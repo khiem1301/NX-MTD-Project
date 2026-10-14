@@ -1,6 +1,3 @@
 @NX_MTD_HostAddress = http://localhost:5215
 
-GET {{NX_MTD_HostAddress}}/weatherforecast/
-Accept: application/json
-
 ###
