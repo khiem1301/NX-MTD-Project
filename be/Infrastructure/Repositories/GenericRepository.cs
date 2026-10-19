@@ -7,10 +7,10 @@ namespace NX_MTD.Infrastructure.Repositories
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected readonly AppDbContext _context;
+        protected readonly NxMtdDbContext _context;
         protected readonly DbSet<T> _dbSet;
 
-        public GenericRepository(AppDbContext context)
+        public GenericRepository(NxMtdDbContext context)
         {
             _context = context;
             _dbSet = context.Set<T>();

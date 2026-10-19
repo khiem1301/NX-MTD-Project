@@ -7,11 +7,11 @@ namespace NX_MTD.Infrastructure.UnitOfWork
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly AppDbContext _context;
+        private readonly NxMtdDbContext _context;
         private readonly Dictionary<Type, object> _repositories = new();
         private IDbContextTransaction? _transaction;
 
-        public UnitOfWork(AppDbContext context)
+        public UnitOfWork(NxMtdDbContext context)
         {
             _context = context;
         }

@@ -1,26 +1,40 @@
-namespace NX_MTD.Application.Common
+namespace NX_MTD.Application.Common;
+
+public enum ResultKind { Ok, Validation, Unauthorized, Forbidden, NotFound, Conflict }
+
+public class Result
 {
-    public class Result
+    protected Result(bool isSuccess, ResultKind kind, string? errorCode, string? message,
+        IReadOnlyDictionary<string, string[]>? errors)
     {
-        public bool IsSuccess { get; protected set; }
-        public string? Message { get; protected set; }
-        public List<string> Errors { get; protected set; } = new();
-
-        public static Result Success(string? message = null)
-            => new() { IsSuccess = true, Message = message };
-
-        public static Result Failure(string message, List<string>? errors = null)
-            => new() { IsSuccess = false, Message = message, Errors = errors ?? new() };
+        IsSuccess = isSuccess; Kind = kind; ErrorCode = errorCode; Message = message; Errors = errors;
     }
 
-    public class Result<T> : Result
+    public bool IsSuccess { get; }
+    public ResultKind Kind { get; }
+    public string? ErrorCode { get; }
+    public string? Message { get; }
+    public IReadOnlyDictionary<string, string[]>? Errors { get; }
+
+    public static Result Success(string? message = null) => new(true, ResultKind.Ok, null, message, null);
+
+    /// <summary>Mặc định Conflict (409) cho lỗi nghiệp vụ.</summary>
+    public static Result Failure(string errorCode, string message, ResultKind kind = ResultKind.Conflict,
+        IReadOnlyDictionary<string, string[]>? errors = null) => new(false, kind, errorCode, message, errors);
+}
+
+public sealed class Result<T> : Result
+{
+    private Result(bool isSuccess, ResultKind kind, T? data, string? errorCode, string? message,
+        IReadOnlyDictionary<string, string[]>? errors) : base(isSuccess, kind, errorCode, message, errors)
     {
-        public T? Data { get; private set; }
-
-        public static Result<T> Success(T data, string? message = null)
-            => new() { IsSuccess = true, Data = data, Message = message };
-
-        public static new Result<T> Failure(string message, List<string>? errors = null)
-            => new() { IsSuccess = false, Message = message, Errors = errors ?? new() };
+        Data = data;
     }
+
+    public T? Data { get; }
+
+    public static Result<T> Success(T data, string? message = null) => new(true, ResultKind.Ok, data, null, message, null);
+
+    public new static Result<T> Failure(string errorCode, string message, ResultKind kind = ResultKind.Conflict,
+        IReadOnlyDictionary<string, string[]>? errors = null) => new(false, kind, default, errorCode, message, errors);
 }
