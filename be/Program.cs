@@ -1,37 +1,37 @@
-using Microsoft.EntityFrameworkCore;
-using NX_MTD.Application.Interfaces;
+using NX_MTD.API.Extensions;
+using NX_MTD.API.Middleware;
+using NX_MTD.Application;
+using NX_MTD.Infrastructure;
 using NX_MTD.Infrastructure.Data;
-using NX_MTD.Infrastructure.UnitOfWork;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Host.UseSerilog((_, lc) => lc.MinimumLevel.Information().WriteTo.Console());
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplication();
+builder.Services.AddApiCore(builder.Configuration);
 
-builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(NX_MTD.Infrastructure.Repositories.GenericRepository<>));
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-// Services
-// builder.Services.AddScoped<I...Service, ...Service>();
-
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ----
+// builder.Services.AddProductionModule(builder.Configuration);   // Kiều
+// builder.Services.AddWarehouseModule(builder.Configuration);    // Thái
+// builder.Services.AddAttendanceModule(builder.Configuration);   // Minh
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
+    await DbSeeder.SeedPasswordsAsync(app.Services);
 }
-
-app.UseHttpsRedirection();
-
+app.UseCors("Web");
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
+
+public partial class Program { }

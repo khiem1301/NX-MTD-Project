@@ -1,0 +1,56 @@
+import { Button, Layout, Menu, Typography } from 'antd';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { MENU_ENTRIES } from '@/app/menu';
+import { MESSAGES } from '@/constants/messages';
+import { useLogout } from '@/features/auth';
+import { useAuth } from '@/hooks/useAuth';
+
+export function MainLayout() {
+  const { user } = useAuth();
+  const logout = useLogout();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const items = MENU_ENTRIES.filter(
+    (e) => e.roles === 'all' || (user !== null && e.roles.includes(user.role)),
+  ).map((e) => ({ key: e.path, label: e.label }));
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Layout.Sider breakpoint="lg" collapsedWidth={0}>
+        <Typography.Title
+          level={4}
+          style={{ color: '#fff', textAlign: 'center', margin: '16px 0' }}
+        >
+          NX-MTD
+        </Typography.Title>
+        <Menu
+          theme="dark"
+          mode="inline"
+          selectedKeys={[location.pathname]}
+          items={items}
+          onClick={({ key }) => navigate(key)}
+        />
+      </Layout.Sider>
+      <Layout>
+        <Layout.Header
+          style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            alignItems: 'center',
+            gap: 16,
+            background: '#fff',
+          }}
+        >
+          <Typography.Text>
+            {user?.fullName} · {user?.roleName}
+          </Typography.Text>
+          <Button onClick={() => void logout()}>{MESSAGES.auth.logoutButton}</Button>
+        </Layout.Header>
+        <Layout.Content style={{ margin: 16 }}>
+          <Outlet />
+        </Layout.Content>
+      </Layout>
+    </Layout>
+  );
+}

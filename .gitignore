@@ -114,3 +114,9 @@ $RECYCLE.BIN/
 
 # Node (if frontend is added later)
 node_modules/
+
+# Local config
+appsettings.Development.json
+
+# AI runbook (khong push)
+NX-MTD_Login_Scaffold_AI_Runbook.md
