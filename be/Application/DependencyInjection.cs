@@ -11,6 +11,12 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         services.AddScoped<IAuthService, AuthService>();
+
+        // Kho, cắt (Thái)
+        services.AddScoped<IStockService, StockService>();
+        services.AddScoped<IInventoryService, InventoryService>();
+        services.AddScoped<IMaterialService, MaterialService>();
+        services.AddScoped<ILookupService, LookupService>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;
     }

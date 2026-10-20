@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Infrastructure.Common;
 using NX_MTD.Infrastructure.Data;
 using NX_MTD.Infrastructure.Repositories;
 using NX_MTD.Infrastructure.Security;
@@ -20,6 +21,12 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
+
+        // Kho, cắt (Thái)
+        services.AddSingleton<IClock, VnClock>();
+        services.AddScoped<IAppLock, SqlAppLock>();
+        services.AddScoped<IDocumentCodeGenerator, DocumentCodeGenerator>();
+        services.AddScoped<IStockRepository, StockRepository>();
         return services;
     }
 }
