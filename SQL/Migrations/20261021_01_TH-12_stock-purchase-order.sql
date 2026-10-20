@@ -1,4 +1,4 @@
--- TH-12 · Thai · 21/10/2026 · DEV-TH-12-1
+﻿-- TH-12 · Thai · 21/10/2026 · DEV-TH-12-1
 -- Đơn mua NVL dùng chung nhiều đơn (kim, chỉ...): Quản đốc tạo mà không cần mã đơn hàng do Admin nhập.
 --   PurchaseOrder.OrderId NULL                       = đơn mua dùng chung, không gắn đơn hàng
 --   PurchaseOrderLine / MaterialReceiptLine:

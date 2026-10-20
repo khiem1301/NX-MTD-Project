@@ -25,7 +25,7 @@
   - [ ] `NX-MTD_AI_Context.md` mục 5 (luồng NVL): thêm trường hợp đơn mua dùng chung; mục 6.2 nếu đổi người sở hữu
   - [ ] Report-3: UC đơn mua / thiếu NVL (luồng thay thế mua dùng chung), mockup màn "NVL của đơn"
   - [ ] `NX-MTD_Tong_hop_Use_Case.md`: UC liên quan đơn mua
-- **File migrate:** `be/SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql`
+- **File migrate:** `SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql`
 - **Trạng thái:** Mở
 
 ### DEV-TH-12-2 · Quản đốc nhập tên NVL mới khi tạo đơn mua
