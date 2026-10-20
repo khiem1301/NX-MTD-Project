@@ -19,6 +19,11 @@ public static class DependencyInjection
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
+        services.AddScoped<FabricPlanner>();
+        services.AddScoped<IWorkOrderService, WorkOrderService>();
+        services.AddScoped<IMaterialIssueService, MaterialIssueService>();
+        services.AddScoped<ICuttingLayService, CuttingLayService>();
+        services.AddScoped<ICutHandoverService, CutHandoverService>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;
     }

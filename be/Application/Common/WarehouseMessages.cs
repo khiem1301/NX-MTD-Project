@@ -37,6 +37,7 @@ public static class WarehouseMessages
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
     public const string FabricShortage = "Không đủ vải cho lệnh cắt";
+    public const string NoFabricNorm = "Mã hàng chưa có định mức vải trong NVL của đơn (UC09), không tính được vải cần.";
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
@@ -46,6 +47,7 @@ public static class WarehouseMessages
     public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, chưa duyệt hoặc khác đơn hàng).";
     public const string WorkOrderRequiredForMaterial = "Cấp NVL cho tổ cắt phải theo lệnh cắt.";
     public const string WorkOrderNotIssuable = "Lệnh cắt không còn mở để cấp vải.";
+    public const string MaterialNotInWorkOrder = "Vải không có trong định mức của lệnh cắt.";
 
     public const string LayQtyExceedsPlan = "Số cắt vượt số kế hoạch + % dư cho phép";
     public const string LayQtyOverPlanWarning = "Đã lưu. Lưu ý: số cắt vượt số kế hoạch (vẫn trong % dư cho phép).";
@@ -55,5 +57,6 @@ public static class WarehouseMessages
 
     public const string HandoverExceedsCut = "Số bàn giao vượt số đã cắt chưa bàn giao";
     public const string HandoverConfirmed = "Đã nhận BTP vào kho.";
+    public const string HandoverConfirmedExceedsHanded = "Số xác nhận không được lớn hơn số tổ giao.";
     public const string HandoverRejected = "Đã từ chối phiếu bàn giao.";
 }
