@@ -92,13 +92,29 @@ public sealed class AttendanceRepository : IAttendanceRepository
                 s.RecordsReceived, s.RecordsInserted, CodeText.ToPascal(s.Status), s.ErrorMessage, s.FileName))
             .ToListAsync(ct);
 
-    public async Task<IReadOnlyList<UnmappedCodeDto>> GetUnmappedCodesAsync(CancellationToken ct) =>
-        await UnmappedQuery()
-            .Select(g => new UnmappedCodeDto(g.Key, g.Count(), g.Min(l => l.PunchTime), g.Max(l => l.PunchTime)))
+    public async Task<IReadOnlyList<UnmappedCodeDto>> GetUnmappedCodesAsync(CancellationToken ct)
+    {
+        // EF không dịch được GroupBy chiếu thẳng vào constructor của record (bọc mỗi hàm gộp
+        // trong AsQueryable). Gộp vào kiểu vô danh để SQL làm, rồi mới dựng DTO trong bộ nhớ.
+        var groups = await UnmappedQuery()
+            .GroupBy(l => l.AttendanceCode)
+            .Select(g => new
+            {
+                AttendanceCode = g.Key,
+                PunchCount = g.Count(),
+                FirstPunchAt = g.Min(l => l.PunchTime),
+                LastPunchAt = g.Max(l => l.PunchTime),
+            })
             .OrderByDescending(x => x.LastPunchAt)
             .ToListAsync(ct);
 
-    public Task<int> CountUnmappedCodesAsync(CancellationToken ct) => UnmappedQuery().CountAsync(ct);
+        return groups
+            .Select(g => new UnmappedCodeDto(g.AttendanceCode, g.PunchCount, g.FirstPunchAt, g.LastPunchAt))
+            .ToList();
+    }
+
+    public Task<int> CountUnmappedCodesAsync(CancellationToken ct) =>
+        UnmappedQuery().Select(l => l.AttendanceCode).Distinct().CountAsync(ct);
 
     public Task<bool> HasPunchesForCodeAsync(int attendanceCode, CancellationToken ct) =>
         _context.AttendanceLogs.AsNoTracking().AnyAsync(l => l.AttendanceCode == attendanceCode, ct);
@@ -222,22 +238,29 @@ public sealed class AttendanceRepository : IAttendanceRepository
     public async Task<TimesheetSummaryDto> GetTimesheetSummaryAsync(TimesheetQuery query, CancellationToken ct)
     {
         var filtered = ApplyFilter(query);
+        // Gộp vào kiểu vô danh rồi mới dựng DTO (xem chú thích ở GetUnmappedCodesAsync).
         var summary = await filtered
             .GroupBy(_ => 1)
-            .Select(g => new TimesheetSummaryDto(
-                g.Select(t => t.EmployeeId).Distinct().Count(),
-                g.Sum(t => t.WorkdayValue),
-                g.Sum(t => t.OvertimeHours),
-                g.Count(t => t.IsMissingPunch)))
+            .Select(g => new
+            {
+                EmployeeCount = g.Select(t => t.EmployeeId).Distinct().Count(),
+                TotalWorkdays = g.Sum(t => t.WorkdayValue),
+                TotalOvertimeHours = g.Sum(t => t.OvertimeHours),
+                MissingPunchCount = g.Count(t => t.IsMissingPunch),
+            })
             .FirstOrDefaultAsync(ct);
 
-        return summary ?? new TimesheetSummaryDto(0, 0, 0, 0);
+        return summary is null
+            ? new TimesheetSummaryDto(0, 0, 0, 0)
+            : new TimesheetSummaryDto(summary.EmployeeCount, summary.TotalWorkdays,
+                summary.TotalOvertimeHours, summary.MissingPunchCount);
     }
 
-    private IQueryable<IGrouping<int, AttendanceLog>> UnmappedQuery() =>
+    /// <summary>Lượt quẹt chưa gắn nhân viên. Trả về dòng (chưa gộp) để mỗi lời gọi tự chọn
+    /// cách gộp: đếm mã khác nhau, hoặc gộp theo mã để lấy số lượt và mốc thời gian.</summary>
+    private IQueryable<AttendanceLog> UnmappedQuery() =>
         _context.AttendanceLogs.AsNoTracking()
-            .Where(l => l.EmployeeId == null)
-            .GroupBy(l => l.AttendanceCode);
+            .Where(l => l.EmployeeId == null);
 
     private IQueryable<DailyTimesheet> ApplyFilter(TimesheetQuery query)
     {
