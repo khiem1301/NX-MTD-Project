@@ -33,10 +33,14 @@ public static class AdjustmentType
     public static readonly string[] All = [ForgotPunch, FingerprintFail, OffsiteWork, ApprovedRequest];
 }
 
-/// <summary>Loại đơn từ và trạng thái đơn mà luồng chấm công dùng.</summary>
+/// <summary>Loại đơn từ (RequestTypeCode) — khai báo một nơi cho mọi luồng dùng.</summary>
 public static class RequestTypes
 {
     public const string AttendanceCorrection = "ATTENDANCE_CORRECTION";
+
+    // Kho, cắt (Thái)
+    public const string MaterialRequisition = "MATERIAL_REQUISITION";
+    public const string SemiFinishedRequisition = "SEMI_FINISHED_REQUISITION";
 }
 
 /// <summary>Trạng thái đơn từ (đồng bộ với CHECK CK_Request_Status trong DB).</summary>
@@ -50,7 +54,7 @@ public static class RequestStatus
     public const string Cancelled = "CANCELLED";
 }
 
-/// <summary>Khóa tham số hệ thống mà luồng chấm công / suất ăn dùng.</summary>
+/// <summary>Khóa tham số trong bảng SystemSetting — khai báo một nơi cho mọi luồng dùng.</summary>
 public static class SettingKeys
 {
     public const string AttendanceSyncMinutes = "ATTENDANCE_SYNC_MINUTES";
@@ -63,4 +67,7 @@ public static class SettingKeys
     public const string DuplicatePunchMinutes = "DUPLICATE_PUNCH_MINUTES";
     public const string MealReminderTime = "MEAL_REMINDER_TIME";
     public const string MealCutoffTime = "MEAL_CUTOFF_TIME";
+
+    // Kho, cắt (Thái)
+    public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
 }
