@@ -1135,7 +1135,14 @@ public partial class NxMtdDbContext : DbContext
         {
             entity.ToTable("MaterialReceiptLine", tb => tb.HasComment("Dòng phiếu nhập NVL"));
 
-            entity.HasIndex(e => new { e.MaterialReceiptId, e.OrderMaterialId }, "UQ_MRL").IsUnique();
+            entity.HasIndex(e => new { e.MaterialReceiptId, e.OrderMaterialId }, "UQ_MRL")
+                .IsUnique()
+                .HasFilter("([OrderMaterialId] IS NOT NULL)");
+            entity.HasIndex(e => new { e.MaterialReceiptId, e.MaterialId, e.MaterialColor }, "UQ_MRL_Stock")
+                .IsUnique()
+                .HasFilter("([OrderMaterialId] IS NULL)");
+
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
 
             entity.Property(e => e.AcceptedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.DefectiveQty).HasColumnType("decimal(18, 3)");
@@ -1146,6 +1153,10 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.MaterialReceiptId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MRL_Receipt");
+
+            entity.HasOne(d => d.Material).WithMany()
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("FK_MRL_Material");
 
             entity.HasOne(d => d.OrderMaterial).WithMany(p => p.MaterialReceiptLines)
                 .HasForeignKey(d => d.OrderMaterialId)
@@ -1658,7 +1669,14 @@ public partial class NxMtdDbContext : DbContext
         {
             entity.ToTable("PurchaseOrderLine", tb => tb.HasComment("Dòng đơn mua NVL"));
 
-            entity.HasIndex(e => new { e.PurchaseOrderId, e.OrderMaterialId }, "UQ_POL").IsUnique();
+            entity.HasIndex(e => new { e.PurchaseOrderId, e.OrderMaterialId }, "UQ_POL")
+                .IsUnique()
+                .HasFilter("([OrderMaterialId] IS NOT NULL)");
+            entity.HasIndex(e => new { e.PurchaseOrderId, e.MaterialId, e.MaterialColor }, "UQ_POL_Stock")
+                .IsUnique()
+                .HasFilter("([OrderMaterialId] IS NULL)");
+
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
 
             entity.Property(e => e.Amount)
                 .HasComputedColumnSql("(CONVERT([decimal](18,2),[OrderedQty]*[UnitPrice]))", false)
@@ -1666,6 +1684,10 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.NotReplenishedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.OrderedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.Material).WithMany()
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("FK_POL_Material");
 
             entity.HasOne(d => d.OrderMaterial).WithMany(p => p.PurchaseOrderLines)
                 .HasForeignKey(d => d.OrderMaterialId)

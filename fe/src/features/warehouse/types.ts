@@ -78,8 +78,8 @@ export type MaterialReceiptListItem = {
   materialReceiptId: number;
   receiptCode: string;
   receiptType: string;
-  orderId: number;
-  orderCode: string;
+  orderId: number | null;
+  orderCode: string | null;
   source: string;
   receiptDate: string;
   status: string;
@@ -106,6 +106,54 @@ export type MaterialReceipt = Omit<MaterialReceiptListItem, 'lineCount'> & {
   returnReason: string | null;
   note: string | null;
   lines: MaterialReceiptLine[];
+};
+
+export type PurchaseOrderListItem = {
+  purchaseOrderId: number;
+  poCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  supplierName: string | null;
+  goodsStatus: string;
+  paymentStatus: string;
+  createdAt: string;
+  lineCount: number;
+};
+
+export type PurchaseOrderLine = {
+  purchaseOrderLineId: number;
+  orderMaterialId: number | null;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  materialColor: string;
+  orderedQty: number;
+  unitPrice: number;
+  amount: number | null;
+};
+
+export type PurchaseOrder = Omit<PurchaseOrderListItem, 'lineCount'> & {
+  supplierId: number | null;
+  note: string | null;
+  lines: PurchaseOrderLine[];
+};
+
+export type PurchaseOrderQuery = PageParams & { goodsStatus?: string; stockOnly?: boolean };
+
+/** orderId để trống = đơn mua dự trữ, không cần Admin tạo mã đơn hàng. */
+export type CreatePurchaseOrderPayload = {
+  orderId?: number;
+  note?: string;
+  lines: {
+    /** Chọn NVL có sẵn; hoặc nhập NVL mới bằng newMaterialName + newMaterialUnit. */
+    materialId?: number;
+    newMaterialName?: string;
+    newMaterialUnit?: string;
+    materialColor?: string;
+    orderedQty: number;
+    unitPrice: number;
+  }[];
 };
 
 export type MaterialReceiptQuery = PageParams & { status?: string; orderId?: number };

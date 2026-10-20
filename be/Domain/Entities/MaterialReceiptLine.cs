@@ -12,7 +12,12 @@ public partial class MaterialReceiptLine
 
     public int MaterialReceiptId { get; set; }
 
-    public int OrderMaterialId { get; set; }
+    /// <summary>NULL khi nhập theo đơn mua dự trữ; khi đó dùng MaterialId + MaterialColor.</summary>
+    public int? OrderMaterialId { get; set; }
+
+    public int? MaterialId { get; set; }
+
+    public string? MaterialColor { get; set; }
 
     public int? PurchaseOrderLineId { get; set; }
 
@@ -30,7 +35,9 @@ public partial class MaterialReceiptLine
 
     public virtual MaterialReceipt MaterialReceipt { get; set; } = null!;
 
-    public virtual OrderMaterial OrderMaterial { get; set; } = null!;
+    public virtual Material? Material { get; set; }
+
+    public virtual OrderMaterial? OrderMaterial { get; set; }
 
     public virtual MaterialReceiptLine? OriginalReceiptLine { get; set; }
 

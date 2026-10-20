@@ -139,8 +139,9 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private async Task<Dictionary<int, decimal>> ReceivedQtyAsync(int orderId, CancellationToken ct) =>
         await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
-            .Where(l => l.MaterialReceipt.OrderId == orderId && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
-            .GroupBy(l => l.OrderMaterialId)
+            .Where(l => l.MaterialReceipt.OrderId == orderId && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed
+                && l.OrderMaterialId != null)
+            .GroupBy(l => l.OrderMaterialId!.Value)
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 

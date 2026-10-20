@@ -26,6 +26,7 @@ export const MESSAGES = {
     orderMaterialSaved: 'Đã lưu NVL của đơn.',
     confirmDeleteOrderMaterial: 'Xóa NVL này khỏi đơn? Thao tác không hoàn tác được.',
     orderMaterialDeleted: 'Đã xóa NVL của đơn.',
+    purchaseOrderCreated: 'Đã tạo đơn mua NVL.',
     receiptSaved: 'Đã gửi phiếu nhập cho Quản đốc xác nhận.',
     confirmReceipt: 'Xác nhận phiếu nhập? Tồn kho NVL sẽ tăng theo số đạt.',
     receiptConfirmed: 'Đã xác nhận phiếu nhập.',
