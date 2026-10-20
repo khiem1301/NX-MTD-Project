@@ -1,3 +1,4 @@
+import { attendanceMenu } from '@/features/attendance/menu';
 import type { MenuEntry } from '@/types/menu';
 
 const homeMenu: MenuEntry[] = [{ key: 'home', label: 'Trang chủ', path: '/', roles: 'all' }];
@@ -7,5 +8,5 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...homeMenu,
   // ...productionMenu,  // Kiều
   // ...warehouseMenu,   // Thái
-  // ...attendanceMenu,  // Minh
+  ...attendanceMenu,  // Minh
 ];

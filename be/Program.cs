@@ -3,6 +3,7 @@ using NX_MTD.API.Middleware;
 using NX_MTD.Application;
 using NX_MTD.Infrastructure;
 using NX_MTD.Infrastructure.Data;
+using NX_MTD.Infrastructure.Modules;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,7 +17,7 @@ builder.Services.AddApiCore(builder.Configuration);
 // ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ----
 // builder.Services.AddProductionModule(builder.Configuration);   // Kiều
 // builder.Services.AddWarehouseModule(builder.Configuration);    // Thái
-// builder.Services.AddAttendanceModule(builder.Configuration);   // Minh
+builder.Services.AddAttendanceModule(builder.Configuration);      // Minh
 
 var app = builder.Build();
 

@@ -1,0 +1,97 @@
+/** Chuỗi hiển thị của màn hình chấm công (Rules FE: chuỗi gom một nơi). */
+export const ATTENDANCE_TEXT = {
+  pageTitle: 'Chấm công',
+  pageSubtitle: 'Dữ liệu lấy từ máy vân tay Ronald Jack Pro',
+  myPageTitle: 'Ngày công của tôi',
+  teamPageTitle: 'Chấm công tổ',
+
+  tabs: {
+    timesheet: 'Bảng công ngày',
+    unmapped: 'Mã chưa gán',
+    sessions: 'Lịch sử đồng bộ',
+  },
+
+  stats: {
+    employees: 'Số nhân viên',
+    workdays: 'Tổng ngày công',
+    overtime: 'Tổng giờ tăng ca',
+    missingPunch: 'Thiếu lượt quẹt',
+    unmappedCodes: 'Mã chưa gán',
+    lastSync: 'Đồng bộ gần nhất',
+  },
+
+  filter: {
+    dateRange: 'Khoảng ngày',
+    team: 'Tổ',
+    allTeams: 'Tất cả tổ',
+    keyword: 'Tìm theo tên hoặc mã nhân viên',
+    onlyMissing: 'Chỉ dòng thiếu giờ',
+    reset: 'Xóa lọc',
+    today: 'Hôm nay',
+    thisWeek: 'Tuần này',
+    thisMonth: 'Tháng này',
+  },
+
+  table: {
+    workDate: 'Ngày',
+    employee: 'Nhân viên',
+    team: 'Tổ',
+    checkIn: 'Giờ vào',
+    checkOut: 'Giờ ra',
+    workedHours: 'Giờ làm',
+    workdayValue: 'Công',
+    overtime: 'Tăng ca',
+    status: 'Tình trạng',
+    note: 'Ghi chú',
+    attendanceCode: 'Mã chấm công',
+    punchCount: 'Số lượt quẹt',
+    firstPunch: 'Lượt đầu',
+    lastPunch: 'Lượt cuối',
+    action: 'Thao tác',
+    source: 'Nguồn',
+    startedAt: 'Bắt đầu',
+    finishedAt: 'Kết thúc',
+    received: 'Nhận',
+    inserted: 'Thêm mới',
+    lastRecordId: 'ID cuối',
+    syncStatus: 'Kết quả',
+  },
+
+  tag: {
+    missingPunch: 'Thiếu giờ ra',
+    extraPunch: 'Quẹt nhiều lần',
+    sunday: 'Chủ nhật',
+    adjusted: 'Chấm hộ',
+    normal: 'Đủ công',
+  },
+
+  sync: {
+    healthyTitle: 'Đồng bộ chấm công bình thường',
+    overdueTitle: 'Chưa đồng bộ được chấm công hơn {0} phút', // MSG23
+    overdueHint: 'Có thể nhập file dự phòng từ Ronald Jack Pro.',
+    never: 'Chưa từng đồng bộ',
+    minutesAgo: '{0} phút trước',
+    sourceRjSync: 'Máy chấm công',
+    sourceExcel: 'File Excel',
+    statusRunning: 'Đang chạy',
+    statusSucceeded: 'Thành công',
+    statusFailed: 'Lỗi',
+  },
+
+  map: {
+    title: 'Gán mã chấm công',
+    description: 'Mã {0} sẽ được gán cho nhân viên, các lượt quẹt cũ của mã này được tính lại.',
+    employee: 'Nhân viên',
+    employeePlaceholder: 'Chọn nhân viên',
+    submit: 'Gán mã',
+    cancel: 'Hủy',
+    success: 'Đã gán mã chấm công.',
+    emptyTitle: 'Không có mã nào chờ gán',
+    emptyHint: 'Mọi mã chấm công đã có chủ.',
+  },
+} as const;
+
+/** Khoảng ngày tối đa một lần xem, khớp TimesheetQueryValidator.MaxRangeDays của BE. */
+export const MAX_RANGE_DAYS = 62;
+
+export const DEFAULT_PAGE_SIZE = 20;
