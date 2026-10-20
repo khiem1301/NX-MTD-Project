@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<ILookupService, LookupService>();
+        services.AddScoped<IOrderMaterialService, OrderMaterialService>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;
     }
