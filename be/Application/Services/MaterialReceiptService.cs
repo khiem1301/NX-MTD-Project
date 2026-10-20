@@ -32,10 +32,11 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var page = await Receipts.AsNoTracking()
             .Where(r => string.IsNullOrEmpty(query.Status) || r.Status == query.Status)
             .Where(r => query.OrderId == null || r.OrderId == query.OrderId)
-            .Where(r => string.IsNullOrEmpty(keyword) || r.ReceiptCode.Contains(keyword) || r.Order.OrderCode.Contains(keyword))
+            .Where(r => string.IsNullOrEmpty(keyword) || r.ReceiptCode.Contains(keyword)
+                || (r.Order != null && r.Order.OrderCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReceiptId)
             .Select(r => new MaterialReceiptListItemDto(r.MaterialReceiptId, r.ReceiptCode, r.ReceiptType, r.OrderId,
-                r.Order.OrderCode, r.Source, r.ReceiptDate, r.Status, r.SubmittedAt, r.ConfirmedAt,
+                r.Order == null ? null : r.Order.OrderCode, r.Source, r.ReceiptDate, r.Status, r.SubmittedAt, r.ConfirmedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.MaterialReceiptLines.Count))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<MaterialReceiptListItemDto>>.Success(page);
@@ -45,13 +46,16 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     {
         var dto = await Receipts.AsNoTracking().Where(r => r.MaterialReceiptId == receiptId)
             .Select(r => new MaterialReceiptDto(r.MaterialReceiptId, r.ReceiptCode, r.ReceiptType, r.OrderId,
-                r.Order.OrderCode, r.Source, r.ReceiptDate, r.Status, r.ReturnReason, r.Note, r.SubmittedAt,
-                r.ConfirmedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
+                r.Order == null ? null : r.Order.OrderCode, r.Source, r.ReceiptDate, r.Status, r.ReturnReason, r.Note,
+                r.SubmittedAt, r.ConfirmedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
                 r.MaterialReceiptLines.OrderBy(l => l.MaterialReceiptLineId).Select(l => new MaterialReceiptLineDto(
-                    l.MaterialReceiptLineId, l.OrderMaterialId, l.OrderMaterial.MaterialId,
-                    l.OrderMaterial.Material.MaterialCode, l.OrderMaterial.Material.MaterialName,
-                    l.OrderMaterial.Material.Unit, l.OrderMaterial.MaterialColor, l.AcceptedQty, l.ShortQty,
-                    l.DefectiveQty)).ToList()))
+                    l.MaterialReceiptLineId, l.OrderMaterialId,
+                    l.OrderMaterial != null ? l.OrderMaterial.MaterialId : l.MaterialId!.Value,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
+                    l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
+                    l.AcceptedQty, l.ShortQty, l.DefectiveQty)).ToList()))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<MaterialReceiptDto>() : Result<MaterialReceiptDto>.Success(dto);
     }
@@ -109,7 +113,10 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
             var today = _clock.Today;
             var movements = receipt.MaterialReceiptLines.Where(l => l.AcceptedQty > 0)
-                .Select(l => new StockMovement(StockKey.Material(l.OrderMaterial.MaterialId, l.OrderMaterial.MaterialColor),
+                .Select(l => new StockMovement(
+                    l.OrderMaterial is { } om
+                        ? StockKey.Material(om.MaterialId, om.MaterialColor)
+                        : StockKey.Material(l.MaterialId!.Value, l.MaterialColor ?? string.Empty),
                     l.AcceptedQty, StockDocTypes.MaterialReceipt, receipt.MaterialReceiptId, l.MaterialReceiptLineId, today))
                 .ToList();
             if (movements.Count > 0)

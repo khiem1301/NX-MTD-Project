@@ -142,4 +142,11 @@ public static class DocumentPrefixes
     public const string MaterialIssue = "PC";
     public const string WorkOrder = "LC";
     public const string CutHandover = "BG";
+    public const string PurchaseOrder = "DM";
+}
+
+public static class PurchaseOrderStatuses
+{
+    public const string PendingFinalisation = "PENDING_FINALISATION";
+    public const string Unpaid = "UNPAID";
 }

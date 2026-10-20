@@ -3,16 +3,16 @@ using NX_MTD.Application.Common;
 namespace NX_MTD.Application.DTOs;
 
 public sealed record MaterialReceiptListItemDto(
-    int MaterialReceiptId, string ReceiptCode, string ReceiptType, int OrderId, string OrderCode, string Source,
+    int MaterialReceiptId, string ReceiptCode, string ReceiptType, int? OrderId, string? OrderCode, string Source,
     DateOnly ReceiptDate, string Status, DateTime SubmittedAt, DateTime? ConfirmedAt, string? ConfirmedByName,
     int LineCount);
 
 public sealed record MaterialReceiptLineDto(
-    int MaterialReceiptLineId, int OrderMaterialId, int MaterialId, string MaterialCode, string MaterialName,
+    int MaterialReceiptLineId, int? OrderMaterialId, int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal AcceptedQty, decimal ShortQty, decimal DefectiveQty);
 
 public sealed record MaterialReceiptDto(
-    int MaterialReceiptId, string ReceiptCode, string ReceiptType, int OrderId, string OrderCode, string Source,
+    int MaterialReceiptId, string ReceiptCode, string ReceiptType, int? OrderId, string? OrderCode, string Source,
     DateOnly ReceiptDate, string Status, string? ReturnReason, string? Note, DateTime SubmittedAt,
     DateTime? ConfirmedAt, string? ConfirmedByName, IReadOnlyList<MaterialReceiptLineDto> Lines);
 

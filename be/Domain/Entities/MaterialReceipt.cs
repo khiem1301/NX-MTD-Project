@@ -18,7 +18,8 @@ public partial class MaterialReceipt
 
     public int? ShortageRequestId { get; set; }
 
-    public int OrderId { get; set; }
+    /// <summary>NULL = nhập hàng của đơn mua dự trữ.</summary>
+    public int? OrderId { get; set; }
 
     public string Source { get; set; } = null!;
 
@@ -46,7 +47,7 @@ public partial class MaterialReceipt
 
     public virtual ICollection<MaterialReceiptLine> MaterialReceiptLines { get; set; } = new List<MaterialReceiptLine>();
 
-    public virtual CustomerOrder Order { get; set; } = null!;
+    public virtual CustomerOrder? Order { get; set; }
 
     public virtual MaterialReceipt? OriginalReceipt { get; set; }
 

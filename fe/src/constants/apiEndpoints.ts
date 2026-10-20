@@ -20,6 +20,7 @@ export const API = {
     materials: (role: RolePath) => v1(`${role}/materials`),
     orderMaterials: (role: RolePath) => v1(`${role}/order-materials`),
     materialReceipts: (role: RolePath) => v1(`${role}/material-receipts`),
+    purchaseOrders: (role: RolePath) => v1(`${role}/purchase-orders`),
     materialIssues: (role: RolePath) => v1(`${role}/material-issues`),
     inventories: (role: RolePath) => v1(`${role}/inventories`),
     pieceHoldings: (role: RolePath) => v1(`${role}/piece-holdings`),

@@ -33,6 +33,9 @@ public static class WarehouseMessages
     public const string ReceiptReturned = "Đã trả phiếu nhập cho Thủ kho.";
     public const string SupplierSourceNotSupported = "Phiếu nhập NVL từ nhà cung cấp làm ở Phase 2 (TH-12).";
 
+    public const string PurchaseOrderMaterialNotInOrder = "NVL và màu này chưa khai báo trong đơn hàng đã chọn (UC09).";
+    public const string PurchaseOrderCreated = "Đã tạo đơn mua NVL.";
+
     public const string CuttingTeamInvalid = "Tổ nhận phải là tổ cắt đang hoạt động.";
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";

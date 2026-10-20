@@ -12,7 +12,8 @@ public partial class PurchaseOrder
 
     public string PoCode { get; set; } = null!;
 
-    public int OrderId { get; set; }
+    /// <summary>NULL = đơn mua dự trữ (kim, chỉ… dùng chung nhiều đơn), không gắn đơn hàng.</summary>
+    public int? OrderId { get; set; }
 
     public int? SupplierId { get; set; }
 
@@ -54,7 +55,7 @@ public partial class PurchaseOrder
 
     public virtual ICollection<MaterialReceipt> MaterialReceipts { get; set; } = new List<MaterialReceipt>();
 
-    public virtual CustomerOrder Order { get; set; } = null!;
+    public virtual CustomerOrder? Order { get; set; }
 
     public virtual PurchaseOrder? OriginalPurchaseOrder { get; set; }
 
