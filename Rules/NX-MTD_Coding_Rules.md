@@ -2,6 +2,7 @@
 
 > Áp dụng cho toàn bộ thành viên nhóm G40 (5 người), cho cả repo backend và repo frontend `nxmtd-web`. Mọi thành viên phải đọc trước khi code; mọi PR phải tuân thủ tài liệu này.
 > Muốn thay đổi quy tắc: mở PR sửa file này, cả nhóm đồng ý rồi mới merge. Không tự ý làm khác.
+> Code được phép đi trước tài liệu (Report, AI Context, DB design), nhưng **mọi chỗ code làm khác tài liệu phải ghi vào `docs/CODE_DEVIATIONS.md`** theo mục 8, để cuối dự án sửa lại Report nhanh.
 
 **Stack:** ASP.NET Core 8 Web API · EF Core · SQL Server · React + TypeScript (Vite) · Ant Design · TanStack Query · Axios · Zustand · Jest + React Testing Library
 
@@ -18,6 +19,7 @@
 5. Git & quy trình Pull Request
 6. Checklist trước khi merge
 7. Từ điển thuật ngữ nghiệp vụ
+8. Ghi lại khác biệt giữa code và tài liệu (`CODE_DEVIATIONS.md`)
 - Phụ lục A – Các điểm đã chốt khi hai file mâu thuẫn
 
 ---
@@ -35,6 +37,7 @@
 | Tiền | BE dùng `decimal(18,2)`, không dùng `float/double`. FE hiển thị dạng `1.250.000 ₫`. |
 | Magic number/string | Cấm. BE đưa vào `const`, `enum` hoặc config; FE đưa vào `constants/`. |
 | Code chết | Không để code comment-out, biến không dùng, `console.log`. `TODO` phải kèm tên người và mã issue: `// TODO(khiem, G40-31): ...`. |
+| Khác tài liệu | Code làm khác Report-3 SRS, `NX-MTD_AI_Context.md`, `NX-MTD_Database.sql` hoặc tổng hợp Use Case thì **không cần sửa tài liệu ngay**, nhưng phải thêm một mục vào `docs/CODE_DEVIATIONS.md` **trong cùng PR** (mục 8). Không được làm khác mà không ghi lại. |
 
 ---
 
@@ -153,7 +156,9 @@ Project
 │   └── UnitOfWork
 │       └── UnitOfWork.cs
 ├── SQL
-│   └── CreateAndSeed.sql
+│   ├── CreateAndSeed.sql          # bản đầy đủ, luôn khớp schema mới nhất
+│   └── Migrations
+│       └── 20261021_01_KH-05_add-order-note.sql   # mỗi thay đổi schema một file
 ├── Program.cs
 └── appsettings.json
 ```
@@ -223,7 +228,7 @@ public class MaterialIssuesController : StorekeeperBaseController { ... }
 - Bảng: **PascalCase số nhiều** (`ProductionOrders`), cột PascalCase, khoá chính `Id`, khoá ngoại `<Entity>Id`.
 - Mọi entity kế thừa `BaseEntity`: `Id`, `CreatedAt`, `CreatedBy`, `UpdatedAt`, `UpdatedBy`, `IsDeleted` (soft delete + global query filter).
 - Cấu hình bằng **Fluent API** (`IEntityTypeConfiguration<T>`), không dùng Data Annotation trên entity.
-- Thay đổi schema: **cập nhật `SQL/CreateAndSeed.sql`** và sửa Entity + `DbContext` trong cùng một PR. Ghi rõ thay đổi bảng/cột trong mô tả PR để cả nhóm chạy lại script.
+- Thay đổi schema (bảng, cột, ràng buộc, view, trigger, proc, dữ liệu seed): trong **cùng một PR** phải có đủ 3 thứ: (1) **file migrate mới** trong `SQL/Migrations/`, (2) `SQL/CreateAndSeed.sql` được cập nhật cho khớp (ai tạo DB mới chạy một file là đủ), (3) Entity + `DbContext` sửa theo. Chi tiết ở mục 3.12.
 - Truy vấn chỉ đọc dùng `AsNoTracking()`; chỉ `Select` cột cần dùng; cấm N+1 (dùng `Include`/projection).
 - Trạng thái lưu bằng `enum` (lưu int hoặc string), không dùng chuỗi tự do. Khi trả API luôn là chuỗi (mục 2.2).
 - Dữ liệu tồn kho, công, lương: **không xoá cứng**, mọi thay đổi phải truy vết được (audit log).
@@ -266,6 +271,28 @@ indent_size = 4
 [*.md]
 trim_trailing_whitespace = false
 ```
+
+### 3.12 File migrate SQL (thay đổi database)
+
+Mục đích: thành viên khác chỉ cần chạy các file migrate mới, **không phải xoá và tạo lại DB từ đầu** (mất dữ liệu test).
+
+**Đặt tên và vị trí**
+- Thư mục `SQL/Migrations/`, tên file `<yyyyMMdd>_<NN>_<mã task>_<mo-ta-ngan>.sql`; `NN` là số thứ tự trong ngày. VD `20261021_01_KH-05_add-order-note.sql`.
+- Thứ tự chạy = thứ tự tên file. Một file một thay đổi có ý nghĩa; không gộp nhiều task vào một file.
+- **Không sửa file migrate đã merge vào `develop`.** Sai thì thêm file migrate mới để sửa.
+
+**Nội dung file**
+- Có thể chạy lại mà không lỗi (idempotent), vì không có bảng theo dõi migrate: kiểm tra trước khi tạo/sửa bằng `IF COL_LENGTH('dbo.CustomerOrder', 'Note') IS NULL`, `IF OBJECT_ID(...) IS NULL`, `CREATE OR ALTER` cho view/proc/trigger/hàm.
+- Dòng đầu là comment: mã task, người viết, ngày, mô tả, mã `DEV-...` nếu khác tài liệu (mục 8).
+- Dùng tên bảng/cột đúng schema, `USE <db>` không hard-code. Bọc `BEGIN TRANSACTION` / `COMMIT` khi có nhiều lệnh; thêm cột `NOT NULL` vào bảng đã có dữ liệu phải kèm `DEFAULT` hoặc điền dữ liệu trước.
+- Hạn chế xoá cột/bảng. Nếu bắt buộc: ghi trong mô tả PR và báo cả nhóm trước khi merge.
+- Thay dữ liệu seed cũng là migrate (`IF NOT EXISTS ... INSERT`, hoặc `UPDATE` có điều kiện).
+
+**Quy trình**
+1. Viết migrate, chạy thử trên DB local đang có dữ liệu. Sau đó chạy `CreateAndSeed.sql` trên DB trống để chắc hai đường cho cùng một schema.
+2. Mở PR gồm: file migrate + `CreateAndSeed.sql` + Entity/`DbContext`. Mô tả PR ghi tên file migrate và tóm tắt bảng/cột đổi; tag người có luồng dùng bảng đó.
+3. Sau khi PR được merge, mọi thành viên `git pull` rồi chạy các file migrate mới theo thứ tự tên file.
+4. Bản demo/deploy: chạy các migrate chưa chạy theo thứ tự, trước khi chạy bản BE mới.
 
 ---
 
@@ -743,9 +770,10 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 2. Chạy kiểm tra, tất cả phải pass:
    - BE: `dotnet build` (không warning mới), `dotnet format --verify-no-changes`, `dotnet test`.
    - FE: `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`.
-3. Mở PR vào `develop`. PR nhỏ (**≤ 400 dòng thay đổi**). Mô tả ghi: mã task, làm gì, test thế nào, ảnh chụp màn hình nếu đổi UI, thay đổi bảng/cột nếu đổi schema.
-4. Ít nhất **1 người review approve**, **Project Manager duyệt merge**, GitHub Actions phải xanh.
-5. Merge xong xoá branch.
+3. Nếu PR làm khác tài liệu gốc: thêm mục vào `docs/CODE_DEVIATIONS.md` theo mẫu ở mục 8 (commit chung trong PR).
+4. Mở PR vào `develop`. PR nhỏ (**≤ 400 dòng thay đổi**, không tính file SQL sinh tự động). Mô tả ghi: mã task, làm gì, test thế nào, ảnh chụp màn hình nếu đổi UI, nếu đổi schema thì tên file migrate trong `SQL/Migrations/` và bảng/cột đổi, **mã DEV đã thêm** (VD `DEV-KH-05-1`) hoặc ghi "Không khác tài liệu". Khác biệt ảnh hưởng luồng người khác thì tag người đó vào PR.
+5. Ít nhất **1 người review approve**, **Project Manager duyệt merge**, GitHub Actions phải xanh. Reviewer thấy code khác tài liệu mà chưa có mục DEV thì yêu cầu bổ sung trước khi approve.
+6. Merge xong xoá branch.
 
 ### 5.4 Phân công review (nhóm 5 người)
 
@@ -765,6 +793,7 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 - [ ] Không có secret, file `.env`, `appsettings.Development.json`
 - [ ] Không có code comment-out, `TODO` thiếu tên + issue
 - [ ] Dùng đúng thuật ngữ ở mục 7
+- [ ] Code làm khác Report-3 / AI Context / DB design / Use Case → đã thêm mục vào `docs/CODE_DEVIATIONS.md` (mục 8) và ghi mã DEV trong mô tả PR
 - [ ] CI (GitHub Actions) xanh, ≥ 1 approve
 
 **Backend**
@@ -773,7 +802,8 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 - [ ] Controller không chứa logic nghiệp vụ, chỉ trả DTO qua `Result`
 - [ ] Có validator cho request mới; phân quyền đúng role
 - [ ] Lỗi nghiệp vụ trả đúng status (400/409) và `errorCode` đã khai báo trong `ErrorCodes`
-- [ ] Thao tác nhiều bước có transaction; đã cập nhật `CreateAndSeed.sql` nếu đổi schema
+- [ ] Thao tác nhiều bước có transaction
+- [ ] Đổi schema: có file migrate mới trong `SQL/Migrations/` (idempotent, đúng tên, đã chạy thử trên DB có dữ liệu), `CreateAndSeed.sql` đã cập nhật, Entity + `DbContext` đã sửa, mô tả PR ghi tên file migrate
 - [ ] Unit test cho logic tính toán (lương, công, tồn kho)
 - [ ] Swagger hiển thị đúng endpoint mới
 
@@ -811,6 +841,81 @@ Dùng thống nhất ở tên bảng, entity, API, type FE, scope commit.
 | Tổ / Chuyền | `Team` | `teams` |
 
 > Bổ sung thuật ngữ mới vào bảng này trước khi code.
+
+---
+
+## 8. Ghi lại khác biệt giữa code và tài liệu (`CODE_DEVIATIONS.md`)
+
+Nhóm không đủ thời gian vừa code vừa sửa tài liệu. Vì vậy: **code và sửa trực tiếp, ghi lại khác biệt ngay lúc code, cuối dự án dựa vào file này để sửa Report** thay vì phải dò lại toàn bộ code.
+
+### 8.1 File ở đâu
+
+- Mỗi repo có **một** file sống: `docs/CODE_DEVIATIONS.md` (repo BE và repo `nxmtd-web` mỗi bên một file). Người dựng repo (Khiêm) tạo file từ mẫu ở 8.4.
+- Chỉ **thêm mục mới vào cuối file**, không xoá mục cũ. Khi conflict lúc merge thì giữ cả hai mục.
+
+### 8.2 Khi nào phải ghi
+
+Phải ghi khi code làm **khác** một trong các tài liệu gốc sau:
+
+| Tài liệu gốc | Ví dụ khác biệt |
+|---|---|
+| Report-3 SRS (UC, FR, quy tắc nghiệp vụ, MSG, mockup màn hình) | Bỏ/thêm bước trong luồng, đổi role được làm, đổi điều kiện kiểm tra, đổi câu thông báo, màn hình gộp/tách |
+| `NX-MTD_AI_Context.md` (quy tắc đã chốt, phân công, ngoài phạm vi) | Làm một việc đang ghi là ngoài phạm vi, đổi trạng thái, đổi người sở hữu luồng |
+| `NX-MTD_Database.sql` / `NX-MTD_Database_Giai_thich.md` | Thêm/xoá/đổi tên bảng, cột, ràng buộc, giá trị `Status`, view, trigger (mục DEV ghi thêm tên file migrate tương ứng, xem mục 3.12) |
+| `NX-MTD_Tong_hop_Use_Case.md` | UC chưa làm, làm khác, hoặc phát sinh UC mới |
+| Phụ lục A / quy tắc trong file này | Không ghi ở đây: đổi quy tắc code thì mở PR sửa file này (xem đầu file) |
+
+**Không cần ghi:** chi tiết cài đặt mà tài liệu không nói tới (tên hàm, cách tách component), sửa bug để code khớp lại tài liệu, đổi giao diện nhỏ không đổi luồng.
+
+Không chắc có phải khác biệt hay không thì **cứ ghi**; mục thừa dễ bỏ hơn mục thiếu.
+
+### 8.3 Cách ghi
+
+1. Mã mục: `DEV-<mã task>-<số thứ tự>`, VD `DEV-KH-05-1`, `DEV-TH-14-2`. Dùng mã task để hai người không trùng mã.
+2. Ghi **trong cùng PR** với code tạo ra khác biệt, không để "ghi sau".
+3. Ghi ngắn, đủ để người sửa Report hiểu mà không cần đọc code: tài liệu ghi gì, code làm gì, vì sao, sửa mục nào.
+4. Nếu khác biệt ảnh hưởng luồng người khác hoặc schema chung: tag người đó vào PR và báo trong nhóm.
+5. Sau này code quay lại đúng tài liệu thì **không xoá mục**, đổi trạng thái thành `Bỏ` và ghi lý do.
+6. Cuối Phase 3 (trước khi nộp Report bản cuối), mỗi người tự sửa phần Report thuộc luồng mình theo các mục `Mở`, rồi đổi trạng thái sang `Đã sửa tài liệu`. PM kiểm tra không còn mục `Mở`.
+
+### 8.4 Mẫu file `docs/CODE_DEVIATIONS.md`
+
+````markdown
+# NX-MTD – Khác biệt giữa code và tài liệu
+
+> Ghi theo Coding Rules mục 8. Chỉ thêm mục mới vào cuối file. Trạng thái: `Mở` · `Đã sửa tài liệu` · `Bỏ`.
+> Tài liệu gốc: Report-3 SRS (16/10), NX-MTD_AI_Context.md (19/10), NX-MTD_Database.sql (65 bảng), NX-MTD_Tong_hop_Use_Case.md (20/10).
+
+## Bảng tổng hợp
+
+| Mã | Ngày | Người | UC / bảng | Tóm tắt | Trạng thái |
+|---|---|---|---|---|---|
+| DEV-KH-05-1 | 21/10/2026 | Khiêm | UC09, `CustomerOrder` | Bỏ bước Admin duyệt đơn hàng | Mở |
+
+---
+
+### DEV-KH-05-1 · Bỏ bước Admin duyệt đơn hàng
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Khiêm · KH-05 · #12
+- **Ảnh hưởng tới:** UC09, FR-xx, bảng `CustomerOrder` (cột `Status`), MSG10
+- **Tài liệu gốc ghi:** (trích ngắn, ghi rõ nguồn và mục) Report-3 UC09: Quản đốc tạo đơn → Admin duyệt → ...
+- **Code đang làm:** Quản đốc tạo đơn là có hiệu lực ngay, không có trạng thái `PendingApproval`.
+- **Lý do:** (phát hiện gì khi code, ai quyết định) ...
+- **Ảnh hưởng người khác:** Thái (lệnh cắt không còn chờ duyệt) – đã báo trong PR.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: mục UC09 (luồng chính), sơ đồ trạng thái đơn hàng
+  - [ ] `NX-MTD_AI_Context.md` mục 6.3
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: CHECK của `CustomerOrder.Status`
+- **Trạng thái:** Mở
+````
+
+> Mỗi khác biệt: 1 dòng trong **Bảng tổng hợp** + 1 mục chi tiết ở cuối file.
+
+### 8.5 Với AI hỗ trợ code (Claude, Copilot…)
+
+- `docs/CODE_DEVIATIONS.md` là một phần của context: AI phải đọc file này cùng `NX-MTD_AI_Context.md` (code hiện tại có thể đã khác tài liệu).
+- Khi AI viết code làm khác tài liệu gốc (theo 8.2), dù do người yêu cầu hay do AI đề xuất, AI phải **tự thêm mục vào `docs/CODE_DEVIATIONS.md` trong cùng lần sửa** và nói rõ với người dùng mục đã thêm.
+- AI không được tự ý làm khác tài liệu chỉ vì "thấy hợp lý hơn": đề xuất trước, người code đồng ý thì mới làm và ghi lại.
 
 ---
 

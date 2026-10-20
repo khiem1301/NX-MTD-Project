@@ -8,13 +8,14 @@
 ## 0. Luật cho AI (bắt buộc)
 
 1. **Chỉ làm đúng task được giao.** Không tự thêm tính năng, màn hình, bảng, cột, endpoint, thư viện ngoài task. Thấy thiếu thì ghi `TODO(<tên>, <mã task>)` và báo lại, không tự làm.
-2. **Schema là `NX-MTD_Database.sql`.** EF Core scaffold từ script này (database-first). Không tự đặt tên bảng/cột khác, không thêm bảng lookup, bảng lịch sử, bảng mirror Ronald Jack Pro, cột `CreatedBy/UpdatedBy/ApprovedBy`. Đổi schema = sửa script + entity trong cùng PR và nêu rõ trong mô tả PR.
+2. **Schema là `NX-MTD_Database.sql`.** EF Core scaffold từ script này (database-first). Không tự đặt tên bảng/cột khác, không thêm bảng lookup, bảng lịch sử, bảng mirror Ronald Jack Pro, cột `CreatedBy/UpdatedBy/ApprovedBy`. Đổi schema = trong cùng PR phải có **file migrate mới** `SQL/Migrations/<yyyyMMdd>_<NN>_<mã task>_<mo-ta>.sql` (idempotent, không sửa file migrate đã merge), cập nhật `SQL/CreateAndSeed.sql` cho khớp, sửa entity, và nêu tên file migrate trong mô tả PR (Coding Rules mục 3.12). Để người khác chạy migrate thay vì tạo lại DB.
 3. **Không làm việc ngoài phạm vi** (mục 9). Đặc biệt: hệ thống **không tính lương chính thức**, không khóa tài khoản khi sai mật khẩu, không có QA/QC phân loại lỗi.
 4. **Quy tắc nghiệp vụ ở mục 5 thắng chữ trong Report-3** khi khác nhau.
 5. **Không đụng code của luồng người khác** (mục 8). Cần dữ liệu luồng khác thì gọi qua interface dùng chung (`IStockService`, `IOutputQueryService`, `IAttachmentService`, `IAuditLogService`, khung `Request`).
 6. Theo đúng Coding Rules (mục 7): controller mỏng, logic ở Service, `Result` + `errorCode`, transaction cho nghiệp vụ nhiều bước, AuditLog cho mọi thay đổi dữ liệu nhạy cảm.
 7. Chuỗi hiển thị dùng đúng mã MSG ở mục 6.4, tiếng Việt. Tên code tiếng Anh.
 8. Không đoán. Thông tin chưa chốt (mục 12) thì dùng giá trị trong `SystemSetting` và để cấu hình được, không hard-code.
+9. **Ghi lại mọi khác biệt với tài liệu.** Đọc `docs/CODE_DEVIATIONS.md` của repo trước khi code (code có thể đã khác file này). Khi code làm khác Report-3 SRS, file này, `NX-MTD_Database.sql` hoặc tổng hợp Use Case (đổi luồng, role, điều kiện, MSG, bảng/cột/trạng thái, UC bỏ hoặc mới), phải **tự thêm mục vào `docs/CODE_DEVIATIONS.md` trong cùng lần sửa** theo mẫu Coding Rules mục 8 (mã `DEV-<mã task>-<n>`, tài liệu gốc ghi gì, code làm gì, lý do, mục Report cần sửa, trạng thái `Mở`) và báo cho người dùng. Không tự ý làm khác tài liệu khi chưa được người code đồng ý.
 
 ---
 
@@ -236,6 +237,8 @@ Map vào `constants/messages.ts` (FE) và `message` của `Result` (BE); mỗi l
 - Branch `main` (demo) / `develop` (tích hợp) / `feature/<task-id>-<ten-ngan>` / `bugfix/...` / `hotfix/...`; `<task-id>` là ID trong file phân công (KH-xx, KI-xx, TH-xx, MI-xx, TA-xx) hoặc UCxx.
 - Conventional Commits `feat(warehouse): ...`. PR ≤ 400 dòng vào `develop`, BE: `dotnet build`, `dotnet format --verify-no-changes`, `dotnet test`; FE: `typecheck`, `lint`, `test`, `build`. ≥ 1 approve, CI xanh, PM (Khiêm) merge.
 - Không commit secret, `.env`, `appsettings.Development.json`.
+- Đổi database → thêm file migrate trong `SQL/Migrations/` + cập nhật `CreateAndSeed.sql` + entity trong cùng PR, ghi tên file migrate trong mô tả PR (Coding Rules mục 3.12).
+- Code khác tài liệu → thêm mục `docs/CODE_DEVIATIONS.md` trong cùng PR, ghi mã DEV trong mô tả PR (Coding Rules mục 8). Cuối Phase 3 mỗi người sửa Report theo các mục `Mở` của mình.
 
 ## 8. Phân công (ai làm gì, UC nào)
 
@@ -263,6 +266,8 @@ Tính lương chính thức (phụ cấp, bảo hiểm, khấu trừ), thuế/MI
 2. `NX-MTD_Database.sql` + `NX-MTD_Database_Giai_thich.md` (schema, view, giả định).
 3. Report-3 SRS bản 16/10 (UC, FR, GBR, MSG) – bỏ qua phần đã bị ghi đè ở mục 11.
 4. `NX-MTD_Coding_Rules.md` (cách code). 5. Report-1, Report-2.
+
+Riêng với **code đã có**: các mục trong `docs/CODE_DEVIATIONS.md` của repo là thay đổi đã thống nhất sau các tài liệu trên, thắng các nguồn 2–5 cho đến khi Report được sửa lại.
 
 ## 11. Mâu thuẫn giữa các nguồn và cách đang xử lý
 
