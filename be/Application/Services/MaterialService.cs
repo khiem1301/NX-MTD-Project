@@ -60,8 +60,12 @@ public sealed class MaterialService : IMaterialService
 
             var material = new Material
             {
-                MaterialCode = code, MaterialName = name, MaterialType = dto.MaterialType,
-                Category = dto.Category, Unit = dto.Unit.Trim(), Status = MaterialStatuses.Active,
+                MaterialCode = code,
+                MaterialName = name,
+                MaterialType = dto.MaterialType,
+                Category = dto.Category,
+                Unit = dto.Unit.Trim(),
+                Status = MaterialStatuses.Active,
             };
             await _uow.Repository<Material>().AddAsync(material);
             await _uow.SaveChangesAsync();

@@ -124,8 +124,11 @@ public sealed class CuttingLayService : ICuttingLayService
             var actual = l.ActualQty ?? calculated;
             return new CuttingLayLine
             {
-                OrderLineId = l.OrderLineId, RatioValue = (short)l.RatioValue, CalculatedQty = calculated,
-                ActualQty = actual, AdjustReason = actual == calculated ? null : l.AdjustReason?.Trim(),
+                OrderLineId = l.OrderLineId,
+                RatioValue = (short)l.RatioValue,
+                CalculatedQty = calculated,
+                ActualQty = actual,
+                AdjustReason = actual == calculated ? null : l.AdjustReason?.Trim(),
             };
         }).ToList();
         if (lines.Any(l => l.ActualQty != l.CalculatedQty && string.IsNullOrEmpty(l.AdjustReason)))

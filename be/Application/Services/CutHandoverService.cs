@@ -92,7 +92,9 @@ public sealed class CutHandoverService : ICutHandoverService
             var handover = new CutHandover
             {
                 HandoverCode = await _codes.NextAsync<CutHandover>(DocumentPrefixes.CutHandover, h => h.HandoverCode, ct),
-                WorkOrderId = wo.WorkOrderId, CuttingTeamId = cuttingTeamId, HandedAt = _clock.Now,
+                WorkOrderId = wo.WorkOrderId,
+                CuttingTeamId = cuttingTeamId,
+                HandedAt = _clock.Now,
                 Status = HandoverStatuses.Pending,
                 CutHandoverLines = dto.Lines.Select(l => new CutHandoverLine { OrderLineId = l.OrderLineId, HandedQty = l.HandedQty }).ToList(),
             };

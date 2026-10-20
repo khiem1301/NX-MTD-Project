@@ -89,9 +89,15 @@ public sealed class MaterialIssueService : IMaterialIssueService
             var issue = new MaterialIssue
             {
                 IssueCode = await _codes.NextAsync<MaterialIssue>(DocumentPrefixes.MaterialIssue, i => i.IssueCode, ct),
-                WarehouseType = dto.WarehouseType, RequestId = dto.RequestId, OrderId = target!.OrderId,
-                WorkOrderId = target.WorkOrderId, ReceivingTeamId = target.TeamId, IssueDate = dto.IssueDate,
-                IssuedBy = issuedByEmployeeId, Status = IssueStatuses.PendingReceipt, MaterialIssueLines = lines,
+                WarehouseType = dto.WarehouseType,
+                RequestId = dto.RequestId,
+                OrderId = target!.OrderId,
+                WorkOrderId = target.WorkOrderId,
+                ReceivingTeamId = target.TeamId,
+                IssueDate = dto.IssueDate,
+                IssuedBy = issuedByEmployeeId,
+                Status = IssueStatuses.PendingReceipt,
+                MaterialIssueLines = lines,
             };
             await _uow.Repository<MaterialIssue>().AddAsync(issue);
             await _uow.SaveChangesAsync();

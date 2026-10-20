@@ -242,7 +242,9 @@ public sealed class WorkOrderService : IWorkOrderService
         wo.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         wo.WorkOrderLines = dto.Lines.Select(l => new WorkOrderLine
         {
-            OrderLineId = l.OrderLineId, PanelName = string.Empty, PlannedQty = l.PlannedQty,
+            OrderLineId = l.OrderLineId,
+            PanelName = string.Empty,
+            PlannedQty = l.PlannedQty,
         }).ToList();
     }
 

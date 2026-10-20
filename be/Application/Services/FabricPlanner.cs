@@ -59,7 +59,8 @@ public sealed class FabricPlanner
                         && l.MaterialIssue.Status != IssueStatuses.Rejected)
             .Select(l => new
             {
-                MaterialId = l.MaterialId!.Value, Color = l.MaterialColor!,
+                MaterialId = l.MaterialId!.Value,
+                Color = l.MaterialColor!,
                 Qty = l.MaterialIssue.Status == IssueStatuses.Received ? l.ConfirmedQty ?? 0 : l.IssuedQty,
             })
             .ToListAsync(ct);
