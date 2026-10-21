@@ -32,6 +32,13 @@
 | DEV-MI-09-5 | 21/10/2026 | Minh (AI) | UC31/UC32, `Payroll.ImportedFileUrl`, bảng `Attachment` | File Excel Kế toán nhập được lưu nguyên bản vào thư mục cục bộ (không dùng `IAttachmentService`/bảng `Attachment`); giám đốc tải qua endpoint có phân quyền | Mở |
 | DEV-MI-09-6 | 21/10/2026 | Minh (AI) | UC31/UC06, `PayslipItem`, `Employee.AttendanceCode` | Import theo file "Bảng thanh toán lương" thật (một sheet mỗi tổ): tra theo mã chấm công, danh mục cột đặt trong code, bậc thợ lưu thành dòng `INFO` dạng chữ, số tổng không lưu, nhân 1000 theo "ĐVT" | Mở |
 | DEV-MI-07-1 | 21/10/2026 | Minh (AI) | UC14/UC23/UC34, `Supplier`, `PurchaseOrder`, `Attachment` | Chốt đặt hàng (đơn giá > 0, NCC ACTIVE, khóa số lượng), hủy = REJECTED, ảnh chứng từ không bắt buộc, trả lại → Quản đốc sửa đơn giá → gửi lại, thông báo theo vai trò | Mở |
+| DEV-KI-00-1 | 21/10/2026 | Minh (AI) làm hộ Kiều | UC25/UC26/UC52/UC55/UC56/UC57/UC22 | Minh làm BE các task KI-01/03/04/06/08/10/11; chưa làm FE của Kiều, KI-07, KI-09 | Mở |
+| DEV-KI-04-1 | 21/10/2026 | Minh (AI) làm hộ Kiều | UC55, `vw_WorkerOutputCap` | Trần sản lượng cấp tổ (BTP đã nhận) khi công nhân chưa có phiếu giao BTP (TH-19 chưa làm) | Mở |
+| DEV-KI-06-1 | 21/10/2026 | Minh (AI) làm hộ Kiều | UC57, `QcBatch` | "Hàng trên chuyền" = BTP nhận − QC đạt − Scrap; hết ca lấy từ SystemSetting | Mở |
+| DEV-KI-08-1 | 21/10/2026 | Minh (AI) làm hộ Kiều | UC56, `Request` | Phiếu Scrap chưa tự sinh đơn cắt bù (KI-09 chưa làm) | Mở |
+| DEV-KI-11-1 | 21/10/2026 | Minh (AI) làm hộ Kiều | UC22, MSG20 | Cửa sổ sửa áp theo từng thao tác; Quản đốc sửa sau hạn kèm lý do + AuditLog, không có màn riêng | Mở |
+| DEV-MI-10-1 | 21/10/2026 | Minh (AI) | UC59 | Chi tiết ngày đọc OutputRecord/DefectRecord trực tiếp (view không có mức công đoạn) | Mở |
+| DEV-MI-17-1 | 21/10/2026 | Minh (AI) | UC19/UC21, `KpiTarget` | % đạt tính trên cả kỳ; Admin chỉ xem KPI | Mở |
 | DEV-TH-12-1 | 21/10/2026 | Thái | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua NVL không bắt buộc gắn đơn hàng (mua dùng chung kim, chỉ...) | Mở |
 | DEV-TH-12-2 | 21/10/2026 | Thái | `Material` | Quản đốc nhập tên NVL mới khi tạo đơn mua, NVL tự vào danh mục | Mở |
 | DEV-KH-07-1 | 22/10/2026 | Khiêm | `Attachment.FileUrl` | Lưu khóa lưu trữ, file ở ổ đĩa (dev), tải qua API có kiểm quyền | Mở |
@@ -40,6 +47,7 @@
 | DEV-KH-10-2 | 24/10/2026 | Khiêm | UC16, UC18 | Bổ nhiệm tổ trưởng / tổ phó hạ người cũ về Công nhân; Quản đốc đổi vai trò được qua bổ nhiệm | Mở |
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
+| DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
 
 ---
 
@@ -505,4 +513,99 @@
   - [ ] Report-3 UC23 / UC34: bổ sung bước Kế toán trả lại, Quản đốc sửa đơn giá và gửi lại; ghi rõ ảnh chứng từ không bắt buộc
   - [ ] `NX-MTD_AI_Context.md` mục 4.1 (4): thêm điều kiện đặt hàng (đơn giá > 0, NCC `ACTIVE`) và luồng RETURNED
   - [ ] `NX-MTD_Database_Giai_thich.md`: `PurchaseOrder.PaymentStatus = RETURNED` → Quản đốc chỉ sửa đơn giá; `Attachment` `PAYMENT_PROOF` không bắt buộc
+- **Trạng thái:** Mở
+
+---
+
+### DEV-KI-00-1 · Minh làm hộ phần BE của Kiều (KI-01, 03, 04, 06, 08, 10, 11)
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) làm hộ Kiều · KI-01, KI-03, KI-04, KI-06, KI-08, KI-10, KI-11 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC25, UC26, UC52, UC55, UC56, UC57, UC22; bảng `Operation`, `PieceRate`, `OperationAssignment`, `OutputRecord`, `DefectRecord`, `QcBatch`; `be/Application/Services/Production/`, `IOutputQueryService`
+- **Tài liệu gốc ghi:** Bảng phân công: các task trên do Kiều làm (Phase 1–2); MI-10 và MI-17 của Minh phụ thuộc KI-10.
+- **Code đang làm:** Kiều chưa đẩy nhánh nào lên GitHub, Minh (có Claude) làm phần **BE** của các task cấp dữ liệu cho lương tạm tính, KPI, tiến độ: công đoạn + đơn giá có duyệt, phân công, sản lượng cuối ca, QC, hàng hỏng, `IOutputQueryService`, hạn sửa (KI-11). Đăng ký ở `ProductionModule` (một dòng trong `Program.cs`). **Chưa làm:** toàn bộ FE của Kiều (KI-02, KI-05, FE của KI-06/KI-08, KI-14), KI-07 (nối trần với BTP thật), KI-09 (đơn cắt bù), test của Kiều (KI-18/19).
+- **Lý do:** Chặn tiến độ MI-10 / MI-17 và các luồng UC21, UC44 của người khác nếu không có dữ liệu sản lượng; được chủ dự án yêu cầu coi các task liên quan là của Minh.
+- **Ảnh hưởng người khác:** Kiều: khi bắt đầu code phải đọc phần đã có, không viết lại; phần FE còn nguyên của Kiều. Thái (TH-11): lấy số QC đạt qua `IOutputQueryService.GetQcFinishedByOrderLineAsync`. Khiêm (KH-16): tiến độ đơn lấy qua `GetOrderLineProgressAsync`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Bảng phân công: ghi rõ Minh đã làm hộ BE các task KI-01/03/04/06/08/10/11
+- **Trạng thái:** Mở
+
+### DEV-KI-04-1 · Trần sản lượng cấp tổ khi công nhân chưa có phiếu giao BTP
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) làm hộ Kiều · KI-04 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC55, MSG16, `vw_WorkerOutputCap`, `vw_TeamPieceHolding`, `WorkerPieceMovement` (TH-19, Thái)
+- **Tài liệu gốc ghi:** `NX-MTD_AI_Context.md` mục 4.3 (5): "Trần theo `vw_WorkerOutputCap` (MSG16)". Sheet KI-04: "trần ≤ BTP đã nhận (tạm dùng tồn seed)".
+- **Code đang làm:** `OutputService` áp **hai** trần: (1) cấp tổ — Σ sản lượng của một công đoạn trên một dòng đơn ≤ BTP tổ đã nhận (`vw_TeamPieceHolding.ReceivedFromWarehouse`); (2) cấp công nhân — chỉ khi công nhân đã có phiếu giao BTP (`vw_WorkerOutputCap` có dòng): ≤ số BTP công nhân đang giữ. Tổ chưa nhận BTP nào thì chặn mọi sản lượng của dòng đơn đó.
+- **Lý do:** Luồng giao / thu hồi BTP với công nhân (`WorkerPieceMovement`, TH-19) là Phase 3 nên `vw_WorkerOutputCap` đang rỗng; chỉ dùng trần công nhân thì không có trần nào, còn bỏ qua trần thì sản lượng vượt BTP thật.
+- **Ảnh hưởng người khác:** Thái (TH-19): khi có phiếu giao BTP, trần theo công nhân tự có hiệu lực, không phải sửa thêm ở đây. Thái (TH-08): tổ chỉ nhập được sản lượng sau khi Thủ kho cấp BTP và tổ xác nhận.
+- **Cần sửa trong tài liệu:**
+  - [ ] `NX-MTD_AI_Context.md` mục 4.3 (5): ghi thêm trần cấp tổ khi công nhân chưa có phiếu giao
+- **Trạng thái:** Mở (đổi `Bỏ` khi TH-19 xong và muốn chỉ dùng trần công nhân)
+
+### DEV-KI-06-1 · "Hàng trên chuyền" của QC và hạn sửa theo ca
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) làm hộ Kiều · KI-06 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC57, MSG19, `QcBatch.EditDeadline`, `SystemSetting` (`LUNCH_START_TIME`, `WORK_END_TIME`)
+- **Tài liệu gốc ghi:** AI Context 4.3 (7): "trần ≤ hàng trên chuyền (MSG19)"; "`QcBatch` đến hết ca". Không định nghĩa "hàng trên chuyền" và "hết ca".
+- **Code đang làm:** Hàng trên chuyền (theo tổ + dòng đơn) = BTP tổ đã nhận − Σ số QC đạt − Σ Scrap chưa hủy (Rework không trừ vì sẽ được sửa rồi QC lại). Hết ca: sáng = đầu nghỉ trưa (`LUNCH_START_TIME`, mặc định 11:30), chiều = hết giờ làm (`WORK_END_TIME`, mặc định 16:30), tăng ca = hết ngày làm việc đó.
+- **Lý do:** Cần một định nghĩa nhất quán với `vw_OrderLineProgress`; giờ ca đặt trong `SystemSetting` như quy tắc 0.8 (không hard-code).
+- **Ảnh hưởng người khác:** Thái (TH-11): tổng bàn giao thành phẩm ≤ số QC đạt, lấy qua `IOutputQueryService`.
+- **Cần sửa trong tài liệu:**
+  - [ ] `NX-MTD_AI_Context.md` mục 4.3 (7): định nghĩa "hàng trên chuyền" và giờ hết ca
+- **Trạng thái:** Mở
+
+### DEV-KI-08-1 · Phiếu Scrap chưa sinh đơn cắt bù
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) làm hộ Kiều · KI-08, KI-09 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC56, UC07 (cắt bù), bảng `Request` (`REPLACEMENT_CUTTING`), `DefectRecord.RequestId`
+- **Tài liệu gốc ghi:** AI Context 4.3 (6): Scrap "sinh yêu cầu cắt bù `REPLACEMENT_CUTTING` → Quản đốc → lệnh cắt bù".
+- **Code đang làm:** `DefectService` ghi phiếu Rework / Scrap, khóa `ScrapUnitRate`, báo công nhân, cho hủy / phản hồi; **không** tạo `Request` cắt bù (KI-09 chưa làm theo thỏa thuận). Tổ trưởng muốn cắt bù hiện tạo đơn tay ở màn Đơn từ.
+- **Lý do:** KI-09 đụng khung đơn từ (Khiêm) và lệnh cắt bù (Thái, TH-10); làm sau để thống nhất `IRequestTypeHandler` cho `REPLACEMENT_CUTTING` với họ.
+- **Ảnh hưởng người khác:** Thái (TH-10: lệnh cắt bù có `SourceRequestId`), Khiêm (`RequestTypePolicies`).
+- **Cần sửa trong tài liệu:** không (tạm thời); đổi `Bỏ` khi KI-09 xong.
+- **Trạng thái:** Mở
+
+### DEV-KI-11-1 · Cửa sổ sửa (UC22) làm theo từng thao tác, không có màn riêng
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) làm hộ Kiều · KI-11 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC22, GBR-09, MSG20, `OutputRecord`, `DefectRecord`, `QcBatch`, `AuditLog`
+- **Tài liệu gốc ghi:** AI Context 4.3 (9): sửa đến hết ngày làm việc kế tiếp (tổ trưởng), hết ca (QA/QC); sau hạn chỉ Quản đốc sửa, bắt buộc lý do, ghi `AuditLog` (UC22).
+- **Code đang làm:** Cùng một quy tắc (`ProductionGuard.CheckEditWindow`) áp trong từng service: trong hạn người nhập sửa; quá hạn → tổ trưởng / QA-QC nhận lỗi 403 `PRODUCTION_EDIT_DEADLINE_PASSED` (MSG20); Quản đốc sửa được kèm lý do bắt buộc (400 nếu thiếu), mọi thay đổi ghi `AuditLog` (cả lý do). Quản đốc dùng các endpoint `manager/output-records`, `manager/qc-batches`, `manager/defect-records` (sửa sản lượng, sửa / xóa đợt QC, hủy phiếu lỗi). Hạn của sản lượng / phiếu lỗi tính bằng cách port `fn_NextWorkingDayEnd` sang C# (bỏ Chủ nhật).
+- **Lý do:** Quy tắc chung nên đặt một chỗ; không làm màn "sửa quá hạn" riêng vì các màn nhập của Kiều (FE) chưa có.
+- **Ảnh hưởng người khác:** Kiều (FE): màn nhập cần hiển thị `canEdit` / `editDeadline` server trả về; màn của Quản đốc cần ô lý do khi `canEdit` do quá hạn.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC22: ghi cách Quản đốc sửa sau hạn theo từng loại chứng từ
+- **Trạng thái:** Mở
+
+### DEV-MI-10-1 · Chi tiết lương tạm tính theo ngày đọc trực tiếp OutputRecord / DefectRecord
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) · MI-10 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC59, `IOutputQueryService`, `OutputRecord`, `DefectRecord`
+- **Tài liệu gốc ghi:** Sheet MI-10: "SL × đơn giá khóa − scrap, chỉ tổ may". `IOutputQueryService` (KI-10) là nguồn dùng chung cho UC59.
+- **Code đang làm:** Tổng theo ngày lấy từ `IOutputQueryService.GetWorkerDailyPayAsync` (`vw_WorkerDailyEstimatedPay`). Màn mở rộng một ngày (từng công đoạn / ca / từng dòng Scrap) vẫn đọc thẳng `OutputRecord` / `DefectRecord` của chính công nhân trong `WorkerPayService.GetMyDayDetailAsync` vì view không có mức chi tiết đó. Người không phải công nhân khoán sản phẩm nhận danh sách rỗng (view đã lọc `PIECE_RATE`).
+- **Lý do:** Không đổi view / schema; chi tiết theo công đoạn là phần riêng của màn này.
+- **Ảnh hưởng người khác:** Kiều: nếu đổi cột `OutputRecord` / `DefectRecord` thì cập nhật hàm này.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-MI-17-1 · Màn KPI: % đạt tính trên cả kỳ; Admin xem thêm
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) · MI-17 · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC19 (KPI tổ may), UC21, `KpiTarget`, `vw_KpiDailyResult`, phân quyền `admin/kpi-targets`
+- **Tài liệu gốc ghi:** Sheet MI-17: "Chỉ tiêu vs thực tế theo tổ (đọc IOutputQueryService)", vai trò "Quản đốc, Admin". Không nói "thực tế" tính trên khoảng nào.
+- **Code đang làm:** Thực tế = Σ hàng hoàn thiện của cả kỳ (`vw_KpiDailyResult`, đọc qua `IOutputQueryService.GetKpiFinishedTotalsAsync`); % đạt = thực tế / chỉ tiêu cả kỳ × 100 (không so với số ngày đã trôi qua; theo từng ngày xem ở bảng MI-18). Admin chỉ **xem** (`admin/kpi-targets`), không lập / sửa / hủy.
+- **Lý do:** Cùng cách `KpiService.CloseExpiredAsync` đã dùng để suy ra Đạt / Không đạt; tránh hai định nghĩa "đạt" khác nhau.
+- **Ảnh hưởng người khác:** Khiêm (KH-16 dashboard UC21): dùng chung `IOutputQueryService`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC19 / UC21: ghi định nghĩa thực tế và % đạt của màn KPI, và Admin chỉ xem
+- **Trạng thái:** Mở
+
+### DEV-MI-09-7 · Đọc file Excel thật: bỏ hình và công thức trước khi nạp
+
+- **Ngày / Người / Task / PR:** 21/10/2026 · Minh (AI) · MI-09 (cũng áp cho MI-12, MI-01) · (chưa có PR, đang ở working tree)
+- **Ảnh hưởng tới:** UC31 (nhập bảng lương), UC12 (nhập chi phí tháng), UC29 (nhập chấm công dự phòng), `ClosedXmlPayrollParser`, `ClosedXmlMonthlyCostParser`, `ClosedXmlAttendanceParser`
+- **Tài liệu gốc ghi:** Không nói gì về chất lượng file Excel đầu vào.
+- **Code đang làm:** Thử trên 40 file lương thật (`LUONG 2026`): phần lớn file `LƯƠNG THÁNG N.xlsx` làm ClosedXML 0.102.3 ném lỗi ngay khi mở (logo trỏ ảnh `Target="NULL"` → `ArgumentOutOfRangeException`) và khi đọc ô (công thức tham chiếu file khác → `NotImplementedException`). `XlsxWorkbookLoader` sửa gói trong bộ nhớ trước khi nạp: bỏ hình / ghi chú của sheet, bỏ công thức và giữ giá trị Excel đã lưu sẵn. Ô công thức chưa từng được Excel tính sẽ đọc ra trống. Ngoài ra sheet có cột "SLĐ" nhưng không có "Thực lĩnh" (vd bảng công "Công AB") bị bỏ qua, chỉ báo "sai mẫu" khi không còn sheet lương nào.
+- **Lý do:** Hệ thống không tính lương (GBR-12), chỉ đọc số đã tính; giữ nguyên file gốc cho giám đốc ở `IPayrollFileStore`.
+- **Ảnh hưởng người khác:** Khiêm / Thái: nếu thêm importer Excel mới nên dùng `XlsxWorkbookLoader.Open`.
+- **Cần sửa trong tài liệu:** không.
 - **Trạng thái:** Mở
