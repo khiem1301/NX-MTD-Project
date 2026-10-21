@@ -1,4 +1,4 @@
-namespace NX_MTD.Domain.Constants;
+﻿namespace NX_MTD.Domain.Constants;
 
 public static class Roles
 {
@@ -14,6 +14,32 @@ public static class Roles
 
     /// <summary>Tổ phó có cùng quyền tổ trưởng trong tổ của mình.</summary>
     public const string TeamLeaderOrDeputy = TeamLeader + "," + TeamDeputy;
+
+    /// <summary>Người xử lý đơn từ (D12).</summary>
+    public const string Handlers = Admin + "," + Manager + "," + Accountant + "," + WarehouseKeeper;
+    public const string AdminOrManager = Admin + "," + Manager;
+    /// <summary>Mọi vai trò trừ Công nhân: dùng cho API tra cứu dùng chung.</summary>
+    public const string StaffExceptWorker = Admin + "," + Manager + "," + Accountant + "," + WarehouseKeeper + ","
+        + TeamLeader + "," + TeamDeputy + "," + QaQc + "," + Electrician;
+
+    public static bool IsTeamRole(string role) => role is TeamLeader or TeamDeputy;
+
+    public static string ToRoleCode(string role) => role switch
+    {
+        Admin => RoleCodes.Admin,
+        Manager => RoleCodes.Manager,
+        Accountant => RoleCodes.Accountant,
+        WarehouseKeeper => RoleCodes.WarehouseKeeper,
+        TeamLeader => RoleCodes.TeamLeader,
+        TeamDeputy => RoleCodes.TeamDeputy,
+        QaQc => RoleCodes.QaQc,
+        Electrician => RoleCodes.Electrician,
+        Worker => RoleCodes.Worker,
+        _ => throw new ArgumentOutOfRangeException(nameof(role), role, "Unknown role")
+    };
+
+    public static bool IsKnown(string role) =>
+        role is Admin or Manager or Accountant or WarehouseKeeper or TeamLeader or TeamDeputy or QaQc or Electrician or Worker;
 
     public static string FromRoleCode(string roleCode) => roleCode switch
     {

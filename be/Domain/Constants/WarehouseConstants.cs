@@ -1,4 +1,4 @@
-namespace NX_MTD.Domain.Constants;
+﻿namespace NX_MTD.Domain.Constants;
 
 /// <summary>Giá trị khớp CHECK constraint trong DB. Không tự đặt chuỗi khác.</summary>
 public static class WarehouseTypes
@@ -133,6 +133,7 @@ public static class RequestStatuses
 public static class SettingKeys
 {
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
+    public const string RequestMaxPhotos = "REQUEST_MAX_PHOTOS";
 }
 
 /// <summary>Tiền tố mã phiếu: TIỀN TỐ-yyyyMMdd-STT.</summary>

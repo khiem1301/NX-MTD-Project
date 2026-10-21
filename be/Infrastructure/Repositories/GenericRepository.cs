@@ -34,5 +34,8 @@ namespace NX_MTD.Infrastructure.Repositories
         public void Remove(T entity) => _dbSet.Remove(entity);
 
         public void RemoveRange(IEnumerable<T> entities) => _dbSet.RemoveRange(entities);
+
+        public void SetOriginalRowVersion(T entity, byte[] rowVer) =>
+            _context.Entry(entity).Property("RowVer").OriginalValue = rowVer;
     }
 }

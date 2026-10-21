@@ -1,5 +1,6 @@
 using NX_MTD.API.Extensions;
 using NX_MTD.API.Middleware;
+using NX_MTD.API.Modules;
 using NX_MTD.Application;
 using NX_MTD.Infrastructure;
 using NX_MTD.Infrastructure.Data;
@@ -12,6 +13,7 @@ builder.Host.UseSerilog((_, lc) => lc.MinimumLevel.Information().WriteTo.Console
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication();
 builder.Services.AddApiCore(builder.Configuration);
+builder.Services.AddSharedModule(builder.Configuration);
 
 // ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ----
 // builder.Services.AddProductionModule(builder.Configuration);   // Kiều
