@@ -25,7 +25,6 @@ const production = () => import('@/features/production');
 // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều): mỗi trang lazy load, chỉ mở cho role được dùng.
 const productionRoutes = [
   { path: PRODUCTION_ROUTES.operations, roles: [ROLES.Accountant], page: async () => (await production()).OperationsPage },
-  { path: PRODUCTION_ROUTES.pieceRates, roles: [ROLES.Accountant], page: async () => (await production()).PieceRatesPage },
   { path: PRODUCTION_ROUTES.adminPieceRates, roles: [Admin], page: async () => (await production()).AdminPieceRatesPage },
   {
     path: PRODUCTION_ROUTES.assignments,

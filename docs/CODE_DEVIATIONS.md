@@ -50,6 +50,7 @@
 | DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
 | DEV-KI-03-2 | 22/10/2026 | Minh (AI) | UC52/UC56, `OperationAssignmentsController` | Thêm endpoint `GET team-leader/operation-assignments/operations?orderId=` trả công đoạn may đang dùng của các mã hàng trong đơn (không kèm đơn giá) để tổ trưởng chọn khi phân công và ghi hàng hỏng; sheet KI-03 / KI-08 không nêu cách lấy danh sách này | Mở |
 | DEV-KI-01-2 | 22/10/2026 | Minh (AI) | UC25, `Operation`, `ClosedXmlOperationParser` | Công đoạn của mã hàng nhập từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC"), thay cho thêm tay từng công đoạn: mã tự sinh từ STT (OP + STT), bỏ dòng "Dự phòng", không đọc cột TIỀN / TGQĐ, không có cột công đoạn cuối nên chọn khi nhập | Mở |
+| DEV-KI-01-3 | 22/10/2026 | Minh (AI) | UC25/UC26, `OperationDto.NextRate`, màn "Công đoạn và đơn giá" | Gộp màn "Công đoạn may" và "Đơn giá công đoạn" của Kế toán làm một: đơn giá đặt ngay trên từng công đoạn, `OperationDto` thêm `NextRate` (đơn giá mới nhất chưa thành hiện hành); màn riêng chỉ còn lại cho Admin duyệt | Mở |
 
 ---
 
@@ -633,4 +634,16 @@
 - **Ảnh hưởng người khác:** Kiều: màn KI-01 FE dùng cách nhập này; nút thêm công đoạn bằng tay đã bỏ khỏi màn (API `POST accountant/operations` vẫn còn).
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC25: mô tả nhập công đoạn từ Excel (cột đọc, quy tắc mã công đoạn)
+- **Trạng thái:** Mở
+
+### DEV-KI-01-3 · Gộp màn công đoạn và đơn giá công đoạn của Kế toán
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-01 · (chưa có PR)
+- **Ảnh hưởng tới:** UC25, UC26, `OperationDto`, `OperationService.ListAsync`, FE `features/production`
+- **Tài liệu gốc ghi:** Hai chức năng riêng: lập công đoạn (UC25) và lập đơn giá có duyệt (UC26).
+- **Code đang làm:** Theo yêu cầu của Minh (22/10/2026) Kế toán dùng một màn "Công đoạn và đơn giá": nhập công đoạn từ Excel, đặt đơn giá ngay trên từng công đoạn (sửa bản Nháp / bị từ chối, hoặc lập bản mới theo ngày hiệu lực), gửi duyệt, mở rộng dòng để xem lịch sử đơn giá. `OperationDto` thêm `NextRate` = đơn giá mới nhất (theo ngày hiệu lực) nếu chưa là đơn giá hiện hành (Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực). `ListAsync` lấy đơn giá của cả mã hàng bằng một truy vấn thay vì mỗi công đoạn một truy vấn. Quy trình duyệt không đổi: Admin vẫn duyệt / từ chối ở màn riêng "Duyệt đơn giá công đoạn"; API `accountant/piece-rates` giữ nguyên.
+- **Lý do:** Công đoạn và đơn giá luôn đi cùng nhau; tách hai màn buộc Kế toán chọn lại mã hàng và công đoạn.
+- **Ảnh hưởng người khác:** Kiều: màn FE KI-01 là màn gộp này; `OperationService` không còn phụ thuộc `IPieceRateService`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25 / UC26: mô tả một màn chung cho công đoạn và đơn giá
 - **Trạng thái:** Mở

@@ -6,28 +6,38 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useProductLookup } from '@/hooks/useOrderLookups';
-import { formatCurrency, formatQty } from '@/utils/format';
+import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { OperationFormModal } from '../components/OperationFormModal';
 import { OperationImportModal } from '../components/OperationImportModal';
+import { PieceRateFormModal } from '../components/PieceRateFormModal';
+import { PieceRateHistory } from '../components/PieceRateHistory';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
-import { useOperations, useToggleOperation } from '../hooks/useProduction';
+import { useOperations, useSubmitPieceRate, useToggleOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
+import { editableRate } from '../utils';
 
 const text = PRODUCTION_TEXT.operations;
+const rateText = PRODUCTION_TEXT.pieceRates;
+
+/** Đặt / sửa đơn giá được khi công đoạn còn dùng và chưa có bản nào đang chờ Admin duyệt. */
+const canSetRate = (operation: Operation) =>
+  operation.status === 'Active' && operation.nextRate?.status !== 'PendingApproval';
 
 /**
- * UC25 (KI-01) — Kế toán nhập công đoạn của mã hàng từ file Excel quy trình công nghệ. Công đoạn đã nhập vẫn sửa được
- * từng dòng (ví dụ đánh dấu công đoạn cuối) hoặc ngừng dùng; đơn giá lập ở màn "Đơn giá công đoạn".
+ * UC25 / UC26 (KI-01) — Kế toán nhập công đoạn của mã hàng từ file Excel quy trình công nghệ rồi đặt đơn giá ngay trên
+ * từng công đoạn (có ngày hiệu lực, gửi Admin duyệt). Mở rộng một dòng để xem lịch sử đơn giá của công đoạn đó.
  */
 export function OperationsPage() {
   const [productId, setProductId] = useState<number | null>(null);
   const [showDiscontinued, setShowDiscontinued] = useState(false);
   const [editing, setEditing] = useState<Operation | null>(null);
+  const [rating, setRating] = useState<Operation | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const operations = useOperations(productId, showDiscontinued);
   const products = useProductLookup();
   const toggle = useToggleOperation();
+  const submit = useSubmitPieceRate();
 
   const product = products.data?.items.find((p) => p.productId === productId);
   const productLabel = product ? `${product.productCode} - ${product.productName}` : '';
@@ -45,7 +55,6 @@ export function OperationsPage() {
       align: 'right',
       render: (v: number | null) => (v === null ? '—' : formatQty(v)),
     },
-    { title: text.columns.teamType, dataIndex: 'teamType', render: (v: string) => text.teamType[v] ?? v },
     { title: text.columns.isFinal, dataIndex: 'isFinalStep', render: (v: boolean) => (v ? <Tag color="blue">Cuối</Tag> : '—') },
     {
       title: text.columns.rate,
@@ -53,15 +62,41 @@ export function OperationsPage() {
       align: 'right',
       render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
     },
+    {
+      title: text.columns.nextRate,
+      key: 'nextRate',
+      render: (_, row) =>
+        row.nextRate ? (
+          <Space direction="vertical" size={0}>
+            <span>
+              {formatCurrency(row.nextRate.rate)} · từ {formatDate(row.nextRate.effectiveDate)}
+            </span>
+            <StatusTag status={row.nextRate.status} labels={rateText.status} />
+            {row.nextRate.rejectReason && <Typography.Text type="danger">{row.nextRate.rejectReason}</Typography.Text>}
+          </Space>
+        ) : (
+          '—'
+        ),
+    },
     { title: text.columns.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={text.status} /> },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) => (
-        <Space size={0}>
+        <Space size={0} wrap>
           <Button type="link" onClick={() => setEditing(row)}>
             {MESSAGES.common.edit}
           </Button>
+          {canSetRate(row) && (
+            <Button type="link" onClick={() => setRating(row)}>
+              {editableRate(row) ? rateText.editRate : rateText.setRate}
+            </Button>
+          )}
+          {row.nextRate?.status === 'Draft' && (
+            <Popconfirm title={rateText.submitConfirm} onConfirm={() => submit.mutate(row.nextRate!.pieceRateId)}>
+              <Button type="link">{rateText.submit}</Button>
+            </Popconfirm>
+          )}
           {row.status === 'Active' ? (
             <Popconfirm title={text.discontinueConfirm} onConfirm={() => toggle.mutate({ id: row.operationId, discontinue: true })}>
               <Button type="link" danger>
@@ -110,6 +145,7 @@ export function OperationsPage() {
         locale={{ emptyText: productId === null ? PRODUCTION_TEXT.selectProduct : MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={false}
+        expandable={{ expandedRowRender: (row) => <PieceRateHistory operationId={row.operationId} />, rowExpandable: () => true }}
       />
 
       {productId !== null && (
@@ -120,6 +156,7 @@ export function OperationsPage() {
             operation={editing}
             onClose={() => setEditing(null)}
           />
+          <PieceRateFormModal operation={rating} onClose={() => setRating(null)} />
           {importOpen && (
             <OperationImportModal
               open

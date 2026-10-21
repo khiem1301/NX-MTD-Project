@@ -13,6 +13,15 @@ export type ShiftValue = ShiftCode | 'MORNING' | 'AFTERNOON' | 'OVERTIME';
 
 export type OperationStatus = 'Active' | 'Discontinued';
 
+/** Đơn giá mới nhất của công đoạn nếu chưa thành đơn giá hiện hành (Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực). */
+export type OperationRate = {
+  pieceRateId: number;
+  rate: number;
+  effectiveDate: string;
+  status: PieceRateStatus;
+  rejectReason: string | null;
+};
+
 export type Operation = {
   operationId: number;
   productId: number;
@@ -26,6 +35,7 @@ export type Operation = {
   isFinalStep: boolean;
   status: OperationStatus;
   currentRate: number | null;
+  nextRate: OperationRate | null;
 };
 
 /** Dòng xem trước khi nhập công đoạn từ Excel. Action: dòng nào thêm mới / cập nhật / không đổi / lỗi. */

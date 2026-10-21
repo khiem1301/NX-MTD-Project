@@ -11,15 +11,13 @@ namespace NX_MTD.Application.Services.Production;
 public sealed class OperationService : IOperationService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IPieceRateService _rates;
     private readonly IAuditLogService _audit;
     private readonly IClock _clock;
     private readonly IExcelOperationParser _excel;
 
-    public OperationService(IUnitOfWork uow, IPieceRateService rates, IAuditLogService audit, IClock clock,
-        IExcelOperationParser excel)
+    public OperationService(IUnitOfWork uow, IAuditLogService audit, IClock clock, IExcelOperationParser excel)
     {
-        _uow = uow; _rates = rates; _audit = audit; _clock = clock; _excel = excel;
+        _uow = uow; _audit = audit; _clock = clock; _excel = excel;
     }
 
     private IQueryable<Operation> Operations => _uow.Repository<Operation>().Query();
@@ -31,18 +29,37 @@ public sealed class OperationService : IOperationService
             .OrderBy(o => o.StationSequence).ThenBy(o => o.OperationCode)
             .Select(o => new OperationDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
                 o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec, o.TeamType, o.IsFinalStep,
-                o.Status, null))
+                o.Status, null, null))
             .ToListAsync(ct);
 
+        // Một truy vấn lấy mọi đơn giá của mã hàng, rồi chọn đơn giá hiện hành / đơn giá sắp tới trong bộ nhớ.
         var today = _clock.Today;
+        var rates = (await _uow.Repository<PieceRate>().Query().AsNoTracking()
+                .Where(r => r.Operation.ProductId == productId)
+                .Select(r => new { r.PieceRateId, r.OperationId, r.Rate, r.EffectiveDate, r.Status, r.RejectReason })
+                .ToListAsync(ct))
+            .GroupBy(r => r.OperationId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var result = new List<OperationDto>(items.Count);
         foreach (var item in items)
         {
-            var rate = await _rates.FindEffectiveAsync(item.OperationId, today, ct);
+            rates.TryGetValue(item.OperationId, out var own);
+            own ??= [];
+
+            // Giống FindEffectiveAsync: đơn giá đã duyệt có ngày hiệu lực lớn nhất không quá hôm nay.
+            var current = own.Where(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
+                .OrderByDescending(r => r.EffectiveDate).FirstOrDefault();
+            var latest = own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
+            var next = latest is not null && latest.PieceRateId != current?.PieceRateId
+                ? new OperationRateDto(latest.PieceRateId, latest.Rate, latest.EffectiveDate,
+                    CodeText.ToPascal(latest.Status), latest.RejectReason)
+                : null;
+
             result.Add(item with
             {
                 TeamType = CodeText.ToPascal(item.TeamType), Status = CodeText.ToPascal(item.Status),
-                CurrentRate = rate?.Rate,
+                CurrentRate = current?.Rate, NextRate = next,
             });
         }
         return Result<IReadOnlyList<OperationDto>>.Success(result);

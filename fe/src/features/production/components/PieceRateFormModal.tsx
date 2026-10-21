@@ -1,56 +1,47 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, InputNumber, Modal, Select } from 'antd';
+import { DatePicker, Descriptions, Form, InputNumber, Modal } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { toApiDate } from '@/utils/format';
+import { formatCurrency, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { useOperations, useSavePieceRate } from '../hooks/useProduction';
-import type { PieceRate } from '../types';
-import { ProductSelect } from './ProductSelect';
+import { useSavePieceRate } from '../hooks/useProduction';
+import type { Operation } from '../types';
+import { editableRate } from '../utils';
 
-type Props = { open: boolean; pieceRate: PieceRate | null; onClose: () => void };
+type Props = { operation: Operation | null; onClose: () => void };
 
-type FormValues = { productId: number; operationId: number; rate: number; effectiveDate: Dayjs };
+type FormValues = { rate: number; effectiveDate: Dayjs };
 
 const text = PRODUCTION_TEXT.pieceRates;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
 
-/** UC25 — Kế toán lập / sửa đơn giá công đoạn (Nháp). Sửa bản đã bị từ chối thì quay về Nháp, gửi duyệt lại. */
-export function PieceRateFormModal({ open, pieceRate, onClose }: Props) {
+/**
+ * UC25 — Kế toán đặt đơn giá cho một công đoạn: sửa bản Nháp / bị từ chối nếu có, không thì lập bản mới theo ngày hiệu lực.
+ * Đơn giá chỉ có hiệu lực khi Admin duyệt (UC26).
+ */
+export function PieceRateFormModal({ operation, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
-  const save = useSavePieceRate(pieceRate?.pieceRateId ?? null);
-  const productId = Form.useWatch('productId', form) ?? null;
-  const operations = useOperations(productId);
-  const editing = pieceRate !== null;
+  const editing = operation ? editableRate(operation) : null;
+  const save = useSavePieceRate(editing?.pieceRateId ?? null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!operation) return;
     form.resetFields();
-    if (pieceRate) {
-      form.setFieldsValue({
-        productId: pieceRate.productId,
-        operationId: pieceRate.operationId,
-        rate: pieceRate.rate,
-        effectiveDate: dayjs(pieceRate.effectiveDate),
-      });
-    }
-  }, [open, pieceRate, form]);
-
-  const operationOptions = (operations.data ?? [])
-    .filter((o) => o.status === 'Active')
-    .map((o) => ({ value: o.operationId, label: `${o.operationCode} - ${o.operationName}` }));
+    if (editing) form.setFieldsValue({ rate: editing.rate, effectiveDate: dayjs(editing.effectiveDate) });
+  }, [operation, editing, form]);
 
   const handleFinish = (values: FormValues) => {
+    if (!operation) return;
     save.mutate(
-      { operationId: values.operationId, rate: values.rate, effectiveDate: toApiDate(values.effectiveDate) },
+      { operationId: operation.operationId, rate: values.rate, effectiveDate: toApiDate(values.effectiveDate) },
       { onSuccess: onClose },
     );
   };
 
   return (
     <Modal
-      open={open}
-      width={520}
+      open={operation !== null}
+      width={480}
       title={editing ? text.edit : text.add}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -59,19 +50,15 @@ export function PieceRateFormModal({ open, pieceRate, onClose }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
+      {operation && (
+        <Descriptions size="small" column={1} style={{ marginBottom: 16 }}>
+          <Descriptions.Item label={text.form.operation}>{`${operation.operationCode} - ${operation.operationName}`}</Descriptions.Item>
+          <Descriptions.Item label={text.form.currentRate}>
+            {operation.currentRate === null ? '—' : formatCurrency(operation.currentRate)}
+          </Descriptions.Item>
+        </Descriptions>
+      )}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Form.Item name="productId" label={PRODUCTION_TEXT.selectProduct} rules={required}>
-          <ProductSelect width={440} disabled={editing} onChange={() => form.setFieldValue('operationId', undefined)} />
-        </Form.Item>
-        <Form.Item name="operationId" label={text.form.operation} rules={required}>
-          <Select
-            showSearch
-            optionFilterProp="label"
-            options={operationOptions}
-            loading={operations.isLoading}
-            disabled={editing || productId === null}
-          />
-        </Form.Item>
         <Form.Item name="rate" label={text.form.rate} rules={[...required, { type: 'number', min: 0, message: text.form.rateMin }]}>
           <InputNumber min={0} precision={2} style={{ width: 220 }} />
         </Form.Item>

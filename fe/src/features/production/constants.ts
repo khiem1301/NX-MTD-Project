@@ -14,8 +14,9 @@ export const PRODUCTION_TEXT = {
   selectFirst: 'Chọn đơn hàng trước.',
 
   operations: {
-    title: 'Công đoạn may',
-    subtitle: 'Công đoạn của từng mã hàng. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
+    title: 'Công đoạn và đơn giá',
+    subtitle:
+      'Nhập công đoạn của mã hàng từ Excel rồi đặt đơn giá từng công đoạn (có ngày hiệu lực), gửi Admin duyệt. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
     edit: 'Sửa công đoạn',
     importExcel: 'Nhập từ Excel',
     noFinalStep: 'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
@@ -57,6 +58,7 @@ export const PRODUCTION_TEXT = {
       teamType: 'Loại tổ',
       isFinal: 'Công đoạn cuối',
       rate: 'Đơn giá hiện hành',
+      nextRate: 'Đơn giá mới (chưa hiệu lực)',
       status: 'Trạng thái',
     },
     form: {
@@ -75,11 +77,13 @@ export const PRODUCTION_TEXT = {
   },
 
   pieceRates: {
-    accountantTitle: 'Đơn giá công đoạn',
-    accountantSubtitle: 'Lập đơn giá theo ngày hiệu lực rồi gửi Admin duyệt. Chỉ sửa được khi Nháp hoặc bị từ chối.',
     adminTitle: 'Duyệt đơn giá công đoạn',
     adminSubtitle: 'Đơn giá chờ duyệt. Sản lượng chỉ nhập được khi công đoạn có đơn giá đã duyệt.',
-    add: 'Thêm đơn giá',
+    add: 'Đặt đơn giá',
+    history: 'Lịch sử đơn giá',
+    noHistory: 'Công đoạn này chưa có đơn giá nào.',
+    setRate: 'Đặt đơn giá',
+    editRate: 'Sửa đơn giá',
     edit: 'Sửa đơn giá',
     submit: 'Gửi duyệt',
     submitConfirm: 'Gửi đơn giá này cho Admin duyệt?',
@@ -102,6 +106,7 @@ export const PRODUCTION_TEXT = {
       rate: 'Đơn giá (đồng/sản phẩm)',
       effectiveDate: 'Ngày hiệu lực',
       rateMin: 'Đơn giá phải lớn hơn hoặc bằng 0.',
+      currentRate: 'Đơn giá hiện hành',
     },
     done: { submitted: 'Đã gửi duyệt.', approved: 'Đã duyệt đơn giá.', rejected: 'Đã từ chối đơn giá.' },
     status: {

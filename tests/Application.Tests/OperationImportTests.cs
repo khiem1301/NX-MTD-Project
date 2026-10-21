@@ -31,8 +31,7 @@ public class OperationImportTests : ProductionTestBase
                 _operations.Add(op);
             }
         });
-        var rates = Substitute.For<IPieceRateService>();
-        _sut = new OperationService(Uow, rates, Audit, Clock, new ClosedXmlOperationParser());
+        _sut = new OperationService(Uow, Audit, Clock, new ClosedXmlOperationParser());
     }
 
     /// <summary>Mô phỏng sheet quy trình: tiêu đề ở dòng 6, có dòng nhóm, chỗ trống đã đánh số và dòng tổng.</summary>

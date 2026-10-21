@@ -4,10 +4,16 @@ namespace NX_MTD.Application.DTOs;
 
 // ================= KI-01: công đoạn + đơn giá (UC25, UC26) =================
 
+/// <summary>
+/// CurrentRate = đơn giá đã duyệt đang hiệu lực hôm nay. NextRate = đơn giá mới nhất (theo ngày hiệu lực) nếu nó chưa
+/// thành đơn giá hiện hành: Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực; null nếu không có.
+/// </summary>
 public sealed record OperationDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, byte? SkillLevel, decimal? StandardTimeSec, string TeamType, bool IsFinalStep,
-    string Status, decimal? CurrentRate);
+    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null);
+
+public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly EffectiveDate, string Status, string? RejectReason);
 
 /// <summary>TeamType nhận PascalCase "Sewing" | "Cutting" (mặc định Sewing).</summary>
 public sealed record SaveOperationDto(

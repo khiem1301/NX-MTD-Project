@@ -87,7 +87,7 @@ export const useSavePieceRate = (id: number | null) =>
 
 export const useSubmitPieceRate = () =>
   useApiMutation((id: number) => productionApi.submitPieceRate(id), {
-    invalidate: [pieceRatesKey],
+    invalidate: [pieceRatesKey, operationsKey],
     successMessage: PRODUCTION_TEXT.pieceRates.done.submitted,
   });
 

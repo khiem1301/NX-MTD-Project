@@ -8,12 +8,6 @@ const teamRoles = [ROLES.TeamLeader, ROLES.TeamDeputy];
 export const productionMenu: MenuEntry[] = [
   { key: 'operations', label: PRODUCTION_TEXT.operations.title, path: PRODUCTION_ROUTES.operations, roles: [ROLES.Accountant] },
   {
-    key: 'piece-rates',
-    label: PRODUCTION_TEXT.pieceRates.accountantTitle,
-    path: PRODUCTION_ROUTES.pieceRates,
-    roles: [ROLES.Accountant],
-  },
-  {
     key: 'admin-piece-rates',
     label: PRODUCTION_TEXT.pieceRates.adminTitle,
     path: PRODUCTION_ROUTES.adminPieceRates,

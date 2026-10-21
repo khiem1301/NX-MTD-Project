@@ -26,7 +26,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         SetupQueryable(_operations);
         SetupQueryable(_rates);
         _rateService = new PieceRateService(Uow, Audit, Notifier, Clock);
-        _operationService = new OperationService(Uow, _rateService, Audit, Clock, new ClosedXmlOperationParser());
+        _operationService = new OperationService(Uow, Audit, Clock, new ClosedXmlOperationParser());
     }
 
     private Operation AddOperation(int id, string code = "OP10", bool final = false, string status = OperationStatuses.Active,
@@ -162,6 +162,31 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         active[0].Status.Should().Be("Active");
         active[0].TeamType.Should().Be("Sewing");
         all.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task ListOperations_NextRate_IsLatestRateThatIsNotYetCurrent()
+    {
+        AddOperation(1, "OP10", sequence: 1);   // đơn giá mới nhất đã duyệt và đang hiệu lực: không có "đơn giá sắp tới"
+        AddOperation(2, "OP20", sequence: 2);   // có bản Nháp mới hơn đơn giá hiện hành
+        AddOperation(3, "OP30", sequence: 3);   // chưa có đơn giá nào
+        AddOperation(4, "OP40", sequence: 4);   // bản mới nhất bị từ chối
+        AddRate(1, 1, 1_000m, Today.AddDays(-10));
+        AddRate(2, 2, 1_000m, Today.AddDays(-10));
+        AddRate(3, 2, 1_300m, Today.AddDays(20), PieceRateStatuses.Draft);
+        AddRate(4, 4, 800m, Today.AddDays(-10));
+        AddRate(5, 4, 900m, Today.AddDays(3), PieceRateStatuses.Rejected).RejectReason = "Vượt khung";
+
+        var items = (await _operationService.ListAsync(1, false, default)).Data!.ToDictionary(o => o.OperationId);
+
+        items[1].NextRate.Should().BeNull();
+        items[1].CurrentRate.Should().Be(1_000m);
+        items[2].CurrentRate.Should().Be(1_000m);
+        items[2].NextRate.Should().BeEquivalentTo(new OperationRateDto(3, 1_300m, Today.AddDays(20), "Draft", null));
+        items[3].CurrentRate.Should().BeNull();
+        items[3].NextRate.Should().BeNull();
+        items[4].NextRate!.Status.Should().Be("Rejected");
+        items[4].NextRate!.RejectReason.Should().Be("Vượt khung");
     }
 
     // ========== Đơn giá ==========

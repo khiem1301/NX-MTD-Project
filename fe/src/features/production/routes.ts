@@ -1,6 +1,5 @@
 export const PRODUCTION_ROUTES = {
   operations: '/operations',
-  pieceRates: '/piece-rates',
   adminPieceRates: '/admin/piece-rates',
   assignments: '/operation-assignments',
   output: '/output-records',
