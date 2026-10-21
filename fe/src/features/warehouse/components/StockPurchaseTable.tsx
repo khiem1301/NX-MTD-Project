@@ -62,7 +62,7 @@ function PurchaseOrderLines({ id }: { id: number }) {
 }
 
 /** Danh sách đơn mua NVL. stockOnly = true: chỉ đơn dùng chung (kim, chỉ...); undefined: cả đơn gắn đơn hàng. */
-export function StockPurchaseTable({ stockOnly = true, goodsStatus }: { stockOnly?: boolean; goodsStatus?: string }) {
+export function StockPurchaseTable({ stockOnly, goodsStatus }: { stockOnly?: boolean; goodsStatus?: string }) {
   const table = useTableQuery<Record<string, never>>({});
   const orders = usePurchaseOrders({ ...table.params, stockOnly, goodsStatus });
   return (

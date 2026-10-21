@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Space } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Modal, Space } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
+import { useOrderMaterials } from '../hooks/useOrderMaterials';
 import { useCreatePurchaseOrder } from '../hooks/usePurchaseOrders';
 import type { CreatePurchaseOrderPayload } from '../types';
 import { isNewMaterial, newMaterialName } from '../newMaterial';
@@ -20,11 +22,12 @@ type LineValues = {
   orderedQty: number;
   unitPrice: number;
 };
-type FormValues = { note?: string; lines: LineValues[] };
+type FormValues = { orderId?: number; note?: string; lines: LineValues[] };
 
 const EMPTY_LINE: LineValues = { orderedQty: 1, unitPrice: 0 };
 
 const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
+  orderId: values.orderId,
   note: values.note,
   lines: values.lines.map(({ material, unit, ...rest }) =>
     isNewMaterial(material)
@@ -34,12 +37,15 @@ const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
 });
 
 /**
- * Quản đốc tạo đơn mua NVL dùng chung (kim, chỉ... cho nhiều đơn), không gắn mã đơn hàng
- * nên không cần Admin tạo đơn trước. NVL chưa có trong danh mục thì gõ tên + đơn vị để thêm mới.
+ * Quản đốc tạo đơn mua NVL. Chọn đơn hàng: các dòng lấy từ NVL của đơn (phần "phải mua"), chỉ nhập đơn giá.
+ * Để trống đơn hàng: mua dự trữ dùng chung (kim, chỉ...); NVL chưa có trong danh mục thì gõ tên + đơn vị để thêm mới.
  */
 export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModalProps) {
   const [form] = Form.useForm<FormValues>();
   const create = useCreatePurchaseOrder();
+  const orderId = Form.useWatch('orderId', form);
+  const orderMaterials = useOrderMaterials(orderId);
+  const linked = orderId !== undefined;
 
   useEffect(() => {
     if (!open) return;
@@ -47,6 +53,26 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
     form.setFieldsValue({ lines: [EMPTY_LINE] });
   }, [open, form]);
 
+  // Chọn đơn hàng → điền sẵn các dòng NVL còn phải mua của đơn; bỏ chọn → về một dòng trống.
+  useEffect(() => {
+    if (!linked) {
+      form.setFieldsValue({ lines: [EMPTY_LINE] });
+      return;
+    }
+    if (!orderMaterials.data) return;
+    form.setFieldsValue({
+      lines: orderMaterials.data
+        .filter((om) => (om.purchaseQty ?? 0) > 0)
+        .map<LineValues>((om) => ({
+          material: om.materialId,
+          materialColor: om.materialColor,
+          orderedQty: om.purchaseQty ?? 0,
+          unitPrice: 0,
+        })),
+    });
+  }, [linked, orderMaterials.data, form]);
+
+  const nothingToBuy = linked && orderMaterials.data !== undefined && !orderMaterials.data.some((om) => (om.purchaseQty ?? 0) > 0);
   const required = [{ required: true, message: MESSAGES.common.required }];
 
   return (
@@ -67,13 +93,17 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
         onFinish={(values) => create.mutate(toPayload(values), { onSuccess: onClose })}
         disabled={create.isPending}
       >
+        <Form.Item name="orderId" label={LABELS.purchaseOrderOrder} extra={LABELS.purchaseOrderOrderHint}>
+          <OrderSelect allowClear placeholder={LABELS.stockPurchaseTag} width={380} />
+        </Form.Item>
+        {nothingToBuy && <Alert type="warning" showIcon message={LABELS.nothingToBuy} style={{ marginBottom: 12 }} />}
         <Form.List name="lines">
           {(fields, { add, remove }) => (
             <>
               {fields.map((field) => (
                 <Space key={field.key} align="start" wrap>
                   <Form.Item name={[field.name, 'material']} rules={required}>
-                    <MaterialFreeSelect />
+                    <MaterialFreeSelect disabled={linked} />
                   </Form.Item>
                   <Form.Item noStyle shouldUpdate>
                     {({ getFieldValue }) =>
@@ -85,7 +115,7 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                     }
                   </Form.Item>
                   <Form.Item name={[field.name, 'materialColor']}>
-                    <Input placeholder={LABELS.color} maxLength={50} style={{ width: 130 }} />
+                    <Input placeholder={LABELS.color} maxLength={50} style={{ width: 130 }} disabled={linked} />
                   </Form.Item>
                   <Form.Item name={[field.name, 'orderedQty']} rules={required}>
                     <InputNumber
@@ -100,11 +130,11 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                   <Button
                     icon={<DeleteOutlined />}
                     onClick={() => remove(field.name)}
-                    disabled={fields.length === 1}
+                    disabled={fields.length === 1 || linked}
                   />
                 </Space>
               ))}
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)}>
+              <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)} disabled={linked}>
                 {LABELS.addLine}
               </Button>
             </>

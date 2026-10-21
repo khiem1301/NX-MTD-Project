@@ -119,7 +119,7 @@ export function OrderMaterialPage() {
       }
     >
       {stockMode ? (
-        <StockPurchaseTable />
+        <StockPurchaseTable stockOnly />
       ) : (
         <>
           <QueryError error={list.error} onRetry={() => void list.refetch()} />
