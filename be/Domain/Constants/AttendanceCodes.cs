@@ -52,4 +52,27 @@ public static class SettingKeys
 
     // Đơn từ (Khiêm)
     public const string RequestMaxPhotos = "REQUEST_MAX_PHOTOS";
+
+    // KPI tổ may (Minh, UC19 KPI tổ may — DEV-MI-16-2: khóa chưa seed trong SystemSetting,
+    // dùng fallback mặc định của KpiAutoCloseJob)
+    public const string KpiAutoCloseTime = "KPI_AUTO_CLOSE_TIME";
+}
+
+/// <summary>Trạng thái suất ăn ngày (DailyMeal.Status) — UC30.</summary>
+public static class MealStatus
+{
+    public const string Open = "OPEN";
+    public const string AutoClosed = "AUTO_CLOSED";
+    public const string Closed = "CLOSED";
+    public const string KitchenNotified = "KITCHEN_NOTIFIED";
+}
+
+/// <summary>Nguồn số suất ăn của tổ (TeamMealConfirmation.Source) — UC30.</summary>
+public static class MealConfirmationSource
+{
+    /// <summary>Tổ trưởng/tổ phó tự xác nhận.</summary>
+    public const string Confirmed = "CONFIRMED";
+
+    /// <summary>Hệ thống lấy theo số người đã quẹt vân tay (JOB-02 nhắc hoặc JOB-03 chốt).</summary>
+    public const string Attendance = "ATTENDANCE";
 }

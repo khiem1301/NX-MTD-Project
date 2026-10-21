@@ -62,6 +62,30 @@ export type TimesheetSummary = {
   missingPunchCount: number;
 };
 
+/** Một dòng quẹt đã đọc được từ file Excel dự phòng (UC29), chưa ghi DB. */
+export type AttendanceExcelPreviewRow = {
+  attendanceCode: number;
+  workDate: string;
+  checkIn: string | null;
+  checkOut: string | null;
+};
+
+export type AttendanceExcelPreview = {
+  rowCount: number;
+  punchCount: number;
+  rows: AttendanceExcelPreviewRow[];
+};
+
+/** Kết quả sau khi nhập file (cùng hình dạng với kết quả đồng bộ RJ). */
+export type AttendanceImportResult = {
+  syncSessionId: number;
+  received: number;
+  inserted: number;
+  skippedLockedMonth: number;
+  duplicates: number;
+  unmapped: number;
+};
+
 /** Bộ lọc gửi lên API; fromDate / toDate dạng yyyy-MM-dd. */
 export type TimesheetFilter = {
   fromDate: string;

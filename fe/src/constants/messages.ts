@@ -57,6 +57,65 @@ export const MESSAGES = {
     handoverConfirmed: 'Đã nhận BTP vào kho.',
     handoverRejected: 'Đã từ chối phiếu bàn giao.',
   },
+  meal: {
+    confirmSaved: 'Đã xác nhận số suất ăn của tổ.',
+    guestSaved: 'Đã lưu suất khách.',
+    kitchenNotified: 'Đã báo bếp.',
+    priceSaved: 'Đã lưu đơn giá suất ăn.',
+  },
+  payroll: {
+    exported: 'Đã xuất file Excel.', // MSG27
+    exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
+    downloadFileFailed: 'Không tải được file gốc của bảng lương.',
+    importedPrefix: 'Đã nhập bảng lương:',
+    submitted: 'Đã gửi duyệt bảng lương.',
+    approved: 'Đã duyệt bảng lương.',
+    rejected: 'Đã từ chối bảng lương.',
+    reopened: 'Đã mở lại bảng lương về Nháp.',
+    confirmApprove:
+      'Duyệt bảng lương này? Sau khi duyệt, tháng sẽ bị khóa và công nhân xem được phiếu lương.',
+    confirmSubmit: 'Gửi duyệt bảng lương này?',
+    rejectReasonLabel: 'Lý do từ chối',
+    reopenReasonLabel: 'Lý do mở lại',
+    reasonRequired: 'Vui lòng nhập lý do.', // MSG09
+    noPayslip: 'Chưa có phiếu lương đã duyệt cho tháng này.',
+  },
+  monthlyCost: {
+    templateDownloaded: 'Đã xuất file Excel.', // MSG27
+    templateDownloadFailed: 'Không tải được file mẫu. Vui lòng thử lại.',
+    importedPrefix: 'Đã nhập chi phí tháng:',
+    noDataYet: 'Tháng này chưa có dữ liệu chi phí. Hãy tải file mẫu và nhập Excel.',
+    confirmImportTitle: 'Nhập chi phí tháng?',
+    confirmImportContent: 'Dữ liệu cũ (nếu có) của tháng này sẽ bị thay thế bằng các dòng hợp lệ trong file.',
+    importDisabledHint: 'Tháng này đã khóa, không thể nhập lại chi phí.',
+  },
+  revenue: {
+    exportSuccess: 'Đã xuất file Excel.', // MSG27
+    exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
+    noDataYet: 'Chưa có dữ liệu doanh thu theo bộ lọc này.',
+  },
+  breakEven: {
+    exportSuccess: 'Đã xuất file Excel.', // MSG27
+    exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
+    noDataYet: 'Tháng này chưa có kết quả hòa vốn. Hãy chạy tính toán.',
+    notReady: 'Chưa thể tính: bảng lương tháng chưa được duyệt hoặc chi phí tháng chưa được nhập.', // MSG25
+    confirmCalculateTitle: 'Tính hòa vốn tháng này?',
+    confirmCalculateContent: 'Hệ thống sẽ lưu thêm một bộ kết quả mới (giữ lại lịch sử các lần tính trước).',
+    calculated: 'Đã tính hòa vốn.',
+    atRisk: 'Nguy cơ lỗ',
+    safe: 'An toàn',
+  },
+  costSummary: {
+    exportSuccess: 'Đã xuất file Excel.', // MSG27
+    exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
+    noDataYet: 'Tháng này chưa có dữ liệu chi phí. Vào màn Chi phí tháng để nhập trước.',
+    payrollNotApproved: 'Chưa có bảng lương đã duyệt cho tháng này.',
+  },
+  accountingReports: {
+    exportSuccess: 'Đã xuất file Excel.', // MSG27
+    exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
+    noDataYet: 'Chưa có dữ liệu cho tháng này.',
+  },
   auth: {
     title: 'NX-MTD',
     subtitle: 'Đăng nhập hệ thống quản lý gia công may mặc',

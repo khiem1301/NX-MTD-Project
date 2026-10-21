@@ -2,6 +2,8 @@ import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
+  AttendanceExcelPreview,
+  AttendanceImportResult,
   DailyTimesheet,
   MapAttendanceCodeRequest,
   SyncHealth,
@@ -10,6 +12,12 @@ import type {
   TimesheetSummary,
   UnmappedCode,
 } from '../types';
+
+const asFormData = (file: File): FormData => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
 
 /** Bỏ các khóa rỗng để URL không mang ?teamId=&keyword= vô nghĩa. */
 const toParams = (filter: TimesheetFilter): Record<string, string | number | boolean> => {
@@ -79,5 +87,23 @@ export const attendanceApi = {
 
   mapCode: async (body: MapAttendanceCodeRequest): Promise<void> => {
     await apiClient.post(API.attendance.mapCode, body);
+  },
+
+  // ---------- Import Excel dự phòng (UC29) ----------
+
+  previewExcelImport: async (file: File): Promise<AttendanceExcelPreview> => {
+    const res = await apiClient.post<ApiResponse<AttendanceExcelPreview>>(
+      API.attendance.importPreview,
+      asFormData(file),
+    );
+    return res.data.data;
+  },
+
+  confirmExcelImport: async (file: File): Promise<AttendanceImportResult> => {
+    const res = await apiClient.post<ApiResponse<AttendanceImportResult>>(
+      API.attendance.import,
+      asFormData(file),
+    );
+    return res.data.data;
   },
 };

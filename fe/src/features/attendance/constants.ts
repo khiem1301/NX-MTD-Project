@@ -9,6 +9,7 @@ export const ATTENDANCE_TEXT = {
     timesheet: 'Bảng công ngày',
     unmapped: 'Mã chưa gán',
     sessions: 'Lịch sử đồng bộ',
+    import: 'Import Excel dự phòng',
   },
 
   stats: {
@@ -88,6 +89,27 @@ export const ATTENDANCE_TEXT = {
     success: 'Đã gán mã chấm công.',
     emptyTitle: 'Không có mã nào chờ gán',
     emptyHint: 'Mọi mã chấm công đã có chủ.',
+  },
+
+  import: {
+    title: 'Nhập file Excel dự phòng',
+    hint: 'Dùng khi không đọc được dữ liệu từ máy chấm công Ronald Jack Pro (UC29).',
+    chooseFile: 'Chọn hoặc kéo thả file Excel (.xlsx, .xls)',
+    preview: 'Xem trước',
+    confirm: 'Nhập dữ liệu',
+    confirmTitle: 'Xác nhận nhập file chấm công',
+    confirmContent: 'Các lượt quẹt hợp lệ trong file sẽ được ghi vào hệ thống. Bạn có chắc chắn?',
+    successPrefix: 'Đã nhập file Excel:',
+    previewSummary: {
+      rowCount: 'Số dòng đọc được',
+      punchCount: 'Số lượt quẹt hợp lệ',
+    },
+    previewColumns: {
+      attendanceCode: 'Mã chấm công',
+      workDate: 'Ngày',
+      checkIn: 'Giờ vào',
+      checkOut: 'Giờ ra',
+    },
   },
 } as const;
 

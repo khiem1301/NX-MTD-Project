@@ -1,7 +1,8 @@
 import { Badge, Space, Tabs, Typography } from 'antd';
-import { HistoryOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons';
+import { FileExcelOutlined, HistoryOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useSyncHealth } from '../hooks/useAttendance';
+import { ExcelImportPanel } from '../components/ExcelImportPanel';
 import { SyncHealthBanner } from '../components/SyncHealthBanner';
 import { SyncSessionTable } from '../components/SyncSessionTable';
 import { TimesheetView } from '../components/TimesheetView';
@@ -53,6 +54,15 @@ export function AttendancePage() {
               </span>
             ),
             children: <SyncSessionTable />,
+          },
+          {
+            key: 'import',
+            label: (
+              <span>
+                <FileExcelOutlined /> {ATTENDANCE_TEXT.tabs.import}
+              </span>
+            ),
+            children: <ExcelImportPanel />,
           },
         ]}
       />

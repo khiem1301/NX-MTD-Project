@@ -117,4 +117,105 @@ public static class Messages
     public const string TeamAppointInvalidRole = "Chỉ bổ nhiệm được công nhân, tổ trưởng, tổ phó của tổ.";
     public const string CannotActOnSelf = "Không thể tự thao tác trên tài khoản của mình.";
     public const string ResignedWasLeader = "Đã cho nghỉ. Tổ {0} hiện chưa có {1}, hãy bổ nhiệm người thay.";
+
+    // --- Suất ăn (UC30) ---
+    public const string MealTeamNotFound = "Không tìm thấy tổ.";
+    public const string MealNotFound = "Không tìm thấy suất ăn ngày này.";
+    public const string MealLocked =
+        "Đã chốt suất ăn lúc 08:30, không thể thay đổi.";                                       // MSG22
+    public const string MealGuestLocked =
+        "Đã chốt suất ăn lúc 08:30, không thể thay đổi suất khách.";                             // MSG22
+    public const string MealNotClosedYet = "Suất ăn ngày này chưa chốt.";
+    public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
+    public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
+    public const string MealKitchenNotified = "Đã báo bếp.";
+    public const string NotifyMealReminderTitle = "Nhắc xác nhận suất ăn";
+    public const string NotifyMealReminderBody =
+        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước 08:30.";
+
+    // --- Bảng lương + khóa tháng (UC06, UC31, UC32) ---
+    public const string PayrollNotFound = "Không tìm thấy bảng lương.";
+    public const string PayrollEmpty = "Bảng lương chưa có phiếu lương nào, không thể gửi duyệt.";
+    public const string PayrollInvalidStatusForImport =
+        "Bảng lương đang chờ duyệt hoặc đã duyệt, không thể nhập lại. Vui lòng mở lại về Nháp trước.";
+    public const string PayrollInvalidStatusForSubmit = "Chỉ bảng lương ở trạng thái Nháp mới gửi duyệt được.";
+    public const string PayrollInvalidStatusForApprove = "Chỉ bảng lương đang chờ duyệt mới duyệt được.";
+    public const string PayrollInvalidStatusForReject = "Chỉ bảng lương đang chờ duyệt mới từ chối được.";
+    public const string PayrollInvalidStatusForReopen = "Chỉ bảng lương đã duyệt mới mở lại được.";
+    public const string PayrollRejectReasonRequired = "Vui lòng nhập lý do từ chối.";          // MSG09
+    public const string PayrollReopenReasonRequired = "Vui lòng nhập lý do mở lại.";            // MSG09
+    public const string PayrollExcelInvalid =
+        "File Excel không đúng mẫu bảng thanh toán lương (cần sheet có cột SLĐ và cột Thực lĩnh/Còn lĩnh).";
+    public const string PayrollFileNotFound = "Bảng lương này chưa có file gốc để tải.";
+    public const string PayrollExcelEmpty = "File Excel không có dòng dữ liệu nào.";
+    public const string PayrollPeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
+    public const string PayslipNotFound = "Chưa có phiếu lương đã duyệt cho tháng này.";
+    public const string ExcelExported = "Đã xuất file Excel.";                                  // MSG27
+
+    // --- Chi phí tháng (UC12, UC33) ---
+    public const string MonthlyCostNotFound = "Chưa có dữ liệu chi phí tháng này.";
+    public const string MonthlyCostPeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
+    public const string MonthlyCostExcelInvalid =
+        "File Excel không đúng định dạng (cần cột: loại chi phí, kiểu, mã hàng, số tiền, số lượng, ghi chú).";
+    public const string MonthlyCostExcelEmpty = "File Excel không có dòng dữ liệu nào.";
+
+    // --- KPI tổ may (UC19 KPI tổ may — Quản đốc lập/sửa/hủy chỉ tiêu, khác UC19 lệnh cắt) ---
+    public const string KpiNotFound = "Không tìm thấy chỉ tiêu KPI.";
+    public const string KpiOrderNotFound = "Không tìm thấy đơn hàng.";
+    public const string KpiTeamInvalid = "Tổ may không hợp lệ hoặc đã ngừng hoạt động.";
+    public const string KpiProductNotInOrder = "Mã hàng không thuộc đơn hàng đã chọn.";
+    public const string KpiDuplicatePeriod =
+        "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
+    public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
+    public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";
+
+    // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
+    public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
+    public const string BreakEvenPeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
+    public const string BreakEvenInvalidAllocationBasis = "Cách phân bổ định phí không hợp lệ (cần OUTPUT hoặc LABOUR_HOURS).";
+    /// <summary>MSG25.</summary>
+    public const string BreakEvenNotReady = "Chưa thể tính: bảng lương tháng chưa được duyệt hoặc chi phí tháng chưa được nhập.";
+    public const string BreakEvenNoOutput = "Tháng này chưa có mã hàng nào hoàn thiện, không có dữ liệu để tính hòa vốn.";
+    public const string BreakEvenNotFound = "Chưa có dữ liệu hòa vốn cho tháng này.";
+    /// <summary>MSG26 — dùng khi BreakEvenQty tính được (đơn giá &gt; biến phí/sp).</summary>
+    public const string BreakEvenAtRiskWarning = "Mã hàng {0} có nguy cơ lỗ: mới đạt {1}% điểm hòa vốn.";
+    /// <summary>Biến thể MSG26 khi BreakEvenQty = NULL (đơn giá ≤ biến phí/sp, không thể hòa vốn) — không có
+    /// "%" để báo vì không tính được điểm hòa vốn (xem docs/CODE_DEVIATIONS.md).</summary>
+    public const string BreakEvenAtRiskWarningNoBreakEven =
+        "Mã hàng {0} có nguy cơ lỗ: không thể đạt điểm hòa vốn với đơn giá hiện tại.";
+    public const string BreakEvenCalculated = "Đã tính hòa vốn tháng {0}.";
+
+    // --- Báo cáo kế toán (UC36, CHỈ Kế toán) ---
+    public const string AccountingReportPeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
+
+    // --- Nhà cung cấp + đơn mua + thanh toán (UC14, UC23, UC34) ---
+    public const string SupplierNameDuplicate = "Tên nhà cung cấp đã tồn tại.";
+    public const string SupplierNotActive = "Nhà cung cấp đã ngừng hợp tác, vui lòng chọn nhà cung cấp khác.";
+    public const string SupplierNotFound = "Nhà cung cấp không tồn tại.";
+    public const string SupplierSaved = "Đã lưu nhà cung cấp.";
+    public const string SupplierDiscontinued = "Đã ngừng hợp tác với nhà cung cấp.";
+    public const string PurchaseOrderInvalidStatus = "Trạng thái đơn mua không cho phép thao tác này.";
+    public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
+    public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
+    public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
+    public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
+    public const string PurchaseOrderDeliveryBeforeOrder = "Ngày giao dự kiến không được trước ngày đặt hàng.";
+    public const string PurchaseOrderPlaced = "Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.";
+    public const string PurchaseOrderCancelled = "Đã hủy đơn mua.";
+    public const string PurchaseOrderRepriced = "Đã cập nhật đơn giá và gửi lại Kế toán.";
+    public const string PaymentConfirmed = "Đã xác nhận thanh toán đơn mua.";
+    public const string PaymentReturned = "Đã trả lại Quản đốc kèm lý do.";
+    public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
+    public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
+    public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
+    public const string NotifyPoPlacedTitle = "Đơn mua chờ thanh toán";
+    public const string NotifyPoPlacedBody = "Đơn mua {0} (NCC {1}) đã đặt hàng, chờ xác nhận thanh toán.";
+    public const string NotifyPoPaidTitle = "Đơn mua đã thanh toán";
+    public const string NotifyPoPaidBody = "Đơn mua {0} đã được Kế toán xác nhận thanh toán.";
+    public const string NotifyPoReturnedTitle = "Đơn mua bị trả lại";
+    public const string NotifyPoReturnedBody = "Kế toán trả lại đơn mua {0}: {1}";
+    public const string NotifyPoRepricedTitle = "Đơn mua chờ thanh toán lại";
+    public const string NotifyPoRepricedBody = "Đơn mua {0} đã được Quản đốc cập nhật đơn giá.";
 }

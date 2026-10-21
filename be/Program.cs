@@ -23,6 +23,13 @@ builder.Services.AddHrModule();
 // builder.Services.AddProductionModule(builder.Configuration);   // Kiều
 // builder.Services.AddWarehouseModule(builder.Configuration);    // Thái
 builder.Services.AddAttendanceModule(builder.Configuration);      // Minh
+builder.Services.AddPayrollModule(builder.Configuration);         // Minh
+builder.Services.AddKpiModule(builder.Configuration);             // Minh
+builder.Services.AddMonthlyCostModule(builder.Configuration);     // Minh
+builder.Services.AddFinanceModule(builder.Configuration);         // Minh
+builder.Services.AddCostSummaryModule(builder.Configuration);     // Minh (MI-19, UC12 — sau MonthlyCost/Payroll)
+builder.Services.AddAccountingReportModule(builder.Configuration);    // Minh (MI-19, UC36)
+builder.Services.AddPurchaseModule(builder.Configuration);        // Minh (MI-07, UC14/UC23/UC34)
 
 var app = builder.Build();
 

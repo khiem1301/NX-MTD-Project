@@ -2,6 +2,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
+using NX_MTD.Infrastructure.Jobs;
 using NX_MTD.Infrastructure.Repositories;
 using NX_MTD.Infrastructure.Services;
 
@@ -18,6 +19,13 @@ public static class AttendanceModule
         services.AddSingleton<IExcelAttendanceParser, ClosedXmlAttendanceParser>();
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
         services.AddScoped<IAttendanceService, AttendanceService>();
+
+        // Suất ăn (UC30) + 3 job nền (MI-04)
+        services.AddScoped<IMealRepository, MealRepository>();
+        services.AddScoped<IMealService, MealService>();
+        services.AddHostedService<AttendanceSyncMonitorJob>();
+        services.AddHostedService<MealReminderJob>();
+        services.AddHostedService<MealAutoCloseJob>();
         return services;
     }
 }

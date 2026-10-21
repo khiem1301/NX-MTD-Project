@@ -3,7 +3,12 @@ import { App } from 'antd';
 import type { ApiError } from '@/types/api';
 import { attendanceApi, type TimesheetAudience } from '../api/attendanceApi';
 import { ATTENDANCE_TEXT } from '../constants';
-import type { MapAttendanceCodeRequest, TimesheetFilter } from '../types';
+import type {
+  AttendanceExcelPreview,
+  AttendanceImportResult,
+  MapAttendanceCodeRequest,
+  TimesheetFilter,
+} from '../types';
 
 /** Khóa query gom một nơi để invalidate sau mutation không bị sót. */
 export const attendanceKeys = {
@@ -67,5 +72,33 @@ export const useMapAttendanceCode = () => {
     onError: (error) => {
       message.error(error.message);
     },
+  });
+};
+
+// ---------- Import Excel dự phòng (UC29) ----------
+
+export const usePreviewExcelImport = () => {
+  const { message } = App.useApp();
+  return useMutation<AttendanceExcelPreview, ApiError, File>({
+    mutationFn: attendanceApi.previewExcelImport,
+    onError: (error) => message.error(error.message),
+  });
+};
+
+/** Nhập xong thì bảng công / lịch sử đồng bộ đổi theo nên làm mới cả nhánh attendance (MSG24). */
+export const useConfirmExcelImport = () => {
+  const queryClient = useQueryClient();
+  const { message } = App.useApp();
+
+  return useMutation<AttendanceImportResult, ApiError, File>({
+    mutationFn: attendanceApi.confirmExcelImport,
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+      message.success(
+        `${ATTENDANCE_TEXT.import.successPrefix} ${result.inserted} dòng mới, ` +
+          `${result.duplicates} trùng, ${result.skippedLockedMonth} thuộc tháng khóa, ${result.unmapped} chưa gán mã.`,
+      );
+    },
+    onError: (error) => message.error(error.message),
   });
 };
