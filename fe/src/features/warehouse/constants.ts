@@ -116,6 +116,7 @@ export const PO_PAYMENT_STATUS_LABEL: Record<string, StatusLabel> = {
 };
 
 export const LABELS = {
+  addMaterial: 'Thêm NVL mới',
   materialsTitle: 'Danh mục NVL',
   materialCode: 'Mã NVL',
   materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
