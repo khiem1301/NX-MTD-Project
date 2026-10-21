@@ -15,6 +15,7 @@ builder.Services.AddApplication();
 builder.Services.AddApiCore(builder.Configuration);
 builder.Services.AddSharedModule(builder.Configuration);
 builder.Services.AddRequestModule();
+builder.Services.AddOrderModule();
 
 // ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ----
 // builder.Services.AddProductionModule(builder.Configuration);   // Kiều

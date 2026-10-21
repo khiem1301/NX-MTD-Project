@@ -1,4 +1,4 @@
-namespace NX_MTD.Application.Common;
+﻿namespace NX_MTD.Application.Common;
 
 /// <summary>Chuỗi tiếng Việt theo mã MSG trong SRS.</summary>
 public static class Messages
@@ -62,6 +62,12 @@ public static class Messages
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
+    public const string OrderHeaderLocked = "Đơn đã vào sản xuất, chỉ sửa ngày giao, ghi chú, số lượng, đơn giá và thêm dòng.";
+    public const string NotifyNewOrderTitle = "Có đơn hàng mới";
+    public const string NotifyNewOrderBody = "Đơn {0}, giao ngày {1}. Vui lòng xem NVL của đơn.";
+    public const string CustomerNotFound = "Khách hàng không tồn tại.";
+    public const string CustomerNameDuplicate = "Tên khách hàng đã tồn tại.";
+    public const string ProductNotFound = "Mã hàng không tồn tại.";
 
     // ---- Nhân sự, tài khoản, tổ ----
     public const string PasswordMismatch = "Mật khẩu nhập lại không khớp.";                      // MSG05
