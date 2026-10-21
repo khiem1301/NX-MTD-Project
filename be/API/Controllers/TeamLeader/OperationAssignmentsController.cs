@@ -16,6 +16,10 @@ public sealed class OperationAssignmentsController : TeamLeaderBaseController
     public async Task<IActionResult> ListCurrent([FromQuery] int orderId, CancellationToken ct) =>
         this.ToResponse(await _assignments.ListCurrentAsync(orderId, ct));
 
+    [HttpGet("operations")]
+    public async Task<IActionResult> ListOperations([FromQuery] int orderId, CancellationToken ct) =>
+        this.ToResponse(await _assignments.ListOperationsAsync(orderId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Assign([FromBody] AssignOperationDto dto, CancellationToken ct) =>
         this.ToResponse(await _assignments.AssignAsync(dto, ct));

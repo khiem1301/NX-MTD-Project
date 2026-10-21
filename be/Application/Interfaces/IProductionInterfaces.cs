@@ -34,6 +34,9 @@ public interface IPieceRateService
 public interface IOperationAssignmentService
 {
     Task<Result<IReadOnlyList<OperationAssignmentDto>>> ListCurrentAsync(int orderId, CancellationToken ct);
+
+    /// <summary>Công đoạn may đang dùng của các mã hàng trong đơn (chọn khi phân công, ghi hàng hỏng).</summary>
+    Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct);
     Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct);
     Task<Result<int>> ReplaceAsync(int assignmentId, ReplaceAssignmentDto dto, CancellationToken ct);
     Task<Result> CloseAsync(int assignmentId, CancellationToken ct);

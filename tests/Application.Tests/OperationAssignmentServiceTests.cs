@@ -64,6 +64,20 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         return op;
     }
 
+    [Fact]
+    public async Task ListOperations_returns_active_sewing_operations_of_order_products_only()
+    {
+        Op(1, "OP10").TeamType = TeamTypes.Sewing;
+        Op(2, "OP20", status: OperationStatuses.Discontinued).TeamType = TeamTypes.Sewing;   // đã ngừng
+        Op(3, "OP30", productId: 9).TeamType = TeamTypes.Sewing;                              // mã hàng không thuộc đơn
+        Op(4, "OP40").TeamType = TeamTypes.Cutting;                                           // công đoạn tổ cắt
+
+        var result = await _sut.ListOperationsAsync(orderId: 1, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Select(o => o.OperationId).Should().Equal(1);
+    }
+
     private Employee Worker(int id, int teamId = TeamId, string status = RecordStatus.Active)
     {
         var e = new Employee { EmployeeId = id, EmployeeCode = "CN" + id, FullName = "Công nhân " + id, TeamId = teamId, Status = status };

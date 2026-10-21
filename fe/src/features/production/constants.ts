@@ -1,0 +1,267 @@
+import type { StatusLabel } from '@/components/common/StatusTag';
+import type { DefectReason, DefectStatus, DefectType, PieceRateStatus, ShiftCode } from './types';
+
+/** Chuỗi hiển thị của luồng công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01..KI-11). Lỗi nghiệp vụ lấy message từ BE. */
+export const PRODUCTION_TEXT = {
+  saved: 'Đã lưu.',
+  required: 'Vui lòng nhập thông tin này.',
+  selectProduct: 'Chọn mã hàng',
+  selectOrder: 'Chọn đơn hàng',
+  selectOrderLine: 'Chọn dòng đơn (màu - size)',
+  selectTeam: 'Chọn tổ may',
+  selectWorker: 'Chọn công nhân',
+  selectOperation: 'Chọn công đoạn',
+  selectFirst: 'Chọn đơn hàng trước.',
+
+  operations: {
+    title: 'Công đoạn may',
+    subtitle: 'Công đoạn của từng mã hàng. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
+    add: 'Thêm công đoạn',
+    edit: 'Sửa công đoạn',
+    showDiscontinued: 'Hiện cả công đoạn đã ngừng',
+    discontinue: 'Ngừng dùng',
+    reactivate: 'Dùng lại',
+    discontinueConfirm: 'Ngừng dùng công đoạn này? Sản lượng cũ vẫn giữ nguyên.',
+    columns: {
+      code: 'Mã',
+      name: 'Tên công đoạn',
+      sequence: 'Thứ tự',
+      skill: 'Bậc khó',
+      standardTime: 'Thời gian chuẩn (giây)',
+      teamType: 'Loại tổ',
+      isFinal: 'Công đoạn cuối',
+      rate: 'Đơn giá hiện hành',
+      status: 'Trạng thái',
+    },
+    form: {
+      code: 'Mã công đoạn',
+      name: 'Tên công đoạn',
+      sequence: 'Thứ tự trên chuyền',
+      skill: 'Bậc khó (1-9)',
+      standardTime: 'Thời gian chuẩn (giây)',
+      isFinal: 'Là công đoạn cuối (tính hàng hoàn thiện)',
+    },
+    teamType: { Sewing: 'Tổ may', Cutting: 'Tổ cắt' } as Record<string, string>,
+    status: {
+      Active: { text: 'Đang dùng', color: 'green' },
+      Discontinued: { text: 'Đã ngừng', color: 'default' },
+    } as Record<string, StatusLabel>,
+  },
+
+  pieceRates: {
+    accountantTitle: 'Đơn giá công đoạn',
+    accountantSubtitle: 'Lập đơn giá theo ngày hiệu lực rồi gửi Admin duyệt. Chỉ sửa được khi Nháp hoặc bị từ chối.',
+    adminTitle: 'Duyệt đơn giá công đoạn',
+    adminSubtitle: 'Đơn giá chờ duyệt. Sản lượng chỉ nhập được khi công đoạn có đơn giá đã duyệt.',
+    add: 'Thêm đơn giá',
+    edit: 'Sửa đơn giá',
+    submit: 'Gửi duyệt',
+    submitConfirm: 'Gửi đơn giá này cho Admin duyệt?',
+    approve: 'Duyệt',
+    approveTitle: 'Duyệt đơn giá',
+    reject: 'Từ chối',
+    rejectTitle: 'Từ chối đơn giá',
+    note: 'Ghi chú (không bắt buộc)',
+    allStatus: 'Mọi trạng thái',
+    columns: {
+      product: 'Mã hàng',
+      operation: 'Công đoạn',
+      rate: 'Đơn giá',
+      effectiveDate: 'Hiệu lực từ',
+      status: 'Trạng thái',
+      note: 'Ghi chú / lý do từ chối',
+    },
+    form: {
+      operation: 'Công đoạn',
+      rate: 'Đơn giá (đồng/sản phẩm)',
+      effectiveDate: 'Ngày hiệu lực',
+      rateMin: 'Đơn giá phải lớn hơn hoặc bằng 0.',
+    },
+    done: { submitted: 'Đã gửi duyệt.', approved: 'Đã duyệt đơn giá.', rejected: 'Đã từ chối đơn giá.' },
+    status: {
+      Draft: { text: 'Nháp', color: 'default' },
+      PendingApproval: { text: 'Chờ duyệt', color: 'orange' },
+      Approved: { text: 'Đã duyệt', color: 'green' },
+      Rejected: { text: 'Bị từ chối', color: 'red' },
+    } as Record<PieceRateStatus, StatusLabel>,
+  },
+
+  assignments: {
+    title: 'Phân công công đoạn',
+    subtitle:
+      'Phân công công nhân cho từng công đoạn theo đơn hàng. Đổi phân công giữ lại lịch sử. Phân công chỉ để nạp sẵn lưới sản lượng.',
+    assign: 'Phân công',
+    assignTitle: 'Phân công công đoạn',
+    replace: 'Đổi người',
+    replaceTitle: 'Đổi công nhân của công đoạn',
+    close: 'Bỏ phân công',
+    closeConfirm: 'Bỏ phân công này? Lịch sử vẫn được giữ.',
+    copy: 'Chép từ đơn khác',
+    copyTitle: 'Chép phân công từ đơn khác',
+    copyFrom: 'Đơn nguồn',
+    copyHint: 'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
+    columns: { product: 'Mã hàng', operation: 'Công đoạn', worker: 'Công nhân', validFrom: 'Từ ngày' },
+    form: { operation: 'Công đoạn', worker: 'Công nhân' },
+    done: { assigned: 'Đã phân công.', replaced: 'Đã đổi công nhân.', closed: 'Đã bỏ phân công.', copied: 'Đã chép phân công.' },
+    empty: 'Đơn này chưa có phân công cho tổ của bạn.',
+  },
+
+  output: {
+    title: 'Sản lượng cuối ca',
+    managerTitle: 'Sửa sản lượng sau hạn',
+    subtitle:
+      'Nhập số sản phẩm của từng công nhân theo công đoạn trong ca. Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
+    managerSubtitle: 'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký.',
+    date: 'Ngày làm việc',
+    shift: 'Ca',
+    team: 'Tổ may',
+    save: 'Lưu sản lượng',
+    reason: 'Lý do sửa (bắt buộc khi sửa sau hạn)',
+    reasonRequired: 'Vui lòng nhập lý do khi sửa sau hạn.',
+    received: 'BTP tổ đã nhận từ kho',
+    noRows: 'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước.',
+    nothingChanged: 'Chưa có thay đổi nào để lưu.',
+    columns: {
+      operation: 'Công đoạn',
+      worker: 'Công nhân',
+      qty: 'Số lượng',
+      rate: 'Đơn giá khóa',
+      deadline: 'Hạn sửa',
+      warnings: 'Cảnh báo',
+    },
+    tags: {
+      outside: 'Ngoài phân công',
+      noAttendance: 'Chưa chấm công',
+      noRate: 'Chưa có đơn giá duyệt',
+      locked: 'Hết hạn sửa',
+    },
+    resultTemplate: 'Đã lưu: thêm {0}, sửa {1}, xóa {2}.',
+    shiftLabel: { Morning: 'Ca sáng', Afternoon: 'Ca chiều', Overtime: 'Tăng ca' } as Record<ShiftCode, string>,
+  },
+
+  qc: {
+    title: 'Hàng hoàn thiện (QC)',
+    managerTitle: 'Sửa số hàng đạt QC',
+    subtitle:
+      'QA/QC nhập số hàng đạt theo đợt kiểm. Số đạt không vượt hàng đang có trên chuyền. Sau hết ca chỉ Quản đốc sửa.',
+    managerSubtitle: 'Quản đốc sửa hoặc xóa đợt QC, kể cả sau hết ca. Phải ghi lý do.',
+    add: 'Thêm đợt kiểm',
+    addTitle: 'Thêm đợt kiểm hoàn thiện',
+    editTitle: 'Sửa số hàng đạt',
+    deleteTitle: 'Xóa đợt kiểm',
+    edit: 'Sửa',
+    delete: 'Xóa',
+    onLine: 'Hàng trên chuyền',
+    onLineDetail: 'Nhận {0} - đạt {1} - hỏng hủy {2} = còn {3}',
+    filterDate: 'Lọc theo ngày',
+    columns: {
+      date: 'Ngày',
+      shift: 'Ca',
+      time: 'Giờ',
+      team: 'Tổ',
+      order: 'Đơn hàng',
+      line: 'Mã hàng - màu - size',
+      qty: 'Số đạt',
+      inspector: 'Người kiểm',
+      deadline: 'Hạn sửa',
+    },
+    form: {
+      date: 'Ngày',
+      shift: 'Ca',
+      time: 'Giờ kiểm',
+      team: 'Tổ may',
+      line: 'Dòng đơn',
+      qty: 'Số hàng đạt',
+      qtyMin: 'Số hàng đạt phải lớn hơn 0.',
+      reason: 'Lý do (bắt buộc khi sửa sau hết ca)',
+    },
+    done: { created: 'Đã thêm đợt kiểm.', updated: 'Đã cập nhật đợt kiểm.', deleted: 'Đã xóa đợt kiểm.' },
+  },
+
+  defects: {
+    title: 'Hàng hỏng',
+    managerTitle: 'Hàng hỏng của các tổ',
+    subtitle:
+      'Ghi hàng hỏng (sửa lại hoặc hủy) và công nhân gây lỗi. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
+    managerSubtitle: 'Quản đốc xem phiếu hàng hỏng của các tổ và hủy phiếu ghi sai (bắt buộc lý do).',
+    add: 'Ghi hàng hỏng',
+    addTitle: 'Ghi hàng hỏng',
+    cancel: 'Hủy phiếu',
+    cancelTitle: 'Hủy phiếu hàng hỏng',
+    filterDate: 'Lọc theo ngày',
+    objected: 'Công nhân phản hồi',
+    columns: {
+      code: 'Mã phiếu',
+      date: 'Ngày',
+      order: 'Đơn hàng',
+      operation: 'Công đoạn',
+      worker: 'Công nhân',
+      type: 'Loại',
+      qty: 'Số lượng',
+      reason: 'Lý do',
+      rate: 'Đơn giá trừ',
+      status: 'Trạng thái',
+      objection: 'Phản hồi của công nhân',
+      deadline: 'Hạn sửa',
+    },
+    form: {
+      date: 'Ngày',
+      shift: 'Ca',
+      line: 'Dòng đơn',
+      operation: 'Công đoạn',
+      worker: 'Công nhân gây lỗi',
+      type: 'Loại hỏng',
+      qty: 'Số lượng',
+      qtyMin: 'Số lượng phải lớn hơn 0.',
+      reason: 'Lý do',
+      note: 'Ghi chú',
+      noteRequired: 'Lý do "Khác" bắt buộc ghi chú.',
+    },
+    done: { created: 'Đã ghi hàng hỏng và thông báo cho công nhân.', cancelled: 'Đã hủy phiếu hàng hỏng.' },
+    type: {
+      Rework: { text: 'Sửa lại', color: 'gold' },
+      Scrap: { text: 'Hủy (trừ lương)', color: 'red' },
+    } as Record<DefectType, StatusLabel>,
+    reason: {
+      SkippedStitch: 'Bỏ mũi',
+      CrookedSeam: 'Đường may lệch',
+      WrongSize: 'Sai size',
+      Torn: 'Rách',
+      Stained: 'Dơ bẩn',
+      Other: 'Khác',
+    } as Record<DefectReason, string>,
+    status: {
+      Recorded: { text: 'Đã ghi', color: 'blue' },
+      Cancelled: { text: 'Đã hủy', color: 'default' },
+      Locked: { text: 'Đã khóa', color: 'purple' },
+    } as Record<DefectStatus, StatusLabel>,
+  },
+
+  myDefects: {
+    title: 'Hàng hỏng của tôi',
+    subtitle: 'Các phiếu hàng hỏng tổ trưởng ghi cho bạn. Hàng hủy trừ vào lương tạm tính; nếu ghi sai hãy phản hồi.',
+    object: 'Phản hồi',
+    objectTitle: 'Phản hồi phiếu hàng hỏng',
+    objection: 'Nội dung phản hồi',
+    objectionRequired: 'Vui lòng nhập nội dung phản hồi.',
+    done: 'Đã gửi phản hồi cho tổ trưởng.',
+    empty: 'Bạn chưa có phiếu hàng hỏng nào.',
+  },
+} as const;
+
+/** BE trả ca dạng "MORNING" hoặc "Morning": quy về nhãn tiếng Việt. */
+export const shiftText = (shift: string | null | undefined): string => {
+  if (!shift) return '—';
+  const key = (shift.charAt(0).toUpperCase() + shift.slice(1).toLowerCase()) as ShiftCode;
+  return PRODUCTION_TEXT.output.shiftLabel[key] ?? shift;
+};
+
+export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as ShiftCode[]).map((value) => ({
+  value,
+  label: PRODUCTION_TEXT.output.shiftLabel[value],
+}));
+
+export const DEFECT_REASON_OPTIONS = (Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[]).map((value) => ({
+  value,
+  label: PRODUCTION_TEXT.defects.reason[value],
+}));

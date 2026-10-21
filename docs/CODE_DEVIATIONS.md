@@ -48,6 +48,7 @@
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 | DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
+| DEV-KI-03-2 | 22/10/2026 | Minh (AI) | UC52/UC56, `OperationAssignmentsController` | Thêm endpoint `GET team-leader/operation-assignments/operations?orderId=` trả công đoạn may đang dùng của các mã hàng trong đơn (không kèm đơn giá) để tổ trưởng chọn khi phân công và ghi hàng hỏng; sheet KI-03 / KI-08 không nêu cách lấy danh sách này | Mở |
 
 ---
 
@@ -607,5 +608,16 @@
 - **Code đang làm:** Thử trên 40 file lương thật (`LUONG 2026`): phần lớn file `LƯƠNG THÁNG N.xlsx` làm ClosedXML 0.102.3 ném lỗi ngay khi mở (logo trỏ ảnh `Target="NULL"` → `ArgumentOutOfRangeException`) và khi đọc ô (công thức tham chiếu file khác → `NotImplementedException`). `XlsxWorkbookLoader` sửa gói trong bộ nhớ trước khi nạp: bỏ hình / ghi chú của sheet, bỏ công thức và giữ giá trị Excel đã lưu sẵn. Ô công thức chưa từng được Excel tính sẽ đọc ra trống. Ngoài ra sheet có cột "SLĐ" nhưng không có "Thực lĩnh" (vd bảng công "Công AB") bị bỏ qua, chỉ báo "sai mẫu" khi không còn sheet lương nào.
 - **Lý do:** Hệ thống không tính lương (GBR-12), chỉ đọc số đã tính; giữ nguyên file gốc cho giám đốc ở `IPayrollFileStore`.
 - **Ảnh hưởng người khác:** Khiêm / Thái: nếu thêm importer Excel mới nên dùng `XlsxWorkbookLoader.Open`.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-KI-03-2 · Endpoint danh sách công đoạn theo đơn cho tổ trưởng
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-03, KI-08 (FE) · (chưa có PR)
+- **Ảnh hưởng tới:** UC52 (phân công công đoạn), UC56 (ghi hàng hỏng), `OperationAssignmentsController`, `IOperationAssignmentService`
+- **Tài liệu gốc ghi:** Không nêu API nào cho tổ trưởng lấy danh sách công đoạn của đơn. API công đoạn hiện có (`accountant/operations`) chỉ mở cho Kế toán và kèm đơn giá hiện hành.
+- **Code đang làm:** `ListOperationsAsync(orderId)`: công đoạn đang dùng, thuộc tổ may, của các mã hàng có trong đơn, sắp theo mã hàng + thứ tự; không trả đơn giá để tổ trưởng không thấy giá.
+- **Lý do:** Màn phân công và màn ghi hàng hỏng cần ô chọn công đoạn theo đơn.
+- **Ảnh hưởng người khác:** Kiều: cùng endpoint dùng cho các màn FE của KI-03 / KI-08.
 - **Cần sửa trong tài liệu:** không.
 - **Trạng thái:** Mở

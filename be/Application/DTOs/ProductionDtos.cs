@@ -129,3 +129,8 @@ public sealed record OrderLineProgressDto(
     int OrderLineId, int OrderId, string OrderCode, int ProductId, string ProductCode, string Color, string SizeCode,
     int OrderedQty, int CutQty, int CutHandedToWarehouseQty, int IssuedToSewingQty, int FinishedQty,
     int FinishedReceivedQty, int DeliveredQty, int ReworkQty, int ScrapQty, decimal? DefectRatePct);
+
+/// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
+public sealed record OperationOptionDto(
+    int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
+    short StationSequence, bool IsFinalStep);

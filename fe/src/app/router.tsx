@@ -13,12 +13,33 @@ import { KPI_ROUTES } from '@/features/kpi/routes';
 import { MEAL_ROUTES } from '@/features/meal/routes';
 import { MONTHLY_COST_ROUTES } from '@/features/monthly-cost/routes';
 import { PAYROLL_ROUTES } from '@/features/payroll/routes';
+import { PRODUCTION_ROUTES } from '@/features/production/routes';
 import { PURCHASE_ROUTES } from '@/features/purchase/routes';
 import { REVENUE_ROUTES } from '@/features/revenue/routes';
 
 const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
 const warehouse = () => import('@/features/warehouse');
 const cutting = () => import('@/features/cutting');
+const production = () => import('@/features/production');
+
+// Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều): mỗi trang lazy load, chỉ mở cho role được dùng.
+const productionRoutes = [
+  { path: PRODUCTION_ROUTES.operations, roles: [ROLES.Accountant], page: async () => (await production()).OperationsPage },
+  { path: PRODUCTION_ROUTES.pieceRates, roles: [ROLES.Accountant], page: async () => (await production()).PieceRatesPage },
+  { path: PRODUCTION_ROUTES.adminPieceRates, roles: [Admin], page: async () => (await production()).AdminPieceRatesPage },
+  {
+    path: PRODUCTION_ROUTES.assignments,
+    roles: [TeamLeader, TeamDeputy],
+    page: async () => (await production()).OperationAssignmentsPage,
+  },
+  { path: PRODUCTION_ROUTES.output, roles: [TeamLeader, TeamDeputy], page: async () => (await production()).OutputEntryPage },
+  { path: PRODUCTION_ROUTES.defects, roles: [TeamLeader, TeamDeputy], page: async () => (await production()).DefectRecordsPage },
+  { path: PRODUCTION_ROUTES.qcBatches, roles: [ROLES.QaQc], page: async () => (await production()).QcBatchesPage },
+  { path: PRODUCTION_ROUTES.managerOutput, roles: [Manager], page: async () => (await production()).ManagerOutputPage },
+  { path: PRODUCTION_ROUTES.managerDefects, roles: [Manager], page: async () => (await production()).ManagerDefectsPage },
+  { path: PRODUCTION_ROUTES.managerQcBatches, roles: [Manager], page: async () => (await production()).ManagerQcBatchesPage },
+  { path: PRODUCTION_ROUTES.myDefects, roles: [ROLES.Worker], page: async () => (await production()).MyDefectsPage },
+];
 
 // Kho, cắt (Thái): mỗi trang lazy load + chỉ mở cho role được dùng.
 const warehouseRoutes = [
@@ -289,6 +310,12 @@ export const router = createBrowserRouter([
               },
             ],
           },
+
+          // --- Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều, KI-01..KI-11) ---
+          ...productionRoutes.map(({ path, roles, page }) => ({
+            element: <ProtectedRoute roles={roles} />,
+            children: [{ path, lazy: async () => ({ Component: (await page()) }) }],
+          })),
 
           // --- Doanh thu (Minh, UC27, GBR-02: Kế toán + Admin) ---
           {
