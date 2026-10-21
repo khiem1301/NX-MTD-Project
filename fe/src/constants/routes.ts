@@ -1,6 +1,13 @@
 export const ROUTES = {
   login: '/login',
   home: '/',
+  // Mã hàng, đơn hàng (Khiêm)
+  products: '/admin/products',
+  customers: '/admin/customers',
+  orders: '/admin/orders',
+  orderNew: '/admin/orders/new',
+  orderDetail: (id: number | string) => `/admin/orders/${id}`,
+  orderEdit: (id: number | string) => `/admin/orders/${id}/edit`,
   // Đơn từ (Khiêm)
   requests: '/requests',
   requestInbox: '/requests/inbox',

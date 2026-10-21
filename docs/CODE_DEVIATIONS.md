@@ -10,6 +10,7 @@
 | DEV-TH-12-1 | 21/10/2026 | Thái | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua NVL không bắt buộc gắn đơn hàng (mua dùng chung kim, chỉ...) | Mở |
 | DEV-TH-12-2 | 21/10/2026 | Thái | `Material` | Quản đốc nhập tên NVL mới khi tạo đơn mua, NVL tự vào danh mục | Mở |
 | DEV-KH-07-1 | 22/10/2026 | Khiêm | `Attachment.FileUrl` | Lưu khóa lưu trữ, file ở ổ đĩa (dev), tải qua API có kiểm quyền | Mở |
+| DEV-KH-08-1 | 23/10/2026 | Khiêm | UC10, `Product` | Ảnh mẫu mã hàng nhập đường dẫn, chưa upload | Mở |
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 
@@ -82,4 +83,18 @@
 - **Lý do:** Giữ thống nhất với runbook đăng nhập (D2); giới hạn theo giờ vào cần dữ liệu chấm công thật (MI-06). Sẽ làm ở KH-24.
 - **Ảnh hưởng người khác:** Thái, Minh, Kiều (mọi màn tổ trưởng) – cùng cách kiểm `Roles.IsTeamRole`.
 - **Cần sửa trong tài liệu:** không (tạm thời); đổi trạng thái `Bỏ` khi KH-24 xong.
+- **Trạng thái:** Mở
+
+---
+
+### DEV-KH-08-1 · Ảnh mẫu mã hàng nhập đường dẫn
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Khiêm (Thái làm hộ) · KH-08 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC10, bảng `Product` (`SampleImageUrl`), `Attachment` (`OwnerType`)
+- **Tài liệu gốc ghi:** UC10: thêm / sửa mã hàng gồm "ảnh mẫu".
+- **Code đang làm:** Ô "Ảnh mẫu" là đường dẫn ảnh (http/https) người dùng dán vào; chưa có upload.
+- **Lý do:** `CK_Attachment_OwnerType` không có `PRODUCT`; không đổi schema trong Phase 1.
+- **Ảnh hưởng người khác:** không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC10 / màn 6 (ghi rõ ảnh mẫu là đường dẫn) – hoặc thêm `PRODUCT` vào `OwnerType` ở Phase sau rồi đổi trạng thái `Bỏ`
 - **Trạng thái:** Mở

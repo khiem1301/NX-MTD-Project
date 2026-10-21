@@ -80,6 +80,20 @@ const requestRoutes = [
   children: [{ path, lazy: async () => ({ Component: await page() }) }],
 }));
 
+// Mã hàng, đơn hàng (Khiêm): chỉ Admin vì có đơn giá CMT (D26).
+const orders = () => import('@/features/orders');
+const orderRoutes = [
+  { path: ROUTES.orders, page: async () => (await orders()).OrdersPage },
+  { path: ROUTES.orderNew, page: async () => (await orders()).OrderFormPage },
+  { path: `${ROUTES.orders}/:id`, page: async () => (await orders()).OrderDetailPage },
+  { path: `${ROUTES.orders}/:id/edit`, page: async () => (await orders()).OrderFormPage },
+  { path: ROUTES.products, page: async () => (await orders()).ProductsPage },
+  { path: ROUTES.customers, page: async () => (await orders()).CustomersPage },
+].map(({ path, page }) => ({
+  element: <ProtectedRoute roles={[Admin]} />,
+  children: [{ path, lazy: async () => ({ Component: await page() }) }],
+}));
+
 export const router = createBrowserRouter([
   {
     path: ROUTES.login,
@@ -94,6 +108,7 @@ export const router = createBrowserRouter([
           { index: true, element: <HomePage /> },
           ...warehouseRoutes,
           ...requestRoutes,
+          ...orderRoutes,
           // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.
         ],
       },

@@ -10,6 +10,26 @@ export const API = {
     logout: '/api/v1/common/auth/logout',
     me: '/api/v1/common/auth/me',
   },
+  customers: { base: v1('admin/customers'), byId: (id: number) => v1(`admin/customers/${id}`) },
+  products: {
+    base: v1('admin/products'),
+    byId: (id: number) => v1(`admin/products/${id}`),
+    discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
+    reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
+  },
+  customerOrders: {
+    base: v1('admin/customer-orders'),
+    nextCode: v1('admin/customer-orders/next-code'),
+    byId: (id: number) => v1(`admin/customer-orders/${id}`),
+    cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
+    stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
+  },
+  /** Tra cứu cho luồng khác: không có đơn giá (D26). */
+  orderLookups: {
+    orders: v1('common/order-lookups/orders'),
+    orderLines: (orderId: number) => v1(`common/order-lookups/orders/${orderId}/lines`),
+    products: v1('common/order-lookups/products'),
+  },
   requests: {
     base: v1('common/requests'),
     types: v1('common/requests/types'),
