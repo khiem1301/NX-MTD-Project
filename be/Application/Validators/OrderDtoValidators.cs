@@ -4,6 +4,13 @@ using NX_MTD.Application.DTOs;
 
 namespace NX_MTD.Application.Validators;
 
+/// <summary>Mã hàng / mã đơn: service sẽ Trim + chữ hoa nên validator cũng kiểm sau khi Trim.</summary>
+internal static class CodePattern
+{
+    private static readonly System.Text.RegularExpressions.Regex Regex = new(@"^[A-Za-z0-9._-]+$");
+    public static bool IsMatch(string value) => Regex.IsMatch(value);
+}
+
 public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto>
 {
     public SaveCustomerDtoValidator()
@@ -20,7 +27,7 @@ public sealed class SaveProductDtoValidator : AbstractValidator<SaveProductDto>
     public SaveProductDtoValidator()
     {
         RuleFor(x => x.ProductCode).NotEmpty().WithMessage(Messages.Required("mã hàng")).MaximumLength(30)
-            .Matches(@"^[A-Za-z0-9._-]+$").WithMessage("Mã hàng chỉ gồm chữ, số và . _ -");
+            .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã hàng chỉ gồm chữ, số và . _ -");
         RuleFor(x => x.ProductName).NotEmpty().WithMessage(Messages.Required("tên mã hàng")).MaximumLength(200);
         RuleFor(x => x.SampleImageUrl).MaximumLength(500)
             .Must(u => Uri.TryCreate(u, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
@@ -49,7 +56,7 @@ public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T 
     protected OrderInputValidatorBase()
     {
         RuleFor(x => x.OrderCode).NotEmpty().WithMessage(Messages.Required("mã đơn hàng")).MaximumLength(30)
-            .Matches(@"^[A-Za-z0-9._-]+$").WithMessage("Mã đơn hàng chỉ gồm chữ, số và . _ -");
+            .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã đơn hàng chỉ gồm chữ, số và . _ -");
         RuleFor(x => x.CustomerId).GreaterThan(0).WithMessage(Messages.Required("khách hàng"));
         RuleFor(x => x.DueDate).Must((x, d) => d >= x.ReceivedDate).WithMessage("Ngày giao phải sau hoặc bằng ngày nhận.");
         RuleFor(x => x.Note).MaximumLength(1000);
