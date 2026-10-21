@@ -18,6 +18,13 @@ export const MESSAGES = {
     saved: 'Đã lưu.',
     actions: 'Thao tác',
     empty: 'Chưa có dữ liệu',
+    noData: 'Không có dữ liệu phù hợp.', // MSG02
+    close: 'Đóng',
+    history: 'Lịch sử',
+    note: 'Ghi chú',
+    loadError: 'Không tải được dữ liệu.',
+    notFound: 'Không tìm thấy dữ liệu hoặc bạn không có quyền xem.',
+    concurrency: 'Dữ liệu đã bị người khác thay đổi. Đã tải lại, vui lòng làm lại thao tác.',
   },
   warehouse: {
     materialSaved: 'Đã lưu NVL.',
