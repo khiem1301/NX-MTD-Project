@@ -17,6 +17,11 @@ public record PageQuery
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = DefaultPageSize;
     public string? Keyword { get; init; }
+    public string? SortBy { get; init; }
+    public string? SortDir { get; init; }
+
+    public int Skip => (SafePage - 1) * SafePageSize;
+    public bool Desc => !string.Equals(SortDir, "asc", StringComparison.OrdinalIgnoreCase);
 
     public int SafePage => Page < 1 ? 1 : Page;
     public int SafePageSize => PageSize < 1 ? DefaultPageSize : Math.Min(PageSize, MaxPageSize);

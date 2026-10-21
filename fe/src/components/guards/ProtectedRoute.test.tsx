@@ -44,6 +44,21 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('home page')).toBeInTheDocument();
   });
 
+  it('forces a user with a temporary password to the profile page', () => {
+    useAuthStore.setState({ status: 'authenticated', user: { ...makeUser('Admin'), isTemporaryPassword: true } });
+    render(
+      <MemoryRouter initialEntries={['/secret']}>
+        <Routes>
+          <Route path="/profile" element={<div>profile page</div>} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/secret" element={<div>secret page</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('profile page')).toBeInTheDocument();
+  });
+
   it('renders children when the role is allowed', () => {
     useAuthStore.setState({ status: 'authenticated', user: makeUser('Admin') });
     renderAt(['Admin']);

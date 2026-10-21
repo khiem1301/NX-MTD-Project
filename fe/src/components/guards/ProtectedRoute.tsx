@@ -18,6 +18,10 @@ export function ProtectedRoute({ roles }: { roles?: Role[] }) {
   if (status !== 'authenticated' || !user) {
     return <Navigate to={ROUTES.login} replace state={{ from: location }} />;
   }
+  // D29: mật khẩu tạm (tạo mới / đặt lại) → phải đổi mật khẩu trước khi dùng tiếp.
+  if (user.isTemporaryPassword && location.pathname !== ROUTES.profile) {
+    return <Navigate to={`${ROUTES.profile}?changePassword=1`} replace />;
+  }
   if (roles && !roles.includes(user.role)) {
     return <Navigate to={ROUTES.home} replace />;
   }
