@@ -9,6 +9,8 @@ type MaterialFormModalProps = {
   open: boolean;
   material: Material | null;
   onClose: () => void;
+  /** Gọi sau khi lưu xong, kèm NVL vừa lưu (để chọn luôn ở form gọi tới). */
+  onSaved?: (material: Material) => void;
 };
 
 const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
@@ -16,7 +18,7 @@ const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
   label: MATERIAL_TYPE_LABEL[t],
 }));
 
-export function MaterialFormModal({ open, material, onClose }: MaterialFormModalProps) {
+export function MaterialFormModal({ open, material, onClose, onSaved }: MaterialFormModalProps) {
   const [form] = Form.useForm<SaveMaterialPayload>();
   const save = useSaveMaterial();
   const materialType = Form.useWatch('materialType', form);
@@ -31,7 +33,10 @@ export function MaterialFormModal({ open, material, onClose }: MaterialFormModal
     save.mutate(
       { id: material?.materialId, body: values },
       {
-        onSuccess: onClose,
+        onSuccess: (saved) => {
+          onSaved?.(saved as Material);
+          onClose();
+        },
         onError: (error) =>
           form.setFields(
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({

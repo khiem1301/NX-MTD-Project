@@ -27,6 +27,31 @@ public sealed class ProductsController : AdminBaseController
     public async Task<IActionResult> Update(int id, [FromBody] SaveProductDto dto, CancellationToken ct) =>
         this.ToResponse(await _products.UpdateAsync(id, dto, ct));
 
+    private const long MaxRequestBytes = 6 * 1024 * 1024;
+
+    /// <summary>multipart/form-data: file. Trả khóa ảnh để gửi lại trong sampleImageUrl khi lưu mã hàng.</summary>
+    [HttpPost("sample-image"), RequestSizeLimit(MaxRequestBytes)]
+    public async Task<IActionResult> UploadSampleImage(IFormFile? file, CancellationToken ct)
+    {
+        byte[] content = Array.Empty<byte>();
+        if (file is not null)
+        {
+            using var buffer = new MemoryStream();
+            await file.CopyToAsync(buffer, ct);
+            content = buffer.ToArray();
+        }
+        return this.ToResponse(await _products.UploadSampleImageAsync(new FileUpload(content, file?.FileName ?? string.Empty), ct));
+    }
+
+    [HttpGet("sample-image")]
+    public async Task<IActionResult> SampleImage([FromQuery] string key, CancellationToken ct)
+    {
+        var result = await _products.OpenSampleImageAsync(key, ct);
+        if (!result.IsSuccess || result.Data is null) return this.ToResponse(result);
+        Response.Headers.CacheControl = "private, max-age=3600";
+        return File(result.Data.Content, result.Data.ContentType);
+    }
+
     [HttpPost("{id:int}/discontinue")]
     public async Task<IActionResult> Discontinue(int id, CancellationToken ct) =>
         this.ToResponse(await _products.DiscontinueAsync(id, ct));

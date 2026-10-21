@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
-import { DatePicker, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { useEffect, useState } from 'react';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, DatePicker, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions, useOrderLineOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveNormPayload, SaveOrderMaterialPayload } from '../types';
+import { MaterialFormModal } from './MaterialFormModal';
 import { NormFields } from './NormFields';
 
 type OrderMaterialFormModalProps = {
@@ -33,6 +35,7 @@ export function OrderMaterialFormModal({
   const materials = useMaterialOptions();
   const orderLines = useOrderLineOptions(orderId);
   const customerQty = Form.useWatch('customerQty', form);
+  const [materialOpen, setMaterialOpen] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -99,6 +102,15 @@ export function OrderMaterialFormModal({
               options={materialOptions}
               loading={materials.isLoading}
               style={{ width: 340 }}
+              dropdownRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <Button type="link" icon={<PlusOutlined />} onClick={() => setMaterialOpen(true)}>
+                    {LABELS.addMaterial}
+                  </Button>
+                </>
+              )}
             />
           </Form.Item>
           <Form.Item name="materialColor" label={LABELS.color}>
@@ -134,6 +146,12 @@ export function OrderMaterialFormModal({
         <Divider orientation="left">{LABELS.norms}</Divider>
         <NormFields orderLines={orderLines.data ?? []} />
       </Form>
+      <MaterialFormModal
+        open={materialOpen}
+        material={null}
+        onClose={() => setMaterialOpen(false)}
+        onSaved={(m) => form.setFieldValue('materialId', m.materialId)}
+      />
     </Modal>
   );
 }

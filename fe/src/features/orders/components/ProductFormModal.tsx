@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Form, Input, Modal, Tooltip } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useSaveProduct } from '../hooks/useOrders';
+import { SampleImageInput } from './SampleImageInput';
 import type { ProductListItem, SaveProductPayload } from '../types';
 
 type ProductFormModalProps = {
@@ -12,7 +13,7 @@ type ProductFormModalProps = {
   onSaved?: (productId: number, code: string) => void;
 };
 
-/** UC10: thêm / sửa mã hàng. Mã khóa khi đã dùng trong đơn. Ảnh mẫu là đường dẫn (DEV-KH-08-1). */
+/** UC10: thêm / sửa mã hàng. Mã khóa khi đã dùng trong đơn. Ảnh mẫu chọn từ máy, lưu khóa file trong SampleImageUrl (DEV-KH-08-1). */
 export function ProductFormModal({ open, product, onClose, onSaved }: ProductFormModalProps) {
   const [form] = Form.useForm<SaveProductPayload>();
   const save = useSaveProduct();
@@ -75,8 +76,8 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         >
           <Input />
         </Form.Item>
-        <Form.Item name="sampleImageUrl" label={MESSAGES.orders.sampleImage} rules={[{ max: 500 }, { type: 'url' }]}>
-          <Input placeholder="https://..." />
+        <Form.Item name="sampleImageUrl" label={MESSAGES.orders.sampleImage} rules={[{ max: 500 }]}>
+          <SampleImageInput />
         </Form.Item>
         <Form.Item name="description" label={MESSAGES.orders.description} rules={[{ max: 1000 }]}>
           <Input.TextArea rows={2} />

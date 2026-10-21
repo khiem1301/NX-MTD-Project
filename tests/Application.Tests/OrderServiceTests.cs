@@ -1,4 +1,5 @@
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using NSubstitute;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
@@ -17,7 +18,40 @@ public class ProductServiceTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
-    private ProductService Create() => new(_products, _audit, _uow, _clock);
+    private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
+
+    private ProductService Create() => new(_products, _audit, _uow, _clock, _storage, Options.Create(new AttachmentOptions()));
+
+    private static readonly byte[] Png = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0 };
+
+    [Fact]
+    public async Task UploadSampleImage_Png_ReturnsStorageKey()
+    {
+        _storage.SaveAsync(Arg.Any<byte[]>(), "PRODUCT", ".png", Arg.Any<CancellationToken>()).Returns("PRODUCT/2026/10/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png");
+
+        var result = await Create().UploadSampleImageAsync(new FileUpload(Png, "a.png"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        SampleImageKey.IsValid(result.Data).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UploadSampleImage_NotAnImage_Fails()
+    {
+        var result = await Create().UploadSampleImageAsync(new FileUpload(new byte[] { 1, 2, 3, 4 }, "a.png"), default);
+
+        result.IsSuccess.Should().BeFalse();
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task OpenSampleImage_InvalidKey_NotFound()
+    {
+        var result = await Create().OpenSampleImageAsync("../secret.png", default);
+
+        result.IsSuccess.Should().BeFalse();
+        await _storage.DidNotReceiveWithAnyArgs().OpenReadAsync(default!, default);
+    }
 
     private static SaveProductDto Dto(string code = "AO-01") => new(code, "Áo thun", null, null);
 

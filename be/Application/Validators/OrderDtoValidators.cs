@@ -30,8 +30,8 @@ public sealed class SaveProductDtoValidator : AbstractValidator<SaveProductDto>
             .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã hàng chỉ gồm chữ, số và . _ -");
         RuleFor(x => x.ProductName).NotEmpty().WithMessage(Messages.Required("tên mã hàng")).MaximumLength(200);
         RuleFor(x => x.SampleImageUrl).MaximumLength(500)
-            .Must(u => Uri.TryCreate(u, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
-            .When(x => !string.IsNullOrWhiteSpace(x.SampleImageUrl)).WithMessage("Ảnh mẫu phải là đường dẫn http hoặc https.");
+            .Must(u => SampleImageKey.IsValid(u.Trim()) || (Uri.TryCreate(u, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
+            .When(x => !string.IsNullOrWhiteSpace(x.SampleImageUrl)).WithMessage("Ảnh mẫu không hợp lệ, vui lòng chọn lại ảnh.");
         RuleFor(x => x.Description).MaximumLength(1000);
     }
 }

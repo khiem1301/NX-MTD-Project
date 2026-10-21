@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Image, Input, Popconfirm, Select, Space, Table, Tag, type TableColumnsType } from 'antd';
+import { Button, Card, Input, Popconfirm, Select, Space, Table, Tag, type TableColumnsType } from 'antd';
+import { ProductImage } from '../components/ProductImage';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -44,7 +45,7 @@ export function ProductsPage() {
     {
       title: MESSAGES.orders.sampleImage,
       dataIndex: 'sampleImageUrl',
-      render: (v: string | null) => (v ? <Image src={v} width={40} height={40} style={{ objectFit: 'cover' }} fallback="" /> : '—'),
+      render: (v: string | null) => (v ? <ProductImage value={v} /> : '—'),
     },
     { title: MESSAGES.orders.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={STATUS_TAG} /> },
     { title: MESSAGES.orders.used, dataIndex: 'isUsed', render: (v: boolean) => (v ? <Tag color="blue">{MESSAGES.orders.used}</Tag> : '—') },

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -12,10 +13,38 @@ public sealed class ProductService : IProductService
     private readonly IAuditLogService _audit;
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
+    private readonly IFileStorage _storage;
+    private readonly AttachmentOptions _options;
 
-    public ProductService(IProductRepository products, IAuditLogService audit, IUnitOfWork uow, IClock clock)
+    public ProductService(IProductRepository products, IAuditLogService audit, IUnitOfWork uow, IClock clock,
+        IFileStorage storage, IOptions<AttachmentOptions> options)
     {
-        _products = products; _audit = audit; _uow = uow; _clock = clock;
+        _products = products; _audit = audit; _uow = uow; _clock = clock; _storage = storage; _options = options.Value;
+    }
+
+    private const string SampleImageFolder = "PRODUCT";
+
+    public async Task<Result<string>> UploadSampleImageAsync(FileUpload file, CancellationToken ct)
+    {
+        if (file.Content.Length == 0)
+            return Result<string>.Failure(ErrorCodes.AttachmentFileEmpty, Messages.AttachmentFileEmpty, ResultKind.Validation);
+        if (file.Content.Length > _options.MaxFileBytes)
+            return Result<string>.Failure(ErrorCodes.AttachmentFileTooLarge,
+                string.Format(Messages.AttachmentFileTooLarge, _options.MaxFileMb), ResultKind.Validation);
+        var kind = FileSignatures.DetectImage(file.Content.AsSpan(0, Math.Min(12, file.Content.Length)));
+        if (kind is null)
+            return Result<string>.Failure(ErrorCodes.AttachmentFileTypeNotAllowed, Messages.AttachmentFileTypeNotAllowed,
+                ResultKind.Validation);
+        return Result<string>.Success(await _storage.SaveAsync(file.Content, SampleImageFolder, kind.Extension, ct));
+    }
+
+    public async Task<Result<AttachmentContent>> OpenSampleImageAsync(string key, CancellationToken ct)
+    {
+        if (!SampleImageKey.IsValid(key)) return Fail.NotFound<AttachmentContent>();
+        var stream = await _storage.OpenReadAsync(key, ct);
+        if (stream is null) return Fail.NotFound<AttachmentContent>();
+        var type = key.EndsWith(".png") ? "image/png" : key.EndsWith(".webp") ? "image/webp" : "image/jpeg";
+        return Result<AttachmentContent>.Success(new AttachmentContent(stream, type, Path.GetFileName(key)));
     }
 
     public async Task<Result<PagedResult<ProductListItemDto>>> ListAsync(ProductQuery query, CancellationToken ct)

@@ -51,6 +51,10 @@ public interface IProductService
     Task<Result> UpdateAsync(int productId, SaveProductDto dto, CancellationToken ct);
     Task<Result> DiscontinueAsync(int productId, CancellationToken ct);
     Task<Result> ReactivateAsync(int productId, CancellationToken ct);
+
+    /// <summary>Tải ảnh mẫu từ máy: kiểm chữ ký ảnh + dung lượng, trả khóa lưu trữ để ghi vào SampleImageUrl.</summary>
+    Task<Result<string>> UploadSampleImageAsync(FileUpload file, CancellationToken ct);
+    Task<Result<AttachmentContent>> OpenSampleImageAsync(string key, CancellationToken ct);
 }
 
 public interface ICustomerOrderService
