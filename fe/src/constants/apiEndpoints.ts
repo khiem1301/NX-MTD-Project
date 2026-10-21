@@ -48,6 +48,7 @@ export const API = {
   customers: { base: v1('admin/customers'), byId: (id: number) => v1(`admin/customers/${id}`) },
   products: {
     base: v1('admin/products'),
+    sampleImage: v1('admin/products/sample-image'),
     byId: (id: number) => v1(`admin/products/${id}`),
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),

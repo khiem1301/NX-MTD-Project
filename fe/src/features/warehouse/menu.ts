@@ -12,6 +12,7 @@ export const warehouseMenu: MenuEntry[] = [
     path: ROUTES.orderMaterials,
     roles: [Admin, Manager],
   },
+  { key: 'purchase-orders', label: 'Đơn mua NVL', path: ROUTES.purchaseOrders, roles: [Manager] },
   {
     key: 'material-receipts',
     label: 'Phiếu nhập NVL',

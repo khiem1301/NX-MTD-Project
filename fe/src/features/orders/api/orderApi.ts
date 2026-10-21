@@ -29,6 +29,13 @@ export const customerApi = {
 };
 
 export const productApi = {
+  uploadSampleImage: async (file: File): Promise<string> => {
+    const body = new FormData();
+    body.append('file', file);
+    return post<string>(API.products.sampleImage, body);
+  },
+  sampleImageBlob: async (key: string): Promise<Blob> =>
+    (await apiClient.get<Blob>(API.products.sampleImage, { params: { key }, responseType: 'blob' })).data,
   list: (q: ProductQuery) => get<Paginated<ProductListItem>>(API.products.base, q),
   get: (id: number) => get<ProductDetail>(API.products.byId(id)),
   create: (body: SaveProductPayload) => post<number>(API.products.base, body),

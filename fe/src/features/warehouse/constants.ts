@@ -116,6 +116,7 @@ export const PO_PAYMENT_STATUS_LABEL: Record<string, StatusLabel> = {
 };
 
 export const LABELS = {
+  addMaterial: 'Thêm NVL mới',
   materialsTitle: 'Danh mục NVL',
   materialCode: 'Mã NVL',
   materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
@@ -149,7 +150,15 @@ export const LABELS = {
   wastagePercent: '% hao hụt',
   purchaseOrdersTitle: 'Đơn mua NVL',
   poCode: 'Số đơn mua',
-  stockPurchase: 'Mua NVL dùng chung (kim, chỉ... cho nhiều đơn)',
+  purchaseOrderOrder: 'Đơn hàng',
+  purchaseOrderOrderHint: 'Chọn đơn hàng để mua theo NVL của đơn; để trống nếu mua dự trữ dùng chung.',
+  nothingToBuy: 'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
+  poKindAll: 'Tất cả đơn mua',
+  poKindStock: 'Mua dự trữ (không gắn đơn hàng)',
+  poKindOrder: 'Gắn đơn hàng',
+  poGoodsStatusFilter: 'Trạng thái hàng',
+  createStockPurchase: 'Tạo đơn mua',
+  stockPurchase: 'Tạo đơn mua NVL',
   selectOrderOrStock: 'Chọn đơn hàng, hoặc để trống để xem / tạo đơn mua NVL dùng chung',
   addNewMaterial: 'Thêm NVL mới',
   newMaterialHint: 'Gõ tên NVL (VD: kim may), chọn có sẵn hoặc thêm mới',

@@ -10,10 +10,11 @@ type MaterialFreeSelectProps = {
   /** number = NVL có sẵn (materialId); "new:<tên>" = NVL mới gõ tay. */
   value?: number | string;
   onChange?: (value: number | string | undefined) => void;
+  disabled?: boolean;
 };
 
 /** Chọn NVL trong danh mục, hoặc gõ tên NVL chưa có để thêm mới (VD: kim may). */
-export function MaterialFreeSelect({ value, onChange }: MaterialFreeSelectProps) {
+export function MaterialFreeSelect({ value, onChange, disabled }: MaterialFreeSelectProps) {
   const materials = useMaterialOptions();
   const [search, setSearch] = useState('');
 
@@ -40,6 +41,7 @@ export function MaterialFreeSelect({ value, onChange }: MaterialFreeSelectProps)
     <Select
       showSearch
       value={value}
+      disabled={disabled}
       onChange={onChange}
       onSearch={(text) => setSearch(text.slice(0, MAX_NAME_LENGTH))}
       onBlur={() => setSearch('')}
