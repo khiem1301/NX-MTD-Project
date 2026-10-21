@@ -1,4 +1,5 @@
 import { Button, Layout, Menu, Typography } from 'antd';
+import { ROUTES } from '@/constants/routes';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MENU_ENTRIES } from '@/app/menu';
 import { MESSAGES } from '@/constants/messages';
@@ -42,9 +43,9 @@ export function MainLayout() {
             background: '#fff',
           }}
         >
-          <Typography.Text>
+          <Typography.Link onClick={() => navigate(ROUTES.profile)}>
             {user?.fullName} · {user?.roleName}
-          </Typography.Text>
+          </Typography.Link>
           <Button onClick={() => void logout()}>{MESSAGES.auth.logoutButton}</Button>
         </Layout.Header>
         <Layout.Content style={{ margin: 16 }}>

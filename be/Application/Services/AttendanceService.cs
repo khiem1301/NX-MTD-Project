@@ -154,7 +154,7 @@ public sealed class AttendanceService : IAttendanceService
                 return Result.Failure(ErrorCodes.AttendanceRequestInvalid, Messages.AttendanceAdjustmentRequestRequired,
                     ResultKind.NotFound);
 
-            if (request.Status != RequestStatus.Approved)
+            if (request.Status != RequestStatuses.Approved)
                 return Result.Failure(ErrorCodes.AttendanceRequestInvalid, Messages.AttendanceRequestInvalid);
         }
 

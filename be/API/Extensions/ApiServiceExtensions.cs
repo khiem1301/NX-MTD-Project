@@ -28,7 +28,11 @@ public static class ApiServiceExtensions
                 o.Filters.Add<ValidationFilter>();
                 o.Conventions.Add(new RouteTokenTransformerConvention(new SlugifyParameterTransformer()));
             })
-            .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+            .AddJsonOptions(o =>
+            {
+                o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                o.JsonSerializerOptions.Converters.Add(new VnDateTimeJsonConverter());
+            })
             .ConfigureApiBehaviorOptions(o =>
                 o.InvalidModelStateResponseFactory = ctx => new Microsoft.AspNetCore.Mvc.ObjectResult(
                     ApiResponses.Failure(ErrorCodes.CommonValidation, "Dữ liệu không hợp lệ.",

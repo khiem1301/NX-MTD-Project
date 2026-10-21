@@ -13,5 +13,8 @@ namespace NX_MTD.Application.Interfaces
         void Update(T entity);
         void Remove(T entity);
         void RemoveRange(IEnumerable<T> entities);
+
+        /// <summary>Gắn RowVer client gửi lên làm giá trị gốc để EF kiểm tra đồng thời (R12) → 409 khi lệch.</summary>
+        void SetOriginalRowVersion(T entity, byte[] rowVer);
     }
 }

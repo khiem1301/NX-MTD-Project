@@ -334,7 +334,7 @@ public class AttendanceServiceTests
         _repo.GetEmployeeStatusAsync(7, Arg.Any<CancellationToken>()).Returns(Employee());
         _repo.HasAdjustmentAsync(7, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(false);
         _repo.GetAdjustmentRequestAsync(11, Arg.Any<CancellationToken>()).Returns(
-            new Request { RequestId = 11, RequestTypeCode = RequestTypes.AttendanceCorrection, Status = RequestStatus.PendingApproval });
+            new Request { RequestId = 11, RequestTypeCode = RequestTypes.AttendanceCorrection, Status = RequestStatuses.PendingApproval });
 
         var result = await _sut.CreateAdjustmentAsync(
             Adjustment(type: AdjustmentType.ApprovedRequest, requestId: 11), 1, CancellationToken.None);

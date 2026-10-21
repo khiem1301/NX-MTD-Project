@@ -1,4 +1,5 @@
-import { formatDate, formatDateTime, formatQty } from './format';
+import type { Dayjs } from 'dayjs';
+import { fill, formatCurrency, formatDate, formatDateTime, formatQty, toApiDate } from './format';
 
 describe('formatQty', () => {
   it('dùng dấu chấm ngăn nghìn, dấu phẩy thập phân', () => {
@@ -40,5 +41,35 @@ describe('formatDateTime', () => {
 
   it('chỉ có ngày thì trả ngày', () => {
     expect(formatDateTime('2026-10-20')).toBe('20/10/2026');
+  });
+});
+
+describe('formatCurrency', () => {
+  it('ngăn nghìn bằng dấu chấm và thêm ₫', () => {
+    expect(formatCurrency(1250000)).toBe('1.250.000 ₫');
+  });
+
+  it('trả gạch ngang khi không có giá trị', () => {
+    expect(formatCurrency(null)).toBe('—');
+  });
+});
+
+describe('formatDateTime với múi giờ', () => {
+  it('đổi chuỗi UTC về giờ Việt Nam', () => {
+    expect(formatDateTime('2026-10-22T01:30:00Z')).toBe('22/10/2026 08:30');
+  });
+
+  it('giữ nguyên chuỗi đã có offset +07:00', () => {
+    expect(formatDateTime('2026-10-22T08:30:00+07:00')).toBe('22/10/2026 08:30');
+  });
+});
+
+describe('toApiDate / fill', () => {
+  it('toApiDate trả YYYY-MM-DD', () => {
+    expect(toApiDate({ format: () => '2026-10-22' } as unknown as Dayjs)).toBe('2026-10-22');
+  });
+
+  it('fill thay {0}, {1}', () => {
+    expect(fill('Đã đủ {0} ảnh ({1})', 5, 'tối đa')).toBe('Đã đủ 5 ảnh (tối đa)');
   });
 });

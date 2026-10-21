@@ -1,4 +1,4 @@
-namespace NX_MTD.Domain.Constants;
+﻿namespace NX_MTD.Domain.Constants;
 
 /// <summary>Giá trị khớp CHECK constraint trong DB. Không tự đặt chuỗi khác.</summary>
 public static class WarehouseTypes
@@ -53,6 +53,10 @@ public static class TeamTypes
 
 public static class OrderStatuses
 {
+    public const string New = "NEW";
+    public const string InProduction = "IN_PRODUCTION";
+    public const string InDelivery = "IN_DELIVERY";
+    public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
     public const string Cancelled = "CANCELLED";
     public const string Stopped = "STOPPED";
     public const string Delivered = "DELIVERED";
@@ -60,6 +64,15 @@ public static class OrderStatuses
 
     /// <summary>Đơn đã đóng thì không lập thêm phiếu kho / lệnh cắt.</summary>
     public static readonly IReadOnlyList<string> Closed = new[] { Cancelled, Stopped, Delivered, Completed };
+
+    /// <summary>D27: đang sản xuất / giao thì chỉ sửa số lượng, đơn giá, thêm dòng.</summary>
+    public static readonly IReadOnlySet<string> LimitedEdit = new HashSet<string> { InProduction, InDelivery, PartiallyDelivered };
+
+    /// <summary>Được dừng (bắt buộc lý do).</summary>
+    public static readonly IReadOnlySet<string> Stoppable = LimitedEdit;
+
+    /// <summary>Mặc định của tra cứu cho luồng khác: đơn còn đang chạy.</summary>
+    public static readonly IReadOnlySet<string> Running = new HashSet<string> { New, InProduction, InDelivery, PartiallyDelivered };
 }
 
 public static class ReceiptStatuses
@@ -119,12 +132,7 @@ public static class ShiftCodes
     public static readonly IReadOnlyList<string> All = new[] { Morning, Afternoon, Overtime };
 }
 
-// RequestTypes và SettingKeys khai báo chung ở AttendanceCodes.cs (đã gộp hằng của cả hai luồng).
-
-public static class RequestStatuses
-{
-    public const string Approved = "APPROVED";
-}
+// RequestTypes, RequestStatuses: RequestConstants.cs. SettingKeys: AttendanceCodes.cs (một nơi cho mọi luồng).
 
 /// <summary>Tiền tố mã phiếu: TIỀN TỐ-yyyyMMdd-STT.</summary>
 public static class DocumentPrefixes

@@ -33,27 +33,6 @@ public static class AdjustmentType
     public static readonly string[] All = [ForgotPunch, FingerprintFail, OffsiteWork, ApprovedRequest];
 }
 
-/// <summary>Loại đơn từ (RequestTypeCode) — khai báo một nơi cho mọi luồng dùng.</summary>
-public static class RequestTypes
-{
-    public const string AttendanceCorrection = "ATTENDANCE_CORRECTION";
-
-    // Kho, cắt (Thái)
-    public const string MaterialRequisition = "MATERIAL_REQUISITION";
-    public const string SemiFinishedRequisition = "SEMI_FINISHED_REQUISITION";
-}
-
-/// <summary>Trạng thái đơn từ (đồng bộ với CHECK CK_Request_Status trong DB).</summary>
-public static class RequestStatus
-{
-    public const string PendingApproval = "PENDING_APPROVAL";
-    public const string PendingProcessing = "PENDING_PROCESSING";
-    public const string Approved = "APPROVED";
-    public const string Rejected = "REJECTED";
-    public const string Completed = "COMPLETED";
-    public const string Cancelled = "CANCELLED";
-}
-
 /// <summary>Khóa tham số trong bảng SystemSetting — khai báo một nơi cho mọi luồng dùng.</summary>
 public static class SettingKeys
 {
@@ -70,4 +49,7 @@ public static class SettingKeys
 
     // Kho, cắt (Thái)
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
+
+    // Đơn từ (Khiêm)
+    public const string RequestMaxPhotos = "REQUEST_MAX_PHOTOS";
 }

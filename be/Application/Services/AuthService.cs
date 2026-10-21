@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -49,6 +49,14 @@ public sealed class AuthService : IAuthService
         if (blocked is not null) return blocked;
 
         return Result<LoginResultDto>.Success(BuildLoginResult(account));
+    }
+
+    public async Task<Result<LoginResultDto>> IssueForAccountAsync(int accountId, CancellationToken ct)
+    {
+        var account = await _accounts.GetWithEmployeeAsync(accountId, ct);
+        if (account is null)
+            return Fail(ErrorCodes.AuthUnauthorized, Messages.Unauthorized, ResultKind.Unauthorized);
+        return CheckUsable(account) ?? Result<LoginResultDto>.Success(BuildLoginResult(account));
     }
 
     public async Task<Result<UserInfoDto>> GetMeAsync(int accountId, CancellationToken ct)
