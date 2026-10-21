@@ -36,29 +36,31 @@ public sealed class ClosedXmlPayrollParser : IExcelPayrollParser
         using var buffer = new MemoryStream();
         stream.CopyTo(buffer);
         buffer.Position = 0;
-        using var workbook = new XLWorkbook(buffer);
+        using var workbook = XlsxWorkbookLoader.Open(buffer);
 
         var rows = new List<PayrollExcelRowDto>();
         var foundPayrollSheet = false;
+        var missingNetPaySheets = new List<string>();
         foreach (var sheet in workbook.Worksheets)
         {
-            var layout = FindLayout(sheet);
-            if (layout is null) continue;   // sheet phụ không có cột SLĐ (ghi chú, bảng tính nháp...)
+            var layout = FindLayout(sheet, missingNetPaySheets);
+            if (layout is null) continue;   // sheet phụ không có cột SLĐ (ghi chú, bảng công, bảng tính nháp...)
 
             foundPayrollSheet = true;
             ReadSheet(sheet, layout, rows);
         }
 
         if (!foundPayrollSheet)
-            throw new InvalidDataException(
-                "File Excel sai mẫu: không có sheet nào chứa cột 'SLĐ' và cột 'Thực lĩnh' (hoặc 'Còn lĩnh').");
+            throw new InvalidDataException(missingNetPaySheets.Count > 0
+                ? $"Sheet '{missingNetPaySheets[0]}' có cột 'SLĐ' nhưng thiếu cột 'Thực lĩnh' hoặc 'Còn lĩnh'."
+                : "File Excel sai mẫu: không có sheet nào chứa cột 'SLĐ' và cột 'Thực lĩnh' (hoặc 'Còn lĩnh').");
 
         return rows;
     }
 
     // ---------- Nhận diện bố cục sheet ----------
 
-    private static SheetLayout? FindLayout(IXLWorksheet sheet)
+    private static SheetLayout? FindLayout(IXLWorksheet sheet, List<string> missingNetPaySheets)
     {
         var lastRow = sheet.LastRowUsed()?.RowNumber() ?? 0;
         var lastCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 0;
@@ -88,8 +90,10 @@ public sealed class ClosedXmlPayrollParser : IExcelPayrollParser
             if (nameCol == 0 && key is PayslipLayout.FullNameKey or "hovaten") nameCol = c;
         }
         if (netCol == 0)
-            throw new InvalidDataException(
-                $"Sheet '{sheet.Name}' có cột 'SLĐ' nhưng thiếu cột 'Thực lĩnh' hoặc 'Còn lĩnh'.");
+        {
+            missingNetPaySheets.Add(sheet.Name);   // không phải sheet lương (vd bảng công có cột SLĐ): bỏ qua
+            return null;
+        }
 
         var columns = BuildColumns(sheet, headerRow, subRow, netCol);
         return new SheetLayout(headerRow, subRow + 1, codeCol, nameCol == 0 ? 2 : nameCol, netCol,

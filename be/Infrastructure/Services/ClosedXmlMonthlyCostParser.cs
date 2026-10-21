@@ -26,7 +26,7 @@ public sealed class ClosedXmlMonthlyCostParser : IExcelMonthlyCostParser
         using var buffer = new MemoryStream();
         stream.CopyTo(buffer);
         buffer.Position = 0;
-        using var workbook = new XLWorkbook(buffer);
+        using var workbook = XlsxWorkbookLoader.Open(buffer);
         var sheet = workbook.Worksheets.Count == 0
             ? throw new InvalidDataException("File Excel không có sheet nào.")
             : workbook.Worksheets.First();
