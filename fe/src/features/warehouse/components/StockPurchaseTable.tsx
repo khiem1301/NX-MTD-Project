@@ -1,4 +1,4 @@
-import { Table, type TableColumnsType } from 'antd';
+import { Table, Tag, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -27,6 +27,11 @@ const lineColumns: TableColumnsType<PurchaseOrderLine> = [
 
 const columns: TableColumnsType<PurchaseOrderListItem> = [
   { title: LABELS.poCode, dataIndex: 'poCode' },
+  {
+    title: LABELS.purchaseOrderOrder,
+    dataIndex: 'orderCode',
+    render: (v: string | null) => v ?? <Tag>{LABELS.stockPurchaseTag}</Tag>,
+  },
   { title: LABELS.supplier, dataIndex: 'supplierName', render: (v: string | null) => v ?? '—' },
   { title: LABELS.lineCount, dataIndex: 'lineCount', align: 'right' },
   { title: LABELS.createdAt, dataIndex: 'createdAt', render: formatDateTime },
@@ -56,10 +61,10 @@ function PurchaseOrderLines({ id }: { id: number }) {
   );
 }
 
-/** Đơn mua NVL dùng chung nhiều đơn (kim, chỉ...), không gắn mã đơn hàng; hiện khi chưa chọn đơn. */
-export function StockPurchaseTable() {
+/** Danh sách đơn mua NVL. stockOnly = true: chỉ đơn dùng chung (kim, chỉ...); undefined: cả đơn gắn đơn hàng. */
+export function StockPurchaseTable({ stockOnly = true, goodsStatus }: { stockOnly?: boolean; goodsStatus?: string }) {
   const table = useTableQuery<Record<string, never>>({});
-  const orders = usePurchaseOrders({ ...table.params, stockOnly: true });
+  const orders = usePurchaseOrders({ ...table.params, stockOnly, goodsStatus });
   return (
     <>
       <QueryError error={orders.error} onRetry={() => void orders.refetch()} />
