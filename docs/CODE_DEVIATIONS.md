@@ -1,4 +1,4 @@
-# NX-MTD – Khác biệt giữa code và tài liệu
+﻿# NX-MTD – Khác biệt giữa code và tài liệu
 
 > Ghi theo Coding Rules mục 8. Chỉ thêm mục mới vào cuối file. Trạng thái: `Mở` · `Đã sửa tài liệu` · `Bỏ`.
 > Tài liệu gốc: Report-3 SRS (16/10), NX-MTD_AI_Context.md (19/10), NX-MTD_Database.sql (65 bảng), NX-MTD_Tong_hop_Use_Case.md (20/10).
@@ -9,6 +9,7 @@
 |---|---|---|---|---|---|
 | DEV-TH-12-1 | 21/10/2026 | Thái | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua NVL không bắt buộc gắn đơn hàng (mua dùng chung kim, chỉ...) | Mở |
 | DEV-TH-12-2 | 21/10/2026 | Thái | `Material` | Quản đốc nhập tên NVL mới khi tạo đơn mua, NVL tự vào danh mục | Mở |
+| DEV-KH-07-1 | 22/10/2026 | Khiêm | `Attachment.FileUrl` | Lưu khóa lưu trữ, file ở ổ đĩa (dev), tải qua API có kiểm quyền | Mở |
 
 ---
 
@@ -39,4 +40,18 @@
 - **Cần sửa trong tài liệu:**
   - [ ] `NX-MTD_AI_Context.md` mục 2: Quản đốc được thêm NVL phụ liệu (nhóm OTHER) khi tạo đơn mua
   - [ ] Report-3: UC quản lý danh mục NVL / UC đơn mua
+- **Trạng thái:** Mở
+
+---
+
+### DEV-KH-07-1 · Ảnh lưu khóa lưu trữ, tải qua API
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Khiêm (Thái làm hộ) · KH-07 · (chưa mở PR)
+- **Ảnh hưởng tới:** bảng `Attachment` (cột `FileUrl`)
+- **Tài liệu gốc ghi:** `NX-MTD_Database.sql`: `FileUrl -- đường dẫn S3`.
+- **Code đang làm:** `FileUrl` lưu khóa lưu trữ dạng `REQUEST/2026/10/<guid>.jpg`; môi trường dev lưu trên ổ đĩa server (`App_Data/uploads`); ảnh chỉ tải qua `GET /api/v1/common/attachments/{id}/content` có kiểm quyền theo loại chứng từ. Chỉ nhận JPG / PNG / WEBP ≤ 5 MB. Gỡ ảnh = `IsCurrent = 0`.
+- **Lý do:** Ảnh chứng từ (thanh toán, phiếu ký) không được có link công khai; S3 làm ở KH-25 qua cùng `IFileStorage`.
+- **Ảnh hưởng người khác:** Minh (MI-07), Thái (TH-14), Kiều – dùng `IAttachmentService`, đăng ký `IAttachmentOwnerAccess` cho loại chứng từ của mình.
+- **Cần sửa trong tài liệu:**
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: comment cột `FileUrl`
 - **Trạng thái:** Mở

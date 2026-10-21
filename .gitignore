@@ -120,3 +120,6 @@ appsettings.Development.json
 
 # AI runbook (khong push)
 NX-MTD_Login_Scaffold_AI_Runbook.md
+
+# Ảnh tải lên (dev)
+App_Data/
