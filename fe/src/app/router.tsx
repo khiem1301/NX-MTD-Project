@@ -94,6 +94,22 @@ const orderRoutes = [
   children: [{ path, lazy: async () => ({ Component: await page() }) }],
 }));
 
+// Nhân sự (Khiêm): hồ sơ mọi vai trò; nhân viên Admin + Quản đốc (API theo vai trò); tổ Admin + Quản đốc.
+const profile = () => import('@/features/profile');
+const users = () => import('@/features/users');
+const teams = () => import('@/features/teams');
+const hrRoutes = [
+  { path: ROUTES.profile, roles: undefined, page: async () => (await profile()).ProfilePage },
+  { path: ROUTES.adminEmployees, roles: [Admin], page: async () => (await users()).EmployeesPage },
+  { path: `${ROUTES.adminEmployees}/:id`, roles: [Admin], page: async () => (await users()).EmployeeDetailPage },
+  { path: ROUTES.managerEmployees, roles: [Manager], page: async () => (await users()).EmployeesPage },
+  { path: `${ROUTES.managerEmployees}/:id`, roles: [Manager], page: async () => (await users()).EmployeeDetailPage },
+  { path: ROUTES.teams, roles: [Admin, Manager], page: async () => (await teams()).TeamsPage },
+].map(({ path, roles, page }) => ({
+  element: <ProtectedRoute roles={roles} />,
+  children: [{ path, lazy: async () => ({ Component: await page() }) }],
+}));
+
 export const router = createBrowserRouter([
   {
     path: ROUTES.login,
@@ -109,6 +125,7 @@ export const router = createBrowserRouter([
           ...warehouseRoutes,
           ...requestRoutes,
           ...orderRoutes,
+          ...hrRoutes,
           // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.
         ],
       },

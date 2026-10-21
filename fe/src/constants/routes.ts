@@ -1,6 +1,12 @@
 export const ROUTES = {
   login: '/login',
   home: '/',
+  // Nhân sự (Khiêm)
+  profile: '/profile',
+  adminEmployees: '/admin/employees',
+  managerEmployees: '/manager/employees',
+  employeeDetail: (base: string, id: number | string) => `${base}/${id}`,
+  teams: '/teams',
   // Mã hàng, đơn hàng (Khiêm)
   products: '/admin/products',
   customers: '/admin/customers',

@@ -11,6 +11,8 @@
 | DEV-TH-12-2 | 21/10/2026 | Thái | `Material` | Quản đốc nhập tên NVL mới khi tạo đơn mua, NVL tự vào danh mục | Mở |
 | DEV-KH-07-1 | 22/10/2026 | Khiêm | `Attachment.FileUrl` | Lưu khóa lưu trữ, file ở ổ đĩa (dev), tải qua API có kiểm quyền | Mở |
 | DEV-KH-08-1 | 23/10/2026 | Khiêm | UC10, `Product` | Ảnh mẫu mã hàng nhập đường dẫn, chưa upload | Mở |
+| DEV-KH-10-1 | 24/10/2026 | Khiêm | UC18, `Employee` | Chuyển tổ chỉ cho ngày hiệu lực ≤ hôm nay | Mở |
+| DEV-KH-10-2 | 24/10/2026 | Khiêm | UC16, UC18 | Bổ nhiệm tổ trưởng / tổ phó hạ người cũ về Công nhân; Quản đốc đổi vai trò được qua bổ nhiệm | Mở |
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 
@@ -97,4 +99,31 @@
 - **Ảnh hưởng người khác:** không.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC10 / màn 6 (ghi rõ ảnh mẫu là đường dẫn) – hoặc thêm `PRODUCT` vào `OwnerType` ở Phase sau rồi đổi trạng thái `Bỏ`
+- **Trạng thái:** Mở
+
+---
+
+### DEV-KH-10-1 · Chuyển tổ chỉ cho ngày hiệu lực ≤ hôm nay
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Khiêm (Thái làm hộ) · KH-10 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC18, bảng `Employee` (`TeamId`), `AuditLog`
+- **Tài liệu gốc ghi:** UC18: "chuyển CN giữa các tổ có ngày hiệu lực".
+- **Code đang làm:** Ngày hiệu lực chọn được nhưng không được sau hôm nay; `Employee.TeamId` đổi ngay khi lưu; ngày hiệu lực ghi trong `AuditLog.Reason`. Không hẹn chuyển tổ trong tương lai.
+- **Lý do:** Schema chỉ có tổ hiện tại (`Employee.TeamId`), không có bảng lịch sử / hẹn lịch chuyển tổ; không đổi schema trong Phase 1.
+- **Ảnh hưởng người khác:** Minh (chấm công, lương theo tổ), Kiều (phân công công đoạn) – tổ đổi ngay lúc lưu.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 + `NX-MTD_Tong_hop_Use_Case.md` UC18: ghi rõ ngày hiệu lực ≤ hôm nay
+- **Trạng thái:** Mở
+
+### DEV-KH-10-2 · Bổ nhiệm tổ trưởng / tổ phó
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Khiêm (Thái làm hộ) · KH-10 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC16, UC18, bảng `Employee` (`RoleId`), trigger `trg_Employee_TeamLeadership`
+- **Tài liệu gốc ghi:** UC18: Quản đốc / Admin "bổ nhiệm tổ trưởng"; UC16: Quản đốc "không đổi vai trò".
+- **Code đang làm:** Màn Tổ có "Bổ nhiệm tổ trưởng / tổ phó" cho Admin và Quản đốc. Người được bổ nhiệm phải là Công nhân / Tổ trưởng / Tổ phó đang ở tổ đó. Người đang giữ chức (nếu có) tự chuyển về vai trò Công nhân, giữ kiểu lương và bậc. Đây là cách duy nhất Quản đốc đổi vai trò; form nhân viên của Quản đốc không có ô vai trò. Mọi người bị đổi vai trò phải đăng nhập lại.
+- **Lý do:** Gộp UC16 + UC18 cho nhất quán; trigger cho phép tối đa 1 tổ trưởng + 1 tổ phó nên phải hạ người cũ trước. **Chờ Morgan xác nhận** trước khi merge.
+- **Ảnh hưởng người khác:** Minh (lương của người bị hạ vẫn theo `PayType` cũ), Kiều (màn tổ trưởng của người mới sau khi đăng nhập lại).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC16 (ngoại lệ bổ nhiệm), UC18 (luồng bổ nhiệm, có tổ phó)
+  - [ ] `NX-MTD_AI_Context.md` mục vai trò
 - **Trạng thái:** Mở

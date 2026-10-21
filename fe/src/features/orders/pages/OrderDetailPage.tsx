@@ -11,7 +11,7 @@ import { MATERIAL_STATUS_TAG, ORDER_LIMITED_EDIT_STATUSES, ORDER_STATUS_TAG } fr
 import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { OrderHistory } from '../components/OrderHistory';
+import { AuditHistory } from '@/components/common/AuditHistory';
 import { useCancelOrder, useOrder, useStopOrder } from '../hooks/useOrders';
 import { blockTotal, fromLines } from '../utils/orderGrid';
 import type { OrderLine } from '../types';
@@ -75,7 +75,7 @@ export function OrderDetailPage() {
   const tabs = [
     { key: 'grid', label: MESSAGES.orders.gridTab, children: <ReadOnlyGrid lines={data.lines} /> },
     ...ORDER_DETAIL_TABS.map((t) => ({ key: t.key, label: t.label, children: <t.Component orderId={data.orderId} /> })),
-    { key: 'history', label: MESSAGES.common.history, children: <OrderHistory history={data.history} /> },
+    { key: 'history', label: MESSAGES.common.history, children: <AuditHistory history={data.history} /> },
   ];
 
   return (

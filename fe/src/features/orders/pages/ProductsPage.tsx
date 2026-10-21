@@ -5,7 +5,7 @@ import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
-import { OrderHistory } from '../components/OrderHistory';
+import { AuditHistory } from '@/components/common/AuditHistory';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { useDiscontinueProduct, useProducts, useReactivateProduct } from '../hooks/useOrders';
 import { useQuery } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ function ProductExpanded({ product }: { product: ProductListItem }) {
   return (
     <>
       <p>{detail.data?.description ?? '—'}</p>
-      <OrderHistory history={detail.data?.history ?? []} />
+      <AuditHistory history={detail.data?.history ?? []} />
     </>
   );
 }

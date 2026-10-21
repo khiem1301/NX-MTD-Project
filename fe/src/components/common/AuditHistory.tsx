@@ -2,12 +2,12 @@ import { Timeline, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import type { AuditEntry } from '@/types/attachment';
 import { formatDateTime } from '@/utils/format';
-import { describeChanges } from '../utils/auditDiff';
+import { describeChanges } from '@/utils/auditDiff';
 
 const ACTION_LABEL: Partial<Record<AuditEntry['action'], string>> = { INSERT: 'Tạo', UPDATE: 'Cập nhật' };
 
-/** Lịch sử đơn hàng / mã hàng. Đơn hàng chứa đơn giá nên chỉ Admin xem (D26). */
-export function OrderHistory({ history }: { history: AuditEntry[] }) {
+/** Lịch sử thay đổi (AuditLog) của đơn hàng, mã hàng, nhân viên, tổ. Lịch sử đơn hàng chứa đơn giá nên chỉ Admin xem (D26). */
+export function AuditHistory({ history }: { history: AuditEntry[] }) {
   return (
     <Timeline
       items={history.map((h) => ({
