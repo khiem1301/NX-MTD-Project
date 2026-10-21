@@ -14,6 +14,20 @@ public static class ErrorCodes
     public const string CommonConcurrencyConflict = "COMMON_CONCURRENCY_CONFLICT";
     public const string CommonInternalError = "COMMON_INTERNAL_ERROR";
 
+    // --- Chấm công & suất ăn (Minh) ---
+    public const string AttendanceEmployeeNotFound = "ATTENDANCE_EMPLOYEE_NOT_FOUND";
+    public const string AttendanceCodeAlreadyMapped = "ATTENDANCE_CODE_ALREADY_MAPPED";
+    public const string AttendanceEmployeeHasCode = "ATTENDANCE_EMPLOYEE_HAS_CODE";
+    public const string AttendanceCodeNotFound = "ATTENDANCE_CODE_NOT_FOUND";
+    public const string AttendancePeriodLocked = "ATTENDANCE_PERIOD_LOCKED";
+    public const string AttendanceEmptyBatch = "ATTENDANCE_EMPTY_BATCH";
+    public const string AttendanceAdjustmentExists = "ATTENDANCE_ADJUSTMENT_EXISTS";
+    public const string AttendanceEmployeeInactive = "ATTENDANCE_EMPLOYEE_INACTIVE";
+    public const string AttendanceAdjustmentNoTime = "ATTENDANCE_ADJUSTMENT_NO_TIME";
+    public const string AttendanceRequestInvalid = "ATTENDANCE_REQUEST_INVALID";
+    public const string AttendanceExcelInvalid = "ATTENDANCE_EXCEL_INVALID";
+    public const string AttendanceExcelEmpty = "ATTENDANCE_EXCEL_EMPTY";
+
     // Chung (Phase H)
     public const string CommonDuplicate = "COMMON_DUPLICATE";
     public const string CommonConstraintViolation = "COMMON_CONSTRAINT_VIOLATION";
@@ -62,6 +76,49 @@ public static class ErrorCodes
     public const string TeamTransferLeader = "TEAM_TRANSFER_LEADER";
     public const string TeamMemberNotInTeam = "TEAM_MEMBER_NOT_IN_TEAM";
 
+    // --- Suất ăn (Minh, UC30) ---
+    public const string MealTeamNotFound = "MEAL_TEAM_NOT_FOUND";
+    public const string MealNotFound = "MEAL_NOT_FOUND";
+    public const string MealLocked = "MEAL_LOCKED";               // trigger trg_TeamMeal_Cutoff (THROW 50020)
+    public const string MealGuestLocked = "MEAL_GUEST_LOCKED";     // trigger trg_DailyMeal_GuestCutoff (THROW 50021)
+    public const string MealNotClosedYet = "MEAL_NOT_CLOSED_YET";
+
+    // --- Bảng lương + khóa tháng (Minh, UC06/UC31/UC32) ---
+    public const string PayrollNotFound = "PAYROLL_NOT_FOUND";
+    public const string PayrollInvalidStatus = "PAYROLL_INVALID_STATUS";
+    public const string PayrollEmpty = "PAYROLL_EMPTY";
+    public const string PayrollReasonRequired = "PAYROLL_REASON_REQUIRED";
+    public const string PayrollPeriodLocked = "PAYROLL_PERIOD_LOCKED";
+    public const string PayrollExcelInvalid = "PAYROLL_EXCEL_INVALID";
+    public const string PayrollExcelEmpty = "PAYROLL_EXCEL_EMPTY";
+    public const string PayrollFileNotFound = "PAYROLL_FILE_NOT_FOUND";
+    public const string PayrollPeriodMonthInvalid = "PAYROLL_PERIOD_MONTH_INVALID";
+    public const string PayslipNotFound = "PAYSLIP_NOT_FOUND";
+
+    // --- Chi phí tháng (Minh, UC12/UC33) ---
+    public const string MonthlyCostNotFound = "MONTHLY_COST_NOT_FOUND";
+    public const string MonthlyCostPeriodMonthInvalid = "MONTHLY_COST_PERIOD_MONTH_INVALID";
+    public const string MonthlyCostPeriodLocked = "MONTHLY_COST_PERIOD_LOCKED";
+    public const string MonthlyCostExcelInvalid = "MONTHLY_COST_EXCEL_INVALID";
+    public const string MonthlyCostExcelEmpty = "MONTHLY_COST_EXCEL_EMPTY";
+
+    // --- KPI tổ may (Minh, UC19 KPI tổ may — khác UC19 lệnh cắt ở WorkOrderService) ---
+    public const string KpiNotFound = "KPI_NOT_FOUND";
+    public const string KpiInvalidStatus = "KPI_INVALID_STATUS";
+    public const string KpiInvalidReference = "KPI_INVALID_REFERENCE";
+    public const string KpiDuplicatePeriod = "KPI_DUPLICATE_PERIOD";
+
+    // --- Doanh thu + hòa vốn (Minh, UC27/UC11) ---
+    public const string RevenuePeriodMonthInvalid = "REVENUE_PERIOD_MONTH_INVALID";
+    public const string BreakEvenPeriodMonthInvalid = "BREAK_EVEN_PERIOD_MONTH_INVALID";
+    public const string BreakEvenInvalidAllocationBasis = "BREAK_EVEN_INVALID_ALLOCATION_BASIS";
+    public const string BreakEvenNotReady = "BREAK_EVEN_NOT_READY";                 // MSG25 (GBR-17)
+    public const string BreakEvenNoOutput = "BREAK_EVEN_NO_OUTPUT";
+    public const string BreakEvenNotFound = "BREAK_EVEN_NOT_FOUND";
+
+    // --- Báo cáo kế toán (Minh, UC36 — CHỈ Kế toán) ---
+    public const string AccountingReportPeriodMonthInvalid = "ACCOUNTING_REPORT_PERIOD_MONTH_INVALID";
+
     // Kho, cắt (Thái)
     public const string WarehouseInsufficientStock = "WAREHOUSE_INSUFFICIENT_STOCK";
     public const string WarehouseInvalidStatus = "WAREHOUSE_INVALID_STATUS";
@@ -77,4 +134,33 @@ public static class ErrorCodes
     public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
+
+    // Nhà cung cấp, đơn mua, thanh toán (Minh, MI-07)
+    public const string SupplierNameDuplicate = "SUPPLIER_NAME_DUPLICATE";
+    public const string SupplierNotActive = "SUPPLIER_NOT_ACTIVE";
+    public const string PurchaseOrderInvalidStatus = "PURCHASE_ORDER_INVALID_STATUS";
+    public const string PurchaseOrderLinesMismatch = "PURCHASE_ORDER_LINES_MISMATCH";
+    public const string PurchaseOrderPriceRequired = "PURCHASE_ORDER_PRICE_REQUIRED";
+    public const string PurchaseOrderDateInvalid = "PURCHASE_ORDER_DATE_INVALID";
+    public const string PaymentInvalid = "PAYMENT_INVALID";
+
+    // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
+    public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
+    public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
+    public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
+    public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
+    public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";
+    public const string PieceRateInvalidStatus = "PIECE_RATE_INVALID_STATUS";
+    public const string PieceRateDuplicateDate = "PIECE_RATE_DUPLICATE_DATE";
+    public const string PieceRateNotApproved = "PIECE_RATE_NOT_APPROVED";
+    public const string AssignmentWorkerInvalid = "ASSIGNMENT_WORKER_INVALID";
+    public const string AssignmentOrderInvalid = "ASSIGNMENT_ORDER_INVALID";
+    public const string OutputInvalid = "OUTPUT_INVALID";
+    public const string OutputExceedsCap = "OUTPUT_EXCEEDS_CAP";
+    public const string ProductionEditDeadlinePassed = "PRODUCTION_EDIT_DEADLINE_PASSED";
+    public const string ProductionPeriodLocked = "PRODUCTION_PERIOD_LOCKED";
+    public const string QcExceedsOnLine = "QC_EXCEEDS_ON_LINE";
+    public const string QcBatchDuplicate = "QC_BATCH_DUPLICATE";
+    public const string DefectInvalid = "DEFECT_INVALID";
+    public const string DefectInvalidStatus = "DEFECT_INVALID_STATUS";
 }
