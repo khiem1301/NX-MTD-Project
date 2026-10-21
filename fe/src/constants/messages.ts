@@ -67,5 +67,15 @@ export const MESSAGES = {
     loginButton: 'Đăng nhập',
     logoutButton: 'Đăng xuất',
   },
+  attachments: {
+    title: 'Ảnh đính kèm',
+    add: 'Thêm ảnh',
+    remove: 'Gỡ ảnh',
+    removeConfirm: 'Gỡ ảnh này khỏi chứng từ?',
+    uploaded: 'Đã tải ảnh lên.',
+    removed: 'Đã gỡ ảnh.',
+    tooLarge: 'Ảnh vượt quá 5 MB.',
+    empty: 'Chưa có ảnh.',
+  },
   home: { greeting: 'Xin chào' },
 } as const;

@@ -10,6 +10,11 @@ export const API = {
     logout: '/api/v1/common/auth/logout',
     me: '/api/v1/common/auth/me',
   },
+  attachments: {
+    base: v1('common/attachments'),
+    content: (id: number) => v1(`common/attachments/${id}/content`),
+    byId: (id: number) => v1(`common/attachments/${id}`),
+  },
   lookups: {
     orders: v1('common/lookups/orders'),
     orderLines: (orderId: number) => v1(`common/lookups/orders/${orderId}/lines`),
