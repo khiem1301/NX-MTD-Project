@@ -143,4 +143,24 @@ public static class ErrorCodes
     public const string PurchaseOrderPriceRequired = "PURCHASE_ORDER_PRICE_REQUIRED";
     public const string PurchaseOrderDateInvalid = "PURCHASE_ORDER_DATE_INVALID";
     public const string PaymentInvalid = "PAYMENT_INVALID";
+
+    // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
+    public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
+    public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
+    public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
+    public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
+    public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";
+    public const string PieceRateInvalidStatus = "PIECE_RATE_INVALID_STATUS";
+    public const string PieceRateDuplicateDate = "PIECE_RATE_DUPLICATE_DATE";
+    public const string PieceRateNotApproved = "PIECE_RATE_NOT_APPROVED";
+    public const string AssignmentWorkerInvalid = "ASSIGNMENT_WORKER_INVALID";
+    public const string AssignmentOrderInvalid = "ASSIGNMENT_ORDER_INVALID";
+    public const string OutputInvalid = "OUTPUT_INVALID";
+    public const string OutputExceedsCap = "OUTPUT_EXCEEDS_CAP";
+    public const string ProductionEditDeadlinePassed = "PRODUCTION_EDIT_DEADLINE_PASSED";
+    public const string ProductionPeriodLocked = "PRODUCTION_PERIOD_LOCKED";
+    public const string QcExceedsOnLine = "QC_EXCEEDS_ON_LINE";
+    public const string QcBatchDuplicate = "QC_BATCH_DUPLICATE";
+    public const string DefectInvalid = "DEFECT_INVALID";
+    public const string DefectInvalidStatus = "DEFECT_INVALID_STATUS";
 }

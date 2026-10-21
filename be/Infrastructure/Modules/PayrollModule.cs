@@ -17,6 +17,7 @@ public static class PayrollModule
         services.AddSingleton<IPayrollFileStore, LocalPayrollFileStore>();
         services.AddScoped<IPayrollRepository, PayrollRepository>();
         services.AddScoped<IPayrollService, PayrollService>();
+        services.AddScoped<IWorkerPayService, WorkerPayService>();   // MI-10 (UC59)
         return services;
     }
 }

@@ -47,7 +47,7 @@ public class KpiServiceTests
 
         _uow.SaveChangesAsync().Returns(Task.FromResult(1));
 
-        _sut = new KpiService(_uow, _audit, NullLogger<KpiService>.Instance);
+        _sut = new KpiService(_uow, new OutputQueryService(_uow), _audit, NullLogger<KpiService>.Instance);
     }
 
     private void SetupQueryable<T>(List<T> backing) where T : class
@@ -298,6 +298,54 @@ public class KpiServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.DailyTarget.Should().Be(15m);
+    }
+
+    // ---------- Thực tế vs chỉ tiêu (MI-17) ----------
+
+    [Fact]
+    public async Task GetByIdAsync_WithQcOutput_ReturnsActualAndPercentOfWholePeriodTarget()
+    {
+        _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 400, order: Order(), product: Product(), team: SewingTeam()));
+        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 10, 5), 100));
+        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 10, 6), 150));
+        _dailyResults.Add(DailyResult(2, new DateOnly(2026, 10, 6), 999));   // chỉ tiêu khác: không lẫn vào
+
+        var result = await _sut.GetByIdAsync(1, CancellationToken.None);
+
+        result.Data!.ActualFinishedQty.Should().Be(250);
+        result.Data.PercentAchieved.Should().Be(62.5m);   // 250 / 400
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NoQcOutputYet_ActualAndPercentAreZero()
+    {
+        _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 400, order: Order(), product: Product(), team: SewingTeam()));
+
+        var result = await _sut.GetByIdAsync(1, CancellationToken.None);
+
+        result.Data!.ActualFinishedQty.Should().Be(0);
+        result.Data.PercentAchieved.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_FillsActualPerTargetFromOneGroupedQuery()
+    {
+        var order = Order();
+        var product = Product();
+        var team = SewingTeam();
+        _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 100, order: order, product: product, team: team));
+        _kpiTargets.Add(Target(2, 1, 1, 1, new DateOnly(2026, 11, 1), new DateOnly(2026, 11, 30), targetQty: 200,
+            order: order, product: product, team: team));
+        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 10, 5), 120));    // vượt chỉ tiêu: > 100%
+        _dailyResults.Add(DailyResult(2, new DateOnly(2026, 11, 5), 50));
+
+        var result = await _sut.GetPagedAsync(new KpiTargetQuery(), CancellationToken.None);
+
+        var byId = result.Data!.Items.ToDictionary(i => i.KpiTargetId);
+        byId[1].ActualFinishedQty.Should().Be(120);
+        byId[1].PercentAchieved.Should().Be(120m);
+        byId[2].ActualFinishedQty.Should().Be(50);
+        byId[2].PercentAchieved.Should().Be(25m);
     }
 
     // ---------- CloseExpiredAsync (KpiAutoCloseJob) ----------

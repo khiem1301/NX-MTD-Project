@@ -30,6 +30,7 @@ builder.Services.AddFinanceModule(builder.Configuration);         // Minh
 builder.Services.AddCostSummaryModule(builder.Configuration);     // Minh (MI-19, UC12 — sau MonthlyCost/Payroll)
 builder.Services.AddAccountingReportModule(builder.Configuration);    // Minh (MI-19, UC36)
 builder.Services.AddPurchaseModule(builder.Configuration);        // Minh (MI-07, UC14/UC23/UC34)
+builder.Services.AddProductionModule(builder.Configuration);      // Minh làm hộ Kiều (KI-01…KI-11)
 
 var app = builder.Build();
 

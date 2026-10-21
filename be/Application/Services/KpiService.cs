@@ -16,12 +16,14 @@ namespace NX_MTD.Application.Services;
 public sealed class KpiService : IKpiService
 {
     private readonly IUnitOfWork _uow;
+    private readonly IOutputQueryService _output;
     private readonly IAuditLogService _audit;
     private readonly ILogger<KpiService> _logger;
 
-    public KpiService(IUnitOfWork uow, IAuditLogService audit, ILogger<KpiService> logger)
+    public KpiService(IUnitOfWork uow, IOutputQueryService output, IAuditLogService audit, ILogger<KpiService> logger)
     {
         _uow = uow;
+        _output = output;
         _audit = audit;
         _logger = logger;
     }
@@ -31,7 +33,7 @@ public sealed class KpiService : IKpiService
     private static readonly Expression<Func<KpiTarget, KpiTargetDto>> ToDto = k => new KpiTargetDto(
         k.KpiTargetId, k.OrderId, k.Order.OrderCode, k.ProductId, k.Product.ProductCode, k.Product.ProductName,
         k.SewingTeamId, k.SewingTeam.TeamName, k.StartDate, k.EndDate, k.TargetFinishedQty, k.WorkingDays,
-        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt);
+        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m);   // thực tế điền sau (WithActualAsync)
 
     public async Task<Result<PagedResult<KpiTargetDto>>> GetPagedAsync(KpiTargetQuery query, CancellationToken ct)
     {
@@ -46,14 +48,34 @@ public sealed class KpiService : IKpiService
             .OrderByDescending(k => k.KpiTargetId)
             .Select(ToDto)
             .ToPagedAsync(query, ct);
-        return Result<PagedResult<KpiTargetDto>>.Success(page with { Items = page.Items.Select(Normalize).ToList() });
+        var items = await WithActualAsync(page.Items.Select(Normalize).ToList(), ct);
+        return Result<PagedResult<KpiTargetDto>>.Success(page with { Items = items });
     }
 
     public async Task<Result<KpiTargetDto>> GetByIdAsync(int kpiTargetId, CancellationToken ct)
     {
         var dto = await Targets.AsNoTracking().Where(k => k.KpiTargetId == kpiTargetId).Select(ToDto)
             .FirstOrDefaultAsync(ct);
-        return dto is null ? NotFound() : Result<KpiTargetDto>.Success(Normalize(dto));
+        if (dto is null) return NotFound();
+        return Result<KpiTargetDto>.Success((await WithActualAsync([Normalize(dto)], ct))[0]);
+    }
+
+    /// <summary>
+    /// MI-17: điền thực tế (Σ FinishedQty cả kỳ từ vw_KpiDailyResult) và % đạt cho các chỉ tiêu của trang — một
+    /// truy vấn nhóm theo KpiTargetId, không N+1. Chưa có sản lượng hoàn thiện thì thực tế = 0, % đạt = 0.
+    /// </summary>
+    private async Task<List<KpiTargetDto>> WithActualAsync(List<KpiTargetDto> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return items;
+        var totals = await _output.GetKpiFinishedTotalsAsync(items.Select(i => i.KpiTargetId).ToList(), ct);
+        return items.Select(i =>
+        {
+            var actual = totals.GetValueOrDefault(i.KpiTargetId);
+            var percent = i.TargetFinishedQty > 0
+                ? Math.Round(100m * actual / i.TargetFinishedQty, 2, MidpointRounding.AwayFromZero)
+                : 0m;
+            return i with { ActualFinishedQty = actual, PercentAchieved = percent };
+        }).ToList();
     }
 
     /// <summary>DTO trả API phải là PascalCase (Coding Rules 2.2); DB lưu UPPER_SNAKE.</summary>
@@ -143,13 +165,7 @@ public sealed class KpiService : IKpiService
             .ToListAsync(ct);
         if (expired.Count == 0) return 0;
 
-        var ids = expired.Select(k => k.KpiTargetId).ToList();
-        var totals = await _uow.Repository<VwKpiDailyResult>().Query()
-            .Where(v => ids.Contains(v.KpiTargetId))
-            .GroupBy(v => v.KpiTargetId)
-            .Select(g => new { KpiTargetId = g.Key, Total = g.Sum(v => v.FinishedQty ?? 0) })
-            .ToListAsync(ct);
-        var totalByKpiTargetId = totals.ToDictionary(x => x.KpiTargetId, x => x.Total);
+        var totalByKpiTargetId = await _output.GetKpiFinishedTotalsAsync(expired.Select(k => k.KpiTargetId).ToList(), ct);
 
         foreach (var target in expired)
         {
@@ -173,12 +189,7 @@ public sealed class KpiService : IKpiService
         if (!exists)
             return Result<IReadOnlyList<KpiDailyResultDto>>.Failure(ErrorCodes.KpiNotFound, Messages.KpiNotFound, ResultKind.NotFound);
 
-        var rows = await _uow.Repository<VwKpiDailyResult>().Query().AsNoTracking()
-            .Where(v => v.KpiTargetId == kpiTargetId)
-            .OrderBy(v => v.WorkDate)
-            .Select(v => new KpiDailyResultDto(v.KpiTargetId, v.SewingTeamId, v.OrderId, v.ProductId, v.WorkDate,
-                v.DailyTarget, v.FinishedQty, v.DefectQty, v.DefectRatePct, v.PercentAchieved))
-            .ToListAsync(ct);
+        var rows = await _output.GetKpiDailyResultsAsync(kpiTargetId, ct);   // KI-10: đọc qua dịch vụ dùng chung
         return Result<IReadOnlyList<KpiDailyResultDto>>.Success(rows);
     }
 

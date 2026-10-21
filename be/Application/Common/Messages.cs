@@ -218,4 +218,60 @@ public static class Messages
     public const string NotifyPoReturnedBody = "Kế toán trả lại đơn mua {0}: {1}";
     public const string NotifyPoRepricedTitle = "Đơn mua chờ thanh toán lại";
     public const string NotifyPoRepricedBody = "Đơn mua {0} đã được Quản đốc cập nhật đơn giá.";
+
+    // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
+    public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
+    public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
+    public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
+    public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
+    public const string OperationProductMismatch = "Công đoạn không thuộc mã hàng của dòng đơn này.";
+    public const string PieceRateInvalidStatus = "Trạng thái đơn giá không cho phép thao tác này.";
+    public const string PieceRateDuplicateDate = "Công đoạn này đã có đơn giá với ngày hiệu lực này.";
+    public const string PieceRateSubmitted = "Đã gửi duyệt đơn giá.";
+    public const string PieceRateApproved = "Đã duyệt đơn giá.";
+    public const string PieceRateRejected = "Đã từ chối đơn giá.";
+    /// <summary>MSG18 (GBR-11): chưa có đơn giá được duyệt thì không nhập sản lượng.</summary>
+    public const string PieceRateNotApproved = "Công đoạn {0} chưa có đơn giá được duyệt hiệu lực đến ngày {1}, chưa nhập được sản lượng.";
+    public const string NotifyPieceRateSubmittedTitle = "Đơn giá chờ duyệt";
+    public const string NotifyPieceRateSubmittedBody = "Công đoạn {0} ({1}) có đơn giá mới chờ duyệt.";
+    public const string NotifyPieceRateDecidedTitle = "Đơn giá đã được xử lý";
+    public const string NotifyPieceRateDecidedBody = "Đơn giá công đoạn {0}: {1}.";
+    public const string AssignmentWorkerInvalid = "Công nhân phải là người đang làm của tổ mình.";
+    public const string AssignmentOrderInvalid = "Đơn hàng không tồn tại hoặc đã đóng.";
+    public const string AssignmentNotFound = "Không tìm thấy phân công đang hiệu lực.";
+    public const string AssignmentSaved = "Đã lưu phân công.";
+    public const string AssignmentClosed = "Đã kết thúc phân công.";
+    public const string AssignmentCopied = "Đã chép {0} phân công.";
+    public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";
+    public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
+    public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
+    public const string OutputRowsRequired = "Chưa có dòng sản lượng nào để lưu.";
+    public const string OutputDuplicateRow = "Công đoạn và công nhân bị lặp trong danh sách.";
+    public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
+    /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
+    public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số BTP đã nhận ({1}): còn tối đa {2}.";
+    /// <summary>MSG17: công nhân chưa có chấm công hôm đó (cảnh báo, không chặn).</summary>
+    public const string OutputNoAttendanceWarning = "{0} chưa có giờ chấm công ngày {1}.";
+    public const string OutputSaved = "Đã lưu sản lượng.";
+    /// <summary>MSG20: quá hạn sửa của tổ trưởng / QA-QC, chỉ Quản đốc sửa có lý do.</summary>
+    public const string ProductionEditDeadlinePassed = "Đã quá hạn sửa. Chỉ Quản đốc được sửa và phải nhập lý do.";
+    public const string ProductionPeriodLocked = "Tháng {0} đã khóa, không thể thay đổi sản lượng.";
+    public const string QcDateFuture = "Không nhập QC cho ngày chưa tới.";
+    /// <summary>MSG19: QC vượt số hàng đang có trên chuyền.</summary>
+    public const string QcExceedsOnLine = "Số đạt vượt hàng đang có trên chuyền ({0}).";
+    public const string QcBatchDuplicate = "Đã có đợt QC cùng ca, giờ, tổ và dòng đơn.";
+    public const string QcBatchSaved = "Đã lưu đợt QC.";
+    public const string QcBatchDeleted = "Đã xóa đợt QC.";
+    public const string DefectReasonInvalid = "Lý do lỗi không hợp lệ.";
+    public const string DefectTypeInvalid = "Loại lỗi phải là Rework hoặc Scrap.";
+    public const string DefectNoteRequired = "Lý do 'Khác' bắt buộc ghi chú.";
+    public const string DefectInvalidStatus = "Phiếu lỗi này không còn hiệu lực để thao tác.";
+    public const string DefectSaved = "Đã ghi phiếu lỗi.";
+    public const string DefectCancelled = "Đã hủy phiếu lỗi.";
+    public const string DefectObjected = "Đã gửi phản hồi cho tổ trưởng.";
+    public const string DefectObjectionRequired = "Vui lòng nhập nội dung phản hồi.";
+    public const string NotifyDefectTitle = "Bạn có phiếu lỗi mới";
+    public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy phản hồi cho tổ trưởng.";
+    public const string NotifyDefectObjectionTitle = "Công nhân phản hồi phiếu lỗi";
+    public const string NotifyDefectObjectionBody = "{0} phản hồi phiếu {1}: {2}";
 }
