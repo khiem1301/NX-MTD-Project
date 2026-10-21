@@ -32,7 +32,12 @@ export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalPro
     form.resetFields();
     form.setFieldsValue(
       receipt
-        ? { ...receipt, note: receipt.note ?? undefined, receiptDate: dayjs(receipt.receiptDate) }
+        ? {
+            ...receipt,
+            orderId: receipt.orderId ?? undefined,
+            note: receipt.note ?? undefined,
+            receiptDate: dayjs(receipt.receiptDate),
+          }
         : { receiptDate: dayjs(), lines: [{ acceptedQty: 0, shortQty: 0, defectiveQty: 0 }] },
     );
   }, [open, receipt, form]);

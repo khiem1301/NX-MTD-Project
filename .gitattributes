@@ -1,0 +1,2 @@
+# SQL scripts: UTF-8 (BOM) + CRLF so SSMS/sqlcmd show Vietnamese correctly
+*.sql text eol=crlf

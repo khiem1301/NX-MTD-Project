@@ -9,7 +9,7 @@ public partial class VwPurchaseOrderLineStatus
 
     public int PurchaseOrderId { get; set; }
 
-    public int OrderMaterialId { get; set; }
+    public int? OrderMaterialId { get; set; }
 
     public decimal OrderedQty { get; set; }
 

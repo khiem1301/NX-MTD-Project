@@ -99,6 +99,22 @@ export const TEAM_TYPE = { CUTTING: 'CUTTING', SEWING: 'SEWING' } as const;
 /** Lệnh cắt còn cấp vải được (BE: OPEN hoặc CUTTING). */
 export const ISSUABLE_WORK_ORDER_STATUSES = ['OPEN', 'CUTTING'] as const;
 
+export const PO_GOODS_STATUS_LABEL: Record<string, StatusLabel> = {
+  PENDING_FINALISATION: { text: 'Chờ chốt đặt hàng', color: 'gold' },
+  ORDERED: { text: 'Đã đặt hàng', color: 'blue' },
+  PARTIALLY_RECEIVED: { text: 'Nhận một phần', color: 'cyan' },
+  RECEIVED: { text: 'Đã nhận đủ', color: 'green' },
+  CLOSED_SHORT: { text: 'Đóng (thiếu)', color: 'orange' },
+  CUSTOMER_SUPPLIED: { text: 'Khách cấp', color: 'purple' },
+  REJECTED: { text: 'Bị từ chối', color: 'red' },
+};
+
+export const PO_PAYMENT_STATUS_LABEL: Record<string, StatusLabel> = {
+  UNPAID: { text: 'Chưa thanh toán', color: 'gold' },
+  PAID: { text: 'Đã thanh toán', color: 'green' },
+  RETURNED: { text: 'Bị trả lại', color: 'red' },
+};
+
 export const LABELS = {
   materialsTitle: 'Danh mục NVL',
   materialCode: 'Mã NVL',
@@ -131,6 +147,20 @@ export const LABELS = {
   sizeCode: 'Size (trống = mọi size)',
   qtyPerPiece: 'Định mức / SP',
   wastagePercent: '% hao hụt',
+  purchaseOrdersTitle: 'Đơn mua NVL',
+  poCode: 'Số đơn mua',
+  stockPurchase: 'Mua NVL dùng chung (kim, chỉ... cho nhiều đơn)',
+  selectOrderOrStock: 'Chọn đơn hàng, hoặc để trống để xem / tạo đơn mua NVL dùng chung',
+  addNewMaterial: 'Thêm NVL mới',
+  newMaterialHint: 'Gõ tên NVL (VD: kim may), chọn có sẵn hoặc thêm mới',
+  stockPurchaseTag: 'Mua dự trữ',
+  orderedQty: 'Số mua',
+  unitPrice: 'Đơn giá',
+  amount: 'Thành tiền',
+  supplier: 'Nhà cung cấp',
+  goodsStatus: 'Hàng',
+  paymentStatus: 'Thanh toán',
+  createdAt: 'Ngày tạo',
   receiptsTitle: 'Phiếu nhập NVL',
   receiptCode: 'Số phiếu',
   receiptDate: 'Ngày nhập',

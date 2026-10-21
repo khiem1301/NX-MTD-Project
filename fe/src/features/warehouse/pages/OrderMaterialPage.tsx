@@ -3,8 +3,12 @@ import { Button, Card, Popconfirm, Space, Table, Tag, type TableColumnsType } fr
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
+import { ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/usePermission';
 import { formatDate, formatQty } from '@/utils/format';
 import { OrderMaterialFormModal } from '../components/OrderMaterialFormModal';
+import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
+import { StockPurchaseTable } from '../components/StockPurchaseTable';
 import { LABELS, MATERIAL_TYPE_LABEL, SOURCE_LABEL } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, OrderMaterialNorm } from '../types';
@@ -23,13 +27,19 @@ const normColumns: TableColumnsType<OrderMaterialNorm> = [
   },
 ];
 
-/** UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua và định mức của đơn. */
+/**
+ * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua và định mức của đơn.
+ * Quản đốc chưa chọn đơn vẫn bấm Tạo được: đó là đơn mua NVL dùng chung (kim, chỉ...), không gắn mã đơn hàng.
+ */
 export function OrderMaterialPage() {
+  const { hasRole } = usePermission();
   const [orderId, setOrderId] = useState<number>();
   const list = useOrderMaterials(orderId);
   const remove = useDeleteOrderMaterial();
   const [editing, setEditing] = useState<OrderMaterial | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [stockFormOpen, setStockFormOpen] = useState(false);
+  const stockMode = orderId === undefined && hasRole(ROLES.Manager);
 
   const openForm = (om: OrderMaterial | null) => {
     setEditing(om);
@@ -91,35 +101,54 @@ export function OrderMaterialPage() {
       title={LABELS.orderMaterialsTitle}
       extra={
         <Space>
-          <OrderSelect value={orderId} onChange={setOrderId} placeholder={LABELS.selectOrder} />
-          <Button type="primary" disabled={orderId === undefined} onClick={() => openForm(null)}>
+          <OrderSelect
+            allowClear
+            value={orderId}
+            onChange={setOrderId}
+            placeholder={hasRole(ROLES.Manager) ? LABELS.selectOrderOrStock : LABELS.selectOrder}
+            width={380}
+          />
+          <Button
+            type="primary"
+            disabled={orderId === undefined && !stockMode}
+            onClick={() => (stockMode ? setStockFormOpen(true) : openForm(null))}
+          >
             {MESSAGES.common.create}
           </Button>
         </Space>
       }
     >
-      <QueryError error={list.error} onRetry={() => void list.refetch()} />
-      <Table
-        rowKey="orderMaterialId"
-        columns={columns}
-        dataSource={list.data}
-        loading={list.isFetching}
-        pagination={false}
-        scroll={{ x: true }}
-        locale={{ emptyText: orderId === undefined ? LABELS.selectOrder : MESSAGES.common.empty }}
-        expandable={{
-          rowExpandable: (om) => om.norms.length > 0,
-          expandedRowRender: (om) => (
-            <Table
-              rowKey="orderMaterialNormId"
-              size="small"
-              columns={normColumns}
-              dataSource={om.norms}
-              pagination={false}
-            />
-          ),
-        }}
-      />
+      {stockMode ? (
+        <StockPurchaseTable />
+      ) : (
+        <>
+          <QueryError error={list.error} onRetry={() => void list.refetch()} />
+          <Table
+            rowKey="orderMaterialId"
+            columns={columns}
+            dataSource={list.data}
+            loading={list.isFetching}
+            pagination={false}
+            scroll={{ x: true }}
+            locale={{
+              emptyText: orderId === undefined ? LABELS.selectOrder : MESSAGES.common.empty,
+            }}
+            expandable={{
+              rowExpandable: (om) => om.norms.length > 0,
+              expandedRowRender: (om) => (
+                <Table
+                  rowKey="orderMaterialNormId"
+                  size="small"
+                  columns={normColumns}
+                  dataSource={om.norms}
+                  pagination={false}
+                />
+              ),
+            }}
+          />
+        </>
+      )}
+      <PurchaseOrderFormModal open={stockFormOpen} onClose={() => setStockFormOpen(false)} />
       {orderId !== undefined && (
         <OrderMaterialFormModal
           open={formOpen}

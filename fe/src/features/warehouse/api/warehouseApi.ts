@@ -14,7 +14,11 @@ import type {
   MaterialReceipt,
   MaterialReceiptListItem,
   MaterialReceiptQuery,
+  CreatePurchaseOrderPayload,
   OrderMaterial,
+  PurchaseOrder,
+  PurchaseOrderListItem,
+  PurchaseOrderQuery,
   SaveMaterialPayload,
   SaveOrderMaterialPayload,
   SaveReceiptPayload,
@@ -52,6 +56,13 @@ export const warehouseApi = {
   deleteOrderMaterial: async (role: RolePath, id: number): Promise<void> => {
     await apiClient.delete(`${API.warehouse.orderMaterials(role)}/${id}`);
   },
+
+  getPurchaseOrders: (role: RolePath, q: PurchaseOrderQuery) =>
+    get<Paginated<PurchaseOrderListItem>>(API.warehouse.purchaseOrders(role), q),
+  getPurchaseOrder: (role: RolePath, id: number) =>
+    get<PurchaseOrder>(`${API.warehouse.purchaseOrders(role)}/${id}`),
+  createPurchaseOrder: (role: RolePath, body: CreatePurchaseOrderPayload) =>
+    post<PurchaseOrder>(API.warehouse.purchaseOrders(role), body),
 
   getReceipts: (role: RolePath, q: MaterialReceiptQuery) =>
     get<Paginated<MaterialReceiptListItem>>(API.warehouse.materialReceipts(role), q),
