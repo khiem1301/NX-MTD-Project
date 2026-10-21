@@ -119,3 +119,18 @@ export const useMyPayslip = (periodMonth: string | null) =>
     queryFn: () => payrollApi.getMyPayslip(periodMonth!),
     enabled: periodMonth !== null,
   });
+
+// ---------- Sản lượng + lương tạm tính của tôi (UC59) ----------
+
+export const useMyEstimatedPay = (from: string, to: string) =>
+  useQuery({
+    queryKey: [...PAYROLL_KEY, 'my-estimated-pay', from, to],
+    queryFn: () => payrollApi.getMyEstimatedPay(from, to),
+  });
+
+export const useMyEstimatedPayDay = (date: string | null) =>
+  useQuery({
+    queryKey: [...PAYROLL_KEY, 'my-estimated-pay-day', date],
+    queryFn: () => payrollApi.getMyEstimatedPayDay(date!),
+    enabled: date !== null,
+  });

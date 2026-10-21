@@ -1,25 +1,36 @@
-import { Button, Input, Select, Space, Table, Tag } from 'antd';
+import { Button, Input, Popconfirm, Progress, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
-import { useKpiTargets } from '../hooks/useKpi';
-import type { KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
+import { useCancelKpiTarget, useKpiTargets } from '../hooks/useKpi';
+import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
 
 type Props = {
   filter: KpiTargetFilter;
   onFilterChange: (filter: KpiTargetFilter) => void;
   onViewDaily: (kpiTargetId: number) => void;
+  /** Quản đốc lập / sửa / hủy; Admin chỉ xem. */
+  role: KpiRole;
+  onAdd?: () => void;
+  onEdit?: (target: KpiTarget) => void;
 };
 
 const STATUS_OPTIONS = (
   Object.entries(KPI_TEXT.statusLabel) as [KpiTargetStatus, { text: string }][]
 ).map(([value, { text }]) => ({ value, label: text }));
 
-/** UC19 — Quản đốc: danh sách chỉ tiêu KPI tổ may, lọc theo trạng thái + từ khóa. */
-export function KpiTargetTable({ filter, onFilterChange, onViewDaily }: Props) {
-  const targets = useKpiTargets(filter);
+/** Chỉ tiêu đạt: xanh; trên 70%: đang tiến triển; còn lại: cảnh báo. Vượt 100% vẫn vẽ đầy thanh. */
+const progressStatus = (percent: number): 'success' | 'normal' | 'exception' =>
+  percent >= 100 ? 'success' : percent >= 70 ? 'normal' : 'exception';
+
+/** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, lọc theo trạng thái + từ khóa. */
+export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAdd, onEdit }: Props) {
+  const targets = useKpiTargets(filter, role);
+  const cancel = useCancelKpiTarget();
+  const canManage = role === 'manager';
 
   const columns: ColumnsType<KpiTarget> = [
     {
@@ -50,6 +61,25 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily }: Props) {
       render: (v: number) => formatQty(v),
     },
     {
+      title: KPI_TEXT.table.actual,
+      dataIndex: 'actualFinishedQty',
+      align: 'right',
+      render: (v: number) => formatQty(v),
+    },
+    {
+      title: KPI_TEXT.table.percent,
+      dataIndex: 'percentAchieved',
+      width: 150,
+      render: (v: number) => (
+        <Progress
+          percent={Math.min(100, Math.round(v))}
+          format={() => `${formatQty(v)}%`}
+          status={progressStatus(v)}
+          size="small"
+        />
+      ),
+    },
+    {
       title: KPI_TEXT.table.status,
       dataIndex: 'status',
       render: (v: KpiTargetStatus) => <Tag color={KPI_TEXT.statusLabel[v].color}>{KPI_TEXT.statusLabel[v].text}</Tag>,
@@ -64,9 +94,23 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily }: Props) {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) => (
-        <Button type="link" onClick={() => onViewDaily(row.kpiTargetId)}>
-          {KPI_TEXT.table.viewDetail}
-        </Button>
+        <Space size={0} wrap>
+          <Button type="link" onClick={() => onViewDaily(row.kpiTargetId)}>
+            {KPI_TEXT.table.viewDetail}
+          </Button>
+          {canManage && row.status === 'Active' && (
+            <>
+              <Button type="link" onClick={() => onEdit?.(row)}>
+                {KPI_TEXT.edit}
+              </Button>
+              <Popconfirm title={KPI_TEXT.cancelConfirm} onConfirm={() => cancel.mutate(row.kpiTargetId)}>
+                <Button type="link" danger loading={cancel.isPending && cancel.variables === row.kpiTargetId}>
+                  {KPI_TEXT.cancel}
+                </Button>
+              </Popconfirm>
+            </>
+          )}
+        </Space>
       ),
     },
   ];
@@ -89,6 +133,11 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily }: Props) {
           options={STATUS_OPTIONS}
           onChange={(status) => onFilterChange({ ...filter, page: 1, status })}
         />
+        {canManage && onAdd && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
+            {KPI_TEXT.add}
+          </Button>
+        )}
       </Space>
 
       <QueryError error={targets.error} onRetry={() => void targets.refetch()} />

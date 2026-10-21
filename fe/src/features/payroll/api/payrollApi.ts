@@ -2,6 +2,8 @@ import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
+  MyDayDetail,
+  MyEstimatedPay,
   MyPayslipDetail,
   MyPayslipSummary,
   PayrollDetail,
@@ -83,4 +85,11 @@ export const payrollApi = {
   getMyPayslips: () => get<MyPayslipSummary[]>(API.payroll.myPayslips),
 
   getMyPayslip: (periodMonth: string) => get<MyPayslipDetail>(API.payroll.myPayslip(periodMonth)),
+
+  // ---------- Sản lượng + lương tạm tính của tôi (UC59) ----------
+
+  getMyEstimatedPay: (from: string, to: string) =>
+    get<MyEstimatedPay>(API.payroll.myEstimatedPay, { from, to }),
+
+  getMyEstimatedPayDay: (date: string) => get<MyDayDetail>(API.payroll.myEstimatedPayDay(date)),
 };

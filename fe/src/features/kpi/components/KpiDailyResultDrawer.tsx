@@ -4,16 +4,16 @@ import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useKpiDailyResults, useKpiTargetDetail } from '../hooks/useKpi';
-import type { KpiDailyResult } from '../types';
+import type { KpiDailyResult, KpiRole } from '../types';
 
-type Props = { kpiTargetId: number | null; onClose: () => void };
+type Props = { kpiTargetId: number | null; onClose: () => void; role?: KpiRole };
 
 const formatPercent = (value: number | null): string => (value === null ? '—' : `${formatQty(value)}%`);
 
 /** MI-18 "KPI theo ngày": chi tiết một chỉ tiêu KPI + bảng kết quả từng ngày (vw_KpiDailyResult). */
-export function KpiDailyResultDrawer({ kpiTargetId, onClose }: Props) {
-  const detail = useKpiTargetDetail(kpiTargetId);
-  const dailyResults = useKpiDailyResults(kpiTargetId);
+export function KpiDailyResultDrawer({ kpiTargetId, onClose, role = 'manager' }: Props) {
+  const detail = useKpiTargetDetail(kpiTargetId, role);
+  const dailyResults = useKpiDailyResults(kpiTargetId, role);
 
   const columns: ColumnsType<KpiDailyResult> = [
     { title: KPI_TEXT.dailyTable.workDate, dataIndex: 'workDate', render: formatDate },

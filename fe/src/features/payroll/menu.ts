@@ -22,4 +22,10 @@ export const payrollMenu: MenuEntry[] = [
     path: PAYROLL_ROUTES.myPayslip,
     roles: 'all',
   },
+  {
+    key: 'my-estimated-pay',
+    label: PAYROLL_TEXT.estimatedPay.pageTitle,
+    path: PAYROLL_ROUTES.myEstimatedPay,
+    roles: [ROLES.Worker],
+  },
 ];

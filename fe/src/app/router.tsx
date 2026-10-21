@@ -188,6 +188,17 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/payroll')).MyPayslipPage }),
           },
           {
+            element: <ProtectedRoute roles={[ROLES.Worker]} />,
+            children: [
+              {
+                path: PAYROLL_ROUTES.myEstimatedPay,
+                lazy: async () => ({
+                  Component: (await import('@/features/payroll')).MyEstimatedPayPage,
+                }),
+              },
+            ],
+          },
+          {
             element: <ProtectedRoute roles={[ROLES.Accountant]} />,
             children: [
               {
@@ -259,6 +270,17 @@ export const router = createBrowserRouter([
               {
                 path: KPI_ROUTES.targets,
                 lazy: async () => ({ Component: (await import('@/features/kpi')).KpiTargetListPage }),
+              },
+            ],
+          },
+
+          // --- KPI tổ may: Admin chỉ xem (Minh, MI-17, UC21) ---
+          {
+            element: <ProtectedRoute roles={[ROLES.Admin]} />,
+            children: [
+              {
+                path: KPI_ROUTES.adminTargets,
+                lazy: async () => ({ Component: (await import('@/features/kpi')).AdminKpiTargetPage }),
               },
             ],
           },

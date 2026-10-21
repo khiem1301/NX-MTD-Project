@@ -119,6 +119,8 @@ export const API = {
     reopen: (id: number) => `/api/v1/admin/payrolls/${id}/reopen`,
     myPayslips: '/api/v1/common/my-payslips',
     myPayslip: (periodMonth: string) => `/api/v1/common/my-payslips/${periodMonth}`,
+    myEstimatedPay: '/api/v1/common/my-estimated-pay',
+    myEstimatedPayDay: (date: string) => `/api/v1/common/my-estimated-pay/days/${date}`,
   },
   monthlyCost: {
     base: '/api/v1/accountant/monthly-costs',
@@ -149,6 +151,9 @@ export const API = {
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
     dailyResults: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-results`,
+    cancel: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/cancel`,
+    adminTargets: '/api/v1/admin/kpi-targets',
+    adminDailyResults: (kpiTargetId: number) => `/api/v1/admin/kpi-targets/${kpiTargetId}/daily-results`,
   },
   revenue: {
     accountant: '/api/v1/accountant/revenue',

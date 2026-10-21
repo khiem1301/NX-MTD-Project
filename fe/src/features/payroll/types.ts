@@ -114,3 +114,53 @@ export type MyPayslipDetail = {
   approvedAt: string;
   items: PayslipItem[];
 };
+
+// ---------- Sản lượng + lương tạm tính của tôi (UC59, MI-10) ----------
+
+export type MyEstimatedPayDay = {
+  workDate: string;
+  isSunday: boolean;
+  outputQty: number;
+  scrapQty: number;
+  outputAmount: number;
+  sundayBonus: number;
+  scrapAmount: number;
+  estimatedPay: number;
+};
+
+/** isEstimate luôn true: số tạm tính, không phải lương chính thức (GBR-12). */
+export type MyEstimatedPay = {
+  from: string;
+  to: string;
+  isEstimate: boolean;
+  days: MyEstimatedPayDay[];
+  totalOutputQty: number;
+  totalScrapQty: number;
+  totalOutputAmount: number;
+  totalSundayBonus: number;
+  totalScrapAmount: number;
+  totalEstimatedPay: number;
+};
+
+export type MyOutputLine = {
+  shiftCode: string;
+  operationCode: string;
+  operationName: string;
+  orderCode: string;
+  productCode: string;
+  quantity: number;
+  unitRate: number;
+  amount: number;
+};
+
+export type MyScrapLine = {
+  operationCode: string;
+  operationName: string;
+  orderCode: string;
+  productCode: string;
+  quantity: number;
+  scrapUnitRate: number;
+  amount: number;
+};
+
+export type MyDayDetail = { workDate: string; outputs: MyOutputLine[]; scraps: MyScrapLine[] };

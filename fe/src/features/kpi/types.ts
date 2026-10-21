@@ -23,6 +23,9 @@ export type KpiTarget = {
   dailyTarget: number;
   status: KpiTargetStatus;
   result: KpiTargetResult | null;
+  /** MI-17: Σ hàng hoàn thiện cả kỳ (QC đạt) và % so với chỉ tiêu cả kỳ. */
+  actualFinishedQty: number;
+  percentAchieved: number;
   createdAt: string;
 };
 
@@ -49,4 +52,17 @@ export type KpiDailyResult = {
   defectQty: number;
   defectRatePct: number | null;
   percentAchieved: number | null;
+};
+
+/** Quản đốc lập / sửa chỉ tiêu KPI; Admin chỉ xem (MI-17, UC21). */
+export type KpiRole = 'manager' | 'admin';
+
+export type SaveKpiTargetPayload = {
+  orderId: number;
+  productId: number;
+  sewingTeamId: number;
+  startDate: string;
+  endDate: string;
+  targetFinishedQty: number;
+  workingDays: number;
 };
