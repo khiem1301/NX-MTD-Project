@@ -11,6 +11,12 @@ public interface IOperationService
     Task<Result> UpdateAsync(int operationId, SaveOperationDto dto, CancellationToken ct);
     Task<Result> DiscontinueAsync(int operationId, CancellationToken ct);
     Task<Result> ReactivateAsync(int operationId, CancellationToken ct);
+
+    /// <summary>Xem trước file Excel quy trình công nghệ (chưa ghi DB): dòng nào thêm mới, cập nhật, không đổi, lỗi.</summary>
+    Task<Result<OperationImportPreviewDto>> PreviewImportAsync(int productId, Stream stream, string? sheetName, CancellationToken ct);
+
+    /// <summary>Nhập công đoạn từ Excel theo mã công đoạn (OP + STT): thêm mới hoặc cập nhật, không xóa công đoạn nào. <paramref name="finalStt"/> đánh dấu công đoạn cuối.</summary>
+    Task<Result<OperationImportResultDto>> ImportAsync(int productId, Stream stream, string? sheetName, int? finalStt, CancellationToken ct);
 }
 
 /// <summary>KI-01 (UC25, UC26): đơn giá công đoạn DRAFT → PENDING_APPROVAL → APPROVED / REJECTED (Admin duyệt).</summary>

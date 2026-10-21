@@ -11,6 +11,7 @@ import type {
   DeleteQcBatchPayload,
   DefectQuery,
   ObjectDefectPayload,
+  OperationImportParams,
   OutputGridQuery,
   OutputRole,
   PieceRateQuery,
@@ -47,6 +48,20 @@ export const useSaveOperation = (id: number | null) =>
       else await productionApi.updateOperation(id, body);
     },
     { invalidate: [operationsKey], successMessage: PRODUCTION_TEXT.saved },
+  );
+
+/** Xem trước file Excel quy trình công nghệ: không ghi DB nên không invalidate. */
+export const usePreviewOperationImport = () =>
+  useApiMutation(
+    ({ file, productId, sheetName }: { file: File; productId: number; sheetName?: string }) =>
+      productionApi.previewOperationImport(file, { productId, sheetName }),
+    { invalidate: [] },
+  );
+
+export const useImportOperations = () =>
+  useApiMutation(
+    ({ file, params }: { file: File; params: OperationImportParams }) => productionApi.importOperations(file, params),
+    { invalidate: [operationsKey, pieceRatesKey] },
   );
 
 export const useToggleOperation = () =>

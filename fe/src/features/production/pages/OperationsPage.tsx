@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Button, Checkbox, Popconfirm, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Checkbox, Popconfirm, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import { UploadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
+import { useProductLookup } from '@/hooks/useOrderLookups';
 import { formatCurrency, formatQty } from '@/utils/format';
 import { OperationFormModal } from '../components/OperationFormModal';
+import { OperationImportModal } from '../components/OperationImportModal';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
 import { useOperations, useToggleOperation } from '../hooks/useProduction';
@@ -14,19 +16,23 @@ import type { Operation } from '../types';
 
 const text = PRODUCTION_TEXT.operations;
 
-/** UC25 (KI-01) — Kế toán lập công đoạn theo mã hàng; đơn giá của từng công đoạn lập ở màn "Đơn giá công đoạn". */
+/**
+ * UC25 (KI-01) — Kế toán nhập công đoạn của mã hàng từ file Excel quy trình công nghệ. Công đoạn đã nhập vẫn sửa được
+ * từng dòng (ví dụ đánh dấu công đoạn cuối) hoặc ngừng dùng; đơn giá lập ở màn "Đơn giá công đoạn".
+ */
 export function OperationsPage() {
   const [productId, setProductId] = useState<number | null>(null);
   const [showDiscontinued, setShowDiscontinued] = useState(false);
   const [editing, setEditing] = useState<Operation | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const operations = useOperations(productId, showDiscontinued);
+  const products = useProductLookup();
   const toggle = useToggleOperation();
 
-  const openForm = (operation: Operation | null) => {
-    setEditing(operation);
-    setFormOpen(true);
-  };
+  const product = products.data?.items.find((p) => p.productId === productId);
+  const productLabel = product ? `${product.productCode} - ${product.productName}` : '';
+  const hasActiveFinal = (operations.data ?? []).some((o) => o.isFinalStep && o.status === 'Active');
+  const showNoFinalHint = productId !== null && operations.data !== undefined && operations.data.length > 0 && !hasActiveFinal;
 
   const columns: ColumnsType<Operation> = [
     { title: text.columns.sequence, dataIndex: 'stationSequence', width: 80 },
@@ -53,7 +59,7 @@ export function OperationsPage() {
       key: 'action',
       render: (_, row) => (
         <Space size={0}>
-          <Button type="link" onClick={() => openForm(row)}>
+          <Button type="link" onClick={() => setEditing(row)}>
             {MESSAGES.common.edit}
           </Button>
           {row.status === 'Active' ? (
@@ -86,10 +92,12 @@ export function OperationsPage() {
         <Checkbox checked={showDiscontinued} onChange={(e) => setShowDiscontinued(e.target.checked)}>
           {text.showDiscontinued}
         </Checkbox>
-        <Button type="primary" icon={<PlusOutlined />} disabled={productId === null} onClick={() => openForm(null)}>
-          {text.add}
+        <Button type="primary" icon={<UploadOutlined />} disabled={productId === null} onClick={() => setImportOpen(true)}>
+          {text.importExcel}
         </Button>
       </Space>
+
+      {showNoFinalHint && <Alert type="info" showIcon message={text.noFinalStep} />}
 
       <QueryError error={operations.error} onRetry={() => void operations.refetch()} />
 
@@ -105,7 +113,22 @@ export function OperationsPage() {
       />
 
       {productId !== null && (
-        <OperationFormModal open={formOpen} productId={productId} operation={editing} onClose={() => setFormOpen(false)} />
+        <>
+          <OperationFormModal
+            open={editing !== null}
+            productId={productId}
+            operation={editing}
+            onClose={() => setEditing(null)}
+          />
+          {importOpen && (
+            <OperationImportModal
+              open
+              productId={productId}
+              productLabel={productLabel}
+              onClose={() => setImportOpen(false)}
+            />
+          )}
+        </>
       )}
     </Space>
   );

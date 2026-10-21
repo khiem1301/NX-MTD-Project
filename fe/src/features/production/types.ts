@@ -28,6 +28,37 @@ export type Operation = {
   currentRate: number | null;
 };
 
+/** Dòng xem trước khi nhập công đoạn từ Excel. Action: dòng nào thêm mới / cập nhật / không đổi / lỗi. */
+export type OperationImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
+
+export type OperationImportRow = {
+  rowNumber: number;
+  stt: number;
+  operationCode: string;
+  operationName: string | null;
+  skillLevel: number | null;
+  standardTimeSec: number | null;
+  equipment: string | null;
+  action: OperationImportAction;
+  error: string | null;
+};
+
+export type OperationImportPreview = {
+  sheetName: string;
+  sheetNames: string[];
+  productText: string | null;
+  newCount: number;
+  updateCount: number;
+  unchangedCount: number;
+  errorCount: number;
+  productHasFinalStep: boolean;
+  rows: OperationImportRow[];
+};
+
+export type OperationImportResult = { created: number; updated: number; unchanged: number; skipped: number };
+
+export type OperationImportParams = { productId: number; sheetName?: string; finalStt?: number };
+
 export type SaveOperationPayload = {
   productId: number;
   operationCode: string;

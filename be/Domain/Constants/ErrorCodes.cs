@@ -150,6 +150,10 @@ public static class ErrorCodes
     public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
     public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
     public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";
+    public const string OperationExcelInvalid = "OPERATION_EXCEL_INVALID";
+    public const string OperationExcelEmpty = "OPERATION_EXCEL_EMPTY";
+    public const string OperationImportSheetNotFound = "OPERATION_IMPORT_SHEET_NOT_FOUND";
+    public const string OperationImportFinalNotFound = "OPERATION_IMPORT_FINAL_NOT_FOUND";
     public const string PieceRateInvalidStatus = "PIECE_RATE_INVALID_STATUS";
     public const string PieceRateDuplicateDate = "PIECE_RATE_DUPLICATE_DATE";
     public const string PieceRateNotApproved = "PIECE_RATE_NOT_APPROVED";

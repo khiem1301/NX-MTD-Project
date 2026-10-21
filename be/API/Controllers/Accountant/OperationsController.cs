@@ -16,6 +16,24 @@ public sealed class OperationsController : AccountantBaseController
     public async Task<IActionResult> List([FromQuery] int productId, [FromQuery] bool includeDiscontinued, CancellationToken ct) =>
         this.ToResponse(await _operations.ListAsync(productId, includeDiscontinued, ct));
 
+    /// <summary>Xem trước file Excel quy trình công nghệ (chưa ghi DB): dòng nào thêm mới, cập nhật, không đổi, lỗi.</summary>
+    [HttpPost("import/preview")]
+    public async Task<IActionResult> PreviewImport(
+        IFormFile file, [FromQuery] int productId, [FromQuery] string? sheetName, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(await _operations.PreviewImportAsync(productId, stream, sheetName, ct));
+    }
+
+    /// <summary>Nhập công đoạn từ file Excel quy trình công nghệ. <c>finalStt</c> (không bắt buộc) đánh dấu công đoạn cuối.</summary>
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(
+        IFormFile file, [FromQuery] int productId, [FromQuery] string? sheetName, [FromQuery] int? finalStt, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(await _operations.ImportAsync(productId, stream, sheetName, finalStt, ct));
+    }
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveOperationDto dto, CancellationToken ct) =>
         this.ToResponse(await _operations.CreateAsync(dto, ct));

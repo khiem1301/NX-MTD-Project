@@ -12,6 +12,9 @@ import type {
   DefectQuery,
   OnLineQty,
   Operation,
+  OperationImportParams,
+  OperationImportPreview,
+  OperationImportResult,
   OperationAssignment,
   OperationOption,
   OutputGrid,
@@ -33,8 +36,14 @@ import type {
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
-const post = async <T>(url: string, body?: unknown): Promise<T> =>
-  (await apiClient.post<ApiResponse<T>>(url, body)).data.data;
+const post = async <T>(url: string, body?: unknown, params?: object): Promise<T> =>
+  (await apiClient.post<ApiResponse<T>>(url, body, { params })).data.data;
+
+const asFormData = (file: File): FormData => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
 const put = async <T>(url: string, body?: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
@@ -44,6 +53,10 @@ export const productionApi = {
   // ---------- KI-01: công đoạn (Kế toán) ----------
   listOperations: (productId: number, includeDiscontinued: boolean) =>
     get<Operation[]>(P.operations, { productId, includeDiscontinued }),
+  previewOperationImport: (file: File, params: Pick<OperationImportParams, 'productId' | 'sheetName'>) =>
+    post<OperationImportPreview>(P.operationImportPreview, asFormData(file), params),
+  importOperations: (file: File, params: OperationImportParams) =>
+    post<OperationImportResult>(P.operationImport, asFormData(file), params),
   createOperation: (body: SaveOperationPayload) => post<number>(P.operations, body),
   updateOperation: (id: number, body: SaveOperationPayload) => put<void>(P.operation(id), body),
   discontinueOperation: (id: number) => post<void>(P.operationDiscontinue(id)),

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
 using NX_MTD.Application.Services.Production;
+using NX_MTD.Infrastructure.Services;
 
 namespace NX_MTD.Infrastructure.Modules;
 
@@ -17,6 +18,7 @@ public static class ProductionModule
         services.AddScoped<IOutputQueryService, OutputQueryService>();   // KI-10
         services.AddScoped<ProductionGuard>();
         services.AddScoped<IPieceRateService, PieceRateService>();
+        services.AddSingleton<IExcelOperationParser, ClosedXmlOperationParser>();
         services.AddScoped<IOperationService, OperationService>();
         services.AddScoped<IOperationAssignmentService, OperationAssignmentService>();
         services.AddScoped<IOutputService, OutputService>();

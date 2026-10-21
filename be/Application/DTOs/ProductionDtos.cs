@@ -134,3 +134,23 @@ public sealed record OrderLineProgressDto(
 public sealed record OperationOptionDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, bool IsFinalStep);
+
+// ================= KI-01: nhập công đoạn từ file Excel quy trình công nghệ =================
+
+/// <summary>Một dòng "bước công việc" đọc từ sheet quy trình. <c>ParseError</c> có khi ô không đọc được hoặc sai giá trị.</summary>
+public sealed record OperationExcelRowDto(
+    int RowNumber, int Stt, string? Name, byte? SkillLevel, decimal? StandardTimeSec, string? Equipment, string? ParseError);
+
+/// <summary>Một sheet quy trình công nghệ trong file (có cột "BƯỚC CÔNG VIỆC" và "TGCT").</summary>
+public sealed record OperationExcelSheetDto(string SheetName, string? ProductText, IReadOnlyList<OperationExcelRowDto> Rows);
+
+/// <summary>Action nhận "New" | "Update" | "Unchanged" | "Error".</summary>
+public sealed record OperationImportRowDto(
+    int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
+    string? Equipment, string Action, string? Error);
+
+public sealed record OperationImportPreviewDto(
+    string SheetName, IReadOnlyList<string> SheetNames, string? ProductText, int NewCount, int UpdateCount,
+    int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, IReadOnlyList<OperationImportRowDto> Rows);
+
+public sealed record OperationImportResultDto(int Created, int Updated, int Unchanged, int Skipped);

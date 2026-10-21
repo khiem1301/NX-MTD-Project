@@ -49,6 +49,7 @@
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 | DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
 | DEV-KI-03-2 | 22/10/2026 | Minh (AI) | UC52/UC56, `OperationAssignmentsController` | Thêm endpoint `GET team-leader/operation-assignments/operations?orderId=` trả công đoạn may đang dùng của các mã hàng trong đơn (không kèm đơn giá) để tổ trưởng chọn khi phân công và ghi hàng hỏng; sheet KI-03 / KI-08 không nêu cách lấy danh sách này | Mở |
+| DEV-KI-01-2 | 22/10/2026 | Minh (AI) | UC25, `Operation`, `ClosedXmlOperationParser` | Công đoạn của mã hàng nhập từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC"), thay cho thêm tay từng công đoạn: mã tự sinh từ STT (OP + STT), bỏ dòng "Dự phòng", không đọc cột TIỀN / TGQĐ, không có cột công đoạn cuối nên chọn khi nhập | Mở |
 
 ---
 
@@ -620,4 +621,16 @@
 - **Lý do:** Màn phân công và màn ghi hàng hỏng cần ô chọn công đoạn theo đơn.
 - **Ảnh hưởng người khác:** Kiều: cùng endpoint dùng cho các màn FE của KI-03 / KI-08.
 - **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-KI-01-2 · Nhập công đoạn từ file Excel quy trình công nghệ
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-01 · (chưa có PR)
+- **Ảnh hưởng tới:** UC25 (công đoạn của mã hàng), `Operation`, `OperationsController`, màn "Công đoạn may"
+- **Tài liệu gốc ghi:** Kế toán lập công đoạn của mã hàng; không nói cách nhập.
+- **Code đang làm:** Theo yêu cầu của Minh (22/10/2026) màn công đoạn nhập từ file Excel quy trình công nghệ của phòng kỹ thuật (thử với "LUNA tổ HT áo dạ ngắn 1 lớp nẹp cúc.xlsx", 85 công đoạn, tổng TGCT 4.007 giây khớp tổng trong file). Đọc sheet đang hiển thị có cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ. Mã công đoạn = "OP" + STT, nên nhập lại file là cập nhật đúng công đoạn cũ, không xóa công đoạn nào. Bỏ qua tiêu đề nhóm, chỗ trống đã đánh số và dòng "Dự phòng" (file không tính vào tổng TGCT). `StandardTimeSec` = TGCT; `SkillLevel` = BẬC; cột THIẾT BỊ chỉ hiện ở bản xem trước vì `Operation` không có cột này. File không đánh dấu công đoạn cuối nên chọn ở bước nhập (không bắt buộc). Không đọc cột TIỀN: đơn giá vẫn lập ở màn "Đơn giá công đoạn" rồi qua Admin duyệt (UC26).
+- **Lý do:** Quy trình công nghệ có hàng chục công đoạn mỗi mã hàng, nhập tay từng dòng không thực tế.
+- **Ảnh hưởng người khác:** Kiều: màn KI-01 FE dùng cách nhập này; nút thêm công đoạn bằng tay đã bỏ khỏi màn (API `POST accountant/operations` vẫn còn).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25: mô tả nhập công đoạn từ Excel (cột đọc, quy tắc mã công đoạn)
 - **Trạng thái:** Mở

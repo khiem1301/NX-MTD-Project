@@ -7,6 +7,7 @@ using NX_MTD.Application.Services.Production;
 using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
+using NX_MTD.Infrastructure.Services;
 
 namespace Application.Tests;
 
@@ -25,7 +26,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         SetupQueryable(_operations);
         SetupQueryable(_rates);
         _rateService = new PieceRateService(Uow, Audit, Notifier, Clock);
-        _operationService = new OperationService(Uow, _rateService, Audit, Clock);
+        _operationService = new OperationService(Uow, _rateService, Audit, Clock, new ClosedXmlOperationParser());
     }
 
     private Operation AddOperation(int id, string code = "OP10", bool final = false, string status = OperationStatuses.Active,

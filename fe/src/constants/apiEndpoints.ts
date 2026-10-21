@@ -179,6 +179,8 @@ export const API = {
   },
   production: {
     operations: v1('accountant/operations'),
+    operationImportPreview: v1('accountant/operations/import/preview'),
+    operationImport: v1('accountant/operations/import'),
     operation: (id: number) => v1(`accountant/operations/${id}`),
     operationDiscontinue: (id: number) => v1(`accountant/operations/${id}/discontinue`),
     operationReactivate: (id: number) => v1(`accountant/operations/${id}/reactivate`),

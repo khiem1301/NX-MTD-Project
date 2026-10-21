@@ -14,10 +14,12 @@ public sealed class OperationService : IOperationService
     private readonly IPieceRateService _rates;
     private readonly IAuditLogService _audit;
     private readonly IClock _clock;
+    private readonly IExcelOperationParser _excel;
 
-    public OperationService(IUnitOfWork uow, IPieceRateService rates, IAuditLogService audit, IClock clock)
+    public OperationService(IUnitOfWork uow, IPieceRateService rates, IAuditLogService audit, IClock clock,
+        IExcelOperationParser excel)
     {
-        _uow = uow; _rates = rates; _audit = audit; _clock = clock;
+        _uow = uow; _rates = rates; _audit = audit; _clock = clock; _excel = excel;
     }
 
     private IQueryable<Operation> Operations => _uow.Repository<Operation>().Query();
@@ -114,6 +116,176 @@ public sealed class OperationService : IOperationService
             new { Status = OperationStatuses.Discontinued }, new { operation.Status }));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
+    }
+
+    // ---------- Nhập công đoạn từ file Excel quy trình công nghệ ----------
+
+    private sealed record PlannedRow(OperationImportRowDto Preview, Operation? Existing);
+
+    private sealed record ImportPlan(
+        OperationExcelSheetDto Sheet, IReadOnlyList<string> SheetNames, bool ProductHasFinalStep, IReadOnlyList<PlannedRow> Rows);
+
+    private const string ActionNew = "New";
+    private const string ActionUpdate = "Update";
+    private const string ActionUnchanged = "Unchanged";
+    private const string ActionError = "Error";
+
+    /// <summary>Mã công đoạn sinh từ số thứ tự trong file: STT 7 → "OP07". Nhập lại cùng file thì khớp đúng công đoạn cũ.</summary>
+    private static string CodeFor(int stt) => $"OP{stt:00}";
+
+    public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
+        int productId, Stream stream, string? sheetName, CancellationToken ct)
+    {
+        var plan = await BuildImportPlanAsync(productId, stream, sheetName, ct);
+        if (!plan.IsSuccess) return Fail.As<OperationImportPreviewDto>(plan);
+
+        var p = plan.Data!;
+        int Count(string action) => p.Rows.Count(r => r.Preview.Action == action);
+        return Result<OperationImportPreviewDto>.Success(new OperationImportPreviewDto(
+            p.Sheet.SheetName, p.SheetNames, p.Sheet.ProductText, Count(ActionNew), Count(ActionUpdate),
+            Count(ActionUnchanged), Count(ActionError), p.ProductHasFinalStep, p.Rows.Select(r => r.Preview).ToList()));
+    }
+
+    public async Task<Result<OperationImportResultDto>> ImportAsync(
+        int productId, Stream stream, string? sheetName, int? finalStt, CancellationToken ct)
+    {
+        var plan = await BuildImportPlanAsync(productId, stream, sheetName, ct);
+        if (!plan.IsSuccess) return Fail.As<OperationImportResultDto>(plan);
+
+        var valid = plan.Data!.Rows.Where(r => r.Preview.Action != ActionError).ToList();
+        if (valid.Count == 0)
+            return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationExcelEmpty, Messages.OperationExcelEmpty,
+                ResultKind.Validation);
+        var skipped = plan.Data.Rows.Count - valid.Count;
+
+        if (finalStt is not null)
+        {
+            var target = valid.FirstOrDefault(r => r.Preview.Stt == finalStt);
+            if (target is null)
+                return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationImportFinalNotFound,
+                    Messages.OperationImportFinalNotFound, ResultKind.Validation);
+            if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct))
+                return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
+                    Messages.OperationFinalStepExists);
+        }
+
+        return await _uow.InTransactionAsync(async () =>
+        {
+            var created = new List<Operation>();
+            var updated = new List<(Operation Operation, object Before)>();
+            var unchanged = 0;
+
+            foreach (var row in valid)
+            {
+                var p = row.Preview;
+                var markFinal = finalStt == p.Stt;
+                if (row.Existing is null)
+                {
+                    var operation = new Operation
+                    {
+                        ProductId = productId, Status = OperationStatuses.Active, TeamType = TeamTypes.Sewing,
+                    };
+                    ApplyImported(operation, p);
+                    operation.IsFinalStep = markFinal;
+                    created.Add(operation);
+                    continue;
+                }
+
+                var existing = row.Existing;
+                if (p.Action == ActionUnchanged && !(markFinal && !existing.IsFinalStep))
+                {
+                    unchanged++;
+                    continue;
+                }
+
+                var before = Snapshot(existing);
+                ApplyImported(existing, p);
+                if (markFinal) existing.IsFinalStep = true;
+                updated.Add((existing, before));
+            }
+
+            if (created.Count > 0) await _uow.Repository<Operation>().AddRangeAsync(created);
+            await _uow.SaveChangesAsync();   // lấy OperationId của dòng mới để ghi nhật ký
+
+            foreach (var operation in created)
+                _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
+            foreach (var (operation, before) in updated)
+                _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update, before, Snapshot(operation)));
+            await _uow.SaveChangesAsync();
+
+            var result = new OperationImportResultDto(created.Count, updated.Count, unchanged, skipped);
+            return Result<OperationImportResultDto>.Success(result,
+                string.Format(Messages.OperationImportDone, created.Count, updated.Count, unchanged, skipped));
+        });
+    }
+
+    private async Task<Result<ImportPlan>> BuildImportPlanAsync(int productId, Stream stream, string? sheetName, CancellationToken ct)
+    {
+        var productExists = await _uow.Repository<Product>().Query().AsNoTracking().AnyAsync(p => p.ProductId == productId, ct);
+        if (!productExists) return Fail.NotFound<ImportPlan>();
+
+        IReadOnlyList<OperationExcelSheetDto> sheets;
+        try
+        {
+            sheets = _excel.Parse(stream);
+        }
+        catch (InvalidDataException ex)
+        {
+            return Result<ImportPlan>.Failure(ErrorCodes.OperationExcelInvalid, ex.Message, ResultKind.Validation);
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException
+                                       or InvalidOperationException or NotImplementedException)
+        {
+            return Result<ImportPlan>.Failure(ErrorCodes.OperationExcelInvalid, Messages.OperationExcelInvalid,
+                ResultKind.Validation);
+        }
+
+        var sheet = string.IsNullOrWhiteSpace(sheetName)
+            ? sheets[0]
+            : sheets.FirstOrDefault(s => string.Equals(s.SheetName, sheetName.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (sheet is null)
+            return Result<ImportPlan>.Failure(ErrorCodes.OperationImportSheetNotFound, Messages.OperationImportSheetNotFound,
+                ResultKind.Validation);
+
+        var existingOps = await Operations.Where(o => o.ProductId == productId).ToListAsync(ct);
+        var byCode = existingOps.ToDictionary(o => o.OperationCode, StringComparer.OrdinalIgnoreCase);
+        var seenStt = new HashSet<int>();
+
+        var rows = new List<PlannedRow>(sheet.Rows.Count);
+        foreach (var raw in sheet.Rows)
+        {
+            var code = CodeFor(raw.Stt);
+            var error = raw.ParseError;
+            if (error is null && !seenStt.Add(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
+
+            if (error is not null)
+            {
+                rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
+                    raw.StandardTimeSec, raw.Equipment, ActionError, error), null));
+                continue;
+            }
+
+            byCode.TryGetValue(code, out var existing);
+            var action = existing is null ? ActionNew : IsSame(existing, raw) ? ActionUnchanged : ActionUpdate;
+            rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
+                raw.StandardTimeSec, raw.Equipment, action, null), existing));
+        }
+
+        var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
+        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows));
+    }
+
+    private static bool IsSame(Operation existing, OperationExcelRowDto raw) =>
+        existing.OperationName == raw.Name && existing.StationSequence == raw.Stt
+        && existing.SkillLevel == raw.SkillLevel && existing.StandardTimeSec == raw.StandardTimeSec;
+
+    private static void ApplyImported(Operation operation, OperationImportRowDto row)
+    {
+        operation.OperationCode = row.OperationCode;
+        operation.OperationName = row.OperationName!;
+        operation.StationSequence = (short)row.Stt;
+        operation.SkillLevel = row.SkillLevel;
+        operation.StandardTimeSec = row.StandardTimeSec;
     }
 
     /// <summary>Mã trùng trong mã hàng và "đúng một công đoạn may cuối đang dùng" — báo rõ trước khi DB chặn.</summary>

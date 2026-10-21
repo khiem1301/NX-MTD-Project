@@ -225,6 +225,11 @@ public static class Messages
     public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
     public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
     public const string OperationProductMismatch = "Công đoạn không thuộc mã hàng của dòng đơn này.";
+    public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
+    public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
+    public const string OperationImportSheetNotFound = "Không tìm thấy sheet đã chọn trong file Excel.";
+    public const string OperationImportDone = "Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi.";
+    public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
     public const string PieceRateInvalidStatus = "Trạng thái đơn giá không cho phép thao tác này.";
     public const string PieceRateDuplicateDate = "Công đoạn này đã có đơn giá với ngày hiệu lực này.";
     public const string PieceRateSubmitted = "Đã gửi duyệt đơn giá.";

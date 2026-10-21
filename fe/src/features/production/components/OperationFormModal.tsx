@@ -19,7 +19,7 @@ type FormValues = {
 const text = PRODUCTION_TEXT.operations;
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
-/** UC25 — Kế toán thêm / sửa công đoạn của một mã hàng. Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
+/** UC25 — Kế toán sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
 export function OperationFormModal({ open, productId, operation, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
@@ -61,7 +61,7 @@ export function OperationFormModal({ open, productId, operation, onClose }: Prop
     <Modal
       open={open}
       width={520}
-      title={operation ? text.edit : text.add}
+      title={text.edit}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
