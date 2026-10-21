@@ -4,6 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { HomePage } from '@/features/dashboard';
+import { REQUEST_CREATOR_ROLES, REQUEST_HANDLER_ROLES } from '@/features/requests/menu';
 
 const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
 const warehouse = () => import('@/features/warehouse');
@@ -61,6 +62,24 @@ const warehouseRoutes = [
   children: [{ path, lazy: async () => ({ Component: await page() }) }],
 }));
 
+// Đơn từ (Khiêm): quyền chi tiết theo (vai trò, loại đơn) do BE kiểm.
+const requests = () => import('@/features/requests');
+const requestRoutes = [
+  {
+    path: ROUTES.requests,
+    roles: [...REQUEST_CREATOR_ROLES],
+    page: async () => (await requests()).MyRequestsPage,
+  },
+  {
+    path: ROUTES.requestInbox,
+    roles: [...REQUEST_HANDLER_ROLES],
+    page: async () => (await requests()).RequestInboxPage,
+  },
+].map(({ path, roles, page }) => ({
+  element: <ProtectedRoute roles={roles} />,
+  children: [{ path, lazy: async () => ({ Component: await page() }) }],
+}));
+
 export const router = createBrowserRouter([
   {
     path: ROUTES.login,
@@ -74,6 +93,7 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           ...warehouseRoutes,
+          ...requestRoutes,
           // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.
         ],
       },

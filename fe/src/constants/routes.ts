@@ -1,6 +1,9 @@
 export const ROUTES = {
   login: '/login',
   home: '/',
+  // Đơn từ (Khiêm)
+  requests: '/requests',
+  requestInbox: '/requests/inbox',
   // Kho, cắt (Thái)
   materials: '/warehouse/materials',
   orderMaterials: '/warehouse/order-materials',

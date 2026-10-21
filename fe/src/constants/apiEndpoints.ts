@@ -10,6 +10,16 @@ export const API = {
     logout: '/api/v1/common/auth/logout',
     me: '/api/v1/common/auth/me',
   },
+  requests: {
+    base: v1('common/requests'),
+    types: v1('common/requests/types'),
+    byId: (id: number) => v1(`common/requests/${id}`),
+    cancel: (id: number) => v1(`common/requests/${id}/cancel`),
+    inbox: v1('common/request-inbox'),
+    approve: (id: number) => v1(`common/request-inbox/${id}/approve`),
+    reject: (id: number) => v1(`common/request-inbox/${id}/reject`),
+    complete: (id: number) => v1(`common/request-inbox/${id}/complete`),
+  },
   attachments: {
     base: v1('common/attachments'),
     content: (id: number) => v1(`common/attachments/${id}/content`),

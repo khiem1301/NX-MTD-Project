@@ -1,4 +1,5 @@
 import { cuttingMenu } from '@/features/cutting';
+import { requestMenu } from '@/features/requests';
 import { warehouseMenu } from '@/features/warehouse';
 import type { MenuEntry } from '@/types/menu';
 
@@ -8,6 +9,7 @@ const homeMenu: MenuEntry[] = [{ key: 'home', label: 'Trang chủ', path: '/', r
 export const MENU_ENTRIES: MenuEntry[] = [
   ...homeMenu,
   // ...productionMenu,  // Kiều
+  ...requestMenu, // Khiêm
   ...warehouseMenu, // Thái
   ...cuttingMenu, // Thái
   // ...attendanceMenu,  // Minh
