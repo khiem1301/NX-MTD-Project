@@ -10,6 +10,8 @@
 | DEV-TH-12-1 | 21/10/2026 | Thái | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua NVL không bắt buộc gắn đơn hàng (mua dùng chung kim, chỉ...) | Mở |
 | DEV-TH-12-2 | 21/10/2026 | Thái | `Material` | Quản đốc nhập tên NVL mới khi tạo đơn mua, NVL tự vào danh mục | Mở |
 | DEV-KH-07-1 | 22/10/2026 | Khiêm | `Attachment.FileUrl` | Lưu khóa lưu trữ, file ở ổ đĩa (dev), tải qua API có kiểm quyền | Mở |
+| DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
+| DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 
 ---
 
@@ -54,4 +56,30 @@
 - **Ảnh hưởng người khác:** Minh (MI-07), Thái (TH-14), Kiều – dùng `IAttachmentService`, đăng ký `IAttachmentOwnerAccess` cho loại chứng từ của mình.
 - **Cần sửa trong tài liệu:**
   - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: comment cột `FileUrl`
+- **Trạng thái:** Mở
+
+---
+
+### DEV-KH-06-1 · Tổ may cũng tạo được đơn xin NVL
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Khiêm (Thái làm hộ) · KH-06 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC07, bảng `Request` (`RequestTypeCode = MATERIAL_REQUISITION`)
+- **Tài liệu gốc ghi:** Report-3 UC07 và `NX-MTD_Tong_hop_Use_Case.md` UC07: phiếu xin NVL do tổ trưởng **tổ cắt** lập.
+- **Code đang làm:** Tổ trưởng / tổ phó tổ **cắt và tổ may** đều tạo được `MATERIAL_REQUISITION` (tổ may xin phụ liệu: chỉ, khóa, nhãn…), Thủ kho xử lý.
+- **Lý do:** `NX-MTD_AI_Context.md` 4.8 (19/10) đã chốt NVL gồm cả phụ liệu và tổ may cần xin phụ liệu; AI Context thắng Report-3.
+- **Ảnh hưởng người khác:** Thái (TH-05: phiếu cấp phải nhận đơn của tổ may).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC07 (tác nhân của loại đơn xin NVL), Permission Matrix
+  - [ ] `NX-MTD_Tong_hop_Use_Case.md` UC07
+- **Trạng thái:** Mở
+
+### DEV-KH-06-2 · Tổ phó luôn có quyền như tổ trưởng
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Khiêm (Thái làm hộ) · KH-06 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC07, UC08, R1, view `vw_TeamActingLeader`
+- **Tài liệu gốc ghi:** `NX-MTD_AI_Context.md` mục vai trò: tổ phó có quyền tổ trưởng **khi tổ trưởng vắng** (`vw_TeamActingLeader`).
+- **Code đang làm:** Tổ phó luôn có quyền như tổ trưởng trong tổ mình (tạo / xem / sửa / hủy đơn của tổ), không đọc `vw_TeamActingLeader`.
+- **Lý do:** Giữ thống nhất với runbook đăng nhập (D2); giới hạn theo giờ vào cần dữ liệu chấm công thật (MI-06). Sẽ làm ở KH-24.
+- **Ảnh hưởng người khác:** Thái, Minh, Kiều (mọi màn tổ trưởng) – cùng cách kiểm `Roles.IsTeamRole`.
+- **Cần sửa trong tài liệu:** không (tạm thời); đổi trạng thái `Bỏ` khi KH-24 xong.
 - **Trạng thái:** Mở

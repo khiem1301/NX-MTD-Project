@@ -119,17 +119,6 @@ public static class ShiftCodes
     public static readonly IReadOnlyList<string> All = new[] { Morning, Afternoon, Overtime };
 }
 
-public static class RequestTypes
-{
-    public const string MaterialRequisition = "MATERIAL_REQUISITION";
-    public const string SemiFinishedRequisition = "SEMI_FINISHED_REQUISITION";
-}
-
-public static class RequestStatuses
-{
-    public const string Approved = "APPROVED";
-}
-
 public static class SettingKeys
 {
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
