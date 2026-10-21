@@ -95,6 +95,7 @@ public static class Messages
     public const string TeamMemberNotInTeam = "Nhân viên không thuộc tổ này.";
     public const string TeamAppointed = "Đã bổ nhiệm. Người giữ chức cũ (nếu có) đã chuyển về Công nhân.";
     public const string TeamTransferred = "Đã chuyển {0} nhân viên.";
+    public const string TeamAppointInvalidRole = "Chỉ bổ nhiệm được công nhân, tổ trưởng, tổ phó của tổ.";
     public const string CannotActOnSelf = "Không thể tự thao tác trên tài khoản của mình.";
     public const string ResignedWasLeader = "Đã cho nghỉ. Tổ {0} hiện chưa có {1}, hãy bổ nhiệm người thay.";
 }

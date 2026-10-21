@@ -1,4 +1,4 @@
-namespace NX_MTD.Domain.Constants;
+﻿namespace NX_MTD.Domain.Constants;
 
 /// <summary>Mã vai trò trong bảng Role (khác chuỗi role trong token ở Roles.cs).</summary>
 public static class RoleCodes
@@ -15,6 +15,12 @@ public static class RoleCodes
 
     /// <summary>Quản đốc không được xem / sửa nhân viên có các vai trò này (UC16, GBR-01).</summary>
     public static readonly IReadOnlySet<string> HiddenFromManager = new HashSet<string> { Admin, Manager, Accountant };
+}
+
+public static class TeamPositions
+{
+    public const string Leader = "Leader";
+    public const string Deputy = "Deputy";
 }
 
 public static class PayTypes
