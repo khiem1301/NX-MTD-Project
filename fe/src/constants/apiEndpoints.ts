@@ -142,6 +142,7 @@ export const API = {
     materialReceipts: (role: RolePath) => v1(`${role}/material-receipts`),
     purchaseOrders: (role: RolePath) => v1(`${role}/purchase-orders`),
     shortDeliveries: (role: RolePath) => v1(`${role}/short-deliveries`),
+    stocktakes: (role: RolePath) => v1(`${role}/stocktakes`),
     materialIssues: (role: RolePath) => v1(`${role}/material-issues`),
     inventories: (role: RolePath) => v1(`${role}/inventories`),
     pieceHoldings: (role: RolePath) => v1(`${role}/piece-holdings`),

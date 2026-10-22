@@ -138,6 +138,9 @@ public static class ErrorCodes
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
     public const string FgHandoverExceedsQc = "FG_HANDOVER_EXCEEDS_QC";
     public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
+    public const string VehiclePlateDuplicate = "VEHICLE_PLATE_DUPLICATE";
+    public const string VehicleInactive = "VEHICLE_INACTIVE";
+    public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
     public const string PieceHandoverExceedsHolding = "PIECE_HANDOVER_EXCEEDS_HOLDING";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";

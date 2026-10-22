@@ -118,6 +118,16 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/material-return')).MaterialReturnPage,
   },
   {
+    path: ROUTES.stocktakes,
+    roles: [WarehouseKeeper, Manager, Admin],
+    page: async () => (await import('@/features/stocktake')).StocktakePage,
+  },
+  {
+    path: ROUTES.vehicleLog,
+    roles: [ROLES.Accountant],
+    page: async () => (await import('@/features/vehicle-log')).VehicleLogPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

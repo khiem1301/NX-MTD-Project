@@ -130,6 +130,21 @@ public static class HandoverStatuses
     public const string Cancelled = "CANCELLED";
 }
 
+/// <summary>VehicleTrip.Status (CK_VT_Status).</summary>
+public static class TripStatuses
+{
+    public const string Started = "STARTED";
+    public const string Completed = "COMPLETED";
+}
+
+/// <summary>Stocktake.Status (CK_Stocktake_Status).</summary>
+public static class StocktakeStatuses
+{
+    public const string PendingApproval = "PENDING_APPROVAL";
+    public const string Approved = "APPROVED";
+    public const string Returned = "RETURNED";
+}
+
 /// <summary>WorkerPieceMovement.MovementType (CK_WPM_Type): tổ trưởng giao BTP cho công nhân hoặc thu hồi lại.</summary>
 public static class PieceMovementTypes
 {
@@ -189,6 +204,7 @@ public static class DocumentPrefixes
     public const string FgHandover = "TP";
     public const string DispatchNote = "XH";
     public const string MaterialReturn = "TV";
+    public const string Stocktake = "KK";
     public const string PurchaseOrder = "DM";
 }
 

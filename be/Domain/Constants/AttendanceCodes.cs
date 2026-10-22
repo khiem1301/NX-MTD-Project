@@ -37,6 +37,8 @@ public static class AdjustmentType
 public static class SettingKeys
 {
     public const string AttendanceSyncMinutes = "ATTENDANCE_SYNC_MINUTES";
+    /// <summary>Dung sai xăng vượt định mức (%) trước khi cảnh báo, mặc định 15 (MSG30, UC35).</summary>
+    public const string FuelNormTolerancePercent = "FUEL_NORM_TOLERANCE_PERCENT";
     public const string AttendanceAlertMinutes = "ATTENDANCE_ALERT_MINUTES";
     public const string WorkStartTime = "WORK_START_TIME";
     public const string WorkEndTime = "WORK_END_TIME";

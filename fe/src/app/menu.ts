@@ -19,6 +19,8 @@ import { monthlyCostMenu } from '@/features/monthly-cost/menu';
 import { payrollMenu } from '@/features/payroll/menu';
 import { purchaseMenu } from '@/features/purchase/menu';
 import { revenueMenu } from '@/features/revenue/menu';
+import { stocktakeMenu } from '@/features/stocktake';
+import { vehicleLogMenu } from '@/features/vehicle-log';
 import { warehouseMenu } from '@/features/warehouse';
 import type { MenuEntry } from '@/types/menu';
 
@@ -36,6 +38,8 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...cuttingMenu, // Thái
   ...fgHandoverMenu, // Thái (TH-11)
   ...dispatchMenu, // Thái (TH-14)
+  ...stocktakeMenu, // Thảo (TA-02)
+  ...vehicleLogMenu, // Thảo (TA-03)
   ...materialReturnMenu, // Thái (TH-10)
   ...pieceMovementMenu, // Thái (TH-19)
   ...attendanceMenu, // Minh
