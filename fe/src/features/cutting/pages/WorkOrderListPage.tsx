@@ -9,6 +9,7 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import type { WorkOrderListItem } from '@/types/workOrder';
 import { formatDate } from '@/utils/format';
 import { WorkOrderDetailDrawer } from '../components/WorkOrderDetailDrawer';
+import { ReplacementWorkOrderModal } from '../components/ReplacementWorkOrderModal';
 import { WorkOrderFormModal } from '../components/WorkOrderFormModal';
 import { LABELS, WORK_ORDER_STATUS_LABEL } from '../constants';
 import { useWorkOrders } from '../hooks/useCutting';
@@ -28,6 +29,7 @@ export function WorkOrderListPage() {
   const [viewingId, setViewingId] = useState<number>();
   const [editing, setEditing] = useState<WorkOrder | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [replacementOpen, setReplacementOpen] = useState(false);
 
   const openForm = (workOrder: WorkOrder | null) => {
     setViewingId(undefined);
@@ -58,9 +60,12 @@ export function WorkOrderListPage() {
       title={LABELS.workOrdersTitle}
       extra={
         <Can roles={[ROLES.Manager]}>
-          <Button type="primary" onClick={() => openForm(null)}>
-            {MESSAGES.common.create}
-          </Button>
+          <Space>
+            <Button onClick={() => setReplacementOpen(true)}>{LABELS.createReplacement}</Button>
+            <Button type="primary" onClick={() => openForm(null)}>
+              {MESSAGES.common.create}
+            </Button>
+          </Space>
         </Can>
       }
     >
@@ -93,6 +98,7 @@ export function WorkOrderListPage() {
         onClose={() => setViewingId(undefined)}
         onEdit={openForm}
       />
+      <ReplacementWorkOrderModal open={replacementOpen} onClose={() => setReplacementOpen(false)} />
       <WorkOrderFormModal open={formOpen} workOrder={editing} onClose={() => setFormOpen(false)} />
     </Card>
   );

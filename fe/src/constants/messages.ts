@@ -51,6 +51,7 @@ export const MESSAGES = {
   },
   cutting: {
     workOrderSaved: 'Đã lưu lệnh cắt.',
+    replacementCreated: 'Đã lập lệnh cắt bù.',
     confirmCancelWorkOrder: 'Hủy lệnh cắt này? Thao tác không hoàn tác được.',
     workOrderCancelled: 'Đã hủy lệnh cắt.',
     laySaved: 'Đã lưu bàn cắt.',

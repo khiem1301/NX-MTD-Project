@@ -26,6 +26,16 @@ public sealed record WorkOrderDto(
 
 public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty);
 
+/// <summary>Đơn cắt bù (REPLACEMENT_CUTTING) đã được Quản đốc duyệt và chưa có lệnh cắt bù.</summary>
+public sealed record ReplacementRequestDto(
+    int RequestId, string RequestCode, int OrderId, string OrderCode, string ProductCode, string? Content,
+    IReadOnlyList<ReplacementRequestLineDto> Lines);
+
+public sealed record ReplacementRequestLineDto(int OrderLineId, string Color, string SizeCode, string PanelName, int Quantity);
+
+/// <summary>Lập lệnh cắt bù từ một đơn cắt bù đã duyệt; dòng lệnh lấy từ dòng đơn (chi tiết + số lượng).</summary>
+public sealed record CreateReplacementWorkOrderDto(int RequestId, int CuttingTeamId, DateOnly DueDate, string? Note);
+
 public sealed record SaveWorkOrderDto(int OrderId, int ProductId, int CuttingTeamId, DateOnly DueDate, string? Note,
     IReadOnlyList<SaveWorkOrderLineDto> Lines);
 

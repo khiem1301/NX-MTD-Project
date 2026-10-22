@@ -98,6 +98,80 @@ public sealed class WorkOrderService : IWorkOrderService
         return await GetByIdAsync(created.Data, null, ct);
     }
 
+    public async Task<Result<IReadOnlyList<ReplacementRequestDto>>> GetOpenReplacementRequestsAsync(CancellationToken ct)
+    {
+        var withOrder = _uow.Repository<WorkOrder>().Query()
+            .Where(w => w.SourceRequestId != null && w.Status != WorkOrderStatuses.Cancelled)
+            .Select(w => w.SourceRequestId!.Value);
+        var requests = await _uow.Repository<Request>().Query().AsNoTracking()
+            .Where(r => r.RequestTypeCode == RequestTypes.ReplacementCutting && r.Status == RequestStatuses.Approved
+                        && !withOrder.Contains(r.RequestId))
+            .OrderBy(r => r.RequestId)
+            .Select(r => new ReplacementRequestDto(r.RequestId, r.RequestCode, r.OrderId!.Value, r.Order!.OrderCode,
+                r.RequestLines.Select(l => l.OrderLine!.Product.ProductCode).FirstOrDefault() ?? string.Empty, r.Content,
+                r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new ReplacementRequestLineDto(l.OrderLineId!.Value,
+                    l.OrderLine!.Color, l.OrderLine.SizeCode, l.PanelName ?? string.Empty, (int)l.Quantity)).ToList()))
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<ReplacementRequestDto>>.Success(requests);
+    }
+
+    public async Task<Result<WorkOrderDto>> CreateReplacementAsync(CreateReplacementWorkOrderDto dto, CancellationToken ct)
+    {
+        var request = await _uow.Repository<Request>().Query().AsNoTracking().Include(r => r.RequestLines)
+            .FirstOrDefaultAsync(r => r.RequestId == dto.RequestId && r.RequestTypeCode == RequestTypes.ReplacementCutting, ct);
+        if (request is null || request.OrderId is null) return WarehouseFailures.NotFound<WorkOrderDto>();
+        if (request.Status != RequestStatuses.Approved)
+            return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementRequestNotApproved);
+        var hasOrder = await WorkOrders.AnyAsync(w => w.SourceRequestId == request.RequestId && w.Status != WorkOrderStatuses.Cancelled, ct);
+        if (hasOrder) return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementOrderExists);
+        if (request.RequestLines.Count == 0 || request.RequestLines.Any(l => l.OrderLineId is null || string.IsNullOrWhiteSpace(l.PanelName)))
+            return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementLinesMissing);
+
+        var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstAsync(o => o.OrderId == request.OrderId, ct);
+        if (OrderStatuses.Closed.Contains(order.Status)) return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+        var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.CuttingTeamId
+            && t.TeamType == TeamTypes.Cutting && t.Status == RecordStatus.Active, ct);
+        if (!teamOk) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.CuttingTeamInvalid);
+
+        var lineIds = request.RequestLines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
+        var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => lineIds.Contains(l.OrderLineId) && l.OrderId == request.OrderId).ToDictionaryAsync(l => l.OrderLineId, ct);
+        if (orderLines.Count != lineIds.Count) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder);
+        var productIds = orderLines.Values.Select(l => l.ProductId).Distinct().ToList();
+        if (productIds.Count != 1) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
+
+        // Vải cần theo chi tiết cần cắt bù (định mức theo PanelName) phải đủ trong kho + vải tổ cắt đang giữ.
+        var demands = request.RequestLines
+            .Select(l => new PieceDemand(orderLines[l.OrderLineId!.Value].ProductId, orderLines[l.OrderLineId!.Value].Color,
+                orderLines[l.OrderLineId!.Value].SizeCode, l.PanelName!.Trim(), (int)l.Quantity)).ToList();
+        var fabric = await CheckFabricAsync(request.OrderId.Value, dto.CuttingTeamId, demands, ct);
+        if (fabric is not null) return fabric;
+
+        var created = await _uow.InTransactionAsync(async () =>
+        {
+            var wo = new WorkOrder
+            {
+                WorkOrderCode = await _codes.NextAsync<WorkOrder>(DocumentPrefixes.WorkOrder, w => w.WorkOrderCode, ct),
+                Status = WorkOrderStatuses.Open,
+                OrderId = request.OrderId.Value,
+                ProductId = productIds[0],
+                CuttingTeamId = dto.CuttingTeamId,
+                DueDate = dto.DueDate,
+                SourceRequestId = request.RequestId,
+                Note = string.IsNullOrWhiteSpace(dto.Note) ? $"Cắt bù theo {request.RequestCode}" : dto.Note.Trim(),
+                WorkOrderLines = request.RequestLines.Select(l => new WorkOrderLine
+                {
+                    OrderLineId = l.OrderLineId!.Value, PanelName = l.PanelName!.Trim(), PlannedQty = (int)l.Quantity,
+                }).ToList(),
+            };
+            await _uow.Repository<WorkOrder>().AddAsync(wo);
+            await _uow.SaveChangesAsync();
+            return Result<int>.Success(wo.WorkOrderId);
+        });
+        _logger.LogInformation("Replacement work order {WorkOrderId} created from request {RequestId}", created.Data, dto.RequestId);
+        return await GetByIdAsync(created.Data, null, ct);
+    }
+
     public async Task<Result<WorkOrderDto>> UpdateAsync(int workOrderId, SaveWorkOrderDto dto, CancellationToken ct)
     {
         var wo = await WorkOrders.Include(w => w.WorkOrderLines).FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
@@ -189,14 +263,20 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         var demands = dto.Lines.Select(l => orderLines[l.OrderLineId])
             .Zip(dto.Lines, (ol, l) => new PieceDemand(ol.ProductId, ol.Color, ol.SizeCode, string.Empty, l.PlannedQty));
-        var needs = await _planner.GetNeedsAsync(dto.OrderId, demands.ToList(), ct);
+        return await CheckFabricAsync(dto.OrderId, dto.CuttingTeamId, demands.ToList(), ct);
+    }
+
+    private async Task<Result<WorkOrderDto>?> CheckFabricAsync(int orderId, int cuttingTeamId,
+        IReadOnlyList<PieceDemand> demands, CancellationToken ct)
+    {
+        var needs = await _planner.GetNeedsAsync(orderId, demands, ct);
         if (needs.Count == 0) return Fail(ErrorCodes.CuttingFabricShortage, WarehouseMessages.NoFabricNorm);
 
         var shortages = new List<string>();
         foreach (var need in needs)
         {
             var available = await _stock.GetAvailableAsync(StockKey.Material(need.MaterialId, need.MaterialColor), ct)
-                            + await _planner.GetTeamHoldingAsync(dto.CuttingTeamId, dto.OrderId, need.MaterialId,
+                            + await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, need.MaterialId,
                                 need.MaterialColor, ct);
             if (available < need.RequiredQty)
                 shortages.Add($"{need.MaterialCode} {need.MaterialName} ({need.MaterialColor}): cần {Format(need.RequiredQty)} {need.Unit}, " +

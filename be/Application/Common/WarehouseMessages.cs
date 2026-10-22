@@ -102,6 +102,16 @@ public static class WarehouseMessages
     public const string MovementTypeInvalid = "Loại phiếu phải là giao hoặc thu hồi BTP.";
     public const string WorkerRequired = "Vui lòng chọn công nhân.";
     public const string RetrievalReasonRequired = "Vui lòng chọn lý do thu hồi.";
+    public const string ReplacementRequestNotApproved = "Chỉ lập lệnh cắt bù cho đơn cắt bù đã được duyệt.";
+    public const string ReplacementOrderExists = "Đơn cắt bù này đã có lệnh cắt bù.";
+    public const string ReplacementLinesMissing = "Đơn cắt bù chưa có dòng chi tiết cần cắt bù hợp lệ.";
+    public const string ReturnIssueNotReturnable = "Chỉ trả vải theo phiếu cấp NVL đã nhận của tổ cắt.";
+    public const string ReturnLineNotInIssue = "Dòng trả không thuộc phiếu cấp đã chọn.";
+    public const string ReturnExceedsIssued = "Số trả vượt số vải đã nhận chưa trả";
+    public const string ReturnCreated = "Đã lập phiếu trả vải, chờ Thủ kho nhận.";
+    public const string ReturnConfirmed = "Đã nhận vải trả vào kho.";
+    public const string ReturnRejected = "Đã từ chối phiếu trả vải.";
+    public const string ReturnCancelled = "Đã rút phiếu trả vải.";
     public const string DeliveryDateRequired = "Vui lòng chọn ngày giao hàng.";
     public const string DeliveryAddressRequired = "Vui lòng nhập địa chỉ giao hàng.";
     public const string CustomerReceivedDateRequired = "Vui lòng nhập ngày khách nhận hàng.";

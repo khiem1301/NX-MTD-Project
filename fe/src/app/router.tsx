@@ -113,6 +113,11 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/piece-movement')).MyPieceMovementsPage,
   },
   {
+    path: ROUTES.materialReturns,
+    roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
+    page: async () => (await import('@/features/material-return')).MaterialReturnPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

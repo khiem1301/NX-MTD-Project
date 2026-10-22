@@ -16,12 +16,13 @@ public sealed class CutHandoverService : ICutHandoverService
     private readonly IDocumentCodeGenerator _codes;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
+    private readonly IRequestService _requests;
     private readonly ILogger<CutHandoverService> _logger;
 
     public CutHandoverService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes, IAppLock locks,
-        IClock clock, ILogger<CutHandoverService> logger)
+        IClock clock, IRequestService requests, ILogger<CutHandoverService> logger)
     {
-        _uow = uow; _stock = stock; _codes = codes; _locks = locks; _clock = clock; _logger = logger;
+        _uow = uow; _stock = stock; _codes = codes; _locks = locks; _clock = clock; _requests = requests; _logger = logger;
     }
 
     private IQueryable<CutHandover> Handovers => _uow.Repository<CutHandover>().Query();
@@ -146,9 +147,28 @@ public sealed class CutHandoverService : ICutHandoverService
             handover.ConfirmedBy = employeeId;
             handover.ConfirmedAt = _clock.Now;
             await _uow.SaveChangesAsync();
+            await CompleteReplacementRequestAsync(handover.WorkOrderId, ct);
+            await _uow.SaveChangesAsync();
             _logger.LogInformation("Cut handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.HandoverConfirmed);
         });
+
+    /// <summary>
+    /// Lệnh cắt bù (SourceRequestId): khi BTP đã vào kho đủ số kế hoạch thì đơn cắt bù tự hoàn thành (UC19, TH-10).
+    /// Chạy sau khi phiếu đã lưu CONFIRMED để tổng đã nhận đọc từ DB đã gồm phiếu này.
+    /// </summary>
+    private async Task CompleteReplacementRequestAsync(int workOrderId, CancellationToken ct)
+    {
+        var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking()
+            .Where(w => w.WorkOrderId == workOrderId).Select(w => new { w.SourceRequestId }).FirstAsync(ct);
+        if (wo.SourceRequestId is not { } requestId) return;
+
+        var planned = await _uow.Repository<WorkOrderLine>().Query().Where(l => l.WorkOrderId == workOrderId).SumAsync(l => l.PlannedQty, ct);
+        var received = await _uow.Repository<CutHandoverLine>().Query()
+            .Where(l => l.CutHandover.WorkOrderId == workOrderId && l.CutHandover.Status == HandoverStatuses.Confirmed)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+        if (received >= planned) await _requests.MarkCompletedAsync(requestId, "BTP cắt bù đã vào kho.", ct);
+    }
 
     public async Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct)
     {

@@ -125,3 +125,29 @@ export type CreateHandoverPayload = {
 export type ConfirmHandoverPayload = {
   lines: { cutHandoverLineId: number; confirmedQty: number; discrepancyReason?: string }[];
 };
+
+/** Đơn cắt bù đã được Quản đốc duyệt và chưa có lệnh cắt bù (UC19, TH-10). */
+export type ReplacementRequestLine = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  panelName: string;
+  quantity: number;
+};
+
+export type ReplacementRequest = {
+  requestId: number;
+  requestCode: string;
+  orderId: number;
+  orderCode: string;
+  productCode: string;
+  content: string | null;
+  lines: ReplacementRequestLine[];
+};
+
+export type CreateReplacementPayload = {
+  requestId: number;
+  cuttingTeamId: number;
+  dueDate: string;
+  note?: string;
+};

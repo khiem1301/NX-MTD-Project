@@ -7,6 +7,7 @@ import { cuttingApi } from '../api/cuttingApi';
 import type {
   ConfirmHandoverPayload,
   CreateHandoverPayload,
+  CreateReplacementPayload,
   CutHandoverQuery,
   CuttingLayQuery,
   SaveCuttingLayPayload,
@@ -25,6 +26,26 @@ export const useWorkOrders = (query: WorkOrderQuery) => {
     queryFn: () => cuttingApi.getWorkOrders(role, query),
     placeholderData: keepPreviousData,
   });
+};
+
+export const useReplacementRequests = (enabled: boolean) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'replacement-requests', role],
+    queryFn: () => cuttingApi.getReplacementRequests(role),
+    enabled,
+  });
+};
+
+export const useCreateReplacement = () => {
+  const role = useRolePath();
+  return useApiMutation(
+    (body: CreateReplacementPayload) => cuttingApi.createReplacement(role, body),
+    {
+      invalidate: [CUTTING_KEY, WAREHOUSE_KEY, ['requests']],
+      successMessage: MESSAGES.cutting.replacementCreated,
+    },
+  );
 };
 
 export const useWorkOrder = (id: number | undefined) => {

@@ -13,6 +13,7 @@ import { userMenu } from '@/features/users';
 import { orderMenu } from '@/features/orders';
 import { requestMenu } from '@/features/requests';
 import { kpiMenu } from '@/features/kpi/menu';
+import { materialReturnMenu } from '@/features/material-return';
 import { mealMenu } from '@/features/meal/menu';
 import { monthlyCostMenu } from '@/features/monthly-cost/menu';
 import { payrollMenu } from '@/features/payroll/menu';
@@ -35,6 +36,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...cuttingMenu, // Thái
   ...fgHandoverMenu, // Thái (TH-11)
   ...dispatchMenu, // Thái (TH-14)
+  ...materialReturnMenu, // Thái (TH-10)
   ...pieceMovementMenu, // Thái (TH-19)
   ...attendanceMenu, // Minh
   ...profileMenu, // Khiêm
