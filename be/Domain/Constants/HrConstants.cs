@@ -43,6 +43,28 @@ public static class AuditActions
     public const string Login = "LOGIN";
 }
 
+/// <summary>Announcement.Priority (CK_Announcement_Priority).</summary>
+public static class AnnouncementPriorities
+{
+    public const string Normal = "NORMAL";
+    public const string Urgent = "URGENT";
+}
+
+/// <summary>Announcement.TargetScope (CK_Announcement_Scope): toàn xưởng, theo tổ, theo vai trò.</summary>
+public static class AnnouncementScopes
+{
+    public const string All = "ALL";
+    public const string Team = "TEAM";
+    public const string Role = "ROLE";
+}
+
+/// <summary>Notification.PushStatus (CK_Notification_Push). Push FCM chưa làm nên luôn SKIPPED (KH-12).</summary>
+public static class NotificationPushStatuses
+{
+    public const string Pending = "PENDING";
+    public const string Skipped = "SKIPPED";
+}
+
 public static class NotificationSources
 {
     public const string Announcement = "ANNOUNCEMENT";

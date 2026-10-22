@@ -35,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IMaterialReturnService, MaterialReturnService>();
         services.AddScoped<IStocktakeService, StocktakeService>();
         services.AddScoped<IVehicleService, VehicleService>();
+        services.AddScoped<INotificationInboxService, NotificationInboxService>();
+        services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<IAttachmentOwnerAccess, VehicleTripAttachmentAccess>();
         services.AddScoped<IAttachmentOwnerAccess, DispatchNoteAttachmentAccess>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

@@ -28,6 +28,7 @@ export const ROUTES = {
   dispatchNotes: '/warehouse/dispatch-notes',
   stocktakes: '/warehouse/stocktakes',
   vehicleLog: '/accounting/vehicle-log',
+  notifications: '/notifications',
   materialReturns: '/warehouse/material-returns',
   pieceMovements: '/warehouse/piece-movements',
   myPieceMovements: '/my-piece-movements',

@@ -81,6 +81,11 @@ public static class Messages
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
+    public const string AnnouncementTooLong = "Nội dung thông báo tối đa 1000 ký tự.";
+    public const string AnnouncementTargetRequired = "Vui lòng chọn ít nhất một tổ hoặc một vai trò nhận thông báo.";
+    public const string AnnouncementScopeInvalid = "Phạm vi gửi phải là toàn xưởng, theo tổ hoặc theo vai trò.";
+    public const string AnnouncementNoRecipient = "Không có người nhận nào trong phạm vi đã chọn.";
+    public const string AnnouncementSent = "Đã gửi thông báo cho {0} người.";
     public const string OrderStarted = "Đã chuyển đơn hàng sang sản xuất.";
     public const string OrderMaterialsAwaiting = "Đơn chưa nhận NVL nào (đang chờ NVL), chưa thể chuyển sang sản xuất.";
     public const string OrderHeaderLocked = "Đơn đã vào sản xuất, chỉ sửa ngày giao, ghi chú, số lượng, đơn giá và thêm dòng.";

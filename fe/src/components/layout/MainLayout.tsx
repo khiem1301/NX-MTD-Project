@@ -4,6 +4,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MENU_ENTRIES } from '@/app/menu';
 import { MESSAGES } from '@/constants/messages';
 import { useLogout } from '@/features/auth';
+import { NotificationBell } from '@/features/notification';
 import { useAuth } from '@/hooks/useAuth';
 
 export function MainLayout() {
@@ -43,6 +44,7 @@ export function MainLayout() {
             background: '#fff',
           }}
         >
+          <NotificationBell />
           <Typography.Link onClick={() => navigate(ROUTES.profile)}>
             {user?.fullName} · {user?.roleName}
           </Typography.Link>

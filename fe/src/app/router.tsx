@@ -128,6 +128,11 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/vehicle-log')).VehicleLogPage,
   },
   {
+    path: ROUTES.notifications,
+    roles: Object.values(ROLES),
+    page: async () => (await import('@/features/notification')).NotificationsPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

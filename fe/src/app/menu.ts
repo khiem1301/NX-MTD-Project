@@ -10,6 +10,7 @@ import { pieceMovementMenu } from '@/features/piece-movement';
 import { profileMenu } from '@/features/profile';
 import { teamMenu } from '@/features/teams';
 import { userMenu } from '@/features/users';
+import { notificationMenu } from '@/features/notification';
 import { orderMenu } from '@/features/orders';
 import { requestMenu } from '@/features/requests';
 import { kpiMenu } from '@/features/kpi/menu';
@@ -29,6 +30,7 @@ const homeMenu: MenuEntry[] = [{ key: 'home', label: 'Trang chủ', path: '/', r
 // Mỗi luồng thêm menu của mình ở features/<x>/menu.ts rồi thêm một dòng vào mảng dưới.
 export const MENU_ENTRIES: MenuEntry[] = [
   ...homeMenu,
+  ...notificationMenu, // Khiêm (KH-12)
   ...productionMenu, // Minh làm hộ Kiều (KI-01..KI-11)
   ...userMenu, // Khiêm
   ...teamMenu, // Khiêm
