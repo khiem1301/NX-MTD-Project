@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
+        services.AddScoped<IAttachmentOwnerAccess, MaterialReceiptAttachmentAccess>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<FabricPlanner>();
         services.AddScoped<IWorkOrderService, WorkOrderService>();

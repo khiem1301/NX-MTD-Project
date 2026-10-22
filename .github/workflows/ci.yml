@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Restore
+        run: dotnet restore tests/Application.Tests/Application.Tests.csproj
+      - name: Build
+        run: dotnet build tests/Application.Tests/Application.Tests.csproj --no-restore -c Release
+      - name: Test
+        run: dotnet test tests/Application.Tests/Application.Tests.csproj --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-test-results
+          path: "**/test-results.trx"
+
+  frontend:
+    name: Frontend (lint + typecheck + test + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: fe/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Test
+        run: npm test -- --ci
+      - name: Build
+        run: npm run build

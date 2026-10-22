@@ -2,14 +2,20 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { Alert, Button, Empty, Image, Popconfirm, Space, Spin } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useAttachments, useRemoveAttachment } from '@/hooks/useAttachments';
-import type { AttachmentOwnerType } from '@/types/attachment';
+import type { AttachmentOwnerType, AttachmentPurpose } from '@/types/attachment';
 import { AttachmentUploadButton } from './AttachmentUploadButton';
 import { AuthImage } from './AuthImage';
 
-type AttachmentGalleryProps = { ownerType: AttachmentOwnerType; ownerId: number; canEdit: boolean; maxFiles: number };
+type AttachmentGalleryProps = {
+  ownerType: AttachmentOwnerType;
+  ownerId: number;
+  canEdit: boolean;
+  maxFiles: number;
+  purpose?: AttachmentPurpose;
+};
 
 /** Danh sách ảnh hiện tại của một chứng từ + nút gỡ / thêm khi canEdit. */
-export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles }: AttachmentGalleryProps) {
+export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles, purpose }: AttachmentGalleryProps) {
   const { data, isLoading, isError } = useAttachments(ownerType, ownerId);
   const remove = useRemoveAttachment(ownerType, ownerId);
   if (isLoading) return <Spin />;
@@ -32,7 +38,7 @@ export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles }: Att
           ))}
         </Space>
       </Image.PreviewGroup>
-      {canEdit && <AttachmentUploadButton ownerType={ownerType} ownerId={ownerId} remaining={maxFiles - items.length} />}
+      {canEdit && <AttachmentUploadButton ownerType={ownerType} ownerId={ownerId} remaining={maxFiles - items.length} purpose={purpose} />}
     </Space>
   );
 }
