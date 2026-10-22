@@ -84,6 +84,9 @@ export type CreateRequestBody = {
   title?: string | null;
   content?: string | null;
   targetDate?: string | null;
+  /** Đơn gắn với đơn hàng / phiếu hàng hỏng (vd. cắt bù từ phiếu Scrap). */
+  orderId?: number | null;
+  defectRecordId?: number | null;
   lines?: RequestLineInput[];
 };
 

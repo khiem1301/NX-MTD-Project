@@ -52,6 +52,11 @@
 | DEV-KI-01-2 | 22/10/2026 | Minh (AI) | UC25, `Operation`, `ClosedXmlOperationParser` | Công đoạn của mã hàng nhập từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC"), thay cho thêm tay từng công đoạn: mã tự sinh từ STT (OP + STT), bỏ dòng "Dự phòng", không đọc cột TGQĐ (cột TIỀN: xem DEV-KI-01-4), không có cột công đoạn cuối nên chọn khi nhập | Mở |
 | DEV-KI-01-3 | 22/10/2026 | Minh (AI) | UC25/UC26, `OperationDto.NextRate`, màn "Công đoạn và đơn giá" | Gộp màn "Công đoạn may" và "Đơn giá công đoạn" của Kế toán làm một: đơn giá đặt ngay trên từng công đoạn, `OperationDto` thêm `NextRate` (đơn giá mới nhất chưa thành hiện hành); màn riêng chỉ còn lại cho Admin duyệt | Mở |
 | DEV-KI-01-4 | 22/10/2026 | Minh (AI) | UC25/UC26, `PieceRate`, `OperationService.ImportAsync`, `PieceRateService.ApproveManyAsync` | Nhập công đoạn từ Excel đọc luôn cột TIỀN thành đơn giá công đoạn (Nháp, hoặc Chờ duyệt nếu gửi duyệt luôn) theo ngày hiệu lực Kế toán chọn; thêm Admin duyệt nhiều đơn giá một lần | Mở |
+| DEV-MI-20-1 | 22/10/2026 | Minh (AI) | MI-05, MI-12, MI-13, MI-09, `XlsxWorkbookLoader`, `FinanceService` | Sửa lỗi phát hiện khi chạy thử toàn luồng trên DB riêng: thiếu màn FE chấm công hộ; gán mã chấm công phải gõ tay mã nhân viên; file mẫu chi phí tháng có dòng ví dụ bị nhập nhầm; tính hòa vốn hai lần trong cùng một giây báo 409; file không phải Excel báo lỗi tiếng Anh | Đã sửa |
+| DEV-KI-09-1 | 22/10/2026 | Minh (AI) | UC56, UC07 (cắt bù), `ReplacementCuttingRequestHandler`, `DefectDto` | Làm đơn cắt bù (KI-09): bộ kiểm đơn REPLACEMENT_CUTTING gắn phiếu hàng hỏng Scrap của tổ mình, mỗi chi tiết một dòng, tối đa một đơn mỗi phiếu; phiếu hàng hỏng hiện đơn cắt bù; Quản đốc hoàn thành tay vì chưa có lệnh cắt bù tự hoàn thành | Mở |
+| DEV-KI-14-1 | 22/10/2026 | Minh (AI) | UC55, UC56, UC57, màn xưởng | Làm gọn màn xưởng cho điện thoại (KI-14): lưới sản lượng dạng thẻ, ẩn cột phụ trên màn nhỏ, hộp thoại co theo màn hình; thêm dòng ngoài phân công vào lưới sản lượng (GBR-20) | Mở |
+| DEV-MI-20-2 | 22/10/2026 | Minh (AI) | `SQL/CreateAndSeed.sql`, `ValidationFilter` | Sửa script (Khiêm, 21/10) thiếu thủ tục `usp_Attendance_ApplyAdjustment` nên chấm công hộ báo 500 trên DB dựng mới; `ValidationFilter` vỡ (500) khi rule mức đối tượng không có tên thuộc tính | Đã sửa |
+| DEV-MI-20-3 | 22/10/2026 | Minh (AI) | `SQL/`, Coding Rules 3.12, AI Context | Gộp mọi script SQL thành MỘT file `SQL/NX-MTD_Database.sql` (schema + TH-12 + tài khoản mẫu + thủ tục chấm công hộ + dữ liệu demo mục 19); xóa `CreateAndSeed.sql`, `SeedAuth.sql`, thư mục `Migrations/`, `DemoData_KH-06-10_purchase-orders.sql` | Đã sửa |
 
 ---
 
@@ -398,7 +403,7 @@
   - [ ] `NX-MTD_AI_Context.md` mục 5 (luồng NVL): thêm trường hợp đơn mua dùng chung; mục 6.2 nếu đổi người sở hữu
   - [ ] Report-3: UC đơn mua / thiếu NVL (luồng thay thế mua dùng chung), mockup màn "NVL của đơn"
   - [ ] `NX-MTD_Tong_hop_Use_Case.md`: UC liên quan đơn mua
-- **File migrate:** `SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql`
+- **File migrate:** đã gộp vào `SQL/NX-MTD_Database.sql` (xem DEV-MI-20-3); file `SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql` đã xóa
 - **Trạng thái:** Mở
 
 ### DEV-TH-12-2 · Quản đốc nhập tên NVL mới khi tạo đơn mua
@@ -660,3 +665,58 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC25 / UC26: nhập đơn giá hàng loạt từ Excel và Admin duyệt nhiều đơn giá cùng lúc
 - **Trạng thái:** Mở
+
+### DEV-MI-20-1 · Lỗi phát hiện khi chạy thử toàn luồng (đã sửa)
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-05, MI-12, MI-13, MI-09 · (chưa có PR)
+- **Ảnh hưởng tới:** màn Chấm công (FE), `ClosedXmlMonthlyCostWriter`, `FinanceService.CalculateAsync`, `XlsxWorkbookLoader`
+- **Cách phát hiện:** dựng DB riêng từ `CreateAndSeed.sql` + migration dữ liệu chung, chạy backend thứ hai và gọi ~110 endpoint GET cùng các luồng ghi qua HTTP thật (nhập công đoạn + đơn giá bằng file, duyệt nhiều, sản lượng, QC, hàng hỏng, mua hàng, KPI, suất ăn, chi phí, lương, hòa vốn).
+- **Lỗi và cách sửa:**
+  - **MI-05** Thiếu FE "Chấm công hộ": API `accountant/attendance/adjustments` có nhưng không có màn. Thêm tab "Chấm công hộ" (danh sách, form, danh sách đơn xin chấm bù đã duyệt kèm nút chấm hộ điền sẵn).
+  - **MI-02** `MapCodeForm` bắt gõ tay `EmployeeId` (TODO chờ API nhân sự của Khiêm, API đã có). Đổi thành chọn tổ rồi nhân viên (`EmployeePicker`).
+  - **MI-12** File mẫu chi phí tháng có dòng ví dụ `MEALS` số tiền 0 hợp lệ, quên xóa là nhập thành khoản chi 0 đồng. Ví dụ chuyển sang sheet `HuongDan`; sheet nhập chỉ còn tiêu đề.
+  - **MI-13** Tính hòa vốn lần hai trong cùng một giây với lần trước (hoặc bấm đúp) bị 409 vì khóa UNIQUE `(PeriodId, CalculatedAt, ProductId)` chỉ chính xác đến giây. `CalculatedAt` luôn lấy mốc lớn hơn lần tính gần nhất.
+  - **MI-09 / MI-12 / MI-08** File không phải .xlsx hiện thông báo kỹ thuật tiếng Anh ("End of Central Directory record could not be found"). `XlsxWorkbookLoader` đổi thành thông báo tiếng Việt.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Đã sửa
+
+### DEV-KI-09-1 · Đơn cắt bù từ phiếu hàng hỏng Scrap
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-09 · (chưa có PR)
+- **Ảnh hưởng tới:** UC56, UC07 (loại đơn cắt bù), `IRequestTypeHandler`, `DefectDto`, `DefectRecordsPage`
+- **Tài liệu gốc ghi:** Sheet KI-09 "Loại đơn cắt bù". Khung đơn từ (Khiêm) đã có chính sách `REPLACEMENT_CUTTING` (tổ trưởng / tổ phó tổ may tạo, Quản đốc duyệt) nhưng chưa có bộ kiểm riêng và chưa có form.
+- **Code đang làm:** `ReplacementCuttingRequestHandler` kiểm: bắt buộc `DefectRecordId`; phiếu phải là Scrap chưa hủy; tổ trưởng / tổ phó chỉ tạo cho phiếu của tổ mình; `OrderId` của đơn khớp đơn hàng của phiếu; mỗi dòng có tên chi tiết (không trùng nhau), đúng dòng đơn của phiếu, số lượng nguyên từ 1 đến số hàng đã hủy; mỗi phiếu tối đa một đơn (khớp `UX_Request_Defect`, kể cả đơn đã bị từ chối / hủy). FE: nút "Đơn cắt bù" trên phiếu Scrap trong màn Hàng hỏng; phiếu hiện mã và trạng thái đơn. `AllowManualComplete = true` vì chưa có lệnh cắt bù của tổ cắt tự hoàn thành đơn (WorkOrder có `SourceRequestId` là việc của Thái); sau khi có thì đổi thành `false`.
+- **Lý do:** Khung đơn từ để mỗi luồng tự thêm bộ kiểm cho loại đơn của mình.
+- **Ảnh hưởng người khác:** Thái: lệnh cắt bù nên gắn `SourceRequestId` và hoàn thành đơn qua `IRequestService`. Khiêm: `CreateRequestBody` (FE) thêm `orderId`, `defectRecordId`.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-KI-14-1 · Màn xưởng trên điện thoại và nhập ngoài phân công
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-14, KI-05 · (chưa có PR)
+- **Ảnh hưởng tới:** UC55, UC56, UC57, `OutputEntryPage`, các hộp thoại của feature `production`
+- **Code đang làm:** Trên màn nhỏ (dưới breakpoint `md`): lưới sản lượng đổi thành thẻ (mỗi công nhân một thẻ, ô nhập số lớn); ẩn cột phụ (đơn giá, hạn sửa, đơn hàng, người kiểm...) ở các bảng sản lượng, hàng hỏng, QC, phân công; hộp thoại có bề rộng `min(Npx, 100vw - 16px)`. Lưới sản lượng thêm "Thêm dòng ngoài phân công" cho tổ trưởng (BE vốn đã hỗ trợ `IsOutsideAssignment`, GBR-20).
+- **Chưa làm:** chưa thử trên thiết bị thật / trình duyệt; chưa có bài kiểm tự động cho bố cục.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-MI-20-2 · Hai lỗi nền tảng phát hiện khi chạy thử
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-05 · (chưa có PR)
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` (trước đó là `CreateAndSeed.sql` của Khiêm, 21/10), `API/Filters/ValidationFilter.cs` (Khiêm)
+- **Lỗi và cách sửa:**
+  - Script `CreateAndSeed.sql` 21/10 thiếu `usp_Attendance_ApplyAdjustment` (bản `NX-MTD_Database.sql` cũ có): chấm công hộ báo 500 trên DB dựng từ script này. Thủ tục (nguyên văn) nay nằm trong `NX-MTD_Database.sql` duy nhất (DEV-MI-20-3). Đã đối chiếu mọi đối tượng giữa hai script: chỉ thiếu đúng thủ tục này.
+  - `ValidationFilter` đọc `PropertyName[0]` nên ném `IndexOutOfRangeException` (500) khi rule mức đối tượng `RuleFor(x => x).Must(...)` báo lỗi (vd. chấm hộ không có giờ vào / ra). Nay trả 400 kèm thông báo của rule.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Đã sửa
+
+### DEV-MI-20-3 · Một file database duy nhất
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-20 · (chưa có PR)
+- **Ảnh hưởng tới:** toàn bộ thư mục `SQL/`; Coding Rules 3.12 và AI Context vẫn nhắc `CreateAndSeed.sql` và `SQL/Migrations/`
+- **Thay đổi:** nhóm đã bỏ `CreateAndSeed.sql` và chỉ dùng `NX-MTD_Database.sql`, nhưng bản 16/10 đã cũ nên người mới phải chạy 4 file đúng thứ tự. Nay `NX-MTD_Database.sql` (bản 22/10) là file duy nhất, chạy một lần: `sqlcmd -S localhost -E -C -I -f 65001 -b -i SQL/NX-MTD_Database.sql`. Gồm schema, TH-12 (đơn mua dùng chung), tài khoản mẫu (mục 17b), thủ tục `usp_Attendance_ApplyAdjustment` và mục 19 dữ liệu demo (188 công đoạn + 110 đơn giá, đơn hàng, sản lượng, QC, hàng hỏng, KPI, suất ăn, bảng lương demo; không có họ tên thật, lương thật hay hash mật khẩu). Muốn DB sạch thì xóa mục 19. Mục 19 chạy lại không nhân đôi dữ liệu.
+- **File đã xóa:** `CreateAndSeed.sql`, `SeedAuth.sql`, `Migrations/20261021_01_TH-12_stock-purchase-order.sql`, `Migrations/20261022_01_MI_shared-data.sql`, `DemoData_KH-06-10_purchase-orders.sql` (cần mã hàng `TEST-MH01` không script nào tạo nên không chạy được trên DB sạch; đơn mua mẫu đã có trong mục 19).
+- **Kiểm chứng:** dựng DB mới chỉ từ file này: 65 bảng, 4 thủ tục `usp_Attendance_*` (QUOTED_IDENTIFIER = 1), 188 công đoạn, 110 đơn giá, 14 nhân viên / 14 tài khoản (đủ 9 role); backend chạy được, đăng nhập các role và chấm công hộ trả 200.
+- **Cần sửa trong tài liệu:**
+  - [ ] Coding Rules 3.12 và AI Context: thay `CreateAndSeed.sql` + `SQL/Migrations/` bằng một file `NX-MTD_Database.sql`
+- **Trạng thái:** Đã sửa

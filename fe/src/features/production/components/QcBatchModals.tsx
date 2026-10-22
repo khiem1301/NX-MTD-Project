@@ -9,6 +9,7 @@ import { fill, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import { useCreateQcBatch, useOnLineQty, useUpdateQcBatch } from '../hooks/useProduction';
 import type { QcBatch, QcRole, ShiftCode } from '../types';
+import { modalWidth } from '../utils';
 
 const text = PRODUCTION_TEXT.qc;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -57,7 +58,7 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Modal
       open={open}
-      width={560}
+      width={modalWidth(560)}
       title={text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -85,7 +86,7 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
           />
         </Form.Item>
         <Form.Item name="orderId" label={PRODUCTION_TEXT.selectOrder} rules={required}>
-          <OrderSelect width={460} onChange={() => form.setFieldValue('orderLineId', undefined)} />
+          <OrderSelect width="100%" onChange={() => form.setFieldValue('orderLineId', undefined)} />
         </Form.Item>
         <Form.Item name="orderLineId" label={text.form.line} rules={required}>
           <Select

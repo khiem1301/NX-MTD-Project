@@ -32,15 +32,15 @@ function QcBoard({ role }: { role: QcRole }) {
     { title: text.columns.shift, dataIndex: 'shiftCode', render: (v: string) => shiftText(v) },
     { title: text.columns.time, dataIndex: 'batchTime', render: (v: string) => v.slice(0, 5) },
     { title: text.columns.team, dataIndex: 'sewingTeamName' },
-    { title: text.columns.order, dataIndex: 'orderCode' },
+    { responsive: ['md'], title: text.columns.order, dataIndex: 'orderCode' },
     {
       title: text.columns.line,
       key: 'line',
       render: (_, b) => `${b.productCode} - ${b.color} - ${b.sizeCode}`,
     },
     { title: text.columns.qty, dataIndex: 'finishedQty', align: 'right', render: (v: number) => formatQty(v) },
-    { title: text.columns.inspector, dataIndex: 'inspectorName' },
-    { title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
+    { responsive: ['md'], title: text.columns.inspector, dataIndex: 'inspectorName' },
+    { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
     {
       title: MESSAGES.common.actions,
       key: 'action',

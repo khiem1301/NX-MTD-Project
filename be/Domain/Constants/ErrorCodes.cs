@@ -154,6 +154,7 @@ public static class ErrorCodes
     public const string OperationExcelEmpty = "OPERATION_EXCEL_EMPTY";
     public const string OperationImportSheetNotFound = "OPERATION_IMPORT_SHEET_NOT_FOUND";
     public const string OperationImportFinalNotFound = "OPERATION_IMPORT_FINAL_NOT_FOUND";
+    public const string ReplacementCuttingInvalid = "REPLACEMENT_CUTTING_INVALID";
     public const string PieceRateInvalidStatus = "PIECE_RATE_INVALID_STATUS";
     public const string PieceRateDuplicateDate = "PIECE_RATE_DUPLICATE_DATE";
     public const string PieceRateNotApproved = "PIECE_RATE_NOT_APPROVED";

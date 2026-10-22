@@ -15,6 +15,8 @@ public sealed class ValidationFilter : IAsyncActionFilter
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var errors = new Dictionary<string, List<string>>();
+        // Rule mức đối tượng (RuleFor(x => x).Must(...)) không có tên thuộc tính: trả thẳng thông báo thay vì làm vỡ bộ lọc.
+        var objectLevel = new List<string>();
         foreach (var argument in context.ActionArguments.Values)
         {
             if (argument is null) continue;
@@ -24,15 +26,22 @@ public sealed class ValidationFilter : IAsyncActionFilter
             var result = await validator.ValidateAsync(new ValidationContext<object>(argument), context.HttpContext.RequestAborted);
             foreach (var failure in result.Errors)
             {
+                if (string.IsNullOrEmpty(failure.PropertyName))
+                {
+                    objectLevel.Add(failure.ErrorMessage);
+                    continue;
+                }
+
                 var key = char.ToLowerInvariant(failure.PropertyName[0]) + failure.PropertyName[1..];
                 if (!errors.TryGetValue(key, out var list)) errors[key] = list = new List<string>();
                 list.Add(failure.ErrorMessage);
             }
         }
 
-        if (errors.Count > 0)
+        if (errors.Count > 0 || objectLevel.Count > 0)
         {
-            var body = ApiResponses.Failure(ErrorCodes.CommonValidation, "Dữ liệu không hợp lệ.",
+            var message = errors.Count == 0 ? string.Join(" ", objectLevel.Distinct()) : "Dữ liệu không hợp lệ.";
+            var body = ApiResponses.Failure(ErrorCodes.CommonValidation, message,
                 errors.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray()));
             context.Result = new ObjectResult(body) { StatusCode = StatusCodes.Status400BadRequest };
             return;

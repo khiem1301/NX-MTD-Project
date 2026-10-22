@@ -22,8 +22,8 @@ export function MyDefectsPage() {
   const columns: ColumnsType<Defect> = [
     { title: text.columns.code, dataIndex: 'defectCode' },
     { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
-    { title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
-    { title: text.columns.operation, key: 'op', render: (_, d) => `${d.operationCode} - ${d.operationName}` },
+    { responsive: ['md'], title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
+    { responsive: ['md'], title: text.columns.operation, key: 'op', render: (_, d) => `${d.operationCode} - ${d.operationName}` },
     { title: text.columns.type, dataIndex: 'defectType', render: (v: string) => <StatusTag status={v} labels={text.type} /> },
     { title: text.columns.qty, dataIndex: 'quantity', align: 'right' },
     {
@@ -32,6 +32,7 @@ export function MyDefectsPage() {
       render: (_, d) => (d.reasonNote ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}` : text.reason[d.defectReasonCode]),
     },
     {
+      responsive: ['md'],
       title: text.columns.rate,
       dataIndex: 'scrapUnitRate',
       align: 'right',

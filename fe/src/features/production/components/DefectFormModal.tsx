@@ -10,6 +10,7 @@ import { toApiDate } from '@/utils/format';
 import { DEFECT_REASON_OPTIONS, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import { useAssignableOperations, useCreateDefect } from '../hooks/useProduction';
 import type { DefectReason, DefectType, ShiftCode } from '../types';
+import { modalWidth } from '../utils';
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -66,7 +67,7 @@ export function DefectFormModal({ open, onClose }: Props) {
   return (
     <Modal
       open={open}
-      width={560}
+      width={modalWidth(560)}
       title={PRODUCTION_TEXT.defects.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}

@@ -2,6 +2,9 @@ import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
+  AdjustmentFilter,
+  AttendanceAdjustment,
+  CreateAdjustmentPayload,
   AttendanceExcelPreview,
   AttendanceImportResult,
   DailyTimesheet,
@@ -87,6 +90,19 @@ export const attendanceApi = {
 
   mapCode: async (body: MapAttendanceCodeRequest): Promise<void> => {
     await apiClient.post(API.attendance.mapCode, body);
+  },
+
+  // ---------- Chấm công hộ (GBR-25) ----------
+
+  getAdjustments: async (filter: AdjustmentFilter): Promise<Paginated<AttendanceAdjustment>> => {
+    const res = await apiClient.get<ApiResponse<Paginated<AttendanceAdjustment>>>(API.attendance.adjustments, {
+      params: { ...filter, keyword: filter.keyword || undefined },
+    });
+    return res.data.data;
+  },
+
+  createAdjustment: async (body: CreateAdjustmentPayload): Promise<void> => {
+    await apiClient.post(API.attendance.adjustments, body);
   },
 
   // ---------- Import Excel dự phòng (UC29) ----------

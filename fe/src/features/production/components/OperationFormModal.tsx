@@ -4,6 +4,7 @@ import { MESSAGES } from '@/constants/messages';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
+import { modalWidth } from '../utils';
 
 type Props = { open: boolean; productId: number; operation: Operation | null; onClose: () => void };
 
@@ -60,7 +61,7 @@ export function OperationFormModal({ open, productId, operation, onClose }: Prop
   return (
     <Modal
       open={open}
-      width={520}
+      width={modalWidth(520)}
       title={text.edit}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
