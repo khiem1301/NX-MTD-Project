@@ -93,6 +93,11 @@ const warehouseRoutes = [
     page: async () => (await cutting()).CuttingLayPage,
   },
   {
+    path: ROUTES.fgHandovers,
+    roles: [ROLES.QaQc, WarehouseKeeper],
+    page: async () => (await import('@/features/fg-handover')).FgHandoverPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

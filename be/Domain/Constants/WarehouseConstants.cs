@@ -148,6 +148,7 @@ public static class DocumentPrefixes
     public const string MaterialIssue = "PC";
     public const string WorkOrder = "LC";
     public const string CutHandover = "BG";
+    public const string FgHandover = "TP";
     public const string PurchaseOrder = "DM";
 }
 

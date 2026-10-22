@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IMaterialIssueService, MaterialIssueService>();
         services.AddScoped<ICuttingLayService, CuttingLayService>();
         services.AddScoped<ICutHandoverService, CutHandoverService>();
+        services.AddScoped<IFgHandoverService, FgHandoverService>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;
     }

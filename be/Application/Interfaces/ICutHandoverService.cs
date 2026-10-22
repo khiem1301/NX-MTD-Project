@@ -23,3 +23,18 @@ public interface ICutHandoverService
 
     Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct);
 }
+
+/// <summary>UC44: QA/QC bàn giao thành phẩm (số QC đạt) vào kho FINISHED; Thủ kho đếm, xác nhận hoặc từ chối.</summary>
+public interface IFgHandoverService
+{
+    /// <param name="inspectorId">Có giá trị = chỉ phiếu của QA/QC này; null = mọi phiếu (Thủ kho, Quản đốc).</param>
+    Task<Result<PagedResult<FgHandoverListItemDto>>> GetPagedAsync(FgHandoverQuery query, int? inspectorId, CancellationToken ct);
+    Task<Result<FgHandoverDto>> GetByIdAsync(int handoverId, int? inspectorId, CancellationToken ct);
+    Task<Result<IReadOnlyList<FgHandoverableLineDto>>> GetHandoverableAsync(int orderId, CancellationToken ct);
+    Task<Result<FgHandoverDto>> CreateAsync(CreateFgHandoverDto dto, int inspectorId, CancellationToken ct);
+    Task<Result> ConfirmAsync(int handoverId, ConfirmFgHandoverDto dto, int employeeId, CancellationToken ct);
+    Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct);
+
+    /// <summary>QA/QC rút lại phiếu của mình khi Thủ kho chưa nhận.</summary>
+    Task<Result> CancelAsync(int handoverId, int inspectorId, CancellationToken ct);
+}
