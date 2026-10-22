@@ -4,6 +4,8 @@ import type { ApiError } from '@/types/api';
 import { attendanceApi, type TimesheetAudience } from '../api/attendanceApi';
 import { ATTENDANCE_TEXT } from '../constants';
 import type {
+  AdjustmentFilter,
+  CreateAdjustmentPayload,
   AttendanceExcelPreview,
   AttendanceImportResult,
   MapAttendanceCodeRequest,
@@ -100,5 +102,31 @@ export const useConfirmExcelImport = () => {
       );
     },
     onError: (error) => message.error(error.message),
+  });
+};
+
+// ---------- Chấm công hộ (GBR-25) ----------
+
+export const useAdjustments = (filter: AdjustmentFilter) =>
+  useQuery({
+    queryKey: [...attendanceKeys.all, 'adjustments', filter] as const,
+    queryFn: () => attendanceApi.getAdjustments(filter),
+    placeholderData: (previous) => previous,
+  });
+
+/** Chấm hộ xong thì bảng công và số liệu đổi theo, nên làm mới cả nhánh attendance. */
+export const useCreateAdjustment = () => {
+  const queryClient = useQueryClient();
+  const { message } = App.useApp();
+
+  return useMutation<void, ApiError, CreateAdjustmentPayload>({
+    mutationFn: attendanceApi.createAdjustment,
+    onSuccess: async () => {
+      message.success(ATTENDANCE_TEXT.adjust.saved);
+      await queryClient.invalidateQueries({ queryKey: attendanceKeys.all });
+    },
+    onError: (error) => {
+      message.error(error.message);
+    },
   });
 };

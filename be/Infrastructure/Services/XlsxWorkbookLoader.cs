@@ -18,10 +18,22 @@ namespace NX_MTD.Infrastructure.Services;
 /// </summary>
 internal static partial class XlsxWorkbookLoader
 {
+    public const string NotExcelMessage =
+        "Không đọc được file. Hãy chọn file Excel .xlsx hợp lệ (không phải file .xls, .csv hoặc file bị hỏng).";
+
     public static XLWorkbook Open(MemoryStream buffer)
     {
-        using var cleaned = Clean(buffer);
-        return new XLWorkbook(cleaned);
+        try
+        {
+            using var cleaned = Clean(buffer);
+            return new XLWorkbook(cleaned);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // ZipArchive / OpenXml ném thông báo kỹ thuật tiếng Anh ("End of Central Directory record could not be found")
+            // khi file không phải .xlsx: đổi thành thông báo người dùng hiểu được.
+            throw new InvalidDataException(NotExcelMessage, ex);
+        }
     }
 
     private static MemoryStream Clean(MemoryStream source)

@@ -52,6 +52,7 @@
 | DEV-KI-01-2 | 22/10/2026 | Minh (AI) | UC25, `Operation`, `ClosedXmlOperationParser` | Công đoạn của mã hàng nhập từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC"), thay cho thêm tay từng công đoạn: mã tự sinh từ STT (OP + STT), bỏ dòng "Dự phòng", không đọc cột TGQĐ (cột TIỀN: xem DEV-KI-01-4), không có cột công đoạn cuối nên chọn khi nhập | Mở |
 | DEV-KI-01-3 | 22/10/2026 | Minh (AI) | UC25/UC26, `OperationDto.NextRate`, màn "Công đoạn và đơn giá" | Gộp màn "Công đoạn may" và "Đơn giá công đoạn" của Kế toán làm một: đơn giá đặt ngay trên từng công đoạn, `OperationDto` thêm `NextRate` (đơn giá mới nhất chưa thành hiện hành); màn riêng chỉ còn lại cho Admin duyệt | Mở |
 | DEV-KI-01-4 | 22/10/2026 | Minh (AI) | UC25/UC26, `PieceRate`, `OperationService.ImportAsync`, `PieceRateService.ApproveManyAsync` | Nhập công đoạn từ Excel đọc luôn cột TIỀN thành đơn giá công đoạn (Nháp, hoặc Chờ duyệt nếu gửi duyệt luôn) theo ngày hiệu lực Kế toán chọn; thêm Admin duyệt nhiều đơn giá một lần | Mở |
+| DEV-MI-20-1 | 22/10/2026 | Minh (AI) | MI-05, MI-12, MI-13, MI-09, `XlsxWorkbookLoader`, `FinanceService` | Sửa lỗi phát hiện khi chạy thử toàn luồng trên DB riêng: thiếu màn FE chấm công hộ; gán mã chấm công phải gõ tay mã nhân viên; file mẫu chi phí tháng có dòng ví dụ bị nhập nhầm; tính hòa vốn hai lần trong cùng một giây báo 409; file không phải Excel báo lỗi tiếng Anh | Đã sửa |
 
 ---
 
@@ -660,3 +661,17 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC25 / UC26: nhập đơn giá hàng loạt từ Excel và Admin duyệt nhiều đơn giá cùng lúc
 - **Trạng thái:** Mở
+
+### DEV-MI-20-1 · Lỗi phát hiện khi chạy thử toàn luồng (đã sửa)
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-05, MI-12, MI-13, MI-09 · (chưa có PR)
+- **Ảnh hưởng tới:** màn Chấm công (FE), `ClosedXmlMonthlyCostWriter`, `FinanceService.CalculateAsync`, `XlsxWorkbookLoader`
+- **Cách phát hiện:** dựng DB riêng từ `CreateAndSeed.sql` + migration dữ liệu chung, chạy backend thứ hai và gọi ~110 endpoint GET cùng các luồng ghi qua HTTP thật (nhập công đoạn + đơn giá bằng file, duyệt nhiều, sản lượng, QC, hàng hỏng, mua hàng, KPI, suất ăn, chi phí, lương, hòa vốn).
+- **Lỗi và cách sửa:**
+  - **MI-05** Thiếu FE "Chấm công hộ": API `accountant/attendance/adjustments` có nhưng không có màn. Thêm tab "Chấm công hộ" (danh sách, form, danh sách đơn xin chấm bù đã duyệt kèm nút chấm hộ điền sẵn).
+  - **MI-02** `MapCodeForm` bắt gõ tay `EmployeeId` (TODO chờ API nhân sự của Khiêm, API đã có). Đổi thành chọn tổ rồi nhân viên (`EmployeePicker`).
+  - **MI-12** File mẫu chi phí tháng có dòng ví dụ `MEALS` số tiền 0 hợp lệ, quên xóa là nhập thành khoản chi 0 đồng. Ví dụ chuyển sang sheet `HuongDan`; sheet nhập chỉ còn tiêu đề.
+  - **MI-13** Tính hòa vốn lần hai trong cùng một giây với lần trước (hoặc bấm đúp) bị 409 vì khóa UNIQUE `(PeriodId, CalculatedAt, ProductId)` chỉ chính xác đến giây. `CalculatedAt` luôn lấy mốc lớn hơn lần tính gần nhất.
+  - **MI-09 / MI-12 / MI-08** File không phải .xlsx hiện thông báo kỹ thuật tiếng Anh ("End of Central Directory record could not be found"). `XlsxWorkbookLoader` đổi thành thông báo tiếng Việt.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Đã sửa
