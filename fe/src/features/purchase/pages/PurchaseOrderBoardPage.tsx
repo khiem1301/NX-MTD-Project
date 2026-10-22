@@ -1,7 +1,9 @@
-import { Card, Input, Select, Space, Typography } from 'antd';
+import { useState } from 'react';
+import { Button, Card, Input, Select, Space, Typography } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
+import { PurchaseOrderFormModal } from '@/features/warehouse/components/PurchaseOrderFormModal';
 import { PurchaseOrderDrawer } from '../components/PurchaseOrderDrawer';
 import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';
@@ -19,17 +21,21 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
   const table = useTableQuery<Filters>({});
   const orders = usePurchaseOrders(role, table.params);
   const isManager = role === 'manager';
+  const [creating, setCreating] = useState(false);
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {isManager ? PURCHASE_TEXT.ordersTitle : PURCHASE_TEXT.paymentsTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          {isManager ? PURCHASE_TEXT.ordersSubtitle : PURCHASE_TEXT.paymentsSubtitle}
-        </Typography.Text>
-      </div>
+      <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
+        <div>
+          <Typography.Title level={3} style={{ marginBottom: 4 }}>
+            {isManager ? PURCHASE_TEXT.ordersTitle : PURCHASE_TEXT.paymentsTitle}
+          </Typography.Title>
+          <Typography.Text type="secondary">
+            {isManager ? PURCHASE_TEXT.ordersSubtitle : PURCHASE_TEXT.paymentsSubtitle}
+          </Typography.Text>
+        </div>
+        {isManager && <Button type="primary" onClick={() => setCreating(true)}>{PURCHASE_TEXT.createOrder}</Button>}
+      </Space>
 
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
@@ -67,6 +73,7 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
         </Space>
       </Card>
       <PurchaseOrderDrawer role={role} />
+      {isManager && <PurchaseOrderFormModal open={creating} onClose={() => setCreating(false)} />}
     </Space>
   );
 }

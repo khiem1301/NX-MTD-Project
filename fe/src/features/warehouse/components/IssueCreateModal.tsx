@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { DatePicker, Form, Modal, Radio, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -29,14 +28,6 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
   const workOrders = useIssuableWorkOrders(open && isFabric);
   const sewingTeams = useTeamOptions(TEAM_TYPE.SEWING);
 
-  useEffect(() => {
-    if (open)
-      form.setFieldsValue({
-        warehouseType: WAREHOUSE_TYPE.MATERIAL,
-        issueDate: dayjs(),
-        lines: [],
-      });
-  }, [open, form]);
 
   const handleFinish = (values: FormValues) => {
     const body = { ...values, issueDate: values.issueDate.format(API_DATE) };
@@ -67,6 +58,8 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
         onFinish={handleFinish}
         disabled={create.isPending}
         preserve={false}
+        // Form dựng lại mỗi lần mở (destroyOnHidden) nên giá trị mặc định đặt ở đây, không dùng setFieldsValue trước khi dựng.
+        initialValues={{ warehouseType: WAREHOUSE_TYPE.MATERIAL, issueDate: dayjs(), lines: [] }}
       >
         <Form.Item name="warehouseType">
           <Radio.Group

@@ -6,6 +6,7 @@ export const PURCHASE_TEXT = {
   suppliersTitle: 'Nhà cung cấp',
   suppliersSubtitle: 'Danh sách nhà cung cấp NVL. Quản đốc chỉ chọn được nhà cung cấp đang hợp tác khi đặt hàng.',
   ordersTitle: 'Đơn mua NVL',
+  createOrder: 'Tạo đơn mua',
   ordersSubtitle: 'Theo dõi đơn mua: chọn nhà cung cấp và đặt hàng, hoặc hủy đơn chưa đặt.',
   paymentsTitle: 'Thanh toán đơn mua',
   paymentsSubtitle: 'Đơn mua đã đặt hàng: xác nhận thanh toán (có thể kèm ảnh chứng từ) hoặc trả lại Quản đốc.',

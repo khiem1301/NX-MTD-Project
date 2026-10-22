@@ -20,7 +20,6 @@ export const ROUTES = {
   // Kho, cắt (Thái)
   materials: '/warehouse/materials',
   orderMaterials: '/warehouse/order-materials',
-  purchaseOrders: '/warehouse/purchase-orders',
   materialReceipts: '/warehouse/material-receipts',
   materialIssues: '/warehouse/material-issues',
   inventories: '/warehouse/inventories',
