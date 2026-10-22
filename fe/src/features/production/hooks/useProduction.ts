@@ -53,8 +53,15 @@ export const useSaveOperation = (id: number | null) =>
 /** Xem trước file Excel quy trình công nghệ: không ghi DB nên không invalidate. */
 export const usePreviewOperationImport = () =>
   useApiMutation(
-    ({ file, productId, sheetName }: { file: File; productId: number; sheetName?: string }) =>
-      productionApi.previewOperationImport(file, { productId, sheetName }),
+    ({
+      file,
+      ...params
+    }: {
+      file: File;
+      productId: number;
+      sheetName?: string;
+      effectiveDate?: string;
+    }) => productionApi.previewOperationImport(file, params),
     { invalidate: [] },
   );
 
@@ -95,6 +102,11 @@ export const useApprovePieceRate = () =>
   useApiMutation(({ id, note }: { id: number; note?: string }) => productionApi.approvePieceRate(id, note), {
     invalidate: [pieceRatesKey, operationsKey],
     successMessage: PRODUCTION_TEXT.pieceRates.done.approved,
+  });
+
+export const useApproveManyPieceRates = () =>
+  useApiMutation(({ ids, note }: { ids: number[]; note?: string }) => productionApi.approveManyPieceRates(ids, note), {
+    invalidate: [pieceRatesKey, operationsKey],
   });
 
 export const useRejectPieceRate = () =>

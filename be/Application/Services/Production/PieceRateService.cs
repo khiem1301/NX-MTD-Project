@@ -142,6 +142,40 @@ public sealed class PieceRateService : IPieceRateService
         return await DecideAsync(rate, AuditActions.Reject, reason, $"bị từ chối: {reason}", Messages.PieceRateRejected, ct);
     }
 
+    public async Task<Result<int>> ApproveManyAsync(ApproveManyPieceRatesDto dto, CancellationToken ct)
+    {
+        var ids = dto.Ids.Distinct().ToList();
+        if (ids.Count == 0)
+            return Result<int>.Failure(ErrorCodes.CommonValidation, Messages.PieceRateNoneSelected, ResultKind.Validation);
+
+        var rates = await Rates.Include(r => r.Operation)
+            .Where(r => ids.Contains(r.PieceRateId) && r.Status == PieceRateStatuses.PendingApproval)
+            .ToListAsync(ct);
+        if (rates.Count == 0)
+            return Result<int>.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);
+
+        var note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        var now = _clock.Now;
+        return await _uow.InTransactionAsync(async () =>
+        {
+            foreach (var rate in rates)
+            {
+                rate.Status = PieceRateStatuses.Approved;
+                rate.ApprovedAt = now;
+                rate.ApprovalNote = note;
+                rate.RejectReason = null;
+                _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Approve,
+                    new { Status = PieceRateStatuses.PendingApproval }, new { rate.Status, rate.ApprovalNote }));
+            }
+
+            await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Production,
+                Messages.NotifyPieceRateDecidedTitle,
+                string.Format(Messages.NotifyPieceRatesApprovedManyBody, rates.Count), null, null, null), ct);
+            await _uow.SaveChangesAsync();
+            return Result<int>.Success(rates.Count, string.Format(Messages.PieceRatesApprovedMany, rates.Count));
+        });
+    }
+
     public async Task<EffectivePieceRate?> FindEffectiveAsync(int operationId, DateOnly date, CancellationToken ct)
     {
         var rate = await Rates.AsNoTracking()

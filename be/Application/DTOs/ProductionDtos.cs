@@ -38,6 +38,9 @@ public sealed record PieceRateQuery : PageQuery
 
 public sealed record ApprovePieceRateDto(string? Note);
 
+/// <summary>Duyệt nhiều đơn giá chờ duyệt một lần (vd. sau khi nhập công đoạn từ Excel).</summary>
+public sealed record ApproveManyPieceRatesDto(IReadOnlyList<int> Ids, string? Note);
+
 public sealed record RejectPieceRateDto(string Reason);
 
 /// <summary>Đơn giá hiệu lực đã duyệt tại một ngày: dùng để khóa vào sản lượng / Scrap.</summary>
@@ -145,18 +148,22 @@ public sealed record OperationOptionDto(
 
 /// <summary>Một dòng "bước công việc" đọc từ sheet quy trình. <c>ParseError</c> có khi ô không đọc được hoặc sai giá trị.</summary>
 public sealed record OperationExcelRowDto(
-    int RowNumber, int Stt, string? Name, byte? SkillLevel, decimal? StandardTimeSec, string? Equipment, string? ParseError);
+    int RowNumber, int Stt, string? Name, byte? SkillLevel, decimal? StandardTimeSec, string? Equipment, decimal? Rate,
+    string? ParseError);
 
 /// <summary>Một sheet quy trình công nghệ trong file (có cột "BƯỚC CÔNG VIỆC" và "TGCT").</summary>
-public sealed record OperationExcelSheetDto(string SheetName, string? ProductText, IReadOnlyList<OperationExcelRowDto> Rows);
+public sealed record OperationExcelSheetDto(
+    string SheetName, string? ProductText, bool HasRateColumn, IReadOnlyList<OperationExcelRowDto> Rows);
 
 /// <summary>Action nhận "New" | "Update" | "Unchanged" | "Error".</summary>
 public sealed record OperationImportRowDto(
     int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
-    string? Equipment, string Action, string? Error);
+    string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null);
 
 public sealed record OperationImportPreviewDto(
     string SheetName, IReadOnlyList<string> SheetNames, string? ProductText, int NewCount, int UpdateCount,
-    int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, IReadOnlyList<OperationImportRowDto> Rows);
+    int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
+    int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows);
 
-public sealed record OperationImportResultDto(int Created, int Updated, int Unchanged, int Skipped);
+public sealed record OperationImportResultDto(
+    int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped);

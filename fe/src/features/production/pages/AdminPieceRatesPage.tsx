@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Select, Space, Table, Typography } from 'antd';
+import { Button, Select, Space, Table, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
@@ -9,7 +9,7 @@ import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
-import { useApprovePieceRate, usePieceRates, useRejectPieceRate } from '../hooks/useProduction';
+import { useApproveManyPieceRates, useApprovePieceRate, usePieceRates, useRejectPieceRate } from '../hooks/useProduction';
 import type { PieceRate, PieceRateQuery, PieceRateStatus } from '../types';
 
 const text = PRODUCTION_TEXT.pieceRates;
@@ -24,12 +24,15 @@ const STATUS_OPTIONS = (Object.keys(text.status) as PieceRateStatus[]).map((valu
  * đơn giá đang chờ duyệt. Kế toán đặt và gửi duyệt đơn giá ngay trên màn "Công đoạn và đơn giá".
  */
 export function AdminPieceRatesPage() {
-  const [query, setQuery] = useState<PieceRateQuery>({ page: 1, pageSize: 20, status: 'PendingApproval' });
+  const [query, setQuery] = useState<PieceRateQuery>({ page: 1, pageSize: 100, status: 'PendingApproval' });
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [approvingMany, setApprovingMany] = useState(false);
   const [approving, setApproving] = useState<PieceRate | null>(null);
   const [rejecting, setRejecting] = useState<PieceRate | null>(null);
   const rates = usePieceRates('admin', query);
   const approve = useApprovePieceRate();
   const reject = useRejectPieceRate();
+  const approveMany = useApproveManyPieceRates();
 
   const columns: ColumnsType<PieceRate> = [
     { title: text.columns.product, dataIndex: 'productCode' },
@@ -81,10 +84,25 @@ export function AdminPieceRatesPage() {
         />
       </Space>
 
+      <Space>
+        <Button
+          type="primary"
+          disabled={selectedIds.length === 0}
+          onClick={() => setApprovingMany(true)}
+        >
+          {`${text.approveSelected} (${selectedIds.length})`}
+        </Button>
+      </Space>
+
       <QueryError error={rates.error} onRetry={() => void rates.refetch()} />
 
       <Table<PieceRate>
         rowKey="pieceRateId"
+        rowSelection={{
+          selectedRowKeys: selectedIds,
+          onChange: (keys) => setSelectedIds(keys as number[]),
+          getCheckboxProps: (row) => ({ disabled: row.status !== 'PendingApproval' }),
+        }}
         size="middle"
         columns={columns}
         dataSource={rates.data?.items}
@@ -96,9 +114,12 @@ export function AdminPieceRatesPage() {
           pageSize: rates.data?.pageSize ?? query.pageSize,
           total: rates.data?.totalItems ?? 0,
           showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
+          pageSizeOptions: [20, 50, 100],
           showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
-          onChange: (page, pageSize) => setQuery({ ...query, page, pageSize }),
+          onChange: (page, pageSize) => {
+            setSelectedIds([]);
+            setQuery({ ...query, page, pageSize });
+          },
         }}
       />
 
@@ -112,6 +133,26 @@ export function AdminPieceRatesPage() {
         onSubmit={(note) =>
           approving &&
           approve.mutate({ id: approving.pieceRateId, note: note ?? undefined }, { onSuccess: () => setApproving(null) })
+        }
+      />
+      <NoteModal
+        open={approvingMany}
+        title={text.approveSelectedTitle}
+        label={text.note}
+        required={false}
+        loading={approveMany.isPending}
+        onCancel={() => setApprovingMany(false)}
+        onSubmit={(note) =>
+          approveMany.mutate(
+            { ids: selectedIds, note: note ?? undefined },
+            {
+              onSuccess: (count) => {
+                void message.success(`Đã duyệt ${count} đơn giá.`);
+                setSelectedIds([]);
+                setApprovingMany(false);
+              },
+            },
+          )
         }
       />
       <ReasonModal

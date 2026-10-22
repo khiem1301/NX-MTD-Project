@@ -53,7 +53,7 @@ export const productionApi = {
   // ---------- KI-01: công đoạn (Kế toán) ----------
   listOperations: (productId: number, includeDiscontinued: boolean) =>
     get<Operation[]>(P.operations, { productId, includeDiscontinued }),
-  previewOperationImport: (file: File, params: Pick<OperationImportParams, 'productId' | 'sheetName'>) =>
+  previewOperationImport: (file: File, params: Pick<OperationImportParams, 'productId' | 'sheetName' | 'effectiveDate'>) =>
     post<OperationImportPreview>(P.operationImportPreview, asFormData(file), params),
   importOperations: (file: File, params: OperationImportParams) =>
     post<OperationImportResult>(P.operationImport, asFormData(file), params),
@@ -69,6 +69,7 @@ export const productionApi = {
   updatePieceRate: (id: number, body: SavePieceRatePayload) => put<void>(P.pieceRate(id), body),
   submitPieceRate: (id: number) => post<void>(P.pieceRateSubmit(id)),
   approvePieceRate: (id: number, note?: string) => post<void>(P.pieceRateApprove(id), { note }),
+  approveManyPieceRates: (ids: number[], note?: string) => post<number>(P.pieceRateApproveMany, { ids, note }),
   rejectPieceRate: (id: number, reason: string) => post<void>(P.pieceRateReject(id), { reason }),
 
   // ---------- KI-03: phân công (tổ trưởng / tổ phó) ----------

@@ -21,7 +21,8 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
     private const int MaxHeaderSearchRows = 25;
     private const int MaxNameLength = 200;
 
-    private sealed record Layout(int HeaderRow, int SttCol, int NameCol, int SkillCol, int TimeCol, int EquipmentCol);
+    private sealed record Layout(
+        int HeaderRow, int SttCol, int NameCol, int SkillCol, int TimeCol, int EquipmentCol, int RateCol);
 
     public IReadOnlyList<OperationExcelSheetDto> Parse(Stream stream)
     {
@@ -36,7 +37,8 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             if (sheet.Visibility != XLWorksheetVisibility.Visible) continue;   // sheet ẩn là bản nháp cũ
             var layout = FindLayout(sheet);
             if (layout is null) continue;
-            sheets.Add(new OperationExcelSheetDto(sheet.Name, FindProductText(sheet, layout.HeaderRow), ReadRows(sheet, layout)));
+            sheets.Add(new OperationExcelSheetDto(
+                sheet.Name, FindProductText(sheet, layout.HeaderRow), layout.RateCol != 0, ReadRows(sheet, layout)));
         }
 
         if (sheets.Count == 0)
@@ -51,7 +53,7 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
         var lastCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 0;
         for (var r = 1; r <= Math.Min(MaxHeaderSearchRows, lastRow); r++)
         {
-            int stt = 0, name = 0, skill = 0, time = 0, equipment = 0;
+            int stt = 0, name = 0, skill = 0, time = 0, equipment = 0, rate = 0;
             for (var c = 1; c <= lastCol; c++)
             {
                 switch (PayslipLayout.NormalizeKey(CellText(sheet.Cell(r, c))))
@@ -61,9 +63,10 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
                     case "bac": skill = skill == 0 ? c : skill; break;
                     case "tgct": time = time == 0 ? c : time; break;
                     case "thietbi": equipment = equipment == 0 ? c : equipment; break;
+                    case "tien": rate = rate == 0 ? c : rate; break;
                 }
             }
-            if (name != 0 && time != 0) return new Layout(r, stt == 0 ? 1 : stt, name, skill, time, equipment);
+            if (name != 0 && time != 0) return new Layout(r, stt == 0 ? 1 : stt, name, skill, time, equipment, rate);
         }
         return null;
     }
@@ -102,7 +105,8 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             var skill = ReadSkill(sheet, r, layout, ref error);
             var time = ReadTime(sheet, r, layout, ref error);
             var equipment = layout.EquipmentCol == 0 ? null : NullIfEmpty(CellText(sheet.Cell(r, layout.EquipmentCol)));
-            rows.Add(new OperationExcelRowDto(r, stt, name, skill, time, equipment, error));
+            var rate = ReadRate(sheet, r, layout, ref error);
+            rows.Add(new OperationExcelRowDto(r, stt, name, skill, time, equipment, rate, error));
         }
         return rows;
     }
@@ -140,6 +144,24 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             return null;
         }
         return value == 0 ? null : Math.Round(value, 2);   // DB: DECIMAL(9,2), phải lớn hơn 0 hoặc để trống
+    }
+
+    /// <summary>Cột TIỀN: đơn giá công đoạn (đồng/sản phẩm). Trống hoặc 0 là chưa có đơn giá. Làm tròn 2 số như cột DB.</summary>
+    private static decimal? ReadRate(IXLWorksheet sheet, int row, Layout layout, ref string? error)
+    {
+        if (layout.RateCol == 0) return null;
+        if (!TryReadNumber(sheet.Cell(row, layout.RateCol), out var value, out var problem))
+        {
+            error ??= $"Cột TIỀN {problem}.";
+            return null;
+        }
+        if (value < 0)
+        {
+            error ??= "TIỀN không được âm.";
+            return null;
+        }
+        var rounded = Math.Round(value, 2);
+        return rounded == 0 ? null : rounded;
     }
 
     private static string? NullIfEmpty(string text) => text.Length == 0 ? null : text;

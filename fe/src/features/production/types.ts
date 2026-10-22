@@ -40,6 +40,7 @@ export type Operation = {
 
 /** Dòng xem trước khi nhập công đoạn từ Excel. Action: dòng nào thêm mới / cập nhật / không đổi / lỗi. */
 export type OperationImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
+export type OperationImportRateAction = 'None' | 'New' | 'Update' | 'Unchanged' | 'Skipped';
 
 export type OperationImportRow = {
   rowNumber: number;
@@ -49,8 +50,12 @@ export type OperationImportRow = {
   skillLevel: number | null;
   standardTimeSec: number | null;
   equipment: string | null;
+  rate: number | null;
   action: OperationImportAction;
   error: string | null;
+  /** Đơn giá từ cột TIỀN: None (không xử lý) | New | Update | Unchanged | Skipped. */
+  rateAction: OperationImportRateAction;
+  rateNote: string | null;
 };
 
 export type OperationImportPreview = {
@@ -62,12 +67,34 @@ export type OperationImportPreview = {
   unchangedCount: number;
   errorCount: number;
   productHasFinalStep: boolean;
+  hasRateColumn: boolean;
+  rateNewCount: number;
+  rateUpdateCount: number;
+  rateUnchangedCount: number;
+  rateSkippedCount: number;
   rows: OperationImportRow[];
 };
 
-export type OperationImportResult = { created: number; updated: number; unchanged: number; skipped: number };
+export type OperationImportResult = {
+  created: number;
+  updated: number;
+  unchanged: number;
+  skipped: number;
+  rateCreated: number;
+  rateUpdated: number;
+  rateUnchanged: number;
+  rateSkipped: number;
+};
 
-export type OperationImportParams = { productId: number; sheetName?: string; finalStt?: number };
+export type OperationImportParams = {
+  productId: number;
+  sheetName?: string;
+  finalStt?: number;
+  /** Có ngày này thì đọc luôn cột TIỀN thành đơn giá công đoạn hiệu lực từ ngày đó (yyyy-MM-dd). */
+  effectiveDate?: string;
+  /** Gửi Admin duyệt luôn (Chờ duyệt) thay vì để Nháp. */
+  submitRates?: boolean;
+};
 
 export type SaveOperationPayload = {
   productId: number;

@@ -26,7 +26,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         SetupQueryable(_operations);
         SetupQueryable(_rates);
         _rateService = new PieceRateService(Uow, Audit, Notifier, Clock);
-        _operationService = new OperationService(Uow, Audit, Clock, new ClosedXmlOperationParser());
+        _operationService = new OperationService(Uow, Audit, Clock, new ClosedXmlOperationParser(), Notifier);
     }
 
     private Operation AddOperation(int id, string code = "OP10", bool final = false, string status = OperationStatuses.Active,
@@ -190,6 +190,44 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     }
 
     // ========== Đơn giá ==========
+
+    [Fact]
+    public async Task ApproveMany_ApprovesOnlyPendingRatesAndNotifiesAccountantOnce()
+    {
+        AddOperation(1, "OP10");
+        AddRate(1, 1, 100m, Today.AddDays(1), PieceRateStatuses.PendingApproval);
+        AddRate(2, 1, 110m, Today.AddDays(2), PieceRateStatuses.PendingApproval);
+        AddRate(3, 1, 120m, Today.AddDays(3), PieceRateStatuses.Draft);
+
+        var result = await _rateService.ApproveManyAsync(new ApproveManyPieceRatesDto([1, 2, 3, 3], " ok "), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().Be(2);
+        _rates.Where(r => r.PieceRateId is 1 or 2).Should().OnlyContain(r => r.Status == PieceRateStatuses.Approved
+            && r.ApprovedAt == Now && r.ApprovalNote == "ok");
+        _rates.Single(r => r.PieceRateId == 3).Status.Should().Be(PieceRateStatuses.Draft);
+        Audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(PieceRate) && e.Action == AuditActions.Approve));
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Accountant, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ApproveMany_NothingPending_ReturnsInvalidStatus()
+    {
+        AddOperation(1, "OP10");
+        AddRate(1, 1, 100m, Today, PieceRateStatuses.Approved);
+
+        var result = await _rateService.ApproveManyAsync(new ApproveManyPieceRatesDto([1], null), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateInvalidStatus);
+    }
+
+    [Fact]
+    public async Task ApproveMany_EmptySelection_ReturnsValidationError()
+    {
+        var result = await _rateService.ApproveManyAsync(new ApproveManyPieceRatesDto([], null), default);
+
+        result.Kind.Should().Be(ResultKind.Validation);
+    }
 
     [Fact]
     public async Task CreateRate_Valid_StartsAsDraftAndLogs()

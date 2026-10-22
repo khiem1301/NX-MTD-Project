@@ -228,7 +228,12 @@ public static class Messages
     public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
     public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
     public const string OperationImportSheetNotFound = "Không tìm thấy sheet đã chọn trong file Excel.";
-    public const string OperationImportDone = "Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi.";
+    public const string OperationImportDone =
+        "Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi. Đơn giá: thêm {4}, cập nhật {5}, không đổi {6}, bỏ qua {7}.";
+    public const string NotifyPieceRatesImportedBody = "Sheet {0}: có {1} đơn giá công đoạn mới nhập từ Excel đang chờ duyệt.";
+    public const string PieceRatesApprovedMany = "Đã duyệt {0} đơn giá.";
+    public const string PieceRateNoneSelected = "Chưa chọn đơn giá nào.";
+    public const string NotifyPieceRatesApprovedManyBody = "{0} đơn giá công đoạn đã được duyệt.";
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
     public const string PieceRateInvalidStatus = "Trạng thái đơn giá không cho phép thao tác này.";
     public const string PieceRateDuplicateDate = "Công đoạn này đã có đơn giá với ngày hiệu lực này.";

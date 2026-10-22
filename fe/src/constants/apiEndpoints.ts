@@ -188,6 +188,7 @@ export const API = {
     pieceRate: (id: number) => v1(`accountant/piece-rates/${id}`),
     pieceRateSubmit: (id: number) => v1(`accountant/piece-rates/${id}/submit`),
     pieceRateApprove: (id: number) => v1(`admin/piece-rates/${id}/approve`),
+    pieceRateApproveMany: v1('admin/piece-rates/approve-many'),
     pieceRateReject: (id: number) => v1(`admin/piece-rates/${id}/reject`),
     assignments: v1('team-leader/operation-assignments'),
     assignmentOperations: v1('team-leader/operation-assignments/operations'),
