@@ -170,7 +170,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         receipt.Source = dto.Source;
         receipt.ReceiptDate = dto.ReceiptDate;
         receipt.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
-        // TODO(thai, TH-03): đính kèm ảnh chứng từ khi IAttachmentService (KH-07) sẵn sàng.
         receipt.MaterialReceiptLines = dto.Lines.Select(l => new MaterialReceiptLine
         {
             OrderMaterialId = l.OrderMaterialId,

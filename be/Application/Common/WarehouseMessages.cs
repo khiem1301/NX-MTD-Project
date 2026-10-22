@@ -47,7 +47,7 @@ public static class WarehouseMessages
 
     public const string IssueReceived = "Đã xác nhận nhận hàng, tồn kho đã giảm.";
     public const string IssueRejected = "Đã từ chối phiếu cấp, số giữ chỗ đã được nhả.";
-    public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, chưa duyệt hoặc khác đơn hàng).";
+    public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, đã xử lý, khác tổ hoặc khác đơn hàng). Cấp BTP cho tổ may bắt buộc có đơn Xin BTP.";
     public const string WorkOrderRequiredForMaterial = "Cấp NVL cho tổ cắt phải theo lệnh cắt.";
     public const string WorkOrderNotIssuable = "Lệnh cắt không còn mở để cấp vải.";
     public const string MaterialNotInWorkOrder = "Vải không có trong định mức của lệnh cắt.";

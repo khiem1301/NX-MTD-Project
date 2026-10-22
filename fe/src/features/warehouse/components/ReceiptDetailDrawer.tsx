@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Descriptions,
+  Divider,
   Drawer,
   Popconfirm,
   Space,
@@ -10,15 +11,19 @@ import {
   Table,
   type TableColumnsType,
 } from 'antd';
+import { AttachmentGallery } from '@/components/common/attachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
+import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { LABELS, RECEIPT_STATUS, RECEIPT_STATUS_LABEL } from '../constants';
 import { useConfirmReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptLine } from '../types';
+
+const MAX_RECEIPT_PHOTOS = 5;
 
 type ReceiptDetailDrawerProps = {
   receiptId: number | undefined;
@@ -113,6 +118,14 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
             columns={lineColumns}
             dataSource={r.lines}
             pagination={false}
+          />
+          <Divider orientation="left">{LABELS.documentPhotos}</Divider>
+          <AttachmentGallery
+            ownerType={ATTACHMENT_OWNER.MaterialReceipt}
+            ownerId={r.materialReceiptId}
+            canEdit={hasRole(ROLES.WarehouseKeeper) && editable}
+            maxFiles={MAX_RECEIPT_PHOTOS}
+            purpose={ATTACHMENT_PURPOSE.DocumentPhoto}
           />
           <ReasonModal
             open={returning}

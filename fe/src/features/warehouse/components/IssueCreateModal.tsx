@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, InputNumber, Modal, Radio, Select, Space } from 'antd';
+import { DatePicker, Form, Modal, Radio, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -10,6 +10,7 @@ import { useCreateIssue, useIssuableWorkOrders } from '../hooks/useIssues';
 import type { CreateIssuePayload } from '../types';
 import { FabricIssueLines } from './FabricIssueLines';
 import { PieceIssueLines } from './PieceIssueLines';
+import { RequisitionSelect } from './RequisitionSelect';
 
 type IssueCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = Omit<CreateIssuePayload, 'issueDate'> & { issueDate: Dayjs };
@@ -112,8 +113,12 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
           <Form.Item name="issueDate" label={LABELS.issueDate} rules={required}>
             <DatePicker format={DATE_FORMAT} />
           </Form.Item>
-          <Form.Item name="requestId" label={LABELS.requestId}>
-            <InputNumber min={1} precision={0} style={{ width: 180 }} />
+          <Form.Item
+            name="requestId"
+            label={isFabric ? LABELS.requestIdOptional : LABELS.requestIdRequired}
+            rules={isFabric ? [] : required}
+          >
+            <RequisitionSelect requestType={isFabric ? 'MaterialRequisition' : 'SemiFinishedRequisition'} />
           </Form.Item>
         </Space>
         {isFabric ? (
