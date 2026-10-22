@@ -130,6 +130,20 @@ public static class HandoverStatuses
     public const string Cancelled = "CANCELLED";
 }
 
+/// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>
+public static class DispatchStatuses
+{
+    public const string Pending = "PENDING";
+    public const string Rejected = "REJECTED";
+    public const string Cancelled = "CANCELLED";
+    public const string InDelivery = "IN_DELIVERY";
+    public const string Delivered = "DELIVERED";
+    public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
+
+    /// <summary>Phiếu đã hoặc đang chiếm số hàng của đơn (tính vào tổng đã xuất).</summary>
+    public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered, PartiallyDelivered };
+}
+
 public static class ShiftCodes
 {
     public const string Morning = "MORNING";
@@ -149,6 +163,7 @@ public static class DocumentPrefixes
     public const string WorkOrder = "LC";
     public const string CutHandover = "BG";
     public const string FgHandover = "TP";
+    public const string DispatchNote = "XH";
     public const string PurchaseOrder = "DM";
 }
 

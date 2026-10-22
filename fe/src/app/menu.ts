@@ -3,6 +3,7 @@ import { attendanceMenu } from '@/features/attendance/menu';
 import { breakEvenMenu } from '@/features/break-even/menu';
 import { costSummaryMenu } from '@/features/cost-summary/menu';
 import { cuttingMenu } from '@/features/cutting';
+import { dispatchMenu } from '@/features/dispatch';
 import { fgHandoverMenu } from '@/features/fg-handover';
 import { productionMenu } from '@/features/production/menu';
 import { profileMenu } from '@/features/profile';
@@ -32,6 +33,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...warehouseMenu, // Thái
   ...cuttingMenu, // Thái
   ...fgHandoverMenu, // Thái (TH-11)
+  ...dispatchMenu, // Thái (TH-14)
   ...attendanceMenu, // Minh
   ...profileMenu, // Khiêm
   ...mealMenu, // Minh

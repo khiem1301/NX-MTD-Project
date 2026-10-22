@@ -82,4 +82,17 @@ public static class WarehouseMessages
     public const string FgHandoverConfirmed = "Đã nhận thành phẩm vào kho.";
     public const string FgHandoverRejected = "Đã từ chối phiếu bàn giao thành phẩm.";
     public const string FgHandoverCancelled = "Đã rút phiếu bàn giao thành phẩm.";
+
+    public const string DispatchExceedsOrder = "Số xuất vượt số còn phải giao của đơn";
+    public const string DispatchLineNotInOrder = "Dòng đơn không thuộc đơn hàng của phiếu xuất.";
+    public const string DispatchCreated = "Đã lập phiếu xuất hàng, thành phẩm đã được giữ chỗ.";
+    public const string DispatchCancelled = "Đã hủy phiếu xuất hàng, số giữ chỗ đã được nhả.";
+    public const string DispatchExported = "Đã xuất hàng, tồn kho thành phẩm đã giảm.";
+    public const string DispatchRejected = "Đã từ chối phiếu xuất hàng, số giữ chỗ đã được nhả.";
+    public const string DispatchDelivered = "Đã xác nhận khách nhận hàng.";
+    public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
+    public const string DeliveryDateRequired = "Vui lòng chọn ngày giao hàng.";
+    public const string DeliveryAddressRequired = "Vui lòng nhập địa chỉ giao hàng.";
+    public const string CustomerReceivedDateRequired = "Vui lòng nhập ngày khách nhận hàng.";
+    public const string DispatchReceivedDateInvalid = "Ngày khách nhận không được trước ngày xuất hàng.";
 }

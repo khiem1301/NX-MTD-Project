@@ -1,0 +1,66 @@
+import type { StatusLabel } from '@/components/common/StatusTag';
+
+export const DISPATCH_STATUS = {
+  PENDING: 'PENDING',
+  REJECTED: 'REJECTED',
+  CANCELLED: 'CANCELLED',
+  IN_DELIVERY: 'IN_DELIVERY',
+  DELIVERED: 'DELIVERED',
+  PARTIALLY_DELIVERED: 'PARTIALLY_DELIVERED',
+} as const;
+
+export const DISPATCH_STATUS_LABEL: Record<string, StatusLabel> = {
+  PENDING: { text: 'Chờ kho xuất', color: 'gold' },
+  REJECTED: { text: 'Kho từ chối', color: 'red' },
+  CANCELLED: { text: 'Đã hủy', color: 'default' },
+  IN_DELIVERY: { text: 'Đang giao', color: 'blue' },
+  DELIVERED: { text: 'Đã giao đủ', color: 'green' },
+  PARTIALLY_DELIVERED: { text: 'Giao một phần', color: 'orange' },
+};
+
+export const DISPATCH_PHOTO_MAX = 5;
+
+export const DISPATCH_LABELS = {
+  title: 'Phiếu xuất hàng',
+  create: 'Lập phiếu xuất',
+  code: 'Mã phiếu',
+  order: 'Đơn hàng',
+  customer: 'Khách hàng',
+  deliveryDate: 'Ngày giao',
+  deliveryAddress: 'Địa chỉ giao hàng',
+  note: 'Ghi chú',
+  status: 'Trạng thái',
+  createdAt: 'Ngày lập',
+  issueQty: 'Số xuất',
+  receivedQty: 'Khách nhận',
+  orderLine: 'Mã hàng - màu - size',
+  orderedQty: 'Đặt',
+  issuedQty: 'Đã xuất',
+  remainingQty: 'Còn xuất được',
+  availableQty: 'Tồn khả dụng',
+  exportQty: 'Xuất lần này',
+  selectOrder: 'Chọn đơn hàng',
+  dispatchedBy: 'Thủ kho xuất',
+  customerReceivedDate: 'Ngày khách nhận',
+  export: 'Xác nhận xuất hàng',
+  reject: 'Từ chối',
+  rejectTitle: 'Từ chối phiếu xuất hàng',
+  rejectReason: 'Lý do từ chối',
+  cancel: 'Hủy phiếu',
+  confirmDelivery: 'Xác nhận khách đã nhận',
+  issueSlipPhotos: 'Ảnh phiếu xuất có Quản đốc ký',
+  deliveryNotePhotos: 'Ảnh biên bản giao có khách ký',
+} as const;
+
+export const DISPATCH_MESSAGES = {
+  created: 'Đã lập phiếu xuất hàng, thành phẩm đã được giữ chỗ.',
+  confirmCreate:
+    'Lập phiếu xuất hàng? Số xuất sẽ được giữ chỗ trong kho thành phẩm đến khi kho xuất hoặc từ chối.',
+  confirmCancel: 'Hủy phiếu xuất hàng này? Số giữ chỗ sẽ được nhả.',
+  cancelled: 'Đã hủy phiếu xuất hàng.',
+  confirmExport: 'Xác nhận đã xuất hàng? Tồn kho thành phẩm sẽ giảm theo số trên phiếu.',
+  exported: 'Đã xuất hàng.',
+  rejected: 'Đã từ chối phiếu xuất hàng.',
+  delivered: 'Đã xác nhận khách nhận hàng.',
+  addressRequired: 'Vui lòng nhập địa chỉ giao hàng.',
+} as const;

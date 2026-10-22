@@ -137,6 +137,7 @@ public static class ErrorCodes
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
     public const string FgHandoverExceedsQc = "FG_HANDOVER_EXCEEDS_QC";
+    public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
     public const string ShortageExceeded = "SHORTAGE_EXCEEDED";
 
