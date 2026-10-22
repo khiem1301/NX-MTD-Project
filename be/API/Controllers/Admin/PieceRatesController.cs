@@ -20,6 +20,11 @@ public sealed class PieceRatesController : AdminBaseController
     public async Task<IActionResult> Approve(int id, [FromBody] ApprovePieceRateDto dto, CancellationToken ct) =>
         this.ToResponse(await _rates.ApproveAsync(id, dto, ct));
 
+    /// <summary>Duyệt nhiều đơn giá chờ duyệt một lần (vd. sau khi Kế toán nhập công đoạn kèm đơn giá từ Excel).</summary>
+    [HttpPost("approve-many")]
+    public async Task<IActionResult> ApproveMany([FromBody] ApproveManyPieceRatesDto dto, CancellationToken ct) =>
+        this.ToResponse(await _rates.ApproveManyAsync(dto, ct));
+
     [HttpPost("{id:int}/reject")]
     public async Task<IActionResult> Reject(int id, [FromBody] RejectPieceRateDto dto, CancellationToken ct) =>
         this.ToResponse(await _rates.RejectAsync(id, dto, ct));

@@ -40,6 +40,22 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         return Result<IReadOnlyList<OperationAssignmentDto>>.Success(items);
     }
 
+    public async Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct)
+    {
+        var team = _guard.ResolveSewingTeam(null);
+        if (!team.IsSuccess) return Fail.As<IReadOnlyList<OperationOptionDto>>(team);
+
+        var productIds = _uow.Repository<OrderLine>().Query().Where(l => l.OrderId == orderId).Select(l => l.ProductId);
+        var items = await _uow.Repository<Operation>().Query().AsNoTracking()
+            .Where(o => productIds.Contains(o.ProductId) && o.Status == OperationStatuses.Active
+                && o.TeamType == TeamTypes.Sewing)
+            .OrderBy(o => o.Product.ProductCode).ThenBy(o => o.StationSequence)
+            .Select(o => new OperationOptionDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
+                o.OperationName, o.StationSequence, o.IsFinalStep))
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<OperationOptionDto>>.Success(items);
+    }
+
     public async Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct)
     {
         var team = _guard.ResolveSewingTeam(null);

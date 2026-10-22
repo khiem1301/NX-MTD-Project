@@ -4,10 +4,16 @@ namespace NX_MTD.Application.DTOs;
 
 // ================= KI-01: công đoạn + đơn giá (UC25, UC26) =================
 
+/// <summary>
+/// CurrentRate = đơn giá đã duyệt đang hiệu lực hôm nay. NextRate = đơn giá mới nhất (theo ngày hiệu lực) nếu nó chưa
+/// thành đơn giá hiện hành: Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực; null nếu không có.
+/// </summary>
 public sealed record OperationDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, byte? SkillLevel, decimal? StandardTimeSec, string TeamType, bool IsFinalStep,
-    string Status, decimal? CurrentRate);
+    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null);
+
+public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly EffectiveDate, string Status, string? RejectReason);
 
 /// <summary>TeamType nhận PascalCase "Sewing" | "Cutting" (mặc định Sewing).</summary>
 public sealed record SaveOperationDto(
@@ -31,6 +37,9 @@ public sealed record PieceRateQuery : PageQuery
 }
 
 public sealed record ApprovePieceRateDto(string? Note);
+
+/// <summary>Duyệt nhiều đơn giá chờ duyệt một lần (vd. sau khi nhập công đoạn từ Excel).</summary>
+public sealed record ApproveManyPieceRatesDto(IReadOnlyList<int> Ids, string? Note);
 
 public sealed record RejectPieceRateDto(string Reason);
 
@@ -129,3 +138,32 @@ public sealed record OrderLineProgressDto(
     int OrderLineId, int OrderId, string OrderCode, int ProductId, string ProductCode, string Color, string SizeCode,
     int OrderedQty, int CutQty, int CutHandedToWarehouseQty, int IssuedToSewingQty, int FinishedQty,
     int FinishedReceivedQty, int DeliveredQty, int ReworkQty, int ScrapQty, decimal? DefectRatePct);
+
+/// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
+public sealed record OperationOptionDto(
+    int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
+    short StationSequence, bool IsFinalStep);
+
+// ================= KI-01: nhập công đoạn từ file Excel quy trình công nghệ =================
+
+/// <summary>Một dòng "bước công việc" đọc từ sheet quy trình. <c>ParseError</c> có khi ô không đọc được hoặc sai giá trị.</summary>
+public sealed record OperationExcelRowDto(
+    int RowNumber, int Stt, string? Name, byte? SkillLevel, decimal? StandardTimeSec, string? Equipment, decimal? Rate,
+    string? ParseError);
+
+/// <summary>Một sheet quy trình công nghệ trong file (có cột "BƯỚC CÔNG VIỆC" và "TGCT").</summary>
+public sealed record OperationExcelSheetDto(
+    string SheetName, string? ProductText, bool HasRateColumn, IReadOnlyList<OperationExcelRowDto> Rows);
+
+/// <summary>Action nhận "New" | "Update" | "Unchanged" | "Error".</summary>
+public sealed record OperationImportRowDto(
+    int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
+    string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null);
+
+public sealed record OperationImportPreviewDto(
+    string SheetName, IReadOnlyList<string> SheetNames, string? ProductText, int NewCount, int UpdateCount,
+    int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
+    int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows);
+
+public sealed record OperationImportResultDto(
+    int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped);

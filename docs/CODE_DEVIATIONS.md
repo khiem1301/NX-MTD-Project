@@ -48,6 +48,10 @@
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 | DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
+| DEV-KI-03-2 | 22/10/2026 | Minh (AI) | UC52/UC56, `OperationAssignmentsController` | Thêm endpoint `GET team-leader/operation-assignments/operations?orderId=` trả công đoạn may đang dùng của các mã hàng trong đơn (không kèm đơn giá) để tổ trưởng chọn khi phân công và ghi hàng hỏng; sheet KI-03 / KI-08 không nêu cách lấy danh sách này | Mở |
+| DEV-KI-01-2 | 22/10/2026 | Minh (AI) | UC25, `Operation`, `ClosedXmlOperationParser` | Công đoạn của mã hàng nhập từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC"), thay cho thêm tay từng công đoạn: mã tự sinh từ STT (OP + STT), bỏ dòng "Dự phòng", không đọc cột TGQĐ (cột TIỀN: xem DEV-KI-01-4), không có cột công đoạn cuối nên chọn khi nhập | Mở |
+| DEV-KI-01-3 | 22/10/2026 | Minh (AI) | UC25/UC26, `OperationDto.NextRate`, màn "Công đoạn và đơn giá" | Gộp màn "Công đoạn may" và "Đơn giá công đoạn" của Kế toán làm một: đơn giá đặt ngay trên từng công đoạn, `OperationDto` thêm `NextRate` (đơn giá mới nhất chưa thành hiện hành); màn riêng chỉ còn lại cho Admin duyệt | Mở |
+| DEV-KI-01-4 | 22/10/2026 | Minh (AI) | UC25/UC26, `PieceRate`, `OperationService.ImportAsync`, `PieceRateService.ApproveManyAsync` | Nhập công đoạn từ Excel đọc luôn cột TIỀN thành đơn giá công đoạn (Nháp, hoặc Chờ duyệt nếu gửi duyệt luôn) theo ngày hiệu lực Kế toán chọn; thêm Admin duyệt nhiều đơn giá một lần | Mở |
 
 ---
 
@@ -608,4 +612,51 @@
 - **Lý do:** Hệ thống không tính lương (GBR-12), chỉ đọc số đã tính; giữ nguyên file gốc cho giám đốc ở `IPayrollFileStore`.
 - **Ảnh hưởng người khác:** Khiêm / Thái: nếu thêm importer Excel mới nên dùng `XlsxWorkbookLoader.Open`.
 - **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-KI-03-2 · Endpoint danh sách công đoạn theo đơn cho tổ trưởng
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-03, KI-08 (FE) · (chưa có PR)
+- **Ảnh hưởng tới:** UC52 (phân công công đoạn), UC56 (ghi hàng hỏng), `OperationAssignmentsController`, `IOperationAssignmentService`
+- **Tài liệu gốc ghi:** Không nêu API nào cho tổ trưởng lấy danh sách công đoạn của đơn. API công đoạn hiện có (`accountant/operations`) chỉ mở cho Kế toán và kèm đơn giá hiện hành.
+- **Code đang làm:** `ListOperationsAsync(orderId)`: công đoạn đang dùng, thuộc tổ may, của các mã hàng có trong đơn, sắp theo mã hàng + thứ tự; không trả đơn giá để tổ trưởng không thấy giá.
+- **Lý do:** Màn phân công và màn ghi hàng hỏng cần ô chọn công đoạn theo đơn.
+- **Ảnh hưởng người khác:** Kiều: cùng endpoint dùng cho các màn FE của KI-03 / KI-08.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-KI-01-2 · Nhập công đoạn từ file Excel quy trình công nghệ
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-01 · (chưa có PR)
+- **Ảnh hưởng tới:** UC25 (công đoạn của mã hàng), `Operation`, `OperationsController`, màn "Công đoạn may"
+- **Tài liệu gốc ghi:** Kế toán lập công đoạn của mã hàng; không nói cách nhập.
+- **Code đang làm:** Theo yêu cầu của Minh (22/10/2026) màn công đoạn nhập từ file Excel quy trình công nghệ của phòng kỹ thuật (thử với "LUNA tổ HT áo dạ ngắn 1 lớp nẹp cúc.xlsx", 85 công đoạn, tổng TGCT 4.007 giây khớp tổng trong file). Đọc sheet đang hiển thị có cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ. Mã công đoạn = "OP" + STT, nên nhập lại file là cập nhật đúng công đoạn cũ, không xóa công đoạn nào. Bỏ qua tiêu đề nhóm, chỗ trống đã đánh số và dòng "Dự phòng" (file không tính vào tổng TGCT). `StandardTimeSec` = TGCT; `SkillLevel` = BẬC; cột THIẾT BỊ chỉ hiện ở bản xem trước vì `Operation` không có cột này. File không đánh dấu công đoạn cuối nên chọn ở bước nhập (không bắt buộc). Cột TIỀN được đọc thành đơn giá công đoạn, xem DEV-KI-01-4; đơn giá vẫn phải qua Admin duyệt (UC26).
+- **Lý do:** Quy trình công nghệ có hàng chục công đoạn mỗi mã hàng, nhập tay từng dòng không thực tế.
+- **Ảnh hưởng người khác:** Kiều: màn KI-01 FE dùng cách nhập này; nút thêm công đoạn bằng tay đã bỏ khỏi màn (API `POST accountant/operations` vẫn còn).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25: mô tả nhập công đoạn từ Excel (cột đọc, quy tắc mã công đoạn)
+- **Trạng thái:** Mở
+
+### DEV-KI-01-3 · Gộp màn công đoạn và đơn giá công đoạn của Kế toán
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-01 · (chưa có PR)
+- **Ảnh hưởng tới:** UC25, UC26, `OperationDto`, `OperationService.ListAsync`, FE `features/production`
+- **Tài liệu gốc ghi:** Hai chức năng riêng: lập công đoạn (UC25) và lập đơn giá có duyệt (UC26).
+- **Code đang làm:** Theo yêu cầu của Minh (22/10/2026) Kế toán dùng một màn "Công đoạn và đơn giá": nhập công đoạn từ Excel, đặt đơn giá ngay trên từng công đoạn (sửa bản Nháp / bị từ chối, hoặc lập bản mới theo ngày hiệu lực), gửi duyệt, mở rộng dòng để xem lịch sử đơn giá. `OperationDto` thêm `NextRate` = đơn giá mới nhất (theo ngày hiệu lực) nếu chưa là đơn giá hiện hành (Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực). `ListAsync` lấy đơn giá của cả mã hàng bằng một truy vấn thay vì mỗi công đoạn một truy vấn. Quy trình duyệt không đổi: Admin vẫn duyệt / từ chối ở màn riêng "Duyệt đơn giá công đoạn"; API `accountant/piece-rates` giữ nguyên.
+- **Lý do:** Công đoạn và đơn giá luôn đi cùng nhau; tách hai màn buộc Kế toán chọn lại mã hàng và công đoạn.
+- **Ảnh hưởng người khác:** Kiều: màn FE KI-01 là màn gộp này; `OperationService` không còn phụ thuộc `IPieceRateService`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25 / UC26: mô tả một màn chung cho công đoạn và đơn giá
+- **Trạng thái:** Mở
+
+### DEV-KI-01-4 · Nhập đơn giá công đoạn từ cột TIỀN và duyệt nhiều đơn giá
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-01 · (chưa có PR)
+- **Ảnh hưởng tới:** UC25, UC26, `PieceRate`, `OperationService`, `PieceRateService`, `PieceRatesController` (Admin)
+- **Tài liệu gốc ghi:** Kế toán lập đơn giá từng công đoạn (UC25) rồi Admin duyệt từng đơn giá (UC26).
+- **Code đang làm:** Theo yêu cầu của Minh (22/10/2026), khi nhập công đoạn từ Excel thì đọc luôn cột TIỀN (đồng/sản phẩm, làm tròn 2 số) thành đơn giá của công đoạn đó, hiệu lực từ ngày Kế toán chọn khi nhập (mặc định hôm nay). Mỗi công đoạn: chưa có đơn giá ngày đó → thêm bản mới; đã có bản Nháp / bị từ chối cùng ngày → cập nhật; đã chờ duyệt / đã duyệt cùng ngày với giá khác → bỏ qua; giá bằng đơn giá hiện hành hoặc bản cùng ngày → không đổi; công đoạn đã ngừng dùng → bỏ qua. Đơn giá tạo ra ở trạng thái Nháp, hoặc Chờ duyệt (Admin nhận một thông báo chung) nếu chọn "Gửi Admin duyệt luôn". File LUNA: 85 đơn giá, tổng 17.887,48 đồng (file ghi 18.000 vì cộng cả dòng "Dự phòng" bị bỏ qua). Admin có thêm `POST admin/piece-rates/approve-many` để duyệt nhiều đơn giá chờ duyệt trong một giao dịch, ghi nhật ký từng đơn giá, gửi Kế toán một thông báo; dòng không ở trạng thái chờ duyệt bị bỏ qua. Từ chối vẫn từng đơn giá, bắt buộc lý do.
+- **Lý do:** Mỗi mã hàng có hàng chục công đoạn, nhập và duyệt từng đơn giá không thực tế.
+- **Ảnh hưởng người khác:** Kiều: màn FE KI-01 dùng cách nhập và duyệt này.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25 / UC26: nhập đơn giá hàng loạt từ Excel và Admin duyệt nhiều đơn giá cùng lúc
 - **Trạng thái:** Mở

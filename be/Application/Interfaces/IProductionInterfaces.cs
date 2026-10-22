@@ -11,6 +11,12 @@ public interface IOperationService
     Task<Result> UpdateAsync(int operationId, SaveOperationDto dto, CancellationToken ct);
     Task<Result> DiscontinueAsync(int operationId, CancellationToken ct);
     Task<Result> ReactivateAsync(int operationId, CancellationToken ct);
+
+    /// <summary>Xem trước file Excel quy trình công nghệ (chưa ghi DB): dòng nào thêm mới, cập nhật, không đổi, lỗi.</summary>
+    Task<Result<OperationImportPreviewDto>> PreviewImportAsync(int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct);
+
+    /// <summary>Nhập công đoạn từ Excel theo mã công đoạn (OP + STT): thêm mới hoặc cập nhật, không xóa công đoạn nào. <paramref name="finalStt"/> đánh dấu công đoạn cuối.</summary>
+    Task<Result<OperationImportResultDto>> ImportAsync(int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct);
 }
 
 /// <summary>KI-01 (UC25, UC26): đơn giá công đoạn DRAFT → PENDING_APPROVAL → APPROVED / REJECTED (Admin duyệt).</summary>
@@ -26,6 +32,9 @@ public interface IPieceRateService
     Task<Result> ApproveAsync(int pieceRateId, ApprovePieceRateDto dto, CancellationToken ct);
     Task<Result> RejectAsync(int pieceRateId, RejectPieceRateDto dto, CancellationToken ct);
 
+    /// <summary>Admin duyệt nhiều đơn giá đang chờ duyệt một lần; dòng không ở trạng thái chờ duyệt bị bỏ qua. Trả số đơn giá đã duyệt.</summary>
+    Task<Result<int>> ApproveManyAsync(ApproveManyPieceRatesDto dto, CancellationToken ct);
+
     /// <summary>Đơn giá APPROVED có EffectiveDate lớn nhất ≤ ngày; null nếu chưa có (MSG18, GBR-11).</summary>
     Task<EffectivePieceRate?> FindEffectiveAsync(int operationId, DateOnly date, CancellationToken ct);
 }
@@ -34,6 +43,9 @@ public interface IPieceRateService
 public interface IOperationAssignmentService
 {
     Task<Result<IReadOnlyList<OperationAssignmentDto>>> ListCurrentAsync(int orderId, CancellationToken ct);
+
+    /// <summary>Công đoạn may đang dùng của các mã hàng trong đơn (chọn khi phân công, ghi hàng hỏng).</summary>
+    Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct);
     Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct);
     Task<Result<int>> ReplaceAsync(int assignmentId, ReplaceAssignmentDto dto, CancellationToken ct);
     Task<Result> CloseAsync(int assignmentId, CancellationToken ct);
