@@ -59,6 +59,7 @@ export const API = {
     byId: (id: number) => v1(`admin/customer-orders/${id}`),
     cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
     stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
+    startProduction: (id: number) => v1(`admin/customer-orders/${id}/start-production`),
   },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {

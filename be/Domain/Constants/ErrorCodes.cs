@@ -56,6 +56,7 @@ public static class ErrorCodes
     public const string OrderLineRemoveNotAllowed = "ORDER_LINE_REMOVE_NOT_ALLOWED";
     public const string OrderLineKeyLocked = "ORDER_LINE_KEY_LOCKED";
     public const string OrderInvalidStatus = "ORDER_INVALID_STATUS";
+    public const string OrderMaterialsAwaiting = "ORDER_MATERIALS_AWAITING";
     public const string CustomerNameDuplicate = "CUSTOMER_NAME_DUPLICATE";
 
     // Nhân sự, tài khoản, tổ (KH-10)

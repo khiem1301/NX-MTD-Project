@@ -235,6 +235,10 @@ export const MESSAGES = {
     selectProduct: 'Chọn mã hàng',
     needLine: 'Vui lòng nhập ít nhất một dòng màu × size.', // MSG01
     cancelOrder: 'Hủy đơn hàng',
+    startProduction: 'Chuyển sang sản xuất',
+    startProductionHint: 'Chưa nhận NVL nào nên chưa thể chuyển sang sản xuất.',
+    confirmStartProduction: 'Chuyển đơn hàng sang sản xuất?',
+    productionStarted: 'Đã chuyển đơn hàng sang sản xuất.',
     stopOrder: 'Dừng đơn hàng',
     cancelReason: 'Lý do hủy (không bắt buộc)',
     stopReason: 'Lý do dừng',

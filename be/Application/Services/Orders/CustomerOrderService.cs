@@ -134,6 +134,17 @@ public sealed class CustomerOrderService : ICustomerOrderService
         return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Stopped, dto.Reason, dto.Reason.Trim(), Messages.OrderStopped);
     }
 
+    public async Task<Result> StartProductionAsync(int orderId, StartOrderProductionDto dto, CancellationToken ct)
+    {
+        var order = await _orders.GetByIdAsync(orderId);
+        if (order is null) return Fail.NotFound();
+        if (order.Status != OrderStatuses.New)
+            return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
+        if (order.MaterialStatus == OrderMaterialStatuses.Awaiting)
+            return Result.Failure(ErrorCodes.OrderMaterialsAwaiting, Messages.OrderMaterialsAwaiting);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.InProduction, null, null, Messages.OrderStarted);
+    }
+
     private async Task<Result> ChangeStatusAsync(CustomerOrder order, byte[] rowVer, string to, string? reason,
         string? stopReason, string successMessage)
     {

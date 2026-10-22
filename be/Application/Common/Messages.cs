@@ -81,6 +81,8 @@ public static class Messages
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
+    public const string OrderStarted = "Đã chuyển đơn hàng sang sản xuất.";
+    public const string OrderMaterialsAwaiting = "Đơn chưa nhận NVL nào (đang chờ NVL), chưa thể chuyển sang sản xuất.";
     public const string OrderHeaderLocked = "Đơn đã vào sản xuất, chỉ sửa ngày giao, ghi chú, số lượng, đơn giá và thêm dòng.";
     public const string NotifyNewOrderTitle = "Có đơn hàng mới";
     public const string NotifyNewOrderBody = "Đơn {0}, giao ngày {1}. Vui lòng xem NVL của đơn.";
