@@ -227,13 +227,16 @@ public sealed class DefectService : IDefectService
         d.OrderLine.Product.ProductCode, d.OperationId, d.Operation.OperationCode, d.Operation.OperationName,
         d.ResponsibleWorkerId, d.ResponsibleWorker.FullName, d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote,
         d.ScrapUnitRate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
-        false, d.RowVer));
+        false, d.RowVer, d.OrderLine.OrderId,
+        d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
+        d.Request == null ? null : d.Request.Status));
 
     /// <summary>Đổi mã DB sang PascalCase và tính CanEdit (còn hiệu lực và còn hạn, hoặc là Quản đốc).</summary>
     private DefectDto Finish(DefectDto d) => d with
     {
         DefectType = CodeText.ToPascal(d.DefectType), DefectReasonCode = CodeText.ToPascal(d.DefectReasonCode),
         Status = CodeText.ToPascal(d.Status),
+        ReplacementRequestStatus = d.ReplacementRequestStatus is null ? null : CodeText.ToPascal(d.ReplacementRequestStatus),
         CanEdit = d.Status == DefectStatuses.Recorded && (_clock.Now <= d.EditDeadline || _guard.IsManager),
     };
 

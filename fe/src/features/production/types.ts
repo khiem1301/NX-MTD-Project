@@ -293,6 +293,11 @@ export type Defect = {
   recordedAt: string;
   canEdit: boolean;
   rowVer: string;
+  orderId: number;
+  /** Đơn cắt bù của phiếu (mỗi phiếu tối đa một đơn). */
+  replacementRequestId: number | null;
+  replacementRequestCode: string | null;
+  replacementRequestStatus: string | null;
 };
 
 export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & { workDate?: string; from?: string; to?: string };

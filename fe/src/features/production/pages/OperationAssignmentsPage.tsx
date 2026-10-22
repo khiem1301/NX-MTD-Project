@@ -134,7 +134,7 @@ function CopyModal({ open, toOrderId, onClose }: { open: boolean; toOrderId: num
         onFinish={(values) => copy.mutate({ fromOrderId: values.fromOrderId, toOrderId }, { onSuccess: onClose })}
       >
         <Form.Item name="fromOrderId" label={text.copyFrom} rules={required}>
-          <OrderSelect width={320} />
+          <OrderSelect width="100%" />
         </Form.Item>
       </Form>
     </Modal>
@@ -151,10 +151,10 @@ export function OperationAssignmentsPage() {
   const close = useCloseAssignment();
 
   const columns: ColumnsType<OperationAssignment> = [
-    { title: text.columns.product, dataIndex: 'productCode' },
+    { responsive: ['md'], title: text.columns.product, dataIndex: 'productCode' },
     { title: text.columns.operation, key: 'op', render: (_, r) => `${r.operationCode} - ${r.operationName}` },
     { title: text.columns.worker, key: 'worker', render: (_, r) => `${r.workerCode} - ${r.workerName}` },
-    { title: text.columns.validFrom, dataIndex: 'validFrom', render: (v: string) => formatDate(v) },
+    { responsive: ['md'], title: text.columns.validFrom, dataIndex: 'validFrom', render: (v: string) => formatDate(v) },
     {
       title: MESSAGES.common.actions,
       key: 'action',

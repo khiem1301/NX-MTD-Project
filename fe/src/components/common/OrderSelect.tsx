@@ -7,7 +7,7 @@ type OrderSelectProps = {
   onChange?: (orderId: number | undefined) => void;
   placeholder?: string;
   allowClear?: boolean;
-  width?: number;
+  width?: number | string;
 };
 
 const DEFAULT_WIDTH = 260;

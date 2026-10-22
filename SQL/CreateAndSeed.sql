@@ -1608,6 +1608,89 @@ BEGIN
 END;
 GO
 
+-- Kế toán chấm bù cho một nhân viên trong một ngày (UC29, GBR-25): ghi AttendanceAdjustment,
+-- ghi AuditLog và ghi đè dòng bảng công của ngày đó bằng Source = 'ADJUSTMENT' (sau này
+-- usp_Attendance_RebuildTimesheet chỉ ghi đè dòng Source = 'FINGERPRINT' nên không xóa chấm bù).
+-- Giờ làm / công / tăng ca tính theo ca Hành Chính như usp_Attendance_RebuildTimesheet.
+CREATE PROCEDURE dbo.usp_Attendance_ApplyAdjustment
+    @EmployeeId     INT,
+    @WorkDate       DATE,
+    @AdjustmentType VARCHAR(20),
+    @Reason         NVARCHAR(500),
+    @RequestId      INT = NULL,
+    @CheckIn        TIME(0) = NULL,
+    @CheckOut       TIME(0) = NULL,
+    @ChangedBy      INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Tháng đã khóa đã bị trigger chặn; kiểm tra sớm để trả lỗi nghiệp vụ thân thiện (MSG21).
+    IF dbo.fn_IsPeriodLocked(@WorkDate) = 1
+        THROW 50013, N'Tháng đã khóa, không thể chấm hộ.', 1;
+
+    DECLARE @ws  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = 'WORK_START_TIME'),
+            @we  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = 'WORK_END_TIME'),
+            @ls  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = 'LUNCH_START_TIME'),
+            @le  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = 'LUNCH_END_TIME'),
+            @std DECIMAL(5,2)  = (SELECT CAST(SettingValue AS DECIMAL(5,2)) FROM dbo.SystemSetting WHERE SettingKey = 'WORKDAY_STANDARD_HOURS');
+
+    -- T-SQL không cho một DECLARE tham chiếu biến khai báo trong cùng câu lệnh, nên tách DECLARE và SET.
+    DECLARE @base DATETIME2(0), @inM DATETIME2(0), @outM DATETIME2(0),
+            @wsD  DATETIME2(0), @weD DATETIME2(0), @lsD  DATETIME2(0), @leD DATETIME2(0);
+
+    SET @base = CAST(@WorkDate AS DATETIME2(0));
+    SET @inM  = CASE WHEN @CheckIn  IS NULL THEN NULL ELSE DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @CheckIn),  @base) END;
+    SET @outM = CASE WHEN @CheckOut IS NULL THEN NULL ELSE DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @CheckOut), @base) END;
+    SET @wsD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @ws), @base);
+    SET @weD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @we), @base);
+    SET @lsD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @ls), @base);
+    SET @leD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @le), @base);
+
+    DECLARE @worked DECIMAL(5,2), @ot DECIMAL(5,2), @workday DECIMAL(4,2);
+
+    SET @worked = CASE WHEN @CheckOut IS NULL THEN 0 ELSE
+        ( IIF(DATEDIFF(MINUTE, IIF(@inM > @wsD, @inM, @wsD), IIF(@outM < @weD, @outM, @weD)) > 0,
+              DATEDIFF(MINUTE, IIF(@inM > @wsD, @inM, @wsD), IIF(@outM < @weD, @outM, @weD)), 0)
+        - IIF(DATEDIFF(MINUTE, IIF(@inM > @lsD, @inM, @lsD), IIF(@outM < @leD, @outM, @leD)) > 0,
+              DATEDIFF(MINUTE, IIF(@inM > @lsD, @inM, @lsD), IIF(@outM < @leD, @outM, @leD)), 0)
+        ) / 60.0 END;
+    SET @ot = CASE WHEN @CheckOut IS NULL OR @outM <= @weD THEN 0
+                   ELSE DATEDIFF(MINUTE, @weD, @outM) / 60.0 END;
+    SET @workday = CAST(IIF(@worked >= @std, 1, ROUND(@worked / @std, 2)) AS DECIMAL(4,2));
+
+    BEGIN TRAN;
+        INSERT dbo.AttendanceAdjustment (EmployeeId, WorkDate, AdjustmentType, Reason, RequestId, CheckIn, CheckOut)
+        VALUES (@EmployeeId, @WorkDate, @AdjustmentType, @Reason, @RequestId, @CheckIn, @CheckOut);
+        DECLARE @aid INT = SCOPE_IDENTITY();
+
+        MERGE dbo.DailyTimesheet AS t
+        USING (SELECT @EmployeeId AS EmployeeId, @WorkDate AS WorkDate) AS s
+            ON t.EmployeeId = s.EmployeeId AND t.WorkDate = s.WorkDate
+        WHEN MATCHED THEN UPDATE SET
+            CheckIn = @inM, CheckOut = @outM, WorkedHours = @worked, WorkdayValue = @workday,
+            OvertimeHours = @ot, IsMissingPunch = IIF(@inM IS NULL OR @outM IS NULL, 1, 0),
+            HasExtraPunch = 0, Source = 'ADJUSTMENT', AttendanceAdjustmentId = @aid,
+            Note = @Reason, UpdatedAt = dbo.fn_VnNow()
+        WHEN NOT MATCHED THEN INSERT
+            (EmployeeId, WorkDate, CheckIn, CheckOut, WorkedHours, WorkdayValue, OvertimeHours,
+             IsMissingPunch, HasExtraPunch, Source, AttendanceAdjustmentId, Note)
+            VALUES (@EmployeeId, @WorkDate, @inM, @outM, @worked, @workday, @ot,
+                    IIF(@inM IS NULL OR @outM IS NULL, 1, 0), 0, 'ADJUSTMENT', @aid, @Reason);
+
+        INSERT dbo.AuditLog (TableName, RecordId, Action, NewValues, Reason, ChangedBy)
+        VALUES ('AttendanceAdjustment', @aid, 'INSERT',
+                CONCAT('{"EmployeeId":', @EmployeeId, ',"WorkDate":"', CONVERT(VARCHAR(10), @WorkDate, 23),
+                       '","AdjustmentType":"', @AdjustmentType, '","CheckIn":"', ISNULL(CONVERT(VARCHAR(8), @CheckIn, 108), ''),
+                       '","CheckOut":"', ISNULL(CONVERT(VARCHAR(8), @CheckOut, 108), ''), '"}'),
+                @Reason, @ChangedBy);
+    COMMIT;
+
+    SELECT @aid AS AttendanceAdjustmentId;
+END;
+GO
+
 /* =====================================================================================
    16. VIEW TÍNH TOÁN (tồn kho, trần sản lượng, tiến độ, lương tạm tính, KPI, doanh thu)
    ===================================================================================== */

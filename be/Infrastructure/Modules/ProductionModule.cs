@@ -24,6 +24,7 @@ public static class ProductionModule
         services.AddScoped<IOutputService, OutputService>();
         services.AddScoped<IQcBatchService, QcBatchService>();
         services.AddScoped<IDefectService, DefectService>();
+        services.AddScoped<IRequestTypeHandler, ReplacementCuttingRequestHandler>();   // KI-09
         return services;
     }
 }

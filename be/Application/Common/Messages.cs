@@ -235,6 +235,13 @@ public static class Messages
     public const string PieceRateNoneSelected = "Chưa chọn đơn giá nào.";
     public const string NotifyPieceRatesApprovedManyBody = "{0} đơn giá công đoạn đã được duyệt.";
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
+    public const string ReplacementCuttingNeedsDefect = "Đơn cắt bù phải gắn với một phiếu hàng hỏng.";
+    public const string ReplacementCuttingDefectCancelled = "Phiếu hàng hỏng này đã bị hủy.";
+    public const string ReplacementCuttingDefectNotScrap = "Chỉ phiếu hàng hỏng loại Hủy (Scrap) mới cần cắt bù.";
+    public const string ReplacementCuttingOtherTeam = "Phiếu hàng hỏng này không thuộc tổ của bạn.";
+    public const string ReplacementCuttingOrderMismatch = "Đơn hàng của đơn cắt bù phải là đơn hàng của phiếu hàng hỏng.";
+    public const string ReplacementCuttingLines = "Mỗi dòng cắt bù cần có chi tiết cần cắt (không trùng nhau), đúng dòng đơn của phiếu hàng hỏng và số lượng từ 1 đến số hàng đã hủy.";
+    public const string ReplacementCuttingDuplicate = "Phiếu hàng hỏng này đã có đơn cắt bù.";
     public const string PieceRateInvalidStatus = "Trạng thái đơn giá không cho phép thao tác này.";
     public const string PieceRateDuplicateDate = "Công đoạn này đã có đơn giá với ngày hiệu lực này.";
     public const string PieceRateSubmitted = "Đã gửi duyệt đơn giá.";

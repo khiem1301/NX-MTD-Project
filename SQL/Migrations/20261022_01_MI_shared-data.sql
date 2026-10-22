@@ -4,8 +4,9 @@
 --   sqlcmd -S localhost -d NXMTD -E -C -f 65001 -b -i SQL/Migrations/20261022_01_MI_shared-data.sql
 --
 -- Gồm 3 phần:
---   0. Sửa thủ tục usp_Attendance_ApplyAdjustment: thủ tục bị tạo khi QUOTED_IDENTIFIER tắt nên "Kế toán chấm công hộ" báo lỗi
---      MERGE (1934). Tạo lại đúng nội dung cũ với QUOTED_IDENTIFIER bật. Không làm gì nếu thủ tục đã đúng.
+--   0. Thủ tục usp_Attendance_ApplyAdjustment (Kế toán chấm công hộ): tạo nếu DB dựng từ CreateAndSeed.sql 21/10 chưa có (script
+--      đó thiếu thủ tục này nên chấm công hộ báo lỗi 500), hoặc tạo lại với QUOTED_IDENTIFIER bật nếu thủ tục bị tạo khi cờ tắt
+--      (lỗi MERGE 1934). Không làm gì nếu thủ tục đã đúng.
 --   1. Dữ liệu demo: mã hàng DEMO-AO01 / DEMO-QU02, đơn hàng, NVL, nhà cung cấp, đơn mua, phân công, sản lượng, QC, hàng hỏng,
 --      KPI, chi phí tháng, bảng công, suất ăn, xe, bảng lương demo (3 công nhân may CNMAY2..4, mật khẩu giống KETOAN). Bỏ qua nếu đã có DEMO-AO01.
 --   2. Công đoạn và đơn giá công đoạn của DEMO-AO01 / DEMO-QU02 (đã nhập từ file Excel quy trình công nghệ), khớp theo mã hàng + mã công đoạn:
@@ -16,9 +17,93 @@ SET QUOTED_IDENTIFIER ON;
 SET NOCOUNT ON;
 GO
 
-/* ===== 0. Sửa usp_Attendance_ApplyAdjustment (QUOTED_IDENTIFIER) ===== */
+/* ===== 0. Thủ tục usp_Attendance_ApplyAdjustment (chấm công hộ) ===== */
 SET QUOTED_IDENTIFIER ON;
-IF EXISTS (SELECT 1 FROM sys.sql_modules WHERE object_id = OBJECT_ID(N'dbo.usp_Attendance_ApplyAdjustment') AND uses_quoted_identifier = 0)
+-- Script dựng DB 21/10 (CreateAndSeed.sql) từng thiếu thủ tục này nên "Kế toán chấm công hộ" báo lỗi 500: tạo nếu chưa có.
+IF OBJECT_ID(N'dbo.usp_Attendance_ApplyAdjustment') IS NULL
+BEGIN
+    EXEC sp_executesql N'CREATE PROCEDURE dbo.usp_Attendance_ApplyAdjustment
+    @EmployeeId     INT,
+    @WorkDate       DATE,
+    @AdjustmentType VARCHAR(20),
+    @Reason         NVARCHAR(500),
+    @RequestId      INT = NULL,
+    @CheckIn        TIME(0) = NULL,
+    @CheckOut       TIME(0) = NULL,
+    @ChangedBy      INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    -- Tháng đã khóa đã bị trigger chặn; kiểm tra sớm để trả lỗi nghiệp vụ thân thiện (MSG21).
+    IF dbo.fn_IsPeriodLocked(@WorkDate) = 1
+        THROW 50013, N''Tháng đã khóa, không thể chấm hộ.'', 1;
+
+    DECLARE @ws  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = ''WORK_START_TIME''),
+            @we  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = ''WORK_END_TIME''),
+            @ls  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = ''LUNCH_START_TIME''),
+            @le  TIME(0)       = (SELECT CAST(SettingValue AS TIME(0)) FROM dbo.SystemSetting WHERE SettingKey = ''LUNCH_END_TIME''),
+            @std DECIMAL(5,2)  = (SELECT CAST(SettingValue AS DECIMAL(5,2)) FROM dbo.SystemSetting WHERE SettingKey = ''WORKDAY_STANDARD_HOURS'');
+
+    -- T-SQL không cho một DECLARE tham chiếu biến khai báo trong cùng câu lệnh, nên tách DECLARE và SET.
+    DECLARE @base DATETIME2(0), @inM DATETIME2(0), @outM DATETIME2(0),
+            @wsD  DATETIME2(0), @weD DATETIME2(0), @lsD  DATETIME2(0), @leD DATETIME2(0);
+
+    SET @base = CAST(@WorkDate AS DATETIME2(0));
+    SET @inM  = CASE WHEN @CheckIn  IS NULL THEN NULL ELSE DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @CheckIn),  @base) END;
+    SET @outM = CASE WHEN @CheckOut IS NULL THEN NULL ELSE DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @CheckOut), @base) END;
+    SET @wsD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @ws), @base);
+    SET @weD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @we), @base);
+    SET @lsD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @ls), @base);
+    SET @leD  = DATEADD(MINUTE, DATEDIFF(MINUTE, 0, @le), @base);
+
+    DECLARE @worked DECIMAL(5,2), @ot DECIMAL(5,2), @workday DECIMAL(4,2);
+
+    SET @worked = CASE WHEN @CheckOut IS NULL THEN 0 ELSE
+        ( IIF(DATEDIFF(MINUTE, IIF(@inM > @wsD, @inM, @wsD), IIF(@outM < @weD, @outM, @weD)) > 0,
+              DATEDIFF(MINUTE, IIF(@inM > @wsD, @inM, @wsD), IIF(@outM < @weD, @outM, @weD)), 0)
+        - IIF(DATEDIFF(MINUTE, IIF(@inM > @lsD, @inM, @lsD), IIF(@outM < @leD, @outM, @leD)) > 0,
+              DATEDIFF(MINUTE, IIF(@inM > @lsD, @inM, @lsD), IIF(@outM < @leD, @outM, @leD)), 0)
+        ) / 60.0 END;
+    SET @ot = CASE WHEN @CheckOut IS NULL OR @outM <= @weD THEN 0
+                   ELSE DATEDIFF(MINUTE, @weD, @outM) / 60.0 END;
+    SET @workday = CAST(IIF(@worked >= @std, 1, ROUND(@worked / @std, 2)) AS DECIMAL(4,2));
+
+    BEGIN TRAN;
+        INSERT dbo.AttendanceAdjustment (EmployeeId, WorkDate, AdjustmentType, Reason, RequestId, CheckIn, CheckOut)
+        VALUES (@EmployeeId, @WorkDate, @AdjustmentType, @Reason, @RequestId, @CheckIn, @CheckOut);
+        DECLARE @aid INT = SCOPE_IDENTITY();
+
+        MERGE dbo.DailyTimesheet AS t
+        USING (SELECT @EmployeeId AS EmployeeId, @WorkDate AS WorkDate) AS s
+            ON t.EmployeeId = s.EmployeeId AND t.WorkDate = s.WorkDate
+        WHEN MATCHED THEN UPDATE SET
+            CheckIn = @inM, CheckOut = @outM, WorkedHours = @worked, WorkdayValue = @workday,
+            OvertimeHours = @ot, IsMissingPunch = IIF(@inM IS NULL OR @outM IS NULL, 1, 0),
+            HasExtraPunch = 0, Source = ''ADJUSTMENT'', AttendanceAdjustmentId = @aid,
+            Note = @Reason, UpdatedAt = dbo.fn_VnNow()
+        WHEN NOT MATCHED THEN INSERT
+            (EmployeeId, WorkDate, CheckIn, CheckOut, WorkedHours, WorkdayValue, OvertimeHours,
+             IsMissingPunch, HasExtraPunch, Source, AttendanceAdjustmentId, Note)
+            VALUES (@EmployeeId, @WorkDate, @inM, @outM, @worked, @workday, @ot,
+                    IIF(@inM IS NULL OR @outM IS NULL, 1, 0), 0, ''ADJUSTMENT'', @aid, @Reason);
+
+        INSERT dbo.AuditLog (TableName, RecordId, Action, NewValues, Reason, ChangedBy)
+        VALUES (''AttendanceAdjustment'', @aid, ''INSERT'',
+                CONCAT(''{"EmployeeId":'', @EmployeeId, '',"WorkDate":"'', CONVERT(VARCHAR(10), @WorkDate, 23),
+                       ''","AdjustmentType":"'', @AdjustmentType, ''","CheckIn":"'', ISNULL(CONVERT(VARCHAR(8), @CheckIn, 108), ''''),
+                       ''","CheckOut":"'', ISNULL(CONVERT(VARCHAR(8), @CheckOut, 108), ''''), ''"}''),
+                @Reason, @ChangedBy);
+    COMMIT;
+
+    SELECT @aid AS AttendanceAdjustmentId;
+END;
+';
+    PRINT N'Đã tạo usp_Attendance_ApplyAdjustment.';
+END
+-- Thủ tục tạo khi QUOTED_IDENTIFIER tắt thì MERGE vào DailyTimesheet báo lỗi 1934: tạo lại đúng nội dung cũ với cờ bật.
+ELSE IF EXISTS (SELECT 1 FROM sys.sql_modules WHERE object_id = OBJECT_ID(N'dbo.usp_Attendance_ApplyAdjustment') AND uses_quoted_identifier = 0)
 BEGIN
     DECLARE @def NVARCHAR(MAX) = (SELECT definition FROM sys.sql_modules WHERE object_id = OBJECT_ID(N'dbo.usp_Attendance_ApplyAdjustment'));
     DECLARE @pos INT = CHARINDEX(N'CREATE PROCEDURE', @def);

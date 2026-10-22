@@ -9,6 +9,7 @@ import { fill, formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useImportOperations, usePreviewOperationImport } from '../hooks/useProduction';
 import type { OperationImportRow } from '../types';
+import { modalWidth } from '../utils';
 
 type Props = { open: boolean; productId: number; productLabel: string; onClose: () => void };
 
@@ -121,7 +122,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
   return (
     <Modal
       open={open}
-      width={1000}
+      width={modalWidth(1000)}
       title={`${text.title} — ${productLabel}`}
       okText={text.confirm}
       cancelText={MESSAGES.common.cancel}
