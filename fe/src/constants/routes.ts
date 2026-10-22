@@ -26,6 +26,8 @@ export const ROUTES = {
   materialIssues: '/warehouse/material-issues',
   fgHandovers: '/warehouse/fg-handovers',
   dispatchNotes: '/warehouse/dispatch-notes',
+  pieceMovements: '/warehouse/piece-movements',
+  myPieceMovements: '/my-piece-movements',
   inventories: '/warehouse/inventories',
   pieceHoldings: '/warehouse/piece-holdings',
   workOrders: '/cutting/work-orders',

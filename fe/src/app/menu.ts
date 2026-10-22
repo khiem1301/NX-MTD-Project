@@ -6,6 +6,7 @@ import { cuttingMenu } from '@/features/cutting';
 import { dispatchMenu } from '@/features/dispatch';
 import { fgHandoverMenu } from '@/features/fg-handover';
 import { productionMenu } from '@/features/production/menu';
+import { pieceMovementMenu } from '@/features/piece-movement';
 import { profileMenu } from '@/features/profile';
 import { teamMenu } from '@/features/teams';
 import { userMenu } from '@/features/users';
@@ -34,6 +35,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...cuttingMenu, // Thái
   ...fgHandoverMenu, // Thái (TH-11)
   ...dispatchMenu, // Thái (TH-14)
+  ...pieceMovementMenu, // Thái (TH-19)
   ...attendanceMenu, // Minh
   ...profileMenu, // Khiêm
   ...mealMenu, // Minh

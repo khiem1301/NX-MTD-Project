@@ -91,6 +91,17 @@ public static class WarehouseMessages
     public const string DispatchRejected = "Đã từ chối phiếu xuất hàng, số giữ chỗ đã được nhả.";
     public const string DispatchDelivered = "Đã xác nhận khách nhận hàng.";
     public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
+    public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
+    public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
+    public const string PieceHandoverExceedsHolding = "Số giao vượt số BTP tổ đang giữ";
+    public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số BTP công nhân đang giữ";
+    public const string PieceConfirmedExceedsQty = "Số xác nhận không được lớn hơn số ghi trên phiếu.";
+    public const string PieceMovementCreated = "Đã ghi phiếu, chờ công nhân xác nhận.";
+    public const string PieceMovementConfirmed = "Đã xác nhận BTP.";
+    public const string PieceMovementRejected = "Đã từ chối phiếu BTP.";
+    public const string MovementTypeInvalid = "Loại phiếu phải là giao hoặc thu hồi BTP.";
+    public const string WorkerRequired = "Vui lòng chọn công nhân.";
+    public const string RetrievalReasonRequired = "Vui lòng chọn lý do thu hồi.";
     public const string DeliveryDateRequired = "Vui lòng chọn ngày giao hàng.";
     public const string DeliveryAddressRequired = "Vui lòng nhập địa chỉ giao hàng.";
     public const string CustomerReceivedDateRequired = "Vui lòng nhập ngày khách nhận hàng.";

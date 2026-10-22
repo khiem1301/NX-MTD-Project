@@ -130,6 +130,30 @@ public static class HandoverStatuses
     public const string Cancelled = "CANCELLED";
 }
 
+/// <summary>WorkerPieceMovement.MovementType (CK_WPM_Type): tổ trưởng giao BTP cho công nhân hoặc thu hồi lại.</summary>
+public static class PieceMovementTypes
+{
+    public const string Handover = "HANDOVER";
+    public const string Retrieval = "RETRIEVAL";
+}
+
+/// <summary>WorkerPieceMovement.RetrievalReason (CK_WPM_Retr).</summary>
+public static class RetrievalReasons
+{
+    public const string OperationChanged = "OPERATION_CHANGED";
+    public const string WorkerAbsent = "WORKER_ABSENT";
+    public const string StyleFinished = "STYLE_FINISHED";
+
+    public static readonly IReadOnlyList<string> All = new[] { OperationChanged, WorkerAbsent, StyleFinished };
+}
+
+/// <summary>WorkerPieceMovement.ConfirmMode (CK_WPM_Mode): công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ.</summary>
+public static class ConfirmModes
+{
+    public const string Worker = "WORKER";
+    public const string OnBehalf = "ON_BEHALF";
+}
+
 /// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>
 public static class DispatchStatuses
 {

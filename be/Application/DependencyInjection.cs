@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ICutHandoverService, CutHandoverService>();
         services.AddScoped<IFgHandoverService, FgHandoverService>();
         services.AddScoped<IDispatchNoteService, DispatchNoteService>();
+        services.AddScoped<IWorkerPieceMovementService, WorkerPieceMovementService>();
         services.AddScoped<IAttachmentOwnerAccess, DispatchNoteAttachmentAccess>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;

@@ -103,6 +103,16 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/dispatch')).DispatchNotesPage,
   },
   {
+    path: ROUTES.pieceMovements,
+    roles: [TeamLeader, TeamDeputy],
+    page: async () => (await import('@/features/piece-movement')).LeaderPieceMovementsPage,
+  },
+  {
+    path: ROUTES.myPieceMovements,
+    roles: [ROLES.Worker],
+    page: async () => (await import('@/features/piece-movement')).MyPieceMovementsPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,
