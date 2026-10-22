@@ -2116,6 +2116,76 @@ CLOSE c; DEALLOCATE c;
 GO
 
 /* =====================================================================================
+   18b. DỮ LIỆU MẪU: ĐƠN HÀNG, NVL CỦA ĐƠN, ĐƠN MUA NVL (22/10/2026)
+   Để xem thử màn "Đơn hàng", "NVL của đơn", "Đơn mua NVL". Đơn giá là GIÁ MẪU.
+   Xóa cả mục này nếu tạo database thật (không cần dữ liệu mẫu). Mỗi khối chỉ chèn khi chưa có.
+   ===================================================================================== */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu')
+    INSERT dbo.Customer (CustomerName) VALUES (N'Khách hàng mẫu');
+IF NOT EXISTS (SELECT 1 FROM dbo.Product WHERE ProductCode = 'MAU-AO-01')
+    INSERT dbo.Product (ProductCode, ProductName) VALUES ('MAU-AO-01', N'Áo polo mẫu');
+IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'V-0001')
+    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
+    VALUES ('V-0001', N'Vải cotton mẫu', 'FABRIC', 'MAIN_FABRIC', 'm');
+IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'PL-0001')
+    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
+    VALUES ('PL-0001', N'Chỉ may mẫu', 'TRIM', 'THREAD', N'cuộn');
+
+DECLARE @cus INT = (SELECT CustomerId FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu');
+DECLARE @prd INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'MAU-AO-01');
+DECLARE @vai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'V-0001');
+DECLARE @chi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'PL-0001');
+
+-- Hai đơn hàng mẫu, mỗi đơn 2 dòng màu x size.
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01')
+BEGIN
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-01', @cus, '2026-10-21', '2026-12-05');
+    DECLARE @o1 INT = SCOPE_IDENTITY();
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
+    VALUES (@o1, @prd, N'Đỏ', 'M', 60, 12500), (@o1, @prd, N'Đỏ', 'L', 40, 12500);
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02')
+BEGIN
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-02', @cus, '2026-10-21', '2026-12-10');
+    DECLARE @o2 INT = SCOPE_IDENTITY();
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
+    VALUES (@o2, @prd, N'Trắng', 'M', 100, 12000), (@o2, @prd, N'Trắng', 'L', 80, 12000);
+END;
+DECLARE @d1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01');
+DECLARE @d2 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02');
+
+-- NVL của đơn (Source và PurchaseQty là cột tính, không chèn).
+-- DH-MAU-01: vải cần 120, khách cấp 20 -> phải mua 100. DH-MAU-02: vải cần 200, khách cấp 50 -> phải mua 150; chỉ phải mua 30.
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d1 AND MaterialId = @vai AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
+    VALUES (@d1, @vai, '', 120, 20, '2026-11-01');
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @vai AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
+    VALUES (@d2, @vai, '', 200, 50, '2026-11-05');
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @chi AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty)
+    VALUES (@d2, @chi, '', 30, 0);
+
+-- Đơn mua gắn đơn hàng: mỗi dòng lấy phần "phải mua" của NVL trong đơn (vải 18.000, chỉ 3.500).
+DECLARE @po TABLE (PoCode VARCHAR(30), OrderId INT, Note NVARCHAR(200));
+INSERT @po VALUES ('DM-20261021-001', @d1, N'Dữ liệu mẫu: mua NVL cho DH-MAU-01'),
+                  ('DM-20261021-002', @d2, N'Dữ liệu mẫu: mua NVL cho DH-MAU-02');
+INSERT dbo.PurchaseOrder (PoCode, OrderId, GoodsStatus, PaymentStatus, Note)
+SELECT p.PoCode, p.OrderId, 'PENDING_FINALISATION', 'UNPAID', p.Note FROM @po p
+WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrder x WHERE x.PoCode = p.PoCode);
+INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, NotReplenishedQty, UnitPrice)
+SELECT po.PurchaseOrderId, om.OrderMaterialId, om.PurchaseQty, 0, CASE om.MaterialId WHEN @vai THEN 18000 ELSE 3500 END
+FROM @po p JOIN dbo.PurchaseOrder po ON po.PoCode = p.PoCode
+JOIN dbo.OrderMaterial om ON om.OrderId = po.OrderId AND om.PurchaseQty > 0
+WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrderLine l WHERE l.PurchaseOrderId = po.PurchaseOrderId);
+
+COMMIT;
+GO
+
+/* =====================================================================================
    19. DỮ LIỆU DEMO (xóa cả mục này nếu muốn database sạch)
    ---------------------------------------------------------------------------------
    Cần mục 17b (tài khoản mẫu) ở trên. Chạy lại riêng mục này không nhân đôi dữ liệu.

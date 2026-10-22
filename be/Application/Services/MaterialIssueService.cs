@@ -18,11 +18,12 @@ public sealed class MaterialIssueService : IMaterialIssueService
     private readonly IDocumentCodeGenerator _codes;
     private readonly IClock _clock;
     private readonly ILogger<MaterialIssueService> _logger;
+    private readonly IRequestService _requests;
 
     public MaterialIssueService(IUnitOfWork uow, IStockService stock, FabricPlanner planner,
-        IDocumentCodeGenerator codes, IClock clock, ILogger<MaterialIssueService> logger)
+        IDocumentCodeGenerator codes, IClock clock, ILogger<MaterialIssueService> logger, IRequestService requests)
     {
-        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _clock = clock; _logger = logger;
+        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _clock = clock; _logger = logger; _requests = requests;
     }
 
     private IQueryable<MaterialIssue> Issues => _uow.Repository<MaterialIssue>().Query();
@@ -100,6 +101,12 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 MaterialIssueLines = lines,
             };
             await _uow.Repository<MaterialIssue>().AddAsync(issue);
+            // Thủ kho lập phiếu cấp = đã xử lý đơn xin (DEV-TH-05-1): đơn xin sang Hoàn thành cùng giao dịch.
+            if (dto.RequestId is { } requestId)
+            {
+                var done = await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
+                if (!done.IsSuccess) return WarehouseFailures.From<int>(done);
+            }
             await _uow.SaveChangesAsync();
             // TODO(thai, TH-05): gửi thông báo cho tổ trưởng tổ nhận khi có Notification (KH-12).
             return Result<int>.Success(issue.MaterialIssueId);
@@ -223,16 +230,20 @@ public sealed class MaterialIssueService : IMaterialIssueService
             : (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
     }
 
-    /// <summary>Có RequestId thì đơn phải đúng loại, đã duyệt và cùng đơn hàng.</summary>
+    /// <summary>
+    /// Cấp BTP cho tổ may bắt buộc có đơn Xin BTP; cấp vải cho tổ cắt thì đơn Xin NVL là tùy chọn (UC40).
+    /// Có RequestId thì đơn phải đúng loại, đang chờ xử lý (đơn xin không qua bước duyệt), của đúng tổ nhận
+    /// và cùng đơn hàng.
+    /// </summary>
     private async Task<bool> IsRequestValidAsync(CreateMaterialIssueDto dto, IssueTarget target, CancellationToken ct)
     {
-        // TODO(thai, TH-05): bắt buộc RequestId khi khung đơn từ (KH-06) xong.
-        if (dto.RequestId is null) return true;
+        if (dto.RequestId is null) return dto.WarehouseType == WarehouseTypes.Material;
         var type = dto.WarehouseType == WarehouseTypes.Material
             ? RequestTypes.MaterialRequisition
             : RequestTypes.SemiFinishedRequisition;
         return await _uow.Repository<Request>().Query().AnyAsync(r => r.RequestId == dto.RequestId
-            && r.RequestTypeCode == type && r.Status == RequestStatuses.Approved
+            && r.RequestTypeCode == type && r.Status == RequestStatuses.PendingProcessing
+            && r.CreatedByTeamId == target.TeamId
             && (r.OrderId == null || r.OrderId == target.OrderId), ct);
     }
 
