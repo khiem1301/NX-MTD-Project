@@ -20,6 +20,12 @@ export const warehouseMenu: MenuEntry[] = [
     roles: [WarehouseKeeper, Manager],
   },
   {
+    key: 'short-deliveries',
+    label: 'Thiếu NVL khi nhập',
+    path: ROUTES.shortDeliveries,
+    roles: [WarehouseKeeper, Manager],
+  },
+  {
     key: 'material-issues',
     label: 'Phiếu cấp NVL / BTP',
     path: ROUTES.materialIssues,

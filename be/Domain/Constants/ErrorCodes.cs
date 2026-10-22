@@ -134,6 +134,9 @@ public static class ErrorCodes
     public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
+    public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
+    public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
+    public const string ShortageExceeded = "SHORTAGE_EXCEEDED";
 
     // Nhà cung cấp, đơn mua, thanh toán (Minh, MI-07)
     public const string SupplierNameDuplicate = "SUPPLIER_NAME_DUPLICATE";

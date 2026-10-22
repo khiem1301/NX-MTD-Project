@@ -24,6 +24,11 @@ public sealed class MaterialReceiptsController : WarehouseKeeperBaseController
     public async Task<IActionResult> Create([FromBody] SaveMaterialReceiptDto dto, CancellationToken ct) =>
         this.ToResponse(await _receipts.CreateAsync(dto, ct));
 
+    /// <summary>Phiếu bổ sung: nhận hàng giao bù theo đơn thiếu NVL đã chọn "giao bù".</summary>
+    [HttpPost("supplementary")]
+    public async Task<IActionResult> CreateSupplementary([FromBody] SaveSupplementaryReceiptDto dto, CancellationToken ct) =>
+        this.ToResponse(await _receipts.CreateSupplementaryAsync(dto, ct));
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveMaterialReceiptDto dto, CancellationToken ct) =>
         this.ToResponse(await _receipts.UpdateAsync(id, dto, ct));

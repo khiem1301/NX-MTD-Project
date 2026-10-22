@@ -81,6 +81,8 @@ export type MaterialReceiptListItem = {
   orderId: number | null;
   orderCode: string | null;
   source: string;
+  purchaseOrderId: number | null;
+  poCode: string | null;
   receiptDate: string;
   status: string;
   submittedAt: string;
@@ -91,18 +93,26 @@ export type MaterialReceiptListItem = {
 
 export type MaterialReceiptLine = {
   materialReceiptLineId: number;
-  orderMaterialId: number;
+  orderMaterialId: number | null;
+  purchaseOrderLineId: number | null;
+  originalReceiptLineId: number | null;
   materialId: number;
   materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
+  unitPrice: number | null;
+  toReplenishQty: number | null;
   acceptedQty: number;
   shortQty: number;
   defectiveQty: number;
 };
 
 export type MaterialReceipt = Omit<MaterialReceiptListItem, 'lineCount'> & {
+  originalReceiptId: number | null;
+  originalReceiptCode: string | null;
+  shortageRequestId: number | null;
+  shortDeliveryRequestId: number | null;
   returnReason: string | null;
   note: string | null;
   lines: MaterialReceiptLine[];
@@ -131,6 +141,8 @@ export type PurchaseOrderLine = {
   orderedQty: number;
   unitPrice: number;
   amount: number | null;
+  receivedQty: number;
+  notReplenishedQty: number;
 };
 
 export type PurchaseOrder = Omit<PurchaseOrderListItem, 'lineCount'> & {
@@ -139,7 +151,12 @@ export type PurchaseOrder = Omit<PurchaseOrderListItem, 'lineCount'> & {
   lines: PurchaseOrderLine[];
 };
 
-export type PurchaseOrderQuery = PageParams & { goodsStatus?: string; stockOnly?: boolean };
+export type PurchaseOrderQuery = PageParams & {
+  goodsStatus?: string;
+  stockOnly?: boolean;
+  /** Chỉ đơn đã đặt và còn phải nhận (Thủ kho chọn khi lập phiếu nhập từ NCC). */
+  receivable?: boolean;
+};
 
 /** orderId để trống = đơn mua dự trữ, không cần Admin tạo mã đơn hàng. */
 export type CreatePurchaseOrderPayload = {
@@ -156,15 +173,81 @@ export type CreatePurchaseOrderPayload = {
   }[];
 };
 
-export type MaterialReceiptQuery = PageParams & { status?: string; orderId?: number };
+export type MaterialReceiptQuery = PageParams & {
+  status?: string;
+  orderId?: number;
+  purchaseOrderId?: number;
+  source?: string;
+};
 
+/** Khách cấp: orderId + dòng chọn NVL của đơn (orderMaterialId). NCC: purchaseOrderId + dòng chọn dòng đơn mua. */
 export type SaveReceiptPayload = {
-  orderId: number;
+  orderId?: number;
+  purchaseOrderId?: number;
   source: string;
   receiptDate: string;
   note?: string;
-  lines: { orderMaterialId: number; acceptedQty: number; shortQty: number; defectiveQty: number }[];
+  lines: {
+    orderMaterialId?: number;
+    purchaseOrderLineId?: number;
+    acceptedQty: number;
+    shortQty: number;
+    defectiveQty: number;
+  }[];
 };
+
+export type SaveSupplementaryPayload = {
+  shortageRequestId: number;
+  receiptDate: string;
+  note?: string;
+  lines: {
+    originalReceiptLineId: number;
+    acceptedQty: number;
+    shortQty: number;
+    defectiveQty: number;
+  }[];
+};
+
+export type ShortDeliveryListItem = {
+  requestId: number;
+  requestCode: string;
+  status: string;
+  resolution: string | null;
+  receiptId: number;
+  receiptCode: string;
+  poCode: string | null;
+  orderCode: string | null;
+  createdAt: string;
+};
+
+export type ShortDeliveryLine = {
+  requestLineId: number;
+  materialReceiptLineId: number;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  materialColor: string;
+  shortQty: number;
+  defectiveQty: number;
+  shortfallQty: number;
+  replenishQty: number | null;
+  replenishedQty: number;
+};
+
+export type ShortDelivery = ShortDeliveryListItem & {
+  resultNote: string | null;
+  source: string;
+  lines: ShortDeliveryLine[];
+};
+
+export type ResolveShortDeliveryPayload = {
+  resolution: 'REPLENISH' | 'NO_REPLENISH';
+  note?: string;
+  lines?: { requestLineId: number; replenishQty: number }[];
+};
+
+export type ShortDeliveryQuery = PageParams & { awaitingReplenish?: boolean };
 
 export type MaterialIssueListItem = {
   materialIssueId: number;

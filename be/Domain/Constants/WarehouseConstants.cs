@@ -88,6 +88,13 @@ public static class ReceiptTypes
     public const string Supplementary = "SUPPLEMENTARY";
 }
 
+/// <summary>Request.ShortageResolution (CK_Request_Shortage): cách Quản đốc xử lý hàng thiếu / lỗi khi nhập.</summary>
+public static class ShortageResolutions
+{
+    public const string Replenish = "REPLENISH";
+    public const string NoReplenish = "NO_REPLENISH";
+}
+
 public static class MaterialSources
 {
     public const string Customer = "CUSTOMER";

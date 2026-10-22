@@ -31,7 +31,20 @@ public static class WarehouseMessages
 
     public const string ReceiptConfirmed = "Đã xác nhận phiếu nhập, tồn kho NVL đã tăng.";
     public const string ReceiptReturned = "Đã trả phiếu nhập cho Thủ kho.";
-    public const string SupplierSourceNotSupported = "Phiếu nhập NVL từ nhà cung cấp làm ở Phase 2 (TH-12).";
+    public const string SourceInvalid = "Nguồn nhập phải là Khách cấp hoặc Nhà cung cấp.";
+    public const string PurchaseOrderRequired = "Phiếu nhập từ nhà cung cấp phải chọn đơn mua.";
+    public const string OrderRequired = "Phiếu nhập NVL khách cấp phải chọn đơn hàng.";
+    public const string PurchaseOrderNotReceivable = "Đơn mua chưa đặt hàng hoặc đã nhận đủ / đã đóng, không lập thêm phiếu nhập.";
+    public const string PurchaseLineNotInOrder = "Dòng đơn mua không thuộc đơn mua của phiếu.";
+    public const string ReceiptLineTarget = "Mỗi dòng phiếu nhập phải chọn NVL của đơn (khách cấp) hoặc dòng đơn mua (nhà cung cấp).";
+    public const string ReceiptExceedsPurchase = "Số nhập vượt số còn phải nhận của dòng đơn mua";
+    public const string ShortDeliveryCreated = "Phiếu nhập có hàng thiếu hoặc lỗi. Hệ thống đã tạo yêu cầu xử lý thiếu NVL.";
+    public const string ShortageNotResolvable = "Yêu cầu này không còn chờ xử lý thiếu NVL.";
+    public const string ShortageResolutionInvalid = "Cách xử lý phải là giao bù hoặc không bù.";
+    public const string ShortageResolved = "Đã ghi nhận cách xử lý hàng thiếu.";
+    public const string ShortageNotReplenish = "Chưa chọn giao bù cho yêu cầu này, không lập được phiếu bổ sung.";
+    public const string ReplenishExceedsShortage = "Số giao bù vượt số thiếu / lỗi của dòng";
+    public const string SupplementaryExceedsReplenish = "Số nhận bù vượt số còn phải bù của dòng";
 
     public const string PurchaseOrderMaterialNotInOrder = "NVL và màu này chưa khai báo trong đơn hàng đã chọn (UC09).";
     public const string PurchaseOrderCreated = "Đã tạo đơn mua NVL.";

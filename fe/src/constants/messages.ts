@@ -38,6 +38,11 @@ export const MESSAGES = {
     confirmReceipt: 'Xác nhận phiếu nhập? Tồn kho NVL sẽ tăng theo số đạt.',
     receiptConfirmed: 'Đã xác nhận phiếu nhập.',
     receiptReturned: 'Đã trả phiếu nhập cho Thủ kho.',
+    shortageStaged: 'Phiếu có hàng thiếu / lỗi, hệ thống đã tạo yêu cầu xử lý thiếu NVL cho Quản đốc.',
+    shortageResolved: 'Đã ghi nhận cách xử lý hàng thiếu.',
+    confirmNoReplenish:
+      'Chốt không bù? Phần thiếu / lỗi sẽ được ghi "không bù" trên đơn mua và yêu cầu hoàn thành.',
+    supplementarySaved: 'Đã gửi phiếu bổ sung cho Quản đốc xác nhận.',
     issueCreated: 'Đã lập phiếu cấp, số lượng đã được giữ chỗ.',
     confirmIssue: 'Xác nhận đã nhận đủ số trên phiếu? Tồn kho sẽ giảm theo số xác nhận.',
     issueConfirmed: 'Đã xác nhận nhận hàng.',

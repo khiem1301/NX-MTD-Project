@@ -19,9 +19,14 @@ import type {
   PurchaseOrder,
   PurchaseOrderListItem,
   PurchaseOrderQuery,
+  ResolveShortDeliveryPayload,
   SaveMaterialPayload,
   SaveOrderMaterialPayload,
   SaveReceiptPayload,
+  SaveSupplementaryPayload,
+  ShortDelivery,
+  ShortDeliveryListItem,
+  ShortDeliveryQuery,
   StockBalance,
   StockBalanceQuery,
   StockCardEntry,
@@ -76,6 +81,15 @@ export const warehouseApi = {
     post<null>(`${API.warehouse.materialReceipts(role)}/${id}/confirm`),
   returnReceipt: (role: RolePath, id: number, reason: string) =>
     post<null>(`${API.warehouse.materialReceipts(role)}/${id}/return`, { reason }),
+  createSupplementary: (role: RolePath, body: SaveSupplementaryPayload) =>
+    post<MaterialReceipt>(`${API.warehouse.materialReceipts(role)}/supplementary`, body),
+
+  getShortDeliveries: (role: RolePath, q: ShortDeliveryQuery) =>
+    get<Paginated<ShortDeliveryListItem>>(API.warehouse.shortDeliveries(role), q),
+  getShortDelivery: (role: RolePath, id: number) =>
+    get<ShortDelivery>(`${API.warehouse.shortDeliveries(role)}/${id}`),
+  resolveShortDelivery: (role: RolePath, id: number, body: ResolveShortDeliveryPayload) =>
+    post<null>(`${API.warehouse.shortDeliveries(role)}/${id}/resolve`, body),
 
   getIssues: (role: RolePath, q: MaterialIssueQuery) =>
     get<Paginated<MaterialIssueListItem>>(API.warehouse.materialIssues(role), q),
