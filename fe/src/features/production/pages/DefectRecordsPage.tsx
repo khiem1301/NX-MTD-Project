@@ -4,11 +4,13 @@ import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
+import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate, formatDateTime, toApiDate } from '@/utils/format';
 import { DefectFormModal } from '../components/DefectFormModal';
+import { ReplacementCuttingModal } from '../components/ReplacementCuttingModal';
 import { PRODUCTION_TEXT } from '../constants';
 import { useCancelDefect, useDefects } from '../hooks/useProduction';
 import type { Defect, DefectQuery, OutputRole } from '../types';
@@ -24,13 +26,14 @@ function DefectBoard({ role }: { role: OutputRole }) {
   const [query, setQuery] = useState<DefectQuery>({ page: 1, pageSize: 20 });
   const [formOpen, setFormOpen] = useState(false);
   const [cancelling, setCancelling] = useState<Defect | null>(null);
+  const [replacing, setReplacing] = useState<Defect | null>(null);
   const defects = useDefects(role, query);
   const cancel = useCancelDefect(role);
 
   const columns: ColumnsType<Defect> = [
     { title: text.columns.code, dataIndex: 'defectCode' },
     { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
-    { title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
+    { responsive: ['md'], title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
     { title: text.columns.operation, key: 'op', render: (_, d) => `${d.operationCode} - ${d.operationName}` },
     { title: text.columns.worker, dataIndex: 'responsibleWorkerName' },
     {
@@ -45,6 +48,7 @@ function DefectBoard({ role }: { role: OutputRole }) {
       render: (_, d) => (d.reasonNote ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}` : text.reason[d.defectReasonCode]),
     },
     {
+      responsive: ['md'],
       title: text.columns.rate,
       dataIndex: 'scrapUnitRate',
       align: 'right',
@@ -64,7 +68,26 @@ function DefectBoard({ role }: { role: OutputRole }) {
           '—'
         ),
     },
-    { title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
+    { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
+    {
+      title: PRODUCTION_TEXT.replacement.column,
+      key: 'replacement',
+      render: (_, d) => {
+        if (d.replacementRequestCode)
+          return (
+            <Tag color="geekblue">
+              {d.replacementRequestCode} · {REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ?? d.replacementRequestStatus}
+            </Tag>
+          );
+        return !isManager && d.defectType === 'Scrap' && d.status === 'Recorded' ? (
+          <Button type="link" onClick={() => setReplacing(d)}>
+            {PRODUCTION_TEXT.replacement.button}
+          </Button>
+        ) : (
+          '—'
+        );
+      },
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',
@@ -122,6 +145,7 @@ function DefectBoard({ role }: { role: OutputRole }) {
       />
 
       {!isManager && <DefectFormModal open={formOpen} onClose={() => setFormOpen(false)} />}
+      {!isManager && <ReplacementCuttingModal defect={replacing} onClose={() => setReplacing(null)} />}
       <ReasonModal
         open={cancelling !== null}
         title={text.cancelTitle}

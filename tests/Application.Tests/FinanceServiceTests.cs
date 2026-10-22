@@ -127,6 +127,27 @@ public class FinanceServiceTests
     // ================= OUTPUT: phân bổ theo SL hoàn thiện, BreakEvenQty = NULL, IsAtRisk =================
 
     [Fact]
+    public async Task CalculateAsync_RunAgainWithinTheSameSecond_UsesALaterCalculatedAt()
+    {
+        var period = Period();
+        SetupReady(period);
+        SetupProducts((1, "SP001", "Ao thun A"));
+        _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>())
+            .Returns(new List<VwMonthlyRevenue> { Revenue(orderId: 10, productId: 1, qty: 100, revenue: 10_000_000m) });
+        _repo.GetMonthlyCostsAsync(period.PeriodId, Arg.Any<CancellationToken>())
+            .Returns(new List<MonthlyCost> { new() { CostType = MonthlyCostType.Fixed, Amount = 1_000_000m } });
+        // Lần tính trước đã ghi đúng giây "bây giờ": khóa UNIQUE (kỳ, CalculatedAt, mã hàng) sẽ báo trùng nếu dùng lại mốc này.
+        _repo.GetResultsAsync(period.PeriodId, null, Arg.Any<CancellationToken>())
+            .Returns(new List<BreakEvenResult> { new() { PeriodId = period.PeriodId, ProductId = 1, CalculatedAt = Now } });
+        CaptureAddedResults(out var getAdded);
+
+        var result = await _sut.CalculateAsync(new BreakEvenCalculateDto(Month, "Output"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        getAdded().Should().OnlyContain(r => r.CalculatedAt == Now.AddSeconds(1));
+    }
+
+    [Fact]
     public async Task CalculateAsync_OutputBasis_AllocatesFixedCostByFinishedQtyShare()
     {
         var period = Period();

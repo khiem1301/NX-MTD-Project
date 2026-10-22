@@ -6,7 +6,7 @@ import { formatCurrency, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSavePieceRate } from '../hooks/useProduction';
 import type { Operation } from '../types';
-import { editableRate } from '../utils';
+import { editableRate, modalWidth } from '../utils';
 
 type Props = { operation: Operation | null; onClose: () => void };
 
@@ -41,7 +41,7 @@ export function PieceRateFormModal({ operation, onClose }: Props) {
   return (
     <Modal
       open={operation !== null}
-      width={480}
+      width={modalWidth(480)}
       title={editing ? text.edit : text.add}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}

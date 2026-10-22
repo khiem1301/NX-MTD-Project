@@ -167,7 +167,10 @@ export const PRODUCTION_TEXT = {
     reason: 'Lý do sửa (bắt buộc khi sửa sau hạn)',
     reasonRequired: 'Vui lòng nhập lý do khi sửa sau hạn.',
     received: 'BTP tổ đã nhận từ kho',
-    noRows: 'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước.',
+    noRows: 'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước, hoặc thêm dòng ngoài phân công bên trên.',
+    addOutside: 'Thêm dòng ngoài phân công',
+    addRow: 'Thêm dòng',
+    removeRow: 'Bỏ dòng',
     nothingChanged: 'Chưa có thay đổi nào để lưu.',
     columns: {
       operation: 'Công đoạn',
@@ -283,6 +286,24 @@ export const PRODUCTION_TEXT = {
       Cancelled: { text: 'Đã hủy', color: 'default' },
       Locked: { text: 'Đã khóa', color: 'purple' },
     } as Record<DefectStatus, StatusLabel>,
+  },
+
+  replacement: {
+    button: 'Đơn cắt bù',
+    title: 'Đơn cắt bù từ phiếu hàng hỏng',
+    hint: 'Gửi Quản đốc duyệt để cắt bù các chi tiết của số hàng đã hủy. Mỗi phiếu hàng hỏng chỉ có một đơn cắt bù.',
+    defect: 'Phiếu hàng hỏng',
+    panels: 'Chi tiết cần cắt bù',
+    panelName: 'Chi tiết (thân trước, tay, cổ...)',
+    quantity: 'Số lượng',
+    addPanel: 'Thêm chi tiết',
+    targetDate: 'Ngày cần',
+    content: 'Ghi chú',
+    panelRequired: 'Nhập tên chi tiết.',
+    qtyRange: 'Số lượng từ 1 đến số hàng đã hủy.',
+    submit: 'Gửi đơn',
+    done: 'Đã gửi đơn cắt bù cho Quản đốc duyệt.',
+    column: 'Đơn cắt bù',
   },
 
   myDefects: {

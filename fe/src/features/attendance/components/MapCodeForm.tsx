@@ -1,6 +1,7 @@
-import { Alert, Button, Descriptions, Form, InputNumber, Space } from 'antd';
+import { Alert, Button, Descriptions, Form, Space } from 'antd';
 import { ATTENDANCE_TEXT } from '../constants';
 import type { UnmappedCode } from '../types';
+import { EmployeePicker } from './EmployeePicker';
 import { formatDateTime } from '../utils';
 
 type FormValues = { employeeId: number };
@@ -13,8 +14,7 @@ type Props = {
 };
 
 /**
- * TODO(Minh, MI-02): đổi InputNumber thành Select tìm theo tên / mã nhân viên khi Khiêm xong
- * API danh sách nhân viên (KH-06, hạn 24/10). Hiện nhập thẳng EmployeeId để không chặn luồng.
+ * Chọn nhân viên theo tổ rồi tên (API tra cứu nhân sự dùng chung) thay cho việc gõ tay mã nhân viên.
  */
 export function MapCodeForm({ code, submitting, onSubmit, onCancel }: Props) {
   const [form] = Form.useForm<FormValues>();
@@ -48,17 +48,9 @@ export function MapCodeForm({ code, submitting, onSubmit, onCancel }: Props) {
       <Form.Item
         name="employeeId"
         label={ATTENDANCE_TEXT.map.employee}
-        rules={[
-          { required: true, message: 'Vui lòng nhập mã nhân viên.' },
-          { type: 'number', min: 1, message: 'Mã nhân viên phải là số dương.' },
-        ]}
+        rules={[{ required: true, message: 'Vui lòng chọn nhân viên.' }]}
       >
-        <InputNumber
-          style={{ width: '100%' }}
-          min={1}
-          placeholder={ATTENDANCE_TEXT.map.employeePlaceholder}
-          autoFocus
-        />
+        <EmployeePicker />
       </Form.Item>
 
       <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>

@@ -146,7 +146,17 @@ public sealed class FinanceService : IFinanceService
             : new Dictionary<int, decimal>();
         var totalLaborHours = productIds.Sum(id => laborHoursByProduct.GetValueOrDefault(id));
 
-        var calculatedAt = _clock.Now;
+        // CalculatedAt chỉ chính xác đến giây (datetime2(0)) và nằm trong khóa UNIQUE (PeriodId, CalculatedAt, ProductId):
+        // tính lại trong cùng một giây với lần trước sẽ bị 409 "trùng". Luôn lấy mốc lớn hơn lần tính gần nhất.
+        var now = _clock.Now;
+        var calculatedAt = new DateTime(now.Ticks - now.Ticks % TimeSpan.TicksPerSecond, now.Kind);
+        var previousRuns = await _repo.GetResultsAsync(period.PeriodId, null, ct);
+        if (previousRuns.Count > 0)
+        {
+            var lastRun = previousRuns.Max(r => r.CalculatedAt);
+            if (calculatedAt <= lastRun) calculatedAt = lastRun.AddSeconds(1);
+        }
+
         var entities = new List<BreakEvenResult>(productIds.Count);
         var warningsByProductId = new Dictionary<int, string>();
 

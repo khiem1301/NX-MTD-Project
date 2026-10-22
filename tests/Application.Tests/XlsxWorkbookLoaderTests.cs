@@ -64,6 +64,17 @@ public class XlsxWorkbookLoaderTests
     }
 
     [Fact]
+    public void Parsers_reject_a_non_excel_file_with_a_readable_message()
+    {
+        var garbage = () => new MemoryStream("đây không phải file excel"u8.ToArray());
+
+        new Action(() => new ClosedXmlPayrollParser().Parse(garbage()))
+            .Should().Throw<InvalidDataException>().WithMessage("*file Excel .xlsx hợp lệ*");
+        new Action(() => new ClosedXmlOperationParser().Parse(garbage()))
+            .Should().Throw<InvalidDataException>().WithMessage("*file Excel .xlsx hợp lệ*");
+    }
+
+    [Fact]
     public void Payroll_parser_reads_cached_values_when_file_has_external_formulas_and_broken_drawing()
     {
         var rows = new ClosedXmlPayrollParser().Parse(BuildBrokenWorkbook());
