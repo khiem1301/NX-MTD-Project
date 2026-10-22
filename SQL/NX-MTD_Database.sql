@@ -19,6 +19,7 @@
    - 22/10/2026  Mục 19: dữ liệu demo các luồng của Minh (mã hàng, đơn hàng, NVL, nhà cung cấp, đơn mua, 188 công đoạn
                  + 110 đơn giá, phân công, sản lượng, QC, hàng hỏng, KPI, chi phí tháng, bảng công, suất ăn, xe,
                  bảng lương demo). Không có họ tên thật, lương thật hay hash mật khẩu. Xóa mục 19 nếu muốn DB sạch.
+                 Mục 19.3: doanh thu + chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -2886,5 +2887,48 @@ COMMIT TRANSACTION;
 DROP TABLE #P, #O, #R;
 GO
 
+-- 19.3 Doanh thu và chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn ở mục 14)
+--      Tính hòa vốn tháng 2026-08: DEMO-AO01 vượt hòa vốn (~148%), DEMO-QU02 chưa đạt (~90%, có cảnh báo).
+SET QUOTED_IDENTIFIER ON;
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH000')
+BEGIN
+    DECLARE @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+            @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+            @p2 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-QU02'),
+            @aug INT = (SELECT PeriodId FROM dbo.AccountingPeriod WHERE PeriodMonth = '2026-08'),
+            @qaqc INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QAQC1'),
+            @thukho INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO');
+
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
+    VALUES ('DEMO-DH000', @cus, '2026-07-20', '2026-09-05', 'COMPLETE', 'COMPLETED', N'Đơn demo đã giao xong trong tháng 8 (để xem hòa vốn)');
+    DECLARE @o0 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH000');
+
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice) VALUES
+     (@o0, @p1, N'Đen', 'M', 1200, 28000),
+     (@o0, @p2, N'Be',  'M',  600, 18000);
+    DECLARE @l1 INT = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o0 AND ProductId = @p1),
+            @l2 INT = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o0 AND ProductId = @p2);
+
+    INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status, ConfirmedBy, ConfirmedAt) VALUES
+     ('FG-DEMO-A01', @o0, @p1, @qaqc, '2026-08-12 16:00:00', 'CONFIRMED', @thukho, '2026-08-12 16:20:00'),
+     ('FG-DEMO-A02', @o0, @p1, @qaqc, '2026-08-26 16:00:00', 'CONFIRMED', @thukho, '2026-08-26 16:20:00'),
+     ('FG-DEMO-A03', @o0, @p2, @qaqc, '2026-08-28 16:00:00', 'CONFIRMED', @thukho, '2026-08-28 16:20:00');
+    INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+    SELECT h.FgHandoverId, v.OrderLineId, v.Qty, v.Qty
+    FROM (VALUES ('FG-DEMO-A01', @l1, 700), ('FG-DEMO-A02', @l1, 500), ('FG-DEMO-A03', @l2, 600)) v(Code, OrderLineId, Qty)
+    JOIN dbo.FgHandover h ON h.HandoverCode = v.Code;
+
+    -- Chi phí tháng 08: định phí 30 triệu; biến phí DEMO-AO01 4 triệu, DEMO-QU02 1,8 triệu
+    INSERT dbo.MonthlyCost (PeriodId, CostCategoryCode, CostType, ProductId, Amount, Quantity, Note) VALUES
+     (@aug, 'MEALS',            'FIXED',    NULL,  8000000, NULL, N'Hóa đơn bếp tháng 8'),
+     (@aug, 'FUEL',             'FIXED',    NULL,  2000000, NULL, NULL),
+     (@aug, 'UTILITIES',        'FIXED',    NULL,  5000000, NULL, N'Điện, nước'),
+     (@aug, 'PREMISES',         'FIXED',    NULL, 15000000, NULL, N'Thuê mặt bằng'),
+     (@aug, 'MACHINE_SUPPLIES', 'VARIABLE', @p1,   2500000, NULL, N'Kim, dầu máy cho áo khoác'),
+     (@aug, 'MATERIALS_BOUGHT', 'VARIABLE', @p1,   1500000, NULL, N'Phụ liệu mua ngoài'),
+     (@aug, 'OTHER',            'VARIABLE', @p2,   1800000, NULL, NULL);
+END
+GO
 PRINT N'NX-MTD: tạo database xong.';
 GO
