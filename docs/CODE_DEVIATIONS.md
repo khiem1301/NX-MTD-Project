@@ -55,7 +55,8 @@
 | DEV-MI-20-1 | 22/10/2026 | Minh (AI) | MI-05, MI-12, MI-13, MI-09, `XlsxWorkbookLoader`, `FinanceService` | Sửa lỗi phát hiện khi chạy thử toàn luồng trên DB riêng: thiếu màn FE chấm công hộ; gán mã chấm công phải gõ tay mã nhân viên; file mẫu chi phí tháng có dòng ví dụ bị nhập nhầm; tính hòa vốn hai lần trong cùng một giây báo 409; file không phải Excel báo lỗi tiếng Anh | Đã sửa |
 | DEV-KI-09-1 | 22/10/2026 | Minh (AI) | UC56, UC07 (cắt bù), `ReplacementCuttingRequestHandler`, `DefectDto` | Làm đơn cắt bù (KI-09): bộ kiểm đơn REPLACEMENT_CUTTING gắn phiếu hàng hỏng Scrap của tổ mình, mỗi chi tiết một dòng, tối đa một đơn mỗi phiếu; phiếu hàng hỏng hiện đơn cắt bù; Quản đốc hoàn thành tay vì chưa có lệnh cắt bù tự hoàn thành | Mở |
 | DEV-KI-14-1 | 22/10/2026 | Minh (AI) | UC55, UC56, UC57, màn xưởng | Làm gọn màn xưởng cho điện thoại (KI-14): lưới sản lượng dạng thẻ, ẩn cột phụ trên màn nhỏ, hộp thoại co theo màn hình; thêm dòng ngoài phân công vào lưới sản lượng (GBR-20) | Mở |
-| DEV-MI-20-2 | 22/10/2026 | Minh (AI) | `SQL/CreateAndSeed.sql`, `ValidationFilter` | Sửa `CreateAndSeed.sql` (Khiêm, 21/10) thiếu thủ tục `usp_Attendance_ApplyAdjustment` nên chấm công hộ báo 500 trên DB dựng mới; `ValidationFilter` vỡ (500) khi rule mức đối tượng không có tên thuộc tính | Đã sửa |
+| DEV-MI-20-2 | 22/10/2026 | Minh (AI) | `SQL/CreateAndSeed.sql`, `ValidationFilter` | Sửa script (Khiêm, 21/10) thiếu thủ tục `usp_Attendance_ApplyAdjustment` nên chấm công hộ báo 500 trên DB dựng mới; `ValidationFilter` vỡ (500) khi rule mức đối tượng không có tên thuộc tính | Đã sửa |
+| DEV-MI-20-3 | 22/10/2026 | Minh (AI) | `SQL/`, Coding Rules 3.12, AI Context | Gộp mọi script SQL thành MỘT file `SQL/NX-MTD_Database.sql` (schema + TH-12 + tài khoản mẫu + thủ tục chấm công hộ + dữ liệu demo mục 19); xóa `CreateAndSeed.sql`, `SeedAuth.sql`, thư mục `Migrations/`, `DemoData_KH-06-10_purchase-orders.sql` | Đã sửa |
 
 ---
 
@@ -402,7 +403,7 @@
   - [ ] `NX-MTD_AI_Context.md` mục 5 (luồng NVL): thêm trường hợp đơn mua dùng chung; mục 6.2 nếu đổi người sở hữu
   - [ ] Report-3: UC đơn mua / thiếu NVL (luồng thay thế mua dùng chung), mockup màn "NVL của đơn"
   - [ ] `NX-MTD_Tong_hop_Use_Case.md`: UC liên quan đơn mua
-- **File migrate:** `SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql`
+- **File migrate:** đã gộp vào `SQL/NX-MTD_Database.sql` (xem DEV-MI-20-3); file `SQL/Migrations/20261021_01_TH-12_stock-purchase-order.sql` đã xóa
 - **Trạng thái:** Mở
 
 ### DEV-TH-12-2 · Quản đốc nhập tên NVL mới khi tạo đơn mua
@@ -702,9 +703,20 @@
 ### DEV-MI-20-2 · Hai lỗi nền tảng phát hiện khi chạy thử
 
 - **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-05 · (chưa có PR)
-- **Ảnh hưởng tới:** `SQL/CreateAndSeed.sql` (Khiêm, 21/10), `API/Filters/ValidationFilter.cs` (Khiêm), `SQL/Migrations/20261022_01_MI_shared-data.sql`
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` (trước đó là `CreateAndSeed.sql` của Khiêm, 21/10), `API/Filters/ValidationFilter.cs` (Khiêm)
 - **Lỗi và cách sửa:**
-  - `CreateAndSeed.sql` 21/10 thiếu `usp_Attendance_ApplyAdjustment` (bản `NX-MTD_Database.sql` cũ có): chấm công hộ báo 500 trên DB dựng từ script này. Thêm lại thủ tục (nguyên văn) vào `CreateAndSeed.sql`; migration dữ liệu chung tạo thủ tục nếu DB thiếu và sửa cờ `QUOTED_IDENTIFIER` nếu sai. Đã đối chiếu mọi đối tượng giữa hai script: chỉ thiếu đúng thủ tục này.
+  - Script `CreateAndSeed.sql` 21/10 thiếu `usp_Attendance_ApplyAdjustment` (bản `NX-MTD_Database.sql` cũ có): chấm công hộ báo 500 trên DB dựng từ script này. Thủ tục (nguyên văn) nay nằm trong `NX-MTD_Database.sql` duy nhất (DEV-MI-20-3). Đã đối chiếu mọi đối tượng giữa hai script: chỉ thiếu đúng thủ tục này.
   - `ValidationFilter` đọc `PropertyName[0]` nên ném `IndexOutOfRangeException` (500) khi rule mức đối tượng `RuleFor(x => x).Must(...)` báo lỗi (vd. chấm hộ không có giờ vào / ra). Nay trả 400 kèm thông báo của rule.
 - **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Đã sửa
+
+### DEV-MI-20-3 · Một file database duy nhất
+
+- **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) · MI-20 · (chưa có PR)
+- **Ảnh hưởng tới:** toàn bộ thư mục `SQL/`; Coding Rules 3.12 và AI Context vẫn nhắc `CreateAndSeed.sql` và `SQL/Migrations/`
+- **Thay đổi:** nhóm đã bỏ `CreateAndSeed.sql` và chỉ dùng `NX-MTD_Database.sql`, nhưng bản 16/10 đã cũ nên người mới phải chạy 4 file đúng thứ tự. Nay `NX-MTD_Database.sql` (bản 22/10) là file duy nhất, chạy một lần: `sqlcmd -S localhost -E -C -I -f 65001 -b -i SQL/NX-MTD_Database.sql`. Gồm schema, TH-12 (đơn mua dùng chung), tài khoản mẫu (mục 17b), thủ tục `usp_Attendance_ApplyAdjustment` và mục 19 dữ liệu demo (188 công đoạn + 110 đơn giá, đơn hàng, sản lượng, QC, hàng hỏng, KPI, suất ăn, bảng lương demo; không có họ tên thật, lương thật hay hash mật khẩu). Muốn DB sạch thì xóa mục 19. Mục 19 chạy lại không nhân đôi dữ liệu.
+- **File đã xóa:** `CreateAndSeed.sql`, `SeedAuth.sql`, `Migrations/20261021_01_TH-12_stock-purchase-order.sql`, `Migrations/20261022_01_MI_shared-data.sql`, `DemoData_KH-06-10_purchase-orders.sql` (cần mã hàng `TEST-MH01` không script nào tạo nên không chạy được trên DB sạch; đơn mua mẫu đã có trong mục 19).
+- **Kiểm chứng:** dựng DB mới chỉ từ file này: 65 bảng, 4 thủ tục `usp_Attendance_*` (QUOTED_IDENTIFIER = 1), 188 công đoạn, 110 đơn giá, 14 nhân viên / 14 tài khoản (đủ 9 role); backend chạy được, đăng nhập các role và chấm công hộ trả 200.
+- **Cần sửa trong tài liệu:**
+  - [ ] Coding Rules 3.12 và AI Context: thay `CreateAndSeed.sql` + `SQL/Migrations/` bằng một file `NX-MTD_Database.sql`
 - **Trạng thái:** Đã sửa
