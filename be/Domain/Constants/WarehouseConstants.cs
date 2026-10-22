@@ -132,11 +132,7 @@ public static class ShiftCodes
     public static readonly IReadOnlyList<string> All = new[] { Morning, Afternoon, Overtime };
 }
 
-public static class SettingKeys
-{
-    public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
-    public const string RequestMaxPhotos = "REQUEST_MAX_PHOTOS";
-}
+// RequestTypes, RequestStatuses: RequestConstants.cs. SettingKeys: AttendanceCodes.cs (một nơi cho mọi luồng).
 
 /// <summary>Tiền tố mã phiếu: TIỀN TỐ-yyyyMMdd-STT.</summary>
 public static class DocumentPrefixes

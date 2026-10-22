@@ -27,6 +27,21 @@ public record PageQuery
     public int SafePageSize => PageSize < 1 ? DefaultPageSize : Math.Min(PageSize, MaxPageSize);
 }
 
+/// <summary>
+/// Chuẩn hóa phân trang cho các query dùng record riêng (không kế thừa PageQuery),
+/// ví dụ bộ lọc bảng công / chấm bù. Dùng chung hằng số với PageQuery.
+/// </summary>
+public static class Paging
+{
+    public const int MaxPageSize = PageQuery.MaxPageSize;
+    public const int DefaultPageSize = PageQuery.DefaultPageSize;
+
+    public static int NormalizePage(int page) => page < 1 ? 1 : page;
+
+    public static int NormalizePageSize(int pageSize) =>
+        pageSize < 1 ? DefaultPageSize : Math.Min(pageSize, MaxPageSize);
+}
+
 public static class QueryableExtensions
 {
     public static async Task<PagedResult<T>> ToPagedAsync<T>(this IQueryable<T> source, PageQuery query,
