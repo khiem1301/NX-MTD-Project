@@ -27,14 +27,14 @@ const renderModal = () => {
 describe('RequestFormModal', () => {
   beforeEach(() => (requestApi.create as jest.Mock).mockReset());
 
-  it('chỉ liệt kê 3 loại đơn của Cơ điện dù server trả 5 loại', async () => {
+  it('chỉ liệt kê loại đơn dùng form chung (Cơ điện + Xin NVL / BTP), bỏ loại có form riêng', async () => {
     renderModal();
 
     // getByRole rất chậm trên DOM antd trong jsdom nên dùng class của rc-select.
     await waitFor(() => expect(requestApi.types).toHaveBeenCalled());
     fireEvent.mouseDown(document.querySelector('.ant-select-selector') as Element);
 
-    await waitFor(() => expect(document.querySelectorAll('.ant-select-item-option')).toHaveLength(3));
+    await waitFor(() => expect(document.querySelectorAll('.ant-select-item-option')).toHaveLength(4));
   });
 
   it('thiếu nội dung thì báo lỗi và không gọi API tạo đơn', async () => {

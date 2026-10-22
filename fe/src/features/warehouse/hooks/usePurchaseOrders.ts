@@ -30,7 +30,7 @@ export const useCreatePurchaseOrder = () => {
     (body: CreatePurchaseOrderPayload) => warehouseApi.createPurchaseOrder(role, body),
     {
       // NVL mới gõ tay được thêm vào danh mục nên dropdown NVL phải nạp lại.
-      invalidate: [WAREHOUSE_KEY, ['lookups', 'materials']],
+      invalidate: [WAREHOUSE_KEY, ['lookups', 'materials'], ['purchase', 'orders']],
       successMessage: MESSAGES.warehouse.purchaseOrderCreated,
     },
   );
