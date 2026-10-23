@@ -72,6 +72,23 @@ export const RECEIPT_STATUS_LABEL: Record<string, StatusLabel> = {
   RETURNED: { text: 'Bị trả lại', color: 'red' },
 };
 
+export const RECEIPT_TYPE_LABEL: Record<string, string> = { NEW: 'Phiếu nhập', SUPPLEMENTARY: 'Phiếu bổ sung' };
+
+/** Cách Quản đốc xử lý đơn thiếu NVL (BE: ShortageResolutions). */
+export const SHORTAGE_RESOLUTION = { REPLENISH: 'REPLENISH', NO_REPLENISH: 'NO_REPLENISH' } as const;
+
+export const SHORTAGE_RESOLUTION_LABEL: Record<string, StatusLabel> = {
+  REPLENISH: { text: 'Giao bù', color: 'blue' },
+  NO_REPLENISH: { text: 'Không bù', color: 'orange' },
+};
+
+/** Trạng thái đơn SHORT_DELIVERY (cùng mã với Request.Status). */
+export const SHORTAGE_STATUS_LABEL: Record<string, StatusLabel> = {
+  PENDING_PROCESSING: { text: 'Chờ xử lý', color: 'gold' },
+  COMPLETED: { text: 'Hoàn thành', color: 'green' },
+  CANCELLED: { text: 'Đã hủy', color: 'default' },
+};
+
 export const ISSUE_STATUS = {
   PENDING_RECEIPT: 'PENDING_RECEIPT',
   RECEIVED: 'RECEIVED',
@@ -116,6 +133,25 @@ export const PO_PAYMENT_STATUS_LABEL: Record<string, StatusLabel> = {
 };
 
 export const LABELS = {
+  purchaseOrder: 'Đơn mua',
+  selectPurchaseOrder: 'Chọn đơn mua',
+  purchaseLine: 'Dòng đơn mua',
+  outstandingQty: 'Còn phải nhận',
+  receiptSource: 'Nguồn nhập',
+  receiptType: 'Loại phiếu',
+  originalReceipt: 'Phiếu gốc',
+  toReplenishQty: 'Cần bù',
+  shortagesTitle: 'Thiếu NVL khi nhập',
+  shortageCode: 'Mã yêu cầu',
+  shortageResolution: 'Cách xử lý',
+  shortfallQty: 'Thiếu + lỗi',
+  replenishQty: 'Giao bù',
+  replenishedQty: 'Đã nhận bù',
+  resolveShortage: 'Xử lý thiếu',
+  replenish: 'Giao bù',
+  noReplenish: 'Chốt không bù',
+  createSupplementary: 'Lập phiếu bổ sung',
+  openShortage: 'Xem yêu cầu thiếu NVL',
   addMaterial: 'Thêm NVL mới',
   materialsTitle: 'Danh mục NVL',
   materialCode: 'Mã NVL',

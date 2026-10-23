@@ -52,6 +52,8 @@ export const orderApi = {
   update: (id: number, body: UpdateOrderPayload) => put<unknown>(API.customerOrders.byId(id), body),
   cancel: (id: number, reason: string | null, rowVer: string) =>
     post<unknown>(API.customerOrders.cancel(id), { reason, rowVer }),
+  startProduction: (id: number, rowVer: string) =>
+    post<unknown>(API.customerOrders.startProduction(id), { rowVer }),
   stop: (id: number, reason: string, rowVer: string) =>
     post<unknown>(API.customerOrders.stop(id), { reason, rowVer }),
 };

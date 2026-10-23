@@ -66,6 +66,9 @@ public interface ICustomerOrderService
     Task<Result> UpdateAsync(int orderId, UpdateOrderDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int orderId, CancelOrderDto dto, CancellationToken ct);
     Task<Result> StopAsync(int orderId, StopOrderDto dto, CancellationToken ct);
+
+    /// <summary>NEW → IN_PRODUCTION, chỉ khi MaterialStatus khác AWAITING (UC09, kiểm ở backend).</summary>
+    Task<Result> StartProductionAsync(int orderId, StartOrderProductionDto dto, CancellationToken ct);
 }
 
 public interface IOrderLookupService

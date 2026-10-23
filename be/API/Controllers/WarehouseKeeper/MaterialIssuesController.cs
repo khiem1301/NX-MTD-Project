@@ -24,6 +24,12 @@ public sealed class MaterialIssuesController : WarehouseKeeperBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _issues.GetByIdAsync(id, null, ct));
 
+    /// <summary>Xuất Excel phiếu cấp để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportIssueAsync(id, null, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMaterialIssueDto dto, CancellationToken ct) =>
         this.ToResponse(await _issues.CreateAsync(dto, _user.EmployeeId, ct));

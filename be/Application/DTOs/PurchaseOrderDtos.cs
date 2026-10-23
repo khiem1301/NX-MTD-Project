@@ -8,7 +8,8 @@ public sealed record PurchaseOrderListItemDto(
 
 public sealed record PurchaseOrderLineDto(
     int PurchaseOrderLineId, int? OrderMaterialId, int MaterialId, string MaterialCode, string MaterialName,
-    string Unit, string MaterialColor, decimal OrderedQty, decimal UnitPrice, decimal? Amount);
+    string Unit, string MaterialColor, decimal OrderedQty, decimal UnitPrice, decimal? Amount,
+    decimal ReceivedQty, decimal NotReplenishedQty);
 
 public sealed record PurchaseOrderDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
@@ -31,4 +32,7 @@ public sealed record PurchaseOrderQuery : PageQuery
 
     /// <summary>true = chỉ đơn mua dự trữ (không gắn đơn hàng).</summary>
     public bool? StockOnly { get; init; }
+
+    /// <summary>true = chỉ đơn đã đặt hàng và còn phải nhận (ORDERED / PARTIALLY_RECEIVED): Thủ kho chọn khi lập phiếu nhập.</summary>
+    public bool? Receivable { get; init; }
 }

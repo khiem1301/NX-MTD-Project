@@ -8,9 +8,11 @@ import type {
   CutHandover,
   CutHandoverListItem,
   CutHandoverQuery,
+  CreateReplacementPayload,
   CuttingLay,
   CuttingLayQuery,
   HandoverableLine,
+  ReplacementRequest,
   SaveCuttingLayPayload,
   SaveWorkOrderPayload,
   WorkOrder,
@@ -33,6 +35,10 @@ export const cuttingApi = {
     post<WorkOrder>(API.cutting.workOrders(role), body),
   updateWorkOrder: (role: RolePath, id: number, body: SaveWorkOrderPayload) =>
     put<WorkOrder>(`${API.cutting.workOrders(role)}/${id}`, body),
+  getReplacementRequests: (role: RolePath) =>
+    get<ReplacementRequest[]>(`${API.cutting.workOrders(role)}/replacement-requests`),
+  createReplacement: (role: RolePath, body: CreateReplacementPayload) =>
+    post<WorkOrder>(`${API.cutting.workOrders(role)}/replacement`, body),
   cancelWorkOrder: (role: RolePath, id: number) =>
     post<null>(`${API.cutting.workOrders(role)}/${id}/cancel`),
 

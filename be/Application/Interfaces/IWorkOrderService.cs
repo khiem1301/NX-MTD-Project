@@ -15,6 +15,12 @@ public interface IWorkOrderService
     Task<Result<IReadOnlyList<FabricRequirementDto>>> GetFabricRequirementsAsync(int workOrderId, CancellationToken ct);
 
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
+
+    /// <summary>Đơn cắt bù đã duyệt và chưa có lệnh cắt bù (Quản đốc chọn khi lập lệnh cắt bù).</summary>
+    Task<Result<IReadOnlyList<ReplacementRequestDto>>> GetOpenReplacementRequestsAsync(CancellationToken ct);
+
+    /// <summary>Lệnh cắt bù (SourceRequestId = đơn cắt bù): không tính vào trần kế hoạch của dòng đơn.</summary>
+    Task<Result<WorkOrderDto>> CreateReplacementAsync(CreateReplacementWorkOrderDto dto, CancellationToken ct);
     Task<Result<WorkOrderDto>> UpdateAsync(int workOrderId, SaveWorkOrderDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int workOrderId, CancellationToken ct);
 }

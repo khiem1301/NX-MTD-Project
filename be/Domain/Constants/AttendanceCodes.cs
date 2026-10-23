@@ -37,6 +37,8 @@ public static class AdjustmentType
 public static class SettingKeys
 {
     public const string AttendanceSyncMinutes = "ATTENDANCE_SYNC_MINUTES";
+    /// <summary>Dung sai xăng vượt định mức (%) trước khi cảnh báo, mặc định 15 (MSG30, UC35).</summary>
+    public const string FuelNormTolerancePercent = "FUEL_NORM_TOLERANCE_PERCENT";
     public const string AttendanceAlertMinutes = "ATTENDANCE_ALERT_MINUTES";
     public const string WorkStartTime = "WORK_START_TIME";
     public const string WorkEndTime = "WORK_END_TIME";
@@ -46,6 +48,13 @@ public static class SettingKeys
     public const string DuplicatePunchMinutes = "DUPLICATE_PUNCH_MINUTES";
     public const string MealReminderTime = "MEAL_REMINDER_TIME";
     public const string MealCutoffTime = "MEAL_CUTOFF_TIME";
+
+    // Tiến độ đơn, thông báo (Khiêm, KH-16 / KH-23)
+    public const string DelayCheckTime = "DELAY_CHECK_TIME";
+    public const string DelayAvgDays = "DELAY_AVG_DAYS";
+    public const string NotificationRetentionDays = "NOTIFICATION_RETENTION_DAYS";
+    /// <summary>Giờ chạy JOB-05; khóa chưa seed trong SystemSetting nên dùng mặc định 01:00 (DEV-KH-23-1).</summary>
+    public const string NotificationCleanupTime = "NOTIFICATION_CLEANUP_TIME";
 
     // Kho, cắt (Thái)
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";

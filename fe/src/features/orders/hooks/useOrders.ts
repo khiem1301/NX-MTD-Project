@@ -94,6 +94,12 @@ export const useCancelOrder = (id: number) =>
     invalidate: [ORDERS_KEY, LOOKUPS_KEY],
   });
 
+export const useStartProduction = (id: number) =>
+  useApiMutation((rowVer: string) => orderApi.startProduction(id, rowVer), {
+    invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    successMessage: MESSAGES.orders.productionStarted,
+  });
+
 export const useStopOrder = (id: number) =>
   useApiMutation(({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer), {
     invalidate: [ORDERS_KEY, LOOKUPS_KEY],

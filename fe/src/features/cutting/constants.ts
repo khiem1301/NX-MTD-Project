@@ -49,6 +49,11 @@ export const SHIFT_LABEL: Record<string, string> = Object.fromEntries(
 export const CUTTING_TEAM_TYPE = 'CUTTING';
 
 export const LABELS = {
+  createReplacement: 'Lập lệnh cắt bù',
+  replacementRequest: 'Đơn cắt bù đã duyệt',
+  selectReplacementRequest: 'Chọn đơn cắt bù',
+  panelName: 'Chi tiết cần cắt bù',
+  noReplacementRequest: 'Chưa có đơn cắt bù nào đã duyệt và chờ lập lệnh.',
   workOrdersTitle: 'Lệnh cắt',
   workOrderCode: 'Số lệnh',
   order: 'Đơn hàng',

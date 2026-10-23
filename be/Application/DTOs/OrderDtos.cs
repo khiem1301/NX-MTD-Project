@@ -46,6 +46,7 @@ public sealed record UpdateOrderDto(string OrderCode, int CustomerId, DateOnly R
 
 public sealed record CancelOrderDto(string? Reason, byte[] RowVer);
 public sealed record StopOrderDto(string Reason, byte[] RowVer);
+public sealed record StartOrderProductionDto(byte[] RowVer);
 
 public sealed record OrderQuery : PageQuery
 {

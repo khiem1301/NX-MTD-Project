@@ -20,9 +20,20 @@ public sealed class MaterialReceiptsController : WarehouseKeeperBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _receipts.GetByIdAsync(id, ct));
 
+    /// <summary>Xuất Excel phiếu nhập để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportReceiptAsync(id, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveMaterialReceiptDto dto, CancellationToken ct) =>
         this.ToResponse(await _receipts.CreateAsync(dto, ct));
+
+    /// <summary>Phiếu bổ sung: nhận hàng giao bù theo đơn thiếu NVL đã chọn "giao bù".</summary>
+    [HttpPost("supplementary")]
+    public async Task<IActionResult> CreateSupplementary([FromBody] SaveSupplementaryReceiptDto dto, CancellationToken ct) =>
+        this.ToResponse(await _receipts.CreateSupplementaryAsync(dto, ct));
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveMaterialReceiptDto dto, CancellationToken ct) =>

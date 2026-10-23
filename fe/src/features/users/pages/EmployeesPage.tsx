@@ -12,6 +12,7 @@ import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
 import { EmployeeFormDrawer } from '../components/EmployeeFormDrawer';
+import { EmployeeImportModal } from '../components/EmployeeImportModal';
 import { TempPasswordModal } from '../components/TempPasswordModal';
 import { useEmployees } from '../hooks/useEmployees';
 import type { EmployeeListItem, TempPassword } from '../types';
@@ -28,6 +29,7 @@ export function EmployeesPage() {
   const employees = useEmployees(table.params);
   const teams = useTeamLookup();
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [tempPassword, setTempPassword] = useState<TempPassword | null>(null);
 
   const roleOptions = (Object.keys(ROLE_LABEL) as Role[])
@@ -56,7 +58,14 @@ export function EmployeesPage() {
   return (
     <Card
       title={MESSAGES.hr.employeesTitle}
-      extra={isAdmin && <Button type="primary" onClick={() => setCreating(true)}>{MESSAGES.hr.addEmployee}</Button>}
+      extra={
+        isAdmin && (
+          <Space>
+            <Button onClick={() => setImporting(true)}>Nhập từ Excel</Button>
+            <Button type="primary" onClick={() => setCreating(true)}>{MESSAGES.hr.addEmployee}</Button>
+          </Space>
+        )
+      }
     >
       <Space style={{ marginBottom: 16 }} wrap>
         <Input.Search allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
@@ -67,6 +76,7 @@ export function EmployeesPage() {
           options={[{ value: 'Active', label: EMPLOYEE_STATUS_TAG.Active?.text }, { value: 'Resigned', label: EMPLOYEE_STATUS_TAG.Resigned?.text }]}
           onChange={(status) => table.setFilters({ status })} />
       </Space>
+      {isAdmin && <EmployeeImportModal open={importing} onClose={() => setImporting(false)} />}
       <QueryError error={employees.error} onRetry={() => void employees.refetch()} />
       <Table<EmployeeListItem>
         rowKey="employeeId"

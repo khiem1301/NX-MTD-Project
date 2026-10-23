@@ -29,6 +29,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var page = await PurchaseOrders.AsNoTracking()
             .Where(p => string.IsNullOrEmpty(query.GoodsStatus) || p.GoodsStatus == query.GoodsStatus)
             .Where(p => query.StockOnly == null || (p.OrderId == null) == query.StockOnly)
+            .Where(p => query.Receivable != true || p.GoodsStatus == PurchaseGoodsStatuses.Ordered
+                        || p.GoodsStatus == PurchaseGoodsStatuses.PartiallyReceived)
             .Where(p => string.IsNullOrEmpty(keyword) || p.PoCode.Contains(keyword)
                 || (p.Order != null && p.Order.OrderCode.Contains(keyword)))
             .OrderByDescending(p => p.PurchaseOrderId)
@@ -53,9 +55,21 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
-                    l.OrderedQty, l.UnitPrice, l.Amount)).ToList()))
+                    l.OrderedQty, l.UnitPrice, l.Amount, 0m, l.NotReplenishedQty)).ToList()))
             .FirstOrDefaultAsync(ct);
-        return dto is null ? WarehouseFailures.NotFound<PurchaseOrderDto>() : Result<PurchaseOrderDto>.Success(dto);
+        if (dto is null) return WarehouseFailures.NotFound<PurchaseOrderDto>();
+
+        // Số đã nhận = Σ số đạt của phiếu nhập đã xác nhận (cùng cách tính với vw_PurchaseOrderLineStatus).
+        var lineIds = dto.Lines.Select(l => l.PurchaseOrderLineId).ToList();
+        var received = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.PurchaseOrderLineId != null && lineIds.Contains(l.PurchaseOrderLineId.Value)
+                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
+            .GroupBy(l => l.PurchaseOrderLineId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+        return Result<PurchaseOrderDto>.Success(dto with
+        {
+            Lines = dto.Lines.Select(l => l with { ReceivedQty = received.GetValueOrDefault(l.PurchaseOrderLineId) }).ToList(),
+        });
     }
 
     public async Task<Result<PurchaseOrderDto>> CreateAsync(CreatePurchaseOrderDto dto, CancellationToken ct)

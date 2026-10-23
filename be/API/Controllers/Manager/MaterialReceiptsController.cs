@@ -24,6 +24,12 @@ public sealed class MaterialReceiptsController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _receipts.GetByIdAsync(id, ct));
 
+    /// <summary>Xuất Excel phiếu nhập để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportReceiptAsync(id, ct));
+
     [HttpPost("{id:int}/confirm")]
     public async Task<IActionResult> Confirm(int id, CancellationToken ct) =>
         this.ToResponse(await _receipts.ConfirmAsync(id, _user.EmployeeId, ct));

@@ -297,6 +297,50 @@ public class CustomerOrderServiceTests
         result.ErrorCode.Should().Be(ErrorCodes.OrderInvalidStatus);
     }
 
+    [Theory]
+    [InlineData(OrderMaterialStatuses.Partial)]
+    [InlineData(OrderMaterialStatuses.Complete)]
+    public async Task StartProduction_NewWithMaterials_MovesToInProduction(string materialStatus)
+    {
+        var order = Existing(OrderStatuses.New);
+        order.MaterialStatus = materialStatus;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.Status.Should().Be(OrderStatuses.InProduction);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(CustomerOrder) && e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task StartProduction_WhileAwaitingMaterials_IsRejected()
+    {
+        var order = Existing(OrderStatuses.New);
+        order.MaterialStatus = OrderMaterialStatuses.Awaiting;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderMaterialsAwaiting);
+        order.Status.Should().Be(OrderStatuses.New);
+    }
+
+    [Theory]
+    [InlineData(OrderStatuses.InProduction)]
+    [InlineData(OrderStatuses.Stopped)]
+    [InlineData(OrderStatuses.Cancelled)]
+    public async Task StartProduction_WhenNotNew_IsRejected(string status)
+    {
+        var order = Existing(status);
+        order.MaterialStatus = OrderMaterialStatuses.Complete;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderInvalidStatus);
+    }
+
     [Fact]
     public async Task Stop_New_Fails_AndInProduction_SetsReason()
     {
