@@ -57,9 +57,8 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
         layout="vertical"
         onFinish={handleFinish}
         disabled={create.isPending}
-        preserve={false}
         // Form dựng lại mỗi lần mở (destroyOnHidden) nên giá trị mặc định đặt ở đây, không dùng setFieldsValue trước khi dựng.
-        initialValues={{ warehouseType: WAREHOUSE_TYPE.MATERIAL, issueDate: dayjs(), lines: [] }}
+        initialValues={{ warehouseType: WAREHOUSE_TYPE.MATERIAL, issueDate: dayjs() }}
       >
         <Form.Item name="warehouseType">
           <Radio.Group

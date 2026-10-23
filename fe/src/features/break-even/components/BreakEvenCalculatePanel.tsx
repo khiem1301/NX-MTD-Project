@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Button, Card, Modal, Select, Space } from 'antd';
+import { Button, Card, Select, Space } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { ALLOCATION_BASIS_OPTIONS, BREAK_EVEN_TEXT } from '../constants';
 import { useCalculateBreakEven } from '../hooks/useBreakEven';
 import type { AllocationBasis } from '../types';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 type Props = { periodMonth: string };
 
@@ -16,7 +17,7 @@ export function BreakEvenCalculatePanel({ periodMonth }: Props) {
   const calculate = useCalculateBreakEven(periodMonth);
 
   const handleCalculate = () => {
-    Modal.confirm({
+    confirmDialog({
       title: MESSAGES.breakEven.confirmCalculateTitle,
       content: MESSAGES.breakEven.confirmCalculateContent,
       okText: MESSAGES.common.confirm,

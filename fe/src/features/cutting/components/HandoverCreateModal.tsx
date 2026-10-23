@@ -4,6 +4,7 @@ import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
 import { useCreateHandover, useHandoverable } from '../hooks/useCutting';
 import type { HandoverableLine } from '../types';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 type HandoverCreateModalProps = { open: boolean; workOrderId: number; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -39,7 +40,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
       cancelText={MESSAGES.common.cancel}
       confirmLoading={create.isPending}
       onOk={() =>
-        Modal.confirm({ title: MESSAGES.cutting.confirmHandoverCreate, onOk: () => form.submit() })
+        confirmDialog({ title: MESSAGES.cutting.confirmHandoverCreate, onOk: () => form.submit() })
       }
       onCancel={onClose}
       destroyOnHidden
