@@ -81,7 +81,7 @@ public class GradeServiceTests
     public async Task Changing_a_grade_amount_adds_a_new_dated_row_and_keeps_the_history()
     {
         _levels.Add(new GradeLevel { GradeLevelId = 1, GradeCode = "A", GradeName = "Bậc A", MonthlyAmount = 600000, EffectiveDate = new(2026, 1, 1) });
-        _uow.Repository<GradeLevel>().AddAsync(Arg.Do<GradeLevel>(g => { g.GradeLevelId = 2; _levels.Add(g); }));
+        _ = _uow.Repository<GradeLevel>().AddAsync(Arg.Do<GradeLevel>(g => { g.GradeLevelId = 2; _levels.Add(g); }));
 
         var added = await Service().AddLevelAsync(new SaveGradeLevelDto(" a ", "Bậc A", 700000, new(2026, 12, 1)), default);
 
