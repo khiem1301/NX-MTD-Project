@@ -198,8 +198,11 @@ public static class Messages
         "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiDailyTargetsRequired = "Vui lòng nhập chỉ tiêu cho từng ngày trong kỳ.";
+    public const string KpiDailyTargetsTooMany = "Một kỳ KPI tối đa 366 ngày.";
+    public const string KpiDailyTargetDuplicateDate = "Mỗi ngày chỉ nhập một chỉ tiêu.";
+    public const string KpiDailyTargetOutOfPeriod = "Ngày có chỉ tiêu phải nằm trong kỳ KPI.";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
-    public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";
 
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
     public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";

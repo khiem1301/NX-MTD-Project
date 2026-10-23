@@ -66,6 +66,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<KpiTarget> KpiTargets { get; set; }
 
+    public virtual DbSet<KpiDailyTarget> KpiDailyTargets { get; set; }
+
     public virtual DbSet<Material> Materials { get; set; }
 
     public virtual DbSet<MaterialIssue> MaterialIssues { get; set; }
@@ -967,6 +969,18 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.SewingTeamId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Kpi_Team");
+        });
+
+        modelBuilder.Entity<KpiDailyTarget>(entity =>
+        {
+            entity.ToTable("KpiDailyTarget", tb => tb.HasComment("Chỉ tiêu KPI từng ngày"));
+
+            entity.HasIndex(e => new { e.KpiTargetId, e.WorkDate }, "UQ_KpiDaily").IsUnique();
+
+            entity.HasOne(d => d.KpiTarget).WithMany(p => p.DailyTargets)
+                .HasForeignKey(d => d.KpiTargetId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_KpiDaily_Kpi");
         });
 
         modelBuilder.Entity<Material>(entity =>

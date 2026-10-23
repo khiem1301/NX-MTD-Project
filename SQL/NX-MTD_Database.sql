@@ -411,6 +411,17 @@ CREATE TABLE dbo.KpiTarget (
 );
 GO
 
+-- Chỉ tiêu từng ngày của KPI: Quản đốc nhập riêng từng ngày (mấy ngày đầu vào đơn tổ làm chậm hơn), không chia đều cả kỳ.
+-- KpiTarget.TargetFinishedQty = Σ TargetQty, WorkingDays = số dòng (dịch vụ tự tính khi lưu).
+CREATE TABLE dbo.KpiDailyTarget (
+    KpiDailyTargetId INT IDENTITY(1,1) CONSTRAINT PK_KpiDailyTarget PRIMARY KEY,
+    KpiTargetId      INT  NOT NULL CONSTRAINT FK_KpiDaily_Kpi REFERENCES dbo.KpiTarget(KpiTargetId),
+    WorkDate         DATE NOT NULL,
+    TargetQty        INT  NOT NULL CONSTRAINT CK_KpiDaily_Qty CHECK (TargetQty > 0),
+    CONSTRAINT UQ_KpiDaily UNIQUE (KpiTargetId, WorkDate)
+);
+GO
+
 /* =====================================================================================
    4. ĐƠN TỪ (REQUEST)   (UC07, UC08, FR 2.2, FR 3.2)
    ---------------------------------------------------------------------------------
@@ -1864,26 +1875,38 @@ OUTER APPLY (SELECT SUM(CASE WHEN DefectType = 'REWORK' THEN Quantity ELSE 0 END
              FROM dbo.DefectRecord WHERE OrderLineId = ol.OrderLineId AND Status <> 'CANCELLED') df;
 GO
 
--- Kết quả KPI theo ngày (FR 3.14): chỉ tiêu ngày, hoàn thiện (QC của tổ), tỉ lệ lỗi, % đạt
+-- Kết quả KPI theo ngày (FR 3.14): chỉ tiêu ngày, hoàn thiện (QC của tổ), tỉ lệ lỗi, % đạt.
+-- Ngày = ngày có chỉ tiêu (KpiDailyTarget) ∪ ngày có QC trong kỳ; ngày có chỉ tiêu mà chưa có hàng thì FinishedQty = 0.
+-- KPI cũ chưa có chỉ tiêu từng ngày: chỉ tiêu ngày = tổng ÷ số ngày như trước. Ngày ngoài kế hoạch: chỉ tiêu và % đạt NULL.
 CREATE VIEW dbo.vw_KpiDailyResult
 AS
-SELECT  k.KpiTargetId, k.SewingTeamId, k.OrderId, k.ProductId, q.WorkDate,
-        CAST(1.0 * k.TargetFinishedQty / k.WorkingDays AS DECIMAL(18,2)) AS DailyTarget,
-        q.FinishedQty,
+SELECT  k.KpiTargetId, k.SewingTeamId, k.OrderId, k.ProductId, dd.WorkDate,
+        CAST(tg.DailyTarget AS DECIMAL(18,2)) AS DailyTarget,
+        ISNULL(q.FinishedQty, 0) AS FinishedQty,
         ISNULL(d.DefectQty, 0) AS DefectQty,
-        CASE WHEN q.FinishedQty + ISNULL(d.DefectQty, 0) = 0 THEN 0
-             ELSE CAST(100.0 * ISNULL(d.DefectQty, 0) / (q.FinishedQty + ISNULL(d.DefectQty, 0)) AS DECIMAL(5,2)) END AS DefectRatePct,
-        CAST(100.0 * q.FinishedQty / (1.0 * k.TargetFinishedQty / k.WorkingDays) AS DECIMAL(9,2)) AS PercentAchieved
+        CASE WHEN ISNULL(q.FinishedQty, 0) + ISNULL(d.DefectQty, 0) = 0 THEN 0
+             ELSE CAST(100.0 * ISNULL(d.DefectQty, 0) / (ISNULL(q.FinishedQty, 0) + ISNULL(d.DefectQty, 0)) AS DECIMAL(5,2)) END AS DefectRatePct,
+        CASE WHEN ISNULL(tg.DailyTarget, 0) = 0 THEN NULL
+             ELSE CAST(100.0 * ISNULL(q.FinishedQty, 0) / tg.DailyTarget AS DECIMAL(9,2)) END AS PercentAchieved
 FROM dbo.KpiTarget k
-CROSS APPLY (SELECT b.WorkDate, SUM(b.FinishedQty) AS FinishedQty
+CROSS APPLY (SELECT x.WorkDate FROM dbo.KpiDailyTarget x WHERE x.KpiTargetId = k.KpiTargetId
+             UNION
+             SELECT b.WorkDate
              FROM dbo.QcBatch b JOIN dbo.OrderLine ol ON ol.OrderLineId = b.OrderLineId
              WHERE b.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
-               AND b.WorkDate BETWEEN k.StartDate AND k.EndDate
-             GROUP BY b.WorkDate) q
+               AND b.WorkDate BETWEEN k.StartDate AND k.EndDate) dd
+LEFT JOIN dbo.KpiDailyTarget p ON p.KpiTargetId = k.KpiTargetId AND p.WorkDate = dd.WorkDate
+CROSS APPLY (SELECT CASE WHEN p.TargetQty IS NOT NULL THEN 1.0 * p.TargetQty
+                         WHEN EXISTS (SELECT 1 FROM dbo.KpiDailyTarget y WHERE y.KpiTargetId = k.KpiTargetId) THEN NULL
+                         ELSE 1.0 * k.TargetFinishedQty / k.WorkingDays END AS DailyTarget) tg
+OUTER APPLY (SELECT SUM(b.FinishedQty) AS FinishedQty
+             FROM dbo.QcBatch b JOIN dbo.OrderLine ol ON ol.OrderLineId = b.OrderLineId
+             WHERE b.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
+               AND b.WorkDate = dd.WorkDate) q
 OUTER APPLY (SELECT SUM(dr.Quantity) AS DefectQty
              FROM dbo.DefectRecord dr JOIN dbo.OrderLine ol ON ol.OrderLineId = dr.OrderLineId
              WHERE dr.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
-               AND dr.WorkDate = q.WorkDate AND dr.Status <> 'CANCELLED') d;
+               AND dr.WorkDate = dd.WorkDate AND dr.Status <> 'CANCELLED') d;
 GO
 
 -- Doanh thu tháng = SL hoàn thiện đã nhập kho TP trong tháng × đơn giá CMT (UC27, GBR-17)
@@ -2082,7 +2105,7 @@ INSERT @d VALUES
  ('Notification', N'Thông báo người dùng (giữ 90 ngày)'),
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
  ('Product', N'Mã hàng'), ('Operation', N'Công đoạn'), ('PieceRate', N'Đơn giá công đoạn'),
- ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('OrderMaterialNorm', N'Định mức NVL cho 1 sản phẩm (vải theo chi tiết, phụ liệu theo sản phẩm)'), ('KpiTarget', N'KPI tổ may'),
+ ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('OrderMaterialNorm', N'Định mức NVL cho 1 sản phẩm (vải theo chi tiết, phụ liệu theo sản phẩm)'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'Chỉ tiêu KPI từng ngày'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
@@ -2494,6 +2517,27 @@ INSERT dbo.KpiTarget (OrderId, ProductId, SewingTeamId, StartDate, EndDate, Targ
  (@o1, @p1, @may, '2026-09-21', '2026-09-30',  500,  8, 'CLOSED', 'ACHIEVED'),
  (@o1, @p1, @may, '2026-09-10', '2026-09-19',  300,  8, 'CANCELLED', NULL),
  (@o2, @p2, @may, '2026-10-26', '2026-11-30',  800, 25, 'ACTIVE', NULL);
+
+-- Chỉ tiêu từng ngày cho 2 KPI đang chạy: bỏ Chủ nhật, 3 ngày đầu thấp (50% → 70% → 90%) vì tổ mới vào đơn;
+-- tổng và số ngày của KPI tính lại theo các ngày (KPI đã đóng / đã hủy giữ cách chia đều cũ).
+;WITH k AS (SELECT KpiTargetId, StartDate, EndDate, TargetFinishedQty FROM dbo.KpiTarget WHERE Status = 'ACTIVE' AND OrderId IN (@o1, @o2)),
+      d AS (SELECT KpiTargetId, StartDate AS WorkDate, EndDate, TargetFinishedQty FROM k
+            UNION ALL
+            SELECT KpiTargetId, DATEADD(DAY, 1, WorkDate), EndDate, TargetFinishedQty FROM d WHERE WorkDate < EndDate),
+      w AS (SELECT KpiTargetId, WorkDate, TargetFinishedQty,
+                   ROW_NUMBER() OVER (PARTITION BY KpiTargetId ORDER BY WorkDate) AS rn,
+                   COUNT(*) OVER (PARTITION BY KpiTargetId) AS n
+            FROM d WHERE DATEDIFF(DAY, '19000107', WorkDate) % 7 <> 0)   -- 07/01/1900 là Chủ nhật
+INSERT dbo.KpiDailyTarget (KpiTargetId, WorkDate, TargetQty)
+SELECT KpiTargetId, WorkDate,
+       CAST(ROUND(1.0 * TargetFinishedQty / n * CASE rn WHEN 1 THEN 0.5 WHEN 2 THEN 0.7 WHEN 3 THEN 0.9 ELSE 1 END, 0) AS INT)
+FROM w
+OPTION (MAXRECURSION 400);
+
+UPDATE kt SET TargetFinishedQty = s.Total, WorkingDays = s.Days
+FROM dbo.KpiTarget kt
+JOIN (SELECT KpiTargetId, SUM(TargetQty) AS Total, COUNT(*) AS Days FROM dbo.KpiDailyTarget GROUP BY KpiTargetId) s
+  ON s.KpiTargetId = kt.KpiTargetId;
 
 /* ---------- 13. Chi phí tháng 09/2026 (MI-12, MI-13, MI-19) ---------- */
 DECLARE @sep INT = (SELECT PeriodId FROM dbo.AccountingPeriod WHERE PeriodMonth = '2026-09'),

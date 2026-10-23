@@ -25,6 +25,7 @@ public class KpiServiceTests
     private readonly List<Team> _teams = [];
     private readonly List<OrderLine> _orderLines = [];
     private readonly List<VwKpiDailyResult> _dailyResults = [];
+    private readonly List<KpiDailyTarget> _dailyTargets = [];
     private readonly KpiService _sut;
 
     public KpiServiceTests()
@@ -35,6 +36,10 @@ public class KpiServiceTests
         SetupQueryable(_teams);
         SetupQueryable(_orderLines);
         SetupQueryable(_dailyResults);
+        SetupQueryable(_dailyTargets);
+        _uow.Repository<KpiDailyTarget>().AddAsync(Arg.Do<KpiDailyTarget>(d => _dailyTargets.Add(d))).Returns(Task.CompletedTask);
+        _uow.Repository<KpiDailyTarget>().When(r => r.RemoveRange(Arg.Any<IEnumerable<KpiDailyTarget>>()))
+            .Do(c => { foreach (var d in c.Arg<IEnumerable<KpiDailyTarget>>().ToList()) _dailyTargets.Remove(d); });
 
         // Giả lập EF gán navigation (Order/Product/SewingTeam) sau khi lưu, để Select chiếu DTO không bị null.
         _uow.Repository<KpiTarget>().AddAsync(Arg.Do<KpiTarget>(e =>
@@ -78,9 +83,14 @@ public class KpiServiceTests
         Order = order!, Product = product!, SewingTeam = team!,
     };
 
+    /// <summary>Chỉ tiêu từng ngày bắt đầu từ Start: mặc định 25 ngày × 40 = 1000.</summary>
+    private static IReadOnlyList<KpiDailyTargetInputDto> Days(params int[] qty) =>
+        (qty.Length == 0 ? Enumerable.Repeat(40, 25).ToArray() : qty)
+            .Select((q, i) => new KpiDailyTargetInputDto(Start.AddDays(i), q)).ToList();
+
     private static SaveKpiTargetDto Dto(int orderId = 1, int productId = 1, int teamId = 1, DateOnly? start = null,
-        DateOnly? end = null, int targetQty = 1000, short workingDays = 25) =>
-        new(orderId, productId, teamId, start ?? Start, end ?? End, targetQty, workingDays);
+        DateOnly? end = null, IReadOnlyList<KpiDailyTargetInputDto>? days = null) =>
+        new(orderId, productId, teamId, start ?? Start, end ?? End, days ?? Days());
 
     // ---------- CreateAsync ----------
 
@@ -161,9 +171,12 @@ public class KpiServiceTests
         _teams.Add(SewingTeam());
         _orderLines.Add(Line(1, 1));
 
-        var result = await _sut.CreateAsync(Dto(targetQty: 1000, workingDays: 25), CancellationToken.None);
+        var result = await _sut.CreateAsync(Dto(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
+        result.Data!.TargetFinishedQty.Should().Be(1000);   // = Σ chỉ tiêu từng ngày
+        result.Data.WorkingDays.Should().Be(25);            // = số ngày có chỉ tiêu
+        result.Data.DailyTargets.Should().HaveCount(25);
         result.Data!.Status.Should().Be(nameof(KpiStatuses.Active));
         result.Data.Result.Should().BeNull();
         result.Data.DailyTarget.Should().Be(40m);
@@ -174,6 +187,24 @@ public class KpiServiceTests
         await _uow.Received(2).SaveChangesAsync();   // lưu chỉ tiêu (lấy Id) rồi lưu AuditLog, cùng transaction
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
             e.TableName == nameof(KpiTarget) && e.Action == AuditActions.Insert && e.OldValues == null));
+    }
+
+    [Fact]
+    public async Task CreateAsync_RampUpDays_KeepsEachDaysTargetInsteadOfSplittingEvenly()
+    {
+        _orders.Add(Order());
+        _products.Add(Product());
+        _teams.Add(SewingTeam());
+        _orderLines.Add(Line(1, 1));
+
+        var result = await _sut.CreateAsync(Dto(days: Days(20, 30, 40, 50, 50)), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.TargetFinishedQty.Should().Be(190);
+        result.Data.WorkingDays.Should().Be(5);
+        _dailyTargets.Select(d => (d.WorkDate, d.TargetQty)).Should().Equal(
+            (Start, 20), (Start.AddDays(1), 30), (Start.AddDays(2), 40), (Start.AddDays(3), 50), (Start.AddDays(4), 50));
+        _dailyTargets.Should().OnlyContain(d => d.KpiTargetId == result.Data.KpiTargetId);
     }
 
     // ---------- UpdateAsync ----------
@@ -217,13 +248,20 @@ public class KpiServiceTests
         var existing = Target(1, 1, 1, 1, Start, End, targetQty: 1000, workingDays: 25, order: order, product: product, team: team);
         _kpiTargets.Add(existing);
 
-        var result = await _sut.UpdateAsync(1, Dto(targetQty: 1200, workingDays: 30), CancellationToken.None);
+        _dailyTargets.Add(new KpiDailyTarget { KpiTargetId = 1, WorkDate = Start, TargetQty = 40 });
+        _dailyTargets.Add(new KpiDailyTarget { KpiTargetId = 1, WorkDate = Start.AddDays(1), TargetQty = 40 });
+        _dailyTargets.Add(new KpiDailyTarget { KpiTargetId = 2, WorkDate = Start, TargetQty = 99 });   // KPI khác: giữ nguyên
+
+        var result = await _sut.UpdateAsync(1, Dto(days: Days(20, 30, 45, 50)), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data!.TargetFinishedQty.Should().Be(1200);
-        result.Data.WorkingDays.Should().Be(30);
-        existing.TargetFinishedQty.Should().Be(1200);
-        existing.WorkingDays.Should().Be(30);
+        result.Data!.TargetFinishedQty.Should().Be(145);
+        result.Data.WorkingDays.Should().Be(4);
+        existing.TargetFinishedQty.Should().Be(145);
+        existing.WorkingDays.Should().Be(4);
+        _dailyTargets.Where(d => d.KpiTargetId == 1).Select(d => d.TargetQty).Should().Equal(20, 30, 45, 50);
+        _dailyTargets.Should().Contain(d => d.KpiTargetId == 2 && d.TargetQty == 99);
+        result.Data.DailyTargets!.Select(d => d.TargetQty).Should().Equal(20, 30, 45, 50);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
             e.TableName == nameof(KpiTarget) && e.Action == AuditActions.Update && e.RecordId == 1
             && e.OldValues != null && e.NewValues != null));
@@ -472,30 +510,42 @@ public class KpiServiceTests
 
 public class SaveKpiTargetDtoValidatorTests
 {
+    private static readonly DateOnly S = new(2026, 10, 1);
+    private static readonly DateOnly E = new(2026, 10, 31);
     private readonly SaveKpiTargetDtoValidator _validator = new();
+
+    private static SaveKpiTargetDto Dto(DateOnly? start = null, DateOnly? end = null, int orderId = 1, params KpiDailyTargetInputDto[] days) =>
+        new(orderId, 1, 1, start ?? S, end ?? E, days.Length == 0 ? [new(S, 20), new(S.AddDays(1), 35)] : days);
 
     [Fact]
     public void Valid_HasNoError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000, 25))
-            .ShouldNotHaveAnyValidationErrors();
+        _validator.TestValidate(Dto()).ShouldNotHaveAnyValidationErrors();
 
     [Fact]
     public void EndDateBeforeStartDate_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 1), 1000, 25))
+        _validator.TestValidate(Dto(start: new DateOnly(2026, 10, 10), end: new DateOnly(2026, 10, 1)))
             .ShouldHaveValidationErrorFor(x => x.EndDate);
 
     [Fact]
-    public void NonPositiveTargetQty_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 0, 25))
-            .ShouldHaveValidationErrorFor(x => x.TargetFinishedQty);
+    public void NoDailyTargets_HasError() =>
+        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, S, E, []))
+            .ShouldHaveValidationErrorFor(x => x.DailyTargets).WithErrorMessage(Messages.KpiDailyTargetsRequired);
 
     [Fact]
-    public void NonPositiveWorkingDays_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000, 0))
-            .ShouldHaveValidationErrorFor(x => x.WorkingDays);
+    public void NonPositiveDayQty_HasError() =>
+        _validator.TestValidate(Dto(days: [new(S, 0)])).IsValid.Should().BeFalse();
+
+    [Fact]
+    public void DuplicateDay_HasError() =>
+        _validator.TestValidate(Dto(days: [new(S, 10), new(S, 20)]))
+            .ShouldHaveValidationErrorFor(x => x.DailyTargets).WithErrorMessage(Messages.KpiDailyTargetDuplicateDate);
+
+    [Fact]
+    public void DayOutsidePeriod_HasError() =>
+        _validator.TestValidate(Dto(days: [new(S, 10), new(E.AddDays(1), 20)]))
+            .ShouldHaveValidationErrorFor(x => x.DailyTargets).WithErrorMessage(Messages.KpiDailyTargetOutOfPeriod);
 
     [Fact]
     public void MissingOrder_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(0, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000, 25))
-            .ShouldHaveValidationErrorFor(x => x.OrderId);
+        _validator.TestValidate(Dto(orderId: 0)).ShouldHaveValidationErrorFor(x => x.OrderId);
 }

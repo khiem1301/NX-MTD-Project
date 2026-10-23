@@ -27,7 +27,11 @@ export type KpiTarget = {
   actualFinishedQty: number;
   percentAchieved: number;
   createdAt: string;
+  /** Chỉ có ở chi tiết: chỉ tiêu từng ngày (null ở danh sách). */
+  dailyTargets: KpiDailyTargetInput[] | null;
 };
+
+export type KpiDailyTargetInput = { workDate: string; targetQty: number };
 
 export type KpiTargetFilter = {
   page: number;
@@ -38,8 +42,8 @@ export type KpiTargetFilter = {
 
 /**
  * MI-18 "KPI theo ngày": một dòng kết quả theo ngày của một chỉ tiêu KPI (vw_KpiDailyResult).
- * Chỉ có dòng cho ngày QA/QC có nhập hàng hoàn thiện — ngày không có dòng là ngày chưa có sản
- * lượng hoàn thiện, không phải lỗi dữ liệu.
+ * Có dòng cho mọi ngày có chỉ tiêu (chưa có hàng thì finishedQty = 0) và ngày QA/QC có nhập hàng ngoài kế hoạch
+ * (dailyTarget, percentAchieved = null).
  */
 export type KpiDailyResult = {
   kpiTargetId: number;
@@ -63,6 +67,6 @@ export type SaveKpiTargetPayload = {
   sewingTeamId: number;
   startDate: string;
   endDate: string;
-  targetFinishedQty: number;
-  workingDays: number;
+  /** Bắt buộc: tổng cả kỳ và số ngày làm việc do BE tính từ các ngày này. */
+  dailyTargets: KpiDailyTargetInput[];
 };

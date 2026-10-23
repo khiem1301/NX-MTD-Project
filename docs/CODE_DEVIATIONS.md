@@ -64,6 +64,7 @@
 | DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
 | DEV-ALL-6 | 23/10/2026 | Claude (AI) | `WarehouseDocumentExportService`, `ClosedXmlWarehouseDocumentWriter` | In / xuất Excel từng phiếu nhập, phiếu cấp, phiếu xuất hàng (TH-16) | Đã làm |
 | DEV-ALL-7 | 23/10/2026 | Claude (AI) | `EmployeeService.ManagerUpdateAsync`, `GradeService.SetGradeAsync`, UC15, UC16 | Quản đốc đổi tổ và vai trò nhân viên; Admin / Quản đốc đặt bậc thợ trực tiếp không qua đề xuất | Đã làm |
+| DEV-ALL-8 | 23/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI bắt buộc nhập theo từng ngày (không chia đều cả kỳ) | Đã làm |
 
 ---
 
@@ -806,4 +807,18 @@
   - Đặt bậc trực tiếp (Admin và Quản đốc): tạo ngay một dòng lịch sử `APPLIED` (người đặt = người đăng nhập, lý do bắt buộc, hiệu lực mặc định hôm nay), cập nhật `CurrentGradeCode`, ghi AuditLog, báo công nhân. Đề xuất đang chờ của công nhân đó bị đóng thành `NOT_APPLIED` với ghi chú, báo người đề xuất. Mỗi người đặt tối đa một lần mỗi công nhân mỗi ngày (ràng buộc `UQ_GradeEval`); sai thì phải đợi sang ngày hoặc nhờ Admin.
   - Quản đốc vẫn không sửa mức tiền bậc A–D (chỉ Admin).
 - **Cần sửa trong tài liệu:** Report-3 UC16 (quyền sửa của Quản đốc), UC15 / UC50 (đặt bậc trực tiếp).
+- **Trạng thái:** Mở
+
+### DEV-ALL-8 · Chỉ tiêu KPI theo từng ngày
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, FR 3.14 · (chưa có PR)
+- **Ảnh hưởng tới:** schema (bảng mới `KpiDailyTarget`, viết lại `vw_KpiDailyResult`), `SaveKpiTargetDto` (bỏ `TargetFinishedQty`, `WorkingDays`, thêm `DailyTargets`), `KpiTargetDto.DailyTargets` (chỉ ở chi tiết), form lập KPI ở FE
+- **Tài liệu gốc ghi:** Chỉ tiêu ngày = chỉ tiêu cả kỳ ÷ số ngày làm việc (chia đều).
+- **Lý do:** Mấy ngày đầu vào đơn tổ may làm chậm hơn (công nhân chưa thạo), chia đều làm KPI ngày đầu luôn "không đạt".
+- **Code đang làm:**
+  - Quản đốc bắt buộc nhập chỉ tiêu từng ngày khi lập / sửa KPI; tổng cả kỳ = Σ các ngày, số ngày làm việc = số ngày có chỉ tiêu (dịch vụ tự tính, không nhập tay). Ngày phải nằm trong kỳ, không trùng, số > 0. Sửa KPI thay toàn bộ các ngày, AuditLog ghi danh sách ngày trước / sau.
+  - FE: bảng ngày dựng theo kỳ, mặc định bỏ Chủ nhật (thêm lại được nếu tăng ca), nút "Chia tăng dần" gợi ý 3 ngày đầu 50% → 70% → 90% mức ổn định rồi 100%; Quản đốc sửa tay từng ngày.
+  - `vw_KpiDailyResult`: có dòng cho mọi ngày có chỉ tiêu (chưa có hàng = 0) và ngày QC ngoài kế hoạch (chỉ tiêu, % đạt = NULL). KPI cũ chưa có dòng ngày giữ cách chia đều cũ. Cột "chỉ tiêu ngày" ở danh sách / chi tiết là trung bình.
+  - DB đang chạy cần chạy thêm: CREATE TABLE `KpiDailyTarget` + CREATE OR ALTER VIEW `vw_KpiDailyResult` (lấy đúng khối trong `SQL/NX-MTD_Database.sql`).
+- **Cần sửa trong tài liệu:** Report-3 UC19 (form lập KPI), FR 3.14 (công thức chỉ tiêu ngày), ERD (bảng mới).
 - **Trạng thái:** Mở
