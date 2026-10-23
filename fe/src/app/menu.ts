@@ -13,6 +13,7 @@ import { userMenu } from '@/features/users';
 import { notificationMenu } from '@/features/notification';
 import { orderMenu } from '@/features/orders';
 import { requestMenu } from '@/features/requests';
+import { gradeMenu } from '@/features/grade';
 import { kpiMenu } from '@/features/kpi/menu';
 import { materialReturnMenu } from '@/features/material-return';
 import { mealMenu } from '@/features/meal/menu';
@@ -31,6 +32,7 @@ const homeMenu: MenuEntry[] = [{ key: 'home', label: 'Trang chủ', path: '/', r
 export const MENU_ENTRIES: MenuEntry[] = [
   ...homeMenu,
   ...notificationMenu, // Khiêm (KH-12)
+  ...gradeMenu, // Khiêm (KH-14)
   ...productionMenu, // Minh làm hộ Kiều (KI-01..KI-11)
   ...userMenu, // Khiêm
   ...teamMenu, // Khiêm

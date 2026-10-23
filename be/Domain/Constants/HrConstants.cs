@@ -43,6 +43,20 @@ public static class AuditActions
     public const string Login = "LOGIN";
 }
 
+/// <summary>GradeLevel / GradeEvaluation: bậc thợ A–D.</summary>
+public static class GradeCodes
+{
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { "A", "B", "C", "D" };
+}
+
+/// <summary>GradeEvaluation.Status (CK_GradeEval_Status). Dòng APPLIED là lịch sử bậc.</summary>
+public static class GradeEvaluationStatuses
+{
+    public const string Submitted = "SUBMITTED";
+    public const string Applied = "APPLIED";
+    public const string NotApplied = "NOT_APPLIED";
+}
+
 /// <summary>Announcement.Priority (CK_Announcement_Priority).</summary>
 public static class AnnouncementPriorities
 {

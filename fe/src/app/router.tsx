@@ -133,6 +133,11 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/notification')).NotificationsPage,
   },
   {
+    path: ROUTES.grades,
+    roles: [TeamLeader, TeamDeputy, Admin, Manager],
+    page: async () => (await import('@/features/grade')).GradePage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

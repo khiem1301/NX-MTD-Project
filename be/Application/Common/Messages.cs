@@ -81,6 +81,16 @@ public static class Messages
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
+    public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
+    public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
+    public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";
+    public const string GradeSameAsCurrent = "Bậc đề xuất trùng bậc hiện tại.";
+    public const string GradePendingExists = "Công nhân này đã có đề xuất đang chờ quyết định.";
+    public const string GradeProposedToday = "Hôm nay bạn đã đề xuất bậc cho công nhân này.";
+    public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
+    public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
+    public const string GradeApplied = "Đã áp dụng bậc thợ.";
+    public const string GradeNotApplied = "Đã ghi nhận không áp dụng bậc thợ.";
     public const string AnnouncementTooLong = "Nội dung thông báo tối đa 1000 ký tự.";
     public const string AnnouncementTargetRequired = "Vui lòng chọn ít nhất một tổ hoặc một vai trò nhận thông báo.";
     public const string AnnouncementScopeInvalid = "Phạm vi gửi phải là toàn xưởng, theo tổ hoặc theo vai trò.";
