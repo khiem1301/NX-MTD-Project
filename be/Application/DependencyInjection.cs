@@ -18,7 +18,10 @@ public static class DependencyInjection
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
+        services.AddScoped<MaterialSupplyUpdater>();
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
+        services.AddScoped<IShortDeliveryService, ShortDeliveryService>();
+        services.AddScoped<IRequestTypeHandler, ShortDeliveryRequestHandler>();
         services.AddScoped<IAttachmentOwnerAccess, MaterialReceiptAttachmentAccess>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<FabricPlanner>();
@@ -26,6 +29,21 @@ public static class DependencyInjection
         services.AddScoped<IMaterialIssueService, MaterialIssueService>();
         services.AddScoped<ICuttingLayService, CuttingLayService>();
         services.AddScoped<ICutHandoverService, CutHandoverService>();
+        services.AddScoped<IFgHandoverService, FgHandoverService>();
+        services.AddScoped<IDispatchNoteService, DispatchNoteService>();
+        services.AddScoped<IWarehouseDocumentExportService, WarehouseDocumentExportService>();   // TH-16
+        services.AddScoped<IWorkerPieceMovementService, WorkerPieceMovementService>();
+        services.AddScoped<IMaterialReturnService, MaterialReturnService>();
+        services.AddScoped<IStocktakeService, StocktakeService>();
+        services.AddScoped<IVehicleService, VehicleService>();
+        services.AddScoped<INotificationInboxService, NotificationInboxService>();
+        services.AddScoped<IAnnouncementService, AnnouncementService>();
+        services.AddScoped<IGradeService, GradeService>();
+        services.AddScoped<IOrderProgressService, OrderProgressService>();
+        services.AddScoped<IEmployeeImportService, NX_MTD.Application.Services.Hr.EmployeeImportService>();
+        services.AddScoped<IAuditLogQueryService, NX_MTD.Application.Services.Hr.AuditLogQueryService>();
+        services.AddScoped<IAttachmentOwnerAccess, VehicleTripAttachmentAccess>();
+        services.AddScoped<IAttachmentOwnerAccess, DispatchNoteAttachmentAccess>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
         return services;
     }

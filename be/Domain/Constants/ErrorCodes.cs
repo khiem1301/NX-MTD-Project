@@ -56,6 +56,7 @@ public static class ErrorCodes
     public const string OrderLineRemoveNotAllowed = "ORDER_LINE_REMOVE_NOT_ALLOWED";
     public const string OrderLineKeyLocked = "ORDER_LINE_KEY_LOCKED";
     public const string OrderInvalidStatus = "ORDER_INVALID_STATUS";
+    public const string OrderMaterialsAwaiting = "ORDER_MATERIALS_AWAITING";
     public const string CustomerNameDuplicate = "CUSTOMER_NAME_DUPLICATE";
 
     // Nhân sự, tài khoản, tổ (KH-10)
@@ -134,6 +135,20 @@ public static class ErrorCodes
     public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
+    public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
+    public const string FgHandoverExceedsQc = "FG_HANDOVER_EXCEEDS_QC";
+    public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
+    public const string AnnouncementInvalid = "ANNOUNCEMENT_INVALID";
+    public const string GradeInvalid = "GRADE_INVALID";
+    public const string EmployeeImportInvalid = "EMPLOYEE_IMPORT_INVALID";
+    public const string VehiclePlateDuplicate = "VEHICLE_PLATE_DUPLICATE";
+    public const string VehicleInactive = "VEHICLE_INACTIVE";
+    public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
+    public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
+    public const string PieceHandoverExceedsHolding = "PIECE_HANDOVER_EXCEEDS_HOLDING";
+    public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
+    public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
+    public const string ShortageExceeded = "SHORTAGE_EXCEEDED";
 
     // Nhà cung cấp, đơn mua, thanh toán (Minh, MI-07)
     public const string SupplierNameDuplicate = "SUPPLIER_NAME_DUPLICATE";

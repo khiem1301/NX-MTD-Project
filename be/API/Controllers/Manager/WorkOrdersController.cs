@@ -24,6 +24,16 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> Create([FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CreateAsync(dto, ct));
 
+    /// <summary>Đơn cắt bù đã duyệt, chưa có lệnh cắt bù.</summary>
+    [HttpGet("replacement-requests")]
+    public async Task<IActionResult> GetReplacementRequests(CancellationToken ct) =>
+        this.ToResponse(await _workOrders.GetOpenReplacementRequestsAsync(ct));
+
+    /// <summary>Lập lệnh cắt bù từ đơn cắt bù đã duyệt (TH-10, UC19).</summary>
+    [HttpPost("replacement")]
+    public async Task<IActionResult> CreateReplacement([FromBody] CreateReplacementWorkOrderDto dto, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.CreateReplacementAsync(dto, ct));
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.UpdateAsync(id, dto, ct));

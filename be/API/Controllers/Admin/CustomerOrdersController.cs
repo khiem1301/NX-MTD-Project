@@ -35,6 +35,11 @@ public sealed class CustomerOrdersController : AdminBaseController
     public async Task<IActionResult> Cancel(int id, [FromBody] CancelOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _orders.CancelAsync(id, dto, ct));
 
+    /// <summary>Chuyển đơn NEW sang sản xuất khi đã có NVL (MaterialStatus khác AWAITING).</summary>
+    [HttpPost("{id:int}/start-production")]
+    public async Task<IActionResult> StartProduction(int id, [FromBody] StartOrderProductionDto dto, CancellationToken ct) =>
+        this.ToResponse(await _orders.StartProductionAsync(id, dto, ct));
+
     [HttpPost("{id:int}/stop")]
     public async Task<IActionResult> Stop(int id, [FromBody] StopOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _orders.StopAsync(id, dto, ct));

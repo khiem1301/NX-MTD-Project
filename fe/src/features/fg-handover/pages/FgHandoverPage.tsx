@@ -1,0 +1,92 @@
+import { useState } from 'react';
+import { Button, Card, Input, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Can } from '@/components/guards/Can';
+import { QueryError } from '@/components/common/QueryError';
+import { StatusTag } from '@/components/common/StatusTag';
+import { MESSAGES } from '@/constants/messages';
+import { ROLES } from '@/constants/roles';
+import { useTableQuery } from '@/hooks/useTableQuery';
+import { formatDateTime } from '@/utils/format';
+import { FgHandoverCreateModal } from '../components/FgHandoverCreateModal';
+import { FgHandoverDrawer } from '../components/FgHandoverDrawer';
+import { FG_LABELS, FG_STATUS_LABEL } from '../constants';
+import { useFgHandovers } from '../hooks/useFgHandover';
+import type { FgHandoverListItem } from '../types';
+
+type Filters = { keyword?: string; status?: string };
+
+const STATUS_OPTIONS = Object.entries(FG_STATUS_LABEL).map(([value, l]) => ({
+  value,
+  label: l.text,
+}));
+
+/** UC44: QA/QC bàn giao thành phẩm (số QC đạt) vào kho; Thủ kho đếm và nhận vào kho thành phẩm. */
+export function FgHandoverPage() {
+  const table = useTableQuery<Filters>({});
+  const handovers = useFgHandovers(table.params);
+  const [viewingId, setViewingId] = useState<number>();
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const columns: TableColumnsType<FgHandoverListItem> = [
+    {
+      title: FG_LABELS.code,
+      dataIndex: 'handoverCode',
+      render: (v: string, h) => <a onClick={() => setViewingId(h.fgHandoverId)}>{v}</a>,
+    },
+    { title: FG_LABELS.order, dataIndex: 'orderCode' },
+    { title: FG_LABELS.product, dataIndex: 'productCode' },
+    { title: FG_LABELS.inspector, dataIndex: 'inspectorName' },
+    { title: FG_LABELS.totalHandedQty, dataIndex: 'totalHandedQty', align: 'right' },
+    { title: FG_LABELS.handedAt, dataIndex: 'handedAt', render: formatDateTime },
+    {
+      title: FG_LABELS.status,
+      dataIndex: 'status',
+      render: (v: string) => <StatusTag status={v} labels={FG_STATUS_LABEL} />,
+    },
+    {
+      title: FG_LABELS.confirmedBy,
+      dataIndex: 'confirmedByName',
+      render: (v: string | null) => v ?? '—',
+    },
+  ];
+
+  return (
+    <Card
+      title={FG_LABELS.title}
+      extra={
+        <Can roles={[ROLES.QaQc]}>
+          <Button type="primary" onClick={() => setCreateOpen(true)}>
+            {FG_LABELS.create}
+          </Button>
+        </Can>
+      }
+    >
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Input.Search
+          allowClear
+          placeholder={MESSAGES.common.search}
+          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+          style={{ width: 280 }}
+        />
+        <Select
+          allowClear
+          placeholder={FG_LABELS.status}
+          options={STATUS_OPTIONS}
+          onChange={(status?: string) => table.setFilters({ status })}
+          style={{ width: 170 }}
+        />
+      </Space>
+      <QueryError error={handovers.error} onRetry={() => void handovers.refetch()} />
+      <Table
+        rowKey="fgHandoverId"
+        columns={columns}
+        dataSource={handovers.data?.items}
+        loading={handovers.isFetching}
+        pagination={table.pagination(handovers.data?.totalItems)}
+        locale={{ emptyText: MESSAGES.common.empty }}
+      />
+      <FgHandoverDrawer handoverId={viewingId} onClose={() => setViewingId(undefined)} />
+      <FgHandoverCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+    </Card>
+  );
+}

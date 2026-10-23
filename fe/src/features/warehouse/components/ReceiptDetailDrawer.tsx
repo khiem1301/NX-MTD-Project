@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { PrinterOutlined } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
 import {
   Alert,
   Button,
@@ -16,11 +18,12 @@ import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
+import { ROUTES } from '@/constants/routes';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { LABELS, RECEIPT_STATUS, RECEIPT_STATUS_LABEL } from '../constants';
-import { useConfirmReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
+import { LABELS, RECEIPT_STATUS, RECEIPT_STATUS_LABEL, RECEIPT_TYPE_LABEL, SOURCE_LABEL } from '../constants';
+import { useConfirmReceipt, useDownloadReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptLine } from '../types';
 
 const MAX_RECEIPT_PHOTOS = 5;
@@ -36,6 +39,12 @@ const lineColumns: TableColumnsType<MaterialReceiptLine> = [
   { title: LABELS.materialName, dataIndex: 'materialName' },
   { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
   { title: LABELS.unit, dataIndex: 'unit' },
+  {
+    title: LABELS.toReplenishQty,
+    dataIndex: 'toReplenishQty',
+    align: 'right',
+    render: (v: number | null) => (v === null ? '—' : formatQty(v)),
+  },
   { title: LABELS.acceptedQty, dataIndex: 'acceptedQty', align: 'right', render: formatQty },
   { title: LABELS.shortQty, dataIndex: 'shortQty', align: 'right', render: formatQty },
   { title: LABELS.defectiveQty, dataIndex: 'defectiveQty', align: 'right', render: formatQty },
@@ -47,13 +56,22 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
   const receipt = useReceipt(receiptId);
   const confirm = useConfirmReceipt();
   const giveBack = useReturnReceipt();
+  const download = useDownloadReceipt();
   const [returning, setReturning] = useState(false);
   const r = receipt.data;
   const pending = r?.status === RECEIPT_STATUS.PENDING;
-  const editable = pending || r?.status === RECEIPT_STATUS.RETURNED;
+  // Phiếu bổ sung không sửa được: nếu bị trả lại thì Thủ kho lập phiếu bổ sung mới.
+  const editable = r?.receiptType === 'NEW' && (pending || r?.status === RECEIPT_STATUS.RETURNED);
 
   const actions = r && (
     <Space>
+      <Button
+        icon={<PrinterOutlined />}
+        loading={download.isPending}
+        onClick={() => download.mutate({ id: r.materialReceiptId, code: r.receiptCode })}
+      >
+        {MESSAGES.common.printExcel}
+      </Button>
       {hasRole(ROLES.Manager) && pending && (
         <>
           <Button danger onClick={() => setReturning(true)}>
@@ -95,8 +113,26 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
               style={{ marginBottom: 16 }}
             />
           )}
+          {r.shortDeliveryRequestId !== null && (
+            <Alert
+              type="info"
+              showIcon
+              message={
+                <>
+                  {MESSAGES.warehouse.shortageStaged} <Link to={ROUTES.shortDeliveries}>{LABELS.openShortage}</Link>
+                </>
+              }
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <Descriptions column={2} size="small" bordered>
-            <Descriptions.Item label={LABELS.order}>{r.orderCode}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.receiptType}>{RECEIPT_TYPE_LABEL[r.receiptType] ?? r.receiptType}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.receiptSource}>{SOURCE_LABEL[r.source] ?? r.source}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.order}>{r.orderCode ?? '—'}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.purchaseOrder}>{r.poCode ?? '—'}</Descriptions.Item>
+            {r.originalReceiptCode && (
+              <Descriptions.Item label={LABELS.originalReceipt}>{r.originalReceiptCode}</Descriptions.Item>
+            )}
             <Descriptions.Item label={LABELS.status}>
               <StatusTag status={r.status} labels={RECEIPT_STATUS_LABEL} />
             </Descriptions.Item>

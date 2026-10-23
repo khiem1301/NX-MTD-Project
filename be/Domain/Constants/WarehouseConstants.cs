@@ -88,6 +88,13 @@ public static class ReceiptTypes
     public const string Supplementary = "SUPPLEMENTARY";
 }
 
+/// <summary>Request.ShortageResolution (CK_Request_Shortage): cách Quản đốc xử lý hàng thiếu / lỗi khi nhập.</summary>
+public static class ShortageResolutions
+{
+    public const string Replenish = "REPLENISH";
+    public const string NoReplenish = "NO_REPLENISH";
+}
+
 public static class MaterialSources
 {
     public const string Customer = "CUSTOMER";
@@ -123,6 +130,59 @@ public static class HandoverStatuses
     public const string Cancelled = "CANCELLED";
 }
 
+/// <summary>VehicleTrip.Status (CK_VT_Status).</summary>
+public static class TripStatuses
+{
+    public const string Started = "STARTED";
+    public const string Completed = "COMPLETED";
+}
+
+/// <summary>Stocktake.Status (CK_Stocktake_Status).</summary>
+public static class StocktakeStatuses
+{
+    public const string PendingApproval = "PENDING_APPROVAL";
+    public const string Approved = "APPROVED";
+    public const string Returned = "RETURNED";
+}
+
+/// <summary>WorkerPieceMovement.MovementType (CK_WPM_Type): tổ trưởng giao BTP cho công nhân hoặc thu hồi lại.</summary>
+public static class PieceMovementTypes
+{
+    public const string Handover = "HANDOVER";
+    public const string Retrieval = "RETRIEVAL";
+}
+
+/// <summary>WorkerPieceMovement.RetrievalReason (CK_WPM_Retr).</summary>
+public static class RetrievalReasons
+{
+    public const string OperationChanged = "OPERATION_CHANGED";
+    public const string WorkerAbsent = "WORKER_ABSENT";
+    public const string StyleFinished = "STYLE_FINISHED";
+
+    public static readonly IReadOnlyList<string> All = new[] { OperationChanged, WorkerAbsent, StyleFinished };
+}
+
+/// <summary>WorkerPieceMovement.ConfirmMode (CK_WPM_Mode): công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ.</summary>
+public static class ConfirmModes
+{
+    public const string Worker = "WORKER";
+    public const string OnBehalf = "ON_BEHALF";
+}
+
+/// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>
+public static class DispatchStatuses
+{
+    public const string Pending = "PENDING";
+    public const string Rejected = "REJECTED";
+    public const string Cancelled = "CANCELLED";
+    public const string InDelivery = "IN_DELIVERY";
+    public const string Delivered = "DELIVERED";
+    public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
+
+    /// <summary>Phiếu đã hoặc đang chiếm số hàng của đơn (tính vào tổng đã xuất).</summary>
+    public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered, PartiallyDelivered };
+}
+
 public static class ShiftCodes
 {
     public const string Morning = "MORNING";
@@ -141,6 +201,10 @@ public static class DocumentPrefixes
     public const string MaterialIssue = "PC";
     public const string WorkOrder = "LC";
     public const string CutHandover = "BG";
+    public const string FgHandover = "TP";
+    public const string DispatchNote = "XH";
+    public const string MaterialReturn = "TV";
+    public const string Stocktake = "KK";
     public const string PurchaseOrder = "DM";
 }
 

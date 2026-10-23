@@ -19,6 +19,9 @@
    - 22/10/2026  Mục 19: dữ liệu demo các luồng của Minh (mã hàng, đơn hàng, NVL, nhà cung cấp, đơn mua, 188 công đoạn
                  + 110 đơn giá, phân công, sản lượng, QC, hàng hỏng, KPI, chi phí tháng, bảng công, suất ăn, xe,
                  bảng lương demo). Không có họ tên thật, lương thật hay hash mật khẩu. Xóa mục 19 nếu muốn DB sạch.
+                 Mục 19.3: doanh thu + chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn).
+                 Mục 19.4: thẻ kho cho phiếu nhập NVL / bàn giao thành phẩm demo (tồn kho có số).
+                 Mục 19.5: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê chờ duyệt, bàn giao thành phẩm chờ nhận, thông báo nhanh.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -2115,6 +2118,76 @@ CLOSE c; DEALLOCATE c;
 GO
 
 /* =====================================================================================
+   18b. DỮ LIỆU MẪU: ĐƠN HÀNG, NVL CỦA ĐƠN, ĐƠN MUA NVL (22/10/2026)
+   Để xem thử màn "Đơn hàng", "NVL của đơn", "Đơn mua NVL". Đơn giá là GIÁ MẪU.
+   Xóa cả mục này nếu tạo database thật (không cần dữ liệu mẫu). Mỗi khối chỉ chèn khi chưa có.
+   ===================================================================================== */
+SET XACT_ABORT ON;
+BEGIN TRAN;
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu')
+    INSERT dbo.Customer (CustomerName) VALUES (N'Khách hàng mẫu');
+IF NOT EXISTS (SELECT 1 FROM dbo.Product WHERE ProductCode = 'MAU-AO-01')
+    INSERT dbo.Product (ProductCode, ProductName) VALUES ('MAU-AO-01', N'Áo polo mẫu');
+IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'V-0001')
+    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
+    VALUES ('V-0001', N'Vải cotton mẫu', 'FABRIC', 'MAIN_FABRIC', 'm');
+IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'PL-0001')
+    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
+    VALUES ('PL-0001', N'Chỉ may mẫu', 'TRIM', 'THREAD', N'cuộn');
+
+DECLARE @cus INT = (SELECT CustomerId FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu');
+DECLARE @prd INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'MAU-AO-01');
+DECLARE @vai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'V-0001');
+DECLARE @chi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'PL-0001');
+
+-- Hai đơn hàng mẫu, mỗi đơn 2 dòng màu x size.
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01')
+BEGIN
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-01', @cus, '2026-10-21', '2026-12-05');
+    DECLARE @o1 INT = SCOPE_IDENTITY();
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
+    VALUES (@o1, @prd, N'Đỏ', 'M', 60, 12500), (@o1, @prd, N'Đỏ', 'L', 40, 12500);
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02')
+BEGIN
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-02', @cus, '2026-10-21', '2026-12-10');
+    DECLARE @o2 INT = SCOPE_IDENTITY();
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
+    VALUES (@o2, @prd, N'Trắng', 'M', 100, 12000), (@o2, @prd, N'Trắng', 'L', 80, 12000);
+END;
+DECLARE @d1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01');
+DECLARE @d2 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02');
+
+-- NVL của đơn (Source và PurchaseQty là cột tính, không chèn).
+-- DH-MAU-01: vải cần 120, khách cấp 20 -> phải mua 100. DH-MAU-02: vải cần 200, khách cấp 50 -> phải mua 150; chỉ phải mua 30.
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d1 AND MaterialId = @vai AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
+    VALUES (@d1, @vai, '', 120, 20, '2026-11-01');
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @vai AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
+    VALUES (@d2, @vai, '', 200, 50, '2026-11-05');
+IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @chi AND MaterialColor = '')
+    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty)
+    VALUES (@d2, @chi, '', 30, 0);
+
+-- Đơn mua gắn đơn hàng: mỗi dòng lấy phần "phải mua" của NVL trong đơn (vải 18.000, chỉ 3.500).
+DECLARE @po TABLE (PoCode VARCHAR(30), OrderId INT, Note NVARCHAR(200));
+INSERT @po VALUES ('DM-20261021-001', @d1, N'Dữ liệu mẫu: mua NVL cho DH-MAU-01'),
+                  ('DM-20261021-002', @d2, N'Dữ liệu mẫu: mua NVL cho DH-MAU-02');
+INSERT dbo.PurchaseOrder (PoCode, OrderId, GoodsStatus, PaymentStatus, Note)
+SELECT p.PoCode, p.OrderId, 'PENDING_FINALISATION', 'UNPAID', p.Note FROM @po p
+WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrder x WHERE x.PoCode = p.PoCode);
+INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, NotReplenishedQty, UnitPrice)
+SELECT po.PurchaseOrderId, om.OrderMaterialId, om.PurchaseQty, 0, CASE om.MaterialId WHEN @vai THEN 18000 ELSE 3500 END
+FROM @po p JOIN dbo.PurchaseOrder po ON po.PoCode = p.PoCode
+JOIN dbo.OrderMaterial om ON om.OrderId = po.OrderId AND om.PurchaseQty > 0
+WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrderLine l WHERE l.PurchaseOrderId = po.PurchaseOrderId);
+
+COMMIT;
+GO
+
+/* =====================================================================================
    19. DỮ LIỆU DEMO (xóa cả mục này nếu muốn database sạch)
    ---------------------------------------------------------------------------------
    Cần mục 17b (tài khoản mẫu) ở trên. Chạy lại riêng mục này không nhân đôi dữ liệu.
@@ -2886,75 +2959,150 @@ COMMIT TRANSACTION;
 DROP TABLE #P, #O, #R;
 GO
 
-/* =====================================================================================
-   18. DỮ LIỆU MẪU: ĐƠN HÀNG, NVL CỦA ĐƠN, ĐƠN MUA NVL (22/10/2026)
-   Để xem thử màn "Đơn hàng", "NVL của đơn", "Đơn mua NVL". Đơn giá là GIÁ MẪU.
-   Xóa cả mục này nếu tạo database thật (không cần dữ liệu mẫu). Mỗi khối chỉ chèn khi chưa có.
-   ===================================================================================== */
-SET XACT_ABORT ON;
-BEGIN TRAN;
-
-IF NOT EXISTS (SELECT 1 FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu')
-    INSERT dbo.Customer (CustomerName) VALUES (N'Khách hàng mẫu');
-IF NOT EXISTS (SELECT 1 FROM dbo.Product WHERE ProductCode = 'MAU-AO-01')
-    INSERT dbo.Product (ProductCode, ProductName) VALUES ('MAU-AO-01', N'Áo polo mẫu');
-IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'V-0001')
-    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
-    VALUES ('V-0001', N'Vải cotton mẫu', 'FABRIC', 'MAIN_FABRIC', 'm');
-IF NOT EXISTS (SELECT 1 FROM dbo.Material WHERE MaterialCode = 'PL-0001')
-    INSERT dbo.Material (MaterialCode, MaterialName, MaterialType, Category, Unit)
-    VALUES ('PL-0001', N'Chỉ may mẫu', 'TRIM', 'THREAD', N'cuộn');
-
-DECLARE @cus INT = (SELECT CustomerId FROM dbo.Customer WHERE CustomerName = N'Khách hàng mẫu');
-DECLARE @prd INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'MAU-AO-01');
-DECLARE @vai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'V-0001');
-DECLARE @chi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'PL-0001');
-
--- Hai đơn hàng mẫu, mỗi đơn 2 dòng màu x size.
-IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01')
-BEGIN
-    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-01', @cus, '2026-10-21', '2026-12-05');
-    DECLARE @o1 INT = SCOPE_IDENTITY();
-    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
-    VALUES (@o1, @prd, N'Đỏ', 'M', 60, 12500), (@o1, @prd, N'Đỏ', 'L', 40, 12500);
-END;
-IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02')
-BEGIN
-    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate) VALUES ('DH-MAU-02', @cus, '2026-10-21', '2026-12-10');
-    DECLARE @o2 INT = SCOPE_IDENTITY();
-    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice)
-    VALUES (@o2, @prd, N'Trắng', 'M', 100, 12000), (@o2, @prd, N'Trắng', 'L', 80, 12000);
-END;
-DECLARE @d1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-01');
-DECLARE @d2 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DH-MAU-02');
-
--- NVL của đơn (Source và PurchaseQty là cột tính, không chèn).
--- DH-MAU-01: vải cần 120, khách cấp 20 -> phải mua 100. DH-MAU-02: vải cần 200, khách cấp 50 -> phải mua 150; chỉ phải mua 30.
-IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d1 AND MaterialId = @vai AND MaterialColor = '')
-    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
-    VALUES (@d1, @vai, '', 120, 20, '2026-11-01');
-IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @vai AND MaterialColor = '')
-    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty, CustomerExpectedDate)
-    VALUES (@d2, @vai, '', 200, 50, '2026-11-05');
-IF NOT EXISTS (SELECT 1 FROM dbo.OrderMaterial WHERE OrderId = @d2 AND MaterialId = @chi AND MaterialColor = '')
-    INSERT dbo.OrderMaterial (OrderId, MaterialId, MaterialColor, RequiredQty, CustomerQty)
-    VALUES (@d2, @chi, '', 30, 0);
-
--- Đơn mua gắn đơn hàng: mỗi dòng lấy phần "phải mua" của NVL trong đơn (vải 18.000, chỉ 3.500).
-DECLARE @po TABLE (PoCode VARCHAR(30), OrderId INT, Note NVARCHAR(200));
-INSERT @po VALUES ('DM-20261021-001', @d1, N'Dữ liệu mẫu: mua NVL cho DH-MAU-01'),
-                  ('DM-20261021-002', @d2, N'Dữ liệu mẫu: mua NVL cho DH-MAU-02');
-INSERT dbo.PurchaseOrder (PoCode, OrderId, GoodsStatus, PaymentStatus, Note)
-SELECT p.PoCode, p.OrderId, 'PENDING_FINALISATION', 'UNPAID', p.Note FROM @po p
-WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrder x WHERE x.PoCode = p.PoCode);
-INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, NotReplenishedQty, UnitPrice)
-SELECT po.PurchaseOrderId, om.OrderMaterialId, om.PurchaseQty, 0, CASE om.MaterialId WHEN @vai THEN 18000 ELSE 3500 END
-FROM @po p JOIN dbo.PurchaseOrder po ON po.PoCode = p.PoCode
-JOIN dbo.OrderMaterial om ON om.OrderId = po.OrderId AND om.PurchaseQty > 0
-WHERE NOT EXISTS (SELECT 1 FROM dbo.PurchaseOrderLine l WHERE l.PurchaseOrderId = po.PurchaseOrderId);
-
-COMMIT;
+-- 19.3 Doanh thu và chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn ở mục 14)
+--      Tính hòa vốn tháng 2026-08: DEMO-AO01 vượt hòa vốn (~148%), DEMO-QU02 chưa đạt (~90%, có cảnh báo).
+SET QUOTED_IDENTIFIER ON;
 GO
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH000')
+BEGIN
+    DECLARE @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+            @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+            @p2 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-QU02'),
+            @aug INT = (SELECT PeriodId FROM dbo.AccountingPeriod WHERE PeriodMonth = '2026-08'),
+            @qaqc INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QAQC1'),
+            @thukho INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO');
 
+    INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
+    VALUES ('DEMO-DH000', @cus, '2026-07-20', '2026-09-05', 'COMPLETE', 'COMPLETED', N'Đơn demo đã giao xong trong tháng 8 (để xem hòa vốn)');
+    DECLARE @o0 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH000');
+
+    INSERT dbo.OrderLine (OrderId, ProductId, Color, SizeCode, OrderedQty, CmtUnitPrice) VALUES
+     (@o0, @p1, N'Đen', 'M', 1200, 28000),
+     (@o0, @p2, N'Be',  'M',  600, 18000);
+    DECLARE @l1 INT = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o0 AND ProductId = @p1),
+            @l2 INT = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o0 AND ProductId = @p2);
+
+    INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status, ConfirmedBy, ConfirmedAt) VALUES
+     ('FG-DEMO-A01', @o0, @p1, @qaqc, '2026-08-12 16:00:00', 'CONFIRMED', @thukho, '2026-08-12 16:20:00'),
+     ('FG-DEMO-A02', @o0, @p1, @qaqc, '2026-08-26 16:00:00', 'CONFIRMED', @thukho, '2026-08-26 16:20:00'),
+     ('FG-DEMO-A03', @o0, @p2, @qaqc, '2026-08-28 16:00:00', 'CONFIRMED', @thukho, '2026-08-28 16:20:00');
+    INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+    SELECT h.FgHandoverId, v.OrderLineId, v.Qty, v.Qty
+    FROM (VALUES ('FG-DEMO-A01', @l1, 700), ('FG-DEMO-A02', @l1, 500), ('FG-DEMO-A03', @l2, 600)) v(Code, OrderLineId, Qty)
+    JOIN dbo.FgHandover h ON h.HandoverCode = v.Code;
+
+    -- Chi phí tháng 08: định phí 30 triệu; biến phí DEMO-AO01 4 triệu, DEMO-QU02 1,8 triệu
+    INSERT dbo.MonthlyCost (PeriodId, CostCategoryCode, CostType, ProductId, Amount, Quantity, Note) VALUES
+     (@aug, 'MEALS',            'FIXED',    NULL,  8000000, NULL, N'Hóa đơn bếp tháng 8'),
+     (@aug, 'FUEL',             'FIXED',    NULL,  2000000, NULL, NULL),
+     (@aug, 'UTILITIES',        'FIXED',    NULL,  5000000, NULL, N'Điện, nước'),
+     (@aug, 'PREMISES',         'FIXED',    NULL, 15000000, NULL, N'Thuê mặt bằng'),
+     (@aug, 'MACHINE_SUPPLIES', 'VARIABLE', @p1,   2500000, NULL, N'Kim, dầu máy cho áo khoác'),
+     (@aug, 'MATERIALS_BOUGHT', 'VARIABLE', @p1,   1500000, NULL, N'Phụ liệu mua ngoài'),
+     (@aug, 'OTHER',            'VARIABLE', @p2,   1800000, NULL, NULL);
+END
+GO
+-- 19.4 Thẻ kho cho các chứng từ demo đã xác nhận (phiếu nhập NVL, bàn giao thành phẩm) để tồn kho khớp chứng từ
+--      Nhờ vậy màn Tồn kho có số, Quản đốc lập được phiếu xuất hàng thử. Chạy lại không nhân đôi (khóa duy nhất theo dòng chứng từ).
+SET QUOTED_IDENTIFIER ON;
+GO
+-- Phiếu nhập NVL đã xác nhận: cộng kho NVL theo số đạt
+INSERT dbo.StockTransaction (WarehouseType, MaterialId, MaterialColor, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+SELECT 'MATERIAL', om.MaterialId, om.MaterialColor, 'MATERIAL_RECEIPT', r.MaterialReceiptId, l.MaterialReceiptLineId, l.AcceptedQty,
+       SUM(l.AcceptedQty) OVER (PARTITION BY om.MaterialId, om.MaterialColor ORDER BY r.ConfirmedAt, l.MaterialReceiptLineId),
+       CAST(r.ConfirmedAt AS DATE)
+FROM dbo.MaterialReceiptLine l
+JOIN dbo.MaterialReceipt r ON r.MaterialReceiptId = l.MaterialReceiptId AND r.Status = 'CONFIRMED'
+JOIN dbo.OrderMaterial om ON om.OrderMaterialId = l.OrderMaterialId
+WHERE l.AcceptedQty > 0
+  AND NOT EXISTS (SELECT 1 FROM dbo.StockTransaction t WHERE t.SourceDocType = 'MATERIAL_RECEIPT' AND t.SourceDocId = r.MaterialReceiptId
+                  AND t.SourceLineId = l.MaterialReceiptLineId AND t.WarehouseType = 'MATERIAL');
+
+-- Bàn giao thành phẩm đã xác nhận: cộng kho thành phẩm theo dòng đơn
+INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+SELECT 'FINISHED', l.OrderLineId, 'FG_HANDOVER', h.FgHandoverId, l.FgHandoverLineId, l.ConfirmedQty,
+       SUM(l.ConfirmedQty) OVER (PARTITION BY l.OrderLineId ORDER BY h.ConfirmedAt, l.FgHandoverLineId),
+       CAST(h.ConfirmedAt AS DATE)
+FROM dbo.FgHandoverLine l
+JOIN dbo.FgHandover h ON h.FgHandoverId = l.FgHandoverId AND h.Status = 'CONFIRMED'
+WHERE l.ConfirmedQty > 0
+  AND NOT EXISTS (SELECT 1 FROM dbo.StockTransaction t WHERE t.SourceDocType = 'FG_HANDOVER' AND t.SourceDocId = h.FgHandoverId
+                  AND t.SourceLineId = l.FgHandoverLineId AND t.WarehouseType = 'FINISHED');
+GO
+-- 19.5 Dữ liệu demo các chức năng bổ sung: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê, bàn giao thành phẩm chờ nhận, thông báo
+--      Chạy lại không nhân đôi (mỗi khối kiểm tra đã có chưa).
+SET QUOTED_IDENTIFIER ON;
+GO
+-- Mức tiền bậc thợ (khớp tiền bậc trong bảng lương demo mục 14)
+INSERT dbo.GradeLevel (GradeCode, GradeName, MonthlyAmount, EffectiveDate)
+SELECT v.GradeCode, v.GradeName, v.Amount, '2026-09-01'
+FROM (VALUES ('A', N'Bậc A', 600000), ('B', N'Bậc B', 400000), ('C', N'Bậc C', 200000), ('D', N'Bậc D', 0)) v(GradeCode, GradeName, Amount)
+WHERE NOT EXISTS (SELECT 1 FROM dbo.GradeLevel g WHERE g.GradeCode = v.GradeCode AND g.EffectiveDate = '2026-09-01');
+
+-- Một đề xuất bậc đang chờ Admin / Quản đốc quyết định
+IF NOT EXISTS (SELECT 1 FROM dbo.GradeEvaluation WHERE Status = 'SUBMITTED' AND Reason LIKE N'Demo:%')
+BEGIN
+    DECLARE @gw INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY2'),
+            @gl INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTMAY'),
+            @gt INT = (SELECT TeamId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY2');
+    IF @gw IS NOT NULL AND @gl IS NOT NULL
+        INSERT dbo.GradeEvaluation (WorkerId, ProposedBy, TeamId, CurrentGradeCode, ProposedGradeCode, Reason, RecentDefectCount, EvaluationDate, Status)
+        VALUES (@gw, @gl, @gt, 'C', 'B', N'Demo: làm đều tay, ít lỗi trong tháng', 0, '2026-10-20', 'SUBMITTED');
+END
+GO
+-- Sổ xe: một xe, hai chuyến (chuyến 2 lệch km và xăng vượt định mức để xem cảnh báo MSG30)
+IF NOT EXISTS (SELECT 1 FROM dbo.Vehicle WHERE PlateNumber = '29C-12345')
+BEGIN
+    INSERT dbo.Vehicle (PlateNumber, VehicleType, FuelNormPer100Km) VALUES ('29C-12345', N'Xe tải 2 tấn', 12.00);
+    DECLARE @v INT = SCOPE_IDENTITY();
+    INSERT dbo.VehicleTrip (VehicleId, TripDate, DriverName, Purpose, OdometerStart, OdometerEnd, FuelLiters, FuelCost, Status, KmGapWarning, FuelOverNormWarning, RecordedAt) VALUES
+     (@v, '2026-10-12', N'Nguyễn Văn Tài', N'Giao hàng đợt 1', 10000, 10150, 18.00, 400000, 'COMPLETED', 0, 0, '2026-10-12 17:30:00'),
+     (@v, '2026-10-19', N'Nguyễn Văn Tài', N'Giao hàng đợt 2', 10200, 10300, 20.00, 450000, 'COMPLETED', 1, 1, '2026-10-19 17:30:00');
+END
+GO
+-- Kiểm kê: một phiếu kho NVL chờ duyệt (đếm thiếu 3 so với sổ)
+IF NOT EXISTS (SELECT 1 FROM dbo.Stocktake WHERE StocktakeCode = 'KK-DEMO-001')
+BEGIN
+    DECLARE @m INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01');
+    DECLARE @book DECIMAL(18,3) = (SELECT ISNULL(SUM(QtyChange), 0) FROM dbo.StockTransaction WHERE WarehouseType = 'MATERIAL' AND MaterialId = @m AND MaterialColor = N'Đen');
+    IF @m IS NOT NULL AND @book >= 3
+    BEGIN
+        INSERT dbo.Stocktake (StocktakeCode, WarehouseType, Scope, StocktakeDate, Status) VALUES ('KK-DEMO-001', 'MATERIAL', N'Kệ vải A (demo)', '2026-10-21', 'PENDING_APPROVAL');
+        INSERT dbo.StocktakeLine (StocktakeId, MaterialId, MaterialColor, BookQty, CountedQty, Note)
+        VALUES (SCOPE_IDENTITY(), @m, N'Đen', @book, @book - 3, N'Thiếu 3m khi đếm');
+    END
+END
+GO
+-- Bàn giao thành phẩm: một phiếu QA/QC đang chờ Thủ kho nhận
+IF NOT EXISTS (SELECT 1 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-001')
+BEGIN
+    DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+            @qa INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QAQC1'),
+            @ol INT = (SELECT TOP 1 ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.CustomerOrder c ON c.OrderId = ol.OrderId
+                       WHERE c.OrderCode = 'DEMO-DH001' AND ol.Color = N'Đen' AND ol.SizeCode = 'M'),
+            @p INT;
+    SET @p = (SELECT ProductId FROM dbo.OrderLine WHERE OrderLineId = @ol);
+    IF @o IS NOT NULL AND @qa IS NOT NULL AND @ol IS NOT NULL
+    BEGIN
+        INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status) VALUES ('TP-DEMO-001', @o, @p, @qa, '2026-10-21 16:00:00', 'PENDING');
+        INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty) VALUES (SCOPE_IDENTITY(), @ol, 20);
+    END
+END
+GO
+-- Thông báo nhanh của Quản đốc tới toàn xưởng (kèm hộp thư của từng người)
+IF NOT EXISTS (SELECT 1 FROM dbo.Announcement WHERE Content LIKE N'Demo:%')
+BEGIN
+    DECLARE @s INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC');
+    IF @s IS NOT NULL
+    BEGIN
+        INSERT dbo.Announcement (Content, Priority, TargetScope, SenderId, SentAt)
+        VALUES (N'Demo: Họp toàn xưởng lúc 15h thứ Sáu để rà soát tiến độ đơn DEMO-DH001.', 'URGENT', 'ALL', @s, '2026-10-22 08:00:00');
+        DECLARE @a INT = SCOPE_IDENTITY();
+        INSERT dbo.Notification (RecipientId, SourceType, AnnouncementId, Title, Message, IsRead, PushStatus, CreatedAt)
+        SELECT e.EmployeeId, 'ANNOUNCEMENT', @a, N'Thông báo khẩn', N'Demo: Họp toàn xưởng lúc 15h thứ Sáu để rà soát tiến độ đơn DEMO-DH001.', 0, 'SKIPPED', '2026-10-22 08:00:00'
+        FROM dbo.Employee e WHERE e.Status = 'ACTIVE' AND e.EmployeeId <> @s;
+    END
+END
+GO
 PRINT N'NX-MTD: tạo database xong.';
 GO

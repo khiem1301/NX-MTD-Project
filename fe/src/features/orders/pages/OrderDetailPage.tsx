@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Descriptions, Result, Space, Spin, Table, Tabs, Tag } from 'antd';
+import { Alert, Button, Card, Descriptions, Popconfirm, Result, Space, Spin, Table, Tabs, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { NoteModal } from '@/components/common/NoteModal';
@@ -12,7 +12,9 @@ import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { AuditHistory } from '@/components/common/AuditHistory';
-import { useCancelOrder, useOrder, useStopOrder } from '../hooks/useOrders';
+import { usePermission } from '@/hooks/usePermission';
+import { ROLES } from '@/constants/roles';
+import { useCancelOrder, useOrder, useStartProduction, useStopOrder } from '../hooks/useOrders';
 import { blockTotal, fromLines } from '../utils/orderGrid';
 import type { OrderLine } from '../types';
 
@@ -56,6 +58,8 @@ export function OrderDetailPage() {
   const { data, isLoading, error, refetch } = useOrder(Number.isInteger(orderId) ? orderId : null);
   const cancel = useCancelOrder(orderId);
   const stop = useStopOrder(orderId);
+  const start = useStartProduction(orderId);
+  const { hasRole } = usePermission();
   const [pending, setPending] = useState<Pending>(null);
 
   if (isLoading) return <Spin />;
@@ -85,6 +89,15 @@ export function OrderDetailPage() {
         <Space>
           <Button onClick={() => navigate(ROUTES.orders)}>{MESSAGES.common.close}</Button>
           {canEdit && <Button onClick={() => navigate(ROUTES.orderEdit(data.orderId))}>{MESSAGES.common.edit}</Button>}
+          {data.status === 'New' && hasRole(ROLES.Admin) && (
+            <Tooltip title={data.materialStatus === 'Awaiting' ? MESSAGES.orders.startProductionHint : undefined}>
+              <Popconfirm title={MESSAGES.orders.confirmStartProduction} onConfirm={() => start.mutate(data.rowVer)}>
+                <Button type="primary" loading={start.isPending} disabled={data.materialStatus === 'Awaiting'}>
+                  {MESSAGES.orders.startProduction}
+                </Button>
+              </Popconfirm>
+            </Tooltip>
+          )}
           {data.status === 'New' && <Button danger onClick={() => setPending('cancel')}>{MESSAGES.orders.cancelOrder}</Button>}
           {canStop && <Button danger onClick={() => setPending('stop')}>{MESSAGES.orders.stopOrder}</Button>}
         </Space>

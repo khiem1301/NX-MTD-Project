@@ -58,6 +58,11 @@ const warehouseRoutes = [
     page: async () => (await warehouse()).MaterialReceiptListPage,
   },
   {
+    path: ROUTES.shortDeliveries,
+    roles: [WarehouseKeeper, Manager],
+    page: async () => (await warehouse()).ShortDeliveryListPage,
+  },
+  {
     path: ROUTES.materialIssues,
     roles: [WarehouseKeeper, TeamLeader, TeamDeputy],
     page: async () => (await warehouse()).MaterialIssueListPage,
@@ -81,6 +86,56 @@ const warehouseRoutes = [
     path: ROUTES.cuttingLays,
     roles: [TeamLeader, TeamDeputy],
     page: async () => (await cutting()).CuttingLayPage,
+  },
+  {
+    path: ROUTES.fgHandovers,
+    roles: [ROLES.QaQc, WarehouseKeeper],
+    page: async () => (await import('@/features/fg-handover')).FgHandoverPage,
+  },
+  {
+    path: ROUTES.dispatchNotes,
+    roles: [Manager, WarehouseKeeper, ROLES.Accountant],
+    page: async () => (await import('@/features/dispatch')).DispatchNotesPage,
+  },
+  {
+    path: ROUTES.pieceMovements,
+    roles: [TeamLeader, TeamDeputy],
+    page: async () => (await import('@/features/piece-movement')).LeaderPieceMovementsPage,
+  },
+  {
+    path: ROUTES.myPieceMovements,
+    roles: [ROLES.Worker],
+    page: async () => (await import('@/features/piece-movement')).MyPieceMovementsPage,
+  },
+  {
+    path: ROUTES.materialReturns,
+    roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
+    page: async () => (await import('@/features/material-return')).MaterialReturnPage,
+  },
+  {
+    path: ROUTES.stocktakes,
+    roles: [WarehouseKeeper, Manager, Admin],
+    page: async () => (await import('@/features/stocktake')).StocktakePage,
+  },
+  {
+    path: ROUTES.vehicleLog,
+    roles: [ROLES.Accountant],
+    page: async () => (await import('@/features/vehicle-log')).VehicleLogPage,
+  },
+  {
+    path: ROUTES.notifications,
+    roles: Object.values(ROLES),
+    page: async () => (await import('@/features/notification')).NotificationsPage,
+  },
+  {
+    path: ROUTES.grades,
+    roles: [TeamLeader, TeamDeputy, Admin, Manager],
+    page: async () => (await import('@/features/grade')).GradePage,
+  },
+  {
+    path: ROUTES.auditLogs,
+    roles: [Admin],
+    page: async () => (await import('@/features/audit-log')).AuditLogPage,
   },
   {
     path: ROUTES.cutHandovers,

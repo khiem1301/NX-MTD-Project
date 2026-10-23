@@ -435,7 +435,7 @@ public class PurchaseFlowServiceTests
         _orders.GetByIdAsync(po.PurchaseOrderId, Arg.Any<CancellationToken>()).Returns(Result<PurchaseOrderDto>.Success(
             new PurchaseOrderDto(po.PurchaseOrderId, po.PoCode, null, null, null, null, po.GoodsStatus, po.PaymentStatus,
                 null, Now, po.PurchaseOrderLines.Select(l => new PurchaseOrderLineDto(l.PurchaseOrderLineId, null, 1,
-                    "PL-0001", "Chỉ", "Cuộn", "Trắng", l.OrderedQty, l.UnitPrice, null)).ToList())));
+                    "PL-0001", "Chỉ", "Cuộn", "Trắng", l.OrderedQty, l.UnitPrice, null, 0, 0)).ToList())));
 
     [Fact]
     public async Task Get_ManagerOnPending_CanPlaceAndCancelButNotPay()

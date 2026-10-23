@@ -9,6 +9,7 @@ export const MESSAGES = {
     save: 'Lưu',
     create: 'Thêm mới',
     edit: 'Sửa',
+    printExcel: 'In / xuất Excel',
     delete: 'Xóa',
     view: 'Xem',
     search: 'Tìm theo mã, tên...',
@@ -38,6 +39,11 @@ export const MESSAGES = {
     confirmReceipt: 'Xác nhận phiếu nhập? Tồn kho NVL sẽ tăng theo số đạt.',
     receiptConfirmed: 'Đã xác nhận phiếu nhập.',
     receiptReturned: 'Đã trả phiếu nhập cho Thủ kho.',
+    shortageStaged: 'Phiếu có hàng thiếu / lỗi, hệ thống đã tạo yêu cầu xử lý thiếu NVL cho Quản đốc.',
+    shortageResolved: 'Đã ghi nhận cách xử lý hàng thiếu.',
+    confirmNoReplenish:
+      'Chốt không bù? Phần thiếu / lỗi sẽ được ghi "không bù" trên đơn mua và yêu cầu hoàn thành.',
+    supplementarySaved: 'Đã gửi phiếu bổ sung cho Quản đốc xác nhận.',
     issueCreated: 'Đã lập phiếu cấp, số lượng đã được giữ chỗ.',
     confirmIssue: 'Xác nhận đã nhận đủ số trên phiếu? Tồn kho sẽ giảm theo số xác nhận.',
     issueConfirmed: 'Đã xác nhận nhận hàng.',
@@ -46,6 +52,7 @@ export const MESSAGES = {
   },
   cutting: {
     workOrderSaved: 'Đã lưu lệnh cắt.',
+    replacementCreated: 'Đã lập lệnh cắt bù.',
     confirmCancelWorkOrder: 'Hủy lệnh cắt này? Thao tác không hoàn tác được.',
     workOrderCancelled: 'Đã hủy lệnh cắt.',
     laySaved: 'Đã lưu bàn cắt.',
@@ -230,6 +237,10 @@ export const MESSAGES = {
     selectProduct: 'Chọn mã hàng',
     needLine: 'Vui lòng nhập ít nhất một dòng màu × size.', // MSG01
     cancelOrder: 'Hủy đơn hàng',
+    startProduction: 'Chuyển sang sản xuất',
+    startProductionHint: 'Chưa nhận NVL nào nên chưa thể chuyển sang sản xuất.',
+    confirmStartProduction: 'Chuyển đơn hàng sang sản xuất?',
+    productionStarted: 'Đã chuyển đơn hàng sang sản xuất.',
     stopOrder: 'Dừng đơn hàng',
     cancelReason: 'Lý do hủy (không bắt buộc)',
     stopReason: 'Lý do dừng',

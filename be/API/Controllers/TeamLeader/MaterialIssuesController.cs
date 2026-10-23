@@ -27,6 +27,12 @@ public sealed class MaterialIssuesController : TeamLeaderBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _issues.GetByIdAsync(id, TeamId, ct));
 
+    /// <summary>Xuất Excel phiếu cấp của tổ mình để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportIssueAsync(id, TeamId, ct));
+
     [HttpPost("{id:int}/confirm")]
     public async Task<IActionResult> Confirm(int id, [FromBody] ConfirmIssueDto dto, CancellationToken ct) =>
         this.ToResponse(await _issues.ConfirmAsync(id, dto, TeamId, _user.EmployeeId, ct));

@@ -13,7 +13,9 @@ public static class MonthlyCostModule
     public static IServiceCollection AddMonthlyCostModule(this IServiceCollection services, IConfiguration config)
     {
         services.AddSingleton<IExcelMonthlyCostParser, ClosedXmlMonthlyCostParser>();
+        services.AddSingleton<IExcelEmployeeParser, ClosedXmlEmployeeParser>();   // KH-22
         services.AddSingleton<IMonthlyCostExcelWriter, ClosedXmlMonthlyCostWriter>();
+        services.AddSingleton<IWarehouseDocumentExcelWriter, ClosedXmlWarehouseDocumentWriter>();   // TH-16
         services.AddScoped<IMonthlyCostRepository, MonthlyCostRepository>();
         services.AddScoped<IMonthlyCostService, MonthlyCostService>();
         return services;

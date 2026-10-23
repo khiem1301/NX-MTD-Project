@@ -43,6 +43,42 @@ public static class AuditActions
     public const string Login = "LOGIN";
 }
 
+/// <summary>GradeLevel / GradeEvaluation: bậc thợ A–D.</summary>
+public static class GradeCodes
+{
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { "A", "B", "C", "D" };
+}
+
+/// <summary>GradeEvaluation.Status (CK_GradeEval_Status). Dòng APPLIED là lịch sử bậc.</summary>
+public static class GradeEvaluationStatuses
+{
+    public const string Submitted = "SUBMITTED";
+    public const string Applied = "APPLIED";
+    public const string NotApplied = "NOT_APPLIED";
+}
+
+/// <summary>Announcement.Priority (CK_Announcement_Priority).</summary>
+public static class AnnouncementPriorities
+{
+    public const string Normal = "NORMAL";
+    public const string Urgent = "URGENT";
+}
+
+/// <summary>Announcement.TargetScope (CK_Announcement_Scope): toàn xưởng, theo tổ, theo vai trò.</summary>
+public static class AnnouncementScopes
+{
+    public const string All = "ALL";
+    public const string Team = "TEAM";
+    public const string Role = "ROLE";
+}
+
+/// <summary>Notification.PushStatus (CK_Notification_Push). Push FCM chưa làm nên luôn SKIPPED (KH-12).</summary>
+public static class NotificationPushStatuses
+{
+    public const string Pending = "PENDING";
+    public const string Skipped = "SKIPPED";
+}
+
 public static class NotificationSources
 {
     public const string Announcement = "ANNOUNCEMENT";

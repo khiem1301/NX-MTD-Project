@@ -13,6 +13,8 @@ public static class KpiModule
     {
         services.AddScoped<IKpiService, KpiService>();
         services.AddHostedService<KpiAutoCloseJob>();
+        services.AddHostedService<DelayRiskJob>();           // JOB-04 (KH-23)
+        services.AddHostedService<NotificationCleanupJob>(); // JOB-05 (KH-23)
         return services;
     }
 }

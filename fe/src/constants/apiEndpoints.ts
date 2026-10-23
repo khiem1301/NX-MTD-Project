@@ -59,6 +59,7 @@ export const API = {
     byId: (id: number) => v1(`admin/customer-orders/${id}`),
     cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
     stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
+    startProduction: (id: number) => v1(`admin/customer-orders/${id}/start-production`),
   },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {
@@ -140,6 +141,8 @@ export const API = {
     orderMaterials: (role: RolePath) => v1(`${role}/order-materials`),
     materialReceipts: (role: RolePath) => v1(`${role}/material-receipts`),
     purchaseOrders: (role: RolePath) => v1(`${role}/purchase-orders`),
+    shortDeliveries: (role: RolePath) => v1(`${role}/short-deliveries`),
+    stocktakes: (role: RolePath) => v1(`${role}/stocktakes`),
     materialIssues: (role: RolePath) => v1(`${role}/material-issues`),
     inventories: (role: RolePath) => v1(`${role}/inventories`),
     pieceHoldings: (role: RolePath) => v1(`${role}/piece-holdings`),
