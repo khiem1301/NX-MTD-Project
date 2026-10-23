@@ -62,6 +62,7 @@
 | DEV-ALL-3 | 23/10/2026 | Claude (AI) | `WorkOrderService.CreateReplacementAsync`, `CutHandoverService`, `MaterialReturnService`, `WorkerPieceMovementService` | Lệnh cắt bù từ đơn cắt bù đã duyệt, tổ cắt trả vải thừa, giao / thu hồi BTP với công nhân | Đã làm |
 | DEV-ALL-4 | 23/10/2026 | Claude (AI) | `StocktakeService`, `VehicleService` | Kiểm kê kho và sổ xe + nhiên liệu | Đã làm |
 | DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
+| DEV-ALL-6 | 23/10/2026 | Claude (AI) | `WarehouseDocumentExportService`, `ClosedXmlWarehouseDocumentWriter` | In / xuất Excel từng phiếu nhập, phiếu cấp, phiếu xuất hàng (TH-16) | Đã làm |
 
 ---
 
@@ -781,4 +782,15 @@
   - JOB-04: chưa hoàn thiện cái nào trong N ngày thì chỉ gắn cờ khi đã quá hạn giao (tránh gắn cờ mọi đơn mới). Tính theo ngày lịch, không bỏ Chủ nhật. JOB-05 01:00: khóa giờ chạy `NOTIFICATION_CLEANUP_TIME` chưa seed nên dùng mặc định trong code.
   - Import nhân viên: cột cố định (Mã NV, Họ tên, Giới tính, Ngày sinh, SĐT, Vai trò, Mã tổ, Hình thức lương, Ngày vào làm, Mã chấm công), tối đa 500 dòng; mật khẩu tạm chỉ trả một lần ngay khi nhập.
 - **Cần sửa trong tài liệu:** Report-3 UC17 (định dạng file import nhân viên), UC21 (công thức nguy cơ trễ), UC05 (không push FCM).
+- **Trạng thái:** Mở
+
+### DEV-ALL-6 · TH-16 In / xuất Excel chứng từ kho
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · TH-16 · (chưa có PR)
+- **Ảnh hưởng tới:** UC13 (phiếu nhập), UC40 (phiếu cấp), UC43 (phiếu xuất hàng); `GET .../{id}/excel` ở các controller Quản đốc, Thủ kho, Tổ trưởng, Kế toán
+- **Code đang làm:**
+  - Xuất theo từng phiếu (một trang A4 dọc: tiêu đề, thông tin chung, bảng dòng hàng, hàng chữ ký), không xuất cả danh sách. Danh sách vẫn xem trên màn hình.
+  - Dữ liệu lấy qua dịch vụ chi tiết hiện có nên giữ nguyên quyền xem: tổ trưởng chỉ in được phiếu cấp của tổ mình (khác tổ → 403 / 404 như xem chi tiết).
+  - Quản đốc in được phiếu nhập; Thủ kho in được cả ba loại; Kế toán in được phiếu xuất hàng.
+- **Cần sửa trong tài liệu:** Report-3 UC13: ghi rõ "in" là tải file Excel để tự in, chưa có bản PDF.
 - **Trạng thái:** Mở

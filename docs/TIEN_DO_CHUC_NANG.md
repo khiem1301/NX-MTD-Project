@@ -6,6 +6,8 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ## Đã làm được
 
+**Bổ sung 23/10 (lần 2):** TH-16 (in / xuất Excel từng phiếu nhập, cấp, xuất hàng) và test phạm vi dữ liệu 3 tầng KH-24 đã xong.
+
 ### Kho, nhập, xuất (Thái)
 | Mã | Chức năng | Ghi chú |
 |---|---|---|
@@ -15,6 +17,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 | TH-14 | Phiếu xuất hàng | Quản đốc lập (giữ chỗ) → Thủ kho xuất → Kế toán xác nhận khách nhận; đơn tự đổi trạng thái giao |
 | TH-10 | Lệnh cắt bù và tổ cắt trả vải thừa | Lệnh cắt bù từ đơn cắt bù đã duyệt; Thủ kho xác nhận trả vải |
 | TH-19 | Giao / thu hồi bán thành phẩm với công nhân | Công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (có lý do); trần sản lượng bám số BTP thật |
+| TH-16 | In / xuất Excel phiếu nhập, phiếu cấp, phiếu xuất hàng | Nút "In / xuất Excel" trong ngăn chi tiết; một phiếu một file A4 có chỗ ký tên |
 
 ### Kế toán, kiểm kê (Thảo)
 | Mã | Chức năng | Ghi chú |
@@ -32,11 +35,12 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 | KH-22 | Nhật ký thay đổi (Admin) và nhập nhân viên từ Excel | Có bước xem trước, báo lỗi và trùng |
 | KH-23 | Job nền | 17:00 gắn cờ đơn nguy cơ trễ; 01:00 xóa thông báo quá 90 ngày |
 | KH-17 | Kịch bản demo 9 bước | `docs/DEMO_SCRIPT.md` |
-| KH-24 | Test phân quyền | Mọi controller khóa đúng vai trò (`RbacControllerTests`) |
+| KH-24 | Test phân quyền và phạm vi dữ liệu 3 tầng | Mọi controller khóa đúng vai trò (`RbacControllerTests`); dữ liệu tầng Mật chỉ tới đúng vai trò, công nhân / tổ trưởng không tự chọn người / tổ (`DataScopeTests`) |
+
 
 ### Dữ liệu và tài liệu
 - Dữ liệu demo mục 19.4–19.5 trong `SQL/NX-MTD_Database.sql` (thẻ kho, bậc thợ, sổ xe, kiểm kê, bàn giao chờ nhận, thông báo).
-- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…5 ghi các chỗ code khác tài liệu gốc.
+- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…6 ghi các chỗ code khác tài liệu gốc.
 
 ## Chưa làm
 
@@ -45,8 +49,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 - Push FCM của KH-12: thông báo chỉ hiện trong ứng dụng.
 
 ### Chưa làm vì cần code thêm
-- TH-16: in / xuất Excel phiếu nhập, cấp, xuất.
-- Test phạm vi dữ liệu 3 tầng riêng cho KH-24 (các test service hiện có đã kiểm tra phạm vi theo tổ / theo người nhưng chưa có bộ test tập trung).
+- Giao diện điện thoại (để sau, theo yêu cầu).
 - Thử toàn bộ màn hình mới trên trình duyệt thật (kể cả giao diện điện thoại).
 
 ### Không phải code (cần người làm)
