@@ -53,11 +53,6 @@ const warehouseRoutes = [
     page: async () => (await warehouse()).OrderMaterialPage,
   },
   {
-    path: ROUTES.purchaseOrders,
-    roles: [Manager],
-    page: async () => (await warehouse()).PurchaseOrderListPage,
-  },
-  {
     path: ROUTES.materialReceipts,
     roles: [WarehouseKeeper, Manager],
     page: async () => (await warehouse()).MaterialReceiptListPage,

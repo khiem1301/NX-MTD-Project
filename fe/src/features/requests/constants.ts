@@ -18,8 +18,10 @@ export const REQUEST_STATUS_TAG: Record<string, StatusLabel> = Object.fromEntrie
   ]),
 );
 
-/** Loại đơn dùng form chung của trang này (Cơ điện). Loại khác: luồng sở hữu làm form riêng. */
-export const GENERIC_FORM_TYPES: readonly RequestType[] = ['SpareParts', 'NewMachine', 'MachineSupplies'];
+/** Loại đơn dùng form chung của trang này (Cơ điện + đơn Xin NVL / Xin BTP của tổ). Loại khác: luồng sở hữu làm form riêng. */
+export const GENERIC_FORM_TYPES: readonly RequestType[] = [
+  'SpareParts', 'NewMachine', 'MachineSupplies', 'MaterialRequisition', 'SemiFinishedRequisition',
+];
 
 /** Dùng khi chưa có chi tiết đơn nào để đọc `maxPhotos` (SystemSetting REQUEST_MAX_PHOTOS). BE vẫn chặn. */
 export const DEFAULT_MAX_PHOTOS = 5;
