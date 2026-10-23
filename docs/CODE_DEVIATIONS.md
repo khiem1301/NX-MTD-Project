@@ -57,6 +57,11 @@
 | DEV-KI-14-1 | 22/10/2026 | Minh (AI) | UC55, UC56, UC57, màn xưởng | Làm gọn màn xưởng cho điện thoại (KI-14): lưới sản lượng dạng thẻ, ẩn cột phụ trên màn nhỏ, hộp thoại co theo màn hình; thêm dòng ngoài phân công vào lưới sản lượng (GBR-20) | Mở |
 | DEV-MI-20-2 | 22/10/2026 | Minh (AI) | `SQL/CreateAndSeed.sql`, `ValidationFilter` | Sửa script (Khiêm, 21/10) thiếu thủ tục `usp_Attendance_ApplyAdjustment` nên chấm công hộ báo 500 trên DB dựng mới; `ValidationFilter` vỡ (500) khi rule mức đối tượng không có tên thuộc tính | Đã sửa |
 | DEV-MI-20-3 | 22/10/2026 | Minh (AI) | `SQL/`, Coding Rules 3.12, AI Context | Gộp mọi script SQL thành MỘT file `SQL/NX-MTD_Database.sql` (schema + TH-12 + tài khoản mẫu + thủ tục chấm công hộ + dữ liệu demo mục 19); xóa `CreateAndSeed.sql`, `SeedAuth.sql`, thư mục `Migrations/`, `DemoData_KH-06-10_purchase-orders.sql` | Đã sửa |
+| DEV-ALL-1 | 23/10/2026 | Claude (AI) | `MaterialReceiptService`, `ShortDeliveryService`, `MaterialSupplyUpdater` | Nhập NVL từ NCC theo đơn mua; nhận thiếu tự sinh đơn SHORT_DELIVERY, Quản đốc chọn giao bù / không bù; phiếu bổ sung; cập nhật GoodsStatus đơn mua và MaterialStatus đơn hàng | Đã làm |
+| DEV-ALL-2 | 23/10/2026 | Claude (AI) | `FgHandoverService`, `DispatchNoteService` | Bàn giao thành phẩm QA/QC → Thủ kho; phiếu xuất hàng Quản đốc → Thủ kho → Kế toán, đơn hàng tự đổi trạng thái giao | Đã làm |
+| DEV-ALL-3 | 23/10/2026 | Claude (AI) | `WorkOrderService.CreateReplacementAsync`, `CutHandoverService`, `MaterialReturnService`, `WorkerPieceMovementService` | Lệnh cắt bù từ đơn cắt bù đã duyệt, tổ cắt trả vải thừa, giao / thu hồi BTP với công nhân | Đã làm |
+| DEV-ALL-4 | 23/10/2026 | Claude (AI) | `StocktakeService`, `VehicleService` | Kiểm kê kho và sổ xe + nhiên liệu | Đã làm |
+| DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
 
 ---
 
@@ -689,6 +694,7 @@
 - **Lý do:** Khung đơn từ để mỗi luồng tự thêm bộ kiểm cho loại đơn của mình.
 - **Ảnh hưởng người khác:** Thái: lệnh cắt bù nên gắn `SourceRequestId` và hoàn thành đơn qua `IRequestService`. Khiêm: `CreateRequestBody` (FE) thêm `orderId`, `defectRecordId`.
 - **Cần sửa trong tài liệu:** không.
+- **Cập nhật 23/10/2026:** lệnh cắt bù đã có (TH-10, xem DEV-ALL-3); đơn cắt bù tự hoàn thành khi BTP bù vào kho đủ số, nên đơn này vẫn cho hoàn thành tay chỉ để xử lý ngoại lệ.
 - **Trạng thái:** Mở
 
 ### DEV-KI-14-1 · Màn xưởng trên điện thoại và nhập ngoài phân công
@@ -720,3 +726,59 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Coding Rules 3.12 và AI Context: thay `CreateAndSeed.sql` + `SQL/Migrations/` bằng một file `NX-MTD_Database.sql`
 - **Trạng thái:** Đã sửa
+
+### DEV-ALL-1 · TH-12, TH-13
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · TH-12, TH-13 · (chưa có PR)
+- **Ảnh hưởng tới:** `MaterialReceiptService`, `ShortDeliveryService`, `MaterialSupplyUpdater`
+- **Code đang làm:**
+  - Phiếu nguồn SUPPLIER lập theo đơn mua đã đặt (ORDERED / PARTIALLY_RECEIVED), số nhập ≤ số còn phải nhận; dòng phiếu nhập hai nhóm (NVL của đơn / dòng đơn mua).
+  - Thủ kho xem đơn thiếu NVL chỉ khi Quản đốc đã chọn "giao bù" (controller riêng). Đơn SHORT_DELIVERY không cho hoàn thành tay (`AllowManualComplete = false`): chỉ đóng khi nhận đủ hàng bù hoặc Quản đốc chốt không bù.
+  - `NotReplenishedQty` chỉ tăng tối đa bằng phần còn lại trên dòng đơn mua (đặt − đã nhận − đã chốt) để không vi phạm `CK_POL_Qty`. Phiếu khách cấp không có đơn mua nên "không bù" chỉ ghi nhận, không đổi số liệu.
+  - MaterialStatus = COMPLETE khi mọi NVL của đơn có (đã nhận + đã chốt không bù) ≥ cần; AWAITING khi chưa nhận gì; còn lại PARTIAL.
+- **Cần sửa trong tài liệu:** AI Context mục 4.1 bước 5: ghi rõ phiếu bổ sung phải ≤ số Quản đốc chọn giao bù và số đã nhận bù được cộng dồn theo từng dòng.
+- **Trạng thái:** Mở
+
+### DEV-ALL-2 · TH-11, TH-14
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · TH-11, TH-14 · (chưa có PR)
+- **Ảnh hưởng tới:** `FgHandoverService`, `DispatchNoteService`
+- **Code đang làm:**
+  - QA/QC chỉ thấy và rút phiếu của mình; số còn giao được = Σ QC đạt − số đã giao (phiếu chờ + đã nhận). QA/QC không được xem tỉ lệ lỗi nên màn này không hiện lỗi.
+  - Phiếu xuất giữ chỗ thành phẩm bằng `EnsureAvailableAsync` ngay khi lập (vw_StockBalance tính phiếu PENDING là đã giữ). Đơn → IN_DELIVERY khi Thủ kho xuất, → DELIVERED / PARTIALLY_DELIVERED theo tổng khách đã nhận so với số đặt (GBR-23). Không có trạng thái giao thất bại (GBR-24).
+  - Ảnh phiếu xuất (Thủ kho) và biên bản giao (Kế toán) đều gắn `DISPATCH_NOTE` nhưng khác mục đích (SIGNED_ISSUE_SLIP / SIGNED_DELIVERY_NOTE).
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-3 · TH-10, TH-19
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · TH-10, TH-19 · (chưa có PR)
+- **Ảnh hưởng tới:** `WorkOrderService.CreateReplacementAsync`, `CutHandoverService`, `MaterialReturnService`, `WorkerPieceMovementService`
+- **Code đang làm:**
+  - Lệnh cắt bù không tính vào trần kế hoạch của dòng đơn (đã có sẵn trong `CheckPlanCapAsync`); vải cần tính theo chi tiết (`PanelName`) của đơn cắt bù. Đơn cắt bù tự hoàn thành khi BTP của lệnh đã vào kho đủ số kế hoạch.
+  - Trả vải thừa: chỉ tổ cắt, theo phiếu cấp đã nhận, số trả ≤ đã nhận − đã trả (phiếu chờ tính số tổ trả, phiếu đã nhận tính số kho đếm).
+  - Giao / thu hồi BTP: giao ≤ BTP tổ đang giữ trừ số đang chờ công nhân nhận; thu hồi ≤ công nhân đang giữ trừ số đang chờ trả; kiểm lại lúc xác nhận. Xác nhận hộ (ON_BEHALF) bắt buộc lý do. Số xác nhận làm đổi `vw_WorkerOutputCap` nên trần sản lượng (MSG16) bám BTP thật.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-4 · TA-02, TA-03
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · TA-02, TA-03 · (chưa có PR)
+- **Ảnh hưởng tới:** `StocktakeService`, `VehicleService`
+- **Code đang làm:**
+  - Kiểm kê: số sổ chụp lúc lập phiếu (và chụp lại khi sửa phiếu bị trả); duyệt ghi điều chỉnh qua `IStockService` (chênh lệch = số đếm − số sổ), nên tồn thực lúc duyệt không âm. Số đếm để trống = khớp sổ.
+  - Sổ xe: biển số chuẩn hóa chữ hoa, không xóa cứng xe. Cảnh báo lệch km so với km cuối chuyến HOÀN THÀNH gần nhất; xăng vượt định mức × (1 + `FUEL_NORM_TOLERANCE_PERCENT`). Cảnh báo chỉ báo, vẫn lưu (MSG30). Mỗi xe tối đa một chuyến chưa kết thúc.
+- **Cần sửa trong tài liệu:** không.
+- **Trạng thái:** Mở
+
+### DEV-ALL-5 · KH-12, KH-14, KH-15, KH-16, KH-22, KH-23
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) · KH-12, KH-14, KH-15, KH-16, KH-22, KH-23 · (chưa có PR)
+- **Ảnh hưởng tới:** Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05
+- **Code đang làm:**
+  - Thông báo: chưa push FCM (PushStatus luôn SKIPPED); chuông tự nạp lại mỗi phút thay cho push thời gian thực. Người gửi không nhận thông báo của chính mình.
+  - Bậc thợ: số lỗi gần đây tính trong 30 ngày (Rework + Scrap chưa hủy). Mỗi công nhân chỉ một đề xuất chờ quyết định; đề xuất đã quyết định không đổi được (GBR-22).
+  - JOB-04: chưa hoàn thiện cái nào trong N ngày thì chỉ gắn cờ khi đã quá hạn giao (tránh gắn cờ mọi đơn mới). Tính theo ngày lịch, không bỏ Chủ nhật. JOB-05 01:00: khóa giờ chạy `NOTIFICATION_CLEANUP_TIME` chưa seed nên dùng mặc định trong code.
+  - Import nhân viên: cột cố định (Mã NV, Họ tên, Giới tính, Ngày sinh, SĐT, Vai trò, Mã tổ, Hình thức lương, Ngày vào làm, Mã chấm công), tối đa 500 dòng; mật khẩu tạm chỉ trả một lần ngay khi nhập.
+- **Cần sửa trong tài liệu:** Report-3 UC17 (định dạng file import nhân viên), UC21 (công thức nguy cơ trễ), UC05 (không push FCM).
+- **Trạng thái:** Mở
