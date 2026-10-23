@@ -20,6 +20,8 @@
                  + 110 đơn giá, phân công, sản lượng, QC, hàng hỏng, KPI, chi phí tháng, bảng công, suất ăn, xe,
                  bảng lương demo). Không có họ tên thật, lương thật hay hash mật khẩu. Xóa mục 19 nếu muốn DB sạch.
                  Mục 19.3: doanh thu + chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn).
+                 Mục 19.4: thẻ kho cho phiếu nhập NVL / bàn giao thành phẩm demo (tồn kho có số).
+                 Mục 19.5: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê chờ duyệt, bàn giao thành phẩm chờ nhận, thông báo nhanh.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -2998,6 +3000,108 @@ BEGIN
      (@aug, 'MACHINE_SUPPLIES', 'VARIABLE', @p1,   2500000, NULL, N'Kim, dầu máy cho áo khoác'),
      (@aug, 'MATERIALS_BOUGHT', 'VARIABLE', @p1,   1500000, NULL, N'Phụ liệu mua ngoài'),
      (@aug, 'OTHER',            'VARIABLE', @p2,   1800000, NULL, NULL);
+END
+GO
+-- 19.4 Thẻ kho cho các chứng từ demo đã xác nhận (phiếu nhập NVL, bàn giao thành phẩm) để tồn kho khớp chứng từ
+--      Nhờ vậy màn Tồn kho có số, Quản đốc lập được phiếu xuất hàng thử. Chạy lại không nhân đôi (khóa duy nhất theo dòng chứng từ).
+SET QUOTED_IDENTIFIER ON;
+GO
+-- Phiếu nhập NVL đã xác nhận: cộng kho NVL theo số đạt
+INSERT dbo.StockTransaction (WarehouseType, MaterialId, MaterialColor, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+SELECT 'MATERIAL', om.MaterialId, om.MaterialColor, 'MATERIAL_RECEIPT', r.MaterialReceiptId, l.MaterialReceiptLineId, l.AcceptedQty,
+       SUM(l.AcceptedQty) OVER (PARTITION BY om.MaterialId, om.MaterialColor ORDER BY r.ConfirmedAt, l.MaterialReceiptLineId),
+       CAST(r.ConfirmedAt AS DATE)
+FROM dbo.MaterialReceiptLine l
+JOIN dbo.MaterialReceipt r ON r.MaterialReceiptId = l.MaterialReceiptId AND r.Status = 'CONFIRMED'
+JOIN dbo.OrderMaterial om ON om.OrderMaterialId = l.OrderMaterialId
+WHERE l.AcceptedQty > 0
+  AND NOT EXISTS (SELECT 1 FROM dbo.StockTransaction t WHERE t.SourceDocType = 'MATERIAL_RECEIPT' AND t.SourceDocId = r.MaterialReceiptId
+                  AND t.SourceLineId = l.MaterialReceiptLineId AND t.WarehouseType = 'MATERIAL');
+
+-- Bàn giao thành phẩm đã xác nhận: cộng kho thành phẩm theo dòng đơn
+INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+SELECT 'FINISHED', l.OrderLineId, 'FG_HANDOVER', h.FgHandoverId, l.FgHandoverLineId, l.ConfirmedQty,
+       SUM(l.ConfirmedQty) OVER (PARTITION BY l.OrderLineId ORDER BY h.ConfirmedAt, l.FgHandoverLineId),
+       CAST(h.ConfirmedAt AS DATE)
+FROM dbo.FgHandoverLine l
+JOIN dbo.FgHandover h ON h.FgHandoverId = l.FgHandoverId AND h.Status = 'CONFIRMED'
+WHERE l.ConfirmedQty > 0
+  AND NOT EXISTS (SELECT 1 FROM dbo.StockTransaction t WHERE t.SourceDocType = 'FG_HANDOVER' AND t.SourceDocId = h.FgHandoverId
+                  AND t.SourceLineId = l.FgHandoverLineId AND t.WarehouseType = 'FINISHED');
+GO
+-- 19.5 Dữ liệu demo các chức năng bổ sung: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê, bàn giao thành phẩm chờ nhận, thông báo
+--      Chạy lại không nhân đôi (mỗi khối kiểm tra đã có chưa).
+SET QUOTED_IDENTIFIER ON;
+GO
+-- Mức tiền bậc thợ (khớp tiền bậc trong bảng lương demo mục 14)
+INSERT dbo.GradeLevel (GradeCode, GradeName, MonthlyAmount, EffectiveDate)
+SELECT v.GradeCode, v.GradeName, v.Amount, '2026-09-01'
+FROM (VALUES ('A', N'Bậc A', 600000), ('B', N'Bậc B', 400000), ('C', N'Bậc C', 200000), ('D', N'Bậc D', 0)) v(GradeCode, GradeName, Amount)
+WHERE NOT EXISTS (SELECT 1 FROM dbo.GradeLevel g WHERE g.GradeCode = v.GradeCode AND g.EffectiveDate = '2026-09-01');
+
+-- Một đề xuất bậc đang chờ Admin / Quản đốc quyết định
+IF NOT EXISTS (SELECT 1 FROM dbo.GradeEvaluation WHERE Status = 'SUBMITTED' AND Reason LIKE N'Demo:%')
+BEGIN
+    DECLARE @gw INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY2'),
+            @gl INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTMAY'),
+            @gt INT = (SELECT TeamId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY2');
+    IF @gw IS NOT NULL AND @gl IS NOT NULL
+        INSERT dbo.GradeEvaluation (WorkerId, ProposedBy, TeamId, CurrentGradeCode, ProposedGradeCode, Reason, RecentDefectCount, EvaluationDate, Status)
+        VALUES (@gw, @gl, @gt, 'C', 'B', N'Demo: làm đều tay, ít lỗi trong tháng', 0, '2026-10-20', 'SUBMITTED');
+END
+GO
+-- Sổ xe: một xe, hai chuyến (chuyến 2 lệch km và xăng vượt định mức để xem cảnh báo MSG30)
+IF NOT EXISTS (SELECT 1 FROM dbo.Vehicle WHERE PlateNumber = '29C-12345')
+BEGIN
+    INSERT dbo.Vehicle (PlateNumber, VehicleType, FuelNormPer100Km) VALUES ('29C-12345', N'Xe tải 2 tấn', 12.00);
+    DECLARE @v INT = SCOPE_IDENTITY();
+    INSERT dbo.VehicleTrip (VehicleId, TripDate, DriverName, Purpose, OdometerStart, OdometerEnd, FuelLiters, FuelCost, Status, KmGapWarning, FuelOverNormWarning, RecordedAt) VALUES
+     (@v, '2026-10-12', N'Nguyễn Văn Tài', N'Giao hàng đợt 1', 10000, 10150, 18.00, 400000, 'COMPLETED', 0, 0, '2026-10-12 17:30:00'),
+     (@v, '2026-10-19', N'Nguyễn Văn Tài', N'Giao hàng đợt 2', 10200, 10300, 20.00, 450000, 'COMPLETED', 1, 1, '2026-10-19 17:30:00');
+END
+GO
+-- Kiểm kê: một phiếu kho NVL chờ duyệt (đếm thiếu 3 so với sổ)
+IF NOT EXISTS (SELECT 1 FROM dbo.Stocktake WHERE StocktakeCode = 'KK-DEMO-001')
+BEGIN
+    DECLARE @m INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01');
+    DECLARE @book DECIMAL(18,3) = (SELECT ISNULL(SUM(QtyChange), 0) FROM dbo.StockTransaction WHERE WarehouseType = 'MATERIAL' AND MaterialId = @m AND MaterialColor = N'Đen');
+    IF @m IS NOT NULL AND @book >= 3
+    BEGIN
+        INSERT dbo.Stocktake (StocktakeCode, WarehouseType, Scope, StocktakeDate, Status) VALUES ('KK-DEMO-001', 'MATERIAL', N'Kệ vải A (demo)', '2026-10-21', 'PENDING_APPROVAL');
+        INSERT dbo.StocktakeLine (StocktakeId, MaterialId, MaterialColor, BookQty, CountedQty, Note)
+        VALUES (SCOPE_IDENTITY(), @m, N'Đen', @book, @book - 3, N'Thiếu 3m khi đếm');
+    END
+END
+GO
+-- Bàn giao thành phẩm: một phiếu QA/QC đang chờ Thủ kho nhận
+IF NOT EXISTS (SELECT 1 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-001')
+BEGIN
+    DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+            @qa INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QAQC1'),
+            @ol INT = (SELECT TOP 1 ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.CustomerOrder c ON c.OrderId = ol.OrderId
+                       WHERE c.OrderCode = 'DEMO-DH001' AND ol.Color = N'Đen' AND ol.SizeCode = 'M'),
+            @p INT;
+    SET @p = (SELECT ProductId FROM dbo.OrderLine WHERE OrderLineId = @ol);
+    IF @o IS NOT NULL AND @qa IS NOT NULL AND @ol IS NOT NULL
+    BEGIN
+        INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status) VALUES ('TP-DEMO-001', @o, @p, @qa, '2026-10-21 16:00:00', 'PENDING');
+        INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty) VALUES (SCOPE_IDENTITY(), @ol, 20);
+    END
+END
+GO
+-- Thông báo nhanh của Quản đốc tới toàn xưởng (kèm hộp thư của từng người)
+IF NOT EXISTS (SELECT 1 FROM dbo.Announcement WHERE Content LIKE N'Demo:%')
+BEGIN
+    DECLARE @s INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC');
+    IF @s IS NOT NULL
+    BEGIN
+        INSERT dbo.Announcement (Content, Priority, TargetScope, SenderId, SentAt)
+        VALUES (N'Demo: Họp toàn xưởng lúc 15h thứ Sáu để rà soát tiến độ đơn DEMO-DH001.', 'URGENT', 'ALL', @s, '2026-10-22 08:00:00');
+        DECLARE @a INT = SCOPE_IDENTITY();
+        INSERT dbo.Notification (RecipientId, SourceType, AnnouncementId, Title, Message, IsRead, PushStatus, CreatedAt)
+        SELECT e.EmployeeId, 'ANNOUNCEMENT', @a, N'Thông báo khẩn', N'Demo: Họp toàn xưởng lúc 15h thứ Sáu để rà soát tiến độ đơn DEMO-DH001.', 0, 'SKIPPED', '2026-10-22 08:00:00'
+        FROM dbo.Employee e WHERE e.Status = 'ACTIVE' AND e.EmployeeId <> @s;
+    END
 END
 GO
 PRINT N'NX-MTD: tạo database xong.';
