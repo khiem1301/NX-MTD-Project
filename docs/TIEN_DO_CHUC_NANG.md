@@ -6,9 +6,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ## Đã làm được
 
-**Bổ sung 24/10 (lần 5):** màn "So sánh BTP – KPI" (`/kpi/btp-compare`) cho Quản đốc, Admin, Thủ kho, tổ trưởng/tổ phó may (xem DEV-ALL-9).
-
-**Bổ sung 23/10 (lần 4):** chỉ tiêu KPI bắt buộc nhập theo từng ngày, có nút "Chia tăng dần" và bỏ Chủ nhật mặc định (xem DEV-ALL-8).
+**Bổ sung 24/10 (lần 5):** lập KPI chỉ nhập tổng; nút "Xem theo ngày" mở lịch tháng để đặt KPI từng ngày (gõ tay hoặc chia tăng dần), có Tổng bán thành phẩm và số còn lại để đặt KPI (xem DEV-ALL-8, DEV-ALL-9). Màn "So sánh BTP – KPI" riêng đã gộp vào lịch.
 
 **Bổ sung 23/10 (lần 3):** Quản đốc sửa được tổ và vai trò nhân viên (trừ Admin / Quản đốc / Kế toán), Admin và Quản đốc đặt bậc thợ trực tiếp cho công nhân (xem DEV-ALL-7).
 

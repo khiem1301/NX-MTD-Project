@@ -33,7 +33,7 @@ public sealed class KpiService : IKpiService
     private static readonly Expression<Func<KpiTarget, KpiTargetDto>> ToDto = k => new KpiTargetDto(
         k.KpiTargetId, k.OrderId, k.Order.OrderCode, k.ProductId, k.Product.ProductCode, k.Product.ProductName,
         k.SewingTeamId, k.SewingTeam.TeamName, k.StartDate, k.EndDate, k.TargetFinishedQty, k.WorkingDays,
-        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m, null);   // thực tế và chỉ tiêu ngày điền sau
+        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m);   // thực tế điền sau (WithActualAsync)
 
     public async Task<Result<PagedResult<KpiTargetDto>>> GetPagedAsync(KpiTargetQuery query, CancellationToken ct)
     {
@@ -57,10 +57,7 @@ public sealed class KpiService : IKpiService
         var dto = await Targets.AsNoTracking().Where(k => k.KpiTargetId == kpiTargetId).Select(ToDto)
             .FirstOrDefaultAsync(ct);
         if (dto is null) return NotFound();
-        var days = await _uow.Repository<KpiDailyTarget>().Query().AsNoTracking()
-            .Where(d => d.KpiTargetId == kpiTargetId).OrderBy(d => d.WorkDate)
-            .Select(d => new KpiDailyTargetInputDto(d.WorkDate, d.TargetQty)).ToListAsync(ct);
-        return Result<KpiTargetDto>.Success((await WithActualAsync([Normalize(dto) with { DailyTargets = days }], ct))[0]);
+        return Result<KpiTargetDto>.Success((await WithActualAsync([Normalize(dto)], ct))[0]);
     }
 
     /// <summary>
@@ -109,8 +106,7 @@ public sealed class KpiService : IKpiService
         {
             await _uow.Repository<KpiTarget>().AddAsync(target);
             await _uow.SaveChangesAsync();
-            await AddDaysAsync(target.KpiTargetId, dto.DailyTargets);
-            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target, dto.DailyTargets)));
+            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target)));
             await _uow.SaveChangesAsync();
             return Result.Success();
         });
@@ -132,20 +128,21 @@ public sealed class KpiService : IKpiService
         var check = await ValidateAsync(dto, kpiTargetId, ct);
         if (check is not null) return check;
 
+        // Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; tổng cả kỳ mới không được nhỏ hơn tổng KPI đã đặt cho các ngày còn lại.
         var days = _uow.Repository<KpiDailyTarget>();
-        var oldDays = await days.Query().Where(d => d.KpiTargetId == kpiTargetId).OrderBy(d => d.WorkDate).ToListAsync(ct);
-        var before = Snapshot(target, oldDays.Select(d => new KpiDailyTargetInputDto(d.WorkDate, d.TargetQty)).ToList());
-        await _uow.InTransactionAsync(async () =>
-        {
-            // Thay toàn bộ chỉ tiêu ngày: xóa trước rồi thêm, lưu tách để khỏi đụng khóa UQ_KpiDaily (KpiTargetId, WorkDate).
-            days.RemoveRange(oldDays);
-            Apply(target, dto);
-            await _uow.SaveChangesAsync();
-            await AddDaysAsync(kpiTargetId, dto.DailyTargets);
-            _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update, before, Snapshot(target, dto.DailyTargets)));
-            await _uow.SaveChangesAsync();
-            return Result.Success();
-        });
+        var oldDays = await days.Query().Where(d => d.KpiTargetId == kpiTargetId).ToListAsync(ct);
+        var outside = oldDays.Where(d => d.WorkDate < dto.StartDate || d.WorkDate > dto.EndDate).ToList();
+        var kept = oldDays.Except(outside).ToList();
+        var keptSum = kept.Sum(d => d.TargetQty);
+        if (keptSum > dto.TargetFinishedQty)
+            return Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiTotalBelowPlan, keptSum));
+
+        var before = Snapshot(target);
+        days.RemoveRange(outside);
+        Apply(target, dto);
+        if (kept.Count > 0) target.WorkingDays = (short)kept.Count;
+        _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update, before, Snapshot(target)));
+        await _uow.SaveChangesAsync();
         return await GetByIdAsync(kpiTargetId, ct);
     }
 
@@ -240,21 +237,14 @@ public sealed class KpiService : IKpiService
         target.SewingTeamId = dto.SewingTeamId;
         target.StartDate = dto.StartDate;
         target.EndDate = dto.EndDate;
-        // Tổng cả kỳ và số ngày làm việc suy ra từ chỉ tiêu từng ngày, không nhập tay nên không bao giờ lệch.
-        target.TargetFinishedQty = dto.DailyTargets.Sum(d => d.TargetQty);
-        target.WorkingDays = (short)dto.DailyTargets.Count;
+        target.TargetFinishedQty = dto.TargetFinishedQty;
+        // Chưa đặt chỉ tiêu ngày: số ngày làm việc = số ngày trong kỳ trừ Chủ nhật (dịch vụ lịch KPI cập nhật lại khi đặt ngày).
+        target.WorkingDays = KpiCalendarMath.WorkingDaysIn(dto.StartDate, dto.EndDate);
     }
 
-    private async Task AddDaysAsync(int kpiTargetId, IReadOnlyList<KpiDailyTargetInputDto> days)
-    {
-        foreach (var d in days.OrderBy(d => d.WorkDate))
-            await _uow.Repository<KpiDailyTarget>().AddAsync(new KpiDailyTarget { KpiTargetId = kpiTargetId, WorkDate = d.WorkDate, TargetQty = d.TargetQty });
-    }
-
-    private static object Snapshot(KpiTarget t, IReadOnlyList<KpiDailyTargetInputDto> days) => new
+    private static object Snapshot(KpiTarget t) => new
     {
         t.OrderId, t.ProductId, t.SewingTeamId, t.StartDate, t.EndDate, t.TargetFinishedQty, t.WorkingDays, t.Status,
-        Days = days.OrderBy(d => d.WorkDate).Select(d => $"{d.WorkDate:dd/MM}={d.TargetQty}").ToArray(),
     };
 
     private static Result<KpiTargetDto> NotFound() =>

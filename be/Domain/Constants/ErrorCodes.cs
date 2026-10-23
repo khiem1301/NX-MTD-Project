@@ -108,6 +108,7 @@ public static class ErrorCodes
     public const string KpiInvalidStatus = "KPI_INVALID_STATUS";
     public const string KpiInvalidReference = "KPI_INVALID_REFERENCE";
     public const string KpiDuplicatePeriod = "KPI_DUPLICATE_PERIOD";
+    public const string KpiPlanInvalid = "KPI_PLAN_INVALID";
 
     // --- Doanh thu + hòa vốn (Minh, UC27/UC11) ---
     public const string RevenuePeriodMonthInvalid = "REVENUE_PERIOD_MONTH_INVALID";

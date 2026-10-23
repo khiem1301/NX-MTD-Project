@@ -64,8 +64,8 @@
 | DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
 | DEV-ALL-6 | 23/10/2026 | Claude (AI) | `WarehouseDocumentExportService`, `ClosedXmlWarehouseDocumentWriter` | In / xuất Excel từng phiếu nhập, phiếu cấp, phiếu xuất hàng (TH-16) | Đã làm |
 | DEV-ALL-7 | 23/10/2026 | Claude (AI) | `EmployeeService.ManagerUpdateAsync`, `GradeService.SetGradeAsync`, UC15, UC16 | Quản đốc đổi tổ và vai trò nhân viên; Admin / Quản đốc đặt bậc thợ trực tiếp không qua đề xuất | Đã làm |
-| DEV-ALL-8 | 23/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI bắt buộc nhập theo từng ngày (không chia đều cả kỳ) | Đã làm |
-| DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiBtpService`, `KpiBtpController` (4 vai trò), `KpiBtpComparePage` | Màn so sánh BTP đã cắt – KPI ngày – thực tế tổ may, trừ dần BTP theo lũy kế | Đã làm |
+| DEV-ALL-8 | 24/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI lập theo tổng cả kỳ; từng ngày đặt riêng (không chia đều) | Đã làm |
+| DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
 
 ---
 
@@ -812,29 +812,29 @@
 
 ### DEV-ALL-8 · Chỉ tiêu KPI theo từng ngày
 
-- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, FR 3.14 · (chưa có PR)
-- **Ảnh hưởng tới:** schema (bảng mới `KpiDailyTarget`, viết lại `vw_KpiDailyResult`), `SaveKpiTargetDto` (bỏ `TargetFinishedQty`, `WorkingDays`, thêm `DailyTargets`), `KpiTargetDto.DailyTargets` (chỉ ở chi tiết), form lập KPI ở FE
+- **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, FR 3.14 · (chưa có PR)
+- **Ảnh hưởng tới:** schema (bảng mới `KpiDailyTarget`, viết lại `vw_KpiDailyResult`), `SaveKpiTargetDto` (vẫn nhập tổng cả kỳ; `WorkingDays` do BE tự tính), form lập KPI ở FE
 - **Tài liệu gốc ghi:** Chỉ tiêu ngày = chỉ tiêu cả kỳ ÷ số ngày làm việc (chia đều).
 - **Lý do:** Mấy ngày đầu vào đơn tổ may làm chậm hơn (công nhân chưa thạo), chia đều làm KPI ngày đầu luôn "không đạt".
 - **Code đang làm:**
-  - Quản đốc bắt buộc nhập chỉ tiêu từng ngày khi lập / sửa KPI; tổng cả kỳ = Σ các ngày, số ngày làm việc = số ngày có chỉ tiêu (dịch vụ tự tính, không nhập tay). Ngày phải nằm trong kỳ, không trùng, số > 0. Sửa KPI thay toàn bộ các ngày, AuditLog ghi danh sách ngày trước / sau.
-  - FE: bảng ngày dựng theo kỳ, mặc định bỏ Chủ nhật (thêm lại được nếu tăng ca), nút "Chia tăng dần" gợi ý 3 ngày đầu 50% → 70% → 90% mức ổn định rồi 100%; Quản đốc sửa tay từng ngày.
-  - `vw_KpiDailyResult`: có dòng cho mọi ngày có chỉ tiêu (chưa có hàng = 0) và ngày QC ngoài kế hoạch (chỉ tiêu, % đạt = NULL). KPI cũ chưa có dòng ngày giữ cách chia đều cũ. Cột "chỉ tiêu ngày" ở danh sách / chi tiết là trung bình.
+  - Lập / sửa KPI chỉ nhập đơn, mã hàng, tổ, kỳ và **tổng cả kỳ**. Chỉ tiêu từng ngày đặt sau, trên lịch KPI (DEV-ALL-9). `WorkingDays` = số ngày đã đặt KPI, chưa đặt thì = số ngày trong kỳ trừ Chủ nhật.
+  - Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; tổng cả kỳ mới không được nhỏ hơn tổng KPI các ngày còn lại (409).
+  - `vw_KpiDailyResult`: có dòng cho mọi ngày có chỉ tiêu (chưa có hàng = 0) và ngày QC ngoài kế hoạch (chỉ tiêu, % đạt = NULL). KPI chưa đặt ngày giữ cách chia đều cũ. Cột "chỉ tiêu ngày" ở danh sách / chi tiết là trung bình.
   - DB đang chạy cần chạy thêm: CREATE TABLE `KpiDailyTarget` + CREATE OR ALTER VIEW `vw_KpiDailyResult` (lấy đúng khối trong `SQL/NX-MTD_Database.sql`).
 - **Cần sửa trong tài liệu:** Report-3 UC19 (form lập KPI), FR 3.14 (công thức chỉ tiêu ngày), ERD (bảng mới).
 - **Trạng thái:** Mở
 
-### DEV-ALL-9 · Màn so sánh BTP – KPI ngày
+### DEV-ALL-9 · Lịch KPI theo ngày (Tổng BTP và số còn lại để đặt KPI)
 
 - **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, UC21, FR 3.14 · (chưa có PR)
-- **Ảnh hưởng tới:** `GET {manager|admin|warehouse-keeper|team-leader}/kpi-btp/options` và `/{kpiTargetId}`; màn `/kpi/btp-compare`; không đổi schema
-- **Tài liệu gốc ghi:** không có màn này (yêu cầu bổ sung): Quản đốc cần biết BTP đã cắt có đủ cho KPI đã đặt cho tổ may không.
+- **Ảnh hưởng tới:** `GET manager|admin/kpi-targets/{id}/calendar`, `PUT manager/kpi-targets/{id}/daily-plan`; nút "Xem theo ngày" ở màn KPI mở lịch; không đổi schema
+- **Tài liệu gốc ghi:** không có (yêu cầu bổ sung). Màn "So sánh BTP – KPI" làm trước đó (`/kpi/btp-compare`, Thủ kho và tổ trưởng xem được) đã bỏ, gộp vào lịch này.
 - **Code đang làm:**
-  - Mỗi ngày trong kỳ KPI: KPI ngày và lũy kế, BTP cắt vào kho (giao dịch kho BTP `CUT_HANDOVER` của các dòng đơn thuộc đơn + mã hàng), hoàn thiện thực tế của tổ (`vw_KpiDailyResult`, tức QA/QC nhập), **BTP còn = BTP còn đầu kỳ + cắt lũy kế − thực tế lũy kế**, và số cần cắt thêm = max(0, KPI lũy kế − (BTP còn đầu kỳ + cắt lũy kế)).
-  - BTP còn đầu kỳ = cắt trước ngày bắt đầu KPI − hoàn thiện của tổ trước ngày bắt đầu KPI (cùng đơn, mã hàng).
-  - Cờ "Sắp thiếu BTP": BTP còn < KPI ngày kế tiếp; "Chậm KPI": thực tế lũy kế < KPI lũy kế. Chỉ xét ngày đã qua. Ngày tương lai là dự báo giả định tổ đạt đúng KPI, không báo động.
-  - Quản đốc, Admin, Thủ kho xem mọi KPI; tổ trưởng / tổ phó chỉ thấy KPI của tổ mình (KPI tổ khác → 404). Chỉ xem.
-  - Hạn chế: BTP cắt tính chung theo (đơn, mã hàng), không tách theo tổ may; hai tổ may cùng mã hàng của một đơn sẽ dùng chung số cắt. Thực tế là hàng hoàn thiện, không phải số BTP đã cấp cho tổ.
-  - Dữ liệu demo mục 19.6 (lệnh cắt + 5 đợt bàn giao BTP cho DEMO-DH001).
-- **Cần sửa trong tài liệu:** thêm màn vào Report-3 (UC19 / UC21) và ma trận quyền.
+  - Lịch tháng kiểu tờ lịch (Thứ hai → Chủ nhật, Thứ bảy xanh, Chủ nhật cam). Quản đốc gõ KPI vào từng ô ngày, hoặc "Chia tăng dần" (3 ngày đầu 50% → 70% → 90% mức ổn định), "Chia đều", "Xóa các ngày chưa tới". Ngày đã qua không sửa được. Admin và KPI đã đóng chỉ xem.
+  - **Tổng bán thành phẩm** = BTP đã cắt vào kho (giao dịch kho BTP `CUT_HANDOVER`) − hàng QA/QC đã nhập ra chuyền, tính theo (đơn, mã hàng) cho mọi tổ. **Số lượng còn lại để đặt KPI** = Tổng BTP − KPI đã đặt chưa ra chuyền (các ngày sau hôm nay + phần còn thiếu của hôm nay, của mọi KPI đang chạy cùng đơn và mã hàng). Giảm khi QA/QC nhập hàng ra chuyền.
+  - Lưu bị chặn (409) khi Σ KPI các ngày > tổng cả kỳ, hoặc KPI chưa ra chuyền vượt số BTP còn lại (báo "tối đa N"). Đang giảm thì vẫn lưu được dù BTP đã thiếu từ trước.
+  - Mỗi ô: KPI, thực tế của tổ (QA/QC), BTP còn sau ngày (ngày tương lai là dự báo theo KPI đã đặt), cờ "Sắp thiếu BTP" và "Chậm KPI".
+  - Hạn chế: BTP là kho chung theo (đơn, mã hàng), không tách theo tổ may; Thủ kho và tổ trưởng không còn màn xem riêng.
+  - Dữ liệu demo mục 19.6: lệnh cắt + các đợt bàn giao BTP cho DEMO-DH001 và DEMO-DH002.
+- **Cần sửa trong tài liệu:** thêm lịch KPI vào Report-3 (UC19 / UC21) và ma trận quyền.
 - **Trạng thái:** Mở

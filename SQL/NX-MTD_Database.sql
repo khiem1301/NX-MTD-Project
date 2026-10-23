@@ -3167,7 +3167,7 @@ BEGIN
         INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, CreatedAt, CompletedAt)
         VALUES ('LC-DEMO-901', @o, @p, @cut, '2026-10-25', 'COMPLETED', '2026-09-15 08:00:00', '2026-10-20 16:00:00');
         SET @wo = SCOPE_IDENTITY();
-        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty) VALUES (@wo, @l6, N'', 400), (@wo, @l7, N'', 350);
+        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty) VALUES (@wo, @l6, N'', 800), (@wo, @l7, N'', 700);
 
         -- Các đợt cắt đã bàn giao kho BTP: (mã, ngày, dòng M, dòng L)
         DECLARE @h TABLE (Code VARCHAR(30), D DATE, Qm INT, Ql INT);
@@ -3175,7 +3175,8 @@ BEGIN
                          ('BG-DEMO-902', '2026-10-01', 60, 40),
                          ('BG-DEMO-903', '2026-10-08', 50, 40),
                          ('BG-DEMO-904', '2026-10-15', 50, 40),
-                         ('BG-DEMO-905', '2026-10-20', 40, 30);
+                         ('BG-DEMO-905', '2026-10-20', 40, 30),
+                         ('BG-DEMO-906', '2026-10-23', 250, 200);
         INSERT dbo.CutHandover (HandoverCode, WorkOrderId, CuttingTeamId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
         SELECT Code, @wo, @cut, DATEADD(HOUR, 9, CAST(D AS DATETIME2(0))), 'CONFIRMED', @wk, DATEADD(HOUR, 10, CAST(D AS DATETIME2(0))) FROM @h;
         INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
@@ -3190,6 +3191,31 @@ BEGIN
                CAST(ch.ConfirmedAt AS DATE)
         FROM dbo.CutHandoverLine l JOIN dbo.CutHandover ch ON ch.CutHandoverId = l.CutHandoverId
         WHERE ch.WorkOrderId = @wo AND ch.Status = 'CONFIRMED';
+    END
+END
+GO
+-- BTP đã cắt cho DEMO-DH002 (KPI tổ may kỳ 26/10 – 30/11 cần BTP): một đợt 800 cái, chưa ra chuyền
+IF NOT EXISTS (SELECT 1 FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-902')
+BEGIN
+    DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH002'),
+            @cut INT = (SELECT TeamId FROM dbo.Team WHERE TeamType = 'CUTTING'),
+            @wk INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO'),
+            @lm INT, @ll INT, @p INT, @wo INT, @ch INT;
+    SELECT @lm = OrderLineId, @p = ProductId FROM dbo.OrderLine WHERE OrderId = @o AND SizeCode = 'M';
+    SET @ll = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o AND SizeCode = 'L');
+    IF @o IS NOT NULL AND @cut IS NOT NULL AND @wk IS NOT NULL AND @lm IS NOT NULL AND @ll IS NOT NULL
+    BEGIN
+        INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, CreatedAt, CompletedAt)
+        VALUES ('LC-DEMO-902', @o, @p, @cut, '2026-10-25', 'COMPLETED', '2026-10-20 08:00:00', '2026-10-22 16:00:00');
+        SET @wo = SCOPE_IDENTITY();
+        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty) VALUES (@wo, @lm, N'', 400), (@wo, @ll, N'', 400);
+        INSERT dbo.CutHandover (HandoverCode, WorkOrderId, CuttingTeamId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
+        VALUES ('BG-DEMO-907', @wo, @cut, '2026-10-22 09:00:00', 'CONFIRMED', @wk, '2026-10-22 10:00:00');
+        SET @ch = SCOPE_IDENTITY();
+        INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty) VALUES (@ch, @lm, 400, 400), (@ch, @ll, 400, 400);
+        INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+        SELECT 'SEMI_FINISHED', l.OrderLineId, 'CUT_HANDOVER', @ch, l.CutHandoverLineId, l.ConfirmedQty, l.ConfirmedQty, '2026-10-22'
+        FROM dbo.CutHandoverLine l WHERE l.CutHandoverId = @ch;
     END
 END
 GO

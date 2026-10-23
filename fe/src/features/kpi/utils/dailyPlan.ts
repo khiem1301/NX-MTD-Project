@@ -1,35 +1,19 @@
 import dayjs from 'dayjs';
 
-/** Một dòng chỉ tiêu ngày trong form (targetQty null = chưa nhập). */
-export type DailyRow = { workDate: string; targetQty: number | null };
-
 const API_DATE = 'YYYY-MM-DD';
 const SUNDAY = 0;
 
 /** Tỉ lệ so với mức ổn định cho mấy ngày đầu vào đơn (tổ chưa thạo việc); các ngày sau 100%. */
 export const RAMP_UP_RATES = [0.5, 0.7, 0.9] as const;
 
-/** Các ngày trong kỳ (gồm cả hai đầu), mặc định bỏ Chủ nhật. */
-export const listWorkDays = (start: string, end: string, skipSunday = true): string[] => {
+/** Các ngày từ `from` đến `to` (gồm hai đầu), mặc định bỏ Chủ nhật. */
+export const listWorkDays = (from: string, to: string, skipSunday = true): string[] => {
   const days: string[] = [];
-  const last = dayjs(end);
-  for (let d = dayjs(start); !d.isAfter(last, 'day'); d = d.add(1, 'day')) {
+  const last = dayjs(to);
+  for (let d = dayjs(from); !d.isAfter(last, 'day'); d = d.add(1, 'day')) {
     if (!skipSunday || d.day() !== SUNDAY) days.push(d.format(API_DATE));
   }
   return days;
-};
-
-/** Dựng lại danh sách dòng theo các ngày mới, giữ số đã nhập của ngày vẫn còn trong kỳ. */
-export const syncRows = (workDates: string[], current: DailyRow[]): DailyRow[] => {
-  const kept = new Map(current.map((r) => [r.workDate, r.targetQty]));
-  return workDates.map((workDate) => ({ workDate, targetQty: kept.get(workDate) ?? null }));
-};
-
-/** Chỉ giữ các dòng nằm trong kỳ mới (dùng khi đổi kỳ mà vẫn muốn giữ ngày đã thêm tay, ví dụ Chủ nhật tăng ca). */
-export const rowsForPeriod = (start: string, end: string, current: DailyRow[]): DailyRow[] => {
-  const extra = current.filter((r) => r.workDate >= start && r.workDate <= end).map((r) => r.workDate);
-  const dates = [...new Set([...listWorkDays(start, end), ...extra])].sort();
-  return syncRows(dates, current);
 };
 
 /**
@@ -55,11 +39,33 @@ export const rampUp = (total: number, count: number): number[] => {
   return result;
 };
 
-/** Chia đều (dùng khi mở sửa một KPI cũ chưa có chỉ tiêu từng ngày). */
+/** Chia đều, phần dư dồn vào các ngày cuối. */
 export const evenSplit = (total: number, count: number): number[] => {
   if (count <= 0) return [];
   const base = Math.floor(total / count);
-  return Array.from({ length: count }, (_, i) => base + (i >= count - (total - base * count) ? 1 : 0));
+  const extra = total - base * count;
+  return Array.from({ length: count }, (_, i) => base + (i >= count - extra ? 1 : 0));
 };
 
-export const sumRows = (rows: DailyRow[]): number => rows.reduce((s, r) => s + (r.targetQty ?? 0), 0);
+/**
+ * Lưới tháng kiểu lịch tờ: mỗi tuần 7 ô bắt đầu từ Thứ hai; ô thuộc tháng khác là null.
+ * `month` là bất kỳ ngày nào trong tháng cần dựng.
+ */
+export const buildMonthGrid = (month: string): (string | null)[][] => {
+  const first = dayjs(month).startOf('month');
+  const lead = (first.day() + 6) % 7; // Thứ hai = 0 ... Chủ nhật = 6
+  const cells: (string | null)[] = Array.from({ length: lead }, () => null);
+  for (let d = first; d.month() === first.month(); d = d.add(1, 'day')) cells.push(d.format(API_DATE));
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (string | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+};
+
+/** Các tháng (đầu tháng, YYYY-MM-01) mà kỳ KPI trải qua. */
+export const monthsOfPeriod = (from: string, to: string): string[] => {
+  const months: string[] = [];
+  const last = dayjs(to).startOf('month');
+  for (let m = dayjs(from).startOf('month'); !m.isAfter(last, 'month'); m = m.add(1, 'month')) months.push(m.format(API_DATE));
+  return months;
+};

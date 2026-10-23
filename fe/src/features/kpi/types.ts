@@ -27,11 +27,8 @@ export type KpiTarget = {
   actualFinishedQty: number;
   percentAchieved: number;
   createdAt: string;
-  /** Chỉ có ở chi tiết: chỉ tiêu từng ngày (null ở danh sách). */
-  dailyTargets: KpiDailyTargetInput[] | null;
 };
 
-export type KpiDailyTargetInput = { workDate: string; targetQty: number };
 
 export type KpiTargetFilter = {
   page: number;
@@ -67,12 +64,40 @@ export type SaveKpiTargetPayload = {
   sewingTeamId: number;
   startDate: string;
   endDate: string;
-  /** Bắt buộc: tổng cả kỳ và số ngày làm việc do BE tính từ các ngày này. */
-  dailyTargets: KpiDailyTargetInput[];
+  targetFinishedQty: number;
 };
 
-/** Màn so sánh BTP đã cắt – KPI ngày – thực tế tổ may (lũy kế). */
-export type KpiBtpOption = {
+/** Lịch KPI theo ngày. */
+export type KpiDailyTargetInput = { workDate: string; targetQty: number };
+
+export type KpiCalendarDay = {
+  workDate: string;
+  isFuture: boolean;
+  isToday: boolean;
+  targetQty: number;
+  cumTarget: number;
+  cutQty: number;
+  actualQty: number | null;
+  btpRemaining: number;
+  lowBtp: boolean;
+  behindTarget: boolean;
+};
+
+export type KpiCalendarSummary = {
+  today: string;
+  planTotal: number;
+  allocated: number;
+  unallocated: number;
+  cutTotal: number;
+  outTotal: number;
+  totalBtp: number;
+  committedAll: number;
+  committedThis: number;
+  remainingToSet: number;
+  canEdit: boolean;
+};
+
+export type KpiCalendar = {
   kpiTargetId: number;
   orderCode: string;
   productCode: string;
@@ -81,30 +106,8 @@ export type KpiBtpOption = {
   startDate: string;
   endDate: string;
   status: KpiTargetStatus;
+  summary: KpiCalendarSummary;
+  days: KpiCalendarDay[];
 };
 
-export type KpiBtpDay = {
-  workDate: string;
-  isFuture: boolean;
-  dailyTarget: number;
-  cumTarget: number;
-  cutQty: number;
-  cumCut: number;
-  actualQty: number | null;
-  cumActual: number;
-  btpRemaining: number;
-  cutShortfall: number;
-  lowBtp: boolean;
-  behindTarget: boolean;
-};
-
-export type KpiBtpSummary = {
-  planTotal: number;
-  openingBtp: number;
-  cutTotal: number;
-  actualTotal: number;
-  btpRemainingNow: number;
-  cutShortfall: number;
-};
-
-export type KpiBtpComparison = { target: KpiBtpOption; summary: KpiBtpSummary; days: KpiBtpDay[] };
+export type SaveKpiDailyPlanPayload = { dailyTargets: KpiDailyTargetInput[] };

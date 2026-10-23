@@ -1,7 +1,7 @@
-import { evenSplit, listWorkDays, rampUp, rowsForPeriod, syncRows } from './dailyPlan';
+import { buildMonthGrid, evenSplit, listWorkDays, monthsOfPeriod, rampUp } from './dailyPlan';
 
 describe('listWorkDays', () => {
-  it('bỏ Chủ nhật mặc định và gồm cả hai đầu kỳ', () => {
+  it('bỏ Chủ nhật mặc định và gồm cả hai đầu', () => {
     // 2026-10-04 là Chủ nhật
     expect(listWorkDays('2026-10-01', '2026-10-06')).toEqual([
       '2026-10-01', '2026-10-02', '2026-10-03', '2026-10-05', '2026-10-06',
@@ -10,6 +10,10 @@ describe('listWorkDays', () => {
 
   it('giữ Chủ nhật khi không bỏ', () => {
     expect(listWorkDays('2026-10-03', '2026-10-05', false)).toEqual(['2026-10-03', '2026-10-04', '2026-10-05']);
+  });
+
+  it('từ sau đến trước thì rỗng', () => {
+    expect(listWorkDays('2026-10-05', '2026-10-01')).toEqual([]);
   });
 });
 
@@ -40,24 +44,33 @@ describe('rampUp', () => {
 describe('evenSplit', () => {
   it('chia đều, phần dư vào các ngày cuối', () => {
     expect(evenSplit(10, 3)).toEqual([3, 3, 4]);
+    expect(evenSplit(9, 3)).toEqual([3, 3, 3]);
+    expect(evenSplit(0, 3)).toEqual([0, 0, 0]);
   });
 });
 
-describe('syncRows / rowsForPeriod', () => {
-  it('giữ số đã nhập của ngày còn trong kỳ', () => {
-    const rows = syncRows(['2026-10-01', '2026-10-02'], [{ workDate: '2026-10-02', targetQty: 30 }]);
-    expect(rows).toEqual([
-      { workDate: '2026-10-01', targetQty: null },
-      { workDate: '2026-10-02', targetQty: 30 },
-    ]);
+describe('buildMonthGrid', () => {
+  it('tháng 01/2021 bắt đầu Thứ sáu: 4 ô trống đầu, như tờ lịch', () => {
+    const weeks = buildMonthGrid('2021-01-15');
+    expect(weeks).toHaveLength(5);
+    expect(weeks[0]).toEqual([null, null, null, null, '2021-01-01', '2021-01-02', '2021-01-03']);
+    expect(weeks[1]?.[0]).toBe('2021-01-04');
+    expect(weeks[4]).toEqual(['2021-01-25', '2021-01-26', '2021-01-27', '2021-01-28', '2021-01-29', '2021-01-30', '2021-01-31']);
   });
 
-  it('giữ Chủ nhật đã thêm tay nếu vẫn trong kỳ, bỏ ngày ra ngoài kỳ', () => {
-    const rows = rowsForPeriod('2026-10-03', '2026-10-05', [
-      { workDate: '2026-10-04', targetQty: 12 },
-      { workDate: '2026-10-09', targetQty: 50 },
-    ]);
-    expect(rows.map((r) => r.workDate)).toEqual(['2026-10-03', '2026-10-04', '2026-10-05']);
-    expect(rows[1]?.targetQty).toBe(12);
+  it('mỗi tuần đủ 7 ô và ngày nằm đúng cột (Chủ nhật = cột cuối)', () => {
+    const weeks = buildMonthGrid('2026-10-01');
+    expect(weeks.every((w) => w.length === 7)).toBe(true);
+    expect(weeks[0]?.[3]).toBe('2026-10-01'); // 01/10/2026 là Thứ năm
+    expect(weeks[0]?.[6]).toBe('2026-10-04'); // Chủ nhật
+    expect(weeks.flat().filter(Boolean)).toHaveLength(31);
+    expect(weeks[weeks.length - 1]?.[5]).toBe('2026-10-31'); // Thứ bảy
+  });
+});
+
+describe('monthsOfPeriod', () => {
+  it('liệt kê các tháng kỳ KPI trải qua', () => {
+    expect(monthsOfPeriod('2026-10-26', '2026-12-03')).toEqual(['2026-10-01', '2026-11-01', '2026-12-01']);
+    expect(monthsOfPeriod('2026-10-05', '2026-10-30')).toEqual(['2026-10-01']);
   });
 });

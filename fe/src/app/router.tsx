@@ -349,19 +349,6 @@ export const router = createBrowserRouter([
             ],
           },
 
-          // --- So sánh BTP đã cắt – KPI ngày – thực tế tổ may (Quản đốc, Admin, Thủ kho, tổ trưởng / tổ phó may) ---
-          {
-            element: (
-              <ProtectedRoute roles={[ROLES.Manager, ROLES.Admin, ROLES.WarehouseKeeper, ROLES.TeamLeader, ROLES.TeamDeputy]} />
-            ),
-            children: [
-              {
-                path: KPI_ROUTES.btpCompare,
-                lazy: async () => ({ Component: (await import('@/features/kpi')).KpiBtpComparePage }),
-              },
-            ],
-          },
-
           // --- KPI tổ may: Admin chỉ xem (Minh, MI-17, UC21) ---
           {
             element: <ProtectedRoute roles={[ROLES.Admin]} />,

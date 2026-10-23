@@ -14,8 +14,12 @@ namespace NX_MTD.API.Controllers.Manager;
 public sealed class KpiTargetsController : ManagerBaseController
 {
     private readonly IKpiService _kpi;
+    private readonly IKpiCalendarService _calendar;
 
-    public KpiTargetsController(IKpiService kpi) => _kpi = kpi;
+    public KpiTargetsController(IKpiService kpi, IKpiCalendarService calendar)
+    {
+        _kpi = kpi; _calendar = calendar;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] KpiTargetQuery query, CancellationToken ct) =>
@@ -36,6 +40,16 @@ public sealed class KpiTargetsController : ManagerBaseController
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>
         this.ToResponse(await _kpi.CancelAsync(id, ct));
+
+    /// <summary>Lịch KPI theo ngày: KPI từng ngày, thực tế của tổ, Tổng BTP và số còn lại để đặt KPI.</summary>
+    [HttpGet("{id:int}/calendar")]
+    public async Task<IActionResult> GetCalendar(int id, CancellationToken ct) =>
+        this.ToResponse(await _calendar.GetAsync(id, ct));
+
+    /// <summary>Đặt toàn bộ KPI từng ngày (rỗng = xóa hết); chặn khi vượt tổng cả kỳ hoặc vượt BTP còn lại.</summary>
+    [HttpPut("{id:int}/daily-plan")]
+    public async Task<IActionResult> SaveDailyPlan(int id, [FromBody] SaveKpiDailyPlanDto dto, CancellationToken ct) =>
+        this.ToResponse(await _calendar.SaveDailyPlanAsync(id, dto, ct));
 
     /// <summary>MI-18 "KPI theo ngày": kết quả từng ngày của một chỉ tiêu KPI (vw_KpiDailyResult).</summary>
     [HttpGet("{id:int}/daily-results")]

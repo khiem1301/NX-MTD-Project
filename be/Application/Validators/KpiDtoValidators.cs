@@ -10,8 +10,6 @@ namespace NX_MTD.Application.Validators;
 /// </summary>
 public sealed class SaveKpiTargetDtoValidator : AbstractValidator<SaveKpiTargetDto>
 {
-    private const int MaxDays = 366;
-
     public SaveKpiTargetDtoValidator()
     {
         RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("Vui lòng chọn đơn hàng.");
@@ -23,17 +21,23 @@ public sealed class SaveKpiTargetDtoValidator : AbstractValidator<SaveKpiTargetD
             .NotEmpty().WithMessage("Vui lòng chọn ngày kết thúc.")
             .GreaterThanOrEqualTo(x => x.StartDate).WithMessage(Messages.DateRangeInvalid);
 
-        RuleFor(x => x.DailyTargets)
-            .NotEmpty().WithMessage(Messages.KpiDailyTargetsRequired)
+        RuleFor(x => x.TargetFinishedQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive);
+    }
+}
+
+public sealed class SaveKpiDailyPlanDtoValidator : AbstractValidator<SaveKpiDailyPlanDto>
+{
+    private const int MaxDays = 366;
+
+    public SaveKpiDailyPlanDtoValidator()
+    {
+        RuleFor(x => x.DailyTargets).NotNull()
             .Must(d => d.Count <= MaxDays).WithMessage(Messages.KpiDailyTargetsTooMany)
             .Must(d => d.Select(x => x.WorkDate).Distinct().Count() == d.Count).WithMessage(Messages.KpiDailyTargetDuplicateDate);
         RuleForEach(x => x.DailyTargets).ChildRules(day =>
         {
             day.RuleFor(d => d.TargetQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive);
         });
-        RuleFor(x => x).Must(x => x.DailyTargets.All(d => d.WorkDate >= x.StartDate && d.WorkDate <= x.EndDate))
-            .When(x => x.DailyTargets is { Count: > 0 } && x.EndDate >= x.StartDate)
-            .WithName(nameof(SaveKpiTargetDto.DailyTargets)).WithMessage(Messages.KpiDailyTargetOutOfPeriod);
     }
 }
 

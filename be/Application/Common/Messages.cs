@@ -198,7 +198,9 @@ public static class Messages
         "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
-    public const string KpiDailyTargetsRequired = "Vui lòng nhập chỉ tiêu cho từng ngày trong kỳ.";
+    public const string KpiPlanExceedsTotal = "Tổng KPI các ngày ({0}) vượt tổng cả kỳ ({1}).";
+    public const string KpiTotalBelowPlan = "Tổng cả kỳ không được nhỏ hơn tổng KPI đã đặt cho các ngày ({0}). Hãy sửa KPI từng ngày trước.";
+    public const string KpiPlanExceedsBtp = "Vượt số bán thành phẩm còn lại để đặt KPI: các ngày từ hôm nay chỉ đặt được tối đa {0}.";
     public const string KpiDailyTargetsTooMany = "Một kỳ KPI tối đa 366 ngày.";
     public const string KpiDailyTargetDuplicateDate = "Mỗi ngày chỉ nhập một chỉ tiêu.";
     public const string KpiDailyTargetOutOfPeriod = "Ngày có chỉ tiêu phải nằm trong kỳ KPI.";
