@@ -45,7 +45,7 @@ public class OrderProgressServiceTests
 
     private CustomerOrder Order(int id, int dueInDays, int ordered, int finished, int finishedLast7Days, string status = OrderStatuses.InProduction)
     {
-        var o = new CustomerOrder { OrderId = id, OrderCode = $"DH-{id}", Status = status, DueDate = Today.AddDays(dueInDays), Customer = new Customer { CustomerName = "Khách" } };
+        var o = new CustomerOrder { OrderId = id, OrderCode = $"DH-{id}", Status = status, MaterialStatus = OrderMaterialStatuses.Complete, DueDate = Today.AddDays(dueInDays), Customer = new Customer { CustomerName = "Khách" } };
         _orders.Add(o);
         var line = new OrderLine { OrderLineId = id * 10, OrderId = id, Order = o, OrderedQty = ordered };
         _lines.Add(line);
