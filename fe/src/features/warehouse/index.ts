@@ -1,5 +1,6 @@
 export { MaterialListPage } from './pages/MaterialListPage';
 export { OrderMaterialPage } from './pages/OrderMaterialPage';
+export { IncomingMaterialsPage } from './pages/IncomingMaterialsPage';
 export { MaterialReceiptListPage } from './pages/MaterialReceiptListPage';
 export { MaterialIssueListPage } from './pages/MaterialIssueListPage';
 export { InventoryPage } from './pages/InventoryPage';

@@ -368,3 +368,61 @@ export type TeamPieceHolding = {
   retrievedFromWorkers: number;
   heldByTeam: number;
 };
+
+/** Đơn đang chạy mà NVL chưa về đủ (materialLines = 0: chưa ai khai báo "NVL của đơn"). */
+export type PendingMaterialOrder = {
+  orderId: number;
+  orderCode: string;
+  customerName: string;
+  dueDate: string;
+  status: string;
+  materialStatus: string;
+  materialLines: number;
+  customerQty: number;
+  toBuyQty: number;
+};
+
+/** NVL khách sẽ cấp mà kho chưa nhận đủ. */
+export type IncomingCustomerMaterial = {
+  orderMaterialId: number;
+  orderId: number;
+  orderCode: string;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  customerQty: number;
+  receivedQty: number;
+  outstandingQty: number;
+  expectedDate: string | null;
+};
+
+/** Dòng đơn mua đã đặt hàng mà kho chưa nhận đủ. */
+export type IncomingSupplierMaterial = {
+  purchaseOrderId: number;
+  poCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  supplierName: string | null;
+  expectedDeliveryDate: string | null;
+  purchaseOrderLineId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  orderedQty: number;
+  receivedQty: number;
+  outstandingQty: number;
+};
+
+export type IncomingMaterials = { customer: IncomingCustomerMaterial[]; supplier: IncomingSupplierMaterial[] };
+
+/** Điền sẵn phiếu nhập từ màn "NVL chờ nhận": nguồn, đơn / đơn mua và dòng cần nhận với số còn phải nhận. */
+export type ReceiptPreset = {
+  source: string;
+  orderId?: number;
+  purchaseOrderId?: number;
+  orderMaterialId?: number;
+  purchaseOrderLineId?: number;
+  acceptedQty: number;
+};

@@ -245,6 +245,11 @@ public static class Messages
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
+    public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
+    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, hẹn giao {4}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyIncomingPoTitle = "Có đơn mua NVL chờ nhận";
+    public const string NotifyIncomingPoBody = "Đơn mua {0} (NCC {1}) đã đặt hàng. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyNoDate = "chưa rõ ngày";
     public const string NotifyPoPlacedTitle = "Đơn mua chờ thanh toán";
     public const string NotifyPoPlacedBody = "Đơn mua {0} (NCC {1}) đã đặt hàng, chờ xác nhận thanh toán.";
     public const string NotifyPoPaidTitle = "Đơn mua đã thanh toán";

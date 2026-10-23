@@ -10,11 +10,13 @@ import { LABELS, MATERIAL_SOURCE, SOURCE_LABEL } from '../constants';
 import { useOrderMaterials } from '../hooks/useOrderMaterials';
 import { usePurchaseOrder, usePurchaseOrders } from '../hooks/usePurchaseOrders';
 import { useSaveReceipt } from '../hooks/useReceipts';
-import type { MaterialReceipt, SaveReceiptPayload } from '../types';
+import type { MaterialReceipt, ReceiptPreset, SaveReceiptPayload } from '../types';
 
 type ReceiptFormModalProps = {
   open: boolean;
   receipt: MaterialReceipt | null;
+  /** Điền sẵn khi lập từ màn NVL chờ nhận (bỏ qua khi sửa phiếu). */
+  preset?: ReceiptPreset | null;
   onClose: () => void;
 };
 
@@ -32,7 +34,7 @@ const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map(
  * UC37: Thủ kho lập / sửa phiếu nhập NVL. Khách cấp: chọn đơn hàng rồi NVL của đơn. Nhà cung cấp (TH-12): chọn đơn mua đã đặt,
  * mỗi dòng là một dòng đơn mua (đơn giá lấy từ đơn mua), số nhập không vượt số còn phải nhận.
  */
-export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalProps) {
+export function ReceiptFormModal({ open, receipt, preset = null, onClose }: ReceiptFormModalProps) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveReceipt();
   const source = Form.useWatch('source', form) ?? MATERIAL_SOURCE.CUSTOMER;
@@ -62,9 +64,25 @@ export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalPro
               defectiveQty: l.defectiveQty,
             })),
           }
-        : { source: MATERIAL_SOURCE.CUSTOMER, receiptDate: dayjs(), lines: [EMPTY_LINE] },
+        : preset
+          ? {
+              source: preset.source,
+              orderId: preset.orderId,
+              purchaseOrderId: preset.purchaseOrderId,
+              receiptDate: dayjs(),
+              lines: [
+                {
+                  orderMaterialId: preset.orderMaterialId,
+                  purchaseOrderLineId: preset.purchaseOrderLineId,
+                  acceptedQty: preset.acceptedQty,
+                  shortQty: 0,
+                  defectiveQty: 0,
+                },
+              ],
+            }
+          : { source: MATERIAL_SOURCE.CUSTOMER, receiptDate: dayjs(), lines: [EMPTY_LINE] },
     );
-  }, [open, receipt, form]);
+  }, [open, receipt, preset, form]);
 
   const resetLines = () => form.setFieldValue('lines', [EMPTY_LINE]);
 

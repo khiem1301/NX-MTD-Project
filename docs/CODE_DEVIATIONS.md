@@ -66,6 +66,7 @@
 | DEV-ALL-7 | 23/10/2026 | Claude (AI) | `EmployeeService.ManagerUpdateAsync`, `GradeService.SetGradeAsync`, UC15, UC16 | Quản đốc đổi tổ và vai trò nhân viên; Admin / Quản đốc đặt bậc thợ trực tiếp không qua đề xuất | Đã làm |
 | DEV-ALL-8 | 24/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI lập theo tổng cả kỳ; từng ngày đặt riêng (không chia đều) | Đã làm |
 | DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
+| DEV-ALL-10 | 24/10/2026 | Claude (AI) | `OrderMaterialService`, `IncomingMaterialService`, `IncomingMaterialsPage`, `PendingMaterialOrdersTable` | Quản đốc thấy đơn chờ khai báo NVL và bấm thông báo mở đúng đơn; Thủ kho có màn NVL chờ nhận và được báo khi khách cấp / đơn mua đã đặt | Đã làm |
 
 ---
 
@@ -837,4 +838,19 @@
   - Hạn chế: BTP là kho chung theo (đơn, mã hàng), không tách theo tổ may; Thủ kho và tổ trưởng không còn màn xem riêng.
   - Dữ liệu demo mục 19.6 (BTP): DEMO-DH001 cắt đủ 5 dòng trước ngày tổ may nhận (PC-DEMO-001) nên kho BTP về 0; DEMO-DH002 cắt 800 chưa cấp tổ may; DEMO-DH000 (đã hoàn thành) cắt rồi cấp hết cho tổ may. Thẻ kho chỉ thêm mới (trigger append-only), nên DB demo đang chạy chỉ được bổ sung, không sửa các đợt cắt cũ.
 - **Cần sửa trong tài liệu:** thêm lịch KPI vào Report-3 (UC19 / UC21) và ma trận quyền.
+- **Trạng thái:** Mở
+
+### DEV-ALL-10 · Đơn chờ khai báo NVL (Quản đốc) và màn NVL chờ nhận (Thủ kho)
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC09 (phần NVL), UC37, UC38 · (chưa có PR)
+- **Ảnh hưởng tới:** `GET admin|manager/order-materials/pending-orders`, `GET warehouse-keeper/incoming-materials`; màn "NVL của đơn" và màn mới "NVL chờ nhận"; thông báo; không đổi schema
+- **Tài liệu gốc ghi:** Admin tạo đơn → Quản đốc nhận thông báo "Có đơn hàng mới" rồi tự vào NVL của đơn chọn đơn. Thủ kho lập phiếu nhập bằng cách tự chọn đơn / đơn mua; không có danh sách việc chờ.
+- **Lý do:** Quản đốc không thấy đơn mới ở đâu để khai báo NVL; Thủ kho không biết khách sẽ cấp hoặc đơn mua đã đặt.
+- **Code đang làm:**
+  - Màn "NVL của đơn" có bảng **Đơn hàng chờ khai báo / mua NVL** (đơn NEW / IN_PRODUCTION có NVL chưa về đủ, đơn chưa khai báo NVL lên đầu). Bấm Mở đơn thì chọn đơn; đơn đang xem nằm trên đường dẫn `?orderId=`.
+  - Thông báo "Có đơn hàng mới" (gửi Quản đốc khi Admin tạo đơn) giờ có liên kết tới `/warehouse/order-materials?orderId=…`.
+  - Màn **NVL chờ nhận** (chỉ Thủ kho): (1) NVL khách cấp = số khách cấp đã khai báo − số đã nhận (phiếu nhập đã xác nhận), kèm ngày hẹn, quá hẹn tô đỏ; (2) dòng đơn mua đã đặt hàng (ORDERED / PARTIALLY_RECEIVED) = đặt − đã nhận − đã chốt không bù. Nút Lập phiếu nhập mở form phiếu nhập điền sẵn nguồn, đơn / đơn mua, dòng NVL và số còn phải nhận.
+  - Thông báo cho Thủ kho: khi Quản đốc khai báo NVL khách cấp (hoặc đổi số khách cấp / ngày hẹn); khi Quản đốc đặt hàng đơn mua với nhà cung cấp.
+  - Lưu ý: đơn mua chỉ vào danh sách chờ nhận sau khi Quản đốc bấm Đặt hàng (trạng thái ORDERED); đơn mua mới tạo (chờ chốt) chưa hiện. Phiếu nhập đang chờ xác nhận chưa trừ vào số còn phải nhận.
+- **Cần sửa trong tài liệu:** Report-3 UC09 / UC37 (thêm màn NVL chờ nhận và danh sách đơn chờ khai báo), ma trận quyền (Thủ kho: NVL chờ nhận).
 - **Trạng thái:** Mở

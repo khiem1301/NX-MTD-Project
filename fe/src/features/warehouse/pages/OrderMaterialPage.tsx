@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Card, Popconfirm, Space, Table, Tag, type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
@@ -7,6 +8,7 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDate, formatQty } from '@/utils/format';
 import { OrderMaterialFormModal } from '../components/OrderMaterialFormModal';
+import { PendingMaterialOrdersTable } from '../components/PendingMaterialOrdersTable';
 import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
 import { StockPurchaseTable } from '../components/StockPurchaseTable';
 import { LABELS, MATERIAL_TYPE_LABEL, SOURCE_LABEL } from '../constants';
@@ -33,7 +35,10 @@ const normColumns: TableColumnsType<OrderMaterialNorm> = [
  */
 export function OrderMaterialPage() {
   const { hasRole } = usePermission();
-  const [orderId, setOrderId] = useState<number>();
+  // Đơn đang xem nằm trên đường dẫn (?orderId=) để bấm thông báo "Có đơn hàng mới" là mở thẳng đơn đó.
+  const [params, setParams] = useSearchParams();
+  const orderId = Number(params.get('orderId')) || undefined;
+  const setOrderId = (id: number | undefined) => setParams(id === undefined ? {} : { orderId: String(id) });
   const list = useOrderMaterials(orderId);
   const remove = useDeleteOrderMaterial();
   const [editing, setEditing] = useState<OrderMaterial | null>(null);
@@ -118,6 +123,7 @@ export function OrderMaterialPage() {
         </Space>
       }
     >
+      {orderId === undefined && <PendingMaterialOrdersTable onPick={setOrderId} />}
       {stockMode ? (
         <StockPurchaseTable stockOnly />
       ) : (

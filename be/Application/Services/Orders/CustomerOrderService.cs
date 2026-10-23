@@ -81,7 +81,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
             await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.System,
                 Messages.NotifyNewOrderTitle,
                 string.Format(Messages.NotifyNewOrderBody, order.OrderCode, order.DueDate.ToString("dd/MM/yyyy")),
-                null, nameof(CustomerOrder), order.OrderId), ct);
+                $"/warehouse/order-materials?orderId={order.OrderId}", nameof(CustomerOrder), order.OrderId), ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(order.OrderId, Messages.Saved);
         });

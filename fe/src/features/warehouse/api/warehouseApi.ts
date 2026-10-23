@@ -16,7 +16,9 @@ import type {
   MaterialReceiptListItem,
   MaterialReceiptQuery,
   CreatePurchaseOrderPayload,
+  IncomingMaterials,
   OrderMaterial,
+  PendingMaterialOrder,
   PurchaseOrder,
   PurchaseOrderListItem,
   PurchaseOrderQuery,
@@ -55,6 +57,11 @@ export const warehouseApi = {
 
   getOrderMaterials: (role: RolePath, orderId: number) =>
     get<OrderMaterial[]>(API.warehouse.orderMaterials(role), { orderId }),
+  /** Admin / Quản đốc: đơn đang chạy mà NVL chưa về đủ (kể cả đơn mới chưa khai báo NVL). */
+  getPendingMaterialOrders: (role: RolePath) =>
+    get<PendingMaterialOrder[]>(`${API.warehouse.orderMaterials(role)}/pending-orders`),
+  /** Thủ kho: NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. */
+  getIncomingMaterials: () => get<IncomingMaterials>(API.warehouse.incomingMaterials),
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
     post<OrderMaterial>(API.warehouse.orderMaterials(role), body),
   updateOrderMaterial: (role: RolePath, id: number, body: SaveOrderMaterialPayload) =>

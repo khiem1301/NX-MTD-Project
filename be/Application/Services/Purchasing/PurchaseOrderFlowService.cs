@@ -16,6 +16,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 {
     private const string ManagerLink = "/purchase-orders?id={0}";
     private const string PaymentLink = "/purchase-payments?id={0}";
+    private const string IncomingLink = "/warehouse/incoming-materials";
 
     private readonly IUnitOfWork _uow;
     private readonly IPurchaseOrderService _orders;
@@ -145,6 +146,9 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier.SupplierName),
                 string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
+            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+                Messages.NotifyIncomingPoTitle, string.Format(Messages.NotifyIncomingPoBody, po.PoCode, supplier.SupplierName),
+                IncomingLink, nameof(PurchaseOrder), po.PurchaseOrderId), ct);
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.PurchaseOrderPlaced);
         });
