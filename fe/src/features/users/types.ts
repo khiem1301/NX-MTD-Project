@@ -79,6 +79,8 @@ export type ManagerUpdatePayload = {
   gender?: string | null;
   dateOfBirth?: string | null;
   phone?: string | null;
+  role: Role;
+  teamId?: number | null;
   startDate: string;
   attendanceCode?: number | null;
   rowVer: string;

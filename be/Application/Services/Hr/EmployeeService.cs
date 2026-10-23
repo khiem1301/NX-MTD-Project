@@ -110,15 +110,26 @@ public sealed class EmployeeService : IEmployeeService
         if (employee is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
         if (employee.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.EmployeeNotActive, Messages.EmployeeNotActive);
 
+        // GBR-01: Quản đốc không được gán vai trò Admin / Quản đốc / Kế toán (cũng là những vai trò anh ta không nhìn thấy).
+        var roleCode = Roles.ToRoleCode(dto.Role);
+        if (!_scope.CanSee(roleCode)) return Result.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
+
         var attChanged = dto.AttendanceCode != employee.AttendanceCode;
-        var check = await CheckPlacementAsync(employee.Role.RoleCode, employee.TeamId, attChanged ? dto.AttendanceCode : null, employeeId, ct, checkTeam: false);
+        var check = await CheckPlacementAsync(roleCode, dto.TeamId, attChanged ? dto.AttendanceCode : null, employeeId, ct);
         if (!check.IsSuccess) return check;
 
         _employees.SetOriginalRowVersion(employee, dto.RowVer);
-        var before = Snapshot(employee, employee.Role.RoleCode);
+        var oldRole = employee.Role.RoleCode;
+        var before = Snapshot(employee, oldRole);
+        var teamChanged = employee.TeamId != dto.TeamId;
+        var identityChanged = oldRole != roleCode || teamChanged;
+        if (oldRole != roleCode) employee.RoleId = await _employees.GetRoleIdAsync(roleCode, ct);
         ApplyProfile(employee, dto.FullName, dto.Gender, dto.DateOfBirth, dto.Phone, dto.StartDate);
+        employee.TeamId = dto.TeamId;
         if (dto.AttendanceCode is null) employee.AttendanceCode = null;
-        return await SaveAndMapAsync(employee, before, employee.Role.RoleCode, attChanged ? dto.AttendanceCode : null, null, ct);
+        if (identityChanged) RotateStamp(employee);   // token cũ mang vai trò / tổ cũ (D29)
+        var reason = teamChanged ? $"Chuyển tổ, hiệu lực {_clock.Today:dd/MM/yyyy}" : null;   // D32
+        return await SaveAndMapAsync(employee, before, roleCode, attChanged ? dto.AttendanceCode : null, reason, ct);
     }
 
     public async Task<Result> ResignAsync(int employeeId, ResignEmployeeDto dto, CancellationToken ct)

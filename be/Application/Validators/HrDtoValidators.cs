@@ -66,6 +66,8 @@ public sealed class ManagerUpdateEmployeeDtoValidator : AbstractValidator<Manage
         RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.Phone).MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
+        RuleFor(x => x.TeamId).NotNull().When(x => HrRules.NeedsTeam(x.Role)).WithMessage(Messages.Required("tổ"));
         RuleFor(x => x.AttendanceCode).InclusiveBetween(1, 99_999_999).When(x => x.AttendanceCode is not null);
         RuleFor(x => x.RowVer).NotEmpty();
     }

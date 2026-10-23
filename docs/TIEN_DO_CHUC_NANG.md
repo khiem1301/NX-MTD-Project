@@ -6,6 +6,8 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ## Đã làm được
 
+**Bổ sung 23/10 (lần 3):** Quản đốc sửa được tổ và vai trò nhân viên (trừ Admin / Quản đốc / Kế toán), Admin và Quản đốc đặt bậc thợ trực tiếp cho công nhân (xem DEV-ALL-7).
+
 **Bổ sung 23/10 (lần 2):** TH-16 (in / xuất Excel từng phiếu nhập, cấp, xuất hàng) và test phạm vi dữ liệu 3 tầng KH-24 đã xong.
 
 ### Kho, nhập, xuất (Thái)
@@ -40,7 +42,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ### Dữ liệu và tài liệu
 - Dữ liệu demo mục 19.4–19.5 trong `SQL/NX-MTD_Database.sql` (thẻ kho, bậc thợ, sổ xe, kiểm kê, bàn giao chờ nhận, thông báo).
-- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…6 ghi các chỗ code khác tài liệu gốc.
+- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…7 ghi các chỗ code khác tài liệu gốc.
 
 ## Chưa làm
 

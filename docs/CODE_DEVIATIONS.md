@@ -63,6 +63,7 @@
 | DEV-ALL-4 | 23/10/2026 | Claude (AI) | `StocktakeService`, `VehicleService` | Kiểm kê kho và sổ xe + nhiên liệu | Đã làm |
 | DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
 | DEV-ALL-6 | 23/10/2026 | Claude (AI) | `WarehouseDocumentExportService`, `ClosedXmlWarehouseDocumentWriter` | In / xuất Excel từng phiếu nhập, phiếu cấp, phiếu xuất hàng (TH-16) | Đã làm |
+| DEV-ALL-7 | 23/10/2026 | Claude (AI) | `EmployeeService.ManagerUpdateAsync`, `GradeService.SetGradeAsync`, UC15, UC16 | Quản đốc đổi tổ và vai trò nhân viên; Admin / Quản đốc đặt bậc thợ trực tiếp không qua đề xuất | Đã làm |
 
 ---
 
@@ -793,4 +794,16 @@
   - Dữ liệu lấy qua dịch vụ chi tiết hiện có nên giữ nguyên quyền xem: tổ trưởng chỉ in được phiếu cấp của tổ mình (khác tổ → 403 / 404 như xem chi tiết).
   - Quản đốc in được phiếu nhập; Thủ kho in được cả ba loại; Kế toán in được phiếu xuất hàng.
 - **Cần sửa trong tài liệu:** Report-3 UC13: ghi rõ "in" là tải file Excel để tự in, chưa có bản PDF.
+- **Trạng thái:** Mở
+
+### DEV-ALL-7 · Quản đốc sửa tổ / vai trò nhân viên và đặt bậc thợ trực tiếp
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) theo yêu cầu của Minh · UC15, UC16 · (chưa có PR)
+- **Ảnh hưởng tới:** `PUT manager/employees/{id}` (`ManagerUpdateEmployeeDto` thêm `Role`, `TeamId`); `POST admin|manager/grade-evaluations/set`, `GET .../workers`; form nhân viên và màn Bậc thợ ở FE
+- **Tài liệu gốc ghi:** UC16: Quản đốc chỉ sửa hồ sơ cá nhân và mã chấm công, không đổi vai trò, tổ, kiểu lương. UC15 / UC50: bậc thợ chỉ đổi qua đề xuất của tổ trưởng rồi Admin / Quản đốc duyệt.
+- **Code đang làm:**
+  - Quản đốc sửa thêm tổ và vai trò: không gán được Admin / Quản đốc / Kế toán (403), vẫn không xem hay sửa được nhân viên có các vai trò đó (GBR-01), không đổi kiểu lương. Đổi tổ ghi nhật ký "Chuyển tổ"; đổi tổ hoặc vai trò làm token cũ hết hiệu lực. Các kiểm tra tổ trưởng / tổ phó (đúng loại tổ, không trùng người) dùng chung với Admin.
+  - Đặt bậc trực tiếp (Admin và Quản đốc): tạo ngay một dòng lịch sử `APPLIED` (người đặt = người đăng nhập, lý do bắt buộc, hiệu lực mặc định hôm nay), cập nhật `CurrentGradeCode`, ghi AuditLog, báo công nhân. Đề xuất đang chờ của công nhân đó bị đóng thành `NOT_APPLIED` với ghi chú, báo người đề xuất. Mỗi người đặt tối đa một lần mỗi công nhân mỗi ngày (ràng buộc `UQ_GradeEval`); sai thì phải đợi sang ngày hoặc nhờ Admin.
+  - Quản đốc vẫn không sửa mức tiền bậc A–D (chỉ Admin).
+- **Cần sửa trong tài liệu:** Report-3 UC16 (quyền sửa của Quản đốc), UC15 / UC50 (đặt bậc trực tiếp).
 - **Trạng thái:** Mở

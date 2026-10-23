@@ -8,6 +8,7 @@ import type {
   GradeWorker,
   ProposePayload,
   SaveLevelPayload,
+  SetGradePayload,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -19,6 +20,9 @@ const post = async <T>(url: string, body?: unknown): Promise<T> =>
 export const gradeApi = {
   evaluations: (base: string, q: EvaluationQuery) => get<Paginated<GradeEvaluation>>(base, q),
   workers: () => get<GradeWorker[]>('/api/v1/team-leader/grade-evaluations/workers'),
+  /** Admin / Quản đốc: mọi công nhân đang làm việc, để đặt bậc trực tiếp. */
+  allWorkers: (base: string) => get<GradeWorker[]>(`${base}/workers`),
+  setGrade: (base: string, body: SetGradePayload) => post<null>(`${base}/set`, body),
   propose: (body: ProposePayload) =>
     post<GradeEvaluation>('/api/v1/team-leader/grade-evaluations', body),
   apply: (base: string, id: number, body: ApplyPayload) => post<null>(`${base}/${id}/apply`, body),
