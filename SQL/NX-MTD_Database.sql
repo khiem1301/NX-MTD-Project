@@ -22,7 +22,7 @@
                  Mục 19.3: doanh thu + chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn).
                  Mục 19.4: thẻ kho cho phiếu nhập NVL / bàn giao thành phẩm demo (tồn kho có số).
                  Mục 19.5: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê chờ duyệt, bàn giao thành phẩm chờ nhận, thông báo nhanh.
-                 Mục 19.6: BTP đã cắt vào kho rải theo ngày (lệnh cắt + bàn giao BTP) cho màn so sánh BTP – KPI.
+                 Mục 19.6: bán thành phẩm của các đơn demo (lệnh cắt, bàn giao BTP vào kho, thẻ kho BTP cắt vào / cấp cho tổ may).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -3149,8 +3149,9 @@ BEGIN
     END
 END
 GO
--- 19.6 BTP đã cắt vào kho rải theo ngày cho DEMO-DH001 (màn "So sánh BTP – KPI": cắt lũy kế − thực tế lũy kế)
---      Tháng 9: cắt đủ số tổ may đã làm xong; tháng 10: cắt từng đợt, có lúc BTP còn ít hơn KPI ngày kế tiếp để thấy cảnh báo.
+-- 19.6 Bán thành phẩm (BTP) của các đơn demo: lệnh cắt, bàn giao BTP vào kho, thẻ kho BTP (cắt vào kho / cấp cho tổ may)
+--      DEMO-DH001: cắt đủ 5 dòng màu × size trước ngày tổ may nhận (PC-DEMO-001, 23/09), nên kho BTP về 0 và tổ may đang giữ đủ.
+--      DEMO-DH002: cắt 800 cái, chưa cấp cho tổ may. DEMO-DH000 (đã hoàn thành): cắt rồi cấp hết cho tổ may.
 --      Chạy lại không nhân đôi (kiểm tra theo mã lệnh cắt).
 SET QUOTED_IDENTIFIER ON;
 GO
@@ -3159,38 +3160,48 @@ BEGIN
     DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
             @cut INT = (SELECT TeamId FROM dbo.Team WHERE TeamType = 'CUTTING'),
             @wk INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO'),
-            @l6 INT, @l7 INT, @p INT, @wo INT;
-    SELECT @l6 = OrderLineId, @p = ProductId FROM dbo.OrderLine WHERE OrderId = @o AND Color = N'Đen' AND SizeCode = 'M';
-    SET @l7 = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o AND Color = N'Đen' AND SizeCode = 'L');
-    IF @o IS NOT NULL AND @cut IS NOT NULL AND @wk IS NOT NULL AND @l6 IS NOT NULL AND @l7 IS NOT NULL
+            @p INT, @wo INT;
+    SET @p = (SELECT TOP 1 ProductId FROM dbo.OrderLine WHERE OrderId = @o);
+    IF @o IS NOT NULL AND @cut IS NOT NULL AND @wk IS NOT NULL AND @p IS NOT NULL
     BEGIN
         INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, CreatedAt, CompletedAt)
-        VALUES ('LC-DEMO-901', @o, @p, @cut, '2026-10-25', 'COMPLETED', '2026-09-15 08:00:00', '2026-10-20 16:00:00');
+        VALUES ('LC-DEMO-901', @o, @p, @cut, '2026-09-25', 'COMPLETED', '2026-09-10 08:00:00', '2026-09-22 16:00:00');
         SET @wo = SCOPE_IDENTITY();
-        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty) VALUES (@wo, @l6, N'', 800), (@wo, @l7, N'', 700);
+        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty)
+        SELECT @wo, OrderLineId, N'', OrderedQty FROM dbo.OrderLine WHERE OrderId = @o;
 
-        -- Các đợt cắt đã bàn giao kho BTP: (mã, ngày, dòng M, dòng L)
-        DECLARE @h TABLE (Code VARCHAR(30), D DATE, Qm INT, Ql INT);
-        INSERT @h VALUES ('BG-DEMO-901', '2026-09-20', 300, 250),
-                         ('BG-DEMO-902', '2026-10-01', 60, 40),
-                         ('BG-DEMO-903', '2026-10-08', 50, 40),
-                         ('BG-DEMO-904', '2026-10-15', 50, 40),
-                         ('BG-DEMO-905', '2026-10-20', 40, 30),
-                         ('BG-DEMO-906', '2026-10-23', 250, 200);
+        -- Các đợt cắt đã bàn giao kho BTP: (mã, ngày, màu, size, số lượng); cộng lại bằng đúng số đặt của từng dòng
+        DECLARE @h TABLE (Code VARCHAR(30), D DATE, Color NVARCHAR(50), SizeCode VARCHAR(10), Qty INT);
+        INSERT @h VALUES
+          ('BG-DEMO-901', '2026-09-15', N'Đen', 'S', 300), ('BG-DEMO-901', '2026-09-15', N'Đen', 'M', 300), ('BG-DEMO-901', '2026-09-15', N'Đen', 'L', 250),
+          ('BG-DEMO-902', '2026-09-18', N'Đen', 'M', 200), ('BG-DEMO-902', '2026-09-18', N'Đen', 'L', 150),
+          ('BG-DEMO-902', '2026-09-18', N'Xanh', 'M', 150), ('BG-DEMO-902', '2026-09-18', N'Xanh', 'L', 100),
+          ('BG-DEMO-903', '2026-09-22', N'Đen', 'M', 100), ('BG-DEMO-903', '2026-09-22', N'Đen', 'L', 100),
+          ('BG-DEMO-903', '2026-09-22', N'Xanh', 'M', 150), ('BG-DEMO-903', '2026-09-22', N'Xanh', 'L', 100);
         INSERT dbo.CutHandover (HandoverCode, WorkOrderId, CuttingTeamId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
-        SELECT Code, @wo, @cut, DATEADD(HOUR, 9, CAST(D AS DATETIME2(0))), 'CONFIRMED', @wk, DATEADD(HOUR, 10, CAST(D AS DATETIME2(0))) FROM @h;
+        SELECT Code, @wo, @cut, DATEADD(HOUR, 9, CAST(MIN(D) AS DATETIME2(0))), 'CONFIRMED', @wk, DATEADD(HOUR, 10, CAST(MIN(D) AS DATETIME2(0)))
+        FROM @h GROUP BY Code;
         INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
-        SELECT ch.CutHandoverId, v.OrderLineId, v.Qty, v.Qty
+        SELECT ch.CutHandoverId, ol.OrderLineId, h.Qty, h.Qty
         FROM @h h JOIN dbo.CutHandover ch ON ch.HandoverCode = h.Code
-        CROSS APPLY (VALUES (@l6, h.Qm), (@l7, h.Ql)) v(OrderLineId, Qty);
+        JOIN dbo.OrderLine ol ON ol.OrderId = @o AND ol.Color = h.Color AND ol.SizeCode = h.SizeCode;
 
-        -- Thẻ kho BTP (tăng kho khi Thủ kho xác nhận bàn giao); BalanceAfter là số dư lũy kế theo từng dòng đơn
+        -- Thẻ kho BTP: cắt vào kho (BalanceAfter là số dư lũy kế theo từng dòng đơn)
         INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
         SELECT 'SEMI_FINISHED', l.OrderLineId, 'CUT_HANDOVER', ch.CutHandoverId, l.CutHandoverLineId, l.ConfirmedQty,
                SUM(l.ConfirmedQty) OVER (PARTITION BY l.OrderLineId ORDER BY ch.ConfirmedAt, l.CutHandoverLineId),
                CAST(ch.ConfirmedAt AS DATE)
         FROM dbo.CutHandoverLine l JOIN dbo.CutHandover ch ON ch.CutHandoverId = l.CutHandoverId
         WHERE ch.WorkOrderId = @wo AND ch.Status = 'CONFIRMED';
+
+        -- Cấp BTP cho tổ may (PC-DEMO-001 đã nhận ngày 23/09): trừ kho BTP đúng số tổ đã nhận
+        INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+        SELECT 'SEMI_FINISHED', l.OrderLineId, 'MATERIAL_ISSUE', i.MaterialIssueId, l.MaterialIssueLineId, -l.ConfirmedQty,
+               (SELECT ISNULL(SUM(x.QtyChange), 0) FROM dbo.StockTransaction x WHERE x.WarehouseType = 'SEMI_FINISHED' AND x.OrderLineId = l.OrderLineId) - l.ConfirmedQty,
+               CAST(i.ReceivedAt AS DATE)
+        FROM dbo.MaterialIssue i JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = i.MaterialIssueId
+        WHERE i.IssueCode = 'PC-DEMO-001' AND i.Status = 'RECEIVED' AND l.ConfirmedQty > 0
+          AND (SELECT ISNULL(SUM(x.QtyChange), 0) FROM dbo.StockTransaction x WHERE x.WarehouseType = 'SEMI_FINISHED' AND x.OrderLineId = l.OrderLineId) >= l.ConfirmedQty;
     END
 END
 GO
@@ -3216,6 +3227,56 @@ BEGIN
         INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
         SELECT 'SEMI_FINISHED', l.OrderLineId, 'CUT_HANDOVER', @ch, l.CutHandoverLineId, l.ConfirmedQty, l.ConfirmedQty, '2026-10-22'
         FROM dbo.CutHandoverLine l WHERE l.CutHandoverId = @ch;
+    END
+END
+GO
+-- BTP của DEMO-DH000 (đơn đã hoàn thành tháng 08): cắt rồi cấp hết cho tổ may, kho BTP về 0
+IF NOT EXISTS (SELECT 1 FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-801')
+BEGIN
+    DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH000'),
+            @cut INT = (SELECT TeamId FROM dbo.Team WHERE TeamType = 'CUTTING'),
+            @sew INT = (SELECT TOP 1 TeamId FROM dbo.Team WHERE TeamType = 'SEWING' ORDER BY TeamId),
+            @wk INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO'),
+            @tt INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTMAY'),
+            @issue INT;
+    IF @o IS NOT NULL AND @cut IS NOT NULL AND @sew IS NOT NULL AND @wk IS NOT NULL AND @tt IS NOT NULL
+       AND (SELECT COUNT(*) FROM dbo.OrderLine WHERE OrderId = @o) > 0
+    BEGIN
+        -- Mỗi mã hàng một lệnh cắt (WorkOrder theo mã hàng); số cắt = số đặt của dòng đơn
+        DECLARE @n INT = 0, @pid INT, @wo INT, @ch INT;
+        DECLARE c CURSOR LOCAL FAST_FORWARD FOR SELECT DISTINCT ProductId FROM dbo.OrderLine WHERE OrderId = @o ORDER BY 1;
+        OPEN c; FETCH NEXT FROM c INTO @pid;
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+            SET @n += 1;
+            INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, CreatedAt, CompletedAt)
+            VALUES ('LC-DEMO-80' + CAST(@n AS VARCHAR(2)), @o, @pid, @cut, '2026-08-10', 'COMPLETED', '2026-08-01 08:00:00', '2026-08-05 16:00:00');
+            SET @wo = SCOPE_IDENTITY();
+            INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty)
+            SELECT @wo, OrderLineId, N'', OrderedQty FROM dbo.OrderLine WHERE OrderId = @o AND ProductId = @pid;
+            INSERT dbo.CutHandover (HandoverCode, WorkOrderId, CuttingTeamId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
+            VALUES ('BG-DEMO-80' + CAST(@n AS VARCHAR(2)), @wo, @cut, '2026-08-05 09:00:00', 'CONFIRMED', @wk, '2026-08-05 10:00:00');
+            SET @ch = SCOPE_IDENTITY();
+            INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+            SELECT @ch, OrderLineId, OrderedQty, OrderedQty FROM dbo.OrderLine WHERE OrderId = @o AND ProductId = @pid;
+            INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+            SELECT 'SEMI_FINISHED', l.OrderLineId, 'CUT_HANDOVER', @ch, l.CutHandoverLineId, l.ConfirmedQty, l.ConfirmedQty, '2026-08-05'
+            FROM dbo.CutHandoverLine l WHERE l.CutHandoverId = @ch;
+            FETCH NEXT FROM c INTO @pid;
+        END
+        CLOSE c; DEALLOCATE c;
+
+        -- Một phiếu cấp BTP cho tổ may, tổ đã nhận đủ; trừ kho BTP về 0
+        INSERT dbo.MaterialIssue (IssueCode, WarehouseType, OrderId, ReceivingTeamId, IssueDate, IssuedBy, Status, ReceivedBy, ReceivedAt)
+        VALUES ('PC-DEMO-800', 'SEMI_FINISHED', @o, @sew, '2026-08-06', @wk, 'RECEIVED', @tt, '2026-08-06 10:00:00');
+        SET @issue = SCOPE_IDENTITY();
+        INSERT dbo.MaterialIssueLine (MaterialIssueId, OrderLineId, IssuedQty, ConfirmedQty)
+        SELECT @issue, OrderLineId, OrderedQty, OrderedQty FROM dbo.OrderLine WHERE OrderId = @o;
+        INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+        SELECT 'SEMI_FINISHED', l.OrderLineId, 'MATERIAL_ISSUE', @issue, l.MaterialIssueLineId, -l.ConfirmedQty,
+               (SELECT ISNULL(SUM(x.QtyChange), 0) FROM dbo.StockTransaction x WHERE x.WarehouseType = 'SEMI_FINISHED' AND x.OrderLineId = l.OrderLineId) - l.ConfirmedQty,
+               '2026-08-06'
+        FROM dbo.MaterialIssueLine l WHERE l.MaterialIssueId = @issue;
     END
 END
 GO

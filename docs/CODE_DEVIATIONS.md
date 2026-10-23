@@ -835,6 +835,6 @@
   - Lưu bị chặn (409) khi Σ KPI các ngày > tổng cả kỳ, hoặc KPI chưa ra chuyền vượt số BTP còn lại (báo "tối đa N"). Đang giảm thì vẫn lưu được dù BTP đã thiếu từ trước.
   - Mỗi ô: KPI, thực tế của tổ (QA/QC), BTP còn sau ngày (ngày tương lai là dự báo theo KPI đã đặt), cờ "Sắp thiếu BTP" và "Chậm KPI".
   - Hạn chế: BTP là kho chung theo (đơn, mã hàng), không tách theo tổ may; Thủ kho và tổ trưởng không còn màn xem riêng.
-  - Dữ liệu demo mục 19.6: lệnh cắt + các đợt bàn giao BTP cho DEMO-DH001 và DEMO-DH002.
+  - Dữ liệu demo mục 19.6 (BTP): DEMO-DH001 cắt đủ 5 dòng trước ngày tổ may nhận (PC-DEMO-001) nên kho BTP về 0; DEMO-DH002 cắt 800 chưa cấp tổ may; DEMO-DH000 (đã hoàn thành) cắt rồi cấp hết cho tổ may. Thẻ kho chỉ thêm mới (trigger append-only), nên DB demo đang chạy chỉ được bổ sung, không sửa các đợt cắt cũ.
 - **Cần sửa trong tài liệu:** thêm lịch KPI vào Report-3 (UC19 / UC21) và ma trận quyền.
 - **Trạng thái:** Mở
