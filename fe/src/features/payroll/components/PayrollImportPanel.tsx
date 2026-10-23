@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Descriptions, Modal, Space, Table, Tag, Typography, Upload } from 'antd';
+import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -7,6 +7,7 @@ import { PAYROLL_ROW_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
 import { useConfirmImport, usePreviewImport } from '../hooks/usePayroll';
 import type { PayrollExcelRowPreview } from '../types';
 import { formatCurrency } from '../utils';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 type Props = {
   periodMonth: string;
@@ -72,7 +73,7 @@ export function PayrollImportPanel({ periodMonth, disabled }: Props) {
 
   const handleConfirm = () => {
     if (!file) return;
-    Modal.confirm({
+    confirmDialog({
       title: PAYROLL_TEXT.confirmImportTitle,
       content: PAYROLL_TEXT.confirmImportContent,
       okText: MESSAGES.common.confirm,

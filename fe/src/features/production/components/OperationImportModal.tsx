@@ -10,6 +10,7 @@ import { PRODUCTION_TEXT } from '../constants';
 import { useImportOperations, usePreviewOperationImport } from '../hooks/useProduction';
 import type { OperationImportRow } from '../types';
 import { modalWidth } from '../utils';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 type Props = { open: boolean; productId: number; productLabel: string; onClose: () => void };
 
@@ -84,7 +85,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
 
   const handleConfirm = () => {
     if (!file || !data) return;
-    Modal.confirm({
+    confirmDialog({
       title: text.confirmTitle,
       content: text.confirmContent,
       okText: MESSAGES.common.confirm,

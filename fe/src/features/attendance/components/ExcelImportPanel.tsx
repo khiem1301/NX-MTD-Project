@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Descriptions, Modal, Space, Table, Typography, Upload } from 'antd';
+import { Alert, Button, Card, Descriptions, Space, Table, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useConfirmExcelImport, usePreviewExcelImport } from '../hooks/useAttendance';
 import type { AttendanceExcelPreviewRow } from '../types';
+import { confirmDialog } from '@/utils/confirmDialog';
 
 const columns: ColumnsType<AttendanceExcelPreviewRow> = [
   { title: ATTENDANCE_TEXT.import.previewColumns.attendanceCode, dataIndex: 'attendanceCode', width: 140 },
@@ -30,7 +31,7 @@ export function ExcelImportPanel() {
 
   const handleConfirm = () => {
     if (!file) return;
-    Modal.confirm({
+    confirmDialog({
       title: ATTENDANCE_TEXT.import.confirmTitle,
       content: ATTENDANCE_TEXT.import.confirmContent,
       okText: MESSAGES.common.confirm,
