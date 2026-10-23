@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<INotificationInboxService, NotificationInboxService>();
         services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<IGradeService, GradeService>();
+        services.AddScoped<IOrderProgressService, OrderProgressService>();
         services.AddScoped<IAttachmentOwnerAccess, VehicleTripAttachmentAccess>();
         services.AddScoped<IAttachmentOwnerAccess, DispatchNoteAttachmentAccess>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

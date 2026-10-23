@@ -49,6 +49,13 @@ public static class SettingKeys
     public const string MealReminderTime = "MEAL_REMINDER_TIME";
     public const string MealCutoffTime = "MEAL_CUTOFF_TIME";
 
+    // Tiến độ đơn, thông báo (Khiêm, KH-16 / KH-23)
+    public const string DelayCheckTime = "DELAY_CHECK_TIME";
+    public const string DelayAvgDays = "DELAY_AVG_DAYS";
+    public const string NotificationRetentionDays = "NOTIFICATION_RETENTION_DAYS";
+    /// <summary>Giờ chạy JOB-05; khóa chưa seed trong SystemSetting nên dùng mặc định 01:00 (DEV-KH-23-1).</summary>
+    public const string NotificationCleanupTime = "NOTIFICATION_CLEANUP_TIME";
+
     // Kho, cắt (Thái)
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
 
