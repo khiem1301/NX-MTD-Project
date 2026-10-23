@@ -1,5 +1,6 @@
 import { accountingReportsMenu } from '@/features/accounting-reports/menu';
 import { attendanceMenu } from '@/features/attendance/menu';
+import { auditLogMenu } from '@/features/audit-log';
 import { breakEvenMenu } from '@/features/break-even/menu';
 import { costSummaryMenu } from '@/features/cost-summary/menu';
 import { cuttingMenu } from '@/features/cutting';
@@ -33,6 +34,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...homeMenu,
   ...notificationMenu, // Khiêm (KH-12)
   ...gradeMenu, // Khiêm (KH-14)
+  ...auditLogMenu, // Khiêm (KH-22)
   ...productionMenu, // Minh làm hộ Kiều (KI-01..KI-11)
   ...userMenu, // Khiêm
   ...teamMenu, // Khiêm

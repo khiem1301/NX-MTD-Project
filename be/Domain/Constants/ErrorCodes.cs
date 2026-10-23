@@ -140,6 +140,7 @@ public static class ErrorCodes
     public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
     public const string AnnouncementInvalid = "ANNOUNCEMENT_INVALID";
     public const string GradeInvalid = "GRADE_INVALID";
+    public const string EmployeeImportInvalid = "EMPLOYEE_IMPORT_INVALID";
     public const string VehiclePlateDuplicate = "VEHICLE_PLATE_DUPLICATE";
     public const string VehicleInactive = "VEHICLE_INACTIVE";
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";

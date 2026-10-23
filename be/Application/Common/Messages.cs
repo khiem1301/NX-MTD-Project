@@ -81,6 +81,14 @@ public static class Messages
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
+    public const string EmployeeImportSummary = "{0} dòng hợp lệ, {1} dòng lỗi, {2} dòng trùng. Chỉ các dòng hợp lệ được nhập.";
+    public const string EmployeeImportDone = "Đã nhập {0} nhân viên, {1} dòng không nhập được.";
+    public const string EmployeeImportEmpty = "File không có dòng nhân viên nào.";
+    public const string EmployeeImportTooMany = "File tối đa {0} dòng.";
+    public const string EmployeeImportExists = "Mã nhân viên đã có trong hệ thống.";
+    public const string EmployeeImportRepeated = "Mã nhân viên bị lặp trong file.";
+    public const string EmployeeImportAttendanceRepeated = "Mã chấm công bị lặp trong file.";
+    public const string EmployeeImportTeamUnknown = "Không tìm thấy tổ có mã {0}.";
     public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
     public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
     public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";

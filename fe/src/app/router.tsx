@@ -138,6 +138,11 @@ const warehouseRoutes = [
     page: async () => (await import('@/features/grade')).GradePage,
   },
   {
+    path: ROUTES.auditLogs,
+    roles: [Admin],
+    page: async () => (await import('@/features/audit-log')).AuditLogPage,
+  },
+  {
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
     page: async () => (await cutting()).CutHandoverPage,

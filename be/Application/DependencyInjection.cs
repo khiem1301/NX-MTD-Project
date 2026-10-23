@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IAnnouncementService, AnnouncementService>();
         services.AddScoped<IGradeService, GradeService>();
         services.AddScoped<IOrderProgressService, OrderProgressService>();
+        services.AddScoped<IEmployeeImportService, NX_MTD.Application.Services.Hr.EmployeeImportService>();
+        services.AddScoped<IAuditLogQueryService, NX_MTD.Application.Services.Hr.AuditLogQueryService>();
         services.AddScoped<IAttachmentOwnerAccess, VehicleTripAttachmentAccess>();
         services.AddScoped<IAttachmentOwnerAccess, DispatchNoteAttachmentAccess>();
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

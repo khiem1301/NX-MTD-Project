@@ -30,6 +30,7 @@ export const ROUTES = {
   vehicleLog: '/accounting/vehicle-log',
   notifications: '/notifications',
   grades: '/hr/grades',
+  auditLogs: '/admin/audit-logs',
   materialReturns: '/warehouse/material-returns',
   pieceMovements: '/warehouse/piece-movements',
   myPieceMovements: '/my-piece-movements',
