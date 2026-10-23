@@ -73,3 +73,11 @@ export const useWorkOrderFabrics = (workOrderId: number | undefined) => {
     enabled: workOrderId !== undefined,
   });
 };
+
+/** TH-16: tải Excel phiếu cấp để in. */
+export const useDownloadIssue = () => {
+  const role = useRolePath();
+  return useApiMutation(({ id, code }: { id: number; code: string }) => warehouseApi.downloadIssue(role, id, code), {
+    invalidate: [],
+  });
+};

@@ -2,6 +2,7 @@ import { API, type RolePath } from '@/constants/apiEndpoints';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
+import { downloadBlob } from '@/utils/downloadFile';
 import type { FabricRequirement, WorkOrderListItem } from '@/types/workOrder';
 import type {
   ConfirmIssuePayload,
@@ -71,6 +72,9 @@ export const warehouseApi = {
 
   getReceipts: (role: RolePath, q: MaterialReceiptQuery) =>
     get<Paginated<MaterialReceiptListItem>>(API.warehouse.materialReceipts(role), q),
+  /** TH-16: tải Excel phiếu nhập để in. */
+  downloadReceipt: (role: RolePath, id: number, code: string) =>
+    downloadBlob(`${API.warehouse.materialReceipts(role)}/${id}/excel`, `PhieuNhap_${code}.xlsx`),
   getReceipt: (role: RolePath, id: number) =>
     get<MaterialReceipt>(`${API.warehouse.materialReceipts(role)}/${id}`),
   createReceipt: (role: RolePath, body: SaveReceiptPayload) =>
@@ -93,6 +97,9 @@ export const warehouseApi = {
 
   getIssues: (role: RolePath, q: MaterialIssueQuery) =>
     get<Paginated<MaterialIssueListItem>>(API.warehouse.materialIssues(role), q),
+  /** TH-16: tải Excel phiếu cấp để in. */
+  downloadIssue: (role: RolePath, id: number, code: string) =>
+    downloadBlob(`${API.warehouse.materialIssues(role)}/${id}/excel`, `PhieuCap_${code}.xlsx`),
   getIssue: (role: RolePath, id: number) =>
     get<MaterialIssue>(`${API.warehouse.materialIssues(role)}/${id}`),
   createIssue: (role: RolePath, body: CreateIssuePayload) =>

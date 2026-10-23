@@ -20,6 +20,12 @@ public sealed class DispatchNotesController : AccountantBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _notes.GetByIdAsync(id, ct));
 
+    /// <summary>Xuất Excel phiếu xuất hàng để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportDispatchNoteAsync(id, ct));
+
     [HttpPost("{id:int}/confirm-delivery")]
     public async Task<IActionResult> ConfirmDelivery(int id, [FromBody] ConfirmDeliveryDto dto, CancellationToken ct) =>
         this.ToResponse(await _notes.ConfirmDeliveryAsync(id, dto, ct));

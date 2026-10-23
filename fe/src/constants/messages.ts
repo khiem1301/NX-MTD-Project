@@ -9,6 +9,7 @@ export const MESSAGES = {
     save: 'Lưu',
     create: 'Thêm mới',
     edit: 'Sửa',
+    printExcel: 'In / xuất Excel',
     delete: 'Xóa',
     view: 'Xem',
     search: 'Tìm theo mã, tên...',

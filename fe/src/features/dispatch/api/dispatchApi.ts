@@ -1,5 +1,6 @@
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
+import { downloadBlob } from '@/utils/downloadFile';
 import type {
   ConfirmDeliveryPayload,
   CreateDispatchPayload,
@@ -24,6 +25,9 @@ export const dispatchApi = {
   detail: (base: string, id: number) => get<DispatchNote>(`${base}/${id}`),
   dispatchable: (orderId: number) =>
     get<DispatchableLine[]>(`${MANAGER_BASE}/dispatchable`, { orderId }),
+  /** TH-16: tải Excel phiếu xuất hàng để in. */
+  downloadExcel: (base: string, id: number, code: string) =>
+    downloadBlob(`${base}/${id}/excel`, `PhieuXuat_${code}.xlsx`),
   create: (body: CreateDispatchPayload) => post<DispatchNote>(MANAGER_BASE, body),
   cancel: (id: number) => post<null>(`${MANAGER_BASE}/${id}/cancel`),
   exportGoods: (id: number) => post<null>(`${WAREHOUSE_BASE}/${id}/export`),

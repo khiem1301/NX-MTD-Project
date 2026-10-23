@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { PrinterOutlined } from '@ant-design/icons';
 import { Alert, Button, Descriptions, Drawer, Form, Popconfirm, Space, Spin } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -7,7 +8,7 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { ISSUE_STATUS, ISSUE_STATUS_LABEL, LABELS, WAREHOUSE_TYPE_LABEL } from '../constants';
-import { useConfirmIssue, useIssue, useRejectIssue } from '../hooks/useIssues';
+import { useConfirmIssue, useDownloadIssue, useIssue, useRejectIssue } from '../hooks/useIssues';
 import type { ConfirmIssuePayload } from '../types';
 import { IssueLinesTable } from './IssueLinesTable';
 
@@ -19,6 +20,7 @@ export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) 
   const issue = useIssue(issueId);
   const confirm = useConfirmIssue();
   const reject = useRejectIssue();
+  const download = useDownloadIssue();
   const [rejecting, setRejecting] = useState(false);
   const [form] = Form.useForm<ConfirmIssuePayload>();
   const i = issue.data;
@@ -40,16 +42,27 @@ export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) 
     confirm.mutate({ id: i.materialIssueId, body: values }, { onSuccess: onClose });
   };
 
-  const actions = canReceive && i && (
+  const actions = i && (
     <Space>
-      <Button danger onClick={() => setRejecting(true)}>
-        {LABELS.reject}
+      <Button
+        icon={<PrinterOutlined />}
+        loading={download.isPending}
+        onClick={() => download.mutate({ id: i.materialIssueId, code: i.issueCode })}
+      >
+        {MESSAGES.common.printExcel}
       </Button>
-      <Popconfirm title={MESSAGES.warehouse.confirmIssue} onConfirm={() => form.submit()}>
-        <Button type="primary" loading={confirm.isPending}>
-          {LABELS.receive}
-        </Button>
-      </Popconfirm>
+      {canReceive && (
+        <>
+          <Button danger onClick={() => setRejecting(true)}>
+            {LABELS.reject}
+          </Button>
+          <Popconfirm title={MESSAGES.warehouse.confirmIssue} onConfirm={() => form.submit()}>
+            <Button type="primary" loading={confirm.isPending}>
+              {LABELS.receive}
+            </Button>
+          </Popconfirm>
+        </>
+      )}
     </Space>
   );
 

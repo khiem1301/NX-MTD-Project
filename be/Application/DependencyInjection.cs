@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ICutHandoverService, CutHandoverService>();
         services.AddScoped<IFgHandoverService, FgHandoverService>();
         services.AddScoped<IDispatchNoteService, DispatchNoteService>();
+        services.AddScoped<IWarehouseDocumentExportService, WarehouseDocumentExportService>();   // TH-16
         services.AddScoped<IWorkerPieceMovementService, WorkerPieceMovementService>();
         services.AddScoped<IMaterialReturnService, MaterialReturnService>();
         services.AddScoped<IStocktakeService, StocktakeService>();

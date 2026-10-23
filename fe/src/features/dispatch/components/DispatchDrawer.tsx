@@ -13,6 +13,7 @@ import {
   Spin,
   Table,
 } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -33,6 +34,7 @@ import {
   useCancelDispatch,
   useConfirmDelivery,
   useDispatchNote,
+  useDownloadDispatch,
   useExportDispatch,
   useRejectDispatch,
 } from '../hooks/useDispatch';
@@ -71,6 +73,7 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
   const exportGoods = useExportDispatch();
   const reject = useRejectDispatch();
   const confirm = useConfirmDelivery();
+  const download = useDownloadDispatch();
   const [rejecting, setRejecting] = useState(false);
   const [form] = Form.useForm<FormValues>();
   const pending = note.status === DISPATCH_STATUS.PENDING;
@@ -102,6 +105,13 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
   return (
     <>
       <Space style={{ marginBottom: 16 }}>
+        <Button
+          icon={<PrinterOutlined />}
+          loading={download.isPending}
+          onClick={() => download.mutate({ id: note.dispatchNoteId, code: note.dispatchCode })}
+        >
+          {MESSAGES.common.printExcel}
+        </Button>
         {hasRole(ROLES.Manager) && pending && (
           <Popconfirm
             title={DISPATCH_MESSAGES.confirmCancel}

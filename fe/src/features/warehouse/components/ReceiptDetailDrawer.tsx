@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PrinterOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import {
   Alert,
@@ -22,7 +23,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { LABELS, RECEIPT_STATUS, RECEIPT_STATUS_LABEL, RECEIPT_TYPE_LABEL, SOURCE_LABEL } from '../constants';
-import { useConfirmReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
+import { useConfirmReceipt, useDownloadReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptLine } from '../types';
 
 const MAX_RECEIPT_PHOTOS = 5;
@@ -55,6 +56,7 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
   const receipt = useReceipt(receiptId);
   const confirm = useConfirmReceipt();
   const giveBack = useReturnReceipt();
+  const download = useDownloadReceipt();
   const [returning, setReturning] = useState(false);
   const r = receipt.data;
   const pending = r?.status === RECEIPT_STATUS.PENDING;
@@ -63,6 +65,13 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
 
   const actions = r && (
     <Space>
+      <Button
+        icon={<PrinterOutlined />}
+        loading={download.isPending}
+        onClick={() => download.mutate({ id: r.materialReceiptId, code: r.receiptCode })}
+      >
+        {MESSAGES.common.printExcel}
+      </Button>
       {hasRole(ROLES.Manager) && pending && (
         <>
           <Button danger onClick={() => setReturning(true)}>

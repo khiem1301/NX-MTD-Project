@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using NX_MTD.Application.Common;
+using NX_MTD.Application.DTOs;
 
 namespace NX_MTD.API.Common;
 
@@ -32,6 +33,13 @@ public static class ApiResponses
     public static IActionResult ToResponse<T>(this ControllerBase controller, Result<T> result) =>
         result.IsSuccess
             ? new OkObjectResult(new ApiSuccess<T>(true, result.Data, result.Message))
+            : Fail(result);
+
+    /// <summary>Trả file Excel (TH-16) hoặc lỗi dạng ApiFailure như mọi endpoint khác.</summary>
+    public static IActionResult ToExcelFile(this ControllerBase controller, Result<ExcelFileDto> result) =>
+        result.IsSuccess
+            ? controller.File(result.Data!.Content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", result.Data.FileName)
             : Fail(result);
 
     private static IActionResult Fail(Result result) =>

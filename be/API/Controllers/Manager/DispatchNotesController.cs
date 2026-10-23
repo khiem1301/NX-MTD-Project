@@ -20,6 +20,12 @@ public sealed class DispatchNotesController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _notes.GetByIdAsync(id, ct));
 
+    /// <summary>Xuất Excel phiếu xuất hàng để in (TH-16).</summary>
+    [HttpGet("{id:int}/excel")]
+    public async Task<IActionResult> ExportExcel(int id,
+        [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
+        this.ToExcelFile(await exports.ExportDispatchNoteAsync(id, ct));
+
     [HttpGet("dispatchable")]
     public async Task<IActionResult> GetDispatchable([FromQuery] int orderId, CancellationToken ct) =>
         this.ToResponse(await _notes.GetDispatchableAsync(orderId, ct));
