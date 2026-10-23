@@ -22,6 +22,7 @@
                  Mục 19.3: doanh thu + chi phí tháng 08/2026 để xem điểm hòa vốn ngay (bảng lương 08 đã duyệt sẵn).
                  Mục 19.4: thẻ kho cho phiếu nhập NVL / bàn giao thành phẩm demo (tồn kho có số).
                  Mục 19.5: mức bậc thợ + đề xuất bậc, sổ xe, kiểm kê chờ duyệt, bàn giao thành phẩm chờ nhận, thông báo nhanh.
+                 Mục 19.6: BTP đã cắt vào kho rải theo ngày (lệnh cắt + bàn giao BTP) cho màn so sánh BTP – KPI.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -3145,6 +3146,50 @@ BEGIN
         INSERT dbo.Notification (RecipientId, SourceType, AnnouncementId, Title, Message, IsRead, PushStatus, CreatedAt)
         SELECT e.EmployeeId, 'ANNOUNCEMENT', @a, N'Thông báo khẩn', N'Demo: Họp toàn xưởng lúc 15h thứ Sáu để rà soát tiến độ đơn DEMO-DH001.', 0, 'SKIPPED', '2026-10-22 08:00:00'
         FROM dbo.Employee e WHERE e.Status = 'ACTIVE' AND e.EmployeeId <> @s;
+    END
+END
+GO
+-- 19.6 BTP đã cắt vào kho rải theo ngày cho DEMO-DH001 (màn "So sánh BTP – KPI": cắt lũy kế − thực tế lũy kế)
+--      Tháng 9: cắt đủ số tổ may đã làm xong; tháng 10: cắt từng đợt, có lúc BTP còn ít hơn KPI ngày kế tiếp để thấy cảnh báo.
+--      Chạy lại không nhân đôi (kiểm tra theo mã lệnh cắt).
+SET QUOTED_IDENTIFIER ON;
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-901')
+BEGIN
+    DECLARE @o INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+            @cut INT = (SELECT TeamId FROM dbo.Team WHERE TeamType = 'CUTTING'),
+            @wk INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO'),
+            @l6 INT, @l7 INT, @p INT, @wo INT;
+    SELECT @l6 = OrderLineId, @p = ProductId FROM dbo.OrderLine WHERE OrderId = @o AND Color = N'Đen' AND SizeCode = 'M';
+    SET @l7 = (SELECT OrderLineId FROM dbo.OrderLine WHERE OrderId = @o AND Color = N'Đen' AND SizeCode = 'L');
+    IF @o IS NOT NULL AND @cut IS NOT NULL AND @wk IS NOT NULL AND @l6 IS NOT NULL AND @l7 IS NOT NULL
+    BEGIN
+        INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, CreatedAt, CompletedAt)
+        VALUES ('LC-DEMO-901', @o, @p, @cut, '2026-10-25', 'COMPLETED', '2026-09-15 08:00:00', '2026-10-20 16:00:00');
+        SET @wo = SCOPE_IDENTITY();
+        INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PanelName, PlannedQty) VALUES (@wo, @l6, N'', 400), (@wo, @l7, N'', 350);
+
+        -- Các đợt cắt đã bàn giao kho BTP: (mã, ngày, dòng M, dòng L)
+        DECLARE @h TABLE (Code VARCHAR(30), D DATE, Qm INT, Ql INT);
+        INSERT @h VALUES ('BG-DEMO-901', '2026-09-20', 300, 250),
+                         ('BG-DEMO-902', '2026-10-01', 60, 40),
+                         ('BG-DEMO-903', '2026-10-08', 50, 40),
+                         ('BG-DEMO-904', '2026-10-15', 50, 40),
+                         ('BG-DEMO-905', '2026-10-20', 40, 30);
+        INSERT dbo.CutHandover (HandoverCode, WorkOrderId, CuttingTeamId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
+        SELECT Code, @wo, @cut, DATEADD(HOUR, 9, CAST(D AS DATETIME2(0))), 'CONFIRMED', @wk, DATEADD(HOUR, 10, CAST(D AS DATETIME2(0))) FROM @h;
+        INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+        SELECT ch.CutHandoverId, v.OrderLineId, v.Qty, v.Qty
+        FROM @h h JOIN dbo.CutHandover ch ON ch.HandoverCode = h.Code
+        CROSS APPLY (VALUES (@l6, h.Qm), (@l7, h.Ql)) v(OrderLineId, Qty);
+
+        -- Thẻ kho BTP (tăng kho khi Thủ kho xác nhận bàn giao); BalanceAfter là số dư lũy kế theo từng dòng đơn
+        INSERT dbo.StockTransaction (WarehouseType, OrderLineId, SourceDocType, SourceDocId, SourceLineId, QtyChange, BalanceAfter, TransactionDate)
+        SELECT 'SEMI_FINISHED', l.OrderLineId, 'CUT_HANDOVER', ch.CutHandoverId, l.CutHandoverLineId, l.ConfirmedQty,
+               SUM(l.ConfirmedQty) OVER (PARTITION BY l.OrderLineId ORDER BY ch.ConfirmedAt, l.CutHandoverLineId),
+               CAST(ch.ConfirmedAt AS DATE)
+        FROM dbo.CutHandoverLine l JOIN dbo.CutHandover ch ON ch.CutHandoverId = l.CutHandoverId
+        WHERE ch.WorkOrderId = @wo AND ch.Status = 'CONFIRMED';
     END
 END
 GO

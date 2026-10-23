@@ -12,6 +12,7 @@ public static class KpiModule
     public static IServiceCollection AddKpiModule(this IServiceCollection services, IConfiguration config)
     {
         services.AddScoped<IKpiService, KpiService>();
+        services.AddScoped<IKpiBtpService, KpiBtpService>();   // so sánh BTP – KPI ngày
         services.AddHostedService<KpiAutoCloseJob>();
         services.AddHostedService<DelayRiskJob>();           // JOB-04 (KH-23)
         services.AddHostedService<NotificationCleanupJob>(); // JOB-05 (KH-23)

@@ -6,6 +6,8 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ## Đã làm được
 
+**Bổ sung 24/10 (lần 5):** màn "So sánh BTP – KPI" (`/kpi/btp-compare`) cho Quản đốc, Admin, Thủ kho, tổ trưởng/tổ phó may (xem DEV-ALL-9).
+
 **Bổ sung 23/10 (lần 4):** chỉ tiêu KPI bắt buộc nhập theo từng ngày, có nút "Chia tăng dần" và bỏ Chủ nhật mặc định (xem DEV-ALL-8).
 
 **Bổ sung 23/10 (lần 3):** Quản đốc sửa được tổ và vai trò nhân viên (trừ Admin / Quản đốc / Kế toán), Admin và Quản đốc đặt bậc thợ trực tiếp cho công nhân (xem DEV-ALL-7).
@@ -44,7 +46,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ### Dữ liệu và tài liệu
 - Dữ liệu demo mục 19.4–19.5 trong `SQL/NX-MTD_Database.sql` (thẻ kho, bậc thợ, sổ xe, kiểm kê, bàn giao chờ nhận, thông báo).
-- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…8 ghi các chỗ code khác tài liệu gốc.
+- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…9 ghi các chỗ code khác tài liệu gốc.
 
 ## Chưa làm
 

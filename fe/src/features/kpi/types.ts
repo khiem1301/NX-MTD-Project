@@ -70,3 +70,41 @@ export type SaveKpiTargetPayload = {
   /** Bắt buộc: tổng cả kỳ và số ngày làm việc do BE tính từ các ngày này. */
   dailyTargets: KpiDailyTargetInput[];
 };
+
+/** Màn so sánh BTP đã cắt – KPI ngày – thực tế tổ may (lũy kế). */
+export type KpiBtpOption = {
+  kpiTargetId: number;
+  orderCode: string;
+  productCode: string;
+  productName: string;
+  sewingTeamName: string;
+  startDate: string;
+  endDate: string;
+  status: KpiTargetStatus;
+};
+
+export type KpiBtpDay = {
+  workDate: string;
+  isFuture: boolean;
+  dailyTarget: number;
+  cumTarget: number;
+  cutQty: number;
+  cumCut: number;
+  actualQty: number | null;
+  cumActual: number;
+  btpRemaining: number;
+  cutShortfall: number;
+  lowBtp: boolean;
+  behindTarget: boolean;
+};
+
+export type KpiBtpSummary = {
+  planTotal: number;
+  openingBtp: number;
+  cutTotal: number;
+  actualTotal: number;
+  btpRemainingNow: number;
+  cutShortfall: number;
+};
+
+export type KpiBtpComparison = { target: KpiBtpOption; summary: KpiBtpSummary; days: KpiBtpDay[] };

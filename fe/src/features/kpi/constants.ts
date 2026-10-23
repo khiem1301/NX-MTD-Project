@@ -68,7 +68,7 @@ export const KPI_TEXT = {
     workingDays: 'Số ngày làm việc',
     dailyTarget: 'Chỉ tiêu ngày (trung bình)',
     noDailyResultsHint:
-      'Chỉ hiển thị các ngày QA/QC đã nhập hàng hoàn thiện. Ngày không có dòng nghĩa là ngày đó chưa có hàng hoàn thiện, không phải lỗi dữ liệu.',
+      'Hiển thị mọi ngày có chỉ tiêu (chưa có hàng hoàn thiện thì số hoàn thiện = 0) và các ngày QA/QC nhập hàng ngoài kế hoạch (không có chỉ tiêu ngày).',
   },
 
   dailyTable: {
@@ -90,4 +90,40 @@ export const KPI_TEXT = {
     Achieved: { text: 'Đạt', color: 'green' },
     NotAchieved: { text: 'Không đạt', color: 'orange' },
   },
+} as const;
+
+/** Màn so sánh BTP đã cắt – KPI ngày – thực tế tổ may. */
+export const BTP_TEXT = {
+  title: 'So sánh BTP – KPI',
+  subtitle: 'BTP đã cắt vào kho so với KPI đã đặt cho tổ may và số hoàn thiện thực tế (QA/QC), trừ dần BTP theo lũy kế.',
+  menu: 'So sánh BTP – KPI',
+  pick: 'Chọn chỉ tiêu KPI',
+  noKpi: 'Chưa có chỉ tiêu KPI nào.',
+  forecast: 'Dự báo',
+  lowBtp: 'Sắp thiếu BTP',
+  behind: 'Chậm KPI',
+  needCut: 'BTP đã cắt chưa đủ cho KPI cả kỳ, cần cắt / cấp thêm tối thiểu:',
+  col: {
+    date: 'Ngày',
+    dailyTarget: 'KPI ngày',
+    cumTarget: 'KPI lũy kế',
+    cut: 'BTP cắt trong ngày',
+    cumCut: 'BTP cắt lũy kế',
+    actual: 'Thực tế trong ngày',
+    cumActual: 'Thực tế lũy kế',
+    remaining: 'BTP còn',
+    shortfall: 'Cần cắt thêm',
+    warning: 'Cảnh báo',
+  },
+  sum: {
+    plan: 'KPI cả kỳ',
+    opening: 'BTP còn đầu kỳ',
+    cut: 'BTP cắt trong kỳ',
+    actual: 'Thực tế đã làm',
+    remaining: 'BTP còn hiện tại',
+    shortfall: 'Cần cắt thêm',
+  },
+  formula:
+    'BTP còn = BTP còn đầu kỳ + BTP cắt lũy kế − thực tế lũy kế. "Sắp thiếu BTP": BTP còn nhỏ hơn KPI ngày kế tiếp. ' +
+    '"Chậm KPI": thực tế lũy kế thấp hơn KPI lũy kế. Ngày dự báo giả định tổ đạt đúng KPI. BTP cắt tính chung cho cả đơn và mã hàng, không tách theo tổ.',
 } as const;
