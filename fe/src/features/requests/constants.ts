@@ -18,9 +18,10 @@ export const REQUEST_STATUS_TAG: Record<string, StatusLabel> = Object.fromEntrie
   ]),
 );
 
-/** Loại đơn dùng form chung của trang này (Cơ điện + đơn Xin NVL / Xin BTP của tổ). Loại khác: luồng sở hữu làm form riêng. */
+/** Loại đơn dùng form chung của trang này (Cơ điện, Xin NVL / Xin BTP, Bổ sung NVL, NVL lỗi). Loại khác: luồng sở hữu làm form riêng. */
 export const GENERIC_FORM_TYPES: readonly RequestType[] = [
   'SpareParts', 'NewMachine', 'MachineSupplies', 'MaterialRequisition', 'SemiFinishedRequisition',
+  'MaterialSupplement', 'DefectiveMaterial',
 ];
 
 /** Dùng khi chưa có chi tiết đơn nào để đọc `maxPhotos` (SystemSetting REQUEST_MAX_PHOTOS). BE vẫn chặn. */

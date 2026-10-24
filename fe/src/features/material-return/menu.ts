@@ -8,5 +8,6 @@ export const materialReturnMenu: MenuEntry[] = [
     label: 'Trả vải thừa',
     path: ROUTES.materialReturns,
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy, ROLES.WarehouseKeeper],
+    teamTypes: ['Cutting'],
   },
 ];

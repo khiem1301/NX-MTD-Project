@@ -8,6 +8,7 @@ export const pieceMovementMenu: MenuEntry[] = [
     label: 'Giao / thu hồi BTP',
     path: ROUTES.pieceMovements,
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy],
+    teamTypes: ['Sewing'],
   },
   {
     key: 'my-piece-movements',

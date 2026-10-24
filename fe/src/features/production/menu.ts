@@ -13,9 +13,9 @@ export const productionMenu: MenuEntry[] = [
     path: PRODUCTION_ROUTES.adminPieceRates,
     roles: [ROLES.Admin],
   },
-  { key: 'operation-assignments', label: PRODUCTION_TEXT.assignments.title, path: PRODUCTION_ROUTES.assignments, roles: teamRoles },
-  { key: 'output-records', label: PRODUCTION_TEXT.output.title, path: PRODUCTION_ROUTES.output, roles: teamRoles },
-  { key: 'defect-records', label: PRODUCTION_TEXT.defects.title, path: PRODUCTION_ROUTES.defects, roles: teamRoles },
+  { key: 'operation-assignments', label: PRODUCTION_TEXT.assignments.title, path: PRODUCTION_ROUTES.assignments, roles: teamRoles, teamTypes: ['Sewing'] },
+  { key: 'output-records', label: PRODUCTION_TEXT.output.title, path: PRODUCTION_ROUTES.output, roles: teamRoles, teamTypes: ['Sewing'] },
+  { key: 'defect-records', label: PRODUCTION_TEXT.defects.title, path: PRODUCTION_ROUTES.defects, roles: teamRoles, teamTypes: ['Sewing'] },
   { key: 'qc-batches', label: PRODUCTION_TEXT.qc.title, path: PRODUCTION_ROUTES.qcBatches, roles: [ROLES.QaQc] },
   {
     key: 'manager-output-records',

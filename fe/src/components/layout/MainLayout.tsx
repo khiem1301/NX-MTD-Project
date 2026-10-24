@@ -1,4 +1,5 @@
 import { Button, Layout, Menu, Typography } from 'antd';
+import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { MENU_ENTRIES } from '@/app/menu';
@@ -13,8 +14,11 @@ export function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const isTeamRole = user?.role === ROLES.TeamLeader || user?.role === ROLES.TeamDeputy;
   const items = MENU_ENTRIES.filter(
-    (e) => e.roles === 'all' || (user !== null && e.roles.includes(user.role)),
+    (e) =>
+      (e.roles === 'all' || (user !== null && e.roles.includes(user.role))) &&
+      !(isTeamRole && e.teamTypes && !e.teamTypes.some((t) => t === user?.teamType)),
   ).map((e) => ({ key: e.path, label: e.label }));
 
   return (
