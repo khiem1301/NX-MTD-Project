@@ -31,6 +31,11 @@ public sealed class CutHandoversController : TeamLeaderBaseController
     public async Task<IActionResult> GetHandoverable([FromQuery] int workOrderId, CancellationToken ct) =>
         this.ToResponse(await _handovers.GetHandoverableAsync(workOrderId, TeamId, ct));
 
+    /// <summary>Rút phiếu bàn giao BTP khi Thủ kho chưa nhận.</summary>
+    [HttpPost("{id:int}/cancel")]
+    public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>
+        this.ToResponse(await _handovers.CancelAsync(id, TeamId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateCutHandoverDto dto, CancellationToken ct) =>
         this.ToResponse(await _handovers.CreateAsync(dto, TeamId, ct));

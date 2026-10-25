@@ -187,6 +187,28 @@ public sealed class CutHandoverService : ICutHandoverService
         return Result.Success(WarehouseMessages.HandoverRejected);
     }
 
+    public async Task<Result> CancelAsync(int handoverId, int cuttingTeamId, CancellationToken ct)
+    {
+        var handover = await Handovers.Include(h => h.WorkOrder)
+            .FirstOrDefaultAsync(h => h.CutHandoverId == handoverId && h.WorkOrder.CuttingTeamId == cuttingTeamId, ct);
+        if (handover is null) return WarehouseFailures.NotFound();
+        if (handover.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
+
+        handover.Status = HandoverStatuses.Cancelled;
+        // Phiếu này đã khóa các bàn cắt của lệnh khi lập; còn phiếu chờ / đã nhận khác thì giữ khóa, hết thì mở lại để sửa bàn cắt.
+        var workOrderId = handover.WorkOrderId;
+        var stillHanded = await Handovers.AnyAsync(h => h.WorkOrderId == workOrderId && h.CutHandoverId != handoverId
+            && (h.Status == HandoverStatuses.Pending || h.Status == HandoverStatuses.Confirmed), ct);
+        if (!stillHanded)
+        {
+            var locked = await _uow.Repository<CuttingLay>().Query()
+                .Where(l => l.WorkOrderId == workOrderId && l.Status == CuttingLayStatuses.Locked).ToListAsync(ct);
+            foreach (var lay in locked) lay.Status = CuttingLayStatuses.Recorded;
+        }
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.CutHandoverCancelled);
+    }
+
     /// <summary>Đã cắt (Σ số thực tế các bàn) − đã bàn giao (phiếu chờ nhận + đã nhận, tính theo số tổ giao).</summary>
     private async Task<IReadOnlyList<HandoverableLineDto>> HandoverableAsync(WorkOrder wo, CancellationToken ct)
     {

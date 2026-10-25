@@ -36,6 +36,7 @@ public class MaterialReceiptFlowTests
     private readonly List<OrderMaterial> _orderMaterials = new();
     private readonly List<Request> _requestList = new();
     private readonly List<RequestLine> _requestLines = new();
+    private readonly List<Attachment> _attachments = new();
 
     public MaterialReceiptFlowTests()
     {
@@ -46,7 +47,7 @@ public class MaterialReceiptFlowTests
         _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>())
             .Returns(_ => new Request { RequestId = 900, RequestCode = "YC261027-001" });
         Setup(_receipts); Setup(_receiptLines); Setup(_pos); Setup(_poLines); Setup(_orders); Setup(_orderMaterials);
-        Setup(_requestList); Setup(_requestLines);
+        Setup(_requestList); Setup(_requestLines); Setup(_attachments);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -96,8 +97,14 @@ public class MaterialReceiptFlowTests
         };
         receipt.MaterialReceiptLines.Add(line);
         _receipts.Add(receipt); _receiptLines.Add(line);
+        AddPhoto(id);   // mặc định phiếu đã có ảnh chứng từ; test "thiếu ảnh" gỡ đi
         return receipt;
     }
+
+    private void AddPhoto(int receiptId) => _attachments.Add(new Attachment
+    {
+        OwnerType = AttachmentOwnerTypes.MaterialReceipt, OwnerId = receiptId, Purpose = AttachmentPurposes.DocumentPhoto, IsCurrent = true,
+    });
 
     private static SaveMaterialReceiptDto SupplierDto(int poId, int polId, decimal accepted) =>
         new(null, MaterialSources.Supplier, poId, Today, null,
@@ -283,6 +290,31 @@ public class MaterialReceiptFlowTests
             Arg.Is<IReadOnlyList<StockMovement>>(m => m.Count == 1 && m[0].QtyChange == 80
                 && m[0].Key.MaterialId == 1 && m[0].Key.MaterialColor == "Đen"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_requires_the_delivery_document_photo()
+    {
+        var (po, line, om, _) = PlacedPo();
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 10);
+        _attachments.Clear();
+
+        var result = await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptPhotoRequired);
+        receipt.Status.Should().Be(ReceiptStatuses.Pending);
+        await _stock.DidNotReceive().PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_ignores_replaced_photos_when_looking_for_the_current_one()
+    {
+        var (po, line, om, _) = PlacedPo();
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 10);
+        _attachments.Single().IsCurrent = false;   // ảnh cũ đã bị thay
+
+        (await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default)).ErrorCode.Should().Be(ErrorCodes.ReceiptPhotoRequired);
     }
 
     [Fact]

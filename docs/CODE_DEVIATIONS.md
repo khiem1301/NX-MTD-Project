@@ -67,6 +67,8 @@
 | DEV-ALL-8 | 24/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI lập theo tổng cả kỳ; từng ngày đặt riêng (không chia đều) | Đã làm |
 | DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
 | DEV-ALL-10 | 24/10/2026 | Claude (AI) | `OrderMaterialService`, `IncomingMaterialService`, `IncomingMaterialsPage`, `PendingMaterialOrdersTable` | Quản đốc thấy đơn chờ khai báo NVL và bấm thông báo mở đúng đơn; Thủ kho có màn NVL chờ nhận và được báo khi khách cấp / đơn mua đã đặt | Đã làm |
+| DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
+| DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
 
 ---
 
@@ -853,4 +855,31 @@
   - Thông báo cho Thủ kho: khi Quản đốc khai báo NVL khách cấp (hoặc đổi số khách cấp / ngày hẹn); khi Quản đốc đặt hàng đơn mua với nhà cung cấp.
   - Lưu ý: đơn mua chỉ vào danh sách chờ nhận sau khi Quản đốc bấm Đặt hàng (trạng thái ORDERED); đơn mua mới tạo (chờ chốt) chưa hiện. Phiếu nhập đang chờ xác nhận chưa trừ vào số còn phải nhận.
 - **Cần sửa trong tài liệu:** Report-3 UC09 / UC37 (thêm màn NVL chờ nhận và danh sách đơn chờ khai báo), ma trận quyền (Thủ kho: NVL chờ nhận).
+- **Trạng thái:** Mở
+
+### DEV-ALL-11 · Chuyển code sang database mới của Morgan (24/10/2026)
+
+- **Ngày / Người / Task / PR:** 25/10/2026 · Claude (AI) theo yêu cầu của Minh · toàn hệ thống · (chưa có PR)
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` (thay nguyên file), `be/Domain/Entities/*` (scaffold lại), hầu hết dịch vụ / DTO / validator, giao diện kho – cắt – đơn hàng – mã hàng, test.
+- **Tài liệu gốc ghi:** script cũ: định mức nhập theo từng đơn (`OrderMaterialNorm`), dòng đơn lưu màu / size, phiếu nhập có số thiếu / lỗi, NVL khách cấp có ngày hẹn, `KpiDailyTarget` cho lịch KPI theo ngày.
+- **Code đang làm (khác tài liệu cũ):**
+  - **Mã hàng có biến thể, thành phần và định mức** (`ProductVariant`, `ProductComponent`, `ProductComponentMaterial`). Admin khai ở màn Mã hàng → nút "Định mức" (`GET|PUT admin/products/{id}/spec`). Dòng đơn trỏ `ProductVariantId`; Admin lưu đơn với màu × size chưa khai báo thì hệ thống **tự tạo biến thể** (ACTIVE), định mức khai bổ sung sau. Vải cần của lệnh cắt tính từ `ProductComponentMaterial` (chi tiết PANEL, NVL loại vải); NVL của đơn so "cần theo định mức" với số Quản đốc khai.
+  - **Số lần giao dự kiến** thay ngày hẹn: `OrderMaterial.ExpectedDeliveryCount` (bắt buộc ≥ 1 khi khách cấp), `PurchaseOrder.ExpectedDeliveryCount` (nhập khi đặt hàng). Màn NVL chờ nhận hiện "đã nhận / dự kiến".
+  - **Thiếu hàng tự tính, Thủ kho không nhập số thiếu / số lỗi** (cột đã bỏ). Khi phiếu nhập được xác nhận mà số phiếu đã xác nhận ≥ số lần giao dự kiến (mặc định 1) và dòng còn thiếu (đặt hoặc khách cấp − đã nhận − đã chốt không bù > 0) thì hệ thống sinh đơn SHORT_DELIVERY cho Quản đốc, số thiếu = phần còn thiếu. Dòng đã có đơn thiếu đang chờ không sinh thêm. Phiếu bổ sung = phiếu có `ShortageRequestId`.
+  - **Cắt bù theo chi tiết**: `WorkOrderLine/RequestLine/CuttingLayLine/CutHandoverLine/MaterialIssueLine/StocktakeLine/StockTransaction.ProductComponentId`. Tổ may chọn chi tiết PANEL của mã hàng (không gõ tên); kho BTP tách tồn "cả bộ" và "chi tiết lẻ"; tồn tổ may đang giữ chỉ tính bộ đủ. Vải cắt bù = số lượng × định mức ÷ số chi tiết trên một sản phẩm.
+  - **Đăng nhập bằng `Employee.EmployeeCode`** (`Account.Username` đã bỏ). **Thông báo**: `RefTable/RefId` + `ReadAt` (`IsRead`, `Source`, `MaterialType`, `IsDelayRisk` là cột tính, code không ghi). **Đơn giá** luôn qua `PieceRate` (`OutputRecord`, `DefectRecord.PieceRateId`). **Bảng lương**: file Excel ở `Attachment` (PAYROLL / IMPORT_FILE), tổng = Σ NetPay, lý do mở lại đọc từ `AuditLog` (UNLOCK). **Suất ăn** tổng qua `vw_DailyMealTotal`. **Xe**: `DriverName` chỉ có khi tài xế không phải nhân viên. **Tổ cắt** của phiếu bàn giao / trả vải lấy từ lệnh cắt / phiếu cấp.
+  - **Gỡ KPI theo ngày** (script mới không có bảng `KpiDailyTarget`) và **tạm bỏ dữ liệu demo 19.3–19.6** (BTP, KPI, xe, suất ăn do Claude thêm); script mới chỉ có 19.1–19.2. Code lịch KPI (`KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid`, endpoint `calendar` / `daily-plan`) còn trong git: commit `2e047a2` và các commit trước đó. Khôi phục = thêm lại bảng `KpiDailyTarget` + `vw_KpiDailyResult` vào script (xin Morgan) rồi lấy lại các file đó. Nút "Xem theo ngày" quay về bảng kết quả từng ngày của `vw_KpiDailyResult`.
+  - Dữ liệu demo mới nhất phải dựng lại từ script; không có lệnh nâng cấp database cũ.
+- **Cần sửa trong tài liệu:** Report-3 (UC09, UC10 thêm định mức / biến thể, UC37 bỏ số thiếu / lỗi và thêm số lần giao dự kiến, UC19, UC24 chi tiết lẻ, lương, suất ăn); ERD.
+- **Trạng thái:** Đã làm
+
+### DEV-ALL-12 · Đối chiếu màn hình luồng chính với swimlane (25/10/2026)
+
+- **Ngày / Người / Task / PR:** 25/10/2026 · Claude (AI) theo yêu cầu của Minh · UC37, UC39, UC43, UC44, UC45–UC47, UC51–UC57 · (chưa có PR)
+- **Ảnh hưởng tới:** nhập kho, cắt, may, xuất hàng; chi tiết xem `docs/SO_SANH_SWIMLANE.md`.
+- **Tài liệu gốc ghi:** swimlane và UC37 (bản v25) cho Thủ kho nhập số đạt, thiếu, lỗi; luồng xuất hàng "Thủ kho lập → Quản đốc xác nhận → Thủ kho xuất" (UC45–UC46) và "Quản đốc lập → Thủ kho chuẩn bị → Quản đốc duyệt → Thủ kho xuất" (III.4).
+- **Code đang làm:**
+  - Đã sửa theo swimlane: tổ may xác nhận nhận BTP thì đơn tự sang IN_PRODUCTION (nút của Admin vẫn dùng); tổ cắt rút phiếu bàn giao BTP khi Thủ kho chưa nhận; Quản đốc chỉ xác nhận phiếu nhập khi có ảnh chứng từ; ghi hàng hủy (Scrap) thì mở luôn form đơn cắt bù; tổ cắt có form đơn "NVL lỗi"; đặt KPI bị chặn khi tổng KPI vượt BTP đã vào kho; Quản đốc đóng lệnh cắt (kèm lý do khi BTP vào kho chưa đủ kế hoạch).
+  - **Còn lệch (cần quyết định):** (1) Thủ kho không nhập thiếu / lỗi — quyết định của Minh, theo script mới; swimlane và UC37 v25 cần Morgan cập nhật. (2) **Chưa có bước Quản đốc duyệt phiếu xuất**: `DispatchNote.Status` chỉ có PENDING / REJECTED / CANCELLED / IN_DELIVERY / DELIVERED / PARTIALLY_DELIVERED và bảng không có cột người duyệt, nên không làm được nếu không sửa script của Morgan. Đề xuất cho Morgan: thêm trạng thái `APPROVED` vào `CK_DN_Status` và hai cột `ApprovedBy INT NULL`, `ApprovedAt DATETIME2(0) NULL` (kèm ràng buộc `Status IN ('APPROVED','IN_DELIVERY',...) → ApprovedBy NOT NULL`); khi có, code đổi: Quản đốc lập (PENDING) → Thủ kho gửi duyệt → Quản đốc duyệt / trả lại có lý do → Thủ kho in và xuất. (3) In phiếu xuất là Excel (swimlane ghi PDF), ảnh phiếu ký chưa bắt buộc, Kế toán chưa có ô ghi chú khi xác nhận giao.
+- **Cần sửa trong tài liệu:** swimlane III.1 (Thủ kho không nhập thiếu / lỗi), III.4 (bước duyệt phiếu xuất, nếu Morgan thêm trạng thái).
 - **Trạng thái:** Mở

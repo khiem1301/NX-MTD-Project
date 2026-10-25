@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import {
   Alert,
   Button,
   Descriptions,
   Drawer,
+  Input,
+  Modal,
   Popconfirm,
   Space,
   Spin,
@@ -16,7 +19,7 @@ import { usePermission } from '@/hooks/usePermission';
 import type { FabricRequirement } from '@/types/workOrder';
 import { formatDate, formatQty } from '@/utils/format';
 import { LABELS, WORK_ORDER_STATUS, WORK_ORDER_STATUS_LABEL } from '../constants';
-import { useCancelWorkOrder, useWorkOrder } from '../hooks/useCutting';
+import { useCancelWorkOrder, useCompleteWorkOrder, useWorkOrder } from '../hooks/useCutting';
 import type { WorkOrder, WorkOrderLine } from '../types';
 
 type WorkOrderDetailDrawerProps = {
@@ -34,10 +37,20 @@ export function WorkOrderDetailDrawer({
   const { hasRole } = usePermission();
   const detail = useWorkOrder(workOrderId);
   const cancel = useCancelWorkOrder();
+  const complete = useCompleteWorkOrder();
+  const [closing, setClosing] = useState(false);
+  const [closeReason, setCloseReason] = useState('');
   const w = detail.data;
   const canEdit = hasRole(ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
+  // Swimlane III.2.12: Quản đốc xem kết quả lệnh cắt rồi đóng lệnh.
+  const canComplete = hasRole(ROLES.Manager) && w?.status === WORK_ORDER_STATUS.CUTTING;
+  const total = (pick: (l: WorkOrderLine) => number) => (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
 
-  const actions = canEdit && w && (
+  const actions = canComplete && w ? (
+    <Button type="primary" onClick={() => setClosing(true)}>
+      {LABELS.completeWorkOrder}
+    </Button>
+  ) : canEdit && w && (
     <Space>
       <Popconfirm
         title={MESSAGES.cutting.confirmCancelWorkOrder}
@@ -59,6 +72,32 @@ export function WorkOrderDetailDrawer({
     >
       {detail.isLoading && <Spin />}
       {detail.error && <Alert type="error" message={detail.error.message} />}
+      <Modal
+        open={closing}
+        title={LABELS.completeWorkOrder}
+        okText={MESSAGES.common.confirm}
+        cancelText={MESSAGES.common.cancel}
+        confirmLoading={complete.isPending}
+        onCancel={() => setClosing(false)}
+        onOk={() =>
+          w &&
+          complete.mutate(
+            { id: w.workOrderId, reason: closeReason },
+            { onSuccess: () => { setClosing(false); setCloseReason(''); onClose(); } },
+          )
+        }
+        destroyOnHidden
+      >
+        <Typography.Paragraph type="secondary">{MESSAGES.cutting.completeHint}</Typography.Paragraph>
+        <Input.TextArea
+          rows={3}
+          maxLength={500}
+          showCount
+          placeholder={LABELS.completeReason}
+          value={closeReason}
+          onChange={(e) => setCloseReason(e.target.value)}
+        />
+      </Modal>
       {w && (
         <>
           <Descriptions column={2} size="small" bordered>
@@ -73,6 +112,15 @@ export function WorkOrderDetailDrawer({
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.note}>{w.note ?? '—'}</Descriptions.Item>
           </Descriptions>
+          <Alert
+            style={{ marginTop: 16 }}
+            type="info"
+            showIcon
+            message={`${LABELS.result}: ${LABELS.resultSummary
+              .replace('{planned}', formatQty(total((l) => l.plannedQty)))
+              .replace('{cut}', formatQty(total((l) => l.cutQty)))
+              .replace('{handed}', formatQty(total((l) => l.handedQty)))}`}
+          />
           <Table<WorkOrderLine>
             rowKey="workOrderLineId"
             size="small"

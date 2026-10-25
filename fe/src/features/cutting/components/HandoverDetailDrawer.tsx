@@ -19,7 +19,7 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
 import { HANDOVER_STATUS, HANDOVER_STATUS_LABEL, LABELS } from '../constants';
-import { useConfirmHandover, useHandover, useRejectHandover } from '../hooks/useCutting';
+import { useCancelHandover, useConfirmHandover, useHandover, useRejectHandover } from '../hooks/useCutting';
 import type { ConfirmHandoverPayload, CutHandoverLine } from '../types';
 
 type HandoverDetailDrawerProps = { handoverId: number | undefined; onClose: () => void };
@@ -30,10 +30,13 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
   const detail = useHandover(handoverId);
   const confirm = useConfirmHandover();
   const reject = useRejectHandover();
+  const cancel = useCancelHandover();
   const [rejecting, setRejecting] = useState(false);
   const [form] = Form.useForm<ConfirmHandoverPayload>();
   const h = detail.data;
   const canReceive = hasRole(ROLES.WarehouseKeeper) && h?.status === HANDOVER_STATUS.PENDING;
+  // Tổ cắt rút phiếu của tổ mình khi Thủ kho chưa nhận (BE kiểm tổ).
+  const canCancel = (hasRole(ROLES.TeamLeader) || hasRole(ROLES.TeamDeputy)) && h?.status === HANDOVER_STATUS.PENDING;
 
   useEffect(() => {
     if (h)
@@ -53,7 +56,15 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
     },
   });
 
-  const actions = canReceive && h && (
+  const cancelAction = canCancel && h && (
+    <Popconfirm title={MESSAGES.cutting.confirmCancelHandover} onConfirm={() => cancel.mutate(h.cutHandoverId, { onSuccess: onClose })}>
+      <Button danger loading={cancel.isPending}>
+        {LABELS.cancelHandover}
+      </Button>
+    </Popconfirm>
+  );
+
+  const actions = cancelAction || canReceive && h && (
     <Space>
       <Button danger onClick={() => setRejecting(true)}>
         {LABELS.reject}

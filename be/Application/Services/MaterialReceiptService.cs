@@ -211,6 +211,12 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             if (receipt is null) return WarehouseFailures.NotFound();
             if (receipt.Status != ReceiptStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
+            // Swimlane III.1.4: Thủ kho chụp ảnh chứng từ giao hàng trước khi Quản đốc xác nhận.
+            var hasPhoto = await _uow.Repository<Attachment>().Query().AnyAsync(a =>
+                a.OwnerType == AttachmentOwnerTypes.MaterialReceipt && a.OwnerId == receiptId && a.IsCurrent, ct);
+            if (!hasPhoto)
+                return Result.Failure(ErrorCodes.ReceiptPhotoRequired, WarehouseMessages.ReceiptPhotoRequired);
+
             var today = _clock.Today;
             var movements = receipt.MaterialReceiptLines.Where(l => l.AcceptedQty > 0)
                 .Select(l => new StockMovement(

@@ -205,6 +205,33 @@ public sealed class WorkOrderService : IWorkOrderService
         return Result.Success(WarehouseMessages.WorkOrderCancelled);
     }
 
+    public async Task<Result> CompleteAsync(int workOrderId, CompleteWorkOrderDto dto, CancellationToken ct)
+    {
+        var wo = await WorkOrders.Include(w => w.WorkOrderLines).FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
+        if (wo is null) return WarehouseFailures.NotFound();
+        if (wo.Status != WorkOrderStatuses.Cutting)
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotCompletable);
+
+        var handovers = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.CutHandover.WorkOrderId == workOrderId)
+            .Select(l => new { l.CutHandover.Status, l.ConfirmedQty }).ToListAsync(ct);
+        if (handovers.Any(h => h.Status == HandoverStatuses.Pending))
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandover);
+
+        var planned = wo.WorkOrderLines.Sum(l => l.PlannedQty);
+        var inWarehouse = handovers.Where(h => h.Status == HandoverStatuses.Confirmed).Sum(h => h.ConfirmedQty ?? 0);
+        var reason = dto.Reason?.Trim();
+        if (inWarehouse < planned && string.IsNullOrEmpty(reason))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference,
+                string.Format(WarehouseMessages.WorkOrderShortReasonRequired, inWarehouse, planned));
+
+        wo.Status = WorkOrderStatuses.Completed;
+        if (!string.IsNullOrEmpty(reason)) wo.Note = string.IsNullOrEmpty(wo.Note) ? $"Đóng lệnh: {reason}" : $"{wo.Note}\nĐóng lệnh: {reason}";
+        await _uow.SaveChangesAsync();
+        _logger.LogInformation("Work order {WorkOrderId} completed: {InWarehouse}/{Planned} in warehouse", workOrderId, inWarehouse, planned);
+        return Result.Success(WarehouseMessages.WorkOrderCompleted);
+    }
+
     /// <summary>Chỉ sửa / hủy khi lệnh còn OPEN, chưa có bàn cắt và chưa có phiếu cấp (trừ phiếu bị từ chối).</summary>
     private async Task<Result> EnsureEditableAsync(WorkOrder wo, CancellationToken ct)
     {

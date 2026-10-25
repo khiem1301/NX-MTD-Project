@@ -19,11 +19,11 @@ Mật khẩu các tài khoản mẫu: `123456` (Admin đổi được sau khi đ
 
 | # | Ai | Làm gì | Màn hình | Kết quả cần thấy |
 |---|---|---|---|---|
-| 1 | Admin | Xem đơn DEMO-DH001, chuyển sang sản xuất khi đã có NVL | Đơn hàng → chi tiết | Nút "Chuyển sang sản xuất" bị khóa khi đơn còn "Chờ NVL" |
+| 1 | Admin | Vào **Mã hàng → Định mức** khai thành phần và định mức NVL; tạo đơn mới (màu × size mới tự thành biến thể); xem đơn DEMO-DH001 | Mã hàng, Đơn hàng → chi tiết | Nút "Chuyển sang sản xuất" bị khóa khi đơn còn "Chờ NVL"; sau này tổ may nhận BTP thì đơn tự sang sản xuất |
 | 2 | Kế toán / Admin | Duyệt đơn giá công đoạn của DEMO-AO01 | Công đoạn và đơn giá / Duyệt đơn giá | Đơn giá ở trạng thái Đã duyệt thì mới nhập sản lượng được |
-| 3 | Thủ kho | Lập phiếu nhập NVL từ NCC theo đơn mua, nhập thiếu một phần | Phiếu nhập NVL | Quản đốc xác nhận → tự sinh "Thiếu NVL khi nhập" |
+| 3 | Quản đốc / Thủ kho | Đặt hàng đơn mua với **số lần NCC giao dự kiến = 2**; Thủ kho lập phiếu nhập lần 1 và đính kèm ảnh chứng từ; Quản đốc xác nhận. Lập tiếp lần 2 còn thiếu | Đơn mua NVL, NVL chờ nhận, Phiếu nhập NVL | NVL chờ nhận hiện "đã nhận / dự kiến"; Quản đốc không xác nhận được khi chưa có ảnh; sau lần giao cuối còn thiếu thì tự sinh "Thiếu NVL khi nhập" |
 | 4 | Quản đốc | Chọn giao bù cho đơn thiếu; Thủ kho lập phiếu bổ sung | Thiếu NVL khi nhập | Đủ hàng bù thì đơn thiếu tự hoàn thành, đơn mua thành "Đã nhận đủ" |
-| 5 | Tổ trưởng cắt | Ghi bàn cắt, bàn giao BTP vào kho | Bàn cắt, Bàn giao BTP | Thủ kho nhận → tồn kho BTP tăng |
+| 5 | Tổ trưởng cắt | Ghi bàn cắt, bàn giao BTP vào kho (có thể rút phiếu khi Thủ kho chưa nhận) | Bàn cắt, Bàn giao BTP | Thủ kho nhận → tồn kho BTP tăng; Quản đốc đặt KPI không vượt BTP trong kho, và đóng lệnh cắt ở chi tiết lệnh |
 | 6 | Tổ trưởng may | Giao BTP cho công nhân; công nhân xác nhận | Giao / thu hồi BTP, BTP của tôi | Công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (có lý do) |
 | 7 | Tổ trưởng may | Nhập sản lượng cuối ca | Sản lượng cuối ca | Vượt số BTP công nhân đang giữ thì bị chặn (MSG16) |
 | 8 | QA/QC | Nhập đợt QC, rồi lập phiếu bàn giao thành phẩm; Thủ kho nhận | Kiểm hoàn thiện, Bàn giao thành phẩm | Kho thành phẩm tăng đúng số Thủ kho đếm |
