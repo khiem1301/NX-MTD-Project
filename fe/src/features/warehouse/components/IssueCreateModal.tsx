@@ -8,11 +8,15 @@ import { LABELS, TEAM_TYPE, WAREHOUSE_TYPE } from '../constants';
 import { useCreateIssue, useIssuableWorkOrders } from '../hooks/useIssues';
 import type { CreateIssuePayload } from '../types';
 import { FabricIssueLines } from './FabricIssueLines';
+import { parsePieceKey } from '../utils';
 import { PieceIssueLines } from './PieceIssueLines';
 import { RequisitionSelect } from './RequisitionSelect';
 
 type IssueCreateModalProps = { open: boolean; onClose: () => void };
-type FormValues = Omit<CreateIssuePayload, 'issueDate'> & { issueDate: Dayjs };
+type FormValues = Omit<CreateIssuePayload, 'issueDate' | 'lines'> & {
+  issueDate: Dayjs;
+  lines: (CreateIssuePayload['lines'][number] & { pieceKey?: string })[];
+};
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const API_DATE = 'YYYY-MM-DD';
@@ -30,7 +34,12 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
 
 
   const handleFinish = (values: FormValues) => {
-    const body = { ...values, issueDate: values.issueDate.format(API_DATE) };
+    const body: CreateIssuePayload = {
+      ...values,
+      issueDate: values.issueDate.format(API_DATE),
+      // Dòng BTP chọn theo "dòng đơn:chi tiết" → tách ra orderLineId + productComponentId.
+      lines: (values.lines ?? []).map(({ pieceKey, ...line }) => (pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line)),
+    };
     create.mutate(body, {
       onSuccess: () => {
         form.resetFields();

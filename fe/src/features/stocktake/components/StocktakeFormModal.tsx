@@ -28,11 +28,13 @@ const WAREHOUSE_OPTIONS = Object.values(WAREHOUSE_TYPE).map((value) => ({
 }));
 
 const rowKey = (b: StockBalance) =>
-  b.materialId !== null ? `${b.materialId}|${b.materialColor ?? ''}` : String(b.orderLineId);
+  b.materialId !== null
+    ? `${b.materialId}|${b.materialColor ?? ''}`
+    : `${b.orderLineId}:${b.productComponentId ?? ''}`;
 const rowName = (b: StockBalance) =>
   b.materialId !== null
     ? `${b.materialCode} ${b.materialName}${b.materialColor ? ` - ${b.materialColor}` : ''}`
-    : `${b.orderCode} · ${b.productCode} ${b.color}-${b.sizeCode}`;
+    : `${b.orderCode} · ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` · ${b.componentName}` : ''}`;
 
 /**
  * UC48: Thủ kho lập phiếu kiểm kê. Chọn kho (và đơn hàng cho kho BTP / thành phẩm), nạp tồn hiện tại làm số sổ,
@@ -51,13 +53,13 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
 
   const initialCounted = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : String(l.orderLineId),
+      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentId ?? ''}`,
       l.countedQty,
     ]),
   );
   const initialNotes = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : String(l.orderLineId),
+      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentId ?? ''}`,
       l.note ?? undefined,
     ]),
   );
@@ -75,6 +77,7 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
         materialId: x.b.materialId ?? undefined,
         materialColor: x.b.materialId !== null ? (x.b.materialColor ?? '') : undefined,
         orderLineId: x.b.orderLineId ?? undefined,
+        productComponentId: x.b.productComponentId,
         countedQty: x.counted,
         note: x.note,
       }));

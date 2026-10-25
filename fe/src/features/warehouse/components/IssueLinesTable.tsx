@@ -9,7 +9,7 @@ type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 const itemName = (l: MaterialIssueLine): string =>
   l.materialId !== null
     ? `${l.materialCode} ${l.materialName} (${l.materialColor || '—'})`
-    : `${l.productCode} ${l.color}-${l.sizeCode}`;
+    : `${l.productCode} ${l.color}-${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`;
 
 /** Dòng phiếu cấp; editable = tổ trưởng nhập số thực nhận (form field lines[i]). */
 export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
