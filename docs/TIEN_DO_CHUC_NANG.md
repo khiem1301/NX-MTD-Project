@@ -1,10 +1,20 @@
-# Tiến độ chức năng (cập nhật 23/10/2026)
+# Tiến độ chức năng (cập nhật 25/10/2026)
 
 Nhánh: `feature/ALL-missing-features` (chưa gộp vào `main`, cần mở PR).
-Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API trên DB thử.
+Kiểm tra: 1026 test backend, 84 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API trên database dựng từ script mới.
 **Chưa có chức năng nào của đợt này được thử trên trình duyệt thật.**
 
 ## Đã làm được
+
+**Sửa 25/10 (lần 2):** phiếu nhập NVL không gửi trùng được (mỗi NVL một phiếu chờ xác nhận; kiểm trần cả hàng khách cấp và lúc Quản đốc xác nhận); phân công công đoạn chọn được nhiều công đoạn cho một công nhân (`POST /team-leader/operation-assignments/bulk`).
+
+**Bổ sung 25/10 (chuyển sang database mới của Morgan, bản 24/10):** định mức theo mã hàng (màn Mã hàng → Định mức: thành phần, màu – size, NVL; dòng đơn tự tạo biến thể), số lần giao dự kiến cho NVL khách cấp và đơn mua, thiếu hàng tự tính (Thủ kho không nhập thiếu / lỗi), cắt bù chọn chi tiết, tồn kho BTP chi tiết lẻ, đăng nhập bằng mã nhân viên; **bỏ lịch KPI theo ngày và dữ liệu demo 19.3–19.6** (xem DEV-ALL-11). Theo swimlane (xem `docs/SO_SANH_SWIMLANE.md`): đơn tự sang sản xuất khi tổ may nhận BTP, rút phiếu bàn giao BTP, ảnh chứng từ khi xác nhận phiếu nhập, mở form cắt bù sau khi ghi hàng hủy, form đơn NVL lỗi, KPI không vượt BTP trong kho, đóng lệnh cắt. **Chưa làm:** bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái, DEV-ALL-12).
+
+**Bổ sung 24/10 (lần 6):** Quản đốc có danh sách đơn chờ khai báo NVL (bấm thông báo mở đúng đơn); Thủ kho có màn "NVL chờ nhận" và được báo khi khách cấp NVL hoặc đơn mua được đặt (xem DEV-ALL-10).
+
+**Bổ sung 24/10 (lần 5, phần lịch KPI đã gỡ ngày 25/10):** lập KPI chỉ nhập tổng; nút "Xem theo ngày" mở lịch tháng để đặt KPI từng ngày (gõ tay hoặc chia tăng dần), có Tổng bán thành phẩm và số còn lại để đặt KPI (xem DEV-ALL-8, DEV-ALL-9). Màn "So sánh BTP – KPI" riêng đã gộp vào lịch.
+
+**Bổ sung 23/10 (lần 3):** Quản đốc sửa được tổ và vai trò nhân viên (trừ Admin / Quản đốc / Kế toán), Admin và Quản đốc đặt bậc thợ trực tiếp cho công nhân (xem DEV-ALL-7).
 
 **Bổ sung 23/10 (lần 2):** TH-16 (in / xuất Excel từng phiếu nhập, cấp, xuất hàng) và test phạm vi dữ liệu 3 tầng KH-24 đã xong.
 
@@ -40,7 +50,7 @@ Kiểm tra: 960 test backend, 78 test frontend, `tsc` và `eslint` sạch. Các 
 
 ### Dữ liệu và tài liệu
 - Dữ liệu demo mục 19.4–19.5 trong `SQL/NX-MTD_Database.sql` (thẻ kho, bậc thợ, sổ xe, kiểm kê, bàn giao chờ nhận, thông báo).
-- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…6 ghi các chỗ code khác tài liệu gốc.
+- `docs/CODE_DEVIATIONS.md`: DEV-ALL-1…10 ghi các chỗ code khác tài liệu gốc.
 
 ## Chưa làm
 

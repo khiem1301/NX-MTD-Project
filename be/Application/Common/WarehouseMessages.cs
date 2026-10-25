@@ -24,8 +24,8 @@ public static class WarehouseMessages
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
     public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa.";
-    public const string CustomerDateRequired = "Khách có cấp NVL thì phải nhập ngày dự kiến giao.";
-    public const string NormProductNotInOrder = "Mã hàng của định mức không có trong đơn.";
+    public const string CustomerDeliveryCountRequired = "Khách có cấp NVL thì phải nhập số lần dự kiến giao (từ 1 trở lên).";
+    public const string CustomerDeliveryCountNotAllowed = "Khách không cấp NVL thì không nhập số lần giao.";
     public const string OrderMaterialNotInOrder = "NVL không thuộc đơn hàng của phiếu.";
     public const string OrderLineNotInOrder = "Dòng đơn không thuộc đơn hàng.";
 
@@ -57,6 +57,13 @@ public static class WarehouseMessages
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
+    public const string WorkOrderCompleted = "Đã đóng lệnh cắt.";
+    public const string WorkOrderNotCompletable = "Chỉ đóng được lệnh cắt đang cắt (đã có bàn cắt).";
+    public const string WorkOrderHasPendingHandover = "Còn phiếu bàn giao BTP chờ kho nhận, chưa đóng được lệnh cắt.";
+    public const string WorkOrderShortReasonRequired = "BTP vào kho chưa đủ kế hoạch ({0}/{1}). Nhập lý do đóng lệnh.";
+    public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
+    public const string ReceiptExceedsCustomer = "Số nhận vượt số khách cấp còn phải nhận";
+    public const string ReceiptPhotoRequired = "Phiếu nhập chưa có ảnh chứng từ giao hàng. Thủ kho cần chụp và đính kèm trước khi xác nhận.";
 
     public const string IssueReceived = "Đã xác nhận nhận hàng, tồn kho đã giảm.";
     public const string IssueRejected = "Đã từ chối phiếu cấp, số giữ chỗ đã được nhả.";
@@ -82,6 +89,7 @@ public static class WarehouseMessages
     public const string FgHandoverConfirmed = "Đã nhận thành phẩm vào kho.";
     public const string FgHandoverRejected = "Đã từ chối phiếu bàn giao thành phẩm.";
     public const string FgHandoverCancelled = "Đã rút phiếu bàn giao thành phẩm.";
+    public const string CutHandoverCancelled = "Đã rút phiếu bàn giao BTP.";
 
     public const string DispatchExceedsOrder = "Số xuất vượt số còn phải giao của đơn";
     public const string DispatchLineNotInOrder = "Dòng đơn không thuộc đơn hàng của phiếu xuất.";

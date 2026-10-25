@@ -1,6 +1,6 @@
 import { Form, Input, InputNumber, Table } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS } from '../constants';
+import { LABELS, lineKey } from '../constants';
 import type { WorkOrderLine } from '../types';
 
 type LayLinesTableProps = { lines: WorkOrderLine[] };
@@ -13,19 +13,23 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
 
   return (
     <Table<WorkOrderLine>
-      rowKey="orderLineId"
+      rowKey={lineKey}
       size="small"
       pagination={false}
       dataSource={lines}
       columns={[
-        { title: LABELS.orderLine, key: 'line', render: (_, l) => `${l.color} - ${l.sizeCode}` },
+        {
+          title: LABELS.orderLine,
+          key: 'line',
+          render: (_, l) => `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
+        },
         { title: LABELS.plannedQty, dataIndex: 'plannedQty', align: 'right' },
         { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
         {
           title: LABELS.ratioValue,
           key: 'ratio',
           render: (_, l) => (
-            <Form.Item name={['ratio', String(l.orderLineId)]} noStyle>
+            <Form.Item name={['ratio', lineKey(l)]} noStyle>
               <InputNumber min={0} precision={0} style={{ width: 80 }} />
             </Form.Item>
           ),
@@ -34,17 +38,17 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
           title: LABELS.calculatedQty,
           key: 'calc',
           align: 'right',
-          render: (_, l) => plyCount * (ratios[String(l.orderLineId)] ?? 0),
+          render: (_, l) => plyCount * (ratios[lineKey(l)] ?? 0),
         },
         {
           title: LABELS.actualQty,
           key: 'actual',
           render: (_, l) => (
-            <Form.Item name={['actual', String(l.orderLineId)]} noStyle>
+            <Form.Item name={['actual', lineKey(l)]} noStyle>
               <InputNumber
                 min={0}
                 precision={0}
-                placeholder={String(plyCount * (ratios[String(l.orderLineId)] ?? 0))}
+                placeholder={String(plyCount * (ratios[lineKey(l)] ?? 0))}
               />
             </Form.Item>
           ),
@@ -54,19 +58,19 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
           key: 'reason',
           render: (_, l) => (
             <Form.Item
-              name={['reason', String(l.orderLineId)]}
+              name={['reason', lineKey(l)]}
               dependencies={[
-                ['actual', String(l.orderLineId)],
+                ['actual', lineKey(l)],
                 'plyCount',
-                ['ratio', String(l.orderLineId)],
+                ['ratio', lineKey(l)],
               ]}
               style={{ marginBottom: 0 }}
               rules={[
                 {
                   validator: async (_rule, value?: string) => {
-                    const actual = form.getFieldValue(['actual', String(l.orderLineId)]) as
+                    const actual = form.getFieldValue(['actual', lineKey(l)]) as
                       number | null | undefined;
-                    const calc = plyCount * (ratios[String(l.orderLineId)] ?? 0);
+                    const calc = plyCount * (ratios[lineKey(l)] ?? 0);
                     if (
                       actual !== null &&
                       actual !== undefined &&

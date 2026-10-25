@@ -112,6 +112,59 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         result.Kind.Should().Be(ResultKind.Forbidden);
     }
 
+    // ---------- Một công nhân, nhiều công đoạn ----------
+
+    [Fact]
+    public async Task AssignMany_OpensOneRowPerOperationForTheSameWorker()
+    {
+        Op(1, "OP10"); Op(2, "OP20"); Op(3, "OP30");
+        Worker(7);
+
+        var result = await _sut.AssignManyAsync(new AssignOperationsDto(1, 7, [1, 2, 3]), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data.Should().Be(3);
+        _assignments.Select(a => (a.OperationId, a.WorkerId)).Should().BeEquivalentTo(new[] { (1, 7), (2, 7), (3, 7) });
+        _assignments.Should().OnlyContain(a => a.SewingTeamId == TeamId && a.ValidTo == null);
+    }
+
+    [Fact]
+    public async Task AssignMany_SkipsOperationsAlreadyAssignedToThatWorker()
+    {
+        var op1 = Op(1, "OP10"); Op(2, "OP20");
+        var worker = Worker(7);
+        Current(50, 1, op1, worker);
+
+        var result = await _sut.AssignManyAsync(new AssignOperationsDto(1, 7, [1, 2]), default);
+
+        result.Data.Should().Be(1);
+        _assignments.Should().HaveCount(2);
+        _assignments.Count(a => a.OperationId == 1).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task AssignMany_SavesNothingWhenOneOperationIsInvalid()
+    {
+        Op(1, "OP10"); Op(2, "OP20", status: OperationStatuses.Discontinued);
+        Worker(7);
+
+        var result = await _sut.AssignManyAsync(new AssignOperationsDto(1, 7, [1, 2]), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.OperationNotActive);
+        _assignments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void AssignMany_Validator_RequiresOperationsWithoutDuplicates()
+    {
+        var validator = new NX_MTD.Application.Validators.AssignOperationsDtoValidator();
+
+        validator.Validate(new AssignOperationsDto(1, 7, [1, 2])).IsValid.Should().BeTrue();
+        validator.Validate(new AssignOperationsDto(1, 7, [])).IsValid.Should().BeFalse();
+        validator.Validate(new AssignOperationsDto(1, 7, [1, 1])).IsValid.Should().BeFalse();
+    }
+
     // ---------- Gán ----------
 
     [Fact]

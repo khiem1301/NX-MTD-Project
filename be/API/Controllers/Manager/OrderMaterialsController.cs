@@ -12,6 +12,11 @@ public sealed class OrderMaterialsController : ManagerBaseController
 
     public OrderMaterialsController(IOrderMaterialService orderMaterials) => _orderMaterials = orderMaterials;
 
+    /// <summary>Đơn đang chạy mà NVL chưa về đủ (kể cả đơn mới chưa khai báo NVL).</summary>
+    [HttpGet("pending-orders")]
+    public async Task<IActionResult> GetPendingOrders(CancellationToken ct) =>
+        this.ToResponse(await _orderMaterials.GetPendingOrdersAsync(ct));
+
     [HttpGet]
     public async Task<IActionResult> GetByOrder([FromQuery] int orderId, CancellationToken ct) =>
         this.ToResponse(await _orderMaterials.GetByOrderAsync(orderId, ct));

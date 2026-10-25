@@ -25,6 +25,7 @@ public class KpiServiceTests
     private readonly List<Team> _teams = [];
     private readonly List<OrderLine> _orderLines = [];
     private readonly List<VwKpiDailyResult> _dailyResults = [];
+    private readonly List<CutHandoverLine> _handoverLines = [];
     private readonly KpiService _sut;
 
     public KpiServiceTests()
@@ -35,6 +36,7 @@ public class KpiServiceTests
         SetupQueryable(_teams);
         SetupQueryable(_orderLines);
         SetupQueryable(_dailyResults);
+        SetupQueryable(_handoverLines);
 
         // Giả lập EF gán navigation (Order/Product/SewingTeam) sau khi lưu, để Select chiếu DTO không bị null.
         _uow.Repository<KpiTarget>().AddAsync(Arg.Do<KpiTarget>(e =>
@@ -57,6 +59,14 @@ public class KpiServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
+    /// <summary>BTP (bộ đủ) tổ cắt đã bàn giao và kho đã xác nhận cho đơn + mã hàng; mặc định đủ lớn để các test khác không bị chặn.</summary>
+    private void GivenBtp(int orderId, int productId, int qty) => _handoverLines.Add(new CutHandoverLine
+    {
+        ConfirmedQty = qty, ProductComponentId = null,
+        CutHandover = new CutHandover { Status = HandoverStatuses.Confirmed },
+        OrderLine = new OrderLine { OrderId = orderId, ProductId = productId },
+    });
+
     private static CustomerOrder Order(int id = 1, string code = "DH001") => new() { OrderId = id, OrderCode = code };
 
     private static Product Product(int id = 1, string code = "MH001", string name = "Áo thun") =>
@@ -66,7 +76,7 @@ public class KpiServiceTests
         new() { TeamId = id, TeamCode = "MAY1", TeamName = name, TeamType = TeamTypes.Sewing, Status = status };
 
     private static OrderLine Line(int orderId, int productId) =>
-        new() { OrderLineId = orderId * 1000 + productId, OrderId = orderId, ProductId = productId, Color = "Đen", SizeCode = "M", OrderedQty = 1000 };
+        new() { OrderLineId = orderId * 1000 + productId, OrderId = orderId, ProductId = productId, ProductVariant = TestVariant.Make(productId), OrderedQty = 1000 };
 
     private static KpiTarget Target(int id, int orderId, int productId, int teamId, DateOnly start, DateOnly end,
         int targetQty = 1000, short workingDays = 25, string status = KpiStatuses.Active, string? result = null,
@@ -160,6 +170,7 @@ public class KpiServiceTests
         _products.Add(Product());
         _teams.Add(SewingTeam());
         _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 1000);
 
         var result = await _sut.CreateAsync(Dto(targetQty: 1000, workingDays: 25), CancellationToken.None);
 
@@ -205,6 +216,57 @@ public class KpiServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_TargetAboveBtpInWarehouse_IsRejectedWithRemainingQty()
+    {
+        _orders.Add(Order());
+        _products.Add(Product());
+        _teams.Add(SewingTeam());
+        _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 600);
+
+        var result = await _sut.CreateAsync(Dto(targetQty: 700, workingDays: 25), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.KpiExceedsStock);
+        result.Message.Should().Contain("600").And.Contain("còn đặt được 600");
+        _kpiTargets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_OtherActiveTargetsOfSameOrderAndProduct_CountAgainstTheBtp()
+    {
+        var order = Order(); var product = Product(); var team = SewingTeam();
+        _orders.Add(order); _products.Add(product); _teams.Add(team);
+        _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 1000);
+        _kpiTargets.Add(Target(9, 1, 1, 1, Start.AddMonths(-1), End.AddMonths(-1), targetQty: 700, order: order, product: product, team: team));
+        _kpiTargets.Add(Target(8, 1, 1, 1, Start.AddMonths(-2), End.AddMonths(-2), targetQty: 5000, status: KpiStatuses.Cancelled,
+            order: order, product: product, team: team));   // đã hủy: không tính
+
+        (await _sut.CreateAsync(Dto(targetQty: 400, workingDays: 25), CancellationToken.None)).ErrorCode.Should().Be(ErrorCodes.KpiExceedsStock);
+        (await _sut.CreateAsync(Dto(targetQty: 300, workingDays: 25), CancellationToken.None)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CreateAsync_PartialComponentsAndUnconfirmedHandovers_DoNotCountAsBtp()
+    {
+        _orders.Add(Order()); _products.Add(Product()); _teams.Add(SewingTeam());
+        _orderLines.Add(Line(1, 1));
+        _handoverLines.Add(new CutHandoverLine   // chi tiết lẻ (cắt bù) không phải bộ đủ
+        {
+            ConfirmedQty = 500, ProductComponentId = 7, CutHandover = new CutHandover { Status = HandoverStatuses.Confirmed },
+            OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
+        });
+        _handoverLines.Add(new CutHandoverLine   // phiếu còn chờ kho nhận
+        {
+            ConfirmedQty = 500, ProductComponentId = null, CutHandover = new CutHandover { Status = HandoverStatuses.Pending },
+            OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
+        });
+
+        (await _sut.CreateAsync(Dto(targetQty: 1, workingDays: 25), CancellationToken.None)).ErrorCode.Should().Be(ErrorCodes.KpiExceedsStock);
+    }
+
+    [Fact]
     public async Task UpdateAsync_Valid_UpdatesFieldsAndReturnsDto()
     {
         var order = Order();
@@ -214,6 +276,7 @@ public class KpiServiceTests
         _products.Add(product);
         _teams.Add(team);
         _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 1500);
         var existing = Target(1, 1, 1, 1, Start, End, targetQty: 1000, workingDays: 25, order: order, product: product, team: team);
         _kpiTargets.Add(existing);
 

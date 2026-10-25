@@ -98,7 +98,7 @@ export function RequestDetailDrawer() {
                 {
                   title: MESSAGES.requests.itemDescription,
                   render: (_: unknown, l) =>
-                    [l.itemDescription, l.materialName && `${l.materialName}${l.materialColor ? ` (${l.materialColor})` : ''}`, l.orderLineLabel, l.panelName]
+                    [l.itemDescription, l.materialName && `${l.materialName}${l.materialColor ? ` (${l.materialColor})` : ''}`, l.orderLineLabel, l.componentName]
                       .filter(Boolean)
                       .join(' · ') || '—',
                 },

@@ -216,7 +216,22 @@ public sealed class KpiService : IKpiService
             .AnyAsync(k => k.OrderId == dto.OrderId && k.ProductId == dto.ProductId && k.SewingTeamId == dto.SewingTeamId
                            && k.StartDate == dto.StartDate
                            && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId), ct);
-        return duplicate ? Fail(ErrorCodes.KpiDuplicatePeriod, Messages.KpiDuplicatePeriod) : null;
+        if (duplicate) return Fail(ErrorCodes.KpiDuplicatePeriod, Messages.KpiDuplicatePeriod);
+
+        // Swimlane III.3.1: đặt KPI thì hệ thống kiểm BTP trong kho. Tổng chỉ tiêu còn hiệu lực của đơn + mã hàng
+        // không được vượt BTP (bộ đủ) tổ cắt đã bàn giao và kho đã nhận.
+        var btpInWarehouse = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.CutHandover.Status == HandoverStatuses.Confirmed && l.ProductComponentId == null
+                        && l.OrderLine.OrderId == dto.OrderId && l.OrderLine.ProductId == dto.ProductId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+        var otherTargets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
+            .Where(k => k.OrderId == dto.OrderId && k.ProductId == dto.ProductId && k.Status == KpiStatuses.Active
+                        && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId))
+            .SumAsync(k => k.TargetFinishedQty, ct);
+        return dto.TargetFinishedQty + otherTargets > btpInWarehouse
+            ? Fail(ErrorCodes.KpiExceedsStock, string.Format(Messages.KpiExceedsStock, btpInWarehouse, otherTargets,
+                Math.Max(0, btpInWarehouse - otherTargets)))
+            : null;
     }
 
     private static void Apply(KpiTarget target, SaveKpiTargetDto dto)

@@ -96,7 +96,9 @@ export type PurchaseOrderDetail = {
   goodsStatus: PoGoodsStatus;
   paymentStatus: PoPaymentStatus;
   orderDate: string | null;
-  expectedDeliveryDate: string | null;
+  /** Số lần NCC dự kiến giao; receivedCount = số phiếu nhập đã xác nhận (kể cả phiếu bổ sung). */
+  expectedDeliveryCount: number | null;
+  receivedCount: number;
   note: string | null;
   rejectReason: string | null;
   paymentReturnReason: string | null;
@@ -104,7 +106,6 @@ export type PurchaseOrderDetail = {
   paidAmount: number | null;
   paymentMethod: PaymentMethod | null;
   paymentNote: string | null;
-  paidAt: string | null;
   totalAmount: number;
   createdAt: string;
   rowVer: string;
@@ -124,7 +125,7 @@ export type PurchaseOrderQuery = {
 export type PlacePayload = {
   supplierId: number;
   orderDate: string;
-  expectedDeliveryDate: string | null;
+  expectedDeliveryCount: number;
   note: string | null;
   lines: { purchaseOrderLineId: number; orderedQty: number; unitPrice: number }[];
   rowVer: string;

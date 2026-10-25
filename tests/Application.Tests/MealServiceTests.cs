@@ -106,7 +106,7 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task ConfirmTeamMealAsync_NewConfirmation_AddsRowAndIncreasesTeamTotal()
+    public async Task ConfirmTeamMealAsync_NewConfirmation_AddsRow()
     {
         var meal = Meal();
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
@@ -117,7 +117,6 @@ public class MealServiceTests
         var result = await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 10), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        meal.TeamTotal.Should().Be(10);
         _repo.Received(1).AddConfirmation(Arg.Is<TeamMealConfirmation>(c =>
             c.TeamId == 3 && c.MealCount == 10 && c.AttendanceCount == 9
             && c.Source == MealConfirmationSource.Confirmed && c.ConfirmedAt != null));
@@ -125,10 +124,9 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task ConfirmTeamMealAsync_ReplacesExistingSuggestion_AdjustsTeamTotalByDelta()
+    public async Task ConfirmTeamMealAsync_ReplacesExistingSuggestion_UpdatesCountAndSource()
     {
         var meal = Meal();
-        meal.TeamTotal = 8;   // gợi ý cũ (JOB-02) đã cộng vào tổng
         var existing = new TeamMealConfirmation
         {
             DailyMealId = meal.DailyMealId, TeamId = 3, MealCount = 8, AttendanceCount = 8,
@@ -141,7 +139,7 @@ public class MealServiceTests
 
         await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 11), CancellationToken.None);
 
-        meal.TeamTotal.Should().Be(11);
+        existing.MealCount.Should().Be(11);
         existing.Source.Should().Be(MealConfirmationSource.Confirmed);
         existing.ConfirmedAt.Should().NotBeNull();
         _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
@@ -294,7 +292,6 @@ public class MealServiceTests
         _repo.Received(1).AddConfirmation(Arg.Is<TeamMealConfirmation>(c =>
             c.TeamId == 3 && c.MealCount == 5 && c.Source == MealConfirmationSource.Attendance
             && c.RemindedAt == Now0800 && c.ConfirmedAt == null));
-        meal.TeamTotal.Should().Be(5);
         await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -368,7 +365,6 @@ public class MealServiceTests
         await _sut.RunReminderJobAsync(Today, CancellationToken.None);
 
         confirmed.RemindedAt.Should().BeNull();
-        meal.TeamTotal.Should().Be(0);
     }
 
     // ---------- RunAutoCloseJobAsync (JOB-03) ----------
@@ -400,7 +396,6 @@ public class MealServiceTests
 
         meal.Status.Should().Be(MealStatus.AutoClosed);
         meal.OfficeCount.Should().Be(4);
-        meal.TeamTotal.Should().Be(8);
         meal.AutoClosedAt.Should().Be(Now0800);
         meal.AttendanceIncomplete.Should().BeFalse();
         _repo.Received(1).AddConfirmation(Arg.Is<TeamMealConfirmation>(c =>
@@ -411,7 +406,6 @@ public class MealServiceTests
     public async Task RunAutoCloseJobAsync_ConfirmedTeam_KeepsLeaderValue()
     {
         var meal = Meal();
-        meal.TeamTotal = 15;
         var confirmed = new TeamMealConfirmation
         {
             DailyMealId = meal.DailyMealId, TeamId = 3, MealCount = 15, Source = MealConfirmationSource.Confirmed,
@@ -427,7 +421,6 @@ public class MealServiceTests
         await _sut.RunAutoCloseJobAsync(Today, CancellationToken.None);
 
         confirmed.MealCount.Should().Be(15);
-        meal.TeamTotal.Should().Be(15);
         _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
     }
 

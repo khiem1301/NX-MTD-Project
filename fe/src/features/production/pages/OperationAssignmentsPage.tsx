@@ -11,7 +11,7 @@ import { formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import {
   useAssignableOperations,
-  useAssignOperation,
+  useAssignOperations,
   useAssignments,
   useCloseAssignment,
   useCopyAssignments,
@@ -33,10 +33,10 @@ function useWorkerOptions() {
 }
 
 function AssignModal({ open, orderId, onClose }: { open: boolean; orderId: number; onClose: () => void }) {
-  const [form] = Form.useForm<{ operationId: number; workerId: number }>();
+  const [form] = Form.useForm<{ operationIds: number[]; workerId: number }>();
   const operations = useAssignableOperations(orderId);
   const workers = useWorkerOptions();
-  const assign = useAssignOperation();
+  const assign = useAssignOperations();
 
   return (
     <Modal
@@ -55,8 +55,9 @@ function AssignModal({ open, orderId, onClose }: { open: boolean; orderId: numbe
         preserve={false}
         onFinish={(values) => assign.mutate({ orderId, ...values }, { onSuccess: onClose })}
       >
-        <Form.Item name="operationId" label={text.form.operation} rules={required}>
+        <Form.Item name="operationIds" label={text.form.operations} rules={required}>
           <Select
+            mode="multiple"
             showSearch
             optionFilterProp="label"
             loading={operations.isLoading}

@@ -27,12 +27,14 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { EVAL_STATUS, EVAL_STATUS_LABEL, GR_LABELS, GRADE_OPTIONS } from '../constants';
 import {
   useAddLevel,
+  useAllGradeWorkers,
   useApplyGrade,
   useEvaluations,
   useGradeLevels,
   useGradeWorkers,
   useProposeGrade,
   useRejectGrade,
+  useSetGrade,
 } from '../hooks/useGrade';
 import type { GradeEvaluation, GradeLevel } from '../types';
 
@@ -83,6 +85,69 @@ function ProposeModal({ open, onClose }: { open: boolean; onClose: () => void })
         <Form.Item
           name="reason"
           label={GR_LABELS.reason}
+          rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
+        >
+          <Input.TextArea rows={3} maxLength={500} showCount />
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+}
+
+function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [form] = Form.useForm<{ workerId: number; gradeCode: string; reason: string; effectiveDate: Dayjs }>();
+  const workers = useAllGradeWorkers(open);
+  const setGrade = useSetGrade();
+  return (
+    <Modal
+      open={open}
+      title={GR_LABELS.setDirect}
+      okText={MESSAGES.common.save}
+      cancelText={MESSAGES.common.cancel}
+      confirmLoading={setGrade.isPending}
+      onOk={() => form.submit()}
+      onCancel={onClose}
+      destroyOnHidden
+    >
+      <Alert type="info" showIcon style={{ marginBottom: 12 }} message={GR_LABELS.setDirectHint} />
+      <Form
+        form={form}
+        layout="vertical"
+        disabled={setGrade.isPending}
+        initialValues={{ effectiveDate: dayjs() }}
+        onFinish={(v) =>
+          setGrade.mutate(
+            {
+              workerId: v.workerId,
+              gradeCode: v.gradeCode,
+              reason: v.reason.trim(),
+              effectiveDate: v.effectiveDate.format(API_DATE),
+            },
+            { onSuccess: onClose },
+          )
+        }
+      >
+        <Form.Item name="workerId" label={GR_LABELS.worker} rules={required}>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            placeholder={GR_LABELS.selectWorker}
+            loading={workers.isLoading}
+            options={(workers.data ?? []).map((w) => ({
+              value: w.workerId,
+              label: `${w.workerCode} - ${w.fullName} · ${w.teamName ?? '—'} · ${GR_LABELS.currentGrade}: ${w.currentGradeCode ?? GR_LABELS.none}${w.hasPending ? ` (${GR_LABELS.pending})` : ''}`,
+            }))}
+          />
+        </Form.Item>
+        <Form.Item name="gradeCode" label={GR_LABELS.newGrade} rules={required}>
+          <Select options={GRADE_OPTIONS} style={{ width: 160 }} />
+        </Form.Item>
+        <Form.Item name="effectiveDate" label={GR_LABELS.effectiveDate} rules={required}>
+          <DatePicker format="DD/MM/YYYY" />
+        </Form.Item>
+        <Form.Item
+          name="reason"
+          label={GR_LABELS.setReason}
           rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
         >
           <Input.TextArea rows={3} maxLength={500} showCount />
@@ -156,6 +221,7 @@ function EvaluationsTab() {
   const list = useEvaluations(table.params);
   const reject = useRejectGrade();
   const [proposeOpen, setProposeOpen] = useState(false);
+  const [setOpen, setSetOpen] = useState(false);
   const [applying, setApplying] = useState<GradeEvaluation | null>(null);
   const [rejecting, setRejecting] = useState<GradeEvaluation | null>(null);
 
@@ -235,6 +301,11 @@ function EvaluationsTab() {
             {GR_LABELS.propose}
           </Button>
         )}
+        {canDecide && (
+          <Button type="primary" onClick={() => setSetOpen(true)}>
+            {GR_LABELS.setDirect}
+          </Button>
+        )}
       </Space>
       <QueryError error={list.error} onRetry={() => void list.refetch()} />
       <Table
@@ -247,6 +318,7 @@ function EvaluationsTab() {
         scroll={{ x: 'max-content' }}
       />
       <ProposeModal open={proposeOpen} onClose={() => setProposeOpen(false)} />
+      <SetGradeModal open={setOpen} onClose={() => setSetOpen(false)} />
       <ApplyModal evaluation={applying} onClose={() => setApplying(null)} />
       <ReasonModal
         open={rejecting !== null}

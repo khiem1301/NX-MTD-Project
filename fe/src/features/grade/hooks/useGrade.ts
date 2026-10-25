@@ -4,7 +4,7 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { gradeApi } from '../api/gradeApi';
 import { GR_MESSAGES } from '../constants';
-import type { ApplyPayload, EvaluationQuery, ProposePayload, SaveLevelPayload } from '../types';
+import type { ApplyPayload, EvaluationQuery, ProposePayload, SaveLevelPayload, SetGradePayload } from '../types';
 
 export const GRADE_KEY = ['grade'] as const;
 // Áp dụng bậc đổi CurrentGradeCode của nhân viên nên nạp lại cả danh sách nhân viên.
@@ -28,6 +28,20 @@ export const useEvaluations = (query: EvaluationQuery) => {
 
 export const useGradeWorkers = (enabled: boolean) =>
   useQuery({ queryKey: [...GRADE_KEY, 'workers'], queryFn: gradeApi.workers, enabled });
+
+/** Admin / Quản đốc: danh sách mọi công nhân để chọn khi đặt bậc trực tiếp. */
+export const useAllGradeWorkers = (enabled: boolean) => {
+  const base = useBase();
+  return useQuery({ queryKey: [...GRADE_KEY, 'all-workers', base], queryFn: () => gradeApi.allWorkers(base), enabled });
+};
+
+export const useSetGrade = () => {
+  const base = useBase();
+  return useApiMutation((body: SetGradePayload) => gradeApi.setGrade(base, body), {
+    invalidate: AFFECTED,
+    successMessage: GR_MESSAGES.set,
+  });
+};
 
 export const useGradeLevels = () =>
   useQuery({ queryKey: [...GRADE_KEY, 'levels'], queryFn: gradeApi.levels });

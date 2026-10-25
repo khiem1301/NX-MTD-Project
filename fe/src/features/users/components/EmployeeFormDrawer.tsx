@@ -1,7 +1,7 @@
 import { Button, DatePicker, Drawer, Form, Input, InputNumber, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { PAY_TYPE_LABEL, ROLE_LABEL, suggestPayType, type PayType } from '@/constants/hr';
+import { MANAGER_HIDDEN_ROLES, PAY_TYPE_LABEL, ROLE_LABEL, suggestPayType, type PayType } from '@/constants/hr';
 import { ROLES, type Role } from '@/constants/roles';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import type { ApiError } from '@/types/api';
@@ -25,7 +25,7 @@ type FormValues = {
 type EmployeeFormDrawerProps = {
   open: boolean;
   employee: EmployeeDetail | null;
-  /** Admin sửa đủ trường; Quản đốc chỉ sửa thông tin cá nhân + mã chấm công (UC16). */
+  /** Admin sửa đủ trường; Quản đốc sửa được hồ sơ, tổ và vai trò (trừ Admin / Quản đốc / Kế toán) nhưng không đổi kiểu lương (UC16). */
   isAdmin: boolean;
   onClose: () => void;
   onCreated: (password: TempPassword) => void;
@@ -41,7 +41,9 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.employeeId ?? 0);
   const saving = create.isPending || update.isPending;
-  const profileOnly = employee !== null && !isAdmin;
+  const isManagerEdit = employee !== null && !isAdmin;
+  // Quản đốc không gán được vai trò mà mình không nhìn thấy (GBR-01).
+  const roleOptions = isAdmin || employee === null ? ROLE_OPTIONS : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
 
   const suggest = () => {
     const values = form.getFieldsValue();
@@ -72,7 +74,9 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
       });
       return;
     }
-    const body = isAdmin ? { ...base, role: v.role, teamId: v.teamId ?? null, payType: v.payType, rowVer: employee.rowVer } : { ...base, rowVer: employee.rowVer };
+    const body = isAdmin
+      ? { ...base, role: v.role, teamId: v.teamId ?? null, payType: v.payType, rowVer: employee.rowVer }
+      : { ...base, role: v.role, teamId: v.teamId ?? null, rowVer: employee.rowVer };
     update.mutate(body, { onSuccess: onClose, onError: showFieldErrors });
   };
 
@@ -118,20 +122,19 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
           </Form.Item>
         </Space>
         <Form.Item name="role" label={MESSAGES.hr.role} rules={[{ required: true, message: MESSAGES.common.required }]}>
-          <Select options={ROLE_OPTIONS} disabled={profileOnly} onChange={suggest} />
+          <Select options={roleOptions} onChange={suggest} />
         </Form.Item>
         <Form.Item name="teamId" label={MESSAGES.hr.team}>
           <Select
             allowClear
             showSearch
             optionFilterProp="label"
-            disabled={profileOnly}
             options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
             onChange={suggest}
           />
         </Form.Item>
         <Form.Item name="payType" label={MESSAGES.hr.payType} rules={[{ required: true, message: MESSAGES.common.required }]}>
-          <Select options={PAY_OPTIONS} disabled={profileOnly} />
+          <Select options={PAY_OPTIONS} disabled={isManagerEdit} />
         </Form.Item>
         {employee && (
           <Form.Item label={MESSAGES.hr.grade} extra={MESSAGES.hr.gradeHint}>

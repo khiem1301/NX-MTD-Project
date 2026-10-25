@@ -63,6 +63,12 @@
 | DEV-ALL-4 | 23/10/2026 | Claude (AI) | `StocktakeService`, `VehicleService` | Kiểm kê kho và sổ xe + nhiên liệu | Đã làm |
 | DEV-ALL-5 | 23/10/2026 | Claude (AI) | Thông báo, bậc thợ, trạng thái đơn, dashboard, AuditLog, import nhân viên, JOB-04 / JOB-05 | Chuông thông báo + thông báo nhanh, bậc thợ, chuyển đơn sang sản xuất, dashboard tiến độ đơn, nhật ký thay đổi, import nhân viên Excel, hai job nền | Đã làm |
 | DEV-ALL-6 | 23/10/2026 | Claude (AI) | `WarehouseDocumentExportService`, `ClosedXmlWarehouseDocumentWriter` | In / xuất Excel từng phiếu nhập, phiếu cấp, phiếu xuất hàng (TH-16) | Đã làm |
+| DEV-ALL-7 | 23/10/2026 | Claude (AI) | `EmployeeService.ManagerUpdateAsync`, `GradeService.SetGradeAsync`, UC15, UC16 | Quản đốc đổi tổ và vai trò nhân viên; Admin / Quản đốc đặt bậc thợ trực tiếp không qua đề xuất | Đã làm |
+| DEV-ALL-8 | 24/10/2026 | Claude (AI) | Bảng mới `KpiDailyTarget`, `vw_KpiDailyResult`, `KpiService`, UC19 | Chỉ tiêu KPI lập theo tổng cả kỳ; từng ngày đặt riêng (không chia đều) | Đã làm |
+| DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
+| DEV-ALL-10 | 24/10/2026 | Claude (AI) | `OrderMaterialService`, `IncomingMaterialService`, `IncomingMaterialsPage`, `PendingMaterialOrdersTable` | Quản đốc thấy đơn chờ khai báo NVL và bấm thông báo mở đúng đơn; Thủ kho có màn NVL chờ nhận và được báo khi khách cấp / đơn mua đã đặt | Đã làm |
+| DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
+| DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
 
 ---
 
@@ -793,4 +799,87 @@
   - Dữ liệu lấy qua dịch vụ chi tiết hiện có nên giữ nguyên quyền xem: tổ trưởng chỉ in được phiếu cấp của tổ mình (khác tổ → 403 / 404 như xem chi tiết).
   - Quản đốc in được phiếu nhập; Thủ kho in được cả ba loại; Kế toán in được phiếu xuất hàng.
 - **Cần sửa trong tài liệu:** Report-3 UC13: ghi rõ "in" là tải file Excel để tự in, chưa có bản PDF.
+- **Trạng thái:** Mở
+
+### DEV-ALL-7 · Quản đốc sửa tổ / vai trò nhân viên và đặt bậc thợ trực tiếp
+
+- **Ngày / Người / Task / PR:** 23/10/2026 · Claude (AI) theo yêu cầu của Minh · UC15, UC16 · (chưa có PR)
+- **Ảnh hưởng tới:** `PUT manager/employees/{id}` (`ManagerUpdateEmployeeDto` thêm `Role`, `TeamId`); `POST admin|manager/grade-evaluations/set`, `GET .../workers`; form nhân viên và màn Bậc thợ ở FE
+- **Tài liệu gốc ghi:** UC16: Quản đốc chỉ sửa hồ sơ cá nhân và mã chấm công, không đổi vai trò, tổ, kiểu lương. UC15 / UC50: bậc thợ chỉ đổi qua đề xuất của tổ trưởng rồi Admin / Quản đốc duyệt.
+- **Code đang làm:**
+  - Quản đốc sửa thêm tổ và vai trò: không gán được Admin / Quản đốc / Kế toán (403), vẫn không xem hay sửa được nhân viên có các vai trò đó (GBR-01), không đổi kiểu lương. Đổi tổ ghi nhật ký "Chuyển tổ"; đổi tổ hoặc vai trò làm token cũ hết hiệu lực. Các kiểm tra tổ trưởng / tổ phó (đúng loại tổ, không trùng người) dùng chung với Admin.
+  - Đặt bậc trực tiếp (Admin và Quản đốc): tạo ngay một dòng lịch sử `APPLIED` (người đặt = người đăng nhập, lý do bắt buộc, hiệu lực mặc định hôm nay), cập nhật `CurrentGradeCode`, ghi AuditLog, báo công nhân. Đề xuất đang chờ của công nhân đó bị đóng thành `NOT_APPLIED` với ghi chú, báo người đề xuất. Mỗi người đặt tối đa một lần mỗi công nhân mỗi ngày (ràng buộc `UQ_GradeEval`); sai thì phải đợi sang ngày hoặc nhờ Admin.
+  - Quản đốc vẫn không sửa mức tiền bậc A–D (chỉ Admin).
+- **Cần sửa trong tài liệu:** Report-3 UC16 (quyền sửa của Quản đốc), UC15 / UC50 (đặt bậc trực tiếp).
+- **Trạng thái:** Mở
+
+### DEV-ALL-8 · Chỉ tiêu KPI theo từng ngày
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, FR 3.14 · (chưa có PR)
+- **Ảnh hưởng tới:** schema (bảng mới `KpiDailyTarget`, viết lại `vw_KpiDailyResult`), `SaveKpiTargetDto` (vẫn nhập tổng cả kỳ; `WorkingDays` do BE tự tính), form lập KPI ở FE
+- **Tài liệu gốc ghi:** Chỉ tiêu ngày = chỉ tiêu cả kỳ ÷ số ngày làm việc (chia đều).
+- **Lý do:** Mấy ngày đầu vào đơn tổ may làm chậm hơn (công nhân chưa thạo), chia đều làm KPI ngày đầu luôn "không đạt".
+- **Code đang làm:**
+  - Lập / sửa KPI chỉ nhập đơn, mã hàng, tổ, kỳ và **tổng cả kỳ**. Chỉ tiêu từng ngày đặt sau, trên lịch KPI (DEV-ALL-9). `WorkingDays` = số ngày đã đặt KPI, chưa đặt thì = số ngày trong kỳ trừ Chủ nhật.
+  - Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; tổng cả kỳ mới không được nhỏ hơn tổng KPI các ngày còn lại (409).
+  - `vw_KpiDailyResult`: có dòng cho mọi ngày có chỉ tiêu (chưa có hàng = 0) và ngày QC ngoài kế hoạch (chỉ tiêu, % đạt = NULL). KPI chưa đặt ngày giữ cách chia đều cũ. Cột "chỉ tiêu ngày" ở danh sách / chi tiết là trung bình.
+  - DB đang chạy cần chạy thêm: CREATE TABLE `KpiDailyTarget` + CREATE OR ALTER VIEW `vw_KpiDailyResult` (lấy đúng khối trong `SQL/NX-MTD_Database.sql`).
+- **Cần sửa trong tài liệu:** Report-3 UC19 (form lập KPI), FR 3.14 (công thức chỉ tiêu ngày), ERD (bảng mới).
+- **Trạng thái:** Mở
+
+### DEV-ALL-9 · Lịch KPI theo ngày (Tổng BTP và số còn lại để đặt KPI)
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC19, UC21, FR 3.14 · (chưa có PR)
+- **Ảnh hưởng tới:** `GET manager|admin/kpi-targets/{id}/calendar`, `PUT manager/kpi-targets/{id}/daily-plan`; nút "Xem theo ngày" ở màn KPI mở lịch; không đổi schema
+- **Tài liệu gốc ghi:** không có (yêu cầu bổ sung). Màn "So sánh BTP – KPI" làm trước đó (`/kpi/btp-compare`, Thủ kho và tổ trưởng xem được) đã bỏ, gộp vào lịch này.
+- **Code đang làm:**
+  - Lịch tháng kiểu tờ lịch (Thứ hai → Chủ nhật, Thứ bảy xanh, Chủ nhật cam). Quản đốc gõ KPI vào từng ô ngày, hoặc "Chia tăng dần" (3 ngày đầu 50% → 70% → 90% mức ổn định), "Chia đều", "Xóa các ngày chưa tới". Ngày đã qua không sửa được. Admin và KPI đã đóng chỉ xem.
+  - **Tổng bán thành phẩm** = BTP đã cắt vào kho (giao dịch kho BTP `CUT_HANDOVER`) − hàng QA/QC đã nhập ra chuyền, tính theo (đơn, mã hàng) cho mọi tổ. **Số lượng còn lại để đặt KPI** = Tổng BTP − KPI đã đặt chưa ra chuyền (các ngày sau hôm nay + phần còn thiếu của hôm nay, của mọi KPI đang chạy cùng đơn và mã hàng). Giảm khi QA/QC nhập hàng ra chuyền.
+  - Lưu bị chặn (409) khi Σ KPI các ngày > tổng cả kỳ, hoặc KPI chưa ra chuyền vượt số BTP còn lại (báo "tối đa N"). Đang giảm thì vẫn lưu được dù BTP đã thiếu từ trước.
+  - Mỗi ô: KPI, thực tế của tổ (QA/QC), BTP còn sau ngày (ngày tương lai là dự báo theo KPI đã đặt), cờ "Sắp thiếu BTP" và "Chậm KPI".
+  - Hạn chế: BTP là kho chung theo (đơn, mã hàng), không tách theo tổ may; Thủ kho và tổ trưởng không còn màn xem riêng.
+  - Dữ liệu demo mục 19.6 (BTP): DEMO-DH001 cắt đủ 5 dòng trước ngày tổ may nhận (PC-DEMO-001) nên kho BTP về 0; DEMO-DH002 cắt 800 chưa cấp tổ may; DEMO-DH000 (đã hoàn thành) cắt rồi cấp hết cho tổ may. Thẻ kho chỉ thêm mới (trigger append-only), nên DB demo đang chạy chỉ được bổ sung, không sửa các đợt cắt cũ.
+- **Cần sửa trong tài liệu:** thêm lịch KPI vào Report-3 (UC19 / UC21) và ma trận quyền.
+- **Trạng thái:** Mở
+
+### DEV-ALL-10 · Đơn chờ khai báo NVL (Quản đốc) và màn NVL chờ nhận (Thủ kho)
+
+- **Ngày / Người / Task / PR:** 24/10/2026 · Claude (AI) theo yêu cầu của Minh · UC09 (phần NVL), UC37, UC38 · (chưa có PR)
+- **Ảnh hưởng tới:** `GET admin|manager/order-materials/pending-orders`, `GET warehouse-keeper/incoming-materials`; màn "NVL của đơn" và màn mới "NVL chờ nhận"; thông báo; không đổi schema
+- **Tài liệu gốc ghi:** Admin tạo đơn → Quản đốc nhận thông báo "Có đơn hàng mới" rồi tự vào NVL của đơn chọn đơn. Thủ kho lập phiếu nhập bằng cách tự chọn đơn / đơn mua; không có danh sách việc chờ.
+- **Lý do:** Quản đốc không thấy đơn mới ở đâu để khai báo NVL; Thủ kho không biết khách sẽ cấp hoặc đơn mua đã đặt.
+- **Code đang làm:**
+  - Màn "NVL của đơn" có bảng **Đơn hàng chờ khai báo / mua NVL** (đơn NEW / IN_PRODUCTION có NVL chưa về đủ, đơn chưa khai báo NVL lên đầu). Bấm Mở đơn thì chọn đơn; đơn đang xem nằm trên đường dẫn `?orderId=`.
+  - Thông báo "Có đơn hàng mới" (gửi Quản đốc khi Admin tạo đơn) giờ có liên kết tới `/warehouse/order-materials?orderId=…`.
+  - Màn **NVL chờ nhận** (chỉ Thủ kho): (1) NVL khách cấp = số khách cấp đã khai báo − số đã nhận (phiếu nhập đã xác nhận), kèm ngày hẹn, quá hẹn tô đỏ; (2) dòng đơn mua đã đặt hàng (ORDERED / PARTIALLY_RECEIVED) = đặt − đã nhận − đã chốt không bù. Nút Lập phiếu nhập mở form phiếu nhập điền sẵn nguồn, đơn / đơn mua, dòng NVL và số còn phải nhận.
+  - Thông báo cho Thủ kho: khi Quản đốc khai báo NVL khách cấp (hoặc đổi số khách cấp / ngày hẹn); khi Quản đốc đặt hàng đơn mua với nhà cung cấp.
+  - Lưu ý: đơn mua chỉ vào danh sách chờ nhận sau khi Quản đốc bấm Đặt hàng (trạng thái ORDERED); đơn mua mới tạo (chờ chốt) chưa hiện. Phiếu nhập đang chờ xác nhận chưa trừ vào số còn phải nhận.
+- **Cần sửa trong tài liệu:** Report-3 UC09 / UC37 (thêm màn NVL chờ nhận và danh sách đơn chờ khai báo), ma trận quyền (Thủ kho: NVL chờ nhận).
+- **Trạng thái:** Mở
+
+### DEV-ALL-11 · Chuyển code sang database mới của Morgan (24/10/2026)
+
+- **Ngày / Người / Task / PR:** 25/10/2026 · Claude (AI) theo yêu cầu của Minh · toàn hệ thống · (chưa có PR)
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` (thay nguyên file), `be/Domain/Entities/*` (scaffold lại), hầu hết dịch vụ / DTO / validator, giao diện kho – cắt – đơn hàng – mã hàng, test.
+- **Tài liệu gốc ghi:** script cũ: định mức nhập theo từng đơn (`OrderMaterialNorm`), dòng đơn lưu màu / size, phiếu nhập có số thiếu / lỗi, NVL khách cấp có ngày hẹn, `KpiDailyTarget` cho lịch KPI theo ngày.
+- **Code đang làm (khác tài liệu cũ):**
+  - **Mã hàng có biến thể, thành phần và định mức** (`ProductVariant`, `ProductComponent`, `ProductComponentMaterial`). Admin khai ở màn Mã hàng → nút "Định mức" (`GET|PUT admin/products/{id}/spec`). Dòng đơn trỏ `ProductVariantId`; Admin lưu đơn với màu × size chưa khai báo thì hệ thống **tự tạo biến thể** (ACTIVE), định mức khai bổ sung sau. Vải cần của lệnh cắt tính từ `ProductComponentMaterial` (chi tiết PANEL, NVL loại vải); NVL của đơn so "cần theo định mức" với số Quản đốc khai.
+  - **Số lần giao dự kiến** thay ngày hẹn: `OrderMaterial.ExpectedDeliveryCount` (bắt buộc ≥ 1 khi khách cấp), `PurchaseOrder.ExpectedDeliveryCount` (nhập khi đặt hàng). Màn NVL chờ nhận hiện "đã nhận / dự kiến".
+  - **Thiếu hàng tự tính, Thủ kho không nhập số thiếu / số lỗi** (cột đã bỏ). Khi phiếu nhập được xác nhận mà số phiếu đã xác nhận ≥ số lần giao dự kiến (mặc định 1) và dòng còn thiếu (đặt hoặc khách cấp − đã nhận − đã chốt không bù > 0) thì hệ thống sinh đơn SHORT_DELIVERY cho Quản đốc, số thiếu = phần còn thiếu. Dòng đã có đơn thiếu đang chờ không sinh thêm. Phiếu bổ sung = phiếu có `ShortageRequestId`.
+  - **Cắt bù theo chi tiết**: `WorkOrderLine/RequestLine/CuttingLayLine/CutHandoverLine/MaterialIssueLine/StocktakeLine/StockTransaction.ProductComponentId`. Tổ may chọn chi tiết PANEL của mã hàng (không gõ tên); kho BTP tách tồn "cả bộ" và "chi tiết lẻ"; tồn tổ may đang giữ chỉ tính bộ đủ. Vải cắt bù = số lượng × định mức ÷ số chi tiết trên một sản phẩm.
+  - **Đăng nhập bằng `Employee.EmployeeCode`** (`Account.Username` đã bỏ). **Thông báo**: `RefTable/RefId` + `ReadAt` (`IsRead`, `Source`, `MaterialType`, `IsDelayRisk` là cột tính, code không ghi). **Đơn giá** luôn qua `PieceRate` (`OutputRecord`, `DefectRecord.PieceRateId`). **Bảng lương**: file Excel ở `Attachment` (PAYROLL / IMPORT_FILE), tổng = Σ NetPay, lý do mở lại đọc từ `AuditLog` (UNLOCK). **Suất ăn** tổng qua `vw_DailyMealTotal`. **Xe**: `DriverName` chỉ có khi tài xế không phải nhân viên. **Tổ cắt** của phiếu bàn giao / trả vải lấy từ lệnh cắt / phiếu cấp.
+  - **Gỡ KPI theo ngày** (script mới không có bảng `KpiDailyTarget`) và **tạm bỏ dữ liệu demo 19.3–19.6** (BTP, KPI, xe, suất ăn do Claude thêm); script mới chỉ có 19.1–19.2. Code lịch KPI (`KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid`, endpoint `calendar` / `daily-plan`) còn trong git: commit `2e047a2` và các commit trước đó. Khôi phục = thêm lại bảng `KpiDailyTarget` + `vw_KpiDailyResult` vào script (xin Morgan) rồi lấy lại các file đó. Nút "Xem theo ngày" quay về bảng kết quả từng ngày của `vw_KpiDailyResult`.
+  - Dữ liệu demo mới nhất phải dựng lại từ script; không có lệnh nâng cấp database cũ.
+- **Cần sửa trong tài liệu:** Report-3 (UC09, UC10 thêm định mức / biến thể, UC37 bỏ số thiếu / lỗi và thêm số lần giao dự kiến, UC19, UC24 chi tiết lẻ, lương, suất ăn); ERD.
+- **Trạng thái:** Đã làm
+
+### DEV-ALL-12 · Đối chiếu màn hình luồng chính với swimlane (25/10/2026)
+
+- **Ngày / Người / Task / PR:** 25/10/2026 · Claude (AI) theo yêu cầu của Minh · UC37, UC39, UC43, UC44, UC45–UC47, UC51–UC57 · (chưa có PR)
+- **Ảnh hưởng tới:** nhập kho, cắt, may, xuất hàng; chi tiết xem `docs/SO_SANH_SWIMLANE.md`.
+- **Tài liệu gốc ghi:** swimlane và UC37 (bản v25) cho Thủ kho nhập số đạt, thiếu, lỗi; luồng xuất hàng "Thủ kho lập → Quản đốc xác nhận → Thủ kho xuất" (UC45–UC46) và "Quản đốc lập → Thủ kho chuẩn bị → Quản đốc duyệt → Thủ kho xuất" (III.4).
+- **Code đang làm:**
+  - Đã sửa theo swimlane: tổ may xác nhận nhận BTP thì đơn tự sang IN_PRODUCTION (nút của Admin vẫn dùng); tổ cắt rút phiếu bàn giao BTP khi Thủ kho chưa nhận; Quản đốc chỉ xác nhận phiếu nhập khi có ảnh chứng từ; ghi hàng hủy (Scrap) thì mở luôn form đơn cắt bù; tổ cắt có form đơn "NVL lỗi"; đặt KPI bị chặn khi tổng KPI vượt BTP đã vào kho; Quản đốc đóng lệnh cắt (kèm lý do khi BTP vào kho chưa đủ kế hoạch).
+  - **Còn lệch (cần quyết định):** (1) Thủ kho không nhập thiếu / lỗi — quyết định của Minh, theo script mới; swimlane và UC37 v25 cần Morgan cập nhật. (2) **Chưa có bước Quản đốc duyệt phiếu xuất**: `DispatchNote.Status` chỉ có PENDING / REJECTED / CANCELLED / IN_DELIVERY / DELIVERED / PARTIALLY_DELIVERED và bảng không có cột người duyệt, nên không làm được nếu không sửa script của Morgan. Đề xuất cho Morgan: thêm trạng thái `APPROVED` vào `CK_DN_Status` và hai cột `ApprovedBy INT NULL`, `ApprovedAt DATETIME2(0) NULL` (kèm ràng buộc `Status IN ('APPROVED','IN_DELIVERY',...) → ApprovedBy NOT NULL`); khi có, code đổi: Quản đốc lập (PENDING) → Thủ kho gửi duyệt → Quản đốc duyệt / trả lại có lý do → Thủ kho in và xuất. (3) In phiếu xuất là Excel (swimlane ghi PDF), ảnh phiếu ký chưa bắt buộc, Kế toán chưa có ô ghi chú khi xác nhận giao.
+- **Cần sửa trong tài liệu:** swimlane III.1 (Thủ kho không nhập thiếu / lỗi), III.4 (bước duyệt phiếu xuất, nếu Morgan thêm trạng thái).
 - **Trạng thái:** Mở

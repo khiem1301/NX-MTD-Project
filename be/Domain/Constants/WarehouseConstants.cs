@@ -21,6 +21,13 @@ public static class StockDocTypes
     public const string Stocktake = "STOCKTAKE";
 }
 
+/// <summary>ProductComponent.ComponentType (CK_PC_Type): chi tiết cắt từ vải hay phụ liệu cấp thẳng cho tổ may.</summary>
+public static class ComponentTypes
+{
+    public const string Panel = "PANEL";
+    public const string Trim = "TRIM";
+}
+
 public static class MaterialTypes
 {
     public const string Fabric = "FABRIC";

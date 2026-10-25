@@ -36,6 +36,60 @@ export type SaveProductPayload = {
   sampleImageUrl?: string | null;
   description?: string | null;
 };
+/** Định mức theo mã hàng (UC10): thành phần, biến thể màu × size và NVL của từng biến thể. */
+export type ProductComponentItem = {
+  productComponentId: number;
+  componentName: string;
+  componentType: 'Panel' | 'Trim';
+  piecesPerGarment: number;
+  sortOrder: number;
+  status: string;
+};
+export type ProductVariantItem = { productVariantId: number; color: string; sizeCode: string; status: string };
+export type ProductNormItem = {
+  productComponentMaterialId: number;
+  componentName: string;
+  color: string;
+  sizeCode: string;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  unit: string;
+  materialColor: string;
+  qtyPerGarment: number;
+  wastagePercent: number;
+  lengthCm: number | null;
+  widthCm: number | null;
+  specNote: string | null;
+};
+export type ProductSpec = {
+  productId: number;
+  components: ProductComponentItem[];
+  variants: ProductVariantItem[];
+  norms: ProductNormItem[];
+};
+export type SaveProductSpecPayload = {
+  components: {
+    productComponentId: number | null;
+    componentName: string;
+    componentType: 'Panel' | 'Trim';
+    piecesPerGarment: number;
+    sortOrder: number;
+  }[];
+  variants: { productVariantId: number | null; color: string; sizeCode: string }[];
+  norms: {
+    componentName: string;
+    color: string;
+    sizeCode: string;
+    materialId: number;
+    materialColor: string | null;
+    qtyPerGarment: number;
+    wastagePercent: number;
+    lengthCm: number | null;
+    widthCm: number | null;
+    specNote: string | null;
+  }[];
+};
 export type ProductQuery = { page: number; pageSize: number; keyword?: string; status?: ProductStatus };
 
 export type OrderListItem = {

@@ -52,6 +52,7 @@ public sealed class PlacePurchaseOrderDtoValidator : AbstractValidator<PlacePurc
     public PlacePurchaseOrderDtoValidator()
     {
         RuleFor(x => x.SupplierId).GreaterThan(0).WithMessage(Messages.Required("nhà cung cấp"));
+        RuleFor(x => x.ExpectedDeliveryCount).GreaterThanOrEqualTo((short)1).WithMessage(Messages.PurchaseOrderDeliveryCountInvalid);
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new PlacePurchaseLineDtoValidator());

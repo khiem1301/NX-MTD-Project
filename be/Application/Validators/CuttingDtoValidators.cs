@@ -22,7 +22,7 @@ public sealed class SaveCuttingLayDtoValidator : AbstractValidator<SaveCuttingLa
             line.RuleFor(l => l.ActualQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
             line.RuleFor(l => l.AdjustReason).MaximumLength(500);
         });
-        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.OrderLineId).Distinct().Count() == l.Count)
+        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => (x.OrderLineId, x.ProductComponentId)).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
     }
 }
@@ -35,7 +35,7 @@ public sealed class CreateCutHandoverDtoValidator : AbstractValidator<CreateCutH
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).ChildRules(line =>
             line.RuleFor(l => l.HandedQty).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive));
-        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.OrderLineId).Distinct().Count() == l.Count)
+        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => (x.OrderLineId, x.ProductComponentId)).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
     }
 }

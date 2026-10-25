@@ -13,6 +13,12 @@ export const warehouseMenu: MenuEntry[] = [
     roles: [Admin, Manager],
   },
   {
+    key: 'incoming-materials',
+    label: 'NVL chờ nhận',
+    path: ROUTES.incomingMaterials,
+    roles: [WarehouseKeeper],
+  },
+  {
     key: 'material-receipts',
     label: 'Phiếu nhập NVL',
     path: ROUTES.materialReceipts,

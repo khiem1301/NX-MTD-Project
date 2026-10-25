@@ -92,8 +92,6 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<OrderMaterial> OrderMaterials { get; set; }
 
-    public virtual DbSet<OrderMaterialNorm> OrderMaterialNorms { get; set; }
-
     public virtual DbSet<OutputRecord> OutputRecords { get; set; }
 
     public virtual DbSet<Payroll> Payrolls { get; set; }
@@ -105,6 +103,12 @@ public partial class NxMtdDbContext : DbContext
     public virtual DbSet<PieceRate> PieceRates { get; set; }
 
     public virtual DbSet<Product> Products { get; set; }
+
+    public virtual DbSet<ProductComponent> ProductComponents { get; set; }
+
+    public virtual DbSet<ProductComponentMaterial> ProductComponentMaterials { get; set; }
+
+    public virtual DbSet<ProductVariant> ProductVariants { get; set; }
 
     public virtual DbSet<PurchaseOrder> PurchaseOrders { get; set; }
 
@@ -136,6 +140,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VehicleTrip> VehicleTrips { get; set; }
 
+    public virtual DbSet<VwDailyMealTotal> VwDailyMealTotals { get; set; }
+
     public virtual DbSet<VwKpiDailyResult> VwKpiDailyResults { get; set; }
 
     public virtual DbSet<VwMaterialStock> VwMaterialStocks { get; set; }
@@ -144,7 +150,15 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwOrderLineProgress> VwOrderLineProgresses { get; set; }
 
+    public virtual DbSet<VwOrderMaterialDelivery> VwOrderMaterialDeliveries { get; set; }
+
+    public virtual DbSet<VwOrderMaterialNorm> VwOrderMaterialNorms { get; set; }
+
     public virtual DbSet<VwPayrollExportDatum> VwPayrollExportData { get; set; }
+
+    public virtual DbSet<VwProductLastSizeRatio> VwProductLastSizeRatios { get; set; }
+
+    public virtual DbSet<VwPurchaseOrderDelivery> VwPurchaseOrderDeliveries { get; set; }
 
     public virtual DbSet<VwPurchaseOrderLineStatus> VwPurchaseOrderLineStatuses { get; set; }
 
@@ -153,6 +167,10 @@ public partial class NxMtdDbContext : DbContext
     public virtual DbSet<VwTeamActingLeader> VwTeamActingLeaders { get; set; }
 
     public virtual DbSet<VwTeamPieceHolding> VwTeamPieceHoldings { get; set; }
+
+    public virtual DbSet<VwWorkOrderFabricNeed> VwWorkOrderFabricNeeds { get; set; }
+
+    public virtual DbSet<VwWorkOrderLineProgress> VwWorkOrderLineProgresses { get; set; }
 
     public virtual DbSet<VwWorkerDailyEstimatedPay> VwWorkerDailyEstimatedPays { get; set; }
 
@@ -174,8 +192,6 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasIndex(e => e.EmployeeId, "UQ_Account_Employee").IsUnique();
 
-            entity.HasIndex(e => e.Username, "UQ_Account_Username").IsUnique();
-
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
@@ -188,9 +204,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasDefaultValue("ACTIVE");
-            entity.Property(e => e.Username)
-                .HasMaxLength(50)
-                .IsUnicode(false);
 
             entity.HasOne(d => d.Employee).WithOne(p => p.Account)
                 .HasForeignKey<Account>(d => d.EmployeeId)
@@ -447,6 +460,7 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+            entity.Property(e => e.IsDelayRisk).HasComputedColumnSql("(CONVERT([bit],case when [DelayRiskSince] IS NULL then (0) else (1) end))", false);
             entity.Property(e => e.MaterialStatus)
                 .HasMaxLength(10)
                 .IsUnicode(false)
@@ -494,11 +508,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.ConfirmedBy)
                 .HasConstraintName("FK_CH_ConfirmedBy");
 
-            entity.HasOne(d => d.CuttingTeam).WithMany(p => p.CutHandovers)
-                .HasForeignKey(d => d.CuttingTeamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CH_Team");
-
             entity.HasOne(d => d.WorkOrder).WithMany(p => p.CutHandovers)
                 .HasForeignKey(d => d.WorkOrderId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -507,9 +516,13 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<CutHandoverLine>(entity =>
         {
-            entity.ToTable("CutHandoverLine", tb => tb.HasComment("Dòng bàn giao BTP"));
+            entity.ToTable("CutHandoverLine", tb =>
+                {
+                    tb.HasComment("Dòng bàn giao BTP");
+                    tb.HasTrigger("trg_CutHandoverLine_Check");
+                });
 
-            entity.HasIndex(e => new { e.CutHandoverId, e.OrderLineId }, "UQ_CHL").IsUnique();
+            entity.HasIndex(e => new { e.CutHandoverId, e.OrderLineId, e.ProductComponentId }, "UQ_CHL").IsUnique();
 
             entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
 
@@ -522,6 +535,10 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.OrderLineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CHL_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.CutHandoverLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_CHL_Component");
         });
 
         modelBuilder.Entity<CuttingLay>(entity =>
@@ -538,7 +555,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.ShiftCode)
                 .HasMaxLength(10)
                 .IsUnicode(false);
-            entity.Property(e => e.SizeRatio).HasMaxLength(200);
             entity.Property(e => e.Status)
                 .HasMaxLength(10)
                 .IsUnicode(false)
@@ -551,6 +567,7 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasOne(d => d.FabricMaterial).WithMany(p => p.CuttingLays)
                 .HasForeignKey(d => d.FabricMaterialId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CL_Material");
 
             entity.HasOne(d => d.WorkOrder).WithMany(p => p.CuttingLays)
@@ -561,9 +578,13 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<CuttingLayLine>(entity =>
         {
-            entity.ToTable("CuttingLayLine", tb => tb.HasComment("Số cắt theo size của bàn cắt"));
+            entity.ToTable("CuttingLayLine", tb =>
+                {
+                    tb.HasComment("Số cắt theo size của bàn cắt");
+                    tb.HasTrigger("trg_CuttingLayLine_Check");
+                });
 
-            entity.HasIndex(e => new { e.CuttingLayId, e.OrderLineId }, "UQ_CLL").IsUnique();
+            entity.HasIndex(e => new { e.CuttingLayId, e.OrderLineId, e.ProductComponentId }, "UQ_CLL").IsUnique();
 
             entity.Property(e => e.AdjustReason).HasMaxLength(500);
 
@@ -576,6 +597,10 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.OrderLineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CLL_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.CuttingLayLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_CLL_Component");
         });
 
         modelBuilder.Entity<DailyMeal>(entity =>
@@ -597,10 +622,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasDefaultValue("OPEN");
-            entity.Property(e => e.TotalAmount)
-                .HasComputedColumnSql("(CONVERT([decimal](18,2),(([OfficeCount]+[GuestCount])+[TeamTotal])*[MealPrice]))", false)
-                .HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.TotalMeals).HasComputedColumnSql("(([OfficeCount]+[GuestCount])+[TeamTotal])", true);
         });
 
         modelBuilder.Entity<DailyTimesheet>(entity =>
@@ -619,7 +640,7 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.Source)
                 .HasMaxLength(15)
                 .IsUnicode(false)
-                .HasDefaultValue("FINGERPRINT");
+                .HasComputedColumnSql("(CONVERT([varchar](15),case when [AttendanceAdjustmentId] IS NULL then 'FINGERPRINT' else 'ADJUSTMENT' end))", true);
             entity.Property(e => e.UpdatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
@@ -641,6 +662,7 @@ public partial class NxMtdDbContext : DbContext
             entity.ToTable("DefectRecord", tb =>
                 {
                     tb.HasComment("Hàng lỗi Rework/Scrap và người gây lỗi");
+                    tb.HasTrigger("trg_DefectRecord_Check");
                     tb.HasTrigger("trg_DefectRecord_PeriodLock");
                 });
 
@@ -668,7 +690,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.RowVer)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-            entity.Property(e => e.ScrapUnitRate).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.ShiftCode)
                 .HasMaxLength(10)
                 .IsUnicode(false);
@@ -689,6 +710,10 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.OrderLineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_DR_OrderLine");
+
+            entity.HasOne(d => d.PieceRate).WithMany(p => p.DefectRecords)
+                .HasForeignKey(d => d.PieceRateId)
+                .HasConstraintName("FK_DR_PieceRate");
 
             entity.HasOne(d => d.RecordedByNavigation).WithMany(p => p.DefectRecordRecordedByNavigations)
                 .HasForeignKey(d => d.RecordedBy)
@@ -718,7 +743,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.DeliveryAddress).HasMaxLength(500);
-            entity.Property(e => e.DeliveryConfirmedAt).HasPrecision(0);
             entity.Property(e => e.DispatchCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -745,7 +769,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<DispatchNoteLine>(entity =>
         {
-            entity.ToTable("DispatchNoteLine", tb => tb.HasComment("Dòng phiếu xuất kho"));
+            entity.ToTable("DispatchNoteLine", tb =>
+                {
+                    tb.HasComment("Dòng phiếu xuất kho");
+                    tb.HasTrigger("trg_DispatchNoteLine_Check");
+                });
 
             entity.HasIndex(e => new { e.DispatchNoteId, e.OrderLineId }, "UQ_DNL").IsUnique();
 
@@ -858,7 +886,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<FgHandoverLine>(entity =>
         {
-            entity.ToTable("FgHandoverLine", tb => tb.HasComment("Dòng bàn giao thành phẩm"));
+            entity.ToTable("FgHandoverLine", tb =>
+                {
+                    tb.HasComment("Dòng bàn giao thành phẩm");
+                    tb.HasTrigger("trg_FgHandoverLine_Check");
+                });
 
             entity.HasIndex(e => new { e.FgHandoverId, e.OrderLineId }, "UQ_FGHL").IsUnique();
 
@@ -989,7 +1021,8 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.MaterialName).HasMaxLength(200);
             entity.Property(e => e.MaterialType)
                 .HasMaxLength(10)
-                .IsUnicode(false);
+                .IsUnicode(false)
+                .HasComputedColumnSql("(CONVERT([varchar](10),case when [Category]='RIB' OR [Category]='INTERLINING' OR [Category]='LINING' OR [Category]='MAIN_FABRIC' then 'FABRIC' else 'TRIM' end))", true);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -999,7 +1032,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<MaterialIssue>(entity =>
         {
-            entity.ToTable("MaterialIssue", tb => tb.HasComment("Phiếu cấp kho: NVL cho tổ cắt/may hoặc BTP cho tổ may"));
+            entity.ToTable("MaterialIssue", tb =>
+                {
+                    tb.HasComment("Phiếu cấp kho: NVL cho tổ cắt/may hoặc BTP cho tổ may");
+                    tb.HasTrigger("trg_MaterialIssue_Check");
+                });
 
             entity.HasIndex(e => new { e.ReceivingTeamId, e.Status }, "IX_MI_Team");
 
@@ -1055,9 +1092,13 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<MaterialIssueLine>(entity =>
         {
-            entity.ToTable("MaterialIssueLine", tb => tb.HasComment("Dòng phiếu cấp kho"));
+            entity.ToTable("MaterialIssueLine", tb =>
+                {
+                    tb.HasComment("Dòng phiếu cấp kho");
+                    tb.HasTrigger("trg_MaterialIssueLine_Check");
+                });
 
-            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.MaterialColor, e.OrderLineId }, "UQ_MIL").IsUnique();
+            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentId }, "UQ_MIL").IsUnique();
 
             entity.Property(e => e.ConfirmedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
@@ -1076,6 +1117,10 @@ public partial class NxMtdDbContext : DbContext
             entity.HasOne(d => d.OrderLine).WithMany(p => p.MaterialIssueLines)
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_MIL_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.MaterialIssueLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_MIL_Component");
         });
 
         modelBuilder.Entity<MaterialReceipt>(entity =>
@@ -1091,16 +1136,14 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.ReceiptCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
-            entity.Property(e => e.ReceiptType)
-                .HasMaxLength(15)
-                .IsUnicode(false);
             entity.Property(e => e.ReturnReason).HasMaxLength(500);
             entity.Property(e => e.RowVer)
                 .IsRowVersion()
                 .IsConcurrencyToken();
             entity.Property(e => e.Source)
                 .HasMaxLength(10)
-                .IsUnicode(false);
+                .IsUnicode(false)
+                .HasComputedColumnSql("(CONVERT([varchar](10),case when [PurchaseOrderId] IS NULL then 'CUSTOMER' else 'SUPPLIER' end))", true);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -1115,12 +1158,7 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasOne(d => d.Order).WithMany(p => p.MaterialReceipts)
                 .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MR_Order");
-
-            entity.HasOne(d => d.OriginalReceipt).WithMany(p => p.InverseOriginalReceipt)
-                .HasForeignKey(d => d.OriginalReceiptId)
-                .HasConstraintName("FK_MR_Original");
 
             entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.MaterialReceipts)
                 .HasForeignKey(d => d.PurchaseOrderId)
@@ -1133,34 +1171,34 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<MaterialReceiptLine>(entity =>
         {
-            entity.ToTable("MaterialReceiptLine", tb => tb.HasComment("Dòng phiếu nhập NVL"));
+            entity.ToTable("MaterialReceiptLine", tb =>
+                {
+                    tb.HasComment("Dòng phiếu nhập NVL");
+                    tb.HasTrigger("trg_MaterialReceiptLine_Check");
+                });
 
             entity.HasIndex(e => new { e.MaterialReceiptId, e.OrderMaterialId }, "UQ_MRL")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NOT NULL)");
+
             entity.HasIndex(e => new { e.MaterialReceiptId, e.MaterialId, e.MaterialColor }, "UQ_MRL_Stock")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NULL)");
 
+            entity.Property(e => e.AcceptedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.MaterialColor).HasMaxLength(50);
 
-            entity.Property(e => e.AcceptedQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.DefectiveQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.ShortQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.ToReplenishQty).HasColumnType("decimal(18, 3)");
+            entity.HasOne(d => d.Material).WithMany(p => p.MaterialReceiptLines)
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("FK_MRL_Material");
 
             entity.HasOne(d => d.MaterialReceipt).WithMany(p => p.MaterialReceiptLines)
                 .HasForeignKey(d => d.MaterialReceiptId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MRL_Receipt");
 
-            entity.HasOne(d => d.Material).WithMany()
-                .HasForeignKey(d => d.MaterialId)
-                .HasConstraintName("FK_MRL_Material");
-
             entity.HasOne(d => d.OrderMaterial).WithMany(p => p.MaterialReceiptLines)
                 .HasForeignKey(d => d.OrderMaterialId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_MRL_OrderMaterial");
 
             entity.HasOne(d => d.OriginalReceiptLine).WithMany(p => p.InverseOriginalReceiptLine)
@@ -1196,11 +1234,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.ConfirmedBy)
                 .HasConstraintName("FK_MRet_ConfirmedBy");
 
-            entity.HasOne(d => d.CuttingTeam).WithMany(p => p.MaterialReturns)
-                .HasForeignKey(d => d.CuttingTeamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_MRet_Team");
-
             entity.HasOne(d => d.MaterialIssue).WithMany(p => p.MaterialReturns)
                 .HasForeignKey(d => d.MaterialIssueId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -1209,7 +1242,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<MaterialReturnLine>(entity =>
         {
-            entity.ToTable("MaterialReturnLine", tb => tb.HasComment("Dòng phiếu trả vải thừa"));
+            entity.ToTable("MaterialReturnLine", tb =>
+                {
+                    tb.HasComment("Dòng phiếu trả vải thừa");
+                    tb.HasTrigger("trg_MaterialReturnLine_Check");
+                });
 
             entity.HasIndex(e => new { e.MaterialReturnId, e.MaterialIssueLineId }, "UQ_MRetL").IsUnique();
 
@@ -1271,6 +1308,7 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+            entity.Property(e => e.IsRead).HasComputedColumnSql("(CONVERT([bit],case when [ReadAt] IS NULL then (0) else (1) end))", true);
             entity.Property(e => e.LinkUrl).HasMaxLength(500);
             entity.Property(e => e.Message).HasMaxLength(1000);
             entity.Property(e => e.PushStatus)
@@ -1285,10 +1323,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false);
             entity.Property(e => e.Title).HasMaxLength(200);
-
-            entity.HasOne(d => d.Announcement).WithMany(p => p.Notifications)
-                .HasForeignKey(d => d.AnnouncementId)
-                .HasConstraintName("FK_Notification_Announcement");
 
             entity.HasOne(d => d.Recipient).WithMany(p => p.Notifications)
                 .HasForeignKey(d => d.RecipientId)
@@ -1328,7 +1362,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<OperationAssignment>(entity =>
         {
-            entity.ToTable("OperationAssignment", tb => tb.HasComment("Phân công công đoạn"));
+            entity.ToTable("OperationAssignment", tb =>
+                {
+                    tb.HasComment("Phân công công đoạn");
+                    tb.HasTrigger("trg_OperationAssignment_Check");
+                });
 
             entity.HasIndex(e => new { e.SewingTeamId, e.OrderId, e.OperationId, e.WorkerId }, "UX_OA_Current")
                 .IsUnique()
@@ -1369,23 +1407,20 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasIndex(e => e.ProductId, "IX_OrderLine_Product");
 
-            entity.HasIndex(e => new { e.OrderId, e.ProductId, e.Color, e.SizeCode }, "UQ_OrderLine").IsUnique();
+            entity.HasIndex(e => new { e.OrderId, e.ProductVariantId }, "UQ_OrderLine").IsUnique();
 
             entity.Property(e => e.CmtUnitPrice).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.Color).HasMaxLength(50);
-            entity.Property(e => e.SizeCode)
-                .HasMaxLength(10)
-                .IsUnicode(false);
 
             entity.HasOne(d => d.Order).WithMany(p => p.OrderLines)
                 .HasForeignKey(d => d.OrderId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OrderLine_Order");
 
-            entity.HasOne(d => d.Product).WithMany(p => p.OrderLines)
-                .HasForeignKey(d => d.ProductId)
+            entity.HasOne(d => d.ProductVariant).WithMany(p => p.OrderLines)
+                .HasPrincipalKey(p => new { p.ProductVariantId, p.ProductId })
+                .HasForeignKey(d => new { d.ProductVariantId, d.ProductId })
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_OrderLine_Product");
+                .HasConstraintName("FK_OrderLine_Variant");
         });
 
         modelBuilder.Entity<OrderMaterial>(entity =>
@@ -1419,38 +1454,12 @@ public partial class NxMtdDbContext : DbContext
                 .HasConstraintName("FK_OM_Order");
         });
 
-        modelBuilder.Entity<OrderMaterialNorm>(entity =>
-        {
-            entity.ToTable("OrderMaterialNorm", tb => tb.HasComment("Định mức NVL cho 1 sản phẩm (vải theo chi tiết, phụ liệu theo sản phẩm)"));
-
-            entity.HasIndex(e => new { e.OrderMaterialId, e.ProductId, e.ComponentName, e.GarmentColor, e.SizeCode }, "UQ_OMN").IsUnique();
-
-            entity.Property(e => e.ComponentName)
-                .HasMaxLength(100)
-                .HasDefaultValue("");
-            entity.Property(e => e.GarmentColor).HasMaxLength(50);
-            entity.Property(e => e.QtyPerPiece).HasColumnType("decimal(18, 4)");
-            entity.Property(e => e.SizeCode)
-                .HasMaxLength(10)
-                .IsUnicode(false);
-            entity.Property(e => e.WastagePercent).HasColumnType("decimal(5, 2)");
-
-            entity.HasOne(d => d.OrderMaterial).WithMany(p => p.OrderMaterialNorms)
-                .HasForeignKey(d => d.OrderMaterialId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_OMN_OrderMaterial");
-
-            entity.HasOne(d => d.Product).WithMany(p => p.OrderMaterialNorms)
-                .HasForeignKey(d => d.ProductId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_OMN_Product");
-        });
-
         modelBuilder.Entity<OutputRecord>(entity =>
         {
             entity.ToTable("OutputRecord", tb =>
                 {
                     tb.HasComment("Sản lượng công đoạn");
+                    tb.HasTrigger("trg_OutputRecord_Check");
                     tb.HasTrigger("trg_OutputRecord_PeriodLock");
                 });
 
@@ -1474,7 +1483,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasMaxLength(10)
                 .IsUnicode(false)
                 .HasDefaultValue("SAVED");
-            entity.Property(e => e.UnitRate).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.UpdatedAt).HasPrecision(0);
 
             entity.HasOne(d => d.Operation).WithMany(p => p.OutputRecords)
@@ -1510,10 +1518,7 @@ public partial class NxMtdDbContext : DbContext
             entity.HasIndex(e => e.PeriodId, "UQ_Payroll_Period").IsUnique();
 
             entity.Property(e => e.ApprovedAt).HasPrecision(0);
-            entity.Property(e => e.ImportedAt).HasPrecision(0);
-            entity.Property(e => e.ImportedFileUrl).HasMaxLength(500);
             entity.Property(e => e.RejectReason).HasMaxLength(500);
-            entity.Property(e => e.ReopenReason).HasMaxLength(500);
             entity.Property(e => e.RowVer)
                 .IsRowVersion()
                 .IsConcurrencyToken();
@@ -1522,7 +1527,6 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("DRAFT");
             entity.Property(e => e.SubmittedAt).HasPrecision(0);
-            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
 
             entity.HasOne(d => d.Period).WithOne(p => p.Payroll)
                 .HasForeignKey<Payroll>(d => d.PeriodId)
@@ -1571,14 +1575,17 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<PieceRate>(entity =>
         {
-            entity.ToTable("PieceRate", tb => tb.HasComment("Đơn giá công đoạn"));
+            entity.ToTable("PieceRate", tb =>
+                {
+                    tb.HasComment("Đơn giá công đoạn");
+                    tb.HasTrigger("trg_PieceRate_Approved");
+                });
 
             entity.HasIndex(e => new { e.OperationId, e.EffectiveDate }, "UQ_PieceRate").IsUnique();
 
-            entity.Property(e => e.ApprovalNote).HasMaxLength(500);
             entity.Property(e => e.ApprovedAt).HasPrecision(0);
+            entity.Property(e => e.DecisionNote).HasMaxLength(500);
             entity.Property(e => e.Rate).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.RejectReason).HasMaxLength(500);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -1601,7 +1608,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.Description).HasMaxLength(1000);
-            entity.Property(e => e.LastSizeRatio).HasMaxLength(200);
             entity.Property(e => e.ProductCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -1613,9 +1619,91 @@ public partial class NxMtdDbContext : DbContext
                 .HasDefaultValue("ACTIVE");
         });
 
+        modelBuilder.Entity<ProductComponent>(entity =>
+        {
+            entity.ToTable("ProductComponent", tb => tb.HasComment("Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)"));
+
+            entity.HasIndex(e => new { e.ProductId, e.ComponentName }, "UQ_PC").IsUnique();
+
+            entity.HasIndex(e => new { e.ProductComponentId, e.ProductId }, "UQ_PC_IdProduct").IsUnique();
+
+            entity.Property(e => e.ComponentName).HasMaxLength(100);
+            entity.Property(e => e.ComponentType)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.PiecesPerGarment).HasDefaultValue((short)1);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("ACTIVE");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductComponents)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PC_Product");
+        });
+
+        modelBuilder.Entity<ProductComponentMaterial>(entity =>
+        {
+            entity.ToTable("ProductComponentMaterial", tb => tb.HasComment("Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết"));
+
+            entity.HasIndex(e => new { e.MaterialId, e.MaterialColor }, "IX_PCM_Material");
+
+            entity.HasIndex(e => new { e.ProductVariantId, e.ProductComponentId, e.MaterialId }, "UQ_PCM").IsUnique();
+
+            entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.MaterialColor)
+                .HasMaxLength(50)
+                .HasDefaultValue("");
+            entity.Property(e => e.QtyPerGarment).HasColumnType("decimal(18, 4)");
+            entity.Property(e => e.SpecNote).HasMaxLength(200);
+            entity.Property(e => e.WastagePercent).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
+
+            entity.HasOne(d => d.Material).WithMany(p => p.ProductComponentMaterials)
+                .HasForeignKey(d => d.MaterialId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PCM_Material");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.ProductComponentMaterials)
+                .HasPrincipalKey(p => new { p.ProductComponentId, p.ProductId })
+                .HasForeignKey(d => new { d.ProductComponentId, d.ProductId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PCM_Component");
+
+            entity.HasOne(d => d.ProductVariant).WithMany(p => p.ProductComponentMaterials)
+                .HasPrincipalKey(p => new { p.ProductVariantId, p.ProductId })
+                .HasForeignKey(d => new { d.ProductVariantId, d.ProductId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PCM_Variant");
+        });
+
+        modelBuilder.Entity<ProductVariant>(entity =>
+        {
+            entity.ToTable("ProductVariant", tb => tb.HasComment("Biến thể mã hàng: màu × size"));
+
+            entity.HasIndex(e => new { e.ProductId, e.Color, e.SizeCode }, "UQ_PV").IsUnique();
+
+            entity.HasIndex(e => new { e.ProductVariantId, e.ProductId }, "UQ_PV_IdProduct").IsUnique();
+
+            entity.Property(e => e.Color).HasMaxLength(50);
+            entity.Property(e => e.SizeCode)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("ACTIVE");
+
+            entity.HasOne(d => d.Product).WithMany(p => p.ProductVariants)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PV_Product");
+        });
+
         modelBuilder.Entity<PurchaseOrder>(entity =>
         {
-            entity.ToTable("PurchaseOrder", tb => tb.HasComment("Đơn mua NVL kèm thanh toán"));
+            entity.ToTable("PurchaseOrder", tb => tb.HasComment("Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)"));
 
             entity.HasIndex(e => e.PoCode, "UQ_PurchaseOrder_Code").IsUnique();
 
@@ -1627,9 +1715,7 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("PENDING_FINALISATION");
             entity.Property(e => e.Note).HasMaxLength(1000);
-            entity.Property(e => e.OrderedAt).HasPrecision(0);
             entity.Property(e => e.PaidAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.PaidAt).HasPrecision(0);
             entity.Property(e => e.PaymentMethod)
                 .HasMaxLength(20)
                 .IsUnicode(false);
@@ -1649,12 +1735,7 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasOne(d => d.Order).WithMany(p => p.PurchaseOrders)
                 .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PO_Order");
-
-            entity.HasOne(d => d.OriginalPurchaseOrder).WithMany(p => p.InverseOriginalPurchaseOrder)
-                .HasForeignKey(d => d.OriginalPurchaseOrderId)
-                .HasConstraintName("FK_PO_Original");
 
             entity.HasOne(d => d.SourceRequest).WithMany(p => p.PurchaseOrders)
                 .HasForeignKey(d => d.SourceRequestId)
@@ -1667,31 +1748,34 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<PurchaseOrderLine>(entity =>
         {
-            entity.ToTable("PurchaseOrderLine", tb => tb.HasComment("Dòng đơn mua NVL"));
+            entity.ToTable("PurchaseOrderLine", tb =>
+                {
+                    tb.HasComment("Dòng đơn mua NVL");
+                    tb.HasTrigger("trg_PurchaseOrderLine_Check");
+                });
 
             entity.HasIndex(e => new { e.PurchaseOrderId, e.OrderMaterialId }, "UQ_POL")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NOT NULL)");
+
             entity.HasIndex(e => new { e.PurchaseOrderId, e.MaterialId, e.MaterialColor }, "UQ_POL_Stock")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NULL)");
 
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
-
             entity.Property(e => e.Amount)
                 .HasComputedColumnSql("(CONVERT([decimal](18,2),[OrderedQty]*[UnitPrice]))", false)
                 .HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.NotReplenishedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.OrderedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
 
-            entity.HasOne(d => d.Material).WithMany()
+            entity.HasOne(d => d.Material).WithMany(p => p.PurchaseOrderLines)
                 .HasForeignKey(d => d.MaterialId)
                 .HasConstraintName("FK_POL_Material");
 
             entity.HasOne(d => d.OrderMaterial).WithMany(p => p.PurchaseOrderLines)
                 .HasForeignKey(d => d.OrderMaterialId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_POL_OrderMaterial");
 
             entity.HasOne(d => d.PurchaseOrder).WithMany(p => p.PurchaseOrderLines)
@@ -1820,11 +1904,14 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<RequestLine>(entity =>
         {
-            entity.ToTable("RequestLine", tb => tb.HasComment("Dòng chi tiết đơn từ"));
+            entity.ToTable("RequestLine", tb =>
+                {
+                    tb.HasComment("Dòng chi tiết đơn từ");
+                    tb.HasTrigger("trg_RequestLine_Check");
+                });
 
             entity.Property(e => e.ItemDescription).HasMaxLength(300);
             entity.Property(e => e.MaterialColor).HasMaxLength(50);
-            entity.Property(e => e.PanelName).HasMaxLength(100);
             entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.ReplenishQty).HasColumnType("decimal(18, 3)");
 
@@ -1839,6 +1926,10 @@ public partial class NxMtdDbContext : DbContext
             entity.HasOne(d => d.OrderLine).WithMany(p => p.RequestLines)
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_RequestLine_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.RequestLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_RequestLine_Component");
 
             entity.HasOne(d => d.Request).WithMany(p => p.RequestLines)
                 .HasForeignKey(d => d.RequestId)
@@ -1892,6 +1983,10 @@ public partial class NxMtdDbContext : DbContext
             entity.HasOne(d => d.OrderLine).WithMany(p => p.StockTransactions)
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_ST_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.StockTransactions)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_ST_Component");
         });
 
         modelBuilder.Entity<Stocktake>(entity =>
@@ -1920,7 +2015,13 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<StocktakeLine>(entity =>
         {
-            entity.ToTable("StocktakeLine", tb => tb.HasComment("Dòng kiểm kê"));
+            entity.ToTable("StocktakeLine", tb =>
+                {
+                    tb.HasComment("Dòng kiểm kê");
+                    tb.HasTrigger("trg_StocktakeLine_Check");
+                });
+
+            entity.HasIndex(e => new { e.StocktakeId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentId }, "UQ_STL").IsUnique();
 
             entity.Property(e => e.BookQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.CountedQty).HasColumnType("decimal(18, 3)");
@@ -1937,6 +2038,10 @@ public partial class NxMtdDbContext : DbContext
             entity.HasOne(d => d.OrderLine).WithMany(p => p.StocktakeLines)
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_STL_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.StocktakeLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_STL_Component");
 
             entity.HasOne(d => d.Stocktake).WithMany(p => p.StocktakeLines)
                 .HasForeignKey(d => d.StocktakeId)
@@ -2085,6 +2190,19 @@ public partial class NxMtdDbContext : DbContext
                 .HasConstraintName("FK_VT_Vehicle");
         });
 
+        modelBuilder.Entity<VwDailyMealTotal>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_DailyMealTotal");
+
+            entity.Property(e => e.MealPrice).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
+        });
+
         modelBuilder.Entity<VwKpiDailyResult>(entity =>
         {
             entity
@@ -2148,6 +2266,30 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false);
         });
 
+        modelBuilder.Entity<VwOrderMaterialDelivery>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_OrderMaterialDelivery");
+
+            entity.Property(e => e.CustomerQty).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
+            entity.Property(e => e.ReceivedQty).HasColumnType("decimal(38, 3)");
+            entity.Property(e => e.RemainingQty).HasColumnType("decimal(38, 3)");
+        });
+
+        modelBuilder.Entity<VwOrderMaterialNorm>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_OrderMaterialNorm");
+
+            entity.Property(e => e.DiffQty).HasColumnType("decimal(19, 3)");
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
+            entity.Property(e => e.NormQty).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.RequiredQty).HasColumnType("decimal(18, 3)");
+        });
+
         modelBuilder.Entity<VwPayrollExportDatum>(entity =>
         {
             entity
@@ -2179,6 +2321,31 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.SundayWorkDays).HasColumnType("decimal(38, 2)");
             entity.Property(e => e.TeamName).HasMaxLength(100);
             entity.Property(e => e.WorkDays).HasColumnType("decimal(38, 2)");
+        });
+
+        modelBuilder.Entity<VwProductLastSizeRatio>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_ProductLastSizeRatio");
+
+            entity.Property(e => e.SizeRatio)
+                .HasMaxLength(8000)
+                .IsUnicode(false);
+        });
+
+        modelBuilder.Entity<VwPurchaseOrderDelivery>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_PurchaseOrderDelivery");
+
+            entity.Property(e => e.GoodsStatus)
+                .HasMaxLength(25)
+                .IsUnicode(false);
+            entity.Property(e => e.PoCode)
+                .HasMaxLength(30)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<VwPurchaseOrderLineStatus>(entity =>
@@ -2230,6 +2397,30 @@ public partial class NxMtdDbContext : DbContext
             entity
                 .HasNoKey()
                 .ToView("vw_TeamPieceHolding");
+        });
+
+        modelBuilder.Entity<VwWorkOrderFabricNeed>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_WorkOrderFabricNeed");
+
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
+            entity.Property(e => e.NeedQty).HasColumnType("decimal(18, 3)");
+        });
+
+        modelBuilder.Entity<VwWorkOrderLineProgress>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_WorkOrderLineProgress");
+
+            entity.Property(e => e.WorkOrderCode)
+                .HasMaxLength(30)
+                .IsUnicode(false);
+            entity.Property(e => e.WorkOrderStatus)
+                .HasMaxLength(20)
+                .IsUnicode(false);
         });
 
         modelBuilder.Entity<VwWorkerDailyEstimatedPay>(entity =>
@@ -2296,18 +2487,22 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<WorkOrderLine>(entity =>
         {
-            entity.ToTable("WorkOrderLine", tb => tb.HasComment("Dòng lệnh cắt"));
+            entity.ToTable("WorkOrderLine", tb =>
+                {
+                    tb.HasComment("Dòng lệnh cắt");
+                    tb.HasTrigger("trg_WorkOrderLine_Check");
+                });
 
-            entity.HasIndex(e => new { e.WorkOrderId, e.OrderLineId, e.PanelName }, "UQ_WOL").IsUnique();
-
-            entity.Property(e => e.PanelName)
-                .HasMaxLength(100)
-                .HasDefaultValue("");
+            entity.HasIndex(e => new { e.WorkOrderId, e.OrderLineId, e.ProductComponentId }, "UQ_WOL").IsUnique();
 
             entity.HasOne(d => d.OrderLine).WithMany(p => p.WorkOrderLines)
                 .HasForeignKey(d => d.OrderLineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WOL_OrderLine");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.WorkOrderLines)
+                .HasForeignKey(d => d.ProductComponentId)
+                .HasConstraintName("FK_WOL_Component");
 
             entity.HasOne(d => d.WorkOrder).WithMany(p => p.WorkOrderLines)
                 .HasForeignKey(d => d.WorkOrderId)
@@ -2317,7 +2512,11 @@ public partial class NxMtdDbContext : DbContext
 
         modelBuilder.Entity<WorkerPieceMovement>(entity =>
         {
-            entity.ToTable("WorkerPieceMovement", tb => tb.HasComment("Giao / thu hồi BTP với công nhân"));
+            entity.ToTable("WorkerPieceMovement", tb =>
+                {
+                    tb.HasComment("Giao / thu hồi BTP với công nhân");
+                    tb.HasTrigger("trg_WorkerPieceMovement_Check");
+                });
 
             entity.HasIndex(e => new { e.SewingTeamId, e.OrderLineId, e.Status }, "IX_WPM_Team");
 

@@ -42,7 +42,7 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             query = query.Where(p => p.ProductCode.Contains(k) || p.ProductName.Contains(k));
         }
         var page = await query.OrderBy(p => p.ProductCode)
-            .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.OrderLines.Any(), p.CreatedAt })
+            .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt })
             .ToPagedAsync(q, ct);
         var items = page.Items.Select(p => new ProductListItemDto(p.ProductId, p.ProductCode, p.ProductName,
             p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt)).ToList();
@@ -52,18 +52,22 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
     public async Task<ProductDetailDto?> GetDetailAsync(int productId, CancellationToken ct)
     {
         var p = await _context.Products.AsNoTracking().Where(x => x.ProductId == productId)
-            .Select(x => new { x.ProductId, x.ProductCode, x.ProductName, x.SampleImageUrl, x.Description, x.LastSizeRatio,
-                x.Status, IsUsed = x.OrderLines.Any(), x.CreatedAt })
+            .Select(x => new { x.ProductId, x.ProductCode, x.ProductName, x.SampleImageUrl, x.Description,
+                x.Status, IsUsed = x.ProductVariants.Any(v => v.OrderLines.Any()), x.CreatedAt })
             .FirstOrDefaultAsync(ct);
-        return p is null ? null : new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
-            p.Description, p.LastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, Array.Empty<AuditLogDto>());
+        if (p is null) return null;
+        // Tỉ lệ size của bàn cắt gần nhất không còn lưu trên Product mà đọc từ vw_ProductLastSizeRatio.
+        var lastSizeRatio = await _context.VwProductLastSizeRatios.AsNoTracking()
+            .Where(v => v.ProductId == productId).Select(v => v.SizeRatio).FirstOrDefaultAsync(ct);
+        return new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
+            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, Array.Empty<AuditLogDto>());
     }
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>
         _context.Products.AnyAsync(p => p.ProductCode == code && (exceptId == null || p.ProductId != exceptId), ct);
 
     public Task<bool> IsUsedAsync(int productId, CancellationToken ct) =>
-        _context.OrderLines.AnyAsync(l => l.ProductId == productId, ct);
+        _context.OrderLines.AnyAsync(l => l.ProductId == productId, ct);   // OrderLine.ProductId khớp ProductVariant (FK ghép)
 
     public async Task<IReadOnlyList<string>> FindInactiveCodesAsync(IReadOnlyCollection<int> productIds, CancellationToken ct)
     {
@@ -93,7 +97,8 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     public CustomerOrderRepository(NxMtdDbContext db) : base(db) { }
 
     public Task<CustomerOrder?> GetWithLinesAsync(int orderId, CancellationToken ct) =>
-        _context.CustomerOrders.Include(o => o.OrderLines).FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
+        _context.CustomerOrders.Include(o => o.OrderLines).ThenInclude(l => l.ProductVariant)
+            .FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
 
     public Task<bool> CustomerExistsAsync(int customerId, CancellationToken ct) =>
         _context.Customers.AnyAsync(c => c.CustomerId == customerId, ct);
@@ -118,7 +123,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
         {
             var k = q.Keyword.Trim();
             query = query.Where(o => o.OrderCode.Contains(k) || o.Customer.CustomerName.Contains(k)
-                                     || o.OrderLines.Any(l => l.Product.ProductCode.Contains(k)));
+                                     || o.OrderLines.Any(l => l.ProductVariant.Product.ProductCode.Contains(k)));
         }
 
         query = q.SortBy?.ToLowerInvariant() switch
@@ -130,7 +135,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
 
         var page = await query.Select(o => new
         {
-            o.OrderId, o.OrderCode, o.Customer.CustomerName, o.ReceivedDate, o.DueDate, o.Status, o.MaterialStatus, o.IsDelayRisk,
+            o.OrderId, o.OrderCode, o.Customer.CustomerName, o.ReceivedDate, o.DueDate, o.Status, o.MaterialStatus, IsDelayRisk = o.IsDelayRisk ?? false,
             TotalQty = o.OrderLines.Sum(l => (int?)l.OrderedQty) ?? 0,
             TotalAmount = o.OrderLines.Sum(l => (decimal?)(l.OrderedQty * l.CmtUnitPrice)) ?? 0m,
         }).ToPagedAsync(q, ct);
@@ -138,7 +143,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
         // Mã hàng của từng đơn lấy bằng 1 query phụ (string.Join trong Select không chắc dịch được sang SQL).
         var ids = page.Items.Select(o => o.OrderId).ToList();
         var codes = (await _context.OrderLines.AsNoTracking().Where(l => ids.Contains(l.OrderId))
-                .Select(l => new { l.OrderId, l.Product.ProductCode }).Distinct().ToListAsync(ct))
+                .Select(l => new { l.OrderId, l.ProductVariant.Product.ProductCode }).Distinct().ToListAsync(ct))
             .GroupBy(x => x.OrderId).ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.ProductCode).OrderBy(c => c)));
 
         var items = page.Items.Select(o => new OrderListItemDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate,
@@ -154,11 +159,12 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
             {
                 OrderId = o.OrderId, OrderCode = o.OrderCode, CustomerId = o.CustomerId, CustomerName = o.Customer.CustomerName,
                 ReceivedDate = o.ReceivedDate, DueDate = o.DueDate, Status = o.Status, MaterialStatus = o.MaterialStatus,
-                IsDelayRisk = o.IsDelayRisk, StopReason = o.StopReason, Note = o.Note, CreatedAt = o.CreatedAt,
+                IsDelayRisk = o.IsDelayRisk ?? false, StopReason = o.StopReason, Note = o.Note, CreatedAt = o.CreatedAt,
                 UpdatedAt = o.UpdatedAt, RowVer = o.RowVer,
-                Lines = o.OrderLines.OrderBy(l => l.Product.ProductCode).ThenBy(l => l.Color).ThenBy(l => l.SizeCode)
-                    .Select(l => new OrderLineDto(l.OrderLineId, l.ProductId, l.Product.ProductCode, l.Product.ProductName,
-                        l.Color, l.SizeCode, l.OrderedQty, l.CmtUnitPrice)).ToList(),
+                Lines = o.OrderLines.OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+                    .Select(l => new OrderLineDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode,
+                        l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
+                        l.OrderedQty, l.CmtUnitPrice)).ToList(),
             }).FirstOrDefaultAsync(ct);
         return dto is null ? null : dto with
         {
@@ -186,7 +192,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     /// <summary>Không chọn CmtUnitPrice (D26).</summary>
     public async Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, CancellationToken ct) =>
         await _context.OrderLines.AsNoTracking().Where(l => l.OrderId == orderId)
-            .OrderBy(l => l.Product.ProductCode).ThenBy(l => l.Color).ThenBy(l => l.SizeCode)
-            .Select(l => new OrderLineLookupDto(l.OrderLineId, l.OrderId, l.ProductId, l.Product.ProductCode,
-                l.Product.ProductName, l.Color, l.SizeCode, l.OrderedQty)).ToListAsync(ct);
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new OrderLineLookupDto(l.OrderLineId, l.OrderId, l.ProductId, l.ProductVariant.Product.ProductCode,
+                l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty)).ToListAsync(ct);
 }

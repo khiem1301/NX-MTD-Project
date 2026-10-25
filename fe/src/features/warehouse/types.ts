@@ -23,17 +23,6 @@ export type SaveMaterialPayload = {
   unit: string;
 };
 
-export type OrderMaterialNorm = {
-  orderMaterialNormId: number;
-  productId: number;
-  productCode: string;
-  componentName: string;
-  garmentColor: string | null;
-  sizeCode: string | null;
-  qtyPerPiece: number;
-  wastagePercent: number;
-};
-
 export type OrderMaterial = {
   orderMaterialId: number;
   orderId: number;
@@ -45,22 +34,15 @@ export type OrderMaterial = {
   materialColor: string;
   requiredQty: number;
   customerQty: number;
-  customerExpectedDate: string | null;
+  /** Số lần khách dự kiến giao (bắt buộc khi khách cấp); receivedCount = số phiếu nhập đã xác nhận. */
+  expectedDeliveryCount: number | null;
+  receivedCount: number;
   purchaseQty: number | null;
   source: string | null;
   note: string | null;
+  /** Số cần theo định mức của mã hàng × số đặt (chỉ đọc). */
   normRequiredQty: number;
   receivedQty: number;
-  norms: OrderMaterialNorm[];
-};
-
-export type SaveNormPayload = {
-  productId: number;
-  componentName?: string;
-  garmentColor?: string;
-  sizeCode?: string;
-  qtyPerPiece: number;
-  wastagePercent: number;
 };
 
 export type SaveOrderMaterialPayload = {
@@ -69,9 +51,8 @@ export type SaveOrderMaterialPayload = {
   materialColor?: string;
   requiredQty: number;
   customerQty: number;
-  customerExpectedDate?: string | null;
+  expectedDeliveryCount?: number | null;
   note?: string;
-  norms: SaveNormPayload[];
 };
 
 export type MaterialReceiptListItem = {
@@ -104,8 +85,6 @@ export type MaterialReceiptLine = {
   unitPrice: number | null;
   toReplenishQty: number | null;
   acceptedQty: number;
-  shortQty: number;
-  defectiveQty: number;
 };
 
 export type MaterialReceipt = Omit<MaterialReceiptListItem, 'lineCount'> & {
@@ -191,8 +170,6 @@ export type SaveReceiptPayload = {
     orderMaterialId?: number;
     purchaseOrderLineId?: number;
     acceptedQty: number;
-    shortQty: number;
-    defectiveQty: number;
   }[];
 };
 
@@ -203,8 +180,6 @@ export type SaveSupplementaryPayload = {
   lines: {
     originalReceiptLineId: number;
     acceptedQty: number;
-    shortQty: number;
-    defectiveQty: number;
   }[];
 };
 
@@ -228,8 +203,6 @@ export type ShortDeliveryLine = {
   materialName: string;
   unit: string;
   materialColor: string;
-  shortQty: number;
-  defectiveQty: number;
   shortfallQty: number;
   replenishQty: number | null;
   replenishedQty: number;
@@ -275,6 +248,9 @@ export type MaterialIssueLine = {
   unit: string | null;
   materialColor: string | null;
   orderLineId: number | null;
+  /** Chỉ dòng cấp BTP: null = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù). */
+  productComponentId: number | null;
+  componentName: string | null;
   productCode: string | null;
   color: string | null;
   sizeCode: string | null;
@@ -303,7 +279,7 @@ export type CreateIssuePayload = {
   receivingTeamId?: number;
   requestId?: number;
   issueDate: string;
-  lines: { materialId?: number; materialColor?: string; orderLineId?: number; issuedQty: number }[];
+  lines: { materialId?: number; materialColor?: string; orderLineId?: number; productComponentId?: number | null; issuedQty: number }[];
 };
 
 export type ConfirmIssuePayload = {
@@ -319,6 +295,9 @@ export type StockBalance = {
   unit: string | null;
   materialColor: string | null;
   orderLineId: number | null;
+  /** Chỉ kho BTP: null = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù). */
+  productComponentId: number | null;
+  componentName: string | null;
   orderId: number | null;
   orderCode: string | null;
   productCode: string | null;
@@ -342,6 +321,7 @@ export type StockCardQuery = {
   materialId?: number;
   materialColor?: string;
   orderLineId?: number;
+  productComponentId?: number | null;
 };
 
 export type StockCardEntry = {
@@ -367,4 +347,65 @@ export type TeamPieceHolding = {
   handedToWorkers: number;
   retrievedFromWorkers: number;
   heldByTeam: number;
+};
+
+/** Đơn đang chạy mà NVL chưa về đủ (materialLines = 0: chưa ai khai báo "NVL của đơn"). */
+export type PendingMaterialOrder = {
+  orderId: number;
+  orderCode: string;
+  customerName: string;
+  dueDate: string;
+  status: string;
+  materialStatus: string;
+  materialLines: number;
+  customerQty: number;
+  toBuyQty: number;
+};
+
+/** NVL khách sẽ cấp mà kho chưa nhận đủ. */
+export type IncomingCustomerMaterial = {
+  orderMaterialId: number;
+  orderId: number;
+  orderCode: string;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  customerQty: number;
+  receivedQty: number;
+  outstandingQty: number;
+  /** Số lần khách dự kiến giao và số lần kho đã nhận (phiếu nhập đã xác nhận). */
+  expectedDeliveryCount: number | null;
+  receivedCount: number;
+};
+
+/** Dòng đơn mua đã đặt hàng mà kho chưa nhận đủ. */
+export type IncomingSupplierMaterial = {
+  purchaseOrderId: number;
+  poCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  supplierName: string | null;
+  expectedDeliveryCount: number | null;
+  receivedCount: number;
+  purchaseOrderLineId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  orderedQty: number;
+  receivedQty: number;
+  outstandingQty: number;
+};
+
+export type IncomingMaterials = { customer: IncomingCustomerMaterial[]; supplier: IncomingSupplierMaterial[] };
+
+/** Điền sẵn phiếu nhập từ màn "NVL chờ nhận": nguồn, đơn / đơn mua và dòng cần nhận với số còn phải nhận. */
+export type ReceiptPreset = {
+  source: string;
+  orderId?: number;
+  purchaseOrderId?: number;
+  orderMaterialId?: number;
+  purchaseOrderLineId?: number;
+  acceptedQty: number;
 };

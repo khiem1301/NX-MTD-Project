@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<ILookupService, LookupService>();
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
+        services.AddScoped<IIncomingMaterialService, IncomingMaterialService>();   // màn NVL chờ nhận của Thủ kho
         services.AddScoped<MaterialSupplyUpdater>();
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
         services.AddScoped<IShortDeliveryService, ShortDeliveryService>();

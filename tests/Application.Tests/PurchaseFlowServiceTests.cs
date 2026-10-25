@@ -28,6 +28,7 @@ public class PurchaseFlowServiceTests
 
     private readonly List<PurchaseOrder> _pos = new();
     private readonly List<Supplier> _suppliers = new();
+    private readonly List<VwPurchaseOrderDelivery> _deliveries = new();
 
     public PurchaseFlowServiceTests()
     {
@@ -38,6 +39,9 @@ public class PurchaseFlowServiceTests
         _uow.Repository<Supplier>().Returns(_supplierRepo);
         _poRepo.Query().Returns(_ => _pos.AsTestAsyncQueryable());
         _supplierRepo.Query().Returns(_ => _suppliers.AsTestAsyncQueryable());
+        var deliveryRepo = Substitute.For<IGenericRepository<VwPurchaseOrderDelivery>>();
+        deliveryRepo.Query().Returns(_ => _deliveries.AsTestAsyncQueryable());
+        _uow.Repository<VwPurchaseOrderDelivery>().Returns(deliveryRepo);   // số phiếu nhập đã xác nhận (vw_PurchaseOrderDelivery)
     }
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
@@ -71,7 +75,7 @@ public class PurchaseFlowServiceTests
 
     private static PlacePurchaseOrderDto Place(int supplierId = 3, DateOnly? orderDate = null, decimal price = 12_000,
         IReadOnlyList<PlacePurchaseLineDto>? lines = null) =>
-        new(supplierId, orderDate ?? Today, Today.AddDays(7), "Giao tại xưởng",
+        new(supplierId, orderDate ?? Today, 2, "Giao tại xưởng",
             lines ?? new[] { new PlacePurchaseLineDto(11, 100, price), new PlacePurchaseLineDto(12, 60, price) }, RowVer);
 
     private static ConfirmPaymentDto Pay(string method = "BankTransfer", DateOnly? date = null, decimal amount = 1_000_000) =>
@@ -157,7 +161,7 @@ public class PurchaseFlowServiceTests
         po.GoodsStatus.Should().Be(PurchaseGoodsStatuses.Ordered);
         po.SupplierId.Should().Be(3);
         po.OrderDate.Should().Be(Today);
-        po.OrderedAt.Should().Be(Now);
+        po.ExpectedDeliveryCount.Should().Be(2);
         po.PurchaseOrderLines.Single(l => l.PurchaseOrderLineId == 12).OrderedQty.Should().Be(60);
         po.PurchaseOrderLines.Should().OnlyContain(l => l.UnitPrice == 12_000);
         _poRepo.Received(1).SetOriginalRowVersion(po, RowVer);
@@ -225,16 +229,16 @@ public class PurchaseFlowServiceTests
     }
 
     [Fact]
-    public async Task Place_DeliveryBeforeOrderDate_ReturnsDateInvalid()
+    public async Task Place_DeliveryCountBelowOne_ReturnsInvalid()
     {
         Po();
         Supplier();
-        var dto = Place() with { ExpectedDeliveryDate = Today.AddDays(-1) };
+        var dto = Place() with { ExpectedDeliveryCount = 0 };
 
         var result = await Flow().PlaceAsync(5, dto, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.PurchaseOrderDateInvalid);
-        result.Message.Should().Be(Messages.PurchaseOrderDeliveryBeforeOrder);
+        result.Message.Should().Be(Messages.PurchaseOrderDeliveryCountInvalid);
     }
 
     [Fact]
@@ -336,7 +340,6 @@ public class PurchaseFlowServiceTests
         po.PaymentMethod.Should().Be(PaymentMethods.BankTransfer);   // PascalCase → mã DB
         po.PaidAmount.Should().Be(1_000_000);
         po.PaymentDate.Should().Be(Today);
-        po.PaidAt.Should().Be(Now);
         _poRepo.Received(1).SetOriginalRowVersion(po, RowVer);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(PurchaseOrder) && e.Action == AuditActions.Confirm));
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
@@ -575,7 +578,7 @@ public class PurchaseFlowValidatorTests
         var validator = new PlacePurchaseOrderDtoValidator();
         var today = new DateOnly(2026, 10, 27);
         PlacePurchaseOrderDto Dto(int supplier, decimal price) =>
-            new(supplier, today, null, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer);
+            new(supplier, today, 1, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer);
 
         validator.Validate(Dto(3, 1000)).IsValid.Should().BeTrue();
         validator.Validate(Dto(0, 1000)).IsValid.Should().BeFalse();

@@ -32,14 +32,14 @@ public sealed class CutHandoverService : ICutHandoverService
     {
         var keyword = query.Keyword?.Trim();
         var page = await Handovers.AsNoTracking()
-            .Where(h => cuttingTeamId == null || h.CuttingTeamId == cuttingTeamId)
+            .Where(h => cuttingTeamId == null || h.WorkOrder.CuttingTeamId == cuttingTeamId)
             .Where(h => string.IsNullOrEmpty(query.Status) || h.Status == query.Status)
             .Where(h => query.WorkOrderId == null || h.WorkOrderId == query.WorkOrderId)
             .Where(h => string.IsNullOrEmpty(keyword) || h.HandoverCode.Contains(keyword)
                         || h.WorkOrder.WorkOrderCode.Contains(keyword) || h.WorkOrder.Order.OrderCode.Contains(keyword))
             .OrderByDescending(h => h.CutHandoverId)
             .Select(h => new CutHandoverListItemDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId,
-                h.WorkOrder.WorkOrderCode, h.WorkOrder.Order.OrderCode, h.CuttingTeamId, h.CuttingTeam.TeamName,
+                h.WorkOrder.WorkOrderCode, h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamName,
                 h.HandedAt, h.Status, h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName,
                 h.ConfirmedAt, h.CutHandoverLines.Sum(l => l.HandedQty)))
             .ToPagedAsync(query, ct);
@@ -50,11 +50,13 @@ public sealed class CutHandoverService : ICutHandoverService
     {
         var dto = await Handovers.AsNoTracking().Where(h => h.CutHandoverId == handoverId)
             .Select(h => new CutHandoverDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId, h.WorkOrder.WorkOrderCode,
-                h.WorkOrder.Order.OrderCode, h.CuttingTeamId, h.CuttingTeam.TeamName, h.HandedAt, h.Status,
+                h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamName, h.HandedAt, h.Status,
                 h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName, h.ConfirmedAt, h.RejectReason,
                 h.CutHandoverLines.OrderBy(l => l.CutHandoverLineId).Select(l => new CutHandoverLineDto(
-                    l.CutHandoverLineId, l.OrderLineId, l.OrderLine.Product.ProductCode, l.OrderLine.Color,
-                    l.OrderLine.SizeCode, l.HandedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
+                    l.CutHandoverLineId, l.OrderLineId, l.ProductComponentId,
+                    l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
+                    l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
+                    l.OrderLine.ProductVariant.SizeCode, l.HandedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<CutHandoverDto>();
         return cuttingTeamId is not null && dto.CuttingTeamId != cuttingTeamId
@@ -66,7 +68,8 @@ public sealed class CutHandoverService : ICutHandoverService
         int cuttingTeamId, CancellationToken ct)
     {
         var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking()
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponent)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
         if (wo is null) return WarehouseFailures.NotFound<IReadOnlyList<HandoverableLineDto>>();
         if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<IReadOnlyList<HandoverableLineDto>>();
@@ -79,7 +82,8 @@ public sealed class CutHandoverService : ICutHandoverService
         var created = await _uow.InTransactionAsync(async () =>
         {
             var wo = await _uow.Repository<WorkOrder>().Query()
-                .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).Include(w => w.CuttingLays)
+                .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+                .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponent).Include(w => w.CuttingLays)
                 .FirstOrDefaultAsync(w => w.WorkOrderId == dto.WorkOrderId, ct);
             if (wo is null) return WarehouseFailures.NotFound<int>();
             if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
@@ -94,10 +98,9 @@ public sealed class CutHandoverService : ICutHandoverService
             {
                 HandoverCode = await _codes.NextAsync<CutHandover>(DocumentPrefixes.CutHandover, h => h.HandoverCode, ct),
                 WorkOrderId = wo.WorkOrderId,
-                CuttingTeamId = cuttingTeamId,
                 HandedAt = _clock.Now,
                 Status = HandoverStatuses.Pending,
-                CutHandoverLines = dto.Lines.Select(l => new CutHandoverLine { OrderLineId = l.OrderLineId, HandedQty = l.HandedQty }).ToList(),
+                CutHandoverLines = dto.Lines.Select(l => new CutHandoverLine { OrderLineId = l.OrderLineId, ProductComponentId = l.ProductComponentId, HandedQty = l.HandedQty }).ToList(),
             };
             // Số đã đưa vào kho thì không sửa nữa: khóa các bàn cắt đang RECORDED của lệnh.
             foreach (var lay in wo.CuttingLays.Where(l => l.Status == CuttingLayStatuses.Recorded))
@@ -135,7 +138,7 @@ public sealed class CutHandoverService : ICutHandoverService
 
             var today = _clock.Today;
             var movements = handover.CutHandoverLines.Where(l => l.ConfirmedQty > 0)
-                .Select(l => new StockMovement(StockKey.SemiFinished(l.OrderLineId), l.ConfirmedQty!.Value,
+                .Select(l => new StockMovement(StockKey.SemiFinished(l.OrderLineId, l.ProductComponentId), l.ConfirmedQty!.Value,
                     StockDocTypes.CutHandover, handover.CutHandoverId, l.CutHandoverLineId, today)).ToList();
             if (movements.Count > 0)
             {
@@ -184,35 +187,64 @@ public sealed class CutHandoverService : ICutHandoverService
         return Result.Success(WarehouseMessages.HandoverRejected);
     }
 
+    public async Task<Result> CancelAsync(int handoverId, int cuttingTeamId, CancellationToken ct)
+    {
+        var handover = await Handovers.Include(h => h.WorkOrder)
+            .FirstOrDefaultAsync(h => h.CutHandoverId == handoverId && h.WorkOrder.CuttingTeamId == cuttingTeamId, ct);
+        if (handover is null) return WarehouseFailures.NotFound();
+        if (handover.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
+
+        handover.Status = HandoverStatuses.Cancelled;
+        // Phiếu này đã khóa các bàn cắt của lệnh khi lập; còn phiếu chờ / đã nhận khác thì giữ khóa, hết thì mở lại để sửa bàn cắt.
+        var workOrderId = handover.WorkOrderId;
+        var stillHanded = await Handovers.AnyAsync(h => h.WorkOrderId == workOrderId && h.CutHandoverId != handoverId
+            && (h.Status == HandoverStatuses.Pending || h.Status == HandoverStatuses.Confirmed), ct);
+        if (!stillHanded)
+        {
+            var locked = await _uow.Repository<CuttingLay>().Query()
+                .Where(l => l.WorkOrderId == workOrderId && l.Status == CuttingLayStatuses.Locked).ToListAsync(ct);
+            foreach (var lay in locked) lay.Status = CuttingLayStatuses.Recorded;
+        }
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.CutHandoverCancelled);
+    }
+
     /// <summary>Đã cắt (Σ số thực tế các bàn) − đã bàn giao (phiếu chờ nhận + đã nhận, tính theo số tổ giao).</summary>
     private async Task<IReadOnlyList<HandoverableLineDto>> HandoverableAsync(WorkOrder wo, CancellationToken ct)
     {
         var cut = await _uow.Repository<CuttingLayLine>().Query().Where(l => l.CuttingLay.WorkOrderId == wo.WorkOrderId)
-            .GroupBy(l => l.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+            .GroupBy(l => new { l.OrderLineId, l.ProductComponentId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
+            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentId), x => x.Qty, ct);
         var handed = await _uow.Repository<CutHandoverLine>().Query()
             .Where(l => l.CutHandover.WorkOrderId == wo.WorkOrderId
                         && (l.CutHandover.Status == HandoverStatuses.Pending || l.CutHandover.Status == HandoverStatuses.Confirmed))
-            .GroupBy(l => l.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(l => l.HandedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+            .GroupBy(l => new { l.OrderLineId, l.ProductComponentId }).Select(g => new { g.Key, Qty = g.Sum(l => l.HandedQty) })
+            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentId), x => x.Qty, ct);
 
-        return wo.WorkOrderLines.Select(l => l.OrderLine).DistinctBy(l => l.OrderLineId)
-            .OrderBy(l => l.Color).ThenBy(l => l.SizeCode)
+        // Mỗi (dòng đơn, chi tiết) của lệnh một dòng: lệnh thường chỉ có bộ đủ (chi tiết null), lệnh cắt bù có từng chi tiết.
+        return wo.WorkOrderLines.DistinctBy(l => (l.OrderLineId, l.ProductComponentId))
+            .OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
+            .ThenBy(l => l.ProductComponent == null ? 0 : l.ProductComponent.SortOrder)
             .Select(l =>
             {
-                var c = cut.GetValueOrDefault(l.OrderLineId);
-                var h = handed.GetValueOrDefault(l.OrderLineId);
-                return new HandoverableLineDto(l.OrderLineId, l.Color, l.SizeCode, c, h, Math.Max(0, c - h));
+                var c = cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentId));
+                var h = handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentId));
+                return new HandoverableLineDto(l.OrderLineId, l.ProductComponentId, l.ProductComponent?.ComponentName,
+                    l.OrderLine.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, c, h, Math.Max(0, c - h));
             }).ToList();
     }
 
     private static Result<int>? CheckRemaining(CreateCutHandoverDto dto, IReadOnlyList<HandoverableLineDto> remaining)
     {
-        var byLine = remaining.ToDictionary(r => r.OrderLineId);
-        if (dto.Lines.Any(l => !byLine.ContainsKey(l.OrderLineId)))
+        var byLine = remaining.ToDictionary(r => (r.OrderLineId, r.ProductComponentId));
+        if (dto.Lines.Any(l => !byLine.ContainsKey((l.OrderLineId, l.ProductComponentId))))
             return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
-        var over = dto.Lines.Where(l => l.HandedQty > byLine[l.OrderLineId].RemainingQty)
-            .Select(l => $"{byLine[l.OrderLineId].Color}-{byLine[l.OrderLineId].SizeCode}: còn {byLine[l.OrderLineId].RemainingQty}, giao {l.HandedQty}")
+        var over = dto.Lines.Where(l => l.HandedQty > byLine[(l.OrderLineId, l.ProductComponentId)].RemainingQty)
+            .Select(l =>
+            {
+                var r = byLine[(l.OrderLineId, l.ProductComponentId)];
+                return $"{r.Color}-{r.SizeCode}{(r.ComponentName is null ? string.Empty : " (" + r.ComponentName + ")")}: còn {r.RemainingQty}, giao {l.HandedQty}";
+            })
             .ToList();
         return over.Count == 0
             ? null

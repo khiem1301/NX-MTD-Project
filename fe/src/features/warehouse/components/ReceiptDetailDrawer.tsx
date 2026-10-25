@@ -19,6 +19,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
+import { useAttachments } from '@/hooks/useAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
@@ -46,8 +47,6 @@ const lineColumns: TableColumnsType<MaterialReceiptLine> = [
     render: (v: number | null) => (v === null ? '—' : formatQty(v)),
   },
   { title: LABELS.acceptedQty, dataIndex: 'acceptedQty', align: 'right', render: formatQty },
-  { title: LABELS.shortQty, dataIndex: 'shortQty', align: 'right', render: formatQty },
-  { title: LABELS.defectiveQty, dataIndex: 'defectiveQty', align: 'right', render: formatQty },
 ];
 
 /** Chi tiết phiếu nhập; Quản đốc xác nhận / trả lại (UC39), Thủ kho sửa phiếu chờ hoặc bị trả. */
@@ -59,6 +58,9 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
   const download = useDownloadReceipt();
   const [returning, setReturning] = useState(false);
   const r = receipt.data;
+  // Quản đốc chỉ xác nhận khi phiếu có ảnh chứng từ giao hàng (BE cũng chặn).
+  const photos = useAttachments(ATTACHMENT_OWNER.MaterialReceipt, r?.materialReceiptId ?? null);
+  const missingPhoto = photos.isSuccess && photos.data.length === 0;
   const pending = r?.status === RECEIPT_STATUS.PENDING;
   // Phiếu bổ sung không sửa được: nếu bị trả lại thì Thủ kho lập phiếu bổ sung mới.
   const editable = r?.receiptType === 'NEW' && (pending || r?.status === RECEIPT_STATUS.RETURNED);
@@ -81,7 +83,7 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
             title={MESSAGES.warehouse.confirmReceipt}
             onConfirm={() => confirm.mutate(r.materialReceiptId, { onSuccess: onClose })}
           >
-            <Button type="primary" loading={confirm.isPending}>
+            <Button type="primary" loading={confirm.isPending} disabled={missingPhoto}>
               {LABELS.confirm}
             </Button>
           </Popconfirm>
@@ -112,6 +114,9 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
               message={`${LABELS.returnReason}: ${r.returnReason}`}
               style={{ marginBottom: 16 }}
             />
+          )}
+          {pending && missingPhoto && (
+            <Alert type="warning" showIcon message={MESSAGES.warehouse.receiptPhotoMissing} style={{ marginBottom: 16 }} />
           )}
           {r.shortDeliveryRequestId !== null && (
             <Alert

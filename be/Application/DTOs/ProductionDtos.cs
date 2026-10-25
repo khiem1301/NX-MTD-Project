@@ -54,6 +54,9 @@ public sealed record OperationAssignmentDto(
 
 public sealed record AssignOperationDto(int OrderId, int OperationId, int WorkerId);
 
+/// <summary>Một công nhân làm nhiều công đoạn: phân công một lần, hợp lệ hết mới lưu.</summary>
+public sealed record AssignOperationsDto(int OrderId, int WorkerId, IReadOnlyList<int> OperationIds);
+
 /// <summary>Đổi phân công = đóng dòng cũ rồi mở dòng mới cho người khác (giữ lịch sử).</summary>
 public sealed record ReplaceAssignmentDto(int NewWorkerId);
 

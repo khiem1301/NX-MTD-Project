@@ -62,7 +62,6 @@ public sealed class MaterialService : IMaterialService
             {
                 MaterialCode = code,
                 MaterialName = name,
-                MaterialType = dto.MaterialType,
                 Category = dto.Category,
                 Unit = dto.Unit.Trim(),
                 Status = MaterialStatuses.Active,
@@ -82,7 +81,6 @@ public sealed class MaterialService : IMaterialService
             return Conflict(WarehouseMessages.MaterialNameDuplicate);
 
         material.MaterialName = name;
-        material.MaterialType = dto.MaterialType;
         material.Category = dto.Category;
         material.Unit = dto.Unit.Trim();
         await _uow.SaveChangesAsync();
@@ -114,7 +112,7 @@ public sealed class MaterialService : IMaterialService
     }
 
     private static readonly Expression<Func<Material, MaterialDto>> ToDto = m =>
-        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType, m.Category, m.Unit, m.Status,
+        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit, m.Status,
             m.CreatedAt);
 
     private static readonly Func<Material, MaterialDto> MapDto = ToDto.Compile();

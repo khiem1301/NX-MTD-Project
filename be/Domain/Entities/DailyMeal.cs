@@ -20,13 +20,7 @@ public partial class DailyMeal
 
     public string? GuestNote { get; set; }
 
-    public int TeamTotal { get; set; }
-
-    public int? TotalMeals { get; set; }
-
     public decimal? MealPrice { get; set; }
-
-    public decimal? TotalAmount { get; set; }
 
     public bool AttendanceIncomplete { get; set; }
 

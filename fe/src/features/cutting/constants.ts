@@ -48,11 +48,27 @@ export const SHIFT_LABEL: Record<string, string> = Object.fromEntries(
 
 export const CUTTING_TEAM_TYPE = 'CUTTING';
 
+/** Khóa một dòng của lệnh cắt: dòng đơn + chi tiết (trống = cả bộ). Lệnh cắt bù có nhiều chi tiết cho cùng một dòng đơn. */
+export const lineKey = (l: { orderLineId: number; productComponentId: number | null }) =>
+  `${l.orderLineId}:${l.productComponentId ?? ''}`;
+
+export const parseLineKey = (key: string) => {
+  const [orderLineId, productComponentId] = key.split(':');
+  return { orderLineId: Number(orderLineId), productComponentId: productComponentId ? Number(productComponentId) : null };
+};
+
 export const LABELS = {
   createReplacement: 'Lập lệnh cắt bù',
   replacementRequest: 'Đơn cắt bù đã duyệt',
   selectReplacementRequest: 'Chọn đơn cắt bù',
   panelName: 'Chi tiết cần cắt bù',
+  cancelHandover: 'Rút phiếu',
+  completeWorkOrder: 'Đóng lệnh',
+  completeReason: 'Lý do (bắt buộc khi BTP vào kho chưa đủ kế hoạch)',
+  result: 'Kết quả',
+  resultSummary: 'Kế hoạch {planned} · đã cắt {cut} · đã bàn giao {handed}',
+  component: 'Chi tiết',
+  wholeGarment: 'Cả bộ',
   noReplacementRequest: 'Chưa có đơn cắt bù nào đã duyệt và chờ lập lệnh.',
   workOrdersTitle: 'Lệnh cắt',
   workOrderCode: 'Số lệnh',

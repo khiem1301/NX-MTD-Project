@@ -40,11 +40,11 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
             Arg.Any<CancellationToken>()).Returns("CAP-20261021-001");
         _requests.MarkCompletedAsync(Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _sut = new MaterialIssueService(Uow, _stock, new FabricPlanner(Uow), _codes, Clock,
-            NullLogger<MaterialIssueService>.Instance, _requests);
+            NullLogger<MaterialIssueService>.Instance, _requests, Audit);
     }
 
     private static CreateMaterialIssueDto Dto(int? requestId) => new(WarehouseTypes.SemiFinished, null, OrderId, SewingTeamId,
-        requestId, new DateOnly(2026, 10, 21), [new CreateIssueLineDto(null, null, LineId, 50)]);
+        requestId, new DateOnly(2026, 10, 21), [new CreateIssueLineDto(null, null, LineId, null, 50)]);
 
     private void GivenRequest(string status, int createdByTeamId = SewingTeamId, string type = RequestTypes.SemiFinishedRequisition) =>
         _requestRows.Add(new Request { RequestId = RequestId, RequestTypeCode = type, Status = status, CreatedByTeamId = createdByTeamId });

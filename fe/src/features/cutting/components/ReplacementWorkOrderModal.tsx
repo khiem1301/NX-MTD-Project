@@ -80,7 +80,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
               )}
             </Descriptions>
             <Table
-              rowKey={(l) => `${l.orderLineId}-${l.panelName}`}
+              rowKey={(l) => `${l.orderLineId}-${l.productComponentId}`}
               size="small"
               pagination={false}
               dataSource={selected.lines}
@@ -91,7 +91,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
                   key: 'line',
                   render: (_, l) => `${l.color} - ${l.sizeCode}`,
                 },
-                { title: LABELS.panelName, dataIndex: 'panelName' },
+                { title: LABELS.panelName, dataIndex: 'componentName' },
                 { title: LABELS.plannedQty, dataIndex: 'quantity', align: 'right' },
               ]}
             />

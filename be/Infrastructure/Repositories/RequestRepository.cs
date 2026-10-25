@@ -68,8 +68,9 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                 Lines = r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new RequestLineDto(
                     l.RequestLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName, l.MaterialColor,
                     l.OrderLineId,
-                    l.OrderLine == null ? null : l.OrderLine.Product.ProductCode + " · " + l.OrderLine.Color + " · " + l.OrderLine.SizeCode,
-                    l.PanelName, l.ItemDescription, l.Quantity, l.ReplenishQty)).ToList(),
+                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode + " · " + l.OrderLine.ProductVariant.Color + " · " + l.OrderLine.ProductVariant.SizeCode,
+                    l.ProductComponentId, l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
+                    l.ItemDescription, l.Quantity, l.ReplenishQty)).ToList(),
             })
             .FirstOrDefaultAsync(ct);
         if (dto is null) return null;

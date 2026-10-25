@@ -18,8 +18,6 @@ public partial class Product
 
     public string? Description { get; set; }
 
-    public string? LastSizeRatio { get; set; }
-
     public string Status { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
@@ -34,9 +32,9 @@ public partial class Product
 
     public virtual Operation? Operation { get; set; }
 
-    public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
+    public virtual ICollection<ProductComponent> ProductComponents { get; set; } = new List<ProductComponent>();
 
-    public virtual ICollection<OrderMaterialNorm> OrderMaterialNorms { get; set; } = new List<OrderMaterialNorm>();
+    public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();
 
     public virtual ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
 }

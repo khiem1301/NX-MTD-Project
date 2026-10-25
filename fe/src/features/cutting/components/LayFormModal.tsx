@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { DatePicker, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS, SHIFT_OPTIONS } from '../constants';
+import { LABELS, SHIFT_OPTIONS, lineKey, parseLineKey } from '../constants';
 import { useSaveLay } from '../hooks/useCutting';
 import type { CuttingLay, SaveCuttingLayPayload, WorkOrder } from '../types';
 import { LayLinesTable } from './LayLinesTable';
@@ -42,14 +42,14 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
             fabricColor: lay.fabricColor,
             plyCount: lay.plyCount,
             note: lay.note ?? undefined,
-            ratio: Object.fromEntries(lay.lines.map((l) => [String(l.orderLineId), l.ratioValue])),
+            ratio: Object.fromEntries(lay.lines.map((l) => [lineKey(l), l.ratioValue])),
             actual: Object.fromEntries(
               lay.lines
                 .filter((l) => l.actualQty !== l.calculatedQty)
-                .map((l) => [String(l.orderLineId), l.actualQty]),
+                .map((l) => [lineKey(l), l.actualQty]),
             ),
             reason: Object.fromEntries(
-              lay.lines.map((l) => [String(l.orderLineId), l.adjustReason ?? undefined]),
+              lay.lines.map((l) => [lineKey(l), l.adjustReason ?? undefined]),
             ),
           }
         : {
@@ -65,7 +65,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
     const lines = Object.entries(ratio ?? {})
       .filter(([, r]) => (r ?? 0) > 0)
       .map(([id, r]) => ({
-        orderLineId: Number(id),
+        ...parseLineKey(id),
         ratioValue: r ?? 0,
         actualQty: actual?.[id] ?? undefined,
         adjustReason: reason?.[id]?.trim() || undefined,

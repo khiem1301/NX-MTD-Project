@@ -10,8 +10,10 @@ import type {
   ProductDetail,
   ProductListItem,
   ProductQuery,
+  ProductSpec,
   SaveCustomerPayload,
   SaveProductPayload,
+  SaveProductSpecPayload,
   UpdateOrderPayload,
 } from '../types';
 
@@ -42,6 +44,8 @@ export const productApi = {
   update: (id: number, body: SaveProductPayload) => put<unknown>(API.products.byId(id), body),
   discontinue: (id: number) => post<unknown>(API.products.discontinue(id)),
   reactivate: (id: number) => post<unknown>(API.products.reactivate(id)),
+  getSpec: (id: number) => get<ProductSpec>(API.products.spec(id)),
+  saveSpec: (id: number, body: SaveProductSpecPayload) => put<ProductSpec>(API.products.spec(id), body),
 };
 
 export const orderApi = {

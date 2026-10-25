@@ -75,6 +75,7 @@ public sealed class StockService : IStockService
         MaterialId = move.Key.MaterialId,
         MaterialColor = move.Key.MaterialColor,
         OrderLineId = move.Key.OrderLineId,
+        ProductComponentId = move.Key.ProductComponentId,
         SourceDocType = move.SourceDocType,
         SourceDocId = move.SourceDocId,
         SourceLineId = move.SourceLineId,

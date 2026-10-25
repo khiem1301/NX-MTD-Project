@@ -76,6 +76,33 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         return Result<int>.Success(row.OperationAssignmentId, Messages.AssignmentSaved);
     }
 
+    public async Task<Result<int>> AssignManyAsync(AssignOperationsDto dto, CancellationToken ct)
+    {
+        var team = _guard.ResolveSewingTeam(null);
+        if (!team.IsSuccess) return Fail.As<int>(team);
+
+        // Kiểm hợp lệ từng công đoạn trước; một công đoạn sai thì không lưu công đoạn nào.
+        var operationIds = dto.OperationIds.Distinct().ToList();
+        foreach (var operationId in operationIds)
+        {
+            var check = await ValidateAsync(team.Data, dto.OrderId, operationId, dto.WorkerId, ct);
+            if (check is not null) return Fail.As<int>(check);
+        }
+
+        var already = await Assignments.AsNoTracking()
+            .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.OrderId && a.WorkerId == dto.WorkerId && a.ValidTo == null
+                        && operationIds.Contains(a.OperationId))
+            .Select(a => a.OperationId).ToListAsync(ct);
+        var rows = operationIds.Except(already)
+            .Select(id => NewRow(team.Data, dto.OrderId, id, dto.WorkerId, null)).ToList();
+        if (rows.Count > 0)
+        {
+            await _uow.Repository<OperationAssignment>().AddRangeAsync(rows);
+            await _uow.SaveChangesAsync();
+        }
+        return Result<int>.Success(rows.Count, Messages.AssignmentSaved);
+    }
+
     public async Task<Result<int>> ReplaceAsync(int assignmentId, ReplaceAssignmentDto dto, CancellationToken ct)
     {
         var team = _guard.ResolveSewingTeam(null);

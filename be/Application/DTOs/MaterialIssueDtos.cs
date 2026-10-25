@@ -10,8 +10,8 @@ public sealed record MaterialIssueListItemDto(
 /// <summary>Dòng NVL có MaterialId + MaterialColor; dòng BTP có OrderLineId.</summary>
 public sealed record MaterialIssueLineDto(
     int MaterialIssueLineId, int? MaterialId, string? MaterialCode, string? MaterialName, string? Unit,
-    string? MaterialColor, int? OrderLineId, string? ProductCode, string? Color, string? SizeCode, decimal IssuedQty,
-    decimal? ConfirmedQty, string? DiscrepancyReason);
+    string? MaterialColor, int? OrderLineId, int? ProductComponentId, string? ComponentName, string? ProductCode,
+    string? Color, string? SizeCode, decimal IssuedQty, decimal? ConfirmedQty, string? DiscrepancyReason);
 
 public sealed record MaterialIssueDto(
     int MaterialIssueId, string IssueCode, string WarehouseType, int OrderId, string OrderCode, int? WorkOrderId,
@@ -19,7 +19,9 @@ public sealed record MaterialIssueDto(
     string Status, string IssuedByName, string? ReceivedByName, DateTime? ReceivedAt, string? RejectReason,
     DateTime CreatedAt, IReadOnlyList<MaterialIssueLineDto> Lines);
 
-public sealed record CreateIssueLineDto(int? MaterialId, string? MaterialColor, int? OrderLineId, decimal IssuedQty);
+/// <param name="ProductComponentId">Chỉ cấp BTP: null = bộ đủ; có giá trị = chi tiết lẻ (cắt bù).</param>
+public sealed record CreateIssueLineDto(int? MaterialId, string? MaterialColor, int? OrderLineId, int? ProductComponentId,
+    decimal IssuedQty);
 
 /// <summary>
 /// MATERIAL: cấp vải cho tổ cắt theo lệnh cắt (WorkOrderId bắt buộc; đơn và tổ lấy từ lệnh).

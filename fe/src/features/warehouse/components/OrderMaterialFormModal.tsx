@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, DatePicker, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useMaterialOptions, useOrderLineOptions } from '@/hooks/useLookups';
+import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
-import type { OrderMaterial, SaveNormPayload, SaveOrderMaterialPayload } from '../types';
+import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
-import { NormFields } from './NormFields';
 
 type OrderMaterialFormModalProps = {
   open: boolean;
@@ -17,12 +15,7 @@ type OrderMaterialFormModalProps = {
   onClose: () => void;
 };
 
-type FormValues = Omit<SaveOrderMaterialPayload, 'customerExpectedDate'> & {
-  customerExpectedDate?: Dayjs | null;
-};
-
-const DATE_FORMAT = 'DD/MM/YYYY';
-const API_DATE = 'YYYY-MM-DD';
+type FormValues = SaveOrderMaterialPayload;
 
 export function OrderMaterialFormModal({
   open,
@@ -33,7 +26,6 @@ export function OrderMaterialFormModal({
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOrderMaterial();
   const materials = useMaterialOptions();
-  const orderLines = useOrderLineOptions(orderId);
   const customerQty = Form.useWatch('customerQty', form);
   const [materialOpen, setMaterialOpen] = useState(false);
 
@@ -44,14 +36,7 @@ export function OrderMaterialFormModal({
     form.setFieldsValue({
       ...orderMaterial,
       note: orderMaterial.note ?? undefined,
-      customerExpectedDate: orderMaterial.customerExpectedDate
-        ? dayjs(orderMaterial.customerExpectedDate)
-        : null,
-      norms: orderMaterial.norms.map<SaveNormPayload>((n) => ({
-        ...n,
-        garmentColor: n.garmentColor ?? undefined,
-        sizeCode: n.sizeCode ?? undefined,
-      })),
+      expectedDeliveryCount: orderMaterial.expectedDeliveryCount ?? undefined,
     });
   }, [open, orderMaterial, form]);
 
@@ -59,8 +44,8 @@ export function OrderMaterialFormModal({
     const body: SaveOrderMaterialPayload = {
       ...values,
       orderId,
-      norms: values.norms ?? [],
-      customerExpectedDate: values.customerExpectedDate?.format(API_DATE) ?? null,
+      // Khách không cấp thì không có số lần giao (CK_OM_Delivery).
+      expectedDeliveryCount: (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
     };
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
@@ -80,7 +65,7 @@ export function OrderMaterialFormModal({
   return (
     <Modal
       open={open}
-      width={980}
+      width={760}
       title={
         orderMaterial
           ? `${MESSAGES.common.edit} ${orderMaterial.materialCode}`
@@ -133,18 +118,16 @@ export function OrderMaterialFormModal({
             <InputNumber min={0} style={{ width: 130 }} />
           </Form.Item>
           <Form.Item
-            name="customerExpectedDate"
-            label={LABELS.customerExpectedDate}
+            name="expectedDeliveryCount"
+            label={LABELS.expectedDeliveryCount}
             rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
           >
-            <DatePicker format={DATE_FORMAT} />
+            <InputNumber min={1} max={99} precision={0} disabled={(customerQty ?? 0) <= 0} style={{ width: 150 }} />
           </Form.Item>
         </Space>
         <Form.Item name="note" label={LABELS.note}>
           <Input.TextArea rows={2} maxLength={500} />
         </Form.Item>
-        <Divider orientation="left">{LABELS.norms}</Divider>
-        <NormFields orderLines={orderLines.data ?? []} />
       </Form>
       <MaterialFormModal
         open={materialOpen}

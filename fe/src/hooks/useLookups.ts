@@ -18,6 +18,14 @@ export const useOrderLineOptions = (orderId: number | undefined) =>
     staleTime: LOOKUP_STALE_MS,
   });
 
+export const useOrderLineComponents = (orderLineId: number | undefined) =>
+  useQuery({
+    queryKey: ['lookups', 'order-line-components', orderLineId],
+    queryFn: () => lookupApi.orderLineComponents(orderLineId ?? 0),
+    enabled: orderLineId !== undefined,
+    staleTime: LOOKUP_STALE_MS,
+  });
+
 export const useTeamOptions = (teamType: string) =>
   useQuery({
     queryKey: ['lookups', 'teams', teamType],

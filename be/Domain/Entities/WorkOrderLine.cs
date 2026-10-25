@@ -14,11 +14,13 @@ public partial class WorkOrderLine
 
     public int OrderLineId { get; set; }
 
-    public string PanelName { get; set; } = null!;
+    public int? ProductComponentId { get; set; }
 
     public int PlannedQty { get; set; }
 
     public virtual OrderLine OrderLine { get; set; } = null!;
+
+    public virtual ProductComponent? ProductComponent { get; set; }
 
     public virtual WorkOrder WorkOrder { get; set; } = null!;
 }

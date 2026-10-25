@@ -51,7 +51,7 @@ public class WorkerPayServiceTests
 
     private static OrderLine Line() => new()
     {
-        Order = new CustomerOrder { OrderCode = "DH001" }, Product = new Product { ProductCode = "MH001" },
+        Order = new CustomerOrder { OrderCode = "DH001" }, ProductVariant = TestVariant.Make(1),
     };
 
     // ---------- GetMyEstimatedPayAsync ----------
@@ -137,22 +137,22 @@ public class WorkerPayServiceTests
     {
         _outputs.Add(new OutputRecord
         {
-            WorkerId = 1, WorkDate = Today, ShiftCode = "MORNING", Quantity = 50, UnitRate = 1_200m,
+            WorkerId = 1, WorkDate = Today, ShiftCode = "MORNING", Quantity = 50, PieceRate = new PieceRate { Rate = 1_200m },
             Operation = Op("OP20", "Vắt sổ", 2), OrderLine = Line(),
         });
         _outputs.Add(new OutputRecord
         {
-            WorkerId = 1, WorkDate = Today, ShiftCode = "MORNING", Quantity = 40, UnitRate = 800m,
+            WorkerId = 1, WorkDate = Today, ShiftCode = "MORNING", Quantity = 40, PieceRate = new PieceRate { Rate = 800m },
             Operation = Op("OP10", "May cổ", 1), OrderLine = Line(),
         });
         _outputs.Add(new OutputRecord   // của người khác và của ngày khác: không được lẫn vào
         {
-            WorkerId = 2, WorkDate = Today, ShiftCode = "MORNING", Quantity = 1, UnitRate = 1m,
+            WorkerId = 2, WorkDate = Today, ShiftCode = "MORNING", Quantity = 1, PieceRate = new PieceRate { Rate = 1m },
             Operation = Op("OP10", "May cổ", 1), OrderLine = Line(),
         });
         _outputs.Add(new OutputRecord
         {
-            WorkerId = 1, WorkDate = Today.AddDays(-1), ShiftCode = "MORNING", Quantity = 1, UnitRate = 1m,
+            WorkerId = 1, WorkDate = Today.AddDays(-1), ShiftCode = "MORNING", Quantity = 1, PieceRate = new PieceRate { Rate = 1m },
             Operation = Op("OP10", "May cổ", 1), OrderLine = Line(),
         });
 
@@ -170,7 +170,7 @@ public class WorkerPayServiceTests
         DefectRecord Defect(string type, string status, int qty, decimal? rate) => new()
         {
             ResponsibleWorkerId = 1, WorkDate = Today, DefectType = type, Status = status, Quantity = qty,
-            ScrapUnitRate = rate, Operation = Op("OP10", "May cổ", 1), OrderLine = Line(),
+            PieceRate = rate is null ? null : new PieceRate { Rate = rate.Value }, Operation = Op("OP10", "May cổ", 1), OrderLine = Line(),
         };
         _defects.Add(Defect("SCRAP", "RECORDED", 3, 2_000m));        // tính
         _defects.Add(Defect("SCRAP", "CANCELLED", 5, 2_000m));       // đã hủy: bỏ

@@ -51,7 +51,7 @@ public sealed class OrderProgressService : IOrderProgressService
             var scrap = l.Sum(x => x.ScrapQty);
             var defectPct = finished + rework + scrap == 0 ? 0m : Math.Round(100m * (rework + scrap) / (finished + rework + scrap), 2);
             return new OrderProgressDto(o.OrderId, o.OrderCode, o.CustomerName, o.DueDate, o.DueDate.DayNumber - today.DayNumber, CodeText.ToPascal(o.Status),
-                CodeText.ToPascal(o.MaterialStatus), o.IsDelayRisk, o.DelayRiskSince, l.Sum(x => x.OrderedQty), l.Sum(x => x.CutQty),
+                CodeText.ToPascal(o.MaterialStatus), o.IsDelayRisk ?? false, o.DelayRiskSince, l.Sum(x => x.OrderedQty), l.Sum(x => x.CutQty),
                 l.Sum(x => x.CutHandedToWarehouseQty), l.Sum(x => x.IssuedToSewingQty), finished, l.Sum(x => x.FinishedReceivedQty),
                 l.Sum(x => x.DeliveredQty), rework, scrap, defectPct);
         }).ToList();
@@ -92,8 +92,9 @@ public sealed class OrderProgressService : IOrderProgressService
         {
             var risk = IsDelayRisk(ordered.GetValueOrDefault(o.OrderId), finished.GetValueOrDefault(o.OrderId),
                 recent.GetValueOrDefault(o.OrderId), avgDays, o.DueDate.DayNumber - today.DayNumber);
-            if (risk && !o.IsDelayRisk) { o.IsDelayRisk = true; o.DelayRiskSince = today; newlyFlagged.Add(o); }
-            else if (!risk && o.IsDelayRisk) { o.IsDelayRisk = false; o.DelayRiskSince = null; }
+            // IsDelayRisk là cột tính từ DelayRiskSince nên chỉ ghi DelayRiskSince.
+            if (risk && o.DelayRiskSince is null) { o.DelayRiskSince = today; newlyFlagged.Add(o); }
+            else if (!risk && o.DelayRiskSince is not null) { o.DelayRiskSince = null; }
         }
 
         foreach (var o in newlyFlagged)

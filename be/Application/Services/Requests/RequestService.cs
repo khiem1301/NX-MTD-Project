@@ -210,7 +210,7 @@ public sealed class RequestService : IRequestService
     private static RequestLine ToEntity(RequestLineInput l) => new()
     {
         MaterialId = l.MaterialId, MaterialColor = l.MaterialColor?.Trim(), OrderLineId = l.OrderLineId,
-        PanelName = l.PanelName?.Trim(), ItemDescription = l.ItemDescription?.Trim(), Quantity = l.Quantity,
+        ProductComponentId = l.ProductComponentId, ItemDescription = l.ItemDescription?.Trim(), Quantity = l.Quantity,
     };
 
     private Task NotifyHandlersAsync(RequestTypePolicy policy, Request request, CancellationToken ct) =>

@@ -12,8 +12,6 @@ public partial class Account
 
     public int EmployeeId { get; set; }
 
-    public string Username { get; set; } = null!;
-
     public string PasswordHash { get; set; } = null!;
 
     public bool IsTemporaryPassword { get; set; }

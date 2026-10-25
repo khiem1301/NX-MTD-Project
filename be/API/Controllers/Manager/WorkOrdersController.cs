@@ -38,6 +38,11 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> Update(int id, [FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.UpdateAsync(id, dto, ct));
 
+    /// <summary>Đóng lệnh cắt sau khi xem kết quả (III.2.12).</summary>
+    [HttpPost("{id:int}/complete")]
+    public async Task<IActionResult> Complete(int id, [FromBody] CompleteWorkOrderDto dto, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.CompleteAsync(id, dto, ct));
+
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CancelAsync(id, ct));

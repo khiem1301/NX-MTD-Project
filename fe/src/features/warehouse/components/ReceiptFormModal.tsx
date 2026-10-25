@@ -10,11 +10,13 @@ import { LABELS, MATERIAL_SOURCE, SOURCE_LABEL } from '../constants';
 import { useOrderMaterials } from '../hooks/useOrderMaterials';
 import { usePurchaseOrder, usePurchaseOrders } from '../hooks/usePurchaseOrders';
 import { useSaveReceipt } from '../hooks/useReceipts';
-import type { MaterialReceipt, SaveReceiptPayload } from '../types';
+import type { MaterialReceipt, ReceiptPreset, SaveReceiptPayload } from '../types';
 
 type ReceiptFormModalProps = {
   open: boolean;
   receipt: MaterialReceipt | null;
+  /** Điền sẵn khi lập từ màn NVL chờ nhận (bỏ qua khi sửa phiếu). */
+  preset?: ReceiptPreset | null;
   onClose: () => void;
 };
 
@@ -22,7 +24,7 @@ type FormValues = Omit<SaveReceiptPayload, 'receiptDate'> & { receiptDate: Dayjs
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const API_DATE = 'YYYY-MM-DD';
-const EMPTY_LINE = { acceptedQty: 0, shortQty: 0, defectiveQty: 0 };
+const EMPTY_LINE = { acceptedQty: 0 };
 const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map((value) => ({
   value,
   label: SOURCE_LABEL[value],
@@ -30,9 +32,10 @@ const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map(
 
 /**
  * UC37: Thủ kho lập / sửa phiếu nhập NVL. Khách cấp: chọn đơn hàng rồi NVL của đơn. Nhà cung cấp (TH-12): chọn đơn mua đã đặt,
- * mỗi dòng là một dòng đơn mua (đơn giá lấy từ đơn mua), số nhập không vượt số còn phải nhận.
+ * mỗi dòng là một dòng đơn mua (đơn giá lấy từ đơn mua), số nhập không vượt số còn phải nhận. Thủ kho chỉ nhập số đạt: hàng thiếu
+ * do hệ thống tự tính khi nhận đủ số lần giao dự kiến.
  */
-export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalProps) {
+export function ReceiptFormModal({ open, receipt, preset = null, onClose }: ReceiptFormModalProps) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveReceipt();
   const source = Form.useWatch('source', form) ?? MATERIAL_SOURCE.CUSTOMER;
@@ -58,13 +61,25 @@ export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalPro
               orderMaterialId: l.orderMaterialId ?? undefined,
               purchaseOrderLineId: l.purchaseOrderLineId ?? undefined,
               acceptedQty: l.acceptedQty,
-              shortQty: l.shortQty,
-              defectiveQty: l.defectiveQty,
             })),
           }
-        : { source: MATERIAL_SOURCE.CUSTOMER, receiptDate: dayjs(), lines: [EMPTY_LINE] },
+        : preset
+          ? {
+              source: preset.source,
+              orderId: preset.orderId,
+              purchaseOrderId: preset.purchaseOrderId,
+              receiptDate: dayjs(),
+              lines: [
+                {
+                  orderMaterialId: preset.orderMaterialId,
+                  purchaseOrderLineId: preset.purchaseOrderLineId,
+                  acceptedQty: preset.acceptedQty,
+                },
+              ],
+            }
+          : { source: MATERIAL_SOURCE.CUSTOMER, receiptDate: dayjs(), lines: [EMPTY_LINE] },
     );
-  }, [open, receipt, form]);
+  }, [open, receipt, preset, form]);
 
   const resetLines = () => form.setFieldValue('lines', [EMPTY_LINE]);
 
@@ -80,8 +95,6 @@ export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalPro
         orderMaterialId: supplier ? undefined : l.orderMaterialId,
         purchaseOrderLineId: supplier ? l.purchaseOrderLineId : undefined,
         acceptedQty: l.acceptedQty,
-        shortQty: l.shortQty,
-        defectiveQty: l.defectiveQty,
       })),
     };
     save.mutate({ id: receipt?.materialReceiptId, body }, { onSuccess: onClose });
@@ -172,12 +185,6 @@ export function ReceiptFormModal({ open, receipt, onClose }: ReceiptFormModalPro
                   )}
                   <Form.Item name={[field.name, 'acceptedQty']} rules={required}>
                     <InputNumber addonBefore={LABELS.acceptedQty} min={0} style={{ width: 160 }} />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'shortQty']} rules={required}>
-                    <InputNumber addonBefore={LABELS.shortQty} min={0} style={{ width: 150 }} />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'defectiveQty']} rules={required}>
-                    <InputNumber addonBefore={LABELS.defectiveQty} min={0} style={{ width: 150 }} />
                   </Form.Item>
                   <Button
                     icon={<DeleteOutlined />}

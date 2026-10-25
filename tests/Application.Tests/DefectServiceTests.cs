@@ -48,7 +48,7 @@ public class DefectServiceTests : ProductionTestBase
         {
             OrderLineId = LineId, OrderId = 1, ProductId = 1,
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001", Status = OrderStatuses.InProduction },
-            Product = new Product { ProductId = 1, ProductCode = "MH001" },
+            ProductVariant = TestVariant.Make(1),
         });
         _operations.Add(new Operation { OperationId = 1, ProductId = 1, OperationCode = "OP10", OperationName = "May cổ",
             StationSequence = 1, Status = OperationStatuses.Active });
@@ -73,7 +73,8 @@ public class DefectServiceTests : ProductionTestBase
         {
             DefectRecordId = _nextId++, DefectCode = code ?? $"MAY1-261021-{_nextId:000}", WorkDate = date ?? Today,
             SewingTeamId = teamId, OrderLineId = LineId, OperationId = 1, ResponsibleWorkerId = workerId, DefectType = type,
-            Quantity = 2, DefectReasonCode = DefectReasons.Torn, ScrapUnitRate = type == DefectTypes.Scrap ? 1_000m : null,
+            Quantity = 2, DefectReasonCode = DefectReasons.Torn, PieceRateId = type == DefectTypes.Scrap ? 50 : null,
+            PieceRate = type == DefectTypes.Scrap ? new PieceRate { PieceRateId = 50, Rate = 1_000m } : null,
             EditDeadline = deadline ?? Now.AddHours(20), Status = status, RowVer = RowVer, RecordedAt = Now.AddHours(-1),
             Operation = _operations[0], OrderLine = _lines[0], ResponsibleWorker = _employees.First(e => e.EmployeeId == workerId),
         };
@@ -91,7 +92,7 @@ public class DefectServiceTests : ProductionTestBase
         result.IsSuccess.Should().BeTrue();
         var defect = _defects.Single();
         defect.DefectType.Should().Be(DefectTypes.Scrap);
-        defect.ScrapUnitRate.Should().Be(1_200m);                 // khóa theo đơn giá duyệt tại ngày làm việc
+        defect.PieceRateId.Should().Be(100);                 // khóa theo đơn giá duyệt tại ngày làm việc (1.200)
         defect.DefectReasonCode.Should().Be(DefectReasons.Torn);  // "Torn" PascalCase → mã DB
         defect.Status.Should().Be(DefectStatuses.Recorded);
         defect.SewingTeamId.Should().Be(TeamId);
@@ -112,7 +113,7 @@ public class DefectServiceTests : ProductionTestBase
         var result = await _sut.CreateAsync(Create(type: "Rework"), default);
 
         result.IsSuccess.Should().BeTrue();
-        _defects.Single().ScrapUnitRate.Should().BeNull();
+        _defects.Single().PieceRateId.Should().BeNull();
     }
 
     [Fact]

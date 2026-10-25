@@ -14,7 +14,7 @@ type LineValues = { purchaseOrderLineId: number; orderedQty: number | null; unit
 type FormValues = {
   supplierId: number;
   orderDate: Dayjs;
-  expectedDeliveryDate: Dayjs | null;
+  expectedDeliveryCount: number;
   note: string | null;
   lines: LineValues[];
 };
@@ -35,6 +35,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
     form.resetFields();
     form.setFieldsValue({
       orderDate: dayjs(),
+      expectedDeliveryCount: 1,
       note: order.note,
       lines: order.lines.map((l) => ({
         purchaseOrderLineId: l.purchaseOrderLineId,
@@ -49,7 +50,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
       {
         supplierId: values.supplierId,
         orderDate: toApiDate(values.orderDate),
-        expectedDeliveryDate: values.expectedDeliveryDate ? toApiDate(values.expectedDeliveryDate) : null,
+        expectedDeliveryCount: values.expectedDeliveryCount,
         note: values.note?.trim() || null,
         lines: values.lines.map((l) => ({
           purchaseOrderLineId: l.purchaseOrderLineId,
@@ -105,19 +106,11 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
             <DatePicker format={DATE_FORMAT} disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
           </Form.Item>
           <Form.Item
-            name="expectedDeliveryDate"
+            name="expectedDeliveryCount"
             label={text.expectedDate}
-            dependencies={['orderDate']}
-            rules={[
-              ({ getFieldValue }) => ({
-                validator: (_, value: Dayjs | null) =>
-                  !value || !getFieldValue('orderDate') || !value.isBefore(getFieldValue('orderDate'), 'day')
-                    ? Promise.resolve()
-                    : Promise.reject(new Error('Ngày giao dự kiến không được trước ngày đặt hàng.')),
-              }),
-            ]}
+            rules={[{ required: true, type: 'number', min: 1, message: text.expectedDateRequired }]}
           >
-            <DatePicker format={DATE_FORMAT} />
+            <InputNumber min={1} max={99} precision={0} style={{ width: 150 }} />
           </Form.Item>
         </Space>
 
