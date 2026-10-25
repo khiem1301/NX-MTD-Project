@@ -32,7 +32,7 @@ public partial class DefectRecord
 
     public string? ReasonNote { get; set; }
 
-    public decimal? ScrapUnitRate { get; set; }
+    public int? PieceRateId { get; set; }
 
     public DateTime? WorkerNotifiedAt { get; set; }
 
@@ -55,6 +55,8 @@ public partial class DefectRecord
     public virtual Operation Operation { get; set; } = null!;
 
     public virtual OrderLine OrderLine { get; set; } = null!;
+
+    public virtual PieceRate? PieceRate { get; set; }
 
     public virtual Employee RecordedByNavigation { get; set; } = null!;
 

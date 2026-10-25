@@ -13,6 +13,8 @@ public partial class VwStockBalance
 
     public int? OrderLineId { get; set; }
 
+    public int? ProductComponentId { get; set; }
+
     public decimal? OnHandQty { get; set; }
 
     public decimal? ReservedQty { get; set; }

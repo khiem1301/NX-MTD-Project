@@ -50,7 +50,7 @@ public class HrServiceTests
     {
         EmployeeId = id, EmployeeCode = $"E{id}", FullName = $"Người {id}", TeamId = team, Status = RecordStatus.Active,
         PayType = pay, StartDate = new DateOnly(2026, 1, 1), Role = new Role { RoleCode = role },
-        Account = new Account { AccountId = id, Username = $"E{id}", SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active },
+        Account = new Account { AccountId = id, SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active },
     };
 
     private static Team TeamOf(string type = TeamTypes.Sewing, int id = 4) =>

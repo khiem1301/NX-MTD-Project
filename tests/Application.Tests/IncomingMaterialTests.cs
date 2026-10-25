@@ -9,7 +9,8 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>
-/// Đơn chờ khai báo NVL (Quản đốc / Admin) và màn NVL chờ nhận (Thủ kho): NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ.
+/// Đơn chờ khai báo NVL (Quản đốc / Admin) và màn NVL chờ nhận (Thủ kho): NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ,
+/// kèm số lần giao dự kiến và số lần đã nhận (vw_OrderMaterialDelivery / vw_PurchaseOrderDelivery).
 /// </summary>
 public class IncomingMaterialTests
 {
@@ -21,10 +22,14 @@ public class IncomingMaterialTests
     private readonly List<MaterialReceiptLine> _receiptLines = [];
     private readonly List<Material> _materials = [];
     private readonly List<OrderLine> _orderLines = [];
+    private readonly List<VwOrderMaterialDelivery> _omDeliveries = [];
+    private readonly List<VwPurchaseOrderDelivery> _poDeliveries = [];
+    private readonly List<ProductComponentMaterial> _norms = [];
 
     public IncomingMaterialTests()
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_poLines); Setup(_receiptLines); Setup(_materials); Setup(_orderLines);
+        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms);
         _materials.Add(Mat());
         _uow.Repository<OrderMaterial>().AddAsync(Arg.Do<OrderMaterial>(om => { om.OrderMaterialId = 99; om.Material = _materials[0]; _orderMaterials.Add(om); })).Returns(Task.CompletedTask);
     }
@@ -51,12 +56,12 @@ public class IncomingMaterialTests
         return o;
     }
 
-    private OrderMaterial OrderMat(CustomerOrder o, int id, decimal customerQty, decimal? purchaseQty = null, DateOnly? expected = null)
+    private OrderMaterial OrderMat(CustomerOrder o, int id, decimal customerQty, decimal? purchaseQty = null, short? deliveries = null)
     {
         var om = new OrderMaterial
         {
             OrderMaterialId = id, OrderId = o.OrderId, Order = o, MaterialId = 1, Material = Mat(), MaterialColor = "Đen",
-            CustomerQty = customerQty, PurchaseQty = purchaseQty, CustomerExpectedDate = expected,
+            CustomerQty = customerQty, PurchaseQty = purchaseQty, ExpectedDeliveryCount = deliveries,
         };
         o.OrderMaterials.Add(om);
         _orderMaterials.Add(om);
@@ -73,7 +78,7 @@ public class IncomingMaterialTests
             MaterialReceipt = new MaterialReceipt { Status = status },
         });
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new FabricPlanner(_uow));
     private IncomingMaterialService Incoming() => new(_uow);
 
     // ---------- Đơn chờ khai báo NVL ----------
@@ -128,7 +133,8 @@ public class IncomingMaterialTests
     public async Task Customer_material_waits_until_the_confirmed_receipts_cover_what_the_customer_will_supply()
     {
         var order = Order(1, "DH001");
-        OrderMat(order, 10, 500, expected: new DateOnly(2026, 10, 30));
+        OrderMat(order, 10, 500, deliveries: 3);
+        _omDeliveries.Add(new VwOrderMaterialDelivery { OrderMaterialId = 10, OrderId = 1, ReceivedCount = 1 });
         Received(10, 200);                                   // phiếu đã xác nhận
         Received(10, 999, ReceiptStatuses.Pending);          // phiếu chờ xác nhận không tính
 
@@ -138,7 +144,8 @@ public class IncomingMaterialTests
         row.CustomerQty.Should().Be(500);
         row.ReceivedQty.Should().Be(200);
         row.OutstandingQty.Should().Be(300);
-        row.ExpectedDate.Should().Be(new DateOnly(2026, 10, 30));
+        row.ExpectedDeliveryCount.Should().Be(3);
+        row.ReceivedCount.Should().Be(1);
         row.MaterialName.Should().Be("Vải cotton");
     }
 
@@ -148,20 +155,20 @@ public class IncomingMaterialTests
         var a = Order(1, "DH-A"); OrderMat(a, 10, 100); Received(10, 100);
         var b = Order(2, "DH-B"); OrderMat(b, 11, 0, 80);                       // khách không cấp gì
         var c = Order(3, "DH-C", status: OrderStatuses.Cancelled); OrderMat(c, 12, 50);   // đơn đã hủy
-        var d = Order(4, "DH-D"); OrderMat(d, 13, 50, expected: new DateOnly(2026, 10, 25));
+        var d = Order(4, "DH-D"); OrderMat(d, 13, 50, deliveries: 1);
 
         (await Incoming().GetAsync(default)).Data!.Customer.Select(r => r.OrderCode).Should().Equal("DH-D");
     }
 
     [Fact]
-    public async Task Customer_material_is_sorted_by_the_promised_date_with_undated_last()
+    public async Task Customer_material_is_sorted_by_order_then_material_code()
     {
-        var o = Order(1, "DH001");
-        OrderMat(o, 10, 10);
-        OrderMat(o, 11, 10, expected: new DateOnly(2026, 11, 5));
-        OrderMat(o, 12, 10, expected: new DateOnly(2026, 11, 1));
+        var late = Order(2, "DH-B");
+        var early = Order(1, "DH-A");
+        OrderMat(late, 10, 10, deliveries: 1);
+        OrderMat(early, 11, 10, deliveries: 2);
 
-        (await Incoming().GetAsync(default)).Data!.Customer.Select(r => r.OrderMaterialId).Should().Equal(12, 11, 10);
+        (await Incoming().GetAsync(default)).Data!.Customer.Select(r => r.OrderMaterialId).Should().Equal(11, 10);
     }
 
     // ---------- NVL chờ nhận: đơn mua ----------
@@ -175,7 +182,7 @@ public class IncomingMaterialTests
             Material = Mat("KHOA", "Khóa kéo", "cái"), MaterialColor = "Đen",
             PurchaseOrder = new PurchaseOrder
             {
-                PurchaseOrderId = poId, PoCode = poCode, GoodsStatus = goodsStatus, ExpectedDeliveryDate = new DateOnly(2026, 10, 28),
+                PurchaseOrderId = poId, PoCode = poCode, GoodsStatus = goodsStatus, ExpectedDeliveryCount = 2,
                 Supplier = new Supplier { SupplierName = "NCC Hà Nội" },
             },
         };
@@ -187,6 +194,7 @@ public class IncomingMaterialTests
     public async Task Placed_purchase_orders_wait_for_the_outstanding_quantity_after_confirmed_receipts_and_closed_shortfalls()
     {
         PoLine(1, PurchaseGoodsStatuses.PartiallyReceived, ordered: 1000, notReplenished: 100);
+        _poDeliveries.Add(new VwPurchaseOrderDelivery { PurchaseOrderId = 1, ReceivedCount = 1 });
         Received(0, 300, poLineId: 1);
         Received(0, 50, ReceiptStatuses.Returned, poLineId: 1);   // phiếu bị trả: không tính
 
@@ -198,7 +206,8 @@ public class IncomingMaterialTests
         row.ReceivedQty.Should().Be(300);
         row.OutstandingQty.Should().Be(600);   // 1000 − 300 − 100 chốt không bù
         row.MaterialName.Should().Be("Khóa kéo");
-        row.ExpectedDeliveryDate.Should().Be(new DateOnly(2026, 10, 28));
+        row.ExpectedDeliveryCount.Should().Be(2);
+        row.ReceivedCount.Should().Be(1);
     }
 
     [Fact]
@@ -223,12 +232,12 @@ public class IncomingMaterialTests
         var order = Order(1, "DH001");
 
         var result = await OrderMaterials().CreateAsync(
-            new CreateOrderMaterialDto(1, 1, "Đen", 500, 500, new DateOnly(2026, 10, 30), null, null), default);
+            new CreateOrderMaterialDto(1, 1, "Đen", 500, 500, (short)3, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper,
             Arg.Is<NotificationMessage>(m => m.LinkUrl == "/warehouse/incoming-materials" && m.Message.Contains("DH001")
-                && m.Message.Contains("500") && m.Message.Contains("30/10/2026") && m.Message.Contains("Vải cotton")),
+                && m.Message.Contains("500") && m.Message.Contains("3 lần") && m.Message.Contains("Vải cotton")),
             Arg.Any<CancellationToken>());
     }
 
@@ -237,7 +246,7 @@ public class IncomingMaterialTests
     {
         Order(1, "DH001");
 
-        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, "Đen", 500, 0, null, null, null), default);
+        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, "Đen", 500, 0, null, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.DidNotReceive().NotifyRoleAsync(Arg.Any<string>(), Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());

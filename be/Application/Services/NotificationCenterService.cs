@@ -23,25 +23,26 @@ public sealed class NotificationInboxService : INotificationInboxService
 
     public async Task<Result<PagedResult<NotificationDto>>> ListMineAsync(NotificationQuery query, CancellationToken ct)
     {
+        var urgentIds = _uow.Repository<Announcement>().Query()
+            .Where(a => a.Priority == AnnouncementPriorities.Urgent).Select(a => (long)a.AnnouncementId);
         var page = await Mine.AsNoTracking()
-            .Where(n => query.UnreadOnly != true || !n.IsRead)
+            .Where(n => query.UnreadOnly != true || n.ReadAt == null)
             .OrderByDescending(n => n.NotificationId)
-            .Select(n => new NotificationDto(n.NotificationId, n.SourceType, n.Title, n.Message, n.LinkUrl, n.IsRead,
-                n.Announcement != null && n.Announcement.Priority == AnnouncementPriorities.Urgent, n.CreatedAt))
+            .Select(n => new NotificationDto(n.NotificationId, n.SourceType, n.Title, n.Message, n.LinkUrl, n.ReadAt != null,
+                n.RefTable == nameof(Announcement) && urgentIds.Contains(n.RefId!.Value), n.CreatedAt))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<NotificationDto>>.Success(page);
     }
 
     public async Task<Result<UnreadCountDto>> UnreadCountAsync(CancellationToken ct) =>
-        Result<UnreadCountDto>.Success(new UnreadCountDto(await Mine.CountAsync(n => !n.IsRead, ct)));
+        Result<UnreadCountDto>.Success(new UnreadCountDto(await Mine.CountAsync(n => n.ReadAt == null, ct)));
 
     public async Task<Result> MarkReadAsync(long notificationId, CancellationToken ct)
     {
         var n = await Mine.FirstOrDefaultAsync(x => x.NotificationId == notificationId, ct);
         if (n is null) return Fail.NotFound();
-        if (!n.IsRead)
+        if (n.ReadAt is null)
         {
-            n.IsRead = true;
             n.ReadAt = _clock.Now;
             await _uow.SaveChangesAsync();
         }
@@ -50,8 +51,8 @@ public sealed class NotificationInboxService : INotificationInboxService
 
     public async Task<Result> MarkAllReadAsync(CancellationToken ct)
     {
-        var unread = await Mine.Where(n => !n.IsRead).ToListAsync(ct);
-        foreach (var n in unread) { n.IsRead = true; n.ReadAt = _clock.Now; }
+        var unread = await Mine.Where(n => n.ReadAt == null).ToListAsync(ct);
+        foreach (var n in unread) n.ReadAt = _clock.Now;
         if (unread.Count > 0) await _uow.SaveChangesAsync();
         return Result.Success();
     }
@@ -77,13 +78,14 @@ public sealed class AnnouncementService : IAnnouncementService
     public async Task<Result<PagedResult<AnnouncementDto>>> ListSentAsync(AnnouncementQuery query, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
+        var notifications = _uow.Repository<Notification>().Query().Where(n => n.RefTable == nameof(Announcement));
         var page = await _uow.Repository<Announcement>().Query().AsNoTracking()
             .Where(a => string.IsNullOrEmpty(keyword) || a.Content.Contains(keyword))
             .OrderByDescending(a => a.AnnouncementId)
             .Select(a => new
             {
                 a.AnnouncementId, a.Content, a.Priority, a.TargetScope, Sender = a.Sender.FullName, a.SentAt,
-                Recipients = a.Notifications.Count,
+                Recipients = notifications.Count(n => n.RefId == a.AnnouncementId),
                 Teams = a.AnnouncementTargets.Where(t => t.Team != null).Select(t => t.Team!.TeamName).ToList(),
                 Roles = a.AnnouncementTargets.Where(t => t.Role != null).Select(t => t.Role!.RoleName).ToList(),
             })
@@ -147,8 +149,8 @@ public sealed class AnnouncementService : IAnnouncementService
             var title = urgent ? "Thông báo khẩn" : "Thông báo";
             await _uow.Repository<Notification>().AddRangeAsync(ids.Select(id => new Notification
             {
-                RecipientId = id, SourceType = NotificationSources.Announcement, AnnouncementId = announcement.AnnouncementId,
-                Title = title, Message = content, IsRead = false, PushStatus = NotificationPushStatuses.Skipped, CreatedAt = _clock.Now,
+                RecipientId = id, SourceType = NotificationSources.Announcement, RefTable = nameof(Announcement), RefId = announcement.AnnouncementId,
+                Title = title, Message = content, PushStatus = NotificationPushStatuses.Skipped, CreatedAt = _clock.Now,
             }).ToList());
             _audit.Add(new AuditEntry(nameof(Announcement), announcement.AnnouncementId, AuditActions.Insert, null,
                 new { announcement.Priority, announcement.TargetScope, Recipients = ids.Count }));

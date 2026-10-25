@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Space, Typography } from 'antd';
-import { KpiCalendarDrawer } from '../components/KpiCalendarDrawer';
+import { KpiDailyResultDrawer } from '../components/KpiDailyResultDrawer';
 import { KpiTargetFormModal } from '../components/KpiTargetFormModal';
 import { KpiTargetTable } from '../components/KpiTargetTable';
 import { KPI_TEXT } from '../constants';
@@ -43,7 +43,7 @@ function KpiBoard({ role }: { role: KpiRole }) {
         onAdd={() => openForm(null)}
         onEdit={openForm}
       />
-      <KpiCalendarDrawer kpiTargetId={viewingDailyId} onClose={() => setViewingDailyId(null)} role={role} />
+      <KpiDailyResultDrawer kpiTargetId={viewingDailyId} onClose={() => setViewingDailyId(null)} role={role} />
       {!isAdmin && <KpiTargetFormModal open={formOpen} target={editing} onClose={() => setFormOpen(false)} />}
     </Space>
   );

@@ -27,7 +27,7 @@ public class StocktakeServiceTests
     private readonly List<Stocktake> _stocktakes = new();
     private readonly List<StocktakeLine> _lines = new();
     private readonly List<Material> _materials = new() { new Material { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" } };
-    private readonly List<OrderLine> _orderLines = new() { new OrderLine { OrderLineId = 101, Color = "Đen", SizeCode = "M" } };
+    private readonly List<OrderLine> _orderLines = new() { new OrderLine { OrderLineId = 101, ProductVariant = TestVariant.Make(1) } };
 
     public StocktakeServiceTests()
     {
@@ -79,7 +79,7 @@ public class StocktakeServiceTests
     }
 
     private static SaveStocktakeDto Material(decimal? counted, string color = "Đen") =>
-        new(WarehouseTypes.Material, " Kho vải ", Today, new[] { new SaveStocktakeLineDto(1, color, null, counted, null) });
+        new(WarehouseTypes.Material, " Kho vải ", Today, new[] { new SaveStocktakeLineDto(1, color, null, null, counted, null) });
 
     // ---------- Lập phiếu ----------
 
@@ -115,24 +115,24 @@ public class StocktakeServiceTests
     [Fact]
     public async Task Create_rejects_bad_warehouse_future_date_negative_count_and_wrong_line_target()
     {
-        (await Service().CreateAsync(new SaveStocktakeDto("OTHER", null, Today, new[] { new SaveStocktakeLineDto(1, "Đen", null, 1, null) }), default))
+        (await Service().CreateAsync(new SaveStocktakeDto("OTHER", null, Today, new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 1, null) }), default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         (await Service().CreateAsync(Material(5) with { StocktakeDate = Today.AddDays(1) }, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         (await Service().CreateAsync(Material(-1), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         // Kho BTP phải chọn dòng đơn, không chọn NVL
         (await Service().CreateAsync(new SaveStocktakeDto(WarehouseTypes.SemiFinished, null, Today,
-            new[] { new SaveStocktakeLineDto(1, "Đen", null, 5, null) }), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+            new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 5, null) }), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
     }
 
     [Fact]
     public async Task Create_rejects_duplicate_lines_and_unknown_items()
     {
         var twice = new SaveStocktakeDto(WarehouseTypes.Material, null, Today,
-            new[] { new SaveStocktakeLineDto(1, "Đen", null, 5, null), new SaveStocktakeLineDto(1, " Đen ", null, 6, null) });
+            new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 5, null), new SaveStocktakeLineDto(1, " Đen ", null, null, 6, null) });
         (await Service().CreateAsync(twice, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
 
-        var unknown = new SaveStocktakeDto(WarehouseTypes.Material, null, Today, new[] { new SaveStocktakeLineDto(99, "Đen", null, 5, null) });
+        var unknown = new SaveStocktakeDto(WarehouseTypes.Material, null, Today, new[] { new SaveStocktakeLineDto(99, "Đen", null, null, 5, null) });
         (await Service().CreateAsync(unknown, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
     }
 
@@ -142,7 +142,7 @@ public class StocktakeServiceTests
         var added = CaptureAdds();
 
         var result = await Service().CreateAsync(new SaveStocktakeDto(WarehouseTypes.Finished, null, Today,
-            new[] { new SaveStocktakeLineDto(null, null, 101, 40, null) }), default);
+            new[] { new SaveStocktakeLineDto(null, null, 101, null, 40, null) }), default);
 
         result.IsSuccess.Should().BeTrue();
         added.Single().StocktakeLines.Single().OrderLineId.Should().Be(101);
@@ -249,7 +249,7 @@ public class StocktakeServiceTests
         var returned = Existing(StocktakeStatuses.Returned, WarehouseTypes.Material, (100, 90));
 
         var result = await Service().UpdateAsync(returned.StocktakeId, new SaveStocktakeDto(WarehouseTypes.Finished, null, Today,
-            new[] { new SaveStocktakeLineDto(null, null, 101, 5, null) }), default);
+            new[] { new SaveStocktakeLineDto(null, null, 101, null, 5, null) }), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
     }

@@ -175,7 +175,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         AddRate(2, 2, 1_000m, Today.AddDays(-10));
         AddRate(3, 2, 1_300m, Today.AddDays(20), PieceRateStatuses.Draft);
         AddRate(4, 4, 800m, Today.AddDays(-10));
-        AddRate(5, 4, 900m, Today.AddDays(3), PieceRateStatuses.Rejected).RejectReason = "Vượt khung";
+        AddRate(5, 4, 900m, Today.AddDays(3), PieceRateStatuses.Rejected).DecisionNote = "Vượt khung";
 
         var items = (await _operationService.ListAsync(1, false, default)).Data!.ToDictionary(o => o.OperationId);
 
@@ -204,7 +204,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().Be(2);
         _rates.Where(r => r.PieceRateId is 1 or 2).Should().OnlyContain(r => r.Status == PieceRateStatuses.Approved
-            && r.ApprovedAt == Now && r.ApprovalNote == "ok");
+            && r.ApprovedAt == Now && r.DecisionNote == "ok");
         _rates.Single(r => r.PieceRateId == 3).Status.Should().Be(PieceRateStatuses.Draft);
         Audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(PieceRate) && e.Action == AuditActions.Approve));
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Accountant, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
@@ -286,12 +286,12 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     {
         AddOperation(1);
         var rate = AddRate(1, 1, 1_000m, Today, PieceRateStatuses.Rejected);
-        rate.RejectReason = "Giá cao";
+        rate.DecisionNote = "Giá cao";
 
         await _rateService.UpdateAsync(1, new SavePieceRateDto(1, 900m, Today), default);
 
         rate.Status.Should().Be(PieceRateStatuses.Draft);
-        rate.RejectReason.Should().BeNull();
+        rate.DecisionNote.Should().BeNull();
     }
 
     [Fact]
@@ -328,7 +328,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         result.IsSuccess.Should().BeTrue();
         rate.Status.Should().Be(PieceRateStatuses.Approved);
         rate.ApprovedAt.Should().Be(Now);
-        rate.ApprovalNote.Should().Be("ok");
+        rate.DecisionNote.Should().Be("ok");
         Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Approve));
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Accountant, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
@@ -353,7 +353,7 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
 
         result.IsSuccess.Should().BeTrue();
         rate.Status.Should().Be(PieceRateStatuses.Rejected);
-        rate.RejectReason.Should().Be("Giá cao hơn thị trường");
+        rate.DecisionNote.Should().Be("Giá cao hơn thị trường");
         Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Reject && e.Reason == "Giá cao hơn thị trường"));
     }
 

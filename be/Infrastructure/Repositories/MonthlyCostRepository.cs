@@ -87,7 +87,7 @@ public sealed class MonthlyCostRepository : IMonthlyCostRepository
     // ---------- Đối soát suất ăn (UC30/UC12) ----------
 
     public async Task<decimal> GetMealsTotalAmountAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct) =>
-        await _context.DailyMeals.AsNoTracking()
+        await _context.VwDailyMealTotals.AsNoTracking()
             .Where(m => m.MealDate >= fromDate && m.MealDate <= toDate)
             .SumAsync(m => (decimal?)m.TotalAmount, ct) ?? 0m;
 }

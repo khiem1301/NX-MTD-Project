@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -59,6 +60,8 @@ public sealed class CustomerOrderService : ICustomerOrderService
             return Result<int>.Failure(ErrorCodes.OrderCodeDuplicate, Messages.OrderCodeDuplicate);
         var check = await CheckReferencesAsync(dto.CustomerId, dto.Lines.Select(l => l.ProductId), ct);
         if (!check.IsSuccess) return Fail.As<int>(check);
+        var variants = await ResolveVariantsAsync(dto.Lines, ct);
+        if (!variants.IsSuccess) return Fail.As<int>(variants);
 
         var order = new CustomerOrder
         {
@@ -71,7 +74,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
             MaterialStatus = OrderMaterialStatuses.Awaiting,
             CreatedAt = _clock.Now,
         };
-        foreach (var l in dto.Lines) order.OrderLines.Add(NewLine(l));
+        foreach (var l in dto.Lines) order.OrderLines.Add(NewLine(l, variants.Data!));
 
         return await _uow.InTransactionAsync(async () =>   // D17: log cần OrderId
         {
@@ -99,10 +102,12 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (!header.IsSuccess) return header;
         var refs = await CheckReferencesAsync(dto.CustomerId, NewProductIds(order, dto.Lines), ct);
         if (!refs.IsSuccess) return refs;
+        var variants = await ResolveVariantsAsync(dto.Lines, ct);
+        if (!variants.IsSuccess) return variants;
 
         _orders.SetOriginalRowVersion(order, dto.RowVer);
         var before = Snapshot(order);
-        var diff = ApplyLines(order, dto.Lines, isNew);
+        var diff = ApplyLines(order, dto.Lines, isNew, variants.Data!);
         if (!diff.IsSuccess) return diff;
 
         order.OrderCode = dto.OrderCode.Trim().ToUpperInvariant();
@@ -195,7 +200,8 @@ public sealed class CustomerOrderService : ICustomerOrderService
     }
 
     /// <summary>D27. Dòng mới trùng khóa với dòng cũ sắp xóa (khi NEW) thì dùng lại dòng cũ, tránh INSERT trước DELETE.</summary>
-    private Result ApplyLines(CustomerOrder order, IReadOnlyList<OrderLineInput> inputs, bool isNew)
+    private Result ApplyLines(CustomerOrder order, IReadOnlyList<OrderLineInput> inputs, bool isNew,
+        IReadOnlyDictionary<VariantKey, ProductVariant> variants)
     {
         var existing = order.OrderLines.ToDictionary(l => l.OrderLineId);
         if (inputs.Any(i => i.OrderLineId is int id && !existing.ContainsKey(id))) return Fail.NotFound();
@@ -213,13 +219,13 @@ public sealed class CustomerOrderService : ICustomerOrderService
                 var line = existing[id];
                 if (!isNew && KeyChanged(line, input))
                     return Result.Failure(ErrorCodes.OrderLineKeyLocked, Messages.OrderLineKeyLocked);
-                Update(line, input);
+                Update(line, input, variants);
                 continue;
             }
             var reusable = isNew ? removed.FirstOrDefault(l => SameKey(l, input)) : null;
             if (reusable is null) { toAdd.Add(input); continue; }
             removed.Remove(reusable);
-            Update(reusable, input);
+            Update(reusable, input, variants);
         }
 
         foreach (var line in removed)
@@ -227,31 +233,65 @@ public sealed class CustomerOrderService : ICustomerOrderService
             order.OrderLines.Remove(line);
             _lines.Remove(line);
         }
-        foreach (var input in toAdd) order.OrderLines.Add(NewLine(input));
+        foreach (var input in toAdd) order.OrderLines.Add(NewLine(input, variants));
         return Result.Success();
+    }
+
+    private readonly record struct VariantKey(int ProductId, string Color, string SizeCode);
+
+    private static VariantKey KeyOf(int productId, string color, string sizeCode) =>
+        new(productId, color.Trim().ToUpperInvariant(), sizeCode.Trim().ToUpperInvariant());
+
+    /// <summary>
+    /// Dòng đơn trỏ <c>ProductVariantId</c> (màu × size của mã hàng, FK ghép với ProductId). Màu × size chưa khai báo thì tạo
+    /// biến thể mới (ACTIVE) để Admin lưu đơn như cũ; định mức của biến thể mới khai ở màn Mã hàng.
+    /// </summary>
+    private async Task<Result<IReadOnlyDictionary<VariantKey, ProductVariant>>> ResolveVariantsAsync(
+        IReadOnlyList<OrderLineInput> inputs, CancellationToken ct)
+    {
+        var productIds = inputs.Select(i => i.ProductId).Distinct().ToArray();
+        var existing = await _uow.Repository<ProductVariant>().Query().Where(v => productIds.Contains(v.ProductId)).ToListAsync(ct);
+        var map = existing.ToDictionary(v => KeyOf(v.ProductId, v.Color, v.SizeCode));
+        foreach (var input in inputs)
+        {
+            var key = KeyOf(input.ProductId, input.Color, input.SizeCode);
+            if (map.TryGetValue(key, out var found))
+            {
+                if (found.Status != RecordStatus.Active)
+                    return Result<IReadOnlyDictionary<VariantKey, ProductVariant>>.Failure(ErrorCodes.ProductNotActive,
+                        string.Format(Messages.ProductVariantInactive, $"{input.Color.Trim()} – {input.SizeCode.Trim().ToUpperInvariant()}", input.ProductId));
+                continue;
+            }
+            var created = new ProductVariant
+            {
+                ProductId = input.ProductId, Color = input.Color.Trim(), SizeCode = input.SizeCode.Trim().ToUpperInvariant(),
+                Status = RecordStatus.Active,
+            };
+            await _uow.Repository<ProductVariant>().AddAsync(created);
+            map[key] = created;
+        }
+        return Result<IReadOnlyDictionary<VariantKey, ProductVariant>>.Success(map);
     }
 
     private static bool SameKey(OrderLine l, OrderLineInput i) =>
         l.ProductId == i.ProductId
-        && string.Equals(l.Color, i.Color.Trim(), StringComparison.OrdinalIgnoreCase)
-        && string.Equals(l.SizeCode, i.SizeCode.Trim(), StringComparison.OrdinalIgnoreCase);
+        && string.Equals(l.ProductVariant.Color, i.Color.Trim(), StringComparison.OrdinalIgnoreCase)
+        && string.Equals(l.ProductVariant.SizeCode, i.SizeCode.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private static bool KeyChanged(OrderLine l, OrderLineInput i) => !SameKey(l, i);
 
-    private static void Update(OrderLine line, OrderLineInput input)
+    private static void Update(OrderLine line, OrderLineInput input, IReadOnlyDictionary<VariantKey, ProductVariant> variants)
     {
         line.ProductId = input.ProductId;
-        line.Color = input.Color.Trim();
-        line.SizeCode = input.SizeCode.Trim().ToUpperInvariant();
+        line.ProductVariant = variants[KeyOf(input.ProductId, input.Color, input.SizeCode)];
         line.OrderedQty = input.OrderedQty;
         line.CmtUnitPrice = input.CmtUnitPrice;
     }
 
-    private static OrderLine NewLine(OrderLineInput i) => new()
+    private static OrderLine NewLine(OrderLineInput i, IReadOnlyDictionary<VariantKey, ProductVariant> variants) => new()
     {
         ProductId = i.ProductId,
-        Color = i.Color.Trim(),
-        SizeCode = i.SizeCode.Trim().ToUpperInvariant(),
+        ProductVariant = variants[KeyOf(i.ProductId, i.Color, i.SizeCode)],
         OrderedQty = i.OrderedQty,
         CmtUnitPrice = i.CmtUnitPrice,
     };
@@ -266,7 +306,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
     private static object Snapshot(CustomerOrder o) => new
     {
         o.OrderCode, o.CustomerId, o.ReceivedDate, o.DueDate, o.Note, o.Status, o.StopReason,
-        Lines = o.OrderLines.OrderBy(l => l.ProductId).ThenBy(l => l.Color).ThenBy(l => l.SizeCode)
-            .Select(l => new { l.OrderLineId, l.ProductId, l.Color, l.SizeCode, l.OrderedQty, l.CmtUnitPrice }).ToList(),
+        Lines = o.OrderLines.OrderBy(l => l.ProductId).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty, l.CmtUnitPrice }).ToList(),
     };
 }

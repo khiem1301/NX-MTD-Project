@@ -32,8 +32,6 @@ public partial class DispatchNote
 
     public DateOnly? CustomerReceivedDate { get; set; }
 
-    public DateTime? DeliveryConfirmedAt { get; set; }
-
     public byte[] RowVer { get; set; } = null!;
 
     public virtual ICollection<DispatchNoteLine> DispatchNoteLines { get; set; } = new List<DispatchNoteLine>();

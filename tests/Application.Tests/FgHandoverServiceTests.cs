@@ -62,7 +62,7 @@ public class FgHandoverServiceTests
 
     private OrderLine AddLine(int id, string color, string size, int qc)
     {
-        var line = new OrderLine { OrderLineId = id, OrderId = 7, ProductId = 3, Product = _product, Color = color, SizeCode = size };
+        var line = new OrderLine { OrderLineId = id, OrderId = 7, ProductId = 3, ProductVariant = TestVariant.Make(_product, color, size) };
         _orderLines.Add(line);
         _qc[id] = qc;
         return line;
@@ -173,7 +173,7 @@ public class FgHandoverServiceTests
     [Fact]
     public async Task Create_rejects_a_line_from_another_product_or_order()
     {
-        _orderLines.Add(new OrderLine { OrderLineId = 201, OrderId = 7, ProductId = 4, Product = new Product { ProductId = 4, ProductCode = "QU-02" }, Color = "Be", SizeCode = "M" });
+        _orderLines.Add(new OrderLine { OrderLineId = 201, OrderId = 7, ProductId = 4, ProductVariant = TestVariant.Make(new Product { ProductId = 4, ProductCode = "QU-02" }, "Be", "M") });
 
         var result = await Service().CreateAsync(Create((201, 5)), Inspector, default);
 

@@ -29,7 +29,6 @@ export type KpiTarget = {
   createdAt: string;
 };
 
-
 export type KpiTargetFilter = {
   page: number;
   pageSize: number;
@@ -39,8 +38,8 @@ export type KpiTargetFilter = {
 
 /**
  * MI-18 "KPI theo ngày": một dòng kết quả theo ngày của một chỉ tiêu KPI (vw_KpiDailyResult).
- * Có dòng cho mọi ngày có chỉ tiêu (chưa có hàng thì finishedQty = 0) và ngày QA/QC có nhập hàng ngoài kế hoạch
- * (dailyTarget, percentAchieved = null).
+ * Chỉ có dòng cho ngày QA/QC có nhập hàng hoàn thiện — ngày không có dòng là ngày chưa có sản
+ * lượng hoàn thiện, không phải lỗi dữ liệu.
  */
 export type KpiDailyResult = {
   kpiTargetId: number;
@@ -65,49 +64,5 @@ export type SaveKpiTargetPayload = {
   startDate: string;
   endDate: string;
   targetFinishedQty: number;
+  workingDays: number;
 };
-
-/** Lịch KPI theo ngày. */
-export type KpiDailyTargetInput = { workDate: string; targetQty: number };
-
-export type KpiCalendarDay = {
-  workDate: string;
-  isFuture: boolean;
-  isToday: boolean;
-  targetQty: number;
-  cumTarget: number;
-  cutQty: number;
-  actualQty: number | null;
-  btpRemaining: number;
-  lowBtp: boolean;
-  behindTarget: boolean;
-};
-
-export type KpiCalendarSummary = {
-  today: string;
-  planTotal: number;
-  allocated: number;
-  unallocated: number;
-  cutTotal: number;
-  outTotal: number;
-  totalBtp: number;
-  committedAll: number;
-  committedThis: number;
-  remainingToSet: number;
-  canEdit: boolean;
-};
-
-export type KpiCalendar = {
-  kpiTargetId: number;
-  orderCode: string;
-  productCode: string;
-  productName: string;
-  sewingTeamName: string;
-  startDate: string;
-  endDate: string;
-  status: KpiTargetStatus;
-  summary: KpiCalendarSummary;
-  days: KpiCalendarDay[];
-};
-
-export type SaveKpiDailyPlanPayload = { dailyTargets: KpiDailyTargetInput[] };

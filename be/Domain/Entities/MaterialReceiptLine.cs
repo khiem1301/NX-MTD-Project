@@ -12,30 +12,23 @@ public partial class MaterialReceiptLine
 
     public int MaterialReceiptId { get; set; }
 
-    /// <summary>NULL khi nhập theo đơn mua dự trữ; khi đó dùng MaterialId + MaterialColor.</summary>
     public int? OrderMaterialId { get; set; }
-
-    public int? MaterialId { get; set; }
-
-    public string? MaterialColor { get; set; }
 
     public int? PurchaseOrderLineId { get; set; }
 
     public int? OriginalReceiptLineId { get; set; }
 
-    public decimal? ToReplenishQty { get; set; }
-
     public decimal AcceptedQty { get; set; }
 
-    public decimal ShortQty { get; set; }
+    public int? MaterialId { get; set; }
 
-    public decimal DefectiveQty { get; set; }
+    public string? MaterialColor { get; set; }
 
     public virtual ICollection<MaterialReceiptLine> InverseOriginalReceiptLine { get; set; } = new List<MaterialReceiptLine>();
 
-    public virtual MaterialReceipt MaterialReceipt { get; set; } = null!;
-
     public virtual Material? Material { get; set; }
+
+    public virtual MaterialReceipt MaterialReceipt { get; set; } = null!;
 
     public virtual OrderMaterial? OrderMaterial { get; set; }
 

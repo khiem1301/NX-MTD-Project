@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services.Production;
 /// <summary>
 /// KI-09 (UC56, UC07 "cắt bù") — kiểm đơn cắt bù do tổ trưởng / tổ phó tổ may tạo từ một phiếu hàng hỏng Scrap, Quản đốc
 /// duyệt. Đơn phải gắn đúng một phiếu Scrap còn hiệu lực của tổ mình (DB cho mỗi phiếu tối đa một đơn: UX_Request_Defect),
-/// và mỗi dòng là một chi tiết cần cắt bù (<c>PanelName</c>) của đúng dòng đơn đó, số lượng từ 1 đến số hàng đã hủy.
+/// và mỗi dòng là một chi tiết cần cắt bù (<c>ProductComponentId</c>, chi tiết PANEL của mã hàng) của đúng dòng đơn đó, số lượng từ 1 đến số hàng đã hủy.
 /// Chưa có lệnh cắt bù của tổ cắt tự hoàn thành đơn nên <see cref="AllowManualComplete"/> = true (DEV-KI-09-1).
 /// </summary>
 public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
@@ -32,7 +32,7 @@ public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
 
         var defect = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
             .Where(d => d.DefectRecordId == draft.DefectRecordId)
-            .Select(d => new { d.DefectType, d.Status, d.SewingTeamId, d.OrderLineId, d.OrderLine.OrderId, d.Quantity })
+            .Select(d => new { d.DefectType, d.Status, d.SewingTeamId, d.OrderLineId, d.OrderLine.OrderId, d.OrderLine.ProductId, d.Quantity })
             .FirstOrDefaultAsync(ct);
         if (defect is null) return Fail.NotFound();
         if (defect.Status == DefectStatuses.Cancelled) return Invalid(Messages.ReplacementCuttingDefectCancelled);
@@ -45,10 +45,17 @@ public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
         if (draft.OrderId != defect.OrderId) return Invalid(Messages.ReplacementCuttingOrderMismatch);
 
         if (draft.Lines.Count == 0
-            || draft.Lines.Any(l => string.IsNullOrWhiteSpace(l.PanelName) || l.OrderLineId != defect.OrderLineId
+            || draft.Lines.Any(l => l.ProductComponentId is null || l.OrderLineId != defect.OrderLineId
                                     || l.Quantity < 1 || l.Quantity != decimal.Truncate(l.Quantity) || l.Quantity > defect.Quantity)
-            || draft.Lines.GroupBy(l => l.PanelName!.Trim().ToLowerInvariant()).Any(g => g.Count() > 1))
+            || draft.Lines.GroupBy(l => l.ProductComponentId).Any(g => g.Count() > 1))
             return Invalid(Messages.ReplacementCuttingLines);
+
+        // Chi tiết cắt bù phải là chi tiết PANEL đang dùng của đúng mã hàng (trg_RequestLine_Check cũng chặn lệch mã hàng).
+        var componentIds = draft.Lines.Select(l => l.ProductComponentId!.Value).Distinct().ToList();
+        var validComponents = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
+            .CountAsync(c => componentIds.Contains(c.ProductComponentId) && c.ProductId == defect.ProductId
+                             && c.ComponentType == ComponentTypes.Panel && c.Status == RecordStatus.Active, ct);
+        if (validComponents != componentIds.Count) return Invalid(Messages.ReplacementCuttingLines);
 
         var duplicate = await _uow.Repository<Request>().Query().AsNoTracking()
             .AnyAsync(r => r.DefectRecordId == draft.DefectRecordId && (draft.RequestId == null || r.RequestId != draft.RequestId), ct);

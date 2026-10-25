@@ -52,7 +52,7 @@ public sealed class OutputService : IOutputService
                         && a.Operation.ProductId == line.ProductId && a.Operation.Status == OperationStatuses.Active)
             .Select(a => new { a.OperationId, a.WorkerId })
             .ToListAsync(ct);
-        var records = await Records.AsNoTracking()
+        var records = await Records.AsNoTracking().Include(r => r.PieceRate)
             .Where(r => r.WorkDate == workDate && r.ShiftCode == shift && r.SewingTeamId == team.Data
                         && r.OrderLineId == orderLineId)
             .ToListAsync(ct);
@@ -82,7 +82,7 @@ public sealed class OutputService : IOutputService
 
             rows.Add(new OutputGridRowDto(operationId, operation.OperationCode, operation.OperationName, workerId,
                 worker.EmployeeCode, worker.FullName, record?.OutputRecordId, record?.Quantity,
-                record?.UnitRate ?? rate?.Rate, record is not null || rate is not null,
+                record?.PieceRate.Rate ?? rate?.Rate, record is not null || rate is not null,
                 record?.IsOutsideAssignment ?? !assigned.Contains((operationId, workerId)),
                 record?.NoAttendanceWarning ?? false, canEdit, record?.EditDeadline, record?.RowVer));
         }
@@ -206,7 +206,7 @@ public sealed class OutputService : IOutputService
                 {
                     WorkDate = dto.WorkDate, ShiftCode = shift, SewingTeamId = team.Data, WorkerId = row.WorkerId,
                     OperationId = row.OperationId, OrderLineId = dto.OrderLineId, Quantity = row.Quantity,
-                    PieceRateId = rates[row.OperationId].PieceRateId, UnitRate = rates[row.OperationId].Rate,
+                    PieceRateId = rates[row.OperationId].PieceRateId,   // đơn giá khóa theo ngày nhập
                     IsOutsideAssignment = !assigned.Contains((row.OperationId, row.WorkerId)),
                     NoAttendanceWarning = !attendedWorkerIds.Contains(row.WorkerId),
                     EditDeadline = newDeadline, Status = OutputStatuses.Saved, EnteredAt = _clock.Now,
@@ -225,7 +225,7 @@ public sealed class OutputService : IOutputService
             foreach (var record in deletes)
             {
                 _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Delete,
-                    new { record.WorkDate, record.WorkerId, record.OperationId, record.Quantity, record.UnitRate }, null, reason));
+                    new { record.WorkDate, record.WorkerId, record.OperationId, record.Quantity, record.PieceRateId }, null, reason));
                 _uow.Repository<OutputRecord>().Remove(record);
             }
             await _uow.SaveChangesAsync();   // lấy OutputRecordId của dòng mới trước khi ghi log Insert
@@ -233,7 +233,7 @@ public sealed class OutputService : IOutputService
             foreach (var record in created)
                 _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Insert, null,
                     new { record.WorkDate, record.ShiftCode, record.WorkerId, record.OperationId, record.OrderLineId,
-                          record.Quantity, record.UnitRate }, reason));
+                          record.Quantity, record.PieceRateId }, reason));
             await _uow.SaveChangesAsync();
             return Result.Success();
         });

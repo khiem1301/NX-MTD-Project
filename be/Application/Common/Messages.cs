@@ -198,13 +198,8 @@ public static class Messages
         "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
-    public const string KpiPlanExceedsTotal = "Tổng KPI các ngày ({0}) vượt tổng cả kỳ ({1}).";
-    public const string KpiTotalBelowPlan = "Tổng cả kỳ không được nhỏ hơn tổng KPI đã đặt cho các ngày ({0}). Hãy sửa KPI từng ngày trước.";
-    public const string KpiPlanExceedsBtp = "Vượt số bán thành phẩm còn lại để đặt KPI: các ngày từ hôm nay chỉ đặt được tối đa {0}.";
-    public const string KpiDailyTargetsTooMany = "Một kỳ KPI tối đa 366 ngày.";
-    public const string KpiDailyTargetDuplicateDate = "Mỗi ngày chỉ nhập một chỉ tiêu.";
-    public const string KpiDailyTargetOutOfPeriod = "Ngày có chỉ tiêu phải nằm trong kỳ KPI.";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
+    public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";
 
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
     public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
@@ -235,8 +230,14 @@ public static class Messages
     public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
     public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
     public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
+    public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
+    public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
+    public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
+    public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
+    public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
+    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng dùng.";
     public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
-    public const string PurchaseOrderDeliveryBeforeOrder = "Ngày giao dự kiến không được trước ngày đặt hàng.";
+    public const string PurchaseOrderDeliveryCountInvalid = "Số lần nhà cung cấp dự kiến giao phải từ 1 trở lên.";
     public const string PurchaseOrderPlaced = "Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.";
     public const string PurchaseOrderCancelled = "Đã hủy đơn mua.";
     public const string PurchaseOrderRepriced = "Đã cập nhật đơn giá và gửi lại Kế toán.";
@@ -246,10 +247,9 @@ public static class Messages
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
-    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, hẹn giao {4}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, dự kiến giao {4} lần. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
     public const string NotifyIncomingPoTitle = "Có đơn mua NVL chờ nhận";
     public const string NotifyIncomingPoBody = "Đơn mua {0} (NCC {1}) đã đặt hàng. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
-    public const string NotifyNoDate = "chưa rõ ngày";
     public const string NotifyPoPlacedTitle = "Đơn mua chờ thanh toán";
     public const string NotifyPoPlacedBody = "Đơn mua {0} (NCC {1}) đã đặt hàng, chờ xác nhận thanh toán.";
     public const string NotifyPoPaidTitle = "Đơn mua đã thanh toán";

@@ -10,8 +10,9 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// UC37 / UC39: phiếu nhập NVL — Thủ kho lập, Quản đốc xác nhận (tăng tồn) hoặc trả lại. Nguồn khách cấp lập theo đơn hàng,
-/// nguồn nhà cung cấp lập theo đơn mua (TH-12). Có hàng thiếu / lỗi thì tự sinh đơn SHORT_DELIVERY (TH-13); phiếu bổ sung
-/// (SUPPLEMENTARY) ghi nhận hàng giao bù theo đơn đó.
+/// nguồn nhà cung cấp lập theo đơn mua (TH-12). Thủ kho chỉ nhập số đạt; khi phiếu đã xác nhận đủ số lần giao dự kiến
+/// (<c>ExpectedDeliveryCount</c>, mặc định 1) mà còn thiếu hàng thì tự sinh đơn SHORT_DELIVERY (TH-13). Phiếu bổ sung là
+/// phiếu có <c>ShortageRequestId</c>, ghi nhận hàng giao bù theo đơn đó.
 /// </summary>
 public sealed class MaterialReceiptService : IMaterialReceiptService
 {
@@ -44,8 +45,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                 || (r.Order != null && r.Order.OrderCode.Contains(keyword))
                 || (r.PurchaseOrder != null && r.PurchaseOrder.PoCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReceiptId)
-            .Select(r => new MaterialReceiptListItemDto(r.MaterialReceiptId, r.ReceiptCode, r.ReceiptType, r.OrderId,
-                r.Order == null ? null : r.Order.OrderCode, r.Source, r.PurchaseOrderId,
+            .Select(r => new MaterialReceiptListItemDto(r.MaterialReceiptId, r.ReceiptCode,
+                r.ShortageRequestId == null ? ReceiptTypes.New : ReceiptTypes.Supplementary, r.OrderId,
+                r.Order == null ? null : r.Order.OrderCode, r.Source!, r.PurchaseOrderId,
                 r.PurchaseOrder == null ? null : r.PurchaseOrder.PoCode, r.ReceiptDate, r.Status, r.SubmittedAt,
                 r.ConfirmedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
                 r.MaterialReceiptLines.Count))
@@ -56,10 +58,13 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     public async Task<Result<MaterialReceiptDto>> GetByIdAsync(int receiptId, CancellationToken ct)
     {
         var dto = await Receipts.AsNoTracking().Where(r => r.MaterialReceiptId == receiptId)
-            .Select(r => new MaterialReceiptDto(r.MaterialReceiptId, r.ReceiptCode, r.ReceiptType, r.OrderId,
-                r.Order == null ? null : r.Order.OrderCode, r.Source, r.PurchaseOrderId,
-                r.PurchaseOrder == null ? null : r.PurchaseOrder.PoCode, r.OriginalReceiptId,
-                r.OriginalReceipt == null ? null : r.OriginalReceipt.ReceiptCode, r.ShortageRequestId, null,
+            .Select(r => new MaterialReceiptDto(r.MaterialReceiptId, r.ReceiptCode,
+                r.ShortageRequestId == null ? ReceiptTypes.New : ReceiptTypes.Supplementary, r.OrderId,
+                r.Order == null ? null : r.Order.OrderCode, r.Source!, r.PurchaseOrderId,
+                r.PurchaseOrder == null ? null : r.PurchaseOrder.PoCode,
+                r.ShortageRequest == null ? null : r.ShortageRequest.MaterialReceiptId,
+                r.ShortageRequest == null || r.ShortageRequest.MaterialReceipt == null
+                    ? null : r.ShortageRequest.MaterialReceipt.ReceiptCode, r.ShortageRequestId, null,
                 r.ReceiptDate, r.Status, r.ReturnReason, r.Note, r.SubmittedAt, r.ConfirmedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
                 r.MaterialReceiptLines.OrderBy(l => l.MaterialReceiptLineId).Select(l => new MaterialReceiptLineDto(
@@ -69,14 +74,27 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
-                    l.PurchaseOrderLine == null ? null : l.PurchaseOrderLine.UnitPrice, l.ToReplenishQty,
-                    l.AcceptedQty, l.ShortQty, l.DefectiveQty)).ToList()))
+                    l.PurchaseOrderLine == null ? null : l.PurchaseOrderLine.UnitPrice, null,
+                    l.AcceptedQty)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<MaterialReceiptDto>();
 
         var shortDeliveryId = await _uow.Repository<Request>().Query().AsNoTracking()
             .Where(q => q.MaterialReceiptId == receiptId && q.RequestTypeCode == RequestTypes.ShortDelivery)
             .Select(q => (int?)q.RequestId).FirstOrDefaultAsync(ct);
+
+        // Phiếu bổ sung: số cần bù của từng dòng = ReplenishQty Quản đốc đã chọn trên đơn thiếu NVL.
+        if (dto.ShortageRequestId is { } shortageId)
+        {
+            var toReplenish = await _uow.Repository<RequestLine>().Query().AsNoTracking()
+                .Where(q => q.RequestId == shortageId && q.MaterialReceiptLineId != null && q.ReplenishQty != null)
+                .ToDictionaryAsync(q => q.MaterialReceiptLineId!.Value, q => q.ReplenishQty, ct);
+            dto = dto with
+            {
+                Lines = dto.Lines.Select(l => l.OriginalReceiptLineId is { } o && toReplenish.TryGetValue(o, out var qty)
+                    ? l with { ToReplenishQty = qty } : l).ToList(),
+            };
+        }
         return Result<MaterialReceiptDto>.Success(dto with { ShortDeliveryRequestId = shortDeliveryId });
     }
 
@@ -90,7 +108,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             var receipt = new MaterialReceipt
             {
                 ReceiptCode = await _codes.NextAsync<MaterialReceipt>(DocumentPrefixes.MaterialReceipt, r => r.ReceiptCode, ct),
-                ReceiptType = ReceiptTypes.New,
                 Status = ReceiptStatuses.Pending,
                 SubmittedAt = _clock.Now,
             };
@@ -108,7 +125,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var receipt = await Receipts.Include(r => r.MaterialReceiptLines)
             .FirstOrDefaultAsync(r => r.MaterialReceiptId == receiptId, ct);
         if (receipt is null) return WarehouseFailures.NotFound<MaterialReceiptDto>();
-        if (receipt.ReceiptType != ReceiptTypes.New
+        if (receipt.ShortageRequestId != null   // phiếu bổ sung không sửa
             || receipt.Status is not (ReceiptStatuses.Pending or ReceiptStatuses.Returned))
             return WarehouseFailures.InvalidStatus<MaterialReceiptDto>();
 
@@ -158,11 +175,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             var receipt = new MaterialReceipt
             {
                 ReceiptCode = await _codes.NextAsync<MaterialReceipt>(DocumentPrefixes.MaterialReceipt, r => r.ReceiptCode, ct),
-                ReceiptType = ReceiptTypes.Supplementary,
-                OriginalReceiptId = original.MaterialReceiptId,
                 ShortageRequestId = request.RequestId,
                 OrderId = original.OrderId,
-                Source = original.Source,
                 PurchaseOrderId = original.PurchaseOrderId,
                 ReceiptDate = dto.ReceiptDate,
                 Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
@@ -176,10 +190,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                         OrderMaterialId = src.OrderMaterialId,
                         PurchaseOrderLineId = src.PurchaseOrderLineId,
                         OriginalReceiptLineId = src.MaterialReceiptLineId,
-                        ToReplenishQty = requestLines[l.OriginalReceiptLineId].ReplenishQty,
                         MaterialId = src.OrderMaterialId is null ? src.MaterialId : null,
                         MaterialColor = src.OrderMaterialId is null ? src.MaterialColor : null,
-                        AcceptedQty = l.AcceptedQty, ShortQty = l.ShortQty, DefectiveQty = l.DefectiveQty,
+                        AcceptedQty = l.AcceptedQty,
                     };
                 }).ToList(),
             };
@@ -222,15 +235,18 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             if (receipt.OrderId is { } orderId) await _supply.RecalculateMaterialStatusAsync(orderId, ct);
 
             var message = WarehouseMessages.ReceiptConfirmed;
-            if (receipt.ReceiptType == ReceiptTypes.New
-                && receipt.MaterialReceiptLines.Any(l => l.ShortQty + l.DefectiveQty > 0))
-            {
-                await StageShortDeliveryAsync(receipt, ct);
-                message = $"{message} {WarehouseMessages.ShortDeliveryCreated}";   // MSG31
-            }
-            else if (receipt.ReceiptType == ReceiptTypes.Supplementary && receipt.ShortageRequestId is { } requestId)
+            if (receipt.ShortageRequestId is { } requestId)
             {
                 await CompleteWhenReplenishedAsync(requestId, ct);
+            }
+            else
+            {
+                var shortages = await FindShortagesAsync(receipt, ct);
+                if (shortages.Count > 0)
+                {
+                    await StageShortDeliveryAsync(receipt, shortages, ct);
+                    message = $"{message} {WarehouseMessages.ShortDeliveryCreated}";   // MSG31
+                }
             }
 
             await _uow.SaveChangesAsync();
@@ -251,21 +267,74 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         return Result.Success(WarehouseMessages.ReceiptReturned);
     }
 
-    // ---------- Thiếu / lỗi → đơn SHORT_DELIVERY cho Quản đốc ----------
+    // ---------- Thiếu hàng (tự tính) → đơn SHORT_DELIVERY cho Quản đốc ----------
 
-    private async Task StageShortDeliveryAsync(MaterialReceipt receipt, CancellationToken ct)
+    /// <summary>
+    /// Dòng của phiếu vừa xác nhận còn thiếu so với đơn mua / số khách cấp, khi nguồn đã giao đủ số lần dự kiến.
+    /// Số thiếu = đặt (hoặc khách cấp) − đã nhận − đã chốt không bù. Bỏ qua dòng đã có đơn thiếu NVL đang chờ xử lý.
+    /// </summary>
+    private async Task<List<(MaterialReceiptLine Line, decimal Qty)>> FindShortagesAsync(MaterialReceipt receipt,
+        CancellationToken ct)
+    {
+        var result = new List<(MaterialReceiptLine, decimal)>();
+        var open = await _uow.Repository<RequestLine>().Query().AsNoTracking()
+            .Where(q => q.Request.RequestTypeCode == RequestTypes.ShortDelivery
+                        && q.Request.Status == RequestStatuses.PendingProcessing && q.MaterialReceiptLine != null)
+            .Select(q => new { q.MaterialReceiptLine!.PurchaseOrderLineId, q.MaterialReceiptLine.OrderMaterialId })
+            .ToListAsync(ct);
+
+        if (receipt.PurchaseOrderId is { } poId)
+        {
+            var po = await _uow.Repository<PurchaseOrder>().Query().AsNoTracking().Include(p => p.PurchaseOrderLines)
+                .FirstAsync(p => p.PurchaseOrderId == poId, ct);
+            var receivedCount = await Receipts.CountAsync(r => r.PurchaseOrderId == poId && r.Status == ReceiptStatuses.Confirmed, ct);
+            if (receivedCount < (po.ExpectedDeliveryCount ?? 1)) return result;
+
+            var received = await _supply.ReceivedByPurchaseLineAsync(po.PurchaseOrderLines.Select(l => l.PurchaseOrderLineId).ToList(), ct);
+            foreach (var line in receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId != null))
+            {
+                var pol = po.PurchaseOrderLines.First(p => p.PurchaseOrderLineId == line.PurchaseOrderLineId);
+                var outstanding = pol.OrderedQty - received.GetValueOrDefault(pol.PurchaseOrderLineId) - pol.NotReplenishedQty;
+                if (outstanding > 0 && open.All(o => o.PurchaseOrderLineId != pol.PurchaseOrderLineId))
+                    result.Add((line, outstanding));
+            }
+            return result;
+        }
+
+        var omIds = receipt.MaterialReceiptLines.Where(l => l.OrderMaterialId != null).Select(l => l.OrderMaterialId!.Value).ToList();
+        var materials = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(m => omIds.Contains(m.OrderMaterialId)).ToDictionaryAsync(m => m.OrderMaterialId, ct);
+        var deliveries = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.OrderMaterialId != null && omIds.Contains(l.OrderMaterialId.Value)
+                        && l.MaterialReceipt.PurchaseOrderId == null && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
+            .Select(l => new { OrderMaterialId = l.OrderMaterialId!.Value, l.MaterialReceiptId, l.AcceptedQty })
+            .ToListAsync(ct);
+        foreach (var line in receipt.MaterialReceiptLines.Where(l => l.OrderMaterialId != null))
+        {
+            var om = materials[line.OrderMaterialId!.Value];
+            var mine = deliveries.Where(d => d.OrderMaterialId == om.OrderMaterialId).ToList();
+            var outstanding = om.CustomerQty - mine.Sum(d => d.AcceptedQty);
+            if (mine.Select(d => d.MaterialReceiptId).Distinct().Count() >= (om.ExpectedDeliveryCount ?? 1)
+                && outstanding > 0 && open.All(o => o.OrderMaterialId != om.OrderMaterialId))
+                result.Add((line, outstanding));
+        }
+        return result;
+    }
+
+    private async Task StageShortDeliveryAsync(MaterialReceipt receipt, IReadOnlyList<(MaterialReceiptLine Line, decimal Qty)> shortages,
+        CancellationToken ct)
     {
         var draft = new RequestDraft(RequestTypes.ShortDelivery, receipt.OrderId, null, null, null,
-            receipt.MaterialReceiptId, null, null, $"Thiếu / lỗi NVL — phiếu {receipt.ReceiptCode}",
+            receipt.MaterialReceiptId, null, null, $"Thiếu NVL — phiếu {receipt.ReceiptCode}",
             WarehouseMessages.ShortDeliveryCreated, Array.Empty<RequestLineInput>(), null);
         var request = await _requests.StageSystemRequestAsync(draft, ct);
-        foreach (var line in receipt.MaterialReceiptLines.Where(l => l.ShortQty + l.DefectiveQty > 0))
+        foreach (var (line, qty) in shortages)
         {
             request.RequestLines.Add(new RequestLine
             {
                 MaterialId = line.OrderMaterial?.MaterialId ?? line.MaterialId,
                 MaterialColor = line.OrderMaterial?.MaterialColor ?? line.MaterialColor ?? string.Empty,
-                Quantity = line.ShortQty + line.DefectiveQty,
+                Quantity = qty,
                 MaterialReceiptLineId = line.MaterialReceiptLineId,
             });
         }
@@ -276,7 +345,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         CancellationToken ct) =>
         await _uow.Repository<MaterialReceiptLine>().Query()
             .Where(l => l.OriginalReceiptLineId != null && l.MaterialReceipt.ShortageRequestId == shortageRequestId
-                        && l.MaterialReceipt.ReceiptType == ReceiptTypes.Supplementary
                         && (l.MaterialReceipt.Status == ReceiptStatuses.Confirmed
                             || (includePending && l.MaterialReceipt.Status == ReceiptStatuses.Pending)))
             .GroupBy(l => l.OriginalReceiptLineId!.Value)
@@ -295,7 +363,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     // ---------- Kiểm tra và dựng dòng phiếu ----------
 
     private sealed record ResolvedLine(int? OrderMaterialId, int? PurchaseOrderLineId, int? MaterialId,
-        string? MaterialColor, decimal AcceptedQty, decimal ShortQty, decimal DefectiveQty);
+        string? MaterialColor, decimal AcceptedQty);
 
     private sealed record ResolvedReceipt(int? OrderId, int? PurchaseOrderId, IReadOnlyList<ResolvedLine> Lines);
 
@@ -319,7 +387,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderMaterialNotInOrder);
 
         return Result<ResolvedReceipt>.Success(new ResolvedReceipt(order.OrderId, null,
-            dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, null, l.AcceptedQty, l.ShortQty, l.DefectiveQty)).ToList()));
+            dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, null, l.AcceptedQty)).ToList()));
     }
 
     private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
@@ -356,16 +424,15 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             {
                 var pol = byId[l.PurchaseOrderLineId!.Value];
                 return pol.OrderMaterialId is not null
-                    ? new ResolvedLine(pol.OrderMaterialId, pol.PurchaseOrderLineId, null, null, l.AcceptedQty, l.ShortQty, l.DefectiveQty)
+                    ? new ResolvedLine(pol.OrderMaterialId, pol.PurchaseOrderLineId, null, null, l.AcceptedQty)
                     : new ResolvedLine(null, pol.PurchaseOrderLineId, pol.MaterialId, pol.MaterialColor ?? string.Empty,
-                        l.AcceptedQty, l.ShortQty, l.DefectiveQty);
+                        l.AcceptedQty);
             }).ToList()));
     }
 
     private static void Apply(MaterialReceipt receipt, SaveMaterialReceiptDto dto, ResolvedReceipt resolved)
     {
         receipt.OrderId = resolved.OrderId;
-        receipt.Source = dto.Source;
         receipt.PurchaseOrderId = resolved.PurchaseOrderId;
         receipt.ReceiptDate = dto.ReceiptDate;
         receipt.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
@@ -376,8 +443,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             MaterialId = l.MaterialId,
             MaterialColor = l.MaterialColor,
             AcceptedQty = l.AcceptedQty,
-            ShortQty = l.ShortQty,
-            DefectiveQty = l.DefectiveQty,
         }).ToList();
     }
 }

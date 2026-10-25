@@ -2,7 +2,7 @@ namespace NX_MTD.Application.Interfaces;
 
 /// <summary>
 /// Kho lưu nguyên file Excel bảng lương Kế toán đã nhập, để Admin (giám đốc) tải về xem (DEV-MI-09-5).
-/// Chỉ trả đường dẫn nội bộ để lưu vào <c>Payroll.ImportedFileUrl</c>; không bao giờ đưa đường dẫn đó ra API.
+/// Chỉ trả đường dẫn nội bộ để lưu vào <c>Attachment (PAYROLL, IMPORT_FILE)</c>; không bao giờ đưa đường dẫn đó ra API.
 /// </summary>
 public interface IPayrollFileStore
 {

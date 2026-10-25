@@ -18,6 +18,8 @@ public partial class MaterialIssueLine
 
     public int? OrderLineId { get; set; }
 
+    public int? ProductComponentId { get; set; }
+
     public decimal IssuedQty { get; set; }
 
     public decimal? ConfirmedQty { get; set; }
@@ -31,4 +33,6 @@ public partial class MaterialIssueLine
     public virtual ICollection<MaterialReturnLine> MaterialReturnLines { get; set; } = new List<MaterialReturnLine>();
 
     public virtual OrderLine? OrderLine { get; set; }
+
+    public virtual ProductComponent? ProductComponent { get; set; }
 }

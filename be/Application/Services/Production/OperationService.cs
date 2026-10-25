@@ -38,7 +38,7 @@ public sealed class OperationService : IOperationService
         var today = _clock.Today;
         var rates = (await _uow.Repository<PieceRate>().Query().AsNoTracking()
                 .Where(r => r.Operation.ProductId == productId)
-                .Select(r => new { r.PieceRateId, r.OperationId, r.Rate, r.EffectiveDate, r.Status, r.RejectReason })
+                .Select(r => new { r.PieceRateId, r.OperationId, r.Rate, r.EffectiveDate, r.Status, r.DecisionNote })
                 .ToListAsync(ct))
             .GroupBy(r => r.OperationId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -55,7 +55,7 @@ public sealed class OperationService : IOperationService
             var latest = own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
             var next = latest is not null && latest.PieceRateId != current?.PieceRateId
                 ? new OperationRateDto(latest.PieceRateId, latest.Rate, latest.EffectiveDate,
-                    CodeText.ToPascal(latest.Status), latest.RejectReason)
+                    CodeText.ToPascal(latest.Status), latest.Status == PieceRateStatuses.Rejected ? latest.DecisionNote : null)
                 : null;
 
             result.Add(item with
@@ -293,7 +293,7 @@ public sealed class OperationService : IOperationService
             var before = RateSnapshot(rate);
             rate.Rate = row.Raw.Rate.Value;
             rate.Status = status;
-            rate.RejectReason = null;
+            rate.DecisionNote = null;
             rate.SubmittedAt = submit ? now : null;
             updated.Add((rate, before));
         }

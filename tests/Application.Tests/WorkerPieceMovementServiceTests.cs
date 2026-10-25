@@ -39,7 +39,7 @@ public class WorkerPieceMovementServiceTests
     {
         _clock.Now.Returns(Now);
         _worker = new Employee { EmployeeId = WorkerId, EmployeeCode = "CNMAY1", FullName = "Công nhân 1", TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.Worker } };
-        _line = new OrderLine { OrderLineId = 101, OrderId = 7, Order = _order, ProductId = 3, Product = new Product { ProductId = 3, ProductCode = "AO-01" }, Color = "Đen", SizeCode = "M" };
+        _line = new OrderLine { OrderLineId = 101, OrderId = 7, Order = _order, ProductId = 3, ProductVariant = TestVariant.Make(new Product { ProductId = 3, ProductCode = "AO-01" }, "Đen", "M") };
         _teams.Add(_team); _employees.Add(_worker); _orderLines.Add(_line);
         _employees.Add(new Employee { EmployeeId = 41, TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.TeamLeader } });
         _inventory.GetTeamHeldQtyAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(_ => _held);

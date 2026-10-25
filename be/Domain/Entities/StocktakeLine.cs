@@ -18,6 +18,8 @@ public partial class StocktakeLine
 
     public int? OrderLineId { get; set; }
 
+    public int? ProductComponentId { get; set; }
+
     public decimal BookQty { get; set; }
 
     public decimal? CountedQty { get; set; }
@@ -29,6 +31,8 @@ public partial class StocktakeLine
     public virtual Material? Material { get; set; }
 
     public virtual OrderLine? OrderLine { get; set; }
+
+    public virtual ProductComponent? ProductComponent { get; set; }
 
     public virtual Stocktake Stocktake { get; set; } = null!;
 }

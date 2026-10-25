@@ -32,7 +32,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(om => new
             {
                 om.OrderMaterialId, om.OrderId, om.Order.OrderCode, om.Material.MaterialCode, om.Material.MaterialName,
-                om.MaterialColor, om.Material.Unit, om.CustomerQty, om.CustomerExpectedDate,
+                om.MaterialColor, om.Material.Unit, om.CustomerQty, om.ExpectedDeliveryCount,
             })
             .ToListAsync(ct);
         if (rows.Count == 0) return [];
@@ -45,12 +45,17 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 
+        var counts = await _uow.Repository<VwOrderMaterialDelivery>().Query().AsNoTracking()
+            .Where(v => ids.Contains(v.OrderMaterialId))
+            .ToDictionaryAsync(v => v.OrderMaterialId, v => v.ReceivedCount, ct);
+
         return rows
             .Select(r => new IncomingCustomerMaterialDto(r.OrderMaterialId, r.OrderId, r.OrderCode, r.MaterialCode, r.MaterialName,
                 r.MaterialColor, r.Unit, r.CustomerQty, received.GetValueOrDefault(r.OrderMaterialId),
-                r.CustomerQty - received.GetValueOrDefault(r.OrderMaterialId), r.CustomerExpectedDate))
+                r.CustomerQty - received.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryCount,
+                counts.GetValueOrDefault(r.OrderMaterialId)))
             .Where(r => r.OutstandingQty > 0)
-            .OrderBy(r => r.ExpectedDate ?? DateOnly.MaxValue).ThenBy(r => r.OrderCode).ThenBy(r => r.MaterialCode)
+            .OrderBy(r => r.OrderCode).ThenBy(r => r.MaterialCode)
             .ToList();
     }
 
@@ -64,7 +69,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 l.PurchaseOrderId, l.PurchaseOrder.PoCode, l.PurchaseOrder.OrderId,
                 OrderCode = l.PurchaseOrder.Order == null ? null : l.PurchaseOrder.Order.OrderCode,
                 SupplierName = l.PurchaseOrder.Supplier == null ? null : l.PurchaseOrder.Supplier.SupplierName,
-                l.PurchaseOrder.ExpectedDeliveryDate, l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
+                l.PurchaseOrder.ExpectedDeliveryCount, l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
                 MaterialCode = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                 MaterialName = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                 Unit = l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
@@ -81,16 +86,22 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 
+        var poIds = rows.Select(r => r.PurchaseOrderId).Distinct().ToArray();
+        var counts = await _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
+            .Where(v => poIds.Contains(v.PurchaseOrderId))
+            .ToDictionaryAsync(v => v.PurchaseOrderId, v => v.ReceivedCount, ct);
+
         return rows
             .Select(r =>
             {
                 var got = received.GetValueOrDefault(r.PurchaseOrderLineId);
                 return new IncomingSupplierMaterialDto(r.PurchaseOrderId, r.PoCode, r.OrderId, r.OrderCode, r.SupplierName,
-                    r.ExpectedDeliveryDate, r.PurchaseOrderLineId, r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
+                    r.ExpectedDeliveryCount, counts.GetValueOrDefault(r.PurchaseOrderId), r.PurchaseOrderLineId,
+                    r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
                     r.OrderedQty, got, r.OrderedQty - got - r.NotReplenishedQty);
             })
             .Where(r => r.OutstandingQty > 0)
-            .OrderBy(r => r.ExpectedDeliveryDate ?? DateOnly.MaxValue).ThenBy(r => r.PoCode).ThenBy(r => r.MaterialCode)
+            .OrderBy(r => r.PoCode).ThenBy(r => r.MaterialCode)
             .ToList();
     }
 }

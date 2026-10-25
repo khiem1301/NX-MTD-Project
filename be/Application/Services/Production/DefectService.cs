@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services.Production;
 
 /// <summary>
 /// KI-08 (UC56): tổ trưởng / tổ phó may ghi hàng hỏng theo QA/QC báo. REWORK trả lại công nhân sửa, không trừ sản
-/// lượng; SCRAP trừ khỏi hàng trên chuyền và sản lượng được trả của công nhân gây lỗi (khóa <c>ScrapUnitRate</c> bằng
+/// lượng; SCRAP trừ khỏi hàng trên chuyền và sản lượng được trả của công nhân gây lỗi (khóa <c>PieceRateId</c> bằng
 /// đơn giá duyệt tại ngày làm việc). Bắt buộc công đoạn, công nhân gây lỗi, lý do (OTHER phải ghi chú); báo cho công
 /// nhân; công nhân phản hồi nếu ghi sai. Hạn sửa như sản lượng (GBR-09). Không sinh đơn cắt bù (KI-09 — DEV-KI-08-1).
 /// </summary>
@@ -113,14 +113,14 @@ public sealed class DefectService : IDefectService
         if (worker is null)
             return Result<int>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid);
 
-        decimal? scrapRate = null;
+        int? scrapRateId = null;
         if (type == DefectTypes.Scrap)
         {
             var rate = await _rates.FindEffectiveAsync(dto.OperationId, dto.WorkDate, ct);
             if (rate is null)   // MSG18: Scrap trừ lương theo đơn giá duyệt nên phải có đơn giá
                 return Result<int>.Failure(ErrorCodes.PieceRateNotApproved, string.Format(Messages.PieceRateNotApproved,
                     operation.OperationCode, dto.WorkDate.ToString("dd/MM/yyyy")));
-            scrapRate = rate.Rate;   // khóa tại thời điểm ghi (CK_DR_Rate)
+            scrapRateId = rate.PieceRateId;   // khóa tại thời điểm ghi (CK_DR_Rate)
         }
 
         var teamCode = await _uow.Repository<Team>().Query().AsNoTracking()
@@ -131,7 +131,7 @@ public sealed class DefectService : IDefectService
             DefectCode = await NextCodeAsync(teamCode, dto.WorkDate, ct), WorkDate = dto.WorkDate, ShiftCode = shift,
             SewingTeamId = team.Data, OrderLineId = dto.OrderLineId, OperationId = dto.OperationId,
             ResponsibleWorkerId = dto.ResponsibleWorkerId, DefectType = type, Quantity = dto.Quantity,
-            DefectReasonCode = reasonCode, ReasonNote = note, ScrapUnitRate = scrapRate, WorkerNotifiedAt = now,
+            DefectReasonCode = reasonCode, ReasonNote = note, PieceRateId = scrapRateId, WorkerNotifiedAt = now,
             EditDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate), Status = DefectStatuses.Recorded,
             RecordedBy = _user.EmployeeId, RecordedAt = now,
         };
@@ -224,9 +224,9 @@ public sealed class DefectService : IDefectService
 
     private static IQueryable<DefectDto> Project(IQueryable<DefectRecord> source) => source.Select(d => new DefectDto(
         d.DefectRecordId, d.DefectCode, d.WorkDate, d.ShiftCode, d.SewingTeamId, d.OrderLineId, d.OrderLine.Order.OrderCode,
-        d.OrderLine.Product.ProductCode, d.OperationId, d.Operation.OperationCode, d.Operation.OperationName,
+        d.OrderLine.ProductVariant.Product.ProductCode, d.OperationId, d.Operation.OperationCode, d.Operation.OperationName,
         d.ResponsibleWorkerId, d.ResponsibleWorker.FullName, d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote,
-        d.ScrapUnitRate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
+        d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
         d.Request == null ? null : d.Request.Status));
@@ -243,7 +243,7 @@ public sealed class DefectService : IDefectService
     private static object Snapshot(DefectRecord d) => new
     {
         d.DefectCode, d.WorkDate, d.ShiftCode, d.SewingTeamId, d.OrderLineId, d.OperationId, d.ResponsibleWorkerId,
-        d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote, d.ScrapUnitRate,
+        d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote, d.PieceRateId,
     };
 
     private static Result<int> Invalid(string message) =>

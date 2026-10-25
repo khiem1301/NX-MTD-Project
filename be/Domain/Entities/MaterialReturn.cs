@@ -14,8 +14,6 @@ public partial class MaterialReturn
 
     public int MaterialIssueId { get; set; }
 
-    public int CuttingTeamId { get; set; }
-
     public string? Note { get; set; }
 
     public string Status { get; set; } = null!;
@@ -29,8 +27,6 @@ public partial class MaterialReturn
     public DateTime CreatedAt { get; set; }
 
     public virtual Employee? ConfirmedByNavigation { get; set; }
-
-    public virtual Team CuttingTeam { get; set; } = null!;
 
     public virtual MaterialIssue MaterialIssue { get; set; } = null!;
 

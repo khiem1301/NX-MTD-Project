@@ -4,7 +4,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
 import { useTeamLookup } from '@/hooks/useHrLookups';
-import { toApiDate } from '@/utils/format';
+import { formatQty, toApiDate } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useSaveKpiTarget } from '../hooks/useKpi';
 import type { KpiTarget } from '../types';
@@ -17,6 +17,7 @@ type FormValues = {
   sewingTeamId: number;
   period: [Dayjs, Dayjs];
   targetFinishedQty: number;
+  workingDays: number;
 };
 
 const DATE_FORMAT = 'DD/MM/YYYY';
@@ -25,12 +26,13 @@ const text = KPI_TEXT.form;
 /**
  * UC19 — Quản đốc lập / sửa chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ. Mã hàng chọn trong số mã hàng
  * của đơn đã chọn; BE kiểm lại và báo trùng kỳ. Khi sửa, đơn / mã hàng / tổ không đổi được để khỏi lệch kết quả đã tính.
- * Chỉ nhập tổng cả kỳ; chỉ tiêu từng ngày đặt riêng trên lịch KPI ("Xem theo ngày") vì mấy ngày đầu vào đơn tổ làm chậm hơn.
  */
 export function KpiTargetFormModal({ open, target, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveKpiTarget(target?.kpiTargetId ?? null);
   const orderId = Form.useWatch('orderId', form) ?? null;
+  const qty = Form.useWatch('targetFinishedQty', form);
+  const days = Form.useWatch('workingDays', form);
   const orders = useOrderLookup();
   const lines = useOrderLineLookup(orderId);
   const teams = useTeamLookup();
@@ -46,6 +48,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
         sewingTeamId: target.sewingTeamId,
         period: [dayjs(target.startDate), dayjs(target.endDate)],
         targetFinishedQty: target.targetFinishedQty,
+        workingDays: target.workingDays,
       });
     }
   }, [open, target, form]);
@@ -69,6 +72,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
     .filter((t) => t.teamType === 'Sewing')
     .map((t) => ({ value: t.teamId, label: t.teamName }));
 
+  const dailyPreview = qty && days ? Math.round((qty / days) * 100) / 100 : null;
   const required = [{ required: true, message: text.required }];
 
   const handleFinish = (values: FormValues) => {
@@ -80,6 +84,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
         startDate: toApiDate(values.period[0]),
         endDate: toApiDate(values.period[1]),
         targetFinishedQty: values.targetFinishedQty,
+        workingDays: values.workingDays,
       },
       { onSuccess: onClose },
     );
@@ -131,7 +136,16 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
         >
           <InputNumber min={1} precision={0} style={{ width: 200 }} />
         </Form.Item>
-        <Typography.Text type="secondary">{text.dailyHint}</Typography.Text>
+        <Form.Item
+          name="workingDays"
+          label={text.workingDays}
+          rules={[...required, { type: 'number', min: 1, message: text.daysMin }]}
+        >
+          <InputNumber min={1} precision={0} style={{ width: 200 }} />
+        </Form.Item>
+        {dailyPreview !== null && (
+          <Typography.Text type="secondary">{`${text.dailyPreview}: ${formatQty(dailyPreview)}`}</Typography.Text>
+        )}
       </Form>
     </Modal>
   );

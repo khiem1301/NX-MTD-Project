@@ -10,18 +10,10 @@ public sealed record KpiTargetDto(
     short WorkingDays, decimal DailyTarget, string Status, string? Result, DateTime CreatedAt,
     int ActualFinishedQty = 0, decimal PercentAchieved = 0m);
 
-/// <summary>Chỉ tiêu một ngày của KPI.</summary>
-public sealed record KpiDailyTargetInputDto(DateOnly WorkDate, int TargetQty);
-
-/// <summary>
-/// Tạo mới / sửa chỉ tiêu KPI (sửa chỉ cho phép khi Status = ACTIVE): đơn, mã hàng, tổ, kỳ và tổng cả kỳ. Chỉ tiêu từng ngày
-/// đặt riêng trên lịch KPI (SaveKpiDailyPlanDto) vì mấy ngày đầu vào đơn tổ làm chậm hơn, không chia đều cả kỳ.
-/// </summary>
+/// <summary>Tạo mới / sửa toàn bộ chỉ tiêu KPI (sửa chỉ cho phép khi Status = ACTIVE).</summary>
 public sealed record SaveKpiTargetDto(
-    int OrderId, int ProductId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate, int TargetFinishedQty);
-
-/// <summary>Đặt toàn bộ chỉ tiêu từng ngày của một KPI (rỗng = xóa hết).</summary>
-public sealed record SaveKpiDailyPlanDto(IReadOnlyList<KpiDailyTargetInputDto> DailyTargets);
+    int OrderId, int ProductId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate,
+    int TargetFinishedQty, short WorkingDays);
 
 public sealed record KpiTargetQuery : PageQuery
 {
@@ -32,8 +24,8 @@ public sealed record KpiTargetQuery : PageQuery
 
 /// <summary>
 /// MI-18 "KPI theo ngày": một dòng kết quả theo ngày của một chỉ tiêu KPI, chiếu thẳng từ view
-/// vw_KpiDailyResult (xem VwKpiDailyResult). Có dòng cho mọi ngày có chỉ tiêu (KpiDailyTarget; chưa có hàng thì FinishedQty = 0)
-/// và ngày QC có hàng ngoài kế hoạch (DailyTarget, PercentAchieved = null).
+/// vw_KpiDailyResult (xem VwKpiDailyResult). View chỉ có dòng cho ngày có QC nhập sản lượng (CROSS APPLY
+/// trong SQL) — ngày không có dòng nghĩa là ngày đó chưa có hàng hoàn thiện, không phải lỗi dữ liệu.
 /// </summary>
 public sealed record KpiDailyResultDto(
     int KpiTargetId, int SewingTeamId, int OrderId, int ProductId, DateOnly WorkDate,

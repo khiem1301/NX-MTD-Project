@@ -128,19 +128,8 @@ public sealed class KpiService : IKpiService
         var check = await ValidateAsync(dto, kpiTargetId, ct);
         if (check is not null) return check;
 
-        // Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; tổng cả kỳ mới không được nhỏ hơn tổng KPI đã đặt cho các ngày còn lại.
-        var days = _uow.Repository<KpiDailyTarget>();
-        var oldDays = await days.Query().Where(d => d.KpiTargetId == kpiTargetId).ToListAsync(ct);
-        var outside = oldDays.Where(d => d.WorkDate < dto.StartDate || d.WorkDate > dto.EndDate).ToList();
-        var kept = oldDays.Except(outside).ToList();
-        var keptSum = kept.Sum(d => d.TargetQty);
-        if (keptSum > dto.TargetFinishedQty)
-            return Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiTotalBelowPlan, keptSum));
-
         var before = Snapshot(target);
-        days.RemoveRange(outside);
         Apply(target, dto);
-        if (kept.Count > 0) target.WorkingDays = (short)kept.Count;
         _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update, before, Snapshot(target)));
         await _uow.SaveChangesAsync();
         return await GetByIdAsync(kpiTargetId, ct);
@@ -238,8 +227,7 @@ public sealed class KpiService : IKpiService
         target.StartDate = dto.StartDate;
         target.EndDate = dto.EndDate;
         target.TargetFinishedQty = dto.TargetFinishedQty;
-        // Chưa đặt chỉ tiêu ngày: số ngày làm việc = số ngày trong kỳ trừ Chủ nhật (dịch vụ lịch KPI cập nhật lại khi đặt ngày).
-        target.WorkingDays = KpiCalendarMath.WorkingDaysIn(dto.StartDate, dto.EndDate);
+        target.WorkingDays = dto.WorkingDays;
     }
 
     private static object Snapshot(KpiTarget t) => new

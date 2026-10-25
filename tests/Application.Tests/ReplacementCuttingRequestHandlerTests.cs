@@ -17,12 +17,21 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
 
     private readonly List<DefectRecord> _defects = [];
     private readonly List<Request> _requests = [];
+    private readonly List<ProductComponent> _components =
+    [
+        new() { ProductComponentId = 7, ProductId = 1, ComponentName = "Thân trước", ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active },
+        new() { ProductComponentId = 8, ProductId = 1, ComponentName = "Cổ", ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active },
+        new() { ProductComponentId = 9, ProductId = 1, ComponentName = "Tay", ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active },
+        new() { ProductComponentId = 10, ProductId = 1, ComponentName = "Khóa", ComponentType = ComponentTypes.Trim, Status = RecordStatus.Active },
+        new() { ProductComponentId = 11, ProductId = 2, ComponentName = "Thân khác mã", ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active },
+    ];
     private readonly ReplacementCuttingRequestHandler _sut;
 
     public ReplacementCuttingRequestHandlerTests()
     {
         SetupQueryable(_defects);
         SetupQueryable(_requests);
+        SetupQueryable(_components);
         AsTeamLeader(TeamId);
         _sut = new ReplacementCuttingRequestHandler(Uow, User);
     }
@@ -33,7 +42,7 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
         var d = new DefectRecord
         {
             DefectRecordId = id, DefectType = type, Status = status, SewingTeamId = teamId, OrderLineId = LineId, Quantity = quantity,
-            OrderLine = new OrderLine { OrderLineId = LineId, OrderId = OrderId },
+            OrderLine = new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 1 },
         };
         _defects.Add(d);
         return d;
@@ -43,8 +52,8 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
         new(RequestTypes.ReplacementCutting, orderId, null, null, null, null, defectId, null, "Cắt bù", null,
             lines.Length > 0 ? lines : [Line()], requestId);
 
-    private static RequestLineInput Line(string? panel = "Thân trước", int? lineId = LineId, decimal qty = 2) =>
-        new(null, null, lineId, panel, null, qty);
+    private static RequestLineInput Line(int? component = 7, int? lineId = LineId, decimal qty = 2) =>
+        new(null, null, lineId, component, null, qty);
 
     [Fact]
     public async Task Valid_ScrapDefectOfOwnTeam_Passes()
@@ -110,13 +119,15 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
     {
         Defect(quantity: 3);
 
-        (await _sut.ValidateAsync(Draft(lines: Line(panel: " ")), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
+        (await _sut.ValidateAsync(Draft(lines: Line(component: null)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
         (await _sut.ValidateAsync(Draft(lines: Line(lineId: 999)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
         (await _sut.ValidateAsync(Draft(lines: Line(qty: 0)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
         (await _sut.ValidateAsync(Draft(lines: Line(qty: 4)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
         (await _sut.ValidateAsync(Draft(lines: Line(qty: 1.5m)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
-        (await _sut.ValidateAsync(Draft(lines: [Line("Cổ"), Line("cổ")]), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
-        (await _sut.ValidateAsync(Draft(lines: [Line("Cổ"), Line("Tay")]), default)).IsSuccess.Should().BeTrue();
+        (await _sut.ValidateAsync(Draft(lines: [Line(8), Line(8)]), default)).Message.Should().Be(Messages.ReplacementCuttingLines);
+        (await _sut.ValidateAsync(Draft(lines: Line(component: 10)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);   // phụ liệu, không phải chi tiết cắt
+        (await _sut.ValidateAsync(Draft(lines: Line(component: 11)), default)).Message.Should().Be(Messages.ReplacementCuttingLines);   // chi tiết của mã hàng khác
+        (await _sut.ValidateAsync(Draft(lines: [Line(8), Line(9)]), default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]

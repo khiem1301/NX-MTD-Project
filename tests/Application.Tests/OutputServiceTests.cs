@@ -53,7 +53,7 @@ public class OutputServiceTests : ProductionTestBase
 
         _lines.Add(new OrderLine
         {
-            OrderLineId = LineId, OrderId = 1, ProductId = 1,
+            OrderLineId = LineId, OrderId = 1, ProductId = 1, ProductVariant = TestVariant.Make(1),
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001", Status = OrderStatuses.InProduction },
         });
         _holdings.Add(new VwTeamPieceHolding { SewingTeamId = TeamId, OrderLineId = LineId, ReceivedFromWarehouse = 1000 });
@@ -107,7 +107,7 @@ public class OutputServiceTests : ProductionTestBase
         var record = new OutputRecord
         {
             OutputRecordId = _nextId++, WorkDate = date ?? Today, ShiftCode = shift, SewingTeamId = TeamId, WorkerId = workerId,
-            OperationId = operationId, OrderLineId = LineId, Quantity = qty, PieceRateId = 50, UnitRate = rate,
+            OperationId = operationId, OrderLineId = LineId, Quantity = qty, PieceRateId = 50, PieceRate = new PieceRate { PieceRateId = 50, Rate = rate },
             EditDeadline = deadline ?? Now.AddHours(20), Status = OutputStatuses.Saved, RowVer = RowVer,
         };
         _records.Add(record);
@@ -132,7 +132,6 @@ public class OutputServiceTests : ProductionTestBase
         result.IsSuccess.Should().BeTrue();
         result.Data!.Inserted.Should().Be(2);
         var assigned = _records.Single(r => r.WorkerId == 7);
-        assigned.UnitRate.Should().Be(1_200m);                // khóa theo đơn giá duyệt lúc nhập
         assigned.PieceRateId.Should().Be(100);
         assigned.IsOutsideAssignment.Should().BeFalse();
         assigned.EditDeadline.Should().Be(new DateTime(2026, 10, 22, 23, 59, 59));
@@ -259,7 +258,7 @@ public class OutputServiceTests : ProductionTestBase
 
         result.Data!.Updated.Should().Be(1);
         record.Quantity.Should().Be(150);
-        record.UnitRate.Should().Be(1_000m);   // không đổi theo giá mới
+        record.PieceRate.Rate.Should().Be(1_000m);   // không đổi theo giá mới
         record.UpdatedAt.Should().Be(Now);
         Repo<OutputRecord>().Received(1).SetOriginalRowVersion(record, RowVer);
         Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update && e.RecordId == record.OutputRecordId

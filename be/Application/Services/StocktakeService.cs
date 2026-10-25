@@ -53,9 +53,10 @@ public sealed class StocktakeService : IStocktakeService
                 s.StocktakeLines.OrderBy(l => l.StocktakeLineId).Select(l => new StocktakeLineDto(l.StocktakeLineId, l.MaterialId,
                     l.Material == null ? null : l.Material.MaterialCode, l.Material == null ? null : l.Material.MaterialName,
                     l.Material == null ? null : l.Material.Unit, l.MaterialColor, l.OrderLineId,
+                    l.ProductComponentId, l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
                     l.OrderLine == null ? null : l.OrderLine.Order.OrderCode,
-                    l.OrderLine == null ? null : l.OrderLine.Product.ProductCode, l.OrderLine == null ? null : l.OrderLine.Color,
-                    l.OrderLine == null ? null : l.OrderLine.SizeCode, l.BookQty, l.CountedQty,
+                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine == null ? null : l.OrderLine.ProductVariant.Color,
+                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode, l.BookQty, l.CountedQty,
                     (l.CountedQty ?? l.BookQty) - l.BookQty, l.Note)).ToList()))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<StocktakeDto>() : Result<StocktakeDto>.Success(dto);
@@ -160,7 +161,7 @@ public sealed class StocktakeService : IStocktakeService
     private static StockKey KeyOf(string warehouseType, StocktakeLine l) =>
         warehouseType == WarehouseTypes.Material
             ? StockKey.Material(l.MaterialId!.Value, l.MaterialColor ?? string.Empty)
-            : warehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value) : StockKey.Finished(l.OrderLineId!.Value);
+            : warehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentId) : StockKey.Finished(l.OrderLineId!.Value);
 
     private async Task NotifyApproversAsync(string code, CancellationToken ct)
     {
@@ -179,7 +180,7 @@ public sealed class StocktakeService : IStocktakeService
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
 
         var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
-        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}|{l.MaterialColor?.Trim()}" : $"{l.OrderLineId}").ToList();
+        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}|{l.MaterialColor?.Trim()}" : $"{l.OrderLineId}|{l.ProductComponentId}").ToList();
         if (keys.Distinct().Count() != keys.Count)
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
         if (dto.Lines.Any(l => isMaterial ? l.MaterialId is null || l.OrderLineId is not null : l.OrderLineId is null || l.MaterialId is not null))
@@ -205,12 +206,13 @@ public sealed class StocktakeService : IStocktakeService
                 return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustNotBeNegative);
             var key = isMaterial
                 ? StockKey.Material(l.MaterialId!.Value, l.MaterialColor?.Trim() ?? string.Empty)
-                : dto.WarehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value) : StockKey.Finished(l.OrderLineId!.Value);
+                : dto.WarehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentId) : StockKey.Finished(l.OrderLineId!.Value);
             lines.Add(new StocktakeLine
             {
                 MaterialId = l.MaterialId,
                 MaterialColor = isMaterial ? l.MaterialColor?.Trim() ?? string.Empty : null,
                 OrderLineId = l.OrderLineId,
+                ProductComponentId = dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentId : null,
                 BookQty = await _stockRepo.GetOnHandAsync(key, ct),
                 CountedQty = l.CountedQty,
                 Note = string.IsNullOrWhiteSpace(l.Note) ? null : l.Note.Trim(),

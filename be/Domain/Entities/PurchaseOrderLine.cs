@@ -12,12 +12,7 @@ public partial class PurchaseOrderLine
 
     public int PurchaseOrderId { get; set; }
 
-    /// <summary>NULL khi dòng thuộc đơn mua dự trữ; khi đó dùng MaterialId + MaterialColor.</summary>
     public int? OrderMaterialId { get; set; }
-
-    public int? MaterialId { get; set; }
-
-    public string? MaterialColor { get; set; }
 
     public decimal OrderedQty { get; set; }
 
@@ -27,9 +22,13 @@ public partial class PurchaseOrderLine
 
     public decimal? Amount { get; set; }
 
-    public virtual ICollection<MaterialReceiptLine> MaterialReceiptLines { get; set; } = new List<MaterialReceiptLine>();
+    public int? MaterialId { get; set; }
+
+    public string? MaterialColor { get; set; }
 
     public virtual Material? Material { get; set; }
+
+    public virtual ICollection<MaterialReceiptLine> MaterialReceiptLines { get; set; } = new List<MaterialReceiptLine>();
 
     public virtual OrderMaterial? OrderMaterial { get; set; }
 

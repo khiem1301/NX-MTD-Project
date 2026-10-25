@@ -24,8 +24,8 @@ public static class WarehouseMessages
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
     public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa.";
-    public const string CustomerDateRequired = "Khách có cấp NVL thì phải nhập ngày dự kiến giao.";
-    public const string NormProductNotInOrder = "Mã hàng của định mức không có trong đơn.";
+    public const string CustomerDeliveryCountRequired = "Khách có cấp NVL thì phải nhập số lần dự kiến giao (từ 1 trở lên).";
+    public const string CustomerDeliveryCountNotAllowed = "Khách không cấp NVL thì không nhập số lần giao.";
     public const string OrderMaterialNotInOrder = "NVL không thuộc đơn hàng của phiếu.";
     public const string OrderLineNotInOrder = "Dòng đơn không thuộc đơn hàng.";
 

@@ -22,22 +22,7 @@ public sealed class SaveKpiTargetDtoValidator : AbstractValidator<SaveKpiTargetD
             .GreaterThanOrEqualTo(x => x.StartDate).WithMessage(Messages.DateRangeInvalid);
 
         RuleFor(x => x.TargetFinishedQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive);
-    }
-}
-
-public sealed class SaveKpiDailyPlanDtoValidator : AbstractValidator<SaveKpiDailyPlanDto>
-{
-    private const int MaxDays = 366;
-
-    public SaveKpiDailyPlanDtoValidator()
-    {
-        RuleFor(x => x.DailyTargets).NotNull()
-            .Must(d => d.Count <= MaxDays).WithMessage(Messages.KpiDailyTargetsTooMany)
-            .Must(d => d.Select(x => x.WorkDate).Distinct().Count() == d.Count).WithMessage(Messages.KpiDailyTargetDuplicateDate);
-        RuleForEach(x => x.DailyTargets).ChildRules(day =>
-        {
-            day.RuleFor(d => d.TargetQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive);
-        });
+        RuleFor(x => x.WorkingDays).GreaterThan((short)0).WithMessage(Messages.KpiWorkingDaysMustBePositive);
     }
 }
 

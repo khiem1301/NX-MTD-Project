@@ -379,11 +379,11 @@ public class OperationImportTests : ProductionTestBase
     {
         var op1 = ExistingOp(1, "OP01", "KT cơi lót túi sườn");
         var rejected = ExistingRate(1, op1, 19.7m, RateDate, PieceRateStatuses.Rejected);
-        rejected.RejectReason = "Sai giá";
+        rejected.DecisionNote = "Sai giá";
 
         await _sut.ImportAsync(1, Workbook(), null, null, RateDate, true, default);
 
         rejected.Status.Should().Be(PieceRateStatuses.PendingApproval);
-        rejected.RejectReason.Should().BeNull();
+        rejected.DecisionNote.Should().BeNull();
     }
 }

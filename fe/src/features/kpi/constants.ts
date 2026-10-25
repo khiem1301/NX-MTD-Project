@@ -17,10 +17,12 @@ export const KPI_TEXT = {
     team: 'Tổ may',
     period: 'Kỳ (từ - đến)',
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
+    workingDays: 'Số ngày làm việc',
+    dailyPreview: 'Chỉ tiêu mỗi ngày',
     required: 'Vui lòng nhập thông tin này.',
     qtyMin: 'Chỉ tiêu phải lớn hơn 0.',
+    daysMin: 'Số ngày làm việc phải lớn hơn 0.',
     noProduct: 'Chọn đơn hàng trước.',
-    dailyHint: 'Chỉ tiêu từng ngày đặt sau khi lập, ở nút "Xem theo ngày" (lịch KPI).',
   },
 
   listPageTitle: 'Chỉ tiêu KPI tổ may',
@@ -36,7 +38,7 @@ export const KPI_TEXT = {
     sewingTeam: 'Tổ may',
     period: 'Kỳ (từ - đến)',
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
-    dailyTarget: 'Chỉ tiêu ngày (TB)',
+    dailyTarget: 'Chỉ tiêu ngày',
     actual: 'Thực tế (hoàn thiện)',
     percent: 'Đạt (%)',
     status: 'Trạng thái',
@@ -52,9 +54,9 @@ export const KPI_TEXT = {
     period: 'Kỳ',
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
     workingDays: 'Số ngày làm việc',
-    dailyTarget: 'Chỉ tiêu ngày (trung bình)',
+    dailyTarget: 'Chỉ tiêu ngày',
     noDailyResultsHint:
-      'Hiển thị mọi ngày có chỉ tiêu (chưa có hàng hoàn thiện thì số hoàn thiện = 0) và các ngày QA/QC nhập hàng ngoài kế hoạch (không có chỉ tiêu ngày).',
+      'Chỉ hiển thị các ngày QA/QC đã nhập hàng hoàn thiện. Ngày không có dòng nghĩa là ngày đó chưa có hàng hoàn thiện, không phải lỗi dữ liệu.',
   },
 
   dailyTable: {
@@ -76,44 +78,4 @@ export const KPI_TEXT = {
     Achieved: { text: 'Đạt', color: 'green' },
     NotAchieved: { text: 'Không đạt', color: 'orange' },
   },
-} as const;
-
-/** Lịch KPI theo ngày: đặt KPI từng ngày, Tổng bán thành phẩm và số còn lại để đặt KPI. */
-export const CAL_TEXT = {
-  title: 'Lịch KPI theo ngày',
-  weekdays: ['Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy', 'Chủ nhật'],
-  monthTitle: (month: number, year: number) => `THÁNG ${month} NĂM ${year}`,
-  prevMonth: 'Tháng trước',
-  nextMonth: 'Tháng sau',
-  sum: {
-    plan: 'Chỉ tiêu cả kỳ',
-    allocated: 'Đã chia cho các ngày',
-    unallocated: 'Chưa chia',
-    totalBtp: 'Tổng bán thành phẩm',
-    totalBtpHint: (cut: number, out: number) => `Đã cắt ${cut} − đã ra chuyền ${out}`,
-    committed: 'KPI đã đặt chưa ra chuyền',
-    remaining: 'Số lượng còn lại để đặt KPI',
-    remainingHint: 'Tổng bán thành phẩm − KPI đã đặt chưa ra chuyền (mọi tổ cùng đơn và mã hàng). Giảm khi QA/QC nhập hàng ra chuyền.',
-  },
-  cell: {
-    actual: 'Thực tế',
-    btp: 'BTP còn',
-    cut: 'Cắt',
-    low: 'Sắp thiếu BTP',
-    behind: 'Chậm KPI',
-    future: 'Dự báo',
-  },
-  tool: {
-    ramp: 'Chia tăng dần',
-    even: 'Chia đều',
-    clear: 'Xóa các ngày chưa tới',
-    save: 'Lưu KPI theo ngày',
-    reset: 'Bỏ thay đổi',
-    rampHint: 'Chia phần chỉ tiêu còn lại (cả kỳ trừ số đã làm) cho các ngày từ hôm nay đến hết kỳ, bỏ Chủ nhật; 3 ngày đầu 50% → 70% → 90% mức ổn định. Sau đó sửa tay từng ngày.',
-  },
-  saved: 'Đã lưu KPI theo ngày.',
-  overPlan: 'Tổng KPI các ngày vượt chỉ tiêu cả kỳ.',
-  overBtp: 'KPI đã đặt vượt số bán thành phẩm còn lại.',
-  readOnly: 'Chỉ xem (chỉ Quản đốc đặt KPI theo ngày, và chỉ khi KPI còn đang chạy).',
-  pastLocked: 'Ngày đã qua không sửa được.',
 } as const;

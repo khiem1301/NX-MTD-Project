@@ -67,7 +67,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
             .GroupBy(m => new
             {
                 m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId, m.OrderLine.Order.OrderCode,
-                m.OrderLine.Product.ProductCode, m.OrderLine.Color, m.OrderLine.SizeCode,
+                m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color, m.OrderLine.ProductVariant.SizeCode,
             })
             .Select(g => new
             {
@@ -99,7 +99,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
             if (worker is null || worker.TeamId != teamId || worker.Status != RecordStatus.Active)
                 return Result<int>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam, ResultKind.Forbidden);
 
-            var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
+            var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order).Include(l => l.ProductVariant)
                 .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId, ct);
             if (line is null) return WarehouseFailures.NotFound<int>();
             if (OrderStatuses.Closed.Contains(line.Order.Status))
@@ -135,7 +135,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
             await _uow.Repository<WorkerPieceMovement>().AddAsync(movement);
             _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
                 dto.MovementType == PieceMovementTypes.Handover ? "Có BTP được giao cho bạn" : "Có BTP được thu hồi từ bạn",
-                $"Tổ trưởng ghi {(dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi")} {dto.Quantity} BTP ({line.Color} - {line.SizeCode}), vui lòng đếm và xác nhận.",
+                $"Tổ trưởng ghi {(dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi")} {dto.Quantity} BTP ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode}), vui lòng đếm và xác nhận.",
                 null));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(movement.WorkerPieceMovementId, WarehouseMessages.PieceMovementCreated);
@@ -166,7 +166,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
         Func<WorkerPieceMovement, Task<Result>> apply, bool notifyLeaders) =>
         _uow.InTransactionAsync(async () =>
         {
-            var movement = await Movements.Include(m => m.OrderLine).FirstOrDefaultAsync(m => m.WorkerPieceMovementId == movementId, ct);
+            var movement = await Movements.Include(m => m.OrderLine).ThenInclude(l => l.ProductVariant).FirstOrDefaultAsync(m => m.WorkerPieceMovementId == movementId, ct);
             if (movement is null || !allowed(movement)) return WarehouseFailures.NotFound();
             if (movement.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
@@ -185,7 +185,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
                     .Select(e => e.EmployeeId).ToListAsync(ct);
                 _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Warehouse,
                     movement.Status == HandoverStatuses.Confirmed ? "Công nhân đã xác nhận BTP" : "Công nhân từ chối phiếu BTP",
-                    $"Phiếu BTP {movement.OrderLine.Color} - {movement.OrderLine.SizeCode}: {(movement.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
+                    $"Phiếu BTP {movement.OrderLine.ProductVariant.Color} - {movement.OrderLine.ProductVariant.SizeCode}: {(movement.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
                     null));
             }
             await _uow.SaveChangesAsync();
@@ -249,7 +249,7 @@ public sealed class WorkerPieceMovementService : IWorkerPieceMovementService
     private static IQueryable<WorkerPieceMovementDto> Project(IQueryable<WorkerPieceMovement> q) =>
         q.Select(m => new WorkerPieceMovementDto(m.WorkerPieceMovementId, m.MovementType, m.SewingTeamId,
             m.SewingTeam.TeamName, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
-            m.OrderLine.Order.OrderCode, m.OrderLine.Product.ProductCode, m.OrderLine.Color, m.OrderLine.SizeCode,
+            m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color, m.OrderLine.ProductVariant.SizeCode,
             m.OperationId, m.Operation == null ? null : m.Operation.OperationName, m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
             m.CreatedAt, m.ConfirmedAt));

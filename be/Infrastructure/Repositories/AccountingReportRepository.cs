@@ -44,7 +44,7 @@ public sealed class AccountingReportRepository : IAccountingReportRepository
     public async Task<(int DaysWithData, int TotalMeals, decimal TotalAmount)> GetMealTotalsAsync(
         DateOnly fromDate, DateOnly toDate, CancellationToken ct)
     {
-        var summary = await _context.DailyMeals.AsNoTracking()
+        var summary = await _context.VwDailyMealTotals.AsNoTracking()
             .Where(m => m.MealDate >= fromDate && m.MealDate <= toDate)
             .GroupBy(_ => 1)
             .Select(g => new

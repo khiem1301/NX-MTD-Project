@@ -89,7 +89,7 @@ public sealed class AuthService : IAuthService
     {
         var employee = account.Employee;
         var pair = _tokens.CreateTokens(new AuthUser(
-            account.AccountId, employee.EmployeeId, account.Username, employee.FullName,
+            account.AccountId, employee.EmployeeId, employee.EmployeeCode, employee.FullName,
             Roles.FromRoleCode(employee.Role.RoleCode), employee.TeamId,
             employee.Team is null ? null : CodeText.ToPascal(employee.Team.TeamType),
             account.SecurityStamp));
@@ -100,7 +100,7 @@ public sealed class AuthService : IAuthService
     private static UserInfoDto ToUserInfo(Account account)
     {
         var e = account.Employee;
-        return new UserInfoDto(account.AccountId, e.EmployeeId, account.Username, e.FullName,
+        return new UserInfoDto(account.AccountId, e.EmployeeId, e.EmployeeCode, e.FullName,
             Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName, e.TeamId, e.Team?.TeamName,
             e.Team is null ? null : CodeText.ToPascal(e.Team.TeamType), account.IsTemporaryPassword);
     }

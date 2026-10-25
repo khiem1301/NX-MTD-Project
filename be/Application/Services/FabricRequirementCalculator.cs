@@ -1,52 +1,40 @@
 namespace NX_MTD.Application.Services;
 
-/// <summary>Một dòng định mức: 1 sản phẩm (theo chi tiết, màu, size) cần QtyPerPiece NVL, cộng % hao hụt.</summary>
-public sealed record NormLine(int OrderMaterialId, int MaterialId, string MaterialColor, int ProductId,
-    string ComponentName, string? GarmentColor, string? SizeCode, decimal QtyPerPiece, decimal WastagePercent);
+/// <summary>Một dòng định mức của biến thể (ProductComponentMaterial): QtyPerGarment là tổng cho 1 sản phẩm, đã tính số chi tiết.</summary>
+public sealed record NormLine(int ProductVariantId, int ProductComponentId, short PiecesPerGarment, int MaterialId,
+    string MaterialColor, decimal QtyPerGarment, decimal WastagePercent);
 
-/// <summary>Số sản phẩm cần làm của một dòng đơn; PanelName rỗng = cả sản phẩm, khác rỗng = chỉ chi tiết đó (cắt bù).</summary>
-public sealed record PieceDemand(int ProductId, string Color, string SizeCode, string PanelName, int Qty);
+/// <summary>Số sản phẩm cần làm của một biến thể (màu × size); ProductComponentId null = cả bộ, có giá trị = chỉ chi tiết đó (cắt bù).</summary>
+public sealed record PieceDemand(int ProductVariantId, int? ProductComponentId, int Qty);
 
-public sealed record MaterialNeed(int OrderMaterialId, int MaterialId, string MaterialColor, decimal Qty);
+public sealed record MaterialNeed(int MaterialId, string MaterialColor, decimal Qty);
 
 /// <summary>
-/// Tính NVL cần từ định mức (UC09 / UC19). Với mỗi NVL và mỗi chi tiết, chọn dòng định mức khớp cụ thể nhất:
-/// đúng cả màu + size &gt; đúng màu &gt; đúng size &gt; dòng chung (màu, size để trống).
+/// Tính NVL cần từ định mức theo mã hàng (UC10 / UC19), cùng công thức với vw_OrderMaterialNorm và vw_WorkOrderFabricNeed:
+/// số sản phẩm × định mức × (1 + hao hụt). Dòng cắt bù một chi tiết chỉ cần phần của chi tiết đó: chia cho số chi tiết / bộ.
 /// </summary>
 public static class FabricRequirementCalculator
 {
     private const int QtyDecimals = 3;
-    private static readonly StringComparer Text = StringComparer.OrdinalIgnoreCase;
 
     public static IReadOnlyList<MaterialNeed> Calculate(IReadOnlyCollection<NormLine> norms,
         IEnumerable<PieceDemand> demands)
     {
-        var totals = new Dictionary<int, MaterialNeed>();
+        var totals = new Dictionary<(int MaterialId, string Color), decimal>();
         foreach (var demand in demands.Where(d => d.Qty > 0))
         {
-            var chosen = norms
-                .Where(n => n.ProductId == demand.ProductId && Matches(n, demand))
-                .GroupBy(n => (n.OrderMaterialId, Component: n.ComponentName.Trim().ToUpperInvariant()))
-                .Select(g => g.OrderByDescending(Specificity).First());
-
-            foreach (var norm in chosen)
+            foreach (var norm in norms.Where(n => n.ProductVariantId == demand.ProductVariantId
+                         && (demand.ProductComponentId is null || n.ProductComponentId == demand.ProductComponentId)))
             {
-                var qty = demand.Qty * norm.QtyPerPiece * (1 + norm.WastagePercent / 100m);
-                totals[norm.OrderMaterialId] = totals.TryGetValue(norm.OrderMaterialId, out var acc)
-                    ? acc with { Qty = acc.Qty + qty }
-                    : new MaterialNeed(norm.OrderMaterialId, norm.MaterialId, norm.MaterialColor, qty);
+                var pieces = demand.ProductComponentId is null ? 1m : Math.Max((short)1, norm.PiecesPerGarment);
+                var qty = demand.Qty * norm.QtyPerGarment * (1 + norm.WastagePercent / 100m) / pieces;
+                var key = (norm.MaterialId, norm.MaterialColor);
+                totals[key] = totals.GetValueOrDefault(key) + qty;
             }
         }
-        return totals.Values
-            .Select(n => n with { Qty = Math.Round(n.Qty, QtyDecimals, MidpointRounding.AwayFromZero) })
-            .OrderBy(n => n.OrderMaterialId).ToList();
+        return totals
+            .Select(t => new MaterialNeed(t.Key.MaterialId, t.Key.Color,
+                Math.Round(t.Value, QtyDecimals, MidpointRounding.AwayFromZero)))
+            .OrderBy(n => n.MaterialId).ThenBy(n => n.MaterialColor).ToList();
     }
-
-    private static bool Matches(NormLine norm, PieceDemand demand) =>
-        (string.IsNullOrWhiteSpace(norm.GarmentColor) || Text.Equals(norm.GarmentColor.Trim(), demand.Color.Trim()))
-        && (string.IsNullOrWhiteSpace(norm.SizeCode) || Text.Equals(norm.SizeCode.Trim(), demand.SizeCode.Trim()))
-        && (string.IsNullOrWhiteSpace(demand.PanelName) || Text.Equals(norm.ComponentName.Trim(), demand.PanelName.Trim()));
-
-    private static int Specificity(NormLine norm) =>
-        (string.IsNullOrWhiteSpace(norm.GarmentColor) ? 0 : 2) + (string.IsNullOrWhiteSpace(norm.SizeCode) ? 0 : 1);
 }

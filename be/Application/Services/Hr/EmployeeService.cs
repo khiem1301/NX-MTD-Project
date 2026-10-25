@@ -62,7 +62,7 @@ public sealed class EmployeeService : IEmployeeService
             PayType = CodeText.ToCode(dto.PayType), StartDate = dto.StartDate, Status = RecordStatus.Active, CreatedAt = _clock.Now,
             Account = new Account
             {
-                Username = code, PasswordHash = _hasher.Hash(tempPassword), IsTemporaryPassword = true,
+                PasswordHash = _hasher.Hash(tempPassword), IsTemporaryPassword = true,
                 SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active, CreatedAt = _clock.Now,
             },
         };

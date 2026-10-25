@@ -29,7 +29,7 @@ public sealed class StockRepository : IStockRepository
             return string.IsNullOrEmpty(key.MaterialColor) ? name ?? "?" : $"{name} ({key.MaterialColor})";
         }
         return await _context.OrderLines.AsNoTracking().Where(l => l.OrderLineId == key.OrderLineId)
-            .Select(l => l.Product.ProductCode + " " + l.Color + "-" + l.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
+            .Select(l => l.ProductVariant.Product.ProductCode + " " + l.ProductVariant.Color + "-" + l.ProductVariant.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
     }
 
     public async Task AddAsync(StockTransaction transaction, CancellationToken ct) =>
@@ -55,9 +55,9 @@ public sealed class StockRepository : IStockRepository
                 join t in _context.Teams on h.SewingTeamId equals t.TeamId
                 where (sewingTeamId == null || h.SewingTeamId == sewingTeamId)
                       && (orderId == null || l.OrderId == orderId)
-                orderby t.TeamName, l.Order.OrderCode, l.Product.ProductCode, l.Color, l.SizeCode
+                orderby t.TeamName, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode
                 select new TeamPieceHoldingDto(h.SewingTeamId, t.TeamName, l.OrderLineId, l.Order.OrderCode,
-                    l.Product.ProductCode, l.Color, l.SizeCode, h.ReceivedFromWarehouse ?? 0, h.HandedToWorkers,
+                    l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode, h.ReceivedFromWarehouse ?? 0, h.HandedToWorkers,
                     h.RetrievedFromWorkers, h.HeldByTeam ?? 0);
         return await q.ToListAsync(ct);
     }
@@ -67,14 +67,14 @@ public sealed class StockRepository : IStockRepository
             ? _context.StockTransactions.Where(t => t.WarehouseType == key.WarehouseType
                 && t.MaterialId == key.MaterialId && t.MaterialColor == key.MaterialColor)
             : _context.StockTransactions.Where(t => t.WarehouseType == key.WarehouseType
-                && t.OrderLineId == key.OrderLineId);
+                && t.OrderLineId == key.OrderLineId && t.ProductComponentId == key.ProductComponentId);
 
     private IQueryable<VwStockBalance> Balances(StockKey key) =>
         key.WarehouseType == WarehouseTypes.Material
             ? _context.VwStockBalances.Where(b => b.WarehouseType == key.WarehouseType
                 && b.MaterialId == key.MaterialId && b.MaterialColor == key.MaterialColor)
             : _context.VwStockBalances.Where(b => b.WarehouseType == key.WarehouseType
-                && b.OrderLineId == key.OrderLineId);
+                && b.OrderLineId == key.OrderLineId && b.ProductComponentId == key.ProductComponentId);
 
     private Task<PagedResult<StockBalanceDto>> MaterialBalances(StockBalanceQuery query, CancellationToken ct)
     {
@@ -100,13 +100,13 @@ public sealed class StockRepository : IStockRepository
                 join l in _context.OrderLines on b.OrderLineId equals l.OrderLineId
                 where b.WarehouseType == query.WarehouseType && (b.OnHandQty != 0 || b.ReservedQty != 0)
                       && (query.OrderId == null || l.OrderId == query.OrderId)
-                      && (string.IsNullOrEmpty(keyword) || l.Product.ProductCode.Contains(keyword)
-                          || l.Product.ProductName.Contains(keyword) || l.Order.OrderCode.Contains(keyword))
-                      && (string.IsNullOrEmpty(query.Color) || l.Color == query.Color)
-                      && (string.IsNullOrEmpty(query.SizeCode) || l.SizeCode == query.SizeCode)
-                orderby l.Order.OrderCode, l.Product.ProductCode, l.Color, l.SizeCode
+                      && (string.IsNullOrEmpty(keyword) || l.ProductVariant.Product.ProductCode.Contains(keyword)
+                          || l.ProductVariant.Product.ProductName.Contains(keyword) || l.Order.OrderCode.Contains(keyword))
+                      && (string.IsNullOrEmpty(query.Color) || l.ProductVariant.Color == query.Color)
+                      && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
+                orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode
                 select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
-                    l.OrderId, l.Order.OrderCode, l.Product.ProductCode, l.Product.ProductName, l.Color, l.SizeCode,
+                    l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
                     b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0);
         return q.ToPagedAsync(query, ct);
     }

@@ -99,13 +99,13 @@ public sealed class VehicleService : IVehicleService
     public async Task<Result<PagedResult<VehicleTripDto>>> GetTripsAsync(VehicleTripQuery query, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
-        var rows = await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote)
+        var rows = await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote).Include(t => t.DriverEmployee)
             .Where(t => query.VehicleId == null || t.VehicleId == query.VehicleId)
             .Where(t => string.IsNullOrEmpty(query.Status) || t.Status == query.Status)
             .Where(t => query.FromDate == null || t.TripDate >= query.FromDate)
             .Where(t => query.ToDate == null || t.TripDate <= query.ToDate)
             .Where(t => query.WarningsOnly != true || t.KmGapWarning || t.FuelOverNormWarning)
-            .Where(t => string.IsNullOrEmpty(keyword) || t.DriverName.Contains(keyword) || t.Vehicle.PlateNumber.Contains(keyword))
+            .Where(t => string.IsNullOrEmpty(keyword) || (t.DriverName ?? t.DriverEmployee!.FullName).Contains(keyword) || t.Vehicle.PlateNumber.Contains(keyword))
             .OrderByDescending(t => t.TripDate).ThenByDescending(t => t.VehicleTripId)
             .ToPagedAsync(query, ct);
         return Result<PagedResult<VehicleTripDto>>.Success(new PagedResult<VehicleTripDto>(
@@ -114,7 +114,7 @@ public sealed class VehicleService : IVehicleService
 
     public async Task<Result<VehicleTripDto>> GetTripAsync(int tripId, CancellationToken ct)
     {
-        var trip = await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote)
+        var trip = await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote).Include(t => t.DriverEmployee)
             .FirstOrDefaultAsync(t => t.VehicleTripId == tripId, ct);
         return trip is null ? WarehouseFailures.NotFound<VehicleTripDto>() : Result<VehicleTripDto>.Success(ToDto(trip));
     }
@@ -140,7 +140,8 @@ public sealed class VehicleService : IVehicleService
 
         var trip = new VehicleTrip
         {
-            VehicleId = dto.VehicleId, TripDate = dto.TripDate, DriverName = dto.DriverName.Trim(), DriverEmployeeId = dto.DriverEmployeeId,
+            VehicleId = dto.VehicleId, TripDate = dto.TripDate,
+            DriverEmployeeId = dto.DriverEmployeeId, DriverName = dto.DriverEmployeeId is null ? dto.DriverName?.Trim() : null,   // CK_VT_Driver: hoặc nhân viên hoặc tên tài xế ngoài
             Purpose = string.IsNullOrWhiteSpace(dto.Purpose) ? null : dto.Purpose.Trim(), DispatchNoteId = dto.DispatchNoteId,
             OdometerStart = dto.OdometerStart, Status = TripStatuses.Started, KmGapWarning = gap, RecordedAt = _clock.Now,
         };
@@ -155,7 +156,7 @@ public sealed class VehicleService : IVehicleService
 
     public async Task<Result<VehicleTripDto>> CompleteTripAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct)
     {
-        var trip = await Trips.Include(t => t.Vehicle).FirstOrDefaultAsync(t => t.VehicleTripId == tripId, ct);
+        var trip = await Trips.Include(t => t.Vehicle).Include(t => t.DriverEmployee).FirstOrDefaultAsync(t => t.VehicleTripId == tripId, ct);
         if (trip is null) return WarehouseFailures.NotFound<VehicleTripDto>();
         if (trip.Status != TripStatuses.Started) return WarehouseFailures.InvalidStatus<VehicleTripDto>();
         if (dto.OdometerEnd <= trip.OdometerStart)
@@ -186,7 +187,7 @@ public sealed class VehicleService : IVehicleService
             .Select(t => t.OdometerEnd).FirstOrDefaultAsync(ct);
 
     private async Task<VehicleTripDto> ReloadAsync(int id, CancellationToken ct) =>
-        ToDto(await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote).FirstAsync(t => t.VehicleTripId == id, ct));
+        ToDto(await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote).Include(t => t.DriverEmployee).FirstAsync(t => t.VehicleTripId == id, ct));
 
     private static string Normalize(string plate) => plate.Trim().ToUpperInvariant();
 
@@ -198,7 +199,7 @@ public sealed class VehicleService : IVehicleService
     private static VehicleTripDto ToDto(VehicleTrip t)
     {
         int? distance = t.OdometerEnd is { } end ? end - t.OdometerStart : null;
-        return new VehicleTripDto(t.VehicleTripId, t.VehicleId, t.Vehicle.PlateNumber, t.TripDate, t.DriverName, t.DriverEmployeeId,
+        return new VehicleTripDto(t.VehicleTripId, t.VehicleId, t.Vehicle.PlateNumber, t.TripDate, t.DriverName ?? t.DriverEmployee?.FullName ?? string.Empty, t.DriverEmployeeId,
             t.Purpose, t.DispatchNoteId, t.DispatchNote?.DispatchCode, t.OdometerStart, t.OdometerEnd, distance, t.FuelLiters, t.FuelCost,
             distance is { } d ? Math.Round(NormLiters(t.Vehicle.FuelNormPer100Km, d), 2) : null, t.Status, t.KmGapWarning,
             t.FuelOverNormWarning, t.RecordedAt);

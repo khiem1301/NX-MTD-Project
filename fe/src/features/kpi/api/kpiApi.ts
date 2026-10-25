@@ -1,15 +1,7 @@
 import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
-import type {
-  KpiCalendar,
-  KpiDailyResult,
-  KpiRole,
-  KpiTarget,
-  KpiTargetFilter,
-  SaveKpiDailyPlanPayload,
-  SaveKpiTargetPayload,
-} from '../types';
+import type { KpiDailyResult, KpiRole, KpiTarget, KpiTargetFilter, SaveKpiTargetPayload } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
@@ -33,14 +25,7 @@ export const kpiApi = {
   getDailyResults: (kpiTargetId: number, role: KpiRole = 'manager') =>
     get<KpiDailyResult[]>(dailyUrl(role, kpiTargetId)),
 
-  /** Lịch KPI theo ngày (cả Quản đốc và Admin xem được). */
-  getCalendar: (kpiTargetId: number, role: KpiRole = 'manager') => get<KpiCalendar>(`${baseUrl(role)}/${kpiTargetId}/calendar`),
-
   // ---------- Quản đốc lập / sửa / hủy ----------
-
-  saveDailyPlan: (kpiTargetId: number, body: SaveKpiDailyPlanPayload) =>
-    put<KpiCalendar>(`${API.kpi.targets}/${kpiTargetId}/daily-plan`, body),
-
 
   createTarget: (body: SaveKpiTargetPayload) => post<KpiTarget>(API.kpi.targets, body),
 

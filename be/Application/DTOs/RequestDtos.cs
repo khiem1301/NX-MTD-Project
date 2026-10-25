@@ -2,9 +2,9 @@ using NX_MTD.Application.Common;
 
 namespace NX_MTD.Application.DTOs;
 
-/// <summary>Dòng đơn chung: NVL (MaterialId + màu), BTP theo dòng đơn (OrderLineId), chi tiết cắt bù (PanelName),
+/// <summary>Dòng đơn chung: NVL (MaterialId + màu), BTP theo dòng đơn (OrderLineId), chi tiết cắt bù (ProductComponentId),
 /// hoặc mô tả linh kiện / máy (ItemDescription). Loại đơn nào dùng cột nào do IRequestTypeHandler kiểm.</summary>
-public sealed record RequestLineInput(int? MaterialId, string? MaterialColor, int? OrderLineId, string? PanelName,
+public sealed record RequestLineInput(int? MaterialId, string? MaterialColor, int? OrderLineId, int? ProductComponentId,
     string? ItemDescription, decimal Quantity);
 
 /// <param name="RequestType">PascalCase, vd. "SpareParts".</param>
@@ -32,7 +32,7 @@ public sealed record RequestListItemDto(int RequestId, string RequestCode, strin
     string? Title, DateOnly? TargetDate, string? CreatedByName, string? TeamName, DateTime CreatedAt, DateTime? DecidedAt);
 
 public sealed record RequestLineDto(int RequestLineId, int? MaterialId, string? MaterialName, string? MaterialColor,
-    int? OrderLineId, string? OrderLineLabel, string? PanelName, string? ItemDescription, decimal Quantity, decimal? ReplenishQty);
+    int? OrderLineId, string? OrderLineLabel, int? ProductComponentId, string? ComponentName, string? ItemDescription, decimal Quantity, decimal? ReplenishQty);
 
 public sealed record RequestPermissionsDto(bool CanEdit, bool CanCancel, bool CanApprove, bool CanReject, bool CanComplete)
 {

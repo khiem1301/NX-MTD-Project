@@ -2,20 +2,21 @@ using NX_MTD.Application.Common;
 
 namespace NX_MTD.Application.DTOs;
 
+/// <summary>ProductComponentId null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù.</summary>
 public sealed record CuttingLayLineDto(
-    int CuttingLayLineId, int OrderLineId, string Color, string SizeCode, int RatioValue, int CalculatedQty,
-    int ActualQty, string? AdjustReason);
+    int CuttingLayLineId, int OrderLineId, int? ProductComponentId, string? ComponentName, string Color, string SizeCode,
+    int RatioValue, int CalculatedQty, int ActualQty, string? AdjustReason);
 
 public sealed record CuttingLayDto(
     int CuttingLayId, int WorkOrderId, string WorkOrderCode, DateOnly WorkDate, string ShiftCode, int LaySequence,
-    int? FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, string SizeRatio, string? Note,
+    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, string SizeRatio, string? Note,
     string Status, DateTime CreatedAt, IReadOnlyList<CuttingLayLineDto> Lines);
 
 /// <summary>ActualQty bỏ trống = bằng số tính (số lớp × tỉ lệ); khác số tính thì bắt buộc AdjustReason.</summary>
-public sealed record SaveLayLineDto(int OrderLineId, int RatioValue, int? ActualQty, string? AdjustReason);
+public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentId, int RatioValue, int? ActualQty, string? AdjustReason);
 
 public sealed record SaveCuttingLayDto(
-    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int? FabricMaterialId, string FabricColor, int PlyCount,
+    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, string FabricColor, int PlyCount,
     string? Note, IReadOnlyList<SaveLayLineDto> Lines);
 
 public sealed record CuttingLayQuery : PageQuery
@@ -30,8 +31,8 @@ public sealed record CutHandoverListItemDto(
     int TotalHandedQty);
 
 public sealed record CutHandoverLineDto(
-    int CutHandoverLineId, int OrderLineId, string ProductCode, string Color, string SizeCode, int HandedQty,
-    int? ConfirmedQty, string? DiscrepancyReason);
+    int CutHandoverLineId, int OrderLineId, int? ProductComponentId, string? ComponentName, string ProductCode, string Color,
+    string SizeCode, int HandedQty, int? ConfirmedQty, string? DiscrepancyReason);
 
 public sealed record CutHandoverDto(
     int CutHandoverId, string HandoverCode, int WorkOrderId, string WorkOrderCode, string OrderCode, int CuttingTeamId,
@@ -39,12 +40,15 @@ public sealed record CutHandoverDto(
     string? RejectReason, IReadOnlyList<CutHandoverLineDto> Lines);
 
 /// <summary>Số còn được bàn giao của từng dòng đơn = đã cắt − đã bàn giao (chờ nhận + đã nhận).</summary>
-public sealed record HandoverableLineDto(int OrderLineId, string Color, string SizeCode, int CutQty, int HandedQty,
-    int RemainingQty);
+public sealed record HandoverableLineDto(int OrderLineId, int? ProductComponentId, string? ComponentName, string Color,
+    string SizeCode, int CutQty, int HandedQty, int RemainingQty);
 
 public sealed record CreateHandoverLineDto(int OrderLineId, int HandedQty);
 
-public sealed record CreateCutHandoverDto(int WorkOrderId, IReadOnlyList<CreateHandoverLineDto> Lines);
+/// <param name="ProductComponentId">null = bộ đủ; có giá trị = chi tiết lẻ của lệnh cắt bù.</param>
+public sealed record CreateCutHandoverLineDto(int OrderLineId, int? ProductComponentId, int HandedQty);
+
+public sealed record CreateCutHandoverDto(int WorkOrderId, IReadOnlyList<CreateCutHandoverLineDto> Lines);
 
 public sealed record ConfirmHandoverLineDto(int CutHandoverLineId, int ConfirmedQty, string? DiscrepancyReason);
 

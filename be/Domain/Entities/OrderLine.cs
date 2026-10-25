@@ -12,11 +12,9 @@ public partial class OrderLine
 
     public int OrderId { get; set; }
 
+    public int ProductVariantId { get; set; }
+
     public int ProductId { get; set; }
-
-    public string Color { get; set; } = null!;
-
-    public string SizeCode { get; set; } = null!;
 
     public int OrderedQty { get; set; }
 
@@ -38,7 +36,7 @@ public partial class OrderLine
 
     public virtual ICollection<OutputRecord> OutputRecords { get; set; } = new List<OutputRecord>();
 
-    public virtual Product Product { get; set; } = null!;
+    public virtual ProductVariant ProductVariant { get; set; } = null!;
 
     public virtual ICollection<QcBatch> QcBatches { get; set; } = new List<QcBatch>();
 
