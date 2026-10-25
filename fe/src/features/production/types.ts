@@ -160,6 +160,7 @@ export type OperationOption = {
 };
 
 export type AssignPayload = { orderId: number; operationId: number; workerId: number };
+export type AssignManyPayload = { orderId: number; workerId: number; operationIds: number[] };
 export type CopyAssignmentsPayload = { fromOrderId: number; toOrderId: number };
 
 // ---------- KI-04: sản lượng cuối ca ----------

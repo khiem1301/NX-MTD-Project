@@ -24,6 +24,11 @@ public sealed class OperationAssignmentsController : TeamLeaderBaseController
     public async Task<IActionResult> Assign([FromBody] AssignOperationDto dto, CancellationToken ct) =>
         this.ToResponse(await _assignments.AssignAsync(dto, ct));
 
+    /// <summary>Một công nhân làm nhiều công đoạn: phân công một lần.</summary>
+    [HttpPost("bulk")]
+    public async Task<IActionResult> AssignMany([FromBody] AssignOperationsDto dto, CancellationToken ct) =>
+        this.ToResponse(await _assignments.AssignManyAsync(dto, ct));
+
     [HttpPost("{id:int}/replace")]
     public async Task<IActionResult> Replace(int id, [FromBody] ReplaceAssignmentDto dto, CancellationToken ct) =>
         this.ToResponse(await _assignments.ReplaceAsync(id, dto, ct));

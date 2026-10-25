@@ -149,7 +149,7 @@ export const PRODUCTION_TEXT = {
     copyFrom: 'Đơn nguồn',
     copyHint: 'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
     columns: { product: 'Mã hàng', operation: 'Công đoạn', worker: 'Công nhân', validFrom: 'Từ ngày' },
-    form: { operation: 'Công đoạn', worker: 'Công nhân' },
+    form: { operation: 'Công đoạn', operations: 'Công đoạn (chọn nhiều)', worker: 'Công nhân' },
     done: { assigned: 'Đã phân công.', replaced: 'Đã đổi công nhân.', closed: 'Đã bỏ phân công.', copied: 'Đã chép phân công.' },
     empty: 'Đơn này chưa có phân công cho tổ của bạn.',
   },

@@ -47,6 +47,9 @@ public interface IOperationAssignmentService
     /// <summary>Công đoạn may đang dùng của các mã hàng trong đơn (chọn khi phân công, ghi hàng hỏng).</summary>
     Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct);
     Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct);
+
+    /// <summary>Phân công nhiều công đoạn cho một công nhân; trả số dòng mới (công đoạn đã phân công đúng người đó thì bỏ qua).</summary>
+    Task<Result<int>> AssignManyAsync(AssignOperationsDto dto, CancellationToken ct);
     Task<Result<int>> ReplaceAsync(int assignmentId, ReplaceAssignmentDto dto, CancellationToken ct);
     Task<Result> CloseAsync(int assignmentId, CancellationToken ct);
     Task<Result<int>> CopyAsync(CopyAssignmentsDto dto, CancellationToken ct);

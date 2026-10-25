@@ -298,6 +298,8 @@ public static class Messages
     public const string AssignmentOrderInvalid = "Đơn hàng không tồn tại hoặc đã đóng.";
     public const string AssignmentNotFound = "Không tìm thấy phân công đang hiệu lực.";
     public const string AssignmentSaved = "Đã lưu phân công.";
+    public const string AssignmentOperationsRequired = "Chọn ít nhất một công đoạn.";
+    public const string AssignmentOperationsDuplicate = "Công đoạn bị chọn trùng.";
     public const string AssignmentClosed = "Đã kết thúc phân công.";
     public const string AssignmentCopied = "Đã chép {0} phân công.";
     public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";

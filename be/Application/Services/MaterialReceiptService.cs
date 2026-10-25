@@ -100,7 +100,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
     public async Task<Result<MaterialReceiptDto>> CreateAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
     {
-        var resolved = await ResolveAsync(dto, ct);
+        var resolved = await ResolveAsync(dto, null, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(resolved);
 
         var created = await _uow.InTransactionAsync(async () =>
@@ -129,7 +129,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             || receipt.Status is not (ReceiptStatuses.Pending or ReceiptStatuses.Returned))
             return WarehouseFailures.InvalidStatus<MaterialReceiptDto>();
 
-        var resolved = await ResolveAsync(dto, ct);
+        var resolved = await ResolveAsync(dto, receiptId, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(resolved);
 
         _uow.Repository<MaterialReceiptLine>().RemoveRange(receipt.MaterialReceiptLines.ToList());
@@ -211,6 +211,11 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             if (receipt is null) return WarehouseFailures.NotFound();
             if (receipt.Status != ReceiptStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
+            // Kiểm lại trần ngay lúc xác nhận (phiếu có thể lập trước khi phiếu khác được xác nhận): tổng đã nhận không vượt
+            // số đặt (trừ phần chốt không bù) hoặc số khách cấp.
+            var overLimit = await FindOverLimitAsync(receipt, ct);
+            if (overLimit is not null) return Result.Failure(ErrorCodes.ReceiptExceedsPurchase, overLimit);
+
             // Swimlane III.1.4: Thủ kho chụp ảnh chứng từ giao hàng trước khi Quản đốc xác nhận.
             var hasPhoto = await _uow.Repository<Attachment>().Query().AnyAsync(a =>
                 a.OwnerType == AttachmentOwnerTypes.MaterialReceipt && a.OwnerId == receiptId && a.IsCurrent, ct);
@@ -271,6 +276,52 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         receipt.ReturnReason = dto.Reason.Trim();
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReceiptReturned);
+    }
+
+    /// <summary>Mô tả dòng vượt trần khi xác nhận; null nếu mọi dòng còn trong số còn phải nhận.</summary>
+    private async Task<string?> FindOverLimitAsync(MaterialReceipt receipt, CancellationToken ct)
+    {
+        var messages = new List<string>();
+        var polIds = receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId != null).Select(l => l.PurchaseOrderLineId!.Value).ToList();
+        if (polIds.Count > 0)
+        {
+            var lines = await _uow.Repository<PurchaseOrderLine>().Query().AsNoTracking()
+                .Where(p => polIds.Contains(p.PurchaseOrderLineId)).ToDictionaryAsync(p => p.PurchaseOrderLineId, ct);
+            var others = await _supply.ReceivedByPurchaseLineAsync(polIds, ct);   // chỉ phiếu đã xác nhận, phiếu này còn chờ
+            foreach (var l in receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId != null))
+            {
+                var pol = lines[l.PurchaseOrderLineId!.Value];
+                var outstanding = pol.OrderedQty - others.GetValueOrDefault(pol.PurchaseOrderLineId) - pol.NotReplenishedQty;
+                if (l.AcceptedQty > outstanding) messages.Add($"còn {outstanding:0.###}, nhập {l.AcceptedQty:0.###}");
+            }
+            if (messages.Count > 0) return $"{WarehouseMessages.ReceiptExceedsPurchase}: {string.Join("; ", messages)}.";
+        }
+
+        var omIds = receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId == null && l.OrderMaterialId != null)
+            .Select(l => l.OrderMaterialId!.Value).ToList();
+        if (omIds.Count == 0) return null;
+        var materials = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(m => omIds.Contains(m.OrderMaterialId)).ToDictionaryAsync(m => m.OrderMaterialId, ct);
+        var received = await ConfirmedCustomerReceivedAsync(omIds, receipt.MaterialReceiptId, ct);
+        foreach (var l in receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId == null && l.OrderMaterialId != null))
+        {
+            var outstanding = materials[l.OrderMaterialId!.Value].CustomerQty - received.GetValueOrDefault(l.OrderMaterialId.Value);
+            if (l.AcceptedQty > outstanding) messages.Add($"còn {outstanding:0.###}, nhập {l.AcceptedQty:0.###}");
+        }
+        return messages.Count == 0 ? null : $"{WarehouseMessages.ReceiptExceedsCustomer}: {string.Join("; ", messages)}.";
+    }
+
+    /// <summary>Số đã nhận (phiếu khách cấp ĐÃ XÁC NHẬN, không có đơn mua) theo NVL của đơn, bỏ qua một phiếu nếu cần.</summary>
+    private async Task<Dictionary<int, decimal>> ConfirmedCustomerReceivedAsync(IReadOnlyCollection<int> orderMaterialIds,
+        int? exceptReceiptId, CancellationToken ct)
+    {
+        var ids = orderMaterialIds.ToArray();
+        return await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value) && l.PurchaseOrderLineId == null
+                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed
+                        && (exceptReceiptId == null || l.MaterialReceiptId != exceptReceiptId))
+            .GroupBy(l => l.OrderMaterialId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
     }
 
     // ---------- Thiếu hàng (tự tính) → đơn SHORT_DELIVERY cho Quản đốc ----------
@@ -373,10 +424,31 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
     private sealed record ResolvedReceipt(int? OrderId, int? PurchaseOrderId, IReadOnlyList<ResolvedLine> Lines);
 
-    private Task<Result<ResolvedReceipt>> ResolveAsync(SaveMaterialReceiptDto dto, CancellationToken ct) =>
-        dto.Source == MaterialSources.Supplier ? ResolveSupplierAsync(dto, ct) : ResolveCustomerAsync(dto, ct);
+    private Task<Result<ResolvedReceipt>> ResolveAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct) =>
+        dto.Source == MaterialSources.Supplier ? ResolveSupplierAsync(dto, exceptReceiptId, ct) : ResolveCustomerAsync(dto, exceptReceiptId, ct);
 
-    private async Task<Result<ResolvedReceipt>> ResolveCustomerAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
+    /// <summary>
+    /// Một NVL chỉ có một phiếu chờ xác nhận tại một thời điểm: tránh Thủ kho gửi nhiều lần cùng một lô rồi Quản đốc
+    /// xác nhận cả loạt làm tồn kho tăng gấp. Phiếu bổ sung (có ShortageRequestId) và phiếu đã trả lại không tính.
+    /// </summary>
+    private async Task<Result<ResolvedReceipt>?> CheckNoPendingDuplicateAsync(IReadOnlyCollection<int> orderMaterialIds,
+        IReadOnlyCollection<int> purchaseLineIds, int? exceptReceiptId, CancellationToken ct)
+    {
+        var orderMaterials = orderMaterialIds.ToArray();
+        var purchaseLines = purchaseLineIds.ToArray();
+        var codes = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.MaterialReceipt.Status == ReceiptStatuses.Pending && l.MaterialReceipt.ShortageRequestId == null
+                        && (exceptReceiptId == null || l.MaterialReceiptId != exceptReceiptId)
+                        && ((l.PurchaseOrderLineId != null && purchaseLines.Contains(l.PurchaseOrderLineId.Value))
+                            || (l.PurchaseOrderLineId == null && l.OrderMaterialId != null && orderMaterials.Contains(l.OrderMaterialId.Value))))
+            .Select(l => l.MaterialReceipt.ReceiptCode).Distinct().ToListAsync(ct);
+        return codes.Count == 0
+            ? null
+            : Result<ResolvedReceipt>.Failure(ErrorCodes.ReceiptDuplicatePending,
+                string.Format(WarehouseMessages.ReceiptDuplicatePending, string.Join(", ", codes)));
+    }
+
+    private async Task<Result<ResolvedReceipt>> ResolveCustomerAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct)
     {
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
@@ -387,16 +459,29 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var ids = dto.Lines.Select(l => l.OrderMaterialId ?? 0).ToList();
         if (ids.Any(i => i <= 0))
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReceiptLineTarget);
-        var valid = await _uow.Repository<OrderMaterial>().Query()
-            .CountAsync(om => ids.Contains(om.OrderMaterialId) && om.OrderId == dto.OrderId, ct);
-        if (valid != ids.Count)
+        var materials = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(om => ids.Contains(om.OrderMaterialId) && om.OrderId == dto.OrderId).ToListAsync(ct);
+        if (materials.Count != ids.Count)
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderMaterialNotInOrder);
+
+        var duplicate = await CheckNoPendingDuplicateAsync(ids, [], exceptReceiptId, ct);
+        if (duplicate is not null) return duplicate;
+
+        // Số nhận không vượt số khách cấp còn phải nhận (đã trừ các phiếu khách cấp đã xác nhận).
+        var receivedByMaterial = await ConfirmedCustomerReceivedAsync(ids, null, ct);
+        var over = dto.Lines.Select(l => (Line: l, Om: materials.First(m => m.OrderMaterialId == l.OrderMaterialId)))
+            .Select(x => (x.Line, Outstanding: x.Om.CustomerQty - receivedByMaterial.GetValueOrDefault(x.Om.OrderMaterialId)))
+            .Where(x => x.Line.AcceptedQty > x.Outstanding)
+            .Select(x => $"còn {x.Outstanding:0.###}, nhập {x.Line.AcceptedQty:0.###}").ToList();
+        if (over.Count > 0)
+            return Result<ResolvedReceipt>.Failure(ErrorCodes.ReceiptExceedsPurchase,
+                $"{WarehouseMessages.ReceiptExceedsCustomer}: {string.Join("; ", over)}.");
 
         return Result<ResolvedReceipt>.Success(new ResolvedReceipt(order.OrderId, null,
             dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, null, l.AcceptedQty)).ToList()));
     }
 
-    private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
+    private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct)
     {
         var po = await _uow.Repository<PurchaseOrder>().Query().AsNoTracking().Include(p => p.PurchaseOrderLines)
             .FirstOrDefaultAsync(p => p.PurchaseOrderId == dto.PurchaseOrderId, ct);
@@ -414,6 +499,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var byId = po.PurchaseOrderLines.ToDictionary(l => l.PurchaseOrderLineId);
         if (dto.Lines.Any(l => l.PurchaseOrderLineId is null || !byId.ContainsKey(l.PurchaseOrderLineId.Value)))
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.PurchaseLineNotInOrder);
+
+        var duplicate = await CheckNoPendingDuplicateAsync([], dto.Lines.Select(l => l.PurchaseOrderLineId!.Value).ToList(), exceptReceiptId, ct);
+        if (duplicate is not null) return duplicate;
 
         var received = await _supply.ReceivedByPurchaseLineAsync(byId.Keys.ToList(), ct);
         var over = dto.Lines.Select(l => (Line: l, Pol: byId[l.PurchaseOrderLineId!.Value]))

@@ -155,7 +155,7 @@ public class MaterialReceiptFlowTests
         _uow.Repository<MaterialReceipt>().AddAsync(Arg.Do<MaterialReceipt>(r =>
         {
             foreach (var l in r.MaterialReceiptLines) { l.MaterialReceipt = r; l.OrderMaterial = om; l.PurchaseOrderLine = pol; }
-            added.Add(r); _receipts.Add(r);
+            added.Add(r); _receipts.Add(r); _receiptLines.AddRange(r.MaterialReceiptLines);
         }));
         return added;
     }
@@ -182,15 +182,77 @@ public class MaterialReceiptFlowTests
     }
 
     [Fact]
-    public async Task Pending_receipts_do_not_reduce_the_outstanding_qty()
+    public async Task A_second_receipt_for_the_same_purchase_line_is_blocked_while_one_is_pending()
     {
         var (po, line, om, _) = PlacedPo(ordered: 100);
-        PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);   // chưa xác nhận → chưa tính là đã nhận
+        PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);   // còn chờ Quản đốc: không gửi tiếp cùng NVL
         CaptureAdds(om, line);
 
-        var result = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 100), default);
+        var result = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 10), default);
 
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptDuplicatePending);
+        result.Message.Should().Contain("PN-41");
+    }
+
+    [Fact]
+    public async Task Editing_the_pending_receipt_itself_is_not_a_duplicate_and_a_returned_one_does_not_block()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100);
+        var pending = PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);
+
+        _uow.When(u => u.SaveChangesAsync()).Do(_ =>   // gắn navigation cho dòng mới như EF
+        {
+            foreach (var l in pending.MaterialReceiptLines) { l.MaterialReceipt = pending; l.OrderMaterial = om; l.PurchaseOrderLine = line; }
+        });
+        var edited = await Receipts().UpdateAsync(41, SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 50), default);
+        edited.IsSuccess.Should().BeTrue();
+
+        pending.Status = ReceiptStatuses.Returned;
+        CaptureAdds(om, line);
+        var next = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 10), default);
+        next.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Confirming_checks_the_cap_again_so_two_receipts_cannot_both_add_the_full_quantity()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100);
+        var first = PendingSupplierReceipt(po, line, om, accepted: 100, id: 41);
+        var second = PendingSupplierReceipt(po, line, om, accepted: 100, id: 42);   // lập khi phiếu 1 chưa được xác nhận (dữ liệu cũ)
+
+        (await Receipts().ConfirmAsync(first.MaterialReceiptId, 3, default)).IsSuccess.Should().BeTrue();
+        var result = await Receipts().ConfirmAsync(second.MaterialReceiptId, 3, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptExceedsPurchase);
+        result.Message.Should().Contain("còn 0");
+        second.Status.Should().Be(ReceiptStatuses.Pending);
+        await _stock.Received(1).PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());   // chỉ phiếu 1 vào kho
+    }
+
+    private static SaveMaterialReceiptDto CustomerDto(int orderMaterialId, decimal accepted) =>
+        new(7, MaterialSources.Customer, null, Today, null, new[] { new SaveReceiptLineDto(orderMaterialId, null, accepted) });
+
+    [Fact]
+    public async Task Customer_receipt_cannot_exceed_the_customer_supplied_qty_and_cannot_be_sent_twice()
+    {
+        var (_, _, om, _) = PlacedPo(ordered: 100);
+        om.CustomerQty = 50;
+        _receipts.Add(new MaterialReceipt { MaterialReceiptId = 30, ReceiptCode = "PN-30", OrderId = 7, Status = ReceiptStatuses.Confirmed });
+        _receiptLines.Add(new MaterialReceiptLine { MaterialReceiptLineId = 300, MaterialReceiptId = 30, OrderMaterialId = 21, AcceptedQty = 30,
+            MaterialReceipt = _receipts.Last() });
+        CaptureAdds(om, new PurchaseOrderLine());
+
+        var tooMuch = await Receipts().CreateAsync(CustomerDto(21, 25), default);   // còn 20
+        tooMuch.ErrorCode.Should().Be(ErrorCodes.ReceiptExceedsPurchase);
+        tooMuch.Message.Should().Contain("còn 20");
+
+        var ok = await Receipts().CreateAsync(CustomerDto(21, 20), default);
+        ok.IsSuccess.Should().BeTrue();
+
+        var again = await Receipts().CreateAsync(CustomerDto(21, 20), default);   // phiếu trước còn chờ
+        again.ErrorCode.Should().Be(ErrorCodes.ReceiptDuplicatePending);
     }
 
     // ---------- Xác nhận phiếu: trạng thái đơn mua, MaterialStatus, đơn thiếu (TH-12 / TH-13) ----------

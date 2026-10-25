@@ -6,6 +6,8 @@ Kiểm tra: 1026 test backend, 84 test frontend, `tsc` và `eslint` sạch. Các
 
 ## Đã làm được
 
+**Sửa 25/10 (lần 2):** phiếu nhập NVL không gửi trùng được (mỗi NVL một phiếu chờ xác nhận; kiểm trần cả hàng khách cấp và lúc Quản đốc xác nhận); phân công công đoạn chọn được nhiều công đoạn cho một công nhân (`POST /team-leader/operation-assignments/bulk`).
+
 **Bổ sung 25/10 (chuyển sang database mới của Morgan, bản 24/10):** định mức theo mã hàng (màn Mã hàng → Định mức: thành phần, màu – size, NVL; dòng đơn tự tạo biến thể), số lần giao dự kiến cho NVL khách cấp và đơn mua, thiếu hàng tự tính (Thủ kho không nhập thiếu / lỗi), cắt bù chọn chi tiết, tồn kho BTP chi tiết lẻ, đăng nhập bằng mã nhân viên; **bỏ lịch KPI theo ngày và dữ liệu demo 19.3–19.6** (xem DEV-ALL-11). Theo swimlane (xem `docs/SO_SANH_SWIMLANE.md`): đơn tự sang sản xuất khi tổ may nhận BTP, rút phiếu bàn giao BTP, ảnh chứng từ khi xác nhận phiếu nhập, mở form cắt bù sau khi ghi hàng hủy, form đơn NVL lỗi, KPI không vượt BTP trong kho, đóng lệnh cắt. **Chưa làm:** bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái, DEV-ALL-12).
 
 **Bổ sung 24/10 (lần 6):** Quản đốc có danh sách đơn chờ khai báo NVL (bấm thông báo mở đúng đơn); Thủ kho có màn "NVL chờ nhận" và được báo khi khách cấp NVL hoặc đơn mua được đặt (xem DEV-ALL-10).
