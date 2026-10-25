@@ -30,7 +30,6 @@ export type DispatchNote = Omit<DispatchNoteListItem, 'totalIssueQty' | 'totalRe
   dispatchedByName: string | null;
   dispatchedAt: string | null;
   customerReceivedDate: string | null;
-  deliveryConfirmedAt: string | null;
   lines: DispatchNoteLine[];
 };
 

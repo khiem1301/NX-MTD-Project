@@ -6,31 +6,18 @@ import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
-import { formatDate, formatQty } from '@/utils/format';
+import { formatQty } from '@/utils/format';
 import { OrderMaterialFormModal } from '../components/OrderMaterialFormModal';
 import { PendingMaterialOrdersTable } from '../components/PendingMaterialOrdersTable';
 import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
 import { StockPurchaseTable } from '../components/StockPurchaseTable';
 import { LABELS, MATERIAL_TYPE_LABEL, SOURCE_LABEL } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
-import type { OrderMaterial, OrderMaterialNorm } from '../types';
-
-const normColumns: TableColumnsType<OrderMaterialNorm> = [
-  { title: LABELS.product, dataIndex: 'productCode' },
-  { title: LABELS.component, dataIndex: 'componentName', render: (v: string) => v || '—' },
-  { title: LABELS.garmentColor, dataIndex: 'garmentColor', render: (v: string | null) => v ?? '—' },
-  { title: LABELS.sizeCode, dataIndex: 'sizeCode', render: (v: string | null) => v ?? '—' },
-  { title: LABELS.qtyPerPiece, dataIndex: 'qtyPerPiece', align: 'right', render: formatQty },
-  {
-    title: LABELS.wastagePercent,
-    dataIndex: 'wastagePercent',
-    align: 'right',
-    render: (v: number) => `${v}%`,
-  },
-];
+import type { OrderMaterial } from '../types';
 
 /**
- * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua và định mức của đơn.
+ * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua của đơn. Số cần theo định mức đọc từ
+ * định mức của mã hàng (màn Mã hàng).
  * Quản đốc chưa chọn đơn vẫn bấm Tạo được: đó là đơn mua NVL dùng chung (kim, chỉ...), không gắn mã đơn hàng.
  */
 export function OrderMaterialPage() {
@@ -72,7 +59,14 @@ export function OrderMaterialPage() {
       render: formatQty,
     },
     { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: formatQty },
-    { title: LABELS.customerExpectedDate, dataIndex: 'customerExpectedDate', render: formatDate },
+    {
+      title: LABELS.deliveries,
+      key: 'deliveries',
+      render: (_, om) =>
+        om.expectedDeliveryCount === null
+          ? '—'
+          : `${om.receivedCount} / ${om.expectedDeliveryCount} ${LABELS.deliveryUnit}`,
+    },
     { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: formatQty },
     {
       title: LABELS.source,
@@ -138,18 +132,6 @@ export function OrderMaterialPage() {
             scroll={{ x: true }}
             locale={{
               emptyText: orderId === undefined ? LABELS.selectOrder : MESSAGES.common.empty,
-            }}
-            expandable={{
-              rowExpandable: (om) => om.norms.length > 0,
-              expandedRowRender: (om) => (
-                <Table
-                  rowKey="orderMaterialNormId"
-                  size="small"
-                  columns={normColumns}
-                  dataSource={om.norms}
-                  pagination={false}
-                />
-              ),
             }}
           />
         </>

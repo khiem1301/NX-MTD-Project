@@ -46,8 +46,6 @@ const lineColumns: TableColumnsType<MaterialReceiptLine> = [
     render: (v: number | null) => (v === null ? '—' : formatQty(v)),
   },
   { title: LABELS.acceptedQty, dataIndex: 'acceptedQty', align: 'right', render: formatQty },
-  { title: LABELS.shortQty, dataIndex: 'shortQty', align: 'right', render: formatQty },
-  { title: LABELS.defectiveQty, dataIndex: 'defectiveQty', align: 'right', render: formatQty },
 ];
 
 /** Chi tiết phiếu nhập; Quản đốc xác nhận / trả lại (UC39), Thủ kho sửa phiếu chờ hoặc bị trả. */

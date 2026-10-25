@@ -33,9 +33,12 @@ public sealed record StockBalanceQuery : PageQuery
 public sealed record StockBalanceDto(
     string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
     string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
-    string? ProductName, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty);
+    string? ProductName, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
+    int? ProductComponentId, string? ComponentName);
 
-public sealed record StockCardQuery(string WarehouseType, int? MaterialId, string? MaterialColor, int? OrderLineId);
+/// <param name="ProductComponentId">Chỉ kho BTP: để trống = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù).</param>
+public sealed record StockCardQuery(string WarehouseType, int? MaterialId, string? MaterialColor, int? OrderLineId,
+    int? ProductComponentId = null);
 
 public sealed record StockCardEntryDto(
     long StockTransactionId, DateOnly TransactionDate, DateTime CreatedAt, string SourceDocType, int SourceDocId,

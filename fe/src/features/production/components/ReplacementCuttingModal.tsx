@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { Button, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Space, Typography, message } from 'antd';
+import { Button, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Typography, message } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
 import { useCreateRequest } from '@/features/requests/hooks/useRequests';
+import { useOrderLineComponents } from '@/hooks/useLookups';
 import { formatDate, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { PRODUCTION_KEY } from '../hooks/useProduction';
@@ -14,23 +15,24 @@ import { modalWidth } from '../utils';
 
 type Props = { defect: Defect | null; onClose: () => void };
 
-type FormValues = { panels: { panelName: string; quantity: number }[]; targetDate?: Dayjs; content?: string };
+type FormValues = { panels: { productComponentId?: number; quantity: number }[]; targetDate?: Dayjs; content?: string };
 
 const text = PRODUCTION_TEXT.replacement;
 
 /**
  * KI-09 (UC56, UC07 "cắt bù") — tổ trưởng / tổ phó tạo đơn cắt bù từ một phiếu hàng hỏng Scrap, gửi Quản đốc duyệt.
- * Mỗi chi tiết là một dòng đơn (tên chi tiết + số lượng); BE kiểm phiếu, tổ, dòng đơn và số lượng.
+ * Mỗi chi tiết là một dòng đơn (chi tiết cắt của mã hàng + số lượng); BE kiểm phiếu, tổ, dòng đơn, chi tiết và số lượng.
  */
 export function ReplacementCuttingModal({ defect, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const create = useCreateRequest();
   const queryClient = useQueryClient();
+  const components = useOrderLineComponents(defect?.orderLineId);
 
   useEffect(() => {
     if (defect) {
       form.resetFields();
-      form.setFieldsValue({ panels: [{ panelName: '', quantity: Math.min(1, defect.quantity) }] });
+      form.setFieldsValue({ panels: [{ productComponentId: undefined, quantity: Math.min(1, defect.quantity) }] });
     }
   }, [defect, form]);
 
@@ -46,7 +48,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
         defectRecordId: defect.defectRecordId,
         lines: values.panels.map((p) => ({
           orderLineId: defect.orderLineId,
-          panelName: p.panelName.trim(),
+          productComponentId: p.productComponentId ?? null,
           quantity: p.quantity,
         })),
       },
@@ -89,11 +91,19 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                 {fields.map((field) => (
                   <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
                     <Form.Item
-                      name={[field.name, 'panelName']}
-                      rules={[{ required: true, whitespace: true, message: text.panelRequired }]}
+                      name={[field.name, 'productComponentId']}
+                      rules={[{ required: true, message: text.panelRequired }]}
                       style={{ marginBottom: 0 }}
                     >
-                      <Input placeholder={text.panelName} style={{ width: 280 }} maxLength={100} />
+                      <Select
+                        placeholder={text.panelName}
+                        loading={components.isLoading}
+                        style={{ width: 280 }}
+                        options={(components.data ?? []).map((c) => ({
+                          value: c.productComponentId,
+                          label: c.piecesPerGarment > 1 ? `${c.componentName} (×${c.piecesPerGarment})` : c.componentName,
+                        }))}
+                      />
                     </Form.Item>
                     <Form.Item
                       name={[field.name, 'quantity']}
@@ -105,7 +115,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                     {fields.length > 1 && <MinusCircleOutlined onClick={() => remove(field.name)} />}
                   </Space>
                 ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ panelName: '', quantity: 1 })}>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ productComponentId: undefined, quantity: 1 })}>
                   {text.addPanel}
                 </Button>
               </Space>

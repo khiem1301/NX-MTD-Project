@@ -49,7 +49,7 @@ export const PURCHASE_TEXT = {
   },
 
   detail: {
-    expectedDate: 'Ngày giao dự kiến',
+    expectedDate: 'Lần giao (đã nhận / dự kiến)',
     note: 'Ghi chú',
     rejectReason: 'Lý do hủy đơn',
     returnReason: 'Lý do trả lại',
@@ -58,7 +58,6 @@ export const PURCHASE_TEXT = {
     paidAmount: 'Số tiền đã thanh toán',
     paymentMethod: 'Hình thức',
     paymentNote: 'Ghi chú thanh toán',
-    paidAt: 'Xác nhận lúc',
     lines: 'Dòng đơn mua',
     proofs: 'Ảnh chứng từ thanh toán',
     proofsHint: 'Ảnh chứng từ không bắt buộc, tối đa 5 ảnh.',
@@ -85,7 +84,8 @@ export const PURCHASE_TEXT = {
     supplierRequired: 'Vui lòng chọn nhà cung cấp.',
     orderDate: 'Ngày đặt hàng',
     orderDateRequired: 'Vui lòng chọn ngày đặt hàng.',
-    expectedDate: 'Ngày giao dự kiến',
+    expectedDate: 'Số lần nhà cung cấp dự kiến giao',
+    expectedDateRequired: 'Nhập số lần giao dự kiến (từ 1 trở lên).',
     note: 'Ghi chú',
     priceRequired: 'Nhập đơn giá lớn hơn 0.',
     qtyRequired: 'Nhập số lượng lớn hơn 0.',

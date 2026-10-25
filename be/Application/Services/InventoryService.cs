@@ -21,7 +21,7 @@ public sealed class InventoryService : IInventoryService
     {
         var key = query.WarehouseType == WarehouseTypes.Material
             ? StockKey.Material(query.MaterialId!.Value, query.MaterialColor ?? string.Empty)
-            : new StockKey(query.WarehouseType, null, null, query.OrderLineId!.Value);
+            : new StockKey(query.WarehouseType, null, null, query.OrderLineId!.Value, query.ProductComponentId);
         return Result<IReadOnlyList<StockCardEntryDto>>.Success(await _stock.GetStockCardAsync(key, ct));
     }
 

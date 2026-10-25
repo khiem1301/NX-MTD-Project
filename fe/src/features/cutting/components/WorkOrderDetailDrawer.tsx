@@ -85,6 +85,11 @@ export function WorkOrderDetailDrawer({
                 key: 'line',
                 render: (_, l) => `${l.color} - ${l.sizeCode}`,
               },
+              {
+                title: LABELS.component,
+                dataIndex: 'componentName',
+                render: (v: string) => v || LABELS.wholeGarment,
+              },
               { title: LABELS.plannedQty, dataIndex: 'plannedQty', align: 'right' },
               { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
               { title: LABELS.handedQty, dataIndex: 'handedQty', align: 'right' },
@@ -94,7 +99,7 @@ export function WorkOrderDetailDrawer({
             {LABELS.fabrics}
           </Typography.Title>
           <Table<FabricRequirement>
-            rowKey="orderMaterialId"
+            rowKey={(f) => `${f.materialId}-${f.materialColor}`}
             size="small"
             pagination={false}
             dataSource={w.fabrics}

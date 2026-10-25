@@ -32,6 +32,18 @@ public sealed class LookupService : ILookupService
                 l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty))
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct)
+    {
+        var productId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductId).FirstOrDefaultAsync(ct);
+        if (productId is null) return [];
+        return await _uow.Repository<ProductComponent>().Query().AsNoTracking()
+            .Where(c => c.ProductId == productId && c.ComponentType == ComponentTypes.Panel && c.Status == RecordStatus.Active)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.ProductComponentId)
+            .Select(c => new ComponentOptionDto(c.ProductComponentId, c.ComponentName, c.PiecesPerGarment))
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<TeamOptionDto>> GetTeamsAsync(string? teamType, CancellationToken ct) =>
         await _uow.Repository<Team>().Query().AsNoTracking()
             .Where(t => t.Status == RecordStatus.Active && (string.IsNullOrEmpty(teamType) || t.TeamType == teamType))

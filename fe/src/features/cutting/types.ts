@@ -8,7 +8,9 @@ export type WorkOrderLine = {
   orderLineId: number;
   color: string;
   sizeCode: string;
-  panelName: string;
+  /** null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù. */
+  productComponentId: number | null;
+  componentName: string;
   plannedQty: number;
   cutQty: number;
   handedQty: number;
@@ -36,6 +38,9 @@ export type SaveWorkOrderPayload = {
 export type CuttingLayLine = {
   cuttingLayLineId: number;
   orderLineId: number;
+  /** null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù. */
+  productComponentId: number | null;
+  componentName: string | null;
   color: string;
   sizeCode: string;
   ratioValue: number;
@@ -72,7 +77,13 @@ export type SaveCuttingLayPayload = {
   fabricColor: string;
   plyCount: number;
   note?: string;
-  lines: { orderLineId: number; ratioValue: number; actualQty?: number; adjustReason?: string }[];
+  lines: {
+    orderLineId: number;
+    productComponentId: number | null;
+    ratioValue: number;
+    actualQty?: number;
+    adjustReason?: string;
+  }[];
 };
 
 export type CutHandoverListItem = {
@@ -93,6 +104,8 @@ export type CutHandoverListItem = {
 export type CutHandoverLine = {
   cutHandoverLineId: number;
   orderLineId: number;
+  productComponentId: number | null;
+  componentName: string | null;
   productCode: string;
   color: string;
   sizeCode: string;
@@ -108,6 +121,8 @@ export type CutHandover = Omit<CutHandoverListItem, 'totalHandedQty'> & {
 
 export type HandoverableLine = {
   orderLineId: number;
+  productComponentId: number | null;
+  componentName: string | null;
   color: string;
   sizeCode: string;
   cutQty: number;
@@ -119,7 +134,7 @@ export type CutHandoverQuery = PageParams & { status?: string; workOrderId?: num
 
 export type CreateHandoverPayload = {
   workOrderId: number;
-  lines: { orderLineId: number; handedQty: number }[];
+  lines: { orderLineId: number; productComponentId: number | null; handedQty: number }[];
 };
 
 export type ConfirmHandoverPayload = {
@@ -131,7 +146,8 @@ export type ReplacementRequestLine = {
   orderLineId: number;
   color: string;
   sizeCode: string;
-  panelName: string;
+  productComponentId: number;
+  componentName: string;
   quantity: number;
 };
 

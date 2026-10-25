@@ -7,6 +7,8 @@ public interface ILookupService
 {
     Task<IReadOnlyList<OrderOptionDto>> GetOpenOrdersAsync(string? keyword, CancellationToken ct);
     Task<IReadOnlyList<OrderLineOptionDto>> GetOrderLinesAsync(int orderId, CancellationToken ct);
+    /// <summary>Chi tiết PANEL đang dùng của mã hàng mà dòng đơn thuộc về (cắt bù chọn chi tiết, không gõ tên).</summary>
+    Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct);
     Task<IReadOnlyList<TeamOptionDto>> GetTeamsAsync(string? teamType, CancellationToken ct);
     Task<IReadOnlyList<MaterialOptionDto>> GetActiveMaterialsAsync(string? keyword, CancellationToken ct);
 }

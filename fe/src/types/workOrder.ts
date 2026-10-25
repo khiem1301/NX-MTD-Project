@@ -17,7 +17,6 @@ export type WorkOrderListItem = {
 
 /** Vải của lệnh cắt: cần theo định mức, đã cấp, còn phải cấp, khả dụng trong kho. */
 export type FabricRequirement = {
-  orderMaterialId: number;
   materialId: number;
   materialCode: string;
   materialName: string;

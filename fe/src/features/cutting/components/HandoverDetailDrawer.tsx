@@ -127,7 +127,8 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
                 {
                   title: LABELS.orderLine,
                   key: 'line',
-                  render: (_, l) => `${l.productCode} ${l.color} - ${l.sizeCode}`,
+                  render: (_, l) =>
+                    `${l.productCode} ${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
                 },
                 { title: LABELS.handoverQty, dataIndex: 'handedQty', align: 'right' },
                 {

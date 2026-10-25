@@ -24,7 +24,7 @@ type FormValues = Omit<SaveReceiptPayload, 'receiptDate'> & { receiptDate: Dayjs
 
 const DATE_FORMAT = 'DD/MM/YYYY';
 const API_DATE = 'YYYY-MM-DD';
-const EMPTY_LINE = { acceptedQty: 0, shortQty: 0, defectiveQty: 0 };
+const EMPTY_LINE = { acceptedQty: 0 };
 const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map((value) => ({
   value,
   label: SOURCE_LABEL[value],
@@ -32,7 +32,8 @@ const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map(
 
 /**
  * UC37: Thủ kho lập / sửa phiếu nhập NVL. Khách cấp: chọn đơn hàng rồi NVL của đơn. Nhà cung cấp (TH-12): chọn đơn mua đã đặt,
- * mỗi dòng là một dòng đơn mua (đơn giá lấy từ đơn mua), số nhập không vượt số còn phải nhận.
+ * mỗi dòng là một dòng đơn mua (đơn giá lấy từ đơn mua), số nhập không vượt số còn phải nhận. Thủ kho chỉ nhập số đạt: hàng thiếu
+ * do hệ thống tự tính khi nhận đủ số lần giao dự kiến.
  */
 export function ReceiptFormModal({ open, receipt, preset = null, onClose }: ReceiptFormModalProps) {
   const [form] = Form.useForm<FormValues>();
@@ -60,8 +61,6 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
               orderMaterialId: l.orderMaterialId ?? undefined,
               purchaseOrderLineId: l.purchaseOrderLineId ?? undefined,
               acceptedQty: l.acceptedQty,
-              shortQty: l.shortQty,
-              defectiveQty: l.defectiveQty,
             })),
           }
         : preset
@@ -75,8 +74,6 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
                   orderMaterialId: preset.orderMaterialId,
                   purchaseOrderLineId: preset.purchaseOrderLineId,
                   acceptedQty: preset.acceptedQty,
-                  shortQty: 0,
-                  defectiveQty: 0,
                 },
               ],
             }
@@ -98,8 +95,6 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
         orderMaterialId: supplier ? undefined : l.orderMaterialId,
         purchaseOrderLineId: supplier ? l.purchaseOrderLineId : undefined,
         acceptedQty: l.acceptedQty,
-        shortQty: l.shortQty,
-        defectiveQty: l.defectiveQty,
       })),
     };
     save.mutate({ id: receipt?.materialReceiptId, body }, { onSuccess: onClose });
@@ -190,12 +185,6 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
                   )}
                   <Form.Item name={[field.name, 'acceptedQty']} rules={required}>
                     <InputNumber addonBefore={LABELS.acceptedQty} min={0} style={{ width: 160 }} />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'shortQty']} rules={required}>
-                    <InputNumber addonBefore={LABELS.shortQty} min={0} style={{ width: 150 }} />
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'defectiveQty']} rules={required}>
-                    <InputNumber addonBefore={LABELS.defectiveQty} min={0} style={{ width: 150 }} />
                   </Form.Item>
                   <Button
                     icon={<DeleteOutlined />}

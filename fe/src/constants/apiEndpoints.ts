@@ -52,6 +52,7 @@ export const API = {
     byId: (id: number) => v1(`admin/products/${id}`),
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
+    spec: (id: number) => v1(`admin/products/${id}/spec`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),
@@ -133,6 +134,7 @@ export const API = {
   lookups: {
     orders: v1('common/lookups/orders'),
     orderLines: (orderId: number) => v1(`common/lookups/orders/${orderId}/lines`),
+    orderLineComponents: (orderLineId: number) => v1(`common/lookups/order-lines/${orderLineId}/components`),
     teams: v1('common/lookups/teams'),
     materials: v1('common/lookups/materials'),
   },

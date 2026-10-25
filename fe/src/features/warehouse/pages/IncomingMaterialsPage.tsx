@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Space, Table, Tag, Typography, type TableColumnsType } from 'antd';
-import dayjs from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate, formatQty } from '@/utils/format';
+import { formatQty } from '@/utils/format';
 import { ReceiptFormModal } from '../components/ReceiptFormModal';
 import { INCOMING_TEXT, MATERIAL_SOURCE } from '../constants';
 import { useIncomingMaterials } from '../hooks/useIncomingMaterials';
@@ -11,19 +10,19 @@ import type { IncomingCustomerMaterial, IncomingSupplierMaterial, ReceiptPreset 
 
 const text = INCOMING_TEXT;
 
-const dateCell = (value: string | null) => {
-  if (!value) return <Typography.Text type="secondary">{text.noDate}</Typography.Text>;
-  const late = dayjs(value).isBefore(dayjs(), 'day');
+/** "đã nhận / dự kiến" lần giao; đã nhận đủ số lần mà vẫn còn thiếu thì báo "Đủ lần giao" để Thủ kho biết hệ thống sẽ lập đơn thiếu NVL. */
+const deliveryCell = (expected: number | null, received: number) => {
+  if (expected === null) return <Typography.Text type="secondary">{text.noDeliveryCount}</Typography.Text>;
   return (
     <Space size={4}>
-      {formatDate(value)}
-      {late && <Tag color="red">{text.overdue}</Tag>}
+      {received} / {expected} {text.deliveryUnit}
+      {received >= expected && <Tag color="orange">{text.deliveriesDone}</Tag>}
     </Space>
   );
 };
 
 /**
- * Màn NVL chờ nhận của Thủ kho: NVL khách sẽ cấp (Quản đốc khai báo số lượng và ngày hẹn ở "NVL của đơn") và đơn mua đã đặt
+ * Màn NVL chờ nhận của Thủ kho: NVL khách sẽ cấp (Quản đốc khai báo số lượng và số lần giao dự kiến ở "NVL của đơn") và đơn mua đã đặt
  * hàng với nhà cung cấp mà kho chưa nhận đủ. Hàng về thì bấm Lập phiếu nhập: nguồn, đơn và số còn phải nhận được điền sẵn.
  */
 export function IncomingMaterialsPage() {
@@ -54,7 +53,11 @@ export function IncomingMaterialsPage() {
         </b>
       ),
     },
-    { title: text.expected, dataIndex: 'expectedDate', render: dateCell },
+    {
+      title: text.deliveries,
+      key: 'deliveries',
+      render: (_, r) => deliveryCell(r.expectedDeliveryCount, r.receivedCount),
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',
@@ -103,7 +106,11 @@ export function IncomingMaterialsPage() {
         </b>
       ),
     },
-    { title: text.expected, dataIndex: 'expectedDeliveryDate', render: dateCell },
+    {
+      title: text.deliveries,
+      key: 'deliveries',
+      render: (_, r) => deliveryCell(r.expectedDeliveryCount, r.receivedCount),
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',

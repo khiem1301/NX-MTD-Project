@@ -37,12 +37,13 @@ const pieceColumns: TableColumnsType<StockBalance> = [
   { title: LABELS.product, dataIndex: 'productCode' },
   { title: LABELS.garmentColor, dataIndex: 'color' },
   { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
+  { title: LABELS.component, dataIndex: 'componentName', render: (v: string | null) => v ?? LABELS.wholeGarment },
 ];
 
 const describe = (b: StockBalance): string =>
   b.materialId !== null
     ? `${b.materialCode} ${b.materialName} (${b.materialColor || '—'})`
-    : `${b.orderCode} ${b.productCode} ${b.color}-${b.sizeCode}`;
+    : `${b.orderCode} ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` (${b.componentName})` : ''}`;
 
 /** Bảng tồn của một kho; bấm dòng để mở thẻ kho. */
 export function BalanceTable({ warehouseType }: BalanceTableProps) {
@@ -67,7 +68,11 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
             materialId: b.materialId ?? undefined,
             materialColor: b.materialColor ?? '',
           }
-        : { warehouseType, orderLineId: b.orderLineId ?? undefined },
+        : {
+            warehouseType,
+            orderLineId: b.orderLineId ?? undefined,
+            productComponentId: b.productComponentId,
+          },
     });
 
   return (
@@ -87,7 +92,9 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
       </Space>
       <QueryError error={balances.error} onRetry={() => void balances.refetch()} />
       <Table
-        rowKey={(b) => `${b.materialId ?? ''}|${b.materialColor ?? ''}|${b.orderLineId ?? ''}`}
+        rowKey={(b) =>
+          `${b.materialId ?? ''}|${b.materialColor ?? ''}|${b.orderLineId ?? ''}|${b.productComponentId ?? ''}`
+        }
         columns={columns}
         dataSource={balances.data?.items}
         loading={balances.isFetching}

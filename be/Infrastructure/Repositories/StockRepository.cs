@@ -89,7 +89,7 @@ public sealed class StockRepository : IStockRepository
                 orderby m.MaterialCode, b.MaterialColor
                 select new StockBalanceDto(b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
                     m.MaterialType, m.Unit, b.MaterialColor, null, null, null, null, null, null, null,
-                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0);
+                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, null, null);
         return q.ToPagedAsync(query, ct);
     }
 
@@ -98,16 +98,19 @@ public sealed class StockRepository : IStockRepository
         var keyword = query.Keyword?.Trim();
         var q = from b in _context.VwStockBalances.AsNoTracking()
                 join l in _context.OrderLines on b.OrderLineId equals l.OrderLineId
+                join c in _context.ProductComponents on b.ProductComponentId equals c.ProductComponentId into comp
+                from c in comp.DefaultIfEmpty()
                 where b.WarehouseType == query.WarehouseType && (b.OnHandQty != 0 || b.ReservedQty != 0)
                       && (query.OrderId == null || l.OrderId == query.OrderId)
                       && (string.IsNullOrEmpty(keyword) || l.ProductVariant.Product.ProductCode.Contains(keyword)
                           || l.ProductVariant.Product.ProductName.Contains(keyword) || l.Order.OrderCode.Contains(keyword))
                       && (string.IsNullOrEmpty(query.Color) || l.ProductVariant.Color == query.Color)
                       && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
-                orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode
+                orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode,
+                    c.SortOrder
                 select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
                     l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
-                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0);
+                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentId, c.ComponentName);
         return q.ToPagedAsync(query, ct);
     }
 
