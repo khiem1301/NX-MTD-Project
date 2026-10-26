@@ -15,7 +15,7 @@ import { modalWidth } from '../utils';
 
 type Props = { defect: Defect | null; onClose: () => void };
 
-type FormValues = { panels: { productComponentId?: number; quantity: number }[]; targetDate?: Dayjs; content?: string };
+type FormValues = { panels: { productComponentMaterialId?: number; quantity: number }[]; targetDate?: Dayjs; content?: string };
 
 const text = PRODUCTION_TEXT.replacement;
 
@@ -32,7 +32,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
   useEffect(() => {
     if (defect) {
       form.resetFields();
-      form.setFieldsValue({ panels: [{ productComponentId: undefined, quantity: Math.min(1, defect.quantity) }] });
+      form.setFieldsValue({ panels: [{ productComponentMaterialId: undefined, quantity: Math.min(1, defect.quantity) }] });
     }
   }, [defect, form]);
 
@@ -48,7 +48,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
         defectRecordId: defect.defectRecordId,
         lines: values.panels.map((p) => ({
           orderLineId: defect.orderLineId,
-          productComponentId: p.productComponentId ?? null,
+          productComponentMaterialId: p.productComponentMaterialId ?? null,
           quantity: p.quantity,
         })),
       },
@@ -91,7 +91,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                 {fields.map((field) => (
                   <Space key={field.key} align="baseline" style={{ display: 'flex' }}>
                     <Form.Item
-                      name={[field.name, 'productComponentId']}
+                      name={[field.name, 'productComponentMaterialId']}
                       rules={[{ required: true, message: text.panelRequired }]}
                       style={{ marginBottom: 0 }}
                     >
@@ -100,7 +100,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                         loading={components.isLoading}
                         style={{ width: 280 }}
                         options={(components.data ?? []).map((c) => ({
-                          value: c.productComponentId,
+                          value: c.productComponentMaterialId,
                           label: c.piecesPerGarment > 1 ? `${c.componentName} (×${c.piecesPerGarment})` : c.componentName,
                         }))}
                       />
@@ -115,7 +115,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                     {fields.length > 1 && <MinusCircleOutlined onClick={() => remove(field.name)} />}
                   </Space>
                 ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ productComponentId: undefined, quantity: 1 })}>
+                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ productComponentMaterialId: undefined, quantity: 1 })}>
                   {text.addPanel}
                 </Button>
               </Space>

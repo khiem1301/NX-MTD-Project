@@ -30,7 +30,7 @@ const WAREHOUSE_OPTIONS = Object.values(WAREHOUSE_TYPE).map((value) => ({
 const rowKey = (b: StockBalance) =>
   b.materialId !== null
     ? `${b.materialId}|${b.materialColor ?? ''}`
-    : `${b.orderLineId}:${b.productComponentId ?? ''}`;
+    : `${b.orderLineId}:${b.productComponentMaterialId ?? ''}`;
 const rowName = (b: StockBalance) =>
   b.materialId !== null
     ? `${b.materialCode} ${b.materialName}${b.materialColor ? ` - ${b.materialColor}` : ''}`
@@ -53,13 +53,13 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
 
   const initialCounted = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentId ?? ''}`,
+      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.countedQty,
     ]),
   );
   const initialNotes = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentId ?? ''}`,
+      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.note ?? undefined,
     ]),
   );
@@ -77,7 +77,7 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
         materialId: x.b.materialId ?? undefined,
         materialColor: x.b.materialId !== null ? (x.b.materialColor ?? '') : undefined,
         orderLineId: x.b.orderLineId ?? undefined,
-        productComponentId: x.b.productComponentId,
+        productComponentMaterialId: x.b.productComponentMaterialId,
         countedQty: x.counted,
         note: x.note,
       }));

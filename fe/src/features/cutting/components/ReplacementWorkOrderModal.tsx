@@ -80,7 +80,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
               )}
             </Descriptions>
             <Table
-              rowKey={(l) => `${l.orderLineId}-${l.productComponentId}`}
+              rowKey={(l) => `${l.orderLineId}-${l.productComponentMaterialId}`}
               size="small"
               pagination={false}
               dataSource={selected.lines}

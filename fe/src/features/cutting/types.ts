@@ -9,7 +9,7 @@ export type WorkOrderLine = {
   color: string;
   sizeCode: string;
   /** null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù. */
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string;
   plannedQty: number;
   cutQty: number;
@@ -39,7 +39,7 @@ export type CuttingLayLine = {
   cuttingLayLineId: number;
   orderLineId: number;
   /** null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù. */
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   color: string;
   sizeCode: string;
@@ -79,7 +79,7 @@ export type SaveCuttingLayPayload = {
   note?: string;
   lines: {
     orderLineId: number;
-    productComponentId: number | null;
+    productComponentMaterialId: number | null;
     ratioValue: number;
     actualQty?: number;
     adjustReason?: string;
@@ -104,7 +104,7 @@ export type CutHandoverListItem = {
 export type CutHandoverLine = {
   cutHandoverLineId: number;
   orderLineId: number;
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   productCode: string;
   color: string;
@@ -121,7 +121,7 @@ export type CutHandover = Omit<CutHandoverListItem, 'totalHandedQty'> & {
 
 export type HandoverableLine = {
   orderLineId: number;
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   color: string;
   sizeCode: string;
@@ -134,7 +134,7 @@ export type CutHandoverQuery = PageParams & { status?: string; workOrderId?: num
 
 export type CreateHandoverPayload = {
   workOrderId: number;
-  lines: { orderLineId: number; productComponentId: number | null; handedQty: number }[];
+  lines: { orderLineId: number; productComponentMaterialId: number | null; handedQty: number }[];
 };
 
 export type ConfirmHandoverPayload = {
@@ -146,7 +146,7 @@ export type ReplacementRequestLine = {
   orderLineId: number;
   color: string;
   sizeCode: string;
-  productComponentId: number;
+  productComponentMaterialId: number;
   componentName: string;
   quantity: number;
 };

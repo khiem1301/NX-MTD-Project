@@ -24,16 +24,16 @@ export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
   });
   const items = balances.data?.items ?? [];
   const available = new Map(
-    items.filter((b) => b.productComponentId === null).map((b) => [b.orderLineId, b.availableQty]),
+    items.filter((b) => b.productComponentMaterialId === null).map((b) => [b.orderLineId, b.availableQty]),
   );
   const wholeOptions = (lines.data ?? []).map((l) => ({
     value: pieceKey(l.orderLineId, null),
     label: `${l.productCode} ${l.color}-${l.sizeCode} (${LABELS.availableQty}: ${formatQty(available.get(l.orderLineId) ?? 0)})`,
   }));
   const partOptions = items
-    .filter((b) => b.productComponentId !== null && b.availableQty > 0)
+    .filter((b) => b.productComponentMaterialId !== null && b.availableQty > 0)
     .map((b) => ({
-      value: pieceKey(b.orderLineId ?? 0, b.productComponentId),
+      value: pieceKey(b.orderLineId ?? 0, b.productComponentMaterialId),
       label: `${b.productCode} ${b.color}-${b.sizeCode} · ${b.componentName} (${LABELS.availableQty}: ${formatQty(b.availableQty)})`,
     }));
   const options = [...wholeOptions, ...partOptions];

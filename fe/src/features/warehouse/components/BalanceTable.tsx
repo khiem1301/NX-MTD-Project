@@ -71,7 +71,7 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
         : {
             warehouseType,
             orderLineId: b.orderLineId ?? undefined,
-            productComponentId: b.productComponentId,
+            productComponentMaterialId: b.productComponentMaterialId,
           },
     });
 
@@ -93,7 +93,7 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
       <QueryError error={balances.error} onRetry={() => void balances.refetch()} />
       <Table
         rowKey={(b) =>
-          `${b.materialId ?? ''}|${b.materialColor ?? ''}|${b.orderLineId ?? ''}|${b.productComponentId ?? ''}`
+          `${b.materialId ?? ''}|${b.materialColor ?? ''}|${b.orderLineId ?? ''}|${b.productComponentMaterialId ?? ''}`
         }
         columns={columns}
         dataSource={balances.data?.items}
