@@ -24,7 +24,7 @@ Mật khẩu các tài khoản mẫu: `123456` (Admin đổi được sau khi đ
 | 3 | Quản đốc / Thủ kho | Đặt hàng đơn mua với **số lần NCC giao dự kiến = 2**; Thủ kho lập phiếu nhập lần 1 và đính kèm ảnh chứng từ; Quản đốc xác nhận. Lập tiếp lần 2 còn thiếu | Đơn mua NVL, NVL chờ nhận, Phiếu nhập NVL | NVL chờ nhận hiện "đã nhận / dự kiến"; Quản đốc không xác nhận được khi chưa có ảnh; sau lần giao cuối còn thiếu thì tự sinh "Thiếu NVL khi nhập" |
 | 4 | Quản đốc | Chọn giao bù cho đơn thiếu; Thủ kho lập phiếu bổ sung | Thiếu NVL khi nhập | Đủ hàng bù thì đơn thiếu tự hoàn thành, đơn mua thành "Đã nhận đủ" |
 | 5 | Tổ trưởng cắt | Ghi bàn cắt, bàn giao BTP vào kho (có thể rút phiếu khi Thủ kho chưa nhận) | Bàn cắt, Bàn giao BTP | Thủ kho nhận → tồn kho BTP tăng; Quản đốc đặt KPI không vượt BTP trong kho, và đóng lệnh cắt ở chi tiết lệnh |
-| 6 | Tổ trưởng may | Giao BTP cho công nhân; công nhân xác nhận | Giao / thu hồi BTP, BTP của tôi | Công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (có lý do) |
+| 6 | Tổ trưởng may | Chọn đơn ở bảng chia việc, bấm Giao ở từng công đoạn (số lần làm, kèm BTP nếu công đoạn dùng BTP); công nhân xác nhận | Giao việc cho công nhân, Việc được giao cho tôi | Công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (có lý do); chưa được giao việc thì không báo sản lượng được |
 | 7 | Tổ trưởng may | Nhập sản lượng cuối ca | Sản lượng cuối ca | Vượt số BTP công nhân đang giữ thì bị chặn (MSG16) |
 | 8 | QA/QC | Nhập đợt QC, rồi lập phiếu bàn giao thành phẩm; Thủ kho nhận | Kiểm hoàn thiện, Bàn giao thành phẩm | Kho thành phẩm tăng đúng số Thủ kho đếm |
 | 9 | Quản đốc → Thủ kho → Kế toán | Lập phiếu xuất, xuất hàng, xác nhận khách nhận | Phiếu xuất hàng | Đơn chuyển Đang giao → Giao một phần / Đã giao |
