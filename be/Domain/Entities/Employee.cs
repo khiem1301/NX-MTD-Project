@@ -98,5 +98,5 @@ public partial class Employee
 
     public virtual ICollection<VehicleTrip> VehicleTrips { get; set; } = new List<VehicleTrip>();
 
-    public virtual ICollection<WorkerPieceMovement> WorkerPieceMovements { get; set; } = new List<WorkerPieceMovement>();
+    public virtual ICollection<WorkAllocation> WorkAllocations { get; set; } = new List<WorkAllocation>();
 }

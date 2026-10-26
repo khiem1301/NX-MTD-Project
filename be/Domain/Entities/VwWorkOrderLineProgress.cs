@@ -17,7 +17,13 @@ public partial class VwWorkOrderLineProgress
 
     public int OrderLineId { get; set; }
 
+    public int? ProductComponentMaterialId { get; set; }
+
     public int? ProductComponentId { get; set; }
+
+    public int? MaterialId { get; set; }
+
+    public string? MaterialColor { get; set; }
 
     public int PlannedQty { get; set; }
 

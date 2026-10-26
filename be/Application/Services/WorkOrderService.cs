@@ -48,21 +48,22 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         var wo = await WorkOrders.AsNoTracking().Include(w => w.Order).Include(w => w.Product).Include(w => w.CuttingTeam)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponent)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
         if (wo is null) return WarehouseFailures.NotFound<WorkOrderDto>();
         if (cuttingTeamId is not null && wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<WorkOrderDto>();
 
         var cut = await _uow.Repository<CuttingLayLine>().Query().Where(l => l.CuttingLay.WorkOrderId == workOrderId)
-            .GroupBy(l => new { l.OrderLineId, l.ProductComponentId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
-            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentId), x => x.Qty, ct);
+            .GroupBy(l => new { l.OrderLineId, l.ProductComponentMaterialId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
+            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
         var handed = await HandedQtyAsync(workOrderId, ct);
         var lines = wo.WorkOrderLines.OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
-            .ThenBy(l => l.ProductComponent == null ? 0 : l.ProductComponent.SortOrder)
+            .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponent.SortOrder)
             .Select(l => new WorkOrderLineDto(l.WorkOrderLineId, l.OrderLineId, l.OrderLine.ProductVariant.Color,
-                l.OrderLine.ProductVariant.SizeCode, l.ProductComponentId, l.ProductComponent?.ComponentName ?? string.Empty,
-                l.PlannedQty, cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentId)),
-                handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentId))))
+                l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId, ComponentLabels.Of(l.ProductComponentMaterial) ?? string.Empty,
+                l.PlannedQty, cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId)),
+                handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId))))
             .ToList();
 
         return Result<WorkOrderDto>.Success(new WorkOrderDto(wo.WorkOrderId, wo.WorkOrderCode, wo.OrderId,
@@ -114,8 +115,8 @@ public sealed class WorkOrderService : IWorkOrderService
             .Select(r => new ReplacementRequestDto(r.RequestId, r.RequestCode, r.OrderId!.Value, r.Order!.OrderCode,
                 r.RequestLines.Select(l => l.OrderLine!.ProductVariant.Product.ProductCode).FirstOrDefault() ?? string.Empty, r.Content,
                 r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new ReplacementRequestLineDto(l.OrderLineId!.Value,
-                    l.OrderLine!.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, l.ProductComponentId!.Value,
-                    l.ProductComponent!.ComponentName, (int)l.Quantity)).ToList()))
+                    l.OrderLine!.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId!.Value,
+                    l.ProductComponentMaterial!.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor), (int)l.Quantity)).ToList()))
             .ToListAsync(ct);
         return Result<IReadOnlyList<ReplacementRequestDto>>.Success(requests);
     }
@@ -129,7 +130,7 @@ public sealed class WorkOrderService : IWorkOrderService
             return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementRequestNotApproved);
         var hasOrder = await WorkOrders.AnyAsync(w => w.SourceRequestId == request.RequestId && w.Status != WorkOrderStatuses.Cancelled, ct);
         if (hasOrder) return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementOrderExists);
-        if (request.RequestLines.Count == 0 || request.RequestLines.Any(l => l.OrderLineId is null || l.ProductComponentId is null))
+        if (request.RequestLines.Count == 0 || request.RequestLines.Any(l => l.OrderLineId is null || l.ProductComponentMaterialId is null))
             return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementLinesMissing);
 
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstAsync(o => o.OrderId == request.OrderId, ct);
@@ -148,7 +149,7 @@ public sealed class WorkOrderService : IWorkOrderService
 
         // Vải cần theo chi tiết cần cắt bù (định mức của chi tiết đó) phải đủ trong kho + vải tổ cắt đang giữ.
         var demands = request.RequestLines
-            .Select(l => new PieceDemand(orderLines[l.OrderLineId!.Value].ProductVariantId, l.ProductComponentId, (int)l.Quantity)).ToList();
+            .Select(l => new PieceDemand(orderLines[l.OrderLineId!.Value].ProductVariantId, l.ProductComponentMaterialId, (int)l.Quantity)).ToList();
         var fabric = await CheckFabricAsync(request.OrderId.Value, dto.CuttingTeamId, demands, ct);
         if (fabric is not null) return fabric;
 
@@ -166,7 +167,7 @@ public sealed class WorkOrderService : IWorkOrderService
                 Note = string.IsNullOrWhiteSpace(dto.Note) ? $"Cắt bù theo {request.RequestCode}" : dto.Note.Trim(),
                 WorkOrderLines = request.RequestLines.Select(l => new WorkOrderLine
                 {
-                    OrderLineId = l.OrderLineId!.Value, ProductComponentId = l.ProductComponentId, PlannedQty = (int)l.Quantity,
+                    OrderLineId = l.OrderLineId!.Value, ProductComponentMaterialId = l.ProductComponentMaterialId, PlannedQty = (int)l.Quantity,
                 }).ToList(),
             };
             await _uow.Repository<WorkOrder>().AddAsync(wo);
@@ -273,7 +274,7 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         var ids = orderLines.Keys.ToList();
         var planned = await _uow.Repository<WorkOrderLine>().Query()
-            .Where(l => ids.Contains(l.OrderLineId) && l.ProductComponentId == null
+            .Where(l => ids.Contains(l.OrderLineId) && l.ProductComponentMaterialId == null
                         && l.WorkOrder.Status != WorkOrderStatuses.Cancelled && l.WorkOrder.SourceRequestId == null
                         && (exceptWorkOrderId == null || l.WorkOrderId != exceptWorkOrderId))
             .GroupBy(l => l.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(l => l.PlannedQty) })
@@ -321,7 +322,7 @@ public sealed class WorkOrderService : IWorkOrderService
 
     private async Task<IReadOnlyList<FabricRequirementDto>> GetFabricsAsync(WorkOrder wo, CancellationToken ct)
     {
-        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentId, l.PlannedQty)).ToList();
+        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
         var needs = await _planner.GetNeedsAsync(demands, ct);
         var issued = await _planner.GetIssuedAsync(wo.WorkOrderId, ct);
 
@@ -336,13 +337,13 @@ public sealed class WorkOrderService : IWorkOrderService
         return result;
     }
 
-    private async Task<Dictionary<(int OrderLineId, int? ProductComponentId), int>> HandedQtyAsync(int workOrderId, CancellationToken ct) =>
+    private async Task<Dictionary<(int OrderLineId, int? ProductComponentMaterialId), int>> HandedQtyAsync(int workOrderId, CancellationToken ct) =>
         await _uow.Repository<CutHandoverLine>().Query()
             .Where(l => l.CutHandover.WorkOrderId == workOrderId
                         && (l.CutHandover.Status == HandoverStatuses.Pending || l.CutHandover.Status == HandoverStatuses.Confirmed))
-            .GroupBy(l => new { l.OrderLineId, l.ProductComponentId })
+            .GroupBy(l => new { l.OrderLineId, l.ProductComponentMaterialId })
             .Select(g => new { g.Key, Qty = g.Sum(l => l.HandedQty) })
-            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentId), x => x.Qty, ct);
+            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
 
     private static void Apply(WorkOrder wo, SaveWorkOrderDto dto)
     {

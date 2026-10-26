@@ -32,6 +32,8 @@ public partial class Product
 
     public virtual Operation? Operation { get; set; }
 
+    public virtual ICollection<OperationGroup> OperationGroups { get; set; } = new List<OperationGroup>();
+
     public virtual ICollection<ProductComponent> ProductComponents { get; set; } = new List<ProductComponent>();
 
     public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();

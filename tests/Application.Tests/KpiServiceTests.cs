@@ -62,7 +62,7 @@ public class KpiServiceTests
     /// <summary>BTP (bộ đủ) tổ cắt đã bàn giao và kho đã xác nhận cho đơn + mã hàng; mặc định đủ lớn để các test khác không bị chặn.</summary>
     private void GivenBtp(int orderId, int productId, int qty) => _handoverLines.Add(new CutHandoverLine
     {
-        ConfirmedQty = qty, ProductComponentId = null,
+        ConfirmedQty = qty, ProductComponentMaterialId = null,
         CutHandover = new CutHandover { Status = HandoverStatuses.Confirmed },
         OrderLine = new OrderLine { OrderId = orderId, ProductId = productId },
     });
@@ -254,12 +254,12 @@ public class KpiServiceTests
         _orderLines.Add(Line(1, 1));
         _handoverLines.Add(new CutHandoverLine   // chi tiết lẻ (cắt bù) không phải bộ đủ
         {
-            ConfirmedQty = 500, ProductComponentId = 7, CutHandover = new CutHandover { Status = HandoverStatuses.Confirmed },
+            ConfirmedQty = 500, ProductComponentMaterialId = 7, CutHandover = new CutHandover { Status = HandoverStatuses.Confirmed },
             OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
         });
         _handoverLines.Add(new CutHandoverLine   // phiếu còn chờ kho nhận
         {
-            ConfirmedQty = 500, ProductComponentId = null, CutHandover = new CutHandover { Status = HandoverStatuses.Pending },
+            ConfirmedQty = 500, ProductComponentMaterialId = null, CutHandover = new CutHandover { Status = HandoverStatuses.Pending },
             OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
         });
 

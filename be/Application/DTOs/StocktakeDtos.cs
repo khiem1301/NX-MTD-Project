@@ -8,7 +8,7 @@ public sealed record StocktakeListItemDto(
 
 public sealed record StocktakeLineDto(
     int StocktakeLineId, int? MaterialId, string? MaterialCode, string? MaterialName, string? Unit, string? MaterialColor,
-    int? OrderLineId, int? ProductComponentId, string? ComponentName, string? OrderCode, string? ProductCode, string? Color,
+    int? OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string? OrderCode, string? ProductCode, string? Color,
     string? SizeCode, decimal BookQty,
     decimal? CountedQty, decimal DifferenceQty, string? Note);
 
@@ -18,7 +18,7 @@ public sealed record StocktakeDto(
 
 /// <summary>Kho NVL xác định dòng bằng MaterialId + MaterialColor; kho BTP / thành phẩm bằng OrderLineId.
 /// CountedQty để trống = khớp sổ.</summary>
-public sealed record SaveStocktakeLineDto(int? MaterialId, string? MaterialColor, int? OrderLineId, int? ProductComponentId,
+public sealed record SaveStocktakeLineDto(int? MaterialId, string? MaterialColor, int? OrderLineId, int? ProductComponentMaterialId,
     decimal? CountedQty, string? Note);
 
 public sealed record SaveStocktakeDto(string WarehouseType, string? Scope, DateOnly StocktakeDate,

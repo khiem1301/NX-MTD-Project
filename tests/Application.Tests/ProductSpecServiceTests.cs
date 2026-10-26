@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services.Orders;
@@ -40,7 +41,7 @@ public class ProductSpecServiceTests
             n.Material = _materials.First(m => m.MaterialId == n.MaterialId);
         });
         foreach (var empty in new[] { typeof(RequestLine), typeof(CuttingLayLine), typeof(CutHandoverLine), typeof(MaterialIssueLine),
-                     typeof(StocktakeLine), typeof(StockTransaction) })
+                     typeof(StockBalance), typeof(OperationComponent) })
             SetupEmpty(empty);
     }
 
@@ -63,7 +64,17 @@ public class ProductSpecServiceTests
 
     private void SetupEmptyOf<T>() where T : class => Setup(new List<T>());
 
-    private ProductSpecService Create() => new(_uow, _audit);
+    private ProductSpecService Create()
+    {
+        // Quan hệ điều hướng của dòng định mức đã seed: EF tự nối khi đọc, ở đây nối tay.
+        foreach (var n in _norms)
+        {
+            n.ProductVariant ??= _variants.FirstOrDefault(v => v.ProductVariantId == n.ProductVariantId)!;
+            n.ProductComponent ??= _components.FirstOrDefault(c => c.ProductComponentId == n.ProductComponentId)!;
+            n.Material ??= _materials.FirstOrDefault(m => m.MaterialId == n.MaterialId)!;
+        }
+        return new ProductSpecService(_uow, _audit);
+    }
 
     private static SaveProductComponentDto Panel(string name, short pieces = 1, short sort = 1, int? id = null) =>
         new(id, name, "Panel", pieces, sort);
@@ -116,7 +127,8 @@ public class ProductSpecServiceTests
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
         var variant = new ProductVariant { ProductVariantId = 21, ProductId = 1, Color = "Đỏ", SizeCode = "S", Status = RecordStatus.Active };
         _components.Add(comp); _variants.Add(variant);
-        _workOrderLines.Add(new WorkOrderLine { ProductComponentId = 11 });
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1, QtyPerGarment = 2 });
+        _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });   // lệnh cắt bù đang trỏ vào dòng định mức
         _orderLines.Add(new OrderLine { OrderLineId = 5, ProductVariantId = 21 });
 
         var result = await Create().SaveAsync(1, Spec([], [], []), default);
@@ -126,6 +138,40 @@ public class ProductSpecServiceTests
         variant.Status.Should().Be(RecordStatus.Discontinued);
         _components.Should().Contain(comp);
         _variants.Should().Contain(variant);
+    }
+
+    [Fact]
+    public async Task Save_updates_an_existing_norm_row_in_place_so_documents_pointing_at_it_stay_valid()
+    {
+        var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
+        var variant = new ProductVariant { ProductVariantId = 21, ProductId = 1, Color = "Đen", SizeCode = "M", Status = RecordStatus.Active };
+        _components.Add(comp); _variants.Add(variant);
+        var norm = new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1, QtyPerGarment = 2 };
+        _norms.Add(norm);
+        _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });
+
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [new(21, "Đen", "M")], [Norm("Tay", "Đen", "M", 2.5m)]), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _norms.Should().ContainSingle().Which.Should().BeSameAs(norm);
+        norm.ProductComponentMaterialId.Should().Be(3);
+        norm.QtyPerGarment.Should().Be(2.5m);
+    }
+
+    [Fact]
+    public async Task Save_refuses_to_delete_a_norm_row_that_is_already_used()
+    {
+        var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
+        var variant = new ProductVariant { ProductVariantId = 21, ProductId = 1, Color = "Đen", SizeCode = "M", Status = RecordStatus.Active };
+        _components.Add(comp); _variants.Add(variant);
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1, QtyPerGarment = 2 });
+        _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });
+
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [new(21, "Đen", "M")], []), default);   // bỏ hết định mức
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
+        result.Message.Should().Be(Messages.ProductSpecNormInUse);
+        _norms.Should().ContainSingle();
     }
 
     [Fact]

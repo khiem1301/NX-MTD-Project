@@ -6,7 +6,7 @@ public sealed record OrderLineOptionDto(int OrderLineId, int ProductId, string P
     string Color, string SizeCode, int OrderedQty);
 
 /// <summary>Chi tiết cắt (PANEL) của mã hàng để chọn khi xin cắt bù một chi tiết.</summary>
-public sealed record ComponentOptionDto(int ProductComponentId, string ComponentName, short PiecesPerGarment);
+public sealed record ComponentOptionDto(int ProductComponentMaterialId, string ComponentName, short PiecesPerGarment);
 
 public sealed record TeamOptionDto(int TeamId, string TeamCode, string TeamName, string TeamType);
 

@@ -45,17 +45,21 @@ public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
         if (draft.OrderId != defect.OrderId) return Invalid(Messages.ReplacementCuttingOrderMismatch);
 
         if (draft.Lines.Count == 0
-            || draft.Lines.Any(l => l.ProductComponentId is null || l.OrderLineId != defect.OrderLineId
+            || draft.Lines.Any(l => l.ProductComponentMaterialId is null || l.OrderLineId != defect.OrderLineId
                                     || l.Quantity < 1 || l.Quantity != decimal.Truncate(l.Quantity) || l.Quantity > defect.Quantity)
-            || draft.Lines.GroupBy(l => l.ProductComponentId).Any(g => g.Count() > 1))
+            || draft.Lines.GroupBy(l => l.ProductComponentMaterialId).Any(g => g.Count() > 1))
             return Invalid(Messages.ReplacementCuttingLines);
 
-        // Chi tiết cắt bù phải là chi tiết PANEL đang dùng của đúng mã hàng (trg_RequestLine_Check cũng chặn lệch mã hàng).
-        var componentIds = draft.Lines.Select(l => l.ProductComponentId!.Value).Distinct().ToList();
-        var validComponents = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
-            .CountAsync(c => componentIds.Contains(c.ProductComponentId) && c.ProductId == defect.ProductId
-                             && c.ComponentType == ComponentTypes.Panel && c.Status == RecordStatus.Active, ct);
-        if (validComponents != componentIds.Count) return Invalid(Messages.ReplacementCuttingLines);
+        // Dòng cắt bù phải là dòng định mức (chi tiết PANEL × vải) đang dùng của đúng biến thể của phiếu hàng hỏng
+        // (trg_RequestLine_Check cũng chặn lệch màu × size).
+        var normIds = draft.Lines.Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
+        var variantId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == defect.OrderLineId).Select(l => l.ProductVariantId).FirstAsync(ct);
+        var validNorms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductVariantId == variantId
+                             && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                             && p.ProductComponent.Status == RecordStatus.Active, ct);
+        if (validNorms != normIds.Count) return Invalid(Messages.ReplacementCuttingLines);
 
         var duplicate = await _uow.Repository<Request>().Query().AsNoTracking()
             .AnyAsync(r => r.DefectRecordId == draft.DefectRecordId && (draft.RequestId == null || r.RequestId != draft.RequestId), ct);

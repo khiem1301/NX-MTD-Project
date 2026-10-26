@@ -23,7 +23,7 @@ public sealed class FabricPlanner
                         && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new
             {
-                Norm = new NormLine(p.ProductVariantId, p.ProductComponentId, p.ProductComponent.PiecesPerGarment, p.MaterialId,
+                Norm = new NormLine(p.ProductComponentMaterialId, p.ProductVariantId, p.ProductComponentId, p.ProductComponent.PiecesPerGarment, p.MaterialId,
                     p.MaterialColor, p.QtyPerGarment, p.WastagePercent),
                 p.Material.MaterialCode, p.Material.MaterialName, p.Material.Unit,
             })
@@ -44,7 +44,7 @@ public sealed class FabricPlanner
         var variantIds = lines.Select(d => d.ProductVariantId).Distinct().ToArray();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => variantIds.Contains(p.ProductVariantId))
-            .Select(p => new NormLine(p.ProductVariantId, p.ProductComponentId, p.ProductComponent.PiecesPerGarment, p.MaterialId,
+            .Select(p => new NormLine(p.ProductComponentMaterialId, p.ProductVariantId, p.ProductComponentId, p.ProductComponent.PiecesPerGarment, p.MaterialId,
                 p.MaterialColor, p.QtyPerGarment, p.WastagePercent))
             .ToListAsync(ct);
         return FabricRequirementCalculator.Calculate(norms, lines).ToDictionary(n => (n.MaterialId, n.MaterialColor), n => n.Qty);

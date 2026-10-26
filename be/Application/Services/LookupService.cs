@@ -34,13 +34,17 @@ public sealed class LookupService : ILookupService
 
     public async Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct)
     {
-        var productId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductId).FirstOrDefaultAsync(ct);
-        if (productId is null) return [];
-        return await _uow.Repository<ProductComponent>().Query().AsNoTracking()
-            .Where(c => c.ProductId == productId && c.ComponentType == ComponentTypes.Panel && c.Status == RecordStatus.Active)
-            .OrderBy(c => c.SortOrder).ThenBy(c => c.ProductComponentId)
-            .Select(c => new ComponentOptionDto(c.ProductComponentId, c.ComponentName, c.PiecesPerGarment))
+        var variantId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductVariantId).FirstOrDefaultAsync(ct);
+        if (variantId is null) return [];
+        // Mỗi dòng định mức (chi tiết vải × NVL × màu) của đúng màu × size là một lựa chọn cắt bù.
+        return await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(p => p.ProductVariantId == variantId && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                        && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
+            .OrderBy(p => p.ProductComponent.SortOrder).ThenBy(p => p.ProductComponentMaterialId)
+            .Select(p => new ComponentOptionDto(p.ProductComponentMaterialId,
+                p.ProductComponent.ComponentName + " – " + p.Material.MaterialName + (p.MaterialColor == "" ? "" : " " + p.MaterialColor),
+                p.ProductComponent.PiecesPerGarment))
             .ToListAsync(ct);
     }
 

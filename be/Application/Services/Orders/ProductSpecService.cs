@@ -82,7 +82,12 @@ public sealed class ProductSpecService : IProductSpecService
             var droppedComponents = components.Where(c => !keptComponents.Contains(c)).ToList();
             var droppedVariants = variants.Where(v => !keptVariants.Contains(v)).ToList();
 
-            var usedComponents = await UsedComponentIdsAsync(droppedComponents.Select(c => c.ProductComponentId).ToList(), ct);
+            var droppedComponentIds = droppedComponents.Select(c => c.ProductComponentId).ToHashSet();
+            var usedNormIds = await UsedNormIdsAsync(norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId))
+                .Select(n => n.ProductComponentMaterialId).ToList(), ct);
+            var usedComponents = norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId)
+                                                  && usedNormIds.Contains(n.ProductComponentMaterialId))
+                .Select(n => n.ProductComponentId).ToHashSet();
             var droppedVariantIds = droppedVariants.Select(v => v.ProductVariantId).ToArray();
             var usedVariants = (await _uow.Repository<OrderLine>().Query()
                 .Where(l => droppedVariantIds.Contains(l.ProductVariantId))
@@ -92,9 +97,12 @@ public sealed class ProductSpecService : IProductSpecService
             var keptVariantIds = keptVariants.Select(v => v.ProductVariantId).ToHashSet();
             var goneVariantIds = droppedVariantIds.Where(id => !usedVariants.Contains(id)).ToHashSet();
             var goneComponentIds = droppedComponents.Select(c => c.ProductComponentId).Where(id => !usedComponents.Contains(id)).ToHashSet();
-            var removeNorms = norms.Where(n => keptVariantIds.Contains(n.ProductVariantId) || goneVariantIds.Contains(n.ProductVariantId)
-                || goneComponentIds.Contains(n.ProductComponentId)).ToList();
+            var removeNorms = norms.Where(n => goneVariantIds.Contains(n.ProductVariantId) || goneComponentIds.Contains(n.ProductComponentId)).ToList();
             _uow.Repository<ProductComponentMaterial>().RemoveRange(removeNorms);
+            // Công đoạn ↔ chi tiết chỉ là dữ liệu tra cứu: gỡ liên kết với thành phần bị xóa.
+            var goneLinks = await _uow.Repository<OperationComponent>().Query()
+                .Where(oc => oc.ProductId == productId && goneComponentIds.Contains(oc.ProductComponentId)).ToListAsync(ct);
+            _uow.Repository<OperationComponent>().RemoveRange(goneLinks);
             foreach (var c in droppedComponents)
             {
                 if (usedComponents.Contains(c.ProductComponentId)) c.Status = RecordStatus.Discontinued;
@@ -132,20 +140,41 @@ public sealed class ProductSpecService : IProductSpecService
             }
             await _uow.SaveChangesAsync();
 
-            // Bước 3: ghi định mức mới.
-            await _uow.Repository<ProductComponentMaterial>().AddRangeAsync(dto.Norms.Select(n => new ProductComponentMaterial
+            // Bước 3: ghi định mức theo kiểu cập nhật / thêm / xóa (giữ Id: lệnh cắt, phiếu cấp, bàn cắt, tồn kho BTP
+            // trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại).
+            var keptComponentIds = componentByName.Values.Select(c => c.ProductComponentId).ToHashSet();
+            var existing = norms.Except(removeNorms)
+                .Where(n => keptVariantIds.Contains(n.ProductVariantId) && keptComponentIds.Contains(n.ProductComponentId))
+                .ToDictionary(n => (n.ProductVariantId, n.ProductComponentId, n.MaterialId));
+            var wanted = new HashSet<(int, int, int)>();
+            foreach (var n in dto.Norms)
             {
-                ProductId = productId,
-                ProductVariantId = variantByKey[(n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant())].ProductVariantId,
-                ProductComponentId = componentByName[n.ComponentName.Trim()].ProductComponentId,
-                MaterialId = n.MaterialId,
-                MaterialColor = n.MaterialColor?.Trim() ?? string.Empty,
-                QtyPerGarment = n.QtyPerGarment,
-                WastagePercent = n.WastagePercent,
-                LengthCm = n.LengthCm,
-                WidthCm = n.WidthCm,
-                SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim(),
-            }).ToList());
+                var key = (variantByKey[(n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant())].ProductVariantId,
+                    componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId);
+                wanted.Add(key);
+                var row = existing.GetValueOrDefault(key);
+                if (row is null)
+                {
+                    row = new ProductComponentMaterial
+                    {
+                        ProductId = productId, ProductVariantId = key.Item1, ProductComponentId = key.Item2, MaterialId = key.Item3,
+                    };
+                    await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
+                }
+                row.MaterialColor = n.MaterialColor?.Trim() ?? string.Empty;
+                row.QtyPerGarment = n.QtyPerGarment;
+                row.WastagePercent = n.WastagePercent;
+                row.LengthCm = n.LengthCm;
+                row.WidthCm = n.WidthCm;
+                row.SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim();
+            }
+            var stale = existing.Where(e => !wanted.Contains(e.Key)).Select(e => e.Value).ToList();
+            if (stale.Count > 0)
+            {
+                var inUse = await UsedNormIdsAsync(stale.Select(n => n.ProductComponentMaterialId).ToList(), ct);
+                if (inUse.Count > 0) return Fail.As<int>(Invalid(Messages.ProductSpecNormInUse));
+                _uow.Repository<ProductComponentMaterial>().RemoveRange(stale);
+            }
             _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, null,
                 new { Spec = new { Components = dto.Components.Count, Variants = dto.Variants.Count, Norms = dto.Norms.Count } }));
             await _uow.SaveChangesAsync();
@@ -180,26 +209,24 @@ public sealed class ProductSpecService : IProductSpecService
         return active == materialIds.Length ? null : Invalid(Messages.ProductSpecMaterialInvalid);
     }
 
-    /// <summary>Thành phần đã được dùng ở lệnh cắt, đơn từ, bàn cắt, bàn giao, phiếu cấp, kiểm kê hoặc thẻ kho.</summary>
-    private async Task<HashSet<int>> UsedComponentIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
+    /// <summary>Dòng định mức đã được dùng ở lệnh cắt, đơn từ, bàn cắt, bàn giao, phiếu cấp hoặc dòng tồn kho BTP.</summary>
+    private async Task<HashSet<int>> UsedNormIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
     {
         var used = new HashSet<int>();
         if (ids.Count == 0) return used;
         var idArray = ids.ToArray();
-        used.UnionWith(await _uow.Repository<WorkOrderLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<RequestLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<CuttingLayLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<CutHandoverLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<MaterialIssueLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<StocktakeLine>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<StockTransaction>().Query().Where(l => l.ProductComponentId != null && idArray.Contains(l.ProductComponentId.Value))
-            .Select(l => l.ProductComponentId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<WorkOrderLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<RequestLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<CuttingLayLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<CutHandoverLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<MaterialIssueLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
+        used.UnionWith(await _uow.Repository<StockBalance>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
         return used;
     }
 

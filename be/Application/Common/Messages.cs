@@ -234,6 +234,7 @@ public static class Messages
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
+    public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
     public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
     public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng dùng.";
@@ -262,6 +263,7 @@ public static class Messages
 
     // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
+    public const string OperationComponentInvalid = "Chi tiết gắn với công đoạn phải thuộc đúng mã hàng của công đoạn.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
     public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
@@ -309,7 +311,7 @@ public static class Messages
     public const string OutputDuplicateRow = "Công đoạn và công nhân bị lặp trong danh sách.";
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
     /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
-    public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số BTP đã nhận ({1}): còn tối đa {2}.";
+    public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số lần được giao ({1}): còn tối đa {2}. Hãy giao thêm việc cho công nhân ở màn Giao việc.";
     /// <summary>MSG17: công nhân chưa có chấm công hôm đó (cảnh báo, không chặn).</summary>
     public const string OutputNoAttendanceWarning = "{0} chưa có giờ chấm công ngày {1}.";
     public const string OutputSaved = "Đã lưu sản lượng.";

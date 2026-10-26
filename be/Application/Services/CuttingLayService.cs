@@ -112,13 +112,26 @@ public sealed class CuttingLayService : ICuttingLayService
     /// <summary>Gán dữ liệu bàn cắt và kiểm tra trần; Success kèm Message = cảnh báo vượt kế hoạch (nếu có).</summary>
     private async Task<Result> ApplyAsync(CuttingLay lay, SaveCuttingLayDto dto, WorkOrder wo, CancellationToken ct)
     {
-        var planned = wo.WorkOrderLines.GroupBy(l => (l.OrderLineId, l.ProductComponentId))
+        var planned = wo.WorkOrderLines.GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId))
             .ToDictionary(g => g.Key, g => g.Sum(l => l.PlannedQty));
-        if (dto.Lines.Any(l => !planned.ContainsKey((l.OrderLineId, l.ProductComponentId))))
+        if (dto.Lines.Any(l => !planned.ContainsKey((l.OrderLineId, l.ProductComponentMaterialId))))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
         if (!await _uow.Repository<Material>().Query()
                 .AnyAsync(m => m.MaterialId == dto.FabricMaterialId && m.MaterialType == MaterialTypes.Fabric, ct))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.MaterialNotInWorkOrder);
+
+        // Bàn cắt bù chi tiết phải cắt đúng vải của dòng định mức (database chặn cứng, THROW 50049).
+        var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null)
+            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
+        if (normIds.Count > 0)
+        {
+            var fabricColor = dto.FabricColor.Trim();
+            var matching = await _uow.Repository<ProductComponentMaterial>().Query()
+                .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.MaterialId == dto.FabricMaterialId
+                                 && (p.MaterialColor == fabricColor || p.MaterialColor == ""), ct);
+            if (matching != normIds.Count)
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayComponentFabricMismatch);
+        }
 
         var lines = dto.Lines.Select(l =>
         {
@@ -127,7 +140,7 @@ public sealed class CuttingLayService : ICuttingLayService
             return new CuttingLayLine
             {
                 OrderLineId = l.OrderLineId,
-                ProductComponentId = l.ProductComponentId,
+                ProductComponentMaterialId = l.ProductComponentMaterialId,
                 RatioValue = (short)l.RatioValue,
                 CalculatedQty = calculated,
                 ActualQty = actual,
@@ -152,21 +165,21 @@ public sealed class CuttingLayService : ICuttingLayService
     }
 
     private async Task<Result> CheckCapAsync(WorkOrder wo, int exceptLayId, IReadOnlyList<CuttingLayLine> lines,
-        IReadOnlyDictionary<(int OrderLineId, int? ProductComponentId), int> planned, CancellationToken ct)
+        IReadOnlyDictionary<(int OrderLineId, int? ProductComponentMaterialId), int> planned, CancellationToken ct)
     {
         var surplus = await SurplusPercentAsync(ct);
         var cut = await _uow.Repository<CuttingLayLine>().Query()
             .Where(l => l.CuttingLay.WorkOrderId == wo.WorkOrderId && l.CuttingLayId != exceptLayId)
-            .GroupBy(l => new { l.OrderLineId, l.ProductComponentId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
-            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentId), x => x.Qty, ct);
+            .GroupBy(l => new { l.OrderLineId, l.ProductComponentMaterialId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
+            .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
 
         var over = new List<string>();
         var warn = false;
         foreach (var line in lines)
         {
             var ol = wo.WorkOrderLines.First(l => l.OrderLineId == line.OrderLineId).OrderLine;
-            var plan = planned[(line.OrderLineId, line.ProductComponentId)];
-            var before = cut.GetValueOrDefault((line.OrderLineId, line.ProductComponentId));
+            var plan = planned[(line.OrderLineId, line.ProductComponentMaterialId)];
+            var before = cut.GetValueOrDefault((line.OrderLineId, line.ProductComponentMaterialId));
             switch (CuttingLayCalculator.Check(plan, before, line.ActualQty, surplus))
             {
                 case CutCapCheck.OverCap:
@@ -213,7 +226,7 @@ public sealed class CuttingLayService : ICuttingLayService
             l.LaySequence, l.FabricMaterialId, l.FabricMaterial.MaterialCode,
             l.FabricColor, l.PlyCount, string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
-                x.OrderLineId, x.ProductComponentId, x.ProductComponent == null ? null : x.ProductComponent.ComponentName,
+                x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.MaterialColor == "" ? "" : " " + x.ProductComponentMaterial.MaterialColor),
                 x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,
                 x.AdjustReason)).ToList());
 }

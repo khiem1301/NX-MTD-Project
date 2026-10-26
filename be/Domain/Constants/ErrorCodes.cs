@@ -149,6 +149,7 @@ public static class ErrorCodes
     public const string VehicleInactive = "VEHICLE_INACTIVE";
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
+    public const string AllocationExceedsRequired = "ALLOCATION_EXCEEDS_REQUIRED";
     public const string PieceHandoverExceedsHolding = "PIECE_HANDOVER_EXCEEDS_HOLDING";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
@@ -166,6 +167,7 @@ public static class ErrorCodes
     // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
     public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
+    public const string OperationInvalid = "OPERATION_INVALID";
     public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
     public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
     public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";

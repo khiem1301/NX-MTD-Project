@@ -50,13 +50,19 @@ public sealed class StocktakeService : IStocktakeService
         var dto = await Stocktakes.AsNoTracking().Where(s => s.StocktakeId == stocktakeId)
             .Select(s => new StocktakeDto(s.StocktakeId, s.StocktakeCode, s.WarehouseType, s.Scope, s.StocktakeDate, s.Status,
                 s.ReturnReason, s.CreatedAt, s.ApprovedAt,
-                s.StocktakeLines.OrderBy(l => l.StocktakeLineId).Select(l => new StocktakeLineDto(l.StocktakeLineId, l.MaterialId,
-                    l.Material == null ? null : l.Material.MaterialCode, l.Material == null ? null : l.Material.MaterialName,
-                    l.Material == null ? null : l.Material.Unit, l.MaterialColor, l.OrderLineId,
-                    l.ProductComponentId, l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
-                    l.OrderLine == null ? null : l.OrderLine.Order.OrderCode,
-                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine == null ? null : l.OrderLine.ProductVariant.Color,
-                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode, l.BookQty, l.CountedQty,
+                s.StocktakeLines.OrderBy(l => l.StocktakeLineId).Select(l => new StocktakeLineDto(l.StocktakeLineId, l.StockBalance.MaterialId,
+                    l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialCode,
+                    l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialName,
+                    l.StockBalance.Material == null ? null : l.StockBalance.Material.Unit, l.StockBalance.MaterialColor,
+                    l.StockBalance.OrderLineId,
+                    l.StockBalance.ProductComponentMaterialId,
+                    l.StockBalance.ProductComponentMaterial == null ? null : l.StockBalance.ProductComponentMaterial.ProductComponent.ComponentName
+                        + " – " + l.StockBalance.ProductComponentMaterial.Material.MaterialName
+                        + (l.StockBalance.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.StockBalance.ProductComponentMaterial.MaterialColor),
+                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.Order.OrderCode,
+                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Product.ProductCode,
+                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Color,
+                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.SizeCode, l.BookQty, l.CountedQty,
                     (l.CountedQty ?? l.BookQty) - l.BookQty, l.Note)).ToList()))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<StocktakeDto>() : Result<StocktakeDto>.Success(dto);
@@ -116,13 +122,13 @@ public sealed class StocktakeService : IStocktakeService
     public Task<Result> ApproveAsync(int stocktakeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
-            var stocktake = await Stocktakes.Include(s => s.StocktakeLines).FirstOrDefaultAsync(s => s.StocktakeId == stocktakeId, ct);
+            var stocktake = await Stocktakes.Include(s => s.StocktakeLines).ThenInclude(l => l.StockBalance).FirstOrDefaultAsync(s => s.StocktakeId == stocktakeId, ct);
             if (stocktake is null) return WarehouseFailures.NotFound();
             if (stocktake.Status != StocktakeStatuses.PendingApproval) return WarehouseFailures.InvalidStatus();
 
             var today = _clock.Today;
             var movements = stocktake.StocktakeLines.Where(l => l.CountedQty is not null && l.CountedQty != l.BookQty)
-                .Select(l => new StockMovement(KeyOf(stocktake.WarehouseType, l), l.CountedQty!.Value - l.BookQty,
+                .Select(l => new StockMovement(KeyOf(l.StockBalance), l.CountedQty!.Value - l.BookQty,
                     StockDocTypes.Stocktake, stocktake.StocktakeId, l.StocktakeLineId, today)).ToList();
             if (movements.Count > 0)
             {
@@ -158,10 +164,8 @@ public sealed class StocktakeService : IStocktakeService
 
     // ---------- Nội bộ ----------
 
-    private static StockKey KeyOf(string warehouseType, StocktakeLine l) =>
-        warehouseType == WarehouseTypes.Material
-            ? StockKey.Material(l.MaterialId!.Value, l.MaterialColor ?? string.Empty)
-            : warehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentId) : StockKey.Finished(l.OrderLineId!.Value);
+    private static StockKey KeyOf(StockBalance b) =>
+        new(b.WarehouseType, b.MaterialId, b.MaterialColor, b.OrderLineId, b.ProductComponentMaterialId);
 
     private async Task NotifyApproversAsync(string code, CancellationToken ct)
     {
@@ -180,7 +184,7 @@ public sealed class StocktakeService : IStocktakeService
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
 
         var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
-        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}|{l.MaterialColor?.Trim()}" : $"{l.OrderLineId}|{l.ProductComponentId}").ToList();
+        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}|{l.MaterialColor?.Trim()}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();
         if (keys.Distinct().Count() != keys.Count)
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
         if (dto.Lines.Any(l => isMaterial ? l.MaterialId is null || l.OrderLineId is not null : l.OrderLineId is null || l.MaterialId is not null))
@@ -206,13 +210,11 @@ public sealed class StocktakeService : IStocktakeService
                 return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustNotBeNegative);
             var key = isMaterial
                 ? StockKey.Material(l.MaterialId!.Value, l.MaterialColor?.Trim() ?? string.Empty)
-                : dto.WarehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentId) : StockKey.Finished(l.OrderLineId!.Value);
+                : dto.WarehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentMaterialId) : StockKey.Finished(l.OrderLineId!.Value);
             lines.Add(new StocktakeLine
             {
-                MaterialId = l.MaterialId,
-                MaterialColor = isMaterial ? l.MaterialColor?.Trim() ?? string.Empty : null,
-                OrderLineId = l.OrderLineId,
-                ProductComponentId = dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentId : null,
+                // Dòng tồn của mặt hàng (tạo mới với tồn 0 nếu chưa từng nhập); tồn thay đổi chỉ qua usp_Stock_Post.
+                StockBalanceId = await _stockRepo.GetOrCreateBalanceIdAsync(key, ct),
                 BookQty = await _stockRepo.GetOnHandAsync(key, ct),
                 CountedQty = l.CountedQty,
                 Note = string.IsNullOrWhiteSpace(l.Note) ? null : l.Note.Trim(),
