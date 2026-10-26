@@ -3,8 +3,8 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 export const MOVEMENT_TYPE = { HANDOVER: 'HANDOVER', RETRIEVAL: 'RETRIEVAL' } as const;
 
 export const MOVEMENT_TYPE_LABEL: Record<string, string> = {
-  HANDOVER: 'Giao BTP',
-  RETRIEVAL: 'Thu hồi BTP',
+  HANDOVER: 'Giao việc',
+  RETRIEVAL: 'Thu hồi việc',
 };
 
 export const MOVEMENT_STATUS = {
@@ -31,16 +31,37 @@ export const CONFIRM_MODE_LABEL: Record<string, string> = {
 };
 
 export const PM_LABELS = {
-  leaderTitle: 'Giao / thu hồi BTP với công nhân',
-  workerTitle: 'BTP của tôi',
-  create: 'Ghi giao / thu hồi',
+  leaderTitle: 'Giao việc cho công nhân',
+  workerTitle: 'Việc được giao cho tôi',
+  boardTab: 'Chia việc theo công đoạn',
+  historyTab: 'Phiếu giao / thu hồi',
+  selectOrder: 'Chọn đơn hàng để chia việc',
+  searchOperation: 'Tìm công đoạn hoặc công đoạn to',
+  teamPieces: 'BTP tổ đang giữ',
+  teamPiecesHint: 'Chỉ bộ đủ. BTP chỉ bị trừ khi giao kèm cho công nhân (công đoạn dùng BTP).',
+  operation: 'Công đoạn',
+  group: 'Công đoạn to',
+  required: 'Cần làm',
+  allocated: 'Đã giao',
+  pending: 'Chờ xác nhận',
+  unallocated: 'Chưa giao',
+  output: 'Đã làm',
+  giveAction: 'Giao',
+  retrieveAction: 'Thu hồi',
+  workersHolding: 'Công nhân đang được giao',
+  giveTitle: 'Giao việc',
+  retrieveTitle: 'Thu hồi việc',
+  withPieces: 'Kèm BTP',
+  withoutPieces: 'Không kèm BTP',
   type: 'Loại',
   worker: 'Công nhân',
   selectWorker: 'Chọn công nhân',
   orderLine: 'Dòng đơn',
-  selectLine: 'Chọn dòng đơn (màu - size)',
-  quantity: 'Số lượng',
-  confirmedQty: 'Số xác nhận',
+  quantity: 'Số lần làm',
+  pieceQty: 'BTP giao kèm',
+  pieceQtyBack: 'BTP trả lại',
+  confirmedQty: 'Số lần xác nhận',
+  confirmedPieceQty: 'BTP xác nhận',
   held: 'Đang giữ',
   available: 'Còn giao được',
   retrievable: 'Còn thu hồi được',
@@ -55,15 +76,16 @@ export const PM_LABELS = {
   confirmOnBehalf: 'Xác nhận hộ',
   confirm: 'Xác nhận',
   reject: 'Từ chối',
-  rejectTitle: 'Từ chối phiếu BTP',
+  rejectTitle: 'Từ chối phiếu giao việc',
   rejectReason: 'Lý do từ chối',
   order: 'Đơn hàng',
-  noHolding: 'Chưa có BTP để giao / thu hồi.',
+  noBoard: 'Tổ chưa nhận BTP của đơn này nên chưa có việc để chia.',
+  noWorkers: 'Chưa có công nhân nào đang được giao việc ở công đoạn này.',
 } as const;
 
 export const PM_MESSAGES = {
   created: 'Đã ghi phiếu, chờ công nhân xác nhận.',
-  confirmed: 'Đã xác nhận BTP.',
-  rejected: 'Đã từ chối phiếu BTP.',
+  confirmed: 'Đã xác nhận.',
+  rejected: 'Đã từ chối phiếu.',
   discrepancyReasonRequired: 'Số xác nhận khác số ghi trên phiếu, vui lòng nhập lý do.',
 } as const;

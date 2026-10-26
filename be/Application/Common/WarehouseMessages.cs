@@ -101,6 +101,11 @@ public static class WarehouseMessages
     public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
+    public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải và màu vải của bàn cắt.";
+    public const string OperationRequired = "Vui lòng chọn công đoạn.";
+    public const string OperationNoSemiFinished = "Công đoạn này không dùng BTP nên không giao kèm BTP.";
+    public const string PieceExceedsAllocationQty = "Số BTP kèm không được lớn hơn số lần giao.";
+    public const string AllocationExceedsRequired = "Số lần giao vượt số còn cần giao của công đoạn";
     public const string PieceHandoverExceedsHolding = "Số giao vượt số BTP tổ đang giữ";
     public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số BTP công nhân đang giữ";
     public const string PieceConfirmedExceedsQty = "Số xác nhận không được lớn hơn số ghi trên phiếu.";

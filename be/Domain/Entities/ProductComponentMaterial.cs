@@ -30,9 +30,21 @@ public partial class ProductComponentMaterial
 
     public string? SpecNote { get; set; }
 
+    public virtual ICollection<CutHandoverLine> CutHandoverLines { get; set; } = new List<CutHandoverLine>();
+
+    public virtual ICollection<CuttingLayLine> CuttingLayLines { get; set; } = new List<CuttingLayLine>();
+
     public virtual Material Material { get; set; } = null!;
+
+    public virtual ICollection<MaterialIssueLine> MaterialIssueLines { get; set; } = new List<MaterialIssueLine>();
 
     public virtual ProductComponent ProductComponent { get; set; } = null!;
 
     public virtual ProductVariant ProductVariant { get; set; } = null!;
+
+    public virtual ICollection<RequestLine> RequestLines { get; set; } = new List<RequestLine>();
+
+    public virtual ICollection<StockBalance> StockBalances { get; set; } = new List<StockBalance>();
+
+    public virtual ICollection<WorkOrderLine> WorkOrderLines { get; set; } = new List<WorkOrderLine>();
 }

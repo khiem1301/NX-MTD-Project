@@ -61,6 +61,10 @@ public class OutputServiceTests : ProductionTestBase
         AddOperation(2, "OP20");
         AddWorker(7);
         AddWorker(8);
+        // Mặc định mọi công nhân đã được giao 1000 lần ở cả hai công đoạn; từng test thu hẹp trần khi cần (vw_WorkerOutputCap).
+        foreach (var worker in new[] { 7, 8 })
+            foreach (var operation in new[] { 1, 2 })
+                _caps.Add(new VwWorkerOutputCap { WorkerId = worker, OrderLineId = LineId, OperationId = operation, CapQty = 1000 });
         GivenRate(1, 100, 1_200m);
         GivenRate(2, 101, 800m);
         AttendanceFor(7, 8);
@@ -179,7 +183,7 @@ public class OutputServiceTests : ProductionTestBase
     // ========== Trần (MSG16) ==========
 
     [Fact]
-    public async Task Save_ExceedsReceivedPieces_IsBlockedWithRemaining()
+    public async Task Save_ExceedsTheAllocatedQty_IsBlockedWithRemaining()
     {
         var result = await _sut.SaveAsync(Save([Row(1, 7, 1001)]), default);
 
@@ -189,9 +193,10 @@ public class OutputServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Save_CapCountsOtherWorkersAndOtherDaysOnSameOperation()
+    public async Task Save_CapCountsTheSameWorkersOtherDaysOnSameOperationButNotOtherWorkers()
     {
-        Existing(1, 8, 600, date: Today.AddDays(-1));   // người khác, ngày khác, cùng công đoạn
+        Existing(1, 8, 900, date: Today.AddDays(-1));   // người khác: không ảnh hưởng trần của công nhân 7
+        Existing(1, 7, 600, date: Today.AddDays(-1));   // chính công nhân 7, ngày khác, cùng công đoạn
 
         var result = await _sut.SaveAsync(Save([Row(1, 7, 500)]), default);
 
@@ -202,7 +207,7 @@ public class OutputServiceTests : ProductionTestBase
     [Fact]
     public async Task Save_CapIsPerOperation_SoOtherOperationDoesNotConsumeIt()
     {
-        Existing(2, 8, 900);   // công đoạn khác dùng hết 900
+        Existing(2, 7, 900);   // công đoạn khác của cùng công nhân
 
         var result = await _sut.SaveAsync(Save([Row(1, 7, 1000)]), default);
 
@@ -221,8 +226,9 @@ public class OutputServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Save_WorkerWithPieceMovement_IsLimitedByWorkerCapToo()
+    public async Task Save_WorkerWithAllocation_IsLimitedByTheAllocatedQty()
     {
+        _caps.RemoveAll(c => c.WorkerId == 7 && c.OperationId == 1);
         _caps.Add(new VwWorkerOutputCap { WorkerId = 7, OrderLineId = LineId, OperationId = 1, CapQty = 100 });
 
         var result = await _sut.SaveAsync(Save([Row(1, 7, 150)]), default);
@@ -232,17 +238,18 @@ public class OutputServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Save_WorkerWithPieceMovement_WithinCapIsAllowed()
+    public async Task Save_WorkerWithAllocation_WithinCapIsAllowed()
     {
+        _caps.RemoveAll(c => c.WorkerId == 7 && c.OperationId == 1);
         _caps.Add(new VwWorkerOutputCap { WorkerId = 7, OrderLineId = LineId, OperationId = 1, CapQty = 100 });
 
         (await _sut.SaveAsync(Save([Row(1, 7, 100)]), default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Save_NoPiecesReceivedYet_BlocksAnyOutput()
+    public async Task Save_NothingAllocatedToTheWorkerYet_BlocksAnyOutput()
     {
-        _holdings.Clear();
+        _caps.Clear();   // chưa được giao việc: trần bằng 0
 
         (await _sut.SaveAsync(Save([Row(1, 7, 1)]), default)).ErrorCode.Should().Be(ErrorCodes.OutputExceedsCap);
     }
@@ -422,6 +429,7 @@ public class OutputServiceTests : ProductionTestBase
     [Fact]
     public async Task Grid_PrefillsFromAssignmentsAndMergesExistingRecords()
     {
+        _caps.Clear();   // lưới chỉ tính phân công; trần giao việc mặc định của test bị bỏ
         Assign(TeamId, 1, 7);
         Assign(TeamId, 2, 7);
         Assign(TeamId, 1, 8,
@@ -450,6 +458,7 @@ public class OutputServiceTests : ProductionTestBase
     [Fact]
     public async Task Grid_OperationWithoutApprovedRate_IsFlagged()
     {
+        _caps.Clear();
         Assign(TeamId, 1, 7);
         _rates.FindEffectiveAsync(1, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns((EffectivePieceRate?)null);
 
@@ -462,6 +471,7 @@ public class OutputServiceTests : ProductionTestBase
     [Fact]
     public async Task Grid_ExpiredRow_LeaderCannotEdit_ManagerCan()
     {
+        _caps.Clear();
         Existing(1, 7, 55, deadline: Now.AddMinutes(-5));
 
         var leaderRow = (await _sut.GetGridAsync(Today, "MORNING", LineId, null, default)).Data!.Rows.Single();

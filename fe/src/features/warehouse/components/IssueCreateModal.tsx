@@ -37,7 +37,7 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
     const body: CreateIssuePayload = {
       ...values,
       issueDate: values.issueDate.format(API_DATE),
-      // Dòng BTP chọn theo "dòng đơn:chi tiết" → tách ra orderLineId + productComponentId.
+      // Dòng BTP chọn theo "dòng đơn:chi tiết" → tách ra orderLineId + productComponentMaterialId.
       lines: (values.lines ?? []).map(({ pieceKey, ...line }) => (pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line)),
     };
     create.mutate(body, {

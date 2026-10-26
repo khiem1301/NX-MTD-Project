@@ -221,7 +221,7 @@ public sealed class KpiService : IKpiService
         // Swimlane III.3.1: đặt KPI thì hệ thống kiểm BTP trong kho. Tổng chỉ tiêu còn hiệu lực của đơn + mã hàng
         // không được vượt BTP (bộ đủ) tổ cắt đã bàn giao và kho đã nhận.
         var btpInWarehouse = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
-            .Where(l => l.CutHandover.Status == HandoverStatuses.Confirmed && l.ProductComponentId == null
+            .Where(l => l.CutHandover.Status == HandoverStatuses.Confirmed && l.ProductComponentMaterialId == null
                         && l.OrderLine.OrderId == dto.OrderId && l.OrderLine.ProductId == dto.ProductId)
             .SumAsync(l => l.ConfirmedQty ?? 0, ct);
         var otherTargets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()

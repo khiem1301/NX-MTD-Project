@@ -44,7 +44,7 @@ public partial class Team
 
     public virtual ICollection<TeamMealConfirmation> TeamMealConfirmations { get; set; } = new List<TeamMealConfirmation>();
 
-    public virtual ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
+    public virtual ICollection<WorkAllocation> WorkAllocations { get; set; } = new List<WorkAllocation>();
 
-    public virtual ICollection<WorkerPieceMovement> WorkerPieceMovements { get; set; } = new List<WorkerPieceMovement>();
+    public virtual ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
 }

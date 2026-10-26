@@ -35,9 +35,16 @@ public class StocktakeServiceTests
         _clock.Today.Returns(Today);
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _stockRepo.GetOnHandAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(100m);
+        _stockRepo.GetOrCreateBalanceIdAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(77);
         _codes.NextAsync<Stocktake>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<Stocktake, string>>>(),
             Arg.Any<CancellationToken>()).Returns("KK-20261110-001");
         Setup(_stocktakes); Setup(_lines); Setup(_materials); Setup(_orderLines);
+        // EF nối StockBalance cho dòng vừa tạo khi lưu; ở đây nối tay để đọc lại phiếu được.
+        _uow.When(u => u.SaveChangesAsync()).Do(_ =>
+        {
+            foreach (var line in _stocktakes.SelectMany(s => s.StocktakeLines).Where(l => l.StockBalance is null))
+                line.StockBalance = new StockBalance { StockBalanceId = line.StockBalanceId };
+        });
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -66,11 +73,17 @@ public class StocktakeServiceTests
         var i = 0;
         foreach (var (book, counted) in lines)
         {
+            var balance = new StockBalance
+            {
+                StockBalanceId = 500 + i, WarehouseType = warehouse,
+                MaterialId = warehouse == WarehouseTypes.Material ? 1 : null, MaterialColor = warehouse == WarehouseTypes.Material ? "Đen" : null,
+                OrderLineId = warehouse == WarehouseTypes.Material ? null : 101,
+                Material = warehouse == WarehouseTypes.Material ? _materials[0] : null,
+            };
             var l = new StocktakeLine
             {
                 StocktakeLineId = s.StocktakeId * 10 + i++, StocktakeId = s.StocktakeId, Stocktake = s, BookQty = book, CountedQty = counted,
-                MaterialId = warehouse == WarehouseTypes.Material ? 1 : null, MaterialColor = warehouse == WarehouseTypes.Material ? "Đen" : null,
-                OrderLineId = warehouse == WarehouseTypes.Material ? null : 101,
+                StockBalanceId = balance.StockBalanceId, StockBalance = balance,
             };
             s.StocktakeLines.Add(l); _lines.Add(l);
         }
@@ -97,7 +110,8 @@ public class StocktakeServiceTests
         var line = s.StocktakeLines.Single();
         line.BookQty.Should().Be(100);
         line.CountedQty.Should().Be(92);
-        line.MaterialColor.Should().Be("Đen");
+        line.StockBalanceId.Should().Be(77);
+        await _stockRepo.Received().GetOrCreateBalanceIdAsync(Arg.Is<StockKey>(k => k.MaterialId == 1 && k.MaterialColor == "Đen"), Arg.Any<CancellationToken>());
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
@@ -145,7 +159,8 @@ public class StocktakeServiceTests
             new[] { new SaveStocktakeLineDto(null, null, 101, null, 40, null) }), default);
 
         result.IsSuccess.Should().BeTrue();
-        added.Single().StocktakeLines.Single().OrderLineId.Should().Be(101);
+        added.Single().StocktakeLines.Single().StockBalanceId.Should().Be(77);
+        await _stockRepo.Received().GetOrCreateBalanceIdAsync(Arg.Is<StockKey>(k => k.WarehouseType == WarehouseTypes.Finished && k.OrderLineId == 101), Arg.Any<CancellationToken>());
         await _stockRepo.Received().GetOnHandAsync(Arg.Is<StockKey>(k => k.WarehouseType == WarehouseTypes.Finished && k.OrderLineId == 101), Arg.Any<CancellationToken>());
     }
 
@@ -258,8 +273,6 @@ public class StocktakeServiceTests
     public async Task Detail_shows_the_difference_per_line()
     {
         var s = Existing(StocktakeStatuses.PendingApproval, WarehouseTypes.Material, (100, 92), (30, null));
-        s.StocktakeLines.First().Material = _materials[0];
-        s.StocktakeLines.Last().Material = _materials[0];
 
         var dto = (await Service().GetByIdAsync(s.StocktakeId, default)).Data!;
 

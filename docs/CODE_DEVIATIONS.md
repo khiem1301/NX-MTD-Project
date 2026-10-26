@@ -68,6 +68,7 @@
 | DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
 | DEV-ALL-10 | 24/10/2026 | Claude (AI) | `OrderMaterialService`, `IncomingMaterialService`, `IncomingMaterialsPage`, `PendingMaterialOrdersTable` | Quản đốc thấy đơn chờ khai báo NVL và bấm thông báo mở đúng đơn; Thủ kho có màn NVL chờ nhận và được báo khi khách cấp / đơn mua đã đặt | Đã làm |
 | DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
+| DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
 | DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
 
 ---
@@ -871,6 +872,20 @@
   - **Gỡ KPI theo ngày** (script mới không có bảng `KpiDailyTarget`) và **tạm bỏ dữ liệu demo 19.3–19.6** (BTP, KPI, xe, suất ăn do Claude thêm); script mới chỉ có 19.1–19.2. Code lịch KPI (`KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid`, endpoint `calendar` / `daily-plan`) còn trong git: commit `2e047a2` và các commit trước đó. Khôi phục = thêm lại bảng `KpiDailyTarget` + `vw_KpiDailyResult` vào script (xin Morgan) rồi lấy lại các file đó. Nút "Xem theo ngày" quay về bảng kết quả từng ngày của `vw_KpiDailyResult`.
   - Dữ liệu demo mới nhất phải dựng lại từ script; không có lệnh nâng cấp database cũ.
 - **Cần sửa trong tài liệu:** Report-3 (UC09, UC10 thêm định mức / biến thể, UC37 bỏ số thiếu / lỗi và thêm số lần giao dự kiến, UC19, UC24 chi tiết lẻ, lương, suất ăn); ERD.
+- **Trạng thái:** Đã làm
+
+### DEV-ALL-13 · Chuyển code sang database bản 25/10 (26/10/2026)
+
+- **Ngày / Người / Task / PR:** 26/10/2026 · Claude (AI) theo yêu cầu của Minh · kho, cắt, may, công đoạn · PR #19
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` (thay bằng bản 25/10; thêm `docs/NX-MTD_Database.dbml`, `docs/NX-MTD_Database_Mo_ta.md`), `StockService`, `StockRepository`, `StocktakeService`, `WorkAllocationService` (thay `WorkerPieceMovementService`), `OutputService`, `OperationService`, `ProductSpecService`, các dịch vụ cắt / cấp BTP, giao diện Giao việc, Công đoạn, Sản lượng, Kiểm kê.
+- **Tài liệu gốc ghi:** bản 24/10: thẻ kho tự ghi từng dòng, tồn tính lại từ thẻ kho; BTP giao / thu hồi cho công nhân theo dòng đơn (`WorkerPieceMovement`); trần sản lượng theo dòng đơn.
+- **Code đang làm (khác bản cũ):**
+  - **Ghi kho chỉ qua `dbo.usp_Stock_Post`** (trigger chặn ghi thẳng, 50047): `StockService.PostAsync` vẫn kiểm trước cả lô bằng `StockBalance` để báo đủ mọi mặt hàng thiếu, rồi gọi thủ tục cho từng dòng chứng từ trong transaction của caller; thủ tục khóa dòng tồn, chặn tồn âm (50048) và điền `BalanceAfter`. `sp_getapplock` còn dùng cho bước giữ chỗ (`EnsureAvailableAsync`). **Kiểm kê** lưu `StockBalanceId`; mặt hàng chưa có dòng tồn thì tạo dòng tồn 0.
+  - **Cắt bù theo dòng định mức (chi tiết × NVL × màu của đúng màu × size)**: `ProductComponentId` → `ProductComponentMaterialId` ở dòng đơn từ, lệnh cắt, bàn cắt, bàn giao BTP, phiếu cấp BTP và `StockBalance`. Tổ may chọn "Tay áo – Vải gió Đen"; bàn cắt bù phải cắt đúng vải của dòng định mức (50049); kho BTP tách tồn theo dòng đó. Mã hàng: lưu định mức theo kiểu **cập nhật / thêm / xóa** (giữ `ProductComponentMaterialId`), không xóa rồi tạo lại; dòng định mức đã được dùng không xóa được, thành phần đã dùng thì ngừng dùng.
+  - **Giao việc thay giao / thu hồi BTP** (`WorkAllocation`): mỗi lần giao là số lần làm một công đoạn × màu × size cho một công nhân, kèm BTP nếu công đoạn dùng BTP (`Operation.UsesSemiFinished`). Tổng số lần giao của công đoạn ≤ số bộ BTP tổ đã nhận (50050); BTP giao kèm ≤ BTP tổ giữ (50053); BTP của tổ chỉ giảm theo BTP giao kèm, không giảm theo số lần. **Trần sản lượng theo từng công nhân × công đoạn** (`vw_WorkerOutputCap`): chưa được giao thì không báo được, DB chặn cứng (50052); `OutputService` bỏ trần cấp tổ cũ. Màn Giao việc hiện bảng chia việc (`vw_OperationAllocationProgress`) kèm số đã làm; tìm được theo tên công đoạn to.
+  - **Công đoạn to** (`OperationGroup`), **công đoạn ↔ chi tiết** (`OperationComponent`), **cờ giao kèm BTP**: sửa ở màn Công đoạn và đơn giá; nhập Excel không đổi các trường này. `OperationAssignment.CopiedFromAssignmentId` đã bỏ (sao chép phân công vẫn chạy, chỉ không lưu nguồn).
+  - Chưa có dữ liệu demo giao việc theo công đoạn nào ngoài mục 19 của script (công đoạn OP01 của DEMO-AO01 đánh dấu giao kèm BTP).
+- **Cần sửa trong tài liệu:** Report-3 (UC24, UC40–UC44, UC52–UC55, UC60: giao việc theo công đoạn, trần sản lượng theo công đoạn, kho BTP theo chi tiết × vải); ERD.
 - **Trạng thái:** Đã làm
 
 ### DEV-ALL-12 · Đối chiếu màn hình luồng chính với swimlane (25/10/2026)

@@ -49,12 +49,12 @@ export const SHIFT_LABEL: Record<string, string> = Object.fromEntries(
 export const CUTTING_TEAM_TYPE = 'CUTTING';
 
 /** Khóa một dòng của lệnh cắt: dòng đơn + chi tiết (trống = cả bộ). Lệnh cắt bù có nhiều chi tiết cho cùng một dòng đơn. */
-export const lineKey = (l: { orderLineId: number; productComponentId: number | null }) =>
-  `${l.orderLineId}:${l.productComponentId ?? ''}`;
+export const lineKey = (l: { orderLineId: number; productComponentMaterialId: number | null }) =>
+  `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`;
 
 export const parseLineKey = (key: string) => {
-  const [orderLineId, productComponentId] = key.split(':');
-  return { orderLineId: Number(orderLineId), productComponentId: productComponentId ? Number(productComponentId) : null };
+  const [orderLineId, productComponentMaterialId] = key.split(':');
+  return { orderLineId: Number(orderLineId), productComponentMaterialId: productComponentMaterialId ? Number(productComponentMaterialId) : null };
 };
 
 export const LABELS = {

@@ -4,21 +4,13 @@ using System.Collections.Generic;
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Thẻ kho (tồn tính ở vw_StockBalance)
+/// Thẻ kho (ghi qua usp_Stock_Post)
 /// </summary>
 public partial class StockTransaction
 {
     public long StockTransactionId { get; set; }
 
-    public string WarehouseType { get; set; } = null!;
-
-    public int? MaterialId { get; set; }
-
-    public string? MaterialColor { get; set; }
-
-    public int? OrderLineId { get; set; }
-
-    public int? ProductComponentId { get; set; }
+    public int StockBalanceId { get; set; }
 
     public string SourceDocType { get; set; } = null!;
 
@@ -34,9 +26,5 @@ public partial class StockTransaction
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual Material? Material { get; set; }
-
-    public virtual OrderLine? OrderLine { get; set; }
-
-    public virtual ProductComponent? ProductComponent { get; set; }
+    public virtual StockBalance StockBalance { get; set; } = null!;
 }

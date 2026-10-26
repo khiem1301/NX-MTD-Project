@@ -4,16 +4,16 @@ using NX_MTD.Domain.Constants;
 namespace NX_MTD.Application.DTOs;
 
 /// <summary>Khóa một dòng tồn: kho NVL theo (NVL, màu); kho BTP / thành phẩm theo dòng đơn.</summary>
-/// <param name="ProductComponentId">Chỉ kho BTP: null = bộ đủ (cắt xong cả bộ); có giá trị = chi tiết lẻ (cắt bù), tồn tách riêng.</param>
+/// <param name="ProductComponentMaterialId">Chỉ kho BTP: null = bộ đủ (cắt xong cả bộ); có giá trị = chi tiết × vải (cắt bù), tồn tách riêng.</param>
 public sealed record StockKey(string WarehouseType, int? MaterialId, string? MaterialColor, int? OrderLineId,
-    int? ProductComponentId = null)
+    int? ProductComponentMaterialId = null)
 {
     public static StockKey Material(int materialId, string color) => new(WarehouseTypes.Material, materialId, color, null);
-    public static StockKey SemiFinished(int orderLineId, int? productComponentId = null) =>
-        new(WarehouseTypes.SemiFinished, null, null, orderLineId, productComponentId);
+    public static StockKey SemiFinished(int orderLineId, int? productComponentMaterialId = null) =>
+        new(WarehouseTypes.SemiFinished, null, null, orderLineId, productComponentMaterialId);
     public static StockKey Finished(int orderLineId) => new(WarehouseTypes.Finished, null, null, orderLineId);
 
-    public string LockName => $"stock:{WarehouseType}:{MaterialId}:{MaterialColor}:{OrderLineId}:{ProductComponentId}";
+    public string LockName => $"stock:{WarehouseType}:{MaterialId}:{MaterialColor}:{OrderLineId}:{ProductComponentMaterialId}";
 }
 
 /// <summary>Một bút toán thẻ kho cần ghi; QtyChange dương = nhập, âm = xuất.</summary>
@@ -34,11 +34,11 @@ public sealed record StockBalanceDto(
     string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
     string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
     string? ProductName, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
-    int? ProductComponentId, string? ComponentName);
+    int? ProductComponentMaterialId, string? ComponentName);
 
-/// <param name="ProductComponentId">Chỉ kho BTP: để trống = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù).</param>
+/// <param name="ProductComponentMaterialId">Chỉ kho BTP: để trống = bộ đủ; có giá trị = chi tiết × vải (hàng cắt bù).</param>
 public sealed record StockCardQuery(string WarehouseType, int? MaterialId, string? MaterialColor, int? OrderLineId,
-    int? ProductComponentId = null);
+    int? ProductComponentMaterialId = null);
 
 public sealed record StockCardEntryDto(
     long StockTransactionId, DateOnly TransactionDate, DateTime CreatedAt, string SourceDocType, int SourceDocId,

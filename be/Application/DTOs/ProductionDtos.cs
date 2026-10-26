@@ -11,14 +11,16 @@ namespace NX_MTD.Application.DTOs;
 public sealed record OperationDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, byte? SkillLevel, decimal? StandardTimeSec, string TeamType, bool IsFinalStep,
-    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null);
+    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null, bool UsesSemiFinished = false,
+    int? OperationGroupId = null, string? GroupName = null, IReadOnlyList<int>? ComponentIds = null);
 
 public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly EffectiveDate, string Status, string? RejectReason);
 
 /// <summary>TeamType nhận PascalCase "Sewing" | "Cutting" (mặc định Sewing).</summary>
 public sealed record SaveOperationDto(
     int ProductId, string OperationCode, string OperationName, short StationSequence, byte? SkillLevel,
-    decimal? StandardTimeSec, string? TeamType, bool IsFinalStep);
+    decimal? StandardTimeSec, string? TeamType, bool IsFinalStep, bool UsesSemiFinished = false, string? GroupName = null,
+    IReadOnlyList<int>? ComponentIds = null);
 
 public sealed record PieceRateDto(
     int PieceRateId, int OperationId, string OperationCode, string OperationName, int ProductId, string ProductCode,
@@ -69,7 +71,8 @@ public sealed record CopyAssignmentsDto(int FromOrderId, int ToOrderId);
 public sealed record OutputGridRowDto(
     int OperationId, string OperationCode, string OperationName, int WorkerId, string WorkerCode, string WorkerName,
     long? OutputRecordId, int? Quantity, decimal? UnitRate, bool RateApproved, bool IsOutsideAssignment,
-    bool NoAttendanceWarning, bool CanEdit, DateTime? EditDeadline, byte[]? RowVer);
+    bool NoAttendanceWarning, bool CanEdit, DateTime? EditDeadline, byte[]? RowVer,
+    int CapQty = 0, int ReportedQty = 0);
 
 public sealed record OutputGridDto(
     DateOnly WorkDate, string ShiftCode, int OrderLineId, int SewingTeamId, int ReceivedFromWarehouse,
@@ -146,7 +149,7 @@ public sealed record OrderLineProgressDto(
 /// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
 public sealed record OperationOptionDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
-    short StationSequence, bool IsFinalStep);
+    short StationSequence, bool IsFinalStep, bool UsesSemiFinished = false, string? GroupName = null);
 
 // ================= KI-01: nhập công đoạn từ file Excel quy trình công nghệ =================
 

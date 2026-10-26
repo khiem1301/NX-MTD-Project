@@ -38,7 +38,5 @@ public partial class Material
 
     public virtual ICollection<RequestLine> RequestLines { get; set; } = new List<RequestLine>();
 
-    public virtual ICollection<StockTransaction> StockTransactions { get; set; } = new List<StockTransaction>();
-
-    public virtual ICollection<StocktakeLine> StocktakeLines { get; set; } = new List<StocktakeLine>();
+    public virtual ICollection<StockBalance> StockBalances { get; set; } = new List<StockBalance>();
 }

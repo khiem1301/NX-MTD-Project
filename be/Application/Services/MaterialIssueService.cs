@@ -62,8 +62,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 i.MaterialIssueLines.OrderBy(l => l.MaterialIssueLineId).Select(l => new MaterialIssueLineDto(
                     l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialCode,
                     l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Unit,
-                    l.MaterialColor, l.OrderLineId, l.ProductComponentId,
-                    l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
+                    l.MaterialColor, l.OrderLineId, l.ProductComponentMaterialId,
+                    l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor),
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode,
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Color, l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode,
                     l.IssuedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
@@ -87,7 +87,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 MaterialId = l.MaterialId,
                 MaterialColor = l.MaterialId is null ? null : l.MaterialColor?.Trim() ?? string.Empty,
                 OrderLineId = l.OrderLineId,
-                ProductComponentId = l.OrderLineId is null ? null : l.ProductComponentId,
+                ProductComponentMaterialId = l.OrderLineId is null ? null : l.ProductComponentMaterialId,
                 IssuedQty = l.IssuedQty,
             }).ToList();
             var available = await _stock.EnsureAvailableAsync(lines.Select(l => new StockRequirement(KeyOf(dto.WarehouseType, l), l.IssuedQty)).ToList(), ct);
@@ -225,7 +225,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
             return (Fail(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotIssuable), null);
 
-        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentId, l.PlannedQty)).ToList();
+        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
         var fabrics = (await _planner.GetNeedsAsync(demands, ct))
             .Select(n => (n.MaterialId, n.MaterialColor)).ToHashSet();
         var allInPlan = dto.Lines.All(l => fabrics.Contains((l.MaterialId!.Value, l.MaterialColor?.Trim() ?? string.Empty)));
@@ -270,7 +270,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
     private static StockKey KeyOf(string warehouseType, MaterialIssueLine line) =>
         warehouseType == WarehouseTypes.Material
             ? StockKey.Material(line.MaterialId!.Value, line.MaterialColor ?? string.Empty)
-            : StockKey.SemiFinished(line.OrderLineId!.Value, line.ProductComponentId);
+            : StockKey.SemiFinished(line.OrderLineId!.Value, line.ProductComponentMaterialId);
 
     private static Result<MaterialIssueDto> Fail(string code, string message) =>
         Result<MaterialIssueDto>.Failure(code, message);

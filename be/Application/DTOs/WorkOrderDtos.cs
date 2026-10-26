@@ -15,7 +15,7 @@ public sealed record WorkOrderListItemDto(
     int CuttingTeamId, string CuttingTeamName, DateOnly DueDate, string Status, int TotalPlannedQty, DateTime CreatedAt);
 
 public sealed record WorkOrderLineDto(
-    int WorkOrderLineId, int OrderLineId, string Color, string SizeCode, int? ProductComponentId, string ComponentName,
+    int WorkOrderLineId, int OrderLineId, string Color, string SizeCode, int? ProductComponentMaterialId, string ComponentName,
     int PlannedQty, int CutQty, int HandedQty);
 
 public sealed record WorkOrderDto(
@@ -34,7 +34,7 @@ public sealed record ReplacementRequestDto(
     int RequestId, string RequestCode, int OrderId, string OrderCode, string ProductCode, string? Content,
     IReadOnlyList<ReplacementRequestLineDto> Lines);
 
-public sealed record ReplacementRequestLineDto(int OrderLineId, string Color, string SizeCode, int ProductComponentId,
+public sealed record ReplacementRequestLineDto(int OrderLineId, string Color, string SizeCode, int ProductComponentMaterialId,
     string ComponentName, int Quantity);
 
 /// <summary>Lập lệnh cắt bù từ một đơn cắt bù đã duyệt; dòng lệnh lấy từ dòng đơn (chi tiết + số lượng).</summary>

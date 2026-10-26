@@ -249,7 +249,7 @@ export type MaterialIssueLine = {
   materialColor: string | null;
   orderLineId: number | null;
   /** Chỉ dòng cấp BTP: null = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù). */
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   productCode: string | null;
   color: string | null;
@@ -279,7 +279,7 @@ export type CreateIssuePayload = {
   receivingTeamId?: number;
   requestId?: number;
   issueDate: string;
-  lines: { materialId?: number; materialColor?: string; orderLineId?: number; productComponentId?: number | null; issuedQty: number }[];
+  lines: { materialId?: number; materialColor?: string; orderLineId?: number; productComponentMaterialId?: number | null; issuedQty: number }[];
 };
 
 export type ConfirmIssuePayload = {
@@ -296,7 +296,7 @@ export type StockBalance = {
   materialColor: string | null;
   orderLineId: number | null;
   /** Chỉ kho BTP: null = bộ đủ; có giá trị = chi tiết lẻ (hàng cắt bù). */
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   orderId: number | null;
   orderCode: string | null;
@@ -321,7 +321,7 @@ export type StockCardQuery = {
   materialId?: number;
   materialColor?: string;
   orderLineId?: number;
-  productComponentId?: number | null;
+  productComponentMaterialId?: number | null;
 };
 
 export type StockCardEntry = {

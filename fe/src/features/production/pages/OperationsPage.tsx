@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Alert, Button, Checkbox, Popconfirm, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Checkbox, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { UploadOutlined } from '@ant-design/icons';
+import { SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useProductLookup } from '@/hooks/useOrderLookups';
 import { formatCurrency, formatDate, formatQty } from '@/utils/format';
+import { normalizeText } from '@/utils/text';
 import { OperationFormModal } from '../components/OperationFormModal';
 import { OperationImportModal } from '../components/OperationImportModal';
 import { PieceRateFormModal } from '../components/PieceRateFormModal';
@@ -34,6 +35,8 @@ export function OperationsPage() {
   const [editing, setEditing] = useState<Operation | null>(null);
   const [rating, setRating] = useState<Operation | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [groupFilter, setGroupFilter] = useState<string>();
+  const [keyword, setKeyword] = useState('');
   const operations = useOperations(productId, showDiscontinued);
   const products = useProductLookup();
   const toggle = useToggleOperation();
@@ -44,10 +47,24 @@ export function OperationsPage() {
   const hasActiveFinal = (operations.data ?? []).some((o) => o.isFinalStep && o.status === 'Active');
   const showNoFinalHint = productId !== null && operations.data !== undefined && operations.data.length > 0 && !hasActiveFinal;
 
+  const groups = [...new Set((operations.data ?? []).map((o) => o.groupName).filter((g): g is string => g !== null))].sort();
+  const needle = normalizeText(keyword.trim());
+  const visible = (operations.data ?? []).filter(
+    (o) =>
+      (groupFilter === undefined || o.groupName === groupFilter) &&
+      (needle === '' || normalizeText(`${o.operationCode} ${o.operationName} ${o.groupName ?? ''}`).includes(needle)),
+  );
+
   const columns: ColumnsType<Operation> = [
     { title: text.columns.sequence, dataIndex: 'stationSequence', width: 80 },
     { title: text.columns.code, dataIndex: 'operationCode' },
     { title: text.columns.name, dataIndex: 'operationName' },
+    { title: text.columns.group, dataIndex: 'groupName', render: (v: string | null) => (v ? <Tag color="geekblue">{v}</Tag> : '—') },
+    {
+      title: text.columns.usesPieces,
+      dataIndex: 'usesSemiFinished',
+      render: (v: boolean) => (v ? <Tag color="blue">{text.withPieces}</Tag> : <Tag>{text.withoutPieces}</Tag>),
+    },
     { title: text.columns.skill, dataIndex: 'skillLevel', render: (v: number | null) => v ?? '—' },
     {
       title: text.columns.standardTime,
@@ -127,6 +144,22 @@ export function OperationsPage() {
         <Checkbox checked={showDiscontinued} onChange={(e) => setShowDiscontinued(e.target.checked)}>
           {text.showDiscontinued}
         </Checkbox>
+        <Select
+          allowClear
+          placeholder={text.filterGroup}
+          value={groupFilter}
+          onChange={setGroupFilter}
+          options={groups.map((g) => ({ value: g, label: g }))}
+          style={{ width: 200 }}
+        />
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder={text.searchOperation}
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          style={{ width: 240 }}
+        />
         <Button type="primary" icon={<UploadOutlined />} disabled={productId === null} onClick={() => setImportOpen(true)}>
           {text.importExcel}
         </Button>
@@ -140,7 +173,7 @@ export function OperationsPage() {
         rowKey="operationId"
         size="middle"
         columns={columns}
-        dataSource={operations.data}
+        dataSource={visible}
         loading={operations.isFetching}
         locale={{ emptyText: productId === null ? PRODUCTION_TEXT.selectProduct : MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
@@ -154,6 +187,7 @@ export function OperationsPage() {
             open={editing !== null}
             productId={productId}
             operation={editing}
+            groups={groups}
             onClose={() => setEditing(null)}
           />
           <PieceRateFormModal operation={rating} onClose={() => setRating(null)} />

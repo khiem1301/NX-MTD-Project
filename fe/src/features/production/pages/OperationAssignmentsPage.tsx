@@ -63,7 +63,7 @@ function AssignModal({ open, orderId, onClose }: { open: boolean; orderId: numbe
             loading={operations.isLoading}
             options={(operations.data ?? []).map((o) => ({
               value: o.operationId,
-              label: `${o.productCode} · ${o.stationSequence}. ${o.operationCode} - ${o.operationName}`,
+              label: `${o.productCode} · ${o.stationSequence}. ${o.operationCode} - ${o.operationName}${o.groupName ? ` [${o.groupName}]` : ''}`,
             }))}
           />
         </Form.Item>

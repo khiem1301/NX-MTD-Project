@@ -4,11 +4,11 @@ using System.Collections.Generic;
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Giao / thu hồi BTP với công nhân
+/// Giao / thu hồi việc với công nhân
 /// </summary>
-public partial class WorkerPieceMovement
+public partial class WorkAllocation
 {
-    public int WorkerPieceMovementId { get; set; }
+    public int WorkAllocationId { get; set; }
 
     public string MovementType { get; set; } = null!;
 
@@ -18,11 +18,15 @@ public partial class WorkerPieceMovement
 
     public int OrderLineId { get; set; }
 
-    public int? OperationId { get; set; }
+    public int OperationId { get; set; }
 
     public int Quantity { get; set; }
 
+    public int PieceQty { get; set; }
+
     public int? ConfirmedQty { get; set; }
+
+    public int? ConfirmedPieceQty { get; set; }
 
     public string? DiscrepancyReason { get; set; }
 
@@ -40,7 +44,7 @@ public partial class WorkerPieceMovement
 
     public DateTime? ConfirmedAt { get; set; }
 
-    public virtual Operation? Operation { get; set; }
+    public virtual Operation Operation { get; set; } = null!;
 
     public virtual OrderLine OrderLine { get; set; } = null!;
 

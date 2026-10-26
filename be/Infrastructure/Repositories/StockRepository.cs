@@ -1,3 +1,4 @@
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
@@ -15,7 +16,7 @@ public sealed class StockRepository : IStockRepository
     public StockRepository(NxMtdDbContext context) => _context = context;
 
     public async Task<decimal> GetOnHandAsync(StockKey key, CancellationToken ct) =>
-        await Transactions(key).SumAsync(t => (decimal?)t.QtyChange, ct) ?? 0m;
+        await StockBalancesOf(key).AsNoTracking().Select(b => (decimal?)b.OnHandQty).FirstOrDefaultAsync(ct) ?? 0m;
 
     public async Task<decimal> GetAvailableAsync(StockKey key, CancellationToken ct) =>
         await Balances(key).SumAsync(b => b.AvailableQty, ct) ?? 0m;
@@ -32,8 +33,48 @@ public sealed class StockRepository : IStockRepository
             .Select(l => l.ProductVariant.Product.ProductCode + " " + l.ProductVariant.Color + "-" + l.ProductVariant.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
     }
 
-    public async Task AddAsync(StockTransaction transaction, CancellationToken ct) =>
-        await _context.StockTransactions.AddAsync(transaction, ct);
+    public async Task PostAsync(StockMovement m, CancellationToken ct)
+    {
+        object Db(object? value) => value ?? DBNull.Value;
+        var parameters = new SqlParameter[]
+        {
+            new("@WarehouseType", m.Key.WarehouseType),
+            new("@MaterialId", Db(m.Key.MaterialId)),
+            new("@MaterialColor", Db(m.Key.MaterialColor)),
+            new("@OrderLineId", Db(m.Key.OrderLineId)),
+            new("@ProductComponentMaterialId", Db(m.Key.ProductComponentMaterialId)),
+            new("@SourceDocType", m.SourceDocType),
+            new("@SourceDocId", m.SourceDocId),
+            new("@SourceLineId", Db(m.SourceLineId)),
+            new("@QtyChange", m.QtyChange),
+            new("@TransactionDate", m.TransactionDate.ToDateTime(TimeOnly.MinValue)) { SqlDbType = System.Data.SqlDbType.Date },
+        };
+        // Thủ tục trả về 1 dòng (StockBalanceId, BalanceAfter); đọc hết để kết nối được giải phóng.
+        await _context.Database.SqlQueryRaw<StockPostResult>(
+            "EXEC dbo.usp_Stock_Post @WarehouseType, @MaterialId, @MaterialColor, @OrderLineId, @ProductComponentMaterialId, " +
+            "NULL, @SourceDocType, @SourceDocId, @SourceLineId, @QtyChange, @TransactionDate", parameters).ToListAsync(ct);
+    }
+
+    public async Task<int> GetOrCreateBalanceIdAsync(StockKey key, CancellationToken ct)
+    {
+        var id = await StockBalancesOf(key).Select(b => (int?)b.StockBalanceId).FirstOrDefaultAsync(ct);
+        if (id != null) return id.Value;
+        var balance = new StockBalance
+        {
+            WarehouseType = key.WarehouseType, MaterialId = key.MaterialId, MaterialColor = key.MaterialColor,
+            OrderLineId = key.OrderLineId, ProductComponentMaterialId = key.ProductComponentMaterialId,
+        };
+        await _context.StockBalances.AddAsync(balance, ct);
+        await _context.SaveChangesAsync(ct);
+        return balance.StockBalanceId;
+    }
+
+    public async Task<StockKey?> GetKeyAsync(int stockBalanceId, CancellationToken ct) =>
+        await _context.StockBalances.AsNoTracking().Where(b => b.StockBalanceId == stockBalanceId)
+            .Select(b => new StockKey(b.WarehouseType, b.MaterialId, b.MaterialColor, b.OrderLineId, b.ProductComponentMaterialId))
+            .FirstOrDefaultAsync(ct);
+
+    private sealed record StockPostResult(int StockBalanceId, decimal BalanceAfter);
 
     public Task<PagedResult<StockBalanceDto>> GetBalancesAsync(StockBalanceQuery query, CancellationToken ct) =>
         query.WarehouseType == WarehouseTypes.Material ? MaterialBalances(query, ct) : PieceBalances(query, ct);
@@ -62,19 +103,22 @@ public sealed class StockRepository : IStockRepository
         return await q.ToListAsync(ct);
     }
 
-    private IQueryable<StockTransaction> Transactions(StockKey key) =>
+    private IQueryable<StockBalance> StockBalancesOf(StockKey key) =>
         key.WarehouseType == WarehouseTypes.Material
-            ? _context.StockTransactions.Where(t => t.WarehouseType == key.WarehouseType
-                && t.MaterialId == key.MaterialId && t.MaterialColor == key.MaterialColor)
-            : _context.StockTransactions.Where(t => t.WarehouseType == key.WarehouseType
-                && t.OrderLineId == key.OrderLineId && t.ProductComponentId == key.ProductComponentId);
+            ? _context.StockBalances.Where(b => b.WarehouseType == key.WarehouseType
+                && b.MaterialId == key.MaterialId && b.MaterialColor == key.MaterialColor)
+            : _context.StockBalances.Where(b => b.WarehouseType == key.WarehouseType
+                && b.OrderLineId == key.OrderLineId && b.ProductComponentMaterialId == key.ProductComponentMaterialId);
+
+    private IQueryable<StockTransaction> Transactions(StockKey key) =>
+        _context.StockTransactions.Where(t => StockBalancesOf(key).Any(b => b.StockBalanceId == t.StockBalanceId));
 
     private IQueryable<VwStockBalance> Balances(StockKey key) =>
         key.WarehouseType == WarehouseTypes.Material
             ? _context.VwStockBalances.Where(b => b.WarehouseType == key.WarehouseType
                 && b.MaterialId == key.MaterialId && b.MaterialColor == key.MaterialColor)
             : _context.VwStockBalances.Where(b => b.WarehouseType == key.WarehouseType
-                && b.OrderLineId == key.OrderLineId && b.ProductComponentId == key.ProductComponentId);
+                && b.OrderLineId == key.OrderLineId && b.ProductComponentMaterialId == key.ProductComponentMaterialId);
 
     private Task<PagedResult<StockBalanceDto>> MaterialBalances(StockBalanceQuery query, CancellationToken ct)
     {
@@ -98,8 +142,9 @@ public sealed class StockRepository : IStockRepository
         var keyword = query.Keyword?.Trim();
         var q = from b in _context.VwStockBalances.AsNoTracking()
                 join l in _context.OrderLines on b.OrderLineId equals l.OrderLineId
-                join c in _context.ProductComponents on b.ProductComponentId equals c.ProductComponentId into comp
-                from c in comp.DefaultIfEmpty()
+                join pcm in _context.ProductComponentMaterials on b.ProductComponentMaterialId equals pcm.ProductComponentMaterialId into pcmj
+                from pcm in pcmj.DefaultIfEmpty()
+                let c = pcm.ProductComponent
                 where b.WarehouseType == query.WarehouseType && (b.OnHandQty != 0 || b.ReservedQty != 0)
                       && (query.OrderId == null || l.OrderId == query.OrderId)
                       && (string.IsNullOrEmpty(keyword) || l.ProductVariant.Product.ProductCode.Contains(keyword)
@@ -110,7 +155,8 @@ public sealed class StockRepository : IStockRepository
                     c.SortOrder
                 select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
                     l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
-                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentId, c.ComponentName);
+                    b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentMaterialId,
+                    pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName + (pcm.MaterialColor == "" ? "" : " " + pcm.MaterialColor));
         return q.ToPagedAsync(query, ct);
     }
 

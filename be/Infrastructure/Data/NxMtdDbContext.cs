@@ -88,6 +88,10 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<OperationAssignment> OperationAssignments { get; set; }
 
+    public virtual DbSet<OperationComponent> OperationComponents { get; set; }
+
+    public virtual DbSet<OperationGroup> OperationGroups { get; set; }
+
     public virtual DbSet<OrderLine> OrderLines { get; set; }
 
     public virtual DbSet<OrderMaterial> OrderMaterials { get; set; }
@@ -122,6 +126,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<StockBalance> StockBalances { get; set; }
+
     public virtual DbSet<StockTransaction> StockTransactions { get; set; }
 
     public virtual DbSet<Stocktake> Stocktakes { get; set; }
@@ -147,6 +153,8 @@ public partial class NxMtdDbContext : DbContext
     public virtual DbSet<VwMaterialStock> VwMaterialStocks { get; set; }
 
     public virtual DbSet<VwMonthlyRevenue> VwMonthlyRevenues { get; set; }
+
+    public virtual DbSet<VwOperationAllocationProgress> VwOperationAllocationProgresses { get; set; }
 
     public virtual DbSet<VwOrderLineProgress> VwOrderLineProgresses { get; set; }
 
@@ -176,11 +184,11 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwWorkerOutputCap> VwWorkerOutputCaps { get; set; }
 
+    public virtual DbSet<WorkAllocation> WorkAllocations { get; set; }
+
     public virtual DbSet<WorkOrder> WorkOrders { get; set; }
 
     public virtual DbSet<WorkOrderLine> WorkOrderLines { get; set; }
-
-    public virtual DbSet<WorkerPieceMovement> WorkerPieceMovements { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -522,7 +530,7 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_CutHandoverLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.CutHandoverId, e.OrderLineId, e.ProductComponentId }, "UQ_CHL").IsUnique();
+            entity.HasIndex(e => new { e.CutHandoverId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_CHL").IsUnique();
 
             entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
 
@@ -536,9 +544,9 @@ public partial class NxMtdDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CHL_OrderLine");
 
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.CutHandoverLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_CHL_Component");
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.CutHandoverLines)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_CHL_PCM");
         });
 
         modelBuilder.Entity<CuttingLay>(entity =>
@@ -584,7 +592,7 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_CuttingLayLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.CuttingLayId, e.OrderLineId, e.ProductComponentId }, "UQ_CLL").IsUnique();
+            entity.HasIndex(e => new { e.CuttingLayId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_CLL").IsUnique();
 
             entity.Property(e => e.AdjustReason).HasMaxLength(500);
 
@@ -598,9 +606,9 @@ public partial class NxMtdDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_CLL_OrderLine");
 
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.CuttingLayLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_CLL_Component");
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.CuttingLayLines)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_CLL_PCM");
         });
 
         modelBuilder.Entity<DailyMeal>(entity =>
@@ -1098,7 +1106,7 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_MaterialIssueLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentId }, "UQ_MIL").IsUnique();
+            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_MIL").IsUnique();
 
             entity.Property(e => e.ConfirmedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
@@ -1118,9 +1126,9 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_MIL_OrderLine");
 
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.MaterialIssueLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_MIL_Component");
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.MaterialIssueLines)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_MIL_PCM");
         });
 
         modelBuilder.Entity<MaterialReceipt>(entity =>
@@ -1334,7 +1342,11 @@ public partial class NxMtdDbContext : DbContext
         {
             entity.ToTable("Operation", tb => tb.HasComment("Công đoạn"));
 
+            entity.HasIndex(e => e.OperationGroupId, "IX_Operation_Group").HasFilter("([OperationGroupId] IS NOT NULL)");
+
             entity.HasIndex(e => new { e.ProductId, e.OperationCode }, "UQ_Operation").IsUnique();
+
+            entity.HasIndex(e => new { e.OperationId, e.ProductId }, "UQ_Operation_IdProduct").IsUnique();
 
             entity.HasIndex(e => e.ProductId, "UX_Operation_FinalStep")
                 .IsUnique()
@@ -1358,6 +1370,11 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey<Operation>(d => d.ProductId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Operation_Product");
+
+            entity.HasOne(d => d.OperationGroup).WithMany(p => p.Operations)
+                .HasPrincipalKey(p => new { p.OperationGroupId, p.ProductId })
+                .HasForeignKey(d => new { d.OperationGroupId, d.ProductId })
+                .HasConstraintName("FK_Operation_Group");
         });
 
         modelBuilder.Entity<OperationAssignment>(entity =>
@@ -1375,10 +1392,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.AssignedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-
-            entity.HasOne(d => d.CopiedFromAssignment).WithMany(p => p.InverseCopiedFromAssignment)
-                .HasForeignKey(d => d.CopiedFromAssignmentId)
-                .HasConstraintName("FK_OA_CopiedFrom");
 
             entity.HasOne(d => d.Operation).WithMany(p => p.OperationAssignments)
                 .HasForeignKey(d => d.OperationId)
@@ -1399,6 +1412,45 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.WorkerId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_OA_Worker");
+        });
+
+        modelBuilder.Entity<OperationComponent>(entity =>
+        {
+            entity.HasKey(e => new { e.OperationId, e.ProductComponentId });
+
+            entity.ToTable("OperationComponent", tb => tb.HasComment("Công đoạn làm trên chi tiết nào"));
+
+            entity.HasIndex(e => e.ProductComponentId, "IX_OC_Component");
+
+            entity.HasOne(d => d.Operation).WithMany(p => p.OperationComponents)
+                .HasPrincipalKey(p => new { p.OperationId, p.ProductId })
+                .HasForeignKey(d => new { d.OperationId, d.ProductId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OC_Operation");
+
+            entity.HasOne(d => d.ProductComponent).WithMany(p => p.OperationComponents)
+                .HasPrincipalKey(p => new { p.ProductComponentId, p.ProductId })
+                .HasForeignKey(d => new { d.ProductComponentId, d.ProductId })
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OC_Component");
+        });
+
+        modelBuilder.Entity<OperationGroup>(entity =>
+        {
+            entity.ToTable("OperationGroup", tb => tb.HasComment("Công đoạn to (nhóm công đoạn)"));
+
+            entity.HasIndex(e => e.GroupName, "IX_OG_Name");
+
+            entity.HasIndex(e => new { e.ProductId, e.GroupName }, "UQ_OG_Name").IsUnique();
+
+            entity.HasIndex(e => new { e.OperationGroupId, e.ProductId }, "UQ_OG_Product").IsUnique();
+
+            entity.Property(e => e.GroupName).HasMaxLength(200);
+
+            entity.HasOne(d => d.Product).WithMany(p => p.OperationGroups)
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_OG_Product");
         });
 
         modelBuilder.Entity<OrderLine>(entity =>
@@ -1927,9 +1979,9 @@ public partial class NxMtdDbContext : DbContext
                 .HasForeignKey(d => d.OrderLineId)
                 .HasConstraintName("FK_RequestLine_OrderLine");
 
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.RequestLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_RequestLine_Component");
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.RequestLines)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_RequestLine_PCM");
 
             entity.HasOne(d => d.Request).WithMany(p => p.RequestLines)
                 .HasForeignKey(d => d.RequestId)
@@ -1949,44 +2001,64 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.RoleName).HasMaxLength(100);
         });
 
+        modelBuilder.Entity<StockBalance>(entity =>
+        {
+            entity.ToTable("StockBalance", tb =>
+                {
+                    tb.HasComment("Tồn hiện tại theo mặt hàng và kho");
+                    tb.HasTrigger("trg_StockBalance_Check");
+                });
+
+            entity.HasIndex(e => new { e.WarehouseType, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_SB_Item").IsUnique();
+
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
+            entity.Property(e => e.OnHandQty).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.UpdatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+            entity.Property(e => e.WarehouseType)
+                .HasMaxLength(15)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.Material).WithMany(p => p.StockBalances)
+                .HasForeignKey(d => d.MaterialId)
+                .HasConstraintName("FK_SB_Material");
+
+            entity.HasOne(d => d.OrderLine).WithMany(p => p.StockBalances)
+                .HasForeignKey(d => d.OrderLineId)
+                .HasConstraintName("FK_SB_OrderLine");
+
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.StockBalances)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_SB_PCM");
+        });
+
         modelBuilder.Entity<StockTransaction>(entity =>
         {
             entity.ToTable("StockTransaction", tb =>
                 {
-                    tb.HasComment("Thẻ kho (tồn tính ở vw_StockBalance)");
+                    tb.HasComment("Thẻ kho (ghi qua usp_Stock_Post)");
                     tb.HasTrigger("trg_StockTransaction_AppendOnly");
+                    tb.HasTrigger("trg_StockTransaction_PostOnly");
                 });
 
-            entity.HasIndex(e => new { e.MaterialId, e.MaterialColor, e.CreatedAt }, "IX_ST_Material").HasFilter("([MaterialId] IS NOT NULL)");
+            entity.HasIndex(e => new { e.StockBalanceId, e.CreatedAt }, "IX_ST_Balance");
 
-            entity.HasIndex(e => new { e.OrderLineId, e.WarehouseType, e.CreatedAt }, "IX_ST_OrderLine").HasFilter("([OrderLineId] IS NOT NULL)");
-
-            entity.HasIndex(e => new { e.SourceDocType, e.SourceDocId, e.SourceLineId, e.WarehouseType }, "UQ_ST_SourceLine").IsUnique();
+            entity.HasIndex(e => new { e.SourceDocType, e.SourceDocId, e.SourceLineId, e.StockBalanceId }, "UQ_ST_SourceLine").IsUnique();
 
             entity.Property(e => e.BalanceAfter).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.QtyChange).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.SourceDocType)
                 .HasMaxLength(30)
                 .IsUnicode(false);
-            entity.Property(e => e.WarehouseType)
-                .HasMaxLength(15)
-                .IsUnicode(false);
 
-            entity.HasOne(d => d.Material).WithMany(p => p.StockTransactions)
-                .HasForeignKey(d => d.MaterialId)
-                .HasConstraintName("FK_ST_Material");
-
-            entity.HasOne(d => d.OrderLine).WithMany(p => p.StockTransactions)
-                .HasForeignKey(d => d.OrderLineId)
-                .HasConstraintName("FK_ST_OrderLine");
-
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.StockTransactions)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_ST_Component");
+            entity.HasOne(d => d.StockBalance).WithMany(p => p.StockTransactions)
+                .HasForeignKey(d => d.StockBalanceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ST_Balance");
         });
 
         modelBuilder.Entity<Stocktake>(entity =>
@@ -2021,27 +2093,19 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_StocktakeLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.StocktakeId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentId }, "UQ_STL").IsUnique();
+            entity.HasIndex(e => new { e.StocktakeId, e.StockBalanceId }, "UQ_STL").IsUnique();
 
             entity.Property(e => e.BookQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.CountedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.DifferenceQty)
                 .HasComputedColumnSql("(isnull([CountedQty],[BookQty])-[BookQty])", false)
                 .HasColumnType("decimal(19, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.Note).HasMaxLength(300);
 
-            entity.HasOne(d => d.Material).WithMany(p => p.StocktakeLines)
-                .HasForeignKey(d => d.MaterialId)
-                .HasConstraintName("FK_STL_Material");
-
-            entity.HasOne(d => d.OrderLine).WithMany(p => p.StocktakeLines)
-                .HasForeignKey(d => d.OrderLineId)
-                .HasConstraintName("FK_STL_OrderLine");
-
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.StocktakeLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_STL_Component");
+            entity.HasOne(d => d.StockBalance).WithMany(p => p.StocktakeLines)
+                .HasForeignKey(d => d.StockBalanceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_STL_Balance");
 
             entity.HasOne(d => d.Stocktake).WithMany(p => p.StocktakeLines)
                 .HasForeignKey(d => d.StocktakeId)
@@ -2247,6 +2311,13 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.Revenue).HasColumnType("decimal(38, 2)");
         });
 
+        modelBuilder.Entity<VwOperationAllocationProgress>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_OperationAllocationProgress");
+        });
+
         modelBuilder.Entity<VwOrderLineProgress>(entity =>
         {
             entity
@@ -2415,6 +2486,7 @@ public partial class NxMtdDbContext : DbContext
                 .HasNoKey()
                 .ToView("vw_WorkOrderLineProgress");
 
+            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.WorkOrderCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -2444,6 +2516,60 @@ public partial class NxMtdDbContext : DbContext
             entity
                 .HasNoKey()
                 .ToView("vw_WorkerOutputCap");
+        });
+
+        modelBuilder.Entity<WorkAllocation>(entity =>
+        {
+            entity.ToTable("WorkAllocation", tb =>
+                {
+                    tb.HasComment("Giao / thu hồi việc với công nhân");
+                    tb.HasTrigger("trg_WorkAllocation_Check");
+                });
+
+            entity.HasIndex(e => new { e.SewingTeamId, e.OrderLineId, e.OperationId, e.Status }, "IX_WA_Line");
+
+            entity.HasIndex(e => new { e.WorkerId, e.OrderLineId, e.OperationId, e.Status }, "IX_WA_Worker");
+
+            entity.Property(e => e.ConfirmMode)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.ConfirmedAt).HasPrecision(0);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+            entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
+            entity.Property(e => e.MovementType)
+                .HasMaxLength(10)
+                .IsUnicode(false);
+            entity.Property(e => e.OnBehalfReason).HasMaxLength(500);
+            entity.Property(e => e.RejectReason).HasMaxLength(500);
+            entity.Property(e => e.RetrievalReason)
+                .HasMaxLength(20)
+                .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("PENDING");
+
+            entity.HasOne(d => d.Operation).WithMany(p => p.WorkAllocations)
+                .HasForeignKey(d => d.OperationId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WA_Operation");
+
+            entity.HasOne(d => d.OrderLine).WithMany(p => p.WorkAllocations)
+                .HasForeignKey(d => d.OrderLineId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WA_OrderLine");
+
+            entity.HasOne(d => d.SewingTeam).WithMany(p => p.WorkAllocations)
+                .HasForeignKey(d => d.SewingTeamId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WA_Team");
+
+            entity.HasOne(d => d.Worker).WithMany(p => p.WorkAllocations)
+                .HasForeignKey(d => d.WorkerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_WA_Worker");
         });
 
         modelBuilder.Entity<WorkOrder>(entity =>
@@ -2493,74 +2619,21 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_WorkOrderLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.WorkOrderId, e.OrderLineId, e.ProductComponentId }, "UQ_WOL").IsUnique();
+            entity.HasIndex(e => new { e.WorkOrderId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_WOL").IsUnique();
 
             entity.HasOne(d => d.OrderLine).WithMany(p => p.WorkOrderLines)
                 .HasForeignKey(d => d.OrderLineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WOL_OrderLine");
 
-            entity.HasOne(d => d.ProductComponent).WithMany(p => p.WorkOrderLines)
-                .HasForeignKey(d => d.ProductComponentId)
-                .HasConstraintName("FK_WOL_Component");
+            entity.HasOne(d => d.ProductComponentMaterial).WithMany(p => p.WorkOrderLines)
+                .HasForeignKey(d => d.ProductComponentMaterialId)
+                .HasConstraintName("FK_WOL_PCM");
 
             entity.HasOne(d => d.WorkOrder).WithMany(p => p.WorkOrderLines)
                 .HasForeignKey(d => d.WorkOrderId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_WOL_WO");
-        });
-
-        modelBuilder.Entity<WorkerPieceMovement>(entity =>
-        {
-            entity.ToTable("WorkerPieceMovement", tb =>
-                {
-                    tb.HasComment("Giao / thu hồi BTP với công nhân");
-                    tb.HasTrigger("trg_WorkerPieceMovement_Check");
-                });
-
-            entity.HasIndex(e => new { e.SewingTeamId, e.OrderLineId, e.Status }, "IX_WPM_Team");
-
-            entity.HasIndex(e => new { e.WorkerId, e.OrderLineId, e.Status }, "IX_WPM_Worker");
-
-            entity.Property(e => e.ConfirmMode)
-                .HasMaxLength(10)
-                .IsUnicode(false);
-            entity.Property(e => e.ConfirmedAt).HasPrecision(0);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-            entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
-            entity.Property(e => e.MovementType)
-                .HasMaxLength(10)
-                .IsUnicode(false);
-            entity.Property(e => e.OnBehalfReason).HasMaxLength(500);
-            entity.Property(e => e.RejectReason).HasMaxLength(500);
-            entity.Property(e => e.RetrievalReason)
-                .HasMaxLength(20)
-                .IsUnicode(false);
-            entity.Property(e => e.Status)
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasDefaultValue("PENDING");
-
-            entity.HasOne(d => d.Operation).WithMany(p => p.WorkerPieceMovements)
-                .HasForeignKey(d => d.OperationId)
-                .HasConstraintName("FK_WPM_Operation");
-
-            entity.HasOne(d => d.OrderLine).WithMany(p => p.WorkerPieceMovements)
-                .HasForeignKey(d => d.OrderLineId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_WPM_OrderLine");
-
-            entity.HasOne(d => d.SewingTeam).WithMany(p => p.WorkerPieceMovements)
-                .HasForeignKey(d => d.SewingTeamId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_WPM_Team");
-
-            entity.HasOne(d => d.Worker).WithMany(p => p.WorkerPieceMovements)
-                .HasForeignKey(d => d.WorkerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_WPM_Worker");
         });
 
         OnModelCreatingPartial(modelBuilder);

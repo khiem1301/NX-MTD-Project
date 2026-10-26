@@ -18,7 +18,7 @@ public partial class MaterialIssueLine
 
     public int? OrderLineId { get; set; }
 
-    public int? ProductComponentId { get; set; }
+    public int? ProductComponentMaterialId { get; set; }
 
     public decimal IssuedQty { get; set; }
 
@@ -34,5 +34,5 @@ public partial class MaterialIssueLine
 
     public virtual OrderLine? OrderLine { get; set; }
 
-    public virtual ProductComponent? ProductComponent { get; set; }
+    public virtual ProductComponentMaterial? ProductComponentMaterial { get; set; }
 }

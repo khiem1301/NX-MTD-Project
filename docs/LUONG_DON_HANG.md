@@ -1,6 +1,6 @@
 # Luồng đơn hàng: từ Admin tạo đơn đến khi giao xong
 
-Ghi ngày 24/10/2026, **cập nhật 25/10/2026 theo database mới** (định mức theo mã hàng, số lần giao dự kiến, thiếu hàng tự tính; bỏ lịch KPI theo ngày). Đã chạy thử toàn bộ luồng qua API trên database dựng mới từ `SQL/NX-MTD_Database.sql`, tất cả các điểm kiểm đều khớp. **Chưa thử trên giao diện trình duyệt.** Đối chiếu với swimlane: xem `docs/SO_SANH_SWIMLANE.md`.
+Ghi ngày 24/10/2026, **cập nhật 26/10/2026 theo database bản 25/10** (định mức theo mã hàng, số lần giao dự kiến, thiếu hàng tự tính; bỏ lịch KPI theo ngày). Đã chạy thử toàn bộ luồng qua API trên database dựng mới từ `SQL/NX-MTD_Database.sql`, tất cả các điểm kiểm đều khớp. **Chưa thử trên giao diện trình duyệt.** Đối chiếu với swimlane: xem `docs/SO_SANH_SWIMLANE.md`.
 
 Cột "Màn hình" là tên mục trong menu bên trái của vai trò đó.
 
@@ -23,7 +23,7 @@ Cột "Màn hình" là tên mục trong menu bên trái của vai trò đó.
 | 13 | Quản đốc | Chỉ tiêu KPI tổ may | Lập KPI cho tổ may (nhập tổng cả kỳ). Xem kết quả từng ngày ở bảng kết quả của KPI | Chặn khi tổng KPI còn hiệu lực của đơn + mã hàng vượt BTP (bộ đủ) đã vào kho; báo số còn đặt được | IN_PRODUCTION |
 | 14 | Tổ trưởng may | Đơn từ của tôi | Gửi đơn "Xin BTP" cho Thủ kho | Chỉ tổ may được tạo | IN_PRODUCTION |
 | 15 | Thủ kho → Tổ trưởng may | Phiếu cấp NVL / BTP | Thủ kho cấp BTP theo đơn xin, tổ trưởng may xác nhận nhận | Trừ kho BTP; đơn xin tự hoàn thành sau khi cấp | IN_PRODUCTION (đơn NEW tự sang IN_PRODUCTION khi tổ may xác nhận nhận BTP) |
-| 16 | Tổ trưởng may → Công nhân | Giao / thu hồi BTP; BTP của tôi | Tổ trưởng giao BTP cho công nhân, công nhân xác nhận (hoặc tổ trưởng xác nhận hộ có lý do) | Không giao vượt BTP tổ đang giữ | IN_PRODUCTION |
+| 16 | Tổ trưởng may → Công nhân | Giao việc cho công nhân; Việc được giao cho tôi | Tổ trưởng chia việc theo công đoạn (số lần làm, kèm BTP nếu công đoạn dùng BTP), công nhân xác nhận (hoặc tổ trưởng xác nhận hộ có lý do) | Tổng số lần giao của công đoạn không vượt số bộ BTP tổ đã nhận; không giao kèm vượt BTP tổ giữ; sản lượng không vượt số lần được giao | IN_PRODUCTION |
 | 17 | Tổ trưởng may | Phân công công đoạn, Sản lượng cuối ca | Phân công công đoạn cho công nhân, nhập sản lượng cuối ca | Sản lượng không vượt BTP công nhân đang giữ (MSG16); đơn giá khóa theo ngày nhập | IN_PRODUCTION |
 | 18 | QA/QC | Hàng hoàn thiện (QC) | Nhập số hàng đạt ra chuyền | Là số "thực tế" của KPI | IN_PRODUCTION |
 | 19 | QA/QC → Thủ kho | Bàn giao thành phẩm | Lập phiếu bàn giao, Thủ kho đếm và nhận vào kho thành phẩm | Tổng bàn giao không vượt tổng QC đạt. Đây là nguồn doanh thu tháng | IN_PRODUCTION |

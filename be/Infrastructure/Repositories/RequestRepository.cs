@@ -69,7 +69,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                     l.RequestLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName, l.MaterialColor,
                     l.OrderLineId,
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode + " · " + l.OrderLine.ProductVariant.Color + " · " + l.OrderLine.ProductVariant.SizeCode,
-                    l.ProductComponentId, l.ProductComponent == null ? null : l.ProductComponent.ComponentName,
+                    l.ProductComponentMaterialId, l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor),
                     l.ItemDescription, l.Quantity, l.ReplenishQty)).ToList(),
             })
             .FirstOrDefaultAsync(ct);

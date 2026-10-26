@@ -31,7 +31,9 @@ public sealed class OperationService : IOperationService
             .OrderBy(o => o.StationSequence).ThenBy(o => o.OperationCode)
             .Select(o => new OperationDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
                 o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec, o.TeamType, o.IsFinalStep,
-                o.Status, null, null))
+                o.Status, null, null, o.UsesSemiFinished, o.OperationGroupId,
+                o.OperationGroup == null ? null : o.OperationGroup.GroupName,
+                o.OperationComponents.Select(c => c.ProductComponentId).ToList()))
             .ToListAsync(ct);
 
         // Một truy vấn lấy mọi đơn giá của mã hàng, rồi chọn đơn giá hiện hành / đơn giá sắp tới trong bộ nhớ.
@@ -79,6 +81,8 @@ public sealed class OperationService : IOperationService
 
         var operation = new Operation { ProductId = dto.ProductId, Status = OperationStatuses.Active };
         Apply(operation, dto, code);
+        var related = await ApplyGroupAndComponentsAsync(operation, dto, ct);
+        if (related is not null) return Fail.As<int>(related);
 
         return await _uow.InTransactionAsync(async () =>   // log cần OperationId nên lưu trước
         {
@@ -102,6 +106,8 @@ public sealed class OperationService : IOperationService
 
         var before = Snapshot(operation);
         Apply(operation, dto, code);
+        var related = await ApplyGroupAndComponentsAsync(operation, dto, ct);
+        if (related is not null) return related;
         _audit.Add(new AuditEntry(nameof(Operation), operationId, AuditActions.Update, before, Snapshot(operation)));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
@@ -445,11 +451,52 @@ public sealed class OperationService : IOperationService
         operation.StandardTimeSec = dto.StandardTimeSec;
         operation.TeamType = string.IsNullOrWhiteSpace(dto.TeamType) ? TeamTypes.Sewing : CodeText.ToCode(dto.TeamType);
         operation.IsFinalStep = dto.IsFinalStep;
+        operation.UsesSemiFinished = dto.UsesSemiFinished;
+    }
+
+    /// <summary>
+    /// Công đoạn to (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
+    /// cùng mã hàng; danh sách trống = không gắn chi tiết nào. <c>ComponentIds</c> null = giữ nguyên (cập nhật từ import Excel).
+    /// </summary>
+    private async Task<Result?> ApplyGroupAndComponentsAsync(Operation operation, SaveOperationDto dto, CancellationToken ct)
+    {
+        var groupName = dto.GroupName?.Trim();
+        if (string.IsNullOrEmpty(groupName))
+        {
+            operation.OperationGroup = null;
+            operation.OperationGroupId = null;
+        }
+        else
+        {
+            var group = await _uow.Repository<OperationGroup>().Query()
+                .FirstOrDefaultAsync(g => g.ProductId == operation.ProductId && g.GroupName == groupName, ct);
+            if (group is null)
+            {
+                group = new OperationGroup { ProductId = operation.ProductId, GroupName = groupName };
+                await _uow.Repository<OperationGroup>().AddAsync(group);
+            }
+            operation.OperationGroup = group;
+        }
+
+        if (dto.ComponentIds is null) return null;
+        var wanted = dto.ComponentIds.Distinct().ToList();
+        var valid = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
+            .CountAsync(c => wanted.Contains(c.ProductComponentId) && c.ProductId == operation.ProductId, ct);
+        if (valid != wanted.Count)
+            return Result.Failure(ErrorCodes.OperationInvalid, Messages.OperationComponentInvalid, ResultKind.Validation);
+
+        var current = operation.OperationId == 0
+            ? new List<OperationComponent>()
+            : await _uow.Repository<OperationComponent>().Query().Where(c => c.OperationId == operation.OperationId).ToListAsync(ct);
+        _uow.Repository<OperationComponent>().RemoveRange(current.Where(c => !wanted.Contains(c.ProductComponentId)).ToList());
+        foreach (var id in wanted.Where(id => current.All(c => c.ProductComponentId != id)))
+            operation.OperationComponents.Add(new OperationComponent { ProductComponentId = id, ProductId = operation.ProductId });
+        return null;
     }
 
     private static object Snapshot(Operation o) => new
     {
         o.ProductId, o.OperationCode, o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec,
-        o.TeamType, o.IsFinalStep, o.Status,
+        o.TeamType, o.IsFinalStep, o.UsesSemiFinished, o.Status,
     };
 }

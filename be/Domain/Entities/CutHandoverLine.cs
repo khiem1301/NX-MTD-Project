@@ -14,7 +14,7 @@ public partial class CutHandoverLine
 
     public int OrderLineId { get; set; }
 
-    public int? ProductComponentId { get; set; }
+    public int? ProductComponentMaterialId { get; set; }
 
     public int HandedQty { get; set; }
 
@@ -26,5 +26,5 @@ public partial class CutHandoverLine
 
     public virtual OrderLine OrderLine { get; set; } = null!;
 
-    public virtual ProductComponent? ProductComponent { get; set; }
+    public virtual ProductComponentMaterial? ProductComponentMaterial { get; set; }
 }

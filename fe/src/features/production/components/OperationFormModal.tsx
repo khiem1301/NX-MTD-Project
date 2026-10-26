@@ -1,12 +1,20 @@
 import { useEffect } from 'react';
-import { Checkbox, Form, Input, InputNumber, Modal } from 'antd';
+import { AutoComplete, Checkbox, Form, Input, InputNumber, Modal, Select, Switch } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { useProductSpec } from '@/features/orders/hooks/useOrders';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
 import { modalWidth } from '../utils';
 
-type Props = { open: boolean; productId: number; operation: Operation | null; onClose: () => void };
+type Props = {
+  open: boolean;
+  productId: number;
+  operation: Operation | null;
+  /** Công đoạn to đã có của mã hàng (gợi ý khi gõ). */
+  groups: string[];
+  onClose: () => void;
+};
 
 type FormValues = {
   operationCode: string;
@@ -15,15 +23,19 @@ type FormValues = {
   skillLevel?: number | null;
   standardTimeSec?: number | null;
   isFinalStep: boolean;
+  usesSemiFinished: boolean;
+  groupName?: string;
+  componentIds: number[];
 };
 
 const text = PRODUCTION_TEXT.operations;
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
 /** UC25 — Kế toán sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
-export function OperationFormModal({ open, productId, operation, onClose }: Props) {
+export function OperationFormModal({ open, productId, operation, groups, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
+  const spec = useProductSpec(open ? productId : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -37,8 +49,11 @@ export function OperationFormModal({ open, productId, operation, onClose }: Prop
             skillLevel: operation.skillLevel,
             standardTimeSec: operation.standardTimeSec,
             isFinalStep: operation.isFinalStep,
+            usesSemiFinished: operation.usesSemiFinished,
+            groupName: operation.groupName ?? undefined,
+            componentIds: operation.componentIds,
           }
-        : { isFinalStep: false },
+        : { isFinalStep: false, usesSemiFinished: false, componentIds: [] },
     );
   }, [open, operation, form]);
 
@@ -53,6 +68,9 @@ export function OperationFormModal({ open, productId, operation, onClose }: Prop
         standardTimeSec: values.standardTimeSec ?? null,
         teamType: 'Sewing',
         isFinalStep: values.isFinalStep,
+        usesSemiFinished: values.usesSemiFinished,
+        groupName: values.groupName?.trim() || null,
+        componentIds: values.componentIds,
       },
       { onSuccess: onClose },
     );
@@ -86,6 +104,22 @@ export function OperationFormModal({ open, productId, operation, onClose }: Prop
         <Form.Item name="standardTimeSec" label={text.form.standardTime}>
           <InputNumber min={0.01} precision={2} style={{ width: 160 }} />
         </Form.Item>
+        <Form.Item name="groupName" label={text.form.group} extra={text.form.groupHint}>
+          <AutoComplete allowClear options={groups.map((g) => ({ value: g }))} maxLength={200} />
+        </Form.Item>
+        <Form.Item name="componentIds" label={text.form.components} extra={text.form.componentsHint}>
+          <Select
+            mode="multiple"
+            allowClear
+            optionFilterProp="label"
+            loading={spec.isLoading}
+            options={(spec.data?.components ?? []).map((c) => ({ value: c.productComponentId, label: c.componentName }))}
+          />
+        </Form.Item>
+        <Form.Item name="usesSemiFinished" valuePropName="checked">
+          <Switch checkedChildren={text.withPieces} unCheckedChildren={text.withoutPieces} />
+        </Form.Item>
+        <div style={{ marginTop: -16, marginBottom: 16, color: '#8c8c8c' }}>{text.form.usesSemiFinished}</div>
         <Form.Item name="isFinalStep" valuePropName="checked">
           <Checkbox>{text.form.isFinal}</Checkbox>
         </Form.Item>

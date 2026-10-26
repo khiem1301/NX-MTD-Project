@@ -11,9 +11,10 @@ public class FabricRequirementCalculatorTests
 
     private static NormLine Norm(int component, decimal perGarment, decimal wastage = 0, int material = 100,
         string materialColor = "Đỏ", short pieces = 1, int variant = Variant) =>
-        new(variant, component, pieces, material, materialColor, perGarment, wastage);
+        new(component * 1000 + variant, variant, component, pieces, material, materialColor, perGarment, wastage);
 
-    private static PieceDemand Demand(int qty, int? component = null, int variant = Variant) => new(variant, component, qty);
+    private static PieceDemand Demand(int qty, int? component = null, int variant = Variant) =>
+        new(variant, component is null ? null : component * 1000 + variant, qty);
 
     [Fact]
     public void Calculate_WholeGarment_MultipliesQtyAndAddsWastage()

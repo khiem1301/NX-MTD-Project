@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Role } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
+export { normalizeText } from '@/utils/text';
 
 export type MenuGroup = {
   key: string;
@@ -96,16 +97,6 @@ export function findActiveLeaf(pathname: string, leaves: readonly NavLeaf[]): Na
     if (match && (best === undefined || leaf.path.length > best.path.length)) best = leaf;
   }
   return best;
-}
-
-/** Bỏ dấu tiếng Việt và hạ chữ thường để tìm "don hang" ra "Đơn hàng". */
-export function normalizeText(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'd')
-    .toLowerCase();
 }
 
 export function initials(fullName: string): string {

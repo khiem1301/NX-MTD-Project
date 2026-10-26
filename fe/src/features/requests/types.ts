@@ -28,7 +28,7 @@ export type RequestLine = {
   materialColor: string | null;
   orderLineId: number | null;
   orderLineLabel: string | null;
-  productComponentId: number | null;
+  productComponentMaterialId: number | null;
   componentName: string | null;
   itemDescription: string | null;
   quantity: number;
@@ -75,7 +75,7 @@ export type RequestLineInput = {
   materialId?: number | null;
   materialColor?: string | null;
   orderLineId?: number | null;
-  productComponentId?: number | null;
+  productComponentMaterialId?: number | null;
   itemDescription?: string | null;
   quantity: number;
 };

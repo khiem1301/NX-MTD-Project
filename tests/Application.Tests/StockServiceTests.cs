@@ -4,7 +4,6 @@ using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
 using NX_MTD.Domain.Constants;
-using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
@@ -36,7 +35,7 @@ public class StockServiceTests
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInsufficientStock);
-        await _repo.DidNotReceive().AddAsync(Arg.Any<StockTransaction>(), Arg.Any<CancellationToken>());
+        await _repo.DidNotReceive().PostAsync(Arg.Any<StockMovement>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -48,28 +47,33 @@ public class StockServiceTests
         var result = await _sut.PostAsync(new[] { Move(Fabric, -10m), Move(Piece, -1m, 2) }, default);
 
         result.IsSuccess.Should().BeFalse();
-        await _repo.DidNotReceive().AddAsync(Arg.Any<StockTransaction>(), Arg.Any<CancellationToken>());
+        await _repo.DidNotReceive().PostAsync(Arg.Any<StockMovement>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task PostAsync_SameKeyTwice_AccumulatesBalanceAfter()
+    public async Task PostAsync_SameKeyTwice_ChecksTheRunningBalanceThenPostsEachMovementInOrder()
     {
         _repo.GetOnHandAsync(Fabric, Arg.Any<CancellationToken>()).Returns(10m);
-        var written = new List<StockTransaction>();
-        await _repo.AddAsync(Arg.Do<StockTransaction>(written.Add), Arg.Any<CancellationToken>());
+        var written = new List<StockMovement>();
+        await _repo.PostAsync(Arg.Do<StockMovement>(written.Add), Arg.Any<CancellationToken>());
 
         var result = await _sut.PostAsync(new[] { Move(Fabric, 5m, 1), Move(Fabric, -12m, 2) }, default);
 
-        result.IsSuccess.Should().BeTrue();
-        written.Select(t => t.BalanceAfter).Should().Equal(15m, 3m);
-        written.Should().AllSatisfy(t =>
-        {
-            t.WarehouseType.Should().Be(WarehouseTypes.Material);
-            t.MaterialId.Should().Be(1);
-            t.MaterialColor.Should().Be("Đỏ");
-            t.OrderLineId.Should().BeNull();
-        });
+        result.IsSuccess.Should().BeTrue();   // 10 + 5 − 12 = 3, không âm
+        written.Select(m => m.QtyChange).Should().Equal(5m, -12m);
+        written.Should().AllSatisfy(m => m.Key.Should().Be(Fabric));
         await _repo.Received(1).GetOnHandAsync(Fabric, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task PostAsync_ListsEveryShortItemInOneMessage()
+    {
+        _repo.GetOnHandAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(1m);
+
+        var result = await _sut.PostAsync(new[] { Move(Fabric, -3m, 1), Move(Piece, -4m, 2) }, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInsufficientStock);
+        result.Message.Should().Contain("thiếu 2").And.Contain("thiếu 3");
     }
 
     [Fact]
@@ -80,8 +84,7 @@ public class StockServiceTests
         var result = await _sut.PostAsync(new[] { Move(Piece, -7m) }, default);
 
         result.IsSuccess.Should().BeTrue();
-        await _repo.Received(1).AddAsync(Arg.Is<StockTransaction>(t => t.BalanceAfter == 0m && t.OrderLineId == 9),
-            Arg.Any<CancellationToken>());
+        await _repo.Received(1).PostAsync(Arg.Is<StockMovement>(m => m.Key == Piece && m.QtyChange == -7m), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -93,11 +96,11 @@ public class StockServiceTests
     }
 
     [Fact]
-    public async Task PostAsync_ManyKeys_LocksEachKeyOnceInFixedOrder()
+    public async Task EnsureAvailableAsync_ManyKeys_LocksEachKeyOnceInFixedOrder()
     {
-        _repo.GetOnHandAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(100m);
+        _repo.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(100m);
 
-        await _sut.PostAsync(new[] { Move(Piece, 1m), Move(Fabric, 1m, 2), Move(Piece, 1m, 3) }, default);
+        await _sut.EnsureAvailableAsync(new[] { new StockRequirement(Piece, 1m), new StockRequirement(Fabric, 1m), new StockRequirement(Piece, 1m) }, default);
 
         var expected = new[] { Fabric.LockName, Piece.LockName }.OrderBy(n => n, StringComparer.Ordinal).ToList();
         Received.InOrder(() =>

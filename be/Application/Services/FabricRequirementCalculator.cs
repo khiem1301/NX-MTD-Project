@@ -1,11 +1,11 @@
 namespace NX_MTD.Application.Services;
 
 /// <summary>Một dòng định mức của biến thể (ProductComponentMaterial): QtyPerGarment là tổng cho 1 sản phẩm, đã tính số chi tiết.</summary>
-public sealed record NormLine(int ProductVariantId, int ProductComponentId, short PiecesPerGarment, int MaterialId,
+public sealed record NormLine(int ProductComponentMaterialId, int ProductVariantId, int ProductComponentId, short PiecesPerGarment, int MaterialId,
     string MaterialColor, decimal QtyPerGarment, decimal WastagePercent);
 
-/// <summary>Số sản phẩm cần làm của một biến thể (màu × size); ProductComponentId null = cả bộ, có giá trị = chỉ chi tiết đó (cắt bù).</summary>
-public sealed record PieceDemand(int ProductVariantId, int? ProductComponentId, int Qty);
+/// <summary>Số sản phẩm cần làm của một biến thể (màu × size); ProductComponentMaterialId null = cả bộ, có giá trị = chỉ dòng định mức đó (chi tiết × vải, cắt bù).</summary>
+public sealed record PieceDemand(int ProductVariantId, int? ProductComponentMaterialId, int Qty);
 
 public sealed record MaterialNeed(int MaterialId, string MaterialColor, decimal Qty);
 
@@ -24,9 +24,9 @@ public static class FabricRequirementCalculator
         foreach (var demand in demands.Where(d => d.Qty > 0))
         {
             foreach (var norm in norms.Where(n => n.ProductVariantId == demand.ProductVariantId
-                         && (demand.ProductComponentId is null || n.ProductComponentId == demand.ProductComponentId)))
+                         && (demand.ProductComponentMaterialId is null || n.ProductComponentMaterialId == demand.ProductComponentMaterialId)))
             {
-                var pieces = demand.ProductComponentId is null ? 1m : Math.Max((short)1, norm.PiecesPerGarment);
+                var pieces = demand.ProductComponentMaterialId is null ? 1m : Math.Max((short)1, norm.PiecesPerGarment);
                 var qty = demand.Qty * norm.QtyPerGarment * (1 + norm.WastagePercent / 100m) / pieces;
                 var key = (norm.MaterialId, norm.MaterialColor);
                 totals[key] = totals.GetValueOrDefault(key) + qty;

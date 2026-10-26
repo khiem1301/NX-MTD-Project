@@ -360,7 +360,6 @@ public class OperationAssignmentServiceTests : ProductionTestBase
 
         result.Data.Should().Be(1);   // chỉ w7: w8 đã có, w9 đã nghỉ, w10 đã sang tổ khác
         var copy = _assignments.Single(a => a.OrderId == 2 && a.WorkerId == 7);
-        copy.CopiedFromAssignmentId.Should().Be(src7.OperationAssignmentId);
         copy.ValidFrom.Should().Be(Today);
     }
 

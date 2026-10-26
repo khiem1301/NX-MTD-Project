@@ -1,10 +1,12 @@
-# Tiến độ chức năng (cập nhật 25/10/2026)
+# Tiến độ chức năng (cập nhật 26/10/2026)
 
 Nhánh: `feature/ALL-missing-features` (chưa gộp vào `main`, cần mở PR).
 Kiểm tra: 1026 test backend, 84 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API trên database dựng từ script mới.
 **Chưa có chức năng nào của đợt này được thử trên trình duyệt thật.**
 
 ## Đã làm được
+
+**Bổ sung 26/10 (chuyển sang database bản 25/10):** ghi kho qua thủ tục `usp_Stock_Post` (kiểm kê tạo dòng tồn khi cần); cắt bù theo chi tiết × vải; **Giao việc cho công nhân theo công đoạn** (bảng chia việc, giao kèm BTP, trần sản lượng theo công đoạn, tìm theo công đoạn to); màn Công đoạn có công đoạn to, chi tiết và công tắc giao kèm BTP; sửa định mức đang được dùng không còn lỗi (cập nhật tại chỗ). Giao diện mới: thanh bên gom nhóm, header có tìm nhanh và menu người dùng.
 
 **Sửa 25/10 (lần 2):** phiếu nhập NVL không gửi trùng được (mỗi NVL một phiếu chờ xác nhận; kiểm trần cả hàng khách cấp và lúc Quản đốc xác nhận); phân công công đoạn chọn được nhiều công đoạn cho một công nhân (`POST /team-leader/operation-assignments/bulk`).
 

@@ -17,7 +17,7 @@ export type OrderLineOption = {
 };
 
 /** Chi tiết cắt (PANEL) của mã hàng, để chọn khi xin cắt bù. */
-export type ComponentOption = { productComponentId: number; componentName: string; piecesPerGarment: number };
+export type ComponentOption = { productComponentMaterialId: number; componentName: string; piecesPerGarment: number };
 
 export type TeamOption = { teamId: number; teamCode: string; teamName: string; teamType: string };
 

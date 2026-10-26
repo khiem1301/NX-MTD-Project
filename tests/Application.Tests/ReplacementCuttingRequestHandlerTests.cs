@@ -25,6 +25,8 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
         new() { ProductComponentId = 10, ProductId = 1, ComponentName = "Khóa", ComponentType = ComponentTypes.Trim, Status = RecordStatus.Active },
         new() { ProductComponentId = 11, ProductId = 2, ComponentName = "Thân khác mã", ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active },
     ];
+    private readonly List<ProductComponentMaterial> _norms = [];
+    private readonly List<OrderLine> _orderLines = [];
     private readonly ReplacementCuttingRequestHandler _sut;
 
     public ReplacementCuttingRequestHandlerTests()
@@ -32,6 +34,15 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
         SetupQueryable(_defects);
         SetupQueryable(_requests);
         SetupQueryable(_components);
+        // Mỗi chi tiết có một dòng định mức (Id = Id chi tiết) của biến thể 21 (mã hàng 1) hoặc 22 (mã hàng khác).
+        _norms.AddRange(_components.Select(c => new ProductComponentMaterial
+        {
+            ProductComponentMaterialId = c.ProductComponentId, ProductId = c.ProductId, ProductComponentId = c.ProductComponentId,
+            ProductComponent = c, ProductVariantId = c.ProductId == 1 ? 21 : 22, MaterialId = 1,
+        }));
+        _orderLines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 1, ProductVariantId = 21 });
+        SetupQueryable(_norms);
+        SetupQueryable(_orderLines);
         AsTeamLeader(TeamId);
         _sut = new ReplacementCuttingRequestHandler(Uow, User);
     }

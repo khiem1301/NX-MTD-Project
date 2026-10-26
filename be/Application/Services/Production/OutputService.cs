@@ -11,8 +11,8 @@ namespace NX_MTD.Application.Services.Production;
 /// KI-04 + KI-11 (UC55, UC22): sản lượng cuối ca của tổ may theo công nhân × công đoạn × dòng đơn.
 /// <list type="bullet">
 /// <item>Đơn giá khóa lúc nhập: lấy đơn giá APPROVED hiệu lực tại ngày làm việc; chưa có thì chặn (MSG18, GBR-11).</item>
-/// <item>Trần (MSG16): tổng sản lượng một công đoạn của dòng đơn ≤ BTP tổ đã nhận; nếu công nhân đã có phiếu giao BTP
-/// (<c>vw_WorkerOutputCap</c>) thì ≤ số BTP công nhân đang giữ — DEV-KI-04-1.</item>
+/// <item>Trần (MSG16, database 25/10): sản lượng của công nhân ở một công đoạn × dòng đơn ≤ số lần tổ trưởng đã giao và
+/// công nhân đã xác nhận (<c>vw_WorkerOutputCap</c>); chưa được giao thì trần bằng 0. Database cũng chặn cứng (50052).</item>
 /// <item>Hạn sửa (GBR-09): hết ngày làm việc kế tiếp; sau hạn chỉ Quản đốc sửa, bắt buộc lý do, ghi AuditLog (MSG20).</item>
 /// <item>Công nhân chưa có giờ vào hôm đó: cảnh báo MSG17, không chặn.</item>
 /// </list>
@@ -57,8 +57,17 @@ public sealed class OutputService : IOutputService
                         && r.OrderLineId == orderLineId)
             .ToListAsync(ct);
 
+        // Số lần được giao (trần) và đã báo của từng công nhân × công đoạn ở dòng đơn này.
+        var caps = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
+            .Where(v => v.OrderLineId == orderLineId).ToListAsync(ct);
+        var capByKey = caps.ToDictionary(v => (v.OperationId, v.WorkerId));
+        var teamWorkerIds = await _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => e.TeamId == team.Data).Select(e => e.EmployeeId).ToListAsync(ct);
+
+        // Công nhân được giao việc nhưng chưa có phân công công đoạn vẫn có dòng để báo sản lượng.
         var keys = assignments.Select(a => (a.OperationId, a.WorkerId))
-            .Union(records.Select(r => (r.OperationId, r.WorkerId))).ToList();
+            .Union(records.Select(r => (r.OperationId, r.WorkerId)))
+            .Union(caps.Where(c => (c.CapQty ?? 0) > 0 && teamWorkerIds.Contains(c.WorkerId)).Select(c => (c.OperationId, c.WorkerId))).ToList();
         var operationIds = keys.Select(k => k.OperationId).Distinct().ToList();
         var workerIds = keys.Select(k => k.WorkerId).Distinct().ToList();
         var operations = await _uow.Repository<Operation>().Query().AsNoTracking()
@@ -84,7 +93,9 @@ public sealed class OutputService : IOutputService
                 worker.EmployeeCode, worker.FullName, record?.OutputRecordId, record?.Quantity,
                 record?.PieceRate.Rate ?? rate?.Rate, record is not null || rate is not null,
                 record?.IsOutsideAssignment ?? !assigned.Contains((operationId, workerId)),
-                record?.NoAttendanceWarning ?? false, canEdit, record?.EditDeadline, record?.RowVer));
+                record?.NoAttendanceWarning ?? false, canEdit, record?.EditDeadline, record?.RowVer,
+                capByKey.TryGetValue((operationId, workerId), out var cap) ? cap.CapQty ?? 0 : 0,
+                cap?.OutputQty ?? 0));
         }
 
         var received = await ReceivedAsync(team.Data, orderLineId, ct);
@@ -245,34 +256,17 @@ public sealed class OutputService : IOutputService
 
     // ---------- Trần (MSG16) ----------
 
-    /// <summary>Trần cấp tổ: Σ sản lượng công đoạn của dòng đơn ≤ BTP tổ đã nhận. Nếu công nhân đã có phiếu giao BTP
-    /// thì thêm trần cấp công nhân (≤ số BTP đang giữ) — DEV-KI-04-1.</summary>
+    /// <summary>Trần theo công nhân × công đoạn: Σ sản lượng ≤ số lần đã giao và được công nhân xác nhận (WorkAllocation).
+    /// Chưa được giao thì trần bằng 0 (trigger trg_OutputRecord_Check chặn cứng, THROW 50052).</summary>
     private async Task<Result?> CheckCapsAsync(int teamId, int orderLineId,
         List<(int OperationId, int WorkerId, int Quantity, OutputRecord? Record)> changing,
         Dictionary<int, Operation> operations, CancellationToken ct)
     {
-        var received = await ReceivedAsync(teamId, orderLineId, ct);
-
-        foreach (var byOperation in changing.GroupBy(c => c.OperationId))
-        {
-            var operationId = byOperation.Key;
-            var changedIds = byOperation.Where(c => c.Record is not null).Select(c => c.Record!.OutputRecordId).ToList();
-            var others = await Records.AsNoTracking()
-                .Where(r => r.SewingTeamId == teamId && r.OrderLineId == orderLineId && r.OperationId == operationId
-                            && !changedIds.Contains(r.OutputRecordId))
-                .SumAsync(r => (int?)r.Quantity, ct) ?? 0;
-            var requested = byOperation.Sum(c => c.Quantity);
-            if (others + requested > received)
-                return Result.Failure(ErrorCodes.OutputExceedsCap, string.Format(Messages.OutputExceedsCap,
-                    operations[operationId].OperationCode, received, Math.Max(0, received - others)));
-        }
-
         foreach (var row in changing)
         {
             var cap = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
-                .Where(v => v.WorkerId == row.WorkerId && v.OrderLineId == orderLineId)
-                .Select(v => (int?)v.CapQty).MaxAsync(ct);
-            if (cap is null) continue;   // chưa có phiếu giao BTP cho công nhân này: chỉ áp trần cấp tổ
+                .Where(v => v.WorkerId == row.WorkerId && v.OrderLineId == orderLineId && v.OperationId == row.OperationId)
+                .Select(v => (int?)v.CapQty).FirstOrDefaultAsync(ct) ?? 0;
 
             var recordId = row.Record?.OutputRecordId;
             var others = await Records.AsNoTracking()
@@ -281,7 +275,7 @@ public sealed class OutputService : IOutputService
                 .SumAsync(r => (int?)r.Quantity, ct) ?? 0;
             if (others + row.Quantity > cap)
                 return Result.Failure(ErrorCodes.OutputExceedsCap, string.Format(Messages.OutputExceedsCap,
-                    operations[row.OperationId].OperationCode, cap.Value, Math.Max(0, cap.Value - others)));
+                    operations[row.OperationId].OperationCode, cap, Math.Max(0, cap - others)));
         }
         return null;
     }

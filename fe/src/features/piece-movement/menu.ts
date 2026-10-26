@@ -5,13 +5,13 @@ import type { MenuEntry } from '@/types/menu';
 export const pieceMovementMenu: MenuEntry[] = [
   {
     key: 'piece-movements',
-    label: 'Giao / thu hồi BTP',
+    label: 'Giao việc cho công nhân',
     path: ROUTES.pieceMovements,
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy],
   },
   {
     key: 'my-piece-movements',
-    label: 'BTP của tôi',
+    label: 'Việc được giao cho tôi',
     path: ROUTES.myPieceMovements,
     roles: [ROLES.Worker],
   },
