@@ -25,7 +25,6 @@ public sealed record WorkOrderDto(
     IReadOnlyList<FabricRequirementDto> Fabrics);
 
 /// <param name="Reason">Bắt buộc khi BTP đã vào kho chưa đủ số kế hoạch (cắt thiếu, hủy phần còn lại).</param>
-public sealed record CompleteWorkOrderDto(string? Reason);
 
 public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty);
 

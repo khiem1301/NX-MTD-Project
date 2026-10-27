@@ -3751,7 +3751,7 @@ JOIN dbo.MaterialReceipt r ON r.ReceiptCode = v.Code;
 
 /* ---------- 3. Lệnh cắt, phiếu cấp vải, bàn cắt, bàn giao BTP của DEMO-DH001 (bù chuỗi kho BTP) ---------- */
 INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, Note, CreatedAt, CompletedAt)
-VALUES ('LC-DEMO-001', @o1, @p1, @cat, '2026-09-22', 'COMPLETED', N'Lệnh cắt đã hoàn thành của DEMO-DH001', '2026-09-15 08:00:00', '2026-09-22 17:00:00');
+VALUES ('LC-DEMO-001', @o1, @p1, @cat, '2026-09-22', 'CUTTING', N'Lệnh cắt của DEMO-DH001 (đã cắt và bàn giao đủ)', '2026-09-15 08:00:00', NULL);
 DECLARE @wo1 INT = (SELECT WorkOrderId FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-001');
 INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PlannedQty)
 SELECT @wo1, ol.OrderLineId, ol.OrderedQty FROM dbo.OrderLine ol WHERE ol.OrderId = @o1;

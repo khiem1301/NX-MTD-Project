@@ -172,44 +172,4 @@ public class SwimlaneFlowTests : ProductionTestBase
     private WorkOrderService WorkOrdersService() => new(Uow, _stock, new FabricPlanner(Uow), Substitute.For<IDocumentCodeGenerator>(),
         NullLogger<WorkOrderService>.Instance);
 
-    [Fact]
-    public async Task Completing_a_fully_handed_over_work_order_needs_no_reason()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Confirmed, confirmed: 100);
-
-        var result = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto(null), default);
-
-        result.IsSuccess.Should().BeTrue();
-        wo.Status.Should().Be(WorkOrderStatuses.Completed);
-    }
-
-    [Fact]
-    public async Task Completing_a_short_work_order_requires_a_reason_which_is_kept_in_the_note()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Confirmed, confirmed: 80);
-
-        var without = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto(" "), default);
-        without.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        without.Message.Should().Contain("80/100");
-        wo.Status.Should().Be(WorkOrderStatuses.Cutting);
-
-        var with = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("Hết vải, hủy phần còn lại"), default);
-        with.IsSuccess.Should().BeTrue();
-        wo.Status.Should().Be(WorkOrderStatuses.Completed);
-        wo.Note.Should().Contain("Hết vải");
-    }
-
-    [Fact]
-    public async Task Work_order_cannot_be_completed_while_a_handover_awaits_the_warehouse_or_when_not_cutting()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Pending);
-        (await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("x"), default)).Message.Should().Be(WarehouseMessages.WorkOrderHasPendingHandover);
-
-        wo.Status = WorkOrderStatuses.Open;
-        (await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("x"), default)).Message.Should().Be(WarehouseMessages.WorkOrderNotCompletable);
-        (await WorkOrdersService().CompleteAsync(99, new CompleteWorkOrderDto("x"), default)).Kind.Should().Be(ResultKind.NotFound);
-    }
 }

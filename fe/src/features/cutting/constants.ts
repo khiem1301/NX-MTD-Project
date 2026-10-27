@@ -4,14 +4,12 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 export const WORK_ORDER_STATUS = {
   OPEN: 'OPEN',
   CUTTING: 'CUTTING',
-  COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 } as const;
 
 export const WORK_ORDER_STATUS_LABEL: Record<string, StatusLabel> = {
   OPEN: { text: 'Mới lập', color: 'blue' },
   CUTTING: { text: 'Đang cắt', color: 'gold' },
-  COMPLETED: { text: 'Hoàn thành', color: 'green' },
   CANCELLED: { text: 'Đã hủy', color: 'default' },
 };
 
@@ -63,8 +61,6 @@ export const LABELS = {
   selectReplacementRequest: 'Chọn đơn cắt bù',
   panelName: 'Chi tiết cần cắt bù',
   cancelHandover: 'Rút phiếu',
-  completeWorkOrder: 'Đóng lệnh',
-  completeReason: 'Lý do (bắt buộc khi BTP vào kho chưa đủ kế hoạch)',
   result: 'Kết quả',
   resultSummary: 'Kế hoạch {planned} · đã cắt {cut} · đã bàn giao {handed}',
   component: 'Chi tiết',

@@ -255,10 +255,12 @@ export const PRODUCTION_TEXT = {
     cancel: 'Hủy phiếu',
     cancelTitle: 'Hủy phiếu hàng hỏng',
     filterDate: 'Lọc theo ngày',
+    searchPlaceholder: 'Tìm theo công nhân, mã hàng, tổ, mã phiếu',
     objected: 'Công nhân phản hồi',
     columns: {
       code: 'Mã phiếu',
       date: 'Ngày',
+      team: 'Tổ',
       order: 'Đơn hàng',
       operation: 'Công đoạn',
       worker: 'Công nhân',

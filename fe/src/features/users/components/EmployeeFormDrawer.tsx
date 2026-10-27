@@ -41,7 +41,6 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.employeeId ?? 0);
   const saving = create.isPending || update.isPending;
-  const isManagerEdit = employee !== null && !isAdmin;
   // Quản đốc không gán được vai trò mà mình không nhìn thấy (GBR-01).
   const roleOptions = isAdmin || employee === null ? ROLE_OPTIONS : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
 
@@ -74,9 +73,7 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
       });
       return;
     }
-    const body = isAdmin
-      ? { ...base, role: v.role, teamId: v.teamId ?? null, payType: v.payType, rowVer: employee.rowVer }
-      : { ...base, role: v.role, teamId: v.teamId ?? null, rowVer: employee.rowVer };
+    const body = { ...base, role: v.role, teamId: v.teamId ?? null, payType: v.payType, rowVer: employee.rowVer };
     update.mutate(body, { onSuccess: onClose, onError: showFieldErrors });
   };
 
@@ -134,7 +131,7 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
           />
         </Form.Item>
         <Form.Item name="payType" label={MESSAGES.hr.payType} rules={[{ required: true, message: MESSAGES.common.required }]}>
-          <Select options={PAY_OPTIONS} disabled={isManagerEdit} />
+          <Select options={PAY_OPTIONS} />
         </Form.Item>
         {employee && (
           <Form.Item label={MESSAGES.hr.grade} extra={MESSAGES.hr.gradeHint}>

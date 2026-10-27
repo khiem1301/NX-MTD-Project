@@ -120,7 +120,8 @@ public sealed record DefectDto(
     int ResponsibleWorkerId, string ResponsibleWorkerName, string DefectType, int Quantity, string DefectReasonCode,
     string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, string? WorkerObjection, DateTime? ObjectedAt,
     DateTime EditDeadline, string Status, DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
-    int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus);
+    int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus,
+    string SewingTeamName = "");
 
 /// <summary>DefectType nhận "Rework" | "Scrap"; ReasonCode nhận PascalCase ("SkippedStitch", "Other"...).</summary>
 public sealed record CreateDefectDto(

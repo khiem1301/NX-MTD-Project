@@ -194,7 +194,7 @@ public class HrServiceTests
     }
 
     private static ManagerUpdateEmployeeDto ManagerEdit(string role, int? team, string name = "Tên mới") =>
-        new(name, null, null, null, role, team, new DateOnly(2026, 1, 1), null, RowVer);
+        new(name, null, null, null, role, team, "PieceRate", new DateOnly(2026, 1, 1), null, RowVer);
 
     [Fact]
     public async Task ManagerUpdate_ChangesTeamAndRole_RotatesStampAndLogsTeamChange()
@@ -210,9 +210,22 @@ public class HrServiceTests
         result.IsSuccess.Should().BeTrue();
         person.TeamId.Should().Be(5);
         person.FullName.Should().Be("Tên mới");
-        person.PayType.Should().Be(PayTypes.PieceRate);   // Quản đốc không đổi kiểu lương
         person.Account.SecurityStamp.Should().NotBe(oldStamp);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason != null && e.Reason.StartsWith("Chuyển tổ")));
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_CanChangePayType()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", 4) with { PayType = "Daily" }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        person.PayType.Should().Be(PayTypes.Daily);
     }
 
     [Fact]

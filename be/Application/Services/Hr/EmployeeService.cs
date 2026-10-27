@@ -126,6 +126,7 @@ public sealed class EmployeeService : IEmployeeService
         if (oldRole != roleCode) employee.RoleId = await _employees.GetRoleIdAsync(roleCode, ct);
         ApplyProfile(employee, dto.FullName, dto.Gender, dto.DateOfBirth, dto.Phone, dto.StartDate);
         employee.TeamId = dto.TeamId;
+        employee.PayType = CodeText.ToCode(dto.PayType);
         if (dto.AttendanceCode is null) employee.AttendanceCode = null;
         if (identityChanged) RotateStamp(employee);   // token cũ mang vai trò / tổ cũ (D29)
         var reason = teamChanged ? $"Chuyển tổ, hiệu lực {_clock.Today:dd/MM/yyyy}" : null;   // D32

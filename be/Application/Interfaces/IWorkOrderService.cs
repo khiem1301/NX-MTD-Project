@@ -23,10 +23,4 @@ public interface IWorkOrderService
     Task<Result<WorkOrderDto>> CreateReplacementAsync(CreateReplacementWorkOrderDto dto, CancellationToken ct);
     Task<Result<WorkOrderDto>> UpdateAsync(int workOrderId, SaveWorkOrderDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int workOrderId, CancellationToken ct);
-
-    /// <summary>
-    /// Quản đốc đóng lệnh cắt sau khi xem kết quả (swimlane III.2.12): lệnh đang cắt, không còn phiếu bàn giao chờ kho nhận;
-    /// BTP vào kho chưa đủ kế hoạch thì phải nhập lý do.
-    /// </summary>
-    Task<Result> CompleteAsync(int workOrderId, CompleteWorkOrderDto dto, CancellationToken ct);
 }

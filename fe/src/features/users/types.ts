@@ -81,6 +81,7 @@ export type ManagerUpdatePayload = {
   phone?: string | null;
   role: Role;
   teamId?: number | null;
+  payType: PayType;
   startDate: string;
   attendanceCode?: number | null;
   rowVer: string;

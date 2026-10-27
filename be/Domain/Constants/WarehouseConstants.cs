@@ -119,7 +119,6 @@ public static class WorkOrderStatuses
 {
     public const string Open = "OPEN";
     public const string Cutting = "CUTTING";
-    public const string Completed = "COMPLETED";
     public const string Cancelled = "CANCELLED";
 }
 

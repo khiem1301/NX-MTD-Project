@@ -63,6 +63,4 @@ export const cuttingApi = {
   rejectHandover: (role: RolePath, id: number, reason: string) =>
     post<null>(`${API.cutting.cutHandovers(role)}/${id}/reject`, { reason }),
   cancelHandover: (role: RolePath, id: number) => post<null>(`${API.cutting.cutHandovers(role)}/${id}/cancel`),
-  completeWorkOrder: (role: RolePath, id: number, reason?: string) =>
-    post<null>(`${API.cutting.workOrders(role)}/${id}/complete`, { reason: reason?.trim() || null }),
 };
