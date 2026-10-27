@@ -3943,5 +3943,51 @@ WHERE s.StocktakeCode = 'KK-DEMO-002';
 COMMIT TRANSACTION;
 GO
 
+/* =====================================================================================
+   19.4 Đơn DEMO-DH004: chưa có lệnh cắt nào, để Quản đốc tạo lệnh cắt mới trên giao diện
+   ---------------------------------------------------------------------------------
+   3 dòng đơn (Đen S 120, Xanh M 150, Xanh L 100). Vải trong kho (tồn đầu kỳ 19.3) đủ theo định mức:
+   vải Xanh 300 m, vải Trắng 150 m, vải Đen còn lại sau các đơn demo khác.
+   Chạy lại không nhân đôi dữ liệu.
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH004')
+BEGIN
+    PRINT N'Dữ liệu demo 19.4 đã có (DEMO-DH004), bỏ qua.';
+    RETURN;
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.Product WHERE ProductCode = 'DEMO-AO01')
+BEGIN
+    PRINT N'Chưa có dữ liệu demo 19.1 (DEMO-AO01), bỏ qua 19.4.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+        @cus INT = (SELECT TOP 1 CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
+
+INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
+VALUES ('DEMO-DH004', @cus, '2026-10-26', '2026-11-30', 'PARTIAL', 'IN_PRODUCTION', N'Đơn demo chưa có lệnh cắt, để Quản đốc tạo lệnh cắt mới');
+DECLARE @o4 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH004');
+
+INSERT dbo.OrderLine (OrderId, ProductVariantId, ProductId, OrderedQty, CmtUnitPrice)
+SELECT @o4, pv.ProductVariantId, pv.ProductId, v.Qty, 28000
+FROM (VALUES (N'Đen', 'S', 120), (N'Xanh', 'M', 150), (N'Xanh', 'L', 100)) v(Color, SizeCode, Qty)
+JOIN dbo.ProductVariant pv ON pv.ProductId = @p1 AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+
+-- NVL của đơn: số cần ≈ định mức × số đặt (vải Xanh thân, vải Trắng tay, vải Đen, phụ liệu), công ty tự mua
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
+SELECT @o4, m.MaterialId, v.Qty, 0, NULL
+FROM (VALUES ('DEMO-VAI02', 260), ('DEMO-VAI03', 105), ('DEMO-VAI01', 175), ('DEMO-CHI02', 25), ('DEMO-CHI01', 15),
+             ('DEMO-KHOA01', 370), ('DEMO-NHAN01', 370)) v(Code, Qty)
+JOIN dbo.Material m ON m.MaterialCode = v.Code;
+
+COMMIT TRANSACTION;
+GO
+
 PRINT N'NX-MTD: tạo database xong.';
 GO
