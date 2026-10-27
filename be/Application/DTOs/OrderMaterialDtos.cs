@@ -4,6 +4,7 @@ namespace NX_MTD.Application.DTOs;
 /// PurchaseQty, Source là cột tính của DB (chỉ đọc). NormRequiredQty = số cần tính từ định mức của mã hàng × số đặt,
 /// để đối chiếu với RequiredQty người dùng nhập. ReceivedQty = tổng số đạt của các phiếu nhập đã xác nhận.
 /// ExpectedDeliveryCount = số lần khách dự kiến giao (bắt buộc khi khách cấp), ReceivedCount = số phiếu nhập đã xác nhận.
+/// MaterialColor = Material.Color (26/10: màu nằm trong NVL, chọn NVL là đã chọn màu).
 /// </summary>
 public sealed record OrderMaterialDto(
     int OrderMaterialId, int OrderId, int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
@@ -14,7 +15,6 @@ public sealed record OrderMaterialDto(
 public interface IOrderMaterialInput
 {
     int MaterialId { get; }
-    string? MaterialColor { get; }
     decimal RequiredQty { get; }
     decimal CustomerQty { get; }
     short? ExpectedDeliveryCount { get; }
@@ -22,9 +22,9 @@ public interface IOrderMaterialInput
 }
 
 public sealed record CreateOrderMaterialDto(
-    int OrderId, int MaterialId, string? MaterialColor, decimal RequiredQty, decimal CustomerQty,
+    int OrderId, int MaterialId, decimal RequiredQty, decimal CustomerQty,
     short? ExpectedDeliveryCount, string? Note) : IOrderMaterialInput;
 
 public sealed record UpdateOrderMaterialDto(
-    int MaterialId, string? MaterialColor, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
+    int MaterialId, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
     string? Note) : IOrderMaterialInput;

@@ -41,7 +41,7 @@ public class RequestServiceTests
     }
 
     private static CreateRequestDto NewDto(string type) => new(type, "t", "nội dung", null, null, null, null, null, null,
-        new[] { new RequestLineInput(null, null, null, null, "chân vịt", 2) });
+        new[] { new RequestLineInput(null, null, null, "chân vịt", 2) });
 
     private static Request Existing(string type, string status, int createdBy = 7, int? team = null) => new()
     {

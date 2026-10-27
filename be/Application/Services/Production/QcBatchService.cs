@@ -143,9 +143,8 @@ public sealed class QcBatchService : IQcBatchService
     /// <summary>Hàng đang có trên chuyền = BTP tổ đã nhận − Σ QC đạt (trừ đợt đang sửa) − Σ Scrap chưa hủy.</summary>
     private async Task<OnLineQtyDto> ComputeOnLineAsync(int teamId, int orderLineId, int? exceptBatchId, CancellationToken ct)
     {
-        var received = await _uow.Repository<VwTeamPieceHolding>().Query().AsNoTracking()
-            .Where(h => h.SewingTeamId == teamId && h.OrderLineId == orderLineId)
-            .Select(h => (int?)h.ReceivedFromWarehouse).FirstOrDefaultAsync(ct) ?? 0;
+        var received = (int)await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking().ReceivedSets(teamId, orderLineId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
         var finished = await Batches.AsNoTracking()
             .Where(b => b.SewingTeamId == teamId && b.OrderLineId == orderLineId
                         && (exceptBatchId == null || b.QcBatchId != exceptBatchId))

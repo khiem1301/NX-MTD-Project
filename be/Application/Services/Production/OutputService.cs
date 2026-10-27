@@ -281,9 +281,8 @@ public sealed class OutputService : IOutputService
     }
 
     private async Task<int> ReceivedAsync(int teamId, int orderLineId, CancellationToken ct) =>
-        await _uow.Repository<VwTeamPieceHolding>().Query().AsNoTracking()
-            .Where(h => h.SewingTeamId == teamId && h.OrderLineId == orderLineId)
-            .Select(h => (int?)h.ReceivedFromWarehouse).FirstOrDefaultAsync(ct) ?? 0;
+        (int)await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking().ReceivedSets(teamId, orderLineId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
 
     private static Result<OutputSaveResultDto> Invalid(string message) =>
         Result<OutputSaveResultDto>.Failure(ErrorCodes.OutputInvalid, message, ResultKind.Validation);

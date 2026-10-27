@@ -10,8 +10,8 @@ public class FabricRequirementCalculatorTests
     private const int Body = 1, Sleeve = 2;
 
     private static NormLine Norm(int component, decimal perGarment, decimal wastage = 0, int material = 100,
-        string materialColor = "Đỏ", short pieces = 1, int variant = Variant) =>
-        new(component * 1000 + variant, variant, component, pieces, material, materialColor, perGarment, wastage);
+        short pieces = 1, int variant = Variant) =>
+        new(component * 1000 + variant, variant, component, pieces, material, perGarment, wastage);
 
     private static PieceDemand Demand(int qty, int? component = null, int variant = Variant) =>
         new(variant, component is null ? null : component * 1000 + variant, qty);
@@ -35,13 +35,14 @@ public class FabricRequirementCalculatorTests
     [Fact]
     public void Calculate_DifferentMaterialsOrColors_AreKeptApart()
     {
-        var norms = new[] { Norm(Body, 1m), Norm(Body, 2m, material: 101), Norm(Sleeve, 3m, materialColor: "Xanh") };
+        // 26/10: cùng loại vải khác màu là hai NVL (MaterialId khác nhau).
+        var norms = new[] { Norm(Body, 1m), Norm(Body, 2m, material: 101), Norm(Sleeve, 3m, material: 102) };
 
         var needs = FabricRequirementCalculator.Calculate(norms, new[] { Demand(1) });
 
         needs.Should().HaveCount(3);
         needs.Single(n => n.MaterialId == 101).Qty.Should().Be(2m);
-        needs.Single(n => n.MaterialColor == "Xanh").Qty.Should().Be(3m);
+        needs.Single(n => n.MaterialId == 102).Qty.Should().Be(3m);
     }
 
     [Fact]

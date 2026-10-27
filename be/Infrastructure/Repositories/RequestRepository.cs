@@ -66,10 +66,10 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                 CreatedAt = r.CreatedAt, DecidedAt = r.DecidedAt, DecisionNote = r.DecisionNote, ResultNote = r.ResultNote,
                 CompletedAt = r.CompletedAt, ShortageResolution = r.ShortageResolution, RowVer = r.RowVer,
                 Lines = r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new RequestLineDto(
-                    l.RequestLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName, l.MaterialColor,
+                    l.RequestLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Color,
                     l.OrderLineId,
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode + " · " + l.OrderLine.ProductVariant.Color + " · " + l.OrderLine.ProductVariant.SizeCode,
-                    l.ProductComponentMaterialId, l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor),
+                    l.ProductComponentMaterialId, l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.ItemDescription, l.Quantity, l.ReplenishQty)).ToList(),
             })
             .FirstOrDefaultAsync(ct);

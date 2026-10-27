@@ -59,7 +59,7 @@ describe('productSpec', () => {
     const payload = toPayload(rows.components, rows.variants, rows.norms);
 
     expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.qtyPerGarment}`)).toEqual(['Đen-M:1.2', 'Đen-L:1.2']);
-    expect(payload.norms.every((n) => n.componentName === 'Thân' && n.materialColor === 'Đen')).toBe(true);
+    expect(payload.norms.every((n) => n.componentName === 'Thân')).toBe(true);
     expect(payload.variants.map((v) => v.productVariantId)).toEqual([10, 11]);
   });
 

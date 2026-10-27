@@ -10,7 +10,6 @@ public sealed class RequestLineInputValidator : AbstractValidator<RequestLineInp
     public RequestLineInputValidator()
     {
         RuleFor(x => x.Quantity).GreaterThan(0).LessThanOrEqualTo(9_999_999);
-        RuleFor(x => x.MaterialColor).MaximumLength(50);
         RuleFor(x => x.ItemDescription).MaximumLength(300);
     }
 }

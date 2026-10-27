@@ -80,7 +80,7 @@ public class ProductSpecServiceTests
         new(id, name, "Panel", pieces, sort);
 
     private static SaveProductNormDto Norm(string component, string color, string size, decimal qty = 1m, int material = 1) =>
-        new(component, color, size, material, "Đen", qty, 5m, null, null, null);
+        new(component, color, size, material, qty, 5m, null, null, null);
 
     private static SaveProductSpecDto Spec(IReadOnlyList<SaveProductComponentDto> components,
         IReadOnlyList<SaveProductVariantDto> variants, IReadOnlyList<SaveProductNormDto> norms) => new(components, variants, norms);
@@ -197,7 +197,7 @@ public class ProductSpecServiceTests
         _norms.Add(new ProductComponentMaterial
         {
             ProductComponentMaterialId = 1, ProductId = 1, ProductVariantId = 21, ProductVariant = variant, ProductComponentId = 11,
-            ProductComponent = comp, MaterialId = 1, Material = _materials[0], MaterialColor = "Đen", QtyPerGarment = 1.2m, WastagePercent = 5,
+            ProductComponent = comp, MaterialId = 1, Material = _materials[0], QtyPerGarment = 1.2m, WastagePercent = 5,
         });
 
         var result = await Create().GetAsync(1, default);

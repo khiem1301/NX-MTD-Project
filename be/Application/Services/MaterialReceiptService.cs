@@ -73,7 +73,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
-                    l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
                     l.PurchaseOrderLine == null ? null : l.PurchaseOrderLine.UnitPrice, null,
                     l.AcceptedQty)).ToList()))
             .FirstOrDefaultAsync(ct);
@@ -191,7 +191,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                         PurchaseOrderLineId = src.PurchaseOrderLineId,
                         OriginalReceiptLineId = src.MaterialReceiptLineId,
                         MaterialId = src.OrderMaterialId is null ? src.MaterialId : null,
-                        MaterialColor = src.OrderMaterialId is null ? src.MaterialColor : null,
                         AcceptedQty = l.AcceptedQty,
                     };
                 }).ToList(),
@@ -226,8 +225,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             var movements = receipt.MaterialReceiptLines.Where(l => l.AcceptedQty > 0)
                 .Select(l => new StockMovement(
                     l.OrderMaterial is { } om
-                        ? StockKey.Material(om.MaterialId, om.MaterialColor)
-                        : StockKey.Material(l.MaterialId!.Value, l.MaterialColor ?? string.Empty),
+                        ? StockKey.Material(om.MaterialId)
+                        : StockKey.Material(l.MaterialId!.Value),
                     l.AcceptedQty, StockDocTypes.MaterialReceipt, receipt.MaterialReceiptId, l.MaterialReceiptLineId, today))
                 .ToList();
             if (movements.Count > 0)
@@ -390,7 +389,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             request.RequestLines.Add(new RequestLine
             {
                 MaterialId = line.OrderMaterial?.MaterialId ?? line.MaterialId,
-                MaterialColor = line.OrderMaterial?.MaterialColor ?? line.MaterialColor ?? string.Empty,
                 Quantity = qty,
                 MaterialReceiptLineId = line.MaterialReceiptLineId,
             });
@@ -419,8 +417,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
     // ---------- Kiểm tra và dựng dòng phiếu ----------
 
-    private sealed record ResolvedLine(int? OrderMaterialId, int? PurchaseOrderLineId, int? MaterialId,
-        string? MaterialColor, decimal AcceptedQty);
+    private sealed record ResolvedLine(int? OrderMaterialId, int? PurchaseOrderLineId, int? MaterialId, decimal AcceptedQty);
 
     private sealed record ResolvedReceipt(int? OrderId, int? PurchaseOrderId, IReadOnlyList<ResolvedLine> Lines);
 
@@ -478,7 +475,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                 $"{WarehouseMessages.ReceiptExceedsCustomer}: {string.Join("; ", over)}.");
 
         return Result<ResolvedReceipt>.Success(new ResolvedReceipt(order.OrderId, null,
-            dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, null, l.AcceptedQty)).ToList()));
+            dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, l.AcceptedQty)).ToList()));
     }
 
     private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct)
@@ -518,9 +515,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             {
                 var pol = byId[l.PurchaseOrderLineId!.Value];
                 return pol.OrderMaterialId is not null
-                    ? new ResolvedLine(pol.OrderMaterialId, pol.PurchaseOrderLineId, null, null, l.AcceptedQty)
-                    : new ResolvedLine(null, pol.PurchaseOrderLineId, pol.MaterialId, pol.MaterialColor ?? string.Empty,
-                        l.AcceptedQty);
+                    ? new ResolvedLine(pol.OrderMaterialId, pol.PurchaseOrderLineId, null, l.AcceptedQty)
+                    : new ResolvedLine(null, pol.PurchaseOrderLineId, pol.MaterialId, l.AcceptedQty);
             }).ToList()));
     }
 
@@ -535,7 +531,6 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             OrderMaterialId = l.OrderMaterialId,
             PurchaseOrderLineId = l.PurchaseOrderLineId,
             MaterialId = l.MaterialId,
-            MaterialColor = l.MaterialColor,
             AcceptedQty = l.AcceptedQty,
         }).ToList();
     }

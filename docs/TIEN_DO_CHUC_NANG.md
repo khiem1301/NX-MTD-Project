@@ -1,10 +1,12 @@
-# Tiến độ chức năng (cập nhật 26/10/2026)
+# Tiến độ chức năng (cập nhật 27/10/2026)
 
 Nhánh: `feature/ALL-missing-features` (chưa gộp vào `main`, cần mở PR).
-Kiểm tra: 1026 test backend, 84 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API trên database dựng từ script mới.
+Kiểm tra: 1045 test backend, 92 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API (45 bước e2e) trên database dựng từ script 26/10 kèm dữ liệu demo.
 **Chưa có chức năng nào của đợt này được thử trên trình duyệt thật.**
 
 ## Đã làm được
+
+**Bổ sung 27/10 (chuyển sang database bản 26/10):** màu NVL nằm trong NVL (danh mục NVL có Màu; các form bỏ ô màu); giao việc cho công nhân **không còn BTP giao kèm** (chỉ số lần làm công đoạn, trần = số bộ BTP tổ đã nhận); trang "BTP của tổ" hiện đã nhận / QC đạt / hàng hủy / còn trên chuyền; thêm validate (NVL trùng theo màu, NVL của đơn 0/0, dòng phiếu cấp sai loại kho, chi tiết ngoài định mức, giao vượt số chưa giao, xác nhận ngoài 1..số trên phiếu); dữ liệu demo 19.3 (đơn DEMO-DH003 và phiếu đang chờ ở từng bước xác nhận). Xem `DEV-ALL-14`.
 
 **Bổ sung 26/10 (chuyển sang database bản 25/10):** ghi kho qua thủ tục `usp_Stock_Post` (kiểm kê tạo dòng tồn khi cần); cắt bù theo chi tiết × vải; **Giao việc cho công nhân theo công đoạn** (bảng chia việc, giao kèm BTP, trần sản lượng theo công đoạn, tìm theo công đoạn to); màn Công đoạn có công đoạn to, chi tiết và công tắc giao kèm BTP; sửa định mức đang được dùng không còn lỗi (cập nhật tại chỗ). Giao diện mới: thanh bên gom nhóm, header có tìm nhanh và menu người dùng.
 

@@ -40,7 +40,7 @@ public sealed class ProductSpecService : IProductSpecService
             .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductVariant.Color).ThenBy(n => n.ProductVariant.SizeCode)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
                 n.ProductVariant.Color, n.ProductVariant.SizeCode, n.MaterialId, n.Material.MaterialCode,
-                n.Material.MaterialName, n.Material.Unit, n.MaterialColor, n.QtyPerGarment, n.WastagePercent,
+                n.Material.MaterialName, n.Material.Unit, n.Material.Color, n.QtyPerGarment, n.WastagePercent,
                 n.LengthCm, n.WidthCm, n.SpecNote))
             .ToListAsync(ct);
 
@@ -161,7 +161,6 @@ public sealed class ProductSpecService : IProductSpecService
                     };
                     await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
                 }
-                row.MaterialColor = n.MaterialColor?.Trim() ?? string.Empty;
                 row.QtyPerGarment = n.QtyPerGarment;
                 row.WastagePercent = n.WastagePercent;
                 row.LengthCm = n.LengthCm;

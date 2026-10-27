@@ -18,7 +18,7 @@ public class QcBatchServiceTests : ProductionTestBase
     private static readonly TimeOnly At = new(9, 0);
 
     private readonly List<QcBatch> _batches = [];
-    private readonly List<VwTeamPieceHolding> _holdings = [];
+    private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<DefectRecord> _defects = [];
     private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
     private readonly List<OrderLine> _lines = [];
@@ -29,7 +29,7 @@ public class QcBatchServiceTests : ProductionTestBase
     public QcBatchServiceTests()
     {
         SetupQueryable(_batches);
-        SetupQueryable(_holdings);
+        SetupQueryable(_issueLines);
         SetupQueryable(_defects);
         SetupQueryable(_teams);
         SetupQueryable(_lines);
@@ -50,7 +50,12 @@ public class QcBatchServiceTests : ProductionTestBase
             OrderLineId = LineId, OrderId = 1, ProductId = 1, ProductVariant = TestVariant.Make(1, "MH001", "Đen", "M"),
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001", Status = OrderStatuses.InProduction },
         });
-        _holdings.Add(new VwTeamPieceHolding { SewingTeamId = TeamId, OrderLineId = LineId, ReceivedFromWarehouse = 1000 });
+        // Tổ đã nhận 1000 bộ BTP của dòng đơn (phiếu cấp BTP đã nhận, dòng bộ đủ).
+        _issueLines.Add(new MaterialIssueLine
+        {
+            OrderLineId = LineId, IssuedQty = 1000, ConfirmedQty = 1000,
+            MaterialIssue = new MaterialIssue { WarehouseType = WarehouseTypes.SemiFinished, Status = IssueStatuses.Received, ReceivingTeamId = TeamId },
+        });
         _sut = new QcBatchService(Uow, Guard(), User, Audit, Clock);
     }
 

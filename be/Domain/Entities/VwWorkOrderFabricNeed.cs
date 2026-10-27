@@ -9,7 +9,5 @@ public partial class VwWorkOrderFabricNeed
 
     public int MaterialId { get; set; }
 
-    public string MaterialColor { get; set; } = null!;
-
     public decimal? NeedQty { get; set; }
 }

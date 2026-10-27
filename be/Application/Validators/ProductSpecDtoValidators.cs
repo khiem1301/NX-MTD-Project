@@ -27,7 +27,6 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
             n.RuleFor(i => i.Color).NotEmpty();
             n.RuleFor(i => i.SizeCode).NotEmpty();
             n.RuleFor(i => i.MaterialId).GreaterThan(0);
-            n.RuleFor(i => i.MaterialColor).MaximumLength(50);
             n.RuleFor(i => i.QtyPerGarment).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive);
             n.RuleFor(i => i.WastagePercent).InclusiveBetween(0, 100);
             n.RuleFor(i => i.LengthCm).GreaterThan(0).When(i => i.LengthCm is not null);

@@ -24,8 +24,6 @@ public partial class PurchaseOrderLine
 
     public int? MaterialId { get; set; }
 
-    public string? MaterialColor { get; set; }
-
     public virtual Material? Material { get; set; }
 
     public virtual ICollection<MaterialReceiptLine> MaterialReceiptLines { get; set; } = new List<MaterialReceiptLine>();

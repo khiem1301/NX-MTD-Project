@@ -73,7 +73,6 @@ export type RequestDetail = {
 
 export type RequestLineInput = {
   materialId?: number | null;
-  materialColor?: string | null;
   orderLineId?: number | null;
   productComponentMaterialId?: number | null;
   itemDescription?: string | null;

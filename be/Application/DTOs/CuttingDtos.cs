@@ -7,6 +7,7 @@ public sealed record CuttingLayLineDto(
     int CuttingLayLineId, int OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string Color, string SizeCode,
     int RatioValue, int CalculatedQty, int ActualQty, string? AdjustReason);
 
+/// <param name="FabricColor">Màu của vải (Material.Color, 26/10); '' = không phân màu.</param>
 public sealed record CuttingLayDto(
     int CuttingLayId, int WorkOrderId, string WorkOrderCode, DateOnly WorkDate, string ShiftCode, int LaySequence,
     int FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, string SizeRatio, string? Note,
@@ -16,7 +17,7 @@ public sealed record CuttingLayDto(
 public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentMaterialId, int RatioValue, int? ActualQty, string? AdjustReason);
 
 public sealed record SaveCuttingLayDto(
-    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, string FabricColor, int PlyCount,
+    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, int PlyCount,
     string? Note, IReadOnlyList<SaveLayLineDto> Lines);
 
 public sealed record CuttingLayQuery : PageQuery

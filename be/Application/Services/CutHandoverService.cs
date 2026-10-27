@@ -54,7 +54,7 @@ public sealed class CutHandoverService : ICutHandoverService
                 h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName, h.ConfirmedAt, h.RejectReason,
                 h.CutHandoverLines.OrderBy(l => l.CutHandoverLineId).Select(l => new CutHandoverLineDto(
                     l.CutHandoverLineId, l.OrderLineId, l.ProductComponentMaterialId,
-                    l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor),
+                    l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
                     l.OrderLine.ProductVariant.SizeCode, l.HandedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);

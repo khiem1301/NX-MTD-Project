@@ -147,7 +147,7 @@ export function WorkOrderDetailDrawer({
             {LABELS.fabrics}
           </Typography.Title>
           <Table<FabricRequirement>
-            rowKey={(f) => `${f.materialId}-${f.materialColor}`}
+            rowKey="materialId"
             size="small"
             pagination={false}
             dataSource={w.fabrics}
@@ -155,7 +155,7 @@ export function WorkOrderDetailDrawer({
               {
                 title: LABELS.material,
                 key: 'm',
-                render: (_, f) => `${f.materialCode} ${f.materialName} (${f.materialColor})`,
+                render: (_, f) => `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
               },
               {
                 title: LABELS.requiredQty,

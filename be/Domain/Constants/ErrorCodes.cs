@@ -133,6 +133,7 @@ public static class ErrorCodes
     public const string WarehouseInvalidRequest = "WAREHOUSE_INVALID_REQUEST";
     public const string WarehouseMaterialDuplicate = "WAREHOUSE_MATERIAL_DUPLICATE";
     public const string WarehouseMaterialInactive = "WAREHOUSE_MATERIAL_INACTIVE";
+    public const string WarehouseMaterialInUse = "WAREHOUSE_MATERIAL_IN_USE";
     public const string WarehouseOrderMaterialDuplicate = "WAREHOUSE_ORDER_MATERIAL_DUPLICATE";
     public const string WarehouseOrderMaterialInUse = "WAREHOUSE_ORDER_MATERIAL_IN_USE";
     public const string CuttingFabricShortage = "CUTTING_FABRIC_SHORTAGE";
@@ -150,7 +151,6 @@ public static class ErrorCodes
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
     public const string AllocationExceedsRequired = "ALLOCATION_EXCEEDS_REQUIRED";
-    public const string PieceHandoverExceedsHolding = "PIECE_HANDOVER_EXCEEDS_HOLDING";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
     public const string ShortageExceeded = "SHORTAGE_EXCEEDED";

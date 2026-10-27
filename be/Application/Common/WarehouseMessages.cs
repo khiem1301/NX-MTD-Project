@@ -17,7 +17,7 @@ public static class WarehouseMessages
     public const string QtyMustNotBeNegative = "Số lượng không được âm.";
 
     public const string MaterialCodeDuplicate = "Mã NVL đã tồn tại.";
-    public const string MaterialNameDuplicate = "Tên NVL đã tồn tại trong cùng loại.";
+    public const string MaterialNameDuplicate = "Đã có NVL cùng tên, cùng loại và cùng màu.";
     public const string MaterialCategoryInvalid = "Nhóm NVL không khớp với loại.";
     public const string MaterialInactive = "NVL đã ngừng sử dụng.";
     public const string MaterialStatusChanged = "Đã cập nhật trạng thái NVL.";
@@ -70,7 +70,14 @@ public static class WarehouseMessages
     public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, đã xử lý, khác tổ hoặc khác đơn hàng). Cấp BTP cho tổ may bắt buộc có đơn Xin BTP.";
     public const string WorkOrderRequiredForMaterial = "Cấp NVL cho tổ cắt phải theo lệnh cắt.";
     public const string WorkOrderNotIssuable = "Lệnh cắt không còn mở để cấp vải.";
-    public const string MaterialNotInWorkOrder = "Vải không có trong định mức của lệnh cắt.";
+    public const string MaterialNotInWorkOrder = "Vải (đã gồm màu) không có trong định mức chi tiết vải của các dòng đơn trên bàn cắt.";
+    public const string MaterialColorInUse = "NVL đã được dùng (định mức, NVL của đơn, chứng từ hoặc tồn kho) nên không đổi màu được; hãy tạo NVL mới cho màu khác.";
+    public const string IssueLineMaterialOnly = "Phiếu cấp NVL chỉ gồm dòng NVL (chọn NVL, không chọn dòng đơn / chi tiết).";
+    public const string IssueLinePieceOnly = "Phiếu cấp BTP chỉ gồm dòng BTP (chọn dòng đơn, không chọn NVL).";
+    public const string ComponentNotInVariantNorm = "Chi tiết phải là chi tiết vải trong định mức của đúng màu × size của dòng đơn.";
+    public const string FabricRequired = "Vui lòng chọn vải của bàn cắt.";
+    public const string OrderMaterialDuplicateOf = "Đơn hàng đã có NVL {0}; hãy sửa dòng đó thay vì thêm mới.";
+    public const string OrderMaterialQtyRequired = "Phải nhập số cần hoặc số khách cấp lớn hơn 0.";
 
     public const string LayQtyExceedsPlan = "Số cắt vượt số kế hoạch + % dư cho phép";
     public const string LayQtyOverPlanWarning = "Đã lưu. Lưu ý: số cắt vượt số kế hoạch (vẫn trong % dư cho phép).";
@@ -101,18 +108,19 @@ public static class WarehouseMessages
     public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
-    public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải và màu vải của bàn cắt.";
+    public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải (đã gồm màu) của bàn cắt.";
     public const string OperationRequired = "Vui lòng chọn công đoạn.";
-    public const string OperationNoSemiFinished = "Công đoạn này không dùng BTP nên không giao kèm BTP.";
-    public const string PieceExceedsAllocationQty = "Số BTP kèm không được lớn hơn số lần giao.";
+    public const string OperationNotAllocatable = "Chỉ giao việc công đoạn may đang dùng của mã hàng.";
     public const string AllocationExceedsRequired = "Số lần giao vượt số còn cần giao của công đoạn";
-    public const string PieceHandoverExceedsHolding = "Số giao vượt số BTP tổ đang giữ";
-    public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số BTP công nhân đang giữ";
-    public const string PieceConfirmedExceedsQty = "Số xác nhận không được lớn hơn số ghi trên phiếu.";
+    public const string AllocationNoPiecesReceived = "Tổ chưa nhận BTP (bộ đủ) của màu × size này từ kho nên chưa giao việc được.";
+    public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số lần công nhân còn giữ (đã trừ phần chờ thu hồi và sản lượng đã báo)";
+    public const string AllocationConfirmRange = "Số xác nhận phải từ 1 đến {0} (số ghi trên phiếu); không nhận gì thì bấm Từ chối.";
+    public const string AllocationConfirmZero = "Số xác nhận phải lớn hơn 0; không nhận gì thì bấm Từ chối.";
+    public const string RetrievalReasonNotAllowed = "Phiếu giao việc không có lý do thu hồi.";
     public const string PieceMovementCreated = "Đã ghi phiếu, chờ công nhân xác nhận.";
-    public const string PieceMovementConfirmed = "Đã xác nhận BTP.";
-    public const string PieceMovementRejected = "Đã từ chối phiếu BTP.";
-    public const string MovementTypeInvalid = "Loại phiếu phải là giao hoặc thu hồi BTP.";
+    public const string PieceMovementConfirmed = "Đã xác nhận phiếu giao việc.";
+    public const string PieceMovementRejected = "Đã từ chối phiếu giao việc.";
+    public const string MovementTypeInvalid = "Loại phiếu phải là giao việc hoặc thu hồi việc.";
     public const string WorkerRequired = "Vui lòng chọn công nhân.";
     public const string RetrievalReasonRequired = "Vui lòng chọn lý do thu hồi.";
     public const string ReplacementRequestNotApproved = "Chỉ lập lệnh cắt bù cho đơn cắt bù đã được duyệt.";

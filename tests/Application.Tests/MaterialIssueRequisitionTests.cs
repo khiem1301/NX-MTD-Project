@@ -44,7 +44,7 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     }
 
     private static CreateMaterialIssueDto Dto(int? requestId) => new(WarehouseTypes.SemiFinished, null, OrderId, SewingTeamId,
-        requestId, new DateOnly(2026, 10, 21), [new CreateIssueLineDto(null, null, LineId, null, 50)]);
+        requestId, new DateOnly(2026, 10, 21), [new CreateIssueLineDto(null, LineId, null, 50)]);
 
     private void GivenRequest(string status, int createdByTeamId = SewingTeamId, string type = RequestTypes.SemiFinishedRequisition) =>
         _requestRows.Add(new Request { RequestId = RequestId, RequestTypeCode = type, Status = status, CreatedByTeamId = createdByTeamId });
