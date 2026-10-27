@@ -16,6 +16,7 @@ public sealed class CreateMaterialDtoValidator : AbstractValidator<CreateMateria
             .Must((dto, c) => MaterialTypes.IsValidCategory(dto.MaterialType, c))
             .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
         RuleFor(x => x.Unit).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Color).MaximumLength(50);
     }
 }
 
@@ -29,6 +30,7 @@ public sealed class UpdateMaterialDtoValidator : AbstractValidator<UpdateMateria
             .Must((dto, c) => MaterialTypes.IsValidCategory(dto.MaterialType, c))
             .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
         RuleFor(x => x.Unit).NotEmpty().MaximumLength(20);
+        RuleFor(x => x.Color).MaximumLength(50);
     }
 }
 

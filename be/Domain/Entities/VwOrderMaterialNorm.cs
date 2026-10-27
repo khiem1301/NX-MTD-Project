@@ -9,8 +9,6 @@ public partial class VwOrderMaterialNorm
 
     public int? MaterialId { get; set; }
 
-    public string? MaterialColor { get; set; }
-
     public int? OrderMaterialId { get; set; }
 
     public decimal? RequiredQty { get; set; }

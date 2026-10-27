@@ -9,8 +9,6 @@ public partial class VwStockBalance
 
     public int? MaterialId { get; set; }
 
-    public string? MaterialColor { get; set; }
-
     public int? OrderLineId { get; set; }
 
     public int? ProductComponentMaterialId { get; set; }

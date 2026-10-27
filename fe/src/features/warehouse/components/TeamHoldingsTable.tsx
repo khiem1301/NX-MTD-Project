@@ -13,18 +13,18 @@ const columns: TableColumnsType<TeamPieceHolding> = [
   { title: LABELS.product, dataIndex: 'productCode' },
   { title: LABELS.garmentColor, dataIndex: 'color' },
   { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
-  { title: LABELS.receivedFromWarehouse, dataIndex: 'receivedFromWarehouse', align: 'right' },
-  { title: LABELS.handedToWorkers, dataIndex: 'handedToWorkers', align: 'right' },
-  { title: LABELS.retrievedFromWorkers, dataIndex: 'retrievedFromWorkers', align: 'right' },
+  { title: LABELS.pieceReceivedQty, dataIndex: 'receivedQty', align: 'right' },
+  { title: LABELS.finishedQty, dataIndex: 'finishedQty', align: 'right' },
+  { title: LABELS.scrapQty, dataIndex: 'scrapQty', align: 'right' },
   {
-    title: LABELS.heldByTeam,
-    dataIndex: 'heldByTeam',
+    title: LABELS.onLineQty,
+    dataIndex: 'onLineQty',
     align: 'right',
     render: (v: number) => <b>{v}</b>,
   },
 ];
 
-/** BTP tổ may đang giữ theo dòng đơn (Thủ kho / Quản đốc xem mọi tổ, tổ trưởng may xem tổ mình). */
+/** BTP tổ may theo dòng đơn: số bộ đã nhận từ kho, QC đạt, hàng hủy, còn trên chuyền (Thủ kho / Quản đốc xem mọi tổ, tổ trưởng may xem tổ mình). */
 export function TeamHoldingsTable() {
   const [orderId, setOrderId] = useState<number>();
   const holdings = useTeamHoldings(orderId);

@@ -14,6 +14,8 @@ public partial class Material
 
     public string MaterialName { get; set; } = null!;
 
+    public string Color { get; set; } = null!;
+
     public string? MaterialType { get; set; }
 
     public string Category { get; set; } = null!;

@@ -60,7 +60,7 @@ public class IncomingMaterialTests
     {
         var om = new OrderMaterial
         {
-            OrderMaterialId = id, OrderId = o.OrderId, Order = o, MaterialId = 1, Material = Mat(), MaterialColor = "Đen",
+            OrderMaterialId = id, OrderId = o.OrderId, Order = o, MaterialId = 1, Material = Mat(),
             CustomerQty = customerQty, PurchaseQty = purchaseQty, ExpectedDeliveryCount = deliveries,
         };
         o.OrderMaterials.Add(om);
@@ -179,7 +179,7 @@ public class IncomingMaterialTests
         var line = new PurchaseOrderLine
         {
             PurchaseOrderLineId = id, PurchaseOrderId = poId, OrderedQty = ordered, NotReplenishedQty = notReplenished,
-            Material = Mat("KHOA", "Khóa kéo", "cái"), MaterialColor = "Đen",
+            Material = Mat("KHOA", "Khóa kéo", "cái"),
             PurchaseOrder = new PurchaseOrder
             {
                 PurchaseOrderId = poId, PoCode = poCode, GoodsStatus = goodsStatus, ExpectedDeliveryCount = 2,
@@ -232,7 +232,7 @@ public class IncomingMaterialTests
         var order = Order(1, "DH001");
 
         var result = await OrderMaterials().CreateAsync(
-            new CreateOrderMaterialDto(1, 1, "Đen", 500, 500, (short)3, null), default);
+            new CreateOrderMaterialDto(1, 1, 500, 500, (short)3, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper,
@@ -246,7 +246,7 @@ public class IncomingMaterialTests
     {
         Order(1, "DH001");
 
-        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, "Đen", 500, 0, null, null), default);
+        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, 500, 0, null, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.DidNotReceive().NotifyRoleAsync(Arg.Any<string>(), Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());

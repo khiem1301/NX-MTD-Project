@@ -53,12 +53,12 @@ public sealed class StocktakeService : IStocktakeService
                 s.StocktakeLines.OrderBy(l => l.StocktakeLineId).Select(l => new StocktakeLineDto(l.StocktakeLineId, l.StockBalance.MaterialId,
                     l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialCode,
                     l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialName,
-                    l.StockBalance.Material == null ? null : l.StockBalance.Material.Unit, l.StockBalance.MaterialColor,
+                    l.StockBalance.Material == null ? null : l.StockBalance.Material.Unit, l.StockBalance.Material == null ? null : l.StockBalance.Material.Color,
                     l.StockBalance.OrderLineId,
                     l.StockBalance.ProductComponentMaterialId,
                     l.StockBalance.ProductComponentMaterial == null ? null : l.StockBalance.ProductComponentMaterial.ProductComponent.ComponentName
                         + " – " + l.StockBalance.ProductComponentMaterial.Material.MaterialName
-                        + (l.StockBalance.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.StockBalance.ProductComponentMaterial.MaterialColor),
+                        + (l.StockBalance.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.StockBalance.ProductComponentMaterial.Material.Color),
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.Order.OrderCode,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Product.ProductCode,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Color,
@@ -165,7 +165,7 @@ public sealed class StocktakeService : IStocktakeService
     // ---------- Nội bộ ----------
 
     private static StockKey KeyOf(StockBalance b) =>
-        new(b.WarehouseType, b.MaterialId, b.MaterialColor, b.OrderLineId, b.ProductComponentMaterialId);
+        new(b.WarehouseType, b.MaterialId, b.OrderLineId, b.ProductComponentMaterialId);
 
     private async Task NotifyApproversAsync(string code, CancellationToken ct)
     {
@@ -184,10 +184,13 @@ public sealed class StocktakeService : IStocktakeService
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
 
         var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
-        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}|{l.MaterialColor?.Trim()}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();
+        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();
         if (keys.Distinct().Count() != keys.Count)
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
         if (dto.Lines.Any(l => isMaterial ? l.MaterialId is null || l.OrderLineId is not null : l.OrderLineId is null || l.MaterialId is not null))
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
+        // CK_SB_Component: chỉ kho BTP có chi tiết lẻ.
+        if (dto.WarehouseType != WarehouseTypes.SemiFinished && dto.Lines.Any(l => l.ProductComponentMaterialId is not null))
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
 
         if (isMaterial)
@@ -199,8 +202,21 @@ public sealed class StocktakeService : IStocktakeService
         else
         {
             var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
-            var count = await _uow.Repository<OrderLine>().Query().CountAsync(l => ids.Contains(l.OrderLineId), ct);
-            if (count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
+            var variants = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
+                .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
+            if (variants.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
+            // THROW 50041: chi tiết lẻ phải là dòng định mức vải của đúng màu × size của dòng đơn.
+            var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
+            if (normIds.Count > 0)
+            {
+                var norms = await _uow.Repository<ProductComponentMaterial>().Query()
+                    .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                                && p.Material.MaterialType == MaterialTypes.Fabric)
+                    .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
+                if (dto.Lines.Any(l => l.ProductComponentMaterialId is { } pcm
+                                       && (!norms.TryGetValue(pcm, out var v) || v != variants[l.OrderLineId!.Value])))
+                    return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm);
+            }
         }
 
         var lines = new List<StocktakeLine>(dto.Lines.Count);
@@ -209,7 +225,7 @@ public sealed class StocktakeService : IStocktakeService
             if (l.CountedQty is < 0)
                 return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustNotBeNegative);
             var key = isMaterial
-                ? StockKey.Material(l.MaterialId!.Value, l.MaterialColor?.Trim() ?? string.Empty)
+                ? StockKey.Material(l.MaterialId!.Value)
                 : dto.WarehouseType == WarehouseTypes.SemiFinished ? StockKey.SemiFinished(l.OrderLineId!.Value, l.ProductComponentMaterialId) : StockKey.Finished(l.OrderLineId!.Value);
             lines.Add(new StocktakeLine
             {

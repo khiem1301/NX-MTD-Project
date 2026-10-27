@@ -46,7 +46,6 @@ export type SaveStocktakePayload = {
   stocktakeDate: string;
   lines: {
     materialId?: number;
-    materialColor?: string;
     orderLineId?: number;
     productComponentMaterialId?: number | null;
     countedQty?: number | null;

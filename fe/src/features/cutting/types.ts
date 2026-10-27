@@ -74,7 +74,6 @@ export type SaveCuttingLayPayload = {
   workDate: string;
   shiftCode: string;
   fabricMaterialId?: number;
-  fabricColor: string;
   plyCount: number;
   note?: string;
   lines: {

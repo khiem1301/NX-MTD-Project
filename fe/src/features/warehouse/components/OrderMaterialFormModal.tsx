@@ -52,12 +52,12 @@ export function OrderMaterialFormModal({
 
   const materialOptions = (materials.data ?? []).map((m) => ({
     value: m.materialId,
-    label: `${m.materialCode} - ${m.materialName} (${m.unit})`,
+    label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
   }));
   if (orderMaterial && !materialOptions.some((o) => o.value === orderMaterial.materialId)) {
     materialOptions.push({
       value: orderMaterial.materialId,
-      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}`,
+      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
     });
   }
   const required = [{ required: true, message: MESSAGES.common.required }];
@@ -98,13 +98,19 @@ export function OrderMaterialFormModal({
               )}
             />
           </Form.Item>
-          <Form.Item name="materialColor" label={LABELS.color}>
-            <Input maxLength={50} style={{ width: 140 }} />
-          </Form.Item>
           <Form.Item
             name="requiredQty"
             label={LABELS.requiredQty}
-            rules={required}
+            dependencies={["customerQty"]}
+            rules={[
+              ...required,
+              {
+                validator: async (_rule, value?: number) => {
+                  const customer = form.getFieldValue("customerQty") as number | undefined;
+                  if ((value ?? 0) <= 0 && (customer ?? 0) <= 0) throw new Error(LABELS.qtyRequiredOrCustomer);
+                },
+              },
+            ]}
             initialValue={0}
           >
             <InputNumber min={0} style={{ width: 130 }} />

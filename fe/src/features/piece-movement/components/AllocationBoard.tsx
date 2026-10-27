@@ -11,7 +11,7 @@ import type { OperationProgress, WorkerAllocationLine } from '../types';
 import { MovementFormModal, type AllocationTarget } from './MovementFormModal';
 
 /**
- * Bảng chia việc của tổ may: mỗi dòng là một công đoạn × màu × size với số cần làm, đã giao, chờ xác nhận và còn chưa giao.
+ * Bảng chia việc của tổ may: mỗi dòng là một công đoạn × màu × size với số cần làm (= số bộ BTP tổ đã nhận), đã giao, chờ xác nhận và còn chưa giao.
  * Bấm Giao để chia cho công nhân; mở rộng dòng để thấy ai đang giữ việc và thu hồi. Tìm được theo tên công đoạn to.
  */
 export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
@@ -21,10 +21,6 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
   const board = useBoard(orderId);
 
   const data = board.data;
-  const pieceByLine = useMemo(
-    () => new Map((data?.team ?? []).map((t) => [t.orderLineId, t.availablePieceQty])),
-    [data?.team],
-  );
   const workersByRow = useMemo(() => {
     const map = new Map<string, WorkerAllocationLine[]>();
     for (const w of data?.workers ?? []) {
@@ -57,9 +53,7 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
           <span>{`${o.operationCode} - ${o.operationName}`}</span>
           <Space size={4}>
             {o.groupName && <Tag color="geekblue">{o.groupName}</Tag>}
-            <Tag color={o.usesSemiFinished ? 'blue' : 'default'}>
-              {o.usesSemiFinished ? PM_LABELS.withPieces : PM_LABELS.withoutPieces}
-            </Tag>
+            {o.usesSemiFinished && <Tag color="blue">{PM_LABELS.usesPieces}</Tag>}
           </Space>
         </Space>
       ),
@@ -83,13 +77,7 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
             type="primary"
             size="small"
             disabled={o.unallocatedQty <= 0}
-            onClick={() =>
-              setTarget({
-                kind: 'HANDOVER',
-                progress: o,
-                pieceLimit: pieceByLine.get(o.orderLineId) ?? 0,
-              })
-            }
+            onClick={() => setTarget({ kind: 'HANDOVER', progress: o })}
           >
             {PM_LABELS.giveAction}
           </Button>
@@ -116,23 +104,6 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
         />
       </Space>
       <QueryError error={board.error} onRetry={() => void board.refetch()} />
-      {orderId !== undefined && data && data.team.length > 0 && (
-        <Alert
-          type="info"
-          showIcon
-          message={PM_LABELS.teamPieces}
-          description={
-            <Space direction="vertical" size={2}>
-              {data.team.map((t) => (
-                <span key={t.orderLineId}>
-                  {`${t.productCode} ${t.color}-${t.sizeCode}: ${PM_LABELS.held} ${t.heldByTeam}, ${PM_LABELS.pending.toLowerCase()} ${t.pendingPieceQty}, ${PM_LABELS.available.toLowerCase()} ${t.availablePieceQty}`}
-                </span>
-              ))}
-              <Typography.Text type="secondary">{PM_LABELS.teamPiecesHint}</Typography.Text>
-            </Space>
-          }
-        />
-      )}
       {orderId !== undefined && !board.isLoading && data && data.operations.length === 0 && (
         <Alert type="warning" showIcon message={PM_LABELS.noBoard} />
       )}

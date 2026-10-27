@@ -22,7 +22,7 @@ public class OutputServiceTests : ProductionTestBase
     private readonly List<Operation> _operations = [];
     private readonly List<Employee> _employees = [];
     private readonly List<OperationAssignment> _assignments = [];
-    private readonly List<VwTeamPieceHolding> _holdings = [];
+    private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<VwWorkerOutputCap> _caps = [];
     private readonly List<DailyTimesheet> _timesheets = [];
     private readonly List<AccountingPeriod> _periods = [];
@@ -36,7 +36,7 @@ public class OutputServiceTests : ProductionTestBase
         SetupQueryable(_operations);
         SetupQueryable(_employees);
         SetupQueryable(_assignments);
-        SetupQueryable(_holdings);
+        SetupQueryable(_issueLines);
         SetupQueryable(_caps);
         SetupQueryable(_timesheets);
         SetupQueryable(_periods);
@@ -56,7 +56,12 @@ public class OutputServiceTests : ProductionTestBase
             OrderLineId = LineId, OrderId = 1, ProductId = 1, ProductVariant = TestVariant.Make(1),
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001", Status = OrderStatuses.InProduction },
         });
-        _holdings.Add(new VwTeamPieceHolding { SewingTeamId = TeamId, OrderLineId = LineId, ReceivedFromWarehouse = 1000 });
+        // Tổ đã nhận 1000 bộ BTP của dòng đơn (phiếu cấp BTP đã nhận, dòng bộ đủ).
+        _issueLines.Add(new MaterialIssueLine
+        {
+            OrderLineId = LineId, IssuedQty = 1000, ConfirmedQty = 1000,
+            MaterialIssue = new MaterialIssue { WarehouseType = WarehouseTypes.SemiFinished, Status = IssueStatuses.Received, ReceivingTeamId = TeamId },
+        });
         AddOperation(1, "OP10");
         AddOperation(2, "OP20");
         AddWorker(7);

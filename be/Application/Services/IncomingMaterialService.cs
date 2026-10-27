@@ -32,7 +32,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(om => new
             {
                 om.OrderMaterialId, om.OrderId, om.Order.OrderCode, om.Material.MaterialCode, om.Material.MaterialName,
-                om.MaterialColor, om.Material.Unit, om.CustomerQty, om.ExpectedDeliveryCount,
+                MaterialColor = om.Material.Color, om.Material.Unit, om.CustomerQty, om.ExpectedDeliveryCount,
             })
             .ToListAsync(ct);
         if (rows.Count == 0) return [];
@@ -73,7 +73,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 MaterialCode = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                 MaterialName = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                 Unit = l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
-                MaterialColor = l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
+                MaterialColor = l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
             })
             .ToListAsync(ct);
         if (rows.Count == 0) return [];

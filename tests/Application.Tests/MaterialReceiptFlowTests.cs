@@ -73,7 +73,7 @@ public class MaterialReceiptFlowTests
         short? expectedDeliveries = null)
     {
         var order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction, MaterialStatus = OrderMaterialStatuses.Awaiting };
-        var om = new OrderMaterial { OrderMaterialId = 21, OrderId = 7, MaterialId = 1, Material = Fabric, MaterialColor = "Đen", RequiredQty = required };
+        var om = new OrderMaterial { OrderMaterialId = 21, OrderId = 7, MaterialId = 1, Material = Fabric, RequiredQty = required };
         var po = new PurchaseOrder { PurchaseOrderId = 5, PoCode = "DM-001", OrderId = 7, GoodsStatus = goodsStatus, ExpectedDeliveryCount = expectedDeliveries };
         var line = new PurchaseOrderLine { PurchaseOrderLineId = 11, PurchaseOrderId = 5, PurchaseOrder = po, OrderMaterialId = 21, OrderMaterial = om, OrderedQty = ordered };
         po.PurchaseOrderLines.Add(line);
@@ -292,7 +292,6 @@ public class MaterialReceiptFlowTests
         var requestLine = staged.RequestLines.Should().ContainSingle().Subject;
         requestLine.Quantity.Should().Be(20);
         requestLine.MaterialId.Should().Be(1);
-        requestLine.MaterialColor.Should().Be("Đen");
         requestLine.MaterialReceiptLineId.Should().Be(501);
     }
 
@@ -350,7 +349,7 @@ public class MaterialReceiptFlowTests
 
         await _stock.Received(1).PostAsync(
             Arg.Is<IReadOnlyList<StockMovement>>(m => m.Count == 1 && m[0].QtyChange == 80
-                && m[0].Key.MaterialId == 1 && m[0].Key.MaterialColor == "Đen"),
+                && m[0].Key.MaterialId == 1),
             Arg.Any<CancellationToken>());
     }
 
@@ -403,7 +402,7 @@ public class MaterialReceiptFlowTests
         };
         var line = new RequestLine
         {
-            RequestLineId = 901, RequestId = 900, Request = request, MaterialId = 1, Material = Fabric, MaterialColor = "Đen",
+            RequestLineId = 901, RequestId = 900, Request = request, MaterialId = 1, Material = Fabric,
             Quantity = qty, MaterialReceiptLineId = receipt.MaterialReceiptLines.First().MaterialReceiptLineId,
             MaterialReceiptLine = receipt.MaterialReceiptLines.First(),
         };

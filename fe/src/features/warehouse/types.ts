@@ -9,6 +9,8 @@ export type Material = {
   materialType: string;
   category: string;
   unit: string;
+  /** Màu NVL (26/10); '' = không phân màu. Cùng loại vải khác màu là hai NVL. */
+  color: string;
   status: string;
   createdAt: string;
 };
@@ -21,6 +23,7 @@ export type SaveMaterialPayload = {
   materialType: string;
   category: string;
   unit: string;
+  color?: string;
 };
 
 export type OrderMaterial = {
@@ -45,10 +48,10 @@ export type OrderMaterial = {
   receivedQty: number;
 };
 
+/** NVL đã gồm màu (26/10) nên không nhập màu riêng. */
 export type SaveOrderMaterialPayload = {
   orderId?: number;
   materialId: number;
-  materialColor?: string;
   requiredQty: number;
   customerQty: number;
   expectedDeliveryCount?: number | null;
@@ -142,11 +145,11 @@ export type CreatePurchaseOrderPayload = {
   orderId?: number;
   note?: string;
   lines: {
-    /** Chọn NVL có sẵn; hoặc nhập NVL mới bằng newMaterialName + newMaterialUnit. */
+    /** Chọn NVL có sẵn (đã gồm màu); hoặc nhập NVL mới bằng newMaterialName + newMaterialUnit + newMaterialColor. */
     materialId?: number;
     newMaterialName?: string;
     newMaterialUnit?: string;
-    materialColor?: string;
+    newMaterialColor?: string;
     orderedQty: number;
     unitPrice: number;
   }[];
@@ -279,7 +282,7 @@ export type CreateIssuePayload = {
   receivingTeamId?: number;
   requestId?: number;
   issueDate: string;
-  lines: { materialId?: number; materialColor?: string; orderLineId?: number; productComponentMaterialId?: number | null; issuedQty: number }[];
+  lines: { materialId?: number; orderLineId?: number; productComponentMaterialId?: number | null; issuedQty: number }[];
 };
 
 export type ConfirmIssuePayload = {
@@ -319,7 +322,6 @@ export type StockBalanceQuery = PageParams & {
 export type StockCardQuery = {
   warehouseType: string;
   materialId?: number;
-  materialColor?: string;
   orderLineId?: number;
   productComponentMaterialId?: number | null;
 };
@@ -335,6 +337,7 @@ export type StockCardEntry = {
   balanceAfter: number;
 };
 
+/** BTP tổ may theo dòng đơn (26/10): số bộ đã nhận từ kho, đã QC đạt, hàng hủy, còn trên chuyền. */
 export type TeamPieceHolding = {
   sewingTeamId: number;
   teamName: string;
@@ -343,10 +346,10 @@ export type TeamPieceHolding = {
   productCode: string;
   color: string;
   sizeCode: string;
-  receivedFromWarehouse: number;
-  handedToWorkers: number;
-  retrievedFromWorkers: number;
-  heldByTeam: number;
+  receivedQty: number;
+  finishedQty: number;
+  scrapQty: number;
+  onLineQty: number;
 };
 
 /** Đơn đang chạy mà NVL chưa về đủ (materialLines = 0: chưa ai khai báo "NVL của đơn"). */

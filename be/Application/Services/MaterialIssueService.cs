@@ -62,8 +62,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 i.MaterialIssueLines.OrderBy(l => l.MaterialIssueLineId).Select(l => new MaterialIssueLineDto(
                     l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialCode,
                     l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Unit,
-                    l.MaterialColor, l.OrderLineId, l.ProductComponentMaterialId,
-                    l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor),
+                    l.Material == null ? null : l.Material.Color, l.OrderLineId, l.ProductComponentMaterialId,
+                    l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode,
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Color, l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode,
                     l.IssuedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
@@ -85,7 +85,6 @@ public sealed class MaterialIssueService : IMaterialIssueService
             var lines = dto.Lines.Select(l => new MaterialIssueLine
             {
                 MaterialId = l.MaterialId,
-                MaterialColor = l.MaterialId is null ? null : l.MaterialColor?.Trim() ?? string.Empty,
                 OrderLineId = l.OrderLineId,
                 ProductComponentMaterialId = l.OrderLineId is null ? null : l.ProductComponentMaterialId,
                 IssuedQty = l.IssuedQty,
@@ -227,8 +226,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
 
         var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
         var fabrics = (await _planner.GetNeedsAsync(demands, ct))
-            .Select(n => (n.MaterialId, n.MaterialColor)).ToHashSet();
-        var allInPlan = dto.Lines.All(l => fabrics.Contains((l.MaterialId!.Value, l.MaterialColor?.Trim() ?? string.Empty)));
+            .Select(n => n.MaterialId).ToHashSet();
+        var allInPlan = dto.Lines.All(l => fabrics.Contains(l.MaterialId!.Value));
         return allInPlan
             ? (null, new IssueTarget(wo.OrderId, wo.CuttingTeamId, wo.WorkOrderId))
             : (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.MaterialNotInWorkOrder), null);
@@ -242,12 +241,26 @@ public sealed class MaterialIssueService : IMaterialIssueService
             && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);
         if (!teamOk) return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.SewingTeamInvalid), null);
 
-        var ids = dto.Lines.Select(l => l.OrderLineId!.Value).ToList();
-        var valid = await _uow.Repository<OrderLine>().Query()
-            .CountAsync(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId, ct);
-        return valid == ids.Count
-            ? (null, new IssueTarget(dto.OrderId!.Value, dto.ReceivingTeamId!.Value, null))
-            : (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
+        var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
+        var variants = await _uow.Repository<OrderLine>().Query()
+            .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId)
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
+        if (variants.Count != ids.Count)
+            return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
+
+        // THROW 50041: chi tiết lẻ phải là dòng định mức vải (PANEL) của đúng màu × size của dòng đơn.
+        var pieceLines = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).ToList();
+        if (pieceLines.Count > 0)
+        {
+            var normIds = pieceLines.Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
+            var norms = await _uow.Repository<ProductComponentMaterial>().Query()
+                .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                            && p.Material.MaterialType == MaterialTypes.Fabric)
+                .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
+            if (pieceLines.Any(l => !norms.TryGetValue(l.ProductComponentMaterialId!.Value, out var v) || v != variants[l.OrderLineId!.Value]))
+                return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm), null);
+        }
+        return (null, new IssueTarget(dto.OrderId!.Value, dto.ReceivingTeamId!.Value, null));
     }
 
     /// <summary>
@@ -269,7 +282,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
 
     private static StockKey KeyOf(string warehouseType, MaterialIssueLine line) =>
         warehouseType == WarehouseTypes.Material
-            ? StockKey.Material(line.MaterialId!.Value, line.MaterialColor ?? string.Empty)
+            ? StockKey.Material(line.MaterialId!.Value)
             : StockKey.SemiFinished(line.OrderLineId!.Value, line.ProductComponentMaterialId);
 
     private static Result<MaterialIssueDto> Fail(string code, string message) =>

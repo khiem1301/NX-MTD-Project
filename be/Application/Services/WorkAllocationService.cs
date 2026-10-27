@@ -8,24 +8,23 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC53 / UC54 / UC60: tổ trưởng may chia việc cho công nhân (database 25/10): mỗi lần giao là số lần làm một công đoạn
-/// × màu × size, kèm BTP nếu công đoạn dùng BTP (<c>Operation.UsesSemiFinished</c>). Tổng số lần giao của một công đoạn
-/// không vượt số bộ BTP tổ đã nhận; số lần đã giao là trần sản lượng của công nhân ở đúng công đoạn đó
-/// (<c>vw_WorkerOutputCap</c>). Service kiểm trước để báo lỗi rõ; trigger <c>trg_WorkAllocation_Check</c> là chốt chặn cuối.
+/// UC53 / UC54 / UC60: tổ trưởng may chia việc cho công nhân (database 26/10): mỗi lần giao là số lần làm một công đoạn
+/// × màu × size (không còn đếm BTP giao kèm). Tổng số lần giao của một công đoạn không vượt số bộ BTP tổ đã nhận (50050);
+/// số lần đã giao là trần sản lượng của công nhân ở đúng công đoạn đó (<c>vw_WorkerOutputCap</c>, 50052).
+/// Service kiểm trước để báo lỗi rõ; trigger <c>trg_WorkAllocation_Check</c> là chốt chặn cuối.
 /// </summary>
 public sealed class WorkAllocationService : IWorkAllocationService
 {
     private readonly IUnitOfWork _uow;
-    private readonly IInventoryService _inventory;
     private readonly INotificationService _notifier;
     private readonly IAuditLogService _audit;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
 
-    public WorkAllocationService(IUnitOfWork uow, IInventoryService inventory, INotificationService notifier,
+    public WorkAllocationService(IUnitOfWork uow, INotificationService notifier,
         IAuditLogService audit, IAppLock locks, IClock clock)
     {
-        _uow = uow; _inventory = inventory; _notifier = notifier; _audit = audit; _locks = locks; _clock = clock;
+        _uow = uow; _notifier = notifier; _audit = audit; _locks = locks; _clock = clock;
     }
 
     private IQueryable<WorkAllocation> Allocations => _uow.Repository<WorkAllocation>().Query();
@@ -51,19 +50,6 @@ public sealed class WorkAllocationService : IWorkAllocationService
 
     public async Task<Result<WorkAllocationBoardDto>> GetBoardAsync(int teamId, int? orderId, CancellationToken ct)
     {
-        var teamLines = (await _inventory.GetTeamHoldingsAsync(teamId, orderId, ct)).Data ?? Array.Empty<TeamPieceHoldingDto>();
-        var pendingPieces = await Allocations.AsNoTracking()
-            .Where(m => m.SewingTeamId == teamId && m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Handover)
-            .GroupBy(m => m.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(m => m.PieceQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
-        var team = teamLines.Where(l => l.HeldByTeam > 0 || pendingPieces.ContainsKey(l.OrderLineId))
-            .Select(l =>
-            {
-                var p = pendingPieces.GetValueOrDefault(l.OrderLineId);
-                return new TeamHoldingLineDto(l.OrderLineId, l.OrderCode, l.ProductCode, l.Color, l.SizeCode, l.HeldByTeam, p,
-                    Math.Max(0, l.HeldByTeam - p));
-            }).ToList();
-
         var operations = await (
             from v in _uow.Repository<VwOperationAllocationProgress>().Query().AsNoTracking()
             join l in _uow.Repository<OrderLine>().Query() on v.OrderLineId equals l.OrderLineId
@@ -99,7 +85,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
                 return new WorkerAllocationLineDto(r.WorkerId, r.EmployeeCode, r.FullName, r.OrderLineId, r.OperationId, r.Held,
                     r.PendingRetrieval, output, Math.Max(0, r.Held - r.PendingRetrieval - output));
             }).ToList();
-        return Result<WorkAllocationBoardDto>.Success(new WorkAllocationBoardDto(team, operations, workers));
+        return Result<WorkAllocationBoardDto>.Success(new WorkAllocationBoardDto(operations, workers));
     }
 
     public async Task<Result<WorkAllocationDto>> CreateAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct)
@@ -120,30 +106,24 @@ public sealed class WorkAllocationService : IWorkAllocationService
             if (OrderStatuses.Closed.Contains(line.Order.Status))
                 return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
 
+            // THROW 50044: công đoạn phải thuộc mã hàng của dòng đơn; chỉ chia việc công đoạn may đang dùng (như vw_OperationAllocationProgress).
             var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
                 .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId && o.ProductId == line.ProductId, ct);
             if (operation is null) return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotOfProduct);
-
-            var pieceQty = dto.PieceQty ?? (operation.UsesSemiFinished ? dto.Quantity : 0);
-            if (pieceQty > dto.Quantity)
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.PieceExceedsAllocationQty);
-            if (!operation.UsesSemiFinished && pieceQty > 0)
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNoSemiFinished);
+            if (dto.MovementType == PieceMovementTypes.Handover
+                && (operation.Status != RecordStatus.Active || operation.TeamType != TeamTypes.Sewing))
+                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable);
 
             await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
             if (dto.MovementType == PieceMovementTypes.Handover)
             {
-                var unallocated = await UnallocatedAsync(teamId, dto.OrderLineId, dto.OperationId, 0, ct);
+                var received = await TeamReceivedAsync(teamId, dto.OrderLineId, ct);
+                if (received == 0)
+                    return Result<int>.Failure(ErrorCodes.AllocationExceedsRequired, WarehouseMessages.AllocationNoPiecesReceived);
+                var unallocated = await UnallocatedAsync(teamId, dto.OrderLineId, dto.OperationId, ct);
                 if (dto.Quantity > unallocated)
                     return Result<int>.Failure(ErrorCodes.AllocationExceedsRequired,
-                        $"{WarehouseMessages.AllocationExceedsRequired}: còn {unallocated}, yêu cầu {dto.Quantity}.");
-                if (pieceQty > 0)
-                {
-                    var pieces = await TeamAvailablePiecesAsync(teamId, dto.OrderLineId, ct);
-                    if (pieceQty > pieces)
-                        return Result<int>.Failure(ErrorCodes.PieceHandoverExceedsHolding,
-                            $"{WarehouseMessages.PieceHandoverExceedsHolding}: còn {pieces}, yêu cầu {pieceQty}.");
-                }
+                        $"{WarehouseMessages.AllocationExceedsRequired}: tổ đã nhận {received} bộ, còn giao được {unallocated}, yêu cầu {dto.Quantity}.");
             }
             else
             {
@@ -161,7 +141,6 @@ public sealed class WorkAllocationService : IWorkAllocationService
                 OrderLineId = dto.OrderLineId,
                 OperationId = dto.OperationId,
                 Quantity = dto.Quantity,
-                PieceQty = pieceQty,
                 RetrievalReason = dto.MovementType == PieceMovementTypes.Retrieval ? dto.RetrievalReason : null,
                 ConfirmMode = ConfirmModes.Worker,
                 Status = HandoverStatuses.Pending,
@@ -172,7 +151,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
                 dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
                 $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
-                + (pieceQty > 0 ? $" kèm {pieceQty} BTP" : "") + ", vui lòng đếm và xác nhận.",
+                + ", vui lòng kiểm tra và xác nhận.",
                 null));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(allocation.WorkAllocationId, WarehouseMessages.PieceMovementCreated);
@@ -182,11 +161,11 @@ public sealed class WorkAllocationService : IWorkAllocationService
 
     public Task<Result> ConfirmByWorkerAsync(int allocationId, ConfirmWorkAllocationDto dto, int workerId, CancellationToken ct) =>
         DecideAsync(allocationId, ct, m => m.WorkerId == workerId, m => ApplyConfirmAsync(m, dto.ConfirmedQty,
-            dto.ConfirmedPieceQty, dto.DiscrepancyReason, ConfirmModes.Worker, null, ct), notifyLeaders: true);
+            dto.DiscrepancyReason, ConfirmModes.Worker, null, ct), notifyLeaders: true);
 
     public Task<Result> ConfirmOnBehalfAsync(int allocationId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct) =>
         DecideAsync(allocationId, ct, m => m.SewingTeamId == teamId, m => ApplyConfirmAsync(m, dto.ConfirmedQty,
-            dto.ConfirmedPieceQty, dto.DiscrepancyReason, ConfirmModes.OnBehalf, dto.OnBehalfReason.Trim(), ct), notifyLeaders: false);
+            dto.DiscrepancyReason, ConfirmModes.OnBehalf, dto.OnBehalfReason.Trim(), ct), notifyLeaders: false);
 
     public Task<Result> RejectByWorkerAsync(int allocationId, ReasonDto dto, int workerId, CancellationToken ct) =>
         DecideAsync(allocationId, ct, m => m.WorkerId == workerId, m =>
@@ -214,7 +193,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             if (!result.IsSuccess) return result;
 
             _audit.Add(new AuditEntry(nameof(WorkAllocation), allocation.WorkAllocationId, AuditActions.Update, before,
-                new { allocation.Status, allocation.ConfirmedQty, allocation.ConfirmedPieceQty, allocation.ConfirmMode },
+                new { allocation.Status, allocation.ConfirmedQty, allocation.ConfirmMode },
                 allocation.OnBehalfReason ?? allocation.RejectReason));
             if (notifyLeaders)
             {
@@ -231,29 +210,18 @@ public sealed class WorkAllocationService : IWorkAllocationService
             return result;
         });
 
-    private async Task<Result> ApplyConfirmAsync(WorkAllocation m, int confirmedQty, int? confirmedPieceQty, string? discrepancy,
+    private async Task<Result> ApplyConfirmAsync(WorkAllocation m, int confirmedQty, string? discrepancy,
         string mode, string? onBehalfReason, CancellationToken ct)
     {
-        if (confirmedQty > m.Quantity)
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.PieceConfirmedExceedsQty);
-        var pieces = confirmedPieceQty ?? (confirmedQty == m.Quantity ? m.PieceQty : Math.Min(m.PieceQty, confirmedQty));
-        if (pieces > m.PieceQty || pieces > confirmedQty)
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.PieceConfirmedExceedsQty);
-        var same = confirmedQty == m.Quantity && pieces == m.PieceQty;
+        if (confirmedQty < 1 || confirmedQty > m.Quantity)
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference,
+                string.Format(WarehouseMessages.AllocationConfirmRange, m.Quantity));
+        var same = confirmedQty == m.Quantity;
         if (!same && string.IsNullOrWhiteSpace(discrepancy))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DiscrepancyReasonRequired);
 
-        // Kiểm tra lại đến lúc này: các phiếu khác có thể đã dùng hết số BTP hoặc công nhân đã báo sản lượng.
-        if (m.MovementType == PieceMovementTypes.Handover)
-        {
-            if (pieces > 0)
-            {
-                var available = await TeamAvailablePiecesAsync(m.SewingTeamId, m.OrderLineId, ct, excludeId: m.WorkAllocationId);
-                if (pieces > available)
-                    return Result.Failure(ErrorCodes.PieceHandoverExceedsHolding, WarehouseMessages.PieceHandoverExceedsHolding);
-            }
-        }
-        else
+        // Thu hồi: kiểm lại đến lúc này vì công nhân có thể đã báo thêm sản lượng (50050 / 50052).
+        if (m.MovementType == PieceMovementTypes.Retrieval)
         {
             var retrievable = await WorkerRetrievableAsync(m.WorkerId, m.OrderLineId, m.OperationId, ct, excludeId: m.WorkAllocationId);
             if (confirmedQty > retrievable)
@@ -261,7 +229,6 @@ public sealed class WorkAllocationService : IWorkAllocationService
         }
 
         m.ConfirmedQty = confirmedQty;
-        m.ConfirmedPieceQty = pieces;
         m.DiscrepancyReason = same ? null : discrepancy!.Trim();
         m.ConfirmMode = mode;
         m.OnBehalfReason = onBehalfReason;
@@ -271,24 +238,18 @@ public sealed class WorkAllocationService : IWorkAllocationService
     }
 
     /// <summary>Số lần còn giao được của công đoạn = cần làm − đã giao − đang chờ xác nhận (vw_OperationAllocationProgress).</summary>
-    private async Task<int> UnallocatedAsync(int teamId, int orderLineId, int operationId, int addBack, CancellationToken ct)
+    private async Task<int> UnallocatedAsync(int teamId, int orderLineId, int operationId, CancellationToken ct)
     {
         var row = await _uow.Repository<VwOperationAllocationProgress>().Query().AsNoTracking()
             .Where(v => v.SewingTeamId == teamId && v.OrderLineId == orderLineId && v.OperationId == operationId)
             .Select(v => new { v.UnallocatedQty }).FirstOrDefaultAsync(ct);
-        return Math.Max(0, (row?.UnallocatedQty ?? 0) + addBack);
+        return Math.Max(0, row?.UnallocatedQty ?? 0);
     }
 
-    /// <summary>BTP bộ đủ tổ đang giữ − BTP đang chờ công nhân nhận (bỏ qua chính phiếu đang xác nhận).</summary>
-    private async Task<int> TeamAvailablePiecesAsync(int teamId, int orderLineId, CancellationToken ct, int? excludeId = null)
-    {
-        var held = await _inventory.GetTeamHeldQtyAsync(teamId, orderLineId, ct);
-        var pending = await Allocations.Where(m => m.SewingTeamId == teamId && m.OrderLineId == orderLineId
-                && m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Handover
-                && m.WorkAllocationId != excludeId)
-            .SumAsync(m => m.PieceQty, ct);
-        return Math.Max(0, held - pending);
-    }
+    /// <summary>Số bộ BTP tổ đã nhận của dòng đơn (trần giao việc của trigger 50050).</summary>
+    private async Task<int> TeamReceivedAsync(int teamId, int orderLineId, CancellationToken ct) =>
+        (int)await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking().ReceivedSets(teamId, orderLineId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
 
     /// <summary>Số lần công nhân đang giữ ở công đoạn (đã nhận − đã thu hồi) − chờ thu hồi − đã báo sản lượng.</summary>
     private async Task<int> WorkerRetrievableAsync(int workerId, int orderLineId, int operationId, CancellationToken ct,
@@ -317,7 +278,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             m.SewingTeam.TeamName, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
             m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color,
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
-            m.Operation.UsesSemiFinished, m.Quantity, m.PieceQty, m.ConfirmedQty, m.ConfirmedPieceQty,
+            m.Operation.UsesSemiFinished, m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
             m.CreatedAt, m.ConfirmedAt));
 }

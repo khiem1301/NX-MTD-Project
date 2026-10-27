@@ -18,7 +18,7 @@ type PurchaseOrderFormModalProps = {
 type LineValues = {
   material?: number | string;
   unit?: string;
-  materialColor?: string;
+  newMaterialColor?: string;
   orderedQty: number;
   unitPrice: number;
 };
@@ -29,9 +29,9 @@ const EMPTY_LINE: LineValues = { orderedQty: 1, unitPrice: 0 };
 const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
   orderId: values.orderId,
   note: values.note,
-  lines: values.lines.map(({ material, unit, ...rest }) =>
+  lines: values.lines.map(({ material, unit, newMaterialColor, ...rest }) =>
     isNewMaterial(material)
-      ? { ...rest, newMaterialName: newMaterialName(material), newMaterialUnit: unit }
+      ? { ...rest, newMaterialName: newMaterialName(material), newMaterialUnit: unit, newMaterialColor }
       : { ...rest, materialId: material },
   ),
 });
@@ -65,7 +65,6 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
         .filter((om) => (om.purchaseQty ?? 0) > 0)
         .map<LineValues>((om) => ({
           material: om.materialId,
-          materialColor: om.materialColor,
           orderedQty: om.purchaseQty ?? 0,
           unitPrice: 0,
         })),
@@ -108,14 +107,16 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                   <Form.Item noStyle shouldUpdate>
                     {({ getFieldValue }) =>
                       isNewMaterial(getFieldValue(['lines', field.name, 'material'])) && (
-                        <Form.Item name={[field.name, 'unit']} rules={required}>
-                          <Input placeholder={LABELS.unit} maxLength={20} style={{ width: 110 }} />
-                        </Form.Item>
+                        <Space align="start">
+                          <Form.Item name={[field.name, 'unit']} rules={required}>
+                            <Input placeholder={LABELS.unit} maxLength={20} style={{ width: 110 }} />
+                          </Form.Item>
+                          <Form.Item name={[field.name, 'newMaterialColor']}>
+                            <Input placeholder={LABELS.color} maxLength={50} style={{ width: 130 }} />
+                          </Form.Item>
+                        </Space>
                       )
                     }
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'materialColor']}>
-                    <Input placeholder={LABELS.color} maxLength={50} style={{ width: 130 }} disabled={linked} />
                   </Form.Item>
                   <Form.Item name={[field.name, 'orderedQty']} rules={required}>
                     <InputNumber

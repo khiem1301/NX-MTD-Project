@@ -116,7 +116,7 @@ public sealed class WorkOrderService : IWorkOrderService
                 r.RequestLines.Select(l => l.OrderLine!.ProductVariant.Product.ProductCode).FirstOrDefault() ?? string.Empty, r.Content,
                 r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new ReplacementRequestLineDto(l.OrderLineId!.Value,
                     l.OrderLine!.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId!.Value,
-                    l.ProductComponentMaterial!.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.MaterialColor == "" ? "" : " " + l.ProductComponentMaterial.MaterialColor), (int)l.Quantity)).ToList()))
+                    l.ProductComponentMaterial!.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color), (int)l.Quantity)).ToList()))
             .ToListAsync(ct);
         return Result<IReadOnlyList<ReplacementRequestDto>>.Success(requests);
     }
@@ -308,11 +308,10 @@ public sealed class WorkOrderService : IWorkOrderService
         var shortages = new List<string>();
         foreach (var need in needs)
         {
-            var available = await _stock.GetAvailableAsync(StockKey.Material(need.MaterialId, need.MaterialColor), ct)
-                            + await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, need.MaterialId,
-                                need.MaterialColor, ct);
+            var available = await _stock.GetAvailableAsync(StockKey.Material(need.MaterialId), ct)
+                            + await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, need.MaterialId, ct);
             if (available < need.RequiredQty)
-                shortages.Add($"{need.MaterialCode} {need.MaterialName} ({need.MaterialColor}): cần {Format(need.RequiredQty)} {need.Unit}, " +
+                shortages.Add($"{need.MaterialCode} {need.MaterialName}{(need.MaterialColor == "" ? "" : $" ({need.MaterialColor})")}: cần {Format(need.RequiredQty)} {need.Unit}, " +
                               $"có {Format(available)}, thiếu {Format(need.RequiredQty - available)}");
         }
         return shortages.Count == 0
@@ -329,8 +328,8 @@ public sealed class WorkOrderService : IWorkOrderService
         var result = new List<FabricRequirementDto>(needs.Count);
         foreach (var n in needs)
         {
-            var done = issued.GetValueOrDefault((n.MaterialId, n.MaterialColor));
-            var available = await _stock.GetAvailableAsync(StockKey.Material(n.MaterialId, n.MaterialColor), ct);
+            var done = issued.GetValueOrDefault(n.MaterialId);
+            var available = await _stock.GetAvailableAsync(StockKey.Material(n.MaterialId), ct);
             result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.Unit,
                 n.MaterialColor, n.RequiredQty, done, Math.Max(0, n.RequiredQty - done), available));
         }

@@ -7,7 +7,7 @@ public sealed record MaterialIssueListItemDto(
     string? WorkOrderCode, int? RequestId, int ReceivingTeamId, string ReceivingTeamName, DateOnly IssueDate,
     string Status, string IssuedByName, DateTime? ReceivedAt, int LineCount);
 
-/// <summary>Dòng NVL có MaterialId + MaterialColor; dòng BTP có OrderLineId.</summary>
+/// <summary>Dòng NVL có MaterialId (MaterialColor = Material.Color); dòng BTP có OrderLineId.</summary>
 public sealed record MaterialIssueLineDto(
     int MaterialIssueLineId, int? MaterialId, string? MaterialCode, string? MaterialName, string? Unit,
     string? MaterialColor, int? OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string? ProductCode,
@@ -19,8 +19,9 @@ public sealed record MaterialIssueDto(
     string Status, string IssuedByName, string? ReceivedByName, DateTime? ReceivedAt, string? RejectReason,
     DateTime CreatedAt, IReadOnlyList<MaterialIssueLineDto> Lines);
 
+/// <param name="MaterialId">Chỉ cấp NVL: NVL đã gồm màu (26/10).</param>
 /// <param name="ProductComponentMaterialId">Chỉ cấp BTP: null = bộ đủ; có giá trị = chi tiết lẻ (cắt bù).</param>
-public sealed record CreateIssueLineDto(int? MaterialId, string? MaterialColor, int? OrderLineId, int? ProductComponentMaterialId,
+public sealed record CreateIssueLineDto(int? MaterialId, int? OrderLineId, int? ProductComponentMaterialId,
     decimal IssuedQty);
 
 /// <summary>

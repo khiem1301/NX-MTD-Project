@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Descriptions, Form, InputNumber, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,14 +7,13 @@ import { useCreateAllocation } from '../hooks/usePieceMovement';
 import type { OperationProgress, WorkerAllocationLine } from '../types';
 
 export type AllocationTarget =
-  | { kind: 'HANDOVER'; progress: OperationProgress; pieceLimit: number }
+  | { kind: 'HANDOVER'; progress: OperationProgress }
   | { kind: 'RETRIEVAL'; progress: OperationProgress; worker: WorkerAllocationLine };
 
 type Props = { target: AllocationTarget | null; onClose: () => void };
 type FormValues = {
   workerId?: number;
   quantity?: number;
-  pieceQty?: number;
   retrievalReason?: string;
 };
 
@@ -25,7 +23,7 @@ const REASON_OPTIONS = Object.entries(RETRIEVAL_REASON_LABEL).map(([value, label
 }));
 
 /**
- * UC53: tổ trưởng giao việc (số lần làm một công đoạn, kèm BTP nếu công đoạn dùng BTP) hoặc thu hồi việc từ một công nhân.
+ * UC53: tổ trưởng giao việc (số lần làm một công đoạn) hoặc thu hồi việc từ một công nhân.
  * Số lần bị chặn theo số còn cần giao / còn thu hồi được; công nhân xác nhận sau đó (UC60).
  */
 export function MovementFormModal({ target, onClose }: Props) {
@@ -34,12 +32,10 @@ export function MovementFormModal({ target, onClose }: Props) {
   const handover = target?.kind === 'HANDOVER';
   const members = useTeamMemberLookup(handover ? (user?.teamId ?? null) : null);
   const create = useCreateAllocation();
-  const [pieceTouched, setPieceTouched] = useState(false);
 
   if (target === null) return <Modal open={false} />;
   const { progress } = target;
   const maxQty = handover ? progress.unallocatedQty : target.worker.retrievableQty;
-  const pieceMax = handover ? target.pieceLimit : undefined;
   const required = [{ required: true, message: MESSAGES.common.required }];
   const workerOptions = (members.data ?? [])
     .filter((m) => m.employeeId !== user?.employeeId)
@@ -53,7 +49,6 @@ export function MovementFormModal({ target, onClose }: Props) {
         orderLineId: progress.orderLineId,
         operationId: progress.operationId,
         quantity: values.quantity as number,
-        pieceQty: progress.usesSemiFinished ? values.pieceQty : undefined,
         retrievalReason: handover ? undefined : values.retrievalReason,
       },
       { onSuccess: onClose },
@@ -75,15 +70,7 @@ export function MovementFormModal({ target, onClose }: Props) {
         layout="vertical"
         onFinish={handleFinish}
         disabled={create.isPending}
-        initialValues={{ quantity: maxQty > 0 ? maxQty : undefined, pieceQty: handover ? Math.min(maxQty, pieceMax ?? 0) : maxQty }}
-        onValuesChange={(changed: FormValues) => {
-          // Công đoạn giao kèm BTP: số BTP điền sẵn theo số lần cho tới khi tổ trưởng tự sửa.
-          if (changed.pieceQty !== undefined) setPieceTouched(true);
-          if (changed.quantity !== undefined && !pieceTouched && progress.usesSemiFinished)
-            form.setFieldsValue({
-              pieceQty: handover ? Math.min(changed.quantity, pieceMax ?? 0) : changed.quantity,
-            });
-        }}
+        initialValues={{ quantity: maxQty > 0 ? maxQty : undefined }}
       >
         <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
           <Descriptions.Item label={PM_LABELS.orderLine}>
@@ -119,15 +106,6 @@ export function MovementFormModal({ target, onClose }: Props) {
         <Form.Item name="quantity" label={PM_LABELS.quantity} rules={required}>
           <InputNumber min={1} max={maxQty} precision={0} style={{ width: 200 }} />
         </Form.Item>
-        {progress.usesSemiFinished && (
-          <Form.Item
-            name="pieceQty"
-            label={handover ? PM_LABELS.pieceQty : PM_LABELS.pieceQtyBack}
-            extra={handover ? `${PM_LABELS.teamPieces}: còn giao kèm được ${pieceMax}` : undefined}
-          >
-            <InputNumber min={0} max={pieceMax} precision={0} style={{ width: 200 }} />
-          </Form.Item>
-        )}
       </Form>
     </Modal>
   );

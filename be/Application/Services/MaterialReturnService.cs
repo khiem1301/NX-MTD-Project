@@ -55,7 +55,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
                 r.MaterialReturnLines.OrderBy(l => l.MaterialReturnLineId).Select(l => new MaterialReturnLineDto(
                     l.MaterialReturnLineId, l.MaterialIssueLineId, l.MaterialIssueLine.Material!.MaterialCode,
                     l.MaterialIssueLine.Material.MaterialName, l.MaterialIssueLine.Material.Unit,
-                    l.MaterialIssueLine.MaterialColor ?? string.Empty, l.ReturnedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
+                    l.MaterialIssueLine.Material.Color, l.ReturnedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<MaterialReturnDto>();
         return cuttingTeamId is not null && dto.CuttingTeamId != cuttingTeamId
@@ -72,7 +72,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
             .Select(l => new
             {
                 l.MaterialIssueId, l.MaterialIssue.IssueCode, l.MaterialIssueLineId, l.MaterialIssue.Order.OrderCode,
-                l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit, Color = l.MaterialColor ?? string.Empty,
+                l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit, Color = l.Material.Color,
                 Received = l.ConfirmedQty ?? 0,
             }).ToListAsync(ct);
         var returned = await ReturnedAsync(lines.Select(l => l.MaterialIssueLineId).ToList(), null, ct);
@@ -154,7 +154,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
 
             var today = _clock.Today;
             var movements = ret.MaterialReturnLines.Where(l => l.ConfirmedQty > 0)
-                .Select(l => new StockMovement(StockKey.Material(l.MaterialIssueLine.MaterialId!.Value, l.MaterialIssueLine.MaterialColor ?? string.Empty),
+                .Select(l => new StockMovement(StockKey.Material(l.MaterialIssueLine.MaterialId!.Value),
                     l.ConfirmedQty!.Value, StockDocTypes.MaterialReturn, ret.MaterialReturnId, l.MaterialReturnLineId, today)).ToList();
             if (movements.Count > 0)
             {

@@ -64,7 +64,7 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
             lines.Length > 0 ? lines : [Line()], requestId);
 
     private static RequestLineInput Line(int? component = 7, int? lineId = LineId, decimal qty = 2) =>
-        new(null, null, lineId, component, null, qty);
+        new(null, lineId, component, null, qty);
 
     [Fact]
     public async Task Valid_ScrapDefectOfOwnTeam_Passes()

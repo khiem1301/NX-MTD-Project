@@ -10,7 +10,7 @@ namespace Application.Tests;
 public class StockServiceTests
 {
     private static readonly DateOnly Today = new(2026, 10, 20);
-    private static readonly StockKey Fabric = StockKey.Material(1, "Đỏ");
+    private static readonly StockKey Fabric = StockKey.Material(1);
     private static readonly StockKey Piece = StockKey.SemiFinished(9);
 
     private readonly IStockRepository _repo = Substitute.For<IStockRepository>();

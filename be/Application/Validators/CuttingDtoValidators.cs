@@ -11,7 +11,7 @@ public sealed class SaveCuttingLayDtoValidator : AbstractValidator<SaveCuttingLa
     {
         RuleFor(x => x.WorkOrderId).GreaterThan(0);
         RuleFor(x => x.ShiftCode).Must(s => ShiftCodes.All.Contains(s));
-        RuleFor(x => x.FabricColor).NotEmpty().MaximumLength(50);
+        RuleFor(x => x.FabricMaterialId).GreaterThan(0).WithMessage(WarehouseMessages.FabricRequired);
         RuleFor(x => x.PlyCount).InclusiveBetween(1, short.MaxValue);
         RuleFor(x => x.Note).MaximumLength(500);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);

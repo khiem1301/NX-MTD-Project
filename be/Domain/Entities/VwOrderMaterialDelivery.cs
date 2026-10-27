@@ -11,8 +11,6 @@ public partial class VwOrderMaterialDelivery
 
     public int MaterialId { get; set; }
 
-    public string MaterialColor { get; set; } = null!;
-
     public decimal CustomerQty { get; set; }
 
     public short? ExpectedDeliveryCount { get; set; }

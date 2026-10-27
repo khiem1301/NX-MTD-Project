@@ -39,7 +39,6 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
             workDate: dayjs(lay.workDate),
             shiftCode: lay.shiftCode,
             fabricMaterialId: lay.fabricMaterialId ?? undefined,
-            fabricColor: lay.fabricColor,
             plyCount: lay.plyCount,
             note: lay.note ?? undefined,
             ratio: Object.fromEntries(lay.lines.map((l) => [lineKey(l), l.ratioValue])),
@@ -56,7 +55,6 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
             workDate: dayjs(),
             shiftCode: SHIFT_OPTIONS[0]?.value,
             fabricMaterialId: firstFabric?.materialId,
-            fabricColor: firstFabric?.materialColor,
           },
     );
   }, [open, lay, workOrder, form]);
@@ -81,7 +79,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
 
   const fabricOptions = workOrder.fabrics.map((f) => ({
     value: f.materialId,
-    label: `${f.materialCode} ${f.materialName} (${f.materialColor})`,
+    label: `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
   }));
   const required = [{ required: true, message: MESSAGES.common.required }];
 
@@ -109,11 +107,8 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
           <Form.Item name="shiftCode" label={LABELS.shift} rules={required}>
             <Select options={SHIFT_OPTIONS} style={{ width: 130 }} />
           </Form.Item>
-          <Form.Item name="fabricMaterialId" label={LABELS.fabricMaterial}>
-            <Select allowClear options={fabricOptions} style={{ width: 280 }} />
-          </Form.Item>
-          <Form.Item name="fabricColor" label={LABELS.fabricColor} rules={required}>
-            <Input maxLength={50} style={{ width: 130 }} />
+          <Form.Item name="fabricMaterialId" label={LABELS.fabricMaterial} rules={required}>
+            <Select options={fabricOptions} style={{ width: 320 }} />
           </Form.Item>
           <Form.Item name="plyCount" label={LABELS.plyCount} rules={required}>
             <InputNumber min={1} precision={0} style={{ width: 110 }} />

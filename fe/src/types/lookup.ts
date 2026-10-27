@@ -27,4 +27,6 @@ export type MaterialOption = {
   materialName: string;
   materialType: string;
   unit: string;
+  /** Màu NVL (26/10); '' = không phân màu. */
+  color: string;
 };

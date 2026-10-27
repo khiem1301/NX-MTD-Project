@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.TeamLeader;
 
-/// <summary>BTP tổ may của mình đang giữ theo dòng đơn (đã nhận từ kho − đã giao CN + đã thu hồi).</summary>
+/// <summary>BTP tổ may của mình theo dòng đơn: số bộ đã nhận từ kho, đã QC đạt, hàng hủy, còn trên chuyền.</summary>
 public sealed class PieceHoldingsController : TeamLeaderBaseController
 {
     private readonly IInventoryService _inventory;

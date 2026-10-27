@@ -22,8 +22,6 @@ public partial class MaterialReceiptLine
 
     public int? MaterialId { get; set; }
 
-    public string? MaterialColor { get; set; }
-
     public virtual ICollection<MaterialReceiptLine> InverseOriginalReceiptLine { get; set; } = new List<MaterialReceiptLine>();
 
     public virtual Material? Material { get; set; }

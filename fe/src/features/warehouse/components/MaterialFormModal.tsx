@@ -100,6 +100,9 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
         >
           <Input maxLength={20} />
         </Form.Item>
+        <Form.Item name="color" label={LABELS.color} extra={LABELS.materialColorHint}>
+          <Input maxLength={50} />
+        </Form.Item>
       </Form>
     </Modal>
   );

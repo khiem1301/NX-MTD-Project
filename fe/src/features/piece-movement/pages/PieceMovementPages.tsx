@@ -72,22 +72,10 @@ function useAllocationColumns(
     },
     { title: PM_LABELS.quantity, dataIndex: 'quantity', align: 'right' },
     {
-      title: PM_LABELS.pieceQty,
-      dataIndex: 'pieceQty',
-      align: 'right',
-      render: (v: number, m) => (m.usesSemiFinished ? v : '—'),
-    },
-    {
       title: PM_LABELS.confirmedQty,
       dataIndex: 'confirmedQty',
       align: 'right',
       render: (v: number | null) => v ?? '—',
-    },
-    {
-      title: PM_LABELS.confirmedPieceQty,
-      dataIndex: 'confirmedPieceQty',
-      align: 'right',
-      render: (v: number | null, m) => (m.usesSemiFinished ? (v ?? '—') : '—'),
     },
     {
       title: PM_LABELS.status,

@@ -54,7 +54,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
-                    l.OrderMaterial != null ? l.OrderMaterial.MaterialColor : l.MaterialColor ?? string.Empty,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
                     l.OrderedQty, l.UnitPrice, l.Amount, 0m, l.NotReplenishedQty)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<PurchaseOrderDto>();
@@ -80,8 +80,11 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
 
         var resolved = await ResolveMaterialsAsync(dto.Lines, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<PurchaseOrderDto>(resolved);
-        var lines = dto.Lines.Select((l, i) => (MaterialId: resolved.Data![i], Color: l.MaterialColor?.Trim() ?? string.Empty,
+        var lines = dto.Lines.Select((l, i) => (MaterialId: resolved.Data![i],
             l.OrderedQty, l.UnitPrice)).ToList();
+        // Hai dòng nhập NVL mới trùng một NVL đã có (cùng tên + màu) → gộp sẽ vi phạm UQ_POL_Stock / UQ_POL.
+        if (lines.Select(l => l.MaterialId).Distinct().Count() != lines.Count)
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
 
         var materialIds = lines.Select(l => l.MaterialId).Distinct().ToList();
         var activeCount = await _uow.Repository<Material>().Query()
@@ -90,14 +93,14 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseMaterialInactive, WarehouseMessages.MaterialInactive);
 
         // Gắn đơn hàng: dòng phải trỏ đúng NVL đã khai báo của đơn (UC09). Không gắn: mua dự trữ.
-        Dictionary<(int MaterialId, string Color), int> orderMaterials = new();
+        Dictionary<int, int> orderMaterials = new();
         if (dto.OrderId is { } orderId)
         {
             var rows = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
                 .Where(om => om.OrderId == orderId && materialIds.Contains(om.MaterialId))
-                .Select(om => new { om.MaterialId, om.MaterialColor, om.OrderMaterialId }).ToListAsync(ct);
-            orderMaterials = rows.ToDictionary(r => (r.MaterialId, r.MaterialColor), r => r.OrderMaterialId);
-            if (lines.Any(l => !orderMaterials.ContainsKey((l.MaterialId, l.Color))))
+                .Select(om => new { om.MaterialId, om.OrderMaterialId }).ToListAsync(ct);
+            orderMaterials = rows.ToDictionary(r => r.MaterialId, r => r.OrderMaterialId);
+            if (lines.Any(l => !orderMaterials.ContainsKey(l.MaterialId)))
                 return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference,
                     WarehouseMessages.PurchaseOrderMaterialNotInOrder);
         }
@@ -112,12 +115,11 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 PaymentStatus = PurchaseOrderStatuses.Unpaid,
                 Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
                 CreatedAt = _clock.Now,
-                PurchaseOrderLines = lines.Select(l => orderMaterials.TryGetValue((l.MaterialId, l.Color), out var omId)
+                PurchaseOrderLines = lines.Select(l => orderMaterials.TryGetValue(l.MaterialId, out var omId)
                     ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = l.OrderedQty, UnitPrice = l.UnitPrice }
                     : new PurchaseOrderLine
                     {
                         MaterialId = l.MaterialId,
-                        MaterialColor = l.Color,
                         OrderedQty = l.OrderedQty,
                         UnitPrice = l.UnitPrice,
                     }).ToList(),
@@ -150,8 +152,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             if (line.MaterialId is { } existing) { ids.Add(existing); continue; }
 
             var name = line.NewMaterialName!.Trim();
+            var color = line.NewMaterialColor?.Trim() ?? string.Empty;
             var found = await _uow.Repository<Material>().Query().AsNoTracking()
-                .FirstOrDefaultAsync(m => m.MaterialName == name && m.MaterialType == MaterialTypes.Trim, ct);
+                .FirstOrDefaultAsync(m => m.MaterialName == name && m.MaterialType == MaterialTypes.Trim && m.Color == color, ct);
             if (found is not null)
             {
                 if (found.Status != MaterialStatuses.Active)
@@ -161,7 +164,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             }
 
             var created = await _materials.CreateAsync(
-                new CreateMaterialDto(null, name, MaterialTypes.Trim, "OTHER", line.NewMaterialUnit!.Trim()), ct);
+                new CreateMaterialDto(null, name, MaterialTypes.Trim, "OTHER", line.NewMaterialUnit!.Trim(), color), ct);
             if (!created.IsSuccess)
                 return Result<List<int>>.Failure(created.ErrorCode!, created.Message!, created.Kind, created.Errors);
             ids.Add(created.Data!.MaterialId);
