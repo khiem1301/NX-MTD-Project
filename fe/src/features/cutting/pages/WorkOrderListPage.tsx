@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -14,6 +14,8 @@ import { WorkOrderFormModal } from '../components/WorkOrderFormModal';
 import { LABELS, WORK_ORDER_STATUS_LABEL } from '../constants';
 import { useWorkOrders } from '../hooks/useCutting';
 import type { WorkOrder } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -70,14 +72,13 @@ export function WorkOrderListPage() {
       }
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 280 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

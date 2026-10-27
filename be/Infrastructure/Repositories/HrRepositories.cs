@@ -29,8 +29,9 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
     public async Task<PagedResult<EmployeeListItemDto>> ListAsync(EmployeeQuery q, IReadOnlyCollection<string>? hidden,
         bool includeAccount, CancellationToken ct)
     {
+        var all = q.Status == "All";
         var status = string.IsNullOrWhiteSpace(q.Status) ? RecordStatus.Active : CodeText.ToCode(q.Status);
-        var query = _context.Employees.AsNoTracking().Where(e => e.Status == status);
+        var query = _context.Employees.AsNoTracking().Where(e => all || e.Status == status);
         if (hidden is not null) query = query.Where(e => !hidden.Contains(e.Role.RoleCode));
         if (q.TeamId is not null) query = query.Where(e => e.TeamId == q.TeamId);
         if (!string.IsNullOrWhiteSpace(q.Role))

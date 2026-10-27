@@ -31,7 +31,10 @@ export const useEmployee = (id: number | null) => {
 const invalidate = [EMPLOYEES_KEY, TEAMS_KEY, HR_LOOKUPS_KEY];
 
 export const useCreateEmployee = () =>
-  useApiMutation((body: CreateEmployeePayload) => employeeApi.create(body), { invalidate });
+  useApiMutation((body: CreateEmployeePayload) => employeeApi.create(body), {
+    invalidate,
+    successMessage: MESSAGES.hr.employeeCreated,
+  });
 
 /** Admin sửa đủ trường; Quản đốc chỉ sửa thông tin cá nhân + mã chấm công. */
 export const useUpdateEmployee = (id: number) => {

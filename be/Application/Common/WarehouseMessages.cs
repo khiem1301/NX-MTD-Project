@@ -8,6 +8,7 @@ public static class WarehouseMessages
     public const string InvalidStatus = "Phiếu không ở trạng thái cho phép thao tác này.";
     public const string OrderClosed = "Đơn hàng đã đóng, không thể lập thêm phiếu.";
     public const string TeamMismatch = "Phiếu không thuộc tổ của bạn.";
+    public const string CuttingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ cắt.";
     public const string ReasonRequired = "Vui lòng nhập lý do.";
     public const string DiscrepancyReasonRequired = "Số xác nhận khác số giao, vui lòng nhập lý do.";
     public const string ConfirmedQtyExceedsIssued = "Số xác nhận không được lớn hơn số đã cấp.";

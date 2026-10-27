@@ -130,6 +130,7 @@ public static class ErrorCodes
     public const string WarehouseInvalidReference = "WAREHOUSE_INVALID_REFERENCE";
     public const string WarehouseOrderClosed = "WAREHOUSE_ORDER_CLOSED";
     public const string WarehouseTeamMismatch = "WAREHOUSE_TEAM_MISMATCH";
+    public const string WarehouseCuttingTeamOnly = "WAREHOUSE_CUTTING_TEAM_ONLY";
     public const string WarehouseInvalidRequest = "WAREHOUSE_INVALID_REQUEST";
     public const string WarehouseMaterialDuplicate = "WAREHOUSE_MATERIAL_DUPLICATE";
     public const string WarehouseMaterialInactive = "WAREHOUSE_MATERIAL_INACTIVE";

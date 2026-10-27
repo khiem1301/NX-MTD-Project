@@ -1,4 +1,4 @@
-import { Button, Card, Input, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
@@ -16,6 +16,8 @@ import { EmployeeImportModal } from '../components/EmployeeImportModal';
 import { TempPasswordModal } from '../components/TempPasswordModal';
 import { useEmployees } from '../hooks/useEmployees';
 import type { EmployeeListItem, TempPassword } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; teamId?: number; role?: Role; status?: 'Active' | 'Resigned' };
 
@@ -26,7 +28,8 @@ export function EmployeesPage() {
   const base = isAdmin ? ROUTES.adminEmployees : ROUTES.managerEmployees;
   const navigate = useNavigate();
   const table = useTableQuery<Filters>({});
-  const employees = useEmployees(table.params);
+  // Chưa chọn trạng thái = Tất cả (BE mặc định chỉ lấy nhân viên đang làm nên phải gửi All).
+  const employees = useEmployees({ ...table.params, status: table.params.status ?? 'All' });
   const teams = useTeamLookup();
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -37,6 +40,7 @@ export function EmployeesPage() {
     .map((r) => ({ value: r, label: ROLE_LABEL[r] }));
 
   const columns: TableColumnsType<EmployeeListItem> = [
+    { title: 'STT', key: 'stt', width: 64, render: (_: unknown, __: EmployeeListItem, index: number) => (table.params.page - 1) * table.params.pageSize + index + 1 },
     {
       title: MESSAGES.hr.employeeCode,
       dataIndex: 'employeeCode',
@@ -68,11 +72,11 @@ export function EmployeesPage() {
       }
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
-        <Select<number> allowClear showSearch optionFilterProp="label" placeholder={MESSAGES.hr.team} style={{ width: 200 }}
+        <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
+        <FilterSelect<number> value={table.filters.teamId} showSearch optionFilterProp="label" placeholder={MESSAGES.hr.team} style={{ width: 200 }}
           options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))} onChange={(teamId) => table.setFilters({ teamId })} />
-        <Select<Role> allowClear placeholder={MESSAGES.hr.role} style={{ width: 160 }} options={roleOptions} onChange={(role) => table.setFilters({ role })} />
-        <Select<'Active' | 'Resigned'> allowClear placeholder={`${MESSAGES.hr.status}: ${EMPLOYEE_STATUS_TAG.Active?.text}`} style={{ width: 190 }}
+        <FilterSelect<Role> value={table.filters.role} placeholder={MESSAGES.hr.role} style={{ width: 160 }} options={roleOptions} onChange={(role) => table.setFilters({ role })} />
+        <FilterSelect<'Active' | 'Resigned'> value={table.filters.status} placeholder={MESSAGES.hr.status} style={{ width: 190 }}
           options={[{ value: 'Active', label: EMPLOYEE_STATUS_TAG.Active?.text }, { value: 'Resigned', label: EMPLOYEE_STATUS_TAG.Resigned?.text }]}
           onChange={(status) => table.setFilters({ status })} />
       </Space>

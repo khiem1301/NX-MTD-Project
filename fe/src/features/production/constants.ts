@@ -121,6 +121,7 @@ export const PRODUCTION_TEXT = {
     selectAllPending: 'Chọn tất cả đơn giá chờ duyệt trong trang',
     note: 'Ghi chú (không bắt buộc)',
     allStatus: 'Mọi trạng thái',
+    allTab: 'Tất cả',
     columns: {
       product: 'Mã hàng',
       operation: 'Công đoạn',

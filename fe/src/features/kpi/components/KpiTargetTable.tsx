@@ -1,4 +1,4 @@
-import { Button, Input, Popconfirm, Progress, Select, Space, Table, Tag } from 'antd';
+import { Button, Popconfirm, Progress, Select, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
@@ -7,6 +7,7 @@ import { formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useCancelKpiTarget, useKpiTargets } from '../hooks/useKpi';
 import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
 type Props = {
   filter: KpiTargetFilter;
@@ -118,7 +119,7 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAd
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
       <Space wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           style={{ width: 260 }}

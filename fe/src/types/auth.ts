@@ -1,5 +1,7 @@
 import type { Role } from '@/constants/roles';
 
+export type TeamType = 'Cutting' | 'Sewing' | 'Office';
+
 export type UserInfo = {
   accountId: number;
   employeeId: number;
@@ -9,7 +11,7 @@ export type UserInfo = {
   roleName: string;
   teamId: number | null;
   teamName: string | null;
-  teamType: 'Cutting' | 'Sewing' | 'Office' | null;
+  teamType: TeamType | null;
   isTemporaryPassword: boolean;
 };
 

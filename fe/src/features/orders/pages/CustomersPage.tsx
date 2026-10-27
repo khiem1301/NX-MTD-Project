@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Button, Card, Input, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { CustomerFormModal } from '../components/CustomerFormModal';
 import { useCustomers } from '../hooks/useOrders';
 import type { Customer } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
 /** Danh mục khách hàng (UC09). Không xóa. */
 export function CustomersPage() {
@@ -32,7 +33,7 @@ export function CustomersPage() {
       extra={<Button type="primary" onClick={() => { setEditing(null); setOpen(true); }}>{MESSAGES.orders.addCustomer}</Button>}
     >
       <Space style={{ marginBottom: 16 }}>
-        <Input.Search allowClear placeholder={MESSAGES.common.search} onSearch={(k) => setKeyword(k.trim() || undefined)} style={{ width: 240 }} />
+        <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(k) => setKeyword(k.trim() || undefined)} style={{ width: 240 }} />
       </Space>
       <QueryError error={customers.error} onRetry={() => void customers.refetch()} />
       <Table<Customer>

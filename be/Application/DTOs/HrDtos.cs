@@ -15,7 +15,7 @@ public sealed record EmployeeQuery : PageQuery
 {
     public int? TeamId { get; init; }
     public string? Role { get; init; }     // PascalCase
-    public string? Status { get; init; }   // Active / Resigned; null = Active
+    public string? Status { get; init; }   // Active / Resigned / All; null = Active
 }
 
 public sealed record EmployeeListItemDto(int EmployeeId, string EmployeeCode, string FullName, string Role, string RoleName,

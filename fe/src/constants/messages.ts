@@ -175,6 +175,7 @@ export const MESSAGES = {
     unlockAccount: 'Mở khóa',
     resetPassword: 'Đặt lại mật khẩu',
     resetConfirm: 'Đặt lại mật khẩu tạm cho nhân viên này? Họ sẽ bị đăng xuất.',
+    employeeCreated: 'Đã thêm nhân viên và tạo tài khoản.',
     tempPasswordTitle: 'Mật khẩu tạm',
     tempPasswordWarning: 'Mật khẩu chỉ hiện một lần. Hãy đưa cho nhân viên và nhắc đổi khi đăng nhập.',
     username: 'Tên đăng nhập',

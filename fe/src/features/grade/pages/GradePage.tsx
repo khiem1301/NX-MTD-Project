@@ -37,6 +37,8 @@ import {
   useSetGrade,
 } from '../hooks/useGrade';
 import type { GradeEvaluation, GradeLevel } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 const API_DATE = 'YYYY-MM-DD';
 const required = [{ required: true, message: MESSAGES.common.required }];
@@ -283,14 +285,13 @@ function EvaluationsTab() {
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 260 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={GR_LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

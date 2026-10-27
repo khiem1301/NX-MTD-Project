@@ -22,7 +22,8 @@ public interface IOperationService
 /// <summary>KI-01 (UC25, UC26): đơn giá công đoạn DRAFT → PENDING_APPROVAL → APPROVED / REJECTED (Admin duyệt).</summary>
 public interface IPieceRateService
 {
-    Task<Result<PagedResult<PieceRateDto>>> ListAsync(PieceRateQuery query, CancellationToken ct);
+    /// <param name="includeDraft">false = bỏ đơn giá Nháp (Admin chỉ thấy đơn giá đã gửi duyệt trở đi).</param>
+    Task<Result<PagedResult<PieceRateDto>>> ListAsync(PieceRateQuery query, CancellationToken ct, bool includeDraft = true);
     Task<Result<int>> CreateAsync(SavePieceRateDto dto, CancellationToken ct);
 
     /// <summary>Chỉ sửa khi DRAFT hoặc REJECTED; sau khi sửa quay về DRAFT.</summary>

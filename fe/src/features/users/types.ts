@@ -57,7 +57,7 @@ export type EmployeeQuery = {
   keyword?: string;
   teamId?: number;
   role?: Role;
-  status?: 'Active' | 'Resigned';
+  status?: 'Active' | 'Resigned' | 'All';
 };
 
 export type CreateEmployeePayload = {

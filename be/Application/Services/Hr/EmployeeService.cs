@@ -30,7 +30,7 @@ public sealed class EmployeeService : IEmployeeService
     {
         if (!string.IsNullOrWhiteSpace(query.Role) && !Roles.IsKnown(query.Role))
             return BadFilter<PagedResult<EmployeeListItemDto>>("role");
-        if (!string.IsNullOrWhiteSpace(query.Status) && query.Status is not ("Active" or "Resigned"))
+        if (!string.IsNullOrWhiteSpace(query.Status) && query.Status is not ("Active" or "Resigned" or "All"))
             return BadFilter<PagedResult<EmployeeListItemDto>>("status");
         return Result<PagedResult<EmployeeListItemDto>>.Success(
             await _employees.ListAsync(query, _scope.HiddenRoleCodes, _scope.IsAdmin, ct));
