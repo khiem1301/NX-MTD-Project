@@ -22,6 +22,9 @@ public interface ICutHandoverService
     Task<Result> ConfirmAsync(int handoverId, ConfirmCutHandoverDto dto, int employeeId, CancellationToken ct);
 
     Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct);
+
+    /// <summary>Tổ trưởng cắt rút phiếu của tổ mình khi Thủ kho chưa nhận (UC43); các bàn cắt đã khóa theo phiếu được mở lại.</summary>
+    Task<Result> CancelAsync(int handoverId, int cuttingTeamId, CancellationToken ct);
 }
 
 /// <summary>UC44: QA/QC bàn giao thành phẩm (số QC đạt) vào kho FINISHED; Thủ kho đếm, xác nhận hoặc từ chối.</summary>

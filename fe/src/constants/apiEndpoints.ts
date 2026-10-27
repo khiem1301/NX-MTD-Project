@@ -52,6 +52,7 @@ export const API = {
     byId: (id: number) => v1(`admin/products/${id}`),
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
+    spec: (id: number) => v1(`admin/products/${id}/spec`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),
@@ -133,12 +134,14 @@ export const API = {
   lookups: {
     orders: v1('common/lookups/orders'),
     orderLines: (orderId: number) => v1(`common/lookups/orders/${orderId}/lines`),
+    orderLineComponents: (orderLineId: number) => v1(`common/lookups/order-lines/${orderLineId}/components`),
     teams: v1('common/lookups/teams'),
     materials: v1('common/lookups/materials'),
   },
   warehouse: {
     materials: (role: RolePath) => v1(`${role}/materials`),
     orderMaterials: (role: RolePath) => v1(`${role}/order-materials`),
+    incomingMaterials: v1('warehouse-keeper/incoming-materials'),
     materialReceipts: (role: RolePath) => v1(`${role}/material-receipts`),
     purchaseOrders: (role: RolePath) => v1(`${role}/purchase-orders`),
     shortDeliveries: (role: RolePath) => v1(`${role}/short-deliveries`),
@@ -194,6 +197,7 @@ export const API = {
     pieceRateApproveMany: v1('admin/piece-rates/approve-many'),
     pieceRateReject: (id: number) => v1(`admin/piece-rates/${id}/reject`),
     assignments: v1('team-leader/operation-assignments'),
+    assignmentsBulk: v1('team-leader/operation-assignments/bulk'),
     assignmentOperations: v1('team-leader/operation-assignments/operations'),
     assignmentReplace: (id: number) => v1(`team-leader/operation-assignments/${id}/replace`),
     assignmentClose: (id: number) => v1(`team-leader/operation-assignments/${id}/close`),

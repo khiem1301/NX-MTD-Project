@@ -20,13 +20,11 @@ public partial class CuttingLay
 
     public short LaySequence { get; set; }
 
-    public int? FabricMaterialId { get; set; }
+    public int FabricMaterialId { get; set; }
 
     public string FabricColor { get; set; } = null!;
 
     public short PlyCount { get; set; }
-
-    public string SizeRatio { get; set; } = null!;
 
     public string? Note { get; set; }
 
@@ -38,7 +36,7 @@ public partial class CuttingLay
 
     public virtual Team CuttingTeam { get; set; } = null!;
 
-    public virtual Material? FabricMaterial { get; set; }
+    public virtual Material FabricMaterial { get; set; } = null!;
 
     public virtual WorkOrder WorkOrder { get; set; } = null!;
 }

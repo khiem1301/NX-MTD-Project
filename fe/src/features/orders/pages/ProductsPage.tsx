@@ -8,6 +8,7 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
 import { AuditHistory } from '@/components/common/AuditHistory';
 import { ProductFormModal } from '../components/ProductFormModal';
+import { ProductSpecDrawer } from '../components/ProductSpecDrawer';
 import { useDiscontinueProduct, useProducts, useReactivateProduct } from '../hooks/useOrders';
 import { useQuery } from '@tanstack/react-query';
 import { productApi } from '../api/orderApi';
@@ -38,6 +39,7 @@ export function ProductsPage() {
   const reactivate = useReactivateProduct();
   const [editing, setEditing] = useState<ProductListItem | null>(null);
   const [open, setOpen] = useState(false);
+  const [specFor, setSpecFor] = useState<ProductListItem | null>(null);
 
   const columns: TableColumnsType<ProductListItem> = [
     { title: MESSAGES.orders.productCode, dataIndex: 'productCode' },
@@ -55,6 +57,7 @@ export function ProductsPage() {
       render: (_: unknown, p) => (
         <Space>
           <Button size="small" onClick={() => { setEditing(p); setOpen(true); }}>{MESSAGES.common.edit}</Button>
+          <Button size="small" onClick={() => setSpecFor(p)}>{MESSAGES.orders.spec.button}</Button>
           {p.status === 'Active' ? (
             <Popconfirm title={MESSAGES.orders.discontinueConfirm} onConfirm={() => discontinue.mutate(p.productId)}>
               <Button size="small" danger>{MESSAGES.orders.discontinue}</Button>
@@ -93,6 +96,7 @@ export function ProductsPage() {
         locale={{ emptyText: MESSAGES.common.noData }}
       />
       <ProductFormModal open={open} product={editing} onClose={() => setOpen(false)} />
+      <ProductSpecDrawer product={specFor} onClose={() => setSpecFor(null)} />
     </Card>
   );
 }

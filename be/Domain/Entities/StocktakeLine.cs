@@ -12,11 +12,7 @@ public partial class StocktakeLine
 
     public int StocktakeId { get; set; }
 
-    public int? MaterialId { get; set; }
-
-    public string? MaterialColor { get; set; }
-
-    public int? OrderLineId { get; set; }
+    public int StockBalanceId { get; set; }
 
     public decimal BookQty { get; set; }
 
@@ -26,9 +22,7 @@ public partial class StocktakeLine
 
     public string? Note { get; set; }
 
-    public virtual Material? Material { get; set; }
-
-    public virtual OrderLine? OrderLine { get; set; }
+    public virtual StockBalance StockBalance { get; set; } = null!;
 
     public virtual Stocktake Stocktake { get; set; } = null!;
 }

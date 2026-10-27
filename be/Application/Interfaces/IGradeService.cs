@@ -11,6 +11,12 @@ public interface IGradeService
 
     Task<Result<IReadOnlyList<GradeWorkerDto>>> GetTeamWorkersAsync(int teamId, CancellationToken ct);
 
+    /// <summary>Công nhân đang làm việc của mọi tổ, để Admin / Quản đốc chọn khi đặt bậc trực tiếp.</summary>
+    Task<Result<IReadOnlyList<GradeWorkerDto>>> GetAllWorkersAsync(CancellationToken ct);
+
+    /// <summary>Đặt bậc trực tiếp: tạo dòng lịch sử APPLIED ngay; đề xuất đang chờ của công nhân đó (nếu có) bị thay thế.</summary>
+    Task<Result> SetGradeAsync(SetGradeDto dto, CancellationToken ct);
+
     /// <param name="teamId">Có giá trị = chỉ đề xuất của tổ này; null = mọi tổ (Admin / Quản đốc).</param>
     Task<Result<PagedResult<GradeEvaluationDto>>> GetPagedAsync(GradeEvaluationQuery query, int? teamId, CancellationToken ct);
 

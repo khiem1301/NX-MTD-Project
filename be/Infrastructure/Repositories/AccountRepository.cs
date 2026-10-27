@@ -10,7 +10,7 @@ public sealed class AccountRepository : GenericRepository<Account>, IAccountRepo
     public AccountRepository(NxMtdDbContext context) : base(context) { }
 
     public Task<Account?> GetByUsernameAsync(string username, CancellationToken ct) =>
-        WithEmployee().FirstOrDefaultAsync(a => a.Username == username, ct);
+        WithEmployee().FirstOrDefaultAsync(a => a.Employee.EmployeeCode == username, ct);
 
     public Task<Account?> GetWithEmployeeAsync(int accountId, CancellationToken ct) =>
         WithEmployee().FirstOrDefaultAsync(a => a.AccountId == accountId, ct);

@@ -14,19 +14,11 @@ public partial class Payroll
 
     public string Status { get; set; } = null!;
 
-    public string? ImportedFileUrl { get; set; }
-
-    public DateTime? ImportedAt { get; set; }
-
-    public decimal TotalAmount { get; set; }
-
     public DateTime? SubmittedAt { get; set; }
 
     public DateTime? ApprovedAt { get; set; }
 
     public string? RejectReason { get; set; }
-
-    public string? ReopenReason { get; set; }
 
     public byte[] RowVer { get; set; } = null!;
 

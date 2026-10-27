@@ -23,6 +23,10 @@ public sealed class LookupsController : CommonBaseController
     public async Task<IActionResult> OrderLines(int orderId, CancellationToken ct) =>
         this.ToResponse(Result<IReadOnlyList<OrderLineOptionDto>>.Success(await _lookups.GetOrderLinesAsync(orderId, ct)));
 
+    [HttpGet("order-lines/{orderLineId:int}/components")]
+    public async Task<IActionResult> OrderLineComponents(int orderLineId, CancellationToken ct) =>
+        this.ToResponse(Result<IReadOnlyList<ComponentOptionDto>>.Success(await _lookups.GetPanelsOfOrderLineAsync(orderLineId, ct)));
+
     [HttpGet("teams")]
     public async Task<IActionResult> Teams([FromQuery] string? teamType, CancellationToken ct) =>
         this.ToResponse(Result<IReadOnlyList<TeamOptionDto>>.Success(await _lookups.GetTeamsAsync(teamType, ct)));

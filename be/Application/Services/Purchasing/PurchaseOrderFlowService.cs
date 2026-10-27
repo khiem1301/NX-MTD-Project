@@ -16,6 +16,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 {
     private const string ManagerLink = "/purchase-orders?id={0}";
     private const string PaymentLink = "/purchase-payments?id={0}";
+    private const string IncomingLink = "/warehouse/incoming-materials";
 
     private readonly IUnitOfWork _uow;
     private readonly IPurchaseOrderService _orders;
@@ -72,12 +73,14 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             {
                 p.PurchaseOrderId, p.PoCode, p.OrderId, OrderCode = p.Order == null ? null : p.Order.OrderCode,
                 p.SupplierId, SupplierName = p.Supplier == null ? null : p.Supplier.SupplierName,
-                p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryDate, p.Note, p.RejectReason,
-                p.PaymentReturnReason, p.PaymentDate, p.PaidAmount, p.PaymentMethod, p.PaymentNote, p.PaidAt,
+                p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryCount, p.Note, p.RejectReason,
+                p.PaymentReturnReason, p.PaymentDate, p.PaidAmount, p.PaymentMethod, p.PaymentNote,
                 p.CreatedAt, p.RowVer,
             })
             .FirstOrDefaultAsync(ct);
         if (header is null) return Fail.NotFound<PurchaseOrderFlowDto>();
+        var receivedCount = await _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
+            .Where(v => v.PurchaseOrderId == purchaseOrderId).Select(v => v.ReceivedCount).FirstOrDefaultAsync(ct);
 
         // Dòng + tên NVL do Thái dựng sẵn (đơn gắn đơn hàng hoặc đơn dự trữ), không viết lại.
         var detail = await _orders.GetByIdAsync(purchaseOrderId, ct);
@@ -88,10 +91,10 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         return Result<PurchaseOrderFlowDto>.Success(new PurchaseOrderFlowDto(
             header.PurchaseOrderId, header.PoCode, header.OrderId, header.OrderCode, header.SupplierId,
             header.SupplierName, CodeText.ToPascal(header.GoodsStatus), CodeText.ToPascal(header.PaymentStatus),
-            header.OrderDate, header.ExpectedDeliveryDate, header.Note, header.RejectReason,
+            header.OrderDate, header.ExpectedDeliveryCount, receivedCount, header.Note, header.RejectReason,
             header.PaymentReturnReason, header.PaymentDate, header.PaidAmount,
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
-            header.PaidAt, lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
+            lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
             PermissionsFor(header.GoodsStatus, header.PaymentStatus), history));
     }
 
@@ -112,8 +115,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         if (dto.OrderDate > _clock.Today)
             return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
                 ResultKind.Validation);
-        if (dto.ExpectedDeliveryDate is { } expected && expected < dto.OrderDate)
-            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderDeliveryBeforeOrder,
+        if (dto.ExpectedDeliveryCount < 1)
+            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderDeliveryCountInvalid,
                 ResultKind.Validation);
 
         var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
@@ -133,18 +136,20 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         }
         po.SupplierId = supplier.SupplierId;
         po.OrderDate = dto.OrderDate;
-        po.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
+        po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
         po.Note = Clean(dto.Note) ?? po.Note;
         po.GoodsStatus = PurchaseGoodsStatuses.Ordered;
-        po.OrderedAt = _clock.Now;
 
         return await _uow.InTransactionAsync(async () =>
         {
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
-                new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryDate, Lines = Snapshot(po) }));
+                new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, Lines = Snapshot(po) }));
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier.SupplierName),
                 string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
+            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+                Messages.NotifyIncomingPoTitle, string.Format(Messages.NotifyIncomingPoBody, po.PoCode, supplier.SupplierName),
+                IncomingLink, nameof(PurchaseOrder), po.PurchaseOrderId), ct);
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.PurchaseOrderPlaced);
         });
@@ -228,7 +233,6 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         po.PaidAmount = dto.PaidAmount;
         po.PaymentMethod = method;
         po.PaymentNote = Clean(dto.PaymentNote);
-        po.PaidAt = _clock.Now;
 
         return await _uow.InTransactionAsync(async () =>
         {

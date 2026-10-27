@@ -20,7 +20,8 @@ public sealed class StartVehicleTripDtoValidator : AbstractValidator<StartVehicl
     {
         RuleFor(x => x.VehicleId).GreaterThan(0);
         RuleFor(x => x.TripDate).NotEmpty();
-        RuleFor(x => x.DriverName).NotEmpty().WithMessage(WarehouseMessages.DriverRequired).MaximumLength(100);
+        RuleFor(x => x.DriverName).NotEmpty().When(x => x.DriverEmployeeId is null).WithMessage(WarehouseMessages.DriverRequired);
+        RuleFor(x => x.DriverName).MaximumLength(100);
         RuleFor(x => x.Purpose).MaximumLength(300);
         RuleFor(x => x.OdometerStart).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.OdometerInvalid);
     }

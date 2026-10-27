@@ -27,10 +27,26 @@ public sealed class LookupService : ILookupService
     public async Task<IReadOnlyList<OrderLineOptionDto>> GetOrderLinesAsync(int orderId, CancellationToken ct) =>
         await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderId == orderId)
-            .OrderBy(l => l.Product.ProductCode).ThenBy(l => l.Color).ThenBy(l => l.SizeCode)
-            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.Product.ProductCode, l.Product.ProductName,
-                l.Color, l.SizeCode, l.OrderedQty))
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
+                l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty))
             .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct)
+    {
+        var variantId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductVariantId).FirstOrDefaultAsync(ct);
+        if (variantId is null) return [];
+        // Mỗi dòng định mức (chi tiết vải × NVL × màu) của đúng màu × size là một lựa chọn cắt bù.
+        return await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(p => p.ProductVariantId == variantId && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                        && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
+            .OrderBy(p => p.ProductComponent.SortOrder).ThenBy(p => p.ProductComponentMaterialId)
+            .Select(p => new ComponentOptionDto(p.ProductComponentMaterialId,
+                p.ProductComponent.ComponentName + " – " + p.Material.MaterialName + (p.MaterialColor == "" ? "" : " " + p.MaterialColor),
+                p.ProductComponent.PiecesPerGarment))
+            .ToListAsync(ct);
+    }
 
     public async Task<IReadOnlyList<TeamOptionDto>> GetTeamsAsync(string? teamType, CancellationToken ct) =>
         await _uow.Repository<Team>().Query().AsNoTracking()
@@ -46,7 +62,7 @@ public sealed class LookupService : ILookupService
             .Where(m => m.Status == MaterialStatuses.Active)
             .Where(m => string.IsNullOrEmpty(kw) || m.MaterialCode.Contains(kw) || m.MaterialName.Contains(kw))
             .OrderBy(m => m.MaterialCode).Take(MaxOptions)
-            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType, m.Unit))
+            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit))
             .ToListAsync(ct);
     }
 }

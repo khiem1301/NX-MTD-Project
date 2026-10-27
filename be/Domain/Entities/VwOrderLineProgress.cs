@@ -15,6 +15,8 @@ public partial class VwOrderLineProgress
 
     public string ProductCode { get; set; } = null!;
 
+    public int ProductVariantId { get; set; }
+
     public string Color { get; set; } = null!;
 
     public string SizeCode { get; set; } = null!;

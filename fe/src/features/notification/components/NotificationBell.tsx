@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BellOutlined } from '@ant-design/icons';
 import { Badge, Button, Empty, List, Popover, Space, Tag, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
+import { ROUTES } from '@/constants/routes';
 import { formatDateTime } from '@/utils/format';
 import {
   useMarkAllRead,
@@ -78,6 +79,9 @@ export function NotificationBell() {
           </List.Item>
         )}
       />
+      <Button type="link" block onClick={() => { setOpen(false); navigate(ROUTES.notifications); }}>
+        Xem tất cả thông báo
+      </Button>
     </div>
   );
 

@@ -15,7 +15,10 @@ public sealed record GradeEvaluationDto(
     DateTime CreatedAt);
 
 public sealed record GradeWorkerDto(int WorkerId, string WorkerCode, string FullName, string? CurrentGradeCode,
-    int RecentDefectCount, bool HasPending);
+    int RecentDefectCount, bool HasPending, string? TeamName = null);
+
+/// <summary>Admin / Quản đốc đặt bậc trực tiếp cho công nhân, không cần tổ trưởng đề xuất. Mặc định có hiệu lực từ hôm nay.</summary>
+public sealed record SetGradeDto(int WorkerId, string GradeCode, string Reason, DateOnly? EffectiveDate);
 
 /// <summary>Tổ trưởng / tổ phó đề xuất bậc cho công nhân của tổ mình; số lỗi gần đây do hệ thống tính.</summary>
 public sealed record ProposeGradeDto(int WorkerId, string ProposedGradeCode, string Reason);

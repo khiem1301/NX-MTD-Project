@@ -16,6 +16,16 @@ public sealed class GradeEvaluationsController : AdminBaseController
     public async Task<IActionResult> GetPaged([FromQuery] GradeEvaluationQuery query, CancellationToken ct) =>
         this.ToResponse(await _grades.GetPagedAsync(query, null, ct));
 
+    /// <summary>Công nhân đang làm việc của mọi tổ để chọn khi đặt bậc trực tiếp.</summary>
+    [HttpGet("workers")]
+    public async Task<IActionResult> GetWorkers(CancellationToken ct) =>
+        this.ToResponse(await _grades.GetAllWorkersAsync(ct));
+
+    /// <summary>Đặt bậc trực tiếp cho công nhân, không cần tổ trưởng đề xuất trước.</summary>
+    [HttpPost("set")]
+    public async Task<IActionResult> SetGrade([FromBody] SetGradeDto dto, CancellationToken ct) =>
+        this.ToResponse(await _grades.SetGradeAsync(dto, ct));
+
     [HttpPost("{id:int}/apply")]
     public async Task<IActionResult> Apply(int id, [FromBody] ApplyGradeDto dto, CancellationToken ct) =>
         this.ToResponse(await _grades.ApplyAsync(id, dto, ct));

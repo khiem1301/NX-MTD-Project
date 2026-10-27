@@ -65,7 +65,7 @@ public class NotificationCenterTests
 
     private Notification Note(int recipient, bool read = false, string title = "T")
     {
-        var n = new Notification { NotificationId = _notifications.Count + 1, RecipientId = recipient, SourceType = NotificationSources.System, Title = title, Message = "m", IsRead = read, CreatedAt = Now };
+        var n = new Notification { NotificationId = _notifications.Count + 1, RecipientId = recipient, SourceType = NotificationSources.System, Title = title, Message = "m", ReadAt = read ? Now : null, CreatedAt = Now };
         _notifications.Add(n);
         return n;
     }
@@ -103,9 +103,9 @@ public class NotificationCenterTests
         (await Inbox().MarkReadAsync(mine.NotificationId, default)).IsSuccess.Should().BeTrue();
         (await Inbox().MarkReadAsync(other.NotificationId, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
 
-        mine.IsRead.Should().BeTrue();
+        mine.ReadAt.Should().NotBeNull();
         mine.ReadAt.Should().Be(Now);
-        other.IsRead.Should().BeFalse();
+        other.ReadAt.Should().BeNull();
     }
 
     [Fact]
@@ -115,9 +115,9 @@ public class NotificationCenterTests
 
         await Inbox().MarkAllReadAsync(default);
 
-        a.IsRead.Should().BeTrue();
-        b.IsRead.Should().BeTrue();
-        other.IsRead.Should().BeFalse();
+        a.ReadAt.Should().NotBeNull();
+        b.ReadAt.Should().NotBeNull();
+        other.ReadAt.Should().BeNull();
     }
 
     [Fact]
@@ -125,7 +125,7 @@ public class NotificationCenterTests
     {
         var announcement = new Announcement { AnnouncementId = 1, Content = "x", Priority = AnnouncementPriorities.Urgent, SenderId = Me };
         _announcements.Add(announcement);
-        var n = Note(Me); n.AnnouncementId = 1; n.Announcement = announcement;
+        var n = Note(Me); n.RefTable = nameof(Announcement); n.RefId = 1;
         Note(Me);
 
         var items = (await Inbox().ListMineAsync(new NotificationQuery(), default)).Data!.Items;
@@ -147,7 +147,7 @@ public class NotificationCenterTests
         result.IsSuccess.Should().BeTrue();
         _notifications.Select(n => n.RecipientId).Should().BeEquivalentTo(new[] { 11, 12, 13 });
         _notifications.Should().OnlyContain(n => n.SourceType == NotificationSources.Announcement && n.PushStatus == NotificationPushStatuses.Skipped
-            && n.Message == "Họp lúc 15h" && n.Title == "Thông báo" && n.AnnouncementId == 1);
+            && n.Message == "Họp lúc 15h" && n.Title == "Thông báo" && n.RefTable == nameof(Announcement) && n.RefId == 1);
         result.Message.Should().Contain("3");
     }
 

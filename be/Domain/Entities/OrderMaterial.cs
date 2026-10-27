@@ -20,7 +20,7 @@ public partial class OrderMaterial
 
     public decimal CustomerQty { get; set; }
 
-    public DateOnly? CustomerExpectedDate { get; set; }
+    public short? ExpectedDeliveryCount { get; set; }
 
     public decimal? PurchaseQty { get; set; }
 
@@ -33,8 +33,6 @@ public partial class OrderMaterial
     public virtual ICollection<MaterialReceiptLine> MaterialReceiptLines { get; set; } = new List<MaterialReceiptLine>();
 
     public virtual CustomerOrder Order { get; set; } = null!;
-
-    public virtual ICollection<OrderMaterialNorm> OrderMaterialNorms { get; set; } = new List<OrderMaterialNorm>();
 
     public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
 }

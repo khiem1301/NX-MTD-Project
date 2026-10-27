@@ -47,11 +47,10 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
 
         var rows = r.Lines.Select((l, i) => (IReadOnlyList<object?>)new object?[]
         {
-            i + 1, l.MaterialCode, l.MaterialName, l.Unit, l.MaterialColor, l.AcceptedQty, l.ShortQty, l.DefectiveQty,
-            l.UnitPrice,
+            i + 1, l.MaterialCode, l.MaterialName, l.Unit, l.MaterialColor, l.AcceptedQty, l.UnitPrice,
         }).ToList();
         var doc = new PrintableDocument("PHIẾU NHẬP NGUYÊN VẬT LIỆU", r.ReceiptCode, info,
-            new[] { "STT", "Mã NVL", "Tên NVL", "ĐVT", "Màu", "SL đạt", "SL thiếu", "SL lỗi", "Đơn giá" }, rows,
+            new[] { "STT", "Mã NVL", "Tên NVL", "ĐVT", "Màu", "SL đạt", "Đơn giá" }, rows,
             new[] { "Người lập phiếu", "Thủ kho", "Quản đốc" });
         return Build(doc, "PhieuNhap");
     }

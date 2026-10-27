@@ -57,6 +57,12 @@ public interface IProductService
     Task<Result<AttachmentContent>> OpenSampleImageAsync(string key, CancellationToken ct);
 }
 
+public interface IProductSpecService
+{
+    Task<Result<ProductSpecDto>> GetAsync(int productId, CancellationToken ct);
+    Task<Result<ProductSpecDto>> SaveAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
+}
+
 public interface ICustomerOrderService
 {
     Task<Result<PagedResult<OrderListItemDto>>> ListAsync(OrderQuery query, CancellationToken ct);

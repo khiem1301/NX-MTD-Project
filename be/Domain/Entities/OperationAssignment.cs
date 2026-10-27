@@ -22,13 +22,7 @@ public partial class OperationAssignment
 
     public DateOnly? ValidTo { get; set; }
 
-    public int? CopiedFromAssignmentId { get; set; }
-
     public DateTime AssignedAt { get; set; }
-
-    public virtual OperationAssignment? CopiedFromAssignment { get; set; }
-
-    public virtual ICollection<OperationAssignment> InverseCopiedFromAssignment { get; set; } = new List<OperationAssignment>();
 
     public virtual Operation Operation { get; set; } = null!;
 

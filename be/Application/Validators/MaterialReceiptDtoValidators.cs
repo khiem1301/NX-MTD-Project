@@ -12,11 +12,8 @@ public sealed class SaveReceiptLineDtoValidator : AbstractValidator<SaveReceiptL
         // Khách cấp chọn NVL của đơn, nhà cung cấp chọn dòng đơn mua: dịch vụ xác định đúng loại theo Source.
         RuleFor(x => x).Must(x => (x.OrderMaterialId ?? 0) > 0 || (x.PurchaseOrderLineId ?? 0) > 0)
             .WithMessage(WarehouseMessages.ReceiptLineTarget).OverridePropertyName("orderMaterialId");
+        // 0 = lô chưa giao / hỏng cả lô: vẫn giữ dòng để gắn yêu cầu thiếu NVL (CK_MRL_Qty cho phép 0).
         RuleFor(x => x.AcceptedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.ShortQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.DefectiveQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.AcceptedQty + x.ShortQty + x.DefectiveQty).GreaterThan(0)
-            .WithMessage(WarehouseMessages.QtyMustBePositive).OverridePropertyName("acceptedQty");
     }
 }
 
@@ -33,6 +30,8 @@ public sealed class SaveMaterialReceiptDtoValidator : AbstractValidator<SaveMate
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new SaveReceiptLineDtoValidator());
+        RuleFor(x => x.Lines).Must(l => l is null || l.Any(x => x.AcceptedQty > 0))
+            .WithMessage(WarehouseMessages.QtyMustBePositive).OverridePropertyName("acceptedQty");
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.PurchaseOrderLineId ?? -x.OrderMaterialId ?? 0).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
     }
@@ -44,10 +43,6 @@ public sealed class SupplementaryLineDtoValidator : AbstractValidator<Supplement
     {
         RuleFor(x => x.OriginalReceiptLineId).GreaterThan(0);
         RuleFor(x => x.AcceptedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.ShortQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.DefectiveQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.AcceptedQty + x.ShortQty + x.DefectiveQty).GreaterThan(0)
-            .WithMessage(WarehouseMessages.QtyMustBePositive).OverridePropertyName("acceptedQty");
     }
 }
 
@@ -61,6 +56,8 @@ public sealed class SaveSupplementaryReceiptDtoValidator : AbstractValidator<Sav
         RuleForEach(x => x.Lines).SetValidator(new SupplementaryLineDtoValidator());
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.OriginalReceiptLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
+        RuleFor(x => x.Lines).Must(l => l is null || l.Any(x => x.AcceptedQty > 0))
+            .WithMessage(WarehouseMessages.QtyMustBePositive).OverridePropertyName("acceptedQty");
     }
 }
 

@@ -22,8 +22,6 @@ public partial class Team
 
     public virtual ICollection<AnnouncementTarget> AnnouncementTargets { get; set; } = new List<AnnouncementTarget>();
 
-    public virtual ICollection<CutHandover> CutHandovers { get; set; } = new List<CutHandover>();
-
     public virtual ICollection<CuttingLay> CuttingLays { get; set; } = new List<CuttingLay>();
 
     public virtual ICollection<DefectRecord> DefectRecords { get; set; } = new List<DefectRecord>();
@@ -36,8 +34,6 @@ public partial class Team
 
     public virtual ICollection<MaterialIssue> MaterialIssues { get; set; } = new List<MaterialIssue>();
 
-    public virtual ICollection<MaterialReturn> MaterialReturns { get; set; } = new List<MaterialReturn>();
-
     public virtual ICollection<OperationAssignment> OperationAssignments { get; set; } = new List<OperationAssignment>();
 
     public virtual ICollection<OutputRecord> OutputRecords { get; set; } = new List<OutputRecord>();
@@ -48,7 +44,7 @@ public partial class Team
 
     public virtual ICollection<TeamMealConfirmation> TeamMealConfirmations { get; set; } = new List<TeamMealConfirmation>();
 
-    public virtual ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
+    public virtual ICollection<WorkAllocation> WorkAllocations { get; set; } = new List<WorkAllocation>();
 
-    public virtual ICollection<WorkerPieceMovement> WorkerPieceMovements { get; set; } = new List<WorkerPieceMovement>();
+    public virtual ICollection<WorkOrder> WorkOrders { get; set; } = new List<WorkOrder>();
 }

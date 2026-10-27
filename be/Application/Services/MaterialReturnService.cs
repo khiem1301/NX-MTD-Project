@@ -33,13 +33,13 @@ public sealed class MaterialReturnService : IMaterialReturnService
     {
         var keyword = query.Keyword?.Trim();
         var page = await Returns.AsNoTracking()
-            .Where(r => cuttingTeamId == null || r.CuttingTeamId == cuttingTeamId)
+            .Where(r => cuttingTeamId == null || r.MaterialIssue.ReceivingTeamId == cuttingTeamId)
             .Where(r => string.IsNullOrEmpty(query.Status) || r.Status == query.Status)
             .Where(r => string.IsNullOrEmpty(keyword) || r.ReturnCode.Contains(keyword)
                         || r.MaterialIssue.IssueCode.Contains(keyword) || r.MaterialIssue.Order.OrderCode.Contains(keyword))
             .OrderByDescending(r => r.MaterialReturnId)
             .Select(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.MaterialIssueId,
-                r.MaterialIssue.IssueCode, r.MaterialIssue.Order.OrderCode, r.CuttingTeamId, r.CuttingTeam.TeamName,
+                r.MaterialIssue.IssueCode, r.MaterialIssue.Order.OrderCode, r.MaterialIssue.ReceivingTeamId, r.MaterialIssue.ReceivingTeam.TeamName,
                 r.Status, r.CreatedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
                 r.ConfirmedAt, r.MaterialReturnLines.Sum(l => l.ReturnedQty)))
             .ToPagedAsync(query, ct);
@@ -50,7 +50,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
     {
         var dto = await Returns.AsNoTracking().Where(r => r.MaterialReturnId == returnId)
             .Select(r => new MaterialReturnDto(r.MaterialReturnId, r.ReturnCode, r.MaterialIssueId, r.MaterialIssue.IssueCode,
-                r.MaterialIssue.Order.OrderCode, r.CuttingTeamId, r.CuttingTeam.TeamName, r.Note, r.Status, r.CreatedAt,
+                r.MaterialIssue.Order.OrderCode, r.MaterialIssue.ReceivingTeamId, r.MaterialIssue.ReceivingTeam.TeamName, r.Note, r.Status, r.CreatedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt, r.RejectReason,
                 r.MaterialReturnLines.OrderBy(l => l.MaterialReturnLineId).Select(l => new MaterialReturnLineDto(
                     l.MaterialReturnLineId, l.MaterialIssueLineId, l.MaterialIssueLine.Material!.MaterialCode,
@@ -115,7 +115,6 @@ public sealed class MaterialReturnService : IMaterialReturnService
             {
                 ReturnCode = await _codes.NextAsync<MaterialReturn>(DocumentPrefixes.MaterialReturn, r => r.ReturnCode, ct),
                 MaterialIssueId = issue.MaterialIssueId,
-                CuttingTeamId = cuttingTeamId,
                 Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
                 Status = HandoverStatuses.Pending,
                 CreatedAt = _clock.Now,
@@ -186,7 +185,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
 
     public async Task<Result> CancelAsync(int returnId, int cuttingTeamId, CancellationToken ct)
     {
-        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId && r.CuttingTeamId == cuttingTeamId, ct);
+        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId && r.MaterialIssue.ReceivingTeamId == cuttingTeamId, ct);
         if (ret is null) return WarehouseFailures.NotFound();
         if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 

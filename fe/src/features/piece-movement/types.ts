@@ -1,7 +1,8 @@
 import type { PageParams } from '@/types/api';
 
-export type WorkerPieceMovement = {
-  workerPieceMovementId: number;
+/** Một lần giao / thu hồi việc với công nhân: số lần làm công đoạn, kèm BTP nếu công đoạn dùng BTP. */
+export type WorkAllocation = {
+  workAllocationId: number;
   movementType: string;
   sewingTeamId: number;
   teamName: string;
@@ -13,10 +14,14 @@ export type WorkerPieceMovement = {
   productCode: string;
   color: string;
   sizeCode: string;
-  operationId: number | null;
-  operationName: string | null;
+  operationId: number;
+  operationCode: string;
+  operationName: string;
+  usesSemiFinished: boolean;
   quantity: number;
+  pieceQty: number;
   confirmedQty: number | null;
+  confirmedPieceQty: number | null;
   discrepancyReason: string | null;
   retrievalReason: string | null;
   confirmMode: string;
@@ -27,6 +32,7 @@ export type WorkerPieceMovement = {
   confirmedAt: string | null;
 };
 
+/** BTP (bộ đủ) tổ đang giữ của một dòng đơn. */
 export type TeamHoldingLine = {
   orderLineId: number;
   orderCode: string;
@@ -34,40 +40,68 @@ export type TeamHoldingLine = {
   color: string;
   sizeCode: string;
   heldByTeam: number;
-  pendingHandoverQty: number;
-  availableQty: number;
+  pendingPieceQty: number;
+  availablePieceQty: number;
 };
 
-export type WorkerHoldingLine = {
-  workerId: number;
-  workerCode: string;
-  workerName: string;
+/** Tiến độ chia việc của một công đoạn × dòng đơn. */
+export type OperationProgress = {
   orderLineId: number;
   orderCode: string;
   productCode: string;
   color: string;
   sizeCode: string;
+  operationId: number;
+  operationCode: string;
+  operationName: string;
+  groupName: string | null;
+  usesSemiFinished: boolean;
+  requiredQty: number;
+  allocatedQty: number;
+  pendingQty: number;
+  unallocatedQty: number;
+  outputQty: number;
+};
+
+/** Số lần một công nhân đang được giao ở một công đoạn × dòng đơn. */
+export type WorkerAllocationLine = {
+  workerId: number;
+  workerCode: string;
+  workerName: string;
+  orderLineId: number;
+  operationId: number;
   heldQty: number;
   pendingRetrievalQty: number;
+  outputQty: number;
   retrievableQty: number;
 };
 
-export type PieceMovementHoldings = { team: TeamHoldingLine[]; workers: WorkerHoldingLine[] };
+export type WorkAllocationBoard = {
+  team: TeamHoldingLine[];
+  operations: OperationProgress[];
+  workers: WorkerAllocationLine[];
+};
 
-export type MovementQuery = PageParams & {
+export type AllocationQuery = PageParams & {
   status?: string;
   movementType?: string;
   workerId?: number;
+  orderId?: number;
 };
 
-export type CreateMovementPayload = {
+export type CreateAllocationPayload = {
   movementType: string;
   workerId: number;
   orderLineId: number;
-  operationId?: number;
+  operationId: number;
   quantity: number;
+  pieceQty?: number;
   retrievalReason?: string;
 };
 
-export type ConfirmMovementPayload = { confirmedQty: number; discrepancyReason?: string };
-export type ConfirmOnBehalfPayload = ConfirmMovementPayload & { onBehalfReason: string };
+export type ConfirmAllocationPayload = {
+  confirmedQty: number;
+  confirmedPieceQty?: number;
+  discrepancyReason?: string;
+};
+export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };

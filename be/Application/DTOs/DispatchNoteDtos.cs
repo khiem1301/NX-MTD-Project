@@ -13,7 +13,7 @@ public sealed record DispatchNoteLineDto(
 public sealed record DispatchNoteDto(
     int DispatchNoteId, string DispatchCode, int OrderId, string OrderCode, string CustomerName, DateOnly DeliveryDate,
     string DeliveryAddress, string? Note, string Status, DateTime CreatedAt, string? RejectReason,
-    string? DispatchedByName, DateTime? DispatchedAt, DateOnly? CustomerReceivedDate, DateTime? DeliveryConfirmedAt,
+    string? DispatchedByName, DateTime? DispatchedAt, DateOnly? CustomerReceivedDate,
     IReadOnlyList<DispatchNoteLineDto> Lines);
 
 /// <summary>Số còn xuất được của từng dòng đơn: đặt − đã xuất (phiếu chờ + đang giao + đã giao); kèm tồn thành phẩm khả dụng.</summary>

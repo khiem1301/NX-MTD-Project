@@ -97,6 +97,11 @@ public static class Messages
     public const string GradeProposedToday = "Hôm nay bạn đã đề xuất bậc cho công nhân này.";
     public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
     public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
+    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin, Quản đốc hoặc Kế toán.";
+    public const string GradeWorkerInvalid = "Chỉ đặt bậc cho công nhân đang làm việc.";
+    public const string GradeSupersededNote = "Quản đốc đã đặt bậc trực tiếp nên đề xuất này không còn hiệu lực.";
+    public const string GradeSetToday = "Hôm nay bạn đã đặt bậc cho công nhân này.";
+    public const string GradeSet = "Đã đặt bậc thợ.";
     public const string GradeApplied = "Đã áp dụng bậc thợ.";
     public const string GradeNotApplied = "Đã ghi nhận không áp dụng bậc thợ.";
     public const string AnnouncementTooLong = "Nội dung thông báo tối đa 1000 ký tự.";
@@ -225,8 +230,16 @@ public static class Messages
     public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
     public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
     public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
+    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP trong kho: BTP đã cắt vào kho {0}, các chỉ tiêu khác đã đặt {1}, còn đặt được {2}.";
+    public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
+    public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
+    public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
+    public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
+    public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
+    public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
+    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng dùng.";
     public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
-    public const string PurchaseOrderDeliveryBeforeOrder = "Ngày giao dự kiến không được trước ngày đặt hàng.";
+    public const string PurchaseOrderDeliveryCountInvalid = "Số lần nhà cung cấp dự kiến giao phải từ 1 trở lên.";
     public const string PurchaseOrderPlaced = "Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.";
     public const string PurchaseOrderCancelled = "Đã hủy đơn mua.";
     public const string PurchaseOrderRepriced = "Đã cập nhật đơn giá và gửi lại Kế toán.";
@@ -235,6 +248,10 @@ public static class Messages
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
+    public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
+    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, dự kiến giao {4} lần. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyIncomingPoTitle = "Có đơn mua NVL chờ nhận";
+    public const string NotifyIncomingPoBody = "Đơn mua {0} (NCC {1}) đã đặt hàng. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
     public const string NotifyPoPlacedTitle = "Đơn mua chờ thanh toán";
     public const string NotifyPoPlacedBody = "Đơn mua {0} (NCC {1}) đã đặt hàng, chờ xác nhận thanh toán.";
     public const string NotifyPoPaidTitle = "Đơn mua đã thanh toán";
@@ -246,6 +263,7 @@ public static class Messages
 
     // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
+    public const string OperationComponentInvalid = "Chi tiết gắn với công đoạn phải thuộc đúng mã hàng của công đoạn.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
     public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
@@ -282,6 +300,8 @@ public static class Messages
     public const string AssignmentOrderInvalid = "Đơn hàng không tồn tại hoặc đã đóng.";
     public const string AssignmentNotFound = "Không tìm thấy phân công đang hiệu lực.";
     public const string AssignmentSaved = "Đã lưu phân công.";
+    public const string AssignmentOperationsRequired = "Chọn ít nhất một công đoạn.";
+    public const string AssignmentOperationsDuplicate = "Công đoạn bị chọn trùng.";
     public const string AssignmentClosed = "Đã kết thúc phân công.";
     public const string AssignmentCopied = "Đã chép {0} phân công.";
     public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";
@@ -291,7 +311,7 @@ public static class Messages
     public const string OutputDuplicateRow = "Công đoạn và công nhân bị lặp trong danh sách.";
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
     /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
-    public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số BTP đã nhận ({1}): còn tối đa {2}.";
+    public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số lần được giao ({1}): còn tối đa {2}. Hãy giao thêm việc cho công nhân ở màn Giao việc.";
     /// <summary>MSG17: công nhân chưa có chấm công hôm đó (cảnh báo, không chặn).</summary>
     public const string OutputNoAttendanceWarning = "{0} chưa có giờ chấm công ngày {1}.";
     public const string OutputSaved = "Đã lưu sản lượng.";

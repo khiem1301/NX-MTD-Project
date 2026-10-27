@@ -49,6 +49,10 @@ public static class ErrorCodes
     // Mã hàng, đơn hàng (KH-08)
     public const string ProductCodeDuplicate = "PRODUCT_CODE_DUPLICATE";
     public const string ProductCodeLocked = "PRODUCT_CODE_LOCKED";
+    public const string ProductSpecInvalid = "PRODUCT_SPEC_INVALID";
+    public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
+    public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
+    public const string ReceiptDuplicatePending = "RECEIPT_DUPLICATE_PENDING";
     public const string ProductNotActive = "PRODUCT_NOT_ACTIVE";
     public const string ProductInvalidStatus = "PRODUCT_INVALID_STATUS";
     public const string OrderCodeDuplicate = "ORDER_CODE_DUPLICATE";
@@ -132,7 +136,6 @@ public static class ErrorCodes
     public const string WarehouseOrderMaterialDuplicate = "WAREHOUSE_ORDER_MATERIAL_DUPLICATE";
     public const string WarehouseOrderMaterialInUse = "WAREHOUSE_ORDER_MATERIAL_IN_USE";
     public const string CuttingFabricShortage = "CUTTING_FABRIC_SHORTAGE";
-    public const string CuttingFabricNormMissing = "CUTTING_FABRIC_NORM_MISSING";
     public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
@@ -146,6 +149,7 @@ public static class ErrorCodes
     public const string VehicleInactive = "VEHICLE_INACTIVE";
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
+    public const string AllocationExceedsRequired = "ALLOCATION_EXCEEDS_REQUIRED";
     public const string PieceHandoverExceedsHolding = "PIECE_HANDOVER_EXCEEDS_HOLDING";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";
@@ -163,6 +167,7 @@ public static class ErrorCodes
     // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
     public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
+    public const string OperationInvalid = "OPERATION_INVALID";
     public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
     public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
     public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";

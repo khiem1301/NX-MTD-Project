@@ -14,7 +14,7 @@ public partial class VehicleTrip
 
     public DateOnly TripDate { get; set; }
 
-    public string DriverName { get; set; } = null!;
+    public string? DriverName { get; set; }
 
     public int? DriverEmployeeId { get; set; }
 

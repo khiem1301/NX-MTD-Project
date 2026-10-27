@@ -34,7 +34,7 @@ public class AuthServiceTests
         };
         return new Account
         {
-            AccountId = 5, EmployeeId = 7, Username = "TTMAY", PasswordHash = "hash",
+            AccountId = 5, EmployeeId = 7, PasswordHash = "hash",
             Status = accountStatus, SecurityStamp = stamp ?? Guid.NewGuid(), Employee = employee,
         };
     }

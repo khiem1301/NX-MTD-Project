@@ -48,6 +48,19 @@ public sealed class AssignOperationDtoValidator : AbstractValidator<AssignOperat
     }
 }
 
+public sealed class AssignOperationsDtoValidator : AbstractValidator<AssignOperationsDto>
+{
+    public AssignOperationsDtoValidator()
+    {
+        RuleFor(x => x.OrderId).GreaterThan(0);
+        RuleFor(x => x.WorkerId).GreaterThan(0);
+        RuleFor(x => x.OperationIds).NotEmpty().WithMessage(Messages.AssignmentOperationsRequired);
+        RuleForEach(x => x.OperationIds).GreaterThan(0);
+        RuleFor(x => x.OperationIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
+            .WithMessage(Messages.AssignmentOperationsDuplicate);
+    }
+}
+
 public sealed class SaveOutputDtoValidator : AbstractValidator<SaveOutputDto>
 {
     public SaveOutputDtoValidator()

@@ -64,7 +64,7 @@ public class DispatchNoteServiceTests
 
     private OrderLine AddLine(int id, int ordered)
     {
-        var line = new OrderLine { OrderLineId = id, OrderId = 7, ProductId = 3, Product = _product, Color = "Đen", SizeCode = id == 101 ? "M" : "L", OrderedQty = ordered };
+        var line = new OrderLine { OrderLineId = id, OrderId = 7, ProductId = 3, ProductVariant = TestVariant.Make(_product, "Đen", id == 101 ? "M" : "L"), OrderedQty = ordered };
         _orderLines.Add(line);
         return line;
     }

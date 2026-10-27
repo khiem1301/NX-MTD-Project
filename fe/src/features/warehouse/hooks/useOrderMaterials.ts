@@ -15,6 +15,15 @@ export const useOrderMaterials = (orderId: number | undefined) => {
   });
 };
 
+/** Đơn chờ khai báo / còn phải mua NVL (Admin, Quản đốc). */
+export const usePendingMaterialOrders = () => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...WAREHOUSE_KEY, 'pending-material-orders', role],
+    queryFn: () => warehouseApi.getPendingMaterialOrders(role),
+  });
+};
+
 export const useSaveOrderMaterial = () => {
   const role = useRolePath();
   return useApiMutation(

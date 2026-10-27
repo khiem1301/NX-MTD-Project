@@ -14,6 +14,8 @@ public partial class CuttingLayLine
 
     public int OrderLineId { get; set; }
 
+    public int? ProductComponentMaterialId { get; set; }
+
     public short RatioValue { get; set; }
 
     public int CalculatedQty { get; set; }
@@ -25,4 +27,6 @@ public partial class CuttingLayLine
     public virtual CuttingLay CuttingLay { get; set; } = null!;
 
     public virtual OrderLine OrderLine { get; set; } = null!;
+
+    public virtual ProductComponentMaterial? ProductComponentMaterial { get; set; }
 }

@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Button, Card, Select, Space, Table, Tag, Typography, type TableColumnsType } from 'antd';
-import { Can } from '@/components/guards/Can';
+import { Button, Card, Select, Space, Table, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
+import { useAuth } from '@/hooks/useAuth';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime } from '@/utils/format';
+import { AllocationBoard } from '../components/AllocationBoard';
 import { ConfirmMovementModal } from '../components/ConfirmMovementModal';
-import { MovementFormModal } from '../components/MovementFormModal';
 import {
   CONFIRM_MODE_LABEL,
   MOVEMENT_STATUS,
@@ -18,8 +18,8 @@ import {
   PM_LABELS,
   RETRIEVAL_REASON_LABEL,
 } from '../constants';
-import { useMovements, useRejectByWorker } from '../hooks/usePieceMovement';
-import type { WorkerPieceMovement } from '../types';
+import { useAllocations, useRejectByWorker } from '../hooks/usePieceMovement';
+import type { WorkAllocation } from '../types';
 
 type Filters = { status?: string; movementType?: string };
 
@@ -32,10 +32,10 @@ const TYPE_OPTIONS = Object.entries(MOVEMENT_TYPE_LABEL).map(([value, label]) =>
   label,
 }));
 
-function useMovementColumns(
-  extra: (m: WorkerPieceMovement) => React.ReactNode,
+function useAllocationColumns(
+  extra: (m: WorkAllocation) => React.ReactNode,
   withWorker: boolean,
-): TableColumnsType<WorkerPieceMovement> {
+): TableColumnsType<WorkAllocation> {
   return [
     {
       title: PM_LABELS.type,
@@ -56,7 +56,7 @@ function useMovementColumns(
           {
             title: PM_LABELS.worker,
             key: 'worker',
-            render: (_: unknown, m: WorkerPieceMovement) => `${m.workerCode} - ${m.workerName}`,
+            render: (_: unknown, m: WorkAllocation) => `${m.workerCode} - ${m.workerName}`,
           },
         ]
       : []),
@@ -65,12 +65,29 @@ function useMovementColumns(
       key: 'line',
       render: (_, m) => `${m.orderCode} · ${m.productCode} ${m.color}-${m.sizeCode}`,
     },
+    {
+      title: PM_LABELS.operation,
+      key: 'operation',
+      render: (_, m) => `${m.operationCode} - ${m.operationName}`,
+    },
     { title: PM_LABELS.quantity, dataIndex: 'quantity', align: 'right' },
+    {
+      title: PM_LABELS.pieceQty,
+      dataIndex: 'pieceQty',
+      align: 'right',
+      render: (v: number, m) => (m.usesSemiFinished ? v : '—'),
+    },
     {
       title: PM_LABELS.confirmedQty,
       dataIndex: 'confirmedQty',
       align: 'right',
       render: (v: number | null) => v ?? '—',
+    },
+    {
+      title: PM_LABELS.confirmedPieceQty,
+      dataIndex: 'confirmedPieceQty',
+      align: 'right',
+      render: (v: number | null, m) => (m.usesSemiFinished ? (v ?? '—') : '—'),
     },
     {
       title: PM_LABELS.status,
@@ -90,14 +107,12 @@ function useMovementColumns(
   ];
 }
 
-/** UC53 / UC54: tổ trưởng / tổ phó may giao hoặc thu hồi BTP với công nhân, xác nhận hộ khi công nhân chưa xác nhận. */
-export function LeaderPieceMovementsPage() {
+function AllocationHistory() {
   const table = useTableQuery<Filters>({});
-  const movements = useMovements(table.params);
-  const [formOpen, setFormOpen] = useState(false);
-  const [onBehalf, setOnBehalf] = useState<WorkerPieceMovement | null>(null);
+  const allocations = useAllocations(table.params);
+  const [onBehalf, setOnBehalf] = useState<WorkAllocation | null>(null);
 
-  const columns = useMovementColumns(
+  const columns = useAllocationColumns(
     (m) =>
       m.status === MOVEMENT_STATUS.PENDING ? (
         <Button type="link" onClick={() => setOnBehalf(m)}>
@@ -108,16 +123,7 @@ export function LeaderPieceMovementsPage() {
   );
 
   return (
-    <Card
-      title={PM_LABELS.leaderTitle}
-      extra={
-        <Can roles={[ROLES.TeamLeader, ROLES.TeamDeputy]}>
-          <Button type="primary" onClick={() => setFormOpen(true)}>
-            {PM_LABELS.create}
-          </Button>
-        </Can>
-      }
-    >
+    <>
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
           allowClear
@@ -134,31 +140,50 @@ export function LeaderPieceMovementsPage() {
           style={{ width: 220 }}
         />
       </Space>
-      <QueryError error={movements.error} onRetry={() => void movements.refetch()} />
+      <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
       <Table
-        rowKey="workerPieceMovementId"
+        rowKey="workAllocationId"
         columns={columns}
-        dataSource={movements.data?.items}
-        loading={movements.isFetching}
-        pagination={table.pagination(movements.data?.totalItems)}
+        dataSource={allocations.data?.items}
+        loading={allocations.isFetching}
+        pagination={table.pagination(allocations.data?.totalItems)}
         locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
       />
-      <MovementFormModal open={formOpen} onClose={() => setFormOpen(false)} />
       <ConfirmMovementModal movement={onBehalf} onBehalf onClose={() => setOnBehalf(null)} />
+    </>
+  );
+}
+
+/** UC53 / UC54: tổ trưởng / tổ phó may chia việc cho công nhân theo công đoạn, xác nhận hộ khi công nhân chưa xác nhận. */
+export function LeaderPieceMovementsPage() {
+  const { user } = useAuth();
+  const canEdit = user?.role === ROLES.TeamLeader || user?.role === ROLES.TeamDeputy;
+  return (
+    <Card title={PM_LABELS.leaderTitle}>
+      <Tabs
+        items={[
+          {
+            key: 'board',
+            label: PM_LABELS.boardTab,
+            children: <AllocationBoard canEdit={canEdit} />,
+          },
+          { key: 'history', label: PM_LABELS.historyTab, children: <AllocationHistory /> },
+        ]}
+      />
     </Card>
   );
 }
 
-/** UC60: công nhân xem BTP được giao / thu hồi của mình rồi tự xác nhận hoặc từ chối. */
+/** UC60: công nhân xem việc được giao / thu hồi của mình rồi tự xác nhận hoặc từ chối. */
 export function MyPieceMovementsPage() {
   const table = useTableQuery<Filters>({});
-  const movements = useMovements(table.params);
+  const allocations = useAllocations(table.params);
   const reject = useRejectByWorker();
-  const [confirming, setConfirming] = useState<WorkerPieceMovement | null>(null);
-  const [rejecting, setRejecting] = useState<WorkerPieceMovement | null>(null);
+  const [confirming, setConfirming] = useState<WorkAllocation | null>(null);
+  const [rejecting, setRejecting] = useState<WorkAllocation | null>(null);
 
-  const columns = useMovementColumns(
+  const columns = useAllocationColumns(
     (m) =>
       m.status === MOVEMENT_STATUS.PENDING ? (
         <Space size={0}>
@@ -184,13 +209,13 @@ export function MyPieceMovementsPage() {
           style={{ width: 220 }}
         />
       </Space>
-      <QueryError error={movements.error} onRetry={() => void movements.refetch()} />
+      <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
       <Table
-        rowKey="workerPieceMovementId"
+        rowKey="workAllocationId"
         columns={columns}
-        dataSource={movements.data?.items}
-        loading={movements.isFetching}
-        pagination={table.pagination(movements.data?.totalItems)}
+        dataSource={allocations.data?.items}
+        loading={allocations.isFetching}
+        pagination={table.pagination(allocations.data?.totalItems)}
         locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
       />
@@ -207,7 +232,7 @@ export function MyPieceMovementsPage() {
         onSubmit={(reason) =>
           rejecting &&
           reject.mutate(
-            { id: rejecting.workerPieceMovementId, reason },
+            { id: rejecting.workAllocationId, reason },
             { onSuccess: () => setRejecting(null) },
           )
         }

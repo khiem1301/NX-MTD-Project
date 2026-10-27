@@ -30,9 +30,9 @@ public partial class DailyTimesheet
 
     public bool? IsSunday { get; set; }
 
-    public string Source { get; set; } = null!;
-
     public int? AttendanceAdjustmentId { get; set; }
+
+    public string? Source { get; set; }
 
     public string? Note { get; set; }
 

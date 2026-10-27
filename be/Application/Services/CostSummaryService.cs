@@ -10,7 +10,7 @@ namespace NX_MTD.Application.Services;
 /// <summary>
 /// MI-19 — UC12 "Tổng hợp chi phí", CHỈ Admin (GBR-02). Gọi thẳng <see cref="IMonthlyCostService.GetByPeriodMonthAsync"/>
 /// (MI-12) để lấy chi phí đã nhập — KHÔNG copy lại logic gộp theo khoản/mã hàng của MonthlyCostService — rồi
-/// cộng thêm Payroll.TotalAmount của bảng lương ĐÃ DUYỆT trong kỳ, đọc thẳng qua <see cref="IPayrollRepository"/>
+/// cộng thêm tổng Σ NetPay của bảng lương ĐÃ DUYỆT trong kỳ, đọc thẳng qua <see cref="IPayrollRepository"/>
 /// (cùng chủ sở hữu — Minh — chỉ đọc, không cần dựng interface dùng chung mới, giống cách FinanceService đọc
 /// OutputRecord/DailyTimesheet của Kiều).
 /// </summary>
@@ -98,9 +98,9 @@ public sealed class CostSummaryService : ICostSummaryService
         var period = await _payrolls.FindPeriodByMonthAsync(periodMonth, ct);
         if (period is null) return (false, null);
 
-        var payroll = await _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, includePayslips: false, ct);
+        var payroll = await _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, includePayslips: true, ct);
         if (payroll is null || payroll.Status != PayrollStatus.Approved) return (false, null);
 
-        return (true, payroll.TotalAmount);
+        return (true, payroll.Payslips.Sum(s => s.NetPay));
     }
 }

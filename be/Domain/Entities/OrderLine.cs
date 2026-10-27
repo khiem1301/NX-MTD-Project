@@ -12,11 +12,9 @@ public partial class OrderLine
 
     public int OrderId { get; set; }
 
+    public int ProductVariantId { get; set; }
+
     public int ProductId { get; set; }
-
-    public string Color { get; set; } = null!;
-
-    public string SizeCode { get; set; } = null!;
 
     public int OrderedQty { get; set; }
 
@@ -38,17 +36,15 @@ public partial class OrderLine
 
     public virtual ICollection<OutputRecord> OutputRecords { get; set; } = new List<OutputRecord>();
 
-    public virtual Product Product { get; set; } = null!;
+    public virtual ProductVariant ProductVariant { get; set; } = null!;
 
     public virtual ICollection<QcBatch> QcBatches { get; set; } = new List<QcBatch>();
 
     public virtual ICollection<RequestLine> RequestLines { get; set; } = new List<RequestLine>();
 
-    public virtual ICollection<StockTransaction> StockTransactions { get; set; } = new List<StockTransaction>();
+    public virtual ICollection<StockBalance> StockBalances { get; set; } = new List<StockBalance>();
 
-    public virtual ICollection<StocktakeLine> StocktakeLines { get; set; } = new List<StocktakeLine>();
+    public virtual ICollection<WorkAllocation> WorkAllocations { get; set; } = new List<WorkAllocation>();
 
     public virtual ICollection<WorkOrderLine> WorkOrderLines { get; set; } = new List<WorkOrderLine>();
-
-    public virtual ICollection<WorkerPieceMovement> WorkerPieceMovements { get; set; } = new List<WorkerPieceMovement>();
 }

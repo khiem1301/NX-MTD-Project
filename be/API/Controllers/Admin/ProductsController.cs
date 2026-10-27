@@ -9,7 +9,8 @@ namespace NX_MTD.API.Controllers.Admin;
 public sealed class ProductsController : AdminBaseController
 {
     private readonly IProductService _products;
-    public ProductsController(IProductService products) => _products = products;
+    private readonly IProductSpecService _specs;
+    public ProductsController(IProductService products, IProductSpecService specs) { _products = products; _specs = specs; }
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] ProductQuery query, CancellationToken ct) =>
@@ -26,6 +27,15 @@ public sealed class ProductsController : AdminBaseController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveProductDto dto, CancellationToken ct) =>
         this.ToResponse(await _products.UpdateAsync(id, dto, ct));
+
+    /// <summary>Thành phần, biến thể (màu × size) và định mức NVL của mã hàng.</summary>
+    [HttpGet("{id:int}/spec")]
+    public async Task<IActionResult> GetSpec(int id, CancellationToken ct) =>
+        this.ToResponse(await _specs.GetAsync(id, ct));
+
+    [HttpPut("{id:int}/spec")]
+    public async Task<IActionResult> SaveSpec(int id, [FromBody] SaveProductSpecDto dto, CancellationToken ct) =>
+        this.ToResponse(await _specs.SaveAsync(id, dto, ct));
 
     private const long MaxRequestBytes = 6 * 1024 * 1024;
 

@@ -46,9 +46,9 @@ public sealed record PurchaseOrderPermissionsDto(
 
 public sealed record PurchaseOrderFlowDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
-    string GoodsStatus, string PaymentStatus, DateOnly? OrderDate, DateOnly? ExpectedDeliveryDate, string? Note,
+    string GoodsStatus, string PaymentStatus, DateOnly? OrderDate, short? ExpectedDeliveryCount, int ReceivedCount, string? Note,
     string? RejectReason, string? PaymentReturnReason, DateOnly? PaymentDate, decimal? PaidAmount,
-    string? PaymentMethod, string? PaymentNote, DateTime? PaidAt, decimal TotalAmount, DateTime CreatedAt,
+    string? PaymentMethod, string? PaymentNote, decimal TotalAmount, DateTime CreatedAt,
     byte[] RowVer, IReadOnlyList<PurchaseOrderLineDto> Lines, PurchaseOrderPermissionsDto Permissions,
     IReadOnlyList<AuditLogDto> History);
 
@@ -56,7 +56,7 @@ public sealed record PurchaseOrderFlowDto(
 public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
 
 public sealed record PlacePurchaseOrderDto(
-    int SupplierId, DateOnly OrderDate, DateOnly? ExpectedDeliveryDate, string? Note,
+    int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount, string? Note,
     IReadOnlyList<PlacePurchaseLineDto> Lines, byte[] RowVer);
 
 public sealed record CancelPurchaseOrderDto(string Reason, byte[] RowVer);

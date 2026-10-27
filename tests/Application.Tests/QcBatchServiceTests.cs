@@ -47,9 +47,8 @@ public class QcBatchServiceTests : ProductionTestBase
 
         _lines.Add(new OrderLine
         {
-            OrderLineId = LineId, OrderId = 1, ProductId = 1, Color = "Đen", SizeCode = "M",
+            OrderLineId = LineId, OrderId = 1, ProductId = 1, ProductVariant = TestVariant.Make(1, "MH001", "Đen", "M"),
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001", Status = OrderStatuses.InProduction },
-            Product = new Product { ProductId = 1, ProductCode = "MH001" },
         });
         _holdings.Add(new VwTeamPieceHolding { SewingTeamId = TeamId, OrderLineId = LineId, ReceivedFromWarehouse = 1000 });
         _sut = new QcBatchService(Uow, Guard(), User, Audit, Clock);

@@ -5,6 +5,9 @@ namespace NX_MTD.Application.Interfaces;
 
 /// <summary>UC06/UC31/UC32: bảng lương tháng + khóa kỳ kế toán. Không có thủ tục DB riêng nên đọc/ghi
 /// thẳng bằng EF, giống MealRepository (module cùng người, cùng kiểu).</summary>
+/// <summary>File Excel gốc Kế toán đã nhập: đường dẫn trong kho (không đưa ra API) và lúc nhập.</summary>
+public sealed record PayrollImportFile(string FileUrl, DateTime ImportedAt);
+
 public interface IPayrollRepository
 {
     // ---------- Kỳ kế toán ----------
@@ -29,6 +32,19 @@ public interface IPayrollRepository
     Task RemovePayslipsAsync(int payrollId, CancellationToken ct);
 
     void AddPayslip(Payslip payslip);
+
+    // ---------- File import (Attachment: OwnerType = PAYROLL, Purpose = IMPORT_FILE) và lý do mở lại (AuditLog UNLOCK) ----------
+
+    /// <summary>File import hiện hành của từng bảng lương (khóa = PayrollId); bảng lương chưa có file không có khóa.</summary>
+    Task<IReadOnlyDictionary<int, PayrollImportFile>> GetImportFilesAsync(IReadOnlyCollection<int> payrollIds, CancellationToken ct);
+
+    /// <summary>Gỡ các dòng Attachment file import cũ của bảng lương; trả đường dẫn các file để xóa khỏi kho.</summary>
+    Task<IReadOnlyList<string>> RemoveImportFilesAsync(int payrollId, CancellationToken ct);
+
+    void AddImportFile(int payrollId, string fileUrl, DateTime uploadedAt);
+
+    /// <summary>Lý do của lần mở lại gần nhất (AuditLog Action = UNLOCK); bảng lương chưa từng mở lại không có khóa.</summary>
+    Task<IReadOnlyDictionary<int, string>> GetReopenReasonsAsync(IReadOnlyCollection<int> payrollIds, CancellationToken ct);
 
     // ---------- Import Excel: tra cứu nhân viên theo mã chấm công (UC31, DEV-MI-09-4) ----------
 

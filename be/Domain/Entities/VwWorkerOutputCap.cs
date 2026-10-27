@@ -9,7 +9,7 @@ public partial class VwWorkerOutputCap
 
     public int OrderLineId { get; set; }
 
-    public int? OperationId { get; set; }
+    public int OperationId { get; set; }
 
     public int? CapQty { get; set; }
 

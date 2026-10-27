@@ -59,8 +59,9 @@ public sealed class AccountAdminService : IAccountAdminService
     {
         if (employeeId == _user.EmployeeId)
             return Result<TemporaryPasswordDto>.Failure(ErrorCodes.AccountCannotLockSelf, Messages.CannotActOnSelf);
-        var account = await FindAccountAsync(employeeId, ct);
-        if (account is null) return Fail.NotFound<TemporaryPasswordDto>();
+        var employee = await _employees.GetFullAsync(employeeId, ct);
+        var account = employee?.Account;
+        if (employee is null || account is null) return Fail.NotFound<TemporaryPasswordDto>();
 
         var temp = _passwords.Generate();
         account.PasswordHash = _hasher.Hash(temp);
@@ -68,7 +69,7 @@ public sealed class AccountAdminService : IAccountAdminService
         account.SecurityStamp = Guid.NewGuid();
         _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Update, null, new { PasswordReset = true }));
         await _uow.SaveChangesAsync();
-        return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(account.Username, temp), Messages.PasswordResetDone);
+        return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(employee.EmployeeCode, temp), Messages.PasswordResetDone);
     }
 
     private async Task<Account?> FindAccountAsync(int employeeId, CancellationToken ct) =>

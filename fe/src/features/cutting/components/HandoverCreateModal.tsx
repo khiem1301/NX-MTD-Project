@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Form, InputNumber, Modal, Table } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS } from '../constants';
+import { LABELS, lineKey, parseLineKey } from '../constants';
 import { useCreateHandover, useHandoverable } from '../hooks/useCutting';
 import type { HandoverableLine } from '../types';
 import { confirmDialog } from '@/utils/confirmDialog';
@@ -19,7 +19,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
     if (!handoverable.data) return;
     form.setFieldsValue({
       qty: Object.fromEntries(
-        handoverable.data.map((l) => [String(l.orderLineId), l.remainingQty]),
+        handoverable.data.map((l) => [lineKey(l), l.remainingQty]),
       ),
     });
   }, [handoverable.data, form]);
@@ -27,7 +27,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
   const handleFinish = ({ qty }: FormValues) => {
     const lines = Object.entries(qty ?? {})
       .filter(([, q]) => (q ?? 0) > 0)
-      .map(([id, q]) => ({ orderLineId: Number(id), handedQty: q ?? 0 }));
+      .map(([key, q]) => ({ ...parseLineKey(key), handedQty: q ?? 0 }));
     create.mutate({ workOrderId, lines }, { onSuccess: onClose });
   };
 
@@ -47,7 +47,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
     >
       <Form form={form} onFinish={handleFinish} disabled={create.isPending}>
         <Table<HandoverableLine>
-          rowKey="orderLineId"
+          rowKey={lineKey}
           size="small"
           pagination={false}
           loading={handoverable.isFetching}
@@ -56,7 +56,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
             {
               title: LABELS.orderLine,
               key: 'line',
-              render: (_, l) => `${l.color} - ${l.sizeCode}`,
+              render: (_, l) => `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
             },
             { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
             { title: LABELS.handedQty, dataIndex: 'handedQty', align: 'right' },
@@ -65,7 +65,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
               title: LABELS.handoverQty,
               key: 'qty',
               render: (_, l) => (
-                <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
+                <Form.Item name={['qty', lineKey(l)]} noStyle>
                   <InputNumber min={0} max={l.remainingQty} precision={0} />
                 </Form.Item>
               ),

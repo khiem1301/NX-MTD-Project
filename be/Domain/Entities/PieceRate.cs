@@ -22,9 +22,9 @@ public partial class PieceRate
 
     public DateTime? ApprovedAt { get; set; }
 
-    public string? ApprovalNote { get; set; }
+    public string? DecisionNote { get; set; }
 
-    public string? RejectReason { get; set; }
+    public virtual ICollection<DefectRecord> DefectRecords { get; set; } = new List<DefectRecord>();
 
     public virtual Operation Operation { get; set; } = null!;
 

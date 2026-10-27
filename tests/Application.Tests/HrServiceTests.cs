@@ -50,7 +50,7 @@ public class HrServiceTests
     {
         EmployeeId = id, EmployeeCode = $"E{id}", FullName = $"Người {id}", TeamId = team, Status = RecordStatus.Active,
         PayType = pay, StartDate = new DateOnly(2026, 1, 1), Role = new Role { RoleCode = role },
-        Account = new Account { AccountId = id, Username = $"E{id}", SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active },
+        Account = new Account { AccountId = id, SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active },
     };
 
     private static Team TeamOf(string type = TeamTypes.Sewing, int id = 4) =>
@@ -191,6 +191,71 @@ public class HrServiceTests
         await _employees.Received(1).ListAsync(Arg.Any<EmployeeQuery>(),
             Arg.Is<IReadOnlyCollection<string>?>(h => h != null && h.Contains("ADMIN") && h.Contains("MANAGER") && h.Contains("ACCOUNTANT")),
             false, Arg.Any<CancellationToken>());
+    }
+
+    private static ManagerUpdateEmployeeDto ManagerEdit(string role, int? team, string name = "Tên mới") =>
+        new(name, null, null, null, role, team, new DateOnly(2026, 1, 1), null, RowVer);
+
+    [Fact]
+    public async Task ManagerUpdate_ChangesTeamAndRole_RotatesStampAndLogsTeamChange()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        var oldStamp = person.Account!.SecurityStamp;
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        _teams.GetByIdAsync(5).Returns(TeamOf(id: 5));
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", 5), default);
+
+        result.IsSuccess.Should().BeTrue();
+        person.TeamId.Should().Be(5);
+        person.FullName.Should().Be("Tên mới");
+        person.PayType.Should().Be(PayTypes.PieceRate);   // Quản đốc không đổi kiểu lương
+        person.Account.SecurityStamp.Should().NotBe(oldStamp);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason != null && e.Reason.StartsWith("Chuyển tổ")));
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_PromotesWorkerToTeamLeader_WhenTeamAllows()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("TeamLeader", 4), default);
+
+        result.IsSuccess.Should().BeTrue();
+        await _employees.Received(1).GetRoleIdAsync(RoleCodes.TeamLeader, Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Manager")]
+    [InlineData("Accountant")]
+    public async Task ManagerUpdate_CannotAssignAdminManagerOrAccountantRole(string role)
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit(role, null), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Kind.Should().Be(ResultKind.Forbidden);
+        person.Role.RoleCode.Should().Be(RoleCodes.Worker);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_StillCannotTouchAnAccountantEmployee()
+    {
+        _user.Role.Returns(Roles.Manager);
+        _employees.GetFullAsync(5, default).ReturnsForAnyArgs(Person(5, RoleCodes.Accountant, team: null));
+
+        var result = await Employees().ManagerUpdateAsync(5, ManagerEdit("Worker", 4), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
     }
 
     // ---- Cập nhật / nghỉ việc ----

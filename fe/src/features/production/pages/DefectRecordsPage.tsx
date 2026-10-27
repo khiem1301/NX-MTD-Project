@@ -26,8 +26,12 @@ function DefectBoard({ role }: { role: OutputRole }) {
   const [query, setQuery] = useState<DefectQuery>({ page: 1, pageSize: 20 });
   const [formOpen, setFormOpen] = useState(false);
   const [cancelling, setCancelling] = useState<Defect | null>(null);
-  const [replacing, setReplacing] = useState<Defect | null>(null);
+  const [replacingPick, setReplacing] = useState<Defect | null>(null);
+  // Vừa ghi hàng hủy (Scrap): mở luôn đơn cắt bù cho Quản đốc (swimlane III.3.9–III.3.10); phiếu lấy từ danh sách sau khi tải lại.
+  const [autoReplaceId, setAutoReplaceId] = useState<number | null>(null);
   const defects = useDefects(role, query);
+  const replacing =
+    replacingPick ?? (autoReplaceId === null ? null : (defects.data?.items.find((d) => d.defectRecordId === autoReplaceId) ?? null));
   const cancel = useCancelDefect(role);
 
   const columns: ColumnsType<Defect> = [
@@ -144,8 +148,20 @@ function DefectBoard({ role }: { role: OutputRole }) {
         }}
       />
 
-      {!isManager && <DefectFormModal open={formOpen} onClose={() => setFormOpen(false)} />}
-      {!isManager && <ReplacementCuttingModal defect={replacing} onClose={() => setReplacing(null)} />}
+      {!isManager && (
+        <DefectFormModal
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          onCreated={(id, type) => type === 'Scrap' && setAutoReplaceId(id)}
+        />
+      )}
+      {!isManager && <ReplacementCuttingModal
+          defect={replacing}
+          onClose={() => {
+            setReplacing(null);
+            setAutoReplaceId(null);
+          }}
+        />}
       <ReasonModal
         open={cancelling !== null}
         title={text.cancelTitle}

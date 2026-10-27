@@ -63,9 +63,9 @@ public sealed record TemporaryPasswordDto(string Username, string TemporaryPassw
 public sealed record AdminUpdateEmployeeDto(string FullName, string? Gender, DateOnly? DateOfBirth, string? Phone,
     string Role, int? TeamId, string PayType, DateOnly StartDate, int? AttendanceCode, byte[] RowVer);
 
-/// <summary>UC16: Quản đốc không đổi vai trò, tổ (dùng chuyển tổ), kiểu lương.</summary>
+/// <summary>UC16: Quản đốc sửa hồ sơ, đổi tổ và vai trò (không gán được Admin / Quản đốc / Kế toán); không đổi kiểu lương.</summary>
 public sealed record ManagerUpdateEmployeeDto(string FullName, string? Gender, DateOnly? DateOfBirth, string? Phone,
-    DateOnly StartDate, int? AttendanceCode, byte[] RowVer);
+    string Role, int? TeamId, DateOnly StartDate, int? AttendanceCode, byte[] RowVer);
 
 public sealed record ResignEmployeeDto(DateOnly ResignDate, string Reason, byte[] RowVer);
 public sealed record LockAccountDto(string Reason);

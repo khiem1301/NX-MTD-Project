@@ -36,6 +36,13 @@ export type Operation = {
   status: OperationStatus;
   currentRate: number | null;
   nextRate: OperationRate | null;
+  /** true = giao việc công đoạn này kèm BTP (bắt buộc cho luồng giao việc). */
+  usesSemiFinished: boolean;
+  operationGroupId: number | null;
+  /** Công đoạn to chứa công đoạn này (vd "May tay"). */
+  groupName: string | null;
+  /** Các chi tiết (thành phần) công đoạn làm trên đó. */
+  componentIds: number[];
 };
 
 /** Dòng xem trước khi nhập công đoạn từ Excel. Action: dòng nào thêm mới / cập nhật / không đổi / lỗi. */
@@ -105,6 +112,9 @@ export type SaveOperationPayload = {
   standardTimeSec?: number | null;
   teamType?: 'Sewing' | 'Cutting';
   isFinalStep: boolean;
+  usesSemiFinished?: boolean;
+  groupName?: string | null;
+  componentIds?: number[];
 };
 
 export type PieceRateStatus = 'Draft' | 'PendingApproval' | 'Approved' | 'Rejected';
@@ -157,9 +167,12 @@ export type OperationOption = {
   operationName: string;
   stationSequence: number;
   isFinalStep: boolean;
+  usesSemiFinished: boolean;
+  groupName: string | null;
 };
 
 export type AssignPayload = { orderId: number; operationId: number; workerId: number };
+export type AssignManyPayload = { orderId: number; workerId: number; operationIds: number[] };
 export type CopyAssignmentsPayload = { fromOrderId: number; toOrderId: number };
 
 // ---------- KI-04: sản lượng cuối ca ----------
@@ -180,6 +193,10 @@ export type OutputGridRow = {
   canEdit: boolean;
   editDeadline: string | null;
   rowVer: string | null;
+  /** Số lần công nhân đã được giao ở công đoạn này (trần sản lượng). */
+  capQty: number;
+  /** Tổng sản lượng đã báo của công nhân ở công đoạn này (mọi ca, mọi ngày). */
+  reportedQty: number;
 };
 
 export type OutputGrid = {

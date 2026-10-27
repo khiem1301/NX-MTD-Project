@@ -35,7 +35,7 @@ public class WarehouseDocumentExportTests
         SubmittedAt: new DateTime(2026, 10, 20, 8, 0, 0), ConfirmedAt: null, ConfirmedByName: "Nguyễn Quản Đốc",
         Lines: new[]
         {
-            new MaterialReceiptLineDto(1, 10, 7, null, 2, "VAI01", "Vải cotton", "m", "Đen", 15000m, null, 95m, 5m, 0m),
+            new MaterialReceiptLineDto(1, 10, 7, null, 2, "VAI01", "Vải cotton", "m", "Đen", 15000m, null, 95m),
         });
 
     [Fact]
@@ -51,7 +51,7 @@ public class WarehouseDocumentExportTests
         text.Should().Contain(new[]
         {
             "PHIẾU NHẬP NGUYÊN VẬT LIỆU", "PN-2026-0005", "20/10/2026", "Nhà cung cấp", "Đã xác nhận", "DH001", "PO-003",
-            "Nguyễn Quản Đốc", "Giao buổi sáng", "VAI01", "Vải cotton", "Đen", "95", "5", "Thủ kho", "Quản đốc",
+            "Nguyễn Quản Đốc", "Giao buổi sáng", "VAI01", "Vải cotton", "Đen", "95", "Thủ kho", "Quản đốc",
         });
     }
 
@@ -86,8 +86,8 @@ public class WarehouseDocumentExportTests
         ReceivedAt: null, RejectReason: null, CreatedAt: new DateTime(2026, 10, 21, 9, 0, 0),
         Lines: new[]
         {
-            new MaterialIssueLineDto(1, 2, "VAI01", "Vải cotton", "m", "Đen", null, null, null, null, 120m, null, null),
-            new MaterialIssueLineDto(2, null, null, null, null, null, 9, "AO01", "Trắng", "M", 30m, 28m, "Rách 2 cái"),
+            new MaterialIssueLineDto(1, 2, "VAI01", "Vải cotton", "m", "Đen", null, null, null, null, null, null, 120m, null, null),
+            new MaterialIssueLineDto(2, null, null, null, null, null, 9, null, null, "AO01", "Trắng", "M", 30m, 28m, "Rách 2 cái"),
         });
 
     [Fact]
@@ -122,7 +122,7 @@ public class WarehouseDocumentExportTests
     {
         var note = new DispatchNoteDto(2, "PX-2026-0002", 1, "DH001", "Công ty ABC", new DateOnly(2026, 10, 25), "12 Lê Lợi, Hà Nội",
             "Giao giờ hành chính", "PartiallyDelivered", new DateTime(2026, 10, 22), null, "Thủ kho A", new DateTime(2026, 10, 23),
-            new DateOnly(2026, 10, 24), new DateTime(2026, 10, 24), new[]
+            new DateOnly(2026, 10, 24), new[]
             {
                 new DispatchNoteLineDto(1, 9, "AO01", "Trắng", "M", 50, 48),
             });

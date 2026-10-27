@@ -2,6 +2,7 @@ import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
+  AssignManyPayload,
   AssignPayload,
   CancelDefectPayload,
   CopyAssignmentsPayload,
@@ -76,6 +77,7 @@ export const productionApi = {
   listAssignments: (orderId: number) => get<OperationAssignment[]>(P.assignments, { orderId }),
   listAssignableOperations: (orderId: number) => get<OperationOption[]>(P.assignmentOperations, { orderId }),
   assign: (body: AssignPayload) => post<number>(P.assignments, body),
+  assignMany: (body: AssignManyPayload) => post<number>(P.assignmentsBulk, body),
   replaceAssignment: (id: number, newWorkerId: number) => post<number>(P.assignmentReplace(id), { newWorkerId }),
   closeAssignment: (id: number) => post<void>(P.assignmentClose(id)),
   copyAssignments: (body: CopyAssignmentsPayload) => post<number>(P.assignmentCopy, body),

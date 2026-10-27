@@ -14,8 +14,6 @@ public partial class Notification
 
     public string SourceType { get; set; } = null!;
 
-    public int? AnnouncementId { get; set; }
-
     public string? RefTable { get; set; }
 
     public long? RefId { get; set; }
@@ -26,15 +24,13 @@ public partial class Notification
 
     public string? LinkUrl { get; set; }
 
-    public bool IsRead { get; set; }
-
     public DateTime? ReadAt { get; set; }
+
+    public bool? IsRead { get; set; }
 
     public string PushStatus { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }
-
-    public virtual Announcement? Announcement { get; set; }
 
     public virtual Employee Recipient { get; set; } = null!;
 }

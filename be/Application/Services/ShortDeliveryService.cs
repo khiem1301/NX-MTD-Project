@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC08 / UC39 (TH-13): xử lý đơn SHORT_DELIVERY do hệ thống tạo khi phiếu nhập có hàng thiếu / lỗi.
+/// UC08 / UC39 (TH-13): xử lý đơn SHORT_DELIVERY do hệ thống tạo khi nhận đủ số lần giao dự kiến mà còn thiếu hàng.
 /// Quản đốc chọn <c>REPLENISH</c> (bên giao bù, Thủ kho lập phiếu bổ sung) hoặc <c>NO_REPLENISH</c> (chốt không bù:
 /// <c>PurchaseOrderLine.NotReplenishedQty</c> tăng, đơn mua có thể thành CLOSED_SHORT).
 /// </summary>
@@ -53,7 +53,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             .Select(q => new
             {
                 q.RequestId, q.RequestCode, q.Status, q.ShortageResolution, q.ResultNote, ReceiptId = q.MaterialReceiptId,
-                ReceiptCode = q.MaterialReceipt!.ReceiptCode, q.MaterialReceipt.Source,
+                ReceiptCode = q.MaterialReceipt!.ReceiptCode, Source = q.MaterialReceipt.Source!,
                 PoCode = q.MaterialReceipt.PurchaseOrder == null ? null : q.MaterialReceipt.PurchaseOrder.PoCode,
                 OrderCode = q.Order == null ? null : q.Order.OrderCode, q.CreatedAt,
                 Lines = q.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new
@@ -61,7 +61,6 @@ public sealed class ShortDeliveryService : IShortDeliveryService
                     l.RequestLineId, l.MaterialReceiptLineId, MaterialId = l.MaterialId!.Value,
                     l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit,
                     Color = l.MaterialColor ?? string.Empty, l.Quantity, l.ReplenishQty,
-                    ShortQty = l.MaterialReceiptLine!.ShortQty, DefectiveQty = l.MaterialReceiptLine.DefectiveQty,
                 }).ToList(),
             }).FirstOrDefaultAsync(ct);
         if (head is null) return WarehouseFailures.NotFound<ShortDeliveryDto>();
@@ -71,7 +70,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             head.ShortageResolution, head.ResultNote, head.ReceiptId!.Value, head.ReceiptCode, head.Source, head.PoCode,
             head.OrderCode, head.CreatedAt,
             head.Lines.Select(l => new ShortDeliveryLineDto(l.RequestLineId, l.MaterialReceiptLineId!.Value, l.MaterialId,
-                l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.ShortQty, l.DefectiveQty, l.Quantity, l.ReplenishQty,
+                l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Quantity, l.ReplenishQty,
                 done.GetValueOrDefault(l.MaterialReceiptLineId!.Value))).ToList()));
     }
 
@@ -154,7 +153,6 @@ public sealed class ShortDeliveryService : IShortDeliveryService
     private async Task<Dictionary<int, decimal>> ReplenishedAsync(int requestId, CancellationToken ct) =>
         await _uow.Repository<MaterialReceiptLine>().Query()
             .Where(l => l.OriginalReceiptLineId != null && l.MaterialReceipt.ShortageRequestId == requestId
-                        && l.MaterialReceipt.ReceiptType == ReceiptTypes.Supplementary
                         && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
             .GroupBy(l => l.OriginalReceiptLineId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);

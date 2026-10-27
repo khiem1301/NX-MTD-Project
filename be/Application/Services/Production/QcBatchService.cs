@@ -35,11 +35,11 @@ public sealed class QcBatchService : IQcBatchService
             .Where(b => query.SewingTeamId == null || b.SewingTeamId == query.SewingTeamId)
             .Where(b => query.OrderLineId == null || b.OrderLineId == query.OrderLineId)
             .Where(b => string.IsNullOrEmpty(keyword) || b.OrderLine.Order.OrderCode.Contains(keyword)
-                        || b.OrderLine.Product.ProductCode.Contains(keyword))
+                        || b.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword))
             .OrderByDescending(b => b.WorkDate).ThenByDescending(b => b.BatchTime).ThenByDescending(b => b.QcBatchId)
             .Select(b => new QcBatchDto(b.QcBatchId, b.WorkDate, b.ShiftCode, b.BatchTime, b.SewingTeamId,
-                b.SewingTeam.TeamName, b.OrderLineId, b.OrderLine.Order.OrderCode, b.OrderLine.Product.ProductCode,
-                b.OrderLine.Color, b.OrderLine.SizeCode, b.FinishedQty, b.InspectorId, b.Inspector.FullName,
+                b.SewingTeam.TeamName, b.OrderLineId, b.OrderLine.Order.OrderCode, b.OrderLine.ProductVariant.Product.ProductCode,
+                b.OrderLine.ProductVariant.Color, b.OrderLine.ProductVariant.SizeCode, b.FinishedQty, b.InspectorId, b.Inspector.FullName,
                 b.EditDeadline, false, b.RowVer))
             .ToPagedAsync(query, ct);
 

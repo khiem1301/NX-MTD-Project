@@ -22,7 +22,7 @@ public sealed class NotificationService : INotificationService
             {
                 RecipientId = id, SourceType = message.SourceType, Title = message.Title, Message = message.Message,
                 LinkUrl = message.LinkUrl, RefTable = message.RefTable, RefId = message.RefId,
-                IsRead = false, PushStatus = PushSkipped, CreatedAt = _clock.Now,
+                PushStatus = PushSkipped, CreatedAt = _clock.Now,
             });
         }
     }

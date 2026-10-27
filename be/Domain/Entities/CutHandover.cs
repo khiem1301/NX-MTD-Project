@@ -14,8 +14,6 @@ public partial class CutHandover
 
     public int WorkOrderId { get; set; }
 
-    public int CuttingTeamId { get; set; }
-
     public DateTime HandedAt { get; set; }
 
     public string Status { get; set; } = null!;
@@ -29,8 +27,6 @@ public partial class CutHandover
     public virtual Employee? ConfirmedByNavigation { get; set; }
 
     public virtual ICollection<CutHandoverLine> CutHandoverLines { get; set; } = new List<CutHandoverLine>();
-
-    public virtual Team CuttingTeam { get; set; } = null!;
 
     public virtual WorkOrder WorkOrder { get; set; } = null!;
 }

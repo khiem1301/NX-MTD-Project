@@ -5,17 +5,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { LEADER_BASE, pieceMovementApi, WORKER_BASE } from '../api/pieceMovementApi';
 import { PM_MESSAGES } from '../constants';
 import type {
-  ConfirmMovementPayload,
+  AllocationQuery,
+  ConfirmAllocationPayload,
   ConfirmOnBehalfPayload,
-  CreateMovementPayload,
-  MovementQuery,
+  CreateAllocationPayload,
 } from '../types';
 
 export const PM_KEY = ['piece-movement'] as const;
-// BTP công nhân giữ đổi thì trần sản lượng và BTP tổ giữ cũng đổi.
+// Số lần được giao là trần sản lượng và số BTP tổ giữ cũng đổi theo.
 const AFFECTED = [PM_KEY, ['warehouse'], ['production']];
 
-export const useMovements = (query: MovementQuery) => {
+export const useAllocations = (query: AllocationQuery) => {
   const { user } = useAuth();
   const base = user?.role === ROLES.Worker ? WORKER_BASE : LEADER_BASE;
   return useQuery({
@@ -25,15 +25,15 @@ export const useMovements = (query: MovementQuery) => {
   });
 };
 
-export const useHoldings = (enabled: boolean) =>
+export const useBoard = (orderId: number | undefined) =>
   useQuery({
-    queryKey: [...PM_KEY, 'holdings'],
-    queryFn: () => pieceMovementApi.holdings(),
-    enabled,
+    queryKey: [...PM_KEY, 'board', orderId],
+    queryFn: () => pieceMovementApi.board(orderId),
+    enabled: orderId !== undefined,
   });
 
-export const useCreateMovement = () =>
-  useApiMutation((body: CreateMovementPayload) => pieceMovementApi.create(body), {
+export const useCreateAllocation = () =>
+  useApiMutation((body: CreateAllocationPayload) => pieceMovementApi.create(body), {
     invalidate: AFFECTED,
     successMessage: PM_MESSAGES.created,
   });
@@ -47,7 +47,7 @@ export const useConfirmOnBehalf = () =>
 
 export const useConfirmByWorker = () =>
   useApiMutation(
-    ({ id, body }: { id: number; body: ConfirmMovementPayload }) =>
+    ({ id, body }: { id: number; body: ConfirmAllocationPayload }) =>
       pieceMovementApi.confirmByWorker(id, body),
     { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
   );

@@ -12,6 +12,8 @@ public partial class Operation
 
     public int ProductId { get; set; }
 
+    public int? OperationGroupId { get; set; }
+
     public string OperationCode { get; set; } = null!;
 
     public string OperationName { get; set; } = null!;
@@ -26,11 +28,17 @@ public partial class Operation
 
     public bool IsFinalStep { get; set; }
 
+    public bool UsesSemiFinished { get; set; }
+
     public string Status { get; set; } = null!;
 
     public virtual ICollection<DefectRecord> DefectRecords { get; set; } = new List<DefectRecord>();
 
     public virtual ICollection<OperationAssignment> OperationAssignments { get; set; } = new List<OperationAssignment>();
+
+    public virtual ICollection<OperationComponent> OperationComponents { get; set; } = new List<OperationComponent>();
+
+    public virtual OperationGroup? OperationGroup { get; set; }
 
     public virtual ICollection<OutputRecord> OutputRecords { get; set; } = new List<OutputRecord>();
 
@@ -38,5 +46,5 @@ public partial class Operation
 
     public virtual Product Product { get; set; } = null!;
 
-    public virtual ICollection<WorkerPieceMovement> WorkerPieceMovements { get; set; } = new List<WorkerPieceMovement>();
+    public virtual ICollection<WorkAllocation> WorkAllocations { get; set; } = new List<WorkAllocation>();
 }

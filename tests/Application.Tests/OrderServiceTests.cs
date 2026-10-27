@@ -126,9 +126,14 @@ public class CustomerOrderServiceTests
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
+    private readonly List<ProductVariant> _variants = [];
 
     public CustomerOrderServiceTests()
     {
+        var variantRepo = Substitute.For<IGenericRepository<ProductVariant>>();
+        variantRepo.Query().Returns(_ => _variants.AsTestAsyncQueryable());
+        variantRepo.AddAsync(Arg.Do<ProductVariant>(v => _variants.Add(v))).Returns(Task.CompletedTask);
+        _uow.Repository<ProductVariant>().Returns(variantRepo);
         _clock.Now.Returns(new DateTime(2026, 10, 23, 8, 0, 0));
         _orders.CustomerExistsAsync(default, default).ReturnsForAnyArgs(true);
         _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(Array.Empty<string>());
@@ -153,8 +158,13 @@ public class CustomerOrderServiceTests
         return order;
     }
 
-    private static OrderLine Line(int id, string color, string size, int qty = 10) =>
-        new() { OrderLineId = id, OrderId = 5, ProductId = 1, Color = color, SizeCode = size, OrderedQty = qty, CmtUnitPrice = 12500 };
+    /// <summary>Dòng đơn đã có sẵn biến thể (màu × size) khai báo cho mã hàng 1.</summary>
+    private OrderLine Line(int id, string color, string size, int qty = 10)
+    {
+        var variant = TestVariant.Make(1, "AO-01", color, size);
+        _variants.Add(variant);
+        return new() { OrderLineId = id, OrderId = 5, ProductId = 1, ProductVariantId = variant.ProductVariantId, ProductVariant = variant, OrderedQty = qty, CmtUnitPrice = 12500 };
+    }
 
     [Fact]
     public async Task Create_InactiveProduct_FailsWithCode()
@@ -182,12 +192,57 @@ public class CustomerOrderServiceTests
         result.IsSuccess.Should().BeTrue();
         saved!.OrderCode.Should().Be("DH2610-001");
         saved.Status.Should().Be(OrderStatuses.New);
-        saved.OrderLines.Single().SizeCode.Should().Be("M");
+        saved.OrderLines.Single().ProductVariant.SizeCode.Should().Be("M");
         await _uow.Received(1).BeginTransactionAsync();
         await _uow.Received(2).SaveChangesAsync();
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Insert));
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
         await _uow.Received(1).CommitTransactionAsync();
+    }
+
+    [Fact]
+    public async Task Create_NewColorAndSize_CreatesTheVariantAndPointsTheLineAtIt()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "m"), L(null, "Đỏ", "L") });
+        CustomerOrder? saved = null;
+        _orders.When(x => x.AddAsync(Arg.Any<CustomerOrder>())).Do(c => saved = c.Arg<CustomerOrder>());
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _variants.Should().HaveCount(2).And.OnlyContain(v => v.ProductId == 1 && v.Status == RecordStatus.Active);
+        saved!.OrderLines.Select(l => l.ProductVariant.SizeCode).Should().BeEquivalentTo("M", "L");
+        saved.OrderLines.Should().OnlyContain(l => l.ProductId == l.ProductVariant.ProductId);   // FK ghép (ProductVariantId, ProductId)
+    }
+
+    [Fact]
+    public async Task Create_ExistingVariantIgnoringCase_IsReusedNotDuplicated()
+    {
+        var existing = TestVariant.Make(1, "AO-01", "Đỏ", "M");
+        _variants.Add(existing);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "đỏ", "m") });
+        CustomerOrder? saved = null;
+        _orders.When(x => x.AddAsync(Arg.Any<CustomerOrder>())).Do(c => saved = c.Arg<CustomerOrder>());
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _variants.Should().ContainSingle();
+        saved!.OrderLines.Single().ProductVariant.Should().BeSameAs(existing);
+    }
+
+    [Fact]
+    public async Task Create_DiscontinuedVariant_IsRejected()
+    {
+        _variants.Add(new ProductVariant { ProductVariantId = 5, ProductId = 1, Color = "Đỏ", SizeCode = "M", Status = RecordStatus.Discontinued });
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductNotActive);
     }
 
     [Fact]

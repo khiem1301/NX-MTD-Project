@@ -31,6 +31,11 @@ public class PayrollServiceTests
         _clock.Now.Returns(Now);
         _files.SaveAsync(Arg.Any<string>(), Arg.Any<byte[]>(), Arg.Any<CancellationToken>())
             .Returns("2026-10/new.xlsx");
+        _repo.GetImportFilesAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, PayrollImportFile>());
+        _repo.GetReopenReasonsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, string>());
+        _repo.RemoveImportFilesAsync(Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(new List<string>());
         _sut = new PayrollService(_repo, _excel, _writer, _files, _audit, _uow, _clock, NullLogger<PayrollService>.Instance);
     }
 
@@ -279,7 +284,7 @@ public class PayrollServiceTests
         addedPayroll.Should().NotBeNull();
         addedPayroll!.Status.Should().Be(PayrollStatus.Draft);
         addedPayroll.PeriodId.Should().Be(period.PeriodId);
-        addedPayroll.ImportedFileUrl.Should().Be("2026-10/new.xlsx");
+        _repo.Received(1).AddImportFile(Arg.Any<int>(), "2026-10/new.xlsx", Now);   // file gốc lưu ở Attachment
         await _files.Received(1).SaveAsync(Month, Arg.Is<byte[]>(b => b.SequenceEqual(original)),
             Arg.Any<CancellationToken>());
 
@@ -305,7 +310,7 @@ public class PayrollServiceTests
         _repo.GetOrCreatePeriodAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
         var existing = Payroll(status: PayrollStatus.Rejected, period: period);
         existing.RejectReason = "Sai số công";
-        existing.ImportedFileUrl = "2026-10/old.xlsx";
+        _repo.RemoveImportFilesAsync(existing.PayrollId, Arg.Any<CancellationToken>()).Returns(new List<string> { "2026-10/old.xlsx" });
         _repo.FindPayrollByPeriodIdAsync(period.PeriodId, false, Arg.Any<CancellationToken>()).Returns(existing);
 
         var result = await _sut.ImportAsync(new MemoryStream(), Month, CancellationToken.None);
@@ -314,7 +319,7 @@ public class PayrollServiceTests
         await _repo.Received(1).RemovePayslipsAsync(existing.PayrollId, Arg.Any<CancellationToken>());
         existing.Status.Should().Be(PayrollStatus.Draft);
         existing.RejectReason.Should().BeNull();
-        existing.ImportedFileUrl.Should().Be("2026-10/new.xlsx");
+        _repo.Received(1).AddImportFile(existing.PayrollId, "2026-10/new.xlsx", Now);
         await _files.Received(1).DeleteAsync("2026-10/old.xlsx", Arg.Any<CancellationToken>());
     }
 
@@ -326,7 +331,7 @@ public class PayrollServiceTests
         var period = Period();
         _repo.GetOrCreatePeriodAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
         var existing = Payroll(period: period);
-        existing.ImportedFileUrl = "2026-10/old.xlsx";
+        _repo.RemoveImportFilesAsync(existing.PayrollId, Arg.Any<CancellationToken>()).Returns(new List<string> { "2026-10/old.xlsx" });
         _repo.FindPayrollByPeriodIdAsync(period.PeriodId, false, Arg.Any<CancellationToken>()).Returns(existing);
         _repo.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(_ => throw new InvalidOperationException("db"));
 
@@ -364,7 +369,8 @@ public class PayrollServiceTests
     public async Task GetImportedFileAsync_StoredFile_ReturnsContentWithPeriodInName()
     {
         var payroll = Payroll();
-        payroll.ImportedFileUrl = "2026-10/abc.xlsx";
+        _repo.GetImportFilesAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, PayrollImportFile> { [payroll.PayrollId] = new("2026-10/abc.xlsx", Now) });
         _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(payroll);
         _files.ReadAsync("2026-10/abc.xlsx", Arg.Any<CancellationToken>()).Returns(new byte[] { 9, 9 });
 
@@ -490,7 +496,8 @@ public class PayrollServiceTests
 
         result.IsSuccess.Should().BeTrue();
         payroll.Status.Should().Be(PayrollStatus.Draft);
-        payroll.ReopenReason.Should().Be("Duyệt nhầm số công");
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Payroll) && e.Action == AuditActions.Unlock
+            && e.Reason == "Duyệt nhầm số công"));   // lý do mở lại đọc từ AuditLog
         payroll.ApprovedAt.Should().BeNull();
         payroll.Period.Status.Should().Be(RecordStatus.Open);
         payroll.Period.LockedAt.Should().BeNull();
@@ -526,7 +533,6 @@ public class PayrollServiceTests
         var period = Period();
         _repo.GetOrCreatePeriodAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
         var existing = Payroll(status: PayrollStatus.Rejected, period: period);
-        existing.TotalAmount = 123;
         _repo.FindPayrollByPeriodIdAsync(period.PeriodId, false, Arg.Any<CancellationToken>()).Returns(existing);
 
         await _sut.ImportAsync(new MemoryStream(), Month, CancellationToken.None);
@@ -571,7 +577,7 @@ public class PayrollServiceTests
     }
 
     [Fact]
-    public async Task ReopenAsync_Valid_LogsUpdateAndPeriodUnlockWithReason()
+    public async Task ReopenAsync_Valid_LogsPayrollAndPeriodUnlockWithReason()
     {
         var period = Period(status: RecordStatus.Locked);
         var payroll = Payroll(status: PayrollStatus.Approved, period: period);
@@ -580,7 +586,7 @@ public class PayrollServiceTests
         await _sut.ReopenAsync(1, new ReopenPayrollDto("Duyệt nhầm số công"), CancellationToken.None);
 
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
-            Logged(e, nameof(Payroll), AuditActions.Update) && e.Reason == "Duyệt nhầm số công"));
+            Logged(e, nameof(Payroll), AuditActions.Unlock) && e.Reason == "Duyệt nhầm số công"));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
             Logged(e, nameof(AccountingPeriod), AuditActions.Unlock) && e.Reason == "Duyệt nhầm số công"));
     }

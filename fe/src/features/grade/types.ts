@@ -36,6 +36,7 @@ export type GradeWorker = {
   currentGradeCode: string | null;
   recentDefectCount: number;
   hasPending: boolean;
+  teamName: string | null;
 };
 
 export type EvaluationQuery = PageParams & { status?: string };
@@ -48,4 +49,5 @@ export type SaveLevelPayload = {
 };
 
 export type ProposePayload = { workerId: number; proposedGradeCode: string; reason: string };
+export type SetGradePayload = { workerId: number; gradeCode: string; reason: string; effectiveDate?: string };
 export type ApplyPayload = { effectiveDate?: string; decisionNote?: string };

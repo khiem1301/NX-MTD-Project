@@ -19,7 +19,7 @@ public sealed record VehicleTripDto(
     bool FuelOverNormWarning, DateTime RecordedAt);
 
 /// <summary>Bắt đầu chuyến: km đầu không liền với km cuối chuyến trước thì bật cảnh báo MSG30 (vẫn lưu được).</summary>
-public sealed record StartVehicleTripDto(int VehicleId, DateOnly TripDate, string DriverName, int? DriverEmployeeId,
+public sealed record StartVehicleTripDto(int VehicleId, DateOnly TripDate, string? DriverName, int? DriverEmployeeId,
     string? Purpose, int? DispatchNoteId, int OdometerStart);
 
 /// <summary>Kết thúc chuyến: km cuối &gt; km đầu; xăng vượt định mức quá dung sai thì bật cảnh báo MSG30.</summary>

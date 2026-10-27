@@ -47,8 +47,8 @@ public sealed class WorkerPayService : IWorkerPayService
             .Where(o => o.WorkerId == employeeId && o.WorkDate == workDate)
             .OrderBy(o => o.ShiftCode).ThenBy(o => o.Operation.StationSequence)
             .Select(o => new MyOutputLineDto(o.ShiftCode, o.Operation.OperationCode, o.Operation.OperationName,
-                o.OrderLine.Order.OrderCode, o.OrderLine.Product.ProductCode, o.Quantity, o.UnitRate,
-                o.Quantity * o.UnitRate))
+                o.OrderLine.Order.OrderCode, o.OrderLine.ProductVariant.Product.ProductCode, o.Quantity, o.PieceRate.Rate,
+                o.Quantity * o.PieceRate.Rate))
             .ToListAsync(ct);
 
         // Khớp vw_WorkerDailyEstimatedPay: chỉ Scrap, bỏ bản ghi đã hủy.
@@ -57,8 +57,8 @@ public sealed class WorkerPayService : IWorkerPayService
                         && d.DefectType == ScrapType && d.Status != CancelledStatus)
             .OrderBy(d => d.Operation.StationSequence)
             .Select(d => new MyScrapLineDto(d.Operation.OperationCode, d.Operation.OperationName,
-                d.OrderLine.Order.OrderCode, d.OrderLine.Product.ProductCode, d.Quantity, d.ScrapUnitRate ?? 0m,
-                d.Quantity * (d.ScrapUnitRate ?? 0m)))
+                d.OrderLine.Order.OrderCode, d.OrderLine.ProductVariant.Product.ProductCode, d.Quantity,
+                d.PieceRate == null ? 0m : d.PieceRate.Rate, d.Quantity * (d.PieceRate == null ? 0m : d.PieceRate.Rate)))
             .ToListAsync(ct);
 
         return Result<MyDayDetailDto>.Success(new MyDayDetailDto(workDate, outputs, scraps));

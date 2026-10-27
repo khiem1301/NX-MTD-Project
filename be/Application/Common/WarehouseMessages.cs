@@ -24,8 +24,8 @@ public static class WarehouseMessages
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
     public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa.";
-    public const string CustomerDateRequired = "Khách có cấp NVL thì phải nhập ngày dự kiến giao.";
-    public const string NormProductNotInOrder = "Mã hàng của định mức không có trong đơn.";
+    public const string CustomerDeliveryCountRequired = "Khách có cấp NVL thì phải nhập số lần dự kiến giao (từ 1 trở lên).";
+    public const string CustomerDeliveryCountNotAllowed = "Khách không cấp NVL thì không nhập số lần giao.";
     public const string OrderMaterialNotInOrder = "NVL không thuộc đơn hàng của phiếu.";
     public const string OrderLineNotInOrder = "Dòng đơn không thuộc đơn hàng.";
 
@@ -53,10 +53,17 @@ public static class WarehouseMessages
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
     public const string FabricShortage = "Không đủ vải cho lệnh cắt";
-    public const string FabricNormMissingFor = "Chưa có định mức vải trong NVL của đơn (UC09) cho";
+    public const string NoFabricNorm = "Mã hàng chưa có định mức vải trong NVL của đơn (UC09), không tính được vải cần.";
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
+    public const string WorkOrderCompleted = "Đã đóng lệnh cắt.";
+    public const string WorkOrderNotCompletable = "Chỉ đóng được lệnh cắt đang cắt (đã có bàn cắt).";
+    public const string WorkOrderHasPendingHandover = "Còn phiếu bàn giao BTP chờ kho nhận, chưa đóng được lệnh cắt.";
+    public const string WorkOrderShortReasonRequired = "BTP vào kho chưa đủ kế hoạch ({0}/{1}). Nhập lý do đóng lệnh.";
+    public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
+    public const string ReceiptExceedsCustomer = "Số nhận vượt số khách cấp còn phải nhận";
+    public const string ReceiptPhotoRequired = "Phiếu nhập chưa có ảnh chứng từ giao hàng. Thủ kho cần chụp và đính kèm trước khi xác nhận.";
 
     public const string IssueReceived = "Đã xác nhận nhận hàng, tồn kho đã giảm.";
     public const string IssueRejected = "Đã từ chối phiếu cấp, số giữ chỗ đã được nhả.";
@@ -82,6 +89,7 @@ public static class WarehouseMessages
     public const string FgHandoverConfirmed = "Đã nhận thành phẩm vào kho.";
     public const string FgHandoverRejected = "Đã từ chối phiếu bàn giao thành phẩm.";
     public const string FgHandoverCancelled = "Đã rút phiếu bàn giao thành phẩm.";
+    public const string CutHandoverCancelled = "Đã rút phiếu bàn giao BTP.";
 
     public const string DispatchExceedsOrder = "Số xuất vượt số còn phải giao của đơn";
     public const string DispatchLineNotInOrder = "Dòng đơn không thuộc đơn hàng của phiếu xuất.";
@@ -93,6 +101,11 @@ public static class WarehouseMessages
     public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
+    public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải và màu vải của bàn cắt.";
+    public const string OperationRequired = "Vui lòng chọn công đoạn.";
+    public const string OperationNoSemiFinished = "Công đoạn này không dùng BTP nên không giao kèm BTP.";
+    public const string PieceExceedsAllocationQty = "Số BTP kèm không được lớn hơn số lần giao.";
+    public const string AllocationExceedsRequired = "Số lần giao vượt số còn cần giao của công đoạn";
     public const string PieceHandoverExceedsHolding = "Số giao vượt số BTP tổ đang giữ";
     public const string PieceRetrievalExceedsHolding = "Số thu hồi vượt số BTP công nhân đang giữ";
     public const string PieceConfirmedExceedsQty = "Số xác nhận không được lớn hơn số ghi trên phiếu.";

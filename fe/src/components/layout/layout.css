@@ -1,0 +1,258 @@
+.app-sider {
+  position: sticky !important;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 8px rgba(0, 21, 41, 0.12);
+  z-index: 20;
+}
+
+.app-sider .ant-layout-sider-children {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 20px;
+  flex: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.app-brand--collapsed {
+  padding: 0;
+  justify-content: center;
+}
+
+.app-brand__logo {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #4096ff 0%, #1677ff 55%, #0958d9 100%);
+  box-shadow: 0 4px 10px rgba(22, 119, 255, 0.45);
+}
+
+.app-brand__name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.app-brand__tag {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.app-sider__scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.app-sider__scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.app-sider__scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.app-sider__scroll .ant-menu {
+  border-inline-end: 0 !important;
+  background: transparent !important;
+}
+
+.app-sider__scroll .ant-menu-submenu-title {
+  font-weight: 500;
+}
+
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 24px;
+  line-height: normal;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(10px);
+  border-bottom: 1px solid #eef0f3;
+  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.04);
+}
+
+.app-header__crumb {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.app-header__crumb-group {
+  font-size: 12px;
+  color: #8c8c8c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-header__crumb-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1f1f1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-header__spacer {
+  flex: 1;
+}
+
+.app-search {
+  width: 280px;
+}
+
+.app-search .ant-input-affix-wrapper {
+  border-radius: 20px;
+  background: #f5f7fa;
+  border-color: transparent;
+}
+
+.app-search .ant-input-affix-wrapper-focused {
+  background: #fff;
+  border-color: #1677ff;
+}
+
+.app-kbd {
+  font-size: 11px;
+  color: #8c8c8c;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  padding: 0 5px;
+  line-height: 18px;
+  background: #fff;
+}
+
+.app-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+
+.app-user:hover,
+.app-user:focus-visible {
+  background: #f0f5ff;
+}
+
+.app-user__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  max-width: 180px;
+}
+
+.app-user__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1f1f1f;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-user__role {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+.app-avatar {
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 600;
+  background: linear-gradient(135deg, #4096ff 0%, #1677ff 60%, #0958d9 100%);
+}
+
+.app-user-pop {
+  width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 21, 41, 0.16), 0 0 0 1px rgba(0, 21, 41, 0.05);
+  overflow: hidden;
+}
+
+.app-user-pop__head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #e6f4ff 0%, #f0f5ff 100%);
+}
+
+.app-user-pop__name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f1f1f;
+}
+
+.app-user-pop__meta {
+  font-size: 12px;
+  color: #595959;
+}
+
+.app-user-pop .ant-menu {
+  border-inline-end: 0 !important;
+  padding: 6px;
+}
+
+.app-content {
+  padding: 24px;
+  min-width: 0;
+}
+
+@media (max-width: 991px) {
+  .app-header {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .app-content {
+    padding: 12px;
+  }
+}

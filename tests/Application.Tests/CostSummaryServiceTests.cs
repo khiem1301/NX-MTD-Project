@@ -36,7 +36,7 @@ public class CostSummaryServiceTests
         new() { PeriodId = id, PeriodMonth = Month, StartDate = MonthStart, EndDate = MonthEnd, Status = RecordStatus.Open };
 
     private static Payroll ApprovedPayroll(int periodId, decimal total) =>
-        new() { PeriodId = periodId, Status = PayrollStatus.Approved, TotalAmount = total, RowVer = [] };
+        new() { PeriodId = periodId, Status = PayrollStatus.Approved, RowVer = [], Payslips = [new Payslip { NetPay = total }] };   // tổng = Σ NetPay
 
     private static MealsReconciliationDto NoReconciliation() => new(0m, null, false);
 
@@ -82,7 +82,7 @@ public class CostSummaryServiceTests
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));
         _payrolls.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
-        _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, false, Arg.Any<CancellationToken>())
+        _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, true, Arg.Any<CancellationToken>())
             .Returns(ApprovedPayroll(period.PeriodId, 50_000_000m));
 
         var result = await _sut.GetAsync(Month, CancellationToken.None);
@@ -112,8 +112,8 @@ public class CostSummaryServiceTests
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));
         _payrolls.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
-        _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, false, Arg.Any<CancellationToken>())
-            .Returns(new Payroll { PeriodId = period.PeriodId, Status = PayrollStatus.Draft, TotalAmount = 0m, RowVer = [] });
+        _payrolls.FindPayrollByPeriodIdAsync(period.PeriodId, true, Arg.Any<CancellationToken>())
+            .Returns(new Payroll { PeriodId = period.PeriodId, Status = PayrollStatus.Draft, RowVer = [] });
 
         var result = await _sut.GetAsync(Month, CancellationToken.None);
 

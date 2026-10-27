@@ -21,6 +21,13 @@ public static class StockDocTypes
     public const string Stocktake = "STOCKTAKE";
 }
 
+/// <summary>ProductComponent.ComponentType (CK_PC_Type): chi tiết cắt từ vải hay phụ liệu cấp thẳng cho tổ may.</summary>
+public static class ComponentTypes
+{
+    public const string Panel = "PANEL";
+    public const string Trim = "TRIM";
+}
+
 public static class MaterialTypes
 {
     public const string Fabric = "FABRIC";
@@ -145,14 +152,14 @@ public static class StocktakeStatuses
     public const string Returned = "RETURNED";
 }
 
-/// <summary>WorkerPieceMovement.MovementType (CK_WPM_Type): tổ trưởng giao BTP cho công nhân hoặc thu hồi lại.</summary>
+/// <summary>WorkAllocation.MovementType (CK_WA_Type): tổ trưởng giao việc (kèm BTP) cho công nhân hoặc thu hồi lại.</summary>
 public static class PieceMovementTypes
 {
     public const string Handover = "HANDOVER";
     public const string Retrieval = "RETRIEVAL";
 }
 
-/// <summary>WorkerPieceMovement.RetrievalReason (CK_WPM_Retr).</summary>
+/// <summary>WorkAllocation.RetrievalReason (CK_WA_Retr).</summary>
 public static class RetrievalReasons
 {
     public const string OperationChanged = "OPERATION_CHANGED";
@@ -162,7 +169,7 @@ public static class RetrievalReasons
     public static readonly IReadOnlyList<string> All = new[] { OperationChanged, WorkerAbsent, StyleFinished };
 }
 
-/// <summary>WorkerPieceMovement.ConfirmMode (CK_WPM_Mode): công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ.</summary>
+/// <summary>WorkAllocation.ConfirmMode (CK_WA_Mode): công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ.</summary>
 public static class ConfirmModes
 {
     public const string Worker = "WORKER";

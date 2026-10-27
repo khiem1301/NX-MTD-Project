@@ -146,6 +146,22 @@ export const useConfirmHandover = () => {
   );
 };
 
+export const useCancelHandover = () => {
+  const role = useRolePath();
+  return useApiMutation((id: number) => cuttingApi.cancelHandover(role, id), {
+    invalidate: [CUTTING_KEY],
+    successMessage: MESSAGES.cutting.handoverCancelled,
+  });
+};
+
+export const useCompleteWorkOrder = () => {
+  const role = useRolePath();
+  return useApiMutation(
+    ({ id, reason }: { id: number; reason?: string }) => cuttingApi.completeWorkOrder(role, id, reason),
+    { invalidate: [CUTTING_KEY], successMessage: MESSAGES.cutting.workOrderCompleted },
+  );
+};
+
 export const useRejectHandover = () => {
   const role = useRolePath();
   return useApiMutation(

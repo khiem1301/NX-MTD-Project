@@ -79,8 +79,7 @@ public class OrderProgressServiceTests
         var flagged = await Service().RunDelayCheckAsync(Today, default);
 
         flagged.Should().Be(1);
-        late.IsDelayRisk.Should().BeTrue();
-        late.DelayRiskSince.Should().Be(Today);
+        late.DelayRiskSince.Should().Be(Today);   // IsDelayRisk là cột tính từ DelayRiskSince
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
 
@@ -94,11 +93,10 @@ public class OrderProgressServiceTests
     public async Task Delay_check_clears_the_flag_when_the_order_catches_up()
     {
         var o = Order(1, dueInDays: 30, ordered: 1000, finished: 900, finishedLast7Days: 700);   // 100 / 100 = 1 ngày < 30
-        o.IsDelayRisk = true; o.DelayRiskSince = Today.AddDays(-3);
+        o.DelayRiskSince = Today.AddDays(-3);
 
         await Service().RunDelayCheckAsync(Today, default);
 
-        o.IsDelayRisk.Should().BeFalse();
         o.DelayRiskSince.Should().BeNull();
     }
 
@@ -110,8 +108,8 @@ public class OrderProgressServiceTests
 
         await Service().RunDelayCheckAsync(Today, default);
 
-        waiting.IsDelayRisk.Should().BeFalse();
-        running.IsDelayRisk.Should().BeTrue();   // đã quá hạn mà chưa hoàn thiện cái nào
+        waiting.DelayRiskSince.Should().BeNull();
+        running.DelayRiskSince.Should().NotBeNull();   // đã quá hạn mà chưa hoàn thiện cái nào
     }
 
     [Fact]

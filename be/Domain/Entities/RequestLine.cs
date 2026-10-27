@@ -18,7 +18,7 @@ public partial class RequestLine
 
     public int? OrderLineId { get; set; }
 
-    public string? PanelName { get; set; }
+    public int? ProductComponentMaterialId { get; set; }
 
     public string? ItemDescription { get; set; }
 
@@ -33,6 +33,8 @@ public partial class RequestLine
     public virtual MaterialReceiptLine? MaterialReceiptLine { get; set; }
 
     public virtual OrderLine? OrderLine { get; set; }
+
+    public virtual ProductComponentMaterial? ProductComponentMaterial { get; set; }
 
     public virtual Request Request { get; set; } = null!;
 }

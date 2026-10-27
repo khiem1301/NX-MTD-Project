@@ -99,6 +99,8 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
         unitRate: null,
         rateApproved: true,
         isOutsideAssignment: true,
+        capQty: 0,
+        reportedQty: 0,
         noAttendanceWarning: false,
         canEdit: true,
         editDeadline: null,
@@ -157,6 +159,17 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
           onChange={(v) => setEdits((prev) => ({ ...prev, [keyOf(r)]: v }))}
         />
       ),
+    },
+    {
+      title: text.columns.allocated,
+      key: 'allocated',
+      align: 'right',
+      render: (_, r) =>
+        r.capQty > 0 ? (
+          `${r.reportedQty} / ${r.capQty}`
+        ) : (
+          <Tag color="red">{text.tags.notAllocated}</Tag>
+        ),
     },
     { responsive: ['md'], title: text.columns.rate, dataIndex: 'unitRate', align: 'right', render: (v: number | null) => (v === null ? '—' : formatCurrency(v)) },
     { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string | null) => formatDateTime(v) },

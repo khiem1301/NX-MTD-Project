@@ -229,7 +229,7 @@ public sealed class AttendanceRepository : IAttendanceRepository
                 t.Employee.Team == null ? null : t.Employee.Team.TeamName,
                 t.WorkDate, t.CheckIn, t.CheckOut, t.WorkedHours, t.WorkdayValue, t.OvertimeHours,
                 t.IsMissingPunch, t.HasExtraPunch, t.IsSunday ?? false,
-                t.Source, t.Note, t.UpdatedAt))
+                t.Source ?? string.Empty, t.Note, t.UpdatedAt))
             .ToListAsync(ct);
 
         return (items, total);

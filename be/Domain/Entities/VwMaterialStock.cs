@@ -11,7 +11,7 @@ public partial class VwMaterialStock
 
     public string MaterialName { get; set; } = null!;
 
-    public string MaterialType { get; set; } = null!;
+    public string? MaterialType { get; set; }
 
     public string Category { get; set; } = null!;
 

@@ -70,7 +70,7 @@ public sealed class PayrollRepository : IPayrollRepository
     public async Task<(IReadOnlyList<Payroll> Items, int Total)> GetPayrollsAsync(
         string? status, int page, int pageSize, CancellationToken ct)
     {
-        var query = _context.Payrolls.Include(p => p.Period).AsQueryable();
+        var query = _context.Payrolls.Include(p => p.Period).Include(p => p.Payslips).AsQueryable();
         if (!string.IsNullOrWhiteSpace(status)) query = query.Where(p => p.Status == status);
         query = query.OrderByDescending(p => p.Period.PeriodMonth);
 
@@ -94,6 +94,50 @@ public sealed class PayrollRepository : IPayrollRepository
     }
 
     public void AddPayslip(Payslip payslip) => _context.Payslips.Add(payslip);
+
+    public async Task<IReadOnlyDictionary<int, PayrollImportFile>> GetImportFilesAsync(
+        IReadOnlyCollection<int> payrollIds, CancellationToken ct)
+    {
+        var ids = payrollIds.ToArray();
+        var rows = await _context.Attachments.AsNoTracking()
+            .Where(a => a.OwnerType == AttachmentOwnerTypes.Payroll && a.Purpose == AttachmentPurposes.ImportFile
+                && a.IsCurrent && ids.Contains(a.OwnerId))
+            .Select(a => new { a.OwnerId, a.FileUrl, a.UploadedAt })
+            .ToListAsync(ct);
+        return rows.GroupBy(r => r.OwnerId).ToDictionary(g => g.Key,
+            g => g.OrderByDescending(r => r.UploadedAt).Select(r => new PayrollImportFile(r.FileUrl, r.UploadedAt)).First());
+    }
+
+    public async Task<IReadOnlyList<string>> RemoveImportFilesAsync(int payrollId, CancellationToken ct)
+    {
+        var old = await _context.Attachments
+            .Where(a => a.OwnerType == AttachmentOwnerTypes.Payroll && a.OwnerId == payrollId
+                && a.Purpose == AttachmentPurposes.ImportFile)
+            .ToListAsync(ct);
+        _context.Attachments.RemoveRange(old);
+        return old.Select(a => a.FileUrl).ToList();
+    }
+
+    public void AddImportFile(int payrollId, string fileUrl, DateTime uploadedAt) =>
+        _context.Attachments.Add(new Attachment
+        {
+            OwnerType = AttachmentOwnerTypes.Payroll, OwnerId = payrollId, Purpose = AttachmentPurposes.ImportFile,
+            FileUrl = fileUrl, FileName = Path.GetFileName(fileUrl), IsCurrent = true, UploadedAt = uploadedAt,
+            ContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+
+    public async Task<IReadOnlyDictionary<int, string>> GetReopenReasonsAsync(
+        IReadOnlyCollection<int> payrollIds, CancellationToken ct)
+    {
+        var ids = payrollIds.Select(i => (long)i).ToArray();
+        var rows = await _context.AuditLogs.AsNoTracking()
+            .Where(l => l.TableName == nameof(Payroll) && l.Action == AuditActions.Unlock && l.Reason != null
+                && ids.Contains(l.RecordId))
+            .OrderByDescending(l => l.AuditLogId)
+            .Select(l => new { l.RecordId, l.Reason })
+            .ToListAsync(ct);
+        return rows.GroupBy(r => r.RecordId).ToDictionary(g => (int)g.Key, g => g.First().Reason!);
+    }
 
     // ---------- Import Excel: tra cứu nhân viên theo mã chấm công (UC31, DEV-MI-09-4) ----------
 

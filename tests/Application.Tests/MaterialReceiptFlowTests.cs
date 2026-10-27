@@ -11,7 +11,10 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>TH-12 / TH-13: nhập NVL từ nhà cung cấp theo đơn mua, nhận thiếu, đơn SHORT_DELIVERY, phiếu bổ sung.</summary>
+/// <summary>
+/// TH-12 / TH-13: nhập NVL từ nhà cung cấp theo đơn mua; thiếu hàng tự tính khi đã nhận đủ số lần giao dự kiến
+/// (<c>ExpectedDeliveryCount</c>) mà còn thiếu → đơn SHORT_DELIVERY; phiếu bổ sung = phiếu có ShortageRequestId.
+/// </summary>
 public class MaterialReceiptFlowTests
 {
     private static readonly DateTime Now = new(2026, 10, 27, 9, 0, 0);
@@ -33,6 +36,7 @@ public class MaterialReceiptFlowTests
     private readonly List<OrderMaterial> _orderMaterials = new();
     private readonly List<Request> _requestList = new();
     private readonly List<RequestLine> _requestLines = new();
+    private readonly List<Attachment> _attachments = new();
 
     public MaterialReceiptFlowTests()
     {
@@ -43,7 +47,7 @@ public class MaterialReceiptFlowTests
         _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>())
             .Returns(_ => new Request { RequestId = 900, RequestCode = "YC261027-001" });
         Setup(_receipts); Setup(_receiptLines); Setup(_pos); Setup(_poLines); Setup(_orders); Setup(_orderMaterials);
-        Setup(_requestList); Setup(_requestLines);
+        Setup(_requestList); Setup(_requestLines); Setup(_attachments);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -65,11 +69,12 @@ public class MaterialReceiptFlowTests
     private static readonly Material Fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
 
     private (PurchaseOrder Po, PurchaseOrderLine Line, OrderMaterial Om, CustomerOrder Order) PlacedPo(
-        string goodsStatus = PurchaseGoodsStatuses.Ordered, decimal ordered = 100, decimal required = 100)
+        string goodsStatus = PurchaseGoodsStatuses.Ordered, decimal ordered = 100, decimal required = 100,
+        short? expectedDeliveries = null)
     {
         var order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction, MaterialStatus = OrderMaterialStatuses.Awaiting };
         var om = new OrderMaterial { OrderMaterialId = 21, OrderId = 7, MaterialId = 1, Material = Fabric, MaterialColor = "Đen", RequiredQty = required };
-        var po = new PurchaseOrder { PurchaseOrderId = 5, PoCode = "DM-001", OrderId = 7, GoodsStatus = goodsStatus };
+        var po = new PurchaseOrder { PurchaseOrderId = 5, PoCode = "DM-001", OrderId = 7, GoodsStatus = goodsStatus, ExpectedDeliveryCount = expectedDeliveries };
         var line = new PurchaseOrderLine { PurchaseOrderLineId = 11, PurchaseOrderId = 5, PurchaseOrder = po, OrderMaterialId = 21, OrderMaterial = om, OrderedQty = ordered };
         po.PurchaseOrderLines.Add(line);
         _orders.Add(order); _orderMaterials.Add(om); _pos.Add(po); _poLines.Add(line);
@@ -77,27 +82,33 @@ public class MaterialReceiptFlowTests
     }
 
     private MaterialReceipt PendingSupplierReceipt(PurchaseOrder po, PurchaseOrderLine pol, OrderMaterial om,
-        decimal accepted, decimal @short = 0, decimal defective = 0, string type = ReceiptTypes.New, int id = 50)
+        decimal accepted, int id = 50, int? shortageRequestId = null)
     {
         var receipt = new MaterialReceipt
         {
-            MaterialReceiptId = id, ReceiptCode = $"PN-{id}", ReceiptType = type, Source = MaterialSources.Supplier,
+            MaterialReceiptId = id, ReceiptCode = $"PN-{id}", ShortageRequestId = shortageRequestId, Source = MaterialSources.Supplier,
             OrderId = po.OrderId, PurchaseOrderId = po.PurchaseOrderId, Status = ReceiptStatuses.Pending,
         };
         var line = new MaterialReceiptLine
         {
             MaterialReceiptLineId = id * 10 + 1, MaterialReceiptId = id, MaterialReceipt = receipt, OrderMaterialId = om.OrderMaterialId,
             OrderMaterial = om, PurchaseOrderLineId = pol.PurchaseOrderLineId, PurchaseOrderLine = pol,
-            AcceptedQty = accepted, ShortQty = @short, DefectiveQty = defective,
+            AcceptedQty = accepted,
         };
         receipt.MaterialReceiptLines.Add(line);
         _receipts.Add(receipt); _receiptLines.Add(line);
+        AddPhoto(id);   // mặc định phiếu đã có ảnh chứng từ; test "thiếu ảnh" gỡ đi
         return receipt;
     }
 
+    private void AddPhoto(int receiptId) => _attachments.Add(new Attachment
+    {
+        OwnerType = AttachmentOwnerTypes.MaterialReceipt, OwnerId = receiptId, Purpose = AttachmentPurposes.DocumentPhoto, IsCurrent = true,
+    });
+
     private static SaveMaterialReceiptDto SupplierDto(int poId, int polId, decimal accepted) =>
         new(null, MaterialSources.Supplier, poId, Today, null,
-            new[] { new SaveReceiptLineDto(null, polId, accepted, 0, 0) });
+            new[] { new SaveReceiptLineDto(null, polId, accepted) });
 
     // ---------- Lập phiếu nhập từ NCC (TH-12) ----------
 
@@ -144,7 +155,7 @@ public class MaterialReceiptFlowTests
         _uow.Repository<MaterialReceipt>().AddAsync(Arg.Do<MaterialReceipt>(r =>
         {
             foreach (var l in r.MaterialReceiptLines) { l.MaterialReceipt = r; l.OrderMaterial = om; l.PurchaseOrderLine = pol; }
-            added.Add(r); _receipts.Add(r);
+            added.Add(r); _receipts.Add(r); _receiptLines.AddRange(r.MaterialReceiptLines);
         }));
         return added;
     }
@@ -161,8 +172,7 @@ public class MaterialReceiptFlowTests
 
         result.IsSuccess.Should().BeTrue();
         var receipt = added.Should().ContainSingle().Subject;
-        receipt.Source.Should().Be(MaterialSources.Supplier);
-        receipt.PurchaseOrderId.Should().Be(5);
+        receipt.PurchaseOrderId.Should().Be(5);   // Source là cột tính của DB (có đơn mua = NCC)
         receipt.OrderId.Should().Be(7);
         receipt.Status.Should().Be(ReceiptStatuses.Pending);
         var saved = receipt.MaterialReceiptLines.Should().ContainSingle().Subject;
@@ -172,15 +182,77 @@ public class MaterialReceiptFlowTests
     }
 
     [Fact]
-    public async Task Pending_receipts_do_not_reduce_the_outstanding_qty()
+    public async Task A_second_receipt_for_the_same_purchase_line_is_blocked_while_one_is_pending()
     {
         var (po, line, om, _) = PlacedPo(ordered: 100);
-        PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);   // chưa xác nhận → chưa tính là đã nhận
+        PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);   // còn chờ Quản đốc: không gửi tiếp cùng NVL
         CaptureAdds(om, line);
 
-        var result = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 100), default);
+        var result = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 10), default);
 
-        result.IsSuccess.Should().BeTrue();
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptDuplicatePending);
+        result.Message.Should().Contain("PN-41");
+    }
+
+    [Fact]
+    public async Task Editing_the_pending_receipt_itself_is_not_a_duplicate_and_a_returned_one_does_not_block()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100);
+        var pending = PendingSupplierReceipt(po, line, om, accepted: 90, id: 41);
+
+        _uow.When(u => u.SaveChangesAsync()).Do(_ =>   // gắn navigation cho dòng mới như EF
+        {
+            foreach (var l in pending.MaterialReceiptLines) { l.MaterialReceipt = pending; l.OrderMaterial = om; l.PurchaseOrderLine = line; }
+        });
+        var edited = await Receipts().UpdateAsync(41, SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 50), default);
+        edited.IsSuccess.Should().BeTrue();
+
+        pending.Status = ReceiptStatuses.Returned;
+        CaptureAdds(om, line);
+        var next = await Receipts().CreateAsync(SupplierDto(po.PurchaseOrderId, line.PurchaseOrderLineId, 10), default);
+        next.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Confirming_checks_the_cap_again_so_two_receipts_cannot_both_add_the_full_quantity()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100);
+        var first = PendingSupplierReceipt(po, line, om, accepted: 100, id: 41);
+        var second = PendingSupplierReceipt(po, line, om, accepted: 100, id: 42);   // lập khi phiếu 1 chưa được xác nhận (dữ liệu cũ)
+
+        (await Receipts().ConfirmAsync(first.MaterialReceiptId, 3, default)).IsSuccess.Should().BeTrue();
+        var result = await Receipts().ConfirmAsync(second.MaterialReceiptId, 3, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptExceedsPurchase);
+        result.Message.Should().Contain("còn 0");
+        second.Status.Should().Be(ReceiptStatuses.Pending);
+        await _stock.Received(1).PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());   // chỉ phiếu 1 vào kho
+    }
+
+    private static SaveMaterialReceiptDto CustomerDto(int orderMaterialId, decimal accepted) =>
+        new(7, MaterialSources.Customer, null, Today, null, new[] { new SaveReceiptLineDto(orderMaterialId, null, accepted) });
+
+    [Fact]
+    public async Task Customer_receipt_cannot_exceed_the_customer_supplied_qty_and_cannot_be_sent_twice()
+    {
+        var (_, _, om, _) = PlacedPo(ordered: 100);
+        om.CustomerQty = 50;
+        _receipts.Add(new MaterialReceipt { MaterialReceiptId = 30, ReceiptCode = "PN-30", OrderId = 7, Status = ReceiptStatuses.Confirmed });
+        _receiptLines.Add(new MaterialReceiptLine { MaterialReceiptLineId = 300, MaterialReceiptId = 30, OrderMaterialId = 21, AcceptedQty = 30,
+            MaterialReceipt = _receipts.Last() });
+        CaptureAdds(om, new PurchaseOrderLine());
+
+        var tooMuch = await Receipts().CreateAsync(CustomerDto(21, 25), default);   // còn 20
+        tooMuch.ErrorCode.Should().Be(ErrorCodes.ReceiptExceedsPurchase);
+        tooMuch.Message.Should().Contain("còn 20");
+
+        var ok = await Receipts().CreateAsync(CustomerDto(21, 20), default);
+        ok.IsSuccess.Should().BeTrue();
+
+        var again = await Receipts().CreateAsync(CustomerDto(21, 20), default);   // phiếu trước còn chờ
+        again.ErrorCode.Should().Be(ErrorCodes.ReceiptDuplicatePending);
     }
 
     // ---------- Xác nhận phiếu: trạng thái đơn mua, MaterialStatus, đơn thiếu (TH-12 / TH-13) ----------
@@ -202,8 +274,9 @@ public class MaterialReceiptFlowTests
     [Fact]
     public async Task Confirm_partial_delivery_with_shortfall_stages_short_delivery_request()
     {
+        // Mặc định NCC giao 1 lần: phiếu xác nhận đầu tiên là lần giao cuối, còn thiếu 20 → tự sinh đơn thiếu NVL.
         var (po, line, om, order) = PlacedPo(ordered: 100, required: 100);
-        var receipt = PendingSupplierReceipt(po, line, om, accepted: 80, @short: 15, defective: 5);
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 80);
         var staged = new Request { RequestId = 900, RequestCode = "YC261027-001" };
         _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>()).Returns(staged);
 
@@ -224,10 +297,54 @@ public class MaterialReceiptFlowTests
     }
 
     [Fact]
+    public async Task Confirm_does_not_stage_a_shortage_while_more_deliveries_are_expected()
+    {
+        var (po, line, om, order) = PlacedPo(ordered: 100, required: 100, expectedDeliveries: 2);
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 60);
+
+        var result = await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().NotContain(WarehouseMessages.ShortDeliveryCreated);
+        po.GoodsStatus.Should().Be(PurchaseGoodsStatuses.PartiallyReceived);
+        await _requests.DidNotReceive().StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_stages_the_shortage_once_the_expected_number_of_deliveries_is_reached()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100, required: 100, expectedDeliveries: 2);
+        var first = PendingSupplierReceipt(po, line, om, accepted: 60, id: 40);
+        first.Status = ReceiptStatuses.Confirmed;
+        var second = PendingSupplierReceipt(po, line, om, accepted: 30, id: 50);
+        var staged = new Request { RequestId = 900, RequestCode = "YC261027-001" };
+        _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>()).Returns(staged);
+
+        var result = await Receipts().ConfirmAsync(second.MaterialReceiptId, 3, default);
+
+        result.Message.Should().Contain(WarehouseMessages.ShortDeliveryCreated);
+        staged.RequestLines.Should().ContainSingle().Which.Quantity.Should().Be(10);   // 100 − 60 − 30
+    }
+
+    [Fact]
+    public async Task Confirm_does_not_stage_a_second_shortage_while_one_is_still_open()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100, required: 100);
+        var first = PendingSupplierReceipt(po, line, om, accepted: 80, id: 40);
+        first.Status = ReceiptStatuses.Confirmed;
+        OpenShortDelivery(first, qty: 20);
+        var again = PendingSupplierReceipt(po, line, om, accepted: 5, id: 50);
+
+        await Receipts().ConfirmAsync(again.MaterialReceiptId, 3, default);
+
+        await _requests.DidNotReceive().StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Confirm_posts_only_the_accepted_qty_to_the_material_warehouse()
     {
         var (po, line, om, _) = PlacedPo();
-        var receipt = PendingSupplierReceipt(po, line, om, accepted: 80, @short: 15, defective: 5);
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 80);
 
         await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default);
 
@@ -235,6 +352,31 @@ public class MaterialReceiptFlowTests
             Arg.Is<IReadOnlyList<StockMovement>>(m => m.Count == 1 && m[0].QtyChange == 80
                 && m[0].Key.MaterialId == 1 && m[0].Key.MaterialColor == "Đen"),
             Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_requires_the_delivery_document_photo()
+    {
+        var (po, line, om, _) = PlacedPo();
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 10);
+        _attachments.Clear();
+
+        var result = await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ReceiptPhotoRequired);
+        receipt.Status.Should().Be(ReceiptStatuses.Pending);
+        await _stock.DidNotReceive().PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_ignores_replaced_photos_when_looking_for_the_current_one()
+    {
+        var (po, line, om, _) = PlacedPo();
+        var receipt = PendingSupplierReceipt(po, line, om, accepted: 10);
+        _attachments.Single().IsCurrent = false;   // ảnh cũ đã bị thay
+
+        (await Receipts().ConfirmAsync(receipt.MaterialReceiptId, 3, default)).ErrorCode.Should().Be(ErrorCodes.ReceiptPhotoRequired);
     }
 
     [Fact]
@@ -274,7 +416,7 @@ public class MaterialReceiptFlowTests
     public async Task Resolve_no_replenish_closes_the_shortfall_and_marks_purchase_order_closed_short()
     {
         var (po, pol, om, order) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived, ordered: 100, required: 100);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 15, defective: 5);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
         receipt.Status = ReceiptStatuses.Confirmed;
         var (request, _) = OpenShortDelivery(receipt);
 
@@ -293,7 +435,7 @@ public class MaterialReceiptFlowTests
     public async Task Resolve_no_replenish_never_pushes_received_plus_not_replenished_above_ordered()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived, ordered: 100);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 95, @short: 5);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 95);
         receipt.Status = ReceiptStatuses.Confirmed;
         OpenShortDelivery(receipt, qty: 50);   // số thiếu khai lớn hơn phần còn lại trên đơn mua
 
@@ -306,7 +448,7 @@ public class MaterialReceiptFlowTests
     public async Task Resolve_replenish_records_qty_per_line_and_notifies_warehouse_keeper()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
         receipt.Status = ReceiptStatuses.Confirmed;
         var (request, line) = OpenShortDelivery(receipt);
 
@@ -325,7 +467,7 @@ public class MaterialReceiptFlowTests
     public async Task Resolve_replenish_defaults_to_the_whole_shortfall()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
         receipt.Status = ReceiptStatuses.Confirmed;
         var (_, line) = OpenShortDelivery(receipt, qty: 20);
 
@@ -338,7 +480,7 @@ public class MaterialReceiptFlowTests
     public async Task Resolve_replenish_rejects_qty_above_the_shortfall()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
         receipt.Status = ReceiptStatuses.Confirmed;
         OpenShortDelivery(receipt, qty: 20);
 
@@ -352,7 +494,7 @@ public class MaterialReceiptFlowTests
     public async Task A_resolved_short_delivery_cannot_be_resolved_twice()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
         receipt.Status = ReceiptStatuses.Confirmed;
         var (request, _) = OpenShortDelivery(receipt);
         request.ShortageResolution = ShortageResolutions.Replenish;
@@ -368,12 +510,12 @@ public class MaterialReceiptFlowTests
     public async Task Supplementary_receipt_requires_the_replenish_resolution()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var original = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var original = PendingSupplierReceipt(po, pol, om, accepted: 80);
         original.Status = ReceiptStatuses.Confirmed;
         OpenShortDelivery(original);   // chưa chọn giao bù
 
         var result = await Receipts().CreateSupplementaryAsync(new SaveSupplementaryReceiptDto(900, Today, null,
-            new[] { new SupplementaryLineDto(501, 10, 0, 0) }), default);
+            new[] { new SupplementaryLineDto(501, 10) }), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.ShortageNotResolvable);
     }
@@ -382,17 +524,16 @@ public class MaterialReceiptFlowTests
     public async Task Supplementary_receipt_cannot_receive_more_than_the_remaining_replenish_qty()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var original = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var original = PendingSupplierReceipt(po, pol, om, accepted: 80);
         original.Status = ReceiptStatuses.Confirmed;
         var (request, line) = OpenShortDelivery(original);
         request.ShortageResolution = ShortageResolutions.Replenish;
         line.ReplenishQty = 20;
-        PendingSupplierReceipt(po, pol, om, accepted: 12, type: ReceiptTypes.Supplementary, id: 60)
-            .ShortageRequestId = 900;
+        PendingSupplierReceipt(po, pol, om, accepted: 12, id: 60, shortageRequestId: 900);
         _receiptLines.Last().OriginalReceiptLineId = 501;   // đã có phiếu bổ sung chờ xác nhận 12
 
         var result = await Receipts().CreateSupplementaryAsync(new SaveSupplementaryReceiptDto(900, Today, null,
-            new[] { new SupplementaryLineDto(501, 9, 0, 0) }), default);   // chỉ còn 8
+            new[] { new SupplementaryLineDto(501, 9) }), default);   // chỉ còn 8
 
         result.ErrorCode.Should().Be(ErrorCodes.ShortageExceeded);
         result.Message.Should().Contain("còn 8");
@@ -402,19 +543,19 @@ public class MaterialReceiptFlowTests
     public async Task Confirming_supplementary_receipt_completes_the_request_only_when_fully_replenished()
     {
         var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
-        var original = PendingSupplierReceipt(po, pol, om, accepted: 80, @short: 20);
+        var original = PendingSupplierReceipt(po, pol, om, accepted: 80);
         original.Status = ReceiptStatuses.Confirmed;
         var (request, line) = OpenShortDelivery(original);
         request.ShortageResolution = ShortageResolutions.Replenish;
         line.ReplenishQty = 20;
 
-        var first = PendingSupplierReceipt(po, pol, om, accepted: 12, type: ReceiptTypes.Supplementary, id: 60);
-        first.ShortageRequestId = 900; _receiptLines.Last().OriginalReceiptLineId = 501;
+        PendingSupplierReceipt(po, pol, om, accepted: 12, id: 60, shortageRequestId: 900);
+        _receiptLines.Last().OriginalReceiptLineId = 501;
         await Receipts().ConfirmAsync(60, 3, default);
         await _requests.DidNotReceive().MarkCompletedAsync(Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>());
 
-        var second = PendingSupplierReceipt(po, pol, om, accepted: 8, type: ReceiptTypes.Supplementary, id: 61);
-        second.ShortageRequestId = 900; _receiptLines.Last().OriginalReceiptLineId = 501;
+        PendingSupplierReceipt(po, pol, om, accepted: 8, id: 61, shortageRequestId: 900);
+        _receiptLines.Last().OriginalReceiptLineId = 501;
         await Receipts().ConfirmAsync(61, 3, default);
 
         await _requests.Received(1).MarkCompletedAsync(900, Arg.Any<string?>(), Arg.Any<CancellationToken>());
@@ -427,8 +568,8 @@ public class MaterialReceiptFlowTests
     public void Validator_requires_order_for_customer_and_purchase_order_for_supplier()
     {
         var validator = new SaveMaterialReceiptDtoValidator();
-        var line = new[] { new SaveReceiptLineDto(1, null, 5, 0, 0) };
-        var supplierLine = new[] { new SaveReceiptLineDto(null, 3, 5, 0, 0) };
+        var line = new[] { new SaveReceiptLineDto(1, null, 5) };
+        var supplierLine = new[] { new SaveReceiptLineDto(null, 3, 5) };
 
         validator.Validate(new SaveMaterialReceiptDto(null, MaterialSources.Customer, null, Today, null, line)).IsValid.Should().BeFalse();
         validator.Validate(new SaveMaterialReceiptDto(7, MaterialSources.Customer, null, Today, null, line)).IsValid.Should().BeTrue();
@@ -442,7 +583,7 @@ public class MaterialReceiptFlowTests
     {
         var validator = new SaveMaterialReceiptDtoValidator();
         var dto = new SaveMaterialReceiptDto(7, MaterialSources.Customer, null, Today, null,
-            new[] { new SaveReceiptLineDto(null, null, 5, 0, 0) });
+            new[] { new SaveReceiptLineDto(null, null, 5) });
 
         validator.Validate(dto).IsValid.Should().BeFalse();
     }

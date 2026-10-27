@@ -21,6 +21,8 @@ export type StocktakeLine = {
   unit: string | null;
   materialColor: string | null;
   orderLineId: number | null;
+  productComponentMaterialId: number | null;
+  componentName: string | null;
   orderCode: string | null;
   productCode: string | null;
   color: string | null;
@@ -46,6 +48,7 @@ export type SaveStocktakePayload = {
     materialId?: number;
     materialColor?: string;
     orderLineId?: number;
+    productComponentMaterialId?: number | null;
     countedQty?: number | null;
     note?: string;
   }[];

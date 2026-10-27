@@ -8,6 +8,7 @@ import type {
   ProductQuery,
   SaveCustomerPayload,
   SaveProductPayload,
+  SaveProductSpecPayload,
   UpdateOrderPayload,
 } from '../types';
 
@@ -39,6 +40,20 @@ export const useSaveProduct = () =>
     ({ id, body }: { id?: number; body: SaveProductPayload }) =>
       id === undefined ? productApi.create(body) : productApi.update(id, body).then(() => id),
     { invalidate: [PRODUCTS_KEY, LOOKUPS_KEY], successMessage: MESSAGES.common.saved },
+  );
+
+export const useProductSpec = (productId: number | undefined) =>
+  useQuery({
+    queryKey: [...PRODUCTS_KEY, 'spec', productId],
+    queryFn: () => productApi.getSpec(productId ?? 0),
+    enabled: productId !== undefined,
+  });
+
+/** Lưu định mức: đơn hàng cũng đọc biến thể và số cần theo định mức, nên làm mới cả nhóm đơn / NVL của đơn. */
+export const useSaveProductSpec = () =>
+  useApiMutation(
+    ({ id, body }: { id: number; body: SaveProductSpecPayload }) => productApi.saveSpec(id, body),
+    { invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']], successMessage: MESSAGES.common.saved },
   );
 
 export const useDiscontinueProduct = () =>

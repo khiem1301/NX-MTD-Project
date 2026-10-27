@@ -74,6 +74,23 @@ public sealed class GradeService : IGradeService
             .ToList());
     }
 
+    public async Task<Result<IReadOnlyList<GradeWorkerDto>>> GetAllWorkersAsync(CancellationToken ct)
+    {
+        var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => e.Status == RecordStatus.Active && e.Role.RoleCode == RoleCodes.Worker)
+            .OrderBy(e => e.EmployeeCode)
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.CurrentGradeCode, TeamName = e.Team == null ? null : e.Team.TeamName })
+            .ToListAsync(ct);
+        var ids = workers.Select(w => w.EmployeeId).ToList();
+        var defects = await DefectCountsAsync(ids, ct);
+        var pending = await Evaluations.Where(e => ids.Contains(e.WorkerId) && e.Status == GradeEvaluationStatuses.Submitted)
+            .Select(e => e.WorkerId).Distinct().ToListAsync(ct);
+        return Result<IReadOnlyList<GradeWorkerDto>>.Success(workers
+            .Select(w => new GradeWorkerDto(w.EmployeeId, w.EmployeeCode, w.FullName, w.CurrentGradeCode, defects.GetValueOrDefault(w.EmployeeId),
+                pending.Contains(w.EmployeeId), w.TeamName))
+            .ToList());
+    }
+
     public async Task<Result<PagedResult<GradeEvaluationDto>>> GetPagedAsync(GradeEvaluationQuery query, int? teamId, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
@@ -142,6 +159,51 @@ public sealed class GradeService : IGradeService
                 $"{e.Worker.FullName}: bậc {e.ProposedGradeCode} có hiệu lực từ {effective:dd/MM/yyyy}.", null));
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.GradeApplied);
+        });
+
+    public Task<Result> SetGradeAsync(SetGradeDto dto, CancellationToken ct) =>
+        _uow.InTransactionAsync(async () =>
+        {
+            var code = dto.GradeCode.Trim().ToUpperInvariant();
+            if (!GradeCodes.All.Contains(code)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInvalid, ResultKind.Validation);
+
+            var worker = await _uow.Repository<Employee>().Query().Include(e => e.Role).FirstOrDefaultAsync(e => e.EmployeeId == dto.WorkerId, ct);
+            if (worker is null || worker.Status != RecordStatus.Active || worker.Role.RoleCode != RoleCodes.Worker)
+                return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeWorkerInvalid, ResultKind.Validation);
+            if (worker.CurrentGradeCode == code) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeSameAsCurrent);
+            // Ràng buộc UQ_GradeEval (công nhân, người đặt, ngày): chặn sớm bằng thông báo rõ thay vì lỗi cơ sở dữ liệu.
+            if (await Evaluations.AnyAsync(e => e.WorkerId == worker.EmployeeId && e.ProposedBy == _user.EmployeeId && e.EvaluationDate == _clock.Today, ct))
+                return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeSetToday);
+
+            var now = _clock.Now;
+            var reason = dto.Reason.Trim();
+            var effective = dto.EffectiveDate ?? _clock.Today;
+
+            // Đề xuất đang chờ của công nhân này không còn ý nghĩa: đóng lại có ghi chú (GBR-22: không sửa dòng đã quyết định).
+            var pending = await Evaluations.Where(e => e.WorkerId == worker.EmployeeId && e.Status == GradeEvaluationStatuses.Submitted).ToListAsync(ct);
+            foreach (var p in pending)
+            {
+                p.Status = GradeEvaluationStatuses.NotApplied;
+                p.ConsideredAt = now;
+                p.DecisionNote = Messages.GradeSupersededNote;
+            }
+
+            var defects = (await DefectCountsAsync(new[] { worker.EmployeeId }, ct)).GetValueOrDefault(worker.EmployeeId);
+            await _uow.Repository<GradeEvaluation>().AddAsync(new GradeEvaluation
+            {
+                WorkerId = worker.EmployeeId, ProposedBy = _user.EmployeeId, TeamId = worker.TeamId, CurrentGradeCode = worker.CurrentGradeCode,
+                ProposedGradeCode = code, Reason = reason, RecentDefectCount = defects, EvaluationDate = _clock.Today,
+                Status = GradeEvaluationStatuses.Applied, EffectiveDate = effective, ConsideredAt = now, DecisionNote = reason, CreatedAt = now,
+            });
+            _audit.Add(new AuditEntry(nameof(Employee), worker.EmployeeId, AuditActions.Update, new { CurrentGradeCode = worker.CurrentGradeCode },
+                new { CurrentGradeCode = code }, reason));
+            var oldGrade = worker.CurrentGradeCode;
+            worker.CurrentGradeCode = code;
+            _notifier.NotifyEmployees(pending.Select(p => p.ProposedBy).Append(worker.EmployeeId).Distinct().ToArray(),
+                new NotificationMessage(NotificationSources.System, "Bậc thợ đã được cập nhật",
+                    $"{worker.FullName}: bậc {oldGrade ?? "—"} → {code}, có hiệu lực từ {effective:dd/MM/yyyy}.", null));
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.GradeSet);
         });
 
     public async Task<Result> RejectAsync(int evaluationId, ReasonDto dto, CancellationToken ct)

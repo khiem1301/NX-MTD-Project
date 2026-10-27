@@ -102,9 +102,14 @@ public sealed class MealService : IMealService
         var rows = await BuildTeamRowsAsync(meal, date, ct);
         var suggestedPrice = meal.MealPrice ?? await _meals.GetPreviousMealPriceAsync(date, ct);
 
+        // Tổng suất tính như vw_DailyMealTotal: suất các tổ + khối văn phòng + khách; thành tiền = tổng × đơn giá.
+        var teamTotal = rows.Where(r => r.Source != null).Sum(r => r.MealCount);   // chỉ tổ đã có dòng xác nhận, không tính gợi ý
+        var totalMeals = teamTotal + meal.OfficeCount + meal.GuestCount;
+        var totalAmount = meal.MealPrice is null ? (decimal?)null : Math.Round(totalMeals * meal.MealPrice.Value, 2);
+
         return Result<DailyMealSummaryDto>.Success(new DailyMealSummaryDto(
             meal.DailyMealId, date, CodeText.ToPascal(meal.Status), meal.OfficeCount, meal.GuestCount, meal.GuestNote,
-            meal.TeamTotal, meal.TotalMeals ?? 0, meal.MealPrice, suggestedPrice, meal.TotalAmount,
+            teamTotal, totalMeals, meal.MealPrice, suggestedPrice, totalAmount,
             meal.AttendanceIncomplete, meal.AutoClosedAt, meal.ClosedAt, meal.KitchenNotifiedAt, rows));
     }
 
@@ -196,9 +201,9 @@ public sealed class MealService : IMealService
 
         await _meals.SaveChangesAsync(ct);
         _logger.LogInformation(
-            "JOB-03: đã chốt suất ăn ngày {MealDate} — TeamTotal={TeamTotal}, OfficeCount={OfficeCount}, " +
+            "JOB-03: đã chốt suất ăn ngày {MealDate} — OfficeCount={OfficeCount}, " +
             "AttendanceIncomplete={AttendanceIncomplete}",
-            date, meal.TeamTotal, meal.OfficeCount, meal.AttendanceIncomplete);
+            date, meal.OfficeCount, meal.AttendanceIncomplete);
     }
 
     // ---------- Dùng chung ----------
@@ -217,11 +222,10 @@ public sealed class MealService : IMealService
         return TimeOnly.FromDateTime(_clock.Now) >= cutoff;
     }
 
-    /// <summary>Thêm/sửa dòng xác nhận của một tổ và cộng dồn chênh lệch vào DailyMeal.TeamTotal.</summary>
+    /// <summary>Thêm/sửa dòng xác nhận của một tổ (tổng suất do vw_DailyMealTotal cộng từ các dòng này).</summary>
     private void Upsert(DailyMeal meal, TeamMealConfirmation? existing, int teamId, int mealCount,
         int attendanceCount, string source, DateTime? confirmedAt, DateTime? remindedAt)
     {
-        var previousCount = existing?.MealCount ?? 0;
         if (existing is null)
         {
             existing = new TeamMealConfirmation { DailyMealId = meal.DailyMealId, TeamId = teamId };
@@ -234,7 +238,6 @@ public sealed class MealService : IMealService
         if (confirmedAt is not null) existing.ConfirmedAt = confirmedAt;
         if (remindedAt is not null) existing.RemindedAt = remindedAt;
 
-        meal.TeamTotal += mealCount - previousCount;
     }
 
     private async Task<IReadOnlyList<TeamMealRowDto>> BuildTeamRowsAsync(DailyMeal meal, DateOnly date, CancellationToken ct)

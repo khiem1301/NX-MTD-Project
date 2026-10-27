@@ -22,6 +22,10 @@ export const GR_LABELS = {
   evaluationsTab: 'Đề xuất bậc',
   levelsTab: 'Mức tiền bậc',
   propose: 'Đề xuất bậc',
+  setDirect: 'Đặt bậc trực tiếp',
+  setDirectHint: 'Đặt bậc ngay, không cần tổ trưởng đề xuất. Đề xuất đang chờ của công nhân này (nếu có) sẽ bị đóng lại.',
+  newGrade: 'Bậc mới',
+  setReason: 'Lý do',
   worker: 'Công nhân',
   selectWorker: 'Chọn công nhân',
   currentGrade: 'Bậc hiện tại',
@@ -49,6 +53,7 @@ export const GR_LABELS = {
 
 export const GR_MESSAGES = {
   proposed: 'Đã gửi đề xuất bậc thợ.',
+  set: 'Đã đặt bậc thợ.',
   applied: 'Đã áp dụng bậc thợ.',
   notApplied: 'Đã ghi nhận không áp dụng bậc thợ.',
   levelSaved: 'Đã lưu mức tiền bậc.',

@@ -22,9 +22,9 @@ public partial class CustomerOrder
 
     public string Status { get; set; } = null!;
 
-    public bool IsDelayRisk { get; set; }
-
     public DateOnly? DelayRiskSince { get; set; }
+
+    public bool? IsDelayRisk { get; set; }
 
     public string? StopReason { get; set; }
 

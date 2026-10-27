@@ -69,7 +69,7 @@ public class MaterialReturnServiceTests
         var ret = new MaterialReturn
         {
             MaterialReturnId = _returns.Count + 1, ReturnCode = $"TV-{_returns.Count + 1}", MaterialIssueId = 10, MaterialIssue = _issue,
-            CuttingTeamId = CutTeam, CuttingTeam = _team, Status = status, CreatedAt = Now,
+            Status = status, CreatedAt = Now,
         };
         var line = new MaterialReturnLine
         {
@@ -86,7 +86,7 @@ public class MaterialReturnServiceTests
         var added = new List<MaterialReturn>();
         _uow.Repository<MaterialReturn>().AddAsync(Arg.Do<MaterialReturn>(r =>
         {
-            r.MaterialIssue = _issue; r.CuttingTeam = _team;
+            r.MaterialIssue = _issue;
             foreach (var l in r.MaterialReturnLines) { l.MaterialReturn = r; l.MaterialIssueLine = _line; }
             added.Add(r); _returns.Add(r); _returnLines.AddRange(r.MaterialReturnLines);
         }));

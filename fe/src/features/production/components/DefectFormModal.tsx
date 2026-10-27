@@ -12,7 +12,8 @@ import { useAssignableOperations, useCreateDefect } from '../hooks/useProduction
 import type { DefectReason, DefectType, ShiftCode } from '../types';
 import { modalWidth } from '../utils';
 
-type Props = { open: boolean; onClose: () => void };
+/** onCreated: báo phiếu vừa ghi (id + loại) để trang mở luôn form đơn cắt bù khi là hàng hủy (Scrap). */
+type Props = { open: boolean; onClose: () => void; onCreated?: (defectId: number, defectType: DefectType) => void };
 
 type FormValues = {
   workDate: Dayjs;
@@ -31,7 +32,7 @@ const text = PRODUCTION_TEXT.defects.form;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
 
 /** UC56 — tổ trưởng / tổ phó may ghi hàng hỏng. Hủy (Scrap) được khóa đơn giá công đoạn để trừ lương tạm tính. */
-export function DefectFormModal({ open, onClose }: Props) {
+export function DefectFormModal({ open, onClose, onCreated }: Props) {
   const [form] = Form.useForm<FormValues>();
   const { user } = useAuth();
   const create = useCreateDefect();
@@ -60,7 +61,12 @@ export function DefectFormModal({ open, onClose }: Props) {
         reasonCode: values.reasonCode,
         reasonNote: values.reasonNote?.trim() || undefined,
       },
-      { onSuccess: onClose },
+      {
+        onSuccess: (defectId) => {
+          onClose();
+          onCreated?.(defectId, values.defectType);
+        },
+      },
     );
   };
 

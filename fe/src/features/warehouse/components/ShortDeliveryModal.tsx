@@ -44,7 +44,7 @@ const API_DATE = 'YYYY-MM-DD';
 type SupplementaryValues = {
   receiptDate: Dayjs;
   note?: string;
-  lines: Record<number, { acceptedQty: number; shortQty: number; defectiveQty: number }>;
+  lines: Record<number, { acceptedQty: number }>;
 };
 
 /**
@@ -56,7 +56,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   const detail = useShortDelivery(requestId);
   const resolve = useResolveShortDelivery();
   const supplementary = useCreateSupplementary();
-  // Số bù Quản đốc đã sửa; dòng chưa sửa mặc định bù đủ phần thiếu / lỗi. Trang gắn key theo đơn nên state tự reset.
+  // Số bù Quản đốc đã sửa; dòng chưa sửa mặc định bù đủ phần còn thiếu. Trang gắn key theo đơn nên state tự reset.
   const [overrides, setOverrides] = useState<Record<number, number>>({});
   const [form] = Form.useForm<SupplementaryValues>();
   const d = detail.data;
@@ -74,8 +74,6 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
     { title: LABELS.materialName, dataIndex: 'materialName' },
     { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
     { title: LABELS.unit, dataIndex: 'unit' },
-    { title: LABELS.shortQty, dataIndex: 'shortQty', align: 'right', render: formatQty },
-    { title: LABELS.defectiveQty, dataIndex: 'defectiveQty', align: 'right', render: formatQty },
     { title: LABELS.shortfallQty, dataIndex: 'shortfallQty', align: 'right', render: formatQty },
     ...(unresolved && isManager
       ? [
@@ -125,20 +123,6 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                     style={{ width: 150 }}
                   />
                 </Form.Item>
-                <Form.Item
-                  name={['lines', l.materialReceiptLineId, 'shortQty']}
-                  noStyle
-                  initialValue={0}
-                >
-                  <InputNumber min={0} addonBefore={LABELS.shortQty} style={{ width: 130 }} />
-                </Form.Item>
-                <Form.Item
-                  name={['lines', l.materialReceiptLineId, 'defectiveQty']}
-                  noStyle
-                  initialValue={0}
-                >
-                  <InputNumber min={0} addonBefore={LABELS.defectiveQty} style={{ width: 130 }} />
-                </Form.Item>
               </Space>
             ),
           },
@@ -172,11 +156,9 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
         return {
           originalReceiptLineId: l.materialReceiptLineId,
           acceptedQty: input?.acceptedQty ?? 0,
-          shortQty: input?.shortQty ?? 0,
-          defectiveQty: input?.defectiveQty ?? 0,
         };
       })
-      .filter((l) => l.acceptedQty + l.shortQty + l.defectiveQty > 0);
+      .filter((l) => l.acceptedQty > 0);
     supplementary.mutate(
       {
         shortageRequestId: d.requestId,

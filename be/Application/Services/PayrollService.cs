@@ -135,16 +135,14 @@ public sealed class PayrollService : IPayrollService
         }
         else
         {
-            before = new { payroll.Status, payroll.TotalAmount, payroll.ImportedAt };
+            before = new { payroll.Status };
             await _repo.RemovePayslipsAsync(payroll.PayrollId, ct);
             payroll.Status = PayrollStatus.Draft;
             payroll.RejectReason = null;   // dữ liệu mới thay thế, lý do từ chối cũ không còn áp dụng
         }
 
-        var previousFile = payroll.ImportedFileUrl;
+        var previousFiles = payroll.PayrollId == 0 ? [] : await _repo.RemoveImportFilesAsync(payroll.PayrollId, ct);
         var storedFile = await _fileStore.SaveAsync(periodMonth, content, ct);
-        payroll.ImportedFileUrl = storedFile;
-        payroll.ImportedAt = _clock.Now;
 
         var totalAmount = 0m;
         foreach (var g in groups)
@@ -171,16 +169,16 @@ public sealed class PayrollService : IPayrollService
             totalAmount += g.NetPay;
         }
 
-        payroll.TotalAmount = totalAmount;
         try
         {
             // Bảng lương mới chỉ có PayrollId sau lần lưu đầu nên log ghi sau, cùng một transaction (GBR-15).
             await _uow.InTransactionAsync(async () =>
             {
                 await _repo.SaveChangesAsync(ct);
+                _repo.AddImportFile(payroll.PayrollId, storedFile, _clock.Now);   // file gốc ở Attachment, tổng tiền = Σ NetPay
                 _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId,
                     before is null ? AuditActions.Insert : AuditActions.Update, before,
-                    new { payroll.Status, payroll.TotalAmount, PeriodMonth = periodMonth, PayslipCount = groups.Count }));
+                    new { payroll.Status, TotalAmount = totalAmount, PeriodMonth = periodMonth, PayslipCount = groups.Count }));
                 await _repo.SaveChangesAsync(ct);
                 return Result.Success();
             });
@@ -191,7 +189,7 @@ public sealed class PayrollService : IPayrollService
             throw;
         }
 
-        if (!string.IsNullOrEmpty(previousFile))
+        foreach (var previousFile in previousFiles)
             await TryDeleteFileAsync(previousFile, ct);
 
         _logger.LogInformation(
@@ -219,7 +217,7 @@ public sealed class PayrollService : IPayrollService
             return Result<PayrollSummaryDto>.Failure(ErrorCodes.PayrollNotFound, Messages.PayrollNotFound,
                 ResultKind.NotFound);
 
-        return Result<PayrollSummaryDto>.Success(ToSummary(payroll));
+        return Result<PayrollSummaryDto>.Success((await ToSummariesAsync([payroll], ct))[0]);
     }
 
     public async Task<Result> SubmitAsync(int payrollId, CancellationToken ct)
@@ -252,9 +250,8 @@ public sealed class PayrollService : IPayrollService
             return Result<ExcelFileDto>.Failure(ErrorCodes.PayrollNotFound, Messages.PayrollNotFound,
                 ResultKind.NotFound);
 
-        var content = string.IsNullOrEmpty(payroll.ImportedFileUrl)
-            ? null
-            : await _fileStore.ReadAsync(payroll.ImportedFileUrl, ct);
+        var file = (await _repo.GetImportFilesAsync([payroll.PayrollId], ct)).GetValueOrDefault(payroll.PayrollId);
+        var content = file is null ? null : await _fileStore.ReadAsync(file.FileUrl, ct);
         if (content is null)
             return Result<ExcelFileDto>.Failure(ErrorCodes.PayrollFileNotFound, Messages.PayrollFileNotFound,
                 ResultKind.NotFound);
@@ -272,7 +269,7 @@ public sealed class PayrollService : IPayrollService
         // Contract 2.2: FE chỉ biết trạng thái dạng PascalCase (giống Status trong PayrollSummaryDto trả về);
         // DB/PayrollRepository lưu/so sánh theo mã UPPER_SNAKE nên phải đổi chiều ngược lại ở đây.
         var (items, total) = await _repo.GetPayrollsAsync(ToRawStatus(query.Status), page, pageSize, ct);
-        var dtos = items.Select(ToSummary).ToList();
+        var dtos = await ToSummariesAsync(items, ct);
 
         return Result<PagedResult<PayrollSummaryDto>>.Success(
             new PagedResult<PayrollSummaryDto>(dtos, page, pageSize, total), dtos.Count == 0 ? Messages.NoData : null);
@@ -285,7 +282,9 @@ public sealed class PayrollService : IPayrollService
             return Result<PayrollDetailDto>.Failure(ErrorCodes.PayrollNotFound, Messages.PayrollNotFound,
                 ResultKind.NotFound);
 
-        return Result<PayrollDetailDto>.Success(ToDetailDto(payroll));
+        var file = (await _repo.GetImportFilesAsync([payroll.PayrollId], ct)).GetValueOrDefault(payroll.PayrollId);
+        var reasons = await _repo.GetReopenReasonsAsync([payroll.PayrollId], ct);
+        return Result<PayrollDetailDto>.Success(ToDetailDto(payroll, file, reasons.GetValueOrDefault(payroll.PayrollId)));
     }
 
     public async Task<Result> ApproveAsync(int payrollId, CancellationToken ct)
@@ -345,12 +344,11 @@ public sealed class PayrollService : IPayrollService
         // DEV-MI-09-2: SRS chỉ nói "mở lại về Nháp, bắt buộc lý do"; khóa tháng gắn liền với duyệt
         // (xem ApproveAsync) nên suy luận mở lại cũng mở khóa tháng — xem docs/CODE_DEVIATIONS.md.
         payroll.Status = PayrollStatus.Draft;
-        payroll.ReopenReason = dto.Reason;
         payroll.ApprovedAt = null;
         payroll.Period.Status = RecordStatus.Open;
         payroll.Period.LockedAt = null;
-        _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId, AuditActions.Update,
-            new { Status = PayrollStatus.Approved }, new { payroll.Status }, dto.Reason));
+        _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId, AuditActions.Unlock,
+            new { Status = PayrollStatus.Approved }, new { payroll.Status }, dto.Reason));   // lý do mở lại đọc từ AuditLog
         _audit.Add(new AuditEntry(nameof(AccountingPeriod), payroll.PeriodId, AuditActions.Unlock,
             new { Status = RecordStatus.Locked }, new { payroll.Period.Status }, dto.Reason));
         await _repo.SaveChangesAsync(ct);
@@ -405,10 +403,21 @@ public sealed class PayrollService : IPayrollService
         _ => status,
     };
 
-    private static PayrollSummaryDto ToSummary(Payroll p) => new(
-        p.PayrollId, p.PeriodId, p.Period.PeriodMonth, CodeText.ToPascal(p.Status),
-        !string.IsNullOrEmpty(p.ImportedFileUrl), p.ImportedAt,
-        p.TotalAmount, p.Payslips.Count, p.SubmittedAt, p.ApprovedAt, p.RejectReason, p.ReopenReason);
+    private async Task<List<PayrollSummaryDto>> ToSummariesAsync(IReadOnlyCollection<Payroll> payrolls, CancellationToken ct)
+    {
+        var ids = payrolls.Select(p => p.PayrollId).ToArray();
+        var files = await _repo.GetImportFilesAsync(ids, ct);
+        var reasons = await _repo.GetReopenReasonsAsync(ids, ct);
+        return payrolls.Select(p =>
+        {
+            var file = files.GetValueOrDefault(p.PayrollId);
+            return new PayrollSummaryDto(
+                p.PayrollId, p.PeriodId, p.Period.PeriodMonth, CodeText.ToPascal(p.Status),
+                file is not null, file?.ImportedAt,
+                p.Payslips.Sum(s => s.NetPay), p.Payslips.Count, p.SubmittedAt, p.ApprovedAt, p.RejectReason,
+                reasons.GetValueOrDefault(p.PayrollId));
+        }).ToList();
+    }
 
     private static PayslipItemDto ToItemDto(PayslipItem i)
     {
@@ -428,10 +437,10 @@ public sealed class PayrollService : IPayrollService
         s.WorkDays, s.TotalAdditions, s.TotalDeductions, s.Insurance, s.NetPay,
         OrderForDisplay(s.PayslipItems));
 
-    private static PayrollDetailDto ToDetailDto(Payroll p) => new(
+    private static PayrollDetailDto ToDetailDto(Payroll p, PayrollImportFile? file, string? reopenReason) => new(
         p.PayrollId, p.PeriodId, p.Period.PeriodMonth, CodeText.ToPascal(p.Status),
-        !string.IsNullOrEmpty(p.ImportedFileUrl), p.TotalAmount,
-        p.SubmittedAt, p.ApprovedAt, p.RejectReason, p.ReopenReason,
+        file is not null, p.Payslips.Sum(s => s.NetPay),
+        p.SubmittedAt, p.ApprovedAt, p.RejectReason, reopenReason,
         p.Payslips.OrderBy(s => s.Employee.EmployeeCode).Select(ToPayslipDto).ToList());
 
     /// <summary>MSG24: {a} dòng hợp lệ, {b} dòng lỗi, {c} dòng trùng.</summary>

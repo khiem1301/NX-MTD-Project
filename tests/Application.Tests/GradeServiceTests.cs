@@ -165,6 +165,89 @@ public class GradeServiceTests
         workers.Last().HasPending.Should().BeFalse();
     }
 
+    // ---------- Quản đốc đặt bậc trực tiếp ----------
+
+    [Fact]
+    public async Task A_direct_set_applies_the_grade_at_once_and_records_history()
+    {
+        Defect(40, 3);
+
+        var result = await Service().SetGradeAsync(new SetGradeDto(40, " a ", " Thợ giỏi ", null), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _worker.CurrentGradeCode.Should().Be("A");
+        var e = _evals.Single();
+        e.Status.Should().Be(GradeEvaluationStatuses.Applied);
+        e.CurrentGradeCode.Should().Be("C");
+        e.ProposedGradeCode.Should().Be("A");
+        e.EffectiveDate.Should().Be(Today);
+        e.ConsideredAt.Should().Be(Now);
+        e.ProposedBy.Should().Be(Leader);   // người đặt (ở đây là người đang đăng nhập)
+        e.RecentDefectCount.Should().Be(1);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(a => a.TableName == nameof(Employee) && a.Reason == "Thợ giỏi"));
+    }
+
+    [Fact]
+    public async Task A_direct_set_closes_the_workers_pending_proposal_and_tells_its_author()
+    {
+        var pending = Eval();   // đề xuất bậc B đang chờ
+
+        var result = await Service().SetGradeAsync(new SetGradeDto(40, "A", "Đặt trực tiếp", new DateOnly(2026, 12, 1)), default);
+
+        result.IsSuccess.Should().BeTrue();
+        pending.Status.Should().Be(GradeEvaluationStatuses.NotApplied);
+        pending.DecisionNote.Should().Be(Messages.GradeSupersededNote);
+        _evals.Last().EffectiveDate.Should().Be(new DateOnly(2026, 12, 1));
+        _notifier.Received(1).NotifyEmployees(Arg.Is<IReadOnlyCollection<int>>(ids => ids.Contains(40) && ids.Contains(Leader)),
+            Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task A_direct_set_rejects_a_bad_grade_the_same_grade_and_non_workers()
+    {
+        (await Service().SetGradeAsync(new SetGradeDto(40, "E", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+        (await Service().SetGradeAsync(new SetGradeDto(40, "C", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+        (await Service().SetGradeAsync(new SetGradeDto(Leader, "A", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+        _worker.Status = RecordStatus.Resigned;
+        (await Service().SetGradeAsync(new SetGradeDto(40, "A", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+        _evals.Should().BeEmpty();
+        _worker.CurrentGradeCode.Should().Be("C");
+    }
+
+    [Fact]
+    public async Task A_second_direct_set_on_the_same_day_is_refused_with_a_clear_message()
+    {
+        (await Service().SetGradeAsync(new SetGradeDto(40, "A", "x", null), default)).IsSuccess.Should().BeTrue();
+
+        var again = await Service().SetGradeAsync(new SetGradeDto(40, "B", "x", null), default);
+
+        again.IsSuccess.Should().BeFalse();
+        again.Message.Should().Be(Messages.GradeSetToday);
+        _worker.CurrentGradeCode.Should().Be("A");
+    }
+
+    [Fact]
+    public async Task All_active_workers_of_every_team_can_be_listed_for_a_direct_set()
+    {
+        _worker.Team = new Team { TeamName = "Tổ may 1" };
+        Eval();
+
+        var result = await Service().GetAllWorkersAsync(default);
+
+        result.Data!.Select(w => w.WorkerId).Should().BeEquivalentTo(new[] { 40, 41, 42 });
+        result.Data!.Single(w => w.WorkerId == 40).HasPending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void The_direct_set_validator_requires_a_reason_and_a_known_grade()
+    {
+        var validator = new SetGradeDtoValidator();
+        validator.Validate(new SetGradeDto(40, "A", "Lý do", null)).IsValid.Should().BeTrue();
+        validator.Validate(new SetGradeDto(40, "A", " ", null)).IsValid.Should().BeFalse();
+        validator.Validate(new SetGradeDto(40, "Z", "x", null)).IsValid.Should().BeFalse();
+        validator.Validate(new SetGradeDto(0, "A", "x", null)).IsValid.Should().BeFalse();
+    }
+
     // ---------- Quyết định ----------
 
     [Fact]

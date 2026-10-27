@@ -3,6 +3,7 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { productionApi } from '../api/productionApi';
 import { PRODUCTION_TEXT } from '../constants';
 import type {
+  AssignManyPayload,
   AssignPayload,
   CancelDefectPayload,
   CopyAssignmentsPayload,
@@ -134,6 +135,12 @@ export const useAssignableOperations = (orderId: number | null) =>
 
 export const useAssignOperation = () =>
   useApiMutation((body: AssignPayload) => productionApi.assign(body), {
+    invalidate: [assignmentsKey, outputKey],
+    successMessage: PRODUCTION_TEXT.assignments.done.assigned,
+  });
+
+export const useAssignOperations = () =>
+  useApiMutation((body: AssignManyPayload) => productionApi.assignMany(body), {
     invalidate: [assignmentsKey, outputKey],
     successMessage: PRODUCTION_TEXT.assignments.done.assigned,
   });

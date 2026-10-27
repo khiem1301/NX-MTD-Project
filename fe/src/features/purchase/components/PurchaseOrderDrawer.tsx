@@ -9,7 +9,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
-import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
+import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import {
   GOODS_STATUS_LABEL,
   PAYMENT_METHOD_LABEL,
@@ -141,7 +141,9 @@ export function PurchaseOrderDrawer({ role }: Props) {
               <StatusTag status={data.paymentStatus} labels={PAYMENT_STATUS_LABEL} />
             </Descriptions.Item>
             <Descriptions.Item label={PURCHASE_TEXT.columns.orderDate}>{formatDate(data.orderDate)}</Descriptions.Item>
-            <Descriptions.Item label={text.expectedDate}>{formatDate(data.expectedDeliveryDate)}</Descriptions.Item>
+            <Descriptions.Item label={text.expectedDate}>
+              {data.expectedDeliveryCount === null ? '—' : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
+            </Descriptions.Item>
             <Descriptions.Item label={text.total}>
               <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
             </Descriptions.Item>
@@ -167,7 +169,6 @@ export function PurchaseOrderDrawer({ role }: Props) {
                 <Descriptions.Item label={text.paymentMethod}>
                   {data.paymentMethod ? PAYMENT_METHOD_LABEL[data.paymentMethod] : '—'}
                 </Descriptions.Item>
-                <Descriptions.Item label={text.paidAt}>{formatDateTime(data.paidAt)}</Descriptions.Item>
                 <Descriptions.Item label={text.paymentNote} span={2}>
                   {data.paymentNote ?? '—'}
                 </Descriptions.Item>

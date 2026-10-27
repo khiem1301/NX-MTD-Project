@@ -40,7 +40,9 @@ public sealed class PieceRateService : IPieceRateService
             .OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId)
             .Select(r => new PieceRateDto(r.PieceRateId, r.OperationId, r.Operation.OperationCode,
                 r.Operation.OperationName, r.Operation.ProductId, r.Operation.Product.ProductCode, r.Rate,
-                r.EffectiveDate, r.Status, r.SubmittedAt, r.ApprovedAt, r.ApprovalNote, r.RejectReason))
+                r.EffectiveDate, r.Status, r.SubmittedAt, r.ApprovedAt,
+                r.Status == PieceRateStatuses.Approved ? r.DecisionNote : null,
+                r.Status == PieceRateStatuses.Rejected ? r.DecisionNote : null))
             .ToPagedAsync(query, ct);
 
         return Result<PagedResult<PieceRateDto>>.Success(
@@ -87,7 +89,7 @@ public sealed class PieceRateService : IPieceRateService
         rate.Rate = dto.Rate;
         rate.EffectiveDate = dto.EffectiveDate;
         rate.Status = PieceRateStatuses.Draft;     // sửa sau khi bị từ chối thì phải gửi duyệt lại
-        rate.RejectReason = null;
+        rate.DecisionNote = null;
         _audit.Add(new AuditEntry(nameof(PieceRate), pieceRateId, AuditActions.Update, before, Snapshot(rate)));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
@@ -124,8 +126,7 @@ public sealed class PieceRateService : IPieceRateService
 
         rate.Status = PieceRateStatuses.Approved;
         rate.ApprovedAt = _clock.Now;
-        rate.ApprovalNote = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
-        rate.RejectReason = null;
+        rate.DecisionNote = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         return await DecideAsync(rate, AuditActions.Approve, null, "đã được duyệt", Messages.PieceRateApproved, ct);
     }
 
@@ -138,7 +139,7 @@ public sealed class PieceRateService : IPieceRateService
 
         var reason = dto.Reason.Trim();
         rate.Status = PieceRateStatuses.Rejected;
-        rate.RejectReason = reason;   // CK_PieceRate_Reject
+        rate.DecisionNote = reason;   // CK_PieceRate_Reject
         return await DecideAsync(rate, AuditActions.Reject, reason, $"bị từ chối: {reason}", Messages.PieceRateRejected, ct);
     }
 
@@ -162,10 +163,9 @@ public sealed class PieceRateService : IPieceRateService
             {
                 rate.Status = PieceRateStatuses.Approved;
                 rate.ApprovedAt = now;
-                rate.ApprovalNote = note;
-                rate.RejectReason = null;
+                rate.DecisionNote = note;
                 _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Approve,
-                    new { Status = PieceRateStatuses.PendingApproval }, new { rate.Status, rate.ApprovalNote }));
+                    new { Status = PieceRateStatuses.PendingApproval }, new { rate.Status, rate.DecisionNote }));
             }
 
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Production,
@@ -191,7 +191,7 @@ public sealed class PieceRateService : IPieceRateService
         _uow.InTransactionAsync(async () =>
         {
             _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, action,
-                new { Status = PieceRateStatuses.PendingApproval }, new { rate.Status, rate.ApprovalNote }, reason));
+                new { Status = PieceRateStatuses.PendingApproval }, new { rate.Status, rate.DecisionNote }, reason));
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Production,
                 Messages.NotifyPieceRateDecidedTitle,
                 string.Format(Messages.NotifyPieceRateDecidedBody, rate.Operation.OperationCode, outcome),

@@ -22,7 +22,5 @@ public partial class Announcement
 
     public virtual ICollection<AnnouncementTarget> AnnouncementTargets { get; set; } = new List<AnnouncementTarget>();
 
-    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
-
     public virtual Employee Sender { get; set; } = null!;
 }

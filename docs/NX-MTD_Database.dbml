@@ -1,0 +1,1498 @@
+// NX-MTD – database xưởng may gia công (SQL Server). Sinh từ NX-MTD_Database.sql.
+// Dán toàn bộ file vào https://dbdiagram.io (New diagram → xóa mẫu → dán).
+// View, trigger, hàm, thủ tục và dữ liệu mẫu không có trong DBML; xem file .sql.
+
+Project NX_MTD {
+  database_type: 'SQLServer'
+  Note: '67 bảng. Chấm công lấy 3 cột CheckInOut của Ronald Jack Pro.'
+}
+
+Table ProductVariant [note: 'Biến thể mã hàng: màu × size'] {
+  ProductVariantId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductId int [not null, note: 'Mã hàng']
+  Color nvarchar(50) [not null, note: 'Màu sản phẩm']
+  SizeCode varchar(10) [not null, note: 'XS, S, M, L, XL, XXL, 3XL, FREE…']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+
+  indexes {
+    (ProductVariantId, ProductId) [unique, name: 'UQ_PV_IdProduct']
+    (ProductId, Color, SizeCode) [unique, name: 'UQ_PV']
+  }
+}
+
+Table StockTransaction [note: 'Thẻ kho (ghi qua usp_Stock_Post)'] {
+  StockTransactionId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  StockBalanceId int [not null, note: 'Mặt hàng + kho của giao dịch (dòng tồn trong StockBalance)']
+  SourceDocType varchar(30) [not null, check: `SourceDocType IN ('MATERIAL_RECEIPT','MATERIAL_ISSUE','MATERIAL_RETURN','CUT_HANDOVER', 'FG_HANDOVER','DISPATCH_NOTE','STOCKTAKE')`, note: 'Loại chứng từ nguồn: MATERIAL_RECEIPT, MATERIAL_ISSUE, MATERIAL_RETURN, CUT_HANDOVER, FG_HANDOVER, DISPATCH_NOTE, STOCKTAKE']
+  SourceDocId int [not null, note: 'Id chứng từ nguồn']
+  SourceLineId int [note: 'Id dòng chứng từ nguồn; mỗi dòng chỉ sinh một giao dịch']
+  QtyChange decimal(18,3) [not null, check: `QtyChange <> 0`, note: 'Số lượng thay đổi: dương là nhập, âm là xuất']
+  BalanceAfter decimal(18,3) [not null, check: `BalanceAfter >= 0`, note: 'Tồn sau giao dịch, do usp_Stock_Post điền từ StockBalance.OnHandQty; không âm (GBR-07)']
+  TransactionDate date [not null, note: 'Ngày giao dịch']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (SourceDocType, SourceDocId, SourceLineId, StockBalanceId) [unique, name: 'UQ_ST_SourceLine']
+    (StockBalanceId, CreatedAt) [name: 'IX_ST_Balance']
+  }
+}
+
+Table OperationAssignment [note: 'Phân công công đoạn'] {
+  OperationAssignmentId int [pk, increment, note: 'Khóa chính, tự tăng']
+  SewingTeamId int [not null, note: 'Tổ may']
+  OrderId int [not null, note: 'Đơn hàng']
+  OperationId int [not null, note: 'Công đoạn']
+  WorkerId int [not null, note: 'Công nhân']
+  ValidFrom date [not null, note: 'Ngày bắt đầu phân công']
+  ValidTo date [note: 'Ngày kết thúc phân công; trống nghĩa là đang hiệu lực']
+  AssignedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm phân công']
+  checks {
+    `ValidTo IS NULL OR ValidTo >= ValidFrom` [name: 'CK_OA_Dates']
+  }
+
+  indexes {
+    (SewingTeamId, OrderId, OperationId, WorkerId) [unique, name: 'UX_OA_Current', note: 'Chỉ áp dụng WHERE [ValidTo] IS NULL']
+  }
+}
+
+Table AuditLog [note: 'Nhật ký thay đổi'] {
+  AuditLogId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  TableName varchar(50) [not null, note: 'Tên bảng bị thay đổi']
+  RecordId bigint [not null, note: 'Id bản ghi bị thay đổi']
+  Action varchar(10) [not null, check: `Action IN ('INSERT','UPDATE','DELETE','APPROVE','REJECT','CONFIRM','LOCK','UNLOCK','LOGIN')`, note: 'Hành động: INSERT, UPDATE, DELETE, APPROVE, REJECT, CONFIRM, LOCK, UNLOCK, LOGIN']
+  OldValues nvarchar(max) [note: 'Giá trị cũ, dạng JSON']
+  NewValues nvarchar(max) [note: 'Giá trị mới, dạng JSON']
+  Reason nvarchar(500) [note: 'Lý do thay đổi; bắt buộc khi Quản đốc sửa dữ liệu quá hạn']
+  ChangedBy int [note: 'Người thực hiện; trống nếu hệ thống tự làm']
+  ChangedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm thay đổi']
+  checks {
+    `(OldValues IS NULL OR ISJSON(OldValues) = 1) AND (NewValues IS NULL OR ISJSON(NewValues) = 1)` [name: 'CK_AuditLog_Json']
+  }
+
+  indexes {
+    (TableName, RecordId, ChangedAt) [name: 'IX_AuditLog_Record']
+  }
+}
+
+Table PurchaseOrderLine [note: 'Dòng đơn mua NVL'] {
+  PurchaseOrderLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PurchaseOrderId int [not null, note: 'Đơn mua NVL']
+  OrderMaterialId int [note: 'NVL + màu của đơn; NULL = dòng dùng chung']
+  OrderedQty decimal(18,3) [not null, check: `OrderedQty > 0`, note: 'Số lượng đặt']
+  NotReplenishedQty decimal(18,3) [not null, default: 0, note: 'Số lượng thiếu Quản đốc chốt là không bù']
+  UnitPrice decimal(18,2) [not null, default: 0, note: 'Đơn giá (đồng / đơn vị)']
+  Amount decimal(18,2) [note: 'Thành tiền = số lượng đặt x đơn giá (cột tính: CONVERT(DECIMAL(18,2), OrderedQty * UnitPrice))']
+  MaterialId int [note: 'Chỉ khi OrderMaterialId NULL']
+  MaterialColor nvarchar(50) [note: 'Màu NVL (chữ tự do, cùng một vật tư có thể có nhiều màu)']
+  checks {
+    `NotReplenishedQty >= 0 AND NotReplenishedQty <= OrderedQty` [name: 'CK_POL_Qty']
+    `(OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)` [name: 'CK_POL_Target']
+  }
+
+  indexes {
+    (PurchaseOrderId, OrderMaterialId) [unique, name: 'UQ_POL', note: 'Chỉ áp dụng WHERE [OrderMaterialId] IS NOT NULL']
+    (PurchaseOrderId, MaterialId, MaterialColor) [unique, name: 'UQ_POL_Stock', note: 'Chỉ áp dụng WHERE [OrderMaterialId] IS NULL']
+  }
+}
+
+Table ProductComponent [note: 'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'] {
+  ProductComponentId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductId int [not null, note: 'Mã hàng']
+  ComponentName nvarchar(100) [not null, note: 'Tên thành phần, vd Thân trước, Tay áo, Khóa kéo; không trùng trong một mã hàng']
+  ComponentType varchar(10) [not null, check: `ComponentType IN ('PANEL','TRIM')`, note: 'PANEL (chi tiết cắt từ vải) hoặc TRIM (phụ liệu gắn vào: khóa, cúc, nhãn…)']
+  PiecesPerGarment smallint [not null, default: 1, check: `PiecesPerGarment > 0`, note: 'Số chi tiết trên 1 sản phẩm, vd tay áo = 2']
+  SortOrder smallint [not null, default: 0, note: 'Thứ tự hiển thị thành phần trên màn hình định mức']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+
+  indexes {
+    (ProductComponentId, ProductId) [unique, name: 'UQ_PC_IdProduct']
+    (ProductId, ComponentName) [unique, name: 'UQ_PC']
+  }
+}
+
+Table AttendanceSyncSession [note: 'Lần đồng bộ RJ / import Excel chấm công'] {
+  SyncSessionId int [pk, increment, note: 'Khóa chính, tự tăng']
+  Source varchar(15) [not null, check: `Source IN ('RJ_SYNC','EXCEL_IMPORT')`, note: 'RJ_SYNC (đọc tự động từ Ronald Jack Pro) hoặc EXCEL_IMPORT (file dự phòng)']
+  StartedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm bắt đầu đồng bộ']
+  FinishedAt datetime2(0) [note: 'Thời điểm kết thúc']
+  LastSourceRecordId int [note: 'CheckInOut.ID lớn nhất đã đọc, làm mốc cho lần đồng bộ sau']
+  RecordsReceived int [not null, default: 0, note: 'Số lượt quẹt nhận được']
+  RecordsInserted int [not null, default: 0, note: 'Số lượt thêm mới; phần còn lại là trùng hoặc thuộc tháng đã khóa']
+  Status varchar(10) [not null, default: 'RUNNING', check: `Status IN ('RUNNING','SUCCEEDED','FAILED')`, note: 'Trạng thái: RUNNING, SUCCEEDED, FAILED']
+  ErrorMessage nvarchar(1000) [note: 'Thông báo lỗi nếu thất bại']
+  FileName nvarchar(300) [note: 'Tên file Excel dự phòng (khi nguồn là EXCEL_IMPORT)']
+
+  indexes {
+    StartedAt [name: 'IX_ASS_StartedAt']
+  }
+}
+
+Table WorkAllocation [note: 'Giao / thu hồi việc với công nhân'] {
+  WorkAllocationId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MovementType varchar(10) [not null, check: `MovementType IN ('HANDOVER','RETRIEVAL')`, note: 'HANDOVER: giao việc; RETRIEVAL: thu hồi việc']
+  SewingTeamId int [not null, note: 'Tổ may']
+  WorkerId int [not null, note: 'Công nhân được giao / bị thu hồi']
+  OrderLineId int [not null, note: 'Dòng đơn = màu × size; tổng số lần giao của công đoạn × dòng đơn không vượt số bộ BTP tổ đã nhận']
+  OperationId int [not null, note: 'Công đoạn được giao, phải thuộc mã hàng của dòng đơn']
+  Quantity int [not null, check: `Quantity > 0`, note: 'Số lần làm công đoạn được giao / thu hồi']
+  PieceQty int [not null, default: 0, note: 'Số BTP giao kèm / trả lại; 0 nếu công đoạn không dùng BTP; không lớn hơn Quantity']
+  ConfirmedQty int [note: 'Số lần công nhân xác nhận; là trần sản lượng']
+  ConfirmedPieceQty int [note: 'Số BTP công nhân xác nhận đã nhận / đã trả; trừ vào tồn BTP của tổ']
+  DiscrepancyReason nvarchar(500) [note: 'Lý do khi số xác nhận khác số giao']
+  RetrievalReason varchar(20) [note: 'Lý do thu hồi: OPERATION_CHANGED, WORKER_ABSENT, STYLE_FINISHED']
+  ConfirmMode varchar(10) [not null, check: `ConfirmMode IN ('WORKER','ON_BEHALF')`, note: 'WORKER: công nhân tự xác nhận; ON_BEHALF: tổ trưởng xác nhận hộ']
+  OnBehalfReason nvarchar(500) [note: 'Lý do xác nhận hộ']
+  Status varchar(10) [not null, default: 'PENDING', check: `Status IN ('PENDING','CONFIRMED','REJECTED')`, note: 'PENDING, CONFIRMED, REJECTED: PENDING, CONFIRMED, REJECTED']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm giao / thu hồi']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  checks {
+    `MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED')` [name: 'CK_WA_Retr']
+    `ConfirmMode = 'WORKER' OR OnBehalfReason IS NOT NULL` [name: 'CK_WA_Behalf']
+    `PieceQty >= 0 AND PieceQty <= Quantity` [name: 'CK_WA_Piece']
+    `(ConfirmedQty IS NULL AND ConfirmedPieceQty IS NULL) OR (ConfirmedQty >= 0 AND ConfirmedPieceQty >= 0 AND ConfirmedPieceQty <= ConfirmedQty AND ((ConfirmedQty = Quantity AND ConfirmedPieceQty = PieceQty) OR DiscrepancyReason IS NOT NULL))` [name: 'CK_WA_Confirmed']
+    `Status <> 'CONFIRMED' OR ConfirmedQty IS NOT NULL` [name: 'CK_WA_ConfirmedStatus']
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_WA_Reject']
+  }
+
+  indexes {
+    (SewingTeamId, OrderLineId, OperationId, Status) [name: 'IX_WA_Line']
+    (WorkerId, OrderLineId, OperationId, Status) [name: 'IX_WA_Worker']
+  }
+}
+
+Table MaterialReceipt [note: 'Phiếu nhập NVL (mới / bổ sung)'] {
+  MaterialReceiptId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ReceiptCode varchar(30) [not null, unique, note: 'Mã phiếu nhập, không trùng']
+  ShortageRequestId int [note: 'Trống = phiếu mới; có = phiếu bổ sung trả lời yêu cầu thiếu NVL này (phiếu gốc = Request.MaterialReceiptId)']
+  OrderId int [note: 'NULL = phiếu nhập của đơn mua dùng chung (TH-12)']
+  Source varchar(10) [note: 'Cột tính: SUPPLIER khi có đơn mua, CUSTOMER khi khách cấp']
+  PurchaseOrderId int [note: 'Đơn mua NVL']
+  ReceiptDate date [not null, note: 'Ngày nhập']
+  Status varchar(20) [not null, default: 'PENDING', check: `Status IN ('PENDING','CONFIRMED','RETURNED')`, note: 'Trạng thái: PENDING, CONFIRMED, RETURNED']
+  ReturnReason nvarchar(500) [note: 'Lý do Quản đốc trả lại phiếu']
+  Note nvarchar(1000) [note: 'Ghi chú của thủ kho về lần nhập (tình trạng hàng, người giao…)']
+  SubmittedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm gửi duyệt']
+  ConfirmedBy int [note: 'Người xác nhận']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `PurchaseOrderId IS NOT NULL OR OrderId IS NOT NULL` [name: 'CK_MR_Order']
+    `Status <> 'RETURNED' OR ReturnReason IS NOT NULL` [name: 'CK_MR_Return']
+  }
+
+  indexes {
+    (OrderId, Status) [name: 'IX_MR_Order']
+  }
+}
+
+Table AttendanceLog [note: 'Lượt quẹt vân tay (3 trường lấy từ RJ)'] {
+  AttendanceLogId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  AttendanceCode int [not null, note: 'Mã chấm công, lấy từ CheckInOut.MaChamCong']
+  PunchTime datetime2(0) [not null, note: 'Giờ quẹt, lấy từ CheckInOut.GioCham']
+  WorkDate date [note: 'Ngày công, suy ra từ giờ quẹt (xưởng không có ca đêm) (cột tính: CAST(PunchTime AS DATE))']
+  SourceRecordId int [note: 'CheckInOut.ID bên Ronald Jack Pro; trống nếu từ file Excel']
+  EmployeeId int [note: 'Nhân viên của lượt quẹt; trống nếu mã chấm công chưa được map']
+  SyncSessionId int [not null, note: 'Lần đồng bộ nhận lượt quẹt này']
+
+  indexes {
+    (AttendanceCode, PunchTime) [unique, name: 'UQ_AttendanceLog']
+    (EmployeeId, WorkDate) [name: 'IX_AL_Employee']
+    AttendanceCode [name: 'IX_AL_Unmapped', note: 'Chỉ áp dụng WHERE [EmployeeId] IS NULL']
+    SourceRecordId [unique, name: 'UX_AL_SourceRecord', note: 'Chỉ áp dụng WHERE [SourceRecordId] IS NOT NULL']
+  }
+}
+
+Table ProductComponentMaterial [note: 'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'] {
+  ProductComponentMaterialId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductId int [not null, note: 'Mã hàng']
+  ProductVariantId int [not null, note: 'Biến thể (màu × size) mà định mức này áp dụng']
+  ProductComponentId int [not null, note: 'Thành phần dùng NVL này; FK ghép cùng ProductId nên phải đúng mã hàng']
+  MaterialId int [not null, note: 'Vật tư']
+  MaterialColor nvarchar(50) [not null, default: '', note: 'Màu NVL (chữ tự do, cùng một vật tư có thể có nhiều màu) – \'\' = NVL không phân màu; khớp OrderMaterial.MaterialColor']
+  QtyPerGarment decimal(18,4) [not null, check: `QtyPerGarment > 0`, note: 'Tổng cho 1 sản phẩm (đã tính số chi tiết), theo đơn vị của NVL: m vải, cuộn chỉ, cái khóa…']
+  WastagePercent decimal(5,2) [not null, default: 0, check: `WastagePercent BETWEEN 0 AND 100`, note: 'Tỉ lệ hao hụt (%) cộng thêm khi tính NVL cần: số cần = số lượng × định mức × (1 + hao hụt/100)']
+  LengthCm decimal(7,2) [note: 'Kích thước chi tiết (nếu cần), vd dài tay áo']
+  WidthCm decimal(7,2) [note: 'Chiều rộng chi tiết (nếu cần), vd rộng thân']
+  SpecNote nvarchar(200) [note: 'Ghi chú quy cách khác']
+  checks {
+    `(LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)` [name: 'CK_PCM_Size']
+  }
+
+  indexes {
+    (ProductVariantId, ProductComponentId, MaterialId) [unique, name: 'UQ_PCM']
+    (MaterialId, MaterialColor) [name: 'IX_PCM_Material']
+  }
+}
+
+Table AttendanceAdjustment [note: 'Chấm hộ của Kế toán'] {
+  AttendanceAdjustmentId int [pk, increment, note: 'Khóa chính, tự tăng']
+  EmployeeId int [not null, note: 'Nhân viên']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  AdjustmentType varchar(20) [not null, check: `AdjustmentType IN ('FORGOT_PUNCH','FINGERPRINT_FAIL','OFFSITE_WORK','APPROVED_REQUEST')`, note: 'Lý do chấm hộ: FORGOT_PUNCH, FINGERPRINT_FAIL, OFFSITE_WORK, APPROVED_REQUEST']
+  Reason nvarchar(500) [not null, note: 'Lý do chấm hộ (bắt buộc)']
+  RequestId int [note: 'Đơn từ liên quan']
+  CheckIn time(0) [note: 'Giờ vào do Kế toán chấm']
+  CheckOut time(0) [note: 'Giờ ra do Kế toán chấm']
+  RecordedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm ghi nhận']
+  checks {
+    `AdjustmentType <> 'APPROVED_REQUEST' OR RequestId IS NOT NULL` [name: 'CK_AA_Request']
+  }
+
+  indexes {
+    (EmployeeId, WorkDate) [unique, name: 'UQ_AA']
+  }
+}
+
+Table MaterialReceiptLine [note: 'Dòng phiếu nhập NVL'] {
+  MaterialReceiptLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MaterialReceiptId int [not null, note: 'Phiếu nhập NVL']
+  OrderMaterialId int [note: 'NVL + màu của đơn; NULL = dòng dùng chung']
+  PurchaseOrderLineId int [note: 'Dòng đơn mua']
+  OriginalReceiptLineId int [note: 'Dòng phiếu nhập gốc']
+  AcceptedQty decimal(18,3) [not null, default: 0, check: `AcceptedQty >= 0`, note: 'Số đạt nhập kho; thiếu so với đơn mua xem vw_PurchaseOrderLineStatus, số thiếu / lỗi báo NCC ghi ở RequestLine.Quantity (SHORT_DELIVERY)']
+  MaterialId int [note: 'Chỉ khi OrderMaterialId NULL']
+  MaterialColor nvarchar(50) [note: 'Màu NVL (chữ tự do, cùng một vật tư có thể có nhiều màu)']
+  checks {
+    `(OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)` [name: 'CK_MRL_Target']
+  }
+
+  indexes {
+    (MaterialReceiptId, OrderMaterialId) [unique, name: 'UQ_MRL', note: 'Chỉ áp dụng WHERE [OrderMaterialId] IS NOT NULL']
+    (MaterialReceiptId, MaterialId, MaterialColor) [unique, name: 'UQ_MRL_Stock', note: 'Chỉ áp dụng WHERE [OrderMaterialId] IS NULL']
+  }
+}
+
+Table CustomerOrder [note: 'Đơn hàng gia công'] {
+  OrderId int [pk, increment, note: 'Khóa chính, tự tăng']
+  OrderCode varchar(30) [not null, unique, note: 'Mã đơn hàng, không trùng']
+  CustomerId int [not null, note: 'Khách hàng']
+  ReceivedDate date [not null, note: 'Ngày nhận đơn']
+  DueDate date [not null, note: 'Hạn giao hàng']
+  MaterialStatus varchar(10) [not null, default: 'AWAITING', check: `MaterialStatus IN ('AWAITING','PARTIAL','COMPLETE')`, note: 'Tiến độ NVL của đơn: AWAITING (chưa có gì), PARTIAL (đã có một phần), COMPLETE (đủ). Backend cập nhật khi xác nhận phiếu nhập. Có PARTIAL là đã được bắt đầu sản xuất']
+  Status varchar(25) [not null, default: 'NEW', check: `Status IN ('NEW','IN_PRODUCTION', 'IN_DELIVERY','PARTIALLY_DELIVERED','DELIVERED','COMPLETED','CANCELLED','STOPPED')`, note: 'Vòng đời đơn, không còn trạng thái NVL: NEW, IN_PRODUCTION, IN_DELIVERY, PARTIALLY_DELIVERED, DELIVERED, COMPLETED, CANCELLED, STOPPED: NEW, IN_PRODUCTION, IN_DELIVERY, PARTIALLY_DELIVERED, DELIVERED, COMPLETED, CANCELLED, STOPPED']
+  DelayRiskSince date [note: 'Ngày JOB-04 bắt đầu cảnh báo nguy cơ trễ đơn']
+  IsDelayRisk bit [note: 'Cờ cảnh báo nguy cơ trễ đơn do JOB-04 đặt; không phải trạng thái đơn (cột tính: CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT))']
+  StopReason nvarchar(500) [note: 'Lý do tạm dừng / hủy đơn']
+  Note nvarchar(1000) [note: 'Ghi chú chung của đơn hàng']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `DueDate >= ReceivedDate` [name: 'CK_CustomerOrder_Dates']
+    `Status <> 'STOPPED' OR StopReason IS NOT NULL` [name: 'CK_CustomerOrder_Stop']
+  }
+
+  indexes {
+    (Status, DueDate) [name: 'IX_CustomerOrder_Status']
+  }
+}
+
+Table DailyTimesheet [note: 'Bảng công ngày'] {
+  DailyTimesheetId int [pk, increment, note: 'Khóa chính, tự tăng']
+  EmployeeId int [not null, note: 'Nhân viên']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  CheckIn datetime2(0) [note: 'Giờ vào = lượt quẹt đầu tiên của ngày']
+  CheckOut datetime2(0) [note: 'Giờ ra = lượt quẹt thứ hai (quẹt ra nhiều lần chỉ tính lần đầu)']
+  WorkedHours decimal(5,2) [not null, default: 0, note: 'Số giờ làm trong ca, đã trừ nghỉ trưa']
+  WorkdayValue decimal(4,2) [not null, default: 0, check: `WorkdayValue BETWEEN 0 AND 1.5`, note: 'Số công = giờ làm thực tế / 8, tối đa 1']
+  OvertimeHours decimal(5,2) [not null, default: 0, check: `OvertimeHours >= 0`, note: 'Giờ tăng ca = giờ ra − 16:30']
+  IsMissingPunch bit [not null, default: 0, note: '1 nếu chỉ có 1 lượt quẹt (thiếu giờ vào hoặc giờ ra)']
+  HasExtraPunch bit [not null, default: 0, note: '1 nếu quẹt quá 2 lần; chỉ tính lần ra đầu tiên, Kế toán xem lại']
+  IsSunday bit [note: '1 nếu là Chủ nhật, lương nhân SUNDAY_PAY_MULTIPLIER (cột tính: CAST(IIF(DATEDIFF(DAY, 0, WorkDate) % 7 = 6, 1, 0) AS BIT))']
+  AttendanceAdjustmentId int [note: 'Lần chấm hộ làm nguồn của ngày công này']
+  Source varchar(15) [note: 'FINGERPRINT (từ máy chấm công) hoặc ADJUSTMENT (Kế toán chấm hộ); tính từ AttendanceAdjustmentId (cột tính: CAST(IIF(AttendanceAdjustmentId IS NULL, \'FINGERPRINT\', \'ADJUSTMENT\') AS VARCHAR(15)))']
+  Note nvarchar(300) [note: 'Ghi chú của Kế toán, vd lý do chấm hộ']
+  UpdatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Lần sửa gần nhất (giờ Việt Nam)']
+
+  indexes {
+    (EmployeeId, WorkDate) [unique, name: 'UQ_DailyTimesheet']
+    WorkDate [name: 'IX_DT_WorkDate']
+  }
+}
+
+Table OutputRecord [note: 'Sản lượng công đoạn'] {
+  OutputRecordId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  ShiftCode varchar(10) [not null, check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
+  SewingTeamId int [not null, note: 'Tổ may']
+  WorkerId int [not null, note: 'Công nhân làm ra sản lượng']
+  OperationId int [not null, note: 'Công đoạn']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  Quantity int [not null, check: `Quantity > 0`, note: 'Số lượng sản phẩm làm ra; chỉ tính hàng may lần đầu, không cộng hàng sửa lại']
+  PieceRateId int [not null, note: 'Đơn giá công đoạn khóa lúc nhập (tiền = Quantity x PieceRate.Rate)']
+  IsOutsideAssignment bit [not null, default: 0, note: '1 nếu công nhân làm công đoạn ngoài phân công (ghi để theo dõi)']
+  NoAttendanceWarning bit [not null, default: 0, note: '1 nếu công nhân chưa có chấm công trong ngày lúc nhập sản lượng (cảnh báo MSG17)']
+  EditDeadline datetime2(0) [not null, note: 'Hạn cuối tổ trưởng được sửa = hết ngày làm việc kế tiếp; sau hạn chỉ Quản đốc sửa (UC22) và phải ghi AuditLog']
+  Status varchar(10) [not null, default: 'SAVED', check: `Status IN ('SAVED','LOCKED')`, note: 'Trạng thái: SAVED, LOCKED']
+  EnteredAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm nhập sản lượng']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+
+  indexes {
+    (WorkDate, ShiftCode, SewingTeamId, OrderLineId, OperationId, WorkerId) [unique, name: 'UQ_OutputRecord']
+    (WorkerId, WorkDate) [name: 'IX_OR_Worker']
+    (OrderLineId, OperationId) [name: 'IX_OR_OrderLine']
+  }
+}
+
+Table Role [note: 'Vai trò (9 vai trò, gồm Tổ trưởng và Tổ phó)'] {
+  RoleId int [pk, increment, note: 'Khóa chính, tự tăng']
+  RoleCode varchar(30) [not null, unique, note: 'Mã vai trò cố định, backend dùng để phân quyền (ADMIN, MANAGER, ACCOUNTANT, WAREHOUSE_KEEPER, TEAM_LEADER, TEAM_DEPUTY, QAQC, ELECTRICIAN, WORKER)']
+  RoleName nvarchar(100) [not null, note: 'Tên vai trò hiển thị tiếng Việt']
+  IsProduction bit [not null, default: 0, note: '1 nếu thuộc khối sản xuất, 0 nếu là khối văn phòng']
+}
+
+Table WorkOrder [note: 'Lệnh cắt'] {
+  WorkOrderId int [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkOrderCode varchar(30) [not null, unique, note: 'Mã lệnh cắt, không trùng']
+  OrderId int [not null, note: 'Đơn hàng']
+  ProductId int [not null, note: 'Mã hàng']
+  CuttingTeamId int [not null, note: 'Tổ cắt']
+  SourceRequestId int [note: 'Yêu cầu cắt bù (REPLACEMENT_CUTTING) sinh ra lệnh cắt này; trống là lệnh cắt thường']
+  DueDate date [not null, note: 'Hạn hoàn thành cắt']
+  Status varchar(20) [not null, default: 'OPEN', check: `Status IN ('OPEN','CUTTING','COMPLETED','CANCELLED')`, note: 'Trạng thái: OPEN, CUTTING, COMPLETED, CANCELLED']
+  Note nvarchar(1000) [note: 'Ghi chú cho tổ cắt']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  CompletedAt datetime2(0) [note: 'Thời điểm hoàn thành lệnh']
+}
+
+Table OrderLine [note: 'Dòng đơn mã hàng–màu–size'] {
+  OrderLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  OrderId int [not null, note: 'Đơn hàng']
+  ProductVariantId int [not null, note: 'Biến thể (mã hàng – màu – size) của dòng đơn; màu và size đọc từ ProductVariant']
+  ProductId int [not null, note: 'Mã hàng của biến thể; giữ để lọc theo mã hàng, FK ghép bảo đảm khớp với biến thể']
+  OrderedQty int [not null, check: `OrderedQty > 0`, note: 'Số lượng đặt (sản phẩm)']
+  CmtUnitPrice decimal(18,2) [not null, check: `CmtUnitPrice >= 0`, note: 'Đơn giá gia công (CMT) của dòng đơn; thông tin nhạy cảm, chỉ vai trò được phép xem']
+
+  indexes {
+    (OrderId, ProductVariantId) [unique, name: 'UQ_OrderLine']
+    ProductId [name: 'IX_OrderLine_Product']
+  }
+}
+
+Table SystemSetting [note: 'Tham số hệ thống'] {
+  SettingKey varchar(50) [pk, note: 'Tên tham số, ví dụ WORK_END_TIME']
+  SettingValue nvarchar(200) [not null, note: 'Giá trị tham số, lưu dạng chữ; nơi dùng tự đổi sang giờ hoặc số']
+  Description nvarchar(500) [note: 'Tham số này dùng để làm gì']
+  UpdatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Lần sửa gần nhất (giờ Việt Nam)']
+}
+
+Table DailyMeal [note: 'Suất ăn ngày (gồm suất khách)'] {
+  DailyMealId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MealDate date [not null, unique, note: 'Ngày ăn, mỗi ngày một dòng']
+  Status varchar(20) [not null, default: 'OPEN', check: `Status IN ('OPEN','AUTO_CLOSED','CLOSED','KITCHEN_NOTIFIED')`, note: 'Trạng thái: OPEN, AUTO_CLOSED, CLOSED, KITCHEN_NOTIFIED']
+  OfficeCount int [not null, default: 0, note: 'Số suất khối văn phòng']
+  GuestCount int [not null, default: 0, note: 'Số suất ăn của khách trong ngày (FR 5.2)']
+  GuestNote nvarchar(300) [note: 'Ghi chú suất khách']
+  MealPrice decimal(18,2) [check: `MealPrice IS NULL OR MealPrice >= 0`, note: 'Đơn giá một suất (đồng)']
+  AttendanceIncomplete bit [not null, default: 0, note: '1 nếu lúc chốt còn thiếu dữ liệu chấm công (hiện cảnh báo Thiếu dữ liệu chấm công)']
+  AutoClosedAt datetime2(0) [note: 'Thời điểm hệ thống tự chốt lúc 08:30']
+  ClosedAt datetime2(0) [note: 'Thời điểm Kế toán chốt']
+  KitchenNotifiedAt datetime2(0) [note: 'Thời điểm báo bếp']
+  checks {
+    `OfficeCount >= 0 AND GuestCount >= 0` [name: 'CK_DM_Counts']
+  }
+}
+
+Table GradeLevel [note: 'Bậc thợ A–D và tiền bậc theo ngày hiệu lực'] {
+  GradeLevelId int [pk, increment, note: 'Khóa chính, tự tăng']
+  GradeCode char(1) [not null, check: `GradeCode IN ('A','B','C','D')`, note: 'Mã bậc thợ: A, B, C hoặc D']
+  GradeName nvarchar(50) [not null, note: 'Tên bậc: Giỏi, Khá, Trung bình, Yếu']
+  MonthlyAmount decimal(18,2) [not null, check: `MonthlyAmount >= 0`, note: 'Tiền bậc theo tháng (đồng), cộng vào lương']
+  EffectiveDate date [not null, note: 'Ngày bắt đầu áp dụng mức tiền này; đổi tiền thì thêm dòng mới, giữ dòng cũ']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (GradeCode, EffectiveDate) [unique, name: 'UQ_GradeLevel']
+  }
+}
+
+Table DefectRecord [note: 'Hàng lỗi Rework/Scrap và người gây lỗi'] {
+  DefectRecordId int [pk, increment, note: 'Khóa chính, tự tăng']
+  DefectCode varchar(30) [not null, unique, note: 'Mã phiếu lỗi, theo dạng tổ + ngày + số thứ tự']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  ShiftCode varchar(10) [check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
+  SewingTeamId int [not null, note: 'Tổ may']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  OperationId int [not null, note: 'Công đoạn']
+  ResponsibleWorkerId int [not null, note: 'Công nhân gây lỗi']
+  DefectType varchar(10) [not null, check: `DefectType IN ('REWORK','SCRAP')`, note: 'REWORK (sửa lại được) hoặc SCRAP (hỏng, bị trừ tiền)']
+  Quantity int [not null, check: `Quantity > 0`, note: 'Số lượng hàng lỗi']
+  DefectReasonCode varchar(20) [not null, check: `DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')`, note: 'Lý do lỗi: SKIPPED_STITCH, CROOKED_SEAM, WRONG_SIZE, TORN, STAINED, OTHER']
+  ReasonNote nvarchar(500) [note: 'Ghi chú lý do, bắt buộc khi lý do là OTHER']
+  PieceRateId int [note: 'Đơn giá công đoạn khóa lúc ghi, để trừ lương tạm tính (bắt buộc với Scrap)']
+  WorkerNotifiedAt datetime2(0) [note: 'Thời điểm báo cho công nhân gây lỗi']
+  WorkerObjection nvarchar(500) [note: 'Phản hồi của công nhân nếu cho rằng ghi sai']
+  ObjectedAt datetime2(0) [note: 'Thời điểm công nhân phản đối']
+  EditDeadline datetime2(0) [not null, note: 'Hạn cuối tổ trưởng/QC được sửa; sau hạn chỉ Quản đốc sửa và phải ghi AuditLog (GBR-09)']
+  Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','CANCELLED','LOCKED')`, note: 'Trạng thái: RECORDED, CANCELLED, LOCKED']
+  RecordedBy int [not null, note: 'Người ghi phiếu lỗi']
+  RecordedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm ghi nhận']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL` [name: 'CK_DR_Other']
+    `DefectType = 'REWORK' OR PieceRateId IS NOT NULL` [name: 'CK_DR_Rate']
+  }
+
+  indexes {
+    (ResponsibleWorkerId, WorkDate) [name: 'IX_DR_Worker']
+    (OrderLineId, DefectType) [name: 'IX_DR_OrderLine']
+  }
+}
+
+Table WorkOrderLine [note: 'Dòng lệnh cắt'] {
+  WorkOrderLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkOrderId int [not null, note: 'Lệnh cắt']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  ProductComponentMaterialId int [note: 'NULL = cắt cả bộ; có giá trị = dòng định mức (chi tiết vải × NVL × màu của đúng màu × size) cần cắt bù']
+  PlannedQty int [not null, check: `PlannedQty > 0`, note: 'Số lượng dự kiến cắt']
+
+  indexes {
+    (WorkOrderId, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_WOL']
+  }
+}
+
+Table OrderMaterial [note: 'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'] {
+  OrderMaterialId int [pk, increment, note: 'Khóa chính, tự tăng']
+  OrderId int [not null, note: 'Đơn hàng']
+  MaterialId int [not null, note: 'Vật tư']
+  MaterialColor nvarchar(50) [not null, default: '', note: 'Màu NVL; để trống nếu NVL không phân màu']
+  RequiredQty decimal(18,3) [not null, note: 'Tổng lượng NVL đơn cần, nhập tay theo số liệu khách đã báo']
+  CustomerQty decimal(18,3) [not null, default: 0, note: 'Lượng khách sẽ cấp (màn 1.2); 0 = xưởng tự mua toàn bộ']
+  ExpectedDeliveryCount smallint [note: 'Số lần khách dự kiến giao NVL này; bắt buộc khi khách có cấp. Số lần đã nhận xem vw_OrderMaterialDelivery']
+  PurchaseQty decimal(19,3) [note: 'Cột tính: phần xưởng phải mua = cần − khách cấp (không âm)']
+  Source varchar(10) [note: 'Cột tính: SUPPLIER (khách không cấp), CUSTOMER (khách cấp đủ), BOTH (khách cấp một phần, xưởng mua phần còn lại)']
+  Note nvarchar(500) [note: 'Ghi chú về NVL này của đơn']
+  checks {
+    `RequiredQty >= 0 AND CustomerQty >= 0` [name: 'CK_OM_Qty']
+    `(CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)` [name: 'CK_OM_Delivery']
+  }
+
+  indexes {
+    (OrderId, MaterialId, MaterialColor) [unique, name: 'UQ_OM']
+  }
+}
+
+Table Team [note: 'Tổ (cắt / may / văn phòng)'] {
+  TeamId int [pk, increment, note: 'Khóa chính, tự tăng']
+  TeamCode varchar(20) [not null, unique, note: 'Mã tổ, không trùng']
+  TeamName nvarchar(100) [not null, unique, note: 'Tên tổ hiển thị']
+  TeamType varchar(10) [not null, check: `TeamType IN ('CUTTING','SEWING','OFFICE')`, note: 'Loại tổ: CUTTING (cắt), SEWING (may), OFFICE (văn phòng)']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+}
+
+Table TeamMealConfirmation [note: 'Xác nhận suất ăn của tổ'] {
+  TeamMealConfirmationId int [pk, increment, note: 'Khóa chính, tự tăng']
+  DailyMealId int [not null, note: 'Ngày ăn']
+  TeamId int [not null, note: 'Tổ']
+  MealCount int [not null, check: `MealCount >= 0`, note: 'Số suất ăn của tổ']
+  AttendanceCount int [not null, default: 0, note: 'Số người của tổ có chấm công, để đối chiếu']
+  Source varchar(15) [not null, check: `Source IN ('CONFIRMED','ATTENDANCE')`, note: 'CONFIRMED (tổ trưởng xác nhận) hoặc ATTENDANCE (hệ thống lấy theo chấm công)']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  RemindedAt datetime2(0) [note: 'Thời điểm JOB-02 nhắc tổ trưởng xác nhận (08:15)']
+  checks {
+    `Source = 'ATTENDANCE' OR ConfirmedAt IS NOT NULL` [name: 'CK_TMC_Confirmed']
+  }
+
+  indexes {
+    (DailyMealId, TeamId) [unique, name: 'UQ_TMC']
+  }
+}
+
+Table MaterialIssue [note: 'Phiếu cấp kho: NVL cho tổ cắt/may hoặc BTP cho tổ may'] {
+  MaterialIssueId int [pk, increment, note: 'Khóa chính, tự tăng']
+  IssueCode varchar(30) [not null, unique, note: 'Mã phiếu cấp kho, không trùng']
+  WarehouseType varchar(15) [not null, default: 'MATERIAL', check: `WarehouseType IN ('MATERIAL','SEMI_FINISHED')`, note: 'Kho cấp: MATERIAL (NVL cho tổ cắt / may) hoặc SEMI_FINISHED (BTP cho tổ may)']
+  RequestId int [note: 'Yêu cầu NVL hoặc BTP mà phiếu này trả lời (có thể trống)']
+  OrderId int [not null, note: 'Đơn hàng']
+  WorkOrderId int [note: 'Lệnh cắt']
+  ReceivingTeamId int [not null, note: 'Tổ nhận hàng']
+  IssueDate date [not null, note: 'Ngày cấp']
+  IssuedBy int [not null, note: 'Thủ kho cấp']
+  Status varchar(20) [not null, default: 'PENDING_RECEIPT', check: `Status IN ('PENDING_RECEIPT','RECEIVED','REJECTED')`, note: 'Trạng thái: PENDING_RECEIPT, RECEIVED, REJECTED']
+  ReceivedBy int [note: 'Tổ trưởng nhận']
+  ReceivedAt datetime2(0) [note: 'Thời điểm tổ trưởng xác nhận nhận (lúc này mới trừ kho)']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_MI_Reject']
+  }
+
+  indexes {
+    (ReceivingTeamId, Status) [name: 'IX_MI_Team']
+  }
+}
+
+Table OperationGroup [note: 'Công đoạn to (nhóm công đoạn)'] {
+  OperationGroupId int [pk, increment, note: 'Khóa chính công đoạn to']
+  ProductId int [not null, note: 'Mã hàng của công đoạn to']
+  GroupName nvarchar(200) [not null, note: 'Tên công đoạn to, vd May tay; tìm theo tên này để ra các công đoạn nhỏ']
+
+  indexes {
+    (OperationGroupId, ProductId) [unique, name: 'UQ_OG_Product']
+    (ProductId, GroupName) [unique, name: 'UQ_OG_Name']
+    GroupName [name: 'IX_OG_Name']
+  }
+}
+
+Table Employee [note: 'Nhân viên'] {
+  EmployeeId int [pk, increment, note: 'Khóa chính, tự tăng']
+  EmployeeCode varchar(20) [not null, unique, note: 'Mã nhân viên, không trùng; cũng là tên đăng nhập']
+  FullName nvarchar(100) [not null, note: 'Họ và tên']
+  Gender char(1) [check: `Gender IN ('M','F')`, note: 'Giới tính: M nam, F nữ']
+  DateOfBirth date [note: 'Ngày sinh']
+  Phone varchar(15) [note: 'Số điện thoại']
+  AvatarUrl nvarchar(500) [note: 'Đường dẫn ảnh đại diện']
+  RoleId int [not null, note: 'Vai trò của nhân viên']
+  TeamId int [note: 'Tổ hiện tại; đổi tổ thì ghi AuditLog']
+  PayType varchar(20) [not null, check: `PayType IN ('PIECE_RATE','DAILY','MONTHLY')`, note: 'Cách tính lương: PIECE_RATE (công nhân may), DAILY (thợ cắt, QA/QC), MONTHLY (các vai trò còn lại)']
+  CurrentGradeCode char(1) [check: `CurrentGradeCode IN ('A','B','C','D')`, note: 'Bậc thợ hiện tại A-D; chỉ công nhân may và tổ trưởng có']
+  AttendanceCode int [note: 'Mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong), mỗi mã chỉ map một nhân viên']
+  StartDate date [not null, note: 'Ngày bắt đầu']
+  ResignDate date [note: 'Ngày nghỉ việc; bắt buộc khi Status là RESIGNED']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','RESIGNED')`, note: 'Trạng thái: ACTIVE, RESIGNED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `(Status = 'RESIGNED' AND ResignDate IS NOT NULL) OR Status = 'ACTIVE'` [name: 'CK_Employee_Resign']
+  }
+
+  indexes {
+    AttendanceCode [unique, name: 'UX_Employee_AttendanceCode', note: 'Chỉ áp dụng WHERE [AttendanceCode] IS NOT NULL']
+    TeamId [name: 'IX_Employee_Team']
+  }
+}
+
+Table Operation [note: 'Công đoạn'] {
+  OperationId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductId int [not null, note: 'Mã hàng của công đoạn']
+  OperationGroupId int [note: 'Công đoạn to chứa công đoạn này (cùng mã hàng); NULL = chưa xếp nhóm']
+  OperationCode varchar(30) [not null, note: 'Mã công đoạn, không trùng trong cùng mã hàng']
+  OperationName nvarchar(200) [not null, note: 'Tên công đoạn, ví dụ May cổ']
+  StationSequence smallint [not null, note: 'Thứ tự công đoạn trên chuyền']
+  SkillLevel tinyint [note: 'Yêu cầu bậc tay nghề']
+  StandardTimeSec decimal(9,2) [check: `StandardTimeSec IS NULL OR StandardTimeSec > 0`, note: 'Thời gian chuẩn của công đoạn (giây)']
+  TeamType varchar(10) [not null, default: 'SEWING', check: `TeamType IN ('CUTTING','SEWING')`, note: 'Công đoạn của tổ nào: CUTTING hoặc SEWING']
+  IsFinalStep bit [not null, default: 0, note: '1 nếu là công đoạn may cuối; mỗi mã hàng đúng 1 công đoạn cuối']
+  UsesSemiFinished bit [not null, default: 0, note: '1 = giao việc công đoạn này kèm BTP (màn giao việc điền sẵn số BTP = số lần); 0 = làm trên hàng đang chạy, không kèm BTP']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+
+  indexes {
+    (OperationId, ProductId) [unique, name: 'UQ_Operation_IdProduct']
+    (ProductId, OperationCode) [unique, name: 'UQ_Operation']
+    OperationGroupId [name: 'IX_Operation_Group', note: 'Chỉ áp dụng WHERE [OperationGroupId] IS NOT NULL']
+    ProductId [unique, name: 'UX_Operation_FinalStep', note: 'Chỉ áp dụng WHERE [IsFinalStep]=(1) AND [Status]=\'ACTIVE\'']
+  }
+}
+
+Table AccountingPeriod [note: 'Kỳ kế toán (tháng), khóa / mở khóa'] {
+  PeriodId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PeriodMonth char(7) [not null, unique, check: `PeriodMonth LIKE '[12][0-9][0-9][0-9]-[01][0-9]'`, note: 'Tháng của kỳ, dạng YYYY-MM']
+  StartDate date [not null, note: 'Ngày bắt đầu']
+  EndDate date [not null, note: 'Ngày kết thúc']
+  Status varchar(10) [not null, default: 'OPEN', check: `Status IN ('OPEN','LOCKED')`, note: 'Trạng thái: OPEN, LOCKED']
+  LockedAt datetime2(0) [note: 'Thời điểm khóa tháng; mở khóa lại được ghi vào AuditLog (UNLOCK, kèm lý do)']
+  checks {
+    `Status <> 'LOCKED' OR LockedAt IS NOT NULL` [name: 'CK_AP_Locked']
+    `EndDate >= StartDate` [name: 'CK_AP_Dates']
+  }
+}
+
+Table QcBatch [note: 'Đợt kiểm hoàn thiện'] {
+  QcBatchId int [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  ShiftCode varchar(10) [not null, check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
+  BatchTime time(0) [not null, note: 'Giờ của đợt kiểm']
+  SewingTeamId int [not null, note: 'Tổ may']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  FinishedQty int [not null, check: `FinishedQty > 0`, note: 'Số lượng đạt (QC chỉ đếm hàng đạt)']
+  InspectorId int [not null, note: 'QA/QC kiểm']
+  EditDeadline datetime2(0) [not null, note: 'Hạn cuối QC được sửa đợt kiểm = hết ca; sau đó chỉ Quản đốc sửa']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+
+  indexes {
+    (WorkDate, ShiftCode, BatchTime, SewingTeamId, OrderLineId) [unique, name: 'UQ_QcBatch']
+    OrderLineId [name: 'IX_QC_OrderLine']
+  }
+}
+
+Table MaterialIssueLine [note: 'Dòng phiếu cấp kho'] {
+  MaterialIssueLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MaterialIssueId int [not null, note: 'Phiếu cấp kho']
+  MaterialId int [note: 'Vật tư được cấp (dùng cho phiếu NVL, phiếu BTP để trống)']
+  MaterialColor nvarchar(50) [note: 'Màu NVL (chữ tự do, cùng một vật tư có thể có nhiều màu)']
+  OrderLineId int [note: 'Dòng đơn được cấp BTP (dùng cho phiếu BTP, phiếu NVL để trống)']
+  ProductComponentMaterialId int [note: 'Phiếu BTP: NULL = bộ đủ; có giá trị = chi tiết × vải cắt bù']
+  IssuedQty decimal(18,3) [not null, check: `IssuedQty > 0`, note: 'Số lượng thủ kho cấp (mới giữ chỗ, chưa trừ kho)']
+  ConfirmedQty decimal(18,3) [note: 'Số lượng bên nhận xác nhận thực tế (có thể lệch so với số lập phiếu)']
+  DiscrepancyReason nvarchar(500) [note: 'Lý do lệch số lượng, bắt buộc khi số xác nhận khác số lập phiếu (GBR-06)']
+  checks {
+    `ConfirmedQty IS NULL OR (ConfirmedQty >= 0 AND ConfirmedQty <= IssuedQty)` [name: 'CK_MIL_Confirmed']
+    `ConfirmedQty IS NULL OR ConfirmedQty = IssuedQty OR DiscrepancyReason IS NOT NULL` [name: 'CK_MIL_Reason']
+    `(MaterialId IS NOT NULL AND MaterialColor IS NOT NULL AND OrderLineId IS NULL) OR (MaterialId IS NULL AND MaterialColor IS NULL AND OrderLineId IS NOT NULL)` [name: 'CK_MIL_Item']
+    `ProductComponentMaterialId IS NULL OR OrderLineId IS NOT NULL` [name: 'CK_MIL_Component']
+  }
+
+  indexes {
+    (MaterialIssueId, MaterialId, MaterialColor, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_MIL']
+  }
+}
+
+Table Account [note: 'Tài khoản đăng nhập (1–1 nhân viên)'] {
+  AccountId int [pk, increment, note: 'Khóa chính, tự tăng']
+  EmployeeId int [not null, unique, note: 'Nhân viên sở hữu tài khoản (1 tài khoản / 1 nhân viên); tên đăng nhập là Employee.EmployeeCode']
+  PasswordHash nvarchar(500) [not null, note: 'Chỉ lưu mã băm của mật khẩu (ASP.NET Identity / BCrypt), không lưu mật khẩu thật']
+  IsTemporaryPassword bit [not null, default: 1, note: '1 nếu đang dùng mật khẩu tạm, bắt buộc đổi khi đăng nhập lần đầu']
+  SecurityStamp uniqueidentifier [not null, default: `newid()`, note: 'Đổi mỗi khi đổi hoặc đặt lại mật khẩu để đăng xuất các phiên khác']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','LOCKED')`, note: 'Trạng thái: ACTIVE, LOCKED']
+  LockedAt datetime2(0) [note: 'Thời điểm Admin khóa tài khoản; bắt buộc khi Status = LOCKED']
+  LockReason nvarchar(300) [note: 'Lý do khóa tài khoản']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  checks {
+    `Status <> 'LOCKED' OR LockedAt IS NOT NULL` [name: 'CK_Account_Lock']
+  }
+}
+
+Table Payroll [note: 'Bảng lương tháng (import)'] {
+  PayrollId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PeriodId int [not null, unique, note: 'Kỳ kế toán (tháng)']
+  Status varchar(20) [not null, default: 'DRAFT', check: `Status IN ('DRAFT','PENDING_APPROVAL','APPROVED','REJECTED')`, note: 'Trạng thái: DRAFT, PENDING_APPROVAL, APPROVED, REJECTED']
+  SubmittedAt datetime2(0) [note: 'Thời điểm gửi duyệt']
+  ApprovedAt datetime2(0) [note: 'Thời điểm duyệt']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_Payroll_Reject']
+    `Status <> 'APPROVED' OR ApprovedAt IS NOT NULL` [name: 'CK_Payroll_Approved']
+  }
+}
+
+Table FgHandover [note: 'Bàn giao thành phẩm'] {
+  FgHandoverId int [pk, increment, note: 'Khóa chính, tự tăng']
+  HandoverCode varchar(30) [not null, unique, note: 'Mã phiếu bàn giao thành phẩm, không trùng']
+  OrderId int [not null, note: 'Đơn hàng']
+  ProductId int [not null, note: 'Mã hàng']
+  InspectorId int [not null, note: 'QA/QC kiểm']
+  HandedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm bàn giao']
+  Status varchar(20) [not null, default: 'PENDING', check: `Status IN ('PENDING','CONFIRMED','REJECTED','CANCELLED')`, note: 'Trạng thái: PENDING, CONFIRMED, REJECTED, CANCELLED']
+  ConfirmedBy int [note: 'Người xác nhận']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_FGH_Reject']
+  }
+}
+
+Table OperationComponent [note: 'Công đoạn làm trên chi tiết nào'] {
+  OperationId int [not null, note: 'Công đoạn (khóa chính cùng ProductComponentId)']
+  ProductComponentId int [not null, note: 'Chi tiết mà công đoạn làm trên đó; một công đoạn có thể gắn nhiều chi tiết']
+  ProductId int [not null, note: 'Mã hàng chung của công đoạn và chi tiết (cho hai FK ghép)']
+
+  indexes {
+    (OperationId, ProductComponentId) [pk, name: 'PK_OperationComponent']
+    ProductComponentId [name: 'IX_OC_Component']
+  }
+}
+
+Table Payslip [note: 'Phiếu lương'] {
+  PayslipId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PayrollId int [not null, note: 'Bảng lương tháng']
+  EmployeeId int [not null, note: 'Nhân viên']
+  WorkDays decimal(5,2) [note: 'Số ngày công']
+  TotalAdditions decimal(18,2) [not null, default: 0, note: 'Tổng các khoản cộng']
+  TotalDeductions decimal(18,2) [not null, default: 0, note: 'Tổng các khoản trừ']
+  Insurance decimal(18,2) [not null, default: 0, note: 'Bảo hiểm']
+  NetPay decimal(18,2) [not null, note: 'Thực lĩnh']
+
+  indexes {
+    (PayrollId, EmployeeId) [unique, name: 'UQ_Payslip']
+  }
+}
+
+Table PieceRate [note: 'Đơn giá công đoạn'] {
+  PieceRateId int [pk, increment, note: 'Khóa chính, tự tăng']
+  OperationId int [not null, note: 'Công đoạn']
+  Rate decimal(18,2) [not null, check: `Rate >= 0`, note: 'Đơn giá công đoạn (đồng / sản phẩm)']
+  EffectiveDate date [not null, note: 'Ngày đơn giá có hiệu lực']
+  Status varchar(20) [not null, default: 'DRAFT', check: `Status IN ('DRAFT','PENDING_APPROVAL','APPROVED','REJECTED')`, note: 'Trạng thái: DRAFT, PENDING_APPROVAL, APPROVED, REJECTED']
+  SubmittedAt datetime2(0) [note: 'Thời điểm gửi duyệt']
+  ApprovedAt datetime2(0) [note: 'Thời điểm duyệt']
+  DecisionNote nvarchar(500) [note: 'Ghi chú khi duyệt; lý do khi từ chối (bắt buộc)']
+  checks {
+    `Status <> 'REJECTED' OR DecisionNote IS NOT NULL` [name: 'CK_PieceRate_Reject']
+    `Status <> 'APPROVED' OR ApprovedAt IS NOT NULL` [name: 'CK_PieceRate_Approved']
+  }
+
+  indexes {
+    (OperationId, EffectiveDate) [unique, name: 'UQ_PieceRate']
+  }
+}
+
+Table GradeEvaluation [note: 'Đề xuất / đổi bậc thợ; dòng APPLIED là lịch sử bậc'] {
+  GradeEvaluationId int [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkerId int [not null, note: 'Công nhân được đề xuất đổi bậc']
+  ProposedBy int [not null, note: 'Tổ trưởng đề xuất']
+  TeamId int [note: 'Tổ của công nhân lúc đề xuất']
+  CurrentGradeCode char(1) [note: 'Bậc hiện tại lúc đề xuất']
+  ProposedGradeCode char(1) [not null, note: 'Bậc đề xuất (bậc mới)']
+  Reason nvarchar(500) [not null, note: 'Lý do đề xuất đổi bậc (bắt buộc)']
+  RecentDefectCount int [not null, default: 0, note: 'Số lỗi gần đây của công nhân, làm căn cứ đề xuất']
+  EvaluationDate date [not null, note: 'Ngày đánh giá / đề xuất']
+  Status varchar(20) [not null, default: 'SUBMITTED', check: `Status IN ('SUBMITTED','APPLIED','NOT_APPLIED')`, note: 'Trạng thái: SUBMITTED, APPLIED, NOT_APPLIED']
+  EffectiveDate date [note: 'Ngày bậc mới có hiệu lực, chỉ có khi APPLIED']
+  ConsideredAt datetime2(0) [note: 'Thời điểm Admin xét']
+  DecisionNote nvarchar(500) [note: 'Ghi chú quyết định của Admin']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  checks {
+    `ProposedGradeCode IN ('A','B','C','D') AND (CurrentGradeCode IS NULL OR CurrentGradeCode IN ('A','B','C','D'))` [name: 'CK_GradeEval_Grades']
+    `Status <> 'APPLIED' OR (EffectiveDate IS NOT NULL AND ConsideredAt IS NOT NULL)` [name: 'CK_GradeEval_Applied']
+  }
+
+  indexes {
+    (WorkerId, ProposedBy, EvaluationDate) [unique, name: 'UQ_GradeEval']
+    (WorkerId, EffectiveDate) [name: 'IX_GradeEval_History', note: 'Chỉ áp dụng WHERE [Status]=\'APPLIED\'']
+  }
+}
+
+Table MaterialReturn [note: 'Phiếu trả vải thừa'] {
+  MaterialReturnId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ReturnCode varchar(30) [not null, unique, note: 'Mã phiếu trả vải, không trùng']
+  MaterialIssueId int [not null, note: 'Phiếu cấp kho']
+  Note nvarchar(500) [note: 'Ghi chú của tổ cắt khi trả vải thừa']
+  Status varchar(20) [not null, default: 'PENDING', check: `Status IN ('PENDING','CONFIRMED','REJECTED','CANCELLED')`, note: 'Trạng thái: PENDING, CONFIRMED, REJECTED, CANCELLED']
+  ConfirmedBy int [note: 'Người xác nhận']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_MRet_Reject']
+  }
+}
+
+Table FgHandoverLine [note: 'Dòng bàn giao thành phẩm'] {
+  FgHandoverLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  FgHandoverId int [not null, note: 'Phiếu bàn giao thành phẩm chứa dòng này']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  HandedQty int [not null, check: `HandedQty > 0`, note: 'Số lượng thành phẩm bàn giao']
+  ConfirmedQty int [check: `ConfirmedQty IS NULL OR ConfirmedQty >= 0`, note: 'Số lượng bên nhận xác nhận thực tế (có thể lệch so với số lập phiếu)']
+  DiscrepancyReason nvarchar(500) [note: 'Lý do lệch số lượng, bắt buộc khi số xác nhận khác số lập phiếu (GBR-06)']
+  checks {
+    `ConfirmedQty IS NULL OR ConfirmedQty = HandedQty OR DiscrepancyReason IS NOT NULL` [name: 'CK_FGHL_Reason']
+  }
+
+  indexes {
+    (FgHandoverId, OrderLineId) [unique, name: 'UQ_FGHL']
+  }
+}
+
+Table PayslipItem [note: 'Khoản trên phiếu lương'] {
+  PayslipItemId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PayslipId int [not null, note: 'Phiếu lương']
+  ItemGroup varchar(15) [not null, check: `ItemGroup IN ('ADDITION','DEDUCTION','INSURANCE','INFO')`, note: 'Nhóm khoản: ADDITION (cộng), DEDUCTION (trừ), INSURANCE (bảo hiểm), INFO (thông tin)']
+  ItemName nvarchar(100) [not null, note: 'Tên khoản, theo cột của file Excel lương']
+  Amount decimal(18,2) [not null, note: 'Số tiền của khoản trên phiếu lương (đồng)']
+  SortOrder smallint [not null, default: 0, note: 'Thứ tự hiển thị trên phiếu lương']
+}
+
+Table KpiTarget [note: 'KPI tổ may'] {
+  KpiTargetId int [pk, increment, note: 'Khóa chính, tự tăng']
+  OrderId int [not null, note: 'Đơn hàng']
+  ProductId int [not null, note: 'Mã hàng']
+  SewingTeamId int [not null, note: 'Tổ may']
+  StartDate date [not null, note: 'Ngày bắt đầu']
+  EndDate date [not null, note: 'Ngày kết thúc']
+  TargetFinishedQty int [not null, check: `TargetFinishedQty > 0`, note: 'Chỉ tiêu số sản phẩm hoàn thiện trong cả kỳ']
+  WorkingDays smallint [not null, check: `WorkingDays > 0`, note: 'Số ngày làm việc trong kỳ; chỉ tiêu ngày = chỉ tiêu cả kỳ / số ngày này']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','CLOSED','CANCELLED')`, note: 'Trạng thái: ACTIVE, CLOSED, CANCELLED']
+  Result varchar(20) [check: `Result IS NULL OR Result IN ('ACHIEVED','NOT_ACHIEVED')`, note: 'Kết quả khi hết kỳ: ACHIEVED (đạt) hoặc NOT_ACHIEVED (không đạt)']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  checks {
+    `EndDate >= StartDate` [name: 'CK_Kpi_Dates']
+  }
+
+  indexes {
+    (OrderId, ProductId, SewingTeamId, StartDate) [unique, name: 'UQ_Kpi']
+  }
+}
+
+Table MaterialReturnLine [note: 'Dòng phiếu trả vải thừa'] {
+  MaterialReturnLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MaterialReturnId int [not null, note: 'Phiếu trả vải chứa dòng này']
+  MaterialIssueLineId int [not null, note: 'Dòng phiếu cấp kho được trả lại']
+  ReturnedQty decimal(18,3) [not null, check: `ReturnedQty > 0`, note: 'Số lượng tổ cắt trả']
+  ConfirmedQty decimal(18,3) [check: `ConfirmedQty IS NULL OR ConfirmedQty >= 0`, note: 'Số lượng bên nhận xác nhận thực tế (có thể lệch so với số lập phiếu)']
+  DiscrepancyReason nvarchar(500) [note: 'Lý do lệch số lượng, bắt buộc khi số xác nhận khác số lập phiếu (GBR-06)']
+  checks {
+    `ConfirmedQty IS NULL OR ConfirmedQty = ReturnedQty OR DiscrepancyReason IS NOT NULL` [name: 'CK_MRetL_Reason']
+  }
+
+  indexes {
+    (MaterialReturnId, MaterialIssueLineId) [unique, name: 'UQ_MRetL']
+  }
+}
+
+Table MonthlyCost [note: 'Chi phí tháng theo khoản mục'] {
+  MonthlyCostId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PeriodId int [not null, note: 'Kỳ kế toán (tháng)']
+  CostCategoryCode varchar(30) [not null, check: `CostCategoryCode IN ('MEALS','FUEL','UTILITIES','PREMISES','MACHINE_REPAIR', 'MACHINE_SUPPLIES','STATIONERY','MATERIALS_BOUGHT','SCRAP','OTHER')`, note: 'Khoản mục: MEALS, FUEL, UTILITIES, PREMISES, MACHINE_REPAIR, MACHINE_SUPPLIES, STATIONERY, MATERIALS_BOUGHT, SCRAP, OTHER']
+  CostType varchar(10) [not null, check: `CostType IN ('FIXED','VARIABLE')`, note: 'Loại chi phí: FIXED (cố định) hoặc VARIABLE (biến đổi)']
+  ProductId int [note: 'Mã hàng']
+  Amount decimal(18,2) [not null, check: `Amount >= 0`, note: 'Số tiền chi phí của khoản trong tháng (đồng)']
+  Quantity int [note: 'Số lượng đi kèm, ví dụ số suất trên hóa đơn bếp']
+  Note nvarchar(300) [note: 'Ghi chú khoản chi phí, vd số hóa đơn']
+  ImportedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm import']
+  checks {
+    `CostType = 'FIXED' OR ProductId IS NOT NULL` [name: 'CK_MC_Product']
+  }
+
+  indexes {
+    (PeriodId, CostCategoryCode, ProductId) [unique, name: 'UQ_MC']
+  }
+}
+
+Table DispatchNote [note: 'Phiếu xuất kho thành phẩm (kiêm lệnh giao hàng)'] {
+  DispatchNoteId int [pk, increment, note: 'Khóa chính, tự tăng']
+  DispatchCode varchar(30) [not null, unique, note: 'Mã phiếu xuất kho, không trùng']
+  OrderId int [not null, note: 'Đơn hàng']
+  DeliveryDate date [not null, note: 'Ngày giao dự kiến']
+  DeliveryAddress nvarchar(500) [not null, note: 'Địa chỉ giao hàng']
+  Note nvarchar(1000) [note: 'Ghi chú giao hàng cho tài xế / khách']
+  Status varchar(25) [not null, default: 'PENDING', check: `Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')`, note: 'Trạng thái: PENDING, REJECTED, CANCELLED, IN_DELIVERY, DELIVERED, PARTIALLY_DELIVERED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  RejectReason nvarchar(500) [note: 'Lý do thủ kho từ chối xuất (ví dụ không đủ hàng)']
+  DispatchedBy int [note: 'Thủ kho xác nhận xuất']
+  DispatchedAt datetime2(0) [note: 'Thời điểm thủ kho xác nhận xuất']
+  CustomerReceivedDate date [note: 'Ngày khách nhận hàng']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_DN_Reject']
+    `Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL` [name: 'CK_DN_Delivered']
+    `Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL)` [name: 'CK_DN_Dispatched']
+  }
+
+  indexes {
+    (OrderId, Status) [name: 'IX_DN_Order']
+  }
+}
+
+Table Announcement [note: 'Thông báo nhanh'] {
+  AnnouncementId int [pk, increment, note: 'Khóa chính, tự tăng']
+  Content nvarchar(2000) [not null, note: 'Nội dung thông báo nhanh']
+  Priority varchar(10) [not null, default: 'NORMAL', check: `Priority IN ('NORMAL','URGENT')`, note: 'Mức ưu tiên: NORMAL (thường), URGENT (khẩn)']
+  TargetScope varchar(10) [not null, check: `TargetScope IN ('ALL','TEAM','ROLE')`, note: 'Phạm vi gửi: ALL (toàn xưởng), TEAM hoặc ROLE (xem bảng AnnouncementTarget)']
+  SenderId int [not null, note: 'Người gửi (Quản đốc hoặc Admin)']
+  SentAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm gửi']
+}
+
+Table CuttingLay [note: 'Bàn cắt'] {
+  CuttingLayId int [pk, increment, note: 'Khóa chính, tự tăng']
+  WorkOrderId int [not null, note: 'Lệnh cắt']
+  CuttingTeamId int [not null, note: 'Tổ cắt']
+  WorkDate date [not null, note: 'Ngày làm việc']
+  ShiftCode varchar(10) [not null, check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
+  LaySequence smallint [not null, note: 'Số thứ tự bàn cắt trong ca của tổ cắt (bàn 1, 2, 3... của ngày và ca đó), đánh lại từ 1 mỗi ca; không trùng trong cùng tổ, ngày, ca']
+  FabricMaterialId int [not null, note: 'Vải dùng cho bàn cắt (bắt buộc), để đối chiếu với vải cần của lệnh cắt']
+  FabricColor nvarchar(50) [not null, note: 'Màu vải của bàn cắt']
+  PlyCount smallint [not null, check: `PlyCount > 0`, note: 'Số lớp vải trên bàn']
+  Note nvarchar(500) [note: 'Ghi chú của tổ cắt về bàn cắt']
+  Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','LOCKED')`, note: 'Trạng thái: RECORDED, LOCKED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (CuttingTeamId, WorkDate, ShiftCode, LaySequence) [unique, name: 'UQ_CL']
+  }
+}
+
+Table AnnouncementTarget [note: 'Phạm vi nhận thông báo nhanh'] {
+  AnnouncementTargetId int [pk, increment, note: 'Khóa chính, tự tăng']
+  AnnouncementId int [not null, note: 'Thông báo nhanh liên quan']
+  TeamId int [note: 'Gửi cho một tổ (hoặc để trống nếu gửi theo vai trò)']
+  RoleId int [note: 'Gửi cho một vai trò (hoặc để trống nếu gửi theo tổ)']
+  checks {
+    `(TeamId IS NOT NULL AND RoleId IS NULL) OR (TeamId IS NULL AND RoleId IS NOT NULL)` [name: 'CK_AnnTarget_OneOf']
+  }
+}
+
+Table Request [note: 'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'] {
+  RequestId int [pk, increment, note: 'Khóa chính, tự tăng']
+  RequestCode varchar(30) [not null, unique, note: 'Mã đơn từ, không trùng']
+  RequestTypeCode varchar(30) [not null, check: `RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION', 'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION')`, note: 'Loại đơn từ (10 loại cố định)']
+  Status varchar(20) [not null, check: `Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')`, note: 'Trạng thái: PENDING_APPROVAL, PENDING_PROCESSING, APPROVED, REJECTED, COMPLETED, CANCELLED']
+  OrderId int [note: 'Đơn hàng']
+  WorkOrderId int [note: 'Lệnh cắt liên quan (NVL lỗi, yêu cầu NVL của tổ cắt)']
+  KpiTargetId int [note: 'Chỉ tiêu KPI mà yêu cầu BTP dựa vào']
+  MaterialIssueId int [note: 'Phiếu cấp bị lỗi mà đơn NVL lỗi nói tới (FR 2.5)']
+  MaterialReceiptId int [note: 'Phiếu nhập sinh ra yêu cầu xử lý thiếu NVL. Mỗi phiếu tối đa một yêu cầu; phiếu bổ sung vẫn thiếu thì sinh yêu cầu tiếp theo, tạo thành chuỗi']
+  DefectRecordId int [note: 'Phiếu hàng hỏng Scrap sinh ra yêu cầu cắt bù']
+  TargetDate date [note: 'Ngày áp dụng theo loại đơn: ngày cần NVL / BTP, ngày xin chấm công bù, hoặc ngày dự kiến bù NVL (SHORT_DELIVERY)']
+  Title nvarchar(200) [note: 'Tiêu đề']
+  Content nvarchar(2000) [note: 'Nội dung và lý do của người tạo']
+  CreatedBy int [note: 'Người lập đơn từ; trống nếu hệ thống tự tạo']
+  CreatedByTeamId int [note: 'Tổ của người lập đơn']
+  DecidedAt datetime2(0) [note: 'Thời điểm duyệt hoặc từ chối']
+  DecisionNote nvarchar(1000) [note: 'Ghi chú của người duyệt; khi từ chối đây là lý do (bắt buộc)']
+  ResultNote nvarchar(1000) [note: 'Kết quả xử lý']
+  CompletedAt datetime2(0) [note: 'Thời điểm hoàn thành']
+  ShortageResolution varchar(20) [check: `ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')`, note: 'Cách xử lý thiếu NVL: REPLENISH (sẽ bù) hoặc NO_REPLENISH (không bù)']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `Status <> 'REJECTED' OR DecisionNote IS NOT NULL` [name: 'CK_Request_Reject']
+  }
+
+  indexes {
+    (RequestTypeCode, Status) [name: 'IX_Request_Inbox']
+    (CreatedBy, Status) [name: 'IX_Request_CreatedBy']
+    MaterialReceiptId [unique, name: 'UX_Request_Receipt', note: 'Chỉ áp dụng WHERE [MaterialReceiptId] IS NOT NULL AND [RequestTypeCode]=\'SHORT_DELIVERY\'']
+    DefectRecordId [unique, name: 'UX_Request_Defect', note: 'Chỉ áp dụng WHERE [DefectRecordId] IS NOT NULL']
+  }
+}
+
+Table BreakEvenResult [note: 'Kết quả hòa vốn theo mã hàng'] {
+  BreakEvenResultId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PeriodId int [not null, note: 'Kỳ kế toán (tháng)']
+  ProductId int [not null, note: 'Mã hàng']
+  AllocationBasis varchar(15) [not null, check: `AllocationBasis IN ('LABOUR_HOURS','OUTPUT')`, note: 'Cách phân bổ chi phí cố định cho mã hàng']
+  FinishedQty int [not null, note: 'Số lượng hoàn thiện trong tháng']
+  CmtUnitPrice decimal(18,2) [not null, note: 'Đơn giá CMT']
+  Revenue decimal(18,2) [not null, note: 'Doanh thu = số lượng x đơn giá CMT']
+  VariableCost decimal(18,2) [not null, note: 'Chi phí biến đổi']
+  AllocatedFixedCost decimal(18,2) [not null, note: 'Chi phí cố định đã phân bổ cho mã hàng']
+  BreakEvenQty decimal(18,2) [note: 'Số lượng hòa vốn; để trống khi đơn giá không lớn hơn biến phí trên mỗi sản phẩm']
+  PercentReached decimal(9,2) [note: 'Phần trăm đạt điểm hòa vốn']
+  SurplusValue decimal(18,2) [not null, note: 'Phần dư = doanh thu − biến phí − định phí phân bổ']
+  IsAtRisk bit [not null, note: '1 nếu mã hàng đang có nguy cơ lỗ']
+  CalculatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tính; mỗi lần tính là một bộ kết quả']
+
+  indexes {
+    (PeriodId, CalculatedAt, ProductId) [unique, name: 'UQ_BER']
+  }
+}
+
+Table DispatchNoteLine [note: 'Dòng phiếu xuất kho'] {
+  DispatchNoteLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  DispatchNoteId int [not null, note: 'Phiếu xuất kho']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  IssueQty int [not null, check: `IssueQty > 0`, note: 'Số lượng xuất']
+  ReceivedQty int [note: 'Số lượng khách nhận thực tế, không vượt số xuất']
+  checks {
+    `ReceivedQty IS NULL OR ReceivedQty BETWEEN 0 AND IssueQty` [name: 'CK_DNL_Received']
+  }
+
+  indexes {
+    (DispatchNoteId, OrderLineId) [unique, name: 'UQ_DNL']
+  }
+}
+
+Table Notification [note: 'Thông báo người dùng (giữ 90 ngày)'] {
+  NotificationId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  RecipientId int [not null, note: 'Người nhận thông báo']
+  SourceType varchar(20) [not null, check: `SourceType IN ('ANNOUNCEMENT','REQUEST','WAREHOUSE','PRODUCTION','SYSTEM')`, note: 'Nguồn sinh thông báo: ANNOUNCEMENT, REQUEST, WAREHOUSE, PRODUCTION, SYSTEM']
+  RefTable varchar(50) [note: 'Tên bảng của chứng từ liên quan, ví dụ MaterialIssue, Announcement']
+  RefId bigint [note: 'Id bản ghi liên quan để mở màn hình tương ứng']
+  Title nvarchar(200) [not null, note: 'Tiêu đề']
+  Message nvarchar(1000) [not null, note: 'Nội dung']
+  LinkUrl nvarchar(500) [note: 'Đường dẫn mở thẳng màn hình liên quan']
+  ReadAt datetime2(0) [note: 'Thời điểm người nhận đọc; NULL = chưa đọc']
+  IsRead bit [note: '1 nếu người nhận đã đọc; tính từ ReadAt, không ghi trực tiếp (cột tính: CAST(IIF(ReadAt IS NULL, 0, 1) AS BIT))']
+  PushStatus varchar(10) [not null, default: 'PENDING', check: `PushStatus IN ('PENDING','SENT','FAILED','SKIPPED')`, note: 'Trạng thái đẩy lên điện thoại: PENDING, SENT, FAILED, SKIPPED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (RecipientId, CreatedAt) [name: 'IX_Notification_Inbox']
+    CreatedAt [name: 'IX_Notification_CreatedAt']
+  }
+}
+
+Table Vehicle [note: 'Xe'] {
+  VehicleId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PlateNumber varchar(20) [not null, unique, note: 'Biển số xe']
+  VehicleType nvarchar(50) [not null, note: 'Loại xe']
+  FuelNormPer100Km decimal(6,2) [not null, check: `FuelNormPer100Km > 0`, note: 'Định mức xăng (lít / 100 km)']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+}
+
+Table StockBalance [note: 'Tồn hiện tại theo mặt hàng và kho'] {
+  StockBalanceId int [pk, increment, note: 'Khóa chính: một mặt hàng trong một kho']
+  WarehouseType varchar(15) [not null, check: `WarehouseType IN ('MATERIAL','SEMI_FINISHED','FINISHED')`, note: 'Kho: MATERIAL (NVL), SEMI_FINISHED (BTP), FINISHED (thành phẩm)']
+  MaterialId int [note: 'NVL (chỉ kho MATERIAL)']
+  MaterialColor nvarchar(50) [note: 'Màu NVL (chỉ kho MATERIAL)']
+  OrderLineId int [note: 'Dòng đơn = màu × size (kho BTP và kho TP)']
+  ProductComponentMaterialId int [note: 'Kho BTP: NULL = bộ đủ; có giá trị = chi tiết × vải cắt bù (vd tay áo vải chính, tay áo vải lót là hai dòng)']
+  OnHandQty decimal(18,3) [not null, default: 0, check: `OnHandQty >= 0`, note: 'Tồn thực hiện tại, không âm; chỉ usp_Stock_Post được thay đổi, luôn bằng tổng StockTransaction.QtyChange']
+  UpdatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Lần cuối số tồn thay đổi (giờ Việt Nam)']
+  checks {
+    `(WarehouseType = 'MATERIAL' AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL AND OrderLineId IS NULL) OR (WarehouseType <> 'MATERIAL' AND MaterialId IS NULL AND MaterialColor IS NULL AND OrderLineId IS NOT NULL)` [name: 'CK_SB_Item']
+    `ProductComponentMaterialId IS NULL OR WarehouseType = 'SEMI_FINISHED'` [name: 'CK_SB_Component']
+  }
+
+  indexes {
+    (WarehouseType, MaterialId, MaterialColor, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_SB_Item']
+  }
+}
+
+Table CuttingLayLine [note: 'Số cắt theo size của bàn cắt'] {
+  CuttingLayLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  CuttingLayId int [not null, note: 'Bàn cắt chứa dòng này']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  ProductComponentMaterialId int [note: 'NULL = cắt cả bộ; có giá trị = dòng định mức đang cắt bù; vải / màu phải trùng vải của bàn cắt']
+  RatioValue smallint [not null, check: `RatioValue > 0`, note: 'Tỉ lệ size trên bàn (số cắt = số lớp x tỉ lệ)']
+  CalculatedQty int [not null, check: `CalculatedQty >= 0`, note: 'Số cắt tính được = số lớp x tỉ lệ size']
+  ActualQty int [not null, check: `ActualQty >= 0`, note: 'Số cắt thực tế; có thể chỉnh nhưng phải ghi lý do']
+  AdjustReason nvarchar(500) [note: 'Lý do khi sửa số cắt']
+  checks {
+    `ActualQty = CalculatedQty OR AdjustReason IS NOT NULL` [name: 'CK_CLL_Reason']
+  }
+
+  indexes {
+    (CuttingLayId, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_CLL']
+  }
+}
+
+Table Customer [note: 'Khách hàng (công ty mẹ)'] {
+  CustomerId int [pk, increment, note: 'Khóa chính, tự tăng']
+  CustomerName nvarchar(200) [not null, unique, note: 'Tên khách hàng (công ty mẹ)']
+  Phone varchar(15) [note: 'Số điện thoại']
+  Email varchar(100) [note: 'Email liên hệ của khách hàng']
+  DefaultAddress nvarchar(500) [note: 'Địa chỉ giao hàng mặc định']
+}
+
+Table RequestLine [note: 'Dòng chi tiết đơn từ'] {
+  RequestLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  RequestId int [not null, note: 'Đơn từ liên quan']
+  MaterialId int [note: 'Vật tư']
+  MaterialColor nvarchar(50) [note: 'Màu NVL (chữ tự do, cùng một vật tư có thể có nhiều màu)']
+  OrderLineId int [note: 'Dòng đơn (mã hàng + màu + size)']
+  ProductComponentMaterialId int [note: 'Chi tiết × vải cần cắt bù (dòng định mức); phải là chi tiết vải của đúng màu × size / mã hàng của lệnh cắt']
+  ItemDescription nvarchar(300) [note: 'Mô tả linh kiện, máy hoặc vật tư máy (đơn của cơ điện)']
+  Quantity decimal(18,3) [not null, check: `Quantity > 0`, note: 'Số lượng yêu cầu']
+  ReplenishQty decimal(18,3) [note: 'Số lượng nhà cung cấp hoặc khách sẽ bù, do Quản đốc nhập']
+  MaterialReceiptLineId int [note: 'SHORT_DELIVERY: dòng phiếu nhập bị thiếu hoặc lỗi; Quantity của dòng này = số thiếu / lỗi báo']
+  checks {
+    `(MaterialId IS NULL AND MaterialColor IS NULL) OR (MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)` [name: 'CK_RequestLine_Material']
+    `MaterialId IS NULL OR OrderLineId IS NULL` [name: 'CK_RequestLine_Kind']
+    `MaterialId IS NOT NULL OR OrderLineId IS NOT NULL OR ProductComponentMaterialId IS NOT NULL OR ItemDescription IS NOT NULL` [name: 'CK_RequestLine_Item']
+  }
+}
+
+Table VehicleTrip [note: 'Chuyến xe & nhiên liệu'] {
+  VehicleTripId int [pk, increment, note: 'Khóa chính, tự tăng']
+  VehicleId int [not null, note: 'Xe']
+  TripDate date [not null, note: 'Ngày chạy']
+  DriverName nvarchar(100) [note: 'Tên tài xế, chỉ ghi khi tài xế không phải nhân viên (khi đó DriverEmployeeId trống)']
+  DriverEmployeeId int [note: 'Tài xế là nhân viên']
+  Purpose nvarchar(300) [note: 'Mục đích chuyến đi (giao hàng, mua vật tư...)']
+  DispatchNoteId int [note: 'Phiếu xuất kho']
+  OdometerStart int [not null, check: `OdometerStart >= 0`, note: 'Số km đồng hồ lúc đi']
+  OdometerEnd int [note: 'Số km đồng hồ lúc về, lớn hơn lúc đi']
+  FuelLiters decimal(8,2) [check: `FuelLiters IS NULL OR FuelLiters >= 0`, note: 'Số lít xăng đổ']
+  FuelCost decimal(18,2) [check: `FuelCost IS NULL OR FuelCost >= 0`, note: 'Tiền xăng (đồng)']
+  Status varchar(10) [not null, default: 'STARTED', check: `Status IN ('STARTED','COMPLETED')`, note: 'Trạng thái: STARTED, COMPLETED']
+  KmGapWarning bit [not null, default: 0, note: '1 nếu số km lệch bất thường (cảnh báo MSG30)']
+  FuelOverNormWarning bit [not null, default: 0, note: '1 nếu xăng vượt định mức hơn 15%']
+  RecordedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm ghi nhận']
+  checks {
+    `OdometerEnd IS NULL OR OdometerEnd > OdometerStart` [name: 'CK_VT_End']
+    `Status = 'STARTED' OR OdometerEnd IS NOT NULL` [name: 'CK_VT_Completed']
+    `(DriverEmployeeId IS NULL AND DriverName IS NOT NULL) OR (DriverEmployeeId IS NOT NULL AND DriverName IS NULL)` [name: 'CK_VT_Driver']
+  }
+
+  indexes {
+    (VehicleId, TripDate, OdometerStart) [unique, name: 'UQ_VT']
+  }
+}
+
+Table Material [note: 'Nguyên vật liệu'] {
+  MaterialId int [pk, increment, note: 'Khóa chính, tự tăng']
+  MaterialCode varchar(30) [not null, unique, note: 'Mã vật tư']
+  MaterialName nvarchar(200) [not null, note: 'Tên vật tư']
+  MaterialType varchar(10) [note: 'Cột tính từ Category: FABRIC (vải, đi qua tổ cắt) hoặc TRIM (phụ liệu, cấp thẳng cho tổ may); không nhập']
+  Category varchar(15) [not null, check: `Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB', 'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE', 'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')`, note: 'Loại cụ thể, người dùng chọn; quyết định MaterialType. Vải: MAIN_FABRIC, LINING, INTERLINING, RIB. Phụ liệu: THREAD, ZIPPER, BUTTON, SNAP, ELASTIC, TAPE, LABEL, HANG_TAG, PADDING, PACKAGING, OTHER']
+  Unit nvarchar(20) [not null, note: 'Đơn vị tính: m, kg, cuộn, cái, cuộn chỉ...']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (MaterialName, MaterialType) [unique, name: 'UQ_Material_NameType']
+  }
+}
+
+Table CutHandover [note: 'Bàn giao BTP vào kho'] {
+  CutHandoverId int [pk, increment, note: 'Khóa chính, tự tăng']
+  HandoverCode varchar(30) [not null, unique, note: 'Mã phiếu bàn giao BTP, không trùng']
+  WorkOrderId int [not null, note: 'Lệnh cắt']
+  HandedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tổ cắt giao BTP']
+  Status varchar(20) [not null, default: 'PENDING', check: `Status IN ('PENDING','CONFIRMED','REJECTED','CANCELLED')`, note: 'Trạng thái: PENDING, CONFIRMED, REJECTED, CANCELLED']
+  ConfirmedBy int [note: 'Người xác nhận']
+  ConfirmedAt datetime2(0) [note: 'Thời điểm xác nhận']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  checks {
+    `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_CH_Reject']
+  }
+}
+
+Table Stocktake [note: 'Phiếu kiểm kê'] {
+  StocktakeId int [pk, increment, note: 'Khóa chính, tự tăng']
+  StocktakeCode varchar(30) [not null, unique, note: 'Mã phiếu kiểm kê, không trùng']
+  WarehouseType varchar(15) [not null, check: `WarehouseType IN ('MATERIAL','SEMI_FINISHED','FINISHED')`, note: 'Kho được kiểm kê: MATERIAL (NVL), SEMI_FINISHED (bán thành phẩm), FINISHED (thành phẩm)']
+  Scope nvarchar(300) [note: 'Phạm vi kiểm kê']
+  StocktakeDate date [not null, note: 'Ngày kiểm kê']
+  Status varchar(20) [not null, default: 'PENDING_APPROVAL', check: `Status IN ('PENDING_APPROVAL','APPROVED','RETURNED')`, note: 'Trạng thái: PENDING_APPROVAL, APPROVED, RETURNED']
+  ReturnReason nvarchar(500) [note: 'Lý do Quản đốc trả lại phiếu']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  ApprovedAt datetime2(0) [note: 'Thời điểm duyệt']
+  checks {
+    `Status <> 'RETURNED' OR ReturnReason IS NOT NULL` [name: 'CK_Stocktake_Return']
+    `Status <> 'APPROVED' OR ApprovedAt IS NOT NULL` [name: 'CK_Stocktake_Approved']
+  }
+}
+
+Table PurchaseOrder [note: 'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'] {
+  PurchaseOrderId int [pk, increment, note: 'Khóa chính, tự tăng']
+  PoCode varchar(30) [not null, unique, note: 'Mã đơn mua, không trùng']
+  OrderId int [note: 'NULL = đơn mua dùng chung']
+  SupplierId int [note: 'Nhà cung cấp; bắt buộc khi đơn đã đặt']
+  SourceRequestId int [note: 'Yêu cầu NVL hoặc xử lý thiếu NVL sinh ra đơn mua này']
+  OrderDate date [note: 'Ngày lập đơn']
+  ExpectedDeliveryCount smallint [check: `ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`, note: 'Số lần NCC dự kiến giao. Số lần đã nhận xem vw_PurchaseOrderDelivery']
+  GoodsStatus varchar(25) [not null, default: 'PENDING_FINALISATION', check: `GoodsStatus IN ('PENDING_FINALISATION','ORDERED','PARTIALLY_RECEIVED','RECEIVED', 'CLOSED_SHORT','CUSTOMER_SUPPLIED','REJECTED')`, note: 'Trạng thái hàng: nháp, đã đặt, nhận một phần, đã nhận đủ...']
+  PaymentStatus varchar(20) [not null, default: 'UNPAID', check: `PaymentStatus IN ('UNPAID','PAID','RETURNED')`, note: 'Trạng thái thanh toán, tách riêng với trạng thái hàng']
+  RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']
+  PaymentReturnReason nvarchar(500) [note: 'Lý do Kế toán trả lại Quản đốc']
+  PaymentDate date [note: 'Ngày Kế toán thanh toán cho NCC']
+  PaidAmount decimal(18,2) [note: 'Số tiền Kế toán đã thanh toán cho NCC (đồng); bắt buộc > 0 khi PAID']
+  PaymentMethod varchar(20) [check: `PaymentMethod IS NULL OR PaymentMethod IN ('BANK_TRANSFER','CASH')`, note: 'Hình thức: BANK_TRANSFER (chuyển khoản) hoặc CASH (tiền mặt)']
+  PaymentNote nvarchar(500) [note: 'Ghi chú thanh toán']
+  Note nvarchar(1000) [note: 'Ghi chú đơn mua cho NCC hoặc Kế toán']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+  RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
+  checks {
+    `PaymentStatus <> 'PAID' OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)` [name: 'CK_PO_Paid']
+    `PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL` [name: 'CK_PO_PayReturn']
+    `GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED') OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)` [name: 'CK_PO_Ordered']
+    `GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_PO_Reject']
+  }
+}
+
+Table Supplier [note: 'Nhà cung cấp'] {
+  SupplierId int [pk, increment, note: 'Khóa chính, tự tăng']
+  SupplierName nvarchar(200) [not null, unique, note: 'Tên nhà cung cấp, không trùng']
+  Phone varchar(15) [note: 'Số điện thoại']
+  Email varchar(100) [note: 'Email liên hệ của nhà cung cấp']
+  Address nvarchar(500) [note: 'Địa chỉ']
+  MaterialTypes nvarchar(200) [note: 'Mô tả loại NVL nhà cung cấp bán']
+  Note nvarchar(500) [note: 'Ghi chú về nhà cung cấp']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+}
+
+Table CutHandoverLine [note: 'Dòng bàn giao BTP'] {
+  CutHandoverLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  CutHandoverId int [not null, note: 'Phiếu bàn giao BTP chứa dòng này']
+  OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
+  ProductComponentMaterialId int [note: 'NULL = bộ đủ; có giá trị = chi tiết × vải cắt bù, kho BTP đếm riêng']
+  HandedQty int [not null, check: `HandedQty > 0`, note: 'Số lượng BTP tổ cắt giao']
+  ConfirmedQty int [check: `ConfirmedQty IS NULL OR ConfirmedQty >= 0`, note: 'Số lượng bên nhận xác nhận thực tế (có thể lệch so với số lập phiếu)']
+  DiscrepancyReason nvarchar(500) [note: 'Lý do lệch số lượng, bắt buộc khi số xác nhận khác số lập phiếu (GBR-06)']
+  checks {
+    `ConfirmedQty IS NULL OR ConfirmedQty = HandedQty OR DiscrepancyReason IS NOT NULL` [name: 'CK_CHL_Reason']
+  }
+
+  indexes {
+    (CutHandoverId, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_CHL']
+  }
+}
+
+Table Product [note: 'Mã hàng'] {
+  ProductId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductCode varchar(30) [not null, unique, note: 'Mã hàng, không trùng']
+  ProductName nvarchar(200) [not null, note: 'Tên mã hàng']
+  SampleImageUrl nvarchar(500) [note: 'Ảnh hàng mẫu']
+  Description nvarchar(1000) [note: 'Mô tả mã hàng (kiểu dáng, chất liệu…)']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+}
+
+Table StocktakeLine [note: 'Dòng kiểm kê'] {
+  StocktakeLineId int [pk, increment, note: 'Khóa chính, tự tăng']
+  StocktakeId int [not null, note: 'Phiếu kiểm kê chứa dòng này']
+  StockBalanceId int [not null, note: 'Dòng tồn được đếm; phải thuộc đúng kho của phiếu kiểm kê']
+  BookQty decimal(18,3) [not null, note: 'Số sổ tại lúc kiểm kê (sau đó tồn vẫn đổi nên không lấy lại được từ StockBalance)']
+  CountedQty decimal(18,3) [note: 'Số đếm thực tế; để trống nghĩa là khớp sổ']
+  DifferenceQty decimal(19,3) [note: 'Chênh lệch = số đếm − số sổ (cột tính: ISNULL(CountedQty, BookQty) - BookQty)']
+  Note nvarchar(300) [note: 'Ghi chú lý do chênh lệch khi kiểm kê']
+
+  indexes {
+    (StocktakeId, StockBalanceId) [unique, name: 'UQ_STL']
+  }
+}
+
+Table Attachment [note: 'Tệp / ảnh đính kèm'] {
+  AttachmentId bigint [pk, increment, note: 'Khóa chính, tự tăng']
+  OwnerType varchar(30) [not null, check: `OwnerType IN ('REQUEST','PURCHASE_ORDER','MATERIAL_RECEIPT','MATERIAL_RETURN','DEFECT_RECORD', 'DISPATCH_NOTE','VEHICLE_TRIP','PAYROLL','ACCOUNTING_PERIOD','ATTENDANCE_IMPORT')`, note: 'Loại chứng từ chứa tệp: REQUEST, PURCHASE_ORDER, MATERIAL_RECEIPT, ...']
+  OwnerId int [not null, note: 'Id của chứng từ chứa tệp']
+  Purpose varchar(30) [not null, default: 'PHOTO', check: `Purpose IN ('PHOTO','DOCUMENT_PHOTO','PAYMENT_PROOF','SIGNED_ISSUE_SLIP', 'SIGNED_DELIVERY_NOTE','FUEL_RECEIPT','IMPORT_FILE')`, note: 'Mục đích tệp: ảnh, ảnh chứng từ, chứng từ thanh toán, phiếu ký...']
+  FileUrl nvarchar(500) [not null, note: 'Đường dẫn tệp trên S3']
+  FileName nvarchar(255) [note: 'Tên tệp']
+  ContentType varchar(100) [note: 'Loại nội dung (MIME)']
+  IsCurrent bit [not null, default: 1, note: '1 nếu là tệp đang dùng; chụp lại ảnh phiếu ký thì ảnh cũ giữ lại và đặt về 0']
+  UploadedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tải lên']
+
+  indexes {
+    (OwnerType, OwnerId) [name: 'IX_Attachment_Owner']
+  }
+}
+
+Ref FK_PCM_Variant: ProductComponentMaterial.(ProductVariantId, ProductId) > ProductVariant.(ProductVariantId, ProductId)
+Ref FK_OrderLine_Variant: OrderLine.(ProductVariantId, ProductId) > ProductVariant.(ProductVariantId, ProductId)
+Ref FK_MRL_POL: MaterialReceiptLine.PurchaseOrderLineId > PurchaseOrderLine.PurchaseOrderLineId
+Ref FK_PCM_Component: ProductComponentMaterial.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
+Ref FK_OC_Component: OperationComponent.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
+Ref FK_AL_Session: AttendanceLog.SyncSessionId > AttendanceSyncSession.SyncSessionId
+Ref FK_Request_MaterialReceipt: Request.MaterialReceiptId > MaterialReceipt.MaterialReceiptId
+Ref FK_MRL_Receipt: MaterialReceiptLine.MaterialReceiptId > MaterialReceipt.MaterialReceiptId
+Ref FK_WOL_PCM: WorkOrderLine.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_MIL_PCM: MaterialIssueLine.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_SB_PCM: StockBalance.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_CLL_PCM: CuttingLayLine.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_RequestLine_PCM: RequestLine.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_CHL_PCM: CutHandoverLine.ProductComponentMaterialId > ProductComponentMaterial.ProductComponentMaterialId
+Ref FK_DT_Adjustment: DailyTimesheet.AttendanceAdjustmentId > AttendanceAdjustment.AttendanceAdjustmentId
+Ref FK_RequestLine_ReceiptLine: RequestLine.MaterialReceiptLineId > MaterialReceiptLine.MaterialReceiptLineId
+Ref FK_MRL_OrigLine: MaterialReceiptLine.OriginalReceiptLineId > MaterialReceiptLine.MaterialReceiptLineId
+Ref FK_OA_Order: OperationAssignment.OrderId > CustomerOrder.OrderId
+Ref FK_MR_Order: MaterialReceipt.OrderId > CustomerOrder.OrderId
+Ref FK_WO_Order: WorkOrder.OrderId > CustomerOrder.OrderId
+Ref FK_OrderLine_Order: OrderLine.OrderId > CustomerOrder.OrderId
+Ref FK_OM_Order: OrderMaterial.OrderId > CustomerOrder.OrderId
+Ref FK_MI_Order: MaterialIssue.OrderId > CustomerOrder.OrderId
+Ref FK_FGH_Order: FgHandover.OrderId > CustomerOrder.OrderId
+Ref FK_Kpi_Order: KpiTarget.OrderId > CustomerOrder.OrderId
+Ref FK_DN_Order: DispatchNote.OrderId > CustomerOrder.OrderId
+Ref FK_Request_Order: Request.OrderId > CustomerOrder.OrderId
+Ref FK_PO_Order: PurchaseOrder.OrderId > CustomerOrder.OrderId
+Ref FK_Employee_Role: Employee.RoleId > Role.RoleId
+Ref FK_AnnTarget_Role: AnnouncementTarget.RoleId > Role.RoleId
+Ref FK_Request_WorkOrder: Request.WorkOrderId > WorkOrder.WorkOrderId
+Ref FK_WOL_WO: WorkOrderLine.WorkOrderId > WorkOrder.WorkOrderId
+Ref FK_MI_WO: MaterialIssue.WorkOrderId > WorkOrder.WorkOrderId
+Ref FK_CL_WO: CuttingLay.WorkOrderId > WorkOrder.WorkOrderId
+Ref FK_CH_WO: CutHandover.WorkOrderId > WorkOrder.WorkOrderId
+Ref FK_WA_OrderLine: WorkAllocation.OrderLineId > OrderLine.OrderLineId
+Ref FK_OR_OrderLine: OutputRecord.OrderLineId > OrderLine.OrderLineId
+Ref FK_DR_OrderLine: DefectRecord.OrderLineId > OrderLine.OrderLineId
+Ref FK_WOL_OrderLine: WorkOrderLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_QC_OrderLine: QcBatch.OrderLineId > OrderLine.OrderLineId
+Ref FK_MIL_OrderLine: MaterialIssueLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_FGHL_OrderLine: FgHandoverLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_DNL_OrderLine: DispatchNoteLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_SB_OrderLine: StockBalance.OrderLineId > OrderLine.OrderLineId
+Ref FK_CLL_OrderLine: CuttingLayLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_RequestLine_OrderLine: RequestLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_CHL_OrderLine: CutHandoverLine.OrderLineId > OrderLine.OrderLineId
+Ref FK_TMC_DailyMeal: TeamMealConfirmation.DailyMealId > DailyMeal.DailyMealId
+Ref FK_Request_DefectRecord: Request.DefectRecordId > DefectRecord.DefectRecordId
+Ref FK_POL_OrderMaterial: PurchaseOrderLine.OrderMaterialId > OrderMaterial.OrderMaterialId
+Ref FK_MRL_OrderMaterial: MaterialReceiptLine.OrderMaterialId > OrderMaterial.OrderMaterialId
+Ref FK_OA_Team: OperationAssignment.SewingTeamId > Team.TeamId
+Ref FK_WA_Team: WorkAllocation.SewingTeamId > Team.TeamId
+Ref FK_OR_Team: OutputRecord.SewingTeamId > Team.TeamId
+Ref FK_WO_Team: WorkOrder.CuttingTeamId > Team.TeamId
+Ref FK_DR_Team: DefectRecord.SewingTeamId > Team.TeamId
+Ref FK_TMC_Team: TeamMealConfirmation.TeamId > Team.TeamId
+Ref FK_MI_Team: MaterialIssue.ReceivingTeamId > Team.TeamId
+Ref FK_Employee_Team: Employee.TeamId > Team.TeamId
+Ref FK_QC_Team: QcBatch.SewingTeamId > Team.TeamId
+Ref FK_GradeEval_Team: GradeEvaluation.TeamId > Team.TeamId
+Ref FK_Kpi_Team: KpiTarget.SewingTeamId > Team.TeamId
+Ref FK_AnnTarget_Team: AnnouncementTarget.TeamId > Team.TeamId
+Ref FK_CL_Team: CuttingLay.CuttingTeamId > Team.TeamId
+Ref FK_Request_Team: Request.CreatedByTeamId > Team.TeamId
+Ref FK_Request_MaterialIssue: Request.MaterialIssueId > MaterialIssue.MaterialIssueId
+Ref FK_MIL_Issue: MaterialIssueLine.MaterialIssueId > MaterialIssue.MaterialIssueId
+Ref FK_MRet_Issue: MaterialReturn.MaterialIssueId > MaterialIssue.MaterialIssueId
+Ref FK_Operation_Group: Operation.(OperationGroupId, ProductId) > OperationGroup.(OperationGroupId, ProductId)
+Ref FK_AuditLog_ChangedBy: AuditLog.ChangedBy > Employee.EmployeeId
+Ref FK_OA_Worker: OperationAssignment.WorkerId > Employee.EmployeeId
+Ref FK_WA_Worker: WorkAllocation.WorkerId > Employee.EmployeeId
+Ref FK_AL_Employee: AttendanceLog.EmployeeId > Employee.EmployeeId
+Ref FK_MR_ConfirmedBy: MaterialReceipt.ConfirmedBy > Employee.EmployeeId
+Ref FK_AA_Employee: AttendanceAdjustment.EmployeeId > Employee.EmployeeId
+Ref FK_DT_Employee: DailyTimesheet.EmployeeId > Employee.EmployeeId
+Ref FK_OR_Worker: OutputRecord.WorkerId > Employee.EmployeeId
+Ref FK_DR_Worker: DefectRecord.ResponsibleWorkerId > Employee.EmployeeId
+Ref FK_DR_RecordedBy: DefectRecord.RecordedBy > Employee.EmployeeId
+Ref FK_MI_IssuedBy: MaterialIssue.IssuedBy > Employee.EmployeeId
+Ref FK_MI_ReceivedBy: MaterialIssue.ReceivedBy > Employee.EmployeeId
+Ref FK_QC_Inspector: QcBatch.InspectorId > Employee.EmployeeId
+Ref FK_Account_Employee: Account.EmployeeId > Employee.EmployeeId
+Ref FK_FGH_Inspector: FgHandover.InspectorId > Employee.EmployeeId
+Ref FK_FGH_ConfirmedBy: FgHandover.ConfirmedBy > Employee.EmployeeId
+Ref FK_Payslip_Employee: Payslip.EmployeeId > Employee.EmployeeId
+Ref FK_GradeEval_Worker: GradeEvaluation.WorkerId > Employee.EmployeeId
+Ref FK_GradeEval_ProposedBy: GradeEvaluation.ProposedBy > Employee.EmployeeId
+Ref FK_MRet_ConfirmedBy: MaterialReturn.ConfirmedBy > Employee.EmployeeId
+Ref FK_Announcement_Sender: Announcement.SenderId > Employee.EmployeeId
+Ref FK_DN_DispatchedBy: DispatchNote.DispatchedBy > Employee.EmployeeId
+Ref FK_Request_CreatedBy: Request.CreatedBy > Employee.EmployeeId
+Ref FK_Notification_Recipient: Notification.RecipientId > Employee.EmployeeId
+Ref FK_VT_Driver: VehicleTrip.DriverEmployeeId > Employee.EmployeeId
+Ref FK_CH_ConfirmedBy: CutHandover.ConfirmedBy > Employee.EmployeeId
+Ref FK_OA_Operation: OperationAssignment.OperationId > Operation.OperationId
+Ref FK_WA_Operation: WorkAllocation.OperationId > Operation.OperationId
+Ref FK_OR_Operation: OutputRecord.OperationId > Operation.OperationId
+Ref FK_DR_Operation: DefectRecord.OperationId > Operation.OperationId
+Ref FK_OC_Operation: OperationComponent.(OperationId, ProductId) > Operation.(OperationId, ProductId)
+Ref FK_PieceRate_Operation: PieceRate.OperationId > Operation.OperationId
+Ref FK_Payroll_Period: Payroll.PeriodId > AccountingPeriod.PeriodId
+Ref FK_MC_Period: MonthlyCost.PeriodId > AccountingPeriod.PeriodId
+Ref FK_BER_Period: BreakEvenResult.PeriodId > AccountingPeriod.PeriodId
+Ref FK_MRetL_IssueLine: MaterialReturnLine.MaterialIssueLineId > MaterialIssueLine.MaterialIssueLineId
+Ref FK_Payslip_Payroll: Payslip.PayrollId > Payroll.PayrollId
+Ref FK_FGHL_Handover: FgHandoverLine.FgHandoverId > FgHandover.FgHandoverId
+Ref FK_PayslipItem_Payslip: PayslipItem.PayslipId > Payslip.PayslipId
+Ref FK_OR_PieceRate: OutputRecord.PieceRateId > PieceRate.PieceRateId
+Ref FK_DR_PieceRate: DefectRecord.PieceRateId > PieceRate.PieceRateId
+Ref FK_MRetL_Return: MaterialReturnLine.MaterialReturnId > MaterialReturn.MaterialReturnId
+Ref FK_Request_Kpi: Request.KpiTargetId > KpiTarget.KpiTargetId
+Ref FK_DNL_DN: DispatchNoteLine.DispatchNoteId > DispatchNote.DispatchNoteId
+Ref FK_VT_Dispatch: VehicleTrip.DispatchNoteId > DispatchNote.DispatchNoteId
+Ref FK_AnnTarget_Announcement: AnnouncementTarget.AnnouncementId > Announcement.AnnouncementId
+Ref FK_CLL_Lay: CuttingLayLine.CuttingLayId > CuttingLay.CuttingLayId
+Ref FK_MR_ShortageRequest: MaterialReceipt.ShortageRequestId > Request.RequestId
+Ref FK_AA_Request: AttendanceAdjustment.RequestId > Request.RequestId
+Ref FK_WO_Request: WorkOrder.SourceRequestId > Request.RequestId
+Ref FK_MI_Request: MaterialIssue.RequestId > Request.RequestId
+Ref FK_RequestLine_Request: RequestLine.RequestId > Request.RequestId
+Ref FK_PO_Request: PurchaseOrder.SourceRequestId > Request.RequestId
+Ref FK_VT_Vehicle: VehicleTrip.VehicleId > Vehicle.VehicleId
+Ref FK_STL_Balance: StocktakeLine.StockBalanceId > StockBalance.StockBalanceId
+Ref FK_ST_Balance: StockTransaction.StockBalanceId > StockBalance.StockBalanceId
+Ref FK_CustomerOrder_Customer: CustomerOrder.CustomerId > Customer.CustomerId
+Ref FK_POL_Material: PurchaseOrderLine.MaterialId > Material.MaterialId
+Ref FK_PCM_Material: ProductComponentMaterial.MaterialId > Material.MaterialId
+Ref FK_MRL_Material: MaterialReceiptLine.MaterialId > Material.MaterialId
+Ref FK_OM_Material: OrderMaterial.MaterialId > Material.MaterialId
+Ref FK_MIL_Material: MaterialIssueLine.MaterialId > Material.MaterialId
+Ref FK_CL_Material: CuttingLay.FabricMaterialId > Material.MaterialId
+Ref FK_SB_Material: StockBalance.MaterialId > Material.MaterialId
+Ref FK_RequestLine_Material: RequestLine.MaterialId > Material.MaterialId
+Ref FK_CHL_Handover: CutHandoverLine.CutHandoverId > CutHandover.CutHandoverId
+Ref FK_STL_Stocktake: StocktakeLine.StocktakeId > Stocktake.StocktakeId
+Ref FK_POL_PO: PurchaseOrderLine.PurchaseOrderId > PurchaseOrder.PurchaseOrderId
+Ref FK_MR_PO: MaterialReceipt.PurchaseOrderId > PurchaseOrder.PurchaseOrderId
+Ref FK_PO_Supplier: PurchaseOrder.SupplierId > Supplier.SupplierId
+Ref FK_PV_Product: ProductVariant.ProductId > Product.ProductId
+Ref FK_PC_Product: ProductComponent.ProductId > Product.ProductId
+Ref FK_WO_Product: WorkOrder.ProductId > Product.ProductId
+Ref FK_OG_Product: OperationGroup.ProductId > Product.ProductId
+Ref FK_Operation_Product: Operation.ProductId > Product.ProductId
+Ref FK_FGH_Product: FgHandover.ProductId > Product.ProductId
+Ref FK_Kpi_Product: KpiTarget.ProductId > Product.ProductId
+Ref FK_MC_Product: MonthlyCost.ProductId > Product.ProductId
+Ref FK_BER_Product: BreakEvenResult.ProductId > Product.ProductId
+
+TableGroup S01_DanhMuc [note: '1. DANH MỤC'] {
+  Role
+  SystemSetting
+  GradeLevel
+}
+TableGroup S02_NhanSu [note: '2. NHÂN SỰ, TÀI KHOẢN, TỔ, BẬC THỢ, THÔNG BÁO'] {
+  Team
+  Employee
+  Account
+  GradeEvaluation
+  Announcement
+  AnnouncementTarget
+  Notification
+}
+TableGroup S03_DonHang [note: '3. KHÁCH HÀNG, MÃ HÀNG, ĐƠN HÀNG, CÔNG ĐOẠN, ĐƠN GIÁ, KPI'] {
+  ProductVariant
+  ProductComponent
+  ProductComponentMaterial
+  CustomerOrder
+  OrderLine
+  OrderMaterial
+  OperationGroup
+  Operation
+  OperationComponent
+  PieceRate
+  KpiTarget
+  Customer
+  Material
+  Supplier
+  Product
+}
+TableGroup S04_DonTu [note: '4. ĐƠN TỪ'] {
+  Request
+  RequestLine
+}
+TableGroup S05_NhapNVL [note: '5. NHẬP NVL'] {
+  PurchaseOrderLine
+  MaterialReceipt
+  MaterialReceiptLine
+  PurchaseOrder
+}
+TableGroup S06_Cat_CapKho [note: '6. LUỒNG CẮT & CẤP KHO'] {
+  WorkOrder
+  WorkOrderLine
+  MaterialIssue
+  MaterialIssueLine
+  MaterialReturn
+  MaterialReturnLine
+  CuttingLay
+  CuttingLayLine
+  CutHandover
+  CutHandoverLine
+}
+TableGroup S07_May_QC [note: '7. LUỒNG MAY'] {
+  OperationAssignment
+  WorkAllocation
+  OutputRecord
+  DefectRecord
+  QcBatch
+  FgHandover
+  FgHandoverLine
+}
+TableGroup S08_XuatHang [note: '8. XUẤT HÀNG'] {
+  DispatchNote
+  DispatchNoteLine
+}
+TableGroup S09_Kho [note: '9. KHO'] {
+  StockTransaction
+  StockBalance
+  Stocktake
+  StocktakeLine
+}
+TableGroup S10_ChamCong_SuatAn [note: '10. CHẤM CÔNG'] {
+  AttendanceSyncSession
+  AttendanceLog
+  AttendanceAdjustment
+  DailyTimesheet
+  DailyMeal
+  TeamMealConfirmation
+}
+TableGroup S11_Ky_Luong_ChiPhi [note: '11. KỲ KẾ TOÁN, BẢNG LƯƠNG, CHI PHÍ THÁNG, HÒA VỐN'] {
+  AccountingPeriod
+  Payroll
+  Payslip
+  PayslipItem
+  MonthlyCost
+  BreakEvenResult
+}
+TableGroup S12_Xe [note: '12. XE & NHIÊN LIỆU'] {
+  Vehicle
+  VehicleTrip
+}
+TableGroup S13_HeThong [note: '13. HỆ THỐNG'] {
+  AuditLog
+  Attachment
+}

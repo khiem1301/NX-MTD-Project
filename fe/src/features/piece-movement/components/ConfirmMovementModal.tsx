@@ -2,18 +2,23 @@ import { Descriptions, Form, Input, InputNumber, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { MOVEMENT_TYPE_LABEL, PM_LABELS, PM_MESSAGES } from '../constants';
 import { useConfirmByWorker, useConfirmOnBehalf } from '../hooks/usePieceMovement';
-import type { WorkerPieceMovement } from '../types';
+import type { WorkAllocation } from '../types';
 
 type ConfirmMovementModalProps = {
-  movement: WorkerPieceMovement | null;
+  movement: WorkAllocation | null;
   /** true = tổ trưởng xác nhận hộ (bắt buộc lý do); false = công nhân tự xác nhận. */
   onBehalf: boolean;
   onClose: () => void;
 };
 
-type FormValues = { confirmedQty: number; discrepancyReason?: string; onBehalfReason?: string };
+type FormValues = {
+  confirmedQty: number;
+  confirmedPieceQty?: number;
+  discrepancyReason?: string;
+  onBehalfReason?: string;
+};
 
-/** UC60 / UC54: đếm số BTP thực nhận (lệch phải có lý do); tổ trưởng xác nhận hộ phải ghi lý do. */
+/** UC60 / UC54: đếm số lần được giao và số BTP thực nhận (lệch phải có lý do); tổ trưởng xác nhận hộ phải ghi lý do. */
 export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMovementModalProps) {
   const [form] = Form.useForm<FormValues>();
   const byWorker = useConfirmByWorker();
@@ -24,18 +29,18 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
     if (!movement) return;
     const base = {
       confirmedQty: values.confirmedQty,
+      confirmedPieceQty: movement.usesSemiFinished ? values.confirmedPieceQty : undefined,
       discrepancyReason: values.discrepancyReason?.trim() || undefined,
     };
     if (onBehalf)
       behalf.mutate(
         {
-          id: movement.workerPieceMovementId,
+          id: movement.workAllocationId,
           body: { ...base, onBehalfReason: (values.onBehalfReason ?? '').trim() },
         },
         { onSuccess: onClose },
       );
-    else
-      byWorker.mutate({ id: movement.workerPieceMovementId, body: base }, { onSuccess: onClose });
+    else byWorker.mutate({ id: movement.workAllocationId, body: base }, { onSuccess: onClose });
   };
 
   return (
@@ -54,7 +59,10 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
           form={form}
           layout="vertical"
           disabled={loading}
-          initialValues={{ confirmedQty: movement.quantity }}
+          initialValues={{
+            confirmedQty: movement.quantity,
+            confirmedPieceQty: movement.pieceQty,
+          }}
           onFinish={handleFinish}
         >
           <Descriptions column={1} size="small" bordered style={{ marginBottom: 16 }}>
@@ -67,7 +75,13 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
             <Descriptions.Item label={PM_LABELS.orderLine}>
               {`${movement.orderCode} · ${movement.productCode} ${movement.color}-${movement.sizeCode}`}
             </Descriptions.Item>
+            <Descriptions.Item label={PM_LABELS.operation}>
+              {`${movement.operationCode} - ${movement.operationName}`}
+            </Descriptions.Item>
             <Descriptions.Item label={PM_LABELS.quantity}>{movement.quantity}</Descriptions.Item>
+            {movement.usesSemiFinished && (
+              <Descriptions.Item label={PM_LABELS.pieceQty}>{movement.pieceQty}</Descriptions.Item>
+            )}
           </Descriptions>
           <Form.Item
             name="confirmedQty"
@@ -76,16 +90,24 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
           >
             <InputNumber min={0} max={movement.quantity} precision={0} />
           </Form.Item>
+          {movement.usesSemiFinished && (
+            <Form.Item name="confirmedPieceQty" label={PM_LABELS.confirmedPieceQty}>
+              <InputNumber min={0} max={movement.pieceQty} precision={0} />
+            </Form.Item>
+          )}
           <Form.Item
             name="discrepancyReason"
             label={PM_LABELS.discrepancyReason}
-            dependencies={['confirmedQty']}
+            dependencies={['confirmedQty', 'confirmedPieceQty']}
             rules={[
               {
                 validator: async (_rule, value?: string) => {
                   const qty = form.getFieldValue('confirmedQty') as number | undefined;
-                  if (qty !== movement.quantity && !value?.trim())
-                    throw new Error(PM_MESSAGES.discrepancyReasonRequired);
+                  const pieces = form.getFieldValue('confirmedPieceQty') as number | undefined;
+                  const differs =
+                    qty !== movement.quantity ||
+                    (movement.usesSemiFinished && pieces !== undefined && pieces !== movement.pieceQty);
+                  if (differs && !value?.trim()) throw new Error(PM_MESSAGES.discrepancyReasonRequired);
                 },
               },
             ]}

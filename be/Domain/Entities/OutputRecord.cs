@@ -26,8 +26,6 @@ public partial class OutputRecord
 
     public int PieceRateId { get; set; }
 
-    public decimal UnitRate { get; set; }
-
     public bool IsOutsideAssignment { get; set; }
 
     public bool NoAttendanceWarning { get; set; }
