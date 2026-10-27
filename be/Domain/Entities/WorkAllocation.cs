@@ -22,11 +22,7 @@ public partial class WorkAllocation
 
     public int Quantity { get; set; }
 
-    public int PieceQty { get; set; }
-
     public int? ConfirmedQty { get; set; }
-
-    public int? ConfirmedPieceQty { get; set; }
 
     public string? DiscrepancyReason { get; set; }
 

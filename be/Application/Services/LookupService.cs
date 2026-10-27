@@ -43,7 +43,7 @@ public sealed class LookupService : ILookupService
                         && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .OrderBy(p => p.ProductComponent.SortOrder).ThenBy(p => p.ProductComponentMaterialId)
             .Select(p => new ComponentOptionDto(p.ProductComponentMaterialId,
-                p.ProductComponent.ComponentName + " – " + p.Material.MaterialName + (p.MaterialColor == "" ? "" : " " + p.MaterialColor),
+                p.ProductComponent.ComponentName + " – " + p.Material.MaterialName + (p.Material.Color == "" ? "" : " " + p.Material.Color),
                 p.ProductComponent.PiecesPerGarment))
             .ToListAsync(ct);
     }
@@ -60,9 +60,9 @@ public sealed class LookupService : ILookupService
         var kw = keyword?.Trim();
         return await _uow.Repository<Material>().Query().AsNoTracking()
             .Where(m => m.Status == MaterialStatuses.Active)
-            .Where(m => string.IsNullOrEmpty(kw) || m.MaterialCode.Contains(kw) || m.MaterialName.Contains(kw))
+            .Where(m => string.IsNullOrEmpty(kw) || m.MaterialCode.Contains(kw) || m.MaterialName.Contains(kw) || m.Color.Contains(kw))
             .OrderBy(m => m.MaterialCode).Take(MaxOptions)
-            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit))
+            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit, m.Color))
             .ToListAsync(ct);
     }
 }

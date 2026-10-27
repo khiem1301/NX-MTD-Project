@@ -48,7 +48,7 @@ public class MaterialReturnServiceTests
         _line = new MaterialIssueLine
         {
             MaterialIssueLineId = 100, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
-            MaterialColor = "Đen", IssuedQty = 120, ConfirmedQty = 100,
+            IssuedQty = 120, ConfirmedQty = 100,
         };
         _issue.MaterialIssueLines.Add(_line);
         _teams.Add(_team); _issues.Add(_issue); _issueLines.Add(_line);
@@ -176,7 +176,7 @@ public class MaterialReturnServiceTests
         var other = new MaterialIssueLine
         {
             MaterialIssueLineId = 101, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
-            MaterialColor = "Be", IssuedQty = 50, ConfirmedQty = 50,
+            IssuedQty = 50, ConfirmedQty = 50,
         };
         _issue.MaterialIssueLines.Add(other); _issueLines.Add(other);
 
@@ -202,7 +202,7 @@ public class MaterialReturnServiceTests
         ret.Status.Should().Be(HandoverStatuses.Confirmed);
         await _stock.Received(1).PostAsync(
             Arg.Is<IReadOnlyList<StockMovement>>(m => m.Count == 1 && m[0].QtyChange == 30 && m[0].Key.MaterialId == 1
-                && m[0].Key.MaterialColor == "Đen" && m[0].SourceDocType == StockDocTypes.MaterialReturn),
+                && m[0].SourceDocType == StockDocTypes.MaterialReturn),
             Arg.Any<CancellationToken>());
     }
 

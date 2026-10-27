@@ -46,7 +46,7 @@ public class SwimlaneFlowTests : ProductionTestBase
             MaterialIssueId = 1, OrderId = order.OrderId, WarehouseType = warehouse, ReceivingTeamId = SewingTeam,
             Status = IssueStatuses.PendingReceipt,
         };
-        var line = new MaterialIssueLine { MaterialIssueLineId = 10, MaterialIssueId = 1, OrderLineId = 11, MaterialId = warehouse == WarehouseTypes.Material ? 1 : null, MaterialColor = warehouse == WarehouseTypes.Material ? "Đen" : null, IssuedQty = 50 };
+        var line = new MaterialIssueLine { MaterialIssueLineId = 10, MaterialIssueId = 1, OrderLineId = 11, MaterialId = warehouse == WarehouseTypes.Material ? 1 : null, IssuedQty = 50 };
         issue.MaterialIssueLines.Add(line);
         _issues.Add(issue);
         return (issue, new ConfirmIssueDto([new ConfirmIssueLineDto(10, 50, null)]));

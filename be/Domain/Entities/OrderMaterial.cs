@@ -14,8 +14,6 @@ public partial class OrderMaterial
 
     public int MaterialId { get; set; }
 
-    public string MaterialColor { get; set; } = null!;
-
     public decimal RequiredQty { get; set; }
 
     public decimal CustomerQty { get; set; }

@@ -116,8 +116,13 @@ public sealed class CuttingLayService : ICuttingLayService
             .ToDictionary(g => g.Key, g => g.Sum(l => l.PlannedQty));
         if (dto.Lines.Any(l => !planned.ContainsKey((l.OrderLineId, l.ProductComponentMaterialId))))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
-        if (!await _uow.Repository<Material>().Query()
-                .AnyAsync(m => m.MaterialId == dto.FabricMaterialId && m.MaterialType == MaterialTypes.Fabric, ct))
+        // Vải của bàn (đã gồm màu, 26/10) phải là vải chi tiết PANEL trong định mức của các dòng đơn trên bàn.
+        var variantIds = wo.WorkOrderLines.Where(l => dto.Lines.Any(d => d.OrderLineId == l.OrderLineId))
+            .Select(l => l.OrderLine.ProductVariantId).Distinct().ToList();
+        if (!await _uow.Repository<ProductComponentMaterial>().Query()
+                .AnyAsync(p => variantIds.Contains(p.ProductVariantId) && p.MaterialId == dto.FabricMaterialId
+                               && p.Material.MaterialType == MaterialTypes.Fabric
+                               && p.ProductComponent.ComponentType == ComponentTypes.Panel, ct))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.MaterialNotInWorkOrder);
 
         // Bàn cắt bù chi tiết phải cắt đúng vải của dòng định mức (database chặn cứng, THROW 50049).
@@ -125,10 +130,8 @@ public sealed class CuttingLayService : ICuttingLayService
             .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
         if (normIds.Count > 0)
         {
-            var fabricColor = dto.FabricColor.Trim();
             var matching = await _uow.Repository<ProductComponentMaterial>().Query()
-                .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.MaterialId == dto.FabricMaterialId
-                                 && (p.MaterialColor == fabricColor || p.MaterialColor == ""), ct);
+                .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.MaterialId == dto.FabricMaterialId, ct);
             if (matching != normIds.Count)
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayComponentFabricMismatch);
         }
@@ -157,7 +160,6 @@ public sealed class CuttingLayService : ICuttingLayService
         lay.WorkDate = dto.WorkDate;
         lay.ShiftCode = dto.ShiftCode;
         lay.FabricMaterialId = dto.FabricMaterialId;
-        lay.FabricColor = dto.FabricColor.Trim();
         lay.PlyCount = (short)dto.PlyCount;
         lay.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         lay.CuttingLayLines = lines;
@@ -224,9 +226,9 @@ public sealed class CuttingLayService : ICuttingLayService
     private static System.Linq.Expressions.Expression<Func<CuttingLay, CuttingLayDto>> ToDto() => l =>
         new CuttingLayDto(l.CuttingLayId, l.WorkOrderId, l.WorkOrder.WorkOrderCode, l.WorkDate, l.ShiftCode,
             l.LaySequence, l.FabricMaterialId, l.FabricMaterial.MaterialCode,
-            l.FabricColor, l.PlyCount, string.Empty, l.Note, l.Status, l.CreatedAt,
+            l.FabricMaterial.Color, l.PlyCount, string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
-                x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.MaterialColor == "" ? "" : " " + x.ProductComponentMaterial.MaterialColor),
+                x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.Material.Color == "" ? "" : " " + x.ProductComponentMaterial.Material.Color),
                 x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,
                 x.AdjustReason)).ToList());
 }

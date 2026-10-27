@@ -60,7 +60,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
                 {
                     l.RequestLineId, l.MaterialReceiptLineId, MaterialId = l.MaterialId!.Value,
                     l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit,
-                    Color = l.MaterialColor ?? string.Empty, l.Quantity, l.ReplenishQty,
+                    Color = l.Material.Color, l.Quantity, l.ReplenishQty,
                 }).ToList(),
             }).FirstOrDefaultAsync(ct);
         if (head is null) return WarehouseFailures.NotFound<ShortDeliveryDto>();

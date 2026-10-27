@@ -23,8 +23,6 @@ public partial class VwWorkOrderLineProgress
 
     public int? MaterialId { get; set; }
 
-    public string? MaterialColor { get; set; }
-
     public int PlannedQty { get; set; }
 
     public int CutQty { get; set; }

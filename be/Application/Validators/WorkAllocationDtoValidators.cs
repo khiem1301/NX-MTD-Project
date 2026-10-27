@@ -15,14 +15,12 @@ public sealed class CreateWorkAllocationDtoValidator : AbstractValidator<CreateW
         RuleFor(x => x.OrderLineId).GreaterThan(0);
         RuleFor(x => x.OperationId).GreaterThan(0).WithMessage(WarehouseMessages.OperationRequired);
         RuleFor(x => x.Quantity).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive);
-        RuleFor(x => x.PieceQty).GreaterThanOrEqualTo(0).When(x => x.PieceQty is not null)
-            .WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.PieceQty).LessThanOrEqualTo(x => x.Quantity).When(x => x.PieceQty is not null)
-            .WithMessage(WarehouseMessages.PieceExceedsAllocationQty);
         // Thu hồi bắt buộc nêu lý do (CK_WA_Retr); giao thì không có lý do thu hồi.
         RuleFor(x => x.RetrievalReason).Must(r => r is not null && RetrievalReasons.All.Contains(r))
             .When(x => x.MovementType == PieceMovementTypes.Retrieval)
             .WithMessage(WarehouseMessages.RetrievalReasonRequired);
+        RuleFor(x => x.RetrievalReason).Null().When(x => x.MovementType == PieceMovementTypes.Handover)
+            .WithMessage(WarehouseMessages.RetrievalReasonNotAllowed);
     }
 }
 
@@ -30,9 +28,7 @@ public sealed class ConfirmWorkAllocationDtoValidator : AbstractValidator<Confir
 {
     public ConfirmWorkAllocationDtoValidator()
     {
-        RuleFor(x => x.ConfirmedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.ConfirmedPieceQty).GreaterThanOrEqualTo(0).When(x => x.ConfirmedPieceQty is not null)
-            .WithMessage(WarehouseMessages.QtyMustNotBeNegative);
+        RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
         RuleFor(x => x.DiscrepancyReason).MaximumLength(500);
     }
 }
@@ -41,9 +37,7 @@ public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBeh
 {
     public ConfirmOnBehalfDtoValidator()
     {
-        RuleFor(x => x.ConfirmedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-        RuleFor(x => x.ConfirmedPieceQty).GreaterThanOrEqualTo(0).When(x => x.ConfirmedPieceQty is not null)
-            .WithMessage(WarehouseMessages.QtyMustNotBeNegative);
+        RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
         RuleFor(x => x.DiscrepancyReason).MaximumLength(500);
         RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
     }

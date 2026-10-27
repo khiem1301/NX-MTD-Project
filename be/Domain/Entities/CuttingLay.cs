@@ -22,8 +22,6 @@ public partial class CuttingLay
 
     public int FabricMaterialId { get; set; }
 
-    public string FabricColor { get; set; } = null!;
-
     public short PlyCount { get; set; }
 
     public string? Note { get; set; }

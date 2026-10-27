@@ -11,4 +11,4 @@ public sealed record ComponentOptionDto(int ProductComponentMaterialId, string C
 public sealed record TeamOptionDto(int TeamId, string TeamCode, string TeamName, string TeamType);
 
 public sealed record MaterialOptionDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
-    string Unit);
+    string Unit, string Color);

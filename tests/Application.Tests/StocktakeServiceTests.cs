@@ -76,7 +76,7 @@ public class StocktakeServiceTests
             var balance = new StockBalance
             {
                 StockBalanceId = 500 + i, WarehouseType = warehouse,
-                MaterialId = warehouse == WarehouseTypes.Material ? 1 : null, MaterialColor = warehouse == WarehouseTypes.Material ? "Đen" : null,
+                MaterialId = warehouse == WarehouseTypes.Material ? 1 : null,
                 OrderLineId = warehouse == WarehouseTypes.Material ? null : 101,
                 Material = warehouse == WarehouseTypes.Material ? _materials[0] : null,
             };
@@ -91,8 +91,8 @@ public class StocktakeServiceTests
         return s;
     }
 
-    private static SaveStocktakeDto Material(decimal? counted, string color = "Đen") =>
-        new(WarehouseTypes.Material, " Kho vải ", Today, new[] { new SaveStocktakeLineDto(1, color, null, null, counted, null) });
+    private static SaveStocktakeDto Material(decimal? counted) =>
+        new(WarehouseTypes.Material, " Kho vải ", Today, new[] { new SaveStocktakeLineDto(1, null, null, counted, null) });
 
     // ---------- Lập phiếu ----------
 
@@ -111,7 +111,7 @@ public class StocktakeServiceTests
         line.BookQty.Should().Be(100);
         line.CountedQty.Should().Be(92);
         line.StockBalanceId.Should().Be(77);
-        await _stockRepo.Received().GetOrCreateBalanceIdAsync(Arg.Is<StockKey>(k => k.MaterialId == 1 && k.MaterialColor == "Đen"), Arg.Any<CancellationToken>());
+        await _stockRepo.Received().GetOrCreateBalanceIdAsync(Arg.Is<StockKey>(k => k.MaterialId == 1), Arg.Any<CancellationToken>());
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
@@ -129,24 +129,24 @@ public class StocktakeServiceTests
     [Fact]
     public async Task Create_rejects_bad_warehouse_future_date_negative_count_and_wrong_line_target()
     {
-        (await Service().CreateAsync(new SaveStocktakeDto("OTHER", null, Today, new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 1, null) }), default))
+        (await Service().CreateAsync(new SaveStocktakeDto("OTHER", null, Today, new[] { new SaveStocktakeLineDto(1, null, null, 1, null) }), default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         (await Service().CreateAsync(Material(5) with { StocktakeDate = Today.AddDays(1) }, default))
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         (await Service().CreateAsync(Material(-1), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         // Kho BTP phải chọn dòng đơn, không chọn NVL
         (await Service().CreateAsync(new SaveStocktakeDto(WarehouseTypes.SemiFinished, null, Today,
-            new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 5, null) }), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+            new[] { new SaveStocktakeLineDto(1, null, null, 5, null) }), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
     }
 
     [Fact]
     public async Task Create_rejects_duplicate_lines_and_unknown_items()
     {
         var twice = new SaveStocktakeDto(WarehouseTypes.Material, null, Today,
-            new[] { new SaveStocktakeLineDto(1, "Đen", null, null, 5, null), new SaveStocktakeLineDto(1, " Đen ", null, null, 6, null) });
+            new[] { new SaveStocktakeLineDto(1, null, null, 5, null), new SaveStocktakeLineDto(1, null, null, 6, null) });
         (await Service().CreateAsync(twice, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
 
-        var unknown = new SaveStocktakeDto(WarehouseTypes.Material, null, Today, new[] { new SaveStocktakeLineDto(99, "Đen", null, null, 5, null) });
+        var unknown = new SaveStocktakeDto(WarehouseTypes.Material, null, Today, new[] { new SaveStocktakeLineDto(99, null, null, 5, null) });
         (await Service().CreateAsync(unknown, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
     }
 
@@ -156,7 +156,7 @@ public class StocktakeServiceTests
         var added = CaptureAdds();
 
         var result = await Service().CreateAsync(new SaveStocktakeDto(WarehouseTypes.Finished, null, Today,
-            new[] { new SaveStocktakeLineDto(null, null, 101, null, 40, null) }), default);
+            new[] { new SaveStocktakeLineDto(null, 101, null, 40, null) }), default);
 
         result.IsSuccess.Should().BeTrue();
         added.Single().StocktakeLines.Single().StockBalanceId.Should().Be(77);
@@ -264,7 +264,7 @@ public class StocktakeServiceTests
         var returned = Existing(StocktakeStatuses.Returned, WarehouseTypes.Material, (100, 90));
 
         var result = await Service().UpdateAsync(returned.StocktakeId, new SaveStocktakeDto(WarehouseTypes.Finished, null, Today,
-            new[] { new SaveStocktakeLineDto(null, null, 101, null, 5, null) }), default);
+            new[] { new SaveStocktakeLineDto(null, 101, null, 5, null) }), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
     }

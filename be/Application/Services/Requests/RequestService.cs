@@ -209,7 +209,7 @@ public sealed class RequestService : IRequestService
 
     private static RequestLine ToEntity(RequestLineInput l) => new()
     {
-        MaterialId = l.MaterialId, MaterialColor = l.MaterialColor?.Trim(), OrderLineId = l.OrderLineId,
+        MaterialId = l.MaterialId, OrderLineId = l.OrderLineId,
         ProductComponentMaterialId = l.ProductComponentMaterialId, ItemDescription = l.ItemDescription?.Trim(), Quantity = l.Quantity,
     };
 

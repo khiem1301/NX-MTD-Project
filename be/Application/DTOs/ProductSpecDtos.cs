@@ -9,7 +9,8 @@ public sealed record ProductComponentDto(int ProductComponentId, string Componen
 
 public sealed record ProductVariantDto(int ProductVariantId, string Color, string SizeCode, string Status);
 
-/// <summary>Một dòng định mức = một NVL của một thành phần cho một biến thể; QtyPerGarment tính cho cả 1 sản phẩm (đã nhân số chi tiết).</summary>
+/// <summary>Một dòng định mức = một NVL của một thành phần cho một biến thể; QtyPerGarment tính cho cả 1 sản phẩm (đã nhân số chi tiết).
+/// MaterialColor = Material.Color (26/10: màu nằm trong NVL).</summary>
 public sealed record ProductNormDto(int ProductComponentMaterialId, string ComponentName, string Color, string SizeCode,
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor, decimal QtyPerGarment,
     decimal WastagePercent, decimal? LengthCm, decimal? WidthCm, string? SpecNote);
@@ -25,7 +26,7 @@ public sealed record SaveProductVariantDto(int? ProductVariantId, string Color, 
 
 /// <summary>Dòng định mức tham chiếu thành phần và biến thể bằng tên / màu / size để lưu cùng lúc với thành phần và biến thể mới.</summary>
 public sealed record SaveProductNormDto(string ComponentName, string Color, string SizeCode, int MaterialId,
-    string? MaterialColor, decimal QtyPerGarment, decimal WastagePercent, decimal? LengthCm, decimal? WidthCm, string? SpecNote);
+    decimal QtyPerGarment, decimal WastagePercent, decimal? LengthCm, decimal? WidthCm, string? SpecNote);
 
 /// <summary>
 /// Gửi đủ thành phần, biến thể và định mức muốn giữ. Thành phần / biến thể bỏ khỏi danh sách: xóa nếu chưa dùng ở đâu,

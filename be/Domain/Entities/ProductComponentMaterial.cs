@@ -18,8 +18,6 @@ public partial class ProductComponentMaterial
 
     public int MaterialId { get; set; }
 
-    public string MaterialColor { get; set; } = null!;
-
     public decimal QtyPerGarment { get; set; }
 
     public decimal WastagePercent { get; set; }

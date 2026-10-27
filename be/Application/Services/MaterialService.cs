@@ -49,7 +49,8 @@ public sealed class MaterialService : IMaterialService
         _uow.InTransactionAsync(async () =>
         {
             var name = dto.MaterialName.Trim();
-            if (await NameTakenAsync(name, dto.MaterialType, null, ct))
+            var color = ColorOf(dto.Color);
+            if (await NameTakenAsync(name, dto.MaterialType, color, null, ct))
                 return Conflict(WarehouseMessages.MaterialNameDuplicate);
 
             var code = string.IsNullOrWhiteSpace(dto.MaterialCode)
@@ -64,6 +65,7 @@ public sealed class MaterialService : IMaterialService
                 MaterialName = name,
                 Category = dto.Category,
                 Unit = dto.Unit.Trim(),
+                Color = color,
                 Status = MaterialStatuses.Active,
             };
             await _uow.Repository<Material>().AddAsync(material);
@@ -77,10 +79,15 @@ public sealed class MaterialService : IMaterialService
         if (material is null) return NotFound();
 
         var name = dto.MaterialName.Trim();
-        if (await NameTakenAsync(name, dto.MaterialType, materialId, ct))
+        var color = dto.Color is null ? material.Color : ColorOf(dto.Color);
+        if (await NameTakenAsync(name, dto.MaterialType, color, materialId, ct))
             return Conflict(WarehouseMessages.MaterialNameDuplicate);
+        // Màu là một phần của NVL: đã dùng ở định mức / đơn / chứng từ / tồn kho thì phải tạo NVL mới thay vì đổi màu.
+        if (color != material.Color && await IsUsedAsync(materialId, ct))
+            return Result<MaterialDto>.Failure(ErrorCodes.WarehouseMaterialInUse, WarehouseMessages.MaterialColorInUse);
 
         material.MaterialName = name;
+        material.Color = color;
         material.Category = dto.Category;
         material.Unit = dto.Unit.Trim();
         await _uow.SaveChangesAsync();
@@ -97,9 +104,20 @@ public sealed class MaterialService : IMaterialService
         return Result.Success(WarehouseMessages.MaterialStatusChanged);
     }
 
-    private Task<bool> NameTakenAsync(string name, string type, int? exceptId, CancellationToken ct) =>
-        Materials.AnyAsync(m => m.MaterialName == name && m.MaterialType == type
+    /// <summary>UQ_Material_NameType (Tên, Loại, Màu).</summary>
+    private Task<bool> NameTakenAsync(string name, string type, string color, int? exceptId, CancellationToken ct) =>
+        Materials.AnyAsync(m => m.MaterialName == name && m.MaterialType == type && m.Color == color
                                 && (exceptId == null || m.MaterialId != exceptId), ct);
+
+    private async Task<bool> IsUsedAsync(int materialId, CancellationToken ct) =>
+        await _uow.Repository<ProductComponentMaterial>().Query().AnyAsync(x => x.MaterialId == materialId, ct)
+        || await _uow.Repository<OrderMaterial>().Query().AnyAsync(x => x.MaterialId == materialId, ct)
+        || await _uow.Repository<PurchaseOrderLine>().Query().AnyAsync(x => x.MaterialId == materialId, ct)
+        || await _uow.Repository<MaterialReceiptLine>().Query().AnyAsync(x => x.MaterialId == materialId, ct)
+        || await _uow.Repository<MaterialIssueLine>().Query().AnyAsync(x => x.MaterialId == materialId, ct)
+        || await _uow.Repository<StockBalance>().Query().AnyAsync(x => x.MaterialId == materialId, ct);
+
+    private static string ColorOf(string? color) => color?.Trim() ?? string.Empty;
 
     private async Task<string> NextCodeAsync(string materialType, CancellationToken ct)
     {
@@ -112,8 +130,8 @@ public sealed class MaterialService : IMaterialService
     }
 
     private static readonly Expression<Func<Material, MaterialDto>> ToDto = m =>
-        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit, m.Status,
-            m.CreatedAt);
+        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit,
+            m.Color, m.Status, m.CreatedAt);
 
     private static readonly Func<Material, MaterialDto> MapDto = ToDto.Compile();
 

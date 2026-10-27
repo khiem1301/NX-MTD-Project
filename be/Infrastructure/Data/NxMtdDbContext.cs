@@ -174,8 +174,6 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwTeamActingLeader> VwTeamActingLeaders { get; set; }
 
-    public virtual DbSet<VwTeamPieceHolding> VwTeamPieceHoldings { get; set; }
-
     public virtual DbSet<VwWorkOrderFabricNeed> VwWorkOrderFabricNeeds { get; set; }
 
     public virtual DbSet<VwWorkOrderLineProgress> VwWorkOrderLineProgresses { get; set; }
@@ -558,7 +556,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-            entity.Property(e => e.FabricColor).HasMaxLength(50);
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.ShiftCode)
                 .HasMaxLength(10)
@@ -1015,11 +1012,14 @@ public partial class NxMtdDbContext : DbContext
 
             entity.HasIndex(e => e.MaterialCode, "UQ_Material_Code").IsUnique();
 
-            entity.HasIndex(e => new { e.MaterialName, e.MaterialType }, "UQ_Material_NameType").IsUnique();
+            entity.HasIndex(e => new { e.MaterialName, e.MaterialType, e.Color }, "UQ_Material_NameType").IsUnique();
 
             entity.Property(e => e.Category)
                 .HasMaxLength(15)
                 .IsUnicode(false);
+            entity.Property(e => e.Color)
+                .HasMaxLength(50)
+                .HasDefaultValue("");
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
@@ -1106,12 +1106,11 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_MaterialIssueLine_Check");
                 });
 
-            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_MIL").IsUnique();
+            entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_MIL").IsUnique();
 
             entity.Property(e => e.ConfirmedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
             entity.Property(e => e.IssuedQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
 
             entity.HasOne(d => d.Material).WithMany(p => p.MaterialIssueLines)
                 .HasForeignKey(d => d.MaterialId)
@@ -1189,12 +1188,11 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NOT NULL)");
 
-            entity.HasIndex(e => new { e.MaterialReceiptId, e.MaterialId, e.MaterialColor }, "UQ_MRL_Stock")
+            entity.HasIndex(e => new { e.MaterialReceiptId, e.MaterialId }, "UQ_MRL_Stock")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NULL)");
 
             entity.Property(e => e.AcceptedQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
 
             entity.HasOne(d => d.Material).WithMany(p => p.MaterialReceiptLines)
                 .HasForeignKey(d => d.MaterialId)
@@ -1479,12 +1477,9 @@ public partial class NxMtdDbContext : DbContext
         {
             entity.ToTable("OrderMaterial", tb => tb.HasComment("NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu"));
 
-            entity.HasIndex(e => new { e.OrderId, e.MaterialId, e.MaterialColor }, "UQ_OM").IsUnique();
+            entity.HasIndex(e => new { e.OrderId, e.MaterialId }, "UQ_OM").IsUnique();
 
             entity.Property(e => e.CustomerQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.MaterialColor)
-                .HasMaxLength(50)
-                .HasDefaultValue("");
             entity.Property(e => e.Note).HasMaxLength(500);
             entity.Property(e => e.PurchaseQty)
                 .HasComputedColumnSql("(case when [RequiredQty]>[CustomerQty] then [RequiredQty]-[CustomerQty] else (0) end)", false)
@@ -1699,14 +1694,11 @@ public partial class NxMtdDbContext : DbContext
         {
             entity.ToTable("ProductComponentMaterial", tb => tb.HasComment("Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết"));
 
-            entity.HasIndex(e => new { e.MaterialId, e.MaterialColor }, "IX_PCM_Material");
+            entity.HasIndex(e => e.MaterialId, "IX_PCM_Material");
 
             entity.HasIndex(e => new { e.ProductVariantId, e.ProductComponentId, e.MaterialId }, "UQ_PCM").IsUnique();
 
             entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
-            entity.Property(e => e.MaterialColor)
-                .HasMaxLength(50)
-                .HasDefaultValue("");
             entity.Property(e => e.QtyPerGarment).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.SpecNote).HasMaxLength(200);
             entity.Property(e => e.WastagePercent).HasColumnType("decimal(5, 2)");
@@ -1810,14 +1802,13 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NOT NULL)");
 
-            entity.HasIndex(e => new { e.PurchaseOrderId, e.MaterialId, e.MaterialColor }, "UQ_POL_Stock")
+            entity.HasIndex(e => new { e.PurchaseOrderId, e.MaterialId }, "UQ_POL_Stock")
                 .IsUnique()
                 .HasFilter("([OrderMaterialId] IS NULL)");
 
             entity.Property(e => e.Amount)
                 .HasComputedColumnSql("(CONVERT([decimal](18,2),[OrderedQty]*[UnitPrice]))", false)
                 .HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.NotReplenishedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.OrderedQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
@@ -1963,7 +1954,6 @@ public partial class NxMtdDbContext : DbContext
                 });
 
             entity.Property(e => e.ItemDescription).HasMaxLength(300);
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.Quantity).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.ReplenishQty).HasColumnType("decimal(18, 3)");
 
@@ -2009,9 +1999,8 @@ public partial class NxMtdDbContext : DbContext
                     tb.HasTrigger("trg_StockBalance_Check");
                 });
 
-            entity.HasIndex(e => new { e.WarehouseType, e.MaterialId, e.MaterialColor, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_SB_Item").IsUnique();
+            entity.HasIndex(e => new { e.WarehouseType, e.MaterialId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_SB_Item").IsUnique();
 
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.OnHandQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.UpdatedAt)
                 .HasPrecision(0)
@@ -2288,10 +2277,10 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.Category)
                 .HasMaxLength(15)
                 .IsUnicode(false);
+            entity.Property(e => e.Color).HasMaxLength(50);
             entity.Property(e => e.MaterialCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.MaterialName).HasMaxLength(200);
             entity.Property(e => e.MaterialType)
                 .HasMaxLength(10)
@@ -2344,7 +2333,6 @@ public partial class NxMtdDbContext : DbContext
                 .ToView("vw_OrderMaterialDelivery");
 
             entity.Property(e => e.CustomerQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.ReceivedQty).HasColumnType("decimal(38, 3)");
             entity.Property(e => e.RemainingQty).HasColumnType("decimal(38, 3)");
         });
@@ -2356,7 +2344,6 @@ public partial class NxMtdDbContext : DbContext
                 .ToView("vw_OrderMaterialNorm");
 
             entity.Property(e => e.DiffQty).HasColumnType("decimal(19, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.NormQty).HasColumnType("decimal(18, 3)");
             entity.Property(e => e.RequiredQty).HasColumnType("decimal(18, 3)");
         });
@@ -2440,7 +2427,6 @@ public partial class NxMtdDbContext : DbContext
                 .ToView("vw_StockBalance");
 
             entity.Property(e => e.AvailableQty).HasColumnType("decimal(38, 3)");
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.OnHandQty).HasColumnType("decimal(38, 3)");
             entity.Property(e => e.ReservedQty).HasColumnType("decimal(38, 3)");
             entity.Property(e => e.WarehouseType)
@@ -2463,20 +2449,12 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false);
         });
 
-        modelBuilder.Entity<VwTeamPieceHolding>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToView("vw_TeamPieceHolding");
-        });
-
         modelBuilder.Entity<VwWorkOrderFabricNeed>(entity =>
         {
             entity
                 .HasNoKey()
                 .ToView("vw_WorkOrderFabricNeed");
 
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.NeedQty).HasColumnType("decimal(18, 3)");
         });
 
@@ -2486,7 +2464,6 @@ public partial class NxMtdDbContext : DbContext
                 .HasNoKey()
                 .ToView("vw_WorkOrderLineProgress");
 
-            entity.Property(e => e.MaterialColor).HasMaxLength(50);
             entity.Property(e => e.WorkOrderCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);

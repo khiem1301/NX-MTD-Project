@@ -11,7 +11,7 @@ public sealed class SavePurchaseOrderLineDtoValidator : AbstractValidator<SavePu
         RuleFor(x => x.MaterialId).GreaterThan(0).When(x => x.MaterialId.HasValue);
         RuleFor(x => x.NewMaterialName).NotEmpty().MaximumLength(200).When(x => !x.MaterialId.HasValue);
         RuleFor(x => x.NewMaterialUnit).NotEmpty().MaximumLength(20).When(x => !x.MaterialId.HasValue);
-        RuleFor(x => x.MaterialColor).MaximumLength(50);
+        RuleFor(x => x.NewMaterialColor).MaximumLength(50);
         RuleFor(x => x.OrderedQty).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive);
         RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
     }
@@ -27,7 +27,7 @@ public sealed class CreatePurchaseOrderDtoValidator : AbstractValidator<CreatePu
         RuleForEach(x => x.Lines).SetValidator(new SavePurchaseOrderLineDtoValidator());
         RuleFor(x => x.Lines).Must(l => l is null
                 || l.Select(x => (x.MaterialId, Name: x.MaterialId.HasValue ? null : x.NewMaterialName?.Trim().ToLowerInvariant(),
-                Color: x.MaterialColor?.Trim() ?? string.Empty)).Distinct().Count() == l.Count)
+                Color: x.MaterialId.HasValue ? null : x.NewMaterialColor?.Trim() ?? string.Empty)).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
     }
 }

@@ -9,5 +9,5 @@ public static class ComponentLabels
         string.IsNullOrEmpty(materialColor) ? $"{componentName} – {materialName}" : $"{componentName} – {materialName} {materialColor}";
 
     public static string? Of(ProductComponentMaterial? pcm) =>
-        pcm is null ? null : Of(pcm.ProductComponent.ComponentName, pcm.Material.MaterialName, pcm.MaterialColor);
+        pcm is null ? null : Of(pcm.ProductComponent.ComponentName, pcm.Material.MaterialName, pcm.Material.Color);
 }

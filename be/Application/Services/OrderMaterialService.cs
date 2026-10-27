@@ -27,7 +27,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
     {
         var rows = await OrderMaterials.AsNoTracking().Where(om => om.OrderId == orderId)
             .Include(om => om.Material)
-            .OrderBy(om => om.Material.MaterialType).ThenBy(om => om.Material.MaterialCode).ThenBy(om => om.MaterialColor)
+            .OrderBy(om => om.Material.MaterialType).ThenBy(om => om.Material.MaterialCode).ThenBy(om => om.Material.Color)
             .ToListAsync(ct);
 
         var norm = await _planner.GetOrderNormAsync(orderId, ct);
@@ -35,7 +35,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
         var deliveries = await ReceivedCountsAsync(orderId, ct);
 
         return Result<IReadOnlyList<OrderMaterialDto>>.Success(rows
-            .Select(om => ToDto(om, norm.GetValueOrDefault((om.MaterialId, om.MaterialColor)),
+            .Select(om => ToDto(om, norm.GetValueOrDefault(om.MaterialId),
                 received.GetValueOrDefault(om.OrderMaterialId), deliveries.GetValueOrDefault(om.OrderMaterialId)))
             .ToList());
     }
@@ -81,7 +81,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
         var oldCustomerQty = entity.CustomerQty;
         var oldDeliveryCount = entity.ExpectedDeliveryCount;
-        var keyChanged = entity.MaterialId != dto.MaterialId || entity.MaterialColor != Color(dto.MaterialColor);
+        var keyChanged = entity.MaterialId != dto.MaterialId;
         if (keyChanged && await HasReceiptsAsync(orderMaterialId, ct))
             return Fail(ErrorCodes.WarehouseOrderMaterialInUse, WarehouseMessages.OrderMaterialInUse);
 
@@ -118,17 +118,18 @@ public sealed class OrderMaterialService : IOrderMaterialService
         var material = await _uow.Repository<Material>().Query().AsNoTracking()
             .FirstOrDefaultAsync(m => m.MaterialId == dto.MaterialId, ct);
         if (material is null) return NotFound();
-        var color = Color(dto.MaterialColor);
         if (material.Status != MaterialStatuses.Active
             && (entity.MaterialId != dto.MaterialId || entity.OrderMaterialId == 0))
             return Fail(ErrorCodes.WarehouseMaterialInactive, WarehouseMessages.MaterialInactive);
 
+        // UQ_OM (đơn, NVL): NVL đã gồm màu nên mỗi màu là một dòng riêng.
         var duplicate = await OrderMaterials.AnyAsync(om => om.OrderId == entity.OrderId && om.MaterialId == dto.MaterialId
-            && om.MaterialColor == color && om.OrderMaterialId != entity.OrderMaterialId, ct);
-        if (duplicate) return Fail(ErrorCodes.WarehouseOrderMaterialDuplicate, WarehouseMessages.OrderMaterialDuplicate);
+            && om.OrderMaterialId != entity.OrderMaterialId, ct);
+        if (duplicate)
+            return Fail(ErrorCodes.WarehouseOrderMaterialDuplicate, string.Format(WarehouseMessages.OrderMaterialDuplicateOf,
+                MaterialLabel(material)));
 
         entity.MaterialId = dto.MaterialId;
-        entity.MaterialColor = color;
         entity.RequiredQty = dto.RequiredQty;
         entity.CustomerQty = dto.CustomerQty;
         entity.ExpectedDeliveryCount = entity.CustomerQty > 0 ? dto.ExpectedDeliveryCount : null;   // CK_OM_Delivery
@@ -173,10 +174,11 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private static OrderMaterialDto ToDto(OrderMaterial om, decimal normQty, decimal receivedQty, int receivedCount) => new(
         om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
-        (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.MaterialColor, om.RequiredQty, om.CustomerQty,
+        (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
         om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, normQty, receivedQty);
 
-    private static string Color(string? color) => color?.Trim() ?? string.Empty;
+    private static string MaterialLabel(Material m) =>
+        string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";
 
     private static Result<OrderMaterialDto> NotFound() =>
         Result<OrderMaterialDto>.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);

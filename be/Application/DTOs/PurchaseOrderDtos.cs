@@ -18,10 +18,11 @@ public sealed record PurchaseOrderDto(
 
 /// <summary>
 /// Chọn NVL có sẵn (MaterialId) hoặc nhập NVL mới (NewMaterialName + NewMaterialUnit): NVL mới được thêm vào
-/// danh mục (phụ liệu, nhóm OTHER), nếu đã có NVL phụ liệu trùng tên thì dùng lại.
+/// danh mục (phụ liệu, nhóm OTHER, màu NewMaterialColor), nếu đã có NVL phụ liệu trùng tên + màu thì dùng lại.
+/// NVL có sẵn đã gồm màu (26/10) nên không nhập màu riêng.
 /// </summary>
 public sealed record SavePurchaseOrderLineDto(int? MaterialId, string? NewMaterialName, string? NewMaterialUnit,
-    string? MaterialColor, decimal OrderedQty, decimal UnitPrice);
+    string? NewMaterialColor, decimal OrderedQty, decimal UnitPrice);
 
 /// <summary>OrderId để trống = đơn mua dự trữ (kim, chỉ... dùng chung nhiều đơn), không cần Admin tạo mã đơn hàng.</summary>
 public sealed record CreatePurchaseOrderDto(int? OrderId, string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines);

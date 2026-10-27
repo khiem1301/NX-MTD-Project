@@ -16,18 +16,18 @@ public sealed class CreateMaterialIssueDtoValidator : AbstractValidator<CreateMa
         RuleFor(x => x.ReceivingTeamId).NotNull().When(x => x.WarehouseType == WarehouseTypes.SemiFinished);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).ChildRules(line =>
-        {
-            line.RuleFor(l => l.IssuedQty).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive);
-            line.RuleFor(l => l.MaterialColor).MaximumLength(50);
-        });
+            line.RuleFor(l => l.IssuedQty).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive));
+        // CK_MIL_Target / THROW 50045: phiếu cấp NVL chỉ có dòng NVL, phiếu cấp BTP chỉ có dòng BTP.
         RuleForEach(x => x.Lines)
-            .Must(l => l.MaterialId is not null && l.OrderLineId is null)
-            .When(x => x.WarehouseType == WarehouseTypes.Material);
+            .Must(l => l.MaterialId > 0 && l.OrderLineId is null && l.ProductComponentMaterialId is null)
+            .When(x => x.WarehouseType == WarehouseTypes.Material)
+            .WithMessage(WarehouseMessages.IssueLineMaterialOnly);
         RuleForEach(x => x.Lines)
-            .Must(l => l.OrderLineId is not null && l.MaterialId is null)
-            .When(x => x.WarehouseType == WarehouseTypes.SemiFinished);
+            .Must(l => l.OrderLineId > 0 && l.MaterialId is null)
+            .When(x => x.WarehouseType == WarehouseTypes.SemiFinished)
+            .WithMessage(WarehouseMessages.IssueLinePieceOnly);
         RuleFor(x => x.Lines)
-            .Must(l => l is null || l.Select(x => (x.MaterialId, Color: x.MaterialColor?.Trim() ?? string.Empty, x.OrderLineId))
+            .Must(l => l is null || l.Select(x => (x.MaterialId, x.OrderLineId, x.ProductComponentMaterialId))
                 .Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
     }
