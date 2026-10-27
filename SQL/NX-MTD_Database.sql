@@ -2290,6 +2290,12 @@ DECLARE @om1Vai INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE Order
         @om2Vai INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o2 AND MaterialId = @mVai),
         @om2Chi INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o2 AND MaterialId = @mChi);
 
+-- Định mức vải (UC09) của DEMO-DH001: thiếu định mức thì không lập được lệnh cắt (UC19).
+-- Áo DEMO-AO01 hết 1,4 m vải Đen (thân 0,85 + tay 0,4 + cổ 0,15), hao hụt 2% → 1.400 áo Đen ≈ 2.000 m (khớp RequiredQty).
+-- Vải của đơn chỉ có màu Đen nên dòng Xanh chưa có định mức; lập lệnh cho dòng Xanh sẽ bị chặn và nêu rõ dòng đó.
+INSERT dbo.OrderMaterialNorm (OrderMaterialId, ProductId, ComponentName, GarmentColor, SizeCode, QtyPerPiece, WastagePercent) VALUES
+ (@om1Vai, @p1, N'Thân', N'Đen', NULL, 0.85, 2), (@om1Vai, @p1, N'Tay', N'Đen', NULL, 0.40, 2), (@om1Vai, @p1, N'Cổ', N'Đen', NULL, 0.15, 2);
+
 /* ---------- 3. MI-07: đơn mua ở đủ các trạng thái ---------- */
 INSERT dbo.PurchaseOrder (PoCode, OrderId, SupplierId, OrderDate, GoodsStatus, PaymentStatus, RejectReason, PaymentReturnReason,
                           PaymentDate, PaidAmount, PaymentMethod, PaymentNote, PaidAt, Note, OrderedAt) VALUES

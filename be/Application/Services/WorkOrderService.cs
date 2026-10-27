@@ -269,11 +269,13 @@ public sealed class WorkOrderService : IWorkOrderService
     private async Task<Result<WorkOrderDto>?> CheckFabricAsync(int orderId, int cuttingTeamId,
         IReadOnlyList<PieceDemand> demands, CancellationToken ct)
     {
-        var needs = await _planner.GetNeedsAsync(orderId, demands, ct);
-        if (needs.Count == 0) return Fail(ErrorCodes.CuttingFabricShortage, WarehouseMessages.NoFabricNorm);
+        var plan = await _planner.GetPlanAsync(orderId, demands, ct);
+        if (plan.Uncovered.Count > 0)   // có dòng thiếu định mức: không được tính vải của dòng đó là 0
+            return Fail(ErrorCodes.CuttingFabricNormMissing,
+                $"{WarehouseMessages.FabricNormMissingFor}: {string.Join(", ", plan.Uncovered.Select(Describe))}.");
 
         var shortages = new List<string>();
-        foreach (var need in needs)
+        foreach (var need in plan.Needs)
         {
             var available = await _stock.GetAvailableAsync(StockKey.Material(need.MaterialId, need.MaterialColor), ct)
                             + await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, need.MaterialId,
@@ -327,6 +329,9 @@ public sealed class WorkOrderService : IWorkOrderService
             PlannedQty = l.PlannedQty,
         }).ToList();
     }
+
+    private static string Describe(PieceDemand d) =>
+        string.IsNullOrEmpty(d.PanelName) ? $"{d.Color}-{d.SizeCode}" : $"{d.Color}-{d.SizeCode} ({d.PanelName})";
 
     private static string Format(decimal qty) => qty.ToString("#,0.###", CultureInfo.GetCultureInfo("vi-VN"));
 

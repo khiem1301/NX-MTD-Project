@@ -6,6 +6,9 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
+/// <summary>Vải cần cho các dòng cần làm, kèm các dòng không có định mức vải nào khớp (không tính được vải).</summary>
+public sealed record FabricPlan(IReadOnlyList<FabricNeed> Needs, IReadOnlyList<PieceDemand> Uncovered);
+
 /// <summary>Vải cần cho lệnh cắt (từ định mức UC09), vải tổ cắt đang giữ và vải đã cấp theo lệnh.</summary>
 public sealed class FabricPlanner
 {
@@ -15,8 +18,12 @@ public sealed class FabricPlanner
 
     /// <summary>Chỉ tính NVL loại vải; phụ liệu cấp cho tổ may, không thuộc lệnh cắt.</summary>
     public async Task<IReadOnlyList<FabricNeed>> GetNeedsAsync(int orderId, IEnumerable<PieceDemand> demands,
-        CancellationToken ct)
+        CancellationToken ct) => (await GetPlanAsync(orderId, demands, ct)).Needs;
+
+    /// <summary>Như <see cref="GetNeedsAsync"/> nhưng cho biết thêm dòng nào chưa có định mức vải để chặn thay vì tính thiếu.</summary>
+    public async Task<FabricPlan> GetPlanAsync(int orderId, IEnumerable<PieceDemand> demands, CancellationToken ct)
     {
+        var demandList = demands.ToList();
         var orderMaterials = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
             .Where(om => om.OrderId == orderId && om.Material.MaterialType == MaterialTypes.Fabric)
             .Include(om => om.Material).Include(om => om.OrderMaterialNorms)
@@ -24,11 +31,12 @@ public sealed class FabricPlanner
         var byId = orderMaterials.ToDictionary(om => om.OrderMaterialId);
         var norms = orderMaterials.SelectMany(OrderMaterialService.ToNormLines).ToList();
 
-        return FabricRequirementCalculator.Calculate(norms, demands)
+        var needs = FabricRequirementCalculator.Calculate(norms, demandList)
             .Select(n => (Om: byId[n.OrderMaterialId], n.Qty))
             .Select(x => new FabricNeed(x.Om.OrderMaterialId, x.Om.MaterialId, x.Om.Material.MaterialCode,
                 x.Om.Material.MaterialName, x.Om.Material.Unit, x.Om.MaterialColor, x.Qty))
             .ToList();
+        return new FabricPlan(needs, FabricRequirementCalculator.FindUncovered(norms, demandList));
     }
 
     /// <summary>Vải tổ cắt đang giữ của đơn = đã nhận (phiếu cấp RECEIVED) − đã trả về kho (phiếu trả CONFIRMED).</summary>

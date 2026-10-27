@@ -42,6 +42,11 @@ public static class FabricRequirementCalculator
             .OrderBy(n => n.OrderMaterialId).ToList();
     }
 
+    /// <summary>Các dòng cần làm mà không có dòng định mức nào khớp; <see cref="Calculate"/> bỏ qua chúng (tính 0 vải).</summary>
+    public static IReadOnlyList<PieceDemand> FindUncovered(IReadOnlyCollection<NormLine> norms,
+        IEnumerable<PieceDemand> demands) =>
+        demands.Where(d => d.Qty > 0 && !norms.Any(n => n.ProductId == d.ProductId && Matches(n, d))).ToList();
+
     private static bool Matches(NormLine norm, PieceDemand demand) =>
         (string.IsNullOrWhiteSpace(norm.GarmentColor) || Text.Equals(norm.GarmentColor.Trim(), demand.Color.Trim()))
         && (string.IsNullOrWhiteSpace(norm.SizeCode) || Text.Equals(norm.SizeCode.Trim(), demand.SizeCode.Trim()))

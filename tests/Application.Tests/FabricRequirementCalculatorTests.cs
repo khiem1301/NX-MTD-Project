@@ -68,6 +68,26 @@ public class FabricRequirementCalculatorTests
     }
 
     [Fact]
+    public void FindUncovered_LineWithoutMatchingNorm_IsReturned()
+    {
+        var norms = new[] { Norm("Thân", 1m, color: "Đỏ") };
+
+        var uncovered = FabricRequirementCalculator.FindUncovered(norms,
+            new[] { Demand(10, color: "Đỏ"), Demand(5, color: "Xanh") });
+
+        uncovered.Should().ContainSingle().Which.Color.Should().Be("Xanh");
+    }
+
+    [Fact]
+    public void FindUncovered_GenericNorm_CoversEveryLine_AndZeroQtyIsIgnored()
+    {
+        var norms = new[] { Norm("Thân", 1m) };
+
+        FabricRequirementCalculator.FindUncovered(norms,
+            new[] { Demand(10, color: "Đỏ"), Demand(5, color: "Xanh", size: "L"), Demand(0, color: "Tím") }).Should().BeEmpty();
+    }
+
+    [Fact]
     public void Calculate_RoundsToThreeDecimals()
     {
         var needs = FabricRequirementCalculator.Calculate(new[] { Norm("Thân", 0.3333m, wastage: 3) }, new[] { Demand(7) });
