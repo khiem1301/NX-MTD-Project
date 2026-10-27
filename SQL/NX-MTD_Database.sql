@@ -3649,5 +3649,299 @@ COMMIT TRANSACTION;
 DROP TABLE #P, #O, #R;
 GO
 
+/* =====================================================================================
+   19.3 Dữ liệu demo để test luồng kho / cắt / giao việc trên giao diện (26/10)
+   ---------------------------------------------------------------------------------
+   - Ghi tồn kho đúng cách: mọi bút toán đi qua dbo.usp_Stock_Post (StockBalance luôn bằng Σ thẻ kho).
+   - Bù thẻ kho cho dữ liệu 19.1 (phiếu nhập PN-DEMO-001, cấp BTP PC-DEMO-001, bàn giao thành phẩm, ...).
+   - Thêm đơn DEMO-DH003 (mã hàng DEMO-AO01): mỗi bước xác nhận có sẵn một phiếu đang chờ để bấm thử:
+       Quản đốc xác nhận phiếu nhập (PN-DEMO-003, cần chụp ảnh chứng từ), chốt đơn mua (DM-DEMO-009);
+       Tổ trưởng cắt nhận vải (PC-DEMO-004), Thủ kho xác nhận trả vải (TV-DEMO-001) và bàn giao BTP (BG-DEMO-003);
+       Tổ trưởng may nhận BTP (PC-DEMO-006), công nhân xác nhận giao việc / thu hồi (WorkAllocation PENDING);
+       Thủ kho xác nhận xuất hàng (XH-DEMO-001), nhận bàn giao thành phẩm (TP-DEMO-004), Quản đốc duyệt kiểm kê (KK-DEMO-002).
+   - Chạy lại không nhân đôi dữ liệu (bỏ qua nếu đã có đơn DEMO-DH003). Xóa cả mục 19 nếu muốn database sạch.
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH003')
+BEGIN
+    PRINT N'Dữ liệu demo 19.3 đã có (DEMO-DH003), bỏ qua.';
+    RETURN;
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001')
+   OR NOT EXISTS (SELECT 1 FROM dbo.MaterialIssue WHERE IssueCode = 'PC-DEMO-001')
+BEGIN
+    PRINT N'Chưa có dữ liệu demo 19.1 (DEMO-DH001), bỏ qua 19.3.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+DECLARE @cat INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'CAT'),
+        @may INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1');
+DECLARE @quandoc INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC'),
+        @thukho  INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'THUKHO'),
+        @ttcat   INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTCAT'),
+        @ttmay   INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTMAY'),
+        @qaqc    INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QAQC1');
+DECLARE @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY1'),
+        @w2 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY2'),
+        @w3 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY3'),
+        @w4 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY4');
+DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+        @o1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
+        @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
+DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
+        @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
+        @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI02'),
+        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
+        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-NHAN01'),
+        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KIM01'),
+        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI02'),
+        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI03');
+DECLARE @sup1 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Công ty Vải Sợi Thành Công%'),
+        @sup2 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Phụ liệu may Hoàng Gia%');
+DECLARE @lM INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
+                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'M'),
+        @lL INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
+                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'L');
+
+/* ---------- 1. Đơn mới DEMO-DH003: dòng đơn + NVL của đơn ---------- */
+INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
+VALUES ('DEMO-DH003', @cus, '2026-10-15', '2026-11-20', 'PARTIAL', 'IN_PRODUCTION', N'Đơn demo để test luồng kho, cắt và giao việc');
+DECLARE @o3 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH003');
+
+INSERT dbo.OrderLine (OrderId, ProductVariantId, ProductId, OrderedQty, CmtUnitPrice)
+SELECT @o3, pv.ProductVariantId, pv.ProductId, v.Qty, 28000
+FROM (VALUES (N'Đen', 'M', 120), (N'Đen', 'L', 100)) v(Color, SizeCode, Qty)
+JOIN dbo.ProductVariant pv ON pv.ProductId = @p1 AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+DECLARE @l3M INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
+                    WHERE ol.OrderId = @o3 AND pv.SizeCode = 'M'),
+        @l3L INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
+                    WHERE ol.OrderId = @o3 AND pv.SizeCode = 'L');
+
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount) VALUES
+ (@o3, @mVai, 320, 0, NULL), (@o3, @mChi, 25, 0, NULL), (@o3, @mKhoa, 220, 0, NULL), (@o3, @mNhan, 220, 0, NULL);
+DECLARE @om3Vai  INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mVai),
+        @om3Khoa INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mKhoa),
+        @om3Nhan INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mNhan);
+
+/* ---------- 2. Đơn mua + phiếu nhập NVL ---------- */
+-- DM-DEMO-008: đã đặt, NCC giao 2 đợt; đợt 1 đã xác nhận (150 m), đợt 2 đang chờ Quản đốc xác nhận (100 m)
+INSERT dbo.PurchaseOrder (PoCode, OrderId, SupplierId, OrderDate, ExpectedDeliveryCount, GoodsStatus, PaymentStatus, Note)
+VALUES ('DM-DEMO-008', @o3, @sup1, '2026-10-20', 2, 'PARTIALLY_RECEIVED', 'UNPAID', N'Mua vải cho DEMO-DH003, chờ Kế toán xác nhận thanh toán');
+-- DM-DEMO-009: chờ Quản đốc chốt nhà cung cấp và đơn giá
+INSERT dbo.PurchaseOrder (PoCode, OrderId, GoodsStatus, PaymentStatus, Note)
+VALUES ('DM-DEMO-009', @o3, 'PENDING_FINALISATION', 'UNPAID', N'Khóa kéo và nhãn của DEMO-DH003');
+DECLARE @po8 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-008'),
+        @po9 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-009');
+INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, UnitPrice) VALUES
+ (@po8, @om3Vai, 320, 45000), (@po9, @om3Khoa, 220, 0), (@po9, @om3Nhan, 220, 0);
+DECLARE @pol8 INT = (SELECT PurchaseOrderLineId FROM dbo.PurchaseOrderLine WHERE PurchaseOrderId = @po8);
+
+INSERT dbo.MaterialReceipt (ReceiptCode, OrderId, PurchaseOrderId, ReceiptDate, Status, ConfirmedBy, ConfirmedAt, SubmittedAt) VALUES
+ ('PN-DEMO-002', @o3, @po8, '2026-10-22', 'CONFIRMED', @quandoc, '2026-10-22 15:30:00', '2026-10-22 14:00:00'),
+ ('PN-DEMO-003', @o3, @po8, '2026-10-26', 'PENDING', NULL, NULL, '2026-10-26 10:00:00');
+INSERT dbo.MaterialReceiptLine (MaterialReceiptId, OrderMaterialId, PurchaseOrderLineId, AcceptedQty)
+SELECT r.MaterialReceiptId, @om3Vai, @pol8, v.Qty
+FROM (VALUES ('PN-DEMO-002', 150), ('PN-DEMO-003', 100)) v(Code, Qty)
+JOIN dbo.MaterialReceipt r ON r.ReceiptCode = v.Code;
+
+/* ---------- 3. Lệnh cắt, phiếu cấp vải, bàn cắt, bàn giao BTP của DEMO-DH001 (bù chuỗi kho BTP) ---------- */
+INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, Note, CreatedAt, CompletedAt)
+VALUES ('LC-DEMO-001', @o1, @p1, @cat, '2026-09-22', 'COMPLETED', N'Lệnh cắt đã hoàn thành của DEMO-DH001', '2026-09-15 08:00:00', '2026-09-22 17:00:00');
+DECLARE @wo1 INT = (SELECT WorkOrderId FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-001');
+INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PlannedQty)
+SELECT @wo1, ol.OrderLineId, ol.OrderedQty FROM dbo.OrderLine ol WHERE ol.OrderId = @o1;
+INSERT dbo.CutHandover (HandoverCode, WorkOrderId, HandedAt, Status, ConfirmedBy, ConfirmedAt)
+VALUES ('BG-DEMO-001', @wo1, '2026-09-22 16:30:00', 'CONFIRMED', @thukho, '2026-09-22 17:00:00');
+INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+SELECT h.CutHandoverId, ol.OrderLineId, ol.OrderedQty, ol.OrderedQty
+FROM dbo.CutHandover h CROSS JOIN dbo.OrderLine ol WHERE h.HandoverCode = 'BG-DEMO-001' AND ol.OrderId = @o1;
+
+/* ---------- 4. DEMO-DH003: lệnh cắt, phiếu cấp vải, bàn cắt, trả vải, bàn giao BTP ---------- */
+INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, Note, CreatedAt)
+VALUES ('LC-DEMO-002', @o3, @p1, @cat, '2026-11-05', 'CUTTING', N'Lệnh cắt DEMO-DH003 đang cắt', '2026-10-22 08:00:00');
+DECLARE @wo2 INT = (SELECT WorkOrderId FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-002');
+INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PlannedQty) VALUES (@wo2, @l3M, 120), (@wo2, @l3L, 100);
+
+-- PC-DEMO-003: vải đã cấp và tổ cắt đã nhận (100 m); PC-DEMO-004: vải cấp thêm, đang chờ tổ trưởng cắt nhận (150 m)
+INSERT dbo.MaterialIssue (IssueCode, WarehouseType, OrderId, WorkOrderId, ReceivingTeamId, IssueDate, IssuedBy, Status, ReceivedBy, ReceivedAt, CreatedAt) VALUES
+ ('PC-DEMO-003', 'MATERIAL', @o3, @wo2, @cat, '2026-10-23', @thukho, 'RECEIVED', @ttcat, '2026-10-23 09:30:00', '2026-10-23 09:00:00'),
+ ('PC-DEMO-004', 'MATERIAL', @o3, @wo2, @cat, '2026-10-26', @thukho, 'PENDING_RECEIPT', NULL, NULL, '2026-10-26 08:30:00');
+INSERT dbo.MaterialIssueLine (MaterialIssueId, MaterialId, IssuedQty, ConfirmedQty)
+SELECT i.MaterialIssueId, @mVai, v.Qty, v.Conf
+FROM (VALUES ('PC-DEMO-003', 100, 100), ('PC-DEMO-004', 150, NULL)) v(Code, Qty, Conf)
+JOIN dbo.MaterialIssue i ON i.IssueCode = v.Code;
+
+-- TV-DEMO-001: tổ cắt trả 8 m vải thừa, chờ Thủ kho xác nhận
+INSERT dbo.MaterialReturn (ReturnCode, MaterialIssueId, Note, Status, CreatedAt)
+SELECT 'TV-DEMO-001', i.MaterialIssueId, N'Vải thừa sau bàn cắt 1', 'PENDING', '2026-10-25 16:00:00'
+FROM dbo.MaterialIssue i WHERE i.IssueCode = 'PC-DEMO-003';
+INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, ReturnedQty)
+SELECT r.MaterialReturnId, l.MaterialIssueLineId, 8
+FROM dbo.MaterialReturn r JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = r.MaterialIssueId WHERE r.ReturnCode = 'TV-DEMO-001';
+
+-- Bàn cắt: 30 lớp × (M:3, L:2) = 90 M + 60 L; bàn 2: 10 lớp = 30 M + 20 L
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, PlyCount, Status, CreatedAt) VALUES
+ (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 30, 'RECORDED', '2026-10-24 11:00:00'),
+ (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 10, 'RECORDED', '2026-10-26 11:00:00');
+INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, RatioValue, CalculatedQty, ActualQty)
+SELECT c.CuttingLayId, v.OrderLineId, v.Ratio, c.PlyCount * v.Ratio, c.PlyCount * v.Ratio
+FROM dbo.CuttingLay c
+CROSS JOIN (VALUES (@l3M, 3), (@l3L, 2)) v(OrderLineId, Ratio)
+WHERE c.WorkOrderId = @wo2;
+
+-- Bàn giao BTP: BG-DEMO-002 đã nhập kho BTP (90 M + 60 L); BG-DEMO-003 đang chờ Thủ kho xác nhận (30 M + 20 L)
+INSERT dbo.CutHandover (HandoverCode, WorkOrderId, HandedAt, Status, ConfirmedBy, ConfirmedAt) VALUES
+ ('BG-DEMO-002', @wo2, '2026-10-24 16:30:00', 'CONFIRMED', @thukho, '2026-10-24 17:00:00'),
+ ('BG-DEMO-003', @wo2, '2026-10-26 16:30:00', 'PENDING', NULL, NULL);
+INSERT dbo.CutHandoverLine (CutHandoverId, OrderLineId, HandedQty, ConfirmedQty)
+SELECT h.CutHandoverId, v.OrderLineId, v.Qty, CASE WHEN h.Status = 'CONFIRMED' THEN v.Qty END
+FROM dbo.CutHandover h
+JOIN (VALUES ('BG-DEMO-002', @l3M, 90), ('BG-DEMO-002', @l3L, 60), ('BG-DEMO-003', @l3M, 30), ('BG-DEMO-003', @l3L, 20)) v(Code, OrderLineId, Qty)
+  ON v.Code = h.HandoverCode;
+
+/* ---------- 5. Cấp BTP cho tổ may + đơn xin NVL / BTP đang chờ Thủ kho ---------- */
+-- PC-DEMO-005: tổ may đã nhận 50 M + 40 L (cấp trần giao việc); PC-DEMO-006: cấp thêm, đang chờ tổ trưởng may nhận
+INSERT dbo.MaterialIssue (IssueCode, WarehouseType, OrderId, ReceivingTeamId, IssueDate, IssuedBy, Status, ReceivedBy, ReceivedAt, CreatedAt) VALUES
+ ('PC-DEMO-005', 'SEMI_FINISHED', @o3, @may, '2026-10-25', @thukho, 'RECEIVED', @ttmay, '2026-10-25 09:30:00', '2026-10-25 09:00:00'),
+ ('PC-DEMO-006', 'SEMI_FINISHED', @o3, @may, '2026-10-26', @thukho, 'PENDING_RECEIPT', NULL, NULL, '2026-10-26 14:00:00');
+INSERT dbo.MaterialIssueLine (MaterialIssueId, OrderLineId, IssuedQty, ConfirmedQty)
+SELECT i.MaterialIssueId, v.OrderLineId, v.Qty, CASE WHEN i.Status = 'RECEIVED' THEN v.Qty END
+FROM dbo.MaterialIssue i
+JOIN (VALUES ('PC-DEMO-005', @l3M, 50), ('PC-DEMO-005', @l3L, 40), ('PC-DEMO-006', @l3M, 30), ('PC-DEMO-006', @l3L, 10)) v(Code, OrderLineId, Qty)
+  ON v.Code = i.IssueCode;
+
+INSERT dbo.Request (RequestCode, RequestTypeCode, Status, OrderId, WorkOrderId, TargetDate, Title, Content, CreatedBy, CreatedByTeamId, CreatedAt) VALUES
+ ('YC-DEMO-001', 'MATERIAL_REQUISITION', 'PENDING_PROCESSING', @o3, @wo2, '2026-10-29', N'Xin thêm vải cho DEMO-DH003',
+  N'Tổ cắt còn thiếu vải để cắt hết lệnh LC-DEMO-002', @ttcat, @cat, '2026-10-26 15:00:00'),
+ ('YC-DEMO-002', 'SEMI_FINISHED_REQUISITION', 'PENDING_PROCESSING', @o3, NULL, '2026-10-29', N'Xin BTP đợt 3 cho DEMO-DH003',
+  N'Tổ may cần thêm BTP để chia việc', @ttmay, @may, '2026-10-26 15:30:00');
+INSERT dbo.RequestLine (RequestId, MaterialId, Quantity)
+SELECT RequestId, @mVai, 80 FROM dbo.Request WHERE RequestCode = 'YC-DEMO-001';
+INSERT dbo.RequestLine (RequestId, OrderLineId, Quantity)
+SELECT r.RequestId, v.OrderLineId, v.Qty FROM dbo.Request r
+CROSS JOIN (VALUES (@l3M, 30), (@l3L, 20)) v(OrderLineId, Qty) WHERE r.RequestCode = 'YC-DEMO-002';
+
+/* ---------- 6. Phân công + giao việc cho công nhân (DEMO-DH003) ---------- */
+DECLARE @op1 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 AND OperationCode = 'OP01'),
+        @op2 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 AND OperationCode = 'OP02'),
+        @op3 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 AND OperationCode = 'OP03'),
+        @op4 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 AND OperationCode = 'OP04'),
+        @op5 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 AND OperationCode = 'OP05');
+INSERT dbo.OperationAssignment (SewingTeamId, OrderId, OperationId, WorkerId, ValidFrom) VALUES
+ (@may, @o3, @op1, @w1, '2026-10-25'), (@may, @o3, @op2, @w1, '2026-10-25'), (@may, @o3, @op3, @w2, '2026-10-25'),
+ (@may, @o3, @op4, @w3, '2026-10-25'), (@may, @o3, @op5, @w4, '2026-10-25');
+-- Tổ đã nhận 50 M + 40 L BTP nên mỗi công đoạn nhận tối đa 50 (M) / 40 (L) lần
+INSERT dbo.WorkAllocation (MovementType, SewingTeamId, WorkerId, OrderLineId, OperationId, Quantity, ConfirmedQty,
+                           RetrievalReason, ConfirmMode, Status, CreatedAt, ConfirmedAt) VALUES
+ ('HANDOVER',  @may, @w1, @l3M, @op1, 20, NULL, NULL, 'WORKER', 'PENDING',   '2026-10-26 08:00:00', NULL),
+ ('HANDOVER',  @may, @w1, @l3M, @op2, 30, 30,   NULL, 'WORKER', 'CONFIRMED', '2026-10-25 10:00:00', '2026-10-25 10:30:00'),
+ ('RETRIEVAL', @may, @w1, @l3M, @op2,  5, NULL, 'WORKER_ABSENT', 'WORKER', 'PENDING', '2026-10-26 09:00:00', NULL),
+ ('HANDOVER',  @may, @w2, @l3L, @op3, 25, 25,   NULL, 'WORKER', 'CONFIRMED', '2026-10-25 10:00:00', '2026-10-25 10:20:00'),
+ ('HANDOVER',  @may, @w3, @l3L, @op4, 15, NULL, NULL, 'WORKER', 'PENDING',   '2026-10-26 08:10:00', NULL),
+ ('HANDOVER',  @may, @w4, @l3M, @op5, 20, 20,   NULL, 'WORKER', 'CONFIRMED', '2026-10-25 10:00:00', '2026-10-25 10:40:00');
+
+/* ---------- 7. Thành phẩm + xuất hàng (DEMO-DH001) ---------- */
+-- QC đã đạt 510 (M) và 350 (L), đã bàn giao 450 và 350: còn 60 M đang chờ Thủ kho xác nhận nhận vào kho TP
+INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status)
+VALUES ('TP-DEMO-004', @o1, @p1, @qaqc, '2026-10-26 16:00:00', 'PENDING');
+INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty)
+SELECT FgHandoverId, @lM, 60 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-004';
+
+-- XH-DEMO-001 chờ Thủ kho xác nhận xuất; XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
+INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt) VALUES
+ ('XH-DEMO-001', @o1, '2026-10-30', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-26 15:00:00', NULL, NULL),
+ ('XH-DEMO-002', @o1, '2026-10-27', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-25 15:00:00', @thukho, '2026-10-26 09:00:00');
+INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
+SELECT d.DispatchNoteId, v.OrderLineId, v.Qty
+FROM dbo.DispatchNote d
+JOIN (VALUES ('XH-DEMO-001', @lM, 150), ('XH-DEMO-001', @lL, 100), ('XH-DEMO-002', @lM, 100)) v(Code, OrderLineId, Qty)
+  ON v.Code = d.DispatchCode;
+
+/* ---------- 8. Kiểm kê: phiếu tồn đầu kỳ đã duyệt (ghi tồn qua thủ tục) ---------- */
+INSERT dbo.Stocktake (StocktakeCode, WarehouseType, Scope, StocktakeDate, Status, CreatedAt, ApprovedAt)
+VALUES ('KK-DEMO-001', 'MATERIAL', N'Tồn đầu kỳ kho NVL', '2026-09-01', 'APPROVED', '2026-09-01 08:00:00', '2026-09-01 10:00:00');
+
+/* ---------- 9. Ghi tồn kho qua dbo.usp_Stock_Post, theo thứ tự thời gian để không xuất âm ---------- */
+CREATE TABLE #Mv (Seq INT IDENTITY(1,1) PRIMARY KEY, WarehouseType VARCHAR(15), MaterialId INT NULL, OrderLineId INT NULL,
+                  DocType VARCHAR(30), DocId INT, LineId INT NULL, Qty DECIMAL(18,3), TxDate DATE);
+-- Tồn đầu kỳ
+INSERT #Mv (WarehouseType, MaterialId, DocType, DocId, Qty, TxDate)
+SELECT 'MATERIAL', v.MaterialId, 'STOCKTAKE', (SELECT StocktakeId FROM dbo.Stocktake WHERE StocktakeCode = 'KK-DEMO-001'), v.Qty, '2026-09-01'
+FROM (VALUES (@mKhoa, 800), (@mNhan, 800), (@mChi, 60), (@mChiXanh, 40), (@mKim, 30), (@mVaiXanh, 300), (@mVaiTrang, 150)) v(MaterialId, Qty);
+-- Phiếu nhập NVL đã xác nhận
+INSERT #Mv (WarehouseType, MaterialId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'MATERIAL', om.MaterialId, 'MATERIAL_RECEIPT', r.MaterialReceiptId, l.MaterialReceiptLineId, l.AcceptedQty, r.ReceiptDate
+FROM dbo.MaterialReceipt r
+JOIN dbo.MaterialReceiptLine l ON l.MaterialReceiptId = r.MaterialReceiptId
+JOIN dbo.OrderMaterial om ON om.OrderMaterialId = l.OrderMaterialId
+WHERE r.Status = 'CONFIRMED' AND l.AcceptedQty > 0 AND r.ReceiptCode IN ('PN-DEMO-001', 'PN-DEMO-002')
+ORDER BY r.ReceiptDate, l.MaterialReceiptLineId;
+-- Vải đã cấp và tổ cắt đã nhận
+INSERT #Mv (WarehouseType, MaterialId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'MATERIAL', l.MaterialId, 'MATERIAL_ISSUE', i.MaterialIssueId, l.MaterialIssueLineId, -l.ConfirmedQty, i.IssueDate
+FROM dbo.MaterialIssue i JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = i.MaterialIssueId
+WHERE i.IssueCode = 'PC-DEMO-003';
+-- BTP: bàn giao đã xác nhận (nhập), phiếu cấp BTP đã nhận (xuất)
+INSERT #Mv (WarehouseType, OrderLineId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'SEMI_FINISHED', cl.OrderLineId, 'CUT_HANDOVER', h.CutHandoverId, cl.CutHandoverLineId, cl.ConfirmedQty, CAST(h.ConfirmedAt AS DATE)
+FROM dbo.CutHandover h JOIN dbo.CutHandoverLine cl ON cl.CutHandoverId = h.CutHandoverId
+WHERE h.Status = 'CONFIRMED' AND h.HandoverCode IN ('BG-DEMO-001', 'BG-DEMO-002')
+ORDER BY h.ConfirmedAt, cl.CutHandoverLineId;
+INSERT #Mv (WarehouseType, OrderLineId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'SEMI_FINISHED', l.OrderLineId, 'MATERIAL_ISSUE', i.MaterialIssueId, l.MaterialIssueLineId, -l.ConfirmedQty, i.IssueDate
+FROM dbo.MaterialIssue i JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = i.MaterialIssueId
+WHERE i.WarehouseType = 'SEMI_FINISHED' AND i.Status = 'RECEIVED' AND l.ProductComponentMaterialId IS NULL
+ORDER BY i.IssueDate, l.MaterialIssueLineId;
+-- Thành phẩm: nhập theo bàn giao, xuất theo phiếu đã xuất
+INSERT #Mv (WarehouseType, OrderLineId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'FINISHED', fl.OrderLineId, 'FG_HANDOVER', h.FgHandoverId, fl.FgHandoverLineId, fl.ConfirmedQty, CAST(h.ConfirmedAt AS DATE)
+FROM dbo.FgHandover h JOIN dbo.FgHandoverLine fl ON fl.FgHandoverId = h.FgHandoverId
+WHERE h.Status = 'CONFIRMED'
+ORDER BY h.ConfirmedAt, fl.FgHandoverLineId;
+INSERT #Mv (WarehouseType, OrderLineId, DocType, DocId, LineId, Qty, TxDate)
+SELECT 'FINISHED', dl.OrderLineId, 'DISPATCH_NOTE', d.DispatchNoteId, dl.DispatchNoteLineId, -dl.IssueQty, CAST(d.DispatchedAt AS DATE)
+FROM dbo.DispatchNote d JOIN dbo.DispatchNoteLine dl ON dl.DispatchNoteId = d.DispatchNoteId
+WHERE d.Status = 'IN_DELIVERY' AND d.DispatchedAt IS NOT NULL;
+
+CREATE TABLE #Posted (StockBalanceId INT, BalanceAfter DECIMAL(18,3));
+DECLARE @seq INT = 0, @wh VARCHAR(15), @mid INT, @olid INT, @dt VARCHAR(30), @did INT, @lid INT, @qty DECIMAL(18,3), @tx DATE;
+WHILE 1 = 1
+BEGIN
+    SELECT TOP (1) @seq = Seq, @wh = WarehouseType, @mid = MaterialId, @olid = OrderLineId, @dt = DocType, @did = DocId,
+                   @lid = LineId, @qty = Qty, @tx = TxDate
+    FROM #Mv WHERE Seq > @seq ORDER BY Seq;
+    IF @@ROWCOUNT = 0 BREAK;
+    INSERT #Posted EXEC dbo.usp_Stock_Post @WarehouseType = @wh, @MaterialId = @mid, @OrderLineId = @olid,
+        @SourceDocType = @dt, @SourceDocId = @did, @SourceLineId = @lid, @QtyChange = @qty, @TransactionDate = @tx;
+END;
+DROP TABLE #Mv, #Posted;
+
+-- Dòng của phiếu tồn đầu kỳ: số sổ 0, đếm ra đúng số đã ghi
+INSERT dbo.StocktakeLine (StocktakeId, StockBalanceId, BookQty, CountedQty, Note)
+SELECT s.StocktakeId, b.StockBalanceId, 0, t.QtyChange, N'Tồn đầu kỳ'
+FROM dbo.Stocktake s
+JOIN dbo.StockTransaction t ON t.SourceDocType = 'STOCKTAKE' AND t.SourceDocId = s.StocktakeId
+JOIN dbo.StockBalance b ON b.StockBalanceId = t.StockBalanceId
+WHERE s.StocktakeCode = 'KK-DEMO-001';
+
+-- KK-DEMO-002: kiểm kê đang chờ Quản đốc / Admin duyệt (vải lệch -8 m, khóa kéo khớp sổ)
+INSERT dbo.Stocktake (StocktakeCode, WarehouseType, Scope, StocktakeDate, Status, CreatedAt)
+VALUES ('KK-DEMO-002', 'MATERIAL', N'Kiểm kê vải và khóa kéo cuối tháng', '2026-10-26', 'PENDING_APPROVAL', '2026-10-26 17:00:00');
+INSERT dbo.StocktakeLine (StocktakeId, StockBalanceId, BookQty, CountedQty, Note)
+SELECT s.StocktakeId, b.StockBalanceId, b.OnHandQty,
+       CASE b.MaterialId WHEN @mVai THEN b.OnHandQty - 8 ELSE b.OnHandQty END,
+       CASE b.MaterialId WHEN @mVai THEN N'Hụt vải khi cắt' END
+FROM dbo.Stocktake s
+JOIN dbo.StockBalance b ON b.WarehouseType = 'MATERIAL' AND b.MaterialId IN (@mVai, @mKhoa)
+WHERE s.StocktakeCode = 'KK-DEMO-002';
+
+COMMIT TRANSACTION;
+GO
+
 PRINT N'NX-MTD: tạo database xong.';
 GO
