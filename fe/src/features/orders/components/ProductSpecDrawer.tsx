@@ -69,7 +69,7 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
     .map((c) => ({ value: c.componentName.trim(), label: c.componentName.trim() }));
   const materialOptions = (materials.data ?? []).map((m) => ({
     value: m.materialId,
-    label: `${m.materialCode} - ${m.materialName} (${m.unit})`,
+    label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
   }));
 
   const handleSave = () => {
@@ -214,12 +214,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
             ),
           },
           {
-            title: text.materialColor,
-            render: (_, r) => (
-              <Input value={r.materialColor} maxLength={50} style={{ width: 110 }} onChange={(e) => patch(setNorms, r.key, { materialColor: e.target.value })} />
-            ),
-          },
-          {
             title: text.qty,
             render: (_, r) => (
               <InputNumber min={0} precision={4} value={r.qtyPerGarment} style={{ width: 110 }} onChange={(v) => patch(setNorms, r.key, { qtyPerGarment: v })} />
@@ -284,7 +278,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
               key: newKey(),
               componentName: undefined,
               materialId: undefined,
-              materialColor: '',
               qtyPerGarment: null,
               wastagePercent: 0,
               lengthCm: null,

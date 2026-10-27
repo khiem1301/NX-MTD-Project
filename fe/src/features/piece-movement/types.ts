@@ -1,6 +1,6 @@
 import type { PageParams } from '@/types/api';
 
-/** Một lần giao / thu hồi việc với công nhân: số lần làm công đoạn, kèm BTP nếu công đoạn dùng BTP. */
+/** Một lần giao / thu hồi việc với công nhân: số lần làm công đoạn × màu × size (26/10: không còn BTP giao kèm). */
 export type WorkAllocation = {
   workAllocationId: number;
   movementType: string;
@@ -19,9 +19,7 @@ export type WorkAllocation = {
   operationName: string;
   usesSemiFinished: boolean;
   quantity: number;
-  pieceQty: number;
   confirmedQty: number | null;
-  confirmedPieceQty: number | null;
   discrepancyReason: string | null;
   retrievalReason: string | null;
   confirmMode: string;
@@ -30,18 +28,6 @@ export type WorkAllocation = {
   rejectReason: string | null;
   createdAt: string;
   confirmedAt: string | null;
-};
-
-/** BTP (bộ đủ) tổ đang giữ của một dòng đơn. */
-export type TeamHoldingLine = {
-  orderLineId: number;
-  orderCode: string;
-  productCode: string;
-  color: string;
-  sizeCode: string;
-  heldByTeam: number;
-  pendingPieceQty: number;
-  availablePieceQty: number;
 };
 
 /** Tiến độ chia việc của một công đoạn × dòng đơn. */
@@ -77,7 +63,6 @@ export type WorkerAllocationLine = {
 };
 
 export type WorkAllocationBoard = {
-  team: TeamHoldingLine[];
   operations: OperationProgress[];
   workers: WorkerAllocationLine[];
 };
@@ -95,13 +80,11 @@ export type CreateAllocationPayload = {
   orderLineId: number;
   operationId: number;
   quantity: number;
-  pieceQty?: number;
   retrievalReason?: string;
 };
 
 export type ConfirmAllocationPayload = {
   confirmedQty: number;
-  confirmedPieceQty?: number;
   discrepancyReason?: string;
 };
 export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };

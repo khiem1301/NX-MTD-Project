@@ -82,7 +82,6 @@ export type SaveProductSpecPayload = {
     color: string;
     sizeCode: string;
     materialId: number;
-    materialColor: string | null;
     qtyPerGarment: number;
     wastagePercent: number;
     lengthCm: number | null;

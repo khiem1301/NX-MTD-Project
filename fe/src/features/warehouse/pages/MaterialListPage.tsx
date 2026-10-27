@@ -50,6 +50,7 @@ export function MaterialListPage() {
       render: (v: string) => CATEGORY_LABEL[v] ?? v,
     },
     { title: LABELS.unit, dataIndex: 'unit', width: 100 },
+    { title: LABELS.color, dataIndex: 'color', width: 120, render: (v: string) => v || '—' },
     {
       title: LABELS.status,
       dataIndex: 'status',

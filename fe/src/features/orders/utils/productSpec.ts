@@ -8,8 +8,8 @@ import type {
 export type NormRow = {
   key: string;
   componentName?: string;
+  /** NVL đã gồm màu (26/10: màu nằm trong Material.Color). */
   materialId?: number;
-  materialColor: string;
   qtyPerGarment: number | null;
   wastagePercent: number;
   lengthCm: number | null;
@@ -25,7 +25,7 @@ export const variantKey = (color: string, sizeCode: string) =>
   `${color.trim().toUpperCase()}|${sizeCode.trim().toUpperCase()}`;
 
 const sameRowKey = (n: ProductNormItem) =>
-  [n.componentName, n.materialId, n.materialColor, n.qtyPerGarment, n.wastagePercent, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
+  [n.componentName, n.materialId, n.qtyPerGarment, n.wastagePercent, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
 
 let counter = 0;
 export const newKey = () => `k${++counter}`;
@@ -59,7 +59,6 @@ export function toRows(spec: ProductSpec): { components: ComponentRow[]; variant
       key: newKey(),
       componentName: n.componentName,
       materialId: n.materialId,
-      materialColor: n.materialColor,
       qtyPerGarment: n.qtyPerGarment,
       wastagePercent: n.wastagePercent,
       lengthCm: n.lengthCm,
@@ -117,7 +116,6 @@ export function toPayload(components: ComponentRow[], variants: VariantRow[], no
             color: v.color.trim(),
             sizeCode: v.sizeCode.trim(),
             materialId: n.materialId!,
-            materialColor: n.materialColor.trim() || null,
             qtyPerGarment: n.qtyPerGarment!,
             wastagePercent: n.wastagePercent,
             lengthCm: n.lengthCm,

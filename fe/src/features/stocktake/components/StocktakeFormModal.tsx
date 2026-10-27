@@ -29,7 +29,7 @@ const WAREHOUSE_OPTIONS = Object.values(WAREHOUSE_TYPE).map((value) => ({
 
 const rowKey = (b: StockBalance) =>
   b.materialId !== null
-    ? `${b.materialId}|${b.materialColor ?? ''}`
+    ? `${b.materialId}`
     : `${b.orderLineId}:${b.productComponentMaterialId ?? ''}`;
 const rowName = (b: StockBalance) =>
   b.materialId !== null
@@ -53,13 +53,13 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
 
   const initialCounted = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
+      l.materialId !== null ? `${l.materialId}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.countedQty,
     ]),
   );
   const initialNotes = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}|${l.materialColor ?? ''}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
+      l.materialId !== null ? `${l.materialId}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.note ?? undefined,
     ]),
   );
@@ -75,7 +75,6 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
       .filter((x) => x.counted !== null || x.note !== undefined)
       .map((x) => ({
         materialId: x.b.materialId ?? undefined,
-        materialColor: x.b.materialId !== null ? (x.b.materialColor ?? '') : undefined,
         orderLineId: x.b.orderLineId ?? undefined,
         productComponentMaterialId: x.b.productComponentMaterialId,
         countedQty: x.counted,

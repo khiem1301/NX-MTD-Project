@@ -34,7 +34,7 @@ export function CuttingLayPage() {
     { title: LABELS.workDate, dataIndex: 'workDate', render: formatDate },
     { title: LABELS.shift, dataIndex: 'shiftCode', render: (v: string) => SHIFT_LABEL[v] ?? v },
     { title: LABELS.laySequence, dataIndex: 'laySequence', align: 'right' },
-    { title: LABELS.fabricColor, dataIndex: 'fabricColor' },
+    { title: LABELS.fabricColor, dataIndex: 'fabricColor', render: (v: string) => v || '—' },
     { title: LABELS.plyCount, dataIndex: 'plyCount', align: 'right' },
     { title: LABELS.sizeRatio, dataIndex: 'sizeRatio' },
     {
