@@ -13,8 +13,9 @@ public static class RoleCodes
     public const string Electrician = "ELECTRICIAN";
     public const string Worker = "WORKER";
 
-    /// <summary>Quản đốc không được xem / sửa nhân viên có các vai trò này (UC16, GBR-01).</summary>
-    public static readonly IReadOnlySet<string> HiddenFromManager = new HashSet<string> { Admin, Manager, Accountant };
+    /// <summary>Quản đốc không được xem / quản lý nhân viên và tài khoản có các vai trò này (UC16, GBR-01; mở rộng 28/10:
+    /// Quản đốc quản lý được mọi người trừ Admin và Kế toán).</summary>
+    public static readonly IReadOnlySet<string> HiddenFromManager = new HashSet<string> { Admin, Accountant };
 }
 
 public static class TeamPositions

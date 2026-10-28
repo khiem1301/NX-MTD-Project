@@ -33,10 +33,11 @@ export const API = {
   employees: {
     base: (role: RolePath) => v1(`${role}/employees`),
     byId: (role: RolePath, id: number) => v1(`${role}/employees/${id}`),
-    resign: (id: number) => v1(`admin/employees/${id}/resign`),
-    lock: (id: number) => v1(`admin/employees/${id}/account/lock`),
-    unlock: (id: number) => v1(`admin/employees/${id}/account/unlock`),
-    resetPassword: (id: number) => v1(`admin/employees/${id}/account/reset-password`),
+    resign: (role: RolePath, id: number) => v1(`${role}/employees/${id}/resign`),
+    lock: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/lock`),
+    unlock: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/unlock`),
+    resetPassword: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/reset-password`),
+    import: (role: RolePath) => v1(`${role}/employee-import`),
   },
   teams: {
     base: (role: RolePath) => v1(`${role}/teams`),

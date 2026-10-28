@@ -97,7 +97,7 @@ public static class Messages
     public const string GradeProposedToday = "Hôm nay bạn đã đề xuất bậc cho công nhân này.";
     public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
     public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
-    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin, Quản đốc hoặc Kế toán.";
+    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin hoặc Kế toán.";
     public const string GradeWorkerInvalid = "Chỉ đặt bậc cho công nhân đang làm việc.";
     public const string GradeSupersededNote = "Quản đốc đã đặt bậc trực tiếp nên đề xuất này không còn hiệu lực.";
     public const string GradeSetToday = "Hôm nay bạn đã đặt bậc cho công nhân này.";

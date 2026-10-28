@@ -103,11 +103,13 @@ public class DataScopeTests
     }
 
     [Fact]
-    public void Manager_cannot_reach_admin_only_hr_actions()
+    public void Manager_manages_accounts_through_scoped_actions_only()
     {
-        // GBR-01: Quản đốc chỉ có cập nhật giới hạn; tạo, nghỉ việc và đặt lại mật khẩu nằm ở thư mục Admin.
+        // GBR-01 (mở rộng 28/10): Quản đốc quản lý tài khoản của mọi người trừ Admin / Kế toán — phạm vi do EmployeeScope chặn
+        // trong service. Riêng AdminUpdate (đổi vai trò tùy ý) vẫn chỉ ở thư mục Admin.
         var manager = Controllers().Single(c => c.Name == "EmployeesController" && Folder(c) == "Manager");
-        manager.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Select(m => m.Name).Should().NotContain(new[] { "Create", "Resign", "ResetPassword", "AdminUpdate" });
+        var actions = manager.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Select(m => m.Name).ToList();
+        actions.Should().Contain(new[] { "Create", "Resign", "Lock", "Unlock", "ResetPassword" });
+        actions.Should().NotContain("AdminUpdate");
     }
 }

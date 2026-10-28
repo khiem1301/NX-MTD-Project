@@ -21,10 +21,11 @@ import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; teamId?: number; role?: Role; status?: 'Active' | 'Resigned' };
 
-/** UC16 / UC17: Admin thấy hết và thêm / sửa; Quản đốc không thấy Admin, Quản đốc, Kế toán và chỉ sửa hồ sơ. */
+/** UC16 / UC17: Admin thấy hết; Quản đốc quản lý mọi người trừ Admin và Kế toán (thêm, sửa, nhập Excel, tài khoản). */
 export function EmployeesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.Admin;
+  const canManage = isAdmin || user?.role === ROLES.Manager;
   const base = isAdmin ? ROUTES.adminEmployees : ROUTES.managerEmployees;
   const navigate = useNavigate();
   const table = useTableQuery<Filters>({});
@@ -54,7 +55,7 @@ export function EmployeesPage() {
     { title: MESSAGES.hr.attendanceCode, dataIndex: 'attendanceCode', render: (v: number | null) => v ?? '—' },
     { title: MESSAGES.hr.startDate, dataIndex: 'startDate', render: formatDate },
     { title: MESSAGES.hr.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={EMPLOYEE_STATUS_TAG} /> },
-    ...(isAdmin
+    ...(canManage
       ? [{ title: MESSAGES.hr.account, dataIndex: 'accountStatus', render: (v: string | null) => (v ? <StatusTag status={v} labels={ACCOUNT_STATUS_TAG} /> : '—') }]
       : []),
   ];
@@ -63,7 +64,7 @@ export function EmployeesPage() {
     <Card
       title={MESSAGES.hr.employeesTitle}
       extra={
-        isAdmin && (
+        canManage && (
           <Space>
             <Button onClick={() => setImporting(true)}>Nhập từ Excel</Button>
             <Button type="primary" onClick={() => setCreating(true)}>{MESSAGES.hr.addEmployee}</Button>
@@ -80,7 +81,7 @@ export function EmployeesPage() {
           options={[{ value: 'Active', label: EMPLOYEE_STATUS_TAG.Active?.text }, { value: 'Resigned', label: EMPLOYEE_STATUS_TAG.Resigned?.text }]}
           onChange={(status) => table.setFilters({ status })} />
       </Space>
-      {isAdmin && <EmployeeImportModal open={importing} onClose={() => setImporting(false)} />}
+      {canManage && <EmployeeImportModal open={importing} onClose={() => setImporting(false)} />}
       <QueryError error={employees.error} onRetry={() => void employees.refetch()} />
       <Table<EmployeeListItem>
         rowKey="employeeId"

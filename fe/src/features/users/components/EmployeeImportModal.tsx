@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { InboxOutlined } from '@ant-design/icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert, Button, Modal, Space, Table, Tag, Typography, Upload, message } from 'antd';
+import { API } from '@/constants/apiEndpoints';
 import { MESSAGES } from '@/constants/messages';
+import { useRolePath } from '@/hooks/useRolePath';
 import { apiClient } from '@/services/apiClient';
 import type { ApiError, ApiResponse } from '@/types/api';
 
@@ -30,7 +32,6 @@ type Result = {
   failed: ImportRow[];
 };
 
-const BASE = '/api/v1/admin/employee-import';
 const HEADERS =
   'Mã NV | Họ tên | Giới tính | Ngày sinh | SĐT | Vai trò | Mã tổ | Hình thức lương | Ngày vào làm | Mã chấm công';
 const STATUS_TAG = {
@@ -51,6 +52,7 @@ const upload = async <T,>(url: string, file: File): Promise<T> => {
  */
 export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const BASE = API.employees.import(useRolePath());
   const [file, setFile] = useState<File | null>(null);
   const preview = useMutation<Preview, ApiError, File>({
     mutationFn: (f) => upload<Preview>(`${BASE}/preview`, f),

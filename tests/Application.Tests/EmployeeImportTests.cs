@@ -37,7 +37,15 @@ public class EmployeeImportTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private EmployeeImportService Service() => new(_uow, _parser, _employees, new CreateEmployeeDtoValidator());
+    private EmployeeImportService Service() => new(_uow, _parser, _employees, new CreateEmployeeDtoValidator(), new EmployeeScope(_user));
+    private readonly ICurrentUser _user = CurrentAdmin();
+
+    private static ICurrentUser CurrentAdmin()
+    {
+        var user = Substitute.For<ICurrentUser>();
+        user.Role.Returns(Roles.Admin);
+        return user;
+    }
 
     private static EmployeeExcelRowDto Row(int n, string code, string role = "Worker", string? team = "MAY1", string? error = null, int? att = null,
         string name = "Nguyễn Văn A", string pay = "PieceRate") =>

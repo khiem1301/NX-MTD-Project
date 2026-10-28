@@ -42,7 +42,7 @@ export function EmployeeFormDrawer({ open, employee, isAdmin, onClose, onCreated
   const update = useUpdateEmployee(employee?.employeeId ?? 0);
   const saving = create.isPending || update.isPending;
   // Quản đốc không gán được vai trò mà mình không nhìn thấy (GBR-01).
-  const roleOptions = isAdmin || employee === null ? ROLE_OPTIONS : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
+  const roleOptions = isAdmin ? ROLE_OPTIONS : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
 
   const suggest = () => {
     const values = form.getFieldsValue();
