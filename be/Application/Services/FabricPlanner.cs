@@ -87,6 +87,23 @@ public sealed class FabricPlanner
         return rows.GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
     }
 
+    /// <summary>Vải tổ cắt đã nhận (phiếu cấp RECEIVED, số xác nhận) và đã trả lại kho (phiếu trả CONFIRMED) theo NVL của một lệnh.</summary>
+    public async Task<(Dictionary<int, decimal> Received, Dictionary<int, decimal> Returned)> GetUsageAsync(int workOrderId,
+        CancellationToken ct)
+    {
+        var received = (await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking()
+            .Where(l => l.MaterialIssue.WorkOrderId == workOrderId && l.MaterialId != null
+                        && l.MaterialIssue.Status == IssueStatuses.Received)
+            .Select(l => new { MaterialId = l.MaterialId!.Value, Qty = l.ConfirmedQty ?? 0 }).ToListAsync(ct))
+            .GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
+        var returned = (await _uow.Repository<MaterialReturnLine>().Query().AsNoTracking()
+            .Where(r => r.MaterialReturn.Status == HandoverStatuses.Confirmed
+                        && r.MaterialIssueLine.MaterialIssue.WorkOrderId == workOrderId && r.MaterialIssueLine.MaterialId != null)
+            .Select(r => new { MaterialId = r.MaterialIssueLine.MaterialId!.Value, Qty = r.ConfirmedQty ?? 0 }).ToListAsync(ct))
+            .GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
+        return (received, returned);
+    }
+
     /// <summary>
     /// Vải các lệnh cắt khác (OPEN / CUTTING) đã "giữ chỗ": kho chỉ trừ phiếu cấp đang chờ nhận nên lệnh cắt chưa có phiếu cấp
     /// vẫn chưa giữ gì. <c>Outstanding</c> = Σ (cần − đã cấp) theo NVL; <c>TeamReceived</c> = vải tổ này đã nhận cho các lệnh khác

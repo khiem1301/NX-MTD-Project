@@ -26,4 +26,9 @@ export type FabricRequirement = {
   issuedQty: number;
   remainingQty: number;
   availableQty: number;
+  /** Kết quả vải: đã nhận, đã trả lại kho, thực dùng, vải theo định mức cho số đã cắt. */
+  receivedQty: number;
+  returnedQty: number;
+  usedQty: number;
+  cutNormQty: number;
 };

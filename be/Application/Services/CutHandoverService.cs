@@ -161,37 +161,23 @@ public sealed class CutHandoverService : ICutHandoverService
             handover.ConfirmedAt = _clock.Now;
             await _uow.SaveChangesAsync();
             await CompleteReplacementRequestAsync(handover.WorkOrderId, ct);
-            await CompleteWorkOrderIfFullAsync(handover, ct);
+            await NotifyConfirmedAsync(handover, ct);
             await _uow.SaveChangesAsync();
             _logger.LogInformation("Cut handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.HandoverConfirmed);
         });
 
     /// <summary>
-    /// Trạng thái lệnh cắt bám theo tiến trình: khi BTP đã vào kho (phiếu đã xác nhận) đủ số kế hoạch của mọi dòng thì lệnh
-    /// tự chuyển COMPLETED và báo Quản đốc (người quyết định bước tiếp: KPI, cấp BTP cho tổ may). Báo tổ cắt về kết quả phiếu.
+    /// Báo tổ cắt phiếu bàn giao đã được kho xác nhận. Lệnh cắt KHÔNG tự hoàn thành ở đây: theo swimlane còn bước tổ cắt trả
+    /// vải thừa, rồi bấm "Cắt xong" để hệ thống so vải thực dùng với định mức và báo Quản đốc (WorkOrderService.FinishCuttingAsync).
     /// </summary>
-    private async Task CompleteWorkOrderIfFullAsync(CutHandover handover, CancellationToken ct)
+    private async Task NotifyConfirmedAsync(CutHandover handover, CancellationToken ct)
     {
-        var wo = await _uow.Repository<WorkOrder>().Query().Include(w => w.WorkOrderLines).Include(w => w.Order)
-            .FirstAsync(w => w.WorkOrderId == handover.WorkOrderId, ct);
-        var received = await _uow.Repository<CutHandoverLine>().Query()
-            .Where(l => l.CutHandover.WorkOrderId == wo.WorkOrderId && l.CutHandover.Status == HandoverStatuses.Confirmed)
-            .Select(l => new { l.OrderLineId, l.ProductComponentMaterialId, Qty = l.ConfirmedQty ?? 0 })
-            .ToListAsync(ct);
-        var planned = wo.WorkOrderLines.GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId))
-            .Select(g => (g.Key, Qty: g.Sum(l => l.PlannedQty)));
-        var full = planned.All(p => received.Where(r => (r.OrderLineId, r.ProductComponentMaterialId) == p.Key).Sum(r => r.Qty) >= p.Qty);
-
+        var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking().FirstAsync(w => w.WorkOrderId == handover.WorkOrderId, ct);
         await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Warehouse,
-            "BTP đã vào kho", $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}.", HandoverLink), ct);
-
-        if (!full || wo.Status == WorkOrderStatuses.Completed) return;
-        wo.Status = WorkOrderStatuses.Completed;
-        wo.CompletedAt = _clock.Now;
-        await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production,
-            "Lệnh cắt đã cắt xong và nhập kho",
-            $"Lệnh cắt {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) đã cắt xong, BTP vào kho đủ kế hoạch.", "/cutting/work-orders"), ct);
+            "BTP đã vào kho",
+            $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}. Còn vải thừa thì lập phiếu trả vải, xong thì bấm Cắt xong.",
+            HandoverLink), ct);
     }
 
     /// <summary>

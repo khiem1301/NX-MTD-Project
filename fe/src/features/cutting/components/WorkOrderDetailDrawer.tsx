@@ -166,6 +166,34 @@ export function WorkOrderDetailDrawer({
                 align: 'right',
                 render: formatQty,
               },
+              {
+                title: LABELS.fabricReturned,
+                dataIndex: 'returnedQty',
+                align: 'right',
+                render: formatQty,
+              },
+              {
+                title: LABELS.fabricUsed,
+                dataIndex: 'usedQty',
+                align: 'right',
+                render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
+              },
+              {
+                title: LABELS.fabricCutNorm,
+                dataIndex: 'cutNormQty',
+                align: 'right',
+                render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
+              },
+              {
+                title: LABELS.fabricDiff,
+                key: 'diff',
+                align: 'right',
+                render: (_, f) => {
+                  if (f.receivedQty <= 0) return '—';
+                  const diff = f.usedQty - f.cutNormQty;
+                  return <Typography.Text type={diff > 0 ? 'danger' : undefined}>{diff > 0 ? '+' : ''}{formatQty(diff)}</Typography.Text>;
+                },
+              },
             ]}
           />
         </>

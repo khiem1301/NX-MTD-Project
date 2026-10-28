@@ -17,23 +17,63 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     private readonly List<WorkOrder> _workOrders = [];
     private readonly List<CutHandoverLine> _handoverLines = [];
     private readonly List<CuttingLayLine> _layLines = [];
+    private readonly List<MaterialIssueLine> _issueLines = [];
+    private readonly List<MaterialReturnLine> _returnLines = [];
+    private readonly List<MaterialReturn> _returns = [];
+    private readonly List<ProductComponentMaterial> _norms = [];
     private readonly WorkOrder _wo;
 
     public WorkOrderFinishCuttingTests()
     {
         SetupQueryable(_workOrders); SetupQueryable(_handoverLines); SetupQueryable(_layLines);
+        SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_returns); SetupQueryable(_norms);
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _wo = new WorkOrder
         {
             WorkOrderId = 7, WorkOrderCode = "LC-7", CuttingTeamId = TeamId, Status = WorkOrderStatuses.Cutting,
             Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001" },
         };
-        _wo.WorkOrderLines.Add(new WorkOrderLine { WorkOrderId = 7, OrderLineId = LineId, PlannedQty = 100 });
+        _wo.WorkOrderLines.Add(new WorkOrderLine
+        {
+            WorkOrderId = 7, OrderLineId = LineId, PlannedQty = 100,
+            OrderLine = new OrderLine { OrderLineId = LineId, ProductVariantId = 5 },
+        });
         _workOrders.Add(_wo);
     }
 
     private WorkOrderService Sut() => new(Uow, Substitute.For<IStockService>(), new FabricPlanner(Uow),
         Substitute.For<IDocumentCodeGenerator>(), Notifier, NullLogger<WorkOrderService>.Instance);
+
+    private readonly Material _fabric = new()
+    {
+        MaterialId = 100, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
+    };
+
+    /// <summary>Định mức 1 m vải cho 1 bộ của biến thể 5.</summary>
+    private void Norm(decimal perGarment = 1m) => _norms.Add(new ProductComponentMaterial
+    {
+        ProductComponentMaterialId = 900, ProductVariantId = 5, ProductComponentId = 1, MaterialId = 100, QtyPerGarment = perGarment,
+        Material = _fabric, ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
+    });
+
+    private MaterialIssueLine IssueReceived(decimal qty) => AddIssueLine(qty, IssueStatuses.Received);
+
+    private MaterialIssueLine AddIssueLine(decimal qty, string status)
+    {
+        var line = new MaterialIssueLine
+        {
+            MaterialIssueLineId = _issueLines.Count + 1, MaterialId = 100, IssuedQty = qty, ConfirmedQty = status == IssueStatuses.Received ? qty : null,
+            MaterialIssue = new MaterialIssue { WorkOrderId = 7, Status = status },
+        };
+        _issueLines.Add(line);
+        return line;
+    }
+
+    private void Return(MaterialIssueLine issue, decimal qty, string status) => _returnLines.Add(new MaterialReturnLine
+    {
+        MaterialIssueLine = issue, ConfirmedQty = status == HandoverStatuses.Confirmed ? qty : null, ReturnedQty = qty,
+        MaterialReturn = new MaterialReturn { Status = status, MaterialIssue = issue.MaterialIssue },
+    });
 
     private void Cut(int qty) => _layLines.Add(new CuttingLayLine
     {
@@ -57,6 +97,52 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
         _wo.Note.Should().Contain("Hết vải");
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("80/100") && m.Message.Contains("Hết vải")), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task FullPlan_NeedsNoReason()
+    {
+        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
+
+        (await Sut().FinishCuttingAsync(7, TeamId, null, default)).IsSuccess.Should().BeTrue();
+
+        _wo.Status.Should().Be(WorkOrderStatuses.Completed);
+    }
+
+    [Fact]
+    public async Task APendingFabricReturn_BlocksFinishing_UntilTheWarehouseConfirmsIt()
+    {
+        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
+        var issue = IssueReceived(120);
+        _returns.Add(new MaterialReturn { Status = HandoverStatuses.Pending, MaterialIssue = issue.MaterialIssue });
+
+        var blocked = await Sut().FinishCuttingAsync(7, TeamId, null, default);
+
+        blocked.Message.Should().Be(WarehouseMessages.WorkOrderHasPendingReturn);
+        _wo.Status.Should().Be(WorkOrderStatuses.Cutting);
+
+        _returns.Clear();
+        (await Sut().FinishCuttingAsync(7, TeamId, null, default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Finishing_ComparesTheFabricActuallyUsedWithTheNormAndTellsTheManager()
+    {
+        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
+        Norm(1m);                                   // 100 bộ → 100 m
+        var issue = IssueReceived(120);             // nhận 120 m
+        Return(issue, 15, HandoverStatuses.Confirmed);   // trả 15 m → dùng 105 m, vượt định mức 5 m
+        Return(issue, 40, HandoverStatuses.Pending);     // phiếu trả chưa xác nhận không tính (và đang chờ → chặn)
+        _returns.Add(new MaterialReturn { Status = HandoverStatuses.Cancelled, MaterialIssue = issue.MaterialIssue });
+        _returnLines.RemoveAll(r => r.MaterialReturn.Status == HandoverStatuses.Pending);
+
+        var result = await Sut().FinishCuttingAsync(7, TeamId, null, default);
+
+        result.IsSuccess.Should().BeTrue();
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("V01") && m.Message.Contains("thực dùng 105")
+                && m.Message.Contains("trả 15") && m.Message.Contains("định mức 100") && m.Message.Contains("vượt 5")),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

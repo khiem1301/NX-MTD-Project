@@ -5,10 +5,14 @@ namespace NX_MTD.Application.DTOs;
 public sealed record FabricNeed(int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal RequiredQty);
 
-/// <summary>Vải của lệnh cắt: cần (định mức), đã cấp (chờ nhận + đã nhận), còn phải cấp, khả dụng trong kho.</summary>
+/// <summary>
+/// Vải của lệnh cắt: cần (định mức), đã cấp (chờ nhận + đã nhận), còn phải cấp, khả dụng trong kho. Kết quả vải: tổ đã nhận,
+/// đã trả lại kho (phiếu trả đã xác nhận), thực dùng = đã nhận − đã trả, và vải theo định mức cho số đã cắt thực tế.
+/// </summary>
 public sealed record FabricRequirementDto(
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
-    decimal RequiredQty, decimal IssuedQty, decimal RemainingQty, decimal AvailableQty);
+    decimal RequiredQty, decimal IssuedQty, decimal RemainingQty, decimal AvailableQty,
+    decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0, decimal CutNormQty = 0);
 
 /// <summary>
 /// Một dòng xem trước vải khi lập lệnh cắt: cần theo định mức, khả dụng trong kho, phần kho đã giữ cho các lệnh cắt khác,

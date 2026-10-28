@@ -59,7 +59,7 @@ export const parseLineKey = (key: string) => {
 
 export const LABELS = {
   finishCutting: 'Cắt xong',
-  finishCuttingHint: 'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận. Cắt ít hơn kế hoạch thì phải nêu lý do.',
+  finishCuttingHint: 'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống so vải thực dùng với định mức và báo Quản đốc. Cắt ít hơn kế hoạch thì phải nêu lý do.',
   finishCuttingReason: 'Lý do cắt thiếu kế hoạch',
   fabricPreview: 'Vải cần cho kế hoạch này',
   fabricPreviewHint: 'Khả dụng = tồn kho khả dụng − vải các lệnh cắt khác đã giữ chỗ + vải tổ cắt đang giữ còn trống của đơn.',
@@ -77,6 +77,11 @@ export const LABELS = {
   workOrdersTab: 'Lệnh cắt',
   fabricByOrderHint: 'Đơn nào đang dùng vải nào theo các lệnh cắt chưa hủy: cần, đã cấp cho tổ cắt, còn phải cấp.',
   fabricIssued: 'Đã cấp',
+  fabricReceived: 'Đã nhận',
+  fabricReturned: 'Đã trả kho',
+  fabricUsed: 'Thực dùng',
+  fabricCutNorm: 'Định mức theo đã cắt',
+  fabricDiff: 'Chênh lệch',
   fabricRemaining: 'Còn phải cấp',
   fabricWorkOrders: 'Lệnh cắt',
   createReplacement: 'Lập lệnh cắt bù',
