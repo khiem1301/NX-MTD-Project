@@ -26,6 +26,7 @@ public static class ProductionModule
         services.AddScoped<IDefectService, DefectService>();
         services.AddScoped<IEndOfOrderService, EndOfOrderService>();
         services.AddScoped<IRequestTypeHandler, ReplacementCuttingRequestHandler>();   // KI-09
+        services.AddScoped<IRequestTypeHandler, DefectiveMaterialRequestHandler>();    // NVL lỗi: duyệt → kiểm tồn → phiếu xin / đơn mua
         return services;
     }
 }

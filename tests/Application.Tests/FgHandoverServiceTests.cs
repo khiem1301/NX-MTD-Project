@@ -30,6 +30,7 @@ public class FgHandoverServiceTests
     private readonly List<OrderLine> _orderLines = new();
     private readonly List<FgHandover> _handovers = new();
     private readonly List<FgHandoverLine> _handoverLines = new();
+    private readonly List<KpiTarget> _kpis = new();
     private readonly Product _product = new() { ProductId = 3, ProductCode = "AO-01" };
     private readonly Employee _qa = new() { EmployeeId = Inspector, FullName = "QA Một" };
     private readonly CustomerOrder _order = new() { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction };
@@ -45,7 +46,8 @@ public class FgHandoverServiceTests
         _output.GetQcFinishedByOrderLineAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
             .Returns(_ => (IReadOnlyDictionary<int, int>)new Dictionary<int, int>(_qc));
         _orders.Add(_order);
-        Setup(_orders); Setup(_orderLines); Setup(_handovers); Setup(_handoverLines);
+        Setup(_orders); Setup(_orderLines); Setup(_handovers); Setup(_handoverLines); Setup(_kpis);
+        _uow.SaveChangesAsync().Returns(Task.FromResult(1));
         AddLine(101, "Đen", "M", qc: 100);
         AddLine(102, "Đen", "L", qc: 60);
     }
@@ -209,6 +211,54 @@ public class FgHandoverServiceTests
                 && m.All(x => x.Key.WarehouseType == WarehouseTypes.Finished && x.SourceDocType == StockDocTypes.FgHandover)
                 && m.Sum(x => x.QtyChange) == 50),
             Arg.Any<CancellationToken>());
+    }
+
+    private void Kpi(int target, string status = KpiStatuses.Active) => _kpis.Add(new KpiTarget
+    {
+        OrderId = 7, ProductId = 3, TargetFinishedQty = target, Status = status, Order = _order, Product = _product,
+        SewingTeam = new Team { TeamName = "Tổ may 1" },
+    });
+
+    private async Task ConfirmAllAsync(FgHandover h) =>
+        await Service().ConfirmAsync(h.FgHandoverId,
+            new ConfirmFgHandoverDto(h.FgHandoverLines.Select(l => new ConfirmFgHandoverLineDto(l.FgHandoverLineId, l.HandedQty, null)).ToList()), 9, default);
+
+    [Fact]
+    public async Task Confirm_compares_the_received_finished_goods_with_the_active_kpi_and_tells_the_manager()
+    {
+        Kpi(200);
+        Handover(HandoverStatuses.Confirmed, (101, 80)).FgHandoverLines.Single().ConfirmedQty = 80;   // lần nhận trước
+        var h = Handover(HandoverStatuses.Pending, (101, 40), (102, 10));
+
+        await ConfirmAllAsync(h);
+
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("130/200") && m.Message.Contains("65%") && m.Message.Contains("chưa đạt")
+                && m.Message.Contains("DH-1") && m.Message.Contains("Tổ may 1")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_tells_the_manager_the_kpi_is_met_when_the_received_qty_reaches_the_target()
+    {
+        Kpi(50);
+        var h = Handover(HandoverStatuses.Pending, (101, 40), (102, 10));
+
+        await ConfirmAllAsync(h);
+
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("50/50") && m.Message.Contains("đã đạt")), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Confirm_does_not_notify_the_manager_without_an_active_kpi()
+    {
+        Kpi(100, KpiStatuses.Closed);
+        var h = Handover(HandoverStatuses.Pending, (101, 40));
+
+        await ConfirmAllAsync(h);
+
+        await _notifier.DidNotReceive().NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

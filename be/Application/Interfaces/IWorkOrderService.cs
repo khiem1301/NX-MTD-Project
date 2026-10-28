@@ -29,4 +29,11 @@ public interface IWorkOrderService
     Task<Result<WorkOrderDto>> CreateReplacementAsync(CreateReplacementWorkOrderDto dto, CancellationToken ct);
     Task<Result<WorkOrderDto>> UpdateAsync(int workOrderId, SaveWorkOrderDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int workOrderId, CancellationToken ct);
+
+    /// <summary>
+    /// Tổ cắt báo cắt xong khi cắt ít hơn kế hoạch (đủ kế hoạch thì lệnh tự hoàn thành khi kho xác nhận): lệnh đang cắt, không
+    /// còn phiếu bàn giao chờ kho, mọi BTP đã cắt đã được kho xác nhận; cắt thiếu kế hoạch thì phải nhập lý do. Lệnh chuyển
+    /// COMPLETED và báo Quản đốc.
+    /// </summary>
+    Task<Result> FinishCuttingAsync(int workOrderId, int cuttingTeamId, string? reason, CancellationToken ct);
 }

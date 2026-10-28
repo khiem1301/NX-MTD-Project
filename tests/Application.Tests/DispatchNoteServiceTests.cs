@@ -29,6 +29,7 @@ public class DispatchNoteServiceTests
     private readonly List<OrderLine> _orderLines = new();
     private readonly List<DispatchNote> _notes = new();
     private readonly List<DispatchNoteLine> _noteLines = new();
+    private readonly List<Attachment> _photos = new();
     private readonly Product _product = new() { ProductId = 3, ProductCode = "AO-01" };
     private readonly CustomerOrder _order;
 
@@ -47,7 +48,7 @@ public class DispatchNoteServiceTests
             Customer = new Customer { CustomerName = "Khách A" },
         };
         _orders.Add(_order);
-        Setup(_orders); Setup(_orderLines); Setup(_notes); Setup(_noteLines);
+        Setup(_orders); Setup(_orderLines); Setup(_notes); Setup(_noteLines); Setup(_photos);
         AddLine(101, ordered: 100);
         AddLine(102, ordered: 50);
     }
@@ -88,6 +89,18 @@ public class DispatchNoteServiceTests
             _noteLines.Add(line);
         }
         _notes.Add(note);
+        return note;
+    }
+
+    private void Photo(DispatchNote note, string purpose) => _photos.Add(new Attachment
+    {
+        OwnerType = AttachmentOwnerTypes.DispatchNote, OwnerId = note.DispatchNoteId, Purpose = purpose, IsCurrent = true,
+    });
+
+    private DispatchNote Approved(params (int OrderLineId, int Issue, int? Received)[] lines)
+    {
+        var note = Note(DispatchStatuses.Approved, lines);
+        Photo(note, AttachmentPurposes.SignedIssueSlip);
         return note;
     }
 
@@ -197,22 +210,127 @@ public class DispatchNoteServiceTests
     // ---------- Hủy / xuất / từ chối ----------
 
     [Fact]
-    public async Task Cancel_only_works_for_a_pending_note()
+    public async Task Cancel_works_until_the_goods_leave_the_warehouse()
     {
         var pending = Note(DispatchStatuses.Pending, (101, 10, null));
+        var waiting = Note(DispatchStatuses.PendingApproval, (101, 10, null));
+        var approved = Note(DispatchStatuses.Approved, (101, 10, null));
         var exported = Note(DispatchStatuses.InDelivery, (101, 10, null));
 
-        (await Service().CancelAsync(pending.DispatchNoteId, default)).IsSuccess.Should().BeTrue();
+        foreach (var n in new[] { pending, waiting, approved })
+            (await Service().CancelAsync(n.DispatchNoteId, default)).IsSuccess.Should().BeTrue();
         (await Service().CancelAsync(exported.DispatchNoteId, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
 
-        pending.Status.Should().Be(DispatchStatuses.Cancelled);
+        new[] { pending, waiting, approved }.Should().OnlyContain(n => n.Status == DispatchStatuses.Cancelled);
         exported.Status.Should().Be(DispatchStatuses.InDelivery);
+    }
+
+    // ---------- Lập phiếu xuất → duyệt → xuất ----------
+
+    private static PrepareDispatchDto Prepare(DispatchNote note, params int[] qty) =>
+        new(note.DispatchNoteLines.Select((l, i) => new PrepareDispatchLineDto(l.DispatchNoteLineId, qty[i])).ToList(), null);
+
+    [Fact]
+    public async Task Prepare_fixes_the_issued_qty_sends_the_note_for_approval_and_tells_the_manager()
+    {
+        var note = Note(DispatchStatuses.Pending, (101, 40, null), (102, 10, null));
+        note.RejectReason = "Quản đốc trả lại: lần trước";
+
+        var result = await Service().PrepareAsync(note.DispatchNoteId, Prepare(note, 35, 10) with { Note = "Thiếu 5 cái" }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        note.Status.Should().Be(DispatchStatuses.PendingApproval);
+        note.DispatchNoteLines.Select(l => l.IssueQty).Should().Equal(35, 10);
+        note.RejectReason.Should().BeNull();
+        note.Note.Should().Contain("Thiếu 5 cái");
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(41)]
+    public async Task Prepare_refuses_a_qty_below_one_or_above_what_the_manager_asked_for(int qty)
+    {
+        var note = Note(DispatchStatuses.Pending, (101, 40, null));
+
+        var result = await Service().PrepareAsync(note.DispatchNoteId, Prepare(note, qty), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+        note.Status.Should().Be(DispatchStatuses.Pending);
+        note.DispatchNoteLines.Single().IssueQty.Should().Be(40);
+    }
+
+    [Fact]
+    public async Task Prepare_needs_every_line_and_a_pending_note()
+    {
+        var note = Note(DispatchStatuses.Pending, (101, 40, null), (102, 10, null));
+        var missing = new PrepareDispatchDto([new PrepareDispatchLineDto(note.DispatchNoteLines.First().DispatchNoteLineId, 10)], null);
+        (await Service().PrepareAsync(note.DispatchNoteId, missing, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+
+        var approved = Note(DispatchStatuses.Approved, (101, 10, null));
+        (await Service().PrepareAsync(approved.DispatchNoteId, Prepare(approved, 10), default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().PrepareAsync(999, Prepare(note, 1, 1), default)).Kind.Should().Be(ResultKind.NotFound);
+    }
+
+    [Fact]
+    public async Task Approve_moves_a_waiting_note_to_approved_and_tells_the_warehouse_keeper()
+    {
+        var note = Note(DispatchStatuses.PendingApproval, (101, 40, null));
+
+        (await Service().ApproveAsync(note.DispatchNoteId, default)).IsSuccess.Should().BeTrue();
+
+        note.Status.Should().Be(DispatchStatuses.Approved);
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        var pending = Note(DispatchStatuses.Pending, (101, 10, null));
+        (await Service().ApproveAsync(pending.DispatchNoteId, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+    }
+
+    [Fact]
+    public async Task Return_sends_the_note_back_to_the_warehouse_keeper_with_the_reason()
+    {
+        var note = Note(DispatchStatuses.PendingApproval, (101, 40, null));
+
+        (await Service().ReturnAsync(note.DispatchNoteId, new ReasonDto("  Sai số lượng "), default)).IsSuccess.Should().BeTrue();
+
+        note.Status.Should().Be(DispatchStatuses.Pending);
+        note.RejectReason.Should().Be("Quản đốc trả lại: Sai số lượng");
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("Sai số lượng")), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Export_is_refused_before_the_manager_approves()
+    {
+        var pending = Note(DispatchStatuses.Pending, (101, 10, null));
+        var waiting = Note(DispatchStatuses.PendingApproval, (101, 10, null));
+        Photo(pending, AttachmentPurposes.SignedIssueSlip); Photo(waiting, AttachmentPurposes.SignedIssueSlip);
+
+        (await Service().ExportAsync(pending.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().ExportAsync(waiting.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+    }
+
+    [Fact]
+    public async Task Export_needs_the_signed_issue_slip_photo()
+    {
+        var note = Note(DispatchStatuses.Approved, (101, 10, null));
+
+        var without = await Service().ExportAsync(note.DispatchNoteId, 9, default);
+
+        without.ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
+        note.Status.Should().Be(DispatchStatuses.Approved);
+        await _stock.DidNotReceive().PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());
+
+        Photo(note, AttachmentPurposes.SignedDeliveryNote);   // ảnh biên bản giao không thay được ảnh phiếu xuất
+        (await Service().ExportAsync(note.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
+
+        Photo(note, AttachmentPurposes.SignedIssueSlip);
+        (await Service().ExportAsync(note.DispatchNoteId, 9, default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
     public async Task Export_deducts_finished_stock_and_moves_the_order_to_in_delivery()
     {
-        var note = Note(DispatchStatuses.Pending, (101, 40, null), (102, 10, null));
+        var note = Approved((101, 40, null), (102, 10, null));
 
         var result = await Service().ExportAsync(note.DispatchNoteId, 9, default);
 
@@ -229,23 +347,24 @@ public class DispatchNoteServiceTests
     }
 
     [Fact]
-    public async Task Export_keeps_the_note_pending_when_stock_cannot_be_posted()
+    public async Task Export_keeps_the_note_approved_when_stock_cannot_be_posted()
     {
-        var note = Note(DispatchStatuses.Pending, (101, 40, null));
+        var note = Approved((101, 40, null));
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure(ErrorCodes.WarehouseInsufficientStock, "x"));
 
         var result = await Service().ExportAsync(note.DispatchNoteId, 9, default);
 
         result.IsSuccess.Should().BeFalse();
-        note.Status.Should().Be(DispatchStatuses.Pending);
+        note.Status.Should().Be(DispatchStatuses.Approved);
         _order.Status.Should().Be(OrderStatuses.InProduction);
     }
 
     [Fact]
-    public async Task Export_and_reject_only_work_for_pending_notes()
+    public async Task Export_and_reject_only_work_in_their_own_status()
     {
         var note = Note(DispatchStatuses.InDelivery, (101, 10, null));
+        Photo(note, AttachmentPurposes.SignedIssueSlip);
 
         (await Service().ExportAsync(note.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
         (await Service().RejectAsync(note.DispatchNoteId, new ReasonDto("x"), 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
@@ -274,7 +393,21 @@ public class DispatchNoteServiceTests
     {
         var note = Note(DispatchStatuses.InDelivery, lines);
         note.DispatchedAt = Now;
+        Photo(note, AttachmentPurposes.SignedDeliveryNote);   // biên bản giao có khách ký là bắt buộc
         return note;
+    }
+
+    [Fact]
+    public async Task Confirm_delivery_needs_the_signed_delivery_note_photo()
+    {
+        var note = Note(DispatchStatuses.InDelivery, (101, 100, null));
+        note.DispatchedAt = Now;
+        Photo(note, AttachmentPurposes.SignedIssueSlip);   // ảnh phiếu xuất không thay được biên bản giao
+
+        var result = await Service().ConfirmDeliveryAsync(note.DispatchNoteId, Delivery(note, Today, 100), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.DispatchDeliveryPhotoRequired);
+        note.Status.Should().Be(DispatchStatuses.InDelivery);
     }
 
     [Fact]
@@ -350,7 +483,9 @@ public class DispatchNoteServiceTests
     // ---------- Quyền ảnh ----------
 
     [Theory]
-    [InlineData(Roles.WarehouseKeeper, DispatchStatuses.Pending, true)]
+    [InlineData(Roles.WarehouseKeeper, DispatchStatuses.Pending, false)]
+    [InlineData(Roles.WarehouseKeeper, DispatchStatuses.PendingApproval, false)]
+    [InlineData(Roles.WarehouseKeeper, DispatchStatuses.Approved, true)]
     [InlineData(Roles.WarehouseKeeper, DispatchStatuses.InDelivery, true)]
     [InlineData(Roles.WarehouseKeeper, DispatchStatuses.Delivered, false)]
     [InlineData(Roles.Accountant, DispatchStatuses.Pending, false)]

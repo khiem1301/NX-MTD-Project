@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Manager;
 
-/// <summary>UC45: Quản đốc lập phiếu xuất hàng kiêm lệnh giao (thành phẩm được giữ chỗ) và hủy phiếu chưa xuất.</summary>
+/// <summary>UC45: Quản đốc lập phiếu xuất hàng kiêm lệnh giao (thành phẩm được giữ chỗ), duyệt / trả lại phiếu Thủ kho đã lập, hủy phiếu chưa xuất.</summary>
 public sealed class DispatchNotesController : ManagerBaseController
 {
     private readonly IDispatchNoteService _notes;
@@ -33,6 +33,15 @@ public sealed class DispatchNotesController : ManagerBaseController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateDispatchNoteDto dto, CancellationToken ct) =>
         this.ToResponse(await _notes.CreateAsync(dto, ct));
+
+    /// <summary>Duyệt phiếu xuất do Thủ kho lập (PENDING_APPROVAL → APPROVED).</summary>
+    [HttpPost("{id:int}/approve")]
+    public async Task<IActionResult> Approve(int id, CancellationToken ct) => this.ToResponse(await _notes.ApproveAsync(id, ct));
+
+    /// <summary>Trả phiếu xuất về Thủ kho làm lại, bắt buộc lý do.</summary>
+    [HttpPost("{id:int}/return")]
+    public async Task<IActionResult> Return(int id, [FromBody] ReasonDto dto, CancellationToken ct) =>
+        this.ToResponse(await _notes.ReturnAsync(id, dto, ct));
 
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>

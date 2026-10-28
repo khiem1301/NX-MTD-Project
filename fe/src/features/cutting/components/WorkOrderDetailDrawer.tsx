@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Alert,
   Button,
@@ -16,7 +17,8 @@ import { usePermission } from '@/hooks/usePermission';
 import type { FabricRequirement } from '@/types/workOrder';
 import { formatDate, formatQty } from '@/utils/format';
 import { LABELS, WORK_ORDER_STATUS, WORK_ORDER_STATUS_LABEL } from '../constants';
-import { useCancelWorkOrder, useWorkOrder } from '../hooks/useCutting';
+import { NoteModal } from '@/components/common/NoteModal';
+import { useCancelWorkOrder, useFinishCutting, useWorkOrder } from '../hooks/useCutting';
 import type { WorkOrder, WorkOrderLine } from '../types';
 
 type WorkOrderDetailDrawerProps = {
@@ -34,11 +36,20 @@ export function WorkOrderDetailDrawer({
   const { hasRole } = usePermission();
   const detail = useWorkOrder(workOrderId);
   const cancel = useCancelWorkOrder();
+  const finish = useFinishCutting();
+  const [finishing, setFinishing] = useState(false);
   const w = detail.data;
   const canEdit = hasRole(ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
   const total = (pick: (l: WorkOrderLine) => number) => (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
+  // Tổ cắt báo cắt xong khi lệnh đang cắt (đủ kế hoạch thì lệnh đã tự hoàn thành khi kho xác nhận).
+  const canFinish = hasRole(ROLES.TeamLeader, ROLES.TeamDeputy) && w?.status === WORK_ORDER_STATUS.CUTTING;
+  const isShort = total((l) => l.handedQty) < total((l) => l.plannedQty);
 
-  const actions = canEdit && w && (
+  const actions = canFinish && w ? (
+    <Button type="primary" onClick={() => setFinishing(true)}>
+      {LABELS.finishCutting}
+    </Button>
+  ) : canEdit && w && (
     <Space>
       <Popconfirm
         title={MESSAGES.cutting.confirmCancelWorkOrder}
@@ -58,6 +69,18 @@ export function WorkOrderDetailDrawer({
       title={w?.workOrderCode}
       extra={actions}
     >
+      <NoteModal
+        open={finishing}
+        title={LABELS.finishCutting}
+        label={isShort ? LABELS.finishCuttingReason : LABELS.finishCuttingHint}
+        required={isShort}
+        loading={finish.isPending}
+        onCancel={() => setFinishing(false)}
+        onSubmit={(note) =>
+          w &&
+          finish.mutate({ id: w.workOrderId, reason: note ?? undefined }, { onSuccess: () => { setFinishing(false); onClose(); } })
+        }
+      />
       {detail.isLoading && <Spin />}
       {detail.error && <Alert type="error" message={detail.error.message} />}
       {w && (
@@ -142,6 +165,34 @@ export function WorkOrderDetailDrawer({
                 dataIndex: 'availableQty',
                 align: 'right',
                 render: formatQty,
+              },
+              {
+                title: LABELS.fabricReturned,
+                dataIndex: 'returnedQty',
+                align: 'right',
+                render: formatQty,
+              },
+              {
+                title: LABELS.fabricUsed,
+                dataIndex: 'usedQty',
+                align: 'right',
+                render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
+              },
+              {
+                title: LABELS.fabricCutNorm,
+                dataIndex: 'cutNormQty',
+                align: 'right',
+                render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
+              },
+              {
+                title: LABELS.fabricDiff,
+                key: 'diff',
+                align: 'right',
+                render: (_, f) => {
+                  if (f.receivedQty <= 0) return '—';
+                  const diff = f.usedQty - f.cutNormQty;
+                  return <Typography.Text type={diff > 0 ? 'danger' : undefined}>{diff > 0 ? '+' : ''}{formatQty(diff)}</Typography.Text>;
+                },
               },
             ]}
           />

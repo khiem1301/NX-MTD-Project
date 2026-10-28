@@ -28,7 +28,8 @@ Kho đã có tồn qua thẻ kho (tồn vải Đen 650 m, giữ chỗ 150 m; BTP
 | Thủ kho (`THUKHO`) | Trả vải `TV-DEMO-001` (8 m) | Đếm và xác nhận |
 | Thủ kho | Bàn giao BTP `BG-DEMO-003` (30 M + 20 L) | Xác nhận → kho BTP tăng |
 | Thủ kho | Bàn giao thành phẩm `TP-DEMO-004` (60 cái) | Xác nhận → kho thành phẩm tăng |
-| Thủ kho | Phiếu xuất `XH-DEMO-001` | Xác nhận xuất hàng (trừ kho thành phẩm) |
+| Thủ kho | Phiếu xuất `XH-DEMO-001` | Lập phiếu xuất (chốt số xuất) → chờ Quản đốc duyệt; sau duyệt chụp ảnh phiếu có ký rồi xuất kho thành phẩm |
+| Quản đốc | Phiếu xuất `XH-DEMO-003` | Duyệt hoặc trả lại (bắt buộc lý do) |
 | Tổ trưởng may (`TTMAY`) | Phiếu cấp BTP `PC-DEMO-006` (30 M + 10 L) | Nhận BTP → tăng số bộ tổ đã nhận, mở thêm việc để giao |
 | Công nhân (`CNMAY1`, `CNMAY3`) | Giao việc / thu hồi việc đang chờ | Tự xác nhận hoặc từ chối (nêu lý do); tổ trưởng xác nhận hộ khi công nhân vắng |
 | Kế toán (`KETOAN`) | Phiếu xuất `XH-DEMO-002` (đang giao) | Xác nhận khách đã nhận |
@@ -77,6 +78,8 @@ Kết thúc bằng Admin / Quản đốc mở **Trang chủ**: bảng *Tiến đ
 | Duyệt tăng ca | `TTMAY` | KPI không đạt thiếu hơn 10%: đơn tăng ca ở "Đơn của tôi", tổ trưởng của đúng tổ duyệt / từ chối |
 | Bậc thợ | `ADMIN` | Bậc thợ → Danh mục bậc: thêm bậc E, ngừng dùng, xóa bậc chưa dùng; đặt bậc chọn Tổ rồi Công nhân |
 | Quản lý tài khoản | `QUANDOC` | Nhân viên: thêm, sửa, khóa, đặt lại mật khẩu mọi người trừ Admin và Kế toán |
+| Xuất hàng | `QUANDOC`, `THUKHO` | `XH-DEMO-001` (chờ lập phiếu xuất): Thủ kho "Lập phiếu xuất" → Quản đốc duyệt hoặc trả lại → Thủ kho chụp ảnh phiếu có ký rồi xuất (thiếu ảnh bị chặn); `XH-DEMO-003` đang chờ Quản đốc duyệt |
+| Cắt xong | `TTCAT`, `QUANDOC` | `LC-DEMO-002`: Tổ cắt bấm "Cắt xong" (nêu lý do nếu thiếu kế hoạch) → Quản đốc nhận thông báo kèm so vải thực dùng / định mức, xem cột vải trong chi tiết lệnh |
 | Thông báo | mọi vai trò | Trang chủ có khối "Thông báo mới" (2 thông báo mẫu nghỉ lễ / sự kiện của mục 19.5) |
 | Doanh thu | `ADMIN` | Trang chủ có khối Doanh thu tháng này (theo SL hoàn thiện đã nhập kho TP) |
 

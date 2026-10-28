@@ -180,7 +180,12 @@ public static class ConfirmModes
 /// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>
 public static class DispatchStatuses
 {
+    /// <summary>Quản đốc lập, chờ Thủ kho lập phiếu xuất (hoặc được Quản đốc trả lại để làm lại).</summary>
     public const string Pending = "PENDING";
+    /// <summary>Thủ kho đã chốt số xuất thực tế, chờ Quản đốc duyệt.</summary>
+    public const string PendingApproval = "PENDING_APPROVAL";
+    /// <summary>Quản đốc đã duyệt, chờ Thủ kho in, chụp ảnh phiếu và xuất kho.</summary>
+    public const string Approved = "APPROVED";
     public const string Rejected = "REJECTED";
     public const string Cancelled = "CANCELLED";
     public const string InDelivery = "IN_DELIVERY";
@@ -188,7 +193,11 @@ public static class DispatchStatuses
     public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
 
     /// <summary>Phiếu đã hoặc đang chiếm số hàng của đơn (tính vào tổng đã xuất).</summary>
-    public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered, PartiallyDelivered };
+    public static readonly IReadOnlySet<string> Issuing = new HashSet<string>
+        { Pending, PendingApproval, Approved, InDelivery, Delivered, PartiallyDelivered };
+
+    /// <summary>Chưa xuất kho: còn giữ chỗ thành phẩm và Quản đốc còn hủy được.</summary>
+    public static readonly IReadOnlySet<string> NotYetExported = new HashSet<string> { Pending, PendingApproval, Approved };
 }
 
 public static class ShiftCodes

@@ -182,19 +182,18 @@ public class SwimlaneFlowTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Work_order_completes_by_itself_and_the_manager_is_told_when_the_warehouse_has_the_full_plan()
+    public async Task Work_order_does_not_complete_when_the_warehouse_confirms_the_full_plan_the_cutting_team_still_returns_fabric_and_finishes()
     {
         var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 100);
 
-        wo.Status.Should().Be(WorkOrderStatuses.Completed);
-        wo.CompletedAt.Should().Be(Now);
-        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
-            Arg.Is<NotificationMessage>(m => m.Message.Contains("LC-7")), Arg.Any<CancellationToken>());
-        await Notifier.Received(1).NotifyTeamLeadersAsync(CuttingTeam, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        wo.Status.Should().Be(WorkOrderStatuses.Cutting);   // hoàn thành do tổ cắt báo "Cắt xong" sau trả vải (swimlane)
+        await Notifier.DidNotReceive().NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        await Notifier.Received(1).NotifyTeamLeadersAsync(CuttingTeam,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("Cắt xong")), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Work_order_stays_cutting_while_the_warehouse_has_less_than_the_plan_and_the_manager_is_not_told()
+    public async Task A_short_confirmation_does_not_tell_the_manager_either()
     {
         var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 80);
 
