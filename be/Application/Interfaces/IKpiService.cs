@@ -7,13 +7,17 @@ namespace NX_MTD.Application.Interfaces;
 /// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ
 /// (KPI tổ may, theo bảng phân công Minh — khác "UC19" đã dùng cho lệnh cắt ở IWorkOrderService,
 /// hai UC19 này đến từ hai nguồn đánh số khác nhau, xem ghi chú trong KpiTargetsController).
-/// Không kiểm tra tồn kho BTP trước khi lập (đã chốt bỏ rule chặn theo tồn kho với người dùng, DEV-MI-16-1).
+/// Lập / sửa chỉ tiêu phải không vượt BTP khả dụng (xem <see cref="GetCapacityAsync"/>).
 /// </summary>
 public interface IKpiService
 {
     Task<Result<PagedResult<KpiTargetDto>>> GetPagedAsync(KpiTargetQuery query, CancellationToken ct);
 
     Task<Result<KpiTargetDto>> GetByIdAsync(int kpiTargetId, CancellationToken ct);
+
+    /// <summary>Chỉ tiêu tối đa lập được cho (đơn, mã hàng, tổ may): form lập KPI hiển thị và validate dùng chung một công thức.</summary>
+    Task<Result<KpiCapacityDto>> GetCapacityAsync(int orderId, int productId, int sewingTeamId, int? exceptKpiTargetId,
+        CancellationToken ct);
 
     Task<Result<KpiTargetDto>> CreateAsync(SaveKpiTargetDto dto, CancellationToken ct);
 

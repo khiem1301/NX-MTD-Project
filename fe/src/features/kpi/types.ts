@@ -29,6 +29,14 @@ export type KpiTarget = {
   createdAt: string;
 };
 
+/** Chỉ tiêu tối đa lập được: BTP kho còn + tổ đang giữ − phần còn phải làm của chỉ tiêu khác. */
+export type KpiCapacity = {
+  warehouseBtp: number;
+  teamHeld: number;
+  committedByOthers: number;
+  maxTarget: number;
+};
+
 export type KpiTargetFilter = {
   page: number;
   pageSize: number;

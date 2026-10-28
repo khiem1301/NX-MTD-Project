@@ -18,6 +18,20 @@ export const useKpiTargets = (filter: KpiTargetFilter, role: KpiRole = 'manager'
     queryFn: () => kpiApi.getTargets(filter, role),
   });
 
+/** BTP khả dụng cho (đơn, mã hàng, tổ may); chỉ gọi khi đã chọn đủ ba thứ. */
+export const useKpiCapacity = (
+  orderId: number | null,
+  productId: number | null,
+  sewingTeamId: number | null,
+  exceptKpiTargetId?: number,
+) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'capacity', orderId, productId, sewingTeamId, exceptKpiTargetId],
+    queryFn: () =>
+      kpiApi.getCapacity({ orderId: orderId!, productId: productId!, sewingTeamId: sewingTeamId!, exceptKpiTargetId }),
+    enabled: orderId !== null && productId !== null && sewingTeamId !== null,
+  });
+
 export const useKpiTargetDetail = (kpiTargetId: number | null, role: KpiRole = 'manager') =>
   useQuery({
     queryKey: targetDetailKey(kpiTargetId ?? 0, role),

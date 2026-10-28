@@ -15,6 +15,12 @@ public sealed record SaveKpiTargetDto(
     int OrderId, int ProductId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate,
     int TargetFinishedQty, short WorkingDays);
 
+/// <summary>
+/// Chỉ tiêu tối đa lập được cho (đơn, mã hàng, tổ may): BTP bộ đủ còn trong kho + BTP tổ đã nhận mà chưa làm xong
+/// − phần còn phải làm của các chỉ tiêu KPI khác cùng đơn + mã hàng.
+/// </summary>
+public sealed record KpiCapacityDto(int WarehouseBtp, int TeamHeld, int CommittedByOthers, int MaxTarget);
+
 public sealed record KpiTargetQuery : PageQuery
 {
     public string? Status { get; init; }

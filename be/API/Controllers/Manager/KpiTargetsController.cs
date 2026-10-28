@@ -25,6 +25,12 @@ public sealed class KpiTargetsController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _kpi.GetByIdAsync(id, ct));
 
+    /// <summary>Chỉ tiêu tối đa lập được (BTP khả dụng) cho form lập KPI.</summary>
+    [HttpGet("available-btp")]
+    public async Task<IActionResult> GetCapacity([FromQuery] int orderId, [FromQuery] int productId,
+        [FromQuery] int sewingTeamId, [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
+        this.ToResponse(await _kpi.GetCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveKpiTargetDto dto, CancellationToken ct) =>
         this.ToResponse(await _kpi.CreateAsync(dto, ct));

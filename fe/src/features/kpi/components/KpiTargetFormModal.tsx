@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from 'react';
-import { DatePicker, Form, InputNumber, Modal, Select, Typography } from 'antd';
+import { Alert, DatePicker, Descriptions, Divider, Form, InputNumber, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import { formatQty, toApiDate } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
-import { useSaveKpiTarget } from '../hooks/useKpi';
+import { useKpiCapacity, useSaveKpiTarget } from '../hooks/useKpi';
 import type { KpiTarget } from '../types';
 
 type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
@@ -31,7 +31,11 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveKpiTarget(target?.kpiTargetId ?? null);
   const orderId = Form.useWatch('orderId', form) ?? null;
+  const productId = Form.useWatch('productId', form) ?? null;
+  const sewingTeamId = Form.useWatch('sewingTeamId', form) ?? null;
   const qty = Form.useWatch('targetFinishedQty', form);
+  const capacity = useKpiCapacity(orderId, productId, sewingTeamId, target?.kpiTargetId).data;
+  const overCapacity = capacity !== undefined && (qty ?? 0) > capacity.maxTarget;
   const days = Form.useWatch('workingDays', form);
   const orders = useOrderLookup();
   const lines = useOrderLineLookup(orderId);
@@ -98,11 +102,13 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
+      okButtonProps={{ disabled: overCapacity }}
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
+        <Divider orientation="left" plain style={{ marginTop: 0 }}>{text.sectionOrder}</Divider>
         <Form.Item name="orderId" label={text.order} rules={required}>
           <Select
             showSearch
@@ -123,12 +129,30 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
             placeholder={orderId === null ? text.noProduct : undefined}
           />
         </Form.Item>
+        <Divider orientation="left" plain>{text.sectionTeam}</Divider>
         <Form.Item name="sewingTeamId" label={text.team} rules={required}>
           <Select options={teamOptions} loading={teams.isLoading} disabled={editing} />
         </Form.Item>
         <Form.Item name="period" label={text.period} rules={required}>
           <DatePicker.RangePicker format={DATE_FORMAT} style={{ width: '100%' }} />
         </Form.Item>
+        <Divider orientation="left" plain>{text.sectionTarget}</Divider>
+        {capacity && (
+          <Descriptions
+            size="small"
+            bordered
+            column={1}
+            title={text.capacityTitle}
+            style={{ marginBottom: 16 }}
+            items={[
+              { key: 'w', label: text.capacityWarehouse, children: formatQty(capacity.warehouseBtp) },
+              { key: 't', label: text.capacityTeamHeld, children: formatQty(capacity.teamHeld) },
+              { key: 'c', label: text.capacityCommitted, children: formatQty(capacity.committedByOthers) },
+              { key: 'm', label: text.capacityMax, children: <strong>{formatQty(capacity.maxTarget)}</strong> },
+            ]}
+          />
+        )}
+        {overCapacity && <Alert type="error" showIcon message={text.capacityExceeds} style={{ marginBottom: 16 }} />}
         <Form.Item
           name="targetFinishedQty"
           label={text.targetFinishedQty}

@@ -1,7 +1,7 @@
 import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
-import type { KpiDailyResult, KpiRole, KpiTarget, KpiTargetFilter, SaveKpiTargetPayload } from '../types';
+import type { KpiCapacity, KpiDailyResult, KpiRole, KpiTarget, KpiTargetFilter, SaveKpiTargetPayload } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
@@ -26,6 +26,9 @@ export const kpiApi = {
     get<KpiDailyResult[]>(dailyUrl(role, kpiTargetId)),
 
   // ---------- Quản đốc lập / sửa / hủy ----------
+
+  getCapacity: (params: { orderId: number; productId: number; sewingTeamId: number; exceptKpiTargetId?: number }) =>
+    get<KpiCapacity>(API.kpi.availableBtp, params),
 
   createTarget: (body: SaveKpiTargetPayload) => post<KpiTarget>(API.kpi.targets, body),
 

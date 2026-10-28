@@ -230,7 +230,7 @@ public static class Messages
     public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
     public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
     public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
-    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP trong kho: BTP đã cắt vào kho {0}, các chỉ tiêu khác đã đặt {1}, còn đặt được {2}.";
+    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP khả dụng: kho còn {0}, tổ đã nhận và chưa làm xong {1}, các chỉ tiêu khác còn phải làm {2}, đặt được tối đa {3}.";
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
