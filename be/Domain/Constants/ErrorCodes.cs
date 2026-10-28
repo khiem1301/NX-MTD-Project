@@ -52,6 +52,8 @@ public static class ErrorCodes
     public const string ProductSpecInvalid = "PRODUCT_SPEC_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
+    public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";
+    public const string DispatchDeliveryPhotoRequired = "DISPATCH_DELIVERY_PHOTO_REQUIRED";
     public const string ReceiptDuplicatePending = "RECEIPT_DUPLICATE_PENDING";
     public const string ProductNotActive = "PRODUCT_NOT_ACTIVE";
     public const string ProductInvalidStatus = "PRODUCT_INVALID_STATUS";

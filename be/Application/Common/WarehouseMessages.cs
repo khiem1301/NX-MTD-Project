@@ -59,6 +59,12 @@ public static class WarehouseMessages
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
+    public const string DispatchIssuePhotoRequired = "Phiếu xuất chưa có ảnh phiếu xuất có Quản đốc ký. Thủ kho cần in, nhờ Quản đốc ký, chụp và đính kèm trước khi xuất hàng.";
+    public const string DispatchDeliveryPhotoRequired = "Phiếu xuất chưa có ảnh biên bản giao hàng có khách ký. Kế toán cần chụp và đính kèm trước khi xác nhận khách đã nhận.";
+    public const string DispatchPrepared = "Đã lập phiếu xuất, chờ Quản đốc duyệt.";
+    public const string DispatchApproved = "Đã duyệt phiếu xuất, Thủ kho có thể in và xuất hàng.";
+    public const string DispatchReturned = "Đã trả phiếu xuất về Thủ kho để làm lại.";
+    public const string DispatchPrepareQtyInvalid = "Số xuất thực tế phải từ 1 đến số Quản đốc đã đặt cho từng dòng.";
     public const string WorkOrderFinishedCutting = "Đã báo cắt xong, lệnh cắt hoàn thành.";
     public const string WorkOrderNotFinishable = "Chỉ báo cắt xong được với lệnh đang cắt (đã có bàn cắt).";
     public const string WorkOrderHasPendingHandoverToFinish = "Còn phiếu bàn giao BTP chờ kho xác nhận, chưa báo cắt xong được.";

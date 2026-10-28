@@ -12,15 +12,17 @@ type AttachmentGalleryProps = {
   canEdit: boolean;
   maxFiles: number;
   purpose?: AttachmentPurpose;
+  /** Chỉ hiện ảnh đúng mục đích này (chứng từ có nhiều loại ảnh, vd. phiếu xuất: ảnh phiếu ký và biên bản giao). */
+  onlyPurpose?: boolean;
 };
 
 /** Danh sách ảnh hiện tại của một chứng từ + nút gỡ / thêm khi canEdit. */
-export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles, purpose }: AttachmentGalleryProps) {
+export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles, purpose, onlyPurpose }: AttachmentGalleryProps) {
   const { data, isLoading, isError } = useAttachments(ownerType, ownerId);
   const remove = useRemoveAttachment(ownerType, ownerId);
   if (isLoading) return <Spin />;
   if (isError) return <Alert type="error" showIcon message={MESSAGES.common.loadError} />;
-  const items = data ?? [];
+  const items = (data ?? []).filter((a) => !onlyPurpose || !purpose || a.purpose === purpose);
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
       {items.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={MESSAGES.attachments.empty} />}

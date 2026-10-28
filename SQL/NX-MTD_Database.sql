@@ -1045,7 +1045,9 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
     RowVer              ROWVERSION,
-    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
+    -- PENDING: Quản đốc lập, chờ Thủ kho lập phiếu xuất; PENDING_APPROVAL: Thủ kho đã chốt số xuất, chờ Quản đốc duyệt;
+    -- APPROVED: đã duyệt, chờ Thủ kho in, chụp ảnh và xuất. Quản đốc trả lại → về PENDING (lý do ở RejectReason).
+    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','PENDING_APPROVAL','APPROVED','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_DN_Delivered CHECK (Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL),
     CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
@@ -2250,10 +2252,10 @@ FROM (
     SELECT i.WarehouseType, l.MaterialId, l.OrderLineId, l.ProductComponentMaterialId, 0, l.IssuedQty
     FROM dbo.MaterialIssue i JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = i.MaterialIssueId
     WHERE i.Status = 'PENDING_RECEIPT'
-    UNION ALL      -- phiếu xuất thành phẩm đang chờ Thủ kho xuất
+    UNION ALL      -- phiếu xuất thành phẩm chưa xuất (chờ lập phiếu xuất, chờ duyệt, đã duyệt chờ xuất)
     SELECT 'FINISHED', NULL, l.OrderLineId, NULL, 0, l.IssueQty
     FROM dbo.DispatchNote d JOIN dbo.DispatchNoteLine l ON l.DispatchNoteId = d.DispatchNoteId
-    WHERE d.Status = 'PENDING'
+    WHERE d.Status IN ('PENDING','PENDING_APPROVAL','APPROVED')
 ) x
 GROUP BY x.WarehouseType, x.MaterialId, x.OrderLineId, x.ProductComponentMaterialId;
 GO
@@ -3868,14 +3870,16 @@ VALUES ('TP-DEMO-004', @o1, @p1, @qaqc, '2026-10-26 16:00:00', 'PENDING');
 INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty)
 SELECT FgHandoverId, @lM, 60 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-004';
 
--- XH-DEMO-001 chờ Thủ kho xác nhận xuất; XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
+-- XH-DEMO-001 chờ Thủ kho lập phiếu xuất; XH-DEMO-003 Thủ kho đã lập, chờ Quản đốc duyệt;
+-- XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
 INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt) VALUES
  ('XH-DEMO-001', @o1, '2026-10-30', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-26 15:00:00', NULL, NULL),
- ('XH-DEMO-002', @o1, '2026-10-27', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-25 15:00:00', @thukho, '2026-10-26 09:00:00');
+ ('XH-DEMO-002', @o1, '2026-10-27', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-25 15:00:00', @thukho, '2026-10-26 09:00:00'),
+ ('XH-DEMO-003', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3 (Thủ kho đã chốt số xuất, chờ Quản đốc duyệt)', 'PENDING_APPROVAL', '2026-10-27 08:00:00', NULL, NULL);
 INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, v.OrderLineId, v.Qty
 FROM dbo.DispatchNote d
-JOIN (VALUES ('XH-DEMO-001', @lM, 150), ('XH-DEMO-001', @lL, 100), ('XH-DEMO-002', @lM, 100)) v(Code, OrderLineId, Qty)
+JOIN (VALUES ('XH-DEMO-001', @lM, 150), ('XH-DEMO-001', @lL, 100), ('XH-DEMO-002', @lM, 100), ('XH-DEMO-003', @lM, 20)) v(Code, OrderLineId, Qty)
   ON v.Code = d.DispatchCode;
 
 /* ---------- 8. Kiểm kê: phiếu tồn đầu kỳ đã duyệt (ghi tồn qua thủ tục) ---------- */
