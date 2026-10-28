@@ -97,8 +97,16 @@ function ProposeModal({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [form] = Form.useForm<{ workerId: number; gradeCode: string; reason: string; effectiveDate: Dayjs }>();
+  const [form] = Form.useForm<{ teamKey: string; workerId: number; gradeCode: string; reason: string; effectiveDate: Dayjs }>();
   const workers = useAllGradeWorkers(open);
+  const teamKey = Form.useWatch('teamKey', form);
+  const workerId = Form.useWatch('workerId', form);
+  const all = workers.data ?? [];
+  const teamOptions = [
+    ...new Map(all.map((w) => [String(w.teamId ?? 'none'), w.teamName ?? GR_LABELS.noTeam])).entries(),
+  ].map(([value, label]) => ({ value, label }));
+  const inTeam = all.filter((w) => String(w.teamId ?? 'none') === teamKey);
+  const selected = all.find((w) => w.workerId === workerId);
   const setGrade = useSetGrade();
   return (
     <Modal
@@ -129,18 +137,33 @@ function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }
           )
         }
       >
+        <Form.Item name="teamKey" label={GR_LABELS.team} rules={required}>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            placeholder={GR_LABELS.selectTeam}
+            loading={workers.isLoading}
+            options={teamOptions}
+            onChange={() => form.setFieldValue('workerId', undefined)}
+          />
+        </Form.Item>
         <Form.Item name="workerId" label={GR_LABELS.worker} rules={required}>
           <Select
             showSearch
             optionFilterProp="label"
-            placeholder={GR_LABELS.selectWorker}
-            loading={workers.isLoading}
-            options={(workers.data ?? []).map((w) => ({
+            disabled={!teamKey}
+            placeholder={teamKey ? GR_LABELS.selectWorker : GR_LABELS.selectTeamFirst}
+            options={inTeam.map((w) => ({
               value: w.workerId,
-              label: `${w.workerCode} - ${w.fullName} · ${w.teamName ?? '—'} · ${GR_LABELS.currentGrade}: ${w.currentGradeCode ?? GR_LABELS.none}${w.hasPending ? ` (${GR_LABELS.pending})` : ''}`,
+              label: `${w.workerCode} - ${w.fullName} · ${GR_LABELS.currentGrade}: ${w.currentGradeCode ?? GR_LABELS.none}${w.hasPending ? ` (${GR_LABELS.pending})` : ''}`,
             }))}
           />
         </Form.Item>
+        {selected && (
+          <Form.Item label={GR_LABELS.currentGrade}>
+            <Input disabled value={selected.currentGradeCode ?? GR_LABELS.none} style={{ width: 160 }} />
+          </Form.Item>
+        )}
         <Form.Item name="gradeCode" label={GR_LABELS.newGrade} rules={required}>
           <Select options={GRADE_OPTIONS} style={{ width: 160 }} />
         </Form.Item>

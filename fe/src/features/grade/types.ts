@@ -37,6 +37,7 @@ export type GradeWorker = {
   recentDefectCount: number;
   hasPending: boolean;
   teamName: string | null;
+  teamId?: number | null;
 };
 
 export type EvaluationQuery = PageParams & { status?: string };

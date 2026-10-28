@@ -79,7 +79,7 @@ public sealed class GradeService : IGradeService
         var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
             .Where(e => e.Status == RecordStatus.Active && e.Role.RoleCode == RoleCodes.Worker)
             .OrderBy(e => e.EmployeeCode)
-            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.CurrentGradeCode, TeamName = e.Team == null ? null : e.Team.TeamName })
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.CurrentGradeCode, e.TeamId, TeamName = e.Team == null ? null : e.Team.TeamName })
             .ToListAsync(ct);
         var ids = workers.Select(w => w.EmployeeId).ToList();
         var defects = await DefectCountsAsync(ids, ct);
@@ -87,7 +87,7 @@ public sealed class GradeService : IGradeService
             .Select(e => e.WorkerId).Distinct().ToListAsync(ct);
         return Result<IReadOnlyList<GradeWorkerDto>>.Success(workers
             .Select(w => new GradeWorkerDto(w.EmployeeId, w.EmployeeCode, w.FullName, w.CurrentGradeCode, defects.GetValueOrDefault(w.EmployeeId),
-                pending.Contains(w.EmployeeId), w.TeamName))
+                pending.Contains(w.EmployeeId), w.TeamName, w.TeamId))
             .ToList());
     }
 

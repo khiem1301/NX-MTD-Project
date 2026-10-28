@@ -18,6 +18,9 @@ export const PRODUCTION_TEXT = {
     subtitle:
       'Nhập công đoạn của mã hàng từ Excel rồi đặt đơn giá từng công đoạn (có ngày hiệu lực), gửi Admin duyệt. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
     edit: 'Sửa công đoạn',
+    add: 'Thêm công đoạn',
+    addTitle: 'Thêm công đoạn',
+    addHint: 'Thêm một công đoạn cho mã hàng đang chọn, rồi nhập đơn giá và gửi Admin duyệt.',
     importExcel: 'Nhập từ Excel',
     noFinalStep: 'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
     import: {
