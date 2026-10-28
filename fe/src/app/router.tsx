@@ -267,6 +267,16 @@ export const router = createBrowserRouter([
             ],
           },
 
+          {
+            element: <ProtectedRoute roles={[ROLES.Admin]} />,
+            children: [
+              {
+                path: MEAL_ROUTES.settings,
+                lazy: async () => ({ Component: (await import('@/features/meal')).MealSettingsPage }),
+              },
+            ],
+          },
+
           // --- Bảng lương (Minh) ---
           {
             path: PAYROLL_ROUTES.myPayslip,

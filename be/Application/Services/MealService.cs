@@ -165,7 +165,8 @@ public sealed class MealService : IMealService
             if (leaderIds.Count > 0)
                 _notifier.NotifyEmployees(leaderIds, new NotificationMessage(NotificationSources.System,
                     Messages.NotifyMealReminderTitle,
-                    string.Format(Messages.NotifyMealReminderBody, team.TeamName, date.ToString("dd/MM/yyyy"), count),
+                    string.Format(Messages.NotifyMealReminderBody, team.TeamName, date.ToString("dd/MM/yyyy"), count,
+                        (await _settings.GetTimeAsync(SettingKeys.MealCutoffTime, new TimeOnly(8, 30), ct)).ToString("HH:mm")),
                     MealLink, nameof(TeamMealConfirmation)));
         }
 

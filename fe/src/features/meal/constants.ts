@@ -1,7 +1,20 @@
 /** Chuỗi hiển thị của luồng suất ăn (UC30). Thông báo kết quả thao tác nằm ở constants/messages.ts. */
 export const MEAL_TEXT = {
   teamPageTitle: 'Suất ăn của tổ',
-  teamPageSubtitle: 'Số suất gợi ý theo người đã quẹt vân tay hôm nay, có thể sửa trước 08:30.',
+  teamPageSubtitle: 'Số suất gợi ý theo người đã quẹt vân tay hôm nay, có thể sửa đến giờ chốt suất ăn.',
+  settingsPageTitle: 'Giờ chốt suất ăn',
+  settings: {
+    subtitle: 'Admin cấu hình giờ nhắc tổ trưởng xác nhận và giờ hệ thống tự chốt suất ăn mỗi ngày.',
+    hint: 'Sau giờ chốt, tổ trưởng không sửa được số suất và Kế toán không sửa được suất khách. Đổi giờ có hiệu lực ngay từ lần kiểm tra kế tiếp; ngày đã chốt rồi thì không mở lại.',
+    reminder: 'Giờ nhắc xác nhận',
+    reminderHelp: 'Tổ chưa xác nhận lúc này sẽ được nhắc; hệ thống tạm lấy theo số người đã quẹt. Mặc định 08:15.',
+    cutoff: 'Giờ chốt suất ăn',
+    cutoffHelp: 'Từ {from} đến {to}. Mặc định 08:30.',
+    required: 'Vui lòng chọn giờ.',
+    order: 'Giờ nhắc phải sớm hơn giờ chốt.',
+    cutoffRange: 'Giờ chốt phải từ {from} đến {to}.',
+    save: 'Lưu',
+  },
   summaryPageTitle: 'Suất ăn hôm nay',
   summaryPageSubtitle: 'Nhập suất khách, xem tổng hợp theo tổ và nhập đơn giá suất ăn.',
 
@@ -16,7 +29,7 @@ export const MEAL_TEXT = {
     mealCount: 'Số suất ăn của tổ',
     confirm: 'Xác nhận',
     confirmedAt: 'Xác nhận lúc',
-    lockedHint: 'Đã chốt suất ăn lúc 08:30, không thể thay đổi.',
+    lockedHint: 'Đã chốt suất ăn, không thể thay đổi.',
     sourceConfirmed: 'Đã xác nhận',
     sourceAttendance: 'Theo chấm công',
     sourceNone: 'Chưa xác nhận',
@@ -43,7 +56,7 @@ export const MEAL_TEXT = {
     attendanceIncomplete: 'Thiếu dữ liệu chấm công lúc chốt',
     notifyKitchen: 'Báo bếp',
     kitchenNotifiedAt: 'Đã báo bếp lúc',
-    notifyDisabledHint: 'Chỉ báo bếp được sau khi đã chốt suất ăn (08:30).',
+    notifyDisabledHint: 'Chỉ báo bếp được sau khi đã chốt suất ăn.',
   },
 
   priceForm: {

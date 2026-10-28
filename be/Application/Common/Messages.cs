@@ -158,16 +158,20 @@ public static class Messages
     public const string MealTeamNotFound = "Không tìm thấy tổ.";
     public const string MealNotFound = "Không tìm thấy suất ăn ngày này.";
     public const string MealLocked =
-        "Đã chốt suất ăn lúc 08:30, không thể thay đổi.";                                       // MSG22
+        "Đã chốt suất ăn, không thể thay đổi.";                                                 // MSG22
     public const string MealGuestLocked =
-        "Đã chốt suất ăn lúc 08:30, không thể thay đổi suất khách.";                             // MSG22
+        "Đã chốt suất ăn, không thể thay đổi suất khách.";                                       // MSG22
+    public const string MealSettingsSaved = "Đã lưu giờ chốt suất ăn.";
+    public const string MealSettingsTimeInvalid = "Giờ phải theo dạng HH:mm (ví dụ 08:30).";
+    public const string MealSettingsOrder = "Giờ nhắc phải sớm hơn giờ chốt.";
+    public const string MealSettingsCutoffRange = "Giờ chốt phải trong khoảng từ {0} đến {1}.";
     public const string MealNotClosedYet = "Suất ăn ngày này chưa chốt.";
     public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealKitchenNotified = "Đã báo bếp.";
     public const string NotifyMealReminderTitle = "Nhắc xác nhận suất ăn";
     public const string NotifyMealReminderBody =
-        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước 08:30.";
+        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước {3}.";
 
     // --- Bảng lương + khóa tháng (UC06, UC31, UC32) ---
     public const string PayrollNotFound = "Không tìm thấy bảng lương.";

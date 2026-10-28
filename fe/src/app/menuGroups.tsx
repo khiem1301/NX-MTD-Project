@@ -91,6 +91,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       'attendance',
       'team-attendance',
       'team-meal',
+      'meal-settings',
     ],
   },
   {

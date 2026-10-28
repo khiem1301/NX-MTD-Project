@@ -69,6 +69,7 @@ export const MESSAGES = {
     handoverRejected: 'Đã từ chối phiếu bàn giao.',
   },
   meal: {
+    settingsSaved: 'Đã lưu giờ chốt suất ăn.',
     confirmSaved: 'Đã xác nhận số suất ăn của tổ.',
     guestSaved: 'Đã lưu suất khách.',
     kitchenNotified: 'Đã báo bếp.',

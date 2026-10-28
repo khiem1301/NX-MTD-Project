@@ -895,6 +895,7 @@
   - **NVL lỗi** (`DefectiveMaterialRequestHandler`): Quản đốc duyệt → kiểm tồn từng NVL; đủ thì tự tạo đơn Xin NVL cho tổ cắt (Thủ kho cấp bù), thiếu thì tự tạo đơn mua chờ chốt cho phần thiếu (gắn `SourceRequestId`); kết quả ghi ở `ResultNote` và báo Quản đốc / Thủ kho.
   - **Nhận thành phẩm → KPI**: Thủ kho xác nhận phiếu bàn giao thành phẩm thì so số thành phẩm kho đã nhận của đơn + mã hàng với KPI đang hoạt động và báo Quản đốc đạt / chưa đạt (chỉ báo, đóng KPI vẫn qua "Kết thúc đơn").
   - **MaterialStatus**: chốt "không bù" NVL mua từ NCC không còn làm đơn hàng COMPLETE (giữ PARTIAL, đơn mua vẫn CLOSED_SHORT); NVL khách cấp giữ như cũ.
+  - **Giờ chốt suất ăn cấu hình được**: Admin đổi giờ nhắc (mặc định 08:15) và giờ chốt (mặc định 08:30) ở "Giờ chốt suất ăn" (`SystemSetting` MEAL_REMINDER_TIME / MEAL_CUTOFF_TIME, giờ chốt trong khoảng 05:00–11:00, nhắc sớm hơn chốt, ghi nhật ký, có hiệu lực ngay vì xóa cache đọc). Job JOB-02 / JOB-03 và kiểm tra khóa của `MealService` đã đọc khóa này sẵn; thông báo và chữ trên giao diện không còn ghi cứng 08:30. Trigger DB chỉ dựa trạng thái ngày (OPEN) nên không phụ thuộc giờ; chỉ câu thông báo lỗi trong trigger còn ghi "08:30".
   - **Doanh thu** vẫn theo SL hoàn thiện đã nhập kho thành phẩm × đơn giá CMT (không theo SL đã giao).
 - **Cần sửa trong tài liệu:** Report-3 (KPI cuối đơn, đơn tăng ca, danh mục bậc, phạm vi tài khoản Quản đốc), `.dbml` / mô tả DB.
 - **Trạng thái:** Đã làm

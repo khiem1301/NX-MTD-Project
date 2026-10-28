@@ -107,6 +107,7 @@ export const API = {
     guestCount: '/api/v1/accountant/meals/guest-count',
     kitchenNotification: '/api/v1/accountant/meals/kitchen-notification',
     price: '/api/v1/accountant/meals/price',
+    settings: '/api/v1/admin/meal-settings',
   },
   payroll: {
     accountant: '/api/v1/accountant/payrolls',

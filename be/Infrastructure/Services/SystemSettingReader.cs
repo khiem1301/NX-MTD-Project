@@ -55,5 +55,7 @@ public sealed class SystemSettingReader : ISystemSettingReader
         return TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out var value) ? value : fallback;
     }
 
+    public void Invalidate(string key) => _cache.Remove(CacheKey(key));
+
     private static string CacheKey(string key) => $"setting:{key}";
 }

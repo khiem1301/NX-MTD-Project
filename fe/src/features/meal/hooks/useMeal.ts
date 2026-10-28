@@ -2,11 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { mealApi } from '../api/mealApi';
-import type { ConfirmTeamMealPayload, SetGuestMealPayload, SetMealPricePayload } from '../types';
+import type { ConfirmTeamMealPayload, MealSettings, SetGuestMealPayload, SetMealPricePayload } from '../types';
 
 export const MEAL_KEY = ['meal'] as const;
 const suggestionKey = (date: string) => [...MEAL_KEY, 'suggestion', date] as const;
 const summaryKey = (date: string) => [...MEAL_KEY, 'summary', date] as const;
+
+/** Admin: giờ nhắc và giờ chốt suất ăn. */
+export const useMealSettings = () => useQuery({ queryKey: [...MEAL_KEY, 'settings'], queryFn: mealApi.getSettings });
+
+export const useSaveMealSettings = () =>
+  useApiMutation((body: MealSettings) => mealApi.saveSettings(body), {
+    invalidate: [MEAL_KEY],
+    successMessage: MESSAGES.meal.settingsSaved,
+  });
 
 /** UC30 — tổ trưởng: gợi ý + tình trạng xác nhận suất ăn của tổ mình trong ngày. */
 export const useTeamMealSuggestion = (date: string) =>
