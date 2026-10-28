@@ -22,13 +22,23 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     private readonly IRequestService _requests;
     private readonly MaterialSupplyUpdater _supply;
     private readonly IClock _clock;
+    private readonly INotificationService _notifier;
     private readonly ILogger<MaterialReceiptService> _logger;
 
     public MaterialReceiptService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes,
-        IRequestService requests, MaterialSupplyUpdater supply, IClock clock, ILogger<MaterialReceiptService> logger)
+        IRequestService requests, MaterialSupplyUpdater supply, IClock clock, INotificationService notifier,
+        ILogger<MaterialReceiptService> logger)
     {
-        _uow = uow; _stock = stock; _codes = codes; _requests = requests; _supply = supply; _clock = clock; _logger = logger;
+        _uow = uow; _stock = stock; _codes = codes; _requests = requests; _supply = supply; _clock = clock; _notifier = notifier;
+        _logger = logger;
     }
+
+    private const string ReceiptLink = "/warehouse/material-receipts";
+
+    /// <summary>Phiếu nhập chờ xác nhận: Quản đốc là người xử lý tiếp.</summary>
+    private Task NotifyPendingAsync(MaterialReceipt receipt, CancellationToken ct) =>
+        _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse, "Phiếu nhập chờ xác nhận",
+            $"Thủ kho đã lập phiếu nhập {receipt.ReceiptCode}, vui lòng xác nhận hoặc trả lại.", ReceiptLink), ct);
 
     private IQueryable<MaterialReceipt> Receipts => _uow.Repository<MaterialReceipt>().Query();
 
@@ -113,6 +123,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             };
             Apply(receipt, dto, resolved.Data!);
             await _uow.Repository<MaterialReceipt>().AddAsync(receipt);
+            await NotifyPendingAsync(receipt, ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(receipt.MaterialReceiptId);
         });
@@ -137,6 +148,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         receipt.Status = ReceiptStatuses.Pending;
         receipt.ReturnReason = null;
         receipt.SubmittedAt = _clock.Now;
+        await NotifyPendingAsync(receipt, ct);
         await _uow.SaveChangesAsync();
         return await GetByIdAsync(receiptId, ct);
     }
@@ -196,6 +208,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                 }).ToList(),
             };
             await _uow.Repository<MaterialReceipt>().AddAsync(receipt);
+            await NotifyPendingAsync(receipt, ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(receipt.MaterialReceiptId);
         });
@@ -273,6 +286,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
         receipt.Status = ReceiptStatuses.Returned;
         receipt.ReturnReason = dto.Reason.Trim();
+        // Thủ kho phải sửa lại phiếu theo lý do trả.
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu nhập bị trả lại", $"Quản đốc trả lại phiếu nhập {receipt.ReceiptCode}: {receipt.ReturnReason}", ReceiptLink), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReceiptReturned);
     }

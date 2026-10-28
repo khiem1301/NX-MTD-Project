@@ -119,6 +119,8 @@ public static class WorkOrderStatuses
 {
     public const string Open = "OPEN";
     public const string Cutting = "CUTTING";
+    /// <summary>Tự động khi BTP đã vào kho (phiếu bàn giao được xác nhận) đủ số kế hoạch của mọi dòng; không có nút đóng tay.</summary>
+    public const string Completed = "COMPLETED";
     public const string Cancelled = "CANCELLED";
 }
 

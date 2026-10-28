@@ -60,7 +60,7 @@ public class MaterialReceiptFlowTests
     private MaterialSupplyUpdater Supply() => new(_uow);
 
     private MaterialReceiptService Receipts() =>
-        new(_uow, _stock, _codes, _requests, Supply(), _clock, NullLogger<MaterialReceiptService>.Instance);
+        new(_uow, _stock, _codes, _requests, Supply(), _clock, _notifier, NullLogger<MaterialReceiptService>.Instance);
 
     private ShortDeliveryService ShortDeliveries() => new(_uow, _requests, Supply(), _notifier, _audit);
 

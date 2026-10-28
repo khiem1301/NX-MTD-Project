@@ -16,12 +16,25 @@ public sealed class WorkOrderService : IWorkOrderService
     private readonly IStockService _stock;
     private readonly FabricPlanner _planner;
     private readonly IDocumentCodeGenerator _codes;
+    private readonly INotificationService _notifier;
     private readonly ILogger<WorkOrderService> _logger;
 
     public WorkOrderService(IUnitOfWork uow, IStockService stock, FabricPlanner planner, IDocumentCodeGenerator codes,
-        ILogger<WorkOrderService> logger)
+        INotificationService notifier, ILogger<WorkOrderService> logger)
     {
-        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _logger = logger;
+        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _notifier = notifier; _logger = logger;
+    }
+
+    private const string WorkOrderLink = "/cutting/work-orders";
+
+    /// <summary>Lệnh cắt mới: tổ cắt biết để chuẩn bị, Thủ kho là người xử lý tiếp (cấp vải cho tổ).</summary>
+    private async Task NotifyCreatedAsync(WorkOrder wo, string? orderCode, CancellationToken ct)
+    {
+        var where = orderCode is null ? string.Empty : $" (đơn {orderCode})";
+        await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Production,
+            "Có lệnh cắt mới", $"Quản đốc giao lệnh cắt {wo.WorkOrderCode}{where}, hạn {wo.DueDate:dd/MM/yyyy}.", WorkOrderLink), ct);
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Cần cấp vải cho lệnh cắt", $"Lệnh cắt {wo.WorkOrderCode}{where} đã lập, vui lòng lập phiếu cấp vải cho tổ cắt.", WorkOrderLink), ct);
     }
 
     private IQueryable<WorkOrder> WorkOrders => _uow.Repository<WorkOrder>().Query();
@@ -96,6 +109,7 @@ public sealed class WorkOrderService : IWorkOrderService
             };
             Apply(wo, dto);
             await _uow.Repository<WorkOrder>().AddAsync(wo);
+            await NotifyCreatedAsync(wo, await OrderCodeAsync(dto.OrderId, ct), ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(wo.WorkOrderId);
         });
@@ -171,6 +185,7 @@ public sealed class WorkOrderService : IWorkOrderService
                 }).ToList(),
             };
             await _uow.Repository<WorkOrder>().AddAsync(wo);
+            await NotifyCreatedAsync(wo, order.OrderCode, ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(wo.WorkOrderId);
         });
@@ -190,6 +205,8 @@ public sealed class WorkOrderService : IWorkOrderService
 
         _uow.Repository<WorkOrderLine>().RemoveRange(wo.WorkOrderLines.ToList());
         Apply(wo, dto);
+        await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Production,
+            "Lệnh cắt được sửa", $"Quản đốc đã sửa lệnh cắt {wo.WorkOrderCode}, xem lại kế hoạch.", WorkOrderLink), ct);
         await _uow.SaveChangesAsync();
         return await GetByIdAsync(workOrderId, null, ct);
     }
@@ -202,6 +219,8 @@ public sealed class WorkOrderService : IWorkOrderService
         if (!editable.IsSuccess) return editable;
 
         wo.Status = WorkOrderStatuses.Cancelled;
+        await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Production,
+            "Lệnh cắt bị hủy", $"Quản đốc đã hủy lệnh cắt {wo.WorkOrderCode}.", WorkOrderLink), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.WorkOrderCancelled);
     }
@@ -425,6 +444,10 @@ public sealed class WorkOrderService : IWorkOrderService
         public decimal Issued { get; set; }
         public List<string> Codes { get; } = [];
     }
+
+    private Task<string?> OrderCodeAsync(int orderId, CancellationToken ct) =>
+        _uow.Repository<CustomerOrder>().Query().AsNoTracking().Where(o => o.OrderId == orderId).Select(o => (string?)o.OrderCode)
+            .FirstOrDefaultAsync(ct);
 
     private static string Format(decimal qty) => qty.ToString("#,0.###", CultureInfo.GetCultureInfo("vi-VN"));
 

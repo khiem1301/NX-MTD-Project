@@ -55,7 +55,7 @@ public class KpiServiceTests
 
         _uow.SaveChangesAsync().Returns(Task.FromResult(1));
 
-        _sut = new KpiService(_uow, new OutputQueryService(_uow), _audit, NullLogger<KpiService>.Instance);
+        _sut = new KpiService(_uow, new OutputQueryService(_uow), _audit, Substitute.For<INotificationService>(), NullLogger<KpiService>.Instance);
     }
 
     private void SetupQueryable<T>(List<T> backing) where T : class

@@ -65,7 +65,7 @@ public class WorkOrderFabricTests : ProductionTestBase
         var codes = Substitute.For<IDocumentCodeGenerator>();
         codes.NextAsync<WorkOrder>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<WorkOrder, string>>>(), Arg.Any<CancellationToken>())
             .Returns("LC-TEST");
-        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, NullLogger<WorkOrderService>.Instance);
+        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance);
     }
 
     private static SaveWorkOrderDto Plan(int qty) =>

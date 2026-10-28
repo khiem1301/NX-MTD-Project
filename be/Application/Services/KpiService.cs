@@ -18,15 +18,20 @@ public sealed class KpiService : IKpiService
     private readonly IUnitOfWork _uow;
     private readonly IOutputQueryService _output;
     private readonly IAuditLogService _audit;
+    private readonly INotificationService _notifier;
     private readonly ILogger<KpiService> _logger;
 
-    public KpiService(IUnitOfWork uow, IOutputQueryService output, IAuditLogService audit, ILogger<KpiService> logger)
+    public KpiService(IUnitOfWork uow, IOutputQueryService output, IAuditLogService audit, INotificationService notifier,
+        ILogger<KpiService> logger)
     {
         _uow = uow;
         _output = output;
         _audit = audit;
+        _notifier = notifier;
         _logger = logger;
     }
+
+    private const string KpiLink = "/kpi/targets";
 
     private IQueryable<KpiTarget> Targets => _uow.Repository<KpiTarget>().Query();
 
@@ -107,6 +112,10 @@ public sealed class KpiService : IKpiService
             await _uow.Repository<KpiTarget>().AddAsync(target);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target)));
+            // Tổ trưởng tổ may là người thực hiện chỉ tiêu.
+            await _notifier.NotifyTeamLeadersAsync(dto.SewingTeamId, new NotificationMessage(NotificationSources.Production,
+                "Có chỉ tiêu KPI mới", $"Quản đốc giao chỉ tiêu {dto.TargetFinishedQty} sản phẩm từ {dto.StartDate:dd/MM/yyyy} đến {dto.EndDate:dd/MM/yyyy}.",
+                KpiLink), ct);
             await _uow.SaveChangesAsync();
             return Result.Success();
         });
@@ -147,6 +156,8 @@ public sealed class KpiService : IKpiService
         target.Status = KpiStatuses.Cancelled;
         _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update,
             new { Status = KpiStatuses.Active }, new { target.Status }));
+        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId, new NotificationMessage(NotificationSources.Production,
+            "Chỉ tiêu KPI bị hủy", $"Quản đốc đã hủy chỉ tiêu KPI {target.TargetFinishedQty} sản phẩm của tổ.", KpiLink), ct);
         await _uow.SaveChangesAsync();
 
         _logger.LogInformation("Đã hủy chỉ tiêu KPI {KpiTargetId}", kpiTargetId);
