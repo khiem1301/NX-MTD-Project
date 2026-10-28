@@ -56,6 +56,7 @@ export const MESSAGES = {
     replacementCreated: 'Đã lập lệnh cắt bù.',
     confirmCancelWorkOrder: 'Hủy lệnh cắt này? Thao tác không hoàn tác được.',
     workOrderCancelled: 'Đã hủy lệnh cắt.',
+    workOrderFinished: 'Đã báo cắt xong, lệnh cắt hoàn thành.',
     laySaved: 'Đã lưu bàn cắt.',
     adjustReasonRequired: 'Số thực tế khác số tính, vui lòng nhập lý do.',
     handoverCreated: 'Đã lập phiếu bàn giao BTP. Các bàn cắt của lệnh đã khóa.',

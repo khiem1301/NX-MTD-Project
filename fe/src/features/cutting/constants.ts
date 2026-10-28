@@ -58,6 +58,9 @@ export const parseLineKey = (key: string) => {
 };
 
 export const LABELS = {
+  finishCutting: 'Cắt xong',
+  finishCuttingHint: 'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận. Cắt ít hơn kế hoạch thì phải nêu lý do.',
+  finishCuttingReason: 'Lý do cắt thiếu kế hoạch',
   fabricPreview: 'Vải cần cho kế hoạch này',
   fabricPreviewHint: 'Khả dụng = tồn kho khả dụng − vải các lệnh cắt khác đã giữ chỗ + vải tổ cắt đang giữ còn trống của đơn.',
   fabricNeed: 'Cần',

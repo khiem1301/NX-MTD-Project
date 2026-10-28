@@ -225,6 +225,50 @@ public sealed class WorkOrderService : IWorkOrderService
         return Result.Success(WarehouseMessages.WorkOrderCancelled);
     }
 
+    public async Task<Result> FinishCuttingAsync(int workOrderId, int cuttingTeamId, string? reason, CancellationToken ct)
+    {
+        var wo = await WorkOrders.Include(w => w.WorkOrderLines).Include(w => w.Order)
+            .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
+        if (wo is null) return WarehouseFailures.NotFound();
+        if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch();
+        if (wo.Status != WorkOrderStatuses.Cutting)
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotFinishable);
+
+        var handovers = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.CutHandover.WorkOrderId == workOrderId)
+            .Select(l => new { l.CutHandover.Status, l.OrderLineId, l.ProductComponentMaterialId, l.ConfirmedQty })
+            .ToListAsync(ct);
+        if (handovers.Any(h => h.Status == HandoverStatuses.Pending))
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandoverToFinish);
+
+        var cut = (await _uow.Repository<CuttingLayLine>().Query().AsNoTracking()
+            .Where(l => l.CuttingLay.WorkOrderId == workOrderId)
+            .Select(l => new { l.OrderLineId, l.ProductComponentMaterialId, l.ActualQty }).ToListAsync(ct))
+            .GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(l => l.ActualQty));
+        var received = handovers.Where(h => h.Status == HandoverStatuses.Confirmed)
+            .GroupBy(h => (h.OrderLineId, h.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(h => h.ConfirmedQty ?? 0));
+
+        var notHanded = cut.Where(c => c.Value > received.GetValueOrDefault(c.Key)).Sum(c => c.Value - received.GetValueOrDefault(c.Key));
+        if (notHanded > 0)
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, string.Format(WarehouseMessages.WorkOrderCutNotHandedOver, notHanded));
+
+        var planned = wo.WorkOrderLines.Sum(l => l.PlannedQty);
+        var inWarehouse = received.Values.Sum();
+        reason = reason?.Trim();
+        if (inWarehouse < planned && string.IsNullOrEmpty(reason))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.WorkOrderFinishShortReasonRequired, inWarehouse, planned));
+
+        wo.Status = WorkOrderStatuses.Completed;
+        wo.CompletedAt = DateTime.Now;
+        if (!string.IsNullOrEmpty(reason)) wo.Note = string.IsNullOrEmpty(wo.Note) ? $"Cắt thiếu: {reason}" : $"{wo.Note}\nCắt thiếu: {reason}";
+        var shortText = inWarehouse < planned ? $" Cắt {inWarehouse}/{planned}: {reason}." : string.Empty;
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production, "Lệnh cắt đã cắt xong",
+            $"Tổ cắt báo lệnh {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) cắt xong, BTP đã vào kho.{shortText}", WorkOrderLink), ct);
+        await _uow.SaveChangesAsync();
+        _logger.LogInformation("Work order {WorkOrderId} finished by cutting team: {InWarehouse}/{Planned}", workOrderId, inWarehouse, planned);
+        return Result.Success(WarehouseMessages.WorkOrderFinishedCutting);
+    }
+
     /// <summary>Chỉ sửa / hủy khi lệnh còn OPEN, chưa có bàn cắt và chưa có phiếu cấp (trừ phiếu bị từ chối).</summary>
     private async Task<Result> EnsureEditableAsync(WorkOrder wo, CancellationToken ct)
     {

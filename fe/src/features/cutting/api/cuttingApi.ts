@@ -45,6 +45,8 @@ export const cuttingApi = {
     get<ReplacementRequest[]>(`${API.cutting.workOrders(role)}/replacement-requests`),
   createReplacement: (role: RolePath, body: CreateReplacementPayload) =>
     post<WorkOrder>(`${API.cutting.workOrders(role)}/replacement`, body),
+  finishCutting: (role: RolePath, id: number, reason?: string) =>
+    post<null>(`${API.cutting.workOrders(role)}/${id}/finish-cutting`, { reason: reason?.trim() || null }),
   cancelWorkOrder: (role: RolePath, id: number) =>
     post<null>(`${API.cutting.workOrders(role)}/${id}/cancel`),
 

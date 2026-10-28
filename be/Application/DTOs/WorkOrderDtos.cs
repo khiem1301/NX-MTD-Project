@@ -41,6 +41,9 @@ public sealed record WorkOrderDto(
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
     IReadOnlyList<FabricRequirementDto> Fabrics);
 
+/// <param name="Reason">Bắt buộc khi BTP vào kho chưa đủ kế hoạch (cắt thiếu).</param>
+public sealed record FinishCuttingDto(string? Reason);
+
 public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty);
 
 /// <summary>Đơn cắt bù (REPLACEMENT_CUTTING) đã được Quản đốc duyệt và chưa có lệnh cắt bù.</summary>
