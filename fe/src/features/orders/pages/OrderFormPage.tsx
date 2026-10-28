@@ -142,7 +142,9 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
               optionFilterProp="label"
               disabled={locked}
               style={{ width: 280 }}
-              options={(customers.data ?? []).map((c) => ({ value: c.customerId, label: c.customerName }))}
+              options={(customers.data ?? [])
+                .filter((c) => c.status === 'Active' || c.customerId === detail?.customerId)
+                .map((c) => ({ value: c.customerId, label: c.customerName }))}
               dropdownRender={(menu) => (
                 <>
                   {menu}

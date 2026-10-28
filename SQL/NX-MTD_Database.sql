@@ -76,6 +76,7 @@
                  (vw_MaterialStock đọc Material.Color).
    - 26/10/2026  WorkAllocation bỏ PieceQty, ConfirmedPieceQty; bỏ vw_TeamPieceHolding và THROW 50051, 50053 (mỗi công đoạn nhận
                  riêng từng thành phần nên không đếm được số BTP giao kèm theo bộ đủ). Operation.UsesSemiFinished giữ lại, chỉ để tham khảo.
+   - 28/10/2026  Customer thêm Status (ACTIVE / DISCONTINUED), như Supplier.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -296,7 +297,9 @@ CREATE TABLE dbo.Customer (
     CustomerName    NVARCHAR(200) NOT NULL CONSTRAINT UQ_Customer_Name UNIQUE,
     Phone           VARCHAR(15)   NULL,
     Email           VARCHAR(100)  NULL,
-    DefaultAddress  NVARCHAR(500) NULL
+    DefaultAddress  NVARCHAR(500) NULL,
+    Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_Customer_Status DEFAULT 'ACTIVE',
+    CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
 -- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chỉ chọn Category (loại chi tiết);

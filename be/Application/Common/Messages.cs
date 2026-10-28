@@ -72,7 +72,7 @@ public static class Messages
     // ---- Mã hàng, đơn hàng ----
     public const string ProductCodeDuplicate = "Mã hàng đã tồn tại.";
     public const string ProductCodeLocked = "Mã hàng đã dùng trong đơn hàng, không đổi được mã.";
-    public const string ProductNotActive = "Mã hàng {0} đã ngừng dùng.";
+    public const string ProductNotActive = "Mã hàng {0} đã ngừng sản xuất.";
     public const string ProductInvalidStatus = "Trạng thái mã hàng không cho phép thao tác này.";
     public const string OrderCodeDuplicate = "Mã đơn hàng đã tồn tại.";
     public const string OrderNotEditable = "Đơn hàng ở trạng thái này không sửa được.";
@@ -122,6 +122,8 @@ public static class Messages
     public const string NotifyNewOrderBody = "Đơn {0}, giao ngày {1}. Vui lòng xem NVL của đơn.";
     public const string CustomerNotFound = "Khách hàng không tồn tại.";
     public const string CustomerNameDuplicate = "Tên khách hàng đã tồn tại.";
+    public const string CustomerNotActive = "Khách hàng đã ngừng hợp tác, vui lòng chọn khách hàng khác.";
+    public const string CustomerDiscontinued = "Đã chuyển khách hàng sang ngừng hợp tác.";
     public const string ProductNotFound = "Mã hàng không tồn tại.";
 
     // ---- Nhân sự, tài khoản, tổ ----
@@ -250,7 +252,7 @@ public static class Messages
     public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
     public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
-    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng dùng.";
+    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng sản xuất.";
     public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
     public const string PurchaseOrderDeliveryCountInvalid = "Số lần nhà cung cấp dự kiến giao phải từ 1 trở lên.";
     public const string PurchaseOrderPlaced = "Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.";

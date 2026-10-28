@@ -1,10 +1,11 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Input, InputNumber, Select, Space, Table, Tooltip, Typography, type TableColumnsType } from 'antd';
+import { Button, Card, InputNumber, Select, Space, Table, Tooltip, Typography, type TableColumnsType } from 'antd';
 import { useState } from 'react';
 import { SIZE_ORDER } from '@/constants/orderStatus';
 import { MESSAGES } from '@/constants/messages';
 import { useProductLookup } from '@/hooks/useOrderLookups';
 import { formatQty } from '@/utils/format';
+import { ColorAutoComplete } from './ColorAutoComplete';
 import { blockTotal, sortSizes, type GridRow, type ProductBlock } from '../utils/orderGrid';
 
 type ProductBlockEditorProps = {
@@ -63,11 +64,11 @@ export function ProductBlockEditor({ block, locked, productLabels, onChange, onR
       title: MESSAGES.orders.color,
       width: 160,
       render: (_: unknown, row, index) => (
-        <Input
+        <ColorAutoComplete
           value={row.color}
           disabled={locked && rowHasOldLine(row)}
-          maxLength={50}
-          onChange={(e) => setRow(index, { color: e.target.value })}
+          extraColors={block.rows.map((r) => r.color)}
+          onChange={(color) => setRow(index, { color })}
         />
       ),
     },

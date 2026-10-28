@@ -453,6 +453,10 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(15)
                 .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasDefaultValue("ACTIVE");
         });
 
         modelBuilder.Entity<CustomerOrder>(entity =>

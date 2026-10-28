@@ -11,6 +11,15 @@ internal static class CodePattern
     public static bool IsMatch(string value) => Regex.IsMatch(value);
 }
 
+public sealed class CustomerQueryValidator : AbstractValidator<CustomerQuery>
+{
+    public CustomerQueryValidator()
+    {
+        RuleFor(x => x.Status).Must(s => s is "Active" or "Discontinued")
+            .When(x => !string.IsNullOrWhiteSpace(x.Status)).WithMessage("Trạng thái khách hàng không hợp lệ.");
+    }
+}
+
 public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto>
 {
     public SaveCustomerDtoValidator()

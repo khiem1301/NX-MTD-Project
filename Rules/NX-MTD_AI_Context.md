@@ -21,7 +21,7 @@
 
 ## 1. Bài toán
 
-- **Khách hàng:** xưởng gia công may mặc (CMT) NX-MTD, khoảng 100 công nhân, 1 tổ cắt + nhiều tổ may + QA/QC + kho + văn phòng. **Khách hàng duy nhất là công ty mẹ** (seed sẵn 1 dòng `Customer`).
+- **Khách hàng:** xưởng gia công may mặc (CMT) NX-MTD, khoảng 100 công nhân, 1 tổ cắt + nhiều tổ may + QA/QC + kho + văn phòng. **Khách hàng duy nhất là công ty mẹ** (seed sẵn 1 dòng `Customer`; `Customer.Status` ACTIVE / DISCONTINUED, khách ngừng hợp tác không tạo được đơn mới).
 - **Hiện trạng:** giấy, Zalo, chấm tay; tổ trưởng mất 15–25 phút mỗi sáng đếm suất ăn trước 08:30; phiếu KCS đến kế toán chậm; lệch kho; trả lương sai do đếm sản lượng sai; giám đốc không thấy lỗi, chi phí, tiến độ.
 - **Ý tưởng cốt lõi:** nối 4 nguồn dữ liệu gốc đang rời rạc: **giờ công** (máy vân tay Ronald Jack Pro), **suất ăn**, **sản lượng công đoạn**, **tồn kho**. Tiến độ, chi phí, lương tạm tính suy ra từ dữ liệu thật.
 - **Hai luồng sản lượng tách biệt (quan trọng nhất):**

@@ -135,7 +135,7 @@ public class CustomerOrderServiceTests
         variantRepo.AddAsync(Arg.Do<ProductVariant>(v => _variants.Add(v))).Returns(Task.CompletedTask);
         _uow.Repository<ProductVariant>().Returns(variantRepo);
         _clock.Now.Returns(new DateTime(2026, 10, 23, 8, 0, 0));
-        _orders.CustomerExistsAsync(default, default).ReturnsForAnyArgs(true);
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Active);
         _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(Array.Empty<string>());
     }
 
@@ -164,6 +164,45 @@ public class CustomerOrderServiceTests
         var variant = TestVariant.Make(1, "AO-01", color, size);
         _variants.Add(variant);
         return new() { OrderLineId = id, OrderId = 5, ProductId = 1, ProductVariantId = variant.ProductVariantId, ProductVariant = variant, OrderedQty = qty, CmtUnitPrice = 12500 };
+    }
+
+    [Fact]
+    public async Task Create_DiscontinuedCustomer_FailsWithCode()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Discontinued);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CustomerNotActive);
+    }
+
+    [Fact]
+    public async Task Create_UnknownCustomer_FailsNotFound()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs((string?)null);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task Update_KeepingTheSameDiscontinuedCustomer_IsAllowed_ButSwitchingToOneIsNot()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Discontinued);
+        var order = Existing(OrderStatuses.New, Line(1, "Đỏ", "M"));
+        _orders.GetWithLinesAsync(5, default).Returns(order);
+
+        var same = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M")), default);
+        same.ErrorCode.Should().NotBe(ErrorCodes.CustomerNotActive);
+
+        var other = Update(L(1, "Đỏ", "M")) with { CustomerId = 2 };
+        var switched = await Create().UpdateAsync(5, other, default);
+        switched.ErrorCode.Should().Be(ErrorCodes.CustomerNotActive);
     }
 
     [Fact]

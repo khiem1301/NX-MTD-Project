@@ -7,7 +7,10 @@ export type Customer = {
   phone: string | null;
   email: string | null;
   defaultAddress: string | null;
+  status: CustomerStatus;
 };
+export type CustomerStatus = 'Active' | 'Discontinued';
+export type CustomerQuery = { keyword?: string; status?: CustomerStatus };
 export type SaveCustomerPayload = {
   customerName: string;
   phone?: string | null;

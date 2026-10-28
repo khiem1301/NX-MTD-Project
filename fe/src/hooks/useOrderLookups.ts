@@ -17,6 +17,10 @@ export const useOrderLineLookup = (orderId: number | null) =>
     enabled: orderId !== null,
   });
 
+/** Màu đã khai ở các mã hàng (gợi ý khi nhập màu). */
+export const useProductColors = () =>
+  useQuery({ queryKey: [...KEY, 'product-colors'], queryFn: () => orderLookupApi.productColors(), staleTime: 60_000 });
+
 /** Mã hàng đang dùng (ACTIVE). */
 export const useProductLookup = (keyword?: string) =>
   useQuery({

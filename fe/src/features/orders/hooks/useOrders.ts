@@ -4,6 +4,7 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { customerApi, orderApi, productApi } from '../api/orderApi';
 import type {
   CreateOrderPayload,
+  CustomerQuery,
   OrderQuery,
   ProductQuery,
   SaveCustomerPayload,
@@ -18,8 +19,15 @@ const CUSTOMERS_KEY = [...ORDERS_KEY, 'customers'] as const;
 /** Mã hàng / khách / đơn đổi thì dropdown tra cứu của luồng khác cũng phải tải lại. */
 const LOOKUPS_KEY = ['order-lookups'] as const;
 
-export const useCustomers = (keyword?: string) =>
-  useQuery({ queryKey: [...CUSTOMERS_KEY, keyword], queryFn: () => customerApi.list(keyword) });
+export const useCustomers = (query: CustomerQuery = {}) =>
+  useQuery({ queryKey: [...CUSTOMERS_KEY, query], queryFn: () => customerApi.list(query) });
+
+export const useToggleCustomer = () =>
+  useApiMutation(
+    ({ id, discontinue }: { id: number; discontinue: boolean }) =>
+      discontinue ? customerApi.discontinue(id) : customerApi.reactivate(id),
+    { invalidate: [CUSTOMERS_KEY], successMessage: MESSAGES.common.saved },
+  );
 
 export const useSaveCustomer = () =>
   useApiMutation(

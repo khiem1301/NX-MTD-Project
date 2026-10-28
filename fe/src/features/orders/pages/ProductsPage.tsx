@@ -19,8 +19,8 @@ import { FilterSelect } from '@/components/common/FilterSelect';
 type Filters = { keyword?: string; status?: ProductStatus };
 
 const STATUS_TAG: Record<string, StatusLabel> = {
-  Active: { text: 'Đang dùng', color: 'green' },
-  Discontinued: { text: 'Ngừng dùng', color: 'default' },
+  Active: { text: 'Đang sản xuất', color: 'green' },
+  Discontinued: { text: 'Ngừng sản xuất', color: 'default' },
 };
 
 function ProductExpanded({ product }: { product: ProductListItem }) {
@@ -33,7 +33,7 @@ function ProductExpanded({ product }: { product: ProductListItem }) {
   );
 }
 
-/** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng dùng. */
+/** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng sản xuất. */
 export function ProductsPage() {
   const table = useTableQuery<Filters>({});
   const products = useProducts(table.params);

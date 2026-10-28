@@ -46,7 +46,12 @@ export const API = {
       v1(`${role}/teams/${id}/${action}`),
   },
   hrLookups: { teams: v1('common/hr-lookups/teams'), teamMembers: v1('common/hr-lookups/team-members') },
-  customers: { base: v1('admin/customers'), byId: (id: number) => v1(`admin/customers/${id}`) },
+  customers: {
+    base: v1('admin/customers'),
+    byId: (id: number) => v1(`admin/customers/${id}`),
+    discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
+    reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
+  },
   products: {
     base: v1('admin/products'),
     sampleImage: v1('admin/products/sample-image'),
@@ -68,6 +73,7 @@ export const API = {
     orders: v1('common/order-lookups/orders'),
     orderLines: (orderId: number) => v1(`common/order-lookups/orders/${orderId}/lines`),
     products: v1('common/order-lookups/products'),
+    productColors: v1('common/order-lookups/product-colors'),
   },
   requests: {
     base: v1('common/requests'),

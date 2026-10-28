@@ -66,7 +66,7 @@ export function SupplierFormModal({ open, supplier, onClose }: Props) {
         <Form.Item name="address" label={text.address} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 500 }]}>
           <Input maxLength={500} />
         </Form.Item>
-        <Form.Item name="materialTypes" label={text.materialTypes}>
+        <Form.Item name="materialTypes" label={text.materialTypes} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 200 }]}>
           <Input maxLength={200} />
         </Form.Item>
         <Form.Item name="note" label={text.note}>

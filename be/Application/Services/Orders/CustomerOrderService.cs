@@ -100,7 +100,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
 
         var header = await CheckHeaderAsync(order, dto, isNew, ct);
         if (!header.IsSuccess) return header;
-        var refs = await CheckReferencesAsync(dto.CustomerId, NewProductIds(order, dto.Lines), ct);
+        var refs = await CheckReferencesAsync(dto.CustomerId, NewProductIds(order, dto.Lines), ct, order.CustomerId);
         if (!refs.IsSuccess) return refs;
         var variants = await ResolveVariantsAsync(dto.Lines, ct);
         if (!variants.IsSuccess) return variants;
@@ -179,11 +179,14 @@ public sealed class CustomerOrderService : ICustomerOrderService
             : Result.Success();
     }
 
-    /// <summary>Khách phải tồn tại; mã hàng phải đang dùng (chỉ kiểm mã hàng của dòng mới / dòng đổi mã hàng).</summary>
-    private async Task<Result> CheckReferencesAsync(int customerId, IEnumerable<int> productIds, CancellationToken ct)
+    /// <summary>Khách phải tồn tại và đang hợp tác (đơn cũ giữ nguyên khách thì không kiểm); mã hàng phải đang dùng (chỉ kiểm mã hàng của dòng mới / dòng đổi mã hàng).</summary>
+    private async Task<Result> CheckReferencesAsync(int customerId, IEnumerable<int> productIds, CancellationToken ct, int? currentCustomerId = null)
     {
-        if (!await _orders.CustomerExistsAsync(customerId, ct))
+        var customerStatus = await _orders.GetCustomerStatusAsync(customerId, ct);
+        if (customerStatus is null)
             return Result.Failure(ErrorCodes.CommonNotFound, Messages.CustomerNotFound);
+        if (customerStatus != RecordStatus.Active && customerId != currentCustomerId)
+            return Result.Failure(ErrorCodes.CustomerNotActive, Messages.CustomerNotActive);
         var ids = productIds.Distinct().ToList();
         if (ids.Count == 0) return Result.Success();
         var bad = await _products.FindInactiveCodesAsync(ids, ct);
