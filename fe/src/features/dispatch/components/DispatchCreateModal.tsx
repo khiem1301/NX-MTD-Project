@@ -24,9 +24,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
   const [orderId, setOrderId] = useState<number>();
   const lines = useDispatchable(orderId);
   const create = useCreateDispatch();
-  // whitespace chỉ dùng cho chuỗi; áp lên DatePicker (Dayjs) thì luôn báo thiếu dù đã chọn ngày.
-  const required = [{ required: true, message: MESSAGES.common.required }];
-  const requiredText = [{ required: true, whitespace: true, message: MESSAGES.common.required }];
+  const required = [{ required: true, whitespace: true, message: MESSAGES.common.required }];
 
   const handleFinish = (values: FormValues) => {
     if (orderId === undefined) return;
@@ -82,7 +80,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
             <DatePicker format="DD/MM/YYYY" />
           </Form.Item>
         </Space>
-        <Form.Item name="deliveryAddress" label={DISPATCH_LABELS.deliveryAddress} rules={requiredText}>
+        <Form.Item name="deliveryAddress" label={DISPATCH_LABELS.deliveryAddress} rules={required}>
           <Input maxLength={500} />
         </Form.Item>
         <Form.Item name="note" label={DISPATCH_LABELS.note}>

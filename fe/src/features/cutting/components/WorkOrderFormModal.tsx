@@ -96,7 +96,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
           </Form.Item>
           <Form.Item name="productId" label={LABELS.product} rules={required}>
             <Select
-              style={{ width: 260 }}
+              style={{ width: 180 }}
               options={products.map((p) => ({
                 value: p.productId,
                 label: `${p.productCode} ${p.productName}`,
