@@ -4005,5 +4005,43 @@ JOIN dbo.Material m ON m.MaterialCode = v.Code;
 COMMIT TRANSACTION;
 GO
 
+/* =====================================================================================
+   19.5 Thông báo mẫu của Quản đốc gửi tổ trưởng / công nhân (nghỉ lễ, sự kiện sắp tới)
+   ---------------------------------------------------------------------------------
+   Gửi tới toàn xưởng; mỗi người nhận một dòng Notification chưa đọc để thử khối "Thông báo mới" ở trang chủ.
+   Chạy lại không nhân đôi dữ liệu.
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.Announcement WHERE Content LIKE N'[[]DEMO]%')
+BEGIN
+    PRINT N'Dữ liệu demo 19.5 đã có, bỏ qua.';
+    RETURN;
+END;
+DECLARE @sender INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC');
+IF @sender IS NULL
+BEGIN
+    PRINT N'Chưa có tài khoản QUANDOC, bỏ qua 19.5.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+INSERT dbo.Announcement (Content, Priority, TargetScope, SenderId, SentAt) VALUES
+ (N'[DEMO] Thông báo nghỉ lễ: xưởng nghỉ Quốc khánh 2/9 từ 31/8 đến hết 3/9, đi làm lại sáng 4/9. Tổ trưởng nhắc công nhân hoàn thành đơn đang chạy trước kỳ nghỉ.', 'URGENT', 'ALL', @sender, '2026-10-27 08:00:00'),
+ (N'[DEMO] Sự kiện sắp tới: liên hoan cuối tháng chiều thứ Bảy 31/10 tại nhà ăn xưởng. Tổ trưởng báo số người tham gia cho Quản đốc trước thứ Sáu.', 'NORMAL', 'ALL', @sender, '2026-10-27 09:00:00');
+
+INSERT dbo.Notification (RecipientId, SourceType, RefTable, RefId, Title, Message, LinkUrl)
+SELECT e.EmployeeId, 'ANNOUNCEMENT', 'Announcement', a.AnnouncementId,
+       CASE a.Priority WHEN 'URGENT' THEN N'Thông báo khẩn' ELSE N'Thông báo' END, a.Content, '/notifications'
+FROM dbo.Announcement a
+CROSS JOIN dbo.Employee e
+WHERE a.Content LIKE N'[[]DEMO]%' AND e.Status = 'ACTIVE' AND e.EmployeeId <> @sender;
+
+COMMIT TRANSACTION;
+GO
+
 PRINT N'NX-MTD: tạo database xong.';
 GO

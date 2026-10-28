@@ -66,6 +66,20 @@ Kết thúc bằng Admin / Quản đốc mở **Trang chủ**: bảng *Tiến đ
 - **Sổ xe**: xe `29C-12345` có chuyến lệch km và chuyến xăng vượt định mức để xem cảnh báo.
 - **Nhật ký thay đổi** (Admin): xem ai đã đổi gì; **Nhân viên → Nhập từ Excel** để nhập nhiều nhân viên một lần.
 
+## Thử các thay đổi 28/10 (theo sheet ghi chú)
+
+| Việc | Ai | Cách thử |
+|---|---|---|
+| Menu theo loại tổ | `TTMAY` và `TTCAT` | `TTCAT` thấy Lệnh cắt, Bàn cắt, Bàn giao BTP; `TTMAY` không thấy, gõ thẳng đường dẫn cũng bị đưa về trang chủ |
+| Lệnh cắt thiếu vải | `QUANDOC` | Lệnh cắt → Lập: nhập kế hoạch, bảng "Vải cần cho kế hoạch này" hiện cần / khả dụng / thiếu và chặn nút Lưu khi thiếu; tab "Vải theo đơn" xem đơn nào dùng vải nào |
+| Lập KPI | `QUANDOC` | Chỉ tiêu KPI → Lập: ô "BTP khả dụng" hiện kho / tổ đang giữ / KPI khác và chặn khi vượt |
+| Kết thúc đơn của tổ | `QUANDOC` | Chỉ tiêu KPI → Kết thúc đơn: xem lệch theo công nhân, KPI đạt / không, tăng ca; xác nhận thì phần lệch thành phiếu hàng hỏng "Lệch kiểm cuối đơn" (cần công đoạn cuối và đơn giá đã duyệt) |
+| Duyệt tăng ca | `TTMAY` | KPI không đạt thiếu hơn 10%: đơn tăng ca ở "Đơn của tôi", tổ trưởng của đúng tổ duyệt / từ chối |
+| Bậc thợ | `ADMIN` | Bậc thợ → Danh mục bậc: thêm bậc E, ngừng dùng, xóa bậc chưa dùng; đặt bậc chọn Tổ rồi Công nhân |
+| Quản lý tài khoản | `QUANDOC` | Nhân viên: thêm, sửa, khóa, đặt lại mật khẩu mọi người trừ Admin và Kế toán |
+| Thông báo | mọi vai trò | Trang chủ có khối "Thông báo mới" (2 thông báo mẫu nghỉ lễ / sự kiện của mục 19.5) |
+| Doanh thu | `ADMIN` | Trang chủ có khối Doanh thu tháng này (theo SL hoàn thiện đã nhập kho TP) |
+
 ## Lưu ý khi diễn tập
 
 - Dữ liệu demo không có họ tên thật hay lương thật.
