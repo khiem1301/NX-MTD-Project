@@ -426,7 +426,8 @@ public class MaterialReceiptFlowTests
         request.ShortageResolution.Should().Be(ShortageResolutions.NoReplenish);
         pol.NotReplenishedQty.Should().Be(20);
         po.GoodsStatus.Should().Be(PurchaseGoodsStatuses.ClosedShort);
-        order.MaterialStatus.Should().Be(OrderMaterialStatuses.Complete);   // đã nhận 80 + không bù 20 = đủ 100
+        // Đã nhận 80/100 và chốt không bù 20: đơn mua đóng thiếu nhưng NVL của đơn vẫn chưa đủ (Partially Received).
+        order.MaterialStatus.Should().Be(OrderMaterialStatuses.Partial);
         await _requests.Received(1).MarkCompletedAsync(900, "Nhà cung cấp hết hàng", Arg.Any<CancellationToken>());
     }
 

@@ -60,7 +60,9 @@ public sealed class RequestService : IRequestService
             request.DecidedAt = _clock.Now;
         }
         await _requests.AddAsync(request);
-        if (teamId is not null) await NotifyTeamLeadersAsync(teamId.Value, request, policy, ct);
+        // Đơn của riêng một tổ do tổ trưởng xử lý (tăng ca) báo tổ trưởng tổ đó; loại khác (vd. đơn xin NVL do hệ thống tạo
+        // cho một tổ) báo người xử lý theo vai trò như mọi đơn.
+        if (teamId is not null && policy.HandlerRole == Roles.TeamLeader) await NotifyTeamLeadersAsync(teamId.Value, request, policy, ct);
         else await NotifyHandlersAsync(policy, request, ct);
         return request;
     }

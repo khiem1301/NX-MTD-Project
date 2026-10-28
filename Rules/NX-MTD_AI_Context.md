@@ -179,7 +179,7 @@
 | `MaterialReceipt` | `ReceiptType` NEW/SUPPLEMENTARY · `Source` CUSTOMER/SUPPLIER · `Status` PENDING, CONFIRMED, RETURNED |
 | `MaterialIssue.Status` | PENDING_RECEIPT (giữ chỗ), RECEIVED (trừ kho), REJECTED |
 | `MaterialReturn`, `CutHandover`, `FgHandover` | PENDING, CONFIRMED, REJECTED, CANCELLED |
-| `WorkOrder.Status` | OPEN, CUTTING, COMPLETED (tự động khi kho xác nhận BTP đủ kế hoạch, không đóng tay), CANCELLED |
+| `WorkOrder.Status` | OPEN, CUTTING, COMPLETED (tổ cắt bấm Cắt xong sau khi kho nhận BTP và trả vải thừa; Quản đốc không đóng tay), CANCELLED |
 | `CuttingLay` / `OutputRecord` / `DefectRecord` | RECORDED, LOCKED / SAVED, LOCKED / RECORDED, CANCELLED, LOCKED |
 | `WorkerPieceMovement` | `MovementType` HANDOVER/RETRIEVAL · `ConfirmMode` WORKER/ON_BEHALF · `Status` PENDING, CONFIRMED, REJECTED |
 | `DispatchNote.Status` | PENDING, REJECTED, CANCELLED, IN_DELIVERY, DELIVERED, PARTIALLY_DELIVERED |
