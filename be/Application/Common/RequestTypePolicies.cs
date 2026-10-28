@@ -33,6 +33,8 @@ public static class RequestTypePolicies
         new RequestTypePolicy(RequestTypes.ShortDelivery, NoCreator, null, Roles.Manager, false, "Thiếu hàng khi nhập"),
         new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, false, "Xin NVL"),
         new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, false, "Xin BTP"),
+        // Hệ thống tạo khi kết thúc đơn mà KPI không đạt; tổ trưởng của chính tổ đó duyệt / từ chối (RequestAccess.IsHandler giới hạn theo tổ).
+        new RequestTypePolicy(RequestTypes.Overtime, NoCreator, null, Roles.TeamLeader, true, "Tăng ca"),
     }.ToDictionary(p => p.RequestType);
 
     public static readonly IReadOnlyDictionary<string, string> StatusLabels = new Dictionary<string, string>

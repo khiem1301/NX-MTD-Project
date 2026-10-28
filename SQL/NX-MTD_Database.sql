@@ -558,6 +558,7 @@ GO
    SHORT_DELIVERY                Hệ thống (phiếu nhập thiếu) Quản đốc      không
    MATERIAL_REQUISITION          Tổ trưởng cắt / may         Thủ kho       không  (yêu cầu NVL)
    SEMI_FINISHED_REQUISITION     Tổ trưởng may               Thủ kho       không  (yêu cầu BTP)
+   OVERTIME                      Hệ thống (KPI không đạt)    Tổ trưởng     có     (thiếu ít: tự duyệt; thiếu nhiều: tổ trưởng quyết định)
    Quy tắc ai tạo / ai xử lý nằm ở backend. Lịch sử đổi trạng thái ghi vào AuditLog.
    ===================================================================================== */
 
@@ -587,7 +588,7 @@ CREATE TABLE dbo.Request (
     UpdatedAt            DATETIME2(0)   NULL,
     RowVer               ROWVERSION,
     CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION',
-        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION')),
+        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','OVERTIME')),
     CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
     CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH'))
@@ -970,7 +971,7 @@ CREATE TABLE dbo.DefectRecord (
     UpdatedAt           DATETIME2(0)   NULL,
     RowVer              ROWVERSION,
     CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP')),
-    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')),
+    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER','END_OF_ORDER_MISMATCH')),   -- END_OF_ORDER_MISMATCH: hệ thống ghi khi kiểm cuối đơn lệch
     CONSTRAINT CK_DR_Other  CHECK (DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL),
     CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CANCELLED','LOCKED')),
     CONSTRAINT CK_DR_Rate   CHECK (DefectType = 'REWORK' OR PieceRateId IS NOT NULL)
@@ -2661,6 +2662,7 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('CUT_SURPLUS_PERCENT',       N'3',     N'% cắt vượt số đặt cho phép (CHƯA CHỐT với xưởng)'),
  ('FUEL_NORM_TOLERANCE_PERCENT', N'15',  N'Cảnh báo xăng vượt định mức'),
  ('REQUEST_MAX_PHOTOS',        N'5',     N'Số ảnh tối đa trên một đơn từ'),
+ ('KPI_OT_AUTO_THRESHOLD_PCT', N'10',    N'KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu nhiều hơn: tổ trưởng quyết định'),
  -- Quy tắc tính công lấy theo ca "Hành Chính" (CA00001) đang cài trong Ronald Jack Pro
  ('WORK_START_TIME',           N'07:30', N'Giờ vào làm (ca Hành Chính RJ)'),
  ('WORK_END_TIME',             N'16:30', N'Giờ tan làm; quẹt ra sau giờ này tính tăng ca'),

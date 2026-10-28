@@ -203,6 +203,9 @@ public static class Messages
     public const string KpiDuplicatePeriod =
         "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiInvalidStatusForFinish = "Chỉ kết thúc được đơn của tổ khi chỉ tiêu KPI còn hoạt động (ACTIVE).";
+    public const string KpiFinishNoFinalOperation = "Mã hàng chưa có công đoạn cuối đang dùng nên chưa so được sản lượng cuối đơn.";
+    public const string KpiFinished = "Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
     public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";

@@ -110,6 +110,7 @@ public static class ErrorCodes
     // --- KPI tổ may (Minh, UC19 KPI tổ may — khác UC19 lệnh cắt ở WorkOrderService) ---
     public const string KpiNotFound = "KPI_NOT_FOUND";
     public const string KpiInvalidStatus = "KPI_INVALID_STATUS";
+    public const string KpiFinishBlocked = "KPI_FINISH_BLOCKED";
     public const string KpiInvalidReference = "KPI_INVALID_REFERENCE";
     public const string KpiDuplicatePeriod = "KPI_DUPLICATE_PERIOD";
 

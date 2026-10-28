@@ -298,6 +298,7 @@ export const PRODUCTION_TEXT = {
       CrookedSeam: 'Đường may lệch',
       WrongSize: 'Sai size',
       Torn: 'Rách',
+      EndOfOrderMismatch: 'Lệch kiểm cuối đơn',
       Stained: 'Dơ bẩn',
       Other: 'Khác',
     } as Record<DefectReason, string>,

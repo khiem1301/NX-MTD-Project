@@ -28,13 +28,6 @@ public interface IKpiService
     Task<Result> CancelAsync(int kpiTargetId, CancellationToken ct);
 
     /// <summary>
-    /// Job nền (KpiAutoCloseJob): đóng các chỉ tiêu ACTIVE đã qua EndDate — so Σ FinishedQty cả kỳ
-    /// (vw_KpiDailyResult) với TargetFinishedQty để suy ra Result, rồi chuyển Status sang CLOSED.
-    /// Trả số chỉ tiêu đã đóng.
-    /// </summary>
-    Task<int> CloseExpiredAsync(DateOnly today, CancellationToken ct);
-
-    /// <summary>
     /// MI-18 "KPI theo ngày" (UC19): danh sách kết quả theo ngày của một chỉ tiêu KPI, chiếu thẳng (thin
     /// pass-through) từ view vw_KpiDailyResult, sắp theo WorkDate tăng dần. 404 nếu KpiTargetId không tồn tại.
     /// View chỉ có dòng cho ngày có QC nhập sản lượng — ngày không có dòng là ngày chưa có hàng hoàn thiện,

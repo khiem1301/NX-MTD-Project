@@ -10,8 +10,8 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ; KpiAutoCloseJob
-/// gọi <see cref="CloseExpiredAsync"/> mỗi ngày để tự đóng các chỉ tiêu đã hết kỳ (xem IKpiService).
+/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ. KPI chỉ được chốt khi kết thúc đơn của
+/// tổ (<see cref="Production.EndOfOrderService"/>), không tự đóng theo ngày hết kỳ.
 /// </summary>
 public sealed class KpiService : IKpiService
 {
@@ -151,36 +151,6 @@ public sealed class KpiService : IKpiService
 
         _logger.LogInformation("Đã hủy chỉ tiêu KPI {KpiTargetId}", kpiTargetId);
         return Result.Success(Messages.Saved);
-    }
-
-    /// <summary>
-    /// Mỗi chỉ tiêu ACTIVE đã qua EndDate: Σ FinishedQty cả kỳ (vw_KpiDailyResult, đã lọc theo
-    /// StartDate..EndDate sẵn trong view) so với TargetFinishedQty → ACHIEVED nếu đạt, ngược lại NOT_ACHIEVED.
-    /// Gộp một truy vấn nhóm theo KpiTargetId thay vì lặp từng dòng để tránh N+1.
-    /// </summary>
-    public async Task<int> CloseExpiredAsync(DateOnly today, CancellationToken ct)
-    {
-        var expired = await _uow.Repository<KpiTarget>().Query()
-            .Where(k => k.Status == KpiStatuses.Active && k.EndDate < today)
-            .ToListAsync(ct);
-        if (expired.Count == 0) return 0;
-
-        var totalByKpiTargetId = await _output.GetKpiFinishedTotalsAsync(expired.Select(k => k.KpiTargetId).ToList(), ct);
-
-        foreach (var target in expired)
-        {
-            var total = totalByKpiTargetId.GetValueOrDefault(target.KpiTargetId);
-            target.Result = total >= target.TargetFinishedQty ? KpiResults.Achieved : KpiResults.NotAchieved;
-            target.Status = KpiStatuses.Closed;
-            // Job nền: không có người đăng nhập nên AuditLogService ghi ChangedBy = NULL.
-            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Update,
-                new { Status = KpiStatuses.Active }, new { target.Status, target.Result, ActualQty = total }));
-        }
-
-        await _uow.SaveChangesAsync();
-        _logger.LogInformation("KpiAutoCloseJob: đã đóng {Count} chỉ tiêu KPI hết hạn trước {Today:yyyy-MM-dd}",
-            expired.Count, today);
-        return expired.Count;
     }
 
     public async Task<Result<IReadOnlyList<KpiDailyResultDto>>> GetDailyResultsAsync(int kpiTargetId, CancellationToken ct)

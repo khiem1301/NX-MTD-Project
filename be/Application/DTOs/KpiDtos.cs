@@ -21,6 +21,23 @@ public sealed record SaveKpiTargetDto(
 /// </summary>
 public sealed record KpiCapacityDto(int WarehouseBtp, int TeamHeld, int CommittedByOthers, int MaxTarget);
 
+/// <summary>Quyết định tăng ca khi KPI không đạt (kết thúc đơn của tổ).</summary>
+public static class OvertimeDecisions
+{
+    public const string None = "None";
+    public const string AutoApproved = "AutoApproved";
+    public const string LeaderDecides = "LeaderDecides";
+}
+
+/// <summary>Một công nhân bị lệch ở một dòng đơn: số báo ở công đoạn cuối và phần lệch (ghi phiếu hàng hỏng nếu &gt; 0).</summary>
+public sealed record EndOfOrderRowDto(int OrderLineId, string Color, string SizeCode, int WorkerId, string WorkerCode,
+    string WorkerName, int ReportedQty, int MismatchQty);
+
+/// <summary>Xem trước (và kết quả) kết thúc đơn của một tổ: chốt KPI, lệch kiểm cuối đơn theo công nhân, tăng ca.</summary>
+public sealed record EndOfOrderPreviewDto(int KpiTargetId, string OrderCode, string ProductCode, string TeamName,
+    int TargetQty, int ActualQty, bool Achieved, int ShortfallQty, decimal ShortfallPct, int ThresholdPct, string OtDecision,
+    string? FinalOperationName, IReadOnlyList<EndOfOrderRowDto> Rows, IReadOnlyList<string> Blockers, bool CanFinish);
+
 public sealed record KpiTargetQuery : PageQuery
 {
     public string? Status { get; init; }

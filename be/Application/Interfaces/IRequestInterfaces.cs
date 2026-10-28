@@ -38,6 +38,9 @@ public interface IRequestRepository : IGenericRepository<Request>
     Task<Request?> GetWithLinesAsync(int requestId, CancellationToken ct);
     Task<RequestHeader?> GetHeaderAsync(int requestId, CancellationToken ct);
     Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct);
+
+    /// <summary>Tổ trưởng và tổ phó đang làm của một tổ (nhận thông báo đơn của riêng tổ).</summary>
+    Task<IReadOnlyList<int>> TeamLeaderIdsAsync(int teamId, CancellationToken ct);
     Task<PagedResult<RequestListItemDto>> ListAsync(RequestListFilter filter, CancellationToken ct);
 
     /// <summary>Chưa có History / Permissions / MaxPhotos (service điền).</summary>
@@ -55,7 +58,9 @@ public interface IRequestService
 
     /// <summary>Hệ thống tạo đơn (SHORT_DELIVERY từ UC39 – Thái). Chỉ thêm vào DbContext, KHÔNG SaveChanges:
     /// người gọi lưu trong transaction của mình. Trả entity để gán thêm (vd. request.MaterialReceipt = receipt).</summary>
-    Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct);
+    /// <param name="teamId">Đơn của riêng một tổ (tăng ca): gán tổ và chỉ báo tổ trưởng / tổ phó của tổ đó.</param>
+    /// <param name="autoApprovalNote">Có giá trị = hệ thống tự duyệt ngay với ghi chú này.</param>
+    Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null, string? autoApprovalNote = null);
 
     /// <summary>Luồng khác hoàn thành đơn trong transaction của mình (vd. TH-05 khi tổ xác nhận phiếu cấp,
     /// cắt bù khi BTP bù vào kho). KHÔNG SaveChanges.</summary>

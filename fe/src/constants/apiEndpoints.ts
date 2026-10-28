@@ -159,6 +159,8 @@ export const API = {
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
     availableBtp: '/api/v1/manager/kpi-targets/available-btp',
+    finishPreview: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/finish-preview`,
+    finish: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/finish`,
     dailyResults: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-results`,
     cancel: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/cancel`,
     adminTargets: '/api/v1/admin/kpi-targets',

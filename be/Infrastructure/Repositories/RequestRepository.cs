@@ -20,6 +20,12 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
             .Select(r => new RequestHeader(r.RequestId, r.RequestTypeCode, r.Status, r.CreatedBy, r.CreatedByTeamId))
             .FirstOrDefaultAsync(ct);
 
+    public async Task<IReadOnlyList<int>> TeamLeaderIdsAsync(int teamId, CancellationToken ct) =>
+        await _context.Employees.AsNoTracking()
+            .Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active
+                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
+            .Select(e => e.EmployeeId).ToListAsync(ct);
+
     public Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct) =>
         _context.Requests.AsNoTracking().Where(r => r.RequestCode.StartsWith(prefix))
             .OrderByDescending(r => r.RequestCode).Select(r => r.RequestCode).FirstOrDefaultAsync(ct);

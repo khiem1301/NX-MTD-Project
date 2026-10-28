@@ -1,4 +1,5 @@
-import { Button, Popconfirm, Progress, Select, Space, Table, Tag } from 'antd';
+import { useState } from 'react';
+import { Button, Popconfirm, Progress, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
@@ -6,13 +7,14 @@ import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useCancelKpiTarget, useKpiTargets } from '../hooks/useKpi';
+import { FinishOrderModal } from './FinishOrderModal';
 import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Props = {
   filter: KpiTargetFilter;
   onFilterChange: (filter: KpiTargetFilter) => void;
-  onViewDaily: (kpiTargetId: number) => void;
   /** Quản đốc lập / sửa / hủy; Admin chỉ xem. */
   role: KpiRole;
   onAdd?: () => void;
@@ -28,10 +30,11 @@ const progressStatus = (percent: number): 'success' | 'normal' | 'exception' =>
   percent >= 100 ? 'success' : percent >= 70 ? 'normal' : 'exception';
 
 /** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, lọc theo trạng thái + từ khóa. */
-export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAdd, onEdit }: Props) {
+export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: Props) {
   const targets = useKpiTargets(filter, role);
   const cancel = useCancelKpiTarget();
   const canManage = role === 'manager';
+  const [finishing, setFinishing] = useState<KpiTarget | null>(null);
 
   const columns: ColumnsType<KpiTarget> = [
     {
@@ -52,12 +55,6 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAd
     {
       title: KPI_TEXT.table.targetFinishedQty,
       dataIndex: 'targetFinishedQty',
-      align: 'right',
-      render: (v: number) => formatQty(v),
-    },
-    {
-      title: KPI_TEXT.table.dailyTarget,
-      dataIndex: 'dailyTarget',
       align: 'right',
       render: (v: number) => formatQty(v),
     },
@@ -96,11 +93,11 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAd
       key: 'action',
       render: (_, row) => (
         <Space size={0} wrap>
-          <Button type="link" onClick={() => onViewDaily(row.kpiTargetId)}>
-            {KPI_TEXT.table.viewDetail}
-          </Button>
           {canManage && row.status === 'Active' && (
             <>
+              <Button type="link" onClick={() => setFinishing(row)}>
+                {KPI_TEXT.finish.button}
+              </Button>
               <Button type="link" onClick={() => onEdit?.(row)}>
                 {KPI_TEXT.edit}
               </Button>
@@ -126,8 +123,7 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAd
           defaultValue={filter.keyword}
           onSearch={(keyword) => onFilterChange({ ...filter, page: 1, keyword: keyword || undefined })}
         />
-        <Select<KpiTargetStatus | undefined>
-          allowClear
+        <FilterSelect<KpiTargetStatus>
           placeholder={KPI_TEXT.filter.statusPlaceholder}
           style={{ width: 180 }}
           value={filter.status}
@@ -142,6 +138,7 @@ export function KpiTargetTable({ filter, onFilterChange, onViewDaily, role, onAd
       </Space>
 
       <QueryError error={targets.error} onRetry={() => void targets.refetch()} />
+      <FinishOrderModal target={finishing} onClose={() => setFinishing(null)} />
 
       <Table<KpiTarget>
         rowKey="kpiTargetId"

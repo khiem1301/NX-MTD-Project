@@ -37,6 +37,37 @@ export type KpiCapacity = {
   maxTarget: number;
 };
 
+/** Kết thúc đơn của tổ: một công nhân lệch ở một dòng đơn (báo ở công đoạn cuối nhiều hơn QC đạt + hàng hủy). */
+export type EndOfOrderRow = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  workerId: number;
+  workerCode: string;
+  workerName: string;
+  reportedQty: number;
+  mismatchQty: number;
+};
+
+export type EndOfOrderPreview = {
+  kpiTargetId: number;
+  orderCode: string;
+  productCode: string;
+  teamName: string;
+  targetQty: number;
+  actualQty: number;
+  achieved: boolean;
+  shortfallQty: number;
+  shortfallPct: number;
+  thresholdPct: number;
+  /** None | AutoApproved | LeaderDecides */
+  otDecision: 'None' | 'AutoApproved' | 'LeaderDecides';
+  finalOperationName: string | null;
+  rows: EndOfOrderRow[];
+  blockers: string[];
+  canFinish: boolean;
+};
+
 export type KpiTargetFilter = {
   page: number;
   pageSize: number;
