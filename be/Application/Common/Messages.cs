@@ -89,7 +89,13 @@ public static class Messages
     public const string EmployeeImportRepeated = "Mã nhân viên bị lặp trong file.";
     public const string EmployeeImportAttendanceRepeated = "Mã chấm công bị lặp trong file.";
     public const string EmployeeImportTeamUnknown = "Không tìm thấy tổ có mã {0}.";
-    public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
+    public const string GradeCodeInvalid = "Bậc thợ không có trong danh mục hoặc đã ngừng dùng.";
+    public const string GradeCodeMalformed = "Mã bậc chỉ gồm chữ hoa và số, tối đa 5 ký tự.";
+    public const string GradeCodeDuplicate = "Mã bậc này đã có trong danh mục.";
+    public const string GradeCodeInUse = "Bậc này đã được dùng (nhân viên, đề xuất hoặc tiền bậc) nên không xóa được. Hãy chuyển sang ngừng dùng.";
+    public const string GradeCodeStatusInvalid = "Trạng thái bậc chỉ nhận Active hoặc Inactive.";
+    public const string GradeLevelLocked = "Mức tiền bậc đã có hiệu lực là lịch sử lương, không sửa hoặc xóa. Hãy thêm mức mới với ngày hiệu lực mới.";
+    public const string GradeLevelEffectiveInPast = "Ngày hiệu lực của mức tiền bậc sửa lại phải sau hôm nay.";
     public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
     public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";
     public const string GradeSameAsCurrent = "Bậc đề xuất trùng bậc hiện tại.";

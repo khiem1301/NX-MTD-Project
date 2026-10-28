@@ -24,6 +24,14 @@ public class GradeServiceTests
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
+    private readonly List<GradeLevelCode> _codes = new()
+    {
+        new() { GradeCode = "A", GradeName = "Bậc A", SortOrder = 1, Status = GradeCodes.Active },
+        new() { GradeCode = "B", GradeName = "Bậc B", SortOrder = 2, Status = GradeCodes.Active },
+        new() { GradeCode = "C", GradeName = "Bậc C", SortOrder = 3, Status = GradeCodes.Active },
+        new() { GradeCode = "D", GradeName = "Bậc D", SortOrder = 4, Status = GradeCodes.Active },
+        new() { GradeCode = "X", GradeName = "Bậc cũ", SortOrder = 9, Status = GradeCodes.Inactive },
+    };
     private readonly List<GradeLevel> _levels = new();
     private readonly List<GradeEvaluation> _evals = new();
     private readonly List<Employee> _employees = new();
@@ -41,7 +49,10 @@ public class GradeServiceTests
         _employees.Add(new Employee { EmployeeId = 41, EmployeeCode = "CN2", FullName = "Công nhân 2", TeamId = TeamId, Status = RecordStatus.Active, Role = workerRole });
         _employees.Add(new Employee { EmployeeId = 42, EmployeeCode = "CN3", FullName = "Khác tổ", TeamId = 9, Status = RecordStatus.Active, Role = workerRole });
         _employees.Add(new Employee { EmployeeId = Leader, EmployeeCode = "TT", FullName = "Tổ trưởng", TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.TeamLeader } });
-        Setup(_levels); Setup(_evals); Setup(_employees); Setup(_defects);
+        Setup(_codes); Setup(_levels); Setup(_evals); Setup(_employees); Setup(_defects);
+        _uow.Repository<GradeLevelCode>().AddAsync(Arg.Do<GradeLevelCode>(c => _codes.Add(c)));
+        _uow.Repository<GradeLevelCode>().When(r => r.Remove(Arg.Any<GradeLevelCode>())).Do(c => _codes.Remove(c.Arg<GradeLevelCode>()));
+        _uow.Repository<GradeLevel>().When(r => r.Remove(Arg.Any<GradeLevel>())).Do(c => _levels.Remove(c.Arg<GradeLevel>()));
         _uow.Repository<GradeEvaluation>().AddAsync(Arg.Do<GradeEvaluation>(e =>
         {
             e.GradeEvaluationId = _evals.Count + 1;
@@ -244,8 +255,68 @@ public class GradeServiceTests
         var validator = new SetGradeDtoValidator();
         validator.Validate(new SetGradeDto(40, "A", "Lý do", null)).IsValid.Should().BeTrue();
         validator.Validate(new SetGradeDto(40, "A", " ", null)).IsValid.Should().BeFalse();
-        validator.Validate(new SetGradeDto(40, "Z", "x", null)).IsValid.Should().BeFalse();
+        validator.Validate(new SetGradeDto(40, "e", "x", null)).IsValid.Should().BeTrue();   // bậc mới do Admin thêm, chỉ kiểm định dạng
+        validator.Validate(new SetGradeDto(40, "TOOLONG", "x", null)).IsValid.Should().BeFalse();
+        validator.Validate(new SetGradeDto(40, "A-1", "x", null)).IsValid.Should().BeFalse();
         validator.Validate(new SetGradeDto(0, "A", "x", null)).IsValid.Should().BeFalse();
+    }
+
+    // ---------- Danh mục bậc ----------
+
+    [Fact]
+    public async Task Admin_adds_a_new_grade_and_it_can_then_be_assigned()
+    {
+        var added = await Service().CreateCodeAsync(new SaveGradeCodeDto("e", "Bậc E – Xuất sắc", 0), default);
+        added.IsSuccess.Should().BeTrue();
+        _codes.Should().Contain(c => c.GradeCode == "E" && c.Status == GradeCodes.Active);   // mã chuẩn hóa chữ hoa
+
+        (await Service().SetGradeAsync(new SetGradeDto(40, "E", "Thưởng bậc", null), default)).IsSuccess.Should().BeTrue();
+        _worker.CurrentGradeCode.Should().Be("E");
+    }
+
+    [Fact]
+    public async Task A_duplicate_or_malformed_code_is_refused()
+    {
+        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A", "trùng", 1), default)).Message.Should().Be(Messages.GradeCodeDuplicate);
+        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A-1", "sai", 1), default)).Message.Should().Be(Messages.GradeCodeMalformed);
+    }
+
+    [Fact]
+    public async Task An_inactive_grade_can_no_longer_be_assigned_or_proposed()
+    {
+        (await Service().SetGradeAsync(new SetGradeDto(40, "X", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+        (await Service().ProposeAsync(new ProposeGradeDto(40, "X", "x"), TeamId, default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+
+        var update = await Service().UpdateCodeAsync("D", new UpdateGradeCodeDto("Bậc D", 4, "Inactive"), default);
+        update.IsSuccess.Should().BeTrue();
+        (await Service().SetGradeAsync(new SetGradeDto(40, "D", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
+    }
+
+    [Fact]
+    public async Task A_grade_in_use_cannot_be_deleted_but_an_unused_one_can()
+    {
+        // C đang gán cho công nhân 1 → chỉ ngừng dùng được; X chưa ai dùng → xóa được.
+        (await Service().DeleteCodeAsync("C", default)).Message.Should().Be(Messages.GradeCodeInUse);
+        _codes.Should().Contain(c => c.GradeCode == "C");
+
+        (await Service().DeleteCodeAsync("X", default)).IsSuccess.Should().BeTrue();
+        (await Service().DeleteCodeAsync("Q", default)).Kind.Should().Be(ResultKind.NotFound);
+    }
+
+    [Fact]
+    public async Task Only_a_future_grade_amount_can_be_edited_or_deleted()
+    {
+        var past = new GradeLevel { GradeLevelId = 1, GradeCode = "A", GradeName = "A", MonthlyAmount = 100, EffectiveDate = Today.AddDays(-10) };
+        var future = new GradeLevel { GradeLevelId = 2, GradeCode = "A", GradeName = "A", MonthlyAmount = 100, EffectiveDate = Today.AddDays(10) };
+        _levels.AddRange([past, future]);
+
+        (await Service().UpdateLevelAsync(1, new UpdateGradeLevelDto("A", 999, Today.AddDays(5)), default)).Message.Should().Be(Messages.GradeLevelLocked);
+        (await Service().DeleteLevelAsync(1, default)).Message.Should().Be(Messages.GradeLevelLocked);
+
+        (await Service().UpdateLevelAsync(2, new UpdateGradeLevelDto("A", 999, Today.AddDays(20)), default)).IsSuccess.Should().BeTrue();
+        future.MonthlyAmount.Should().Be(999);
+        (await Service().DeleteLevelAsync(2, default)).IsSuccess.Should().BeTrue();
+        _levels.Should().ContainSingle().Which.GradeLevelId.Should().Be(1);
     }
 
     // ---------- Quyết định ----------

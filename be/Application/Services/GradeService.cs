@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC15 / UC16 / UC50 (KH-14): bậc thợ A–D. Admin đặt tiền bậc (đổi tiền = thêm dòng mới theo ngày hiệu lực); tổ trưởng / tổ phó
+/// UC15 / UC16 / UC50 (KH-14): bậc thợ (danh mục GradeLevelCode: A, B, C, D... Admin thêm / sửa / ngừng dùng). Admin đặt tiền bậc (đổi tiền = thêm dòng mới theo ngày hiệu lực); tổ trưởng / tổ phó
 /// đề xuất bậc cho công nhân tổ mình (số lỗi 30 ngày gần nhất do hệ thống tính); Admin / Quản đốc quyết định: áp dụng
 /// (cập nhật <c>Employee.CurrentGradeCode</c>) hoặc không áp dụng có lý do. Dòng APPLIED là lịch sử bậc (GBR-22).
 /// </summary>
@@ -41,10 +41,111 @@ public sealed class GradeService : IGradeService
             .ToList());
     }
 
+    // ---------- Danh mục bậc ----------
+
+    private IQueryable<GradeLevelCode> Codes => _uow.Repository<GradeLevelCode>().Query();
+
+    /// <summary>Bậc phải có trong danh mục và đang dùng mới gán được cho nhân viên / đề xuất.</summary>
+    private Task<bool> IsAssignableAsync(string code, CancellationToken ct) =>
+        Codes.AnyAsync(c => c.GradeCode == code && c.Status == GradeCodes.Active, ct);
+
+    private async Task<bool> IsInUseAsync(string code, CancellationToken ct) =>
+        await _uow.Repository<GradeLevel>().Query().AnyAsync(g => g.GradeCode == code, ct)
+        || await _uow.Repository<Employee>().Query().AnyAsync(e => e.CurrentGradeCode == code, ct)
+        || await Evaluations.AnyAsync(e => e.ProposedGradeCode == code || e.CurrentGradeCode == code, ct);
+
+    public async Task<Result<IReadOnlyList<GradeCodeDto>>> GetCodesAsync(bool activeOnly, CancellationToken ct)
+    {
+        var rows = await Codes.AsNoTracking().Where(c => !activeOnly || c.Status == GradeCodes.Active)
+            .OrderBy(c => c.SortOrder).ThenBy(c => c.GradeCode).ToListAsync(ct);
+        var list = new List<GradeCodeDto>(rows.Count);
+        foreach (var c in rows) list.Add(ToDto(c, activeOnly ? false : await IsInUseAsync(c.GradeCode, ct)));
+        return Result<IReadOnlyList<GradeCodeDto>>.Success(list);
+    }
+
+    public async Task<Result<GradeCodeDto>> CreateCodeAsync(SaveGradeCodeDto dto, CancellationToken ct)
+    {
+        var code = dto.GradeCode.Trim().ToUpperInvariant();
+        if (!GradeCodes.IsWellFormed(code))
+            return Result<GradeCodeDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeMalformed, ResultKind.Validation);
+        if (await Codes.AnyAsync(c => c.GradeCode == code, ct))
+            return Result<GradeCodeDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeDuplicate);
+
+        var row = new GradeLevelCode { GradeCode = code, GradeName = dto.GradeName.Trim(), SortOrder = dto.SortOrder, Status = GradeCodes.Active, CreatedAt = _clock.Now };
+        await _uow.Repository<GradeLevelCode>().AddAsync(row);
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Insert, null, new { row.GradeCode, row.GradeName, row.SortOrder }));
+        await _uow.SaveChangesAsync();
+        return Result<GradeCodeDto>.Success(ToDto(row, false), Messages.Saved);
+    }
+
+    public async Task<Result<GradeCodeDto>> UpdateCodeAsync(string gradeCode, UpdateGradeCodeDto dto, CancellationToken ct)
+    {
+        var code = gradeCode.Trim().ToUpperInvariant();
+        var row = await Codes.FirstOrDefaultAsync(c => c.GradeCode == code, ct);
+        if (row is null) return Fail.NotFound<GradeCodeDto>();
+
+        var before = new { row.GradeName, row.SortOrder, row.Status };
+        row.GradeName = dto.GradeName.Trim();
+        row.SortOrder = dto.SortOrder;
+        row.Status = dto.Status == "Inactive" ? GradeCodes.Inactive : GradeCodes.Active;
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Update, before, new { row.GradeName, row.SortOrder, row.Status }, code));
+        await _uow.SaveChangesAsync();
+        return Result<GradeCodeDto>.Success(ToDto(row, await IsInUseAsync(code, ct)), Messages.Saved);
+    }
+
+    public async Task<Result> DeleteCodeAsync(string gradeCode, CancellationToken ct)
+    {
+        var code = gradeCode.Trim().ToUpperInvariant();
+        var row = await Codes.FirstOrDefaultAsync(c => c.GradeCode == code, ct);
+        if (row is null) return Fail.NotFound();
+        if (await IsInUseAsync(code, ct)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInUse);
+
+        _uow.Repository<GradeLevelCode>().Remove(row);
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Delete, new { row.GradeCode, row.GradeName }, null, code));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.Saved);
+    }
+
+    private static GradeCodeDto ToDto(GradeLevelCode c, bool inUse) =>
+        new(c.GradeCode, c.GradeName, c.SortOrder, CodeText.ToPascal(c.Status), inUse);
+
+    public async Task<Result<GradeLevelDto>> UpdateLevelAsync(int gradeLevelId, UpdateGradeLevelDto dto, CancellationToken ct)
+    {
+        var level = await _uow.Repository<GradeLevel>().Query().FirstOrDefaultAsync(g => g.GradeLevelId == gradeLevelId, ct);
+        if (level is null) return Fail.NotFound<GradeLevelDto>();
+        if (level.EffectiveDate <= _clock.Today) return Result<GradeLevelDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeLevelLocked);
+        if (dto.EffectiveDate <= _clock.Today)
+            return Result<GradeLevelDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeLevelEffectiveInPast, ResultKind.Validation);
+        if (await _uow.Repository<GradeLevel>().Query().AnyAsync(g => g.GradeCode == level.GradeCode && g.EffectiveDate == dto.EffectiveDate && g.GradeLevelId != gradeLevelId, ct))
+            return Result<GradeLevelDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeLevelDuplicate);
+
+        var before = new { level.GradeName, level.MonthlyAmount, level.EffectiveDate };
+        level.GradeName = dto.GradeName.Trim();
+        level.MonthlyAmount = dto.MonthlyAmount;
+        level.EffectiveDate = dto.EffectiveDate;
+        _audit.Add(new AuditEntry(nameof(GradeLevel), level.GradeLevelId, AuditActions.Update, before, new { level.GradeName, level.MonthlyAmount, level.EffectiveDate }));
+        await _uow.SaveChangesAsync();
+        return Result<GradeLevelDto>.Success(new GradeLevelDto(level.GradeLevelId, level.GradeCode, level.GradeName, level.MonthlyAmount, level.EffectiveDate, false), Messages.Saved);
+    }
+
+    public async Task<Result> DeleteLevelAsync(int gradeLevelId, CancellationToken ct)
+    {
+        var level = await _uow.Repository<GradeLevel>().Query().FirstOrDefaultAsync(g => g.GradeLevelId == gradeLevelId, ct);
+        if (level is null) return Fail.NotFound();
+        if (level.EffectiveDate <= _clock.Today) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeLevelLocked);
+
+        _uow.Repository<GradeLevel>().Remove(level);
+        _audit.Add(new AuditEntry(nameof(GradeLevel), level.GradeLevelId, AuditActions.Delete, new { level.GradeCode, level.MonthlyAmount, level.EffectiveDate }, null));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.Saved);
+    }
+
+    // ---------- Mức tiền bậc (thêm) ----------
+
     public async Task<Result<GradeLevelDto>> AddLevelAsync(SaveGradeLevelDto dto, CancellationToken ct)
     {
         var code = dto.GradeCode.Trim().ToUpperInvariant();
-        if (!GradeCodes.All.Contains(code))
+        if (!await Codes.AnyAsync(c => c.GradeCode == code, ct))
             return Result<GradeLevelDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInvalid, ResultKind.Validation);
         if (await _uow.Repository<GradeLevel>().Query().AnyAsync(g => g.GradeCode == code && g.EffectiveDate == dto.EffectiveDate, ct))
             return Result<GradeLevelDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeLevelDuplicate);
@@ -110,7 +211,7 @@ public sealed class GradeService : IGradeService
     public async Task<Result<GradeEvaluationDto>> ProposeAsync(ProposeGradeDto dto, int teamId, CancellationToken ct)
     {
         var code = dto.ProposedGradeCode.Trim().ToUpperInvariant();
-        if (!GradeCodes.All.Contains(code))
+        if (!await IsAssignableAsync(code, ct))
             return Result<GradeEvaluationDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInvalid, ResultKind.Validation);
 
         var worker = await _uow.Repository<Employee>().Query().AsNoTracking().Include(e => e.Role)
@@ -165,7 +266,7 @@ public sealed class GradeService : IGradeService
         _uow.InTransactionAsync(async () =>
         {
             var code = dto.GradeCode.Trim().ToUpperInvariant();
-            if (!GradeCodes.All.Contains(code)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInvalid, ResultKind.Validation);
+            if (!await IsAssignableAsync(code, ct)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInvalid, ResultKind.Validation);
 
             var worker = await _uow.Repository<Employee>().Query().Include(e => e.Role).FirstOrDefaultAsync(e => e.EmployeeId == dto.WorkerId, ct);
             if (worker is null || worker.Status != RecordStatus.Active || worker.Role.RoleCode != RoleCodes.Worker)

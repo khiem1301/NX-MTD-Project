@@ -6,6 +6,16 @@ public sealed record GradeLevelDto(int GradeLevelId, string GradeCode, string Gr
     DateOnly EffectiveDate, bool IsCurrent);
 
 /// <summary>Đổi tiền bậc = thêm dòng mới với ngày hiệu lực mới, không sửa dòng cũ (lịch sử).</summary>
+/// <summary>Một bậc thợ trong danh mục. InUse = đã có nhân viên, đánh giá hoặc tiền bậc dùng (chỉ ngừng dùng được, không xóa).</summary>
+public sealed record GradeCodeDto(string GradeCode, string GradeName, short SortOrder, string Status, bool InUse);
+
+public sealed record SaveGradeCodeDto(string GradeCode, string GradeName, short SortOrder);
+
+public sealed record UpdateGradeCodeDto(string GradeName, short SortOrder, string Status);
+
+/// <summary>Sửa phiên bản tiền bậc chưa có hiệu lực (phiên bản đã hiệu lực là lịch sử lương, không sửa).</summary>
+public sealed record UpdateGradeLevelDto(string GradeName, decimal MonthlyAmount, DateOnly EffectiveDate);
+
 public sealed record SaveGradeLevelDto(string GradeCode, string GradeName, decimal MonthlyAmount, DateOnly EffectiveDate);
 
 public sealed record GradeEvaluationDto(

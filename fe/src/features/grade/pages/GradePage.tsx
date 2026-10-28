@@ -8,6 +8,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -24,9 +25,16 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatCurrency, formatDate } from '@/utils/format';
-import { EVAL_STATUS, EVAL_STATUS_LABEL, GR_LABELS, GRADE_OPTIONS } from '../constants';
+import { EVAL_STATUS, EVAL_STATUS_LABEL, GR_LABELS } from '../constants';
 import {
   useAddLevel,
+  useCreateGradeCode,
+  useDeleteGradeCode,
+  useDeleteLevel,
+  useGradeCodes,
+  useGradeOptions,
+  useUpdateGradeCode,
+  useUpdateLevel,
   useAllGradeWorkers,
   useApplyGrade,
   useEvaluations,
@@ -36,7 +44,7 @@ import {
   useRejectGrade,
   useSetGrade,
 } from '../hooks/useGrade';
-import type { GradeEvaluation, GradeLevel } from '../types';
+import type { GradeCode, GradeEvaluation, GradeLevel } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 
@@ -50,6 +58,7 @@ const STATUS_OPTIONS = Object.entries(EVAL_STATUS_LABEL).map(([value, l]) => ({
 function ProposeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = Form.useForm<{ workerId: number; proposedGradeCode: string; reason: string }>();
   const workers = useGradeWorkers(open);
+  const gradeOptions = useGradeOptions();
   const propose = useProposeGrade();
   return (
     <Modal
@@ -82,7 +91,7 @@ function ProposeModal({ open, onClose }: { open: boolean; onClose: () => void })
           />
         </Form.Item>
         <Form.Item name="proposedGradeCode" label={GR_LABELS.proposedGrade} rules={required}>
-          <Select options={GRADE_OPTIONS} style={{ width: 160 }} />
+          <Select options={gradeOptions.options} loading={gradeOptions.isLoading} style={{ width: 200 }} />
         </Form.Item>
         <Form.Item
           name="reason"
@@ -97,6 +106,7 @@ function ProposeModal({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const gradeOptions = useGradeOptions();
   const [form] = Form.useForm<{ teamKey: string; workerId: number; gradeCode: string; reason: string; effectiveDate: Dayjs }>();
   const workers = useAllGradeWorkers(open);
   const teamKey = Form.useWatch('teamKey', form);
@@ -165,7 +175,7 @@ function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }
           </Form.Item>
         )}
         <Form.Item name="gradeCode" label={GR_LABELS.newGrade} rules={required}>
-          <Select options={GRADE_OPTIONS} style={{ width: 160 }} />
+          <Select options={gradeOptions.options} loading={gradeOptions.isLoading} style={{ width: 200 }} />
         </Form.Item>
         <Form.Item name="effectiveDate" label={GR_LABELS.effectiveDate} rules={required}>
           <DatePicker format="DD/MM/YYYY" />
@@ -362,7 +372,12 @@ function EvaluationsTab() {
 }
 
 function LevelsTab() {
+  const gradeOptions = useGradeOptions();
   const levels = useGradeLevels();
+  const updateLevel = useUpdateLevel();
+  const deleteLevel = useDeleteLevel();
+  const [editing, setEditing] = useState<GradeLevel | null>(null);
+  const [editForm] = Form.useForm<{ gradeName: string; monthlyAmount: number; effectiveDate: Dayjs }>();
   const add = useAddLevel();
   const [open, setOpen] = useState(false);
   const [form] = Form.useForm<{
@@ -381,6 +396,30 @@ function LevelsTab() {
       title: GR_LABELS.status,
       dataIndex: 'isCurrent',
       render: (v: boolean) => (v ? <Tag color="green">{GR_LABELS.current}</Tag> : null),
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      // Chỉ mức chưa hiệu lực mới sửa / xóa được (mức đã hiệu lực là lịch sử lương).
+      render: (_, row) =>
+        dayjs(row.effectiveDate).isAfter(dayjs(), 'day') ? (
+          <Space size={0}>
+            <Button
+              type="link"
+              onClick={() => {
+                setEditing(row);
+                editForm.setFieldsValue({ gradeName: row.gradeName, monthlyAmount: row.monthlyAmount, effectiveDate: dayjs(row.effectiveDate) });
+              }}
+            >
+              {MESSAGES.common.edit}
+            </Button>
+            <Popconfirm title={GR_LABELS.deleteLevelConfirm} onConfirm={() => deleteLevel.mutate(row.gradeLevelId)}>
+              <Button type="link" danger>
+                {MESSAGES.common.delete}
+              </Button>
+            </Popconfirm>
+          </Space>
+        ) : null,
     },
   ];
 
@@ -404,6 +443,41 @@ function LevelsTab() {
         loading={levels.isFetching}
         pagination={false}
       />
+      <Modal
+        open={editing !== null}
+        title={GR_LABELS.editLevel}
+        okText={MESSAGES.common.save}
+        cancelText={MESSAGES.common.cancel}
+        confirmLoading={updateLevel.isPending}
+        onOk={() => editForm.submit()}
+        onCancel={() => setEditing(null)}
+        destroyOnHidden
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          onFinish={(v) =>
+            editing &&
+            updateLevel.mutate(
+              {
+                id: editing.gradeLevelId,
+                body: { gradeName: v.gradeName.trim(), monthlyAmount: v.monthlyAmount, effectiveDate: v.effectiveDate.format(API_DATE) },
+              },
+              { onSuccess: () => setEditing(null) },
+            )
+          }
+        >
+          <Form.Item name="gradeName" label={GR_LABELS.gradeName} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}>
+            <Input maxLength={50} />
+          </Form.Item>
+          <Form.Item name="monthlyAmount" label={GR_LABELS.amount} rules={required}>
+            <InputNumber min={0} step={50000} style={{ width: 200 }} />
+          </Form.Item>
+          <Form.Item name="effectiveDate" label={GR_LABELS.effectiveDate} rules={required}>
+            <DatePicker format="DD/MM/YYYY" disabledDate={(d) => !d.isAfter(dayjs(), 'day')} />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Modal
         open={open}
         title={GR_LABELS.addLevel}
@@ -431,7 +505,7 @@ function LevelsTab() {
           }
         >
           <Form.Item name="gradeCode" label={GR_LABELS.gradeCode} rules={required}>
-            <Select options={GRADE_OPTIONS} style={{ width: 160 }} />
+            <Select options={gradeOptions.options} loading={gradeOptions.isLoading} style={{ width: 200 }} />
           </Form.Item>
           <Form.Item
             name="gradeName"
@@ -452,6 +526,113 @@ function LevelsTab() {
   );
 }
 
+/** Admin: danh mục bậc thợ (thêm, sửa tên / thứ tự, ngừng dùng, xóa bậc chưa ai dùng). */
+function CodesTab() {
+  const codes = useGradeCodes();
+  const create = useCreateGradeCode();
+  const update = useUpdateGradeCode();
+  const remove = useDeleteGradeCode();
+  const [editing, setEditing] = useState<GradeCode | 'new' | null>(null);
+  const [form] = Form.useForm<{ gradeCode: string; gradeName: string; sortOrder: number }>();
+  const isNew = editing === 'new';
+  const current = editing !== null && editing !== 'new' ? editing : null;
+
+  const open = (row: GradeCode | 'new') => {
+    setEditing(row);
+    form.resetFields();
+    form.setFieldsValue(row === 'new' ? { sortOrder: (codes.data?.length ?? 0) + 1 } : { gradeCode: row.gradeCode, gradeName: row.gradeName, sortOrder: row.sortOrder });
+  };
+
+  const columns: TableColumnsType<GradeCode> = [
+    { title: GR_LABELS.gradeCode, dataIndex: 'gradeCode' },
+    { title: GR_LABELS.gradeName, dataIndex: 'gradeName' },
+    { title: GR_LABELS.sortOrder, dataIndex: 'sortOrder', align: 'right' },
+    {
+      title: GR_LABELS.status,
+      dataIndex: 'status',
+      render: (v: GradeCode['status']) => <Tag color={v === 'Active' ? 'green' : 'default'}>{v === 'Active' ? GR_LABELS.active : GR_LABELS.inactive}</Tag>,
+    },
+    { title: GR_LABELS.inUse, dataIndex: 'inUse', render: (v: boolean) => (v ? <Tag color="blue">{GR_LABELS.inUse}</Tag> : '—') },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, row) => (
+        <Space size={0}>
+          <Button type="link" onClick={() => open(row)}>
+            {MESSAGES.common.edit}
+          </Button>
+          <Button
+            type="link"
+            onClick={() =>
+              update.mutate({
+                code: row.gradeCode,
+                body: { gradeName: row.gradeName, sortOrder: row.sortOrder, status: row.status === 'Active' ? 'Inactive' : 'Active' },
+              })
+            }
+          >
+            {row.status === 'Active' ? GR_LABELS.deactivate : GR_LABELS.reactivate}
+          </Button>
+          {!row.inUse && (
+            <Popconfirm title={GR_LABELS.deleteConfirm} onConfirm={() => remove.mutate(row.gradeCode)}>
+              <Button type="link" danger>
+                {MESSAGES.common.delete}
+              </Button>
+            </Popconfirm>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <Space style={{ marginBottom: 16 }} wrap>
+        <Alert type="info" showIcon message={GR_LABELS.codeHint} />
+        <Button type="primary" onClick={() => open('new')}>
+          {GR_LABELS.addCode}
+        </Button>
+      </Space>
+      <QueryError error={codes.error} onRetry={() => void codes.refetch()} />
+      <Table rowKey="gradeCode" columns={columns} dataSource={codes.data} loading={codes.isFetching} pagination={false} />
+      <Modal
+        open={editing !== null}
+        title={isNew ? GR_LABELS.addCode : GR_LABELS.editCode}
+        okText={MESSAGES.common.save}
+        cancelText={MESSAGES.common.cancel}
+        confirmLoading={create.isPending || update.isPending}
+        onOk={() => form.submit()}
+        onCancel={() => setEditing(null)}
+        destroyOnHidden
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={(v) => {
+            const done = { onSuccess: () => setEditing(null) };
+            if (isNew) create.mutate({ gradeCode: v.gradeCode.trim().toUpperCase(), gradeName: v.gradeName.trim(), sortOrder: v.sortOrder }, done);
+            else if (current)
+              update.mutate({ code: current.gradeCode, body: { gradeName: v.gradeName.trim(), sortOrder: v.sortOrder, status: current.status } }, done);
+          }}
+        >
+          <Form.Item
+            name="gradeCode"
+            label={GR_LABELS.codeCode}
+            rules={[{ required: true, message: MESSAGES.common.required }, { pattern: /^[A-Za-z0-9]{1,5}$/, message: 'Chỉ gồm chữ và số, tối đa 5 ký tự.' }]}
+          >
+            <Input maxLength={5} disabled={!isNew} style={{ width: 160 }} />
+          </Form.Item>
+          <Form.Item name="gradeName" label={GR_LABELS.gradeName} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}>
+            <Input maxLength={50} />
+          </Form.Item>
+          <Form.Item name="sortOrder" label={GR_LABELS.sortOrder} rules={required}>
+            <InputNumber min={0} precision={0} style={{ width: 120 }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}
+
 /** UC15 / UC16 / UC50: tổ trưởng đề xuất bậc; Admin / Quản đốc quyết định; Admin đặt mức tiền bậc. */
 export function GradePage() {
   const { hasRole } = usePermission();
@@ -461,7 +642,10 @@ export function GradePage() {
         items={[
           { key: 'evaluations', label: GR_LABELS.evaluationsTab, children: <EvaluationsTab /> },
           ...(hasRole(ROLES.Admin)
-            ? [{ key: 'levels', label: GR_LABELS.levelsTab, children: <LevelsTab /> }]
+            ? [
+                { key: 'codes', label: GR_LABELS.codesTab, children: <CodesTab /> },
+                { key: 'levels', label: GR_LABELS.levelsTab, children: <LevelsTab /> },
+              ]
             : []),
         ]}
       />
