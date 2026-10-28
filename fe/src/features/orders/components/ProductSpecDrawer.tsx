@@ -116,7 +116,12 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
             title: text.pieces,
             width: 140,
             render: (_, r) => (
-              <InputNumber min={1} max={99} precision={0} value={r.piecesPerGarment} onChange={(v) => patch(setComponents, r.key, { piecesPerGarment: v ?? 1 })} />
+              <Space direction="vertical" size={2}>
+                <InputNumber min={1} max={99} precision={0} value={r.piecesPerGarment} onChange={(v) => patch(setComponents, r.key, { piecesPerGarment: v ?? 1 })} />
+                {/tay/i.test(r.componentName) && r.piecesPerGarment === 2 && (
+                  <span style={{ fontSize: 12, opacity: 0.65 }}>Gồm tay trái + tay phải</span>
+                )}
+              </Space>
             ),
           },
           {

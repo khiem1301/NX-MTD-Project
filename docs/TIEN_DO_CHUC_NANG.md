@@ -1,10 +1,12 @@
-# Tiến độ chức năng (cập nhật 27/10/2026)
+# Tiến độ chức năng (cập nhật 28/10/2026)
 
 Nhánh: `feature/ALL-missing-features` (chưa gộp vào `main`, cần mở PR).
 Kiểm tra: 1045 test backend, 92 test frontend, `tsc` và `eslint` sạch. Các luồng mới đã chạy qua API (45 bước e2e) trên database dựng từ script 26/10 kèm dữ liệu demo.
 **Chưa có chức năng nào của đợt này được thử trên trình duyệt thật.**
 
 ## Đã làm được
+
+**Bổ sung 28/10 (sửa theo sheet ghi chú):** menu và route theo loại tổ (tổ cắt / tổ may), Admin bỏ "Ngày công của tôi"; tìm kiếm tức thì và bộ lọc mặc định "Tất cả"; Khách hàng / Nhà cung cấp bắt buộc SĐT, email, địa chỉ; duyệt đơn giá có tab "Tất cả" và Admin không thấy Nháp; cột STT + toast ở Nhân viên; "Thêm công đoạn"; đặt bậc chọn tổ trước; bậc thợ động (Admin thêm / sửa / ngừng dùng / xóa); Quản đốc quản lý tài khoản trừ Admin và Kế toán; lệnh cắt bỏ COMPLETED, kiểm tra vải có giữ chỗ + xem trước vải + tab "Vải theo đơn"; KPI theo BTP khả dụng, chỉ đánh giá cuối đơn ("Kết thúc đơn": phiếu lỗi lệch kiểm cuối đơn cho từng công nhân, chốt KPI, đơn tăng ca); hàng hỏng tìm theo công nhân / mã hàng / tổ; trang chủ có thông báo mới và doanh thu (Admin). Xem `DEV-ALL-15`.
 
 **Bổ sung 27/10 (chuyển sang database bản 26/10):** màu NVL nằm trong NVL (danh mục NVL có Màu; các form bỏ ô màu); giao việc cho công nhân **không còn BTP giao kèm** (chỉ số lần làm công đoạn, trần = số bộ BTP tổ đã nhận); trang "BTP của tổ" hiện đã nhận / QC đạt / hàng hủy / còn trên chuyền; thêm validate (NVL trùng theo màu, NVL của đơn 0/0, dòng phiếu cấp sai loại kho, chi tiết ngoài định mức, giao vượt số chưa giao, xác nhận ngoài 1..số trên phiếu); dữ liệu demo 19.3 (đơn DEMO-DH003 và phiếu đang chờ ở từng bước xác nhận). Xem `DEV-ALL-14`.
 
