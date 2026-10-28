@@ -10,23 +10,28 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ; KpiAutoCloseJob
-/// gọi <see cref="CloseExpiredAsync"/> mỗi ngày để tự đóng các chỉ tiêu đã hết kỳ (xem IKpiService).
+/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ. KPI chỉ được chốt khi kết thúc đơn của
+/// tổ (<see cref="Production.EndOfOrderService"/>), không tự đóng theo ngày hết kỳ.
 /// </summary>
 public sealed class KpiService : IKpiService
 {
     private readonly IUnitOfWork _uow;
     private readonly IOutputQueryService _output;
     private readonly IAuditLogService _audit;
+    private readonly INotificationService _notifier;
     private readonly ILogger<KpiService> _logger;
 
-    public KpiService(IUnitOfWork uow, IOutputQueryService output, IAuditLogService audit, ILogger<KpiService> logger)
+    public KpiService(IUnitOfWork uow, IOutputQueryService output, IAuditLogService audit, INotificationService notifier,
+        ILogger<KpiService> logger)
     {
         _uow = uow;
         _output = output;
         _audit = audit;
+        _notifier = notifier;
         _logger = logger;
     }
+
+    private const string KpiLink = "/kpi/targets";
 
     private IQueryable<KpiTarget> Targets => _uow.Repository<KpiTarget>().Query();
 
@@ -107,6 +112,10 @@ public sealed class KpiService : IKpiService
             await _uow.Repository<KpiTarget>().AddAsync(target);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target)));
+            // Tổ trưởng tổ may là người thực hiện chỉ tiêu.
+            await _notifier.NotifyTeamLeadersAsync(dto.SewingTeamId, new NotificationMessage(NotificationSources.Production,
+                "Có chỉ tiêu KPI mới", $"Quản đốc giao chỉ tiêu {dto.TargetFinishedQty} sản phẩm từ {dto.StartDate:dd/MM/yyyy} đến {dto.EndDate:dd/MM/yyyy}.",
+                KpiLink), ct);
             await _uow.SaveChangesAsync();
             return Result.Success();
         });
@@ -147,40 +156,12 @@ public sealed class KpiService : IKpiService
         target.Status = KpiStatuses.Cancelled;
         _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update,
             new { Status = KpiStatuses.Active }, new { target.Status }));
+        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId, new NotificationMessage(NotificationSources.Production,
+            "Chỉ tiêu KPI bị hủy", $"Quản đốc đã hủy chỉ tiêu KPI {target.TargetFinishedQty} sản phẩm của tổ.", KpiLink), ct);
         await _uow.SaveChangesAsync();
 
         _logger.LogInformation("Đã hủy chỉ tiêu KPI {KpiTargetId}", kpiTargetId);
         return Result.Success(Messages.Saved);
-    }
-
-    /// <summary>
-    /// Mỗi chỉ tiêu ACTIVE đã qua EndDate: Σ FinishedQty cả kỳ (vw_KpiDailyResult, đã lọc theo
-    /// StartDate..EndDate sẵn trong view) so với TargetFinishedQty → ACHIEVED nếu đạt, ngược lại NOT_ACHIEVED.
-    /// Gộp một truy vấn nhóm theo KpiTargetId thay vì lặp từng dòng để tránh N+1.
-    /// </summary>
-    public async Task<int> CloseExpiredAsync(DateOnly today, CancellationToken ct)
-    {
-        var expired = await _uow.Repository<KpiTarget>().Query()
-            .Where(k => k.Status == KpiStatuses.Active && k.EndDate < today)
-            .ToListAsync(ct);
-        if (expired.Count == 0) return 0;
-
-        var totalByKpiTargetId = await _output.GetKpiFinishedTotalsAsync(expired.Select(k => k.KpiTargetId).ToList(), ct);
-
-        foreach (var target in expired)
-        {
-            var total = totalByKpiTargetId.GetValueOrDefault(target.KpiTargetId);
-            target.Result = total >= target.TargetFinishedQty ? KpiResults.Achieved : KpiResults.NotAchieved;
-            target.Status = KpiStatuses.Closed;
-            // Job nền: không có người đăng nhập nên AuditLogService ghi ChangedBy = NULL.
-            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Update,
-                new { Status = KpiStatuses.Active }, new { target.Status, target.Result, ActualQty = total }));
-        }
-
-        await _uow.SaveChangesAsync();
-        _logger.LogInformation("KpiAutoCloseJob: đã đóng {Count} chỉ tiêu KPI hết hạn trước {Today:yyyy-MM-dd}",
-            expired.Count, today);
-        return expired.Count;
     }
 
     public async Task<Result<IReadOnlyList<KpiDailyResultDto>>> GetDailyResultsAsync(int kpiTargetId, CancellationToken ct)
@@ -218,20 +199,58 @@ public sealed class KpiService : IKpiService
                            && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId), ct);
         if (duplicate) return Fail(ErrorCodes.KpiDuplicatePeriod, Messages.KpiDuplicatePeriod);
 
-        // Swimlane III.3.1: đặt KPI thì hệ thống kiểm BTP trong kho. Tổng chỉ tiêu còn hiệu lực của đơn + mã hàng
-        // không được vượt BTP (bộ đủ) tổ cắt đã bàn giao và kho đã nhận.
-        var btpInWarehouse = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
-            .Where(l => l.CutHandover.Status == HandoverStatuses.Confirmed && l.ProductComponentMaterialId == null
-                        && l.OrderLine.OrderId == dto.OrderId && l.OrderLine.ProductId == dto.ProductId)
-            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
-        var otherTargets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
-            .Where(k => k.OrderId == dto.OrderId && k.ProductId == dto.ProductId && k.Status == KpiStatuses.Active
-                        && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId))
-            .SumAsync(k => k.TargetFinishedQty, ct);
-        return dto.TargetFinishedQty + otherTargets > btpInWarehouse
-            ? Fail(ErrorCodes.KpiExceedsStock, string.Format(Messages.KpiExceedsStock, btpInWarehouse, otherTargets,
-                Math.Max(0, btpInWarehouse - otherTargets)))
+        // Swimlane III.3.1: đặt KPI thì hệ thống kiểm BTP khả dụng (kho + tổ đang giữ − các chỉ tiêu khác).
+        var capacity = await ComputeCapacityAsync(dto.OrderId, dto.ProductId, dto.SewingTeamId, exceptKpiTargetId, ct);
+        return dto.TargetFinishedQty > capacity.MaxTarget
+            ? Fail(ErrorCodes.KpiExceedsStock, string.Format(Messages.KpiExceedsStock, capacity.WarehouseBtp, capacity.TeamHeld,
+                capacity.CommittedByOthers, capacity.MaxTarget))
             : null;
+    }
+
+    public async Task<Result<KpiCapacityDto>> GetCapacityAsync(int orderId, int productId, int sewingTeamId,
+        int? exceptKpiTargetId, CancellationToken ct) =>
+        Result<KpiCapacityDto>.Success(await ComputeCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
+
+    /// <summary>
+    /// Tối đa = BTP bộ đủ còn trong kho (đã nhận từ tổ cắt − đã cấp cho các tổ may) + BTP tổ này đã nhận mà chưa thành
+    /// phẩm / chưa hủy − phần còn phải làm (chỉ tiêu − đã hoàn thiện) của các chỉ tiêu KPI còn hiệu lực khác cùng đơn + mã hàng.
+    /// </summary>
+    private async Task<KpiCapacityDto> ComputeCapacityAsync(int orderId, int productId, int sewingTeamId,
+        int? exceptKpiTargetId, CancellationToken ct)
+    {
+        var handedIn = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.CutHandover.Status == HandoverStatuses.Confirmed && l.ProductComponentMaterialId == null
+                        && l.OrderLine.OrderId == orderId && l.OrderLine.ProductId == productId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+        // Phiếu cấp BTP chờ nhận tính số cấp, đã nhận tính số xác nhận; phiếu bị từ chối trả lại kho.
+        var issuedOut = await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking()
+            .Where(l => l.MaterialIssue.WarehouseType == WarehouseTypes.SemiFinished && l.ProductComponentMaterialId == null
+                        && l.MaterialIssue.Status != IssueStatuses.Rejected && l.OrderLine != null
+                        && l.OrderLine.OrderId == orderId && l.OrderLine.ProductId == productId)
+            .SumAsync(l => l.MaterialIssue.Status == IssueStatuses.Received ? l.ConfirmedQty ?? 0 : l.IssuedQty, ct);
+        var warehouse = Math.Max(0, handedIn - (int)issuedOut);
+
+        var received = await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking()
+            .ReceivedSets(sewingTeamId)
+            .Where(l => l.OrderLine!.OrderId == orderId && l.OrderLine.ProductId == productId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+        var finished = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(q => q.SewingTeamId == sewingTeamId && q.OrderLine.OrderId == orderId && q.OrderLine.ProductId == productId)
+            .SumAsync(q => q.FinishedQty, ct);
+        var scrap = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
+            .Where(d => d.SewingTeamId == sewingTeamId && d.DefectType == DefectTypes.Scrap && d.Status != DefectStatuses.Cancelled
+                        && d.OrderLine.OrderId == orderId && d.OrderLine.ProductId == productId)
+            .SumAsync(d => d.Quantity, ct);
+        var held = Math.Max(0, (int)received - finished - scrap);
+
+        var others = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
+            .Where(k => k.OrderId == orderId && k.ProductId == productId && k.Status == KpiStatuses.Active
+                        && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId))
+            .Select(k => new { k.KpiTargetId, k.TargetFinishedQty }).ToListAsync(ct);
+        var done = await _output.GetKpiFinishedTotalsAsync(others.Select(o => o.KpiTargetId).ToList(), ct);
+        var committed = others.Sum(o => Math.Max(0, o.TargetFinishedQty - done.GetValueOrDefault(o.KpiTargetId)));
+
+        return new KpiCapacityDto(warehouse, held, committed, Math.Max(0, warehouse + held - committed));
     }
 
     private static void Apply(KpiTarget target, SaveKpiTargetDto dto)

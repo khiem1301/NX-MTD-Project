@@ -6,6 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.TeamLeader;
 
 /// <summary>Tổ trưởng / tổ phó cắt xem lệnh cắt của tổ mình.</summary>
+[CuttingTeamOnly]
 public sealed class WorkOrdersController : TeamLeaderBaseController
 {
     private readonly IWorkOrderService _workOrders;

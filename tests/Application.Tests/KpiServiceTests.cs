@@ -26,6 +26,9 @@ public class KpiServiceTests
     private readonly List<OrderLine> _orderLines = [];
     private readonly List<VwKpiDailyResult> _dailyResults = [];
     private readonly List<CutHandoverLine> _handoverLines = [];
+    private readonly List<MaterialIssueLine> _issueLines = [];
+    private readonly List<QcBatch> _qcBatches = [];
+    private readonly List<DefectRecord> _defects = [];
     private readonly KpiService _sut;
 
     public KpiServiceTests()
@@ -37,6 +40,9 @@ public class KpiServiceTests
         SetupQueryable(_orderLines);
         SetupQueryable(_dailyResults);
         SetupQueryable(_handoverLines);
+        SetupQueryable(_issueLines);
+        SetupQueryable(_qcBatches);
+        SetupQueryable(_defects);
 
         // Giả lập EF gán navigation (Order/Product/SewingTeam) sau khi lưu, để Select chiếu DTO không bị null.
         _uow.Repository<KpiTarget>().AddAsync(Arg.Do<KpiTarget>(e =>
@@ -49,7 +55,7 @@ public class KpiServiceTests
 
         _uow.SaveChangesAsync().Returns(Task.FromResult(1));
 
-        _sut = new KpiService(_uow, new OutputQueryService(_uow), _audit, NullLogger<KpiService>.Instance);
+        _sut = new KpiService(_uow, new OutputQueryService(_uow), _audit, Substitute.For<INotificationService>(), NullLogger<KpiService>.Instance);
     }
 
     private void SetupQueryable<T>(List<T> backing) where T : class
@@ -228,7 +234,7 @@ public class KpiServiceTests
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.KpiExceedsStock);
-        result.Message.Should().Contain("600").And.Contain("còn đặt được 600");
+        result.Message.Should().Contain("kho còn 600").And.Contain("tối đa 600");
         _kpiTargets.Should().BeEmpty();
     }
 
@@ -245,6 +251,64 @@ public class KpiServiceTests
 
         (await _sut.CreateAsync(Dto(targetQty: 400, workingDays: 25), CancellationToken.None)).ErrorCode.Should().Be(ErrorCodes.KpiExceedsStock);
         (await _sut.CreateAsync(Dto(targetQty: 300, workingDays: 25), CancellationToken.None)).IsSuccess.Should().BeTrue();
+    }
+
+    private MaterialIssueLine IssueToTeam(int teamId, int qty, string status = IssueStatuses.Received) => new()
+    {
+        IssuedQty = qty, ConfirmedQty = status == IssueStatuses.Received ? qty : null, ProductComponentMaterialId = null,
+        OrderLineId = 1001, OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
+        MaterialIssue = new MaterialIssue { WarehouseType = WarehouseTypes.SemiFinished, Status = status, ReceivingTeamId = teamId },
+    };
+
+    [Fact]
+    public async Task Capacity_BtpAlreadyIssuedToAnotherTeam_NoLongerCountsAsInTheWarehouse()
+    {
+        _orders.Add(Order()); _products.Add(Product()); _teams.Add(SewingTeam()); _teams.Add(SewingTeam(2, "Tổ may 2"));
+        _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 600);
+        _issueLines.Add(IssueToTeam(2, 550));          // đã cấp hết cho tổ may 2 → kho chỉ còn 50
+
+        var capacity = (await _sut.GetCapacityAsync(1, 1, 1, null, CancellationToken.None)).Data!;
+
+        capacity.WarehouseBtp.Should().Be(50);
+        capacity.TeamHeld.Should().Be(0);
+        capacity.MaxTarget.Should().Be(50);
+        (await _sut.CreateAsync(Dto(teamId: 1, targetQty: 51, workingDays: 25), CancellationToken.None)).ErrorCode
+            .Should().Be(ErrorCodes.KpiExceedsStock);
+    }
+
+    [Fact]
+    public async Task Capacity_AddsWhatTheTeamHoldsAndHasNotFinished()
+    {
+        _orders.Add(Order()); _products.Add(Product()); _teams.Add(SewingTeam());
+        _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 400);
+        _issueLines.Add(IssueToTeam(1, 300));          // tổ nhận 300, kho còn 100
+        _qcBatches.Add(new QcBatch { SewingTeamId = 1, FinishedQty = 120, OrderLine = new OrderLine { OrderId = 1, ProductId = 1 } });
+        _defects.Add(new DefectRecord
+        {
+            SewingTeamId = 1, DefectType = DefectTypes.Scrap, Status = DefectStatuses.Recorded, Quantity = 10,
+            OrderLine = new OrderLine { OrderId = 1, ProductId = 1 },
+        });
+
+        var capacity = (await _sut.GetCapacityAsync(1, 1, 1, null, CancellationToken.None)).Data!;
+
+        capacity.TeamHeld.Should().Be(170);            // 300 − 120 đạt − 10 hủy
+        capacity.WarehouseBtp.Should().Be(100);
+        capacity.MaxTarget.Should().Be(270);
+    }
+
+    [Fact]
+    public async Task Capacity_SubtractsTheRemainingOfOtherActiveTargets_ButNotTheOneBeingEdited()
+    {
+        var order = Order(); var product = Product(); var team = SewingTeam();
+        _orders.Add(order); _products.Add(product); _teams.Add(team);
+        _orderLines.Add(Line(1, 1));
+        GivenBtp(1, 1, 1000);
+        _kpiTargets.Add(Target(9, 1, 1, 1, Start.AddMonths(-1), End.AddMonths(-1), targetQty: 300, order: order, product: product, team: team));
+
+        (await _sut.GetCapacityAsync(1, 1, 1, null, CancellationToken.None)).Data!.MaxTarget.Should().Be(700);
+        (await _sut.GetCapacityAsync(1, 1, 1, 9, CancellationToken.None)).Data!.MaxTarget.Should().Be(1000);
     }
 
     [Fact]
@@ -409,81 +473,6 @@ public class KpiServiceTests
         byId[1].PercentAchieved.Should().Be(120m);
         byId[2].ActualFinishedQty.Should().Be(50);
         byId[2].PercentAchieved.Should().Be(25m);
-    }
-
-    // ---------- CloseExpiredAsync (KpiAutoCloseJob) ----------
-
-    [Fact]
-    public async Task CloseExpiredAsync_NoExpired_ReturnsZero()
-    {
-        var target = Target(1, 1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 12, 31));
-        _kpiTargets.Add(target);
-
-        var closed = await _sut.CloseExpiredAsync(new DateOnly(2026, 10, 21), CancellationToken.None);
-
-        closed.Should().Be(0);
-        target.Status.Should().Be(KpiStatuses.Active);
-        await _uow.DidNotReceive().SaveChangesAsync();
-    }
-
-    [Fact]
-    public async Task CloseExpiredAsync_TotalMeetsTarget_SetsAchievedAndClosed()
-    {
-        var target = Target(1, 1, 1, 1, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), targetQty: 500, workingDays: 25);
-        _kpiTargets.Add(target);
-        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 9, 10), 300));
-        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 9, 20), 250));
-
-        var closed = await _sut.CloseExpiredAsync(new DateOnly(2026, 10, 21), CancellationToken.None);
-
-        closed.Should().Be(1);
-        target.Status.Should().Be(KpiStatuses.Closed);
-        target.Result.Should().Be(KpiResults.Achieved);
-        _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
-            e.TableName == nameof(KpiTarget) && e.Action == AuditActions.Update && e.RecordId == 1));
-    }
-
-    [Fact]
-    public async Task CloseExpiredAsync_TotalBelowTarget_SetsNotAchievedAndClosed()
-    {
-        var target = Target(1, 1, 1, 1, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), targetQty: 500, workingDays: 25);
-        _kpiTargets.Add(target);
-        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 9, 10), 100));
-
-        var closed = await _sut.CloseExpiredAsync(new DateOnly(2026, 10, 21), CancellationToken.None);
-
-        closed.Should().Be(1);
-        target.Status.Should().Be(KpiStatuses.Closed);
-        target.Result.Should().Be(KpiResults.NotAchieved);
-    }
-
-    [Fact]
-    public async Task CloseExpiredAsync_NoMatchingViewRows_TreatsAsZeroNotAchieved()
-    {
-        var target = Target(1, 1, 1, 1, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), targetQty: 500, workingDays: 25);
-        _kpiTargets.Add(target);
-        // không có dòng vw_KpiDailyResult nào (không QC ngày nào trong kỳ)
-
-        var closed = await _sut.CloseExpiredAsync(new DateOnly(2026, 10, 21), CancellationToken.None);
-
-        closed.Should().Be(1);
-        target.Result.Should().Be(KpiResults.NotAchieved);
-    }
-
-    [Fact]
-    public async Task CloseExpiredAsync_MultipleExpiredTargets_ClosesAllIndependently()
-    {
-        var achieved = Target(1, 1, 1, 1, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), targetQty: 100, workingDays: 10);
-        var notAchieved = Target(2, 2, 2, 2, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 30), targetQty: 100, workingDays: 10);
-        _kpiTargets.Add(achieved);
-        _kpiTargets.Add(notAchieved);
-        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 9, 10), 150));
-
-        var closed = await _sut.CloseExpiredAsync(new DateOnly(2026, 10, 21), CancellationToken.None);
-
-        closed.Should().Be(2);
-        achieved.Result.Should().Be(KpiResults.Achieved);
-        notAchieved.Result.Should().Be(KpiResults.NotAchieved);
     }
 
     private static VwKpiDailyResult DailyResult(int kpiTargetId, DateOnly workDate, int finishedQty) => new()

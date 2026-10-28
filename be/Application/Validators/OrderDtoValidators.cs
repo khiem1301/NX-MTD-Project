@@ -16,9 +16,11 @@ public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto
     public SaveCustomerDtoValidator()
     {
         RuleFor(x => x.CustomerName).NotEmpty().WithMessage(Messages.Required("tên khách hàng")).MaximumLength(200);
-        RuleFor(x => x.Phone).MaximumLength(15).Matches(@"^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
-        RuleFor(x => x.Email).MaximumLength(100).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email));
-        RuleFor(x => x.DefaultAddress).MaximumLength(500);
+        RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
+            .MaximumLength(15).Matches(@"^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
+            .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
+        RuleFor(x => x.DefaultAddress).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
     }
 }
 

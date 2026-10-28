@@ -47,13 +47,32 @@ public sealed class RequestService : IRequestService
         return Result<int>.Success(request.RequestId, Messages.Submitted);   // MSG10
     }
 
-    public async Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct)
+    public async Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null,
+        string? autoApprovalNote = null)
     {
         var policy = RequestTypePolicies.All[draft.RequestType];
-        var request = await NewRequestAsync(draft, policy, null, null, ct);
+        var request = await NewRequestAsync(draft, policy, null, teamId, ct);
+        if (autoApprovalNote is not null)
+        {
+            // Hệ thống tự duyệt (vd. KPI thiếu ít → tăng ca): không cần người xử lý.
+            request.Status = RequestStatuses.Approved;
+            request.DecisionNote = autoApprovalNote;
+            request.DecidedAt = _clock.Now;
+        }
         await _requests.AddAsync(request);
-        await NotifyHandlersAsync(policy, request, ct);
+        if (teamId is not null) await NotifyTeamLeadersAsync(teamId.Value, request, policy, ct);
+        else await NotifyHandlersAsync(policy, request, ct);
         return request;
+    }
+
+    /// <summary>Đơn của riêng một tổ: báo tổ trưởng / tổ phó của tổ đó, không báo cả vai trò.</summary>
+    private async Task NotifyTeamLeadersAsync(int teamId, Request request, RequestTypePolicy policy, CancellationToken ct)
+    {
+        var leaders = await _requests.TeamLeaderIdsAsync(teamId, ct);
+        if (leaders.Count == 0) return;
+        _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Request, Messages.NotifyNewRequestTitle,
+            string.Format(Messages.NotifyNewRequestBody, request.RequestCode, policy.Label),
+            string.Format(MineLink, request.RequestId), nameof(Request), request.RequestId));
     }
 
     public async Task<Result> UpdateAsync(int requestId, UpdateRequestDto dto, CancellationToken ct)
@@ -106,7 +125,7 @@ public sealed class RequestService : IRequestService
     public async Task<Result> CompleteAsync(int requestId, CompleteRequestDto dto, CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode, request.CreatedByTeamId)) return Fail.NotFound();
         if (!_handlers.For(request.RequestTypeCode).AllowManualComplete)
             return Result.Failure(ErrorCodes.RequestManualCompleteNotAllowed, Messages.RequestManualCompleteNotAllowed);
         if (!RequestStatuses.Completable.Contains(request.Status))
@@ -135,7 +154,7 @@ public sealed class RequestService : IRequestService
         CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode, request.CreatedByTeamId)) return Fail.NotFound();
         var allowed = to == RequestStatuses.Approved
             ? request.Status == RequestStatuses.PendingApproval
             : RequestStatuses.Rejectable.Contains(request.Status);

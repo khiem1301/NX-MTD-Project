@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -15,6 +15,7 @@ import { HandoverDetailDrawer } from '../components/HandoverDetailDrawer';
 import { HANDOVER_STATUS_LABEL, LABELS, WORK_ORDER_STATUS } from '../constants';
 import { useHandovers, useWorkOrders } from '../hooks/useCutting';
 import type { CutHandoverListItem } from '../types';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { status?: string; workOrderId?: number };
 
@@ -84,8 +85,7 @@ export function CutHandoverPage() {
           onChange={(workOrderId) => table.setFilters({ workOrderId })}
           placeholder={LABELS.workOrder}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

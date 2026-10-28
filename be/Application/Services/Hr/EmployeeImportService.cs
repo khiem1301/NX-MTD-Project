@@ -23,11 +23,12 @@ public sealed class EmployeeImportService : IEmployeeImportService
     private readonly IExcelEmployeeParser _parser;
     private readonly IEmployeeService _employees;
     private readonly IValidator<CreateEmployeeDto> _validator;
+    private readonly EmployeeScope _scope;
 
     public EmployeeImportService(IUnitOfWork uow, IExcelEmployeeParser parser, IEmployeeService employees,
-        IValidator<CreateEmployeeDto> validator)
+        IValidator<CreateEmployeeDto> validator, EmployeeScope scope)
     {
-        _uow = uow; _parser = parser; _employees = employees; _validator = validator;
+        _uow = uow; _parser = parser; _employees = employees; _validator = validator; _scope = scope;
     }
 
     public async Task<Result<EmployeeImportPreviewDto>> PreviewAsync(Stream stream, CancellationToken ct)
@@ -101,6 +102,9 @@ public sealed class EmployeeImportService : IEmployeeImportService
             if (!seen.Add(code)) { result.Add((Row(StatusDuplicate, Messages.EmployeeImportRepeated), null)); continue; }
 
             var role = NormalizeRole(r.Role);
+            // Quản đốc không nhập được nhân viên vai trò Admin / Kế toán.
+            if (role is not null && !_scope.CanSee(Roles.ToRoleCode(role)))
+            { result.Add((Row(StatusError, Messages.ManagerCannotAssignRole), null)); continue; }
             int? teamId = null;
             if (!string.IsNullOrWhiteSpace(r.TeamCode))
             {

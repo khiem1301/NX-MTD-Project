@@ -1,4 +1,4 @@
-import { Button, Card, Input, Select, Space, Table, Tag, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, Tag, type TableColumnsType } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -9,6 +9,8 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { useCustomers, useOrders } from '../hooks/useOrders';
 import type { OrderListItem } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: OrderStatus; customerId?: number };
 
@@ -52,10 +54,9 @@ export function OrdersPage() {
       extra={<Button type="primary" onClick={() => navigate(ROUTES.orderNew)}>{MESSAGES.orders.createOrder}</Button>}
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
-        <Select<OrderStatus> allowClear placeholder={MESSAGES.orders.status} style={{ width: 170 }} options={STATUS_OPTIONS} onChange={(status) => table.setFilters({ status })} />
-        <Select<number>
-          allowClear
+        <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
+        <FilterSelect<OrderStatus> value={table.filters.status} placeholder={MESSAGES.orders.status} style={{ width: 170 }} options={STATUS_OPTIONS} onChange={(status) => table.setFilters({ status })} />
+        <FilterSelect<number> value={table.filters.customerId}
           showSearch
           optionFilterProp="label"
           placeholder={MESSAGES.orders.customer}

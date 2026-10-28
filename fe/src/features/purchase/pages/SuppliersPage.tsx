@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Popconfirm, Select, Space, Table, Typography } from 'antd';
+import { Button, Card, Popconfirm, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
@@ -10,6 +10,8 @@ import { SupplierFormModal } from '../components/SupplierFormModal';
 import { PURCHASE_TEXT, SUPPLIER_STATUS_LABEL, SUPPLIER_STATUS_OPTIONS } from '../constants';
 import { useSuppliers, useToggleSupplier } from '../hooks/usePurchase';
 import type { Supplier, SupplierStatus } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: SupplierStatus };
 
@@ -78,14 +80,13 @@ export function SuppliersPage() {
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
           <Space wrap>
-            <Input.Search
+            <DebouncedSearch
               allowClear
               placeholder={PURCHASE_TEXT.searchSupplier}
               style={{ width: 300 }}
               onSearch={(value) => table.setFilters({ keyword: value.trim() || undefined })}
             />
-            <Select
-              allowClear
+            <FilterSelect value={table.filters.status}
               placeholder={PURCHASE_TEXT.allStatus}
               style={{ width: 180 }}
               options={SUPPLIER_STATUS_OPTIONS}

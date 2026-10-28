@@ -20,6 +20,16 @@ export const attendanceMenu: MenuEntry[] = [
     key: 'my-attendance',
     label: ATTENDANCE_TEXT.myPageTitle,
     path: ATTENDANCE_ROUTES.myAttendance,
-    roles: 'all',
+    // Giám đốc (Admin) không chấm công theo ngày: chỉ các vai trò còn lại có trang này.
+    roles: [
+      ROLES.Manager,
+      ROLES.Accountant,
+      ROLES.WarehouseKeeper,
+      ROLES.TeamLeader,
+      ROLES.TeamDeputy,
+      ROLES.QaQc,
+      ROLES.Electrician,
+      ROLES.Worker,
+    ],
   },
 ];

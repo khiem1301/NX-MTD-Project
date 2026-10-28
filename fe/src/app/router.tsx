@@ -220,8 +220,13 @@ export const router = createBrowserRouter([
 
           // --- Chấm công (Minh) ---
           {
-            path: ATTENDANCE_ROUTES.myAttendance,
-            lazy: async () => ({ Component: (await import('@/features/attendance')).MyAttendancePage }),
+            element: <ProtectedRoute roles={Object.values(ROLES).filter((r) => r !== ROLES.Admin)} />,
+            children: [
+              {
+                path: ATTENDANCE_ROUTES.myAttendance,
+                lazy: async () => ({ Component: (await import('@/features/attendance')).MyAttendancePage }),
+              },
+            ],
           },
           {
             element: <ProtectedRoute roles={[ROLES.Accountant]} />,

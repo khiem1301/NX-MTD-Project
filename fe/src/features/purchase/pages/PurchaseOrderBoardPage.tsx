@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Select, Space, Typography } from 'antd';
+import { Button, Card, Space, Typography } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
@@ -9,6 +9,8 @@ import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { usePurchaseOrders } from '../hooks/usePurchase';
 import type { PoGoodsStatus, PoPaymentStatus, PurchaseRole } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; goodsStatus?: PoGoodsStatus; paymentStatus?: PoPaymentStatus };
 
@@ -40,23 +42,21 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
           <Space wrap>
-            <Input.Search
+            <DebouncedSearch
               allowClear
               placeholder={PURCHASE_TEXT.searchOrder}
               style={{ width: 340 }}
               onSearch={(value) => table.setFilters({ keyword: value.trim() || undefined })}
             />
             {isManager && (
-              <Select
-                allowClear
+              <FilterSelect value={table.filters.goodsStatus}
                 placeholder={PURCHASE_TEXT.allGoodsStatus}
                 style={{ width: 200 }}
                 options={GOODS_STATUS_OPTIONS}
                 onChange={(value: PoGoodsStatus | undefined) => table.setFilters({ goodsStatus: value })}
               />
             )}
-            <Select
-              allowClear
+            <FilterSelect value={table.filters.paymentStatus}
               placeholder={PURCHASE_TEXT.allPaymentStatus}
               style={{ width: 200 }}
               options={PAYMENT_STATUS_OPTIONS}

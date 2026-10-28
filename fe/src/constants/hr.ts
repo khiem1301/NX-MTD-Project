@@ -14,7 +14,8 @@ export const ROLE_LABEL: Record<Role, string> = {
 };
 
 /** UC16: Quản đốc không thấy nhân viên có các vai trò này (khớp RoleCodes.HiddenFromManager ở BE). */
-export const MANAGER_HIDDEN_ROLES: readonly Role[] = ['Admin', 'Manager', 'Accountant'];
+/** Quản đốc quản lý mọi người trừ Admin và Kế toán (BE: RoleCodes.HiddenFromManager). */
+export const MANAGER_HIDDEN_ROLES: readonly Role[] = ['Admin', 'Accountant'];
 
 export type PayType = 'PieceRate' | 'Daily' | 'Monthly';
 export const PAY_TYPE_LABEL: Record<PayType, string> = {

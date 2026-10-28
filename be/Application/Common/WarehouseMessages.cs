@@ -8,6 +8,7 @@ public static class WarehouseMessages
     public const string InvalidStatus = "Phiếu không ở trạng thái cho phép thao tác này.";
     public const string OrderClosed = "Đơn hàng đã đóng, không thể lập thêm phiếu.";
     public const string TeamMismatch = "Phiếu không thuộc tổ của bạn.";
+    public const string CuttingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ cắt.";
     public const string ReasonRequired = "Vui lòng nhập lý do.";
     public const string DiscrepancyReasonRequired = "Số xác nhận khác số giao, vui lòng nhập lý do.";
     public const string ConfirmedQtyExceedsIssued = "Số xác nhận không được lớn hơn số đã cấp.";
@@ -53,14 +54,11 @@ public static class WarehouseMessages
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
     public const string FabricShortage = "Không đủ vải cho lệnh cắt";
+    public const string NoFabricNormForLines = "Chưa có định mức vải thân (chi tiết PANEL) cho: {0}. Bổ sung định mức mã hàng (UC10) rồi lập lệnh cắt.";
     public const string NoFabricNorm = "Mã hàng chưa có định mức vải trong NVL của đơn (UC09), không tính được vải cần.";
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
-    public const string WorkOrderCompleted = "Đã đóng lệnh cắt.";
-    public const string WorkOrderNotCompletable = "Chỉ đóng được lệnh cắt đang cắt (đã có bàn cắt).";
-    public const string WorkOrderHasPendingHandover = "Còn phiếu bàn giao BTP chờ kho nhận, chưa đóng được lệnh cắt.";
-    public const string WorkOrderShortReasonRequired = "BTP vào kho chưa đủ kế hoạch ({0}/{1}). Nhập lý do đóng lệnh.";
     public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
     public const string ReceiptExceedsCustomer = "Số nhận vượt số khách cấp còn phải nhận";
     public const string ReceiptPhotoRequired = "Phiếu nhập chưa có ảnh chứng từ giao hàng. Thủ kho cần chụp và đính kèm trước khi xác nhận.";

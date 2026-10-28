@@ -2,7 +2,9 @@ import { Card, Descriptions } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
+import { LatestNotificationsCard } from './LatestNotificationsCard';
 import { OrderProgressPanel } from './OrderProgressPanel';
+import { RevenuePanel } from './RevenuePanel';
 
 export function HomePage() {
   const { user } = useAuth();
@@ -19,6 +21,8 @@ export function HomePage() {
           <Descriptions.Item label="Mã nhân viên">{user.username}</Descriptions.Item>
         </Descriptions>
       </Card>
+      <LatestNotificationsCard />
+      {user.role === ROLES.Admin && <RevenuePanel />}
       {seesProgress && <OrderProgressPanel />}
     </>
   );

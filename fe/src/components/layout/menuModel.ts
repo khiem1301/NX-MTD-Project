@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { Role } from '@/constants/roles';
+import { matchesTeamType, type Role } from '@/constants/roles';
+import type { TeamType } from '@/types/auth';
 import type { MenuEntry } from '@/types/menu';
 export { normalizeText } from '@/utils/text';
 
@@ -35,8 +36,9 @@ export type Navigation = {
 export const HOME_PATH = '/';
 const OTHER_GROUP: Omit<MenuGroup, 'entries'> = { key: 'other', label: 'Khác', icon: null };
 
-const canSee = (entry: MenuEntry, role: Role | undefined) =>
-  entry.roles === 'all' || (role !== undefined && entry.roles.includes(role));
+const canSee = (entry: MenuEntry, role: Role | undefined, teamType: TeamType | null | undefined) =>
+  (entry.roles === 'all' || (role !== undefined && entry.roles.includes(role))) &&
+  matchesTeamType(role, teamType, entry.teamTypes);
 
 /**
  * Gom các mục menu theo nhóm. Mục chưa được xếp nhóm rơi vào "Khác" để không bao giờ mất chức năng.
@@ -48,8 +50,9 @@ export function buildNavigation(
   role: Role | undefined,
   hidden: readonly string[],
   home: { key: string; icon: ReactNode },
+  teamType?: TeamType | null,
 ): Navigation {
-  const visible = entries.filter((e) => canSee(e, role));
+  const visible = entries.filter((e) => canSee(e, role, teamType));
   const byKey = new Map<string, MenuEntry>();
   visible.forEach((e) => byKey.set(e.key, e));
 

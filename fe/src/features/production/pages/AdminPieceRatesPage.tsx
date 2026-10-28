@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Select, Space, Table, Typography, message } from 'antd';
+import { Button, Space, Table, Tabs, Typography, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
@@ -14,17 +14,22 @@ import type { PieceRate, PieceRateQuery, PieceRateStatus } from '../types';
 
 const text = PRODUCTION_TEXT.pieceRates;
 
-const STATUS_OPTIONS = (Object.keys(text.status) as PieceRateStatus[]).map((value) => ({
-  value,
-  label: text.status[value].text,
-}));
+/** Admin không thấy đơn giá Nháp (chưa gửi duyệt): tab "Tất cả" gồm các trạng thái còn lại. */
+const ALL_TAB = 'All';
+const STATUS_TABS: { key: string; label: string }[] = [
+  { key: ALL_TAB, label: text.allTab },
+  ...(['PendingApproval', 'Approved', 'Rejected'] as PieceRateStatus[]).map((value) => ({
+    key: value,
+    label: text.status[value].text,
+  })),
+];
 
 /**
  * UC26 (KI-01) — Admin duyệt hoặc từ chối đơn giá công đoạn do Kế toán gửi (từ chối bắt buộc lý do). Mặc định xem các
  * đơn giá đang chờ duyệt. Kế toán đặt và gửi duyệt đơn giá ngay trên màn "Công đoạn và đơn giá".
  */
 export function AdminPieceRatesPage() {
-  const [query, setQuery] = useState<PieceRateQuery>({ page: 1, pageSize: 100, status: 'PendingApproval' });
+  const [query, setQuery] = useState<PieceRateQuery>({ page: 1, pageSize: 100, status: undefined });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [approvingMany, setApprovingMany] = useState(false);
   const [approving, setApproving] = useState<PieceRate | null>(null);
@@ -74,15 +79,16 @@ export function AdminPieceRatesPage() {
           placeholder={PRODUCTION_TEXT.selectProduct}
           onChange={(productId) => setQuery({ ...query, page: 1, productId })}
         />
-        <Select<PieceRateStatus | undefined>
-          allowClear
-          placeholder={text.allStatus}
-          style={{ width: 180 }}
-          value={query.status}
-          options={STATUS_OPTIONS}
-          onChange={(status) => setQuery({ ...query, page: 1, status })}
-        />
       </Space>
+
+      <Tabs
+        activeKey={query.status ?? ALL_TAB}
+        items={STATUS_TABS}
+        onChange={(key) => {
+          setSelectedIds([]);
+          setQuery({ ...query, page: 1, status: key === ALL_TAB ? undefined : (key as PieceRateStatus) });
+        }}
+      />
 
       <Space>
         <Button

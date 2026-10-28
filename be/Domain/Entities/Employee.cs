@@ -54,6 +54,8 @@ public partial class Employee
 
     public virtual ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
 
+    public virtual GradeLevelCode? CurrentGradeCodeNavigation { get; set; }
+
     public virtual ICollection<CutHandover> CutHandovers { get; set; } = new List<CutHandover>();
 
     public virtual ICollection<DailyTimesheet> DailyTimesheets { get; set; } = new List<DailyTimesheet>();

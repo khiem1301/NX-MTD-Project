@@ -10,4 +10,7 @@ public interface INotificationService
 
     /// <summary>Gửi cho mọi nhân viên ACTIVE có vai trò này (roleCode theo bảng Role, vd. "ADMIN").</summary>
     Task NotifyRoleAsync(string roleCode, NotificationMessage message, CancellationToken ct);
+
+    /// <summary>Gửi cho tổ trưởng và tổ phó đang làm của một tổ (việc của riêng tổ đó).</summary>
+    Task NotifyTeamLeadersAsync(int teamId, NotificationMessage message, CancellationToken ct);
 }

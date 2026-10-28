@@ -281,7 +281,7 @@ export type OnLineQty = {
 
 export type DefectType = 'Rework' | 'Scrap';
 export type DefectStatus = 'Recorded' | 'Cancelled' | 'Locked';
-export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
+export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other' | 'EndOfOrderMismatch';
 
 export type Defect = {
   defectRecordId: number;
@@ -315,9 +315,16 @@ export type Defect = {
   replacementRequestId: number | null;
   replacementRequestCode: string | null;
   replacementRequestStatus: string | null;
+  sewingTeamName: string;
 };
 
-export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & { workDate?: string; from?: string; to?: string };
+export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & {
+  workDate?: string;
+  from?: string;
+  to?: string;
+  /** Tìm theo tên công nhân, mã hàng, tổ, mã phiếu, mã đơn. */
+  keyword?: string;
+};
 
 export type CreateDefectPayload = {
   workDate: string;

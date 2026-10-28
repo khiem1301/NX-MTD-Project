@@ -18,6 +18,9 @@ export const PRODUCTION_TEXT = {
     subtitle:
       'Nhập công đoạn của mã hàng từ Excel rồi đặt đơn giá từng công đoạn (có ngày hiệu lực), gửi Admin duyệt. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
     edit: 'Sửa công đoạn',
+    add: 'Thêm công đoạn',
+    addTitle: 'Thêm công đoạn',
+    addHint: 'Thêm một công đoạn cho mã hàng đang chọn, rồi nhập đơn giá và gửi Admin duyệt.',
     importExcel: 'Nhập từ Excel',
     noFinalStep: 'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
     import: {
@@ -121,6 +124,7 @@ export const PRODUCTION_TEXT = {
     selectAllPending: 'Chọn tất cả đơn giá chờ duyệt trong trang',
     note: 'Ghi chú (không bắt buộc)',
     allStatus: 'Mọi trạng thái',
+    allTab: 'Tất cả',
     columns: {
       product: 'Mã hàng',
       operation: 'Công đoạn',
@@ -254,10 +258,12 @@ export const PRODUCTION_TEXT = {
     cancel: 'Hủy phiếu',
     cancelTitle: 'Hủy phiếu hàng hỏng',
     filterDate: 'Lọc theo ngày',
+    searchPlaceholder: 'Tìm theo công nhân, mã hàng, tổ, mã phiếu',
     objected: 'Công nhân phản hồi',
     columns: {
       code: 'Mã phiếu',
       date: 'Ngày',
+      team: 'Tổ',
       order: 'Đơn hàng',
       operation: 'Công đoạn',
       worker: 'Công nhân',
@@ -292,6 +298,7 @@ export const PRODUCTION_TEXT = {
       CrookedSeam: 'Đường may lệch',
       WrongSize: 'Sai size',
       Torn: 'Rách',
+      EndOfOrderMismatch: 'Lệch kiểm cuối đơn',
       Stained: 'Dơ bẩn',
       Other: 'Khác',
     } as Record<DefectReason, string>,
@@ -344,7 +351,10 @@ export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as 
   label: PRODUCTION_TEXT.output.shiftLabel[value],
 }));
 
-export const DEFECT_REASON_OPTIONS = (Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[]).map((value) => ({
+/** Lý do tổ trưởng được chọn khi ghi phiếu; "Lệch kiểm cuối đơn" do hệ thống ghi nên không có trong danh sách. */
+export const DEFECT_REASON_OPTIONS = (Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[])
+  .filter((value) => value !== 'EndOfOrderMismatch')
+  .map((value) => ({
   value,
   label: PRODUCTION_TEXT.defects.reason[value],
 }));

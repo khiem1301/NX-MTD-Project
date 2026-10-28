@@ -8,14 +8,26 @@ export const KPI_KEY = ['kpi'] as const;
 const targetsKey = (filter: KpiTargetFilter, role: KpiRole) => [...KPI_KEY, role, 'targets', filter] as const;
 const targetDetailKey = (kpiTargetId: number, role: KpiRole) =>
   [...KPI_KEY, role, 'target-detail', kpiTargetId] as const;
-const dailyResultsKey = (kpiTargetId: number, role: KpiRole) =>
-  [...KPI_KEY, role, 'daily-results', kpiTargetId] as const;
 
 /** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, phân trang server-side. */
 export const useKpiTargets = (filter: KpiTargetFilter, role: KpiRole = 'manager') =>
   useQuery({
     queryKey: targetsKey(filter, role),
     queryFn: () => kpiApi.getTargets(filter, role),
+  });
+
+/** BTP khả dụng cho (đơn, mã hàng, tổ may); chỉ gọi khi đã chọn đủ ba thứ. */
+export const useKpiCapacity = (
+  orderId: number | null,
+  productId: number | null,
+  sewingTeamId: number | null,
+  exceptKpiTargetId?: number,
+) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'capacity', orderId, productId, sewingTeamId, exceptKpiTargetId],
+    queryFn: () =>
+      kpiApi.getCapacity({ orderId: orderId!, productId: productId!, sewingTeamId: sewingTeamId!, exceptKpiTargetId }),
+    enabled: orderId !== null && productId !== null && sewingTeamId !== null,
   });
 
 export const useKpiTargetDetail = (kpiTargetId: number | null, role: KpiRole = 'manager') =>
@@ -25,12 +37,19 @@ export const useKpiTargetDetail = (kpiTargetId: number | null, role: KpiRole = '
     enabled: kpiTargetId !== null,
   });
 
-/** MI-18 "KPI theo ngày": kết quả từng ngày của một chỉ tiêu (vw_KpiDailyResult). */
-export const useKpiDailyResults = (kpiTargetId: number | null, role: KpiRole = 'manager') =>
+/** Xem trước kết thúc đơn của tổ: lệch kiểm cuối đơn theo công nhân, kết quả KPI, tăng ca. */
+export const useFinishPreview = (kpiTargetId: number | null) =>
   useQuery({
-    queryKey: dailyResultsKey(kpiTargetId ?? 0, role),
-    queryFn: () => kpiApi.getDailyResults(kpiTargetId!, role),
+    queryKey: [...KPI_KEY, 'finish-preview', kpiTargetId],
+    queryFn: () => kpiApi.finishPreview(kpiTargetId!),
     enabled: kpiTargetId !== null,
+  });
+
+/** Kết thúc đơn: ghi phiếu hàng hỏng cho phần lệch, chốt và đóng KPI; làm mới cả hàng hỏng và đơn từ (đơn tăng ca). */
+export const useFinishKpiTarget = () =>
+  useApiMutation((kpiTargetId: number) => kpiApi.finish(kpiTargetId), {
+    invalidate: [KPI_KEY, ['production'], ['requests']],
+    successMessage: KPI_TEXT.finish.done,
   });
 
 // ---------- Quản đốc lập / sửa / hủy (UC19) ----------

@@ -18,11 +18,11 @@ public sealed class SaveSupplierDtoValidator : AbstractValidator<SaveSupplierDto
     public SaveSupplierDtoValidator()
     {
         RuleFor(x => x.SupplierName).NotEmpty().WithMessage(Messages.Required("tên nhà cung cấp")).MaximumLength(200);
-        RuleFor(x => x.Phone).MaximumLength(15).Matches("^[0-9+]*$")
-            .WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
-        RuleFor(x => x.Email).MaximumLength(100).EmailAddress().When(x => !string.IsNullOrWhiteSpace(x.Email))
-            .WithMessage("Email không hợp lệ.");
-        RuleFor(x => x.Address).MaximumLength(500);
+        RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
+            .MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
+            .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
+        RuleFor(x => x.Address).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
         RuleFor(x => x.MaterialTypes).MaximumLength(200);
         RuleFor(x => x.Note).MaximumLength(500);
     }

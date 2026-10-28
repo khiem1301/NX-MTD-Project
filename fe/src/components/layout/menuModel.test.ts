@@ -46,6 +46,21 @@ describe('buildNavigation', () => {
     expect(nav.leaves.find((l) => l.path === '/new')?.groupLabel).toBe('Khác');
   });
 
+  it('Tổ trưởng chỉ thấy chức năng đúng loại tổ; vai trò ngoài tổ không bị lọc', () => {
+    const scoped: MenuEntry[] = [
+      { key: 'home', label: 'Trang chủ', path: '/', roles: 'all' },
+      { key: 'work-orders', label: 'Lệnh cắt', path: '/work-orders', roles: [ROLES.Manager, ROLES.TeamLeader], teamTypes: ['Cutting'] },
+      { key: 'output', label: 'Sản lượng', path: '/output', roles: [ROLES.TeamLeader], teamTypes: ['Sewing'] },
+    ];
+    const paths = (role: typeof ROLES[keyof typeof ROLES], teamType: 'Cutting' | 'Sewing' | null) =>
+      buildNavigation(scoped, [], role, [], home, teamType).leaves.map((l) => l.path);
+
+    expect(paths(ROLES.TeamLeader, 'Sewing')).toEqual(['/', '/output']);
+    expect(paths(ROLES.TeamLeader, 'Cutting')).toEqual(['/', '/work-orders']);
+    expect(paths(ROLES.TeamLeader, null)).toEqual(['/']);
+    expect(paths(ROLES.Manager, null)).toEqual(['/', '/work-orders']);
+  });
+
   it('mục ẩn khỏi thanh bên vẫn tìm được', () => {
     const nav = buildNavigation(entries, groups, ROLES.Admin, ['profile'], home);
 

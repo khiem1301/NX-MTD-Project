@@ -57,7 +57,7 @@ export type EmployeeQuery = {
   keyword?: string;
   teamId?: number;
   role?: Role;
-  status?: 'Active' | 'Resigned';
+  status?: 'Active' | 'Resigned' | 'All';
 };
 
 export type CreateEmployeePayload = {
@@ -81,6 +81,7 @@ export type ManagerUpdatePayload = {
   phone?: string | null;
   role: Role;
   teamId?: number | null;
+  payType: PayType;
   startDate: string;
   attendanceCode?: number | null;
   rowVer: string;

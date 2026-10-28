@@ -61,8 +61,6 @@ export const MESSAGES = {
     handoverCreated: 'Đã lập phiếu bàn giao BTP. Các bàn cắt của lệnh đã khóa.',
     handoverCancelled: 'Đã rút phiếu bàn giao BTP. Các bàn cắt đã mở lại để sửa.',
     confirmCancelHandover: 'Rút phiếu bàn giao này? Thủ kho sẽ không còn thấy phiếu để nhận.',
-    workOrderCompleted: 'Đã đóng lệnh cắt.',
-    completeHint: 'Kiểm tra kết quả bên dưới rồi đóng lệnh. Nếu BTP vào kho chưa đủ kế hoạch, nhập lý do (ví dụ hết vải, hủy phần còn lại).',
     confirmHandoverCreate:
       'Lập phiếu bàn giao? Sau khi bàn giao, các bàn cắt của lệnh sẽ không sửa được.',
     confirmHandover: 'Xác nhận nhận BTP vào kho theo số đếm?',
@@ -175,6 +173,7 @@ export const MESSAGES = {
     unlockAccount: 'Mở khóa',
     resetPassword: 'Đặt lại mật khẩu',
     resetConfirm: 'Đặt lại mật khẩu tạm cho nhân viên này? Họ sẽ bị đăng xuất.',
+    employeeCreated: 'Đã thêm nhân viên và tạo tài khoản.',
     tempPasswordTitle: 'Mật khẩu tạm',
     tempPasswordWarning: 'Mật khẩu chỉ hiện một lần. Hãy đưa cho nhân viên và nhắc đổi khi đăng nhập.',
     username: 'Tên đăng nhập',

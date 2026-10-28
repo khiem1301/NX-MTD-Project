@@ -77,6 +77,7 @@ public class DefectServiceTests : ProductionTestBase
             PieceRate = type == DefectTypes.Scrap ? new PieceRate { PieceRateId = 50, Rate = 1_000m } : null,
             EditDeadline = deadline ?? Now.AddHours(20), Status = status, RowVer = RowVer, RecordedAt = Now.AddHours(-1),
             Operation = _operations[0], OrderLine = _lines[0], ResponsibleWorker = _employees.First(e => e.EmployeeId == workerId),
+            SewingTeam = _teams.FirstOrDefault(t => t.TeamId == teamId) ?? new Team { TeamId = teamId, TeamCode = "T" + teamId, TeamName = "Tổ " + teamId },
         };
         _defects.Add(defect);
         return defect;
@@ -322,5 +323,24 @@ public class DefectServiceTests : ProductionTestBase
         leader.Count(d => d.CanEdit).Should().Be(1);
         manager.Should().HaveCount(3);
         manager.Should().OnlyContain(d => d.CanEdit);
+    }
+
+    [Fact]
+    public async Task ListForTeam_Manager_SearchesByWorkerNameProductCodeAndTeam_AndReturnsTeamName()
+    {
+        _teams.Add(new Team { TeamId = 6, TeamCode = "MAY2", TeamName = "Tổ may 2", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active });
+        _employees.Add(Worker(8, teamId: 6));
+        Existing(workerId: 7, teamId: TeamId);
+        Existing(workerId: 8, teamId: 6);
+        AsManager();
+        var manager = new DefectService(Uow, Guard(), _rates, Notifier, Audit, User, Clock);
+        async Task<IReadOnlyList<DefectDto>> Search(string keyword) =>
+            (await manager.ListForTeamAsync(new DefectQuery { Keyword = keyword }, default)).Data!.Items;
+        var productCode = _lines[0].ProductVariant.Product.ProductCode;
+
+        (await Search("Công nhân 8")).Should().ContainSingle().Which.SewingTeamName.Should().Be("Tổ may 2");
+        (await Search("Tổ may 1")).Should().ContainSingle().Which.ResponsibleWorkerId.Should().Be(7);
+        (await Search(productCode)).Should().HaveCount(2);
+        (await Search("khong-co")).Should().BeEmpty();
     }
 }

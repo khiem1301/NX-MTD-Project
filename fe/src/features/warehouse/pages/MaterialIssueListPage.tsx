@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -12,6 +12,8 @@ import { IssueDetailDrawer } from '../components/IssueDetailDrawer';
 import { ISSUE_STATUS_LABEL, LABELS, WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '../constants';
 import { useIssues } from '../hooks/useIssues';
 import type { MaterialIssueListItem } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: string; warehouseType?: string };
 
@@ -66,21 +68,19 @@ export function MaterialIssueListPage() {
       }
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 260 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.warehouseType}
           placeholder={LABELS.warehouseType}
           options={TYPE_OPTIONS}
           onChange={(warehouseType?: string) => table.setFilters({ warehouseType })}
           style={{ width: 150 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

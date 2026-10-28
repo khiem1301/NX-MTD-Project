@@ -9,6 +9,19 @@ export type GradeLevel = {
   isCurrent: boolean;
 };
 
+/** Bậc thợ trong danh mục (Admin thêm / sửa / ngừng dùng). inUse: đã có người / đề xuất / tiền bậc dùng nên không xóa được. */
+export type GradeCode = {
+  gradeCode: string;
+  gradeName: string;
+  sortOrder: number;
+  status: 'Active' | 'Inactive';
+  inUse: boolean;
+};
+
+export type SaveGradeCodePayload = { gradeCode: string; gradeName: string; sortOrder: number };
+export type UpdateGradeCodePayload = { gradeName: string; sortOrder: number; status: 'Active' | 'Inactive' };
+export type UpdateLevelPayload = { gradeName: string; monthlyAmount: number; effectiveDate: string };
+
 export type GradeEvaluation = {
   gradeEvaluationId: number;
   workerId: number;
@@ -37,6 +50,7 @@ export type GradeWorker = {
   recentDefectCount: number;
   hasPending: boolean;
   teamName: string | null;
+  teamId?: number | null;
 };
 
 export type EvaluationQuery = PageParams & { status?: string };

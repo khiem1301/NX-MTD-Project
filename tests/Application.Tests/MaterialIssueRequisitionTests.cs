@@ -40,7 +40,7 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
             Arg.Any<CancellationToken>()).Returns("CAP-20261021-001");
         _requests.MarkCompletedAsync(Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _sut = new MaterialIssueService(Uow, _stock, new FabricPlanner(Uow), _codes, Clock,
-            NullLogger<MaterialIssueService>.Instance, _requests, Audit);
+            NullLogger<MaterialIssueService>.Instance, _requests, Audit, Notifier);
     }
 
     private static CreateMaterialIssueDto Dto(int? requestId) => new(WarehouseTypes.SemiFinished, null, OrderId, SewingTeamId,

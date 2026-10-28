@@ -12,11 +12,13 @@ public static class RequestTypes
     public const string ShortDelivery = "SHORT_DELIVERY";
     public const string MaterialRequisition = "MATERIAL_REQUISITION";
     public const string SemiFinishedRequisition = "SEMI_FINISHED_REQUISITION";
+    /// <summary>Tăng ca khi KPI không đạt: hệ thống tạo lúc kết thúc đơn của tổ; tổ trưởng quyết định (thiếu ít thì tự duyệt).</summary>
+    public const string Overtime = "OVERTIME";
 
     public static readonly IReadOnlyList<string> All = new[]
     {
         SpareParts, NewMachine, MachineSupplies, AttendanceCorrection, MaterialSupplement,
-        DefectiveMaterial, ReplacementCutting, ShortDelivery, MaterialRequisition, SemiFinishedRequisition,
+        DefectiveMaterial, ReplacementCutting, ShortDelivery, MaterialRequisition, SemiFinishedRequisition, Overtime,
     };
 }
 

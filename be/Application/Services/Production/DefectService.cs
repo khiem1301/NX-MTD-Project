@@ -49,8 +49,12 @@ public sealed class DefectService : IDefectService
                 .Where(d => query.WorkDate == null || d.WorkDate == query.WorkDate)
                 .Where(d => query.From == null || d.WorkDate >= query.From)
                 .Where(d => query.To == null || d.WorkDate <= query.To)
+                // Tìm theo mã lỗi, tên công nhân, mã hàng, tổ (tên / mã) và mã đơn.
                 .Where(d => string.IsNullOrEmpty(keyword) || d.DefectCode.Contains(keyword)
-                            || d.ResponsibleWorker.FullName.Contains(keyword))
+                            || d.ResponsibleWorker.FullName.Contains(keyword)
+                            || d.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword)
+                            || d.SewingTeam.TeamName.Contains(keyword) || d.SewingTeam.TeamCode.Contains(keyword)
+                            || d.OrderLine.Order.OrderCode.Contains(keyword))
                 .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<DefectDto>>.Success(page with { Items = page.Items.Select(Finish).ToList() });
@@ -229,7 +233,7 @@ public sealed class DefectService : IDefectService
         d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
-        d.Request == null ? null : d.Request.Status));
+        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamName));
 
     /// <summary>Đổi mã DB sang PascalCase và tính CanEdit (còn hiệu lực và còn hạn, hoặc là Quản đốc).</summary>
     private DefectDto Finish(DefectDto d) => d with

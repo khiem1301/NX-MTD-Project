@@ -139,10 +139,19 @@ CREATE TABLE dbo.SystemSetting (
     UpdatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_SystemSetting_UpdatedAt DEFAULT (dbo.fn_VnNow())
 );
 
--- Bậc thợ A–D và tiền bậc theo tháng, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
+-- Danh mục bậc thợ (A, B, C, D... Admin thêm / sửa / ngừng dùng). Mã bậc là khóa; nhân viên, đánh giá và tiền bậc tham chiếu mã này.
+CREATE TABLE dbo.GradeLevelCode (
+    GradeCode  VARCHAR(5)    NOT NULL CONSTRAINT PK_GradeLevelCode PRIMARY KEY CONSTRAINT CK_GLC_Code CHECK (GradeCode NOT LIKE '%[^A-Z0-9]%'),
+    GradeName  NVARCHAR(50)  NOT NULL,
+    SortOrder  SMALLINT      NOT NULL CONSTRAINT DF_GLC_Sort DEFAULT 0,   -- thứ tự hiển thị (bậc cao trước)
+    Status     VARCHAR(10)   NOT NULL CONSTRAINT DF_GLC_Status DEFAULT 'ACTIVE' CONSTRAINT CK_GLC_Status CHECK (Status IN ('ACTIVE','INACTIVE')),
+    CreatedAt  DATETIME2(0)  NOT NULL CONSTRAINT DF_GLC_CreatedAt DEFAULT (dbo.fn_VnNow())
+);
+
+-- Tiền bậc theo tháng của từng bậc, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
 CREATE TABLE dbo.GradeLevel (
     GradeLevelId     INT IDENTITY(1,1) CONSTRAINT PK_GradeLevel PRIMARY KEY,
-    GradeCode        CHAR(1)       NOT NULL CONSTRAINT CK_GradeLevel_Code CHECK (GradeCode IN ('A','B','C','D')),
+    GradeCode        VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeLevel_Code REFERENCES dbo.GradeLevelCode(GradeCode),
     GradeName        NVARCHAR(50)  NOT NULL,
     MonthlyAmount    DECIMAL(18,2) NOT NULL CONSTRAINT CK_GradeLevel_Amount CHECK (MonthlyAmount >= 0),
     EffectiveDate    DATE          NOT NULL,
@@ -179,7 +188,7 @@ CREATE TABLE dbo.Employee (
     RoleId           INT           NOT NULL CONSTRAINT FK_Employee_Role REFERENCES dbo.Role(RoleId),
     TeamId           INT           NULL CONSTRAINT FK_Employee_Team REFERENCES dbo.Team(TeamId), -- tổ hiện tại (đổi tổ ghi AuditLog)
     PayType          VARCHAR(20)   NOT NULL,   -- PIECE_RATE: CN may; DAILY: thợ cắt, QA/QC; MONTHLY: còn lại
-    CurrentGradeCode CHAR(1)       NULL CONSTRAINT CK_Employee_Grade CHECK (CurrentGradeCode IN ('A','B','C','D')), -- chỉ CN may, tổ phó & tổ trưởng
+    CurrentGradeCode VARCHAR(5)    NULL CONSTRAINT FK_Employee_Grade REFERENCES dbo.GradeLevelCode(GradeCode), -- chỉ CN may, tổ phó & tổ trưởng
     AttendanceCode   INT           NULL,       -- mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong)
     StartDate        DATE          NOT NULL,
     ResignDate       DATE          NULL,
@@ -220,8 +229,8 @@ CREATE TABLE dbo.GradeEvaluation (
     WorkerId          INT           NOT NULL CONSTRAINT FK_GradeEval_Worker REFERENCES dbo.Employee(EmployeeId),
     ProposedBy        INT           NOT NULL CONSTRAINT FK_GradeEval_ProposedBy REFERENCES dbo.Employee(EmployeeId),
     TeamId            INT           NULL CONSTRAINT FK_GradeEval_Team REFERENCES dbo.Team(TeamId),
-    CurrentGradeCode  CHAR(1)       NULL,
-    ProposedGradeCode CHAR(1)       NOT NULL,
+    CurrentGradeCode  VARCHAR(5)    NULL CONSTRAINT FK_GradeEval_Current REFERENCES dbo.GradeLevelCode(GradeCode),
+    ProposedGradeCode VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeEval_Proposed REFERENCES dbo.GradeLevelCode(GradeCode),
     Reason            NVARCHAR(500) NOT NULL,
     RecentDefectCount INT           NOT NULL CONSTRAINT DF_GradeEval_Defects DEFAULT 0,
     EvaluationDate    DATE          NOT NULL,
@@ -230,7 +239,6 @@ CREATE TABLE dbo.GradeEvaluation (
     ConsideredAt      DATETIME2(0)  NULL,
     DecisionNote      NVARCHAR(500) NULL,
     CreatedAt         DATETIME2(0)  NOT NULL CONSTRAINT DF_GradeEval_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    CONSTRAINT CK_GradeEval_Grades CHECK (ProposedGradeCode IN ('A','B','C','D') AND (CurrentGradeCode IS NULL OR CurrentGradeCode IN ('A','B','C','D'))),
     CONSTRAINT CK_GradeEval_Status CHECK (Status IN ('SUBMITTED','APPLIED','NOT_APPLIED')),
     CONSTRAINT CK_GradeEval_Applied CHECK (Status <> 'APPLIED' OR (EffectiveDate IS NOT NULL AND ConsideredAt IS NOT NULL)),
     CONSTRAINT UQ_GradeEval UNIQUE (WorkerId, ProposedBy, EvaluationDate)
@@ -550,6 +558,7 @@ GO
    SHORT_DELIVERY                Hệ thống (phiếu nhập thiếu) Quản đốc      không
    MATERIAL_REQUISITION          Tổ trưởng cắt / may         Thủ kho       không  (yêu cầu NVL)
    SEMI_FINISHED_REQUISITION     Tổ trưởng may               Thủ kho       không  (yêu cầu BTP)
+   OVERTIME                      Hệ thống (KPI không đạt)    Tổ trưởng     có     (thiếu ít: tự duyệt; thiếu nhiều: tổ trưởng quyết định)
    Quy tắc ai tạo / ai xử lý nằm ở backend. Lịch sử đổi trạng thái ghi vào AuditLog.
    ===================================================================================== */
 
@@ -579,7 +588,7 @@ CREATE TABLE dbo.Request (
     UpdatedAt            DATETIME2(0)   NULL,
     RowVer               ROWVERSION,
     CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION',
-        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION')),
+        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','OVERTIME')),
     CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
     CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH'))
@@ -962,7 +971,7 @@ CREATE TABLE dbo.DefectRecord (
     UpdatedAt           DATETIME2(0)   NULL,
     RowVer              ROWVERSION,
     CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP')),
-    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')),
+    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER','END_OF_ORDER_MISMATCH')),   -- END_OF_ORDER_MISMATCH: hệ thống ghi khi kiểm cuối đơn lệch
     CONSTRAINT CK_DR_Other  CHECK (DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL),
     CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CANCELLED','LOCKED')),
     CONSTRAINT CK_DR_Rate   CHECK (DefectType = 'REWORK' OR PieceRateId IS NOT NULL)
@@ -2628,6 +2637,12 @@ INSERT dbo.Role (RoleCode, RoleName, IsProduction) VALUES
  ('WORKER',           N'Công nhân',            1);
 -- Cách tính lương (Employee.PayType) đặt theo từng người khi tạo: tổ may PIECE_RATE, tổ cắt và QA/QC DAILY, còn lại MONTHLY.
 
+INSERT dbo.GradeLevelCode (GradeCode, GradeName, SortOrder) VALUES
+ ('A', N'Bậc A – Giỏi',       1),
+ ('B', N'Bậc B – Khá',        2),
+ ('C', N'Bậc C – Trung bình', 3),
+ ('D', N'Bậc D – Yếu',        4);
+
 INSERT dbo.GradeLevel (GradeCode, GradeName, MonthlyAmount, EffectiveDate) VALUES
  ('A', N'Bậc A – Giỏi',      600000, '2026-01-01'),
  ('B', N'Bậc B – Khá',       400000, '2026-01-01'),
@@ -2647,6 +2662,7 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('CUT_SURPLUS_PERCENT',       N'3',     N'% cắt vượt số đặt cho phép (CHƯA CHỐT với xưởng)'),
  ('FUEL_NORM_TOLERANCE_PERCENT', N'15',  N'Cảnh báo xăng vượt định mức'),
  ('REQUEST_MAX_PHOTOS',        N'5',     N'Số ảnh tối đa trên một đơn từ'),
+ ('KPI_OT_AUTO_THRESHOLD_PCT', N'10',    N'KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu nhiều hơn: tổ trưởng quyết định'),
  -- Quy tắc tính công lấy theo ca "Hành Chính" (CA00001) đang cài trong Ronald Jack Pro
  ('WORK_START_TIME',           N'07:30', N'Giờ vào làm (ca Hành Chính RJ)'),
  ('WORK_END_TIME',             N'16:30', N'Giờ tan làm; quẹt ra sau giờ này tính tăng ca'),
@@ -3939,6 +3955,90 @@ SELECT s.StocktakeId, b.StockBalanceId, b.OnHandQty,
 FROM dbo.Stocktake s
 JOIN dbo.StockBalance b ON b.WarehouseType = 'MATERIAL' AND b.MaterialId IN (@mVai, @mKhoa)
 WHERE s.StocktakeCode = 'KK-DEMO-002';
+
+COMMIT TRANSACTION;
+GO
+
+/* =====================================================================================
+   19.4 Đơn DEMO-DH004: chưa có lệnh cắt nào, để Quản đốc tạo lệnh cắt mới trên giao diện
+   ---------------------------------------------------------------------------------
+   3 dòng đơn (Đen S 120, Xanh M 150, Xanh L 100). Vải trong kho (tồn đầu kỳ 19.3) đủ theo định mức:
+   vải Xanh 300 m, vải Trắng 150 m, vải Đen còn lại sau các đơn demo khác.
+   Chạy lại không nhân đôi dữ liệu.
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH004')
+BEGIN
+    PRINT N'Dữ liệu demo 19.4 đã có (DEMO-DH004), bỏ qua.';
+    RETURN;
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.Product WHERE ProductCode = 'DEMO-AO01')
+BEGIN
+    PRINT N'Chưa có dữ liệu demo 19.1 (DEMO-AO01), bỏ qua 19.4.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+        @cus INT = (SELECT TOP 1 CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
+
+INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
+VALUES ('DEMO-DH004', @cus, '2026-10-26', '2026-11-30', 'PARTIAL', 'IN_PRODUCTION', N'Đơn demo chưa có lệnh cắt, để Quản đốc tạo lệnh cắt mới');
+DECLARE @o4 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH004');
+
+INSERT dbo.OrderLine (OrderId, ProductVariantId, ProductId, OrderedQty, CmtUnitPrice)
+SELECT @o4, pv.ProductVariantId, pv.ProductId, v.Qty, 28000
+FROM (VALUES (N'Đen', 'S', 120), (N'Xanh', 'M', 150), (N'Xanh', 'L', 100)) v(Color, SizeCode, Qty)
+JOIN dbo.ProductVariant pv ON pv.ProductId = @p1 AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+
+-- NVL của đơn: số cần ≈ định mức × số đặt (vải Xanh thân, vải Trắng tay, vải Đen, phụ liệu), công ty tự mua
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
+SELECT @o4, m.MaterialId, v.Qty, 0, NULL
+FROM (VALUES ('DEMO-VAI02', 260), ('DEMO-VAI03', 105), ('DEMO-VAI01', 175), ('DEMO-CHI02', 25), ('DEMO-CHI01', 15),
+             ('DEMO-KHOA01', 370), ('DEMO-NHAN01', 370)) v(Code, Qty)
+JOIN dbo.Material m ON m.MaterialCode = v.Code;
+
+COMMIT TRANSACTION;
+GO
+
+/* =====================================================================================
+   19.5 Thông báo mẫu của Quản đốc gửi tổ trưởng / công nhân (nghỉ lễ, sự kiện sắp tới)
+   ---------------------------------------------------------------------------------
+   Gửi tới toàn xưởng; mỗi người nhận một dòng Notification chưa đọc để thử khối "Thông báo mới" ở trang chủ.
+   Chạy lại không nhân đôi dữ liệu.
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.Announcement WHERE Content LIKE N'[[]DEMO]%')
+BEGIN
+    PRINT N'Dữ liệu demo 19.5 đã có, bỏ qua.';
+    RETURN;
+END;
+DECLARE @sender INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC');
+IF @sender IS NULL
+BEGIN
+    PRINT N'Chưa có tài khoản QUANDOC, bỏ qua 19.5.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+INSERT dbo.Announcement (Content, Priority, TargetScope, SenderId, SentAt) VALUES
+ (N'[DEMO] Thông báo nghỉ lễ: xưởng nghỉ Quốc khánh 2/9 từ 31/8 đến hết 3/9, đi làm lại sáng 4/9. Tổ trưởng nhắc công nhân hoàn thành đơn đang chạy trước kỳ nghỉ.', 'URGENT', 'ALL', @sender, '2026-10-27 08:00:00'),
+ (N'[DEMO] Sự kiện sắp tới: liên hoan cuối tháng chiều thứ Bảy 31/10 tại nhà ăn xưởng. Tổ trưởng báo số người tham gia cho Quản đốc trước thứ Sáu.', 'NORMAL', 'ALL', @sender, '2026-10-27 09:00:00');
+
+INSERT dbo.Notification (RecipientId, SourceType, RefTable, RefId, Title, Message, LinkUrl)
+SELECT e.EmployeeId, 'ANNOUNCEMENT', 'Announcement', a.AnnouncementId,
+       CASE a.Priority WHEN 'URGENT' THEN N'Thông báo khẩn' ELSE N'Thông báo' END, a.Content, '/notifications'
+FROM dbo.Announcement a
+CROSS JOIN dbo.Employee e
+WHERE a.Content LIKE N'[[]DEMO]%' AND e.Status = 'ACTIVE' AND e.EmployeeId <> @sender;
 
 COMMIT TRANSACTION;
 GO

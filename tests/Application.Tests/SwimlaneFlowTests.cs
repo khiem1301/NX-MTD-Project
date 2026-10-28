@@ -36,7 +36,7 @@ public class SwimlaneFlowTests : ProductionTestBase
     // ---------- Tổ may nhận BTP → IN_PRODUCTION ----------
 
     private MaterialIssueService Issues() => new(Uow, _stock, new FabricPlanner(Uow), Substitute.For<IDocumentCodeGenerator>(), Clock,
-        NullLogger<MaterialIssueService>.Instance, _requests, Audit);
+        NullLogger<MaterialIssueService>.Instance, _requests, Audit, Notifier);
 
     private (MaterialIssue Issue, ConfirmIssueDto Dto) PendingBtpIssue(CustomerOrder order, string warehouse = WarehouseTypes.SemiFinished)
     {
@@ -106,7 +106,7 @@ public class SwimlaneFlowTests : ProductionTestBase
     // ---------- Tổ cắt rút phiếu bàn giao BTP ----------
 
     private CutHandoverService Handovers() => new(Uow, _stock, Substitute.For<IDocumentCodeGenerator>(), Substitute.For<IAppLock>(), Clock,
-        _requests, NullLogger<CutHandoverService>.Instance);
+        _requests, Notifier, NullLogger<CutHandoverService>.Instance);
 
     private WorkOrder CuttingWorkOrder(int plannedQty = 100, string status = WorkOrderStatuses.Cutting)
     {
@@ -167,49 +167,56 @@ public class SwimlaneFlowTests : ProductionTestBase
         pending.Status.Should().Be(HandoverStatuses.Pending);
     }
 
+    // ---------- Trạng thái lệnh cắt bám theo tiến trình + thông báo ----------
+
+    private async Task<WorkOrder> ConfirmHandoverAsync(int plannedQty, int handed, int confirmed)
+    {
+        var wo = CuttingWorkOrder(plannedQty);
+        wo.Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001" };
+        var h = Handover(wo, HandoverStatuses.Pending, handed: handed);
+        var dto = new ConfirmCutHandoverDto([new ConfirmHandoverLineDto(h.CutHandoverLines.Single().CutHandoverLineId, confirmed,
+            confirmed == handed ? null : "Thiếu khi đếm")]);
+
+        (await Handovers().ConfirmAsync(h.CutHandoverId, dto, 900, default)).IsSuccess.Should().BeTrue();
+        return wo;
+    }
+
+    [Fact]
+    public async Task Work_order_completes_by_itself_and_the_manager_is_told_when_the_warehouse_has_the_full_plan()
+    {
+        var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 100);
+
+        wo.Status.Should().Be(WorkOrderStatuses.Completed);
+        wo.CompletedAt.Should().Be(Now);
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("LC-7")), Arg.Any<CancellationToken>());
+        await Notifier.Received(1).NotifyTeamLeadersAsync(CuttingTeam, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Work_order_stays_cutting_while_the_warehouse_has_less_than_the_plan_and_the_manager_is_not_told()
+    {
+        var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 80);
+
+        wo.Status.Should().Be(WorkOrderStatuses.Cutting);
+        await Notifier.DidNotReceive().NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Rejecting_a_handover_tells_the_cutting_team_leaders()
+    {
+        var wo = CuttingWorkOrder();
+        var h = Handover(wo, HandoverStatuses.Pending);
+
+        (await Handovers().RejectAsync(h.CutHandoverId, new ReasonDto("Đếm lại thiếu"), 900, default)).IsSuccess.Should().BeTrue();
+
+        await Notifier.Received(1).NotifyTeamLeadersAsync(CuttingTeam,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("Đếm lại thiếu")), Arg.Any<CancellationToken>());
+    }
+
     // ---------- Quản đốc đóng lệnh cắt ----------
 
     private WorkOrderService WorkOrdersService() => new(Uow, _stock, new FabricPlanner(Uow), Substitute.For<IDocumentCodeGenerator>(),
-        NullLogger<WorkOrderService>.Instance);
+        Notifier, NullLogger<WorkOrderService>.Instance);
 
-    [Fact]
-    public async Task Completing_a_fully_handed_over_work_order_needs_no_reason()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Confirmed, confirmed: 100);
-
-        var result = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto(null), default);
-
-        result.IsSuccess.Should().BeTrue();
-        wo.Status.Should().Be(WorkOrderStatuses.Completed);
-    }
-
-    [Fact]
-    public async Task Completing_a_short_work_order_requires_a_reason_which_is_kept_in_the_note()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Confirmed, confirmed: 80);
-
-        var without = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto(" "), default);
-        without.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        without.Message.Should().Contain("80/100");
-        wo.Status.Should().Be(WorkOrderStatuses.Cutting);
-
-        var with = await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("Hết vải, hủy phần còn lại"), default);
-        with.IsSuccess.Should().BeTrue();
-        wo.Status.Should().Be(WorkOrderStatuses.Completed);
-        wo.Note.Should().Contain("Hết vải");
-    }
-
-    [Fact]
-    public async Task Work_order_cannot_be_completed_while_a_handover_awaits_the_warehouse_or_when_not_cutting()
-    {
-        var wo = CuttingWorkOrder(plannedQty: 100);
-        Handover(wo, HandoverStatuses.Pending);
-        (await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("x"), default)).Message.Should().Be(WarehouseMessages.WorkOrderHasPendingHandover);
-
-        wo.Status = WorkOrderStatuses.Open;
-        (await WorkOrdersService().CompleteAsync(7, new CompleteWorkOrderDto("x"), default)).Message.Should().Be(WarehouseMessages.WorkOrderNotCompletable);
-        (await WorkOrdersService().CompleteAsync(99, new CompleteWorkOrderDto("x"), default)).Kind.Should().Be(ResultKind.NotFound);
-    }
 }
