@@ -14,6 +14,8 @@ type Props = {
   /** Công đoạn to đã có của mã hàng (gợi ý khi gõ). */
   groups: string[];
   onClose: () => void;
+  /** Gọi sau khi tạo mới công đoạn (không gọi khi sửa) — để mở tiếp ô nhập đơn giá. */
+  onCreated?: (operationId: number) => void;
 };
 
 type FormValues = {
@@ -32,7 +34,7 @@ const text = PRODUCTION_TEXT.operations;
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
 /** UC25 — Kế toán sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
-export function OperationFormModal({ open, productId, operation, groups, onClose }: Props) {
+export function OperationFormModal({ open, productId, operation, groups, onClose, onCreated }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
   const spec = useProductSpec(open ? productId : undefined);
@@ -72,7 +74,12 @@ export function OperationFormModal({ open, productId, operation, groups, onClose
         groupName: values.groupName?.trim() || null,
         componentIds: values.componentIds,
       },
-      { onSuccess: onClose },
+      {
+        onSuccess: (operationId) => {
+          onClose();
+          if (!operation) onCreated?.(operationId);
+        },
+      },
     );
   };
 
@@ -80,7 +87,7 @@ export function OperationFormModal({ open, productId, operation, groups, onClose
     <Modal
       open={open}
       width={modalWidth(520)}
-      title={text.edit}
+      title={operation ? text.edit : text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}

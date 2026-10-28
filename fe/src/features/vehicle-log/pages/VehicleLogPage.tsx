@@ -4,9 +4,7 @@ import {
   Card,
   Checkbox,
   Drawer,
-  Input,
   Popconfirm,
-  Select,
   Space,
   Table,
   Tabs,
@@ -32,6 +30,8 @@ import {
 } from '../constants';
 import { useChangeVehicleStatus, useTrips, useVehicles } from '../hooks/useVehicleLog';
 import type { Vehicle, VehicleTrip } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type TripFilters = { keyword?: string; status?: string; warningsOnly?: boolean };
 type VehicleFilters = { keyword?: string; status?: string };
@@ -124,14 +124,13 @@ function TripsTab() {
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 260 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={VL_LABELS.status}
           options={TRIP_STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}
@@ -238,14 +237,13 @@ function VehiclesTab() {
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 260 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={VL_LABELS.status}
           options={VEHICLE_STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

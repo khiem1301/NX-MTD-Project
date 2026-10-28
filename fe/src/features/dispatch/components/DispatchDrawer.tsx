@@ -12,10 +12,12 @@ import {
   Space,
   Spin,
   Table,
+  Tooltip,
 } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AttachmentGallery } from '@/components/common/attachments';
+import { useAttachments } from '@/hooks/useAttachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -30,13 +32,16 @@ import {
   DISPATCH_STATUS,
   DISPATCH_STATUS_LABEL,
 } from '../constants';
+import { PrepareDispatchModal } from './PrepareDispatchModal';
 import {
+  useApproveDispatch,
   useCancelDispatch,
   useConfirmDelivery,
   useDispatchNote,
   useDownloadDispatch,
   useExportDispatch,
   useRejectDispatch,
+  useReturnDispatch,
 } from '../hooks/useDispatch';
 import type { DispatchNote, DispatchNoteLine } from '../types';
 
@@ -46,8 +51,9 @@ type FormValues = { receivedDate: Dayjs; received: Record<string, number> };
 const API_DATE = 'YYYY-MM-DD';
 
 /**
- * Chi tiết phiếu xuất hàng. Quản đốc hủy phiếu chưa xuất; Thủ kho xuất hàng (kèm ảnh phiếu xuất có Quản đốc ký) hoặc từ chối;
- * Kế toán xác nhận khách nhận (ngày nhận, số nhận từng dòng, ảnh biên bản giao có khách ký).
+ * Chi tiết phiếu xuất hàng. Quản đốc lập → Thủ kho lập phiếu xuất (chốt số xuất) → Quản đốc duyệt hoặc trả lại → Thủ kho in,
+ * chụp ảnh phiếu có ký (bắt buộc) rồi xuất; Quản đốc hủy được đến khi hàng rời kho; Kế toán xác nhận khách nhận
+ * (ngày nhận, số nhận từng dòng, ảnh biên bản giao có khách ký — bắt buộc).
  */
 export function DispatchDrawer({ noteId, onClose }: DispatchDrawerProps) {
   const detail = useDispatchNote(noteId);
@@ -72,20 +78,28 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
   const cancel = useCancelDispatch();
   const exportGoods = useExportDispatch();
   const reject = useRejectDispatch();
+  const approve = useApproveDispatch();
+  const giveBack = useReturnDispatch();
+  const photos = useAttachments(ATTACHMENT_OWNER.DispatchNote, note.dispatchNoteId);
+  const hasIssuePhoto = (photos.data ?? []).some((a) => a.purpose === ATTACHMENT_PURPOSE.SignedIssueSlip);
+  const hasDeliveryPhoto = (photos.data ?? []).some((a) => a.purpose === ATTACHMENT_PURPOSE.SignedDeliveryNote);
+  const [preparing, setPreparing] = useState(false);
+  const [returning, setReturning] = useState(false);
   const confirm = useConfirmDelivery();
   const download = useDownloadDispatch();
   const [rejecting, setRejecting] = useState(false);
   const [form] = Form.useForm<FormValues>();
   const pending = note.status === DISPATCH_STATUS.PENDING;
+  const waitingApproval = note.status === DISPATCH_STATUS.PENDING_APPROVAL;
+  const approved = note.status === DISPATCH_STATUS.APPROVED;
   const inDelivery = note.status === DISPATCH_STATUS.IN_DELIVERY;
   const isKeeper = hasRole(ROLES.WarehouseKeeper);
   const isAccountant = hasRole(ROLES.Accountant);
-  const canExport = isKeeper && pending;
+  const isManager = hasRole(ROLES.Manager);
+  const canExport = isKeeper && approved;
   const canConfirm = isAccountant && inDelivery;
-  const sent =
-    note.status !== DISPATCH_STATUS.PENDING &&
-    note.status !== DISPATCH_STATUS.CANCELLED &&
-    note.status !== DISPATCH_STATUS.REJECTED;
+  const notExportedYet = pending || waitingApproval || approved;
+  const sent = !notExportedYet && note.status !== DISPATCH_STATUS.CANCELLED && note.status !== DISPATCH_STATUS.REJECTED;
 
   const handleFinish = (values: FormValues) =>
     confirm.mutate(
@@ -112,7 +126,19 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
         >
           {MESSAGES.common.printExcel}
         </Button>
-        {hasRole(ROLES.Manager) && pending && (
+        {isManager && waitingApproval && (
+          <>
+            <Button danger onClick={() => setReturning(true)}>
+              {DISPATCH_LABELS.returnBack}
+            </Button>
+            <Popconfirm title={DISPATCH_MESSAGES.confirmApprove} onConfirm={() => approve.mutate(note.dispatchNoteId, { onSuccess: onClose })}>
+              <Button type="primary" loading={approve.isPending}>
+                {DISPATCH_LABELS.approve}
+              </Button>
+            </Popconfirm>
+          </>
+        )}
+        {isManager && notExportedYet && (
           <Popconfirm
             title={DISPATCH_MESSAGES.confirmCancel}
             onConfirm={() => cancel.mutate(note.dispatchNoteId, { onSuccess: onClose })}
@@ -122,32 +148,47 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
             </Button>
           </Popconfirm>
         )}
-        {canExport && (
+        {isKeeper && pending && (
           <>
             <Button danger onClick={() => setRejecting(true)}>
               {DISPATCH_LABELS.reject}
             </Button>
-            <Popconfirm
-              title={DISPATCH_MESSAGES.confirmExport}
-              onConfirm={() => exportGoods.mutate(note.dispatchNoteId, { onSuccess: onClose })}
-            >
-              <Button type="primary" loading={exportGoods.isPending}>
-                {DISPATCH_LABELS.export}
-              </Button>
-            </Popconfirm>
+            <Button type="primary" onClick={() => setPreparing(true)}>
+              {DISPATCH_LABELS.prepare}
+            </Button>
           </>
         )}
+        {canExport && (
+          <Tooltip title={hasIssuePhoto ? undefined : DISPATCH_LABELS.needIssuePhoto}>
+            <span>
+              <Popconfirm
+                title={DISPATCH_MESSAGES.confirmExport}
+                disabled={!hasIssuePhoto}
+                onConfirm={() => exportGoods.mutate(note.dispatchNoteId, { onSuccess: onClose })}
+              >
+                <Button type="primary" disabled={!hasIssuePhoto} loading={exportGoods.isPending}>
+                  {DISPATCH_LABELS.export}
+                </Button>
+              </Popconfirm>
+            </span>
+          </Tooltip>
+        )}
         {canConfirm && (
-          <Button type="primary" loading={confirm.isPending} onClick={() => form.submit()}>
-            {DISPATCH_LABELS.confirmDelivery}
-          </Button>
+          <Tooltip title={hasDeliveryPhoto ? undefined : DISPATCH_LABELS.needDeliveryPhoto}>
+            <span>
+              <Button type="primary" disabled={!hasDeliveryPhoto} loading={confirm.isPending} onClick={() => form.submit()}>
+                {DISPATCH_LABELS.confirmDelivery}
+              </Button>
+            </span>
+          </Tooltip>
         )}
       </Space>
       {note.rejectReason && (
         <Alert
           type="warning"
           showIcon
-          message={`${DISPATCH_LABELS.rejectReason}: ${note.rejectReason}`}
+          // Phiếu đang chờ làm lại: lý do là của Quản đốc khi trả lại ("Quản đốc trả lại: ...").
+          message={pending ? note.rejectReason : `${DISPATCH_LABELS.rejectReason}: ${note.rejectReason}`}
           style={{ marginBottom: 16 }}
         />
       )}
@@ -228,30 +269,42 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
           ]}
         />
       </Form>
-      {(isKeeper || hasRole(ROLES.Manager) || sent) && (
+      {(approved || sent) && (isKeeper || isManager || sent) && (
         <>
-          <Divider orientation="left">{DISPATCH_LABELS.issueSlipPhotos}</Divider>
+          <Divider orientation="left">{`${DISPATCH_LABELS.issueSlipPhotos} (${DISPATCH_LABELS.requiredPhoto})`}</Divider>
           <AttachmentGallery
             ownerType={ATTACHMENT_OWNER.DispatchNote}
             ownerId={note.dispatchNoteId}
-            canEdit={isKeeper && (pending || inDelivery)}
+            canEdit={isKeeper && (approved || inDelivery)}
             maxFiles={DISPATCH_PHOTO_MAX}
             purpose={ATTACHMENT_PURPOSE.SignedIssueSlip}
+            onlyPurpose
           />
         </>
       )}
       {sent && (
         <>
-          <Divider orientation="left">{DISPATCH_LABELS.deliveryNotePhotos}</Divider>
+          <Divider orientation="left">{`${DISPATCH_LABELS.deliveryNotePhotos} (${DISPATCH_LABELS.requiredPhoto})`}</Divider>
           <AttachmentGallery
             ownerType={ATTACHMENT_OWNER.DispatchNote}
             ownerId={note.dispatchNoteId}
-            canEdit={isAccountant}
+            canEdit={isAccountant && inDelivery}
             maxFiles={DISPATCH_PHOTO_MAX}
             purpose={ATTACHMENT_PURPOSE.SignedDeliveryNote}
+            onlyPurpose
           />
         </>
       )}
+      <PrepareDispatchModal note={note} open={preparing} onClose={() => setPreparing(false)} />
+      <ReasonModal
+        open={returning}
+        title={DISPATCH_LABELS.returnTitle}
+        loading={giveBack.isPending}
+        onCancel={() => setReturning(false)}
+        onSubmit={(reason) =>
+          giveBack.mutate({ id: note.dispatchNoteId, reason }, { onSuccess: () => { setReturning(false); onClose(); } })
+        }
+      />
       <ReasonModal
         open={rejecting}
         title={DISPATCH_LABELS.rejectTitle}

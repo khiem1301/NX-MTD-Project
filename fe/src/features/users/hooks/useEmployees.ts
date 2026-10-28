@@ -30,10 +30,15 @@ export const useEmployee = (id: number | null) => {
 
 const invalidate = [EMPLOYEES_KEY, TEAMS_KEY, HR_LOOKUPS_KEY];
 
-export const useCreateEmployee = () =>
-  useApiMutation((body: CreateEmployeePayload) => employeeApi.create(body), { invalidate });
+export const useCreateEmployee = () => {
+  const role = useRolePath();
+  return useApiMutation((body: CreateEmployeePayload) => employeeApi.create(role, body), {
+    invalidate,
+    successMessage: MESSAGES.hr.employeeCreated,
+  });
+};
 
-/** Admin sửa đủ trường; Quản đốc chỉ sửa thông tin cá nhân + mã chấm công. */
+/** Admin sửa đủ trường; Quản đốc sửa các trường như Admin nhưng không gán được vai trò Admin / Kế toán. */
 export const useUpdateEmployee = (id: number) => {
   const role = useRolePath();
   return useApiMutation(
@@ -43,12 +48,22 @@ export const useUpdateEmployee = (id: number) => {
   );
 };
 
-export const useResignEmployee = (id: number) =>
-  useApiMutation((body: { resignDate: string; reason: string; rowVer: string }) => employeeApi.resign(id, body), { invalidate });
+export const useResignEmployee = (id: number) => {
+  const role = useRolePath();
+  return useApiMutation((body: { resignDate: string; reason: string; rowVer: string }) => employeeApi.resign(role, id, body), { invalidate });
+};
 
-export const useLockAccount = (id: number) =>
-  useApiMutation((reason: string) => employeeApi.lock(id, reason), { invalidate });
+export const useLockAccount = (id: number) => {
+  const role = useRolePath();
+  return useApiMutation((reason: string) => employeeApi.lock(role, id, reason), { invalidate });
+};
 
-export const useUnlockAccount = (id: number) => useApiMutation(() => employeeApi.unlock(id), { invalidate });
+export const useUnlockAccount = (id: number) => {
+  const role = useRolePath();
+  return useApiMutation(() => employeeApi.unlock(role, id), { invalidate });
+};
 
-export const useResetPassword = (id: number) => useApiMutation(() => employeeApi.resetPassword(id), { invalidate });
+export const useResetPassword = (id: number) => {
+  const role = useRolePath();
+  return useApiMutation(() => employeeApi.resetPassword(role, id), { invalidate });
+};

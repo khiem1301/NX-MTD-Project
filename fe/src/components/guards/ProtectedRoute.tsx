@@ -1,8 +1,20 @@
 import { Spin } from 'antd';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import type { Role } from '@/constants/roles';
+import { MENU_ENTRIES } from '@/app/menu';
+import { matchesTeamType, type Role } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
+
+/** Loại tổ được vào trang này, lấy từ mục menu cùng đường dẫn (khớp dài nhất) để menu và route không lệch nhau. */
+function teamTypesOf(pathname: string) {
+  let best: (typeof MENU_ENTRIES)[number] | undefined;
+  for (const entry of MENU_ENTRIES) {
+    if (entry.path === '/') continue;
+    if (pathname !== entry.path && !pathname.startsWith(`${entry.path}/`)) continue;
+    if (!best || entry.path.length > best.path.length) best = entry;
+  }
+  return best?.teamTypes;
+}
 
 export function ProtectedRoute({ roles }: { roles?: Role[] }) {
   const { status, user } = useAuth();
@@ -23,6 +35,10 @@ export function ProtectedRoute({ roles }: { roles?: Role[] }) {
     return <Navigate to={`${ROUTES.profile}?changePassword=1`} replace />;
   }
   if (roles && !roles.includes(user.role)) {
+    return <Navigate to={ROUTES.home} replace />;
+  }
+  // Tổ cắt và tổ may cùng vai trò Tổ trưởng / Công nhân nhưng khác chức năng.
+  if (!matchesTeamType(user.role, user.teamType, teamTypesOf(location.pathname))) {
     return <Navigate to={ROUTES.home} replace />;
   }
   return <Outlet />;

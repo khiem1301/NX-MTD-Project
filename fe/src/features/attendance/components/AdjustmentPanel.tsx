@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, DatePicker, Input, Space, Table, Typography } from 'antd';
+import { Button, Card, DatePicker, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -12,6 +12,7 @@ import { ATTENDANCE_TEXT } from '../constants';
 import { useAdjustments } from '../hooks/useAttendance';
 import type { AdjustmentFilter, AttendanceAdjustment } from '../types';
 import { AdjustmentFormModal, type AdjustmentPrefill } from './AdjustmentFormModal';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
 const text = ATTENDANCE_TEXT.adjust;
 const shortTime = (v: string | null) => (v ? v.slice(0, 5) : '—');
@@ -97,7 +98,7 @@ export function AdjustmentPanel() {
             }
           }}
         />
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={text.search}
           style={{ width: 260 }}

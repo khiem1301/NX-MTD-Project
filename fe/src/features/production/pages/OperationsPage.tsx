@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Checkbox, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { SearchOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -34,6 +34,9 @@ export function OperationsPage() {
   const [showDiscontinued, setShowDiscontinued] = useState(false);
   const [editing, setEditing] = useState<Operation | null>(null);
   const [rating, setRating] = useState<Operation | null>(null);
+  const [creating, setCreating] = useState(false);
+  /** Công đoạn vừa thêm: mở luôn ô nhập đơn giá khi danh sách đã tải lại có nó. */
+  const [pendingRateId, setPendingRateId] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [groupFilter, setGroupFilter] = useState<string>();
   const [keyword, setKeyword] = useState('');
@@ -42,6 +45,8 @@ export function OperationsPage() {
   const toggle = useToggleOperation();
   const submit = useSubmitPieceRate();
 
+  const ratingTarget =
+    rating ?? (pendingRateId === null ? null : (operations.data?.find((o) => o.operationId === pendingRateId) ?? null));
   const product = products.data?.items.find((p) => p.productId === productId);
   const productLabel = product ? `${product.productCode} - ${product.productName}` : '';
   const hasActiveFinal = (operations.data ?? []).some((o) => o.isFinalStep && o.status === 'Active');
@@ -160,7 +165,10 @@ export function OperationsPage() {
           onChange={(e) => setKeyword(e.target.value)}
           style={{ width: 240 }}
         />
-        <Button type="primary" icon={<UploadOutlined />} disabled={productId === null} onClick={() => setImportOpen(true)}>
+        <Button type="primary" icon={<PlusOutlined />} disabled={productId === null} onClick={() => setCreating(true)}>
+          {text.add}
+        </Button>
+        <Button icon={<UploadOutlined />} disabled={productId === null} onClick={() => setImportOpen(true)}>
           {text.importExcel}
         </Button>
       </Space>
@@ -184,13 +192,23 @@ export function OperationsPage() {
       {productId !== null && (
         <>
           <OperationFormModal
-            open={editing !== null}
+            open={editing !== null || creating}
             productId={productId}
             operation={editing}
             groups={groups}
-            onClose={() => setEditing(null)}
+            onClose={() => {
+              setEditing(null);
+              setCreating(false);
+            }}
+            onCreated={setPendingRateId}
           />
-          <PieceRateFormModal operation={rating} onClose={() => setRating(null)} />
+          <PieceRateFormModal
+            operation={ratingTarget}
+            onClose={() => {
+              setRating(null);
+              setPendingRateId(null);
+            }}
+          />
           {importOpen && (
             <OperationImportModal
               open

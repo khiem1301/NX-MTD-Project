@@ -27,6 +27,15 @@ public sealed class NotificationService : INotificationService
         }
     }
 
+    public async Task NotifyTeamLeadersAsync(int teamId, NotificationMessage message, CancellationToken ct)
+    {
+        var ids = await _db.Employees.AsNoTracking()
+            .Where(e => e.Status == RecordStatus.Active && e.TeamId == teamId
+                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
+            .Select(e => e.EmployeeId).ToListAsync(ct);
+        NotifyEmployees(ids, message);
+    }
+
     public async Task NotifyRoleAsync(string roleCode, NotificationMessage message, CancellationToken ct)
     {
         var ids = await _db.Employees.AsNoTracking()

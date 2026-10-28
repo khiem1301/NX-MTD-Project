@@ -1,8 +1,8 @@
 namespace NX_MTD.Domain.Constants;
 
 /// <summary>
-/// Trạng thái chỉ tiêu KPI tổ may (KpiTarget.Status) — Quản đốc lập/sửa/hủy; KpiAutoCloseJob
-/// tự đóng khi hết kỳ (Minh).
+/// Trạng thái chỉ tiêu KPI tổ may (KpiTarget.Status) — Quản đốc lập/sửa/hủy; EndOfOrderService
+/// chốt và đóng khi kết thúc đơn của tổ (Minh).
 /// </summary>
 public static class KpiStatuses
 {

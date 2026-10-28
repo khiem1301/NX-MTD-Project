@@ -6,6 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.TeamLeader;
 
 /// <summary>UC51: tổ trưởng / tổ phó cắt nhập sản lượng cắt theo bàn.</summary>
+[CuttingTeamOnly]
 public sealed class CuttingLaysController : TeamLeaderBaseController
 {
     private readonly ICuttingLayService _lays;

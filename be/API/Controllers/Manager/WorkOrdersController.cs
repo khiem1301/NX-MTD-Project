@@ -20,6 +20,16 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _workOrders.GetByIdAsync(id, null, ct));
 
+    /// <summary>Xem trước vải cần / khả dụng / thiếu cho kế hoạch đang nhập (không lưu).</summary>
+    [HttpPost("fabric-preview")]
+    public async Task<IActionResult> PreviewFabric([FromBody] SaveWorkOrderDto dto, [FromQuery] int? exceptWorkOrderId, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.PreviewFabricAsync(dto, exceptWorkOrderId, ct));
+
+    /// <summary>Vải theo đơn của các lệnh cắt đang chạy.</summary>
+    [HttpGet("fabric-by-order")]
+    public async Task<IActionResult> GetFabricByOrder([FromQuery] int? orderId, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.GetFabricByOrderAsync(orderId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CreateAsync(dto, ct));
@@ -37,11 +47,6 @@ public sealed class WorkOrdersController : ManagerBaseController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.UpdateAsync(id, dto, ct));
-
-    /// <summary>Đóng lệnh cắt sau khi xem kết quả (III.2.12).</summary>
-    [HttpPost("{id:int}/complete")]
-    public async Task<IActionResult> Complete(int id, [FromBody] CompleteWorkOrderDto dto, CancellationToken ct) =>
-        this.ToResponse(await _workOrders.CompleteAsync(id, dto, ct));
 
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>

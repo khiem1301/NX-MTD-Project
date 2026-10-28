@@ -63,13 +63,13 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         >
           <Input />
         </Form.Item>
-        <Form.Item name="phone" label={MESSAGES.orders.phone} rules={[{ max: 15 }, { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' }]}>
+        <Form.Item name="phone" label={MESSAGES.orders.phone} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 15 }, { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="email" label={MESSAGES.orders.email} rules={[{ max: 100 }, { type: 'email' }]}>
+        <Form.Item name="email" label={MESSAGES.orders.email} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 100 }, { type: 'email' }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="defaultAddress" label={MESSAGES.orders.address} rules={[{ max: 500 }]}>
+        <Form.Item name="defaultAddress" label={MESSAGES.orders.address} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 500 }]}>
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>

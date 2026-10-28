@@ -3,6 +3,8 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type { WorkOrderListItem } from '@/types/workOrder';
 import type {
+  FabricByOrderRow,
+  FabricPreview,
   ConfirmHandoverPayload,
   CreateHandoverPayload,
   CutHandover,
@@ -35,10 +37,16 @@ export const cuttingApi = {
     post<WorkOrder>(API.cutting.workOrders(role), body),
   updateWorkOrder: (role: RolePath, id: number, body: SaveWorkOrderPayload) =>
     put<WorkOrder>(`${API.cutting.workOrders(role)}/${id}`, body),
+  previewFabric: async (role: RolePath, body: SaveWorkOrderPayload, exceptWorkOrderId?: number) =>
+    (await post<FabricPreview>(`${API.cutting.workOrders(role)}/fabric-preview${exceptWorkOrderId ? `?exceptWorkOrderId=${exceptWorkOrderId}` : ''}`, body)).data,
+  getFabricByOrder: (role: RolePath, orderId?: number) =>
+    get<FabricByOrderRow[]>(`${API.cutting.workOrders(role)}/fabric-by-order`, { orderId }),
   getReplacementRequests: (role: RolePath) =>
     get<ReplacementRequest[]>(`${API.cutting.workOrders(role)}/replacement-requests`),
   createReplacement: (role: RolePath, body: CreateReplacementPayload) =>
     post<WorkOrder>(`${API.cutting.workOrders(role)}/replacement`, body),
+  finishCutting: (role: RolePath, id: number, reason?: string) =>
+    post<null>(`${API.cutting.workOrders(role)}/${id}/finish-cutting`, { reason: reason?.trim() || null }),
   cancelWorkOrder: (role: RolePath, id: number) =>
     post<null>(`${API.cutting.workOrders(role)}/${id}/cancel`),
 
@@ -63,6 +71,4 @@ export const cuttingApi = {
   rejectHandover: (role: RolePath, id: number, reason: string) =>
     post<null>(`${API.cutting.cutHandovers(role)}/${id}/reject`, { reason }),
   cancelHandover: (role: RolePath, id: number) => post<null>(`${API.cutting.cutHandovers(role)}/${id}/cancel`),
-  completeWorkOrder: (role: RolePath, id: number, reason?: string) =>
-    post<null>(`${API.cutting.workOrders(role)}/${id}/complete`, { reason: reason?.trim() || null }),
 };

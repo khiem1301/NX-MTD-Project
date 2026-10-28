@@ -57,13 +57,13 @@ export function SupplierFormModal({ open, supplier, onClose }: Props) {
         >
           <Input maxLength={200} autoFocus />
         </Form.Item>
-        <Form.Item name="phone" label={text.phone} rules={[{ pattern: /^[0-9+]*$/, message: text.phoneInvalid }]}>
+        <Form.Item name="phone" label={text.phone} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { pattern: /^[0-9+]*$/, message: text.phoneInvalid }, { max: 15 }]}>
           <Input maxLength={15} />
         </Form.Item>
-        <Form.Item name="email" label={text.email} rules={[{ type: 'email', message: text.emailInvalid }]}>
+        <Form.Item name="email" label={text.email} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { type: 'email', message: text.emailInvalid }, { max: 100 }]}>
           <Input maxLength={100} />
         </Form.Item>
-        <Form.Item name="address" label={text.address}>
+        <Form.Item name="address" label={text.address} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 500 }]}>
           <Input maxLength={500} />
         </Form.Item>
         <Form.Item name="materialTypes" label={text.materialTypes}>

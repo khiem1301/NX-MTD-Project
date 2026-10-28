@@ -101,7 +101,10 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                         style={{ width: 280 }}
                         options={(components.data ?? []).map((c) => ({
                           value: c.productComponentMaterialId,
-                          label: c.piecesPerGarment > 1 ? `${c.componentName} (×${c.piecesPerGarment})` : c.componentName,
+                          label:
+                            c.piecesPerGarment > 1
+                              ? `${c.componentName} (×${c.piecesPerGarment}${/tay/i.test(c.componentName) && c.piecesPerGarment === 2 ? ': gồm tay trái + tay phải' : ''})`
+                              : c.componentName,
                         }))}
                       />
                     </Form.Item>

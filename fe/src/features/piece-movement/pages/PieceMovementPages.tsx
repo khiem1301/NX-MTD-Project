@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Select, Space, Table, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -20,6 +20,7 @@ import {
 } from '../constants';
 import { useAllocations, useRejectByWorker } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { status?: string; movementType?: string };
 
@@ -113,15 +114,13 @@ function AllocationHistory() {
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.movementType}
           placeholder={PM_LABELS.type}
           options={TYPE_OPTIONS}
           onChange={(movementType?: string) => table.setFilters({ movementType })}
           style={{ width: 170 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={PM_LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}
@@ -189,8 +188,7 @@ export function MyPieceMovementsPage() {
   return (
     <Card title={PM_LABELS.workerTitle}>
       <Space style={{ marginBottom: 16 }}>
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={PM_LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

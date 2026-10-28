@@ -4,7 +4,7 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { ACCOUNTANT_BASE, dispatchApi, MANAGER_BASE, WAREHOUSE_BASE } from '../api/dispatchApi';
 import { DISPATCH_MESSAGES } from '../constants';
-import type { ConfirmDeliveryPayload, CreateDispatchPayload, DispatchNoteQuery } from '../types';
+import type { ConfirmDeliveryPayload, CreateDispatchPayload, DispatchNoteQuery, PrepareDispatchPayload } from '../types';
 
 export const DISPATCH_KEY = ['dispatch'] as const;
 // Xuất hàng làm đổi tồn kho thành phẩm và trạng thái đơn hàng nên nạp lại cả hai.
@@ -52,6 +52,21 @@ export const useCancelDispatch = () =>
   useApiMutation((id: number) => dispatchApi.cancel(id), {
     invalidate: AFFECTED,
     successMessage: DISPATCH_MESSAGES.cancelled,
+  });
+
+export const usePrepareDispatch = () =>
+  useApiMutation(({ id, body }: { id: number; body: PrepareDispatchPayload }) => dispatchApi.prepare(id, body), {
+    invalidate: AFFECTED,
+    successMessage: DISPATCH_MESSAGES.prepared,
+  });
+
+export const useApproveDispatch = () =>
+  useApiMutation((id: number) => dispatchApi.approve(id), { invalidate: AFFECTED, successMessage: DISPATCH_MESSAGES.approved });
+
+export const useReturnDispatch = () =>
+  useApiMutation(({ id, reason }: { id: number; reason: string }) => dispatchApi.returnBack(id, reason), {
+    invalidate: AFFECTED,
+    successMessage: DISPATCH_MESSAGES.returned,
   });
 
 export const useExportDispatch = () =>

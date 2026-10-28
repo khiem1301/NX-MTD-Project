@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Popconfirm, Select, Space, Table, Tag, type TableColumnsType } from 'antd';
+import { Button, Card, Popconfirm, Space, Table, Tag, type TableColumnsType } from 'antd';
 import { ProductImage } from '../components/ProductImage';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
@@ -13,6 +13,8 @@ import { useDiscontinueProduct, useProducts, useReactivateProduct } from '../hoo
 import { useQuery } from '@tanstack/react-query';
 import { productApi } from '../api/orderApi';
 import type { ProductListItem, ProductStatus } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: ProductStatus };
 
@@ -76,9 +78,8 @@ export function ProductsPage() {
       extra={<Button type="primary" onClick={() => { setEditing(null); setOpen(true); }}>{MESSAGES.common.create}</Button>}
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
-        <Select<ProductStatus>
-          allowClear
+        <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
+        <FilterSelect<ProductStatus> value={table.filters.status}
           placeholder={MESSAGES.orders.status}
           style={{ width: 160 }}
           options={Object.entries(STATUS_TAG).map(([value, l]) => ({ value: value as ProductStatus, label: l.text }))}

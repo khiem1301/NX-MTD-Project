@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Popconfirm, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Popconfirm, Space, Table, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -15,6 +15,8 @@ import {
 } from '../constants';
 import { useChangeMaterialStatus, useMaterials } from '../hooks/useMaterials';
 import type { Material } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; materialType?: string };
 
@@ -91,14 +93,13 @@ export function MaterialListPage() {
       }
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 280 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.materialType}
           placeholder={LABELS.materialType}
           options={TYPE_OPTIONS}
           onChange={(materialType?: string) => table.setFilters({ materialType })}

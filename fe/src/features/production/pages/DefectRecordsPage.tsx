@@ -3,6 +3,7 @@ import { Button, DatePicker, Space, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { QueryError } from '@/components/common/QueryError';
 import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -37,6 +38,7 @@ function DefectBoard({ role }: { role: OutputRole }) {
   const columns: ColumnsType<Defect> = [
     { title: text.columns.code, dataIndex: 'defectCode' },
     { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
+    ...(isManager ? [{ title: text.columns.team, dataIndex: 'sewingTeamName' }] : []),
     { responsive: ['md'], title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
     { title: text.columns.operation, key: 'op', render: (_, d) => `${d.operationCode} - ${d.operationName}` },
     { title: text.columns.worker, dataIndex: 'responsibleWorkerName' },
@@ -114,6 +116,12 @@ function DefectBoard({ role }: { role: OutputRole }) {
       </div>
 
       <Space wrap>
+        <DebouncedSearch
+          allowClear
+          style={{ width: 320 }}
+          placeholder={text.searchPlaceholder}
+          onSearch={(keyword) => setQuery({ ...query, page: 1, keyword: keyword.trim() || undefined })}
+        />
         <DatePicker
           allowClear
           format="DD/MM/YYYY"

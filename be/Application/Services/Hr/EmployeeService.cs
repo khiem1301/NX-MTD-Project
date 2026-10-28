@@ -30,15 +30,15 @@ public sealed class EmployeeService : IEmployeeService
     {
         if (!string.IsNullOrWhiteSpace(query.Role) && !Roles.IsKnown(query.Role))
             return BadFilter<PagedResult<EmployeeListItemDto>>("role");
-        if (!string.IsNullOrWhiteSpace(query.Status) && query.Status is not ("Active" or "Resigned"))
+        if (!string.IsNullOrWhiteSpace(query.Status) && query.Status is not ("Active" or "Resigned" or "All"))
             return BadFilter<PagedResult<EmployeeListItemDto>>("status");
         return Result<PagedResult<EmployeeListItemDto>>.Success(
-            await _employees.ListAsync(query, _scope.HiddenRoleCodes, _scope.IsAdmin, ct));
+            await _employees.ListAsync(query, _scope.HiddenRoleCodes, true, ct));
     }
 
     public async Task<Result<EmployeeDetailDto>> GetAsync(int employeeId, CancellationToken ct)
     {
-        var detail = await _employees.GetDetailAsync(employeeId, _scope.IsAdmin, ct);
+        var detail = await _employees.GetDetailAsync(employeeId, true, ct);
         if (detail is null || !_scope.CanSee(Roles.ToRoleCode(detail.Role))) return Fail.NotFound<EmployeeDetailDto>();
         var history = await _audit.GetHistoryAsync(nameof(Employee), employeeId, ct);
         return Result<EmployeeDetailDto>.Success(detail with { History = history });
@@ -51,6 +51,9 @@ public sealed class EmployeeService : IEmployeeService
         if (await _employees.CodeExistsAsync(code, ct))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeCodeDuplicate, Messages.EmployeeCodeDuplicate);
         var roleCode = Roles.ToRoleCode(dto.Role);
+        // Quản đốc không tạo được nhân viên vai trò Admin / Kế toán (GBR-01).
+        if (!_scope.CanSee(roleCode))
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, dto.AttendanceCode, null, ct);
         if (!check.IsSuccess) return Fail.As<CreatedEmployeeDto>(check);
 
@@ -126,6 +129,7 @@ public sealed class EmployeeService : IEmployeeService
         if (oldRole != roleCode) employee.RoleId = await _employees.GetRoleIdAsync(roleCode, ct);
         ApplyProfile(employee, dto.FullName, dto.Gender, dto.DateOfBirth, dto.Phone, dto.StartDate);
         employee.TeamId = dto.TeamId;
+        employee.PayType = CodeText.ToCode(dto.PayType);
         if (dto.AttendanceCode is null) employee.AttendanceCode = null;
         if (identityChanged) RotateStamp(employee);   // token cũ mang vai trò / tổ cũ (D29)
         var reason = teamChanged ? $"Chuyển tổ, hiệu lực {_clock.Today:dd/MM/yyyy}" : null;   // D32
@@ -136,7 +140,7 @@ public sealed class EmployeeService : IEmployeeService
     {
         if (employeeId == _user.EmployeeId) return Result.Failure(ErrorCodes.AccountCannotLockSelf, Messages.CannotActOnSelf);
         var employee = await _employees.GetFullAsync(employeeId, ct);
-        if (employee is null) return Fail.NotFound();
+        if (employee is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
         if (employee.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.EmployeeNotActive, Messages.EmployeeNotActive);
         if (dto.ResignDate < employee.StartDate)
             return Result.Failure(ErrorCodes.CommonValidation, "Ngày nghỉ không được trước ngày vào làm.", ResultKind.Validation,

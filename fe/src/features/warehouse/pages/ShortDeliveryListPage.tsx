@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Input, Select, Space, Table, Typography, type TableColumnsType } from 'antd';
+import { Card, Space, Table, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -9,10 +9,12 @@ import { ShortDeliveryModal } from '../components/ShortDeliveryModal';
 import { LABELS, SHORTAGE_RESOLUTION_LABEL, SHORTAGE_STATUS_LABEL } from '../constants';
 import { useShortDeliveries } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryListItem } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; awaitingReplenish?: boolean };
 
-const SCOPE_OPTIONS = [{ value: true, label: 'Đang chờ nhận hàng bù' }];
+const SCOPE_OPTIONS = [{ value: 'awaiting', label: 'Đang chờ nhận hàng bù' }];
 
 /**
  * UC08 / UC39: đơn thiếu NVL khi nhập (hệ thống tự tạo từ phiếu nhập có hàng thiếu / lỗi). Quản đốc chọn giao bù hoặc
@@ -53,17 +55,16 @@ export function ShortDeliveryListPage() {
   return (
     <Card title={LABELS.shortagesTitle}>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 280 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.awaitingReplenish ? 'awaiting' : undefined}
           placeholder={LABELS.status}
           options={SCOPE_OPTIONS}
-          onChange={(awaitingReplenish?: boolean) => table.setFilters({ awaitingReplenish })}
+          onChange={(scope) => table.setFilters({ awaitingReplenish: scope === 'awaiting' ? true : undefined })}
           style={{ width: 220 }}
         />
       </Space>

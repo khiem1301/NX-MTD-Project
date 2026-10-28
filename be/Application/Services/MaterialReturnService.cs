@@ -134,7 +134,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
         _uow.InTransactionAsync(async () =>
         {
             var ret = await Returns.Include(r => r.MaterialReturnLines).ThenInclude(l => l.MaterialIssueLine)
-                .FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
+                .Include(r => r.MaterialIssue).FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
             if (ret is null) return WarehouseFailures.NotFound();
             if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
@@ -165,13 +165,15 @@ public sealed class MaterialReturnService : IMaterialReturnService
             ret.Status = HandoverStatuses.Confirmed;
             ret.ConfirmedBy = employeeId;
             ret.ConfirmedAt = _clock.Now;
+            await _notifier.NotifyTeamLeadersAsync(ret.MaterialIssue.ReceivingTeamId, new NotificationMessage(NotificationSources.Warehouse,
+                "Kho đã nhận vải trả", $"Thủ kho đã xác nhận phiếu trả vải {ret.ReturnCode}.", "/warehouse/material-returns"), ct);
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.ReturnConfirmed);
         });
 
     public async Task<Result> RejectAsync(int returnId, ReasonDto dto, int employeeId, CancellationToken ct)
     {
-        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
+        var ret = await Returns.Include(r => r.MaterialIssue).FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
         if (ret is null) return WarehouseFailures.NotFound();
         if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
@@ -179,6 +181,8 @@ public sealed class MaterialReturnService : IMaterialReturnService
         ret.RejectReason = dto.Reason.Trim();
         ret.ConfirmedBy = employeeId;
         ret.ConfirmedAt = _clock.Now;
+        await _notifier.NotifyTeamLeadersAsync(ret.MaterialIssue.ReceivingTeamId, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu trả vải bị từ chối", $"Thủ kho từ chối phiếu trả vải {ret.ReturnCode}: {ret.RejectReason}", "/warehouse/material-returns"), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReturnRejected);
     }

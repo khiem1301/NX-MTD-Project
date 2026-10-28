@@ -16,6 +16,12 @@ public interface IWorkOrderService
 
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
 
+    /// <summary>Xem trước vải cần / khả dụng / thiếu ngay trong form lập lệnh cắt (không lưu gì).</summary>
+    Task<Result<FabricPreviewDto>> PreviewFabricAsync(SaveWorkOrderDto dto, int? exceptWorkOrderId, CancellationToken ct);
+
+    /// <summary>Vải theo đơn của các lệnh cắt đang chạy: đơn nào dùng vải nào, đã cấp bao nhiêu, còn thiếu bao nhiêu.</summary>
+    Task<Result<IReadOnlyList<FabricByOrderRowDto>>> GetFabricByOrderAsync(int? orderId, CancellationToken ct);
+
     /// <summary>Đơn cắt bù đã duyệt và chưa có lệnh cắt bù (Quản đốc chọn khi lập lệnh cắt bù).</summary>
     Task<Result<IReadOnlyList<ReplacementRequestDto>>> GetOpenReplacementRequestsAsync(CancellationToken ct);
 
@@ -25,8 +31,9 @@ public interface IWorkOrderService
     Task<Result> CancelAsync(int workOrderId, CancellationToken ct);
 
     /// <summary>
-    /// Quản đốc đóng lệnh cắt sau khi xem kết quả (swimlane III.2.12): lệnh đang cắt, không còn phiếu bàn giao chờ kho nhận;
-    /// BTP vào kho chưa đủ kế hoạch thì phải nhập lý do.
+    /// Tổ cắt báo cắt xong khi cắt ít hơn kế hoạch (đủ kế hoạch thì lệnh tự hoàn thành khi kho xác nhận): lệnh đang cắt, không
+    /// còn phiếu bàn giao chờ kho, mọi BTP đã cắt đã được kho xác nhận; cắt thiếu kế hoạch thì phải nhập lý do. Lệnh chuyển
+    /// COMPLETED và báo Quản đốc.
     /// </summary>
-    Task<Result> CompleteAsync(int workOrderId, CompleteWorkOrderDto dto, CancellationToken ct);
+    Task<Result> FinishCuttingAsync(int workOrderId, int cuttingTeamId, string? reason, CancellationToken ct);
 }

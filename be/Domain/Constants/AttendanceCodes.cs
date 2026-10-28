@@ -65,6 +65,9 @@ public static class SettingKeys
     // KPI tổ may (Minh, UC19 KPI tổ may — DEV-MI-16-2: khóa chưa seed trong SystemSetting,
     // dùng fallback mặc định của KpiAutoCloseJob)
     public const string KpiAutoCloseTime = "KPI_AUTO_CLOSE_TIME";
+
+    /// <summary>KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu hơn: tổ trưởng quyết định.</summary>
+    public const string KpiOtAutoThresholdPct = "KPI_OT_AUTO_THRESHOLD_PCT";
 }
 
 /// <summary>Trạng thái suất ăn ngày (DailyMeal.Status) — UC30.</summary>

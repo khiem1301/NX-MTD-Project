@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Input, Select, Space, Table, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -12,6 +12,8 @@ import { DispatchDrawer } from '../components/DispatchDrawer';
 import { DISPATCH_LABELS, DISPATCH_STATUS_LABEL } from '../constants';
 import { useDispatchNotes } from '../hooks/useDispatch';
 import type { DispatchNoteListItem } from '../types';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -63,14 +65,13 @@ export function DispatchNotesPage() {
       }
     >
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 280 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.status}
           placeholder={DISPATCH_LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}

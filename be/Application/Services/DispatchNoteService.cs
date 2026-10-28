@@ -9,8 +9,9 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC45 / UC46 / UC47: phiếu xuất hàng kiêm lệnh giao. Quản đốc lập (thành phẩm được giữ chỗ), Thủ kho xác nhận xuất
-/// (IN_DELIVERY, trừ kho FINISHED) hoặc từ chối có lý do, Kế toán xác nhận khách đã nhận → DELIVERED / PARTIALLY_DELIVERED.
+/// UC45 / UC46 / UC47: phiếu xuất hàng kiêm lệnh giao. Quản đốc lập (thành phẩm được giữ chỗ) → Thủ kho lập phiếu xuất
+/// (chốt số xuất) → Quản đốc duyệt hoặc trả lại → Thủ kho in, chụp ảnh và xuất (IN_DELIVERY, trừ kho FINISHED); Thủ kho
+/// còn từ chối có lý do khi không đủ hàng, Kế toán xác nhận khách đã nhận → DELIVERED / PARTIALLY_DELIVERED.
 /// Đơn hàng DELIVERED khi tổng khách đã nhận ≥ số đặt (GBR-23). Giao hàng luôn thành công (GBR-24).
 /// </summary>
 public sealed class DispatchNoteService : IDispatchNoteService
@@ -111,7 +112,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
             };
             await _uow.Repository<DispatchNote>().AddAsync(note);
             await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-                "Có phiếu xuất hàng chờ xuất", $"Phiếu {note.DispatchCode} cho đơn {order.OrderCode} đang chờ Thủ kho xuất hàng.", null), ct);
+                "Có phiếu xuất hàng chờ lập phiếu xuất", $"Phiếu {note.DispatchCode} cho đơn {order.OrderCode}: Thủ kho vui lòng chốt số xuất và gửi Quản đốc duyệt.", "/warehouse/dispatch-notes"), ct);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Insert, null,
                 new { note.DispatchCode, note.Status, Qty = dto.Lines.Sum(l => l.IssueQty) }));
@@ -121,15 +122,76 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return created.IsSuccess ? await GetByIdAsync(created.Data, ct) : WarehouseFailures.From<DispatchNoteDto>(created);
     }
 
+    public async Task<Result> PrepareAsync(int dispatchNoteId, PrepareDispatchDto dto, CancellationToken ct)
+    {
+        var note = await Notes.Include(d => d.DispatchNoteLines).Include(d => d.Order)
+            .FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
+        if (note is null) return WarehouseFailures.NotFound();
+        if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+
+        var byId = dto.Lines.ToDictionary(l => l.DispatchNoteLineId);
+        if (byId.Count != note.DispatchNoteLines.Count || note.DispatchNoteLines.Any(l => !byId.ContainsKey(l.DispatchNoteLineId)))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);
+        if (note.DispatchNoteLines.Any(l => byId[l.DispatchNoteLineId].IssueQty < 1 || byId[l.DispatchNoteLineId].IssueQty > l.IssueQty))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchPrepareQtyInvalid);
+
+        var before = note.DispatchNoteLines.Sum(l => l.IssueQty);
+        foreach (var line in note.DispatchNoteLines) line.IssueQty = byId[line.DispatchNoteLineId].IssueQty;   // giảm số xuất thì nhả giữ chỗ
+        note.Status = DispatchStatuses.PendingApproval;
+        note.RejectReason = null;   // lý do Quản đốc trả lại lần trước (nếu có) đã được xử lý
+        if (!string.IsNullOrWhiteSpace(dto.Note))
+            note.Note = string.IsNullOrWhiteSpace(note.Note) ? dto.Note.Trim() : $"{note.Note}\n{dto.Note.Trim()}";
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu xuất hàng chờ duyệt", $"Thủ kho đã lập phiếu xuất {note.DispatchCode} (đơn {note.Order.OrderCode}), vui lòng duyệt hoặc trả lại.",
+            "/warehouse/dispatch-notes"), ct);
+        _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Update,
+            new { Status = DispatchStatuses.Pending, Qty = before }, new { note.Status, Qty = note.DispatchNoteLines.Sum(l => l.IssueQty) }, "Lập phiếu xuất"));
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.DispatchPrepared);
+    }
+
+    public async Task<Result> ApproveAsync(int dispatchNoteId, CancellationToken ct)
+    {
+        var note = await Notes.Include(d => d.Order).FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
+        if (note is null) return WarehouseFailures.NotFound();
+        if (note.Status != DispatchStatuses.PendingApproval) return WarehouseFailures.InvalidStatus();
+
+        note.Status = DispatchStatuses.Approved;
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu xuất hàng đã duyệt", $"Quản đốc đã duyệt phiếu {note.DispatchCode}: vui lòng in, chụp ảnh phiếu có ký và xuất hàng.",
+            "/warehouse/dispatch-notes"), ct);
+        _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Approve,
+            new { Status = DispatchStatuses.PendingApproval }, new { note.Status }));
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.DispatchApproved);
+    }
+
+    public async Task<Result> ReturnAsync(int dispatchNoteId, ReasonDto dto, CancellationToken ct)
+    {
+        var note = await Notes.FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
+        if (note is null) return WarehouseFailures.NotFound();
+        if (note.Status != DispatchStatuses.PendingApproval) return WarehouseFailures.InvalidStatus();
+
+        note.Status = DispatchStatuses.Pending;
+        note.RejectReason = $"Quản đốc trả lại: {dto.Reason.Trim()}";
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu xuất hàng bị trả lại", $"Quản đốc trả lại phiếu {note.DispatchCode}: {dto.Reason.Trim()}", "/warehouse/dispatch-notes"), ct);
+        _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Reject,
+            new { Status = DispatchStatuses.PendingApproval }, new { note.Status }, dto.Reason.Trim()));
+        await _uow.SaveChangesAsync();
+        return Result.Success(WarehouseMessages.DispatchReturned);
+    }
+
     public async Task<Result> CancelAsync(int dispatchNoteId, CancellationToken ct)
     {
         var note = await Notes.FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
         if (note is null) return WarehouseFailures.NotFound();
-        if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+        if (!DispatchStatuses.NotYetExported.Contains(note.Status)) return WarehouseFailures.InvalidStatus();
 
+        var from = note.Status;
         note.Status = DispatchStatuses.Cancelled;
         _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Update,
-            new { Status = DispatchStatuses.Pending }, new { note.Status }));
+            new { Status = from }, new { note.Status }));
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.DispatchCancelled);
     }
@@ -140,7 +202,10 @@ public sealed class DispatchNoteService : IDispatchNoteService
             var note = await Notes.Include(d => d.DispatchNoteLines).Include(d => d.Order)
                 .FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
             if (note is null) return WarehouseFailures.NotFound();
-            if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+            if (note.Status != DispatchStatuses.Approved) return WarehouseFailures.InvalidStatus();   // chỉ xuất sau khi Quản đốc duyệt
+            // Swimlane: Thủ kho in, chụp ảnh phiếu xuất có Quản đốc ký rồi mới xuất.
+            if (!await HasPhotoAsync(dispatchNoteId, AttachmentPurposes.SignedIssueSlip, ct))
+                return Result.Failure(ErrorCodes.DispatchIssuePhotoRequired, WarehouseMessages.DispatchIssuePhotoRequired);
 
             var today = _clock.Today;
             var posted = await _stock.PostAsync(note.DispatchNoteLines
@@ -156,7 +221,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 "Hàng đã xuất, chờ xác nhận khách nhận",
                 $"Phiếu {note.DispatchCode} đã xuất kho; khi khách nhận hàng vui lòng xác nhận và chụp biên bản giao.", null), ct);
             _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Confirm,
-                new { Status = DispatchStatuses.Pending }, new { note.Status }));
+                new { Status = DispatchStatuses.Approved }, new { note.Status }));
             await _uow.SaveChangesAsync();
             _logger.LogInformation("Dispatch note {Code} exported by employee {EmployeeId}", note.DispatchCode, employeeId);
             return Result.Success(WarehouseMessages.DispatchExported);
@@ -187,6 +252,9 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 .FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
             if (note is null) return WarehouseFailures.NotFound();
             if (note.Status != DispatchStatuses.InDelivery) return WarehouseFailures.InvalidStatus();
+            // Biên bản giao hàng có khách ký là chứng từ xác nhận khách đã nhận.
+            if (!await HasPhotoAsync(dispatchNoteId, AttachmentPurposes.SignedDeliveryNote, ct))
+                return Result.Failure(ErrorCodes.DispatchDeliveryPhotoRequired, WarehouseMessages.DispatchDeliveryPhotoRequired);
             if (note.DispatchedAt is { } sent && dto.CustomerReceivedDate < DateOnly.FromDateTime(sent))
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchReceivedDateInvalid);
 
@@ -224,6 +292,10 @@ public sealed class DispatchNoteService : IDispatchNoteService
             .SumAsync(l => l.ReceivedQty ?? 0, ct);
         order.Status = delivered >= ordered ? OrderStatuses.Delivered : OrderStatuses.PartiallyDelivered;
     }
+
+    private Task<bool> HasPhotoAsync(int dispatchNoteId, string purpose, CancellationToken ct) =>
+        _uow.Repository<Attachment>().Query().AnyAsync(a => a.OwnerType == AttachmentOwnerTypes.DispatchNote
+            && a.OwnerId == dispatchNoteId && a.Purpose == purpose && a.IsCurrent, ct);
 
     private async Task<IReadOnlyList<DispatchableLineDto>> DispatchableAsync(int orderId, CancellationToken ct)
     {
@@ -279,7 +351,8 @@ public sealed class DispatchNoteAttachmentAccess : IAttachmentOwnerAccess
         return _user.Role switch
         {
             // Thủ kho chụp phiếu xuất từ lúc xuất hàng; Kế toán chụp biên bản khi hàng đang giao hoặc vừa xác nhận.
-            Roles.WarehouseKeeper => status is DispatchStatuses.Pending or DispatchStatuses.InDelivery,
+            // Ảnh phiếu xuất có Quản đốc ký chụp sau khi duyệt, trước / lúc xuất hàng.
+            Roles.WarehouseKeeper => status is DispatchStatuses.Approved or DispatchStatuses.InDelivery,
             Roles.Accountant => status is DispatchStatuses.InDelivery or DispatchStatuses.Delivered or DispatchStatuses.PartiallyDelivered,
             _ => false,
         };

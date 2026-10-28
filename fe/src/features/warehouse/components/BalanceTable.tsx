@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Input, Space, Table, type TableColumnsType } from 'antd';
+import { Space, Table, type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -9,6 +9,7 @@ import { LABELS, MATERIAL_TYPE_LABEL, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
 import type { StockBalance, StockCardQuery } from '../types';
 import { StockCardDrawer } from './StockCardDrawer';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
 type BalanceTableProps = { warehouseType: string };
 type Filters = { keyword?: string; orderId?: number };
@@ -77,7 +78,7 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
   return (
     <>
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}

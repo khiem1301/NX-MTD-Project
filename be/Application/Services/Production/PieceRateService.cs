@@ -26,7 +26,7 @@ public sealed class PieceRateService : IPieceRateService
 
     private IQueryable<PieceRate> Rates => _uow.Repository<PieceRate>().Query();
 
-    public async Task<Result<PagedResult<PieceRateDto>>> ListAsync(PieceRateQuery query, CancellationToken ct)
+    public async Task<Result<PagedResult<PieceRateDto>>> ListAsync(PieceRateQuery query, CancellationToken ct, bool includeDraft = true)
     {
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var keyword = query.Keyword?.Trim();
@@ -35,6 +35,7 @@ public sealed class PieceRateService : IPieceRateService
             .Where(r => query.OperationId == null || r.OperationId == query.OperationId)
             .Where(r => query.ProductId == null || r.Operation.ProductId == query.ProductId)
             .Where(r => status == null || r.Status == status)
+            .Where(r => includeDraft || r.Status != PieceRateStatuses.Draft)
             .Where(r => string.IsNullOrEmpty(keyword) || r.Operation.OperationCode.Contains(keyword)
                 || r.Operation.OperationName.Contains(keyword) || r.Operation.Product.ProductCode.Contains(keyword))
             .OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId)

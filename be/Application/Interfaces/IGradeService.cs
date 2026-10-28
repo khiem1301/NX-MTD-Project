@@ -8,6 +8,15 @@ public interface IGradeService
 {
     Task<Result<IReadOnlyList<GradeLevelDto>>> GetLevelsAsync(CancellationToken ct);
     Task<Result<GradeLevelDto>> AddLevelAsync(SaveGradeLevelDto dto, CancellationToken ct);
+    Task<Result<GradeLevelDto>> UpdateLevelAsync(int gradeLevelId, UpdateGradeLevelDto dto, CancellationToken ct);
+    Task<Result> DeleteLevelAsync(int gradeLevelId, CancellationToken ct);
+
+    /// <summary>Danh mục bậc thợ. <paramref name="activeOnly"/> = chỉ bậc đang dùng (để chọn khi đề xuất / đặt bậc).</summary>
+    Task<Result<IReadOnlyList<GradeCodeDto>>> GetCodesAsync(bool activeOnly, CancellationToken ct);
+    Task<Result<GradeCodeDto>> CreateCodeAsync(SaveGradeCodeDto dto, CancellationToken ct);
+    Task<Result<GradeCodeDto>> UpdateCodeAsync(string gradeCode, UpdateGradeCodeDto dto, CancellationToken ct);
+    /// <summary>Chỉ xóa được bậc chưa ai dùng; bậc đã dùng thì chuyển sang ngừng dùng.</summary>
+    Task<Result> DeleteCodeAsync(string gradeCode, CancellationToken ct);
 
     Task<Result<IReadOnlyList<GradeWorkerDto>>> GetTeamWorkersAsync(int teamId, CancellationToken ct);
 

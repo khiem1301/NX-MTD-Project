@@ -4,8 +4,6 @@ import {
   DatePicker,
   Descriptions,
   Drawer,
-  Input,
-  Select,
   Space,
   Table,
   Tag,
@@ -20,6 +18,8 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import { formatDateTime } from '@/utils/format';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type AuditRow = {
   auditLogId: number;
@@ -114,22 +114,20 @@ export function AuditLogPage() {
   return (
     <Card title="Nhật ký thay đổi">
       <Space style={{ marginBottom: 16 }} wrap>
-        <Input.Search
+        <DebouncedSearch
           allowClear
           placeholder="Tìm theo lý do / người thực hiện"
           onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })}
           style={{ width: 280 }}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.tableName}
           showSearch
           placeholder="Bảng"
           style={{ width: 200 }}
           options={(tables.data ?? []).map((t) => ({ value: t, label: t }))}
           onChange={(tableName?: string) => table.setFilters({ tableName })}
         />
-        <Select
-          allowClear
+        <FilterSelect value={table.filters.action}
           placeholder="Hành động"
           style={{ width: 160 }}
           options={ACTIONS.map((a) => ({ value: a, label: a }))}

@@ -30,6 +30,11 @@ public sealed class DispatchNotesController : WarehouseKeeperBaseController
         [FromServices] IWarehouseDocumentExportService exports, CancellationToken ct) =>
         this.ToExcelFile(await exports.ExportDispatchNoteAsync(id, ct));
 
+    /// <summary>Lập phiếu xuất: chốt số xuất thực tế rồi gửi Quản đốc duyệt.</summary>
+    [HttpPost("{id:int}/prepare")]
+    public async Task<IActionResult> Prepare(int id, [FromBody] PrepareDispatchDto dto, CancellationToken ct) =>
+        this.ToResponse(await _notes.PrepareAsync(id, dto, ct));
+
     [HttpPost("{id:int}/export")]
     public async Task<IActionResult> Export(int id, CancellationToken ct) =>
         this.ToResponse(await _notes.ExportAsync(id, _user.EmployeeId, ct));

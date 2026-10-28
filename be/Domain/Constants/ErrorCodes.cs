@@ -52,6 +52,8 @@ public static class ErrorCodes
     public const string ProductSpecInvalid = "PRODUCT_SPEC_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
+    public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";
+    public const string DispatchDeliveryPhotoRequired = "DISPATCH_DELIVERY_PHOTO_REQUIRED";
     public const string ReceiptDuplicatePending = "RECEIPT_DUPLICATE_PENDING";
     public const string ProductNotActive = "PRODUCT_NOT_ACTIVE";
     public const string ProductInvalidStatus = "PRODUCT_INVALID_STATUS";
@@ -110,6 +112,7 @@ public static class ErrorCodes
     // --- KPI tổ may (Minh, UC19 KPI tổ may — khác UC19 lệnh cắt ở WorkOrderService) ---
     public const string KpiNotFound = "KPI_NOT_FOUND";
     public const string KpiInvalidStatus = "KPI_INVALID_STATUS";
+    public const string KpiFinishBlocked = "KPI_FINISH_BLOCKED";
     public const string KpiInvalidReference = "KPI_INVALID_REFERENCE";
     public const string KpiDuplicatePeriod = "KPI_DUPLICATE_PERIOD";
 
@@ -130,6 +133,7 @@ public static class ErrorCodes
     public const string WarehouseInvalidReference = "WAREHOUSE_INVALID_REFERENCE";
     public const string WarehouseOrderClosed = "WAREHOUSE_ORDER_CLOSED";
     public const string WarehouseTeamMismatch = "WAREHOUSE_TEAM_MISMATCH";
+    public const string WarehouseCuttingTeamOnly = "WAREHOUSE_CUTTING_TEAM_ONLY";
     public const string WarehouseInvalidRequest = "WAREHOUSE_INVALID_REQUEST";
     public const string WarehouseMaterialDuplicate = "WAREHOUSE_MATERIAL_DUPLICATE";
     public const string WarehouseMaterialInactive = "WAREHOUSE_MATERIAL_INACTIVE";

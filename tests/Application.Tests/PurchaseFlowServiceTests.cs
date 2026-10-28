@@ -566,10 +566,33 @@ public class PurchaseFlowValidatorTests
     {
         var validator = new SaveSupplierDtoValidator();
 
-        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", null, null, null)).IsValid.Should().BeTrue();
-        validator.Validate(new SaveSupplierDto("", null, null, null, null, null)).IsValid.Should().BeFalse();
-        validator.Validate(new SaveSupplierDto("NCC A", "09-01 abc", null, null, null, null)).IsValid.Should().BeFalse();
-        validator.Validate(new SaveSupplierDto("NCC A", null, "khong-phai-email", null, null, null)).IsValid.Should().BeFalse();
+        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeTrue();
+        validator.Validate(new SaveSupplierDto("", "0901234567", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();
+        validator.Validate(new SaveSupplierDto("NCC A", "09-01 abc", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();
+        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "khong-phai-email", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null, "a@b.vn", "12 Lê Lợi")]
+    [InlineData("0901234567", null, "12 Lê Lợi")]
+    [InlineData("0901234567", "a@b.vn", null)]
+    [InlineData("  ", "a@b.vn", "12 Lê Lợi")]
+    public void Supplier_PhoneEmailAddressAreRequired(string? phone, string? email, string? address)
+    {
+        new SaveSupplierDtoValidator().Validate(new SaveSupplierDto("NCC A", phone, email, address, null, null))
+            .IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(null, "a@b.vn", "12 Lê Lợi")]
+    [InlineData("0901234567", null, "12 Lê Lợi")]
+    [InlineData("0901234567", "a@b.vn", null)]
+    public void Customer_PhoneEmailAddressAreRequired(string? phone, string? email, string? address)
+    {
+        var validator = new SaveCustomerDtoValidator();
+
+        validator.Validate(new SaveCustomerDto("Khách A", phone, email, address)).IsValid.Should().BeFalse();
+        validator.Validate(new SaveCustomerDto("Khách A", "0901234567", "a@b.vn", "12 Lê Lợi")).IsValid.Should().BeTrue();
     }
 
     [Fact]

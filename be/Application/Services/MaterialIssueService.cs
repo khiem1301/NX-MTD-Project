@@ -20,14 +20,17 @@ public sealed class MaterialIssueService : IMaterialIssueService
     private readonly ILogger<MaterialIssueService> _logger;
     private readonly IRequestService _requests;
     private readonly IAuditLogService _audit;
+    private readonly INotificationService _notifier;
 
     public MaterialIssueService(IUnitOfWork uow, IStockService stock, FabricPlanner planner,
         IDocumentCodeGenerator codes, IClock clock, ILogger<MaterialIssueService> logger, IRequestService requests,
-        IAuditLogService audit)
+        IAuditLogService audit, INotificationService notifier)
     {
         _uow = uow; _stock = stock; _planner = planner; _codes = codes; _clock = clock; _logger = logger; _requests = requests;
-        _audit = audit;
+        _audit = audit; _notifier = notifier;
     }
+
+    private const string IssueLink = "/warehouse/material-issues";
 
     private IQueryable<MaterialIssue> Issues => _uow.Repository<MaterialIssue>().Query();
 
@@ -112,8 +115,11 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 var done = await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
                 if (!done.IsSuccess) return WarehouseFailures.From<int>(done);
             }
+            // Tổ trưởng tổ nhận là người xử lý tiếp: kiểm đếm và xác nhận nhận.
+            await _notifier.NotifyTeamLeadersAsync(target.TeamId, new NotificationMessage(NotificationSources.Warehouse,
+                dto.WarehouseType == WarehouseTypes.SemiFinished ? "Có phiếu cấp BTP chờ nhận" : "Có phiếu cấp vải chờ nhận",
+                $"Thủ kho đã lập phiếu cấp {issue.IssueCode} cho tổ bạn, vui lòng kiểm đếm và xác nhận nhận.", IssueLink), ct);
             await _uow.SaveChangesAsync();
-            // TODO(thai, TH-05): gửi thông báo cho tổ trưởng tổ nhận khi có Notification (KH-12).
             return Result<int>.Success(issue.MaterialIssueId);
         });
         if (!created.IsSuccess) return WarehouseFailures.From<MaterialIssueDto>(created);
@@ -184,6 +190,9 @@ public sealed class MaterialIssueService : IMaterialIssueService
 
         issue!.Status = IssueStatuses.Rejected;
         issue.RejectReason = dto.Reason.Trim();
+        // Thủ kho lập phiếu phải xử lý lại.
+        _notifier.NotifyEmployees([issue.IssuedBy], new NotificationMessage(NotificationSources.Warehouse, "Phiếu cấp bị tổ từ chối",
+            $"Tổ nhận từ chối phiếu cấp {issue.IssueCode}: {issue.RejectReason}", IssueLink));
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.IssueRejected);
     }

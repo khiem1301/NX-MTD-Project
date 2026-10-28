@@ -17,13 +17,17 @@ public sealed class CutHandoverService : ICutHandoverService
     private readonly IAppLock _locks;
     private readonly IClock _clock;
     private readonly IRequestService _requests;
+    private readonly INotificationService _notifier;
     private readonly ILogger<CutHandoverService> _logger;
 
     public CutHandoverService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes, IAppLock locks,
-        IClock clock, IRequestService requests, ILogger<CutHandoverService> logger)
+        IClock clock, IRequestService requests, INotificationService notifier, ILogger<CutHandoverService> logger)
     {
-        _uow = uow; _stock = stock; _codes = codes; _locks = locks; _clock = clock; _requests = requests; _logger = logger;
+        _uow = uow; _stock = stock; _codes = codes; _locks = locks; _clock = clock; _requests = requests; _notifier = notifier;
+        _logger = logger;
     }
+
+    private const string HandoverLink = "/cutting/handovers";
 
     private IQueryable<CutHandover> Handovers => _uow.Repository<CutHandover>().Query();
 
@@ -109,6 +113,10 @@ public sealed class CutHandoverService : ICutHandoverService
                 lay.Status = CuttingLayStatuses.Locked;
 
             await _uow.Repository<CutHandover>().AddAsync(handover);
+            // Thủ kho là người xử lý tiếp: đếm và xác nhận BTP vào kho.
+            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+                "Chờ nhận BTP từ tổ cắt", $"Tổ cắt bàn giao BTP lệnh {wo.WorkOrderCode} (phiếu {handover.HandoverCode}), vui lòng đếm và xác nhận.",
+                HandoverLink), ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(handover.CutHandoverId);
         });
@@ -153,10 +161,24 @@ public sealed class CutHandoverService : ICutHandoverService
             handover.ConfirmedAt = _clock.Now;
             await _uow.SaveChangesAsync();
             await CompleteReplacementRequestAsync(handover.WorkOrderId, ct);
+            await NotifyConfirmedAsync(handover, ct);
             await _uow.SaveChangesAsync();
             _logger.LogInformation("Cut handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.HandoverConfirmed);
         });
+
+    /// <summary>
+    /// Báo tổ cắt phiếu bàn giao đã được kho xác nhận. Lệnh cắt KHÔNG tự hoàn thành ở đây: theo swimlane còn bước tổ cắt trả
+    /// vải thừa, rồi bấm "Cắt xong" để hệ thống so vải thực dùng với định mức và báo Quản đốc (WorkOrderService.FinishCuttingAsync).
+    /// </summary>
+    private async Task NotifyConfirmedAsync(CutHandover handover, CancellationToken ct)
+    {
+        var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking().FirstAsync(w => w.WorkOrderId == handover.WorkOrderId, ct);
+        await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Warehouse,
+            "BTP đã vào kho",
+            $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}. Còn vải thừa thì lập phiếu trả vải, xong thì bấm Cắt xong.",
+            HandoverLink), ct);
+    }
 
     /// <summary>
     /// Lệnh cắt bù (SourceRequestId): khi BTP đã vào kho đủ số kế hoạch thì đơn cắt bù tự hoàn thành (UC19, TH-10).
@@ -185,6 +207,10 @@ public sealed class CutHandoverService : ICutHandoverService
         handover.RejectReason = dto.Reason.Trim();
         handover.ConfirmedBy = employeeId;
         handover.ConfirmedAt = _clock.Now;
+        var teamId = await _uow.Repository<WorkOrder>().Query().Where(w => w.WorkOrderId == handover.WorkOrderId)
+            .Select(w => w.CuttingTeamId).FirstAsync(ct);
+        await _notifier.NotifyTeamLeadersAsync(teamId, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu bàn giao BTP bị từ chối", $"Thủ kho từ chối phiếu {handover.HandoverCode}: {handover.RejectReason}", HandoverLink), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.HandoverRejected);
     }

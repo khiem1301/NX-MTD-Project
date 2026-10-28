@@ -5,10 +5,31 @@ namespace NX_MTD.Application.DTOs;
 public sealed record FabricNeed(int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal RequiredQty);
 
-/// <summary>Vải của lệnh cắt: cần (định mức), đã cấp (chờ nhận + đã nhận), còn phải cấp, khả dụng trong kho.</summary>
+/// <summary>
+/// Vải của lệnh cắt: cần (định mức), đã cấp (chờ nhận + đã nhận), còn phải cấp, khả dụng trong kho. Kết quả vải: tổ đã nhận,
+/// đã trả lại kho (phiếu trả đã xác nhận), thực dùng = đã nhận − đã trả, và vải theo định mức cho số đã cắt thực tế.
+/// </summary>
 public sealed record FabricRequirementDto(
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
-    decimal RequiredQty, decimal IssuedQty, decimal RemainingQty, decimal AvailableQty);
+    decimal RequiredQty, decimal IssuedQty, decimal RemainingQty, decimal AvailableQty,
+    decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0, decimal CutNormQty = 0);
+
+/// <summary>
+/// Một dòng xem trước vải khi lập lệnh cắt: cần theo định mức, khả dụng trong kho, phần kho đã giữ cho các lệnh cắt khác,
+/// vải tổ cắt đang giữ còn trống, và thiếu bao nhiêu.
+/// </summary>
+public sealed record FabricPreviewRowDto(
+    int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
+    decimal RequiredQty, decimal WarehouseAvailable, decimal ReservedByOtherWorkOrders, decimal TeamHolding,
+    decimal AvailableQty, decimal ShortQty);
+
+/// <param name="MissingNormLines">Dòng đơn (màu - size) chưa có định mức vải thân (PANEL) nên không tính được vải cần.</param>
+public sealed record FabricPreviewDto(IReadOnlyList<FabricPreviewRowDto> Rows, IReadOnlyList<string> MissingNormLines, bool Enough);
+
+/// <summary>Vải theo từng đơn: cần theo các lệnh cắt đang chạy, đã cấp cho tổ cắt, còn phải cấp (xem "đơn nào dùng vải nào").</summary>
+public sealed record FabricByOrderRowDto(
+    int OrderId, string OrderCode, int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
+    decimal RequiredQty, decimal IssuedQty, decimal RemainingQty, IReadOnlyList<string> WorkOrderCodes);
 
 public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
@@ -24,8 +45,8 @@ public sealed record WorkOrderDto(
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
     IReadOnlyList<FabricRequirementDto> Fabrics);
 
-/// <param name="Reason">Bắt buộc khi BTP đã vào kho chưa đủ số kế hoạch (cắt thiếu, hủy phần còn lại).</param>
-public sealed record CompleteWorkOrderDto(string? Reason);
+/// <param name="Reason">Bắt buộc khi BTP vào kho chưa đủ kế hoạch (cắt thiếu).</param>
+public sealed record FinishCuttingDto(string? Reason);
 
 public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty);
 

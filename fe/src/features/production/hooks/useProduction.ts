@@ -44,9 +44,11 @@ export const useOperations = (productId: number | null, includeDiscontinued = fa
 
 export const useSaveOperation = (id: number | null) =>
   useApiMutation(
-    async (body: SaveOperationPayload): Promise<void> => {
-      if (id === null) await productionApi.createOperation(body);
-      else await productionApi.updateOperation(id, body);
+    /** Trả mã công đoạn (tạo mới: mã vừa tạo) để màn hình mở tiếp ô nhập đơn giá. */
+    async (body: SaveOperationPayload): Promise<number> => {
+      if (id === null) return productionApi.createOperation(body);
+      await productionApi.updateOperation(id, body);
+      return id;
     },
     { invalidate: [operationsKey], successMessage: PRODUCTION_TEXT.saved },
   );

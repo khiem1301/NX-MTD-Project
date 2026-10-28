@@ -1,4 +1,4 @@
-import { Input, Select, Space } from 'antd';
+import { Select, Space } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import {
   REQUEST_STATUS_LABEL,
@@ -6,6 +6,7 @@ import {
   type RequestStatus,
   type RequestType,
 } from '@/constants/requestTypes';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
 export type RequestFilterValue = { keyword?: string; requestType?: RequestType; status?: RequestStatus };
 
@@ -28,7 +29,7 @@ const STATUS_OPTIONS = (Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[]).ma
 export function RequestFilters({ value, onChange, emptyStatusLabel }: RequestFiltersProps) {
   return (
     <Space wrap>
-      <Input.Search
+      <DebouncedSearch
         allowClear
         placeholder={MESSAGES.common.search}
         defaultValue={value.keyword}

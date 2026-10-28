@@ -43,7 +43,10 @@ public sealed class MaterialSupplyUpdater
             : (anyReceived ? PurchaseGoodsStatuses.PartiallyReceived : PurchaseGoodsStatuses.Ordered);
     }
 
-    /// <summary>AWAITING (chưa nhận gì) / PARTIAL / COMPLETE (mọi NVL của đơn đã nhận đủ hoặc đã chốt không bù).</summary>
+    /// <summary>
+    /// AWAITING (chưa nhận gì) / PARTIAL / COMPLETE (mọi NVL của đơn đã nhận đủ số cần). Chốt "không bù" NVL mua từ NCC chỉ
+    /// đóng đơn mua (CLOSED_SHORT), không làm đơn hàng thành COMPLETE: số cần chưa đủ thì vẫn PARTIAL (swimlane: Partially Received).
+    /// </summary>
     public async Task RecalculateMaterialStatusAsync(int orderId, CancellationToken ct)
     {
         var order = await _uow.Repository<CustomerOrder>().Query().FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
@@ -58,13 +61,8 @@ public sealed class MaterialSupplyUpdater
                         && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
             .GroupBy(l => l.OrderMaterialId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
-        var notReplenished = await _uow.Repository<PurchaseOrderLine>().Query()
-            .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value) && l.NotReplenishedQty > 0)
-            .GroupBy(l => l.OrderMaterialId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.NotReplenishedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 
-        var complete = materials.All(m =>
-            received.GetValueOrDefault(m.OrderMaterialId) + notReplenished.GetValueOrDefault(m.OrderMaterialId) >= m.RequiredQty);
+        var complete = materials.All(m => received.GetValueOrDefault(m.OrderMaterialId) >= m.RequiredQty);
         var anyReceived = materials.Any(m => received.GetValueOrDefault(m.OrderMaterialId) > 0);
         order.MaterialStatus = complete
             ? OrderMaterialStatuses.Complete

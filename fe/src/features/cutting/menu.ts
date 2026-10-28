@@ -10,17 +10,20 @@ export const cuttingMenu: MenuEntry[] = [
     label: 'Lệnh cắt',
     path: ROUTES.workOrders,
     roles: [Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
+    teamTypes: ['Cutting'],
   },
   {
     key: 'cutting-lays',
     label: 'Bàn cắt',
     path: ROUTES.cuttingLays,
     roles: [TeamLeader, TeamDeputy],
+    teamTypes: ['Cutting'],
   },
   {
     key: 'cut-handovers',
     label: 'Bàn giao BTP',
     path: ROUTES.cutHandovers,
     roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
+    teamTypes: ['Cutting'],
   },
 ];

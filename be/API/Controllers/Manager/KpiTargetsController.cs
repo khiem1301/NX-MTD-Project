@@ -14,8 +14,21 @@ namespace NX_MTD.API.Controllers.Manager;
 public sealed class KpiTargetsController : ManagerBaseController
 {
     private readonly IKpiService _kpi;
+    private readonly IEndOfOrderService _endOfOrder;
 
-    public KpiTargetsController(IKpiService kpi) => _kpi = kpi;
+    public KpiTargetsController(IKpiService kpi, IEndOfOrderService endOfOrder)
+    {
+        _kpi = kpi; _endOfOrder = endOfOrder;
+    }
+
+    /// <summary>Xem trước kết thúc đơn của tổ: KPI, lệch kiểm cuối đơn theo công nhân, tăng ca.</summary>
+    [HttpGet("{id:int}/finish-preview")]
+    public async Task<IActionResult> FinishPreview(int id, CancellationToken ct) =>
+        this.ToResponse(await _endOfOrder.PreviewAsync(id, ct));
+
+    /// <summary>Kết thúc đơn của tổ: ghi phiếu hàng hỏng cho phần lệch, chốt và đóng KPI, tạo đơn tăng ca nếu không đạt.</summary>
+    [HttpPost("{id:int}/finish")]
+    public async Task<IActionResult> Finish(int id, CancellationToken ct) => this.ToResponse(await _endOfOrder.FinishAsync(id, ct));
 
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] KpiTargetQuery query, CancellationToken ct) =>
@@ -24,6 +37,12 @@ public sealed class KpiTargetsController : ManagerBaseController
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _kpi.GetByIdAsync(id, ct));
+
+    /// <summary>Chỉ tiêu tối đa lập được (BTP khả dụng) cho form lập KPI.</summary>
+    [HttpGet("available-btp")]
+    public async Task<IActionResult> GetCapacity([FromQuery] int orderId, [FromQuery] int productId,
+        [FromQuery] int sewingTeamId, [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
+        this.ToResponse(await _kpi.GetCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveKpiTargetDto dto, CancellationToken ct) =>

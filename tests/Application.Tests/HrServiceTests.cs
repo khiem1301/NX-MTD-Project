@@ -180,7 +180,7 @@ public class HrServiceTests
     }
 
     [Fact]
-    public async Task ManagerList_PassesHiddenRolesAndNoAccountInfo()
+    public async Task ManagerList_HidesOnlyAdminAndAccountant_AndIncludesAccountInfo()
     {
         _user.Role.Returns(Roles.Manager);
         _employees.ListAsync(default!, default, default, default)
@@ -189,12 +189,12 @@ public class HrServiceTests
         await Employees().ListAsync(new EmployeeQuery(), default);
 
         await _employees.Received(1).ListAsync(Arg.Any<EmployeeQuery>(),
-            Arg.Is<IReadOnlyCollection<string>?>(h => h != null && h.Contains("ADMIN") && h.Contains("MANAGER") && h.Contains("ACCOUNTANT")),
-            false, Arg.Any<CancellationToken>());
+            Arg.Is<IReadOnlyCollection<string>?>(h => h != null && h.Contains("ADMIN") && h.Contains("ACCOUNTANT") && !h.Contains("MANAGER")),
+            true, Arg.Any<CancellationToken>());
     }
 
     private static ManagerUpdateEmployeeDto ManagerEdit(string role, int? team, string name = "Tên mới") =>
-        new(name, null, null, null, role, team, new DateOnly(2026, 1, 1), null, RowVer);
+        new(name, null, null, null, role, team, "PieceRate", new DateOnly(2026, 1, 1), null, RowVer);
 
     [Fact]
     public async Task ManagerUpdate_ChangesTeamAndRole_RotatesStampAndLogsTeamChange()
@@ -210,9 +210,22 @@ public class HrServiceTests
         result.IsSuccess.Should().BeTrue();
         person.TeamId.Should().Be(5);
         person.FullName.Should().Be("Tên mới");
-        person.PayType.Should().Be(PayTypes.PieceRate);   // Quản đốc không đổi kiểu lương
         person.Account.SecurityStamp.Should().NotBe(oldStamp);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason != null && e.Reason.StartsWith("Chuyển tổ")));
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_CanChangePayType()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", 4) with { PayType = "Daily" }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        person.PayType.Should().Be(PayTypes.Daily);
     }
 
     [Fact]
@@ -231,9 +244,8 @@ public class HrServiceTests
 
     [Theory]
     [InlineData("Admin")]
-    [InlineData("Manager")]
     [InlineData("Accountant")]
-    public async Task ManagerUpdate_CannotAssignAdminManagerOrAccountantRole(string role)
+    public async Task ManagerUpdate_CannotAssignAdminOrAccountantRole(string role)
     {
         _user.Role.Returns(Roles.Manager);
         var person = Person(7, RoleCodes.Worker, team: 4);
@@ -296,7 +308,7 @@ public class HrServiceTests
     [Fact]
     public async Task Account_LockSelf_Fails_LockRotatesStamp_ResetSetsTemp()
     {
-        var service = new AccountAdminService(_employees, _hasher, _passwords, _audit, _uow, _user, _clock);
+        var service = new AccountAdminService(_employees, _hasher, _passwords, _audit, _uow, _user, _clock, Scope());
         (await service.LockAsync(1, new LockAccountDto("x"), default)).ErrorCode.Should().Be(ErrorCodes.AccountCannotLockSelf);
 
         var person = Person(7, RoleCodes.Worker);
@@ -310,6 +322,49 @@ public class HrServiceTests
         var reset = await service.ResetPasswordAsync(7, default);
         reset.Data!.TemporaryPassword.Should().Be("123456");
         person.Account.IsTemporaryPassword.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData(RoleCodes.Admin)]
+    [InlineData(RoleCodes.Accountant)]
+    public async Task ManagerAccountActions_OnHiddenRoles_ReturnNotFound(string targetRole)
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, targetRole);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        var service = new AccountAdminService(_employees, _hasher, _passwords, _audit, _uow, _user, _clock, Scope());
+
+        (await service.LockAsync(7, new LockAccountDto("x"), default)).Kind.Should().Be(ResultKind.NotFound);
+        (await service.UnlockAsync(7, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await service.ResetPasswordAsync(7, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Employees().ResignAsync(7, new ResignEmployeeDto(new DateOnly(2026, 10, 24), "x", RowVer), default)).Kind
+            .Should().Be(ResultKind.NotFound);
+        person.Account!.Status.Should().Be(RecordStatus.Active);
+    }
+
+    [Fact]
+    public async Task ManagerAccountActions_OnAnotherManager_AreAllowed()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Manager, team: null);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        var service = new AccountAdminService(_employees, _hasher, _passwords, _audit, _uow, _user, _clock, Scope());
+
+        (await service.LockAsync(7, new LockAccountDto("nghỉ phép dài"), default)).IsSuccess.Should().BeTrue();
+        (await service.ResetPasswordAsync(7, default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("Admin")]
+    [InlineData("Accountant")]
+    public async Task ManagerCreate_AdminOrAccountant_IsForbidden(string role)
+    {
+        _user.Role.Returns(Roles.Manager);
+
+        var result = await Employees().CreateAsync(NewEmployee(role), default);
+
+        result.Kind.Should().Be(ResultKind.Forbidden);
+        result.Message.Should().Be(Messages.ManagerCannotAssignRole);
     }
 
     // ---- Tổ ----

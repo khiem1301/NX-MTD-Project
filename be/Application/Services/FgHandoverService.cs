@@ -157,9 +157,47 @@ public sealed class FgHandoverService : IFgHandoverService
                 "Đã nhận thành phẩm", $"Thủ kho đã nhận phiếu bàn giao {handover.HandoverCode} vào kho.", null,
                 nameof(FgHandover), handover.FgHandoverId));
             await _uow.SaveChangesAsync();
+            await CompareWithKpiAsync(handover, ct);
+            await _uow.SaveChangesAsync();
             _logger.LogInformation("FG handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.FgHandoverConfirmed);
         });
+
+    /// <summary>
+    /// Swimlane "Compare & Notify KPI result": mỗi lần kho nhận thành phẩm, so số thành phẩm kho đã nhận của đơn + mã hàng với
+    /// chỉ tiêu KPI đang hoạt động và báo Quản đốc. Chỉ báo; chốt và đóng KPI vẫn qua "Kết thúc đơn" của Quản đốc.
+    /// </summary>
+    private async Task CompareWithKpiAsync(FgHandover handover, CancellationToken ct)
+    {
+        var pairs = (await _uow.Repository<FgHandoverLine>().Query().AsNoTracking()
+                .Where(l => l.FgHandoverId == handover.FgHandoverId)
+                .Select(l => new { l.OrderLine.OrderId, l.OrderLine.ProductId }).ToListAsync(ct))
+            .Distinct().ToList();
+        foreach (var pair in pairs)
+        {
+            var targets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
+                .Where(k => k.OrderId == pair.OrderId && k.ProductId == pair.ProductId && k.Status == KpiStatuses.Active)
+                .Select(k => new { k.TargetFinishedQty, OrderCode = k.Order.OrderCode, ProductCode = k.Product.ProductCode, Team = k.SewingTeam.TeamName })
+                .ToListAsync(ct);
+            if (targets.Count == 0) continue;
+
+            var received = await _uow.Repository<FgHandoverLine>().Query().AsNoTracking()
+                .Where(l => l.FgHandover.Status == HandoverStatuses.Confirmed && l.OrderLine.OrderId == pair.OrderId
+                            && l.OrderLine.ProductId == pair.ProductId)
+                .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+            foreach (var t in targets)
+            {
+                var percent = t.TargetFinishedQty > 0 ? Math.Round(100m * received / t.TargetFinishedQty, 1) : 0m;
+                var verdict = received >= t.TargetFinishedQty
+                    ? "đã đạt chỉ tiêu, có thể bấm Kết thúc đơn để chốt KPI"
+                    : $"chưa đạt, còn thiếu {t.TargetFinishedQty - received}";
+                await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production,
+                    "Kết quả KPI sau khi kho nhận thành phẩm",
+                    $"Đơn {t.OrderCode} mã hàng {t.ProductCode}, {t.Team}: kho đã nhận {received}/{t.TargetFinishedQty} ({percent:0.#}%), {verdict}.",
+                    "/kpi/targets"), ct);
+            }
+        }
+    }
 
     public async Task<Result> RejectAsync(int handoverId, ReasonDto dto, int employeeId, CancellationToken ct)
     {

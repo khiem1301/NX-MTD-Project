@@ -28,6 +28,25 @@ export const useWorkOrders = (query: WorkOrderQuery) => {
   });
 };
 
+/** Xem trước vải của kế hoạch đang nhập; chỉ gọi khi đã đủ đơn, mã hàng, tổ cắt và có số kế hoạch. */
+export const useFabricPreview = (body: SaveWorkOrderPayload | null, exceptWorkOrderId?: number) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'fabric-preview', role, body, exceptWorkOrderId],
+    queryFn: () => cuttingApi.previewFabric(role, body as SaveWorkOrderPayload, exceptWorkOrderId),
+    enabled: body !== null,
+    placeholderData: keepPreviousData,
+  });
+};
+
+export const useFabricByOrder = (orderId?: number) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'fabric-by-order', role, orderId],
+    queryFn: () => cuttingApi.getFabricByOrder(role, orderId),
+  });
+};
+
 export const useReplacementRequests = (enabled: boolean) => {
   const role = useRolePath();
   return useQuery({
@@ -64,6 +83,15 @@ export const useSaveWorkOrder = () => {
       id ? cuttingApi.updateWorkOrder(role, id, body) : cuttingApi.createWorkOrder(role, body),
     { invalidate: [CUTTING_KEY], successMessage: MESSAGES.cutting.workOrderSaved },
   );
+};
+
+/** Tổ cắt báo cắt xong: lệnh chuyển Hoàn thành (cắt thiếu kế hoạch thì phải nêu lý do). */
+export const useFinishCutting = () => {
+  const role = useRolePath();
+  return useApiMutation(({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason), {
+    invalidate: [CUTTING_KEY],
+    successMessage: MESSAGES.cutting.workOrderFinished,
+  });
 };
 
 export const useCancelWorkOrder = () => {
@@ -152,14 +180,6 @@ export const useCancelHandover = () => {
     invalidate: [CUTTING_KEY],
     successMessage: MESSAGES.cutting.handoverCancelled,
   });
-};
-
-export const useCompleteWorkOrder = () => {
-  const role = useRolePath();
-  return useApiMutation(
-    ({ id, reason }: { id: number; reason?: string }) => cuttingApi.completeWorkOrder(role, id, reason),
-    { invalidate: [CUTTING_KEY], successMessage: MESSAGES.cutting.workOrderCompleted },
-  );
 };
 
 export const useRejectHandover = () => {

@@ -6,6 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.TeamLeader;
 
 /// <summary>UC43: tổ trưởng / tổ phó cắt lập phiếu bàn giao BTP vào kho.</summary>
+[CuttingTeamOnly]
 public sealed class CutHandoversController : TeamLeaderBaseController
 {
     private readonly ICutHandoverService _handovers;

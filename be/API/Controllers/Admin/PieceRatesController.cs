@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Admin;
 
-/// <summary>UC26 (KI-01) — Admin xem đơn giá chờ duyệt, duyệt hoặc từ chối (bắt buộc lý do).</summary>
+/// <summary>UC26 (KI-01) — Admin xem đơn giá chờ duyệt, duyệt hoặc từ chối (bắt buộc lý do). Không thấy đơn giá Nháp.</summary>
 public sealed class PieceRatesController : AdminBaseController
 {
     private readonly IPieceRateService _rates;
@@ -14,7 +14,7 @@ public sealed class PieceRatesController : AdminBaseController
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] PieceRateQuery query, CancellationToken ct) =>
-        this.ToResponse(await _rates.ListAsync(query, ct));
+        this.ToResponse(await _rates.ListAsync(query, ct, includeDraft: false));
 
     [HttpPost("{id:int}/approve")]
     public async Task<IActionResult> Approve(int id, [FromBody] ApprovePieceRateDto dto, CancellationToken ct) =>

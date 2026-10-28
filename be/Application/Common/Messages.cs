@@ -89,7 +89,13 @@ public static class Messages
     public const string EmployeeImportRepeated = "Mã nhân viên bị lặp trong file.";
     public const string EmployeeImportAttendanceRepeated = "Mã chấm công bị lặp trong file.";
     public const string EmployeeImportTeamUnknown = "Không tìm thấy tổ có mã {0}.";
-    public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
+    public const string GradeCodeInvalid = "Bậc thợ không có trong danh mục hoặc đã ngừng dùng.";
+    public const string GradeCodeMalformed = "Mã bậc chỉ gồm chữ hoa và số, tối đa 5 ký tự.";
+    public const string GradeCodeDuplicate = "Mã bậc này đã có trong danh mục.";
+    public const string GradeCodeInUse = "Bậc này đã được dùng (nhân viên, đề xuất hoặc tiền bậc) nên không xóa được. Hãy chuyển sang ngừng dùng.";
+    public const string GradeCodeStatusInvalid = "Trạng thái bậc chỉ nhận Active hoặc Inactive.";
+    public const string GradeLevelLocked = "Mức tiền bậc đã có hiệu lực là lịch sử lương, không sửa hoặc xóa. Hãy thêm mức mới với ngày hiệu lực mới.";
+    public const string GradeLevelEffectiveInPast = "Ngày hiệu lực của mức tiền bậc sửa lại phải sau hôm nay.";
     public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
     public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";
     public const string GradeSameAsCurrent = "Bậc đề xuất trùng bậc hiện tại.";
@@ -97,7 +103,7 @@ public static class Messages
     public const string GradeProposedToday = "Hôm nay bạn đã đề xuất bậc cho công nhân này.";
     public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
     public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
-    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin, Quản đốc hoặc Kế toán.";
+    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin hoặc Kế toán.";
     public const string GradeWorkerInvalid = "Chỉ đặt bậc cho công nhân đang làm việc.";
     public const string GradeSupersededNote = "Quản đốc đã đặt bậc trực tiếp nên đề xuất này không còn hiệu lực.";
     public const string GradeSetToday = "Hôm nay bạn đã đặt bậc cho công nhân này.";
@@ -197,6 +203,9 @@ public static class Messages
     public const string KpiDuplicatePeriod =
         "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiInvalidStatusForFinish = "Chỉ kết thúc được đơn của tổ khi chỉ tiêu KPI còn hoạt động (ACTIVE).";
+    public const string KpiFinishNoFinalOperation = "Mã hàng chưa có công đoạn cuối đang dùng nên chưa so được sản lượng cuối đơn.";
+    public const string KpiFinished = "Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
     public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";
@@ -230,7 +239,7 @@ public static class Messages
     public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
     public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
     public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
-    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP trong kho: BTP đã cắt vào kho {0}, các chỉ tiêu khác đã đặt {1}, còn đặt được {2}.";
+    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP khả dụng: kho còn {0}, tổ đã nhận và chưa làm xong {1}, các chỉ tiêu khác còn phải làm {2}, đặt được tối đa {3}.";
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";

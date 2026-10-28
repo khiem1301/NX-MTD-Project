@@ -45,7 +45,10 @@ public static class DefectReasons
     public const string Torn = "TORN";
     public const string Stained = "STAINED";
     public const string Other = "OTHER";
+    /// <summary>Hệ thống ghi khi kiểm cuối đơn lệch (EndOfOrderService); người dùng không chọn tay nên không nằm trong <see cref="All"/>.</summary>
+    public const string EndOfOrderMismatch = "END_OF_ORDER_MISMATCH";
 
+    /// <summary>Các lý do người dùng được chọn khi ghi phiếu hàng hỏng.</summary>
     public static readonly IReadOnlySet<string> All = new HashSet<string>
     {
         SkippedStitch, CrookedSeam, WrongSize, Torn, Stained, Other,

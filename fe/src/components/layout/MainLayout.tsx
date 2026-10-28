@@ -63,9 +63,11 @@ export function MainLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const role = user?.role;
+  const teamType = user?.teamType;
   const nav = useMemo(
-    () => buildNavigation(MENU_ENTRIES, MENU_GROUPS, role, SIDEBAR_HIDDEN, { key: HOME_ENTRY_KEY, icon: <HomeOutlined /> }),
-    [role],
+    () =>
+      buildNavigation(MENU_ENTRIES, MENU_GROUPS, role, SIDEBAR_HIDDEN, { key: HOME_ENTRY_KEY, icon: <HomeOutlined /> }, teamType),
+    [role, teamType],
   );
   const active = findActiveLeaf(location.pathname, nav.leaves);
 

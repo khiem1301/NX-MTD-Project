@@ -27,6 +27,8 @@ export function EmployeeDetailPage() {
   const employeeId = Number(id);
   const { user } = useAuth();
   const isAdmin = user?.role === ROLES.Admin;
+  // Quản đốc quản lý tài khoản của mọi người trừ Admin và Kế toán (BE chặn phần còn lại).
+  const canManage = isAdmin || user?.role === ROLES.Manager;
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useEmployee(Number.isInteger(employeeId) ? employeeId : null);
   const lock = useLockAccount(employeeId);
@@ -55,7 +57,7 @@ export function EmployeeDetailPage() {
         <Space wrap>
           <Button onClick={() => navigate(isAdmin ? ROUTES.adminEmployees : ROUTES.managerEmployees)}>{MESSAGES.common.close}</Button>
           {active && <Button onClick={() => setEditing(true)}>{MESSAGES.common.edit}</Button>}
-          {isAdmin && active && !isSelf && <Button danger onClick={() => setResigning(true)}>{MESSAGES.hr.resign}</Button>}
+          {canManage && active && !isSelf && <Button danger onClick={() => setResigning(true)}>{MESSAGES.hr.resign}</Button>}
         </Space>
       }
     >
@@ -72,7 +74,7 @@ export function EmployeeDetailPage() {
         {data.resignDate && <Descriptions.Item label={MESSAGES.hr.resignDate}>{formatDate(data.resignDate)}</Descriptions.Item>}
       </Descriptions>
 
-      {isAdmin && account && (
+      {canManage && account && (
         <Card size="small" title={MESSAGES.hr.account} style={{ marginBottom: 16 }}>
           <Space wrap>
             <span>{`${MESSAGES.hr.username}: ${account.username}`}</span>

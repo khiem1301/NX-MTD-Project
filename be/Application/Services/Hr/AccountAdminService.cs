@@ -6,7 +6,8 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services.Hr;
 
-/// <summary>Khóa / mở khóa / đặt lại mật khẩu tài khoản (chỉ Admin). Mọi thao tác đổi SecurityStamp → đẩy người đó ra (D29).</summary>
+/// <summary>Khóa / mở khóa / đặt lại mật khẩu tài khoản (Admin: tất cả; Quản đốc: trừ Admin và Kế toán). Mọi thao tác đổi
+/// SecurityStamp → đẩy người đó ra (D29).</summary>
 public sealed class AccountAdminService : IAccountAdminService
 {
     private readonly IEmployeeRepository _employees;
@@ -16,11 +17,13 @@ public sealed class AccountAdminService : IAccountAdminService
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
+    private readonly EmployeeScope _scope;
 
     public AccountAdminService(IEmployeeRepository employees, IPasswordHasher hasher, ITemporaryPasswordGenerator passwords,
-        IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock)
+        IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock, EmployeeScope scope)
     {
         _employees = employees; _hasher = hasher; _passwords = passwords; _audit = audit; _uow = uow; _user = user; _clock = clock;
+        _scope = scope;
     }
 
     public async Task<Result> LockAsync(int employeeId, LockAccountDto dto, CancellationToken ct)
@@ -43,7 +46,7 @@ public sealed class AccountAdminService : IAccountAdminService
     {
         var employee = await _employees.GetFullAsync(employeeId, ct);
         var account = employee?.Account;
-        if (employee is null || account is null) return Fail.NotFound();
+        if (employee is null || account is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
         if (employee.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.EmployeeNotActive, Messages.EmployeeNotActive);
         if (account.Status != RecordStatus.Locked) return Result.Failure(ErrorCodes.AccountInvalidStatus, Messages.AccountInvalidStatus);
 
@@ -61,7 +64,7 @@ public sealed class AccountAdminService : IAccountAdminService
             return Result<TemporaryPasswordDto>.Failure(ErrorCodes.AccountCannotLockSelf, Messages.CannotActOnSelf);
         var employee = await _employees.GetFullAsync(employeeId, ct);
         var account = employee?.Account;
-        if (employee is null || account is null) return Fail.NotFound<TemporaryPasswordDto>();
+        if (employee is null || account is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound<TemporaryPasswordDto>();
 
         var temp = _passwords.Generate();
         account.PasswordHash = _hasher.Hash(temp);
@@ -72,6 +75,10 @@ public sealed class AccountAdminService : IAccountAdminService
         return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(employee.EmployeeCode, temp), Messages.PasswordResetDone);
     }
 
-    private async Task<Account?> FindAccountAsync(int employeeId, CancellationToken ct) =>
-        (await _employees.GetFullAsync(employeeId, ct))?.Account;
+    /// <summary>Tài khoản của nhân viên trong phạm vi người thao tác (Quản đốc không thấy Admin / Kế toán).</summary>
+    private async Task<Account?> FindAccountAsync(int employeeId, CancellationToken ct)
+    {
+        var employee = await _employees.GetFullAsync(employeeId, ct);
+        return employee is not null && _scope.CanSee(employee.Role.RoleCode) ? employee.Account : null;
+    }
 }

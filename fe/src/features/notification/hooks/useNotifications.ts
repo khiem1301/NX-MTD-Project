@@ -5,7 +5,7 @@ import { notificationApi } from '../api/notificationApi';
 import type { NotificationQuery, SendAnnouncementPayload } from '../types';
 
 export const NOTIFICATION_KEY = ['notifications'] as const;
-const POLL_MS = 60_000;
+const POLL_MS = 30_000;
 
 /** Số thông báo chưa đọc, tự nạp lại mỗi phút (chưa có push thời gian thực). */
 export const useUnreadCount = () =>

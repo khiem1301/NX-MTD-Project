@@ -10,6 +10,7 @@ import {
   useNotifications,
   useUnreadCount,
 } from '../hooks/useNotifications';
+import { useNewNotificationToast } from '../hooks/useNewNotificationToast';
 import type { NotificationItem } from '../types';
 
 const LIST_SIZE = 10;
@@ -17,6 +18,7 @@ const LIST_SIZE = 10;
 /** UC05: chuông thông báo trên thanh trên cùng — số chưa đọc, 10 thông báo mới nhất, đánh dấu đã đọc. */
 export function NotificationBell() {
   const navigate = useNavigate();
+  useNewNotificationToast();
   const [open, setOpen] = useState(false);
   const unread = useUnreadCount();
   const list = useNotifications({ page: 1, pageSize: LIST_SIZE }, open);
