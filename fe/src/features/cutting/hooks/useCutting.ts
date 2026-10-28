@@ -28,6 +28,25 @@ export const useWorkOrders = (query: WorkOrderQuery) => {
   });
 };
 
+/** Xem trước vải của kế hoạch đang nhập; chỉ gọi khi đã đủ đơn, mã hàng, tổ cắt và có số kế hoạch. */
+export const useFabricPreview = (body: SaveWorkOrderPayload | null, exceptWorkOrderId?: number) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'fabric-preview', role, body, exceptWorkOrderId],
+    queryFn: () => cuttingApi.previewFabric(role, body as SaveWorkOrderPayload, exceptWorkOrderId),
+    enabled: body !== null,
+    placeholderData: keepPreviousData,
+  });
+};
+
+export const useFabricByOrder = (orderId?: number) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'fabric-by-order', role, orderId],
+    queryFn: () => cuttingApi.getFabricByOrder(role, orderId),
+  });
+};
+
 export const useReplacementRequests = (enabled: boolean) => {
   const role = useRolePath();
   return useQuery({

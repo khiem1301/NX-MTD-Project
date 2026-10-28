@@ -16,6 +16,12 @@ public interface IWorkOrderService
 
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
 
+    /// <summary>Xem trước vải cần / khả dụng / thiếu ngay trong form lập lệnh cắt (không lưu gì).</summary>
+    Task<Result<FabricPreviewDto>> PreviewFabricAsync(SaveWorkOrderDto dto, int? exceptWorkOrderId, CancellationToken ct);
+
+    /// <summary>Vải theo đơn của các lệnh cắt đang chạy: đơn nào dùng vải nào, đã cấp bao nhiêu, còn thiếu bao nhiêu.</summary>
+    Task<Result<IReadOnlyList<FabricByOrderRowDto>>> GetFabricByOrderAsync(int? orderId, CancellationToken ct);
+
     /// <summary>Đơn cắt bù đã duyệt và chưa có lệnh cắt bù (Quản đốc chọn khi lập lệnh cắt bù).</summary>
     Task<Result<IReadOnlyList<ReplacementRequestDto>>> GetOpenReplacementRequestsAsync(CancellationToken ct);
 

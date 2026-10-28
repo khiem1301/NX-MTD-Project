@@ -69,13 +69,15 @@ public sealed class FabricPlanner
         return received - returned;
     }
 
-    /// <summary>Vải đã cấp theo lệnh cắt: phiếu chờ nhận tính số cấp, phiếu đã nhận tính số xác nhận.</summary>
+    /// <summary>Vải đã cấp theo lệnh cắt: phiếu chờ nhận tính số cấp, phiếu đã nhận tính số xác nhận.
+    /// <paramref name="receivedOnly"/> = true chỉ tính phiếu tổ cắt đã nhận.</summary>
     public async Task<Dictionary<int, decimal>> GetIssuedAsync(int workOrderId,
-        CancellationToken ct)
+        CancellationToken ct, bool receivedOnly = false)
     {
         var rows = await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking()
             .Where(l => l.MaterialIssue.WorkOrderId == workOrderId && l.MaterialId != null
-                        && l.MaterialIssue.Status != IssueStatuses.Rejected)
+                        && l.MaterialIssue.Status != IssueStatuses.Rejected
+                        && (!receivedOnly || l.MaterialIssue.Status == IssueStatuses.Received))
             .Select(l => new
             {
                 MaterialId = l.MaterialId!.Value,
@@ -84,4 +86,51 @@ public sealed class FabricPlanner
             .ToListAsync(ct);
         return rows.GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
     }
+
+    /// <summary>
+    /// Vải các lệnh cắt khác (OPEN / CUTTING) đã "giữ chỗ": kho chỉ trừ phiếu cấp đang chờ nhận nên lệnh cắt chưa có phiếu cấp
+    /// vẫn chưa giữ gì. <c>Outstanding</c> = Σ (cần − đã cấp) theo NVL; <c>TeamReceived</c> = vải tổ này đã nhận cho các lệnh khác
+    /// cùng đơn (đã nằm trong số tổ đang giữ nên không được dùng lại cho lệnh mới).
+    /// </summary>
+    public async Task<FabricCommitments> GetCommitmentsAsync(int cuttingTeamId, int orderId, int? exceptWorkOrderId,
+        CancellationToken ct)
+    {
+        var open = await _uow.Repository<WorkOrder>().Query().AsNoTracking()
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
+            .Where(w => (w.Status == WorkOrderStatuses.Open || w.Status == WorkOrderStatuses.Cutting)
+                        && (exceptWorkOrderId == null || w.WorkOrderId != exceptWorkOrderId))
+            .ToListAsync(ct);
+
+        var outstanding = new Dictionary<int, decimal>();
+        var teamReceived = new Dictionary<int, decimal>();
+        foreach (var wo in open)
+        {
+            var demands = wo.WorkOrderLines
+                .Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
+            var needs = await GetNeedsAsync(demands, ct);
+            var issued = await GetIssuedAsync(wo.WorkOrderId, ct);
+            foreach (var n in needs)
+                outstanding[n.MaterialId] = outstanding.GetValueOrDefault(n.MaterialId)
+                                            + Math.Max(0, n.RequiredQty - issued.GetValueOrDefault(n.MaterialId));
+
+            if (wo.CuttingTeamId != cuttingTeamId || wo.OrderId != orderId) continue;
+            foreach (var (materialId, qty) in await GetIssuedAsync(wo.WorkOrderId, ct, receivedOnly: true))
+                teamReceived[materialId] = teamReceived.GetValueOrDefault(materialId) + qty;
+        }
+        return new FabricCommitments(outstanding, teamReceived);
+    }
+
+    /// <summary>Biến thể (màu - size) chưa có chi tiết PANEL dùng NVL vải trong định mức: không tính được vải cần.</summary>
+    public async Task<HashSet<int>> GetVariantsWithFabricNormAsync(IEnumerable<int> variantIds, CancellationToken ct)
+    {
+        var ids = variantIds.Distinct().ToArray();
+        var withNorm = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(p => ids.Contains(p.ProductVariantId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                        && p.Material.MaterialType == MaterialTypes.Fabric)
+            .Select(p => p.ProductVariantId).Distinct().ToListAsync(ct);
+        return withNorm.ToHashSet();
+    }
 }
+
+/// <summary>Xem <see cref="FabricPlanner.GetCommitmentsAsync"/>.</summary>
+public sealed record FabricCommitments(IReadOnlyDictionary<int, decimal> Outstanding, IReadOnlyDictionary<int, decimal> TeamReceived);

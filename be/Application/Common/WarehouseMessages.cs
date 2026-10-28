@@ -54,6 +54,7 @@ public static class WarehouseMessages
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
     public const string FabricShortage = "Không đủ vải cho lệnh cắt";
+    public const string NoFabricNormForLines = "Chưa có định mức vải thân (chi tiết PANEL) cho: {0}. Bổ sung định mức mã hàng (UC10) rồi lập lệnh cắt.";
     public const string NoFabricNorm = "Mã hàng chưa có định mức vải trong NVL của đơn (UC09), không tính được vải cần.";
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
