@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { customerApi, orderApi, productApi } from '../api/orderApi';
+import { useProductScope } from './useProductScope';
 import type {
   CreateOrderPayload,
   CustomerQuery,
@@ -36,12 +37,14 @@ export const useSaveCustomer = () =>
     { invalidate: [CUSTOMERS_KEY], successMessage: MESSAGES.common.saved },
   );
 
-export const useProducts = (query: ProductQuery) =>
-  useQuery({
-    queryKey: [...PRODUCTS_KEY, query],
-    queryFn: () => productApi.list(query),
+export const useProducts = (query: ProductQuery) => {
+  const scope = useProductScope();
+  return useQuery({
+    queryKey: [...PRODUCTS_KEY, scope, query],
+    queryFn: () => productApi.list(query, scope),
     placeholderData: keepPreviousData,
   });
+};
 
 export const useSaveProduct = () =>
   useApiMutation(
@@ -50,19 +53,23 @@ export const useSaveProduct = () =>
     { invalidate: [PRODUCTS_KEY, LOOKUPS_KEY], successMessage: MESSAGES.common.saved },
   );
 
-export const useProductSpec = (productId: number | undefined) =>
-  useQuery({
-    queryKey: [...PRODUCTS_KEY, 'spec', productId],
-    queryFn: () => productApi.getSpec(productId ?? 0),
+export const useProductSpec = (productId: number | undefined) => {
+  const scope = useProductScope();
+  return useQuery({
+    queryKey: [...PRODUCTS_KEY, 'spec', scope, productId],
+    queryFn: () => productApi.getSpec(productId ?? 0, scope),
     enabled: productId !== undefined,
   });
+};
 
 /** Lưu định mức: đơn hàng cũng đọc biến thể và số cần theo định mức, nên làm mới cả nhóm đơn / NVL của đơn. */
-export const useSaveProductSpec = () =>
-  useApiMutation(
-    ({ id, body }: { id: number; body: SaveProductSpecPayload }) => productApi.saveSpec(id, body),
+export const useSaveProductSpec = () => {
+  const scope = useProductScope();
+  return useApiMutation(
+    ({ id, body }: { id: number; body: SaveProductSpecPayload }) => productApi.saveSpec(id, body, scope),
     { invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']], successMessage: MESSAGES.common.saved },
   );
+};
 
 export const useDiscontinueProduct = () =>
   useApiMutation((id: number) => productApi.discontinue(id), {

@@ -90,6 +90,11 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
       setLineError(MESSAGES.orders.needLine);
       return;
     }
+    const chosen = blocks.map((b) => b.productId).filter((id): id is number => id !== null);
+    if (new Set(chosen).size !== chosen.length) {
+      setLineError(MESSAGES.orders.duplicateProduct);
+      return;
+    }
     const body = {
       orderCode: values.orderCode.trim(),
       customerId: values.customerId,
@@ -186,6 +191,7 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
           block={block}
           locked={locked}
           productLabels={labels}
+          usedProductIds={blocks.filter((b) => b.key !== block.key && b.productId !== null).map((b) => b.productId as number)}
           onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
           onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
           onCreateProduct={() => setProductBlock(block.key)}

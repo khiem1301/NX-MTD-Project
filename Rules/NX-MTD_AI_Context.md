@@ -60,14 +60,14 @@
 
 ### 4.1 Đơn hàng và NVL
 1. Admin tạo `Product` (mã hàng) → `CustomerOrder` + `OrderLine` (mã hàng × màu × size, `OrderedQty`, `CmtUnitPrice`). Size là chữ tự do.
-2. NVL của đơn: mỗi (đơn, NVL, màu) = 1 dòng `OrderMaterial`: `RequiredQty` **nhập tay** theo số khách báo (không tính từ định mức), `CustomerQty`, `CustomerExpectedDate`; `PurchaseQty` và `Source` (CUSTOMER/SUPPLIER/BOTH) là cột tính. Định mức trên 1 sản phẩm ở `OrderMaterialNorm` (vải theo chi tiết `ComponentName`, phụ liệu `ComponentName = ''`), có thể khác theo màu/size.
+2. NVL của đơn: mỗi (đơn, NVL, màu) = 1 dòng `OrderMaterial`: `RequiredQty` **nhập tay** theo số khách báo (không tính từ định mức), `CustomerQty`, `CustomerExpectedDate`; `PurchaseQty` và `Source` (CUSTOMER/SUPPLIER/BOTH) là cột tính. Định mức theo mã hàng ở `ProductComponentMaterial` (thành phần × NVL × màu – size, kèm dài / rộng chi tiết; **không còn lượng vải / hao hụt** từ DB 29/10), do Kế toán và Admin nhập; màu – size lấy từ đơn hàng.
 3. `Material.MaterialType` = `FABRIC` (đi qua tổ cắt) / `TRIM` (cấp thẳng tổ may); `Category` chi tiết (MAIN_FABRIC, LINING, INTERLINING, RIB / THREAD, ZIPPER, BUTTON, SNAP, ELASTIC, TAPE, LABEL, HANG_TAG, PADDING, PACKAGING, OTHER).
 4. Thiếu NVL: xin khách trước, khách không cấp được mới mua. **Quản đốc tạo `PurchaseOrder`**, chọn NCC ACTIVE, đặt hàng; **Kế toán xác nhận thanh toán** ngay trên PO (`PaymentDate`, `PaidAmount`, `PaymentMethod`, ảnh chứng từ trong `Attachment`), không sửa NCC/số lượng (GBR-18). Số đã nhận/còn phải nhận xem `vw_PurchaseOrderLineStatus`.
 5. Nhập NVL: Thủ kho lập `MaterialReceipt` (`NEW`, nguồn CUSTOMER hoặc SUPPLIER có PO), mỗi dòng `AcceptedQty / ShortQty / DefectiveQty` → **Quản đốc xác nhận** → kho NVL tăng theo `AcceptedQty` (GBR-19). Có thiếu/lỗi → hệ thống tạo `Request` `SHORT_DELIVERY` (`CreatedBy` NULL) + MSG31 → Quản đốc chọn `REPLENISH` (bên giao bù bằng phiếu `SUPPLEMENTARY` trỏ phiếu gốc) hoặc `NO_REPLENISH` (`PurchaseOrderLine.NotReplenishedQty`, PO `CLOSED_SHORT`).
 6. `CustomerOrder.MaterialStatus` (AWAITING / PARTIAL / COMPLETE) tách khỏi `Status`. Đơn chỉ chuyển `NEW → IN_PRODUCTION` khi `MaterialStatus <> 'AWAITING'` (kiểm tra ở backend).
 
 ### 4.2 Cắt
-1. Lệnh cắt `WorkOrder(+Line)` theo dòng đơn; vải cần tính từ định mức; **giữ chỗ vải**, thiếu vải thì không lưu và báo thiếu loại nào, bao nhiêu. `SourceRequestId` có giá trị = lệnh cắt bù.
+1. Lệnh cắt `WorkOrder(+Line)` theo dòng đơn; DB 29/10 không còn lượng vải theo định mức nên lệnh cắt thường không kiểm vải khi lập; lệnh cắt bù (`SourceRequestId` có giá trị) ước tính số mét từ dài × rộng chi tiết và khổ vải (`vw_RecutFabricNeed`), thiếu thì không lưu và báo thiếu loại nào.
 2. Tổ trưởng cắt xin NVL (`Request` `MATERIAL_REQUISITION`) → Thủ kho lập `MaterialIssue` `WarehouseType = MATERIAL` (**chỉ giữ chỗ**, `PENDING_RECEIPT`) → tổ trưởng đếm, xác nhận (`RECEIVED`, **lúc này mới trừ kho**; lệch phải có lý do, báo Quản đốc – GBR-06) hoặc từ chối (nhả giữ chỗ).
 3. Bàn cắt `CuttingLay(+Line)`: SL = số lớp × tỉ lệ size; `ActualQty` khác `CalculatedQty` phải có lý do. Tổng cắt vượt số đặt trong mức `CUT_SURPLUS_PERCENT` → cảnh báo MSG15; vượt mức → chặn MSG29.
 4. `CutHandover(+Line)`: tổ cắt bàn giao BTP vào kho `SEMI_FINISHED` theo dòng đơn; Thủ kho xác nhận (lệch có lý do) hoặc từ chối.
@@ -164,7 +164,7 @@
 |---|---|
 | Khiêm (18) | Role, Employee, Account, Team, GradeLevel, GradeEvaluation, Announcement, AnnouncementTarget, Notification, SystemSetting, Attachment, AuditLog, Customer, Product, CustomerOrder, OrderLine, Request, RequestLine |
 | Kiều (6) | Operation, PieceRate, OperationAssignment, OutputRecord, DefectRecord, QcBatch |
-| Thái (21) | Material, OrderMaterial, OrderMaterialNorm, MaterialReceipt(+Line), MaterialIssue(+Line), MaterialReturn(+Line), StockTransaction, WorkOrder(+Line), CuttingLay(+Line), CutHandover(+Line), WorkerPieceMovement, FgHandover(+Line), DispatchNote(+Line) |
+| Thái (21) | Material, OrderMaterial, ProductComponentMaterial, MaterialReceipt(+Line), MaterialIssue(+Line), MaterialReturn(+Line), StockTransaction, WorkOrder(+Line), CuttingLay(+Line), CutHandover(+Line), WorkerPieceMovement, FgHandover(+Line), DispatchNote(+Line) |
 | Minh (16) | AttendanceSyncSession, AttendanceLog, DailyTimesheet, AttendanceAdjustment, DailyMeal, TeamMealConfirmation, Supplier, PurchaseOrder, PurchaseOrderLine, AccountingPeriod, Payroll, Payslip, PayslipItem, MonthlyCost, BreakEvenResult, KpiTarget |
 | Thảo (4) | Stocktake, StocktakeLine, Vehicle, VehicleTrip |
 

@@ -8,12 +8,13 @@ import {
 } from '@/constants/requestTypes';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 
-export type RequestFilterValue = { keyword?: string; requestType?: RequestType; status?: RequestStatus };
+/** 'All' chỉ dùng ở hộp "Đơn cần xử lý": bỏ lọc trạng thái (BE mặc định chỉ hiện đơn đang mở). */
+export type RequestFilterValue = { keyword?: string; requestType?: RequestType; status?: RequestStatus | 'All' };
 
 type RequestFiltersProps = {
   value: RequestFilterValue;
   onChange: (patch: RequestFilterValue) => void;
-  /** Trang "Đơn cần xử lý": không chọn trạng thái = đang mở (BE mặc định). */
+  /** Trang "Đơn cần xử lý": không chọn trạng thái = đang mở (BE mặc định); có thêm lựa chọn "Tất cả". */
   emptyStatusLabel?: string;
 };
 
@@ -48,8 +49,8 @@ export function RequestFilters({ value, onChange, emptyStatusLabel }: RequestFil
         allowClear
         placeholder={emptyStatusLabel ?? MESSAGES.requests.status}
         value={value.status}
-        options={STATUS_OPTIONS}
-        onChange={(status?: RequestStatus) => onChange({ status })}
+        options={emptyStatusLabel ? [{ value: 'All' as const, label: MESSAGES.requests.allStatuses }, ...STATUS_OPTIONS] : STATUS_OPTIONS}
+        onChange={(status?: RequestStatus | 'All') => onChange({ status })}
         style={{ width: 180 }}
       />
     </Space>

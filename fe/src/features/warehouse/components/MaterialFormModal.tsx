@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, Input, Modal, Select } from 'antd';
+import { Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
@@ -103,6 +103,14 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
         <Form.Item name="color" label={LABELS.color} extra={LABELS.materialColorHint}>
           <Input maxLength={50} />
         </Form.Item>
+        <Space align="start" wrap>
+          <Form.Item name="lengthCm" label={LABELS.materialLengthCm}>
+            <InputNumber min={0.01} max={99999} precision={2} style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item name="widthCm" label={LABELS.materialWidthCm} extra={LABELS.materialSizeHint}>
+            <InputNumber min={0.01} max={99999} precision={2} style={{ width: 180 }} />
+          </Form.Item>
+        </Space>
       </Form>
     </Modal>
   );

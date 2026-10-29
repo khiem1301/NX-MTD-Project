@@ -52,12 +52,6 @@ export function OrderMaterialPage() {
     { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
     { title: LABELS.unit, dataIndex: 'unit' },
     { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: formatQty },
-    {
-      title: LABELS.normRequiredQty,
-      dataIndex: 'normRequiredQty',
-      align: 'right',
-      render: formatQty,
-    },
     { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: formatQty },
     {
       title: LABELS.deliveries,

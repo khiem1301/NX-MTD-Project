@@ -7,7 +7,6 @@ import { MESSAGES } from '@/constants/messages';
 import { foldVietnamese } from '@/utils/colorSearch';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { useProductSpec, useSaveProductSpec } from '../hooks/useOrders';
-import { ColorAutoComplete } from './ColorAutoComplete';
 import type { ProductListItem, ProductSpec } from '../types';
 import {
   newKey,
@@ -131,13 +130,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
               </Space>
             ),
           },
-          {
-            title: text.sortOrder,
-            width: 110,
-            render: (_, r) => (
-              <InputNumber min={0} max={99} precision={0} value={r.sortOrder} onChange={(v) => patch(setComponents, r.key, { sortOrder: v ?? 0 })} />
-            ),
-          },
           delCol(setComponents),
         ]}
       />
@@ -148,7 +140,7 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
         onClick={() =>
           setComponents((rows) => [
             ...rows,
-            { key: newKey(), productComponentId: null, componentName: '', componentType: 'Panel', piecesPerGarment: 1, sortOrder: rows.length + 1 },
+            { key: newKey(), productComponentId: null, componentName: '', componentType: 'Panel', piecesPerGarment: 1 },
           ])
         }
       >
@@ -164,33 +156,28 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
       <Table<VariantRow>
         rowKey="key"
         size="small"
-        pagination={false}
+        pagination={{ pageSize: 10, showSizeChanger: false, hideOnSinglePage: true }}
         dataSource={variants}
         columns={[
+          { title: text.color, dataIndex: 'color' },
+          { title: text.size, dataIndex: 'sizeCode', width: 120 },
           {
-            title: text.color,
+            title: text.variantLength,
+            width: 190,
             render: (_, r) => (
-              <ColorAutoComplete value={r.color} extraColors={variants.map((v) => v.color)} onChange={(color) => patch(setVariants, r.key, { color })} />
+              <InputNumber min={0} precision={2} value={r.lengthCm} style={{ width: 150 }} onChange={(v) => patch(setVariants, r.key, { lengthCm: v })} />
             ),
           },
           {
-            title: text.size,
-            width: 160,
+            title: text.variantWidth,
+            width: 190,
             render: (_, r) => (
-              <Input value={r.sizeCode} maxLength={10} onChange={(e) => patch(setVariants, r.key, { sizeCode: e.target.value.toUpperCase() })} />
+              <InputNumber min={0} precision={2} value={r.widthCm} style={{ width: 150 }} onChange={(v) => patch(setVariants, r.key, { widthCm: v })} />
             ),
           },
-          delCol(setVariants),
         ]}
+        locale={{ emptyText: MESSAGES.common.noData }}
       />
-      <Button
-        type="dashed"
-        icon={<PlusOutlined />}
-        style={{ marginTop: 8 }}
-        onClick={() => setVariants((rows) => [...rows, { key: newKey(), productVariantId: null, color: rows.at(-1)?.color ?? '', sizeCode: '' }])}
-      >
-        {text.addVariant}
-      </Button>
       {discontinuedVariants.length > 0 && (
         <Alert style={{ marginTop: 12 }} type="info" showIcon message={`${text.discontinuedVariants}: ${discontinuedVariants.join(', ')}`} />
       )}
@@ -265,18 +252,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
             ),
           },
           {
-            title: text.qty,
-            render: (_, r) => (
-              <InputNumber min={0} precision={4} value={r.qtyPerGarment} style={{ width: 110 }} onChange={(v) => patch(setNorms, r.key, { qtyPerGarment: v })} />
-            ),
-          },
-          {
-            title: text.wastage,
-            render: (_, r) => (
-              <InputNumber min={0} max={100} precision={2} value={r.wastagePercent} style={{ width: 90 }} onChange={(v) => patch(setNorms, r.key, { wastagePercent: v ?? 0 })} />
-            ),
-          },
-          {
             title: text.length,
             render: (_, r) => (
               <InputNumber min={0} precision={2} value={r.lengthCm} style={{ width: 90 }} onChange={(v) => patch(setNorms, r.key, { lengthCm: v })} />
@@ -331,8 +306,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
               key: newKey(),
               componentName: undefined,
               materialId: undefined,
-              qtyPerGarment: null,
-              wastagePercent: 0,
               lengthCm: null,
               widthCm: null,
               specNote: '',

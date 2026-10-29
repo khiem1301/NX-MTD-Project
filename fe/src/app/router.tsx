@@ -184,6 +184,14 @@ const orderRoutes = [
   children: [{ path, lazy: async () => ({ Component: await page() }) }],
 }));
 
+// Kế toán nhập thành phần và định mức NVL của mã hàng (cùng trang Mã hàng, chỉ danh sách + Định mức).
+const accountantProductRoutes = [
+  {
+    element: <ProtectedRoute roles={[ROLES.Accountant]} />,
+    children: [{ path: ROUTES.accountantProducts, lazy: async () => ({ Component: (await orders()).ProductsPage }) }],
+  },
+];
+
 // Nhân sự (Khiêm): hồ sơ mọi vai trò; nhân viên Admin + Quản đốc (API theo vai trò); tổ Admin + Quản đốc.
 const profile = () => import('@/features/profile');
 const users = () => import('@/features/users');
@@ -215,6 +223,7 @@ export const router = createBrowserRouter([
           ...warehouseRoutes,
           ...requestRoutes,
           ...orderRoutes,
+          ...accountantProductRoutes,
           ...hrRoutes,
           // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.
 

@@ -15,20 +15,16 @@ export type WorkOrderListItem = {
   createdAt: string;
 };
 
-/** Vải của lệnh cắt: cần theo định mức, đã cấp, còn phải cấp, khả dụng trong kho. */
+/** Vải của lệnh cắt: đã cấp, khả dụng trong kho, tổ đã nhận / đã trả lại kho / thực dùng (không còn so với định mức). */
 export type FabricRequirement = {
   materialId: number;
   materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
-  requiredQty: number;
   issuedQty: number;
-  remainingQty: number;
   availableQty: number;
-  /** Kết quả vải: đã nhận, đã trả lại kho, thực dùng, vải theo định mức cho số đã cắt. */
   receivedQty: number;
   returnedQty: number;
   usedQty: number;
-  cutNormQty: number;
 };

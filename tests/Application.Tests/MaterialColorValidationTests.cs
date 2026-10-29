@@ -93,6 +93,17 @@ public class MaterialColorValidationTests
             .IsValid.Should().BeFalse();
     }
 
+    [Fact]
+    public void Material_validator_needs_positive_sizes_when_given()
+    {
+        var validator = new CreateMaterialDtoValidator();
+
+        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 5000, 150)).IsValid.Should().BeTrue();
+        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, null, null)).IsValid.Should().BeTrue();
+        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 0, 150)).IsValid.Should().BeFalse();
+        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 5000, -1)).IsValid.Should().BeFalse();
+    }
+
     // ---------- NVL của đơn ----------
 
     [Fact]

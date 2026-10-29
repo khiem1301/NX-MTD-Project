@@ -1,4 +1,5 @@
 /** Tiền tố role trong URL BE: /api/v1/<role>/<resource>. */
+export type ProductScope = 'admin' | 'accountant';
 export type RolePath = 'admin' | 'manager' | 'warehouse-keeper' | 'team-leader';
 
 const v1 = (path: string): string => `/api/v1/${path}`;
@@ -52,13 +53,14 @@ export const API = {
     discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
   },
+  /** Mã hàng: Admin đầy đủ; Kế toán chỉ xem danh sách và sửa định mức (scope = 'accountant'). */
   products: {
-    base: v1('admin/products'),
-    sampleImage: v1('admin/products/sample-image'),
+    base: (scope: ProductScope = 'admin') => v1(`${scope}/products`),
+    sampleImage: (scope: ProductScope = 'admin') => v1(`${scope}/products/sample-image`),
     byId: (id: number) => v1(`admin/products/${id}`),
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
-    spec: (id: number) => v1(`admin/products/${id}/spec`),
+    spec: (id: number, scope: ProductScope = 'admin') => v1(`${scope}/products/${id}/spec`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),

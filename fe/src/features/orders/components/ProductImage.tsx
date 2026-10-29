@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image } from 'antd';
 import { productApi } from '../api/orderApi';
+import { useProductScope } from '../hooks/useProductScope';
 
 const isRemoteUrl = (v: string) => /^https?:\/\//i.test(v);
 
@@ -8,13 +9,14 @@ const isRemoteUrl = (v: string) => /^https?:\/\//i.test(v);
 export function ProductImage({ value, size = 40 }: { value: string; size?: number }) {
   const [blobUrl, setBlobUrl] = useState<{ key: string; url: string } | null>(null);
   const remote = isRemoteUrl(value);
+  const scope = useProductScope();
 
   useEffect(() => {
     if (remote) return;
     let objectUrl: string | null = null;
     let cancelled = false;
     productApi
-      .sampleImageBlob(value)
+      .sampleImageBlob(value, scope)
       .then((blob) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -25,7 +27,7 @@ export function ProductImage({ value, size = 40 }: { value: string; size?: numbe
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [value, remote]);
+  }, [value, remote, scope]);
 
   const src = remote ? value : blobUrl?.key === value ? blobUrl.url : undefined;
   if (!src) return <div style={{ width: size, height: size, background: '#f0f0f0' }} />;

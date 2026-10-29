@@ -68,6 +68,7 @@
 | DEV-ALL-9 | 24/10/2026 | Claude (AI) | `KpiCalendarService`, `KpiCalendarDrawer`, `KpiMonthGrid` | Lịch KPI theo ngày (dạng tờ lịch): đặt KPI từng ngày, Tổng bán thành phẩm, số còn lại để đặt KPI | Đã làm |
 | DEV-ALL-10 | 24/10/2026 | Claude (AI) | `OrderMaterialService`, `IncomingMaterialService`, `IncomingMaterialsPage`, `PendingMaterialOrdersTable` | Quản đốc thấy đơn chờ khai báo NVL và bấm thông báo mở đúng đơn; Thủ kho có màn NVL chờ nhận và được báo khi khách cấp / đơn mua đã đặt | Đã làm |
 | DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
+| DEV-ALL-16 | 29/10/2026 | Claude (AI) | UC10, UC15, UC19, UC40, UC45–UC47, UC51 | Chuyển code sang database 29/10: định mức không còn lượng vải / hao hụt / thứ tự, màu – size chỉ đọc từ đơn hàng (kèm kích thước), Kế toán cùng Admin sửa định mức, lệnh cắt thường không kiểm vải, lệnh cắt bù ước tính theo `vw_RecutFabricNeed`; hoàn lại bậc thợ A–D, xuất hàng 1 bước, bỏ loại đơn tăng ca; các mục "Doing" của sheet | Đã làm |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -876,7 +877,27 @@
 - **Cần sửa trong tài liệu:** Report-3 (UC09, UC10 thêm định mức / biến thể, UC37 bỏ số thiếu / lỗi và thêm số lần giao dự kiến, UC19, UC24 chi tiết lẻ, lương, suất ăn); ERD.
 - **Trạng thái:** Đã làm
 
+### DEV-ALL-16 · Chuyển code sang database 29/10 và các mục "Doing" của sheet (29/10/2026)
+
+- **Ngày / Người / Task / PR:** 29/10/2026 · Claude (AI) theo yêu cầu của Minh · nhiều luồng · cùng nhánh `feature/ALL-missing-features`
+- **Đổi schema:** script chính `SQL/NX-MTD_Database.sql` khớp bản 29/10 của nhóm (đã áp patch `SQL/patches/2026-10-29_db_29_10.sql` lên `NXMTD_demo5`; chạy lại không lỗi). Bản này **không có** 3 patch 28/10 của nhánh này nên đã xóa `2026-10-28_grade_level_code.sql`, `end_of_order.sql`, `dispatch_approval.sql`.
+  - `ProductComponent` bỏ `SortOrder`; `ProductComponentMaterial` bỏ `QtyPerGarment`, `WastagePercent`; `ProductVariant`, `Material` thêm `LengthCm`, `WidthCm`; bỏ `vw_OrderMaterialNorm`, `vw_WorkOrderFabricNeed`; thêm `vw_RecutFabricNeed`.
+  - Hoàn lại về bản gốc: bậc thợ `CHAR(1)` A–D (bỏ `GradeLevelCode`), `CK_DN_Status` và giữ chỗ `vw_StockBalance` chỉ `PENDING`, `CK_DR_Reason` bỏ `END_OF_ORDER_MISMATCH`, `CK_Request_Type` bỏ `OVERTIME`, bỏ khóa `KPI_OT_AUTO_THRESHOLD_PCT`.
+- **Chức năng bị gỡ / thu nhỏ so với DEV-ALL-15 (code còn trong git, khôi phục được khi DB có lại các cột / bảng này):**
+  - Bậc thợ động (bậc E, F… do Admin thêm): về 4 bậc cố định; vẫn sửa tiền bậc theo ngày hiệu lực.
+  - Đề xuất tăng ca khi KPI không đạt: "Kết thúc đơn" chỉ gửi thông báo cho Quản đốc và tổ trưởng của tổ kèm % thiếu và gợi ý (thiếu không quá ngưỡng thì nên tăng ca, thiếu nhiều thì tổ trưởng quyết định); phiếu hàng hỏng lệch ghi lý do `OTHER`, ghi chú "Lệch kiểm cuối đơn".
+  - Xuất hàng 2 bước duyệt: về `PENDING → IN_DELIVERY`; vẫn bắt buộc ảnh phiếu xuất có Quản đốc ký (Thủ kho chụp ở trạng thái chờ xuất) và ảnh biên bản giao có khách ký.
+  - Lượng vải theo định mức: lệnh cắt thường **không** kiểm đủ vải khi lập, không còn "xem trước vải", tab "Vải theo đơn", so sánh thực dùng với định mức, cột "Cần theo định mức" ở NVL của đơn. Chi tiết lệnh cắt chỉ còn đã cấp / khả dụng / đã nhận / đã trả / thực dùng; Thủ kho tự nhập số cấp. Lệnh cắt bù ước tính số mét từ dài × rộng chi tiết và khổ vải (`RecutFabricEstimator`, cùng công thức `vw_RecutFabricNeed`) so với kho khả dụng + vải tổ cắt đang giữ; thiếu kích thước thì bỏ qua kiểm.
+- **Code đang làm theo sheet (tab "Doing"):**
+  - Thành phần và định mức NVL do **Kế toán và Admin** nhập (`/accountant/products`: danh sách + định mức, không sửa mã hàng, không đơn giá); tab Màu – size chỉ đọc (màu – size do đơn hàng tạo), chỉ nhập kích thước thành phẩm; bỏ cột Thứ tự, Định mức / SP, % hao hụt.
+  - Tồn kho: nhãn "Đang giữ chỗ" → "Đã lên phiếu". Hộp "Đơn cần xử lý": trạng thái có "Tất cả" (`status=All`). Đơn hàng: một mã hàng chỉ khai một khối / một đơn giá (FE loại mã đã chọn, validator chặn). NVL có thêm dài / rộng (khổ vải).
+  - "NVL của đơn": chỉ hiện bảng chi tiết khi đã chọn đơn. Dòng "Nhật ký thay đổi" của sheet để trống nên không làm.
+- **Cần sửa trong tài liệu:** `docs/NX-MTD_Database.dbml`, `NX-MTD_Database_Mo_ta.md` (Morgan cập nhật theo script 29/10), Report-3 (định mức không lượng vải, lệnh cắt không kiểm vải).
+- **Trạng thái:** Đã làm
+
 ### DEV-ALL-15 · Sửa theo sheet ghi chú của Minh (28/10/2026)
+
+> **Cập nhật 29/10 (DEV-ALL-16):** bậc thợ động, đơn tăng ca, xuất hàng 2 bước duyệt và so vải thực dùng với định mức bên dưới đã bị gỡ / thu nhỏ khi theo database 29/10.
 
 - **Ngày / Người / Task / PR:** 28/10/2026 · Claude (AI) theo yêu cầu của Minh · nhiều luồng · PR #21
 - **Đổi schema (có patch riêng, đã áp lên `NXMTD_demo5`; script chính `SQL/NX-MTD_Database.sql` đã cập nhật):**

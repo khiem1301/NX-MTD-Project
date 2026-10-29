@@ -35,43 +35,6 @@ export type SaveWorkOrderPayload = {
   lines: { orderLineId: number; plannedQty: number }[];
 };
 
-/** Xem trước vải khi lập lệnh cắt: cần / khả dụng (đã trừ phần kho giữ cho lệnh khác, cộng vải tổ đang giữ) / thiếu. */
-export type FabricPreviewRow = {
-  materialId: number;
-  materialCode: string;
-  materialName: string;
-  unit: string;
-  materialColor: string;
-  requiredQty: number;
-  warehouseAvailable: number;
-  reservedByOtherWorkOrders: number;
-  teamHolding: number;
-  availableQty: number;
-  shortQty: number;
-};
-
-export type FabricPreview = {
-  rows: FabricPreviewRow[];
-  /** Dòng đơn (màu - size) chưa có định mức vải thân. */
-  missingNormLines: string[];
-  enough: boolean;
-};
-
-/** Vải theo đơn của các lệnh cắt đang chạy. */
-export type FabricByOrderRow = {
-  orderId: number;
-  orderCode: string;
-  materialId: number;
-  materialCode: string;
-  materialName: string;
-  unit: string;
-  materialColor: string;
-  requiredQty: number;
-  issuedQty: number;
-  remainingQty: number;
-  workOrderCodes: string[];
-};
-
 export type CuttingLayLine = {
   cuttingLayLineId: number;
   orderLineId: number;

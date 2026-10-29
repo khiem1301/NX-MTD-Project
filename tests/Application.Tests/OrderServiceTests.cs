@@ -466,6 +466,19 @@ public class OrderValidatorTests
     }
 
     [Fact]
+    public void TheSameProductWithTwoPrices_Fails_ButOneProductWithManyColorsAndSizes_Passes()
+    {
+        var twoPrices = Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 100), new OrderLineInput(null, 1, "Xanh", "M", 1, 120));
+        var validator = new CreateOrderDtoValidator();
+
+        validator.Validate(twoPrices).Errors.Should().Contain(e => e.ErrorMessage.Contains("chỉ khai một lần"));
+
+        var onePrice = Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 100), new OrderLineInput(null, 1, "Xanh", "L", 1, 100),
+            new OrderLineInput(null, 2, "Đỏ", "M", 1, 90));
+        validator.Validate(onePrice).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
     public void DueBeforeReceived_Fails()
     {
         var dto = Dto(new DateOnly(2026, 9, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0));

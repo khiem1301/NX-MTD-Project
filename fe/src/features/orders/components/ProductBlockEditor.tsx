@@ -14,6 +14,8 @@ type ProductBlockEditorProps = {
   locked: boolean;
   /** Nhãn mã hàng đã biết (kể cả mã đã ngừng dùng, không có trong tra cứu). */
   productLabels: Record<number, string>;
+  /** Mã hàng đã chọn ở các khối khác của đơn: không chọn lại (một mã hàng chỉ khai một lần trong đơn). */
+  usedProductIds?: readonly number[];
   onChange: (block: ProductBlock) => void;
   onRemove: () => void;
   onCreateProduct: () => void;
@@ -25,7 +27,7 @@ const sizeHasOldLine = (block: ProductBlock, size: string): boolean =>
   block.rows.some((r) => r.cells[size]?.orderLineId !== undefined && r.cells[size]?.orderLineId !== null);
 
 /** Một khối mã hàng: chọn mã hàng + đơn giá CMT + lưới màu (hàng) × size (cột). */
-export function ProductBlockEditor({ block, locked, productLabels, onChange, onRemove, onCreateProduct }: ProductBlockEditorProps) {
+export function ProductBlockEditor({ block, locked, productLabels, usedProductIds = [], onChange, onRemove, onCreateProduct }: ProductBlockEditorProps) {
   const [keyword, setKeyword] = useState<string>();
   const products = useProductLookup(keyword);
   const hasOldLines = block.rows.some(rowHasOldLine);
@@ -34,6 +36,7 @@ export function ProductBlockEditor({ block, locked, productLabels, onChange, onR
   const options = new Map<number, string>();
   if (block.productId !== null && productLabels[block.productId]) options.set(block.productId, productLabels[block.productId] as string);
   for (const p of products.data?.items ?? []) options.set(p.productId, `${p.productCode} · ${p.productName}`);
+  for (const id of usedProductIds) if (id !== block.productId) options.delete(id);
 
   const setRow = (index: number, patch: Partial<GridRow>) =>
     onChange({ ...block, rows: block.rows.map((r, i) => (i === index ? { ...r, ...patch } : r)) });

@@ -44,11 +44,6 @@ export type DispatchableLine = {
   availableQty: number;
 };
 
-export type PrepareDispatchPayload = {
-  lines: { dispatchNoteLineId: number; issueQty: number }[];
-  note?: string | null;
-};
-
 export type DispatchNoteQuery = PageParams & { status?: string; orderId?: number };
 
 export type CreateDispatchPayload = {
