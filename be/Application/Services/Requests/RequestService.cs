@@ -47,18 +47,10 @@ public sealed class RequestService : IRequestService
         return Result<int>.Success(request.RequestId, Messages.Submitted);   // MSG10
     }
 
-    public async Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null,
-        string? autoApprovalNote = null)
+    public async Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null)
     {
         var policy = RequestTypePolicies.All[draft.RequestType];
         var request = await NewRequestAsync(draft, policy, null, teamId, ct);
-        if (autoApprovalNote is not null)
-        {
-            // Hệ thống tự duyệt (vd. KPI thiếu ít → tăng ca): không cần người xử lý.
-            request.Status = RequestStatuses.Approved;
-            request.DecisionNote = autoApprovalNote;
-            request.DecidedAt = _clock.Now;
-        }
         await _requests.AddAsync(request);
         // Đơn của riêng một tổ do tổ trưởng xử lý (tăng ca) báo tổ trưởng tổ đó; loại khác (vd. đơn xin NVL do hệ thống tạo
         // cho một tổ) báo người xử lý theo vai trò như mọi đơn.
@@ -127,7 +119,7 @@ public sealed class RequestService : IRequestService
     public async Task<Result> CompleteAsync(int requestId, CompleteRequestDto dto, CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode, request.CreatedByTeamId)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
         if (!_handlers.For(request.RequestTypeCode).AllowManualComplete)
             return Result.Failure(ErrorCodes.RequestManualCompleteNotAllowed, Messages.RequestManualCompleteNotAllowed);
         if (!RequestStatuses.Completable.Contains(request.Status))
@@ -156,7 +148,7 @@ public sealed class RequestService : IRequestService
         CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode, request.CreatedByTeamId)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
         var allowed = to == RequestStatuses.Approved
             ? request.Status == RequestStatuses.PendingApproval
             : RequestStatuses.Rejectable.Contains(request.Status);

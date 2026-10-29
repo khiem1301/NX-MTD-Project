@@ -81,6 +81,9 @@ public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T 
                 if (!seen.Add((l.ProductId, l.Color.Trim().ToLowerInvariant(), l.SizeCode.Trim().ToUpperInvariant())))
                     ctx.AddFailure($"Dòng mã hàng #{l.ProductId} / {l.Color} / {l.SizeCode} bị lặp.");
             }
+            // Một mã hàng chỉ khai một lần trong đơn (một đơn giá); thêm màu / size khác vào cùng khối mã hàng đó.
+            foreach (var g in list.GroupBy(l => l.ProductId).Where(g => g.Select(x => x.CmtUnitPrice).Distinct().Count() > 1))
+                ctx.AddFailure($"Mã hàng #{g.Key} đã có trong đơn với đơn giá khác: mỗi mã hàng chỉ khai một lần, thêm màu / size vào cùng khối.");
         });
     }
 }

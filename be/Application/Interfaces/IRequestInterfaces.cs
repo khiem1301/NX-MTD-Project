@@ -58,9 +58,8 @@ public interface IRequestService
 
     /// <summary>Hệ thống tạo đơn (SHORT_DELIVERY từ UC39 – Thái). Chỉ thêm vào DbContext, KHÔNG SaveChanges:
     /// người gọi lưu trong transaction của mình. Trả entity để gán thêm (vd. request.MaterialReceipt = receipt).</summary>
-    /// <param name="teamId">Đơn của riêng một tổ (tăng ca): gán tổ và chỉ báo tổ trưởng / tổ phó của tổ đó.</param>
-    /// <param name="autoApprovalNote">Có giá trị = hệ thống tự duyệt ngay với ghi chú này.</param>
-    Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null, string? autoApprovalNote = null);
+    /// <param name="teamId">Đơn của riêng một tổ (vd. xin NVL cấp bù): gán tổ và chỉ báo tổ trưởng / tổ phó của tổ đó.</param>
+    Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null);
 
     /// <summary>Luồng khác hoàn thành đơn trong transaction của mình (vd. TH-05 khi tổ xác nhận phiếu cấp,
     /// cắt bù khi BTP bù vào kho). KHÔNG SaveChanges.</summary>

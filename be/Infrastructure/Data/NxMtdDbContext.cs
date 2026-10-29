@@ -64,8 +64,6 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<GradeLevel> GradeLevels { get; set; }
 
-    public virtual DbSet<GradeLevelCode> GradeLevelCodes { get; set; }
-
     public virtual DbSet<KpiTarget> KpiTargets { get; set; }
 
     public virtual DbSet<Material> Materials { get; set; }
@@ -162,8 +160,6 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwOrderMaterialDelivery> VwOrderMaterialDeliveries { get; set; }
 
-    public virtual DbSet<VwOrderMaterialNorm> VwOrderMaterialNorms { get; set; }
-
     public virtual DbSet<VwPayrollExportDatum> VwPayrollExportData { get; set; }
 
     public virtual DbSet<VwProductLastSizeRatio> VwProductLastSizeRatios { get; set; }
@@ -172,11 +168,11 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwPurchaseOrderLineStatus> VwPurchaseOrderLineStatuses { get; set; }
 
+    public virtual DbSet<VwRecutFabricNeed> VwRecutFabricNeeds { get; set; }
+
     public virtual DbSet<VwStockBalance> VwStockBalances { get; set; }
 
     public virtual DbSet<VwTeamActingLeader> VwTeamActingLeaders { get; set; }
-
-    public virtual DbSet<VwWorkOrderFabricNeed> VwWorkOrderFabricNeeds { get; set; }
 
     public virtual DbSet<VwWorkOrderLineProgress> VwWorkOrderLineProgresses { get; set; }
 
@@ -820,8 +816,9 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.CurrentGradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
+                .HasMaxLength(1)
+                .IsUnicode(false)
+                .IsFixedLength();
             entity.Property(e => e.EmployeeCode)
                 .HasMaxLength(20)
                 .IsUnicode(false);
@@ -844,10 +841,6 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("ACTIVE");
             entity.Property(e => e.UpdatedAt).HasPrecision(0);
-
-            entity.HasOne(d => d.CurrentGradeCodeNavigation).WithMany(p => p.Employees)
-                .HasForeignKey(d => d.CurrentGradeCode)
-                .HasConstraintName("FK_Employee_Grade");
 
             entity.HasOne(d => d.Role).WithMany(p => p.Employees)
                 .HasForeignKey(d => d.RoleId)
@@ -936,31 +929,24 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.CurrentGradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
+                .HasMaxLength(1)
+                .IsUnicode(false)
+                .IsFixedLength();
             entity.Property(e => e.DecisionNote).HasMaxLength(500);
             entity.Property(e => e.ProposedGradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
+                .HasMaxLength(1)
+                .IsUnicode(false)
+                .IsFixedLength();
             entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasDefaultValue("SUBMITTED");
 
-            entity.HasOne(d => d.CurrentGradeCodeNavigation).WithMany(p => p.GradeEvaluationCurrentGradeCodeNavigations)
-                .HasForeignKey(d => d.CurrentGradeCode)
-                .HasConstraintName("FK_GradeEval_Current");
-
             entity.HasOne(d => d.ProposedByNavigation).WithMany(p => p.GradeEvaluationProposedByNavigations)
                 .HasForeignKey(d => d.ProposedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_GradeEval_ProposedBy");
-
-            entity.HasOne(d => d.ProposedGradeCodeNavigation).WithMany(p => p.GradeEvaluationProposedGradeCodeNavigations)
-                .HasForeignKey(d => d.ProposedGradeCode)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GradeEval_Proposed");
 
             entity.HasOne(d => d.Team).WithMany(p => p.GradeEvaluations)
                 .HasForeignKey(d => d.TeamId)
@@ -982,34 +968,11 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.GradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
+                .HasMaxLength(1)
+                .IsUnicode(false)
+                .IsFixedLength();
             entity.Property(e => e.GradeName).HasMaxLength(50);
             entity.Property(e => e.MonthlyAmount).HasColumnType("decimal(18, 2)");
-
-            entity.HasOne(d => d.GradeCodeNavigation).WithMany(p => p.GradeLevels)
-                .HasForeignKey(d => d.GradeCode)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_GradeLevel_Code");
-        });
-
-        modelBuilder.Entity<GradeLevelCode>(entity =>
-        {
-            entity.HasKey(e => e.GradeCode);
-
-            entity.ToTable("GradeLevelCode");
-
-            entity.Property(e => e.GradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt)
-                .HasPrecision(0)
-                .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-            entity.Property(e => e.GradeName).HasMaxLength(50);
-            entity.Property(e => e.Status)
-                .HasMaxLength(10)
-                .IsUnicode(false)
-                .HasDefaultValue("ACTIVE");
         });
 
         modelBuilder.Entity<KpiTarget>(entity =>
@@ -1062,6 +1025,7 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+            entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
             entity.Property(e => e.MaterialCode)
                 .HasMaxLength(30)
                 .IsUnicode(false);
@@ -1075,6 +1039,7 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("ACTIVE");
             entity.Property(e => e.Unit).HasMaxLength(20);
+            entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
         });
 
         modelBuilder.Entity<MaterialIssue>(entity =>
@@ -1738,9 +1703,7 @@ public partial class NxMtdDbContext : DbContext
             entity.HasIndex(e => new { e.ProductVariantId, e.ProductComponentId, e.MaterialId }, "UQ_PCM").IsUnique();
 
             entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
-            entity.Property(e => e.QtyPerGarment).HasColumnType("decimal(18, 4)");
             entity.Property(e => e.SpecNote).HasMaxLength(200);
-            entity.Property(e => e.WastagePercent).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
 
             entity.HasOne(d => d.Material).WithMany(p => p.ProductComponentMaterials)
@@ -1770,6 +1733,7 @@ public partial class NxMtdDbContext : DbContext
             entity.HasIndex(e => new { e.ProductVariantId, e.ProductId }, "UQ_PV_IdProduct").IsUnique();
 
             entity.Property(e => e.Color).HasMaxLength(50);
+            entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
             entity.Property(e => e.SizeCode)
                 .HasMaxLength(10)
                 .IsUnicode(false);
@@ -1777,6 +1741,7 @@ public partial class NxMtdDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasDefaultValue("ACTIVE");
+            entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
 
             entity.HasOne(d => d.Product).WithMany(p => p.ProductVariants)
                 .HasForeignKey(d => d.ProductId)
@@ -2376,17 +2341,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.RemainingQty).HasColumnType("decimal(38, 3)");
         });
 
-        modelBuilder.Entity<VwOrderMaterialNorm>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToView("vw_OrderMaterialNorm");
-
-            entity.Property(e => e.DiffQty).HasColumnType("decimal(19, 3)");
-            entity.Property(e => e.NormQty).HasColumnType("decimal(18, 3)");
-            entity.Property(e => e.RequiredQty).HasColumnType("decimal(18, 3)");
-        });
-
         modelBuilder.Entity<VwPayrollExportDatum>(entity =>
         {
             entity
@@ -2399,8 +2353,9 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.GradeAllowance).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.GradeCode)
-                .HasMaxLength(5)
-                .IsUnicode(false);
+                .HasMaxLength(1)
+                .IsUnicode(false)
+                .IsFixedLength();
             entity.Property(e => e.OvertimeHours).HasColumnType("decimal(38, 2)");
             entity.Property(e => e.PayType)
                 .HasMaxLength(20)
@@ -2458,6 +2413,20 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 2)");
         });
 
+        modelBuilder.Entity<VwRecutFabricNeed>(entity =>
+        {
+            entity
+                .HasNoKey()
+                .ToView("vw_RecutFabricNeed");
+
+            entity.Property(e => e.AvailableQty).HasColumnType("decimal(38, 3)");
+            entity.Property(e => e.FabricWidthCm).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.NeedMeters).HasColumnType("decimal(18, 3)");
+            entity.Property(e => e.PieceLengthCm).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.PieceWidthCm).HasColumnType("decimal(7, 2)");
+            entity.Property(e => e.Unit).HasMaxLength(20);
+        });
+
         modelBuilder.Entity<VwStockBalance>(entity =>
         {
             entity
@@ -2485,15 +2454,6 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.TeamType)
                 .HasMaxLength(10)
                 .IsUnicode(false);
-        });
-
-        modelBuilder.Entity<VwWorkOrderFabricNeed>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToView("vw_WorkOrderFabricNeed");
-
-            entity.Property(e => e.NeedQty).HasColumnType("decimal(18, 3)");
         });
 
         modelBuilder.Entity<VwWorkOrderLineProgress>(entity =>

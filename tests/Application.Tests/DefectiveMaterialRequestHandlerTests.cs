@@ -30,7 +30,7 @@ public class DefectiveMaterialRequestHandlerTests : ProductionTestBase
         Repo<PurchaseOrder>().When(r => r.AddAsync(Arg.Any<PurchaseOrder>())).Do(c => _orders.Add(c.Arg<PurchaseOrder>()));
         _codes.NextAsync<PurchaseOrder>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<PurchaseOrder, string>>>(),
             Arg.Any<CancellationToken>()).Returns("DM-TEST-001");
-        _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>(), Arg.Any<int?>(), Arg.Any<string?>())
+        _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>(), Arg.Any<int?>())
             .Returns(new Request { RequestCode = "YC-TEST-001", RequestTypeCode = RequestTypes.MaterialRequisition });
         _materials.Add(new Material { MaterialId = VaiA, MaterialCode = "VA", MaterialName = "Vải A" });
         _materials.Add(new Material { MaterialId = VaiB, MaterialCode = "VB", MaterialName = "Vải B" });
@@ -63,7 +63,7 @@ public class DefectiveMaterialRequestHandlerTests : ProductionTestBase
         await _requests.Received(1).StageSystemRequestAsync(
             Arg.Is<RequestDraft>(d => d.RequestType == RequestTypes.MaterialRequisition && d.WorkOrderId == 7
                 && d.Lines.Single().MaterialId == VaiA && d.Lines.Single().Quantity == 10),
-            Arg.Any<CancellationToken>(), TeamId, Arg.Any<string?>());
+            Arg.Any<CancellationToken>(), TeamId);
         _orders.Should().BeEmpty();
         _request.ResultNote.Should().Contain("YC-TEST-001").And.Contain("đủ tồn");
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
@@ -80,7 +80,7 @@ public class DefectiveMaterialRequestHandlerTests : ProductionTestBase
 
         await _requests.Received(1).StageSystemRequestAsync(
             Arg.Is<RequestDraft>(d => d.Lines.Count == 1 && d.Lines[0].MaterialId == VaiA && d.Lines[0].Quantity == 20),
-            Arg.Any<CancellationToken>(), TeamId, Arg.Any<string?>());
+            Arg.Any<CancellationToken>(), TeamId);
         var po = _orders.Should().ContainSingle().Subject;
         po.SourceRequestId.Should().Be(9);
         po.OrderId.Should().Be(OrderId);

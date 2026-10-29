@@ -25,11 +25,6 @@ public sealed record DispatchLineInputDto(int OrderLineId, int IssueQty);
 public sealed record CreateDispatchNoteDto(int OrderId, DateOnly DeliveryDate, string DeliveryAddress, string? Note,
     IReadOnlyList<DispatchLineInputDto> Lines);
 
-/// <summary>Thủ kho lập phiếu xuất: số xuất thực tế từng dòng (không vượt số Quản đốc đặt).</summary>
-public sealed record PrepareDispatchLineDto(int DispatchNoteLineId, int IssueQty);
-
-public sealed record PrepareDispatchDto(IReadOnlyList<PrepareDispatchLineDto> Lines, string? Note);
-
 public sealed record DeliveryLineInputDto(int DispatchNoteLineId, int ReceivedQty);
 
 public sealed record ConfirmDeliveryDto(DateOnly CustomerReceivedDate, IReadOnlyList<DeliveryLineInputDto> Lines);

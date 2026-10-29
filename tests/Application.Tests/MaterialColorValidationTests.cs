@@ -49,7 +49,7 @@ public class MaterialColorValidationTests
 
     private MaterialService Materials() => new(_uow, _locks);
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new FabricPlanner(_uow));
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
 
     // ---------- Danh mục NVL ----------
 
