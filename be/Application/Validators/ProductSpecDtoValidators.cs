@@ -20,6 +20,8 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
         {
             v.RuleFor(i => i.Color).NotEmpty().MaximumLength(50);
             v.RuleFor(i => i.SizeCode).NotEmpty().MaximumLength(10);
+            v.RuleFor(i => i.LengthCm).GreaterThan(0).When(i => i.LengthCm is not null);
+            v.RuleFor(i => i.WidthCm).GreaterThan(0).When(i => i.WidthCm is not null);
         });
         RuleForEach(x => x.Norms).ChildRules(n =>
         {
@@ -27,8 +29,6 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
             n.RuleFor(i => i.Color).NotEmpty();
             n.RuleFor(i => i.SizeCode).NotEmpty();
             n.RuleFor(i => i.MaterialId).GreaterThan(0);
-            n.RuleFor(i => i.QtyPerGarment).GreaterThan(0).WithMessage(WarehouseMessages.QtyMustBePositive);
-            n.RuleFor(i => i.WastagePercent).InclusiveBetween(0, 100);
             n.RuleFor(i => i.LengthCm).GreaterThan(0).When(i => i.LengthCm is not null);
             n.RuleFor(i => i.WidthCm).GreaterThan(0).When(i => i.WidthCm is not null);
             n.RuleFor(i => i.SpecNote).MaximumLength(200);

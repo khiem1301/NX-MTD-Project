@@ -1,13 +1,12 @@
 import { useEffect } from 'react';
 import { Form, InputNumber, Space, Typography, type FormInstance } from 'antd';
-import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import { useWorkOrderFabrics } from '../hooks/useIssues';
 
 type FabricIssueLinesProps = { form: FormInstance; workOrderId: number | undefined };
 
-/** Dòng cấp vải: điền sẵn số còn phải cấp theo định mức của lệnh cắt (không vượt khả dụng). */
+/** Dòng cấp vải: liệt kê vải của lệnh cắt (theo định mức mã hàng), Thủ kho nhập số cấp cho vải cần cấp (không vượt khả dụng). */
 export function FabricIssueLines({ form, workOrderId }: FabricIssueLinesProps) {
   const fabrics = useWorkOrderFabrics(workOrderId);
 
@@ -15,12 +14,7 @@ export function FabricIssueLines({ form, workOrderId }: FabricIssueLinesProps) {
     if (!fabrics.data) return;
     form.setFieldValue(
       'lines',
-      fabrics.data
-        .filter((f) => f.remainingQty > 0)
-        .map((f) => ({
-          materialId: f.materialId,
-          issuedQty: Math.min(f.remainingQty, f.availableQty),
-        })),
+      fabrics.data.map((f) => ({ materialId: f.materialId, issuedQty: undefined })),
     );
   }, [fabrics.data, form]);
 
@@ -43,15 +37,12 @@ export function FabricIssueLines({ form, workOrderId }: FabricIssueLinesProps) {
                   : line.materialId}
               </Typography.Text>
               <Typography.Text type="secondary">
-                {LABELS.remainingQty}: {formatQty(fabric?.remainingQty)} · {LABELS.availableQty}:{' '}
+                {LABELS.issuedAlready}: {formatQty(fabric?.issuedQty)} · {LABELS.availableQty}:{' '}
                 {formatQty(fabric?.availableQty)} {fabric?.unit}
               </Typography.Text>
-              <Form.Item
-                name={[field.name, 'issuedQty']}
-                rules={[{ required: true, message: MESSAGES.common.required }]}
-              >
+              <Form.Item name={[field.name, 'issuedQty']}>
                 <InputNumber
-                  addonBefore={LABELS.issuedQty}
+                  addonBefore={LABELS.issueNow}
                   min={0.001}
                   max={fabric?.availableQty}
                   style={{ width: 200 }}

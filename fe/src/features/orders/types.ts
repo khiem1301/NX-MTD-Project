@@ -7,7 +7,10 @@ export type Customer = {
   phone: string | null;
   email: string | null;
   defaultAddress: string | null;
+  status: CustomerStatus;
 };
+export type CustomerStatus = 'Active' | 'Discontinued';
+export type CustomerQuery = { keyword?: string; status?: CustomerStatus };
 export type SaveCustomerPayload = {
   customerName: string;
   phone?: string | null;
@@ -42,10 +45,17 @@ export type ProductComponentItem = {
   componentName: string;
   componentType: 'Panel' | 'Trim';
   piecesPerGarment: number;
-  sortOrder: number;
   status: string;
 };
-export type ProductVariantItem = { productVariantId: number; color: string; sizeCode: string; status: string };
+/** Màu – size do đơn hàng tạo ra (chỉ đọc); lengthCm / widthCm là kích thước thành phẩm. */
+export type ProductVariantItem = {
+  productVariantId: number;
+  color: string;
+  sizeCode: string;
+  lengthCm: number | null;
+  widthCm: number | null;
+  status: string;
+};
 export type ProductNormItem = {
   productComponentMaterialId: number;
   componentName: string;
@@ -56,8 +66,6 @@ export type ProductNormItem = {
   materialName: string;
   unit: string;
   materialColor: string;
-  qtyPerGarment: number;
-  wastagePercent: number;
   lengthCm: number | null;
   widthCm: number | null;
   specNote: string | null;
@@ -74,16 +82,13 @@ export type SaveProductSpecPayload = {
     componentName: string;
     componentType: 'Panel' | 'Trim';
     piecesPerGarment: number;
-    sortOrder: number;
   }[];
-  variants: { productVariantId: number | null; color: string; sizeCode: string }[];
+  variants: { productVariantId: number | null; color: string; sizeCode: string; lengthCm: number | null; widthCm: number | null }[];
   norms: {
     componentName: string;
     color: string;
     sizeCode: string;
     materialId: number;
-    qtyPerGarment: number;
-    wastagePercent: number;
     lengthCm: number | null;
     widthCm: number | null;
     specNote: string | null;

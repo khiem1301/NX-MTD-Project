@@ -281,7 +281,7 @@ export type OnLineQty = {
 
 export type DefectType = 'Rework' | 'Scrap';
 export type DefectStatus = 'Recorded' | 'Cancelled' | 'Locked';
-export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other' | 'EndOfOrderMismatch';
+export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
 
 export type Defect = {
   defectRecordId: number;

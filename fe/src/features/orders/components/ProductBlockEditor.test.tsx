@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { useState } from 'react';
 import type { ProductBlock } from '../utils/orderGrid';
 import { ProductBlockEditor } from './ProductBlockEditor';
 
 jest.mock('@/hooks/useOrderLookups', () => ({
   useProductLookup: () => ({ data: { items: [{ productId: 1, productCode: 'AO-01', productName: 'Áo' }] } }),
+  useProductColors: () => ({ data: ['Be', 'Đen', 'Xanh'] }),
 }));
 
 const oldBlock: ProductBlock = {
@@ -46,5 +48,25 @@ describe('ProductBlockEditor', () => {
     expect(screen.getAllByLabelText('Xóa size S').length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText('Xóa').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('Đỏ')).not.toBeDisabled();
+  });
+
+  it('gõ "đ" vào ô màu gợi ý màu Đen đã khai ở mã hàng khác', async () => {
+    function Stateful() {
+      const [block, setBlock] = useState(oldBlock);
+      return (
+        <QueryClientProvider client={new QueryClient()}>
+          <ProductBlockEditor block={block} locked={false} productLabels={{ 1: 'AO-01 · Áo' }} onChange={setBlock} onRemove={jest.fn()} onCreateProduct={jest.fn()} />
+        </QueryClientProvider>
+      );
+    }
+    render(<Stateful />);
+
+    const input = screen.getByDisplayValue('Đỏ');
+    // fireEvent thay cho userEvent.type: gõ từng phím quá chậm trên máy CI (vượt timeout 20s)
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'đ' } });
+
+    expect((await screen.findAllByText('Đen')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Be')).not.toBeInTheDocument();
   });
 });

@@ -233,8 +233,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
             return (Fail(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotIssuable), null);
 
-        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
-        var fabrics = (await _planner.GetNeedsAsync(demands, ct))
+        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId)).ToList();
+        var fabrics = (await _planner.GetFabricsAsync(lines, ct))
             .Select(n => n.MaterialId).ToHashSet();
         var allInPlan = dto.Lines.All(l => fabrics.Contains(l.MaterialId!.Value));
         return allInPlan

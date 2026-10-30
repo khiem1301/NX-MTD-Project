@@ -9,6 +9,7 @@ export const ROUTES = {
   teams: '/teams',
   // Mã hàng, đơn hàng (Khiêm)
   products: '/admin/products',
+  accountantProducts: '/accounting/products',
   customers: '/admin/customers',
   orders: '/admin/orders',
   orderNew: '/admin/orders/new',

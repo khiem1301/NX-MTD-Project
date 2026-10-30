@@ -1,4 +1,5 @@
 /** Tiền tố role trong URL BE: /api/v1/<role>/<resource>. */
+export type ProductScope = 'admin' | 'accountant';
 export type RolePath = 'admin' | 'manager' | 'warehouse-keeper' | 'team-leader';
 
 const v1 = (path: string): string => `/api/v1/${path}`;
@@ -46,14 +47,20 @@ export const API = {
       v1(`${role}/teams/${id}/${action}`),
   },
   hrLookups: { teams: v1('common/hr-lookups/teams'), teamMembers: v1('common/hr-lookups/team-members') },
-  customers: { base: v1('admin/customers'), byId: (id: number) => v1(`admin/customers/${id}`) },
+  customers: {
+    base: v1('admin/customers'),
+    byId: (id: number) => v1(`admin/customers/${id}`),
+    discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
+    reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
+  },
+  /** Mã hàng: Admin đầy đủ; Kế toán chỉ xem danh sách và sửa định mức (scope = 'accountant'). */
   products: {
-    base: v1('admin/products'),
-    sampleImage: v1('admin/products/sample-image'),
+    base: (scope: ProductScope = 'admin') => v1(`${scope}/products`),
+    sampleImage: (scope: ProductScope = 'admin') => v1(`${scope}/products/sample-image`),
     byId: (id: number) => v1(`admin/products/${id}`),
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
-    spec: (id: number) => v1(`admin/products/${id}/spec`),
+    spec: (id: number, scope: ProductScope = 'admin') => v1(`${scope}/products/${id}/spec`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),
@@ -68,6 +75,7 @@ export const API = {
     orders: v1('common/order-lookups/orders'),
     orderLines: (orderId: number) => v1(`common/order-lookups/orders/${orderId}/lines`),
     products: v1('common/order-lookups/products'),
+    productColors: v1('common/order-lookups/product-colors'),
   },
   requests: {
     base: v1('common/requests'),
@@ -107,6 +115,7 @@ export const API = {
     guestCount: '/api/v1/accountant/meals/guest-count',
     kitchenNotification: '/api/v1/accountant/meals/kitchen-notification',
     price: '/api/v1/accountant/meals/price',
+    settings: '/api/v1/admin/meal-settings',
   },
   payroll: {
     accountant: '/api/v1/accountant/payrolls',

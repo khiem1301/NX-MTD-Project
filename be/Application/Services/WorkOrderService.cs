@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC19 (tổ cắt): Quản đốc lập lệnh cắt theo dòng đơn; thiếu vải thì chặn và nêu rõ vải thiếu.</summary>
+/// <summary>UC19 (tổ cắt): Quản đốc lập lệnh cắt theo dòng đơn; lệnh cắt bù thiếu vải (ước tính) thì chặn và nêu rõ vải thiếu.</summary>
 public sealed class WorkOrderService : IWorkOrderService
 {
     private readonly IUnitOfWork _uow;
@@ -72,7 +72,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
         var handed = await HandedQtyAsync(workOrderId, ct);
         var lines = wo.WorkOrderLines.OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
-            .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponent.SortOrder)
+            .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponentId)
             .Select(l => new WorkOrderLineDto(l.WorkOrderLineId, l.OrderLineId, l.OrderLine.ProductVariant.Color,
                 l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId, ComponentLabels.Of(l.ProductComponentMaterial) ?? string.Empty,
                 l.PlannedQty, cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId)),
@@ -161,10 +161,9 @@ public sealed class WorkOrderService : IWorkOrderService
         var productIds = orderLines.Values.Select(l => l.ProductId).Distinct().ToList();
         if (productIds.Count != 1) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
 
-        // Vải cần theo chi tiết cần cắt bù (định mức của chi tiết đó) phải đủ trong kho + vải tổ cắt đang giữ.
-        var demands = request.RequestLines
-            .Select(l => new PieceDemand(orderLines[l.OrderLineId!.Value].ProductVariantId, l.ProductComponentMaterialId, (int)l.Quantity)).ToList();
-        var fabric = await CheckFabricAsync(request.OrderId.Value, dto.CuttingTeamId, demands, null, null, ct);
+        // Vải ước tính theo kích thước chi tiết cần cắt bù và khổ vải (vw_RecutFabricNeed) phải đủ trong kho + vải tổ cắt đang giữ.
+        var fabric = await CheckRecutFabricAsync(request.OrderId.Value, dto.CuttingTeamId,
+            request.RequestLines.Select(l => (l.ProductComponentMaterialId!.Value, (int)l.Quantity)).ToList(), ct);
         if (fabric is not null) return fabric;
 
         var created = await _uow.InTransactionAsync(async () =>
@@ -240,7 +239,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .ToListAsync(ct);
         if (handovers.Any(h => h.Status == HandoverStatuses.Pending))
             return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandoverToFinish);
-        // Thứ tự theo swimlane: BTP vào kho → trả vải thừa → so sánh → báo Quản đốc. Phiếu trả chờ kho thì chưa so được.
+        // Thứ tự theo swimlane: BTP vào kho → trả vải thừa → báo Quản đốc kèm vải thực dùng. Phiếu trả chờ kho thì chưa tổng kết được.
         if (await _uow.Repository<MaterialReturn>().Query().AnyAsync(r => r.Status == HandoverStatuses.Pending
                 && r.MaterialIssue.WorkOrderId == workOrderId, ct))
             return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingReturn);
@@ -269,7 +268,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var fabrics = await GetFabricsAsync(await WorkOrders.AsNoTracking().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
             .FirstAsync(w => w.WorkOrderId == workOrderId, ct), ct);
         await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production, "Lệnh cắt đã cắt xong",
-            $"Tổ cắt báo lệnh {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) cắt xong, BTP đã vào kho.{shortText}{FabricComparison(fabrics)}", WorkOrderLink), ct);
+            $"Tổ cắt báo lệnh {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) cắt xong, BTP đã vào kho.{shortText}{FabricUsage(fabrics)}", WorkOrderLink), ct);
         await _uow.SaveChangesAsync();
         _logger.LogInformation("Work order {WorkOrderId} finished by cutting team: {InWarehouse}/{Planned}", workOrderId, inWarehouse, planned);
         return Result.Success(WarehouseMessages.WorkOrderFinishedCutting);
@@ -306,8 +305,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .ToDictionaryAsync(l => l.OrderLineId, ct);
         if (orderLines.Count != ids.Count) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
 
-        return await CheckPlanCapAsync(dto, orderLines, exceptWorkOrderId, ct)
-               ?? await CheckFabricAsync(dto, orderLines, exceptWorkOrderId, ct);
+        return await CheckPlanCapAsync(dto, orderLines, exceptWorkOrderId, ct);
     }
 
     /// <summary>Σ số kế hoạch của các lệnh cắt thường (không tính lệnh hủy, lệnh cắt bù) ≤ số đặt của dòng đơn.</summary>
@@ -333,166 +331,79 @@ public sealed class WorkOrderService : IWorkOrderService
     }
 
     /// <summary>
-    /// Vải cần (định mức) ≤ khả dụng: kho khả dụng − vải các lệnh cắt khác đã giữ chỗ + vải tổ cắt đang giữ còn trống của đơn.
-    /// Thiếu vải hoặc có dòng chưa có định mức vải thân thì chặn và nêu rõ.
+    /// Lệnh cắt bù: ước tính số mét vải theo kích thước chi tiết (định mức) và khổ vải, so với vải khả dụng trong kho + vải tổ cắt
+    /// đang giữ. Thiếu kích thước thì không ước tính được và cho qua. Lệnh cắt thường không kiểm vải ở đây (DB 29/10 bỏ lượng định mức).
     /// </summary>
-    private async Task<Result<WorkOrderDto>?> CheckFabricAsync(SaveWorkOrderDto dto,
-        IReadOnlyDictionary<int, OrderLine> orderLines, int? exceptWorkOrderId, CancellationToken ct)
+    private async Task<Result<WorkOrderDto>?> CheckRecutFabricAsync(int orderId, int cuttingTeamId,
+        IReadOnlyCollection<(int ProductComponentMaterialId, int Pieces)> lines, CancellationToken ct)
     {
-        var (demands, labels) = DemandsOf(dto, orderLines);
-        return await CheckFabricAsync(dto.OrderId, dto.CuttingTeamId, demands, labels, exceptWorkOrderId, ct);
-    }
+        var ids = lines.Select(l => l.ProductComponentMaterialId).Distinct().ToArray();
+        var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(n => ids.Contains(n.ProductComponentMaterialId))
+            .Select(n => new
+            {
+                n.ProductComponentMaterialId, n.MaterialId, n.LengthCm, n.WidthCm,
+                n.Material.MaterialCode, n.Material.MaterialName, n.Material.Color, n.Material.Unit, FabricWidthCm = n.Material.WidthCm,
+            })
+            .ToDictionaryAsync(n => n.ProductComponentMaterialId, ct);
 
-    private static (List<PieceDemand> Demands, Dictionary<int, string> Labels) DemandsOf(SaveWorkOrderDto dto,
-        IReadOnlyDictionary<int, OrderLine> orderLines)
-    {
-        var demands = dto.Lines.Select(l => new PieceDemand(orderLines[l.OrderLineId].ProductVariantId, null, l.PlannedQty)).ToList();
-        var labels = orderLines.Values.GroupBy(o => o.ProductVariantId)
-            .ToDictionary(g => g.Key, g => $"{g.First().ProductVariant.Color}-{g.First().ProductVariant.SizeCode}");
-        return (demands, labels);
-    }
+        var need = new Dictionary<int, (decimal Meters, string Label)>();
+        foreach (var (pcmId, pieces) in lines)
+        {
+            if (!norms.TryGetValue(pcmId, out var n) || n.Unit != "m") continue;
+            var meters = RecutFabricEstimator.NeedMeters(pieces, n.LengthCm, n.WidthCm, n.FabricWidthCm);
+            if (meters is null) continue;
+            var label = $"{n.MaterialCode} {n.MaterialName}{(n.Color == "" ? "" : $" ({n.Color})")}";
+            need[n.MaterialId] = need.TryGetValue(n.MaterialId, out var cur) ? (cur.Meters + meters.Value, label) : (meters.Value, label);
+        }
 
-    private async Task<Result<WorkOrderDto>?> CheckFabricAsync(int orderId, int cuttingTeamId,
-        IReadOnlyList<PieceDemand> demands, IReadOnlyDictionary<int, string>? variantLabels, int? exceptWorkOrderId,
-        CancellationToken ct)
-    {
-        var preview = await EvaluateFabricAsync(orderId, cuttingTeamId, demands, variantLabels, exceptWorkOrderId, ct);
-        if (preview.MissingNormLines.Count > 0)
-            return Fail(ErrorCodes.CuttingFabricShortage,
-                string.Format(WarehouseMessages.NoFabricNormForLines, string.Join(", ", preview.MissingNormLines)));
-        if (preview.Rows.Count == 0) return Fail(ErrorCodes.CuttingFabricShortage, WarehouseMessages.NoFabricNorm);
-
-        var shortages = preview.Rows.Where(r => r.ShortQty > 0).Select(r =>
-            $"{r.MaterialCode} {r.MaterialName}{(r.MaterialColor == "" ? "" : $" ({r.MaterialColor})")}: cần {Format(r.RequiredQty)} {r.Unit}, " +
-            $"có {Format(r.AvailableQty)} (kho {Format(r.WarehouseAvailable)}, đã giữ cho lệnh cắt khác {Format(r.ReservedByOtherWorkOrders)}, " +
-            $"tổ đang giữ {Format(r.TeamHolding)}), thiếu {Format(r.ShortQty)}").ToList();
+        var shortages = new List<string>();
+        foreach (var (materialId, (meters, label)) in need)
+        {
+            var warehouse = await _stock.GetAvailableAsync(StockKey.Material(materialId), ct);
+            var holding = Math.Max(0, await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, materialId, ct));
+            var available = warehouse + holding;
+            if (available < meters)
+                shortages.Add($"{label}: cần khoảng {Format(meters)} m, có {Format(available)} (kho {Format(warehouse)}, tổ đang giữ {Format(holding)})");
+        }
         return shortages.Count == 0
             ? null
             : Fail(ErrorCodes.CuttingFabricShortage, $"{WarehouseMessages.FabricShortage}: {string.Join("; ", shortages)}.");
     }
 
-    private async Task<FabricPreviewDto> EvaluateFabricAsync(int orderId, int cuttingTeamId,
-        IReadOnlyList<PieceDemand> demands, IReadOnlyDictionary<int, string>? variantLabels, int? exceptWorkOrderId,
-        CancellationToken ct)
-    {
-        var missing = new List<string>();
-        if (variantLabels is not null)
-        {
-            var withNorm = await _planner.GetVariantsWithFabricNormAsync(demands.Select(d => d.ProductVariantId), ct);
-            missing = demands.Select(d => d.ProductVariantId).Distinct().Where(v => !withNorm.Contains(v))
-                .Select(v => variantLabels.GetValueOrDefault(v, v.ToString())).OrderBy(x => x).ToList();
-        }
-
-        var needs = await _planner.GetNeedsAsync(demands, ct);
-        var commitments = await _planner.GetCommitmentsAsync(cuttingTeamId, orderId, exceptWorkOrderId, ct);
-        var rows = new List<FabricPreviewRowDto>(needs.Count);
-        foreach (var need in needs)
-        {
-            var warehouse = await _stock.GetAvailableAsync(StockKey.Material(need.MaterialId), ct);
-            var reserved = commitments.Outstanding.GetValueOrDefault(need.MaterialId);
-            var holding = Math.Max(0, await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, need.MaterialId, ct)
-                                      - commitments.TeamReceived.GetValueOrDefault(need.MaterialId));
-            var available = warehouse - reserved + holding;
-            rows.Add(new FabricPreviewRowDto(need.MaterialId, need.MaterialCode, need.MaterialName, need.Unit, need.MaterialColor,
-                need.RequiredQty, warehouse, reserved, holding, available, Math.Max(0, need.RequiredQty - available)));
-        }
-        return new FabricPreviewDto(rows, missing, missing.Count == 0 && rows.Count > 0 && rows.All(r => r.ShortQty <= 0));
-    }
-
-    public async Task<Result<FabricPreviewDto>> PreviewFabricAsync(SaveWorkOrderDto dto, int? exceptWorkOrderId, CancellationToken ct)
-    {
-        var ids = dto.Lines.Where(l => l.PlannedQty > 0).Select(l => l.OrderLineId).ToList();
-        var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant)
-            .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId && l.ProductId == dto.ProductId)
-            .ToDictionaryAsync(l => l.OrderLineId, ct);
-        if (ids.Count == 0 || orderLines.Count != ids.Count)
-            return Result<FabricPreviewDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
-
-        var active = new SaveWorkOrderDto(dto.OrderId, dto.ProductId, dto.CuttingTeamId, dto.DueDate, dto.Note,
-            dto.Lines.Where(l => l.PlannedQty > 0).ToList());
-        var (demands, labels) = DemandsOf(active, orderLines);
-        return Result<FabricPreviewDto>.Success(
-            await EvaluateFabricAsync(dto.OrderId, dto.CuttingTeamId, demands, labels, exceptWorkOrderId, ct));
-    }
-
-    /// <summary>Vải theo đơn: gom các lệnh cắt đang chạy (OPEN / CUTTING) theo đơn × NVL — cần, đã cấp, còn phải cấp.</summary>
-    public async Task<Result<IReadOnlyList<FabricByOrderRowDto>>> GetFabricByOrderAsync(int? orderId, CancellationToken ct)
-    {
-        var open = await WorkOrders.AsNoTracking().Include(w => w.Order).Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
-            .Where(w => (w.Status == WorkOrderStatuses.Open || w.Status == WorkOrderStatuses.Cutting)
-                        && (orderId == null || w.OrderId == orderId))
-            .OrderBy(w => w.OrderId).ThenBy(w => w.WorkOrderId).ToListAsync(ct);
-
-        var rows = new Dictionary<(int OrderId, int MaterialId), FabricByOrderAcc>();
-        foreach (var wo in open)
-        {
-            var demands = wo.WorkOrderLines
-                .Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
-            var needs = await _planner.GetNeedsAsync(demands, ct);
-            var issued = await _planner.GetIssuedAsync(wo.WorkOrderId, ct);
-            foreach (var n in needs)
-            {
-                var key = (wo.OrderId, n.MaterialId);
-                if (!rows.TryGetValue(key, out var current)) rows[key] = current = new FabricByOrderAcc(wo.Order.OrderCode, n);
-                current.Required += n.RequiredQty;
-                current.Issued += Math.Min(n.RequiredQty, issued.GetValueOrDefault(n.MaterialId));
-                if (!current.Codes.Contains(wo.WorkOrderCode)) current.Codes.Add(wo.WorkOrderCode);
-            }
-        }
-        IReadOnlyList<FabricByOrderRowDto> result = rows
-            .Select(kv => new FabricByOrderRowDto(kv.Key.OrderId, kv.Value.OrderCode, kv.Key.MaterialId, kv.Value.Info.MaterialCode,
-                kv.Value.Info.MaterialName, kv.Value.Info.Unit, kv.Value.Info.MaterialColor, kv.Value.Required, kv.Value.Issued,
-                Math.Max(0, kv.Value.Required - kv.Value.Issued), kv.Value.Codes))
-            .OrderBy(x => x.OrderCode).ThenBy(x => x.MaterialCode).ToList();
-        return Result<IReadOnlyList<FabricByOrderRowDto>>.Success(result);
-    }
-
     private async Task<IReadOnlyList<FabricRequirementDto>> GetFabricsAsync(WorkOrder wo, CancellationToken ct)
     {
-        var demands = wo.WorkOrderLines.Select(l => new PieceDemand(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId, l.PlannedQty)).ToList();
-        var needs = await _planner.GetNeedsAsync(demands, ct);
+        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId)).ToList();
+        var infos = (await _planner.GetFabricsAsync(lines, ct)).ToDictionary(f => f.MaterialId);
         var issued = await _planner.GetIssuedAsync(wo.WorkOrderId, ct);
         var (received, returned) = await _planner.GetUsageAsync(wo.WorkOrderId, ct);
-        var cutNorm = await CutNormAsync(wo, ct);
 
-        var result = new List<FabricRequirementDto>(needs.Count);
-        foreach (var n in needs)
+        // Vải đã cấp / trả cho lệnh nhưng không (còn) nằm trong định mức vẫn phải hiện.
+        var extra = issued.Keys.Concat(received.Keys).Concat(returned.Keys).Where(id => !infos.ContainsKey(id)).Distinct().ToList();
+        if (extra.Count > 0)
         {
-            var done = issued.GetValueOrDefault(n.MaterialId);
+            var more = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => extra.Contains(m.MaterialId))
+                .Select(m => new FabricInfo(m.MaterialId, m.MaterialCode, m.MaterialName, m.Unit, m.Color)).ToListAsync(ct);
+            foreach (var m in more) infos[m.MaterialId] = m;
+        }
+
+        var result = new List<FabricRequirementDto>(infos.Count);
+        foreach (var n in infos.Values.OrderBy(f => f.MaterialCode).ThenBy(f => f.MaterialColor))
+        {
             var got = received.GetValueOrDefault(n.MaterialId);
             var back = returned.GetValueOrDefault(n.MaterialId);
             var available = await _stock.GetAvailableAsync(StockKey.Material(n.MaterialId), ct);
-            result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.Unit,
-                n.MaterialColor, n.RequiredQty, done, Math.Max(0, n.RequiredQty - done), available,
-                got, back, Math.Max(0, got - back), cutNorm.GetValueOrDefault(n.MaterialId)));
+            result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.Unit, n.MaterialColor,
+                issued.GetValueOrDefault(n.MaterialId), available, got, back, Math.Max(0, got - back)));
         }
         return result;
     }
 
-    /// <summary>Vải theo định mức cho số đã cắt thực tế (Σ số thực tế các bàn), để so với vải thực dùng.</summary>
-    private async Task<Dictionary<int, decimal>> CutNormAsync(WorkOrder wo, CancellationToken ct)
-    {
-        var variantOf = wo.WorkOrderLines.GroupBy(l => l.OrderLineId).ToDictionary(g => g.Key, g => g.First().OrderLine.ProductVariantId);
-        var cut = (await _uow.Repository<CuttingLayLine>().Query().AsNoTracking()
-            .Where(l => l.CuttingLay.WorkOrderId == wo.WorkOrderId)
-            .Select(l => new { l.OrderLineId, l.ProductComponentMaterialId, l.ActualQty }).ToListAsync(ct))
-            .GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId))
-            .Where(g => variantOf.ContainsKey(g.Key.OrderLineId))
-            .Select(g => new PieceDemand(variantOf[g.Key.OrderLineId], g.Key.ProductComponentMaterialId, g.Sum(l => l.ActualQty))).ToList();
-        if (cut.Count == 0) return new Dictionary<int, decimal>();
-        return (await _planner.GetNeedsAsync(cut, ct)).ToDictionary(n => n.MaterialId, n => n.RequiredQty);
-    }
-
-    /// <summary>So sánh vải thực dùng với định mức cho số đã cắt; dòng lệch hiện trong thông báo cho Quản đốc.</summary>
-    private static string FabricComparison(IEnumerable<FabricRequirementDto> fabrics)
+    /// <summary>Vải đã nhận, đã trả, thực dùng của lệnh (không so định mức); hiện trong thông báo cho Quản đốc.</summary>
+    private static string FabricUsage(IEnumerable<FabricRequirementDto> fabrics)
     {
         var rows = fabrics.Where(f => f.ReceivedQty > 0).Select(f =>
-        {
-            var diff = f.UsedQty - f.CutNormQty;
-            var verdict = diff > 0 ? $"dùng vượt {Format(diff)}" : diff < 0 ? $"dùng ít hơn {Format(-diff)}" : "khớp định mức";
-            return $"{f.MaterialCode}: thực dùng {Format(f.UsedQty)} {f.Unit} (nhận {Format(f.ReceivedQty)}, trả {Format(f.ReturnedQty)}), " +
-                   $"định mức {Format(f.CutNormQty)}, {verdict}";
-        }).ToList();
+            $"{f.MaterialCode}: nhận {Format(f.ReceivedQty)}, trả {Format(f.ReturnedQty)}, thực dùng {Format(f.UsedQty)} {f.Unit}").ToList();
         return rows.Count == 0 ? string.Empty : $" Vải: {string.Join("; ", rows)}.";
     }
 
@@ -516,15 +427,6 @@ public sealed class WorkOrderService : IWorkOrderService
             OrderLineId = l.OrderLineId,
             PlannedQty = l.PlannedQty,
         }).ToList();
-    }
-
-    private sealed class FabricByOrderAcc(string orderCode, FabricNeed info)
-    {
-        public string OrderCode { get; } = orderCode;
-        public FabricNeed Info { get; } = info;
-        public decimal Required { get; set; }
-        public decimal Issued { get; set; }
-        public List<string> Codes { get; } = [];
     }
 
     private Task<string?> OrderCodeAsync(int orderId, CancellationToken ct) =>

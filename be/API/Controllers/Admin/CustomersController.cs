@@ -12,8 +12,8 @@ public sealed class CustomersController : AdminBaseController
     public CustomersController(ICustomerService customers) => _customers = customers;
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] string? keyword, CancellationToken ct) =>
-        this.ToResponse(await _customers.ListAsync(keyword, ct));
+    public async Task<IActionResult> List([FromQuery] CustomerQuery query, CancellationToken ct) =>
+        this.ToResponse(await _customers.ListAsync(query, ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveCustomerDto dto, CancellationToken ct) =>
@@ -22,4 +22,12 @@ public sealed class CustomersController : AdminBaseController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveCustomerDto dto, CancellationToken ct) =>
         this.ToResponse(await _customers.UpdateAsync(id, dto, ct));
+
+    [HttpPost("{id:int}/discontinue")]
+    public async Task<IActionResult> Discontinue(int id, CancellationToken ct) =>
+        this.ToResponse(await _customers.DiscontinueAsync(id, ct));
+
+    [HttpPost("{id:int}/reactivate")]
+    public async Task<IActionResult> Reactivate(int id, CancellationToken ct) =>
+        this.ToResponse(await _customers.ReactivateAsync(id, ct));
 }

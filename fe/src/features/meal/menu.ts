@@ -16,4 +16,10 @@ export const mealMenu: MenuEntry[] = [
     path: MEAL_ROUTES.summary,
     roles: [ROLES.Accountant],
   },
+  {
+    key: 'meal-settings',
+    label: MEAL_TEXT.settingsPageTitle,
+    path: MEAL_ROUTES.settings,
+    roles: [ROLES.Admin],
+  },
 ];

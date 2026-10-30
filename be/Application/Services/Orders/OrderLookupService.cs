@@ -30,4 +30,7 @@ public sealed class OrderLookupService : IOrderLookupService
 
     public async Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct) =>
         Result<PagedResult<ProductLookupDto>>.Success(await _products.LookupAsync(query, ct));
+
+    public async Task<Result<IReadOnlyList<string>>> ColorsAsync(CancellationToken ct) =>
+        Result<IReadOnlyList<string>>.Success(await _products.ListColorsAsync(ct));
 }

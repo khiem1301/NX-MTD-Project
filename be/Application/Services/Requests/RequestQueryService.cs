@@ -73,6 +73,9 @@ public sealed class RequestQueryService : IRequestQueryService
         return Result<RequestDetailDto>.Success(detail with { History = history, Permissions = permissions, MaxPhotos = maxPhotos });
     }
 
+    /// <summary>Giá trị Status xin tất cả trạng thái (không lọc).</summary>
+    public const string AllStatuses = "All";
+
     /// <summary>Đổi RequestType / Status PascalCase sang mã DB; giá trị lạ → 400. defaultStatuses dùng khi không truyền Status.</summary>
     private static RequestListFilter BuildFilter(RequestQuery q, IReadOnlySet<string>? defaultStatuses, out Result? invalid)
     {
@@ -86,7 +89,9 @@ public sealed class RequestQueryService : IRequestQueryService
             if (!RequestTypes.All.Contains(code)) invalid = BadFilter("requestType");
             types = new[] { code };
         }
-        if (!string.IsNullOrWhiteSpace(q.Status))
+        if (string.Equals(q.Status?.Trim(), AllStatuses, StringComparison.OrdinalIgnoreCase))
+            statuses = null;   // "Tất cả": bỏ lọc trạng thái (mặc định hộp đơn chỉ hiện đơn đang mở)
+        else if (!string.IsNullOrWhiteSpace(q.Status))
         {
             var code = CodeText.ToCode(q.Status);
             if (!RequestTypePolicies.StatusLabels.ContainsKey(code)) invalid = BadFilter("status");

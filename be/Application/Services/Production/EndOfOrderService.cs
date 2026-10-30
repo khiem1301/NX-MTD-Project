@@ -10,9 +10,10 @@ namespace NX_MTD.Application.Services.Production;
 /// <summary>
 /// Kết thúc đơn của một tổ may (chỉ đánh giá khi đến cuối đơn, không theo ngày / tháng):
 /// 1) so sản lượng công nhân báo ở công đoạn cuối với số QC đạt + hàng hủy; phần lệch ghi thẳng thành phiếu hàng hỏng
-///    (lý do "Lệch kiểm cuối đơn") gắn với từng công nhân theo tỉ lệ sản lượng đã báo;
+///    (lý do OTHER, ghi chú "Lệch kiểm cuối đơn") gắn với từng công nhân theo tỉ lệ sản lượng đã báo;
 /// 2) chốt KPI (đạt / không đạt theo số QC đạt cả đơn) và đóng chỉ tiêu;
-/// 3) KPI không đạt: thiếu không quá ngưỡng thì tự duyệt tăng ca, thiếu nhiều hơn thì tổ trưởng quyết định.
+/// 3) KPI không đạt: báo Quản đốc và tổ trưởng kèm % thiếu — thiếu không quá ngưỡng thì nên tăng ca, thiếu nhiều hơn thì
+///    tổ trưởng quyết định (DB 29/10 không còn loại đơn tăng ca nên chỉ thông báo, không tạo đơn).
 /// </summary>
 public sealed class EndOfOrderService : IEndOfOrderService
 {
@@ -21,17 +22,16 @@ public sealed class EndOfOrderService : IEndOfOrderService
     private readonly IUnitOfWork _uow;
     private readonly ProductionGuard _guard;
     private readonly IPieceRateService _rates;
-    private readonly IRequestService _requests;
     private readonly INotificationService _notifier;
     private readonly IAuditLogService _audit;
     private readonly ISystemSettingReader _settings;
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
 
-    public EndOfOrderService(IUnitOfWork uow, ProductionGuard guard, IPieceRateService rates, IRequestService requests,
+    public EndOfOrderService(IUnitOfWork uow, ProductionGuard guard, IPieceRateService rates,
         INotificationService notifier, IAuditLogService audit, ISystemSettingReader settings, ICurrentUser user, IClock clock)
     {
-        _uow = uow; _guard = guard; _rates = rates; _requests = requests; _notifier = notifier; _audit = audit;
+        _uow = uow; _guard = guard; _rates = rates; _notifier = notifier; _audit = audit;
         _settings = settings; _user = user; _clock = clock;
     }
 
@@ -71,7 +71,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
                         DefectCode = $"{target.SewingTeam.TeamCode}-{today:yyMMdd}-{seq++:000}", WorkDate = today, ShiftCode = null,
                         SewingTeamId = target.SewingTeamId, OrderLineId = row.OrderLineId, OperationId = finalOp.OperationId,
                         ResponsibleWorkerId = row.WorkerId, DefectType = DefectTypes.Scrap, Quantity = row.MismatchQty,
-                        DefectReasonCode = DefectReasons.EndOfOrderMismatch,
+                        DefectReasonCode = DefectReasons.Other,
                         ReasonNote = $"Lệch kiểm cuối đơn {target.Order.OrderCode}: sản lượng báo ở công đoạn cuối nhiều hơn số QC đạt và hàng hủy.",
                         PieceRateId = rateId, WorkerNotifiedAt = now, EditDeadline = ProductionGuard.NextWorkingDayEnd(today),
                         Status = DefectStatuses.Recorded, RecordedBy = _user.EmployeeId, RecordedAt = now,
@@ -98,7 +98,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
                 new { target.Status, target.Result, ActualQty = preview.ActualQty, MismatchRecords = created.Count }, "Kết thúc đơn của tổ"));
 
             if (preview.OtDecision != OvertimeDecisions.None)
-                await StageOvertimeAsync(target, preview, ct);
+                await NotifyShortfallAsync(target, preview, ct);
 
             await _uow.SaveChangesAsync();
             return Result.Success();
@@ -217,15 +217,15 @@ public sealed class EndOfOrderService : IEndOfOrderService
         return codes.Select(c => int.TryParse(c[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;
     }
 
-    private async Task StageOvertimeAsync(KpiTarget target, EndOfOrderPreviewDto preview, CancellationToken ct)
+    /// <summary>KPI không đạt: báo Quản đốc và tổ trưởng của tổ (không còn đơn tăng ca trong DB).</summary>
+    private async Task NotifyShortfallAsync(KpiTarget target, EndOfOrderPreviewDto preview, CancellationToken ct)
     {
-        var auto = preview.OtDecision == OvertimeDecisions.AutoApproved;
-        var content = $"KPI đơn {preview.OrderCode} mã hàng {preview.ProductCode} chưa đạt: {preview.ActualQty}/{preview.TargetQty} " +
+        var small = preview.OtDecision == OvertimeDecisions.AutoApproved;
+        var message = $"KPI đơn {preview.OrderCode} mã hàng {preview.ProductCode} của {preview.TeamName} chưa đạt: {preview.ActualQty}/{preview.TargetQty} " +
                       $"(thiếu {preview.ShortfallQty}, {preview.ShortfallPct:0.##}%). " +
-                      (auto ? $"Thiếu không quá {preview.ThresholdPct}% nên tự duyệt tăng ca." : "Tổ trưởng quyết định có tăng ca hay không.");
-        var draft = new RequestDraft(RequestTypes.Overtime, target.OrderId, null, target.KpiTargetId, null, null, null, null,
-            $"Tăng ca KPI {preview.OrderCode}", content, Array.Empty<RequestLineInput>(), null);
-        await _requests.StageSystemRequestAsync(draft, ct, target.SewingTeamId,
-            auto ? $"Tự duyệt: thiếu {preview.ShortfallPct:0.##}% ≤ {preview.ThresholdPct}%." : null);
+                      (small ? $"Thiếu không quá {preview.ThresholdPct}%: nên tăng ca để bù." : "Thiếu nhiều: tổ trưởng quyết định có tăng ca hay không.");
+        var note = new NotificationMessage(NotificationSources.Production, "KPI không đạt khi kết thúc đơn", message, "/kpi");
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, note, ct);
+        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId, note, ct);
     }
 }

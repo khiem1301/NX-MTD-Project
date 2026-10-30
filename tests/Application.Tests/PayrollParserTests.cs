@@ -8,6 +8,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>Parser file "Bảng thanh toán lương" thật (DEV-MI-09-4) và danh mục cột PayslipLayout.</summary>
+[Collection(ExcelTestCollection.Name)]
 public class PayrollParserTests
 {
     private readonly ClosedXmlPayrollParser _sut = new();
@@ -264,6 +265,7 @@ public class PayrollParserTests
     }
 }
 
+[Collection(ExcelTestCollection.Name)]
 public class PayslipLayoutTests
 {
     [Theory]

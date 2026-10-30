@@ -18,5 +18,7 @@ public partial class Customer
 
     public string? DefaultAddress { get; set; }
 
+    public string Status { get; set; } = null!;
+
     public virtual ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
 }

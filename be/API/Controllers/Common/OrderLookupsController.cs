@@ -26,4 +26,9 @@ public sealed class OrderLookupsController : CommonBaseController
     [HttpGet("products")]
     public async Task<IActionResult> Products([FromQuery] PageQuery query, CancellationToken ct) =>
         this.ToResponse(await _lookups.ProductsAsync(query, ct));
+
+    /// <summary>Màu đã khai ở các mã hàng, để gợi ý khi nhập màu mới.</summary>
+    [HttpGet("product-colors")]
+    public async Task<IActionResult> ProductColors(CancellationToken ct) =>
+        this.ToResponse(await _lookups.ColorsAsync(ct));
 }

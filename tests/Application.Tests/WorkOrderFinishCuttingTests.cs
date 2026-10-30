@@ -27,6 +27,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     {
         SetupQueryable(_workOrders); SetupQueryable(_handoverLines); SetupQueryable(_layLines);
         SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_returns); SetupQueryable(_norms);
+        SetupQueryable(new List<Material> { _fabric });
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _wo = new WorkOrder
         {
@@ -49,10 +50,10 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
         MaterialId = 100, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
     };
 
-    /// <summary>Định mức 1 m vải cho 1 bộ của biến thể 5.</summary>
-    private void Norm(decimal perGarment = 1m) => _norms.Add(new ProductComponentMaterial
+    /// <summary>Dòng định mức vải thân (PANEL) của biến thể 5: cho biết vải nào thuộc lệnh cắt.</summary>
+    private void Norm() => _norms.Add(new ProductComponentMaterial
     {
-        ProductComponentMaterialId = 900, ProductVariantId = 5, ProductComponentId = 1, MaterialId = 100, QtyPerGarment = perGarment,
+        ProductComponentMaterialId = 900, ProductVariantId = 5, ProductComponentId = 1, MaterialId = 100,
         Material = _fabric, ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
     });
 
@@ -126,12 +127,12 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Finishing_ComparesTheFabricActuallyUsedWithTheNormAndTellsTheManager()
+    public async Task Finishing_TellsTheManagerHowMuchFabricWasReceivedReturnedAndUsed()
     {
         Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
-        Norm(1m);                                   // 100 bộ → 100 m
+        Norm();
         var issue = IssueReceived(120);             // nhận 120 m
-        Return(issue, 15, HandoverStatuses.Confirmed);   // trả 15 m → dùng 105 m, vượt định mức 5 m
+        Return(issue, 15, HandoverStatuses.Confirmed);   // trả 15 m → dùng 105 m
         Return(issue, 40, HandoverStatuses.Pending);     // phiếu trả chưa xác nhận không tính (và đang chờ → chặn)
         _returns.Add(new MaterialReturn { Status = HandoverStatuses.Cancelled, MaterialIssue = issue.MaterialIssue });
         _returnLines.RemoveAll(r => r.MaterialReturn.Status == HandoverStatuses.Pending);
@@ -140,8 +141,8 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
 
         result.IsSuccess.Should().BeTrue();
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
-            Arg.Is<NotificationMessage>(m => m.Message.Contains("V01") && m.Message.Contains("thực dùng 105")
-                && m.Message.Contains("trả 15") && m.Message.Contains("định mức 100") && m.Message.Contains("vượt 5")),
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("V01") && m.Message.Contains("nhận 120")
+                && m.Message.Contains("trả 15") && m.Message.Contains("thực dùng 105") && !m.Message.Contains("định mức")),
             Arg.Any<CancellationToken>());
     }
 

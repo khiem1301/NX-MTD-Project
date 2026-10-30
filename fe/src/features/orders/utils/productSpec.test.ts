@@ -1,7 +1,7 @@
 import type { ProductSpec } from '../types';
 import { toPayload, toRows, validate, variantKey, type ComponentRow, type NormRow, type VariantRow } from './productSpec';
 
-const norm = (id: number, component: string, color: string, size: string, qty = 1, material = 1) => ({
+const norm = (id: number, component: string, color: string, size: string, length: number | null = null, material = 1) => ({
   productComponentMaterialId: id,
   componentName: component,
   color,
@@ -11,9 +11,7 @@ const norm = (id: number, component: string, color: string, size: string, qty = 
   materialName: 'Vải',
   unit: 'm',
   materialColor: 'Đen',
-  qtyPerGarment: qty,
-  wastagePercent: 5,
-  lengthCm: null,
+  lengthCm: length,
   widthCm: null,
   specNote: null,
 });
@@ -21,17 +19,17 @@ const norm = (id: number, component: string, color: string, size: string, qty = 
 const spec: ProductSpec = {
   productId: 1,
   components: [
-    { productComponentId: 1, componentName: 'Thân', componentType: 'Panel', piecesPerGarment: 1, sortOrder: 1, status: 'Active' },
-    { productComponentId: 2, componentName: 'Cổ cũ', componentType: 'Panel', piecesPerGarment: 1, sortOrder: 2, status: 'Discontinued' },
+    { productComponentId: 1, componentName: 'Thân', componentType: 'Panel', piecesPerGarment: 1, status: 'Active' },
+    { productComponentId: 2, componentName: 'Cổ cũ', componentType: 'Panel', piecesPerGarment: 1, status: 'Discontinued' },
   ],
   variants: [
-    { productVariantId: 10, color: 'Đen', sizeCode: 'M', status: 'Active' },
-    { productVariantId: 11, color: 'Đen', sizeCode: 'L', status: 'Active' },
-    { productVariantId: 12, color: 'Đỏ', sizeCode: 'S', status: 'Discontinued' },
+    { productVariantId: 10, color: 'Đen', sizeCode: 'M', lengthCm: 68, widthCm: 52, status: 'Active' },
+    { productVariantId: 11, color: 'Đen', sizeCode: 'L', lengthCm: null, widthCm: null, status: 'Active' },
+    { productVariantId: 12, color: 'Đỏ', sizeCode: 'S', lengthCm: null, widthCm: null, status: 'Discontinued' },
   ],
   norms: [
-    norm(1, 'Thân', 'Đen', 'M', 1.2),
-    norm(2, 'Thân', 'Đen', 'L', 1.2),
+    norm(1, 'Thân', 'Đen', 'M', 60),
+    norm(2, 'Thân', 'Đen', 'L', 60),
     norm(3, 'Cổ cũ', 'Đen', 'M'),
     norm(4, 'Thân', 'Đỏ', 'S'),
   ],
@@ -47,8 +45,8 @@ describe('productSpec', () => {
     expect(rows.norms[0]?.variantKeys).toEqual([variantKey('Đen', 'M'), variantKey('Đen', 'L')]);
   });
 
-  it('định mức khác nhau giữa các size thì tách dòng', () => {
-    const rows = toRows({ ...spec, norms: [norm(1, 'Thân', 'Đen', 'M', 1.2), norm(2, 'Thân', 'Đen', 'L', 1.4)] });
+  it('định mức (kích thước chi tiết) khác nhau giữa các size thì tách dòng', () => {
+    const rows = toRows({ ...spec, norms: [norm(1, 'Thân', 'Đen', 'M', 60), norm(2, 'Thân', 'Đen', 'L', 62)] });
 
     expect(rows.norms).toHaveLength(2);
   });
@@ -58,9 +56,10 @@ describe('productSpec', () => {
 
     const payload = toPayload(rows.components, rows.variants, rows.norms);
 
-    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.qtyPerGarment}`)).toEqual(['Đen-M:1.2', 'Đen-L:1.2']);
+    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.lengthCm}`)).toEqual(['Đen-M:60', 'Đen-L:60']);
     expect(payload.norms.every((n) => n.componentName === 'Thân')).toBe(true);
     expect(payload.variants.map((v) => v.productVariantId)).toEqual([10, 11]);
+    expect(payload.variants[0]).toMatchObject({ lengthCm: 68, widthCm: 52 });
   });
 
   describe('validate', () => {
@@ -72,10 +71,9 @@ describe('productSpec', () => {
       expect(validate(base.components, base.variants, base.norms)).toBe('');
     });
 
-    it('bắt dòng thiếu thành phần / NVL, định mức không dương, không áp dụng cho biến thể nào', () => {
+    it('bắt dòng thiếu thành phần / NVL, không áp dụng cho biến thể nào', () => {
       expect(validate(base.components, base.variants, [row({ componentName: undefined })])).not.toBe('');
       expect(validate(base.components, base.variants, [row({ materialId: undefined })])).not.toBe('');
-      expect(validate(base.components, base.variants, [row({ qtyPerGarment: 0 })])).not.toBe('');
       expect(validate(base.components, base.variants, [row({ variantKeys: [] })])).not.toBe('');
     });
 

@@ -18,8 +18,6 @@ public partial class ProductComponent
 
     public short PiecesPerGarment { get; set; }
 
-    public short SortOrder { get; set; }
-
     public string Status { get; set; } = null!;
 
     public virtual ICollection<OperationComponent> OperationComponents { get; set; } = new List<OperationComponent>();

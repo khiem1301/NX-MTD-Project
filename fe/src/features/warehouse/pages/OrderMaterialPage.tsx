@@ -52,12 +52,6 @@ export function OrderMaterialPage() {
     { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
     { title: LABELS.unit, dataIndex: 'unit' },
     { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: formatQty },
-    {
-      title: LABELS.normRequiredQty,
-      dataIndex: 'normRequiredQty',
-      align: 'right',
-      render: formatQty,
-    },
     { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: formatQty },
     {
       title: LABELS.deliveries,
@@ -121,20 +115,21 @@ export function OrderMaterialPage() {
       {stockMode ? (
         <StockPurchaseTable stockOnly />
       ) : (
-        <>
-          <QueryError error={list.error} onRetry={() => void list.refetch()} />
-          <Table
-            rowKey="orderMaterialId"
-            columns={columns}
-            dataSource={list.data}
-            loading={list.isFetching}
-            pagination={false}
-            scroll={{ x: true }}
-            locale={{
-              emptyText: orderId === undefined ? LABELS.selectOrder : MESSAGES.common.empty,
-            }}
-          />
-        </>
+        // Chưa chọn đơn: chỉ còn danh sách đơn chờ khai báo ở trên, không dựng bảng chi tiết trống.
+        orderId !== undefined && (
+          <>
+            <QueryError error={list.error} onRetry={() => void list.refetch()} />
+            <Table
+              rowKey="orderMaterialId"
+              columns={columns}
+              dataSource={list.data}
+              loading={list.isFetching}
+              pagination={false}
+              scroll={{ x: true }}
+              locale={{ emptyText: MESSAGES.common.empty }}
+            />
+          </>
+        )
       )}
       <PurchaseOrderFormModal open={stockFormOpen} onClose={() => setStockFormOpen(false)} />
       {orderId !== undefined && (

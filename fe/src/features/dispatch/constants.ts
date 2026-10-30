@@ -2,8 +2,6 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 
 export const DISPATCH_STATUS = {
   PENDING: 'PENDING',
-  PENDING_APPROVAL: 'PENDING_APPROVAL',
-  APPROVED: 'APPROVED',
   REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED',
   IN_DELIVERY: 'IN_DELIVERY',
@@ -12,9 +10,7 @@ export const DISPATCH_STATUS = {
 } as const;
 
 export const DISPATCH_STATUS_LABEL: Record<string, StatusLabel> = {
-  PENDING: { text: 'Chờ kho lập phiếu xuất', color: 'gold' },
-  PENDING_APPROVAL: { text: 'Chờ Quản đốc duyệt', color: 'orange' },
-  APPROVED: { text: 'Đã duyệt, chờ xuất', color: 'cyan' },
+  PENDING: { text: 'Chờ xuất kho', color: 'gold' },
   REJECTED: { text: 'Kho từ chối', color: 'red' },
   CANCELLED: { text: 'Đã hủy', color: 'default' },
   IN_DELIVERY: { text: 'Đang giao', color: 'blue' },
@@ -46,16 +42,6 @@ export const DISPATCH_LABELS = {
   selectOrder: 'Chọn đơn hàng',
   dispatchedBy: 'Thủ kho xuất',
   customerReceivedDate: 'Ngày khách nhận',
-  prepare: 'Lập phiếu xuất',
-  prepareTitle: 'Lập phiếu xuất',
-  prepareSubmit: 'Gửi Quản đốc duyệt',
-  prepareHint: 'Chốt số xuất thực tế từng dòng (không vượt số Quản đốc đã đặt), rồi gửi Quản đốc duyệt.',
-  requestedQty: 'Số đặt',
-  actualIssueQty: 'Số xuất thực tế',
-  qtyRange: 'Từ 1 đến {max}.',
-  approve: 'Duyệt',
-  returnBack: 'Trả lại',
-  returnTitle: 'Trả phiếu xuất về Thủ kho',
   requiredPhoto: 'bắt buộc',
   needIssuePhoto: 'Cần ảnh phiếu xuất có Quản đốc ký trước khi xuất hàng.',
   needDeliveryPhoto: 'Cần ảnh biên bản giao có khách ký trước khi xác nhận khách nhận.',
@@ -74,10 +60,6 @@ export const DISPATCH_MESSAGES = {
   confirmCreate:
     'Lập phiếu xuất hàng? Số xuất sẽ được giữ chỗ trong kho thành phẩm đến khi kho xuất hoặc từ chối.',
   confirmCancel: 'Hủy phiếu xuất hàng này? Số giữ chỗ sẽ được nhả.',
-  prepared: 'Đã lập phiếu xuất, chờ Quản đốc duyệt.',
-  approved: 'Đã duyệt phiếu xuất.',
-  returned: 'Đã trả phiếu xuất về Thủ kho.',
-  confirmApprove: 'Duyệt phiếu xuất này? Thủ kho sẽ in, chụp ảnh và xuất hàng.',
   cancelled: 'Đã hủy phiếu xuất hàng.',
   confirmExport: 'Xác nhận đã xuất hàng? Tồn kho thành phẩm sẽ giảm theo số trên phiếu.',
   exported: 'Đã xuất hàng.',

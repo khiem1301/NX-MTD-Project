@@ -16,6 +16,10 @@ public partial class ProductVariant
 
     public string SizeCode { get; set; } = null!;
 
+    public decimal? LengthCm { get; set; }
+
+    public decimal? WidthCm { get; set; }
+
     public string Status { get; set; } = null!;
 
     public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();

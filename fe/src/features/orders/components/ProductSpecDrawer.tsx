@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { Alert, Button, Drawer, Input, InputNumber, Select, Space, Spin, Table, Tabs, Typography } from 'antd';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 import { MESSAGES } from '@/constants/messages';
+import { foldVietnamese } from '@/utils/colorSearch';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { useProductSpec, useSaveProductSpec } from '../hooks/useOrders';
 import type { ProductListItem, ProductSpec } from '../types';
@@ -17,6 +20,7 @@ import {
 } from '../utils/productSpec';
 
 type Props = { product: ProductListItem | null; onClose: () => void };
+type NormFilter = { keyword?: string; component?: string; materialId?: number; color?: string; size?: string };
 
 const text = MESSAGES.orders.spec;
 const TYPE_OPTIONS = [
@@ -56,6 +60,8 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
   const [variants, setVariants] = useState<VariantRow[]>(initial.variants);
   const [norms, setNorms] = useState<NormRow[]>(initial.norms);
   const [error, setError] = useState('');
+  const [normFilter, setNormFilter] = useState<NormFilter>({});
+  const [normPage, setNormPage] = useState({ current: 1, pageSize: 10 });
 
   const patch = <T extends { key: string }>(set: (f: (rows: T[]) => T[]) => void, key: string, change: Partial<T>) =>
     set((rows) => rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
@@ -124,13 +130,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
               </Space>
             ),
           },
-          {
-            title: text.sortOrder,
-            width: 110,
-            render: (_, r) => (
-              <InputNumber min={0} max={99} precision={0} value={r.sortOrder} onChange={(v) => patch(setComponents, r.key, { sortOrder: v ?? 0 })} />
-            ),
-          },
           delCol(setComponents),
         ]}
       />
@@ -141,7 +140,7 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
         onClick={() =>
           setComponents((rows) => [
             ...rows,
-            { key: newKey(), productComponentId: null, componentName: '', componentType: 'Panel', piecesPerGarment: 1, sortOrder: rows.length + 1 },
+            { key: newKey(), productComponentId: null, componentName: '', componentType: 'Panel', piecesPerGarment: 1 },
           ])
         }
       >
@@ -157,45 +156,79 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
       <Table<VariantRow>
         rowKey="key"
         size="small"
-        pagination={false}
+        pagination={{ pageSize: 10, showSizeChanger: false, hideOnSinglePage: true }}
         dataSource={variants}
         columns={[
+          { title: text.color, dataIndex: 'color' },
+          { title: text.size, dataIndex: 'sizeCode', width: 120 },
           {
-            title: text.color,
-            render: (_, r) => <Input value={r.color} maxLength={50} onChange={(e) => patch(setVariants, r.key, { color: e.target.value })} />,
-          },
-          {
-            title: text.size,
-            width: 160,
+            title: text.variantLength,
+            width: 190,
             render: (_, r) => (
-              <Input value={r.sizeCode} maxLength={10} onChange={(e) => patch(setVariants, r.key, { sizeCode: e.target.value.toUpperCase() })} />
+              <InputNumber min={0} precision={2} value={r.lengthCm} style={{ width: 150 }} onChange={(v) => patch(setVariants, r.key, { lengthCm: v })} />
             ),
           },
-          delCol(setVariants),
+          {
+            title: text.variantWidth,
+            width: 190,
+            render: (_, r) => (
+              <InputNumber min={0} precision={2} value={r.widthCm} style={{ width: 150 }} onChange={(v) => patch(setVariants, r.key, { widthCm: v })} />
+            ),
+          },
         ]}
+        locale={{ emptyText: MESSAGES.common.noData }}
       />
-      <Button
-        type="dashed"
-        icon={<PlusOutlined />}
-        style={{ marginTop: 8 }}
-        onClick={() => setVariants((rows) => [...rows, { key: newKey(), productVariantId: null, color: rows.at(-1)?.color ?? '', sizeCode: '' }])}
-      >
-        {text.addVariant}
-      </Button>
       {discontinuedVariants.length > 0 && (
         <Alert style={{ marginTop: 12 }} type="info" showIcon message={`${text.discontinuedVariants}: ${discontinuedVariants.join(', ')}`} />
       )}
     </>
   );
 
+  const materialLabel = (id: number | undefined) => materialOptions.find((m) => m.value === id)?.label ?? '';
+  const colorFilterOptions = [...new Set(variants.map((v) => v.color.trim()).filter(Boolean))].map((c) => ({ value: c, label: c }));
+  const sizeFilterOptions = [...new Set(variants.map((v) => v.sizeCode.trim()).filter(Boolean))].map((s) => ({ value: s, label: s }));
+  const appliesTo = (r: NormRow, match: (v: VariantRow) => boolean) =>
+    r.variantKeys.some((k) => variants.some((v) => variantKey(v.color, v.sizeCode) === k && match(v)));
+  const visibleNorms = norms.filter((r) => {
+    const f = normFilter;
+    if (f.component && r.componentName !== f.component) return false;
+    if (f.materialId !== undefined && r.materialId !== f.materialId) return false;
+    if (f.color && !appliesTo(r, (v) => v.color.trim() === f.color)) return false;
+    if (f.size && !appliesTo(r, (v) => v.sizeCode.trim() === f.size)) return false;
+    const kw = foldVietnamese(f.keyword ?? '');
+    return !kw || foldVietnamese(`${r.componentName ?? ''} ${materialLabel(r.materialId)} ${r.specNote}`).includes(kw);
+  });
+  const changeFilter = (change: Partial<NormFilter>) => {
+    setNormFilter((f) => ({ ...f, ...change }));
+    setNormPage((p) => ({ ...p, current: 1 }));
+  };
+  const hasNormFilter = Object.values(normFilter).some((v) => v !== undefined && v !== '');
+
   const normTab = (
     <>
       <Typography.Paragraph type="secondary">{text.normHint}</Typography.Paragraph>
+      <Space wrap style={{ marginBottom: 12 }}>
+        <DebouncedSearch allowClear placeholder={text.normSearch} style={{ width: 260 }} onSearch={(k) => changeFilter({ keyword: k.trim() || undefined })} />
+        <FilterSelect value={normFilter.component} placeholder={text.component} style={{ width: 190 }} options={componentOptions} onChange={(v) => changeFilter({ component: v })} />
+        <FilterSelect value={normFilter.materialId} placeholder={text.material} style={{ width: 220 }} options={materialOptions} showSearch optionFilterProp="label" onChange={(v) => changeFilter({ materialId: v })} />
+        <FilterSelect value={normFilter.color} placeholder={text.color} style={{ width: 150 }} options={colorFilterOptions} onChange={(v) => changeFilter({ color: v })} />
+        <FilterSelect value={normFilter.size} placeholder={text.size} style={{ width: 130 }} options={sizeFilterOptions} onChange={(v) => changeFilter({ size: v })} />
+        {hasNormFilter && (
+          <span style={{ opacity: 0.65 }}>{text.normShown.replace('{n}', String(visibleNorms.length)).replace('{total}', String(norms.length))}</span>
+        )}
+      </Space>
       <Table<NormRow>
         rowKey="key"
         size="small"
-        pagination={false}
-        dataSource={norms}
+        pagination={{
+          ...normPage,
+          total: visibleNorms.length,
+          showSizeChanger: true,
+          pageSizeOptions: [10, 20, 50],
+          showTotal: (total) => `${total} ${text.normRows}`,
+          onChange: (current, pageSize) => setNormPage({ current, pageSize }),
+        }}
+        dataSource={visibleNorms}
         scroll={{ x: 'max-content' }}
         columns={[
           {
@@ -216,18 +249,6 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
                 style={{ width: 260 }}
                 onChange={(v) => patch(setNorms, r.key, { materialId: v })}
               />
-            ),
-          },
-          {
-            title: text.qty,
-            render: (_, r) => (
-              <InputNumber min={0} precision={4} value={r.qtyPerGarment} style={{ width: 110 }} onChange={(v) => patch(setNorms, r.key, { qtyPerGarment: v })} />
-            ),
-          },
-          {
-            title: text.wastage,
-            render: (_, r) => (
-              <InputNumber min={0} max={100} precision={2} value={r.wastagePercent} style={{ width: 90 }} onChange={(v) => patch(setNorms, r.key, { wastagePercent: v ?? 0 })} />
             ),
           },
           {
@@ -276,22 +297,22 @@ function SpecEditor({ product, spec, onClose }: { product: ProductListItem; spec
         type="dashed"
         icon={<PlusOutlined />}
         style={{ marginTop: 8 }}
-        onClick={() =>
+        onClick={() => {
+          setNormFilter({});
+          setNormPage((p) => ({ ...p, current: Math.ceil((norms.length + 1) / p.pageSize) }));
           setNorms((rows) => [
             ...rows,
             {
               key: newKey(),
               componentName: undefined,
               materialId: undefined,
-              qtyPerGarment: null,
-              wastagePercent: 0,
               lengthCm: null,
               widthCm: null,
               specNote: '',
               variantKeys: variantOptions.map((o) => o.value),
             },
-          ])
-        }
+          ]);
+        }}
       >
         {text.addNorm}
       </Button>

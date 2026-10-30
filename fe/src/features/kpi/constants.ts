@@ -71,8 +71,8 @@ export const KPI_TEXT = {
     mismatchTitle: 'Tổng {n} sản phẩm lệch sẽ ghi thành phiếu hàng hỏng',
     noMismatch: 'Không có lệch kiểm cuối đơn.',
     noOutput: 'Chưa có sản lượng báo ở công đoạn cuối.',
-    otAuto: 'KPI không đạt nhưng thiếu không quá {pct}%: hệ thống tự duyệt tăng ca cho tổ.',
-    otLeader: 'KPI không đạt, thiếu hơn {pct}%: tổ trưởng của tổ quyết định có tăng ca hay không.',
+    otAuto: 'KPI không đạt nhưng thiếu không quá {pct}%: nên tăng ca để bù; hệ thống báo Quản đốc và tổ trưởng.',
+    otLeader: 'KPI không đạt, thiếu hơn {pct}%: tổ trưởng của tổ quyết định có tăng ca hay không (hệ thống báo tổ trưởng).',
     done: 'Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.',
   },
 

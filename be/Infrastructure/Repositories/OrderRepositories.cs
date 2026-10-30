@@ -12,16 +12,18 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
 {
     public CustomerRepository(NxMtdDbContext db) : base(db) { }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, CancellationToken ct)
+    public async Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, string? statusCode, CancellationToken ct)
     {
         var q = _context.Customers.AsNoTracking();
+        if (statusCode is not null) q = q.Where(c => c.Status == statusCode);
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var k = keyword.Trim();
             q = q.Where(c => c.CustomerName.Contains(k) || (c.Phone != null && c.Phone.Contains(k)));
         }
-        return await q.OrderBy(c => c.CustomerName)
-            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress)).ToListAsync(ct);
+        var rows = await q.OrderBy(c => c.CustomerName)
+            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status)).ToListAsync(ct);
+        return rows.Select(c => c with { Status = CodeText.ToPascal(c.Status) }).ToList();
     }
 
     public Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct) =>
@@ -90,6 +92,13 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
         return await query.OrderBy(p => p.ProductCode)
             .Select(p => new ProductLookupDto(p.ProductId, p.ProductCode, p.ProductName)).ToPagedAsync(q, ct);
     }
+
+    public async Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct)
+    {
+        var colors = await _context.ProductVariants.AsNoTracking().Select(v => v.Color).Distinct().ToListAsync(ct);
+        return colors.GroupBy(c => c.Trim(), StringComparer.OrdinalIgnoreCase).Select(g => g.First())
+            .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
 }
 
 public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, ICustomerOrderRepository
@@ -100,8 +109,8 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
         _context.CustomerOrders.Include(o => o.OrderLines).ThenInclude(l => l.ProductVariant)
             .FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
 
-    public Task<bool> CustomerExistsAsync(int customerId, CancellationToken ct) =>
-        _context.Customers.AnyAsync(c => c.CustomerId == customerId, ct);
+    public Task<string?> GetCustomerStatusAsync(int customerId, CancellationToken ct) =>
+        _context.Customers.Where(c => c.CustomerId == customerId).Select(c => (string?)c.Status).FirstOrDefaultAsync(ct);
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>
         _context.CustomerOrders.AnyAsync(o => o.OrderCode == code && (exceptId == null || o.OrderId != exceptId), ct);

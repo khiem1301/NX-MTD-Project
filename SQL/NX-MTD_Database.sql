@@ -76,6 +76,14 @@
                  (vw_MaterialStock đọc Material.Color).
    - 26/10/2026  WorkAllocation bỏ PieceQty, ConfirmedPieceQty; bỏ vw_TeamPieceHolding và THROW 50051, 50053 (mỗi công đoạn nhận
                  riêng từng thành phần nên không đếm được số BTP giao kèm theo bộ đủ). Operation.UsesSemiFinished giữ lại, chỉ để tham khảo.
+   - 28/10/2026  Customer thêm Status (ACTIVE / DISCONTINUED), như Supplier. ProductComponent bỏ SortOrder (chỉ để sắp xếp hiển thị).
+   - 28/10/2026  ProductComponentMaterial bỏ WastagePercent, CK_PCM_Wastage (QtyPerGarment là lượng thực dùng cho 1 sản phẩm, đã gồm hao hụt);
+                 vw_OrderMaterialNorm, vw_WorkOrderFabricNeed không còn nhân hệ số hao hụt. ProductVariant thêm LengthCm, WidthCm
+                 (kích thước thành phẩm theo màu × size).
+   - 28/10/2026  ProductComponentMaterial bỏ QtyPerGarment, CK_PCM_Qty; bỏ vw_OrderMaterialNorm và vw_WorkOrderFabricNeed
+                 (cả hai tính từ QtyPerGarment). Định mức chỉ còn ghi thành phần dùng NVL nào (đã gồm màu) và kích thước chi tiết.
+   - 28/10/2026  Material thêm LengthCm, WidthCm (chiều dài, chiều rộng / khổ của cuộn vải, cm).
+   - 28/10/2026  Thêm vw_RecutFabricNeed: số mét vải ước tính cho dòng lệnh cắt bù (theo hình chữ nhật bao của chi tiết và khổ vải).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -139,19 +147,10 @@ CREATE TABLE dbo.SystemSetting (
     UpdatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_SystemSetting_UpdatedAt DEFAULT (dbo.fn_VnNow())
 );
 
--- Danh mục bậc thợ (A, B, C, D... Admin thêm / sửa / ngừng dùng). Mã bậc là khóa; nhân viên, đánh giá và tiền bậc tham chiếu mã này.
-CREATE TABLE dbo.GradeLevelCode (
-    GradeCode  VARCHAR(5)    NOT NULL CONSTRAINT PK_GradeLevelCode PRIMARY KEY CONSTRAINT CK_GLC_Code CHECK (GradeCode NOT LIKE '%[^A-Z0-9]%'),
-    GradeName  NVARCHAR(50)  NOT NULL,
-    SortOrder  SMALLINT      NOT NULL CONSTRAINT DF_GLC_Sort DEFAULT 0,   -- thứ tự hiển thị (bậc cao trước)
-    Status     VARCHAR(10)   NOT NULL CONSTRAINT DF_GLC_Status DEFAULT 'ACTIVE' CONSTRAINT CK_GLC_Status CHECK (Status IN ('ACTIVE','INACTIVE')),
-    CreatedAt  DATETIME2(0)  NOT NULL CONSTRAINT DF_GLC_CreatedAt DEFAULT (dbo.fn_VnNow())
-);
-
--- Tiền bậc theo tháng của từng bậc, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
+-- Bậc thợ A–D và tiền bậc theo tháng, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
 CREATE TABLE dbo.GradeLevel (
     GradeLevelId     INT IDENTITY(1,1) CONSTRAINT PK_GradeLevel PRIMARY KEY,
-    GradeCode        VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeLevel_Code REFERENCES dbo.GradeLevelCode(GradeCode),
+    GradeCode        CHAR(1)       NOT NULL CONSTRAINT CK_GradeLevel_Code CHECK (GradeCode IN ('A','B','C','D')),
     GradeName        NVARCHAR(50)  NOT NULL,
     MonthlyAmount    DECIMAL(18,2) NOT NULL CONSTRAINT CK_GradeLevel_Amount CHECK (MonthlyAmount >= 0),
     EffectiveDate    DATE          NOT NULL,
@@ -188,7 +187,7 @@ CREATE TABLE dbo.Employee (
     RoleId           INT           NOT NULL CONSTRAINT FK_Employee_Role REFERENCES dbo.Role(RoleId),
     TeamId           INT           NULL CONSTRAINT FK_Employee_Team REFERENCES dbo.Team(TeamId), -- tổ hiện tại (đổi tổ ghi AuditLog)
     PayType          VARCHAR(20)   NOT NULL,   -- PIECE_RATE: CN may; DAILY: thợ cắt, QA/QC; MONTHLY: còn lại
-    CurrentGradeCode VARCHAR(5)    NULL CONSTRAINT FK_Employee_Grade REFERENCES dbo.GradeLevelCode(GradeCode), -- chỉ CN may, tổ phó & tổ trưởng
+    CurrentGradeCode CHAR(1)       NULL CONSTRAINT CK_Employee_Grade CHECK (CurrentGradeCode IN ('A','B','C','D')), -- chỉ CN may, tổ phó & tổ trưởng
     AttendanceCode   INT           NULL,       -- mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong)
     StartDate        DATE          NOT NULL,
     ResignDate       DATE          NULL,
@@ -229,8 +228,8 @@ CREATE TABLE dbo.GradeEvaluation (
     WorkerId          INT           NOT NULL CONSTRAINT FK_GradeEval_Worker REFERENCES dbo.Employee(EmployeeId),
     ProposedBy        INT           NOT NULL CONSTRAINT FK_GradeEval_ProposedBy REFERENCES dbo.Employee(EmployeeId),
     TeamId            INT           NULL CONSTRAINT FK_GradeEval_Team REFERENCES dbo.Team(TeamId),
-    CurrentGradeCode  VARCHAR(5)    NULL CONSTRAINT FK_GradeEval_Current REFERENCES dbo.GradeLevelCode(GradeCode),
-    ProposedGradeCode VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeEval_Proposed REFERENCES dbo.GradeLevelCode(GradeCode),
+    CurrentGradeCode  CHAR(1)       NULL,
+    ProposedGradeCode CHAR(1)       NOT NULL,
     Reason            NVARCHAR(500) NOT NULL,
     RecentDefectCount INT           NOT NULL CONSTRAINT DF_GradeEval_Defects DEFAULT 0,
     EvaluationDate    DATE          NOT NULL,
@@ -239,6 +238,7 @@ CREATE TABLE dbo.GradeEvaluation (
     ConsideredAt      DATETIME2(0)  NULL,
     DecisionNote      NVARCHAR(500) NULL,
     CreatedAt         DATETIME2(0)  NOT NULL CONSTRAINT DF_GradeEval_CreatedAt DEFAULT (dbo.fn_VnNow()),
+    CONSTRAINT CK_GradeEval_Grades CHECK (ProposedGradeCode IN ('A','B','C','D') AND (CurrentGradeCode IS NULL OR CurrentGradeCode IN ('A','B','C','D'))),
     CONSTRAINT CK_GradeEval_Status CHECK (Status IN ('SUBMITTED','APPLIED','NOT_APPLIED')),
     CONSTRAINT CK_GradeEval_Applied CHECK (Status <> 'APPLIED' OR (EffectiveDate IS NOT NULL AND ConsideredAt IS NOT NULL)),
     CONSTRAINT UQ_GradeEval UNIQUE (WorkerId, ProposedBy, EvaluationDate)
@@ -296,7 +296,9 @@ CREATE TABLE dbo.Customer (
     CustomerName    NVARCHAR(200) NOT NULL CONSTRAINT UQ_Customer_Name UNIQUE,
     Phone           VARCHAR(15)   NULL,
     Email           VARCHAR(100)  NULL,
-    DefaultAddress  NVARCHAR(500) NULL
+    DefaultAddress  NVARCHAR(500) NULL,
+    Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_Customer_Status DEFAULT 'ACTIVE',
+    CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
 -- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chỉ chọn Category (loại chi tiết);
@@ -310,6 +312,8 @@ CREATE TABLE dbo.Material (
                           AS VARCHAR(10))) PERSISTED,
     Category      VARCHAR(15)   NOT NULL,
     Unit          NVARCHAR(20)  NOT NULL,     -- m, kg, cuộn, cái, cuộn chỉ…
+    LengthCm      DECIMAL(7,2)  NULL,         -- chiều dài một cuộn / tấm NVL, cm (28/10)
+    WidthCm       DECIMAL(7,2)  NULL,         -- chiều rộng, với vải là khổ vải, cm (28/10)
     Status        VARCHAR(20)   NOT NULL CONSTRAINT DF_Material_Status DEFAULT 'ACTIVE',
     CreatedAt     DATETIME2(0)  NOT NULL CONSTRAINT DF_Material_CreatedAt DEFAULT (dbo.fn_VnNow()),
     -- vải: vải chính, vải lót, mex, bo; phụ liệu: chỉ, khóa, cúc, cúc dập, chun, dây / viền, nhãn, thẻ treo, bông / đệm, bao bì, khác
@@ -317,6 +321,7 @@ CREATE TABLE dbo.Material (
                                                         'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE',
                                                         'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')),
     CONSTRAINT CK_Material_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
+    CONSTRAINT CK_Material_Size   CHECK ((LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)),
     CONSTRAINT UQ_Material_NameType UNIQUE (MaterialName, MaterialType, Color)
 );
 
@@ -352,8 +357,11 @@ CREATE TABLE dbo.ProductVariant (
     ProductId         INT           NOT NULL CONSTRAINT FK_PV_Product REFERENCES dbo.Product(ProductId),
     Color             NVARCHAR(50)  NOT NULL,        -- màu sản phẩm
     SizeCode          VARCHAR(10)   NOT NULL,        -- XS, S, M, L, XL, XXL, 3XL, FREE…
+    LengthCm          DECIMAL(7,2)  NULL,            -- chiều dài thành phẩm theo size (28/10)
+    WidthCm           DECIMAL(7,2)  NULL,            -- chiều rộng thành phẩm theo size (28/10)
     Status            VARCHAR(20)   NOT NULL CONSTRAINT DF_PV_Status DEFAULT 'ACTIVE',
     CONSTRAINT CK_PV_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
+    CONSTRAINT CK_PV_Size   CHECK ((LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)),
     CONSTRAINT UQ_PV UNIQUE (ProductId, Color, SizeCode),
     CONSTRAINT UQ_PV_IdProduct UNIQUE (ProductVariantId, ProductId)   -- cho FK ghép ở ProductComponentMaterial và OrderLine
 );
@@ -367,7 +375,6 @@ CREATE TABLE dbo.ProductComponent (
     ComponentName       NVARCHAR(100) NOT NULL,
     ComponentType       VARCHAR(10)   NOT NULL,
     PiecesPerGarment    SMALLINT      NOT NULL CONSTRAINT DF_PC_Pieces DEFAULT 1,   -- số chi tiết trên 1 sản phẩm, vd tay áo = 2
-    SortOrder           SMALLINT      NOT NULL CONSTRAINT DF_PC_Sort DEFAULT 0,
     Status              VARCHAR(20)   NOT NULL CONSTRAINT DF_PC_Status DEFAULT 'ACTIVE',
     CONSTRAINT CK_PC_Type   CHECK (ComponentType IN ('PANEL','TRIM')),
     CONSTRAINT CK_PC_Pieces CHECK (PiecesPerGarment > 0),
@@ -377,7 +384,7 @@ CREATE TABLE dbo.ProductComponent (
 );
 
 -- Định mức NVL theo biến thể (23/10, thay OrderMaterialNorm): với mỗi biến thể (màu × size) và mỗi thành phần,
--- dùng NVL nào (đã gồm màu, vì màu là cột của Material), bao nhiêu cho 1 sản phẩm, kích thước chi tiết. Một thành phần có thể dùng nhiều NVL
+-- dùng NVL nào (đã gồm màu, vì màu là cột của Material), kích thước chi tiết (28/10 bỏ QtyPerGarment: không ghi lượng mét). Một thành phần có thể dùng nhiều NVL
 -- (vd cổ áo = vải chính + mex). Ghi tường minh từng biến thể, không dùng NULL = "mọi màu / mọi size";
 -- màn hình nhập có nút "áp dụng cho các size / màu khác" để đỡ nhập tay.
 -- ProductId lặp lại để FK ghép bảo đảm biến thể và thành phần cùng một mã hàng.
@@ -387,15 +394,11 @@ CREATE TABLE dbo.ProductComponentMaterial (
     ProductVariantId    INT            NOT NULL,
     ProductComponentId  INT            NOT NULL,
     MaterialId          INT            NOT NULL CONSTRAINT FK_PCM_Material REFERENCES dbo.Material(MaterialId),
-    QtyPerGarment       DECIMAL(18,4)  NOT NULL,     -- tổng cho 1 sản phẩm (đã tính số chi tiết), theo đơn vị của NVL: m vải, cuộn chỉ, cái khóa…
-    WastagePercent      DECIMAL(5,2)   NOT NULL CONSTRAINT DF_PCM_Wastage DEFAULT 0,
     LengthCm            DECIMAL(7,2)   NULL,         -- kích thước chi tiết (nếu cần), vd dài tay áo
     WidthCm             DECIMAL(7,2)   NULL,
     SpecNote            NVARCHAR(200)  NULL,         -- ghi chú quy cách khác
     CONSTRAINT FK_PCM_Variant   FOREIGN KEY (ProductVariantId, ProductId)   REFERENCES dbo.ProductVariant(ProductVariantId, ProductId),
     CONSTRAINT FK_PCM_Component FOREIGN KEY (ProductComponentId, ProductId) REFERENCES dbo.ProductComponent(ProductComponentId, ProductId),
-    CONSTRAINT CK_PCM_Qty     CHECK (QtyPerGarment > 0),
-    CONSTRAINT CK_PCM_Wastage CHECK (WastagePercent BETWEEN 0 AND 100),
     CONSTRAINT CK_PCM_Size    CHECK ((LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)),
     CONSTRAINT UQ_PCM UNIQUE (ProductVariantId, ProductComponentId, MaterialId)
 );
@@ -443,7 +446,7 @@ CREATE INDEX IX_OrderLine_Product ON dbo.OrderLine(ProductId);
 -- NVL của đơn (18/10): mỗi dòng = một NVL + màu mà đơn cần. Là bảng trung tâm của phần NVL:
 -- phần khách cấp (màn 1.2), dòng đơn mua và dòng phiếu nhập đều trỏ về đây.
 -- 23/10: định mức chuyển sang ProductComponentMaterial (theo mã hàng). Hai bên khớp theo MaterialId (đã gồm màu),
--- không có FK; số theo định mức để đối chiếu với RequiredQty xem vw_OrderMaterialNorm.
+-- không có FK. RequiredQty nhập tay theo số khách báo.
 -- Nguồn suy ra từ số lượng: CustomerQty = 0 là tự mua, CustomerQty >= RequiredQty là khách cấp, còn lại là cả hai.
 CREATE TABLE dbo.OrderMaterial (
     OrderMaterialId      INT IDENTITY(1,1) CONSTRAINT PK_OrderMaterial PRIMARY KEY,
@@ -558,7 +561,6 @@ GO
    SHORT_DELIVERY                Hệ thống (phiếu nhập thiếu) Quản đốc      không
    MATERIAL_REQUISITION          Tổ trưởng cắt / may         Thủ kho       không  (yêu cầu NVL)
    SEMI_FINISHED_REQUISITION     Tổ trưởng may               Thủ kho       không  (yêu cầu BTP)
-   OVERTIME                      Hệ thống (KPI không đạt)    Tổ trưởng     có     (thiếu ít: tự duyệt; thiếu nhiều: tổ trưởng quyết định)
    Quy tắc ai tạo / ai xử lý nằm ở backend. Lịch sử đổi trạng thái ghi vào AuditLog.
    ===================================================================================== */
 
@@ -588,7 +590,7 @@ CREATE TABLE dbo.Request (
     UpdatedAt            DATETIME2(0)   NULL,
     RowVer               ROWVERSION,
     CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION',
-        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','OVERTIME')),
+        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION')),
     CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
     CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH'))
@@ -971,7 +973,7 @@ CREATE TABLE dbo.DefectRecord (
     UpdatedAt           DATETIME2(0)   NULL,
     RowVer              ROWVERSION,
     CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP')),
-    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER','END_OF_ORDER_MISMATCH')),   -- END_OF_ORDER_MISMATCH: hệ thống ghi khi kiểm cuối đơn lệch
+    CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')),
     CONSTRAINT CK_DR_Other  CHECK (DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL),
     CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CANCELLED','LOCKED')),
     CONSTRAINT CK_DR_Rate   CHECK (DefectType = 'REWORK' OR PieceRateId IS NOT NULL)
@@ -1045,9 +1047,7 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
     RowVer              ROWVERSION,
-    -- PENDING: Quản đốc lập, chờ Thủ kho lập phiếu xuất; PENDING_APPROVAL: Thủ kho đã chốt số xuất, chờ Quản đốc duyệt;
-    -- APPROVED: đã duyệt, chờ Thủ kho in, chụp ảnh và xuất. Quản đốc trả lại → về PENDING (lý do ở RejectReason).
-    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','PENDING_APPROVAL','APPROVED','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
+    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_DN_Delivered CHECK (Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL),
     CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
@@ -2252,10 +2252,10 @@ FROM (
     SELECT i.WarehouseType, l.MaterialId, l.OrderLineId, l.ProductComponentMaterialId, 0, l.IssuedQty
     FROM dbo.MaterialIssue i JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = i.MaterialIssueId
     WHERE i.Status = 'PENDING_RECEIPT'
-    UNION ALL      -- phiếu xuất thành phẩm chưa xuất (chờ lập phiếu xuất, chờ duyệt, đã duyệt chờ xuất)
+    UNION ALL      -- phiếu xuất thành phẩm đang chờ Thủ kho xuất
     SELECT 'FINISHED', NULL, l.OrderLineId, NULL, 0, l.IssueQty
     FROM dbo.DispatchNote d JOIN dbo.DispatchNoteLine l ON l.DispatchNoteId = d.DispatchNoteId
-    WHERE d.Status IN ('PENDING','PENDING_APPROVAL','APPROVED')
+    WHERE d.Status = 'PENDING'
 ) x
 GROUP BY x.WarehouseType, x.MaterialId, x.OrderLineId, x.ProductComponentMaterialId;
 GO
@@ -2338,43 +2338,31 @@ JOIN dbo.Material m ON m.MaterialId = sb.MaterialId
 WHERE sb.WarehouseType = 'MATERIAL';
 GO
 
--- NVL của đơn theo định mức (23/10): Σ số lượng dòng đơn × định mức biến thể × (1 + hao hụt), theo NVL + màu,
--- đặt cạnh RequiredQty khách báo (OrderMaterial). FULL JOIN để thấy cả hai lệch:
--- OrderMaterialId NULL = định mức cần NVL mà đơn chưa khai; NormQty = 0 = đơn khai NVL mà định mức không dùng
-CREATE VIEW dbo.vw_OrderMaterialNorm
+-- Vải ước tính cho dòng lệnh cắt bù (28/10): chỉ dòng WorkOrderLine có ProductComponentMaterialId (PlannedQty = số chi tiết cần cắt lại).
+-- Mỗi chi tiết tính như một hình chữ nhật ProductComponentMaterial.LengthCm × WidthCm; số miếng xếp được ngang khổ vải
+-- Material.WidthCm = làm tròn xuống (khổ / rộng chi tiết); số hàng = làm tròn lên (số chi tiết / số miếng một hàng);
+-- số mét = số hàng × dài chi tiết / 100. Chỉ là ước lượng (không xoay chi tiết, không lồng các chi tiết vào nhau).
+-- NeedMeters NULL = thiếu kích thước chi tiết hoặc khổ vải, hoặc chi tiết rộng hơn khổ vải (PiecesPerRow = 0).
+-- AvailableQty lấy từ vw_StockBalance kho NVL; EnoughStock chỉ so khi đơn vị NVL là m
+CREATE VIEW dbo.vw_RecutFabricNeed
 AS
-WITH n AS (
-    SELECT ol.OrderId, pcm.MaterialId,
-           CAST(SUM(ol.OrderedQty * pcm.QtyPerGarment * (1 + pcm.WastagePercent / 100)) AS DECIMAL(18,3)) AS NormQty
-    FROM dbo.OrderLine ol
-    JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductVariantId = ol.ProductVariantId
-    GROUP BY ol.OrderId, pcm.MaterialId
-)
-SELECT  COALESCE(om.OrderId, n.OrderId)             AS OrderId,
-        COALESCE(om.MaterialId, n.MaterialId)       AS MaterialId,
-        om.OrderMaterialId,
-        om.RequiredQty,
-        ISNULL(n.NormQty, 0)                        AS NormQty,
-        ISNULL(om.RequiredQty, 0) - ISNULL(n.NormQty, 0) AS DiffQty   -- âm = khách báo thiếu so với định mức
-FROM n
-FULL JOIN dbo.OrderMaterial om
-       ON om.OrderId = n.OrderId AND om.MaterialId = n.MaterialId;
-GO
-
--- Vải cần cho lệnh cắt (UC19 lưu lệnh cắt, UC40 điền sẵn số cấp, UC51 so với vải thực dùng):
--- chỉ thành phần PANEL và NVL loại vải. Dòng cả bộ: PlannedQty × định mức; dòng cắt bù 1 dòng định mức: PlannedQty × định mức / số chi tiết
-CREATE VIEW dbo.vw_WorkOrderFabricNeed
-AS
-SELECT  wol.WorkOrderId, pcm.MaterialId,
-        CAST(SUM(wol.PlannedQty * pcm.QtyPerGarment * (1 + pcm.WastagePercent / 100)
-                 / CASE WHEN wol.ProductComponentMaterialId IS NULL THEN 1 ELSE pc.PiecesPerGarment END) AS DECIMAL(18,3)) AS NeedQty
+SELECT  wol.WorkOrderLineId, wol.WorkOrderId, wol.OrderLineId, wol.ProductComponentMaterialId,
+        pcm.ProductComponentId, pcm.MaterialId, m.Unit, wol.PlannedQty AS Pieces,
+        pcm.LengthCm AS PieceLengthCm, pcm.WidthCm AS PieceWidthCm, m.WidthCm AS FabricWidthCm,
+        x.PiecesPerRow,
+        x.NeedMeters,
+        sb.AvailableQty,
+        CASE WHEN x.NeedMeters IS NULL OR m.Unit <> N'm' THEN NULL
+             WHEN ISNULL(sb.AvailableQty, 0) >= x.NeedMeters THEN CAST(1 AS BIT) ELSE CAST(0 AS BIT) END AS EnoughStock
 FROM dbo.WorkOrderLine wol
-JOIN dbo.OrderLine ol      ON ol.OrderLineId = wol.OrderLineId
-JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductVariantId = ol.ProductVariantId
-                                     AND (wol.ProductComponentMaterialId IS NULL OR pcm.ProductComponentMaterialId = wol.ProductComponentMaterialId)
-JOIN dbo.ProductComponent pc ON pc.ProductComponentId = pcm.ProductComponentId AND pc.ComponentType = 'PANEL'
-JOIN dbo.Material m          ON m.MaterialId = pcm.MaterialId AND m.MaterialType = 'FABRIC'
-GROUP BY wol.WorkOrderId, pcm.MaterialId;
+JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = wol.ProductComponentMaterialId
+JOIN dbo.Material m                   ON m.MaterialId = pcm.MaterialId
+CROSS APPLY (SELECT CASE WHEN pcm.WidthCm > 0 AND m.WidthCm >= pcm.WidthCm THEN CAST(FLOOR(m.WidthCm / pcm.WidthCm) AS INT) END AS PiecesPerRow) pr
+CROSS APPLY (SELECT pr.PiecesPerRow,
+                    CASE WHEN pr.PiecesPerRow > 0 AND pcm.LengthCm > 0
+                         THEN CAST(CEILING(wol.PlannedQty * 1.0 / pr.PiecesPerRow) * pcm.LengthCm / 100.0 AS DECIMAL(18,3)) END AS NeedMeters) x
+LEFT JOIN dbo.vw_StockBalance sb ON sb.WarehouseType = 'MATERIAL' AND sb.MaterialId = pcm.MaterialId
+WHERE wol.ProductComponentMaterialId IS NOT NULL;
 GO
 
 -- Trần sản lượng (25/10) theo công nhân × dòng đơn × công đoạn = số lần đã giao − đã thu hồi (đã xác nhận);
@@ -2639,12 +2627,6 @@ INSERT dbo.Role (RoleCode, RoleName, IsProduction) VALUES
  ('WORKER',           N'Công nhân',            1);
 -- Cách tính lương (Employee.PayType) đặt theo từng người khi tạo: tổ may PIECE_RATE, tổ cắt và QA/QC DAILY, còn lại MONTHLY.
 
-INSERT dbo.GradeLevelCode (GradeCode, GradeName, SortOrder) VALUES
- ('A', N'Bậc A – Giỏi',       1),
- ('B', N'Bậc B – Khá',        2),
- ('C', N'Bậc C – Trung bình', 3),
- ('D', N'Bậc D – Yếu',        4);
-
 INSERT dbo.GradeLevel (GradeCode, GradeName, MonthlyAmount, EffectiveDate) VALUES
  ('A', N'Bậc A – Giỏi',      600000, '2026-01-01'),
  ('B', N'Bậc B – Khá',       400000, '2026-01-01'),
@@ -2664,7 +2646,6 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('CUT_SURPLUS_PERCENT',       N'3',     N'% cắt vượt số đặt cho phép (CHƯA CHỐT với xưởng)'),
  ('FUEL_NORM_TOLERANCE_PERCENT', N'15',  N'Cảnh báo xăng vượt định mức'),
  ('REQUEST_MAX_PHOTOS',        N'5',     N'Số ảnh tối đa trên một đơn từ'),
- ('KPI_OT_AUTO_THRESHOLD_PCT', N'10',    N'KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu nhiều hơn: tổ trưởng quyết định'),
  -- Quy tắc tính công lấy theo ca "Hành Chính" (CA00001) đang cài trong Ronald Jack Pro
  ('WORK_START_TIME',           N'07:30', N'Giờ vào làm (ca Hành Chính RJ)'),
  ('WORK_END_TIME',             N'16:30', N'Giờ tan làm; quẹt ra sau giờ này tính tăng ca'),
@@ -2862,6 +2843,8 @@ INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit) VALUES
  ('DEMO-VAI04',  N'Vải gió 2 lớp DEMO', N'Be',    'MAIN_FABRIC', N'm'),
  ('DEMO-CHI02',  N'Chỉ may 40/2 DEMO',  N'Xanh',  'THREAD',      N'cuộn'),
  ('DEMO-CHI03',  N'Chỉ may 40/2 DEMO',  N'Be',    'THREAD',      N'cuộn');
+-- Vải gió: khổ 150 cm, cuộn dài 50 m
+UPDATE dbo.Material SET WidthCm = 150, LengthCm = 5000 WHERE MaterialCode LIKE 'DEMO-VAI%';
 DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
         @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
         @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
@@ -2875,50 +2858,46 @@ DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'D
 
 -- Biến thể, thành phần và định mức (23/10). Phải có trước OrderLine (FK_OrderLine_Variant).
 -- Xanh – S chưa có trong đơn nào: biến thể khai báo trước, đơn sau mới dùng.
-INSERT dbo.ProductVariant (ProductId, Color, SizeCode) VALUES
- (@p1, N'Đen', 'S'), (@p1, N'Đen', 'M'), (@p1, N'Đen', 'L'),
- (@p1, N'Xanh', 'S'), (@p1, N'Xanh', 'M'), (@p1, N'Xanh', 'L'),
- (@p2, N'Be', 'M'), (@p2, N'Be', 'L');
+INSERT dbo.ProductVariant (ProductId, Color, SizeCode, LengthCm, WidthCm) VALUES
+ (@p1, N'Đen', 'S', 66, 50), (@p1, N'Đen', 'M', 68, 52), (@p1, N'Đen', 'L', 70, 54),
+ (@p1, N'Xanh', 'S', 66, 50), (@p1, N'Xanh', 'M', 68, 52), (@p1, N'Xanh', 'L', 70, 54),
+ (@p2, N'Be', 'M', 45, 40), (@p2, N'Be', 'L', 47, 42);
 
-INSERT dbo.ProductComponent (ProductId, ComponentName, ComponentType, PiecesPerGarment, SortOrder) VALUES
- (@p1, N'Thân trước', 'PANEL', 2, 1), (@p1, N'Thân sau', 'PANEL', 1, 2), (@p1, N'Tay áo', 'PANEL', 2, 3),
- (@p1, N'Khóa kéo',   'TRIM',  1, 4), (@p1, N'Nhãn',     'TRIM',  1, 5), (@p1, N'Chỉ may', 'TRIM',  1, 6),
- (@p2, N'Ống quần',   'PANEL', 2, 1), (@p2, N'Chỉ may',  'TRIM',  1, 2);
+INSERT dbo.ProductComponent (ProductId, ComponentName, ComponentType, PiecesPerGarment) VALUES
+ (@p1, N'Thân trước', 'PANEL', 2), (@p1, N'Thân sau', 'PANEL', 1), (@p1, N'Tay áo', 'PANEL', 2),
+ (@p1, N'Khóa kéo',   'TRIM',  1), (@p1, N'Nhãn',     'TRIM',  1), (@p1, N'Chỉ may', 'TRIM',  1),
+ (@p2, N'Ống quần',   'PANEL', 2), (@p2, N'Chỉ may',  'TRIM',  1);
 
--- Vải theo chi tiết × size: lượng vải và chiều dài chi tiết tăng theo size.
+-- Vải theo chi tiết × size: chiều dài chi tiết tăng theo size.
 -- Màu vải: theo màu áo, riêng biến thể Xanh phối tay áo vải Trắng (vd Xanh – S: tay dài 58 cm, vải Trắng;
 -- Đen – M: tay dài 60 cm, vải Đen)
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId,
-                                     QtyPerGarment, WastagePercent, LengthCm)
+INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId, LengthCm, WidthCm)
 SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
        CASE WHEN pv.Color = N'Xanh' AND pc.ComponentName = N'Tay áo' THEN @mVaiTrang
             WHEN pv.Color = N'Xanh' THEN @mVaiXanh ELSE @mVai END,
-       s.Qty, 3, s.LengthCm
-FROM (VALUES (N'Thân trước', 'S', 0.48, 66), (N'Thân trước', 'M', 0.52, 68), (N'Thân trước', 'L', 0.56, 70),
-             (N'Thân sau',   'S', 0.42, 66), (N'Thân sau',   'M', 0.45, 68), (N'Thân sau',   'L', 0.49, 70),
-             (N'Tay áo',     'S', 0.36, 58), (N'Tay áo',     'M', 0.39, 60), (N'Tay áo',     'L', 0.42, 62))
-     s (ComponentName, SizeCode, Qty, LengthCm)
+       s.LengthCm, s.WidthCm
+FROM (VALUES (N'Thân trước', 'S', 66, 30), (N'Thân trước', 'M', 68, 31), (N'Thân trước', 'L', 70, 32),
+             (N'Thân sau',   'S', 66, 52), (N'Thân sau',   'M', 68, 54), (N'Thân sau',   'L', 70, 56),
+             (N'Tay áo',     'S', 58, 40), (N'Tay áo',     'M', 60, 41), (N'Tay áo',     'L', 62, 42))
+     s (ComponentName, SizeCode, LengthCm, WidthCm)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = s.ComponentName
 JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1 AND pv.SizeCode = s.SizeCode;
 
 -- Phụ liệu áo: như nhau mọi size; chỉ theo màu áo (Đen / Xanh), khóa và nhãn không phân màu
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId,
-                                     QtyPerGarment, WastagePercent)
+INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId)
 SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
-       CASE WHEN t.ByColor = 1 AND pv.Color = N'Xanh' THEN @mChiXanh ELSE t.MaterialId END, t.Qty, t.Wastage
-FROM (VALUES (N'Khóa kéo', @mKhoa, 1.0, 0, 0), (N'Nhãn', @mNhan, 1.0, 1, 0), (N'Chỉ may', @mChi, 0.1, 5, 1))
-     t (ComponentName, MaterialId, Qty, Wastage, ByColor)
+       CASE WHEN t.ByColor = 1 AND pv.Color = N'Xanh' THEN @mChiXanh ELSE t.MaterialId END
+FROM (VALUES (N'Khóa kéo', @mKhoa, 0), (N'Nhãn', @mNhan, 0), (N'Chỉ may', @mChi, 1))
+     t (ComponentName, MaterialId, ByColor)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = t.ComponentName
 JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1;
 
 -- Quần short
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId,
-                                     QtyPerGarment, WastagePercent, LengthCm)
+INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId, LengthCm, WidthCm)
 SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId, t.MaterialId,
-       CASE WHEN pc.ComponentType = 'PANEL' AND pv.SizeCode = 'L' THEN t.Qty + 0.05 ELSE t.Qty END,
-       t.Wastage,
-       CASE WHEN pc.ComponentType = 'PANEL' THEN CASE pv.SizeCode WHEN 'M' THEN 45 ELSE 47 END END
-FROM (VALUES (N'Ống quần', @mVaiBe, 0.55, 3), (N'Chỉ may', @mChiBe, 0.05, 5)) t (ComponentName, MaterialId, Qty, Wastage)
+       CASE WHEN pc.ComponentType = 'PANEL' THEN CASE pv.SizeCode WHEN 'M' THEN 45 ELSE 47 END END,
+       CASE WHEN pc.ComponentType = 'PANEL' THEN CASE pv.SizeCode WHEN 'M' THEN 28 ELSE 30 END END
+FROM (VALUES (N'Ống quần', @mVaiBe), (N'Chỉ may', @mChiBe)) t (ComponentName, MaterialId)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p2 AND pc.ComponentName = t.ComponentName
 JOIN dbo.ProductVariant pv   ON pv.ProductId = @p2;
 
@@ -3711,6 +3690,8 @@ DECLARE @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNM
 DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
         @o1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
         @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
+-- Vải gió: khổ 150 cm, cuộn dài 50 m
+UPDATE dbo.Material SET WidthCm = 150, LengthCm = 5000 WHERE MaterialCode LIKE 'DEMO-VAI%';
 DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
         @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
         @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI02'),
@@ -3870,12 +3851,12 @@ VALUES ('TP-DEMO-004', @o1, @p1, @qaqc, '2026-10-26 16:00:00', 'PENDING');
 INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty)
 SELECT FgHandoverId, @lM, 60 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-004';
 
--- XH-DEMO-001 chờ Thủ kho lập phiếu xuất; XH-DEMO-003 Thủ kho đã lập, chờ Quản đốc duyệt;
+-- XH-DEMO-001 và XH-DEMO-003 chờ Thủ kho xuất;
 -- XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
 INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt) VALUES
  ('XH-DEMO-001', @o1, '2026-10-30', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-26 15:00:00', NULL, NULL),
  ('XH-DEMO-002', @o1, '2026-10-27', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-25 15:00:00', @thukho, '2026-10-26 09:00:00'),
- ('XH-DEMO-003', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3 (Thủ kho đã chốt số xuất, chờ Quản đốc duyệt)', 'PENDING_APPROVAL', '2026-10-27 08:00:00', NULL, NULL);
+ ('XH-DEMO-003', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3', 'PENDING', '2026-10-27 08:00:00', NULL, NULL);
 INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, v.OrderLineId, v.Qty
 FROM dbo.DispatchNote d

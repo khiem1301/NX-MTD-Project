@@ -1,5 +1,10 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
 
+export const GRADE_OPTIONS = ['A', 'B', 'C', 'D'].map((value) => ({
+  value,
+  label: `Bậc ${value}`,
+}));
+
 export const EVAL_STATUS = {
   SUBMITTED: 'SUBMITTED',
   APPLIED: 'APPLIED',
@@ -16,21 +21,6 @@ export const GR_LABELS = {
   title: 'Bậc thợ',
   evaluationsTab: 'Đề xuất bậc',
   levelsTab: 'Mức tiền bậc',
-  codesTab: 'Danh mục bậc',
-  addCode: 'Thêm bậc',
-  editCode: 'Sửa bậc',
-  codeHint: 'Bậc đã có người, đề xuất hoặc tiền bậc dùng thì không xóa được, chỉ ngừng dùng (không gán thêm được nữa).',
-  codeCode: 'Mã bậc (chữ hoa / số, tối đa 5 ký tự)',
-  sortOrder: 'Thứ tự',
-  active: 'Đang dùng',
-  inactive: 'Ngừng dùng',
-  inUse: 'Đã được dùng',
-  deactivate: 'Ngừng dùng',
-  reactivate: 'Dùng lại',
-  deleteConfirm: 'Xóa bậc này?',
-  deleteLevelConfirm: 'Xóa mức tiền bậc chưa hiệu lực này?',
-  editLevel: 'Sửa mức tiền bậc',
-  futureOnlyHint: 'Mức đã có hiệu lực là lịch sử lương, không sửa hoặc xóa.',
   propose: 'Đề xuất bậc',
   setDirect: 'Đặt bậc trực tiếp',
   setDirectHint: 'Đặt bậc ngay, không cần tổ trưởng đề xuất. Đề xuất đang chờ của công nhân này (nếu có) sẽ bị đóng lại.',
@@ -70,8 +60,5 @@ export const GR_MESSAGES = {
   applied: 'Đã áp dụng bậc thợ.',
   notApplied: 'Đã ghi nhận không áp dụng bậc thợ.',
   levelSaved: 'Đã lưu mức tiền bậc.',
-  levelDeleted: 'Đã xóa mức tiền bậc.',
-  codeSaved: 'Đã lưu bậc thợ.',
-  codeDeleted: 'Đã xóa bậc thợ.',
   levelHint: 'Đổi tiền bậc = thêm một dòng mới với ngày hiệu lực mới, các dòng cũ giữ làm lịch sử.',
 } as const;

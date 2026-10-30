@@ -11,6 +11,9 @@ export type Material = {
   unit: string;
   /** Màu NVL (26/10); '' = không phân màu. Cùng loại vải khác màu là hai NVL. */
   color: string;
+  /** Chiều dài cuộn / tấm và chiều rộng (khổ vải), cm; dùng ước tính vải cắt bù. */
+  lengthCm?: number | null;
+  widthCm?: number | null;
   status: string;
   createdAt: string;
 };
@@ -24,6 +27,8 @@ export type SaveMaterialPayload = {
   category: string;
   unit: string;
   color?: string;
+  lengthCm?: number | null;
+  widthCm?: number | null;
 };
 
 export type OrderMaterial = {
@@ -43,8 +48,6 @@ export type OrderMaterial = {
   purchaseQty: number | null;
   source: string | null;
   note: string | null;
-  /** Số cần theo định mức của mã hàng × số đặt (chỉ đọc). */
-  normRequiredQty: number;
   receivedQty: number;
 };
 

@@ -19,6 +19,4 @@ public partial class GradeLevel
     public DateOnly EffectiveDate { get; set; }
 
     public DateTime CreatedAt { get; set; }
-
-    public virtual GradeLevelCode GradeCodeNavigation { get; set; } = null!;
 }

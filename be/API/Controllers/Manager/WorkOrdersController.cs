@@ -20,16 +20,6 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _workOrders.GetByIdAsync(id, null, ct));
 
-    /// <summary>Xem trước vải cần / khả dụng / thiếu cho kế hoạch đang nhập (không lưu).</summary>
-    [HttpPost("fabric-preview")]
-    public async Task<IActionResult> PreviewFabric([FromBody] SaveWorkOrderDto dto, [FromQuery] int? exceptWorkOrderId, CancellationToken ct) =>
-        this.ToResponse(await _workOrders.PreviewFabricAsync(dto, exceptWorkOrderId, ct));
-
-    /// <summary>Vải theo đơn của các lệnh cắt đang chạy.</summary>
-    [HttpGet("fabric-by-order")]
-    public async Task<IActionResult> GetFabricByOrder([FromQuery] int? orderId, CancellationToken ct) =>
-        this.ToResponse(await _workOrders.GetFabricByOrderAsync(orderId, ct));
-
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CreateAsync(dto, ct));

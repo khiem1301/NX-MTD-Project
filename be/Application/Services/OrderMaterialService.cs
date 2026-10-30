@@ -7,18 +7,17 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC09 (phần NVL): NVL khách cấp / phải mua của đơn; số cần theo định mức đọc từ định mức của mã hàng (UC10).</summary>
+/// <summary>UC09 (phần NVL): NVL khách cấp / phải mua của đơn; số cần nhập tay theo số khách báo.</summary>
 public sealed class OrderMaterialService : IOrderMaterialService
 {
     private const string IncomingLink = "/warehouse/incoming-materials";
 
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notifier;
-    private readonly FabricPlanner _planner;
 
-    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, FabricPlanner planner)
+    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier)
     {
-        _uow = uow; _notifier = notifier; _planner = planner;
+        _uow = uow; _notifier = notifier;
     }
 
     private IQueryable<OrderMaterial> OrderMaterials => _uow.Repository<OrderMaterial>().Query();
@@ -30,13 +29,11 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .OrderBy(om => om.Material.MaterialType).ThenBy(om => om.Material.MaterialCode).ThenBy(om => om.Material.Color)
             .ToListAsync(ct);
 
-        var norm = await _planner.GetOrderNormAsync(orderId, ct);
         var received = await ReceivedQtyAsync(orderId, ct);
         var deliveries = await ReceivedCountsAsync(orderId, ct);
 
         return Result<IReadOnlyList<OrderMaterialDto>>.Success(rows
-            .Select(om => ToDto(om, norm.GetValueOrDefault(om.MaterialId),
-                received.GetValueOrDefault(om.OrderMaterialId), deliveries.GetValueOrDefault(om.OrderMaterialId)))
+            .Select(om => ToDto(om, received.GetValueOrDefault(om.OrderMaterialId), deliveries.GetValueOrDefault(om.OrderMaterialId)))
             .ToList());
     }
 
@@ -172,10 +169,10 @@ public sealed class OrderMaterialService : IOrderMaterialService
         await _uow.Repository<VwOrderMaterialDelivery>().Query().AsNoTracking().Where(v => v.OrderId == orderId)
             .ToDictionaryAsync(v => v.OrderMaterialId, v => v.ReceivedCount, ct);
 
-    private static OrderMaterialDto ToDto(OrderMaterial om, decimal normQty, decimal receivedQty, int receivedCount) => new(
+    private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount) => new(
         om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
         (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, normQty, receivedQty);
+        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty);
 
     private static string MaterialLabel(Material m) =>
         string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";

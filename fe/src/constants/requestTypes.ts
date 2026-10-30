@@ -9,7 +9,6 @@ export const REQUEST_TYPE = {
   ShortDelivery: 'ShortDelivery',
   MaterialRequisition: 'MaterialRequisition',
   SemiFinishedRequisition: 'SemiFinishedRequisition',
-  Overtime: 'Overtime',
 } as const;
 export type RequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE];
 
@@ -25,7 +24,6 @@ export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   ShortDelivery: 'Thiếu hàng khi nhập',
   MaterialRequisition: 'Xin NVL',
   SemiFinishedRequisition: 'Xin BTP',
-  Overtime: 'Tăng ca',
 };
 
 export const REQUEST_STATUS = {

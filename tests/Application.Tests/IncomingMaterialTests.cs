@@ -78,7 +78,7 @@ public class IncomingMaterialTests
             MaterialReceipt = new MaterialReceipt { Status = status },
         });
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new FabricPlanner(_uow));
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
     private IncomingMaterialService Incoming() => new(_uow);
 
     // ---------- Đơn chờ khai báo NVL ----------

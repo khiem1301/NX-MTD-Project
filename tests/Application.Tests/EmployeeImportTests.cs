@@ -14,6 +14,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>KH-22 / UC17, UC22: import nhân viên từ Excel (xem trước MSG24 rồi nhập) và xem AuditLog.</summary>
+[Collection(ExcelTestCollection.Name)]
 public class EmployeeImportTests
 {
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();

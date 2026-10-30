@@ -23,7 +23,7 @@ public sealed class SaveSupplierDtoValidator : AbstractValidator<SaveSupplierDto
         RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
             .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
         RuleFor(x => x.Address).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
-        RuleFor(x => x.MaterialTypes).MaximumLength(200);
+        RuleFor(x => x.MaterialTypes).NotEmpty().WithMessage(Messages.Required("loại NVL cung cấp")).MaximumLength(200);
         RuleFor(x => x.Note).MaximumLength(500);
     }
 }

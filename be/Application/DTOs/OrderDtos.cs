@@ -3,7 +3,10 @@ using NX_MTD.Application.Common;
 namespace NX_MTD.Application.DTOs;
 
 // ---- Khách hàng ----
-public sealed record CustomerDto(int CustomerId, string CustomerName, string? Phone, string? Email, string? DefaultAddress);
+public sealed record CustomerDto(int CustomerId, string CustomerName, string? Phone, string? Email, string? DefaultAddress, string Status);
+
+/// <summary>Lọc danh mục khách hàng: Status = Active | Discontinued (PascalCase như Supplier).</summary>
+public sealed record CustomerQuery(string? Keyword, string? Status);
 public sealed record SaveCustomerDto(string CustomerName, string? Phone, string? Email, string? DefaultAddress);
 
 // ---- Mã hàng ----

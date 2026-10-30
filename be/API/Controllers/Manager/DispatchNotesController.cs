@@ -34,15 +34,6 @@ public sealed class DispatchNotesController : ManagerBaseController
     public async Task<IActionResult> Create([FromBody] CreateDispatchNoteDto dto, CancellationToken ct) =>
         this.ToResponse(await _notes.CreateAsync(dto, ct));
 
-    /// <summary>Duyệt phiếu xuất do Thủ kho lập (PENDING_APPROVAL → APPROVED).</summary>
-    [HttpPost("{id:int}/approve")]
-    public async Task<IActionResult> Approve(int id, CancellationToken ct) => this.ToResponse(await _notes.ApproveAsync(id, ct));
-
-    /// <summary>Trả phiếu xuất về Thủ kho làm lại, bắt buộc lý do.</summary>
-    [HttpPost("{id:int}/return")]
-    public async Task<IActionResult> Return(int id, [FromBody] ReasonDto dto, CancellationToken ct) =>
-        this.ToResponse(await _notes.ReturnAsync(id, dto, ct));
-
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>
         this.ToResponse(await _notes.CancelAsync(id, ct));
