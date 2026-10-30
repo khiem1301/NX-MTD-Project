@@ -1047,8 +1047,6 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
     RowVer              ROWVERSION,
-    -- PENDING: Quản đốc lập, chờ Thủ kho lập phiếu xuất; PENDING_APPROVAL: Thủ kho đã chốt số xuất, chờ Quản đốc duyệt;
-    -- APPROVED: đã duyệt, chờ Thủ kho in, chụp ảnh và xuất. Quản đốc trả lại → về PENDING (lý do ở RejectReason).
     CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_DN_Delivered CHECK (Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL),
