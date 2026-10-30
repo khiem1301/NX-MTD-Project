@@ -17,6 +17,8 @@ public sealed class CreateMaterialDtoValidator : AbstractValidator<CreateMateria
             .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
         RuleFor(x => x.Unit).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Color).MaximumLength(50);
+        RuleFor(x => x.LengthCm).GreaterThan(0).When(x => x.LengthCm is not null);
+        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
     }
 }
 
@@ -31,6 +33,8 @@ public sealed class UpdateMaterialDtoValidator : AbstractValidator<UpdateMateria
             .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
         RuleFor(x => x.Unit).NotEmpty().MaximumLength(20);
         RuleFor(x => x.Color).MaximumLength(50);
+        RuleFor(x => x.LengthCm).GreaterThan(0).When(x => x.LengthCm is not null);
+        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
     }
 }
 

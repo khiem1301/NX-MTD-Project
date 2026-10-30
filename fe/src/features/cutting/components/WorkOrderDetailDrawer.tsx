@@ -143,26 +143,20 @@ export function WorkOrderDetailDrawer({
                 render: (_, f) => `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
               },
               {
-                title: LABELS.requiredQty,
-                dataIndex: 'requiredQty',
-                align: 'right',
-                render: formatQty,
-              },
-              {
                 title: LABELS.issuedQty,
                 dataIndex: 'issuedQty',
                 align: 'right',
                 render: formatQty,
               },
               {
-                title: LABELS.remainingQty,
-                dataIndex: 'remainingQty',
+                title: LABELS.availableQty,
+                dataIndex: 'availableQty',
                 align: 'right',
                 render: formatQty,
               },
               {
-                title: LABELS.availableQty,
-                dataIndex: 'availableQty',
+                title: LABELS.fabricReceived,
+                dataIndex: 'receivedQty',
                 align: 'right',
                 render: formatQty,
               },
@@ -177,22 +171,6 @@ export function WorkOrderDetailDrawer({
                 dataIndex: 'usedQty',
                 align: 'right',
                 render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
-              },
-              {
-                title: LABELS.fabricCutNorm,
-                dataIndex: 'cutNormQty',
-                align: 'right',
-                render: (v: number, f) => (f.receivedQty > 0 ? formatQty(v) : '—'),
-              },
-              {
-                title: LABELS.fabricDiff,
-                key: 'diff',
-                align: 'right',
-                render: (_, f) => {
-                  if (f.receivedQty <= 0) return '—';
-                  const diff = f.usedQty - f.cutNormQty;
-                  return <Typography.Text type={diff > 0 ? 'danger' : undefined}>{diff > 0 ? '+' : ''}{formatQty(diff)}</Typography.Text>;
-                },
               },
             ]}
           />

@@ -252,7 +252,7 @@ public sealed class CutHandoverService : ICutHandoverService
         // Mỗi (dòng đơn, chi tiết) của lệnh một dòng: lệnh thường chỉ có bộ đủ (chi tiết null), lệnh cắt bù có từng chi tiết.
         return wo.WorkOrderLines.DistinctBy(l => (l.OrderLineId, l.ProductComponentMaterialId))
             .OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
-            .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponent.SortOrder)
+            .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponentId)
             .Select(l =>
             {
                 var c = cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId));

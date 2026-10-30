@@ -97,7 +97,7 @@ export type RequestListQuery = {
   pageSize: number;
   keyword?: string;
   requestType?: RequestType;
-  status?: RequestStatus;
+  status?: RequestStatus | 'All';
 };
 
 export type RequestAction =

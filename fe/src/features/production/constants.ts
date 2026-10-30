@@ -298,7 +298,6 @@ export const PRODUCTION_TEXT = {
       CrookedSeam: 'Đường may lệch',
       WrongSize: 'Sai size',
       Torn: 'Rách',
-      EndOfOrderMismatch: 'Lệch kiểm cuối đơn',
       Stained: 'Dơ bẩn',
       Other: 'Khác',
     } as Record<DefectReason, string>,
@@ -351,9 +350,8 @@ export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as 
   label: PRODUCTION_TEXT.output.shiftLabel[value],
 }));
 
-/** Lý do tổ trưởng được chọn khi ghi phiếu; "Lệch kiểm cuối đơn" do hệ thống ghi nên không có trong danh sách. */
+/** Lý do tổ trưởng được chọn khi ghi phiếu hàng hỏng. */
 export const DEFECT_REASON_OPTIONS = (Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[])
-  .filter((value) => value !== 'EndOfOrderMismatch')
   .map((value) => ({
   value,
   label: PRODUCTION_TEXT.defects.reason[value],

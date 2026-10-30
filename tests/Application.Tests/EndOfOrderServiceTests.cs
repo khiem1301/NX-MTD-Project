@@ -61,7 +61,7 @@ public class EndOfOrderServiceTests : ProductionTestBase
         _targets.Add(_target);
     }
 
-    private EndOfOrderService Sut() => new(Uow, Guard(), _rates, _requests, Notifier, Audit, Settings, User, Clock);
+    private EndOfOrderService Sut() => new(Uow, Guard(), _rates, Notifier, Audit, Settings, User, Clock);
 
     private void Reported(int worker, int qty) => _outputs.Add(new OutputRecord
     {
@@ -120,34 +120,35 @@ public class EndOfOrderServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Finish_WritesScrapDefectsForTheMismatch_ClosesKpiAndAutoApprovesSmallShortfallOvertime()
+    public async Task Finish_WritesScrapDefectsForTheMismatch_ClosesKpiAndTellsAboutASmallShortfall()
     {
         Reported(7, 60); Reported(8, 40); Qc(95);   // thiếu 5% ≤ 10%, lệch 5
 
         var result = await Sut().FinishAsync(1, default);
 
         result.IsSuccess.Should().BeTrue();
-        _defects.Should().OnlyContain(d => d.DefectType == DefectTypes.Scrap && d.DefectReasonCode == DefectReasons.EndOfOrderMismatch
+        _defects.Should().OnlyContain(d => d.DefectType == DefectTypes.Scrap && d.DefectReasonCode == DefectReasons.Other && d.ReasonNote!.Contains("Lệch kiểm cuối đơn")
             && d.PieceRateId == 70 && d.OperationId == FinalOp && d.SewingTeamId == TeamId);
         _defects.Sum(d => d.Quantity).Should().Be(5);
         _defects.Select(d => d.ResponsibleWorkerId).Should().BeSubsetOf(new[] { 7, 8 });
         _target.Status.Should().Be(KpiStatuses.Closed);
         _target.Result.Should().Be(KpiResults.NotAchieved);
-        await _requests.Received(1).StageSystemRequestAsync(
-            Arg.Is<RequestDraft>(r => r.RequestType == RequestTypes.Overtime && r.KpiTargetId == 1),
-            Arg.Any<CancellationToken>(), TeamId, Arg.Is<string?>(n => n != null));   // tự duyệt
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("nên tăng ca")), Arg.Any<CancellationToken>());   // thiếu ít
+        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
         Notifier.Received().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
     }
 
     [Fact]
-    public async Task Finish_LargeShortfall_SendsOvertimeToTheLeaderWithoutAutoApproval()
+    public async Task Finish_LargeShortfall_LetsTheTeamLeaderDecideOnOvertime()
     {
         Reported(7, 60); Qc(60);   // thiếu 40%, không lệch
 
         (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
 
         _defects.Should().BeEmpty();
-        await _requests.Received(1).StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>(), TeamId, null);
+        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("tổ trưởng quyết định")), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -158,7 +159,7 @@ public class EndOfOrderServiceTests : ProductionTestBase
         (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
 
         _target.Result.Should().Be(KpiResults.Achieved);
-        await _requests.DidNotReceiveWithAnyArgs().StageSystemRequestAsync(default!, default);
+        await Notifier.DidNotReceive().NotifyTeamLeadersAsync(Arg.Any<int>(), Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

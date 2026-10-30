@@ -11,7 +11,7 @@ type Props = { target: KpiTarget | null; onClose: () => void };
 const text = KPI_TEXT.finish;
 
 /**
- * Kết thúc đơn của tổ (Quản đốc): xem trước lệch kiểm cuối đơn theo công nhân, kết quả KPI và quyết định tăng ca,
+ * Kết thúc đơn của tổ (Quản đốc): xem trước lệch kiểm cuối đơn theo công nhân, kết quả KPI và gợi ý tăng ca (chỉ thông báo, không tạo đơn),
  * rồi xác nhận. Phần lệch được ghi thẳng thành phiếu hàng hỏng (trừ lương) gắn với từng công nhân.
  */
 export function FinishOrderModal({ target, onClose }: Props) {

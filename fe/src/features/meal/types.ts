@@ -16,6 +16,9 @@ export type TeamMealSuggestion = {
   isLocked: boolean;
 };
 
+/** Giờ nhắc xác nhận và giờ tự chốt suất ăn, dạng HH:mm. */
+export type MealSettings = { reminderTime: string; cutoffTime: string };
+
 export type ConfirmTeamMealPayload = {
   mealDate: string;
   mealCount: number;

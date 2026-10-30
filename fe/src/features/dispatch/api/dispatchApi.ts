@@ -8,7 +8,6 @@ import type {
   DispatchNote,
   DispatchNoteListItem,
   DispatchNoteQuery,
-  PrepareDispatchPayload,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -31,9 +30,6 @@ export const dispatchApi = {
     downloadBlob(`${base}/${id}/excel`, `PhieuXuat_${code}.xlsx`),
   create: (body: CreateDispatchPayload) => post<DispatchNote>(MANAGER_BASE, body),
   cancel: (id: number) => post<null>(`${MANAGER_BASE}/${id}/cancel`),
-  prepare: (id: number, body: PrepareDispatchPayload) => post<null>(`${WAREHOUSE_BASE}/${id}/prepare`, body),
-  approve: (id: number) => post<null>(`${MANAGER_BASE}/${id}/approve`),
-  returnBack: (id: number, reason: string) => post<null>(`${MANAGER_BASE}/${id}/return`, { reason }),
   exportGoods: (id: number) => post<null>(`${WAREHOUSE_BASE}/${id}/export`),
   reject: (id: number, reason: string) => post<null>(`${WAREHOUSE_BASE}/${id}/reject`, { reason }),
   confirmDelivery: (id: number, body: ConfirmDeliveryPayload) =>

@@ -10,22 +10,21 @@ export type NormRow = {
   componentName?: string;
   /** NVL đã gồm màu (26/10: màu nằm trong Material.Color). */
   materialId?: number;
-  qtyPerGarment: number | null;
-  wastagePercent: number;
   lengthCm: number | null;
   widthCm: number | null;
   specNote: string;
   variantKeys: string[];
 };
 
-export type ComponentRow = { key: string; productComponentId: number | null; componentName: string; componentType: 'Panel' | 'Trim'; piecesPerGarment: number; sortOrder: number };
-export type VariantRow = { key: string; productVariantId: number | null; color: string; sizeCode: string };
+export type ComponentRow = { key: string; productComponentId: number | null; componentName: string; componentType: 'Panel' | 'Trim'; piecesPerGarment: number };
+/** Màu – size do đơn hàng tạo (chỉ đọc); chỉ sửa kích thước thành phẩm. */
+export type VariantRow = { key: string; productVariantId: number | null; color: string; sizeCode: string; lengthCm: number | null; widthCm: number | null };
 
 export const variantKey = (color: string, sizeCode: string) =>
   `${color.trim().toUpperCase()}|${sizeCode.trim().toUpperCase()}`;
 
 const sameRowKey = (n: ProductNormItem) =>
-  [n.componentName, n.materialId, n.qtyPerGarment, n.wastagePercent, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
+  [n.componentName, n.materialId, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
 
 let counter = 0;
 export const newKey = () => `k${++counter}`;
@@ -43,11 +42,17 @@ export function toRows(spec: ProductSpec): { components: ComponentRow[]; variant
       componentName: c.componentName,
       componentType: c.componentType,
       piecesPerGarment: c.piecesPerGarment,
-      sortOrder: c.sortOrder,
     }));
   const variants = spec.variants
     .filter((v) => v.status === 'Active')
-    .map<VariantRow>((v) => ({ key: newKey(), productVariantId: v.productVariantId, color: v.color, sizeCode: v.sizeCode }));
+    .map<VariantRow>((v) => ({
+      key: newKey(),
+      productVariantId: v.productVariantId,
+      color: v.color,
+      sizeCode: v.sizeCode,
+      lengthCm: v.lengthCm,
+      widthCm: v.widthCm,
+    }));
 
   const activeComponents = new Set(components.map((c) => c.componentName.toUpperCase()));
   const activeVariants = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
@@ -59,8 +64,6 @@ export function toRows(spec: ProductSpec): { components: ComponentRow[]; variant
       key: newKey(),
       componentName: n.componentName,
       materialId: n.materialId,
-      qtyPerGarment: n.qtyPerGarment,
-      wastagePercent: n.wastagePercent,
       lengthCm: n.lengthCm,
       widthCm: n.widthCm,
       specNote: n.specNote ?? '',
@@ -80,7 +83,6 @@ export function validate(components: ComponentRow[], variants: VariantRow[], nor
   if (new Set(variants.map((v) => variantKey(v.color, v.sizeCode))).size !== variants.length) return 'Màu – size bị trùng.';
   for (const n of norms) {
     if (!n.componentName || n.materialId === undefined) return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
-    if (!n.qtyPerGarment || n.qtyPerGarment <= 0) return 'Định mức trên một sản phẩm phải lớn hơn 0.';
     if (n.variantKeys.length === 0) return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
   }
   const seen = new Set<string>();
@@ -103,9 +105,14 @@ export function toPayload(components: ComponentRow[], variants: VariantRow[], no
       componentName: c.componentName.trim(),
       componentType: c.componentType,
       piecesPerGarment: c.piecesPerGarment,
-      sortOrder: c.sortOrder,
     })),
-    variants: variants.map((v) => ({ productVariantId: v.productVariantId, color: v.color.trim(), sizeCode: v.sizeCode.trim() })),
+    variants: variants.map((v) => ({
+      productVariantId: v.productVariantId,
+      color: v.color.trim(),
+      sizeCode: v.sizeCode.trim(),
+      lengthCm: v.lengthCm,
+      widthCm: v.widthCm,
+    })),
     norms: norms.flatMap((n) =>
       n.variantKeys
         .filter((vk) => byKey.has(vk))
@@ -116,8 +123,6 @@ export function toPayload(components: ComponentRow[], variants: VariantRow[], no
             color: v.color.trim(),
             sizeCode: v.sizeCode.trim(),
             materialId: n.materialId!,
-            qtyPerGarment: n.qtyPerGarment!,
-            wastagePercent: n.wastagePercent,
             lengthCm: n.lengthCm,
             widthCm: n.widthCm,
             specNote: n.specNote.trim() || null,

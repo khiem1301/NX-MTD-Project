@@ -4,6 +4,8 @@ import { ProductImage } from '../components/ProductImage';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
+import { ROLES } from '@/constants/roles';
+import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
 import { AuditHistory } from '@/components/common/AuditHistory';
@@ -19,8 +21,8 @@ import { FilterSelect } from '@/components/common/FilterSelect';
 type Filters = { keyword?: string; status?: ProductStatus };
 
 const STATUS_TAG: Record<string, StatusLabel> = {
-  Active: { text: 'Đang dùng', color: 'green' },
-  Discontinued: { text: 'Ngừng dùng', color: 'default' },
+  Active: { text: 'Đang sản xuất', color: 'green' },
+  Discontinued: { text: 'Ngừng sản xuất', color: 'default' },
 };
 
 function ProductExpanded({ product }: { product: ProductListItem }) {
@@ -33,9 +35,10 @@ function ProductExpanded({ product }: { product: ProductListItem }) {
   );
 }
 
-/** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng dùng. */
+/** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng sản xuất. */
 export function ProductsPage() {
   const table = useTableQuery<Filters>({});
+  const isAccountant = usePermission().hasRole(ROLES.Accountant);   // Kế toán: chỉ xem danh sách và sửa định mức
   const products = useProducts(table.params);
   const discontinue = useDiscontinueProduct();
   const reactivate = useReactivateProduct();
@@ -58,9 +61,9 @@ export function ProductsPage() {
       title: MESSAGES.common.actions,
       render: (_: unknown, p) => (
         <Space>
-          <Button size="small" onClick={() => { setEditing(p); setOpen(true); }}>{MESSAGES.common.edit}</Button>
+          {!isAccountant && <Button size="small" onClick={() => { setEditing(p); setOpen(true); }}>{MESSAGES.common.edit}</Button>}
           <Button size="small" onClick={() => setSpecFor(p)}>{MESSAGES.orders.spec.button}</Button>
-          {p.status === 'Active' ? (
+          {isAccountant ? null : p.status === 'Active' ? (
             <Popconfirm title={MESSAGES.orders.discontinueConfirm} onConfirm={() => discontinue.mutate(p.productId)}>
               <Button size="small" danger>{MESSAGES.orders.discontinue}</Button>
             </Popconfirm>
@@ -75,7 +78,7 @@ export function ProductsPage() {
   return (
     <Card
       title={MESSAGES.orders.productsTitle}
-      extra={<Button type="primary" onClick={() => { setEditing(null); setOpen(true); }}>{MESSAGES.common.create}</Button>}
+      extra={isAccountant ? undefined : <Button type="primary" onClick={() => { setEditing(null); setOpen(true); }}>{MESSAGES.common.create}</Button>}
     >
       <Space style={{ marginBottom: 16 }} wrap>
         <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })} style={{ width: 240 }} />
@@ -93,7 +96,7 @@ export function ProductsPage() {
         columns={columns}
         dataSource={products.data?.items ?? []}
         pagination={table.pagination(products.data?.totalItems)}
-        expandable={{ expandedRowRender: (p) => <ProductExpanded product={p} /> }}
+        expandable={isAccountant ? undefined : { expandedRowRender: (p) => <ProductExpanded product={p} /> }}
         locale={{ emptyText: MESSAGES.common.noData }}
       />
       <ProductFormModal open={open} product={editing} onClose={() => setOpen(false)} />

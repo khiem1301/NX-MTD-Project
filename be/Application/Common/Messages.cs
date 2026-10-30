@@ -72,7 +72,7 @@ public static class Messages
     // ---- Mã hàng, đơn hàng ----
     public const string ProductCodeDuplicate = "Mã hàng đã tồn tại.";
     public const string ProductCodeLocked = "Mã hàng đã dùng trong đơn hàng, không đổi được mã.";
-    public const string ProductNotActive = "Mã hàng {0} đã ngừng dùng.";
+    public const string ProductNotActive = "Mã hàng {0} đã ngừng sản xuất.";
     public const string ProductInvalidStatus = "Trạng thái mã hàng không cho phép thao tác này.";
     public const string OrderCodeDuplicate = "Mã đơn hàng đã tồn tại.";
     public const string OrderNotEditable = "Đơn hàng ở trạng thái này không sửa được.";
@@ -89,13 +89,7 @@ public static class Messages
     public const string EmployeeImportRepeated = "Mã nhân viên bị lặp trong file.";
     public const string EmployeeImportAttendanceRepeated = "Mã chấm công bị lặp trong file.";
     public const string EmployeeImportTeamUnknown = "Không tìm thấy tổ có mã {0}.";
-    public const string GradeCodeInvalid = "Bậc thợ không có trong danh mục hoặc đã ngừng dùng.";
-    public const string GradeCodeMalformed = "Mã bậc chỉ gồm chữ hoa và số, tối đa 5 ký tự.";
-    public const string GradeCodeDuplicate = "Mã bậc này đã có trong danh mục.";
-    public const string GradeCodeInUse = "Bậc này đã được dùng (nhân viên, đề xuất hoặc tiền bậc) nên không xóa được. Hãy chuyển sang ngừng dùng.";
-    public const string GradeCodeStatusInvalid = "Trạng thái bậc chỉ nhận Active hoặc Inactive.";
-    public const string GradeLevelLocked = "Mức tiền bậc đã có hiệu lực là lịch sử lương, không sửa hoặc xóa. Hãy thêm mức mới với ngày hiệu lực mới.";
-    public const string GradeLevelEffectiveInPast = "Ngày hiệu lực của mức tiền bậc sửa lại phải sau hôm nay.";
+    public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
     public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
     public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";
     public const string GradeSameAsCurrent = "Bậc đề xuất trùng bậc hiện tại.";
@@ -122,6 +116,8 @@ public static class Messages
     public const string NotifyNewOrderBody = "Đơn {0}, giao ngày {1}. Vui lòng xem NVL của đơn.";
     public const string CustomerNotFound = "Khách hàng không tồn tại.";
     public const string CustomerNameDuplicate = "Tên khách hàng đã tồn tại.";
+    public const string CustomerNotActive = "Khách hàng đã ngừng hợp tác, vui lòng chọn khách hàng khác.";
+    public const string CustomerDiscontinued = "Đã chuyển khách hàng sang ngừng hợp tác.";
     public const string ProductNotFound = "Mã hàng không tồn tại.";
 
     // ---- Nhân sự, tài khoản, tổ ----
@@ -158,16 +154,20 @@ public static class Messages
     public const string MealTeamNotFound = "Không tìm thấy tổ.";
     public const string MealNotFound = "Không tìm thấy suất ăn ngày này.";
     public const string MealLocked =
-        "Đã chốt suất ăn lúc 08:30, không thể thay đổi.";                                       // MSG22
+        "Đã chốt suất ăn, không thể thay đổi.";                                                 // MSG22
     public const string MealGuestLocked =
-        "Đã chốt suất ăn lúc 08:30, không thể thay đổi suất khách.";                             // MSG22
+        "Đã chốt suất ăn, không thể thay đổi suất khách.";                                       // MSG22
+    public const string MealSettingsSaved = "Đã lưu giờ chốt suất ăn.";
+    public const string MealSettingsTimeInvalid = "Giờ phải theo dạng HH:mm (ví dụ 08:30).";
+    public const string MealSettingsOrder = "Giờ nhắc phải sớm hơn giờ chốt.";
+    public const string MealSettingsCutoffRange = "Giờ chốt phải trong khoảng từ {0} đến {1}.";
     public const string MealNotClosedYet = "Suất ăn ngày này chưa chốt.";
     public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealKitchenNotified = "Đã báo bếp.";
     public const string NotifyMealReminderTitle = "Nhắc xác nhận suất ăn";
     public const string NotifyMealReminderBody =
-        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước 08:30.";
+        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước {3}.";
 
     // --- Bảng lương + khóa tháng (UC06, UC31, UC32) ---
     public const string PayrollNotFound = "Không tìm thấy bảng lương.";
@@ -244,9 +244,10 @@ public static class Messages
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
     public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
+    public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
     public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
-    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng dùng.";
+    public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng sản xuất.";
     public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
     public const string PurchaseOrderDeliveryCountInvalid = "Số lần nhà cung cấp dự kiến giao phải từ 1 trở lên.";
     public const string PurchaseOrderPlaced = "Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.";

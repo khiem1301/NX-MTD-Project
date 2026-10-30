@@ -176,7 +176,7 @@ public sealed class StockRepository : IStockRepository
                       && (string.IsNullOrEmpty(query.Color) || l.ProductVariant.Color == query.Color)
                       && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
                 orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode,
-                    c.SortOrder
+                    c.ProductComponentId
                 select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
                     l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
                     b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentMaterialId,

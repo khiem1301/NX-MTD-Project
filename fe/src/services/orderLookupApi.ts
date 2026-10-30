@@ -13,4 +13,5 @@ export const orderLookupApi = {
   orders: (params?: LookupParams) => get<Paginated<OrderLookup>>(API.orderLookups.orders, params),
   orderLines: (orderId: number) => get<OrderLineLookup[]>(API.orderLookups.orderLines(orderId)),
   products: (params?: LookupParams) => get<Paginated<ProductLookup>>(API.orderLookups.products, params),
+  productColors: () => get<string[]>(API.orderLookups.productColors),
 };

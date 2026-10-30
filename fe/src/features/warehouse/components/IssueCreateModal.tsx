@@ -1,4 +1,4 @@
-import { DatePicker, Form, Modal, Radio, Select, Space } from 'antd';
+import { DatePicker, Form, Modal, Radio, Select, Space, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -34,11 +34,17 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
 
 
   const handleFinish = (values: FormValues) => {
+    // Vải: chỉ gửi các dòng Thủ kho đã nhập số cấp.
+    const lines = (values.lines ?? []).filter((l) => !isFabric || (l.issuedQty ?? 0) > 0);
+    if (lines.length === 0) {
+      void message.warning(LABELS.issueNeedLine);
+      return;
+    }
     const body: CreateIssuePayload = {
       ...values,
       issueDate: values.issueDate.format(API_DATE),
       // Dòng BTP chọn theo "dòng đơn:chi tiết" → tách ra orderLineId + productComponentMaterialId.
-      lines: (values.lines ?? []).map(({ pieceKey, ...line }) => (pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line)),
+      lines: lines.map(({ pieceKey, ...line }) => (pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line)),
     };
     create.mutate(body, {
       onSuccess: () => {

@@ -11,16 +11,10 @@ public interface IWorkOrderService
 
     Task<Result<WorkOrderDto>> GetByIdAsync(int workOrderId, int? cuttingTeamId, CancellationToken ct);
 
-    /// <summary>Vải cần / đã cấp / còn phải cấp của lệnh cắt — dùng điền sẵn phiếu cấp vải (UC40).</summary>
+    /// <summary>Vải của lệnh cắt: đã cấp / đã nhận / đã trả / thực dùng, khả dụng trong kho (UC40).</summary>
     Task<Result<IReadOnlyList<FabricRequirementDto>>> GetFabricRequirementsAsync(int workOrderId, CancellationToken ct);
 
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
-
-    /// <summary>Xem trước vải cần / khả dụng / thiếu ngay trong form lập lệnh cắt (không lưu gì).</summary>
-    Task<Result<FabricPreviewDto>> PreviewFabricAsync(SaveWorkOrderDto dto, int? exceptWorkOrderId, CancellationToken ct);
-
-    /// <summary>Vải theo đơn của các lệnh cắt đang chạy: đơn nào dùng vải nào, đã cấp bao nhiêu, còn thiếu bao nhiêu.</summary>
-    Task<Result<IReadOnlyList<FabricByOrderRowDto>>> GetFabricByOrderAsync(int? orderId, CancellationToken ct);
 
     /// <summary>Đơn cắt bù đã duyệt và chưa có lệnh cắt bù (Quản đốc chọn khi lập lệnh cắt bù).</summary>
     Task<Result<IReadOnlyList<ReplacementRequestDto>>> GetOpenReplacementRequestsAsync(CancellationToken ct);

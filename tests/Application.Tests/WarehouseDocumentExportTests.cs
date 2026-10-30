@@ -10,6 +10,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>TH-16: xuất Excel phiếu nhập / cấp / xuất hàng để in. Dùng writer ClosedXML thật để kiểm nội dung file.</summary>
+[Collection(ExcelTestCollection.Name)]
 public class WarehouseDocumentExportTests
 {
     private readonly IMaterialReceiptService _receipts = Substitute.For<IMaterialReceiptService>();

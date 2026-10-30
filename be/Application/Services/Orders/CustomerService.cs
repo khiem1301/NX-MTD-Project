@@ -17,8 +17,9 @@ public sealed class CustomerService : ICustomerService
         _customers = customers; _audit = audit; _uow = uow;
     }
 
-    public async Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(string? keyword, CancellationToken ct) =>
-        Result<IReadOnlyList<CustomerDto>>.Success(await _customers.ListAsync(keyword, ct));
+    public async Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
+        Result<IReadOnlyList<CustomerDto>>.Success(
+            await _customers.ListAsync(query.Keyword, query.Status is null ? null : CodeText.ToCode(query.Status), ct));
 
     public async Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct)
     {
@@ -26,7 +27,7 @@ public sealed class CustomerService : ICustomerService
         if (await _customers.NameExistsAsync(name, null, ct))
             return Result<int>.Failure(ErrorCodes.CustomerNameDuplicate, Messages.CustomerNameDuplicate);
 
-        var customer = new Customer { CustomerName = name };
+        var customer = new Customer { CustomerName = name, Status = RecordStatus.Active };
         Apply(customer, dto);
         return await _uow.InTransactionAsync(async () =>   // D17: log cần CustomerId
         {
@@ -54,6 +55,33 @@ public sealed class CustomerService : ICustomerService
         return Result.Success(Messages.Saved);
     }
 
+    public async Task<Result> DiscontinueAsync(int customerId, CancellationToken ct)
+    {
+        var customer = await _customers.GetByIdAsync(customerId);
+        if (customer is null) return Fail.NotFound();
+        if (customer.Status == RecordStatus.Discontinued) return Result.Success(Messages.CustomerDiscontinued);
+
+        customer.Status = RecordStatus.Discontinued;
+        _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
+            new { Status = RecordStatus.Active }, new { customer.Status }));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.CustomerDiscontinued);
+    }
+
+    /// <summary>Gọi lại khi đã ACTIVE không lỗi, không đổi gì.</summary>
+    public async Task<Result> ReactivateAsync(int customerId, CancellationToken ct)
+    {
+        var customer = await _customers.GetByIdAsync(customerId);
+        if (customer is null) return Fail.NotFound();
+        if (customer.Status == RecordStatus.Active) return Result.Success(Messages.Saved);
+
+        customer.Status = RecordStatus.Active;
+        _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
+            new { Status = RecordStatus.Discontinued }, new { customer.Status }));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.Saved);
+    }
+
     private static void Apply(Customer c, SaveCustomerDto dto)
     {
         c.Phone = Clean(dto.Phone);
@@ -63,5 +91,5 @@ public sealed class CustomerService : ICustomerService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static object Snapshot(Customer c) => new { c.CustomerName, c.Phone, c.Email, c.DefaultAddress };
+    private static object Snapshot(Customer c) => new { c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status };
 }

@@ -16,20 +16,15 @@ public sealed class RequestAccess
             ? createdByTeamId is not null && createdByTeamId == _user.TeamId
             : createdBy is not null && createdBy == _user.EmployeeId;
 
-    /// <summary>Loại đơn của riêng một tổ (tăng ca): chỉ tổ trưởng của chính tổ đó xử lý, không phải mọi tổ trưởng.</summary>
-    private static bool IsTeamScoped(string requestType) => requestType == RequestTypes.Overtime;
-
-    public bool IsHandler(string requestType, int? createdByTeamId = null) =>
-        RequestTypePolicies.All.TryGetValue(requestType, out var p) && p.HandlerRole == _user.Role
-        && (!IsTeamScoped(requestType) || (createdByTeamId is not null && createdByTeamId == _user.TeamId));
+    public bool IsHandler(string requestType) =>
+        RequestTypePolicies.All.TryGetValue(requestType, out var p) && p.HandlerRole == _user.Role;
 
     public bool CanView(string requestType, int? createdBy, int? createdByTeamId) =>
-        IsCreatorSide(createdBy, createdByTeamId) || IsHandler(requestType, createdByTeamId);
+        IsCreatorSide(createdBy, createdByTeamId) || IsHandler(requestType);
 
-    /// <summary>Loại đơn xử lý theo vai trò (hộp "Đơn cần xử lý"); loại của riêng một tổ chỉ hiện ở "Đơn của tôi" của tổ đó.</summary>
+
     public IReadOnlyCollection<string> HandledTypes() =>
-        RequestTypePolicies.All.Values.Where(p => p.HandlerRole == _user.Role && !IsTeamScoped(p.RequestType))
-            .Select(p => p.RequestType).ToList();
+        RequestTypePolicies.All.Values.Where(p => p.HandlerRole == _user.Role).Select(p => p.RequestType).ToList();
 
     public IReadOnlyList<RequestTypePolicy> CreatableTypes() =>
         RequestTypePolicies.All.Values.Where(p => p.CanCreate(_user.Role, _user.TeamTypeCode)).ToList();
@@ -37,7 +32,7 @@ public sealed class RequestAccess
     public RequestPermissionsDto PermissionsFor(string requestType, string status, int? createdBy, int? teamId, bool allowManualComplete)
     {
         var creator = IsCreatorSide(createdBy, teamId);
-        var handler = IsHandler(requestType, teamId);
+        var handler = IsHandler(requestType);
         var pending = RequestStatuses.Pending.Contains(status);
         return new RequestPermissionsDto(
             CanEdit: creator && pending,

@@ -66,6 +66,8 @@ public sealed class MaterialService : IMaterialService
                 Category = dto.Category,
                 Unit = dto.Unit.Trim(),
                 Color = color,
+                LengthCm = dto.LengthCm,
+                WidthCm = dto.WidthCm,
                 Status = MaterialStatuses.Active,
             };
             await _uow.Repository<Material>().AddAsync(material);
@@ -90,6 +92,8 @@ public sealed class MaterialService : IMaterialService
         material.Color = color;
         material.Category = dto.Category;
         material.Unit = dto.Unit.Trim();
+        material.LengthCm = dto.LengthCm;
+        material.WidthCm = dto.WidthCm;
         await _uow.SaveChangesAsync();
         return Result<MaterialDto>.Success(MapDto(material));
     }
@@ -131,7 +135,7 @@ public sealed class MaterialService : IMaterialService
 
     private static readonly Expression<Func<Material, MaterialDto>> ToDto = m =>
         new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit,
-            m.Color, m.Status, m.CreatedAt);
+            m.Color, m.Status, m.CreatedAt, m.LengthCm, m.WidthCm);
 
     private static readonly Func<Material, MaterialDto> MapDto = ToDto.Compile();
 

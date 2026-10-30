@@ -566,7 +566,9 @@ public class PurchaseFlowValidatorTests
     {
         var validator = new SaveSupplierDtoValidator();
 
-        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeTrue();
+        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", "12 Lê Lợi", "Vải chính", null)).IsValid.Should().BeTrue();
+        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();   // loại NVL bắt buộc
+        validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "a@b.vn", "12 Lê Lợi", "  ", null)).IsValid.Should().BeFalse();
         validator.Validate(new SaveSupplierDto("", "0901234567", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();
         validator.Validate(new SaveSupplierDto("NCC A", "09-01 abc", "a@b.vn", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();
         validator.Validate(new SaveSupplierDto("NCC A", "0901234567", "khong-phai-email", "12 Lê Lợi", null, null)).IsValid.Should().BeFalse();

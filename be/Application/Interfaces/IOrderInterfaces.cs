@@ -6,7 +6,7 @@ namespace NX_MTD.Application.Interfaces;
 
 public interface ICustomerRepository : IGenericRepository<Customer>
 {
-    Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, CancellationToken ct);
+    Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, string? statusCode, CancellationToken ct);
     Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct);
 }
 
@@ -20,13 +20,17 @@ public interface IProductRepository : IGenericRepository<Product>
     /// <summary>Mã hàng KHÔNG active trong danh sách; Id không tồn tại trả "#id".</summary>
     Task<IReadOnlyList<string>> FindInactiveCodesAsync(IReadOnlyCollection<int> productIds, CancellationToken ct);
     Task<PagedResult<ProductLookupDto>> LookupAsync(PageQuery query, CancellationToken ct);
+
+    /// <summary>Các màu đã khai ở mọi mã hàng (ProductVariant.Color), bỏ trùng không phân biệt hoa thường.</summary>
+    Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct);
 }
 
 public interface ICustomerOrderRepository : IGenericRepository<CustomerOrder>
 {
     /// <summary>Tracked, kèm OrderLines.</summary>
     Task<CustomerOrder?> GetWithLinesAsync(int orderId, CancellationToken ct);
-    Task<bool> CustomerExistsAsync(int customerId, CancellationToken ct);
+    /// <summary>Trạng thái (mã DB) của khách; null nếu không tồn tại.</summary>
+    Task<string?> GetCustomerStatusAsync(int customerId, CancellationToken ct);
     Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct);
     Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct);
     Task<PagedResult<OrderListItemDto>> ListAsync(OrderQuery query, string? statusCode, CancellationToken ct);
@@ -38,9 +42,11 @@ public interface ICustomerOrderRepository : IGenericRepository<CustomerOrder>
 
 public interface ICustomerService
 {
-    Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(string? keyword, CancellationToken ct);
+    Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct);
     Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int customerId, SaveCustomerDto dto, CancellationToken ct);
+    Task<Result> DiscontinueAsync(int customerId, CancellationToken ct);
+    Task<Result> ReactivateAsync(int customerId, CancellationToken ct);
 }
 
 public interface IProductService
@@ -82,4 +88,5 @@ public interface IOrderLookupService
     Task<Result<PagedResult<OrderLookupDto>>> OrdersAsync(OrderLookupQuery query, CancellationToken ct);
     Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, CancellationToken ct);
     Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct);
+    Task<Result<IReadOnlyList<string>>> ColorsAsync(CancellationToken ct);
 }

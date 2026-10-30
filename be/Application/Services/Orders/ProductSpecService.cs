@@ -27,27 +27,27 @@ public sealed class ProductSpecService : IProductSpecService
             return Fail.NotFound<ProductSpecDto>();
 
         var components = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
-            .Where(c => c.ProductId == productId).OrderBy(c => c.SortOrder).ThenBy(c => c.ProductComponentId)
-            .Select(c => new { c.ProductComponentId, c.ComponentName, c.ComponentType, c.PiecesPerGarment, c.SortOrder, c.Status })
+            .Where(c => c.ProductId == productId).OrderBy(c => c.ProductComponentId)
+            .Select(c => new { c.ProductComponentId, c.ComponentName, c.ComponentType, c.PiecesPerGarment, c.Status })
             .ToListAsync(ct);
         var variants = await _uow.Repository<ProductVariant>().Query().AsNoTracking()
             .Where(v => v.ProductId == productId).OrderBy(v => v.Color).ThenBy(v => v.SizeCode)
-            .Select(v => new { v.ProductVariantId, v.Color, v.SizeCode, v.Status })
+            .Select(v => new { v.ProductVariantId, v.Color, v.SizeCode, v.LengthCm, v.WidthCm, v.Status })
             .ToListAsync(ct);
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => n.ProductId == productId)
-            .OrderBy(n => n.ProductComponent.SortOrder).ThenBy(n => n.ProductComponentId)
+            .OrderBy(n => n.ProductComponentId)
             .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductVariant.Color).ThenBy(n => n.ProductVariant.SizeCode)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
                 n.ProductVariant.Color, n.ProductVariant.SizeCode, n.MaterialId, n.Material.MaterialCode,
-                n.Material.MaterialName, n.Material.Unit, n.Material.Color, n.QtyPerGarment, n.WastagePercent,
+                n.Material.MaterialName, n.Material.Unit, n.Material.Color,
                 n.LengthCm, n.WidthCm, n.SpecNote))
             .ToListAsync(ct);
 
         return Result<ProductSpecDto>.Success(new ProductSpecDto(productId,
             components.Select(c => new ProductComponentDto(c.ProductComponentId, c.ComponentName, CodeText.ToPascal(c.ComponentType),
-                c.PiecesPerGarment, c.SortOrder, CodeText.ToPascal(c.Status))).ToList(),
-            variants.Select(v => new ProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode, CodeText.ToPascal(v.Status))).ToList(),
+                c.PiecesPerGarment, CodeText.ToPascal(c.Status))).ToList(),
+            variants.Select(v => new ProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode, v.LengthCm, v.WidthCm, CodeText.ToPascal(v.Status))).ToList(),
             norms));
     }
 
@@ -75,12 +75,13 @@ public sealed class ProductSpecService : IProductSpecService
             if (componentMatch.Any(m => m.Input.ProductComponentId is not null && m.Entity is null)
                 || variantMatch.Any(m => m.Input.ProductVariantId is not null && m.Entity is null))
                 return Fail.NotFound<int>();
+            // Màu – size lấy từ đơn hàng: không tạo mới ở màn định mức.
+            if (variantMatch.Any(m => m.Entity is null)) return Fail.As<int>(Invalid(Messages.ProductSpecVariantFromOrders));
 
             // Bước 1: gỡ định mức cũ của các biến thể giữ lại + thành phần / biến thể bị bỏ (xóa nếu chưa dùng, còn dùng thì ngừng dùng).
             var keptComponents = componentMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
             var keptVariants = variantMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
             var droppedComponents = components.Where(c => !keptComponents.Contains(c)).ToList();
-            var droppedVariants = variants.Where(v => !keptVariants.Contains(v)).ToList();
 
             var droppedComponentIds = droppedComponents.Select(c => c.ProductComponentId).ToHashSet();
             var usedNormIds = await UsedNormIdsAsync(norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId))
@@ -88,16 +89,11 @@ public sealed class ProductSpecService : IProductSpecService
             var usedComponents = norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId)
                                                   && usedNormIds.Contains(n.ProductComponentMaterialId))
                 .Select(n => n.ProductComponentId).ToHashSet();
-            var droppedVariantIds = droppedVariants.Select(v => v.ProductVariantId).ToArray();
-            var usedVariants = (await _uow.Repository<OrderLine>().Query()
-                .Where(l => droppedVariantIds.Contains(l.ProductVariantId))
-                .Select(l => l.ProductVariantId).Distinct().ToListAsync(ct)).ToHashSet();
 
-            // Định mức bị gỡ: của biến thể giữ lại (sẽ ghi lại theo danh sách gửi lên), của biến thể / thành phần bị xóa.
+            // Định mức bị gỡ: của thành phần bị xóa (định mức của biến thể giữ lại sẽ ghi lại theo danh sách gửi lên).
             var keptVariantIds = keptVariants.Select(v => v.ProductVariantId).ToHashSet();
-            var goneVariantIds = droppedVariantIds.Where(id => !usedVariants.Contains(id)).ToHashSet();
             var goneComponentIds = droppedComponents.Select(c => c.ProductComponentId).Where(id => !usedComponents.Contains(id)).ToHashSet();
-            var removeNorms = norms.Where(n => goneVariantIds.Contains(n.ProductVariantId) || goneComponentIds.Contains(n.ProductComponentId)).ToList();
+            var removeNorms = norms.Where(n => goneComponentIds.Contains(n.ProductComponentId)).ToList();
             _uow.Repository<ProductComponentMaterial>().RemoveRange(removeNorms);
             // Công đoạn ↔ chi tiết chỉ là dữ liệu tra cứu: gỡ liên kết với thành phần bị xóa.
             var goneLinks = await _uow.Repository<OperationComponent>().Query()
@@ -107,11 +103,6 @@ public sealed class ProductSpecService : IProductSpecService
             {
                 if (usedComponents.Contains(c.ProductComponentId)) c.Status = RecordStatus.Discontinued;
                 else _uow.Repository<ProductComponent>().Remove(c);
-            }
-            foreach (var v in droppedVariants)
-            {
-                if (usedVariants.Contains(v.ProductVariantId)) v.Status = RecordStatus.Discontinued;
-                else _uow.Repository<ProductVariant>().Remove(v);
             }
             await _uow.SaveChangesAsync();
 
@@ -123,7 +114,6 @@ public sealed class ProductSpecService : IProductSpecService
                 c.ComponentName = input.ComponentName.Trim();
                 c.ComponentType = CodeText.ToCode(input.ComponentType);
                 c.PiecesPerGarment = input.PiecesPerGarment;
-                c.SortOrder = input.SortOrder;
                 c.Status = RecordStatus.Active;
                 if (entity is null) await _uow.Repository<ProductComponent>().AddAsync(c);
                 componentByName[c.ComponentName] = c;
@@ -131,11 +121,9 @@ public sealed class ProductSpecService : IProductSpecService
             var variantByKey = new Dictionary<(string, string), ProductVariant>();
             foreach (var (input, entity) in variantMatch)
             {
-                var v = entity ?? new ProductVariant { ProductId = productId };
-                v.Color = input.Color.Trim();
-                v.SizeCode = input.SizeCode.Trim().ToUpperInvariant();
-                v.Status = RecordStatus.Active;
-                if (entity is null) await _uow.Repository<ProductVariant>().AddAsync(v);
+                var v = entity!;
+                v.LengthCm = input.LengthCm;
+                v.WidthCm = input.WidthCm;
                 variantByKey[(v.Color.ToUpperInvariant(), v.SizeCode)] = v;
             }
             await _uow.SaveChangesAsync();
@@ -161,8 +149,6 @@ public sealed class ProductSpecService : IProductSpecService
                     };
                     await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
                 }
-                row.QtyPerGarment = n.QtyPerGarment;
-                row.WastagePercent = n.WastagePercent;
                 row.LengthCm = n.LengthCm;
                 row.WidthCm = n.WidthCm;
                 row.SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim();
