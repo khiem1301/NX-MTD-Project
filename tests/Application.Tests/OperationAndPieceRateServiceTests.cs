@@ -12,6 +12,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>KI-01 (UC25, UC26): công đoạn của mã hàng và đơn giá công đoạn có duyệt.</summary>
+[Collection(ExcelTestCollection.Name)]
 public class OperationAndPieceRateServiceTests : ProductionTestBase
 {
     private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", ProductName = "Áo" }];

@@ -12,6 +12,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>KI-01: nhập công đoạn từ file Excel quy trình công nghệ (sheet "BƯỚC CÔNG VIỆC").</summary>
+[Collection(ExcelTestCollection.Name)]
 public class OperationImportTests : ProductionTestBase
 {
     private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "LUNA", ProductName = "Áo dạ" }];

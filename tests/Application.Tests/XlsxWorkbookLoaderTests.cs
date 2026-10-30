@@ -6,6 +6,7 @@ using NX_MTD.Infrastructure.Services;
 namespace Application.Tests;
 
 /// <summary>File .xlsx thật của xưởng có logo trỏ ảnh hỏng và công thức tham chiếu file khác; importer vẫn phải đọc được giá trị.</summary>
+[Collection(ExcelTestCollection.Name)]
 public class XlsxWorkbookLoaderTests
 {
     private const string Ns = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";

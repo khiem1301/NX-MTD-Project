@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import type { ProductBlock } from '../utils/orderGrid';
 import { ProductBlockEditor } from './ProductBlockEditor';
@@ -63,8 +62,9 @@ describe('ProductBlockEditor', () => {
     render(<Stateful />);
 
     const input = screen.getByDisplayValue('Đỏ');
-    await userEvent.clear(input);
-    await userEvent.type(input, 'đ');
+    // fireEvent thay cho userEvent.type: gõ từng phím quá chậm trên máy CI (vượt timeout 20s)
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'đ' } });
 
     expect((await screen.findAllByText('Đen')).length).toBeGreaterThan(0);
     expect(screen.queryByText('Be')).not.toBeInTheDocument();
