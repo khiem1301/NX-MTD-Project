@@ -146,16 +146,7 @@ public sealed class FinanceService : IFinanceService
             : new Dictionary<int, decimal>();
         var totalLaborHours = productIds.Sum(id => laborHoursByProduct.GetValueOrDefault(id));
 
-        // CalculatedAt chỉ chính xác đến giây (datetime2(0)) và nằm trong khóa UNIQUE (PeriodId, CalculatedAt, ProductId):
-        // tính lại trong cùng một giây với lần trước sẽ bị 409 "trùng". Luôn lấy mốc lớn hơn lần tính gần nhất.
-        var now = _clock.Now;
-        var calculatedAt = new DateTime(now.Ticks - now.Ticks % TimeSpan.TicksPerSecond, now.Kind);
-        var previousRuns = await _repo.GetResultsAsync(period.PeriodId, null, ct);
-        if (previousRuns.Count > 0)
-        {
-            var lastRun = previousRuns.Max(r => r.CalculatedAt);
-            if (calculatedAt <= lastRun) calculatedAt = lastRun.AddSeconds(1);
-        }
+        var calculatedAt = await NextCalculatedAtAsync(period.PeriodId, ct);
 
         var entities = new List<BreakEvenResult>(productIds.Count);
         var warningsByProductId = new Dictionary<int, string>();
@@ -163,66 +154,13 @@ public sealed class FinanceService : IFinanceService
         foreach (var productId in productIds.OrderBy(id => ProductCodeOf(products, id)))
         {
             var (finishedQty, revenue) = byProduct[productId];
-            var cmtUnitPrice = finishedQty > 0 ? Math.Round(revenue / finishedQty, 2, MidpointRounding.AwayFromZero) : 0m;
-            var variableCost = variableByProduct.GetValueOrDefault(productId);
-
-            decimal share;
-            if (allocationBasis == AllocationBasis.LabourHours)
-            {
-                var hours = laborHoursByProduct.GetValueOrDefault(productId);
-                if (hours > 0 && totalLaborHours > 0)
-                {
-                    share = hours / totalLaborHours;
-                }
-                else
-                {
-                    // DEV-MI-13-1: mã hàng này không quy đổi được giờ công hợp lệ trong kỳ (không có
-                    // OutputRecord nào, hoặc công nhân không có DailyTimesheet khớp ngày) → dùng tỉ lệ
-                    // OUTPUT thay thế riêng cho mã hàng này, các mã hàng khác vẫn theo LABOUR_HOURS.
-                    share = outputShare[productId];
-                }
-            }
-            else
-            {
-                share = outputShare[productId];
-            }
-
-            var allocatedFixedCost = Math.Round(totalFixedCost * share, 2, MidpointRounding.AwayFromZero);
-            var variableCostPerUnit = finishedQty > 0 ? variableCost / finishedQty : 0m;
-
-            decimal? breakEvenQty = cmtUnitPrice <= variableCostPerUnit
-                ? null
-                : Math.Round(allocatedFixedCost / (cmtUnitPrice - variableCostPerUnit), 2, MidpointRounding.AwayFromZero);
-
-            // Guard chia cho 0: AllocatedFixedCost = 0 (không gánh định phí) cho ra BreakEvenQty = 0, nghĩa
-            // là đã đạt hòa vốn ngay từ sản phẩm đầu tiên → coi như 100% thay vì chia FinishedQty/0.
-            decimal? percentReached = breakEvenQty switch
-            {
-                null => null,
-                0m => 100m,
-                _ => Math.Round(finishedQty / breakEvenQty.Value * 100m, 2, MidpointRounding.AwayFromZero),
-            };
-
-            var surplusValue = Math.Round(revenue - variableCost - allocatedFixedCost, 2, MidpointRounding.AwayFromZero);
-            var isAtRisk = surplusValue < 0;
-
-            entities.Add(new BreakEvenResult
-            {
-                PeriodId = period.PeriodId, ProductId = productId, AllocationBasis = allocationBasis,
-                FinishedQty = finishedQty, CmtUnitPrice = cmtUnitPrice, Revenue = revenue, VariableCost = variableCost,
-                AllocatedFixedCost = allocatedFixedCost, BreakEvenQty = breakEvenQty, PercentReached = percentReached,
-                SurplusValue = surplusValue, IsAtRisk = isAtRisk, CalculatedAt = calculatedAt,
-            });
-
-            if (isAtRisk)
-            {
-                var productCode = ProductCodeOf(products, productId);
-                // MSG26: khi không tính được điểm hòa vốn (đơn giá ≤ biến phí/sp), dùng câu thay thế ngắn
-                // gọn thay vì "{x}%" không xác định (xem báo cáo task, không phải MSG mới).
-                warningsByProductId[productId] = percentReached.HasValue
-                    ? string.Format(Messages.BreakEvenAtRiskWarning, productCode, percentReached.Value)
-                    : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, productCode);
-            }
+            var share = AllocationShare(allocationBasis, productId, laborHoursByProduct, totalLaborHours, outputShare);
+            var (entity, warning) = ComputeBreakEven(
+                period.PeriodId, productId, allocationBasis, finishedQty, revenue,
+                variableByProduct.GetValueOrDefault(productId), totalFixedCost, share, calculatedAt,
+                ProductCodeOf(products, productId));
+            entities.Add(entity);
+            if (warning is not null) warningsByProductId[productId] = warning;
         }
 
         _repo.AddBreakEvenResults(entities);
@@ -246,6 +184,83 @@ public sealed class FinanceService : IFinanceService
             new BreakEvenCalculationResultDto(period.PeriodId, dto.PeriodMonth, CodeText.ToPascal(allocationBasis),
                 calculatedAt, items, warnings),
             string.Format(Messages.BreakEvenCalculated, dto.PeriodMonth));
+    }
+
+    /// <summary>
+    /// CalculatedAt chỉ chính xác đến giây (datetime2(0)) và nằm trong khóa UNIQUE (PeriodId, CalculatedAt, ProductId):
+    /// tính lại trong cùng một giây với lần trước sẽ bị 409 "trùng". Luôn lấy mốc lớn hơn lần tính gần nhất.
+    /// </summary>
+    private async Task<DateTime> NextCalculatedAtAsync(int periodId, CancellationToken ct)
+    {
+        var now = _clock.Now;
+        var calculatedAt = new DateTime(now.Ticks - now.Ticks % TimeSpan.TicksPerSecond, now.Kind);
+        var previousRuns = await _repo.GetResultsAsync(periodId, null, ct);
+        if (previousRuns.Count > 0)
+        {
+            var lastRun = previousRuns.Max(r => r.CalculatedAt);
+            if (calculatedAt <= lastRun) calculatedAt = lastRun.AddSeconds(1);
+        }
+        return calculatedAt;
+    }
+
+    /// <summary>
+    /// Tỉ lệ phân bổ định phí của một mã hàng. DEV-MI-13-1: với LABOUR_HOURS, mã hàng không quy đổi được giờ công hợp lệ
+    /// trong kỳ (không có OutputRecord nào, hoặc công nhân không có DailyTimesheet khớp ngày) dùng tỉ lệ OUTPUT thay thế
+    /// riêng cho mã hàng đó, các mã hàng khác vẫn theo LABOUR_HOURS.
+    /// </summary>
+    private static decimal AllocationShare(
+        string allocationBasis, int productId, IReadOnlyDictionary<int, decimal> laborHoursByProduct,
+        decimal totalLaborHours, IReadOnlyDictionary<int, decimal> outputShare)
+    {
+        if (allocationBasis != AllocationBasis.LabourHours) return outputShare[productId];
+
+        var hours = laborHoursByProduct.GetValueOrDefault(productId);
+        return hours > 0 && totalLaborHours > 0 ? hours / totalLaborHours : outputShare[productId];
+    }
+
+    /// <summary>Tính hòa vốn và giá trị thặng dư cho một mã hàng; trả thêm câu cảnh báo MSG26 khi nguy cơ lỗ.</summary>
+    private static (BreakEvenResult Entity, string? Warning) ComputeBreakEven(
+        int periodId, int productId, string allocationBasis, int finishedQty, decimal revenue, decimal variableCost,
+        decimal totalFixedCost, decimal share, DateTime calculatedAt, string productCode)
+    {
+        var cmtUnitPrice = finishedQty > 0 ? Math.Round(revenue / finishedQty, 2, MidpointRounding.AwayFromZero) : 0m;
+        var allocatedFixedCost = Math.Round(totalFixedCost * share, 2, MidpointRounding.AwayFromZero);
+        var variableCostPerUnit = finishedQty > 0 ? variableCost / finishedQty : 0m;
+
+        decimal? breakEvenQty = cmtUnitPrice <= variableCostPerUnit
+            ? null
+            : Math.Round(allocatedFixedCost / (cmtUnitPrice - variableCostPerUnit), 2, MidpointRounding.AwayFromZero);
+
+        // Guard chia cho 0: AllocatedFixedCost = 0 (không gánh định phí) cho ra BreakEvenQty = 0, nghĩa
+        // là đã đạt hòa vốn ngay từ sản phẩm đầu tiên → coi như 100% thay vì chia FinishedQty/0.
+        decimal? percentReached = breakEvenQty switch
+        {
+            null => null,
+            0m => 100m,
+            _ => Math.Round(finishedQty / breakEvenQty.Value * 100m, 2, MidpointRounding.AwayFromZero),
+        };
+
+        var surplusValue = Math.Round(revenue - variableCost - allocatedFixedCost, 2, MidpointRounding.AwayFromZero);
+        var isAtRisk = surplusValue < 0;
+
+        var entity = new BreakEvenResult
+        {
+            PeriodId = periodId, ProductId = productId, AllocationBasis = allocationBasis,
+            FinishedQty = finishedQty, CmtUnitPrice = cmtUnitPrice, Revenue = revenue, VariableCost = variableCost,
+            AllocatedFixedCost = allocatedFixedCost, BreakEvenQty = breakEvenQty, PercentReached = percentReached,
+            SurplusValue = surplusValue, IsAtRisk = isAtRisk, CalculatedAt = calculatedAt,
+        };
+
+        // MSG26: khi không tính được điểm hòa vốn (đơn giá ≤ biến phí/sp), dùng câu thay thế ngắn
+        // gọn thay vì "{x}%" không xác định (xem báo cáo task, không phải MSG mới).
+        string? warning = null;
+        if (isAtRisk)
+        {
+            warning = percentReached.HasValue
+                ? string.Format(Messages.BreakEvenAtRiskWarning, productCode, percentReached.Value)
+                : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, productCode);
+        }
+        return (entity, warning);
     }
 
     public async Task<Result<BreakEvenListResultDto>> GetBreakEvenAsync(
