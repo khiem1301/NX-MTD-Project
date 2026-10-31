@@ -190,78 +190,100 @@ public sealed class OperationService : IOperationService
                 ResultKind.Validation);
         var skipped = plan.Data.Rows.Count - valid.Count;
 
-        if (finalStt is not null)
-        {
-            var target = valid.FirstOrDefault(r => r.Preview.Stt == finalStt);
-            if (target is null)
-                return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationImportFinalNotFound,
-                    Messages.OperationImportFinalNotFound, ResultKind.Validation);
-            if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct))
-                return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
-                    Messages.OperationFinalStepExists);
-        }
+        var finalError = await CheckFinalStepAsync(productId, valid, finalStt, ct);
+        if (finalError is not null) return finalError;
 
-        return await _uow.InTransactionAsync(async () =>
-        {
-            var created = new List<Operation>();
-            var updated = new List<(Operation Operation, object Before)>();
-            var operationByStt = new Dictionary<int, Operation>();
-            var unchanged = 0;
+        return await _uow.InTransactionAsync(
+            () => ApplyImportAsync(productId, plan.Data!, valid, finalStt, effectiveDate, submitRates, skipped, ct));
+    }
 
-            foreach (var row in valid)
+    private sealed record RowChanges(
+        List<Operation> Created, List<(Operation Operation, object Before)> Updated,
+        Dictionary<int, Operation> OperationByStt, int Unchanged);
+
+    /// <summary>Áp các dòng hợp lệ lên công đoạn: dòng mới tạo thực thể, dòng đã có cập nhật nếu thay đổi (hoặc được chọn làm bước cuối).</summary>
+    private RowChanges ApplyRows(int productId, IReadOnlyList<PlannedRow> valid, int? finalStt)
+    {
+        var created = new List<Operation>();
+        var updated = new List<(Operation Operation, object Before)>();
+        var operationByStt = new Dictionary<int, Operation>();
+        var unchanged = 0;
+
+        foreach (var row in valid)
+        {
+            var p = row.Preview;
+            var markFinal = finalStt == p.Stt;
+            if (row.Existing is null)
             {
-                var p = row.Preview;
-                var markFinal = finalStt == p.Stt;
-                if (row.Existing is null)
+                var operation = new Operation
                 {
-                    var operation = new Operation
-                    {
-                        ProductId = productId, Status = OperationStatuses.Active, TeamType = TeamTypes.Sewing,
-                    };
-                    ApplyImported(operation, p);
-                    operation.IsFinalStep = markFinal;
-                    created.Add(operation);
-                    operationByStt[p.Stt] = operation;
-                    continue;
-                }
-
-                var existing = row.Existing;
-                operationByStt[p.Stt] = existing;
-                if (p.Action == ActionUnchanged && !(markFinal && !existing.IsFinalStep))
-                {
-                    unchanged++;
-                    continue;
-                }
-
-                var before = Snapshot(existing);
-                ApplyImported(existing, p);
-                if (markFinal) existing.IsFinalStep = true;
-                updated.Add((existing, before));
+                    ProductId = productId, Status = OperationStatuses.Active, TeamType = TeamTypes.Sewing,
+                };
+                ApplyImported(operation, p);
+                operation.IsFinalStep = markFinal;
+                created.Add(operation);
+                operationByStt[p.Stt] = operation;
+                continue;
             }
 
-            if (created.Count > 0) await _uow.Repository<Operation>().AddRangeAsync(created);
-            await _uow.SaveChangesAsync();   // lấy OperationId của dòng mới để ghi nhật ký và gắn đơn giá
+            var existing = row.Existing;
+            operationByStt[p.Stt] = existing;
+            if (p.Action == ActionUnchanged && !(markFinal && !existing.IsFinalStep))
+            {
+                unchanged++;
+                continue;
+            }
 
-            foreach (var operation in created)
-                _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
-            foreach (var (operation, before) in updated)
-                _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update, before, Snapshot(operation)));
+            var before = Snapshot(existing);
+            ApplyImported(existing, p);
+            if (markFinal) existing.IsFinalStep = true;
+            updated.Add((existing, before));
+        }
+        return new RowChanges(created, updated, operationByStt, unchanged);
+    }
 
-            var rateStats = await ApplyImportedRatesAsync(valid, operationByStt, effectiveDate, submitRates);
-            await _uow.SaveChangesAsync();
+    private async Task<Result<OperationImportResultDto>> ApplyImportAsync(int productId, ImportPlan plan,
+        IReadOnlyList<PlannedRow> valid, int? finalStt, DateOnly? effectiveDate, bool submitRates, int skipped,
+        CancellationToken ct)
+    {
+        var (created, updated, operationByStt, unchanged) = ApplyRows(productId, valid, finalStt);
+        if (created.Count > 0) await _uow.Repository<Operation>().AddRangeAsync(created);
+        await _uow.SaveChangesAsync();   // lấy OperationId của dòng mới để ghi nhật ký và gắn đơn giá
 
-            if (rateStats.Submitted > 0)
-                await _notifier.NotifyRoleAsync(RoleCodes.Admin, new NotificationMessage(NotificationSources.Production,
-                    Messages.NotifyPieceRateSubmittedTitle,
-                    string.Format(Messages.NotifyPieceRatesImportedBody, plan.Data.Sheet.SheetName, rateStats.Submitted),
-                    null, null, null), ct);
+        foreach (var operation in created)
+            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
+        foreach (var (operation, before) in updated)
+            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update, before, Snapshot(operation)));
 
-            var result = new OperationImportResultDto(created.Count, updated.Count, unchanged, skipped,
-                rateStats.Created, rateStats.Updated, rateStats.Unchanged, rateStats.Skipped);
-            return Result<OperationImportResultDto>.Success(result, string.Format(Messages.OperationImportDone,
-                created.Count, updated.Count, unchanged, skipped, rateStats.Created, rateStats.Updated,
-                rateStats.Unchanged, rateStats.Skipped));
-        });
+        var rateStats = await ApplyImportedRatesAsync(valid, operationByStt, effectiveDate, submitRates);
+        await _uow.SaveChangesAsync();
+
+        if (rateStats.Submitted > 0)
+            await _notifier.NotifyRoleAsync(RoleCodes.Admin, new NotificationMessage(NotificationSources.Production,
+                Messages.NotifyPieceRateSubmittedTitle,
+                string.Format(Messages.NotifyPieceRatesImportedBody, plan.Sheet.SheetName, rateStats.Submitted),
+                null, null, null), ct);
+
+        var result = new OperationImportResultDto(created.Count, updated.Count, unchanged, skipped,
+            rateStats.Created, rateStats.Updated, rateStats.Unchanged, rateStats.Skipped);
+        return Result<OperationImportResultDto>.Success(result, string.Format(Messages.OperationImportDone,
+            created.Count, updated.Count, unchanged, skipped, rateStats.Created, rateStats.Updated,
+            rateStats.Unchanged, rateStats.Skipped));
+    }
+
+    /// <summary>Khi chọn dòng làm công đoạn cuối: dòng phải hợp lệ và mã hàng chưa có công đoạn cuối khác. Trả về lỗi hoặc null.</summary>
+    private async Task<Result<OperationImportResultDto>?> CheckFinalStepAsync(int productId, IReadOnlyList<PlannedRow> valid,
+        int? finalStt, CancellationToken ct)
+    {
+        if (finalStt is null) return null;
+        var target = valid.FirstOrDefault(r => r.Preview.Stt == finalStt);
+        if (target is null)
+            return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationImportFinalNotFound,
+                Messages.OperationImportFinalNotFound, ResultKind.Validation);
+        if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct))
+            return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
+                Messages.OperationFinalStepExists);
+        return null;
     }
 
     private sealed record RateStats(int Created, int Updated, int Unchanged, int Skipped, int Submitted);
