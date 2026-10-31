@@ -4,7 +4,7 @@ import { Button, Card, Space } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { PurchaseOrderFormModal } from '@/features/warehouse/components/PurchaseOrderFormModal';
+import { PurchaseOrderFormModal } from '@/features/warehouse';
 import { PurchaseOrderModal } from './PurchaseOrderModal';
 import { PurchaseOrderTable } from './PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';

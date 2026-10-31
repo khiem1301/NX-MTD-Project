@@ -2,7 +2,7 @@ import { BellOutlined } from '@ant-design/icons';
 import { Button, Card, List, Tag, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
-import { useMarkRead, useNotifications } from '@/features/notification/hooks/useNotifications';
+import { useMarkRead, useNotifications } from '../hooks/useNotifications';
 import { formatDateTime } from '@/utils/format';
 
 const LIMIT = 3;

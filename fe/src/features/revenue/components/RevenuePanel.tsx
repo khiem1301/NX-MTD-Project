@@ -1,8 +1,8 @@
 import { Alert, Card, Col, Row, Statistic, Typography, type TableColumnsType } from 'antd';
 import { useMemo } from 'react';
 import { QueryError } from '@/components/common/QueryError';
-import { REVENUE_TEXT } from '@/features/revenue/constants';
-import { useRevenue } from '@/features/revenue/hooks/useRevenue';
+import { REVENUE_TEXT } from '../constants';
+import { useRevenue } from '../hooks/useRevenue';
 import { formatCurrency, formatMonth, formatQty } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 

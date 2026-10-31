@@ -6,7 +6,7 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
-import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
+import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { StocktakeModal } from '../components/StocktakeModal';

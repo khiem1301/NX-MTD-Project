@@ -1,10 +1,15 @@
 import { Card, Descriptions } from 'antd';
+import { lazy, Suspense } from 'react';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
-import { LatestNotificationsCard } from './LatestNotificationsCard';
+import { LatestNotificationsCard } from '@/features/notification';
 import { OrderProgressPanel } from '../components/OrderProgressPanel';
-import { RevenuePanel } from './RevenuePanel';
+
+// Nạp lười để trang chủ không kéo cả các trang doanh thu vào gói chính.
+const RevenuePanel = lazy(() =>
+  import('@/features/revenue').then((m) => ({ default: m.RevenuePanel })),
+);
 
 export function HomePage() {
   const { user } = useAuth();
@@ -22,7 +27,11 @@ export function HomePage() {
         </Descriptions>
       </Card>
       <LatestNotificationsCard />
-      {user.role === ROLES.Admin && <RevenuePanel />}
+      {user.role === ROLES.Admin && (
+        <Suspense fallback={null}>
+          <RevenuePanel />
+        </Suspense>
+      )}
       {seesProgress && <OrderProgressPanel />}
     </>
   );

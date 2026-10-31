@@ -4,3 +4,4 @@ export { OrderFormPage } from './pages/OrderFormPage';
 export { OrdersPage } from './pages/OrdersPage';
 export { ProductsPage } from './pages/ProductsPage';
 export { orderMenu } from './menu';
+export { useProductSpec } from './hooks/useOrders';
