@@ -94,20 +94,9 @@ public sealed class PayrollService : IPayrollService
 
     public async Task<Result<PayrollImportResultDto>> ImportAsync(Stream stream, string periodMonth, CancellationToken ct)
     {
-        if (!IsValidMonth(periodMonth))
-            return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollPeriodMonthInvalid,
-                Messages.PayrollPeriodMonthInvalid, ResultKind.Validation);
-
-        // Giữ nguyên byte file gốc: vừa để đọc, vừa để lưu cho giám đốc tải (DEV-MI-09-5).
-        using var buffer = new MemoryStream();
-        await stream.CopyToAsync(buffer, ct);
-        var content = buffer.ToArray();
-
-        if (!TryParseExcel(new MemoryStream(content), out var rawRows, out var errorCode, out var errorMessage))
-            return Result<PayrollImportResultDto>.Failure(errorCode!, errorMessage!, ResultKind.Validation);
-
-        if (rawRows!.Count == 0)
-            return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollExcelEmpty, Messages.PayrollExcelEmpty);
+        var parsed = await ParseImportAsync(stream, periodMonth, ct);
+        if (parsed.Failure is not null) return parsed.Failure;
+        var (content, rawRows) = (parsed.Content, parsed.Rows);
 
         var employees = await LookupEmployeesAsync(rawRows, ct);
         var (_, valid, error, duplicate, groups) = ValidateRows(rawRows, employees);
@@ -116,15 +105,9 @@ public sealed class PayrollService : IPayrollService
             return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollExcelEmpty,
                 "Không có dòng hợp lệ nào để nhập.");
 
-        var period = await _repo.GetOrCreatePeriodAsync(periodMonth, ct);
-        if (period.Status == RecordStatus.Locked)
-            return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollPeriodLocked,
-                string.Format(Messages.AttendancePeriodLockedMessage, periodMonth));   // MSG21
-
-        var payroll = await _repo.FindPayrollByPeriodIdAsync(period.PeriodId, includePayslips: false, ct);
-        if (payroll is not null && payroll.Status is not (PayrollStatus.Draft or PayrollStatus.Rejected))
-            return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollInvalidStatus,
-                Messages.PayrollInvalidStatusForImport);
+        var target = await FindImportTargetAsync(periodMonth, ct);
+        if (target.Failure is not null) return target.Failure;
+        var (period, payroll) = (target.Period!, target.Payroll);
 
         (payroll, var before) = await PreparePayrollAsync(payroll, period, ct);
         var previousFiles = payroll.PayrollId == 0 ? [] : await _repo.RemoveImportFilesAsync(payroll.PayrollId, ct);
@@ -438,6 +421,43 @@ public sealed class PayrollService : IPayrollService
         {
             _logger.LogWarning(ex, "Không xóa được file bảng lương {StoredPath}", storedPath);
         }
+    }
+
+    private sealed record ParsedImport(Result<PayrollImportResultDto>? Failure, byte[] Content, IReadOnlyList<PayrollExcelRowDto> Rows);
+
+    private sealed record ImportTarget(Result<PayrollImportResultDto>? Failure, AccountingPeriod? Period = null, Payroll? Payroll = null);
+
+    /// <summary>Kiểm tháng, đọc file Excel (giữ nguyên byte file gốc để lưu cho giám đốc tải, DEV-MI-09-5) và đảm bảo có dòng dữ liệu.</summary>
+    private async Task<ParsedImport> ParseImportAsync(Stream stream, string periodMonth, CancellationToken ct)
+    {
+        if (!IsValidMonth(periodMonth))
+            return new ParsedImport(Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollPeriodMonthInvalid,
+                Messages.PayrollPeriodMonthInvalid, ResultKind.Validation), [], []);
+
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer, ct);
+        var content = buffer.ToArray();
+
+        if (!TryParseExcel(new MemoryStream(content), out var rawRows, out var errorCode, out var errorMessage))
+            return new ParsedImport(Result<PayrollImportResultDto>.Failure(errorCode!, errorMessage!, ResultKind.Validation), content, []);
+        if (rawRows!.Count == 0)
+            return new ParsedImport(Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollExcelEmpty, Messages.PayrollExcelEmpty), content, []);
+        return new ParsedImport(null, content, rawRows);
+    }
+
+    /// <summary>Kỳ chưa khóa (MSG21) và bảng lương của kỳ (nếu có) đang Nháp / Từ chối thì mới nhập được.</summary>
+    private async Task<ImportTarget> FindImportTargetAsync(string periodMonth, CancellationToken ct)
+    {
+        var period = await _repo.GetOrCreatePeriodAsync(periodMonth, ct);
+        if (period.Status == RecordStatus.Locked)
+            return new ImportTarget(Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollPeriodLocked,
+                string.Format(Messages.AttendancePeriodLockedMessage, periodMonth)));   // MSG21
+
+        var payroll = await _repo.FindPayrollByPeriodIdAsync(period.PeriodId, includePayslips: false, ct);
+        if (payroll is not null && payroll.Status is not (PayrollStatus.Draft or PayrollStatus.Rejected))
+            return new ImportTarget(Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollInvalidStatus,
+                Messages.PayrollInvalidStatusForImport));
+        return new ImportTarget(null, period, payroll);
     }
 
     /// <summary>Tạo bảng lương mới, hoặc làm lại bảng Nháp / Từ chối (xóa phiếu lương cũ). Trả về bảng lương và giá trị cũ cho AuditLog.</summary>
