@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { Alert, Button, Descriptions, Modal, Popconfirm, Space, Spin, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Alert, Button, Modal, Popconfirm, Space, Spin } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime, formatMonth } from '@/utils/format';
-import { PAYROLL_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
+import { formatMonth } from '@/utils/format';
+import { PAYROLL_TEXT } from '../constants';
 import {
   useApprovePayroll,
   useDownloadImportedFile,
@@ -15,10 +14,11 @@ import {
   useReopenPayroll,
 } from '../hooks/usePayroll';
 import type { Payslip } from '../types';
-import { formatCurrency } from '../utils';
 import { PayslipItemsView } from './PayslipItemsView';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { payslipColumns } from './payslipColumns';
+import { PayrollDetailInfo } from './PayrollDetailInfo';
 
 type Props = { payrollId: number | null; onClose: () => void };
 
@@ -38,57 +38,7 @@ export function PayrollDetailModal({ payrollId, onClose }: Props) {
   const canReject = d?.status === 'PendingApproval';
   const canReopen = d?.status === 'Approved';
 
-  const columns: ColumnsType<Payslip> = [
-    {
-      title: PAYROLL_TEXT.table.employee,
-      dataIndex: 'fullName',
-      render: (v: string, row) => `${row.employeeCode} - ${v}`,
-    },
-    {
-      title: PAYROLL_TEXT.table.team,
-      dataIndex: 'teamName',
-      render: (v: string | null) => v ?? '—',
-    },
-    {
-      title: PAYROLL_TEXT.table.workDays,
-      dataIndex: 'workDays',
-      align: 'right',
-      render: (v: number | null) => v ?? '—',
-    },
-    {
-      title: PAYROLL_TEXT.table.totalAdditions,
-      dataIndex: 'totalAdditions',
-      align: 'right',
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: PAYROLL_TEXT.table.totalDeductions,
-      dataIndex: 'totalDeductions',
-      align: 'right',
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: PAYROLL_TEXT.table.insurance,
-      dataIndex: 'insurance',
-      align: 'right',
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: PAYROLL_TEXT.table.netPay,
-      dataIndex: 'netPay',
-      align: 'right',
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, row) => (
-        <Button type="link" onClick={() => setViewingPayslip(row)}>
-          {MESSAGES.common.view}
-        </Button>
-      ),
-    },
-  ];
+  const columns = payslipColumns({ onView: setViewingPayslip });
 
   const actions = d ? (
     <Space>
@@ -136,34 +86,7 @@ export function PayrollDetailModal({ payrollId, onClose }: Props) {
 
       {d ? (
         <>
-          <Descriptions
-            column={{ xs: 1, sm: 2, md: 3 }}
-            bordered
-            size="small"
-            style={{ marginBottom: 16 }}
-          >
-            <Descriptions.Item label={PAYROLL_TEXT.summary.status}>
-              <Tag color={PAYROLL_STATUS_LABEL[d.status].color}>
-                {PAYROLL_STATUS_LABEL[d.status].text}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label={PAYROLL_TEXT.summary.totalAmount}>
-              {formatCurrency(d.totalAmount)}
-            </Descriptions.Item>
-            <Descriptions.Item label={PAYROLL_TEXT.summary.payslipCount}>
-              {d.payslips.length}
-            </Descriptions.Item>
-            {d.submittedAt ? (
-              <Descriptions.Item label={PAYROLL_TEXT.summary.submittedAt}>
-                {formatDateTime(d.submittedAt)}
-              </Descriptions.Item>
-            ) : null}
-            {d.approvedAt ? (
-              <Descriptions.Item label={PAYROLL_TEXT.summary.approvedAt}>
-                {formatDateTime(d.approvedAt)}
-              </Descriptions.Item>
-            ) : null}
-          </Descriptions>
+          <PayrollDetailInfo detail={d} />
 
           {d.rejectReason ? (
             <Alert
