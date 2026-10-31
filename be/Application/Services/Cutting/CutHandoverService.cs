@@ -84,45 +84,48 @@ public sealed class CutHandoverService : ICutHandoverService
     public async Task<Result<CutHandoverDto>> CreateAsync(CreateCutHandoverDto dto, int cuttingTeamId,
         CancellationToken ct)
     {
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var wo = await _uow.Repository<WorkOrder>().Query()
-                .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
-                .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
-                .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material).Include(w => w.CuttingLays)
-                .FirstOrDefaultAsync(w => w.WorkOrderId == dto.WorkOrderId, ct);
-            if (wo is null) return WarehouseFailures.NotFound<int>();
-            if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
-            if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotCuttable);
-
-            await _locks.AcquireAsync($"cut-handover:{wo.WorkOrderId}", ct);
-            var check = CheckRemaining(dto, await HandoverableAsync(wo, ct));
-            if (check is not null) return check;
-
-            var handover = new CutHandover
-            {
-                HandoverCode = await _codes.NextAsync<CutHandover>(DocumentPrefixes.CutHandover, h => h.HandoverCode, ct),
-                WorkOrderId = wo.WorkOrderId,
-                HandedAt = _clock.Now,
-                Status = HandoverStatuses.Pending,
-                CutHandoverLines = dto.Lines.Select(l => new CutHandoverLine { OrderLineId = l.OrderLineId, ProductComponentMaterialId = l.ProductComponentMaterialId, HandedQty = l.HandedQty }).ToList(),
-            };
-            // Số đã đưa vào kho thì không sửa nữa: khóa các bàn cắt đang RECORDED của lệnh.
-            foreach (var lay in wo.CuttingLays.Where(l => l.Status == CuttingLayStatuses.Recorded))
-                lay.Status = CuttingLayStatuses.Locked;
-
-            await _uow.Repository<CutHandover>().AddAsync(handover);
-            // Thủ kho là người xử lý tiếp: đếm và xác nhận BTP vào kho.
-            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-                "Chờ nhận BTP từ tổ cắt", $"Tổ cắt bàn giao BTP lệnh {wo.WorkOrderCode} (phiếu {handover.HandoverCode}), vui lòng đếm và xác nhận.",
-                HandoverLink), ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(handover.CutHandoverId);
-        });
+        var created = await _uow.InTransactionAsync(() => StoreHandoverAsync(dto, cuttingTeamId, ct));
         return created.IsSuccess
             ? await GetByIdAsync(created.Data, cuttingTeamId, ct)
             : WarehouseFailures.From<CutHandoverDto>(created);
+    }
+
+    /// <summary>Kiểm lệnh cắt, số bàn giao không vượt số còn lại rồi lưu phiếu bàn giao BTP, khóa các bàn cắt đã ghi và báo Thủ kho.</summary>
+    private async Task<Result<int>> StoreHandoverAsync(CreateCutHandoverDto dto, int cuttingTeamId, CancellationToken ct)
+    {
+        var wo = await _uow.Repository<WorkOrder>().Query()
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material).Include(w => w.CuttingLays)
+            .FirstOrDefaultAsync(w => w.WorkOrderId == dto.WorkOrderId, ct);
+        if (wo is null) return WarehouseFailures.NotFound<int>();
+        if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
+        if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
+            return Result<int>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotCuttable);
+
+        await _locks.AcquireAsync($"cut-handover:{wo.WorkOrderId}", ct);
+        var check = CheckRemaining(dto, await HandoverableAsync(wo, ct));
+        if (check is not null) return check;
+
+        var handover = new CutHandover
+        {
+            HandoverCode = await _codes.NextAsync<CutHandover>(DocumentPrefixes.CutHandover, h => h.HandoverCode, ct),
+            WorkOrderId = wo.WorkOrderId,
+            HandedAt = _clock.Now,
+            Status = HandoverStatuses.Pending,
+            CutHandoverLines = dto.Lines.Select(l => new CutHandoverLine { OrderLineId = l.OrderLineId, ProductComponentMaterialId = l.ProductComponentMaterialId, HandedQty = l.HandedQty }).ToList(),
+        };
+        // Số đã đưa vào kho thì không sửa nữa: khóa các bàn cắt đang RECORDED của lệnh.
+        foreach (var lay in wo.CuttingLays.Where(l => l.Status == CuttingLayStatuses.Recorded))
+            lay.Status = CuttingLayStatuses.Locked;
+
+        await _uow.Repository<CutHandover>().AddAsync(handover);
+        // Thủ kho là người xử lý tiếp: đếm và xác nhận BTP vào kho.
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Chờ nhận BTP từ tổ cắt", $"Tổ cắt bàn giao BTP lệnh {wo.WorkOrderCode} (phiếu {handover.HandoverCode}), vui lòng đếm và xác nhận.",
+            HandoverLink), ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(handover.CutHandoverId);
     }
 
     public Task<Result> ConfirmAsync(int handoverId, ConfirmCutHandoverDto dto, int employeeId, CancellationToken ct) =>

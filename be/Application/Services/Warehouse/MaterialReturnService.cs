@@ -87,47 +87,50 @@ public sealed class MaterialReturnService : IMaterialReturnService
 
     public async Task<Result<MaterialReturnDto>> CreateAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
     {
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == cuttingTeamId, ct);
-            if (team is null || team.TeamType != TeamTypes.Cutting) return WarehouseFailures.TeamMismatch<int>();
-
-            var issue = await _uow.Repository<MaterialIssue>().Query().AsNoTracking().Include(i => i.MaterialIssueLines)
-                .FirstOrDefaultAsync(i => i.MaterialIssueId == dto.MaterialIssueId, ct);
-            if (issue is null) return WarehouseFailures.NotFound<int>();
-            if (issue.ReceivingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
-            if (issue.WarehouseType != WarehouseTypes.Material || issue.Status != IssueStatuses.Received)
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.ReturnIssueNotReturnable);
-
-            await _locks.AcquireAsync($"material-return:{issue.MaterialIssueId}", ct);
-            var byLine = issue.MaterialIssueLines.Where(l => l.MaterialId != null).ToDictionary(l => l.MaterialIssueLineId);
-            if (dto.Lines.Any(l => !byLine.ContainsKey(l.MaterialIssueLineId)))
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReturnLineNotInIssue);
-            var returned = await ReturnedAsync(byLine.Keys.ToList(), null, ct);
-            var over = dto.Lines
-                .Select(l => (Line: l, Remaining: (byLine[l.MaterialIssueLineId].ConfirmedQty ?? 0) - returned.GetValueOrDefault(l.MaterialIssueLineId)))
-                .Where(x => x.Line.ReturnedQty > x.Remaining)
-                .Select(x => $"còn trả được {x.Remaining:0.###}, trả {x.Line.ReturnedQty:0.###}").ToList();
-            if (over.Count > 0)
-                return Result<int>.Failure(ErrorCodes.ReturnExceedsIssued, $"{WarehouseMessages.ReturnExceedsIssued}: {string.Join("; ", over)}.");
-
-            var ret = new MaterialReturn
-            {
-                ReturnCode = await _codes.NextAsync<MaterialReturn>(DocumentPrefixes.MaterialReturn, r => r.ReturnCode, ct),
-                MaterialIssueId = issue.MaterialIssueId,
-                Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
-                Status = HandoverStatuses.Pending,
-                CreatedAt = _clock.Now,
-                MaterialReturnLines = dto.Lines.Select(l => new MaterialReturnLine
-                    { MaterialIssueLineId = l.MaterialIssueLineId, ReturnedQty = l.ReturnedQty }).ToList(),
-            };
-            await _uow.Repository<MaterialReturn>().AddAsync(ret);
-            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-                "Chờ nhận vải thừa", $"Tổ cắt {team.TeamName} trả vải theo phiếu {issue.IssueCode}, vui lòng đếm và nhận vào kho.", null), ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(ret.MaterialReturnId, WarehouseMessages.ReturnCreated);
-        });
+        var created = await _uow.InTransactionAsync(() => StoreReturnAsync(dto, cuttingTeamId, ct));
         return created.IsSuccess ? await GetByIdAsync(created.Data, cuttingTeamId, ct) : WarehouseFailures.From<MaterialReturnDto>(created);
+    }
+
+    /// <summary>Kiểm tổ cắt, phiếu cấp, số lượng trả không vượt số đã nhận rồi lưu phiếu trả vải thừa và báo Thủ kho.</summary>
+    private async Task<Result<int>> StoreReturnAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
+    {
+        var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == cuttingTeamId, ct);
+        if (team is null || team.TeamType != TeamTypes.Cutting) return WarehouseFailures.TeamMismatch<int>();
+
+        var issue = await _uow.Repository<MaterialIssue>().Query().AsNoTracking().Include(i => i.MaterialIssueLines)
+            .FirstOrDefaultAsync(i => i.MaterialIssueId == dto.MaterialIssueId, ct);
+        if (issue is null) return WarehouseFailures.NotFound<int>();
+        if (issue.ReceivingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
+        if (issue.WarehouseType != WarehouseTypes.Material || issue.Status != IssueStatuses.Received)
+            return Result<int>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.ReturnIssueNotReturnable);
+
+        await _locks.AcquireAsync($"material-return:{issue.MaterialIssueId}", ct);
+        var byLine = issue.MaterialIssueLines.Where(l => l.MaterialId != null).ToDictionary(l => l.MaterialIssueLineId);
+        if (dto.Lines.Any(l => !byLine.ContainsKey(l.MaterialIssueLineId)))
+            return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReturnLineNotInIssue);
+        var returned = await ReturnedAsync(byLine.Keys.ToList(), null, ct);
+        var over = dto.Lines
+            .Select(l => (Line: l, Remaining: (byLine[l.MaterialIssueLineId].ConfirmedQty ?? 0) - returned.GetValueOrDefault(l.MaterialIssueLineId)))
+            .Where(x => x.Line.ReturnedQty > x.Remaining)
+            .Select(x => $"còn trả được {x.Remaining:0.###}, trả {x.Line.ReturnedQty:0.###}").ToList();
+        if (over.Count > 0)
+            return Result<int>.Failure(ErrorCodes.ReturnExceedsIssued, $"{WarehouseMessages.ReturnExceedsIssued}: {string.Join("; ", over)}.");
+
+        var ret = new MaterialReturn
+        {
+            ReturnCode = await _codes.NextAsync<MaterialReturn>(DocumentPrefixes.MaterialReturn, r => r.ReturnCode, ct),
+            MaterialIssueId = issue.MaterialIssueId,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            Status = HandoverStatuses.Pending,
+            CreatedAt = _clock.Now,
+            MaterialReturnLines = dto.Lines.Select(l => new MaterialReturnLine
+                { MaterialIssueLineId = l.MaterialIssueLineId, ReturnedQty = l.ReturnedQty }).ToList(),
+        };
+        await _uow.Repository<MaterialReturn>().AddAsync(ret);
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Chờ nhận vải thừa", $"Tổ cắt {team.TeamName} trả vải theo phiếu {issue.IssueCode}, vui lòng đếm và nhận vào kho.", null), ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(ret.MaterialReturnId, WarehouseMessages.ReturnCreated);
     }
 
     public Task<Result> ConfirmAsync(int returnId, ConfirmMaterialReturnDto dto, int employeeId, CancellationToken ct) =>
