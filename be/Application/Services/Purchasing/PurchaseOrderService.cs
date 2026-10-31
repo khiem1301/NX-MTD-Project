@@ -80,55 +80,64 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
 
         var resolved = await ResolveMaterialsAsync(dto.Lines, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<PurchaseOrderDto>(resolved);
-        var lines = dto.Lines.Select((l, i) => (MaterialId: resolved.Data![i],
-            l.OrderedQty, l.UnitPrice)).ToList();
+        var lines = dto.Lines.Select((l, i) => new NewLine(resolved.Data![i], l.OrderedQty, l.UnitPrice)).ToList();
+        var materialIds = lines.Select(l => l.MaterialId).Distinct().ToList();
         // Hai dòng nhập NVL mới trùng một NVL đã có (cùng tên + màu) → gộp sẽ vi phạm UQ_POL_Stock / UQ_POL.
-        if (lines.Select(l => l.MaterialId).Distinct().Count() != lines.Count)
+        if (materialIds.Count != lines.Count)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
 
-        var materialIds = lines.Select(l => l.MaterialId).Distinct().ToList();
         var activeCount = await _uow.Repository<Material>().Query()
             .CountAsync(m => materialIds.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active, ct);
         if (activeCount != materialIds.Count)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseMaterialInactive, WarehouseMessages.MaterialInactive);
 
-        // Gắn đơn hàng: dòng phải trỏ đúng NVL đã khai báo của đơn (UC09). Không gắn: mua dự trữ.
-        Dictionary<int, int> orderMaterials = new();
-        if (dto.OrderId is { } orderId)
-        {
-            var rows = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
-                .Where(om => om.OrderId == orderId && materialIds.Contains(om.MaterialId))
-                .Select(om => new { om.MaterialId, om.OrderMaterialId }).ToListAsync(ct);
-            orderMaterials = rows.ToDictionary(r => r.MaterialId, r => r.OrderMaterialId);
-            if (lines.Any(l => !orderMaterials.ContainsKey(l.MaterialId)))
-                return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference,
-                    WarehouseMessages.PurchaseOrderMaterialNotInOrder);
-        }
+        var orderMaterials = await MapOrderMaterialsAsync(dto.OrderId, materialIds, ct);
+        if (dto.OrderId is not null && lines.Any(l => !orderMaterials.ContainsKey(l.MaterialId)))
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference,
+                WarehouseMessages.PurchaseOrderMaterialNotInOrder);
 
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var po = new PurchaseOrder
-            {
-                PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
-                OrderId = dto.OrderId,
-                GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
-                PaymentStatus = PurchaseOrderStatuses.Unpaid,
-                Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
-                CreatedAt = _clock.Now,
-                PurchaseOrderLines = lines.Select(l => orderMaterials.TryGetValue(l.MaterialId, out var omId)
-                    ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = l.OrderedQty, UnitPrice = l.UnitPrice }
-                    : new PurchaseOrderLine
-                    {
-                        MaterialId = l.MaterialId,
-                        OrderedQty = l.OrderedQty,
-                        UnitPrice = l.UnitPrice,
-                    }).ToList(),
-            };
-            await _uow.Repository<PurchaseOrder>().AddAsync(po);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(po.PurchaseOrderId);
-        });
+        var created = await _uow.InTransactionAsync(() => AddOrderAsync(dto, lines, orderMaterials, ct));
         return await GetByIdAsync(created.Data, ct);
+    }
+
+    private sealed record NewLine(int MaterialId, decimal OrderedQty, decimal UnitPrice);
+
+    /// <summary>
+    /// Gắn đơn hàng: dòng phải trỏ đúng NVL đã khai báo của đơn (UC09), trả về NVL → OrderMaterialId. Không gắn: mua dự trữ,
+    /// trả về từ điển rỗng.
+    /// </summary>
+    private async Task<Dictionary<int, int>> MapOrderMaterialsAsync(int? orderId, List<int> materialIds, CancellationToken ct)
+    {
+        if (orderId is not { } id) return new Dictionary<int, int>();
+        var rows = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(om => om.OrderId == id && materialIds.Contains(om.MaterialId))
+            .Select(om => new { om.MaterialId, om.OrderMaterialId }).ToListAsync(ct);
+        return rows.ToDictionary(r => r.MaterialId, r => r.OrderMaterialId);
+    }
+
+    private async Task<Result<int>> AddOrderAsync(CreatePurchaseOrderDto dto, List<NewLine> lines,
+        Dictionary<int, int> orderMaterials, CancellationToken ct)
+    {
+        var po = new PurchaseOrder
+        {
+            PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
+            OrderId = dto.OrderId,
+            GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
+            PaymentStatus = PurchaseOrderStatuses.Unpaid,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            CreatedAt = _clock.Now,
+            PurchaseOrderLines = lines.Select(l => orderMaterials.TryGetValue(l.MaterialId, out var omId)
+                ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = l.OrderedQty, UnitPrice = l.UnitPrice }
+                : new PurchaseOrderLine
+                {
+                    MaterialId = l.MaterialId,
+                    OrderedQty = l.OrderedQty,
+                    UnitPrice = l.UnitPrice,
+                }).ToList(),
+        };
+        await _uow.Repository<PurchaseOrder>().AddAsync(po);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(po.PurchaseOrderId);
     }
 
     private async Task<Result<PurchaseOrderDto>?> ValidateOrderAsync(int? orderId, CancellationToken ct)
