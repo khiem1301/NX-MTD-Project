@@ -84,3 +84,13 @@ export const PM_MESSAGES = {
   rejected: 'Đã từ chối phiếu.',
   discrepancyReasonRequired: 'Số xác nhận khác số ghi trên phiếu, vui lòng nhập lý do.',
 } as const;
+
+export const STATUS_OPTIONS = Object.entries(MOVEMENT_STATUS_LABEL).map(([value, l]) => ({
+  value,
+  label: l.text,
+}));
+
+export const TYPE_OPTIONS = Object.entries(MOVEMENT_TYPE_LABEL).map(([value, label]) => ({
+  value,
+  label,
+}));

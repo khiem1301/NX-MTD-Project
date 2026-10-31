@@ -1,9 +1,12 @@
-export { DefectRecordsPage, ManagerDefectsPage } from './pages/DefectRecordsPage';
+export { DefectRecordsPage } from './pages/DefectRecordsPage';
+export { ManagerDefectsPage } from './pages/ManagerDefectsPage';
 export { MyDefectsPage } from './pages/MyDefectsPage';
 export { OperationAssignmentsPage } from './pages/OperationAssignmentsPage';
 export { OperationsPage } from './pages/OperationsPage';
-export { ManagerOutputPage, OutputEntryPage } from './pages/OutputEntryPage';
+export { ManagerOutputPage } from './pages/ManagerOutputPage';
+export { OutputEntryPage } from './pages/OutputEntryPage';
 export { AdminPieceRatesPage } from './pages/AdminPieceRatesPage';
-export { ManagerQcBatchesPage, QcBatchesPage } from './pages/QcBatchesPage';
+export { ManagerQcBatchesPage } from './pages/ManagerQcBatchesPage';
+export { QcBatchesPage } from './pages/QcBatchesPage';
 export { productionMenu } from './menu';
 export { PRODUCTION_ROUTES } from './routes';

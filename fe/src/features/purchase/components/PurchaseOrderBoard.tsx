@@ -5,22 +5,22 @@ import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { PurchaseOrderFormModal } from '@/features/warehouse/components/PurchaseOrderFormModal';
-import { PurchaseOrderModal } from '../components/PurchaseOrderModal';
-import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
+import { PurchaseOrderModal } from './PurchaseOrderModal';
+import { PurchaseOrderTable } from './PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { usePurchaseOrders } from '../hooks/usePurchase';
 import type { PoGoodsStatus, PoPaymentStatus, PurchaseRole } from '../types';
+
+type Filters = { keyword?: string; goodsStatus?: PoGoodsStatus; paymentStatus?: PoPaymentStatus };
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { PageCard } from '@/components/common/PageCard';
-
-type Filters = { keyword?: string; goodsStatus?: PoGoodsStatus; paymentStatus?: PoPaymentStatus };
 
 /**
  * Danh sách đơn mua dùng chung hai vai trò (BE chọn phạm vi): Quản đốc thấy mọi đơn mua và đặt hàng / hủy;
  * Kế toán chỉ thấy đơn đã đặt hàng và xác nhận thanh toán / trả lại (UC23, UC34).
  */
-function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
+export function PurchaseOrderBoard({ role }: { role: PurchaseRole }) {
   const [, setSearchParams] = useSearchParams();
   const table = useTableQuery<Filters>({});
   const orders = usePurchaseOrders(role, table.params);
@@ -83,9 +83,3 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
     </PageCard>
   );
 }
-
-/** UC23 — Quản đốc: theo dõi đơn mua, chọn nhà cung cấp, đặt hàng, hủy. */
-export const PurchaseOrdersPage = () => <PurchaseOrderBoardPage role="manager" />;
-
-/** UC34 — Kế toán: xác nhận thanh toán đơn mua đã đặt hàng. */
-export const PurchasePaymentsPage = () => <PurchaseOrderBoardPage role="accountant" />;
