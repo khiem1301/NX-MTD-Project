@@ -178,47 +178,12 @@ public sealed class StocktakeService : IStocktakeService
     /// <summary>Kiểm tra từng dòng và chụp số sổ (tồn thực hiện tại) cho từng dòng.</summary>
     private async Task<Result<List<StocktakeLine>>> BuildLinesAsync(SaveStocktakeDto dto, CancellationToken ct)
     {
-        if (dto.WarehouseType is not (WarehouseTypes.Material or WarehouseTypes.SemiFinished or WarehouseTypes.Finished))
-            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeWarehouseInvalid);
-        if (dto.StocktakeDate > _clock.Today)
-            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
+        var invalid = ValidateShape(dto) ?? (dto.WarehouseType == WarehouseTypes.Material
+            ? await ValidateMaterialsAsync(dto, ct)
+            : await ValidateOrderLinesAsync(dto, ct));
+        if (invalid is not null) return invalid;
 
         var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
-        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();
-        if (keys.Distinct().Count() != keys.Count)
-            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
-        if (dto.Lines.Any(l => isMaterial ? l.MaterialId is null || l.OrderLineId is not null : l.OrderLineId is null || l.MaterialId is not null))
-            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
-        // CK_SB_Component: chỉ kho BTP có chi tiết lẻ.
-        if (dto.WarehouseType != WarehouseTypes.SemiFinished && dto.Lines.Any(l => l.ProductComponentMaterialId is not null))
-            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
-
-        if (isMaterial)
-        {
-            var ids = dto.Lines.Select(l => l.MaterialId!.Value).Distinct().ToList();
-            var count = await _uow.Repository<Material>().Query().CountAsync(m => ids.Contains(m.MaterialId), ct);
-            if (count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
-        }
-        else
-        {
-            var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
-            var variants = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
-                .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
-            if (variants.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
-            // THROW 50041: chi tiết lẻ phải là dòng định mức vải của đúng màu × size của dòng đơn.
-            var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
-            if (normIds.Count > 0)
-            {
-                var norms = await _uow.Repository<ProductComponentMaterial>().Query()
-                    .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                                && p.Material.MaterialType == MaterialTypes.Fabric)
-                    .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
-                if (dto.Lines.Any(l => l.ProductComponentMaterialId is { } pcm
-                                       && (!norms.TryGetValue(pcm, out var v) || v != variants[l.OrderLineId!.Value])))
-                    return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm);
-            }
-        }
-
         var lines = new List<StocktakeLine>(dto.Lines.Count);
         foreach (var l in dto.Lines)
         {
@@ -237,5 +202,52 @@ public sealed class StocktakeService : IStocktakeService
             });
         }
         return Result<List<StocktakeLine>>.Success(lines);
+    }
+
+    /// <summary>Kiểm không cần DB: loại kho, ngày, dòng trùng, mỗi dòng đúng một loại đối tượng, chi tiết lẻ chỉ ở kho BTP.</summary>
+    private Result<List<StocktakeLine>>? ValidateShape(SaveStocktakeDto dto)
+    {
+        if (dto.WarehouseType is not (WarehouseTypes.Material or WarehouseTypes.SemiFinished or WarehouseTypes.Finished))
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeWarehouseInvalid);
+        if (dto.StocktakeDate > _clock.Today)
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
+
+        var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
+        var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();
+        if (keys.Distinct().Count() != keys.Count)
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DuplicateLine);
+        if (dto.Lines.Any(l => isMaterial ? l.MaterialId is null || l.OrderLineId is not null : l.OrderLineId is null || l.MaterialId is not null))
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
+        // CK_SB_Component: chỉ kho BTP có chi tiết lẻ.
+        if (dto.WarehouseType != WarehouseTypes.SemiFinished && dto.Lines.Any(l => l.ProductComponentMaterialId is not null))
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeLineTarget);
+        return null;
+    }
+
+    private async Task<Result<List<StocktakeLine>>?> ValidateMaterialsAsync(SaveStocktakeDto dto, CancellationToken ct)
+    {
+        var ids = dto.Lines.Select(l => l.MaterialId!.Value).Distinct().ToList();
+        var count = await _uow.Repository<Material>().Query().CountAsync(m => ids.Contains(m.MaterialId), ct);
+        return count != ids.Count ? WarehouseFailures.NotFound<List<StocktakeLine>>() : null;
+    }
+
+    /// <summary>Kho BTP / thành phẩm: dòng đơn phải tồn tại; chi tiết lẻ phải là dòng định mức vải của đúng màu × size (THROW 50041).</summary>
+    private async Task<Result<List<StocktakeLine>>?> ValidateOrderLinesAsync(SaveStocktakeDto dto, CancellationToken ct)
+    {
+        var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
+        var variants = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
+        if (variants.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
+
+        var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
+        if (normIds.Count == 0) return null;
+        var norms = await _uow.Repository<ProductComponentMaterial>().Query()
+            .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                        && p.Material.MaterialType == MaterialTypes.Fabric)
+            .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
+        return dto.Lines.Any(l => l.ProductComponentMaterialId is { } pcm
+                                  && (!norms.TryGetValue(pcm, out var v) || v != variants[l.OrderLineId!.Value]))
+            ? Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm)
+            : null;
     }
 }
