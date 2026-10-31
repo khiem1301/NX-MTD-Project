@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
-import { formatDateTime } from '@/utils/format';
-import { HANDOVER_STATUS, HANDOVER_STATUS_LABEL, LABELS } from '../constants';
+import { HANDOVER_STATUS, LABELS } from '../constants';
 import {
   useCancelHandover,
   useConfirmHandover,
@@ -14,8 +12,9 @@ import {
   useRejectHandover,
 } from '../hooks/useCutting';
 import type { ConfirmHandoverPayload, CutHandoverLine } from '../types';
-import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
+import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { HandoverInfo } from './HandoverInfo';
 
 type HandoverDetailModalProps = { handoverId: number | undefined; onClose: () => void };
 
@@ -98,20 +97,7 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
               style={{ marginBottom: 16 }}
             />
           )}
-          <DetailDescriptions>
-            <Descriptions.Item label={LABELS.workOrder}>{h.workOrderCode}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.order}>{h.orderCode}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.cuttingTeam}>{h.cuttingTeamName}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.handedAt}>
-              {formatDateTime(h.handedAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.status}>
-              <StatusTag status={h.status} labels={HANDOVER_STATUS_LABEL} />
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.confirmedBy}>
-              {h.confirmedByName ? `${h.confirmedByName} · ${formatDateTime(h.confirmedAt)}` : '—'}
-            </Descriptions.Item>
-          </DetailDescriptions>
+          <HandoverInfo handover={h} />
           <Form
             form={form}
             disabled={confirm.isPending}
