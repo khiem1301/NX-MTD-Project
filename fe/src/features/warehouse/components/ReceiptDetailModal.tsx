@@ -1,41 +1,27 @@
 import { useState } from 'react';
 import { PrinterOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Divider,
-  Popconfirm,
-  Space,
-  type TableColumnsType,
-} from 'antd';
+import { Alert, Button, Divider, Popconfirm, Space } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { useAttachments } from '@/hooks/useAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
-import { formatDate, formatDateTime, formatQty } from '@/utils/format';
-import {
-  LABELS,
-  RECEIPT_STATUS,
-  RECEIPT_STATUS_LABEL,
-  RECEIPT_TYPE_LABEL,
-  SOURCE_LABEL,
-} from '../constants';
+import { LABELS, RECEIPT_STATUS } from '../constants';
 import {
   useConfirmReceipt,
   useDownloadReceipt,
   useReceipt,
   useReturnReceipt,
 } from '../hooks/useReceipts';
-import type { MaterialReceipt, MaterialReceiptLine } from '../types';
-import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
+import type { MaterialReceipt } from '../types';
+import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { ReceiptInfo } from './ReceiptInfo';
+import { receiptLineColumns } from './receiptLineColumns';
 
 const MAX_RECEIPT_PHOTOS = 5;
 
@@ -44,20 +30,6 @@ type ReceiptDetailModalProps = {
   onClose: () => void;
   onEdit: (receipt: MaterialReceipt) => void;
 };
-
-const lineColumns: TableColumnsType<MaterialReceiptLine> = [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
-  { title: LABELS.materialName, dataIndex: 'materialName' },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  { title: LABELS.unit, dataIndex: 'unit' },
-  {
-    title: LABELS.toReplenishQty,
-    dataIndex: 'toReplenishQty',
-    align: 'right',
-    render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-  },
-  { title: LABELS.acceptedQty, dataIndex: 'acceptedQty', align: 'right', render: formatQty },
-];
 
 /** Chi tiết phiếu nhập; Quản đốc xác nhận / trả lại (UC39), Thủ kho sửa phiếu chờ hoặc bị trả. */
 export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetailModalProps) {
@@ -145,38 +117,11 @@ export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetail
               style={{ marginBottom: 16 }}
             />
           )}
-          <DetailDescriptions>
-            <Descriptions.Item label={LABELS.receiptType}>
-              {RECEIPT_TYPE_LABEL[r.receiptType] ?? r.receiptType}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.receiptSource}>
-              {SOURCE_LABEL[r.source] ?? r.source}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.order}>{r.orderCode ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.purchaseOrder}>{r.poCode ?? '—'}</Descriptions.Item>
-            {r.originalReceiptCode && (
-              <Descriptions.Item label={LABELS.originalReceipt}>
-                {r.originalReceiptCode}
-              </Descriptions.Item>
-            )}
-            <Descriptions.Item label={LABELS.status}>
-              <StatusTag status={r.status} labels={RECEIPT_STATUS_LABEL} />
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.receiptDate}>
-              {formatDate(r.receiptDate)}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.submittedAt}>
-              {formatDateTime(r.submittedAt)}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.confirmedBy}>
-              {r.confirmedByName ? `${r.confirmedByName} · ${formatDateTime(r.confirmedAt)}` : '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.note}>{r.note ?? '—'}</Descriptions.Item>
-          </DetailDescriptions>
+          <ReceiptInfo receipt={r} />
           <DataTable
             rowKey="materialReceiptLineId"
             style={{ marginTop: 16 }}
-            columns={lineColumns}
+            columns={receiptLineColumns}
             dataSource={r.lines}
             pagination={false}
           />
