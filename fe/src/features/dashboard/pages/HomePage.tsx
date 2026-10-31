@@ -3,7 +3,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
 import { LatestNotificationsCard } from './LatestNotificationsCard';
-import { OrderProgressPanel } from './OrderProgressPanel';
+import { OrderProgressPanel } from '../components/OrderProgressPanel';
 import { RevenuePanel } from './RevenuePanel';
 
 export function HomePage() {

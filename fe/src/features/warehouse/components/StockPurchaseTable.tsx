@@ -3,30 +3,14 @@ import { Tag, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDateTime, formatQty } from '@/utils/format';
+import { formatDateTime } from '@/utils/format';
 import { LABELS, PO_GOODS_STATUS_LABEL, PO_PAYMENT_STATUS_LABEL } from '../constants';
-import { usePurchaseOrder, usePurchaseOrders } from '../hooks/usePurchaseOrders';
-import type { PurchaseOrderLine, PurchaseOrderListItem } from '../types';
+import { usePurchaseOrders } from '../hooks/usePurchaseOrders';
+import type { PurchaseOrderListItem } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
-
-const lineColumns: TableColumnsType<PurchaseOrderLine> = [
-  {
-    title: LABELS.material,
-    key: 'material',
-    render: (_, l) => (
-      <>
-        <b>{l.materialCode}</b> {l.materialName}
-      </>
-    ),
-  },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  { title: LABELS.unit, dataIndex: 'unit' },
-  { title: LABELS.orderedQty, dataIndex: 'orderedQty', align: 'right', render: formatQty },
-  { title: LABELS.unitPrice, dataIndex: 'unitPrice', align: 'right', render: formatQty },
-  { title: LABELS.amount, dataIndex: 'amount', align: 'right', render: formatQty },
-];
+import { PurchaseOrderLines } from './PurchaseOrderLines';
 
 const columns = (
   onView: (po: PurchaseOrderListItem) => void,
@@ -55,19 +39,6 @@ const columns = (
     render: (v: string) => <StatusTag status={v} labels={PO_PAYMENT_STATUS_LABEL} />,
   },
 ];
-
-function PurchaseOrderLines({ id }: { id: number }) {
-  const detail = usePurchaseOrder(id);
-  return (
-    <DataTable
-      rowKey="purchaseOrderLineId"
-      columns={lineColumns}
-      dataSource={detail.data?.lines}
-      loading={detail.isFetching}
-      pagination={false}
-    />
-  );
-}
 
 /** Danh sách đơn mua NVL. stockOnly = true: chỉ đơn dùng chung (kim, chỉ...); undefined: cả đơn gắn đơn hàng. */
 export function StockPurchaseTable({

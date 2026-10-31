@@ -7,13 +7,14 @@ import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatDateTime, formatQty, toApiDate } from '@/utils/format';
-import { QcCreateModal, QcEditModal } from '../components/QcBatchModals';
+import { QcCreateModal } from '../components/QcBatchModals';
 import { PRODUCTION_TEXT, shiftText } from '../constants';
 import { useDeleteQcBatch, useQcBatches } from '../hooks/useProduction';
 import type { QcBatch, QcBatchQuery, QcRole } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { QcEditModal } from '../components/QcEditModal';
 
 const text = PRODUCTION_TEXT.qc;
 

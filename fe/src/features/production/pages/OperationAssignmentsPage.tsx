@@ -1,181 +1,21 @@
 import { useState } from 'react';
-import { Button, Form, Modal, Popconfirm, Select, Space, Typography } from 'antd';
+import { Button, Popconfirm, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CopyOutlined, PlusOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
-import { useAuth } from '@/hooks/useAuth';
-import { useTeamMemberLookup } from '@/hooks/useHrLookups';
 import { formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import {
-  useAssignableOperations,
-  useAssignOperations,
-  useAssignments,
-  useCloseAssignment,
-  useCopyAssignments,
-  useReplaceAssignment,
-} from '../hooks/useProduction';
+import { useAssignments, useCloseAssignment } from '../hooks/useProduction';
 import type { OperationAssignment } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
+import { AssignModal } from '../components/AssignModal';
+import { ReplaceModal } from '../components/ReplaceModal';
+import { CopyModal } from '../components/CopyModal';
 
 const text = PRODUCTION_TEXT.assignments;
-const required = [{ required: true, message: PRODUCTION_TEXT.required }];
-
-/** Danh sách công nhân đang làm của tổ mình, dùng cho các ô chọn công nhân. */
-function useWorkerOptions() {
-  const { user } = useAuth();
-  const members = useTeamMemberLookup(user?.teamId ?? null);
-  const options = (members.data ?? [])
-    .filter((m) => m.role === 'Worker')
-    .map((m) => ({ value: m.employeeId, label: `${m.employeeCode} - ${m.fullName}` }));
-  return { options, loading: members.isLoading };
-}
-
-function AssignModal({
-  open,
-  orderId,
-  onClose,
-}: {
-  open: boolean;
-  orderId: number;
-  onClose: () => void;
-}) {
-  const [form] = Form.useForm<{ operationIds: number[]; workerId: number }>();
-  const operations = useAssignableOperations(orderId);
-  const workers = useWorkerOptions();
-  const assign = useAssignOperations();
-
-  return (
-    <Modal
-      open={open}
-      title={text.assignTitle}
-      okText={MESSAGES.common.save}
-      cancelText={MESSAGES.common.cancel}
-      confirmLoading={assign.isPending}
-      onOk={() => form.submit()}
-      onCancel={onClose}
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        preserve={false}
-        onFinish={(values) => assign.mutate({ orderId, ...values }, { onSuccess: onClose })}
-      >
-        <Form.Item name="operationIds" label={text.form.operations} rules={required}>
-          <Select
-            mode="multiple"
-            showSearch
-            optionFilterProp="label"
-            loading={operations.isLoading}
-            options={(operations.data ?? []).map((o) => ({
-              value: o.operationId,
-              label: `${o.productCode} · ${o.stationSequence}. ${o.operationCode} - ${o.operationName}${o.groupName ? ` [${o.groupName}]` : ''}`,
-            }))}
-          />
-        </Form.Item>
-        <Form.Item name="workerId" label={text.form.worker} rules={required}>
-          <Select
-            showSearch
-            optionFilterProp="label"
-            loading={workers.loading}
-            options={workers.options}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
-
-function ReplaceModal({
-  target,
-  onClose,
-}: {
-  target: OperationAssignment | null;
-  onClose: () => void;
-}) {
-  const [form] = Form.useForm<{ newWorkerId: number }>();
-  const workers = useWorkerOptions();
-  const replace = useReplaceAssignment();
-
-  return (
-    <Modal
-      open={target !== null}
-      title={`${text.replaceTitle}: ${target?.operationCode ?? ''}`}
-      okText={MESSAGES.common.save}
-      cancelText={MESSAGES.common.cancel}
-      confirmLoading={replace.isPending}
-      onOk={() => form.submit()}
-      onCancel={onClose}
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        preserve={false}
-        onFinish={(values) =>
-          target &&
-          replace.mutate(
-            { id: target.operationAssignmentId, newWorkerId: values.newWorkerId },
-            { onSuccess: onClose },
-          )
-        }
-      >
-        <Form.Item name="newWorkerId" label={text.form.worker} rules={required}>
-          <Select
-            showSearch
-            optionFilterProp="label"
-            loading={workers.loading}
-            options={workers.options.filter((o) => o.value !== target?.workerId)}
-          />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
-
-function CopyModal({
-  open,
-  toOrderId,
-  onClose,
-}: {
-  open: boolean;
-  toOrderId: number;
-  onClose: () => void;
-}) {
-  const [form] = Form.useForm<{ fromOrderId: number }>();
-  const copy = useCopyAssignments();
-
-  return (
-    <Modal
-      open={open}
-      title={text.copyTitle}
-      okText={MESSAGES.common.save}
-      cancelText={MESSAGES.common.cancel}
-      confirmLoading={copy.isPending}
-      onOk={() => form.submit()}
-      onCancel={onClose}
-      destroyOnHidden
-    >
-      <Typography.Paragraph type="secondary">{text.copyHint}</Typography.Paragraph>
-      <Form
-        form={form}
-        layout="vertical"
-        preserve={false}
-        onFinish={(values) =>
-          copy.mutate({ fromOrderId: values.fromOrderId, toOrderId }, { onSuccess: onClose })
-        }
-      >
-        <Form.Item name="fromOrderId" label={text.copyFrom} rules={required}>
-          <OrderSelect width="100%" />
-        </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
 
 /** UC52 (KI-03) — tổ trưởng / tổ phó may phân công công nhân × công đoạn theo đơn hàng; đổi phân công giữ lịch sử. */
 export function OperationAssignmentsPage() {
