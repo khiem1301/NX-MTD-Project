@@ -90,73 +90,95 @@ public sealed class WorkAllocationService : IWorkAllocationService
 
     public async Task<Result<WorkAllocationDto>> CreateAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct)
     {
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == teamId, ct);
-            if (team is null || team.TeamType != TeamTypes.Sewing) return WarehouseFailures.TeamMismatch<int>();
-
-            var worker = await _uow.Repository<Employee>().Query().AsNoTracking()
-                .FirstOrDefaultAsync(e => e.EmployeeId == dto.WorkerId, ct);
-            if (worker is null || worker.TeamId != teamId || worker.Status != RecordStatus.Active)
-                return Result<int>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam, ResultKind.Forbidden);
-
-            var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order).Include(l => l.ProductVariant)
-                .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId, ct);
-            if (line is null) return WarehouseFailures.NotFound<int>();
-            if (OrderStatuses.Closed.Contains(line.Order.Status))
-                return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
-
-            // THROW 50044: công đoạn phải thuộc mã hàng của dòng đơn; chỉ chia việc công đoạn may đang dùng (như vw_OperationAllocationProgress).
-            var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
-                .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId && o.ProductId == line.ProductId, ct);
-            if (operation is null) return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotOfProduct);
-            if (dto.MovementType == PieceMovementTypes.Handover
-                && (operation.Status != RecordStatus.Active || operation.TeamType != TeamTypes.Sewing))
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable);
-
-            await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
-            if (dto.MovementType == PieceMovementTypes.Handover)
-            {
-                var received = await TeamReceivedAsync(teamId, dto.OrderLineId, ct);
-                if (received == 0)
-                    return Result<int>.Failure(ErrorCodes.AllocationExceedsRequired, WarehouseMessages.AllocationNoPiecesReceived);
-                var unallocated = await UnallocatedAsync(teamId, dto.OrderLineId, dto.OperationId, ct);
-                if (dto.Quantity > unallocated)
-                    return Result<int>.Failure(ErrorCodes.AllocationExceedsRequired,
-                        $"{WarehouseMessages.AllocationExceedsRequired}: tổ đã nhận {received} bộ, còn giao được {unallocated}, yêu cầu {dto.Quantity}.");
-            }
-            else
-            {
-                var retrievable = await WorkerRetrievableAsync(dto.WorkerId, dto.OrderLineId, dto.OperationId, ct);
-                if (dto.Quantity > retrievable)
-                    return Result<int>.Failure(ErrorCodes.PieceRetrievalExceedsHolding,
-                        $"{WarehouseMessages.PieceRetrievalExceedsHolding}: còn {retrievable}, yêu cầu {dto.Quantity}.");
-            }
-
-            var allocation = new WorkAllocation
-            {
-                MovementType = dto.MovementType,
-                SewingTeamId = teamId,
-                WorkerId = dto.WorkerId,
-                OrderLineId = dto.OrderLineId,
-                OperationId = dto.OperationId,
-                Quantity = dto.Quantity,
-                RetrievalReason = dto.MovementType == PieceMovementTypes.Retrieval ? dto.RetrievalReason : null,
-                ConfirmMode = ConfirmModes.Worker,
-                Status = HandoverStatuses.Pending,
-                CreatedAt = _clock.Now,
-            };
-            await _uow.Repository<WorkAllocation>().AddAsync(allocation);
-            var verb = dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi";
-            _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
-                dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
-                $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
-                + ", vui lòng kiểm tra và xác nhận.",
-                null));
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(allocation.WorkAllocationId, WarehouseMessages.PieceMovementCreated);
-        });
+        var created = await _uow.InTransactionAsync(() => CreateInTransactionAsync(dto, teamId, ct));
         return created.IsSuccess ? await GetOneAsync(created.Data, ct) : WarehouseFailures.From<WorkAllocationDto>(created);
+    }
+
+    private sealed record AllocationRefs(Result<int>? Failure, OrderLine? Line = null, Operation? Operation = null);
+
+    private async Task<Result<int>> CreateInTransactionAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct)
+    {
+        var refs = await ValidateReferencesAsync(dto, teamId, ct);
+        if (refs.Failure is not null) return refs.Failure;
+        var (line, operation) = (refs.Line!, refs.Operation!);
+
+        await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
+        var excess = await CheckQuantityAsync(dto, teamId, ct);
+        if (excess is not null) return excess;
+
+        var allocation = new WorkAllocation
+        {
+            MovementType = dto.MovementType,
+            SewingTeamId = teamId,
+            WorkerId = dto.WorkerId,
+            OrderLineId = dto.OrderLineId,
+            OperationId = dto.OperationId,
+            Quantity = dto.Quantity,
+            RetrievalReason = dto.MovementType == PieceMovementTypes.Retrieval ? dto.RetrievalReason : null,
+            ConfirmMode = ConfirmModes.Worker,
+            Status = HandoverStatuses.Pending,
+            CreatedAt = _clock.Now,
+        };
+        await _uow.Repository<WorkAllocation>().AddAsync(allocation);
+        var verb = dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi";
+        _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
+            dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
+            $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
+            + ", vui lòng kiểm tra và xác nhận.",
+            null));
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(allocation.WorkAllocationId, WarehouseMessages.PieceMovementCreated);
+    }
+
+    /// <summary>Kiểm tra tổ may, công nhân (đúng tổ, còn làm), dòng đơn (chưa đóng) và công đoạn thuộc mã hàng của dòng đơn.</summary>
+    private async Task<AllocationRefs> ValidateReferencesAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct)
+    {
+        var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == teamId, ct);
+        if (team is null || team.TeamType != TeamTypes.Sewing) return new AllocationRefs(WarehouseFailures.TeamMismatch<int>());
+
+        var worker = await _uow.Repository<Employee>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(e => e.EmployeeId == dto.WorkerId, ct);
+        if (worker is null || worker.TeamId != teamId || worker.Status != RecordStatus.Active)
+            return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam,
+                ResultKind.Forbidden));
+
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order).Include(l => l.ProductVariant)
+            .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId, ct);
+        if (line is null) return new AllocationRefs(WarehouseFailures.NotFound<int>());
+        if (OrderStatuses.Closed.Contains(line.Order.Status))
+            return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed));
+
+        // THROW 50044: công đoạn phải thuộc mã hàng của dòng đơn; chỉ chia việc công đoạn may đang dùng (như vw_OperationAllocationProgress).
+        var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId && o.ProductId == line.ProductId, ct);
+        if (operation is null)
+            return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotOfProduct));
+        if (dto.MovementType == PieceMovementTypes.Handover
+            && (operation.Status != RecordStatus.Active || operation.TeamType != TeamTypes.Sewing))
+            return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable));
+        return new AllocationRefs(null, line, operation);
+    }
+
+    /// <summary>Giao: tổ đã nhận bán thành phẩm và không giao quá phần còn lại; thu hồi: không thu quá phần công nhân đang giữ.</summary>
+    private async Task<Result<int>?> CheckQuantityAsync(CreateWorkAllocationDto dto, int teamId, CancellationToken ct)
+    {
+        if (dto.MovementType != PieceMovementTypes.Handover)
+        {
+            var retrievable = await WorkerRetrievableAsync(dto.WorkerId, dto.OrderLineId, dto.OperationId, ct);
+            return dto.Quantity > retrievable
+                ? Result<int>.Failure(ErrorCodes.PieceRetrievalExceedsHolding,
+                    $"{WarehouseMessages.PieceRetrievalExceedsHolding}: còn {retrievable}, yêu cầu {dto.Quantity}.")
+                : null;
+        }
+
+        var received = await TeamReceivedAsync(teamId, dto.OrderLineId, ct);
+        if (received == 0)
+            return Result<int>.Failure(ErrorCodes.AllocationExceedsRequired, WarehouseMessages.AllocationNoPiecesReceived);
+        var unallocated = await UnallocatedAsync(teamId, dto.OrderLineId, dto.OperationId, ct);
+        return dto.Quantity > unallocated
+            ? Result<int>.Failure(ErrorCodes.AllocationExceedsRequired,
+                $"{WarehouseMessages.AllocationExceedsRequired}: tổ đã nhận {received} bộ, còn giao được {unallocated}, yêu cầu {dto.Quantity}.")
+            : null;
     }
 
     public Task<Result> ConfirmByWorkerAsync(int allocationId, ConfirmWorkAllocationDto dto, int workerId, CancellationToken ct) =>

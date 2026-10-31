@@ -49,7 +49,20 @@ public sealed class DefectiveMaterialRequestHandler : IRequestTypeHandler
         var info = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => wanted.Keys.Contains(m.MaterialId))
             .ToDictionaryAsync(m => m.MaterialId, ct);
 
-        // Kiểm tồn: phần kho cấp bù được ngay, phần còn lại phải mua.
+        var (fromStock, toBuy) = await SplitByStockAsync(wanted, ct);
+        var notes = new List<string>();
+        if (fromStock.Count > 0) notes.Add(await StageRequisitionAsync(request, fromStock, info, ct));
+        if (toBuy.Count > 0) notes.Add(await StagePurchaseOrderAsync(request, toBuy, info, ct));
+
+        var summary = string.Join("; ", notes);
+        request.ResultNote = summary.Length > 1000 ? summary[..1000] : summary;
+        return Result.Success();
+    }
+
+    /// <summary>Kiểm tồn: phần kho cấp bù được ngay, phần còn lại phải mua.</summary>
+    private async Task<(Dictionary<int, decimal> FromStock, Dictionary<int, decimal> ToBuy)> SplitByStockAsync(
+        Dictionary<int, decimal> wanted, CancellationToken ct)
+    {
         var fromStock = new Dictionary<int, decimal>();
         var toBuy = new Dictionary<int, decimal>();
         foreach (var (materialId, qty) in wanted)
@@ -59,52 +72,51 @@ public sealed class DefectiveMaterialRequestHandler : IRequestTypeHandler
             if (give > 0) fromStock[materialId] = give;
             if (qty - give > 0) toBuy[materialId] = qty - give;
         }
+        return (fromStock, toBuy);
+    }
 
-        var notes = new List<string>();
+    /// <summary>Đủ tồn: tạo đơn xin NVL để Thủ kho cấp bù cho tổ cắt. Trả về câu ghi vào kết quả đơn.</summary>
+    private async Task<string> StageRequisitionAsync(Request request, Dictionary<int, decimal> fromStock,
+        Dictionary<int, Material> info, CancellationToken ct)
+    {
         var requests = _services.GetRequiredService<IRequestService>();
+        var lines = fromStock.Select(kv => new RequestLineInput(kv.Key, null, null, null, kv.Value)).ToList();
+        var draft = new RequestDraft(RequestTypes.MaterialRequisition, request.OrderId, request.WorkOrderId, null, null, null, null,
+            null, $"Cấp bù NVL lỗi theo {request.RequestCode}", $"Tự tạo khi Quản đốc duyệt đơn NVL lỗi {request.RequestCode}.", lines, null);
+        var requisition = await requests.StageSystemRequestAsync(draft, ct, request.CreatedByTeamId);
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Cần cấp bù NVL lỗi", $"Quản đốc đã duyệt {request.RequestCode}: vui lòng lập phiếu cấp bù theo đơn xin {requisition.RequestCode}.",
+            "/requests/inbox"), ct);
+        return $"đủ tồn: đã tạo đơn xin NVL {requisition.RequestCode} ({Describe(fromStock, info)}), Thủ kho cấp bù cho tổ cắt";
+    }
 
-        if (fromStock.Count > 0)
+    /// <summary>Thiếu tồn: tạo đơn mua chờ chốt để Quản đốc đặt hàng. Trả về câu ghi vào kết quả đơn.</summary>
+    private async Task<string> StagePurchaseOrderAsync(Request request, Dictionary<int, decimal> toBuy,
+        Dictionary<int, Material> info, CancellationToken ct)
+    {
+        var orderMaterials = request.OrderId is { } orderId
+            ? await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+                .Where(om => om.OrderId == orderId && toBuy.Keys.Contains(om.MaterialId))
+                .ToDictionaryAsync(om => om.MaterialId, om => om.OrderMaterialId, ct)
+            : new Dictionary<int, int>();
+        var po = new PurchaseOrder
         {
-            var lines = fromStock.Select(kv => new RequestLineInput(kv.Key, null, null, null, kv.Value)).ToList();
-            var draft = new RequestDraft(RequestTypes.MaterialRequisition, request.OrderId, request.WorkOrderId, null, null, null, null,
-                null, $"Cấp bù NVL lỗi theo {request.RequestCode}", $"Tự tạo khi Quản đốc duyệt đơn NVL lỗi {request.RequestCode}.", lines, null);
-            var requisition = await requests.StageSystemRequestAsync(draft, ct, request.CreatedByTeamId);
-            notes.Add($"đủ tồn: đã tạo đơn xin NVL {requisition.RequestCode} ({Describe(fromStock, info)}), Thủ kho cấp bù cho tổ cắt");
-            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-                "Cần cấp bù NVL lỗi", $"Quản đốc đã duyệt {request.RequestCode}: vui lòng lập phiếu cấp bù theo đơn xin {requisition.RequestCode}.",
-                "/requests/inbox"), ct);
-        }
-
-        if (toBuy.Count > 0)
-        {
-            var orderMaterials = request.OrderId is { } orderId
-                ? await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
-                    .Where(om => om.OrderId == orderId && toBuy.Keys.Contains(om.MaterialId))
-                    .ToDictionaryAsync(om => om.MaterialId, om => om.OrderMaterialId, ct)
-                : new Dictionary<int, int>();
-            var po = new PurchaseOrder
-            {
-                PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
-                OrderId = request.OrderId,
-                SourceRequestId = request.RequestId,
-                GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
-                PaymentStatus = PurchaseOrderStatuses.Unpaid,
-                Note = $"Tự tạo khi duyệt NVL lỗi {request.RequestCode}: tồn kho không đủ.",
-                CreatedAt = _clock.Now,
-                PurchaseOrderLines = toBuy.Select(kv => orderMaterials.TryGetValue(kv.Key, out var omId)
-                    ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = kv.Value }
-                    : new PurchaseOrderLine { MaterialId = kv.Key, OrderedQty = kv.Value }).ToList(),
-            };
-            await _uow.Repository<PurchaseOrder>().AddAsync(po);
-            notes.Add($"thiếu tồn: đã tạo đơn mua {po.PoCode} chờ chốt ({Describe(toBuy, info)}), Quản đốc đặt hàng với nhà cung cấp");
-            await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse,
-                "Đơn mua cho NVL lỗi chờ chốt", $"Tồn kho không đủ bù NVL lỗi của {request.RequestCode}: đơn mua {po.PoCode} chờ bạn chốt nhà cung cấp và đơn giá.",
-                "/purchase/orders"), ct);
-        }
-
-        var summary = string.Join("; ", notes);
-        request.ResultNote = summary.Length > 1000 ? summary[..1000] : summary;
-        return Result.Success();
+            PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
+            OrderId = request.OrderId,
+            SourceRequestId = request.RequestId,
+            GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
+            PaymentStatus = PurchaseOrderStatuses.Unpaid,
+            Note = $"Tự tạo khi duyệt NVL lỗi {request.RequestCode}: tồn kho không đủ.",
+            CreatedAt = _clock.Now,
+            PurchaseOrderLines = toBuy.Select(kv => orderMaterials.TryGetValue(kv.Key, out var omId)
+                ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = kv.Value }
+                : new PurchaseOrderLine { MaterialId = kv.Key, OrderedQty = kv.Value }).ToList(),
+        };
+        await _uow.Repository<PurchaseOrder>().AddAsync(po);
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse,
+            "Đơn mua cho NVL lỗi chờ chốt", $"Tồn kho không đủ bù NVL lỗi của {request.RequestCode}: đơn mua {po.PoCode} chờ bạn chốt nhà cung cấp và đơn giá.",
+            "/purchase/orders"), ct);
+        return $"thiếu tồn: đã tạo đơn mua {po.PoCode} chờ chốt ({Describe(toBuy, info)}), Quản đốc đặt hàng với nhà cung cấp";
     }
 
     private static string Describe(IReadOnlyDictionary<int, decimal> qty, IReadOnlyDictionary<int, Material> info) =>
