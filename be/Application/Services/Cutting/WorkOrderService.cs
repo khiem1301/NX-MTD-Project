@@ -139,57 +139,73 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         var request = await _uow.Repository<Request>().Query().AsNoTracking().Include(r => r.RequestLines)
             .FirstOrDefaultAsync(r => r.RequestId == dto.RequestId && r.RequestTypeCode == RequestTypes.ReplacementCutting, ct);
-        if (request is null || request.OrderId is null) return WarehouseFailures.NotFound<WorkOrderDto>();
+        var check = await ValidateReplacementAsync(request, dto, ct);
+        if (check.Failure is not null) return check.Failure;
+
+        var created = await _uow.InTransactionAsync(() => AddReplacementAsync(dto, request!, check, ct));
+        _logger.LogInformation("Replacement work order {WorkOrderId} created from request {RequestId}", created.Data, dto.RequestId);
+        return await GetByIdAsync(created.Data, null, ct);
+    }
+
+    private sealed record ReplacementCheck(Result<WorkOrderDto>? Failure, int ProductId = 0, string OrderCode = "");
+
+    /// <summary>
+    /// Đơn cắt bù phải đã duyệt, chưa có lệnh, có đủ dòng; đơn hàng chưa đóng, tổ cắt hợp lệ, các dòng thuộc đơn và cùng một mã hàng,
+    /// vải đủ cho phần cắt bù. Trả về mã hàng và mã đơn để tạo lệnh.
+    /// </summary>
+    private async Task<ReplacementCheck> ValidateReplacementAsync(Request? request, CreateReplacementWorkOrderDto dto, CancellationToken ct)
+    {
+        if (request is null || request.OrderId is null) return new ReplacementCheck(WarehouseFailures.NotFound<WorkOrderDto>());
         if (request.Status != RequestStatuses.Approved)
-            return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementRequestNotApproved);
+            return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementRequestNotApproved));
         var hasOrder = await WorkOrders.AnyAsync(w => w.SourceRequestId == request.RequestId && w.Status != WorkOrderStatuses.Cancelled, ct);
-        if (hasOrder) return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementOrderExists);
+        if (hasOrder) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementOrderExists));
         if (request.RequestLines.Count == 0 || request.RequestLines.Any(l => l.OrderLineId is null || l.ProductComponentMaterialId is null))
-            return Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementLinesMissing);
+            return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.ReplacementLinesMissing));
 
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstAsync(o => o.OrderId == request.OrderId, ct);
-        if (OrderStatuses.Closed.Contains(order.Status)) return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+        if (OrderStatuses.Closed.Contains(order.Status)) return new ReplacementCheck(Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed));
         var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.CuttingTeamId
             && t.TeamType == TeamTypes.Cutting && t.Status == RecordStatus.Active, ct);
-        if (!teamOk) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.CuttingTeamInvalid);
+        if (!teamOk) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.CuttingTeamInvalid));
 
         var lineIds = request.RequestLines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
         var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Include(l => l.ProductVariant)
             .Where(l => lineIds.Contains(l.OrderLineId) && l.OrderId == request.OrderId).ToDictionaryAsync(l => l.OrderLineId, ct);
-        if (orderLines.Count != lineIds.Count) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder);
+        if (orderLines.Count != lineIds.Count) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder));
         var productIds = orderLines.Values.Select(l => l.ProductId).Distinct().ToList();
-        if (productIds.Count != 1) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
+        if (productIds.Count != 1) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder));
 
         // Vải ước tính theo kích thước chi tiết cần cắt bù và khổ vải (vw_RecutFabricNeed) phải đủ trong kho + vải tổ cắt đang giữ.
         var fabric = await CheckRecutFabricAsync(request.OrderId.Value, dto.CuttingTeamId,
             request.RequestLines.Select(l => (l.ProductComponentMaterialId!.Value, (int)l.Quantity)).ToList(), ct);
-        if (fabric is not null) return fabric;
+        if (fabric is not null) return new ReplacementCheck(fabric);
+        return new ReplacementCheck(null, productIds[0], order.OrderCode);
+    }
 
-        var created = await _uow.InTransactionAsync(async () =>
+    private async Task<Result<int>> AddReplacementAsync(CreateReplacementWorkOrderDto dto, Request request, ReplacementCheck check,
+        CancellationToken ct)
+    {
+        var wo = new WorkOrder
         {
-            var wo = new WorkOrder
+            WorkOrderCode = await _codes.NextAsync<WorkOrder>(DocumentPrefixes.WorkOrder, w => w.WorkOrderCode, ct),
+            Status = WorkOrderStatuses.Open,
+            OrderId = request.OrderId.Value,
+            ProductId = check.ProductId,
+            CuttingTeamId = dto.CuttingTeamId,
+            DueDate = dto.DueDate,
+            SourceRequestId = request.RequestId,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? $"Cắt bù theo {request.RequestCode}" : dto.Note.Trim(),
+            WorkOrderLines = request.RequestLines.Select(l => new WorkOrderLine
             {
-                WorkOrderCode = await _codes.NextAsync<WorkOrder>(DocumentPrefixes.WorkOrder, w => w.WorkOrderCode, ct),
-                Status = WorkOrderStatuses.Open,
-                OrderId = request.OrderId.Value,
-                ProductId = productIds[0],
-                CuttingTeamId = dto.CuttingTeamId,
-                DueDate = dto.DueDate,
-                SourceRequestId = request.RequestId,
-                Note = string.IsNullOrWhiteSpace(dto.Note) ? $"Cắt bù theo {request.RequestCode}" : dto.Note.Trim(),
-                WorkOrderLines = request.RequestLines.Select(l => new WorkOrderLine
-                {
-                    OrderLineId = l.OrderLineId!.Value, ProductComponentMaterialId = l.ProductComponentMaterialId, PlannedQty = (int)l.Quantity,
-                }).ToList(),
-            };
-            await _uow.Repository<WorkOrder>().AddAsync(wo);
-            await NotifyCreatedAsync(wo, order.OrderCode, ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(wo.WorkOrderId);
-        });
-        _logger.LogInformation("Replacement work order {WorkOrderId} created from request {RequestId}", created.Data, dto.RequestId);
-        return await GetByIdAsync(created.Data, null, ct);
+                OrderLineId = l.OrderLineId!.Value, ProductComponentMaterialId = l.ProductComponentMaterialId, PlannedQty = (int)l.Quantity,
+            }).ToList(),
+        };
+        await _uow.Repository<WorkOrder>().AddAsync(wo);
+        await NotifyCreatedAsync(wo, check.OrderCode, ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(wo.WorkOrderId);
     }
 
     public async Task<Result<WorkOrderDto>> UpdateAsync(int workOrderId, SaveWorkOrderDto dto, CancellationToken ct)
@@ -233,33 +249,10 @@ public sealed class WorkOrderService : IWorkOrderService
         if (wo.Status != WorkOrderStatuses.Cutting)
             return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotFinishable);
 
-        var handovers = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
-            .Where(l => l.CutHandover.WorkOrderId == workOrderId)
-            .Select(l => new { l.CutHandover.Status, l.OrderLineId, l.ProductComponentMaterialId, l.ConfirmedQty })
-            .ToListAsync(ct);
-        if (handovers.Any(h => h.Status == HandoverStatuses.Pending))
-            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandoverToFinish);
-        // Thứ tự theo swimlane: BTP vào kho → trả vải thừa → báo Quản đốc kèm vải thực dùng. Phiếu trả chờ kho thì chưa tổng kết được.
-        if (await _uow.Repository<MaterialReturn>().Query().AnyAsync(r => r.Status == HandoverStatuses.Pending
-                && r.MaterialIssue.WorkOrderId == workOrderId, ct))
-            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingReturn);
-
-        var cut = (await _uow.Repository<CuttingLayLine>().Query().AsNoTracking()
-            .Where(l => l.CuttingLay.WorkOrderId == workOrderId)
-            .Select(l => new { l.OrderLineId, l.ProductComponentMaterialId, l.ActualQty }).ToListAsync(ct))
-            .GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(l => l.ActualQty));
-        var received = handovers.Where(h => h.Status == HandoverStatuses.Confirmed)
-            .GroupBy(h => (h.OrderLineId, h.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(h => h.ConfirmedQty ?? 0));
-
-        var notHanded = cut.Where(c => c.Value > received.GetValueOrDefault(c.Key)).Sum(c => c.Value - received.GetValueOrDefault(c.Key));
-        if (notHanded > 0)
-            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, string.Format(WarehouseMessages.WorkOrderCutNotHandedOver, notHanded));
-
-        var planned = wo.WorkOrderLines.Sum(l => l.PlannedQty);
-        var inWarehouse = received.Values.Sum();
         reason = reason?.Trim();
-        if (inWarehouse < planned && string.IsNullOrEmpty(reason))
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.WorkOrderFinishShortReasonRequired, inWarehouse, planned));
+        var check = await CheckFinishableAsync(wo, reason, ct);
+        if (check.Failure is not null) return check.Failure;
+        var (inWarehouse, planned) = (check.InWarehouse, check.Planned);
 
         wo.Status = WorkOrderStatuses.Completed;
         wo.CompletedAt = DateTime.Now;
@@ -272,6 +265,44 @@ public sealed class WorkOrderService : IWorkOrderService
         await _uow.SaveChangesAsync();
         _logger.LogInformation("Work order {WorkOrderId} finished by cutting team: {InWarehouse}/{Planned}", workOrderId, inWarehouse, planned);
         return Result.Success(WarehouseMessages.WorkOrderFinishedCutting);
+    }
+
+    private sealed record FinishCheck(Result? Failure, int InWarehouse = 0, int Planned = 0);
+
+    /// <summary>
+    /// Chỉ kết thúc khi mọi phiếu bàn giao và phiếu trả vải đã xử lý, phần đã cắt đã vào kho BTP hết; cắt thiếu phải có lý do.
+    /// Trả về số BTP đã vào kho và số kế hoạch.
+    /// </summary>
+    private async Task<FinishCheck> CheckFinishableAsync(WorkOrder wo, string? reason, CancellationToken ct)
+    {
+        var workOrderId = wo.WorkOrderId;
+        var handovers = await _uow.Repository<CutHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.CutHandover.WorkOrderId == workOrderId)
+            .Select(l => new { l.CutHandover.Status, l.OrderLineId, l.ProductComponentMaterialId, l.ConfirmedQty })
+            .ToListAsync(ct);
+        if (handovers.Any(h => h.Status == HandoverStatuses.Pending))
+            return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandoverToFinish));
+        // Thứ tự theo swimlane: BTP vào kho → trả vải thừa → báo Quản đốc kèm vải thực dùng. Phiếu trả chờ kho thì chưa tổng kết được.
+        if (await _uow.Repository<MaterialReturn>().Query().AnyAsync(r => r.Status == HandoverStatuses.Pending
+                && r.MaterialIssue.WorkOrderId == workOrderId, ct))
+            return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingReturn));
+
+        var cut = (await _uow.Repository<CuttingLayLine>().Query().AsNoTracking()
+            .Where(l => l.CuttingLay.WorkOrderId == workOrderId)
+            .Select(l => new { l.OrderLineId, l.ProductComponentMaterialId, l.ActualQty }).ToListAsync(ct))
+            .GroupBy(l => (l.OrderLineId, l.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(l => l.ActualQty));
+        var received = handovers.Where(h => h.Status == HandoverStatuses.Confirmed)
+            .GroupBy(h => (h.OrderLineId, h.ProductComponentMaterialId)).ToDictionary(g => g.Key, g => g.Sum(h => h.ConfirmedQty ?? 0));
+
+        var notHanded = cut.Where(c => c.Value > received.GetValueOrDefault(c.Key)).Sum(c => c.Value - received.GetValueOrDefault(c.Key));
+        if (notHanded > 0)
+            return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidStatus, string.Format(WarehouseMessages.WorkOrderCutNotHandedOver, notHanded)));
+
+        var planned = wo.WorkOrderLines.Sum(l => l.PlannedQty);
+        var inWarehouse = received.Values.Sum();
+        if (inWarehouse < planned && string.IsNullOrEmpty(reason))
+            return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.WorkOrderFinishShortReasonRequired, inWarehouse, planned)));
+        return new FinishCheck(null, inWarehouse, planned);
     }
 
     /// <summary>Chỉ sửa / hủy khi lệnh còn OPEN, chưa có bàn cắt và chưa có phiếu cấp (trừ phiếu bị từ chối).</summary>
