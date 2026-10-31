@@ -102,16 +102,8 @@ public sealed class FinanceService : IFinanceService
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenInvalidAllocationBasis,
                 Messages.BreakEvenInvalidAllocationBasis, ResultKind.Validation);
 
-        // Cổng điều kiện GBR-17/MSG25: bảng lương tháng đã duyệt VÀ chi phí tháng đã nhập. Không tự tạo kỳ
-        // kế toán nếu chưa có — khác MonthlyCostService/PayrollService (đây không phải hành động "import").
-        var period = await _repo.FindPeriodByMonthAsync(dto.PeriodMonth, ct);
+        var period = await FindReadyPeriodAsync(dto.PeriodMonth, ct);
         if (period is null)
-            return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenNotReady,
-                Messages.BreakEvenNotReady);
-
-        var payrollApproved = await _repo.IsPayrollApprovedAsync(period.PeriodId, ct);
-        var hasMonthlyCost = await _repo.HasMonthlyCostAsync(period.PeriodId, ct);
-        if (!payrollApproved || !hasMonthlyCost)
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenNotReady,
                 Messages.BreakEvenNotReady);
 
@@ -122,6 +114,59 @@ public sealed class FinanceService : IFinanceService
             return Result<BreakEvenCalculationResultDto>.Failure(ErrorCodes.BreakEvenNoOutput,
                 Messages.BreakEvenNoOutput);
 
+        var (entities, warningsByProductId, products, calculatedAt) =
+            await BuildEntitiesAsync(period, allocationBasis, revenueRows, ct);
+        await SaveResultsAsync(period, dto.PeriodMonth, allocationBasis, entities, calculatedAt, ct);
+
+        var items = entities.Select(e => ToDto(e, dto.PeriodMonth, products, warningsByProductId)).ToList();
+        var warnings = items.Where(i => i.AtRiskWarning is not null).Select(i => i.AtRiskWarning!).ToList();
+
+        _logger.LogInformation(
+            "Tính hòa vốn tháng {PeriodMonth} ({AllocationBasis}): {Count} mã hàng, {AtRisk} nguy cơ lỗ",
+            dto.PeriodMonth, allocationBasis, items.Count, warnings.Count);
+
+        return Result<BreakEvenCalculationResultDto>.Success(
+            new BreakEvenCalculationResultDto(period.PeriodId, dto.PeriodMonth, CodeText.ToPascal(allocationBasis),
+                calculatedAt, items, warnings),
+            string.Format(Messages.BreakEvenCalculated, dto.PeriodMonth));
+    }
+
+    /// <summary>Lưu kết quả hòa vốn kèm AuditLog.</summary>
+    private async Task SaveResultsAsync(AccountingPeriod period, string periodMonth, string allocationBasis,
+        List<BreakEvenResult> entities, DateTime calculatedAt, CancellationToken ct)
+    {
+        _repo.AddBreakEvenResults(entities);
+        // Kết quả hòa vốn là dữ liệu mật (GBR-02): log chỉ ghi cách tính + số mã hàng, không ghi doanh thu / đơn giá CMT (D26).
+        _audit.Add(new AuditEntry(nameof(BreakEvenResult), period.PeriodId, AuditActions.Insert, null,
+            new
+            {
+                PeriodMonth = periodMonth, AllocationBasis = allocationBasis, CalculatedAt = calculatedAt,
+                ProductCount = entities.Count, AtRiskCount = entities.Count(e => e.IsAtRisk),
+            }));
+        await _repo.SaveChangesAsync(ct);
+    }
+
+    /// <summary>
+    /// Cổng điều kiện GBR-17/MSG25: bảng lương tháng đã duyệt VÀ chi phí tháng đã nhập. Không tự tạo kỳ
+    /// kế toán nếu chưa có — khác MonthlyCostService/PayrollService (đây không phải hành động "import").
+    /// Trả về null khi chưa đủ điều kiện.
+    /// </summary>
+    private async Task<AccountingPeriod?> FindReadyPeriodAsync(string periodMonth, CancellationToken ct)
+    {
+        var period = await _repo.FindPeriodByMonthAsync(periodMonth, ct);
+        if (period is null) return null;
+
+        var payrollApproved = await _repo.IsPayrollApprovedAsync(period.PeriodId, ct);
+        var hasMonthlyCost = await _repo.HasMonthlyCostAsync(period.PeriodId, ct);
+        return payrollApproved && hasMonthlyCost ? period : null;
+    }
+
+    /// <summary>Tính kết quả hòa vốn cho từng mã hàng có doanh thu trong tháng (bước 1-6 của UC11).</summary>
+    private async Task<(List<BreakEvenResult> Entities, Dictionary<int, string> Warnings,
+        IReadOnlyDictionary<int, (string ProductCode, string ProductName)> Products, DateTime CalculatedAt)>
+        BuildEntitiesAsync(AccountingPeriod period, string allocationBasis, IReadOnlyList<VwMonthlyRevenue> revenueRows,
+            CancellationToken ct)
+    {
         var byProduct = revenueRows
             .GroupBy(r => r.ProductId)
             .ToDictionary(g => g.Key, g => (FinishedQty: g.Sum(x => x.FinishedQty ?? 0), Revenue: g.Sum(x => x.Revenue ?? 0m)));
@@ -162,28 +207,7 @@ public sealed class FinanceService : IFinanceService
             entities.Add(entity);
             if (warning is not null) warningsByProductId[productId] = warning;
         }
-
-        _repo.AddBreakEvenResults(entities);
-        // Kết quả hòa vốn là dữ liệu mật (GBR-02): log chỉ ghi cách tính + số mã hàng, không ghi doanh thu / đơn giá CMT (D26).
-        _audit.Add(new AuditEntry(nameof(BreakEvenResult), period.PeriodId, AuditActions.Insert, null,
-            new
-            {
-                PeriodMonth = dto.PeriodMonth, AllocationBasis = allocationBasis, CalculatedAt = calculatedAt,
-                ProductCount = entities.Count, AtRiskCount = entities.Count(e => e.IsAtRisk),
-            }));
-        await _repo.SaveChangesAsync(ct);
-
-        var items = entities.Select(e => ToDto(e, dto.PeriodMonth, products, warningsByProductId)).ToList();
-        var warnings = items.Where(i => i.AtRiskWarning is not null).Select(i => i.AtRiskWarning!).ToList();
-
-        _logger.LogInformation(
-            "Tính hòa vốn tháng {PeriodMonth} ({AllocationBasis}): {Count} mã hàng, {AtRisk} nguy cơ lỗ",
-            dto.PeriodMonth, allocationBasis, items.Count, warnings.Count);
-
-        return Result<BreakEvenCalculationResultDto>.Success(
-            new BreakEvenCalculationResultDto(period.PeriodId, dto.PeriodMonth, CodeText.ToPascal(allocationBasis),
-                calculatedAt, items, warnings),
-            string.Format(Messages.BreakEvenCalculated, dto.PeriodMonth));
+        return (entities, warningsByProductId, products, calculatedAt);
     }
 
     /// <summary>
@@ -253,15 +277,13 @@ public sealed class FinanceService : IFinanceService
 
         // MSG26: khi không tính được điểm hòa vốn (đơn giá ≤ biến phí/sp), dùng câu thay thế ngắn
         // gọn thay vì "{x}%" không xác định (xem báo cáo task, không phải MSG mới).
-        string? warning = null;
-        if (isAtRisk)
-        {
-            warning = percentReached.HasValue
-                ? string.Format(Messages.BreakEvenAtRiskWarning, productCode, percentReached.Value)
-                : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, productCode);
-        }
-        return (entity, warning);
+        return (entity, isAtRisk ? AtRiskWarning(productCode, percentReached) : null);
     }
+
+    private static string AtRiskWarning(string productCode, decimal? percentReached) =>
+        percentReached.HasValue
+            ? string.Format(Messages.BreakEvenAtRiskWarning, productCode, percentReached.Value)
+            : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, productCode);
 
     public async Task<Result<BreakEvenListResultDto>> GetBreakEvenAsync(
         string periodMonth, int? productId, bool history, CancellationToken ct)
