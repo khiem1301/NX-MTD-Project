@@ -40,7 +40,7 @@ public sealed class OperationService : IOperationService
         var today = _clock.Today;
         var rates = (await _uow.Repository<PieceRate>().Query().AsNoTracking()
                 .Where(r => r.Operation.ProductId == productId)
-                .Select(r => new { r.PieceRateId, r.OperationId, r.Rate, r.EffectiveDate, r.Status, r.DecisionNote })
+                .Select(r => new RateRow(r.PieceRateId, r.OperationId, r.Rate, r.EffectiveDate, r.Status, r.DecisionNote))
                 .ToListAsync(ct))
             .GroupBy(r => r.OperationId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -51,22 +51,34 @@ public sealed class OperationService : IOperationService
             rates.TryGetValue(item.OperationId, out var own);
             own ??= [];
 
-            // Giống FindEffectiveAsync: đơn giá đã duyệt có ngày hiệu lực lớn nhất không quá hôm nay.
-            var current = own.Where(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
-                .OrderByDescending(r => r.EffectiveDate).FirstOrDefault();
-            var latest = own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
-            var next = latest is not null && latest.PieceRateId != current?.PieceRateId
-                ? new OperationRateDto(latest.PieceRateId, latest.Rate, latest.EffectiveDate,
-                    CodeText.ToPascal(latest.Status), latest.Status == PieceRateStatuses.Rejected ? latest.DecisionNote : null)
-                : null;
+            var (current, next) = CurrentAndNextRate(own, today);
 
             result.Add(item with
             {
                 TeamType = CodeText.ToPascal(item.TeamType), Status = CodeText.ToPascal(item.Status),
-                CurrentRate = current?.Rate, NextRate = next,
+                CurrentRate = current, NextRate = next,
             });
         }
         return Result<IReadOnlyList<OperationDto>>.Success(result);
+    }
+
+    private sealed record RateRow(
+        int PieceRateId, int OperationId, decimal Rate, DateOnly EffectiveDate, string Status, string? DecisionNote);
+
+    /// <summary>
+    /// Đơn giá hiện hành (giống FindEffectiveAsync: đã duyệt, ngày hiệu lực lớn nhất không quá hôm nay) và đơn giá
+    /// sắp tới / mới nhất khác hiện hành (kèm lý do nếu bị từ chối).
+    /// </summary>
+    private static (decimal? Current, OperationRateDto? Next) CurrentAndNextRate(List<RateRow> own, DateOnly today)
+    {
+        var current = own.Where(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
+            .OrderByDescending(r => r.EffectiveDate).FirstOrDefault();
+        var latest = own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
+        var next = latest is not null && latest.PieceRateId != current?.PieceRateId
+            ? new OperationRateDto(latest.PieceRateId, latest.Rate, latest.EffectiveDate,
+                CodeText.ToPascal(latest.Status), latest.Status == PieceRateStatuses.Rejected ? latest.DecisionNote : null)
+            : null;
+        return (current?.Rate, next);
     }
 
     public async Task<Result<int>> CreateAsync(SaveOperationDto dto, CancellationToken ct)
@@ -297,6 +309,24 @@ public sealed class OperationService : IOperationService
         var skipped = rows.Count(r => r.Preview.RateAction == RateSkipped);
         if (effectiveDate is null) return new RateStats(0, 0, unchanged, skipped, 0);
 
+        var (created, updated) = ApplyRateRows(rows, operationByStt, effectiveDate.Value, submit);
+
+        if (created.Count > 0) await _uow.Repository<PieceRate>().AddRangeAsync(created);
+        await _uow.SaveChangesAsync();   // lấy PieceRateId để ghi nhật ký
+
+        foreach (var rate in created)
+            _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Insert, null, RateSnapshot(rate)));
+        foreach (var (rate, before) in updated)
+            _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Update, before, RateSnapshot(rate)));
+
+        return new RateStats(created.Count, updated.Count, unchanged, skipped, submit ? created.Count + updated.Count : 0);
+    }
+
+    /// <summary>Dựng đơn giá mới và cập nhật đơn giá cũ (Nháp hoặc Chờ duyệt nếu gửi duyệt luôn) theo kế hoạch từng dòng.</summary>
+    private (List<PieceRate> Created, List<(PieceRate Rate, object Before)> Updated) ApplyRateRows(
+        IReadOnlyList<PlannedRow> rows, IReadOnlyDictionary<int, Operation> operationByStt, DateOnly effectiveDate,
+        bool submit)
+    {
         var now = _clock.Now;
         var status = submit ? PieceRateStatuses.PendingApproval : PieceRateStatuses.Draft;
         var created = new List<PieceRate>();
@@ -311,7 +341,7 @@ public sealed class OperationService : IOperationService
             {
                 created.Add(new PieceRate
                 {
-                    OperationId = operation.OperationId, Rate = row.Raw.Rate.Value, EffectiveDate = effectiveDate.Value,
+                    OperationId = operation.OperationId, Rate = row.Raw.Rate.Value, EffectiveDate = effectiveDate,
                     Status = status, SubmittedAt = submit ? now : null,
                 });
                 continue;
@@ -325,16 +355,7 @@ public sealed class OperationService : IOperationService
             rate.SubmittedAt = submit ? now : null;
             updated.Add((rate, before));
         }
-
-        if (created.Count > 0) await _uow.Repository<PieceRate>().AddRangeAsync(created);
-        await _uow.SaveChangesAsync();   // lấy PieceRateId để ghi nhật ký
-
-        foreach (var rate in created)
-            _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Insert, null, RateSnapshot(rate)));
-        foreach (var (rate, before) in updated)
-            _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Update, before, RateSnapshot(rate)));
-
-        return new RateStats(created.Count, updated.Count, unchanged, skipped, submit ? created.Count + updated.Count : 0);
+        return (created, updated);
     }
 
     private async Task<Result<ImportPlan>> BuildImportPlanAsync(
@@ -343,21 +364,9 @@ public sealed class OperationService : IOperationService
         var productExists = await _uow.Repository<Product>().Query().AsNoTracking().AnyAsync(p => p.ProductId == productId, ct);
         if (!productExists) return Fail.NotFound<ImportPlan>();
 
-        IReadOnlyList<OperationExcelSheetDto> sheets;
-        try
-        {
-            sheets = _excel.Parse(stream);
-        }
-        catch (InvalidDataException ex)
-        {
-            return Result<ImportPlan>.Failure(ErrorCodes.OperationExcelInvalid, ex.Message, ResultKind.Validation);
-        }
-        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException
-                                       or InvalidOperationException or NotImplementedException)
-        {
-            return Result<ImportPlan>.Failure(ErrorCodes.OperationExcelInvalid, Messages.OperationExcelInvalid,
-                ResultKind.Validation);
-        }
+        var parsed = ParseSheets(stream);
+        if (!parsed.IsSuccess) return Fail.As<ImportPlan>(parsed);
+        var sheets = parsed.Data!;
 
         var sheet = string.IsNullOrWhiteSpace(sheetName)
             ? sheets[0]
@@ -372,8 +381,36 @@ public sealed class OperationService : IOperationService
                 .ToListAsync(ct))
             .GroupBy(r => r.OperationId)
             .ToDictionary(g => g.Key, g => g.ToList());
-        var seenStt = new HashSet<int>();
+        var rows = PlanRows(sheet, byCode, ratesByOperation, effectiveDate);
 
+        var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
+        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows));
+    }
+
+    /// <summary>Đọc các sheet từ file Excel; file hỏng thì trả lỗi validation.</summary>
+    private Result<IReadOnlyList<OperationExcelSheetDto>> ParseSheets(Stream stream)
+    {
+        try
+        {
+            return Result<IReadOnlyList<OperationExcelSheetDto>>.Success(_excel.Parse(stream));
+        }
+        catch (InvalidDataException ex)
+        {
+            return Result<IReadOnlyList<OperationExcelSheetDto>>.Failure(ErrorCodes.OperationExcelInvalid, ex.Message, ResultKind.Validation);
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException
+                                       or InvalidOperationException or NotImplementedException)
+        {
+            return Result<IReadOnlyList<OperationExcelSheetDto>>.Failure(ErrorCodes.OperationExcelInvalid, Messages.OperationExcelInvalid,
+                ResultKind.Validation);
+        }
+    }
+
+    /// <summary>Lập kế hoạch cho từng dòng của sheet: lỗi / thêm mới / cập nhật / không đổi, kèm cách xử lý đơn giá.</summary>
+    private static List<PlannedRow> PlanRows(OperationExcelSheetDto sheet, IReadOnlyDictionary<string, Operation> byCode,
+        IReadOnlyDictionary<int, List<PieceRate>> ratesByOperation, DateOnly? effectiveDate)
+    {
+        var seenStt = new HashSet<int>();
         var rows = new List<PlannedRow>(sheet.Rows.Count);
         foreach (var raw in sheet.Rows)
         {
@@ -394,9 +431,7 @@ public sealed class OperationService : IOperationService
             rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
                 raw.StandardTimeSec, raw.Equipment, raw.Rate, action, null, rateAction, rateNote), raw, existing, existingRate));
         }
-
-        var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
-        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows));
+        return rows;
     }
 
     /// <summary>
