@@ -112,53 +112,64 @@ public sealed class AnnouncementService : IAnnouncementService
 
         var teamIds = (dto.TeamIds ?? Array.Empty<int>()).Distinct().ToList();
         var roleIds = (dto.RoleIds ?? Array.Empty<int>()).Distinct().ToList();
+        var recipients = await ResolveRecipientsAsync(dto.TargetScope, senderId, teamIds, roleIds, ct);
+        if (!recipients.IsSuccess) return Fail.As<AnnouncementDto>(recipients);
+
+        var created = await _uow.InTransactionAsync(() => StoreAnnouncementAsync(dto, senderId, content, teamIds, roleIds, recipients.Data!));
+        var list = await ListSentAsync(new AnnouncementQuery { Page = 1, PageSize = 1 }, ct);
+        return Result<AnnouncementDto>.Success(list.Data!.Items.First(a => a.AnnouncementId == created.Data), created.Message);
+    }
+
+    /// <summary>Người nhận theo phạm vi (tất cả / tổ / vai trò), loại người gửi và nhân viên đã nghỉ; phải có ít nhất một người.</summary>
+    private async Task<Result<List<int>>> ResolveRecipientsAsync(string scope, int senderId, List<int> teamIds, List<int> roleIds,
+        CancellationToken ct)
+    {
         var recipients = _uow.Repository<Employee>().Query().AsNoTracking().Where(e => e.Status == RecordStatus.Active && e.EmployeeId != senderId);
-        switch (dto.TargetScope)
+        switch (scope)
         {
             case AnnouncementScopes.All: break;
             case AnnouncementScopes.Team:
-                if (teamIds.Count == 0) return Result<AnnouncementDto>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementTargetRequired, ResultKind.Validation);
+                if (teamIds.Count == 0) return Result<List<int>>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementTargetRequired, ResultKind.Validation);
                 recipients = recipients.Where(e => e.TeamId != null && teamIds.Contains(e.TeamId.Value));
                 break;
             case AnnouncementScopes.Role:
-                if (roleIds.Count == 0) return Result<AnnouncementDto>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementTargetRequired, ResultKind.Validation);
+                if (roleIds.Count == 0) return Result<List<int>>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementTargetRequired, ResultKind.Validation);
                 recipients = recipients.Where(e => roleIds.Contains(e.RoleId));
                 break;
             default:
-                return Result<AnnouncementDto>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementScopeInvalid, ResultKind.Validation);
+                return Result<List<int>>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementScopeInvalid, ResultKind.Validation);
         }
 
         var ids = await recipients.Select(e => e.EmployeeId).ToListAsync(ct);
-        if (ids.Count == 0)
-            return Result<AnnouncementDto>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementNoRecipient, ResultKind.Validation);
+        return ids.Count == 0
+            ? Result<List<int>>.Failure(ErrorCodes.AnnouncementInvalid, Messages.AnnouncementNoRecipient, ResultKind.Validation)
+            : Result<List<int>>.Success(ids);
+    }
 
-        var urgent = dto.Priority == AnnouncementPriorities.Urgent;
-        var created = await _uow.InTransactionAsync(async () =>
+    /// <summary>Lưu thông báo chung cùng đích nhận và một thông báo cá nhân cho từng người nhận.</summary>
+    private async Task<Result<int>> StoreAnnouncementAsync(SendAnnouncementDto dto, int senderId, string content,
+        List<int> teamIds, List<int> roleIds, List<int> ids)
+    {
+        var announcement = new Announcement
         {
-            var announcement = new Announcement
-            {
-                Content = content, Priority = dto.Priority, TargetScope = dto.TargetScope, SenderId = senderId, SentAt = _clock.Now,
-            };
-            if (dto.TargetScope == AnnouncementScopes.Team)
-                foreach (var id in teamIds) announcement.AnnouncementTargets.Add(new AnnouncementTarget { TeamId = id });
-            if (dto.TargetScope == AnnouncementScopes.Role)
-                foreach (var id in roleIds) announcement.AnnouncementTargets.Add(new AnnouncementTarget { RoleId = id });
-            await _uow.Repository<Announcement>().AddAsync(announcement);
-            await _uow.SaveChangesAsync();
+            Content = content, Priority = dto.Priority, TargetScope = dto.TargetScope, SenderId = senderId, SentAt = _clock.Now,
+        };
+        if (dto.TargetScope == AnnouncementScopes.Team)
+            foreach (var id in teamIds) announcement.AnnouncementTargets.Add(new AnnouncementTarget { TeamId = id });
+        if (dto.TargetScope == AnnouncementScopes.Role)
+            foreach (var id in roleIds) announcement.AnnouncementTargets.Add(new AnnouncementTarget { RoleId = id });
+        await _uow.Repository<Announcement>().AddAsync(announcement);
+        await _uow.SaveChangesAsync();
 
-            var title = urgent ? "Thông báo khẩn" : "Thông báo";
-            await _uow.Repository<Notification>().AddRangeAsync(ids.Select(id => new Notification
-            {
-                RecipientId = id, SourceType = NotificationSources.Announcement, RefTable = nameof(Announcement), RefId = announcement.AnnouncementId,
-                Title = title, Message = content, PushStatus = NotificationPushStatuses.Skipped, CreatedAt = _clock.Now,
-            }).ToList());
-            _audit.Add(new AuditEntry(nameof(Announcement), announcement.AnnouncementId, AuditActions.Insert, null,
-                new { announcement.Priority, announcement.TargetScope, Recipients = ids.Count }));
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(announcement.AnnouncementId, string.Format(Messages.AnnouncementSent, ids.Count));
-        });
-
-        var list = await ListSentAsync(new AnnouncementQuery { Page = 1, PageSize = 1 }, ct);
-        return Result<AnnouncementDto>.Success(list.Data!.Items.First(a => a.AnnouncementId == created.Data), created.Message);
+        var title = dto.Priority == AnnouncementPriorities.Urgent ? "Thông báo khẩn" : "Thông báo";
+        await _uow.Repository<Notification>().AddRangeAsync(ids.Select(id => new Notification
+        {
+            RecipientId = id, SourceType = NotificationSources.Announcement, RefTable = nameof(Announcement), RefId = announcement.AnnouncementId,
+            Title = title, Message = content, PushStatus = NotificationPushStatuses.Skipped, CreatedAt = _clock.Now,
+        }).ToList());
+        _audit.Add(new AuditEntry(nameof(Announcement), announcement.AnnouncementId, AuditActions.Insert, null,
+            new { announcement.Priority, announcement.TargetScope, Recipients = ids.Count }));
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(announcement.AnnouncementId, string.Format(Messages.AnnouncementSent, ids.Count));
     }
 }
