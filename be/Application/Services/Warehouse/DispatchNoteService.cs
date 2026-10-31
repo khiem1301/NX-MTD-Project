@@ -74,6 +74,26 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return Result<IReadOnlyList<DispatchableLineDto>>.Success(await DispatchableAsync(orderId, ct));
     }
 
+    /// <summary>Khóa theo đơn rồi kiểm dòng thuộc đơn, số xuất không vượt số còn phải giao và thành phẩm khả dụng (GBR-07, MSG13).</summary>
+    private async Task<Result<int>?> CheckQuantitiesAsync(CreateDispatchNoteDto dto, CustomerOrder order, CancellationToken ct)
+    {
+        await _locks.AcquireAsync($"dispatch:{order.OrderId}", ct);
+        var lines = (await DispatchableAsync(order.OrderId, ct)).ToDictionary(l => l.OrderLineId);
+        if (dto.Lines.Any(l => !lines.ContainsKey(l.OrderLineId)))
+            return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchLineNotInOrder);
+        var over = dto.Lines.Where(l => l.IssueQty > lines[l.OrderLineId].RemainingQty)
+            .Select(l => $"{lines[l.OrderLineId].Color}-{lines[l.OrderLineId].SizeCode}: còn {lines[l.OrderLineId].RemainingQty}, xuất {l.IssueQty}")
+            .ToList();
+        if (over.Count > 0)
+            return Result<int>.Failure(ErrorCodes.DispatchExceedsOrder,
+                $"{WarehouseMessages.DispatchExceedsOrder}: {string.Join("; ", over)}.");
+
+        // Giữ chỗ thành phẩm: không xuất vượt số khả dụng (GBR-07, MSG13). vw_StockBalance tính phiếu PENDING là đã giữ.
+        var enough = await _stock.EnsureAvailableAsync(
+            dto.Lines.Select(l => new StockRequirement(StockKey.Finished(l.OrderLineId), l.IssueQty)).ToList(), ct);
+        return enough.IsSuccess ? null : WarehouseFailures.From<int>(enough);
+    }
+
     public async Task<Result<DispatchNoteDto>> CreateAsync(CreateDispatchNoteDto dto, CancellationToken ct)
     {
         var created = await _uow.InTransactionAsync(async () =>
@@ -83,21 +103,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
             if (OrderStatuses.Closed.Contains(order.Status))
                 return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
 
-            await _locks.AcquireAsync($"dispatch:{order.OrderId}", ct);
-            var lines = (await DispatchableAsync(order.OrderId, ct)).ToDictionary(l => l.OrderLineId);
-            if (dto.Lines.Any(l => !lines.ContainsKey(l.OrderLineId)))
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchLineNotInOrder);
-            var over = dto.Lines.Where(l => l.IssueQty > lines[l.OrderLineId].RemainingQty)
-                .Select(l => $"{lines[l.OrderLineId].Color}-{lines[l.OrderLineId].SizeCode}: còn {lines[l.OrderLineId].RemainingQty}, xuất {l.IssueQty}")
-                .ToList();
-            if (over.Count > 0)
-                return Result<int>.Failure(ErrorCodes.DispatchExceedsOrder,
-                    $"{WarehouseMessages.DispatchExceedsOrder}: {string.Join("; ", over)}.");
-
-            // Giữ chỗ thành phẩm: không xuất vượt số khả dụng (GBR-07, MSG13). vw_StockBalance tính phiếu PENDING là đã giữ.
-            var enough = await _stock.EnsureAvailableAsync(
-                dto.Lines.Select(l => new StockRequirement(StockKey.Finished(l.OrderLineId), l.IssueQty)).ToList(), ct);
-            if (!enough.IsSuccess) return WarehouseFailures.From<int>(enough);
+            var invalid = await CheckQuantitiesAsync(dto, order, ct);
+            if (invalid is not null) return invalid;
 
             var note = new DispatchNote
             {
