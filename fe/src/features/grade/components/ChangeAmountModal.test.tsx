@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { gradeApi } from '../api/gradeApi';
 import { GR_LABELS } from '../constants';
 import type { GradeCode, GradeLevel } from '../types';
-import { ChangeAmountModal } from './GradePage';
+import { ChangeAmountModal } from './ChangeAmountModal';
 
 jest.mock('../api/gradeApi', () => ({ gradeApi: { addLevel: jest.fn() } }));
 

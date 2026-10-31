@@ -1,4 +1,5 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
+import { MESSAGES } from '@/constants/messages';
 
 export const EVAL_STATUS = {
   SUBMITTED: 'SUBMITTED',
@@ -88,3 +89,6 @@ export const GR_MESSAGES = {
   codeDeleted: 'Đã xóa bậc thợ.',
   levelHint: 'Đổi tiền bậc = thêm một dòng mới với ngày hiệu lực mới, các dòng cũ giữ làm lịch sử.',
 } as const;
+
+/** Luật bắt buộc nhập dùng chung cho các form của màn Bậc thợ. */
+export const REQUIRED_RULES = [{ required: true, message: MESSAGES.common.required }];
