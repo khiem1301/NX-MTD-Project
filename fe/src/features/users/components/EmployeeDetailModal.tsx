@@ -1,48 +1,28 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Card,
-  Descriptions,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Result,
-  Space,
-  Tabs,
-} from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { Alert, Button, Card, Popconfirm, Result, Space, Tabs } from 'antd';
 import { AuditHistory } from '@/components/common/AuditHistory';
-import { DetailDescriptions, DetailModal } from '@/components/common/DetailModal';
+import { DetailModal } from '@/components/common/DetailModal';
 import { NoteModal } from '@/components/common/NoteModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ERROR_CODES } from '@/constants/errorCodes';
-import {
-  ACCOUNT_STATUS_TAG,
-  EMPLOYEE_STATUS_TAG,
-  PAY_TYPE_LABEL,
-  ROLE_LABEL,
-} from '@/constants/hr';
+import { ACCOUNT_STATUS_TAG } from '@/constants/hr';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
 import { useQueryId } from '@/hooks/useQueryId';
 import type { ApiError } from '@/types/api';
-import { formatDate, formatDateTime, toApiDate } from '@/utils/format';
+import { formatDateTime } from '@/utils/format';
 import {
   useEmployee,
   useLockAccount,
   useResetPassword,
-  useResignEmployee,
   useUnlockAccount,
 } from '../hooks/useEmployees';
 import type { TempPassword } from '../types';
 import { EmployeeFormModal } from './EmployeeFormModal';
 import { TempPasswordModal } from './TempPasswordModal';
-import { AppDatePicker } from '@/components/common/DateInputs';
-
-type ResignForm = { resignDate: Dayjs; reason: string };
+import { EmployeeInfo } from './EmployeeInfo';
+import { ResignEmployeeModal } from './ResignEmployeeModal';
 
 /** Chi tiết nhân viên mở theo ?id= + lịch sử. Admin có thêm khối tài khoản (khóa / mở khóa / đặt lại mật khẩu) và Cho nghỉ việc. */
 export function EmployeeDetailModal() {
@@ -55,12 +35,10 @@ export function EmployeeDetailModal() {
   const lock = useLockAccount(id ?? 0);
   const unlock = useUnlockAccount(id ?? 0);
   const reset = useResetPassword(id ?? 0);
-  const resign = useResignEmployee(id ?? 0);
   const [editing, setEditing] = useState(false);
   const [locking, setLocking] = useState(false);
   const [resigning, setResigning] = useState(false);
   const [tempPassword, setTempPassword] = useState<TempPassword | null>(null);
-  const [resignForm] = Form.useForm<ResignForm>();
   const notFound = (error as ApiError | null)?.errorCode === ERROR_CODES.CommonNotFound;
 
   const isSelf = data?.employeeId === user?.employeeId;
@@ -90,36 +68,7 @@ export function EmployeeDetailModal() {
       {notFound && <Result status="404" subTitle={MESSAGES.common.notFound} />}
       {data && (
         <>
-          <DetailDescriptions style={{ marginBottom: 16 }}>
-            <Descriptions.Item label={MESSAGES.hr.role}>
-              {ROLE_LABEL[data.role] ?? data.role}
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.team}>{data.teamName ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.status}>
-              <StatusTag status={data.status} labels={EMPLOYEE_STATUS_TAG} />
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.payType}>
-              {PAY_TYPE_LABEL[data.payType] ?? data.payType}
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.grade}>
-              {data.currentGradeCode ?? '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.attendanceCode}>
-              {data.attendanceCode ?? '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.phone}>{data.phone ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.dateOfBirth}>
-              {formatDate(data.dateOfBirth)}
-            </Descriptions.Item>
-            <Descriptions.Item label={MESSAGES.hr.startDate}>
-              {formatDate(data.startDate)}
-            </Descriptions.Item>
-            {data.resignDate && (
-              <Descriptions.Item label={MESSAGES.hr.resignDate}>
-                {formatDate(data.resignDate)}
-              </Descriptions.Item>
-            )}
-          </DetailDescriptions>
+          <EmployeeInfo employee={data} />
 
           {canManage && account && (
             <Card size="small" title={MESSAGES.hr.account} style={{ marginBottom: 16 }}>
@@ -183,51 +132,12 @@ export function EmployeeDetailModal() {
               onSubmit={(note) => lock.mutate(note ?? '', { onSettled: () => setLocking(false) })}
             />
           )}
-          <Modal
+          <ResignEmployeeModal
+            employeeId={data.employeeId}
+            rowVer={data.rowVer}
             open={resigning}
-            title={MESSAGES.hr.resign}
-            okText={MESSAGES.common.confirm}
-            cancelText={MESSAGES.common.cancel}
-            okButtonProps={{ danger: true }}
-            confirmLoading={resign.isPending}
-            onCancel={() => setResigning(false)}
-            onOk={() => resignForm.submit()}
-            destroyOnHidden
-          >
-            <Form
-              form={resignForm}
-              layout="vertical"
-              preserve={false}
-              initialValues={{ resignDate: dayjs() }}
-              onFinish={(v) =>
-                resign.mutate(
-                  {
-                    resignDate: toApiDate(v.resignDate),
-                    reason: v.reason.trim(),
-                    rowVer: data.rowVer,
-                  },
-                  { onSuccess: () => setResigning(false) },
-                )
-              }
-            >
-              <Form.Item
-                name="resignDate"
-                label={MESSAGES.hr.resignDate}
-                rules={[{ required: true, message: MESSAGES.common.required }]}
-              >
-                <AppDatePicker />
-              </Form.Item>
-              <Form.Item
-                name="reason"
-                label={MESSAGES.hr.resignReason}
-                rules={[
-                  { required: true, whitespace: true, message: MESSAGES.common.reasonRequired },
-                ]}
-              >
-                <Input.TextArea rows={3} maxLength={500} showCount />
-              </Form.Item>
-            </Form>
-          </Modal>
+            onClose={() => setResigning(false)}
+          />
         </>
       )}
       <TempPasswordModal value={tempPassword} onClose={() => setTempPassword(null)} />
