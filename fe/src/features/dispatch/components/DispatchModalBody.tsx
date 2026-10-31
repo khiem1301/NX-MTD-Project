@@ -1,23 +1,15 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Divider, Form, InputNumber, Popconfirm, Tooltip } from 'antd';
+import { Alert, Button, Form, Popconfirm, Tooltip } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { AttachmentGallery } from '@/components/common/attachments';
 import { useAttachments } from '@/hooks/useAttachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
-import { API_DATE, formatDate, formatDateTime } from '@/utils/format';
-import {
-  DISPATCH_LABELS,
-  DISPATCH_MESSAGES,
-  DISPATCH_PHOTO_MAX,
-  DISPATCH_STATUS,
-  DISPATCH_STATUS_LABEL,
-} from '../constants';
+import { API_DATE } from '@/utils/format';
+import { DISPATCH_LABELS, DISPATCH_MESSAGES, DISPATCH_STATUS } from '../constants';
 import {
   useCancelDispatch,
   useConfirmDelivery,
@@ -26,10 +18,13 @@ import {
   useRejectDispatch,
 } from '../hooks/useDispatch';
 import type { DispatchNote, DispatchNoteLine } from '../types';
-import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
+import { ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { type Dayjs } from 'dayjs';
+import { DispatchInfo } from './DispatchInfo';
+import { DispatchPhotos } from './DispatchPhotos';
+import { dispatchLineColumns } from './dispatchLineColumns';
 
 type FormValues = { receivedDate: Dayjs; received: Record<string, number> };
 
@@ -57,10 +52,6 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
   const canExport = isKeeper && pending;
   const canConfirm = isAccountant && inDelivery;
   const notExportedYet = pending;
-  const sent =
-    !notExportedYet &&
-    note.status !== DISPATCH_STATUS.CANCELLED &&
-    note.status !== DISPATCH_STATUS.REJECTED;
 
   const handleFinish = (values: FormValues) =>
     confirm.mutate(
@@ -140,30 +131,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
           style={{ marginBottom: 16 }}
         />
       )}
-      <DetailDescriptions>
-        <Descriptions.Item label={DISPATCH_LABELS.order}>{note.orderCode}</Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.customer}>{note.customerName}</Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.deliveryDate}>
-          {formatDate(note.deliveryDate)}
-        </Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.status}>
-          <StatusTag status={note.status} labels={DISPATCH_STATUS_LABEL} />
-        </Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.deliveryAddress} span={2}>
-          {note.deliveryAddress}
-        </Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.dispatchedBy}>
-          {note.dispatchedByName
-            ? `${note.dispatchedByName} · ${formatDateTime(note.dispatchedAt)}`
-            : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.customerReceivedDate}>
-          {note.customerReceivedDate ? formatDate(note.customerReceivedDate) : '—'}
-        </Descriptions.Item>
-        <Descriptions.Item label={DISPATCH_LABELS.note} span={2}>
-          {note.note ?? '—'}
-        </Descriptions.Item>
-      </DetailDescriptions>
+      <DispatchInfo note={note} />
       <Form
         form={form}
         disabled={confirm.isPending}
@@ -190,59 +158,10 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
           size="small"
           pagination={false}
           dataSource={note.lines}
-          columns={[
-            {
-              title: DISPATCH_LABELS.orderLine,
-              key: 'line',
-              render: (_, l) => `${l.productCode} - ${l.color} - ${l.sizeCode}`,
-            },
-            { title: DISPATCH_LABELS.issueQty, dataIndex: 'issueQty', align: 'right' },
-            {
-              title: DISPATCH_LABELS.receivedQty,
-              key: 'received',
-              align: 'right',
-              render: (_, l) =>
-                canConfirm ? (
-                  <Form.Item
-                    name={['received', String(l.dispatchNoteLineId)]}
-                    noStyle
-                    rules={[{ required: true, message: MESSAGES.common.required }]}
-                  >
-                    <InputNumber min={0} max={l.issueQty} precision={0} />
-                  </Form.Item>
-                ) : (
-                  (l.receivedQty ?? '—')
-                ),
-            },
-          ]}
+          columns={dispatchLineColumns(canConfirm)}
         />
       </Form>
-      {(pending || sent) && (isKeeper || isManager || sent) && (
-        <>
-          <Divider orientation="left">{`${DISPATCH_LABELS.issueSlipPhotos} (${DISPATCH_LABELS.requiredPhoto})`}</Divider>
-          <AttachmentGallery
-            ownerType={ATTACHMENT_OWNER.DispatchNote}
-            ownerId={note.dispatchNoteId}
-            canEdit={isKeeper && (pending || inDelivery)}
-            maxFiles={DISPATCH_PHOTO_MAX}
-            purpose={ATTACHMENT_PURPOSE.SignedIssueSlip}
-            onlyPurpose
-          />
-        </>
-      )}
-      {sent && (
-        <>
-          <Divider orientation="left">{`${DISPATCH_LABELS.deliveryNotePhotos} (${DISPATCH_LABELS.requiredPhoto})`}</Divider>
-          <AttachmentGallery
-            ownerType={ATTACHMENT_OWNER.DispatchNote}
-            ownerId={note.dispatchNoteId}
-            canEdit={isAccountant && inDelivery}
-            maxFiles={DISPATCH_PHOTO_MAX}
-            purpose={ATTACHMENT_PURPOSE.SignedDeliveryNote}
-            onlyPurpose
-          />
-        </>
-      )}
+      <DispatchPhotos note={note} />
       <ReasonModal
         open={rejecting}
         title={DISPATCH_LABELS.rejectTitle}
