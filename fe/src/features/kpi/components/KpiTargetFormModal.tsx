@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { Alert, DatePicker, Descriptions, Divider, Form, InputNumber, Modal, Select, Typography } from 'antd';
+import { Alert, Descriptions, Divider, Form, InputNumber, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
@@ -8,6 +8,8 @@ import { formatQty, toApiDate } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useKpiCapacity, useSaveKpiTarget } from '../hooks/useKpi';
 import type { KpiTarget } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { AppRangePicker } from '@/components/common/DateInputs';
 
 type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
 
@@ -20,7 +22,6 @@ type FormValues = {
   workingDays: number;
 };
 
-const DATE_FORMAT = 'DD/MM/YYYY';
 const text = KPI_TEXT.form;
 
 /**
@@ -58,7 +59,10 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
   }, [open, target, form]);
 
   const orderOptions = useMemo(() => {
-    const options = (orders.data?.items ?? []).map((o) => ({ value: o.orderId, label: o.orderCode }));
+    const options = (orders.data?.items ?? []).map((o) => ({
+      value: o.orderId,
+      label: o.orderCode,
+    }));
     // Đơn của chỉ tiêu đang sửa có thể đã ra khỏi danh sách "đơn đang chạy": vẫn phải hiện đúng mã.
     return target && !options.some((o) => o.value === target.orderId)
       ? [{ value: target.orderId, label: target.orderCode }, ...options]
@@ -68,7 +72,8 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
   const productOptions = useMemo(() => {
     const seen = new Map<number, string>();
     (lines.data ?? []).forEach((l) => seen.set(l.productId, `${l.productCode} - ${l.productName}`));
-    if (target && !seen.has(target.productId)) seen.set(target.productId, `${target.productCode} - ${target.productName}`);
+    if (target && !seen.has(target.productId))
+      seen.set(target.productId, `${target.productCode} - ${target.productName}`);
     return [...seen].map(([value, label]) => ({ value, label }));
   }, [lines.data, target]);
 
@@ -97,7 +102,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
   return (
     <Modal
       open={open}
-      width={560}
+      width={MODAL_WIDTH.sm}
       title={editing ? text.editTitle : text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -108,7 +113,9 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Divider orientation="left" plain style={{ marginTop: 0 }}>{text.sectionOrder}</Divider>
+        <Divider orientation="left" plain style={{ marginTop: 0 }}>
+          {text.sectionOrder}
+        </Divider>
         <Form.Item name="orderId" label={text.order} rules={required}>
           <Select
             showSearch
@@ -129,14 +136,18 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
             placeholder={orderId === null ? text.noProduct : undefined}
           />
         </Form.Item>
-        <Divider orientation="left" plain>{text.sectionTeam}</Divider>
+        <Divider orientation="left" plain>
+          {text.sectionTeam}
+        </Divider>
         <Form.Item name="sewingTeamId" label={text.team} rules={required}>
           <Select options={teamOptions} loading={teams.isLoading} disabled={editing} />
         </Form.Item>
         <Form.Item name="period" label={text.period} rules={required}>
-          <DatePicker.RangePicker format={DATE_FORMAT} style={{ width: '100%' }} />
+          <AppRangePicker style={{ width: '100%' }} />
         </Form.Item>
-        <Divider orientation="left" plain>{text.sectionTarget}</Divider>
+        <Divider orientation="left" plain>
+          {text.sectionTarget}
+        </Divider>
         {capacity && (
           <Descriptions
             size="small"
@@ -145,14 +156,33 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
             title={text.capacityTitle}
             style={{ marginBottom: 16 }}
             items={[
-              { key: 'w', label: text.capacityWarehouse, children: formatQty(capacity.warehouseBtp) },
+              {
+                key: 'w',
+                label: text.capacityWarehouse,
+                children: formatQty(capacity.warehouseBtp),
+              },
               { key: 't', label: text.capacityTeamHeld, children: formatQty(capacity.teamHeld) },
-              { key: 'c', label: text.capacityCommitted, children: formatQty(capacity.committedByOthers) },
-              { key: 'm', label: text.capacityMax, children: <strong>{formatQty(capacity.maxTarget)}</strong> },
+              {
+                key: 'c',
+                label: text.capacityCommitted,
+                children: formatQty(capacity.committedByOthers),
+              },
+              {
+                key: 'm',
+                label: text.capacityMax,
+                children: <strong>{formatQty(capacity.maxTarget)}</strong>,
+              },
             ]}
           />
         )}
-        {overCapacity && <Alert type="error" showIcon message={text.capacityExceeds} style={{ marginBottom: 16 }} />}
+        {overCapacity && (
+          <Alert
+            type="error"
+            showIcon
+            message={text.capacityExceeds}
+            style={{ marginBottom: 16 }}
+          />
+        )}
         <Form.Item
           name="targetFinishedQty"
           label={text.targetFinishedQty}

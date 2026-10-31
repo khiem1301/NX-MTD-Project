@@ -1,5 +1,15 @@
 import { useState } from 'react';
-import { Alert, Checkbox, DatePicker, Descriptions, Modal, Select, Space, Table, Typography, Upload, message } from 'antd';
+import {
+  Alert,
+  Checkbox,
+  Descriptions,
+  Modal,
+  Select,
+  Space,
+  Typography,
+  Upload,
+  message,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -9,8 +19,10 @@ import { fill, formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useImportOperations, usePreviewOperationImport } from '../hooks/useProduction';
 import type { OperationImportRow } from '../types';
-import { modalWidth } from '../utils';
 import { confirmDialog } from '@/utils/confirmDialog';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type Props = { open: boolean; productId: number; productLabel: string; onClose: () => void };
 
@@ -20,7 +32,12 @@ const columns: ColumnsType<OperationImportRow> = [
   { title: text.columns.stt, dataIndex: 'stt', width: 70 },
   { title: text.columns.code, dataIndex: 'operationCode', width: 90 },
   { title: text.columns.name, dataIndex: 'operationName', render: (v: string | null) => v ?? '—' },
-  { title: text.columns.skill, dataIndex: 'skillLevel', width: 70, render: (v: number | null) => v ?? '—' },
+  {
+    title: text.columns.skill,
+    dataIndex: 'skillLevel',
+    width: 70,
+    render: (v: number | null) => v ?? '—',
+  },
   {
     title: text.columns.time,
     dataIndex: 'standardTimeSec',
@@ -35,7 +52,9 @@ const columns: ColumnsType<OperationImportRow> = [
     render: (_, row) => (
       <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
         <span>{row.rate === null ? '—' : formatCurrency(row.rate)}</span>
-        {row.rateAction !== 'None' && <StatusTag status={row.rateAction} labels={text.rateAction} />}
+        {row.rateAction !== 'None' && (
+          <StatusTag status={row.rateAction} labels={text.rateAction} />
+        )}
         {row.rateNote && <Typography.Text type="secondary">{row.rateNote}</Typography.Text>}
       </Space>
     ),
@@ -69,7 +88,10 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
   const data = preview.data;
   const ratesOn = withRates && data?.hasRateColumn === true;
 
-  const runPreview = (nextFile: File, options: { sheetName?: string; withRates?: boolean; date?: Dayjs } = {}) => {
+  const runPreview = (
+    nextFile: File,
+    options: { sheetName?: string; withRates?: boolean; date?: Dayjs } = {},
+  ) => {
     setFinalStt(undefined);
     const useRates = options.withRates ?? withRates;
     const date = options.date ?? effectiveDate;
@@ -104,10 +126,22 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
           })
           .then((result) => {
             const rates = ratesOn
-              ? fill(text.rateResultTemplate, result.rateCreated, result.rateUpdated, result.rateUnchanged, result.rateSkipped)
+              ? fill(
+                  text.rateResultTemplate,
+                  result.rateCreated,
+                  result.rateUpdated,
+                  result.rateUnchanged,
+                  result.rateSkipped,
+                )
               : '';
             void message.success(
-              fill(text.resultTemplate, result.created, result.updated, result.unchanged, result.skipped) + rates,
+              fill(
+                text.resultTemplate,
+                result.created,
+                result.updated,
+                result.unchanged,
+                result.skipped,
+              ) + rates,
             );
             onClose();
           }),
@@ -115,7 +149,11 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
   };
 
   const rateChanges = ratesOn ? (data?.rateNewCount ?? 0) + (data?.rateUpdateCount ?? 0) : 0;
-  const importable = (data?.newCount ?? 0) + (data?.updateCount ?? 0) + rateChanges + (finalStt !== undefined ? 1 : 0);
+  const importable =
+    (data?.newCount ?? 0) +
+    (data?.updateCount ?? 0) +
+    rateChanges +
+    (finalStt !== undefined ? 1 : 0);
   const finalOptions = (data?.rows ?? [])
     .filter((r) => r.action !== 'Error')
     .map((r) => ({ value: r.stt, label: `${r.stt}. ${r.operationName ?? ''}` }));
@@ -123,7 +161,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
   return (
     <Modal
       open={open}
-      width={modalWidth(1000)}
+      width={MODAL_WIDTH.lg}
       title={`${text.title} — ${productLabel}`}
       okText={text.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -162,7 +200,12 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
         {data && file && (
           <>
             {data.productText && (
-              <Alert type="info" showIcon message={`${text.productInFile}: ${data.productText}`} description={text.productCheck} />
+              <Alert
+                type="info"
+                showIcon
+                message={`${text.productInFile}: ${data.productText}`}
+                description={text.productCheck}
+              />
             )}
 
             <Space wrap size={24}>
@@ -184,7 +227,9 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
                   showSearch
                   optionFilterProp="label"
                   style={{ width: 340 }}
-                  placeholder={data.productHasFinalStep ? text.finalStepHasOne : text.finalStepPlaceholder}
+                  placeholder={
+                    data.productHasFinalStep ? text.finalStepHasOne : text.finalStepPlaceholder
+                  }
                   disabled={data.productHasFinalStep}
                   value={finalStt}
                   options={finalOptions}
@@ -208,9 +253,8 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
                   <Space wrap size={24}>
                     <Space>
                       <span>{text.effectiveDate}</span>
-                      <DatePicker
+                      <AppDatePicker
                         allowClear={false}
-                        format="DD/MM/YYYY"
                         value={effectiveDate}
                         onChange={(v) => {
                           const date = v ?? dayjs();
@@ -219,7 +263,10 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
                         }}
                       />
                     </Space>
-                    <Checkbox checked={submitRates} onChange={(e) => setSubmitRates(e.target.checked)}>
+                    <Checkbox
+                      checked={submitRates}
+                      onChange={(e) => setSubmitRates(e.target.checked)}
+                    >
                       {text.submitRates}
                     </Checkbox>
                   </Space>
@@ -235,23 +282,33 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
                 <Typography.Text type="success">{data.newCount}</Typography.Text>
               </Descriptions.Item>
               <Descriptions.Item label={text.summary.updated}>{data.updateCount}</Descriptions.Item>
-              <Descriptions.Item label={text.summary.unchanged}>{data.unchangedCount}</Descriptions.Item>
+              <Descriptions.Item label={text.summary.unchanged}>
+                {data.unchangedCount}
+              </Descriptions.Item>
               <Descriptions.Item label={text.summary.error}>
-                <Typography.Text type={data.errorCount > 0 ? 'danger' : undefined}>{data.errorCount}</Typography.Text>
+                <Typography.Text type={data.errorCount > 0 ? 'danger' : undefined}>
+                  {data.errorCount}
+                </Typography.Text>
               </Descriptions.Item>
               {ratesOn && (
                 <>
                   <Descriptions.Item label={text.rateSummary.created}>
                     <Typography.Text type="success">{data.rateNewCount}</Typography.Text>
                   </Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.updated}>{data.rateUpdateCount}</Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.unchanged}>{data.rateUnchangedCount}</Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.skipped}>{data.rateSkippedCount}</Descriptions.Item>
+                  <Descriptions.Item label={text.rateSummary.updated}>
+                    {data.rateUpdateCount}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={text.rateSummary.unchanged}>
+                    {data.rateUnchangedCount}
+                  </Descriptions.Item>
+                  <Descriptions.Item label={text.rateSummary.skipped}>
+                    {data.rateSkippedCount}
+                  </Descriptions.Item>
                 </>
               )}
             </Descriptions>
 
-            <Table<OperationImportRow>
+            <DataTable<OperationImportRow>
               rowKey={(r) => `${r.rowNumber}-${r.stt}`}
               size="small"
               columns={columns}

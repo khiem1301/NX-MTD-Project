@@ -1,10 +1,12 @@
-import { Alert, Descriptions, Modal, Spin, Table, Tag, type TableColumnsType } from 'antd';
+import { Alert, Descriptions, Modal, Spin, Tag, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useFinishKpiTarget, useFinishPreview } from '../hooks/useKpi';
 import type { EndOfOrderRow, KpiTarget } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = { target: KpiTarget | null; onClose: () => void };
 
@@ -23,12 +25,18 @@ export function FinishOrderModal({ target, onClose }: Props) {
   const columns: TableColumnsType<EndOfOrderRow> = [
     { title: text.worker, key: 'worker', render: (_, r) => `${r.workerCode} - ${r.workerName}` },
     { title: text.line, key: 'line', render: (_, r) => `${r.color} - ${r.sizeCode}` },
-    { title: text.reported, dataIndex: 'reportedQty', align: 'right', render: (v: number) => formatQty(v) },
+    {
+      title: text.reported,
+      dataIndex: 'reportedQty',
+      align: 'right',
+      render: (v: number) => formatQty(v),
+    },
     {
       title: text.mismatch,
       dataIndex: 'mismatchQty',
       align: 'right',
-      render: (v: number) => (v > 0 ? <Tag color="red">{formatQty(v)}</Tag> : <Tag color="green">0</Tag>),
+      render: (v: number) =>
+        v > 0 ? <Tag color="red">{formatQty(v)}</Tag> : <Tag color="green">0</Tag>,
     },
   ];
 
@@ -42,7 +50,7 @@ export function FinishOrderModal({ target, onClose }: Props) {
   return (
     <Modal
       open={target !== null}
-      width={720}
+      width={MODAL_WIDTH.md}
       title={target ? `${text.title}: ${target.orderCode} · ${target.sewingTeamName}` : text.title}
       okText={text.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -61,22 +69,32 @@ export function FinishOrderModal({ target, onClose }: Props) {
             <Descriptions.Item label={text.target}>{formatQty(data.targetQty)}</Descriptions.Item>
             <Descriptions.Item label={text.actual}>{formatQty(data.actualQty)}</Descriptions.Item>
             <Descriptions.Item label={text.result}>
-              <Tag color={data.achieved ? 'green' : 'orange'}>{data.achieved ? text.achieved : text.notAchieved}</Tag>
+              <Tag color={data.achieved ? 'green' : 'orange'}>
+                {data.achieved ? text.achieved : text.notAchieved}
+              </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label={text.shortfall}>{`${formatQty(data.shortfallQty)} (${formatQty(data.shortfallPct)}%)`}</Descriptions.Item>
+            <Descriptions.Item
+              label={text.shortfall}
+            >{`${formatQty(data.shortfallQty)} (${formatQty(data.shortfallPct)}%)`}</Descriptions.Item>
           </Descriptions>
-          {otMessage && <Alert type="warning" showIcon message={otMessage} style={{ marginBottom: 12 }} />}
+          {otMessage && (
+            <Alert type="warning" showIcon message={otMessage} style={{ marginBottom: 12 }} />
+          )}
           {data.blockers.map((b) => (
             <Alert key={b} type="error" showIcon message={b} style={{ marginBottom: 12 }} />
           ))}
-          <Table<EndOfOrderRow>
+          <DataTable<EndOfOrderRow>
             rowKey={(r) => `${r.orderLineId}-${r.workerId}`}
             size="small"
             pagination={false}
             columns={columns}
             dataSource={data.rows}
             locale={{ emptyText: text.noOutput }}
-            title={() => (mismatchTotal > 0 ? text.mismatchTitle.replace('{n}', formatQty(mismatchTotal)) : text.noMismatch)}
+            title={() =>
+              mismatchTotal > 0
+                ? text.mismatchTitle.replace('{n}', formatQty(mismatchTotal))
+                : text.noMismatch
+            }
           />
         </>
       )}

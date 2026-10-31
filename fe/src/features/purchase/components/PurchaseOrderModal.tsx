@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Divider, Drawer, Result, Space, Spin, Table, Typography } from 'antd';
+import { Alert, Button, Descriptions, Divider, Result, Space, Spin, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useSearchParams } from 'react-router-dom';
 import { AuditHistory } from '@/components/common/AuditHistory';
@@ -16,16 +16,14 @@ import {
   PAYMENT_STATUS_LABEL,
   PURCHASE_TEXT,
 } from '../constants';
-import {
-  useCancelOrder,
-  usePurchaseOrderDetail,
-  useReturnPayment,
-} from '../hooks/usePurchase';
+import { useCancelOrder, usePurchaseOrderDetail, useReturnPayment } from '../hooks/usePurchase';
 import type { PurchaseOrderLine, PurchaseRole } from '../types';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { PaymentProofGallery } from './PaymentProofGallery';
 import { PlaceOrderModal } from './PlaceOrderModal';
 import { RepriceModal } from './RepriceModal';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = { role: PurchaseRole };
 type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
@@ -45,7 +43,12 @@ const lineColumns: ColumnsType<PurchaseOrderLine> = [
     align: 'right',
     render: (value: number, l) => `${formatQty(value)} ${l.unit}`,
   },
-  { title: text.unitPrice, dataIndex: 'unitPrice', align: 'right', render: (v: number) => formatCurrency(v) },
+  {
+    title: text.unitPrice,
+    dataIndex: 'unitPrice',
+    align: 'right',
+    render: (v: number) => formatCurrency(v),
+  },
   {
     title: text.amount,
     key: 'amount',
@@ -58,7 +61,7 @@ const lineColumns: ColumnsType<PurchaseOrderLine> = [
  * Chi tiết đơn mua mở theo ?id=<purchaseOrderId> (link trong thông báo chia sẻ được). Nút hiện theo `permissions`
  * server trả về: Quản đốc đặt hàng / hủy / sửa đơn giá; Kế toán xác nhận thanh toán / trả lại.
  */
-export function PurchaseOrderDrawer({ role }: Props) {
+export function PurchaseOrderModal({ role }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const idParam = Number(searchParams.get('id'));
   const id = Number.isInteger(idParam) && idParam > 0 ? idParam : null;
@@ -103,14 +106,7 @@ export function PurchaseOrderDrawer({ role }: Props) {
   );
 
   return (
-    <Drawer
-      open={id !== null}
-      onClose={close}
-      width={760}
-      destroyOnHidden
-      title={data?.poCode}
-      extra={actions}
-    >
+    <DetailModal open={id !== null} onClose={close} title={data?.poCode} extra={actions}>
       {isLoading && <Spin />}
       {notFound && <Result status="404" subTitle={MESSAGES.common.notFound} />}
       {!notFound && <QueryError error={error} onRetry={() => void refetch()} />}
@@ -118,7 +114,12 @@ export function PurchaseOrderDrawer({ role }: Props) {
       {data && (
         <>
           {data.rejectReason && (
-            <Alert type="error" showIcon message={`${text.rejectReason}: ${data.rejectReason}`} style={{ marginBottom: 12 }} />
+            <Alert
+              type="error"
+              showIcon
+              message={`${text.rejectReason}: ${data.rejectReason}`}
+              style={{ marginBottom: 12 }}
+            />
           )}
           {data.paymentStatus === 'Returned' && data.paymentReturnReason && (
             <Alert
@@ -133,16 +134,22 @@ export function PurchaseOrderDrawer({ role }: Props) {
             <Descriptions.Item label={PURCHASE_TEXT.columns.order}>
               {data.orderCode ?? PURCHASE_TEXT.columns.stock}
             </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.supplier}>{data.supplierName ?? '—'}</Descriptions.Item>
+            <Descriptions.Item label={PURCHASE_TEXT.columns.supplier}>
+              {data.supplierName ?? '—'}
+            </Descriptions.Item>
             <Descriptions.Item label={PURCHASE_TEXT.columns.goodsStatus}>
               <StatusTag status={data.goodsStatus} labels={GOODS_STATUS_LABEL} />
             </Descriptions.Item>
             <Descriptions.Item label={PURCHASE_TEXT.columns.paymentStatus}>
               <StatusTag status={data.paymentStatus} labels={PAYMENT_STATUS_LABEL} />
             </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.orderDate}>{formatDate(data.orderDate)}</Descriptions.Item>
+            <Descriptions.Item label={PURCHASE_TEXT.columns.orderDate}>
+              {formatDate(data.orderDate)}
+            </Descriptions.Item>
             <Descriptions.Item label={text.expectedDate}>
-              {data.expectedDeliveryCount === null ? '—' : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
+              {data.expectedDeliveryCount === null
+                ? '—'
+                : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
             </Descriptions.Item>
             <Descriptions.Item label={text.total}>
               <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
@@ -151,7 +158,7 @@ export function PurchaseOrderDrawer({ role }: Props) {
           </Descriptions>
 
           <Divider orientation="left">{text.lines}</Divider>
-          <Table<PurchaseOrderLine>
+          <DataTable<PurchaseOrderLine>
             rowKey="purchaseOrderLineId"
             size="small"
             columns={lineColumns}
@@ -164,8 +171,12 @@ export function PurchaseOrderDrawer({ role }: Props) {
             <>
               <Divider orientation="left">{text.paymentInfo}</Divider>
               <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-                <Descriptions.Item label={text.paymentDate}>{formatDate(data.paymentDate)}</Descriptions.Item>
-                <Descriptions.Item label={text.paidAmount}>{formatCurrency(data.paidAmount)}</Descriptions.Item>
+                <Descriptions.Item label={text.paymentDate}>
+                  {formatDate(data.paymentDate)}
+                </Descriptions.Item>
+                <Descriptions.Item label={text.paidAmount}>
+                  {formatCurrency(data.paidAmount)}
+                </Descriptions.Item>
                 <Descriptions.Item label={text.paymentMethod}>
                   {data.paymentMethod ? PAYMENT_METHOD_LABEL[data.paymentMethod] : '—'}
                 </Descriptions.Item>
@@ -182,7 +193,10 @@ export function PurchaseOrderDrawer({ role }: Props) {
               {perm?.canConfirmPayment && (
                 <Typography.Paragraph type="secondary">{text.proofsHint}</Typography.Paragraph>
               )}
-              <PaymentProofGallery purchaseOrderId={data.purchaseOrderId} canEdit={perm?.canConfirmPayment ?? false} />
+              <PaymentProofGallery
+                purchaseOrderId={data.purchaseOrderId}
+                canEdit={perm?.canConfirmPayment ?? false}
+              />
             </>
           )}
 
@@ -197,17 +211,21 @@ export function PurchaseOrderDrawer({ role }: Props) {
             title={PURCHASE_TEXT.cancelTitle}
             loading={cancel.isPending}
             onCancel={closeDialog}
-            onSubmit={(reason) => cancel.mutate({ reason, rowVer: data.rowVer }, { onSuccess: closeDialog })}
+            onSubmit={(reason) =>
+              cancel.mutate({ reason, rowVer: data.rowVer }, { onSuccess: closeDialog })
+            }
           />
           <ReasonModal
             open={dialog === 'return'}
             title={PURCHASE_TEXT.returnTitle}
             loading={returnPayment.isPending}
             onCancel={closeDialog}
-            onSubmit={(reason) => returnPayment.mutate({ reason, rowVer: data.rowVer }, { onSuccess: closeDialog })}
+            onSubmit={(reason) =>
+              returnPayment.mutate({ reason, rowVer: data.rowVer }, { onSuccess: closeDialog })
+            }
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

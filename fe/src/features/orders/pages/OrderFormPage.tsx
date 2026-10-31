@@ -1,5 +1,5 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, DatePicker, Divider, Form, Input, Select, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Card, Divider, Form, Input, Select, Space, Spin, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { useBlocker, useNavigate, useParams } from 'react-router-dom';
@@ -13,11 +13,24 @@ import { formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { CustomerFormModal } from '../components/CustomerFormModal';
 import { ProductBlockEditor } from '../components/ProductBlockEditor';
 import { ProductFormModal } from '../components/ProductFormModal';
-import { useCreateOrder, useCustomers, useNextOrderCode, useOrder, useUpdateOrder } from '../hooks/useOrders';
+import {
+  useCreateOrder,
+  useCustomers,
+  useNextOrderCode,
+  useOrder,
+  useUpdateOrder,
+} from '../hooks/useOrders';
 import type { OrderDetail } from '../types';
 import { blocksTotals, fromLines, newBlock, toLines, type ProductBlock } from '../utils/orderGrid';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
-type HeaderValues = { orderCode: string; customerId: number; receivedDate: Dayjs; dueDate: Dayjs; note?: string };
+type HeaderValues = {
+  orderCode: string;
+  customerId: number;
+  receivedDate: Dayjs;
+  dueDate: Dayjs;
+  note?: string;
+};
 
 const LINE_ERROR_CODES: string[] = [
   ERROR_CODES.OrderLineRemoveNotAllowed,
@@ -33,7 +46,8 @@ export function OrderFormPage() {
   const order = useOrder(orderId);
 
   if (orderId !== null && order.isLoading) return <Spin />;
-  if (orderId !== null && order.error) return <QueryError error={order.error} onRetry={() => void order.refetch()} />;
+  if (orderId !== null && order.error)
+    return <QueryError error={order.error} onRetry={() => void order.refetch()} />;
   // key theo rowVer: sau khi dữ liệu đổi (vd. tải lại do xung đột) form khởi tạo lại từ bản mới.
   return <OrderForm key={order.data?.rowVer ?? 'new'} orderId={orderId} detail={order.data} />;
 }
@@ -49,22 +63,32 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
   const create = useCreateOrder();
   const update = useUpdateOrder(orderId ?? 0);
 
-  const [blocks, setBlocks] = useState<ProductBlock[]>(() => (detail ? fromLines(detail.lines) : [newBlock()]));
+  const [blocks, setBlocks] = useState<ProductBlock[]>(() =>
+    detail ? fromLines(detail.lines) : [newBlock()],
+  );
   const [labels, setLabels] = useState<Record<number, string>>(() =>
-    Object.fromEntries((detail?.lines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`])),
+    Object.fromEntries(
+      (detail?.lines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`]),
+    ),
   );
   const [lineError, setLineError] = useState<string>();
   const [dirty, setDirty] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [productBlock, setProductBlock] = useState<string>();
   const locked = isEdit && detail !== undefined && detail.status !== 'New';
-  const editable = !isEdit || (detail !== undefined && (detail.status === 'New' || ORDER_LIMITED_EDIT_STATUSES.includes(detail.status)));
+  const editable =
+    !isEdit ||
+    (detail !== undefined &&
+      (detail.status === 'New' || ORDER_LIMITED_EDIT_STATUSES.includes(detail.status)));
 
   useEffect(() => {
     if (!isEdit && nextCode.data) form.setFieldsValue({ orderCode: nextCode.data });
   }, [isEdit, nextCode.data, form]);
 
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => dirty && currentLocation.pathname !== nextLocation.pathname);
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      dirty && currentLocation.pathname !== nextLocation.pathname,
+  );
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
     if (window.confirm(MESSAGES.orders.unsavedChanges)) blocker.proceed();
@@ -80,7 +104,8 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
   };
 
   const handleError = (error: ApiError) => {
-    if (error.errorCode === ERROR_CODES.OrderCodeDuplicate) form.setFields([{ name: 'orderCode', errors: [error.message] }]);
+    if (error.errorCode === ERROR_CODES.OrderCodeDuplicate)
+      form.setFields([{ name: 'orderCode', errors: [error.message] }]);
     else if (LINE_ERROR_CODES.includes(error.errorCode)) setLineError(error.message);
   };
 
@@ -106,15 +131,43 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
     setDirty(false);
     const done = (savedId: number) => navigate(ROUTES.orderDetail(savedId));
     if (isEdit && detail) {
-      update.mutate({ ...body, rowVer: detail.rowVer }, { onSuccess: () => done(detail.orderId), onError: (e) => { setDirty(true); handleError(e); } });
+      update.mutate(
+        { ...body, rowVer: detail.rowVer },
+        {
+          onSuccess: () => done(detail.orderId),
+          onError: (e) => {
+            setDirty(true);
+            handleError(e);
+          },
+        },
+      );
     } else {
-      create.mutate(body, { onSuccess: (newId) => done(newId as number), onError: (e) => { setDirty(true); handleError(e); } });
+      create.mutate(body, {
+        onSuccess: (newId) => done(newId as number),
+        onError: (e) => {
+          setDirty(true);
+          handleError(e);
+        },
+      });
     }
   };
 
   return (
-    <Card title={isEdit ? `${MESSAGES.orders.editOrder} ${detail?.orderCode ?? ''}` : MESSAGES.orders.createOrder}>
-      {!editable && <Alert type="warning" showIcon message="Đơn hàng ở trạng thái này không sửa được." style={{ marginBottom: 16 }} />}
+    <Card
+      title={
+        isEdit
+          ? `${MESSAGES.orders.editOrder} ${detail?.orderCode ?? ''}`
+          : MESSAGES.orders.createOrder
+      }
+    >
+      {!editable && (
+        <Alert
+          type="warning"
+          showIcon
+          message="Đơn hàng ở trạng thái này không sửa được."
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <Form<HeaderValues>
         form={form}
         layout="vertical"
@@ -137,11 +190,18 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
           <Form.Item
             name="orderCode"
             label={MESSAGES.orders.orderCode}
-            rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 30 }]}
+            rules={[
+              { required: true, whitespace: true, message: MESSAGES.common.required },
+              { max: 30 },
+            ]}
           >
             <Input disabled={locked} style={{ width: 180 }} />
           </Form.Item>
-          <Form.Item name="customerId" label={MESSAGES.orders.customer} rules={[{ required: true, message: MESSAGES.common.required }]}>
+          <Form.Item
+            name="customerId"
+            label={MESSAGES.orders.customer}
+            rules={[{ required: true, message: MESSAGES.common.required }]}
+          >
             <Select
               showSearch
               optionFilterProp="label"
@@ -154,13 +214,19 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
                 <>
                   {menu}
                   <Divider style={{ margin: '8px 0' }} />
-                  <Button type="link" icon={<PlusOutlined />} onClick={() => setCustomerOpen(true)}>{MESSAGES.orders.addCustomer}</Button>
+                  <Button type="link" icon={<PlusOutlined />} onClick={() => setCustomerOpen(true)}>
+                    {MESSAGES.orders.addCustomer}
+                  </Button>
                 </>
               )}
             />
           </Form.Item>
-          <Form.Item name="receivedDate" label={MESSAGES.orders.receivedDate} rules={[{ required: true, message: MESSAGES.common.required }]}>
-            <DatePicker format="DD/MM/YYYY" disabled={locked} />
+          <Form.Item
+            name="receivedDate"
+            label={MESSAGES.orders.receivedDate}
+            rules={[{ required: true, message: MESSAGES.common.required }]}
+          >
+            <AppDatePicker disabled={locked} />
           </Form.Item>
           <Form.Item
             name="dueDate"
@@ -170,13 +236,15 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
               { required: true, message: MESSAGES.common.required },
               ({ getFieldValue }) => ({
                 validator: (_, value: Dayjs | undefined) =>
-                  !value || !getFieldValue('receivedDate') || !value.isBefore(getFieldValue('receivedDate') as Dayjs, 'day')
+                  !value ||
+                  !getFieldValue('receivedDate') ||
+                  !value.isBefore(getFieldValue('receivedDate') as Dayjs, 'day')
                     ? Promise.resolve()
                     : Promise.reject(new Error('Ngày giao phải sau hoặc bằng ngày nhận.')),
               }),
             ]}
           >
-            <DatePicker format="DD/MM/YYYY" />
+            <AppDatePicker />
           </Form.Item>
         </Space>
         <Form.Item name="note" label={MESSAGES.orders.note} rules={[{ max: 1000 }]}>
@@ -184,14 +252,18 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
         </Form.Item>
       </Form>
 
-      {lineError && <Alert type="error" showIcon message={lineError} style={{ marginBottom: 16 }} />}
+      {lineError && (
+        <Alert type="error" showIcon message={lineError} style={{ marginBottom: 16 }} />
+      )}
       {blocks.map((block, index) => (
         <ProductBlockEditor
           key={block.key}
           block={block}
           locked={locked}
           productLabels={labels}
-          usedProductIds={blocks.filter((b) => b.key !== block.key && b.productId !== null).map((b) => b.productId as number)}
+          usedProductIds={blocks
+            .filter((b) => b.key !== block.key && b.productId !== null)
+            .map((b) => b.productId as number)}
           onChange={(next) => changeBlocks(blocks.map((b, i) => (i === index ? next : b)))}
           onRemove={() => changeBlocks(blocks.filter((_b, i) => i !== index))}
           onCreateProduct={() => setProductBlock(block.key)}
@@ -208,14 +280,29 @@ function OrderForm({ orderId, detail }: OrderFormProps) {
           {`${MESSAGES.orders.totalQty}: ${formatQty(totals.qty)} · ${MESSAGES.orders.totalAmount}: ${formatCurrency(totals.amount)}`}
         </Typography.Text>
         <Space>
-          <Button onClick={() => navigate(isEdit ? ROUTES.orderDetail(orderId) : ROUTES.orders)}>{MESSAGES.common.cancel}</Button>
-          <Button type="primary" disabled={!editable} loading={create.isPending || update.isPending} onClick={() => form.submit()}>
+          <Button onClick={() => navigate(isEdit ? ROUTES.orderDetail(orderId) : ROUTES.orders)}>
+            {MESSAGES.common.cancel}
+          </Button>
+          <Button
+            type="primary"
+            disabled={!editable}
+            loading={create.isPending || update.isPending}
+            onClick={() => form.submit()}
+          >
             {MESSAGES.common.save}
           </Button>
         </Space>
       </Space>
 
-      <CustomerFormModal open={customerOpen} customer={null} onClose={() => setCustomerOpen(false)} onSaved={(customerId) => { form.setFieldValue('customerId', customerId); setDirty(true); }} />
+      <CustomerFormModal
+        open={customerOpen}
+        customer={null}
+        onClose={() => setCustomerOpen(false)}
+        onSaved={(customerId) => {
+          form.setFieldValue('customerId', customerId);
+          setDirty(true);
+        }}
+      />
       <ProductFormModal
         open={productBlock !== undefined}
         product={null}

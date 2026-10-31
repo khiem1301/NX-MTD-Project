@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -8,12 +9,15 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { DispatchCreateModal } from '../components/DispatchCreateModal';
-import { DispatchDrawer } from '../components/DispatchDrawer';
+import { DispatchModal } from '../components/DispatchModal';
 import { DISPATCH_LABELS, DISPATCH_STATUS_LABEL } from '../constants';
 import { useDispatchNotes } from '../hooks/useDispatch';
 import type { DispatchNoteListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -33,7 +37,9 @@ export function DispatchNotesPage() {
     {
       title: DISPATCH_LABELS.code,
       dataIndex: 'dispatchCode',
-      render: (v: string, n) => <a onClick={() => setViewingId(n.dispatchNoteId)}>{v}</a>,
+      render: (v: string, n) => (
+        <DetailLink onClick={() => setViewingId(n.dispatchNoteId)}>{v}</DetailLink>
+      ),
     },
     { title: DISPATCH_LABELS.order, dataIndex: 'orderCode' },
     { title: DISPATCH_LABELS.customer, dataIndex: 'customerName' },
@@ -58,36 +64,40 @@ export function DispatchNotesPage() {
       title={DISPATCH_LABELS.title}
       extra={
         <Can roles={[ROLES.Manager]}>
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {DISPATCH_LABELS.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={DISPATCH_LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 180 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={DISPATCH_LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 180 }}
+            />
+          </>
+        }
+      />
       <QueryError error={notes.error} onRetry={() => void notes.refetch()} />
-      <Table
+      <DataTable
         rowKey="dispatchNoteId"
         columns={columns}
         dataSource={notes.data?.items}
         loading={notes.isFetching}
         pagination={table.pagination(notes.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <DispatchDrawer noteId={viewingId} onClose={() => setViewingId(undefined)} />
+      <DispatchModal noteId={viewingId} onClose={() => setViewingId(undefined)} />
       <DispatchCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

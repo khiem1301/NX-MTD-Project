@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Space, Table, type TableColumnsType } from 'antd';
+import { type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -8,8 +8,11 @@ import { formatQty } from '@/utils/format';
 import { LABELS, MATERIAL_TYPE_LABEL, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
 import type { StockBalance, StockCardQuery } from '../types';
-import { StockCardDrawer } from './StockCardDrawer';
+import { StockCardModal } from './StockCardModal';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type BalanceTableProps = { warehouseType: string };
 type Filters = { keyword?: string; orderId?: number };
@@ -38,7 +41,11 @@ const pieceColumns: TableColumnsType<StockBalance> = [
   { title: LABELS.product, dataIndex: 'productCode' },
   { title: LABELS.garmentColor, dataIndex: 'color' },
   { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
-  { title: LABELS.component, dataIndex: 'componentName', render: (v: string | null) => v ?? LABELS.wholeGarment },
+  {
+    title: LABELS.component,
+    dataIndex: 'componentName',
+    render: (v: string | null) => v ?? LABELS.wholeGarment,
+  },
 ];
 
 const describe = (b: StockBalance): string =>
@@ -46,7 +53,7 @@ const describe = (b: StockBalance): string =>
     ? `${b.materialCode} ${b.materialName} (${b.materialColor || '—'})`
     : `${b.orderCode} ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` (${b.componentName})` : ''}`;
 
-/** Bảng tồn của một kho; bấm dòng để mở thẻ kho. */
+/** Bảng tồn của một kho; bấm mã ở cột đầu để mở thẻ kho. */
 export function BalanceTable({ warehouseType }: BalanceTableProps) {
   const table = useTableQuery<Filters>({});
   const balances = useBalances({ ...table.params, warehouseType });
@@ -54,7 +61,16 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
   const isMaterial = warehouseType === WAREHOUSE_TYPE.MATERIAL;
 
   const columns: TableColumnsType<StockBalance> = [
-    ...(isMaterial ? materialColumns : pieceColumns),
+    ...(isMaterial ? materialColumns : pieceColumns).map((c, i) =>
+      i === 0
+        ? {
+            ...c,
+            render: (v: string, b: StockBalance) => (
+              <DetailLink onClick={() => openCard(b)}>{v}</DetailLink>
+            ),
+          }
+        : c,
+    ),
     qty(LABELS.onHandQty, 'onHandQty'),
     qty(LABELS.reservedQty, 'reservedQty'),
     qty(LABELS.availableQty, 'availableQty'),
@@ -77,21 +93,25 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 260 }}
-        />
-        <OrderSelect
-          allowClear
-          placeholder={LABELS.order}
-          onChange={(orderId) => table.setFilters({ orderId })}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 260 }}
+            />
+            <OrderSelect
+              allowClear
+              placeholder={LABELS.order}
+              onChange={(orderId) => table.setFilters({ orderId })}
+            />
+          </>
+        }
+      />
       <QueryError error={balances.error} onRetry={() => void balances.refetch()} />
-      <Table
+      <DataTable
         rowKey={(b) =>
           `${b.materialId ?? ''}|${b.orderLineId ?? ''}|${b.productComponentMaterialId ?? ''}`
         }
@@ -99,10 +119,8 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
         dataSource={balances.data?.items}
         loading={balances.isFetching}
         pagination={table.pagination(balances.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        onRow={(b) => ({ onClick: () => openCard(b), style: { cursor: 'pointer' } })}
       />
-      <StockCardDrawer
+      <StockCardModal
         query={card?.query}
         title={card?.title ?? ''}
         onClose={() => setCard(undefined)}

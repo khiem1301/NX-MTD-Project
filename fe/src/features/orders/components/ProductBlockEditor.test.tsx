@@ -5,7 +5,9 @@ import type { ProductBlock } from '../utils/orderGrid';
 import { ProductBlockEditor } from './ProductBlockEditor';
 
 jest.mock('@/hooks/useOrderLookups', () => ({
-  useProductLookup: () => ({ data: { items: [{ productId: 1, productCode: 'AO-01', productName: 'Áo' }] } }),
+  useProductLookup: () => ({
+    data: { items: [{ productId: 1, productCode: 'AO-01', productName: 'Áo' }] },
+  }),
   useProductColors: () => ({ data: ['Be', 'Đen', 'Xanh'] }),
 }));
 
@@ -14,7 +16,13 @@ const oldBlock: ProductBlock = {
   productId: 1,
   cmtUnitPrice: 100,
   sizes: ['S', 'M'],
-  rows: [{ key: 'r1', color: 'Đỏ', cells: { S: { orderLineId: 1, qty: 10 }, M: { orderLineId: 2, qty: 20 } } }],
+  rows: [
+    {
+      key: 'r1',
+      color: 'Đỏ',
+      cells: { S: { orderLineId: 1, qty: 10 }, M: { orderLineId: 2, qty: 20 } },
+    },
+  ],
 };
 
 const renderEditor = (locked: boolean) =>
@@ -55,7 +63,14 @@ describe('ProductBlockEditor', () => {
       const [block, setBlock] = useState(oldBlock);
       return (
         <QueryClientProvider client={new QueryClient()}>
-          <ProductBlockEditor block={block} locked={false} productLabels={{ 1: 'AO-01 · Áo' }} onChange={setBlock} onRemove={jest.fn()} onCreateProduct={jest.fn()} />
+          <ProductBlockEditor
+            block={block}
+            locked={false}
+            productLabels={{ 1: 'AO-01 · Áo' }}
+            onChange={setBlock}
+            onRemove={jest.fn()}
+            onCreateProduct={jest.fn()}
+          />
         </QueryClientProvider>
       );
     }

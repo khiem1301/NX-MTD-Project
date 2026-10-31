@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { Alert, DatePicker, Descriptions, Form, Input, Modal, Select, Table } from 'antd';
+import { Alert, Descriptions, Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
 import { useCreateReplacement, useReplacementRequests } from '../hooks/useCutting';
+import { API_DATE } from '@/utils/format';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type ReplacementWorkOrderModalProps = { open: boolean; onClose: () => void };
 type FormValues = { requestId: number; cuttingTeamId: number; dueDate: Dayjs; note?: string };
 
 const CUTTING_TEAM_TYPE = 'Cutting';
-const API_DATE = 'YYYY-MM-DD';
 
 /** UC19 (TH-10): Quản đốc lập lệnh cắt bù từ đơn cắt bù đã duyệt; dòng lệnh lấy từ đơn (chi tiết + số lượng). */
 export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrderModalProps) {
@@ -25,7 +28,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
   return (
     <Modal
       open={open}
-      width={720}
+      width={MODAL_WIDTH.md}
       title={LABELS.createReplacement}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -79,9 +82,8 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
                 <Descriptions.Item label={LABELS.note}>{selected.content}</Descriptions.Item>
               )}
             </Descriptions>
-            <Table
+            <DataTable
               rowKey={(l) => `${l.orderLineId}-${l.productComponentMaterialId}`}
-              size="small"
               pagination={false}
               dataSource={selected.lines}
               style={{ marginBottom: 12 }}
@@ -104,7 +106,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
           />
         </Form.Item>
         <Form.Item name="dueDate" label={LABELS.dueDate} rules={required}>
-          <DatePicker format="DD/MM/YYYY" />
+          <AppDatePicker />
         </Form.Item>
         <Form.Item name="note" label={LABELS.note}>
           <Input.TextArea rows={2} maxLength={500} />

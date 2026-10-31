@@ -215,7 +215,12 @@ export type OutputGridQuery = {
   sewingTeamId?: number;
 };
 
-export type OutputLineInput = { operationId: number; workerId: number; quantity: number; rowVer?: string | null };
+export type OutputLineInput = {
+  operationId: number;
+  workerId: number;
+  quantity: number;
+  rowVer?: string | null;
+};
 
 export type SaveOutputPayload = {
   workDate: string;
@@ -226,7 +231,12 @@ export type SaveOutputPayload = {
   rows: OutputLineInput[];
 };
 
-export type OutputSaveResult = { inserted: number; updated: number; deleted: number; warnings: string[] };
+export type OutputSaveResult = {
+  inserted: number;
+  updated: number;
+  deleted: number;
+  warnings: string[];
+};
 
 // ---------- KI-06: QC ----------
 
@@ -281,7 +291,8 @@ export type OnLineQty = {
 
 export type DefectType = 'Rework' | 'Scrap';
 export type DefectStatus = 'Recorded' | 'Cancelled' | 'Locked';
-export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
+export type DefectReason =
+  'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
 
 export type Defect = {
   defectRecordId: number;

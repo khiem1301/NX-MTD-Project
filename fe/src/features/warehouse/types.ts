@@ -285,7 +285,12 @@ export type CreateIssuePayload = {
   receivingTeamId?: number;
   requestId?: number;
   issueDate: string;
-  lines: { materialId?: number; orderLineId?: number; productComponentMaterialId?: number | null; issuedQty: number }[];
+  lines: {
+    materialId?: number;
+    orderLineId?: number;
+    productComponentMaterialId?: number | null;
+    issuedQty: number;
+  }[];
 };
 
 export type ConfirmIssuePayload = {
@@ -404,7 +409,10 @@ export type IncomingSupplierMaterial = {
   outstandingQty: number;
 };
 
-export type IncomingMaterials = { customer: IncomingCustomerMaterial[]; supplier: IncomingSupplierMaterial[] };
+export type IncomingMaterials = {
+  customer: IncomingCustomerMaterial[];
+  supplier: IncomingSupplierMaterial[];
+};
 
 /** Điền sẵn phiếu nhập từ màn "NVL chờ nhận": nguồn, đơn / đơn mua và dòng cần nhận với số còn phải nhận. */
 export type ReceiptPreset = {

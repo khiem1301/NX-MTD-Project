@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, Popconfirm, Space, Table, Tag, type TableColumnsType } from 'antd';
+import { Button, Card, Popconfirm, Space, Tag, type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -14,6 +15,7 @@ import { StockPurchaseTable } from '../components/StockPurchaseTable';
 import { LABELS, MATERIAL_TYPE_LABEL, SOURCE_LABEL } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
 import type { OrderMaterial } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 /**
  * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua của đơn. Số cần theo định mức đọc từ
@@ -25,7 +27,8 @@ export function OrderMaterialPage() {
   // Đơn đang xem nằm trên đường dẫn (?orderId=) để bấm thông báo "Có đơn hàng mới" là mở thẳng đơn đó.
   const [params, setParams] = useSearchParams();
   const orderId = Number(params.get('orderId')) || undefined;
-  const setOrderId = (id: number | undefined) => setParams(id === undefined ? {} : { orderId: String(id) });
+  const setOrderId = (id: number | undefined) =>
+    setParams(id === undefined ? {} : { orderId: String(id) });
   const list = useOrderMaterials(orderId);
   const remove = useDeleteOrderMaterial();
   const [editing, setEditing] = useState<OrderMaterial | null>(null);
@@ -72,15 +75,15 @@ export function OrderMaterialPage() {
       title: MESSAGES.common.actions,
       key: 'actions',
       render: (_, om) => (
-        <Space>
-          <Button size="small" onClick={() => openForm(om)}>
+        <Space size={0} wrap>
+          <Button type="link" icon={<EditOutlined />} onClick={() => openForm(om)}>
             {MESSAGES.common.edit}
           </Button>
           <Popconfirm
             title={MESSAGES.warehouse.confirmDeleteOrderMaterial}
             onConfirm={() => remove.mutate(om.orderMaterialId)}
           >
-            <Button size="small" danger>
+            <Button type="link" icon={<DeleteOutlined />} danger>
               {MESSAGES.common.delete}
             </Button>
           </Popconfirm>
@@ -93,24 +96,25 @@ export function OrderMaterialPage() {
     <Card
       title={LABELS.orderMaterialsTitle}
       extra={
-        <Space>
-          <OrderSelect
-            allowClear
-            value={orderId}
-            onChange={setOrderId}
-            placeholder={hasRole(ROLES.Manager) ? LABELS.selectOrderOrStock : LABELS.selectOrder}
-            width={380}
-          />
-          <Button
-            type="primary"
-            disabled={orderId === undefined && !stockMode}
-            onClick={() => (stockMode ? setStockFormOpen(true) : openForm(null))}
-          >
-            {MESSAGES.common.create}
-          </Button>
-        </Space>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={orderId === undefined && !stockMode}
+          onClick={() => (stockMode ? setStockFormOpen(true) : openForm(null))}
+        >
+          {MESSAGES.common.create}
+        </Button>
       }
     >
+      <Space style={{ marginBottom: 16 }} wrap>
+        <OrderSelect
+          allowClear
+          value={orderId}
+          onChange={setOrderId}
+          placeholder={hasRole(ROLES.Manager) ? LABELS.selectOrderOrStock : LABELS.selectOrder}
+          width={380}
+        />
+      </Space>
       {orderId === undefined && <PendingMaterialOrdersTable onPick={setOrderId} />}
       {stockMode ? (
         <StockPurchaseTable stockOnly />
@@ -119,14 +123,13 @@ export function OrderMaterialPage() {
         orderId !== undefined && (
           <>
             <QueryError error={list.error} onRetry={() => void list.refetch()} />
-            <Table
+            <DataTable
               rowKey="orderMaterialId"
               columns={columns}
               dataSource={list.data}
               loading={list.isFetching}
               pagination={false}
               scroll={{ x: true }}
-              locale={{ emptyText: MESSAGES.common.empty }}
             />
           </>
         )

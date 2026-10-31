@@ -15,7 +15,12 @@ type RequisitionSelectProps = {
 };
 
 /** Đơn xin NVL / BTP đang chờ Thủ kho xử lý; lập phiếu cấp xong đơn tự chuyển sang Hoàn thành. */
-export function RequisitionSelect({ requestType, value, onChange, disabled }: RequisitionSelectProps) {
+export function RequisitionSelect({
+  requestType,
+  value,
+  onChange,
+  disabled,
+}: RequisitionSelectProps) {
   const requests = useQuery({
     queryKey: ['requests', 'requisitions', requestType],
     queryFn: () => requestApi.inbox({ page: 1, pageSize: PAGE_SIZE, requestType, status: PENDING }),

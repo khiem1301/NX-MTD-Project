@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, DatePicker, Space, Spin, Tabs, Typography } from 'antd';
+import { Alert, Button, Space, Spin, Tabs, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { DownloadOutlined } from '@ant-design/icons';
 import type { ApiError } from '@/types/api';
@@ -15,6 +15,8 @@ import {
 } from '../hooks/useAccountingReports';
 import type { AccountingReportFilter } from '../types';
 import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { PageCard } from '@/components/common/PageCard';
+import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC36 — Kế toán: chọn tháng, xem 3 báo cáo vận hành (công/tăng ca, suất ăn, sổ xe), xuất Excel. */
 export function AccountingReportsPage() {
@@ -65,20 +67,14 @@ export function AccountingReportsPage() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {ACCOUNTING_REPORT_TEXT.pageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{ACCOUNTING_REPORT_TEXT.pageSubtitle}</Typography.Text>
-      </div>
-
+    <PageCard
+      title={ACCOUNTING_REPORT_TEXT.pageTitle}
+      description={ACCOUNTING_REPORT_TEXT.pageSubtitle}
+    >
       <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
         <Space>
           <Typography.Text>{ACCOUNTING_REPORT_TEXT.periodMonth}</Typography.Text>
-          <DatePicker
-            picker="month"
-            format={PERIOD_MONTH_FORMAT}
+          <AppMonthPicker
             allowClear={false}
             value={dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT)}
             onChange={(value: Dayjs | null) => {
@@ -98,6 +94,6 @@ export function AccountingReportsPage() {
       {workdaysError ? <Alert type="error" showIcon message={workdaysError.message} /> : null}
 
       <Tabs items={items} />
-    </Space>
+    </PageCard>
   );
 }

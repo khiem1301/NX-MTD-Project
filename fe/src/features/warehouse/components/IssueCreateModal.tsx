@@ -1,9 +1,9 @@
-import { DatePicker, Form, Modal, Radio, Select, Space, message } from 'antd';
+import { Form, Modal, Radio, Select, Space, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamOptions } from '@/hooks/useLookups';
-import { formatDate } from '@/utils/format';
+import { API_DATE, formatDate } from '@/utils/format';
 import { LABELS, TEAM_TYPE, WAREHOUSE_TYPE } from '../constants';
 import { useCreateIssue, useIssuableWorkOrders } from '../hooks/useIssues';
 import type { CreateIssuePayload } from '../types';
@@ -11,15 +11,14 @@ import { FabricIssueLines } from './FabricIssueLines';
 import { parsePieceKey } from '../utils';
 import { PieceIssueLines } from './PieceIssueLines';
 import { RequisitionSelect } from './RequisitionSelect';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type IssueCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = Omit<CreateIssuePayload, 'issueDate' | 'lines'> & {
   issueDate: Dayjs;
   lines: (CreateIssuePayload['lines'][number] & { pieceKey?: string })[];
 };
-
-const DATE_FORMAT = 'DD/MM/YYYY';
-const API_DATE = 'YYYY-MM-DD';
 
 /** UC40: Thủ kho cấp vải cho tổ cắt (theo lệnh cắt) hoặc BTP cho tổ may; số cấp được giữ chỗ trong kho. */
 export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
@@ -32,7 +31,6 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
   const workOrders = useIssuableWorkOrders(open && isFabric);
   const sewingTeams = useTeamOptions(TEAM_TYPE.SEWING);
 
-
   const handleFinish = (values: FormValues) => {
     // Vải: chỉ gửi các dòng Thủ kho đã nhập số cấp.
     const lines = (values.lines ?? []).filter((l) => !isFabric || (l.issuedQty ?? 0) > 0);
@@ -44,7 +42,9 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
       ...values,
       issueDate: values.issueDate.format(API_DATE),
       // Dòng BTP chọn theo "dòng đơn:chi tiết" → tách ra orderLineId + productComponentMaterialId.
-      lines: lines.map(({ pieceKey, ...line }) => (pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line)),
+      lines: lines.map(({ pieceKey, ...line }) =>
+        pieceKey ? { ...line, ...parsePieceKey(pieceKey) } : line,
+      ),
     };
     create.mutate(body, {
       onSuccess: () => {
@@ -58,7 +58,7 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
   return (
     <Modal
       open={open}
-      width={920}
+      width={MODAL_WIDTH.lg}
       title={isFabric ? LABELS.issueFabric : LABELS.issuePieces}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -118,14 +118,16 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
             </>
           )}
           <Form.Item name="issueDate" label={LABELS.issueDate} rules={required}>
-            <DatePicker format={DATE_FORMAT} />
+            <AppDatePicker />
           </Form.Item>
           <Form.Item
             name="requestId"
             label={isFabric ? LABELS.requestIdOptional : LABELS.requestIdRequired}
             rules={isFabric ? [] : required}
           >
-            <RequisitionSelect requestType={isFabric ? 'MaterialRequisition' : 'SemiFinishedRequisition'} />
+            <RequisitionSelect
+              requestType={isFabric ? 'MaterialRequisition' : 'SemiFinishedRequisition'}
+            />
           </Form.Item>
         </Space>
         {isFabric ? (

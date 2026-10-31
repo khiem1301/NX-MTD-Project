@@ -95,9 +95,12 @@ export const attendanceApi = {
   // ---------- Chấm công hộ (GBR-25) ----------
 
   getAdjustments: async (filter: AdjustmentFilter): Promise<Paginated<AttendanceAdjustment>> => {
-    const res = await apiClient.get<ApiResponse<Paginated<AttendanceAdjustment>>>(API.attendance.adjustments, {
-      params: { ...filter, keyword: filter.keyword || undefined },
-    });
+    const res = await apiClient.get<ApiResponse<Paginated<AttendanceAdjustment>>>(
+      API.attendance.adjustments,
+      {
+        params: { ...filter, keyword: filter.keyword || undefined },
+      },
+    );
     return res.data.data;
   },
 

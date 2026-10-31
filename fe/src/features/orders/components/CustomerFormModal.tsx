@@ -38,7 +38,10 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         },
         onError: (error) =>
           form.setFields(
-            Object.entries(error.errors ?? {}).map(([name, errors]) => ({ name: name as keyof SaveCustomerPayload, errors })),
+            Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+              name: name as keyof SaveCustomerPayload,
+              errors,
+            })),
           ),
       },
     );
@@ -47,7 +50,9 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
   return (
     <Modal
       open={open}
-      title={customer ? `${MESSAGES.common.edit} ${customer.customerName}` : MESSAGES.orders.addCustomer}
+      title={
+        customer ? `${MESSAGES.common.edit} ${customer.customerName}` : MESSAGES.orders.addCustomer
+      }
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
@@ -59,17 +64,43 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         <Form.Item
           name="customerName"
           label={MESSAGES.orders.customerName}
-          rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 200 }]}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 200 },
+          ]}
         >
           <Input />
         </Form.Item>
-        <Form.Item name="phone" label={MESSAGES.orders.phone} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 15 }, { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' }]}>
+        <Form.Item
+          name="phone"
+          label={MESSAGES.orders.phone}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 15 },
+            { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' },
+          ]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="email" label={MESSAGES.orders.email} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 100 }, { type: 'email' }]}>
+        <Form.Item
+          name="email"
+          label={MESSAGES.orders.email}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 100 },
+            { type: 'email' },
+          ]}
+        >
           <Input />
         </Form.Item>
-        <Form.Item name="defaultAddress" label={MESSAGES.orders.address} rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 500 }]}>
+        <Form.Item
+          name="defaultAddress"
+          label={MESSAGES.orders.address}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 500 },
+          ]}
+        >
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>

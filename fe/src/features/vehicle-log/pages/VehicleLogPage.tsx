@@ -1,16 +1,7 @@
 import { useState } from 'react';
-import {
-  Button,
-  Card,
-  Checkbox,
-  Drawer,
-  Popconfirm,
-  Space,
-  Table,
-  Tabs,
-  Tag,
-  type TableColumnsType,
-} from 'antd';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { TableToolbar } from '@/components/common/TableToolbar';
+import { Button, Card, Checkbox, Popconfirm, Space, Tabs, Tag, type TableColumnsType } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -32,6 +23,8 @@ import { useChangeVehicleStatus, useTrips, useVehicles } from '../hooks/useVehic
 import type { Vehicle, VehicleTrip } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
 type TripFilters = { keyword?: string; status?: string; warningsOnly?: boolean };
 type VehicleFilters = { keyword?: string; status?: string };
@@ -123,46 +116,50 @@ function TripsTab() {
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 260 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={VL_LABELS.status}
-          options={TRIP_STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 160 }}
-        />
-        <Checkbox
-          onChange={(e) => table.setFilters({ warningsOnly: e.target.checked || undefined })}
-        >
-          {VL_LABELS.warningsOnly}
-        </Checkbox>
-        <Button type="primary" onClick={() => setStartOpen(true)}>
-          {VL_LABELS.startTrip}
-        </Button>
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 260 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={VL_LABELS.status}
+              options={TRIP_STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 160 }}
+            />
+            <Checkbox
+              onChange={(e) => table.setFilters({ warningsOnly: e.target.checked || undefined })}
+            >
+              {VL_LABELS.warningsOnly}
+            </Checkbox>
+          </>
+        }
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setStartOpen(true)}>
+            {VL_LABELS.startTrip}
+          </Button>
+        }
+      />
       <QueryError error={trips.error} onRetry={() => void trips.refetch()} />
-      <Table
+      <DataTable
         rowKey="vehicleTripId"
         columns={columns}
         dataSource={trips.data?.items}
         loading={trips.isFetching}
         pagination={table.pagination(trips.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        scroll={{ x: 'max-content' }}
       />
       <TripStartModal open={startOpen} onClose={() => setStartOpen(false)} />
       <TripCompleteModal trip={completing} onClose={() => setCompleting(null)} />
-      <Drawer
+      <DetailModal
         open={photoTrip !== null}
         onClose={() => setPhotoTrip(null)}
         title={`${VL_LABELS.receiptPhotos}${photoTrip ? ` — ${photoTrip.plateNumber}` : ''}`}
-        width={520}
-        destroyOnHidden
+        size="sm"
       >
         {photoTrip && (
           <AttachmentGallery
@@ -173,7 +170,7 @@ function TripsTab() {
             purpose={ATTACHMENT_PURPOSE.FuelReceipt}
           />
         )}
-      </Drawer>
+      </DetailModal>
     </>
   );
 }
@@ -208,6 +205,7 @@ function VehiclesTab() {
         <Space size={0}>
           <Button
             type="link"
+            icon={<EditOutlined />}
             onClick={() => {
               setEditing(v);
               setFormOpen(true);
@@ -243,7 +241,8 @@ function VehiclesTab() {
           onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
           style={{ width: 260 }}
         />
-        <FilterSelect value={table.filters.status}
+        <FilterSelect
+          value={table.filters.status}
           placeholder={VL_LABELS.status}
           options={VEHICLE_STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}
@@ -260,13 +259,12 @@ function VehiclesTab() {
         </Button>
       </Space>
       <QueryError error={vehicles.error} onRetry={() => void vehicles.refetch()} />
-      <Table
+      <DataTable
         rowKey="vehicleId"
         columns={columns}
         dataSource={vehicles.data?.items}
         loading={vehicles.isFetching}
         pagination={table.pagination(vehicles.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
       <VehicleFormModal open={formOpen} vehicle={editing} onClose={() => setFormOpen(false)} />
     </>

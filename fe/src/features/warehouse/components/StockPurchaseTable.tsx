@@ -1,12 +1,15 @@
-import { Table, Tag, type TableColumnsType } from 'antd';
+import { useState } from 'react';
+import { Tag, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
-import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime, formatQty } from '@/utils/format';
 import { LABELS, PO_GOODS_STATUS_LABEL, PO_PAYMENT_STATUS_LABEL } from '../constants';
 import { usePurchaseOrder, usePurchaseOrders } from '../hooks/usePurchaseOrders';
 import type { PurchaseOrderLine, PurchaseOrderListItem } from '../types';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
 
 const lineColumns: TableColumnsType<PurchaseOrderLine> = [
   {
@@ -25,8 +28,14 @@ const lineColumns: TableColumnsType<PurchaseOrderLine> = [
   { title: LABELS.amount, dataIndex: 'amount', align: 'right', render: formatQty },
 ];
 
-const columns: TableColumnsType<PurchaseOrderListItem> = [
-  { title: LABELS.poCode, dataIndex: 'poCode' },
+const columns = (
+  onView: (po: PurchaseOrderListItem) => void,
+): TableColumnsType<PurchaseOrderListItem> => [
+  {
+    title: LABELS.poCode,
+    dataIndex: 'poCode',
+    render: (v: string, po) => <DetailLink onClick={() => onView(po)}>{v}</DetailLink>,
+  },
   {
     title: LABELS.purchaseOrderOrder,
     dataIndex: 'orderCode',
@@ -50,9 +59,8 @@ const columns: TableColumnsType<PurchaseOrderListItem> = [
 function PurchaseOrderLines({ id }: { id: number }) {
   const detail = usePurchaseOrder(id);
   return (
-    <Table
+    <DataTable
       rowKey="purchaseOrderLineId"
-      size="small"
       columns={lineColumns}
       dataSource={detail.data?.lines}
       loading={detail.isFetching}
@@ -62,24 +70,29 @@ function PurchaseOrderLines({ id }: { id: number }) {
 }
 
 /** Danh sách đơn mua NVL. stockOnly = true: chỉ đơn dùng chung (kim, chỉ...); undefined: cả đơn gắn đơn hàng. */
-export function StockPurchaseTable({ stockOnly, goodsStatus }: { stockOnly?: boolean; goodsStatus?: string }) {
+export function StockPurchaseTable({
+  stockOnly,
+  goodsStatus,
+}: {
+  stockOnly?: boolean;
+  goodsStatus?: string;
+}) {
   const table = useTableQuery<Record<string, never>>({});
   const orders = usePurchaseOrders({ ...table.params, stockOnly, goodsStatus });
+  const [viewing, setViewing] = useState<PurchaseOrderListItem | null>(null);
   return (
     <>
       <QueryError error={orders.error} onRetry={() => void orders.refetch()} />
-      <Table
+      <DataTable
         rowKey="purchaseOrderId"
-        columns={columns}
+        columns={columns(setViewing)}
         dataSource={orders.data?.items}
         loading={orders.isFetching}
         pagination={table.pagination(orders.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        expandable={{
-          rowExpandable: (po) => po.lineCount > 0,
-          expandedRowRender: (po) => <PurchaseOrderLines id={po.purchaseOrderId} />,
-        }}
       />
+      <DetailModal open={viewing !== null} onClose={() => setViewing(null)} title={viewing?.poCode}>
+        {viewing && <PurchaseOrderLines id={viewing.purchaseOrderId} />}
+      </DetailModal>
     </>
   );
 }

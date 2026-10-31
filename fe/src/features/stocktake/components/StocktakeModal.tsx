@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-  Typography,
-} from 'antd';
+import { Alert, Button, Descriptions, Popconfirm, Typography } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ROLES } from '@/constants/roles';
@@ -19,8 +9,10 @@ import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { ST_LABELS, ST_MESSAGES, STOCKTAKE_STATUS, STOCKTAKE_STATUS_LABEL } from '../constants';
 import { useApproveStocktake, useReturnStocktake, useStocktake } from '../hooks/useStocktake';
 import type { Stocktake, StocktakeLine } from '../types';
+import { DetailModal, DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type StocktakeDrawerProps = {
+type StocktakeModalProps = {
   stocktakeId: number | undefined;
   onClose: () => void;
   onEdit: (stocktake: Stocktake) => void;
@@ -32,7 +24,7 @@ const lineName = (l: StocktakeLine) =>
     : `${l.orderCode} · ${l.productCode} ${l.color}-${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`;
 
 /** Chi tiết phiếu kiểm kê: Quản đốc / Admin duyệt (điều chỉnh kho) hoặc trả lại; Thủ kho sửa phiếu bị trả. */
-export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawerProps) {
+export function StocktakeModal({ stocktakeId, onClose, onEdit }: StocktakeModalProps) {
   const { hasRole } = usePermission();
   const detail = useStocktake(stocktakeId);
   const approve = useApproveStocktake();
@@ -44,18 +36,16 @@ export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawe
   const canEdit = hasRole(ROLES.WarehouseKeeper) && s?.status === STOCKTAKE_STATUS.RETURNED;
 
   return (
-    <Drawer
+    <DetailModal
       open={stocktakeId !== undefined}
       onClose={onClose}
-      width={860}
       title={s?.stocktakeCode}
-      destroyOnHidden
+      loading={detail.isLoading}
+      error={detail.error}
     >
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {s && (
         <>
-          <Space style={{ marginBottom: 16 }}>
+          <ModalActions>
             {canDecide && (
               <>
                 <Button danger onClick={() => setReturning(true)}>
@@ -71,12 +61,8 @@ export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawe
                 </Popconfirm>
               </>
             )}
-            {canEdit && (
-              <Button type="primary" onClick={() => onEdit(s)}>
-                {ST_LABELS.edit}
-              </Button>
-            )}
-          </Space>
+            {canEdit && <Button onClick={() => onEdit(s)}>{ST_LABELS.edit}</Button>}
+          </ModalActions>
           {s.returnReason && (
             <Alert
               type="warning"
@@ -85,7 +71,7 @@ export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawe
               style={{ marginBottom: 16 }}
             />
           )}
-          <Descriptions column={2} size="small" bordered>
+          <DetailDescriptions>
             <Descriptions.Item label={ST_LABELS.warehouse}>
               {WAREHOUSE_TYPE_LABEL[s.warehouseType]}
             </Descriptions.Item>
@@ -101,8 +87,8 @@ export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawe
             <Descriptions.Item label={ST_LABELS.scope} span={2}>
               {s.scope ?? '—'}
             </Descriptions.Item>
-          </Descriptions>
-          <Table<StocktakeLine>
+          </DetailDescriptions>
+          <DataTable<StocktakeLine>
             rowKey="stocktakeLineId"
             size="small"
             style={{ marginTop: 16 }}
@@ -157,6 +143,6 @@ export function StocktakeDrawer({ stocktakeId, onClose, onEdit }: StocktakeDrawe
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

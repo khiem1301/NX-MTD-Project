@@ -1,7 +1,21 @@
 import type { OrderLine } from '../types';
-import { blockTotal, blocksTotals, fromLines, sortSizes, toLines, type ProductBlock } from './orderGrid';
+import {
+  blockTotal,
+  blocksTotals,
+  fromLines,
+  sortSizes,
+  toLines,
+  type ProductBlock,
+} from './orderGrid';
 
-const line = (id: number, color: string, size: string, qty: number, price = 12500, productId = 1): OrderLine => ({
+const line = (
+  id: number,
+  color: string,
+  size: string,
+  qty: number,
+  price = 12500,
+  productId = 1,
+): OrderLine => ({
   orderLineId: id,
   productId,
   productCode: 'AO-01',
@@ -19,7 +33,9 @@ describe('orderGrid', () => {
     const back = toLines(fromLines(lines));
 
     expect(back).toHaveLength(3);
-    expect(back.map((l) => [l.orderLineId, l.color, l.sizeCode, l.orderedQty, l.cmtUnitPrice]).sort()).toEqual(
+    expect(
+      back.map((l) => [l.orderLineId, l.color, l.sizeCode, l.orderedQty, l.cmtUnitPrice]).sort(),
+    ).toEqual(
       lines.map((l) => [l.orderLineId, l.color, l.sizeCode, l.orderedQty, l.cmtUnitPrice]).sort(),
     );
   });
@@ -40,9 +56,21 @@ describe('orderGrid', () => {
         productId: 1,
         cmtUnitPrice: 10,
         sizes: ['S', 'M'],
-        rows: [{ key: 'r', color: 'Đỏ', cells: { S: { orderLineId: null, qty: 0 }, M: { orderLineId: null, qty: null } } }],
+        rows: [
+          {
+            key: 'r',
+            color: 'Đỏ',
+            cells: { S: { orderLineId: null, qty: 0 }, M: { orderLineId: null, qty: null } },
+          },
+        ],
       },
-      { key: 'b', productId: null, cmtUnitPrice: 10, sizes: ['S'], rows: [{ key: 'r2', color: 'X', cells: { S: { orderLineId: null, qty: 5 } } }] },
+      {
+        key: 'b',
+        productId: null,
+        cmtUnitPrice: 10,
+        sizes: ['S'],
+        rows: [{ key: 'r2', color: 'X', cells: { S: { orderLineId: null, qty: 5 } } }],
+      },
     ];
     expect(toLines(blocks)).toEqual([]);
   });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PrinterOutlined } from '@ant-design/icons';
-import { Alert, Button, Descriptions, Drawer, Form, Popconfirm, Space, Spin } from 'antd';
+import { Alert, Button, Descriptions, Form, Popconfirm, Space } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -11,11 +11,12 @@ import { ISSUE_STATUS, ISSUE_STATUS_LABEL, LABELS, WAREHOUSE_TYPE_LABEL } from '
 import { useConfirmIssue, useDownloadIssue, useIssue, useRejectIssue } from '../hooks/useIssues';
 import type { ConfirmIssuePayload } from '../types';
 import { IssueLinesTable } from './IssueLinesTable';
+import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
 
-type IssueDetailDrawerProps = { issueId: number | undefined; onClose: () => void };
+type IssueDetailModalProps = { issueId: number | undefined; onClose: () => void };
 
 /** Chi tiết phiếu cấp; tổ trưởng / tổ phó tổ nhận đếm và xác nhận số thực nhận hoặc từ chối (UC41). */
-export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) {
+export function IssueDetailModal({ issueId, onClose }: IssueDetailModalProps) {
   const { hasRole } = usePermission();
   const issue = useIssue(issueId);
   const confirm = useConfirmIssue();
@@ -67,21 +68,20 @@ export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) 
   );
 
   return (
-    <Drawer
+    <DetailModal
       open={issueId !== undefined}
       onClose={onClose}
-      width={900}
       title={i?.issueCode}
       extra={actions}
+      loading={issue.isLoading}
+      error={issue.error}
     >
-      {issue.isLoading && <Spin />}
-      {issue.error && <Alert type="error" message={issue.error.message} />}
       {i && (
         <>
           {i.rejectReason && (
             <Alert type="warning" showIcon message={i.rejectReason} style={{ marginBottom: 16 }} />
           )}
-          <Descriptions column={2} size="small" bordered>
+          <DetailDescriptions>
             <Descriptions.Item label={LABELS.warehouseType}>
               {WAREHOUSE_TYPE_LABEL[i.warehouseType]}
             </Descriptions.Item>
@@ -100,7 +100,7 @@ export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) 
             <Descriptions.Item label={LABELS.receive}>
               {i.receivedByName ? `${i.receivedByName} · ${formatDateTime(i.receivedAt)}` : '—'}
             </Descriptions.Item>
-          </Descriptions>
+          </DetailDescriptions>
           <Form
             form={form}
             onFinish={handleConfirm}
@@ -128,6 +128,6 @@ export function IssueDetailDrawer({ issueId, onClose }: IssueDetailDrawerProps) 
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

@@ -1,12 +1,13 @@
-import { DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, InputNumber, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { VL_LABELS } from '../constants';
 import { useCompleteTrip, useStartTrip, useVehicles } from '../hooks/useVehicleLog';
 import type { VehicleTrip } from '../types';
+import { API_DATE } from '@/utils/format';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
-const API_DATE = 'YYYY-MM-DD';
 const required = [{ required: true, message: MESSAGES.common.required }];
 
 type StartForm = {
@@ -68,7 +69,7 @@ export function TripStartModal({ open, onClose }: { open: boolean; onClose: () =
           />
         </Form.Item>
         <Form.Item name="tripDate" label={VL_LABELS.date} rules={required}>
-          <DatePicker format="DD/MM/YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+          <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
         </Form.Item>
         <Form.Item
           name="driverName"

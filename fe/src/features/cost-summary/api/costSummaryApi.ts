@@ -11,7 +11,10 @@ export const costSummaryApi = {
 
   /** Tải file Excel tổng hợp chi phí về máy theo đúng tháng đang xem (MSG27). */
   export: async (filter: CostSummaryFilter): Promise<void> => {
-    const res = await apiClient.get<Blob>(API.costSummary.export, { params: filter, responseType: 'blob' });
+    const res = await apiClient.get<Blob>(API.costSummary.export, {
+      params: filter,
+      responseType: 'blob',
+    });
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement('a');
     link.href = url;

@@ -20,10 +20,15 @@ export type Profile = {
   isTemporaryPassword: boolean;
 };
 
-export type ChangePasswordPayload = { currentPassword: string; newPassword: string; confirmPassword: string };
+export type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
 export const profileApi = {
-  get: async (): Promise<Profile> => (await apiClient.get<ApiResponse<Profile>>(API.profile.base)).data.data,
+  get: async (): Promise<Profile> =>
+    (await apiClient.get<ApiResponse<Profile>>(API.profile.base)).data.data,
   /** BE trả cặp token mới cho phiên hiện tại (D36); các phiên khác bị đẩy ra. */
   changePassword: async (body: ChangePasswordPayload): Promise<LoginResult> =>
     (await apiClient.post<ApiResponse<LoginResult>>(API.profile.changePassword, body)).data.data,

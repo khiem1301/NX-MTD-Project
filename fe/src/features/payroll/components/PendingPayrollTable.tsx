@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Button, Card, Select, Table, Tag } from 'antd';
+import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { QueryError } from '@/components/common/QueryError';
-import { MESSAGES } from '@/constants/messages';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime, formatMonth } from '@/utils/format';
 import { PAYROLL_STATUS_FILTER_OPTIONS, PAYROLL_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
 import { useAdminPayrolls } from '../hooks/usePayroll';
 import type { PayrollStatus, PayrollSummary } from '../types';
 import { formatCurrency } from '../utils';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Props = { onView: (payrollId: number) => void };
 
@@ -19,7 +22,13 @@ export function PendingPayrollTable({ onView }: Props) {
   const payrolls = useAdminPayrolls(status);
 
   const columns: ColumnsType<PayrollSummary> = [
-    { title: PAYROLL_TEXT.periodMonth, dataIndex: 'periodMonth' },
+    {
+      title: PAYROLL_TEXT.periodMonth,
+      dataIndex: 'periodMonth',
+      render: (v: string, row) => (
+        <DetailLink onClick={() => onView(row.payrollId)}>{formatMonth(v)}</DetailLink>
+      ),
+    },
     {
       title: PAYROLL_TEXT.summary.status,
       dataIndex: 'status',
@@ -39,42 +48,33 @@ export function PendingPayrollTable({ onView }: Props) {
       dataIndex: 'submittedAt',
       render: (v: string | null) => (v ? formatDateTime(v) : '—'),
     },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, row) => (
-        <Button type="link" onClick={() => onView(row.payrollId)}>
-          {PAYROLL_TEXT.table.viewDetail}
-        </Button>
-      ),
-    },
   ];
 
   return (
-    <Card
-      size="small"
-      extra={
-        <Select<PayrollStatus | undefined>
-          allowClear
-          placeholder={PAYROLL_TEXT.filter.statusPlaceholder}
-          value={status}
-          options={PAYROLL_STATUS_FILTER_OPTIONS}
-          onChange={setStatus}
-          style={{ width: 180 }}
-        />
-      }
-    >
+    <>
+      <TableToolbar
+        filters={
+          <>
+            <FilterSelect<PayrollStatus>
+              placeholder={PAYROLL_TEXT.filter.statusPlaceholder}
+              value={status}
+              options={PAYROLL_STATUS_FILTER_OPTIONS}
+              onChange={(v) => setStatus(v)}
+              style={{ width: 180 }}
+            />
+          </>
+        }
+      />
       <QueryError error={payrolls.error} onRetry={() => void payrolls.refetch()} />
-      <Table<PayrollSummary>
+      <DataTable<PayrollSummary>
         rowKey="payrollId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={payrolls.data?.items}
         loading={payrolls.isFetching}
         pagination={false}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
       />
-    </Card>
+    </>
   );
 }

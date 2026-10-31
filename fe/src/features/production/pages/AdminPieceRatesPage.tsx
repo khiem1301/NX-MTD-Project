@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Space, Table, Tabs, Typography, message } from 'antd';
+import { Button, Space, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
@@ -9,20 +9,27 @@ import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
-import { useApproveManyPieceRates, useApprovePieceRate, usePieceRates, useRejectPieceRate } from '../hooks/useProduction';
+import {
+  useApproveManyPieceRates,
+  useApprovePieceRate,
+  usePieceRates,
+  useRejectPieceRate,
+} from '../hooks/useProduction';
 import type { PieceRate, PieceRateQuery, PieceRateStatus } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
+import { FilterSelect } from '@/components/common/FilterSelect';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 const text = PRODUCTION_TEXT.pieceRates;
 
 /** Admin không thấy đơn giá Nháp (chưa gửi duyệt): tab "Tất cả" gồm các trạng thái còn lại. */
-const ALL_TAB = 'All';
-const STATUS_TABS: { key: string; label: string }[] = [
-  { key: ALL_TAB, label: text.allTab },
-  ...(['PendingApproval', 'Approved', 'Rejected'] as PieceRateStatus[]).map((value) => ({
-    key: value,
+const STATUS_OPTIONS = (['PendingApproval', 'Approved', 'Rejected'] as PieceRateStatus[]).map(
+  (value) => ({
+    value,
     label: text.status[value].text,
-  })),
-];
+  }),
+);
 
 /**
  * UC26 (KI-01) — Admin duyệt hoặc từ chối đơn giá công đoạn do Kế toán gửi (từ chối bắt buộc lý do). Mặc định xem các
@@ -41,17 +48,38 @@ export function AdminPieceRatesPage() {
 
   const columns: ColumnsType<PieceRate> = [
     { title: text.columns.product, dataIndex: 'productCode' },
-    { title: text.columns.operation, key: 'op', render: (_, r) => `${r.operationCode} - ${r.operationName}` },
-    { title: text.columns.rate, dataIndex: 'rate', align: 'right', render: (v: number) => formatCurrency(v) },
-    { title: text.columns.effectiveDate, dataIndex: 'effectiveDate', render: (v: string) => formatDate(v) },
-    { title: text.columns.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={text.status} /> },
-    { title: text.columns.note, key: 'note', render: (_, r) => r.rejectReason ?? r.approvalNote ?? '—' },
+    {
+      title: text.columns.operation,
+      key: 'op',
+      render: (_, r) => `${r.operationCode} - ${r.operationName}`,
+    },
+    {
+      title: text.columns.rate,
+      dataIndex: 'rate',
+      align: 'right',
+      render: (v: number) => formatCurrency(v),
+    },
+    {
+      title: text.columns.effectiveDate,
+      dataIndex: 'effectiveDate',
+      render: (v: string) => formatDate(v),
+    },
+    {
+      title: text.columns.status,
+      dataIndex: 'status',
+      render: (v: string) => <StatusTag status={v} labels={text.status} />,
+    },
+    {
+      title: text.columns.note,
+      key: 'note',
+      render: (_, r) => r.rejectReason ?? r.approvalNote ?? '—',
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) =>
         row.status === 'PendingApproval' ? (
-          <Space size={0}>
+          <Space size={0} wrap>
             <Button type="link" onClick={() => setApproving(row)}>
               {text.approve}
             </Button>
@@ -64,56 +92,52 @@ export function AdminPieceRatesPage() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {text.adminTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{text.adminSubtitle}</Typography.Text>
-      </div>
-
-      <Space wrap>
-        <ProductSelect
-          allowClear
-          value={query.productId}
-          placeholder={PRODUCTION_TEXT.selectProduct}
-          onChange={(productId) => setQuery({ ...query, page: 1, productId })}
-        />
-      </Space>
-
-      <Tabs
-        activeKey={query.status ?? ALL_TAB}
-        items={STATUS_TABS}
-        onChange={(key) => {
-          setSelectedIds([]);
-          setQuery({ ...query, page: 1, status: key === ALL_TAB ? undefined : (key as PieceRateStatus) });
-        }}
+    <PageCard title={text.adminTitle} description={text.adminSubtitle}>
+      <TableToolbar
+        filters={
+          <>
+            <ProductSelect
+              allowClear
+              value={query.productId}
+              placeholder={PRODUCTION_TEXT.selectProduct}
+              onChange={(productId) => setQuery({ ...query, page: 1, productId })}
+            />
+            <FilterSelect<PieceRateStatus>
+              value={query.status}
+              placeholder={text.columns.status}
+              style={{ width: 200 }}
+              options={STATUS_OPTIONS}
+              onChange={(status) => {
+                setSelectedIds([]);
+                setQuery({ ...query, page: 1, status });
+              }}
+            />
+          </>
+        }
+        actions={
+          <Button
+            type="primary"
+            disabled={selectedIds.length === 0}
+            onClick={() => setApprovingMany(true)}
+          >
+            {`${text.approveSelected} (${selectedIds.length})`}
+          </Button>
+        }
       />
-
-      <Space>
-        <Button
-          type="primary"
-          disabled={selectedIds.length === 0}
-          onClick={() => setApprovingMany(true)}
-        >
-          {`${text.approveSelected} (${selectedIds.length})`}
-        </Button>
-      </Space>
 
       <QueryError error={rates.error} onRetry={() => void rates.refetch()} />
 
-      <Table<PieceRate>
+      <DataTable<PieceRate>
         rowKey="pieceRateId"
         rowSelection={{
           selectedRowKeys: selectedIds,
           onChange: (keys) => setSelectedIds(keys as number[]),
           getCheckboxProps: (row) => ({ disabled: row.status !== 'PendingApproval' }),
         }}
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={rates.data?.items}
         loading={rates.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: rates.data?.page ?? query.page,
@@ -138,7 +162,10 @@ export function AdminPieceRatesPage() {
         onCancel={() => setApproving(null)}
         onSubmit={(note) =>
           approving &&
-          approve.mutate({ id: approving.pieceRateId, note: note ?? undefined }, { onSuccess: () => setApproving(null) })
+          approve.mutate(
+            { id: approving.pieceRateId, note: note ?? undefined },
+            { onSuccess: () => setApproving(null) },
+          )
         }
       />
       <NoteModal
@@ -167,9 +194,13 @@ export function AdminPieceRatesPage() {
         loading={reject.isPending}
         onCancel={() => setRejecting(null)}
         onSubmit={(reason) =>
-          rejecting && reject.mutate({ id: rejecting.pieceRateId, reason }, { onSuccess: () => setRejecting(null) })
+          rejecting &&
+          reject.mutate(
+            { id: rejecting.pieceRateId, reason },
+            { onSuccess: () => setRejecting(null) },
+          )
         }
       />
-    </Space>
+    </PageCard>
   );
 }

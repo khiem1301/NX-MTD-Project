@@ -1,11 +1,14 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, SHIFT_OPTIONS, lineKey, parseLineKey } from '../constants';
 import { useSaveLay } from '../hooks/useCutting';
 import type { CuttingLay, SaveCuttingLayPayload, WorkOrder } from '../types';
 import { LayLinesTable } from './LayLinesTable';
+import { API_DATE } from '@/utils/format';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type LayFormModalProps = {
   open: boolean;
@@ -20,9 +23,6 @@ type FormValues = Omit<SaveCuttingLayPayload, 'workDate' | 'lines' | 'workOrderI
   actual: Record<string, number | null>;
   reason: Record<string, string | undefined>;
 };
-
-const DATE_FORMAT = 'DD/MM/YYYY';
-const API_DATE = 'YYYY-MM-DD';
 
 /** UC51: nhập bàn cắt của lệnh cắt (số lớp × tỉ lệ size); BE chặn vượt kế hoạch + % dư. */
 export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProps) {
@@ -86,7 +86,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
   return (
     <Modal
       open={open}
-      width={960}
+      width={MODAL_WIDTH.lg}
       title={
         lay
           ? `${LABELS.laySequence} ${lay.laySequence}`
@@ -102,7 +102,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
         <Space wrap align="start">
           <Form.Item name="workDate" label={LABELS.workDate} rules={required}>
-            <DatePicker format={DATE_FORMAT} />
+            <AppDatePicker />
           </Form.Item>
           <Form.Item name="shiftCode" label={LABELS.shift} rules={required}>
             <Select options={SHIFT_OPTIONS} style={{ width: 130 }} />

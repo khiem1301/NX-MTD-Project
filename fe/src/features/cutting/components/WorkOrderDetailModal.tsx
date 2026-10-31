@@ -1,15 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-  Typography,
-} from 'antd';
+import { Alert, Button, Descriptions, Popconfirm, Space, Typography } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
@@ -20,19 +10,17 @@ import { LABELS, WORK_ORDER_STATUS, WORK_ORDER_STATUS_LABEL } from '../constants
 import { NoteModal } from '@/components/common/NoteModal';
 import { useCancelWorkOrder, useFinishCutting, useWorkOrder } from '../hooks/useCutting';
 import type { WorkOrder, WorkOrderLine } from '../types';
+import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type WorkOrderDetailDrawerProps = {
+type WorkOrderDetailModalProps = {
   workOrderId: number | undefined;
   onClose: () => void;
   onEdit: (workOrder: WorkOrder) => void;
 };
 
 /** Chi tiết lệnh cắt: kế hoạch / đã cắt / đã bàn giao theo màu - size và vải cần theo định mức. */
-export function WorkOrderDetailDrawer({
-  workOrderId,
-  onClose,
-  onEdit,
-}: WorkOrderDetailDrawerProps) {
+export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrderDetailModalProps) {
   const { hasRole } = usePermission();
   const detail = useWorkOrder(workOrderId);
   const cancel = useCancelWorkOrder();
@@ -40,34 +28,41 @@ export function WorkOrderDetailDrawer({
   const [finishing, setFinishing] = useState(false);
   const w = detail.data;
   const canEdit = hasRole(ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
-  const total = (pick: (l: WorkOrderLine) => number) => (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
+  const total = (pick: (l: WorkOrderLine) => number) =>
+    (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
   // Tổ cắt báo cắt xong khi lệnh đang cắt (đủ kế hoạch thì lệnh đã tự hoàn thành khi kho xác nhận).
-  const canFinish = hasRole(ROLES.TeamLeader, ROLES.TeamDeputy) && w?.status === WORK_ORDER_STATUS.CUTTING;
+  const canFinish =
+    hasRole(ROLES.TeamLeader, ROLES.TeamDeputy) && w?.status === WORK_ORDER_STATUS.CUTTING;
   const isShort = total((l) => l.handedQty) < total((l) => l.plannedQty);
 
-  const actions = canFinish && w ? (
-    <Button type="primary" onClick={() => setFinishing(true)}>
-      {LABELS.finishCutting}
-    </Button>
-  ) : canEdit && w && (
-    <Space>
-      <Popconfirm
-        title={MESSAGES.cutting.confirmCancelWorkOrder}
-        onConfirm={() => cancel.mutate(w.workOrderId, { onSuccess: onClose })}
-      >
-        <Button danger>{LABELS.cancelWorkOrder}</Button>
-      </Popconfirm>
-      <Button onClick={() => onEdit(w)}>{MESSAGES.common.edit}</Button>
-    </Space>
-  );
+  const actions =
+    canFinish && w ? (
+      <Button type="primary" onClick={() => setFinishing(true)}>
+        {LABELS.finishCutting}
+      </Button>
+    ) : (
+      canEdit &&
+      w && (
+        <Space>
+          <Popconfirm
+            title={MESSAGES.cutting.confirmCancelWorkOrder}
+            onConfirm={() => cancel.mutate(w.workOrderId, { onSuccess: onClose })}
+          >
+            <Button danger>{LABELS.cancelWorkOrder}</Button>
+          </Popconfirm>
+          <Button onClick={() => onEdit(w)}>{MESSAGES.common.edit}</Button>
+        </Space>
+      )
+    );
 
   return (
-    <Drawer
+    <DetailModal
       open={workOrderId !== undefined}
       onClose={onClose}
-      width={860}
       title={w?.workOrderCode}
       extra={actions}
+      loading={detail.isLoading}
+      error={detail.error}
     >
       <NoteModal
         open={finishing}
@@ -78,14 +73,20 @@ export function WorkOrderDetailDrawer({
         onCancel={() => setFinishing(false)}
         onSubmit={(note) =>
           w &&
-          finish.mutate({ id: w.workOrderId, reason: note ?? undefined }, { onSuccess: () => { setFinishing(false); onClose(); } })
+          finish.mutate(
+            { id: w.workOrderId, reason: note ?? undefined },
+            {
+              onSuccess: () => {
+                setFinishing(false);
+                onClose();
+              },
+            },
+          )
         }
       />
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {w && (
         <>
-          <Descriptions column={2} size="small" bordered>
+          <DetailDescriptions>
             <Descriptions.Item label={LABELS.order}>{w.orderCode}</Descriptions.Item>
             <Descriptions.Item
               label={LABELS.product}
@@ -96,7 +97,7 @@ export function WorkOrderDetailDrawer({
               <StatusTag status={w.status} labels={WORK_ORDER_STATUS_LABEL} />
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.note}>{w.note ?? '—'}</Descriptions.Item>
-          </Descriptions>
+          </DetailDescriptions>
           <Alert
             style={{ marginTop: 16 }}
             type="info"
@@ -106,7 +107,7 @@ export function WorkOrderDetailDrawer({
               .replace('{cut}', formatQty(total((l) => l.cutQty)))
               .replace('{handed}', formatQty(total((l) => l.handedQty)))}`}
           />
-          <Table<WorkOrderLine>
+          <DataTable<WorkOrderLine>
             rowKey="workOrderLineId"
             size="small"
             style={{ marginTop: 16 }}
@@ -131,7 +132,7 @@ export function WorkOrderDetailDrawer({
           <Typography.Title level={5} style={{ marginTop: 16 }}>
             {LABELS.fabrics}
           </Typography.Title>
-          <Table<FabricRequirement>
+          <DataTable<FabricRequirement>
             rowKey="materialId"
             size="small"
             pagination={false}
@@ -140,7 +141,8 @@ export function WorkOrderDetailDrawer({
               {
                 title: LABELS.material,
                 key: 'm',
-                render: (_, f) => `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
+                render: (_, f) =>
+                  `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
               },
               {
                 title: LABELS.issuedQty,
@@ -176,6 +178,6 @@ export function WorkOrderDetailDrawer({
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

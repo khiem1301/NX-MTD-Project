@@ -40,7 +40,9 @@ export const cuttingApi = {
   createReplacement: (role: RolePath, body: CreateReplacementPayload) =>
     post<WorkOrder>(`${API.cutting.workOrders(role)}/replacement`, body),
   finishCutting: (role: RolePath, id: number, reason?: string) =>
-    post<null>(`${API.cutting.workOrders(role)}/${id}/finish-cutting`, { reason: reason?.trim() || null }),
+    post<null>(`${API.cutting.workOrders(role)}/${id}/finish-cutting`, {
+      reason: reason?.trim() || null,
+    }),
   cancelWorkOrder: (role: RolePath, id: number) =>
     post<null>(`${API.cutting.workOrders(role)}/${id}/cancel`),
 
@@ -64,5 +66,6 @@ export const cuttingApi = {
     post<null>(`${API.cutting.cutHandovers(role)}/${id}/confirm`, body),
   rejectHandover: (role: RolePath, id: number, reason: string) =>
     post<null>(`${API.cutting.cutHandovers(role)}/${id}/reject`, { reason }),
-  cancelHandover: (role: RolePath, id: number) => post<null>(`${API.cutting.cutHandovers(role)}/${id}/cancel`),
+  cancelHandover: (role: RolePath, id: number) =>
+    post<null>(`${API.cutting.cutHandovers(role)}/${id}/cancel`),
 };

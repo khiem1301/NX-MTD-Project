@@ -6,7 +6,8 @@ import { revenueApi, type RevenueScope } from '../api/revenueApi';
 import type { RevenueFilter } from '../types';
 
 export const REVENUE_KEY = ['revenue'] as const;
-const listKey = (scope: RevenueScope, filter: RevenueFilter) => [...REVENUE_KEY, scope, filter] as const;
+const listKey = (scope: RevenueScope, filter: RevenueFilter) =>
+  [...REVENUE_KEY, scope, filter] as const;
 
 /** UC27 — doanh thu theo tháng/đơn/mã hàng, phân trang server-side; scope quyết định route BE gọi. */
 export const useRevenue = (scope: RevenueScope, filter: RevenueFilter) =>

@@ -13,10 +13,12 @@ export const PAYROLL_TEXT = {
 
   estimatedPay: {
     pageTitle: 'Sản lượng và lương tạm tính',
-    pageSubtitle: 'Số liệu tạm tính theo sản lượng đã nhập, không phải lương chính thức. Lương chính thức xem ở Phiếu lương của tôi sau khi Admin duyệt.',
+    pageSubtitle:
+      'Số liệu tạm tính theo sản lượng đã nhập, không phải lương chính thức. Lương chính thức xem ở Phiếu lương của tôi sau khi Admin duyệt.',
     estimateTag: 'Tạm tính',
     month: 'Tháng',
-    notApplicable: 'Chưa có sản lượng trong tháng này. Chỉ công nhân may khoán sản phẩm mới có lương tạm tính.',
+    notApplicable:
+      'Chưa có sản lượng trong tháng này. Chỉ công nhân may khoán sản phẩm mới có lương tạm tính.',
     totals: {
       output: 'Sản lượng',
       outputAmount: 'Tiền sản phẩm',
@@ -56,7 +58,8 @@ export const PAYROLL_TEXT = {
   confirmImportContent:
     'Bảng lương cũ (nếu có) của tháng này sẽ bị thay bằng các nhân viên hợp lệ trong file. File gốc được lưu lại để giám đốc xem.',
   downloadImportedFile: 'Tải file gốc',
-  chooseFileHint: 'File "Bảng thanh toán lương" gồm một sheet cho mỗi tổ (cột SLĐ là mã chấm công).',
+  chooseFileHint:
+    'File "Bảng thanh toán lương" gồm một sheet cho mỗi tổ (cột SLĐ là mã chấm công).',
   import: 'Nhập bảng lương',
   submit: 'Gửi duyệt',
   noPayrollYet: 'Tháng này chưa có bảng lương. Hãy nhập file Excel đã tính lương.',

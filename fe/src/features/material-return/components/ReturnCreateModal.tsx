@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Alert, Form, Input, InputNumber, Modal, Select, Table } from 'antd';
+import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { RETURN_LABELS, RETURN_MESSAGES } from '../constants';
 import { useCreateReturn, useReturnable } from '../hooks/useMaterialReturn';
 import type { ReturnableLine } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
 
 type ReturnCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null>; note?: string };
@@ -36,7 +38,7 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
   return (
     <Modal
       open={open}
-      width={760}
+      width={MODAL_WIDTH.md}
       title={RETURN_LABELS.create}
       okText={MESSAGES.common.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -74,7 +76,7 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
         onFinish={handleFinish}
         key={issueId}
       >
-        <Table<ReturnableLine>
+        <DataTable<ReturnableLine>
           rowKey="materialIssueLineId"
           size="small"
           pagination={false}

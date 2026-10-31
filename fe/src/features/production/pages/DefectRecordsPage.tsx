@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, DatePicker, Space, Table, Tag, Typography } from 'antd';
+import { Button, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
@@ -15,6 +15,9 @@ import { ReplacementCuttingModal } from '../components/ReplacementCuttingModal';
 import { PRODUCTION_TEXT } from '../constants';
 import { useCancelDefect, useDefects } from '../hooks/useProduction';
 import type { Defect, DefectQuery, OutputRole } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 const text = PRODUCTION_TEXT.defects;
 
@@ -32,15 +35,27 @@ function DefectBoard({ role }: { role: OutputRole }) {
   const [autoReplaceId, setAutoReplaceId] = useState<number | null>(null);
   const defects = useDefects(role, query);
   const replacing =
-    replacingPick ?? (autoReplaceId === null ? null : (defects.data?.items.find((d) => d.defectRecordId === autoReplaceId) ?? null));
+    replacingPick ??
+    (autoReplaceId === null
+      ? null
+      : (defects.data?.items.find((d) => d.defectRecordId === autoReplaceId) ?? null));
   const cancel = useCancelDefect(role);
 
   const columns: ColumnsType<Defect> = [
     { title: text.columns.code, dataIndex: 'defectCode' },
     { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
     ...(isManager ? [{ title: text.columns.team, dataIndex: 'sewingTeamName' }] : []),
-    { responsive: ['md'], title: text.columns.order, key: 'order', render: (_, d) => `${d.orderCode} · ${d.productCode}` },
-    { title: text.columns.operation, key: 'op', render: (_, d) => `${d.operationCode} - ${d.operationName}` },
+    {
+      responsive: ['md'],
+      title: text.columns.order,
+      key: 'order',
+      render: (_, d) => `${d.orderCode} · ${d.productCode}`,
+    },
+    {
+      title: text.columns.operation,
+      key: 'op',
+      render: (_, d) => `${d.operationCode} - ${d.operationName}`,
+    },
     { title: text.columns.worker, dataIndex: 'responsibleWorkerName' },
     {
       title: text.columns.type,
@@ -51,7 +66,10 @@ function DefectBoard({ role }: { role: OutputRole }) {
     {
       title: text.columns.reason,
       key: 'reason',
-      render: (_, d) => (d.reasonNote ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}` : text.reason[d.defectReasonCode]),
+      render: (_, d) =>
+        d.reasonNote
+          ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}`
+          : text.reason[d.defectReasonCode],
     },
     {
       responsive: ['md'],
@@ -60,7 +78,11 @@ function DefectBoard({ role }: { role: OutputRole }) {
       align: 'right',
       render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
     },
-    { title: text.columns.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={text.status} /> },
+    {
+      title: text.columns.status,
+      dataIndex: 'status',
+      render: (v: string) => <StatusTag status={v} labels={text.status} />,
+    },
     {
       title: text.columns.objection,
       key: 'objection',
@@ -74,7 +96,12 @@ function DefectBoard({ role }: { role: OutputRole }) {
           '—'
         ),
     },
-    { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
+    {
+      responsive: ['md'],
+      title: text.columns.deadline,
+      dataIndex: 'editDeadline',
+      render: (v: string) => formatDateTime(v),
+    },
     {
       title: PRODUCTION_TEXT.replacement.column,
       key: 'replacement',
@@ -82,7 +109,9 @@ function DefectBoard({ role }: { role: OutputRole }) {
         if (d.replacementRequestCode)
           return (
             <Tag color="geekblue">
-              {d.replacementRequestCode} · {REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ?? d.replacementRequestStatus}
+              {d.replacementRequestCode} ·{' '}
+              {REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ??
+                d.replacementRequestStatus}
             </Tag>
           );
         return !isManager && d.defectType === 'Scrap' && d.status === 'Recorded' ? (
@@ -107,43 +136,43 @@ function DefectBoard({ role }: { role: OutputRole }) {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {isManager ? text.managerTitle : text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{isManager ? text.managerSubtitle : text.subtitle}</Typography.Text>
-      </div>
-
+    <PageCard
+      title={isManager ? text.managerTitle : text.title}
+      description={isManager ? text.managerSubtitle : text.subtitle}
+      extra={
+        !isManager && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
+            {text.add}
+          </Button>
+        )
+      }
+    >
       <Space wrap>
         <DebouncedSearch
           allowClear
           style={{ width: 320 }}
           placeholder={text.searchPlaceholder}
-          onSearch={(keyword) => setQuery({ ...query, page: 1, keyword: keyword.trim() || undefined })}
+          onSearch={(keyword) =>
+            setQuery({ ...query, page: 1, keyword: keyword.trim() || undefined })
+          }
         />
-        <DatePicker
+        <AppDatePicker
           allowClear
-          format="DD/MM/YYYY"
           placeholder={text.filterDate}
-          onChange={(v: Dayjs | null) => setQuery({ ...query, page: 1, workDate: v ? toApiDate(v) : undefined })}
+          onChange={(v: Dayjs | null) =>
+            setQuery({ ...query, page: 1, workDate: v ? toApiDate(v) : undefined })
+          }
         />
-        {!isManager && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>
-            {text.add}
-          </Button>
-        )}
       </Space>
 
       <QueryError error={defects.error} onRetry={() => void defects.refetch()} />
 
-      <Table<Defect>
+      <DataTable<Defect>
         rowKey="defectRecordId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={defects.data?.items}
         loading={defects.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: defects.data?.page ?? query.page,
@@ -163,13 +192,15 @@ function DefectBoard({ role }: { role: OutputRole }) {
           onCreated={(id, type) => type === 'Scrap' && setAutoReplaceId(id)}
         />
       )}
-      {!isManager && <ReplacementCuttingModal
+      {!isManager && (
+        <ReplacementCuttingModal
           defect={replacing}
           onClose={() => {
             setReplacing(null);
             setAutoReplaceId(null);
           }}
-        />}
+        />
+      )}
       <ReasonModal
         open={cancelling !== null}
         title={text.cancelTitle}
@@ -183,7 +214,7 @@ function DefectBoard({ role }: { role: OutputRole }) {
           )
         }
       />
-    </Space>
+    </PageCard>
   );
 }
 

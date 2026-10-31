@@ -69,10 +69,13 @@ export const useSaveWorkOrder = () => {
 /** Tổ cắt báo cắt xong: lệnh chuyển Hoàn thành (cắt thiếu kế hoạch thì phải nêu lý do). */
 export const useFinishCutting = () => {
   const role = useRolePath();
-  return useApiMutation(({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason), {
-    invalidate: [CUTTING_KEY],
-    successMessage: MESSAGES.cutting.workOrderFinished,
-  });
+  return useApiMutation(
+    ({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason),
+    {
+      invalidate: [CUTTING_KEY],
+      successMessage: MESSAGES.cutting.workOrderFinished,
+    },
+  );
 };
 
 export const useCancelWorkOrder = () => {

@@ -1,9 +1,10 @@
-import { DatePicker, Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import { toApiDate } from '@/utils/format';
 import { useTransferIn } from '../hooks/useTeams';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type TransferModalProps = {
   open: boolean;
@@ -23,7 +24,14 @@ export function TransferModal({ open, fromTeamId, employeeIds, onClose }: Transf
 
   const handleFinish = (v: FormValues) =>
     transfer.mutate(
-      { id: v.targetTeamId, body: { employeeIds, effectiveDate: toApiDate(v.effectiveDate), reason: v.reason?.trim() || null } },
+      {
+        id: v.targetTeamId,
+        body: {
+          employeeIds,
+          effectiveDate: toApiDate(v.effectiveDate),
+          reason: v.reason?.trim() || null,
+        },
+      },
       { onSuccess: onClose },
     );
 
@@ -38,16 +46,32 @@ export function TransferModal({ open, fromTeamId, employeeIds, onClose }: Transf
       onCancel={onClose}
       destroyOnHidden
     >
-      <Form form={form} layout="vertical" preserve={false} initialValues={{ effectiveDate: dayjs() }} onFinish={handleFinish}>
-        <Form.Item name="targetTeamId" label={MESSAGES.hr.transferTarget} rules={[{ required: true, message: MESSAGES.common.required }]}>
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        initialValues={{ effectiveDate: dayjs() }}
+        onFinish={handleFinish}
+      >
+        <Form.Item
+          name="targetTeamId"
+          label={MESSAGES.hr.transferTarget}
+          rules={[{ required: true, message: MESSAGES.common.required }]}
+        >
           <Select
             showSearch
             optionFilterProp="label"
-            options={(teams.data ?? []).filter((t) => t.teamId !== fromTeamId).map((t) => ({ value: t.teamId, label: t.teamName }))}
+            options={(teams.data ?? [])
+              .filter((t) => t.teamId !== fromTeamId)
+              .map((t) => ({ value: t.teamId, label: t.teamName }))}
           />
         </Form.Item>
-        <Form.Item name="effectiveDate" label={MESSAGES.hr.effectiveDate} rules={[{ required: true, message: MESSAGES.common.required }]}>
-          <DatePicker format="DD/MM/YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+        <Form.Item
+          name="effectiveDate"
+          label={MESSAGES.hr.effectiveDate}
+          rules={[{ required: true, message: MESSAGES.common.required }]}
+        >
+          <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
         </Form.Item>
         <Form.Item name="reason" label={MESSAGES.hr.transferReason} rules={[{ max: 500 }]}>
           <Input.TextArea rows={2} />

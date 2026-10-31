@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -8,12 +9,15 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime } from '@/utils/format';
 import { FgHandoverCreateModal } from '../components/FgHandoverCreateModal';
-import { FgHandoverDrawer } from '../components/FgHandoverDrawer';
+import { FgHandoverModal } from '../components/FgHandoverModal';
 import { FG_LABELS, FG_STATUS_LABEL } from '../constants';
 import { useFgHandovers } from '../hooks/useFgHandover';
 import type { FgHandoverListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -33,7 +37,9 @@ export function FgHandoverPage() {
     {
       title: FG_LABELS.code,
       dataIndex: 'handoverCode',
-      render: (v: string, h) => <a onClick={() => setViewingId(h.fgHandoverId)}>{v}</a>,
+      render: (v: string, h) => (
+        <DetailLink onClick={() => setViewingId(h.fgHandoverId)}>{v}</DetailLink>
+      ),
     },
     { title: FG_LABELS.order, dataIndex: 'orderCode' },
     { title: FG_LABELS.product, dataIndex: 'productCode' },
@@ -57,36 +63,40 @@ export function FgHandoverPage() {
       title={FG_LABELS.title}
       extra={
         <Can roles={[ROLES.QaQc]}>
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {FG_LABELS.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={FG_LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 170 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={FG_LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 170 }}
+            />
+          </>
+        }
+      />
       <QueryError error={handovers.error} onRetry={() => void handovers.refetch()} />
-      <Table
+      <DataTable
         rowKey="fgHandoverId"
         columns={columns}
         dataSource={handovers.data?.items}
         loading={handovers.isFetching}
         pagination={table.pagination(handovers.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <FgHandoverDrawer handoverId={viewingId} onClose={() => setViewingId(undefined)} />
+      <FgHandoverModal handoverId={viewingId} onClose={() => setViewingId(undefined)} />
       <FgHandoverCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

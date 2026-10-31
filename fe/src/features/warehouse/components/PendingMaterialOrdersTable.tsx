@@ -1,15 +1,20 @@
-import { Alert, Button, Space, Table, Tag, Typography, type TableColumnsType } from 'antd';
+import { Alert, Button, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { formatDate, formatQty } from '@/utils/format';
 import { INCOMING_TEXT } from '../constants';
 import { usePendingMaterialOrders } from '../hooks/useOrderMaterials';
 import type { PendingMaterialOrder } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 const text = INCOMING_TEXT;
 
 const statusTag = (o: PendingMaterialOrder) => {
   if (o.materialLines === 0) return <Tag color="red">{text.notDeclared}</Tag>;
-  return o.materialStatus === 'Partial' ? <Tag color="gold">{text.partial}</Tag> : <Tag color="orange">{text.awaiting}</Tag>;
+  return o.materialStatus === 'Partial' ? (
+    <Tag color="gold">{text.partial}</Tag>
+  ) : (
+    <Tag color="orange">{text.awaiting}</Tag>
+  );
 };
 
 /**
@@ -19,7 +24,9 @@ const statusTag = (o: PendingMaterialOrder) => {
 export function PendingMaterialOrdersTable({ onPick }: { onPick: (orderId: number) => void }) {
   const pending = usePendingMaterialOrders();
   const rows = [...(pending.data ?? [])].sort(
-    (a, b) => Number(a.materialLines > 0) - Number(b.materialLines > 0) || a.dueDate.localeCompare(b.dueDate),
+    (a, b) =>
+      Number(a.materialLines > 0) - Number(b.materialLines > 0) ||
+      a.dueDate.localeCompare(b.dueDate),
   );
 
   const columns: TableColumnsType<PendingMaterialOrder> = [
@@ -47,16 +54,16 @@ export function PendingMaterialOrdersTable({ onPick }: { onPick: (orderId: numbe
       </Typography.Title>
       <Typography.Text type="secondary">{text.pendingHint}</Typography.Text>
       <QueryError error={pending.error} onRetry={() => void pending.refetch()} />
-      {pending.data && pending.data.length === 0 && <Alert type="success" showIcon message={text.pendingEmpty} />}
+      {pending.data && pending.data.length === 0 && (
+        <Alert type="success" showIcon message={text.pendingEmpty} />
+      )}
       {rows.length > 0 && (
-        <Table
+        <DataTable
           rowKey="orderId"
-          size="small"
           columns={columns}
           dataSource={rows}
           loading={pending.isFetching}
           pagination={false}
-          scroll={{ x: 'max-content' }}
         />
       )}
     </Space>

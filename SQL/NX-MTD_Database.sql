@@ -147,11 +147,18 @@ CREATE TABLE dbo.SystemSetting (
     UpdatedAt    DATETIME2(0)   NOT NULL CONSTRAINT DF_SystemSetting_UpdatedAt DEFAULT (dbo.fn_VnNow())
 );
 
--- Bậc thợ A–D và tiền bậc theo tháng, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
+-- Danh mục bậc thợ (A, B, C, D... Admin thêm / sửa / ngừng dùng). Mã bậc là khóa; nhân viên, đánh giá và tiền bậc tham chiếu mã này.
+CREATE TABLE dbo.GradeLevelCode (
+    GradeCode  VARCHAR(5)    NOT NULL CONSTRAINT PK_GradeLevelCode PRIMARY KEY CONSTRAINT CK_GLC_Code CHECK (GradeCode NOT LIKE '%[^A-Z0-9]%'),
+    GradeName  NVARCHAR(50)  NOT NULL,
+    Status     VARCHAR(10)   NOT NULL CONSTRAINT DF_GLC_Status DEFAULT 'ACTIVE' CONSTRAINT CK_GLC_Status CHECK (Status IN ('ACTIVE','INACTIVE')),
+    CreatedAt  DATETIME2(0)  NOT NULL CONSTRAINT DF_GLC_CreatedAt DEFAULT (dbo.fn_VnNow())
+);
+
+-- Tiền bậc theo tháng của từng bậc, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15). Tên bậc chỉ lưu ở GradeLevelCode.
 CREATE TABLE dbo.GradeLevel (
     GradeLevelId     INT IDENTITY(1,1) CONSTRAINT PK_GradeLevel PRIMARY KEY,
-    GradeCode        CHAR(1)       NOT NULL CONSTRAINT CK_GradeLevel_Code CHECK (GradeCode IN ('A','B','C','D')),
-    GradeName        NVARCHAR(50)  NOT NULL,
+    GradeCode        VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeLevel_Code REFERENCES dbo.GradeLevelCode(GradeCode),
     MonthlyAmount    DECIMAL(18,2) NOT NULL CONSTRAINT CK_GradeLevel_Amount CHECK (MonthlyAmount >= 0),
     EffectiveDate    DATE          NOT NULL,
     CreatedAt        DATETIME2(0)  NOT NULL CONSTRAINT DF_GradeLevel_CreatedAt DEFAULT (dbo.fn_VnNow()),
@@ -187,7 +194,7 @@ CREATE TABLE dbo.Employee (
     RoleId           INT           NOT NULL CONSTRAINT FK_Employee_Role REFERENCES dbo.Role(RoleId),
     TeamId           INT           NULL CONSTRAINT FK_Employee_Team REFERENCES dbo.Team(TeamId), -- tổ hiện tại (đổi tổ ghi AuditLog)
     PayType          VARCHAR(20)   NOT NULL,   -- PIECE_RATE: CN may; DAILY: thợ cắt, QA/QC; MONTHLY: còn lại
-    CurrentGradeCode CHAR(1)       NULL CONSTRAINT CK_Employee_Grade CHECK (CurrentGradeCode IN ('A','B','C','D')), -- chỉ CN may, tổ phó & tổ trưởng
+    CurrentGradeCode VARCHAR(5)    NULL CONSTRAINT FK_Employee_Grade REFERENCES dbo.GradeLevelCode(GradeCode), -- chỉ CN may, tổ phó & tổ trưởng
     AttendanceCode   INT           NULL,       -- mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong)
     StartDate        DATE          NOT NULL,
     ResignDate       DATE          NULL,
@@ -228,8 +235,8 @@ CREATE TABLE dbo.GradeEvaluation (
     WorkerId          INT           NOT NULL CONSTRAINT FK_GradeEval_Worker REFERENCES dbo.Employee(EmployeeId),
     ProposedBy        INT           NOT NULL CONSTRAINT FK_GradeEval_ProposedBy REFERENCES dbo.Employee(EmployeeId),
     TeamId            INT           NULL CONSTRAINT FK_GradeEval_Team REFERENCES dbo.Team(TeamId),
-    CurrentGradeCode  CHAR(1)       NULL,
-    ProposedGradeCode CHAR(1)       NOT NULL,
+    CurrentGradeCode  VARCHAR(5)    NULL CONSTRAINT FK_GradeEval_Current REFERENCES dbo.GradeLevelCode(GradeCode),
+    ProposedGradeCode VARCHAR(5)    NOT NULL CONSTRAINT FK_GradeEval_Proposed REFERENCES dbo.GradeLevelCode(GradeCode),
     Reason            NVARCHAR(500) NOT NULL,
     RecentDefectCount INT           NOT NULL CONSTRAINT DF_GradeEval_Defects DEFAULT 0,
     EvaluationDate    DATE          NOT NULL,
@@ -238,7 +245,6 @@ CREATE TABLE dbo.GradeEvaluation (
     ConsideredAt      DATETIME2(0)  NULL,
     DecisionNote      NVARCHAR(500) NULL,
     CreatedAt         DATETIME2(0)  NOT NULL CONSTRAINT DF_GradeEval_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    CONSTRAINT CK_GradeEval_Grades CHECK (ProposedGradeCode IN ('A','B','C','D') AND (CurrentGradeCode IS NULL OR CurrentGradeCode IN ('A','B','C','D'))),
     CONSTRAINT CK_GradeEval_Status CHECK (Status IN ('SUBMITTED','APPLIED','NOT_APPLIED')),
     CONSTRAINT CK_GradeEval_Applied CHECK (Status <> 'APPLIED' OR (EffectiveDate IS NOT NULL AND ConsideredAt IS NOT NULL)),
     CONSTRAINT UQ_GradeEval UNIQUE (WorkerId, ProposedBy, EvaluationDate)
@@ -2627,11 +2633,17 @@ INSERT dbo.Role (RoleCode, RoleName, IsProduction) VALUES
  ('WORKER',           N'Công nhân',            1);
 -- Cách tính lương (Employee.PayType) đặt theo từng người khi tạo: tổ may PIECE_RATE, tổ cắt và QA/QC DAILY, còn lại MONTHLY.
 
-INSERT dbo.GradeLevel (GradeCode, GradeName, MonthlyAmount, EffectiveDate) VALUES
- ('A', N'Bậc A – Giỏi',      600000, '2026-01-01'),
- ('B', N'Bậc B – Khá',       400000, '2026-01-01'),
- ('C', N'Bậc C – Trung bình', 200000, '2026-01-01'),
- ('D', N'Bậc D – Yếu',            0, '2026-01-01');
+INSERT dbo.GradeLevelCode (GradeCode, GradeName) VALUES
+ ('A', N'Bậc A – Giỏi'),
+ ('B', N'Bậc B – Khá'),
+ ('C', N'Bậc C – Trung bình'),
+ ('D', N'Bậc D – Yếu');
+
+INSERT dbo.GradeLevel (GradeCode, MonthlyAmount, EffectiveDate) VALUES
+ ('A', 600000, '2026-01-01'),
+ ('B', 400000, '2026-01-01'),
+ ('C', 200000, '2026-01-01'),
+ ('D',      0, '2026-01-01');
 
 DECLARE @rAdmin INT = (SELECT RoleId FROM dbo.Role WHERE RoleCode = 'ADMIN');
 

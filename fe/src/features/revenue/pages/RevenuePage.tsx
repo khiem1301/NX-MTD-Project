@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Space, Typography } from 'antd';
 import { RevenueTable } from '../components/RevenueTable';
 import { REVENUE_TEXT } from '../constants';
 import type { RevenueScope } from '../api/revenueApi';
 import type { RevenueFilter } from '../types';
+import { PageCard } from '@/components/common/PageCard';
 
 const DEFAULT_FILTER: RevenueFilter = { page: 1, pageSize: 20 };
 
@@ -14,16 +14,9 @@ export function RevenuePage({ scope }: Props) {
   const [filter, setFilter] = useState<RevenueFilter>(DEFAULT_FILTER);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {REVENUE_TEXT.pageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{REVENUE_TEXT.pageSubtitle}</Typography.Text>
-      </div>
-
+    <PageCard title={REVENUE_TEXT.pageTitle} description={REVENUE_TEXT.pageSubtitle}>
       <RevenueTable scope={scope} filter={filter} onFilterChange={setFilter} />
-    </Space>
+    </PageCard>
   );
 }
 

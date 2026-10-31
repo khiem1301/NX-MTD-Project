@@ -9,6 +9,7 @@ import { useCreatePurchaseOrder } from '../hooks/usePurchaseOrders';
 import type { CreatePurchaseOrderPayload } from '../types';
 import { isNewMaterial, newMaterialName } from '../newMaterial';
 import { MaterialFreeSelect } from './MaterialFreeSelect';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type PurchaseOrderFormModalProps = {
   open: boolean;
@@ -31,7 +32,12 @@ const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
   note: values.note,
   lines: values.lines.map(({ material, unit, newMaterialColor, ...rest }) =>
     isNewMaterial(material)
-      ? { ...rest, newMaterialName: newMaterialName(material), newMaterialUnit: unit, newMaterialColor }
+      ? {
+          ...rest,
+          newMaterialName: newMaterialName(material),
+          newMaterialUnit: unit,
+          newMaterialColor,
+        }
       : { ...rest, materialId: material },
   ),
 });
@@ -71,13 +77,16 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
     });
   }, [linked, orderMaterials.data, form]);
 
-  const nothingToBuy = linked && orderMaterials.data !== undefined && !orderMaterials.data.some((om) => (om.purchaseQty ?? 0) > 0);
+  const nothingToBuy =
+    linked &&
+    orderMaterials.data !== undefined &&
+    !orderMaterials.data.some((om) => (om.purchaseQty ?? 0) > 0);
   const required = [{ required: true, message: MESSAGES.common.required }];
 
   return (
     <Modal
       open={open}
-      width={980}
+      width={MODAL_WIDTH.lg}
       title={LABELS.stockPurchase}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -92,10 +101,21 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
         onFinish={(values) => create.mutate(toPayload(values), { onSuccess: onClose })}
         disabled={create.isPending}
       >
-        <Form.Item name="orderId" label={LABELS.purchaseOrderOrder} extra={LABELS.purchaseOrderOrderHint}>
+        <Form.Item
+          name="orderId"
+          label={LABELS.purchaseOrderOrder}
+          extra={LABELS.purchaseOrderOrderHint}
+        >
           <OrderSelect allowClear placeholder={LABELS.stockPurchaseTag} width={380} />
         </Form.Item>
-        {nothingToBuy && <Alert type="warning" showIcon message={LABELS.nothingToBuy} style={{ marginBottom: 12 }} />}
+        {nothingToBuy && (
+          <Alert
+            type="warning"
+            showIcon
+            message={LABELS.nothingToBuy}
+            style={{ marginBottom: 12 }}
+          />
+        )}
         <Form.List name="lines">
           {(fields, { add, remove }) => (
             <>
@@ -109,10 +129,18 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                       isNewMaterial(getFieldValue(['lines', field.name, 'material'])) && (
                         <Space align="start">
                           <Form.Item name={[field.name, 'unit']} rules={required}>
-                            <Input placeholder={LABELS.unit} maxLength={20} style={{ width: 110 }} />
+                            <Input
+                              placeholder={LABELS.unit}
+                              maxLength={20}
+                              style={{ width: 110 }}
+                            />
                           </Form.Item>
                           <Form.Item name={[field.name, 'newMaterialColor']}>
-                            <Input placeholder={LABELS.color} maxLength={50} style={{ width: 130 }} />
+                            <Input
+                              placeholder={LABELS.color}
+                              maxLength={50}
+                              style={{ width: 130 }}
+                            />
                           </Form.Item>
                         </Space>
                       )
@@ -135,7 +163,12 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                   />
                 </Space>
               ))}
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)} disabled={linked}>
+              <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => add(EMPTY_LINE)}
+                disabled={linked}
+              >
                 {LABELS.addLine}
               </Button>
             </>

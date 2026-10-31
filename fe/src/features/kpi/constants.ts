@@ -1,7 +1,8 @@
 /** Chuỗi hiển thị của màn KPI tổ may (UC19, MI-18 "KPI theo ngày"). */
 export const KPI_TEXT = {
   adminPageTitle: 'KPI tổ may (xem)',
-  adminPageSubtitle: 'Admin xem chỉ tiêu và kết quả thực tế của từng tổ may. Quản đốc là người lập, sửa, hủy chỉ tiêu.',
+  adminPageSubtitle:
+    'Admin xem chỉ tiêu và kết quả thực tế của từng tổ may. Quản đốc là người lập, sửa, hủy chỉ tiêu.',
   add: 'Lập chỉ tiêu',
   edit: 'Sửa',
   cancel: 'Hủy chỉ tiêu',
@@ -71,8 +72,10 @@ export const KPI_TEXT = {
     mismatchTitle: 'Tổng {n} sản phẩm lệch sẽ ghi thành phiếu hàng hỏng',
     noMismatch: 'Không có lệch kiểm cuối đơn.',
     noOutput: 'Chưa có sản lượng báo ở công đoạn cuối.',
-    otAuto: 'KPI không đạt nhưng thiếu không quá {pct}%: nên tăng ca để bù; hệ thống báo Quản đốc và tổ trưởng.',
-    otLeader: 'KPI không đạt, thiếu hơn {pct}%: tổ trưởng của tổ quyết định có tăng ca hay không (hệ thống báo tổ trưởng).',
+    otAuto:
+      'KPI không đạt nhưng thiếu không quá {pct}%: nên tăng ca để bù; hệ thống báo Quản đốc và tổ trưởng.',
+    otLeader:
+      'KPI không đạt, thiếu hơn {pct}%: tổ trưởng của tổ quyết định có tăng ca hay không (hệ thống báo tổ trưởng).',
     done: 'Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.',
   },
 

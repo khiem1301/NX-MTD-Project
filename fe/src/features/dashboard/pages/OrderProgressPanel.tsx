@@ -3,11 +3,9 @@ import {
   Alert,
   Card,
   Checkbox,
-  Drawer,
   Progress,
   Space,
   Spin,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -16,12 +14,14 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
-import { MESSAGES } from '@/constants/messages';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
 import { useRolePath } from '@/hooks/useRolePath';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse } from '@/types/api';
 import { formatDate } from '@/utils/format';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
 
 type OrderProgress = {
   orderId: number;
@@ -111,24 +111,21 @@ function LinesDrawer({ order, onClose }: { order: OrderProgress | null; onClose:
     },
   ];
   return (
-    <Drawer
+    <DetailModal
       open={order !== null}
       onClose={onClose}
-      width={980}
       title={order ? `Tiến độ ${order.orderCode}` : ''}
-      destroyOnHidden
+      size="lg"
     >
       {lines.isLoading && <Spin />}
       {lines.error && <Alert type="error" message={lines.error.message} />}
-      <Table
+      <DataTable
         rowKey="orderLineId"
-        size="small"
         columns={columns}
         dataSource={lines.data}
         pagination={false}
-        scroll={{ x: 'max-content' }}
       />
-    </Drawer>
+    </DetailModal>
   );
 }
 
@@ -149,7 +146,7 @@ export function OrderProgressPanel() {
       key: 'order',
       render: (_, o) => (
         <Space direction="vertical" size={0}>
-          <a onClick={() => setViewing(o)}>{o.orderCode}</a>
+          <DetailLink onClick={() => setViewing(o)}>{o.orderCode}</DetailLink>
           <Typography.Text type="secondary">{o.customerName}</Typography.Text>
         </Space>
       ),
@@ -232,13 +229,10 @@ export function OrderProgressPanel() {
   ];
 
   return (
-    <Card
-      title="Tiến độ đơn hàng"
-      extra={
+    <Card title="Tiến độ đơn hàng" style={{ marginTop: 16 }}>
+      <Space style={{ marginBottom: 16 }} wrap>
         <Checkbox onChange={(e) => setIncludeClosed(e.target.checked)}>Gồm đơn đã đóng</Checkbox>
-      }
-      style={{ marginTop: 16 }}
-    >
+      </Space>
       {risky.length > 0 && (
         <Alert
           type="error"
@@ -248,15 +242,12 @@ export function OrderProgressPanel() {
         />
       )}
       <QueryError error={overview.error} onRetry={() => void overview.refetch()} />
-      <Table
+      <DataTable
         rowKey="orderId"
-        size="small"
         columns={columns}
         dataSource={overview.data}
         loading={overview.isFetching}
         pagination={false}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        scroll={{ x: 'max-content' }}
       />
       <LinesDrawer order={viewing} onClose={() => setViewing(null)} />
     </Card>

@@ -12,7 +12,12 @@ type ColorAutoCompleteProps = {
 };
 
 /** Ô màu: gợi ý các màu đã khai ở mã hàng trước (gõ không dấu cũng được), vẫn nhập được màu mới. */
-export function ColorAutoComplete({ value, onChange, disabled, extraColors = [] }: ColorAutoCompleteProps) {
+export function ColorAutoComplete({
+  value,
+  onChange,
+  disabled,
+  extraColors = [],
+}: ColorAutoCompleteProps) {
   const colors = useProductColors();
   const all = useMemo(() => {
     const seen = new Map<string, string>();

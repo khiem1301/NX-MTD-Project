@@ -1,19 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Descriptions,
-  Divider,
-  Drawer,
-  Form,
-  InputNumber,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-  Tooltip,
-} from 'antd';
+import { Alert, Button, Descriptions, Divider, Form, InputNumber, Popconfirm, Tooltip } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AttachmentGallery } from '@/components/common/attachments';
@@ -24,7 +10,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { API_DATE, formatDate, formatDateTime } from '@/utils/format';
 import {
   DISPATCH_LABELS,
   DISPATCH_MESSAGES,
@@ -41,32 +27,31 @@ import {
   useRejectDispatch,
 } from '../hooks/useDispatch';
 import type { DispatchNote, DispatchNoteLine } from '../types';
+import { DetailModal, DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
-type DispatchDrawerProps = { noteId: number | undefined; onClose: () => void };
+type DispatchModalProps = { noteId: number | undefined; onClose: () => void };
 type FormValues = { receivedDate: Dayjs; received: Record<string, number> };
-
-const API_DATE = 'YYYY-MM-DD';
 
 /**
  * Chi tiết phiếu xuất hàng. Quản đốc lập → Thủ kho in, chụp ảnh phiếu có Quản đốc ký (bắt buộc) rồi xuất hoặc từ chối;
  * Quản đốc hủy được đến khi hàng rời kho; Kế toán xác nhận khách nhận
  * (ngày nhận, số nhận từng dòng, ảnh biên bản giao có khách ký — bắt buộc).
  */
-export function DispatchDrawer({ noteId, onClose }: DispatchDrawerProps) {
+export function DispatchModal({ noteId, onClose }: DispatchModalProps) {
   const detail = useDispatchNote(noteId);
   const note = detail.data;
   return (
-    <Drawer
+    <DetailModal
       open={noteId !== undefined}
       onClose={onClose}
-      width={860}
       title={note?.dispatchCode}
-      destroyOnHidden
+      loading={detail.isLoading}
+      error={detail.error}
     >
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {note && <DrawerBody key={note.dispatchNoteId} note={note} onClose={onClose} />}
-    </Drawer>
+    </DetailModal>
   );
 }
 
@@ -76,8 +61,12 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
   const exportGoods = useExportDispatch();
   const reject = useRejectDispatch();
   const photos = useAttachments(ATTACHMENT_OWNER.DispatchNote, note.dispatchNoteId);
-  const hasIssuePhoto = (photos.data ?? []).some((a) => a.purpose === ATTACHMENT_PURPOSE.SignedIssueSlip);
-  const hasDeliveryPhoto = (photos.data ?? []).some((a) => a.purpose === ATTACHMENT_PURPOSE.SignedDeliveryNote);
+  const hasIssuePhoto = (photos.data ?? []).some(
+    (a) => a.purpose === ATTACHMENT_PURPOSE.SignedIssueSlip,
+  );
+  const hasDeliveryPhoto = (photos.data ?? []).some(
+    (a) => a.purpose === ATTACHMENT_PURPOSE.SignedDeliveryNote,
+  );
   const confirm = useConfirmDelivery();
   const download = useDownloadDispatch();
   const [rejecting, setRejecting] = useState(false);
@@ -90,7 +79,10 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
   const canExport = isKeeper && pending;
   const canConfirm = isAccountant && inDelivery;
   const notExportedYet = pending;
-  const sent = !notExportedYet && note.status !== DISPATCH_STATUS.CANCELLED && note.status !== DISPATCH_STATUS.REJECTED;
+  const sent =
+    !notExportedYet &&
+    note.status !== DISPATCH_STATUS.CANCELLED &&
+    note.status !== DISPATCH_STATUS.REJECTED;
 
   const handleFinish = (values: FormValues) =>
     confirm.mutate(
@@ -109,7 +101,7 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
+      <ModalActions>
         <Button
           icon={<PrinterOutlined />}
           loading={download.isPending}
@@ -150,13 +142,18 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
         {canConfirm && (
           <Tooltip title={hasDeliveryPhoto ? undefined : DISPATCH_LABELS.needDeliveryPhoto}>
             <span>
-              <Button type="primary" disabled={!hasDeliveryPhoto} loading={confirm.isPending} onClick={() => form.submit()}>
+              <Button
+                type="primary"
+                disabled={!hasDeliveryPhoto}
+                loading={confirm.isPending}
+                onClick={() => form.submit()}
+              >
                 {DISPATCH_LABELS.confirmDelivery}
               </Button>
             </span>
           </Tooltip>
         )}
-      </Space>
+      </ModalActions>
       {note.rejectReason && (
         <Alert
           type="warning"
@@ -165,7 +162,7 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
           style={{ marginBottom: 16 }}
         />
       )}
-      <Descriptions column={2} size="small" bordered>
+      <DetailDescriptions>
         <Descriptions.Item label={DISPATCH_LABELS.order}>{note.orderCode}</Descriptions.Item>
         <Descriptions.Item label={DISPATCH_LABELS.customer}>{note.customerName}</Descriptions.Item>
         <Descriptions.Item label={DISPATCH_LABELS.deliveryDate}>
@@ -188,7 +185,7 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
         <Descriptions.Item label={DISPATCH_LABELS.note} span={2}>
           {note.note ?? '—'}
         </Descriptions.Item>
-      </Descriptions>
+      </DetailDescriptions>
       <Form
         form={form}
         disabled={confirm.isPending}
@@ -207,10 +204,10 @@ function DrawerBody({ note, onClose }: { note: DispatchNote; onClose: () => void
             label={DISPATCH_LABELS.customerReceivedDate}
             rules={[{ required: true, message: MESSAGES.common.required }]}
           >
-            <DatePicker format="DD/MM/YYYY" />
+            <AppDatePicker />
           </Form.Item>
         )}
-        <Table<DispatchNoteLine>
+        <DataTable<DispatchNoteLine>
           rowKey="dispatchNoteLineId"
           size="small"
           pagination={false}

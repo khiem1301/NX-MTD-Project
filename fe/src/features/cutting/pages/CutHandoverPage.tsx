@@ -1,21 +1,24 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { WorkOrderSelect } from '@/components/common/WorkOrderSelect';
-import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime } from '@/utils/format';
 import { HandoverCreateModal } from '../components/HandoverCreateModal';
-import { HandoverDetailDrawer } from '../components/HandoverDetailDrawer';
+import { HandoverDetailModal } from '../components/HandoverDetailModal';
 import { HANDOVER_STATUS_LABEL, LABELS, WORK_ORDER_STATUS } from '../constants';
 import { useHandovers, useWorkOrders } from '../hooks/useCutting';
 import type { CutHandoverListItem } from '../types';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { status?: string; workOrderId?: number };
 
@@ -39,7 +42,9 @@ export function CutHandoverPage() {
     {
       title: LABELS.handoverCode,
       dataIndex: 'handoverCode',
-      render: (v: string, h) => <a onClick={() => setViewingId(h.cutHandoverId)}>{v}</a>,
+      render: (v: string, h) => (
+        <DetailLink onClick={() => setViewingId(h.cutHandoverId)}>{v}</DetailLink>
+      ),
     },
     { title: LABELS.workOrder, dataIndex: 'workOrderCode' },
     { title: LABELS.order, dataIndex: 'orderCode' },
@@ -65,6 +70,7 @@ export function CutHandoverPage() {
         <Can roles={[ROLES.TeamLeader, ROLES.TeamDeputy]}>
           <Button
             type="primary"
+            icon={<PlusOutlined />}
             disabled={table.filters.workOrderId === undefined}
             onClick={() => setCreateOpen(true)}
           >
@@ -73,35 +79,39 @@ export function CutHandoverPage() {
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <WorkOrderSelect
-          workOrders={
-            isCuttingLeader
-              ? workOrders.data?.items.filter((w) => CUTTABLE.includes(w.status))
-              : workOrders.data?.items
-          }
-          loading={workOrders.isLoading}
-          value={table.filters.workOrderId}
-          onChange={(workOrderId) => table.setFilters({ workOrderId })}
-          placeholder={LABELS.workOrder}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 170 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <WorkOrderSelect
+              workOrders={
+                isCuttingLeader
+                  ? workOrders.data?.items.filter((w) => CUTTABLE.includes(w.status))
+                  : workOrders.data?.items
+              }
+              loading={workOrders.isLoading}
+              value={table.filters.workOrderId}
+              onChange={(workOrderId) => table.setFilters({ workOrderId })}
+              placeholder={LABELS.workOrder}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 170 }}
+            />
+          </>
+        }
+      />
       <QueryError error={handovers.error} onRetry={() => void handovers.refetch()} />
-      <Table
+      <DataTable
         rowKey="cutHandoverId"
         columns={columns}
         dataSource={handovers.data?.items}
         loading={handovers.isFetching}
         pagination={table.pagination(handovers.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <HandoverDetailDrawer handoverId={viewingId} onClose={() => setViewingId(undefined)} />
+      <HandoverDetailModal handoverId={viewingId} onClose={() => setViewingId(undefined)} />
       {table.filters.workOrderId !== undefined && (
         <HandoverCreateModal
           open={createOpen}

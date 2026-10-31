@@ -6,17 +6,45 @@ import { PRODUCTION_ROUTES } from './routes';
 const teamRoles = [ROLES.TeamLeader, ROLES.TeamDeputy];
 
 export const productionMenu: MenuEntry[] = [
-  { key: 'operations', label: PRODUCTION_TEXT.operations.title, path: PRODUCTION_ROUTES.operations, roles: [ROLES.Accountant] },
+  {
+    key: 'operations',
+    label: PRODUCTION_TEXT.operations.title,
+    path: PRODUCTION_ROUTES.operations,
+    roles: [ROLES.Accountant],
+  },
   {
     key: 'admin-piece-rates',
     label: PRODUCTION_TEXT.pieceRates.adminTitle,
     path: PRODUCTION_ROUTES.adminPieceRates,
     roles: [ROLES.Admin],
   },
-  { key: 'operation-assignments', label: PRODUCTION_TEXT.assignments.title, path: PRODUCTION_ROUTES.assignments, roles: teamRoles, teamTypes: ['Sewing'] },
-  { key: 'output-records', label: PRODUCTION_TEXT.output.title, path: PRODUCTION_ROUTES.output, roles: teamRoles, teamTypes: ['Sewing'] },
-  { key: 'defect-records', label: PRODUCTION_TEXT.defects.title, path: PRODUCTION_ROUTES.defects, roles: teamRoles, teamTypes: ['Sewing'] },
-  { key: 'qc-batches', label: PRODUCTION_TEXT.qc.title, path: PRODUCTION_ROUTES.qcBatches, roles: [ROLES.QaQc] },
+  {
+    key: 'operation-assignments',
+    label: PRODUCTION_TEXT.assignments.title,
+    path: PRODUCTION_ROUTES.assignments,
+    roles: teamRoles,
+    teamTypes: ['Sewing'],
+  },
+  {
+    key: 'output-records',
+    label: PRODUCTION_TEXT.output.title,
+    path: PRODUCTION_ROUTES.output,
+    roles: teamRoles,
+    teamTypes: ['Sewing'],
+  },
+  {
+    key: 'defect-records',
+    label: PRODUCTION_TEXT.defects.title,
+    path: PRODUCTION_ROUTES.defects,
+    roles: teamRoles,
+    teamTypes: ['Sewing'],
+  },
+  {
+    key: 'qc-batches',
+    label: PRODUCTION_TEXT.qc.title,
+    path: PRODUCTION_ROUTES.qcBatches,
+    roles: [ROLES.QaQc],
+  },
   {
     key: 'manager-output-records',
     label: PRODUCTION_TEXT.output.managerTitle,
@@ -35,5 +63,11 @@ export const productionMenu: MenuEntry[] = [
     path: PRODUCTION_ROUTES.managerQcBatches,
     roles: [ROLES.Manager],
   },
-  { key: 'my-defects', label: PRODUCTION_TEXT.myDefects.title, path: PRODUCTION_ROUTES.myDefects, roles: [ROLES.Worker], teamTypes: ['Sewing'] },
+  {
+    key: 'my-defects',
+    label: PRODUCTION_TEXT.myDefects.title,
+    path: PRODUCTION_ROUTES.myDefects,
+    roles: [ROLES.Worker],
+    teamTypes: ['Sewing'],
+  },
 ];

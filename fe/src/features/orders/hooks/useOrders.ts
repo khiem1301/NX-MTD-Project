@@ -53,6 +53,14 @@ export const useSaveProduct = () =>
     { invalidate: [PRODUCTS_KEY, LOOKUPS_KEY], successMessage: MESSAGES.common.saved },
   );
 
+/** Chi tiết mã hàng (mô tả + lịch sử); chỉ vai trò được xem lịch sử mới gọi. */
+export const useProduct = (productId: number | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: [...PRODUCTS_KEY, 'detail', productId],
+    queryFn: () => productApi.get(productId ?? 0),
+    enabled: enabled && productId !== undefined,
+  });
+
 export const useProductSpec = (productId: number | undefined) => {
   const scope = useProductScope();
   return useQuery({
@@ -66,8 +74,12 @@ export const useProductSpec = (productId: number | undefined) => {
 export const useSaveProductSpec = () => {
   const scope = useProductScope();
   return useApiMutation(
-    ({ id, body }: { id: number; body: SaveProductSpecPayload }) => productApi.saveSpec(id, body, scope),
-    { invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']], successMessage: MESSAGES.common.saved },
+    ({ id, body }: { id: number; body: SaveProductSpecPayload }) =>
+      productApi.saveSpec(id, body, scope),
+    {
+      invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']],
+      successMessage: MESSAGES.common.saved,
+    },
   );
 };
 
@@ -120,9 +132,13 @@ export const useUpdateOrder = (id: number) =>
   });
 
 export const useCancelOrder = (id: number) =>
-  useApiMutation(({ reason, rowVer }: { reason: string | null; rowVer: string }) => orderApi.cancel(id, reason, rowVer), {
-    invalidate: [ORDERS_KEY, LOOKUPS_KEY],
-  });
+  useApiMutation(
+    ({ reason, rowVer }: { reason: string | null; rowVer: string }) =>
+      orderApi.cancel(id, reason, rowVer),
+    {
+      invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    },
+  );
 
 export const useStartProduction = (id: number) =>
   useApiMutation((rowVer: string) => orderApi.startProduction(id, rowVer), {
@@ -131,6 +147,9 @@ export const useStartProduction = (id: number) =>
   });
 
 export const useStopOrder = (id: number) =>
-  useApiMutation(({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer), {
-    invalidate: [ORDERS_KEY, LOOKUPS_KEY],
-  });
+  useApiMutation(
+    ({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer),
+    {
+      invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    },
+  );

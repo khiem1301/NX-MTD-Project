@@ -54,8 +54,10 @@ export const productionApi = {
   // ---------- KI-01: công đoạn (Kế toán) ----------
   listOperations: (productId: number, includeDiscontinued: boolean) =>
     get<Operation[]>(P.operations, { productId, includeDiscontinued }),
-  previewOperationImport: (file: File, params: Pick<OperationImportParams, 'productId' | 'sheetName' | 'effectiveDate'>) =>
-    post<OperationImportPreview>(P.operationImportPreview, asFormData(file), params),
+  previewOperationImport: (
+    file: File,
+    params: Pick<OperationImportParams, 'productId' | 'sheetName' | 'effectiveDate'>,
+  ) => post<OperationImportPreview>(P.operationImportPreview, asFormData(file), params),
   importOperations: (file: File, params: OperationImportParams) =>
     post<OperationImportResult>(P.operationImport, asFormData(file), params),
   createOperation: (body: SaveOperationPayload) => post<number>(P.operations, body),
@@ -70,31 +72,41 @@ export const productionApi = {
   updatePieceRate: (id: number, body: SavePieceRatePayload) => put<void>(P.pieceRate(id), body),
   submitPieceRate: (id: number) => post<void>(P.pieceRateSubmit(id)),
   approvePieceRate: (id: number, note?: string) => post<void>(P.pieceRateApprove(id), { note }),
-  approveManyPieceRates: (ids: number[], note?: string) => post<number>(P.pieceRateApproveMany, { ids, note }),
+  approveManyPieceRates: (ids: number[], note?: string) =>
+    post<number>(P.pieceRateApproveMany, { ids, note }),
   rejectPieceRate: (id: number, reason: string) => post<void>(P.pieceRateReject(id), { reason }),
 
   // ---------- KI-03: phân công (tổ trưởng / tổ phó) ----------
   listAssignments: (orderId: number) => get<OperationAssignment[]>(P.assignments, { orderId }),
-  listAssignableOperations: (orderId: number) => get<OperationOption[]>(P.assignmentOperations, { orderId }),
+  listAssignableOperations: (orderId: number) =>
+    get<OperationOption[]>(P.assignmentOperations, { orderId }),
   assign: (body: AssignPayload) => post<number>(P.assignments, body),
   assignMany: (body: AssignManyPayload) => post<number>(P.assignmentsBulk, body),
-  replaceAssignment: (id: number, newWorkerId: number) => post<number>(P.assignmentReplace(id), { newWorkerId }),
+  replaceAssignment: (id: number, newWorkerId: number) =>
+    post<number>(P.assignmentReplace(id), { newWorkerId }),
   closeAssignment: (id: number) => post<void>(P.assignmentClose(id)),
   copyAssignments: (body: CopyAssignmentsPayload) => post<number>(P.assignmentCopy, body),
 
   // ---------- KI-04: sản lượng cuối ca ----------
-  getOutputGrid: (role: OutputRole, query: OutputGridQuery) => get<OutputGrid>(P.outputGrid(role), query),
-  saveOutput: (role: OutputRole, body: SaveOutputPayload) => post<OutputSaveResult>(P.output(role), body),
+  getOutputGrid: (role: OutputRole, query: OutputGridQuery) =>
+    get<OutputGrid>(P.outputGrid(role), query),
+  saveOutput: (role: OutputRole, body: SaveOutputPayload) =>
+    post<OutputSaveResult>(P.output(role), body),
 
   // ---------- KI-06: QC ----------
-  listQcBatches: (role: QcRole, query: QcBatchQuery) => get<Paginated<QcBatch>>(P.qcBatches(role), query),
-  getOnLine: (sewingTeamId: number, orderLineId: number) => get<OnLineQty>(P.qcOnLine, { sewingTeamId, orderLineId }),
+  listQcBatches: (role: QcRole, query: QcBatchQuery) =>
+    get<Paginated<QcBatch>>(P.qcBatches(role), query),
+  getOnLine: (sewingTeamId: number, orderLineId: number) =>
+    get<OnLineQty>(P.qcOnLine, { sewingTeamId, orderLineId }),
   createQcBatch: (body: CreateQcBatchPayload) => post<number>(P.qcBatches('qa-qc'), body),
-  updateQcBatch: (role: QcRole, id: number, body: UpdateQcBatchPayload) => put<void>(P.qcBatch(role, id), body),
-  deleteQcBatch: (role: QcRole, id: number, body: DeleteQcBatchPayload) => post<void>(P.qcBatchDelete(role, id), body),
+  updateQcBatch: (role: QcRole, id: number, body: UpdateQcBatchPayload) =>
+    put<void>(P.qcBatch(role, id), body),
+  deleteQcBatch: (role: QcRole, id: number, body: DeleteQcBatchPayload) =>
+    post<void>(P.qcBatchDelete(role, id), body),
 
   // ---------- KI-08: hàng hỏng ----------
-  listDefects: (role: OutputRole, query: DefectQuery) => get<Paginated<Defect>>(P.defects(role), query),
+  listDefects: (role: OutputRole, query: DefectQuery) =>
+    get<Paginated<Defect>>(P.defects(role), query),
   createDefect: (body: CreateDefectPayload) => post<number>(P.defects('team-leader'), body),
   cancelDefect: (role: OutputRole, id: number, body: CancelDefectPayload) =>
     post<void>(P.defectCancel(role, id), body),

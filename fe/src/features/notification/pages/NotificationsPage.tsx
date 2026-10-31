@@ -9,7 +9,6 @@ import {
   Radio,
   Select,
   Space,
-  Table,
   Tabs,
   Tag,
   type TableColumnsType,
@@ -30,6 +29,7 @@ import {
   useSentAnnouncements,
 } from '../hooks/useNotifications';
 import type { Announcement, NotificationItem } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 const SCOPE_LABEL: Record<string, string> = {
   ALL: 'Toàn xưởng',
@@ -84,13 +84,12 @@ function InboxTab() {
         <Button onClick={() => markAll.mutate(undefined)}>Đánh dấu tất cả đã đọc</Button>
       </Space>
       <QueryError error={list.error} onRetry={() => void list.refetch()} />
-      <Table
+      <DataTable
         rowKey="notificationId"
         columns={columns}
         dataSource={list.data?.items}
         loading={list.isFetching}
         pagination={table.pagination(list.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
     </>
   );
@@ -203,13 +202,12 @@ function SentTab() {
   return (
     <>
       <QueryError error={list.error} onRetry={() => void list.refetch()} />
-      <Table
+      <DataTable
         rowKey="announcementId"
         columns={columns}
         dataSource={list.data?.items}
         loading={list.isFetching}
         pagination={table.pagination(list.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
     </>
   );

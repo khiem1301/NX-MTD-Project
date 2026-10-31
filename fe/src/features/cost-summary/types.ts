@@ -15,7 +15,12 @@ export type CostVariableItem = {
   amount: number;
 };
 
-export type CostByProduct = { productId: number; productCode: string; productName: string; amount: number };
+export type CostByProduct = {
+  productId: number;
+  productCode: string;
+  productName: string;
+  amount: number;
+};
 
 /**
  * UC12 "Tổng hợp chi phí" (MI-19). CHỈ Admin xem được (GBR-02 — dữ liệu "mật"). Không copy lại chi phí

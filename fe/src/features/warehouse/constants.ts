@@ -72,10 +72,16 @@ export const RECEIPT_STATUS_LABEL: Record<string, StatusLabel> = {
   RETURNED: { text: 'Bị trả lại', color: 'red' },
 };
 
-export const RECEIPT_TYPE_LABEL: Record<string, string> = { NEW: 'Phiếu nhập', SUPPLEMENTARY: 'Phiếu bổ sung' };
+export const RECEIPT_TYPE_LABEL: Record<string, string> = {
+  NEW: 'Phiếu nhập',
+  SUPPLEMENTARY: 'Phiếu bổ sung',
+};
 
 /** Cách Quản đốc xử lý đơn thiếu NVL (BE: ShortageResolutions). */
-export const SHORTAGE_RESOLUTION = { REPLENISH: 'REPLENISH', NO_REPLENISH: 'NO_REPLENISH' } as const;
+export const SHORTAGE_RESOLUTION = {
+  REPLENISH: 'REPLENISH',
+  NO_REPLENISH: 'NO_REPLENISH',
+} as const;
 
 export const SHORTAGE_RESOLUTION_LABEL: Record<string, StatusLabel> = {
   REPLENISH: { text: 'Giao bù', color: 'blue' },
@@ -171,7 +177,8 @@ export const LABELS = {
   materialLengthCm: 'Dài cuộn / tấm (cm)',
   materialWidthCm: 'Rộng / khổ vải (cm)',
   materialSizeHint: 'Không bắt buộc. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt bù.',
-  materialColorHint: 'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
+  materialColorHint:
+    'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
   requiredQty: 'Số cần',
   customerQty: 'Khách cấp',
   expectedDeliveryCount: 'Số lần khách giao dự kiến',
@@ -189,9 +196,11 @@ export const LABELS = {
   purchaseOrdersTitle: 'Đơn mua NVL',
   poCode: 'Số đơn mua',
   purchaseOrderOrder: 'Đơn hàng',
-  purchaseOrderOrderHint: 'Chọn đơn hàng để mua theo NVL của đơn; để trống nếu mua dự trữ dùng chung.',
+  purchaseOrderOrderHint:
+    'Chọn đơn hàng để mua theo NVL của đơn; để trống nếu mua dự trữ dùng chung.',
   qtyRequiredOrCustomer: 'Phải nhập số cần hoặc số khách cấp lớn hơn 0.',
-  nothingToBuy: 'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
+  nothingToBuy:
+    'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
   poKindAll: 'Tất cả đơn mua',
   poKindStock: 'Mua dự trữ (không gắn đơn hàng)',
   poKindOrder: 'Gắn đơn hàng',
@@ -277,7 +286,8 @@ export const INCOMING_TEXT = {
   customerQty: 'Khách cấp',
   toBuyQty: 'Phải mua',
   title: 'NVL chờ nhận',
-  subtitle: 'NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. Hàng về thì bấm Lập phiếu nhập, số còn phải nhận được điền sẵn.',
+  subtitle:
+    'NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. Hàng về thì bấm Lập phiếu nhập, số còn phải nhận được điền sẵn.',
   customerSection: 'Khách cấp (số lần giao dự kiến)',
   supplierSection: 'Mua nhà cung cấp (đơn mua đã đặt hàng)',
   customerEmpty: 'Chưa có NVL khách cấp nào đang chờ nhận.',

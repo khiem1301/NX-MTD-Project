@@ -1,12 +1,12 @@
-import { Alert, Button, Space, Switch, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Button, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined } from '@ant-design/icons';
-import { MESSAGES } from '@/constants/messages';
 import { formatDateTime } from '@/utils/format';
 import { BREAK_EVEN_TEXT, RISK_LABEL } from '../constants';
 import { useExportBreakEven } from '../hooks/useBreakEven';
 import type { BreakEvenFilter, BreakEvenResultItem } from '../types';
 import { formatCurrency } from '../utils';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   items: BreakEvenResultItem[];
@@ -28,7 +28,12 @@ const columns: ColumnsType<BreakEvenResultItem> = [
     align: 'right',
     render: (v: number) => formatCurrency(v),
   },
-  { title: BREAK_EVEN_TEXT.table.revenue, dataIndex: 'revenue', align: 'right', render: (v: number) => formatCurrency(v) },
+  {
+    title: BREAK_EVEN_TEXT.table.revenue,
+    dataIndex: 'revenue',
+    align: 'right',
+    render: (v: number) => formatCurrency(v),
+  },
   {
     title: BREAK_EVEN_TEXT.table.variableCost,
     dataIndex: 'variableCost',
@@ -102,21 +107,16 @@ export function BreakEvenResultTable({ items, filter, onFilterChange }: Props) {
       </Space>
 
       {atRiskWarnings.length > 0 ? (
-        <Alert
-          type="warning"
-          showIcon
-          message={atRiskWarnings.join(' ')}
-        />
+        <Alert type="warning" showIcon message={atRiskWarnings.join(' ')} />
       ) : null}
 
-      <Table<BreakEvenResultItem>
+      <DataTable<BreakEvenResultItem>
         rowKey="breakEvenResultId"
         size="small"
         columns={columns}
         dataSource={items}
         pagination={{ pageSize: 10 }}
         scroll={{ x: 'max-content' }}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
     </Space>
   );

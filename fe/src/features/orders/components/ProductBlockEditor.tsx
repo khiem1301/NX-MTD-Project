@@ -1,5 +1,14 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Card, InputNumber, Select, Space, Table, Tooltip, Typography, type TableColumnsType } from 'antd';
+import {
+  Button,
+  Card,
+  InputNumber,
+  Select,
+  Space,
+  Tooltip,
+  Typography,
+  type TableColumnsType,
+} from 'antd';
 import { useState } from 'react';
 import { SIZE_ORDER } from '@/constants/orderStatus';
 import { MESSAGES } from '@/constants/messages';
@@ -7,6 +16,8 @@ import { useProductLookup } from '@/hooks/useOrderLookups';
 import { formatQty } from '@/utils/format';
 import { ColorAutoComplete } from './ColorAutoComplete';
 import { blockTotal, sortSizes, type GridRow, type ProductBlock } from '../utils/orderGrid';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type ProductBlockEditorProps = {
   block: ProductBlock;
@@ -22,20 +33,33 @@ type ProductBlockEditorProps = {
 };
 
 const SIZE_OPTIONS = SIZE_ORDER.map((s) => ({ value: s, label: s }));
-const rowHasOldLine = (row: GridRow): boolean => Object.values(row.cells).some((c) => c.orderLineId !== null);
+const rowHasOldLine = (row: GridRow): boolean =>
+  Object.values(row.cells).some((c) => c.orderLineId !== null);
 const sizeHasOldLine = (block: ProductBlock, size: string): boolean =>
-  block.rows.some((r) => r.cells[size]?.orderLineId !== undefined && r.cells[size]?.orderLineId !== null);
+  block.rows.some(
+    (r) => r.cells[size]?.orderLineId !== undefined && r.cells[size]?.orderLineId !== null,
+  );
 
 /** Một khối mã hàng: chọn mã hàng + đơn giá CMT + lưới màu (hàng) × size (cột). */
-export function ProductBlockEditor({ block, locked, productLabels, usedProductIds = [], onChange, onRemove, onCreateProduct }: ProductBlockEditorProps) {
+export function ProductBlockEditor({
+  block,
+  locked,
+  productLabels,
+  usedProductIds = [],
+  onChange,
+  onRemove,
+  onCreateProduct,
+}: ProductBlockEditorProps) {
   const [keyword, setKeyword] = useState<string>();
   const products = useProductLookup(keyword);
   const hasOldLines = block.rows.some(rowHasOldLine);
   const lockKey = locked && hasOldLines;
 
   const options = new Map<number, string>();
-  if (block.productId !== null && productLabels[block.productId]) options.set(block.productId, productLabels[block.productId] as string);
-  for (const p of products.data?.items ?? []) options.set(p.productId, `${p.productCode} · ${p.productName}`);
+  if (block.productId !== null && productLabels[block.productId])
+    options.set(block.productId, productLabels[block.productId] as string);
+  for (const p of products.data?.items ?? [])
+    options.set(p.productId, `${p.productCode} · ${p.productName}`);
   for (const id of usedProductIds) if (id !== block.productId) options.delete(id);
 
   const setRow = (index: number, patch: Partial<GridRow>) =>
@@ -49,7 +73,8 @@ export function ProductBlockEditor({ block, locked, productLabels, usedProductId
 
   const addSize = (size: string) => {
     const normalized = size.trim().toUpperCase();
-    if (normalized && !block.sizes.includes(normalized)) onChange({ ...block, sizes: sortSizes([...block.sizes, normalized]) });
+    if (normalized && !block.sizes.includes(normalized))
+      onChange({ ...block, sizes: sortSizes([...block.sizes, normalized]) });
   };
 
   const removeSize = (size: string) =>
@@ -80,7 +105,13 @@ export function ProductBlockEditor({ block, locked, productLabels, usedProductId
         <Space size={4}>
           {size}
           {!(locked && sizeHasOldLine(block, size)) && (
-            <Button type="text" size="small" icon={<DeleteOutlined />} aria-label={`Xóa size ${size}`} onClick={() => removeSize(size)} />
+            <Button
+              type="text"
+              size="small"
+              icon={<DeleteOutlined />}
+              aria-label={`Xóa size ${size}`}
+              onClick={() => removeSize(size)}
+            />
           )}
         </Space>
       ),
@@ -104,53 +135,69 @@ export function ProductBlockEditor({ block, locked, productLabels, usedProductId
       title: MESSAGES.orders.totalQty,
       width: 90,
       align: 'right',
-      render: (_: unknown, row) => formatQty(block.sizes.reduce((s, size) => s + (row.cells[size]?.qty ?? 0), 0)),
+      render: (_: unknown, row) =>
+        formatQty(block.sizes.reduce((s, size) => s + (row.cells[size]?.qty ?? 0), 0)),
     },
     {
       title: '',
       width: 48,
       render: (_: unknown, row, index) =>
         locked && rowHasOldLine(row) ? null : (
-          <Button type="text" danger icon={<DeleteOutlined />} aria-label={MESSAGES.common.delete}
-            onClick={() => onChange({ ...block, rows: block.rows.filter((_r, i) => i !== index) })} />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            aria-label={MESSAGES.common.delete}
+            onClick={() => onChange({ ...block, rows: block.rows.filter((_r, i) => i !== index) })}
+          />
         ),
     },
   ];
 
   return (
     <Card size="small" style={{ marginBottom: 16 }}>
-      <Space wrap style={{ marginBottom: 12 }}>
-        <Tooltip title={lockKey ? MESSAGES.requests.otherFlowHint : undefined}>
-          <Select
-            showSearch
-            filterOption={false}
-            placeholder={MESSAGES.orders.selectProduct}
-            style={{ width: 280 }}
-            value={block.productId ?? undefined}
-            disabled={lockKey}
-            options={[...options].map(([value, label]) => ({ value, label }))}
-            onSearch={setKeyword}
-            onChange={(productId: number) => onChange({ ...block, productId })}
-          />
-        </Tooltip>
-        <Button icon={<PlusOutlined />} disabled={lockKey} onClick={onCreateProduct}>
-          {MESSAGES.common.create}
-        </Button>
-        <InputNumber
-          min={0}
-          precision={2}
-          addonAfter="₫"
-          placeholder={MESSAGES.orders.unitPrice}
-          style={{ width: 200 }}
-          formatter={(v) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-          parser={(v) => Number((v ?? '').replace(/\./g, ''))}
-          value={block.cmtUnitPrice}
-          onChange={(v) => onChange({ ...block, cmtUnitPrice: v })}
-        />
-        <Typography.Text strong>{`${MESSAGES.orders.totalQty}: ${formatQty(blockTotal(block))}`}</Typography.Text>
-        {!lockKey && <Button danger onClick={onRemove}>{MESSAGES.common.delete}</Button>}
-      </Space>
-      <Table<GridRow>
+      <TableToolbar
+        filters={
+          <>
+            <Tooltip title={lockKey ? MESSAGES.requests.otherFlowHint : undefined}>
+              <Select
+                showSearch
+                filterOption={false}
+                placeholder={MESSAGES.orders.selectProduct}
+                style={{ width: 280 }}
+                value={block.productId ?? undefined}
+                disabled={lockKey}
+                options={[...options].map(([value, label]) => ({ value, label }))}
+                onSearch={setKeyword}
+                onChange={(productId: number) => onChange({ ...block, productId })}
+              />
+            </Tooltip>
+            <Button icon={<PlusOutlined />} disabled={lockKey} onClick={onCreateProduct}>
+              {MESSAGES.common.create}
+            </Button>
+            <InputNumber
+              min={0}
+              precision={2}
+              addonAfter="₫"
+              placeholder={MESSAGES.orders.unitPrice}
+              style={{ width: 200 }}
+              formatter={(v) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+              parser={(v) => Number((v ?? '').replace(/\./g, ''))}
+              value={block.cmtUnitPrice}
+              onChange={(v) => onChange({ ...block, cmtUnitPrice: v })}
+            />
+            <Typography.Text
+              strong
+            >{`${MESSAGES.orders.totalQty}: ${formatQty(blockTotal(block))}`}</Typography.Text>
+            {!lockKey && (
+              <Button danger onClick={onRemove}>
+                {MESSAGES.common.delete}
+              </Button>
+            )}
+          </>
+        }
+      />
+      <DataTable<GridRow>
         rowKey="key"
         size="small"
         pagination={false}
@@ -162,7 +209,13 @@ export function ProductBlockEditor({ block, locked, productLabels, usedProductId
         <Button
           icon={<PlusOutlined />}
           onClick={() =>
-            onChange({ ...block, rows: [...block.rows, { key: `row-${block.rows.length}-${Date.now()}`, color: '', cells: {} }] })
+            onChange({
+              ...block,
+              rows: [
+                ...block.rows,
+                { key: `row-${block.rows.length}-${Date.now()}`, color: '', cells: {} },
+              ],
+            })
           }
         >
           {MESSAGES.orders.addColor}

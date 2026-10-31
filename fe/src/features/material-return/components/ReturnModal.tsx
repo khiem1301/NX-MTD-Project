@@ -1,17 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-} from 'antd';
+import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -26,26 +14,26 @@ import {
   useRejectReturn,
 } from '../hooks/useMaterialReturn';
 import type { MaterialReturn, MaterialReturnLine } from '../types';
+import { DetailModal, DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type ReturnDrawerProps = { returnId: number | undefined; onClose: () => void };
+type ReturnModalProps = { returnId: number | undefined; onClose: () => void };
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
 /** Chi tiết phiếu trả vải: Thủ kho đếm (lệch phải có lý do), nhận vào kho hoặc từ chối; tổ cắt rút phiếu chờ. */
-export function ReturnDrawer({ returnId, onClose }: ReturnDrawerProps) {
+export function ReturnModal({ returnId, onClose }: ReturnModalProps) {
   const detail = useMaterialReturn(returnId);
   const r = detail.data;
   return (
-    <Drawer
+    <DetailModal
       open={returnId !== undefined}
       onClose={onClose}
-      width={820}
       title={r?.returnCode}
-      destroyOnHidden
+      loading={detail.isLoading}
+      error={detail.error}
     >
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {r && <DrawerBody key={r.materialReturnId} ret={r} onClose={onClose} />}
-    </Drawer>
+    </DetailModal>
   );
 }
 
@@ -86,7 +74,7 @@ function DrawerBody({ ret: r, onClose }: { ret: MaterialReturn; onClose: () => v
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
+      <ModalActions>
         {canReceive && (
           <>
             <Button danger onClick={() => setRejecting(true)}>
@@ -109,7 +97,7 @@ function DrawerBody({ ret: r, onClose }: { ret: MaterialReturn; onClose: () => v
             </Button>
           </Popconfirm>
         )}
-      </Space>
+      </ModalActions>
       {r.rejectReason && (
         <Alert
           type="warning"
@@ -118,7 +106,7 @@ function DrawerBody({ ret: r, onClose }: { ret: MaterialReturn; onClose: () => v
           style={{ marginBottom: 16 }}
         />
       )}
-      <Descriptions column={2} size="small" bordered>
+      <DetailDescriptions>
         <Descriptions.Item label={RETURN_LABELS.issue}>{r.issueCode}</Descriptions.Item>
         <Descriptions.Item label={RETURN_LABELS.order}>{r.orderCode}</Descriptions.Item>
         <Descriptions.Item label={RETURN_LABELS.team}>{r.cuttingTeamName}</Descriptions.Item>
@@ -134,7 +122,7 @@ function DrawerBody({ ret: r, onClose }: { ret: MaterialReturn; onClose: () => v
         <Descriptions.Item label={RETURN_LABELS.note} span={2}>
           {r.note ?? '—'}
         </Descriptions.Item>
-      </Descriptions>
+      </DetailDescriptions>
       <Form
         form={form}
         disabled={confirm.isPending}
@@ -146,7 +134,7 @@ function DrawerBody({ ret: r, onClose }: { ret: MaterialReturn; onClose: () => v
         }}
         onFinish={handleFinish}
       >
-        <Table<MaterialReturnLine>
+        <DataTable<MaterialReturnLine>
           rowKey="materialReturnLineId"
           size="small"
           pagination={false}

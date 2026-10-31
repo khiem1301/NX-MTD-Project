@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography, Upload } from 'antd';
+import { Alert, Button, Card, Descriptions, Space, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined, InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -12,6 +12,7 @@ import {
 import type { MonthlyCostExcelRowPreview } from '../types';
 import { formatCurrency } from '../utils';
 import { confirmDialog } from '@/utils/confirmDialog';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   periodMonth: string;
@@ -26,7 +27,11 @@ const columns: ColumnsType<MonthlyCostExcelRowPreview> = [
     dataIndex: 'costCategoryCode',
     render: (v: string | null) => v ?? '—',
   },
-  { title: MONTHLY_COST_TEXT.previewColumns.costType, dataIndex: 'costType', render: (v: string | null) => v ?? '—' },
+  {
+    title: MONTHLY_COST_TEXT.previewColumns.costType,
+    dataIndex: 'costType',
+    render: (v: string | null) => v ?? '—',
+  },
   {
     title: MONTHLY_COST_TEXT.previewColumns.productCode,
     dataIndex: 'productCode',
@@ -49,12 +54,18 @@ const columns: ColumnsType<MonthlyCostExcelRowPreview> = [
     align: 'right',
     render: (v: number | null) => v ?? '—',
   },
-  { title: MONTHLY_COST_TEXT.previewColumns.note, dataIndex: 'note', render: (v: string | null) => v ?? '—' },
+  {
+    title: MONTHLY_COST_TEXT.previewColumns.note,
+    dataIndex: 'note',
+    render: (v: string | null) => v ?? '—',
+  },
   {
     title: MONTHLY_COST_TEXT.previewColumns.status,
     dataIndex: 'rowStatus',
     render: (v: keyof typeof MONTHLY_COST_ROW_STATUS_LABEL) => (
-      <Tag color={MONTHLY_COST_ROW_STATUS_LABEL[v].color}>{MONTHLY_COST_ROW_STATUS_LABEL[v].text}</Tag>
+      <Tag color={MONTHLY_COST_ROW_STATUS_LABEL[v].color}>
+        {MONTHLY_COST_ROW_STATUS_LABEL[v].text}
+      </Tag>
     ),
   },
   {
@@ -93,9 +104,15 @@ export function MonthlyCostImportPanel({ periodMonth, disabled }: Props) {
   return (
     <Card size="small" title={MONTHLY_COST_TEXT.import}>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        {disabled ? <Alert type="warning" showIcon message={MESSAGES.monthlyCost.importDisabledHint} /> : null}
+        {disabled ? (
+          <Alert type="warning" showIcon message={MESSAGES.monthlyCost.importDisabledHint} />
+        ) : null}
 
-        <Button icon={<DownloadOutlined />} loading={downloadTemplate.isPending} onClick={() => downloadTemplate.mutate()}>
+        <Button
+          icon={<DownloadOutlined />}
+          loading={downloadTemplate.isPending}
+          onClick={() => downloadTemplate.mutate()}
+        >
           {MONTHLY_COST_TEXT.downloadTemplate}
         </Button>
 
@@ -158,14 +175,13 @@ export function MonthlyCostImportPanel({ periodMonth, disabled }: Props) {
               />
             ) : null}
 
-            <Table<MonthlyCostExcelRowPreview>
+            <DataTable<MonthlyCostExcelRowPreview>
               rowKey="rowNumber"
               size="small"
               columns={columns}
               dataSource={preview.data.rows}
               pagination={{ pageSize: 10 }}
               scroll={{ x: 'max-content' }}
-              locale={{ emptyText: MESSAGES.common.empty }}
             />
           </>
         ) : null}

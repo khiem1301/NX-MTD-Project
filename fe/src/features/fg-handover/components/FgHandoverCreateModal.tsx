@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Alert, Form, InputNumber, Modal, Select, Space, Table } from 'antd';
+import { Alert, Form, InputNumber, Modal, Select } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { FG_LABELS, FG_MESSAGES } from '../constants';
 import { useCreateFgHandover, useFgHandoverable } from '../hooks/useFgHandover';
 import type { FgHandoverableLine } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type FgHandoverCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -40,7 +43,7 @@ export function FgHandoverCreateModal({ open, onClose }: FgHandoverCreateModalPr
   return (
     <Modal
       open={open}
-      width={760}
+      width={MODAL_WIDTH.md}
       title={FG_LABELS.create}
       okText={MESSAGES.common.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -50,29 +53,33 @@ export function FgHandoverCreateModal({ open, onClose }: FgHandoverCreateModalPr
       onCancel={onClose}
       destroyOnHidden
     >
-      <Space wrap style={{ marginBottom: 16 }}>
-        <OrderSelect
-          value={orderId}
-          placeholder={FG_LABELS.selectOrder}
-          onChange={(id) => {
-            setOrderId(id);
-            setProductId(undefined);
-            form.resetFields();
-          }}
-        />
-        {products.length > 1 && (
-          <Select
-            value={effectiveProductId}
-            options={products}
-            placeholder={FG_LABELS.selectProduct}
-            style={{ width: 220 }}
-            onChange={(id: number) => {
-              setProductId(id);
-              form.resetFields();
-            }}
-          />
-        )}
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <OrderSelect
+              value={orderId}
+              placeholder={FG_LABELS.selectOrder}
+              onChange={(id) => {
+                setOrderId(id);
+                setProductId(undefined);
+                form.resetFields();
+              }}
+            />
+            {products.length > 1 && (
+              <Select
+                value={effectiveProductId}
+                options={products}
+                placeholder={FG_LABELS.selectProduct}
+                style={{ width: 220 }}
+                onChange={(id: number) => {
+                  setProductId(id);
+                  form.resetFields();
+                }}
+              />
+            )}
+          </>
+        }
+      />
       {orderId !== undefined &&
         !handoverable.isLoading &&
         lines.length > 0 &&
@@ -93,7 +100,7 @@ export function FgHandoverCreateModal({ open, onClose }: FgHandoverCreateModalPr
           qty: Object.fromEntries(lines.map((l) => [String(l.orderLineId), l.remainingQty])),
         }}
       >
-        <Table<FgHandoverableLine>
+        <DataTable<FgHandoverableLine>
           rowKey="orderLineId"
           size="small"
           pagination={false}

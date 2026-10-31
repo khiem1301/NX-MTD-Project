@@ -24,7 +24,9 @@ export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
   });
   const items = balances.data?.items ?? [];
   const available = new Map(
-    items.filter((b) => b.productComponentMaterialId === null).map((b) => [b.orderLineId, b.availableQty]),
+    items
+      .filter((b) => b.productComponentMaterialId === null)
+      .map((b) => [b.orderLineId, b.availableQty]),
   );
   const wholeOptions = (lines.data ?? []).map((l) => ({
     value: pieceKey(l.orderLineId, null),

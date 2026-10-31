@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Table, Tag, Typography, Upload } from 'antd';
+import { Alert, Button, Card, Descriptions, Space, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -8,6 +8,7 @@ import { useConfirmImport, usePreviewImport } from '../hooks/usePayroll';
 import type { PayrollExcelRowPreview } from '../types';
 import { formatCurrency } from '../utils';
 import { confirmDialog } from '@/utils/confirmDialog';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   periodMonth: string;
@@ -23,7 +24,11 @@ const columns: ColumnsType<PayrollExcelRowPreview> = [
     dataIndex: 'attendanceCode',
     render: (v: string | null) => v ?? '—',
   },
-  { title: PAYROLL_TEXT.previewColumns.employeeName, dataIndex: 'employeeName', render: (v: string | null) => v ?? '—' },
+  {
+    title: PAYROLL_TEXT.previewColumns.employeeName,
+    dataIndex: 'employeeName',
+    render: (v: string | null) => v ?? '—',
+  },
   {
     title: PAYROLL_TEXT.previewColumns.workDays,
     dataIndex: 'workDays',
@@ -52,7 +57,9 @@ const columns: ColumnsType<PayrollExcelRowPreview> = [
       v === null ? (
         '—'
       ) : (
-        <Typography.Text type={row.rowStatus === 'Valid' ? 'warning' : undefined}>{v}</Typography.Text>
+        <Typography.Text type={row.rowStatus === 'Valid' ? 'warning' : undefined}>
+          {v}
+        </Typography.Text>
       ),
   },
 ];
@@ -139,14 +146,13 @@ export function PayrollImportPanel({ periodMonth, disabled }: Props) {
                 <Typography.Text type="warning">{preview.data.duplicateCount}</Typography.Text>
               </Descriptions.Item>
             </Descriptions>
-            <Table<PayrollExcelRowPreview>
+            <DataTable<PayrollExcelRowPreview>
               rowKey={(row) => `${row.sheetName}-${row.rowNumber}`}
               size="small"
               columns={columns}
               dataSource={preview.data.rows}
               pagination={{ pageSize: 10 }}
               scroll={{ x: 'max-content' }}
-              locale={{ emptyText: MESSAGES.common.empty }}
             />
           </>
         ) : null}

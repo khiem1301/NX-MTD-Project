@@ -70,7 +70,8 @@ export const usePreviewOperationImport = () =>
 
 export const useImportOperations = () =>
   useApiMutation(
-    ({ file, params }: { file: File; params: OperationImportParams }) => productionApi.importOperations(file, params),
+    ({ file, params }: { file: File; params: OperationImportParams }) =>
+      productionApi.importOperations(file, params),
     { invalidate: [operationsKey, pieceRatesKey] },
   );
 
@@ -84,7 +85,10 @@ export const useToggleOperation = () =>
 // ---------- Đơn giá ----------
 
 export const usePieceRates = (role: PieceRateRole, query: PieceRateQuery) =>
-  useQuery({ queryKey: [...pieceRatesKey, role, query], queryFn: () => productionApi.listPieceRates(role, query) });
+  useQuery({
+    queryKey: [...pieceRatesKey, role, query],
+    queryFn: () => productionApi.listPieceRates(role, query),
+  });
 
 export const useSavePieceRate = (id: number | null) =>
   useApiMutation(
@@ -102,21 +106,31 @@ export const useSubmitPieceRate = () =>
   });
 
 export const useApprovePieceRate = () =>
-  useApiMutation(({ id, note }: { id: number; note?: string }) => productionApi.approvePieceRate(id, note), {
-    invalidate: [pieceRatesKey, operationsKey],
-    successMessage: PRODUCTION_TEXT.pieceRates.done.approved,
-  });
+  useApiMutation(
+    ({ id, note }: { id: number; note?: string }) => productionApi.approvePieceRate(id, note),
+    {
+      invalidate: [pieceRatesKey, operationsKey],
+      successMessage: PRODUCTION_TEXT.pieceRates.done.approved,
+    },
+  );
 
 export const useApproveManyPieceRates = () =>
-  useApiMutation(({ ids, note }: { ids: number[]; note?: string }) => productionApi.approveManyPieceRates(ids, note), {
-    invalidate: [pieceRatesKey, operationsKey],
-  });
+  useApiMutation(
+    ({ ids, note }: { ids: number[]; note?: string }) =>
+      productionApi.approveManyPieceRates(ids, note),
+    {
+      invalidate: [pieceRatesKey, operationsKey],
+    },
+  );
 
 export const useRejectPieceRate = () =>
-  useApiMutation(({ id, reason }: { id: number; reason: string }) => productionApi.rejectPieceRate(id, reason), {
-    invalidate: [pieceRatesKey],
-    successMessage: PRODUCTION_TEXT.pieceRates.done.rejected,
-  });
+  useApiMutation(
+    ({ id, reason }: { id: number; reason: string }) => productionApi.rejectPieceRate(id, reason),
+    {
+      invalidate: [pieceRatesKey],
+      successMessage: PRODUCTION_TEXT.pieceRates.done.rejected,
+    },
+  );
 
 // ---------- Phân công ----------
 
@@ -149,8 +163,12 @@ export const useAssignOperations = () =>
 
 export const useReplaceAssignment = () =>
   useApiMutation(
-    ({ id, newWorkerId }: { id: number; newWorkerId: number }) => productionApi.replaceAssignment(id, newWorkerId),
-    { invalidate: [assignmentsKey, outputKey], successMessage: PRODUCTION_TEXT.assignments.done.replaced },
+    ({ id, newWorkerId }: { id: number; newWorkerId: number }) =>
+      productionApi.replaceAssignment(id, newWorkerId),
+    {
+      invalidate: [assignmentsKey, outputKey],
+      successMessage: PRODUCTION_TEXT.assignments.done.replaced,
+    },
   );
 
 export const useCloseAssignment = () =>
@@ -175,12 +193,17 @@ export const useOutputGrid = (role: OutputRole, query: OutputGridQuery | null) =
   });
 
 export const useSaveOutput = (role: OutputRole) =>
-  useApiMutation((body: SaveOutputPayload) => productionApi.saveOutput(role, body), { invalidate: [outputKey] });
+  useApiMutation((body: SaveOutputPayload) => productionApi.saveOutput(role, body), {
+    invalidate: [outputKey],
+  });
 
 // ---------- QC ----------
 
 export const useQcBatches = (role: QcRole, query: QcBatchQuery) =>
-  useQuery({ queryKey: [...qcKey, role, 'list', query], queryFn: () => productionApi.listQcBatches(role, query) });
+  useQuery({
+    queryKey: [...qcKey, role, 'list', query],
+    queryFn: () => productionApi.listQcBatches(role, query),
+  });
 
 export const useOnLineQty = (sewingTeamId: number | null, orderLineId: number | null) =>
   useQuery({
@@ -196,21 +219,32 @@ export const useCreateQcBatch = () =>
   });
 
 export const useUpdateQcBatch = (role: QcRole) =>
-  useApiMutation(({ id, body }: { id: number; body: UpdateQcBatchPayload }) => productionApi.updateQcBatch(role, id, body), {
-    invalidate: [qcKey],
-    successMessage: PRODUCTION_TEXT.qc.done.updated,
-  });
+  useApiMutation(
+    ({ id, body }: { id: number; body: UpdateQcBatchPayload }) =>
+      productionApi.updateQcBatch(role, id, body),
+    {
+      invalidate: [qcKey],
+      successMessage: PRODUCTION_TEXT.qc.done.updated,
+    },
+  );
 
 export const useDeleteQcBatch = (role: QcRole) =>
-  useApiMutation(({ id, body }: { id: number; body: DeleteQcBatchPayload }) => productionApi.deleteQcBatch(role, id, body), {
-    invalidate: [qcKey],
-    successMessage: PRODUCTION_TEXT.qc.done.deleted,
-  });
+  useApiMutation(
+    ({ id, body }: { id: number; body: DeleteQcBatchPayload }) =>
+      productionApi.deleteQcBatch(role, id, body),
+    {
+      invalidate: [qcKey],
+      successMessage: PRODUCTION_TEXT.qc.done.deleted,
+    },
+  );
 
 // ---------- Hàng hỏng ----------
 
 export const useDefects = (role: OutputRole, query: DefectQuery) =>
-  useQuery({ queryKey: [...defectsKey, role, 'list', query], queryFn: () => productionApi.listDefects(role, query) });
+  useQuery({
+    queryKey: [...defectsKey, role, 'list', query],
+    queryFn: () => productionApi.listDefects(role, query),
+  });
 
 export const useCreateDefect = () =>
   useApiMutation((body: CreateDefectPayload) => productionApi.createDefect(body), {
@@ -219,16 +253,27 @@ export const useCreateDefect = () =>
   });
 
 export const useCancelDefect = (role: OutputRole) =>
-  useApiMutation(({ id, body }: { id: number; body: CancelDefectPayload }) => productionApi.cancelDefect(role, id, body), {
-    invalidate: [defectsKey],
-    successMessage: PRODUCTION_TEXT.defects.done.cancelled,
-  });
+  useApiMutation(
+    ({ id, body }: { id: number; body: CancelDefectPayload }) =>
+      productionApi.cancelDefect(role, id, body),
+    {
+      invalidate: [defectsKey],
+      successMessage: PRODUCTION_TEXT.defects.done.cancelled,
+    },
+  );
 
 export const useMyDefects = (query: DefectQuery) =>
-  useQuery({ queryKey: [...defectsKey, 'mine', query], queryFn: () => productionApi.listMyDefects(query) });
+  useQuery({
+    queryKey: [...defectsKey, 'mine', query],
+    queryFn: () => productionApi.listMyDefects(query),
+  });
 
 export const useObjectDefect = () =>
-  useApiMutation(({ id, body }: { id: number; body: ObjectDefectPayload }) => productionApi.objectDefect(id, body), {
-    invalidate: [defectsKey],
-    successMessage: PRODUCTION_TEXT.myDefects.done,
-  });
+  useApiMutation(
+    ({ id, body }: { id: number; body: ObjectDefectPayload }) =>
+      productionApi.objectDefect(id, body),
+    {
+      invalidate: [defectsKey],
+      successMessage: PRODUCTION_TEXT.myDefects.done,
+    },
+  );

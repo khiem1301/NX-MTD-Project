@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, Popconfirm, Progress, Space, Table, Tag } from 'antd';
+import { Button, Popconfirm, Progress, Space, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
@@ -11,6 +11,7 @@ import { FinishOrderModal } from './FinishOrderModal';
 import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   filter: KpiTargetFilter;
@@ -80,7 +81,9 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
     {
       title: KPI_TEXT.table.status,
       dataIndex: 'status',
-      render: (v: KpiTargetStatus) => <Tag color={KPI_TEXT.statusLabel[v].color}>{KPI_TEXT.statusLabel[v].text}</Tag>,
+      render: (v: KpiTargetStatus) => (
+        <Tag color={KPI_TEXT.statusLabel[v].color}>{KPI_TEXT.statusLabel[v].text}</Tag>
+      ),
     },
     {
       title: KPI_TEXT.table.result,
@@ -98,11 +101,18 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
               <Button type="link" onClick={() => setFinishing(row)}>
                 {KPI_TEXT.finish.button}
               </Button>
-              <Button type="link" onClick={() => onEdit?.(row)}>
+              <Button type="link" icon={<EditOutlined />} onClick={() => onEdit?.(row)}>
                 {KPI_TEXT.edit}
               </Button>
-              <Popconfirm title={KPI_TEXT.cancelConfirm} onConfirm={() => cancel.mutate(row.kpiTargetId)}>
-                <Button type="link" danger loading={cancel.isPending && cancel.variables === row.kpiTargetId}>
+              <Popconfirm
+                title={KPI_TEXT.cancelConfirm}
+                onConfirm={() => cancel.mutate(row.kpiTargetId)}
+              >
+                <Button
+                  type="link"
+                  danger
+                  loading={cancel.isPending && cancel.variables === row.kpiTargetId}
+                >
                   {KPI_TEXT.cancel}
                 </Button>
               </Popconfirm>
@@ -121,7 +131,9 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
           placeholder={MESSAGES.common.search}
           style={{ width: 260 }}
           defaultValue={filter.keyword}
-          onSearch={(keyword) => onFilterChange({ ...filter, page: 1, keyword: keyword || undefined })}
+          onSearch={(keyword) =>
+            onFilterChange({ ...filter, page: 1, keyword: keyword || undefined })
+          }
         />
         <FilterSelect<KpiTargetStatus>
           placeholder={KPI_TEXT.filter.statusPlaceholder}
@@ -140,13 +152,12 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
       <QueryError error={targets.error} onRetry={() => void targets.refetch()} />
       <FinishOrderModal target={finishing} onClose={() => setFinishing(null)} />
 
-      <Table<KpiTarget>
+      <DataTable<KpiTarget>
         rowKey="kpiTargetId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={targets.data?.items}
         loading={targets.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: targets.data?.page ?? filter.page,

@@ -83,7 +83,13 @@ export type SaveProductSpecPayload = {
     componentType: 'Panel' | 'Trim';
     piecesPerGarment: number;
   }[];
-  variants: { productVariantId: number | null; color: string; sizeCode: string; lengthCm: number | null; widthCm: number | null }[];
+  variants: {
+    productVariantId: number | null;
+    color: string;
+    sizeCode: string;
+    lengthCm: number | null;
+    widthCm: number | null;
+  }[];
   norms: {
     componentName: string;
     color: string;
@@ -94,7 +100,12 @@ export type SaveProductSpecPayload = {
     specNote: string | null;
   }[];
 };
-export type ProductQuery = { page: number; pageSize: number; keyword?: string; status?: ProductStatus };
+export type ProductQuery = {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: ProductStatus;
+};
 
 export type OrderListItem = {
   orderId: number;

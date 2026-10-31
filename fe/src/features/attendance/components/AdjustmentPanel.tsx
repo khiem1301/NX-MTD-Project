@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, DatePicker, Space, Table, Typography } from 'antd';
+import { Button, Card, Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -7,23 +7,41 @@ import { QueryError } from '@/components/common/QueryError';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
 import { useRequestInbox } from '@/features/requests/hooks/useRequests';
 import type { RequestListItem } from '@/features/requests/types';
-import { formatDate, toApiDate } from '@/utils/format';
+import { DATE_TIME_FORMAT, formatDate, toApiDate } from '@/utils/format';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useAdjustments } from '../hooks/useAttendance';
 import type { AdjustmentFilter, AttendanceAdjustment } from '../types';
 import { AdjustmentFormModal, type AdjustmentPrefill } from './AdjustmentFormModal';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { DataTable } from '@/components/common/DataTable';
+import { AppRangePicker } from '@/components/common/DateInputs';
 
 const text = ATTENDANCE_TEXT.adjust;
 const shortTime = (v: string | null) => (v ? v.slice(0, 5) : '—');
 
 const columns: ColumnsType<AttendanceAdjustment> = [
   { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
-  { title: text.columns.employee, key: 'employee', render: (_, r) => `${r.employeeCode} - ${r.fullName}` },
-  { title: text.columns.type, dataIndex: 'adjustmentType', render: (v: string) => text.types[v] ?? v },
-  { title: text.columns.times, key: 'times', render: (_, r) => `${shortTime(r.checkIn)} - ${shortTime(r.checkOut)}` },
+  {
+    title: text.columns.employee,
+    key: 'employee',
+    render: (_, r) => `${r.employeeCode} - ${r.fullName}`,
+  },
+  {
+    title: text.columns.type,
+    dataIndex: 'adjustmentType',
+    render: (v: string) => text.types[v] ?? v,
+  },
+  {
+    title: text.columns.times,
+    key: 'times',
+    render: (_, r) => `${shortTime(r.checkIn)} - ${shortTime(r.checkOut)}`,
+  },
   { title: text.columns.reason, dataIndex: 'reason' },
-  { title: text.columns.recordedAt, dataIndex: 'recordedAt', render: (v: string) => dayjs(v).format('DD/MM/YYYY HH:mm') },
+  {
+    title: text.columns.recordedAt,
+    dataIndex: 'recordedAt',
+    render: (v: string) => dayjs(v).format(DATE_TIME_FORMAT),
+  },
 ];
 
 /**
@@ -45,7 +63,12 @@ export function AdjustmentPanel() {
     pageSize: 20,
   };
   const adjustments = useAdjustments(filter);
-  const approved = useRequestInbox({ page: 1, pageSize: 20, requestType: REQUEST_TYPE.AttendanceCorrection, status: 'Approved' });
+  const approved = useRequestInbox({
+    page: 1,
+    pageSize: 20,
+    requestType: REQUEST_TYPE.AttendanceCorrection,
+    status: 'Approved',
+  });
 
   const openForm = (next: AdjustmentPrefill | null) => {
     setPrefill(next);
@@ -54,15 +77,36 @@ export function AdjustmentPanel() {
 
   const requestColumns: ColumnsType<RequestListItem> = [
     { title: text.approvedRequests.columns.code, dataIndex: 'requestCode' },
-    { title: text.approvedRequests.columns.title, dataIndex: 'title', render: (v: string | null) => v ?? '—' },
-    { title: text.approvedRequests.columns.team, dataIndex: 'teamName', render: (v: string | null) => v ?? '—' },
-    { title: text.approvedRequests.columns.creator, dataIndex: 'createdByName', render: (v: string | null) => v ?? '—' },
-    { title: text.approvedRequests.columns.date, dataIndex: 'targetDate', render: (v: string | null) => formatDate(v) },
+    {
+      title: text.approvedRequests.columns.title,
+      dataIndex: 'title',
+      render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: text.approvedRequests.columns.team,
+      dataIndex: 'teamName',
+      render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: text.approvedRequests.columns.creator,
+      dataIndex: 'createdByName',
+      render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: text.approvedRequests.columns.date,
+      dataIndex: 'targetDate',
+      render: (v: string | null) => formatDate(v),
+    },
     {
       title: text.approvedRequests.columns.action,
       key: 'action',
       render: (_, r) => (
-        <Button type="link" onClick={() => openForm({ requestId: r.requestId, workDate: r.targetDate, reason: r.title })}>
+        <Button
+          type="link"
+          onClick={() =>
+            openForm({ requestId: r.requestId, workDate: r.targetDate, reason: r.title })
+          }
+        >
           {text.add}
         </Button>
       ),
@@ -74,7 +118,7 @@ export function AdjustmentPanel() {
       <Typography.Text type="secondary">{text.hint}</Typography.Text>
 
       <Card size="small" title={text.approvedRequests.title}>
-        <Table<RequestListItem>
+        <DataTable<RequestListItem>
           rowKey="requestId"
           size="small"
           columns={requestColumns}
@@ -87,9 +131,8 @@ export function AdjustmentPanel() {
       </Card>
 
       <Space wrap>
-        <DatePicker.RangePicker
+        <AppRangePicker
           allowClear={false}
-          format="DD/MM/YYYY"
           value={range}
           onChange={(v) => {
             if (v?.[0] && v[1]) {
@@ -114,9 +157,9 @@ export function AdjustmentPanel() {
 
       <QueryError error={adjustments.error} onRetry={() => void adjustments.refetch()} />
 
-      <Table<AttendanceAdjustment>
+      <DataTable<AttendanceAdjustment>
         rowKey="attendanceAdjustmentId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={adjustments.data?.items}
         loading={adjustments.isFetching}
