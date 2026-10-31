@@ -93,19 +93,22 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             .Where(q => q.MaterialReceiptId == receiptId && q.RequestTypeCode == RequestTypes.ShortDelivery)
             .Select(q => (int?)q.RequestId).FirstOrDefaultAsync(ct);
 
-        // Phiếu bổ sung: số cần bù của từng dòng = ReplenishQty Quản đốc đã chọn trên đơn thiếu NVL.
-        if (dto.ShortageRequestId is { } shortageId)
-        {
-            var toReplenish = await _uow.Repository<RequestLine>().Query().AsNoTracking()
-                .Where(q => q.RequestId == shortageId && q.MaterialReceiptLineId != null && q.ReplenishQty != null)
-                .ToDictionaryAsync(q => q.MaterialReceiptLineId!.Value, q => q.ReplenishQty, ct);
-            dto = dto with
-            {
-                Lines = dto.Lines.Select(l => l.OriginalReceiptLineId is { } o && toReplenish.TryGetValue(o, out var qty)
-                    ? l with { ToReplenishQty = qty } : l).ToList(),
-            };
-        }
+        dto = await WithReplenishQtyAsync(dto, ct);
         return Result<MaterialReceiptDto>.Success(dto with { ShortDeliveryRequestId = shortDeliveryId });
+    }
+
+    /// <summary>Phiếu bổ sung: số cần bù của từng dòng = ReplenishQty Quản đốc đã chọn trên đơn thiếu NVL.</summary>
+    private async Task<MaterialReceiptDto> WithReplenishQtyAsync(MaterialReceiptDto dto, CancellationToken ct)
+    {
+        if (dto.ShortageRequestId is not { } shortageId) return dto;
+        var toReplenish = await _uow.Repository<RequestLine>().Query().AsNoTracking()
+            .Where(q => q.RequestId == shortageId && q.MaterialReceiptLineId != null && q.ReplenishQty != null)
+            .ToDictionaryAsync(q => q.MaterialReceiptLineId!.Value, q => q.ReplenishQty, ct);
+        return dto with
+        {
+            Lines = dto.Lines.Select(l => l.OriginalReceiptLineId is { } o && toReplenish.TryGetValue(o, out var qty)
+                ? l with { ToReplenishQty = qty } : l).ToList(),
+        };
     }
 
     public async Task<Result<MaterialReceiptDto>> CreateAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
@@ -159,14 +162,33 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     {
         var request = await _uow.Repository<Request>().Query().Include(q => q.RequestLines)
             .FirstOrDefaultAsync(q => q.RequestId == dto.ShortageRequestId && q.RequestTypeCode == RequestTypes.ShortDelivery, ct);
+        var notResolvable = CheckReplenishable(request);
+        if (notResolvable is not null) return notResolvable;
+
+        var original = await Receipts.Include(r => r.MaterialReceiptLines)
+            .FirstAsync(r => r.MaterialReceiptId == request!.MaterialReceiptId, ct);
+        var invalid = await CheckSupplementaryLinesAsync(dto, request!, ct);
+        if (invalid is not null) return invalid;
+
+        var created = await _uow.InTransactionAsync(() => AddSupplementaryReceiptAsync(dto, request!, original, ct));
+        return await GetByIdAsync(created.Data, ct);
+    }
+
+    /// <summary>Đơn thiếu NVL phải tồn tại, gắn phiếu nhập gốc, đang chờ xử lý và đã chọn hướng giao bù.</summary>
+    private static Result<MaterialReceiptDto>? CheckReplenishable(Request? request)
+    {
         if (request is null || request.MaterialReceiptId is null) return WarehouseFailures.NotFound<MaterialReceiptDto>();
         if (request.Status != RequestStatuses.PendingProcessing)
             return Result<MaterialReceiptDto>.Failure(ErrorCodes.ShortageNotResolvable, WarehouseMessages.ShortageNotResolvable);
         if (request.ShortageResolution != ShortageResolutions.Replenish)
             return Result<MaterialReceiptDto>.Failure(ErrorCodes.ShortageNotResolvable, WarehouseMessages.ShortageNotReplenish);
+        return null;
+    }
 
-        var original = await Receipts.Include(r => r.MaterialReceiptLines)
-            .FirstAsync(r => r.MaterialReceiptId == request.MaterialReceiptId, ct);
+    /// <summary>Mỗi dòng phải thuộc đơn thiếu NVL và nhận bù không vượt số còn phải bù (đã tính cả phiếu đang chờ).</summary>
+    private async Task<Result<MaterialReceiptDto>?> CheckSupplementaryLinesAsync(SaveSupplementaryReceiptDto dto, Request request,
+        CancellationToken ct)
+    {
         var requestLines = request.RequestLines.Where(l => l.MaterialReceiptLineId != null && l.ReplenishQty > 0)
             .ToDictionary(l => l.MaterialReceiptLineId!.Value);
         if (dto.Lines.Any(l => !requestLines.ContainsKey(l.OriginalReceiptLineId)))
@@ -177,42 +199,43 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             .Where(l => l.AcceptedQty > requestLines[l.OriginalReceiptLineId].ReplenishQty!.Value - done.GetValueOrDefault(l.OriginalReceiptLineId))
             .Select(l => $"còn {requestLines[l.OriginalReceiptLineId].ReplenishQty!.Value - done.GetValueOrDefault(l.OriginalReceiptLineId):0.###}, nhận {l.AcceptedQty:0.###}")
             .ToList();
-        if (over.Count > 0)
-            return Result<MaterialReceiptDto>.Failure(ErrorCodes.ShortageExceeded,
-                $"{WarehouseMessages.SupplementaryExceedsReplenish}: {string.Join("; ", over)}.");
+        return over.Count > 0
+            ? Result<MaterialReceiptDto>.Failure(ErrorCodes.ShortageExceeded,
+                $"{WarehouseMessages.SupplementaryExceedsReplenish}: {string.Join("; ", over)}.")
+            : null;
+    }
 
+    private async Task<Result<int>> AddSupplementaryReceiptAsync(SaveSupplementaryReceiptDto dto, Request request,
+        MaterialReceipt original, CancellationToken ct)
+    {
         var originalLines = original.MaterialReceiptLines.ToDictionary(l => l.MaterialReceiptLineId);
-        var created = await _uow.InTransactionAsync(async () =>
+        var receipt = new MaterialReceipt
         {
-            var receipt = new MaterialReceipt
+            ReceiptCode = await _codes.NextAsync<MaterialReceipt>(DocumentPrefixes.MaterialReceipt, r => r.ReceiptCode, ct),
+            ShortageRequestId = request.RequestId,
+            OrderId = original.OrderId,
+            PurchaseOrderId = original.PurchaseOrderId,
+            ReceiptDate = dto.ReceiptDate,
+            Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
+            Status = ReceiptStatuses.Pending,
+            SubmittedAt = _clock.Now,
+            MaterialReceiptLines = dto.Lines.Select(l =>
             {
-                ReceiptCode = await _codes.NextAsync<MaterialReceipt>(DocumentPrefixes.MaterialReceipt, r => r.ReceiptCode, ct),
-                ShortageRequestId = request.RequestId,
-                OrderId = original.OrderId,
-                PurchaseOrderId = original.PurchaseOrderId,
-                ReceiptDate = dto.ReceiptDate,
-                Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
-                Status = ReceiptStatuses.Pending,
-                SubmittedAt = _clock.Now,
-                MaterialReceiptLines = dto.Lines.Select(l =>
+                var src = originalLines[l.OriginalReceiptLineId];
+                return new MaterialReceiptLine
                 {
-                    var src = originalLines[l.OriginalReceiptLineId];
-                    return new MaterialReceiptLine
-                    {
-                        OrderMaterialId = src.OrderMaterialId,
-                        PurchaseOrderLineId = src.PurchaseOrderLineId,
-                        OriginalReceiptLineId = src.MaterialReceiptLineId,
-                        MaterialId = src.OrderMaterialId is null ? src.MaterialId : null,
-                        AcceptedQty = l.AcceptedQty,
-                    };
-                }).ToList(),
-            };
-            await _uow.Repository<MaterialReceipt>().AddAsync(receipt);
-            await NotifyPendingAsync(receipt, ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(receipt.MaterialReceiptId);
-        });
-        return await GetByIdAsync(created.Data, ct);
+                    OrderMaterialId = src.OrderMaterialId,
+                    PurchaseOrderLineId = src.PurchaseOrderLineId,
+                    OriginalReceiptLineId = src.MaterialReceiptLineId,
+                    MaterialId = src.OrderMaterialId is null ? src.MaterialId : null,
+                    AcceptedQty = l.AcceptedQty,
+                };
+            }).ToList(),
+        };
+        await _uow.Repository<MaterialReceipt>().AddAsync(receipt);
+        await NotifyPendingAsync(receipt, ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(receipt.MaterialReceiptId);
     }
 
     public Task<Result> ConfirmAsync(int receiptId, int confirmedByEmployeeId, CancellationToken ct) =>
@@ -494,11 +517,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, l.AcceptedQty)).ToList()));
     }
 
-    private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct)
+    /// <summary>Đơn mua phải đang đặt / nhận một phần và đơn hàng gắn với nó chưa đóng.</summary>
+    private async Task<Result<ResolvedReceipt>?> CheckReceivableAsync(PurchaseOrder po, CancellationToken ct)
     {
-        var po = await _uow.Repository<PurchaseOrder>().Query().AsNoTracking().Include(p => p.PurchaseOrderLines)
-            .FirstOrDefaultAsync(p => p.PurchaseOrderId == dto.PurchaseOrderId, ct);
-        if (po is null) return WarehouseFailures.NotFound<ResolvedReceipt>();
         if (po.GoodsStatus is not (PurchaseGoodsStatuses.Ordered or PurchaseGoodsStatuses.PartiallyReceived))
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.PurchaseOrderNotReceivable);
         if (po.OrderId is { } orderId)
@@ -508,6 +529,16 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             if (OrderStatuses.Closed.Contains(status))
                 return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
         }
+        return null;
+    }
+
+    private async Task<Result<ResolvedReceipt>> ResolveSupplierAsync(SaveMaterialReceiptDto dto, int? exceptReceiptId, CancellationToken ct)
+    {
+        var po = await _uow.Repository<PurchaseOrder>().Query().AsNoTracking().Include(p => p.PurchaseOrderLines)
+            .FirstOrDefaultAsync(p => p.PurchaseOrderId == dto.PurchaseOrderId, ct);
+        if (po is null) return WarehouseFailures.NotFound<ResolvedReceipt>();
+        var notReceivable = await CheckReceivableAsync(po, ct);
+        if (notReceivable is not null) return notReceivable;
 
         var byId = po.PurchaseOrderLines.ToDictionary(l => l.PurchaseOrderLineId);
         if (dto.Lines.Any(l => l.PurchaseOrderLineId is null || !byId.ContainsKey(l.PurchaseOrderLineId.Value)))
