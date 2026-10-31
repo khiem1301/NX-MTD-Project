@@ -1,12 +1,8 @@
 import { useState } from 'react';
-import { Button, Space, message } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, message } from 'antd';
 import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
-import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, formatDate } from '@/utils/format';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
 import {
@@ -20,6 +16,7 @@ import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { TableToolbar } from '@/components/common/TableToolbar';
+import { pieceRateColumns } from '../components/pieceRateColumns';
 
 const text = PRODUCTION_TEXT.pieceRates;
 
@@ -46,50 +43,7 @@ export function AdminPieceRatesPage() {
   const reject = useRejectPieceRate();
   const approveMany = useApproveManyPieceRates();
 
-  const columns: ColumnsType<PieceRate> = [
-    { title: text.columns.product, dataIndex: 'productCode' },
-    {
-      title: text.columns.operation,
-      key: 'op',
-      render: (_, r) => `${r.operationCode} - ${r.operationName}`,
-    },
-    {
-      title: text.columns.rate,
-      dataIndex: 'rate',
-      align: 'right',
-      render: (v: number) => formatCurrency(v),
-    },
-    {
-      title: text.columns.effectiveDate,
-      dataIndex: 'effectiveDate',
-      render: (v: string) => formatDate(v),
-    },
-    {
-      title: text.columns.status,
-      dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={text.status} />,
-    },
-    {
-      title: text.columns.note,
-      key: 'note',
-      render: (_, r) => r.rejectReason ?? r.approvalNote ?? '—',
-    },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, row) =>
-        row.status === 'PendingApproval' ? (
-          <Space size={0} wrap>
-            <Button type="link" onClick={() => setApproving(row)}>
-              {text.approve}
-            </Button>
-            <Button type="link" danger onClick={() => setRejecting(row)}>
-              {text.reject}
-            </Button>
-          </Space>
-        ) : null,
-    },
-  ];
+  const columns = pieceRateColumns({ onApprove: setApproving, onReject: setRejecting });
 
   return (
     <PageCard title={text.adminTitle} description={text.adminSubtitle}>

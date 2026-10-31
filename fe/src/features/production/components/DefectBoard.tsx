@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import { Button, Space, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, Space } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { QueryError } from '@/components/common/QueryError';
-import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
-import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, formatDate, formatDateTime, toApiDate } from '@/utils/format';
+import { toApiDate } from '@/utils/format';
 import { DefectFormModal } from './DefectFormModal';
 import { ReplacementCuttingModal } from './ReplacementCuttingModal';
 import { PRODUCTION_TEXT } from '../constants';
@@ -18,6 +14,7 @@ import type { Defect, DefectQuery, OutputRole } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { defectColumns } from './defectColumns';
 
 const text = PRODUCTION_TEXT.defects;
 
@@ -41,99 +38,7 @@ export function DefectBoard({ role }: { role: OutputRole }) {
       : (defects.data?.items.find((d) => d.defectRecordId === autoReplaceId) ?? null));
   const cancel = useCancelDefect(role);
 
-  const columns: ColumnsType<Defect> = [
-    { title: text.columns.code, dataIndex: 'defectCode' },
-    { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
-    ...(isManager ? [{ title: text.columns.team, dataIndex: 'sewingTeamName' }] : []),
-    {
-      responsive: ['md'],
-      title: text.columns.order,
-      key: 'order',
-      render: (_, d) => `${d.orderCode} · ${d.productCode}`,
-    },
-    {
-      title: text.columns.operation,
-      key: 'op',
-      render: (_, d) => `${d.operationCode} - ${d.operationName}`,
-    },
-    { title: text.columns.worker, dataIndex: 'responsibleWorkerName' },
-    {
-      title: text.columns.type,
-      dataIndex: 'defectType',
-      render: (v: string) => <StatusTag status={v} labels={text.type} />,
-    },
-    { title: text.columns.qty, dataIndex: 'quantity', align: 'right' },
-    {
-      title: text.columns.reason,
-      key: 'reason',
-      render: (_, d) =>
-        d.reasonNote
-          ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}`
-          : text.reason[d.defectReasonCode],
-    },
-    {
-      responsive: ['md'],
-      title: text.columns.rate,
-      dataIndex: 'scrapUnitRate',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
-    },
-    {
-      title: text.columns.status,
-      dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={text.status} />,
-    },
-    {
-      title: text.columns.objection,
-      key: 'objection',
-      render: (_, d) =>
-        d.workerObjection ? (
-          <Space direction="vertical" size={0}>
-            <Tag color="volcano">{text.objected}</Tag>
-            <Typography.Text>{d.workerObjection}</Typography.Text>
-          </Space>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      responsive: ['md'],
-      title: text.columns.deadline,
-      dataIndex: 'editDeadline',
-      render: (v: string) => formatDateTime(v),
-    },
-    {
-      title: PRODUCTION_TEXT.replacement.column,
-      key: 'replacement',
-      render: (_, d) => {
-        if (d.replacementRequestCode)
-          return (
-            <Tag color="geekblue">
-              {d.replacementRequestCode} ·{' '}
-              {REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ??
-                d.replacementRequestStatus}
-            </Tag>
-          );
-        return !isManager && d.defectType === 'Scrap' && d.status === 'Recorded' ? (
-          <Button type="link" onClick={() => setReplacing(d)}>
-            {PRODUCTION_TEXT.replacement.button}
-          </Button>
-        ) : (
-          '—'
-        );
-      },
-    },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, d) =>
-        d.status === 'Recorded' && (isManager || d.canEdit) ? (
-          <Button type="link" danger onClick={() => setCancelling(d)}>
-            {text.cancel}
-          </Button>
-        ) : null,
-    },
-  ];
+  const columns = defectColumns({ isManager, onReplace: setReplacing, onCancel: setCancelling });
 
   return (
     <PageCard
