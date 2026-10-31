@@ -52,16 +52,8 @@ public sealed class MonthlyCostService : IMonthlyCostService
     public async Task<Result<MonthlyCostExcelPreviewDto>> PreviewImportAsync(
         Stream stream, string periodMonth, CancellationToken ct)
     {
-        if (!IsValidMonth(periodMonth))
-            return Result<MonthlyCostExcelPreviewDto>.Failure(ErrorCodes.MonthlyCostPeriodMonthInvalid,
-                Messages.MonthlyCostPeriodMonthInvalid, ResultKind.Validation);
-
-        if (!TryParseExcel(stream, out var rawRows, out var errorCode, out var errorMessage))
-            return Result<MonthlyCostExcelPreviewDto>.Failure(errorCode!, errorMessage!, ResultKind.Validation);
-
-        if (rawRows!.Count == 0)
-            return Result<MonthlyCostExcelPreviewDto>.Failure(ErrorCodes.MonthlyCostExcelEmpty,
-                Messages.MonthlyCostExcelEmpty);
+        var failure = ParseInput<MonthlyCostExcelPreviewDto>(stream, periodMonth, out var rawRows);
+        if (failure is not null) return failure;
 
         var products = await LookupProductsAsync(rawRows, ct);
         var (previews, valid, error, duplicate, items) = ValidateRows(rawRows, products);
@@ -74,16 +66,8 @@ public sealed class MonthlyCostService : IMonthlyCostService
     public async Task<Result<MonthlyCostImportResultDto>> ImportAsync(
         Stream stream, string periodMonth, CancellationToken ct)
     {
-        if (!IsValidMonth(periodMonth))
-            return Result<MonthlyCostImportResultDto>.Failure(ErrorCodes.MonthlyCostPeriodMonthInvalid,
-                Messages.MonthlyCostPeriodMonthInvalid, ResultKind.Validation);
-
-        if (!TryParseExcel(stream, out var rawRows, out var errorCode, out var errorMessage))
-            return Result<MonthlyCostImportResultDto>.Failure(errorCode!, errorMessage!, ResultKind.Validation);
-
-        if (rawRows!.Count == 0)
-            return Result<MonthlyCostImportResultDto>.Failure(ErrorCodes.MonthlyCostExcelEmpty,
-                Messages.MonthlyCostExcelEmpty);
+        var failure = ParseInput<MonthlyCostImportResultDto>(stream, periodMonth, out var rawRows);
+        if (failure is not null) return failure;
 
         var products = await LookupProductsAsync(rawRows, ct);
         var (_, valid, error, duplicate, items) = ValidateRows(rawRows, products);
@@ -99,26 +83,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
             return Result<MonthlyCostImportResultDto>.Failure(ErrorCodes.MonthlyCostPeriodLocked,
                 string.Format(Messages.AttendancePeriodLockedMessage, periodMonth));   // MSG21
 
-        // "Import lại thay số tháng đó": xóa toàn bộ dòng cũ rồi ghi lại các dòng hợp lệ, một SaveChanges
-        // (DEV-MI-12-1 — không có cột lịch sử/versioning trong schema để giữ "có lịch sử" như SRS nói).
-        var previous = await _repo.GetItemsByPeriodIdAsync(period.PeriodId, ct);   // giá trị cũ cho AuditLog
-        await _repo.RemoveItemsByPeriodIdAsync(period.PeriodId, ct);
-
-        var now = _clock.Now;
-        foreach (var item in items)
-        {
-            item.PeriodId = period.PeriodId;
-            item.ImportedAt = now;
-        }
-        _repo.AddItems(items);
-
-        var totalAmount = items.Sum(i => i.Amount);
-        // Log theo tháng (RecordId = PeriodId) vì import thay cả bộ dòng chi phí của tháng, không sửa từng dòng (GBR-15).
-        _audit.Add(new AuditEntry(nameof(MonthlyCost), period.PeriodId,
-            previous.Count == 0 ? AuditActions.Insert : AuditActions.Update,
-            previous.Count == 0 ? null : new { ItemCount = previous.Count, TotalAmount = previous.Sum(i => i.Amount) },
-            new { PeriodMonth = periodMonth, ItemCount = items.Count, TotalAmount = totalAmount }));
-        await _repo.SaveChangesAsync(ct);
+        var totalAmount = await ReplacePeriodItemsAsync(period, periodMonth, items, ct);
 
         var reconciliation = await BuildMealsReconciliationAsync(periodMonth, items, ct);
 
@@ -226,6 +191,51 @@ public sealed class MonthlyCostService : IMonthlyCostService
         }
     }
 
+    /// <summary>Xóa dòng chi phí cũ của tháng rồi ghi lại các dòng hợp lệ, kèm AuditLog. Trả về tổng tiền mới.</summary>
+    private async Task<decimal> ReplacePeriodItemsAsync(AccountingPeriod period, string periodMonth, List<MonthlyCost> items,
+        CancellationToken ct)
+    {
+        // "Import lại thay số tháng đó": xóa toàn bộ dòng cũ rồi ghi lại các dòng hợp lệ, một SaveChanges
+        // (DEV-MI-12-1 — không có cột lịch sử/versioning trong schema để giữ "có lịch sử" như SRS nói).
+        var previous = await _repo.GetItemsByPeriodIdAsync(period.PeriodId, ct);   // giá trị cũ cho AuditLog
+        await _repo.RemoveItemsByPeriodIdAsync(period.PeriodId, ct);
+
+        var now = _clock.Now;
+        foreach (var item in items)
+        {
+            item.PeriodId = period.PeriodId;
+            item.ImportedAt = now;
+        }
+        _repo.AddItems(items);
+
+        var totalAmount = items.Sum(i => i.Amount);
+        // Log theo tháng (RecordId = PeriodId) vì import thay cả bộ dòng chi phí của tháng, không sửa từng dòng (GBR-15).
+        _audit.Add(new AuditEntry(nameof(MonthlyCost), period.PeriodId,
+            previous.Count == 0 ? AuditActions.Insert : AuditActions.Update,
+            previous.Count == 0 ? null : new { ItemCount = previous.Count, TotalAmount = previous.Sum(i => i.Amount) },
+            new { PeriodMonth = periodMonth, ItemCount = items.Count, TotalAmount = totalAmount }));
+        await _repo.SaveChangesAsync(ct);
+        return totalAmount;
+    }
+
+    /// <summary>Kiểm tra tháng, đọc file Excel và đảm bảo có dòng dữ liệu; trả về lỗi (nếu có) hoặc null.</summary>
+    private Result<T>? ParseInput<T>(Stream stream, string periodMonth, out IReadOnlyList<MonthlyCostExcelRowDto> rawRows)
+    {
+        rawRows = [];
+        if (!IsValidMonth(periodMonth))
+            return Result<T>.Failure(ErrorCodes.MonthlyCostPeriodMonthInvalid,
+                Messages.MonthlyCostPeriodMonthInvalid, ResultKind.Validation);
+
+        if (!TryParseExcel(stream, out var rows, out var errorCode, out var errorMessage))
+            return Result<T>.Failure(errorCode!, errorMessage!, ResultKind.Validation);
+
+        if (rows!.Count == 0)
+            return Result<T>.Failure(ErrorCodes.MonthlyCostExcelEmpty, Messages.MonthlyCostExcelEmpty);
+
+        rawRows = rows;
+        return null;
+    }
+
     private async Task<IReadOnlyDictionary<string, (int ProductId, string ProductName)>> LookupProductsAsync(
         IReadOnlyList<MonthlyCostExcelRowDto> rawRows, CancellationToken ct)
     {
@@ -252,92 +262,18 @@ public sealed class MonthlyCostService : IMonthlyCostService
 
         foreach (var row in rawRows)
         {
-            if (row.ParseError is not null)
+            var check = CheckRow(row, products);
+            if (check.Error is not null)
             {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error, row.ParseError));
+                previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Error, check.Error));
                 error++;
                 continue;
             }
 
-            var category = row.CostCategoryCode?.Trim().ToUpperInvariant();
-            if (string.IsNullOrWhiteSpace(category))
-            {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error, "Thiếu loại chi phí."));
-                error++;
-                continue;
-            }
-            if (!MonthlyCostCategory.All.Contains(category))
-            {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                    $"Loại chi phí '{category}' không hợp lệ."));
-                error++;
-                continue;
-            }
-
-            var costType = row.CostType?.Trim().ToUpperInvariant();
-            if (string.IsNullOrWhiteSpace(costType))
-            {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                    "Thiếu kiểu chi phí (FIXED/VARIABLE)."));
-                error++;
-                continue;
-            }
-            if (!MonthlyCostType.All.Contains(costType))
-            {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                    $"Kiểu chi phí '{costType}' không hợp lệ (cần FIXED/VARIABLE)."));
-                error++;
-                continue;
-            }
-
-            var productCode = row.ProductCode?.Trim();
-            int? productId = null;
-            string? productName = null;
-            if (costType == MonthlyCostType.Variable)
-            {
-                if (string.IsNullOrWhiteSpace(productCode))
-                {
-                    previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                        "Khoản biến đổi (VARIABLE) phải có mã hàng."));
-                    error++;
-                    continue;
-                }
-                if (!products.TryGetValue(productCode, out var product))
-                {
-                    previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                        $"Mã hàng '{productCode}' không tồn tại."));
-                    error++;
-                    continue;
-                }
-                productId = product.ProductId;
-                productName = product.ProductName;
-            }
-            else if (!string.IsNullOrWhiteSpace(productCode))
-            {
-                previews.Add(ToPreview(row, null, MonthlyCostRowStatus.Error,
-                    "Khoản cố định (FIXED) không được có mã hàng."));
-                error++;
-                continue;
-            }
-
-            if (row.Amount is null)
-            {
-                previews.Add(ToPreview(row, productName, MonthlyCostRowStatus.Error, "Thiếu số tiền."));
-                error++;
-                continue;
-            }
-            if (row.Amount < 0)
-            {
-                previews.Add(ToPreview(row, productName, MonthlyCostRowStatus.Error,
-                    "Số tiền phải lớn hơn hoặc bằng 0."));
-                error++;
-                continue;
-            }
-
-            var key = (category, productId);
+            var key = (check.Category!, check.ProductId);
             if (!seenKeys.Add(key))
             {
-                previews.Add(ToPreview(row, productName, MonthlyCostRowStatus.Duplicate,
+                previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Duplicate,
                     "Dòng trùng (cùng loại chi phí và mã hàng)."));
                 duplicate++;
                 continue;
@@ -345,14 +281,50 @@ public sealed class MonthlyCostService : IMonthlyCostService
 
             items.Add(new MonthlyCost
             {
-                CostCategoryCode = category, CostType = costType, ProductId = productId,
-                Amount = row.Amount.Value, Quantity = row.Quantity, Note = row.Note,
+                CostCategoryCode = check.Category!, CostType = check.CostType!, ProductId = check.ProductId,
+                Amount = row.Amount!.Value, Quantity = row.Quantity, Note = row.Note,
             });
-            previews.Add(ToPreview(row, productName, MonthlyCostRowStatus.Valid, null));
+            previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Valid, null));
             valid++;
         }
 
         return (previews, valid, error, duplicate, items);
+    }
+
+    private sealed record RowCheck(string? Error, string? ProductName = null, string? Category = null,
+        string? CostType = null, int? ProductId = null);
+
+    /// <summary>Kiểm tra một dòng thô: loại / kiểu chi phí, mã hàng đúng chiều theo kiểu, số tiền. Lỗi đầu tiên được trả về.</summary>
+    private static RowCheck CheckRow(MonthlyCostExcelRowDto row,
+        IReadOnlyDictionary<string, (int ProductId, string ProductName)> products)
+    {
+        if (row.ParseError is not null) return new RowCheck(row.ParseError);
+
+        var category = row.CostCategoryCode?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(category)) return new RowCheck("Thiếu loại chi phí.");
+        if (!MonthlyCostCategory.All.Contains(category)) return new RowCheck($"Loại chi phí '{category}' không hợp lệ.");
+
+        var costType = row.CostType?.Trim().ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(costType)) return new RowCheck("Thiếu kiểu chi phí (FIXED/VARIABLE).");
+        if (!MonthlyCostType.All.Contains(costType))
+            return new RowCheck($"Kiểu chi phí '{costType}' không hợp lệ (cần FIXED/VARIABLE).");
+
+        var productCode = row.ProductCode?.Trim();
+        int? productId = null;
+        string? productName = null;
+        if (costType == MonthlyCostType.Variable)
+        {
+            if (string.IsNullOrWhiteSpace(productCode)) return new RowCheck("Khoản biến đổi (VARIABLE) phải có mã hàng.");
+            if (!products.TryGetValue(productCode, out var product)) return new RowCheck($"Mã hàng '{productCode}' không tồn tại.");
+            productId = product.ProductId;
+            productName = product.ProductName;
+        }
+        else if (!string.IsNullOrWhiteSpace(productCode))
+            return new RowCheck("Khoản cố định (FIXED) không được có mã hàng.");
+
+        if (row.Amount is null) return new RowCheck("Thiếu số tiền.", productName);
+        if (row.Amount < 0) return new RowCheck("Số tiền phải lớn hơn hoặc bằng 0.", productName);
+        return new RowCheck(null, productName, category, costType, productId);
     }
 
     private static MonthlyCostExcelRowPreviewDto ToPreview(MonthlyCostExcelRowDto row, string? productName,
