@@ -31,7 +31,12 @@ export type SaveSupplierPayload = {
 /** Ô chọn nhà cung cấp khi đặt hàng: BE chỉ trả nhà cung cấp đang hợp tác. */
 export type SupplierOption = { supplierId: number; supplierName: string };
 
-export type SupplierQuery = { page: number; pageSize: number; keyword?: string; status?: SupplierStatus };
+export type SupplierQuery = {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: SupplierStatus;
+};
 
 // ---------- Đơn mua: đặt hàng (Quản đốc) và thanh toán (Kế toán) ----------
 

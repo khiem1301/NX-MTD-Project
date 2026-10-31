@@ -1,9 +1,10 @@
-import { Alert, Button, Descriptions, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Descriptions, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { formatDateTime } from '@/utils/format';
 import { MEAL_TEXT } from '../constants';
 import { useMarkKitchenNotified } from '../hooks/useMeal';
 import type { DailyMealSummary, TeamMealRow } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   date: string;
@@ -11,8 +12,10 @@ type Props = {
 };
 
 const sourceTag = (source: TeamMealRow['source']) => {
-  if (source === 'Confirmed') return <Tag color="green">{MEAL_TEXT.suggestion.sourceConfirmed}</Tag>;
-  if (source === 'Attendance') return <Tag color="blue">{MEAL_TEXT.suggestion.sourceAttendance}</Tag>;
+  if (source === 'Confirmed')
+    return <Tag color="green">{MEAL_TEXT.suggestion.sourceConfirmed}</Tag>;
+  if (source === 'Attendance')
+    return <Tag color="blue">{MEAL_TEXT.suggestion.sourceAttendance}</Tag>;
   return <Tag>{MEAL_TEXT.suggestion.sourceNone}</Tag>;
 };
 
@@ -35,14 +38,27 @@ export function MealSummaryTable({ summary }: Props) {
 
   return (
     <div>
-      <Descriptions column={{ xs: 1, sm: 2, md: 4 }} bordered size="small" style={{ marginBottom: 16 }}>
+      <Descriptions
+        column={{ xs: 1, sm: 2, md: 4 }}
+        bordered
+        size="small"
+        style={{ marginBottom: 16 }}
+      >
         <Descriptions.Item label={MEAL_TEXT.summary.status}>
           <Tag>{MEAL_TEXT.statusLabel[summary.status]}</Tag>
         </Descriptions.Item>
-        <Descriptions.Item label={MEAL_TEXT.summary.officeCount}>{summary.officeCount}</Descriptions.Item>
-        <Descriptions.Item label={MEAL_TEXT.summary.guestCount}>{summary.guestCount}</Descriptions.Item>
-        <Descriptions.Item label={MEAL_TEXT.summary.teamTotal}>{summary.teamTotal}</Descriptions.Item>
-        <Descriptions.Item label={MEAL_TEXT.summary.totalMeals}>{summary.totalMeals}</Descriptions.Item>
+        <Descriptions.Item label={MEAL_TEXT.summary.officeCount}>
+          {summary.officeCount}
+        </Descriptions.Item>
+        <Descriptions.Item label={MEAL_TEXT.summary.guestCount}>
+          {summary.guestCount}
+        </Descriptions.Item>
+        <Descriptions.Item label={MEAL_TEXT.summary.teamTotal}>
+          {summary.teamTotal}
+        </Descriptions.Item>
+        <Descriptions.Item label={MEAL_TEXT.summary.totalMeals}>
+          {summary.totalMeals}
+        </Descriptions.Item>
         {summary.kitchenNotifiedAt ? (
           <Descriptions.Item label={MEAL_TEXT.summary.kitchenNotifiedAt}>
             {formatDateTime(summary.kitchenNotifiedAt)}
@@ -59,9 +75,9 @@ export function MealSummaryTable({ summary }: Props) {
         />
       ) : null}
 
-      <Table<TeamMealRow>
+      <DataTable<TeamMealRow>
         rowKey="teamId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={summary.teams}
         pagination={false}

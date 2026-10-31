@@ -40,7 +40,10 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         },
         onError: (error) =>
           form.setFields(
-            Object.entries(error.errors ?? {}).map(([name, errors]) => ({ name: name as keyof SaveProductPayload, errors })),
+            Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+              name: name as keyof SaveProductPayload,
+              errors,
+            })),
           ),
       },
     );
@@ -64,7 +67,10 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
           <Form.Item
             name="productCode"
             label={MESSAGES.orders.productCode}
-            rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 30 }]}
+            rules={[
+              { required: true, whitespace: true, message: MESSAGES.common.required },
+              { max: 30 },
+            ]}
           >
             <Input disabled={locked} />
           </Form.Item>
@@ -72,7 +78,10 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         <Form.Item
           name="productName"
           label={MESSAGES.orders.productName}
-          rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 200 }]}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 200 },
+          ]}
         >
           <Input />
         </Form.Item>

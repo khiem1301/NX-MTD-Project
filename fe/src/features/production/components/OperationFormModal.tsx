@@ -5,7 +5,7 @@ import { useProductSpec } from '@/features/orders/hooks/useOrders';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
-import { modalWidth } from '../utils';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type Props = {
   open: boolean;
@@ -34,7 +34,14 @@ const text = PRODUCTION_TEXT.operations;
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
 /** UC25 — Kế toán sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
-export function OperationFormModal({ open, productId, operation, groups, onClose, onCreated }: Props) {
+export function OperationFormModal({
+  open,
+  productId,
+  operation,
+  groups,
+  onClose,
+  onCreated,
+}: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
   const spec = useProductSpec(open ? productId : undefined);
@@ -86,7 +93,7 @@ export function OperationFormModal({ open, productId, operation, groups, onClose
   return (
     <Modal
       open={open}
-      width={modalWidth(520)}
+      width={MODAL_WIDTH.sm}
       title={operation ? text.edit : text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -102,7 +109,11 @@ export function OperationFormModal({ open, productId, operation, groups, onClose
         <Form.Item name="operationName" label={text.form.name} rules={required}>
           <Input maxLength={200} />
         </Form.Item>
-        <Form.Item name="stationSequence" label={text.form.sequence} rules={[{ required: true, message: PRODUCTION_TEXT.required }]}>
+        <Form.Item
+          name="stationSequence"
+          label={text.form.sequence}
+          rules={[{ required: true, message: PRODUCTION_TEXT.required }]}
+        >
           <InputNumber min={1} precision={0} style={{ width: 160 }} />
         </Form.Item>
         <Form.Item name="skillLevel" label={text.form.skill}>
@@ -114,19 +125,28 @@ export function OperationFormModal({ open, productId, operation, groups, onClose
         <Form.Item name="groupName" label={text.form.group} extra={text.form.groupHint}>
           <AutoComplete allowClear options={groups.map((g) => ({ value: g }))} maxLength={200} />
         </Form.Item>
-        <Form.Item name="componentIds" label={text.form.components} extra={text.form.componentsHint}>
+        <Form.Item
+          name="componentIds"
+          label={text.form.components}
+          extra={text.form.componentsHint}
+        >
           <Select
             mode="multiple"
             allowClear
             optionFilterProp="label"
             loading={spec.isLoading}
-            options={(spec.data?.components ?? []).map((c) => ({ value: c.productComponentId, label: c.componentName }))}
+            options={(spec.data?.components ?? []).map((c) => ({
+              value: c.productComponentId,
+              label: c.componentName,
+            }))}
           />
         </Form.Item>
         <Form.Item name="usesSemiFinished" valuePropName="checked">
           <Switch checkedChildren={text.withPieces} unCheckedChildren={text.withoutPieces} />
         </Form.Item>
-        <div style={{ marginTop: -16, marginBottom: 16, color: '#8c8c8c' }}>{text.form.usesSemiFinished}</div>
+        <div style={{ marginTop: -16, marginBottom: 16, color: '#8c8c8c' }}>
+          {text.form.usesSemiFinished}
+        </div>
         <Form.Item name="isFinalStep" valuePropName="checked">
           <Checkbox>{text.form.isFinal}</Checkbox>
         </Form.Item>

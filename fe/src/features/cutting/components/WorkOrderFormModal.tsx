@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table } from 'antd';
+import { Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -8,6 +8,10 @@ import type { OrderLineOption } from '@/types/lookup';
 import { CUTTING_TEAM_TYPE, LABELS } from '../constants';
 import { useSaveWorkOrder } from '../hooks/useCutting';
 import type { SaveWorkOrderPayload, WorkOrder } from '../types';
+import { API_DATE } from '@/utils/format';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type WorkOrderFormModalProps = { open: boolean; workOrder: WorkOrder | null; onClose: () => void };
 
@@ -16,9 +20,6 @@ type FormValues = Omit<SaveWorkOrderPayload, 'dueDate' | 'lines'> & {
   /** Số kế hoạch theo từng dòng đơn; 0 / trống = không cắt dòng đó. */
   planned: Record<string, number | null>;
 };
-
-const DATE_FORMAT = 'DD/MM/YYYY';
-const API_DATE = 'YYYY-MM-DD';
 
 /** UC19 (tổ cắt): Quản đốc lập lệnh cắt theo dòng đơn của một mã hàng. */
 export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormModalProps) {
@@ -60,7 +61,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
   return (
     <Modal
       open={open}
-      width={860}
+      width={MODAL_WIDTH.md}
       title={
         workOrder ? `${MESSAGES.common.edit} ${workOrder.workOrderCode}` : LABELS.workOrdersTitle
       }
@@ -95,10 +96,10 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
             />
           </Form.Item>
           <Form.Item name="dueDate" label={LABELS.dueDate} rules={required}>
-            <DatePicker format={DATE_FORMAT} />
+            <AppDatePicker />
           </Form.Item>
         </Space>
-        <Table<OrderLineOption>
+        <DataTable<OrderLineOption>
           rowKey="orderLineId"
           size="small"
           pagination={false}

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Space, Table, Tag, Typography, type TableColumnsType } from 'antd';
+import { Alert, Button, Card, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
@@ -7,12 +7,15 @@ import { ReceiptFormModal } from '../components/ReceiptFormModal';
 import { INCOMING_TEXT, MATERIAL_SOURCE } from '../constants';
 import { useIncomingMaterials } from '../hooks/useIncomingMaterials';
 import type { IncomingCustomerMaterial, IncomingSupplierMaterial, ReceiptPreset } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
 
 const text = INCOMING_TEXT;
 
 /** "đã nhận / dự kiến" lần giao; đã nhận đủ số lần mà vẫn còn thiếu thì báo "Đủ lần giao" để Thủ kho biết hệ thống sẽ lập đơn thiếu NVL. */
 const deliveryCell = (expected: number | null, received: number) => {
-  if (expected === null) return <Typography.Text type="secondary">{text.noDeliveryCount}</Typography.Text>;
+  if (expected === null)
+    return <Typography.Text type="secondary">{text.noDeliveryCount}</Typography.Text>;
   return (
     <Space size={4}>
       {received} / {expected} {text.deliveryUnit}
@@ -63,8 +66,7 @@ export function IncomingMaterialsPage() {
       key: 'action',
       render: (_, r) => (
         <Button
-          type="primary"
-          size="small"
+          type="link"
           onClick={() =>
             setPreset({
               source: MATERIAL_SOURCE.CUSTOMER,
@@ -82,7 +84,11 @@ export function IncomingMaterialsPage() {
 
   const supplierColumns: TableColumnsType<IncomingSupplierMaterial> = [
     { title: text.purchaseOrder, dataIndex: 'poCode' },
-    { title: text.order, dataIndex: 'orderCode', render: (v: string | null) => v ?? text.stockPurchase },
+    {
+      title: text.order,
+      dataIndex: 'orderCode',
+      render: (v: string | null) => v ?? text.stockPurchase,
+    },
     { title: text.supplier, dataIndex: 'supplierName', render: (v: string | null) => v ?? '—' },
     {
       title: text.material,
@@ -116,8 +122,7 @@ export function IncomingMaterialsPage() {
       key: 'action',
       render: (_, r) => (
         <Button
-          type="primary"
-          size="small"
+          type="link"
           onClick={() =>
             setPreset({
               source: MATERIAL_SOURCE.SUPPLIER,
@@ -135,42 +140,37 @@ export function IncomingMaterialsPage() {
 
   const data = incoming.data;
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{text.subtitle}</Typography.Text>
-      </div>
+    <PageCard title={text.title} description={text.subtitle}>
       <QueryError error={incoming.error} onRetry={() => void incoming.refetch()} />
       <Card title={text.customerSection} size="small">
-        <Table
+        <DataTable
           rowKey="orderMaterialId"
-          size="small"
           columns={customerColumns}
           dataSource={data?.customer}
           loading={incoming.isFetching}
           pagination={false}
           locale={{ emptyText: text.customerEmpty }}
-          scroll={{ x: 'max-content' }}
         />
       </Card>
       <Card title={text.supplierSection} size="small">
-        <Table
+        <DataTable
           rowKey="purchaseOrderLineId"
-          size="small"
           columns={supplierColumns}
           dataSource={data?.supplier}
           loading={incoming.isFetching}
           pagination={false}
           locale={{ emptyText: text.supplierEmpty }}
-          scroll={{ x: 'max-content' }}
         />
       </Card>
       {data && data.customer.length === 0 && data.supplier.length === 0 && (
         <Alert type="info" showIcon message={text.customerEmpty + ' ' + text.supplierEmpty} />
       )}
-      <ReceiptFormModal open={preset !== null} receipt={null} preset={preset} onClose={() => setPreset(null)} />
-    </Space>
+      <ReceiptFormModal
+        open={preset !== null}
+        receipt={null}
+        preset={preset}
+        onClose={() => setPreset(null)}
+      />
+    </PageCard>
   );
 }

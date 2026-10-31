@@ -5,7 +5,8 @@ import { KPI_TEXT } from '../constants';
 import type { KpiRole, KpiTargetFilter, SaveKpiTargetPayload } from '../types';
 
 export const KPI_KEY = ['kpi'] as const;
-const targetsKey = (filter: KpiTargetFilter, role: KpiRole) => [...KPI_KEY, role, 'targets', filter] as const;
+const targetsKey = (filter: KpiTargetFilter, role: KpiRole) =>
+  [...KPI_KEY, role, 'targets', filter] as const;
 const targetDetailKey = (kpiTargetId: number, role: KpiRole) =>
   [...KPI_KEY, role, 'target-detail', kpiTargetId] as const;
 
@@ -26,7 +27,12 @@ export const useKpiCapacity = (
   useQuery({
     queryKey: [...KPI_KEY, 'capacity', orderId, productId, sewingTeamId, exceptKpiTargetId],
     queryFn: () =>
-      kpiApi.getCapacity({ orderId: orderId!, productId: productId!, sewingTeamId: sewingTeamId!, exceptKpiTargetId }),
+      kpiApi.getCapacity({
+        orderId: orderId!,
+        productId: productId!,
+        sewingTeamId: sewingTeamId!,
+        exceptKpiTargetId,
+      }),
     enabled: orderId !== null && productId !== null && sewingTeamId !== null,
   });
 

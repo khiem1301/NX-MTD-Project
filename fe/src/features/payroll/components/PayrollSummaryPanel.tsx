@@ -1,7 +1,7 @@
 import { Alert, Button, Card, Descriptions, Popconfirm, Space, Tag } from 'antd';
 import { DownloadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime, formatMonth } from '@/utils/format';
 import { PAYROLL_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
 import { useDownloadImportedFile, useSubmitPayroll } from '../hooks/usePayroll';
 import type { PayrollSummary } from '../types';
@@ -16,8 +16,16 @@ export function PayrollSummaryPanel({ periodMonth, summary }: Props) {
   const canSubmit = summary.status === 'Draft' && summary.payslipCount > 0;
 
   return (
-    <Card size="small" title={`${PAYROLL_TEXT.summary.periodMonth} ${summary.periodMonth}`}>
-      <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small" style={{ marginBottom: 16 }}>
+    <Card
+      size="small"
+      title={`${PAYROLL_TEXT.summary.periodMonth} ${formatMonth(summary.periodMonth)}`}
+    >
+      <Descriptions
+        column={{ xs: 1, sm: 2, md: 3 }}
+        bordered
+        size="small"
+        style={{ marginBottom: 16 }}
+      >
         <Descriptions.Item label={PAYROLL_TEXT.summary.status}>
           <Tag color={PAYROLL_STATUS_LABEL[summary.status].color}>
             {PAYROLL_STATUS_LABEL[summary.status].text}
@@ -73,7 +81,10 @@ export function PayrollSummaryPanel({ periodMonth, summary }: Props) {
             icon={<DownloadOutlined />}
             loading={downloadFile.isPending}
             onClick={() =>
-              downloadFile.mutate({ payrollId: summary.payrollId, periodMonth: summary.periodMonth })
+              downloadFile.mutate({
+                payrollId: summary.payrollId,
+                periodMonth: summary.periodMonth,
+              })
             }
           >
             {PAYROLL_TEXT.downloadImportedFile}

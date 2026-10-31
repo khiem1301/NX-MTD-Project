@@ -79,7 +79,10 @@ export const useConfirmDelivery = () =>
 /** TH-16: tải Excel phiếu xuất hàng để in. */
 export const useDownloadDispatch = () => {
   const base = useBase();
-  return useApiMutation(({ id, code }: { id: number; code: string }) => dispatchApi.downloadExcel(base, id, code), {
-    invalidate: [],
-  });
+  return useApiMutation(
+    ({ id, code }: { id: number; code: string }) => dispatchApi.downloadExcel(base, id, code),
+    {
+      invalidate: [],
+    },
+  );
 };

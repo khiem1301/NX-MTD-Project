@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { profileApi } from '../api/profileApi';
 import { ChangePasswordForm } from './ChangePasswordForm';
 
-jest.mock('../api/profileApi', () => ({ profileApi: { changePassword: jest.fn(), get: jest.fn() } }));
+jest.mock('../api/profileApi', () => ({
+  profileApi: { changePassword: jest.fn(), get: jest.fn() },
+}));
 jest.mock('@/services/tokenStorage', () => ({ tokenStorage: { setTokens: jest.fn() } }));
 
 const renderForm = () =>
@@ -32,12 +34,20 @@ describe('ChangePasswordForm', () => {
   });
 
   it('khớp thì gọi API đổi mật khẩu', async () => {
-    (profileApi.changePassword as jest.Mock).mockResolvedValue({ accessToken: 'a', refreshToken: 'r', user: {} });
+    (profileApi.changePassword as jest.Mock).mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: {},
+    });
     renderForm();
     fill('cu', 'moi123', 'moi123');
 
     await waitFor(() =>
-      expect(profileApi.changePassword).toHaveBeenCalledWith({ currentPassword: 'cu', newPassword: 'moi123', confirmPassword: 'moi123' }),
+      expect(profileApi.changePassword).toHaveBeenCalledWith({
+        currentPassword: 'cu',
+        newPassword: 'moi123',
+        confirmPassword: 'moi123',
+      }),
     );
   });
 });

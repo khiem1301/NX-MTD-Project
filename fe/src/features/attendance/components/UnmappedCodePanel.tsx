@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Empty, Modal, Space, Table, Tag, Typography } from 'antd';
+import { Alert, Button, Empty, Modal, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { LinkOutlined } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
@@ -7,6 +7,7 @@ import { useMapAttendanceCode, useUnmappedCodes } from '../hooks/useAttendance';
 import type { UnmappedCode } from '../types';
 import { formatDateTime } from '../utils';
 import { MapCodeForm } from './MapCodeForm';
+import { DataTable } from '@/components/common/DataTable';
 
 /**
  * UC28 — mã chấm công có lượt quẹt nhưng chưa gắn nhân viên. Gán xong thì thủ tục
@@ -51,7 +52,12 @@ export function UnmappedCodePanel() {
       width: 130,
       fixed: 'right',
       render: (_, row) => (
-        <Button type="primary" size="small" icon={<LinkOutlined />} onClick={() => setSelected(row)}>
+        <Button
+          type="primary"
+          size="small"
+          icon={<LinkOutlined />}
+          onClick={() => setSelected(row)}
+        >
           {ATTENDANCE_TEXT.map.submit}
         </Button>
       ),
@@ -73,9 +79,9 @@ export function UnmappedCodePanel() {
         />
       ) : null}
 
-      <Table<UnmappedCode>
+      <DataTable<UnmappedCode>
         rowKey="attendanceCode"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={data ?? []}
         loading={isLoading}

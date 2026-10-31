@@ -7,6 +7,7 @@ import { LABELS } from '../constants';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type OrderMaterialFormModalProps = {
   open: boolean;
@@ -45,7 +46,8 @@ export function OrderMaterialFormModal({
       ...values,
       orderId,
       // Khách không cấp thì không có số lần giao (CK_OM_Delivery).
-      expectedDeliveryCount: (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
+      expectedDeliveryCount:
+        (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
     };
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
@@ -65,7 +67,7 @@ export function OrderMaterialFormModal({
   return (
     <Modal
       open={open}
-      width={760}
+      width={MODAL_WIDTH.md}
       title={
         orderMaterial
           ? `${MESSAGES.common.edit} ${orderMaterial.materialCode}`
@@ -101,13 +103,14 @@ export function OrderMaterialFormModal({
           <Form.Item
             name="requiredQty"
             label={LABELS.requiredQty}
-            dependencies={["customerQty"]}
+            dependencies={['customerQty']}
             rules={[
               ...required,
               {
                 validator: async (_rule, value?: number) => {
-                  const customer = form.getFieldValue("customerQty") as number | undefined;
-                  if ((value ?? 0) <= 0 && (customer ?? 0) <= 0) throw new Error(LABELS.qtyRequiredOrCustomer);
+                  const customer = form.getFieldValue('customerQty') as number | undefined;
+                  if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
+                    throw new Error(LABELS.qtyRequiredOrCustomer);
                 },
               },
             ]}
@@ -128,7 +131,13 @@ export function OrderMaterialFormModal({
             label={LABELS.expectedDeliveryCount}
             rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
           >
-            <InputNumber min={1} max={99} precision={0} disabled={(customerQty ?? 0) <= 0} style={{ width: 150 }} />
+            <InputNumber
+              min={1}
+              max={99}
+              precision={0}
+              disabled={(customerQty ?? 0) <= 0}
+              style={{ width: 150 }}
+            />
           </Form.Item>
         </Space>
         <Form.Item name="note" label={LABELS.note}>

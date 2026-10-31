@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { InboxOutlined } from '@ant-design/icons';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Modal, Space, Table, Tag, Typography, Upload, message } from 'antd';
+import { Alert, Button, Modal, Space, Tag, Typography, Upload, message } from 'antd';
 import { API } from '@/constants/apiEndpoints';
 import { MESSAGES } from '@/constants/messages';
 import { useRolePath } from '@/hooks/useRolePath';
 import { apiClient } from '@/services/apiClient';
 import type { ApiError, ApiResponse } from '@/types/api';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
 
 type ImportRow = {
   rowNumber: number;
@@ -82,7 +84,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
   return (
     <Modal
       open={open}
-      width={920}
+      width={MODAL_WIDTH.lg}
       title="Nhập nhân viên từ Excel"
       onCancel={onClose}
       destroyOnHidden
@@ -151,7 +153,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
                 message={data.summary}
                 style={{ marginBottom: 12 }}
               />
-              <Table<ImportRow>
+              <DataTable<ImportRow>
                 rowKey="rowNumber"
                 size="small"
                 dataSource={data.rows}
@@ -194,7 +196,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
             description="Mật khẩu tạm chỉ hiện một lần ở đây. Hãy sao chép và gửi cho từng người; đóng hộp này là không xem lại được."
             action={<Button onClick={() => void copyAll()}>Sao chép tất cả</Button>}
           />
-          <Table<Created>
+          <DataTable<Created>
             rowKey="username"
             size="small"
             dataSource={result.created}
@@ -210,7 +212,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
             ]}
           />
           {result.failed.length > 0 && (
-            <Table<ImportRow>
+            <DataTable<ImportRow>
               style={{ marginTop: 12 }}
               rowKey="rowNumber"
               size="small"

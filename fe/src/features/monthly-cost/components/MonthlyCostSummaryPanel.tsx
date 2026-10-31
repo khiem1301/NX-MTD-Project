@@ -1,10 +1,14 @@
-import { Alert, Card, Descriptions, Table, Tag } from 'antd';
+import { Alert, Card, Descriptions, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { MESSAGES } from '@/constants/messages';
-import { formatDateTime } from '@/utils/format';
-import { MONTHLY_COST_CATEGORY_LABEL, MONTHLY_COST_TEXT, MONTHLY_COST_TYPE_LABEL } from '../constants';
+import { formatDateTime, formatMonth } from '@/utils/format';
+import {
+  MONTHLY_COST_CATEGORY_LABEL,
+  MONTHLY_COST_TEXT,
+  MONTHLY_COST_TYPE_LABEL,
+} from '../constants';
 import type { MonthlyCostItem, MonthlyCostSummary } from '../types';
 import { formatCurrency } from '../utils';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = { summary: MonthlyCostSummary };
 
@@ -38,7 +42,11 @@ const columns: ColumnsType<MonthlyCostItem> = [
     align: 'right',
     render: (v: number | null) => v ?? '—',
   },
-  { title: MONTHLY_COST_TEXT.table.note, dataIndex: 'note', render: (v: string | null) => v ?? '—' },
+  {
+    title: MONTHLY_COST_TEXT.table.note,
+    dataIndex: 'note',
+    render: (v: string | null) => v ?? '—',
+  },
   {
     title: MONTHLY_COST_TEXT.table.importedAt,
     dataIndex: 'importedAt',
@@ -51,12 +59,22 @@ export function MonthlyCostSummaryPanel({ summary }: Props) {
   const reconciliation = summary.mealsReconciliation;
 
   return (
-    <Card size="small" title={`${MONTHLY_COST_TEXT.summary.periodMonth} ${summary.periodMonth}`}>
-      <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small" style={{ marginBottom: 16 }}>
+    <Card
+      size="small"
+      title={`${MONTHLY_COST_TEXT.summary.periodMonth} ${formatMonth(summary.periodMonth)}`}
+    >
+      <Descriptions
+        column={{ xs: 1, sm: 2, md: 3 }}
+        bordered
+        size="small"
+        style={{ marginBottom: 16 }}
+      >
         <Descriptions.Item label={MONTHLY_COST_TEXT.summary.totalAmount}>
           {formatCurrency(summary.totalAmount)}
         </Descriptions.Item>
-        <Descriptions.Item label={MONTHLY_COST_TEXT.summary.itemCount}>{summary.items.length}</Descriptions.Item>
+        <Descriptions.Item label={MONTHLY_COST_TEXT.summary.itemCount}>
+          {summary.items.length}
+        </Descriptions.Item>
         {summary.isLocked ? (
           <Descriptions.Item label={MONTHLY_COST_TEXT.summary.locked}>
             <Tag color="red">{MONTHLY_COST_TEXT.summary.locked}</Tag>
@@ -74,14 +92,13 @@ export function MonthlyCostSummaryPanel({ summary }: Props) {
         />
       ) : null}
 
-      <Table<MonthlyCostItem>
+      <DataTable<MonthlyCostItem>
         rowKey="monthlyCostId"
         size="small"
         columns={columns}
         dataSource={summary.items}
         pagination={{ pageSize: 10 }}
         scroll={{ x: 'max-content' }}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
     </Card>
   );

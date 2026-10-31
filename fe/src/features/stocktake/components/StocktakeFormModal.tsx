@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, DatePicker, Form, Input, InputNumber, Modal, Select, Space, Table } from 'antd';
+import { Alert, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -7,10 +7,13 @@ import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
 import { useBalances } from '@/features/warehouse/hooks/useInventory';
 import type { StockBalance } from '@/features/warehouse/types';
-import { formatQty } from '@/utils/format';
+import { API_DATE, formatQty } from '@/utils/format';
 import { ST_LABELS } from '../constants';
 import { useSaveStocktake } from '../hooks/useStocktake';
 import type { Stocktake } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type StocktakeFormModalProps = { open: boolean; stocktake: Stocktake | null; onClose: () => void };
 type FormValues = {
@@ -21,7 +24,6 @@ type FormValues = {
   notes: Record<string, string | undefined>;
 };
 
-const API_DATE = 'YYYY-MM-DD';
 const WAREHOUSE_OPTIONS = Object.values(WAREHOUSE_TYPE).map((value) => ({
   value,
   label: WAREHOUSE_TYPE_LABEL[value],
@@ -53,13 +55,17 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
 
   const initialCounted = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
+      l.materialId !== null
+        ? `${l.materialId}`
+        : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.countedQty,
     ]),
   );
   const initialNotes = Object.fromEntries(
     (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null ? `${l.materialId}` : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
+      l.materialId !== null
+        ? `${l.materialId}`
+        : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
       l.note ?? undefined,
     ]),
   );
@@ -97,7 +103,7 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
   return (
     <Modal
       open={open}
-      width={940}
+      width={MODAL_WIDTH.lg}
       title={stocktake ? ST_LABELS.edit : ST_LABELS.create}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -146,14 +152,14 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
             label={ST_LABELS.date}
             rules={[{ required: true, message: MESSAGES.common.required }]}
           >
-            <DatePicker format="DD/MM/YYYY" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+            <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
           </Form.Item>
           <Form.Item name="scope" label={ST_LABELS.scope}>
             <Input placeholder={ST_LABELS.scopeHint} maxLength={300} style={{ width: 280 }} />
           </Form.Item>
         </Space>
         <Alert type="info" showIcon message={ST_LABELS.blankHint} style={{ marginBottom: 12 }} />
-        <Table<StockBalance>
+        <DataTable<StockBalance>
           rowKey={rowKey}
           size="small"
           loading={balances.isFetching}

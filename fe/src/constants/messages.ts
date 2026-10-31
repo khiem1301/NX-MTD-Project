@@ -298,6 +298,10 @@ export const MESSAGES = {
       allVariants: 'Chọn tất cả',
       note: 'Ghi chú quy cách',
       addNorm: 'Thêm dòng định mức',
+      unsavedTitle: 'Định mức chưa lưu',
+      unsavedBody: 'Các thay đổi chưa được lưu sẽ mất. Đóng mà không lưu?',
+      leave: 'Đóng không lưu',
+      stay: 'Tiếp tục sửa',
     },
   },
   requests: {

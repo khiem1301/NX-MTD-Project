@@ -1,5 +1,17 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Grid, Input, InputNumber, Select, Space, Table, Tag, Typography, message } from 'antd';
+import {
+  Alert,
+  Button,
+  Card,
+  Grid,
+  Input,
+  InputNumber,
+  Select,
+  Space,
+  Tag,
+  Typography,
+  message,
+} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -11,9 +23,13 @@ import { fill, formatCurrency, formatDateTime, formatQty, toApiDate } from '@/ut
 import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import { useAssignableOperations, useOutputGrid, useSaveOutput } from '../hooks/useProduction';
 import type { OutputGridRow, OutputLineInput, OutputRole, ShiftCode } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 const text = PRODUCTION_TEXT.output;
-const keyOf = (row: Pick<OutputGridRow, 'operationId' | 'workerId'>) => `${row.operationId}-${row.workerId}`;
+const keyOf = (row: Pick<OutputGridRow, 'operationId' | 'workerId'>) =>
+  `${row.operationId}-${row.workerId}`;
 
 /**
  * UC55 (KI-04) / UC22 (KI-11) — lưới sản lượng cuối ca: mỗi dòng là một công nhân × công đoạn đã phân công.
@@ -124,7 +140,9 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
       { ...query, reason: reason.trim() || undefined, rows: changedRows },
       {
         onSuccess: (result) => {
-          void message.success(fill(text.resultTemplate, result.inserted, result.updated, result.deleted));
+          void message.success(
+            fill(text.resultTemplate, result.inserted, result.updated, result.deleted),
+          );
           setWarnings(result.warnings);
           setEdits({});
           setExtraRows([]);
@@ -143,8 +161,16 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
     .map((t) => ({ value: t.teamId, label: t.teamName }));
 
   const columns: ColumnsType<OutputGridRow> = [
-    { title: text.columns.operation, key: 'op', render: (_, r) => `${r.operationCode} - ${r.operationName}` },
-    { title: text.columns.worker, key: 'worker', render: (_, r) => `${r.workerCode} - ${r.workerName}` },
+    {
+      title: text.columns.operation,
+      key: 'op',
+      render: (_, r) => `${r.operationCode} - ${r.operationName}`,
+    },
+    {
+      title: text.columns.worker,
+      key: 'worker',
+      render: (_, r) => `${r.workerCode} - ${r.workerName}`,
+    },
     {
       title: text.columns.qty,
       key: 'qty',
@@ -171,8 +197,19 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
           <Tag color="red">{text.tags.notAllocated}</Tag>
         ),
     },
-    { responsive: ['md'], title: text.columns.rate, dataIndex: 'unitRate', align: 'right', render: (v: number | null) => (v === null ? '—' : formatCurrency(v)) },
-    { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string | null) => formatDateTime(v) },
+    {
+      responsive: ['md'],
+      title: text.columns.rate,
+      dataIndex: 'unitRate',
+      align: 'right',
+      render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
+    },
+    {
+      responsive: ['md'],
+      title: text.columns.deadline,
+      dataIndex: 'editDeadline',
+      render: (v: string | null) => formatDateTime(v),
+    },
     {
       title: text.columns.warnings,
       key: 'warnings',
@@ -208,18 +245,13 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {isManager ? text.managerTitle : text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{isManager ? text.managerSubtitle : text.subtitle}</Typography.Text>
-      </div>
-
+    <PageCard
+      title={isManager ? text.managerTitle : text.title}
+      description={isManager ? text.managerSubtitle : text.subtitle}
+    >
       <Space wrap>
-        <DatePicker
+        <AppDatePicker
           allowClear={false}
-          format="DD/MM/YYYY"
           value={workDate}
           onChange={(v) => {
             setWorkDate(v ?? dayjs());
@@ -261,7 +293,9 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
           style={{ width: 300 }}
           showSearch
           optionFilterProp="label"
-          placeholder={orderId === null ? PRODUCTION_TEXT.selectFirst : PRODUCTION_TEXT.selectOrderLine}
+          placeholder={
+            orderId === null ? PRODUCTION_TEXT.selectFirst : PRODUCTION_TEXT.selectOrderLine
+          }
           disabled={orderId === null}
           loading={lines.isLoading}
           value={orderLineId ?? undefined}
@@ -282,7 +316,15 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
       )}
 
       {warnings.length > 0 && (
-        <Alert type="warning" showIcon message={warnings.map((w) => <div key={w}>{w}</div>)} closable onClose={() => setWarnings([])} />
+        <Alert
+          type="warning"
+          showIcon
+          message={warnings.map((w) => (
+            <div key={w}>{w}</div>
+          ))}
+          closable
+          onClose={() => setWarnings([])}
+        />
       )}
 
       {!isManager && query !== null && (
@@ -313,7 +355,10 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
               .map((m) => ({ value: m.employeeId, label: `${m.employeeCode} - ${m.fullName}` }))}
             onChange={setExtraWorkerId}
           />
-          <Button disabled={extraOperationId === undefined || extraWorkerId === undefined} onClick={addExtraRow}>
+          <Button
+            disabled={extraOperationId === undefined || extraWorkerId === undefined}
+            onClick={addExtraRow}
+          >
             {text.addRow}
           </Button>
         </Space>
@@ -329,7 +374,9 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
           {rows.map((r) => (
             <Card key={keyOf(r)} size="small" loading={grid.isFetching}>
               <Space direction="vertical" size={6} style={{ width: '100%' }}>
-                <Typography.Text strong>{`${r.operationCode} - ${r.operationName}`}</Typography.Text>
+                <Typography.Text
+                  strong
+                >{`${r.operationCode} - ${r.operationName}`}</Typography.Text>
                 <Typography.Text type="secondary">{`${r.workerCode} - ${r.workerName}`}</Typography.Text>
                 <Space size={4} wrap>
                   {r.isOutsideAssignment && <Tag color="orange">{text.tags.outside}</Tag>}
@@ -359,9 +406,9 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
           ))}
         </Space>
       ) : (
-        <Table<OutputGridRow>
+        <DataTable<OutputGridRow>
           rowKey={keyOf}
-          size="middle"
+          size="small"
           columns={columns}
           dataSource={rows}
           loading={grid.isFetching}
@@ -383,12 +430,17 @@ function OutputEntryBoard({ role }: { role: OutputRole }) {
               onChange={(e) => setReason(e.target.value)}
             />
           )}
-          <Button type="primary" loading={save.isPending} disabled={changedRows.length === 0} onClick={handleSave}>
+          <Button
+            type="primary"
+            loading={save.isPending}
+            disabled={changedRows.length === 0}
+            onClick={handleSave}
+          >
             {`${text.save}${changedRows.length > 0 ? ` (${changedRows.length})` : ''}`}
           </Button>
         </Space>
       )}
-    </Space>
+    </PageCard>
   );
 }
 

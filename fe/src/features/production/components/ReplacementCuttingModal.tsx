@@ -1,5 +1,16 @@
 import { useEffect } from 'react';
-import { Button, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Select, Space, Typography, message } from 'antd';
+import {
+  Button,
+  Descriptions,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Typography,
+  message,
+} from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
@@ -11,11 +22,16 @@ import { formatDate, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { PRODUCTION_KEY } from '../hooks/useProduction';
 import type { Defect } from '../types';
-import { modalWidth } from '../utils';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type Props = { defect: Defect | null; onClose: () => void };
 
-type FormValues = { panels: { productComponentMaterialId?: number; quantity: number }[]; targetDate?: Dayjs; content?: string };
+type FormValues = {
+  panels: { productComponentMaterialId?: number; quantity: number }[];
+  targetDate?: Dayjs;
+  content?: string;
+};
 
 const text = PRODUCTION_TEXT.replacement;
 
@@ -32,7 +48,9 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
   useEffect(() => {
     if (defect) {
       form.resetFields();
-      form.setFieldsValue({ panels: [{ productComponentMaterialId: undefined, quantity: Math.min(1, defect.quantity) }] });
+      form.setFieldsValue({
+        panels: [{ productComponentMaterialId: undefined, quantity: Math.min(1, defect.quantity) }],
+      });
     }
   }, [defect, form]);
 
@@ -65,7 +83,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
   return (
     <Modal
       open={defect !== null}
-      width={modalWidth(560)}
+      width={MODAL_WIDTH.sm}
       title={text.title}
       okText={text.submit}
       cancelText={MESSAGES.common.cancel}
@@ -110,15 +128,34 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                     </Form.Item>
                     <Form.Item
                       name={[field.name, 'quantity']}
-                      rules={[{ required: true, type: 'number', min: 1, max: defect?.quantity, message: text.qtyRange }]}
+                      rules={[
+                        {
+                          required: true,
+                          type: 'number',
+                          min: 1,
+                          max: defect?.quantity,
+                          message: text.qtyRange,
+                        },
+                      ]}
                       style={{ marginBottom: 0 }}
                     >
-                      <InputNumber min={1} max={defect?.quantity} precision={0} placeholder={text.quantity} />
+                      <InputNumber
+                        min={1}
+                        max={defect?.quantity}
+                        precision={0}
+                        placeholder={text.quantity}
+                      />
                     </Form.Item>
-                    {fields.length > 1 && <MinusCircleOutlined onClick={() => remove(field.name)} />}
+                    {fields.length > 1 && (
+                      <MinusCircleOutlined onClick={() => remove(field.name)} />
+                    )}
                   </Space>
                 ))}
-                <Button type="dashed" icon={<PlusOutlined />} onClick={() => add({ productComponentMaterialId: undefined, quantity: 1 })}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() => add({ productComponentMaterialId: undefined, quantity: 1 })}
+                >
                   {text.addPanel}
                 </Button>
               </Space>
@@ -126,7 +163,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
           </Form.List>
         </Form.Item>
         <Form.Item name="targetDate" label={text.targetDate}>
-          <DatePicker format="DD/MM/YYYY" />
+          <AppDatePicker />
         </Form.Item>
         <Form.Item name="content" label={text.content}>
           <Input.TextArea rows={2} maxLength={500} showCount />

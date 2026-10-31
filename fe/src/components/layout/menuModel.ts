@@ -91,7 +91,7 @@ export function buildNavigation(
   return { items, leaves };
 }
 
-/** Mục đang mở: đường dẫn dài nhất trùng đầu (để trang chi tiết /admin/orders/5 vẫn sáng "Đơn hàng"). */
+/** Mục đang mở: đường dẫn dài nhất trùng đầu (để trang con như /admin/orders/5/edit vẫn sáng "Đơn hàng"). */
 export function findActiveLeaf(pathname: string, leaves: readonly NavLeaf[]): NavLeaf | undefined {
   let best: NavLeaf | undefined;
   for (const leaf of leaves) {

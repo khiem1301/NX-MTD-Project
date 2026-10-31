@@ -24,20 +24,56 @@ const production = () => import('@/features/production');
 
 // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều): mỗi trang lazy load, chỉ mở cho role được dùng.
 const productionRoutes = [
-  { path: PRODUCTION_ROUTES.operations, roles: [ROLES.Accountant], page: async () => (await production()).OperationsPage },
-  { path: PRODUCTION_ROUTES.adminPieceRates, roles: [Admin], page: async () => (await production()).AdminPieceRatesPage },
+  {
+    path: PRODUCTION_ROUTES.operations,
+    roles: [ROLES.Accountant],
+    page: async () => (await production()).OperationsPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.adminPieceRates,
+    roles: [Admin],
+    page: async () => (await production()).AdminPieceRatesPage,
+  },
   {
     path: PRODUCTION_ROUTES.assignments,
     roles: [TeamLeader, TeamDeputy],
     page: async () => (await production()).OperationAssignmentsPage,
   },
-  { path: PRODUCTION_ROUTES.output, roles: [TeamLeader, TeamDeputy], page: async () => (await production()).OutputEntryPage },
-  { path: PRODUCTION_ROUTES.defects, roles: [TeamLeader, TeamDeputy], page: async () => (await production()).DefectRecordsPage },
-  { path: PRODUCTION_ROUTES.qcBatches, roles: [ROLES.QaQc], page: async () => (await production()).QcBatchesPage },
-  { path: PRODUCTION_ROUTES.managerOutput, roles: [Manager], page: async () => (await production()).ManagerOutputPage },
-  { path: PRODUCTION_ROUTES.managerDefects, roles: [Manager], page: async () => (await production()).ManagerDefectsPage },
-  { path: PRODUCTION_ROUTES.managerQcBatches, roles: [Manager], page: async () => (await production()).ManagerQcBatchesPage },
-  { path: PRODUCTION_ROUTES.myDefects, roles: [ROLES.Worker], page: async () => (await production()).MyDefectsPage },
+  {
+    path: PRODUCTION_ROUTES.output,
+    roles: [TeamLeader, TeamDeputy],
+    page: async () => (await production()).OutputEntryPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.defects,
+    roles: [TeamLeader, TeamDeputy],
+    page: async () => (await production()).DefectRecordsPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.qcBatches,
+    roles: [ROLES.QaQc],
+    page: async () => (await production()).QcBatchesPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.managerOutput,
+    roles: [Manager],
+    page: async () => (await production()).ManagerOutputPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.managerDefects,
+    roles: [Manager],
+    page: async () => (await production()).ManagerDefectsPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.managerQcBatches,
+    roles: [Manager],
+    page: async () => (await production()).ManagerQcBatchesPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.myDefects,
+    roles: [ROLES.Worker],
+    page: async () => (await production()).MyDefectsPage,
+  },
 ];
 
 // Kho, cắt (Thái): mỗi trang lazy load + chỉ mở cho role được dùng.
@@ -188,7 +224,12 @@ const orderRoutes = [
 const accountantProductRoutes = [
   {
     element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-    children: [{ path: ROUTES.accountantProducts, lazy: async () => ({ Component: (await orders()).ProductsPage }) }],
+    children: [
+      {
+        path: ROUTES.accountantProducts,
+        lazy: async () => ({ Component: (await orders()).ProductsPage }),
+      },
+    ],
   },
 ];
 
@@ -199,9 +240,21 @@ const teams = () => import('@/features/teams');
 const hrRoutes = [
   { path: ROUTES.profile, roles: undefined, page: async () => (await profile()).ProfilePage },
   { path: ROUTES.adminEmployees, roles: [Admin], page: async () => (await users()).EmployeesPage },
-  { path: `${ROUTES.adminEmployees}/:id`, roles: [Admin], page: async () => (await users()).EmployeeDetailPage },
-  { path: ROUTES.managerEmployees, roles: [Manager], page: async () => (await users()).EmployeesPage },
-  { path: `${ROUTES.managerEmployees}/:id`, roles: [Manager], page: async () => (await users()).EmployeeDetailPage },
+  {
+    path: `${ROUTES.adminEmployees}/:id`,
+    roles: [Admin],
+    page: async () => (await users()).EmployeeDetailRedirect,
+  },
+  {
+    path: ROUTES.managerEmployees,
+    roles: [Manager],
+    page: async () => (await users()).EmployeesPage,
+  },
+  {
+    path: `${ROUTES.managerEmployees}/:id`,
+    roles: [Manager],
+    page: async () => (await users()).EmployeeDetailRedirect,
+  },
   { path: ROUTES.teams, roles: [Admin, Manager], page: async () => (await teams()).TeamsPage },
 ].map(({ path, roles, page }) => ({
   element: <ProtectedRoute roles={roles} />,
@@ -229,11 +282,15 @@ export const router = createBrowserRouter([
 
           // --- Chấm công (Minh) ---
           {
-            element: <ProtectedRoute roles={Object.values(ROLES).filter((r) => r !== ROLES.Admin)} />,
+            element: (
+              <ProtectedRoute roles={Object.values(ROLES).filter((r) => r !== ROLES.Admin)} />
+            ),
             children: [
               {
                 path: ATTENDANCE_ROUTES.myAttendance,
-                lazy: async () => ({ Component: (await import('@/features/attendance')).MyAttendancePage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/attendance')).MyAttendancePage,
+                }),
               },
             ],
           },
@@ -242,7 +299,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: ATTENDANCE_ROUTES.attendance,
-                lazy: async () => ({ Component: (await import('@/features/attendance')).AttendancePage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/attendance')).AttendancePage,
+                }),
               },
             ],
           },
@@ -251,7 +310,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: ATTENDANCE_ROUTES.teamAttendance,
-                lazy: async () => ({ Component: (await import('@/features/attendance')).TeamAttendancePage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/attendance')).TeamAttendancePage,
+                }),
               },
             ],
           },
@@ -271,7 +332,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: MEAL_ROUTES.summary,
-                lazy: async () => ({ Component: (await import('@/features/meal')).MealSummaryPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/meal')).MealSummaryPage,
+                }),
               },
             ],
           },
@@ -281,7 +344,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: MEAL_ROUTES.settings,
-                lazy: async () => ({ Component: (await import('@/features/meal')).MealSettingsPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/meal')).MealSettingsPage,
+                }),
               },
             ],
           },
@@ -331,7 +396,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: PURCHASE_ROUTES.suppliers,
-                lazy: async () => ({ Component: (await import('@/features/purchase')).SuppliersPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/purchase')).SuppliersPage,
+                }),
               },
             ],
           },
@@ -340,7 +407,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: PURCHASE_ROUTES.orders,
-                lazy: async () => ({ Component: (await import('@/features/purchase')).PurchaseOrdersPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/purchase')).PurchaseOrdersPage,
+                }),
               },
             ],
           },
@@ -349,7 +418,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: PURCHASE_ROUTES.payments,
-                lazy: async () => ({ Component: (await import('@/features/purchase')).PurchasePaymentsPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/purchase')).PurchasePaymentsPage,
+                }),
               },
             ],
           },
@@ -373,7 +444,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: KPI_ROUTES.targets,
-                lazy: async () => ({ Component: (await import('@/features/kpi')).KpiTargetListPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/kpi')).KpiTargetListPage,
+                }),
               },
             ],
           },
@@ -384,7 +457,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: KPI_ROUTES.adminTargets,
-                lazy: async () => ({ Component: (await import('@/features/kpi')).AdminKpiTargetPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/kpi')).AdminKpiTargetPage,
+                }),
               },
             ],
           },
@@ -392,7 +467,7 @@ export const router = createBrowserRouter([
           // --- Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều, KI-01..KI-11) ---
           ...productionRoutes.map(({ path, roles, page }) => ({
             element: <ProtectedRoute roles={roles} />,
-            children: [{ path, lazy: async () => ({ Component: (await page()) }) }],
+            children: [{ path, lazy: async () => ({ Component: await page() }) }],
           })),
 
           // --- Doanh thu (Minh, UC27, GBR-02: Kế toán + Admin) ---
@@ -401,7 +476,9 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: REVENUE_ROUTES.accountant,
-                lazy: async () => ({ Component: (await import('@/features/revenue')).AccountantRevenuePage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/revenue')).AccountantRevenuePage,
+                }),
               },
             ],
           },
@@ -410,19 +487,25 @@ export const router = createBrowserRouter([
             children: [
               {
                 path: REVENUE_ROUTES.admin,
-                lazy: async () => ({ Component: (await import('@/features/revenue')).AdminRevenuePage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/revenue')).AdminRevenuePage,
+                }),
               },
 
               // --- Hòa vốn + giá trị thặng dư (Minh, UC11, chỉ Admin, GBR-02) ---
               {
                 path: BREAK_EVEN_ROUTES.admin,
-                lazy: async () => ({ Component: (await import('@/features/break-even')).BreakEvenPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/break-even')).BreakEvenPage,
+                }),
               },
 
               // --- Tổng hợp chi phí (Minh, MI-19, UC12, chỉ Admin, GBR-02) ---
               {
                 path: COST_SUMMARY_ROUTES.admin,
-                lazy: async () => ({ Component: (await import('@/features/cost-summary')).CostSummaryPage }),
+                lazy: async () => ({
+                  Component: (await import('@/features/cost-summary')).CostSummaryPage,
+                }),
               },
             ],
           },

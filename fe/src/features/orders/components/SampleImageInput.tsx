@@ -31,10 +31,20 @@ export function SampleImageInput({ value, onChange }: Props) {
     <Space direction="vertical">
       {value && <ProductImage value={value} size={96} />}
       <Space>
-        <Upload accept="image/png,image/jpeg,image/webp" showUploadList={false} beforeUpload={beforeUpload}>
-          <Button loading={uploading}>{value ? MESSAGES.orders.changeImage : MESSAGES.orders.chooseImage}</Button>
+        <Upload
+          accept="image/png,image/jpeg,image/webp"
+          showUploadList={false}
+          beforeUpload={beforeUpload}
+        >
+          <Button loading={uploading}>
+            {value ? MESSAGES.orders.changeImage : MESSAGES.orders.chooseImage}
+          </Button>
         </Upload>
-        {value && <Button danger onClick={() => onChange?.(undefined)}>{MESSAGES.orders.removeImage}</Button>}
+        {value && (
+          <Button danger onClick={() => onChange?.(undefined)}>
+            {MESSAGES.orders.removeImage}
+          </Button>
+        )}
       </Space>
       <Typography.Text type="secondary">{MESSAGES.orders.imageHint}</Typography.Text>
     </Space>

@@ -88,7 +88,8 @@ export const MONTHLY_COST_ROW_STATUS_LABEL: Record<MonthlyCostRowStatus, StatusL
   Duplicate: { text: MONTHLY_COST_TEXT.rowStatusLabel.Duplicate, color: 'gold' },
 };
 
-export const MONTHLY_COST_CATEGORY_LABEL: Record<MonthlyCostCategory, string> = MONTHLY_COST_TEXT.categoryLabel;
+export const MONTHLY_COST_CATEGORY_LABEL: Record<MonthlyCostCategory, string> =
+  MONTHLY_COST_TEXT.categoryLabel;
 
 export const MONTHLY_COST_TYPE_LABEL: Record<MonthlyCostType, StatusLabel> = {
   Fixed: { text: MONTHLY_COST_TEXT.typeLabel.Fixed, color: 'default' },

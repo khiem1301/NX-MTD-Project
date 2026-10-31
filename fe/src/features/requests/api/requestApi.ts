@@ -17,9 +17,13 @@ export const requestApi = {
   types: async (): Promise<RequestTypeOption[]> =>
     data(await apiClient.get<ApiResponse<RequestTypeOption[]>>(API.requests.types)),
   mine: async (params: RequestListQuery): Promise<Paginated<RequestListItem>> =>
-    data(await apiClient.get<ApiResponse<Paginated<RequestListItem>>>(API.requests.base, { params })),
+    data(
+      await apiClient.get<ApiResponse<Paginated<RequestListItem>>>(API.requests.base, { params }),
+    ),
   inbox: async (params: RequestListQuery): Promise<Paginated<RequestListItem>> =>
-    data(await apiClient.get<ApiResponse<Paginated<RequestListItem>>>(API.requests.inbox, { params })),
+    data(
+      await apiClient.get<ApiResponse<Paginated<RequestListItem>>>(API.requests.inbox, { params }),
+    ),
   detail: async (id: number): Promise<RequestDetail> =>
     data(await apiClient.get<ApiResponse<RequestDetail>>(API.requests.byId(id))),
   /** BE trả Id đơn mới. */

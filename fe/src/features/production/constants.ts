@@ -22,12 +22,14 @@ export const PRODUCTION_TEXT = {
     addTitle: 'Thêm công đoạn',
     addHint: 'Thêm một công đoạn cho mã hàng đang chọn, rồi nhập đơn giá và gửi Admin duyệt.',
     importExcel: 'Nhập từ Excel',
-    noFinalStep: 'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
+    noFinalStep:
+      'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
     import: {
       title: 'Nhập công đoạn từ file Excel quy trình công nghệ',
       hint: 'File có bảng với các cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT. Mã công đoạn tự sinh từ STT (STT 7 thành OP07), nhập lại file sẽ cập nhật đúng công đoạn cũ, không tạo trùng.',
       chooseFile: 'Bấm hoặc kéo file .xlsx vào đây',
-      chooseFileHint: 'Chỉ đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ. Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
+      chooseFileHint:
+        'Chỉ đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ. Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
       productInFile: 'Mã hàng ghi trong file',
       productCheck: 'Đối chiếu với mã hàng bạn đang chọn trước khi nhập.',
       sheet: 'Sheet',
@@ -37,7 +39,8 @@ export const PRODUCTION_TEXT = {
       preview: 'Xem trước',
       confirm: 'Nhập công đoạn',
       confirmTitle: 'Nhập công đoạn vào mã hàng?',
-      confirmContent: 'Công đoạn mới được thêm, công đoạn trùng mã được cập nhật. Không công đoạn nào bị xóa.',
+      confirmContent:
+        'Công đoạn mới được thêm, công đoạn trùng mã được cập nhật. Không công đoạn nào bị xóa.',
       summary: { created: 'Thêm mới', updated: 'Cập nhật', unchanged: 'Không đổi', error: 'Lỗi' },
       resultTemplate:
         'Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi.',
@@ -46,9 +49,24 @@ export const PRODUCTION_TEXT = {
       noRateColumn: 'File không có cột TIỀN nên không nhập được đơn giá.',
       effectiveDate: 'Đơn giá hiệu lực từ',
       submitRates: 'Gửi Admin duyệt luôn (bỏ chọn thì lưu Nháp)',
-      rateHint: 'Đơn giá cùng ngày đã chờ duyệt hoặc đã duyệt với giá khác sẽ được bỏ qua; đơn giá bằng giá hiện hành không tạo thêm.',
-      rateSummary: { created: 'Đơn giá mới', updated: 'Đơn giá cập nhật', unchanged: 'Đơn giá không đổi', skipped: 'Đơn giá bỏ qua' },
-      columns: { stt: 'STT', code: 'Mã', name: 'Bước công việc', skill: 'Bậc', time: 'TG chuẩn (giây)', equipment: 'Thiết bị', rate: 'Đơn giá (đ)', action: 'Kết quả' },
+      rateHint:
+        'Đơn giá cùng ngày đã chờ duyệt hoặc đã duyệt với giá khác sẽ được bỏ qua; đơn giá bằng giá hiện hành không tạo thêm.',
+      rateSummary: {
+        created: 'Đơn giá mới',
+        updated: 'Đơn giá cập nhật',
+        unchanged: 'Đơn giá không đổi',
+        skipped: 'Đơn giá bỏ qua',
+      },
+      columns: {
+        stt: 'STT',
+        code: 'Mã',
+        name: 'Bước công việc',
+        skill: 'Bậc',
+        time: 'TG chuẩn (giây)',
+        equipment: 'Thiết bị',
+        rate: 'Đơn giá (đ)',
+        action: 'Kết quả',
+      },
       rateAction: {
         New: { text: 'Đơn giá mới', color: 'green' },
         Update: { text: 'Cập nhật giá', color: 'blue' },
@@ -89,9 +107,11 @@ export const PRODUCTION_TEXT = {
       isFinal: 'Là công đoạn cuối (tính hàng hoàn thiện)',
       usesSemiFinished: 'Giao việc kèm BTP (công đoạn nhận BTP từ tổ, vd ráp thân)',
       group: 'Công đoạn to',
-      groupHint: 'Chọn hoặc gõ tên mới (vd May tay) để nhóm các công đoạn nhỏ; tìm theo tên này ở màn Giao việc.',
+      groupHint:
+        'Chọn hoặc gõ tên mới (vd May tay) để nhóm các công đoạn nhỏ; tìm theo tên này ở màn Giao việc.',
       components: 'Chi tiết công đoạn làm trên',
-      componentsHint: 'Một công đoạn có thể làm trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước, Thân sau). Bỏ trống nếu không gắn chi tiết.',
+      componentsHint:
+        'Một công đoạn có thể làm trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước, Thân sau). Bỏ trống nếu không gắn chi tiết.',
     },
     filterGroup: 'Lọc theo công đoạn to',
     searchOperation: 'Tìm tên hoặc mã công đoạn',
@@ -140,7 +160,11 @@ export const PRODUCTION_TEXT = {
       rateMin: 'Đơn giá phải lớn hơn hoặc bằng 0.',
       currentRate: 'Đơn giá hiện hành',
     },
-    done: { submitted: 'Đã gửi duyệt.', approved: 'Đã duyệt đơn giá.', rejected: 'Đã từ chối đơn giá.' },
+    done: {
+      submitted: 'Đã gửi duyệt.',
+      approved: 'Đã duyệt đơn giá.',
+      rejected: 'Đã từ chối đơn giá.',
+    },
     status: {
       Draft: { text: 'Nháp', color: 'default' },
       PendingApproval: { text: 'Chờ duyệt', color: 'orange' },
@@ -162,10 +186,21 @@ export const PRODUCTION_TEXT = {
     copy: 'Chép từ đơn khác',
     copyTitle: 'Chép phân công từ đơn khác',
     copyFrom: 'Đơn nguồn',
-    copyHint: 'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
-    columns: { product: 'Mã hàng', operation: 'Công đoạn', worker: 'Công nhân', validFrom: 'Từ ngày' },
+    copyHint:
+      'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
+    columns: {
+      product: 'Mã hàng',
+      operation: 'Công đoạn',
+      worker: 'Công nhân',
+      validFrom: 'Từ ngày',
+    },
     form: { operation: 'Công đoạn', operations: 'Công đoạn (chọn nhiều)', worker: 'Công nhân' },
-    done: { assigned: 'Đã phân công.', replaced: 'Đã đổi công nhân.', closed: 'Đã bỏ phân công.', copied: 'Đã chép phân công.' },
+    done: {
+      assigned: 'Đã phân công.',
+      replaced: 'Đã đổi công nhân.',
+      closed: 'Đã bỏ phân công.',
+      copied: 'Đã chép phân công.',
+    },
     empty: 'Đơn này chưa có phân công cho tổ của bạn.',
   },
 
@@ -174,7 +209,8 @@ export const PRODUCTION_TEXT = {
     managerTitle: 'Sửa sản lượng sau hạn',
     subtitle:
       'Nhập số sản phẩm của từng công nhân theo công đoạn trong ca. Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
-    managerSubtitle: 'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký.',
+    managerSubtitle:
+      'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký.',
     date: 'Ngày làm việc',
     shift: 'Ca',
     team: 'Tổ may',
@@ -182,8 +218,10 @@ export const PRODUCTION_TEXT = {
     reason: 'Lý do sửa (bắt buộc khi sửa sau hạn)',
     reasonRequired: 'Vui lòng nhập lý do khi sửa sau hạn.',
     received: 'BTP tổ đã nhận từ kho',
-    allocatedHelp: 'Sản lượng của mỗi công nhân không vượt số lần được giao (màn Giao việc) ở đúng công đoạn đó.',
-    noRows: 'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước, hoặc thêm dòng ngoài phân công bên trên.',
+    allocatedHelp:
+      'Sản lượng của mỗi công nhân không vượt số lần được giao (màn Giao việc) ở đúng công đoạn đó.',
+    noRows:
+      'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước, hoặc thêm dòng ngoài phân công bên trên.',
     addOutside: 'Thêm dòng ngoài phân công',
     addRow: 'Thêm dòng',
     removeRow: 'Bỏ dòng',
@@ -205,7 +243,10 @@ export const PRODUCTION_TEXT = {
       locked: 'Hết hạn sửa',
     },
     resultTemplate: 'Đã lưu: thêm {0}, sửa {1}, xóa {2}.',
-    shiftLabel: { Morning: 'Ca sáng', Afternoon: 'Ca chiều', Overtime: 'Tăng ca' } as Record<ShiftCode, string>,
+    shiftLabel: { Morning: 'Ca sáng', Afternoon: 'Ca chiều', Overtime: 'Tăng ca' } as Record<
+      ShiftCode,
+      string
+    >,
   },
 
   qc: {
@@ -244,7 +285,11 @@ export const PRODUCTION_TEXT = {
       qtyMin: 'Số hàng đạt phải lớn hơn 0.',
       reason: 'Lý do (bắt buộc khi sửa sau hết ca)',
     },
-    done: { created: 'Đã thêm đợt kiểm.', updated: 'Đã cập nhật đợt kiểm.', deleted: 'Đã xóa đợt kiểm.' },
+    done: {
+      created: 'Đã thêm đợt kiểm.',
+      updated: 'Đã cập nhật đợt kiểm.',
+      deleted: 'Đã xóa đợt kiểm.',
+    },
   },
 
   defects: {
@@ -252,7 +297,8 @@ export const PRODUCTION_TEXT = {
     managerTitle: 'Hàng hỏng của các tổ',
     subtitle:
       'Ghi hàng hỏng (sửa lại hoặc hủy) và công nhân gây lỗi. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
-    managerSubtitle: 'Quản đốc xem phiếu hàng hỏng của các tổ và hủy phiếu ghi sai (bắt buộc lý do).',
+    managerSubtitle:
+      'Quản đốc xem phiếu hàng hỏng của các tổ và hủy phiếu ghi sai (bắt buộc lý do).',
     add: 'Ghi hàng hỏng',
     addTitle: 'Ghi hàng hỏng',
     cancel: 'Hủy phiếu',
@@ -288,7 +334,10 @@ export const PRODUCTION_TEXT = {
       note: 'Ghi chú',
       noteRequired: 'Lý do "Khác" bắt buộc ghi chú.',
     },
-    done: { created: 'Đã ghi hàng hỏng và thông báo cho công nhân.', cancelled: 'Đã hủy phiếu hàng hỏng.' },
+    done: {
+      created: 'Đã ghi hàng hỏng và thông báo cho công nhân.',
+      cancelled: 'Đã hủy phiếu hàng hỏng.',
+    },
     type: {
       Rework: { text: 'Sửa lại', color: 'gold' },
       Scrap: { text: 'Hủy (trừ lương)', color: 'red' },
@@ -328,7 +377,8 @@ export const PRODUCTION_TEXT = {
 
   myDefects: {
     title: 'Hàng hỏng của tôi',
-    subtitle: 'Các phiếu hàng hỏng tổ trưởng ghi cho bạn. Hàng hủy trừ vào lương tạm tính; nếu ghi sai hãy phản hồi.',
+    subtitle:
+      'Các phiếu hàng hỏng tổ trưởng ghi cho bạn. Hàng hủy trừ vào lương tạm tính; nếu ghi sai hãy phản hồi.',
     object: 'Phản hồi',
     objectTitle: 'Phản hồi phiếu hàng hỏng',
     objection: 'Nội dung phản hồi',
@@ -345,14 +395,17 @@ export const shiftText = (shift: string | null | undefined): string => {
   return PRODUCTION_TEXT.output.shiftLabel[key] ?? shift;
 };
 
-export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as ShiftCode[]).map((value) => ({
-  value,
-  label: PRODUCTION_TEXT.output.shiftLabel[value],
-}));
+export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as ShiftCode[]).map(
+  (value) => ({
+    value,
+    label: PRODUCTION_TEXT.output.shiftLabel[value],
+  }),
+);
 
 /** Lý do tổ trưởng được chọn khi ghi phiếu hàng hỏng. */
-export const DEFECT_REASON_OPTIONS = (Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[])
-  .map((value) => ({
+export const DEFECT_REASON_OPTIONS = (
+  Object.keys(PRODUCTION_TEXT.defects.reason) as DefectReason[]
+).map((value) => ({
   value,
   label: PRODUCTION_TEXT.defects.reason[value],
 }));

@@ -28,16 +28,28 @@ export function ProfilePage() {
         <QueryError error={profile.error} onRetry={() => void profile.refetch()} />
         {p && (
           <Space align="start" size="large" wrap>
-            <Avatar size={72} src={p.avatarUrl ?? undefined}>{p.fullName.slice(0, 1)}</Avatar>
+            <Avatar size={72} src={p.avatarUrl ?? undefined}>
+              {p.fullName.slice(0, 1)}
+            </Avatar>
             <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label={MESSAGES.hr.employeeCode}>{p.employeeCode}</Descriptions.Item>
+              <Descriptions.Item label={MESSAGES.hr.employeeCode}>
+                {p.employeeCode}
+              </Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.fullName}>{p.fullName}</Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.role}>{p.roleName}</Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.team}>{p.teamName ?? '—'}</Descriptions.Item>
-              <Descriptions.Item label={MESSAGES.hr.startDate}>{formatDate(p.startDate)}</Descriptions.Item>
-              <Descriptions.Item label={MESSAGES.hr.dateOfBirth}>{formatDate(p.dateOfBirth)}</Descriptions.Item>
+              <Descriptions.Item label={MESSAGES.hr.startDate}>
+                {formatDate(p.startDate)}
+              </Descriptions.Item>
+              <Descriptions.Item label={MESSAGES.hr.dateOfBirth}>
+                {formatDate(p.dateOfBirth)}
+              </Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.phone}>{p.phone ?? '—'}</Descriptions.Item>
-              {p.currentGradeCode && <Descriptions.Item label={MESSAGES.hr.grade}>{p.currentGradeCode}</Descriptions.Item>}
+              {p.currentGradeCode && (
+                <Descriptions.Item label={MESSAGES.hr.grade}>
+                  {p.currentGradeCode}
+                </Descriptions.Item>
+              )}
             </Descriptions>
           </Space>
         )}

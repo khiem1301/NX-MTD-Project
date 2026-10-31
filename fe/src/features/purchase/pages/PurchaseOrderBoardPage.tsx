@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { Button, Card, Space, Typography } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Space } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { PurchaseOrderFormModal } from '@/features/warehouse/components/PurchaseOrderFormModal';
-import { PurchaseOrderDrawer } from '../components/PurchaseOrderDrawer';
+import { PurchaseOrderModal } from '../components/PurchaseOrderModal';
 import { PurchaseOrderTable } from '../components/PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { usePurchaseOrders } from '../hooks/usePurchase';
 import type { PoGoodsStatus, PoPaymentStatus, PurchaseRole } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { PageCard } from '@/components/common/PageCard';
 
 type Filters = { keyword?: string; goodsStatus?: PoGoodsStatus; paymentStatus?: PoPaymentStatus };
 
@@ -26,19 +28,17 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
   const [creating, setCreating] = useState(false);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between' }} align="start">
-        <div>
-          <Typography.Title level={3} style={{ marginBottom: 4 }}>
-            {isManager ? PURCHASE_TEXT.ordersTitle : PURCHASE_TEXT.paymentsTitle}
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            {isManager ? PURCHASE_TEXT.ordersSubtitle : PURCHASE_TEXT.paymentsSubtitle}
-          </Typography.Text>
-        </div>
-        {isManager && <Button type="primary" onClick={() => setCreating(true)}>{PURCHASE_TEXT.createOrder}</Button>}
-      </Space>
-
+    <PageCard
+      title={isManager ? PURCHASE_TEXT.ordersTitle : PURCHASE_TEXT.paymentsTitle}
+      description={isManager ? PURCHASE_TEXT.ordersSubtitle : PURCHASE_TEXT.paymentsSubtitle}
+      extra={
+        isManager && (
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>
+            {PURCHASE_TEXT.createOrder}
+          </Button>
+        )
+      }
+    >
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
           <Space wrap>
@@ -49,18 +49,24 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
               onSearch={(value) => table.setFilters({ keyword: value.trim() || undefined })}
             />
             {isManager && (
-              <FilterSelect value={table.filters.goodsStatus}
+              <FilterSelect
+                value={table.filters.goodsStatus}
                 placeholder={PURCHASE_TEXT.allGoodsStatus}
                 style={{ width: 200 }}
                 options={GOODS_STATUS_OPTIONS}
-                onChange={(value: PoGoodsStatus | undefined) => table.setFilters({ goodsStatus: value })}
+                onChange={(value: PoGoodsStatus | undefined) =>
+                  table.setFilters({ goodsStatus: value })
+                }
               />
             )}
-            <FilterSelect value={table.filters.paymentStatus}
+            <FilterSelect
+              value={table.filters.paymentStatus}
               placeholder={PURCHASE_TEXT.allPaymentStatus}
               style={{ width: 200 }}
               options={PAYMENT_STATUS_OPTIONS}
-              onChange={(value: PoPaymentStatus | undefined) => table.setFilters({ paymentStatus: value })}
+              onChange={(value: PoPaymentStatus | undefined) =>
+                table.setFilters({ paymentStatus: value })
+              }
             />
           </Space>
           <QueryError error={orders.error} onRetry={() => void orders.refetch()} />
@@ -72,9 +78,9 @@ function PurchaseOrderBoardPage({ role }: { role: PurchaseRole }) {
           />
         </Space>
       </Card>
-      <PurchaseOrderDrawer role={role} />
+      <PurchaseOrderModal role={role} />
       {isManager && <PurchaseOrderFormModal open={creating} onClose={() => setCreating(false)} />}
-    </Space>
+    </PageCard>
   );
 }
 

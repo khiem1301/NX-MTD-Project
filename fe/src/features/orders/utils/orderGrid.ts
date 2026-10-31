@@ -28,7 +28,13 @@ export const fromLines = (lines: OrderLine[]): ProductBlock[] => {
     const blockKey = `${l.productId}|${l.cmtUnitPrice}`;
     let block = blocks.get(blockKey);
     if (!block) {
-      block = { key: blockKey, productId: l.productId, cmtUnitPrice: l.cmtUnitPrice, sizes: [], rows: [] };
+      block = {
+        key: blockKey,
+        productId: l.productId,
+        cmtUnitPrice: l.cmtUnitPrice,
+        sizes: [],
+        rows: [],
+      };
       blocks.set(blockKey, block);
     }
     block.sizes.push(l.sizeCode);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -8,7 +9,7 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import type { WorkOrderListItem } from '@/types/workOrder';
 import { formatDate } from '@/utils/format';
-import { WorkOrderDetailDrawer } from '../components/WorkOrderDetailDrawer';
+import { WorkOrderDetailModal } from '../components/WorkOrderDetailModal';
 import { ReplacementWorkOrderModal } from '../components/ReplacementWorkOrderModal';
 import { WorkOrderFormModal } from '../components/WorkOrderFormModal';
 import { LABELS, WORK_ORDER_STATUS_LABEL } from '../constants';
@@ -16,6 +17,9 @@ import { useWorkOrders } from '../hooks/useCutting';
 import type { WorkOrder } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -43,7 +47,9 @@ export function WorkOrderListPage() {
     {
       title: LABELS.workOrderCode,
       dataIndex: 'workOrderCode',
-      render: (v: string, w) => <a onClick={() => setViewingId(w.workOrderId)}>{v}</a>,
+      render: (v: string, w) => (
+        <DetailLink onClick={() => setViewingId(w.workOrderId)}>{v}</DetailLink>
+      ),
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.product, dataIndex: 'productCode' },
@@ -64,37 +70,41 @@ export function WorkOrderListPage() {
         <Can roles={[ROLES.Manager]}>
           <Space>
             <Button onClick={() => setReplacementOpen(true)}>{LABELS.createReplacement}</Button>
-            <Button type="primary" onClick={() => openForm(null)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
               {MESSAGES.common.create}
             </Button>
           </Space>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 160 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 160 }}
+            />
+          </>
+        }
+      />
       <QueryError error={workOrders.error} onRetry={() => void workOrders.refetch()} />
-      <Table
+      <DataTable
         rowKey="workOrderId"
         columns={columns}
         dataSource={workOrders.data?.items}
         loading={workOrders.isFetching}
         pagination={table.pagination(workOrders.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <WorkOrderDetailDrawer
+      <WorkOrderDetailModal
         workOrderId={viewingId}
         onClose={() => setViewingId(undefined)}
         onEdit={openForm}

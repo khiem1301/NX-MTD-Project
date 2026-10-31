@@ -23,7 +23,11 @@ export function LatestNotificationsCard() {
       }
       style={{ marginTop: 16 }}
       loading={list.isLoading}
-      extra={<Button type="link" onClick={() => navigate(ROUTES.notifications)}>Xem tất cả</Button>}
+      extra={
+        <Button type="link" onClick={() => navigate(ROUTES.notifications)}>
+          Xem tất cả
+        </Button>
+      }
     >
       <List
         locale={{ emptyText: 'Không có thông báo mới.' }}
@@ -45,7 +49,9 @@ export function LatestNotificationsCard() {
               }
               description={
                 <>
-                  <Typography.Paragraph style={{ marginBottom: 0 }}>{n.message}</Typography.Paragraph>
+                  <Typography.Paragraph style={{ marginBottom: 0 }}>
+                    {n.message}
+                  </Typography.Paragraph>
                   <Typography.Text type="secondary">{formatDateTime(n.createdAt)}</Typography.Text>
                 </>
               }

@@ -1,8 +1,4 @@
-import type {
-  ProductNormItem,
-  ProductSpec,
-  SaveProductSpecPayload,
-} from '../types';
+import type { ProductNormItem, ProductSpec, SaveProductSpecPayload } from '../types';
 
 /** Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều biến thể (màu × size) cùng lúc. */
 export type NormRow = {
@@ -16,9 +12,22 @@ export type NormRow = {
   variantKeys: string[];
 };
 
-export type ComponentRow = { key: string; productComponentId: number | null; componentName: string; componentType: 'Panel' | 'Trim'; piecesPerGarment: number };
+export type ComponentRow = {
+  key: string;
+  productComponentId: number | null;
+  componentName: string;
+  componentType: 'Panel' | 'Trim';
+  piecesPerGarment: number;
+};
 /** Màu – size do đơn hàng tạo (chỉ đọc); chỉ sửa kích thước thành phẩm. */
-export type VariantRow = { key: string; productVariantId: number | null; color: string; sizeCode: string; lengthCm: number | null; widthCm: number | null };
+export type VariantRow = {
+  key: string;
+  productVariantId: number | null;
+  color: string;
+  sizeCode: string;
+  lengthCm: number | null;
+  widthCm: number | null;
+};
 
 export const variantKey = (color: string, sizeCode: string) =>
   `${color.trim().toUpperCase()}|${sizeCode.trim().toUpperCase()}`;
@@ -33,7 +42,11 @@ export const newKey = () => `k${++counter}`;
  * Máy chủ lưu định mức theo từng biến thể; trên màn hình gộp các biến thể có cùng định mức thành một dòng
  * (đỡ nhập lặp) và chỉ giữ thành phần / biến thể còn dùng.
  */
-export function toRows(spec: ProductSpec): { components: ComponentRow[]; variants: VariantRow[]; norms: NormRow[] } {
+export function toRows(spec: ProductSpec): {
+  components: ComponentRow[];
+  variants: VariantRow[];
+  norms: NormRow[];
+} {
   const components = spec.components
     .filter((c) => c.status === 'Active')
     .map<ComponentRow>((c) => ({
@@ -58,7 +71,11 @@ export function toRows(spec: ProductSpec): { components: ComponentRow[]; variant
   const activeVariants = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
   const groups = new Map<string, NormRow>();
   for (const n of spec.norms) {
-    if (!activeComponents.has(n.componentName.toUpperCase()) || !activeVariants.has(variantKey(n.color, n.sizeCode))) continue;
+    if (
+      !activeComponents.has(n.componentName.toUpperCase()) ||
+      !activeVariants.has(variantKey(n.color, n.sizeCode))
+    )
+      continue;
     const k = sameRowKey(n);
     const row = groups.get(k) ?? {
       key: newKey(),
@@ -76,14 +93,25 @@ export function toRows(spec: ProductSpec): { components: ComponentRow[]; variant
 }
 
 /** Lỗi nhập định mức (hiện cho người dùng trước khi gửi); chuỗi rỗng = hợp lệ. */
-export function validate(components: ComponentRow[], variants: VariantRow[], norms: NormRow[]): string {
+export function validate(
+  components: ComponentRow[],
+  variants: VariantRow[],
+  norms: NormRow[],
+): string {
   if (components.some((c) => !c.componentName.trim())) return 'Mỗi thành phần phải có tên.';
-  if (new Set(components.map((c) => c.componentName.trim().toUpperCase())).size !== components.length) return 'Tên thành phần bị trùng.';
-  if (variants.some((v) => !v.color.trim() || !v.sizeCode.trim())) return 'Mỗi biến thể phải có màu và size.';
-  if (new Set(variants.map((v) => variantKey(v.color, v.sizeCode))).size !== variants.length) return 'Màu – size bị trùng.';
+  if (
+    new Set(components.map((c) => c.componentName.trim().toUpperCase())).size !== components.length
+  )
+    return 'Tên thành phần bị trùng.';
+  if (variants.some((v) => !v.color.trim() || !v.sizeCode.trim()))
+    return 'Mỗi biến thể phải có màu và size.';
+  if (new Set(variants.map((v) => variantKey(v.color, v.sizeCode))).size !== variants.length)
+    return 'Màu – size bị trùng.';
   for (const n of norms) {
-    if (!n.componentName || n.materialId === undefined) return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
-    if (n.variantKeys.length === 0) return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
+    if (!n.componentName || n.materialId === undefined)
+      return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
+    if (n.variantKeys.length === 0)
+      return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
   }
   const seen = new Set<string>();
   for (const n of norms) {
@@ -97,7 +125,11 @@ export function validate(components: ComponentRow[], variants: VariantRow[], nor
 }
 
 /** Nở mỗi dòng định mức ra từng biến thể (máy chủ lưu theo biến thể × thành phần × NVL). */
-export function toPayload(components: ComponentRow[], variants: VariantRow[], norms: NormRow[]): SaveProductSpecPayload {
+export function toPayload(
+  components: ComponentRow[],
+  variants: VariantRow[],
+  norms: NormRow[],
+): SaveProductSpecPayload {
   const byKey = new Map(variants.map((v) => [variantKey(v.color, v.sizeCode), v]));
   return {
     components: components.map((c) => ({

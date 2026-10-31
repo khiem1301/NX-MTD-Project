@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Space, Table, Typography, type TableColumnsType } from 'antd';
+import { Card, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -11,6 +11,9 @@ import { useShortDeliveries } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; awaitingReplenish?: boolean };
 
@@ -29,7 +32,9 @@ export function ShortDeliveryListPage() {
     {
       title: LABELS.shortageCode,
       dataIndex: 'requestCode',
-      render: (v: string, r) => <a onClick={() => setViewingId(r.requestId)}>{v}</a>,
+      render: (v: string, r) => (
+        <DetailLink onClick={() => setViewingId(r.requestId)}>{v}</DetailLink>
+      ),
     },
     { title: LABELS.receiptCode, dataIndex: 'receiptCode' },
     { title: LABELS.purchaseOrder, dataIndex: 'poCode', render: (v: string | null) => v ?? '—' },
@@ -54,28 +59,34 @@ export function ShortDeliveryListPage() {
 
   return (
     <Card title={LABELS.shortagesTitle}>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.awaitingReplenish ? 'awaiting' : undefined}
-          placeholder={LABELS.status}
-          options={SCOPE_OPTIONS}
-          onChange={(scope) => table.setFilters({ awaitingReplenish: scope === 'awaiting' ? true : undefined })}
-          style={{ width: 220 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.awaitingReplenish ? 'awaiting' : undefined}
+              placeholder={LABELS.status}
+              options={SCOPE_OPTIONS}
+              onChange={(scope) =>
+                table.setFilters({ awaitingReplenish: scope === 'awaiting' ? true : undefined })
+              }
+              style={{ width: 220 }}
+            />
+          </>
+        }
+      />
       <QueryError error={list.error} onRetry={() => void list.refetch()} />
-      <Table
+      <DataTable
         rowKey="requestId"
         columns={columns}
         dataSource={list.data?.items}
         loading={list.isFetching}
         pagination={table.pagination(list.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
       <ShortDeliveryModal
         key={viewingId ?? 'none'}

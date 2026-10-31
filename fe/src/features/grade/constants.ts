@@ -1,10 +1,5 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
 
-export const GRADE_OPTIONS = ['A', 'B', 'C', 'D'].map((value) => ({
-  value,
-  label: `Bậc ${value}`,
-}));
-
 export const EVAL_STATUS = {
   SUBMITTED: 'SUBMITTED',
   APPLIED: 'APPLIED',
@@ -20,10 +15,26 @@ export const EVAL_STATUS_LABEL: Record<string, StatusLabel> = {
 export const GR_LABELS = {
   title: 'Bậc thợ',
   evaluationsTab: 'Đề xuất bậc',
-  levelsTab: 'Mức tiền bậc',
+  levelsTab: 'Bậc & mức tiền',
+  addCode: 'Thêm bậc',
+  searchGrade: 'Tìm theo mã, tên bậc...',
+  editCode: 'Sửa bậc',
+  codeHint:
+    'Mỗi dòng là một bậc và mức tiền đang áp dụng. Đổi tiền = thêm mức mới theo ngày hiệu lực, mức cũ giữ làm lịch sử. Bậc đã có người, đề xuất hoặc tiền bậc dùng thì không xóa được, chỉ ngừng dùng.',
+  codeCode: 'Mã bậc (chữ hoa / số, tối đa 5 ký tự)',
+  active: 'Đang dùng',
+  inactive: 'Ngừng dùng',
+  inUse: 'Đã được dùng',
+  deactivate: 'Ngừng dùng',
+  reactivate: 'Dùng lại',
+  deleteConfirm: 'Xóa bậc này?',
+  deleteLevelConfirm: 'Xóa mức tiền bậc chưa hiệu lực này?',
+  editLevel: 'Sửa mức tiền bậc',
+  futureOnlyHint: 'Mức đã có hiệu lực là lịch sử lương, không sửa hoặc xóa.',
   propose: 'Đề xuất bậc',
   setDirect: 'Đặt bậc trực tiếp',
-  setDirectHint: 'Đặt bậc ngay, không cần tổ trưởng đề xuất. Đề xuất đang chờ của công nhân này (nếu có) sẽ bị đóng lại.',
+  setDirectHint:
+    'Đặt bậc ngay, không cần tổ trưởng đề xuất. Đề xuất đang chờ của công nhân này (nếu có) sẽ bị đóng lại.',
   newGrade: 'Bậc mới',
   setReason: 'Lý do',
   worker: 'Công nhân',
@@ -46,7 +57,19 @@ export const GR_LABELS = {
   notApplyTitle: 'Không áp dụng đề xuất bậc',
   applyTitle: 'Áp dụng bậc thợ',
   pending: 'Đang chờ đề xuất',
-  addLevel: 'Thêm mức tiền bậc',
+  addLevel: 'Đặt mức tiền bậc',
+  changeAmount: 'Đổi tiền',
+  currentAmount: 'Mức hiện tại',
+  newAmount: 'Mức mới / tháng',
+  levelHistory: 'Lịch sử mức tiền và mức sắp áp dụng',
+  upcoming: 'Sắp áp dụng',
+  expired: 'Đã thay thế',
+  diffFromPrev: 'Chênh so với mức trước',
+  sameAmount: 'Mức mới đang trùng mức hiện tại.',
+  effectiveHint:
+    'Mức cũ được giữ làm lịch sử. Chọn ngày sau ngày hiệu lực của mức hiện tại, kể cả ngày trong tương lai.',
+  replaceHint: 'Ngày này đã có mức hẹn, lưu sẽ thay thế mức đó',
+  allGrades: 'Mọi bậc',
   gradeCode: 'Bậc',
   gradeName: 'Tên bậc',
   amount: 'Tiền bậc / tháng',
@@ -60,5 +83,8 @@ export const GR_MESSAGES = {
   applied: 'Đã áp dụng bậc thợ.',
   notApplied: 'Đã ghi nhận không áp dụng bậc thợ.',
   levelSaved: 'Đã lưu mức tiền bậc.',
+  levelDeleted: 'Đã xóa mức tiền bậc.',
+  codeSaved: 'Đã lưu bậc thợ.',
+  codeDeleted: 'Đã xóa bậc thợ.',
   levelHint: 'Đổi tiền bậc = thêm một dòng mới với ngày hiệu lực mới, các dòng cũ giữ làm lịch sử.',
 } as const;

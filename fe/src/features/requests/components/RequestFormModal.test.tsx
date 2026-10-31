@@ -8,7 +8,13 @@ jest.mock('../api/requestApi', () => ({
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));
 
-const TYPES = ['SpareParts', 'NewMachine', 'MachineSupplies', 'MaterialRequisition', 'AttendanceCorrection'].map((t) => ({
+const TYPES = [
+  'SpareParts',
+  'NewMachine',
+  'MachineSupplies',
+  'MaterialRequisition',
+  'AttendanceCorrection',
+].map((t) => ({
   requestType: t,
   label: t,
   needsApproval: true,
@@ -18,7 +24,9 @@ const TYPES = ['SpareParts', 'NewMachine', 'MachineSupplies', 'MaterialRequisiti
 const renderModal = () => {
   (requestApi.types as jest.Mock).mockResolvedValue(TYPES);
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <RequestFormModal open maxPhotos={5} onClose={jest.fn()} onSaved={jest.fn()} />
     </QueryClientProvider>,
   );
@@ -34,7 +42,9 @@ describe('RequestFormModal', () => {
     await waitFor(() => expect(requestApi.types).toHaveBeenCalled());
     fireEvent.mouseDown(document.querySelector('.ant-select-selector') as Element);
 
-    await waitFor(() => expect(document.querySelectorAll('.ant-select-item-option')).toHaveLength(4));
+    await waitFor(() =>
+      expect(document.querySelectorAll('.ant-select-item-option')).toHaveLength(4),
+    );
   });
 
   it('thiếu nội dung thì báo lỗi và không gọi API tạo đơn', async () => {

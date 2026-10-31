@@ -54,12 +54,18 @@ export const lineKey = (l: { orderLineId: number; productComponentMaterialId: nu
 
 export const parseLineKey = (key: string) => {
   const [orderLineId, productComponentMaterialId] = key.split(':');
-  return { orderLineId: Number(orderLineId), productComponentMaterialId: productComponentMaterialId ? Number(productComponentMaterialId) : null };
+  return {
+    orderLineId: Number(orderLineId),
+    productComponentMaterialId: productComponentMaterialId
+      ? Number(productComponentMaterialId)
+      : null,
+  };
 };
 
 export const LABELS = {
   finishCutting: 'Cắt xong',
-  finishCuttingHint: 'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống báo Quản đốc số vải đã nhận, đã trả và thực dùng. Cắt ít hơn kế hoạch thì phải nêu lý do.',
+  finishCuttingHint:
+    'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống báo Quản đốc số vải đã nhận, đã trả và thực dùng. Cắt ít hơn kế hoạch thì phải nêu lý do.',
   finishCuttingReason: 'Lý do cắt thiếu kế hoạch',
   fabricReceived: 'Đã nhận',
   fabricReturned: 'Đã trả kho',

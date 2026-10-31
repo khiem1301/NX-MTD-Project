@@ -1,17 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-} from 'antd';
+import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -19,13 +7,20 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime } from '@/utils/format';
 import { HANDOVER_STATUS, HANDOVER_STATUS_LABEL, LABELS } from '../constants';
-import { useCancelHandover, useConfirmHandover, useHandover, useRejectHandover } from '../hooks/useCutting';
+import {
+  useCancelHandover,
+  useConfirmHandover,
+  useHandover,
+  useRejectHandover,
+} from '../hooks/useCutting';
 import type { ConfirmHandoverPayload, CutHandoverLine } from '../types';
+import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type HandoverDetailDrawerProps = { handoverId: number | undefined; onClose: () => void };
+type HandoverDetailModalProps = { handoverId: number | undefined; onClose: () => void };
 
 /** Chi tiết phiếu bàn giao; Thủ kho đếm số thực nhận (lệch phải có lý do), nhận vào kho BTP hoặc từ chối. */
-export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDrawerProps) {
+export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModalProps) {
   const { hasRole } = usePermission();
   const detail = useHandover(handoverId);
   const confirm = useConfirmHandover();
@@ -36,7 +31,9 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
   const h = detail.data;
   const canReceive = hasRole(ROLES.WarehouseKeeper) && h?.status === HANDOVER_STATUS.PENDING;
   // Tổ cắt rút phiếu của tổ mình khi Thủ kho chưa nhận (BE kiểm tổ).
-  const canCancel = (hasRole(ROLES.TeamLeader) || hasRole(ROLES.TeamDeputy)) && h?.status === HANDOVER_STATUS.PENDING;
+  const canCancel =
+    (hasRole(ROLES.TeamLeader) || hasRole(ROLES.TeamDeputy)) &&
+    h?.status === HANDOVER_STATUS.PENDING;
 
   useEffect(() => {
     if (h)
@@ -57,36 +54,40 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
   });
 
   const cancelAction = canCancel && h && (
-    <Popconfirm title={MESSAGES.cutting.confirmCancelHandover} onConfirm={() => cancel.mutate(h.cutHandoverId, { onSuccess: onClose })}>
+    <Popconfirm
+      title={MESSAGES.cutting.confirmCancelHandover}
+      onConfirm={() => cancel.mutate(h.cutHandoverId, { onSuccess: onClose })}
+    >
       <Button danger loading={cancel.isPending}>
         {LABELS.cancelHandover}
       </Button>
     </Popconfirm>
   );
 
-  const actions = cancelAction || canReceive && h && (
-    <Space>
-      <Button danger onClick={() => setRejecting(true)}>
-        {LABELS.reject}
-      </Button>
-      <Popconfirm title={MESSAGES.cutting.confirmHandover} onConfirm={() => form.submit()}>
-        <Button type="primary" loading={confirm.isPending}>
-          {LABELS.receive}
+  const actions =
+    cancelAction ||
+    (canReceive && h && (
+      <Space>
+        <Button danger onClick={() => setRejecting(true)}>
+          {LABELS.reject}
         </Button>
-      </Popconfirm>
-    </Space>
-  );
+        <Popconfirm title={MESSAGES.cutting.confirmHandover} onConfirm={() => form.submit()}>
+          <Button type="primary" loading={confirm.isPending}>
+            {LABELS.receive}
+          </Button>
+        </Popconfirm>
+      </Space>
+    ));
 
   return (
-    <Drawer
+    <DetailModal
       open={handoverId !== undefined}
       onClose={onClose}
-      width={820}
       title={h?.handoverCode}
       extra={actions}
+      loading={detail.isLoading}
+      error={detail.error}
     >
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {h && (
         <>
           {h.rejectReason && (
@@ -97,7 +98,7 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
               style={{ marginBottom: 16 }}
             />
           )}
-          <Descriptions column={2} size="small" bordered>
+          <DetailDescriptions>
             <Descriptions.Item label={LABELS.workOrder}>{h.workOrderCode}</Descriptions.Item>
             <Descriptions.Item label={LABELS.order}>{h.orderCode}</Descriptions.Item>
             <Descriptions.Item label={LABELS.cuttingTeam}>{h.cuttingTeamName}</Descriptions.Item>
@@ -110,7 +111,7 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
             <Descriptions.Item label={LABELS.confirmedBy}>
               {h.confirmedByName ? `${h.confirmedByName} · ${formatDateTime(h.confirmedAt)}` : '—'}
             </Descriptions.Item>
-          </Descriptions>
+          </DetailDescriptions>
           <Form
             form={form}
             disabled={confirm.isPending}
@@ -129,7 +130,7 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
                   <InputNumber />
                 </Form.Item>
               ))}
-            <Table<CutHandoverLine>
+            <DataTable<CutHandoverLine>
               rowKey="cutHandoverLineId"
               size="small"
               pagination={false}
@@ -197,6 +198,6 @@ export function HandoverDetailDrawer({ handoverId, onClose }: HandoverDetailDraw
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

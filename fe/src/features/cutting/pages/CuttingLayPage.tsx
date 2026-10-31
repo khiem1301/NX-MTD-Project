@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Space, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { WorkOrderSelect } from '@/components/common/WorkOrderSelect';
@@ -11,6 +12,9 @@ import { LayFormModal } from '../components/LayFormModal';
 import { LABELS, LAY_STATUS, LAY_STATUS_LABEL, SHIFT_LABEL, WORK_ORDER_STATUS } from '../constants';
 import { useLays, useWorkOrder, useWorkOrders } from '../hooks/useCutting';
 import type { CuttingLay } from '../types';
+import { LayDetailModal } from '../components/LayDetailModal';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
 
 const CUTTABLE: readonly string[] = [WORK_ORDER_STATUS.OPEN, WORK_ORDER_STATUS.CUTTING];
 
@@ -30,8 +34,16 @@ export function CuttingLayPage() {
     setFormOpen(true);
   };
 
+  const [viewing, setViewing] = useState<CuttingLay | null>(null);
+
   const columns: TableColumnsType<CuttingLay> = [
-    { title: LABELS.workDate, dataIndex: 'workDate', render: formatDate },
+    {
+      title: LABELS.workDate,
+      dataIndex: 'workDate',
+      render: (v: string, l) => (
+        <DetailLink onClick={() => setViewing(l)}>{formatDate(v)}</DetailLink>
+      ),
+    },
     { title: LABELS.shift, dataIndex: 'shiftCode', render: (v: string) => SHIFT_LABEL[v] ?? v },
     { title: LABELS.laySequence, dataIndex: 'laySequence', align: 'right' },
     { title: LABELS.fabricColor, dataIndex: 'fabricColor', render: (v: string) => v || '—' },
@@ -53,7 +65,7 @@ export function CuttingLayPage() {
       key: 'actions',
       render: (_, l) =>
         l.status === LAY_STATUS.RECORDED && cuttable ? (
-          <Button size="small" onClick={() => openForm(l)}>
+          <Button type="link" icon={<EditOutlined />} onClick={() => openForm(l)}>
             {MESSAGES.common.edit}
           </Button>
         ) : null,
@@ -64,20 +76,25 @@ export function CuttingLayPage() {
     <Card
       title={LABELS.laysTitle}
       extra={
-        <Space>
-          <WorkOrderSelect
-            workOrders={workOrders.data?.items.filter((w) => CUTTABLE.includes(w.status))}
-            loading={workOrders.isLoading}
-            value={workOrderId}
-            onChange={setWorkOrderId}
-            placeholder={LABELS.workOrder}
-          />
-          <Button type="primary" disabled={!cuttable} onClick={() => openForm(null)}>
-            {MESSAGES.common.create}
-          </Button>
-        </Space>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={!cuttable}
+          onClick={() => openForm(null)}
+        >
+          {MESSAGES.common.create}
+        </Button>
       }
     >
+      <Space style={{ marginBottom: 16 }} wrap>
+        <WorkOrderSelect
+          workOrders={workOrders.data?.items.filter((w) => CUTTABLE.includes(w.status))}
+          loading={workOrders.isLoading}
+          value={workOrderId}
+          onChange={setWorkOrderId}
+          placeholder={LABELS.workOrder}
+        />
+      </Space>
       {workOrderId === undefined && (
         <Alert
           type="info"
@@ -87,23 +104,14 @@ export function CuttingLayPage() {
         />
       )}
       <QueryError error={lays.error ?? workOrder.error} onRetry={() => void lays.refetch()} />
-      <Table
+      <DataTable
         rowKey="cuttingLayId"
         columns={columns}
         dataSource={workOrderId === undefined ? [] : lays.data?.items}
         loading={lays.isFetching}
         pagination={table.pagination(lays.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        expandable={{
-          expandedRowRender: (l) =>
-            l.lines
-              .map(
-                (x) =>
-                  `${x.color}-${x.sizeCode}: ${x.actualQty}${x.adjustReason ? ` (${x.adjustReason})` : ''}`,
-              )
-              .join(' · '),
-        }}
       />
+      <LayDetailModal lay={viewing} onClose={() => setViewing(null)} />
       {workOrder.data && (
         <LayFormModal
           open={formOpen}

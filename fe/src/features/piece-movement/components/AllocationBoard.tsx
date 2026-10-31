@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
-import { Alert, Button, Input, Space, Table, Tag, Typography, type TableColumnsType } from 'antd';
+import { Alert, Button, Input, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -9,6 +9,9 @@ import { PM_LABELS } from '../constants';
 import { useBoard } from '../hooks/usePieceMovement';
 import type { OperationProgress, WorkerAllocationLine } from '../types';
 import { MovementFormModal, type AllocationTarget } from './MovementFormModal';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
 /**
  * Bảng chia việc của tổ may: mỗi dòng là một công đoạn × màu × size với số cần làm (= số bộ BTP tổ đã nhận), đã giao, chờ xác nhận và còn chưa giao.
@@ -18,6 +21,7 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
   const [orderId, setOrderId] = useState<number>();
   const [keyword, setKeyword] = useState('');
   const [target, setTarget] = useState<AllocationTarget | null>(null);
+  const [viewing, setViewing] = useState<OperationProgress | null>(null);
   const board = useBoard(orderId);
 
   const data = board.data;
@@ -35,7 +39,9 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
     return (data?.operations ?? []).filter(
       (o) =>
         needle === '' ||
-        normalizeText(`${o.operationCode} ${o.operationName} ${o.groupName ?? ''}`).includes(needle),
+        normalizeText(`${o.operationCode} ${o.operationName} ${o.groupName ?? ''}`).includes(
+          needle,
+        ),
     );
   }, [data?.operations, keyword]);
 
@@ -50,7 +56,9 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
       key: 'operation',
       render: (_, o) => (
         <Space direction="vertical" size={0}>
-          <span>{`${o.operationCode} - ${o.operationName}`}</span>
+          <DetailLink
+            onClick={() => setViewing(o)}
+          >{`${o.operationCode} - ${o.operationName}`}</DetailLink>
           <Space size={4}>
             {o.groupName && <Tag color="geekblue">{o.groupName}</Tag>}
             {o.usesSemiFinished && <Tag color="blue">{PM_LABELS.usesPieces}</Tag>}
@@ -107,53 +115,66 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
       {orderId !== undefined && !board.isLoading && data && data.operations.length === 0 && (
         <Alert type="warning" showIcon message={PM_LABELS.noBoard} />
       )}
-      <Table
+      <DataTable
         rowKey={(o) => `${o.orderLineId}-${o.operationId}`}
         columns={columns}
         dataSource={rows}
         loading={board.isFetching}
         pagination={{ pageSize: 50, hideOnSinglePage: true }}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        scroll={{ x: 'max-content' }}
-        expandable={{
-          rowExpandable: (o) => workersByRow.has(`${o.orderLineId}-${o.operationId}`),
-          expandedRowRender: (o) => (
-            <Table
-              size="small"
-              pagination={false}
-              rowKey="workerId"
-              dataSource={workersByRow.get(`${o.orderLineId}-${o.operationId}`)}
-              columns={[
-                {
-                  title: PM_LABELS.workersHolding,
-                  key: 'worker',
-                  render: (_: unknown, w: WorkerAllocationLine) => `${w.workerCode} - ${w.workerName}`,
-                },
-                { title: PM_LABELS.held, dataIndex: 'heldQty', align: 'right' as const },
-                { title: PM_LABELS.pending, dataIndex: 'pendingRetrievalQty', align: 'right' as const },
-                { title: PM_LABELS.output, dataIndex: 'outputQty', align: 'right' as const },
-                { title: PM_LABELS.retrievable, dataIndex: 'retrievableQty', align: 'right' as const },
-                {
-                  title: MESSAGES.common.actions,
-                  key: 'action',
-                  render: (_: unknown, w: WorkerAllocationLine) =>
-                    canEdit && (
-                      <Button
-                        size="small"
-                        disabled={w.retrievableQty <= 0}
-                        onClick={() => setTarget({ kind: 'RETRIEVAL', progress: o, worker: w })}
-                      >
-                        {PM_LABELS.retrieveAction}
-                      </Button>
-                    ),
-                },
-              ]}
-            />
-          ),
-        }}
       />
+      <DetailModal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing ? `${viewing.operationCode} - ${viewing.operationName}` : undefined}
+      >
+        {viewing && (
+          <DataTable
+            pagination={false}
+            rowKey="workerId"
+            dataSource={workersByRow.get(`${viewing.orderLineId}-${viewing.operationId}`)}
+            columns={[
+              {
+                title: PM_LABELS.workersHolding,
+                key: 'worker',
+                render: (_: unknown, w: WorkerAllocationLine) =>
+                  `${w.workerCode} - ${w.workerName}`,
+              },
+              { title: PM_LABELS.held, dataIndex: 'heldQty', align: 'right' as const },
+              {
+                title: PM_LABELS.pending,
+                dataIndex: 'pendingRetrievalQty',
+                align: 'right' as const,
+              },
+              { title: PM_LABELS.output, dataIndex: 'outputQty', align: 'right' as const },
+              {
+                title: PM_LABELS.retrievable,
+                dataIndex: 'retrievableQty',
+                align: 'right' as const,
+              },
+              {
+                title: MESSAGES.common.actions,
+                key: 'action',
+                render: (_: unknown, w: WorkerAllocationLine) =>
+                  canEdit && (
+                    <Button
+                      type="link"
+                      disabled={w.retrievableQty <= 0}
+                      onClick={() => setTarget({ kind: 'RETRIEVAL', progress: viewing, worker: w })}
+                    >
+                      {PM_LABELS.retrieveAction}
+                    </Button>
+                  ),
+              },
+            ]}
+          />
+        )}
+      </DetailModal>
       <MovementFormModal
-        key={target ? `${target.kind}-${target.progress.orderLineId}-${target.progress.operationId}` : 'none'}
+        key={
+          target
+            ? `${target.kind}-${target.progress.orderLineId}-${target.progress.operationId}`
+            : 'none'
+        }
         target={target}
         onClose={() => setTarget(null)}
       />

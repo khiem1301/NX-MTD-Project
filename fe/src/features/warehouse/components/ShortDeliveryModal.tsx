@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Alert,
   Button,
-  DatePicker,
   Descriptions,
   Form,
   Input,
@@ -11,7 +10,6 @@ import {
   Popconfirm,
   Space,
   Spin,
-  Table,
   type TableColumnsType,
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -19,7 +17,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
-import { formatDateTime, formatQty } from '@/utils/format';
+import { API_DATE, formatDateTime, formatQty } from '@/utils/format';
 import {
   LABELS,
   SHORTAGE_RESOLUTION,
@@ -32,6 +30,9 @@ import {
   useShortDelivery,
 } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryLine } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type ShortDeliveryModalProps = {
   requestId: number | undefined;
@@ -39,7 +40,6 @@ type ShortDeliveryModalProps = {
 };
 
 const OPEN_STATUS = 'PENDING_PROCESSING';
-const API_DATE = 'YYYY-MM-DD';
 
 type SupplementaryValues = {
   receiptDate: Dayjs;
@@ -173,7 +173,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   return (
     <Modal
       open={requestId !== undefined}
-      width={980}
+      width={MODAL_WIDTH.lg}
       title={d ? `${LABELS.shortagesTitle} — ${d.requestCode}` : LABELS.shortagesTitle}
       onCancel={onClose}
       destroyOnHidden
@@ -247,13 +247,11 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
               </Descriptions.Item>
             )}
           </Descriptions>
-          <Table
+          <DataTable
             rowKey="requestLineId"
-            size="small"
             columns={columns}
             dataSource={d.lines}
             pagination={false}
-            scroll={{ x: 'max-content' }}
           />
           {awaitingReplenish && isKeeper && (
             <Space style={{ marginTop: 16 }} align="start" wrap>
@@ -262,7 +260,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                 label={LABELS.receiptDate}
                 rules={[{ required: true, message: MESSAGES.common.required }]}
               >
-                <DatePicker format="DD/MM/YYYY" />
+                <AppDatePicker />
               </Form.Item>
               <Form.Item name="note" label={LABELS.note}>
                 <Input.TextArea rows={1} maxLength={1000} style={{ width: 420 }} />

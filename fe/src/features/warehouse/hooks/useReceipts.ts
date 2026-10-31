@@ -53,7 +53,10 @@ export const useReturnReceipt = () => {
 /** TH-16: tải Excel phiếu nhập để in; lỗi hiện thông báo như các thao tác khác. */
 export const useDownloadReceipt = () => {
   const role = useRolePath();
-  return useApiMutation(({ id, code }: { id: number; code: string }) => warehouseApi.downloadReceipt(role, id, code), {
-    invalidate: [],
-  });
+  return useApiMutation(
+    ({ id, code }: { id: number; code: string }) => warehouseApi.downloadReceipt(role, id, code),
+    {
+      invalidate: [],
+    },
+  );
 };

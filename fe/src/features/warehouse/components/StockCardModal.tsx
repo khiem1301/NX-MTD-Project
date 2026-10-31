@@ -1,10 +1,12 @@
-import { Alert, Drawer, Table, type TableColumnsType } from 'antd';
+import { Alert, type TableColumnsType } from 'antd';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { LABELS, STOCK_DOC_LABEL } from '../constants';
 import { useStockCard } from '../hooks/useInventory';
 import type { StockCardEntry, StockCardQuery } from '../types';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type StockCardDrawerProps = {
+type StockCardModalProps = {
   query: StockCardQuery | undefined;
   title: string;
   onClose: () => void;
@@ -29,24 +31,23 @@ const columns: TableColumnsType<StockCardEntry> = [
 ];
 
 /** UC24: thẻ kho của một dòng tồn (chứng từ, ngày, số nhập / xuất, tồn sau). */
-export function StockCardDrawer({ query, title, onClose }: StockCardDrawerProps) {
+export function StockCardModal({ query, title, onClose }: StockCardModalProps) {
   const card = useStockCard(query);
   return (
-    <Drawer
+    <DetailModal
       open={query !== undefined}
       onClose={onClose}
-      width={760}
       title={`${LABELS.stockCard}: ${title}`}
+      size="md"
     >
       {card.error && <Alert type="error" message={card.error.message} />}
-      <Table
+      <DataTable
         rowKey="stockTransactionId"
-        size="small"
         columns={columns}
         dataSource={card.data}
         loading={card.isFetching}
         pagination={false}
       />
-    </Drawer>
+    </DetailModal>
   );
 }

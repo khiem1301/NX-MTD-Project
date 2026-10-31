@@ -3,13 +3,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { requestApi } from '../api/requestApi';
 import type { RequestDetail, RequestPermissions } from '../types';
-import { RequestDetailDrawer } from './RequestDetailDrawer';
+import { RequestDetailModal } from './RequestDetailModal';
 
 jest.mock('../api/requestApi', () => ({
   requestApi: { detail: jest.fn(), act: jest.fn(), types: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));
-jest.mock('@/components/common/attachments', () => ({ AttachmentGallery: () => <div>gallery</div> }));
+jest.mock('@/components/common/attachments', () => ({
+  AttachmentGallery: () => <div>gallery</div>,
+}));
 
 const NO_PERMISSIONS: RequestPermissions = {
   canEdit: false,
@@ -49,15 +51,17 @@ const detail = (permissions: Partial<RequestPermissions>): RequestDetail => ({
 const renderDrawer = (d: RequestDetail) => {
   (requestApi.detail as jest.Mock).mockResolvedValue(d);
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <MemoryRouter initialEntries={['/requests?id=1']}>
-        <RequestDetailDrawer />
+        <RequestDetailModal />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 };
 
-describe('RequestDetailDrawer', () => {
+describe('RequestDetailModal', () => {
   beforeEach(() => (requestApi.act as jest.Mock).mockReset().mockResolvedValue(undefined));
 
   it('không hiện nút Từ chối khi server không cấp quyền', async () => {
@@ -81,11 +85,18 @@ describe('RequestDetailDrawer', () => {
     renderDrawer(detail({ canReject: true }));
 
     fireEvent.click(await screen.findByText('Từ chối'));
-    fireEvent.change(await screen.findByLabelText('Lý do từ chối'), { target: { value: 'Dùng đồ dự phòng' } });
+    fireEvent.change(await screen.findByLabelText('Lý do từ chối'), {
+      target: { value: 'Dùng đồ dự phòng' },
+    });
     fireEvent.click(screen.getByText('Xác nhận'));
 
     await waitFor(() =>
-      expect(requestApi.act).toHaveBeenCalledWith({ kind: 'reject', id: 1, reason: 'Dùng đồ dự phòng', rowVer: 'AQID' }),
+      expect(requestApi.act).toHaveBeenCalledWith({
+        kind: 'reject',
+        id: 1,
+        reason: 'Dùng đồ dự phòng',
+        rowVer: 'AQID',
+      }),
     );
   });
 });

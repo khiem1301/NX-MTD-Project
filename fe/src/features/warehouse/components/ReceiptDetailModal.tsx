@@ -6,11 +6,8 @@ import {
   Button,
   Descriptions,
   Divider,
-  Drawer,
   Popconfirm,
   Space,
-  Spin,
-  Table,
   type TableColumnsType,
 } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
@@ -23,13 +20,26 @@ import { useAttachments } from '@/hooks/useAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { LABELS, RECEIPT_STATUS, RECEIPT_STATUS_LABEL, RECEIPT_TYPE_LABEL, SOURCE_LABEL } from '../constants';
-import { useConfirmReceipt, useDownloadReceipt, useReceipt, useReturnReceipt } from '../hooks/useReceipts';
+import {
+  LABELS,
+  RECEIPT_STATUS,
+  RECEIPT_STATUS_LABEL,
+  RECEIPT_TYPE_LABEL,
+  SOURCE_LABEL,
+} from '../constants';
+import {
+  useConfirmReceipt,
+  useDownloadReceipt,
+  useReceipt,
+  useReturnReceipt,
+} from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptLine } from '../types';
+import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
 const MAX_RECEIPT_PHOTOS = 5;
 
-type ReceiptDetailDrawerProps = {
+type ReceiptDetailModalProps = {
   receiptId: number | undefined;
   onClose: () => void;
   onEdit: (receipt: MaterialReceipt) => void;
@@ -50,7 +60,7 @@ const lineColumns: TableColumnsType<MaterialReceiptLine> = [
 ];
 
 /** Chi tiết phiếu nhập; Quản đốc xác nhận / trả lại (UC39), Thủ kho sửa phiếu chờ hoặc bị trả. */
-export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetailDrawerProps) {
+export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetailModalProps) {
   const { hasRole } = usePermission();
   const receipt = useReceipt(receiptId);
   const confirm = useConfirmReceipt();
@@ -74,6 +84,9 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
       >
         {MESSAGES.common.printExcel}
       </Button>
+      {hasRole(ROLES.WarehouseKeeper) && editable && (
+        <Button onClick={() => onEdit(r)}>{MESSAGES.common.edit}</Button>
+      )}
       {hasRole(ROLES.Manager) && pending && (
         <>
           <Button danger onClick={() => setReturning(true)}>
@@ -89,22 +102,18 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
           </Popconfirm>
         </>
       )}
-      {hasRole(ROLES.WarehouseKeeper) && editable && (
-        <Button onClick={() => onEdit(r)}>{MESSAGES.common.edit}</Button>
-      )}
     </Space>
   );
 
   return (
-    <Drawer
+    <DetailModal
       open={receiptId !== undefined}
       onClose={onClose}
-      width={820}
       title={r?.receiptCode}
       extra={actions}
+      loading={receipt.isLoading}
+      error={receipt.error}
     >
-      {receipt.isLoading && <Spin />}
-      {receipt.error && <Alert type="error" message={receipt.error.message} />}
       {r && (
         <>
           {r.returnReason && (
@@ -116,7 +125,12 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
             />
           )}
           {pending && missingPhoto && (
-            <Alert type="warning" showIcon message={MESSAGES.warehouse.receiptPhotoMissing} style={{ marginBottom: 16 }} />
+            <Alert
+              type="warning"
+              showIcon
+              message={MESSAGES.warehouse.receiptPhotoMissing}
+              style={{ marginBottom: 16 }}
+            />
           )}
           {r.shortDeliveryRequestId !== null && (
             <Alert
@@ -124,19 +138,26 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
               showIcon
               message={
                 <>
-                  {MESSAGES.warehouse.shortageStaged} <Link to={ROUTES.shortDeliveries}>{LABELS.openShortage}</Link>
+                  {MESSAGES.warehouse.shortageStaged}{' '}
+                  <Link to={ROUTES.shortDeliveries}>{LABELS.openShortage}</Link>
                 </>
               }
               style={{ marginBottom: 16 }}
             />
           )}
-          <Descriptions column={2} size="small" bordered>
-            <Descriptions.Item label={LABELS.receiptType}>{RECEIPT_TYPE_LABEL[r.receiptType] ?? r.receiptType}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.receiptSource}>{SOURCE_LABEL[r.source] ?? r.source}</Descriptions.Item>
+          <DetailDescriptions>
+            <Descriptions.Item label={LABELS.receiptType}>
+              {RECEIPT_TYPE_LABEL[r.receiptType] ?? r.receiptType}
+            </Descriptions.Item>
+            <Descriptions.Item label={LABELS.receiptSource}>
+              {SOURCE_LABEL[r.source] ?? r.source}
+            </Descriptions.Item>
             <Descriptions.Item label={LABELS.order}>{r.orderCode ?? '—'}</Descriptions.Item>
             <Descriptions.Item label={LABELS.purchaseOrder}>{r.poCode ?? '—'}</Descriptions.Item>
             {r.originalReceiptCode && (
-              <Descriptions.Item label={LABELS.originalReceipt}>{r.originalReceiptCode}</Descriptions.Item>
+              <Descriptions.Item label={LABELS.originalReceipt}>
+                {r.originalReceiptCode}
+              </Descriptions.Item>
             )}
             <Descriptions.Item label={LABELS.status}>
               <StatusTag status={r.status} labels={RECEIPT_STATUS_LABEL} />
@@ -151,10 +172,9 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
               {r.confirmedByName ? `${r.confirmedByName} · ${formatDateTime(r.confirmedAt)}` : '—'}
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.note}>{r.note ?? '—'}</Descriptions.Item>
-          </Descriptions>
-          <Table
+          </DetailDescriptions>
+          <DataTable
             rowKey="materialReceiptLineId"
-            size="small"
             style={{ marginTop: 16 }}
             columns={lineColumns}
             dataSource={r.lines}
@@ -187,6 +207,6 @@ export function ReceiptDetailDrawer({ receiptId, onClose, onEdit }: ReceiptDetai
           />
         </>
       )}
-    </Drawer>
+    </DetailModal>
   );
 }

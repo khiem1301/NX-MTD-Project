@@ -40,14 +40,21 @@ export const productApi = {
     return post<string>(API.products.sampleImage(), body);
   },
   sampleImageBlob: async (key: string, scope: ProductScope = 'admin'): Promise<Blob> =>
-    (await apiClient.get<Blob>(API.products.sampleImage(scope), { params: { key }, responseType: 'blob' })).data,
-  list: (q: ProductQuery, scope: ProductScope = 'admin') => get<Paginated<ProductListItem>>(API.products.base(scope), q),
+    (
+      await apiClient.get<Blob>(API.products.sampleImage(scope), {
+        params: { key },
+        responseType: 'blob',
+      })
+    ).data,
+  list: (q: ProductQuery, scope: ProductScope = 'admin') =>
+    get<Paginated<ProductListItem>>(API.products.base(scope), q),
   get: (id: number) => get<ProductDetail>(API.products.byId(id)),
   create: (body: SaveProductPayload) => post<number>(API.products.base(), body),
   update: (id: number, body: SaveProductPayload) => put<unknown>(API.products.byId(id), body),
   discontinue: (id: number) => post<unknown>(API.products.discontinue(id)),
   reactivate: (id: number) => post<unknown>(API.products.reactivate(id)),
-  getSpec: (id: number, scope: ProductScope = 'admin') => get<ProductSpec>(API.products.spec(id, scope)),
+  getSpec: (id: number, scope: ProductScope = 'admin') =>
+    get<ProductSpec>(API.products.spec(id, scope)),
   saveSpec: (id: number, body: SaveProductSpecPayload, scope: ProductScope = 'admin') =>
     put<ProductSpec>(API.products.spec(id, scope), body),
 };

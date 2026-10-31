@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
+import { Button, Card, Space, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -21,6 +21,8 @@ import {
 import { useAllocations, useRejectByWorker } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { status?: string; movementType?: string };
 
@@ -113,29 +115,33 @@ function AllocationHistory() {
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <FilterSelect value={table.filters.movementType}
-          placeholder={PM_LABELS.type}
-          options={TYPE_OPTIONS}
-          onChange={(movementType?: string) => table.setFilters({ movementType })}
-          style={{ width: 170 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={PM_LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 220 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <FilterSelect
+              value={table.filters.movementType}
+              placeholder={PM_LABELS.type}
+              options={TYPE_OPTIONS}
+              onChange={(movementType?: string) => table.setFilters({ movementType })}
+              style={{ width: 170 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={PM_LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 220 }}
+            />
+          </>
+        }
+      />
       <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
-      <Table
+      <DataTable
         rowKey="workAllocationId"
         columns={columns}
         dataSource={allocations.data?.items}
         loading={allocations.isFetching}
         pagination={table.pagination(allocations.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        scroll={{ x: 'max-content' }}
       />
       <ConfirmMovementModal movement={onBehalf} onBehalf onClose={() => setOnBehalf(null)} />
     </>
@@ -173,7 +179,7 @@ export function MyPieceMovementsPage() {
   const columns = useAllocationColumns(
     (m) =>
       m.status === MOVEMENT_STATUS.PENDING ? (
-        <Space size={0}>
+        <Space size={0} wrap>
           <Button type="link" onClick={() => setConfirming(m)}>
             {PM_LABELS.confirm}
           </Button>
@@ -188,7 +194,8 @@ export function MyPieceMovementsPage() {
   return (
     <Card title={PM_LABELS.workerTitle}>
       <Space style={{ marginBottom: 16 }}>
-        <FilterSelect value={table.filters.status}
+        <FilterSelect
+          value={table.filters.status}
           placeholder={PM_LABELS.status}
           options={STATUS_OPTIONS}
           onChange={(status?: string) => table.setFilters({ status })}
@@ -196,14 +203,12 @@ export function MyPieceMovementsPage() {
         />
       </Space>
       <QueryError error={allocations.error} onRetry={() => void allocations.refetch()} />
-      <Table
+      <DataTable
         rowKey="workAllocationId"
         columns={columns}
         dataSource={allocations.data?.items}
         loading={allocations.isFetching}
         pagination={table.pagination(allocations.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        scroll={{ x: 'max-content' }}
       />
       <ConfirmMovementModal
         movement={confirming}

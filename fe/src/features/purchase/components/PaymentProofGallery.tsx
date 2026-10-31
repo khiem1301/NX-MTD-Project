@@ -32,8 +32,16 @@ export function PaymentProofGallery({ purchaseOrderId, canEdit }: Props) {
             <Space key={a.attachmentId} direction="vertical" align="center">
               <AuthImage attachmentId={a.attachmentId} alt={a.fileName ?? ''} />
               {canEdit && (
-                <Popconfirm title={MESSAGES.attachments.removeConfirm} onConfirm={() => remove.mutate(a.attachmentId)}>
-                  <Button size="small" danger icon={<DeleteOutlined />} aria-label={MESSAGES.attachments.remove} />
+                <Popconfirm
+                  title={MESSAGES.attachments.removeConfirm}
+                  onConfirm={() => remove.mutate(a.attachmentId)}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    aria-label={MESSAGES.attachments.remove}
+                  />
                 </Popconfirm>
               )}
             </Space>

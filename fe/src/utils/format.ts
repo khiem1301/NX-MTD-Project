@@ -36,8 +36,34 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits
 export const formatCurrency = (value: number | null | undefined): string =>
   value === null || value === undefined ? EMPTY : `${currencyFormatter.format(Math.round(value))} ₫`;
 
+/** Định dạng hiển thị và nhập liệu duy nhất cho toàn hệ thống (Rules FE: dd/MM/yyyy HH:mm). */
+export const DATE_FORMAT = 'DD/MM/YYYY';
+export const DATE_TIME_FORMAT = 'DD/MM/YYYY HH:mm';
+export const TIME_FORMAT = 'HH:mm';
+export const MONTH_FORMAT = 'MM/YYYY';
+
+/** Định dạng gửi lên API. */
+export const API_DATE = 'YYYY-MM-DD';
+export const API_MONTH = 'YYYY-MM';
+
 /** Giá trị gửi lên API cho cột DATE. */
-export const toApiDate = (value: Dayjs): string => value.format('YYYY-MM-DD');
+export const toApiDate = (value: Dayjs): string => value.format(API_DATE);
+
+/** Giá trị gửi lên API cho kỳ tháng. */
+export const toApiMonth = (value: Dayjs): string => value.format(API_MONTH);
+
+/** "2026-10" → "10/2026". */
+export const formatMonth = (value: string | null | undefined): string => {
+  if (!value) return EMPTY;
+  const [y, m] = value.slice(0, 7).split('-');
+  return y && m ? `${pad(m)}/${y}` : value;
+};
+
+/** "08:05:00" hoặc "2026-10-20T08:05:00" → "08:05". */
+export const formatTime = (value: string | null | undefined): string => {
+  if (!value) return EMPTY;
+  return value.includes('T') ? value.slice(11, 16) : value.slice(0, 5);
+};
 
 /** fill('Đã đủ {0} ảnh', 5) → 'Đã đủ 5 ảnh'. */
 export const fill = (template: string, ...args: (string | number)[]): string =>

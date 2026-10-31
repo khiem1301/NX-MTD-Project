@@ -1,16 +1,18 @@
 import { useEffect } from 'react';
-import { Button, DatePicker, Form, Input, InputNumber, Modal, Radio, Select, Space } from 'antd';
+import { Button, Form, Input, InputNumber, Modal, Radio, Select, Space } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
-import { formatQty } from '@/utils/format';
+import { API_DATE, formatQty } from '@/utils/format';
 import { LABELS, MATERIAL_SOURCE, SOURCE_LABEL } from '../constants';
 import { useOrderMaterials } from '../hooks/useOrderMaterials';
 import { usePurchaseOrder, usePurchaseOrders } from '../hooks/usePurchaseOrders';
 import { useSaveReceipt } from '../hooks/useReceipts';
 import type { MaterialReceipt, ReceiptPreset, SaveReceiptPayload } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type ReceiptFormModalProps = {
   open: boolean;
@@ -22,8 +24,6 @@ type ReceiptFormModalProps = {
 
 type FormValues = Omit<SaveReceiptPayload, 'receiptDate'> & { receiptDate: Dayjs };
 
-const DATE_FORMAT = 'DD/MM/YYYY';
-const API_DATE = 'YYYY-MM-DD';
 const EMPTY_LINE = { acceptedQty: 0 };
 const SOURCE_OPTIONS = [MATERIAL_SOURCE.CUSTOMER, MATERIAL_SOURCE.SUPPLIER].map((value) => ({
   value,
@@ -121,7 +121,7 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
   return (
     <Modal
       open={open}
-      width={940}
+      width={MODAL_WIDTH.lg}
       title={receipt ? `${MESSAGES.common.edit} ${receipt.receiptCode}` : LABELS.receiptsTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -158,7 +158,7 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
             </Form.Item>
           )}
           <Form.Item name="receiptDate" label={LABELS.receiptDate} rules={required}>
-            <DatePicker format={DATE_FORMAT} />
+            <AppDatePicker />
           </Form.Item>
         </Space>
         <Form.List name="lines">

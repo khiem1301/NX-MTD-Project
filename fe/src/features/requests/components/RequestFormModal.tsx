@@ -2,7 +2,6 @@ import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import {
   Alert,
   Button,
-  DatePicker,
   Form,
   Input,
   InputNumber,
@@ -25,6 +24,7 @@ import { fill, toApiDate } from '@/utils/format';
 import { GENERIC_FORM_TYPES } from '../constants';
 import { useCreateRequest, useRequestTypes, useUpdateRequest } from '../hooks/useRequests';
 import type { RequestDetail } from '../types';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type FormValues = {
   requestType: RequestType;
@@ -45,7 +45,13 @@ type RequestFormModalProps = {
 const EMPTY_LINE = { itemDescription: '', quantity: 1 };
 
 /** Form chung cho 3 loại đơn của Cơ điện: tiêu đề, nội dung, ngày cần, dòng linh kiện + số lượng, ảnh. */
-export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }: RequestFormModalProps) {
+export function RequestFormModal({
+  open,
+  editing,
+  maxPhotos,
+  onClose,
+  onSaved,
+}: RequestFormModalProps) {
   const [form] = Form.useForm<FormValues>();
   const [files, setFiles] = useState<UploadFile[]>([]);
   const { data: types } = useRequestTypes();
@@ -56,7 +62,9 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
   // Ảnh cần OwnerId nên chỉ tải được sau khi đơn đã có Id; lỗi một phần không làm mất đơn.
   const uploadPhotos = async (requestId: number) => {
     const results = await Promise.allSettled(
-      files.map((f) => attachmentApi.upload('Request', requestId, f.originFileObj as File, 'Photo')),
+      files.map((f) =>
+        attachmentApi.upload('Request', requestId, f.originFileObj as File, 'Photo'),
+      ),
     );
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed > 0) void message.warning(fill(MESSAGES.requests.photoUploadFailed, failed));
@@ -67,7 +75,10 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
       title: values.title ?? null,
       content: values.content ?? null,
       targetDate: values.targetDate ? toApiDate(values.targetDate) : null,
-      lines: (values.lines ?? []).map((l) => ({ itemDescription: l.itemDescription, quantity: l.quantity })),
+      lines: (values.lines ?? []).map((l) => ({
+        itemDescription: l.itemDescription,
+        quantity: l.quantity,
+      })),
     };
     try {
       if (editing) {
@@ -93,7 +104,10 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
         title: editing.title ?? undefined,
         content: editing.content ?? undefined,
         targetDate: editing.targetDate ? dayjs(editing.targetDate) : undefined,
-        lines: editing.lines.map((l) => ({ itemDescription: l.itemDescription ?? '', quantity: l.quantity })),
+        lines: editing.lines.map((l) => ({
+          itemDescription: l.itemDescription ?? '',
+          quantity: l.quantity,
+        })),
       }
     : { lines: [EMPTY_LINE] };
 
@@ -109,13 +123,22 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
       destroyOnHidden
       width={640}
     >
-      <Form form={form} layout="vertical" preserve={false} onFinish={handleFinish} initialValues={initialValues}>
+      <Form
+        form={form}
+        layout="vertical"
+        preserve={false}
+        onFinish={handleFinish}
+        initialValues={initialValues}
+      >
         <Form.Item
           name="requestType"
           label={MESSAGES.requests.type}
           rules={[{ required: true, message: MESSAGES.common.required }]}
         >
-          <Select disabled={!!editing} options={options.map((o) => ({ value: o.requestType, label: o.label }))} />
+          <Select
+            disabled={!!editing}
+            options={options.map((o) => ({ value: o.requestType, label: o.label }))}
+          />
         </Form.Item>
         <Form.Item name="title" label={MESSAGES.requests.titleField} rules={[{ max: 200 }]}>
           <Input />
@@ -123,12 +146,15 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
         <Form.Item
           name="content"
           label={MESSAGES.requests.content}
-          rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 2000 }]}
+          rules={[
+            { required: true, whitespace: true, message: MESSAGES.common.required },
+            { max: 2000 },
+          ]}
         >
           <Input.TextArea rows={3} />
         </Form.Item>
         <Form.Item name="targetDate" label={MESSAGES.requests.targetDate}>
-          <DatePicker format="DD/MM/YYYY" disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
+          <AppDatePicker disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
         </Form.Item>
         <Form.List name="lines">
           {(fields, { add, remove }) => (
@@ -137,7 +163,10 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
                 <Space key={f.key} align="baseline">
                   <Form.Item
                     name={[f.name, 'itemDescription']}
-                    rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }, { max: 300 }]}
+                    rules={[
+                      { required: true, whitespace: true, message: MESSAGES.common.required },
+                      { max: 300 },
+                    ]}
                   >
                     <Input placeholder={MESSAGES.requests.itemDescription} style={{ width: 340 }} />
                   </Form.Item>
@@ -148,7 +177,10 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
                     <InputNumber min={0.001} placeholder={MESSAGES.requests.quantity} />
                   </Form.Item>
                   {fields.length > 1 && (
-                    <MinusCircleOutlined aria-label={MESSAGES.common.delete} onClick={() => remove(f.name)} />
+                    <MinusCircleOutlined
+                      aria-label={MESSAGES.common.delete}
+                      onClick={() => remove(f.name)}
+                    />
                   )}
                 </Space>
               ))}
@@ -177,7 +209,14 @@ export function RequestFormModal({ open, editing, maxPhotos, onClose, onSaved }:
             </Upload>
           </Form.Item>
         )}
-        {editing && <Alert type="info" showIcon message={MESSAGES.attachments.title} description={MESSAGES.requests.attachmentsHint} />}
+        {editing && (
+          <Alert
+            type="info"
+            showIcon
+            message={MESSAGES.attachments.title}
+            description={MESSAGES.requests.attachmentsHint}
+          />
+        )}
       </Form>
     </Modal>
   );

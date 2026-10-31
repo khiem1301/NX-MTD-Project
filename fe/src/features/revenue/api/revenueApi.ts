@@ -13,12 +13,21 @@ const endpointsOf = (scope: RevenueScope) =>
     : { list: API.revenue.accountant, export: API.revenue.accountantExport };
 
 export const revenueApi = {
-  getRevenue: async (scope: RevenueScope, filter: RevenueFilter): Promise<Paginated<RevenueSummary>> =>
-    (await apiClient.get<ApiResponse<Paginated<RevenueSummary>>>(endpointsOf(scope).list, { params: filter })).data
-      .data,
+  getRevenue: async (
+    scope: RevenueScope,
+    filter: RevenueFilter,
+  ): Promise<Paginated<RevenueSummary>> =>
+    (
+      await apiClient.get<ApiResponse<Paginated<RevenueSummary>>>(endpointsOf(scope).list, {
+        params: filter,
+      })
+    ).data.data,
 
   exportRevenue: async (scope: RevenueScope, filter: RevenueFilter): Promise<void> => {
-    const res = await apiClient.get<Blob>(endpointsOf(scope).export, { params: filter, responseType: 'blob' });
+    const res = await apiClient.get<Blob>(endpointsOf(scope).export, {
+      params: filter,
+      responseType: 'blob',
+    });
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement('a');
     link.href = url;

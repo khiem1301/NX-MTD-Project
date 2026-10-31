@@ -1,17 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-} from 'antd';
+import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm } from 'antd';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -26,26 +14,26 @@ import {
   useRejectFgHandover,
 } from '../hooks/useFgHandover';
 import type { FgHandover, FgHandoverLine } from '../types';
+import { DetailModal, DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
 
-type FgHandoverDrawerProps = { handoverId: number | undefined; onClose: () => void };
+type FgHandoverModalProps = { handoverId: number | undefined; onClose: () => void };
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
 /** Chi tiết phiếu bàn giao thành phẩm: Thủ kho đếm (lệch phải có lý do), nhận vào kho hoặc từ chối; QA/QC rút phiếu chờ. */
-export function FgHandoverDrawer({ handoverId, onClose }: FgHandoverDrawerProps) {
+export function FgHandoverModal({ handoverId, onClose }: FgHandoverModalProps) {
   const detail = useFgHandover(handoverId);
   const h = detail.data;
   return (
-    <Drawer
+    <DetailModal
       open={handoverId !== undefined}
       onClose={onClose}
-      width={820}
       title={h?.handoverCode}
-      destroyOnHidden
+      loading={detail.isLoading}
+      error={detail.error}
     >
-      {detail.isLoading && <Spin />}
-      {detail.error && <Alert type="error" message={detail.error.message} />}
       {h && <DrawerBody key={h.fgHandoverId} handover={h} onClose={onClose} />}
-    </Drawer>
+    </DetailModal>
   );
 }
 
@@ -85,7 +73,7 @@ function DrawerBody({ handover: h, onClose }: { handover: FgHandover; onClose: (
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }}>
+      <ModalActions>
         {canReceive && (
           <>
             <Button danger onClick={() => setRejecting(true)}>
@@ -108,7 +96,7 @@ function DrawerBody({ handover: h, onClose }: { handover: FgHandover; onClose: (
             </Button>
           </Popconfirm>
         )}
-      </Space>
+      </ModalActions>
       {h.rejectReason && (
         <Alert
           type="warning"
@@ -117,7 +105,7 @@ function DrawerBody({ handover: h, onClose }: { handover: FgHandover; onClose: (
           style={{ marginBottom: 16 }}
         />
       )}
-      <Descriptions column={2} size="small" bordered>
+      <DetailDescriptions>
         <Descriptions.Item label={FG_LABELS.order}>{h.orderCode}</Descriptions.Item>
         <Descriptions.Item label={FG_LABELS.product}>{h.productCode}</Descriptions.Item>
         <Descriptions.Item label={FG_LABELS.inspector}>{h.inspectorName}</Descriptions.Item>
@@ -130,7 +118,7 @@ function DrawerBody({ handover: h, onClose }: { handover: FgHandover; onClose: (
         <Descriptions.Item label={FG_LABELS.confirmedBy}>
           {h.confirmedByName ? `${h.confirmedByName} · ${formatDateTime(h.confirmedAt)}` : '—'}
         </Descriptions.Item>
-      </Descriptions>
+      </DetailDescriptions>
       <Form
         form={form}
         disabled={confirm.isPending}
@@ -142,7 +130,7 @@ function DrawerBody({ handover: h, onClose }: { handover: FgHandover; onClose: (
         }}
         onFinish={handleFinish}
       >
-        <Table<FgHandoverLine>
+        <DataTable<FgHandoverLine>
           rowKey="fgHandoverLineId"
           size="small"
           pagination={false}

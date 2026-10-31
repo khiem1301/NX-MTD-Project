@@ -1,7 +1,22 @@
 import type { ProductSpec } from '../types';
-import { toPayload, toRows, validate, variantKey, type ComponentRow, type NormRow, type VariantRow } from './productSpec';
+import {
+  toPayload,
+  toRows,
+  validate,
+  variantKey,
+  type ComponentRow,
+  type NormRow,
+  type VariantRow,
+} from './productSpec';
 
-const norm = (id: number, component: string, color: string, size: string, length: number | null = null, material = 1) => ({
+const norm = (
+  id: number,
+  component: string,
+  color: string,
+  size: string,
+  length: number | null = null,
+  material = 1,
+) => ({
   productComponentMaterialId: id,
   componentName: component,
   color,
@@ -19,13 +34,46 @@ const norm = (id: number, component: string, color: string, size: string, length
 const spec: ProductSpec = {
   productId: 1,
   components: [
-    { productComponentId: 1, componentName: 'Thân', componentType: 'Panel', piecesPerGarment: 1, status: 'Active' },
-    { productComponentId: 2, componentName: 'Cổ cũ', componentType: 'Panel', piecesPerGarment: 1, status: 'Discontinued' },
+    {
+      productComponentId: 1,
+      componentName: 'Thân',
+      componentType: 'Panel',
+      piecesPerGarment: 1,
+      status: 'Active',
+    },
+    {
+      productComponentId: 2,
+      componentName: 'Cổ cũ',
+      componentType: 'Panel',
+      piecesPerGarment: 1,
+      status: 'Discontinued',
+    },
   ],
   variants: [
-    { productVariantId: 10, color: 'Đen', sizeCode: 'M', lengthCm: 68, widthCm: 52, status: 'Active' },
-    { productVariantId: 11, color: 'Đen', sizeCode: 'L', lengthCm: null, widthCm: null, status: 'Active' },
-    { productVariantId: 12, color: 'Đỏ', sizeCode: 'S', lengthCm: null, widthCm: null, status: 'Discontinued' },
+    {
+      productVariantId: 10,
+      color: 'Đen',
+      sizeCode: 'M',
+      lengthCm: 68,
+      widthCm: 52,
+      status: 'Active',
+    },
+    {
+      productVariantId: 11,
+      color: 'Đen',
+      sizeCode: 'L',
+      lengthCm: null,
+      widthCm: null,
+      status: 'Active',
+    },
+    {
+      productVariantId: 12,
+      color: 'Đỏ',
+      sizeCode: 'S',
+      lengthCm: null,
+      widthCm: null,
+      status: 'Discontinued',
+    },
   ],
   norms: [
     norm(1, 'Thân', 'Đen', 'M', 60),
@@ -46,7 +94,10 @@ describe('productSpec', () => {
   });
 
   it('định mức (kích thước chi tiết) khác nhau giữa các size thì tách dòng', () => {
-    const rows = toRows({ ...spec, norms: [norm(1, 'Thân', 'Đen', 'M', 60), norm(2, 'Thân', 'Đen', 'L', 62)] });
+    const rows = toRows({
+      ...spec,
+      norms: [norm(1, 'Thân', 'Đen', 'M', 60), norm(2, 'Thân', 'Đen', 'L', 62)],
+    });
 
     expect(rows.norms).toHaveLength(2);
   });
@@ -56,7 +107,10 @@ describe('productSpec', () => {
 
     const payload = toPayload(rows.components, rows.variants, rows.norms);
 
-    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.lengthCm}`)).toEqual(['Đen-M:60', 'Đen-L:60']);
+    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.lengthCm}`)).toEqual([
+      'Đen-M:60',
+      'Đen-L:60',
+    ]);
     expect(payload.norms.every((n) => n.componentName === 'Thân')).toBe(true);
     expect(payload.variants.map((v) => v.productVariantId)).toEqual([10, 11]);
     expect(payload.variants[0]).toMatchObject({ lengthCm: 68, widthCm: 52 });
@@ -72,15 +126,33 @@ describe('productSpec', () => {
     });
 
     it('bắt dòng thiếu thành phần / NVL, không áp dụng cho biến thể nào', () => {
-      expect(validate(base.components, base.variants, [row({ componentName: undefined })])).not.toBe('');
-      expect(validate(base.components, base.variants, [row({ materialId: undefined })])).not.toBe('');
+      expect(
+        validate(base.components, base.variants, [row({ componentName: undefined })]),
+      ).not.toBe('');
+      expect(validate(base.components, base.variants, [row({ materialId: undefined })])).not.toBe(
+        '',
+      );
       expect(validate(base.components, base.variants, [row({ variantKeys: [] })])).not.toBe('');
     });
 
     it('bắt trùng NVL cùng thành phần và màu – size, trùng tên thành phần, trùng màu – size', () => {
-      expect(validate(base.components, base.variants, [row({ key: 'a' }), row({ key: 'b' })])).not.toBe('');
-      expect(validate([...base.components, { ...(base.components[0] as ComponentRow), key: 'x' }], base.variants, [])).not.toBe('');
-      expect(validate(base.components, [...base.variants, { ...(base.variants[0] as VariantRow), key: 'y' }], [])).not.toBe('');
+      expect(
+        validate(base.components, base.variants, [row({ key: 'a' }), row({ key: 'b' })]),
+      ).not.toBe('');
+      expect(
+        validate(
+          [...base.components, { ...(base.components[0] as ComponentRow), key: 'x' }],
+          base.variants,
+          [],
+        ),
+      ).not.toBe('');
+      expect(
+        validate(
+          base.components,
+          [...base.variants, { ...(base.variants[0] as VariantRow), key: 'y' }],
+          [],
+        ),
+      ).not.toBe('');
     });
   });
 });

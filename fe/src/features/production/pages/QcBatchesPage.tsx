@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Button, DatePicker, Space, Table, Typography } from 'antd';
+import { Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -11,6 +11,9 @@ import { QcCreateModal, QcEditModal } from '../components/QcBatchModals';
 import { PRODUCTION_TEXT, shiftText } from '../constants';
 import { useDeleteQcBatch, useQcBatches } from '../hooks/useProduction';
 import type { QcBatch, QcBatchQuery, QcRole } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 const text = PRODUCTION_TEXT.qc;
 
@@ -38,19 +41,29 @@ function QcBoard({ role }: { role: QcRole }) {
       key: 'line',
       render: (_, b) => `${b.productCode} - ${b.color} - ${b.sizeCode}`,
     },
-    { title: text.columns.qty, dataIndex: 'finishedQty', align: 'right', render: (v: number) => formatQty(v) },
+    {
+      title: text.columns.qty,
+      dataIndex: 'finishedQty',
+      align: 'right',
+      render: (v: number) => formatQty(v),
+    },
     { responsive: ['md'], title: text.columns.inspector, dataIndex: 'inspectorName' },
-    { responsive: ['md'], title: text.columns.deadline, dataIndex: 'editDeadline', render: (v: string) => formatDateTime(v) },
+    {
+      responsive: ['md'],
+      title: text.columns.deadline,
+      dataIndex: 'editDeadline',
+      render: (v: string) => formatDateTime(v),
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, b) =>
         isManager || b.canEdit ? (
-          <Space size={0}>
-            <Button type="link" onClick={() => setEditing(b)}>
+          <Space size={0} wrap>
+            <Button type="link" icon={<EditOutlined />} onClick={() => setEditing(b)}>
               {text.edit}
             </Button>
-            <Button type="link" danger onClick={() => setDeleting(b)}>
+            <Button type="link" icon={<DeleteOutlined />} danger onClick={() => setDeleting(b)}>
               {text.delete}
             </Button>
           </Space>
@@ -59,37 +72,35 @@ function QcBoard({ role }: { role: QcRole }) {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {isManager ? text.managerTitle : text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{isManager ? text.managerSubtitle : text.subtitle}</Typography.Text>
-      </div>
-
-      <Space wrap>
-        <DatePicker
-          allowClear
-          format="DD/MM/YYYY"
-          placeholder={text.filterDate}
-          onChange={(v: Dayjs | null) => setQuery({ ...query, page: 1, workDate: v ? toApiDate(v) : undefined })}
-        />
-        {!isManager && (
+    <PageCard
+      title={isManager ? text.managerTitle : text.title}
+      description={isManager ? text.managerSubtitle : text.subtitle}
+      extra={
+        !isManager && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {text.add}
           </Button>
-        )}
+        )
+      }
+    >
+      <Space wrap>
+        <AppDatePicker
+          allowClear
+          placeholder={text.filterDate}
+          onChange={(v: Dayjs | null) =>
+            setQuery({ ...query, page: 1, workDate: v ? toApiDate(v) : undefined })
+          }
+        />
       </Space>
 
       <QueryError error={batches.error} onRetry={() => void batches.refetch()} />
 
-      <Table<QcBatch>
+      <DataTable<QcBatch>
         rowKey="qcBatchId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={batches.data?.items}
         loading={batches.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: batches.data?.page ?? query.page,
@@ -117,7 +128,7 @@ function QcBoard({ role }: { role: QcRole }) {
           )
         }
       />
-    </Space>
+    </PageCard>
   );
 }
 

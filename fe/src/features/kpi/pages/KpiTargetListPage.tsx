@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Space, Typography } from 'antd';
 import { KpiTargetFormModal } from '../components/KpiTargetFormModal';
 import { KpiTargetTable } from '../components/KpiTargetTable';
 import { KPI_TEXT } from '../constants';
 import type { KpiRole, KpiTarget, KpiTargetFilter } from '../types';
+import { PageCard } from '@/components/common/PageCard';
 
 const DEFAULT_FILTER: KpiTargetFilter = { page: 1, pageSize: 20 };
 
@@ -23,16 +23,10 @@ function KpiBoard({ role }: { role: KpiRole }) {
   };
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {isAdmin ? KPI_TEXT.adminPageTitle : KPI_TEXT.listPageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          {isAdmin ? KPI_TEXT.adminPageSubtitle : KPI_TEXT.listPageSubtitle}
-        </Typography.Text>
-      </div>
-
+    <PageCard
+      title={isAdmin ? KPI_TEXT.adminPageTitle : KPI_TEXT.listPageTitle}
+      description={isAdmin ? KPI_TEXT.adminPageSubtitle : KPI_TEXT.listPageSubtitle}
+    >
       <KpiTargetTable
         filter={filter}
         onFilterChange={setFilter}
@@ -40,8 +34,10 @@ function KpiBoard({ role }: { role: KpiRole }) {
         onAdd={() => openForm(null)}
         onEdit={openForm}
       />
-      {!isAdmin && <KpiTargetFormModal open={formOpen} target={editing} onClose={() => setFormOpen(false)} />}
-    </Space>
+      {!isAdmin && (
+        <KpiTargetFormModal open={formOpen} target={editing} onClose={() => setFormOpen(false)} />
+      )}
+    </PageCard>
   );
 }
 

@@ -5,12 +5,21 @@ import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import type { ApiError } from '@/types/api';
 import { requestApi } from '../api/requestApi';
-import type { CreateRequestBody, RequestAction, RequestListQuery, UpdateRequestBody } from '../types';
+import type {
+  CreateRequestBody,
+  RequestAction,
+  RequestListQuery,
+  UpdateRequestBody,
+} from '../types';
 
 export const REQUESTS_KEY = ['requests'] as const;
 
 export const useRequestTypes = () =>
-  useQuery({ queryKey: [...REQUESTS_KEY, 'types'], queryFn: requestApi.types, staleTime: Infinity });
+  useQuery({
+    queryKey: [...REQUESTS_KEY, 'types'],
+    queryFn: requestApi.types,
+    staleTime: Infinity,
+  });
 
 export const useMyRequests = (query: RequestListQuery) =>
   useQuery({
@@ -35,7 +44,9 @@ export const useRequestDetail = (id: number | null) =>
 
 /** Danh sách + chi tiết đều nằm dưới key 'requests' → một lần invalidate là đủ. */
 export const useCreateRequest = () =>
-  useApiMutation((body: CreateRequestBody) => requestApi.create(body), { invalidate: [REQUESTS_KEY] });
+  useApiMutation((body: CreateRequestBody) => requestApi.create(body), {
+    invalidate: [REQUESTS_KEY],
+  });
 
 export const useUpdateRequest = (id: number) =>
   useApiMutation((body: UpdateRequestBody) => requestApi.update(id, body), {
@@ -53,7 +64,9 @@ export const useRequestAction = () => {
     onError: (error) => {
       void refresh();
       void message.error(
-        error.errorCode === ERROR_CODES.CommonConcurrencyConflict ? MESSAGES.common.concurrency : error.message,
+        error.errorCode === ERROR_CODES.CommonConcurrencyConflict
+          ? MESSAGES.common.concurrency
+          : error.message,
       );
     },
   });

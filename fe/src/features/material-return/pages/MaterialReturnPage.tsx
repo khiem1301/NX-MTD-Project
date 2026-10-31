@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -8,12 +9,15 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime, formatQty } from '@/utils/format';
 import { ReturnCreateModal } from '../components/ReturnCreateModal';
-import { ReturnDrawer } from '../components/ReturnDrawer';
+import { ReturnModal } from '../components/ReturnModal';
 import { RETURN_LABELS, RETURN_STATUS_LABEL } from '../constants';
 import { useMaterialReturns } from '../hooks/useMaterialReturn';
 import type { MaterialReturnListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -33,7 +37,9 @@ export function MaterialReturnPage() {
     {
       title: RETURN_LABELS.code,
       dataIndex: 'returnCode',
-      render: (v: string, r) => <a onClick={() => setViewingId(r.materialReturnId)}>{v}</a>,
+      render: (v: string, r) => (
+        <DetailLink onClick={() => setViewingId(r.materialReturnId)}>{v}</DetailLink>
+      ),
     },
     { title: RETURN_LABELS.issue, dataIndex: 'issueCode' },
     { title: RETURN_LABELS.order, dataIndex: 'orderCode' },
@@ -62,36 +68,40 @@ export function MaterialReturnPage() {
       title={RETURN_LABELS.title}
       extra={
         <Can roles={[ROLES.TeamLeader, ROLES.TeamDeputy]}>
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {RETURN_LABELS.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={RETURN_LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 170 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={RETURN_LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 170 }}
+            />
+          </>
+        }
+      />
       <QueryError error={returns.error} onRetry={() => void returns.refetch()} />
-      <Table
+      <DataTable
         rowKey="materialReturnId"
         columns={columns}
         dataSource={returns.data?.items}
         loading={returns.isFetching}
         pagination={table.pagination(returns.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <ReturnDrawer returnId={viewingId} onClose={() => setViewingId(undefined)} />
+      <ReturnModal returnId={viewingId} onClose={() => setViewingId(undefined)} />
       <ReturnCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

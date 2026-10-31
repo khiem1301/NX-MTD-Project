@@ -1,4 +1,4 @@
-import { Table, type TableColumnsType, type TablePaginationConfig } from 'antd';
+import { type TableColumnsType, type TablePaginationConfig } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
@@ -6,6 +6,8 @@ import type { Paginated } from '@/types/api';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { REQUEST_STATUS_TAG } from '../constants';
 import type { RequestListItem } from '../types';
+import { DetailLink } from '@/components/common/DetailLink';
+import { DataTable } from '@/components/common/DataTable';
 
 type RequestTableProps = {
   data?: Paginated<RequestListItem>;
@@ -20,14 +22,33 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
     {
       title: MESSAGES.requests.code,
       dataIndex: 'requestCode',
-      render: (v: string, r) => <a onClick={() => onOpen(r.requestId)}>{v}</a>,
+      render: (v: string, r) => <DetailLink onClick={() => onOpen(r.requestId)}>{v}</DetailLink>,
     },
-    { title: MESSAGES.requests.type, dataIndex: 'requestType', render: (v: keyof typeof REQUEST_TYPE_LABEL) => REQUEST_TYPE_LABEL[v] ?? v },
-    { title: MESSAGES.requests.titleField, dataIndex: 'title', ellipsis: true, render: (v: string | null) => v ?? '—' },
+    {
+      title: MESSAGES.requests.type,
+      dataIndex: 'requestType',
+      render: (v: keyof typeof REQUEST_TYPE_LABEL) => REQUEST_TYPE_LABEL[v] ?? v,
+    },
+    {
+      title: MESSAGES.requests.titleField,
+      dataIndex: 'title',
+      ellipsis: true,
+      render: (v: string | null) => v ?? '—',
+    },
     ...(showTeam
-      ? [{ title: MESSAGES.requests.team, dataIndex: 'teamName', render: (v: string | null) => v ?? '—' }]
+      ? [
+          {
+            title: MESSAGES.requests.team,
+            dataIndex: 'teamName',
+            render: (v: string | null) => v ?? '—',
+          },
+        ]
       : []),
-    { title: MESSAGES.requests.createdBy, dataIndex: 'createdByName', render: (v: string | null) => v ?? '—' },
+    {
+      title: MESSAGES.requests.createdBy,
+      dataIndex: 'createdByName',
+      render: (v: string | null) => v ?? '—',
+    },
     { title: MESSAGES.requests.createdAt, dataIndex: 'createdAt', render: formatDateTime },
     { title: MESSAGES.requests.targetDate, dataIndex: 'targetDate', render: formatDate },
     {
@@ -38,14 +59,13 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
   ];
 
   return (
-    <Table<RequestListItem>
+    <DataTable<RequestListItem>
       rowKey="requestId"
-      size="middle"
+      size="small"
       loading={loading}
       columns={columns}
       dataSource={data?.items ?? []}
       pagination={pagination}
-      locale={{ emptyText: MESSAGES.common.noData }}
     />
   );
 }

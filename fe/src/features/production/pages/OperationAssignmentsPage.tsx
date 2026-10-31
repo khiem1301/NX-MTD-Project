@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Form, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd';
+import { Button, Form, Modal, Popconfirm, Select, Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { CopyOutlined, PlusOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -18,6 +18,8 @@ import {
   useReplaceAssignment,
 } from '../hooks/useProduction';
 import type { OperationAssignment } from '../types';
+import { PageCard } from '@/components/common/PageCard';
+import { DataTable } from '@/components/common/DataTable';
 
 const text = PRODUCTION_TEXT.assignments;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -32,7 +34,15 @@ function useWorkerOptions() {
   return { options, loading: members.isLoading };
 }
 
-function AssignModal({ open, orderId, onClose }: { open: boolean; orderId: number; onClose: () => void }) {
+function AssignModal({
+  open,
+  orderId,
+  onClose,
+}: {
+  open: boolean;
+  orderId: number;
+  onClose: () => void;
+}) {
   const [form] = Form.useForm<{ operationIds: number[]; workerId: number }>();
   const operations = useAssignableOperations(orderId);
   const workers = useWorkerOptions();
@@ -68,14 +78,25 @@ function AssignModal({ open, orderId, onClose }: { open: boolean; orderId: numbe
           />
         </Form.Item>
         <Form.Item name="workerId" label={text.form.worker} rules={required}>
-          <Select showSearch optionFilterProp="label" loading={workers.loading} options={workers.options} />
+          <Select
+            showSearch
+            optionFilterProp="label"
+            loading={workers.loading}
+            options={workers.options}
+          />
         </Form.Item>
       </Form>
     </Modal>
   );
 }
 
-function ReplaceModal({ target, onClose }: { target: OperationAssignment | null; onClose: () => void }) {
+function ReplaceModal({
+  target,
+  onClose,
+}: {
+  target: OperationAssignment | null;
+  onClose: () => void;
+}) {
   const [form] = Form.useForm<{ newWorkerId: number }>();
   const workers = useWorkerOptions();
   const replace = useReplaceAssignment();
@@ -96,7 +117,11 @@ function ReplaceModal({ target, onClose }: { target: OperationAssignment | null;
         layout="vertical"
         preserve={false}
         onFinish={(values) =>
-          target && replace.mutate({ id: target.operationAssignmentId, newWorkerId: values.newWorkerId }, { onSuccess: onClose })
+          target &&
+          replace.mutate(
+            { id: target.operationAssignmentId, newWorkerId: values.newWorkerId },
+            { onSuccess: onClose },
+          )
         }
       >
         <Form.Item name="newWorkerId" label={text.form.worker} rules={required}>
@@ -112,7 +137,15 @@ function ReplaceModal({ target, onClose }: { target: OperationAssignment | null;
   );
 }
 
-function CopyModal({ open, toOrderId, onClose }: { open: boolean; toOrderId: number; onClose: () => void }) {
+function CopyModal({
+  open,
+  toOrderId,
+  onClose,
+}: {
+  open: boolean;
+  toOrderId: number;
+  onClose: () => void;
+}) {
   const [form] = Form.useForm<{ fromOrderId: number }>();
   const copy = useCopyAssignments();
 
@@ -132,7 +165,9 @@ function CopyModal({ open, toOrderId, onClose }: { open: boolean; toOrderId: num
         form={form}
         layout="vertical"
         preserve={false}
-        onFinish={(values) => copy.mutate({ fromOrderId: values.fromOrderId, toOrderId }, { onSuccess: onClose })}
+        onFinish={(values) =>
+          copy.mutate({ fromOrderId: values.fromOrderId, toOrderId }, { onSuccess: onClose })
+        }
       >
         <Form.Item name="fromOrderId" label={text.copyFrom} rules={required}>
           <OrderSelect width="100%" />
@@ -153,18 +188,34 @@ export function OperationAssignmentsPage() {
 
   const columns: ColumnsType<OperationAssignment> = [
     { responsive: ['md'], title: text.columns.product, dataIndex: 'productCode' },
-    { title: text.columns.operation, key: 'op', render: (_, r) => `${r.operationCode} - ${r.operationName}` },
-    { title: text.columns.worker, key: 'worker', render: (_, r) => `${r.workerCode} - ${r.workerName}` },
-    { responsive: ['md'], title: text.columns.validFrom, dataIndex: 'validFrom', render: (v: string) => formatDate(v) },
+    {
+      title: text.columns.operation,
+      key: 'op',
+      render: (_, r) => `${r.operationCode} - ${r.operationName}`,
+    },
+    {
+      title: text.columns.worker,
+      key: 'worker',
+      render: (_, r) => `${r.workerCode} - ${r.workerName}`,
+    },
+    {
+      responsive: ['md'],
+      title: text.columns.validFrom,
+      dataIndex: 'validFrom',
+      render: (v: string) => formatDate(v),
+    },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) => (
-        <Space size={0}>
+        <Space size={0} wrap>
           <Button type="link" onClick={() => setReplacing(row)}>
             {text.replace}
           </Button>
-          <Popconfirm title={text.closeConfirm} onConfirm={() => close.mutate(row.operationAssignmentId)}>
+          <Popconfirm
+            title={text.closeConfirm}
+            onConfirm={() => close.mutate(row.operationAssignmentId)}
+          >
             <Button type="link" danger>
               {text.close}
             </Button>
@@ -175,29 +226,40 @@ export function OperationAssignmentsPage() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{text.subtitle}</Typography.Text>
-      </div>
-
-      <Space wrap>
-        <OrderSelect value={orderId ?? undefined} onChange={(v) => setOrderId(v ?? null)} placeholder={PRODUCTION_TEXT.selectOrder} />
-        <Button type="primary" icon={<PlusOutlined />} disabled={orderId === null} onClick={() => setAssignOpen(true)}>
+    <PageCard
+      title={text.title}
+      description={text.subtitle}
+      extra={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={orderId === null}
+          onClick={() => setAssignOpen(true)}
+        >
           {text.assign}
         </Button>
-        <Button icon={<CopyOutlined />} disabled={orderId === null} onClick={() => setCopyOpen(true)}>
+      }
+    >
+      <Space wrap>
+        <OrderSelect
+          value={orderId ?? undefined}
+          onChange={(v) => setOrderId(v ?? null)}
+          placeholder={PRODUCTION_TEXT.selectOrder}
+        />
+        <Button
+          icon={<CopyOutlined />}
+          disabled={orderId === null}
+          onClick={() => setCopyOpen(true)}
+        >
           {text.copy}
         </Button>
       </Space>
 
       <QueryError error={assignments.error} onRetry={() => void assignments.refetch()} />
 
-      <Table<OperationAssignment>
+      <DataTable<OperationAssignment>
         rowKey="operationAssignmentId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={assignments.data}
         loading={assignments.isFetching}
@@ -213,6 +275,6 @@ export function OperationAssignmentsPage() {
         </>
       )}
       <ReplaceModal target={replacing} onClose={() => setReplacing(null)} />
-    </Space>
+    </PageCard>
   );
 }

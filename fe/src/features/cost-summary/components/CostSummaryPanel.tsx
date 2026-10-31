@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Col, Descriptions, Row, Statistic, Table, Tag } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Row, Statistic, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -6,6 +6,8 @@ import { COST_SUMMARY_TEXT, costCategoryLabel } from '../constants';
 import { useExportCostSummary } from '../hooks/useCostSummary';
 import type { CostByProduct, CostFixedItem, CostSummary, CostSummaryFilter } from '../types';
 import { formatCurrency } from '../utils';
+import { formatMonth } from '@/utils/format';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = { summary: CostSummary; filter: CostSummaryFilter };
 
@@ -46,7 +48,7 @@ export function CostSummaryPanel({ summary, filter }: Props) {
   return (
     <Card
       size="small"
-      title={`${COST_SUMMARY_TEXT.periodMonth} ${summary.periodMonth}`}
+      title={`${COST_SUMMARY_TEXT.periodMonth} ${formatMonth(summary.periodMonth)}`}
       extra={
         <Button
           icon={<DownloadOutlined />}
@@ -59,7 +61,10 @@ export function CostSummaryPanel({ summary, filter }: Props) {
     >
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={12} md={6}>
-          <Statistic title={COST_SUMMARY_TEXT.summary.fixedCostTotal} value={formatCurrency(summary.fixedCostTotal)} />
+          <Statistic
+            title={COST_SUMMARY_TEXT.summary.fixedCostTotal}
+            value={formatCurrency(summary.fixedCostTotal)}
+          />
         </Col>
         <Col xs={12} md={6}>
           <Statistic
@@ -70,11 +75,18 @@ export function CostSummaryPanel({ summary, filter }: Props) {
         <Col xs={12} md={6}>
           <Statistic
             title={COST_SUMMARY_TEXT.summary.payrollTotal}
-            value={summary.payrollApproved ? formatCurrency(summary.payrollTotal) : MESSAGES.costSummary.payrollNotApproved}
+            value={
+              summary.payrollApproved
+                ? formatCurrency(summary.payrollTotal)
+                : MESSAGES.costSummary.payrollNotApproved
+            }
           />
         </Col>
         <Col xs={12} md={6}>
-          <Statistic title={COST_SUMMARY_TEXT.summary.grandTotal} value={formatCurrency(summary.grandTotal)} />
+          <Statistic
+            title={COST_SUMMARY_TEXT.summary.grandTotal}
+            value={formatCurrency(summary.grandTotal)}
+          />
         </Col>
       </Row>
 
@@ -98,25 +110,23 @@ export function CostSummaryPanel({ summary, filter }: Props) {
 
       <Row gutter={16}>
         <Col xs={24} md={12}>
-          <Table<CostFixedItem>
+          <DataTable<CostFixedItem>
             rowKey="costCategoryCode"
             size="small"
             title={() => COST_SUMMARY_TEXT.summary.fixedCostTotal}
             columns={fixedColumns}
             dataSource={summary.fixedCosts}
             pagination={false}
-            locale={{ emptyText: MESSAGES.common.empty }}
           />
         </Col>
         <Col xs={24} md={12}>
-          <Table<CostByProduct>
+          <DataTable<CostByProduct>
             rowKey="productId"
             size="small"
             title={() => COST_SUMMARY_TEXT.summary.variableCostTotal}
             columns={byProductColumns}
             dataSource={summary.variableCostsByProduct}
             pagination={false}
-            locale={{ emptyText: MESSAGES.common.empty }}
           />
         </Col>
       </Row>

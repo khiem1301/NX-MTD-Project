@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Space, Table, type TableColumnsType } from 'antd';
+import { Space, type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
-import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
 import { useTeamHoldings } from '../hooks/useInventory';
 import type { TeamPieceHolding } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 const columns: TableColumnsType<TeamPieceHolding> = [
   { title: LABELS.team, dataIndex: 'teamName' },
@@ -34,13 +34,12 @@ export function TeamHoldingsTable() {
         <OrderSelect allowClear placeholder={LABELS.order} value={orderId} onChange={setOrderId} />
       </Space>
       <QueryError error={holdings.error} onRetry={() => void holdings.refetch()} />
-      <Table
+      <DataTable
         rowKey={(h) => `${h.sewingTeamId}|${h.orderLineId}`}
         columns={columns}
         dataSource={holdings.data}
         loading={holdings.isFetching}
         pagination={false}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
     </>
   );
