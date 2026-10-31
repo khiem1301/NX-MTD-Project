@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-06 + KI-11 (UC57, UC22): QA/QC nhập số hàng hoàn thiện đạt theo đợt trong ca, không phân loại lỗi.

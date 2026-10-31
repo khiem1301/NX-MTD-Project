@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-04 + KI-11 (UC55, UC22): sản lượng cuối ca của tổ may theo công nhân × công đoạn × dòng đơn.

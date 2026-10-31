@@ -1,7 +1,7 @@
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>Admin thấy và quản lý tất cả; Quản đốc quản lý mọi người trừ Admin và Kế toán (UC16, GBR-01).</summary>
 public sealed class EmployeeScope

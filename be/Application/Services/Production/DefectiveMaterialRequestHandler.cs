@@ -7,7 +7,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Đơn NVL lỗi (DEFECTIVE_MATERIAL, tổ cắt → Quản đốc duyệt). Khi Quản đốc duyệt, hệ thống kiểm tồn kho NVL (swimlane):

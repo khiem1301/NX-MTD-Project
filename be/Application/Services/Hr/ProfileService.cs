@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>UC03 đổi mật khẩu + UC04 xem hồ sơ của mình.</summary>
 public sealed class ProfileService : IProfileService

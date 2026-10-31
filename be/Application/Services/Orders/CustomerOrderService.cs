@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Orders;
+namespace NX_MTD.Application.Services;
 
 public sealed class CustomerOrderService : ICustomerOrderService
 {

@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Purchasing;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// MI-07 (UC23, UC34): Quản đốc chọn nhà cung cấp + chốt đặt hàng / hủy, Kế toán xác nhận thanh toán (ảnh chứng từ là

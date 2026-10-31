@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Quy tắc dùng chung của luồng may + QC (KI-01…KI-11): tổ của người đăng nhập, hạn sửa (GBR-09), giờ hết ca,

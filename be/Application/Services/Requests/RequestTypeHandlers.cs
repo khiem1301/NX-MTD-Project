@@ -2,7 +2,7 @@ using NX_MTD.Application.Common;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Requests;
+namespace NX_MTD.Application.Services;
 
 /// <summary>Loại đơn chưa có handler riêng dùng DefaultHandler (không kiểm thêm, được hoàn thành tay).</summary>
 public sealed class RequestTypeHandlers

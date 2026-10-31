@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-09 (UC56, UC07 "cắt bù") — kiểm đơn cắt bù do tổ trưởng / tổ phó tổ may tạo từ một phiếu hàng hỏng Scrap, Quản đốc

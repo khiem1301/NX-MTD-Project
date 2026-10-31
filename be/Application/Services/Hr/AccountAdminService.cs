@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>Khóa / mở khóa / đặt lại mật khẩu tài khoản (Admin: tất cả; Quản đốc: trừ Admin và Kế toán). Mọi thao tác đổi
 /// SecurityStamp → đẩy người đó ra (D29).</summary>

@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Purchasing;
+namespace NX_MTD.Application.Services;
 
 /// <summary>UC14 (MI-07): Admin quản lý nhà cung cấp. Không xóa, chỉ ngừng hợp tác (đơn mua cũ vẫn trỏ tới).</summary>
 public sealed class SupplierService : ISupplierService

@@ -70,6 +70,7 @@
 | DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
 | DEV-ALL-16 | 29/10/2026 | Claude (AI) | UC10, UC15, UC19, UC40, UC45–UC47, UC51 | Chuyển code sang database 29/10: định mức không còn lượng vải / hao hụt / thứ tự, màu – size chỉ đọc từ đơn hàng (kèm kích thước), Kế toán cùng Admin sửa định mức, lệnh cắt thường không kiểm vải, lệnh cắt bù ước tính theo `vw_RecutFabricNeed`; hoàn lại bậc thợ A–D, xuất hàng 1 bước, bỏ loại đơn tăng ca; các mục "Doing" của sheet | Đã làm |
 | DEV-ALL-17 | 31/10/2026 | Claude (AI) | UC50, `GradeLevelCode`, `GradeLevel`, `Employee`, `GradeEvaluation` | Khôi phục bậc thợ động theo yêu cầu của Minh: Admin thêm / sửa / ngừng dùng / xóa bậc (E, F…), bỏ CHECK cứng A–D; sửa / xóa mức tiền bậc chưa hiệu lực | Mở |
+| DEV-ALL-18 | 31/10/2026 | Claude (AI) | Cấu trúc `Application/`, `Infrastructure/Data` | Chia `Services`, `Interfaces`, `DTOs`, `Validators` thành thư mục con theo module (Shared, Auth, Hr, Orders, Requests, Warehouse, Cutting, Purchasing, Production, Attendance, Finance); cấu hình EF tách thành `IEntityTypeConfiguration<T>` từng entity | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -971,4 +972,15 @@
 - **Code đang làm:** khôi phục phần của DEV-ALL-15 (commit `e8e66e0`): bảng `GradeLevelCode` (danh mục bậc), mã bậc `VARCHAR(5)` ở `GradeLevel` / `Employee` / `GradeEvaluation`, khóa ngoại thay cho CHECK A–D; Admin thêm / sửa tên và thứ tự / ngừng dùng / xóa bậc chưa dùng; sửa / xóa mức tiền bậc chưa hiệu lực. FE: tab "Danh mục bậc" ở màn Bậc thợ, các ô chọn bậc lấy từ danh mục.
 - **Đổi schema:** `SQL/NX-MTD_Database.sql` sửa lại theo bản có `GradeLevelCode` (khác bản 29/10 của nhóm ở 3 chỗ này); DB đã dựng cần chạy `SQL/patches/2026-10-28_grade_level_code.sql` (chạy lại không lỗi). Cần nhóm DB xác nhận trước khi hợp nhất với bản 29/10.
 - **Cần sửa trong tài liệu:** Report-3 UC50, AI_Context mục 56 (bậc A–D), NX-MTD_Database.dbml / Mo_ta (`GradeLevelCode`, kiểu cột mã bậc).
+- **Trạng thái:** Mở
+
+### DEV-ALL-18 · Tổ chức lại thư mục backend theo module (31/10/2026)
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) theo yêu cầu của Minh · tổ chức code · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Tài liệu gốc ghi:** Coding Rules 3.1: `Application/Services`, `Interfaces`, `DTOs`, `Validators` là thư mục phẳng; 3.7: cấu hình EF bằng `IEntityTypeConfiguration<T>`.
+- **Code đang làm:**
+  - Mỗi thư mục trên chia thư mục con theo module: Shared, Auth, Hr, Orders, Requests, Warehouse, Cutting, Purchasing, Production, Attendance, Finance. `IUnitOfWork`, `IGenericRepository` giữ ở gốc `Interfaces/`. **Namespace giữ theo tầng** (VD `NX_MTD.Application.Services`, không có đoạn module), nên không phải sửa `using` ở nơi dùng; các service từng nằm trong `Services/Hr|Orders|Production|Purchasing|Requests` đã đổi từ namespace lồng về namespace phẳng.
+  - `NxMtdDbContext.OnModelCreating` (2651 dòng) tách thành 88 file `Infrastructure/Data/Configurations/<Entity>Configuration.cs`, nạp bằng `ApplyConfigurationsFromAssembly`; mô hình EF so sánh trước / sau giống hệt. Lưu ý: nếu scaffold lại bằng `--force` thì các file này sẽ bị ghi đè, cần chuyển cấu hình mới vào đây.
+  - Tách các method quá 40 dòng (mới làm `FinanceService.CalculateAsync`, `OutputService.SaveAsync`; còn 37 method).
+- **Cần sửa trong tài liệu:** Coding Rules 3.1 (ghi cấu trúc thư mục con theo module).
 - **Trạng thái:** Mở

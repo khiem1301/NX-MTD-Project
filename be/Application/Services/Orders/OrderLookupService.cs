@@ -3,7 +3,7 @@ using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 
-namespace NX_MTD.Application.Services.Orders;
+namespace NX_MTD.Application.Services;
 
 /// <summary>Tra cứu cho luồng khác (kho, cắt, may, chấm công): tuyệt đối không có đơn giá (D26).</summary>
 public sealed class OrderLookupService : IOrderLookupService
