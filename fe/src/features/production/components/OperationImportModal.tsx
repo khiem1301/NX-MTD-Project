@@ -1,75 +1,18 @@
-import { useState } from 'react';
-import {
-  Alert,
-  Checkbox,
-  Descriptions,
-  Modal,
-  Select,
-  Space,
-  Typography,
-  Upload,
-  message,
-} from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Alert, Modal, Select, Space, Typography, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { fill, formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { useImportOperations, usePreviewOperationImport } from '../hooks/useProduction';
 import type { OperationImportRow } from '../types';
-import { confirmDialog } from '@/utils/confirmDialog';
 import { DataTable } from '@/components/common/DataTable';
-import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { useOperationImport } from '../hooks/useOperationImport';
+import { operationImportColumns } from './operationImportColumns';
+import { OperationImportRateOptions } from './OperationImportRateOptions';
+import { OperationImportSummary } from './OperationImportSummary';
 
 type Props = { open: boolean; productId: number; productLabel: string; onClose: () => void };
 
 const text = PRODUCTION_TEXT.operations.import;
-
-const columns: ColumnsType<OperationImportRow> = [
-  { title: text.columns.stt, dataIndex: 'stt', width: 70 },
-  { title: text.columns.code, dataIndex: 'operationCode', width: 90 },
-  { title: text.columns.name, dataIndex: 'operationName', render: (v: string | null) => v ?? '—' },
-  {
-    title: text.columns.skill,
-    dataIndex: 'skillLevel',
-    width: 70,
-    render: (v: number | null) => v ?? '—',
-  },
-  {
-    title: text.columns.time,
-    dataIndex: 'standardTimeSec',
-    align: 'right',
-    render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-  },
-  { title: text.columns.equipment, dataIndex: 'equipment', render: (v: string | null) => v ?? '—' },
-  {
-    title: text.columns.rate,
-    key: 'rate',
-    align: 'right',
-    render: (_, row) => (
-      <Space direction="vertical" size={0} style={{ alignItems: 'flex-end' }}>
-        <span>{row.rate === null ? '—' : formatCurrency(row.rate)}</span>
-        {row.rateAction !== 'None' && (
-          <StatusTag status={row.rateAction} labels={text.rateAction} />
-        )}
-        {row.rateNote && <Typography.Text type="secondary">{row.rateNote}</Typography.Text>}
-      </Space>
-    ),
-  },
-  {
-    title: text.columns.action,
-    key: 'action',
-    render: (_, row) => (
-      <Space direction="vertical" size={0}>
-        <StatusTag status={row.action} labels={text.action} />
-        {row.error && <Typography.Text type="danger">{row.error}</Typography.Text>}
-      </Space>
-    ),
-  },
-];
 
 /**
  * KI-01 (UC25) — Kế toán nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ: chọn file là xem trước ngay
@@ -78,85 +21,26 @@ const columns: ColumnsType<OperationImportRow> = [
  * Trang chỉ gắn hộp thoại khi đang mở nên state tự reset mỗi lần mở.
  */
 export function OperationImportModal({ open, productId, productLabel, onClose }: Props) {
-  const [file, setFile] = useState<File | null>(null);
-  const [finalStt, setFinalStt] = useState<number | undefined>(undefined);
-  const [withRates, setWithRates] = useState(true);
-  const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
-  const [submitRates, setSubmitRates] = useState(true);
-  const preview = usePreviewOperationImport();
-  const importOps = useImportOperations();
-  const data = preview.data;
-  const ratesOn = withRates && data?.hasRateColumn === true;
-
-  const runPreview = (
-    nextFile: File,
-    options: { sheetName?: string; withRates?: boolean; date?: Dayjs } = {},
-  ) => {
-    setFinalStt(undefined);
-    const useRates = options.withRates ?? withRates;
-    const date = options.date ?? effectiveDate;
-    // Chọn file mới truyền sheetName: undefined (đọc sheet đầu); đổi ngày / tùy chọn thì giữ sheet đang xem.
-    const sheetName = 'sheetName' in options ? options.sheetName : data?.sheetName;
-    preview.mutate({
-      file: nextFile,
-      productId,
-      sheetName,
-      effectiveDate: useRates ? toApiDate(date) : undefined,
-    });
-  };
-
-  const handleConfirm = () => {
-    if (!file || !data) return;
-    confirmDialog({
-      title: text.confirmTitle,
-      content: text.confirmContent,
-      okText: MESSAGES.common.confirm,
-      cancelText: MESSAGES.common.cancel,
-      onOk: () =>
-        importOps
-          .mutateAsync({
-            file,
-            params: {
-              productId,
-              sheetName: data.sheetName,
-              finalStt,
-              effectiveDate: ratesOn ? toApiDate(effectiveDate) : undefined,
-              submitRates: ratesOn ? submitRates : undefined,
-            },
-          })
-          .then((result) => {
-            const rates = ratesOn
-              ? fill(
-                  text.rateResultTemplate,
-                  result.rateCreated,
-                  result.rateUpdated,
-                  result.rateUnchanged,
-                  result.rateSkipped,
-                )
-              : '';
-            void message.success(
-              fill(
-                text.resultTemplate,
-                result.created,
-                result.updated,
-                result.unchanged,
-                result.skipped,
-              ) + rates,
-            );
-            onClose();
-          }),
-    });
-  };
-
-  const rateChanges = ratesOn ? (data?.rateNewCount ?? 0) + (data?.rateUpdateCount ?? 0) : 0;
-  const importable =
-    (data?.newCount ?? 0) +
-    (data?.updateCount ?? 0) +
-    rateChanges +
-    (finalStt !== undefined ? 1 : 0);
-  const finalOptions = (data?.rows ?? [])
-    .filter((r) => r.action !== 'Error')
-    .map((r) => ({ value: r.stt, label: `${r.stt}. ${r.operationName ?? ''}` }));
+  const {
+    file,
+    setFile,
+    finalStt,
+    setFinalStt,
+    withRates,
+    setWithRates,
+    effectiveDate,
+    setEffectiveDate,
+    submitRates,
+    setSubmitRates,
+    preview,
+    importOps,
+    data,
+    ratesOn,
+    runPreview,
+    handleConfirm,
+    importable,
+    finalOptions,
+  } = useOperationImport(productId, onClose);
 
   return (
     <Modal
@@ -238,80 +122,28 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               </Space>
             </Space>
 
-            {data.hasRateColumn ? (
-              <Space direction="vertical" size={8}>
-                <Checkbox
-                  checked={withRates}
-                  onChange={(e) => {
-                    setWithRates(e.target.checked);
-                    runPreview(file, { withRates: e.target.checked });
-                  }}
-                >
-                  {text.withRates}
-                </Checkbox>
-                {withRates && (
-                  <Space wrap size={24}>
-                    <Space>
-                      <span>{text.effectiveDate}</span>
-                      <AppDatePicker
-                        allowClear={false}
-                        value={effectiveDate}
-                        onChange={(v) => {
-                          const date = v ?? dayjs();
-                          setEffectiveDate(date);
-                          runPreview(file, { date });
-                        }}
-                      />
-                    </Space>
-                    <Checkbox
-                      checked={submitRates}
-                      onChange={(e) => setSubmitRates(e.target.checked)}
-                    >
-                      {text.submitRates}
-                    </Checkbox>
-                  </Space>
-                )}
-                {withRates && <Typography.Text type="secondary">{text.rateHint}</Typography.Text>}
-              </Space>
-            ) : (
-              <Alert type="warning" showIcon message={text.noRateColumn} />
-            )}
+            <OperationImportRateOptions
+              data={data}
+              withRates={withRates}
+              effectiveDate={effectiveDate}
+              submitRates={submitRates}
+              onWithRatesChange={(checked) => {
+                setWithRates(checked);
+                runPreview(file, { withRates: checked });
+              }}
+              onEffectiveDateChange={(date) => {
+                setEffectiveDate(date);
+                runPreview(file, { date });
+              }}
+              onSubmitRatesChange={setSubmitRates}
+            />
 
-            <Descriptions column={4} size="small" bordered>
-              <Descriptions.Item label={text.summary.created}>
-                <Typography.Text type="success">{data.newCount}</Typography.Text>
-              </Descriptions.Item>
-              <Descriptions.Item label={text.summary.updated}>{data.updateCount}</Descriptions.Item>
-              <Descriptions.Item label={text.summary.unchanged}>
-                {data.unchangedCount}
-              </Descriptions.Item>
-              <Descriptions.Item label={text.summary.error}>
-                <Typography.Text type={data.errorCount > 0 ? 'danger' : undefined}>
-                  {data.errorCount}
-                </Typography.Text>
-              </Descriptions.Item>
-              {ratesOn && (
-                <>
-                  <Descriptions.Item label={text.rateSummary.created}>
-                    <Typography.Text type="success">{data.rateNewCount}</Typography.Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.updated}>
-                    {data.rateUpdateCount}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.unchanged}>
-                    {data.rateUnchangedCount}
-                  </Descriptions.Item>
-                  <Descriptions.Item label={text.rateSummary.skipped}>
-                    {data.rateSkippedCount}
-                  </Descriptions.Item>
-                </>
-              )}
-            </Descriptions>
+            <OperationImportSummary data={data} ratesOn={ratesOn} />
 
             <DataTable<OperationImportRow>
               rowKey={(r) => `${r.rowNumber}-${r.stt}`}
               size="small"
-              columns={columns}
+              columns={operationImportColumns}
               dataSource={data.rows}
               pagination={{ pageSize: 10, showSizeChanger: false }}
               scroll={{ x: 'max-content' }}
