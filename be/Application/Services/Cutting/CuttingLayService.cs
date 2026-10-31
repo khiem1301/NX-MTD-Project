@@ -116,6 +116,29 @@ public sealed class CuttingLayService : ICuttingLayService
             .ToDictionary(g => g.Key, g => g.Sum(l => l.PlannedQty));
         if (dto.Lines.Any(l => !planned.ContainsKey((l.OrderLineId, l.ProductComponentMaterialId))))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
+        var fabric = await CheckFabricAsync(dto, wo, ct);
+        if (fabric is not null) return fabric;
+
+        var lines = BuildLines(dto);
+        if (lines.Any(l => l.ActualQty != l.CalculatedQty && string.IsNullOrEmpty(l.AdjustReason)))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReasonRequired);
+
+        var cap = await CheckCapAsync(wo, lay.CuttingLayId, lines, planned, ct);
+        if (!cap.IsSuccess) return cap;
+
+        lay.WorkOrderId = wo.WorkOrderId;
+        lay.WorkDate = dto.WorkDate;
+        lay.ShiftCode = dto.ShiftCode;
+        lay.FabricMaterialId = dto.FabricMaterialId;
+        lay.PlyCount = (short)dto.PlyCount;
+        lay.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        lay.CuttingLayLines = lines;
+        return cap;
+    }
+
+    /// <summary>Vải của bàn phải là vải chi tiết PANEL trong định mức của các dòng đơn trên bàn; bàn cắt bù chi tiết phải đúng vải của dòng định mức.</summary>
+    private async Task<Result?> CheckFabricAsync(SaveCuttingLayDto dto, WorkOrder wo, CancellationToken ct)
+    {
         // Vải của bàn (đã gồm màu, 26/10) phải là vải chi tiết PANEL trong định mức của các dòng đơn trên bàn.
         var variantIds = wo.WorkOrderLines.Where(l => dto.Lines.Any(d => d.OrderLineId == l.OrderLineId))
             .Select(l => l.OrderLine.ProductVariantId).Distinct().ToList();
@@ -135,7 +158,11 @@ public sealed class CuttingLayService : ICuttingLayService
             if (matching != normIds.Count)
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayComponentFabricMismatch);
         }
+        return null;
+    }
 
+    private static List<CuttingLayLine> BuildLines(SaveCuttingLayDto dto)
+    {
         var lines = dto.Lines.Select(l =>
         {
             var calculated = CuttingLayCalculator.CalculatedQty(dto.PlyCount, l.RatioValue);
@@ -150,20 +177,7 @@ public sealed class CuttingLayService : ICuttingLayService
                 AdjustReason = actual == calculated ? null : l.AdjustReason?.Trim(),
             };
         }).ToList();
-        if (lines.Any(l => l.ActualQty != l.CalculatedQty && string.IsNullOrEmpty(l.AdjustReason)))
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReasonRequired);
-
-        var cap = await CheckCapAsync(wo, lay.CuttingLayId, lines, planned, ct);
-        if (!cap.IsSuccess) return cap;
-
-        lay.WorkOrderId = wo.WorkOrderId;
-        lay.WorkDate = dto.WorkDate;
-        lay.ShiftCode = dto.ShiftCode;
-        lay.FabricMaterialId = dto.FabricMaterialId;
-        lay.PlyCount = (short)dto.PlyCount;
-        lay.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
-        lay.CuttingLayLines = lines;
-        return cap;
+        return lines;
     }
 
     private async Task<Result> CheckCapAsync(WorkOrder wo, int exceptLayId, IReadOnlyList<CuttingLayLine> lines,
