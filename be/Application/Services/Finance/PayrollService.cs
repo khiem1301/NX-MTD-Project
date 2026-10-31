@@ -126,68 +126,13 @@ public sealed class PayrollService : IPayrollService
             return Result<PayrollImportResultDto>.Failure(ErrorCodes.PayrollInvalidStatus,
                 Messages.PayrollInvalidStatusForImport);
 
-        // Giá trị cũ cho AuditLog (GBR-15): chỉ có khi nhập lại bảng lương Nháp / Từ chối.
-        object? before = null;
-        if (payroll is null)
-        {
-            payroll = new Payroll { PeriodId = period.PeriodId, Status = PayrollStatus.Draft };
-            _repo.AddPayroll(payroll);
-        }
-        else
-        {
-            before = new { payroll.Status };
-            await _repo.RemovePayslipsAsync(payroll.PayrollId, ct);
-            payroll.Status = PayrollStatus.Draft;
-            payroll.RejectReason = null;   // dữ liệu mới thay thế, lý do từ chối cũ không còn áp dụng
-        }
-
+        (payroll, var before) = await PreparePayrollAsync(payroll, period, ct);
         var previousFiles = payroll.PayrollId == 0 ? [] : await _repo.RemoveImportFilesAsync(payroll.PayrollId, ct);
         var storedFile = await _fileStore.SaveAsync(periodMonth, content, ct);
 
-        var totalAmount = 0m;
-        foreach (var g in groups)
-        {
-            var additions = g.Items.Where(i => i.Group == PayslipItemGroup.Addition).Sum(i => i.Amount);
-            var deductions = g.Items.Where(i => i.Group == PayslipItemGroup.Deduction).Sum(i => i.Amount);
-            var insurance = g.Items.Where(i => i.Group == PayslipItemGroup.Insurance).Sum(i => i.Amount);
+        var totalAmount = AddPayslips(payroll, groups);
 
-            var payslip = new Payslip
-            {
-                EmployeeId = g.EmployeeId,
-                WorkDays = g.WorkDays,
-                TotalAdditions = additions,
-                TotalDeductions = deductions,
-                Insurance = insurance,
-                NetPay = g.NetPay,
-                Payroll = payroll,
-                PayslipItems = g.Items.Select((item, idx) => new PayslipItem
-                {
-                    ItemGroup = item.Group, ItemName = item.Name, Amount = item.Amount, SortOrder = (short)idx,
-                }).ToList(),
-            };
-            _repo.AddPayslip(payslip);
-            totalAmount += g.NetPay;
-        }
-
-        try
-        {
-            // Bảng lương mới chỉ có PayrollId sau lần lưu đầu nên log ghi sau, cùng một transaction (GBR-15).
-            await _uow.InTransactionAsync(async () =>
-            {
-                await _repo.SaveChangesAsync(ct);
-                _repo.AddImportFile(payroll.PayrollId, storedFile, _clock.Now);   // file gốc ở Attachment, tổng tiền = Σ NetPay
-                _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId,
-                    before is null ? AuditActions.Insert : AuditActions.Update, before,
-                    new { payroll.Status, TotalAmount = totalAmount, PeriodMonth = periodMonth, PayslipCount = groups.Count }));
-                await _repo.SaveChangesAsync(ct);
-                return Result.Success();
-            });
-        }
-        catch
-        {
-            await TryDeleteFileAsync(storedFile, ct);   // không để lại file mồ côi khi ghi DB lỗi
-            throw;
-        }
+        await PersistImportAsync(payroll, before, storedFile, totalAmount, periodMonth, groups.Count, ct);
 
         foreach (var previousFile in previousFiles)
             await TryDeleteFileAsync(previousFile, ct);
@@ -495,6 +440,82 @@ public sealed class PayrollService : IPayrollService
         }
     }
 
+    /// <summary>Tạo bảng lương mới, hoặc làm lại bảng Nháp / Từ chối (xóa phiếu lương cũ). Trả về bảng lương và giá trị cũ cho AuditLog.</summary>
+    private async Task<(Payroll Payroll, object? Before)> PreparePayrollAsync(Payroll? payroll, AccountingPeriod period,
+        CancellationToken ct)
+    {
+        // Giá trị cũ cho AuditLog (GBR-15): chỉ có khi nhập lại bảng lương Nháp / Từ chối.
+        object? before = null;
+        if (payroll is null)
+        {
+            payroll = new Payroll { PeriodId = period.PeriodId, Status = PayrollStatus.Draft };
+            _repo.AddPayroll(payroll);
+        }
+        else
+        {
+            before = new { payroll.Status };
+            await _repo.RemovePayslipsAsync(payroll.PayrollId, ct);
+            payroll.Status = PayrollStatus.Draft;
+            payroll.RejectReason = null;   // dữ liệu mới thay thế, lý do từ chối cũ không còn áp dụng
+        }
+        return (payroll, before);
+    }
+
+    /// <summary>Thêm phiếu lương (kèm các khoản) của từng nhân viên hợp lệ vào bảng lương. Trả về tổng thực lĩnh.</summary>
+    private decimal AddPayslips(Payroll payroll, List<EmployeeGroup> groups)
+    {
+        var totalAmount = 0m;
+        foreach (var g in groups)
+        {
+            var additions = g.Items.Where(i => i.Group == PayslipItemGroup.Addition).Sum(i => i.Amount);
+            var deductions = g.Items.Where(i => i.Group == PayslipItemGroup.Deduction).Sum(i => i.Amount);
+            var insurance = g.Items.Where(i => i.Group == PayslipItemGroup.Insurance).Sum(i => i.Amount);
+
+            var payslip = new Payslip
+            {
+                EmployeeId = g.EmployeeId,
+                WorkDays = g.WorkDays,
+                TotalAdditions = additions,
+                TotalDeductions = deductions,
+                Insurance = insurance,
+                NetPay = g.NetPay,
+                Payroll = payroll,
+                PayslipItems = g.Items.Select((item, idx) => new PayslipItem
+                {
+                    ItemGroup = item.Group, ItemName = item.Name, Amount = item.Amount, SortOrder = (short)idx,
+                }).ToList(),
+            };
+            _repo.AddPayslip(payslip);
+            totalAmount += g.NetPay;
+        }
+        return totalAmount;
+    }
+
+    /// <summary>Lưu bảng lương, file gốc và AuditLog trong một transaction; ghi lỗi thì xóa file vừa lưu.</summary>
+    private async Task PersistImportAsync(Payroll payroll, object? before, string storedFile, decimal totalAmount,
+        string periodMonth, int payslipCount, CancellationToken ct)
+    {
+        try
+        {
+            // Bảng lương mới chỉ có PayrollId sau lần lưu đầu nên log ghi sau, cùng một transaction (GBR-15).
+            await _uow.InTransactionAsync(async () =>
+            {
+                await _repo.SaveChangesAsync(ct);
+                _repo.AddImportFile(payroll.PayrollId, storedFile, _clock.Now);   // file gốc ở Attachment, tổng tiền = Σ NetPay
+                _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId,
+                    before is null ? AuditActions.Insert : AuditActions.Update, before,
+                    new { payroll.Status, TotalAmount = totalAmount, PeriodMonth = periodMonth, PayslipCount = payslipCount }));
+                await _repo.SaveChangesAsync(ct);
+                return Result.Success();
+            });
+        }
+        catch
+        {
+            await TryDeleteFileAsync(storedFile, ct);   // không để lại file mồ côi khi ghi DB lỗi
+            throw;
+        }
+    }
+
     private sealed record EmployeeGroup(
         int EmployeeId, string AttendanceCode, decimal? WorkDays, decimal NetPay,
         List<(string Group, string Name, decimal Amount)> Items);
@@ -512,68 +533,47 @@ public sealed class PayrollService : IPayrollService
 
         foreach (var row in rawRows)
         {
-            if (row.ParseError is not null)
+            var (message, employee) = CheckRow(row, employees);
+            if (message is not null)
             {
-                previews.Add(ToPreview(row, null, PayrollRowStatus.Error, row.ParseError));
+                previews.Add(ToPreview(row, employee?.FullName, PayrollRowStatus.Error, message));
                 error++;
                 continue;
             }
 
             var code = row.AttendanceCode!;
-            if (!employees.TryGetValue(code, out var employee))
-            {
-                previews.Add(ToPreview(row, null, PayrollRowStatus.Error,
-                    $"Mã chấm công {code} ({row.FullName}) không có trong hệ thống."));
-                error++;
-                continue;
-            }
-
-            if (employee.Status != RecordStatus.Active)
-            {
-                previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Error,
-                    $"Nhân viên mã chấm công {code} đã nghỉ việc."));
-                error++;
-                continue;
-            }
-
-            if (row.NetPay is null)
-            {
-                previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Error, "Thiếu thực lĩnh."));
-                error++;
-                continue;
-            }
-
-            if (row.WorkDays is < 0 or > 31)
-            {
-                previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Error, "Số công không hợp lệ (0-31)."));
-                error++;
-                continue;
-            }
-
-            if (row.Items.Count == 0)
-            {
-                previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Error,
-                    "Dòng không có khoản lương nào lớn hơn 0."));
-                error++;
-                continue;
-            }
-
             if (!seenCodes.Add(code))
             {
-                previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Duplicate,
+                previews.Add(ToPreview(row, employee!.Value.FullName, PayrollRowStatus.Duplicate,
                     "Dòng trùng (mã chấm công đã có ở dòng/sheet trước, bỏ qua dòng này)."));
                 duplicate++;
                 continue;
             }
 
-            groups.Add(new EmployeeGroup(employee.EmployeeId, code, row.WorkDays, row.NetPay.Value,
+            groups.Add(new EmployeeGroup(employee!.Value.EmployeeId, code, row.WorkDays, row.NetPay!.Value,
                 row.Items.Select(i => (i.Group, i.Name, i.Amount)).ToList()));
-            previews.Add(ToPreview(row, employee.FullName, PayrollRowStatus.Valid,
-                BuildWarnings(row, employee.GradeCode)));
+            previews.Add(ToPreview(row, employee.Value.FullName, PayrollRowStatus.Valid,
+                BuildWarnings(row, employee.Value.GradeCode)));
             valid++;
         }
 
         return (previews, valid, error, duplicate, groups);
+    }
+
+    /// <summary>Lỗi đầu tiên của một dòng (mã chấm công, nhân viên còn làm, thực lĩnh, số công, có khoản lương); null nếu hợp lệ.</summary>
+    private static (string? Error, (int EmployeeId, string FullName, string Status, string? GradeCode)? Employee) CheckRow(
+        PayrollExcelRowDto row, EmployeeLookup employees)
+    {
+        if (row.ParseError is not null) return (row.ParseError, null);
+
+        var code = row.AttendanceCode!;
+        if (!employees.TryGetValue(code, out var employee))
+            return ($"Mã chấm công {code} ({row.FullName}) không có trong hệ thống.", null);
+        if (employee.Status != RecordStatus.Active) return ($"Nhân viên mã chấm công {code} đã nghỉ việc.", employee);
+        if (row.NetPay is null) return ("Thiếu thực lĩnh.", employee);
+        if (row.WorkDays is < 0 or > 31) return ("Số công không hợp lệ (0-31).", employee);
+        if (row.Items.Count == 0) return ("Dòng không có khoản lương nào lớn hơn 0.", employee);
+        return (null, employee);
     }
 
     /// <summary>Cảnh báo không chặn: tổng các khoản (cộng − trừ − BHXH) lệch Thực lĩnh trong file hoặc bậc thợ trong
