@@ -10,39 +10,23 @@ import {
   Space,
   Upload,
   message,
-  type UploadFile,
 } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
-import { useState } from 'react';
+import dayjs from 'dayjs';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
 import { MESSAGES } from '@/constants/messages';
-import type { RequestType } from '@/constants/requestTypes';
-import { attachmentApi } from '@/hooks/useAttachments';
-import type { ApiError } from '@/types/api';
-import { applyFieldErrors } from '@/utils/apiError';
-import { fill, toApiDate } from '@/utils/format';
-import { GENERIC_FORM_TYPES } from '../constants';
-import { useCreateRequest, useRequestTypes, useUpdateRequest } from '../hooks/useRequests';
+import { fill } from '@/utils/format';
 import type { RequestDetail } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { useRequestForm } from '../hooks/useRequestForm';
+import { EMPTY_LINE } from '../hooks/useRequestForm';
 
-type FormValues = {
-  requestType: RequestType;
-  title?: string;
-  content?: string;
-  targetDate?: Dayjs;
-  lines?: { itemDescription: string; quantity: number }[];
-};
-
-type RequestFormModalProps = {
+export type RequestFormModalProps = {
   open: boolean;
   editing?: RequestDetail;
   maxPhotos: number;
   onClose: () => void;
   onSaved: (requestId: number) => void;
 };
-
-const EMPTY_LINE = { itemDescription: '', quantity: 1 };
 
 /** Form chung cho 3 loại đơn của Cơ điện: tiêu đề, nội dung, ngày cần, dòng linh kiện + số lượng, ảnh. */
 export function RequestFormModal({
@@ -52,64 +36,8 @@ export function RequestFormModal({
   onClose,
   onSaved,
 }: RequestFormModalProps) {
-  const [form] = Form.useForm<FormValues>();
-  const [files, setFiles] = useState<UploadFile[]>([]);
-  const { data: types } = useRequestTypes();
-  const create = useCreateRequest();
-  const update = useUpdateRequest(editing?.requestId ?? 0);
-  const options = (types ?? []).filter((t) => GENERIC_FORM_TYPES.includes(t.requestType));
-
-  // Ảnh cần OwnerId nên chỉ tải được sau khi đơn đã có Id; lỗi một phần không làm mất đơn.
-  const uploadPhotos = async (requestId: number) => {
-    const results = await Promise.allSettled(
-      files.map((f) =>
-        attachmentApi.upload('Request', requestId, f.originFileObj as File, 'Photo'),
-      ),
-    );
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    if (failed > 0) void message.warning(fill(MESSAGES.requests.photoUploadFailed, failed));
-  };
-
-  const handleFinish = async (values: FormValues) => {
-    const body = {
-      title: values.title ?? null,
-      content: values.content ?? null,
-      targetDate: values.targetDate ? toApiDate(values.targetDate) : null,
-      lines: (values.lines ?? []).map((l) => ({
-        itemDescription: l.itemDescription,
-        quantity: l.quantity,
-      })),
-    };
-    try {
-      if (editing) {
-        await update.mutateAsync({ ...body, rowVer: editing.rowVer });
-        onSaved(editing.requestId);
-      } else {
-        const newId = await create.mutateAsync({ ...body, requestType: values.requestType });
-        await uploadPhotos(newId);
-        void message.success(MESSAGES.requests.created);
-        onSaved(newId);
-      }
-      form.resetFields();
-      setFiles([]);
-    } catch (e) {
-      // useApiMutation đã hiện message; lỗi 400 theo field thì gắn thêm vào ô nhập.
-      applyFieldErrors(form, e as ApiError);
-    }
-  };
-
-  const initialValues: Partial<FormValues> = editing
-    ? {
-        requestType: editing.requestType,
-        title: editing.title ?? undefined,
-        content: editing.content ?? undefined,
-        targetDate: editing.targetDate ? dayjs(editing.targetDate) : undefined,
-        lines: editing.lines.map((l) => ({
-          itemDescription: l.itemDescription ?? '',
-          quantity: l.quantity,
-        })),
-      }
-    : { lines: [EMPTY_LINE] };
+  const { create, update, options, handleFinish, initialValues, form, files, setFiles } =
+    useRequestForm({ editing, onSaved });
 
   return (
     <Modal

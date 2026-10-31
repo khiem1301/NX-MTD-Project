@@ -1,26 +1,13 @@
-import { useEffect, useMemo } from 'react';
 import { Alert, Descriptions, Divider, Form, InputNumber, Modal, Select, Typography } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
-import { useTeamLookup } from '@/hooks/useHrLookups';
-import { formatQty, toApiDate } from '@/utils/format';
+import { formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
-import { useKpiCapacity, useSaveKpiTarget } from '../hooks/useKpi';
 import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppRangePicker } from '@/components/common/DateInputs';
+import { useKpiTargetForm } from '../hooks/useKpiTargetForm';
 
-type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
-
-type FormValues = {
-  orderId: number;
-  productId: number;
-  sewingTeamId: number;
-  period: [Dayjs, Dayjs];
-  targetFinishedQty: number;
-  workingDays: number;
-};
+export type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
 
 const text = KPI_TEXT.form;
 
@@ -29,75 +16,23 @@ const text = KPI_TEXT.form;
  * của đơn đã chọn; BE kiểm lại và báo trùng kỳ. Khi sửa, đơn / mã hàng / tổ không đổi được để khỏi lệch kết quả đã tính.
  */
 export function KpiTargetFormModal({ open, target, onClose }: Props) {
-  const [form] = Form.useForm<FormValues>();
-  const save = useSaveKpiTarget(target?.kpiTargetId ?? null);
-  const orderId = Form.useWatch('orderId', form) ?? null;
-  const productId = Form.useWatch('productId', form) ?? null;
-  const sewingTeamId = Form.useWatch('sewingTeamId', form) ?? null;
-  const qty = Form.useWatch('targetFinishedQty', form);
-  const capacity = useKpiCapacity(orderId, productId, sewingTeamId, target?.kpiTargetId).data;
-  const overCapacity = capacity !== undefined && (qty ?? 0) > capacity.maxTarget;
-  const days = Form.useWatch('workingDays', form);
-  const orders = useOrderLookup();
-  const lines = useOrderLineLookup(orderId);
-  const teams = useTeamLookup();
-  const editing = target !== null;
-
-  useEffect(() => {
-    if (!open) return;
-    form.resetFields();
-    if (target) {
-      form.setFieldsValue({
-        orderId: target.orderId,
-        productId: target.productId,
-        sewingTeamId: target.sewingTeamId,
-        period: [dayjs(target.startDate), dayjs(target.endDate)],
-        targetFinishedQty: target.targetFinishedQty,
-        workingDays: target.workingDays,
-      });
-    }
-  }, [open, target, form]);
-
-  const orderOptions = useMemo(() => {
-    const options = (orders.data?.items ?? []).map((o) => ({
-      value: o.orderId,
-      label: o.orderCode,
-    }));
-    // Đơn của chỉ tiêu đang sửa có thể đã ra khỏi danh sách "đơn đang chạy": vẫn phải hiện đúng mã.
-    return target && !options.some((o) => o.value === target.orderId)
-      ? [{ value: target.orderId, label: target.orderCode }, ...options]
-      : options;
-  }, [orders.data, target]);
-
-  const productOptions = useMemo(() => {
-    const seen = new Map<number, string>();
-    (lines.data ?? []).forEach((l) => seen.set(l.productId, `${l.productCode} - ${l.productName}`));
-    if (target && !seen.has(target.productId))
-      seen.set(target.productId, `${target.productCode} - ${target.productName}`);
-    return [...seen].map(([value, label]) => ({ value, label }));
-  }, [lines.data, target]);
-
-  const teamOptions = (teams.data ?? [])
-    .filter((t) => t.teamType === 'Sewing')
-    .map((t) => ({ value: t.teamId, label: t.teamName }));
-
-  const dailyPreview = qty && days ? Math.round((qty / days) * 100) / 100 : null;
-  const required = [{ required: true, message: text.required }];
-
-  const handleFinish = (values: FormValues) => {
-    save.mutate(
-      {
-        orderId: values.orderId,
-        productId: values.productId,
-        sewingTeamId: values.sewingTeamId,
-        startDate: toApiDate(values.period[0]),
-        endDate: toApiDate(values.period[1]),
-        targetFinishedQty: values.targetFinishedQty,
-        workingDays: values.workingDays,
-      },
-      { onSuccess: onClose },
-    );
-  };
+  const {
+    save,
+    orderId,
+    capacity,
+    overCapacity,
+    orders,
+    lines,
+    teams,
+    editing,
+    orderOptions,
+    productOptions,
+    teamOptions,
+    dailyPreview,
+    required,
+    handleFinish,
+    form,
+  } = useKpiTargetForm({ open, target, onClose });
 
   return (
     <Modal
