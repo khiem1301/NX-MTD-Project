@@ -163,3 +163,10 @@ export function toPayload(
     ),
   };
 }
+
+/** Sửa một dòng của bảng nhập liệu theo khóa dòng (dùng chung cho thành phần, biến thể, định mức). */
+export const patchRow = <T extends { key: string }>(
+  set: (updater: (rows: T[]) => T[]) => void,
+  key: string,
+  change: Partial<T>,
+) => set((rows) => rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
