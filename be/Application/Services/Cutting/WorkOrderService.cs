@@ -191,7 +191,7 @@ public sealed class WorkOrderService : IWorkOrderService
         {
             WorkOrderCode = await _codes.NextAsync<WorkOrder>(DocumentPrefixes.WorkOrder, w => w.WorkOrderCode, ct),
             Status = WorkOrderStatuses.Open,
-            OrderId = request.OrderId.Value,
+            OrderId = request.OrderId!.Value,
             ProductId = check.ProductId,
             CuttingTeamId = dto.CuttingTeamId,
             DueDate = dto.DueDate,
