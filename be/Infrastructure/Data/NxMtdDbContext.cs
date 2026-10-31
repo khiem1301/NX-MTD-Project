@@ -64,6 +64,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<GradeLevel> GradeLevels { get; set; }
 
+    public virtual DbSet<GradeLevelCode> GradeLevelCodes { get; set; }
+
     public virtual DbSet<KpiTarget> KpiTargets { get; set; }
 
     public virtual DbSet<Material> Materials { get; set; }
@@ -816,9 +818,8 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.CurrentGradeCode)
-                .HasMaxLength(1)
-                .IsUnicode(false)
-                .IsFixedLength();
+                .HasMaxLength(5)
+                .IsUnicode(false);
             entity.Property(e => e.EmployeeCode)
                 .HasMaxLength(20)
                 .IsUnicode(false);
@@ -841,6 +842,10 @@ public partial class NxMtdDbContext : DbContext
                 .IsUnicode(false)
                 .HasDefaultValue("ACTIVE");
             entity.Property(e => e.UpdatedAt).HasPrecision(0);
+
+            entity.HasOne(d => d.CurrentGradeCodeNavigation).WithMany(p => p.Employees)
+                .HasForeignKey(d => d.CurrentGradeCode)
+                .HasConstraintName("FK_Employee_Grade");
 
             entity.HasOne(d => d.Role).WithMany(p => p.Employees)
                 .HasForeignKey(d => d.RoleId)
@@ -929,24 +934,31 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.CurrentGradeCode)
-                .HasMaxLength(1)
-                .IsUnicode(false)
-                .IsFixedLength();
+                .HasMaxLength(5)
+                .IsUnicode(false);
             entity.Property(e => e.DecisionNote).HasMaxLength(500);
             entity.Property(e => e.ProposedGradeCode)
-                .HasMaxLength(1)
-                .IsUnicode(false)
-                .IsFixedLength();
+                .HasMaxLength(5)
+                .IsUnicode(false);
             entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasDefaultValue("SUBMITTED");
 
+            entity.HasOne(d => d.CurrentGradeCodeNavigation).WithMany(p => p.GradeEvaluationCurrentGradeCodeNavigations)
+                .HasForeignKey(d => d.CurrentGradeCode)
+                .HasConstraintName("FK_GradeEval_Current");
+
             entity.HasOne(d => d.ProposedByNavigation).WithMany(p => p.GradeEvaluationProposedByNavigations)
                 .HasForeignKey(d => d.ProposedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_GradeEval_ProposedBy");
+
+            entity.HasOne(d => d.ProposedGradeCodeNavigation).WithMany(p => p.GradeEvaluationProposedGradeCodeNavigations)
+                .HasForeignKey(d => d.ProposedGradeCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_GradeEval_Proposed");
 
             entity.HasOne(d => d.Team).WithMany(p => p.GradeEvaluations)
                 .HasForeignKey(d => d.TeamId)
@@ -968,11 +980,33 @@ public partial class NxMtdDbContext : DbContext
                 .HasPrecision(0)
                 .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.GradeCode)
-                .HasMaxLength(1)
-                .IsUnicode(false)
-                .IsFixedLength();
+                .HasMaxLength(5)
+                .IsUnicode(false);
+                        entity.Property(e => e.MonthlyAmount).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.GradeCodeNavigation).WithMany(p => p.GradeLevels)
+                .HasForeignKey(d => d.GradeCode)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_GradeLevel_Code");
+        });
+
+        modelBuilder.Entity<GradeLevelCode>(entity =>
+        {
+            entity.HasKey(e => e.GradeCode);
+
+            entity.ToTable("GradeLevelCode");
+
+            entity.Property(e => e.GradeCode)
+                .HasMaxLength(5)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedAt)
+                .HasPrecision(0)
+                .HasDefaultValueSql("([dbo].[fn_VnNow]())");
             entity.Property(e => e.GradeName).HasMaxLength(50);
-            entity.Property(e => e.MonthlyAmount).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Status)
+                .HasMaxLength(10)
+                .IsUnicode(false)
+                .HasDefaultValue("ACTIVE");
         });
 
         modelBuilder.Entity<KpiTarget>(entity =>
@@ -2353,9 +2387,8 @@ public partial class NxMtdDbContext : DbContext
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.GradeAllowance).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.GradeCode)
-                .HasMaxLength(1)
-                .IsUnicode(false)
-                .IsFixedLength();
+                .HasMaxLength(5)
+                .IsUnicode(false);
             entity.Property(e => e.OvertimeHours).HasColumnType("decimal(38, 2)");
             entity.Property(e => e.PayType)
                 .HasMaxLength(20)

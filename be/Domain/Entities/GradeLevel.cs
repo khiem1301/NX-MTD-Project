@@ -12,11 +12,11 @@ public partial class GradeLevel
 
     public string GradeCode { get; set; } = null!;
 
-    public string GradeName { get; set; } = null!;
-
     public decimal MonthlyAmount { get; set; }
 
     public DateOnly EffectiveDate { get; set; }
 
     public DateTime CreatedAt { get; set; }
+
+    public virtual GradeLevelCode GradeCodeNavigation { get; set; } = null!;
 }

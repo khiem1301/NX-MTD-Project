@@ -44,10 +44,16 @@ public static class AuditActions
     public const string Login = "LOGIN";
 }
 
-/// <summary>GradeLevel / GradeEvaluation: bậc thợ A–D.</summary>
+/// <summary>Danh mục bậc thợ (GradeLevelCode): mã gồm chữ hoa / số, tối đa 5 ký tự; Admin thêm / sửa / ngừng dùng.</summary>
 public static class GradeCodes
 {
-    public static readonly IReadOnlySet<string> All = new HashSet<string> { "A", "B", "C", "D" };
+    public const int MaxLength = 5;
+    public const string Active = "ACTIVE";
+    public const string Inactive = "INACTIVE";
+
+    public static bool IsWellFormed(string? code) =>
+        !string.IsNullOrWhiteSpace(code) && code.Trim().Length <= MaxLength
+        && code.Trim().All(c => char.IsAsciiLetterUpper(c) || char.IsAsciiDigit(c));
 }
 
 /// <summary>GradeEvaluation.Status (CK_GradeEval_Status). Dòng APPLIED là lịch sử bậc.</summary>
