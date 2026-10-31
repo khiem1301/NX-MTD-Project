@@ -51,9 +51,9 @@ public sealed class QcBatchService : IQcBatchService
     public async Task<Result<OnLineQtyDto>> GetOnLineAsync(int sewingTeamId, int orderLineId, CancellationToken ct) =>
         Result<OnLineQtyDto>.Success(await ComputeOnLineAsync(sewingTeamId, orderLineId, null, ct));
 
-    public async Task<Result<int>> CreateAsync(CreateQcBatchDto dto, CancellationToken ct)
+    /// <summary>Kiểm ca, số lượng, ngày, kỳ khóa, tổ may, dòng đơn chưa đóng, lô trùng và số lượng không vượt số đang trên chuyền (MSG19).</summary>
+    private async Task<Result<int>?> ValidateAsync(CreateQcBatchDto dto, string shift, CancellationToken ct)
     {
-        var shift = CodeText.ToCode(dto.ShiftCode);
         if (!ShiftCodes.All.Contains(shift))
             return Result<int>.Failure(ErrorCodes.OutputInvalid, "Ca làm việc không hợp lệ.", ResultKind.Validation);
         if (dto.FinishedQty <= 0)
@@ -78,8 +78,16 @@ public sealed class QcBatchService : IQcBatchService
         if (duplicate) return Result<int>.Failure(ErrorCodes.QcBatchDuplicate, Messages.QcBatchDuplicate);
 
         var onLine = await ComputeOnLineAsync(dto.SewingTeamId, dto.OrderLineId, null, ct);
-        if (dto.FinishedQty > onLine.OnLine)
-            return Result<int>.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine));   // MSG19
+        return dto.FinishedQty > onLine.OnLine
+            ? Result<int>.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine))   // MSG19
+            : null;
+    }
+
+    public async Task<Result<int>> CreateAsync(CreateQcBatchDto dto, CancellationToken ct)
+    {
+        var shift = CodeText.ToCode(dto.ShiftCode);
+        var invalid = await ValidateAsync(dto, shift, ct);
+        if (invalid is not null) return invalid;
 
         var batch = new QcBatch
         {

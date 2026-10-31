@@ -59,6 +59,21 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .ToList();
     }
 
+    /// <summary>Số lượng đã nhận (phiếu nhập đã xác nhận) theo dòng đơn mua.</summary>
+    private Task<Dictionary<int, decimal>> ReceivedByLineAsync(int[] lineIds, CancellationToken ct) =>
+        _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.PurchaseOrderLineId != null && lineIds.Contains(l.PurchaseOrderLineId.Value)
+                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
+            .GroupBy(l => l.PurchaseOrderLineId!.Value)
+            .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+
+    /// <summary>Số lần giao đã nhận theo đơn mua.</summary>
+    private Task<Dictionary<int, int>> DeliveryCountsAsync(int[] purchaseOrderIds, CancellationToken ct) =>
+        _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
+            .Where(v => purchaseOrderIds.Contains(v.PurchaseOrderId))
+            .ToDictionaryAsync(v => v.PurchaseOrderId, v => v.ReceivedCount, ct);
+
     private async Task<List<IncomingSupplierMaterialDto>> SupplierAsync(CancellationToken ct)
     {
         var receivable = new[] { PurchaseGoodsStatuses.Ordered, PurchaseGoodsStatuses.PartiallyReceived };
@@ -79,17 +94,8 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
         if (rows.Count == 0) return [];
 
         var ids = rows.Select(r => r.PurchaseOrderLineId).ToArray();
-        var received = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
-            .Where(l => l.PurchaseOrderLineId != null && ids.Contains(l.PurchaseOrderLineId.Value)
-                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
-            .GroupBy(l => l.PurchaseOrderLineId!.Value)
-            .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
-
-        var poIds = rows.Select(r => r.PurchaseOrderId).Distinct().ToArray();
-        var counts = await _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
-            .Where(v => poIds.Contains(v.PurchaseOrderId))
-            .ToDictionaryAsync(v => v.PurchaseOrderId, v => v.ReceivedCount, ct);
+        var received = await ReceivedByLineAsync(ids, ct);
+        var counts = await DeliveryCountsAsync(rows.Select(r => r.PurchaseOrderId).Distinct().ToArray(), ct);
 
         return rows
             .Select(r =>
