@@ -45,6 +45,24 @@ public sealed class CostSummaryService : ICostSummaryService
             return Result<CostSummaryDto>.Failure(costResult.ErrorCode!, costResult.Message!, costResult.Kind);
 
         var cost = costResult.Data!;
+        var (fixedItems, variableItems, variableByProduct) = SplitItems(cost);
+
+        var fixedTotal = fixedItems.Sum(i => i.Amount);
+        var variableTotal = variableItems.Sum(i => i.Amount);
+
+        var (payrollApproved, payrollTotal) = await GetApprovedPayrollTotalAsync(periodMonth, ct);
+        var grandTotal = cost.TotalAmount + (payrollTotal ?? 0m);
+
+        return Result<CostSummaryDto>.Success(new CostSummaryDto(
+            cost.PeriodId, periodMonth, cost.IsLocked,
+            fixedTotal, fixedItems, variableTotal, variableItems, variableByProduct,
+            cost.TotalAmount, payrollApproved, payrollTotal, grandTotal, cost.MealsReconciliation));
+    }
+
+    /// <summary>Tách khoản chi phí thành định phí, biến phí theo khoản và biến phí gộp theo mã hàng.</summary>
+    private static (List<CostFixedItemDto> Fixed, List<CostVariableItemDto> Variable, List<CostByProductDto> ByProduct) SplitItems(
+        MonthlyCostSummaryDto cost)
+    {
         var fixedTypeText = CodeText.ToPascal(MonthlyCostType.Fixed);
         var variableTypeText = CodeText.ToPascal(MonthlyCostType.Variable);
 
@@ -62,17 +80,7 @@ public sealed class CostSummaryService : ICostSummaryService
             .Select(g => new CostByProductDto(g.Key.ProductId, g.Key.ProductCode, g.Key.ProductName, g.Sum(i => i.Amount)))
             .OrderBy(p => p.ProductCode)
             .ToList();
-
-        var fixedTotal = fixedItems.Sum(i => i.Amount);
-        var variableTotal = variableItems.Sum(i => i.Amount);
-
-        var (payrollApproved, payrollTotal) = await GetApprovedPayrollTotalAsync(periodMonth, ct);
-        var grandTotal = cost.TotalAmount + (payrollTotal ?? 0m);
-
-        return Result<CostSummaryDto>.Success(new CostSummaryDto(
-            cost.PeriodId, periodMonth, cost.IsLocked,
-            fixedTotal, fixedItems, variableTotal, variableItems, variableByProduct,
-            cost.TotalAmount, payrollApproved, payrollTotal, grandTotal, cost.MealsReconciliation));
+        return (fixedItems, variableItems, variableByProduct);
     }
 
     public async Task<Result<ExcelFileDto>> ExportAsync(string periodMonth, CancellationToken ct)

@@ -79,44 +79,47 @@ public sealed class FgHandoverService : IFgHandoverService
 
     public async Task<Result<FgHandoverDto>> CreateAsync(CreateFgHandoverDto dto, int inspectorId, CancellationToken ct)
     {
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var order = await _uow.Repository<CustomerOrder>().Query().FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
-            if (order is null) return WarehouseFailures.NotFound<int>();
-            if (OrderStatuses.Closed.Contains(order.Status))
-                return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
-
-            await _locks.AcquireAsync($"fg-handover:{order.OrderId}", ct);
-            var remaining = (await HandoverableAsync(order.OrderId, dto.ProductId, ct)).ToDictionary(r => r.OrderLineId);
-            if (dto.Lines.Any(l => !remaining.ContainsKey(l.OrderLineId)))
-                return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.FgLineNotInOrder);
-            var over = dto.Lines.Where(l => l.HandedQty > remaining[l.OrderLineId].RemainingQty)
-                .Select(l => $"{remaining[l.OrderLineId].Color}-{remaining[l.OrderLineId].SizeCode}: còn {remaining[l.OrderLineId].RemainingQty}, giao {l.HandedQty}")
-                .ToList();
-            if (over.Count > 0)
-                return Result<int>.Failure(ErrorCodes.FgHandoverExceedsQc,
-                    $"{WarehouseMessages.FgHandoverExceedsQc}: {string.Join("; ", over)}.");
-
-            var handover = new FgHandover
-            {
-                HandoverCode = await _codes.NextAsync<FgHandover>(DocumentPrefixes.FgHandover, h => h.HandoverCode, ct),
-                OrderId = order.OrderId,
-                ProductId = dto.ProductId,
-                InspectorId = inspectorId,
-                HandedAt = _clock.Now,
-                Status = HandoverStatuses.Pending,
-                FgHandoverLines = dto.Lines.Select(l => new FgHandoverLine { OrderLineId = l.OrderLineId, HandedQty = l.HandedQty }).ToList(),
-            };
-            await _uow.Repository<FgHandover>().AddAsync(handover);
-            await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-                "Chờ nhận thành phẩm", $"QA/QC đã lập phiếu {handover.HandoverCode} cho đơn {order.OrderCode}, vui lòng đếm và nhận vào kho.",
-                null), ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(handover.FgHandoverId, WarehouseMessages.FgHandoverCreated);
-        });
+        var created = await _uow.InTransactionAsync(() => StoreHandoverAsync(dto, inspectorId, ct));
         return created.IsSuccess
             ? await GetByIdAsync(created.Data, inspectorId, ct)
             : WarehouseFailures.From<FgHandoverDto>(created);
+    }
+
+    /// <summary>Kiểm dòng đơn và số lượng rồi lưu phiếu bàn giao thành phẩm và báo Thủ kho.</summary>
+    private async Task<Result<int>> StoreHandoverAsync(CreateFgHandoverDto dto, int inspectorId, CancellationToken ct)
+    {
+        var order = await _uow.Repository<CustomerOrder>().Query().FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
+        if (order is null) return WarehouseFailures.NotFound<int>();
+        if (OrderStatuses.Closed.Contains(order.Status))
+            return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+
+        await _locks.AcquireAsync($"fg-handover:{order.OrderId}", ct);
+        var remaining = (await HandoverableAsync(order.OrderId, dto.ProductId, ct)).ToDictionary(r => r.OrderLineId);
+        if (dto.Lines.Any(l => !remaining.ContainsKey(l.OrderLineId)))
+            return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.FgLineNotInOrder);
+        var over = dto.Lines.Where(l => l.HandedQty > remaining[l.OrderLineId].RemainingQty)
+            .Select(l => $"{remaining[l.OrderLineId].Color}-{remaining[l.OrderLineId].SizeCode}: còn {remaining[l.OrderLineId].RemainingQty}, giao {l.HandedQty}")
+            .ToList();
+        if (over.Count > 0)
+            return Result<int>.Failure(ErrorCodes.FgHandoverExceedsQc,
+                $"{WarehouseMessages.FgHandoverExceedsQc}: {string.Join("; ", over)}.");
+
+        var handover = new FgHandover
+        {
+            HandoverCode = await _codes.NextAsync<FgHandover>(DocumentPrefixes.FgHandover, h => h.HandoverCode, ct),
+            OrderId = order.OrderId,
+            ProductId = dto.ProductId,
+            InspectorId = inspectorId,
+            HandedAt = _clock.Now,
+            Status = HandoverStatuses.Pending,
+            FgHandoverLines = dto.Lines.Select(l => new FgHandoverLine { OrderLineId = l.OrderLineId, HandedQty = l.HandedQty }).ToList(),
+        };
+        await _uow.Repository<FgHandover>().AddAsync(handover);
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            "Chờ nhận thành phẩm", $"QA/QC đã lập phiếu {handover.HandoverCode} cho đơn {order.OrderCode}, vui lòng đếm và nhận vào kho.",
+            null), ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(handover.FgHandoverId, WarehouseMessages.FgHandoverCreated);
     }
 
     public Task<Result> ConfirmAsync(int handoverId, ConfirmFgHandoverDto dto, int employeeId, CancellationToken ct) =>
