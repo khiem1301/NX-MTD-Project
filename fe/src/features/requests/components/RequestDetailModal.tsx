@@ -1,98 +1,35 @@
-import { Button, Descriptions, Divider, Result, Spin, Typography, message } from 'antd';
-import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Button, Descriptions, Divider, Result, Spin, Typography } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
-import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
-import type { ApiError } from '@/types/api';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { DEFAULT_MAX_PHOTOS, GENERIC_FORM_TYPES, REQUEST_STATUS_TAG } from '../constants';
-import { useRequestAction, useRequestDetail } from '../hooks/useRequests';
-import type { RequestAction, RequestDetail } from '../types';
 import { RequestFormModal } from './RequestFormModal';
 import { RequestHistory } from './RequestHistory';
 import { DetailModal, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
-
-type ActionKind = RequestAction['kind'];
-
-const PENDING_MODAL: Record<
-  ActionKind,
-  { title: string; label: string; required: boolean; danger: boolean; done: string }
-> = {
-  approve: {
-    title: MESSAGES.requests.approve,
-    label: MESSAGES.requests.approveNote,
-    required: false,
-    danger: false,
-    done: MESSAGES.requests.approved,
-  },
-  reject: {
-    title: MESSAGES.requests.reject,
-    label: MESSAGES.requests.rejectReason,
-    required: true,
-    danger: true,
-    done: MESSAGES.requests.rejected,
-  },
-  complete: {
-    title: MESSAGES.requests.complete,
-    label: MESSAGES.requests.resultNote,
-    required: false,
-    danger: false,
-    done: MESSAGES.requests.completed,
-  },
-  cancel: {
-    title: MESSAGES.requests.cancelRequest,
-    label: MESSAGES.requests.cancelReason,
-    required: false,
-    danger: true,
-    done: MESSAGES.requests.cancelled,
-  },
-};
-
-const buildAction = (
-  kind: ActionKind,
-  detail: RequestDetail,
-  note: string | null,
-): RequestAction => {
-  const base = { id: detail.requestId, rowVer: detail.rowVer };
-  switch (kind) {
-    case 'approve':
-      return { kind, ...base, note };
-    case 'reject':
-      return { kind, ...base, reason: note ?? '' };
-    case 'complete':
-      return { kind, ...base, resultNote: note };
-    case 'cancel':
-      return { kind, ...base, reason: note };
-  }
-};
+import { PENDING_MODAL, useRequestDetailModal } from '../hooks/useRequestDetailModal';
 
 /** Chi tiết đơn mở theo query ?id=<requestId> (link chia sẻ được). Nút hiện theo `permissions` server trả về. */
 export function RequestDetailModal() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const idParam = Number(searchParams.get('id'));
-  const id = Number.isInteger(idParam) && idParam > 0 ? idParam : null;
-  const { data, isLoading, error, refetch } = useRequestDetail(id);
-  const act = useRequestAction();
-  const [pending, setPending] = useState<ActionKind | null>(null);
-  const [editing, setEditing] = useState(false);
-
-  const close = () => setSearchParams({});
-  const notFound = (error as ApiError | null)?.errorCode === ERROR_CODES.CommonNotFound;
-
-  const submit = (note: string | null) => {
-    if (!pending || !data) return;
-    const meta = PENDING_MODAL[pending];
-    act.mutate(buildAction(pending, data, note), {
-      onSuccess: () => void message.success(meta.done),
-      onSettled: () => setPending(null),
-    });
-  };
+  const {
+    id,
+    act,
+    close,
+    notFound,
+    submit,
+    pending,
+    setPending,
+    editing,
+    setEditing,
+    data,
+    isLoading,
+    error,
+    refetch,
+  } = useRequestDetailModal();
 
   return (
     <DetailModal
