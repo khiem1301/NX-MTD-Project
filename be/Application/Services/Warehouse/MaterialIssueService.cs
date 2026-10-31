@@ -83,45 +83,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var (error, target) = await ResolveTargetAsync(dto, ct);
         if (error is not null) return error;
 
-        var created = await _uow.InTransactionAsync(async () =>
-        {
-            var lines = dto.Lines.Select(l => new MaterialIssueLine
-            {
-                MaterialId = l.MaterialId,
-                OrderLineId = l.OrderLineId,
-                ProductComponentMaterialId = l.OrderLineId is null ? null : l.ProductComponentMaterialId,
-                IssuedQty = l.IssuedQty,
-            }).ToList();
-            var available = await _stock.EnsureAvailableAsync(lines.Select(l => new StockRequirement(KeyOf(dto.WarehouseType, l), l.IssuedQty)).ToList(), ct);
-            if (!available.IsSuccess) return WarehouseFailures.From<int>(available);
-
-            var issue = new MaterialIssue
-            {
-                IssueCode = await _codes.NextAsync<MaterialIssue>(DocumentPrefixes.MaterialIssue, i => i.IssueCode, ct),
-                WarehouseType = dto.WarehouseType,
-                RequestId = dto.RequestId,
-                OrderId = target!.OrderId,
-                WorkOrderId = target.WorkOrderId,
-                ReceivingTeamId = target.TeamId,
-                IssueDate = dto.IssueDate,
-                IssuedBy = issuedByEmployeeId,
-                Status = IssueStatuses.PendingReceipt,
-                MaterialIssueLines = lines,
-            };
-            await _uow.Repository<MaterialIssue>().AddAsync(issue);
-            // Thủ kho lập phiếu cấp = đã xử lý đơn xin (DEV-TH-05-1): đơn xin sang Hoàn thành cùng giao dịch.
-            if (dto.RequestId is { } requestId)
-            {
-                var done = await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
-                if (!done.IsSuccess) return WarehouseFailures.From<int>(done);
-            }
-            // Tổ trưởng tổ nhận là người xử lý tiếp: kiểm đếm và xác nhận nhận.
-            await _notifier.NotifyTeamLeadersAsync(target.TeamId, new NotificationMessage(NotificationSources.Warehouse,
-                dto.WarehouseType == WarehouseTypes.SemiFinished ? "Có phiếu cấp BTP chờ nhận" : "Có phiếu cấp vải chờ nhận",
-                $"Thủ kho đã lập phiếu cấp {issue.IssueCode} cho tổ bạn, vui lòng kiểm đếm và xác nhận nhận.", IssueLink), ct);
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(issue.MaterialIssueId);
-        });
+        var created = await _uow.InTransactionAsync(() => StoreIssueAsync(dto, issuedByEmployeeId, target!, ct));
         if (!created.IsSuccess) return WarehouseFailures.From<MaterialIssueDto>(created);
         _logger.LogInformation("Material issue {IssueId} ({WarehouseType}) created for team {TeamId}",
             created.Data, dto.WarehouseType, target!.TeamId);
@@ -202,6 +164,47 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (issue is null) return WarehouseFailures.NotFound();
         if (issue.ReceivingTeamId != teamId) return WarehouseFailures.TeamMismatch();
         return issue.Status == IssueStatuses.PendingReceipt ? null : WarehouseFailures.InvalidStatus();
+    }
+
+    /// <summary>Kiểm tồn rồi lưu phiếu cấp; phiếu cấp theo đơn xin thì đánh dấu đơn xin hoàn thành và báo tổ trưởng tổ nhận.</summary>
+    private async Task<Result<int>> StoreIssueAsync(CreateMaterialIssueDto dto, int issuedByEmployeeId, IssueTarget target, CancellationToken ct)
+    {
+        var lines = dto.Lines.Select(l => new MaterialIssueLine
+        {
+            MaterialId = l.MaterialId,
+            OrderLineId = l.OrderLineId,
+            ProductComponentMaterialId = l.OrderLineId is null ? null : l.ProductComponentMaterialId,
+            IssuedQty = l.IssuedQty,
+        }).ToList();
+        var available = await _stock.EnsureAvailableAsync(lines.Select(l => new StockRequirement(KeyOf(dto.WarehouseType, l), l.IssuedQty)).ToList(), ct);
+        if (!available.IsSuccess) return WarehouseFailures.From<int>(available);
+
+        var issue = new MaterialIssue
+        {
+            IssueCode = await _codes.NextAsync<MaterialIssue>(DocumentPrefixes.MaterialIssue, i => i.IssueCode, ct),
+            WarehouseType = dto.WarehouseType,
+            RequestId = dto.RequestId,
+            OrderId = target.OrderId,
+            WorkOrderId = target.WorkOrderId,
+            ReceivingTeamId = target.TeamId,
+            IssueDate = dto.IssueDate,
+            IssuedBy = issuedByEmployeeId,
+            Status = IssueStatuses.PendingReceipt,
+            MaterialIssueLines = lines,
+        };
+        await _uow.Repository<MaterialIssue>().AddAsync(issue);
+        // Thủ kho lập phiếu cấp = đã xử lý đơn xin (DEV-TH-05-1): đơn xin sang Hoàn thành cùng giao dịch.
+        if (dto.RequestId is { } requestId)
+        {
+            var done = await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
+            if (!done.IsSuccess) return WarehouseFailures.From<int>(done);
+        }
+        // Tổ trưởng tổ nhận là người xử lý tiếp: kiểm đếm và xác nhận nhận.
+        await _notifier.NotifyTeamLeadersAsync(target.TeamId, new NotificationMessage(NotificationSources.Warehouse,
+            dto.WarehouseType == WarehouseTypes.SemiFinished ? "Có phiếu cấp BTP chờ nhận" : "Có phiếu cấp vải chờ nhận",
+            $"Thủ kho đã lập phiếu cấp {issue.IssueCode} cho tổ bạn, vui lòng kiểm đếm và xác nhận nhận.", IssueLink), ct);
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(issue.MaterialIssueId);
     }
 
     private async Task<(Result<MaterialIssueDto>? Error, IssueTarget? Target)> ResolveTargetAsync(
