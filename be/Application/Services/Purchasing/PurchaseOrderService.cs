@@ -7,17 +7,26 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>Đơn mua NVL: Quản đốc tạo, có thể không gắn đơn hàng (mua kim, chỉ dùng chung nhiều đơn).</summary>
+/// <summary>
+/// Đơn mua NVL: Quản đốc tạo là đặt hàng luôn (nhà cung cấp, số lượng, đơn giá, ngày đặt, số lần giao), có thể không gắn đơn hàng
+/// (mua kim, chỉ dùng chung nhiều đơn). Đơn do luồng NVL lỗi dựng sẵn mới ở trạng thái chờ chốt và đặt hàng ở PurchaseOrderFlowService.
+/// </summary>
 public sealed class PurchaseOrderService : IPurchaseOrderService
 {
     private readonly IUnitOfWork _uow;
     private readonly IDocumentCodeGenerator _codes;
     private readonly IClock _clock;
     private readonly IMaterialService _materials;
+    private readonly INotificationService _notifier;
+    private readonly IAuditLogService _audit;
 
-    public PurchaseOrderService(IUnitOfWork uow, IDocumentCodeGenerator codes, IClock clock, IMaterialService materials)
+    private const string PaymentLink = "/purchase-payments?id={0}";
+    private const string IncomingLink = "/warehouse/incoming-materials";
+
+    public PurchaseOrderService(IUnitOfWork uow, IDocumentCodeGenerator codes, IClock clock, IMaterialService materials,
+        INotificationService notifier, IAuditLogService audit)
     {
-        _uow = uow; _codes = codes; _clock = clock; _materials = materials;
+        _uow = uow; _codes = codes; _clock = clock; _materials = materials; _notifier = notifier; _audit = audit;
     }
 
     private IQueryable<PurchaseOrder> PurchaseOrders => _uow.Repository<PurchaseOrder>().Query();
@@ -79,6 +88,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         if (orderCheck is not null) return orderCheck;
         var supplierCheck = await ValidateSupplierAsync(dto.SupplierId, ct);
         if (supplierCheck is not null) return supplierCheck;
+        if (dto.OrderDate > _clock.Today)
+            return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
+                ResultKind.Validation);
 
         var resolved = await ResolveMaterialsAsync(dto.Lines, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<PurchaseOrderDto>(resolved);
@@ -125,7 +137,9 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
             OrderId = dto.OrderId,
             SupplierId = dto.SupplierId,
-            GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
+            OrderDate = dto.OrderDate,
+            ExpectedDeliveryCount = dto.ExpectedDeliveryCount,
+            GoodsStatus = PurchaseGoodsStatuses.Ordered,
             PaymentStatus = PurchaseOrderStatuses.Unpaid,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
             CreatedAt = _clock.Now,
@@ -139,6 +153,18 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 }).ToList(),
         };
         await _uow.Repository<PurchaseOrder>().AddAsync(po);
+        await _uow.SaveChangesAsync();   // log và thông báo cần PurchaseOrderId nên lưu trước (cùng transaction)
+
+        var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
+            .Where(s => s.SupplierId == dto.SupplierId).Select(s => s.SupplierName).FirstAsync(ct);
+        _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Insert, null,
+            new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, Lines = po.PurchaseOrderLines.Count }));
+        await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
+            Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier),
+            string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
+        await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
+            Messages.NotifyIncomingPoTitle, string.Format(Messages.NotifyIncomingPoBody, po.PoCode, supplier),
+            IncomingLink, nameof(PurchaseOrder), po.PurchaseOrderId), ct);
         await _uow.SaveChangesAsync();
         return Result<int>.Success(po.PurchaseOrderId);
     }

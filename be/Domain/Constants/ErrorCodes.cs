@@ -195,6 +195,7 @@ public static class ErrorCodes
     public const string ProductionEditDeadlinePassed = "PRODUCTION_EDIT_DEADLINE_PASSED";
     public const string ProductionPeriodLocked = "PRODUCTION_PERIOD_LOCKED";
     public const string QcExceedsOnLine = "QC_EXCEEDS_ON_LINE";
+    public const string QcBelowHandedOver = "QC_BELOW_HANDED_OVER";
     public const string QcBatchDuplicate = "QC_BATCH_DUPLICATE";
     public const string DefectInvalid = "DEFECT_INVALID";
     public const string DefectInvalidStatus = "DEFECT_INVALID_STATUS";

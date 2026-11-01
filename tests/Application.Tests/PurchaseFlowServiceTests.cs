@@ -618,7 +618,30 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, null, [line]))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, new DateOnly(2026, 11, 1), 1, null, [line]))
             .IsValid.Should().Be(valid);
+    }
+
+    [Theory]
+    [InlineData(1, 1000, true)]
+    [InlineData(99, 1, true)]
+    [InlineData(0, 1000, false)]     // số lần giao tối thiểu 1
+    [InlineData(100, 1000, false)]   // tối đa 99
+    [InlineData(1, 0, false)]        // tạo là đặt hàng luôn nên đơn giá phải lớn hơn 0
+    public void CreatePurchaseOrder_ChecksDeliveryCountAndPrice(short count, decimal price, bool valid)
+    {
+        var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, price);
+
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line]))
+            .IsValid.Should().Be(valid);
+    }
+
+    [Fact]
+    public void CreatePurchaseOrder_RequiresOrderDate()
+    {
+        var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
+
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, default, 1, null, [line]))
+            .IsValid.Should().BeFalse();
     }
 }

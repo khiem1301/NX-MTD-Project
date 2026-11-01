@@ -296,6 +296,23 @@ public class KpiServiceTests
     }
 
     [Fact]
+    public async Task UpdateAsync_TargetCannotGoBelowWhatTheTeamAlreadyFinished()
+    {
+        GivenSetup();
+        _clock.Today.Returns(new DateOnly(2026, 10, 15));
+        _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 500, order: _orders[0], product: _products[0], team: _teams[0]));
+        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 10, 10), 300));
+        _dailyResults.Add(DailyResult(1, new DateOnly(2026, 10, 11), 100));   // đã làm 400
+
+        var below = await _sut.UpdateAsync(1, Dto(targetQty: 399), CancellationToken.None);
+        below.ErrorCode.Should().Be(ErrorCodes.KpiPlanInvalid);
+        below.Message.Should().Be(string.Format(Messages.KpiTargetBelowActual, 400));
+        _kpiTargets[0].TargetFinishedQty.Should().Be(500);
+
+        (await _sut.UpdateAsync(1, Dto(targetQty: 400), CancellationToken.None)).IsSuccess.Should().BeTrue();   // đúng bằng thì được
+    }
+
+    [Fact]
     public async Task CreateAsync_SamePeriodOnAnotherTeam_IsAllowed()
     {
         GivenSetup();
@@ -683,4 +700,56 @@ public class SaveKpiTargetDtoValidatorTests
     public void MissingOrder_HasError() =>
         _validator.TestValidate(new SaveKpiTargetDto(0, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000))
             .ShouldHaveValidationErrorFor(x => x.OrderId);
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1_000_000, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(1_000_001, false)]
+    [InlineData(int.MaxValue, false)]
+    public void TargetQty_Boundaries(int qty, bool valid) =>
+        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), qty))
+            .IsValid.Should().Be(valid);
+
+    [Theory]
+    [InlineData(0, true)]     // kỳ một ngày
+    [InlineData(365, true)]   // 366 ngày gồm hai đầu
+    [InlineData(366, false)]  // 367 ngày
+    [InlineData(2_000_000, false)]
+    public void Period_IsLimitedTo366Days(int extraDays, bool valid)
+    {
+        var start = new DateOnly(2026, 11, 2);
+        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, start, start.AddDays(Math.Min(extraDays, 2_000_000)), 1000))
+            .IsValid.Should().Be(valid);
+    }
+
+    [Fact]
+    public void MissingDates_AreReportedWithoutThrowing()
+    {
+        var result = _validator.Validate(new SaveKpiTargetDto(1, 1, 1, default, default, 1000));
+        result.IsValid.Should().BeFalse();
+    }
+}
+
+public class KpiTargetQueryValidatorTests
+{
+    private readonly KpiTargetQueryValidator _validator = new();
+
+    [Fact]
+    public void Status_MustBeKnownWhenGiven()
+    {
+        _validator.Validate(new KpiTargetQuery { Status = "Active" }).IsValid.Should().BeTrue();
+        _validator.Validate(new KpiTargetQuery { Status = "Cancelled" }).IsValid.Should().BeTrue();
+        _validator.Validate(new KpiTargetQuery()).IsValid.Should().BeTrue();
+        _validator.Validate(new KpiTargetQuery { Status = "Done" }).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Keyword_IsLimitedAfterTrimming()
+    {
+        _validator.Validate(new KpiTargetQuery { Keyword = "  " + new string('a', 100) + "  " }).IsValid.Should().BeTrue();
+        _validator.Validate(new KpiTargetQuery { Keyword = new string('a', 101) }).IsValid.Should().BeFalse();
+        _validator.Validate(new KpiTargetQuery { PageSize = 101 }).IsValid.Should().BeFalse();
+    }
 }

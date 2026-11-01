@@ -23,6 +23,7 @@ public class QcBatchServiceTests : ProductionTestBase
     private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
     private readonly List<OrderLine> _lines = [];
     private readonly List<AccountingPeriod> _periods = [];
+    private readonly List<FgHandoverLine> _handoverLines = [];
     private readonly QcBatchService _sut;
     private int _nextId = 1;
 
@@ -34,6 +35,7 @@ public class QcBatchServiceTests : ProductionTestBase
         SetupQueryable(_teams);
         SetupQueryable(_lines);
         SetupQueryable(_periods);
+        SetupQueryable(_handoverLines);
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         AsQaQc();
 
@@ -166,6 +168,48 @@ public class QcBatchServiceTests : ProductionTestBase
     }
 
     // ========== Sửa / xóa ==========
+
+    private void HandedOver(int qty, string status = HandoverStatuses.Pending) =>
+        _handoverLines.Add(new FgHandoverLine { OrderLineId = LineId, HandedQty = qty, FgHandover = new FgHandover { Status = status } });
+
+    [Theory]
+    [InlineData(100, true)]    // đúng bằng số đã bàn giao thì vẫn được
+    [InlineData(99, false)]    // thấp hơn 1 thì chặn
+    public async Task Update_CannotGoBelowQuantityAlreadyHandedToFinishedGoods(int newQty, bool allowed)
+    {
+        var batch = Batch(150);
+        HandedOver(100);
+
+        var result = await _sut.UpdateAsync(batch.QcBatchId, new UpdateQcBatchDto(newQty, null, RowVer), default);
+
+        result.IsSuccess.Should().Be(allowed);
+        if (!allowed) result.ErrorCode.Should().Be(ErrorCodes.QcBelowHandedOver);
+    }
+
+    [Fact]
+    public async Task Update_CountsOtherBatchesOfTheLineAndIgnoresRejectedOrCancelledHandovers()
+    {
+        var batch = Batch(50);
+        Batch(60, time: new TimeOnly(10, 0));          // đợt khác của cùng dòng đơn: 60 + 50 = 110
+        HandedOver(110);
+        HandedOver(500, HandoverStatuses.Rejected);
+        HandedOver(500, HandoverStatuses.Cancelled);
+
+        (await _sut.UpdateAsync(batch.QcBatchId, new UpdateQcBatchDto(50, null, RowVer), default)).IsSuccess.Should().BeTrue();
+        (await _sut.UpdateAsync(batch.QcBatchId, new UpdateQcBatchDto(49, null, RowVer), default)).ErrorCode
+            .Should().Be(ErrorCodes.QcBelowHandedOver);
+    }
+
+    [Fact]
+    public async Task Delete_IsBlockedWhenTheRemainingQcIsBelowWhatWasHandedOver()
+    {
+        var batch = Batch(100);
+        HandedOver(30);
+
+        (await _sut.DeleteAsync(batch.QcBatchId, new DeleteQcBatchDto(null, RowVer), default)).ErrorCode
+            .Should().Be(ErrorCodes.QcBelowHandedOver);
+        _batches.Should().Contain(batch);
+    }
 
     [Fact]
     public async Task Update_WithinShift_ChangesQuantityAndLogsOldAndNew()

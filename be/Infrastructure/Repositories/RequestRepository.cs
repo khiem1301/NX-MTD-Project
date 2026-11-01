@@ -26,9 +26,15 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                         && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
             .Select(e => e.EmployeeId).ToListAsync(ct);
 
-    public Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct) =>
-        _context.Requests.AsNoTracking().Where(r => r.RequestCode.StartsWith(prefix))
+    public async Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct)
+    {
+        var saved = await _context.Requests.AsNoTracking().Where(r => r.RequestCode.StartsWith(prefix))
             .OrderByDescending(r => r.RequestCode).Select(r => r.RequestCode).FirstOrDefaultAsync(ct);
+        // Đơn vừa thêm trong cùng lần lưu (một lần duyệt tạo hai đơn hệ thống) chưa có trong DB nhưng đã chiếm mã.
+        var pending = _context.ChangeTracker.Entries<Request>().Where(e => e.State == EntityState.Added)
+            .Select(e => e.Entity.RequestCode).Where(code => code != null && code.StartsWith(prefix, StringComparison.Ordinal));
+        return pending.Append(saved).Where(code => code != null).OrderByDescending(code => code, StringComparer.Ordinal).FirstOrDefault();
+    }
 
     public async Task<PagedResult<RequestListItemDto>> ListAsync(RequestListFilter f, CancellationToken ct)
     {

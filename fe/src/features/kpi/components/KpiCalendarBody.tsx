@@ -5,6 +5,7 @@ import { fill, formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useSaveKpiDailyPlan } from '../hooks/useKpi';
 import { useKpiDailyPlan } from '../hooks/useKpiDailyPlan';
+import { KPI_MAX_QTY } from '../utils/periodRule';
 import type { KpiCalendar } from '../types';
 import { KpiMonthCalendar } from './KpiMonthCalendar';
 
@@ -43,6 +44,7 @@ export function KpiCalendarBody({ data, editable }: KpiCalendarBodyProps) {
           <InputNumber
             size="small"
             min={0}
+            max={KPI_MAX_QTY}
             precision={0}
             controls={false}
             aria-label={fill(text.dayInput, date)}

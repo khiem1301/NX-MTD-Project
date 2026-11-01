@@ -9,6 +9,7 @@ import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppRangePicker } from '@/components/common/DateInputs';
 import { useKpiTargetForm } from '../hooks/useKpiTargetForm';
+import { KPI_MAX_QTY, periodLimitRule } from '../utils/periodRule';
 
 export type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
 
@@ -137,7 +138,11 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>
-            <Form.Item name="period" label={text.period} rules={required}>
+            <Form.Item
+              name="period"
+              label={text.period}
+              rules={[...required, periodLimitRule(text.periodMax)]}
+            >
               <AppRangePicker style={{ width: '100%' }} disabledDate={disabledDate} />
             </Form.Item>
           </Col>
@@ -176,9 +181,13 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
         <Form.Item
           name="targetFinishedQty"
           label={text.targetFinishedQty}
-          rules={[...required, { type: 'number', min: 1, message: text.qtyMin }]}
+          rules={[
+            ...required,
+            { type: 'number', min: 1, message: text.qtyMin },
+            { type: 'number', max: KPI_MAX_QTY, message: text.qtyMax },
+          ]}
         >
-          <InputNumber min={1} precision={0} style={{ width: 200 }} />
+          <InputNumber min={1} max={KPI_MAX_QTY} precision={0} style={{ width: 200 }} />
         </Form.Item>
       </Form>
     </Modal>
