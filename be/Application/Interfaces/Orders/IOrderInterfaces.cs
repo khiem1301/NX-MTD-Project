@@ -6,7 +6,8 @@ namespace NX_MTD.Application.Interfaces;
 
 public interface ICustomerRepository : IGenericRepository<Customer>
 {
-    Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, string? statusCode, CancellationToken ct);
+    Task<PagedResult<CustomerDto>> ListAsync(CustomerQuery query, string? statusCode, CancellationToken ct);
+    Task<IReadOnlyList<CustomerOptionDto>> ListOptionsAsync(CancellationToken ct);
     Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct);
 }
 
@@ -42,7 +43,8 @@ public interface ICustomerOrderRepository : IGenericRepository<CustomerOrder>
 
 public interface ICustomerService
 {
-    Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct);
+    Task<Result<PagedResult<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct);
+    Task<Result<IReadOnlyList<CustomerOptionDto>>> GetOptionsAsync(CancellationToken ct);
     Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int customerId, SaveCustomerDto dto, CancellationToken ct);
     Task<Result> DiscontinueAsync(int customerId, DiscontinueCustomerDto dto, CancellationToken ct);
@@ -61,6 +63,14 @@ public interface IProductService
     /// <summary>Tải ảnh mẫu từ máy: kiểm chữ ký ảnh + dung lượng, trả khóa lưu trữ để ghi vào SampleImageUrl.</summary>
     Task<Result<string>> UploadSampleImageAsync(FileUpload file, CancellationToken ct);
     Task<Result<AttachmentContent>> OpenSampleImageAsync(string key, CancellationToken ct);
+}
+
+/// <summary>Dọn ảnh mã hàng không còn mã hàng nào dùng (ảnh đã bị thay hoặc gỡ, ảnh tải lên nhưng chưa bao giờ được lưu).</summary>
+public interface IProductImageCleanupService
+{
+    /// <param name="utcNow">Giờ UTC hiện tại, so với giờ ghi cuối của file (truyền vào để kiểm thử được).</param>
+    /// <returns>Số file đã xóa.</returns>
+    Task<int> RunAsync(DateTime utcNow, CancellationToken ct);
 }
 
 public interface IProductSpecService

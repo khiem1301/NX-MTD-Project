@@ -16,12 +16,25 @@ export type WorkOrderLine = {
   handedQty: number;
 };
 
+/** Vải theo kích thước chi tiết của một NVL: chỉ để cảnh báo, không chặn lập lệnh. materialId = 0: màu – size chưa có định mức vải. */
+export type WorkOrderFabricCheck = {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  status: 'Enough' | 'Short' | 'TooWide' | 'Unknown';
+  needMeters: number | null;
+  availableQty: number | null;
+  message: string | null;
+};
+
 export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {
   productName: string;
   sourceRequestId: number | null;
   note: string | null;
   lines: WorkOrderLine[];
   fabrics: FabricRequirement[];
+  fabricChecks: WorkOrderFabricCheck[];
 };
 
 export type WorkOrderQuery = PageParams & { status?: string; orderId?: number };
@@ -32,7 +45,20 @@ export type SaveWorkOrderPayload = {
   cuttingTeamId: number;
   dueDate: string;
   note?: string;
-  lines: { orderLineId: number; plannedQty: number }[];
+  lines: SaveWorkOrderLine[];
+};
+
+export type SaveWorkOrderLine = {
+  orderLineId: number;
+  plannedQty: number;
+  /** Có giá trị = cắt lẻ thêm chi tiết này, plannedQty là số chi tiết. */
+  productComponentMaterialId?: number | null;
+};
+
+export type CheckWorkOrderFabricPayload = {
+  orderId: number;
+  cuttingTeamId: number;
+  lines: SaveWorkOrderLine[];
 };
 
 export type CuttingLayLine = {

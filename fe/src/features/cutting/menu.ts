@@ -2,14 +2,14 @@ import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import type { MenuEntry } from '@/types/menu';
 
-const { Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
+const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
 
 export const cuttingMenu: MenuEntry[] = [
   {
     key: 'work-orders',
     label: 'Lệnh cắt',
     path: ROUTES.workOrders,
-    roles: [Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
+    roles: [Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
     teamTypes: ['Cutting'],
   },
   {

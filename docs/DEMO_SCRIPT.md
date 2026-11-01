@@ -71,7 +71,7 @@ Kết thúc bằng Admin / Quản đốc mở **Trang chủ**: bảng *Tiến đ
 | Việc | Ai | Cách thử |
 |---|---|---|
 | Menu theo loại tổ | `TTMAY` và `TTCAT` | `TTCAT` thấy Lệnh cắt, Bàn cắt, Bàn giao BTP; `TTMAY` không thấy, gõ thẳng đường dẫn cũng bị đưa về trang chủ |
-| Định mức | `KETOAN`, `ADMIN` | Mã hàng → Định mức: Thành phần + Định mức NVL (kèm dài × rộng chi tiết); tab Màu – size chỉ đọc, nhập kích thước thành phẩm; Kế toán có mục "Mã hàng" riêng (chỉ danh sách + định mức) |
+| Định mức | `KETOAN`, `ADMIN` | Mã hàng → Định mức: Thành phần + Định mức NVL (kèm dài × rộng chi tiết); tab Màu – size chỉ đọc; Kế toán có mục "Mã hàng" riêng (chỉ danh sách + định mức) |
 | Lập KPI | `QUANDOC` | Chỉ tiêu KPI → Lập: ô "BTP khả dụng" hiện kho / tổ đang giữ / KPI khác và chặn khi vượt |
 | Kết thúc đơn của tổ | `QUANDOC` | Chỉ tiêu KPI → Kết thúc đơn: xem lệch theo công nhân, KPI đạt / không, tăng ca; xác nhận thì phần lệch thành phiếu hàng hỏng "Lệch kiểm cuối đơn" (cần công đoạn cuối và đơn giá đã duyệt) |
 | Bậc thợ | `ADMIN` | Bậc thợ → đặt bậc chọn Tổ rồi Công nhân (hiện bậc cũ); bậc cố định A–D |

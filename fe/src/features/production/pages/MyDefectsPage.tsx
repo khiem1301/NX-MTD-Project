@@ -9,6 +9,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
+import { isObjectionOpen } from '../defectRules';
 import { useMyDefects, useObjectDefect } from '../hooks/useProduction';
 import type { Defect } from '../types';
 import { PageCard } from '@/components/common/PageCard';
@@ -68,9 +69,11 @@ export function MyDefectsPage() {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, d) =>
-        d.workerObjection ? (
+        d.status === 'Confirmed' && d.workerObjection ? (
+          <Tag color="red">{mine.rejected}</Tag>
+        ) : d.workerObjection ? (
           <Tag color="volcano">{text.objected}</Tag>
-        ) : d.status === 'Recorded' ? (
+        ) : d.status === 'Recorded' && isObjectionOpen(d) ? (
           <IconAction
             title={mine.object}
             icon={<ExclamationCircleOutlined />}

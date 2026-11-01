@@ -11,6 +11,7 @@ import {
   newKey,
   variantKey,
   type ComponentRow,
+  type MaterialOption,
   type NormRow,
   type VariantRow,
 } from '../utils/productSpec';
@@ -31,7 +32,7 @@ type SpecNormsTabProps = {
   setNorms: Dispatch<SetStateAction<NormRow[]>>;
   variants: VariantRow[];
   components: ComponentRow[];
-  materialOptions: { value: number; label: string }[];
+  materialOptions: MaterialOption[];
   materialsLoading: boolean;
 };
 
@@ -55,9 +56,20 @@ export function SpecNormsTab({
       })),
     [variants],
   );
-  const componentOptions = components
-    .filter((c) => c.componentName.trim())
-    .map((c) => ({ value: c.componentName.trim(), label: c.componentName.trim() }));
+  // Chọn theo khóa dòng, nên đổi tên thành phần thì nhãn đổi theo mà dòng định mức không mất liên kết.
+  const componentOptions = components.map((c) => ({
+    value: c.key,
+    label: c.componentName.trim() || MESSAGES.orders.specValidation.unnamedComponent,
+  }));
+  const componentLabel = (key: string | undefined) =>
+    componentOptions.find((o) => o.value === key)?.label ?? '';
+  // Thành phần đang lọc có thể đã bị xóa ở tab khác: bỏ lọc thay vì giữ một khóa không còn.
+  const effectiveFilter: NormFilter = {
+    ...normFilter,
+    component: componentOptions.some((o) => o.value === normFilter.component)
+      ? normFilter.component
+      : undefined,
+  };
   const materialLabel = (id: number | undefined) =>
     materialOptions.find((m) => m.value === id)?.label ?? '';
   const colorFilterOptions = [...new Set(variants.map((v) => v.color.trim()).filter(Boolean))].map(
@@ -71,8 +83,8 @@ export function SpecNormsTab({
       variants.some((v) => variantKey(v.color, v.sizeCode) === k && match(v)),
     );
   const visibleNorms = norms.filter((r) => {
-    const f = normFilter;
-    if (f.component && r.componentName !== f.component) return false;
+    const f = effectiveFilter;
+    if (f.component && r.componentKey !== f.component) return false;
     if (f.materialId !== undefined && r.materialId !== f.materialId) return false;
     if (f.color && !appliesTo(r, (v) => v.color.trim() === f.color)) return false;
     if (f.size && !appliesTo(r, (v) => v.sizeCode.trim() === f.size)) return false;
@@ -80,7 +92,7 @@ export function SpecNormsTab({
     return (
       !kw ||
       foldVietnamese(
-        `${r.componentName ?? ''} ${materialLabel(r.materialId)} ${r.specNote}`,
+        `${componentLabel(r.componentKey)} ${materialLabel(r.materialId)} ${r.specNote}`,
       ).includes(kw)
     );
   });
@@ -88,7 +100,7 @@ export function SpecNormsTab({
     setNormFilter((f) => ({ ...f, ...change }));
     setNormPage((p) => ({ ...p, current: 1 }));
   };
-  const hasNormFilter = Object.values(normFilter).some((v) => v !== undefined && v !== '');
+  const hasNormFilter = Object.values(effectiveFilter).some((v) => v !== undefined && v !== '');
 
   const addNorm = () => {
     setNormFilter({});
@@ -97,7 +109,7 @@ export function SpecNormsTab({
       ...rows,
       {
         key: newKey(),
-        componentName: undefined,
+        componentKey: undefined,
         materialId: undefined,
         lengthCm: null,
         widthCm: null,
@@ -120,7 +132,7 @@ export function SpecNormsTab({
               onSearch={(k) => changeFilter({ keyword: k.trim() || undefined })}
             />
             <FilterSelect
-              value={normFilter.component}
+              value={effectiveFilter.component}
               placeholder={text.component}
               style={{ width: 190 }}
               options={componentOptions}

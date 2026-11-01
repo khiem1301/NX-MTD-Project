@@ -21,7 +21,15 @@ const CUSTOMERS_KEY = [...ORDERS_KEY, 'customers'] as const;
 const LOOKUPS_KEY = ['order-lookups'] as const;
 
 export const useCustomers = (query: CustomerQuery = {}) =>
-  useQuery({ queryKey: [...CUSTOMERS_KEY, query], queryFn: () => customerApi.list(query) });
+  useQuery({
+    queryKey: [...CUSTOMERS_KEY, 'list', query],
+    queryFn: () => customerApi.list(query),
+    placeholderData: keepPreviousData,
+  });
+
+/** Mọi khách hàng ở dạng rút gọn cho ô chọn (form đơn hàng, bộ lọc đơn hàng); không phân trang. */
+export const useCustomerOptions = () =>
+  useQuery({ queryKey: [...CUSTOMERS_KEY, 'options'], queryFn: () => customerApi.options() });
 
 export const useToggleCustomer = () =>
   useApiMutation(

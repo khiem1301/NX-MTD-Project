@@ -6,7 +6,6 @@ import type {
   KpiCalendar,
   KpiDailyResult,
   KpiOrderCapacity,
-  KpiRole,
   KpiTarget,
   KpiTargetFilter,
   SaveKpiDailyPlanPayload,
@@ -20,27 +19,17 @@ const post = async <T>(url: string, body?: unknown): Promise<T> =>
 const put = async <T>(url: string, body?: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
-/** Quản đốc dùng API `manager/`, Admin chỉ xem qua API `admin/` (UC21). */
-const baseUrl = (role: KpiRole) => (role === 'admin' ? API.kpi.adminTargets : API.kpi.targets);
-const dailyUrl = (role: KpiRole, id: number) =>
-  role === 'admin' ? API.kpi.adminDailyResults(id) : API.kpi.dailyResults(id);
-
 export const kpiApi = {
-  getTargets: (filter: KpiTargetFilter, role: KpiRole = 'manager') =>
-    get<Paginated<KpiTarget>>(baseUrl(role), filter),
+  getTargets: (filter: KpiTargetFilter) => get<Paginated<KpiTarget>>(API.kpi.targets, filter),
 
-  getTargetById: (kpiTargetId: number, role: KpiRole = 'manager') =>
-    get<KpiTarget>(`${baseUrl(role)}/${kpiTargetId}`),
+  getTargetById: (kpiTargetId: number) => get<KpiTarget>(`${API.kpi.targets}/${kpiTargetId}`),
 
-  getDailyResults: (kpiTargetId: number, role: KpiRole = 'manager') =>
-    get<KpiDailyResult[]>(dailyUrl(role, kpiTargetId)),
+  getDailyResults: (kpiTargetId: number) =>
+    get<KpiDailyResult[]>(API.kpi.dailyResults(kpiTargetId)),
 
-  getCalendar: (kpiTargetId: number, role: KpiRole = 'manager') =>
-    get<KpiCalendar>(
-      role === 'admin' ? API.kpi.adminCalendar(kpiTargetId) : API.kpi.calendar(kpiTargetId),
-    ),
+  getCalendar: (kpiTargetId: number) => get<KpiCalendar>(API.kpi.calendar(kpiTargetId)),
 
-  // ---------- Quản đốc lập / sửa / hủy ----------
+  // ---------- Quản đốc, Admin lập / sửa / hủy ----------
 
   getOrderCapacity: (params: { orderId: number; productId: number; exceptKpiTargetId?: number }) =>
     get<KpiOrderCapacity>(API.kpi.orderCapacity, params),

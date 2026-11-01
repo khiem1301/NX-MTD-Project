@@ -1,14 +1,14 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { Button, Input, InputNumber, Select, type TableColumnsType } from 'antd';
+import { Button, Input, InputNumber, Select, Tooltip, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { patchRow, type NormRow } from '../utils/productSpec';
+import { dropRow, patchRow, type MaterialOption, type NormRow } from '../utils/productSpec';
 import { deleteRowColumn } from './deleteRowColumn';
 
 const text = MESSAGES.orders.spec;
 
 type SpecNormColumnsOptions = {
   componentOptions: { value: string; label: string }[];
-  materialOptions: { value: number; label: string }[];
+  materialOptions: MaterialOption[];
   materialsLoading: boolean;
   variantOptions: { value: string; label: string }[];
   setNorms: Dispatch<SetStateAction<NormRow[]>>;
@@ -28,28 +28,31 @@ export const specNormColumns = ({
     render: (_, r) => (
       <Select
         size="small"
-        value={r.componentName}
+        value={r.componentKey}
         options={componentOptions}
         style={{ width: 150 }}
-        onChange={(v) => patchRow(setNorms, r.key, { componentName: v })}
+        onChange={(v) => patchRow(setNorms, r.key, { componentKey: v })}
       />
     ),
   },
   {
     title: text.material,
+    // Ô đã chọn chỉ hiện "mã - màu" cho cột gọn; trỏ chuột mới hiện đủ tên, danh sách chọn vẫn hiện và tìm theo đủ.
     render: (_, r) => (
-      <Select
-        size="small"
-        showSearch
-        optionFilterProp="label"
-        value={r.materialId}
-        options={materialOptions}
-        loading={materialsLoading}
-        popupMatchSelectWidth={false}
-        style={{ width: 420 }}
-        title={materialOptions.find((m) => m.value === r.materialId)?.label}
-        onChange={(v) => patchRow(setNorms, r.key, { materialId: v })}
-      />
+      <Tooltip title={materialOptions.find((m) => m.value === r.materialId)?.label}>
+        <Select
+          size="small"
+          showSearch
+          optionFilterProp="label"
+          optionLabelProp="short"
+          value={r.materialId}
+          options={materialOptions}
+          loading={materialsLoading}
+          popupMatchSelectWidth={false}
+          style={{ width: 200 }}
+          onChange={(v) => patchRow(setNorms, r.key, { materialId: v })}
+        />
+      </Tooltip>
     ),
   },
   {
@@ -120,5 +123,5 @@ export const specNormColumns = ({
       />
     ),
   },
-  deleteRowColumn(setNorms),
+  deleteRowColumn<NormRow>((key) => dropRow(setNorms, key)),
 ];

@@ -95,6 +95,7 @@ public class AttachmentServiceTests
 
         result.IsSuccess.Should().BeTrue();
         attachment.IsCurrent.Should().BeFalse();
+        attachment.RemovedAt.Should().Be(new DateTime(2026, 10, 22, 8, 0, 0));
         await _uow.Received(1).SaveChangesAsync();
     }
 }

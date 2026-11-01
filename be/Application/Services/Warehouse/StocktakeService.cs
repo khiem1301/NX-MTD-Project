@@ -63,7 +63,8 @@ public sealed class StocktakeService : IStocktakeService
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Product.ProductCode,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Color,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.SizeCode, l.BookQty, l.CountedQty,
-                    (l.CountedQty ?? l.BookQty) - l.BookQty, l.Note)).ToList()))
+                    (l.CountedQty ?? l.BookQty) - l.BookQty, l.Note,
+                    s.Status == StocktakeStatuses.PendingApproval ? l.StockBalance.OnHandQty : null)).ToList()))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<StocktakeDto>() : Result<StocktakeDto>.Success(dto);
     }

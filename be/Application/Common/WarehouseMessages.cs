@@ -27,7 +27,8 @@ public static class WarehouseMessages
     public const string MaterialStatusChanged = "Đã cập nhật trạng thái NVL.";
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
-    public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa.";
+    public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa hoặc đổi sang NVL khác.";
+    public const string OrderMaterialOrderClosed = "Đơn hàng đã đóng, không thể thêm, sửa hoặc xóa NVL của đơn.";
     public const string CustomerDeliveryCountRequired = "Khách có cấp NVL thì phải nhập số lần dự kiến giao (từ 1 trở lên).";
     public const string CustomerDeliveryCountNotAllowed = "Khách không cấp NVL thì không nhập số lần giao.";
     public const string OrderMaterialNotInOrder = "NVL không thuộc đơn hàng của phiếu.";
@@ -57,9 +58,18 @@ public static class WarehouseMessages
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
     public const string FabricShortage = "Không đủ vải để cắt bù";
+    public const string FabricCheckShort = "{0}: thiếu khoảng {1} m (cần khoảng {2} m, có {3} m: kho {4}, tổ đang giữ {5}).";
+    public const string FabricCheckTooWide = "{0}: chi tiết rộng hơn khổ vải {1} cm: {2}.";
+    public const string FabricCheckNoSize = "{0}: chưa tính được vì chưa có kích thước chi tiết: {1}.";
+    public const string FabricCheckNoWidth = "{0}: chưa tính được vì NVL chưa có khổ vải.";
+    public const string FabricCheckNotMeters = "{0}: chưa tính được vì NVL không tính theo mét.";
+    public const string FabricCheckNoNorm = "Chưa tính được vải cho {0} vì chưa có định mức vải.";
+    public const string WorkOrderComponentInvalid = "Chi tiết cắt lẻ phải là chi tiết vải đang dùng trong định mức của đúng màu – size.";
     public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
+    public const string WorkOrderStatusInvalid = "Trạng thái lệnh cắt không hợp lệ.";
+    public const string WorkOrderNoteTooLongToAppend = "Ghi chú của lệnh cắt quá dài, không ghi thêm được lý do cắt thiếu. Hãy rút gọn lý do.";
     public const string DispatchIssuePhotoRequired = "Phiếu xuất chưa có ảnh phiếu xuất có Quản đốc ký. Thủ kho cần in, nhờ Quản đốc ký, chụp và đính kèm trước khi xuất hàng.";
     public const string DispatchDeliveryPhotoRequired = "Phiếu xuất chưa có ảnh biên bản giao hàng có khách ký. Kế toán cần chụp và đính kèm trước khi xác nhận khách đã nhận.";
     public const string WorkOrderFinishedCutting = "Đã báo cắt xong, lệnh cắt hoàn thành.";
@@ -150,6 +160,10 @@ public static class WarehouseMessages
     public const string StocktakeDateFuture = "Ngày kiểm kê không được sau hôm nay.";
     public const string StocktakeLineTarget = "Dòng kiểm kê kho NVL chọn NVL + màu; kho BTP / thành phẩm chọn dòng đơn.";
     public const string StocktakeTooManyLines = "Một phiếu kiểm kê tối đa 1000 dòng.";
+    public const string StocktakeQtyMax = "Số đếm tối đa 100.000.000.";
+    public const string StocktakeQtyScale = "Số đếm tối đa 3 số lẻ.";
+    public const string StocktakePieceQtyWhole = "Số đếm của kho BTP / thành phẩm phải là số nguyên.";
+    public const string StocktakeStatusInvalid = "Trạng thái phiếu kiểm kê không hợp lệ.";
     public const string VehiclePlateDuplicate = "Biển số xe đã tồn tại.";
     public const string VehicleSaved = "Đã lưu xe.";
     public const string VehicleInactive = "Xe đã ngừng sử dụng, không ghi thêm chuyến.";

@@ -6,9 +6,6 @@ export const DELIVERING_ORDER_STATUSES: readonly (string | null | undefined)[] =
 
 /** Chuỗi hiển thị của màn KPI tổ may (UC19, MI-18 "KPI theo ngày"). */
 export const KPI_TEXT = {
-  adminPageTitle: 'KPI tổ may (xem)',
-  adminPageSubtitle:
-    'Admin xem chỉ tiêu và kết quả thực tế của từng tổ may. Quản đốc là người lập, sửa, hủy chỉ tiêu.',
   add: 'Lập chỉ tiêu',
   edit: 'Sửa',
   cancel: 'Hủy chỉ tiêu',

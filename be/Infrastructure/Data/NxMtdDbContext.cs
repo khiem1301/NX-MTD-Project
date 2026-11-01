@@ -116,6 +116,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<ProductComponentMaterial> ProductComponentMaterials { get; set; }
 
+    public virtual DbSet<ProductImage> ProductImages { get; set; }
+
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
 
     public virtual DbSet<PurchaseOrder> PurchaseOrders { get; set; }

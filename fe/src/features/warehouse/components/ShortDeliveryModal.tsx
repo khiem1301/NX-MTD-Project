@@ -45,7 +45,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   const [overrides, setOverrides] = useState<Record<number, number>>({});
   const [form] = Form.useForm<SupplementaryValues>();
   const d = detail.data;
-  const isManager = hasRole(ROLES.Manager);
+  const isManager = hasRole(ROLES.Admin, ROLES.Manager);
   const isKeeper = hasRole(ROLES.WarehouseKeeper);
   const open = d?.status === OPEN_STATUS;
   const unresolved = open && d?.resolution === null;

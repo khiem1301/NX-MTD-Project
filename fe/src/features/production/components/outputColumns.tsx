@@ -3,7 +3,7 @@ import { InputNumber, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { IconAction } from '@/components/common/IconAction';
 import { formatCurrency, formatDateTime } from '@/utils/format';
-import { PRODUCTION_TEXT } from '../constants';
+import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
 import { outputKeyOf } from '../utils';
 import { OutputRowTags } from './OutputRowTags';
@@ -44,6 +44,7 @@ export const outputColumns = ({
     render: (_, r) => (
       <InputNumber
         min={0}
+        max={OUTPUT_MAX_QTY}
         precision={0}
         style={{ width: 120 }}
         disabled={!isManager && !r.canEdit}

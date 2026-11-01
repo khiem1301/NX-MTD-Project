@@ -55,6 +55,10 @@ public static class SettingKeys
     public const string NotificationRetentionDays = "NOTIFICATION_RETENTION_DAYS";
     /// <summary>Giờ chạy JOB-05; khóa chưa seed trong SystemSetting nên dùng mặc định 01:00 (DEV-KH-23-1).</summary>
     public const string NotificationCleanupTime = "NOTIFICATION_CLEANUP_TIME";
+    /// <summary>Giờ chạy job dọn ảnh mồ côi của mã hàng; khóa chưa seed trong SystemSetting nên dùng mặc định 02:00.</summary>
+    public const string ProductImageCleanupTime = "PRODUCT_IMAGE_CLEANUP_TIME";
+    /// <summary>Giờ chạy job dọn ảnh chứng từ đã gỡ; khóa chưa seed trong SystemSetting nên dùng mặc định 02:30.</summary>
+    public const string AttachmentCleanupTime = "ATTACHMENT_CLEANUP_TIME";
 
     // Kho, cắt (Thái)
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";

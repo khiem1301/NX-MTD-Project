@@ -49,7 +49,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
   const inDelivery = note.status === DISPATCH_STATUS.IN_DELIVERY;
   const isKeeper = hasRole(ROLES.WarehouseKeeper);
   const isAccountant = hasRole(ROLES.Accountant);
-  const isManager = hasRole(ROLES.Manager);
+  const isManager = hasRole(ROLES.Admin, ROLES.Manager);
   const canExport = isKeeper && pending;
   const canConfirm = isAccountant && inDelivery;
   const notExportedYet = pending;

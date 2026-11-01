@@ -9,7 +9,8 @@ import {
 import { Button, Card, Space, Tag, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
-import { ProductImage } from '../components/ProductImage';
+import { ProductGalleryModal } from '../components/ProductGalleryModal';
+import { ProductImagesCell } from '../components/ProductImagesCell';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -39,6 +40,7 @@ export function ProductsPage() {
   const [editing, setEditing] = useState<ProductListItem | null>(null);
   const [open, setOpen] = useState(false);
   const [specFor, setSpecFor] = useState<ProductListItem | null>(null);
+  const [gallery, setGallery] = useState<ProductListItem | null>(null);
 
   const columns: TableColumnsType<ProductListItem> = [
     {
@@ -47,9 +49,10 @@ export function ProductsPage() {
     },
     { title: MESSAGES.orders.productName, dataIndex: 'productName' },
     {
-      title: MESSAGES.orders.sampleImage,
-      dataIndex: 'sampleImageUrl',
-      render: (v: string | null) => (v ? <ProductImage value={v} /> : '—'),
+      title: MESSAGES.orders.images,
+      render: (_: unknown, p) => (
+        <ProductImagesCell product={p} onOpenGallery={() => setGallery(p)} />
+      ),
     },
     {
       title: MESSAGES.orders.status,
@@ -149,6 +152,7 @@ export function ProductsPage() {
         pagination={table.pagination(products.data?.totalItems)}
       />
       <ProductFormModal open={open} product={editing} onClose={() => setOpen(false)} />
+      <ProductGalleryModal product={gallery} onClose={() => setGallery(null)} />
       <ProductSpecModal
         product={specFor}
         showHistory={!isAccountant}

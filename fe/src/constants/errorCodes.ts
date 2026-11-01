@@ -81,6 +81,7 @@ export const ERROR_CODES = {
   PayrollExcelInvalid: 'PAYROLL_EXCEL_INVALID',
   PayrollExcelEmpty: 'PAYROLL_EXCEL_EMPTY',
   PayrollFileNotFound: 'PAYROLL_FILE_NOT_FOUND',
+  CustomerNameDuplicate: 'CUSTOMER_NAME_DUPLICATE',
   SupplierNameDuplicate: 'SUPPLIER_NAME_DUPLICATE',
   SupplierNotActive: 'SUPPLIER_NOT_ACTIVE',
   PurchaseOrderInvalidStatus: 'PURCHASE_ORDER_INVALID_STATUS',

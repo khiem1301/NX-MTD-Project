@@ -121,7 +121,7 @@ public sealed record DefectDto(
     string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, string? WorkerObjection, DateTime? ObjectedAt,
     DateTime EditDeadline, string Status, DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
     int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus,
-    string SewingTeamName = "");
+    string SewingTeamName = "", DateTime? UpdatedAt = null);
 
 /// <summary>DefectType nhận "Rework" | "Scrap"; ReasonCode nhận PascalCase ("SkippedStitch", "Other"...).</summary>
 public sealed record CreateDefectDto(
@@ -132,11 +132,22 @@ public sealed record CancelDefectDto(string? Reason, byte[] RowVer);
 
 public sealed record ObjectDefectDto(string Objection, byte[] RowVer);
 
+/// <summary>Quản đốc / Admin chấp nhận phiếu sau khi công nhân phản đối (giữ phiếu); Note không bắt buộc, ghi vào nhật ký. Không chấp nhận thì hủy phiếu.</summary>
+public sealed record ConfirmDefectDto(string? Note, byte[] RowVer);
+
 public sealed record DefectQuery : PageQuery
 {
     public DateOnly? WorkDate { get; init; }
     public DateOnly? From { get; init; }
     public DateOnly? To { get; init; }
+    /// <summary>Quản đốc lọc theo tổ; tổ trưởng luôn chỉ thấy tổ mình.</summary>
+    public int? SewingTeamId { get; init; }
+    /// <summary>Recorded | Confirmed | Cancelled.</summary>
+    public string? Status { get; init; }
+    /// <summary>Rework | Scrap.</summary>
+    public string? DefectType { get; init; }
+    /// <summary>Pending (chờ quyết định) | Resolved (đã chấp nhận hoặc hủy) | None (không phản đối).</summary>
+    public string? Objection { get; init; }
 }
 
 // ================= KI-10: IOutputQueryService (dùng chung cho UC19, UC21, UC59) =================

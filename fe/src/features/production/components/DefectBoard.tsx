@@ -1,44 +1,51 @@
 import { useState } from 'react';
-import { Button, Space } from 'antd';
+import { Button } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-import type { Dayjs } from 'dayjs';
-import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { toApiDate } from '@/utils/format';
+import { useTableQuery } from '@/hooks/useTableQuery';
+import { DefectExpandedRow } from './DefectExpandedRow';
+import { DefectFilterBar } from './DefectFilterBar';
 import { DefectFormModal } from './DefectFormModal';
 import { ReplacementCuttingModal } from './ReplacementCuttingModal';
+import { ConfirmDefectModal } from './ConfirmDefectModal';
 import { PRODUCTION_TEXT } from '../constants';
-import { useCancelDefect, useDefects } from '../hooks/useProduction';
-import type { Defect, DefectQuery, OutputRole } from '../types';
+import { useCancelDefect, useConfirmDefect, useDefects } from '../hooks/useProduction';
+import type { Defect, DefectFilters, OutputRole } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
-import { AppDatePicker } from '@/components/common/DateInputs';
 import { defectColumns } from './defectColumns';
 
 const text = PRODUCTION_TEXT.defects;
 
 /**
- * UC56 (KI-08) — phiếu hàng hỏng của tổ. Tổ trưởng / tổ phó ghi và hủy phiếu trong hạn; Quản đốc xem các tổ
- * và hủy phiếu ghi sai, kể cả sau hạn (bắt buộc lý do, có nhật ký).
+ * UC56 (KI-08) — phiếu hàng hỏng của tổ. Tổ trưởng / tổ phó ghi và hủy phiếu trong hạn; Quản đốc và Admin xem các tổ và,
+ * khi công nhân phản đối, chấp nhận phiếu (giữ phiếu) hoặc hủy phiếu ghi sai, kể cả sau hạn (bắt buộc lý do, có nhật ký).
  */
 export function DefectBoard({ role }: { role: OutputRole }) {
   const isManager = role === 'manager';
-  const [query, setQuery] = useState<DefectQuery>({ page: 1, pageSize: 20 });
+  const table = useTableQuery<DefectFilters>({});
   const [formOpen, setFormOpen] = useState(false);
   const [cancelling, setCancelling] = useState<Defect | null>(null);
+  const [confirming, setConfirming] = useState<Defect | null>(null);
   const [replacingPick, setReplacing] = useState<Defect | null>(null);
-  // Vừa ghi hàng hủy (Scrap): mở luôn đơn cắt bù cho Quản đốc (swimlane III.3.9–III.3.10); phiếu lấy từ danh sách sau khi tải lại.
+  // Vừa ghi hàng hủy (Scrap): mở luôn đơn cắt bù (swimlane III.3.9–III.3.10); phiếu lấy từ danh sách sau khi tải lại.
   const [autoReplaceId, setAutoReplaceId] = useState<number | null>(null);
-  const defects = useDefects(role, query);
+  const defects = useDefects(role, table.params);
   const replacing =
     replacingPick ??
     (autoReplaceId === null
       ? null
       : (defects.data?.items.find((d) => d.defectRecordId === autoReplaceId) ?? null));
   const cancel = useCancelDefect(role);
+  const confirm = useConfirmDefect();
 
-  const columns = defectColumns({ isManager, onReplace: setReplacing, onCancel: setCancelling });
+  const columns = defectColumns({
+    isManager,
+    onReplace: setReplacing,
+    onCancel: setCancelling,
+    onConfirm: setConfirming,
+  });
 
   return (
     <PageCard
@@ -52,23 +59,7 @@ export function DefectBoard({ role }: { role: OutputRole }) {
         )
       }
     >
-      <Space wrap>
-        <DebouncedSearch
-          allowClear
-          style={{ width: 320 }}
-          placeholder={text.searchPlaceholder}
-          onSearch={(keyword) =>
-            setQuery({ ...query, page: 1, keyword: keyword.trim() || undefined })
-          }
-        />
-        <AppDatePicker
-          allowClear
-          placeholder={text.filterDate}
-          onChange={(v: Dayjs | null) =>
-            setQuery({ ...query, page: 1, workDate: v ? toApiDate(v) : undefined })
-          }
-        />
-      </Space>
+      <DefectFilterBar filters={table.filters} isManager={isManager} onChange={table.setFilters} />
 
       <QueryError error={defects.error} onRetry={() => void defects.refetch()} />
 
@@ -78,33 +69,25 @@ export function DefectBoard({ role }: { role: OutputRole }) {
         columns={columns}
         dataSource={defects.data?.items}
         loading={defects.isFetching}
-        scroll={{ x: 'max-content' }}
-        pagination={{
-          current: defects.data?.page ?? query.page,
-          pageSize: defects.data?.pageSize ?? query.pageSize,
-          total: defects.data?.totalItems ?? 0,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
-          showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
-          onChange: (page, pageSize) => setQuery({ ...query, page, pageSize }),
-        }}
+        expandable={{ expandedRowRender: (d) => <DefectExpandedRow defect={d} /> }}
+        pagination={table.pagination(defects.data?.totalItems)}
       />
 
       {!isManager && (
-        <DefectFormModal
-          open={formOpen}
-          onClose={() => setFormOpen(false)}
-          onCreated={(id, type) => type === 'Scrap' && setAutoReplaceId(id)}
-        />
-      )}
-      {!isManager && (
-        <ReplacementCuttingModal
-          defect={replacing}
-          onClose={() => {
-            setReplacing(null);
-            setAutoReplaceId(null);
-          }}
-        />
+        <>
+          <DefectFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onCreated={(id, type) => type === 'Scrap' && setAutoReplaceId(id)}
+          />
+          <ReplacementCuttingModal
+            defect={replacing}
+            onClose={() => {
+              setReplacing(null);
+              setAutoReplaceId(null);
+            }}
+          />
+        </>
       )}
       <ReasonModal
         open={cancelling !== null}
@@ -116,6 +99,18 @@ export function DefectBoard({ role }: { role: OutputRole }) {
           cancel.mutate(
             { id: cancelling.defectRecordId, body: { reason, rowVer: cancelling.rowVer } },
             { onSuccess: () => setCancelling(null) },
+          )
+        }
+      />
+      <ConfirmDefectModal
+        defect={confirming}
+        loading={confirm.isPending}
+        onCancel={() => setConfirming(null)}
+        onSubmit={(note) =>
+          confirming &&
+          confirm.mutate(
+            { id: confirming.defectRecordId, body: { note, rowVer: confirming.rowVer } },
+            { onSuccess: () => setConfirming(null) },
           )
         }
       />

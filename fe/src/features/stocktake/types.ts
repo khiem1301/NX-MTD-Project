@@ -31,6 +31,8 @@ export type StocktakeLine = {
   countedQty: number | null;
   differenceQty: number;
   note: string | null;
+  /** Tồn thực lúc xem; chỉ có khi phiếu chờ duyệt. */
+  currentQty: number | null;
 };
 
 export type Stocktake = Omit<StocktakeListItem, 'lineCount' | 'differenceLineCount'> & {

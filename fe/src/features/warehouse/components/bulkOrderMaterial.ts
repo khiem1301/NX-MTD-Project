@@ -2,6 +2,7 @@ import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
 import type { MaterialOption } from '@/types/lookup';
+import { deliveryCountProblem, noteProblem, qtyProblem } from '../utils/orderMaterialRules';
 
 export type Draft = {
   requiredQty: number;
@@ -52,10 +53,19 @@ export const isChanged = (line: BulkLine): boolean => {
   );
 };
 
-/** Lỗi của một dòng theo quy tắc form từng dòng: phải chọn NVL, có số cần hoặc khách cấp; khách cấp thì phải có số lần giao. */
+/**
+ * Lỗi của một dòng theo quy tắc form từng dòng: phải chọn NVL, từng số lượng hợp lệ (không âm, tối đa 100.000.000, 3 số lẻ),
+ * có số cần hoặc khách cấp; khách cấp thì phải có số lần giao từ 1 đến 99; ghi chú tối đa 500 ký tự.
+ */
 export const rowError = (line: BulkLine): string | null => {
   if (line.materialId === null) return MESSAGES.common.required;
   const d = line.draft;
+  const problem =
+    qtyProblem(LABELS.requiredQtyName, d.requiredQty) ??
+    qtyProblem(LABELS.customerQtyName, d.customerQty) ??
+    (d.customerQty > 0 ? deliveryCountProblem(d.expectedDeliveryCount) : null) ??
+    noteProblem(d.note);
+  if (problem) return problem;
   if (d.requiredQty <= 0 && d.customerQty <= 0) return LABELS.qtyRequiredOrCustomer;
   if (d.customerQty > 0 && !d.expectedDeliveryCount) return MESSAGES.common.required;
   return null;

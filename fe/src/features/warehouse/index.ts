@@ -10,4 +10,5 @@ export { warehouseMenu } from './menu';
 export { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from './constants';
 export { useBalances } from './hooks/useInventory';
+export { MAX_QTY, QTY_DECIMALS } from './utils/orderMaterialRules';
 export type { StockBalance } from './types';

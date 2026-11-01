@@ -75,7 +75,7 @@ export function WorkOrderListPage() {
     <Card
       title={LABELS.workOrdersTitle}
       extra={
-        <Can roles={[ROLES.Manager]}>
+        <Can roles={[ROLES.Admin, ROLES.Manager]}>
           <Space>
             <Button onClick={() => setReplacementOpen(true)}>{LABELS.createReplacement}</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>

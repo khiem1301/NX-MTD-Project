@@ -14,6 +14,7 @@ public static class OrderModule
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductSpecService, ProductSpecService>();
+        services.AddScoped<IProductImageCleanupService, ProductImageCleanupService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderLookupService, OrderLookupService>();
         return services;

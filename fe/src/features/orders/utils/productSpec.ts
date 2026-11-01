@@ -1,9 +1,28 @@
+import { MESSAGES } from '@/constants/messages';
+import { fill, formatQty } from '@/utils/format';
 import type { ProductNormItem, ProductSpec, SaveProductSpecPayload } from '../types';
 
-/** Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều biến thể (màu × size) cùng lúc. */
+const text = MESSAGES.orders.specValidation;
+
+/** Giới hạn khớp SaveProductSpecDtoValidator ở BE (cột DECIMAL(7,2), SMALLINT và số dòng mỗi lần lưu). */
+export const MAX_SIZE_CM = 99999.99;
+export const MAX_PIECES_PER_GARMENT = 99;
+export const MAX_COMPONENTS = 200;
+export const MAX_VARIANTS = 200;
+/** Tính sau khi mỗi dòng định mức được nở ra từng màu – size. */
+export const MAX_NORMS = 5000;
+
+/** Kích thước bỏ trống được; đã nhập thì phải lớn hơn 0 và không vượt giới hạn cột (vượt thì database báo tràn số). */
+const sizeProblem = (name: string, label: string, value: number | null): string =>
+  value !== null && (value <= 0 || value > MAX_SIZE_CM) ? fill(text.sizeRange, name, label) : '';
+
+/**
+ * Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều biến thể (màu × size) cùng lúc.
+ * Thành phần được trỏ bằng khóa dòng (`ComponentRow.key`) chứ không bằng tên, nên đổi tên thành phần thì dòng định mức đi theo.
+ */
 export type NormRow = {
   key: string;
-  componentName?: string;
+  componentKey?: string;
   /** NVL đã gồm màu (26/10: màu nằm trong Material.Color). */
   materialId?: number;
   lengthCm: number | null;
@@ -19,14 +38,12 @@ export type ComponentRow = {
   componentType: 'Panel' | 'Trim';
   piecesPerGarment: number;
 };
-/** Màu – size do đơn hàng tạo (chỉ đọc); chỉ sửa kích thước thành phẩm. */
+/** Màu – size do đơn hàng tạo (chỉ đọc). */
 export type VariantRow = {
   key: string;
   productVariantId: number | null;
   color: string;
   sizeCode: string;
-  lengthCm: number | null;
-  widthCm: number | null;
 };
 
 export const variantKey = (color: string, sizeCode: string) =>
@@ -63,23 +80,19 @@ export function toRows(spec: ProductSpec): {
       productVariantId: v.productVariantId,
       color: v.color,
       sizeCode: v.sizeCode,
-      lengthCm: v.lengthCm,
-      widthCm: v.widthCm,
     }));
 
-  const activeComponents = new Set(components.map((c) => c.componentName.toUpperCase()));
+  const keyByName = new Map(components.map((c) => [c.componentName.toUpperCase(), c.key]));
   const activeVariants = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
   const groups = new Map<string, NormRow>();
   for (const n of spec.norms) {
-    if (
-      !activeComponents.has(n.componentName.toUpperCase()) ||
-      !activeVariants.has(variantKey(n.color, n.sizeCode))
-    )
+    const componentKey = keyByName.get(n.componentName.toUpperCase());
+    if (componentKey === undefined || !activeVariants.has(variantKey(n.color, n.sizeCode)))
       continue;
     const k = sameRowKey(n);
     const row = groups.get(k) ?? {
       key: newKey(),
-      componentName: n.componentName,
+      componentKey,
       materialId: n.materialId,
       lengthCm: n.lengthCm,
       widthCm: n.widthCm,
@@ -92,12 +105,35 @@ export function toRows(spec: ProductSpec): {
   return { components, variants, norms: [...groups.values()] };
 }
 
+/** `label`: đủ mã, tên, màu, đơn vị (danh sách chọn và tìm kiếm); `short`: chỉ mã - màu (ô đã chọn trong bảng hẹp). */
+export type MaterialOption = { value: number; label: string; short: string };
+
+export const toMaterialOption = (m: {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  color: string;
+  unit: string;
+}): MaterialOption => ({
+  value: m.materialId,
+  label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+  short: `${m.materialCode}${m.color ? ` - ${m.color}` : ''}`,
+});
+
+/** Số dòng định mức máy chủ sẽ nhận: mỗi dòng nở ra từng màu – size còn tồn tại (xem `toPayload`). */
+const expandedNormCount = (variants: VariantRow[], norms: NormRow[]): number => {
+  const known = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
+  return norms.reduce((sum, n) => sum + n.variantKeys.filter((vk) => known.has(vk)).length, 0);
+};
+
 /** Lỗi nhập định mức (hiện cho người dùng trước khi gửi); chuỗi rỗng = hợp lệ. */
 export function validate(
   components: ComponentRow[],
   variants: VariantRow[],
   norms: NormRow[],
 ): string {
+  if (components.length > MAX_COMPONENTS) return fill(text.maxComponents, MAX_COMPONENTS);
+  if (variants.length > MAX_VARIANTS) return fill(text.maxVariants, MAX_VARIANTS);
   if (components.some((c) => !c.componentName.trim())) return 'Mỗi thành phần phải có tên.';
   if (
     new Set(components.map((c) => c.componentName.trim().toUpperCase())).size !== components.length
@@ -107,20 +143,32 @@ export function validate(
     return 'Mỗi biến thể phải có màu và size.';
   if (new Set(variants.map((v) => variantKey(v.color, v.sizeCode))).size !== variants.length)
     return 'Màu – size bị trùng.';
+  const badPieces = components.find(
+    (c) => c.piecesPerGarment < 1 || c.piecesPerGarment > MAX_PIECES_PER_GARMENT,
+  );
+  if (badPieces) return fill(text.piecesRange, badPieces.componentName.trim());
+  const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   for (const n of norms) {
-    if (!n.componentName || n.materialId === undefined)
+    const name = n.componentKey === undefined ? undefined : nameByKey.get(n.componentKey);
+    if (name === undefined || n.materialId === undefined)
       return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
+    const problem =
+      sizeProblem(name, text.normLength, n.lengthCm) ||
+      sizeProblem(name, text.normWidth, n.widthCm);
+    if (problem) return problem;
     if (n.variantKeys.length === 0)
       return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
   }
   const seen = new Set<string>();
   for (const n of norms) {
     for (const vk of n.variantKeys) {
-      const k = `${n.componentName!.toUpperCase()}¦${n.materialId}¦${vk}`;
+      const k = `${n.componentKey}¦${n.materialId}¦${vk}`;
       if (seen.has(k)) return 'Một NVL chỉ khai một dòng cho mỗi thành phần và màu – size.';
       seen.add(k);
     }
   }
+  const total = expandedNormCount(variants, norms);
+  if (total > MAX_NORMS) return fill(text.maxNorms, formatQty(total), formatQty(MAX_NORMS));
   return '';
 }
 
@@ -131,6 +179,7 @@ export function toPayload(
   norms: NormRow[],
 ): SaveProductSpecPayload {
   const byKey = new Map(variants.map((v) => [variantKey(v.color, v.sizeCode), v]));
+  const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   return {
     components: components.map((c) => ({
       productComponentId: c.productComponentId,
@@ -142,8 +191,6 @@ export function toPayload(
       productVariantId: v.productVariantId,
       color: v.color.trim(),
       sizeCode: v.sizeCode.trim(),
-      lengthCm: v.lengthCm,
-      widthCm: v.widthCm,
     })),
     norms: norms.flatMap((n) =>
       n.variantKeys
@@ -151,7 +198,7 @@ export function toPayload(
         .map((vk) => {
           const v = byKey.get(vk)!;
           return {
-            componentName: n.componentName!.trim(),
+            componentName: nameByKey.get(n.componentKey!)!,
             color: v.color.trim(),
             sizeCode: v.sizeCode.trim(),
             materialId: n.materialId!,
@@ -164,9 +211,28 @@ export function toPayload(
   };
 }
 
+/** Xóa một thành phần kèm các dòng định mức dùng nó (không để dòng định mức trỏ vào thành phần không còn). */
+export function removeComponent(
+  components: ComponentRow[],
+  norms: NormRow[],
+  key: string,
+): { components: ComponentRow[]; norms: NormRow[]; removedNorms: number } {
+  return {
+    components: components.filter((c) => c.key !== key),
+    norms: norms.filter((n) => n.componentKey !== key),
+    removedNorms: norms.filter((n) => n.componentKey === key).length,
+  };
+}
+
 /** Sửa một dòng của bảng nhập liệu theo khóa dòng (dùng chung cho thành phần, biến thể, định mức). */
 export const patchRow = <T extends { key: string }>(
   set: (updater: (rows: T[]) => T[]) => void,
   key: string,
   change: Partial<T>,
 ) => set((rows) => rows.map((r) => (r.key === key ? { ...r, ...change } : r)));
+
+/** Bỏ một dòng của bảng nhập liệu theo khóa dòng. */
+export const dropRow = <T extends { key: string }>(
+  set: (updater: (rows: T[]) => T[]) => void,
+  key: string,
+) => set((rows) => rows.filter((r) => r.key !== key));

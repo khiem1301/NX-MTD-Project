@@ -44,8 +44,21 @@ public sealed class DefectService : IDefectService
         }
 
         var keyword = query.Keyword?.Trim();
+        var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
+        var type = string.IsNullOrWhiteSpace(query.DefectType) ? null : CodeText.ToCode(query.DefectType);
+        var objectionPending = query.Objection == DefectObjectionFilters.Pending;
+        var objectionResolved = query.Objection == DefectObjectionFilters.Resolved;
+        var objectionNone = query.Objection == DefectObjectionFilters.None;
         var page = await Project(Defects.AsNoTracking()
                 .Where(d => teamId == null || d.SewingTeamId == teamId)
+                // Quản đốc lọc theo tổ; tổ trưởng đã bị giới hạn ở tổ mình ở trên.
+                .Where(d => teamId != null || query.SewingTeamId == null || d.SewingTeamId == query.SewingTeamId)
+                .Where(d => status == null || d.Status == status)
+                .Where(d => type == null || d.DefectType == type)
+                // Chờ quyết định = công nhân phản đối mà phiếu vẫn ở trạng thái đã ghi; đã quyết định = đã chấp nhận hoặc hủy.
+                .Where(d => !objectionPending || (d.WorkerObjection != null && d.Status == DefectStatuses.Recorded))
+                .Where(d => !objectionResolved || (d.WorkerObjection != null && d.Status != DefectStatuses.Recorded))
+                .Where(d => !objectionNone || d.WorkerObjection == null)
                 .Where(d => query.WorkDate == null || d.WorkDate == query.WorkDate)
                 .Where(d => query.From == null || d.WorkDate >= query.From)
                 .Where(d => query.To == null || d.WorkDate <= query.To)
@@ -211,15 +224,16 @@ public sealed class DefectService : IDefectService
         // Công nhân chỉ phản hồi phiếu của chính mình.
         var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId && d.ResponsibleWorkerId == workerId, ct);
         if (defect is null) return Fail.NotFound();
+        if (defect.Status == DefectStatuses.Confirmed)
+            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectObjectionDecided);
         if (defect.Status != DefectStatuses.Recorded)
             return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectInvalidStatus);
+        if (_clock.Now > defect.RecordedAt.AddHours(DefectObjectionWindow.Hours))
+            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectObjectionExpired);
 
         var workerName = await _uow.Repository<Employee>().Query().AsNoTracking()
             .Where(e => e.EmployeeId == workerId).Select(e => e.FullName).FirstAsync(ct);
-        var leaderIds = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => e.TeamId == defect.SewingTeamId && e.Status == RecordStatus.Active
-                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
-            .Select(e => e.EmployeeId).ToListAsync(ct);
+        var leaderIds = await LeaderIdsAsync(defect.SewingTeamId, ct);
 
         _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
         defect.WorkerObjection = objection;
@@ -236,7 +250,50 @@ public sealed class DefectService : IDefectService
         return Result.Success(Messages.DefectObjected);
     }
 
+    // ---------- Chấp nhận phiếu (Quản đốc / Admin) ----------
+
+    /// <summary>
+    /// Quản đốc / Admin chấp nhận phiếu sau khi công nhân phản đối: phiếu được giữ (Status = CONFIRMED), công nhân không phản đối lại
+    /// được. Không chấp nhận thì hủy phiếu bằng <see cref="CancelAsync"/>. Kiểm khóa kỳ vì DB chặn sửa phiếu của tháng đã khóa;
+    /// ghi chú (không bắt buộc) và người thao tác nằm ở AuditLog. Công nhân và tổ trưởng, tổ phó được báo.
+    /// </summary>
+    public async Task<Result> ConfirmAsync(int defectRecordId, ConfirmDefectDto dto, CancellationToken ct)
+    {
+        if (!_guard.IsManager)
+            return Result.Failure(ErrorCodes.ProductionForbidden, Messages.DefectManagerOnly, ResultKind.Forbidden);
+        var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId, ct);
+        if (defect is null) return Fail.NotFound();
+        if (defect.Status != DefectStatuses.Recorded)
+            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectInvalidStatus);
+        if (defect.WorkerObjection is null)
+            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectNoObjection);
+        if (await _guard.IsPeriodLockedAsync(defect.WorkDate, ct)) return _guard.PeriodLockedFailure(defect.WorkDate);
+
+        var note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
+        defect.Status = DefectStatuses.Confirmed;
+        defect.UpdatedAt = _clock.Now;
+        _audit.Add(new AuditEntry(nameof(DefectRecord), defectRecordId, AuditActions.Update,
+            new { Status = DefectStatuses.Recorded }, new { defect.Status }, note));
+        _notifier.NotifyEmployees(await RecipientsAsync(defect, ct), new NotificationMessage(NotificationSources.Production,
+            Messages.NotifyDefectConfirmedTitle, string.Format(Messages.NotifyDefectConfirmedBody, defect.DefectCode),
+            null, nameof(DefectRecord), defectRecordId));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.DefectConfirmed);
+    }
+
     // ---------- Dùng chung ----------
+
+    /// <summary>Tổ trưởng / tổ phó đang làm của tổ.</summary>
+    private Task<List<int>> LeaderIdsAsync(int teamId, CancellationToken ct) =>
+        _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active
+                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
+            .Select(e => e.EmployeeId).ToListAsync(ct);
+
+    /// <summary>Người nhận thông báo khi Quản đốc chấp nhận phiếu: tổ trưởng / tổ phó của tổ và công nhân gây lỗi.</summary>
+    private async Task<List<int>> RecipientsAsync(DefectRecord defect, CancellationToken ct) =>
+        (await LeaderIdsAsync(defect.SewingTeamId, ct)).Append(defect.ResponsibleWorkerId).Distinct().ToList();
 
     /// <summary>Tổ trưởng / tổ phó chỉ thao tác phiếu của tổ mình; Quản đốc thao tác mọi tổ.</summary>
     private bool CanSeeTeam(int teamId) => _guard.IsManager || _user.TeamId == teamId;
@@ -259,7 +316,7 @@ public sealed class DefectService : IDefectService
         d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
-        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamName));
+        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamName, d.UpdatedAt));
 
     /// <summary>Đổi mã DB sang PascalCase và tính CanEdit (còn hiệu lực và còn hạn, hoặc là Quản đốc).</summary>
     private DefectDto Finish(DefectDto d) => d with

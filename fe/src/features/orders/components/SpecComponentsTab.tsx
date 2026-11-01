@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, ConfigProvider, Input, InputNumber, Select, Space, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Input, InputNumber, Select, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import { newKey, patchRow, type ComponentRow } from '../utils/productSpec';
@@ -16,6 +16,8 @@ const TYPE_OPTIONS = [
 type SpecComponentsTabProps = {
   components: ComponentRow[];
   setComponents: Dispatch<SetStateAction<ComponentRow[]>>;
+  /** Xóa một thành phần cùng các dòng định mức dùng nó (nằm ở cha vì định mức thuộc tab khác). */
+  onRemove: (key: string) => void;
   /** Tên các thành phần đã ngừng dùng (đã có số liệu sản xuất), chỉ để báo. */
   discontinued: string[];
   /** Admin chỉ xem: Kế toán là người nhập. */
@@ -26,6 +28,7 @@ type SpecComponentsTabProps = {
 export function SpecComponentsTab({
   components,
   setComponents,
+  onRemove,
   discontinued,
   readOnly = false,
 }: SpecComponentsTabProps) {
@@ -69,22 +72,17 @@ export function SpecComponentsTab({
               title: text.pieces,
               width: 140,
               render: (_, r) => (
-                <Space direction="vertical" size={2}>
-                  <InputNumber
-                    size="small"
-                    min={1}
-                    max={99}
-                    precision={0}
-                    value={r.piecesPerGarment}
-                    onChange={(v) => patchRow(setComponents, r.key, { piecesPerGarment: v ?? 1 })}
-                  />
-                  {/tay/i.test(r.componentName) && r.piecesPerGarment === 2 && (
-                    <span style={{ fontSize: 12, opacity: 0.65 }}>Gồm tay trái + tay phải</span>
-                  )}
-                </Space>
+                <InputNumber
+                  size="small"
+                  min={1}
+                  max={99}
+                  precision={0}
+                  value={r.piecesPerGarment}
+                  onChange={(v) => patchRow(setComponents, r.key, { piecesPerGarment: v ?? 1 })}
+                />
               ),
             },
-            ...(readOnly ? [] : [deleteRowColumn(setComponents)]),
+            ...(readOnly ? [] : [deleteRowColumn<ComponentRow>(onRemove)]),
           ]}
         />
       </ConfigProvider>

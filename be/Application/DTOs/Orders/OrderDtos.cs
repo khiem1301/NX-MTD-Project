@@ -6,8 +6,14 @@ namespace NX_MTD.Application.DTOs;
 public sealed record CustomerDto(int CustomerId, string CustomerName, string? Phone, string? Email, string? DefaultAddress, string Status,
     string? DiscontinueReason = null);
 
-/// <summary>Lọc danh mục khách hàng: Status = Active | Discontinued (PascalCase như Supplier).</summary>
-public sealed record CustomerQuery(string? Keyword, string? Status);
+/// <summary>Lọc và phân trang danh mục khách hàng: Status = Active | Discontinued (PascalCase như Supplier); Keyword tìm theo tên hoặc số điện thoại.</summary>
+public sealed record CustomerQuery : PageQuery
+{
+    public string? Status { get; init; }
+}
+
+/// <summary>Khách hàng rút gọn cho ô chọn (form đơn hàng, bộ lọc đơn hàng): không phân trang, không có SĐT / email / địa chỉ.</summary>
+public sealed record CustomerOptionDto(int CustomerId, string CustomerName, string Status);
 /// <summary>Lý do ngừng hợp tác với khách hàng (bắt buộc, lưu vào hồ sơ và nhật ký).</summary>
 public sealed record DiscontinueCustomerDto(string Reason);
 public sealed record SaveCustomerDto(string CustomerName, string? Phone, string? Email, string? DefaultAddress);
@@ -18,15 +24,18 @@ public sealed record ProductQuery : PageQuery
     public string? Status { get; init; }   // PascalCase: Active / Discontinued; null = tất cả
 }
 
+/// <param name="ExtraImages">Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5); ảnh chính là SampleImageUrl.</param>
 public sealed record ProductListItemDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
-    string Status, bool IsUsed, DateTime CreatedAt);
+    string Status, bool IsUsed, DateTime CreatedAt, IReadOnlyList<string> ExtraImages);
 
 public sealed record ProductDetailDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
     string? Description, string? LastSizeRatio, string Status, bool IsUsed, DateTime CreatedAt,
-    IReadOnlyList<AuditLogDto> History);
+    IReadOnlyList<string> ExtraImages, IReadOnlyList<AuditLogDto> History);
 
-/// <param name="SampleImageUrl">D28: đường dẫn ảnh (http/https), chưa upload.</param>
-public sealed record SaveProductDto(string ProductCode, string ProductName, string? SampleImageUrl, string? Description);
+/// <param name="SampleImageUrl">Ảnh chính: khóa ảnh tải từ máy, hoặc đường dẫn http/https (dữ liệu cũ).</param>
+/// <param name="ExtraImages">Ảnh phụ (tối đa 5, khóa ảnh tải từ máy, theo thứ tự hiển thị). null = giữ nguyên, danh sách rỗng = xóa hết.</param>
+public sealed record SaveProductDto(string ProductCode, string ProductName, string? SampleImageUrl, string? Description,
+    IReadOnlyList<string>? ExtraImages = null);
 
 // ---- Đơn hàng ----
 /// <param name="OrderLineId">null = dòng mới; có giá trị = dòng cũ (sửa).</param>

@@ -78,6 +78,9 @@ public static class OrderStatuses
     /// <summary>Được dừng (bắt buộc lý do).</summary>
     public static readonly IReadOnlySet<string> Stoppable = LimitedEdit;
 
+    /// <summary>JOB-04 theo dõi nguy cơ trễ: đơn đã giao một phần vẫn còn hàng phải làm nên vẫn tính.</summary>
+    public static readonly IReadOnlySet<string> DelayTracked = LimitedEdit;
+
     /// <summary>Mặc định của tra cứu cho luồng khác: đơn còn đang chạy.</summary>
     public static readonly IReadOnlySet<string> Running = new HashSet<string> { New, InProduction, InDelivery, PartiallyDelivered };
 }
@@ -121,6 +124,15 @@ public static class IssueStatuses
     public const string Rejected = "REJECTED";
 }
 
+/// <summary>Kết quả kiểm vải khi lập lệnh cắt theo kích thước chi tiết (chỉ cảnh báo, không chặn).</summary>
+public static class FabricCheckStatuses
+{
+    public const string Enough = "Enough";
+    public const string Short = "Short";
+    public const string TooWide = "TooWide";
+    public const string Unknown = "Unknown";
+}
+
 public static class WorkOrderStatuses
 {
     public const string Open = "OPEN";
@@ -128,6 +140,8 @@ public static class WorkOrderStatuses
     /// <summary>Tự động khi BTP đã vào kho (phiếu bàn giao được xác nhận) đủ số kế hoạch của mọi dòng; không có nút đóng tay.</summary>
     public const string Completed = "COMPLETED";
     public const string Cancelled = "CANCELLED";
+
+    public static readonly IReadOnlyList<string> All = new[] { Open, Cutting, Completed, Cancelled };
 }
 
 public static class CuttingLayStatuses
@@ -157,6 +171,8 @@ public static class StocktakeStatuses
     public const string PendingApproval = "PENDING_APPROVAL";
     public const string Approved = "APPROVED";
     public const string Returned = "RETURNED";
+
+    public static readonly IReadOnlyList<string> All = new[] { PendingApproval, Approved, Returned };
 }
 
 /// <summary>WorkAllocation.MovementType (CK_WA_Type): tổ trưởng giao việc (kèm BTP) cho công nhân hoặc thu hồi lại.</summary>

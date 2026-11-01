@@ -3,6 +3,7 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type { WorkOrderListItem } from '@/types/workOrder';
 import type {
+  CheckWorkOrderFabricPayload,
   ConfirmHandoverPayload,
   CreateHandoverPayload,
   CutHandover,
@@ -16,6 +17,7 @@ import type {
   SaveCuttingLayPayload,
   SaveWorkOrderPayload,
   WorkOrder,
+  WorkOrderFabricCheck,
   WorkOrderQuery,
 } from '../types';
 
@@ -35,6 +37,8 @@ export const cuttingApi = {
     post<WorkOrder>(API.cutting.workOrders(role), body),
   updateWorkOrder: (role: RolePath, id: number, body: SaveWorkOrderPayload) =>
     put<WorkOrder>(`${API.cutting.workOrders(role)}/${id}`, body),
+  checkWorkOrderFabric: async (role: RolePath, body: CheckWorkOrderFabricPayload) =>
+    (await post<WorkOrderFabricCheck[]>(`${API.cutting.workOrders(role)}/fabric-check`, body)).data,
   getReplacementRequests: (role: RolePath) =>
     get<ReplacementRequest[]>(`${API.cutting.workOrders(role)}/replacement-requests`),
   createReplacement: (role: RolePath, body: CreateReplacementPayload) =>

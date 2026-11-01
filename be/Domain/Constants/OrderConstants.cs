@@ -42,3 +42,9 @@ public static class SizeCodes
     /// <summary>Thứ tự cột size trên lưới. Size khác (vd. "4XL") được phép, xếp sau cùng theo chữ cái.</summary>
     public static readonly IReadOnlyList<string> Ordered = new[] { "XS", "S", "M", "L", "XL", "XXL", "3XL", "FREE" };
 }
+
+/// <summary>Ảnh của mã hàng: một ảnh chính (Product.SampleImageUrl) và tối đa 10 ảnh phụ (ProductImage).</summary>
+public static class ProductImageLimits
+{
+    public const int MaxExtra = 10;
+}

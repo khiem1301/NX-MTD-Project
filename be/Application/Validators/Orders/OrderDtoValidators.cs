@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -11,7 +12,7 @@ internal static class CodePattern
     public static bool IsMatch(string value) => Regex.IsMatch(value);
 }
 
-public sealed class CustomerQueryValidator : AbstractValidator<CustomerQuery>
+public sealed class CustomerQueryValidator : PageQueryValidatorBase<CustomerQuery>
 {
     public CustomerQueryValidator()
     {
@@ -23,19 +24,21 @@ public sealed class CustomerQueryValidator : AbstractValidator<CustomerQuery>
 public sealed class DiscontinueCustomerDtoValidator : AbstractValidator<DiscontinueCustomerDto>
 {
     public DiscontinueCustomerDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaxTrimmedLength(500, "Lý do");   // MSG09
 }
 
 public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto>
 {
     public SaveCustomerDtoValidator()
     {
-        RuleFor(x => x.CustomerName).NotEmpty().WithMessage(Messages.Required("tên khách hàng")).MaximumLength(200);
+        RuleFor(x => x.CustomerName).NotEmpty().WithMessage(Messages.Required("tên khách hàng"))
+            .MaxTrimmedLength(200, "Tên khách hàng");
         RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
             .MustBePhone();
         RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
-            .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
-        RuleFor(x => x.DefaultAddress).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
+            .MaxTrimmedLength(100, "Email").MustBeEmail();
+        RuleFor(x => x.DefaultAddress).NotEmpty().WithMessage(Messages.Required("địa chỉ"))
+            .MaxTrimmedLength(500, "Địa chỉ");
     }
 }
 
@@ -43,13 +46,19 @@ public sealed class SaveProductDtoValidator : AbstractValidator<SaveProductDto>
 {
     public SaveProductDtoValidator()
     {
-        RuleFor(x => x.ProductCode).NotEmpty().WithMessage(Messages.Required("mã hàng")).MaximumLength(30)
+        RuleFor(x => x.ProductCode).NotEmpty().WithMessage(Messages.Required("mã hàng"))
+            .Must(c => c.Trim().Length <= 30).WithMessage("Mã hàng tối đa 30 ký tự.")
             .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã hàng chỉ gồm chữ, số và . _ -");
         RuleFor(x => x.ProductName).NotEmpty().WithMessage(Messages.Required("tên mã hàng")).MaximumLength(200);
         RuleFor(x => x.SampleImageUrl).MaximumLength(500)
             .Must(u => SampleImageKey.IsValid(u.Trim()) || (Uri.TryCreate(u, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
             .When(x => !string.IsNullOrWhiteSpace(x.SampleImageUrl)).WithMessage("Ảnh mẫu không hợp lệ, vui lòng chọn lại ảnh.");
         RuleFor(x => x.Description).MaximumLength(1000);
+        RuleFor(x => x.ExtraImages).Cascade(CascadeMode.Stop)
+            .Must(l => l!.Count <= ProductImageLimits.MaxExtra).WithMessage($"Tối đa {ProductImageLimits.MaxExtra} ảnh phụ.")
+            .Must(l => l!.All(k => k is not null && SampleImageKey.IsValid(k.Trim()))).WithMessage("Ảnh phụ không hợp lệ, vui lòng chọn lại ảnh.")
+            .Must(l => l!.Select(k => k.Trim()).Distinct().Count() == l!.Count).WithMessage("Không dùng một ảnh hai lần.")
+            .When(x => x.ExtraImages is not null);
     }
 }
 

@@ -2,24 +2,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { kpiApi } from '../api/kpiApi';
 import { KPI_TEXT } from '../constants';
-import type {
-  KpiRole,
-  KpiTargetFilter,
-  SaveKpiDailyPlanPayload,
-  SaveKpiTargetPayload,
-} from '../types';
+import type { KpiTargetFilter, SaveKpiDailyPlanPayload, SaveKpiTargetPayload } from '../types';
 
 export const KPI_KEY = ['kpi'] as const;
-const targetsKey = (filter: KpiTargetFilter, role: KpiRole) =>
-  [...KPI_KEY, role, 'targets', filter] as const;
-const targetDetailKey = (kpiTargetId: number, role: KpiRole) =>
-  [...KPI_KEY, role, 'target-detail', kpiTargetId] as const;
+const targetsKey = (filter: KpiTargetFilter) => [...KPI_KEY, 'targets', filter] as const;
+const targetDetailKey = (kpiTargetId: number) =>
+  [...KPI_KEY, 'target-detail', kpiTargetId] as const;
 
 /** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, phân trang server-side. */
-export const useKpiTargets = (filter: KpiTargetFilter, role: KpiRole = 'manager') =>
+export const useKpiTargets = (filter: KpiTargetFilter) =>
   useQuery({
-    queryKey: targetsKey(filter, role),
-    queryFn: () => kpiApi.getTargets(filter, role),
+    queryKey: targetsKey(filter),
+    queryFn: () => kpiApi.getTargets(filter),
   });
 
 /** Chỉ tiêu tối đa lập được theo số lượng đơn đặt; chỉ gọi khi đã chọn đơn và mã hàng. */
@@ -36,17 +30,17 @@ export const useKpiOrderCapacity = (
   });
 
 /** Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng. */
-export const useKpiCalendar = (kpiTargetId: number | null, role: KpiRole) =>
+export const useKpiCalendar = (kpiTargetId: number | null) =>
   useQuery({
-    queryKey: [...KPI_KEY, role, 'calendar', kpiTargetId],
-    queryFn: () => kpiApi.getCalendar(kpiTargetId!, role),
+    queryKey: [...KPI_KEY, 'calendar', kpiTargetId],
+    queryFn: () => kpiApi.getCalendar(kpiTargetId!),
     enabled: kpiTargetId !== null,
   });
 
-export const useKpiTargetDetail = (kpiTargetId: number | null, role: KpiRole = 'manager') =>
+export const useKpiTargetDetail = (kpiTargetId: number | null) =>
   useQuery({
-    queryKey: targetDetailKey(kpiTargetId ?? 0, role),
-    queryFn: () => kpiApi.getTargetById(kpiTargetId!, role),
+    queryKey: targetDetailKey(kpiTargetId ?? 0),
+    queryFn: () => kpiApi.getTargetById(kpiTargetId!),
     enabled: kpiTargetId !== null,
   });
 

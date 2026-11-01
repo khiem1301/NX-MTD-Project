@@ -70,7 +70,6 @@ export const MENU_GROUPS: MenuGroup[] = [
       'manager-defect-records',
       'manager-qc-batches',
       'kpi-targets',
-      'admin-kpi-targets',
     ],
   },
   {

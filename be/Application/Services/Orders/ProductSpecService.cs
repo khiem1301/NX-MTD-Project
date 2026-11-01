@@ -32,7 +32,7 @@ public sealed class ProductSpecService : IProductSpecService
             .ToListAsync(ct);
         var variants = await _uow.Repository<ProductVariant>().Query().AsNoTracking()
             .Where(v => v.ProductId == productId).OrderBy(v => v.Color).ThenBy(v => v.SizeCode)
-            .Select(v => new { v.ProductVariantId, v.Color, v.SizeCode, v.LengthCm, v.WidthCm, v.Status })
+            .Select(v => new { v.ProductVariantId, v.Color, v.SizeCode, v.Status })
             .ToListAsync(ct);
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => n.ProductId == productId)
@@ -47,7 +47,7 @@ public sealed class ProductSpecService : IProductSpecService
         return Result<ProductSpecDto>.Success(new ProductSpecDto(productId,
             components.Select(c => new ProductComponentDto(c.ProductComponentId, c.ComponentName, CodeText.ToPascal(c.ComponentType),
                 c.PiecesPerGarment, CodeText.ToPascal(c.Status))).ToList(),
-            variants.Select(v => new ProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode, v.LengthCm, v.WidthCm, CodeText.ToPascal(v.Status))).ToList(),
+            variants.Select(v => new ProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode, CodeText.ToPascal(v.Status))).ToList(),
             norms));
     }
 
@@ -148,11 +148,9 @@ public sealed class ProductSpecService : IProductSpecService
             componentByName[c.ComponentName] = c;
         }
         var variantByKey = new Dictionary<(string, string), ProductVariant>();
-        foreach (var (input, entity) in variantMatch)
+        foreach (var (_, entity) in variantMatch)
         {
             var v = entity!;
-            v.LengthCm = input.LengthCm;
-            v.WidthCm = input.WidthCm;
             variantByKey[(v.Color.ToUpperInvariant(), v.SizeCode)] = v;
         }
         await _uow.SaveChangesAsync();

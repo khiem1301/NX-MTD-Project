@@ -426,7 +426,7 @@ Table DefectRecord [note: 'Hàng lỗi Rework/Scrap và người gây lỗi'] {
   WorkerObjection nvarchar(500) [note: 'Phản hồi của công nhân nếu cho rằng ghi sai']
   ObjectedAt datetime2(0) [note: 'Thời điểm công nhân phản đối']
   EditDeadline datetime2(0) [not null, note: 'Hạn cuối tổ trưởng/QC được sửa; sau hạn chỉ Quản đốc sửa và phải ghi AuditLog (GBR-09)']
-  Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','CANCELLED','LOCKED')`, note: 'Trạng thái: RECORDED, CANCELLED, LOCKED']
+  Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','CONFIRMED','CANCELLED','LOCKED')`, note: 'Trạng thái: RECORDED, CONFIRMED (Quản đốc đã chấp nhận phiếu sau phản đối), CANCELLED, LOCKED']
   RecordedBy int [not null, note: 'Người ghi phiếu lỗi']
   RecordedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm ghi nhận']
   UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
@@ -1219,6 +1219,18 @@ Table Product [note: 'Mã hàng'] {
   Description nvarchar(1000) [note: 'Mô tả mã hàng (kiểu dáng, chất liệu…)']
   Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+}
+
+Table ProductImage [note: 'Ảnh phụ của mã hàng (tối đa 5)'] {
+  ProductImageId int [pk, increment, note: 'Khóa chính, tự tăng']
+  ProductId int [not null, ref: > Product.ProductId, note: 'Mã hàng']
+  ImageKey nvarchar(500) [not null, note: 'Khóa ảnh tải từ máy']
+  SortOrder tinyint [not null, check: `SortOrder BETWEEN 1 AND 5`, note: 'Thứ tự hiển thị 1-5, mỗi mã hàng một ảnh cho mỗi vị trí']
+  CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
+
+  indexes {
+    (ProductId, SortOrder) [unique, name: 'UQ_ProductImage_Sort']
+  }
 }
 
 Table StocktakeLine [note: 'Dòng kiểm kê'] {

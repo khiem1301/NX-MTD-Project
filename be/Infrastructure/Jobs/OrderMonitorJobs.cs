@@ -34,3 +34,33 @@ public sealed class NotificationCleanupJob : DailyScheduledJob
     protected override Task RunAsync(IServiceProvider scopedProvider, DateOnly today, CancellationToken ct) =>
         scopedProvider.GetRequiredService<IOrderProgressService>().PurgeOldNotificationsAsync(today, ct);
 }
+
+/// <summary>Dọn ảnh mồ côi của mã hàng (02:00): xóa file ảnh quá 24 giờ mà không còn mã hàng nào dùng.</summary>
+public sealed class ProductImageCleanupJob : DailyScheduledJob
+{
+    public ProductImageCleanupJob(IServiceScopeFactory scopeFactory, IClock clock, ILogger<ProductImageCleanupJob> logger)
+        : base(scopeFactory, clock, logger)
+    {
+    }
+
+    protected override string ScheduleSettingKey => SettingKeys.ProductImageCleanupTime;
+    protected override TimeOnly DefaultScheduleTime => new(2, 0);
+
+    protected override Task RunAsync(IServiceProvider scopedProvider, DateOnly today, CancellationToken ct) =>
+        scopedProvider.GetRequiredService<IProductImageCleanupService>().RunAsync(DateTime.UtcNow, ct);
+}
+
+/// <summary>Dọn tệp chứng từ (02:30): xóa ảnh đã gỡ quá 15 ngày và file không còn dòng Attachment nào trỏ tới quá 15 ngày.</summary>
+public sealed class AttachmentCleanupJob : DailyScheduledJob
+{
+    public AttachmentCleanupJob(IServiceScopeFactory scopeFactory, IClock clock, ILogger<AttachmentCleanupJob> logger)
+        : base(scopeFactory, clock, logger)
+    {
+    }
+
+    protected override string ScheduleSettingKey => SettingKeys.AttachmentCleanupTime;
+    protected override TimeOnly DefaultScheduleTime => new(2, 30);
+
+    protected override Task RunAsync(IServiceProvider scopedProvider, DateOnly today, CancellationToken ct) =>
+        scopedProvider.GetRequiredService<IAttachmentCleanupService>().RunAsync(DateTime.UtcNow, ct);
+}

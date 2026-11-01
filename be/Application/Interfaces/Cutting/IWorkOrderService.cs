@@ -11,6 +11,9 @@ public interface IWorkOrderService
 
     Task<Result<WorkOrderDto>> GetByIdAsync(int workOrderId, int? cuttingTeamId, CancellationToken ct);
 
+    /// <summary>Kiểm vải theo kích thước chi tiết khi đang lập lệnh, chưa lưu (chỉ cảnh báo).</summary>
+    Task<Result<IReadOnlyList<WorkOrderFabricCheckDto>>> CheckFabricAsync(CheckWorkOrderFabricDto dto, CancellationToken ct);
+
     /// <summary>Vải của lệnh cắt: đã cấp / đã nhận / đã trả / thực dùng, khả dụng trong kho (UC40).</summary>
     Task<Result<IReadOnlyList<FabricRequirementDto>>> GetFabricRequirementsAsync(int workOrderId, CancellationToken ct);
 

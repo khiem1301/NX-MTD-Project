@@ -32,8 +32,29 @@ public static class DefectTypes
 public static class DefectStatuses
 {
     public const string Recorded = "RECORDED";
+    /// <summary>Công nhân phản đối nhưng Quản đốc / Admin chấp nhận phiếu: phiếu được giữ, không hủy hay phản đối nữa. Vẫn tính như phiếu còn hiệu lực.</summary>
+    public const string Confirmed = "CONFIRMED";
     public const string Cancelled = "CANCELLED";
+    /// <summary>Chỉ database dùng (CK_DR_Status, trigger khóa tháng); ứng dụng chưa chuyển phiếu sang trạng thái này nên không có trong <see cref="All"/> và giao diện.</summary>
     public const string Locked = "LOCKED";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { Recorded, Confirmed, Cancelled };
+}
+
+/// <summary>Công nhân chỉ được phản đối phiếu hàng hỏng trong số giờ này kể từ lúc phiếu được ghi (quá hạn thì không phản đối được).</summary>
+public static class DefectObjectionWindow
+{
+    public const int Hours = 48;
+}
+
+/// <summary>Giá trị bộ lọc phản đối của danh sách phiếu hàng hỏng: chờ quyết định, đã quyết định (chấp nhận hoặc hủy), không có phản đối.</summary>
+public static class DefectObjectionFilters
+{
+    public const string Pending = "Pending";
+    public const string Resolved = "Resolved";
+    public const string None = "None";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { Pending, Resolved, None };
 }
 
 /// <summary>DefectRecord.DefectReasonCode. OTHER bắt buộc ghi chú (CK_DR_Other).</summary>

@@ -56,6 +56,7 @@ export const API = {
   },
   customers: {
     base: v1('admin/customers'),
+    options: v1('admin/customers/options'),
     byId: (id: number) => v1(`admin/customers/${id}`),
     discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
@@ -184,10 +185,6 @@ export const API = {
     dailyResults: (kpiTargetId: number) =>
       `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-results`,
     cancel: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/cancel`,
-    adminTargets: '/api/v1/admin/kpi-targets',
-    adminCalendar: (kpiTargetId: number) => `/api/v1/admin/kpi-targets/${kpiTargetId}/calendar`,
-    adminDailyResults: (kpiTargetId: number) =>
-      `/api/v1/admin/kpi-targets/${kpiTargetId}/daily-results`,
   },
   revenue: {
     accountant: '/api/v1/accountant/revenue',
@@ -236,6 +233,7 @@ export const API = {
     defects: (role: 'team-leader' | 'manager') => v1(`${role}/defect-records`),
     defectCancel: (role: 'team-leader' | 'manager', id: number) =>
       v1(`${role}/defect-records/${id}/cancel`),
+    defectConfirm: (id: number) => v1(`manager/defect-records/${id}/confirm`),
     qcBatches: (role: 'qa-qc' | 'manager') => v1(`${role}/qc-batches`),
     qcBatch: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}`),
     qcBatchDelete: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}/delete`),

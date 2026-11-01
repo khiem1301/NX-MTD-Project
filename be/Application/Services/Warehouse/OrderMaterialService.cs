@@ -95,7 +95,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
         if (order is null) return NotFound();
         if (OrderStatuses.Closed.Contains(order.Status))
-            return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+            return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
 
         var entity = new OrderMaterial { OrderId = dto.OrderId };
         var check = await ApplyAsync(entity, dto, ct);
@@ -112,6 +112,9 @@ public sealed class OrderMaterialService : IOrderMaterialService
     {
         var entity = await OrderMaterials.FirstOrDefaultAsync(om => om.OrderMaterialId == orderMaterialId, ct);
         if (entity is null) return NotFound();
+
+        if (await IsOrderClosedAsync(entity.OrderId, ct))
+            return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
 
         var oldCustomerQty = entity.CustomerQty;
         var oldDeliveryCount = entity.ExpectedDeliveryCount;
@@ -137,6 +140,8 @@ public sealed class OrderMaterialService : IOrderMaterialService
     {
         var entity = await OrderMaterials.FirstOrDefaultAsync(om => om.OrderMaterialId == orderMaterialId, ct);
         if (entity is null) return Result.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);
+        if (await IsOrderClosedAsync(entity.OrderId, ct))
+            return Result.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
         if (await HasReceiptsAsync(orderMaterialId, ct))
             return Result.Failure(ErrorCodes.WarehouseOrderMaterialInUse, WarehouseMessages.OrderMaterialInUse);
 
@@ -197,6 +202,14 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .GroupBy(l => l.OrderMaterialId!.Value)
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+
+    /// <summary>Thêm, sửa, xóa NVL của đơn đều bị chặn khi đơn đã đóng (hủy, dừng, đã giao, hoàn tất), không chỉ thêm mới.</summary>
+    private async Task<bool> IsOrderClosedAsync(int orderId, CancellationToken ct)
+    {
+        var status = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+            .Where(o => o.OrderId == orderId).Select(o => o.Status).FirstOrDefaultAsync(ct);
+        return status is not null && OrderStatuses.Closed.Contains(status);
+    }
 
     private Task<bool> HasReceiptsAsync(int orderMaterialId, CancellationToken ct) =>
         _uow.Repository<MaterialReceiptLine>().Query().AnyAsync(l => l.OrderMaterialId == orderMaterialId, ct);

@@ -49,19 +49,19 @@ export const productionMenu: MenuEntry[] = [
     key: 'manager-output-records',
     label: PRODUCTION_TEXT.output.managerTitle,
     path: PRODUCTION_ROUTES.managerOutput,
-    roles: [ROLES.Manager],
+    roles: [ROLES.Admin, ROLES.Manager],
   },
   {
     key: 'manager-defect-records',
     label: PRODUCTION_TEXT.defects.managerTitle,
     path: PRODUCTION_ROUTES.managerDefects,
-    roles: [ROLES.Manager],
+    roles: [ROLES.Admin, ROLES.Manager],
   },
   {
     key: 'manager-qc-batches',
     label: PRODUCTION_TEXT.qc.managerTitle,
     path: PRODUCTION_ROUTES.managerQcBatches,
-    roles: [ROLES.Manager],
+    roles: [ROLES.Admin, ROLES.Manager],
   },
   {
     key: 'my-defects',

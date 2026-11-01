@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { normalizePhone, phoneRule } from '@/utils/phone';
+import { ERROR_CODES } from '@/constants/errorCodes';
+import { normalizePhone } from '@/utils/phone';
+import { PARTNER_LIMITS, partnerRules } from '@/utils/partnerRules';
 import { useSaveCustomer } from '../hooks/useOrders';
 import type { Customer, SaveCustomerPayload } from '../types';
 
@@ -39,10 +41,12 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         },
         onError: (error) =>
           form.setFields(
-            Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-              name: name as keyof SaveCustomerPayload,
-              errors,
-            })),
+            error.errorCode === ERROR_CODES.CustomerNameDuplicate
+              ? [{ name: 'customerName', errors: [error.message] }]
+              : Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+                  name: name as keyof SaveCustomerPayload,
+                  errors,
+                })),
           ),
       },
     );
@@ -65,10 +69,7 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         <Form.Item
           name="customerName"
           label={MESSAGES.orders.customerName}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 200 },
-          ]}
+          rules={[partnerRules.required(MESSAGES.orders.customerName, PARTNER_LIMITS.name)]}
         >
           <Input />
         </Form.Item>
@@ -76,31 +77,17 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           name="phone"
           normalize={normalizePhone}
           label={MESSAGES.orders.phone}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            phoneRule,
-          ]}
+          rules={[partnerRules.phone]}
         >
           <Input maxLength={12} />
         </Form.Item>
-        <Form.Item
-          name="email"
-          label={MESSAGES.orders.email}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 100 },
-            { type: 'email' },
-          ]}
-        >
+        <Form.Item name="email" label={MESSAGES.orders.email} rules={[partnerRules.email]}>
           <Input />
         </Form.Item>
         <Form.Item
           name="defaultAddress"
           label={MESSAGES.orders.address}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 500 },
-          ]}
+          rules={[partnerRules.required(MESSAGES.orders.address, PARTNER_LIMITS.address)]}
         >
           <Input.TextArea rows={2} />
         </Form.Item>

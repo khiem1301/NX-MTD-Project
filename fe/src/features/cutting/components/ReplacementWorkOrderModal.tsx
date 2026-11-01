@@ -3,7 +3,7 @@ import { Alert, Descriptions, Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamOptions } from '@/hooks/useLookups';
-import { LABELS } from '../constants';
+import { LABELS, WORK_ORDER_LIMITS } from '../constants';
 import { useCreateReplacement, useReplacementRequests } from '../hooks/useCutting';
 import { API_DATE } from '@/utils/format';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
@@ -109,7 +109,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
           <AppDatePicker disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
         </Form.Item>
         <Form.Item name="note" label={LABELS.note}>
-          <Input.TextArea rows={2} maxLength={500} />
+          <Input.TextArea rows={2} maxLength={WORK_ORDER_LIMITS.noteMax} showCount />
         </Form.Item>
       </Form>
     </Modal>

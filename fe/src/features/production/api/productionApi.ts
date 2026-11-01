@@ -5,6 +5,7 @@ import type {
   AssignManyPayload,
   AssignPayload,
   CancelDefectPayload,
+  ConfirmDefectPayload,
   CopyAssignmentsPayload,
   CreateDefectPayload,
   CreateQcBatchPayload,
@@ -110,6 +111,7 @@ export const productionApi = {
   createDefect: (body: CreateDefectPayload) => post<number>(P.defects('team-leader'), body),
   cancelDefect: (role: OutputRole, id: number, body: CancelDefectPayload) =>
     post<void>(P.defectCancel(role, id), body),
+  confirmDefect: (id: number, body: ConfirmDefectPayload) => post<void>(P.defectConfirm(id), body),
   listMyDefects: (query: DefectQuery) => get<Defect[]>(P.myDefects, query),
   objectDefect: (id: number, body: ObjectDefectPayload) => post<void>(P.myDefectObject(id), body),
 };

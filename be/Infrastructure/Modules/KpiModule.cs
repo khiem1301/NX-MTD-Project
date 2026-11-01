@@ -15,6 +15,8 @@ public static class KpiModule
         services.AddScoped<IKpiCalendarService, KpiCalendarService>();
         services.AddHostedService<DelayRiskJob>();           // JOB-04 (KH-23)
         services.AddHostedService<NotificationCleanupJob>(); // JOB-05 (KH-23)
+        services.AddHostedService<ProductImageCleanupJob>(); // dọn ảnh mồ côi của mã hàng
+        services.AddHostedService<AttachmentCleanupJob>();   // dọn ảnh chứng từ đã gỡ quá 15 ngày
         return services;
     }
 }

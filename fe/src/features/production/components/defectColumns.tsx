@@ -1,12 +1,12 @@
-import { CloseCircleOutlined, SwapOutlined } from '@ant-design/icons';
-import { Space, Tag, Typography } from 'antd';
+import { CheckCircleOutlined, CloseCircleOutlined, SwapOutlined } from '@ant-design/icons';
+import { Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { IconAction } from '@/components/common/IconAction';
-import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
+import { canCancelDefect, canConfirmDefect, defectStateOf } from '../defectRules';
 import type { Defect } from '../types';
 
 const text = PRODUCTION_TEXT.defects;
@@ -15,108 +15,117 @@ type DefectColumnsOptions = {
   isManager: boolean;
   onReplace: (defect: Defect) => void;
   onCancel: (defect: Defect) => void;
+  onConfirm: (defect: Defect) => void;
 };
 
-/** Cột bảng hàng hỏng: mã, ngày, lý do, đơn giá trừ, trạng thái, phản đối của công nhân và thao tác cắt bù / hủy phiếu. */
+const reasonText = (d: Defect) =>
+  d.reasonNote
+    ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}`
+    : text.reason[d.defectReasonCode];
+
+/** Hai dòng chồng nhau: dòng đầu đậm, dòng sau mờ. Gộp nhiều thông tin vào một cột để bảng không phải cuộn ngang. */
+const stacked = (top: string, bottom: string) => (
+  <Space direction="vertical" size={0}>
+    <Typography.Text strong>{top}</Typography.Text>
+    <Typography.Text type="secondary">{bottom}</Typography.Text>
+  </Space>
+);
+
+/**
+ * Cột bảng hàng hỏng, gộp lại còn 7 cột: phiếu (mã, ngày, tổ), đơn / mã hàng, công đoạn / công nhân, loại và số lượng,
+ * lý do, tình trạng, thao tác. Thông tin phụ nằm ở dòng mở rộng (DefectExpandedRow). Công nhân phản đối thì Quản đốc chọn
+ * chấp nhận phiếu (dấu tích) hoặc hủy phiếu (dấu x).
+ */
 export const defectColumns = ({
   isManager,
   onReplace,
   onCancel,
+  onConfirm,
 }: DefectColumnsOptions): ColumnsType<Defect> => [
-  { title: text.columns.code, dataIndex: 'defectCode' },
-  { title: text.columns.date, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
-  ...(isManager ? [{ title: text.columns.team, dataIndex: 'sewingTeamName' }] : []),
   {
-    responsive: ['md'],
-    title: text.columns.order,
-    key: 'order',
-    render: (_, d) => `${d.orderCode} · ${d.productCode}`,
-  },
-  {
-    title: text.columns.operation,
-    key: 'op',
-    render: (_, d) => `${d.operationCode} - ${d.operationName}`,
-  },
-  { title: text.columns.worker, dataIndex: 'responsibleWorkerName' },
-  {
-    title: text.columns.type,
-    dataIndex: 'defectType',
-    render: (v: string) => <StatusTag status={v} labels={text.type} />,
-  },
-  { title: text.columns.qty, dataIndex: 'quantity', align: 'right' },
-  {
-    title: text.columns.reason,
-    key: 'reason',
+    title: text.columns.ticket,
+    key: 'ticket',
     render: (_, d) =>
-      d.reasonNote
-        ? `${text.reason[d.defectReasonCode]}: ${d.reasonNote}`
-        : text.reason[d.defectReasonCode],
-  },
-  {
-    responsive: ['md'],
-    title: text.columns.rate,
-    dataIndex: 'scrapUnitRate',
-    align: 'right',
-    render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
-  },
-  {
-    title: text.columns.status,
-    dataIndex: 'status',
-    render: (v: string) => <StatusTag status={v} labels={text.status} />,
-  },
-  {
-    title: text.columns.objection,
-    key: 'objection',
-    render: (_, d) =>
-      d.workerObjection ? (
-        <Space direction="vertical" size={0}>
-          <Tag color="volcano">{text.objected}</Tag>
-          <Typography.Text>{d.workerObjection}</Typography.Text>
-        </Space>
-      ) : (
-        '—'
+      stacked(
+        d.defectCode,
+        isManager ? `${formatDate(d.workDate)} · ${d.sewingTeamName}` : formatDate(d.workDate),
       ),
   },
   {
     responsive: ['md'],
-    title: text.columns.deadline,
-    dataIndex: 'editDeadline',
-    render: (v: string) => formatDateTime(v),
+    title: text.columns.orderProduct,
+    key: 'order',
+    render: (_, d) => stacked(d.orderCode, d.productCode),
   },
   {
-    title: PRODUCTION_TEXT.replacement.column,
-    key: 'replacement',
-    render: (_, d) => {
-      if (d.replacementRequestCode)
-        return (
-          <Tag color="geekblue">
-            {d.replacementRequestCode} ·{' '}
-            {REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ??
-              d.replacementRequestStatus}
-          </Tag>
-        );
-      return !isManager && d.defectType === 'Scrap' && d.status === 'Recorded' ? (
-        <IconAction
-          title={PRODUCTION_TEXT.replacement.button}
-          icon={<SwapOutlined />}
-          onClick={() => onReplace(d)}
-        />
-      ) : (
-        '—'
-      );
-    },
+    title: text.columns.operationWorker,
+    key: 'op',
+    render: (_, d) => stacked(`${d.operationCode} - ${d.operationName}`, d.responsibleWorkerName),
+  },
+  {
+    title: text.columns.defect,
+    key: 'defect',
+    render: (_, d) => (
+      <Space size={4}>
+        <StatusTag status={d.defectType} labels={text.type} />
+        <strong>{`×${d.quantity}`}</strong>
+      </Space>
+    ),
+  },
+  {
+    responsive: ['lg'],
+    title: text.columns.reason,
+    key: 'reason',
+    width: 200,
+    ellipsis: { showTitle: false },
+    render: (_, d) => (
+      <Tooltip title={reasonText(d)}>
+        <span>{reasonText(d)}</span>
+      </Tooltip>
+    ),
+  },
+  {
+    title: text.columns.state,
+    key: 'state',
+    render: (_, d) => (
+      <Space size={4} wrap>
+        <StatusTag status={defectStateOf(d)} labels={text.state} />
+        {d.replacementRequestCode && <Tag color="geekblue">{d.replacementRequestCode}</Tag>}
+      </Space>
+    ),
   },
   {
     title: MESSAGES.common.actions,
     key: 'action',
-    render: (_, d) =>
-      d.status === 'Recorded' && (isManager || d.canEdit) ? (
-        <IconAction
-          title={text.cancel}
-          icon={<CloseCircleOutlined />}
-          danger
-          onClick={() => onCancel(d)}
-        />
-      ) : null,
+    fixed: 'right',
+    render: (_, d) => (
+      <Space size={0}>
+        {isManager && canConfirmDefect(d) && (
+          <IconAction
+            title={text.confirm}
+            icon={<CheckCircleOutlined />}
+            onClick={() => onConfirm(d)}
+          />
+        )}
+        {!isManager &&
+          d.defectType === 'Scrap' &&
+          d.status === 'Recorded' &&
+          !d.replacementRequestCode && (
+            <IconAction
+              title={PRODUCTION_TEXT.replacement.button}
+              icon={<SwapOutlined />}
+              onClick={() => onReplace(d)}
+            />
+          )}
+        {canCancelDefect(d, isManager) && (
+          <IconAction
+            title={text.cancel}
+            icon={<CloseCircleOutlined />}
+            danger
+            onClick={() => onCancel(d)}
+          />
+        )}
+      </Space>
+    ),
   },
 ];

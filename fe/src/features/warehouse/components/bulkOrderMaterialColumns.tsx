@@ -4,6 +4,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { MaterialOption } from '@/types/lookup';
 import { LABELS } from '../constants';
+import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
 import { rowError, type BulkLine, type Draft, isChanged } from './bulkOrderMaterial';
 
 type Options = {
@@ -86,9 +87,13 @@ export const bulkOrderMaterialColumns = ({
       render: (_, line) => (
         <InputNumber
           size="small"
-          min={0}
           style={{ width: '100%' }}
           suffix={unitOf(line)}
+          status={
+            showErrors && qtyProblem(LABELS.requiredQtyName, line.draft.requiredQty)
+              ? 'error'
+              : undefined
+          }
           value={line.draft.requiredQty}
           onChange={(v) => onPatch(line.key, { requiredQty: v ?? 0 })}
         />
@@ -101,9 +106,13 @@ export const bulkOrderMaterialColumns = ({
       render: (_, line) => (
         <InputNumber
           size="small"
-          min={0}
           style={{ width: '100%' }}
           suffix={unitOf(line)}
+          status={
+            showErrors && qtyProblem(LABELS.customerQtyName, line.draft.customerQty)
+              ? 'error'
+              : undefined
+          }
           value={line.draft.customerQty}
           onChange={(v) => onPatch(line.key, { customerQty: v ?? 0 })}
         />
@@ -117,12 +126,15 @@ export const bulkOrderMaterialColumns = ({
         line.draft.customerQty > 0 ? (
           <InputNumber
             size="small"
-            min={1}
-            max={99}
-            precision={0}
             style={{ width: '100%' }}
             aria-label={LABELS.expectedDeliveryCount}
-            status={showErrors && !line.draft.expectedDeliveryCount ? 'error' : undefined}
+            status={
+              showErrors &&
+              (!line.draft.expectedDeliveryCount ||
+                deliveryCountProblem(line.draft.expectedDeliveryCount))
+                ? 'error'
+                : undefined
+            }
             value={line.draft.expectedDeliveryCount}
             onChange={(v) => onPatch(line.key, { expectedDeliveryCount: v })}
           />

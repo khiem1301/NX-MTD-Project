@@ -66,7 +66,7 @@ export function OrderMaterialPage() {
         title={INCOMING_TEXT.pendingTitle}
         description={INCOMING_TEXT.pendingHint}
         extra={
-          hasRole(ROLES.Manager) && (
+          hasRole(ROLES.Admin, ROLES.Manager) && (
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setStockFormOpen(true)}>
               {INCOMING_TEXT.createStockPurchase}
             </Button>

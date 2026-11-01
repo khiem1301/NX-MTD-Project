@@ -17,7 +17,7 @@ import { KPI_TEXT } from '../constants';
 import { useCancelKpiTarget, useKpiTargets } from '../hooks/useKpi';
 import { FinishOrderModal } from './FinishOrderModal';
 import { KpiCalendarModal } from './KpiCalendarModal';
-import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
+import type { KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { DataTable } from '@/components/common/DataTable';
@@ -25,8 +25,6 @@ import { DataTable } from '@/components/common/DataTable';
 type Props = {
   filter: KpiTargetFilter;
   onFilterChange: (filter: KpiTargetFilter) => void;
-  /** Quản đốc lập / sửa / hủy; Admin chỉ xem. */
-  role: KpiRole;
   onAdd?: () => void;
   onEdit?: (target: KpiTarget) => void;
 };
@@ -40,10 +38,9 @@ const progressStatus = (percent: number): 'success' | 'normal' | 'exception' =>
   percent >= 100 ? 'success' : percent >= 70 ? 'normal' : 'exception';
 
 /** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, lọc theo trạng thái + từ khóa. */
-export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: Props) {
-  const targets = useKpiTargets(filter, role);
+export function KpiTargetTable({ filter, onFilterChange, onAdd, onEdit }: Props) {
+  const targets = useKpiTargets(filter);
   const cancel = useCancelKpiTarget();
-  const canManage = role === 'manager';
   const [finishing, setFinishing] = useState<KpiTarget | null>(null);
   const [calendarOf, setCalendarOf] = useState<KpiTarget | null>(null);
 
@@ -101,7 +98,7 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
             icon={<CalendarOutlined />}
             onClick={() => setCalendarOf(row)}
           />
-          {canManage && row.status === 'Active' && (
+          {row.status === 'Active' && (
             <>
               <IconAction
                 title={KPI_TEXT.edit}
@@ -150,7 +147,7 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
           options={STATUS_OPTIONS}
           onChange={(status) => onFilterChange({ ...filter, page: 1, status })}
         />
-        {canManage && onAdd && (
+        {onAdd && (
           <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
             {KPI_TEXT.add}
           </Button>
@@ -159,7 +156,7 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
 
       <QueryError error={targets.error} onRetry={() => void targets.refetch()} />
       <FinishOrderModal target={finishing} onClose={() => setFinishing(null)} />
-      <KpiCalendarModal target={calendarOf} role={role} onClose={() => setCalendarOf(null)} />
+      <KpiCalendarModal target={calendarOf} onClose={() => setCalendarOf(null)} />
 
       <DataTable<KpiTarget>
         rowKey="kpiTargetId"

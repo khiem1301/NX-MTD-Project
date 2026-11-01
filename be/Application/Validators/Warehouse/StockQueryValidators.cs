@@ -9,11 +9,12 @@ public sealed class PendingMaterialOrderQueryValidator : AbstractValidator<Pendi
 {
     public PendingMaterialOrderQueryValidator()
     {
-        RuleFor(x => x.Page).GreaterThan(0);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize);
-        RuleFor(x => x.Keyword).MaximumLength(100);
+        RuleFor(x => x.Page).GreaterThan(0).WithMessage("Số trang phải từ 1 trở lên.");
+        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize)
+            .WithMessage($"Số dòng mỗi trang phải từ 1 đến {PageQuery.MaxPageSize}.");
+        RuleFor(x => x.Keyword).MaximumLength(100).WithMessage("Từ khóa tối đa 100 ký tự.");
         RuleFor(x => x.MaterialState).Must(s => PendingMaterialStates.All.Contains(s!))
-            .When(x => !string.IsNullOrEmpty(x.MaterialState));
+            .When(x => !string.IsNullOrEmpty(x.MaterialState)).WithMessage("Tình trạng NVL không hợp lệ.");
     }
 }
 
@@ -21,14 +22,15 @@ public sealed class OrderMaterialPageQueryValidator : AbstractValidator<OrderMat
 {
     public OrderMaterialPageQueryValidator()
     {
-        RuleFor(x => x.OrderId).GreaterThan(0);
-        RuleFor(x => x.Page).GreaterThan(0);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize);
-        RuleFor(x => x.Keyword).MaximumLength(100);
+        RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("Vui lòng chọn đơn hàng.");
+        RuleFor(x => x.Page).GreaterThan(0).WithMessage("Số trang phải từ 1 trở lên.");
+        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize)
+            .WithMessage($"Số dòng mỗi trang phải từ 1 đến {PageQuery.MaxPageSize}.");
+        RuleFor(x => x.Keyword).MaximumLength(100).WithMessage("Từ khóa tối đa 100 ký tự.");
         RuleFor(x => x.Supply).Must(s => OrderMaterialSupplies.All.Contains(s!))
-            .When(x => !string.IsNullOrEmpty(x.Supply));
+            .When(x => !string.IsNullOrEmpty(x.Supply)).WithMessage("Nguồn cấp không hợp lệ.");
         RuleFor(x => x.ReceiptState).Must(s => OrderMaterialReceiptStates.All.Contains(s!))
-            .When(x => !string.IsNullOrEmpty(x.ReceiptState));
+            .When(x => !string.IsNullOrEmpty(x.ReceiptState)).WithMessage("Tình trạng nhận không hợp lệ.");
     }
 }
 

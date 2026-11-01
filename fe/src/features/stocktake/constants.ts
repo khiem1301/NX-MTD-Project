@@ -30,6 +30,9 @@ export const ST_LABELS = {
   bookQty: 'Số sổ',
   countedQty: 'Số đếm',
   differenceQty: 'Chênh lệch',
+  currentQty: 'Tồn hiện tại',
+  stockChanged:
+    'Tồn kho đã thay đổi so với số sổ lúc lập phiếu ở {0} dòng (cột Tồn hiện tại). Duyệt vẫn điều chỉnh theo chênh lệch số đếm − số sổ; nếu tồn không đủ để trừ thì hệ thống báo lỗi và phiếu giữ nguyên.',
   note: 'Ghi chú',
   approve: 'Duyệt và điều chỉnh kho',
   return: 'Trả lại',
@@ -44,5 +47,7 @@ export const ST_MESSAGES = {
   saved: 'Đã gửi phiếu kiểm kê cho Quản đốc / Admin duyệt.',
   confirmApprove: 'Duyệt phiếu? Tồn kho sẽ được điều chỉnh theo số đếm ở các dòng lệch.',
   approved: 'Đã duyệt phiếu kiểm kê.',
+  noLines: 'Nhập số đếm hoặc ghi chú cho ít nhất một dòng trước khi gửi.',
+  tooManyLines: 'Một phiếu kiểm kê tối đa 1.000 dòng, hãy tách thành nhiều phiếu.',
   returned: 'Đã trả phiếu kiểm kê cho Thủ kho.',
 } as const;

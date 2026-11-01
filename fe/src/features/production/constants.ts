@@ -1,5 +1,21 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
-import type { DefectReason, DefectStatus, DefectType, PieceRateStatus, ShiftCode } from './types';
+import type {
+  DefectObjectionFilter,
+  DefectReason,
+  DefectStatus,
+  DefectType,
+  PieceRateStatus,
+  ShiftCode,
+} from './types';
+
+/** Số lượng hàng hỏng tối đa mỗi phiếu và độ dài ghi chú / lý do / trả lời, khớp DefectLimits ở BE. */
+export const DEFECT_MAX_QTY = 1_000_000;
+export const DEFECT_TEXT_MAX = 500;
+/** Khoảng ngày lọc danh sách phiếu hàng hỏng tối đa (ngày), khớp BE. */
+export const DEFECT_MAX_RANGE_DAYS = 366;
+
+/** Số lượng sản lượng tối đa mỗi dòng, khớp OutputLimits.MaxQty ở BE. */
+export const OUTPUT_MAX_QTY = 1_000_000;
 
 /** Chuỗi hiển thị của luồng công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01..KI-11). Lỗi nghiệp vụ lấy message từ BE. */
 export const PRODUCTION_TEXT = {
@@ -298,7 +314,7 @@ export const PRODUCTION_TEXT = {
     subtitle:
       'Ghi hàng hỏng (sửa lại hoặc hủy) và công nhân gây lỗi. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
     managerSubtitle:
-      'Quản đốc xem phiếu hàng hỏng của các tổ và hủy phiếu ghi sai (bắt buộc lý do).',
+      'Quản đốc xem phiếu hàng hỏng của các tổ. Công nhân phản đối thì chấp nhận phiếu (giữ phiếu) hoặc hủy phiếu ghi sai (bắt buộc lý do).',
     add: 'Ghi hàng hỏng',
     addTitle: 'Ghi hàng hỏng',
     cancel: 'Hủy phiếu',
@@ -306,7 +322,46 @@ export const PRODUCTION_TEXT = {
     filterDate: 'Lọc theo ngày',
     searchPlaceholder: 'Tìm theo công nhân, mã hàng, tổ, mã phiếu',
     objected: 'Công nhân phản hồi',
+    confirm: 'Chấp nhận phiếu',
+    confirmTitle: 'Chấp nhận phiếu hàng hỏng',
+    confirmHint:
+      'Công nhân phản đối phiếu này. Chấp nhận thì phiếu được giữ nguyên và công nhân không phản đối lại được; nếu phiếu ghi sai hãy hủy phiếu.',
+    confirmNote: 'Ghi chú (không bắt buộc)',
+    confirmWorker: 'Phản đối của',
+    rangeTooLong: 'Khoảng ngày lọc tối đa 366 ngày.',
+    filters: {
+      range: ['Từ ngày', 'Đến ngày'] as [string, string],
+      team: 'Tổ',
+      type: 'Loại hỏng',
+      status: 'Phiếu',
+      objection: 'Phản đối',
+    },
+    objectionOptions: [
+      { value: 'None', label: 'Không phản đối' },
+      { value: 'Pending', label: 'Chờ quyết định' },
+      { value: 'Resolved', label: 'Đã quyết định' },
+    ] as { value: DefectObjectionFilter; label: string }[],
+    state: {
+      Pending: { text: 'Đã ghi', color: 'blue' },
+      ObjectionPending: { text: 'Chờ quyết định', color: 'volcano' },
+      Confirmed: { text: 'Đã chấp nhận', color: 'green' },
+      Cancelled: { text: 'Đã hủy', color: 'default' },
+    } as Record<string, StatusLabel>,
+    detail: {
+      reasonNote: 'Ghi chú lý do',
+      rate: 'Đơn giá trừ',
+      deadline: 'Hạn sửa',
+      recordedAt: 'Ghi lúc',
+      updatedAt: 'Cập nhật lần cuối',
+      objection: 'Phản đối của công nhân',
+      replacement: 'Đơn cắt bù',
+    },
     columns: {
+      ticket: 'Phiếu',
+      orderProduct: 'Đơn / mã hàng',
+      operationWorker: 'Công đoạn / công nhân',
+      defect: 'Hỏng',
+      state: 'Tình trạng',
       code: 'Mã phiếu',
       date: 'Ngày',
       team: 'Tổ',
@@ -330,6 +385,7 @@ export const PRODUCTION_TEXT = {
       type: 'Loại hỏng',
       qty: 'Số lượng',
       qtyMin: 'Số lượng phải lớn hơn 0.',
+      qtyMax: 'Số lượng tối đa 1.000.000.',
       reason: 'Lý do',
       note: 'Ghi chú',
       noteRequired: 'Lý do "Khác" bắt buộc ghi chú.',
@@ -337,6 +393,7 @@ export const PRODUCTION_TEXT = {
     done: {
       created: 'Đã ghi hàng hỏng và thông báo cho công nhân.',
       cancelled: 'Đã hủy phiếu hàng hỏng.',
+      confirmed: 'Đã chấp nhận phiếu hàng hỏng.',
     },
     type: {
       Rework: { text: 'Sửa lại', color: 'gold' },
@@ -352,8 +409,8 @@ export const PRODUCTION_TEXT = {
     } as Record<DefectReason, string>,
     status: {
       Recorded: { text: 'Đã ghi', color: 'blue' },
+      Confirmed: { text: 'Đã chấp nhận', color: 'green' },
       Cancelled: { text: 'Đã hủy', color: 'default' },
-      Locked: { text: 'Đã khóa', color: 'purple' },
     } as Record<DefectStatus, StatusLabel>,
   },
 
@@ -385,6 +442,7 @@ export const PRODUCTION_TEXT = {
     objectionRequired: 'Vui lòng nhập nội dung phản hồi.',
     done: 'Đã gửi phản hồi cho tổ trưởng.',
     empty: 'Bạn chưa có phiếu hàng hỏng nào.',
+    rejected: 'Phản hồi bị bác',
   },
 } as const;
 

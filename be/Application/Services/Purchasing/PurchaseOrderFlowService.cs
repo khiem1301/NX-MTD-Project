@@ -310,7 +310,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
     private PurchaseOrderPermissionsDto PermissionsFor(string goodsStatus, string paymentStatus)
     {
-        var isManager = _user.Role == Roles.Manager;
+        var isManager = _user.Role is Roles.Manager or Roles.Admin;
         var isAccountant = _user.Role == Roles.Accountant;
         var pending = goodsStatus == PurchaseOrderStatuses.PendingFinalisation;
         var payable = CanPay(goodsStatus, paymentStatus);

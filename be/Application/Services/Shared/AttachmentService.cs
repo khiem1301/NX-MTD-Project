@@ -79,6 +79,7 @@ public sealed class AttachmentService : IAttachmentService
         var a = await _attachments.GetAsync(attachmentId, ct);
         if (a is null || !a.IsCurrent || !await CanWriteAsync(a.OwnerType, a.OwnerId, ct)) return Fail.NotFound();
         a.IsCurrent = false;
+        a.RemovedAt = _clock.Now;
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.AttachmentRemoved);
     }

@@ -1,9 +1,11 @@
 /* =====================================================================================
-   Gộp các patch 31/10 - 02/11/2026 chưa đẩy lên remote: AuditLog.Summary; lý do ngừng hợp tác;
-   bỏ Material.LengthCm; KPI tổ may. Chạy sau các patch 28/10 - 31/10 đã có trên remote.
+   Gộp các patch 31/10 - 01/11/2026 chưa đẩy lên remote, chạy sau các patch 28/10 - 31/10 đã có trên remote:
+     1. AuditLog.Summary            2. Lý do ngừng hợp tác          3. Bỏ Material.LengthCm        4. KPI tổ may
+     5. Ảnh phụ của mã hàng         6. Attachment.RemovedAt         7. Bỏ ProductVariant.LengthCm, WidthCm
+     8. Hàng hỏng: trạng thái CONFIRMED
    DB dựng mới từ SQL/NX-MTD_Database.sql không cần chạy. Chạy lại không lỗi.
    Lệnh (PowerShell, tại thư mục gốc dự án):
-     sqlcmd -S localhost -E -C -I -f 65001 -b -d NXMTD -i SQL\patches\2026-11-02_kpi_audit_material.sql
+     sqlcmd -S localhost -E -C -I -f 65001 -b -d NXMTD -i SQL\patches\2026-11-01_all_changes.sql
    ===================================================================================== */
 
 /* =========================== 1. AuditLog.Summary =========================== */
@@ -131,4 +133,115 @@ OUTER APPLY (SELECT SUM(dr.Quantity) AS DefectQty
 GO
 
 PRINT N'Đã cập nhật KPI tổ may.';
+GO
+GO
+
+/* =========================== 5. Ảnh phụ của mã hàng =========================== */
+-- Mã hàng có một ảnh chính (Product.SampleImageUrl, giữ nguyên) và tối đa 10 ảnh phụ (bảng mới dbo.ProductImage).
+-- SortOrder 1-10, mỗi vị trí một ảnh: database tự chặn ảnh phụ thứ 11.
+-- Database đã chạy bản cũ (tối đa 5 ảnh) thì nới ràng buộc lên 10, dữ liệu giữ nguyên.
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF OBJECT_ID('dbo.ProductImage', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.ProductImage (
+        ProductImageId  INT IDENTITY(1,1) CONSTRAINT PK_ProductImage PRIMARY KEY,
+        ProductId       INT           NOT NULL CONSTRAINT FK_ProductImage_Product REFERENCES dbo.Product(ProductId),
+        ImageKey        NVARCHAR(500) NOT NULL,   -- khóa ảnh tải từ máy, vd PRODUCT/2026/11/<guid>.jpg
+        SortOrder       TINYINT       NOT NULL,   -- thứ tự hiển thị 1-10
+        CreatedAt       DATETIME2(0)  NOT NULL CONSTRAINT DF_ProductImage_CreatedAt DEFAULT (dbo.fn_VnNow()),
+        CONSTRAINT CK_ProductImage_Sort CHECK (SortOrder BETWEEN 1 AND 10),
+        CONSTRAINT UQ_ProductImage_Sort UNIQUE (ProductId, SortOrder)
+    );
+    PRINT N'Đã tạo bảng ProductImage.';
+END
+ELSE IF EXISTS (SELECT 1 FROM sys.check_constraints
+                WHERE name = 'CK_ProductImage_Sort' AND parent_object_id = OBJECT_ID('dbo.ProductImage')
+                  AND definition LIKE N'%(5)%')
+BEGIN
+    ALTER TABLE dbo.ProductImage DROP CONSTRAINT CK_ProductImage_Sort;
+    ALTER TABLE dbo.ProductImage ADD CONSTRAINT CK_ProductImage_Sort CHECK (SortOrder BETWEEN 1 AND 10);
+    PRINT N'Đã nới CK_ProductImage_Sort lên 10 ảnh phụ.';
+END
+ELSE
+    PRINT N'ProductImage đã đúng, bỏ qua.';
+GO
+
+/* =========================== 6. Attachment.RemovedAt =========================== */
+-- Ghi lúc gỡ ảnh (IsCurrent = 0) để job dọn tệp xóa file và dòng của ảnh đã gỡ sau 15 ngày.
+-- Ảnh đã gỡ từ trước không biết gỡ lúc nào nên lấy giờ chạy patch làm mốc: được giữ thêm 15 ngày kể từ hôm nay.
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF COL_LENGTH('dbo.Attachment', 'RemovedAt') IS NOT NULL
+BEGIN
+    PRINT N'Attachment.RemovedAt đã có, bỏ qua.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+ALTER TABLE dbo.Attachment ADD RemovedAt DATETIME2(0) NULL;
+-- Cột vừa thêm chưa dùng được trong cùng lô, nên cập nhật bằng EXEC.
+EXEC(N'UPDATE dbo.Attachment SET RemovedAt = dbo.fn_VnNow() WHERE IsCurrent = 0 AND RemovedAt IS NULL');
+COMMIT TRANSACTION;
+PRINT N'Đã thêm Attachment.RemovedAt.';
+GO
+
+/* =========================== 7. Bỏ ProductVariant.LengthCm, WidthCm =========================== */
+-- Số mét vải của lệnh cắt tính từ kích thước chi tiết (ProductComponentMaterial.LengthCm, WidthCm), không còn dùng kích thước theo màu – size.
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF COL_LENGTH('dbo.ProductVariant', 'LengthCm') IS NULL AND COL_LENGTH('dbo.ProductVariant', 'WidthCm') IS NULL
+BEGIN
+    PRINT N'ProductVariant đã bỏ LengthCm, WidthCm, bỏ qua.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+IF OBJECT_ID('dbo.CK_PV_Size', 'C') IS NOT NULL ALTER TABLE dbo.ProductVariant DROP CONSTRAINT CK_PV_Size;
+IF COL_LENGTH('dbo.ProductVariant', 'LengthCm') IS NOT NULL ALTER TABLE dbo.ProductVariant DROP COLUMN LengthCm;
+IF COL_LENGTH('dbo.ProductVariant', 'WidthCm') IS NOT NULL ALTER TABLE dbo.ProductVariant DROP COLUMN WidthCm;
+COMMIT TRANSACTION;
+PRINT N'Đã bỏ ProductVariant.LengthCm, WidthCm.';
+GO
+GO
+
+/* =========================== 8. Hàng hỏng: trạng thái CONFIRMED =========================== */
+-- Công nhân phản đối phiếu thì Quản đốc / Admin chấp nhận phiếu (Status = CONFIRMED) hoặc hủy phiếu (CANCELLED có sẵn).
+-- Không thêm cột: giờ quyết định ở UpdatedAt, người và ghi chú ở AuditLog. Phiếu quá 48 giờ không bị phản đối cũng được job nền chuyển sang CONFIRMED.
+-- Database đã chạy bản đầu (thêm 7 cột HandledAt, HandledBy, HandledNote, ObjectionResolution, ObjectionResolvedNote, ObjectionResolvedBy, ObjectionResolvedAt) thì bước này bỏ các cột và ràng buộc đó.
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+
+-- Dọn bản đầu (nếu đã chạy): ràng buộc, khóa ngoại, rồi 7 cột.
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_DR_Objection' AND parent_object_id = OBJECT_ID('dbo.DefectRecord'))
+    ALTER TABLE dbo.DefectRecord DROP CONSTRAINT CK_DR_Objection;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_DR_ObjectionCols' AND parent_object_id = OBJECT_ID('dbo.DefectRecord'))
+    ALTER TABLE dbo.DefectRecord DROP CONSTRAINT CK_DR_ObjectionCols;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_DR_Handled' AND parent_object_id = OBJECT_ID('dbo.DefectRecord'))
+    ALTER TABLE dbo.DefectRecord DROP CONSTRAINT CK_DR_Handled;
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_DR_ResolvedBy') ALTER TABLE dbo.DefectRecord DROP CONSTRAINT FK_DR_ResolvedBy;
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_DR_HandledBy')  ALTER TABLE dbo.DefectRecord DROP CONSTRAINT FK_DR_HandledBy;
+IF COL_LENGTH('dbo.DefectRecord', 'HandledAt') IS NOT NULL
+    ALTER TABLE dbo.DefectRecord DROP COLUMN ObjectionResolution, ObjectionResolvedNote, ObjectionResolvedBy, ObjectionResolvedAt,
+                                             HandledAt, HandledBy, HandledNote;
+GO
+
+-- Status thêm giá trị CONFIRMED.
+IF NOT EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_DR_Status' AND parent_object_id = OBJECT_ID('dbo.DefectRecord')
+               AND definition LIKE '%CONFIRMED%')
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_DR_Status' AND parent_object_id = OBJECT_ID('dbo.DefectRecord'))
+        ALTER TABLE dbo.DefectRecord DROP CONSTRAINT CK_DR_Status;
+    ALTER TABLE dbo.DefectRecord ADD CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CONFIRMED','CANCELLED','LOCKED'));
+END
+GO
+PRINT N'Đã thêm trạng thái CONFIRMED cho phiếu hàng hỏng.';
 GO
