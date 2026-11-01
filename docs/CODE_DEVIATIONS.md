@@ -91,6 +91,7 @@
 | DEV-ALL-37 | 01/11/2026 | Claude (AI) | UC56 (KI-08), UC22 | Hàng hỏng của các tổ: tách bộ lọc, bảng gọn; công nhân phản đối thì Quản đốc / Admin chấp nhận phiếu hoặc hủy phiếu; giới hạn nhập | Mở
 | DEV-ALL-38 | 01/11/2026 | Claude (AI) | UC57, UC22 | Sửa số hàng đạt QC: giới hạn nhập, chặn giảm dưới số đã bàn giao kho thành phẩm | Mở
 | DEV-ALL-39 | 01/11/2026 | Claude (AI) | UC (KPI tổ may) | Chỉ tiêu KPI tổ may: giới hạn kỳ và số lượng, chặn sửa chỉ tiêu dưới số đã làm | Mở
+| DEV-ALL-40 | 01/11/2026 | Claude (AI) | UC09, UC23 | Đơn mua NVL: tạo là đặt hàng luôn; NVL lỗi thiếu tồn tạo đơn từ Mua NVL thay vì đơn mua | Mở
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1304,4 +1305,19 @@
 - **Giữ nguyên:** các kiểm tra nghiệp vụ có sẵn (không trùng ngày giữa các kỳ, tổng không vượt số lượng đơn, kỳ không ở quá khứ, đơn đã đóng, khóa KPI ngày đã qua).
 - **Chưa xử lý:** ô nhập FE chưa tự đặt mức tối thiểu bằng số đã làm (chỉ báo lỗi từ BE khi lưu).
 - **Cần sửa trong tài liệu:** Report-3 phần KPI tổ may.
+- **Trạng thái:** Mở
+
+### DEV-ALL-40 · Đơn mua NVL: tạo là đặt hàng luôn, NVL lỗi thiếu tồn tạo đơn từ Mua NVL
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC09, UC23 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `PurchaseOrderService.CreateAsync`, `CreatePurchaseOrderDto` và validator, `PlaceOrderModal`, `PurchaseOrderFormModal`, `DefectiveMaterialRequestHandler`, `RequestTypes` / `RequestTypePolicies` (loại `MATERIAL_PURCHASE`), `RequestRepository.GetMaxCodeAsync`, ràng buộc `CK_Request_Type`.
+- **Tài liệu gốc ghi:** Quản đốc tạo đơn mua ở trạng thái chờ chốt rồi mở chi tiết để đặt hàng; duyệt đơn NVL lỗi thiếu tồn thì hệ thống tự tạo đơn mua chờ chốt.
+- **Lý do:** yêu cầu của người dùng. Quản đốc phải nhập nhà cung cấp, số lượng hai lần (lúc tạo và lúc đặt hàng); đơn mua tự tạo thiếu nhà cung cấp và đơn giá nên không có giá trị, Quản đốc muốn tự tạo đơn mua.
+- **Code đang làm:**
+  - **Tạo là đặt hàng:** form tạo thêm ngày đặt (không sau hôm nay) và số lần giao dự kiến (1 đến 99), đơn giá lớn hơn 0; đơn vào thẳng trạng thái đã đặt, ghi nhật ký và báo Kế toán, Thủ kho như bước Đặt hàng cũ. Form Đặt hàng (cho đơn chờ chốt có sẵn) điền sẵn nhà cung cấp của đơn.
+  - **NVL lỗi thiếu tồn:** không tự tạo đơn mua. Phần đủ tồn vẫn tạo đơn Xin NVL cho Thủ kho; phần thiếu tạo đơn từ loại `MATERIAL_PURCHASE` ("Mua NVL", hệ thống tạo, Quản đốc xử lý, không cần duyệt) kèm NVL và số thiếu để Quản đốc tự tạo đơn mua.
+  - **Database:** `CK_Request_Type` thêm `MATERIAL_PURCHASE` (patch `SQL/patches/2026-11-01_all_changes.sql` phần 9, script chính và dbml đã cập nhật).
+  - **Sửa lỗi kèm theo:** một lần duyệt tạo hai đơn từ hệ thống thì trùng mã đơn (409); hàm sinh mã nay tính cả đơn vừa thêm chưa lưu.
+- **Giữ nguyên:** đơn chờ chốt đã có trong database vẫn đặt hàng và hủy được ở form cũ.
+- **Chưa xử lý:** đơn tạo tay không còn trạng thái chờ chốt nên không có bước hủy trước khi đặt; đơn Mua NVL chưa liên kết với đơn mua Quản đốc tạo ra nên phải bấm Hoàn thành thủ công.
+- **Cần sửa trong tài liệu:** Report-3 UC09, UC23; ERD (`Request.RequestTypeCode`).
 - **Trạng thái:** Mở
