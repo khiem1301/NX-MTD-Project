@@ -133,7 +133,12 @@ export function RequestFormModal({
               }}
               onChange={({ fileList }) => setFiles(fileList.slice(0, maxPhotos))}
             >
-              {files.length < maxPhotos && <PlusOutlined />}
+              {files.length < maxPhotos && (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 4 }}>{MESSAGES.attachments.add}</div>
+                </div>
+              )}
             </Upload>
           </Form.Item>
         )}

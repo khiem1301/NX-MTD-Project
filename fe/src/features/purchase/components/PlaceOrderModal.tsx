@@ -38,6 +38,8 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
     if (!open) return;
     form.resetFields();
     form.setFieldsValue({
+      // Đơn đã chọn nhà cung cấp lúc tạo thì điền sẵn, không bắt chọn lại.
+      supplierId: order.supplierId ?? undefined,
       orderDate: dayjs(),
       expectedDeliveryCount: 1,
       note: order.note,
@@ -48,6 +50,13 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
       })),
     });
   }, [open, order, form]);
+
+  // Nhà cung cấp đã chọn lúc tạo mà nay ngừng hợp tác (không còn trong danh sách) thì bỏ chọn để chọn lại.
+  useEffect(() => {
+    const current = form.getFieldValue('supplierId');
+    if (suppliers.isSuccess && current && !suppliers.data.some((x) => x.supplierId === current))
+      form.setFieldValue('supplierId', undefined);
+  }, [suppliers.isSuccess, suppliers.data, form]);
 
   const handleFinish = (values: FormValues) => {
     place.mutate(

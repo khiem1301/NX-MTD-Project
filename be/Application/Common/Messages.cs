@@ -224,6 +224,11 @@ public static class Messages
     public const string KpiFinishNoFinalOperation = "Mã hàng chưa có công đoạn cuối đang dùng nên chưa so được sản lượng cuối đơn.";
     public const string KpiFinished = "Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
+    public const string KpiTargetBelowActual = "Chỉ tiêu cả kỳ không được nhỏ hơn số tổ đã làm được ({0}).";
+    public const string KpiTargetQtyMax = "Chỉ tiêu sản lượng tối đa 1.000.000.";
+    public const string KpiPeriodTooLong = "Kỳ chỉ tiêu tối đa 366 ngày.";
+    public const string KpiDailyTargetQtyMax = "KPI của ngày tối đa 1.000.000.";
+    public const string KpiDailyTargetTooMany = "Một lần lưu tối đa 366 ngày.";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
 
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
@@ -350,6 +355,9 @@ public static class Messages
     /// <summary>MSG19: QC vượt số hàng đang có trên chuyền.</summary>
     public const string QcExceedsOnLine = "Số đạt vượt hàng đang có trên chuyền ({0}).";
     public const string QcBatchDuplicate = "Đã có đợt QC cùng ca, giờ, tổ và dòng đơn.";
+    public const string QcQtyInvalid = "Số hàng đạt phải là số nguyên lớn hơn 0.";
+    public const string QcQtyMax = "Số hàng đạt tối đa 1.000.000.";
+    public const string QcBelowHandedOver = "Không giảm hoặc xóa được: tổng QC đạt của dòng đơn còn {0}, thấp hơn số đã bàn giao cho kho thành phẩm ({1}).";
     public const string QcBatchSaved = "Đã lưu đợt QC.";
     public const string QcBatchDeleted = "Đã xóa đợt QC.";
     public const string DefectReasonInvalid = "Lý do lỗi không hợp lệ.";

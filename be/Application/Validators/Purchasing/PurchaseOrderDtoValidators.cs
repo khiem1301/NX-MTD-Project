@@ -23,9 +23,13 @@ public sealed class CreatePurchaseOrderDtoValidator : AbstractValidator<CreatePu
     {
         RuleFor(x => x.OrderId).GreaterThan(0).When(x => x.OrderId.HasValue);
         RuleFor(x => x.SupplierId).GreaterThan(0).WithMessage(Messages.Required("nhà cung cấp"));
+        RuleFor(x => x.OrderDate).NotEqual(default(DateOnly)).WithMessage(Messages.Required("ngày đặt hàng"));
+        RuleFor(x => x.ExpectedDeliveryCount).InclusiveBetween((short)1, (short)99)
+            .WithMessage(Messages.PurchaseOrderDeliveryCountInvalid);
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new SavePurchaseOrderLineDtoValidator());
+        RuleForEach(x => x.Lines).Must(l => l.UnitPrice > 0).WithMessage(Messages.PurchaseOrderPriceRequired);
         RuleFor(x => x.Lines).Must(l => l is null
                 || l.Select(x => (x.MaterialId, Name: x.MaterialId.HasValue ? null : x.NewMaterialName?.Trim().ToLowerInvariant(),
                 Color: x.MaterialId.HasValue ? null : x.NewMaterialColor?.Trim() ?? string.Empty)).Distinct().Count() == l.Count)

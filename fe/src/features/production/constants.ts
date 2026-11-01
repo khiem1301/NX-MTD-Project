@@ -299,6 +299,7 @@ export const PRODUCTION_TEXT = {
       line: 'Dòng đơn',
       qty: 'Số hàng đạt',
       qtyMin: 'Số hàng đạt phải lớn hơn 0.',
+      qtyMax: 'Số hàng đạt tối đa 1.000.000.',
       reason: 'Lý do (bắt buộc khi sửa sau hết ca)',
     },
     done: {

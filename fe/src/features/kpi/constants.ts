@@ -23,6 +23,8 @@ export const KPI_TEXT = {
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
     required: 'Vui lòng nhập thông tin này.',
     qtyMin: 'Chỉ tiêu phải lớn hơn 0.',
+    qtyMax: 'Chỉ tiêu tối đa 1.000.000.',
+    periodMax: 'Kỳ chỉ tiêu tối đa 366 ngày.',
     noProduct: 'Chọn đơn hàng trước.',
     orderOption: '{0} (giao {1})',
     orderStatus: 'Trạng thái đơn',

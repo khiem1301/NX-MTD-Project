@@ -6,7 +6,7 @@ import { MESSAGES } from '@/constants/messages';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
-import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
+import { OUTPUT_MAX_QTY, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import { useCreateQcBatch, useOnLineQty } from '../hooks/useProduction';
 import type { ShiftCode } from '../types';
 import { AppDatePicker, AppTimePicker } from '@/components/common/DateInputs';
@@ -115,9 +115,13 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
         <Form.Item
           name="finishedQty"
           label={text.form.qty}
-          rules={[...required, { type: 'number', min: 1, message: text.form.qtyMin }]}
+          rules={[
+            ...required,
+            { type: 'number', min: 1, message: text.form.qtyMin },
+            { type: 'number', max: OUTPUT_MAX_QTY, message: text.form.qtyMax },
+          ]}
         >
-          <InputNumber min={1} precision={0} style={{ width: 180 }} />
+          <InputNumber min={1} max={OUTPUT_MAX_QTY} precision={0} style={{ width: 180 }} />
         </Form.Item>
       </Form>
     </Modal>

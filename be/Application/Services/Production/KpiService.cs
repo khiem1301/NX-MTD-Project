@@ -142,6 +142,9 @@ public sealed class KpiService : IKpiService
 
         var check = await ValidateAsync(dto, target, ct);
         if (check is not null) return check;
+        var actual = (await _output.GetKpiFinishedTotalsAsync([kpiTargetId], ct)).GetValueOrDefault(kpiTargetId);
+        if (dto.TargetFinishedQty < actual)
+            return Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiTargetBelowActual, actual));
 
         // Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; chỉ tiêu cả kỳ mới không được nhỏ hơn tổng KPI các ngày còn lại.
         var days = _uow.Repository<KpiDailyTarget>();
