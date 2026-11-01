@@ -89,6 +89,8 @@
 | DEV-ALL-35 | 01/11/2026 | Claude (AI) | UC19 (tổ cắt) | Lệnh cắt: giới hạn ghi chú, lý do cắt thiếu, số dòng; kiểm tra thêm cho lệnh cắt bù, báo cắt xong, bộ lọc danh sách; sửa lệnh cũ giữ nguyên hạn đã qua | Mở
 | DEV-ALL-36 | 01/11/2026 | Claude (AI) | UC22 (KI-11), UC55 | Sửa sản lượng sau hạn: giới hạn số lượng, lý do, số dòng; chặn chọn ngày tương lai | Mở
 | DEV-ALL-37 | 01/11/2026 | Claude (AI) | UC56 (KI-08), UC22 | Hàng hỏng của các tổ: tách bộ lọc, bảng gọn; công nhân phản đối thì Quản đốc / Admin chấp nhận phiếu hoặc hủy phiếu; giới hạn nhập | Mở
+| DEV-ALL-38 | 01/11/2026 | Claude (AI) | UC57, UC22 | Sửa số hàng đạt QC: giới hạn nhập, chặn giảm dưới số đã bàn giao kho thành phẩm | Mở
+| DEV-ALL-39 | 01/11/2026 | Claude (AI) | UC (KPI tổ may) | Chỉ tiêu KPI tổ may: giới hạn kỳ và số lượng, chặn sửa chỉ tiêu dưới số đã làm | Mở
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1272,6 +1274,34 @@
   - **Bỏ trạng thái "Đã khóa" ở ứng dụng:** ứng dụng chưa có chỗ nào chuyển phiếu sang `LOCKED` (khi duyệt bảng lương chỉ kỳ kế toán bị khóa, phiếu giữ nguyên trạng thái, việc chặn sửa do trigger `trg_DefectRecord_PeriodLock` lo). Vì vậy `LOCKED` bị bỏ khỏi `DefectStatuses.All` (lọc `status=Locked` trả 400), ô lọc, nhãn và kiểu `DefectStatus` ở giao diện. Database giữ nguyên `LOCKED` trong `CK_DR_Status` và trigger; hằng `DefectStatuses.Locked` còn lại cho test điểm hạng.
   - **Dữ liệu demo:** `SQL/NX-MTD_Database.sql` mục 11 có đủ các tình huống (đã hủy, tự chốt, chờ quyết định, đã chấp nhận sau phản đối, phiếu mới còn trong hạn phản đối).
 - **Giữ nguyên:** việc ghi phiếu vẫn chỉ do tổ trưởng, tổ phó tổ may; hủy phiếu vẫn theo hạn sửa (Quản đốc sau hạn phải nhập lý do).
-- **Chưa xử lý:** đợt QC (`UpdateQcBatchDtoValidator`, `CreateQcBatchDtoValidator`) vẫn chưa có giới hạn trên cho số lượng.
+- **Chưa xử lý:** không còn (giới hạn của đợt QC xử lý ở DEV-ALL-38).
 - **Cần sửa trong tài liệu:** Report-3 UC56, UC22; ERD (`DefectRecord.Status`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-38 · Sửa số hàng đạt QC: giới hạn nhập, chặn giảm dưới số đã bàn giao
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC57, UC22 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `QcBatchService` (sửa, xóa), `CreateQcBatchDtoValidator`, `UpdateQcBatchDtoValidator`, `DeleteQcBatchDtoValidator`, mã lỗi `QC_BELOW_HANDED_OVER`, hai form thêm và sửa đợt QC ở FE.
+- **Tài liệu gốc ghi:** số đạt không vượt hàng đang có trên chuyền (MSG19); hạn sửa hết ca, sau hạn chỉ Quản đốc sửa kèm lý do (MSG20); không nêu giới hạn trên của số nhập và không nêu quan hệ với số đã bàn giao kho thành phẩm.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate, giá trị biên). Số QC đạt là nguồn của "còn bàn giao được" (QC đạt − đã bàn giao), nên sửa giảm hoặc xóa đợt có thể làm số này âm; số nhập cũng chưa có trần.
+- **Code đang làm:**
+  - **Chặn giảm dưới số đã bàn giao:** sau khi sửa hoặc xóa, tổng QC đạt của dòng đơn (mọi tổ) không được thấp hơn tổng số đã bàn giao cho kho thành phẩm (phiếu chờ nhận và đã nhận; phiếu bị từ chối hoặc đã hủy không tính). Đúng bằng thì được. Thông báo nêu số QC còn lại và số đã bàn giao.
+  - **Giá trị biên:** số hàng đạt 1 đến 1.000.000 (thêm và sửa); lý do tối đa 500 ký tự sau khi cắt khoảng trắng; thiếu phiên bản dữ liệu báo rõ; thông báo "không âm" sai cho giá trị 0 đổi thành "lớn hơn 0".
+- **Giữ nguyên:** sửa hoặc xóa đợt QC của đơn đã đóng vẫn được phép (chủ ý: Quản đốc cần chỉnh số liệu sau khi đóng đơn; có kỳ lương khóa, lý do bắt buộc sau hạn và nhật ký kiểm soát). Thêm mới cho đơn đã đóng vẫn bị chặn.
+- **Chưa xử lý:** không.
+- **Cần sửa trong tài liệu:** Report-3 UC57, UC22.
+- **Trạng thái:** Mở
+
+### DEV-ALL-39 · Chỉ tiêu KPI tổ may: giới hạn kỳ và số lượng, chặn sửa dưới số đã làm
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · KPI tổ may · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `KpiService.UpdateAsync`, `SaveKpiTargetDtoValidator`, `SaveKpiDailyPlanDtoValidator`, `KpiTargetQueryValidator`, `KpiLimits`, form lập chỉ tiêu và lịch KPI ở FE (`KpiTargetFormModal`, `KpiCalendarBody`, `useKpiDailyPlan`, `periodRule`).
+- **Tài liệu gốc ghi:** chỉ tiêu KPI theo kỳ, số lượng lớn hơn 0; không nêu độ dài tối đa của kỳ, trần số lượng, hay quan hệ giữa chỉ tiêu sửa lại và số tổ đã làm.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate, giá trị biên). Kỳ không giới hạn làm vòng lặp theo ngày chạy rất lâu và tràn cột `WorkingDays` (SMALLINT); số KPI từng ngày không có trần làm phép cộng tổng tràn int (lỗi 500); sửa chỉ tiêu thấp hơn số đã làm cho % đạt vô lý (vd. 500%).
+- **Code đang làm:**
+  - **Kỳ:** tối đa 366 ngày (gồm hai đầu), FE báo lỗi tại ô chọn kỳ.
+  - **Số lượng:** chỉ tiêu cả kỳ và KPI từng ngày từ 1 đến 1.000.000 (bằng trần số lượng đơn); một lần lưu KPI ngày tối đa 366 dòng; dòng rỗng báo lỗi thay vì ném lỗi; ô nhập FE có trần tương ứng.
+  - **Bộ lọc danh sách:** trạng thái chỉ nhận Active, Closed, Cancelled; từ khóa tối đa 100 ký tự sau khi cắt khoảng trắng.
+  - **Chặn sửa dưới số đã làm:** khi sửa, chỉ tiêu cả kỳ không được nhỏ hơn tổng hàng hoàn thiện của tổ trong kỳ (đúng bằng thì được), thông báo nêu số đã làm. Lập mới không áp dụng.
+- **Giữ nguyên:** các kiểm tra nghiệp vụ có sẵn (không trùng ngày giữa các kỳ, tổng không vượt số lượng đơn, kỳ không ở quá khứ, đơn đã đóng, khóa KPI ngày đã qua).
+- **Chưa xử lý:** ô nhập FE chưa tự đặt mức tối thiểu bằng số đã làm (chỉ báo lỗi từ BE khi lưu).
+- **Cần sửa trong tài liệu:** Report-3 phần KPI tổ may.
 - **Trạng thái:** Mở

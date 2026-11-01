@@ -920,10 +920,10 @@ Table AnnouncementTarget [note: 'Phạm vi nhận thông báo nhanh'] {
   }
 }
 
-Table Request [note: 'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'] {
+Table Request [note: 'Đơn từ (11 loại, gồm yêu cầu NVL / BTP / mua NVL)'] {
   RequestId int [pk, increment, note: 'Khóa chính, tự tăng']
   RequestCode varchar(30) [not null, unique, note: 'Mã đơn từ, không trùng']
-  RequestTypeCode varchar(30) [not null, check: `RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION', 'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION')`, note: 'Loại đơn từ (10 loại cố định)']
+  RequestTypeCode varchar(30) [not null, check: `RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION', 'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE')`, note: 'Loại đơn từ (11 loại cố định)']
   Status varchar(20) [not null, check: `Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')`, note: 'Trạng thái: PENDING_APPROVAL, PENDING_PROCESSING, APPROVED, REJECTED, COMPLETED, CANCELLED']
   OrderId int [note: 'Đơn hàng']
   WorkOrderId int [note: 'Lệnh cắt liên quan (NVL lỗi, yêu cầu NVL của tổ cắt)']

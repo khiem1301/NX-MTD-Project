@@ -178,7 +178,12 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
               }}
               onChange={({ fileList }) => setPhotos(fileList.slice(0, MAX_RECEIPT_PHOTOS))}
             >
-              {photos.length < MAX_RECEIPT_PHOTOS && <PlusOutlined />}
+              {photos.length < MAX_RECEIPT_PHOTOS && (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 4 }}>{MESSAGES.attachments.add}</div>
+                </div>
+              )}
             </Upload>
           )}
         </Form.Item>

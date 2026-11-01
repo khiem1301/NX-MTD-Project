@@ -12,11 +12,14 @@ public static class RequestTypes
     public const string ShortDelivery = "SHORT_DELIVERY";
     public const string MaterialRequisition = "MATERIAL_REQUISITION";
     public const string SemiFinishedRequisition = "SEMI_FINISHED_REQUISITION";
+    /// <summary>Hệ thống tạo khi duyệt đơn NVL lỗi mà kho thiếu NVL: Quản đốc đọc rồi tự tạo đơn mua.</summary>
+    public const string MaterialPurchase = "MATERIAL_PURCHASE";
 
     public static readonly IReadOnlyList<string> All = new[]
     {
         SpareParts, NewMachine, MachineSupplies, AttendanceCorrection, MaterialSupplement,
         DefectiveMaterial, ReplacementCutting, ShortDelivery, MaterialRequisition, SemiFinishedRequisition,
+        MaterialPurchase,
     };
 }
 

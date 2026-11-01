@@ -108,7 +108,7 @@ public sealed class QcBatchService : IQcBatchService
     public async Task<Result> UpdateAsync(int qcBatchId, UpdateQcBatchDto dto, CancellationToken ct)
     {
         if (dto.FinishedQty <= 0)
-            return Result.Failure(ErrorCodes.OutputInvalid, Messages.OutputQtyInvalid, ResultKind.Validation);
+            return Result.Failure(ErrorCodes.OutputInvalid, Messages.QcQtyInvalid, ResultKind.Validation);
         var batch = await Batches.FirstOrDefaultAsync(b => b.QcBatchId == qcBatchId, ct);
         if (batch is null) return Fail.NotFound();
 
@@ -121,6 +121,8 @@ public sealed class QcBatchService : IQcBatchService
         var onLine = await ComputeOnLineAsync(batch.SewingTeamId, batch.OrderLineId, qcBatchId, ct);
         if (dto.FinishedQty > onLine.OnLine)
             return Result.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine));
+        var handedOver = await CheckHandedOverAsync(batch, dto.FinishedQty, ct);
+        if (handedOver is not null) return handedOver;
 
         _uow.Repository<QcBatch>().SetOriginalRowVersion(batch, dto.RowVer);
         var before = Snapshot(batch);
@@ -141,11 +143,33 @@ public sealed class QcBatchService : IQcBatchService
         if (window is not null) return window;
         if (await _guard.IsPeriodLockedAsync(batch.WorkDate, ct)) return _guard.PeriodLockedFailure(batch.WorkDate);
 
+        var handedOver = await CheckHandedOverAsync(batch, 0, ct);
+        if (handedOver is not null) return handedOver;
+
         _uow.Repository<QcBatch>().SetOriginalRowVersion(batch, dto.RowVer);
         _audit.Add(new AuditEntry(nameof(QcBatch), qcBatchId, AuditActions.Delete, Snapshot(batch), null, reason));
         _uow.Repository<QcBatch>().Remove(batch);
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.QcBatchDeleted);
+    }
+
+    /// <summary>
+    /// Số QC đạt của dòng đơn (mọi tổ) sau khi đợt này đổi thành <paramref name="newQty"/> không được thấp hơn số đã bàn giao cho kho
+    /// thành phẩm (phiếu chờ nhận + đã nhận), nếu không "còn bàn giao được" = QC đạt − đã bàn giao bị âm.
+    /// </summary>
+    private async Task<Result?> CheckHandedOverAsync(QcBatch batch, int newQty, CancellationToken ct)
+    {
+        var others = await Batches.AsNoTracking()
+            .Where(b => b.OrderLineId == batch.OrderLineId && b.QcBatchId != batch.QcBatchId)
+            .SumAsync(b => (int?)b.FinishedQty, ct) ?? 0;
+        var handed = await _uow.Repository<FgHandoverLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == batch.OrderLineId
+                        && (l.FgHandover.Status == HandoverStatuses.Pending || l.FgHandover.Status == HandoverStatuses.Confirmed))
+            .SumAsync(l => (int?)l.HandedQty, ct) ?? 0;
+        var total = others + newQty;
+        return total < handed
+            ? Result.Failure(ErrorCodes.QcBelowHandedOver, string.Format(Messages.QcBelowHandedOver, total, handed))
+            : null;
     }
 
     /// <summary>Hàng đang có trên chuyền = BTP tổ đã nhận − Σ QC đạt (trừ đợt đang sửa) − Σ Scrap chưa hủy.</summary>

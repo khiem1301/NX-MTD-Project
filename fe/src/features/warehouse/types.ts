@@ -147,6 +147,10 @@ export type PurchaseOrderQuery = PageParams & {
 export type CreatePurchaseOrderPayload = {
   orderId?: number;
   supplierId: number;
+  /** Ngày đặt hàng (yyyy-MM-dd), không sau hôm nay. */
+  orderDate: string;
+  /** Số lần nhà cung cấp dự kiến giao, từ 1 đến 99. */
+  expectedDeliveryCount: number;
   note?: string;
   lines: {
     /** Chọn NVL có sẵn (đã gồm màu); hoặc nhập NVL mới bằng newMaterialName + newMaterialUnit + newMaterialColor. */

@@ -98,6 +98,13 @@ public sealed class SaveOutputDtoValidator : AbstractValidator<SaveOutputDto>
 
 public sealed class QcBatchQueryValidator : PageQueryValidatorBase<QcBatchQuery> { }
 
+/// <summary>Giới hạn của đợt QC. Số đạt tối đa 1.000.000 (cột INT, và tổng với số đã QC khi so với trần không được tràn); lý do tối đa 500 (cột nhật ký).</summary>
+public static class QcLimits
+{
+    public const int MaxQty = 1_000_000;
+    public const int MaxReason = 500;
+}
+
 public sealed class CreateQcBatchDtoValidator : AbstractValidator<CreateQcBatchDto>
 {
     public CreateQcBatchDtoValidator()
@@ -105,7 +112,8 @@ public sealed class CreateQcBatchDtoValidator : AbstractValidator<CreateQcBatchD
         RuleFor(x => x.ShiftCode).NotEmpty().MaximumLength(10);
         RuleFor(x => x.SewingTeamId).GreaterThan(0);
         RuleFor(x => x.OrderLineId).GreaterThan(0);
-        RuleFor(x => x.FinishedQty).GreaterThan(0).WithMessage(Messages.OutputQtyInvalid);
+        RuleFor(x => x.FinishedQty).GreaterThan(0).WithMessage(Messages.QcQtyInvalid)
+            .LessThanOrEqualTo(QcLimits.MaxQty).WithMessage(Messages.QcQtyMax);
     }
 }
 
@@ -113,9 +121,10 @@ public sealed class UpdateQcBatchDtoValidator : AbstractValidator<UpdateQcBatchD
 {
     public UpdateQcBatchDtoValidator()
     {
-        RuleFor(x => x.FinishedQty).GreaterThan(0).WithMessage(Messages.OutputQtyInvalid);
-        RuleFor(x => x.Reason).MaximumLength(500);
-        RuleFor(x => x.RowVer).NotEmpty();
+        RuleFor(x => x.FinishedQty).GreaterThan(0).WithMessage(Messages.QcQtyInvalid)
+            .LessThanOrEqualTo(QcLimits.MaxQty).WithMessage(Messages.QcQtyMax);
+        RuleFor(x => x.Reason).MaxTrimmedLength(QcLimits.MaxReason, "Lý do");
+        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
     }
 }
 
@@ -123,8 +132,8 @@ public sealed class DeleteQcBatchDtoValidator : AbstractValidator<DeleteQcBatchD
 {
     public DeleteQcBatchDtoValidator()
     {
-        RuleFor(x => x.Reason).MaximumLength(500);
-        RuleFor(x => x.RowVer).NotEmpty();
+        RuleFor(x => x.Reason).MaxTrimmedLength(QcLimits.MaxReason, "Lý do");
+        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
     }
 }
 

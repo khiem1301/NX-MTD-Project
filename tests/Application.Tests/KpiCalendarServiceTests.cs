@@ -376,4 +376,24 @@ public class SaveKpiDailyPlanDtoValidatorTests
     [Fact]
     public void NonPositiveQty_HasError() =>
         _validator.TestValidate(new SaveKpiDailyPlanDto([new(Day, 0)])).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1_000_000, true)]
+    [InlineData(1_000_001, false)]
+    [InlineData(int.MaxValue, false)]   // cộng nhiều ngày sẽ tràn int
+    [InlineData(-1, false)]
+    public void Qty_Boundaries(int qty, bool valid) =>
+        _validator.Validate(new SaveKpiDailyPlanDto([new(Day, qty)])).IsValid.Should().Be(valid);
+
+    [Fact]
+    public void NullRow_HasErrorWithoutThrowing() =>
+        _validator.Validate(new SaveKpiDailyPlanDto([null!])).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData(366, true)]
+    [InlineData(367, false)]
+    public void RowCount_IsLimitedTo366(int count, bool valid) =>
+        _validator.Validate(new SaveKpiDailyPlanDto(Enumerable.Range(0, count).Select(i => new KpiDailyTargetInputDto(Day.AddDays(i), 1)).ToList()))
+            .IsValid.Should().Be(valid);
 }

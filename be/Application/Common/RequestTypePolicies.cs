@@ -33,6 +33,7 @@ public static class RequestTypePolicies
         new RequestTypePolicy(RequestTypes.ShortDelivery, NoCreator, null, Roles.Manager, false, "Thiếu hàng khi nhập"),
         new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, false, "Xin NVL"),
         new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, false, "Xin BTP"),
+        new RequestTypePolicy(RequestTypes.MaterialPurchase, NoCreator, null, Roles.Manager, false, "Mua NVL"),
     }.ToDictionary(p => p.RequestType);
 
     public static readonly IReadOnlyDictionary<string, string> StatusLabels = new Dictionary<string, string>

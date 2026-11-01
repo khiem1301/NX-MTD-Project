@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { KpiCalendar, KpiCalendarDay, SaveKpiDailyPlanPayload } from '../types';
+import { KPI_MAX_QTY } from '../utils/periodRule';
 
 /** Bản nháp KPI theo ngày: tính lại ngay số đã đặt và BTP còn lại; BE kiểm lại khi lưu. */
 export function useKpiDailyPlan(data: KpiCalendar) {
@@ -12,7 +13,7 @@ export function useKpiDailyPlan(data: KpiCalendar) {
   const isLocked = (day: KpiCalendarDay): boolean => day.workDate < data.firstEditableDate;
 
   const setQty = (day: KpiCalendarDay, value: number | null) => {
-    const qty = Math.max(0, Math.floor(value ?? 0));
+    const qty = Math.min(KPI_MAX_QTY, Math.max(0, Math.floor(value ?? 0)));
     setEdits(({ [day.workDate]: _old, ...rest }) =>
       qty === day.targetQty ? rest : { ...rest, [day.workDate]: qty },
     );

@@ -2,7 +2,7 @@
    Gộp các patch 31/10 - 01/11/2026 chưa đẩy lên remote, chạy sau các patch 28/10 - 31/10 đã có trên remote:
      1. AuditLog.Summary            2. Lý do ngừng hợp tác          3. Bỏ Material.LengthCm        4. KPI tổ may
      5. Ảnh phụ của mã hàng         6. Attachment.RemovedAt         7. Bỏ ProductVariant.LengthCm, WidthCm
-     8. Hàng hỏng: trạng thái CONFIRMED
+     8. Hàng hỏng: trạng thái CONFIRMED        9. Đơn từ: loại MATERIAL_PURCHASE
    DB dựng mới từ SQL/NX-MTD_Database.sql không cần chạy. Chạy lại không lỗi.
    Lệnh (PowerShell, tại thư mục gốc dự án):
      sqlcmd -S localhost -E -C -I -f 65001 -b -d NXMTD -i SQL\patches\2026-11-01_all_changes.sql
@@ -244,4 +244,21 @@ BEGIN
 END
 GO
 PRINT N'Đã thêm trạng thái CONFIRMED cho phiếu hàng hỏng.';
+GO
+
+/* =========================== 9. Đơn từ: loại MATERIAL_PURCHASE =========================== */
+-- Khi Quản đốc duyệt đơn NVL lỗi mà kho thiếu NVL, hệ thống tạo đơn từ "Mua NVL" cho Quản đốc (không tự tạo đơn mua).
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+GO
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = 'CK_Request_Type' AND definition NOT LIKE '%MATERIAL_PURCHASE%')
+BEGIN
+    ALTER TABLE dbo.Request DROP CONSTRAINT CK_Request_Type;
+    ALTER TABLE dbo.Request ADD CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES',
+        'ATTENDANCE_CORRECTION','MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION',
+        'SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE'));
+    PRINT N'Đã thêm loại đơn từ MATERIAL_PURCHASE.';
+END
+ELSE PRINT N'CK_Request_Type đã có MATERIAL_PURCHASE, bỏ qua.';
 GO

@@ -3,7 +3,7 @@ import { Form, Input, InputNumber, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useUpdateQcBatch } from '../hooks/useProduction';
 import type { QcBatch, QcRole } from '../types';
-import { PRODUCTION_TEXT } from '../constants';
+import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 
 const text = PRODUCTION_TEXT.qc;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -61,9 +61,13 @@ export function QcEditModal({
         <Form.Item
           name="finishedQty"
           label={text.form.qty}
-          rules={[...required, { type: 'number', min: 1, message: text.form.qtyMin }]}
+          rules={[
+            ...required,
+            { type: 'number', min: 1, message: text.form.qtyMin },
+            { type: 'number', max: OUTPUT_MAX_QTY, message: text.form.qtyMax },
+          ]}
         >
-          <InputNumber min={1} precision={0} style={{ width: 180 }} />
+          <InputNumber min={1} max={OUTPUT_MAX_QTY} precision={0} style={{ width: 180 }} />
         </Form.Item>
         {needReason && (
           <Form.Item
