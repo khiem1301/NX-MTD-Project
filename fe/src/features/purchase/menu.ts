@@ -14,7 +14,7 @@ export const purchaseMenu: MenuEntry[] = [
     key: 'purchase-orders',
     label: PURCHASE_TEXT.ordersTitle,
     path: PURCHASE_ROUTES.orders,
-    roles: [ROLES.Manager],
+    roles: [ROLES.Admin, ROLES.Manager],
   },
   {
     key: 'purchase-payments',

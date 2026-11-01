@@ -216,6 +216,7 @@ public class SwimlaneFlowTests : ProductionTestBase
     // ---------- Quản đốc đóng lệnh cắt ----------
 
     private WorkOrderService WorkOrdersService() => new(Uow, _stock, new FabricPlanner(Uow), Substitute.For<IDocumentCodeGenerator>(),
-        Notifier, NullLogger<WorkOrderService>.Instance, Clock);
+        Notifier, NullLogger<WorkOrderService>.Instance, Clock,
+        new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow)));
 
 }

@@ -4,18 +4,17 @@ import { QueryError } from '@/components/common/QueryError';
 import { fill, formatDate } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useKpiCalendar } from '../hooks/useKpi';
-import type { KpiRole, KpiTarget } from '../types';
+import type { KpiTarget } from '../types';
 import { KpiCalendarBody } from './KpiCalendarBody';
 
 type KpiCalendarModalProps = {
   target: KpiTarget | null;
-  role: KpiRole;
   onClose: () => void;
 };
 
 /** Modal lịch KPI theo ngày của một chỉ tiêu. */
-export function KpiCalendarModal({ target, role, onClose }: KpiCalendarModalProps) {
-  const calendar = useKpiCalendar(target?.kpiTargetId ?? null, role);
+export function KpiCalendarModal({ target, onClose }: KpiCalendarModalProps) {
+  const calendar = useKpiCalendar(target?.kpiTargetId ?? null);
   const data = calendar.data;
 
   return (
@@ -41,7 +40,7 @@ export function KpiCalendarModal({ target, role, onClose }: KpiCalendarModalProp
     >
       <QueryError error={calendar.error} onRetry={() => void calendar.refetch()} />
       {calendar.isLoading && <Skeleton active />}
-      {data && <KpiCalendarBody data={data} editable={role === 'manager' && data.canEdit} />}
+      {data && <KpiCalendarBody data={data} editable={data.canEdit} />}
     </Modal>
   );
 }

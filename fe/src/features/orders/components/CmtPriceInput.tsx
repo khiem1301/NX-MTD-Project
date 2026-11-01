@@ -1,6 +1,6 @@
 import { InputNumber } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { formatPriceInput, parsePriceInput } from '../utils/priceInput';
+import { formatPriceInput, formatPriceTyping, parsePriceInput } from '../utils/priceInput';
 
 type CmtPriceInputProps = {
   value: number | null;
@@ -8,7 +8,7 @@ type CmtPriceInputProps = {
 };
 
 /**
- * Ô đơn giá CMT: đang gõ giữ nguyên chữ người dùng nhập, rời ô mới định dạng lại.
+ * Ô đơn giá CMT (VND): chỉ nhận số nguyên, dấu chấm ngăn nghìn do ô tự thêm nên phím `.` và `,` bị chặn.
  * Không đặt min / max / precision: antd sẽ tự sửa số khi rời ô; số sai để orderValidation báo lỗi.
  */
 export function CmtPriceInput({ value, onChange }: CmtPriceInputProps) {
@@ -18,10 +18,15 @@ export function CmtPriceInput({ value, onChange }: CmtPriceInputProps) {
       suffix="₫"
       placeholder={MESSAGES.orders.unitPriceExample}
       style={{ width: '100%' }}
-      formatter={(v, { userTyping, input }) => (userTyping ? input : formatPriceInput(v))}
+      formatter={(v, { userTyping, input }) =>
+        userTyping ? formatPriceTyping(input) : formatPriceInput(v)
+      }
       parser={(v) => parsePriceInput(v) as unknown as number}
       value={value}
       onChange={onChange}
+      onKeyDown={(e) => {
+        if (e.key === '.' || e.key === ',') e.preventDefault();
+      }}
     />
   );
 }

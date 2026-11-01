@@ -15,7 +15,6 @@ public sealed class ProductVariantConfiguration : IEntityTypeConfiguration<Produ
         entity.HasIndex(e => new { e.ProductVariantId, e.ProductId }, "UQ_PV_IdProduct").IsUnique();
 
         entity.Property(e => e.Color).HasMaxLength(50);
-        entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
         entity.Property(e => e.SizeCode)
             .HasMaxLength(10)
             .IsUnicode(false);
@@ -23,7 +22,6 @@ public sealed class ProductVariantConfiguration : IEntityTypeConfiguration<Produ
             .HasMaxLength(20)
             .IsUnicode(false)
             .HasDefaultValue("ACTIVE");
-        entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
 
         entity.HasOne(d => d.Product).WithMany(p => p.ProductVariants)
             .HasForeignKey(d => d.ProductId)

@@ -4,11 +4,11 @@ import type { Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MESSAGES } from '@/constants/messages';
 import { zodRule } from '@/utils/zodRule';
-import type { Customer } from '../types';
+import type { CustomerOption } from '../types';
 import { orderCodeSchema, orderNoteSchema } from '../utils/orderValidation';
 
 type OrderHeaderFieldsProps = {
-  customers: Customer[];
+  customers: CustomerOption[];
   /** Khách của đơn đang sửa: vẫn hiện dù đã ngừng hợp tác. */
   currentCustomerId?: number;
   /** Đơn không còn ở trạng thái Mới: không đổi mã đơn, khách hàng, ngày nhận. */

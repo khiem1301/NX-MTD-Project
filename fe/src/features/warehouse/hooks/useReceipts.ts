@@ -1,13 +1,13 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
-import { useRolePath } from '@/hooks/useRolePath';
+import { useManagerRolePath } from '@/hooks/useRolePath';
 import { warehouseApi } from '../api/warehouseApi';
 import type { MaterialReceiptQuery, SaveReceiptPayload } from '../types';
 import { WAREHOUSE_KEY } from './useMaterials';
 
 export const useReceipts = (query: MaterialReceiptQuery) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...WAREHOUSE_KEY, 'material-receipts', role, query],
     queryFn: () => warehouseApi.getReceipts(role, query),
@@ -16,7 +16,7 @@ export const useReceipts = (query: MaterialReceiptQuery) => {
 };
 
 export const useReceipt = (id: number | undefined) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...WAREHOUSE_KEY, 'material-receipt', role, id],
     queryFn: () => warehouseApi.getReceipt(role, id ?? 0),
@@ -25,7 +25,7 @@ export const useReceipt = (id: number | undefined) => {
 };
 
 export const useSaveReceipt = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, body }: { id?: number; body: SaveReceiptPayload }) =>
       id ? warehouseApi.updateReceipt(role, id, body) : warehouseApi.createReceipt(role, body),
@@ -34,7 +34,7 @@ export const useSaveReceipt = () => {
 };
 
 export const useConfirmReceipt = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation((id: number) => warehouseApi.confirmReceipt(role, id), {
     invalidate: [WAREHOUSE_KEY],
     successMessage: MESSAGES.warehouse.receiptConfirmed,
@@ -42,7 +42,7 @@ export const useConfirmReceipt = () => {
 };
 
 export const useReturnReceipt = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, reason }: { id: number; reason: string }) =>
       warehouseApi.returnReceipt(role, id, reason),
@@ -52,7 +52,7 @@ export const useReturnReceipt = () => {
 
 /** TH-16: tải Excel phiếu nhập để in; lỗi hiện thông báo như các thao tác khác. */
 export const useDownloadReceipt = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, code }: { id: number; code: string }) => warehouseApi.downloadReceipt(role, id, code),
     {

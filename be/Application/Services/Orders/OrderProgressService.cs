@@ -68,15 +68,18 @@ public sealed class OrderProgressService : IOrderProgressService
     // ---------- JOB-04: nguy cơ trễ đơn ----------
 
     /// <summary>
-    /// Đơn đang sản xuất có nguy cơ trễ khi SL còn lại ÷ trung bình hoàn thiện N ngày gần nhất &gt; số ngày còn lại.
+    /// Đơn đang sản xuất hoặc đã bắt đầu giao (DEV-ALL-27) có nguy cơ trễ khi SL còn lại ÷ trung bình hoàn thiện N ngày gần nhất &gt; số ngày còn lại.
     /// Chưa hoàn thiện được cái nào trong N ngày thì chỉ coi là nguy cơ khi đã quá hạn giao (DEV-KH-23-1).
-    /// Báo Admin + Quản đốc vào ngày đầu tiên đơn bị gắn cờ; hết nguy cơ thì gỡ cờ.
+    /// Báo Admin + Quản đốc vào ngày đầu tiên đơn bị gắn cờ; hết nguy cơ hoặc đơn đã đóng thì gỡ cờ.
     /// </summary>
     public async Task<int> RunDelayCheckAsync(DateOnly today, CancellationToken ct)
     {
         var avgDays = Math.Max(1, await _settings.GetIntAsync(SettingKeys.DelayAvgDays, DefaultAvgDays, ct));
         var from = today.AddDays(-avgDays);
-        var orders = await _uow.Repository<CustomerOrder>().Query().Where(o => o.Status == OrderStatuses.InProduction).ToListAsync(ct);
+        // Mảng để EF dịch được thành IN (...). Lấy cả đơn còn cờ cũ để gỡ cờ khi đơn đã rời nhóm theo dõi.
+        var tracked = OrderStatuses.DelayTracked.ToArray();
+        var orders = await _uow.Repository<CustomerOrder>().Query()
+            .Where(o => tracked.Contains(o.Status) || o.DelayRiskSince != null).ToListAsync(ct);
         if (orders.Count == 0) return 0;
 
         var ids = orders.Select(o => o.OrderId).ToList();
@@ -90,7 +93,7 @@ public sealed class OrderProgressService : IOrderProgressService
         var newlyFlagged = new List<CustomerOrder>();
         foreach (var o in orders)
         {
-            var risk = IsDelayRisk(ordered.GetValueOrDefault(o.OrderId), finished.GetValueOrDefault(o.OrderId),
+            var risk = tracked.Contains(o.Status) && IsDelayRisk(ordered.GetValueOrDefault(o.OrderId), finished.GetValueOrDefault(o.OrderId),
                 recent.GetValueOrDefault(o.OrderId), avgDays, o.DueDate.DayNumber - today.DayNumber);
             // IsDelayRisk là cột tính từ DelayRiskSince nên chỉ ghi DelayRiskSince.
             if (risk && o.DelayRiskSince is null) { o.DelayRiskSince = today; newlyFlagged.Add(o); }

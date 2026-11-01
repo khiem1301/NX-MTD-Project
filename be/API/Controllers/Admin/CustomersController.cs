@@ -15,6 +15,11 @@ public sealed class CustomersController : AdminBaseController
     public async Task<IActionResult> List([FromQuery] CustomerQuery query, CancellationToken ct) =>
         this.ToResponse(await _customers.ListAsync(query, ct));
 
+    /// <summary>Danh sách rút gọn (mã, tên, trạng thái) cho ô chọn khách hàng; không phân trang.</summary>
+    [HttpGet("options")]
+    public async Task<IActionResult> Options(CancellationToken ct) =>
+        this.ToResponse(await _customers.GetOptionsAsync(ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveCustomerDto dto, CancellationToken ct) =>
         this.ToResponse(await _customers.CreateAsync(dto, ct));

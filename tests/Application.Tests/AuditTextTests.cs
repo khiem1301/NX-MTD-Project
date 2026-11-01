@@ -22,6 +22,15 @@ public class AuditTextTests
     }
 
     [Fact]
+    public void Product_ExtraImagesAndMainImage_AreLabelledInVietnamese()
+    {
+        var text = AuditText.Summary("Product", 3, AuditActions.Update,
+            """{"ProductCode":"AO-01","SampleImageUrl":null,"ExtraImages":0}""",
+            """{"ProductCode":"AO-01","SampleImageUrl":"PRODUCT/2026/11/a.jpg","ExtraImages":5}""", null);
+        Assert.Equal("Cập nhật mã hàng AO-01: Ảnh chính (trống) → PRODUCT/2026/11/a.jpg; Số ảnh phụ 0 → 5", text);
+    }
+
+    [Fact]
     public void NoCode_FallsBackToId_ReasonAppended()
     {
         var text = AuditText.Summary("PurchaseOrder", 7, AuditActions.Reject, null, """{"GoodsStatus":"REJECTED"}""", "Sai giá");

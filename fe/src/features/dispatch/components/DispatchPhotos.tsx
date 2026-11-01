@@ -13,7 +13,7 @@ export function DispatchPhotos({ note }: { note: DispatchNote }) {
   const inDelivery = note.status === DISPATCH_STATUS.IN_DELIVERY;
   const isKeeper = hasRole(ROLES.WarehouseKeeper);
   const isAccountant = hasRole(ROLES.Accountant);
-  const isManager = hasRole(ROLES.Manager);
+  const isManager = hasRole(ROLES.Admin, ROLES.Manager);
   const sent =
     !pending &&
     note.status !== DISPATCH_STATUS.CANCELLED &&

@@ -1,10 +1,9 @@
-import type { Dispatch, SetStateAction } from 'react';
 import { DeleteOutlined } from '@ant-design/icons';
 import { Button } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 
 /** Cột cuối của bảng nhập liệu: nút xóa dòng (cố định bên phải khi bảng cuộn ngang). */
-export const deleteRowColumn = <T extends { key: string }>(set: Dispatch<SetStateAction<T[]>>) => ({
+export const deleteRowColumn = <T extends { key: string }>(onDelete: (key: string) => void) => ({
   title: '',
   width: 48,
   fixed: 'right' as const,
@@ -14,7 +13,7 @@ export const deleteRowColumn = <T extends { key: string }>(set: Dispatch<SetStat
       danger
       icon={<DeleteOutlined />}
       aria-label={MESSAGES.common.delete}
-      onClick={() => set((rows) => rows.filter((x) => x.key !== r.key))}
+      onClick={() => onDelete(r.key)}
     />
   ),
 });

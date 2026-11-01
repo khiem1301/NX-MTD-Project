@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Tabs, Typography } from 'antd';
+import { Alert, Button, Tabs, Typography, message } from 'antd';
 import { AuditHistory } from '@/components/common/AuditHistory';
 import { ModalActions } from '@/components/common/DetailModal';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
+import { fill } from '@/utils/format';
 import { useSaveProductSpec } from '../hooks/useOrders';
 import type { ProductDetail, ProductListItem, ProductSpec } from '../types';
 import {
+  removeComponent,
+  toMaterialOption,
   toPayload,
   toRows,
   validate,
@@ -45,7 +48,7 @@ export function ProductSpecEditor({
   const materials = useMaterialOptions();
   const [initial] = useState(() => toRows(spec));
   const [components, setComponents] = useState<ComponentRow[]>(initial.components);
-  const [variants, setVariants] = useState<VariantRow[]>(initial.variants);
+  const [variants] = useState<VariantRow[]>(initial.variants);
   const [norms, setNorms] = useState<NormRow[]>(initial.norms);
   const [error, setError] = useState('');
 
@@ -56,10 +59,15 @@ export function ProductSpecEditor({
     return () => onDirtyChange(false);
   }, [snapshot, baseline, onDirtyChange]);
 
-  const materialOptions = (materials.data ?? []).map((m) => ({
-    value: m.materialId,
-    label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
-  }));
+  const materialOptions = (materials.data ?? []).map(toMaterialOption);
+
+  const handleRemoveComponent = (key: string) => {
+    const next = removeComponent(components, norms, key);
+    setComponents(next.components);
+    setNorms(next.norms);
+    if (next.removedNorms > 0)
+      void message.info(fill(MESSAGES.orders.specValidation.removedNorms, next.removedNorms));
+  };
 
   const handleSave = () => {
     const problem = validate(components, variants, norms);
@@ -98,6 +106,7 @@ export function ProductSpecEditor({
               <SpecComponentsTab
                 components={components}
                 setComponents={setComponents}
+                onRemove={handleRemoveComponent}
                 discontinued={discontinued}
                 readOnly={readOnly}
               />
@@ -107,12 +116,7 @@ export function ProductSpecEditor({
             key: 'variants',
             label: `${text.tabVariants} (${variants.length})`,
             children: (
-              <SpecVariantsTab
-                variants={variants}
-                setVariants={setVariants}
-                discontinuedVariants={discontinuedVariants}
-                readOnly={readOnly}
-              />
+              <SpecVariantsTab variants={variants} discontinuedVariants={discontinuedVariants} />
             ),
           },
           {

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -207,6 +208,7 @@ public sealed class OutputService : IOutputService
         if (!ShiftCodes.All.Contains(shift)) return Invalid("Ca làm việc không hợp lệ.");
         if (dto.Rows.Count == 0) return Invalid(Messages.OutputRowsRequired);
         if (dto.Rows.Any(r => r.Quantity < 0)) return Invalid(Messages.OutputQtyInvalid);
+        if (dto.Rows.Any(r => r.Quantity > OutputLimits.MaxQty)) return Invalid(Messages.OutputQtyMax);
         if (dto.Rows.Select(r => (r.OperationId, r.WorkerId)).Distinct().Count() != dto.Rows.Count)
             return Invalid(Messages.OutputDuplicateRow);
         if (dto.WorkDate > _clock.Today) return Invalid(Messages.OutputDateFuture);

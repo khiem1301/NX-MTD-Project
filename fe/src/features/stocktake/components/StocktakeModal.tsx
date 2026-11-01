@@ -6,10 +6,11 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { ROLES } from '@/constants/roles';
 import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
 import { usePermission } from '@/hooks/usePermission';
-import { formatDate, formatDateTime, formatQty } from '@/utils/format';
+import { fill, formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { ST_LABELS, ST_MESSAGES, STOCKTAKE_STATUS, STOCKTAKE_STATUS_LABEL } from '../constants';
 import { useApproveStocktake, useReturnStocktake, useStocktake } from '../hooks/useStocktake';
 import type { Stocktake, StocktakeLine } from '../types';
+import { isStockChanged } from '../utils/stockChanged';
 import { DetailModal, DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 
@@ -35,6 +36,8 @@ export function StocktakeModal({ stocktakeId, onClose, onEdit }: StocktakeModalP
   const canDecide =
     hasRole(ROLES.Manager, ROLES.Admin) && s?.status === STOCKTAKE_STATUS.PENDING_APPROVAL;
   const canEdit = hasRole(ROLES.WarehouseKeeper) && s?.status === STOCKTAKE_STATUS.RETURNED;
+  const changedCount = s?.lines.filter(isStockChanged).length ?? 0;
+  const showCurrent = s?.status === STOCKTAKE_STATUS.PENDING_APPROVAL;
 
   return (
     <DetailModal
@@ -72,6 +75,14 @@ export function StocktakeModal({ stocktakeId, onClose, onEdit }: StocktakeModalP
               style={{ marginBottom: 16 }}
             />
           )}
+          {showCurrent && changedCount > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              message={fill(ST_LABELS.stockChanged, changedCount)}
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <DetailDescriptions>
             <Descriptions.Item label={ST_LABELS.warehouse}>
               {WAREHOUSE_TYPE_LABEL[s.warehouseType]}
@@ -103,6 +114,23 @@ export function StocktakeModal({ stocktakeId, onClose, onEdit }: StocktakeModalP
                 render: (v: string | null) => v ?? 'cái',
               },
               { title: ST_LABELS.bookQty, dataIndex: 'bookQty', align: 'right', render: formatQty },
+              ...(showCurrent
+                ? [
+                    {
+                      title: ST_LABELS.currentQty,
+                      key: 'currentQty',
+                      align: 'right' as const,
+                      render: (_: unknown, l: StocktakeLine) =>
+                        l.currentQty === null ? (
+                          '—'
+                        ) : (
+                          <Typography.Text type={isStockChanged(l) ? 'warning' : undefined}>
+                            {formatQty(l.currentQty)}
+                          </Typography.Text>
+                        ),
+                    },
+                  ]
+                : []),
               {
                 title: ST_LABELS.countedQty,
                 dataIndex: 'countedQty',

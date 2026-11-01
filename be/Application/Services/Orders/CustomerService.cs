@@ -17,9 +17,12 @@ public sealed class CustomerService : ICustomerService
         _customers = customers; _audit = audit; _uow = uow;
     }
 
-    public async Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
-        Result<IReadOnlyList<CustomerDto>>.Success(
-            await _customers.ListAsync(query.Keyword, query.Status is null ? null : CodeText.ToCode(query.Status), ct));
+    public async Task<Result<PagedResult<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
+        Result<PagedResult<CustomerDto>>.Success(
+            await _customers.ListAsync(query, string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status), ct));
+
+    public async Task<Result<IReadOnlyList<CustomerOptionDto>>> GetOptionsAsync(CancellationToken ct) =>
+        Result<IReadOnlyList<CustomerOptionDto>>.Success(await _customers.ListOptionsAsync(ct));
 
     public async Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct)
     {

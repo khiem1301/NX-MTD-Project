@@ -3,9 +3,8 @@ import { Button, Space, Typography, Upload, message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
 import { productApi } from '../api/orderApi';
+import { isAcceptableImage } from '../utils/imageFile';
 import { ProductImage } from './ProductImage';
-
-const MAX_BYTES = 5 * 1024 * 1024;
 
 type Props = { value?: string; onChange?: (value: string | undefined) => void };
 
@@ -14,7 +13,7 @@ export function SampleImageInput({ value, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
 
   const beforeUpload = (file: File) => {
-    if (!file.type.startsWith('image/') || file.size > MAX_BYTES) {
+    if (!isAcceptableImage(file)) {
       void message.error(MESSAGES.orders.imageHint);
       return Upload.LIST_IGNORE;
     }

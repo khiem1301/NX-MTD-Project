@@ -34,6 +34,25 @@ public sealed class LocalFileStorage : IFileStorage
         return Task.FromResult(stream);
     }
 
+    public Task<IReadOnlyList<StoredFile>> ListAsync(string folder, CancellationToken ct)
+    {
+        var dir = Resolve(folder);
+        if (dir is null || !Directory.Exists(dir)) return Task.FromResult<IReadOnlyList<StoredFile>>(Array.Empty<StoredFile>());
+        var files = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+            .Select(path => new StoredFile(Path.GetRelativePath(_root, path).Replace(Path.DirectorySeparatorChar, '/'),
+                File.GetLastWriteTimeUtc(path)))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<StoredFile>>(files);
+    }
+
+    public Task<bool> DeleteAsync(string key, CancellationToken ct)
+    {
+        var path = Resolve(key);
+        if (path is null || !File.Exists(path)) return Task.FromResult(false);
+        File.Delete(path);
+        return Task.FromResult(true);
+    }
+
     /// <summary>Chặn "../" ra ngoài thư mục gốc.</summary>
     private string? Resolve(string key)
     {

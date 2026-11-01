@@ -12,7 +12,7 @@ const AFFECTED = [DISPATCH_KEY, ['warehouse'], ['orders']];
 
 const useBase = () => {
   const { user } = useAuth();
-  if (user?.role === ROLES.Manager) return MANAGER_BASE;
+  if (user?.role === ROLES.Manager || user?.role === ROLES.Admin) return MANAGER_BASE;
   if (user?.role === ROLES.Accountant) return ACCOUNTANT_BASE;
   return WAREHOUSE_BASE;
 };

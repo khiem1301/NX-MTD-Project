@@ -56,17 +56,17 @@ const productionRoutes = [
   },
   {
     path: PRODUCTION_ROUTES.managerOutput,
-    roles: [Manager],
+    roles: [Admin, Manager],
     page: async () => (await production()).ManagerOutputPage,
   },
   {
     path: PRODUCTION_ROUTES.managerDefects,
-    roles: [Manager],
+    roles: [Admin, Manager],
     page: async () => (await production()).ManagerDefectsPage,
   },
   {
     path: PRODUCTION_ROUTES.managerQcBatches,
-    roles: [Manager],
+    roles: [Admin, Manager],
     page: async () => (await production()).ManagerQcBatchesPage,
   },
   {
@@ -95,12 +95,12 @@ const warehouseRoutes = [
   },
   {
     path: ROUTES.materialReceipts,
-    roles: [WarehouseKeeper, Manager],
+    roles: [WarehouseKeeper, Admin, Manager],
     page: async () => (await warehouse()).MaterialReceiptListPage,
   },
   {
     path: ROUTES.shortDeliveries,
-    roles: [WarehouseKeeper, Manager],
+    roles: [WarehouseKeeper, Admin, Manager],
     page: async () => (await warehouse()).ShortDeliveryListPage,
   },
   {
@@ -120,7 +120,7 @@ const warehouseRoutes = [
   },
   {
     path: ROUTES.workOrders,
-    roles: [Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
+    roles: [Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
     page: async () => (await cutting()).WorkOrderListPage,
   },
   {
@@ -135,7 +135,7 @@ const warehouseRoutes = [
   },
   {
     path: ROUTES.dispatchNotes,
-    roles: [Manager, WarehouseKeeper, ROLES.Accountant],
+    roles: [Admin, Manager, WarehouseKeeper, ROLES.Accountant],
     page: async () => (await import('@/features/dispatch')).DispatchNotesPage,
   },
   {
@@ -403,7 +403,7 @@ export const router = createBrowserRouter([
             ],
           },
           {
-            element: <ProtectedRoute roles={[ROLES.Manager]} />,
+            element: <ProtectedRoute roles={[ROLES.Admin, ROLES.Manager]} />,
             children: [
               {
                 path: PURCHASE_ROUTES.orders,
@@ -440,25 +440,12 @@ export const router = createBrowserRouter([
 
           // --- KPI tổ may (Minh) ---
           {
-            element: <ProtectedRoute roles={[ROLES.Manager]} />,
+            element: <ProtectedRoute roles={[ROLES.Admin, ROLES.Manager]} />,
             children: [
               {
                 path: KPI_ROUTES.targets,
                 lazy: async () => ({
                   Component: (await import('@/features/kpi')).KpiTargetListPage,
-                }),
-              },
-            ],
-          },
-
-          // --- KPI tổ may: Admin chỉ xem (Minh, MI-17, UC21) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin]} />,
-            children: [
-              {
-                path: KPI_ROUTES.adminTargets,
-                lazy: async () => ({
-                  Component: (await import('@/features/kpi')).AdminKpiTargetPage,
                 }),
               },
             ],

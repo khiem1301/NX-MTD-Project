@@ -18,6 +18,7 @@ public sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachmen
         entity.Property(e => e.FileName).HasMaxLength(255);
         entity.Property(e => e.FileUrl).HasMaxLength(500);
         entity.Property(e => e.IsCurrent).HasDefaultValue(true);
+        entity.Property(e => e.RemovedAt).HasPrecision(0);
         entity.Property(e => e.OwnerType)
             .HasMaxLength(30)
             .IsUnicode(false);

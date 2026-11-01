@@ -7,12 +7,18 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import type { FabricRequirement } from '@/types/workOrder';
 import { formatDate, formatQty } from '@/utils/format';
-import { LABELS, WORK_ORDER_STATUS, WORK_ORDER_STATUS_LABEL } from '../constants';
+import {
+  LABELS,
+  WORK_ORDER_LIMITS,
+  WORK_ORDER_STATUS,
+  WORK_ORDER_STATUS_LABEL,
+} from '../constants';
 import { NoteModal } from '@/components/common/NoteModal';
 import { useCancelWorkOrder, useFinishCutting, useWorkOrder } from '../hooks/useCutting';
 import type { WorkOrder, WorkOrderLine } from '../types';
 import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { FabricCheckAlerts } from './FabricCheckAlerts';
 
 type WorkOrderDetailModalProps = {
   workOrderId: number | undefined;
@@ -28,7 +34,7 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
   const finish = useFinishCutting();
   const [finishing, setFinishing] = useState(false);
   const w = detail.data;
-  const canEdit = hasRole(ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
+  const canEdit = hasRole(ROLES.Admin, ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
   const total = (pick: (l: WorkOrderLine) => number) =>
     (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
   // Tổ cắt báo cắt xong khi lệnh đang cắt (đủ kế hoạch thì lệnh đã tự hoàn thành khi kho xác nhận).
@@ -70,6 +76,7 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
         title={LABELS.finishCutting}
         label={isShort ? LABELS.finishCuttingReason : LABELS.finishCuttingHint}
         required={isShort}
+        maxLength={WORK_ORDER_LIMITS.finishReasonMax}
         loading={finish.isPending}
         onCancel={() => setFinishing(false)}
         onSubmit={(note) =>
@@ -108,6 +115,7 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
               .replace('{cut}', formatQty(total((l) => l.cutQty)))
               .replace('{handed}', formatQty(total((l) => l.handedQty)))}`}
           />
+          <FabricCheckAlerts checks={w.fabricChecks} />
           <DataTable<WorkOrderLine>
             rowKey="workOrderLineId"
             size="small"

@@ -289,4 +289,55 @@ public class StocktakeServiceTests
         validator.Validate(Material(5) with { WarehouseType = "X" }).IsValid.Should().BeFalse();
         validator.Validate(Material(5) with { Lines = Array.Empty<SaveStocktakeLineDto>() }).IsValid.Should().BeFalse();
     }
+
+    [Theory]
+    [InlineData("100000000", true)]
+    [InlineData("100000000.001", false)]
+    [InlineData("0.001", true)]
+    [InlineData("0.0001", false)]
+    [InlineData("1e15", false)]
+    public void Validator_bounds_the_counted_qty_to_the_database_column(string counted, bool valid)
+    {
+        var qty = decimal.Parse(counted, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture);
+
+        new SaveStocktakeDtoValidator().Validate(Material(qty)).IsValid.Should().Be(valid);
+    }
+
+    [Fact]
+    public void Validator_requires_whole_counts_for_piece_warehouses_only()
+    {
+        var validator = new SaveStocktakeDtoValidator();
+        SaveStocktakeDto Pieces(string warehouse, decimal qty) =>
+            new(warehouse, null, Today, new[] { new SaveStocktakeLineDto(null, 101, null, qty, null) });
+
+        validator.Validate(Pieces(WarehouseTypes.Finished, 5)).IsValid.Should().BeTrue();
+        validator.Validate(Pieces(WarehouseTypes.Finished, 5.5m)).IsValid.Should().BeFalse();
+        validator.Validate(Pieces(WarehouseTypes.SemiFinished, 0.5m)).IsValid.Should().BeFalse();
+        validator.Validate(Material(5.5m)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validator_bounds_text_ids_and_the_date()
+    {
+        var validator = new SaveStocktakeDtoValidator();
+        var line = new SaveStocktakeLineDto(1, null, null, 5, null);
+
+        validator.Validate(Material(5) with { Scope = new string('a', 300) }).IsValid.Should().BeTrue();
+        validator.Validate(Material(5) with { Scope = new string('a', 301) }).IsValid.Should().BeFalse();
+        validator.Validate(Material(5) with { Lines = new[] { line with { Note = new string('a', 301) } } }).IsValid.Should().BeFalse();
+        validator.Validate(Material(5) with { Lines = new[] { line with { MaterialId = 0 } } }).IsValid.Should().BeFalse();
+        validator.Validate(Material(5) with { StocktakeDate = default }).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Query_validator_rejects_unknown_status_warehouse_and_bad_paging()
+    {
+        var validator = new StocktakeQueryValidator();
+
+        validator.Validate(new StocktakeQuery()).IsValid.Should().BeTrue();
+        validator.Validate(new StocktakeQuery { Status = StocktakeStatuses.Returned, WarehouseType = WarehouseTypes.Finished }).IsValid.Should().BeTrue();
+        validator.Validate(new StocktakeQuery { Status = "X" }).IsValid.Should().BeFalse();
+        validator.Validate(new StocktakeQuery { WarehouseType = "X" }).IsValid.Should().BeFalse();
+        validator.Validate(new StocktakeQuery { PageSize = 101 }).IsValid.Should().BeFalse();
+    }
 }

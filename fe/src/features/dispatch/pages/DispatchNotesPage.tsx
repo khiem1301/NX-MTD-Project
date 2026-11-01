@@ -71,7 +71,7 @@ export function DispatchNotesPage() {
     <Card
       title={DISPATCH_LABELS.title}
       extra={
-        <Can roles={[ROLES.Manager]}>
+        <Can roles={[ROLES.Admin, ROLES.Manager]}>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {DISPATCH_LABELS.create}
           </Button>

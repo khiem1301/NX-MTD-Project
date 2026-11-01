@@ -1,6 +1,6 @@
 import { Card, InputNumber, Space, Typography } from 'antd';
 import { formatCurrency, formatDateTime } from '@/utils/format';
-import { PRODUCTION_TEXT } from '../constants';
+import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
 import { outputKeyOf } from '../utils';
 import { OutputRowTags } from './OutputRowTags';
@@ -42,6 +42,7 @@ export function OutputMobileList({
             <InputNumber
               size="large"
               min={0}
+              max={OUTPUT_MAX_QTY}
               precision={0}
               inputMode="numeric"
               addonBefore={text.columns.qty}

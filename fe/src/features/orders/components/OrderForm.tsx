@@ -3,6 +3,7 @@ import { Alert, Button, Form, Space, Typography, theme } from 'antd';
 import type { CSSProperties } from 'react';
 import { PageCard } from '@/components/common/PageCard';
 import { StatusTag } from '@/components/common/StatusTag';
+import { UnsavedChangesModal } from '@/components/common/UnsavedChangesModal';
 import { MESSAGES } from '@/constants/messages';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
 import { ROUTES } from '@/constants/routes';
@@ -30,6 +31,7 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
     changeBlocks,
     handleFinish,
     handleSave,
+    leaveGuard,
     initialValues,
     form,
     blocks,
@@ -137,17 +139,17 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
           </Typography.Text>
           <Space>
             <Button onClick={goBack}>{MESSAGES.common.cancel}</Button>
-            <Button
-              type="primary"
-              disabled={!editable}
-              loading={saving}
-              onClick={handleSave}
-            >
+            <Button type="primary" disabled={!editable} loading={saving} onClick={handleSave}>
               {MESSAGES.common.save}
             </Button>
           </Space>
         </div>
 
+        <UnsavedChangesModal
+          open={leaveGuard.open}
+          onLeave={leaveGuard.leave}
+          onStay={leaveGuard.stay}
+        />
         <CustomerFormModal
           open={customerOpen}
           customer={null}

@@ -4,6 +4,7 @@ import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   CreateOrderPayload,
   Customer,
+  CustomerOption,
   CustomerQuery,
   OrderDetail,
   OrderListItem,
@@ -26,7 +27,8 @@ const put = async <T>(url: string, body: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
 export const customerApi = {
-  list: (query: CustomerQuery = {}) => get<Customer[]>(API.customers.base, query),
+  list: (query: CustomerQuery = {}) => get<Paginated<Customer>>(API.customers.base, query),
+  options: () => get<CustomerOption[]>(API.customers.options),
   create: (body: SaveCustomerPayload) => post<number>(API.customers.base, body),
   update: (id: number, body: SaveCustomerPayload) => put<unknown>(API.customers.byId(id), body),
   discontinue: (id: number, reason: string) =>

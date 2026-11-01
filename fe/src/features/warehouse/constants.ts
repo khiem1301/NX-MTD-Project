@@ -206,6 +206,13 @@ export const LABELS = {
   noActiveSupplier:
     'Chưa có nhà cung cấp nào đang hợp tác. Nhờ Admin thêm nhà cung cấp trước khi tạo đơn mua.',
   qtyRequiredOrCustomer: 'Phải nhập số cần hoặc số khách cấp lớn hơn 0.',
+  requiredQtyName: 'Số cần',
+  customerQtyName: 'Số khách cấp',
+  qtyNegative: '{0} không được âm.',
+  qtyMax: '{0} tối đa {1}.',
+  qtyScale: '{0} tối đa {1} số lẻ.',
+  deliveryCountRange: 'Số lần giao dự kiến phải là số nguyên từ 1 đến {0}.',
+  noteMax: 'Ghi chú tối đa {0} ký tự.',
   nothingToBuy:
     'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
   poKindAll: 'Tất cả đơn mua',

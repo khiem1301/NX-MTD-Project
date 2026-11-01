@@ -78,6 +78,17 @@
 | DEV-ALL-24 | 01/11/2026 | Claude (AI) | UC19, `KpiTarget`, `SystemSetting`, `EndOfOrderService` | Một đơn + mã hàng + tổ có nhiều chỉ tiêu theo các kỳ không trùng ngày (thay quy tắc một chỉ tiêu ở DEV-ALL-23); KPI ngày khóa sau 08:00 của chính ngày đó | Mở |
 | DEV-ALL-25 | 01/11/2026 | Claude (AI) | UC19, `SystemSetting` | Kiểm ngày của kỳ KPI; cảnh báo kỳ kết thúc sau hoặc sát ngày giao hàng; form lập KPI hiện ngày giao | Mở |
 | DEV-ALL-26 | 01/11/2026 | Claude (AI) | UC09 (phần NVL) | Màn "NVL của đơn" mở đầu bằng danh sách đơn chờ NVL có phân trang, lọc; bỏ ô chọn đơn | Mở |
+| DEV-ALL-27 | 01/11/2026 | Claude (AI) | UC21, JOB-04 | Cảnh báo nguy cơ trễ quét cả đơn Đang giao và Giao một phần; đơn đã đóng được gỡ cờ | Mở |
+| DEV-ALL-28 | 01/11/2026 | Claude (AI) | UC10, bảng mới `ProductImage` | Mã hàng có một ảnh chính và tối đa 10 ảnh phụ, job dọn ảnh mồ côi; giới hạn nhập mã hàng và định mức (kích thước, số chi tiết, số dòng mỗi lần lưu) | Mở |
+| DEV-ALL-29 | 01/11/2026 | Claude (AI) | `Attachment`, `IFileStorage` | Ảnh chứng từ đã gỡ hoặc bị thay chỉ giữ 15 ngày rồi job dọn tệp xóa file và dòng; thêm `Attachment.RemovedAt` | Mở
+| DEV-ALL-30 | 01/11/2026 | Claude (AI) | UC09, UC14 | Siết kiểm tra khách hàng và nhà cung cấp: email chỉ ASCII và có tên miền, độ dài tính sau khi cắt khoảng trắng, lỗi trùng tên hiện ngay dưới ô tên; danh sách khách hàng phân trang phía server | Mở
+| DEV-ALL-31 | 01/11/2026 | Claude (AI) | UC09 (phần NVL), UC10 | NVL của đơn: giới hạn số lượng, số lần giao; chặn sửa, xóa khi đơn đã đóng. Bỏ kích thước ở màu – size | Mở
+| DEV-ALL-32 | 01/11/2026 | Claude (AI) | UC10, UC19, `ProductVariant`, `WorkOrderLine` | Bỏ dài, rộng ở màu – size; lệnh cắt thường tính vải theo kích thước từng chi tiết và chỉ cảnh báo; lệnh cắt thường được cắt lẻ thêm thành phần | Mở
+| DEV-ALL-33 | 01/11/2026 | Claude (AI) | UC48, UC49 | Kiểm kê kho: giới hạn số đếm, ghi chú, phạm vi, bộ lọc danh sách; form lập phiếu phân trang để kiểm kê được hơn 100 hàng hóa | Mở
+| DEV-ALL-34 | 01/11/2026 | Claude (AI) | Ma trận vai trò, UC19, UC21, UC22 | Admin có toàn bộ chức năng của Quản đốc | Mở |
+| DEV-ALL-35 | 01/11/2026 | Claude (AI) | UC19 (tổ cắt) | Lệnh cắt: giới hạn ghi chú, lý do cắt thiếu, số dòng; kiểm tra thêm cho lệnh cắt bù, báo cắt xong, bộ lọc danh sách; sửa lệnh cũ giữ nguyên hạn đã qua | Mở
+| DEV-ALL-36 | 01/11/2026 | Claude (AI) | UC22 (KI-11), UC55 | Sửa sản lượng sau hạn: giới hạn số lượng, lý do, số dòng; chặn chọn ngày tương lai | Mở
+| DEV-ALL-37 | 01/11/2026 | Claude (AI) | UC56 (KI-08), UC22 | Hàng hỏng của các tổ: tách bộ lọc, bảng gọn; công nhân phản đối thì Quản đốc / Admin chấp nhận phiếu hoặc hủy phiếu; giới hạn nhập | Mở
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -919,7 +930,7 @@
   - **KPI**: chỉ tiêu tối đa = BTP còn trong kho + BTP tổ đã nhận chưa làm xong − phần còn phải làm của KPI khác (form hiện số này). **Chỉ đánh giá cuối đơn**: bỏ tự đóng theo ngày hết kỳ và xem theo ngày; Quản đốc bấm "Kết thúc đơn" → so sản lượng báo ở công đoạn cuối với QC đạt + hàng hủy, phần lệch ghi `DefectRecord` (SCRAP, lý do "Lệch kiểm cuối đơn") theo tỉ lệ sản lượng từng công nhân, chốt Đạt / Không đạt và đóng KPI. KPI không đạt: thiếu ≤ ngưỡng (10%) tự duyệt đơn tăng ca; thiếu hơn do tổ trưởng của tổ duyệt / từ chối (loại đơn `OVERTIME`, hiện ở "Đơn của tôi" của tổ). Đơn tăng ca chỉ là quyết định; giờ OT tính lương vẫn từ máy chấm công.
   - **Bậc thợ động**: Admin thêm / sửa / ngừng dùng / xóa (bậc chưa ai dùng) trong "Danh mục bậc"; sửa / xóa mức tiền bậc chưa có hiệu lực; mọi ô chọn bậc lấy từ API. Đặt bậc trực tiếp: chọn tổ → công nhân, hiện bậc hiện tại.
   - **Tài khoản**: Quản đốc quản lý mọi người trừ Admin và Kế toán (thêm, sửa kể cả kiểu lương, nhập Excel, nghỉ việc, khóa / mở khóa / đặt lại mật khẩu).
-  - **Khác**: Khách hàng và Nhà cung cấp bắt buộc SĐT, email, địa chỉ (chỉ ở FE + validator, cột DB vẫn NULL); duyệt đơn giá công đoạn có tab "Tất cả", Admin không thấy Nháp; nút "Thêm công đoạn"; trang chủ có thông báo mới và (Admin) doanh thu; tìm kiếm tức thì ở các danh sách; bộ lọc mặc định "Tất cả"; "Tay áo" giữ một chi tiết × 2 (ghi chú gồm tay trái + tay phải).
+  - **Khác**: Khách hàng và Nhà cung cấp bắt buộc SĐT, email, địa chỉ (chỉ ở FE + validator, cột DB vẫn NULL); duyệt đơn giá công đoạn có tab "Tất cả", Admin không thấy Nháp; nút "Thêm công đoạn"; trang chủ có thông báo mới và (Admin) doanh thu; tìm kiếm tức thì ở các danh sách; bộ lọc mặc định "Tất cả"; "Tay áo" giữ một chi tiết × 2 (màn cắt bù ghi chú gồm tay trái + tay phải).
   - **Thông báo hệ thống (chỉ báo người phải xử lý tiếp; chuông tự nạp 30 giây và bật toast khi có mới):** lệnh cắt mới → tổ trưởng cắt + Thủ kho (cấp vải), sửa / hủy → tổ cắt; phiếu cấp vải / BTP chờ nhận → tổ nhận, bị từ chối → Thủ kho lập phiếu; bàn giao BTP chờ → Thủ kho, được xác nhận / từ chối → tổ cắt, lệnh cắt đủ kế hoạch → Quản đốc; phiếu nhập chờ xác nhận → Quản đốc, bị trả lại → Thủ kho; phiếu trả vải xác nhận / từ chối → tổ cắt; KPI giao / hủy → tổ trưởng tổ may. Thêm `INotificationService.NotifyTeamLeadersAsync`. Các luồng đã có sẵn (đơn mua, kiểm kê, xuất hàng, thành phẩm, giao việc, hàng hỏng, đơn từ) giữ nguyên.
   - **Xuất hàng có bước duyệt** (đổi DB: `CK_DN_Status` thêm PENDING_APPROVAL, APPROVED; `vw_StockBalance` giữ chỗ cả hai; patch `SQL/patches/2026-10-28_dispatch_approval.sql`): Quản đốc lập (PENDING) → Thủ kho lập phiếu xuất chốt số xuất thực tế ≤ số đặt (PENDING_APPROVAL) → Quản đốc duyệt (APPROVED) hoặc trả lại có lý do (về PENDING) → Thủ kho in, chụp ảnh phiếu có Quản đốc ký, xuất (IN_DELIVERY). Thủ kho vẫn từ chối được ở PENDING; Quản đốc hủy được đến khi hàng rời kho. **Ảnh phiếu xuất đã ký bắt buộc khi xuất và ảnh biên bản giao có khách ký bắt buộc khi Kế toán xác nhận khách nhận.** Số xuất sau khi Thủ kho giảm là trần mới nếu bị trả lại (không lưu riêng số Quản đốc đặt ban đầu).
   - **NVL lỗi** (`DefectiveMaterialRequestHandler`): Quản đốc duyệt → kiểm tồn từng NVL; đủ thì tự tạo đơn Xin NVL cho tổ cắt (Thủ kho cấp bù), thiếu thì tự tạo đơn mua chờ chốt cho phần thiếu (gắn `SourceRequestId`); kết quả ghi ở `ResultNote` và báo Quản đốc / Thủ kho.
@@ -997,7 +1008,7 @@
 - **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) theo yêu cầu của Minh · nhật ký thay đổi · cùng nhánh `feature/ALL-ui-sync-grade-levels`
 - **Tài liệu gốc ghi:** schema `AuditLog` chỉ có `OldValues` / `NewValues` (JSON) và `Reason`; người đọc phải đọc JSON.
 - **Code đang làm:**
-  - Thêm cột `AuditLog.Summary NVARCHAR(500) NULL` (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật, đã áp lên `NXMTD`).
+  - Thêm cột `AuditLog.Summary NVARCHAR(500) NULL` (patch `SQL/patches/2026-11-01_all_changes.sql`, script chính đã cập nhật, đã áp lên `NXMTD`).
   - `AuditLogService.Add` tự dựng câu mô tả bằng `AuditText.Summary` (hành động + đối tượng + mã bản ghi + các field đổi, dịch tiếng Việt, kèm lý do), nên mọi chỗ gọi `_audit.Add` đều có câu mô tả mà không phải sửa. `AuditEntry` có thêm tham số `Summary` để chỗ gọi tự viết câu riêng khi cần (đã dùng ở bậc thợ và tài khoản).
   - Dòng log cũ để `Summary = NULL`; giao diện tự ghép "{hành động} {đối tượng} #{Id}". Danh sách nhãn đối tượng / trường / giá trị nằm ở `AuditText` (BE) và `fe/src/utils/auditLabels.ts` (FE): thêm bảng / trường mới thì cập nhật cả hai.
 - **Cần sửa trong tài liệu:** Report-3 / script DB (mô tả bảng `AuditLog`).
@@ -1035,7 +1046,7 @@
 ### DEV-ALL-23 · KPI tổ may: không trùng đơn + mã hàng + tổ, KPI theo ngày trên lịch tháng
 
 - **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) · UC19, UC21, FR 3.14 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
-- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật): `UQ_Kpi`, bảng `KpiDailyTarget`, `vw_KpiDailyResult`. API: `GET manager/kpi-targets/order-capacity` thay `available-btp`; thêm `GET manager|admin/kpi-targets/{id}/calendar`, `PUT manager/kpi-targets/{id}/daily-plan`; `SaveKpiTargetDto` bỏ `WorkingDays`.
+- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-01_all_changes.sql`, script chính đã cập nhật): `UQ_Kpi`, bảng `KpiDailyTarget`, `vw_KpiDailyResult`. API: `GET manager/kpi-targets/order-capacity` thay `available-btp`; thêm `GET manager|admin/kpi-targets/{id}/calendar`, `PUT manager/kpi-targets/{id}/daily-plan`; `SaveKpiTargetDto` bỏ `WorkingDays`.
 - **Tài liệu gốc ghi:** `UQ_Kpi` gồm cả `StartDate`, nên một tổ lập được nhiều chỉ tiêu cho cùng đơn + mã hàng. Swimlane III.3.1: đặt KPI thì kiểm BTP khả dụng. Chỉ tiêu ngày = tổng ÷ `WorkingDays` nhập tay. DEV-ALL-11 đã gỡ KPI theo ngày.
 - **Lý do:** yêu cầu của người dùng: chỉ tiêu cả kỳ chỉ so với số lượng đơn đặt, BTP chỉ kiểm khi đặt KPI theo ngày; một đơn + mã hàng có thể nhiều tổ làm, một tổ làm nhiều đơn + mã hàng.
 - **Code đang làm:**
@@ -1052,7 +1063,7 @@
 ### DEV-ALL-24 · KPI tổ may: nhiều chỉ tiêu không trùng kỳ, khóa KPI ngày sau 08:00
 
 - **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC19, FR 3.14 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
-- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật): `UQ_Kpi` thêm lại `StartDate`, khóa `KPI_EDIT_CUTOFF_TIME`. API lịch KPI thêm `firstEditableDate`, `editCutoff`. Mã lỗi `KPI_PERIOD_OVERLAP` thay `KPI_DUPLICATE_TARGET`.
+- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-01_all_changes.sql`, script chính đã cập nhật): `UQ_Kpi` thêm lại `StartDate`, khóa `KPI_EDIT_CUTOFF_TIME`. API lịch KPI thêm `firstEditableDate`, `editCutoff`. Mã lỗi `KPI_PERIOD_OVERLAP` thay `KPI_DUPLICATE_TARGET`.
 - **Tài liệu gốc ghi:** DEV-ALL-23: mỗi đơn + mã hàng + tổ chỉ một chỉ tiêu; ngày đã qua không sửa được.
 - **Lý do:** yêu cầu của người dùng.
 - **Code đang làm:**
@@ -1060,7 +1071,7 @@
   - **Số lượng đơn:** tổng các chỉ tiêu không vượt số lượng đơn đặt, tính cả các chỉ tiêu khác của cùng tổ.
   - **BTP khả dụng:** chỉ tiêu kỳ khác của cùng tổ trừ thẳng phần còn phải làm vì dùng chung BTP tổ đang giữ; tổ khác vẫn chỉ trừ phần phải lấy từ kho.
   - **Kết thúc đơn:** thực tế = QC cả đơn của tổ − QC nằm trong kỳ của các chỉ tiêu khác cùng đơn + mã hàng + tổ, để không tính lặp. Một chỉ tiêu thì không đổi.
-  - **Patch:** các patch chưa đẩy lên remote gộp vào `SQL/patches/2026-11-02_kpi_audit_material.sql` (audit log, lý do ngừng hợp tác, bỏ `Material.LengthCm`, KPI). File gộp bỏ bước chuyển chỉ tiêu trùng sang `CANCELLED` của DEV-ALL-23, vì nhiều kỳ giờ hợp lệ và `UQ_Kpi` cũ đã gồm `StartDate` nên không có dòng trùng.
+  - **Patch:** các patch chưa đẩy lên remote gộp vào `SQL/patches/2026-11-01_all_changes.sql` (audit log, lý do ngừng hợp tác, bỏ `Material.LengthCm`, KPI). File gộp bỏ bước chuyển chỉ tiêu trùng sang `CANCELLED` của DEV-ALL-23, vì nhiều kỳ giờ hợp lệ và `UQ_Kpi` cũ đã gồm `StartDate` nên không có dòng trùng.
   - **Khóa KPI ngày:** KPI của một ngày không sửa được từ 08:00 của chính ngày đó (khóa `KPI_EDIT_CUTOFF_TIME`, giờ Việt Nam, thiếu khóa thì mặc định 08:00). BE chặn cả lưu lịch lẫn đổi kỳ làm mất ngày đã khóa. Chỉ tiêu cả kỳ vẫn sửa được.
 - **Ảnh hưởng người khác:** Morgan (schema), DB đang chạy phải chạy patch.
 - **Cần sửa trong tài liệu:** Report-3 UC19 (ràng buộc kỳ, giờ khóa); `NX-MTD_AI_Context.md` mục 6.4 (thêm khóa `KPI_EDIT_CUTOFF_TIME`); `NX-MTD_Database.dbml`, `NX-MTD_Database_Mo_ta.md`.
@@ -1069,7 +1080,7 @@
 ### DEV-ALL-25 · KPI tổ may: kiểm ngày của kỳ và cảnh báo theo ngày giao hàng
 
 - **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC19 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
-- **Ảnh hưởng tới:** khóa mới `KPI_DUE_WARNING_DAYS` (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật); `GET manager/kpi-targets/order-capacity` thêm `dueDate`, `dueWarningDays`; mã lỗi `KPI_PERIOD_INVALID`; bố cục form lập KPI.
+- **Ảnh hưởng tới:** khóa mới `KPI_DUE_WARNING_DAYS` (patch `SQL/patches/2026-11-01_all_changes.sql`, script chính đã cập nhật); `GET manager/kpi-targets/order-capacity` thêm `dueDate`, `dueWarningDays`; mã lỗi `KPI_PERIOD_INVALID`; bố cục form lập KPI.
 - **Tài liệu gốc ghi:** chỉ yêu cầu ngày kết thúc không trước ngày bắt đầu; không nhắc tới ngày giao hàng khi lập KPI.
 - **Lý do:** yêu cầu của người dùng, để Quản đốc kiểm soát kỳ KPI theo ngày giao.
 - **Code đang làm:**
@@ -1090,4 +1101,177 @@
 - **Code đang làm:** Màn chính là bảng "Đơn hàng chờ khai báo / mua NVL" (phân trang server, tìm mã đơn / khách hàng, lọc tình trạng NVL); đơn chưa khai báo lên đầu. Bấm Mở đơn mới sang NVL của đơn, có nút quay lại; `?orderId=` trong thông báo vẫn mở thẳng. Bỏ ô chọn đơn; đơn đã đủ NVL mở qua lựa chọn lọc "Đã đủ NVL". Chỉ gồm đơn Mới và Đang sản xuất, nên đơn đang giao chỉ mở được qua đường dẫn. Quản đốc tạo đơn mua dùng chung bằng nút "Tạo đơn mua dùng chung" ở danh sách.
 - **Bảng NVL của một đơn:** thêm `GET admin|manager/order-materials/paged` (`orderId, page, pageSize, keyword, supply, receiptState`). Tìm mã, tên, màu NVL; lọc nguồn cấp (khách cấp, phải mua) và tình trạng nhập kho (đã nhận đủ khi số nhận ≥ số cần). `GET order-materials` giữ nguyên cho các form cần đủ dòng.
 - **Cần sửa trong tài liệu:** Report-3 UC09 (màn NVL của đơn).
+- **Trạng thái:** Mở
+
+### DEV-ALL-27 · JOB-04: cảnh báo nguy cơ trễ cho đơn đã bắt đầu giao
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC21, JOB-04 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OrderProgressService.RunDelayCheckAsync`, cờ `IsDelayRisk` / `DelayRiskSince`; không đổi schema.
+- **Tài liệu gốc ghi:** JOB-04 đặt cờ theo số lượng còn lại; code chỉ quét đơn `IN_PRODUCTION`.
+- **Lý do:** yêu cầu của người dùng. Đơn giao từng đợt rời `IN_PRODUCTION` khi xuất kho đợt đầu dù phần còn lại vẫn đang sản xuất, nên bị bỏ sót cảnh báo.
+- **Code đang làm:**
+  - Quét `IN_PRODUCTION`, `IN_DELIVERY`, `PARTIALLY_DELIVERED` (`OrderStatuses.DelayTracked`). Công thức giữ nguyên, số còn lại vẫn tính theo số hoàn thiện (QC đạt) so với số đặt, không theo số đã giao.
+  - Đơn ngoài nhóm này mà còn cờ cũ (đã giao, dừng, hủy...) được gỡ cờ ở lần chạy kế tiếp, không gửi thông báo. Trước đây cờ cũ không bao giờ được gỡ.
+- **Cần sửa trong tài liệu:** Report-3 UC21, mô tả JOB-04.
+- **Trạng thái:** Mở
+
+### DEV-ALL-28 · Mã hàng: ảnh chính + 10 ảnh phụ, giới hạn nhập mã hàng và định mức
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC10 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `Product`, bảng mới `ProductImage`, `GET admin|accountant/products`, `POST / PUT admin/products`, `PUT .../{id}/spec`
+- **Tài liệu gốc ghi:** mã hàng có một ảnh mẫu (`Product.SampleImageUrl`); định mức không ghi giới hạn kích thước, số chi tiết hay số dòng mỗi lần lưu.
+- **Lý do:** yêu cầu của người dùng (mã hàng có 1 ảnh chính và 10 ảnh phụ, dọn ảnh mồ côi); các giới hạn còn lại chặn lỗi hệ thống khi nhập số quá cột database và yêu cầu quá lớn.
+- **Code đang làm:**
+  - **Ảnh:** ảnh chính vẫn là `Product.SampleImageUrl` (giữ dữ liệu cũ, nhãn đổi thành "Ảnh chính"). Ảnh phụ lưu ở bảng `ProductImage` (`SortOrder` 1-10, mỗi vị trí một ảnh, database tự chặn ảnh thứ 11). `SaveProductDto.ExtraImages`: null = giữ nguyên, danh sách rỗng = xóa hết; chỉ nhận khóa ảnh tải từ máy, không lặp, tối đa 10. Danh sách mã hàng và chi tiết trả thêm `extraImages`. Ảnh bị gỡ hoặc bị thay không xóa ngay mà để job dọn ảnh mồ côi xử lý (xem bên dưới). Bảng `Attachment` không dùng vì ảnh mã hàng cần thứ tự và lưu nguyên danh sách trong một lần, còn `Attachment` chỉ ẩn ảnh gỡ (`IsCurrent = 0`) và cần `OwnerType` mới cùng quyền riêng.
+  - **Dọn ảnh mồ côi:** job hằng ngày lúc 02:00 (`PRODUCT_IMAGE_CLEANUP_TIME`, chưa seed nên mặc định 02:00) xóa file trong thư mục `PRODUCT` mà không còn `Product.SampleImageUrl` hay `ProductImage.ImageKey` nào trỏ tới. Chỉ xóa file cũ hơn 24 giờ (ảnh được tải lên ngay khi chọn, trước khi bấm Lưu) và chỉ file đúng dạng khóa ảnh mã hàng. Ảnh còn nằm trong lịch sử nhật ký không được giữ lại. `IFileStorage` thêm `ListAsync` và `DeleteAsync`.
+  - **Mã hàng:** mã tối đa 30 ký tự tính sau khi cắt khoảng trắng đầu cuối, chỉ chữ không dấu, số và `. _ -`.
+  - **Định mức:** kích thước chi tiết từ 0,01 đến 99.999,99 cm, tối đa 2 số lẻ (cột DECIMAL(7,2); trước đây vượt thì lỗi hệ thống 500); số chi tiết trên một sản phẩm từ 1 đến 99; tối đa 200 thành phần, 200 màu – size và 5.000 dòng định mức (tính sau khi nở theo màu – size) mỗi lần lưu. Dòng định mức trỏ vào thành phần bằng khóa dòng trên màn hình nên đổi tên thành phần thì dòng định mức đi theo; xóa thành phần thì xóa luôn các dòng định mức dùng nó.
+  - **Sửa lỗi:** form sửa mã hàng nạp mô tả từ chi tiết (trước đây lưu lại là xóa mất mô tả).
+- **Database:** `SQL/NX-MTD_Database.sql` thêm `ProductImage`; patch `SQL/patches/2026-11-01_all_changes.sql` cho database đã dựng (chạy lại không lỗi).
+- **Cần sửa trong tài liệu:** Report-3 UC10 (ảnh mã hàng, giới hạn định mức); ERD (bảng `ProductImage`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-29 · Dọn tệp chứng từ: ảnh đã gỡ giữ 15 ngày rồi xóa
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · `Attachment` · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** bảng `Attachment` (thêm `RemovedAt`), `IFileStorage`, `AttachmentService.RemoveAsync`
+- **Tài liệu gốc ghi:** gỡ ảnh chỉ đặt `IsCurrent = 0`, không xóa file, không xóa dòng (ảnh cũ giữ lại mãi).
+- **Lý do:** yêu cầu của người dùng: ảnh chứng từ bị thay đổi mà thành mồ côi thì sau 15 ngày sẽ xóa.
+- **Code đang làm:**
+  - Gỡ ảnh ghi thêm `Attachment.RemovedAt`. Job hằng ngày lúc 02:30 (`ATTACHMENT_CLEANUP_TIME`, chưa seed nên mặc định 02:30) xóa file rồi xóa dòng của ảnh có `IsCurrent = 0` và `RemovedAt` quá 15 ngày. File không xóa được thì giữ dòng để thử lại lần sau.
+  - Cùng job: file trong kho không còn dòng `Attachment` nào trỏ tới (vd. tải lên xong nhưng chưa ghi được dòng) và cũ hơn 15 ngày cũng bị xóa. Ảnh đã gỡ còn trong hạn giữ vẫn được bảo vệ vì dòng của nó còn.
+  - Chỉ áp dụng loại chứng từ có tệp ở `IFileStorage` (`AttachmentOwnerTypes.InFileStorage`) và file đúng dạng khóa ảnh. Tệp bảng lương và file chấm công nhập có kho riêng nên không bị đụng. Ảnh đang dùng (`IsCurrent = 1`) không bao giờ bị xóa.
+  - Ảnh đã gỡ trước khi có cột `RemovedAt` được gán mốc là lúc chạy patch (giữ thêm 15 ngày); dòng gỡ mà không có `RemovedAt` không bị xóa.
+- **Database:** `SQL/NX-MTD_Database.sql` thêm cột; patch `SQL/patches/2026-11-01_all_changes.sql` cho database đã dựng (chạy lại không lỗi).
+- **Cần sửa trong tài liệu:** Report-3 phần đính kèm; ERD (cột `RemovedAt`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-30 · Khách hàng, nhà cung cấp: siết kiểm tra giá trị nhập
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC09 (khách hàng), UC14 (nhà cung cấp) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `SaveCustomerDto`, `SaveSupplierDto`, lý do ngừng hợp tác, `GET admin/customers?keyword`, `PhoneRule`; không đổi schema.
+- **Tài liệu gốc ghi:** email phải hợp lệ, số điện thoại 10 số; không nêu giới hạn độ dài hay ký tự được phép.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate và giá trị biên). Trước đây email "nguyễn@b.vn" được nhận rồi lưu thành "nguy?n@b.vn" (cột `Email` là VARCHAR); "a@b" và "a b@c.vn" cũng lọt; từ khóa tìm khách hàng dài 5.000 ký tự gây lỗi hệ thống; tên đúng 200 ký tự kèm khoảng trắng đầu cuối bị từ chối dù bản lưu chỉ 200 ký tự.
+- **Code đang làm:**
+  - **Email:** dạng `ten@mien.com`, chỉ ký tự ASCII, tên miền có ít nhất một dấu chấm, không có khoảng trắng (`EmailRule` ở BE, `utils/email.ts` ở FE). Email có chữ có dấu bị từ chối thay vì lưu sai.
+  - **Số điện thoại:** `PhoneRule` dùng `[0-9]` và `z` thay vì `d` và `$` (`d` của .NET khớp cả chữ số Ả Rập – Ấn Độ, `$` cho phép xuống dòng ở cuối).
+  - **Độ dài:** tên 200, email 100, địa chỉ 500, loại NVL 200, ghi chú 500, lý do ngừng hợp tác 500, từ khóa tìm khách hàng 100; tính sau khi cắt khoảng trắng đầu cuối, thông báo bằng tiếng Việt (`MaxTrimmedLength`). Số trang và số dòng mỗi trang cũng báo bằng tiếng Việt.
+  - **Giao diện:** quy tắc nhập dùng Zod (`utils/partnerRules.ts`) khớp BE; lỗi trùng tên và lỗi từng trường hiện ngay dưới ô (form nhà cung cấp trước đây chỉ có thông báo chung).
+  - **Phân trang:** `GET admin/customers` phân trang phía server (`page`, `pageSize`, `keyword`, `status`) và trả `PagedResult`, đổi so với trước là trả cả danh sách. Các ô chọn khách hàng (form đơn hàng, bộ lọc đơn hàng) dùng `GET admin/customers/options`: mọi khách hàng ở dạng rút gọn (mã, tên, trạng thái), không phân trang.
+- **Giữ nguyên:** hai khách hàng khác nhau chỉ ở dấu ("Công ty A" và "Cong ty A") vẫn được phép vì collation `Vietnamese_100_CI_AS` phân biệt dấu.
+- **Cần sửa trong tài liệu:** Report-3 UC09, UC14 (quy tắc nhập).
+- **Trạng thái:** Mở
+
+### DEV-ALL-31 · NVL của đơn: giới hạn nhập, chặn sửa khi đơn đã đóng
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC09 (phần NVL), UC10 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `POST / PUT / DELETE admin|manager/order-materials`; không đổi schema.
+- **Tài liệu gốc ghi:** NVL của đơn chỉ yêu cầu số không âm và có số cần hoặc số khách cấp; thêm NVL cho đơn đã đóng bị chặn, sửa và xóa thì không nêu.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate và giá trị biên NVL của đơn).
+- **Code đang làm:**
+  - **Số cần, số khách cấp:** không âm, tối đa 100.000.000, tối đa 3 số lẻ (cột `DECIMAL(18,3)`). Trước đây từ 10^15 trở lên gây lỗi hệ thống, quá 3 số lẻ bị làm tròn âm thầm (1,2345 thành 1,235) và 0,0004 lưu thành 0.
+  - **Số lần giao dự kiến:** số nguyên từ 1 đến 99 (trước đây backend nhận tới 32767 trong khi giao diện chặn ở 99). Ghi chú tối đa 500 ký tự tính sau khi cắt khoảng trắng. Thông báo lỗi bằng tiếng Việt, mỗi ô một thông báo.
+  - **Đơn đã đóng:** sửa và xóa NVL của đơn bị chặn như thêm mới (409 `WAREHOUSE_ORDER_CLOSED`); trước đây sửa và xóa vẫn được dù đơn đã hủy hoặc đã giao.
+  - **Giao diện:** form từng dòng và bảng sửa cả đơn dùng chung bộ kiểm tra (`utils/orderMaterialRules.ts`); ô số bỏ `min / max / precision` để báo lỗi rõ thay vì tự đổi giá trị.
+- **Chưa làm:** giảm số cần hoặc số khách cấp xuống thấp hơn số đã nhận vẫn được lưu; chưa chốt có chặn hay không.
+- **Cần sửa trong tài liệu:** Report-3 UC09.
+- **Trạng thái:** Mở
+
+### DEV-ALL-32 · Lệnh cắt thường: kiểm vải theo từng chi tiết, cắt lẻ thêm thành phần
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC10, UC19 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** bỏ `ProductVariant.LengthCm, WidthCm, CK_PV_Size`; `GET .../products/{id}/spec` và `PUT` bỏ hai trường này ở màu – size; `POST / PUT manager/work-orders` nhận `productComponentMaterialId` theo dòng; `GET .../work-orders/{id}` thêm `fabricChecks`; endpoint mới `POST manager/work-orders/fabric-check`.
+- **Tài liệu gốc ghi:** DEV-ALL-16: lệnh cắt thường không kiểm đủ vải khi lập, màu – size có kích thước thành phẩm; dòng lệnh chọn chi tiết chỉ dùng cho lệnh cắt bù.
+- **Lý do:** yêu cầu của người dùng.
+- **Code đang làm:**
+  - **Tính vải:** cùng công thức cắt bù (`PieceFabricEstimator`, `vw_RecutFabricNeed`): mỗi chi tiết là hình chữ nhật dài × rộng trong định mức; số miếng một hàng = làm tròn xuống (khổ vải ÷ rộng); số hàng = làm tròn lên (số miếng ÷ số miếng một hàng); số mét = số hàng × dài. Cả bộ: số miếng = số bộ × `PiecesPerGarment`; cắt lẻ: số miếng do người lập nhập. Tính riêng từng NVL vải, từng màu – size, từng thành phần vải đang dùng. Không tính hao phí, không lồng chi tiết nên thường dư.
+  - **Cảnh báo:** so với kho khả dụng + vải tổ cắt đang giữ của đơn. Hiện ở form lập lệnh và chi tiết lệnh đang mở, không chặn lưu, không gửi thông báo: không đủ vải (nêu số mét thiếu), chi tiết rộng hơn khổ vải (nêu chi tiết), chưa tính được (thiếu kích thước chi tiết, thiếu khổ vải, NVL không tính theo mét, màu – size chưa có định mức vải). Lệnh cắt bù giữ cách kiểm cũ.
+  - **Cắt lẻ thêm thành phần:** lệnh cắt thường có thêm dòng màu – size × chi tiết vải × số chi tiết, cùng một dòng đơn vừa cắt cả bộ vừa cắt lẻ được. Dòng cắt lẻ không tính vào trần số đặt; tối đa 1.000.000 chi tiết mỗi dòng.
+- **Chưa xử lý:** kho tính tổng mét theo NVL, không theo từng cuộn, nên nhiều đầu vải ngắn cộng lại vẫn được coi là đủ.
+- **Database:** `SQL/NX-MTD_Database.sql`; phần 7 của patch `SQL/patches/2026-11-01_all_changes.sql` cho database đã dựng (chạy lại không lỗi).
+- **Cần sửa trong tài liệu:** Report-3 UC10, UC19; ERD (`ProductVariant`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-33 · Kiểm kê kho: giới hạn nhập, form lập phiếu phân trang
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC48, UC49 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `SaveStocktakeDtoValidator`, `StocktakeQueryValidator` (mới), `ReasonDtoValidator`, `StocktakeStatuses.All`, form lập phiếu kiểm kê ở FE; không đổi schema.
+- **Tài liệu gốc ghi:** số đếm không âm, để trống = khớp sổ; không nêu giới hạn trên hay số lẻ.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate và giá trị biên). Số đếm 1e15 làm database báo tràn số (lỗi hệ thống 500), 0,0001 bị làm tròn thành 0 âm thầm, kho BTP / thành phẩm nhận được 5,5 cái. Form chỉ nạp 100 dòng tồn đầu tiên nên kho nhiều hơn 100 hàng hóa không kiểm kê được phần còn lại.
+- **Code đang làm:**
+  - **Số đếm:** từ 0 đến 100.000.000 (khớp số lượng NVL của đơn); kho NVL tối đa 3 số lẻ, kho BTP / thành phẩm phải là số nguyên. Ô nhập ở FE chặn cùng giới hạn.
+  - **Chữ:** phạm vi và ghi chú dòng tối đa 300 ký tự, lý do trả lại tối đa 500, tính sau khi cắt khoảng trắng, thông báo tiếng Việt. Mã NVL, dòng đơn, chi tiết phải lớn hơn 0.
+  - **Danh sách phiếu:** trạng thái và loại kho lọc phải hợp lệ; số trang, số dòng mỗi trang, từ khóa dùng luật chung.
+  - **Form lập phiếu:** danh sách tồn phân trang phía server, có ô tìm kiếm; số đã nhập giữ nguyên khi chuyển trang hoặc tìm kiếm. Không nhập gì thì báo ngay thay vì chờ máy chủ; tối đa 1.000 dòng mỗi phiếu. Hàng hóa tồn sổ 0 nhưng còn hàng giữ cho đơn cũng hiện để đếm.
+- **Chưa xử lý:** hàng hóa chưa từng có tồn (số sổ 0, chưa có giao dịch) chưa chọn được ở form dù máy chủ nhận.
+- **Màn duyệt:** phiếu chờ duyệt có thêm cột "Tồn hiện tại" và cảnh báo khi tồn đã đổi so với số sổ lúc lập. Duyệt vẫn điều chỉnh theo (số đếm − số sổ lúc lập) để không mất các lần nhập xuất xảy ra trong lúc chờ duyệt; tồn không đủ để trừ thì báo lỗi và phiếu giữ nguyên.
+- **Cần sửa trong tài liệu:** Report-3 UC48, UC49 (quy tắc nhập).
+- **Trạng thái:** Mở
+
+### DEV-ALL-34 · Admin có toàn bộ chức năng của Quản đốc
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · ma trận vai trò, UC19, UC21, UC22 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `ManagerBaseController`, `ProductionGuard.IsManager`, `PurchaseOrderFlowService`, `RequestAccess`, menu, route và nút ở FE; không đổi schema.
+- **Tài liệu gốc ghi:** `NX-MTD_AI_Context.md` mục 3 tách việc của `ADMIN` và `MANAGER`; MI-17 / UC21 ghi Admin chỉ xem KPI.
+- **Lý do:** yêu cầu của người dùng.
+- **Code đang làm:**
+  - **API:** mọi API `api/v1/manager/...` mở cho cả Admin. Chức năng chỉ có ở API Quản đốc thì Admin gọi chung API đó (`useManagerRolePath` ở FE).
+  - **Chức năng Admin có thêm:** lệnh cắt, phiếu nhập NVL, thiếu NVL khi nhập, đơn mua, phiếu xuất hàng, lập và sửa KPI, sản lượng, hàng hỏng, đợt QC (gồm sửa quá hạn UC22), xử lý các loại đơn của Quản đốc (bổ sung NVL, NVL lỗi, cắt bù, thiếu hàng khi nhập).
+  - **KPI:** bỏ màn "KPI tổ may (xem)" ở `/admin/kpi-targets` và `Admin/KpiTargetsController`; Admin dùng chung màn `/kpi/targets`.
+- **Giữ nguyên:**
+  - Quản đốc không có thêm quyền của Admin. Admin vẫn dùng màn và API nhân viên, nhà cung cấp riêng, rộng hơn của Quản đốc.
+  - Admin vẫn không có trang "Ngày công của tôi", vì Giám đốc không chấm công theo ngày.
+  - Thông báo gửi cho Quản đốc không gửi thêm cho Admin, trừ các thông báo vốn đã gửi cả hai. Admin xem việc cần làm ở các màn tương ứng.
+- **Cần sửa trong tài liệu:** `NX-MTD_AI_Context.md` mục 3, Report-3 ma trận phân quyền, UC21.
+- **Trạng thái:** Mở
+
+### DEV-ALL-35 · Lệnh cắt: giá trị biên
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC19 (tổ cắt) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `SaveWorkOrderDtoValidator`, `CheckWorkOrderFabricDtoValidator`, `CreateReplacementWorkOrderDtoValidator`, `FinishCuttingDtoValidator`, `WorkOrderQueryValidator` (mới), `WorkOrderService.FinishCuttingAsync`, form lập lệnh cắt ở FE; không đổi schema.
+- **Tài liệu gốc ghi:** không nêu giới hạn độ dài ghi chú hay lý do cắt thiếu.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate và giá trị biên). Báo cắt xong nối "Cắt thiếu: <lý do>" vào ghi chú của lệnh (cột 1.000 ký tự) mà lý do không có giới hạn: ghi chú 900 ký tự cộng lý do 200 ký tự làm database báo cắt chuỗi (lỗi hệ thống 500) đúng lúc tổ cắt báo xong. Lệnh cắt bù, báo cắt xong và bộ lọc danh sách không có validator nào.
+- **Code đang làm:**
+  - **Ghi chú tối đa 600, lý do cắt thiếu tối đa 300:** cộng lại luôn vừa cột. Ghi chú cũ dài hơn 600 vẫn đọc được; nếu cộng lý do vào mà vượt 1.000 thì báo lỗi rõ thay vì lỗi hệ thống.
+  - **Số dòng:** tối đa 1.000 dòng mỗi lệnh (200 màu – size cộng các dòng cắt lẻ); trước đây lưu lệnh không giới hạn, còn kiểm vải giới hạn 200 nên lệnh có nhiều dòng cắt lẻ không kiểm vải được.
+  - **Thêm validator:** lệnh cắt bù (đơn cắt bù, tổ, hạn, ghi chú), báo cắt xong (lý do), bộ lọc danh sách (trạng thái, đơn hàng, số trang, từ khóa). Hạn cắt để trống báo bằng tiếng Việt.
+  - **Form:** báo ngay khi chưa nhập dòng nào hoặc khai trùng chi tiết cắt lẻ; ghi chú có đếm ký tự. Sửa lệnh cũ mà giữ nguyên hạn đã qua thì lưu được, khớp với BE (trước đây form chặn dù BE cho qua).
+  - **Giờ hoàn thành:** dùng đồng hồ hệ thống (IClock) thay vì giờ máy.
+- **Cần sửa trong tài liệu:** Report-3 UC19 (quy tắc nhập).
+- **Trạng thái:** Mở
+
+### DEV-ALL-36 · Sửa sản lượng sau hạn: giá trị biên
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC22 (KI-11), UC55 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `SaveOutputDtoValidator`, `OutputLimits` (mới), `OutputService.ValidateRows`, lưới sản lượng ở FE; không đổi schema.
+- **Tài liệu gốc ghi:** số lượng là số nguyên không âm; sau hạn chỉ Quản đốc sửa và bắt buộc lý do (MSG20).
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate và giá trị biên). Số lượng không có giới hạn trên: khi so với trần, phép cộng số đã nhập với số lượng mới tràn số int nên một dòng 2.147.483.647 có thể lọt qua kiểm tra trần và chỉ bị trigger của database chặn bằng lỗi hệ thống. Lý do dài quá 500 ký tự (kể cả khoảng trắng đầu cuối) và số dòng mỗi lần lưu không bị chặn bằng thông báo rõ ràng.
+- **Code đang làm:**
+  - **Số lượng:** từ 0 đến 1.000.000 mỗi dòng (0 = xóa dòng đã nhập); ô nhập ở FE chặn cùng giới hạn. Vẫn phải nằm trong trần số lần được giao (MSG16).
+  - **Lý do:** tối đa 500 ký tự tính sau khi cắt khoảng trắng, thông báo tiếng Việt; vẫn bắt buộc khi sửa sau hạn (kiểm ở service).
+  - **Số dòng:** tối đa 2.000 dòng mỗi lần lưu. Ngày làm việc để trống, mã dòng đơn, tổ, công đoạn, công nhân không hợp lệ đều báo bằng tiếng Việt.
+  - **Ngày:** ô chọn ngày ở FE không cho chọn ngày chưa tới (BE vẫn chặn như cũ).
+- **Chưa xử lý:** đợt QC (`UpdateQcBatchDtoValidator`, `CreateQcBatchDtoValidator`) và phiếu hàng hỏng (`CreateDefectDtoValidator`) cùng nhóm UC22 vẫn chưa có giới hạn trên cho số lượng và còn thông báo lý do bằng tiếng Anh.
+- **Cần sửa trong tài liệu:** Report-3 UC22, UC55 (quy tắc nhập).
+- **Trạng thái:** Mở
+
+### DEV-ALL-37 · Hàng hỏng của các tổ: chấp nhận hoặc hủy phiếu sau phản đối, tách bộ lọc, giá trị biên
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC56 (KI-08), UC22 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** ràng buộc `CK_DR_Status` của `DefectRecord` (thêm giá trị `CONFIRMED`, không thêm cột), `DefectService`, `Manager/DefectRecordsController`, `DefectQuery`, `DefectDto` (thêm `UpdatedAt`), các validator hàng hỏng, màn Hàng hỏng của các tổ và Hàng hỏng của tôi ở FE.
+- **Tài liệu gốc ghi:** phiếu hàng hỏng chỉ có ghi, hủy và công nhân phản hồi; không nêu ai quyết định khi công nhân phản đối.
+- **Lý do:** yêu cầu của người dùng. Công nhân phản đối nhưng Quản đốc chỉ có cách hủy phiếu, không có cách giữ phiếu; bộ lọc và bảng khó dùng (15 cột, cuộn ngang); một số giá trị nhập chưa có giới hạn.
+- **Code đang làm:**
+  - **Quyết định sau phản đối (Quản đốc, Admin):** chỉ có hai kết quả và kết quả nằm ở cột `Status`: chấp nhận phiếu → `CONFIRMED` (phiếu được giữ, công nhân không phản đối lại được, không hủy được nữa), hoặc hủy phiếu → `CANCELLED` (chức năng hủy có sẵn, hủy sau hạn vẫn bắt buộc lý do). Chấp nhận chỉ áp dụng cho phiếu đã bị công nhân phản đối; ghi chú không bắt buộc. Công nhân và tổ trưởng, tổ phó được báo khi phiếu được chấp nhận.
+  - **Giờ và người thao tác:** giờ chấp nhận hoặc hủy chỉ nằm ở `UpdatedAt` (cả hai thao tác đều cập nhật cột này, màn hình hiện ở dòng mở rộng); người thao tác và ghi chú nằm ở nhật ký thay đổi (AuditLog). Không có cột người / giờ / ghi chú riêng.
+  - **Database:** không thêm cột; `CK_DR_Status` thêm `CONFIRMED`. Patch `SQL/patches/2026-11-01_all_changes.sql` (có dọn 7 cột của bản đầu đã chạy trên máy dev, nên chạy lại không lỗi); `SQL/NX-MTD_Database.sql` đã cập nhật. Chấp nhận phiếu thuộc tháng đã khóa thì báo lỗi rõ (database chặn sửa phiếu của tháng đã khóa).
+  - **Bộ lọc tách riêng:** tìm kiếm, khoảng ngày (tối đa 366 ngày), tổ (chỉ Quản đốc), loại hỏng, tình trạng phiếu (gồm Đã chấp nhận), phản đối (không phản đối, chờ quyết định, đã quyết định); lọc phía máy chủ. Tổ trưởng không mở rộng được sang tổ khác bằng bộ lọc tổ.
+  - **Bảng gọn:** từ 15 cột còn 7 (phiếu, đơn / mã hàng, công đoạn / công nhân, hỏng, lý do, tình trạng, thao tác); thông tin phụ ở dòng mở rộng.
+  - **Giá trị biên:** số lượng 1 đến 1.000.000; ghi chú, lý do hủy, phản hồi, ghi chú khi chấp nhận tối đa 500 ký tự sau khi cắt khoảng trắng; lý do Khác bắt buộc ghi chú; ca, loại, lý do, ngày làm việc kiểm bằng thông báo tiếng Việt; thiếu phiên bản dữ liệu báo rõ.
+  - **Hạn phản đối 48 giờ:** công nhân chỉ phản đối được trong 48 giờ kể từ lúc phiếu được ghi (`RecordedAt`; đúng 48 giờ vẫn được), quá hạn thì backend từ chối với thông báo tiếng Việt và màn Hàng hỏng của tôi ẩn nút phản đối. Phiếu quá 48 giờ không bị phản đối thì job nền `DefectAutoConfirmJob` (15 phút quét một lần, `DefectAutoConfirmService`) tự chuyển `RECORDED` sang `CONFIRMED`, giờ chuyển nằm ở `UpdatedAt`; phiếu đã bị phản đối vẫn chờ Quản đốc quyết định. Hệ quả: phiếu đã tự chốt không hủy được nữa (hủy chỉ áp dụng cho phiếu `RECORDED`).
+  - **Bỏ trạng thái "Đã khóa" ở ứng dụng:** ứng dụng chưa có chỗ nào chuyển phiếu sang `LOCKED` (khi duyệt bảng lương chỉ kỳ kế toán bị khóa, phiếu giữ nguyên trạng thái, việc chặn sửa do trigger `trg_DefectRecord_PeriodLock` lo). Vì vậy `LOCKED` bị bỏ khỏi `DefectStatuses.All` (lọc `status=Locked` trả 400), ô lọc, nhãn và kiểu `DefectStatus` ở giao diện. Database giữ nguyên `LOCKED` trong `CK_DR_Status` và trigger; hằng `DefectStatuses.Locked` còn lại cho test điểm hạng.
+  - **Dữ liệu demo:** `SQL/NX-MTD_Database.sql` mục 11 có đủ các tình huống (đã hủy, tự chốt, chờ quyết định, đã chấp nhận sau phản đối, phiếu mới còn trong hạn phản đối).
+- **Giữ nguyên:** việc ghi phiếu vẫn chỉ do tổ trưởng, tổ phó tổ may; hủy phiếu vẫn theo hạn sửa (Quản đốc sau hạn phải nhập lý do).
+- **Chưa xử lý:** đợt QC (`UpdateQcBatchDtoValidator`, `CreateQcBatchDtoValidator`) vẫn chưa có giới hạn trên cho số lượng.
+- **Cần sửa trong tài liệu:** Report-3 UC56, UC22; ERD (`DefectRecord.Status`).
 - **Trạng thái:** Mở

@@ -76,5 +76,5 @@ public sealed class ResolveShortDeliveryDtoValidator : AbstractValidator<Resolve
 public sealed class ReasonDtoValidator : AbstractValidator<ReasonDto>
 {
     public ReasonDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaxTrimmedLength(500, "Lý do");
 }

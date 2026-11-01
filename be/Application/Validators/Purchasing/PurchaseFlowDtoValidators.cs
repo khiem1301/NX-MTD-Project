@@ -17,14 +17,16 @@ public sealed class SaveSupplierDtoValidator : AbstractValidator<SaveSupplierDto
 {
     public SaveSupplierDtoValidator()
     {
-        RuleFor(x => x.SupplierName).NotEmpty().WithMessage(Messages.Required("tên nhà cung cấp")).MaximumLength(200);
+        RuleFor(x => x.SupplierName).NotEmpty().WithMessage(Messages.Required("tên nhà cung cấp"))
+            .MaxTrimmedLength(200, "Tên nhà cung cấp");
         RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
             .MustBePhone();
         RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
-            .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
-        RuleFor(x => x.Address).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
-        RuleFor(x => x.MaterialTypes).NotEmpty().WithMessage(Messages.Required("loại NVL cung cấp")).MaximumLength(200);
-        RuleFor(x => x.Note).MaximumLength(500);
+            .MaxTrimmedLength(100, "Email").MustBeEmail();
+        RuleFor(x => x.Address).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaxTrimmedLength(500, "Địa chỉ");
+        RuleFor(x => x.MaterialTypes).NotEmpty().WithMessage(Messages.Required("loại NVL cung cấp"))
+            .MaxTrimmedLength(200, "Loại NVL cung cấp");
+        RuleFor(x => x.Note).MaxTrimmedLength(500, "Ghi chú");
     }
 }
 
@@ -63,7 +65,7 @@ public sealed class PlacePurchaseOrderDtoValidator : AbstractValidator<PlacePurc
 public sealed class DiscontinueSupplierDtoValidator : AbstractValidator<DiscontinueSupplierDto>
 {
     public DiscontinueSupplierDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaxTrimmedLength(500, "Lý do");   // MSG09
 }
 
 public sealed class CancelPurchaseOrderDtoValidator : AbstractValidator<CancelPurchaseOrderDto>

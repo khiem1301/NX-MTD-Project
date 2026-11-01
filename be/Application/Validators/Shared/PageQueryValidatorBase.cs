@@ -8,8 +8,9 @@ public abstract class PageQueryValidatorBase<T> : AbstractValidator<T> where T :
 {
     protected PageQueryValidatorBase()
     {
-        RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
-        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize);
-        RuleFor(x => x.Keyword).MaximumLength(100);
+        RuleFor(x => x.Page).GreaterThanOrEqualTo(1).WithMessage("Số trang phải từ 1 trở lên.");
+        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize)
+            .WithMessage($"Số dòng mỗi trang phải từ 1 đến {PageQuery.MaxPageSize}.");
+        RuleFor(x => x.Keyword).MaximumLength(100).WithMessage("Từ khóa tối đa 100 ký tự.");
     }
 }

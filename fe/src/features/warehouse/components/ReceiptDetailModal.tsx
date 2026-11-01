@@ -58,7 +58,7 @@ export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetail
       {hasRole(ROLES.WarehouseKeeper) && editable && (
         <Button onClick={() => onEdit(r)}>{MESSAGES.common.edit}</Button>
       )}
-      {hasRole(ROLES.Manager) && pending && (
+      {hasRole(ROLES.Admin, ROLES.Manager) && pending && (
         <>
           <Button danger onClick={() => setReturning(true)}>
             {LABELS.returnReceipt}

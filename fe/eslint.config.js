@@ -25,6 +25,22 @@ export default tseslint.config(
       '@typescript-eslint/consistent-type-imports': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       eqeqeq: ['error', 'always'],
+      // Thông báo, cảnh báo, xác nhận dùng antd (message, Alert, Modal, ConfirmAction), không dùng hộp thoại gốc của trình duyệt.
+      'no-alert': 'error',
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'window',
+          property: 'confirm',
+          message: 'Dùng ConfirmAction hoặc Modal của antd.',
+        },
+        {
+          object: 'window',
+          property: 'alert',
+          message: 'Dùng message, notification hoặc Alert của antd.',
+        },
+        { object: 'window', property: 'prompt', message: 'Dùng Modal có ô nhập của antd.' },
+      ],
     },
   },
   {

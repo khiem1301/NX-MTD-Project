@@ -32,6 +32,7 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
       <AppDatePicker
         allowClear={false}
         value={workDate}
+        disabledDate={(d) => d.isAfter(dayjs(), 'day')}
         onChange={(v) => {
           setWorkDate(v ?? dayjs());
           resetEdits();

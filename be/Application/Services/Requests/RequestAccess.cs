@@ -16,15 +16,19 @@ public sealed class RequestAccess
             ? createdByTeamId is not null && createdByTeamId == _user.TeamId
             : createdBy is not null && createdBy == _user.EmployeeId;
 
+    /// <summary>Admin có toàn bộ chức năng của Quản đốc nên xử lý được cả đơn của Quản đốc.</summary>
+    private bool Handles(RequestTypePolicy policy) =>
+        policy.HandlerRole == _user.Role || (policy.HandlerRole == Roles.Manager && _user.Role == Roles.Admin);
+
     public bool IsHandler(string requestType) =>
-        RequestTypePolicies.All.TryGetValue(requestType, out var p) && p.HandlerRole == _user.Role;
+        RequestTypePolicies.All.TryGetValue(requestType, out var p) && Handles(p);
 
     public bool CanView(string requestType, int? createdBy, int? createdByTeamId) =>
         IsCreatorSide(createdBy, createdByTeamId) || IsHandler(requestType);
 
 
     public IReadOnlyCollection<string> HandledTypes() =>
-        RequestTypePolicies.All.Values.Where(p => p.HandlerRole == _user.Role).Select(p => p.RequestType).ToList();
+        RequestTypePolicies.All.Values.Where(Handles).Select(p => p.RequestType).ToList();
 
     public IReadOnlyList<RequestTypePolicy> CreatableTypes() =>
         RequestTypePolicies.All.Values.Where(p => p.CanCreate(_user.Role, _user.TeamTypeCode)).ToList();

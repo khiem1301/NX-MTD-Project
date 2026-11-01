@@ -333,6 +333,8 @@ public static class Messages
     public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";
     public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
     public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
+    public const string OutputQtyMax = "Số lượng tối đa 1.000.000.";
+    public const string OutputTooManyRows = "Một lần lưu tối đa 2.000 dòng sản lượng.";
     public const string OutputRowsRequired = "Chưa có dòng sản lượng nào để lưu.";
     public const string OutputDuplicateRow = "Công đoạn và công nhân bị lặp trong danh sách.";
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
@@ -358,6 +360,13 @@ public static class Messages
     public const string DefectCancelled = "Đã hủy phiếu lỗi.";
     public const string DefectObjected = "Đã gửi phản hồi cho tổ trưởng.";
     public const string DefectObjectionRequired = "Vui lòng nhập nội dung phản hồi.";
+    public const string DefectConfirmed = "Đã chấp nhận phiếu lỗi, phiếu được giữ nguyên.";
+    public const string DefectNoObjection = "Phiếu này chưa có phản đối của công nhân.";
+    public const string DefectObjectionExpired = "Đã quá 48 giờ kể từ lúc phiếu được ghi, không phản đối được nữa.";
+    public const string DefectObjectionDecided = "Quản đốc đã chấp nhận phiếu này, không phản đối được nữa.";
+    public const string DefectManagerOnly = "Chỉ Quản đốc hoặc Admin được chấp nhận phiếu lỗi.";
+    public const string NotifyDefectConfirmedTitle = "Phiếu lỗi được giữ nguyên";
+    public const string NotifyDefectConfirmedBody = "Quản đốc đã chấp nhận phiếu {0}, phản đối của bạn không được chấp nhận.";
     public const string NotifyDefectTitle = "Bạn có phiếu lỗi mới";
     public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy phản hồi cho tổ trưởng.";
     public const string NotifyDefectObjectionTitle = "Công nhân phản hồi phiếu lỗi";

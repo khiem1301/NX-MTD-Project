@@ -11,7 +11,14 @@ export type Customer = {
   discontinueReason: string | null;
 };
 export type CustomerStatus = 'Active' | 'Discontinued';
-export type CustomerQuery = { keyword?: string; status?: CustomerStatus };
+export type CustomerQuery = {
+  keyword?: string;
+  status?: CustomerStatus;
+  page?: number;
+  pageSize?: number;
+};
+/** Khách hàng rút gọn cho ô chọn: đủ để lọc khách đang hợp tác. */
+export type CustomerOption = { customerId: number; customerName: string; status: CustomerStatus };
 export type SaveCustomerPayload = {
   customerName: string;
   phone?: string | null;
@@ -25,6 +32,8 @@ export type ProductListItem = {
   productCode: string;
   productName: string;
   sampleImageUrl: string | null;
+  /** Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5). */
+  extraImages: string[];
   status: ProductStatus;
   isUsed: boolean;
   createdAt: string;
@@ -38,6 +47,8 @@ export type SaveProductPayload = {
   productCode: string;
   productName: string;
   sampleImageUrl?: string | null;
+  /** Ảnh phụ theo thứ tự hiển thị (tối đa 5); bỏ trống = giữ nguyên, mảng rỗng = xóa hết. */
+  extraImages?: string[];
   description?: string | null;
 };
 /** Định mức theo mã hàng (UC10): thành phần, biến thể màu × size và NVL của từng biến thể. */
@@ -48,13 +59,11 @@ export type ProductComponentItem = {
   piecesPerGarment: number;
   status: string;
 };
-/** Màu – size do đơn hàng tạo ra (chỉ đọc); lengthCm / widthCm là kích thước thành phẩm. */
+/** Màu – size do đơn hàng tạo ra (chỉ đọc). */
 export type ProductVariantItem = {
   productVariantId: number;
   color: string;
   sizeCode: string;
-  lengthCm: number | null;
-  widthCm: number | null;
   status: string;
 };
 export type ProductNormItem = {
@@ -88,8 +97,6 @@ export type SaveProductSpecPayload = {
     productVariantId: number | null;
     color: string;
     sizeCode: string;
-    lengthCm: number | null;
-    widthCm: number | null;
   }[];
   norms: {
     componentName: string;

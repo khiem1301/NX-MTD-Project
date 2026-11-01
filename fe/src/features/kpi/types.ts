@@ -134,7 +134,6 @@ export type KpiDailyResult = {
 };
 
 /** Quản đốc lập / sửa chỉ tiêu KPI; Admin chỉ xem (MI-17, UC21). */
-export type KpiRole = 'manager' | 'admin';
 
 export type SaveKpiTargetPayload = {
   orderId: number;

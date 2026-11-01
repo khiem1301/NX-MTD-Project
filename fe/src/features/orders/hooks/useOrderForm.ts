@@ -9,7 +9,7 @@ import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
 import { toApiDate } from '@/utils/format';
-import { useCreateOrder, useCustomers, useNextOrderCode, useUpdateOrder } from './useOrders';
+import { useCreateOrder, useCustomerOptions, useNextOrderCode, useUpdateOrder } from './useOrders';
 import { blocksTotals, fromLines, newBlock, toLines, type ProductBlock } from '../utils/orderGrid';
 import { validateBlocks } from '../utils/orderValidation';
 import type { OrderFormProps } from '../components/OrderForm';
@@ -29,7 +29,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
   const navigate = useNavigate();
   const [form] = Form.useForm<HeaderValues>();
   const nextCode = useNextOrderCode(!isEdit);
-  const customers = useCustomers();
+  const customers = useCustomerOptions();
   const create = useCreateOrder();
   const update = useUpdateOrder(orderId ?? 0);
 
@@ -60,11 +60,12 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
     ({ currentLocation, nextLocation }) =>
       dirty && currentLocation.pathname !== nextLocation.pathname,
   );
-  useEffect(() => {
-    if (blocker.state !== 'blocked') return;
-    if (window.confirm(MESSAGES.orders.unsavedChanges)) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
+  // Hộp hỏi nằm ở OrderForm (UnsavedChangesModal), không dùng hộp thoại gốc của trình duyệt.
+  const leaveGuard = {
+    open: blocker.state === 'blocked',
+    leave: () => blocker.proceed?.(),
+    stay: () => blocker.reset?.(),
+  };
 
   const totals = useMemo(() => blocksTotals(blocks), [blocks]);
   // Chỉ báo sau lần bấm Lưu đầu tiên; từ đó lỗi tự mất ngay khi người dùng sửa xong.
@@ -160,6 +161,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
     changeBlocks,
     handleFinish,
     handleSave,
+    leaveGuard,
     form,
     blocks,
     blockErrors,

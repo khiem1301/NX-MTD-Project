@@ -13,7 +13,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROUTES } from '@/constants/routes';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatCurrency, formatDate, formatQty } from '@/utils/format';
-import { useCustomers, useOrders } from '../hooks/useOrders';
+import { useCustomerOptions, useOrders } from '../hooks/useOrders';
 import type { OrderListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
@@ -33,7 +33,7 @@ export function OrdersPage() {
   const navigate = useNavigate();
   const table = useTableQuery<Filters>({});
   const orders = useOrders(table.params);
-  const customers = useCustomers();
+  const customers = useCustomerOptions();
 
   const columns: TableColumnsType<OrderListItem> = [
     {

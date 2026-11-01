@@ -4,6 +4,12 @@ import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select } fr
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
+import {
+  deliveryCountProblem,
+  MAX_NOTE_LENGTH,
+  noteProblem,
+  qtyProblem,
+} from '../utils/orderMaterialRules';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
@@ -108,6 +114,8 @@ export function OrderMaterialFormModal({
                 ...required,
                 {
                   validator: async (_rule, value?: number) => {
+                    const problem = qtyProblem(LABELS.requiredQtyName, value);
+                    if (problem) throw new Error(problem);
                     const customer = form.getFieldValue('customerQty') as number | undefined;
                     if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
                       throw new Error(LABELS.qtyRequiredOrCustomer);
@@ -116,37 +124,61 @@ export function OrderMaterialFormModal({
               ]}
               initialValue={0}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
             <Form.Item
               name="customerQty"
               label={LABELS.customerQty}
-              rules={required}
+              rules={[
+                ...required,
+                {
+                  validator: async (_rule, value?: number) => {
+                    const problem = qtyProblem(LABELS.customerQtyName, value);
+                    if (problem) throw new Error(problem);
+                  },
+                },
+              ]}
               initialValue={0}
             >
-              <InputNumber min={0} style={{ width: '100%' }} />
+              <InputNumber style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
             <Form.Item
               name="expectedDeliveryCount"
               label={LABELS.expectedDeliveryCount}
-              rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
+              rules={[
+                { required: (customerQty ?? 0) > 0, message: MESSAGES.common.required },
+                {
+                  validator: async (_rule, value?: number) => {
+                    const problem = deliveryCountProblem(value);
+                    if (problem) throw new Error(problem);
+                  },
+                },
+              ]}
             >
-              <InputNumber
-                min={1}
-                max={99}
-                precision={0}
-                disabled={(customerQty ?? 0) <= 0}
-                style={{ width: '100%' }}
-              />
+              <InputNumber disabled={(customerQty ?? 0) <= 0} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
         </Row>
-        <Form.Item name="note" label={LABELS.note}>
-          <Input.TextArea rows={2} maxLength={500} />
+        <Form.Item
+          name="note"
+          label={LABELS.note}
+          rules={[
+            {
+              validator: async (_rule, value?: string) => {
+                const problem = noteProblem(value);
+                if (problem) throw new Error(problem);
+              },
+            },
+          ]}
+        >
+          <Input.TextArea
+            rows={2}
+            showCount={{ formatter: ({ count }) => `${count}/${MAX_NOTE_LENGTH}` }}
+          />
         </Form.Item>
       </Form>
       <MaterialFormModal

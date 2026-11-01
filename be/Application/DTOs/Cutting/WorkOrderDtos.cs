@@ -22,12 +22,20 @@ public sealed record WorkOrderDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
     string ProductName, int CuttingTeamId, string CuttingTeamName, int? SourceRequestId, DateOnly DueDate,
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
-    IReadOnlyList<FabricRequirementDto> Fabrics);
+    IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks);
+
+/// <summary>Vải theo kích thước chi tiết của một NVL. Status là một giá trị của FabricCheckStatuses; Message = null khi đủ vải. MaterialId = 0: dòng báo màu – size chưa có định mức vải.</summary>
+public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
+    string Status, decimal? NeedMeters, decimal? AvailableQty, string? Message);
+
+/// <summary>Kiểm vải khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
+public sealed record CheckWorkOrderFabricDto(int OrderId, int CuttingTeamId, IReadOnlyList<SaveWorkOrderLineDto> Lines);
 
 /// <param name="Reason">Bắt buộc khi BTP vào kho chưa đủ kế hoạch (cắt thiếu).</param>
 public sealed record FinishCuttingDto(string? Reason);
 
-public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty);
+/// <param name="ProductComponentMaterialId">null = cả bộ; có giá trị = cắt lẻ thêm chi tiết này, PlannedQty là số chi tiết (không tính vào trần số đặt).</param>
+public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty, int? ProductComponentMaterialId = null);
 
 /// <summary>Đơn cắt bù (REPLACEMENT_CUTTING) đã được Quản đốc duyệt và chưa có lệnh cắt bù.</summary>
 public sealed record ReplacementRequestDto(

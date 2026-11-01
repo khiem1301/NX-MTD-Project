@@ -1,49 +1,43 @@
-import { useState } from 'react';
-import { Alert, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { useEffect, useState } from 'react';
+import { Alert, Form, Input, Modal, Select, Space, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
-import { MAX_PAGE_SIZE } from '@/constants/pagination';
-import {
-  WAREHOUSE_TYPE,
-  WAREHOUSE_TYPE_LABEL,
-  useBalances,
-  type StockBalance,
-} from '@/features/warehouse';
-import { API_DATE, formatQty } from '@/utils/format';
-import { ST_LABELS } from '../constants';
+import { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL, useBalances } from '@/features/warehouse';
+import { useTableQuery } from '@/hooks/useTableQuery';
+import { API_DATE } from '@/utils/format';
+import { ST_LABELS, ST_MESSAGES } from '../constants';
 import { useSaveStocktake } from '../hooks/useStocktake';
 import type { Stocktake } from '../types';
+import {
+  MAX_LINES,
+  targetKey,
+  toStocktakeLines,
+  type CountValues,
+  type LineTarget,
+} from '../utils/stocktakeLines';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { DataTable } from '@/components/common/DataTable';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { StocktakeCountTable } from './StocktakeCountTable';
 
 type StocktakeFormModalProps = { open: boolean; stocktake: Stocktake | null; onClose: () => void };
-type FormValues = {
+type FormValues = CountValues & {
   warehouseType: string;
   scope?: string;
   stocktakeDate: Dayjs;
-  counted: Record<string, number | null>;
-  notes: Record<string, string | undefined>;
 };
+type Filters = { keyword?: string; orderId?: number };
 
 const WAREHOUSE_OPTIONS = Object.values(WAREHOUSE_TYPE).map((value) => ({
   value,
   label: WAREHOUSE_TYPE_LABEL[value],
 }));
 
-const rowKey = (b: StockBalance) =>
-  b.materialId !== null
-    ? `${b.materialId}`
-    : `${b.orderLineId}:${b.productComponentMaterialId ?? ''}`;
-const rowName = (b: StockBalance) =>
-  b.materialId !== null
-    ? `${b.materialCode} ${b.materialName}${b.materialColor ? ` - ${b.materialColor}` : ''}`
-    : `${b.orderCode} · ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` · ${b.componentName}` : ''}`;
-
 /**
  * UC48: Thủ kho lập phiếu kiểm kê. Chọn kho (và đơn hàng cho kho BTP / thành phẩm), nạp tồn hiện tại làm số sổ,
- * nhập số đếm ở các dòng lệch (để trống = khớp sổ). Phiếu bị trả lại được sửa và gửi lại.
+ * nhập số đếm ở các dòng lệch (để trống = khớp sổ). Danh sách tồn phân trang phía máy chủ, số đã nhập giữ nguyên khi
+ * chuyển trang. Phiếu bị trả lại được sửa và gửi lại.
  */
 export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormModalProps) {
   const [form] = Form.useForm<FormValues>();
@@ -51,44 +45,27 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
   const [warehouseType, setWarehouseType] = useState<string>(
     stocktake?.warehouseType ?? WAREHOUSE_TYPE.MATERIAL,
   );
-  const [orderId, setOrderId] = useState<number>();
-  const balances = useBalances({ warehouseType, orderId, page: 1, pageSize: MAX_PAGE_SIZE });
+  const table = useTableQuery<Filters>({});
+  const balances = useBalances({ ...table.params, warehouseType });
   const isMaterial = warehouseType === WAREHOUSE_TYPE.MATERIAL;
-  const rows = (balances.data?.items ?? []).filter((b) => b.onHandQty > 0 || stocktake !== null);
+  // Mọi hàng hóa đã hiện ở bất kỳ trang nào (và dòng của phiếu đang sửa): nguồn để dựng danh sách dòng gửi đi.
+  const [targets] = useState(
+    () =>
+      new Map<string, LineTarget>(
+        (stocktake?.lines ?? []).map((l): [string, LineTarget] => [targetKey(l), l]),
+      ),
+  );
+  useEffect(() => {
+    (balances.data?.items ?? []).forEach((b) => targets.set(targetKey(b), b));
+  }, [balances.data, targets]);
 
-  const initialCounted = Object.fromEntries(
-    (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null
-        ? `${l.materialId}`
-        : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
-      l.countedQty,
-    ]),
-  );
-  const initialNotes = Object.fromEntries(
-    (stocktake?.lines ?? []).map((l) => [
-      l.materialId !== null
-        ? `${l.materialId}`
-        : `${l.orderLineId}:${l.productComponentMaterialId ?? ''}`,
-      l.note ?? undefined,
-    ]),
-  );
+  const lineValues = <V,>(pick: (l: Stocktake['lines'][number]) => V) =>
+    Object.fromEntries((stocktake?.lines ?? []).map((l) => [targetKey(l), pick(l)]));
 
   const handleFinish = (values: FormValues) => {
-    const lines = rows
-      .map((b) => ({
-        b,
-        counted: values.counted?.[rowKey(b)] ?? null,
-        note: values.notes?.[rowKey(b)]?.trim() || undefined,
-      }))
-      // Chỉ gửi dòng có nhập số đếm hoặc ghi chú: các dòng còn lại coi như khớp sổ.
-      .filter((x) => x.counted !== null || x.note !== undefined)
-      .map((x) => ({
-        materialId: x.b.materialId ?? undefined,
-        orderLineId: x.b.orderLineId ?? undefined,
-        productComponentMaterialId: x.b.productComponentMaterialId,
-        countedQty: x.counted,
-        note: x.note,
-      }));
+    const lines = toStocktakeLines(form.getFieldsValue(true) as CountValues, targets);
+    if (lines.length === 0) return void message.warning(ST_MESSAGES.noLines);
+    if (lines.length > MAX_LINES) return void message.warning(ST_MESSAGES.tooManyLines);
     save.mutate(
       {
         id: stocktake?.stocktakeId,
@@ -101,6 +78,13 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
       },
       { onSuccess: onClose },
     );
+  };
+
+  const changeWarehouse = (value: string) => {
+    setWarehouseType(value);
+    targets.clear();
+    table.setFilters({ keyword: undefined, orderId: undefined });
+    form.setFieldsValue({ counted: {}, notes: {} });
   };
 
   return (
@@ -124,8 +108,8 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
           warehouseType,
           scope: stocktake?.scope ?? undefined,
           stocktakeDate: stocktake ? dayjs(stocktake.stocktakeDate) : dayjs(),
-          counted: initialCounted,
-          notes: initialNotes,
+          counted: lineValues((l) => l.countedQty),
+          notes: lineValues((l) => l.note ?? undefined),
         }}
       >
         <Space wrap align="start">
@@ -138,18 +122,9 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
               style={{ width: 200 }}
               options={WAREHOUSE_OPTIONS}
               disabled={stocktake !== null}
-              onChange={(value: string) => {
-                setWarehouseType(value);
-                setOrderId(undefined);
-                form.setFieldsValue({ counted: {}, notes: {} });
-              }}
+              onChange={changeWarehouse}
             />
           </Form.Item>
-          {!isMaterial && (
-            <Form.Item label={ST_LABELS.orderFilter}>
-              <OrderSelect value={orderId} allowClear onChange={setOrderId} />
-            </Form.Item>
-          )}
           <Form.Item
             name="stocktakeDate"
             label={ST_LABELS.date}
@@ -161,38 +136,29 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
             <Input placeholder={ST_LABELS.scopeHint} maxLength={300} style={{ width: 280 }} />
           </Form.Item>
         </Space>
+        <Space wrap style={{ marginBottom: 12 }}>
+          <DebouncedSearch
+            key={warehouseType}
+            allowClear
+            placeholder={MESSAGES.common.search}
+            onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+            style={{ width: 240 }}
+          />
+          {!isMaterial && (
+            <OrderSelect
+              allowClear
+              placeholder={ST_LABELS.orderFilter}
+              value={table.filters.orderId}
+              onChange={(orderId) => table.setFilters({ orderId })}
+            />
+          )}
+        </Space>
         <Alert type="info" showIcon message={ST_LABELS.blankHint} style={{ marginBottom: 12 }} />
-        <DataTable<StockBalance>
-          rowKey={rowKey}
-          size="small"
+        <StocktakeCountTable
+          isMaterial={isMaterial}
+          balances={balances.data?.items}
           loading={balances.isFetching}
-          dataSource={rows}
-          pagination={false}
-          scroll={{ y: 360 }}
-          locale={{ emptyText: ST_LABELS.noRows }}
-          columns={[
-            { title: ST_LABELS.item, key: 'item', render: (_, b) => rowName(b) },
-            { title: ST_LABELS.unit, dataIndex: 'unit', render: (v: string | null) => v ?? 'cái' },
-            { title: ST_LABELS.bookQty, dataIndex: 'onHandQty', align: 'right', render: formatQty },
-            {
-              title: ST_LABELS.countedQty,
-              key: 'counted',
-              render: (_, b) => (
-                <Form.Item name={['counted', rowKey(b)]} noStyle>
-                  <InputNumber min={0} />
-                </Form.Item>
-              ),
-            },
-            {
-              title: ST_LABELS.note,
-              key: 'note',
-              render: (_, b) => (
-                <Form.Item name={['notes', rowKey(b)]} noStyle>
-                  <Input maxLength={300} />
-                </Form.Item>
-              ),
-            },
-          ]}
+          pagination={table.pagination(balances.data?.totalItems)}
         />
       </Form>
     </Modal>

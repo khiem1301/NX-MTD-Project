@@ -5,6 +5,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
+import { useTableQuery } from '@/hooks/useTableQuery';
 import { CustomerFormModal } from '../components/CustomerFormModal';
 import { useCustomers, useToggleCustomer } from '../hooks/useOrders';
 import type { Customer, CustomerStatus } from '../types';
@@ -22,11 +23,12 @@ const STATUS_OPTIONS = (Object.keys(STATUS_TAG) as CustomerStatus[]).map((v) => 
   label: (STATUS_TAG[v] as StatusLabel).text,
 }));
 
+type Filters = { keyword?: string; status?: CustomerStatus };
+
 /** Danh mục khách hàng (UC09). Không xóa, chỉ ngừng hợp tác (không tạo được đơn mới). */
 export function CustomersPage() {
-  const [keyword, setKeyword] = useState<string>();
-  const [status, setStatus] = useState<CustomerStatus>();
-  const customers = useCustomers({ keyword, status });
+  const table = useTableQuery<Filters>({});
+  const customers = useCustomers(table.params);
   const toggle = useToggleCustomer();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
@@ -104,15 +106,15 @@ export function CustomersPage() {
         <DebouncedSearch
           allowClear
           placeholder={MESSAGES.common.search}
-          onSearch={(k) => setKeyword(k.trim() || undefined)}
+          onSearch={(k) => table.setFilters({ keyword: k.trim() || undefined })}
           style={{ width: 240 }}
         />
         <FilterSelect
-          value={status}
+          value={table.filters.status}
           placeholder={MESSAGES.orders.allStatus}
           style={{ width: 200 }}
           options={STATUS_OPTIONS}
-          onChange={setStatus}
+          onChange={(status) => table.setFilters({ status })}
         />
       </Space>
       <QueryError error={customers.error} onRetry={() => void customers.refetch()} />
@@ -120,8 +122,8 @@ export function CustomersPage() {
         rowKey="customerId"
         loading={customers.isFetching}
         columns={columns}
-        dataSource={customers.data ?? []}
-        pagination={{ pageSize: 20 }}
+        dataSource={customers.data?.items ?? []}
+        pagination={table.pagination(customers.data?.totalItems)}
       />
       <ReasonModal
         open={stopping !== null}
