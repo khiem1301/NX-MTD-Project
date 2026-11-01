@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { EditOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, type TableColumnsType } from 'antd';
+import { EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Button, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -48,29 +50,27 @@ export function VehiclesTab() {
       key: 'action',
       render: (_, v) => (
         <Space size={0}>
-          <Button
-            type="link"
+          <IconAction
+            title={MESSAGES.common.edit}
             icon={<EditOutlined />}
             onClick={() => {
               setEditing(v);
               setFormOpen(true);
             }}
-          >
-            {MESSAGES.common.edit}
-          </Button>
+          />
           {v.status === 'ACTIVE' ? (
-            <Popconfirm
+            <ConfirmAction
               title={VL_MESSAGES.confirmDiscontinue}
               onConfirm={() => change.mutate({ id: v.vehicleId, active: false })}
             >
-              <Button type="link" danger>
-                {VL_LABELS.discontinue}
-              </Button>
-            </Popconfirm>
+              <IconAction title={VL_LABELS.discontinue} icon={<StopOutlined />} danger />
+            </ConfirmAction>
           ) : (
-            <Button type="link" onClick={() => change.mutate({ id: v.vehicleId, active: true })}>
-              {VL_LABELS.reactivate}
-            </Button>
+            <IconAction
+              title={VL_LABELS.reactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => change.mutate({ id: v.vehicleId, active: true })}
+            />
           )}
         </Space>
       ),

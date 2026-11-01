@@ -1,0 +1,4 @@
+/* Calendar luôn vẽ đủ 6 tuần: ẩn hàng không có ngày nào của tháng đang xem. */
+.kpi-month-calendar tbody tr:not(:has(.ant-picker-cell-in-view)) {
+  display: none;
+}

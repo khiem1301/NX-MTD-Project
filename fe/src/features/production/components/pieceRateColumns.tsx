@@ -1,5 +1,7 @@
-import { Button, Space } from 'antd';
+import { CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { IconAction } from '@/components/common/IconAction';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
@@ -51,12 +53,17 @@ export const pieceRateColumns = ({
     render: (_, row) =>
       row.status === 'PendingApproval' ? (
         <Space size={0} wrap>
-          <Button type="link" onClick={() => onApprove(row)}>
-            {text.approve}
-          </Button>
-          <Button type="link" danger onClick={() => onReject(row)}>
-            {text.reject}
-          </Button>
+          <IconAction
+            title={text.approve}
+            icon={<CheckCircleOutlined />}
+            onClick={() => onApprove(row)}
+          />
+          <IconAction
+            title={text.reject}
+            icon={<CloseCircleOutlined />}
+            danger
+            onClick={() => onReject(row)}
+          />
         </Space>
       ) : null,
   },

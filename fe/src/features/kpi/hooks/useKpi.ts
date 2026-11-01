@@ -2,7 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { kpiApi } from '../api/kpiApi';
 import { KPI_TEXT } from '../constants';
-import type { KpiRole, KpiTargetFilter, SaveKpiTargetPayload } from '../types';
+import type {
+  KpiRole,
+  KpiTargetFilter,
+  SaveKpiDailyPlanPayload,
+  SaveKpiTargetPayload,
+} from '../types';
 
 export const KPI_KEY = ['kpi'] as const;
 const targetsKey = (filter: KpiTargetFilter, role: KpiRole) =>
@@ -17,23 +22,25 @@ export const useKpiTargets = (filter: KpiTargetFilter, role: KpiRole = 'manager'
     queryFn: () => kpiApi.getTargets(filter, role),
   });
 
-/** BTP khả dụng cho (đơn, mã hàng, tổ may); chỉ gọi khi đã chọn đủ ba thứ. */
-export const useKpiCapacity = (
+/** Chỉ tiêu tối đa lập được theo số lượng đơn đặt; chỉ gọi khi đã chọn đơn và mã hàng. */
+export const useKpiOrderCapacity = (
   orderId: number | null,
   productId: number | null,
-  sewingTeamId: number | null,
   exceptKpiTargetId?: number,
 ) =>
   useQuery({
-    queryKey: [...KPI_KEY, 'capacity', orderId, productId, sewingTeamId, exceptKpiTargetId],
+    queryKey: [...KPI_KEY, 'order-capacity', orderId, productId, exceptKpiTargetId],
     queryFn: () =>
-      kpiApi.getCapacity({
-        orderId: orderId!,
-        productId: productId!,
-        sewingTeamId: sewingTeamId!,
-        exceptKpiTargetId,
-      }),
-    enabled: orderId !== null && productId !== null && sewingTeamId !== null,
+      kpiApi.getOrderCapacity({ orderId: orderId!, productId: productId!, exceptKpiTargetId }),
+    enabled: orderId !== null && productId !== null,
+  });
+
+/** Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng. */
+export const useKpiCalendar = (kpiTargetId: number | null, role: KpiRole) =>
+  useQuery({
+    queryKey: [...KPI_KEY, role, 'calendar', kpiTargetId],
+    queryFn: () => kpiApi.getCalendar(kpiTargetId!, role),
+    enabled: kpiTargetId !== null,
   });
 
 export const useKpiTargetDetail = (kpiTargetId: number | null, role: KpiRole = 'manager') =>
@@ -68,6 +75,12 @@ export const useSaveKpiTarget = (kpiTargetId: number | null) =>
     },
     { invalidate: [KPI_KEY], successMessage: KPI_TEXT.saved },
   );
+
+export const useSaveKpiDailyPlan = (kpiTargetId: number) =>
+  useApiMutation((body: SaveKpiDailyPlanPayload) => kpiApi.saveDailyPlan(kpiTargetId, body), {
+    invalidate: [KPI_KEY],
+    successMessage: KPI_TEXT.calendar.saved,
+  });
 
 export const useCancelKpiTarget = () =>
   useApiMutation((kpiTargetId: number) => kpiApi.cancelTarget(kpiTargetId), {

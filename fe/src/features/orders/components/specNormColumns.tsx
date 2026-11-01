@@ -45,7 +45,9 @@ export const specNormColumns = ({
         value={r.materialId}
         options={materialOptions}
         loading={materialsLoading}
-        style={{ width: 260 }}
+        popupMatchSelectWidth={false}
+        style={{ width: 420 }}
+        title={materialOptions.find((m) => m.value === r.materialId)?.label}
         onChange={(v) => patchRow(setNorms, r.key, { materialId: v })}
       />
     ),

@@ -1,4 +1,5 @@
-import { Alert, Button, Card, Descriptions, Popconfirm, Space, Tag } from 'antd';
+import { Alert, Button, Card, Descriptions, Space, Tag } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { DownloadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { formatDateTime, formatMonth } from '@/utils/format';
@@ -67,7 +68,7 @@ export function PayrollSummaryPanel({ periodMonth, summary }: Props) {
       ) : null}
 
       <Space>
-        <Popconfirm
+        <ConfirmAction
           title={MESSAGES.payroll.confirmSubmit}
           disabled={!canSubmit}
           onConfirm={() => submit.mutate(summary.payrollId)}
@@ -75,7 +76,7 @@ export function PayrollSummaryPanel({ periodMonth, summary }: Props) {
           <Button type="primary" disabled={!canSubmit} loading={submit.isPending}>
             {PAYROLL_TEXT.submit}
           </Button>
-        </Popconfirm>
+        </ConfirmAction>
         {summary.hasImportedFile ? (
           <Button
             icon={<DownloadOutlined />}

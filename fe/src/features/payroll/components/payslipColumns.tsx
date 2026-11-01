@@ -1,5 +1,7 @@
-import { Button } from 'antd';
+import { EyeOutlined } from '@ant-design/icons';
+
 import type { ColumnsType } from 'antd/es/table';
+import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { PAYROLL_TEXT } from '../constants';
 import type { Payslip } from '../types';
@@ -55,9 +57,7 @@ export const payslipColumns = ({ onView }: PayslipColumnsOptions): ColumnsType<P
     title: MESSAGES.common.actions,
     key: 'action',
     render: (_, row) => (
-      <Button type="link" onClick={() => onView(row)}>
-        {MESSAGES.common.view}
-      </Button>
+      <IconAction title={MESSAGES.common.view} icon={<EyeOutlined />} onClick={() => onView(row)} />
     ),
   },
 ];

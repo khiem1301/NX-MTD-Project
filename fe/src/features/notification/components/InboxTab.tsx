@@ -1,4 +1,6 @@
+import { CheckOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Space, Tag, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
@@ -33,9 +35,11 @@ export function InboxTab() {
       key: 'action',
       render: (_, n) =>
         n.isRead ? null : (
-          <Button type="link" onClick={() => markRead.mutate(n.notificationId)}>
-            Đánh dấu đã đọc
-          </Button>
+          <IconAction
+            title="Đánh dấu đã đọc"
+            icon={<CheckOutlined />}
+            onClick={() => markRead.mutate(n.notificationId)}
+          />
         ),
     },
   ];

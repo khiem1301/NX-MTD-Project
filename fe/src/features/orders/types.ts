@@ -8,6 +8,7 @@ export type Customer = {
   email: string | null;
   defaultAddress: string | null;
   status: CustomerStatus;
+  discontinueReason: string | null;
 };
 export type CustomerStatus = 'Active' | 'Discontinued';
 export type CustomerQuery = { keyword?: string; status?: CustomerStatus };

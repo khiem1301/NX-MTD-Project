@@ -1,6 +1,8 @@
+import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Button, Tag } from 'antd';
+import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -69,9 +71,11 @@ export function MyDefectsPage() {
         d.workerObjection ? (
           <Tag color="volcano">{text.objected}</Tag>
         ) : d.status === 'Recorded' ? (
-          <Button type="link" onClick={() => setObjecting(d)}>
-            {mine.object}
-          </Button>
+          <IconAction
+            title={mine.object}
+            icon={<ExclamationCircleOutlined />}
+            onClick={() => setObjecting(d)}
+          />
         ) : null,
     },
   ];

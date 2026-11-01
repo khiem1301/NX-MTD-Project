@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, RollbackOutlined, EyeOutlined } from '@ant-design/icons';
 import { Alert, Button, Input, Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -9,7 +10,6 @@ import { PM_LABELS } from '../constants';
 import { useBoard } from '../hooks/usePieceMovement';
 import type { OperationProgress, WorkerAllocationLine } from '../types';
 import { MovementFormModal, type AllocationTarget } from './MovementFormModal';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 
@@ -56,9 +56,7 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
       key: 'operation',
       render: (_, o) => (
         <Space direction="vertical" size={0}>
-          <DetailLink
-            onClick={() => setViewing(o)}
-          >{`${o.operationCode} - ${o.operationName}`}</DetailLink>
+          <Typography.Text>{`${o.operationCode} - ${o.operationName}`}</Typography.Text>
           <Space size={4}>
             {o.groupName && <Tag color="geekblue">{o.groupName}</Tag>}
             {o.usesSemiFinished && <Tag color="blue">{PM_LABELS.usesPieces}</Tag>}
@@ -79,17 +77,25 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
     {
       title: MESSAGES.common.actions,
       key: 'action',
-      render: (_, o) =>
-        canEdit && (
-          <Button
-            type="primary"
-            size="small"
-            disabled={o.unallocatedQty <= 0}
-            onClick={() => setTarget({ kind: 'HANDOVER', progress: o })}
-          >
-            {PM_LABELS.giveAction}
-          </Button>
-        ),
+      render: (_, o) => (
+        <Space size={4}>
+          <IconAction
+            title={MESSAGES.common.view}
+            icon={<EyeOutlined />}
+            onClick={() => setViewing(o)}
+          />
+          {canEdit && (
+            <Button
+              type="primary"
+              size="small"
+              disabled={o.unallocatedQty <= 0}
+              onClick={() => setTarget({ kind: 'HANDOVER', progress: o })}
+            >
+              {PM_LABELS.giveAction}
+            </Button>
+          )}
+        </Space>
+      ),
     },
   ];
 
@@ -156,13 +162,12 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
                 key: 'action',
                 render: (_: unknown, w: WorkerAllocationLine) =>
                   canEdit && (
-                    <Button
-                      type="link"
+                    <IconAction
+                      title={PM_LABELS.retrieveAction}
+                      icon={<RollbackOutlined />}
                       disabled={w.retrievableQty <= 0}
                       onClick={() => setTarget({ kind: 'RETRIEVAL', progress: viewing, worker: w })}
-                    >
-                      {PM_LABELS.retrieveAction}
-                    </Button>
+                    />
                   ),
               },
             ]}

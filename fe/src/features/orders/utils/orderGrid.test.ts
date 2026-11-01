@@ -3,8 +3,11 @@ import {
   blockTotal,
   blocksTotals,
   fromLines,
+  rowTotal,
+  sizeTotal,
   sortSizes,
   toLines,
+  type GridRow,
   type ProductBlock,
 } from './orderGrid';
 
@@ -84,5 +87,16 @@ describe('orderGrid', () => {
     const blocks = fromLines([line(1, 'Đỏ', 'S', 10, 100), line(2, 'Đỏ', 'M', 20, 100)]);
     expect(blockTotal(blocks[0] as ProductBlock)).toBe(30);
     expect(blocksTotals(blocks)).toEqual({ qty: 30, amount: 3000 });
+  });
+
+  it('tính tổng theo màu và theo size, ô trống tính 0', () => {
+    const block = fromLines([
+      line(1, 'Đỏ', 'S', 10),
+      line(2, 'Đỏ', 'M', 20),
+      line(3, 'Xanh', 'S', 5),
+    ])[0] as ProductBlock;
+    expect(rowTotal(block, block.rows[1] as GridRow)).toBe(5);
+    expect(sizeTotal(block, 'S')).toBe(15);
+    expect(sizeTotal(block, 'M')).toBe(20);
   });
 });

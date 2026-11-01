@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Form, Popconfirm, Tooltip } from 'antd';
+import { Alert, Button, Form, Tooltip } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { PrinterOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useAttachments } from '@/hooks/useAttachments';
@@ -79,14 +80,14 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
           {MESSAGES.common.printExcel}
         </Button>
         {isManager && notExportedYet && (
-          <Popconfirm
+          <ConfirmAction
             title={DISPATCH_MESSAGES.confirmCancel}
             onConfirm={() => cancel.mutate(note.dispatchNoteId, { onSuccess: onClose })}
           >
             <Button danger loading={cancel.isPending}>
               {DISPATCH_LABELS.cancel}
             </Button>
-          </Popconfirm>
+          </ConfirmAction>
         )}
         {isKeeper && pending && (
           <Button danger onClick={() => setRejecting(true)}>
@@ -96,7 +97,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         {canExport && (
           <Tooltip title={hasIssuePhoto ? undefined : DISPATCH_LABELS.needIssuePhoto}>
             <span>
-              <Popconfirm
+              <ConfirmAction
                 title={DISPATCH_MESSAGES.confirmExport}
                 disabled={!hasIssuePhoto}
                 onConfirm={() => exportGoods.mutate(note.dispatchNoteId, { onSuccess: onClose })}
@@ -104,7 +105,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
                 <Button type="primary" disabled={!hasIssuePhoto} loading={exportGoods.isPending}>
                   {DISPATCH_LABELS.export}
                 </Button>
-              </Popconfirm>
+              </ConfirmAction>
             </span>
           </Tooltip>
         )}

@@ -1,3 +1,6 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { Alert, Card, Col, Empty, Row, Space, Spin, Statistic, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -10,7 +13,6 @@ import type { MyEstimatedPayDay } from '../types';
 import { formatCurrency } from '../utils';
 import { PageCard } from '@/components/common/PageCard';
 import { DetailModal } from '@/components/common/DetailModal';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 import { DayDetail } from '../components/DayDetail';
@@ -35,7 +37,7 @@ export function MyEstimatedPayPage() {
       dataIndex: 'workDate',
       render: (value: string, row) => (
         <Space>
-          <DetailLink onClick={() => setViewingDate(row.workDate)}>{formatDate(value)}</DetailLink>
+          {formatDate(value)}
           {row.isSunday && <Tag color="gold">{text.columns.sunday}</Tag>}
         </Space>
       ),
@@ -75,6 +77,17 @@ export function MyEstimatedPayPage() {
       dataIndex: 'estimatedPay',
       align: 'right',
       render: (v: number) => <Typography.Text strong>{formatCurrency(v)}</Typography.Text>,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, row) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingDate(row.workDate)}
+        />
+      ),
     },
   ];
 

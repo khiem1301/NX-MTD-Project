@@ -1,5 +1,7 @@
-import { Button, InputNumber, Tag } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
+import { InputNumber, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { IconAction } from '@/components/common/IconAction';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
@@ -84,9 +86,12 @@ export const outputColumns = ({
     key: 'remove',
     render: (_, r) =>
       r.outputRecordId === null && isExtraRow(r) ? (
-        <Button type="link" danger onClick={() => onRemoveExtra(r)}>
-          {text.removeRow}
-        </Button>
+        <IconAction
+          title={text.removeRow}
+          icon={<DeleteOutlined />}
+          danger
+          onClick={() => onRemoveExtra(r)}
+        />
       ) : null,
   },
 ];

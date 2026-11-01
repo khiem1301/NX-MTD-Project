@@ -3,6 +3,7 @@ import { Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Dayjs } from 'dayjs';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
@@ -62,12 +63,13 @@ export function QcBoard({ role }: { role: QcRole }) {
       render: (_, b) =>
         isManager || b.canEdit ? (
           <Space size={0} wrap>
-            <Button type="link" icon={<EditOutlined />} onClick={() => setEditing(b)}>
-              {text.edit}
-            </Button>
-            <Button type="link" icon={<DeleteOutlined />} danger onClick={() => setDeleting(b)}>
-              {text.delete}
-            </Button>
+            <IconAction title={text.edit} icon={<EditOutlined />} onClick={() => setEditing(b)} />
+            <IconAction
+              title={text.delete}
+              icon={<DeleteOutlined />}
+              danger
+              onClick={() => setDeleting(b)}
+            />
           </Space>
         ) : null,
     },

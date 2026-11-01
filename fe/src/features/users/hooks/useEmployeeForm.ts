@@ -1,6 +1,6 @@
 import { Form } from 'antd';
 import dayjs from 'dayjs';
-import { MANAGER_HIDDEN_ROLES, suggestPayType, ROLE_LABEL, type PayType } from '@/constants/hr';
+import { ADMIN_ASSIGNED_ROLES, suggestPayType, ROLE_LABEL, type PayType } from '@/constants/hr';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import type { ApiError } from '@/types/api';
 import { toApiDate } from '@/utils/format';
@@ -19,10 +19,12 @@ export function useEmployeeForm(
   const create = useCreateEmployee();
   const update = useUpdateEmployee(employee?.employeeId ?? 0);
   const saving = create.isPending || update.isPending;
-  // Quản đốc không gán được vai trò mà mình không nhìn thấy (GBR-01).
-  const roleOptions = isAdmin
-    ? ROLE_OPTIONS
-    : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
+  // Quản đốc không gán được Admin / Quản đốc / Kế toán; nhân viên đang là Quản đốc thì khóa ô vai trò, hiện đúng vai trò hiện tại.
+  const roleLocked = !isAdmin && !!employee && ADMIN_ASSIGNED_ROLES.includes(employee.role);
+  const roleOptions =
+    isAdmin || roleLocked
+      ? ROLE_OPTIONS
+      : ROLE_OPTIONS.filter((o) => !ADMIN_ASSIGNED_ROLES.includes(o.value));
 
   const suggest = () => {
     const values = form.getFieldsValue();
@@ -96,6 +98,7 @@ export function useEmployeeForm(
     teams,
     saving,
     roleOptions,
+    roleLocked,
     suggest,
     handleFinish,
     initialValues,

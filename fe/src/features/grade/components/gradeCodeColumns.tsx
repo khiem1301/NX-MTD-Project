@@ -1,6 +1,14 @@
-import { DeleteOutlined, DollarOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Tag, type TableColumnsType } from 'antd';
-import { DetailLink } from '@/components/common/DetailLink';
+import {
+  DeleteOutlined,
+  DollarOutlined,
+  EditOutlined,
+  StopOutlined,
+  PlayCircleOutlined,
+  EyeOutlined,
+} from '@ant-design/icons';
+import { Space, Tag, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { GR_LABELS } from '../constants';
@@ -30,7 +38,6 @@ export const gradeCodeColumns = ({
     title: GR_LABELS.gradeCode,
     dataIndex: 'gradeCode',
     width: 100,
-    render: (v: string, row) => <DetailLink onClick={() => onView(row)}>{v}</DetailLink>,
   },
   { title: GR_LABELS.gradeName, dataIndex: 'gradeName' },
   {
@@ -72,21 +79,30 @@ export const gradeCodeColumns = ({
     key: 'action',
     render: (_, row) => (
       <Space size={0} wrap>
-        <Button type="link" icon={<DollarOutlined />} onClick={() => onChangeAmount(row)}>
-          {GR_LABELS.changeAmount}
-        </Button>
-        <Button type="link" icon={<EditOutlined />} onClick={() => onEdit(row)}>
-          {MESSAGES.common.edit}
-        </Button>
-        <Button type="link" onClick={() => onToggleStatus(row)}>
-          {row.status === 'Active' ? GR_LABELS.deactivate : GR_LABELS.reactivate}
-        </Button>
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onView(row)}
+        />
+        <IconAction
+          title={GR_LABELS.changeAmount}
+          icon={<DollarOutlined />}
+          onClick={() => onChangeAmount(row)}
+        />
+        <IconAction
+          title={MESSAGES.common.edit}
+          icon={<EditOutlined />}
+          onClick={() => onEdit(row)}
+        />
+        <IconAction
+          title={row.status === 'Active' ? GR_LABELS.deactivate : GR_LABELS.reactivate}
+          icon={row.status === 'Active' ? <StopOutlined /> : <PlayCircleOutlined />}
+          onClick={() => onToggleStatus(row)}
+        />
         {!row.inUse && (
-          <Popconfirm title={GR_LABELS.deleteConfirm} onConfirm={() => onRemove(row)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              {MESSAGES.common.delete}
-            </Button>
-          </Popconfirm>
+          <ConfirmAction title={GR_LABELS.deleteConfirm} onConfirm={() => onRemove(row)}>
+            <IconAction title={MESSAGES.common.delete} danger icon={<DeleteOutlined />} />
+          </ConfirmAction>
         )}
       </Space>
     ),

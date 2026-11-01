@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Form, Input, InputNumber, Popconfirm, Space } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Space } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
@@ -53,14 +54,14 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
   });
 
   const cancelAction = canCancel && h && (
-    <Popconfirm
+    <ConfirmAction
       title={MESSAGES.cutting.confirmCancelHandover}
       onConfirm={() => cancel.mutate(h.cutHandoverId, { onSuccess: onClose })}
     >
       <Button danger loading={cancel.isPending}>
         {LABELS.cancelHandover}
       </Button>
-    </Popconfirm>
+    </ConfirmAction>
   );
 
   const actions =
@@ -70,11 +71,11 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
         <Button danger onClick={() => setRejecting(true)}>
           {LABELS.reject}
         </Button>
-        <Popconfirm title={MESSAGES.cutting.confirmHandover} onConfirm={() => form.submit()}>
+        <ConfirmAction title={MESSAGES.cutting.confirmHandover} onConfirm={() => form.submit()}>
           <Button type="primary" loading={confirm.isPending}>
             {LABELS.receive}
           </Button>
-        </Popconfirm>
+        </ConfirmAction>
       </Space>
     ));
 

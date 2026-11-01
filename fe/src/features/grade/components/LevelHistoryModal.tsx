@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Alert, Button, Popconfirm, Space, type TableColumnsType } from 'antd';
+import { Alert, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { GR_LABELS } from '../constants';
@@ -32,17 +34,17 @@ export function LevelHistoryModal({
       render: (_, row) =>
         dayjs(row.effectiveDate).isAfter(dayjs(), 'day') ? (
           <Space size={0} wrap>
-            <Button type="link" icon={<EditOutlined />} onClick={() => setEditing(row)}>
-              {MESSAGES.common.edit}
-            </Button>
-            <Popconfirm
+            <IconAction
+              title={MESSAGES.common.edit}
+              icon={<EditOutlined />}
+              onClick={() => setEditing(row)}
+            />
+            <ConfirmAction
               title={GR_LABELS.deleteLevelConfirm}
               onConfirm={() => deleteLevel.mutate(row.gradeLevelId)}
             >
-              <Button type="link" danger icon={<DeleteOutlined />}>
-                {MESSAGES.common.delete}
-              </Button>
-            </Popconfirm>
+              <IconAction title={MESSAGES.common.delete} danger icon={<DeleteOutlined />} />
+            </ConfirmAction>
           </Space>
         ) : null,
     },

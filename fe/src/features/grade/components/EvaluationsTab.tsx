@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { Button, Space, Tag, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -79,12 +80,17 @@ export function EvaluationsTab() {
             render: (_: unknown, e: GradeEvaluation) =>
               e.status === EVAL_STATUS.SUBMITTED ? (
                 <Space size={0} wrap>
-                  <Button type="link" onClick={() => setApplying(e)}>
-                    {GR_LABELS.apply}
-                  </Button>
-                  <Button type="link" danger onClick={() => setRejecting(e)}>
-                    {GR_LABELS.notApply}
-                  </Button>
+                  <IconAction
+                    title={GR_LABELS.apply}
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => setApplying(e)}
+                  />
+                  <IconAction
+                    title={GR_LABELS.notApply}
+                    icon={<CloseCircleOutlined />}
+                    danger
+                    onClick={() => setRejecting(e)}
+                  />
                 </Space>
               ) : null,
           },

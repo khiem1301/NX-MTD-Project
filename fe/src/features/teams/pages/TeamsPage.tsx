@@ -1,5 +1,13 @@
-import { Button, Card, Popconfirm, Space, Switch, type TableColumnsType } from 'antd';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Card, Space, Switch, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
+import {
+  PlusOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  StopOutlined,
+  EyeOutlined,
+} from '@ant-design/icons';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
@@ -10,7 +18,6 @@ import { TeamDetailModal } from '../components/TeamDetailModal';
 import { TeamFormModal } from '../components/TeamFormModal';
 import { useTeams, useTeamStatus } from '../hooks/useTeams';
 import type { TeamListItem } from '../types';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 
 /** UC18: Admin + Quản đốc quản lý tổ. Ngừng tổ còn người bị chặn ở BE (TEAM_HAS_ACTIVE_MEMBERS). */
@@ -26,9 +33,6 @@ export function TeamsPage() {
     {
       title: MESSAGES.hr.teamCode,
       dataIndex: 'teamCode',
-      render: (v: string, t) => (
-        <DetailLink onClick={() => setParams({ id: String(t.teamId) })}>{v}</DetailLink>
-      ),
     },
     { title: MESSAGES.hr.teamName, dataIndex: 'teamName' },
     {
@@ -48,29 +52,32 @@ export function TeamsPage() {
       title: MESSAGES.common.actions,
       render: (_: unknown, t) => (
         <Space size={0} wrap>
-          <Button
-            type="link"
+          <IconAction
+            title={MESSAGES.common.view}
+            icon={<EyeOutlined />}
+            onClick={() => setParams({ id: String(t.teamId) })}
+          />
+          <IconAction
+            title={MESSAGES.common.edit}
             icon={<EditOutlined />}
             onClick={() => {
               setEditing(t);
               setOpen(true);
             }}
-          >
-            {MESSAGES.common.edit}
-          </Button>
+          />
           {t.status === 'Active' ? (
-            <Popconfirm
+            <ConfirmAction
               title={MESSAGES.hr.discontinue}
               onConfirm={() => status.mutate({ id: t.teamId, active: false })}
             >
-              <Button type="link" danger>
-                {MESSAGES.hr.discontinue}
-              </Button>
-            </Popconfirm>
+              <IconAction title={MESSAGES.hr.discontinue} icon={<StopOutlined />} danger />
+            </ConfirmAction>
           ) : (
-            <Button type="link" onClick={() => status.mutate({ id: t.teamId, active: true })}>
-              {MESSAGES.hr.reactivate}
-            </Button>
+            <IconAction
+              title={MESSAGES.hr.reactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => status.mutate({ id: t.teamId, active: true })}
+            />
           )}
         </Space>
       ),

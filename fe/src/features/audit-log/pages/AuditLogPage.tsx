@@ -1,68 +1,26 @@
 import { useState } from 'react';
-import { Card, Descriptions, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
+import { DataTable } from '@/components/common/DataTable';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { AppRangePicker } from '@/components/common/DateInputs';
+import { FilterSelect } from '@/components/common/FilterSelect';
+import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
+import { TableToolbar } from '@/components/common/TableToolbar';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
-import { API_DATE, formatDateTime } from '@/utils/format';
-import { DebouncedSearch } from '@/components/common/DebouncedSearch';
-import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailModal } from '@/components/common/DetailModal';
-import { DetailLink } from '@/components/common/DetailLink';
-import { DataTable } from '@/components/common/DataTable';
-import { AppRangePicker } from '@/components/common/DateInputs';
-import { TableToolbar } from '@/components/common/TableToolbar';
-
-type AuditRow = {
-  auditLogId: number;
-  tableName: string;
-  recordId: number;
-  action: string;
-  oldValues: string | null;
-  newValues: string | null;
-  reason: string | null;
-  changedBy: number | null;
-  changedByName: string | null;
-  changedAt: string;
-};
+import { AUDIT_ACTION, auditTableLabel } from '@/utils/auditLabels';
+import { API_DATE } from '@/utils/format';
+import { AuditLogDetailModal } from '../components/AuditLogDetailModal';
+import { auditLogColumns } from '../components/auditLogColumns';
+import type { AuditRow } from '../types';
 
 const BASE = '/api/v1/admin/audit-logs';
-const ACTIONS = [
-  'INSERT',
-  'UPDATE',
-  'DELETE',
-  'APPROVE',
-  'REJECT',
-  'CONFIRM',
-  'LOCK',
-  'UNLOCK',
-  'LOGIN',
-];
-const ACTION_COLOR: Record<string, string> = {
-  INSERT: 'green',
-  UPDATE: 'blue',
-  DELETE: 'red',
-  APPROVE: 'cyan',
-  REJECT: 'orange',
-  CONFIRM: 'geekblue',
-  LOCK: 'purple',
-  UNLOCK: 'purple',
-  LOGIN: 'default',
-};
 
 const get = async <T,>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
-
-const pretty = (json: string | null) => {
-  if (!json) return '—';
-  try {
-    return JSON.stringify(JSON.parse(json), null, 2);
-  } catch {
-    return json;
-  }
-};
 
 type Filters = {
   keyword?: string;
@@ -72,7 +30,7 @@ type Filters = {
   toDate?: string;
 };
 
-/** UC22: Admin xem nhật ký thay đổi dữ liệu — ai, lúc nào, bảng nào, giá trị cũ / mới, lý do. */
+/** UC22: Admin xem nhật ký thay đổi dữ liệu — ai, lúc nào, đối tượng nào, thay đổi gì, lý do. */
 export function AuditLogPage() {
   const table = useTableQuery<Filters>({});
   const [viewing, setViewing] = useState<AuditRow | null>(null);
@@ -86,32 +44,8 @@ export function AuditLogPage() {
     queryFn: () => get<Paginated<AuditRow>>(BASE, table.params),
   });
 
-  const columns: TableColumnsType<AuditRow> = [
-    {
-      title: 'Lúc',
-      dataIndex: 'changedAt',
-      width: 160,
-      render: (v: string, r) => (
-        <DetailLink onClick={() => setViewing(r)}>{formatDateTime(v)}</DetailLink>
-      ),
-    },
-    {
-      title: 'Người thực hiện',
-      dataIndex: 'changedByName',
-      render: (v: string | null) => v ?? 'Hệ thống',
-    },
-    { title: 'Bảng', dataIndex: 'tableName' },
-    { title: 'Mã bản ghi', dataIndex: 'recordId', align: 'right' },
-    {
-      title: 'Hành động',
-      dataIndex: 'action',
-      render: (v: string) => <Tag color={ACTION_COLOR[v] ?? 'default'}>{v}</Tag>,
-    },
-    { title: 'Lý do', dataIndex: 'reason', render: (v: string | null) => v ?? '—' },
-  ];
-
   return (
-    <Card title="Nhật ký thay đổi">
+    <PageCard title="Nhật ký thay đổi">
       <TableToolbar
         filters={
           <>
@@ -124,16 +58,16 @@ export function AuditLogPage() {
             <FilterSelect
               value={table.filters.tableName}
               showSearch
-              placeholder="Bảng"
-              style={{ width: 200 }}
-              options={(tables.data ?? []).map((t) => ({ value: t, label: t }))}
+              placeholder="Đối tượng"
+              style={{ width: 220 }}
+              options={(tables.data ?? []).map((t) => ({ value: t, label: auditTableLabel(t) }))}
               onChange={(tableName?: string) => table.setFilters({ tableName })}
             />
             <FilterSelect
               value={table.filters.action}
               placeholder="Hành động"
-              style={{ width: 160 }}
-              options={ACTIONS.map((a) => ({ value: a, label: a }))}
+              style={{ width: 180 }}
+              options={Object.entries(AUDIT_ACTION).map(([value, a]) => ({ value, label: a.text }))}
               onChange={(action?: string) => table.setFilters({ action })}
             />
             <AppRangePicker
@@ -150,49 +84,12 @@ export function AuditLogPage() {
       <QueryError error={logs.error} onRetry={() => void logs.refetch()} />
       <DataTable
         rowKey="auditLogId"
-        columns={columns}
+        columns={auditLogColumns(setViewing)}
         dataSource={logs.data?.items}
         loading={logs.isFetching}
         pagination={table.pagination(logs.data?.totalItems)}
       />
-      <DetailModal
-        open={viewing !== null}
-        onClose={() => setViewing(null)}
-        title="Chi tiết thay đổi"
-        size="md"
-      >
-        {viewing && (
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="Lúc">{formatDateTime(viewing.changedAt)}</Descriptions.Item>
-              <Descriptions.Item label="Người thực hiện">
-                {viewing.changedByName ?? 'Hệ thống'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Bảng / bản ghi">{`${viewing.tableName} #${viewing.recordId}`}</Descriptions.Item>
-              <Descriptions.Item label="Hành động">{viewing.action}</Descriptions.Item>
-              <Descriptions.Item label="Lý do" span={2}>
-                {viewing.reason ?? '—'}
-              </Descriptions.Item>
-            </Descriptions>
-            <div>
-              <Typography.Text strong>Giá trị cũ</Typography.Text>
-              <pre
-                style={{ background: 'rgba(0,0,0,0.04)', padding: 8, margin: 0, overflow: 'auto' }}
-              >
-                {pretty(viewing.oldValues)}
-              </pre>
-            </div>
-            <div>
-              <Typography.Text strong>Giá trị mới</Typography.Text>
-              <pre
-                style={{ background: 'rgba(0,0,0,0.04)', padding: 8, margin: 0, overflow: 'auto' }}
-              >
-                {pretty(viewing.newValues)}
-              </pre>
-            </div>
-          </Space>
-        )}
-      </DetailModal>
-    </Card>
+      <AuditLogDetailModal row={viewing} onClose={() => setViewing(null)} />
+    </PageCard>
   );
 }

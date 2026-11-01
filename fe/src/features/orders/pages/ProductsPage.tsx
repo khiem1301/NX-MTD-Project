@@ -1,6 +1,14 @@
 import { useState } from 'react';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Card, Popconfirm, Space, Tag, type TableColumnsType } from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  PlayCircleOutlined,
+  StopOutlined,
+  ProfileOutlined,
+} from '@ant-design/icons';
+import { Button, Card, Space, Tag, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ProductImage } from '../components/ProductImage';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -16,7 +24,6 @@ import type { ProductListItem, ProductStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { PRODUCT_STATUS_TAG } from '../constants';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -37,7 +44,6 @@ export function ProductsPage() {
     {
       title: MESSAGES.orders.productCode,
       dataIndex: 'productCode',
-      render: (v: string, p) => <DetailLink onClick={() => setSpecFor(p)}>{v}</DetailLink>,
     },
     { title: MESSAGES.orders.productName, dataIndex: 'productName' },
     {
@@ -60,31 +66,34 @@ export function ProductsPage() {
       title: MESSAGES.common.actions,
       render: (_: unknown, p) => (
         <Space size={0} wrap>
+          <IconAction
+            title={MESSAGES.orders.spec.button}
+            icon={<ProfileOutlined />}
+            onClick={() => setSpecFor(p)}
+          />
           {!isAccountant && (
-            <Button
-              type="link"
+            <IconAction
+              title={MESSAGES.common.edit}
               icon={<EditOutlined />}
               onClick={() => {
                 setEditing(p);
                 setOpen(true);
               }}
-            >
-              {MESSAGES.common.edit}
-            </Button>
+            />
           )}
           {isAccountant ? null : p.status === 'Active' ? (
-            <Popconfirm
+            <ConfirmAction
               title={MESSAGES.orders.discontinueConfirm}
               onConfirm={() => discontinue.mutate(p.productId)}
             >
-              <Button type="link" danger>
-                {MESSAGES.orders.discontinue}
-              </Button>
-            </Popconfirm>
+              <IconAction title={MESSAGES.orders.discontinue} icon={<StopOutlined />} danger />
+            </ConfirmAction>
           ) : (
-            <Button type="link" onClick={() => reactivate.mutate(p.productId)}>
-              {MESSAGES.orders.reactivate}
-            </Button>
+            <IconAction
+              title={MESSAGES.orders.reactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => reactivate.mutate(p.productId)}
+            />
           )}
         </Space>
       ),

@@ -1,4 +1,4 @@
-import { Alert, Avatar, Card, Descriptions, Space, Spin } from 'antd';
+import { Avatar, Card, Descriptions, Space, Spin } from 'antd';
 import { useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
@@ -12,18 +12,18 @@ export function ProfilePage() {
   const profile = useProfile();
   const [params] = useSearchParams();
   const formRef = useRef<HTMLDivElement>(null);
-  const mustChange = params.get('changePassword') === '1';
+  const toPassword = params.get('changePassword') === '1';
 
+  // Vào từ menu "Đổi mật khẩu": cuộn tới form. Mật khẩu tạm được xử lý riêng ở ForceChangePasswordPage.
   useEffect(() => {
-    if (mustChange) formRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [mustChange]);
+    if (toPassword) formRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [toPassword]);
 
   if (profile.isLoading) return <Spin />;
   const p = profile.data;
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      {mustChange && <Alert type="warning" showIcon message={MESSAGES.hr.tempPasswordNotice} />}
       <Card title={MESSAGES.hr.profileTitle}>
         <QueryError error={profile.error} onRetry={() => void profile.refetch()} />
         {p && (

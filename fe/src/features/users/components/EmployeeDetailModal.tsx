@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Popconfirm, Result, Space, Tabs } from 'antd';
+import { Alert, Button, Card, Result, Space, Tabs } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { AuditHistory } from '@/components/common/AuditHistory';
 import { DetailModal } from '@/components/common/DetailModal';
 import { NoteModal } from '@/components/common/NoteModal';
@@ -92,12 +93,12 @@ export function EmployeeDetailModal() {
                   </Button>
                 )}
                 {!isSelf && active && (
-                  <Popconfirm
+                  <ConfirmAction
                     title={MESSAGES.hr.resetConfirm}
                     onConfirm={() => reset.mutate(undefined, { onSuccess: setTempPassword })}
                   >
                     <Button>{MESSAGES.hr.resetPassword}</Button>
-                  </Popconfirm>
+                  </ConfirmAction>
                 )}
               </Space>
             </Card>

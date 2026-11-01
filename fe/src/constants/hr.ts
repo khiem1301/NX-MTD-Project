@@ -16,6 +16,8 @@ export const ROLE_LABEL: Record<Role, string> = {
 /** UC16: Quản đốc không thấy nhân viên có các vai trò này (khớp RoleCodes.HiddenFromManager ở BE). */
 /** Quản đốc quản lý mọi người trừ Admin và Kế toán (BE: RoleCodes.HiddenFromManager). */
 export const MANAGER_HIDDEN_ROLES: readonly Role[] = ['Admin', 'Accountant'];
+/** Chỉ Admin được gán hoặc đổi các vai trò này (BE: RoleCodes.AdminAssignedOnly). */
+export const ADMIN_ASSIGNED_ROLES: readonly Role[] = ['Admin', 'Manager', 'Accountant'];
 
 export type PayType = 'PieceRate' | 'Daily' | 'Monthly';
 export const PAY_TYPE_LABEL: Record<PayType, string> = {
@@ -25,7 +27,11 @@ export const PAY_TYPE_LABEL: Record<PayType, string> = {
 };
 
 export type TeamType = 'Cutting' | 'Sewing' | 'Office';
-export const TEAM_TYPE_LABEL: Record<TeamType, string> = { Cutting: 'Tổ cắt', Sewing: 'Tổ may', Office: 'Văn phòng' };
+export const TEAM_TYPE_LABEL: Record<TeamType, string> = {
+  Cutting: 'Tổ cắt',
+  Sewing: 'Tổ may',
+  Office: 'Văn phòng',
+};
 
 export const EMPLOYEE_STATUS_TAG: Record<string, StatusLabel> = {
   Active: { text: 'Đang làm', color: 'green' },
@@ -43,7 +49,10 @@ export const TEAM_STATUS_TAG: Record<string, StatusLabel> = {
 };
 
 /** Gợi ý kiểu lương khi chọn vai trò + loại tổ (chỉ gợi ý, người dùng sửa được). */
-export const suggestPayType = (role: Role | undefined, teamType: TeamType | undefined): PayType | undefined => {
+export const suggestPayType = (
+  role: Role | undefined,
+  teamType: TeamType | undefined,
+): PayType | undefined => {
   if (!role) return undefined;
   if (role === 'Worker' && teamType === 'Sewing') return 'PieceRate';
   if ((role === 'Worker' && teamType === 'Cutting') || role === 'QaQc') return 'Daily';

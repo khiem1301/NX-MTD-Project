@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm } from 'antd';
+import { Alert, Button, Descriptions, Form, Input, InputNumber } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -66,22 +67,22 @@ export function FgHandoverModalBody({
             <Button danger onClick={() => setRejecting(true)}>
               {FG_LABELS.reject}
             </Button>
-            <Popconfirm title={FG_MESSAGES.confirmReceive} onConfirm={() => form.submit()}>
+            <ConfirmAction title={FG_MESSAGES.confirmReceive} onConfirm={() => form.submit()}>
               <Button type="primary" loading={confirm.isPending}>
                 {FG_LABELS.receive}
               </Button>
-            </Popconfirm>
+            </ConfirmAction>
           </>
         )}
         {canCancel && (
-          <Popconfirm
+          <ConfirmAction
             title={FG_MESSAGES.confirmCancel}
             onConfirm={() => cancel.mutate(h.fgHandoverId, { onSuccess: onClose })}
           >
             <Button danger loading={cancel.isPending}>
               {FG_LABELS.cancel}
             </Button>
-          </Popconfirm>
+          </ConfirmAction>
         )}
       </ModalActions>
       {h.rejectReason && (

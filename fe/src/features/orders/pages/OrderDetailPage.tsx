@@ -1,21 +1,11 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Card,
-  Descriptions,
-  Popconfirm,
-  Result,
-  Space,
-  Spin,
-  Tabs,
-  Tag,
-  Tooltip,
-} from 'antd';
+import { Alert, Button, Descriptions, Result, Space, Spin, Tabs, Tag, Tooltip, Typography } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ORDER_DETAIL_TABS } from '@/app/orderDetailTabs';
 import { AuditHistory } from '@/components/common/AuditHistory';
 import { NoteModal } from '@/components/common/NoteModal';
+import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ERROR_CODES } from '@/constants/errorCodes';
@@ -29,9 +19,10 @@ import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { usePermission } from '@/hooks/usePermission';
 import type { ApiError } from '@/types/api';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { OrderReadOnlyGrid } from '../components/OrderReadOnlyGrid';
 import { useCancelOrder, useOrder, useStartProduction, useStopOrder } from '../hooks/useOrders';
+import { blocksTotals, fromLines } from '../utils/orderGrid';
 
 type Pending = 'cancel' | 'stop' | null;
 
@@ -59,6 +50,7 @@ export function OrderDetailPage() {
 
   const canEdit = data.status === 'New' || ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
   const canStop = ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
+  const totals = blocksTotals(fromLines(data.lines));
 
   const submit = (note: string | null) => {
     const onDone = { onSettled: () => setPending(null) };
@@ -85,11 +77,18 @@ export function OrderDetailPage() {
   ];
 
   return (
-    <Card
-      title={data.orderCode}
+    <PageCard
+      onBack={() => navigate(ROUTES.orders)}
+      title={
+        <Space size={8} wrap>
+          {data.orderCode}
+          <StatusTag status={data.status} labels={ORDER_STATUS_TAG} />
+          {data.isDelayRisk && <Tag color="red">{MESSAGES.orders.delayRisk}</Tag>}
+        </Space>
+      }
+      description={data.customerName}
       extra={
         <Space wrap>
-          <Button onClick={() => navigate(ROUTES.orders)}>{MESSAGES.common.close}</Button>
           {canEdit && (
             <Button onClick={() => navigate(ROUTES.orderEdit(data.orderId))}>
               {MESSAGES.common.edit}
@@ -111,7 +110,7 @@ export function OrderDetailPage() {
                 data.materialStatus === 'Awaiting' ? MESSAGES.orders.startProductionHint : undefined
               }
             >
-              <Popconfirm
+              <ConfirmAction
                 title={MESSAGES.orders.confirmStartProduction}
                 onConfirm={() => start.mutate(data.rowVer)}
               >
@@ -122,7 +121,7 @@ export function OrderDetailPage() {
                 >
                   {MESSAGES.orders.startProduction}
                 </Button>
-              </Popconfirm>
+              </ConfirmAction>
             </Tooltip>
           )}
         </Space>
@@ -133,41 +132,43 @@ export function OrderDetailPage() {
           type="warning"
           showIcon
           message={`${MESSAGES.orders.stopReason}: ${data.stopReason}`}
-          style={{ marginBottom: 16 }}
         />
       )}
       <Descriptions
         size="small"
-        column={{ xs: 1, sm: 2, lg: 3 }}
         bordered
-        style={{ marginBottom: 16 }}
+        layout="vertical"
+        column={{ xs: 2, sm: 3, md: 3, lg: 6, xl: 6, xxl: 6 }}
       >
-        <Descriptions.Item label={MESSAGES.orders.customer}>{data.customerName}</Descriptions.Item>
         <Descriptions.Item label={MESSAGES.orders.receivedDate}>
           {formatDate(data.receivedDate)}
         </Descriptions.Item>
         <Descriptions.Item label={MESSAGES.orders.dueDate}>
           {formatDate(data.dueDate)}
         </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.status}>
-          <Space size={4}>
-            <StatusTag status={data.status} labels={ORDER_STATUS_TAG} />
-            {data.isDelayRisk && <Tag color="red">{MESSAGES.orders.delayRisk}</Tag>}
-          </Space>
-        </Descriptions.Item>
         <Descriptions.Item label={MESSAGES.orders.materialStatus}>
           <StatusTag status={data.materialStatus} labels={MATERIAL_STATUS_TAG} />
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.totalQty}>
+          <b>{formatQty(totals.qty)}</b>
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.totalAmount}>
+          <b>{formatCurrency(totals.amount)}</b>
         </Descriptions.Item>
         <Descriptions.Item label={MESSAGES.requests.createdAt}>
           {formatDateTime(data.createdAt)}
         </Descriptions.Item>
-        {data.note && (
-          <Descriptions.Item label={MESSAGES.orders.note} span={3}>
-            {data.note}
-          </Descriptions.Item>
-        )}
       </Descriptions>
-      <Tabs items={tabs} />
+      {data.note && (
+        <Typography.Paragraph
+          type="secondary"
+          ellipsis={{ rows: 2, expandable: true }}
+          style={{ marginBottom: 0 }}
+        >
+          {`${MESSAGES.orders.note}: ${data.note}`}
+        </Typography.Paragraph>
+      )}
+      <Tabs size="small" items={tabs} />
       {pending && (
         <NoteModal
           open
@@ -180,6 +181,6 @@ export function OrderDetailPage() {
           onSubmit={submit}
         />
       )}
-    </Card>
+    </PageCard>
   );
 }

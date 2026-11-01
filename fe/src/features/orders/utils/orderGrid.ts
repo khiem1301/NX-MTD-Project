@@ -71,8 +71,14 @@ export const toLines = (blocks: ProductBlock[]): OrderLineInput[] =>
     );
   });
 
+export const rowTotal = (b: ProductBlock, r: GridRow): number =>
+  b.sizes.reduce((s, size) => s + (r.cells[size]?.qty ?? 0), 0);
+
+export const sizeTotal = (b: ProductBlock, size: string): number =>
+  b.rows.reduce((s, r) => s + (r.cells[size]?.qty ?? 0), 0);
+
 export const blockTotal = (b: ProductBlock): number =>
-  b.rows.reduce((sum, r) => sum + b.sizes.reduce((s, size) => s + (r.cells[size]?.qty ?? 0), 0), 0);
+  b.rows.reduce((sum, r) => sum + rowTotal(b, r), 0);
 
 export const blocksTotals = (blocks: ProductBlock[]): { qty: number; amount: number } =>
   blocks.reduce(

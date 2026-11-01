@@ -3,11 +3,12 @@ import { Form } from 'antd';
 import dayjs from 'dayjs';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
 import { useTeamLookup } from '@/hooks/useHrLookups';
-import { toApiDate } from '@/utils/format';
-import { useKpiCapacity, useSaveKpiTarget } from './useKpi';
+import { fill, formatDate, toApiDate } from '@/utils/format';
+import { useKpiOrderCapacity, useSaveKpiTarget } from './useKpi';
 import type { Props } from '../components/KpiTargetFormModal';
 import { type Dayjs } from 'dayjs';
 import { KPI_TEXT } from '../constants';
+import { dueWarning } from '../utils/dueWarning';
 
 const text = KPI_TEXT.form;
 
@@ -18,11 +19,15 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
   const save = useSaveKpiTarget(target?.kpiTargetId ?? null);
   const orderId = Form.useWatch('orderId', form) ?? null;
   const productId = Form.useWatch('productId', form) ?? null;
-  const sewingTeamId = Form.useWatch('sewingTeamId', form) ?? null;
   const qty = Form.useWatch('targetFinishedQty', form);
-  const capacity = useKpiCapacity(orderId, productId, sewingTeamId, target?.kpiTargetId).data;
+  const capacity = useKpiOrderCapacity(orderId, productId, target?.kpiTargetId).data;
   const overCapacity = capacity !== undefined && (qty ?? 0) > capacity.maxTarget;
-  const days = Form.useWatch('workingDays', form);
+  const orderClosed = capacity?.orderClosed === true;
+  const period = Form.useWatch('period', form);
+  const warning =
+    capacity?.dueDate && period?.[1]
+      ? dueWarning(toApiDate(period[1]), capacity.dueDate, capacity.dueWarningDays)
+      : null;
   const orders = useOrderLookup();
   const lines = useOrderLineLookup(orderId);
   const teams = useTeamLookup();
@@ -38,7 +43,6 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
         sewingTeamId: target.sewingTeamId,
         period: [dayjs(target.startDate), dayjs(target.endDate)],
         targetFinishedQty: target.targetFinishedQty,
-        workingDays: target.workingDays,
       });
     }
   }, [open, target, form]);
@@ -46,7 +50,7 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
   const orderOptions = useMemo(() => {
     const options = (orders.data?.items ?? []).map((o) => ({
       value: o.orderId,
-      label: o.orderCode,
+      label: fill(text.orderOption, o.orderCode, formatDate(o.dueDate)),
     }));
     // Đơn của chỉ tiêu đang sửa có thể đã ra khỏi danh sách "đơn đang chạy": vẫn phải hiện đúng mã.
     return target && !options.some((o) => o.value === target.orderId)
@@ -66,8 +70,9 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     .filter((t) => t.teamType === 'Sewing')
     .map((t) => ({ value: t.teamId, label: t.teamName }));
 
-  const dailyPreview = qty && days ? Math.round((qty / days) * 100) / 100 : null;
   const required = [{ required: true, message: text.required }];
+  // Lập mới không chọn được ngày đã qua; chỉ tiêu đang chạy có thể đã bắt đầu từ trước nên để BE kiểm mốc bị đổi.
+  const disabledDate = editing ? undefined : (date: Dayjs) => date.isBefore(dayjs(), 'day');
 
   const handleFinish = (values: FormValues) => {
     save.mutate(
@@ -78,7 +83,6 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
         startDate: toApiDate(values.period[0]),
         endDate: toApiDate(values.period[1]),
         targetFinishedQty: values.targetFinishedQty,
-        workingDays: values.workingDays,
       },
       { onSuccess: onClose },
     );
@@ -88,9 +92,11 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     save,
     orderId,
     productId,
-    sewingTeamId,
     capacity,
     overCapacity,
+    orderClosed,
+    warning,
+    disabledDate,
     orders,
     lines,
     teams,
@@ -98,7 +104,6 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     orderOptions,
     productOptions,
     teamOptions,
-    dailyPreview,
     required,
     handleFinish,
     form,
@@ -111,5 +116,4 @@ type FormValues = {
   sewingTeamId: number;
   period: [Dayjs, Dayjs];
   targetFinishedQty: number;
-  workingDays: number;
 };

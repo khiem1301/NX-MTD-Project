@@ -1,5 +1,7 @@
+import { UserSwitchOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Button } from 'antd';
+
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { ConfirmMovementModal } from './ConfirmMovementModal';
@@ -21,9 +23,11 @@ export function AllocationHistory() {
   const columns = allocationColumns(
     (m) =>
       m.status === MOVEMENT_STATUS.PENDING ? (
-        <Button type="link" onClick={() => setOnBehalf(m)}>
-          {PM_LABELS.confirmOnBehalf}
-        </Button>
+        <IconAction
+          title={PM_LABELS.confirmOnBehalf}
+          icon={<UserSwitchOutlined />}
+          onClick={() => setOnBehalf(m)}
+        />
       ) : null,
     true,
   );

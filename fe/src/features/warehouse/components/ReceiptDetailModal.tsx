@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { PrinterOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import { Alert, Button, Divider, Popconfirm, Space } from 'antd';
+import { Alert, Button, Divider, Space } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
@@ -10,7 +11,7 @@ import { ROUTES } from '@/constants/routes';
 import { useAttachments } from '@/hooks/useAttachments';
 import { usePermission } from '@/hooks/usePermission';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
-import { LABELS, RECEIPT_STATUS } from '../constants';
+import { LABELS, MAX_RECEIPT_PHOTOS, RECEIPT_STATUS } from '../constants';
 import {
   useConfirmReceipt,
   useDownloadReceipt,
@@ -22,8 +23,6 @@ import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 import { ReceiptInfo } from './ReceiptInfo';
 import { receiptLineColumns } from './receiptLineColumns';
-
-const MAX_RECEIPT_PHOTOS = 5;
 
 type ReceiptDetailModalProps = {
   receiptId: number | undefined;
@@ -64,14 +63,14 @@ export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetail
           <Button danger onClick={() => setReturning(true)}>
             {LABELS.returnReceipt}
           </Button>
-          <Popconfirm
+          <ConfirmAction
             title={MESSAGES.warehouse.confirmReceipt}
             onConfirm={() => confirm.mutate(r.materialReceiptId, { onSuccess: onClose })}
           >
             <Button type="primary" loading={confirm.isPending} disabled={missingPhoto}>
               {LABELS.confirm}
             </Button>
-          </Popconfirm>
+          </ConfirmAction>
         </>
       )}
     </Space>
@@ -129,7 +128,7 @@ export function ReceiptDetailModal({ receiptId, onClose, onEdit }: ReceiptDetail
           <AttachmentGallery
             ownerType={ATTACHMENT_OWNER.MaterialReceipt}
             ownerId={r.materialReceiptId}
-            canEdit={hasRole(ROLES.WarehouseKeeper) && editable}
+            canEdit={false}
             maxFiles={MAX_RECEIPT_PHOTOS}
             purpose={ATTACHMENT_PURPOSE.DocumentPhoto}
           />

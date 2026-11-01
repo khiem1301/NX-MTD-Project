@@ -25,6 +25,8 @@ type ProductSpecEditorProps = {
   spec: ProductSpec;
   detail: ProductDetail | undefined;
   showHistory: boolean;
+  /** Admin chỉ xem: Kế toán là người nhập thành phần và định mức. */
+  readOnly?: boolean;
   onDirtyChange: (dirty: boolean) => void;
   onClose: () => void;
 };
@@ -35,6 +37,7 @@ export function ProductSpecEditor({
   spec,
   detail,
   showHistory,
+  readOnly = false,
   onDirtyChange,
   onClose,
 }: ProductSpecEditorProps) {
@@ -76,9 +79,11 @@ export function ProductSpecEditor({
     <>
       <ModalActions>
         <Button onClick={onClose}>{MESSAGES.common.close}</Button>
-        <Button type="primary" loading={save.isPending} onClick={handleSave}>
-          {MESSAGES.common.save}
-        </Button>
+        {!readOnly && (
+          <Button type="primary" loading={save.isPending} onClick={handleSave}>
+            {MESSAGES.common.save}
+          </Button>
+        )}
       </ModalActions>
       {detail?.description && (
         <Typography.Paragraph type="secondary">{`${MESSAGES.orders.description}: ${detail.description}`}</Typography.Paragraph>
@@ -94,6 +99,7 @@ export function ProductSpecEditor({
                 components={components}
                 setComponents={setComponents}
                 discontinued={discontinued}
+                readOnly={readOnly}
               />
             ),
           },
@@ -105,6 +111,7 @@ export function ProductSpecEditor({
                 variants={variants}
                 setVariants={setVariants}
                 discontinuedVariants={discontinuedVariants}
+                readOnly={readOnly}
               />
             ),
           },

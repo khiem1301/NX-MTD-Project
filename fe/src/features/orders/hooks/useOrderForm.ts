@@ -7,9 +7,11 @@ import { MESSAGES } from '@/constants/messages';
 import { ORDER_LIMITED_EDIT_STATUSES } from '@/constants/orderStatus';
 import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
+import { applyFieldErrors } from '@/utils/apiError';
 import { toApiDate } from '@/utils/format';
 import { useCreateOrder, useCustomers, useNextOrderCode, useUpdateOrder } from './useOrders';
 import { blocksTotals, fromLines, newBlock, toLines, type ProductBlock } from '../utils/orderGrid';
+import { validateBlocks } from '../utils/orderValidation';
 import type { OrderFormProps } from '../components/OrderForm';
 
 export type HeaderValues = {
@@ -40,6 +42,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
     ),
   );
   const [lineError, setLineError] = useState<string>();
+  const [showBlockErrors, setShowBlockErrors] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [productBlock, setProductBlock] = useState<string>();
@@ -64,6 +67,11 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
   }, [blocker]);
 
   const totals = useMemo(() => blocksTotals(blocks), [blocks]);
+  // Chỉ báo sau lần bấm Lưu đầu tiên; từ đó lỗi tự mất ngay khi người dùng sửa xong.
+  const blockErrors = useMemo(
+    () => (showBlockErrors ? validateBlocks(blocks, locked) : {}),
+    [showBlockErrors, blocks, locked],
+  );
 
   const changeBlocks = (next: ProductBlock[]) => {
     setBlocks(next);
@@ -75,17 +83,26 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
     if (error.errorCode === ERROR_CODES.OrderCodeDuplicate)
       form.setFields([{ name: 'orderCode', errors: [error.message] }]);
     else if (LINE_ERROR_CODES.includes(error.errorCode)) setLineError(error.message);
+    else if (applyFieldErrors(form, error)) {
+      // Lỗi 400 của dòng hàng có khóa dạng lines[0].color, không gắn được vào ô nào của form.
+      const lineErrors = Object.entries(error.errors ?? {})
+        .filter(([field]) => !HEADER_FIELDS.includes(field))
+        .flatMap(([, messages]) => messages);
+      if (lineErrors.length > 0) setLineError([...new Set(lineErrors)].join(' '));
+    }
+  };
+
+  const handleSave = () => {
+    setShowBlockErrors(true);
+    setLineError(undefined);
+    form.submit();
   };
 
   const handleFinish = (values: HeaderValues) => {
+    if (Object.keys(validateBlocks(blocks, locked)).length > 0) return;
     const lines = toLines(blocks);
     if (lines.length === 0) {
       setLineError(MESSAGES.orders.needLine);
-      return;
-    }
-    const chosen = blocks.map((b) => b.productId).filter((id): id is number => id !== null);
-    if (new Set(chosen).size !== chosen.length) {
-      setLineError(MESSAGES.orders.duplicateProduct);
       return;
     }
     const body = {
@@ -142,8 +159,10 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
     totals,
     changeBlocks,
     handleFinish,
+    handleSave,
     form,
     blocks,
+    blockErrors,
     labels,
     setLabels,
     lineError,
@@ -155,6 +174,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
   };
 }
 
+const HEADER_FIELDS = ['orderCode', 'customerId', 'receivedDate', 'dueDate', 'note'];
 const LINE_ERROR_CODES: string[] = [
   ERROR_CODES.OrderLineRemoveNotAllowed,
   ERROR_CODES.OrderLineKeyLocked,

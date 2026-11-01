@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Form, Input, Modal, Popconfirm, Space, Spin } from 'antd';
+import { Alert, Button, Form, Input, Modal, Space, Spin } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
@@ -114,7 +115,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
             <Button onClick={onClose}>{MESSAGES.common.cancel}</Button>
             {unresolved && isManager && (
               <>
-                <Popconfirm
+                <ConfirmAction
                   title={MESSAGES.warehouse.confirmNoReplenish}
                   onConfirm={() =>
                     resolve.mutate(
@@ -126,7 +127,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                   <Button danger loading={resolve.isPending}>
                     {LABELS.noReplenish}
                   </Button>
-                </Popconfirm>
+                </ConfirmAction>
                 <Button type="primary" loading={resolve.isPending} onClick={submitReplenish}>
                   {LABELS.replenish}
                 </Button>

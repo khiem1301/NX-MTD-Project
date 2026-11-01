@@ -1,16 +1,38 @@
-import { Alert, Button, Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { FolderOpenOutlined } from '@ant-design/icons';
+import { Alert, Tag, type TableColumnsType } from 'antd';
+import { DataTable } from '@/components/common/DataTable';
+import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
+import { TableToolbar } from '@/components/common/TableToolbar';
+import { MESSAGES } from '@/constants/messages';
+import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatQty } from '@/utils/format';
 import { INCOMING_TEXT } from '../constants';
 import { usePendingMaterialOrders } from '../hooks/useOrderMaterials';
-import type { PendingMaterialOrder } from '../types';
-import { DataTable } from '@/components/common/DataTable';
+import {
+  PENDING_MATERIAL_STATE,
+  type PendingMaterialOrder,
+  type PendingMaterialState,
+} from '../types';
 
 const text = INCOMING_TEXT;
 
+type Filters = { keyword?: string; materialState?: PendingMaterialState };
+
+const STATE_OPTIONS = [
+  { value: PENDING_MATERIAL_STATE.NotDeclared, label: text.notDeclared },
+  { value: PENDING_MATERIAL_STATE.Awaiting, label: text.awaiting },
+  { value: PENDING_MATERIAL_STATE.Partial, label: text.partial },
+  { value: PENDING_MATERIAL_STATE.Complete, label: text.materialComplete },
+];
+
 const statusTag = (o: PendingMaterialOrder) => {
+  if (o.materialStatus === PENDING_MATERIAL_STATE.Complete)
+    return <Tag color="green">{text.materialComplete}</Tag>;
   if (o.materialLines === 0) return <Tag color="red">{text.notDeclared}</Tag>;
-  return o.materialStatus === 'Partial' ? (
+  return o.materialStatus === PENDING_MATERIAL_STATE.Partial ? (
     <Tag color="gold">{text.partial}</Tag>
   ) : (
     <Tag color="orange">{text.awaiting}</Tag>
@@ -18,54 +40,67 @@ const statusTag = (o: PendingMaterialOrder) => {
 };
 
 /**
- * Đơn đang chạy mà NVL chưa về đủ, đơn mới chưa khai báo NVL lên đầu để Quản đốc / Admin thấy ngay việc cần làm.
- * Bấm vào đơn thì mở NVL của đơn đó.
+ * Đơn đang chạy mà NVL chưa về đủ, phân trang và lọc ở server; đơn mới chưa khai báo NVL lên đầu để Quản đốc / Admin thấy ngay
+ * việc cần làm. Nút Mở đơn ở cột thao tác mở NVL của đơn đó.
  */
 export function PendingMaterialOrdersTable({ onPick }: { onPick: (orderId: number) => void }) {
-  const pending = usePendingMaterialOrders();
-  const rows = [...(pending.data ?? [])].sort(
-    (a, b) =>
-      Number(a.materialLines > 0) - Number(b.materialLines > 0) ||
-      a.dueDate.localeCompare(b.dueDate),
-  );
+  const table = useTableQuery<Filters>({});
+  const pending = usePendingMaterialOrders(table.params);
+  const unfiltered = !table.filters.keyword && !table.filters.materialState;
 
   const columns: TableColumnsType<PendingMaterialOrder> = [
-    { title: text.order, dataIndex: 'orderCode', render: (v: string) => <b>{v}</b> },
+    { title: text.order, dataIndex: 'orderCode' },
     { title: text.customerName, dataIndex: 'customerName' },
     { title: text.dueDate, dataIndex: 'dueDate', render: formatDate },
-    { title: 'NVL', key: 'status', render: (_, o) => statusTag(o) },
+    { title: text.pendingState, key: 'status', render: (_, o) => statusTag(o) },
     { title: text.materialLines, dataIndex: 'materialLines', align: 'right' },
     { title: text.customerQty, dataIndex: 'customerQty', align: 'right', render: formatQty },
     { title: text.toBuyQty, dataIndex: 'toBuyQty', align: 'right', render: formatQty },
     {
+      title: MESSAGES.common.actions,
       key: 'action',
       render: (_, o) => (
-        <Button type="primary" size="small" onClick={() => onPick(o.orderId)}>
-          {text.open}
-        </Button>
+        <IconAction
+          title={text.open}
+          icon={<FolderOpenOutlined />}
+          onClick={() => onPick(o.orderId)}
+        />
       ),
     },
   ];
 
   return (
-    <Space direction="vertical" size={8} style={{ width: '100%', marginBottom: 24 }}>
-      <Typography.Title level={5} style={{ margin: 0 }}>
-        {text.pendingTitle}
-      </Typography.Title>
-      <Typography.Text type="secondary">{text.pendingHint}</Typography.Text>
+    <>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={text.pendingSearch}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword.trim() || undefined })}
+              style={{ width: 260 }}
+            />
+            <FilterSelect<PendingMaterialState>
+              value={table.filters.materialState}
+              placeholder={text.pendingState}
+              style={{ width: 200 }}
+              options={STATE_OPTIONS}
+              onChange={(materialState) => table.setFilters({ materialState })}
+            />
+          </>
+        }
+      />
       <QueryError error={pending.error} onRetry={() => void pending.refetch()} />
-      {pending.data && pending.data.length === 0 && (
-        <Alert type="success" showIcon message={text.pendingEmpty} />
+      {unfiltered && pending.data?.totalItems === 0 && (
+        <Alert type="success" showIcon message={text.pendingEmpty} style={{ marginBottom: 12 }} />
       )}
-      {rows.length > 0 && (
-        <DataTable
-          rowKey="orderId"
-          columns={columns}
-          dataSource={rows}
-          loading={pending.isFetching}
-          pagination={false}
-        />
-      )}
-    </Space>
+      <DataTable
+        rowKey="orderId"
+        columns={columns}
+        dataSource={pending.data?.items}
+        loading={pending.isFetching}
+        pagination={table.pagination(pending.data?.totalItems)}
+      />
+    </>
   );
 }

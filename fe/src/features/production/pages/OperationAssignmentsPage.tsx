@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Button, Popconfirm, Space } from 'antd';
+import { Button, Space } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import type { ColumnsType } from 'antd/es/table';
-import { CopyOutlined, PlusOutlined } from '@ant-design/icons';
+import { CopyOutlined, PlusOutlined, CloseCircleOutlined, SwapOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -49,17 +51,17 @@ export function OperationAssignmentsPage() {
       key: 'action',
       render: (_, row) => (
         <Space size={0} wrap>
-          <Button type="link" onClick={() => setReplacing(row)}>
-            {text.replace}
-          </Button>
-          <Popconfirm
+          <IconAction
+            title={text.replace}
+            icon={<SwapOutlined />}
+            onClick={() => setReplacing(row)}
+          />
+          <ConfirmAction
             title={text.closeConfirm}
             onConfirm={() => close.mutate(row.operationAssignmentId)}
           >
-            <Button type="link" danger>
-              {text.close}
-            </Button>
-          </Popconfirm>
+            <IconAction title={text.close} icon={<CloseCircleOutlined />} danger />
+          </ConfirmAction>
         </Space>
       ),
     },

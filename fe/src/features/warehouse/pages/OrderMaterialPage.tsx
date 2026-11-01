@@ -1,26 +1,27 @@
 import { useState } from 'react';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, Popconfirm, Space, Tag, type TableColumnsType } from 'antd';
-import { OrderSelect } from '@/components/common/OrderSelect';
-import { QueryError } from '@/components/common/QueryError';
+import { Button } from 'antd';
+import { PageCard } from '@/components/common/PageCard';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
+import { useOrderOptions } from '@/hooks/useLookups';
 import { usePermission } from '@/hooks/usePermission';
-import { formatQty } from '@/utils/format';
+import { orderMaterialColumns } from '../components/orderMaterialColumns';
+import { OrderMaterialBulkEditor } from '../components/OrderMaterialBulkEditor';
 import { OrderMaterialFormModal } from '../components/OrderMaterialFormModal';
+import { OrderMaterialTable } from '../components/OrderMaterialTable';
 import { PendingMaterialOrdersTable } from '../components/PendingMaterialOrdersTable';
 import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
-import { StockPurchaseTable } from '../components/StockPurchaseTable';
-import { LABELS, MATERIAL_TYPE_LABEL, SOURCE_LABEL } from '../constants';
+import { INCOMING_TEXT, LABELS } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
 import type { OrderMaterial } from '../types';
-import { DataTable } from '@/components/common/DataTable';
 
 /**
  * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua của đơn. Số cần theo định mức đọc từ
  * định mức của mã hàng (màn Mã hàng).
- * Quản đốc chưa chọn đơn vẫn bấm Tạo được: đó là đơn mua NVL dùng chung (kim, chỉ...), không gắn mã đơn hàng.
+ * Màn chính là danh sách đơn chờ khai báo / mua NVL; bấm Mở đơn mới sang NVL của đơn đó (đơn nằm trên đường dẫn ?orderId=).
+ * Quản đốc tạo đơn mua NVL dùng chung (kim, chỉ...) ở màn danh sách, không gắn mã đơn hàng.
  */
 export function OrderMaterialPage() {
   const { hasRole } = usePermission();
@@ -34,115 +35,78 @@ export function OrderMaterialPage() {
   const [editing, setEditing] = useState<OrderMaterial | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [stockFormOpen, setStockFormOpen] = useState(false);
-  const stockMode = orderId === undefined && hasRole(ROLES.Manager);
+  const [bulkEditing, setBulkEditing] = useState(false);
+  const orderCode = useOrderOptions().data?.find((o) => o.orderId === orderId)?.orderCode;
 
   const openForm = (om: OrderMaterial | null) => {
     setEditing(om);
     setFormOpen(true);
   };
 
-  const columns: TableColumnsType<OrderMaterial> = [
-    {
-      title: LABELS.material,
-      key: 'material',
-      render: (_, om) => (
-        <>
-          <b>{om.materialCode}</b> {om.materialName}{' '}
-          <Tag>{MATERIAL_TYPE_LABEL[om.materialType]}</Tag>
-        </>
-      ),
-    },
-    { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-    { title: LABELS.unit, dataIndex: 'unit' },
-    { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: formatQty },
-    { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: formatQty },
-    {
-      title: LABELS.deliveries,
-      key: 'deliveries',
-      render: (_, om) =>
-        om.expectedDeliveryCount === null
-          ? '—'
-          : `${om.receivedCount} / ${om.expectedDeliveryCount} ${LABELS.deliveryUnit}`,
-    },
-    { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: formatQty },
-    {
-      title: LABELS.source,
-      dataIndex: 'source',
-      render: (v: string | null) => (v ? SOURCE_LABEL[v] : '—'),
-    },
-    { title: LABELS.receivedQty, dataIndex: 'receivedQty', align: 'right', render: formatQty },
-    {
-      title: MESSAGES.common.actions,
-      key: 'actions',
-      render: (_, om) => (
-        <Space size={0} wrap>
-          <Button type="link" icon={<EditOutlined />} onClick={() => openForm(om)}>
-            {MESSAGES.common.edit}
-          </Button>
-          <Popconfirm
-            title={MESSAGES.warehouse.confirmDeleteOrderMaterial}
-            onConfirm={() => remove.mutate(om.orderMaterialId)}
-          >
-            <Button type="link" icon={<DeleteOutlined />} danger>
-              {MESSAGES.common.delete}
+  const columns = orderMaterialColumns({
+    onEdit: openForm,
+    onDelete: (om) => remove.mutate(om.orderMaterialId),
+  });
+
+  if (bulkEditing) {
+    return (
+      <PageCard title="Sửa NVL của cả đơn" onBack={() => setBulkEditing(false)}>
+        <OrderMaterialBulkEditor
+          orderId={orderId as number}
+          materials={list.data ?? []}
+          onDone={() => setBulkEditing(false)}
+        />
+      </PageCard>
+    );
+  }
+
+  if (orderId === undefined) {
+    return (
+      <PageCard
+        title={INCOMING_TEXT.pendingTitle}
+        description={INCOMING_TEXT.pendingHint}
+        extra={
+          hasRole(ROLES.Manager) && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setStockFormOpen(true)}>
+              {INCOMING_TEXT.createStockPurchase}
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+          )
+        }
+      >
+        <PendingMaterialOrdersTable onPick={setOrderId} />
+        <PurchaseOrderFormModal open={stockFormOpen} onClose={() => setStockFormOpen(false)} />
+      </PageCard>
+    );
+  }
 
   return (
-    <Card
-      title={LABELS.orderMaterialsTitle}
+    <PageCard
+      title={orderCode ? `${LABELS.orderMaterialsTitle}: ${orderCode}` : LABELS.orderMaterialsTitle}
+      onBack={() => setOrderId(undefined)}
       extra={
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          disabled={orderId === undefined && !stockMode}
-          onClick={() => (stockMode ? setStockFormOpen(true) : openForm(null))}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
           {MESSAGES.common.create}
         </Button>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <OrderSelect
-          allowClear
-          value={orderId}
-          onChange={setOrderId}
-          placeholder={hasRole(ROLES.Manager) ? LABELS.selectOrderOrStock : LABELS.selectOrder}
-          width={380}
-        />
-      </Space>
-      {orderId === undefined && <PendingMaterialOrdersTable onPick={setOrderId} />}
-      {stockMode ? (
-        <StockPurchaseTable stockOnly />
-      ) : (
-        // Chưa chọn đơn: chỉ còn danh sách đơn chờ khai báo ở trên, không dựng bảng chi tiết trống.
-        orderId !== undefined && (
-          <>
-            <QueryError error={list.error} onRetry={() => void list.refetch()} />
-            <DataTable
-              rowKey="orderMaterialId"
-              columns={columns}
-              dataSource={list.data}
-              loading={list.isFetching}
-              pagination={false}
-              scroll={{ x: true }}
-            />
-          </>
-        )
-      )}
-      <PurchaseOrderFormModal open={stockFormOpen} onClose={() => setStockFormOpen(false)} />
-      {orderId !== undefined && (
-        <OrderMaterialFormModal
-          open={formOpen}
-          orderId={orderId}
-          orderMaterial={editing}
-          onClose={() => setFormOpen(false)}
-        />
-      )}
-    </Card>
+      <OrderMaterialTable
+        key={orderId}
+        orderId={orderId}
+        columns={columns}
+        actions={
+          (list.data?.length ?? 0) > 0 && (
+            <Button icon={<EditOutlined />} onClick={() => setBulkEditing(true)}>
+              Sửa cả đơn
+            </Button>
+          )
+        }
+      />
+      <OrderMaterialFormModal
+        open={formOpen}
+        orderId={orderId}
+        orderMaterial={editing}
+        onClose={() => setFormOpen(false)}
+      />
+    </PageCard>
   );
 }

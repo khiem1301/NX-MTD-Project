@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Card, Popconfirm, Space, type TableColumnsType } from 'antd';
+import { PlusOutlined, EditOutlined, StopOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -69,17 +71,21 @@ export function MaterialListPage() {
         const next = active ? MATERIAL_STATUS.DISCONTINUED : MATERIAL_STATUS.ACTIVE;
         return (
           <Space size={0} wrap>
-            <Button type="link" icon={<EditOutlined />} onClick={() => openForm(m)}>
-              {MESSAGES.common.edit}
-            </Button>
-            <Popconfirm
+            <IconAction
+              title={MESSAGES.common.edit}
+              icon={<EditOutlined />}
+              onClick={() => openForm(m)}
+            />
+            <ConfirmAction
               title={active ? MESSAGES.warehouse.confirmDiscontinue : LABELS.reactivate}
               onConfirm={() => changeStatus.mutate({ id: m.materialId, status: next })}
             >
-              <Button type="link" danger={active}>
-                {active ? LABELS.discontinue : LABELS.reactivate}
-              </Button>
-            </Popconfirm>
+              <IconAction
+                title={active ? LABELS.discontinue : LABELS.reactivate}
+                icon={active ? <StopOutlined /> : <PlayCircleOutlined />}
+                danger={active}
+              />
+            </ConfirmAction>
           </Space>
         );
       },

@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Card, Popconfirm, Space, type TableColumnsType } from 'antd';
+import { PlusOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ReasonModal } from '@/components/common/ReasonModal';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { CustomerFormModal } from '../components/CustomerFormModal';
@@ -28,6 +30,7 @@ export function CustomersPage() {
   const toggle = useToggleCustomer();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
+  const [stopping, setStopping] = useState<Customer | null>(null);
 
   const columns: TableColumnsType<Customer> = [
     { title: MESSAGES.orders.customerName, dataIndex: 'customerName' },
@@ -45,35 +48,36 @@ export function CustomersPage() {
       render: (v: string) => <StatusTag status={v} labels={STATUS_TAG} />,
     },
     {
+      title: MESSAGES.orders.customerDiscontinueReason,
+      dataIndex: 'discontinueReason',
+      ellipsis: true,
+      render: (v: string | null) => v ?? '—',
+    },
+    {
       title: MESSAGES.common.actions,
       render: (_: unknown, c) => (
         <Space size={0} wrap>
-          <Button
-            type="link"
+          <IconAction
+            title={MESSAGES.common.edit}
             icon={<EditOutlined />}
             onClick={() => {
               setEditing(c);
               setOpen(true);
             }}
-          >
-            {MESSAGES.common.edit}
-          </Button>
+          />
           {c.status === 'Active' ? (
-            <Popconfirm
-              title={MESSAGES.orders.customerDiscontinueConfirm}
-              onConfirm={() => toggle.mutate({ id: c.customerId, discontinue: true })}
-            >
-              <Button type="link" danger>
-                {MESSAGES.orders.customerDiscontinue}
-              </Button>
-            </Popconfirm>
+            <IconAction
+              title={MESSAGES.orders.customerDiscontinue}
+              icon={<StopOutlined />}
+              danger
+              onClick={() => setStopping(c)}
+            />
           ) : (
-            <Button
-              type="link"
-              onClick={() => toggle.mutate({ id: c.customerId, discontinue: false })}
-            >
-              {MESSAGES.orders.customerReactivate}
-            </Button>
+            <IconAction
+              title={MESSAGES.orders.customerReactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => toggle.mutate({ id: c.customerId })}
+            />
           )}
         </Space>
       ),
@@ -118,6 +122,16 @@ export function CustomersPage() {
         columns={columns}
         dataSource={customers.data ?? []}
         pagination={{ pageSize: 20 }}
+      />
+      <ReasonModal
+        open={stopping !== null}
+        title={MESSAGES.orders.customerDiscontinueConfirm}
+        loading={toggle.isPending}
+        onCancel={() => setStopping(null)}
+        onSubmit={(reason) =>
+          stopping &&
+          toggle.mutate({ id: stopping.customerId, reason }, { onSuccess: () => setStopping(null) })
+        }
       />
       <CustomerFormModal open={open} customer={editing} onClose={() => setOpen(false)} />
     </Card>

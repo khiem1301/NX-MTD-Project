@@ -3,7 +3,7 @@ import { Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
-import { useOrderLineOptions, useTeamOptions } from '@/hooks/useLookups';
+import { useOrderLineOptions, useOrderOptions, useTeamOptions } from '@/hooks/useLookups';
 import type { OrderLineOption } from '@/types/lookup';
 import { CUTTING_TEAM_TYPE, LABELS } from '../constants';
 import { useSaveWorkOrder } from '../hooks/useCutting';
@@ -29,6 +29,9 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
   const productId = Form.useWatch('productId', form);
   const orderLines = useOrderLineOptions(orderId);
   const teams = useTeamOptions(CUTTING_TEAM_TYPE);
+  const orders = useOrderOptions();
+  // Hạn lệnh cắt phải sau ngày bắt đầu (ngày nhận) của đơn.
+  const startDate = orders.data?.find((o) => o.orderId === orderId)?.receivedDate;
 
   useEffect(() => {
     if (!open) return;
@@ -95,8 +98,36 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
               options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
             />
           </Form.Item>
-          <Form.Item name="dueDate" label={LABELS.dueDate} rules={required}>
-            <AppDatePicker />
+          <Form.Item
+            name="dueDate"
+            label={LABELS.dueDate}
+            dependencies={['orderId']}
+            extra={
+              startDate
+                ? `Phải sau ngày bắt đầu của đơn (${dayjs(startDate).format('DD/MM/YYYY')})`
+                : undefined
+            }
+            rules={[
+              ...required,
+              {
+                validator: (_, value: Dayjs | undefined) =>
+                  value?.isBefore(dayjs(), 'day')
+                    ? Promise.reject(new Error('Không đặt hạn trong quá khứ.'))
+                    : !value || !startDate || value.isAfter(dayjs(startDate), 'day')
+                      ? Promise.resolve()
+                      : Promise.reject(
+                          new Error(
+                            `Hạn phải sau ngày bắt đầu của đơn (${dayjs(startDate).format('DD/MM/YYYY')}).`,
+                          ),
+                        ),
+              },
+            ]}
+          >
+            <AppDatePicker
+              disabledDate={(d) =>
+                d.isBefore(dayjs(), 'day') || (!!startDate && !d.isAfter(dayjs(startDate), 'day'))
+              }
+            />
           </Form.Item>
         </Space>
         <DataTable<OrderLineOption>

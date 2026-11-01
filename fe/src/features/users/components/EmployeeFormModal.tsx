@@ -1,6 +1,7 @@
 import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
+import { normalizePhone, phoneRule } from '@/utils/phone';
 import { PAY_TYPE_LABEL, type PayType } from '@/constants/hr';
 import type { EmployeeDetail, TempPassword } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
@@ -29,7 +30,7 @@ export function EmployeeFormModal({
   onClose,
   onCreated,
 }: EmployeeFormModalProps) {
-  const { teams, saving, roleOptions, suggest, handleFinish, initialValues, form } =
+  const { teams, saving, roleOptions, roleLocked, suggest, handleFinish, initialValues, form } =
     useEmployeeForm({ employee, isAdmin, onClose, onCreated });
 
   return (
@@ -93,10 +94,11 @@ export function EmployeeFormModal({
           </Form.Item>
           <Form.Item
             name="phone"
+            normalize={normalizePhone}
             label={MESSAGES.hr.phone}
-            rules={[{ max: 15 }, { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' }]}
+            rules={[phoneRule]}
           >
-            <Input style={{ width: 160 }} />
+            <Input maxLength={12} style={{ width: 160 }} />
           </Form.Item>
         </Space>
         <Form.Item
@@ -104,7 +106,7 @@ export function EmployeeFormModal({
           label={MESSAGES.hr.role}
           rules={[{ required: true, message: MESSAGES.common.required }]}
         >
-          <Select options={roleOptions} onChange={suggest} />
+          <Select options={roleOptions} onChange={suggest} disabled={roleLocked} />
         </Form.Item>
         <Form.Item name="teamId" label={MESSAGES.hr.team}>
           <Select

@@ -1,3 +1,6 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import {
   Alert,
@@ -10,7 +13,6 @@ import {
   type TableColumnsType,
 } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
-import { DetailLink } from '@/components/common/DetailLink';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
@@ -33,7 +35,7 @@ export function OrderProgressPanel() {
       key: 'order',
       render: (_, o) => (
         <Space direction="vertical" size={0}>
-          <DetailLink onClick={() => setViewing(o)}>{o.orderCode}</DetailLink>
+          <Typography.Text>{o.orderCode}</Typography.Text>
           <Typography.Text type="secondary">{o.customerName}</Typography.Text>
         </Space>
       ),
@@ -112,6 +114,17 @@ export function OrderProgressPanel() {
             Nguy cơ trễ{o.delayRiskSince ? ` từ ${formatDate(o.delayRiskSince)}` : ''}
           </Tag>
         ) : null,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, o) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewing(o)}
+        />
+      ),
     },
   ];
 

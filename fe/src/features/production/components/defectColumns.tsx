@@ -1,5 +1,7 @@
-import { Button, Space, Tag, Typography } from 'antd';
+import { CloseCircleOutlined, SwapOutlined } from '@ant-design/icons';
+import { Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { IconAction } from '@/components/common/IconAction';
 import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -94,9 +96,11 @@ export const defectColumns = ({
           </Tag>
         );
       return !isManager && d.defectType === 'Scrap' && d.status === 'Recorded' ? (
-        <Button type="link" onClick={() => onReplace(d)}>
-          {PRODUCTION_TEXT.replacement.button}
-        </Button>
+        <IconAction
+          title={PRODUCTION_TEXT.replacement.button}
+          icon={<SwapOutlined />}
+          onClick={() => onReplace(d)}
+        />
       ) : (
         '—'
       );
@@ -107,9 +111,12 @@ export const defectColumns = ({
     key: 'action',
     render: (_, d) =>
       d.status === 'Recorded' && (isManager || d.canEdit) ? (
-        <Button type="link" danger onClick={() => onCancel(d)}>
-          {text.cancel}
-        </Button>
+        <IconAction
+          title={text.cancel}
+          icon={<CloseCircleOutlined />}
+          danger
+          onClick={() => onCancel(d)}
+        />
       ) : null,
   },
 ];

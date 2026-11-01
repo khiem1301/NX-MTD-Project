@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, CameraOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { IconAction } from '@/components/common/IconAction';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { Button, Checkbox, Space, Tag, type TableColumnsType } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
@@ -90,13 +91,17 @@ export function TripsTab() {
       render: (_, t) => (
         <Space size={0}>
           {t.status === TRIP_STATUS.STARTED && (
-            <Button type="link" onClick={() => setCompleting(t)}>
-              {VL_LABELS.completeTrip}
-            </Button>
+            <IconAction
+              title={VL_LABELS.completeTrip}
+              icon={<CheckCircleOutlined />}
+              onClick={() => setCompleting(t)}
+            />
           )}
-          <Button type="link" onClick={() => setPhotoTrip(t)}>
-            {VL_LABELS.photos}
-          </Button>
+          <IconAction
+            title={VL_LABELS.photos}
+            icon={<CameraOutlined />}
+            onClick={() => setPhotoTrip(t)}
+          />
         </Space>
       ),
     },

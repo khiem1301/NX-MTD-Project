@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Form, Input, InputNumber, Popconfirm } from 'antd';
+import { Alert, Button, Descriptions, Form, Input, InputNumber } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -57,22 +58,22 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
             <Button danger onClick={() => setRejecting(true)}>
               {RETURN_LABELS.reject}
             </Button>
-            <Popconfirm title={RETURN_MESSAGES.confirmReceive} onConfirm={() => form.submit()}>
+            <ConfirmAction title={RETURN_MESSAGES.confirmReceive} onConfirm={() => form.submit()}>
               <Button type="primary" loading={confirm.isPending}>
                 {RETURN_LABELS.receive}
               </Button>
-            </Popconfirm>
+            </ConfirmAction>
           </>
         )}
         {canCancel && (
-          <Popconfirm
+          <ConfirmAction
             title={RETURN_MESSAGES.confirmCancel}
             onConfirm={() => cancel.mutate(r.materialReturnId, { onSuccess: onClose })}
           >
             <Button danger loading={cancel.isPending}>
               {RETURN_LABELS.cancel}
             </Button>
-          </Popconfirm>
+          </ConfirmAction>
         )}
       </ModalActions>
       {r.rejectReason && (

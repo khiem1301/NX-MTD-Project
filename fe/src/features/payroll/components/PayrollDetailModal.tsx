@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { Alert, Button, Modal, Popconfirm, Space, Spin } from 'antd';
+import { Alert, Button, Modal, Space, Spin } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { DownloadOutlined } from '@ant-design/icons';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
@@ -62,14 +63,14 @@ export function PayrollDetailModal({ payrollId, onClose }: Props) {
         </Button>
       ) : null}
       {canApprove ? (
-        <Popconfirm
+        <ConfirmAction
           title={MESSAGES.payroll.confirmApprove}
           onConfirm={() => approve.mutate(undefined, { onSuccess: onClose })}
         >
           <Button type="primary" loading={approve.isPending}>
             {PAYROLL_TEXT.actions.approve}
           </Button>
-        </Popconfirm>
+        </ConfirmAction>
       ) : null}
     </Space>
   ) : null;

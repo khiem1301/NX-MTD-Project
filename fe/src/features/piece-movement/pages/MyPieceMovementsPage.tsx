@@ -1,5 +1,7 @@
+import { CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Button, Card, Space } from 'antd';
+import { Card, Space } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { useTableQuery } from '@/hooks/useTableQuery';
@@ -25,12 +27,17 @@ export function MyPieceMovementsPage() {
     (m) =>
       m.status === MOVEMENT_STATUS.PENDING ? (
         <Space size={0} wrap>
-          <Button type="link" onClick={() => setConfirming(m)}>
-            {PM_LABELS.confirm}
-          </Button>
-          <Button type="link" danger onClick={() => setRejecting(m)}>
-            {PM_LABELS.reject}
-          </Button>
+          <IconAction
+            title={PM_LABELS.confirm}
+            icon={<CheckCircleOutlined />}
+            onClick={() => setConfirming(m)}
+          />
+          <IconAction
+            title={PM_LABELS.reject}
+            icon={<CloseCircleOutlined />}
+            danger
+            onClick={() => setRejecting(m)}
+          />
         </Space>
       ) : null,
     false,

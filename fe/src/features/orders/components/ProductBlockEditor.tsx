@@ -1,5 +1,5 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { Button, Card, InputNumber, Select, Space, Tooltip, Typography } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { Button, Card, Flex, Form, Select, Space, Tooltip, Typography } from 'antd';
 import { useState } from 'react';
 import { SIZE_ORDER } from '@/constants/orderStatus';
 import { MESSAGES } from '@/constants/messages';
@@ -7,8 +7,11 @@ import { useProductLookup } from '@/hooks/useOrderLookups';
 import { formatQty } from '@/utils/format';
 import { blockTotal, sortSizes, type GridRow, type ProductBlock } from '../utils/orderGrid';
 import { DataTable } from '@/components/common/DataTable';
-import { TableToolbar } from '@/components/common/TableToolbar';
+import { IconAction } from '@/components/common/IconAction';
+import type { BlockErrors } from '../utils/orderValidation';
 import { blockGridColumns, rowHasOldLine } from './blockGridColumns';
+import { BlockSummaryRow } from './BlockSummaryRow';
+import { CmtPriceInput } from './CmtPriceInput';
 
 type ProductBlockEditorProps = {
   block: ProductBlock;
@@ -18,18 +21,26 @@ type ProductBlockEditorProps = {
   productLabels: Record<number, string>;
   /** Mã hàng đã chọn ở các khối khác của đơn: không chọn lại (một mã hàng chỉ khai một lần trong đơn). */
   usedProductIds?: readonly number[];
+  /** Lỗi của khối sau khi bấm Lưu (xem orderValidation). */
+  errors?: BlockErrors;
   onChange: (block: ProductBlock) => void;
   onRemove: () => void;
   onCreateProduct: () => void;
 };
 
 const SIZE_OPTIONS = SIZE_ORDER.map((s) => ({ value: s, label: s }));
+const NO_ERRORS: BlockErrors = {};
+const FIELD_STYLE = { marginBottom: 0 };
+const errorProps = (message: string | undefined) =>
+  message ? { validateStatus: 'error' as const, help: message } : {};
+
 /** Một khối mã hàng: chọn mã hàng + đơn giá CMT + lưới màu (hàng) × size (cột). */
 export function ProductBlockEditor({
   block,
   locked,
   productLabels,
   usedProductIds = [],
+  errors = NO_ERRORS,
   onChange,
   onRemove,
   onCreateProduct,
@@ -55,6 +66,15 @@ export function ProductBlockEditor({
     setRow(index, { cells: { ...row.cells, [size]: { ...cell, qty } } });
   };
 
+  const addRow = () =>
+    onChange({
+      ...block,
+      rows: [
+        ...block.rows,
+        { key: `row-${block.rows.length}-${Date.now()}`, color: '', cells: {} },
+      ],
+    });
+
   const addSize = (size: string) => {
     const normalized = size.trim().toUpperCase();
     if (normalized && !block.sizes.includes(normalized))
@@ -71,51 +91,90 @@ export function ProductBlockEditor({
       }),
     });
 
-  const columns = blockGridColumns({ block, locked, setRow, setQty, removeSize, onChange });
+  const columns = blockGridColumns({ block, locked, errors, setRow, setQty, removeSize, onChange });
+  const gridErrors = [
+    ...new Set(
+      Object.entries(errors)
+        .filter(([key]) => key !== 'product' && key !== 'price')
+        .map(([, error]) => error),
+    ),
+  ];
 
   return (
-    <Card size="small" style={{ marginBottom: 16 }}>
-      <TableToolbar
-        filters={
-          <>
-            <Tooltip title={lockKey ? MESSAGES.requests.otherFlowHint : undefined}>
+    <Card size="small" style={{ marginBottom: 12 }}>
+      <Form component={false} layout="vertical">
+        <Flex wrap gap={12} align="flex-start" style={{ marginBottom: 12 }}>
+          <Form.Item
+            required
+            label={MESSAGES.orders.productCode}
+            style={{ ...FIELD_STYLE, width: 300 }}
+            {...errorProps(errors.product)}
+          >
+            <Space.Compact block>
+              <Tooltip title={lockKey ? MESSAGES.requests.otherFlowHint : undefined}>
+                <Select
+                  showSearch
+                  filterOption={false}
+                  placeholder={MESSAGES.orders.selectProduct}
+                  style={{ width: '100%' }}
+                  value={block.productId ?? undefined}
+                  disabled={lockKey}
+                  options={[...options].map(([value, label]) => ({ value, label }))}
+                  onSearch={setKeyword}
+                  onChange={(productId: number) => onChange({ ...block, productId })}
+                />
+              </Tooltip>
+              <Tooltip title={MESSAGES.orders.createProduct}>
+                <Button
+                  icon={<PlusOutlined />}
+                  aria-label={MESSAGES.orders.createProduct}
+                  disabled={lockKey}
+                  onClick={onCreateProduct}
+                />
+              </Tooltip>
+            </Space.Compact>
+          </Form.Item>
+          <Form.Item
+            required
+            label={MESSAGES.orders.unitPrice}
+            style={{ ...FIELD_STYLE, width: 180 }}
+            {...errorProps(errors.price)}
+          >
+            <CmtPriceInput
+              value={block.cmtUnitPrice}
+              onChange={(cmtUnitPrice) => onChange({ ...block, cmtUnitPrice })}
+            />
+          </Form.Item>
+          <Form.Item label=" " colon={false} style={{ ...FIELD_STYLE, marginLeft: 'auto' }}>
+            <Space wrap>
+              <Button icon={<PlusOutlined />} onClick={addRow}>
+                {MESSAGES.orders.addColor}
+              </Button>
               <Select
                 showSearch
-                filterOption={false}
-                placeholder={MESSAGES.orders.selectProduct}
-                style={{ width: 280 }}
-                value={block.productId ?? undefined}
-                disabled={lockKey}
-                options={[...options].map(([value, label]) => ({ value, label }))}
-                onSearch={setKeyword}
-                onChange={(productId: number) => onChange({ ...block, productId })}
+                placeholder={MESSAGES.orders.addSize}
+                style={{ width: 120 }}
+                value={null}
+                options={SIZE_OPTIONS.filter((o) => !block.sizes.includes(o.value))}
+                onSearch={() => undefined}
+                onChange={(v: string) => addSize(v)}
+                notFoundContent={null}
               />
-            </Tooltip>
-            <Button icon={<PlusOutlined />} disabled={lockKey} onClick={onCreateProduct}>
-              {MESSAGES.common.create}
-            </Button>
-            <InputNumber
-              min={0}
-              precision={2}
-              addonAfter="₫"
-              placeholder={MESSAGES.orders.unitPrice}
-              style={{ width: 200 }}
-              formatter={(v) => `${v ?? ''}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-              parser={(v) => Number((v ?? '').replace(/\./g, ''))}
-              value={block.cmtUnitPrice}
-              onChange={(v) => onChange({ ...block, cmtUnitPrice: v })}
-            />
-            <Typography.Text
-              strong
-            >{`${MESSAGES.orders.totalQty}: ${formatQty(blockTotal(block))}`}</Typography.Text>
-            {!lockKey && (
-              <Button danger onClick={onRemove}>
-                {MESSAGES.common.delete}
-              </Button>
-            )}
-          </>
-        }
-      />
+              <Typography.Text
+                strong
+              >{`${MESSAGES.orders.totalQty}: ${formatQty(blockTotal(block))}`}</Typography.Text>
+              {!lockKey && (
+                <IconAction
+                  danger
+                  title={MESSAGES.orders.removeProductBlock}
+                  icon={<DeleteOutlined />}
+                  onClick={onRemove}
+                />
+              )}
+            </Space>
+          </Form.Item>
+        </Flex>
+      </Form>
       <DataTable<GridRow>
         rowKey="key"
         size="small"
@@ -123,33 +182,15 @@ export function ProductBlockEditor({
         columns={columns}
         dataSource={block.rows}
         scroll={{ x: 'max-content' }}
+        summary={() =>
+          block.rows.length > 1 ? <BlockSummaryRow block={block} hasActionColumn /> : undefined
+        }
       />
-      <Space style={{ marginTop: 8 }} wrap>
-        <Button
-          icon={<PlusOutlined />}
-          onClick={() =>
-            onChange({
-              ...block,
-              rows: [
-                ...block.rows,
-                { key: `row-${block.rows.length}-${Date.now()}`, color: '', cells: {} },
-              ],
-            })
-          }
-        >
-          {MESSAGES.orders.addColor}
-        </Button>
-        <Select
-          showSearch
-          placeholder={MESSAGES.orders.addSize}
-          style={{ width: 130 }}
-          value={null}
-          options={SIZE_OPTIONS.filter((o) => !block.sizes.includes(o.value))}
-          onSearch={() => undefined}
-          onChange={(v: string) => addSize(v)}
-          notFoundContent={null}
-        />
-      </Space>
+      {gridErrors.map((error) => (
+        <div key={error} style={{ marginTop: 4 }}>
+          <Typography.Text type="danger">{error}</Typography.Text>
+        </div>
+      ))}
     </Card>
   );
 }

@@ -178,5 +178,4 @@ export const PAYROLL_STATUS_FILTER_OPTIONS: { value: PayrollStatus; label: strin
   { value: 'PendingApproval', label: PAYROLL_STATUS_LABEL.PendingApproval.text },
   { value: 'Approved', label: PAYROLL_STATUS_LABEL.Approved.text },
   { value: 'Rejected', label: PAYROLL_STATUS_LABEL.Rejected.text },
-  { value: 'Draft', label: PAYROLL_STATUS_LABEL.Draft.text },
 ];

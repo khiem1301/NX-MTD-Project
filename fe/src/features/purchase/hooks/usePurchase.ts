@@ -44,8 +44,10 @@ export const useSaveSupplier = (id: number | null) =>
 
 export const useToggleSupplier = () =>
   useApiMutation(
-    ({ id, discontinue }: { id: number; discontinue: boolean }) =>
-      discontinue ? purchaseApi.discontinueSupplier(id) : purchaseApi.reactivateSupplier(id),
+    ({ id, reason }: { id: number; reason?: string }) =>
+      reason === undefined
+        ? purchaseApi.reactivateSupplier(id)
+        : purchaseApi.discontinueSupplier(id, reason),
     { invalidate: [suppliersKey], successMessage: PURCHASE_TEXT.saved },
   );
 

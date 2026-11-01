@@ -1,7 +1,15 @@
-import { EditOutlined } from '@ant-design/icons';
-import { Button, Popconfirm, Space, Tag, Typography } from 'antd';
+import {
+  EditOutlined,
+  PlayCircleOutlined,
+  StopOutlined,
+  SendOutlined,
+  DollarOutlined,
+  EyeOutlined,
+} from '@ant-design/icons';
+import { Space, Tag, Typography } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import type { ColumnsType } from 'antd/es/table';
-import { DetailLink } from '@/components/common/DetailLink';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate, formatQty } from '@/utils/format';
@@ -36,7 +44,6 @@ export const operationColumns = ({
   {
     title: text.columns.code,
     dataIndex: 'operationCode',
-    render: (v: string, row) => <DetailLink onClick={() => onView(row)}>{v}</DetailLink>,
   },
   { title: text.columns.name, dataIndex: 'operationName' },
   {
@@ -96,32 +103,41 @@ export const operationColumns = ({
     key: 'action',
     render: (_, row) => (
       <Space size={0} wrap>
-        <Button type="link" icon={<EditOutlined />} onClick={() => onEdit(row)}>
-          {MESSAGES.common.edit}
-        </Button>
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onView(row)}
+        />
+        <IconAction
+          title={MESSAGES.common.edit}
+          icon={<EditOutlined />}
+          onClick={() => onEdit(row)}
+        />
         {canSetRate(row) && (
-          <Button type="link" onClick={() => onSetRate(row)}>
-            {editableRate(row) ? rateText.editRate : rateText.setRate}
-          </Button>
+          <IconAction
+            title={editableRate(row) ? rateText.editRate : rateText.setRate}
+            icon={<DollarOutlined />}
+            onClick={() => onSetRate(row)}
+          />
         )}
         {row.nextRate?.status === 'Draft' && (
-          <Popconfirm
+          <ConfirmAction
             title={rateText.submitConfirm}
             onConfirm={() => onSubmitRate(row.nextRate!.pieceRateId)}
           >
-            <Button type="link">{rateText.submit}</Button>
-          </Popconfirm>
+            <IconAction title={rateText.submit} icon={<SendOutlined />} />
+          </ConfirmAction>
         )}
         {row.status === 'Active' ? (
-          <Popconfirm title={text.discontinueConfirm} onConfirm={() => onToggle(row, true)}>
-            <Button type="link" danger>
-              {text.discontinue}
-            </Button>
-          </Popconfirm>
+          <ConfirmAction title={text.discontinueConfirm} onConfirm={() => onToggle(row, true)}>
+            <IconAction title={text.discontinue} icon={<StopOutlined />} danger />
+          </ConfirmAction>
         ) : (
-          <Button type="link" onClick={() => onToggle(row, false)}>
-            {text.reactivate}
-          </Button>
+          <IconAction
+            title={text.reactivate}
+            icon={<PlayCircleOutlined />}
+            onClick={() => onToggle(row, false)}
+          />
         )}
       </Space>
     ),

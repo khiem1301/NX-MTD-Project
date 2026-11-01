@@ -1,9 +1,11 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Button, InputNumber, Space, type TableColumnsType } from 'antd';
+import { InputNumber, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { ColorAutoComplete } from './ColorAutoComplete';
-import type { GridRow, ProductBlock } from '../utils/orderGrid';
+import { rowTotal, type GridRow, type ProductBlock } from '../utils/orderGrid';
+import { colorErrorKey, qtyErrorKey, type BlockErrors } from '../utils/orderValidation';
 
 export const rowHasOldLine = (row: GridRow): boolean =>
   Object.values(row.cells).some((c) => c.orderLineId !== null);
@@ -16,6 +18,7 @@ type BlockGridColumnsOptions = {
   block: ProductBlock;
   /** Đơn không còn ở trạng thái Mới: dòng / size cũ không xóa được, không đổi màu. */
   locked: boolean;
+  errors: BlockErrors;
   setRow: (index: number, patch: Partial<GridRow>) => void;
   setQty: (index: number, size: string, qty: number | null) => void;
   removeSize: (size: string) => void;
@@ -26,6 +29,7 @@ type BlockGridColumnsOptions = {
 export const blockGridColumns = ({
   block,
   locked,
+  errors,
   setRow,
   setQty,
   removeSize,
@@ -36,6 +40,8 @@ export const blockGridColumns = ({
     width: 160,
     render: (_: unknown, row, index) => (
       <ColorAutoComplete
+        size="small"
+        status={errors[colorErrorKey(row.key)] ? 'error' : undefined}
         value={row.color}
         disabled={locked && rowHasOldLine(row)}
         extraColors={block.rows.map((r) => r.color)}
@@ -48,24 +54,21 @@ export const blockGridColumns = ({
       <Space size={4}>
         {size}
         {!(locked && sizeHasOldLine(block, size)) && (
-          <Button
-            type="text"
-            size="small"
+          <IconAction
+            title={`Xóa size ${size}`}
             icon={<DeleteOutlined />}
-            aria-label={`Xóa size ${size}`}
             onClick={() => removeSize(size)}
           />
         )}
       </Space>
     ),
-    width: 110,
+    width: 90,
     render: (_: unknown, row: GridRow, index: number) => {
       const cell = row.cells[size];
-      const old = cell?.orderLineId !== undefined && cell.orderLineId !== null;
       return (
         <InputNumber
-          min={locked && old ? 1 : 0}
-          precision={0}
+          size="small"
+          status={errors[qtyErrorKey(row.key, size)] ? 'error' : undefined}
           controls={false}
           style={{ width: '100%' }}
           value={cell?.qty ?? null}
@@ -78,19 +81,17 @@ export const blockGridColumns = ({
     title: MESSAGES.orders.totalQty,
     width: 90,
     align: 'right',
-    render: (_: unknown, row) =>
-      formatQty(block.sizes.reduce((s, size) => s + (row.cells[size]?.qty ?? 0), 0)),
+    render: (_: unknown, row) => formatQty(rowTotal(block, row)),
   },
   {
     title: '',
-    width: 48,
+    width: 40,
     render: (_: unknown, row, index) =>
       locked && rowHasOldLine(row) ? null : (
-        <Button
-          type="text"
+        <IconAction
           danger
+          title={MESSAGES.common.delete}
           icon={<DeleteOutlined />}
-          aria-label={MESSAGES.common.delete}
           onClick={() => onChange({ ...block, rows: block.rows.filter((_r, i) => i !== index) })}
         />
       ),

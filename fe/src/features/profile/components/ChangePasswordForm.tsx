@@ -5,7 +5,7 @@ import { useChangePassword } from '../hooks/useProfile';
 import type { ChangePasswordPayload } from '../api/profileApi';
 
 /** UC03: nhập lại phải khớp (MSG05); sai mật khẩu hiện tại là 409 (MSG07) nên không bị tự refresh token. */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ requireCurrent = true }: { requireCurrent?: boolean }) {
   const [form] = Form.useForm<ChangePasswordPayload>();
   const change = useChangePassword();
 
@@ -38,13 +38,15 @@ export function ChangePasswordForm() {
       disabled={change.isPending}
       style={{ maxWidth: 420 }}
     >
-      <Form.Item
-        name="currentPassword"
-        label={MESSAGES.hr.currentPassword}
-        rules={[{ required: true, message: MESSAGES.common.required }]}
-      >
-        <Input.Password autoComplete="current-password" />
-      </Form.Item>
+      {requireCurrent && (
+        <Form.Item
+          name="currentPassword"
+          label={MESSAGES.hr.currentPassword}
+          rules={[{ required: true, message: MESSAGES.common.required }]}
+        >
+          <Input.Password autoComplete="current-password" />
+        </Form.Item>
+      )}
       <Form.Item
         name="newPassword"
         label={MESSAGES.hr.newPassword}
