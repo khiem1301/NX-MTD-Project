@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { Button, Card, Space, type TableColumnsType } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -23,7 +24,6 @@ import { useEmployees } from '../hooks/useEmployees';
 import type { EmployeeListItem, TempPassword } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { EmployeeDetailModal } from '../components/EmployeeDetailModal';
 import { useSearchParams } from 'react-router-dom';
 import { DataTable } from '@/components/common/DataTable';
@@ -61,7 +61,6 @@ export function EmployeesPage() {
     {
       title: MESSAGES.hr.employeeCode,
       dataIndex: 'employeeCode',
-      render: (v: string, e) => <DetailLink onClick={() => open(e.employeeId)}>{v}</DetailLink>,
     },
     { title: MESSAGES.hr.fullName, dataIndex: 'fullName' },
     { title: MESSAGES.hr.role, dataIndex: 'role', render: (v: Role) => ROLE_LABEL[v] ?? v },
@@ -97,6 +96,17 @@ export function EmployeesPage() {
           },
         ]
       : []),
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, e) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => open(e.employeeId)}
+        />
+      ),
+    },
   ];
 
   return (

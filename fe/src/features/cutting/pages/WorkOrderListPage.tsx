@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, Space, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
@@ -17,7 +18,6 @@ import { useWorkOrders } from '../hooks/useCutting';
 import type { WorkOrder } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -47,9 +47,6 @@ export function WorkOrderListPage() {
     {
       title: LABELS.workOrderCode,
       dataIndex: 'workOrderCode',
-      render: (v: string, w) => (
-        <DetailLink onClick={() => setViewingId(w.workOrderId)}>{v}</DetailLink>
-      ),
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.product, dataIndex: 'productCode' },
@@ -60,6 +57,17 @@ export function WorkOrderListPage() {
       title: LABELS.status,
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={WORK_ORDER_STATUS_LABEL} />,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, w) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(w.workOrderId)}
+        />
+      ),
     },
   ];
 

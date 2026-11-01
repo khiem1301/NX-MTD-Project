@@ -30,6 +30,8 @@ public partial class KpiTarget
 
     public DateTime CreatedAt { get; set; }
 
+    public virtual ICollection<KpiDailyTarget> KpiDailyTargets { get; set; } = new List<KpiDailyTarget>();
+
     public virtual CustomerOrder Order { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;

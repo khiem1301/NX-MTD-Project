@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-01 (UC25, UC26): đơn giá công đoạn. Kế toán lập (DRAFT) và gửi duyệt, Admin duyệt hoặc từ chối (bắt buộc lý do).

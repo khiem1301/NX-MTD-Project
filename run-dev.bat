@@ -26,6 +26,5 @@ if errorlevel 1 (
 )
 
 start "" http://localhost:5173
-start "" http://localhost:5080/swagger
 echo [NX-MTD] San sang. Dong 2 cua so Backend/Frontend de tat server.
 timeout /t 5 >nul

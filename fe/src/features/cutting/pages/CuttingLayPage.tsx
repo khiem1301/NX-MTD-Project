@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
 import { Alert, Button, Card, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { WorkOrderSelect } from '@/components/common/WorkOrderSelect';
@@ -13,7 +14,6 @@ import { LABELS, LAY_STATUS, LAY_STATUS_LABEL, SHIFT_LABEL, WORK_ORDER_STATUS } 
 import { useLays, useWorkOrder, useWorkOrders } from '../hooks/useCutting';
 import type { CuttingLay } from '../types';
 import { LayDetailModal } from '../components/LayDetailModal';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 
 const CUTTABLE: readonly string[] = [WORK_ORDER_STATUS.OPEN, WORK_ORDER_STATUS.CUTTING];
@@ -40,9 +40,7 @@ export function CuttingLayPage() {
     {
       title: LABELS.workDate,
       dataIndex: 'workDate',
-      render: (v: string, l) => (
-        <DetailLink onClick={() => setViewing(l)}>{formatDate(v)}</DetailLink>
-      ),
+      render: (v: string) => formatDate(v),
     },
     { title: LABELS.shift, dataIndex: 'shiftCode', render: (v: string) => SHIFT_LABEL[v] ?? v },
     { title: LABELS.laySequence, dataIndex: 'laySequence', align: 'right' },
@@ -63,12 +61,22 @@ export function CuttingLayPage() {
     {
       title: MESSAGES.common.actions,
       key: 'actions',
-      render: (_, l) =>
-        l.status === LAY_STATUS.RECORDED && cuttable ? (
-          <Button type="link" icon={<EditOutlined />} onClick={() => openForm(l)}>
-            {MESSAGES.common.edit}
-          </Button>
-        ) : null,
+      render: (_, l) => (
+        <Space size={0}>
+          <IconAction
+            title={MESSAGES.common.view}
+            icon={<EyeOutlined />}
+            onClick={() => setViewing(l)}
+          />
+          {l.status === LAY_STATUS.RECORDED && cuttable && (
+            <IconAction
+              title={MESSAGES.common.edit}
+              icon={<EditOutlined />}
+              onClick={() => openForm(l)}
+            />
+          )}
+        </Space>
+      ),
     },
   ];
 

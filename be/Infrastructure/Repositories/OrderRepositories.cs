@@ -22,7 +22,7 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
             q = q.Where(c => c.CustomerName.Contains(k) || (c.Phone != null && c.Phone.Contains(k)));
         }
         var rows = await q.OrderBy(c => c.CustomerName)
-            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status)).ToListAsync(ct);
+            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status, c.DiscontinueReason)).ToListAsync(ct);
         return rows.Select(c => c with { Status = CodeText.ToPascal(c.Status) }).ToList();
     }
 

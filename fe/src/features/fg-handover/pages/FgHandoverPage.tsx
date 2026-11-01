@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
@@ -15,7 +16,6 @@ import { useFgHandovers } from '../hooks/useFgHandover';
 import type { FgHandoverListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -37,9 +37,6 @@ export function FgHandoverPage() {
     {
       title: FG_LABELS.code,
       dataIndex: 'handoverCode',
-      render: (v: string, h) => (
-        <DetailLink onClick={() => setViewingId(h.fgHandoverId)}>{v}</DetailLink>
-      ),
     },
     { title: FG_LABELS.order, dataIndex: 'orderCode' },
     { title: FG_LABELS.product, dataIndex: 'productCode' },
@@ -55,6 +52,17 @@ export function FgHandoverPage() {
       title: FG_LABELS.confirmedBy,
       dataIndex: 'confirmedByName',
       render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, h) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(h.fgHandoverId)}
+        />
+      ),
     },
   ];
 

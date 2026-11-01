@@ -1,4 +1,5 @@
-import { Button, Popconfirm, Result, Space, Spin, Tabs, type TableColumnsType } from 'antd';
+import { Button, Result, Space, Spin, Tabs, type TableColumnsType } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AuditHistory } from '@/components/common/AuditHistory';
@@ -42,12 +43,12 @@ export function TeamDetailModal() {
     const label = position === 'Leader' ? MESSAGES.hr.appointLeader : MESSAGES.hr.appointDeputy;
     const run = () => appoint.mutate({ id: data?.teamId ?? 0, employeeId: m.employeeId, position });
     return holder ? (
-      <Popconfirm
+      <ConfirmAction
         title={fill(MESSAGES.hr.appointConfirm, holder.fullName, POSITION_LABEL[position])}
         onConfirm={run}
       >
         <Button size="small">{label}</Button>
-      </Popconfirm>
+      </ConfirmAction>
     ) : (
       <Button size="small" onClick={run}>
         {label}

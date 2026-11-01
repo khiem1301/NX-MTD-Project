@@ -1,0 +1,4 @@
+/* Bỏ margin mặc định của trình duyệt: layout cao 100vh cộng margin sẽ dài hơn màn hình và sinh thanh cuộn. */
+body {
+  margin: 0;
+}

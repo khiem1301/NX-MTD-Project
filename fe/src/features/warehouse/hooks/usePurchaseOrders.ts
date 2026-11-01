@@ -35,3 +35,11 @@ export const useCreatePurchaseOrder = () => {
     },
   );
 };
+
+/** Nhà cung cấp đang hợp tác cho ô chọn của form tạo đơn mua. */
+export const useSupplierOptions = (enabled: boolean) =>
+  useQuery({
+    queryKey: [...WAREHOUSE_KEY, 'supplier-options'],
+    queryFn: warehouseApi.getSupplierOptions,
+    enabled,
+  });

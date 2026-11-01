@@ -122,6 +122,11 @@ export const TEAM_TYPE = { CUTTING: 'CUTTING', SEWING: 'SEWING' } as const;
 /** Lệnh cắt còn cấp vải được (BE: OPEN hoặc CUTTING). */
 export const ISSUABLE_WORK_ORDER_STATUSES = ['OPEN', 'CUTTING'] as const;
 
+/** Số ảnh chứng từ tối đa của một phiếu nhập. */
+export const MAX_RECEIPT_PHOTOS = 5;
+
+export const MATERIAL_ORDER_SCOPE = { NO_ORDER: 'NO_ORDER' } as const;
+
 export const PO_GOODS_STATUS_LABEL: Record<string, StatusLabel> = {
   PENDING_FINALISATION: { text: 'Chờ chốt đặt hàng', color: 'gold' },
   ORDERED: { text: 'Đã đặt hàng', color: 'blue' },
@@ -171,18 +176,17 @@ export const LABELS = {
   reactivate: 'Dùng lại',
   orderMaterialsTitle: 'NVL của đơn hàng',
   order: 'Đơn hàng',
-  selectOrder: 'Chọn đơn hàng',
   material: 'NVL',
   color: 'Màu NVL',
-  materialLengthCm: 'Dài cuộn / tấm (cm)',
-  materialWidthCm: 'Rộng / khổ vải (cm)',
-  materialSizeHint: 'Không bắt buộc. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt bù.',
+  materialWidthCm: 'Khổ vải (cm)',
+  materialSizeHint: 'Bắt buộc với vải. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt bù.',
   materialColorHint:
     'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
   requiredQty: 'Số cần',
   customerQty: 'Khách cấp',
   expectedDeliveryCount: 'Số lần khách giao dự kiến',
-  deliveries: 'Lần giao (đã nhận / dự kiến)',
+  deliveryCountShort: 'Số lần giao',
+  deliveries: 'Lần giao',
   deliveryUnit: 'lần',
   purchaseQty: 'Phải mua',
   source: 'Nguồn',
@@ -197,7 +201,10 @@ export const LABELS = {
   poCode: 'Số đơn mua',
   purchaseOrderOrder: 'Đơn hàng',
   purchaseOrderOrderHint:
-    'Chọn đơn hàng để mua theo NVL của đơn; để trống nếu mua dự trữ dùng chung.',
+    'Chọn đơn hàng để mua theo NVL của đơn (không cần mua hết, xóa dòng chưa mua); để trống nếu mua dự trữ dùng chung.',
+  addOrderMaterial: 'Thêm NVL của đơn chưa chọn',
+  noActiveSupplier:
+    'Chưa có nhà cung cấp nào đang hợp tác. Nhờ Admin thêm nhà cung cấp trước khi tạo đơn mua.',
   qtyRequiredOrCustomer: 'Phải nhập số cần hoặc số khách cấp lớn hơn 0.',
   nothingToBuy:
     'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
@@ -207,7 +214,6 @@ export const LABELS = {
   poGoodsStatusFilter: 'Trạng thái hàng',
   createStockPurchase: 'Tạo đơn mua',
   stockPurchase: 'Tạo đơn mua NVL',
-  selectOrderOrStock: 'Chọn đơn hàng, hoặc để trống để xem / tạo đơn mua NVL dùng chung',
   addNewMaterial: 'Thêm NVL mới',
   newMaterialHint: 'Gõ tên NVL (VD: kim may), chọn có sẵn hoặc thêm mới',
   stockPurchaseTag: 'Mua dự trữ',
@@ -226,6 +232,7 @@ export const LABELS = {
   confirmedBy: 'Người xác nhận',
   returnReason: 'Lý do trả lại',
   addLine: 'Thêm dòng',
+  addReceiptLine: 'Thêm NVL còn phải nhận chưa có trong phiếu',
   lineCount: 'Số dòng',
   confirm: 'Xác nhận',
   returnReceipt: 'Trả lại',
@@ -244,12 +251,17 @@ export const LABELS = {
   confirmedQty: 'Số thực nhận',
   discrepancyReason: 'Lý do chênh lệch',
   documentPhotos: 'Ảnh chứng từ',
+  documentPhotosHint:
+    'Đính kèm ảnh chứng từ giao hàng trước khi lưu phiếu; sau khi lưu không thêm ảnh ở màn chi tiết nữa.',
+  photoUploadFailed: 'Đã lưu phiếu nhưng {0} ảnh chưa tải được. Mở phiếu sửa để thêm lại ảnh.',
   requestIdOptional: 'Đơn Xin NVL (nếu có)',
   requestIdRequired: 'Đơn Xin BTP',
   issueFabric: 'Cấp vải cho tổ cắt',
   issuePieces: 'Cấp BTP cho tổ may',
   remainingQty: 'Còn phải cấp',
   availableQty: 'Khả dụng',
+  orderFilter: 'Đơn hàng (đơn đặt của khách)',
+  orderScopeNoOrder: 'Dùng chung',
   orderLine: 'Dòng đơn (màu - size)',
   receive: 'Xác nhận nhận',
   reject: 'Từ chối',
@@ -271,11 +283,26 @@ export const LABELS = {
   pieceHoldingsTitle: 'BTP của tổ may',
 } as const;
 
+/** Bộ lọc bảng NVL của đơn. */
+export const ORDER_MATERIAL_FILTER_TEXT = {
+  search: 'Tìm mã, tên, màu NVL',
+  supply: 'Nguồn',
+  supplyCustomer: 'Khách cấp',
+  supplyPurchase: 'Phải mua',
+  receipt: 'Nhập kho',
+  receiptPending: 'Chưa nhận đủ',
+  receiptDone: 'Đã nhận đủ',
+} as const;
+
 /** Đơn chờ khai báo NVL (Quản đốc / Admin) và màn NVL chờ nhận (Thủ kho). */
 export const INCOMING_TEXT = {
   pendingTitle: 'Đơn hàng chờ khai báo / mua NVL',
-  pendingHint: 'Bấm vào đơn để khai báo NVL khách cấp và NVL phải mua, rồi lập đơn mua.',
+  pendingHint: 'Bấm Mở đơn để khai báo NVL khách cấp và NVL phải mua, rồi lập đơn mua.',
   pendingEmpty: 'Không có đơn nào đang chờ NVL.',
+  pendingSearch: 'Tìm mã đơn, khách hàng',
+  pendingState: 'NVL',
+  materialComplete: 'Đã đủ NVL',
+  createStockPurchase: 'Tạo đơn mua dùng chung',
   open: 'Mở đơn',
   notDeclared: 'Chưa khai báo NVL',
   awaiting: 'Chờ NVL',
@@ -292,7 +319,14 @@ export const INCOMING_TEXT = {
   supplierSection: 'Mua nhà cung cấp (đơn mua đã đặt hàng)',
   customerEmpty: 'Chưa có NVL khách cấp nào đang chờ nhận.',
   supplierEmpty: 'Chưa có đơn mua nào đang chờ nhận.',
-  deliveries: 'Lần giao (đã nhận / dự kiến)',
+  goodsStatus: 'Tình trạng đơn mua',
+  canReceiveMore: 'Còn nhận tiếp được',
+  closedShortSection: 'Đơn mua đã đóng do giao thiếu (không nhận tiếp)',
+  closedShortHint:
+    'Phần còn thiếu đã được chốt không bù, không lập thêm phiếu nhập cho các đơn này.',
+  closedShortEmpty: 'Chưa có đơn mua nào đóng do giao thiếu.',
+  notReplenished: 'Thiếu đã chốt không bù',
+  deliveries: 'Lần giao',
   deliveryUnit: 'lần',
   noDeliveryCount: 'Chưa khai',
   deliveriesDone: 'Đủ lần giao',

@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { Button, Card, Space, Tag, type TableColumnsType } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import {
@@ -16,7 +17,6 @@ import { useCustomers, useOrders } from '../hooks/useOrders';
 import type { OrderListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { useNavigate } from 'react-router-dom';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
@@ -39,9 +39,6 @@ export function OrdersPage() {
     {
       title: MESSAGES.orders.orderCode,
       dataIndex: 'orderCode',
-      render: (v: string, o) => (
-        <DetailLink onClick={() => navigate(ROUTES.orderDetail(o.orderId))}>{v}</DetailLink>
-      ),
     },
     { title: MESSAGES.orders.customer, dataIndex: 'customerName' },
     { title: MESSAGES.orders.productCode, dataIndex: 'productCodes', ellipsis: true },
@@ -68,6 +65,17 @@ export function OrdersPage() {
       title: MESSAGES.orders.materialStatus,
       dataIndex: 'materialStatus',
       render: (v: string) => <StatusTag status={v} labels={MATERIAL_STATUS_TAG} />,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, o) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => navigate(ROUTES.orderDetail(o.orderId))}
+        />
+      ),
     },
   ];
 

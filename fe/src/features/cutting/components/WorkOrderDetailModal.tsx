@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Popconfirm, Space, Typography } from 'antd';
+import { Alert, Button, Descriptions, Space, Typography } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
@@ -44,12 +45,12 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
       canEdit &&
       w && (
         <Space>
-          <Popconfirm
+          <ConfirmAction
             title={MESSAGES.cutting.confirmCancelWorkOrder}
             onConfirm={() => cancel.mutate(w.workOrderId, { onSuccess: onClose })}
           >
             <Button danger>{LABELS.cancelWorkOrder}</Button>
-          </Popconfirm>
+          </ConfirmAction>
           <Button onClick={() => onEdit(w)}>{MESSAGES.common.edit}</Button>
         </Space>
       )

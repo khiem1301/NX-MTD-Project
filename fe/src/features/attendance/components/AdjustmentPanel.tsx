@@ -3,10 +3,10 @@ import { Button, Card, Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
-import { useRequestInbox } from '@/features/requests/hooks/useRequests';
-import type { RequestListItem } from '@/features/requests/types';
+import { useRequestInbox, type RequestListItem } from '@/features/requests';
 import { DATE_TIME_FORMAT, formatDate, toApiDate } from '@/utils/format';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useAdjustments } from '../hooks/useAttendance';
@@ -101,14 +101,13 @@ export function AdjustmentPanel() {
       title: text.approvedRequests.columns.action,
       key: 'action',
       render: (_, r) => (
-        <Button
-          type="link"
+        <IconAction
+          title={text.add}
+          icon={<PlusOutlined />}
           onClick={() =>
             openForm({ requestId: r.requestId, workDate: r.targetDate, reason: r.title })
           }
-        >
-          {text.add}
-        </Button>
+        />
       ),
     },
   ];

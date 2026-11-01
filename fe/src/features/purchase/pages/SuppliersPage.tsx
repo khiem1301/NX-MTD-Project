@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Button, Popconfirm, Space } from 'antd';
+import { Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { IconAction } from '@/components/common/IconAction';
+import { ReasonModal } from '@/components/common/ReasonModal';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -26,6 +28,7 @@ export function SuppliersPage() {
   const toggle = useToggleSupplier();
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [stopping, setStopping] = useState<Supplier | null>(null);
 
   const openForm = (supplier: Supplier | null) => {
     setEditing(supplier);
@@ -46,31 +49,36 @@ export function SuppliersPage() {
       dataIndex: 'status',
       render: (value: string) => <StatusTag status={value} labels={SUPPLIER_STATUS_LABEL} />,
     },
+    {
+      title: text.discontinueReason,
+      dataIndex: 'discontinueReason',
+      ellipsis: true,
+      render: (v: string | null) => v ?? '—',
+    },
     { title: text.orderCount, dataIndex: 'purchaseOrderCount', align: 'right' },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) => (
         <Space size={0} wrap>
-          <Button type="link" icon={<EditOutlined />} onClick={() => openForm(row)}>
-            {MESSAGES.common.edit}
-          </Button>
+          <IconAction
+            title={MESSAGES.common.edit}
+            icon={<EditOutlined />}
+            onClick={() => openForm(row)}
+          />
           {row.status === 'Active' ? (
-            <Popconfirm
-              title={PURCHASE_TEXT.discontinueConfirm}
-              onConfirm={() => toggle.mutate({ id: row.supplierId, discontinue: true })}
-            >
-              <Button type="link" danger>
-                {PURCHASE_TEXT.discontinue}
-              </Button>
-            </Popconfirm>
+            <IconAction
+              title={PURCHASE_TEXT.discontinue}
+              icon={<StopOutlined />}
+              danger
+              onClick={() => setStopping(row)}
+            />
           ) : (
-            <Button
-              type="link"
-              onClick={() => toggle.mutate({ id: row.supplierId, discontinue: false })}
-            >
-              {PURCHASE_TEXT.reactivate}
-            </Button>
+            <IconAction
+              title={PURCHASE_TEXT.reactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => toggle.mutate({ id: row.supplierId })}
+            />
           )}
         </Space>
       ),
@@ -109,6 +117,16 @@ export function SuppliersPage() {
         dataSource={suppliers.data?.items ?? []}
         loading={suppliers.isFetching}
         pagination={table.pagination(suppliers.data?.totalItems)}
+      />
+      <ReasonModal
+        open={stopping !== null}
+        title={PURCHASE_TEXT.discontinueTitle}
+        loading={toggle.isPending}
+        onCancel={() => setStopping(null)}
+        onSubmit={(reason) =>
+          stopping &&
+          toggle.mutate({ id: stopping.supplierId, reason }, { onSuccess: () => setStopping(null) })
+        }
       />
       <SupplierFormModal open={formOpen} supplier={editing} onClose={() => setFormOpen(false)} />
     </PageCard>

@@ -16,7 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
-import { useCreateRequest } from '@/features/requests/hooks/useRequests';
+import { useCreateRequest } from '@/features/requests';
 import { useOrderLineComponents } from '@/hooks/useLookups';
 import { formatDate, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';

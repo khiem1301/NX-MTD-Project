@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PrinterOutlined } from '@ant-design/icons';
-import { Alert, Button, Descriptions, Form, Popconfirm, Space } from 'antd';
+import { Alert, Button, Descriptions, Form, Space } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -57,11 +58,11 @@ export function IssueDetailModal({ issueId, onClose }: IssueDetailModalProps) {
           <Button danger onClick={() => setRejecting(true)}>
             {LABELS.reject}
           </Button>
-          <Popconfirm title={MESSAGES.warehouse.confirmIssue} onConfirm={() => form.submit()}>
+          <ConfirmAction title={MESSAGES.warehouse.confirmIssue} onConfirm={() => form.submit()}>
             <Button type="primary" loading={confirm.isPending}>
               {LABELS.receive}
             </Button>
-          </Popconfirm>
+          </ConfirmAction>
         </>
       )}
     </Space>

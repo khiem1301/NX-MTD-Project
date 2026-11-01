@@ -154,6 +154,8 @@ public sealed class StockRepository : IStockRepository
                       && (string.IsNullOrEmpty(query.Color) || m.Color == query.Color)
                       && (query.OrderId == null || _context.OrderMaterials.Any(o => o.OrderId == query.OrderId
                           && o.MaterialId == b.MaterialId))
+                      && (query.OrderScope != MaterialOrderScopes.NoOrder
+                          || !_context.OrderMaterials.Any(o => o.MaterialId == b.MaterialId))
                 orderby m.MaterialCode, m.Color
                 select new StockBalanceDto(b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
                     m.MaterialType, m.Unit, m.Color, null, null, null, null, null, null, null,

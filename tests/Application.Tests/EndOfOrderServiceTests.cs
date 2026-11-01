@@ -1,9 +1,9 @@
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Production;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -90,6 +90,24 @@ public class EndOfOrderServiceTests : ProductionTestBase
         preview.Rows.Should().Contain(r => r.WorkerId == 7 && r.MismatchQty == 6)
             .And.Contain(r => r.WorkerId == 8 && r.MismatchQty == 4);
         preview.Blockers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Preview_QcInThePeriodOfAnotherTargetOfTheSameTeam_IsNotCountedAgain()
+    {
+        var firstDay = new DateOnly(2026, 9, 21);
+        _targets.Add(new KpiTarget
+        {
+            KpiTargetId = 2, OrderId = OrderId, ProductId = ProductId, SewingTeamId = TeamId, Status = KpiStatuses.Closed,
+            StartDate = firstDay, EndDate = firstDay.AddDays(9),
+        });
+        _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 70, WorkDate = firstDay.AddDays(1) });
+        _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 40, WorkDate = firstDay.AddDays(15) });
+
+        var preview = (await Sut().PreviewAsync(1, default)).Data!;
+
+        preview.ActualQty.Should().Be(40);
+        preview.Achieved.Should().BeFalse();
     }
 
     [Fact]

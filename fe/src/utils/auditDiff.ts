@@ -1,37 +1,36 @@
-import { formatDate } from '@/utils/format';
+import { auditFieldLabel, formatAuditValue } from '@/utils/auditLabels';
 
 type Json = Record<string, unknown>;
-type SnapshotLine = { orderLineId: number; color: string; sizeCode: string; orderedQty: number; cmtUnitPrice: number };
-
-const FIELD_LABEL: Record<string, string> = {
-  OrderCode: 'Mã đơn',
-  CustomerId: 'Khách hàng',
-  ReceivedDate: 'Ngày nhận',
-  DueDate: 'Ngày giao',
-  Note: 'Ghi chú',
-  Status: 'Trạng thái',
-  StopReason: 'Lý do dừng',
-  ProductCode: 'Mã hàng',
-  ProductName: 'Tên',
-  SampleImageUrl: 'Ảnh mẫu',
-  Description: 'Mô tả',
+type SnapshotLine = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  orderedQty: number;
+  cmtUnitPrice: number;
 };
+
+/** Một dòng thay đổi đã dịch sang tiếng Việt: trường, giá trị trước (rỗng khi tạo mới) và giá trị sau. */
+export type ChangeRow = { field: string; before: string | null; after: string };
+
+const LINES_FIELD = 'Dòng đơn';
 
 const parse = (text: string | null): Json | null => {
   if (!text) return null;
   try {
     const value: unknown = JSON.parse(text);
-    return typeof value === 'object' && value !== null ? (value as Json) : null;
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+      ? (value as Json)
+      : null;
   } catch {
     return null;
   }
 };
 
-const show = (key: string, value: unknown): string => {
-  if (value === null || value === undefined || value === '') return '—';
-  if (key === 'ReceivedDate' || key === 'DueDate') return formatDate(String(value));
-  return String(value);
-};
+const isOrderLines = (value: unknown): value is SnapshotLine[] =>
+  Array.isArray(value) &&
+  value.every(
+    (l) => typeof l === 'object' && l !== null && 'orderLineId' in l && 'orderedQty' in l,
+  );
 
 const lineKey = (l: SnapshotLine): string => `${l.color} / ${l.sizeCode}`;
 
@@ -46,26 +45,63 @@ const diffLines = (before: SnapshotLine[], after: SnapshotLine[]): string[] => {
       continue;
     }
     seen.add(l.orderLineId);
-    if (prev.orderedQty !== l.orderedQty) result.push(`${lineKey(l)}: SL ${prev.orderedQty} → ${l.orderedQty}`);
-    if (prev.cmtUnitPrice !== l.cmtUnitPrice) result.push(`${lineKey(l)}: đơn giá ${prev.cmtUnitPrice} → ${l.cmtUnitPrice}`);
+    if (prev.orderedQty !== l.orderedQty)
+      result.push(`${lineKey(l)}: SL ${prev.orderedQty} → ${l.orderedQty}`);
+    if (prev.cmtUnitPrice !== l.cmtUnitPrice)
+      result.push(`${lineKey(l)}: đơn giá ${prev.cmtUnitPrice} → ${l.cmtUnitPrice}`);
   }
-  for (const l of before) if (!seen.has(l.orderLineId) && !after.some((a) => a.orderLineId === l.orderLineId)) result.push(`Xóa dòng ${lineKey(l)}`);
+  for (const l of before)
+    if (!seen.has(l.orderLineId) && !after.some((a) => a.orderLineId === l.orderLineId))
+      result.push(`Xóa dòng ${lineKey(l)}`);
   return result;
 };
 
-/** Các thay đổi đọc được của một bản ghi UPDATE: trường đổi (cũ → mới) và dòng màu × size thêm / xóa / đổi. */
-export const describeChanges = (oldValues: string | null, newValues: string | null): string[] => {
+/**
+ * Nội dung một bản ghi log dưới dạng bảng "trường – trước – sau" dễ đọc.
+ * Tạo mới / hành động không có giá trị cũ: liệt kê giá trị mới (before = null). Cập nhật: chỉ các trường đổi.
+ */
+export const buildChangeRows = (
+  oldValues: string | null,
+  newValues: string | null,
+): ChangeRow[] => {
   const before = parse(oldValues);
   const after = parse(newValues);
-  if (!before || !after) return [];
+  if (!after && !before) return [];
 
-  const result: string[] = [];
-  for (const [key, value] of Object.entries(after)) {
-    if (key === 'Lines' || !(key in before) || before[key] === value) continue;
-    result.push(`${FIELD_LABEL[key] ?? key}: ${show(key, before[key])} → ${show(key, value)}`);
+  const rows: ChangeRow[] = [];
+  for (const [key, value] of Object.entries(after ?? {})) {
+    if (key === 'Lines' && isOrderLines(value)) continue;
+    if (before && key in before) {
+      if (JSON.stringify(before[key]) === JSON.stringify(value)) continue;
+      rows.push({
+        field: auditFieldLabel(key),
+        before: formatAuditValue(key, before[key]),
+        after: formatAuditValue(key, value),
+      });
+    } else {
+      rows.push({
+        field: auditFieldLabel(key),
+        before: before ? '—' : null,
+        after: formatAuditValue(key, value),
+      });
+    }
   }
-  if (Array.isArray(before.Lines) && Array.isArray(after.Lines)) {
-    result.push(...diffLines(before.Lines as SnapshotLine[], after.Lines as SnapshotLine[]));
+  if (!after && before) {
+    for (const [key, value] of Object.entries(before))
+      rows.push({ field: auditFieldLabel(key), before: formatAuditValue(key, value), after: '—' });
   }
-  return result;
+  if (before && after && isOrderLines(before.Lines) && isOrderLines(after.Lines)) {
+    for (const note of diffLines(before.Lines, after.Lines))
+      rows.push({ field: LINES_FIELD, before: null, after: note });
+  }
+  return rows;
+};
+
+/** Các thay đổi đọc được của một bản ghi UPDATE dạng từng câu (dùng ở lịch sử trong màn chi tiết). */
+export const describeChanges = (oldValues: string | null, newValues: string | null): string[] => {
+  if (!parse(oldValues) || !parse(newValues)) return [];
+  return buildChangeRows(oldValues, newValues).map((r) => {
+    if (r.field === LINES_FIELD) return r.after;
+    return r.before === null ? `${r.field}: ${r.after}` : `${r.field}: ${r.before} → ${r.after}`;
+  });
 };

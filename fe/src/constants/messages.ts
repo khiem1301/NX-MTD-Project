@@ -35,12 +35,15 @@ export const MESSAGES = {
     confirmDeleteOrderMaterial: 'Xóa NVL này khỏi đơn? Thao tác không hoàn tác được.',
     orderMaterialDeleted: 'Đã xóa NVL của đơn.',
     purchaseOrderCreated: 'Đã tạo đơn mua NVL.',
-    receiptSaved: 'Đã gửi phiếu nhập. Mở chi tiết phiếu và đính kèm ảnh chứng từ giao hàng để Quản đốc xác nhận.',
-    receiptPhotoMissing: 'Phiếu chưa có ảnh chứng từ giao hàng. Thủ kho cần đính kèm ảnh trước khi Quản đốc xác nhận.',
+    receiptSaved:
+      'Đã gửi phiếu nhập. Mở chi tiết phiếu và đính kèm ảnh chứng từ giao hàng để Quản đốc xác nhận.',
+    receiptPhotoMissing:
+      'Phiếu chưa có ảnh chứng từ giao hàng. Thủ kho cần đính kèm ảnh trước khi Quản đốc xác nhận.',
     confirmReceipt: 'Xác nhận phiếu nhập? Tồn kho NVL sẽ tăng theo số đạt.',
     receiptConfirmed: 'Đã xác nhận phiếu nhập.',
     receiptReturned: 'Đã trả phiếu nhập cho Thủ kho.',
-    shortageStaged: 'Phiếu có hàng thiếu / lỗi, hệ thống đã tạo yêu cầu xử lý thiếu NVL cho Quản đốc.',
+    shortageStaged:
+      'Phiếu có hàng thiếu / lỗi, hệ thống đã tạo yêu cầu xử lý thiếu NVL cho Quản đốc.',
     shortageResolved: 'Đã ghi nhận cách xử lý hàng thiếu.',
     confirmNoReplenish:
       'Chốt không bù? Phần thiếu / lỗi sẽ được ghi "không bù" trên đơn mua và yêu cầu hoàn thành.',
@@ -98,7 +101,8 @@ export const MESSAGES = {
     importedPrefix: 'Đã nhập chi phí tháng:',
     noDataYet: 'Tháng này chưa có dữ liệu chi phí. Hãy tải file mẫu và nhập Excel.',
     confirmImportTitle: 'Nhập chi phí tháng?',
-    confirmImportContent: 'Dữ liệu cũ (nếu có) của tháng này sẽ bị thay thế bằng các dòng hợp lệ trong file.',
+    confirmImportContent:
+      'Dữ liệu cũ (nếu có) của tháng này sẽ bị thay thế bằng các dòng hợp lệ trong file.',
     importDisabledHint: 'Tháng này đã khóa, không thể nhập lại chi phí.',
   },
   revenue: {
@@ -112,7 +116,8 @@ export const MESSAGES = {
     noDataYet: 'Tháng này chưa có kết quả hòa vốn. Hãy chạy tính toán.',
     notReady: 'Chưa thể tính: bảng lương tháng chưa được duyệt hoặc chi phí tháng chưa được nhập.', // MSG25
     confirmCalculateTitle: 'Tính hòa vốn tháng này?',
-    confirmCalculateContent: 'Hệ thống sẽ lưu thêm một bộ kết quả mới (giữ lại lịch sử các lần tính trước).',
+    confirmCalculateContent:
+      'Hệ thống sẽ lưu thêm một bộ kết quả mới (giữ lại lịch sử các lần tính trước).',
     calculated: 'Đã tính hòa vốn.',
     atRisk: 'Nguy cơ lỗ',
     safe: 'An toàn',
@@ -177,7 +182,8 @@ export const MESSAGES = {
     resetConfirm: 'Đặt lại mật khẩu tạm cho nhân viên này? Họ sẽ bị đăng xuất.',
     employeeCreated: 'Đã thêm nhân viên và tạo tài khoản.',
     tempPasswordTitle: 'Mật khẩu tạm',
-    tempPasswordWarning: 'Mật khẩu chỉ hiện một lần. Hãy đưa cho nhân viên và nhắc đổi khi đăng nhập.',
+    tempPasswordWarning:
+      'Mật khẩu chỉ hiện một lần. Hãy đưa cho nhân viên và nhắc đổi khi đăng nhập.',
     username: 'Tên đăng nhập',
     copy: 'Sao chép',
     copied: 'Đã sao chép.',
@@ -222,7 +228,9 @@ export const MESSAGES = {
     discontinueConfirm: 'Ngừng sản xuất mã hàng này? Đơn cũ vẫn giữ nguyên.',
     customerDiscontinue: 'Ngừng hợp tác',
     customerReactivate: 'Hợp tác lại',
-    customerDiscontinueConfirm: 'Ngừng hợp tác với khách hàng này? Đơn cũ vẫn giữ nguyên, nhưng không tạo được đơn mới.',
+    customerDiscontinueConfirm:
+      'Ngừng hợp tác (đơn cũ vẫn giữ nguyên, không tạo được đơn mới) — nhập lý do',
+    customerDiscontinueReason: 'Lý do ngừng hợp tác',
     customerActive: 'Đang hợp tác',
     customerInactive: 'Ngừng hợp tác',
     allStatus: 'Trạng thái',
@@ -247,8 +255,35 @@ export const MESSAGES = {
     color: 'Màu',
     unitPrice: 'Đơn giá CMT',
     selectProduct: 'Chọn mã hàng',
+    unitPriceExample: 'VD: 15.000',
+    notEditable: 'Đơn hàng ở trạng thái này không sửa được.',
+    validation: {
+      codeMax: 'Mã đơn hàng tối đa 30 ký tự.',
+      codeFormat: 'Mã đơn hàng chỉ gồm chữ không dấu, số và . _ -',
+      noteMax: 'Ghi chú tối đa 1000 ký tự.',
+      dueBeforeReceived: 'Ngày giao phải sau hoặc bằng ngày nhận.',
+      productRequired: 'Vui lòng chọn mã hàng.',
+      priceRequired: 'Vui lòng nhập đơn giá CMT.',
+      priceMin: 'Đơn giá CMT không được âm.',
+      priceMax: 'Đơn giá CMT tối đa 100.000.000 ₫.',
+      priceDecimals: 'Đơn giá CMT tối đa 2 số lẻ.',
+      blockEmpty: 'Vui lòng nhập ít nhất một màu có số lượng.',
+      colorRequired: 'Vui lòng nhập màu.',
+      colorMax: 'Màu tối đa 50 ký tự.',
+      colorNoQty: 'Màu này chưa có số lượng.',
+      colorDuplicate: 'Màu này đã có trong mã hàng.',
+      qtyInvalid: 'Số lượng phải là số nguyên, không âm.',
+      qtyMax: 'Số lượng mỗi ô tối đa 1.000.000.',
+      oldLineEmpty: 'Đơn đã vào sản xuất: không được để trống số lượng đã khai.',
+      fixLines: 'Vui lòng sửa các ô báo đỏ ở phần mã hàng.',
+    },
+    createProduct: 'Tạo mã hàng mới',
+    removeProductBlock: 'Bỏ mã hàng khỏi đơn',
+    lockedEditHint:
+      'Đơn đã vào sản xuất: không đổi mã đơn, khách hàng, ngày nhận, màu và size đã khai; vẫn sửa được số lượng, đơn giá, ngày giao, ghi chú và thêm màu, size mới.',
     needLine: 'Vui lòng nhập ít nhất một dòng màu × size.', // MSG01
-    duplicateProduct: 'Một mã hàng chỉ khai một lần trong đơn: thêm màu / size vào cùng khối mã hàng đó.',
+    duplicateProduct:
+      'Một mã hàng chỉ khai một lần trong đơn: thêm màu / size vào cùng khối mã hàng đó.',
     cancelOrder: 'Hủy đơn hàng',
     startProduction: 'Chuyển sang sản xuất',
     startProductionHint: 'Chưa nhận NVL nào nên chưa thể chuyển sang sản xuất.',

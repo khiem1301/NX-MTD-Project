@@ -3,11 +3,13 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   EndOfOrderPreview,
-  KpiCapacity,
+  KpiCalendar,
   KpiDailyResult,
+  KpiOrderCapacity,
   KpiRole,
   KpiTarget,
   KpiTargetFilter,
+  SaveKpiDailyPlanPayload,
   SaveKpiTargetPayload,
 } from '../types';
 
@@ -33,14 +35,18 @@ export const kpiApi = {
   getDailyResults: (kpiTargetId: number, role: KpiRole = 'manager') =>
     get<KpiDailyResult[]>(dailyUrl(role, kpiTargetId)),
 
+  getCalendar: (kpiTargetId: number, role: KpiRole = 'manager') =>
+    get<KpiCalendar>(
+      role === 'admin' ? API.kpi.adminCalendar(kpiTargetId) : API.kpi.calendar(kpiTargetId),
+    ),
+
   // ---------- Quản đốc lập / sửa / hủy ----------
 
-  getCapacity: (params: {
-    orderId: number;
-    productId: number;
-    sewingTeamId: number;
-    exceptKpiTargetId?: number;
-  }) => get<KpiCapacity>(API.kpi.availableBtp, params),
+  getOrderCapacity: (params: { orderId: number; productId: number; exceptKpiTargetId?: number }) =>
+    get<KpiOrderCapacity>(API.kpi.orderCapacity, params),
+
+  saveDailyPlan: (kpiTargetId: number, body: SaveKpiDailyPlanPayload) =>
+    put<KpiCalendar>(API.kpi.dailyPlan(kpiTargetId), body),
 
   finishPreview: (kpiTargetId: number) =>
     get<EndOfOrderPreview>(API.kpi.finishPreview(kpiTargetId)),

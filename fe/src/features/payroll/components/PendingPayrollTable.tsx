@@ -1,3 +1,6 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -7,27 +10,23 @@ import { PAYROLL_STATUS_FILTER_OPTIONS, PAYROLL_STATUS_LABEL, PAYROLL_TEXT } fro
 import { useAdminPayrolls } from '../hooks/usePayroll';
 import type { PayrollStatus, PayrollSummary } from '../types';
 import { formatCurrency } from '../utils';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { FilterSelect } from '@/components/common/FilterSelect';
 
 type Props = { onView: (payrollId: number) => void };
 
-const DEFAULT_STATUS: PayrollStatus = 'PendingApproval';
-
-/** UC32 — Admin: danh sách bảng lương theo trạng thái; mặc định xem các bảng Chờ duyệt. */
+/** UC32 — Admin: danh sách bảng lương theo trạng thái; mặc định "Tất cả" nhưng không gồm bảng Nháp (kế toán chưa gửi). */
 export function PendingPayrollTable({ onView }: Props) {
-  const [status, setStatus] = useState<PayrollStatus | undefined>(DEFAULT_STATUS);
+  const [status, setStatus] = useState<PayrollStatus | undefined>(undefined);
   const payrolls = useAdminPayrolls(status);
+  const rows = payrolls.data?.items.filter((p) => p.status !== 'Draft');
 
   const columns: ColumnsType<PayrollSummary> = [
     {
       title: PAYROLL_TEXT.periodMonth,
       dataIndex: 'periodMonth',
-      render: (v: string, row) => (
-        <DetailLink onClick={() => onView(row.payrollId)}>{formatMonth(v)}</DetailLink>
-      ),
+      render: (v: string) => formatMonth(v),
     },
     {
       title: PAYROLL_TEXT.summary.status,
@@ -47,6 +46,17 @@ export function PendingPayrollTable({ onView }: Props) {
       title: PAYROLL_TEXT.summary.submittedAt,
       dataIndex: 'submittedAt',
       render: (v: string | null) => (v ? formatDateTime(v) : '—'),
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, row) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onView(row.payrollId)}
+        />
+      ),
     },
   ];
 
@@ -70,7 +80,7 @@ export function PendingPayrollTable({ onView }: Props) {
         rowKey="payrollId"
         size="small"
         columns={columns}
-        dataSource={payrolls.data?.items}
+        dataSource={rows}
         loading={payrolls.isFetching}
         pagination={false}
         scroll={{ x: 'max-content' }}

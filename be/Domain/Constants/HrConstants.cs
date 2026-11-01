@@ -16,6 +16,9 @@ public static class RoleCodes
     /// <summary>Quản đốc không được xem / quản lý nhân viên và tài khoản có các vai trò này (UC16, GBR-01; mở rộng 28/10:
     /// Quản đốc quản lý được mọi người trừ Admin và Kế toán).</summary>
     public static readonly IReadOnlySet<string> HiddenFromManager = new HashSet<string> { Admin, Accountant };
+
+    /// <summary>Chỉ Admin được gán hoặc đổi các vai trò này; Quản đốc vẫn thấy nhân viên vai trò Quản đốc nhưng không đổi được vai trò.</summary>
+    public static readonly IReadOnlySet<string> AdminAssignedOnly = new HashSet<string> { Admin, Manager, Accountant };
 }
 
 public static class TeamPositions

@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Orders;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// UC10 (phần định mức): thành phần PANEL / TRIM, biến thể màu × size và định mức NVL của từng biến thể, khai báo một lần
@@ -59,116 +59,143 @@ public sealed class ProductSpecService : IProductSpecService
         var invalid = await ValidateAsync(dto, ct);
         if (invalid is not null) return invalid;
 
-        var saved = await _uow.InTransactionAsync(async () =>
-        {
-            var components = await _uow.Repository<ProductComponent>().Query().Where(c => c.ProductId == productId).ToListAsync(ct);
-            var variants = await _uow.Repository<ProductVariant>().Query().Where(v => v.ProductId == productId).ToListAsync(ct);
-            var norms = await _uow.Repository<ProductComponentMaterial>().Query().Where(n => n.ProductId == productId).ToListAsync(ct);
-
-            // Khớp dòng gửi lên với dòng đang có: theo Id, không có Id thì theo tên (thành phần) / màu + size (biến thể).
-            var componentMatch = dto.Components.Select(c => (Input: c, Entity: c.ProductComponentId is { } id
-                ? components.FirstOrDefault(e => e.ProductComponentId == id)
-                : components.FirstOrDefault(e => Same(e.ComponentName, c.ComponentName)))).ToList();
-            var variantMatch = dto.Variants.Select(v => (Input: v, Entity: v.ProductVariantId is { } id
-                ? variants.FirstOrDefault(e => e.ProductVariantId == id)
-                : variants.FirstOrDefault(e => Same(e.Color, v.Color) && Same(e.SizeCode, v.SizeCode)))).ToList();
-            if (componentMatch.Any(m => m.Input.ProductComponentId is not null && m.Entity is null)
-                || variantMatch.Any(m => m.Input.ProductVariantId is not null && m.Entity is null))
-                return Fail.NotFound<int>();
-            // Màu – size lấy từ đơn hàng: không tạo mới ở màn định mức.
-            if (variantMatch.Any(m => m.Entity is null)) return Fail.As<int>(Invalid(Messages.ProductSpecVariantFromOrders));
-
-            // Bước 1: gỡ định mức cũ của các biến thể giữ lại + thành phần / biến thể bị bỏ (xóa nếu chưa dùng, còn dùng thì ngừng dùng).
-            var keptComponents = componentMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
-            var keptVariants = variantMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
-            var droppedComponents = components.Where(c => !keptComponents.Contains(c)).ToList();
-
-            var droppedComponentIds = droppedComponents.Select(c => c.ProductComponentId).ToHashSet();
-            var usedNormIds = await UsedNormIdsAsync(norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId))
-                .Select(n => n.ProductComponentMaterialId).ToList(), ct);
-            var usedComponents = norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId)
-                                                  && usedNormIds.Contains(n.ProductComponentMaterialId))
-                .Select(n => n.ProductComponentId).ToHashSet();
-
-            // Định mức bị gỡ: của thành phần bị xóa (định mức của biến thể giữ lại sẽ ghi lại theo danh sách gửi lên).
-            var keptVariantIds = keptVariants.Select(v => v.ProductVariantId).ToHashSet();
-            var goneComponentIds = droppedComponents.Select(c => c.ProductComponentId).Where(id => !usedComponents.Contains(id)).ToHashSet();
-            var removeNorms = norms.Where(n => goneComponentIds.Contains(n.ProductComponentId)).ToList();
-            _uow.Repository<ProductComponentMaterial>().RemoveRange(removeNorms);
-            // Công đoạn ↔ chi tiết chỉ là dữ liệu tra cứu: gỡ liên kết với thành phần bị xóa.
-            var goneLinks = await _uow.Repository<OperationComponent>().Query()
-                .Where(oc => oc.ProductId == productId && goneComponentIds.Contains(oc.ProductComponentId)).ToListAsync(ct);
-            _uow.Repository<OperationComponent>().RemoveRange(goneLinks);
-            foreach (var c in droppedComponents)
-            {
-                if (usedComponents.Contains(c.ProductComponentId)) c.Status = RecordStatus.Discontinued;
-                else _uow.Repository<ProductComponent>().Remove(c);
-            }
-            await _uow.SaveChangesAsync();
-
-            // Bước 2: cập nhật / thêm thành phần và biến thể để có Id cho định mức.
-            var componentByName = new Dictionary<string, ProductComponent>(StringComparer.OrdinalIgnoreCase);
-            foreach (var (input, entity) in componentMatch)
-            {
-                var c = entity ?? new ProductComponent { ProductId = productId };
-                c.ComponentName = input.ComponentName.Trim();
-                c.ComponentType = CodeText.ToCode(input.ComponentType);
-                c.PiecesPerGarment = input.PiecesPerGarment;
-                c.Status = RecordStatus.Active;
-                if (entity is null) await _uow.Repository<ProductComponent>().AddAsync(c);
-                componentByName[c.ComponentName] = c;
-            }
-            var variantByKey = new Dictionary<(string, string), ProductVariant>();
-            foreach (var (input, entity) in variantMatch)
-            {
-                var v = entity!;
-                v.LengthCm = input.LengthCm;
-                v.WidthCm = input.WidthCm;
-                variantByKey[(v.Color.ToUpperInvariant(), v.SizeCode)] = v;
-            }
-            await _uow.SaveChangesAsync();
-
-            // Bước 3: ghi định mức theo kiểu cập nhật / thêm / xóa (giữ Id: lệnh cắt, phiếu cấp, bàn cắt, tồn kho BTP
-            // trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại).
-            var keptComponentIds = componentByName.Values.Select(c => c.ProductComponentId).ToHashSet();
-            var existing = norms.Except(removeNorms)
-                .Where(n => keptVariantIds.Contains(n.ProductVariantId) && keptComponentIds.Contains(n.ProductComponentId))
-                .ToDictionary(n => (n.ProductVariantId, n.ProductComponentId, n.MaterialId));
-            var wanted = new HashSet<(int, int, int)>();
-            foreach (var n in dto.Norms)
-            {
-                var key = (variantByKey[(n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant())].ProductVariantId,
-                    componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId);
-                wanted.Add(key);
-                var row = existing.GetValueOrDefault(key);
-                if (row is null)
-                {
-                    row = new ProductComponentMaterial
-                    {
-                        ProductId = productId, ProductVariantId = key.Item1, ProductComponentId = key.Item2, MaterialId = key.Item3,
-                    };
-                    await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
-                }
-                row.LengthCm = n.LengthCm;
-                row.WidthCm = n.WidthCm;
-                row.SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim();
-            }
-            var stale = existing.Where(e => !wanted.Contains(e.Key)).Select(e => e.Value).ToList();
-            if (stale.Count > 0)
-            {
-                var inUse = await UsedNormIdsAsync(stale.Select(n => n.ProductComponentMaterialId).ToList(), ct);
-                if (inUse.Count > 0) return Fail.As<int>(Invalid(Messages.ProductSpecNormInUse));
-                _uow.Repository<ProductComponentMaterial>().RemoveRange(stale);
-            }
-            _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, null,
-                new { Spec = new { Components = dto.Components.Count, Variants = dto.Variants.Count, Norms = dto.Norms.Count } }));
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(productId, Messages.Saved);
-        });
+        var saved = await _uow.InTransactionAsync(() => ApplySpecAsync(productId, dto, ct));
         if (!saved.IsSuccess) return Fail.As<ProductSpecDto>(saved);
 
         var spec = await GetAsync(productId, ct);
         return Result<ProductSpecDto>.Success(spec.Data!, Messages.Saved);
+    }
+
+    /// <summary>Ghi định mức trong một giao dịch: gỡ mục bỏ đi → cập nhật / thêm thành phần, biến thể → ghi định mức.</summary>
+    private async Task<Result<int>> ApplySpecAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
+    {
+        var components = await _uow.Repository<ProductComponent>().Query().Where(c => c.ProductId == productId).ToListAsync(ct);
+        var variants = await _uow.Repository<ProductVariant>().Query().Where(v => v.ProductId == productId).ToListAsync(ct);
+        var norms = await _uow.Repository<ProductComponentMaterial>().Query().Where(n => n.ProductId == productId).ToListAsync(ct);
+
+        // Khớp dòng gửi lên với dòng đang có: theo Id, không có Id thì theo tên (thành phần) / màu + size (biến thể).
+        var componentMatch = dto.Components.Select(c => (Input: c, Entity: c.ProductComponentId is { } id
+            ? components.FirstOrDefault(e => e.ProductComponentId == id)
+            : components.FirstOrDefault(e => Same(e.ComponentName, c.ComponentName)))).ToList();
+        var variantMatch = dto.Variants.Select(v => (Input: v, Entity: v.ProductVariantId is { } id
+            ? variants.FirstOrDefault(e => e.ProductVariantId == id)
+            : variants.FirstOrDefault(e => Same(e.Color, v.Color) && Same(e.SizeCode, v.SizeCode)))).ToList();
+        if (componentMatch.Any(m => m.Input.ProductComponentId is not null && m.Entity is null)
+            || variantMatch.Any(m => m.Input.ProductVariantId is not null && m.Entity is null))
+            return Fail.NotFound<int>();
+        // Màu – size lấy từ đơn hàng: không tạo mới ở màn định mức.
+        if (variantMatch.Any(m => m.Entity is null)) return Fail.As<int>(Invalid(Messages.ProductSpecVariantFromOrders));
+
+        var keptComponents = componentMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
+        var keptVariantIds = variantMatch.Select(m => m.Entity!.ProductVariantId).ToHashSet();
+        var removeNorms = await RemoveDroppedComponentsAsync(productId, components, keptComponents, norms, ct);
+        var (componentByName, variantByKey) = await UpsertComponentsAndVariantsAsync(productId, componentMatch, variantMatch);
+        var failed = await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), keptVariantIds, componentByName, variantByKey, ct);
+        if (failed is not null) return failed;
+
+        _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, null,
+            new { Spec = new { Components = dto.Components.Count, Variants = dto.Variants.Count, Norms = dto.Norms.Count } }));
+        await _uow.SaveChangesAsync();
+        return Result<int>.Success(productId, Messages.Saved);
+    }
+
+    /// <summary>
+    /// Bước 1: gỡ thành phần bị bỏ (xóa nếu chưa dùng, còn dùng thì ngừng dùng) cùng định mức và liên kết công đoạn của nó.
+    /// Trả về các dòng định mức đã gỡ (định mức của biến thể giữ lại sẽ ghi lại theo danh sách gửi lên).
+    /// </summary>
+    private async Task<List<ProductComponentMaterial>> RemoveDroppedComponentsAsync(int productId, List<ProductComponent> components,
+        HashSet<ProductComponent> keptComponents, List<ProductComponentMaterial> norms, CancellationToken ct)
+    {
+        var droppedComponents = components.Where(c => !keptComponents.Contains(c)).ToList();
+        var droppedComponentIds = droppedComponents.Select(c => c.ProductComponentId).ToHashSet();
+        var usedNormIds = await UsedNormIdsAsync(norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId))
+            .Select(n => n.ProductComponentMaterialId).ToList(), ct);
+        var usedComponents = norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId)
+                                              && usedNormIds.Contains(n.ProductComponentMaterialId))
+            .Select(n => n.ProductComponentId).ToHashSet();
+
+        var goneComponentIds = droppedComponentIds.Where(id => !usedComponents.Contains(id)).ToHashSet();
+        var removeNorms = norms.Where(n => goneComponentIds.Contains(n.ProductComponentId)).ToList();
+        _uow.Repository<ProductComponentMaterial>().RemoveRange(removeNorms);
+        // Công đoạn ↔ chi tiết chỉ là dữ liệu tra cứu: gỡ liên kết với thành phần bị xóa.
+        var goneLinks = await _uow.Repository<OperationComponent>().Query()
+            .Where(oc => oc.ProductId == productId && goneComponentIds.Contains(oc.ProductComponentId)).ToListAsync(ct);
+        _uow.Repository<OperationComponent>().RemoveRange(goneLinks);
+        foreach (var c in droppedComponents)
+        {
+            if (usedComponents.Contains(c.ProductComponentId)) c.Status = RecordStatus.Discontinued;
+            else _uow.Repository<ProductComponent>().Remove(c);
+        }
+        await _uow.SaveChangesAsync();
+        return removeNorms;
+    }
+
+    /// <summary>Bước 2: cập nhật / thêm thành phần và biến thể để có Id cho định mức.</summary>
+    private async Task<(Dictionary<string, ProductComponent> ByName, Dictionary<(string, string), ProductVariant> ByKey)>
+        UpsertComponentsAndVariantsAsync(int productId,
+            List<(SaveProductComponentDto Input, ProductComponent? Entity)> componentMatch,
+            List<(SaveProductVariantDto Input, ProductVariant? Entity)> variantMatch)
+    {
+        var componentByName = new Dictionary<string, ProductComponent>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (input, entity) in componentMatch)
+        {
+            var c = entity ?? new ProductComponent { ProductId = productId };
+            c.ComponentName = input.ComponentName.Trim();
+            c.ComponentType = CodeText.ToCode(input.ComponentType);
+            c.PiecesPerGarment = input.PiecesPerGarment;
+            c.Status = RecordStatus.Active;
+            if (entity is null) await _uow.Repository<ProductComponent>().AddAsync(c);
+            componentByName[c.ComponentName] = c;
+        }
+        var variantByKey = new Dictionary<(string, string), ProductVariant>();
+        foreach (var (input, entity) in variantMatch)
+        {
+            var v = entity!;
+            v.LengthCm = input.LengthCm;
+            v.WidthCm = input.WidthCm;
+            variantByKey[(v.Color.ToUpperInvariant(), v.SizeCode)] = v;
+        }
+        await _uow.SaveChangesAsync();
+        return (componentByName, variantByKey);
+    }
+
+    /// <summary>
+    /// Bước 3: ghi định mức theo kiểu cập nhật / thêm / xóa (giữ Id: lệnh cắt, phiếu cấp, bàn cắt, tồn kho BTP
+    /// trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại). Trả về lỗi nếu định mức bị bỏ đã được dùng.
+    /// </summary>
+    private async Task<Result<int>?> WriteNormsAsync(int productId, SaveProductSpecDto dto, List<ProductComponentMaterial> remainingNorms,
+        HashSet<int> keptVariantIds, Dictionary<string, ProductComponent> componentByName,
+        Dictionary<(string, string), ProductVariant> variantByKey, CancellationToken ct)
+    {
+        var keptComponentIds = componentByName.Values.Select(c => c.ProductComponentId).ToHashSet();
+        var existing = remainingNorms
+            .Where(n => keptVariantIds.Contains(n.ProductVariantId) && keptComponentIds.Contains(n.ProductComponentId))
+            .ToDictionary(n => (n.ProductVariantId, n.ProductComponentId, n.MaterialId));
+        var wanted = new HashSet<(int, int, int)>();
+        foreach (var n in dto.Norms)
+        {
+            var key = (variantByKey[(n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant())].ProductVariantId,
+                componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId);
+            wanted.Add(key);
+            var row = existing.GetValueOrDefault(key);
+            if (row is null)
+            {
+                row = new ProductComponentMaterial
+                {
+                    ProductId = productId, ProductVariantId = key.Item1, ProductComponentId = key.Item2, MaterialId = key.Item3,
+                };
+                await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
+            }
+            row.LengthCm = n.LengthCm;
+            row.WidthCm = n.WidthCm;
+            row.SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim();
+        }
+        var stale = existing.Where(e => !wanted.Contains(e.Key)).Select(e => e.Value).ToList();
+        if (stale.Count == 0) return null;
+        var inUse = await UsedNormIdsAsync(stale.Select(n => n.ProductComponentMaterialId).ToList(), ct);
+        if (inUse.Count > 0) return Fail.As<int>(Invalid(Messages.ProductSpecNormInUse));
+        _uow.Repository<ProductComponentMaterial>().RemoveRange(stale);
+        return null;
     }
 
     private async Task<Result<ProductSpecDto>?> ValidateAsync(SaveProductSpecDto dto, CancellationToken ct)

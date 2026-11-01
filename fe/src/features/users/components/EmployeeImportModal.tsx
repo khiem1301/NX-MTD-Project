@@ -1,85 +1,20 @@
-import { useState } from 'react';
 import { InboxOutlined } from '@ant-design/icons';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert, Button, Modal, Space, Tag, Typography, Upload, message } from 'antd';
-import { API } from '@/constants/apiEndpoints';
+import { Alert, Button, Modal, Space, Upload } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useRolePath } from '@/hooks/useRolePath';
-import { apiClient } from '@/services/apiClient';
-import type { ApiError, ApiResponse } from '@/types/api';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
-
-type ImportRow = {
-  rowNumber: number;
-  code: string | null;
-  fullName: string | null;
-  role: string | null;
-  teamCode: string | null;
-  status: 'VALID' | 'ERROR' | 'DUPLICATE';
-  message: string | null;
-};
-type Preview = {
-  validCount: number;
-  errorCount: number;
-  duplicateCount: number;
-  summary: string;
-  rows: ImportRow[];
-};
-type Created = { username: string; fullName: string; temporaryPassword: string };
-type Result = {
-  createdCount: number;
-  failedCount: number;
-  created: Created[];
-  failed: ImportRow[];
-};
+import { useEmployeeImport, type ImportCreated, type ImportRow } from '../hooks/useEmployeeImport';
+import { createdColumns, failedColumns, previewColumns } from './employeeImportColumns';
 
 const HEADERS =
   'Mã NV | Họ tên | Giới tính | Ngày sinh | SĐT | Vai trò | Mã tổ | Hình thức lương | Ngày vào làm | Mã chấm công';
-const STATUS_TAG = {
-  VALID: { color: 'green', text: 'Hợp lệ' },
-  ERROR: { color: 'red', text: 'Lỗi' },
-  DUPLICATE: { color: 'orange', text: 'Trùng' },
-} as const;
-
-const upload = async <T,>(url: string, file: File): Promise<T> => {
-  const form = new FormData();
-  form.append('file', file);
-  return (await apiClient.post<ApiResponse<T>>(url, form)).data.data;
-};
 
 /**
  * KH-22 (UC17 import): Admin chọn file Excel nhân viên → xem trước 3 loại hợp lệ / lỗi / trùng (MSG24) → nhập các dòng hợp lệ.
  * Mật khẩu tạm của người vừa nhập chỉ hiện một lần trong hộp này (D29): không lưu store, đóng hộp là mất.
  */
 export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const BASE = API.employees.import(useRolePath());
-  const [file, setFile] = useState<File | null>(null);
-  const preview = useMutation<Preview, ApiError, File>({
-    mutationFn: (f) => upload<Preview>(`${BASE}/preview`, f),
-    onError: (e) => void message.error(e.message),
-  });
-  const run = useMutation<Result, ApiError, File>({
-    mutationFn: (f) => upload<Result>(BASE, f),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['employees'] }),
-        queryClient.invalidateQueries({ queryKey: ['users'] }),
-      ]);
-    },
-    onError: (e) => void message.error(e.message),
-  });
-  const data = preview.data;
-  const result = run.data;
-
-  const copyAll = async () => {
-    if (!result) return;
-    await navigator.clipboard.writeText(
-      result.created.map((c) => `${c.username}\t${c.temporaryPassword}`).join('\n'),
-    );
-    void message.success(MESSAGES.hr.copied);
-  };
+  const { file, setFile, preview, run, data, result, copyAll } = useEmployeeImport();
 
   return (
     <Modal
@@ -158,29 +93,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
                 size="small"
                 dataSource={data.rows}
                 pagination={{ pageSize: 10, hideOnSinglePage: true }}
-                columns={[
-                  { title: 'Dòng', dataIndex: 'rowNumber', width: 60 },
-                  { title: 'Mã NV', dataIndex: 'code', render: (v: string | null) => v ?? '—' },
-                  {
-                    title: 'Họ tên',
-                    dataIndex: 'fullName',
-                    render: (v: string | null) => v ?? '—',
-                  },
-                  { title: 'Vai trò', dataIndex: 'role', render: (v: string | null) => v ?? '—' },
-                  { title: 'Tổ', dataIndex: 'teamCode', render: (v: string | null) => v ?? '—' },
-                  {
-                    title: 'Kết quả',
-                    key: 'status',
-                    render: (_, r) => (
-                      <Space direction="vertical" size={0}>
-                        <Tag color={STATUS_TAG[r.status].color}>{STATUS_TAG[r.status].text}</Tag>
-                        {r.message && (
-                          <Typography.Text type="secondary">{r.message}</Typography.Text>
-                        )}
-                      </Space>
-                    ),
-                  },
-                ]}
+                columns={previewColumns}
               />
             </>
           )}
@@ -196,20 +109,12 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
             description="Mật khẩu tạm chỉ hiện một lần ở đây. Hãy sao chép và gửi cho từng người; đóng hộp này là không xem lại được."
             action={<Button onClick={() => void copyAll()}>Sao chép tất cả</Button>}
           />
-          <DataTable<Created>
+          <DataTable<ImportCreated>
             rowKey="username"
             size="small"
             dataSource={result.created}
             pagination={{ pageSize: 10, hideOnSinglePage: true }}
-            columns={[
-              { title: 'Tên đăng nhập', dataIndex: 'username' },
-              { title: 'Họ tên', dataIndex: 'fullName' },
-              {
-                title: 'Mật khẩu tạm',
-                dataIndex: 'temporaryPassword',
-                render: (v: string) => <Typography.Text code>{v}</Typography.Text>,
-              },
-            ]}
+            columns={createdColumns}
           />
           {result.failed.length > 0 && (
             <DataTable<ImportRow>
@@ -218,11 +123,7 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
               size="small"
               dataSource={result.failed}
               pagination={false}
-              columns={[
-                { title: 'Dòng không nhập', dataIndex: 'rowNumber' },
-                { title: 'Mã NV', dataIndex: 'code', render: (v: string | null) => v ?? '—' },
-                { title: 'Lý do', dataIndex: 'message', render: (v: string | null) => v ?? '—' },
-              ]}
+              columns={failedColumns}
             />
           )}
         </>

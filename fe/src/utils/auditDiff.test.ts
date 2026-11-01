@@ -1,4 +1,4 @@
-import { describeChanges } from './auditDiff';
+import { buildChangeRows, describeChanges } from './auditDiff';
 
 describe('describeChanges', () => {
   it('liệt kê trường đổi và dòng thêm / xóa / đổi số lượng', () => {
@@ -30,5 +30,30 @@ describe('describeChanges', () => {
   it('JSON hỏng hoặc thiếu thì trả mảng rỗng', () => {
     expect(describeChanges('không phải json', null)).toEqual([]);
     expect(describeChanges(null, null)).toEqual([]);
+  });
+});
+
+describe('buildChangeRows', () => {
+  it('tạo mới: liệt kê giá trị mới bằng nhãn tiếng Việt, không có cột trước', () => {
+    const rows = buildChangeRows(
+      null,
+      JSON.stringify({ Status: 'PENDING_APPROVAL', PaidAmount: 1500000, KmGapWarning: false }),
+    );
+    expect(rows).toEqual([
+      { field: 'Trạng thái', before: null, after: 'Chờ duyệt' },
+      { field: 'Số tiền đã trả', before: null, after: expect.stringContaining('1.500.000') },
+      { field: 'Cảnh báo chênh số km', before: null, after: 'Không' },
+    ]);
+  });
+
+  it('cập nhật: chỉ trường đổi, trường lạ được tách chữ', () => {
+    const rows = buildChangeRows(
+      JSON.stringify({ Status: 'DRAFT', SomeNewField: 1 }),
+      JSON.stringify({ Status: 'APPROVED', SomeNewField: 1 }),
+    );
+    expect(rows).toEqual([{ field: 'Trạng thái', before: 'Nháp', after: 'Đã duyệt' }]);
+    expect(buildChangeRows(null, JSON.stringify({ SomeNewField: 2 }))[0]?.field).toBe(
+      'Some New Field',
+    );
   });
 });

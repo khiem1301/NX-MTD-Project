@@ -70,6 +70,14 @@
 | DEV-ALL-11 | 25/10/2026 | Claude (AI) | `SQL/NX-MTD_Database.sql` (bản 24/10 của Morgan), toàn bộ entity / dịch vụ / giao diện | Chuyển code sang database mới: định mức theo mã hàng, dòng đơn trỏ biến thể, thiếu hàng tự tính, bỏ KPI theo ngày và dữ liệu demo 19.3–19.6 | Đã làm |
 | DEV-ALL-16 | 29/10/2026 | Claude (AI) | UC10, UC15, UC19, UC40, UC45–UC47, UC51 | Chuyển code sang database 29/10: định mức không còn lượng vải / hao hụt / thứ tự, màu – size chỉ đọc từ đơn hàng (kèm kích thước), Kế toán cùng Admin sửa định mức, lệnh cắt thường không kiểm vải, lệnh cắt bù ước tính theo `vw_RecutFabricNeed`; hoàn lại bậc thợ A–D, xuất hàng 1 bước, bỏ loại đơn tăng ca; các mục "Doing" của sheet | Đã làm |
 | DEV-ALL-17 | 31/10/2026 | Claude (AI) | UC50, `GradeLevelCode`, `GradeLevel`, `Employee`, `GradeEvaluation` | Khôi phục bậc thợ động theo yêu cầu của Minh: Admin thêm / sửa / ngừng dùng / xóa bậc (E, F…), bỏ CHECK cứng A–D; sửa / xóa mức tiền bậc chưa hiệu lực | Mở |
+| DEV-ALL-18 | 31/10/2026 | Claude (AI) | Cấu trúc `Application/`, `Infrastructure/Data` | Chia `Services`, `Interfaces`, `DTOs`, `Validators` thành thư mục con theo module (Shared, Auth, Hr, Orders, Requests, Warehouse, Cutting, Purchasing, Production, Attendance, Finance); cấu hình EF tách thành `IEntityTypeConfiguration<T>` từng entity | Mở |
+| DEV-ALL-20 | 31/10/2026 | Claude (AI) | UC39, `PurchaseOrder` | Màn "NVL chờ nhận" của Thủ kho hiện tình trạng đơn mua (còn nhận tiếp được) và danh sách đơn mua đã đóng do giao thiếu, không đổi DB | Mở |
+| DEV-ALL-21 | 31/10/2026 | Claude (AI) | UC37, UC39 | Phiếu nhập: đính ảnh chứng từ trước khi lưu (không thêm ảnh ở màn chi tiết); không lập phiếu cho NVL khách cấp đã bị Quản đốc chốt không bù; điền sẵn nhiều NVL khi lập phiếu | Mở |
+| DEV-ALL-22 | 31/10/2026 | Claude (AI) | UC24 | Tồn kho NVL: thêm lựa chọn "không thuộc đơn hàng nào" vào ô lọc đơn hàng; đổi nhãn bộ lọc đơn hàng cho rõ là đơn đặt của khách | Mở |
+| DEV-ALL-23 | 31/10/2026 | Claude (AI) | UC19, UC21, `KpiTarget`, bảng mới `KpiDailyTarget`, `vw_KpiDailyResult` | Mỗi đơn + mã hàng + tổ một chỉ tiêu; chỉ tiêu chỉ so với số lượng đơn; khôi phục KPI theo ngày (lịch tháng), BTP khả dụng chỉ kiểm khi đặt KPI ngày | Mở |
+| DEV-ALL-24 | 01/11/2026 | Claude (AI) | UC19, `KpiTarget`, `SystemSetting`, `EndOfOrderService` | Một đơn + mã hàng + tổ có nhiều chỉ tiêu theo các kỳ không trùng ngày (thay quy tắc một chỉ tiêu ở DEV-ALL-23); KPI ngày khóa sau 08:00 của chính ngày đó | Mở |
+| DEV-ALL-25 | 01/11/2026 | Claude (AI) | UC19, `SystemSetting` | Kiểm ngày của kỳ KPI; cảnh báo kỳ kết thúc sau hoặc sát ngày giao hàng; form lập KPI hiện ngày giao | Mở |
+| DEV-ALL-26 | 01/11/2026 | Claude (AI) | UC09 (phần NVL) | Màn "NVL của đơn" mở đầu bằng danh sách đơn chờ NVL có phân trang, lọc; bỏ ô chọn đơn | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -971,4 +979,115 @@
 - **Code đang làm:** khôi phục phần của DEV-ALL-15 (commit `e8e66e0`): bảng `GradeLevelCode` (danh mục bậc), mã bậc `VARCHAR(5)` ở `GradeLevel` / `Employee` / `GradeEvaluation`, khóa ngoại thay cho CHECK A–D; Admin thêm / sửa tên và thứ tự / ngừng dùng / xóa bậc chưa dùng; sửa / xóa mức tiền bậc chưa hiệu lực. FE: tab "Danh mục bậc" ở màn Bậc thợ, các ô chọn bậc lấy từ danh mục.
 - **Đổi schema:** `SQL/NX-MTD_Database.sql` sửa lại theo bản có `GradeLevelCode` (khác bản 29/10 của nhóm ở 3 chỗ này); DB đã dựng cần chạy `SQL/patches/2026-10-28_grade_level_code.sql` (chạy lại không lỗi). Cần nhóm DB xác nhận trước khi hợp nhất với bản 29/10.
 - **Cần sửa trong tài liệu:** Report-3 UC50, AI_Context mục 56 (bậc A–D), NX-MTD_Database.dbml / Mo_ta (`GradeLevelCode`, kiểu cột mã bậc).
+- **Trạng thái:** Mở
+
+### DEV-ALL-18 · Tổ chức lại thư mục backend theo module (31/10/2026)
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) theo yêu cầu của Minh · tổ chức code · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Tài liệu gốc ghi:** Coding Rules 3.1: `Application/Services`, `Interfaces`, `DTOs`, `Validators` là thư mục phẳng; 3.7: cấu hình EF bằng `IEntityTypeConfiguration<T>`.
+- **Code đang làm:**
+  - Mỗi thư mục trên chia thư mục con theo module: Shared, Auth, Hr, Orders, Requests, Warehouse, Cutting, Purchasing, Production, Attendance, Finance. `IUnitOfWork`, `IGenericRepository` giữ ở gốc `Interfaces/`. **Namespace giữ theo tầng** (VD `NX_MTD.Application.Services`, không có đoạn module), nên không phải sửa `using` ở nơi dùng; các service từng nằm trong `Services/Hr|Orders|Production|Purchasing|Requests` đã đổi từ namespace lồng về namespace phẳng.
+  - `NxMtdDbContext.OnModelCreating` (2651 dòng) tách thành 88 file `Infrastructure/Data/Configurations/<Entity>Configuration.cs`, nạp bằng `ApplyConfigurationsFromAssembly`; mô hình EF so sánh trước / sau giống hệt. Lưu ý: nếu scaffold lại bằng `--force` thì các file này sẽ bị ghi đè, cần chuyển cấu hình mới vào đây.
+  - Tách các method quá 40 dòng (mới làm `FinanceService.CalculateAsync`, `OutputService.SaveAsync`; còn 37 method).
+- **Cần sửa trong tài liệu:** Coding Rules 3.1 (ghi cấu trúc thư mục con theo module).
+- **Trạng thái:** Mở
+
+### DEV-ALL-19 · AuditLog có thêm cột Summary (câu mô tả tiếng Việt) (01/11/2026)
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) theo yêu cầu của Minh · nhật ký thay đổi · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Tài liệu gốc ghi:** schema `AuditLog` chỉ có `OldValues` / `NewValues` (JSON) và `Reason`; người đọc phải đọc JSON.
+- **Code đang làm:**
+  - Thêm cột `AuditLog.Summary NVARCHAR(500) NULL` (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật, đã áp lên `NXMTD`).
+  - `AuditLogService.Add` tự dựng câu mô tả bằng `AuditText.Summary` (hành động + đối tượng + mã bản ghi + các field đổi, dịch tiếng Việt, kèm lý do), nên mọi chỗ gọi `_audit.Add` đều có câu mô tả mà không phải sửa. `AuditEntry` có thêm tham số `Summary` để chỗ gọi tự viết câu riêng khi cần (đã dùng ở bậc thợ và tài khoản).
+  - Dòng log cũ để `Summary = NULL`; giao diện tự ghép "{hành động} {đối tượng} #{Id}". Danh sách nhãn đối tượng / trường / giá trị nằm ở `AuditText` (BE) và `fe/src/utils/auditLabels.ts` (FE): thêm bảng / trường mới thì cập nhật cả hai.
+- **Cần sửa trong tài liệu:** Report-3 / script DB (mô tả bảng `AuditLog`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-20 · Thủ kho xem tình trạng đơn mua NVL: còn nhận tiếp hay đã đóng do giao thiếu (31/10/2026)
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) theo yêu cầu của Minh · UC39 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** UC39 (nhận NVL), màn "NVL chờ nhận", `PurchaseOrder.GoodsStatus`
+- **Tài liệu gốc ghi:** màn chỉ liệt kê dòng đơn mua còn phải nhận; đơn đã đóng thiếu (CLOSED_SHORT) biến mất khỏi màn.
+- **Code đang làm:** `GET .../incoming-materials` trả thêm `goodsStatus` cho từng dòng chờ nhận (ORDERED / PARTIALLY_RECEIVED, hiện "Còn nhận tiếp được") và mảng `closedShort` (dòng đơn mua CLOSED_SHORT kèm đã đặt, đã nhận, thiếu đã chốt không bù). Không đổi schema, không thêm trạng thái mới.
+- **Cần sửa trong tài liệu:** Report-3 UC39 (màn NVL chờ nhận).
+- **Trạng thái:** Mở
+
+### DEV-ALL-21 · Phiếu nhập: ảnh trước khi lưu, chặn NVL đã chốt không bù, điền sẵn nhiều NVL (31/10/2026)
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) theo yêu cầu của Minh · UC37, UC39 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** UC37 (lập phiếu nhập), UC39 (xử lý thiếu NVL), `MaterialReceipt`, `Request` (SHORT_DELIVERY)
+- **Tài liệu gốc ghi:** Thủ kho thêm ảnh chứng từ ở màn chi tiết phiếu sau khi lưu; phiếu khách cấp không có bước chặn sau khi Quản đốc chốt "không bù".
+- **Code đang làm:**
+  - Form lập phiếu nhập có ô chọn ảnh chứng từ (tối đa 5), ảnh tải lên ngay sau khi lưu phiếu mới; màn chi tiết phiếu chỉ xem ảnh, không thêm / gỡ. Khi sửa phiếu (chờ xác nhận / bị trả) ảnh thêm / gỡ ngay trong form sửa.
+  - NVL khách cấp mà Quản đốc đã chốt "không bù" ở đơn thiếu NVL: BE từ chối lập phiếu (`RECEIPT_SHORTAGE_CLOSED`, 409) và màn NVL chờ nhận không liệt kê dòng đó. Đơn mua nhà cung cấp đã chặn sẵn qua `NotReplenishedQty`.
+  - Chọn đơn mua / đơn hàng thì form điền sẵn mọi dòng NVL còn phải nhận; thêm dòng bằng ô chọn các NVL còn lại.
+- **Cần sửa trong tài liệu:** Report-3 UC37 (luồng ảnh chứng từ), UC39 (hậu quả của chốt không bù với phiếu khách cấp).
+- **Trạng thái:** Mở
+
+### DEV-ALL-22 · Tồn kho NVL: lọc NVL không thuộc đơn hàng nào (31/10/2026)
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) theo yêu cầu của Minh · UC24 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Tài liệu gốc ghi:** màn tồn kho chỉ lọc theo đơn hàng.
+- **Code đang làm:** `GET .../inventories?warehouseType=MATERIAL` nhận thêm `orderScope=NO_ORDER` (NVL không thuộc đơn nào, như hàng mua dự trữ dùng chung). FE gộp vào ô lọc đơn hàng ở tab Kho NVL: chọn một đơn hoặc "Không thuộc đơn hàng nào". Không đổi schema.
+- **Cần sửa trong tài liệu:** Report-3 UC24 (bộ lọc màn tồn kho).
+- **Trạng thái:** Mở
+
+### DEV-ALL-23 · KPI tổ may: không trùng đơn + mã hàng + tổ, KPI theo ngày trên lịch tháng
+
+- **Ngày / Người / Task / PR:** 31/10/2026 · Claude (AI) · UC19, UC21, FR 3.14 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật): `UQ_Kpi`, bảng `KpiDailyTarget`, `vw_KpiDailyResult`. API: `GET manager/kpi-targets/order-capacity` thay `available-btp`; thêm `GET manager|admin/kpi-targets/{id}/calendar`, `PUT manager/kpi-targets/{id}/daily-plan`; `SaveKpiTargetDto` bỏ `WorkingDays`.
+- **Tài liệu gốc ghi:** `UQ_Kpi` gồm cả `StartDate`, nên một tổ lập được nhiều chỉ tiêu cho cùng đơn + mã hàng. Swimlane III.3.1: đặt KPI thì kiểm BTP khả dụng. Chỉ tiêu ngày = tổng ÷ `WorkingDays` nhập tay. DEV-ALL-11 đã gỡ KPI theo ngày.
+- **Lý do:** yêu cầu của người dùng: chỉ tiêu cả kỳ chỉ so với số lượng đơn đặt, BTP chỉ kiểm khi đặt KPI theo ngày; một đơn + mã hàng có thể nhiều tổ làm, một tổ làm nhiều đơn + mã hàng.
+- **Code đang làm:**
+  - **Không trùng:** `UQ_Kpi` thành filtered index (`OrderId, ProductId, SewingTeamId`, `Status <> 'CANCELLED'`). Chỉ tiêu đã hủy thì lập lại được; chỉ tiêu đã đóng vẫn tính là trùng. Patch chuyển các chỉ tiêu trùng sẵn có sang `CANCELLED` (giữ chỉ tiêu ACTIVE, không có thì giữ chỉ tiêu mới nhất). Dữ liệu demo: chỉ tiêu tháng 9 của DEMO-DH001 đổi từ `CLOSED` sang `CANCELLED`, nên demo không còn dòng KPI đã đóng.
+  - **Chỉ tiêu cả kỳ:** tổng chỉ tiêu các tổ của một đơn + mã hàng không vượt Σ `OrderLine.OrderedQty` (409 `KPI_EXCEEDS_ORDER_QTY`). Chỉ tiêu đang chạy tính cả chỉ tiêu, chỉ tiêu đã đóng tính số thực tế làm được, đã hủy không tính. Không kiểm BTP ở bước này.
+  - **KPI theo ngày:** nút "KPI theo ngày" ở bảng KPI mở modal lịch tháng (`KpiCalendarModal`, dùng `Calendar` của Ant Design). Quản đốc gõ KPI từng ô; ngày đã qua không sửa được (BE chặn); Admin và chỉ tiêu đã đóng / hủy chỉ xem. Mỗi ô hiện KPI và thực tế QA/QC. Tổng các ngày không vượt chỉ tiêu cả kỳ. `WorkingDays` = số ngày đã đặt, chưa đặt thì = số ngày trong kỳ trừ Chủ nhật. Đổi kỳ thì bỏ các ngày ngoài kỳ mới; chỉ tiêu cả kỳ không được nhỏ hơn tổng KPI các ngày còn lại.
+  - **BTP khả dụng khi đặt KPI ngày** = BTP bộ đủ trong kho + BTP tổ đang giữ − phần các tổ khác phải lấy từ kho (KPI đã đặt chưa hoàn thiện của tổ đó trừ BTP tổ đó đang giữ, chỉ tính KPI đang chạy). Lưu bị chặn (409 `KPI_EXCEEDS_STOCK`) khi KPI đã đặt chưa hoàn thiện vượt số này; đang giảm thì vẫn lưu được. Kiểm theo BTP hiện có, chưa tính BTP sẽ cắt thêm, nên đơn chưa cắt đủ thì chỉ đặt được phần đã có BTP.
+  - **Thông báo sau khi kho nhận thành phẩm** (khác DEV-ALL-15): phiếu bàn giao không ghi tổ, nên trước đây tổng kho nhận của đơn + mã hàng bị so với chỉ tiêu của từng tổ, báo "đã đạt" sai khi nhiều tổ cùng làm. Nay mỗi đơn + mã hàng một thông báo: kho nhận so với tổng chỉ tiêu các tổ đang chạy; từng tổ đạt hay chưa tính theo QA/QC trong kỳ của tổ, chỉ tổ đạt mới được gợi ý Kết thúc đơn.
+  - Khác DEV-ALL-9 (bản cũ đã gỡ): không có "Chia tăng dần" / "Chia đều", không dự báo BTP từng ngày; BTP tính theo kho + tổ giữ của DB mới thay vì giao dịch cắt − QC.
+- **Ảnh hưởng người khác:** Morgan (schema), DB đang chạy phải chạy patch trước khi chạy backend mới.
+- **Cần sửa trong tài liệu:** Report-3 UC19, UC21, FR 3.14 (ràng buộc, kiểm số lượng đơn, KPI theo ngày, BTP); `NX-MTD_AI_Context.md` phần KPI tổ may; `NX-MTD_Database.dbml`, `NX-MTD_Database_Mo_ta.md`, ERD.
+- **Trạng thái:** Mở
+
+### DEV-ALL-24 · KPI tổ may: nhiều chỉ tiêu không trùng kỳ, khóa KPI ngày sau 08:00
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC19, FR 3.14 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** schema (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật): `UQ_Kpi` thêm lại `StartDate`, khóa `KPI_EDIT_CUTOFF_TIME`. API lịch KPI thêm `firstEditableDate`, `editCutoff`. Mã lỗi `KPI_PERIOD_OVERLAP` thay `KPI_DUPLICATE_TARGET`.
+- **Tài liệu gốc ghi:** DEV-ALL-23: mỗi đơn + mã hàng + tổ chỉ một chỉ tiêu; ngày đã qua không sửa được.
+- **Lý do:** yêu cầu của người dùng.
+- **Code đang làm:**
+  - **Nhiều chỉ tiêu:** cùng đơn + mã hàng + tổ được lập nhiều chỉ tiêu, nhưng các kỳ không được có chung ngày nào, kể cả ngày kết thúc kỳ này trùng ngày bắt đầu kỳ kia (409 `KPI_PERIOD_OVERLAP`). Tính cả chỉ tiêu đã đóng, không tính chỉ tiêu đã hủy. Trùng kỳ kiểm ở `KpiService`; `UQ_Kpi` (lọc `Status <> 'CANCELLED'`) chỉ chặn trùng ngày bắt đầu. Bỏ quy tắc "một chỉ tiêu" của DEV-ALL-23.
+  - **Số lượng đơn:** tổng các chỉ tiêu không vượt số lượng đơn đặt, tính cả các chỉ tiêu khác của cùng tổ.
+  - **BTP khả dụng:** chỉ tiêu kỳ khác của cùng tổ trừ thẳng phần còn phải làm vì dùng chung BTP tổ đang giữ; tổ khác vẫn chỉ trừ phần phải lấy từ kho.
+  - **Kết thúc đơn:** thực tế = QC cả đơn của tổ − QC nằm trong kỳ của các chỉ tiêu khác cùng đơn + mã hàng + tổ, để không tính lặp. Một chỉ tiêu thì không đổi.
+  - **Patch:** các patch chưa đẩy lên remote gộp vào `SQL/patches/2026-11-02_kpi_audit_material.sql` (audit log, lý do ngừng hợp tác, bỏ `Material.LengthCm`, KPI). File gộp bỏ bước chuyển chỉ tiêu trùng sang `CANCELLED` của DEV-ALL-23, vì nhiều kỳ giờ hợp lệ và `UQ_Kpi` cũ đã gồm `StartDate` nên không có dòng trùng.
+  - **Khóa KPI ngày:** KPI của một ngày không sửa được từ 08:00 của chính ngày đó (khóa `KPI_EDIT_CUTOFF_TIME`, giờ Việt Nam, thiếu khóa thì mặc định 08:00). BE chặn cả lưu lịch lẫn đổi kỳ làm mất ngày đã khóa. Chỉ tiêu cả kỳ vẫn sửa được.
+- **Ảnh hưởng người khác:** Morgan (schema), DB đang chạy phải chạy patch.
+- **Cần sửa trong tài liệu:** Report-3 UC19 (ràng buộc kỳ, giờ khóa); `NX-MTD_AI_Context.md` mục 6.4 (thêm khóa `KPI_EDIT_CUTOFF_TIME`); `NX-MTD_Database.dbml`, `NX-MTD_Database_Mo_ta.md`.
+- **Trạng thái:** Mở
+
+### DEV-ALL-25 · KPI tổ may: kiểm ngày của kỳ và cảnh báo theo ngày giao hàng
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC19 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** khóa mới `KPI_DUE_WARNING_DAYS` (patch `SQL/patches/2026-11-02_kpi_audit_material.sql`, script chính đã cập nhật); `GET manager/kpi-targets/order-capacity` thêm `dueDate`, `dueWarningDays`; mã lỗi `KPI_PERIOD_INVALID`; bố cục form lập KPI.
+- **Tài liệu gốc ghi:** chỉ yêu cầu ngày kết thúc không trước ngày bắt đầu; không nhắc tới ngày giao hàng khi lập KPI.
+- **Lý do:** yêu cầu của người dùng, để Quản đốc kiểm soát kỳ KPI theo ngày giao.
+- **Code đang làm:**
+  - **Chặn (409 `KPI_PERIOD_INVALID`):** ngày bắt đầu trước ngày nhận đơn hoặc ở quá khứ; ngày kết thúc ở quá khứ. Khi sửa chỉ kiểm mốc ngày bị đổi, để chỉ tiêu đang chạy vẫn sửa được số lượng.
+  - **Chỉ cảnh báo, vẫn lưu được:** kỳ kết thúc sau ngày giao, hoặc cách ngày giao không quá `KPI_DUE_WARNING_DAYS` ngày (mặc định 3). Cảnh báo tính ở form, BE không chặn.
+  - **Trạng thái đơn:** đơn đã dừng, hủy, đã giao hoặc hoàn tất thì không lập, không sửa chỉ tiêu và không đặt KPI theo ngày (lịch chỉ xem, trước đây đặt KPI ngày chưa kiểm). Đơn đang giao hoặc giao một phần vẫn đặt được, form cảnh báo. Hủy chỉ tiêu và Kết thúc đơn vẫn làm được để đóng KPI của đơn đã dừng.
+  - **Lịch KPI theo ngày:** API lịch thêm `dueDate`. Modal hiện ngày giao hàng, đánh dấu ô ngày giao, tô nền các ô sau ngày giao và cảnh báo khi có KPI đặt sau ngày giao; vẫn lưu được.
+  - **Form:** bố cục hai cột; sau khi chọn đơn và mã hàng hiện ngày giao hàng, số ngày còn lại, số lượng đơn, phần đã giao và số tối đa. Danh sách đơn hiện kèm ngày giao. Lập mới không chọn được ngày đã qua.
+- **Cần sửa trong tài liệu:** Report-3 UC19; `NX-MTD_AI_Context.md` mục 6.4 (thêm khóa `KPI_DUE_WARNING_DAYS`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-26 · Màn NVL của đơn: danh sách đơn chờ là màn chính
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC09 (phần NVL) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `GET admin|manager/order-materials/pending-orders` nhận `page, pageSize, keyword, materialState` và trả dạng phân trang; không đổi schema.
+- **Tài liệu gốc ghi:** DEV-ALL-10: màn NVL của đơn có ô chọn đơn, phía dưới là bảng đơn chờ không phân trang.
+- **Lý do:** yêu cầu của người dùng.
+- **Code đang làm:** Màn chính là bảng "Đơn hàng chờ khai báo / mua NVL" (phân trang server, tìm mã đơn / khách hàng, lọc tình trạng NVL); đơn chưa khai báo lên đầu. Bấm Mở đơn mới sang NVL của đơn, có nút quay lại; `?orderId=` trong thông báo vẫn mở thẳng. Bỏ ô chọn đơn; đơn đã đủ NVL mở qua lựa chọn lọc "Đã đủ NVL". Chỉ gồm đơn Mới và Đang sản xuất, nên đơn đang giao chỉ mở được qua đường dẫn. Quản đốc tạo đơn mua dùng chung bằng nút "Tạo đơn mua dùng chung" ở danh sách.
+- **Bảng NVL của một đơn:** thêm `GET admin|manager/order-materials/paged` (`orderId, page, pageSize, keyword, supply, receiptState`). Tìm mã, tên, màu NVL; lọc nguồn cấp (khách cấp, phải mua) và tình trạng nhập kho (đã nhận đủ khi số nhận ≥ số cần). `GET order-materials` giữ nguyên cho các form cần đủ dòng.
+- **Cần sửa trong tài liệu:** Report-3 UC09 (màn NVL của đơn).
 - **Trạng thái:** Mở

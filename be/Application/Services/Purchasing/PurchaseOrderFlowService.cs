@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Purchasing;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// MI-07 (UC23, UC34): Quản đốc chọn nhà cung cấp + chốt đặt hàng / hủy, Kế toán xác nhận thanh toán (ảnh chứng từ là
@@ -107,17 +107,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         if (po.GoodsStatus != PurchaseOrderStatuses.PendingFinalisation)
             return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
 
-        if (!SameLines(po, dto.Lines.Select(l => l.PurchaseOrderLineId)))
-            return Result.Failure(ErrorCodes.PurchaseOrderLinesMismatch, Messages.PurchaseOrderLinesMismatch);
-        if (dto.Lines.Any(l => l.UnitPrice <= 0))
-            return Result.Failure(ErrorCodes.PurchaseOrderPriceRequired, Messages.PurchaseOrderPriceRequired,
-                ResultKind.Validation);
-        if (dto.OrderDate > _clock.Today)
-            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
-                ResultKind.Validation);
-        if (dto.ExpectedDeliveryCount < 1)
-            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderDeliveryCountInvalid,
-                ResultKind.Validation);
+        var invalid = ValidatePlaceInput(po, dto);
+        if (invalid is not null) return invalid;
 
         var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
             .FirstOrDefaultAsync(s => s.SupplierId == dto.SupplierId, ct);
@@ -128,17 +119,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
         var before = new { po.GoodsStatus, po.SupplierId, Lines = Snapshot(po) };
 
-        foreach (var line in po.PurchaseOrderLines)
-        {
-            var input = dto.Lines.Single(l => l.PurchaseOrderLineId == line.PurchaseOrderLineId);
-            line.OrderedQty = input.OrderedQty;
-            line.UnitPrice = input.UnitPrice;
-        }
-        po.SupplierId = supplier.SupplierId;
-        po.OrderDate = dto.OrderDate;
-        po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
-        po.Note = Clean(dto.Note) ?? po.Note;
-        po.GoodsStatus = PurchaseGoodsStatuses.Ordered;
+        ApplyPlacement(po, dto, supplier);
 
         return await _uow.InTransactionAsync(async () =>
         {
@@ -153,6 +134,38 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.PurchaseOrderPlaced);
         });
+    }
+
+    /// <summary>Dòng gửi lên phải đúng bộ dòng của đơn, đơn giá > 0, ngày đặt không ở tương lai, số lần giao ≥ 1.</summary>
+    private Result? ValidatePlaceInput(PurchaseOrder po, PlacePurchaseOrderDto dto)
+    {
+        if (!SameLines(po, dto.Lines.Select(l => l.PurchaseOrderLineId)))
+            return Result.Failure(ErrorCodes.PurchaseOrderLinesMismatch, Messages.PurchaseOrderLinesMismatch);
+        if (dto.Lines.Any(l => l.UnitPrice <= 0))
+            return Result.Failure(ErrorCodes.PurchaseOrderPriceRequired, Messages.PurchaseOrderPriceRequired,
+                ResultKind.Validation);
+        if (dto.OrderDate > _clock.Today)
+            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
+                ResultKind.Validation);
+        if (dto.ExpectedDeliveryCount < 1)
+            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderDeliveryCountInvalid,
+                ResultKind.Validation);
+        return null;
+    }
+
+    private void ApplyPlacement(PurchaseOrder po, PlacePurchaseOrderDto dto, Supplier supplier)
+    {
+        foreach (var line in po.PurchaseOrderLines)
+        {
+            var input = dto.Lines.Single(l => l.PurchaseOrderLineId == line.PurchaseOrderLineId);
+            line.OrderedQty = input.OrderedQty;
+            line.UnitPrice = input.UnitPrice;
+        }
+        po.SupplierId = supplier.SupplierId;
+        po.OrderDate = dto.OrderDate;
+        po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
+        po.Note = Clean(dto.Note) ?? po.Note;
+        po.GoodsStatus = PurchaseGoodsStatuses.Ordered;
     }
 
     public async Task<Result> CancelAsync(int purchaseOrderId, CancelPurchaseOrderDto dto, CancellationToken ct)

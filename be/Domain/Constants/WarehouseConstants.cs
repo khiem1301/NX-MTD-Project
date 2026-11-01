@@ -96,6 +96,12 @@ public static class ReceiptTypes
 }
 
 /// <summary>Request.ShortageResolution (CK_Request_Shortage): cách Quản đốc xử lý hàng thiếu / lỗi khi nhập.</summary>
+/// <summary>Lọc tồn kho NVL: chỉ NVL không nằm trong "NVL của đơn" nào (mua dự trữ dùng chung).</summary>
+public static class MaterialOrderScopes
+{
+    public const string NoOrder = "NO_ORDER";
+}
+
 public static class ShortageResolutions
 {
     public const string Replenish = "REPLENISH";

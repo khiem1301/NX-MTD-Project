@@ -29,8 +29,8 @@ public sealed class SuppliersController : AdminBaseController
         this.ToResponse(await _suppliers.UpdateAsync(id, dto, ct));
 
     [HttpPost("{id:int}/discontinue")]
-    public async Task<IActionResult> Discontinue(int id, CancellationToken ct) =>
-        this.ToResponse(await _suppliers.DiscontinueAsync(id, ct));
+    public async Task<IActionResult> Discontinue(int id, DiscontinueSupplierDto dto, CancellationToken ct) =>
+        this.ToResponse(await _suppliers.DiscontinueAsync(id, dto, ct));
 
     [HttpPost("{id:int}/reactivate")]
     public async Task<IActionResult> Reactivate(int id, CancellationToken ct) =>

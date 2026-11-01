@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Kết thúc đơn của một tổ may (chỉ đánh giá khi đến cuối đơn, không theo ngày / tháng):
@@ -60,36 +60,8 @@ public sealed class EndOfOrderService : IEndOfOrderService
 
         var result = await _uow.InTransactionAsync(async () =>
         {
-            var created = new List<DefectRecord>();
-            if (built.FinalOperation is { } finalOp && built.RateId is { } rateId)
-            {
-                var seq = await NextSequenceAsync(target.SewingTeam.TeamCode, today, ct);
-                foreach (var row in preview.Rows.Where(r => r.MismatchQty > 0))
-                {
-                    var defect = new DefectRecord
-                    {
-                        DefectCode = $"{target.SewingTeam.TeamCode}-{today:yyMMdd}-{seq++:000}", WorkDate = today, ShiftCode = null,
-                        SewingTeamId = target.SewingTeamId, OrderLineId = row.OrderLineId, OperationId = finalOp.OperationId,
-                        ResponsibleWorkerId = row.WorkerId, DefectType = DefectTypes.Scrap, Quantity = row.MismatchQty,
-                        DefectReasonCode = DefectReasons.Other,
-                        ReasonNote = $"Lệch kiểm cuối đơn {target.Order.OrderCode}: sản lượng báo ở công đoạn cuối nhiều hơn số QC đạt và hàng hủy.",
-                        PieceRateId = rateId, WorkerNotifiedAt = now, EditDeadline = ProductionGuard.NextWorkingDayEnd(today),
-                        Status = DefectStatuses.Recorded, RecordedBy = _user.EmployeeId, RecordedAt = now,
-                    };
-                    await _uow.Repository<DefectRecord>().AddAsync(defect);
-                    created.Add(defect);
-                }
-                if (created.Count > 0) await _uow.SaveChangesAsync();   // lấy DefectRecordId cho nhật ký / thông báo
-            }
-            foreach (var d in created)
-            {
-                _audit.Add(new AuditEntry(nameof(DefectRecord), d.DefectRecordId, AuditActions.Insert, null,
-                    new { d.DefectCode, d.ResponsibleWorkerId, d.Quantity, d.DefectReasonCode }, "Kiểm cuối đơn"));
-                _notifier.NotifyEmployees([d.ResponsibleWorkerId], new NotificationMessage(NotificationSources.Production,
-                    Messages.NotifyDefectTitle,
-                    $"Kiểm cuối đơn {target.Order.OrderCode}: {d.Quantity} sản phẩm báo ở công đoạn cuối chưa có QC đạt, ghi hàng hủy (trừ lương).",
-                    null, nameof(DefectRecord), d.DefectRecordId));
-            }
+            var created = await CreateMismatchDefectsAsync(target, built, today, now, ct);
+            AuditAndNotifyMismatches(target, created);
 
             var before = new { target.Status, target.Result };
             target.Result = preview.Achieved ? KpiResults.Achieved : KpiResults.NotAchieved;
@@ -105,6 +77,47 @@ public sealed class EndOfOrderService : IEndOfOrderService
         });
         if (!result.IsSuccess) return Fail.As<EndOfOrderPreviewDto>(result);
         return Result<EndOfOrderPreviewDto>.Success(preview, Messages.KpiFinished);
+    }
+
+    /// <summary>Ghi phiếu hàng hủy (Scrap) cho phần lệch kiểm cuối đơn của từng công nhân ở công đoạn cuối.</summary>
+    private async Task<List<DefectRecord>> CreateMismatchDefectsAsync(KpiTarget target, Built built, DateOnly today,
+        DateTime now, CancellationToken ct)
+    {
+        var created = new List<DefectRecord>();
+        if (built.FinalOperation is { } finalOp && built.RateId is { } rateId)
+        {
+            var seq = await NextSequenceAsync(target.SewingTeam.TeamCode, today, ct);
+            foreach (var row in built.Preview.Rows.Where(r => r.MismatchQty > 0))
+            {
+                var defect = new DefectRecord
+                {
+                    DefectCode = $"{target.SewingTeam.TeamCode}-{today:yyMMdd}-{seq++:000}", WorkDate = today, ShiftCode = null,
+                    SewingTeamId = target.SewingTeamId, OrderLineId = row.OrderLineId, OperationId = finalOp.OperationId,
+                    ResponsibleWorkerId = row.WorkerId, DefectType = DefectTypes.Scrap, Quantity = row.MismatchQty,
+                    DefectReasonCode = DefectReasons.Other,
+                    ReasonNote = $"Lệch kiểm cuối đơn {target.Order.OrderCode}: sản lượng báo ở công đoạn cuối nhiều hơn số QC đạt và hàng hủy.",
+                    PieceRateId = rateId, WorkerNotifiedAt = now, EditDeadline = ProductionGuard.NextWorkingDayEnd(today),
+                    Status = DefectStatuses.Recorded, RecordedBy = _user.EmployeeId, RecordedAt = now,
+                };
+                await _uow.Repository<DefectRecord>().AddAsync(defect);
+                created.Add(defect);
+            }
+            if (created.Count > 0) await _uow.SaveChangesAsync();   // lấy DefectRecordId cho nhật ký / thông báo
+        }
+        return created;
+    }
+
+    private void AuditAndNotifyMismatches(KpiTarget target, List<DefectRecord> created)
+    {
+        foreach (var d in created)
+        {
+            _audit.Add(new AuditEntry(nameof(DefectRecord), d.DefectRecordId, AuditActions.Insert, null,
+                new { d.DefectCode, d.ResponsibleWorkerId, d.Quantity, d.DefectReasonCode }, "Kiểm cuối đơn"));
+            _notifier.NotifyEmployees([d.ResponsibleWorkerId], new NotificationMessage(NotificationSources.Production,
+                Messages.NotifyDefectTitle,
+                $"Kiểm cuối đơn {target.Order.OrderCode}: {d.Quantity} sản phẩm báo ở công đoạn cuối chưa có QC đạt, ghi hàng hủy (trừ lương).",
+                null, nameof(DefectRecord), d.DefectRecordId));
+        }
     }
 
     // ---------- Tính toán ----------
@@ -125,18 +138,8 @@ public sealed class EndOfOrderService : IEndOfOrderService
             .Where(l => l.OrderId == target.OrderId && l.ProductId == target.ProductId).ToListAsync(ct);
         var lineIds = lines.Select(l => l.OrderLineId).ToList();
 
-        // QC đạt cả đơn của tổ (không theo kỳ): căn cứ chốt KPI.
-        var qcByLine = await _uow.Repository<QcBatch>().Query().AsNoTracking()
-            .Where(q => q.SewingTeamId == target.SewingTeamId && lineIds.Contains(q.OrderLineId))
-            .GroupBy(q => q.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(q => q.FinishedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
-        var actual = qcByLine.Values.Sum();
-
-        var scrapByLine = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
-            .Where(d => d.SewingTeamId == target.SewingTeamId && lineIds.Contains(d.OrderLineId)
-                        && d.DefectType == DefectTypes.Scrap && d.Status != DefectStatuses.Cancelled)
-            .GroupBy(d => d.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(d => d.Quantity) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+        var (qcByLine, scrapByLine) = await LoadQcAndScrapAsync(target, lineIds, ct);
+        var actual = qcByLine.Values.Sum() - await QcOfOtherTargetsAsync(target, lineIds, ct);
 
         var finalOp = await _uow.Repository<Operation>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.ProductId == target.ProductId && o.IsFinalStep && o.Status == OperationStatuses.Active, ct);
@@ -146,36 +149,8 @@ public sealed class EndOfOrderService : IEndOfOrderService
             blockers.Add(Messages.KpiFinishNoFinalOperation);
         else
         {
-            var reported = await _uow.Repository<OutputRecord>().Query().AsNoTracking()
-                .Where(o => o.SewingTeamId == target.SewingTeamId && o.OperationId == finalOp.OperationId && lineIds.Contains(o.OrderLineId))
-                .GroupBy(o => new { o.OrderLineId, o.WorkerId })
-                .Select(g => new { g.Key.OrderLineId, g.Key.WorkerId, Qty = g.Sum(o => o.Quantity) })
-                .ToListAsync(ct);
-            var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
-                .Where(e => reported.Select(r => r.WorkerId).Distinct().Contains(e.EmployeeId))
-                .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName }).ToListAsync(ct);
-
-            foreach (var line in lines.OrderBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode))
-            {
-                var perWorker = reported.Where(r => r.OrderLineId == line.OrderLineId && r.Qty > 0).OrderBy(r => r.WorkerId).ToList();
-                var totalReported = perWorker.Sum(r => r.Qty);
-                var diff = Math.Max(0, totalReported - qcByLine.GetValueOrDefault(line.OrderLineId) - scrapByLine.GetValueOrDefault(line.OrderLineId));
-                foreach (var (r, qty) in perWorker.Zip(Distribute(diff, perWorker.Select(r => r.Qty).ToList())))
-                {
-                    var w = workers.First(x => x.EmployeeId == r.WorkerId);
-                    rows.Add(new EndOfOrderRowDto(line.OrderLineId, line.ProductVariant.Color, line.ProductVariant.SizeCode,
-                        r.WorkerId, w.EmployeeCode, w.FullName, r.Qty, qty));
-                }
-            }
-
-            if (rows.Any(r => r.MismatchQty > 0))
-            {
-                var rate = await _rates.FindEffectiveAsync(finalOp.OperationId, today, ct);
-                if (rate is null)
-                    blockers.Add(string.Format(Messages.PieceRateNotApproved, finalOp.OperationCode, today.ToString("dd/MM/yyyy")));
-                else rateId = rate.PieceRateId;
-                if (await _guard.IsPeriodLockedAsync(today, ct)) blockers.Add(_guard.PeriodLockedFailure(today).Message ?? string.Empty);
-            }
+            rows = await BuildMismatchRowsAsync(target, finalOp, lines, qcByLine, scrapByLine, ct);
+            if (rows.Any(r => r.MismatchQty > 0)) rateId = await CheckRateAndPeriodAsync(finalOp, blockers, ct);
         }
 
         var achieved = actual >= target.TargetFinishedQty;
@@ -187,6 +162,82 @@ public sealed class EndOfOrderService : IEndOfOrderService
             target.SewingTeam.TeamName, target.TargetFinishedQty, actual, achieved, shortfall, pct, threshold, ot,
             finalOp?.OperationName, rows, blockers, target.Status == KpiStatuses.Active);
         return new Built(preview, finalOp, rateId);
+    }
+
+    /// <summary>QC đạt nằm trong kỳ của các chỉ tiêu khác cùng đơn + mã hàng + tổ: đã thuộc về chỉ tiêu đó, không tính lặp vào chỉ tiêu này.</summary>
+    private async Task<int> QcOfOtherTargetsAsync(KpiTarget target, List<int> lineIds, CancellationToken ct)
+    {
+        var others = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
+            .Where(k => k.OrderId == target.OrderId && k.ProductId == target.ProductId && k.SewingTeamId == target.SewingTeamId
+                        && k.Status != KpiStatuses.Cancelled && k.KpiTargetId != target.KpiTargetId)
+            .Select(k => new { k.StartDate, k.EndDate }).ToListAsync(ct);
+        if (others.Count == 0) return 0;
+
+        var batches = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(q => q.SewingTeamId == target.SewingTeamId && lineIds.Contains(q.OrderLineId))
+            .Select(q => new { q.WorkDate, q.FinishedQty }).ToListAsync(ct);
+        return batches.Where(q => others.Any(o => q.WorkDate >= o.StartDate && q.WorkDate <= o.EndDate)).Sum(q => q.FinishedQty);
+    }
+
+    /// <summary>QC đạt và hàng hủy (Scrap) của tổ theo dòng đơn, cả đơn (không theo kỳ): căn cứ chốt KPI.</summary>
+    private async Task<(Dictionary<int, int> QcByLine, Dictionary<int, int> ScrapByLine)> LoadQcAndScrapAsync(
+        KpiTarget target, List<int> lineIds, CancellationToken ct)
+    {
+        // QC đạt cả đơn của tổ (không theo kỳ): căn cứ chốt KPI.
+        var qcByLine = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(q => q.SewingTeamId == target.SewingTeamId && lineIds.Contains(q.OrderLineId))
+            .GroupBy(q => q.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(q => q.FinishedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+
+        var scrapByLine = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
+            .Where(d => d.SewingTeamId == target.SewingTeamId && lineIds.Contains(d.OrderLineId)
+                        && d.DefectType == DefectTypes.Scrap && d.Status != DefectStatuses.Cancelled)
+            .GroupBy(d => d.OrderLineId).Select(g => new { g.Key, Qty = g.Sum(d => d.Quantity) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+        return (qcByLine, scrapByLine);
+    }
+
+    /// <summary>Số lệch kiểm cuối đơn của từng công nhân theo dòng đơn: sản lượng báo ở công đoạn cuối − QC đạt − hàng hủy, chia theo tỉ lệ sản lượng.</summary>
+    private async Task<List<EndOfOrderRowDto>> BuildMismatchRowsAsync(KpiTarget target, Operation finalOp,
+        List<OrderLine> lines, Dictionary<int, int> qcByLine, Dictionary<int, int> scrapByLine, CancellationToken ct)
+    {
+        var lineIds = lines.Select(l => l.OrderLineId).ToList();
+        var rows = new List<EndOfOrderRowDto>();
+        var reported = await _uow.Repository<OutputRecord>().Query().AsNoTracking()
+            .Where(o => o.SewingTeamId == target.SewingTeamId && o.OperationId == finalOp.OperationId && lineIds.Contains(o.OrderLineId))
+            .GroupBy(o => new { o.OrderLineId, o.WorkerId })
+            .Select(g => new { g.Key.OrderLineId, g.Key.WorkerId, Qty = g.Sum(o => o.Quantity) })
+            .ToListAsync(ct);
+        var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => reported.Select(r => r.WorkerId).Distinct().Contains(e.EmployeeId))
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName }).ToListAsync(ct);
+
+        foreach (var line in lines.OrderBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode))
+        {
+            var perWorker = reported.Where(r => r.OrderLineId == line.OrderLineId && r.Qty > 0).OrderBy(r => r.WorkerId).ToList();
+            var totalReported = perWorker.Sum(r => r.Qty);
+            var diff = Math.Max(0, totalReported - qcByLine.GetValueOrDefault(line.OrderLineId) - scrapByLine.GetValueOrDefault(line.OrderLineId));
+            foreach (var (r, qty) in perWorker.Zip(Distribute(diff, perWorker.Select(r => r.Qty).ToList())))
+            {
+                var w = workers.First(x => x.EmployeeId == r.WorkerId);
+                rows.Add(new EndOfOrderRowDto(line.OrderLineId, line.ProductVariant.Color, line.ProductVariant.SizeCode,
+                    r.WorkerId, w.EmployeeCode, w.FullName, r.Qty, qty));
+            }
+        }
+        return rows;
+    }
+
+    /// <summary>Có lệch phải ghi Scrap: cần đơn giá duyệt cho công đoạn cuối và kỳ chưa khóa, nếu không thêm vào blockers. Trả về Id đơn giá.</summary>
+    private async Task<int?> CheckRateAndPeriodAsync(Operation finalOp, List<string> blockers, CancellationToken ct)
+    {
+        var today = _clock.Today;
+        int? rateId = null;
+        var rate = await _rates.FindEffectiveAsync(finalOp.OperationId, today, ct);
+        if (rate is null)
+            blockers.Add(string.Format(Messages.PieceRateNotApproved, finalOp.OperationCode, today.ToString("dd/MM/yyyy")));
+        else rateId = rate.PieceRateId;
+        if (await _guard.IsPeriodLockedAsync(today, ct)) blockers.Add(_guard.PeriodLockedFailure(today).Message ?? string.Empty);
+        return rateId;
     }
 
     /// <summary>Chia <paramref name="total"/> theo tỉ lệ <paramref name="weights"/> thành số nguyên (phần dư chia cho phần lẻ lớn nhất).</summary>

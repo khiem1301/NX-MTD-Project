@@ -18,7 +18,9 @@ import type {
   CreatePurchaseOrderPayload,
   IncomingMaterials,
   OrderMaterial,
+  OrderMaterialPageQuery,
   PendingMaterialOrder,
+  PendingMaterialOrderQuery,
   PurchaseOrder,
   PurchaseOrderListItem,
   PurchaseOrderQuery,
@@ -57,9 +59,15 @@ export const warehouseApi = {
 
   getOrderMaterials: (role: RolePath, orderId: number) =>
     get<OrderMaterial[]>(API.warehouse.orderMaterials(role), { orderId }),
+  /** Admin / Quản đốc: bảng NVL của đơn có tìm kiếm, lọc, phân trang. */
+  getOrderMaterialPage: (role: RolePath, params: OrderMaterialPageQuery) =>
+    get<Paginated<OrderMaterial>>(`${API.warehouse.orderMaterials(role)}/paged`, params),
   /** Admin / Quản đốc: đơn đang chạy mà NVL chưa về đủ (kể cả đơn mới chưa khai báo NVL). */
-  getPendingMaterialOrders: (role: RolePath) =>
-    get<PendingMaterialOrder[]>(`${API.warehouse.orderMaterials(role)}/pending-orders`),
+  getPendingMaterialOrders: (role: RolePath, params: PendingMaterialOrderQuery) =>
+    get<Paginated<PendingMaterialOrder>>(
+      `${API.warehouse.orderMaterials(role)}/pending-orders`,
+      params,
+    ),
   /** Thủ kho: NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. */
   getIncomingMaterials: () => get<IncomingMaterials>(API.warehouse.incomingMaterials),
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
@@ -74,6 +82,9 @@ export const warehouseApi = {
     get<Paginated<PurchaseOrderListItem>>(API.warehouse.purchaseOrders(role), q),
   getPurchaseOrder: (role: RolePath, id: number) =>
     get<PurchaseOrder>(`${API.warehouse.purchaseOrders(role)}/${id}`),
+  /** Nhà cung cấp đang hợp tác cho ô chọn khi Quản đốc tạo đơn mua. */
+  getSupplierOptions: () =>
+    get<{ supplierId: number; supplierName: string }[]>(API.purchase.supplierOptions),
   createPurchaseOrder: (role: RolePath, body: CreatePurchaseOrderPayload) =>
     post<PurchaseOrder>(API.warehouse.purchaseOrders(role), body),
 

@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KH-22 (UC17 import): Admin tải file Excel nhân viên; xem trước 3 loại hợp lệ / lỗi / trùng (MSG24) rồi chỉ nhập các dòng
@@ -102,8 +102,8 @@ public sealed class EmployeeImportService : IEmployeeImportService
             if (!seen.Add(code)) { result.Add((Row(StatusDuplicate, Messages.EmployeeImportRepeated), null)); continue; }
 
             var role = NormalizeRole(r.Role);
-            // Quản đốc không nhập được nhân viên vai trò Admin / Kế toán.
-            if (role is not null && !_scope.CanSee(Roles.ToRoleCode(role)))
+            // Quản đốc không nhập được nhân viên vai trò Admin / Quản đốc / Kế toán.
+            if (role is not null && !_scope.CanAssign(Roles.ToRoleCode(role)))
             { result.Add((Row(StatusError, Messages.ManagerCannotAssignRole), null)); continue; }
             int? teamId = null;
             if (!string.IsNullOrWhiteSpace(r.TeamCode))
@@ -169,7 +169,7 @@ public sealed class AuditLogQueryService : IAuditLogQueryService
                         || (a.ChangedByNavigation != null && a.ChangedByNavigation.FullName.Contains(keyword)))
             .OrderByDescending(a => a.AuditLogId)
             .Select(a => new AuditLogRowDto(a.AuditLogId, a.TableName, a.RecordId, a.Action, a.OldValues, a.NewValues, a.Reason, a.ChangedBy,
-                a.ChangedByNavigation == null ? null : a.ChangedByNavigation.FullName, a.ChangedAt))
+                a.ChangedByNavigation == null ? null : a.ChangedByNavigation.FullName, a.ChangedAt, a.Summary))
             .ToPagedAsync(q, ct);
         return Result<PagedResult<AuditLogRowDto>>.Success(page);
     }

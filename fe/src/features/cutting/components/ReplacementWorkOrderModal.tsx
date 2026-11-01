@@ -106,7 +106,7 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
           />
         </Form.Item>
         <Form.Item name="dueDate" label={LABELS.dueDate} rules={required}>
-          <AppDatePicker />
+          <AppDatePicker disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
         </Form.Item>
         <Form.Item name="note" label={LABELS.note}>
           <Input.TextArea rows={2} maxLength={500} />

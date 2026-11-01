@@ -1,5 +1,6 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Alert, Button, Empty, Image, Popconfirm, Space, Spin } from 'antd';
+import { Alert, Button, Empty, Image, Space, Spin } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { AttachmentUploadButton, AuthImage } from '@/components/common/attachments';
 import { MESSAGES } from '@/constants/messages';
 import { useAttachments, useRemoveAttachment } from '@/hooks/useAttachments';
@@ -32,7 +33,7 @@ export function PaymentProofGallery({ purchaseOrderId, canEdit }: Props) {
             <Space key={a.attachmentId} direction="vertical" align="center">
               <AuthImage attachmentId={a.attachmentId} alt={a.fileName ?? ''} />
               {canEdit && (
-                <Popconfirm
+                <ConfirmAction
                   title={MESSAGES.attachments.removeConfirm}
                   onConfirm={() => remove.mutate(a.attachmentId)}
                 >
@@ -42,7 +43,7 @@ export function PaymentProofGallery({ purchaseOrderId, canEdit }: Props) {
                     icon={<DeleteOutlined />}
                     aria-label={MESSAGES.attachments.remove}
                   />
-                </Popconfirm>
+                </ConfirmAction>
               )}
             </Space>
           ))}

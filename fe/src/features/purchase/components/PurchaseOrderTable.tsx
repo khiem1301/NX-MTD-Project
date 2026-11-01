@@ -1,3 +1,6 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { Tag } from 'antd';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -5,7 +8,6 @@ import type { Paginated } from '@/types/api';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { GOODS_STATUS_LABEL, PAYMENT_STATUS_LABEL, PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderListItem } from '../types';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
@@ -23,9 +25,6 @@ export function PurchaseOrderTable({ data, loading, pagination, onOpen }: Props)
     {
       title: text.poCode,
       dataIndex: 'poCode',
-      render: (value: string, row) => (
-        <DetailLink onClick={() => onOpen(row.purchaseOrderId)}>{value}</DetailLink>
-      ),
     },
     {
       title: text.order,
@@ -63,6 +62,17 @@ export function PurchaseOrderTable({ data, loading, pagination, onOpen }: Props)
       dataIndex: 'paidAmount',
       align: 'right',
       render: (value: number | null) => formatCurrency(value),
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, row) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onOpen(row.purchaseOrderId)}
+        />
+      ),
     },
   ];
 

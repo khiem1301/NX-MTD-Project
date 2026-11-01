@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { normalizePhone, phoneRule } from '@/utils/phone';
 import { useSaveCustomer } from '../hooks/useOrders';
 import type { Customer, SaveCustomerPayload } from '../types';
 
@@ -73,14 +74,14 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
         </Form.Item>
         <Form.Item
           name="phone"
+          normalize={normalizePhone}
           label={MESSAGES.orders.phone}
           rules={[
             { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 15 },
-            { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' },
+            phoneRule,
           ]}
         >
-          <Input />
+          <Input maxLength={12} />
         </Form.Item>
         <Form.Item
           name="email"

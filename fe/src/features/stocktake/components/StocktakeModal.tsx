@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Popconfirm, Typography } from 'antd';
+import { Alert, Button, Descriptions, Typography } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ROLES } from '@/constants/roles';
-import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
+import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { ST_LABELS, ST_MESSAGES, STOCKTAKE_STATUS, STOCKTAKE_STATUS_LABEL } from '../constants';
@@ -51,14 +52,14 @@ export function StocktakeModal({ stocktakeId, onClose, onEdit }: StocktakeModalP
                 <Button danger onClick={() => setReturning(true)}>
                   {ST_LABELS.return}
                 </Button>
-                <Popconfirm
+                <ConfirmAction
                   title={ST_MESSAGES.confirmApprove}
                   onConfirm={() => approve.mutate(s.stocktakeId, { onSuccess: onClose })}
                 >
                   <Button type="primary" loading={approve.isPending}>
                     {ST_LABELS.approve}
                   </Button>
-                </Popconfirm>
+                </ConfirmAction>
               </>
             )}
             {canEdit && <Button onClick={() => onEdit(s)}>{ST_LABELS.edit}</Button>}

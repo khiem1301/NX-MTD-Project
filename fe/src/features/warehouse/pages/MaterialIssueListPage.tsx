@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
@@ -15,7 +16,6 @@ import { useIssues } from '../hooks/useIssues';
 import type { MaterialIssueListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -41,9 +41,6 @@ export function MaterialIssueListPage() {
     {
       title: LABELS.issueCode,
       dataIndex: 'issueCode',
-      render: (v: string, r) => (
-        <DetailLink onClick={() => setViewingId(r.materialIssueId)}>{v}</DetailLink>
-      ),
     },
     {
       title: LABELS.warehouseType,
@@ -59,6 +56,17 @@ export function MaterialIssueListPage() {
       title: LABELS.status,
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={ISSUE_STATUS_LABEL} />,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(r.materialIssueId)}
+        />
+      ),
     },
   ];
 

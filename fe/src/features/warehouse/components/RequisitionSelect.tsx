@@ -1,6 +1,6 @@
 import { Select } from 'antd';
 import { useQuery } from '@tanstack/react-query';
-import { requestApi } from '@/features/requests/api/requestApi';
+import { requestApi } from '@/features/requests';
 import type { RequestType } from '@/constants/requestTypes';
 
 const PAGE_SIZE = 100;

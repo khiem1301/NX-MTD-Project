@@ -1,5 +1,7 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
@@ -16,7 +18,6 @@ import { HANDOVER_STATUS_LABEL, LABELS, WORK_ORDER_STATUS } from '../constants';
 import { useHandovers, useWorkOrders } from '../hooks/useCutting';
 import type { CutHandoverListItem } from '../types';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -42,9 +43,6 @@ export function CutHandoverPage() {
     {
       title: LABELS.handoverCode,
       dataIndex: 'handoverCode',
-      render: (v: string, h) => (
-        <DetailLink onClick={() => setViewingId(h.cutHandoverId)}>{v}</DetailLink>
-      ),
     },
     { title: LABELS.workOrder, dataIndex: 'workOrderCode' },
     { title: LABELS.order, dataIndex: 'orderCode' },
@@ -60,6 +58,17 @@ export function CutHandoverPage() {
       title: LABELS.confirmedBy,
       dataIndex: 'confirmedByName',
       render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, h) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(h.cutHandoverId)}
+        />
+      ),
     },
   ];
 

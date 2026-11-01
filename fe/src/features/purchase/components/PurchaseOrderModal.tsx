@@ -1,21 +1,13 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Divider, Result, Space, Spin, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Alert, Button, Divider, Result, Space, Spin, Typography } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { AuditHistory } from '@/components/common/AuditHistory';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
-import { StatusTag } from '@/components/common/StatusTag';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
-import { formatCurrency, formatDate, formatQty } from '@/utils/format';
-import {
-  GOODS_STATUS_LABEL,
-  PAYMENT_METHOD_LABEL,
-  PAYMENT_STATUS_LABEL,
-  PURCHASE_TEXT,
-} from '../constants';
+import { PURCHASE_TEXT } from '../constants';
 import { useCancelOrder, usePurchaseOrderDetail, useReturnPayment } from '../hooks/usePurchase';
 import type { PurchaseOrderLine, PurchaseRole } from '../types';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
@@ -24,38 +16,14 @@ import { PlaceOrderModal } from './PlaceOrderModal';
 import { RepriceModal } from './RepriceModal';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { PaymentInfo } from './PaymentInfo';
+import { PurchaseOrderInfo } from './PurchaseOrderInfo';
+import { purchaseLineColumns } from './purchaseLineColumns';
 
 type Props = { role: PurchaseRole };
 type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
 
 const text = PURCHASE_TEXT.detail;
-
-const lineColumns: ColumnsType<PurchaseOrderLine> = [
-  {
-    title: text.material,
-    key: 'material',
-    render: (_, l) => `${l.materialCode} - ${l.materialName}`,
-  },
-  { title: text.color, dataIndex: 'materialColor', render: (value: string) => value || '—' },
-  {
-    title: text.qty,
-    dataIndex: 'orderedQty',
-    align: 'right',
-    render: (value: number, l) => `${formatQty(value)} ${l.unit}`,
-  },
-  {
-    title: text.unitPrice,
-    dataIndex: 'unitPrice',
-    align: 'right',
-    render: (v: number) => formatCurrency(v),
-  },
-  {
-    title: text.amount,
-    key: 'amount',
-    align: 'right',
-    render: (_, l) => formatCurrency(l.orderedQty * l.unitPrice),
-  },
-];
 
 /**
  * Chi tiết đơn mua mở theo ?id=<purchaseOrderId> (link trong thông báo chia sẻ được). Nút hiện theo `permissions`
@@ -130,38 +98,13 @@ export function PurchaseOrderModal({ role }: Props) {
             />
           )}
 
-          <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.order}>
-              {data.orderCode ?? PURCHASE_TEXT.columns.stock}
-            </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.supplier}>
-              {data.supplierName ?? '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.goodsStatus}>
-              <StatusTag status={data.goodsStatus} labels={GOODS_STATUS_LABEL} />
-            </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.paymentStatus}>
-              <StatusTag status={data.paymentStatus} labels={PAYMENT_STATUS_LABEL} />
-            </Descriptions.Item>
-            <Descriptions.Item label={PURCHASE_TEXT.columns.orderDate}>
-              {formatDate(data.orderDate)}
-            </Descriptions.Item>
-            <Descriptions.Item label={text.expectedDate}>
-              {data.expectedDeliveryCount === null
-                ? '—'
-                : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
-            </Descriptions.Item>
-            <Descriptions.Item label={text.total}>
-              <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
-            </Descriptions.Item>
-            <Descriptions.Item label={text.note}>{data.note ?? '—'}</Descriptions.Item>
-          </Descriptions>
+          <PurchaseOrderInfo order={data} />
 
           <Divider orientation="left">{text.lines}</Divider>
           <DataTable<PurchaseOrderLine>
             rowKey="purchaseOrderLineId"
             size="small"
-            columns={lineColumns}
+            columns={purchaseLineColumns}
             dataSource={data.lines}
             pagination={false}
             scroll={{ x: 'max-content' }}
@@ -170,20 +113,7 @@ export function PurchaseOrderModal({ role }: Props) {
           {data.paymentStatus === 'Paid' && (
             <>
               <Divider orientation="left">{text.paymentInfo}</Divider>
-              <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
-                <Descriptions.Item label={text.paymentDate}>
-                  {formatDate(data.paymentDate)}
-                </Descriptions.Item>
-                <Descriptions.Item label={text.paidAmount}>
-                  {formatCurrency(data.paidAmount)}
-                </Descriptions.Item>
-                <Descriptions.Item label={text.paymentMethod}>
-                  {data.paymentMethod ? PAYMENT_METHOD_LABEL[data.paymentMethod] : '—'}
-                </Descriptions.Item>
-                <Descriptions.Item label={text.paymentNote} span={2}>
-                  {data.paymentNote ?? '—'}
-                </Descriptions.Item>
-              </Descriptions>
+              <PaymentInfo order={data} />
             </>
           )}
 

@@ -3,7 +3,7 @@ import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
-import { useRequestInbox } from '@/features/requests/hooks/useRequests';
+import { useRequestInbox } from '@/features/requests';
 import { formatDate, toApiDate } from '@/utils/format';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useCreateAdjustment } from '../hooks/useAttendance';

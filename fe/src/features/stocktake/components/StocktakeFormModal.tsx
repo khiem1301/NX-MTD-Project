@@ -4,9 +4,12 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
-import { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
-import { useBalances } from '@/features/warehouse/hooks/useInventory';
-import type { StockBalance } from '@/features/warehouse/types';
+import {
+  WAREHOUSE_TYPE,
+  WAREHOUSE_TYPE_LABEL,
+  useBalances,
+  type StockBalance,
+} from '@/features/warehouse';
 import { API_DATE, formatQty } from '@/utils/format';
 import { ST_LABELS } from '../constants';
 import { useSaveStocktake } from '../hooks/useStocktake';

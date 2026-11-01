@@ -7,6 +7,8 @@ type ColorAutoCompleteProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  size?: 'small' | 'middle' | 'large';
+  status?: 'error';
   /** Màu đang có trong form (chưa lưu) cũng được gợi ý. */
   extraColors?: readonly string[];
 };
@@ -16,6 +18,8 @@ export function ColorAutoComplete({
   value,
   onChange,
   disabled,
+  size,
+  status,
   extraColors = [],
 }: ColorAutoCompleteProps) {
   const colors = useProductColors();
@@ -34,6 +38,8 @@ export function ColorAutoComplete({
       value={value}
       options={options}
       disabled={disabled}
+      size={size}
+      status={status}
       maxLength={50}
       style={{ width: '100%' }}
       onChange={onChange}

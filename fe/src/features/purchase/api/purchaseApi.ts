@@ -36,7 +36,8 @@ export const purchaseApi = {
   createSupplier: (body: SaveSupplierPayload) => post<number>(API.purchase.suppliers, body),
   updateSupplier: (id: number, body: SaveSupplierPayload) =>
     put<void>(API.purchase.supplier(id), body),
-  discontinueSupplier: (id: number) => post<void>(API.purchase.supplierDiscontinue(id)),
+  discontinueSupplier: (id: number, reason: string) =>
+    post<void>(API.purchase.supplierDiscontinue(id), { reason }),
   reactivateSupplier: (id: number) => post<void>(API.purchase.supplierReactivate(id)),
 
   /** Quản đốc: chỉ nhà cung cấp đang hợp tác. */

@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>UC03 đổi mật khẩu + UC04 xem hồ sơ của mình.</summary>
 public sealed class ProfileService : IProfileService
@@ -39,7 +39,8 @@ public sealed class ProfileService : IProfileService
     {
         var account = await _accounts.GetByIdAsync(_user.AccountId);
         if (account is null) return Fail.NotFound<LoginResultDto>();
-        if (!_hasher.Verify(dto.CurrentPassword, account.PasswordHash))   // D36: 409, không 401 để FE không tự refresh
+        // Mật khẩu tạm: người dùng đã đăng nhập bằng nó nên không bắt nhập lại; ngược lại phải đúng mật khẩu hiện tại.
+        if (!account.IsTemporaryPassword && !_hasher.Verify(dto.CurrentPassword ?? string.Empty, account.PasswordHash))   // D36: 409, không 401 để FE không tự refresh
             return Result<LoginResultDto>.Failure(ErrorCodes.AuthWrongCurrentPassword, Messages.WrongCurrentPassword);
 
         account.PasswordHash = _hasher.Hash(dto.NewPassword);

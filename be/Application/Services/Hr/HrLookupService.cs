@@ -3,7 +3,7 @@ using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>Tra cứu tổ / thành viên cho luồng khác (chấm công, công đoạn).</summary>
 public sealed class HrLookupService : IHrLookupService

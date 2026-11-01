@@ -1,36 +1,14 @@
 import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import {
-  MANAGER_HIDDEN_ROLES,
-  PAY_TYPE_LABEL,
-  ROLE_LABEL,
-  suggestPayType,
-  type PayType,
-} from '@/constants/hr';
-import { ROLES, type Role } from '@/constants/roles';
-import { useTeamLookup } from '@/hooks/useHrLookups';
-import type { ApiError } from '@/types/api';
-import { toApiDate } from '@/utils/format';
-import { useCreateEmployee, useUpdateEmployee } from '../hooks/useEmployees';
+import { normalizePhone, phoneRule } from '@/utils/phone';
+import { PAY_TYPE_LABEL, type PayType } from '@/constants/hr';
 import type { EmployeeDetail, TempPassword } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { useEmployeeForm } from '../hooks/useEmployeeForm';
 
-type FormValues = {
-  employeeCode: string;
-  fullName: string;
-  gender?: string;
-  dateOfBirth?: Dayjs;
-  phone?: string;
-  role: Role;
-  teamId?: number;
-  payType: PayType;
-  startDate: Dayjs;
-  attendanceCode?: number;
-};
-
-type EmployeeFormModalProps = {
+export type EmployeeFormModalProps = {
   open: boolean;
   employee: EmployeeDetail | null;
   /** Admin sửa đủ trường; Quản đốc sửa được hồ sơ, tổ và vai trò (trừ Admin / Quản đốc / Kế toán) nhưng không đổi kiểu lương (UC16). */
@@ -39,10 +17,6 @@ type EmployeeFormModalProps = {
   onCreated: (password: TempPassword) => void;
 };
 
-const ROLE_OPTIONS = (Object.values(ROLES) as Role[]).map((r) => ({
-  value: r,
-  label: ROLE_LABEL[r],
-}));
 const PAY_OPTIONS = (Object.keys(PAY_TYPE_LABEL) as PayType[]).map((p) => ({
   value: p,
   label: PAY_TYPE_LABEL[p],
@@ -56,83 +30,8 @@ export function EmployeeFormModal({
   onClose,
   onCreated,
 }: EmployeeFormModalProps) {
-  const [form] = Form.useForm<FormValues>();
-  const teams = useTeamLookup();
-  const create = useCreateEmployee();
-  const update = useUpdateEmployee(employee?.employeeId ?? 0);
-  const saving = create.isPending || update.isPending;
-  // Quản đốc không gán được vai trò mà mình không nhìn thấy (GBR-01).
-  const roleOptions = isAdmin
-    ? ROLE_OPTIONS
-    : ROLE_OPTIONS.filter((o) => !MANAGER_HIDDEN_ROLES.includes(o.value));
-
-  const suggest = () => {
-    const values = form.getFieldsValue();
-    const teamType = teams.data?.find((t) => t.teamId === values.teamId)?.teamType;
-    const pay = suggestPayType(values.role, teamType);
-    if (pay && !employee) form.setFieldValue('payType', pay);
-  };
-
-  const showFieldErrors = (error: ApiError) =>
-    form.setFields(
-      Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-        name: name as keyof FormValues,
-        errors,
-      })),
-    );
-
-  const handleFinish = (v: FormValues) => {
-    const base = {
-      fullName: v.fullName,
-      gender: v.gender ?? null,
-      dateOfBirth: v.dateOfBirth ? toApiDate(v.dateOfBirth) : null,
-      phone: v.phone ?? null,
-      startDate: toApiDate(v.startDate),
-      attendanceCode: v.attendanceCode ?? null,
-    };
-    if (!employee) {
-      create.mutate(
-        {
-          ...base,
-          employeeCode: v.employeeCode,
-          role: v.role,
-          teamId: v.teamId ?? null,
-          payType: v.payType,
-        },
-        {
-          onSuccess: (data) => {
-            onCreated({ username: data.username, temporaryPassword: data.temporaryPassword });
-            onClose();
-          },
-          onError: showFieldErrors,
-        },
-      );
-      return;
-    }
-    const body = {
-      ...base,
-      role: v.role,
-      teamId: v.teamId ?? null,
-      payType: v.payType,
-      rowVer: employee.rowVer,
-    };
-    update.mutate(body, { onSuccess: onClose, onError: showFieldErrors });
-  };
-
-  const initialValues: Partial<FormValues> = employee
-    ? {
-        employeeCode: employee.employeeCode,
-        fullName: employee.fullName,
-        gender: employee.gender ?? undefined,
-        dateOfBirth: employee.dateOfBirth ? dayjs(employee.dateOfBirth) : undefined,
-        phone: employee.phone ?? undefined,
-        role: employee.role,
-        teamId: employee.teamId ?? undefined,
-        payType: employee.payType,
-        startDate: dayjs(employee.startDate),
-        attendanceCode: employee.attendanceCode ?? undefined,
-      }
-    : { startDate: dayjs(), payType: 'Monthly' };
+  const { teams, saving, roleOptions, roleLocked, suggest, handleFinish, initialValues, form } =
+    useEmployeeForm({ employee, isAdmin, onClose, onCreated });
 
   return (
     <DetailModal
@@ -195,10 +94,11 @@ export function EmployeeFormModal({
           </Form.Item>
           <Form.Item
             name="phone"
+            normalize={normalizePhone}
             label={MESSAGES.hr.phone}
-            rules={[{ max: 15 }, { pattern: /^[0-9+]*$/, message: 'Chỉ gồm chữ số và dấu +' }]}
+            rules={[phoneRule]}
           >
-            <Input style={{ width: 160 }} />
+            <Input maxLength={12} style={{ width: 160 }} />
           </Form.Item>
         </Space>
         <Form.Item
@@ -206,7 +106,7 @@ export function EmployeeFormModal({
           label={MESSAGES.hr.role}
           rules={[{ required: true, message: MESSAGES.common.required }]}
         >
-          <Select options={roleOptions} onChange={suggest} />
+          <Select options={roleOptions} onChange={suggest} disabled={roleLocked} />
         </Form.Item>
         <Form.Item name="teamId" label={MESSAGES.hr.team}>
           <Select

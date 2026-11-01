@@ -21,7 +21,8 @@ export type Profile = {
 };
 
 export type ChangePasswordPayload = {
-  currentPassword: string;
+  /** Bỏ trống khi tài khoản đang dùng mật khẩu tạm. */
+  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
 };

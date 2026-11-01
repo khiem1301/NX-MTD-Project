@@ -58,6 +58,51 @@ describe('ProductBlockEditor', () => {
     expect(screen.getByDisplayValue('Đỏ')).not.toBeDisabled();
   });
 
+  it('hai màu trở lên: hiện dòng tổng theo size', () => {
+    const block: ProductBlock = {
+      ...oldBlock,
+      rows: [
+        ...oldBlock.rows,
+        { key: 'r2', color: 'Xanh', cells: { S: { orderLineId: 3, qty: 5 } } },
+      ],
+    };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProductBlockEditor
+          block={block}
+          locked={false}
+          productLabels={{ 1: 'AO-01 · Áo' }}
+          onChange={jest.fn()}
+          onRemove={jest.fn()}
+          onCreateProduct={jest.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText('15')).toBeInTheDocument(); // size S: 10 + 5
+    expect(screen.getAllByText('35').length).toBeGreaterThan(0); // tổng cả khối
+  });
+
+  it('hiện lỗi đơn giá dưới ô, ô đơn giá có nhãn riêng', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProductBlockEditor
+          block={{ ...oldBlock, cmtUnitPrice: null }}
+          locked={false}
+          productLabels={{ 1: 'AO-01 · Áo' }}
+          errors={{ price: 'Vui lòng nhập đơn giá CMT.', lines: 'Lỗi dòng' }}
+          onChange={jest.fn()}
+          onRemove={jest.fn()}
+          onCreateProduct={jest.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(screen.getByText('Đơn giá CMT')).toBeInTheDocument();
+    expect(screen.getByText('Vui lòng nhập đơn giá CMT.')).toBeInTheDocument();
+    expect(screen.getByText('Lỗi dòng')).toBeInTheDocument();
+  });
+
   it('gõ "đ" vào ô màu gợi ý màu Đen đã khai ở mã hàng khác', async () => {
     function Stateful() {
       const [block, setBlock] = useState(oldBlock);

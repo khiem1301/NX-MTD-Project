@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { AutoComplete, Checkbox, Form, Input, InputNumber, Modal, Select, Switch } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useProductSpec } from '@/features/orders/hooks/useOrders';
+import { useProductSpec } from '@/features/orders';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';

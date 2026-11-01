@@ -1,5 +1,6 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
@@ -15,7 +16,6 @@ import { useReceipts } from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -44,9 +44,6 @@ export function MaterialReceiptListPage() {
     {
       title: LABELS.receiptCode,
       dataIndex: 'receiptCode',
-      render: (v: string, r) => (
-        <DetailLink onClick={() => setViewingId(r.materialReceiptId)}>{v}</DetailLink>
-      ),
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.receiptDate, dataIndex: 'receiptDate', render: formatDate },
@@ -61,6 +58,17 @@ export function MaterialReceiptListPage() {
       title: LABELS.confirmedBy,
       dataIndex: 'confirmedByName',
       render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(r.materialReceiptId)}
+        />
+      ),
     },
   ];
 

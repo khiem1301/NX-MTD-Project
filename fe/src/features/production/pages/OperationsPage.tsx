@@ -1,34 +1,25 @@
 import { useState } from 'react';
-import { Alert, Button, Checkbox, Input, Popconfirm, Space, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, SearchOutlined, UploadOutlined, EditOutlined } from '@ant-design/icons';
+import { Alert, Button, Checkbox, Input, Space } from 'antd';
+import { PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useProductLookup } from '@/hooks/useOrderLookups';
-import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { normalizeText } from '@/utils/text';
 import { OperationFormModal } from '../components/OperationFormModal';
 import { OperationImportModal } from '../components/OperationImportModal';
 import { PieceRateFormModal } from '../components/PieceRateFormModal';
+import { operationColumns } from '../components/operationColumns';
 import { PieceRateHistory } from '../components/PieceRateHistory';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
 import { useOperations, useSubmitPieceRate, useToggleOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
-import { editableRate } from '../utils';
 import { PageCard } from '@/components/common/PageCard';
 import { DetailModal } from '@/components/common/DetailModal';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { FilterSelect } from '@/components/common/FilterSelect';
 
 const text = PRODUCTION_TEXT.operations;
-const rateText = PRODUCTION_TEXT.pieceRates;
-
-/** Đặt / sửa đơn giá được khi công đoạn còn dùng và chưa có bản nào đang chờ Admin duyệt. */
-const canSetRate = (operation: Operation) =>
-  operation.status === 'Active' && operation.nextRate?.status !== 'PendingApproval';
 
 /**
  * UC25 / UC26 (KI-01) — Kế toán nhập công đoạn của mã hàng từ file Excel quy trình công nghệ rồi đặt đơn giá ngay trên
@@ -83,108 +74,13 @@ export function OperationsPage() {
 
   const [viewing, setViewing] = useState<Operation | null>(null);
 
-  const columns: ColumnsType<Operation> = [
-    { title: text.columns.sequence, dataIndex: 'stationSequence', width: 80 },
-    {
-      title: text.columns.code,
-      dataIndex: 'operationCode',
-      render: (v: string, row) => <DetailLink onClick={() => setViewing(row)}>{v}</DetailLink>,
-    },
-    { title: text.columns.name, dataIndex: 'operationName' },
-    {
-      title: text.columns.group,
-      dataIndex: 'groupName',
-      render: (v: string | null) => (v ? <Tag color="geekblue">{v}</Tag> : '—'),
-    },
-    {
-      title: text.columns.usesPieces,
-      dataIndex: 'usesSemiFinished',
-      render: (v: boolean) =>
-        v ? <Tag color="blue">{text.withPieces}</Tag> : <Tag>{text.withoutPieces}</Tag>,
-    },
-    { title: text.columns.skill, dataIndex: 'skillLevel', render: (v: number | null) => v ?? '—' },
-    {
-      title: text.columns.standardTime,
-      dataIndex: 'standardTimeSec',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-    },
-    {
-      title: text.columns.isFinal,
-      dataIndex: 'isFinalStep',
-      render: (v: boolean) => (v ? <Tag color="blue">Cuối</Tag> : '—'),
-    },
-    {
-      title: text.columns.rate,
-      dataIndex: 'currentRate',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
-    },
-    {
-      title: text.columns.nextRate,
-      key: 'nextRate',
-      render: (_, row) =>
-        row.nextRate ? (
-          <Space direction="vertical" size={0}>
-            <span>
-              {formatCurrency(row.nextRate.rate)} · từ {formatDate(row.nextRate.effectiveDate)}
-            </span>
-            <StatusTag status={row.nextRate.status} labels={rateText.status} />
-            {row.nextRate.rejectReason && (
-              <Typography.Text type="danger">{row.nextRate.rejectReason}</Typography.Text>
-            )}
-          </Space>
-        ) : (
-          '—'
-        ),
-    },
-    {
-      title: text.columns.status,
-      dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={text.status} />,
-    },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, row) => (
-        <Space size={0} wrap>
-          <Button type="link" icon={<EditOutlined />} onClick={() => setEditing(row)}>
-            {MESSAGES.common.edit}
-          </Button>
-          {canSetRate(row) && (
-            <Button type="link" onClick={() => setRating(row)}>
-              {editableRate(row) ? rateText.editRate : rateText.setRate}
-            </Button>
-          )}
-          {row.nextRate?.status === 'Draft' && (
-            <Popconfirm
-              title={rateText.submitConfirm}
-              onConfirm={() => submit.mutate(row.nextRate!.pieceRateId)}
-            >
-              <Button type="link">{rateText.submit}</Button>
-            </Popconfirm>
-          )}
-          {row.status === 'Active' ? (
-            <Popconfirm
-              title={text.discontinueConfirm}
-              onConfirm={() => toggle.mutate({ id: row.operationId, discontinue: true })}
-            >
-              <Button type="link" danger>
-                {text.discontinue}
-              </Button>
-            </Popconfirm>
-          ) : (
-            <Button
-              type="link"
-              onClick={() => toggle.mutate({ id: row.operationId, discontinue: false })}
-            >
-              {text.reactivate}
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const columns = operationColumns({
+    onView: setViewing,
+    onEdit: setEditing,
+    onSetRate: setRating,
+    onSubmitRate: (pieceRateId) => submit.mutate(pieceRateId),
+    onToggle: (row, discontinue) => toggle.mutate({ id: row.operationId, discontinue }),
+  });
 
   return (
     <PageCard

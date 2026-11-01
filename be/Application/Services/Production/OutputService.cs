@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-04 + KI-11 (UC55, UC22): sản lượng cuối ca của tổ may theo công nhân × công đoạn × dòng đơn.
@@ -58,27 +58,53 @@ public sealed class OutputService : IOutputService
             .ToListAsync(ct);
 
         // Số lần được giao (trần) và đã báo của từng công nhân × công đoạn ở dòng đơn này.
-        var caps = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
-            .Where(v => v.OrderLineId == orderLineId).ToListAsync(ct);
+        var (caps, teamWorkerIds) = await LoadCapsAsync(orderLineId, team.Data, ct);
         var capByKey = caps.ToDictionary(v => (v.OperationId, v.WorkerId));
-        var teamWorkerIds = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => e.TeamId == team.Data).Select(e => e.EmployeeId).ToListAsync(ct);
 
         // Công nhân được giao việc nhưng chưa có phân công công đoạn vẫn có dòng để báo sản lượng.
         var keys = assignments.Select(a => (a.OperationId, a.WorkerId))
             .Union(records.Select(r => (r.OperationId, r.WorkerId)))
             .Union(caps.Where(c => (c.CapQty ?? 0) > 0 && teamWorkerIds.Contains(c.WorkerId)).Select(c => (c.OperationId, c.WorkerId))).ToList();
+        var (operations, workers) = await LoadOperationsAndWorkersAsync(keys, ct);
+
+        var assigned = assignments.Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
+        var recordByKey = records.ToDictionary(r => (r.OperationId, r.WorkerId));
+        var rows = await BuildGridRowsAsync(workDate, keys, operations, workers, recordByKey, capByKey, assigned, ct);
+
+        var received = await ReceivedAsync(team.Data, orderLineId, ct);
+        return Result<OutputGridDto>.Success(new OutputGridDto(workDate, shift, orderLineId, team.Data, received, rows));
+    }
+
+    private async Task<(List<VwWorkerOutputCap> Caps, List<int> TeamWorkerIds)> LoadCapsAsync(
+        int orderLineId, int teamId, CancellationToken ct)
+    {
+        var caps = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
+            .Where(v => v.OrderLineId == orderLineId).ToListAsync(ct);
+        var teamWorkerIds = await _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => e.TeamId == teamId).Select(e => e.EmployeeId).ToListAsync(ct);
+        return (caps, teamWorkerIds);
+    }
+
+    private async Task<(Dictionary<int, Operation> Operations, Dictionary<int, Employee> Workers)> LoadOperationsAndWorkersAsync(
+        List<(int OperationId, int WorkerId)> keys, CancellationToken ct)
+    {
         var operationIds = keys.Select(k => k.OperationId).Distinct().ToList();
         var workerIds = keys.Select(k => k.WorkerId).Distinct().ToList();
         var operations = await _uow.Repository<Operation>().Query().AsNoTracking()
             .Where(o => operationIds.Contains(o.OperationId)).ToDictionaryAsync(o => o.OperationId, ct);
         var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
             .Where(e => workerIds.Contains(e.EmployeeId)).ToDictionaryAsync(e => e.EmployeeId, ct);
+        return (operations, workers);
+    }
 
-        var assigned = assignments.Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
-        var recordByKey = records.ToDictionary(r => (r.OperationId, r.WorkerId));
+    /// <summary>Mỗi (công đoạn, công nhân) một dòng: đã có bản ghi thì lấy số liệu của nó, chưa có thì dùng đơn giá hiện hành.</summary>
+    private async Task<List<OutputGridRowDto>> BuildGridRowsAsync(DateOnly workDate, List<(int OperationId, int WorkerId)> keys,
+        Dictionary<int, Operation> operations, Dictionary<int, Employee> workers,
+        Dictionary<(int OperationId, int WorkerId), OutputRecord> recordByKey,
+        Dictionary<(int OperationId, int WorkerId), VwWorkerOutputCap> capByKey,
+        HashSet<(int OperationId, int WorkerId)> assigned, CancellationToken ct)
+    {
         var newRowOpen = _clock.Now <= ProductionGuard.NextWorkingDayEnd(workDate) || _guard.IsManager;
-
         var rows = new List<OutputGridRowDto>();
         foreach (var (operationId, workerId) in keys.OrderBy(k => operations[k.OperationId].StationSequence)
                      .ThenBy(k => workers[k.WorkerId].EmployeeCode))
@@ -97,9 +123,7 @@ public sealed class OutputService : IOutputService
                 capByKey.TryGetValue((operationId, workerId), out var cap) ? cap.CapQty ?? 0 : 0,
                 cap?.OutputQty ?? 0));
         }
-
-        var received = await ReceivedAsync(team.Data, orderLineId, ct);
-        return Result<OutputGridDto>.Success(new OutputGridDto(workDate, shift, orderLineId, team.Data, received, rows));
+        return rows;
     }
 
     // ---------- Lưu ----------
@@ -107,58 +131,138 @@ public sealed class OutputService : IOutputService
     public async Task<Result<OutputSaveResultDto>> SaveAsync(SaveOutputDto dto, CancellationToken ct)
     {
         var shift = CodeText.ToCode(dto.ShiftCode);
-        if (!ShiftCodes.All.Contains(shift)) return Invalid("Ca làm việc không hợp lệ.");
-        if (dto.Rows.Count == 0) return Invalid(Messages.OutputRowsRequired);
-        if (dto.Rows.Any(r => r.Quantity < 0)) return Invalid(Messages.OutputQtyInvalid);
-        if (dto.Rows.Select(r => (r.OperationId, r.WorkerId)).Distinct().Count() != dto.Rows.Count)
-            return Invalid(Messages.OutputDuplicateRow);
-        if (dto.WorkDate > _clock.Today) return Invalid(Messages.OutputDateFuture);
+        var invalid = ValidateRows(dto, shift);
+        if (invalid is not null) return invalid;
 
         var team = _guard.ResolveSewingTeam(dto.SewingTeamId);
         if (!team.IsSuccess) return Fail.As<OutputSaveResultDto>(team);
         if (await _guard.IsPeriodLockedAsync(dto.WorkDate, ct))
             return Fail.As<OutputSaveResultDto>(_guard.PeriodLockedFailure(dto.WorkDate));
 
-        var closed = OrderStatuses.Closed.ToArray();
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
+        var line = await FindOpenLineAsync(dto.OrderLineId, ct);
         if (line is null)
             return Result<OutputSaveResultDto>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
 
-        var existing = await Records.Where(r => r.WorkDate == dto.WorkDate && r.ShiftCode == shift
-            && r.SewingTeamId == team.Data && r.OrderLineId == dto.OrderLineId).ToListAsync(ct);
-        var existingByKey = existing.ToDictionary(r => (r.OperationId, r.WorkerId));
+        var existing = await LoadExistingAsync(dto, shift, team.Data, ct);
         var newDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate);
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
-
         // 1) Phân loại từng dòng + kiểm hạn sửa trước khi chạm DB.
-        var inserts = new List<OutputLineInput>();
-        var updates = new List<(OutputRecord Record, OutputLineInput Input)>();
-        var deletes = new List<OutputRecord>();
-        foreach (var row in dto.Rows)
+        var planResult = ClassifyRows(dto.Rows, existing, newDeadline, reason);
+        if (!planResult.IsSuccess) return Fail.As<OutputSaveResultDto>(planResult);
+        var plan = planResult.Data!;
+        if (plan.IsEmpty)
+            return Result<OutputSaveResultDto>.Success(new OutputSaveResultDto(0, 0, 0, []), Messages.OutputSaved);
+
+        // 2) Công đoạn / công nhân / đơn giá / trần cho các dòng thêm hoặc đổi số lượng.
+        var lookupsResult = await LoadAndValidateChangesAsync(dto, team.Data, line, plan, ct);
+        if (!lookupsResult.IsSuccess) return Fail.As<OutputSaveResultDto>(lookupsResult);
+        var lookups = lookupsResult.Data!;
+
+        // 3) Cảnh báo MSG17 + cờ ngoài phân công cho các dòng mới.
+        var (attendedWorkerIds, assigned, warnings) = await CollectWarningsAsync(dto, team.Data, line, plan, lookups, ct);
+
+        // 4) Ghi cùng AuditLog trong một transaction.
+        var written = await PersistAsync(dto, shift, team.Data, plan, lookups.Rates, assigned, attendedWorkerIds, newDeadline, reason);
+        if (!written.IsSuccess) return Fail.As<OutputSaveResultDto>(written);
+
+        return Result<OutputSaveResultDto>.Success(
+            new OutputSaveResultDto(plan.Inserts.Count, plan.Updates.Count, plan.Deletes.Count, warnings), Messages.OutputSaved);
+    }
+
+    /// <summary>Công nhân có chấm công trong ngày, cặp (công đoạn, công nhân) được phân công và cảnh báo MSG17 cho công nhân mới chưa chấm công.</summary>
+    private async Task<(List<int> AttendedWorkerIds, HashSet<(int OperationId, int WorkerId)> Assigned, List<string> Warnings)>
+        CollectWarningsAsync(SaveOutputDto dto, int teamId, OrderLine line, OutputPlan plan, OutputLookups lookups,
+            CancellationToken ct)
+    {
+        var attendedWorkerIds = await _uow.Repository<DailyTimesheet>().Query().AsNoTracking()
+            .Where(t => t.WorkDate == dto.WorkDate && t.CheckIn != null && lookups.WorkerIds.Contains(t.EmployeeId))
+            .Select(t => t.EmployeeId).Distinct().ToListAsync(ct);
+        var assigned = (await _uow.Repository<OperationAssignment>().Query().AsNoTracking()
+                .Where(a => a.SewingTeamId == teamId && a.OrderId == line.OrderId && a.ValidTo == null)
+                .Select(a => new { a.OperationId, a.WorkerId }).ToListAsync(ct))
+            .Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
+
+        var warnings = new List<string>();
+        foreach (var workerId in plan.Inserts.Select(i => i.WorkerId).Distinct().Where(id => !attendedWorkerIds.Contains(id)))
+            warnings.Add(string.Format(Messages.OutputNoAttendanceWarning, lookups.Workers[workerId].FullName,
+                dto.WorkDate.ToString("dd/MM/yyyy")));
+        return (attendedWorkerIds, assigned, warnings);
+    }
+
+    /// <summary>Dòng đơn chưa đóng; null nếu không có hoặc đơn đã đóng.</summary>
+    private async Task<OrderLine?> FindOpenLineAsync(int orderLineId, CancellationToken ct)
+    {
+        var closed = OrderStatuses.Closed.ToArray();
+        return await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId && !closed.Contains(l.Order.Status), ct);
+    }
+
+    private Task<List<OutputRecord>> LoadExistingAsync(SaveOutputDto dto, string shift, int teamId, CancellationToken ct) =>
+        Records.Where(r => r.WorkDate == dto.WorkDate && r.ShiftCode == shift
+            && r.SewingTeamId == teamId && r.OrderLineId == dto.OrderLineId).ToListAsync(ct);
+
+    /// <summary>Kiểm đầu vào không cần DB: ca, số dòng, số lượng, dòng trùng, ngày tương lai.</summary>
+    private Result<OutputSaveResultDto>? ValidateRows(SaveOutputDto dto, string shift)
+    {
+        if (!ShiftCodes.All.Contains(shift)) return Invalid("Ca làm việc không hợp lệ.");
+        if (dto.Rows.Count == 0) return Invalid(Messages.OutputRowsRequired);
+        if (dto.Rows.Any(r => r.Quantity < 0)) return Invalid(Messages.OutputQtyInvalid);
+        if (dto.Rows.Select(r => (r.OperationId, r.WorkerId)).Distinct().Count() != dto.Rows.Count)
+            return Invalid(Messages.OutputDuplicateRow);
+        if (dto.WorkDate > _clock.Today) return Invalid(Messages.OutputDateFuture);
+        return null;
+    }
+
+    /// <summary>Thêm / sửa / xóa: so từng dòng gửi lên với bản ghi đã có, kiểm hạn sửa (GBR-09) cho dòng thật sự đổi.</summary>
+    private Result<OutputPlan> ClassifyRows(
+        IReadOnlyList<OutputLineInput> rows, List<OutputRecord> existing, DateTime newDeadline, string? reason)
+    {
+        var existingByKey = existing.ToDictionary(r => (r.OperationId, r.WorkerId));
+        var plan = new OutputPlan([], [], []);
+        foreach (var row in rows)
         {
             existingByKey.TryGetValue((row.OperationId, row.WorkerId), out var record);
             if (record is null)
             {
                 if (row.Quantity == 0) continue;
                 var window = _guard.CheckEditWindow(newDeadline, reason);
-                if (window is not null) return Fail.As<OutputSaveResultDto>(window);
-                inserts.Add(row);
+                if (window is not null) return Fail.As<OutputPlan>(window);
+                plan.Inserts.Add(row);
                 continue;
             }
             if (row.Quantity == record.Quantity) continue;
 
             var editWindow = _guard.CheckEditWindow(record.EditDeadline, reason);
-            if (editWindow is not null) return Fail.As<OutputSaveResultDto>(editWindow);
-            if (row.Quantity == 0) deletes.Add(record);
-            else updates.Add((record, row));
+            if (editWindow is not null) return Fail.As<OutputPlan>(editWindow);
+            if (row.Quantity == 0) plan.Deletes.Add(record);
+            else plan.Updates.Add((record, row));
         }
-        if (inserts.Count == 0 && updates.Count == 0 && deletes.Count == 0)
-            return Result<OutputSaveResultDto>.Success(new OutputSaveResultDto(0, 0, 0, []), Messages.OutputSaved);
+        return Result<OutputPlan>.Success(plan);
+    }
 
-        // 2) Công đoạn / công nhân / đơn giá / trần cho các dòng thêm hoặc đổi số lượng.
-        var changing = inserts.Select(i => (i.OperationId, i.WorkerId, i.Quantity, Record: (OutputRecord?)null))
-            .Concat(updates.Select(u => (u.Input.OperationId, u.Input.WorkerId, u.Input.Quantity, Record: (OutputRecord?)u.Record)))
+    /// <summary>Đơn giá duyệt hiện hành theo ngày nhập của từng công đoạn có dòng thêm mới (MSG18: chưa có thì không nhập được).</summary>
+    private async Task<Result<Dictionary<int, EffectivePieceRate>>> LoadRatesAsync(OutputPlan plan, DateOnly workDate,
+        Dictionary<int, Operation> operations, CancellationToken ct)
+    {
+        var rates = new Dictionary<int, EffectivePieceRate>();
+        foreach (var operationId in plan.Inserts.Select(i => i.OperationId).Distinct())
+        {
+            var rate = await _rates.FindEffectiveAsync(operationId, workDate, ct);
+            if (rate is null)   // MSG18: chưa có đơn giá duyệt thì không nhập sản lượng
+                return Result<Dictionary<int, EffectivePieceRate>>.Failure(ErrorCodes.PieceRateNotApproved,
+                    string.Format(Messages.PieceRateNotApproved, operations[operationId].OperationCode,
+                        workDate.ToString("dd/MM/yyyy")));
+            rates[operationId] = rate;
+        }
+        return Result<Dictionary<int, EffectivePieceRate>>.Success(rates);
+    }
+
+    /// <summary>Nạp công đoạn / công nhân / đơn giá của các dòng đổi và kiểm: còn hoạt động, đúng mã hàng, đúng tổ, đã có đơn giá duyệt, không vượt trần.</summary>
+    private async Task<Result<OutputLookups>> LoadAndValidateChangesAsync(
+        SaveOutputDto dto, int teamId, OrderLine line, OutputPlan plan, CancellationToken ct)
+    {
+        var changing = plan.Inserts.Select(i => (i.OperationId, i.WorkerId, i.Quantity, Record: (OutputRecord?)null))
+            .Concat(plan.Updates.Select(u => (u.Input.OperationId, u.Input.WorkerId, u.Input.Quantity, Record: (OutputRecord?)u.Record)))
             .ToList();
         var operationIds = changing.Select(c => c.OperationId).Distinct().ToList();
         var workerIds = changing.Select(c => c.WorkerId).Distinct().ToList();
@@ -170,75 +274,35 @@ public sealed class OutputService : IOutputService
 
         foreach (var c in changing)
         {
-            if (!operations.TryGetValue(c.OperationId, out var operation)) return Fail.As<OutputSaveResultDto>(Fail.NotFound());
+            if (!operations.TryGetValue(c.OperationId, out var operation)) return Fail.As<OutputLookups>(Fail.NotFound());
             if (operation.Status != OperationStatuses.Active)
-                return Result<OutputSaveResultDto>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
+                return Result<OutputLookups>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
             if (operation.ProductId != line.ProductId)
-                return Result<OutputSaveResultDto>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
-            if (!workers.TryGetValue(c.WorkerId, out var worker) || worker.TeamId != team.Data || worker.Status != RecordStatus.Active)
-                return Result<OutputSaveResultDto>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid);
+                return Result<OutputLookups>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
+            if (!workers.TryGetValue(c.WorkerId, out var worker) || worker.TeamId != teamId || worker.Status != RecordStatus.Active)
+                return Result<OutputLookups>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid);
         }
 
-        var rates = new Dictionary<int, EffectivePieceRate>();
-        foreach (var operationId in inserts.Select(i => i.OperationId).Distinct())
-        {
-            var rate = await _rates.FindEffectiveAsync(operationId, dto.WorkDate, ct);
-            if (rate is null)   // MSG18: chưa có đơn giá duyệt thì không nhập sản lượng
-                return Result<OutputSaveResultDto>.Failure(ErrorCodes.PieceRateNotApproved,
-                    string.Format(Messages.PieceRateNotApproved, operations[operationId].OperationCode,
-                        dto.WorkDate.ToString("dd/MM/yyyy")));
-            rates[operationId] = rate;
-        }
+        var ratesResult = await LoadRatesAsync(plan, dto.WorkDate, operations, ct);
+        if (!ratesResult.IsSuccess) return Fail.As<OutputLookups>(ratesResult);
+        var rates = ratesResult.Data!;
 
-        var capFailure = await CheckCapsAsync(team.Data, dto.OrderLineId, changing, operations, ct);
-        if (capFailure is not null) return Fail.As<OutputSaveResultDto>(capFailure);
+        var capFailure = await CheckCapsAsync(teamId, dto.OrderLineId, changing, operations, ct);
+        if (capFailure is not null) return Fail.As<OutputLookups>(capFailure);
 
-        // 3) Cảnh báo MSG17 + cờ ngoài phân công cho các dòng mới.
-        var attendedWorkerIds = await _uow.Repository<DailyTimesheet>().Query().AsNoTracking()
-            .Where(t => t.WorkDate == dto.WorkDate && t.CheckIn != null && workerIds.Contains(t.EmployeeId))
-            .Select(t => t.EmployeeId).Distinct().ToListAsync(ct);
-        var assigned = (await _uow.Repository<OperationAssignment>().Query().AsNoTracking()
-                .Where(a => a.SewingTeamId == team.Data && a.OrderId == line.OrderId && a.ValidTo == null)
-                .Select(a => new { a.OperationId, a.WorkerId }).ToListAsync(ct))
-            .Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
+        return Result<OutputLookups>.Success(new OutputLookups(workers, rates, workerIds));
+    }
 
-        var warnings = new List<string>();
-        foreach (var workerId in inserts.Select(i => i.WorkerId).Distinct().Where(id => !attendedWorkerIds.Contains(id)))
-            warnings.Add(string.Format(Messages.OutputNoAttendanceWarning, workers[workerId].FullName,
-                dto.WorkDate.ToString("dd/MM/yyyy")));
-
-        // 4) Ghi cùng AuditLog trong một transaction.
+    /// <summary>Ghi dòng mới / đổi / xóa cùng AuditLog trong một transaction; đơn giá khóa theo ngày nhập.</summary>
+    private async Task<Result> PersistAsync(
+        SaveOutputDto dto, string shift, int teamId, OutputPlan plan, Dictionary<int, EffectivePieceRate> rates,
+        HashSet<(int OperationId, int WorkerId)> assigned, List<int> attendedWorkerIds, DateTime newDeadline, string? reason)
+    {
         var created = new List<OutputRecord>();
-        var result = await _uow.InTransactionAsync(async () =>
+        return await _uow.InTransactionAsync(async () =>
         {
-            foreach (var row in inserts)
-            {
-                var record = new OutputRecord
-                {
-                    WorkDate = dto.WorkDate, ShiftCode = shift, SewingTeamId = team.Data, WorkerId = row.WorkerId,
-                    OperationId = row.OperationId, OrderLineId = dto.OrderLineId, Quantity = row.Quantity,
-                    PieceRateId = rates[row.OperationId].PieceRateId,   // đơn giá khóa theo ngày nhập
-                    IsOutsideAssignment = !assigned.Contains((row.OperationId, row.WorkerId)),
-                    NoAttendanceWarning = !attendedWorkerIds.Contains(row.WorkerId),
-                    EditDeadline = newDeadline, Status = OutputStatuses.Saved, EnteredAt = _clock.Now,
-                };
-                await _uow.Repository<OutputRecord>().AddAsync(record);
-                created.Add(record);
-            }
-            foreach (var (record, input) in updates)
-            {
-                if (input.RowVer is { Length: > 0 }) _uow.Repository<OutputRecord>().SetOriginalRowVersion(record, input.RowVer);
-                _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Update,
-                    new { record.Quantity }, new { input.Quantity }, reason));
-                record.Quantity = input.Quantity;   // đơn giá đã khóa lúc nhập, không đổi theo giá mới
-                record.UpdatedAt = _clock.Now;
-            }
-            foreach (var record in deletes)
-            {
-                _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Delete,
-                    new { record.WorkDate, record.WorkerId, record.OperationId, record.Quantity, record.PieceRateId }, null, reason));
-                _uow.Repository<OutputRecord>().Remove(record);
-            }
+            created = await AddInsertsAsync(dto, shift, teamId, plan, rates, assigned, attendedWorkerIds, newDeadline);
+            ApplyUpdatesAndDeletes(plan, reason);
             await _uow.SaveChangesAsync();   // lấy OutputRecordId của dòng mới trước khi ghi log Insert
 
             foreach (var record in created)
@@ -248,11 +312,59 @@ public sealed class OutputService : IOutputService
             await _uow.SaveChangesAsync();
             return Result.Success();
         });
-        if (!result.IsSuccess) return Fail.As<OutputSaveResultDto>(result);
-
-        return Result<OutputSaveResultDto>.Success(
-            new OutputSaveResultDto(inserts.Count, updates.Count, deletes.Count, warnings), Messages.OutputSaved);
     }
+
+    private async Task<List<OutputRecord>> AddInsertsAsync(SaveOutputDto dto, string shift, int teamId, OutputPlan plan,
+        Dictionary<int, EffectivePieceRate> rates, HashSet<(int OperationId, int WorkerId)> assigned,
+        List<int> attendedWorkerIds, DateTime newDeadline)
+    {
+        var created = new List<OutputRecord>();
+        foreach (var row in plan.Inserts)
+        {
+            var record = new OutputRecord
+            {
+                WorkDate = dto.WorkDate, ShiftCode = shift, SewingTeamId = teamId, WorkerId = row.WorkerId,
+                OperationId = row.OperationId, OrderLineId = dto.OrderLineId, Quantity = row.Quantity,
+                PieceRateId = rates[row.OperationId].PieceRateId,   // đơn giá khóa theo ngày nhập
+                IsOutsideAssignment = !assigned.Contains((row.OperationId, row.WorkerId)),
+                NoAttendanceWarning = !attendedWorkerIds.Contains(row.WorkerId),
+                EditDeadline = newDeadline, Status = OutputStatuses.Saved, EnteredAt = _clock.Now,
+            };
+            await _uow.Repository<OutputRecord>().AddAsync(record);
+            created.Add(record);
+        }
+        return created;
+    }
+
+    /// <summary>Đổi số lượng dòng đã có (đơn giá đã khóa lúc nhập, không đổi theo giá mới) và xóa dòng bị bỏ, kèm AuditLog.</summary>
+    private void ApplyUpdatesAndDeletes(OutputPlan plan, string? reason)
+    {
+        foreach (var (record, input) in plan.Updates)
+        {
+            if (input.RowVer is { Length: > 0 }) _uow.Repository<OutputRecord>().SetOriginalRowVersion(record, input.RowVer);
+            _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Update,
+                new { record.Quantity }, new { input.Quantity }, reason));
+            record.Quantity = input.Quantity;   // đơn giá đã khóa lúc nhập, không đổi theo giá mới
+            record.UpdatedAt = _clock.Now;
+        }
+        foreach (var record in plan.Deletes)
+        {
+            _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Delete,
+                new { record.WorkDate, record.WorkerId, record.OperationId, record.Quantity, record.PieceRateId }, null, reason));
+            _uow.Repository<OutputRecord>().Remove(record);
+        }
+    }
+
+    /// <summary>Kết quả phân loại các dòng gửi lên.</summary>
+    private sealed record OutputPlan(
+        List<OutputLineInput> Inserts, List<(OutputRecord Record, OutputLineInput Input)> Updates, List<OutputRecord> Deletes)
+    {
+        public bool IsEmpty => Inserts.Count == 0 && Updates.Count == 0 && Deletes.Count == 0;
+    }
+
+    /// <summary>Dữ liệu tra cứu đã nạp và kiểm cho các dòng đổi.</summary>
+    private sealed record OutputLookups(
+        Dictionary<int, Employee> Workers, Dictionary<int, EffectivePieceRate> Rates, List<int> WorkerIds);
 
     // ---------- Trần (MSG16) ----------
 

@@ -1,7 +1,7 @@
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 
-namespace NX_MTD.Application.Services.Requests;
+namespace NX_MTD.Application.Services;
 
 public sealed class RequestAttachmentAccess : IAttachmentOwnerAccess
 {

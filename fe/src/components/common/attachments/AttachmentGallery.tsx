@@ -1,5 +1,6 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Alert, Button, Empty, Image, Popconfirm, Space, Spin } from 'antd';
+import { Alert, Button, Empty, Image, Space, Spin } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MESSAGES } from '@/constants/messages';
 import { useAttachments, useRemoveAttachment } from '@/hooks/useAttachments';
 import type { AttachmentOwnerType, AttachmentPurpose } from '@/types/attachment';
@@ -17,7 +18,14 @@ type AttachmentGalleryProps = {
 };
 
 /** Danh sách ảnh hiện tại của một chứng từ + nút gỡ / thêm khi canEdit. */
-export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles, purpose, onlyPurpose }: AttachmentGalleryProps) {
+export function AttachmentGallery({
+  ownerType,
+  ownerId,
+  canEdit,
+  maxFiles,
+  purpose,
+  onlyPurpose,
+}: AttachmentGalleryProps) {
   const { data, isLoading, isError } = useAttachments(ownerType, ownerId);
   const remove = useRemoveAttachment(ownerType, ownerId);
   if (isLoading) return <Spin />;
@@ -25,22 +33,39 @@ export function AttachmentGallery({ ownerType, ownerId, canEdit, maxFiles, purpo
   const items = (data ?? []).filter((a) => !onlyPurpose || !purpose || a.purpose === purpose);
   return (
     <Space direction="vertical" style={{ width: '100%' }}>
-      {items.length === 0 && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={MESSAGES.attachments.empty} />}
+      {items.length === 0 && (
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={MESSAGES.attachments.empty} />
+      )}
       <Image.PreviewGroup>
         <Space wrap>
           {items.map((a) => (
             <Space key={a.attachmentId} direction="vertical" align="center">
               <AuthImage attachmentId={a.attachmentId} alt={a.fileName ?? ''} />
               {canEdit && (
-                <Popconfirm title={MESSAGES.attachments.removeConfirm} onConfirm={() => remove.mutate(a.attachmentId)}>
-                  <Button size="small" danger icon={<DeleteOutlined />} aria-label={MESSAGES.attachments.remove} />
-                </Popconfirm>
+                <ConfirmAction
+                  title={MESSAGES.attachments.removeConfirm}
+                  onConfirm={() => remove.mutate(a.attachmentId)}
+                >
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    aria-label={MESSAGES.attachments.remove}
+                  />
+                </ConfirmAction>
               )}
             </Space>
           ))}
         </Space>
       </Image.PreviewGroup>
-      {canEdit && <AttachmentUploadButton ownerType={ownerType} ownerId={ownerId} remaining={maxFiles - items.length} purpose={purpose} />}
+      {canEdit && (
+        <AttachmentUploadButton
+          ownerType={ownerType}
+          ownerId={ownerId}
+          remaining={maxFiles - items.length}
+          purpose={purpose}
+        />
+      )}
     </Space>
   );
 }

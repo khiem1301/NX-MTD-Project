@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { Alert, Button, Form, Input, InputNumber, Modal, Space } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
 import { useOrderMaterials } from '../hooks/useOrderMaterials';
-import { useCreatePurchaseOrder } from '../hooks/usePurchaseOrders';
+import { useCreatePurchaseOrder, useSupplierOptions } from '../hooks/usePurchaseOrders';
 import type { CreatePurchaseOrderPayload } from '../types';
 import { isNewMaterial, newMaterialName } from '../newMaterial';
 import { MaterialFreeSelect } from './MaterialFreeSelect';
@@ -23,12 +23,13 @@ type LineValues = {
   orderedQty: number;
   unitPrice: number;
 };
-type FormValues = { orderId?: number; note?: string; lines: LineValues[] };
+type FormValues = { orderId?: number; supplierId?: number; note?: string; lines: LineValues[] };
 
 const EMPTY_LINE: LineValues = { orderedQty: 1, unitPrice: 0 };
 
 const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
   orderId: values.orderId,
+  supplierId: values.supplierId as number,
   note: values.note,
   lines: values.lines.map(({ material, unit, newMaterialColor, ...rest }) =>
     isNewMaterial(material)
@@ -52,6 +53,8 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
   const orderId = Form.useWatch('orderId', form);
   const orderMaterials = useOrderMaterials(orderId);
   const linked = orderId !== undefined;
+  const suppliers = useSupplierOptions(open);
+  const lines = Form.useWatch('lines', form);
 
   useEffect(() => {
     if (!open) return;
@@ -77,6 +80,9 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
     });
   }, [linked, orderMaterials.data, form]);
 
+  // Đơn hàng không bắt buộc mua hết NVL: dòng nào chưa mua thì xóa, cần lại thì chọn thêm từ NVL của đơn.
+  const buyable = (orderMaterials.data ?? []).filter((om) => (om.purchaseQty ?? 0) > 0);
+  const addable = buyable.filter((om) => !(lines ?? []).some((l) => l.material === om.materialId));
   const nothingToBuy =
     linked &&
     orderMaterials.data !== undefined &&
@@ -101,6 +107,26 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
         onFinish={(values) => create.mutate(toPayload(values), { onSuccess: onClose })}
         disabled={create.isPending}
       >
+        <Form.Item name="supplierId" label={LABELS.supplier} rules={required}>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            loading={suppliers.isLoading}
+            style={{ width: 380 }}
+            options={(suppliers.data ?? []).map((s) => ({
+              value: s.supplierId,
+              label: s.supplierName,
+            }))}
+          />
+        </Form.Item>
+        {suppliers.isSuccess && suppliers.data.length === 0 && (
+          <Alert
+            type="warning"
+            showIcon
+            message={LABELS.noActiveSupplier}
+            style={{ marginBottom: 12 }}
+          />
+        )}
         <Form.Item
           name="orderId"
           label={LABELS.purchaseOrderOrder}
@@ -120,7 +146,7 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
           {(fields, { add, remove }) => (
             <>
               {fields.map((field) => (
-                <Space key={field.key} align="start" wrap>
+                <Space key={field.key} align="start" wrap style={{ display: 'flex' }}>
                   <Form.Item name={[field.name, 'material']} rules={required}>
                     <MaterialFreeSelect disabled={linked} />
                   </Form.Item>
@@ -159,18 +185,37 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                   <Button
                     icon={<DeleteOutlined />}
                     onClick={() => remove(field.name)}
-                    disabled={fields.length === 1 || linked}
+                    disabled={fields.length === 1}
                   />
                 </Space>
               ))}
-              <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={() => add(EMPTY_LINE)}
-                disabled={linked}
-              >
-                {LABELS.addLine}
-              </Button>
+              <div style={{ marginTop: 4 }}>
+                {linked ? (
+                  <Select
+                    placeholder={LABELS.addOrderMaterial}
+                    value={null}
+                    disabled={addable.length === 0}
+                    style={{ width: 380 }}
+                    options={addable.map((om) => ({
+                      value: om.materialId,
+                      label: `${om.materialCode} - ${om.materialName}`,
+                    }))}
+                    onChange={(materialId: number) => {
+                      const om = addable.find((x) => x.materialId === materialId);
+                      if (om)
+                        add({
+                          material: om.materialId,
+                          orderedQty: om.purchaseQty ?? 1,
+                          unitPrice: 0,
+                        });
+                    }}
+                  />
+                ) : (
+                  <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)}>
+                    {LABELS.addLine}
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </Form.List>

@@ -6,6 +6,9 @@ public static class WarehouseMessages
     public const string NotFound = "Không tìm thấy dữ liệu.";
     public const string InsufficientStock = "Tồn kho không đủ";
     public const string InvalidStatus = "Phiếu không ở trạng thái cho phép thao tác này.";
+    public const string WorkOrderDueBeforeStart = "Hạn lệnh cắt phải sau ngày bắt đầu của đơn hàng ({0}).";
+    public const string FabricWidthRequired = "Vải bắt buộc nhập khổ vải (cm).";
+    public const string WorkOrderDueInPast = "Không đặt lệnh cắt có hạn trong quá khứ.";
     public const string OrderClosed = "Đơn hàng đã đóng, không thể lập thêm phiếu.";
     public const string TeamMismatch = "Phiếu không thuộc tổ của bạn.";
     public const string CuttingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ cắt.";
@@ -66,6 +69,7 @@ public static class WarehouseMessages
     public const string WorkOrderCutNotHandedOver = "Còn BTP đã cắt chưa bàn giao và được kho xác nhận: {0}. Bàn giao hết rồi báo cắt xong.";
     public const string WorkOrderFinishShortReasonRequired = "Cắt chưa đủ kế hoạch ({0}/{1}). Nhập lý do cắt thiếu.";
     public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
+    public const string ReceiptShortageClosed = "NVL này đã được Quản đốc chốt không bù (hủy giao phần thiếu), không thể lập thêm phiếu nhập.";
     public const string ReceiptExceedsCustomer = "Số nhận vượt số khách cấp còn phải nhận";
     public const string ReceiptPhotoRequired = "Phiếu nhập chưa có ảnh chứng từ giao hàng. Thủ kho cần chụp và đính kèm trước khi xác nhận.";
 

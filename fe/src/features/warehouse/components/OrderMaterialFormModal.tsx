@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
@@ -81,65 +81,70 @@ export function OrderMaterialFormModal({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Space wrap align="start">
-          <Form.Item name="materialId" label={LABELS.material} rules={required}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              options={materialOptions}
-              loading={materials.isLoading}
-              style={{ width: 340 }}
-              dropdownRender={(menu) => (
-                <>
-                  {menu}
-                  <Divider style={{ margin: '8px 0' }} />
-                  <Button type="link" icon={<PlusOutlined />} onClick={() => setMaterialOpen(true)}>
-                    {LABELS.addMaterial}
-                  </Button>
-                </>
-              )}
-            />
-          </Form.Item>
-          <Form.Item
-            name="requiredQty"
-            label={LABELS.requiredQty}
-            dependencies={['customerQty']}
-            rules={[
-              ...required,
-              {
-                validator: async (_rule, value?: number) => {
-                  const customer = form.getFieldValue('customerQty') as number | undefined;
-                  if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
-                    throw new Error(LABELS.qtyRequiredOrCustomer);
+        <Form.Item name="materialId" label={LABELS.material} rules={required}>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={materialOptions}
+            loading={materials.isLoading}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <Divider style={{ margin: '8px 0' }} />
+                <Button type="link" icon={<PlusOutlined />} onClick={() => setMaterialOpen(true)}>
+                  {LABELS.addMaterial}
+                </Button>
+              </>
+            )}
+          />
+        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="requiredQty"
+              label={LABELS.requiredQty}
+              dependencies={['customerQty']}
+              rules={[
+                ...required,
+                {
+                  validator: async (_rule, value?: number) => {
+                    const customer = form.getFieldValue('customerQty') as number | undefined;
+                    if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
+                      throw new Error(LABELS.qtyRequiredOrCustomer);
+                  },
                 },
-              },
-            ]}
-            initialValue={0}
-          >
-            <InputNumber min={0} style={{ width: 130 }} />
-          </Form.Item>
-          <Form.Item
-            name="customerQty"
-            label={LABELS.customerQty}
-            rules={required}
-            initialValue={0}
-          >
-            <InputNumber min={0} style={{ width: 130 }} />
-          </Form.Item>
-          <Form.Item
-            name="expectedDeliveryCount"
-            label={LABELS.expectedDeliveryCount}
-            rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
-          >
-            <InputNumber
-              min={1}
-              max={99}
-              precision={0}
-              disabled={(customerQty ?? 0) <= 0}
-              style={{ width: 150 }}
-            />
-          </Form.Item>
-        </Space>
+              ]}
+              initialValue={0}
+            >
+              <InputNumber min={0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="customerQty"
+              label={LABELS.customerQty}
+              rules={required}
+              initialValue={0}
+            >
+              <InputNumber min={0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="expectedDeliveryCount"
+              label={LABELS.expectedDeliveryCount}
+              rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
+            >
+              <InputNumber
+                min={1}
+                max={99}
+                precision={0}
+                disabled={(customerQty ?? 0) <= 0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
         <Form.Item name="note" label={LABELS.note}>
           <Input.TextArea rows={2} maxLength={500} />
         </Form.Item>

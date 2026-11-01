@@ -25,8 +25,8 @@ export const useCustomers = (query: CustomerQuery = {}) =>
 
 export const useToggleCustomer = () =>
   useApiMutation(
-    ({ id, discontinue }: { id: number; discontinue: boolean }) =>
-      discontinue ? customerApi.discontinue(id) : customerApi.reactivate(id),
+    ({ id, reason }: { id: number; reason?: string }) =>
+      reason === undefined ? customerApi.reactivate(id) : customerApi.discontinue(id, reason),
     { invalidate: [CUSTOMERS_KEY], successMessage: MESSAGES.common.saved },
   );
 

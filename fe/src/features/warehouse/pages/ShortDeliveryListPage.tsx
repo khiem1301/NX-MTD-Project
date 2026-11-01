@@ -1,3 +1,5 @@
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { Card, Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
@@ -11,7 +13,6 @@ import { useShortDeliveries } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -32,9 +33,6 @@ export function ShortDeliveryListPage() {
     {
       title: LABELS.shortageCode,
       dataIndex: 'requestCode',
-      render: (v: string, r) => (
-        <DetailLink onClick={() => setViewingId(r.requestId)}>{v}</DetailLink>
-      ),
     },
     { title: LABELS.receiptCode, dataIndex: 'receiptCode' },
     { title: LABELS.purchaseOrder, dataIndex: 'poCode', render: (v: string | null) => v ?? '—' },
@@ -55,6 +53,17 @@ export function ShortDeliveryListPage() {
         ),
     },
     { title: LABELS.submittedAt, dataIndex: 'createdAt', render: formatDateTime },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(r.requestId)}
+        />
+      ),
+    },
   ];
 
   return (

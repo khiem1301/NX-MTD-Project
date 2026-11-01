@@ -15,6 +15,7 @@ export type Supplier = {
   status: SupplierStatus;
   createdAt: string;
   purchaseOrderCount: number;
+  discontinueReason: string | null;
 };
 
 export type SupplierDetail = { supplier: Supplier; history: AuditEntry[] };

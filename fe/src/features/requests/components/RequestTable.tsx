@@ -1,3 +1,5 @@
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { type TableColumnsType, type TablePaginationConfig } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -6,7 +8,6 @@ import type { Paginated } from '@/types/api';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { REQUEST_STATUS_TAG } from '../constants';
 import type { RequestListItem } from '../types';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 
 type RequestTableProps = {
@@ -22,7 +23,6 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
     {
       title: MESSAGES.requests.code,
       dataIndex: 'requestCode',
-      render: (v: string, r) => <DetailLink onClick={() => onOpen(r.requestId)}>{v}</DetailLink>,
     },
     {
       title: MESSAGES.requests.type,
@@ -55,6 +55,17 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
       title: MESSAGES.requests.status,
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={REQUEST_STATUS_TAG} />,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onOpen(r.requestId)}
+        />
+      ),
     },
   ];
 

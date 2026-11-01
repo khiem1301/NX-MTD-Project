@@ -43,7 +43,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     }
 
     private WorkOrderService Sut() => new(Uow, Substitute.For<IStockService>(), new FabricPlanner(Uow),
-        Substitute.For<IDocumentCodeGenerator>(), Notifier, NullLogger<WorkOrderService>.Instance);
+        Substitute.For<IDocumentCodeGenerator>(), Notifier, NullLogger<WorkOrderService>.Instance, Clock);
 
     private readonly Material _fabric = new()
     {

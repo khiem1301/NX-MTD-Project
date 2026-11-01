@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
@@ -25,11 +26,12 @@ public class IncomingMaterialTests
     private readonly List<VwOrderMaterialDelivery> _omDeliveries = [];
     private readonly List<VwPurchaseOrderDelivery> _poDeliveries = [];
     private readonly List<ProductComponentMaterial> _norms = [];
+    private readonly List<RequestLine> _requestLines = [];
 
     public IncomingMaterialTests()
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_poLines); Setup(_receiptLines); Setup(_materials); Setup(_orderLines);
-        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms);
+        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms); Setup(_requestLines);
         _materials.Add(Mat());
         _uow.Repository<OrderMaterial>().AddAsync(Arg.Do<OrderMaterial>(om => { om.OrderMaterialId = 99; om.Material = _materials[0]; _orderMaterials.Add(om); })).Returns(Task.CompletedTask);
     }
@@ -79,7 +81,7 @@ public class IncomingMaterialTests
         });
 
     private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
-    private IncomingMaterialService Incoming() => new(_uow);
+    private IncomingMaterialService Incoming() => new(_uow, new MaterialSupplyUpdater(_uow));
 
     // ---------- Đơn chờ khai báo NVL ----------
 
@@ -88,9 +90,9 @@ public class IncomingMaterialTests
     {
         Order(1, "DH-NEW");
 
-        var result = await OrderMaterials().GetPendingOrdersAsync(default);
+        var result = await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default);
 
-        var row = result.Data!.Single();
+        var row = result.Data!.Items.Single();
         row.OrderCode.Should().Be("DH-NEW");
         row.MaterialLines.Should().Be(0);
         row.Status.Should().Be("New");
@@ -107,7 +109,7 @@ public class IncomingMaterialTests
         OrderMat(late, 2, 40, null);
         OrderMat(soon, 3, 0, 300);
 
-        var rows = (await OrderMaterials().GetPendingOrdersAsync(default)).Data!;
+        var rows = (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default)).Data!.Items;
 
         rows.Select(r => r.OrderCode).Should().Equal("DH-SOON", "DH-LATE");
         rows[1].MaterialLines.Should().Be(2);
@@ -124,7 +126,113 @@ public class IncomingMaterialTests
         Order(3, "DH-FULL", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Complete);
         Order(4, "DH-OK");
 
-        (await OrderMaterials().GetPendingOrdersAsync(default)).Data!.Select(r => r.OrderCode).Should().Equal("DH-OK");
+        (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default)).Data!.Items.Select(r => r.OrderCode)
+            .Should().Equal("DH-OK");
+    }
+
+    private async Task<IEnumerable<string>> PendingCodes(PendingMaterialOrderQuery query) =>
+        (await OrderMaterials().GetPendingOrdersAsync(query, default)).Data!.Items.Select(r => r.OrderCode);
+
+    [Fact]
+    public async Task Pending_orders_put_undeclared_orders_first_even_when_their_due_date_is_later()
+    {
+        OrderMat(Order(1, "DH-CO", dueInDays: 3), 1, 10, null);
+        Order(2, "DH-CHUA", dueInDays: 30);
+
+        (await PendingCodes(new PendingMaterialOrderQuery())).Should().Equal("DH-CHUA", "DH-CO");
+    }
+
+    [Theory]
+    [InlineData(PendingMaterialStates.NotDeclared, "DH-CHUA")]
+    [InlineData(PendingMaterialStates.Awaiting, "DH-CHO")]
+    [InlineData(PendingMaterialStates.Partial, "DH-MOTPHAN")]
+    [InlineData(PendingMaterialStates.Complete, "DH-DU")]
+    public async Task Pending_orders_filter_by_material_state(string state, string expected)
+    {
+        Order(1, "DH-CHUA");
+        OrderMat(Order(2, "DH-CHO"), 1, 10, null);
+        OrderMat(Order(3, "DH-MOTPHAN", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Partial), 2, 10, null);
+        OrderMat(Order(4, "DH-DU", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Complete), 3, 10, null);
+
+        (await PendingCodes(new PendingMaterialOrderQuery { MaterialState = state })).Should().Equal(expected);
+    }
+
+    [Fact]
+    public async Task Pending_orders_search_by_order_code_and_customer_and_page_on_the_server()
+    {
+        Order(1, "DH-A");
+        Order(2, "DH-B");
+        Order(3, "DH-C");
+
+        (await PendingCodes(new PendingMaterialOrderQuery { Keyword = " DH-B " })).Should().Equal("DH-B");
+        (await PendingCodes(new PendingMaterialOrderQuery { Keyword = "Công ty ABC" })).Should().HaveCount(3);
+        var page = (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery { Page = 2, PageSize = 2 }, default)).Data!;
+        page.TotalItems.Should().Be(3);
+        page.Items.Should().ContainSingle();
+    }
+
+    // ---------- Bảng NVL của đơn ----------
+
+    private async Task<PagedResult<OrderMaterialDto>> Paged(OrderMaterialPageQuery query) =>
+        (await OrderMaterials().GetPagedAsync(query, default)).Data!;
+
+    private (CustomerOrder Order, OrderMaterial Customer, OrderMaterial Buy) TwoLines()
+    {
+        var o = Order(1, "DH-1");
+        var customer = OrderMat(o, 1, 100);
+        var buy = OrderMat(o, 2, 0, 50);
+        customer.RequiredQty = 100;
+        buy.RequiredQty = 50;
+        buy.Material = new Material { MaterialId = 2, MaterialCode = "CHI01", MaterialName = "Chỉ may", Color = "Xanh", Unit = "cuộn" };
+        return (o, customer, buy);
+    }
+
+    [Theory]
+    [InlineData(OrderMaterialSupplies.Customer, 1)]
+    [InlineData(OrderMaterialSupplies.Purchase, 2)]
+    public async Task Order_material_table_filters_by_supply(string supply, int expectedId)
+    {
+        TwoLines();
+
+        var page = await Paged(new OrderMaterialPageQuery { OrderId = 1, Supply = supply });
+
+        page.Items.Should().ContainSingle(m => m.OrderMaterialId == expectedId);
+    }
+
+    [Fact]
+    public async Task Order_material_table_filters_by_receipt_state()
+    {
+        TwoLines();
+        Received(1, 100);
+        _receiptLines[^1].MaterialReceipt.OrderId = 1;
+
+        (await Paged(new OrderMaterialPageQuery { OrderId = 1, ReceiptState = OrderMaterialReceiptStates.Done }))
+            .Items.Should().ContainSingle(m => m.OrderMaterialId == 1);
+        (await Paged(new OrderMaterialPageQuery { OrderId = 1, ReceiptState = OrderMaterialReceiptStates.Pending }))
+            .Items.Should().ContainSingle(m => m.OrderMaterialId == 2);
+    }
+
+    [Theory]
+    [InlineData("chi01")]
+    [InlineData("CHỈ MAY")]
+    [InlineData("xanh")]
+    public async Task Order_material_table_searches_code_name_and_color_ignoring_case(string keyword)
+    {
+        TwoLines();
+
+        (await Paged(new OrderMaterialPageQuery { OrderId = 1, Keyword = keyword }))
+            .Items.Should().ContainSingle(m => m.OrderMaterialId == 2);
+    }
+
+    [Fact]
+    public async Task Order_material_table_pages_and_reports_the_filtered_total()
+    {
+        TwoLines();
+
+        var page = await Paged(new OrderMaterialPageQuery { OrderId = 1, Page = 2, PageSize = 1 });
+
+        page.TotalItems.Should().Be(2);
+        page.Items.Should().ContainSingle();
     }
 
     // ---------- NVL chờ nhận: khách cấp ----------

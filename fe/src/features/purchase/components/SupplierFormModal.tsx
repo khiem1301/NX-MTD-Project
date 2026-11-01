@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { normalizePhone, phoneRule } from '@/utils/phone';
 import { PURCHASE_TEXT } from '../constants';
 import { useSaveSupplier } from '../hooks/usePurchase';
 import type { SaveSupplierPayload, Supplier } from '../types';
@@ -59,14 +60,14 @@ export function SupplierFormModal({ open, supplier, onClose }: Props) {
         </Form.Item>
         <Form.Item
           name="phone"
+          normalize={normalizePhone}
           label={text.phone}
           rules={[
             { required: true, whitespace: true, message: MESSAGES.common.required },
-            { pattern: /^[0-9+]*$/, message: text.phoneInvalid },
-            { max: 15 },
+            phoneRule,
           ]}
         >
-          <Input maxLength={15} />
+          <Input maxLength={12} />
         </Form.Item>
         <Form.Item
           name="email"

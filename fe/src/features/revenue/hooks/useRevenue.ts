@@ -16,6 +16,14 @@ export const useRevenue = (scope: RevenueScope, filter: RevenueFilter) =>
     queryFn: () => revenueApi.getRevenue(scope, filter),
   });
 
+/** Gợi ý đơn hàng / mã hàng cho bộ lọc doanh thu. */
+export const useRevenueFilterOptions = (scope: RevenueScope) =>
+  useQuery({
+    queryKey: [...REVENUE_KEY, scope, 'filter-options'],
+    queryFn: () => revenueApi.getFilterOptions(scope),
+    staleTime: 60_000,
+  });
+
 export const useExportRevenue = (scope: RevenueScope) =>
   useMutation<void, ApiError, RevenueFilter>({
     mutationFn: (filter) => revenueApi.exportRevenue(scope, filter),

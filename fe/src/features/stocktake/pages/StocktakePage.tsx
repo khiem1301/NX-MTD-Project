@@ -1,12 +1,13 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
-import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
+import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { StocktakeModal } from '../components/StocktakeModal';
@@ -16,7 +17,6 @@ import { useStocktakes } from '../hooks/useStocktake';
 import type { Stocktake, StocktakeListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { DetailLink } from '@/components/common/DetailLink';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
@@ -45,9 +45,6 @@ export function StocktakePage() {
     {
       title: ST_LABELS.code,
       dataIndex: 'stocktakeCode',
-      render: (v: string, s) => (
-        <DetailLink onClick={() => setViewingId(s.stocktakeId)}>{v}</DetailLink>
-      ),
     },
     {
       title: ST_LABELS.warehouse,
@@ -63,6 +60,17 @@ export function StocktakePage() {
       title: ST_LABELS.status,
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={STOCKTAKE_STATUS_LABEL} />,
+    },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, s) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(s.stocktakeId)}
+        />
+      ),
     },
   ];
 

@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// KI-08 (UC56): tổ trưởng / tổ phó may ghi hàng hỏng theo QA/QC báo. REWORK trả lại công nhân sửa, không trừ sản
@@ -79,46 +79,17 @@ public sealed class DefectService : IDefectService
         var team = _guard.ResolveSewingTeam(null);   // Quản đốc không ghi phiếu hộ: phiếu do tổ trưởng của tổ lập
         if (!team.IsSuccess) return Fail.As<int>(team);
 
-        var type = CodeText.ToCode(dto.DefectType);
-        if (type is not (DefectTypes.Rework or DefectTypes.Scrap))
-            return Invalid(Messages.DefectTypeInvalid);
-        var reasonCode = CodeText.ToCode(dto.ReasonCode);
-        if (!DefectReasons.All.Contains(reasonCode)) return Invalid(Messages.DefectReasonInvalid);
-        var note = string.IsNullOrWhiteSpace(dto.ReasonNote) ? null : dto.ReasonNote.Trim();
-        if (reasonCode == DefectReasons.Other && note is null) return Invalid(Messages.DefectNoteRequired);   // CK_DR_Other
-        if (dto.Quantity <= 0) return Invalid(Messages.OutputQtyInvalid);
-        if (dto.WorkDate > _clock.Today) return Invalid(Messages.OutputDateFuture);
-
-        string? shift = null;
-        if (!string.IsNullOrWhiteSpace(dto.ShiftCode))
-        {
-            shift = CodeText.ToCode(dto.ShiftCode);
-            if (!ShiftCodes.All.Contains(shift)) return Invalid("Ca làm việc không hợp lệ.");
-        }
+        var input = ValidateInput(dto);
+        if (input.Failure is not null) return input.Failure;
         if (await _guard.IsPeriodLockedAsync(dto.WorkDate, ct))
             return Fail.As<int>(_guard.PeriodLockedFailure(dto.WorkDate));
 
-        var closed = OrderStatuses.Closed.ToArray();
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
-        if (line is null)
-            return Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
-
-        var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId, ct);
-        if (operation is null) return Fail.NotFound<int>();
-        if (operation.Status != OperationStatuses.Active)
-            return Result<int>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
-        if (operation.ProductId != line.ProductId)
-            return Result<int>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
-
-        var worker = await _uow.Repository<Employee>().Query().AsNoTracking().FirstOrDefaultAsync(
-            e => e.EmployeeId == dto.ResponsibleWorkerId && e.TeamId == team.Data && e.Status == RecordStatus.Active, ct);
-        if (worker is null)
-            return Result<int>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid);
+        var refs = await ValidateReferencesAsync(dto, team.Data, ct);
+        if (refs.Failure is not null) return refs.Failure;
+        var (operation, worker) = (refs.Operation!, refs.Worker!);
 
         int? scrapRateId = null;
-        if (type == DefectTypes.Scrap)
+        if (input.Type == DefectTypes.Scrap)
         {
             var rate = await _rates.FindEffectiveAsync(dto.OperationId, dto.WorkDate, ct);
             if (rate is null)   // MSG18: Scrap trừ lương theo đơn giá duyệt nên phải có đơn giá
@@ -127,19 +98,7 @@ public sealed class DefectService : IDefectService
             scrapRateId = rate.PieceRateId;   // khóa tại thời điểm ghi (CK_DR_Rate)
         }
 
-        var teamCode = await _uow.Repository<Team>().Query().AsNoTracking()
-            .Where(t => t.TeamId == team.Data).Select(t => t.TeamCode).FirstAsync(ct);
-        var now = _clock.Now;
-        var defect = new DefectRecord
-        {
-            DefectCode = await NextCodeAsync(teamCode, dto.WorkDate, ct), WorkDate = dto.WorkDate, ShiftCode = shift,
-            SewingTeamId = team.Data, OrderLineId = dto.OrderLineId, OperationId = dto.OperationId,
-            ResponsibleWorkerId = dto.ResponsibleWorkerId, DefectType = type, Quantity = dto.Quantity,
-            DefectReasonCode = reasonCode, ReasonNote = note, PieceRateId = scrapRateId, WorkerNotifiedAt = now,
-            EditDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate), Status = DefectStatuses.Recorded,
-            RecordedBy = _user.EmployeeId, RecordedAt = now,
-        };
-
+        var defect = await BuildDefectAsync(dto, team.Data, input, scrapRateId, ct);
         return await _uow.InTransactionAsync(async () =>   // log cần DefectRecordId nên lưu trước
         {
             await _uow.Repository<DefectRecord>().AddAsync(defect);
@@ -148,11 +107,78 @@ public sealed class DefectService : IDefectService
             _notifier.NotifyEmployees([worker.EmployeeId], new NotificationMessage(NotificationSources.Production,
                 Messages.NotifyDefectTitle,
                 string.Format(Messages.NotifyDefectBody, dto.WorkDate.ToString("dd/MM/yyyy"), dto.Quantity,
-                    type == DefectTypes.Scrap ? "hỏng không sửa được (Scrap)" : "cần sửa lại (Rework)", operation.OperationName),
+                    input.Type == DefectTypes.Scrap ? "hỏng không sửa được (Scrap)" : "cần sửa lại (Rework)", operation.OperationName),
                 null, nameof(DefectRecord), defect.DefectRecordId));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(defect.DefectRecordId, Messages.DefectSaved);
         });
+    }
+
+    private sealed record DefectInput(Result<int>? Failure, string Type = "", string ReasonCode = "", string? Note = null,
+        string? Shift = null);
+
+    private sealed record DefectRefs(Result<int>? Failure, Operation? Operation = null, Employee? Worker = null);
+
+    /// <summary>Kiểm tra các trường nhập: loại lỗi, nguyên nhân (Khác phải có ghi chú), số lượng, ngày, ca.</summary>
+    private DefectInput ValidateInput(CreateDefectDto dto)
+    {
+        var type = CodeText.ToCode(dto.DefectType);
+        if (type is not (DefectTypes.Rework or DefectTypes.Scrap)) return new DefectInput(Invalid(Messages.DefectTypeInvalid));
+        var reasonCode = CodeText.ToCode(dto.ReasonCode);
+        if (!DefectReasons.All.Contains(reasonCode)) return new DefectInput(Invalid(Messages.DefectReasonInvalid));
+        var note = string.IsNullOrWhiteSpace(dto.ReasonNote) ? null : dto.ReasonNote.Trim();
+        if (reasonCode == DefectReasons.Other && note is null) return new DefectInput(Invalid(Messages.DefectNoteRequired));   // CK_DR_Other
+        if (dto.Quantity <= 0) return new DefectInput(Invalid(Messages.OutputQtyInvalid));
+        if (dto.WorkDate > _clock.Today) return new DefectInput(Invalid(Messages.OutputDateFuture));
+
+        string? shift = null;
+        if (!string.IsNullOrWhiteSpace(dto.ShiftCode))
+        {
+            shift = CodeText.ToCode(dto.ShiftCode);
+            if (!ShiftCodes.All.Contains(shift)) return new DefectInput(Invalid("Ca làm việc không hợp lệ."));
+        }
+        return new DefectInput(null, type, reasonCode, note, shift);
+    }
+
+    /// <summary>Kiểm tra dòng đơn (chưa đóng), công đoạn (đang dùng, đúng mã hàng) và công nhân chịu trách nhiệm (đúng tổ, còn làm).</summary>
+    private async Task<DefectRefs> ValidateReferencesAsync(CreateDefectDto dto, int teamId, CancellationToken ct)
+    {
+        var closed = OrderStatuses.Closed.ToArray();
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
+        if (line is null)
+            return new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid));
+
+        var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId, ct);
+        if (operation is null) return new DefectRefs(Fail.NotFound<int>());
+        if (operation.Status != OperationStatuses.Active)
+            return new DefectRefs(Result<int>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive));
+        if (operation.ProductId != line.ProductId)
+            return new DefectRefs(Result<int>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch));
+
+        var worker = await _uow.Repository<Employee>().Query().AsNoTracking().FirstOrDefaultAsync(
+            e => e.EmployeeId == dto.ResponsibleWorkerId && e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
+        return worker is null
+            ? new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid))
+            : new DefectRefs(null, operation, worker);
+    }
+
+    private async Task<DefectRecord> BuildDefectAsync(CreateDefectDto dto, int teamId, DefectInput input, int? scrapRateId,
+        CancellationToken ct)
+    {
+        var teamCode = await _uow.Repository<Team>().Query().AsNoTracking()
+            .Where(t => t.TeamId == teamId).Select(t => t.TeamCode).FirstAsync(ct);
+        var now = _clock.Now;
+        return new DefectRecord
+        {
+            DefectCode = await NextCodeAsync(teamCode, dto.WorkDate, ct), WorkDate = dto.WorkDate, ShiftCode = input.Shift,
+            SewingTeamId = teamId, OrderLineId = dto.OrderLineId, OperationId = dto.OperationId,
+            ResponsibleWorkerId = dto.ResponsibleWorkerId, DefectType = input.Type, Quantity = dto.Quantity,
+            DefectReasonCode = input.ReasonCode, ReasonNote = input.Note, PieceRateId = scrapRateId, WorkerNotifiedAt = now,
+            EditDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate), Status = DefectStatuses.Recorded,
+            RecordedBy = _user.EmployeeId, RecordedAt = now,
+        };
     }
 
     public async Task<Result> CancelAsync(int defectRecordId, CancelDefectDto dto, CancellationToken ct)
