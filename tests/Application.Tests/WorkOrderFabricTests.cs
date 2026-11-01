@@ -46,7 +46,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     private WorkOrderService Sut()
     {
         var codes = Substitute.For<IDocumentCodeGenerator>();
-        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance);
+        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance, Clock);
     }
 
     /// <summary>Chi tiết cần cắt bù: dài 70 cm, rộng 50 cm → khổ 150 cm xếp được 3 miếng một hàng.</summary>
@@ -86,6 +86,17 @@ public class WorkOrderFabricTests : ProductionTestBase
     public void Estimator_returnsNullWhenASizeIsMissingOrThePieceDoesNotFit(double? length, double? width, double? fabric)
     {
         RecutFabricEstimator.NeedMeters(5, (decimal?)length, (decimal?)width, (decimal?)fabric).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Recut_DueDateInThePast_IsRejected()
+    {
+        RecutRequest(7);
+
+        var result = await Sut().CreateReplacementAsync(Dto() with { DueDate = Today.AddDays(-1) }, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(NX_MTD.Application.Common.WarehouseMessages.WorkOrderDueInPast);
     }
 
     [Fact]

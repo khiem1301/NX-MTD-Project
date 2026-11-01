@@ -37,19 +37,56 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .ToList());
     }
 
-    public async Task<Result<IReadOnlyList<PendingMaterialOrderDto>>> GetPendingOrdersAsync(CancellationToken ct)
+    /// <summary>Số đã nhận tính từ phiếu nhập nên lọc trên danh sách đã dựng; số dòng của một đơn không lớn.</summary>
+    public async Task<Result<PagedResult<OrderMaterialDto>>> GetPagedAsync(OrderMaterialPageQuery query, CancellationToken ct)
+    {
+        var keyword = query.Keyword?.Trim();
+        var all = (await GetByOrderAsync(query.OrderId, ct)).Data!;
+        var rows = all
+            .Where(m => string.IsNullOrEmpty(keyword) || new[] { m.MaterialCode, m.MaterialName, m.MaterialColor }
+                .Any(text => text?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true))
+            .Where(m => query.Supply != OrderMaterialSupplies.Customer || m.CustomerQty > 0)
+            .Where(m => query.Supply != OrderMaterialSupplies.Purchase || m.PurchaseQty > 0)
+            .Where(m => string.IsNullOrEmpty(query.ReceiptState)
+                        || IsFullyReceived(m) == (query.ReceiptState == OrderMaterialReceiptStates.Done))
+            .ToList();
+        var items = rows.Skip(query.Skip).Take(query.SafePageSize).ToList();
+        return Result<PagedResult<OrderMaterialDto>>.Success(
+            new PagedResult<OrderMaterialDto>(items, query.SafePage, query.SafePageSize, rows.Count));
+    }
+
+    private static bool IsFullyReceived(OrderMaterialDto m) => m.RequiredQty > 0 && m.ReceivedQty >= m.RequiredQty;
+
+    /// <summary>Đơn đang chạy chờ NVL, đơn chưa khai báo lên đầu rồi đến hạn giao gần nhất. Lọc "Đã đủ NVL" để mở lại đơn đã xong phần NVL.</summary>
+    public async Task<Result<PagedResult<PendingMaterialOrderDto>>> GetPendingOrdersAsync(PendingMaterialOrderQuery query,
+        CancellationToken ct)
     {
         var running = new[] { OrderStatuses.New, OrderStatuses.InProduction };
-        var rows = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
-            .Where(o => running.Contains(o.Status) && o.MaterialStatus != OrderMaterialStatuses.Complete)
-            .OrderBy(o => o.DueDate).ThenBy(o => o.OrderId)
+        var keyword = query.Keyword?.Trim();
+        var state = query.MaterialState;
+        var page = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+            .Where(o => running.Contains(o.Status))
+            .Where(o => state == PendingMaterialStates.Complete
+                ? o.MaterialStatus == OrderMaterialStatuses.Complete
+                : o.MaterialStatus != OrderMaterialStatuses.Complete)
+            .Where(o => state != PendingMaterialStates.NotDeclared || !o.OrderMaterials.Any())
+            .Where(o => state != PendingMaterialStates.Awaiting
+                        || (o.OrderMaterials.Any() && o.MaterialStatus == OrderMaterialStatuses.Awaiting))
+            .Where(o => state != PendingMaterialStates.Partial
+                        || (o.OrderMaterials.Any() && o.MaterialStatus == OrderMaterialStatuses.Partial))
+            .Where(o => string.IsNullOrEmpty(keyword) || o.OrderCode.Contains(keyword) || o.Customer.CustomerName.Contains(keyword))
+            .OrderBy(o => o.OrderMaterials.Any() ? 1 : 0).ThenBy(o => o.DueDate).ThenBy(o => o.OrderId)
             .Select(o => new PendingMaterialOrderDto(o.OrderId, o.OrderCode, o.Customer.CustomerName, o.DueDate, o.Status,
                 o.MaterialStatus, o.OrderMaterials.Count, o.OrderMaterials.Sum(m => (decimal?)m.CustomerQty) ?? 0m,
                 o.OrderMaterials.Sum(m => (decimal?)m.PurchaseQty) ?? 0m))
-            .ToListAsync(ct);
-        return Result<IReadOnlyList<PendingMaterialOrderDto>>.Success(rows
-            .Select(r => r with { Status = CodeText.ToPascal(r.Status), MaterialStatus = CodeText.ToPascal(r.MaterialStatus) })
-            .ToList());
+            .ToPagedAsync(query, ct);
+        return Result<PagedResult<PendingMaterialOrderDto>>.Success(page with
+        {
+            Items = page.Items.Select(r => r with
+            {
+                Status = CodeText.ToPascal(r.Status), MaterialStatus = CodeText.ToPascal(r.MaterialStatus),
+            }).ToList(),
+        });
     }
 
     public async Task<Result<OrderMaterialDto>> CreateAsync(CreateOrderMaterialDto dto, CancellationToken ct)
@@ -172,7 +209,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
     private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount) => new(
         om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
         (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty);
+        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty, om.Material.WidthCm);
 
     private static string MaterialLabel(Material m) =>
         string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";

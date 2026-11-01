@@ -18,11 +18,12 @@ public sealed class WorkOrderService : IWorkOrderService
     private readonly IDocumentCodeGenerator _codes;
     private readonly INotificationService _notifier;
     private readonly ILogger<WorkOrderService> _logger;
+    private readonly IClock _clock;
 
     public WorkOrderService(IUnitOfWork uow, IStockService stock, FabricPlanner planner, IDocumentCodeGenerator codes,
-        INotificationService notifier, ILogger<WorkOrderService> logger)
+        INotificationService notifier, ILogger<WorkOrderService> logger, IClock clock)
     {
-        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _notifier = notifier; _logger = logger;
+        _uow = uow; _stock = stock; _planner = planner; _codes = codes; _notifier = notifier; _logger = logger; _clock = clock;
     }
 
     private const string WorkOrderLink = "/cutting/work-orders";
@@ -165,6 +166,11 @@ public sealed class WorkOrderService : IWorkOrderService
 
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstAsync(o => o.OrderId == request.OrderId, ct);
         if (OrderStatuses.Closed.Contains(order.Status)) return new ReplacementCheck(Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed));
+        if (dto.DueDate < _clock.Today)
+            return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.WorkOrderDueInPast));
+        if (dto.DueDate <= order.ReceivedDate)
+            return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference,
+                string.Format(WarehouseMessages.WorkOrderDueBeforeStart, order.ReceivedDate.ToString("dd/MM/yyyy"))));
         var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.CuttingTeamId
             && t.TeamType == TeamTypes.Cutting && t.Status == RecordStatus.Active, ct);
         if (!teamOk) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.CuttingTeamInvalid));
@@ -215,7 +221,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var editable = await EnsureEditableAsync(wo, ct);
         if (!editable.IsSuccess) return WarehouseFailures.From<WorkOrderDto>(editable);
 
-        var check = await ValidateAsync(dto, workOrderId, ct);
+        var check = await ValidateAsync(dto, workOrderId, ct, wo.DueDate);
         if (check is not null) return check;
 
         _uow.Repository<WorkOrderLine>().RemoveRange(wo.WorkOrderLines.ToList());
@@ -318,13 +324,19 @@ public sealed class WorkOrderService : IWorkOrderService
     }
 
     private async Task<Result<WorkOrderDto>?> ValidateAsync(SaveWorkOrderDto dto, int? exceptWorkOrderId,
-        CancellationToken ct)
+        CancellationToken ct, DateOnly? previousDueDate = null)
     {
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
         if (order is null) return WarehouseFailures.NotFound<WorkOrderDto>();
         if (OrderStatuses.Closed.Contains(order.Status))
             return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+        // Không đặt hạn trong quá khứ (sửa lệnh cũ mà giữ nguyên hạn thì không kiểm lại).
+        if (dto.DueDate < _clock.Today && dto.DueDate != previousDueDate)
+            return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.WorkOrderDueInPast);
+        // Hạn của lệnh cắt phải sau ngày bắt đầu của đơn (ngày nhận đơn).
+        if (dto.DueDate <= order.ReceivedDate)
+            return Fail(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.WorkOrderDueBeforeStart, order.ReceivedDate.ToString("dd/MM/yyyy")));
 
         var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.CuttingTeamId
             && t.TeamType == TeamTypes.Cutting && t.Status == RecordStatus.Active, ct);

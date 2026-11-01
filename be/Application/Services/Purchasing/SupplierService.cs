@@ -32,7 +32,7 @@ public sealed class SupplierService : ISupplierService
                 || (s.Phone != null && s.Phone.Contains(keyword)))
             .OrderBy(s => s.SupplierName)
             .Select(s => new SupplierDto(s.SupplierId, s.SupplierName, s.Phone, s.Email, s.Address, s.MaterialTypes,
-                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count))
+                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count, s.DiscontinueReason))
             .ToPagedAsync(query, ct);
 
         return Result<PagedResult<SupplierDto>>.Success(
@@ -43,7 +43,7 @@ public sealed class SupplierService : ISupplierService
     {
         var dto = await Suppliers.AsNoTracking().Where(s => s.SupplierId == supplierId)
             .Select(s => new SupplierDto(s.SupplierId, s.SupplierName, s.Phone, s.Email, s.Address, s.MaterialTypes,
-                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count))
+                s.Note, s.Status, s.CreatedAt, s.PurchaseOrders.Count, s.DiscontinueReason))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return Fail.NotFound<SupplierDetailDto>();
 
@@ -86,15 +86,17 @@ public sealed class SupplierService : ISupplierService
         return Result.Success(Messages.SupplierSaved);
     }
 
-    public async Task<Result> DiscontinueAsync(int supplierId, CancellationToken ct)
+    public async Task<Result> DiscontinueAsync(int supplierId, DiscontinueSupplierDto dto, CancellationToken ct)
     {
         var supplier = await _uow.Repository<Supplier>().GetByIdAsync(supplierId);
         if (supplier is null) return Fail.NotFound();
         if (supplier.Status == RecordStatus.Discontinued) return Result.Success(Messages.SupplierDiscontinued);
 
         supplier.Status = RecordStatus.Discontinued;
+        supplier.DiscontinueReason = dto.Reason.Trim();
         _audit.Add(new AuditEntry(nameof(Supplier), supplierId, AuditActions.Update,
-            new { Status = RecordStatus.Active }, new { supplier.Status }));
+            new { Status = RecordStatus.Active }, new { supplier.Status }, dto.Reason.Trim(),
+            $"Ngừng hợp tác với nhà cung cấp {supplier.SupplierName}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.SupplierDiscontinued);
     }
@@ -107,6 +109,7 @@ public sealed class SupplierService : ISupplierService
         if (supplier.Status == RecordStatus.Active) return Result.Success(Messages.Saved);
 
         supplier.Status = RecordStatus.Active;
+        supplier.DiscontinueReason = null;
         _audit.Add(new AuditEntry(nameof(Supplier), supplierId, AuditActions.Update,
             new { Status = RecordStatus.Discontinued }, new { supplier.Status }));
         await _uow.SaveChangesAsync();

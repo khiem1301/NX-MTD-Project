@@ -19,6 +19,7 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
         entity.Property(e => e.Reason).HasMaxLength(500);
+        entity.Property(e => e.Summary).HasMaxLength(500);
         entity.Property(e => e.TableName)
             .HasMaxLength(50)
             .IsUnicode(false);

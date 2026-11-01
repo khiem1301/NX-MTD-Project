@@ -24,8 +24,8 @@ public sealed class CustomersController : AdminBaseController
         this.ToResponse(await _customers.UpdateAsync(id, dto, ct));
 
     [HttpPost("{id:int}/discontinue")]
-    public async Task<IActionResult> Discontinue(int id, CancellationToken ct) =>
-        this.ToResponse(await _customers.DiscontinueAsync(id, ct));
+    public async Task<IActionResult> Discontinue(int id, DiscontinueCustomerDto dto, CancellationToken ct) =>
+        this.ToResponse(await _customers.DiscontinueAsync(id, dto, ct));
 
     [HttpPost("{id:int}/reactivate")]
     public async Task<IActionResult> Reactivate(int id, CancellationToken ct) =>

@@ -4,10 +4,11 @@ using NX_MTD.Application.DTOs;
 namespace NX_MTD.Application.Interfaces;
 
 /// <summary>
-/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ
+/// Quản đốc lập / sửa / hủy chỉ tiêu KPI tổ may theo đơn hàng + mã hàng + tổ may + kỳ; các kỳ của cùng đơn + mã hàng + tổ không trùng ngày
 /// (KPI tổ may, theo bảng phân công Minh — khác "UC19" đã dùng cho lệnh cắt ở IWorkOrderService,
 /// hai UC19 này đến từ hai nguồn đánh số khác nhau, xem ghi chú trong KpiTargetsController).
-/// Lập / sửa chỉ tiêu phải không vượt BTP khả dụng (xem <see cref="GetCapacityAsync"/>).
+/// Chỉ tiêu cả kỳ của các tổ cộng lại không vượt số lượng đơn đặt (xem <see cref="GetOrderCapacityAsync"/>); BTP khả dụng chỉ
+/// kiểm khi đặt KPI theo ngày (<see cref="IKpiCalendarService"/>).
 /// </summary>
 public interface IKpiService
 {
@@ -15,9 +16,8 @@ public interface IKpiService
 
     Task<Result<KpiTargetDto>> GetByIdAsync(int kpiTargetId, CancellationToken ct);
 
-    /// <summary>Chỉ tiêu tối đa lập được cho (đơn, mã hàng, tổ may): form lập KPI hiển thị và validate dùng chung một công thức.</summary>
-    Task<Result<KpiCapacityDto>> GetCapacityAsync(int orderId, int productId, int sewingTeamId, int? exceptKpiTargetId,
-        CancellationToken ct);
+    /// <summary>Chỉ tiêu tối đa lập được cho (đơn, mã hàng): form lập KPI hiển thị và validate dùng chung một công thức.</summary>
+    Task<Result<KpiOrderCapacityDto>> GetOrderCapacityAsync(int orderId, int productId, int? exceptKpiTargetId, CancellationToken ct);
 
     Task<Result<KpiTargetDto>> CreateAsync(SaveKpiTargetDto dto, CancellationToken ct);
 

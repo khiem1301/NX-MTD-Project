@@ -17,6 +17,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         entity.Property(e => e.Email)
             .HasMaxLength(100)
             .IsUnicode(false);
+        entity.Property(e => e.DiscontinueReason).HasMaxLength(500);
         entity.Property(e => e.Phone)
             .HasMaxLength(15)
             .IsUnicode(false);

@@ -93,6 +93,24 @@ public class EndOfOrderServiceTests : ProductionTestBase
     }
 
     [Fact]
+    public async Task Preview_QcInThePeriodOfAnotherTargetOfTheSameTeam_IsNotCountedAgain()
+    {
+        var firstDay = new DateOnly(2026, 9, 21);
+        _targets.Add(new KpiTarget
+        {
+            KpiTargetId = 2, OrderId = OrderId, ProductId = ProductId, SewingTeamId = TeamId, Status = KpiStatuses.Closed,
+            StartDate = firstDay, EndDate = firstDay.AddDays(9),
+        });
+        _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 70, WorkDate = firstDay.AddDays(1) });
+        _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 40, WorkDate = firstDay.AddDays(15) });
+
+        var preview = (await Sut().PreviewAsync(1, default)).Data!;
+
+        preview.ActualQty.Should().Be(40);
+        preview.Achieved.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Preview_ScrapAlreadyRecordedIsNotCountedAsMismatch()
     {
         Reported(7, 100);

@@ -84,6 +84,8 @@
                  (cả hai tính từ QtyPerGarment). Định mức chỉ còn ghi thành phần dùng NVL nào (đã gồm màu) và kích thước chi tiết.
    - 28/10/2026  Material thêm LengthCm, WidthCm (chiều dài, chiều rộng / khổ của cuộn vải, cm).
    - 28/10/2026  Thêm vw_RecutFabricNeed: số mét vải ước tính cho dòng lệnh cắt bù (theo hình chữ nhật bao của chi tiết và khổ vải).
+   - 31/10/2026  Thêm KpiDailyTarget, vw_KpiDailyResult đọc KPI theo ngày.
+   - 01/11/2026  UQ_Kpi lọc chỉ tiêu đã hủy (trùng kỳ do KpiService kiểm); thêm KPI_EDIT_CUTOFF_TIME.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -304,6 +306,7 @@ CREATE TABLE dbo.Customer (
     Email           VARCHAR(100)  NULL,
     DefaultAddress  NVARCHAR(500) NULL,
     Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_Customer_Status DEFAULT 'ACTIVE',
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
     CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
@@ -318,7 +321,6 @@ CREATE TABLE dbo.Material (
                           AS VARCHAR(10))) PERSISTED,
     Category      VARCHAR(15)   NOT NULL,
     Unit          NVARCHAR(20)  NOT NULL,     -- m, kg, cuộn, cái, cuộn chỉ…
-    LengthCm      DECIMAL(7,2)  NULL,         -- chiều dài một cuộn / tấm NVL, cm (28/10)
     WidthCm       DECIMAL(7,2)  NULL,         -- chiều rộng, với vải là khổ vải, cm (28/10)
     Status        VARCHAR(20)   NOT NULL CONSTRAINT DF_Material_Status DEFAULT 'ACTIVE',
     CreatedAt     DATETIME2(0)  NOT NULL CONSTRAINT DF_Material_CreatedAt DEFAULT (dbo.fn_VnNow()),
@@ -327,7 +329,7 @@ CREATE TABLE dbo.Material (
                                                         'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE',
                                                         'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')),
     CONSTRAINT CK_Material_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
-    CONSTRAINT CK_Material_Size   CHECK ((LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)),
+    CONSTRAINT CK_Material_Size   CHECK (WidthCm IS NULL OR WidthCm > 0),
     CONSTRAINT UQ_Material_NameType UNIQUE (MaterialName, MaterialType, Color)
 );
 
@@ -340,6 +342,7 @@ CREATE TABLE dbo.Supplier (
     MaterialTypes  NVARCHAR(200) NULL,       -- loại NVL cung cấp (mô tả)
     Note           NVARCHAR(500) NULL,
     Status         VARCHAR(20)   NOT NULL CONSTRAINT DF_Supplier_Status DEFAULT 'ACTIVE',
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
     CreatedAt      DATETIME2(0)  NOT NULL CONSTRAINT DF_Supplier_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Supplier_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
@@ -548,8 +551,20 @@ CREATE TABLE dbo.KpiTarget (
     CreatedAt        DATETIME2(0)  NOT NULL CONSTRAINT DF_Kpi_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Kpi_Dates  CHECK (EndDate >= StartDate),
     CONSTRAINT CK_Kpi_Status CHECK (Status IN ('ACTIVE','CLOSED','CANCELLED')),
-    CONSTRAINT CK_Kpi_Result CHECK (Result IS NULL OR Result IN ('ACHIEVED','NOT_ACHIEVED')),
-    CONSTRAINT UQ_Kpi UNIQUE (OrderId, ProductId, SewingTeamId, StartDate)
+    CONSTRAINT CK_Kpi_Result CHECK (Result IS NULL OR Result IN ('ACHIEVED','NOT_ACHIEVED'))
+);
+GO
+-- Một đơn + mã hàng + tổ có nhiều chỉ tiêu theo các kỳ không trùng ngày (KpiService kiểm); chỉ tiêu đã hủy không tính
+CREATE UNIQUE INDEX UQ_Kpi ON dbo.KpiTarget(OrderId, ProductId, SewingTeamId, StartDate) WHERE Status <> 'CANCELLED';
+GO
+
+-- KPI theo từng ngày của một chỉ tiêu (lịch KPI); chưa đặt ngày nào thì chỉ tiêu ngày chia đều theo WorkingDays
+CREATE TABLE dbo.KpiDailyTarget (
+    KpiDailyTargetId INT IDENTITY(1,1) CONSTRAINT PK_KpiDailyTarget PRIMARY KEY,
+    KpiTargetId      INT  NOT NULL CONSTRAINT FK_KpiDaily_Kpi REFERENCES dbo.KpiTarget(KpiTargetId),
+    WorkDate         DATE NOT NULL,
+    TargetQty        INT  NOT NULL CONSTRAINT CK_KpiDaily_Qty CHECK (TargetQty > 0),
+    CONSTRAINT UQ_KpiDaily UNIQUE (KpiTargetId, WorkDate)
 );
 GO
 
@@ -1426,6 +1441,7 @@ CREATE TABLE dbo.AuditLog (
     OldValues     NVARCHAR(MAX)  NULL,     -- JSON
     NewValues     NVARCHAR(MAX)  NULL,     -- JSON
     Reason        NVARCHAR(500)  NULL,     -- bắt buộc khi Quản đốc sửa dữ liệu quá hạn
+    Summary       NVARCHAR(500)  NULL,     -- câu mô tả tiếng Việt do backend dựng lúc ghi (AuditText)
     ChangedBy     INT            NULL CONSTRAINT FK_AuditLog_ChangedBy REFERENCES dbo.Employee(EmployeeId),
     ChangedAt     DATETIME2(0)   NOT NULL CONSTRAINT DF_AuditLog_ChangedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_AuditLog_Action CHECK (Action IN ('INSERT','UPDATE','DELETE','APPROVE','REJECT','CONFIRM','LOCK','UNLOCK','LOGIN')),
@@ -2496,23 +2512,33 @@ GO
 -- Kết quả KPI theo ngày (FR 3.14): chỉ tiêu ngày, hoàn thiện (QC của tổ), tỉ lệ lỗi, % đạt
 CREATE VIEW dbo.vw_KpiDailyResult
 AS
-SELECT  k.KpiTargetId, k.SewingTeamId, k.OrderId, k.ProductId, q.WorkDate,
-        CAST(1.0 * k.TargetFinishedQty / k.WorkingDays AS DECIMAL(18,2)) AS DailyTarget,
-        q.FinishedQty,
+SELECT  k.KpiTargetId, k.SewingTeamId, k.OrderId, k.ProductId, dd.WorkDate,
+        CAST(tg.DailyTarget AS DECIMAL(18,2)) AS DailyTarget,
+        ISNULL(q.FinishedQty, 0) AS FinishedQty,
         ISNULL(d.DefectQty, 0) AS DefectQty,
-        CASE WHEN q.FinishedQty + ISNULL(d.DefectQty, 0) = 0 THEN 0
-             ELSE CAST(100.0 * ISNULL(d.DefectQty, 0) / (q.FinishedQty + ISNULL(d.DefectQty, 0)) AS DECIMAL(5,2)) END AS DefectRatePct,
-        CAST(100.0 * q.FinishedQty / (1.0 * k.TargetFinishedQty / k.WorkingDays) AS DECIMAL(9,2)) AS PercentAchieved
+        CASE WHEN ISNULL(q.FinishedQty, 0) + ISNULL(d.DefectQty, 0) = 0 THEN 0
+             ELSE CAST(100.0 * ISNULL(d.DefectQty, 0) / (ISNULL(q.FinishedQty, 0) + ISNULL(d.DefectQty, 0)) AS DECIMAL(5,2)) END AS DefectRatePct,
+        CASE WHEN ISNULL(tg.DailyTarget, 0) = 0 THEN NULL
+             ELSE CAST(100.0 * ISNULL(q.FinishedQty, 0) / tg.DailyTarget AS DECIMAL(9,2)) END AS PercentAchieved
 FROM dbo.KpiTarget k
-CROSS APPLY (SELECT b.WorkDate, SUM(b.FinishedQty) AS FinishedQty
+CROSS APPLY (SELECT x.WorkDate FROM dbo.KpiDailyTarget x WHERE x.KpiTargetId = k.KpiTargetId
+             UNION
+             SELECT b.WorkDate
              FROM dbo.QcBatch b JOIN dbo.OrderLine ol ON ol.OrderLineId = b.OrderLineId
              WHERE b.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
-               AND b.WorkDate BETWEEN k.StartDate AND k.EndDate
-             GROUP BY b.WorkDate) q
+               AND b.WorkDate BETWEEN k.StartDate AND k.EndDate) dd
+LEFT JOIN dbo.KpiDailyTarget p ON p.KpiTargetId = k.KpiTargetId AND p.WorkDate = dd.WorkDate
+CROSS APPLY (SELECT CASE WHEN p.TargetQty IS NOT NULL THEN 1.0 * p.TargetQty
+                         WHEN EXISTS (SELECT 1 FROM dbo.KpiDailyTarget y WHERE y.KpiTargetId = k.KpiTargetId) THEN NULL
+                         ELSE 1.0 * k.TargetFinishedQty / k.WorkingDays END AS DailyTarget) tg
+OUTER APPLY (SELECT SUM(b.FinishedQty) AS FinishedQty
+             FROM dbo.QcBatch b JOIN dbo.OrderLine ol ON ol.OrderLineId = b.OrderLineId
+             WHERE b.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
+               AND b.WorkDate = dd.WorkDate) q
 OUTER APPLY (SELECT SUM(dr.Quantity) AS DefectQty
              FROM dbo.DefectRecord dr JOIN dbo.OrderLine ol ON ol.OrderLineId = dr.OrderLineId
              WHERE dr.SewingTeamId = k.SewingTeamId AND ol.OrderId = k.OrderId AND ol.ProductId = k.ProductId
-               AND dr.WorkDate = q.WorkDate AND dr.Status <> 'CANCELLED') d;
+               AND dr.WorkDate = dd.WorkDate AND dr.Status <> 'CANCELLED') d;
 GO
 
 -- Doanh thu tháng = SL hoàn thiện đã nhập kho TP trong tháng × đơn giá CMT (UC27, GBR-17)
@@ -2650,6 +2676,8 @@ DECLARE @rAdmin INT = (SELECT RoleId FROM dbo.Role WHERE RoleCode = 'ADMIN');
 INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('MEAL_REMINDER_TIME',        N'08:15', N'JOB-02 nhắc tổ trưởng xác nhận suất ăn'),
  ('MEAL_CUTOFF_TIME',          N'08:30', N'JOB-03 tự chốt suất ăn'),
+ ('KPI_EDIT_CUTOFF_TIME',      N'08:00', N'Sau giờ này không sửa được KPI theo ngày của chính ngày đó'),
+ ('KPI_DUE_WARNING_DAYS',      N'3',     N'Cảnh báo khi kỳ KPI kết thúc cách ngày giao hàng không quá số ngày này'),
  ('ATTENDANCE_SYNC_MINUTES',   N'10',    N'Chu kỳ JOB-01 đọc Ronald Jack Pro'),
  ('ATTENDANCE_ALERT_MINUTES',  N'30',    N'Báo Kế toán khi không đồng bộ được quá số phút này'),
  ('DELAY_CHECK_TIME',          N'17:00', N'JOB-04 kiểm tra nguy cơ trễ đơn'),
@@ -2750,7 +2778,7 @@ INSERT @d VALUES
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
  ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết nào'), ('PieceRate', N'Đơn giá công đoạn'),
  ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductVariant', N'Biến thể mã hàng: màu × size'), ('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
- ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'),
+ ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
@@ -2856,7 +2884,7 @@ INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit) VALUES
  ('DEMO-CHI02',  N'Chỉ may 40/2 DEMO',  N'Xanh',  'THREAD',      N'cuộn'),
  ('DEMO-CHI03',  N'Chỉ may 40/2 DEMO',  N'Be',    'THREAD',      N'cuộn');
 -- Vải gió: khổ 150 cm, cuộn dài 50 m
-UPDATE dbo.Material SET WidthCm = 150, LengthCm = 5000 WHERE MaterialCode LIKE 'DEMO-VAI%';
+UPDATE dbo.Material SET WidthCm = 150 WHERE MaterialCode LIKE 'DEMO-VAI%';
 DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
         @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
         @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
@@ -3703,7 +3731,7 @@ DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-A
         @o1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
         @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
 -- Vải gió: khổ 150 cm, cuộn dài 50 m
-UPDATE dbo.Material SET WidthCm = 150, LengthCm = 5000 WHERE MaterialCode LIKE 'DEMO-VAI%';
+UPDATE dbo.Material SET WidthCm = 150 WHERE MaterialCode LIKE 'DEMO-VAI%';
 DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
         @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
         @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI02'),

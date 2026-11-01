@@ -37,7 +37,8 @@ public sealed class AccountAdminService : IAccountAdminService
         account.LockedAt = _clock.Now;
         account.LockReason = dto.Reason.Trim();
         account.SecurityStamp = Guid.NewGuid();
-        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Lock, null, null, account.LockReason));
+        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Lock, null, null, account.LockReason,
+            $"Khóa tài khoản của nhân viên #{employeeId}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.AccountLockedDone);
     }
@@ -53,7 +54,8 @@ public sealed class AccountAdminService : IAccountAdminService
         account.Status = RecordStatus.Active;
         account.LockedAt = null;
         account.LockReason = null;
-        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Unlock));
+        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Unlock,
+            Summary: $"Mở khóa tài khoản của nhân viên {employee.EmployeeCode}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.AccountUnlockedDone);
     }
@@ -70,7 +72,8 @@ public sealed class AccountAdminService : IAccountAdminService
         account.PasswordHash = _hasher.Hash(temp);
         account.IsTemporaryPassword = true;
         account.SecurityStamp = Guid.NewGuid();
-        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Update, null, new { PasswordReset = true }));
+        _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Update, null, new { PasswordReset = true },
+            Summary: $"Đặt lại mật khẩu tạm cho nhân viên {employee.EmployeeCode}"));
         await _uow.SaveChangesAsync();
         return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(employee.EmployeeCode, temp), Messages.PasswordResetDone);
     }

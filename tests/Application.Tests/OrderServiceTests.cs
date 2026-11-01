@@ -486,6 +486,73 @@ public class OrderValidatorTests
         new CreateOrderDtoValidator().Validate(dto).Errors.Should().Contain(e => e.ErrorMessage.Contains("Ngày giao"));
     }
 
+    private static bool LineIsValid(string color, int qty, decimal price, string size = "M") =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, color, size, qty, price))).IsValid;
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1_000_000, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(1_000_001, false)]
+    public void OrderedQty_Boundaries(int qty, bool expected) => LineIsValid("Đỏ", qty, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("0.01", true)]
+    [InlineData("100000000", true)]
+    [InlineData("-0.01", false)]
+    [InlineData("100000000.01", false)]
+    [InlineData("1.234", false)]
+    public void CmtUnitPrice_Boundaries(string price, bool expected) =>
+        LineIsValid("Đỏ", 1, decimal.Parse(price, System.Globalization.CultureInfo.InvariantCulture)).Should().Be(expected);
+
+    [Theory]
+    [InlineData(50, true)]
+    [InlineData(51, false)]
+    public void Color_MaxLength(int length, bool expected) => LineIsValid(new string('x', length), 1, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    public void Size_MaxLength(int length, bool expected) => LineIsValid("Đỏ", 1, 100, new string('X', length)).Should().Be(expected);
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", true)]     // 30 ký tự
+    [InlineData(" AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA ", true)]   // 30 ký tự sau khi Trim, như service lưu
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", false)]   // 31 ký tự
+    public void OrderCode_MaxLength_AfterTrim(string code, bool expected)
+    {
+        var dto = new CreateOrderDto(code, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(1000, true)]
+    [InlineData(1001, false)]
+    public void Note_MaxLength(int length, bool expected)
+    {
+        var dto = new CreateOrderDto("DH1", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), new string('x', length), new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Fact]
+    public void DueOnReceivedDate_Passes() =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 10, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0))).IsValid.Should().BeTrue();
+
+    [Fact]
+    public void MissingDates_Fail()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, default, default, null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        var errors = new CreateOrderDtoValidator().Validate(dto).Errors;
+
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.ReceivedDate));
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.DueDate));
+    }
+
     [Fact]
     public void NoLines_Fails() =>
         new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 11, 1))).IsValid.Should().BeFalse();

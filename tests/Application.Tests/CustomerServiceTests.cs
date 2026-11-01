@@ -31,9 +31,10 @@ public class CustomerServiceTests
     {
         var c = Existing(RecordStatus.Active);
 
-        var result = await Sut().DiscontinueAsync(3, default);
+        var result = await Sut().DiscontinueAsync(3, new DiscontinueCustomerDto("Không còn đặt hàng"), default);
 
         result.IsSuccess.Should().BeTrue();
+        c.DiscontinueReason.Should().Be("Không còn đặt hàng");
         c.Status.Should().Be(RecordStatus.Discontinued);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Customer) && e.Action == AuditActions.Update));
         await _uow.Received(1).SaveChangesAsync();
@@ -44,7 +45,7 @@ public class CustomerServiceTests
     {
         Existing(RecordStatus.Discontinued);
 
-        var result = await Sut().DiscontinueAsync(3, default);
+        var result = await Sut().DiscontinueAsync(3, new DiscontinueCustomerDto("x"), default);
 
         result.IsSuccess.Should().BeTrue();
         _audit.DidNotReceive().Add(Arg.Any<AuditEntry>());

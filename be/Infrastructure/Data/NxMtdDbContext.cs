@@ -66,6 +66,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<GradeLevelCode> GradeLevelCodes { get; set; }
 
+    public virtual DbSet<KpiDailyTarget> KpiDailyTargets { get; set; }
+
     public virtual DbSet<KpiTarget> KpiTargets { get; set; }
 
     public virtual DbSet<Material> Materials { get; set; }

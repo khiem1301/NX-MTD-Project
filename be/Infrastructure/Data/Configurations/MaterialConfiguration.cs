@@ -23,7 +23,6 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
         entity.Property(e => e.MaterialCode)
             .HasMaxLength(30)
             .IsUnicode(false);

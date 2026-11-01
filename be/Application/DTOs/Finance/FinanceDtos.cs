@@ -11,6 +11,14 @@ public sealed record RevenueSummaryDto(
     string PeriodMonth, int OrderId, string OrderCode, int ProductId, string ProductCode, string ProductName,
     int FinishedQty, decimal Revenue);
 
+/// <summary>Gợi ý cho bộ lọc doanh thu: các đơn hàng và mã hàng đã có doanh thu.</summary>
+public sealed record RevenueFilterOptionsDto(
+    IReadOnlyList<RevenueOrderOptionDto> Orders, IReadOnlyList<RevenueProductOptionDto> Products);
+
+public sealed record RevenueOrderOptionDto(int OrderId, string OrderCode);
+
+public sealed record RevenueProductOptionDto(int ProductId, string ProductCode, string ProductName);
+
 public sealed record RevenueQuery : PageQuery
 {
     public string? PeriodMonth { get; init; }

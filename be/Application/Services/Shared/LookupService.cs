@@ -20,7 +20,7 @@ public sealed class LookupService : ILookupService
             .Where(o => !OrderStatuses.Closed.Contains(o.Status))
             .Where(o => string.IsNullOrEmpty(kw) || o.OrderCode.Contains(kw))
             .OrderByDescending(o => o.OrderId).Take(MaxOptions)
-            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate))
+            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate))
             .ToListAsync(ct);
     }
 

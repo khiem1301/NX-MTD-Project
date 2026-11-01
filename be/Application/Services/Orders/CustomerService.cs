@@ -55,15 +55,17 @@ public sealed class CustomerService : ICustomerService
         return Result.Success(Messages.Saved);
     }
 
-    public async Task<Result> DiscontinueAsync(int customerId, CancellationToken ct)
+    public async Task<Result> DiscontinueAsync(int customerId, DiscontinueCustomerDto dto, CancellationToken ct)
     {
         var customer = await _customers.GetByIdAsync(customerId);
         if (customer is null) return Fail.NotFound();
         if (customer.Status == RecordStatus.Discontinued) return Result.Success(Messages.CustomerDiscontinued);
 
         customer.Status = RecordStatus.Discontinued;
+        customer.DiscontinueReason = dto.Reason.Trim();
         _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
-            new { Status = RecordStatus.Active }, new { customer.Status }));
+            new { Status = RecordStatus.Active }, new { customer.Status }, customer.DiscontinueReason,
+            $"Ngừng hợp tác với khách hàng {customer.CustomerName}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.CustomerDiscontinued);
     }
@@ -76,6 +78,7 @@ public sealed class CustomerService : ICustomerService
         if (customer.Status == RecordStatus.Active) return Result.Success(Messages.Saved);
 
         customer.Status = RecordStatus.Active;
+        customer.DiscontinueReason = null;
         _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
             new { Status = RecordStatus.Discontinued }, new { customer.Status }));
         await _uow.SaveChangesAsync();

@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.Accountant;
 
 /// <summary>
-/// UC10 (định mức): Kế toán cùng Admin nhập thành phần và định mức NVL của mã hàng. Chỉ xem danh sách mã hàng và sửa định mức
+/// UC10 (định mức): Kế toán là người nhập thành phần, định mức và định mức NVL của mã hàng (Admin chỉ xem). Chỉ xem danh sách mã hàng và sửa định mức
 /// (không thêm / sửa / ngừng sản xuất mã hàng, không đơn giá CMT).
 /// </summary>
 public sealed class ProductsController : AccountantBaseController

@@ -39,7 +39,8 @@ public sealed class ProfileService : IProfileService
     {
         var account = await _accounts.GetByIdAsync(_user.AccountId);
         if (account is null) return Fail.NotFound<LoginResultDto>();
-        if (!_hasher.Verify(dto.CurrentPassword, account.PasswordHash))   // D36: 409, không 401 để FE không tự refresh
+        // Mật khẩu tạm: người dùng đã đăng nhập bằng nó nên không bắt nhập lại; ngược lại phải đúng mật khẩu hiện tại.
+        if (!account.IsTemporaryPassword && !_hasher.Verify(dto.CurrentPassword ?? string.Empty, account.PasswordHash))   // D36: 409, không 401 để FE không tự refresh
             return Result<LoginResultDto>.Failure(ErrorCodes.AuthWrongCurrentPassword, Messages.WrongCurrentPassword);
 
         account.PasswordHash = _hasher.Hash(dto.NewPassword);

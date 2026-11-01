@@ -503,6 +503,10 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var duplicate = await CheckNoPendingDuplicateAsync(ids, [], exceptReceiptId, ct);
         if (duplicate is not null) return duplicate;
 
+        // Quản đốc đã chốt không bù (hủy giao phần thiếu) thì Thủ kho không lập thêm phiếu cho NVL đó.
+        if ((await _supply.ClosedWithoutReplenishAsync(ids, ct)).Count > 0)
+            return Result<ResolvedReceipt>.Failure(ErrorCodes.ReceiptShortageClosed, WarehouseMessages.ReceiptShortageClosed);
+
         // Số nhận không vượt số khách cấp còn phải nhận (đã trừ các phiếu khách cấp đã xác nhận).
         var receivedByMaterial = await ConfirmedCustomerReceivedAsync(ids, null, ct);
         var over = dto.Lines.Select(l => (Line: l, Om: materials.First(m => m.OrderMaterialId == l.OrderMaterialId)))

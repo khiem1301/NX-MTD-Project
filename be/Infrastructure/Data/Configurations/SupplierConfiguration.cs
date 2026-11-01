@@ -21,6 +21,7 @@ public sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
             .IsUnicode(false);
         entity.Property(e => e.MaterialTypes).HasMaxLength(200);
         entity.Property(e => e.Note).HasMaxLength(500);
+        entity.Property(e => e.DiscontinueReason).HasMaxLength(500);
         entity.Property(e => e.Phone)
             .HasMaxLength(15)
             .IsUnicode(false);

@@ -57,6 +57,19 @@ public sealed class FinanceService : IFinanceService
             new PagedResult<RevenueSummaryDto>(dtos, page, pageSize, total), total == 0 ? Messages.NoData : null);
     }
 
+    /// <summary>Đơn hàng và mã hàng đã có doanh thu, để bộ lọc gợi ý thay vì bắt nhập Id.</summary>
+    public async Task<Result<RevenueFilterOptionsDto>> GetRevenueFilterOptionsAsync(CancellationToken ct)
+    {
+        var rows = await _repo.GetRevenueRowsAsync(null, null, null, ct);
+        var dtos = await ToRevenueDtosAsync(rows, ct);
+        var orders = dtos.GroupBy(d => d.OrderId).Select(g => new RevenueOrderOptionDto(g.Key, g.First().OrderCode))
+            .OrderBy(o => o.OrderCode).ToList();
+        var products = dtos.GroupBy(d => d.ProductId)
+            .Select(g => new RevenueProductOptionDto(g.Key, g.First().ProductCode, g.First().ProductName))
+            .OrderBy(p => p.ProductCode).ToList();
+        return Result<RevenueFilterOptionsDto>.Success(new RevenueFilterOptionsDto(orders, products));
+    }
+
     public async Task<Result<ExcelFileDto>> ExportRevenueAsync(RevenueQuery query, CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(query.PeriodMonth) && !IsValidMonth(query.PeriodMonth))

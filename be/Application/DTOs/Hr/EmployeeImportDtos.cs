@@ -31,4 +31,4 @@ public sealed record AuditLogQuery : PageQuery
 }
 
 public sealed record AuditLogRowDto(long AuditLogId, string TableName, long RecordId, string Action, string? OldValues,
-    string? NewValues, string? Reason, int? ChangedBy, string? ChangedByName, DateTime ChangedAt);
+    string? NewValues, string? Reason, int? ChangedBy, string? ChangedByName, DateTime ChangedAt, string? Summary = null);

@@ -10,7 +10,7 @@ public interface ISupplierService
     Task<Result<SupplierDetailDto>> GetAsync(int supplierId, CancellationToken ct);
     Task<Result<int>> CreateAsync(SaveSupplierDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int supplierId, SaveSupplierDto dto, CancellationToken ct);
-    Task<Result> DiscontinueAsync(int supplierId, CancellationToken ct);
+    Task<Result> DiscontinueAsync(int supplierId, DiscontinueSupplierDto dto, CancellationToken ct);
     Task<Result> ReactivateAsync(int supplierId, CancellationToken ct);
 
     /// <summary>Chỉ nhà cung cấp đang hợp tác, sắp theo tên (ô chọn khi đặt hàng).</summary>

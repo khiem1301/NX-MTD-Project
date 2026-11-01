@@ -45,7 +45,7 @@ public interface ICustomerService
     Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct);
     Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int customerId, SaveCustomerDto dto, CancellationToken ct);
-    Task<Result> DiscontinueAsync(int customerId, CancellationToken ct);
+    Task<Result> DiscontinueAsync(int customerId, DiscontinueCustomerDto dto, CancellationToken ct);
     Task<Result> ReactivateAsync(int customerId, CancellationToken ct);
 }
 

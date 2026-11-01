@@ -22,6 +22,8 @@ public partial class AuditLog
 
     public string? Reason { get; set; }
 
+    public string? Summary { get; set; }
+
     public int? ChangedBy { get; set; }
 
     public DateTime ChangedAt { get; set; }

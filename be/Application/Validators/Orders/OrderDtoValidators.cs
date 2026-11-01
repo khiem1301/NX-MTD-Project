@@ -20,13 +20,19 @@ public sealed class CustomerQueryValidator : AbstractValidator<CustomerQuery>
     }
 }
 
+public sealed class DiscontinueCustomerDtoValidator : AbstractValidator<DiscontinueCustomerDto>
+{
+    public DiscontinueCustomerDtoValidator() =>
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+}
+
 public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto>
 {
     public SaveCustomerDtoValidator()
     {
         RuleFor(x => x.CustomerName).NotEmpty().WithMessage(Messages.Required("tên khách hàng")).MaximumLength(200);
         RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
-            .MaximumLength(15).Matches(@"^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+            .MustBePhone();
         RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
             .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
         RuleFor(x => x.DefaultAddress).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
@@ -66,10 +72,13 @@ public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T 
 {
     protected OrderInputValidatorBase()
     {
-        RuleFor(x => x.OrderCode).NotEmpty().WithMessage(Messages.Required("mã đơn hàng")).MaximumLength(30)
+        RuleFor(x => x.OrderCode).NotEmpty().WithMessage(Messages.Required("mã đơn hàng"))
+            .Must(c => c.Trim().Length <= 30).WithMessage("Mã đơn hàng tối đa 30 ký tự.")
             .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã đơn hàng chỉ gồm chữ, số và . _ -");
         RuleFor(x => x.CustomerId).GreaterThan(0).WithMessage(Messages.Required("khách hàng"));
-        RuleFor(x => x.DueDate).Must((x, d) => d >= x.ReceivedDate).WithMessage("Ngày giao phải sau hoặc bằng ngày nhận.");
+        RuleFor(x => x.ReceivedDate).NotEmpty().WithMessage(Messages.Required("ngày nhận"));
+        RuleFor(x => x.DueDate).NotEmpty().WithMessage(Messages.Required("ngày giao"))
+            .Must((x, d) => d >= x.ReceivedDate).WithMessage("Ngày giao phải sau hoặc bằng ngày nhận.");
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage("Vui lòng nhập ít nhất một dòng màu × size.");
         RuleForEach(x => x.Lines).SetValidator(new OrderLineInputValidator());

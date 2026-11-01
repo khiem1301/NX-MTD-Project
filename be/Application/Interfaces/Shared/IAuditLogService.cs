@@ -4,8 +4,9 @@ namespace NX_MTD.Application.Interfaces;
 
 /// <param name="OldValues">Object ẩn danh chỉ chứa các field thay đổi, vd. new { Status = "PENDING_APPROVAL" }.
 /// Không bao giờ đưa mật khẩu, hash, token vào đây. Đơn giá CMT chỉ được ghi ở log của CustomerOrder (D26).</param>
+/// <param name="Summary">Câu mô tả tiếng Việt cho người đọc. Để trống thì AuditLogService tự dựng từ hành động, mã bản ghi và các field đổi (AuditText).</param>
 public sealed record AuditEntry(string TableName, long RecordId, string Action,
-    object? OldValues = null, object? NewValues = null, string? Reason = null);
+    object? OldValues = null, object? NewValues = null, string? Reason = null, string? Summary = null);
 
 public interface IAuditLogService
 {

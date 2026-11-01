@@ -6,7 +6,7 @@ namespace NX_MTD.Application.DTOs;
 
 public sealed record SupplierDto(
     int SupplierId, string SupplierName, string? Phone, string? Email, string? Address, string? MaterialTypes,
-    string? Note, string Status, DateTime CreatedAt, int PurchaseOrderCount);
+    string? Note, string Status, DateTime CreatedAt, int PurchaseOrderCount, string? DiscontinueReason = null);
 
 public sealed record SupplierDetailDto(SupplierDto Supplier, IReadOnlyList<AuditLogDto> History);
 
@@ -58,6 +58,9 @@ public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal Order
 public sealed record PlacePurchaseOrderDto(
     int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount, string? Note,
     IReadOnlyList<PlacePurchaseLineDto> Lines, byte[] RowVer);
+
+/// <summary>Lý do ngừng hợp tác với nhà cung cấp (bắt buộc, ghi vào nhật ký).</summary>
+public sealed record DiscontinueSupplierDto(string Reason);
 
 public sealed record CancelPurchaseOrderDto(string Reason, byte[] RowVer);
 

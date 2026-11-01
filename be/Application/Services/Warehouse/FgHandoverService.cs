@@ -167,8 +167,9 @@ public sealed class FgHandoverService : IFgHandoverService
         });
 
     /// <summary>
-    /// Swimlane "Compare & Notify KPI result": mỗi lần kho nhận thành phẩm, so số thành phẩm kho đã nhận của đơn + mã hàng với
-    /// chỉ tiêu KPI đang hoạt động và báo Quản đốc. Chỉ báo; chốt và đóng KPI vẫn qua "Kết thúc đơn" của Quản đốc.
+    /// Swimlane "Compare & Notify KPI result": mỗi lần kho nhận thành phẩm, báo Quản đốc một lần cho mỗi đơn + mã hàng. Phiếu bàn
+    /// giao không ghi tổ nên số kho nhận chỉ so với tổng chỉ tiêu các tổ; từng tổ đạt hay chưa tính theo QA/QC của tổ, như màn KPI
+    /// và "Kết thúc đơn". Chỉ báo; chốt và đóng KPI vẫn qua "Kết thúc đơn" của Quản đốc.
     /// </summary>
     private async Task CompareWithKpiAsync(FgHandover handover, CancellationToken ct)
     {
@@ -180,7 +181,8 @@ public sealed class FgHandoverService : IFgHandoverService
         {
             var targets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
                 .Where(k => k.OrderId == pair.OrderId && k.ProductId == pair.ProductId && k.Status == KpiStatuses.Active)
-                .Select(k => new { k.TargetFinishedQty, OrderCode = k.Order.OrderCode, ProductCode = k.Product.ProductCode, Team = k.SewingTeam.TeamName })
+                .OrderBy(k => k.SewingTeam.TeamName)
+                .Select(k => new { k.KpiTargetId, k.TargetFinishedQty, OrderCode = k.Order.OrderCode, ProductCode = k.Product.ProductCode, Team = k.SewingTeam.TeamName })
                 .ToListAsync(ct);
             if (targets.Count == 0) continue;
 
@@ -188,17 +190,17 @@ public sealed class FgHandoverService : IFgHandoverService
                 .Where(l => l.FgHandover.Status == HandoverStatuses.Confirmed && l.OrderLine.OrderId == pair.OrderId
                             && l.OrderLine.ProductId == pair.ProductId)
                 .SumAsync(l => l.ConfirmedQty ?? 0, ct);
-            foreach (var t in targets)
-            {
-                var percent = t.TargetFinishedQty > 0 ? Math.Round(100m * received / t.TargetFinishedQty, 1) : 0m;
-                var verdict = received >= t.TargetFinishedQty
-                    ? "đã đạt chỉ tiêu, có thể bấm Kết thúc đơn để chốt KPI"
-                    : $"chưa đạt, còn thiếu {t.TargetFinishedQty - received}";
-                await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production,
-                    "Kết quả KPI sau khi kho nhận thành phẩm",
-                    $"Đơn {t.OrderCode} mã hàng {t.ProductCode}, {t.Team}: kho đã nhận {received}/{t.TargetFinishedQty} ({percent:0.#}%), {verdict}.",
-                    "/kpi/targets"), ct);
-            }
+            var finished = await _output.GetKpiFinishedTotalsAsync(targets.Select(t => t.KpiTargetId).ToList(), ct);
+            var teams = targets.Select(t => (t.Team, Done: finished.GetValueOrDefault(t.KpiTargetId), Target: t.TargetFinishedQty)).ToList();
+            var total = teams.Sum(t => t.Target);
+            var percent = total > 0 ? Math.Round(100m * received / total, 1) : 0m;
+            var verdict = received >= total ? "đã đạt tổng chỉ tiêu" : $"chưa đạt, còn thiếu {total - received}";
+            var byTeam = string.Join(", ", teams.Select(t => $"{t.Team} {t.Done}/{t.Target}{(t.Done >= t.Target ? " (đạt)" : "")}"));
+            var finishHint = teams.Any(t => t.Done >= t.Target) ? " Tổ đạt có thể bấm Kết thúc đơn để chốt KPI." : "";
+            await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production,
+                "Kết quả KPI sau khi kho nhận thành phẩm",
+                $"Đơn {targets[0].OrderCode} mã hàng {targets[0].ProductCode}: kho đã nhận {received}/{total} ({percent:0.#}%), {verdict}. QA/QC theo tổ: {byTeam}.{finishHint}",
+                "/kpi/targets"), ct);
         }
     }
 

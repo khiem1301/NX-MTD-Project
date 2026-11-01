@@ -22,7 +22,17 @@ public sealed class SaveKpiTargetDtoValidator : AbstractValidator<SaveKpiTargetD
             .GreaterThanOrEqualTo(x => x.StartDate).WithMessage(Messages.DateRangeInvalid);
 
         RuleFor(x => x.TargetFinishedQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive);
-        RuleFor(x => x.WorkingDays).GreaterThan((short)0).WithMessage(Messages.KpiWorkingDaysMustBePositive);
+    }
+}
+
+public sealed class SaveKpiDailyPlanDtoValidator : AbstractValidator<SaveKpiDailyPlanDto>
+{
+    public SaveKpiDailyPlanDtoValidator()
+    {
+        RuleFor(x => x.DailyTargets).Cascade(CascadeMode.Stop).NotNull()
+            .Must(days => days.Select(d => d.WorkDate).Distinct().Count() == days.Count)
+            .WithMessage(Messages.KpiDailyTargetDuplicateDate);
+        RuleForEach(x => x.DailyTargets).Must(d => d.TargetQty > 0).WithMessage(Messages.KpiDailyTargetQtyMustBePositive);
     }
 }
 

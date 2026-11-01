@@ -19,7 +19,7 @@ public sealed class SaveSupplierDtoValidator : AbstractValidator<SaveSupplierDto
     {
         RuleFor(x => x.SupplierName).NotEmpty().WithMessage(Messages.Required("tên nhà cung cấp")).MaximumLength(200);
         RuleFor(x => x.Phone).NotEmpty().WithMessage(Messages.Required("số điện thoại"))
-            .MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+            .MustBePhone();
         RuleFor(x => x.Email).NotEmpty().WithMessage(Messages.Required("email"))
             .MaximumLength(100).EmailAddress().WithMessage("Email không hợp lệ.");
         RuleFor(x => x.Address).NotEmpty().WithMessage(Messages.Required("địa chỉ")).MaximumLength(500);
@@ -58,6 +58,12 @@ public sealed class PlacePurchaseOrderDtoValidator : AbstractValidator<PlacePurc
         RuleForEach(x => x.Lines).SetValidator(new PlacePurchaseLineDtoValidator());
         RuleFor(x => x.RowVer).NotEmpty();
     }
+}
+
+public sealed class DiscontinueSupplierDtoValidator : AbstractValidator<DiscontinueSupplierDto>
+{
+    public DiscontinueSupplierDtoValidator() =>
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
 }
 
 public sealed class CancelPurchaseOrderDtoValidator : AbstractValidator<CancelPurchaseOrderDto>

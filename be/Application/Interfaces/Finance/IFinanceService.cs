@@ -14,6 +14,8 @@ public interface IFinanceService
 
     Task<Result<ExcelFileDto>> ExportRevenueAsync(RevenueQuery query, CancellationToken ct);
 
+    Task<Result<RevenueFilterOptionsDto>> GetRevenueFilterOptionsAsync(CancellationToken ct);
+
     // ---------- Hòa vốn + giá trị thặng dư (UC11) — CHỈ Admin ----------
 
     /// <summary>Chạy một lần tính mới cho một tháng theo cách phân bổ Admin chọn; chặn nếu bảng lương

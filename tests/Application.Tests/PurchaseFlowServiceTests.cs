@@ -117,11 +117,12 @@ public class PurchaseFlowServiceTests
     {
         var supplier = Supplier();
 
-        var result = await Suppliers().DiscontinueAsync(3, default);
+        var result = await Suppliers().DiscontinueAsync(3, new DiscontinueSupplierDto("Giao hàng trễ nhiều lần"), default);
 
         result.IsSuccess.Should().BeTrue();
         supplier.Status.Should().Be(RecordStatus.Discontinued);
-        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Supplier) && e.Action == AuditActions.Update));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Supplier) && e.Action == AuditActions.Update
+            && e.Reason == "Giao hàng trễ nhiều lần"));
     }
 
     [Fact]
@@ -608,5 +609,16 @@ public class PurchaseFlowValidatorTests
         validator.Validate(Dto(3, 1000)).IsValid.Should().BeTrue();
         validator.Validate(Dto(0, 1000)).IsValid.Should().BeFalse();
         validator.Validate(Dto(3, 0)).IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(3, true)]
+    public void CreatePurchaseOrder_RequiresSupplier(int supplierId, bool valid)
+    {
+        var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
+
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, null, [line]))
+            .IsValid.Should().Be(valid);
     }
 }

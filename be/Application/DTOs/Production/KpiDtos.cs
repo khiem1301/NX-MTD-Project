@@ -10,16 +10,18 @@ public sealed record KpiTargetDto(
     short WorkingDays, decimal DailyTarget, string Status, string? Result, DateTime CreatedAt,
     int ActualFinishedQty = 0, decimal PercentAchieved = 0m);
 
-/// <summary>Tạo mới / sửa toàn bộ chỉ tiêu KPI (sửa chỉ cho phép khi Status = ACTIVE).</summary>
+/// <summary>Tạo mới / sửa chỉ tiêu KPI (sửa chỉ cho phép khi Status = ACTIVE). WorkingDays do BE tính: số ngày đã đặt KPI, chưa đặt thì số ngày trong kỳ trừ Chủ nhật.</summary>
 public sealed record SaveKpiTargetDto(
     int OrderId, int ProductId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate,
-    int TargetFinishedQty, short WorkingDays);
+    int TargetFinishedQty);
 
 /// <summary>
-/// Chỉ tiêu tối đa lập được cho (đơn, mã hàng, tổ may): BTP bộ đủ còn trong kho + BTP tổ đã nhận mà chưa làm xong
-/// − phần còn phải làm của các chỉ tiêu KPI khác cùng đơn + mã hàng.
+/// Chỉ tiêu tối đa lập được cho (đơn, mã hàng): số lượng đơn đặt − phần đã giao ở các chỉ tiêu khác, kể cả của cùng tổ (chỉ tiêu
+/// đang chạy tính cả chỉ tiêu, chỉ tiêu đã đóng tính số thực tế làm được, chỉ tiêu đã hủy không tính). DueDate và DueWarningDays
+/// để form cảnh báo kỳ kết thúc sau hoặc sát ngày giao hàng; OrderClosed = đơn đã đóng, không đặt chỉ tiêu được.
 /// </summary>
-public sealed record KpiCapacityDto(int WarehouseBtp, int TeamHeld, int CommittedByOthers, int MaxTarget);
+public sealed record KpiOrderCapacityDto(int OrderQty, int AssignedToOthers, int MaxTarget, DateOnly? DueDate = null,
+    int DueWarningDays = 0, string? OrderStatus = null, bool OrderClosed = false);
 
 /// <summary>Quyết định tăng ca khi KPI không đạt (kết thúc đơn của tổ).</summary>
 public static class OvertimeDecisions

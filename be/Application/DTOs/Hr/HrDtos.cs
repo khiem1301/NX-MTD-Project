@@ -8,7 +8,7 @@ public sealed record ProfileDto(int EmployeeId, string EmployeeCode, string Full
     string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamName, DateOnly StartDate,
     string? CurrentGradeCode, bool IsTemporaryPassword);
 
-public sealed record ChangePasswordDto(string CurrentPassword, string NewPassword, string ConfirmPassword);
+public sealed record ChangePasswordDto(string? CurrentPassword, string NewPassword, string ConfirmPassword);
 
 // ---- Nhân viên (UC16, UC17) ----
 public sealed record EmployeeQuery : PageQuery

@@ -19,7 +19,6 @@ public sealed class ChangePasswordDtoValidator : AbstractValidator<ChangePasswor
 {
     public ChangePasswordDtoValidator()
     {
-        RuleFor(x => x.CurrentPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu hiện tại"));
         RuleFor(x => x.NewPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu mới")).MaximumLength(100);
         RuleFor(x => x.ConfirmPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu nhập lại"))
             .Equal(x => x.NewPassword).WithMessage(Messages.PasswordMismatch);   // MSG05
@@ -36,7 +35,7 @@ public sealed class CreateEmployeeDtoValidator : AbstractValidator<CreateEmploye
         RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.DateOfBirth).LessThan(DateOnly.FromDateTime(DateTime.Today)).When(x => x.DateOfBirth is not null);
-        RuleFor(x => x.Phone).MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
         RuleFor(x => x.PayType).Must(HrRules.PayTypes.Contains).WithMessage("Kiểu lương không hợp lệ.");
         RuleFor(x => x.AttendanceCode).InclusiveBetween(1, 99_999_999).When(x => x.AttendanceCode is not null);
@@ -50,7 +49,7 @@ public sealed class AdminUpdateEmployeeDtoValidator : AbstractValidator<AdminUpd
     {
         RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
-        RuleFor(x => x.Phone).MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
         RuleFor(x => x.PayType).Must(HrRules.PayTypes.Contains).WithMessage("Kiểu lương không hợp lệ.");
         RuleFor(x => x.AttendanceCode).InclusiveBetween(1, 99_999_999).When(x => x.AttendanceCode is not null);
@@ -65,7 +64,7 @@ public sealed class ManagerUpdateEmployeeDtoValidator : AbstractValidator<Manage
     {
         RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
-        RuleFor(x => x.Phone).MaximumLength(15).Matches("^[0-9+]*$").WithMessage("Số điện thoại chỉ gồm chữ số và dấu +.");
+        RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
         RuleFor(x => x.PayType).Must(HrRules.PayTypes.Contains).WithMessage("Kiểu lương không hợp lệ.");
         RuleFor(x => x.TeamId).NotNull().When(x => HrRules.NeedsTeam(x.Role)).WithMessage(Messages.Required("tổ"));

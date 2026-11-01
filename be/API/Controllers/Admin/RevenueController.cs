@@ -18,6 +18,10 @@ public sealed class RevenueController : AdminBaseController
     public async Task<IActionResult> GetPaged([FromQuery] RevenueQuery query, CancellationToken ct) =>
         this.ToResponse(await _finance.GetRevenueAsync(query, ct));
 
+    [HttpGet("filter-options")]
+    public async Task<IActionResult> FilterOptions(CancellationToken ct) =>
+        this.ToResponse(await _finance.GetRevenueFilterOptionsAsync(ct));
+
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] RevenueQuery query, CancellationToken ct)
     {

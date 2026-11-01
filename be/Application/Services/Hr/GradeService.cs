@@ -73,7 +73,8 @@ public sealed class GradeService : IGradeService
 
         var row = new GradeLevelCode { GradeCode = code, GradeName = dto.GradeName.Trim(), Status = GradeCodes.Active, CreatedAt = _clock.Now };
         await _uow.Repository<GradeLevelCode>().AddAsync(row);
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Insert, null, new { row.GradeCode, row.GradeName }));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Insert, null, new { row.GradeCode, row.GradeName },
+            Summary: $"Thêm bậc thợ {row.GradeCode} ({row.GradeName})"));
         await _uow.SaveChangesAsync();
         return Result<GradeCodeDto>.Success(ToDto(row, false), Messages.Saved);
     }
@@ -87,7 +88,8 @@ public sealed class GradeService : IGradeService
         var before = new { row.GradeName, row.Status };
         row.GradeName = dto.GradeName.Trim();
         row.Status = dto.Status == "Inactive" ? GradeCodes.Inactive : GradeCodes.Active;
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Update, before, new { row.GradeName, row.Status }, code));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Update, before, new { row.GradeName, row.Status }, code,
+            $"Cập nhật bậc thợ {code}: tên {before.GradeName} → {row.GradeName}, trạng thái {(row.Status == GradeCodes.Active ? "đang dùng" : "ngừng dùng")}"));
         await _uow.SaveChangesAsync();
         return Result<GradeCodeDto>.Success(ToDto(row, await IsInUseAsync(code, ct)), Messages.Saved);
     }
@@ -100,7 +102,8 @@ public sealed class GradeService : IGradeService
         if (await IsInUseAsync(code, ct)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInUse);
 
         _uow.Repository<GradeLevelCode>().Remove(row);
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Delete, new { row.GradeCode, row.GradeName }, null, code));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Delete, new { row.GradeCode, row.GradeName }, null, code,
+            $"Xóa bậc thợ {code} ({row.GradeName})"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
     }

@@ -115,7 +115,10 @@ public static class ErrorCodes
     public const string KpiInvalidStatus = "KPI_INVALID_STATUS";
     public const string KpiFinishBlocked = "KPI_FINISH_BLOCKED";
     public const string KpiInvalidReference = "KPI_INVALID_REFERENCE";
-    public const string KpiDuplicatePeriod = "KPI_DUPLICATE_PERIOD";
+    public const string KpiPeriodOverlap = "KPI_PERIOD_OVERLAP";
+    public const string KpiPeriodInvalid = "KPI_PERIOD_INVALID";
+    public const string KpiExceedsOrderQty = "KPI_EXCEEDS_ORDER_QTY";
+    public const string KpiPlanInvalid = "KPI_PLAN_INVALID";
 
     // --- Doanh thu + hòa vốn (Minh, UC27/UC11) ---
     public const string RevenuePeriodMonthInvalid = "REVENUE_PERIOD_MONTH_INVALID";
@@ -146,6 +149,7 @@ public static class ErrorCodes
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
+    public const string ReceiptShortageClosed = "RECEIPT_SHORTAGE_CLOSED";
     public const string FgHandoverExceedsQc = "FG_HANDOVER_EXCEEDS_QC";
     public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
     public const string AnnouncementInvalid = "ANNOUNCEMENT_INVALID";

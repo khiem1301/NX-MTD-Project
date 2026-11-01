@@ -12,4 +12,5 @@ public sealed class EmployeeScope
     public bool IsAdmin => _user.Role == Roles.Admin;
     public IReadOnlyCollection<string>? HiddenRoleCodes => IsAdmin ? null : RoleCodes.HiddenFromManager.ToArray();
     public bool CanSee(string roleCode) => IsAdmin || !RoleCodes.HiddenFromManager.Contains(roleCode);
+    public bool CanAssign(string roleCode) => IsAdmin || !RoleCodes.AdminAssignedOnly.Contains(roleCode);
 }

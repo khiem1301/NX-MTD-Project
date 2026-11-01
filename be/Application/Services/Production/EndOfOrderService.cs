@@ -139,7 +139,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
         var lineIds = lines.Select(l => l.OrderLineId).ToList();
 
         var (qcByLine, scrapByLine) = await LoadQcAndScrapAsync(target, lineIds, ct);
-        var actual = qcByLine.Values.Sum();
+        var actual = qcByLine.Values.Sum() - await QcOfOtherTargetsAsync(target, lineIds, ct);
 
         var finalOp = await _uow.Repository<Operation>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.ProductId == target.ProductId && o.IsFinalStep && o.Status == OperationStatuses.Active, ct);
@@ -162,6 +162,21 @@ public sealed class EndOfOrderService : IEndOfOrderService
             target.SewingTeam.TeamName, target.TargetFinishedQty, actual, achieved, shortfall, pct, threshold, ot,
             finalOp?.OperationName, rows, blockers, target.Status == KpiStatuses.Active);
         return new Built(preview, finalOp, rateId);
+    }
+
+    /// <summary>QC đạt nằm trong kỳ của các chỉ tiêu khác cùng đơn + mã hàng + tổ: đã thuộc về chỉ tiêu đó, không tính lặp vào chỉ tiêu này.</summary>
+    private async Task<int> QcOfOtherTargetsAsync(KpiTarget target, List<int> lineIds, CancellationToken ct)
+    {
+        var others = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
+            .Where(k => k.OrderId == target.OrderId && k.ProductId == target.ProductId && k.SewingTeamId == target.SewingTeamId
+                        && k.Status != KpiStatuses.Cancelled && k.KpiTargetId != target.KpiTargetId)
+            .Select(k => new { k.StartDate, k.EndDate }).ToListAsync(ct);
+        if (others.Count == 0) return 0;
+
+        var batches = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(q => q.SewingTeamId == target.SewingTeamId && lineIds.Contains(q.OrderLineId))
+            .Select(q => new { q.WorkDate, q.FinishedQty }).ToListAsync(ct);
+        return batches.Where(q => others.Any(o => q.WorkDate >= o.StartDate && q.WorkDate <= o.EndDate)).Sum(q => q.FinishedQty);
     }
 
     /// <summary>QC đạt và hàng hủy (Scrap) của tổ theo dòng đơn, cả đơn (không theo kỳ): căn cứ chốt KPI.</summary>

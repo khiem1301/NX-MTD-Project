@@ -66,6 +66,12 @@ public static class SettingKeys
     // dùng fallback mặc định của KpiAutoCloseJob)
     public const string KpiAutoCloseTime = "KPI_AUTO_CLOSE_TIME";
 
+    /// <summary>Sau giờ này không sửa được KPI theo ngày của chính ngày đó.</summary>
+    public const string KpiEditCutoffTime = "KPI_EDIT_CUTOFF_TIME";
+
+    /// <summary>Cảnh báo khi kỳ KPI kết thúc cách ngày giao hàng không quá số ngày này.</summary>
+    public const string KpiDueWarningDays = "KPI_DUE_WARNING_DAYS";
+
     /// <summary>KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu hơn: tổ trưởng quyết định.</summary>
     public const string KpiOtAutoThresholdPct = "KPI_OT_AUTO_THRESHOLD_PCT";
 }

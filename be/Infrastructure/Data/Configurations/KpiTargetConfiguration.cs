@@ -10,7 +10,9 @@ public sealed class KpiTargetConfiguration : IEntityTypeConfiguration<KpiTarget>
     {
         entity.ToTable("KpiTarget", tb => tb.HasComment("KPI tổ may"));
 
-        entity.HasIndex(e => new { e.OrderId, e.ProductId, e.SewingTeamId, e.StartDate }, "UQ_Kpi").IsUnique();
+        entity.HasIndex(e => new { e.OrderId, e.ProductId, e.SewingTeamId, e.StartDate }, "UQ_Kpi")
+            .IsUnique()
+            .HasFilter("([Status]<>'CANCELLED')");
 
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)

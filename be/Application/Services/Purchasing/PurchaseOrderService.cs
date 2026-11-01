@@ -77,6 +77,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         // Gắn đơn hàng: kiểm tra đơn trước để không tạo NVL mới vô ích.
         var orderCheck = await ValidateOrderAsync(dto.OrderId, ct);
         if (orderCheck is not null) return orderCheck;
+        var supplierCheck = await ValidateSupplierAsync(dto.SupplierId, ct);
+        if (supplierCheck is not null) return supplierCheck;
 
         var resolved = await ResolveMaterialsAsync(dto.Lines, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<PurchaseOrderDto>(resolved);
@@ -122,6 +124,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         {
             PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
             OrderId = dto.OrderId,
+            SupplierId = dto.SupplierId,
             GoodsStatus = PurchaseOrderStatuses.PendingFinalisation,
             PaymentStatus = PurchaseOrderStatuses.Unpaid,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
@@ -138,6 +141,17 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         await _uow.Repository<PurchaseOrder>().AddAsync(po);
         await _uow.SaveChangesAsync();
         return Result<int>.Success(po.PurchaseOrderId);
+    }
+
+    /// <summary>Đơn mua phải gắn nhà cung cấp đang hợp tác ngay lúc tạo.</summary>
+    private async Task<Result<PurchaseOrderDto>?> ValidateSupplierAsync(int supplierId, CancellationToken ct)
+    {
+        var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SupplierId == supplierId, ct);
+        if (supplier is null) return Result<PurchaseOrderDto>.Failure(ErrorCodes.CommonNotFound, Messages.SupplierNotFound, ResultKind.NotFound);
+        return supplier.Status == RecordStatus.Active
+            ? null
+            : Result<PurchaseOrderDto>.Failure(ErrorCodes.SupplierNotActive, Messages.SupplierNotActive);
     }
 
     private async Task<Result<PurchaseOrderDto>?> ValidateOrderAsync(int? orderId, CancellationToken ct)

@@ -24,8 +24,8 @@ public sealed record PurchaseOrderDto(
 public sealed record SavePurchaseOrderLineDto(int? MaterialId, string? NewMaterialName, string? NewMaterialUnit,
     string? NewMaterialColor, decimal OrderedQty, decimal UnitPrice);
 
-/// <summary>OrderId để trống = đơn mua dự trữ (kim, chỉ... dùng chung nhiều đơn), không cần Admin tạo mã đơn hàng.</summary>
-public sealed record CreatePurchaseOrderDto(int? OrderId, string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines);
+/// <summary>OrderId để trống = đơn mua dự trữ (kim, chỉ... dùng chung nhiều đơn). Bắt buộc có nhà cung cấp đang hợp tác; một đơn mua không cần mua hết NVL của đơn hàng.</summary>
+public sealed record CreatePurchaseOrderDto(int? OrderId, int SupplierId, string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines);
 
 public sealed record PurchaseOrderQuery : PageQuery
 {

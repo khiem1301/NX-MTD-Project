@@ -18,6 +18,10 @@ public sealed class RevenueController : AccountantBaseController
         this.ToResponse(await _finance.GetRevenueAsync(query, ct));
 
     /// <summary>Xuất doanh thu ra Excel theo đúng bộ lọc đang xem (MSG27).</summary>
+    [HttpGet("filter-options")]
+    public async Task<IActionResult> FilterOptions(CancellationToken ct) =>
+        this.ToResponse(await _finance.GetRevenueFilterOptionsAsync(ct));
+
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] RevenueQuery query, CancellationToken ct)
     {

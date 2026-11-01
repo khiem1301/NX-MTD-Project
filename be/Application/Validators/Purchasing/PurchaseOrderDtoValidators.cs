@@ -22,6 +22,7 @@ public sealed class CreatePurchaseOrderDtoValidator : AbstractValidator<CreatePu
     public CreatePurchaseOrderDtoValidator()
     {
         RuleFor(x => x.OrderId).GreaterThan(0).When(x => x.OrderId.HasValue);
+        RuleFor(x => x.SupplierId).GreaterThan(0).WithMessage(Messages.Required("nhà cung cấp"));
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new SavePurchaseOrderLineDtoValidator());

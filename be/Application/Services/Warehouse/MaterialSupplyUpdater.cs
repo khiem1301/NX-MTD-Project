@@ -26,6 +26,20 @@ public sealed class MaterialSupplyUpdater
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 
+    /// <summary>
+    /// NVL khách cấp mà Quản đốc đã chốt "không bù" (hủy giao phần thiếu): Thủ kho không lập thêm phiếu nhập cho các NVL này.
+    /// Phiếu mua từ nhà cung cấp đã chặn bằng <c>NotReplenishedQty</c> nên chỉ tính phiếu khách cấp.
+    /// </summary>
+    public async Task<HashSet<int>> ClosedWithoutReplenishAsync(IReadOnlyCollection<int> orderMaterialIds, CancellationToken ct) =>
+        (await _uow.Repository<RequestLine>().Query().AsNoTracking()
+            .Where(l => l.Request.RequestTypeCode == RequestTypes.ShortDelivery
+                        && l.Request.ShortageResolution == ShortageResolutions.NoReplenish
+                        && l.MaterialReceiptLine != null && l.MaterialReceiptLine.PurchaseOrderLineId == null
+                        && l.MaterialReceiptLine.OrderMaterialId != null
+                        && orderMaterialIds.Contains(l.MaterialReceiptLine.OrderMaterialId.Value))
+            .Select(l => l.MaterialReceiptLine!.OrderMaterialId!.Value)
+            .Distinct().ToListAsync(ct)).ToHashSet();
+
     public async Task RecalculatePurchaseOrderAsync(int purchaseOrderId, CancellationToken ct)
     {
         var po = await _uow.Repository<PurchaseOrder>().Query().Include(p => p.PurchaseOrderLines)

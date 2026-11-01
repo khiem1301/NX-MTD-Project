@@ -26,6 +26,8 @@ public sealed record StockBalanceQuery : PageQuery
 {
     public string WarehouseType { get; init; } = WarehouseTypes.Material;
     public int? OrderId { get; init; }
+    /// <summary>Chỉ kho NVL: <see cref="MaterialOrderScopes.NoOrder"/> = NVL không thuộc đơn hàng nào.</summary>
+    public string? OrderScope { get; init; }
     public string? Color { get; init; }
     public string? SizeCode { get; init; }
 }
