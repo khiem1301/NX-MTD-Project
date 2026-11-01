@@ -81,7 +81,14 @@ export function NotificationBell() {
           </List.Item>
         )}
       />
-      <Button type="link" block onClick={() => { setOpen(false); navigate(ROUTES.notifications); }}>
+      <Button
+        type="link"
+        block
+        onClick={() => {
+          setOpen(false);
+          navigate(ROUTES.notifications);
+        }}
+      >
         Xem tất cả thông báo
       </Button>
     </div>

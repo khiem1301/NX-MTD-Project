@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
@@ -5,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Orders;
+namespace NX_MTD.Application.Services;
 
 public sealed class ProductService : IProductService
 {
@@ -22,7 +23,7 @@ public sealed class ProductService : IProductService
         _products = products; _audit = audit; _uow = uow; _clock = clock; _storage = storage; _options = options.Value;
     }
 
-    private const string SampleImageFolder = "PRODUCT";
+    private const string SampleImageFolder = SampleImageKey.Folder;
 
     public async Task<Result<string>> UploadSampleImageAsync(FileUpload file, CancellationToken ct)
     {
@@ -83,11 +84,13 @@ public sealed class ProductService : IProductService
             Status = RecordStatus.Active,
             CreatedAt = _clock.Now,
         };
+        foreach (var (key, index) in (ExtraKeys(dto) ?? []).Select((k, i) => (k, i)))
+            product.ProductImages.Add(NewImage(key, index));
         return await _uow.InTransactionAsync(async () =>   // D17: log cần ProductId
         {
             await _products.AddAsync(product);
             await _uow.SaveChangesAsync();
-            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null, Snapshot(product)));
+            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null, Snapshot(product, product.ProductImages.Count)));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(product.ProductId, Messages.Saved);
         });
@@ -107,14 +110,32 @@ public sealed class ProductService : IProductService
                 return Result.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
         }
 
-        var before = Snapshot(product);
+        var images = _uow.Repository<ProductImage>();
+        var current = await images.Query().Where(i => i.ProductId == productId).OrderBy(i => i.SortOrder).ToListAsync(ct);
+        var requested = ExtraKeys(dto);
+        var replaceImages = requested is not null && !current.Select(i => i.ImageKey).SequenceEqual(requested);
+
+        var before = Snapshot(product, current.Count);
         product.ProductCode = code;
         product.ProductName = dto.ProductName.Trim();
         product.SampleImageUrl = Clean(dto.SampleImageUrl);
         product.Description = Clean(dto.Description);
-        _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, before, Snapshot(product)));
-        await _uow.SaveChangesAsync();
-        return Result.Success(Messages.Saved);
+        _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, before,
+            Snapshot(product, replaceImages ? requested!.Count : current.Count)));
+        if (!replaceImages)
+        {
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.Saved);
+        }
+        return await _uow.InTransactionAsync(async () =>
+        {
+            // UQ_ProductImage_Sort (ProductId, SortOrder): gỡ hết ảnh cũ trước rồi mới ghi danh sách mới.
+            images.RemoveRange(current);
+            await _uow.SaveChangesAsync();
+            await images.AddRangeAsync(requested!.Select((key, index) => NewImage(key, index, productId)).ToList());
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.Saved);
+        });
     }
 
     public Task<Result> DiscontinueAsync(int productId, CancellationToken ct) =>
@@ -137,5 +158,11 @@ public sealed class ProductService : IProductService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static object Snapshot(Product p) => new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status };
+    private static object Snapshot(Product p, int extraImages) =>
+        new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages };
+
+    private static List<string>? ExtraKeys(SaveProductDto dto) => dto.ExtraImages?.Select(k => k.Trim()).ToList();
+
+    private ProductImage NewImage(string key, int index, int productId = 0) =>
+        new() { ProductId = productId, ImageKey = key, SortOrder = (byte)(index + 1), CreatedAt = _clock.Now };
 }

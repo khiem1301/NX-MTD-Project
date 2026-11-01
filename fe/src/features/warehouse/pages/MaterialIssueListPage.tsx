@@ -1,5 +1,7 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -8,12 +10,14 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
 import { IssueCreateModal } from '../components/IssueCreateModal';
-import { IssueDetailDrawer } from '../components/IssueDetailDrawer';
+import { IssueDetailModal } from '../components/IssueDetailModal';
 import { ISSUE_STATUS_LABEL, LABELS, WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '../constants';
 import { useIssues } from '../hooks/useIssues';
 import type { MaterialIssueListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string; warehouseType?: string };
 
@@ -37,7 +41,6 @@ export function MaterialIssueListPage() {
     {
       title: LABELS.issueCode,
       dataIndex: 'issueCode',
-      render: (v: string, r) => <a onClick={() => setViewingId(r.materialIssueId)}>{v}</a>,
     },
     {
       title: LABELS.warehouseType,
@@ -54,6 +57,17 @@ export function MaterialIssueListPage() {
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={ISSUE_STATUS_LABEL} />,
     },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(r.materialIssueId)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -61,43 +75,48 @@ export function MaterialIssueListPage() {
       title={LABELS.issuesTitle}
       extra={
         <Can roles={[ROLES.WarehouseKeeper]}>
-          <Button type="primary" onClick={() => setCreateOpen(true)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
             {MESSAGES.common.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 260 }}
-        />
-        <FilterSelect value={table.filters.warehouseType}
-          placeholder={LABELS.warehouseType}
-          options={TYPE_OPTIONS}
-          onChange={(warehouseType?: string) => table.setFilters({ warehouseType })}
-          style={{ width: 150 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 160 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 260 }}
+            />
+            <FilterSelect
+              value={table.filters.warehouseType}
+              placeholder={LABELS.warehouseType}
+              options={TYPE_OPTIONS}
+              onChange={(warehouseType?: string) => table.setFilters({ warehouseType })}
+              style={{ width: 150 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 160 }}
+            />
+          </>
+        }
+      />
       <QueryError error={issues.error} onRetry={() => void issues.refetch()} />
-      <Table
+      <DataTable
         rowKey="materialIssueId"
         columns={columns}
         dataSource={issues.data?.items}
         loading={issues.isFetching}
         pagination={table.pagination(issues.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: true }}
       />
-      <IssueDetailDrawer issueId={viewingId} onClose={() => setViewingId(undefined)} />
+      <IssueDetailModal issueId={viewingId} onClose={() => setViewingId(undefined)} />
       <IssueCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </Card>
   );

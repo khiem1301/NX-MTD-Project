@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Card, Empty, List, Space, Spin, Typography } from 'antd';
+import { Alert, Card, Empty, List, Spin, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime, formatMonth } from '@/utils/format';
 import { PayslipItemsView } from '../components/PayslipItemsView';
 import { PAYROLL_TEXT } from '../constants';
 import { useMyPayslip, useMyPayslips } from '../hooks/usePayroll';
 import { formatCurrency } from '../utils';
+import { PageCard } from '@/components/common/PageCard';
 
 /** UC06 — mọi vai trò xem phiếu lương của chính mình, chỉ xem được các tháng Admin đã duyệt. */
 export function MyPayslipPage() {
@@ -16,14 +17,10 @@ export function MyPayslipPage() {
   const rows = summaries.data ?? [];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {PAYROLL_TEXT.myPayslipPageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{PAYROLL_TEXT.myPayslipPageSubtitle}</Typography.Text>
-      </div>
-
+    <PageCard
+      title={PAYROLL_TEXT.myPayslipPageTitle}
+      description={PAYROLL_TEXT.myPayslipPageSubtitle}
+    >
       {summaries.error ? <Alert type="error" showIcon message={summaries.error.message} /> : null}
       {summaries.isLoading ? <Spin /> : null}
 
@@ -45,7 +42,7 @@ export function MyPayslipPage() {
                 }}
               >
                 <List.Item.Meta
-                  title={`${PAYROLL_TEXT.myPayslip.periodMonth} ${item.periodMonth}`}
+                  title={`${PAYROLL_TEXT.myPayslip.periodMonth} ${formatMonth(item.periodMonth)}`}
                   description={`${PAYROLL_TEXT.myPayslip.approvedAt}: ${formatDateTime(item.approvedAt)}`}
                 />
                 <Typography.Text strong>{formatCurrency(item.netPay)}</Typography.Text>
@@ -56,7 +53,10 @@ export function MyPayslipPage() {
       ) : null}
 
       {selectedMonth ? (
-        <Card size="small" title={`${PAYROLL_TEXT.myPayslip.periodMonth} ${selectedMonth}`}>
+        <Card
+          size="small"
+          title={`${PAYROLL_TEXT.myPayslip.periodMonth} ${formatMonth(selectedMonth)}`}
+        >
           {detail.isLoading ? <Spin /> : null}
           {detail.error ? <Alert type="error" showIcon message={detail.error.message} /> : null}
           {detail.data ? (
@@ -71,6 +71,6 @@ export function MyPayslipPage() {
           ) : null}
         </Card>
       ) : null}
-    </Space>
+    </PageCard>
   );
 }

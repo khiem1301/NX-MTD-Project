@@ -24,6 +24,8 @@ public partial class Supplier
 
     public string Status { get; set; } = null!;
 
+    public string? DiscontinueReason { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public virtual ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();

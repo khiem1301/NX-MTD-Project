@@ -1,8 +1,9 @@
-import { Form, Input, InputNumber, Table, type TableColumnsType } from 'antd';
+import { Form, Input, InputNumber, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { MaterialIssueLine } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 
@@ -75,9 +76,8 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             <InputNumber />
           </Form.Item>
         ))}
-      <Table
+      <DataTable
         rowKey="materialIssueLineId"
-        size="small"
         columns={columns}
         dataSource={lines}
         pagination={false}

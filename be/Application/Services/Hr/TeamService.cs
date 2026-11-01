@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 /// <summary>UC18: quản lý tổ (Admin + Quản đốc). Chuyển tổ và bổ nhiệm tổ trưởng / tổ phó.</summary>
 public sealed class TeamService : ITeamService

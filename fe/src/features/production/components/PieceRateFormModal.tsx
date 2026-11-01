@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
-import { DatePicker, Descriptions, Form, InputNumber, Modal } from 'antd';
+import { Descriptions, Form, InputNumber, Modal } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useSavePieceRate } from '../hooks/useProduction';
 import type { Operation } from '../types';
-import { editableRate, modalWidth } from '../utils';
+import { editableRate } from '../utils';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type Props = { operation: Operation | null; onClose: () => void };
 
@@ -27,13 +29,18 @@ export function PieceRateFormModal({ operation, onClose }: Props) {
   useEffect(() => {
     if (!operation) return;
     form.resetFields();
-    if (editing) form.setFieldsValue({ rate: editing.rate, effectiveDate: dayjs(editing.effectiveDate) });
+    if (editing)
+      form.setFieldsValue({ rate: editing.rate, effectiveDate: dayjs(editing.effectiveDate) });
   }, [operation, editing, form]);
 
   const handleFinish = (values: FormValues) => {
     if (!operation) return;
     save.mutate(
-      { operationId: operation.operationId, rate: values.rate, effectiveDate: toApiDate(values.effectiveDate) },
+      {
+        operationId: operation.operationId,
+        rate: values.rate,
+        effectiveDate: toApiDate(values.effectiveDate),
+      },
       { onSuccess: onClose },
     );
   };
@@ -41,7 +48,7 @@ export function PieceRateFormModal({ operation, onClose }: Props) {
   return (
     <Modal
       open={operation !== null}
-      width={modalWidth(480)}
+      width={MODAL_WIDTH.sm}
       title={editing ? text.edit : text.add}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -52,18 +59,24 @@ export function PieceRateFormModal({ operation, onClose }: Props) {
     >
       {operation && (
         <Descriptions size="small" column={1} style={{ marginBottom: 16 }}>
-          <Descriptions.Item label={text.form.operation}>{`${operation.operationCode} - ${operation.operationName}`}</Descriptions.Item>
+          <Descriptions.Item
+            label={text.form.operation}
+          >{`${operation.operationCode} - ${operation.operationName}`}</Descriptions.Item>
           <Descriptions.Item label={text.form.currentRate}>
             {operation.currentRate === null ? '—' : formatCurrency(operation.currentRate)}
           </Descriptions.Item>
         </Descriptions>
       )}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Form.Item name="rate" label={text.form.rate} rules={[...required, { type: 'number', min: 0, message: text.form.rateMin }]}>
+        <Form.Item
+          name="rate"
+          label={text.form.rate}
+          rules={[...required, { type: 'number', min: 0, message: text.form.rateMin }]}
+        >
           <InputNumber min={0} precision={2} style={{ width: 220 }} />
         </Form.Item>
         <Form.Item name="effectiveDate" label={text.form.effectiveDate} rules={required}>
-          <DatePicker format="DD/MM/YYYY" style={{ width: 220 }} />
+          <AppDatePicker style={{ width: 220 }} />
         </Form.Item>
       </Form>
     </Modal>

@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
-import { useRolePath } from '@/hooks/useRolePath';
+import { useManagerRolePath } from '@/hooks/useRolePath';
 import { cuttingApi } from '../api/cuttingApi';
 import type {
   ConfirmHandoverPayload,
@@ -12,6 +13,8 @@ import type {
   CuttingLayQuery,
   SaveCuttingLayPayload,
   SaveWorkOrderPayload,
+  CheckWorkOrderFabricPayload,
+  WorkOrderFabricCheck,
   WorkOrderQuery,
 } from '../types';
 
@@ -20,7 +23,7 @@ export const CUTTING_KEY = ['cutting'] as const;
 const WAREHOUSE_KEY = ['warehouse'] as const;
 
 export const useWorkOrders = (query: WorkOrderQuery) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'work-orders', role, query],
     queryFn: () => cuttingApi.getWorkOrders(role, query),
@@ -29,7 +32,7 @@ export const useWorkOrders = (query: WorkOrderQuery) => {
 };
 
 export const useReplacementRequests = (enabled: boolean) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'replacement-requests', role],
     queryFn: () => cuttingApi.getReplacementRequests(role),
@@ -38,7 +41,7 @@ export const useReplacementRequests = (enabled: boolean) => {
 };
 
 export const useCreateReplacement = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     (body: CreateReplacementPayload) => cuttingApi.createReplacement(role, body),
     {
@@ -49,7 +52,7 @@ export const useCreateReplacement = () => {
 };
 
 export const useWorkOrder = (id: number | undefined) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'work-order', role, id],
     queryFn: () => cuttingApi.getWorkOrder(role, id ?? 0),
@@ -57,8 +60,46 @@ export const useWorkOrder = (id: number | undefined) => {
   });
 };
 
+const FABRIC_CHECK_DELAY_MS = 400;
+const NO_FABRIC_CHECKS: WorkOrderFabricCheck[] = [];
+
+/**
+ * Kiểm vải khi đang lập lệnh, chưa lưu: chờ người dùng dừng gõ rồi mới hỏi máy chủ. Null = chưa đủ thông tin để kiểm,
+ * khi đó trả rỗng ngay. Kết quả cũ chỉ giữ tạm khi vẫn cùng đơn và tổ cắt, để cảnh báo không nhấp nháy lúc đang gõ số.
+ */
+export const useWorkOrderFabricCheck = (body: CheckWorkOrderFabricPayload | null) => {
+  const role = useManagerRolePath();
+  const key = JSON.stringify(body);
+  const [debounced, setDebounced] = useState<CheckWorkOrderFabricPayload | null>(null);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => setDebounced(JSON.parse(key) as CheckWorkOrderFabricPayload | null),
+      FABRIC_CHECK_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [key]);
+  const checks = useQuery({
+    queryKey: [
+      ...CUTTING_KEY,
+      'fabric-check',
+      role,
+      debounced?.orderId,
+      debounced?.cuttingTeamId,
+      debounced?.lines,
+    ],
+    queryFn: () => cuttingApi.checkWorkOrderFabric(role, debounced as CheckWorkOrderFabricPayload),
+    enabled: debounced !== null,
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[3] === debounced?.orderId &&
+      previousQuery?.queryKey[4] === debounced?.cuttingTeamId
+        ? previous
+        : undefined,
+  });
+  return body === null ? NO_FABRIC_CHECKS : (checks.data ?? NO_FABRIC_CHECKS);
+};
+
 export const useSaveWorkOrder = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, body }: { id?: number; body: SaveWorkOrderPayload }) =>
       id ? cuttingApi.updateWorkOrder(role, id, body) : cuttingApi.createWorkOrder(role, body),
@@ -68,15 +109,18 @@ export const useSaveWorkOrder = () => {
 
 /** Tổ cắt báo cắt xong: lệnh chuyển Hoàn thành (cắt thiếu kế hoạch thì phải nêu lý do). */
 export const useFinishCutting = () => {
-  const role = useRolePath();
-  return useApiMutation(({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason), {
-    invalidate: [CUTTING_KEY],
-    successMessage: MESSAGES.cutting.workOrderFinished,
-  });
+  const role = useManagerRolePath();
+  return useApiMutation(
+    ({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason),
+    {
+      invalidate: [CUTTING_KEY],
+      successMessage: MESSAGES.cutting.workOrderFinished,
+    },
+  );
 };
 
 export const useCancelWorkOrder = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation((id: number) => cuttingApi.cancelWorkOrder(role, id), {
     invalidate: [CUTTING_KEY],
     successMessage: MESSAGES.cutting.workOrderCancelled,
@@ -84,7 +128,7 @@ export const useCancelWorkOrder = () => {
 };
 
 export const useLays = (query: CuttingLayQuery) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'lays', role, query],
     queryFn: () => cuttingApi.getLays(role, query),
@@ -94,7 +138,7 @@ export const useLays = (query: CuttingLayQuery) => {
 
 /** Lưu bàn cắt; BE trả message khi vượt kế hoạch (trong % dư) → hiện cảnh báo thay vì thông báo thường. */
 export const useSaveLay = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     async ({ id, body }: { id?: number; body: SaveCuttingLayPayload }) => {
       const res = id
@@ -109,7 +153,7 @@ export const useSaveLay = () => {
 };
 
 export const useHandovers = (query: CutHandoverQuery) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'handovers', role, query],
     queryFn: () => cuttingApi.getHandovers(role, query),
@@ -118,7 +162,7 @@ export const useHandovers = (query: CutHandoverQuery) => {
 };
 
 export const useHandover = (id: number | undefined) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'handover', role, id],
     queryFn: () => cuttingApi.getHandover(role, id ?? 0),
@@ -127,7 +171,7 @@ export const useHandover = (id: number | undefined) => {
 };
 
 export const useHandoverable = (workOrderId: number | undefined) => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useQuery({
     queryKey: [...CUTTING_KEY, 'handoverable', role, workOrderId],
     queryFn: () => cuttingApi.getHandoverable(role, workOrderId ?? 0),
@@ -136,7 +180,7 @@ export const useHandoverable = (workOrderId: number | undefined) => {
 };
 
 export const useCreateHandover = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation((body: CreateHandoverPayload) => cuttingApi.createHandover(role, body), {
     invalidate: [CUTTING_KEY],
     successMessage: MESSAGES.cutting.handoverCreated,
@@ -144,7 +188,7 @@ export const useCreateHandover = () => {
 };
 
 export const useConfirmHandover = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, body }: { id: number; body: ConfirmHandoverPayload }) =>
       cuttingApi.confirmHandover(role, id, body),
@@ -156,7 +200,7 @@ export const useConfirmHandover = () => {
 };
 
 export const useCancelHandover = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation((id: number) => cuttingApi.cancelHandover(role, id), {
     invalidate: [CUTTING_KEY],
     successMessage: MESSAGES.cutting.handoverCancelled,
@@ -164,7 +208,7 @@ export const useCancelHandover = () => {
 };
 
 export const useRejectHandover = () => {
-  const role = useRolePath();
+  const role = useManagerRolePath();
   return useApiMutation(
     ({ id, reason }: { id: number; reason: string }) => cuttingApi.rejectHandover(role, id, reason),
     { invalidate: [CUTTING_KEY], successMessage: MESSAGES.cutting.handoverRejected },

@@ -1,5 +1,5 @@
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Hr;
 using NX_MTD.Infrastructure.Repositories;
 using NX_MTD.Infrastructure.Security;
 

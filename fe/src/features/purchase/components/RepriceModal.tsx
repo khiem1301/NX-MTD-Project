@@ -5,6 +5,7 @@ import { formatCurrency, formatQty } from '@/utils/format';
 import { PURCHASE_TEXT } from '../constants';
 import { useRepriceOrder } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -19,14 +20,20 @@ export function RepriceModal({ open, order, onClose }: Props) {
   const reprice = useRepriceOrder(order.purchaseOrderId);
   const text = PURCHASE_TEXT.reprice;
   const lines = Form.useWatch('lines', form) ?? [];
-  const total = lines.reduce((sum, l, i) => sum + (order.lines[i]?.orderedQty ?? 0) * (l?.unitPrice ?? 0), 0);
+  const total = lines.reduce(
+    (sum, l, i) => sum + (order.lines[i]?.orderedQty ?? 0) * (l?.unitPrice ?? 0),
+    0,
+  );
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
     form.setFieldsValue({
       note: order.note,
-      lines: order.lines.map((l) => ({ purchaseOrderLineId: l.purchaseOrderLineId, unitPrice: l.unitPrice })),
+      lines: order.lines.map((l) => ({
+        purchaseOrderLineId: l.purchaseOrderLineId,
+        unitPrice: l.unitPrice,
+      })),
     });
   }, [open, order, form]);
 
@@ -34,7 +41,10 @@ export function RepriceModal({ open, order, onClose }: Props) {
     reprice.mutate(
       {
         note: values.note?.trim() || null,
-        lines: values.lines.map((l) => ({ purchaseOrderLineId: l.purchaseOrderLineId, unitPrice: l.unitPrice ?? 0 })),
+        lines: values.lines.map((l) => ({
+          purchaseOrderLineId: l.purchaseOrderLineId,
+          unitPrice: l.unitPrice ?? 0,
+        })),
         rowVer: order.rowVer,
       },
       { onSuccess: onClose },
@@ -44,7 +54,7 @@ export function RepriceModal({ open, order, onClose }: Props) {
   return (
     <Modal
       open={open}
-      width={640}
+      width={MODAL_WIDTH.sm}
       title={`${text.title} · ${order.poCode}`}
       okText={PURCHASE_TEXT.actions.reprice}
       cancelText={MESSAGES.common.cancel}
@@ -73,14 +83,23 @@ export function RepriceModal({ open, order, onClose }: Props) {
                     <InputNumber />
                   </Form.Item>
                   <Typography.Text style={{ display: 'inline-block', width: 230 }}>
-                    {line ? `${line.materialName}${line.materialColor ? ` (${line.materialColor})` : ''}` : ''}
+                    {line
+                      ? `${line.materialName}${line.materialColor ? ` (${line.materialColor})` : ''}`
+                      : ''}
                   </Typography.Text>
                   <Typography.Text type="secondary" style={{ display: 'inline-block', width: 110 }}>
                     {line ? `${formatQty(line.orderedQty)} ${line.unit}` : ''}
                   </Typography.Text>
                   <Form.Item
                     name={[field.name, 'unitPrice']}
-                    rules={[{ required: true, type: 'number', min: 0.01, message: PURCHASE_TEXT.place.priceRequired }]}
+                    rules={[
+                      {
+                        required: true,
+                        type: 'number',
+                        min: 0.01,
+                        message: PURCHASE_TEXT.place.priceRequired,
+                      },
+                    ]}
                   >
                     <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 170 }} />
                   </Form.Item>
@@ -92,7 +111,9 @@ export function RepriceModal({ open, order, onClose }: Props) {
         <Form.Item name="note" label={PURCHASE_TEXT.detail.note}>
           <Input.TextArea rows={2} maxLength={1000} showCount />
         </Form.Item>
-        <Typography.Text strong>{`${PURCHASE_TEXT.detail.total}: ${formatCurrency(total)}`}</Typography.Text>
+        <Typography.Text
+          strong
+        >{`${PURCHASE_TEXT.detail.total}: ${formatCurrency(total)}`}</Typography.Text>
       </Form>
     </Modal>
   );

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Button, Card, Checkbox, DatePicker, Flex, Input, Segmented, Space } from 'antd';
+import { Button, Card, Checkbox, Flex, Input, Segmented, Space } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ATTENDANCE_TEXT, MAX_RANGE_DAYS } from '../constants';
-import { DATE_FORMAT, type DateRange } from '../utils';
+import { type DateRange } from '../utils';
+import { AppRangePicker } from '@/components/common/DateInputs';
 
 type Preset = 'today' | 'week' | 'month';
 
@@ -66,9 +67,8 @@ export function TimesheetFilterBar({
           ]}
         />
 
-        <DatePicker.RangePicker
+        <AppRangePicker
           value={range}
-          format={DATE_FORMAT}
           allowClear={false}
           disabledDate={disabledDate}
           onCalendarChange={(value) => setPicking(value)}

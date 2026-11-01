@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Space, Table } from 'antd';
+import { Form, Input, InputNumber, Modal, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
-import { formatQty } from '@/utils/format';
+import { API_DATE, formatQty } from '@/utils/format';
 import { DISPATCH_LABELS, DISPATCH_MESSAGES } from '../constants';
 import { useCreateDispatch, useDispatchable } from '../hooks/useDispatch';
 import type { DispatchableLine } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
 
 type DispatchCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = {
@@ -15,8 +18,6 @@ type FormValues = {
   note?: string;
   qty: Record<string, number | null>;
 };
-
-const API_DATE = 'YYYY-MM-DD';
 
 /** UC45: Quản đốc lập phiếu xuất hàng kiêm lệnh giao; thành phẩm được giữ chỗ ngay khi lập. */
 export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps) {
@@ -46,7 +47,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
   return (
     <Modal
       open={open}
-      width={820}
+      width={MODAL_WIDTH.md}
       title={DISPATCH_LABELS.create}
       okText={MESSAGES.common.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -77,7 +78,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
             />
           </Form.Item>
           <Form.Item name="deliveryDate" label={DISPATCH_LABELS.deliveryDate} rules={required}>
-            <DatePicker format="DD/MM/YYYY" />
+            <AppDatePicker />
           </Form.Item>
         </Space>
         <Form.Item name="deliveryAddress" label={DISPATCH_LABELS.deliveryAddress} rules={required}>
@@ -86,7 +87,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
         <Form.Item name="note" label={DISPATCH_LABELS.note}>
           <Input.TextArea rows={2} maxLength={1000} />
         </Form.Item>
-        <Table<DispatchableLine>
+        <DataTable<DispatchableLine>
           rowKey="orderLineId"
           size="small"
           pagination={false}

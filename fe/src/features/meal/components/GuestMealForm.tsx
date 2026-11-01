@@ -18,7 +18,10 @@ export function GuestMealForm({ date, summary }: Props) {
   const locked = summary.status !== 'Open';
 
   useEffect(() => {
-    form.setFieldsValue({ guestCount: summary.guestCount, guestNote: summary.guestNote ?? undefined });
+    form.setFieldsValue({
+      guestCount: summary.guestCount,
+      guestNote: summary.guestNote ?? undefined,
+    });
   }, [form, summary.guestCount, summary.guestNote]);
 
   return (

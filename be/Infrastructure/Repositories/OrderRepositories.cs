@@ -12,17 +12,25 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
 {
     public CustomerRepository(NxMtdDbContext db) : base(db) { }
 
-    public async Task<IReadOnlyList<CustomerDto>> ListAsync(string? keyword, string? statusCode, CancellationToken ct)
+    public async Task<PagedResult<CustomerDto>> ListAsync(CustomerQuery query, string? statusCode, CancellationToken ct)
     {
         var q = _context.Customers.AsNoTracking();
         if (statusCode is not null) q = q.Where(c => c.Status == statusCode);
-        if (!string.IsNullOrWhiteSpace(keyword))
+        if (!string.IsNullOrWhiteSpace(query.Keyword))
         {
-            var k = keyword.Trim();
+            var k = query.Keyword.Trim();
             q = q.Where(c => c.CustomerName.Contains(k) || (c.Phone != null && c.Phone.Contains(k)));
         }
-        var rows = await q.OrderBy(c => c.CustomerName)
-            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status)).ToListAsync(ct);
+        var page = await q.OrderBy(c => c.CustomerName).ThenBy(c => c.CustomerId)
+            .Select(c => new CustomerDto(c.CustomerId, c.CustomerName, c.Phone, c.Email, c.DefaultAddress, c.Status, c.DiscontinueReason))
+            .ToPagedAsync(query, ct);
+        return page with { Items = page.Items.Select(c => c with { Status = CodeText.ToPascal(c.Status) }).ToList() };
+    }
+
+    public async Task<IReadOnlyList<CustomerOptionDto>> ListOptionsAsync(CancellationToken ct)
+    {
+        var rows = await _context.Customers.AsNoTracking().OrderBy(c => c.CustomerName).ThenBy(c => c.CustomerId)
+            .Select(c => new CustomerOptionDto(c.CustomerId, c.CustomerName, c.Status)).ToListAsync(ct);
         return rows.Select(c => c with { Status = CodeText.ToPascal(c.Status) }).ToList();
     }
 
@@ -44,10 +52,11 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             query = query.Where(p => p.ProductCode.Contains(k) || p.ProductName.Contains(k));
         }
         var page = await query.OrderBy(p => p.ProductCode)
-            .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt })
+            .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt,
+                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
             .ToPagedAsync(q, ct);
         var items = page.Items.Select(p => new ProductListItemDto(p.ProductId, p.ProductCode, p.ProductName,
-            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt)).ToList();
+            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages)).ToList();
         return new PagedResult<ProductListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
@@ -55,14 +64,15 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
     {
         var p = await _context.Products.AsNoTracking().Where(x => x.ProductId == productId)
             .Select(x => new { x.ProductId, x.ProductCode, x.ProductName, x.SampleImageUrl, x.Description,
-                x.Status, IsUsed = x.ProductVariants.Any(v => v.OrderLines.Any()), x.CreatedAt })
+                x.Status, IsUsed = x.ProductVariants.Any(v => v.OrderLines.Any()), x.CreatedAt,
+                ExtraImages = x.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
             .FirstOrDefaultAsync(ct);
         if (p is null) return null;
         // Tỉ lệ size của bàn cắt gần nhất không còn lưu trên Product mà đọc từ vw_ProductLastSizeRatio.
         var lastSizeRatio = await _context.VwProductLastSizeRatios.AsNoTracking()
             .Where(v => v.ProductId == productId).Select(v => v.SizeRatio).FirstOrDefaultAsync(ct);
         return new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
-            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, Array.Empty<AuditLogDto>());
+            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages, Array.Empty<AuditLogDto>());
     }
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>

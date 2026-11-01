@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, InputNumber, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -7,13 +7,24 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTeamMemberLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { toApiDate } from '@/utils/format';
-import { DEFECT_REASON_OPTIONS, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
+import {
+  DEFECT_MAX_QTY,
+  DEFECT_REASON_OPTIONS,
+  DEFECT_TEXT_MAX,
+  PRODUCTION_TEXT,
+  SHIFT_OPTIONS,
+} from '../constants';
 import { useAssignableOperations, useCreateDefect } from '../hooks/useProduction';
 import type { DefectReason, DefectType, ShiftCode } from '../types';
-import { modalWidth } from '../utils';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 /** onCreated: báo phiếu vừa ghi (id + loại) để trang mở luôn form đơn cắt bù khi là hàng hủy (Scrap). */
-type Props = { open: boolean; onClose: () => void; onCreated?: (defectId: number, defectType: DefectType) => void };
+type Props = {
+  open: boolean;
+  onClose: () => void;
+  onCreated?: (defectId: number, defectType: DefectType) => void;
+};
 
 type FormValues = {
   workDate: Dayjs;
@@ -73,7 +84,7 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
   return (
     <Modal
       open={open}
-      width={modalWidth(560)}
+      width={MODAL_WIDTH.sm}
       title={PRODUCTION_TEXT.defects.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -84,7 +95,7 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={create.isPending}>
         <Form.Item name="workDate" label={text.date} rules={required}>
-          <DatePicker format="DD/MM/YYYY" allowClear={false} />
+          <AppDatePicker allowClear={false} />
         </Form.Item>
         <Form.Item name="shiftCode" label={text.shift}>
           <Select allowClear options={SHIFT_OPTIONS} style={{ width: 160 }} />
@@ -138,8 +149,16 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
             }))}
           />
         </Form.Item>
-        <Form.Item name="quantity" label={text.qty} rules={[...required, { type: 'number', min: 1, message: text.qtyMin }]}>
-          <InputNumber min={1} precision={0} style={{ width: 160 }} />
+        <Form.Item
+          name="quantity"
+          label={text.qty}
+          rules={[
+            ...required,
+            { type: 'number', min: 1, message: text.qtyMin },
+            { type: 'number', max: DEFECT_MAX_QTY, message: text.qtyMax },
+          ]}
+        >
+          <InputNumber min={1} max={DEFECT_MAX_QTY} precision={0} style={{ width: 160 }} />
         </Form.Item>
         <Form.Item name="reasonCode" label={text.reason} rules={required}>
           <Select options={DEFECT_REASON_OPTIONS} style={{ width: 260 }} />
@@ -147,9 +166,11 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
         <Form.Item
           name="reasonNote"
           label={text.note}
-          rules={[{ required: reasonCode === 'Other', whitespace: true, message: text.noteRequired }]}
+          rules={[
+            { required: reasonCode === 'Other', whitespace: true, message: text.noteRequired },
+          ]}
         >
-          <Input.TextArea rows={2} maxLength={500} showCount />
+          <Input.TextArea rows={2} maxLength={DEFECT_TEXT_MAX} showCount />
         </Form.Item>
       </Form>
     </Modal>

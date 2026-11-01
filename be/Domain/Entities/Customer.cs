@@ -20,5 +20,7 @@ public partial class Customer
 
     public string Status { get; set; } = null!;
 
+    public string? DiscontinueReason { get; set; }
+
     public virtual ICollection<CustomerOrder> CustomerOrders { get; set; } = new List<CustomerOrder>();
 }

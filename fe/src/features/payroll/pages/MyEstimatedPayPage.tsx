@@ -1,73 +1,23 @@
+import { MESSAGES } from '@/constants/messages';
+import { IconAction } from '@/components/common/IconAction';
+import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Alert, Card, Col, DatePicker, Empty, Row, Space, Spin, Statistic, Table, Tag, Typography } from 'antd';
+import { Alert, Card, Col, Empty, Row, Space, Spin, Statistic, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
 import { formatDate, formatQty, toApiDate } from '@/utils/format';
 import { PAYROLL_TEXT } from '../constants';
-import { useMyEstimatedPay, useMyEstimatedPayDay } from '../hooks/usePayroll';
-import type { MyEstimatedPayDay, MyOutputLine, MyScrapLine } from '../types';
+import { useMyEstimatedPay } from '../hooks/usePayroll';
+import type { MyEstimatedPayDay } from '../types';
 import { formatCurrency } from '../utils';
+import { PageCard } from '@/components/common/PageCard';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
+import { AppMonthPicker } from '@/components/common/DateInputs';
+import { DayDetail } from '../components/DayDetail';
 
 const text = PAYROLL_TEXT.estimatedPay;
-const detailText = text.detail;
-
-const outputColumns: ColumnsType<MyOutputLine> = [
-  { title: detailText.operation, key: 'operation', render: (_, l) => `${l.operationCode} - ${l.operationName}` },
-  { title: detailText.shift, dataIndex: 'shiftCode' },
-  { title: detailText.order, dataIndex: 'orderCode' },
-  { title: detailText.product, dataIndex: 'productCode' },
-  { title: detailText.qty, dataIndex: 'quantity', align: 'right', render: (v: number) => formatQty(v) },
-  { title: detailText.rate, dataIndex: 'unitRate', align: 'right', render: (v: number) => formatCurrency(v) },
-  { title: detailText.amount, dataIndex: 'amount', align: 'right', render: (v: number) => formatCurrency(v) },
-];
-
-const scrapColumns: ColumnsType<MyScrapLine> = [
-  { title: detailText.operation, key: 'operation', render: (_, l) => `${l.operationCode} - ${l.operationName}` },
-  { title: detailText.order, dataIndex: 'orderCode' },
-  { title: detailText.product, dataIndex: 'productCode' },
-  { title: detailText.qty, dataIndex: 'quantity', align: 'right', render: (v: number) => formatQty(v) },
-  { title: detailText.rate, dataIndex: 'scrapUnitRate', align: 'right', render: (v: number) => formatCurrency(v) },
-  { title: detailText.amount, dataIndex: 'amount', align: 'right', render: (v: number) => formatCurrency(v) },
-];
-
-/** Dòng mở rộng của một ngày: chỉ tải khi mở (mỗi ngày một truy vấn). */
-function DayDetail({ date }: { date: string }) {
-  const detail = useMyEstimatedPayDay(date);
-  if (detail.isLoading) return <Spin />;
-  if (detail.error) return <QueryError error={detail.error} onRetry={() => void detail.refetch()} />;
-
-  const { outputs = [], scraps = [] } = detail.data ?? {};
-  return (
-    <Space direction="vertical" style={{ width: '100%' }} size={12}>
-      <div>
-        <Typography.Text strong>{detailText.outputs}</Typography.Text>
-        <Table<MyOutputLine>
-          rowKey={(l) => `${l.shiftCode}-${l.operationCode}-${l.orderCode}-${l.productCode}`}
-          size="small"
-          columns={outputColumns}
-          dataSource={outputs}
-          pagination={false}
-          locale={{ emptyText: detailText.none }}
-          scroll={{ x: 'max-content' }}
-        />
-      </div>
-      {scraps.length > 0 && (
-        <div>
-          <Typography.Text strong>{detailText.scraps}</Typography.Text>
-          <Table<MyScrapLine>
-            rowKey={(l) => `${l.operationCode}-${l.orderCode}-${l.productCode}-${l.quantity}`}
-            size="small"
-            columns={scrapColumns}
-            dataSource={scraps}
-            pagination={false}
-            scroll={{ x: 'max-content' }}
-          />
-        </div>
-      )}
-    </Space>
-  );
-}
 
 /**
  * UC59 (MI-10) — công nhân may khoán sản phẩm xem sản lượng và lương tạm tính của chính mình theo tháng.
@@ -78,6 +28,8 @@ export function MyEstimatedPayPage() {
   const from = toApiDate(month.startOf('month'));
   const to = toApiDate(month.endOf('month'));
   const pay = useMyEstimatedPay(from, to);
+
+  const [viewingDate, setViewingDate] = useState<string | null>(null);
 
   const columns: ColumnsType<MyEstimatedPayDay> = [
     {
@@ -90,41 +42,71 @@ export function MyEstimatedPayPage() {
         </Space>
       ),
     },
-    { title: text.columns.output, dataIndex: 'outputQty', align: 'right', render: (v: number) => formatQty(v) },
-    { title: text.columns.scrap, dataIndex: 'scrapQty', align: 'right', render: (v: number) => formatQty(v) },
-    { title: text.columns.outputAmount, dataIndex: 'outputAmount', align: 'right', render: (v: number) => formatCurrency(v) },
-    { title: text.columns.sundayBonus, dataIndex: 'sundayBonus', align: 'right', render: (v: number) => formatCurrency(v) },
-    { title: text.columns.scrapAmount, dataIndex: 'scrapAmount', align: 'right', render: (v: number) => formatCurrency(v) },
+    {
+      title: text.columns.output,
+      dataIndex: 'outputQty',
+      align: 'right',
+      render: (v: number) => formatQty(v),
+    },
+    {
+      title: text.columns.scrap,
+      dataIndex: 'scrapQty',
+      align: 'right',
+      render: (v: number) => formatQty(v),
+    },
+    {
+      title: text.columns.outputAmount,
+      dataIndex: 'outputAmount',
+      align: 'right',
+      render: (v: number) => formatCurrency(v),
+    },
+    {
+      title: text.columns.sundayBonus,
+      dataIndex: 'sundayBonus',
+      align: 'right',
+      render: (v: number) => formatCurrency(v),
+    },
+    {
+      title: text.columns.scrapAmount,
+      dataIndex: 'scrapAmount',
+      align: 'right',
+      render: (v: number) => formatCurrency(v),
+    },
     {
       title: text.columns.estimatedPay,
       dataIndex: 'estimatedPay',
       align: 'right',
       render: (v: number) => <Typography.Text strong>{formatCurrency(v)}</Typography.Text>,
     },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, row) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingDate(row.workDate)}
+        />
+      ),
+    },
   ];
 
   const data = pay.data;
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
+    <PageCard
+      title={
         <Space align="center">
-          <Typography.Title level={3} style={{ marginBottom: 4 }}>
-            {text.pageTitle}
-          </Typography.Title>
+          {text.pageTitle}
           <Tag color="orange">{text.estimateTag}</Tag>
         </Space>
-        <div>
-          <Typography.Text type="secondary">{text.pageSubtitle}</Typography.Text>
-        </div>
-      </div>
-
+      }
+      description={text.pageSubtitle}
+    >
       <Space>
         <Typography.Text>{text.month}</Typography.Text>
-        <DatePicker
-          picker="month"
+        <AppMonthPicker
           allowClear={false}
           value={month}
-          format="MM/YYYY"
           onChange={(value) => value && setMonth(value)}
         />
       </Space>
@@ -132,7 +114,9 @@ export function MyEstimatedPayPage() {
       <QueryError error={pay.error} onRetry={() => void pay.refetch()} />
       {pay.isLoading && <Spin />}
 
-      {data && data.days.length === 0 && <Alert type="info" showIcon message={text.notApplicable} />}
+      {data && data.days.length === 0 && (
+        <Alert type="info" showIcon message={text.notApplicable} />
+      )}
       {data && data.days.length === 0 && <Empty />}
 
       {data && data.days.length > 0 && (
@@ -145,7 +129,10 @@ export function MyEstimatedPayPage() {
             </Col>
             <Col xs={12} md={6}>
               <Card size="small">
-                <Statistic title={text.totals.outputAmount} value={formatCurrency(data.totalOutputAmount)} />
+                <Statistic
+                  title={text.totals.outputAmount}
+                  value={formatCurrency(data.totalOutputAmount)}
+                />
               </Card>
             </Col>
             <Col xs={12} md={6}>
@@ -158,22 +145,31 @@ export function MyEstimatedPayPage() {
             </Col>
             <Col xs={12} md={6}>
               <Card size="small">
-                <Statistic title={`${text.totals.estimatedPay} (${text.estimateTag})`} value={formatCurrency(data.totalEstimatedPay)} />
+                <Statistic
+                  title={`${text.totals.estimatedPay} (${text.estimateTag})`}
+                  value={formatCurrency(data.totalEstimatedPay)}
+                />
               </Card>
             </Col>
           </Row>
 
-          <Table<MyEstimatedPayDay>
+          <DataTable<MyEstimatedPayDay>
             rowKey="workDate"
-            size="middle"
+            size="small"
             columns={columns}
             dataSource={data.days}
             pagination={false}
             scroll={{ x: 'max-content' }}
-            expandable={{ expandedRowRender: (row) => <DayDetail date={row.workDate} /> }}
           />
         </>
       )}
-    </Space>
+      <DetailModal
+        open={viewingDate !== null}
+        onClose={() => setViewingDate(null)}
+        title={viewingDate ? formatDate(viewingDate) : undefined}
+      >
+        {viewingDate && <DayDetail date={viewingDate} />}
+      </DetailModal>
+    </PageCard>
   );
 }

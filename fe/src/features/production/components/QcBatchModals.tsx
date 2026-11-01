@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { DatePicker, Form, Input, InputNumber, Modal, Select, TimePicker, Typography } from 'antd';
+import { Form, InputNumber, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -7,9 +7,10 @@ import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
-import { useCreateQcBatch, useOnLineQty, useUpdateQcBatch } from '../hooks/useProduction';
-import type { QcBatch, QcRole, ShiftCode } from '../types';
-import { modalWidth } from '../utils';
+import { useCreateQcBatch, useOnLineQty } from '../hooks/useProduction';
+import type { ShiftCode } from '../types';
+import { AppDatePicker, AppTimePicker } from '@/components/common/DateInputs';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 const text = PRODUCTION_TEXT.qc;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -58,7 +59,7 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
   return (
     <Modal
       open={open}
-      width={modalWidth(560)}
+      width={MODAL_WIDTH.sm}
       title={text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
@@ -69,13 +70,13 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={create.isPending}>
         <Form.Item name="workDate" label={text.form.date} rules={required}>
-          <DatePicker format="DD/MM/YYYY" allowClear={false} />
+          <AppDatePicker allowClear={false} />
         </Form.Item>
         <Form.Item name="shiftCode" label={text.form.shift} rules={required}>
           <Select options={SHIFT_OPTIONS} style={{ width: 160 }} />
         </Form.Item>
         <Form.Item name="batchTime" label={text.form.time} rules={required}>
-          <TimePicker format="HH:mm" allowClear={false} />
+          <AppTimePicker allowClear={false} />
         </Form.Item>
         <Form.Item name="sewingTeamId" label={text.form.team} rules={required}>
           <Select
@@ -118,62 +119,6 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
         >
           <InputNumber min={1} precision={0} style={{ width: 180 }} />
         </Form.Item>
-      </Form>
-    </Modal>
-  );
-}
-
-type EditValues = { finishedQty: number; reason?: string };
-
-/** Sửa số hàng đạt của một đợt. Sau hết ca chỉ Quản đốc sửa và phải ghi lý do (BE kiểm). */
-export function QcEditModal({ role, batch, onClose }: { role: QcRole; batch: QcBatch | null; onClose: () => void }) {
-  const [form] = Form.useForm<EditValues>();
-  const update = useUpdateQcBatch(role);
-  const needReason = role === 'manager' || (batch !== null && !batch.canEdit);
-
-  useEffect(() => {
-    if (batch) form.setFieldsValue({ finishedQty: batch.finishedQty, reason: undefined });
-  }, [batch, form]);
-
-  return (
-    <Modal
-      open={batch !== null}
-      title={text.editTitle}
-      okText={MESSAGES.common.save}
-      cancelText={MESSAGES.common.cancel}
-      confirmLoading={update.isPending}
-      onOk={() => form.submit()}
-      onCancel={onClose}
-      destroyOnHidden
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        preserve={false}
-        onFinish={(values) =>
-          batch &&
-          update.mutate(
-            { id: batch.qcBatchId, body: { finishedQty: values.finishedQty, reason: values.reason?.trim() || undefined, rowVer: batch.rowVer } },
-            { onSuccess: onClose },
-          )
-        }
-      >
-        <Form.Item
-          name="finishedQty"
-          label={text.form.qty}
-          rules={[...required, { type: 'number', min: 1, message: text.form.qtyMin }]}
-        >
-          <InputNumber min={1} precision={0} style={{ width: 180 }} />
-        </Form.Item>
-        {needReason && (
-          <Form.Item
-            name="reason"
-            label={text.form.reason}
-            rules={[{ required: true, whitespace: true, message: MESSAGES.common.reasonRequired }]}
-          >
-            <Input.TextArea rows={2} maxLength={500} showCount />
-          </Form.Item>
-        )}
       </Form>
     </Modal>
   );

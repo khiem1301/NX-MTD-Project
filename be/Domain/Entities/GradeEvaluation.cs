@@ -36,7 +36,11 @@ public partial class GradeEvaluation
 
     public DateTime CreatedAt { get; set; }
 
+    public virtual GradeLevelCode? CurrentGradeCodeNavigation { get; set; }
+
     public virtual Employee ProposedByNavigation { get; set; } = null!;
+
+    public virtual GradeLevelCode ProposedGradeCodeNavigation { get; set; } = null!;
 
     public virtual Team? Team { get; set; }
 

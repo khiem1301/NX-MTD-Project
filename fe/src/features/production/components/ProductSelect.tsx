@@ -11,7 +11,14 @@ type Props = {
 };
 
 /** Chọn mã hàng đang dùng (tra cứu chung, không kèm giá). */
-export function ProductSelect({ value, onChange, placeholder, allowClear, width = 280, disabled }: Props) {
+export function ProductSelect({
+  value,
+  onChange,
+  placeholder,
+  allowClear,
+  width = 280,
+  disabled,
+}: Props) {
   const products = useProductLookup();
   return (
     <Select
@@ -24,7 +31,10 @@ export function ProductSelect({ value, onChange, placeholder, allowClear, width 
       optionFilterProp="label"
       loading={products.isLoading}
       style={{ width }}
-      options={(products.data?.items ?? []).map((p) => ({ value: p.productId, label: `${p.productCode} - ${p.productName}` }))}
+      options={(products.data?.items ?? []).map((p) => ({
+        value: p.productId,
+        label: `${p.productCode} - ${p.productName}`,
+      }))}
     />
   );
 }

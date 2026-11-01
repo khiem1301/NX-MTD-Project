@@ -19,14 +19,26 @@ export function TempPasswordModal({ value, onClose }: TempPasswordModalProps) {
       onCancel={onClose}
       destroyOnHidden
       footer={[
-        <Button key="copy" onClick={() => void copy()}>{MESSAGES.hr.copy}</Button>,
-        <Button key="close" type="primary" onClick={onClose}>{MESSAGES.common.close}</Button>,
+        <Button key="copy" onClick={() => void copy()}>
+          {MESSAGES.hr.copy}
+        </Button>,
+        <Button key="close" type="primary" onClick={onClose}>
+          {MESSAGES.common.close}
+        </Button>,
       ]}
     >
       {value && (
         <>
-          <Alert type="warning" showIcon message={MESSAGES.hr.tempPasswordWarning} style={{ marginBottom: 16 }} />
-          <div>{`${MESSAGES.hr.username}: `}<Typography.Text strong>{value.username}</Typography.Text></div>
+          <Alert
+            type="warning"
+            showIcon
+            message={MESSAGES.hr.tempPasswordWarning}
+            style={{ marginBottom: 16 }}
+          />
+          <div>
+            {`${MESSAGES.hr.username}: `}
+            <Typography.Text strong>{value.username}</Typography.Text>
+          </div>
           <Typography.Title level={2} copyable={false} style={{ letterSpacing: 6, marginTop: 8 }}>
             {value.temporaryPassword}
           </Typography.Title>

@@ -24,6 +24,11 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> Create([FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CreateAsync(dto, ct));
 
+    /// <summary>Kiểm vải theo kích thước chi tiết khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
+    [HttpPost("fabric-check")]
+    public async Task<IActionResult> CheckFabric([FromBody] CheckWorkOrderFabricDto dto, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.CheckFabricAsync(dto, ct));
+
     /// <summary>Đơn cắt bù đã duyệt, chưa có lệnh cắt bù.</summary>
     [HttpGet("replacement-requests")]
     public async Task<IActionResult> GetReplacementRequests(CancellationToken ct) =>

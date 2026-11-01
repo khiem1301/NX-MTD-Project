@@ -1,22 +1,30 @@
 import { useState } from 'react';
-import { Button, Popconfirm, Progress, Space, Table, Tag } from 'antd';
+import { Button, Progress, Space, Tag, Tooltip } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
+import { IconAction } from '@/components/common/IconAction';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import {
+  CalendarOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  EditOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate, formatQty } from '@/utils/format';
+import { fill, formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useCancelKpiTarget, useKpiTargets } from '../hooks/useKpi';
 import { FinishOrderModal } from './FinishOrderModal';
-import type { KpiRole, KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
+import { KpiCalendarModal } from './KpiCalendarModal';
+import type { KpiTarget, KpiTargetFilter, KpiTargetStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   filter: KpiTargetFilter;
   onFilterChange: (filter: KpiTargetFilter) => void;
-  /** Quản đốc lập / sửa / hủy; Admin chỉ xem. */
-  role: KpiRole;
   onAdd?: () => void;
   onEdit?: (target: KpiTarget) => void;
 };
@@ -30,21 +38,18 @@ const progressStatus = (percent: number): 'success' | 'normal' | 'exception' =>
   percent >= 100 ? 'success' : percent >= 70 ? 'normal' : 'exception';
 
 /** UC19 / UC21 — danh sách chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu, lọc theo trạng thái + từ khóa. */
-export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: Props) {
-  const targets = useKpiTargets(filter, role);
+export function KpiTargetTable({ filter, onFilterChange, onAdd, onEdit }: Props) {
+  const targets = useKpiTargets(filter);
   const cancel = useCancelKpiTarget();
-  const canManage = role === 'manager';
   const [finishing, setFinishing] = useState<KpiTarget | null>(null);
+  const [calendarOf, setCalendarOf] = useState<KpiTarget | null>(null);
 
   const columns: ColumnsType<KpiTarget> = [
-    {
-      title: KPI_TEXT.table.order,
-      dataIndex: 'orderCode',
-    },
+    { title: KPI_TEXT.table.order, dataIndex: 'orderCode' },
     {
       title: KPI_TEXT.table.product,
-      key: 'product',
-      render: (_, row) => `${row.productCode} - ${row.productName}`,
+      dataIndex: 'productCode',
+      render: (code: string, row) => <Tooltip title={row.productName}>{code}</Tooltip>,
     },
     { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamName' },
     {
@@ -53,59 +58,69 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
       render: (_, row) => `${formatDate(row.startDate)} - ${formatDate(row.endDate)}`,
     },
     {
-      title: KPI_TEXT.table.targetFinishedQty,
-      dataIndex: 'targetFinishedQty',
-      align: 'right',
-      render: (v: number) => formatQty(v),
-    },
-    {
-      title: KPI_TEXT.table.actual,
-      dataIndex: 'actualFinishedQty',
-      align: 'right',
-      render: (v: number) => formatQty(v),
-    },
-    {
-      title: KPI_TEXT.table.percent,
-      dataIndex: 'percentAchieved',
-      width: 150,
-      render: (v: number) => (
+      title: KPI_TEXT.table.progress,
+      key: 'progress',
+      width: 240,
+      render: (_, row) => (
         <Progress
-          percent={Math.min(100, Math.round(v))}
-          format={() => `${formatQty(v)}%`}
-          status={progressStatus(v)}
+          percent={Math.min(100, Math.round(row.percentAchieved))}
+          format={() =>
+            fill(
+              KPI_TEXT.table.progressValue,
+              formatQty(row.actualFinishedQty),
+              formatQty(row.targetFinishedQty),
+              formatQty(row.percentAchieved),
+            )
+          }
+          status={progressStatus(row.percentAchieved)}
           size="small"
         />
       ),
     },
     {
       title: KPI_TEXT.table.status,
-      dataIndex: 'status',
-      render: (v: KpiTargetStatus) => <Tag color={KPI_TEXT.statusLabel[v].color}>{KPI_TEXT.statusLabel[v].text}</Tag>,
-    },
-    {
-      title: KPI_TEXT.table.result,
-      dataIndex: 'result',
-      render: (v: KpiTarget['result']) =>
-        v ? <Tag color={KPI_TEXT.resultLabel[v].color}>{KPI_TEXT.resultLabel[v].text}</Tag> : '—',
+      key: 'status',
+      render: (_, row) => {
+        // Đã có kết quả thì chỉ tiêu đã đóng, chỉ cần hiện kết quả.
+        const label = row.result
+          ? KPI_TEXT.resultLabel[row.result]
+          : KPI_TEXT.statusLabel[row.status];
+        return <Tag color={label.color}>{label.text}</Tag>;
+      },
     },
     {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, row) => (
-        <Space size={0} wrap>
-          {canManage && row.status === 'Active' && (
+        <Space size={0}>
+          <IconAction
+            title={KPI_TEXT.calendar.button}
+            icon={<CalendarOutlined />}
+            onClick={() => setCalendarOf(row)}
+          />
+          {row.status === 'Active' && (
             <>
-              <Button type="link" onClick={() => setFinishing(row)}>
-                {KPI_TEXT.finish.button}
-              </Button>
-              <Button type="link" onClick={() => onEdit?.(row)}>
-                {KPI_TEXT.edit}
-              </Button>
-              <Popconfirm title={KPI_TEXT.cancelConfirm} onConfirm={() => cancel.mutate(row.kpiTargetId)}>
-                <Button type="link" danger loading={cancel.isPending && cancel.variables === row.kpiTargetId}>
-                  {KPI_TEXT.cancel}
-                </Button>
-              </Popconfirm>
+              <IconAction
+                title={KPI_TEXT.edit}
+                icon={<EditOutlined />}
+                onClick={() => onEdit?.(row)}
+              />
+              <IconAction
+                title={KPI_TEXT.finish.button}
+                icon={<CheckCircleOutlined />}
+                onClick={() => setFinishing(row)}
+              />
+              <ConfirmAction
+                title={KPI_TEXT.cancelConfirm}
+                onConfirm={() => cancel.mutate(row.kpiTargetId)}
+              >
+                <IconAction
+                  title={KPI_TEXT.cancel}
+                  icon={<CloseCircleOutlined />}
+                  danger
+                  loading={cancel.isPending && cancel.variables === row.kpiTargetId}
+                />
+              </ConfirmAction>
             </>
           )}
         </Space>
@@ -121,7 +136,9 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
           placeholder={MESSAGES.common.search}
           style={{ width: 260 }}
           defaultValue={filter.keyword}
-          onSearch={(keyword) => onFilterChange({ ...filter, page: 1, keyword: keyword || undefined })}
+          onSearch={(keyword) =>
+            onFilterChange({ ...filter, page: 1, keyword: keyword || undefined })
+          }
         />
         <FilterSelect<KpiTargetStatus>
           placeholder={KPI_TEXT.filter.statusPlaceholder}
@@ -130,7 +147,7 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
           options={STATUS_OPTIONS}
           onChange={(status) => onFilterChange({ ...filter, page: 1, status })}
         />
-        {canManage && onAdd && (
+        {onAdd && (
           <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
             {KPI_TEXT.add}
           </Button>
@@ -139,14 +156,14 @@ export function KpiTargetTable({ filter, onFilterChange, role, onAdd, onEdit }: 
 
       <QueryError error={targets.error} onRetry={() => void targets.refetch()} />
       <FinishOrderModal target={finishing} onClose={() => setFinishing(null)} />
+      <KpiCalendarModal target={calendarOf} onClose={() => setCalendarOf(null)} />
 
-      <Table<KpiTarget>
+      <DataTable<KpiTarget>
         rowKey="kpiTargetId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={targets.data?.items}
         loading={targets.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: targets.data?.page ?? filter.page,

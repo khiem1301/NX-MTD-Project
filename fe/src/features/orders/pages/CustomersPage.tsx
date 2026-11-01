@@ -1,46 +1,85 @@
 import { useState } from 'react';
-import { Button, Card, Popconfirm, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ReasonModal } from '@/components/common/ReasonModal';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
+import { useTableQuery } from '@/hooks/useTableQuery';
 import { CustomerFormModal } from '../components/CustomerFormModal';
 import { useCustomers, useToggleCustomer } from '../hooks/useOrders';
 import type { Customer, CustomerStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
+import { DataTable } from '@/components/common/DataTable';
 
 const STATUS_TAG: Record<string, StatusLabel> = {
   Active: { text: MESSAGES.orders.customerActive, color: 'green' },
   Discontinued: { text: MESSAGES.orders.customerInactive, color: 'default' },
 };
-const STATUS_OPTIONS = (Object.keys(STATUS_TAG) as CustomerStatus[]).map((v) => ({ value: v, label: (STATUS_TAG[v] as StatusLabel).text }));
+const STATUS_OPTIONS = (Object.keys(STATUS_TAG) as CustomerStatus[]).map((v) => ({
+  value: v,
+  label: (STATUS_TAG[v] as StatusLabel).text,
+}));
+
+type Filters = { keyword?: string; status?: CustomerStatus };
 
 /** Danh mục khách hàng (UC09). Không xóa, chỉ ngừng hợp tác (không tạo được đơn mới). */
 export function CustomersPage() {
-  const [keyword, setKeyword] = useState<string>();
-  const [status, setStatus] = useState<CustomerStatus>();
-  const customers = useCustomers({ keyword, status });
+  const table = useTableQuery<Filters>({});
+  const customers = useCustomers(table.params);
   const toggle = useToggleCustomer();
   const [editing, setEditing] = useState<Customer | null>(null);
   const [open, setOpen] = useState(false);
+  const [stopping, setStopping] = useState<Customer | null>(null);
 
   const columns: TableColumnsType<Customer> = [
     { title: MESSAGES.orders.customerName, dataIndex: 'customerName' },
     { title: MESSAGES.orders.phone, dataIndex: 'phone', render: (v: string | null) => v ?? '—' },
     { title: MESSAGES.orders.email, dataIndex: 'email', render: (v: string | null) => v ?? '—' },
-    { title: MESSAGES.orders.address, dataIndex: 'defaultAddress', ellipsis: true, render: (v: string | null) => v ?? '—' },
-    { title: MESSAGES.orders.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={STATUS_TAG} /> },
+    {
+      title: MESSAGES.orders.address,
+      dataIndex: 'defaultAddress',
+      ellipsis: true,
+      render: (v: string | null) => v ?? '—',
+    },
+    {
+      title: MESSAGES.orders.status,
+      dataIndex: 'status',
+      render: (v: string) => <StatusTag status={v} labels={STATUS_TAG} />,
+    },
+    {
+      title: MESSAGES.orders.customerDiscontinueReason,
+      dataIndex: 'discontinueReason',
+      ellipsis: true,
+      render: (v: string | null) => v ?? '—',
+    },
     {
       title: MESSAGES.common.actions,
       render: (_: unknown, c) => (
-        <Space>
-          <Button size="small" onClick={() => { setEditing(c); setOpen(true); }}>{MESSAGES.common.edit}</Button>
+        <Space size={0} wrap>
+          <IconAction
+            title={MESSAGES.common.edit}
+            icon={<EditOutlined />}
+            onClick={() => {
+              setEditing(c);
+              setOpen(true);
+            }}
+          />
           {c.status === 'Active' ? (
-            <Popconfirm title={MESSAGES.orders.customerDiscontinueConfirm} onConfirm={() => toggle.mutate({ id: c.customerId, discontinue: true })}>
-              <Button size="small" danger>{MESSAGES.orders.customerDiscontinue}</Button>
-            </Popconfirm>
+            <IconAction
+              title={MESSAGES.orders.customerDiscontinue}
+              icon={<StopOutlined />}
+              danger
+              onClick={() => setStopping(c)}
+            />
           ) : (
-            <Button size="small" onClick={() => toggle.mutate({ id: c.customerId, discontinue: false })}>{MESSAGES.orders.customerReactivate}</Button>
+            <IconAction
+              title={MESSAGES.orders.customerReactivate}
+              icon={<PlayCircleOutlined />}
+              onClick={() => toggle.mutate({ id: c.customerId })}
+            />
           )}
         </Space>
       ),
@@ -50,20 +89,51 @@ export function CustomersPage() {
   return (
     <Card
       title={MESSAGES.orders.customersTitle}
-      extra={<Button type="primary" onClick={() => { setEditing(null); setOpen(true); }}>{MESSAGES.orders.addCustomer}</Button>}
+      extra={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditing(null);
+            setOpen(true);
+          }}
+        >
+          {MESSAGES.orders.addCustomer}
+        </Button>
+      }
     >
       <Space style={{ marginBottom: 16 }}>
-        <DebouncedSearch allowClear placeholder={MESSAGES.common.search} onSearch={(k) => setKeyword(k.trim() || undefined)} style={{ width: 240 }} />
-        <FilterSelect value={status} placeholder={MESSAGES.orders.allStatus} style={{ width: 200 }} options={STATUS_OPTIONS} onChange={setStatus} />
+        <DebouncedSearch
+          allowClear
+          placeholder={MESSAGES.common.search}
+          onSearch={(k) => table.setFilters({ keyword: k.trim() || undefined })}
+          style={{ width: 240 }}
+        />
+        <FilterSelect
+          value={table.filters.status}
+          placeholder={MESSAGES.orders.allStatus}
+          style={{ width: 200 }}
+          options={STATUS_OPTIONS}
+          onChange={(status) => table.setFilters({ status })}
+        />
       </Space>
       <QueryError error={customers.error} onRetry={() => void customers.refetch()} />
-      <Table<Customer>
+      <DataTable<Customer>
         rowKey="customerId"
         loading={customers.isFetching}
         columns={columns}
-        dataSource={customers.data ?? []}
-        pagination={{ pageSize: 20 }}
-        locale={{ emptyText: MESSAGES.common.noData }}
+        dataSource={customers.data?.items ?? []}
+        pagination={table.pagination(customers.data?.totalItems)}
+      />
+      <ReasonModal
+        open={stopping !== null}
+        title={MESSAGES.orders.customerDiscontinueConfirm}
+        loading={toggle.isPending}
+        onCancel={() => setStopping(null)}
+        onSubmit={(reason) =>
+          stopping &&
+          toggle.mutate({ id: stopping.customerId, reason }, { onSuccess: () => setStopping(null) })
+        }
       />
       <CustomerFormModal open={open} customer={editing} onClose={() => setOpen(false)} />
     </Card>

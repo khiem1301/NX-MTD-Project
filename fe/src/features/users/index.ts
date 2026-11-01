@@ -1,3 +1,3 @@
-export { EmployeeDetailPage } from './pages/EmployeeDetailPage';
+export { EmployeeDetailRedirect } from './pages/EmployeeDetailRedirect';
 export { EmployeesPage } from './pages/EmployeesPage';
 export { userMenu } from './menu';

@@ -3,7 +3,8 @@ export type SyncStatus = 'Running' | 'Succeeded' | 'Failed';
 export type TimesheetSource = 'FINGERPRINT' | 'ADJUSTMENT';
 
 /** Mã DB như BE nhận / trả cho chấm bù (khác quy ước PascalCase của các enum khác). */
-export type AdjustmentType = 'FORGOT_PUNCH' | 'FINGERPRINT_FAIL' | 'OFFSITE_WORK' | 'APPROVED_REQUEST';
+export type AdjustmentType =
+  'FORGOT_PUNCH' | 'FINGERPRINT_FAIL' | 'OFFSITE_WORK' | 'APPROVED_REQUEST';
 
 export type AttendanceAdjustment = {
   attendanceAdjustmentId: number;
@@ -29,7 +30,13 @@ export type CreateAdjustmentPayload = {
   checkOut?: string;
 };
 
-export type AdjustmentFilter = { fromDate: string; toDate: string; keyword?: string; page: number; pageSize: number };
+export type AdjustmentFilter = {
+  fromDate: string;
+  toDate: string;
+  keyword?: string;
+  page: number;
+  pageSize: number;
+};
 
 export type SyncSession = {
   syncSessionId: number;

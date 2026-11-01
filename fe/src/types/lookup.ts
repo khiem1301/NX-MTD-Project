@@ -4,6 +4,8 @@ export type OrderOption = {
   status: string;
   materialStatus: string;
   dueDate: string;
+  /** Ngày nhận đơn = ngày bắt đầu của đơn. */
+  receivedDate: string;
 };
 
 export type OrderLineOption = {
@@ -17,7 +19,11 @@ export type OrderLineOption = {
 };
 
 /** Chi tiết cắt (PANEL) của mã hàng, để chọn khi xin cắt bù. */
-export type ComponentOption = { productComponentMaterialId: number; componentName: string; piecesPerGarment: number };
+export type ComponentOption = {
+  productComponentMaterialId: number;
+  componentName: string;
+  piecesPerGarment: number;
+};
 
 export type TeamOption = { teamId: number; teamCode: string; teamName: string; teamType: string };
 

@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Divider, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
+import {
+  deliveryCountProblem,
+  MAX_NOTE_LENGTH,
+  noteProblem,
+  qtyProblem,
+} from '../utils/orderMaterialRules';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
 
 type OrderMaterialFormModalProps = {
   open: boolean;
@@ -45,7 +52,8 @@ export function OrderMaterialFormModal({
       ...values,
       orderId,
       // Khách không cấp thì không có số lần giao (CK_OM_Delivery).
-      expectedDeliveryCount: (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
+      expectedDeliveryCount:
+        (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
     };
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
@@ -65,7 +73,7 @@ export function OrderMaterialFormModal({
   return (
     <Modal
       open={open}
-      width={760}
+      width={MODAL_WIDTH.md}
       title={
         orderMaterial
           ? `${MESSAGES.common.edit} ${orderMaterial.materialCode}`
@@ -79,60 +87,98 @@ export function OrderMaterialFormModal({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Space wrap align="start">
-          <Form.Item name="materialId" label={LABELS.material} rules={required}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              options={materialOptions}
-              loading={materials.isLoading}
-              style={{ width: 340 }}
-              dropdownRender={(menu) => (
-                <>
-                  {menu}
-                  <Divider style={{ margin: '8px 0' }} />
-                  <Button type="link" icon={<PlusOutlined />} onClick={() => setMaterialOpen(true)}>
-                    {LABELS.addMaterial}
-                  </Button>
-                </>
-              )}
-            />
-          </Form.Item>
-          <Form.Item
-            name="requiredQty"
-            label={LABELS.requiredQty}
-            dependencies={["customerQty"]}
-            rules={[
-              ...required,
-              {
-                validator: async (_rule, value?: number) => {
-                  const customer = form.getFieldValue("customerQty") as number | undefined;
-                  if ((value ?? 0) <= 0 && (customer ?? 0) <= 0) throw new Error(LABELS.qtyRequiredOrCustomer);
+        <Form.Item name="materialId" label={LABELS.material} rules={required}>
+          <Select
+            showSearch
+            optionFilterProp="label"
+            options={materialOptions}
+            loading={materials.isLoading}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <Divider style={{ margin: '8px 0' }} />
+                <Button type="link" icon={<PlusOutlined />} onClick={() => setMaterialOpen(true)}>
+                  {LABELS.addMaterial}
+                </Button>
+              </>
+            )}
+          />
+        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="requiredQty"
+              label={LABELS.requiredQty}
+              dependencies={['customerQty']}
+              rules={[
+                ...required,
+                {
+                  validator: async (_rule, value?: number) => {
+                    const problem = qtyProblem(LABELS.requiredQtyName, value);
+                    if (problem) throw new Error(problem);
+                    const customer = form.getFieldValue('customerQty') as number | undefined;
+                    if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
+                      throw new Error(LABELS.qtyRequiredOrCustomer);
+                  },
                 },
+              ]}
+              initialValue={0}
+            >
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="customerQty"
+              label={LABELS.customerQty}
+              rules={[
+                ...required,
+                {
+                  validator: async (_rule, value?: number) => {
+                    const problem = qtyProblem(LABELS.customerQtyName, value);
+                    if (problem) throw new Error(problem);
+                  },
+                },
+              ]}
+              initialValue={0}
+            >
+              <InputNumber style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="expectedDeliveryCount"
+              label={LABELS.expectedDeliveryCount}
+              rules={[
+                { required: (customerQty ?? 0) > 0, message: MESSAGES.common.required },
+                {
+                  validator: async (_rule, value?: number) => {
+                    const problem = deliveryCountProblem(value);
+                    if (problem) throw new Error(problem);
+                  },
+                },
+              ]}
+            >
+              <InputNumber disabled={(customerQty ?? 0) <= 0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Form.Item
+          name="note"
+          label={LABELS.note}
+          rules={[
+            {
+              validator: async (_rule, value?: string) => {
+                const problem = noteProblem(value);
+                if (problem) throw new Error(problem);
               },
-            ]}
-            initialValue={0}
-          >
-            <InputNumber min={0} style={{ width: 130 }} />
-          </Form.Item>
-          <Form.Item
-            name="customerQty"
-            label={LABELS.customerQty}
-            rules={required}
-            initialValue={0}
-          >
-            <InputNumber min={0} style={{ width: 130 }} />
-          </Form.Item>
-          <Form.Item
-            name="expectedDeliveryCount"
-            label={LABELS.expectedDeliveryCount}
-            rules={[{ required: (customerQty ?? 0) > 0, message: MESSAGES.common.required }]}
-          >
-            <InputNumber min={1} max={99} precision={0} disabled={(customerQty ?? 0) <= 0} style={{ width: 150 }} />
-          </Form.Item>
-        </Space>
-        <Form.Item name="note" label={LABELS.note}>
-          <Input.TextArea rows={2} maxLength={500} />
+            },
+          ]}
+        >
+          <Input.TextArea
+            rows={2}
+            showCount={{ formatter: ({ count }) => `${count}/${MAX_NOTE_LENGTH}` }}
+          />
         </Form.Item>
       </Form>
       <MaterialFormModal

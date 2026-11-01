@@ -6,13 +6,22 @@ import { revenueApi, type RevenueScope } from '../api/revenueApi';
 import type { RevenueFilter } from '../types';
 
 export const REVENUE_KEY = ['revenue'] as const;
-const listKey = (scope: RevenueScope, filter: RevenueFilter) => [...REVENUE_KEY, scope, filter] as const;
+const listKey = (scope: RevenueScope, filter: RevenueFilter) =>
+  [...REVENUE_KEY, scope, filter] as const;
 
 /** UC27 — doanh thu theo tháng/đơn/mã hàng, phân trang server-side; scope quyết định route BE gọi. */
 export const useRevenue = (scope: RevenueScope, filter: RevenueFilter) =>
   useQuery({
     queryKey: listKey(scope, filter),
     queryFn: () => revenueApi.getRevenue(scope, filter),
+  });
+
+/** Gợi ý đơn hàng / mã hàng cho bộ lọc doanh thu. */
+export const useRevenueFilterOptions = (scope: RevenueScope) =>
+  useQuery({
+    queryKey: [...REVENUE_KEY, scope, 'filter-options'],
+    queryFn: () => revenueApi.getFilterOptions(scope),
+    staleTime: 60_000,
   });
 
 export const useExportRevenue = (scope: RevenueScope) =>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, DatePicker, Space, Typography } from 'antd';
+import { Alert, Space, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
@@ -10,6 +10,8 @@ import { BREAK_EVEN_TEXT } from '../constants';
 import { useBreakEven } from '../hooks/useBreakEven';
 import type { BreakEvenFilter } from '../types';
 import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { PageCard } from '@/components/common/PageCard';
+import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC11 — Admin: chọn tháng + cách phân bổ, chạy tính hòa vốn, xem/xuất kết quả (mật, chỉ Admin — GBR-02). */
 export function BreakEvenPage() {
@@ -24,19 +26,10 @@ export function BreakEvenPage() {
   const notReady = error?.errorCode === ERROR_CODES.BreakEvenNotReady;
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {BREAK_EVEN_TEXT.pageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{BREAK_EVEN_TEXT.pageSubtitle}</Typography.Text>
-      </div>
-
+    <PageCard title={BREAK_EVEN_TEXT.pageTitle} description={BREAK_EVEN_TEXT.pageSubtitle}>
       <Space>
         <Typography.Text>{BREAK_EVEN_TEXT.periodMonth}</Typography.Text>
-        <DatePicker
-          picker="month"
-          format={PERIOD_MONTH_FORMAT}
+        <AppMonthPicker
           allowClear={false}
           value={dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT)}
           onChange={(value: Dayjs | null) => {
@@ -55,8 +48,12 @@ export function BreakEvenPage() {
       ) : null}
 
       {breakEven.data ? (
-        <BreakEvenResultTable items={breakEven.data.items} filter={filter} onFilterChange={setFilter} />
+        <BreakEvenResultTable
+          items={breakEven.data.items}
+          filter={filter}
+          onFilterChange={setFilter}
+        />
       ) : null}
-    </Space>
+    </PageCard>
   );
 }

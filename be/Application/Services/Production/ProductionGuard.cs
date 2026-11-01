@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Production;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Quy tắc dùng chung của luồng may + QC (KI-01…KI-11): tổ của người đăng nhập, hạn sửa (GBR-09), giờ hết ca,
@@ -25,7 +25,8 @@ public sealed class ProductionGuard
         _uow = uow; _user = user; _clock = clock; _settings = settings;
     }
 
-    public bool IsManager => _user.Role == Roles.Manager;
+    /// <summary>Quản đốc, hoặc Admin (có toàn bộ chức năng của Quản đốc).</summary>
+    public bool IsManager => _user.Role is Roles.Manager or Roles.Admin;
 
     /// <summary>Tổ may người đăng nhập thao tác. Quản đốc sửa hộ phải chọn tổ; tổ trưởng / tổ phó dùng tổ của mình
     /// và phải là tổ may.</summary>

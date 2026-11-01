@@ -21,7 +21,10 @@ export const breakEvenApi = {
 
   /** Tải file Excel hòa vốn về máy theo đúng bộ lọc đang xem (MSG27). */
   export: async (filter: BreakEvenFilter): Promise<void> => {
-    const res = await apiClient.get<Blob>(API.breakEven.export, { params: filter, responseType: 'blob' });
+    const res = await apiClient.get<Blob>(API.breakEven.export, {
+      params: filter,
+      responseType: 'blob',
+    });
     const url = window.URL.createObjectURL(new Blob([res.data]));
     const link = document.createElement('a');
     link.href = url;

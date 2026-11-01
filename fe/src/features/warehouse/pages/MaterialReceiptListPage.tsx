@@ -1,5 +1,7 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -7,13 +9,15 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
-import { ReceiptDetailDrawer } from '../components/ReceiptDetailDrawer';
+import { ReceiptDetailModal } from '../components/ReceiptDetailModal';
 import { ReceiptFormModal } from '../components/ReceiptFormModal';
 import { LABELS, RECEIPT_STATUS_LABEL } from '../constants';
 import { useReceipts } from '../hooks/useReceipts';
 import type { MaterialReceipt, MaterialReceiptListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -40,7 +44,6 @@ export function MaterialReceiptListPage() {
     {
       title: LABELS.receiptCode,
       dataIndex: 'receiptCode',
-      render: (v: string, r) => <a onClick={() => setViewingId(r.materialReceiptId)}>{v}</a>,
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.receiptDate, dataIndex: 'receiptDate', render: formatDate },
@@ -56,6 +59,17 @@ export function MaterialReceiptListPage() {
       dataIndex: 'confirmedByName',
       render: (v: string | null) => v ?? '—',
     },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, r) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(r.materialReceiptId)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -63,36 +77,40 @@ export function MaterialReceiptListPage() {
       title={LABELS.receiptsTitle}
       extra={
         <Can roles={[ROLES.WarehouseKeeper]}>
-          <Button type="primary" onClick={() => openForm(null)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
             {MESSAGES.common.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 180 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 180 }}
+            />
+          </>
+        }
+      />
       <QueryError error={receipts.error} onRetry={() => void receipts.refetch()} />
-      <Table
+      <DataTable
         rowKey="materialReceiptId"
         columns={columns}
         dataSource={receipts.data?.items}
         loading={receipts.isFetching}
         pagination={table.pagination(receipts.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <ReceiptDetailDrawer
+      <ReceiptDetailModal
         receiptId={viewingId}
         onClose={() => setViewingId(undefined)}
         onEdit={openForm}

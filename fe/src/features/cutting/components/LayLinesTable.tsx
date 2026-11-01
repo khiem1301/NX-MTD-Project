@@ -1,7 +1,8 @@
-import { Form, Input, InputNumber, Table } from 'antd';
+import { Form, Input, InputNumber } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, lineKey } from '../constants';
 import type { WorkOrderLine } from '../types';
+import { DataTable } from '@/components/common/DataTable';
 
 type LayLinesTableProps = { lines: WorkOrderLine[] };
 
@@ -12,7 +13,7 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
   const ratios = (Form.useWatch('ratio', form) as Record<string, number | null> | undefined) ?? {};
 
   return (
-    <Table<WorkOrderLine>
+    <DataTable<WorkOrderLine>
       rowKey={lineKey}
       size="small"
       pagination={false}
@@ -21,7 +22,8 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
         {
           title: LABELS.orderLine,
           key: 'line',
-          render: (_, l) => `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
+          render: (_, l) =>
+            `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
         },
         { title: LABELS.plannedQty, dataIndex: 'plannedQty', align: 'right' },
         { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
@@ -59,11 +61,7 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
           render: (_, l) => (
             <Form.Item
               name={['reason', lineKey(l)]}
-              dependencies={[
-                ['actual', lineKey(l)],
-                'plyCount',
-                ['ratio', lineKey(l)],
-              ]}
+              dependencies={[['actual', lineKey(l)], 'plyCount', ['ratio', lineKey(l)]]}
               style={{ marginBottom: 0 }}
               rules={[
                 {

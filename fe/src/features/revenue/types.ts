@@ -21,3 +21,9 @@ export type RevenueFilter = {
   orderId?: number;
   productId?: number;
 };
+
+/** Gợi ý cho bộ lọc: đơn hàng và mã hàng đã có doanh thu. */
+export type RevenueFilterOptions = {
+  orders: { orderId: number; orderCode: string }[];
+  products: { productId: number; productCode: string; productName: string }[];
+};

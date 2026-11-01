@@ -1,14 +1,16 @@
-import { Button, DatePicker, InputNumber, Space, Table } from 'antd';
+import { Button, Select, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { DownloadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
-import { MESSAGES } from '@/constants/messages';
 import { REVENUE_TEXT } from '../constants';
-import { useExportRevenue, useRevenue } from '../hooks/useRevenue';
+import { useExportRevenue, useRevenue, useRevenueFilterOptions } from '../hooks/useRevenue';
 import type { RevenueScope } from '../api/revenueApi';
 import type { RevenueFilter, RevenueSummary } from '../types';
 import { PERIOD_MONTH_FORMAT, formatCurrency } from '../utils';
+import { formatMonth } from '@/utils/format';
+import { DataTable } from '@/components/common/DataTable';
+import { AppMonthPicker } from '@/components/common/DateInputs';
 
 type Props = {
   scope: RevenueScope;
@@ -17,7 +19,11 @@ type Props = {
 };
 
 const columns: ColumnsType<RevenueSummary> = [
-  { title: REVENUE_TEXT.table.periodMonth, dataIndex: 'periodMonth' },
+  {
+    title: REVENUE_TEXT.table.periodMonth,
+    dataIndex: 'periodMonth',
+    render: (v: string) => formatMonth(v),
+  },
   { title: REVENUE_TEXT.table.orderCode, dataIndex: 'orderCode' },
   {
     title: REVENUE_TEXT.table.product,
@@ -41,33 +47,50 @@ const columns: ColumnsType<RevenueSummary> = [
 export function RevenueTable({ scope, filter, onFilterChange }: Props) {
   const revenue = useRevenue(scope, filter);
   const exportRevenue = useExportRevenue(scope);
+  const options = useRevenueFilterOptions(scope);
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>
       <Space wrap>
-        <DatePicker
-          picker="month"
-          format={PERIOD_MONTH_FORMAT}
+        <AppMonthPicker
           placeholder={REVENUE_TEXT.filter.periodMonth}
           allowClear
           value={filter.periodMonth ? dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT) : null}
           onChange={(value: Dayjs | null) =>
-            onFilterChange({ ...filter, page: 1, periodMonth: value ? value.format(PERIOD_MONTH_FORMAT) : undefined })
+            onFilterChange({
+              ...filter,
+              page: 1,
+              periodMonth: value ? value.format(PERIOD_MONTH_FORMAT) : undefined,
+            })
           }
         />
-        <InputNumber
+        <Select
+          showSearch
+          allowClear
+          optionFilterProp="label"
           placeholder={REVENUE_TEXT.filter.orderId}
-          min={1}
-          style={{ width: 160 }}
+          style={{ width: 200 }}
+          loading={options.isLoading}
           value={filter.orderId}
-          onChange={(value) => onFilterChange({ ...filter, page: 1, orderId: value ?? undefined })}
+          options={(options.data?.orders ?? []).map((o) => ({
+            value: o.orderId,
+            label: o.orderCode,
+          }))}
+          onChange={(value?: number) => onFilterChange({ ...filter, page: 1, orderId: value })}
         />
-        <InputNumber
+        <Select
+          showSearch
+          allowClear
+          optionFilterProp="label"
           placeholder={REVENUE_TEXT.filter.productId}
-          min={1}
-          style={{ width: 160 }}
+          style={{ width: 260 }}
+          loading={options.isLoading}
           value={filter.productId}
-          onChange={(value) => onFilterChange({ ...filter, page: 1, productId: value ?? undefined })}
+          options={(options.data?.products ?? []).map((p) => ({
+            value: p.productId,
+            label: `${p.productCode} — ${p.productName}`,
+          }))}
+          onChange={(value?: number) => onFilterChange({ ...filter, page: 1, productId: value })}
         />
         <Button
           icon={<DownloadOutlined />}
@@ -80,13 +103,12 @@ export function RevenueTable({ scope, filter, onFilterChange }: Props) {
 
       <QueryError error={revenue.error} onRetry={() => void revenue.refetch()} />
 
-      <Table<RevenueSummary>
+      <DataTable<RevenueSummary>
         rowKey={(row) => `${row.periodMonth}-${row.orderId}-${row.productId}`}
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={revenue.data?.items}
         loading={revenue.isFetching}
-        locale={{ emptyText: MESSAGES.common.empty }}
         scroll={{ x: 'max-content' }}
         pagination={{
           current: revenue.data?.page ?? filter.page,

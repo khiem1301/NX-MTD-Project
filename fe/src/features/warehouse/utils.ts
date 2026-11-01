@@ -4,5 +4,10 @@ export const pieceKey = (orderLineId: number, productComponentMaterialId: number
 
 export const parsePieceKey = (key: string) => {
   const [orderLineId, productComponentMaterialId] = key.split(':');
-  return { orderLineId: Number(orderLineId), productComponentMaterialId: productComponentMaterialId ? Number(productComponentMaterialId) : null };
+  return {
+    orderLineId: Number(orderLineId),
+    productComponentMaterialId: productComponentMaterialId
+      ? Number(productComponentMaterialId)
+      : null,
+  };
 };

@@ -10,7 +10,12 @@ type Props = { report: MealReport };
 export function MealReportPanel({ report }: Props) {
   return (
     <>
-      <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small" style={{ marginBottom: 16 }}>
+      <Descriptions
+        column={{ xs: 1, sm: 2, md: 3 }}
+        bordered
+        size="small"
+        style={{ marginBottom: 16 }}
+      >
         <Descriptions.Item label={ACCOUNTING_REPORT_TEXT.mealSummary.daysWithData}>
           {report.daysWithData}
         </Descriptions.Item>

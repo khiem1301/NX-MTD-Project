@@ -33,7 +33,15 @@ export const ATTENDANCE_TEXT = {
     period: 'Khoảng ngày',
     search: 'Tìm theo mã, tên nhân viên',
     empty: 'Chưa có lượt chấm công hộ nào trong khoảng ngày này.',
-    columns: { date: 'Ngày công', employee: 'Nhân viên', type: 'Loại', reason: 'Lý do', times: 'Giờ vào - ra', request: 'Đơn', recordedAt: 'Ghi lúc' },
+    columns: {
+      date: 'Ngày công',
+      employee: 'Nhân viên',
+      type: 'Loại',
+      reason: 'Lý do',
+      times: 'Giờ vào - ra',
+      request: 'Đơn',
+      recordedAt: 'Ghi lúc',
+    },
     types: {
       FORGOT_PUNCH: 'Quên quẹt thẻ',
       FINGERPRINT_FAIL: 'Vân tay lỗi',
@@ -43,7 +51,14 @@ export const ATTENDANCE_TEXT = {
     approvedRequests: {
       title: 'Đơn xin chấm công bù đã duyệt, chờ chấm hộ',
       empty: 'Không có đơn xin chấm công bù nào đang chờ.',
-      columns: { code: 'Mã đơn', title: 'Tiêu đề', team: 'Tổ', creator: 'Người tạo', date: 'Ngày xin bù', action: 'Chấm hộ' },
+      columns: {
+        code: 'Mã đơn',
+        title: 'Tiêu đề',
+        team: 'Tổ',
+        creator: 'Người tạo',
+        date: 'Ngày xin bù',
+        action: 'Chấm hộ',
+      },
     },
   },
 

@@ -4,7 +4,16 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { gradeApi } from '../api/gradeApi';
 import { GR_MESSAGES } from '../constants';
-import type { ApplyPayload, EvaluationQuery, ProposePayload, SaveLevelPayload, SetGradePayload } from '../types';
+import type {
+  ApplyPayload,
+  EvaluationQuery,
+  ProposePayload,
+  SaveGradeCodePayload,
+  SaveLevelPayload,
+  SetGradePayload,
+  UpdateGradeCodePayload,
+  UpdateLevelPayload,
+} from '../types';
 
 export const GRADE_KEY = ['grade'] as const;
 // Áp dụng bậc đổi CurrentGradeCode của nhân viên nên nạp lại cả danh sách nhân viên.
@@ -32,7 +41,11 @@ export const useGradeWorkers = (enabled: boolean) =>
 /** Admin / Quản đốc: danh sách mọi công nhân để chọn khi đặt bậc trực tiếp. */
 export const useAllGradeWorkers = (enabled: boolean) => {
   const base = useBase();
-  return useQuery({ queryKey: [...GRADE_KEY, 'all-workers', base], queryFn: () => gradeApi.allWorkers(base), enabled });
+  return useQuery({
+    queryKey: [...GRADE_KEY, 'all-workers', base],
+    queryFn: () => gradeApi.allWorkers(base),
+    enabled,
+  });
 };
 
 export const useSetGrade = () => {
@@ -42,6 +55,59 @@ export const useSetGrade = () => {
     successMessage: GR_MESSAGES.set,
   });
 };
+
+/** Bậc đang dùng dạng lựa chọn cho Select (đề xuất, đặt bậc). */
+export const useGradeOptions = () => {
+  const query = useQuery({
+    queryKey: [...GRADE_KEY, 'code-options'],
+    queryFn: gradeApi.codeOptions,
+  });
+  const options = (query.data ?? []).map((c) => ({
+    value: c.gradeCode,
+    label: c.gradeName || `Bậc ${c.gradeCode}`,
+  }));
+  return { ...query, options };
+};
+
+export const useGradeCodes = () =>
+  useQuery({ queryKey: [...GRADE_KEY, 'codes'], queryFn: gradeApi.codes });
+
+export const useCreateGradeCode = () =>
+  useApiMutation((body: SaveGradeCodePayload) => gradeApi.createCode(body), {
+    invalidate: [GRADE_KEY],
+    successMessage: GR_MESSAGES.codeSaved,
+  });
+
+export const useUpdateGradeCode = () =>
+  useApiMutation(
+    ({ code, body }: { code: string; body: UpdateGradeCodePayload }) =>
+      gradeApi.updateCode(code, body),
+    {
+      invalidate: [GRADE_KEY],
+      successMessage: GR_MESSAGES.codeSaved,
+    },
+  );
+
+export const useDeleteGradeCode = () =>
+  useApiMutation((code: string) => gradeApi.deleteCode(code), {
+    invalidate: [GRADE_KEY],
+    successMessage: GR_MESSAGES.codeDeleted,
+  });
+
+export const useUpdateLevel = () =>
+  useApiMutation(
+    ({ id, body }: { id: number; body: UpdateLevelPayload }) => gradeApi.updateLevel(id, body),
+    {
+      invalidate: [GRADE_KEY],
+      successMessage: GR_MESSAGES.levelSaved,
+    },
+  );
+
+export const useDeleteLevel = () =>
+  useApiMutation((id: number) => gradeApi.deleteLevel(id), {
+    invalidate: [GRADE_KEY],
+    successMessage: GR_MESSAGES.levelDeleted,
+  });
 
 export const useGradeLevels = () =>
   useQuery({ queryKey: [...GRADE_KEY, 'levels'], queryFn: gradeApi.levels });

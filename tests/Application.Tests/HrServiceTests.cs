@@ -1,10 +1,10 @@
 using System.Text.RegularExpressions;
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Hr;
 using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
@@ -73,6 +73,34 @@ public class HrServiceTests
         result.ErrorCode.Should().Be(ErrorCodes.AuthWrongCurrentPassword);
         result.Kind.Should().Be(ResultKind.Conflict);
         account.PasswordHash.Should().Be("old");
+    }
+
+    [Fact]
+    public async Task ChangePassword_TemporaryPassword_DoesNotNeedCurrentPassword()
+    {
+        var account = new Account { AccountId = 1, PasswordHash = "tam", IsTemporaryPassword = true, SecurityStamp = Guid.NewGuid() };
+        _accounts.GetByIdAsync(1).Returns(account);
+        _hasher.Verify(default!, default!).ReturnsForAnyArgs(false);
+        _auth.IssueForAccountAsync(1, default).ReturnsForAnyArgs(Result<LoginResultDto>.Success(null!));
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+
+        var result = await service.ChangePasswordAsync(new ChangePasswordDto(null, "moi", "moi"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        account.IsTemporaryPassword.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ChangePassword_NormalAccount_MissingCurrentPassword_IsRejected()
+    {
+        var account = new Account { AccountId = 1, PasswordHash = "old", IsTemporaryPassword = false, SecurityStamp = Guid.NewGuid() };
+        _accounts.GetByIdAsync(1).Returns(account);
+        _hasher.Verify(default!, default!).ReturnsForAnyArgs(false);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+
+        var result = await service.ChangePasswordAsync(new ChangePasswordDto(null, "moi", "moi"), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AuthWrongCurrentPassword);
     }
 
     [Fact]
@@ -244,8 +272,9 @@ public class HrServiceTests
 
     [Theory]
     [InlineData("Admin")]
+    [InlineData("Manager")]
     [InlineData("Accountant")]
-    public async Task ManagerUpdate_CannotAssignAdminOrAccountantRole(string role)
+    public async Task ManagerUpdate_CannotAssignAdminManagerOrAccountantRole(string role)
     {
         _user.Role.Returns(Roles.Manager);
         var person = Person(7, RoleCodes.Worker, team: 4);
@@ -257,6 +286,33 @@ public class HrServiceTests
         result.Kind.Should().Be(ResultKind.Forbidden);
         person.Role.RoleCode.Should().Be(RoleCodes.Worker);
         await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_CannotChangeTheRoleOfAnotherManager()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Manager, team: null);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", null), default);
+
+        result.Kind.Should().Be(ResultKind.Forbidden);
+        result.Message.Should().Be(Messages.ManagerCannotAssignRole);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_CanStillEditTheProfileOfAnotherManager_WhenRoleStaysTheSame()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Manager, team: null);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Manager", null), default);
+
+        result.IsSuccess.Should().BeTrue();
+        person.FullName.Should().Be("Tên mới");
     }
 
     [Fact]
@@ -356,8 +412,9 @@ public class HrServiceTests
 
     [Theory]
     [InlineData("Admin")]
+    [InlineData("Manager")]
     [InlineData("Accountant")]
-    public async Task ManagerCreate_AdminOrAccountant_IsForbidden(string role)
+    public async Task ManagerCreate_AdminManagerOrAccountant_IsForbidden(string role)
     {
         _user.Role.Returns(Roles.Manager);
 

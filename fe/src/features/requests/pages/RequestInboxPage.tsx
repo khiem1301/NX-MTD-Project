@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { RequestDetailDrawer } from '../components/RequestDetailDrawer';
+import { RequestDetailModal } from '../components/RequestDetailModal';
 import { RequestFilters, type RequestFilterValue } from '../components/RequestFilters';
 import { RequestTable } from '../components/RequestTable';
 import { useRequestInbox } from '../hooks/useRequests';
@@ -17,7 +17,11 @@ export function RequestInboxPage() {
   return (
     <Card title={MESSAGES.requests.inboxTitle}>
       <Space direction="vertical" style={{ width: '100%' }}>
-        <RequestFilters value={table.filters} onChange={table.setFilters} emptyStatusLabel={MESSAGES.requests.allOpen} />
+        <RequestFilters
+          value={table.filters}
+          onChange={table.setFilters}
+          emptyStatusLabel={MESSAGES.requests.allOpen}
+        />
         <QueryError error={requests.error} onRetry={() => void requests.refetch()} />
         <RequestTable
           data={requests.data}
@@ -27,7 +31,7 @@ export function RequestInboxPage() {
           onOpen={(id) => setSearchParams({ id: String(id) })}
         />
       </Space>
-      <RequestDetailDrawer />
+      <RequestDetailModal />
     </Card>
   );
 }

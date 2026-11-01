@@ -88,3 +88,5 @@ export type ConfirmAllocationPayload = {
   discrepancyReason?: string;
 };
 export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };
+
+export type AllocationFilters = { status?: string; movementType?: string };

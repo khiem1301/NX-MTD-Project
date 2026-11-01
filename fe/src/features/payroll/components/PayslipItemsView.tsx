@@ -1,9 +1,10 @@
-import { Descriptions, Table, Typography } from 'antd';
+import { Descriptions, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MESSAGES } from '@/constants/messages';
 import { PAYROLL_TEXT } from '../constants';
 import type { PayslipItem } from '../types';
 import { formatCurrency } from '../utils';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = {
   workDays: number | null;
@@ -85,7 +86,7 @@ export function PayslipItemsView({
         groupBySection(items).map(({ title, items: sectionItems }) => (
           <div key={title} style={{ marginBottom: 16 }}>
             <Typography.Title level={5}>{title}</Typography.Title>
-            <Table<PayslipItem>
+            <DataTable<PayslipItem>
               rowKey={(row) => `${row.sortOrder}-${row.itemName}`}
               size="small"
               columns={itemColumns}

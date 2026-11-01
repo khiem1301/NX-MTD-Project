@@ -1,20 +1,24 @@
+import { IconAction } from '@/components/common/IconAction';
 import { useState } from 'react';
-import { Button, Card, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
+import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
-import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse/constants';
+import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
-import { StocktakeDrawer } from '../components/StocktakeDrawer';
+import { StocktakeModal } from '../components/StocktakeModal';
 import { StocktakeFormModal } from '../components/StocktakeFormModal';
 import { ST_LABELS, STOCKTAKE_STATUS_LABEL } from '../constants';
 import { useStocktakes } from '../hooks/useStocktake';
 import type { Stocktake, StocktakeListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; status?: string };
 
@@ -41,7 +45,6 @@ export function StocktakePage() {
     {
       title: ST_LABELS.code,
       dataIndex: 'stocktakeCode',
-      render: (v: string, s) => <a onClick={() => setViewingId(s.stocktakeId)}>{v}</a>,
     },
     {
       title: ST_LABELS.warehouse,
@@ -58,6 +61,17 @@ export function StocktakePage() {
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={STOCKTAKE_STATUS_LABEL} />,
     },
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, s) => (
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => setViewingId(s.stocktakeId)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -65,36 +79,40 @@ export function StocktakePage() {
       title={ST_LABELS.title}
       extra={
         <Can roles={[ROLES.WarehouseKeeper]}>
-          <Button type="primary" onClick={() => openForm(null)}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
             {ST_LABELS.create}
           </Button>
         </Can>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.status}
-          placeholder={ST_LABELS.status}
-          options={STATUS_OPTIONS}
-          onChange={(status?: string) => table.setFilters({ status })}
-          style={{ width: 170 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.status}
+              placeholder={ST_LABELS.status}
+              options={STATUS_OPTIONS}
+              onChange={(status?: string) => table.setFilters({ status })}
+              style={{ width: 170 }}
+            />
+          </>
+        }
+      />
       <QueryError error={stocktakes.error} onRetry={() => void stocktakes.refetch()} />
-      <Table
+      <DataTable
         rowKey="stocktakeId"
         columns={columns}
         dataSource={stocktakes.data?.items}
         loading={stocktakes.isFetching}
         pagination={table.pagination(stocktakes.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
-      <StocktakeDrawer
+      <StocktakeModal
         stocktakeId={viewingId}
         onClose={() => setViewingId(undefined)}
         onEdit={openForm}

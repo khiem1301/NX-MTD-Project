@@ -10,6 +10,7 @@ import { AppHeader } from './AppHeader';
 import { buildNavigation, findActiveLeaf } from './menuModel';
 import { SideMenu } from './SideMenu';
 import { useMediaQuery } from './useMediaQuery';
+import { Brand } from './Brand';
 import './layout.css';
 
 const COLLAPSED_KEY = 'nxmtd.sider.collapsed';
@@ -33,26 +34,6 @@ function writeCollapsed(value: boolean) {
   }
 }
 
-function Brand({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
-  return (
-    <div
-      className={collapsed ? 'app-brand app-brand--collapsed' : 'app-brand'}
-      onClick={onClick}
-      role="link"
-      tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && onClick()}
-    >
-      <div className="app-brand__logo">NX</div>
-      {!collapsed && (
-        <div>
-          <div className="app-brand__name">NX-MTD</div>
-          <div className="app-brand__tag">Quản lý xưởng may</div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function MainLayout() {
   const { user } = useAuth();
   const location = useLocation();
@@ -66,7 +47,14 @@ export function MainLayout() {
   const teamType = user?.teamType;
   const nav = useMemo(
     () =>
-      buildNavigation(MENU_ENTRIES, MENU_GROUPS, role, SIDEBAR_HIDDEN, { key: HOME_ENTRY_KEY, icon: <HomeOutlined /> }, teamType),
+      buildNavigation(
+        MENU_ENTRIES,
+        MENU_GROUPS,
+        role,
+        SIDEBAR_HIDDEN,
+        { key: HOME_ENTRY_KEY, icon: <HomeOutlined /> },
+        teamType,
+      ),
     [role, teamType],
   );
   const active = findActiveLeaf(location.pathname, nav.leaves);
@@ -127,7 +115,10 @@ export function MainLayout() {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           closable={false}
-          styles={{ header: { display: 'none' }, body: { padding: 0, background: SIDER_BG, display: 'flex', flexDirection: 'column' } }}
+          styles={{
+            header: { display: 'none' },
+            body: { padding: 0, background: SIDER_BG, display: 'flex', flexDirection: 'column' },
+          }}
         >
           {menu(true)}
         </Drawer>

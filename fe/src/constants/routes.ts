@@ -5,7 +5,7 @@ export const ROUTES = {
   profile: '/profile',
   adminEmployees: '/admin/employees',
   managerEmployees: '/manager/employees',
-  employeeDetail: (base: string, id: number | string) => `${base}/${id}`,
+  employeeDetail: (base: string, id: number | string) => `${base}?id=${id}`,
   teams: '/teams',
   // Mã hàng, đơn hàng (Khiêm)
   products: '/admin/products',

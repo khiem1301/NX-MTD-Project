@@ -11,7 +11,10 @@ const invalidate = [TEAMS_KEY, ['employees'], ['hr-lookups']];
 
 export const useTeams = (includeDiscontinued: boolean) => {
   const role = useRolePath();
-  return useQuery({ queryKey: [...TEAMS_KEY, 'list', role, includeDiscontinued], queryFn: () => teamApi.list(role, includeDiscontinued) });
+  return useQuery({
+    queryKey: [...TEAMS_KEY, 'list', role, includeDiscontinued],
+    queryFn: () => teamApi.list(role, includeDiscontinued),
+  });
 };
 
 export const useTeam = (id: number | null) => {
@@ -35,14 +38,18 @@ export const useSaveTeam = () => {
 export const useTeamStatus = () => {
   const role = useRolePath();
   return useApiMutation(
-    ({ id, active }: { id: number; active: boolean }) => (active ? teamApi.reactivate(role, id) : teamApi.discontinue(role, id)),
+    ({ id, active }: { id: number; active: boolean }) =>
+      active ? teamApi.reactivate(role, id) : teamApi.discontinue(role, id),
     { invalidate, successMessage: MESSAGES.common.saved },
   );
 };
 
 export const useTransferIn = () => {
   const role = useRolePath();
-  return useApiMutation(({ id, body }: { id: number; body: TransferPayload }) => teamApi.transferIn(role, id, body), { invalidate });
+  return useApiMutation(
+    ({ id, body }: { id: number; body: TransferPayload }) => teamApi.transferIn(role, id, body),
+    { invalidate },
+  );
 };
 
 export const useAppoint = () => {

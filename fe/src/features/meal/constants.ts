@@ -1,13 +1,16 @@
 /** Chuỗi hiển thị của luồng suất ăn (UC30). Thông báo kết quả thao tác nằm ở constants/messages.ts. */
 export const MEAL_TEXT = {
   teamPageTitle: 'Suất ăn của tổ',
-  teamPageSubtitle: 'Số suất gợi ý theo người đã quẹt vân tay hôm nay, có thể sửa đến giờ chốt suất ăn.',
+  teamPageSubtitle:
+    'Số suất gợi ý theo người đã quẹt vân tay hôm nay, có thể sửa đến giờ chốt suất ăn.',
   settingsPageTitle: 'Giờ chốt suất ăn',
   settings: {
-    subtitle: 'Admin cấu hình giờ nhắc tổ trưởng xác nhận và giờ hệ thống tự chốt suất ăn mỗi ngày.',
+    subtitle:
+      'Admin cấu hình giờ nhắc tổ trưởng xác nhận và giờ hệ thống tự chốt suất ăn mỗi ngày.',
     hint: 'Sau giờ chốt, tổ trưởng không sửa được số suất và Kế toán không sửa được suất khách. Đổi giờ có hiệu lực ngay từ lần kiểm tra kế tiếp; ngày đã chốt rồi thì không mở lại.',
     reminder: 'Giờ nhắc xác nhận',
-    reminderHelp: 'Tổ chưa xác nhận lúc này sẽ được nhắc; hệ thống tạm lấy theo số người đã quẹt. Mặc định 08:15.',
+    reminderHelp:
+      'Tổ chưa xác nhận lúc này sẽ được nhắc; hệ thống tạm lấy theo số người đã quẹt. Mặc định 08:15.',
     cutoff: 'Giờ chốt suất ăn',
     cutoffHelp: 'Từ {from} đến {to}. Mặc định 08:30.',
     required: 'Vui lòng chọn giờ.',

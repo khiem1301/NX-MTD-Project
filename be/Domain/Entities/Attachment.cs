@@ -24,5 +24,8 @@ public partial class Attachment
 
     public bool IsCurrent { get; set; }
 
+    /// <summary>Lúc gỡ ảnh (IsCurrent = 0); job dọn tệp xóa file và dòng sau 15 ngày.</summary>
+    public DateTime? RemovedAt { get; set; }
+
     public DateTime UploadedAt { get; set; }
 }

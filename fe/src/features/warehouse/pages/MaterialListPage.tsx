@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { Button, Card, Popconfirm, Space, Table, type TableColumnsType } from 'antd';
+import { PlusOutlined, EditOutlined, StopOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -17,6 +20,8 @@ import { useChangeMaterialStatus, useMaterials } from '../hooks/useMaterials';
 import type { Material } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; materialType?: string };
 
@@ -65,18 +70,22 @@ export function MaterialListPage() {
         const active = m.status === MATERIAL_STATUS.ACTIVE;
         const next = active ? MATERIAL_STATUS.DISCONTINUED : MATERIAL_STATUS.ACTIVE;
         return (
-          <Space>
-            <Button size="small" onClick={() => openForm(m)}>
-              {MESSAGES.common.edit}
-            </Button>
-            <Popconfirm
+          <Space size={0} wrap>
+            <IconAction
+              title={MESSAGES.common.edit}
+              icon={<EditOutlined />}
+              onClick={() => openForm(m)}
+            />
+            <ConfirmAction
               title={active ? MESSAGES.warehouse.confirmDiscontinue : LABELS.reactivate}
               onConfirm={() => changeStatus.mutate({ id: m.materialId, status: next })}
             >
-              <Button size="small" danger={active}>
-                {active ? LABELS.discontinue : LABELS.reactivate}
-              </Button>
-            </Popconfirm>
+              <IconAction
+                title={active ? LABELS.discontinue : LABELS.reactivate}
+                icon={active ? <StopOutlined /> : <PlayCircleOutlined />}
+                danger={active}
+              />
+            </ConfirmAction>
           </Space>
         );
       },
@@ -87,33 +96,37 @@ export function MaterialListPage() {
     <Card
       title={LABELS.materialsTitle}
       extra={
-        <Button type="primary" onClick={() => openForm(null)}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
           {MESSAGES.common.create}
         </Button>
       }
     >
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 280 }}
-        />
-        <FilterSelect value={table.filters.materialType}
-          placeholder={LABELS.materialType}
-          options={TYPE_OPTIONS}
-          onChange={(materialType?: string) => table.setFilters({ materialType })}
-          style={{ width: 160 }}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 280 }}
+            />
+            <FilterSelect
+              value={table.filters.materialType}
+              placeholder={LABELS.materialType}
+              options={TYPE_OPTIONS}
+              onChange={(materialType?: string) => table.setFilters({ materialType })}
+              style={{ width: 160 }}
+            />
+          </>
+        }
+      />
       <QueryError error={materials.error} onRetry={() => void materials.refetch()} />
-      <Table
+      <DataTable
         rowKey="materialId"
         columns={columns}
         dataSource={materials.data?.items}
         loading={materials.isFetching}
         pagination={table.pagination(materials.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
       />
       <MaterialFormModal open={formOpen} material={editing} onClose={() => setFormOpen(false)} />
     </Card>

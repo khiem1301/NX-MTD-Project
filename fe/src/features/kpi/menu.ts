@@ -8,12 +8,6 @@ export const kpiMenu: MenuEntry[] = [
     key: 'kpi-targets',
     label: KPI_TEXT.listPageTitle,
     path: KPI_ROUTES.targets,
-    roles: [ROLES.Manager],
-  },
-  {
-    key: 'admin-kpi-targets',
-    label: KPI_TEXT.adminPageTitle,
-    path: KPI_ROUTES.adminTargets,
-    roles: [ROLES.Admin],
+    roles: [ROLES.Admin, ROLES.Manager],
   },
 ];

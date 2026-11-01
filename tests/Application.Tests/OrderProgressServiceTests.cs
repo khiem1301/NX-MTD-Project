@@ -100,8 +100,44 @@ public class OrderProgressServiceTests
         o.DelayRiskSince.Should().BeNull();
     }
 
+    [Theory]
+    [InlineData(OrderStatuses.InDelivery)]
+    [InlineData(OrderStatuses.PartiallyDelivered)]
+    public async Task Delay_check_still_flags_orders_that_started_delivering_but_are_not_finished(string status)
+    {
+        var o = Order(1, dueInDays: 2, ordered: 1000, finished: 300, finishedLast7Days: 70, status: status);
+
+        (await Service().RunDelayCheckAsync(Today, default)).Should().Be(1);
+
+        o.DelayRiskSince.Should().Be(Today);
+    }
+
     [Fact]
-    public async Task Delay_check_only_looks_at_orders_in_production()
+    public async Task Delay_check_does_not_flag_a_delivering_order_that_is_fully_finished()
+    {
+        var o = Order(1, dueInDays: -1, ordered: 100, finished: 100, finishedLast7Days: 10, status: OrderStatuses.PartiallyDelivered);
+
+        await Service().RunDelayCheckAsync(Today, default);
+
+        o.DelayRiskSince.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(OrderStatuses.Delivered)]
+    [InlineData(OrderStatuses.Stopped)]
+    public async Task Delay_check_clears_the_old_flag_of_a_closed_order_without_notifying(string status)
+    {
+        var o = Order(1, dueInDays: -5, ordered: 1000, finished: 0, finishedLast7Days: 0, status: status);
+        o.DelayRiskSince = Today.AddDays(-3);
+
+        (await Service().RunDelayCheckAsync(Today, default)).Should().Be(0);
+
+        o.DelayRiskSince.Should().BeNull();
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Delay_check_ignores_new_orders()
     {
         var waiting = Order(1, dueInDays: -5, ordered: 1000, finished: 0, finishedLast7Days: 0, status: OrderStatuses.New);
         var running = Order(2, dueInDays: -5, ordered: 1000, finished: 0, finishedLast7Days: 0);

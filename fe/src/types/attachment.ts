@@ -32,10 +32,12 @@ export type Attachment = {
 /** Một dòng lịch sử thay đổi (AuditLogDto ở BE). oldValues / newValues là chuỗi JSON. */
 export type AuditEntry = {
   auditLogId: number;
-  action: 'INSERT' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'CONFIRM' | 'LOCK' | 'UNLOCK' | 'LOGIN';
+  action:
+    'INSERT' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT' | 'CONFIRM' | 'LOCK' | 'UNLOCK' | 'LOGIN';
   oldValues: string | null;
   newValues: string | null;
   reason: string | null;
+  summary?: string | null;
   changedBy: number | null;
   changedByName: string | null;
   changedAt: string;

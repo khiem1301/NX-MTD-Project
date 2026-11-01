@@ -24,10 +24,14 @@ export function MealPriceForm({ date, summary }: Props) {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%', maxWidth: 480 }}>
-      {!closed ? <Alert type="warning" showIcon message={MEAL_TEXT.priceForm.disabledHint} /> : null}
+      {!closed ? (
+        <Alert type="warning" showIcon message={MEAL_TEXT.priceForm.disabledHint} />
+      ) : null}
 
       <Descriptions column={1} bordered size="small">
-        <Descriptions.Item label={MEAL_TEXT.priceForm.totalMeals}>{summary.totalMeals}</Descriptions.Item>
+        <Descriptions.Item label={MEAL_TEXT.priceForm.totalMeals}>
+          {summary.totalMeals}
+        </Descriptions.Item>
         <Descriptions.Item label={MEAL_TEXT.priceForm.totalAmount}>
           {formatCurrency(summary.totalAmount)}
         </Descriptions.Item>
@@ -49,7 +53,12 @@ export function MealPriceForm({ date, summary }: Props) {
           <InputNumber min={0} style={{ width: '100%' }} disabled={!closed} />
         </Form.Item>
 
-        <Button type="primary" htmlType="submit" loading={setMealPrice.isPending} disabled={!closed}>
+        <Button
+          type="primary"
+          htmlType="submit"
+          loading={setMealPrice.isPending}
+          disabled={!closed}
+        >
           {MEAL_TEXT.priceForm.save}
         </Button>
       </Form>

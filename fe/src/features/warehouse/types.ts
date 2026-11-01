@@ -11,8 +11,7 @@ export type Material = {
   unit: string;
   /** Màu NVL (26/10); '' = không phân màu. Cùng loại vải khác màu là hai NVL. */
   color: string;
-  /** Chiều dài cuộn / tấm và chiều rộng (khổ vải), cm; dùng ước tính vải cắt bù. */
-  lengthCm?: number | null;
+  /** Khổ vải, cm (chỉ vải); dùng ước tính vải cắt bù. */
   widthCm?: number | null;
   status: string;
   createdAt: string;
@@ -27,7 +26,6 @@ export type SaveMaterialPayload = {
   category: string;
   unit: string;
   color?: string;
-  lengthCm?: number | null;
   widthCm?: number | null;
 };
 
@@ -49,6 +47,8 @@ export type OrderMaterial = {
   source: string | null;
   note: string | null;
   receivedQty: number;
+  /** Khổ vải, cm (chỉ vải). */
+  materialWidthCm?: number | null;
 };
 
 /** NVL đã gồm màu (26/10) nên không nhập màu riêng. */
@@ -146,6 +146,7 @@ export type PurchaseOrderQuery = PageParams & {
 /** orderId để trống = đơn mua dự trữ, không cần Admin tạo mã đơn hàng. */
 export type CreatePurchaseOrderPayload = {
   orderId?: number;
+  supplierId: number;
   note?: string;
   lines: {
     /** Chọn NVL có sẵn (đã gồm màu); hoặc nhập NVL mới bằng newMaterialName + newMaterialUnit + newMaterialColor. */
@@ -285,7 +286,12 @@ export type CreateIssuePayload = {
   receivingTeamId?: number;
   requestId?: number;
   issueDate: string;
-  lines: { materialId?: number; orderLineId?: number; productComponentMaterialId?: number | null; issuedQty: number }[];
+  lines: {
+    materialId?: number;
+    orderLineId?: number;
+    productComponentMaterialId?: number | null;
+    issuedQty: number;
+  }[];
 };
 
 export type ConfirmIssuePayload = {
@@ -315,9 +321,13 @@ export type StockBalance = {
   availableQty: number;
 };
 
+export type MaterialOrderScope = 'NO_ORDER';
+
 export type StockBalanceQuery = PageParams & {
   warehouseType: string;
   orderId?: number;
+  /** Chỉ kho NVL: NVL không thuộc đơn hàng nào (mua dự trữ dùng chung). */
+  orderScope?: MaterialOrderScope;
   color?: string;
   sizeCode?: string;
 };
@@ -368,6 +378,39 @@ export type PendingMaterialOrder = {
   toBuyQty: number;
 };
 
+export const ORDER_MATERIAL_SUPPLY = { Customer: 'Customer', Purchase: 'Purchase' } as const;
+export type OrderMaterialSupply =
+  (typeof ORDER_MATERIAL_SUPPLY)[keyof typeof ORDER_MATERIAL_SUPPLY];
+
+export const ORDER_MATERIAL_RECEIPT_STATE = { Pending: 'Pending', Done: 'Done' } as const;
+export type OrderMaterialReceiptState =
+  (typeof ORDER_MATERIAL_RECEIPT_STATE)[keyof typeof ORDER_MATERIAL_RECEIPT_STATE];
+
+export type OrderMaterialPageQuery = {
+  orderId: number;
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  supply?: OrderMaterialSupply;
+  receiptState?: OrderMaterialReceiptState;
+};
+
+export const PENDING_MATERIAL_STATE = {
+  NotDeclared: 'NotDeclared',
+  Awaiting: 'Awaiting',
+  Partial: 'Partial',
+  Complete: 'Complete',
+} as const;
+export type PendingMaterialState =
+  (typeof PENDING_MATERIAL_STATE)[keyof typeof PENDING_MATERIAL_STATE];
+
+export type PendingMaterialOrderQuery = {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  materialState?: PendingMaterialState;
+};
+
 /** NVL khách sẽ cấp mà kho chưa nhận đủ. */
 export type IncomingCustomerMaterial = {
   orderMaterialId: number;
@@ -402,9 +445,31 @@ export type IncomingSupplierMaterial = {
   orderedQty: number;
   receivedQty: number;
   outstandingQty: number;
+  goodsStatus: string;
 };
 
-export type IncomingMaterials = { customer: IncomingCustomerMaterial[]; supplier: IncomingSupplierMaterial[] };
+/** Dòng đơn mua đã đóng vì giao thiếu: phần thiếu đã chốt không bù, không nhận tiếp được. */
+export type ClosedShortPurchase = {
+  purchaseOrderId: number;
+  poCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  supplierName: string | null;
+  purchaseOrderLineId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  orderedQty: number;
+  receivedQty: number;
+  notReplenishedQty: number;
+};
+
+export type IncomingMaterials = {
+  customer: IncomingCustomerMaterial[];
+  supplier: IncomingSupplierMaterial[];
+  closedShort: ClosedShortPurchase[];
+};
 
 /** Điền sẵn phiếu nhập từ màn "NVL chờ nhận": nguồn, đơn / đơn mua và dòng cần nhận với số còn phải nhận. */
 export type ReceiptPreset = {
@@ -414,4 +479,6 @@ export type ReceiptPreset = {
   orderMaterialId?: number;
   purchaseOrderLineId?: number;
   acceptedQty: number;
+  /** Nhận cả đơn mua: mỗi dòng NVL còn phải nhận một dòng phiếu (thay cho purchaseOrderLineId / acceptedQty). */
+  purchaseLines?: { purchaseOrderLineId: number; acceptedQty: number }[];
 };

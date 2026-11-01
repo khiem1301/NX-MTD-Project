@@ -1,5 +1,11 @@
-import { Badge, Space, Tabs, Typography } from 'antd';
-import { EditOutlined, FileExcelOutlined, HistoryOutlined, LinkOutlined, TableOutlined } from '@ant-design/icons';
+import { Badge, Tabs } from 'antd';
+import {
+  EditOutlined,
+  FileExcelOutlined,
+  HistoryOutlined,
+  LinkOutlined,
+  TableOutlined,
+} from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useSyncHealth } from '../hooks/useAttendance';
 import { AdjustmentPanel } from '../components/AdjustmentPanel';
@@ -8,20 +14,14 @@ import { SyncHealthBanner } from '../components/SyncHealthBanner';
 import { SyncSessionTable } from '../components/SyncSessionTable';
 import { TimesheetView } from '../components/TimesheetView';
 import { UnmappedCodePanel } from '../components/UnmappedCodePanel';
+import { PageCard } from '@/components/common/PageCard';
 
 /** UC28 — màn chấm công của Kế toán: bảng công toàn xưởng, gán mã, lịch sử đồng bộ. */
 export function AttendancePage() {
   const { data: health } = useSyncHealth();
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {ATTENDANCE_TEXT.pageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{ATTENDANCE_TEXT.pageSubtitle}</Typography.Text>
-      </div>
-
+    <PageCard title={ATTENDANCE_TEXT.pageTitle} description={ATTENDANCE_TEXT.pageSubtitle}>
       <SyncHealthBanner health={health} />
 
       <Tabs
@@ -76,6 +76,6 @@ export function AttendancePage() {
           },
         ]}
       />
-    </Space>
+    </PageCard>
   );
 }

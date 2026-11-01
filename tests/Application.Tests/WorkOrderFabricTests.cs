@@ -46,7 +46,8 @@ public class WorkOrderFabricTests : ProductionTestBase
     private WorkOrderService Sut()
     {
         var codes = Substitute.For<IDocumentCodeGenerator>();
-        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance);
+        return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance, Clock,
+            new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow)));
     }
 
     /// <summary>Chi tiết cần cắt bù: dài 70 cm, rộng 50 cm → khổ 150 cm xếp được 3 miếng một hàng.</summary>
@@ -73,7 +74,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     [InlineData(4, 100, 40, 150, 2.0)]   // 3 miếng / hàng → 2 hàng × 100 cm = 2 m
     public void Estimator_countsRowsAcrossTheFabricWidth(int pieces, double length, double width, double fabric, double expected)
     {
-        var meters = RecutFabricEstimator.NeedMeters(pieces, (decimal)length, (decimal)width, (decimal)fabric);
+        var meters = PieceFabricEstimator.NeedMeters(pieces, (decimal)length, (decimal)width, (decimal)fabric);
 
         meters.Should().Be((decimal)expected);
     }
@@ -85,7 +86,18 @@ public class WorkOrderFabricTests : ProductionTestBase
     [InlineData(70.0, 160.0, 150.0)]   // chi tiết rộng hơn khổ vải
     public void Estimator_returnsNullWhenASizeIsMissingOrThePieceDoesNotFit(double? length, double? width, double? fabric)
     {
-        RecutFabricEstimator.NeedMeters(5, (decimal?)length, (decimal?)width, (decimal?)fabric).Should().BeNull();
+        PieceFabricEstimator.NeedMeters(5, (decimal?)length, (decimal?)width, (decimal?)fabric).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Recut_DueDateInThePast_IsRejected()
+    {
+        RecutRequest(7);
+
+        var result = await Sut().CreateReplacementAsync(Dto() with { DueDate = Today.AddDays(-1) }, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(NX_MTD.Application.Common.WarehouseMessages.WorkOrderDueInPast);
     }
 
     [Fact]

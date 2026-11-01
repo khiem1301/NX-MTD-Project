@@ -8,8 +8,8 @@ using NX_MTD.Domain.Constants;
 namespace Application.Tests;
 
 /// <summary>
-/// KH-24: phân quyền phía máy chủ. Mỗi controller phải nằm đúng thư mục vai trò và chỉ vai trò đó gọi được;
-/// không có endpoint nào quên [Authorize]. Chạy bằng reflection nên chặn được controller mới thêm sai quyền.
+/// KH-24: phân quyền phía máy chủ. Mỗi controller phải nằm đúng thư mục vai trò và chỉ vai trò đó gọi được
+/// (thư mục Manager thêm Admin vì Admin có toàn bộ chức năng của Quản đốc); không có endpoint nào quên [Authorize]. Chạy bằng reflection nên chặn được controller mới thêm sai quyền.
 /// </summary>
 public class RbacControllerTests
 {
@@ -18,7 +18,7 @@ public class RbacControllerTests
     private static readonly Dictionary<string, string> RolesByFolder = new()
     {
         ["Admin"] = Roles.Admin,
-        ["Manager"] = Roles.Manager,
+        ["Manager"] = Roles.AdminOrManager,
         ["Accountant"] = Roles.Accountant,
         ["WarehouseKeeper"] = Roles.WarehouseKeeper,
         ["TeamLeader"] = Roles.TeamLeaderOrDeputy,

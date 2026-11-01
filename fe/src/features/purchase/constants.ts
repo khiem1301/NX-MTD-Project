@@ -4,18 +4,20 @@ import type { PaymentMethod, PoGoodsStatus, PoPaymentStatus, SupplierStatus } fr
 /** Chuỗi hiển thị của luồng nhà cung cấp, đơn mua, thanh toán (MI-07). Lỗi nghiệp vụ lấy message từ BE. */
 export const PURCHASE_TEXT = {
   suppliersTitle: 'Nhà cung cấp',
-  suppliersSubtitle: 'Danh sách nhà cung cấp NVL. Quản đốc chỉ chọn được nhà cung cấp đang hợp tác khi đặt hàng.',
+  suppliersSubtitle:
+    'Danh sách nhà cung cấp NVL. Quản đốc chỉ chọn được nhà cung cấp đang hợp tác khi đặt hàng.',
   ordersTitle: 'Đơn mua NVL',
   createOrder: 'Tạo đơn mua',
   ordersSubtitle: 'Theo dõi đơn mua: chọn nhà cung cấp và đặt hàng, hoặc hủy đơn chưa đặt.',
   paymentsTitle: 'Thanh toán đơn mua',
-  paymentsSubtitle: 'Đơn mua đã đặt hàng: xác nhận thanh toán (có thể kèm ảnh chứng từ) hoặc trả lại Quản đốc.',
+  paymentsSubtitle:
+    'Đơn mua đã đặt hàng: xác nhận thanh toán (có thể kèm ảnh chứng từ) hoặc trả lại Quản đốc.',
 
   add: 'Thêm nhà cung cấp',
   editSupplier: 'Sửa nhà cung cấp',
   discontinue: 'Ngừng hợp tác',
   reactivate: 'Hợp tác lại',
-  discontinueConfirm: 'Ngừng hợp tác với nhà cung cấp này? Đơn mua cũ vẫn giữ nguyên.',
+  discontinueTitle: 'Ngừng hợp tác (đơn mua cũ vẫn giữ nguyên) — nhập lý do',
   searchSupplier: 'Tìm theo tên, số điện thoại',
   searchOrder: 'Tìm theo mã đơn mua, mã đơn hàng, nhà cung cấp',
   allStatus: 'Tất cả trạng thái',
@@ -26,13 +28,13 @@ export const PURCHASE_TEXT = {
     name: 'Tên nhà cung cấp',
     nameRequired: 'Vui lòng nhập tên nhà cung cấp.',
     phone: 'Số điện thoại',
-    phoneInvalid: 'Chỉ gồm chữ số và dấu +.',
     email: 'Email',
     emailInvalid: 'Email không hợp lệ.',
     address: 'Địa chỉ',
     materialTypes: 'Loại NVL cung cấp',
     note: 'Ghi chú',
     status: 'Trạng thái',
+    discontinueReason: 'Lý do ngừng hợp tác',
     orderCount: 'Số đơn mua',
   },
 

@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Hr;
+namespace NX_MTD.Application.Services;
 
 public sealed class EmployeeService : IEmployeeService
 {
@@ -51,8 +51,8 @@ public sealed class EmployeeService : IEmployeeService
         if (await _employees.CodeExistsAsync(code, ct))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeCodeDuplicate, Messages.EmployeeCodeDuplicate);
         var roleCode = Roles.ToRoleCode(dto.Role);
-        // Quản đốc không tạo được nhân viên vai trò Admin / Kế toán (GBR-01).
-        if (!_scope.CanSee(roleCode))
+        // Quản đốc không tạo được nhân viên vai trò Admin / Quản đốc / Kế toán (GBR-01).
+        if (!_scope.CanAssign(roleCode))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, dto.AttendanceCode, null, ct);
         if (!check.IsSuccess) return Fail.As<CreatedEmployeeDto>(check);
@@ -115,7 +115,9 @@ public sealed class EmployeeService : IEmployeeService
 
         // GBR-01: Quản đốc không được gán vai trò Admin / Quản đốc / Kế toán (cũng là những vai trò anh ta không nhìn thấy).
         var roleCode = Roles.ToRoleCode(dto.Role);
-        if (!_scope.CanSee(roleCode)) return Result.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
+        var roleChanged = roleCode != employee.Role.RoleCode;
+        if (roleChanged && !(_scope.CanAssign(roleCode) && _scope.CanAssign(employee.Role.RoleCode)))
+            return Result.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
 
         var attChanged = dto.AttendanceCode != employee.AttendanceCode;
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, attChanged ? dto.AttendanceCode : null, employeeId, ct);

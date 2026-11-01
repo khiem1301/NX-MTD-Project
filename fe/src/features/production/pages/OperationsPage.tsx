@@ -1,29 +1,25 @@
 import { useState } from 'react';
-import { Alert, Button, Checkbox, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
+import { Alert, Button, Checkbox, Input, Space } from 'antd';
 import { PlusOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import { QueryError } from '@/components/common/QueryError';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useProductLookup } from '@/hooks/useOrderLookups';
-import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { normalizeText } from '@/utils/text';
 import { OperationFormModal } from '../components/OperationFormModal';
 import { OperationImportModal } from '../components/OperationImportModal';
 import { PieceRateFormModal } from '../components/PieceRateFormModal';
+import { operationColumns } from '../components/operationColumns';
 import { PieceRateHistory } from '../components/PieceRateHistory';
 import { ProductSelect } from '../components/ProductSelect';
 import { PRODUCTION_TEXT } from '../constants';
 import { useOperations, useSubmitPieceRate, useToggleOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
-import { editableRate } from '../utils';
+import { PageCard } from '@/components/common/PageCard';
+import { DetailModal } from '@/components/common/DetailModal';
+import { DataTable } from '@/components/common/DataTable';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 const text = PRODUCTION_TEXT.operations;
-const rateText = PRODUCTION_TEXT.pieceRates;
-
-/** Đặt / sửa đơn giá được khi công đoạn còn dùng và chưa có bản nào đang chờ Admin duyệt. */
-const canSetRate = (operation: Operation) =>
-  operation.status === 'Active' && operation.nextRate?.status !== 'PendingApproval';
 
 /**
  * UC25 / UC26 (KI-01) — Kế toán nhập công đoạn của mã hàng từ file Excel quy trình công nghệ rồi đặt đơn giá ngay trên
@@ -46,111 +42,74 @@ export function OperationsPage() {
   const submit = useSubmitPieceRate();
 
   const ratingTarget =
-    rating ?? (pendingRateId === null ? null : (operations.data?.find((o) => o.operationId === pendingRateId) ?? null));
+    rating ??
+    (pendingRateId === null
+      ? null
+      : (operations.data?.find((o) => o.operationId === pendingRateId) ?? null));
   const product = products.data?.items.find((p) => p.productId === productId);
   const productLabel = product ? `${product.productCode} - ${product.productName}` : '';
-  const hasActiveFinal = (operations.data ?? []).some((o) => o.isFinalStep && o.status === 'Active');
-  const showNoFinalHint = productId !== null && operations.data !== undefined && operations.data.length > 0 && !hasActiveFinal;
+  const hasActiveFinal = (operations.data ?? []).some(
+    (o) => o.isFinalStep && o.status === 'Active',
+  );
+  const showNoFinalHint =
+    productId !== null &&
+    operations.data !== undefined &&
+    operations.data.length > 0 &&
+    !hasActiveFinal;
 
-  const groups = [...new Set((operations.data ?? []).map((o) => o.groupName).filter((g): g is string => g !== null))].sort();
+  const groups = [
+    ...new Set(
+      (operations.data ?? []).map((o) => o.groupName).filter((g): g is string => g !== null),
+    ),
+  ].sort();
   const needle = normalizeText(keyword.trim());
   const visible = (operations.data ?? []).filter(
     (o) =>
       (groupFilter === undefined || o.groupName === groupFilter) &&
-      (needle === '' || normalizeText(`${o.operationCode} ${o.operationName} ${o.groupName ?? ''}`).includes(needle)),
+      (needle === '' ||
+        normalizeText(`${o.operationCode} ${o.operationName} ${o.groupName ?? ''}`).includes(
+          needle,
+        )),
   );
 
-  const columns: ColumnsType<Operation> = [
-    { title: text.columns.sequence, dataIndex: 'stationSequence', width: 80 },
-    { title: text.columns.code, dataIndex: 'operationCode' },
-    { title: text.columns.name, dataIndex: 'operationName' },
-    { title: text.columns.group, dataIndex: 'groupName', render: (v: string | null) => (v ? <Tag color="geekblue">{v}</Tag> : '—') },
-    {
-      title: text.columns.usesPieces,
-      dataIndex: 'usesSemiFinished',
-      render: (v: boolean) => (v ? <Tag color="blue">{text.withPieces}</Tag> : <Tag>{text.withoutPieces}</Tag>),
-    },
-    { title: text.columns.skill, dataIndex: 'skillLevel', render: (v: number | null) => v ?? '—' },
-    {
-      title: text.columns.standardTime,
-      dataIndex: 'standardTimeSec',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-    },
-    { title: text.columns.isFinal, dataIndex: 'isFinalStep', render: (v: boolean) => (v ? <Tag color="blue">Cuối</Tag> : '—') },
-    {
-      title: text.columns.rate,
-      dataIndex: 'currentRate',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
-    },
-    {
-      title: text.columns.nextRate,
-      key: 'nextRate',
-      render: (_, row) =>
-        row.nextRate ? (
-          <Space direction="vertical" size={0}>
-            <span>
-              {formatCurrency(row.nextRate.rate)} · từ {formatDate(row.nextRate.effectiveDate)}
-            </span>
-            <StatusTag status={row.nextRate.status} labels={rateText.status} />
-            {row.nextRate.rejectReason && <Typography.Text type="danger">{row.nextRate.rejectReason}</Typography.Text>}
-          </Space>
-        ) : (
-          '—'
-        ),
-    },
-    { title: text.columns.status, dataIndex: 'status', render: (v: string) => <StatusTag status={v} labels={text.status} /> },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, row) => (
-        <Space size={0} wrap>
-          <Button type="link" onClick={() => setEditing(row)}>
-            {MESSAGES.common.edit}
-          </Button>
-          {canSetRate(row) && (
-            <Button type="link" onClick={() => setRating(row)}>
-              {editableRate(row) ? rateText.editRate : rateText.setRate}
-            </Button>
-          )}
-          {row.nextRate?.status === 'Draft' && (
-            <Popconfirm title={rateText.submitConfirm} onConfirm={() => submit.mutate(row.nextRate!.pieceRateId)}>
-              <Button type="link">{rateText.submit}</Button>
-            </Popconfirm>
-          )}
-          {row.status === 'Active' ? (
-            <Popconfirm title={text.discontinueConfirm} onConfirm={() => toggle.mutate({ id: row.operationId, discontinue: true })}>
-              <Button type="link" danger>
-                {text.discontinue}
-              </Button>
-            </Popconfirm>
-          ) : (
-            <Button type="link" onClick={() => toggle.mutate({ id: row.operationId, discontinue: false })}>
-              {text.reactivate}
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const [viewing, setViewing] = useState<Operation | null>(null);
+
+  const columns = operationColumns({
+    onView: setViewing,
+    onEdit: setEditing,
+    onSetRate: setRating,
+    onSubmitRate: (pieceRateId) => submit.mutate(pieceRateId),
+    onToggle: (row, discontinue) => toggle.mutate({ id: row.operationId, discontinue }),
+  });
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {text.title}
-        </Typography.Title>
-        <Typography.Text type="secondary">{text.subtitle}</Typography.Text>
-      </div>
-
+    <PageCard
+      title={text.title}
+      description={text.subtitle}
+      extra={
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          disabled={productId === null}
+          onClick={() => setCreating(true)}
+        >
+          {text.add}
+        </Button>
+      }
+    >
       <Space wrap>
-        <ProductSelect value={productId ?? undefined} onChange={(v) => setProductId(v ?? null)} placeholder={PRODUCTION_TEXT.selectProduct} />
-        <Checkbox checked={showDiscontinued} onChange={(e) => setShowDiscontinued(e.target.checked)}>
+        <ProductSelect
+          value={productId ?? undefined}
+          onChange={(v) => setProductId(v ?? null)}
+          placeholder={PRODUCTION_TEXT.selectProduct}
+        />
+        <Checkbox
+          checked={showDiscontinued}
+          onChange={(e) => setShowDiscontinued(e.target.checked)}
+        >
           {text.showDiscontinued}
         </Checkbox>
-        <Select
-          allowClear
+        <FilterSelect<string>
           placeholder={text.filterGroup}
           value={groupFilter}
           onChange={setGroupFilter}
@@ -165,10 +124,11 @@ export function OperationsPage() {
           onChange={(e) => setKeyword(e.target.value)}
           style={{ width: 240 }}
         />
-        <Button type="primary" icon={<PlusOutlined />} disabled={productId === null} onClick={() => setCreating(true)}>
-          {text.add}
-        </Button>
-        <Button icon={<UploadOutlined />} disabled={productId === null} onClick={() => setImportOpen(true)}>
+        <Button
+          icon={<UploadOutlined />}
+          disabled={productId === null}
+          onClick={() => setImportOpen(true)}
+        >
           {text.importExcel}
         </Button>
       </Space>
@@ -177,17 +137,27 @@ export function OperationsPage() {
 
       <QueryError error={operations.error} onRetry={() => void operations.refetch()} />
 
-      <Table<Operation>
+      <DataTable<Operation>
         rowKey="operationId"
-        size="middle"
+        size="small"
         columns={columns}
         dataSource={visible}
         loading={operations.isFetching}
-        locale={{ emptyText: productId === null ? PRODUCTION_TEXT.selectProduct : MESSAGES.common.empty }}
+        locale={{
+          emptyText: productId === null ? PRODUCTION_TEXT.selectProduct : MESSAGES.common.empty,
+        }}
         scroll={{ x: 'max-content' }}
         pagination={false}
-        expandable={{ expandedRowRender: (row) => <PieceRateHistory operationId={row.operationId} />, rowExpandable: () => true }}
       />
+
+      <DetailModal
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        title={viewing ? `${viewing.operationCode} - ${viewing.operationName}` : undefined}
+        size="md"
+      >
+        {viewing && <PieceRateHistory operationId={viewing.operationId} />}
+      </DetailModal>
 
       {productId !== null && (
         <>
@@ -219,6 +189,6 @@ export function OperationsPage() {
           )}
         </>
       )}
-    </Space>
+    </PageCard>
   );
 }

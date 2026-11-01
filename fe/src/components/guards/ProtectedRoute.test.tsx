@@ -8,8 +8,18 @@ import { ProtectedRoute } from './ProtectedRoute';
 // Tránh nạp toàn bộ menu các feature (cần import.meta của Vite); chỉ giữ mục cần cho ca kiểm tra loại tổ.
 jest.mock('@/app/menu', () => ({
   MENU_ENTRIES: [
-    { key: 'cut', label: 'Bàn cắt', path: '/cutting-lays', roles: ['TeamLeader'], teamTypes: ['Cutting'] },
+    {
+      key: 'cut',
+      label: 'Bàn cắt',
+      path: '/cutting-lays',
+      roles: ['TeamLeader'],
+      teamTypes: ['Cutting'],
+    },
   ],
+}));
+
+jest.mock('@/features/profile', () => ({
+  ForceChangePasswordPage: () => <div>force change password</div>,
 }));
 
 const makeUser = (role: Role, teamType: TeamType | null = null): UserInfo => ({
@@ -52,19 +62,14 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('home page')).toBeInTheDocument();
   });
 
-  it('forces a user with a temporary password to the profile page', () => {
-    useAuthStore.setState({ status: 'authenticated', user: { ...makeUser('Admin'), isTemporaryPassword: true } });
-    render(
-      <MemoryRouter initialEntries={['/secret']}>
-        <Routes>
-          <Route path="/profile" element={<div>profile page</div>} />
-          <Route element={<ProtectedRoute />}>
-            <Route path="/secret" element={<div>secret page</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(screen.getByText('profile page')).toBeInTheDocument();
+  it('shows the forced change-password screen instead of the page for a temporary password', () => {
+    useAuthStore.setState({
+      status: 'authenticated',
+      user: { ...makeUser('Admin'), isTemporaryPassword: true },
+    });
+    renderAt();
+    expect(screen.getByText('force change password')).toBeInTheDocument();
+    expect(screen.queryByText('secret page')).not.toBeInTheDocument();
   });
 
   it('renders children when the role is allowed', () => {

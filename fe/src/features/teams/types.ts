@@ -36,5 +36,9 @@ export type TeamDetail = {
 };
 
 export type SaveTeamPayload = { teamCode: string; teamName: string; teamType: TeamType };
-export type TransferPayload = { employeeIds: number[]; effectiveDate: string; reason?: string | null };
+export type TransferPayload = {
+  employeeIds: number[];
+  effectiveDate: string;
+  reason?: string | null;
+};
 export type AppointPosition = 'Leader' | 'Deputy';

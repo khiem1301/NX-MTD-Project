@@ -4,6 +4,7 @@ import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   CreateOrderPayload,
   Customer,
+  CustomerOption,
   CustomerQuery,
   OrderDetail,
   OrderListItem,
@@ -26,10 +27,12 @@ const put = async <T>(url: string, body: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
 export const customerApi = {
-  list: (query: CustomerQuery = {}) => get<Customer[]>(API.customers.base, query),
+  list: (query: CustomerQuery = {}) => get<Paginated<Customer>>(API.customers.base, query),
+  options: () => get<CustomerOption[]>(API.customers.options),
   create: (body: SaveCustomerPayload) => post<number>(API.customers.base, body),
   update: (id: number, body: SaveCustomerPayload) => put<unknown>(API.customers.byId(id), body),
-  discontinue: (id: number) => post<void>(API.customers.discontinue(id)),
+  discontinue: (id: number, reason: string) =>
+    post<void>(API.customers.discontinue(id), { reason }),
   reactivate: (id: number) => post<void>(API.customers.reactivate(id)),
 };
 
@@ -40,14 +43,21 @@ export const productApi = {
     return post<string>(API.products.sampleImage(), body);
   },
   sampleImageBlob: async (key: string, scope: ProductScope = 'admin'): Promise<Blob> =>
-    (await apiClient.get<Blob>(API.products.sampleImage(scope), { params: { key }, responseType: 'blob' })).data,
-  list: (q: ProductQuery, scope: ProductScope = 'admin') => get<Paginated<ProductListItem>>(API.products.base(scope), q),
+    (
+      await apiClient.get<Blob>(API.products.sampleImage(scope), {
+        params: { key },
+        responseType: 'blob',
+      })
+    ).data,
+  list: (q: ProductQuery, scope: ProductScope = 'admin') =>
+    get<Paginated<ProductListItem>>(API.products.base(scope), q),
   get: (id: number) => get<ProductDetail>(API.products.byId(id)),
   create: (body: SaveProductPayload) => post<number>(API.products.base(), body),
   update: (id: number, body: SaveProductPayload) => put<unknown>(API.products.byId(id), body),
   discontinue: (id: number) => post<unknown>(API.products.discontinue(id)),
   reactivate: (id: number) => post<unknown>(API.products.reactivate(id)),
-  getSpec: (id: number, scope: ProductScope = 'admin') => get<ProductSpec>(API.products.spec(id, scope)),
+  getSpec: (id: number, scope: ProductScope = 'admin') =>
+    get<ProductSpec>(API.products.spec(id, scope)),
   saveSpec: (id: number, body: SaveProductSpecPayload, scope: ProductScope = 'admin') =>
     put<ProductSpec>(API.products.spec(id, scope), body),
 };

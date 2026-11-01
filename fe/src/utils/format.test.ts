@@ -1,5 +1,5 @@
 import type { Dayjs } from 'dayjs';
-import { fill, formatCurrency, formatDate, formatDateTime, formatQty, toApiDate } from './format';
+import { fill, formatCurrency, formatDate, formatDateTime, formatMonth, formatQty, formatTime, toApiDate } from './format';
 
 describe('formatQty', () => {
   it('dùng dấu chấm ngăn nghìn, dấu phẩy thập phân', () => {
@@ -71,5 +71,18 @@ describe('toApiDate / fill', () => {
 
   it('fill thay {0}, {1}', () => {
     expect(fill('Đã đủ {0} ảnh ({1})', 5, 'tối đa')).toBe('Đã đủ 5 ảnh (tối đa)');
+  });
+});
+
+describe('formatMonth / formatTime', () => {
+  it('đổi kỳ yyyy-MM sang MM/yyyy', () => {
+    expect(formatMonth('2026-10')).toBe('10/2026');
+    expect(formatMonth(null)).toBe('—');
+  });
+
+  it('lấy HH:mm từ giờ hoặc ngày giờ', () => {
+    expect(formatTime('08:05:00')).toBe('08:05');
+    expect(formatTime('2026-10-20T16:45:00')).toBe('16:45');
+    expect(formatTime(undefined)).toBe('—');
   });
 });

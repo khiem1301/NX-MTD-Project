@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { MENU_ENTRIES } from '@/app/menu';
 import { matchesTeamType, type Role } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
+import { ForceChangePasswordPage } from '@/features/profile';
 import { useAuth } from '@/hooks/useAuth';
 
 /** Loại tổ được vào trang này, lấy từ mục menu cùng đường dẫn (khớp dài nhất) để menu và route không lệch nhau. */
@@ -31,9 +32,7 @@ export function ProtectedRoute({ roles }: { roles?: Role[] }) {
     return <Navigate to={ROUTES.login} replace state={{ from: location }} />;
   }
   // D29: mật khẩu tạm (tạo mới / đặt lại) → phải đổi mật khẩu trước khi dùng tiếp.
-  if (user.isTemporaryPassword && location.pathname !== ROUTES.profile) {
-    return <Navigate to={`${ROUTES.profile}?changePassword=1`} replace />;
-  }
+  if (user.isTemporaryPassword) return <ForceChangePasswordPage />;
   if (roles && !roles.includes(user.role)) {
     return <Navigate to={ROUTES.home} replace />;
   }

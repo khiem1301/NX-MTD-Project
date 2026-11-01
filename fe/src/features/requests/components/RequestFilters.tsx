@@ -7,9 +7,14 @@ import {
   type RequestType,
 } from '@/constants/requestTypes';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { FilterSelect } from '@/components/common/FilterSelect';
 
 /** 'All' chỉ dùng ở hộp "Đơn cần xử lý": bỏ lọc trạng thái (BE mặc định chỉ hiện đơn đang mở). */
-export type RequestFilterValue = { keyword?: string; requestType?: RequestType; status?: RequestStatus | 'All' };
+export type RequestFilterValue = {
+  keyword?: string;
+  requestType?: RequestType;
+  status?: RequestStatus | 'All';
+};
 
 type RequestFiltersProps = {
   value: RequestFilterValue;
@@ -37,19 +42,22 @@ export function RequestFilters({ value, onChange, emptyStatusLabel }: RequestFil
         onSearch={(keyword) => onChange({ keyword: keyword.trim() || undefined })}
         style={{ width: 240 }}
       />
-      <Select
-        allowClear
+      <FilterSelect<RequestType>
         placeholder={MESSAGES.requests.type}
         value={value.requestType}
         options={TYPE_OPTIONS}
-        onChange={(requestType?: RequestType) => onChange({ requestType })}
+        onChange={(requestType) => onChange({ requestType })}
         style={{ width: 180 }}
       />
       <Select
         allowClear
         placeholder={emptyStatusLabel ?? MESSAGES.requests.status}
         value={value.status}
-        options={emptyStatusLabel ? [{ value: 'All' as const, label: MESSAGES.requests.allStatuses }, ...STATUS_OPTIONS] : STATUS_OPTIONS}
+        options={
+          emptyStatusLabel
+            ? [{ value: 'All' as const, label: MESSAGES.requests.allStatuses }, ...STATUS_OPTIONS]
+            : STATUS_OPTIONS
+        }
         onChange={(status?: RequestStatus | 'All') => onChange({ status })}
         style={{ width: 180 }}
       />

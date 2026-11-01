@@ -37,18 +37,26 @@ export const API = {
     resign: (role: RolePath, id: number) => v1(`${role}/employees/${id}/resign`),
     lock: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/lock`),
     unlock: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/unlock`),
-    resetPassword: (role: RolePath, id: number) => v1(`${role}/employees/${id}/account/reset-password`),
+    resetPassword: (role: RolePath, id: number) =>
+      v1(`${role}/employees/${id}/account/reset-password`),
     import: (role: RolePath) => v1(`${role}/employee-import`),
   },
   teams: {
     base: (role: RolePath) => v1(`${role}/teams`),
     byId: (role: RolePath, id: number) => v1(`${role}/teams/${id}`),
-    action: (role: RolePath, id: number, action: 'discontinue' | 'reactivate' | 'transfer-in' | 'appoint') =>
-      v1(`${role}/teams/${id}/${action}`),
+    action: (
+      role: RolePath,
+      id: number,
+      action: 'discontinue' | 'reactivate' | 'transfer-in' | 'appoint',
+    ) => v1(`${role}/teams/${id}/${action}`),
   },
-  hrLookups: { teams: v1('common/hr-lookups/teams'), teamMembers: v1('common/hr-lookups/team-members') },
+  hrLookups: {
+    teams: v1('common/hr-lookups/teams'),
+    teamMembers: v1('common/hr-lookups/team-members'),
+  },
   customers: {
     base: v1('admin/customers'),
+    options: v1('admin/customers/options'),
     byId: (id: number) => v1(`admin/customers/${id}`),
     discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
@@ -144,7 +152,8 @@ export const API = {
   lookups: {
     orders: v1('common/lookups/orders'),
     orderLines: (orderId: number) => v1(`common/lookups/orders/${orderId}/lines`),
-    orderLineComponents: (orderLineId: number) => v1(`common/lookups/order-lines/${orderLineId}/components`),
+    orderLineComponents: (orderLineId: number) =>
+      v1(`common/lookups/order-lines/${orderLineId}/components`),
     teams: v1('common/lookups/teams'),
     materials: v1('common/lookups/materials'),
   },
@@ -167,19 +176,23 @@ export const API = {
   },
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
-    availableBtp: '/api/v1/manager/kpi-targets/available-btp',
-    finishPreview: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/finish-preview`,
+    orderCapacity: '/api/v1/manager/kpi-targets/order-capacity',
+    calendar: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/calendar`,
+    dailyPlan: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-plan`,
+    finishPreview: (kpiTargetId: number) =>
+      `/api/v1/manager/kpi-targets/${kpiTargetId}/finish-preview`,
     finish: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/finish`,
-    dailyResults: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-results`,
+    dailyResults: (kpiTargetId: number) =>
+      `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-results`,
     cancel: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/cancel`,
-    adminTargets: '/api/v1/admin/kpi-targets',
-    adminDailyResults: (kpiTargetId: number) => `/api/v1/admin/kpi-targets/${kpiTargetId}/daily-results`,
   },
   revenue: {
     accountant: '/api/v1/accountant/revenue',
     accountantExport: '/api/v1/accountant/revenue/export',
+    accountantFilterOptions: '/api/v1/accountant/revenue/filter-options',
     admin: '/api/v1/admin/revenue',
     adminExport: '/api/v1/admin/revenue/export',
+    adminFilterOptions: '/api/v1/admin/revenue/filter-options',
   },
   breakEven: {
     base: '/api/v1/admin/break-even',
@@ -218,7 +231,9 @@ export const API = {
     outputGrid: (role: 'team-leader' | 'manager') => v1(`${role}/output-records/grid`),
     output: (role: 'team-leader' | 'manager') => v1(`${role}/output-records`),
     defects: (role: 'team-leader' | 'manager') => v1(`${role}/defect-records`),
-    defectCancel: (role: 'team-leader' | 'manager', id: number) => v1(`${role}/defect-records/${id}/cancel`),
+    defectCancel: (role: 'team-leader' | 'manager', id: number) =>
+      v1(`${role}/defect-records/${id}/cancel`),
+    defectConfirm: (id: number) => v1(`manager/defect-records/${id}/confirm`),
     qcBatches: (role: 'qa-qc' | 'manager') => v1(`${role}/qc-batches`),
     qcBatch: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}`),
     qcBatchDelete: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}/delete`),

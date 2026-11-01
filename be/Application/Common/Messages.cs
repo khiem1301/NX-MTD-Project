@@ -89,7 +89,13 @@ public static class Messages
     public const string EmployeeImportRepeated = "Mã nhân viên bị lặp trong file.";
     public const string EmployeeImportAttendanceRepeated = "Mã chấm công bị lặp trong file.";
     public const string EmployeeImportTeamUnknown = "Không tìm thấy tổ có mã {0}.";
-    public const string GradeCodeInvalid = "Bậc thợ phải là A, B, C hoặc D.";
+    public const string GradeCodeInvalid = "Bậc thợ không có trong danh mục hoặc đã ngừng dùng.";
+    public const string GradeCodeMalformed = "Mã bậc chỉ gồm chữ hoa và số, tối đa 5 ký tự.";
+    public const string GradeCodeDuplicate = "Mã bậc này đã có trong danh mục.";
+    public const string GradeCodeInUse = "Bậc này đã được dùng (nhân viên, đề xuất hoặc tiền bậc) nên không xóa được. Hãy chuyển sang ngừng dùng.";
+    public const string GradeCodeStatusInvalid = "Trạng thái bậc chỉ nhận Active hoặc Inactive.";
+    public const string GradeLevelLocked = "Mức tiền bậc đã có hiệu lực là lịch sử lương, không sửa hoặc xóa. Hãy thêm mức mới với ngày hiệu lực mới.";
+    public const string GradeLevelEffectiveInPast = "Ngày hiệu lực của mức tiền bậc sửa lại phải sau hôm nay.";
     public const string GradeLevelDuplicate = "Bậc này đã có mức tiền cho ngày hiệu lực đó.";
     public const string GradeWorkerNotInTeam = "Chỉ đề xuất bậc cho công nhân đang làm việc trong tổ của bạn.";
     public const string GradeSameAsCurrent = "Bậc đề xuất trùng bậc hiện tại.";
@@ -97,7 +103,7 @@ public static class Messages
     public const string GradeProposedToday = "Hôm nay bạn đã đề xuất bậc cho công nhân này.";
     public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
     public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
-    public const string ManagerCannotAssignRole = "Quản đốc không gán được vai trò Admin hoặc Kế toán.";
+    public const string ManagerCannotAssignRole = "Quản đốc không gán hoặc đổi được vai trò Admin, Quản đốc, Kế toán.";
     public const string GradeWorkerInvalid = "Chỉ đặt bậc cho công nhân đang làm việc.";
     public const string GradeSupersededNote = "Quản đốc đã đặt bậc trực tiếp nên đề xuất này không còn hiệu lực.";
     public const string GradeSetToday = "Hôm nay bạn đã đặt bậc cho công nhân này.";
@@ -198,17 +204,27 @@ public static class Messages
     // --- KPI tổ may (UC19 KPI tổ may — Quản đốc lập/sửa/hủy chỉ tiêu, khác UC19 lệnh cắt) ---
     public const string KpiNotFound = "Không tìm thấy chỉ tiêu KPI.";
     public const string KpiOrderNotFound = "Không tìm thấy đơn hàng.";
+    public const string KpiOrderClosed = "Đơn hàng đã dừng, đã hủy hoặc đã giao xong, không đặt chỉ tiêu được.";
     public const string KpiTeamInvalid = "Tổ may không hợp lệ hoặc đã ngừng hoạt động.";
     public const string KpiProductNotInOrder = "Mã hàng không thuộc đơn hàng đã chọn.";
-    public const string KpiDuplicatePeriod =
-        "Tổ may này đã có chỉ tiêu KPI cho đơn hàng, mã hàng và ngày bắt đầu này.";
+    public const string KpiPeriodOverlap =
+        "Kỳ bị trùng với chỉ tiêu {0:dd/MM/yyyy} - {1:dd/MM/yyyy} của tổ này cho cùng đơn hàng và mã hàng. Kỳ mới phải bắt đầu sau ngày kết thúc của chỉ tiêu đó hoặc kết thúc trước ngày bắt đầu.";
+    public const string KpiExceedsOrderQty = "Chỉ tiêu vượt số lượng đơn đặt: đơn đặt {0}, đã giao ở các chỉ tiêu khác {1}, đặt được tối đa {2}.";
+    public const string KpiStartBeforeReceived = "Ngày bắt đầu kỳ không được trước ngày nhận đơn ({0:dd/MM/yyyy}).";
+    public const string KpiStartInPast = "Ngày bắt đầu kỳ không được ở trong quá khứ.";
+    public const string KpiEndInPast = "Ngày kết thúc kỳ không được ở trong quá khứ.";
+    public const string KpiDailyTargetOutOfPeriod = "Ngày đặt KPI phải nằm trong kỳ của chỉ tiêu.";
+    public const string KpiDailyTargetDuplicateDate = "Mỗi ngày chỉ đặt một KPI.";
+    public const string KpiDailyTargetQtyMustBePositive = "KPI của ngày phải lớn hơn 0.";
+    public const string KpiDayLocked = "Không sửa được KPI của ngày đã qua; KPI của hôm nay chỉ sửa được trước {0:HH:mm}.";
+    public const string KpiPlanExceedsTotal = "Tổng KPI các ngày ({0}) vượt chỉ tiêu cả kỳ ({1}).";
+    public const string KpiTotalBelowPlan = "Chỉ tiêu cả kỳ không được nhỏ hơn tổng KPI đã đặt cho các ngày ({0}). Hãy sửa KPI từng ngày trước.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiInvalidStatusForFinish = "Chỉ kết thúc được đơn của tổ khi chỉ tiêu KPI còn hoạt động (ACTIVE).";
     public const string KpiFinishNoFinalOperation = "Mã hàng chưa có công đoạn cuối đang dùng nên chưa so được sản lượng cuối đơn.";
     public const string KpiFinished = "Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
-    public const string KpiWorkingDaysMustBePositive = "Số ngày làm việc phải lớn hơn 0.";
 
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
     public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
@@ -239,7 +255,7 @@ public static class Messages
     public const string PurchaseOrderLinesMismatch = "Danh sách dòng phải đủ mọi dòng của đơn mua, không thêm hoặc bớt.";
     public const string PurchaseOrderPriceRequired = "Vui lòng nhập đơn giá lớn hơn 0 cho mọi dòng trước khi đặt hàng.";
     public const string PurchaseOrderQtyLocked = "Đơn đã đặt hàng, không đổi được số lượng hoặc nhà cung cấp.";
-    public const string KpiExceedsStock = "Chỉ tiêu vượt BTP khả dụng: kho còn {0}, tổ đã nhận và chưa làm xong {1}, các chỉ tiêu khác còn phải làm {2}, đặt được tối đa {3}.";
+    public const string KpiExceedsStock = "KPI theo ngày còn phải làm ({0}) vượt BTP khả dụng ({1}): kho còn {2}, tổ đang giữ {3}, tổ khác cần lấy từ kho {4}.";
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu – size có trong danh sách.";
@@ -317,6 +333,8 @@ public static class Messages
     public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";
     public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
     public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
+    public const string OutputQtyMax = "Số lượng tối đa 1.000.000.";
+    public const string OutputTooManyRows = "Một lần lưu tối đa 2.000 dòng sản lượng.";
     public const string OutputRowsRequired = "Chưa có dòng sản lượng nào để lưu.";
     public const string OutputDuplicateRow = "Công đoạn và công nhân bị lặp trong danh sách.";
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
@@ -342,6 +360,13 @@ public static class Messages
     public const string DefectCancelled = "Đã hủy phiếu lỗi.";
     public const string DefectObjected = "Đã gửi phản hồi cho tổ trưởng.";
     public const string DefectObjectionRequired = "Vui lòng nhập nội dung phản hồi.";
+    public const string DefectConfirmed = "Đã chấp nhận phiếu lỗi, phiếu được giữ nguyên.";
+    public const string DefectNoObjection = "Phiếu này chưa có phản đối của công nhân.";
+    public const string DefectObjectionExpired = "Đã quá 48 giờ kể từ lúc phiếu được ghi, không phản đối được nữa.";
+    public const string DefectObjectionDecided = "Quản đốc đã chấp nhận phiếu này, không phản đối được nữa.";
+    public const string DefectManagerOnly = "Chỉ Quản đốc hoặc Admin được chấp nhận phiếu lỗi.";
+    public const string NotifyDefectConfirmedTitle = "Phiếu lỗi được giữ nguyên";
+    public const string NotifyDefectConfirmedBody = "Quản đốc đã chấp nhận phiếu {0}, phản đối của bạn không được chấp nhận.";
     public const string NotifyDefectTitle = "Bạn có phiếu lỗi mới";
     public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy phản hồi cho tổ trưởng.";
     public const string NotifyDefectObjectionTitle = "Công nhân phản hồi phiếu lỗi";

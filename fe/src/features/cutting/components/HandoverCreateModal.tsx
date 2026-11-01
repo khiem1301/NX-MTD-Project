@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
-import { Form, InputNumber, Modal, Table } from 'antd';
+import { Form, InputNumber, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, lineKey, parseLineKey } from '../constants';
 import { useCreateHandover, useHandoverable } from '../hooks/useCutting';
 import type { HandoverableLine } from '../types';
 import { confirmDialog } from '@/utils/confirmDialog';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
 
 type HandoverCreateModalProps = { open: boolean; workOrderId: number; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -18,9 +20,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
   useEffect(() => {
     if (!handoverable.data) return;
     form.setFieldsValue({
-      qty: Object.fromEntries(
-        handoverable.data.map((l) => [lineKey(l), l.remainingQty]),
-      ),
+      qty: Object.fromEntries(handoverable.data.map((l) => [lineKey(l), l.remainingQty])),
     });
   }, [handoverable.data, form]);
 
@@ -34,7 +34,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
   return (
     <Modal
       open={open}
-      width={720}
+      width={MODAL_WIDTH.md}
       title={LABELS.createHandover}
       okText={MESSAGES.common.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -46,7 +46,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
       destroyOnHidden
     >
       <Form form={form} onFinish={handleFinish} disabled={create.isPending}>
-        <Table<HandoverableLine>
+        <DataTable<HandoverableLine>
           rowKey={lineKey}
           size="small"
           pagination={false}
@@ -56,7 +56,8 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
             {
               title: LABELS.orderLine,
               key: 'line',
-              render: (_, l) => `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
+              render: (_, l) =>
+                `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
             },
             { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
             { title: LABELS.handedQty, dataIndex: 'handedQty', align: 'right' },

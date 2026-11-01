@@ -1,5 +1,7 @@
+import { IconAction } from '@/components/common/IconAction';
+import { ProfileOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Space, Table, type TableColumnsType } from 'antd';
+import { type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -7,12 +9,15 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatQty } from '@/utils/format';
 import { LABELS, MATERIAL_TYPE_LABEL, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
-import type { StockBalance, StockCardQuery } from '../types';
-import { StockCardDrawer } from './StockCardDrawer';
+import type { MaterialOrderScope, StockBalance, StockCardQuery } from '../types';
+import { StockCardModal } from './StockCardModal';
+import { StockOrderFilter } from './StockOrderFilter';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
+import { DataTable } from '@/components/common/DataTable';
+import { TableToolbar } from '@/components/common/TableToolbar';
 
 type BalanceTableProps = { warehouseType: string };
-type Filters = { keyword?: string; orderId?: number };
+type Filters = { keyword?: string; orderId?: number; orderScope?: MaterialOrderScope };
 
 const qty = (title: string, dataIndex: keyof StockBalance) => ({
   title,
@@ -38,7 +43,11 @@ const pieceColumns: TableColumnsType<StockBalance> = [
   { title: LABELS.product, dataIndex: 'productCode' },
   { title: LABELS.garmentColor, dataIndex: 'color' },
   { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
-  { title: LABELS.component, dataIndex: 'componentName', render: (v: string | null) => v ?? LABELS.wholeGarment },
+  {
+    title: LABELS.component,
+    dataIndex: 'componentName',
+    render: (v: string | null) => v ?? LABELS.wholeGarment,
+  },
 ];
 
 const describe = (b: StockBalance): string =>
@@ -46,7 +55,7 @@ const describe = (b: StockBalance): string =>
     ? `${b.materialCode} ${b.materialName} (${b.materialColor || '—'})`
     : `${b.orderCode} ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` (${b.componentName})` : ''}`;
 
-/** Bảng tồn của một kho; bấm dòng để mở thẻ kho. */
+/** Bảng tồn của một kho; mở thẻ kho ở cột thao tác. */
 export function BalanceTable({ warehouseType }: BalanceTableProps) {
   const table = useTableQuery<Filters>({});
   const balances = useBalances({ ...table.params, warehouseType });
@@ -58,6 +67,17 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
     qty(LABELS.onHandQty, 'onHandQty'),
     qty(LABELS.reservedQty, 'reservedQty'),
     qty(LABELS.availableQty, 'availableQty'),
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      render: (_, b) => (
+        <IconAction
+          title={LABELS.stockCard}
+          icon={<ProfileOutlined />}
+          onClick={() => openCard(b)}
+        />
+      ),
+    },
   ];
 
   const openCard = (b: StockBalance) =>
@@ -77,21 +97,34 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
 
   return (
     <>
-      <Space style={{ marginBottom: 16 }} wrap>
-        <DebouncedSearch
-          allowClear
-          placeholder={MESSAGES.common.search}
-          onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
-          style={{ width: 260 }}
-        />
-        <OrderSelect
-          allowClear
-          placeholder={LABELS.order}
-          onChange={(orderId) => table.setFilters({ orderId })}
-        />
-      </Space>
+      <TableToolbar
+        filters={
+          <>
+            <DebouncedSearch
+              allowClear
+              placeholder={MESSAGES.common.search}
+              onSearch={(keyword) => table.setFilters({ keyword: keyword || undefined })}
+              style={{ width: 260 }}
+            />
+            {isMaterial ? (
+              <StockOrderFilter
+                orderId={table.filters.orderId}
+                orderScope={table.filters.orderScope}
+                onChange={table.setFilters}
+              />
+            ) : (
+              <OrderSelect
+                allowClear
+                placeholder={LABELS.orderFilter}
+                value={table.filters.orderId}
+                onChange={(orderId) => table.setFilters({ orderId })}
+              />
+            )}
+          </>
+        }
+      />
       <QueryError error={balances.error} onRetry={() => void balances.refetch()} />
-      <Table
+      <DataTable
         rowKey={(b) =>
           `${b.materialId ?? ''}|${b.orderLineId ?? ''}|${b.productComponentMaterialId ?? ''}`
         }
@@ -99,10 +132,8 @@ export function BalanceTable({ warehouseType }: BalanceTableProps) {
         dataSource={balances.data?.items}
         loading={balances.isFetching}
         pagination={table.pagination(balances.data?.totalItems)}
-        locale={{ emptyText: MESSAGES.common.empty }}
-        onRow={(b) => ({ onClick: () => openCard(b), style: { cursor: 'pointer' } })}
       />
-      <StockCardDrawer
+      <StockCardModal
         query={card?.query}
         title={card?.title ?? ''}
         onClose={() => setCard(undefined)}

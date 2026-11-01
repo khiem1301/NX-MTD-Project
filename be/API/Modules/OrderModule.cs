@@ -1,5 +1,5 @@
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Orders;
 using NX_MTD.Infrastructure.Repositories;
 
 namespace NX_MTD.API.Modules;
@@ -14,6 +14,7 @@ public static class OrderModule
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductSpecService, ProductSpecService>();
+        services.AddScoped<IProductImageCleanupService, ProductImageCleanupService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderLookupService, OrderLookupService>();
         return services;

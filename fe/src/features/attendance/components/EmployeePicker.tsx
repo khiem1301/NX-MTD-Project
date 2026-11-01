@@ -40,7 +40,10 @@ export function EmployeePicker({ value, onChange, disabled }: Props) {
         loading={members.isLoading}
         disabled={disabled || teamId === null}
         value={value}
-        options={(members.data ?? []).map((m) => ({ value: m.employeeId, label: `${m.employeeCode} - ${m.fullName}` }))}
+        options={(members.data ?? []).map((m) => ({
+          value: m.employeeId,
+          label: `${m.employeeCode} - ${m.fullName}`,
+        }))}
         onChange={onChange}
       />
     </Space.Compact>

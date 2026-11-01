@@ -7,7 +7,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { RequestDetailDrawer } from '../components/RequestDetailDrawer';
+import { RequestDetailModal } from '../components/RequestDetailModal';
 import { RequestFilters, type RequestFilterValue } from '../components/RequestFilters';
 import { RequestFormModal } from '../components/RequestFormModal';
 import { RequestTable } from '../components/RequestTable';
@@ -58,7 +58,7 @@ export function MyRequestsPage() {
           open(id);
         }}
       />
-      <RequestDetailDrawer />
+      <RequestDetailModal />
     </Card>
   );
 }

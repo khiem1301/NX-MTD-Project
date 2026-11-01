@@ -215,7 +215,12 @@ export type OutputGridQuery = {
   sewingTeamId?: number;
 };
 
-export type OutputLineInput = { operationId: number; workerId: number; quantity: number; rowVer?: string | null };
+export type OutputLineInput = {
+  operationId: number;
+  workerId: number;
+  quantity: number;
+  rowVer?: string | null;
+};
 
 export type SaveOutputPayload = {
   workDate: string;
@@ -226,7 +231,12 @@ export type SaveOutputPayload = {
   rows: OutputLineInput[];
 };
 
-export type OutputSaveResult = { inserted: number; updated: number; deleted: number; warnings: string[] };
+export type OutputSaveResult = {
+  inserted: number;
+  updated: number;
+  deleted: number;
+  warnings: string[];
+};
 
 // ---------- KI-06: QC ----------
 
@@ -280,8 +290,11 @@ export type OnLineQty = {
 // ---------- KI-08: hàng hỏng ----------
 
 export type DefectType = 'Rework' | 'Scrap';
-export type DefectStatus = 'Recorded' | 'Cancelled' | 'Locked';
-export type DefectReason = 'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
+export type DefectStatus = 'Recorded' | 'Confirmed' | 'Cancelled';
+export type DefectReason =
+  'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
+
+export type DefectObjectionFilter = 'Pending' | 'Resolved' | 'None';
 
 export type Defect = {
   defectRecordId: number;
@@ -316,6 +329,8 @@ export type Defect = {
   replacementRequestCode: string | null;
   replacementRequestStatus: string | null;
   sewingTeamName: string;
+  /** Lần cập nhật gần nhất; sau khi chấp nhận hoặc hủy phiếu chính là giờ của thao tác đó. */
+  updatedAt: string | null;
 };
 
 export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & {
@@ -324,7 +339,15 @@ export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & {
   to?: string;
   /** Tìm theo tên công nhân, mã hàng, tổ, mã phiếu, mã đơn. */
   keyword?: string;
+  /** Chỉ Quản đốc lọc theo tổ; tổ trưởng luôn chỉ thấy tổ mình. */
+  sewingTeamId?: number;
+  status?: DefectStatus;
+  defectType?: DefectType;
+  objection?: DefectObjectionFilter;
 };
+
+/** Bộ lọc danh sách phiếu hàng hỏng (không gồm số trang). */
+export type DefectFilters = Omit<DefectQuery, 'page' | 'pageSize'>;
 
 export type CreateDefectPayload = {
   workDate: string;
@@ -340,3 +363,4 @@ export type CreateDefectPayload = {
 
 export type CancelDefectPayload = { reason?: string; rowVer: string };
 export type ObjectDefectPayload = { objection: string; rowVer: string };
+export type ConfirmDefectPayload = { note?: string; rowVer: string };

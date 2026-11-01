@@ -7,12 +7,21 @@ type ColorAutoCompleteProps = {
   value: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  size?: 'small' | 'middle' | 'large';
+  status?: 'error';
   /** Màu đang có trong form (chưa lưu) cũng được gợi ý. */
   extraColors?: readonly string[];
 };
 
 /** Ô màu: gợi ý các màu đã khai ở mã hàng trước (gõ không dấu cũng được), vẫn nhập được màu mới. */
-export function ColorAutoComplete({ value, onChange, disabled, extraColors = [] }: ColorAutoCompleteProps) {
+export function ColorAutoComplete({
+  value,
+  onChange,
+  disabled,
+  size,
+  status,
+  extraColors = [],
+}: ColorAutoCompleteProps) {
   const colors = useProductColors();
   const all = useMemo(() => {
     const seen = new Map<string, string>();
@@ -29,6 +38,8 @@ export function ColorAutoComplete({ value, onChange, disabled, extraColors = [] 
       value={value}
       options={options}
       disabled={disabled}
+      size={size}
+      status={status}
       maxLength={50}
       style={{ width: '100%' }}
       onChange={onChange}

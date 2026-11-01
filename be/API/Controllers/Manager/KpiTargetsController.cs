@@ -14,11 +14,12 @@ namespace NX_MTD.API.Controllers.Manager;
 public sealed class KpiTargetsController : ManagerBaseController
 {
     private readonly IKpiService _kpi;
+    private readonly IKpiCalendarService _calendar;
     private readonly IEndOfOrderService _endOfOrder;
 
-    public KpiTargetsController(IKpiService kpi, IEndOfOrderService endOfOrder)
+    public KpiTargetsController(IKpiService kpi, IKpiCalendarService calendar, IEndOfOrderService endOfOrder)
     {
-        _kpi = kpi; _endOfOrder = endOfOrder;
+        _kpi = kpi; _calendar = calendar; _endOfOrder = endOfOrder;
     }
 
     /// <summary>Xem trước kết thúc đơn của tổ: KPI, lệch kiểm cuối đơn theo công nhân, tăng ca.</summary>
@@ -38,11 +39,21 @@ public sealed class KpiTargetsController : ManagerBaseController
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _kpi.GetByIdAsync(id, ct));
 
-    /// <summary>Chỉ tiêu tối đa lập được (BTP khả dụng) cho form lập KPI.</summary>
-    [HttpGet("available-btp")]
-    public async Task<IActionResult> GetCapacity([FromQuery] int orderId, [FromQuery] int productId,
-        [FromQuery] int sewingTeamId, [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
-        this.ToResponse(await _kpi.GetCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
+    /// <summary>Chỉ tiêu tối đa lập được (theo số lượng đơn đặt) cho form lập KPI.</summary>
+    [HttpGet("order-capacity")]
+    public async Task<IActionResult> GetOrderCapacity([FromQuery] int orderId, [FromQuery] int productId,
+        [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
+        this.ToResponse(await _kpi.GetOrderCapacityAsync(orderId, productId, exceptKpiTargetId, ct));
+
+    /// <summary>Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng.</summary>
+    [HttpGet("{id:int}/calendar")]
+    public async Task<IActionResult> GetCalendar(int id, CancellationToken ct) =>
+        this.ToResponse(await _calendar.GetAsync(id, ct));
+
+    /// <summary>Đặt KPI từng ngày; KPI chưa làm không được vượt BTP khả dụng.</summary>
+    [HttpPut("{id:int}/daily-plan")]
+    public async Task<IActionResult> SaveDailyPlan(int id, [FromBody] SaveKpiDailyPlanDto dto, CancellationToken ct) =>
+        this.ToResponse(await _calendar.SaveDailyPlanAsync(id, dto, ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] SaveKpiTargetDto dto, CancellationToken ct) =>

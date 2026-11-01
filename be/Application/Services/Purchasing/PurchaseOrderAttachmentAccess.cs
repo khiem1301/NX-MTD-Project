@@ -3,7 +3,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Purchasing;
+namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Quyền ảnh chứng từ thanh toán đơn mua (OwnerType = PURCHASE_ORDER, mục đích PAYMENT_PROOF — DEV-KH-07-1):

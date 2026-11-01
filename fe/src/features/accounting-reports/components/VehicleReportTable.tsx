@@ -1,9 +1,9 @@
-import { Table, Tag } from 'antd';
+import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { MESSAGES } from '@/constants/messages';
 import { ACCOUNTING_REPORT_TEXT } from '../constants';
 import type { VehicleReport, VehicleTripReportRow } from '../types';
 import { formatCurrency, formatNumber } from '../utils';
+import { DataTable } from '@/components/common/DataTable';
 
 type Props = { report: VehicleReport };
 
@@ -46,37 +46,36 @@ const columns: ColumnsType<VehicleTripReportRow> = [
  * hoặc vượt định mức xăng). */
 export function VehicleReportTable({ report }: Props) {
   return (
-    <Table<VehicleTripReportRow>
+    <DataTable<VehicleTripReportRow>
       rowKey="vehicleId"
       size="small"
       columns={columns}
       dataSource={report.vehicles}
       pagination={{ pageSize: 20 }}
       scroll={{ x: 'max-content' }}
-      locale={{ emptyText: MESSAGES.common.empty }}
       summary={() => (
-        <Table.Summary fixed>
-          <Table.Summary.Row>
-            <Table.Summary.Cell index={0} colSpan={3}>
+        <DataTable.Summary fixed>
+          <DataTable.Summary.Row>
+            <DataTable.Summary.Cell index={0} colSpan={3}>
               Tổng cộng
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={1} align="right">
+            </DataTable.Summary.Cell>
+            <DataTable.Summary.Cell index={1} align="right">
               {report.totalKm}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={2} align="right">
+            </DataTable.Summary.Cell>
+            <DataTable.Summary.Cell index={2} align="right">
               {formatNumber(report.totalFuelLiters)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={3} align="right">
+            </DataTable.Summary.Cell>
+            <DataTable.Summary.Cell index={3} align="right">
               {formatCurrency(report.totalFuelCost)}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={4} align="right">
+            </DataTable.Summary.Cell>
+            <DataTable.Summary.Cell index={4} align="right">
               {report.totalKmGapWarnings}
-            </Table.Summary.Cell>
-            <Table.Summary.Cell index={5} align="right">
+            </DataTable.Summary.Cell>
+            <DataTable.Summary.Cell index={5} align="right">
               {report.totalFuelOverNormWarnings}
-            </Table.Summary.Cell>
-          </Table.Summary.Row>
-        </Table.Summary>
+            </DataTable.Summary.Cell>
+          </DataTable.Summary.Row>
+        </DataTable.Summary>
       )}
     />
   );

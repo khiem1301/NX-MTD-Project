@@ -21,12 +21,20 @@ const CUSTOMERS_KEY = [...ORDERS_KEY, 'customers'] as const;
 const LOOKUPS_KEY = ['order-lookups'] as const;
 
 export const useCustomers = (query: CustomerQuery = {}) =>
-  useQuery({ queryKey: [...CUSTOMERS_KEY, query], queryFn: () => customerApi.list(query) });
+  useQuery({
+    queryKey: [...CUSTOMERS_KEY, 'list', query],
+    queryFn: () => customerApi.list(query),
+    placeholderData: keepPreviousData,
+  });
+
+/** Mọi khách hàng ở dạng rút gọn cho ô chọn (form đơn hàng, bộ lọc đơn hàng); không phân trang. */
+export const useCustomerOptions = () =>
+  useQuery({ queryKey: [...CUSTOMERS_KEY, 'options'], queryFn: () => customerApi.options() });
 
 export const useToggleCustomer = () =>
   useApiMutation(
-    ({ id, discontinue }: { id: number; discontinue: boolean }) =>
-      discontinue ? customerApi.discontinue(id) : customerApi.reactivate(id),
+    ({ id, reason }: { id: number; reason?: string }) =>
+      reason === undefined ? customerApi.reactivate(id) : customerApi.discontinue(id, reason),
     { invalidate: [CUSTOMERS_KEY], successMessage: MESSAGES.common.saved },
   );
 
@@ -53,6 +61,14 @@ export const useSaveProduct = () =>
     { invalidate: [PRODUCTS_KEY, LOOKUPS_KEY], successMessage: MESSAGES.common.saved },
   );
 
+/** Chi tiết mã hàng (mô tả + lịch sử); chỉ vai trò được xem lịch sử mới gọi. */
+export const useProduct = (productId: number | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: [...PRODUCTS_KEY, 'detail', productId],
+    queryFn: () => productApi.get(productId ?? 0),
+    enabled: enabled && productId !== undefined,
+  });
+
 export const useProductSpec = (productId: number | undefined) => {
   const scope = useProductScope();
   return useQuery({
@@ -66,8 +82,12 @@ export const useProductSpec = (productId: number | undefined) => {
 export const useSaveProductSpec = () => {
   const scope = useProductScope();
   return useApiMutation(
-    ({ id, body }: { id: number; body: SaveProductSpecPayload }) => productApi.saveSpec(id, body, scope),
-    { invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']], successMessage: MESSAGES.common.saved },
+    ({ id, body }: { id: number; body: SaveProductSpecPayload }) =>
+      productApi.saveSpec(id, body, scope),
+    {
+      invalidate: [PRODUCTS_KEY, ORDERS_KEY, ['lookups'], ['warehouse']],
+      successMessage: MESSAGES.common.saved,
+    },
   );
 };
 
@@ -120,9 +140,13 @@ export const useUpdateOrder = (id: number) =>
   });
 
 export const useCancelOrder = (id: number) =>
-  useApiMutation(({ reason, rowVer }: { reason: string | null; rowVer: string }) => orderApi.cancel(id, reason, rowVer), {
-    invalidate: [ORDERS_KEY, LOOKUPS_KEY],
-  });
+  useApiMutation(
+    ({ reason, rowVer }: { reason: string | null; rowVer: string }) =>
+      orderApi.cancel(id, reason, rowVer),
+    {
+      invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    },
+  );
 
 export const useStartProduction = (id: number) =>
   useApiMutation((rowVer: string) => orderApi.startProduction(id, rowVer), {
@@ -131,6 +155,9 @@ export const useStartProduction = (id: number) =>
   });
 
 export const useStopOrder = (id: number) =>
-  useApiMutation(({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer), {
-    invalidate: [ORDERS_KEY, LOOKUPS_KEY],
-  });
+  useApiMutation(
+    ({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer),
+    {
+      invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    },
+  );

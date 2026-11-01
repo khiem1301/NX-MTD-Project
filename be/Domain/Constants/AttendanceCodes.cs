@@ -55,6 +55,10 @@ public static class SettingKeys
     public const string NotificationRetentionDays = "NOTIFICATION_RETENTION_DAYS";
     /// <summary>Giờ chạy JOB-05; khóa chưa seed trong SystemSetting nên dùng mặc định 01:00 (DEV-KH-23-1).</summary>
     public const string NotificationCleanupTime = "NOTIFICATION_CLEANUP_TIME";
+    /// <summary>Giờ chạy job dọn ảnh mồ côi của mã hàng; khóa chưa seed trong SystemSetting nên dùng mặc định 02:00.</summary>
+    public const string ProductImageCleanupTime = "PRODUCT_IMAGE_CLEANUP_TIME";
+    /// <summary>Giờ chạy job dọn ảnh chứng từ đã gỡ; khóa chưa seed trong SystemSetting nên dùng mặc định 02:30.</summary>
+    public const string AttachmentCleanupTime = "ATTACHMENT_CLEANUP_TIME";
 
     // Kho, cắt (Thái)
     public const string CutSurplusPercent = "CUT_SURPLUS_PERCENT";
@@ -65,6 +69,12 @@ public static class SettingKeys
     // KPI tổ may (Minh, UC19 KPI tổ may — DEV-MI-16-2: khóa chưa seed trong SystemSetting,
     // dùng fallback mặc định của KpiAutoCloseJob)
     public const string KpiAutoCloseTime = "KPI_AUTO_CLOSE_TIME";
+
+    /// <summary>Sau giờ này không sửa được KPI theo ngày của chính ngày đó.</summary>
+    public const string KpiEditCutoffTime = "KPI_EDIT_CUTOFF_TIME";
+
+    /// <summary>Cảnh báo khi kỳ KPI kết thúc cách ngày giao hàng không quá số ngày này.</summary>
+    public const string KpiDueWarningDays = "KPI_DUE_WARNING_DAYS";
 
     /// <summary>KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu hơn: tổ trưởng quyết định.</summary>
     public const string KpiOtAutoThresholdPct = "KPI_OT_AUTO_THRESHOLD_PCT";

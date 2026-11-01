@@ -80,7 +80,9 @@ export function MovementFormModal({ target, onClose }: Props) {
             {`${progress.operationCode} - ${progress.operationName}`}
           </Descriptions.Item>
           {handover ? (
-            <Descriptions.Item label={PM_LABELS.unallocated}>{progress.unallocatedQty}</Descriptions.Item>
+            <Descriptions.Item label={PM_LABELS.unallocated}>
+              {progress.unallocatedQty}
+            </Descriptions.Item>
           ) : (
             <Descriptions.Item label={PM_LABELS.worker}>
               {`${target.worker.workerCode} - ${target.worker.workerName} (${PM_LABELS.retrievable} ${target.worker.retrievableQty})`}

@@ -20,11 +20,18 @@ const ordersKey = [...PURCHASE_KEY, 'orders'] as const;
 // ---------- Nhà cung cấp ----------
 
 export const useSuppliers = (query: SupplierQuery) =>
-  useQuery({ queryKey: [...suppliersKey, 'list', query], queryFn: () => purchaseApi.listSuppliers(query) });
+  useQuery({
+    queryKey: [...suppliersKey, 'list', query],
+    queryFn: () => purchaseApi.listSuppliers(query),
+  });
 
 /** Nhà cung cấp đang hợp tác cho ô chọn của Quản đốc. */
 export const useSupplierOptions = (enabled: boolean) =>
-  useQuery({ queryKey: [...suppliersKey, 'options'], queryFn: purchaseApi.supplierOptions, enabled });
+  useQuery({
+    queryKey: [...suppliersKey, 'options'],
+    queryFn: purchaseApi.supplierOptions,
+    enabled,
+  });
 
 export const useSaveSupplier = (id: number | null) =>
   useApiMutation(
@@ -37,15 +44,20 @@ export const useSaveSupplier = (id: number | null) =>
 
 export const useToggleSupplier = () =>
   useApiMutation(
-    ({ id, discontinue }: { id: number; discontinue: boolean }) =>
-      discontinue ? purchaseApi.discontinueSupplier(id) : purchaseApi.reactivateSupplier(id),
+    ({ id, reason }: { id: number; reason?: string }) =>
+      reason === undefined
+        ? purchaseApi.reactivateSupplier(id)
+        : purchaseApi.discontinueSupplier(id, reason),
     { invalidate: [suppliersKey], successMessage: PURCHASE_TEXT.saved },
   );
 
 // ---------- Đơn mua ----------
 
 export const usePurchaseOrders = (role: PurchaseRole, query: PurchaseOrderQuery) =>
-  useQuery({ queryKey: [...ordersKey, role, 'list', query], queryFn: () => purchaseApi.listOrders(role, query) });
+  useQuery({
+    queryKey: [...ordersKey, role, 'list', query],
+    queryFn: () => purchaseApi.listOrders(role, query),
+  });
 
 export const usePurchaseOrderDetail = (role: PurchaseRole, id: number | null) =>
   useQuery({
@@ -57,13 +69,22 @@ export const usePurchaseOrderDetail = (role: PurchaseRole, id: number | null) =>
 const afterAction = (successMessage: string) => ({ invalidate: [ordersKey], successMessage });
 
 export const usePlaceOrder = (id: number) =>
-  useApiMutation((body: PlacePayload) => purchaseApi.place(id, body), afterAction(PURCHASE_TEXT.done.placed));
+  useApiMutation(
+    (body: PlacePayload) => purchaseApi.place(id, body),
+    afterAction(PURCHASE_TEXT.done.placed),
+  );
 
 export const useCancelOrder = (id: number) =>
-  useApiMutation((body: ReasonPayload) => purchaseApi.cancel(id, body), afterAction(PURCHASE_TEXT.done.cancelled));
+  useApiMutation(
+    (body: ReasonPayload) => purchaseApi.cancel(id, body),
+    afterAction(PURCHASE_TEXT.done.cancelled),
+  );
 
 export const useRepriceOrder = (id: number) =>
-  useApiMutation((body: RepricePayload) => purchaseApi.reprice(id, body), afterAction(PURCHASE_TEXT.done.repriced));
+  useApiMutation(
+    (body: RepricePayload) => purchaseApi.reprice(id, body),
+    afterAction(PURCHASE_TEXT.done.repriced),
+  );
 
 export const useConfirmPayment = (id: number) =>
   useApiMutation(
@@ -72,4 +93,7 @@ export const useConfirmPayment = (id: number) =>
   );
 
 export const useReturnPayment = (id: number) =>
-  useApiMutation((body: ReasonPayload) => purchaseApi.returnPayment(id, body), afterAction(PURCHASE_TEXT.done.returned));
+  useApiMutation(
+    (body: ReasonPayload) => purchaseApi.returnPayment(id, body),
+    afterAction(PURCHASE_TEXT.done.returned),
+  );

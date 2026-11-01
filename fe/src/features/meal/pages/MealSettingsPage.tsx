@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { Alert, Button, Card, Form, Skeleton, Space, TimePicker, Typography } from 'antd';
+import { Alert, Button, Card, Form, Skeleton } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
 import { MEAL_TEXT } from '../constants';
 import { useMealSettings, useSaveMealSettings } from '../hooks/useMeal';
+import { PageCard } from '@/components/common/PageCard';
+import { AppTimePicker } from '@/components/common/DateInputs';
 
 type FormValues = { reminder: Dayjs; cutoff: Dayjs };
 
@@ -21,17 +23,19 @@ export function MealSettingsPage() {
   const data = settings.data;
 
   useEffect(() => {
-    if (data) form.setFieldsValue({ reminder: dayjs(data.reminderTime, FORMAT), cutoff: dayjs(data.cutoffTime, FORMAT) });
+    if (data)
+      form.setFieldsValue({
+        reminder: dayjs(data.reminderTime, FORMAT),
+        cutoff: dayjs(data.cutoffTime, FORMAT),
+      });
   }, [data, form]);
 
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%', maxWidth: 560 }}>
-      <div>
-        <Typography.Title level={3} style={{ marginBottom: 4 }}>
-          {MEAL_TEXT.settingsPageTitle}
-        </Typography.Title>
-        <Typography.Text type="secondary">{text.subtitle}</Typography.Text>
-      </div>
+    <PageCard
+      title={MEAL_TEXT.settingsPageTitle}
+      description={text.subtitle}
+      style={{ maxWidth: 560 }}
+    >
       <QueryError error={settings.error} onRetry={() => void settings.refetch()} />
       {settings.isLoading && <Skeleton active />}
       {data && (
@@ -41,10 +45,20 @@ export function MealSettingsPage() {
             form={form}
             layout="vertical"
             disabled={save.isPending}
-            onFinish={(v) => save.mutate({ reminderTime: v.reminder.format(FORMAT), cutoffTime: v.cutoff.format(FORMAT) })}
+            onFinish={(v) =>
+              save.mutate({
+                reminderTime: v.reminder.format(FORMAT),
+                cutoffTime: v.cutoff.format(FORMAT),
+              })
+            }
           >
-            <Form.Item name="reminder" label={text.reminder} extra={text.reminderHelp} rules={[{ required: true, message: text.required }]}>
-              <TimePicker format={FORMAT} minuteStep={5} allowClear={false} needConfirm={false} />
+            <Form.Item
+              name="reminder"
+              label={text.reminder}
+              extra={text.reminderHelp}
+              rules={[{ required: true, message: text.required }]}
+            >
+              <AppTimePicker minuteStep={5} allowClear={false} needConfirm={false} />
             </Form.Item>
             <Form.Item
               name="cutoff"
@@ -58,14 +72,20 @@ export function MealSettingsPage() {
                     const reminder = getFieldValue('reminder') as Dayjs | undefined;
                     if (!value) return Promise.resolve();
                     const hm = value.format(FORMAT);
-                    if (hm < EARLIEST || hm > LATEST) return Promise.reject(new Error(text.cutoffRange.replace('{from}', EARLIEST).replace('{to}', LATEST)));
-                    if (reminder && reminder.format(FORMAT) >= hm) return Promise.reject(new Error(text.order));
+                    if (hm < EARLIEST || hm > LATEST)
+                      return Promise.reject(
+                        new Error(
+                          text.cutoffRange.replace('{from}', EARLIEST).replace('{to}', LATEST),
+                        ),
+                      );
+                    if (reminder && reminder.format(FORMAT) >= hm)
+                      return Promise.reject(new Error(text.order));
                     return Promise.resolve();
                   },
                 }),
               ]}
             >
-              <TimePicker format={FORMAT} minuteStep={5} allowClear={false} needConfirm={false} />
+              <AppTimePicker minuteStep={5} allowClear={false} needConfirm={false} />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={save.isPending}>
               {text.save}
@@ -73,6 +93,6 @@ export function MealSettingsPage() {
           </Form>
         </Card>
       )}
-    </Space>
+    </PageCard>
   );
 }

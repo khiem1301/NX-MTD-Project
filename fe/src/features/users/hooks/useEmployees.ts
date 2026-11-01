@@ -3,7 +3,12 @@ import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { useRolePath } from '@/hooks/useRolePath';
 import { employeeApi } from '../api/employeeApi';
-import type { AdminUpdatePayload, CreateEmployeePayload, EmployeeQuery, ManagerUpdatePayload } from '../types';
+import type {
+  AdminUpdatePayload,
+  CreateEmployeePayload,
+  EmployeeQuery,
+  ManagerUpdatePayload,
+} from '../types';
 
 export const EMPLOYEES_KEY = ['employees'] as const;
 /** Đổi nhân viên / tổ thì tra cứu tổ và thành viên của luồng khác cũng phải tải lại. */
@@ -43,14 +48,20 @@ export const useUpdateEmployee = (id: number) => {
   const role = useRolePath();
   return useApiMutation(
     (body: AdminUpdatePayload | ManagerUpdatePayload) =>
-      role === 'admin' ? employeeApi.adminUpdate(id, body as AdminUpdatePayload) : employeeApi.managerUpdate(id, body as ManagerUpdatePayload),
+      role === 'admin'
+        ? employeeApi.adminUpdate(id, body as AdminUpdatePayload)
+        : employeeApi.managerUpdate(id, body as ManagerUpdatePayload),
     { invalidate, successMessage: MESSAGES.common.saved },
   );
 };
 
 export const useResignEmployee = (id: number) => {
   const role = useRolePath();
-  return useApiMutation((body: { resignDate: string; reason: string; rowVer: string }) => employeeApi.resign(role, id, body), { invalidate });
+  return useApiMutation(
+    (body: { resignDate: string; reason: string; rowVer: string }) =>
+      employeeApi.resign(role, id, body),
+    { invalidate },
+  );
 };
 
 export const useLockAccount = (id: number) => {

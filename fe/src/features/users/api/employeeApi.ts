@@ -20,14 +20,23 @@ const put = async <T>(url: string, body: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
 export const employeeApi = {
-  list: (role: RolePath, q: EmployeeQuery) => get<Paginated<EmployeeListItem>>(API.employees.base(role), q),
+  list: (role: RolePath, q: EmployeeQuery) =>
+    get<Paginated<EmployeeListItem>>(API.employees.base(role), q),
   get: (role: RolePath, id: number) => get<EmployeeDetail>(API.employees.byId(role, id)),
-  create: (role: RolePath, body: CreateEmployeePayload) => post<CreatedEmployee>(API.employees.base(role), body),
-  adminUpdate: (id: number, body: AdminUpdatePayload) => put<unknown>(API.employees.byId('admin', id), body),
-  managerUpdate: (id: number, body: ManagerUpdatePayload) => put<unknown>(API.employees.byId('manager', id), body),
-  resign: (role: RolePath, id: number, body: { resignDate: string; reason: string; rowVer: string }) =>
-    post<unknown>(API.employees.resign(role, id), body),
-  lock: (role: RolePath, id: number, reason: string) => post<unknown>(API.employees.lock(role, id), { reason }),
+  create: (role: RolePath, body: CreateEmployeePayload) =>
+    post<CreatedEmployee>(API.employees.base(role), body),
+  adminUpdate: (id: number, body: AdminUpdatePayload) =>
+    put<unknown>(API.employees.byId('admin', id), body),
+  managerUpdate: (id: number, body: ManagerUpdatePayload) =>
+    put<unknown>(API.employees.byId('manager', id), body),
+  resign: (
+    role: RolePath,
+    id: number,
+    body: { resignDate: string; reason: string; rowVer: string },
+  ) => post<unknown>(API.employees.resign(role, id), body),
+  lock: (role: RolePath, id: number, reason: string) =>
+    post<unknown>(API.employees.lock(role, id), { reason }),
   unlock: (role: RolePath, id: number) => post<unknown>(API.employees.unlock(role, id)),
-  resetPassword: (role: RolePath, id: number) => post<TempPassword>(API.employees.resetPassword(role, id)),
+  resetPassword: (role: RolePath, id: number) =>
+    post<TempPassword>(API.employees.resetPassword(role, id)),
 };

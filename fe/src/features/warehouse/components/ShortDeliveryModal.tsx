@@ -1,37 +1,23 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  DatePicker,
-  Descriptions,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Popconfirm,
-  Space,
-  Spin,
-  Table,
-  type TableColumnsType,
-} from 'antd';
+import { Alert, Button, Form, Input, Modal, Space, Spin } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import dayjs, { type Dayjs } from 'dayjs';
-import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
-import { formatDateTime, formatQty } from '@/utils/format';
-import {
-  LABELS,
-  SHORTAGE_RESOLUTION,
-  SHORTAGE_RESOLUTION_LABEL,
-  SHORTAGE_STATUS_LABEL,
-} from '../constants';
+import { API_DATE } from '@/utils/format';
+import { LABELS, SHORTAGE_RESOLUTION } from '../constants';
 import {
   useCreateSupplementary,
   useResolveShortDelivery,
   useShortDelivery,
 } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryLine } from '../types';
+import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { DataTable } from '@/components/common/DataTable';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { shortDeliveryColumns } from './shortDeliveryColumns';
+import { ShortDeliveryInfo } from './ShortDeliveryInfo';
 
 type ShortDeliveryModalProps = {
   requestId: number | undefined;
@@ -39,7 +25,6 @@ type ShortDeliveryModalProps = {
 };
 
 const OPEN_STATUS = 'PENDING_PROCESSING';
-const API_DATE = 'YYYY-MM-DD';
 
 type SupplementaryValues = {
   receiptDate: Dayjs;
@@ -60,7 +45,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   const [overrides, setOverrides] = useState<Record<number, number>>({});
   const [form] = Form.useForm<SupplementaryValues>();
   const d = detail.data;
-  const isManager = hasRole(ROLES.Manager);
+  const isManager = hasRole(ROLES.Admin, ROLES.Manager);
   const isKeeper = hasRole(ROLES.WarehouseKeeper);
   const open = d?.status === OPEN_STATUS;
   const unresolved = open && d?.resolution === null;
@@ -69,66 +54,13 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   const replenishOf = (l: ShortDeliveryLine) => overrides[l.requestLineId] ?? l.shortfallQty;
   const remaining = (l: ShortDeliveryLine) => Math.max(0, (l.replenishQty ?? 0) - l.replenishedQty);
 
-  const columns: TableColumnsType<ShortDeliveryLine> = [
-    { title: LABELS.materialCode, dataIndex: 'materialCode' },
-    { title: LABELS.materialName, dataIndex: 'materialName' },
-    { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-    { title: LABELS.unit, dataIndex: 'unit' },
-    { title: LABELS.shortfallQty, dataIndex: 'shortfallQty', align: 'right', render: formatQty },
-    ...(unresolved && isManager
-      ? [
-          {
-            title: LABELS.replenishQty,
-            key: 'replenish',
-            render: (_: unknown, l: ShortDeliveryLine) => (
-              <InputNumber
-                min={0}
-                max={l.shortfallQty}
-                value={replenishOf(l)}
-                onChange={(v) => setOverrides({ ...overrides, [l.requestLineId]: v ?? 0 })}
-              />
-            ),
-          },
-        ]
-      : [
-          {
-            title: LABELS.replenishQty,
-            dataIndex: 'replenishQty',
-            align: 'right' as const,
-            render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-          },
-          {
-            title: LABELS.replenishedQty,
-            dataIndex: 'replenishedQty',
-            align: 'right' as const,
-            render: formatQty,
-          },
-        ]),
-    ...(awaitingReplenish && isKeeper
-      ? [
-          {
-            title: LABELS.acceptedQty,
-            key: 'accepted',
-            render: (_: unknown, l: ShortDeliveryLine) => (
-              <Space>
-                <Form.Item
-                  name={['lines', l.materialReceiptLineId, 'acceptedQty']}
-                  noStyle
-                  initialValue={remaining(l)}
-                >
-                  <InputNumber
-                    min={0}
-                    max={remaining(l)}
-                    addonBefore={LABELS.acceptedQty}
-                    style={{ width: 150 }}
-                  />
-                </Form.Item>
-              </Space>
-            ),
-          },
-        ]
-      : []),
-  ];
+  const columns = shortDeliveryColumns({
+    canEditReplenish: unresolved && isManager,
+    canReceive: awaitingReplenish && isKeeper,
+    replenishOf,
+    remaining,
+    onReplenishChange: (line, qty) => setOverrides({ ...overrides, [line.requestLineId]: qty }),
+  });
 
   const submitReplenish = () => {
     if (!d) return;
@@ -173,7 +105,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   return (
     <Modal
       open={requestId !== undefined}
-      width={980}
+      width={MODAL_WIDTH.lg}
       title={d ? `${LABELS.shortagesTitle} — ${d.requestCode}` : LABELS.shortagesTitle}
       onCancel={onClose}
       destroyOnHidden
@@ -183,7 +115,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
             <Button onClick={onClose}>{MESSAGES.common.cancel}</Button>
             {unresolved && isManager && (
               <>
-                <Popconfirm
+                <ConfirmAction
                   title={MESSAGES.warehouse.confirmNoReplenish}
                   onConfirm={() =>
                     resolve.mutate(
@@ -195,7 +127,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                   <Button danger loading={resolve.isPending}>
                     {LABELS.noReplenish}
                   </Button>
-                </Popconfirm>
+                </ConfirmAction>
                 <Button type="primary" loading={resolve.isPending} onClick={submitReplenish}>
                   {LABELS.replenish}
                 </Button>
@@ -224,36 +156,12 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
           onFinish={submitSupplementary}
           disabled={supplementary.isPending}
         >
-          <Descriptions column={2} size="small" bordered style={{ marginBottom: 16 }}>
-            <Descriptions.Item label={LABELS.receiptCode}>{d.receiptCode}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.status}>
-              <StatusTag status={d.status} labels={SHORTAGE_STATUS_LABEL} />
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.order}>{d.orderCode ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.purchaseOrder}>{d.poCode ?? '—'}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.shortageResolution}>
-              {d.resolution ? (
-                <StatusTag status={d.resolution} labels={SHORTAGE_RESOLUTION_LABEL} />
-              ) : (
-                '—'
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.submittedAt}>
-              {formatDateTime(d.createdAt)}
-            </Descriptions.Item>
-            {d.resultNote && (
-              <Descriptions.Item label={LABELS.note} span={2}>
-                {d.resultNote}
-              </Descriptions.Item>
-            )}
-          </Descriptions>
-          <Table
+          <ShortDeliveryInfo detail={d} />
+          <DataTable
             rowKey="requestLineId"
-            size="small"
             columns={columns}
             dataSource={d.lines}
             pagination={false}
-            scroll={{ x: 'max-content' }}
           />
           {awaitingReplenish && isKeeper && (
             <Space style={{ marginTop: 16 }} align="start" wrap>
@@ -262,7 +170,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                 label={LABELS.receiptDate}
                 rules={[{ required: true, message: MESSAGES.common.required }]}
               >
-                <DatePicker format="DD/MM/YYYY" />
+                <AppDatePicker />
               </Form.Item>
               <Form.Item name="note" label={LABELS.note}>
                 <Input.TextArea rows={1} maxLength={1000} style={{ width: 420 }} />

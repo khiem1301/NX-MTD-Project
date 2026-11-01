@@ -3,8 +3,7 @@ import { MESSAGES } from '@/constants/messages';
 import type { AuditEntry } from '@/types/attachment';
 import { formatDateTime } from '@/utils/format';
 import { describeChanges } from '@/utils/auditDiff';
-
-const ACTION_LABEL: Partial<Record<AuditEntry['action'], string>> = { INSERT: 'Tạo', UPDATE: 'Cập nhật' };
+import { auditActionText } from '@/utils/auditLabels';
 
 /** Lịch sử thay đổi (AuditLog) của đơn hàng, mã hàng, nhân viên, tổ. Lịch sử đơn hàng chứa đơn giá nên chỉ Admin xem (D26). */
 export function AuditHistory({ history }: { history: AuditEntry[] }) {
@@ -14,7 +13,7 @@ export function AuditHistory({ history }: { history: AuditEntry[] }) {
         key: h.auditLogId,
         children: (
           <>
-            <Typography.Text strong>{ACTION_LABEL[h.action] ?? h.action}</Typography.Text>
+            <Typography.Text strong>{auditActionText(h.action)}</Typography.Text>
             <div>{`${h.changedByName ?? '—'} · ${formatDateTime(h.changedAt)}`}</div>
             {describeChanges(h.oldValues, h.newValues).map((c) => (
               <div key={c}>{c}</div>

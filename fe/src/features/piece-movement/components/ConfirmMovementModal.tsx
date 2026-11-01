@@ -90,7 +90,8 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
               {
                 validator: async (_rule, value?: string) => {
                   const qty = form.getFieldValue('confirmedQty') as number | undefined;
-                  if (qty !== movement.quantity && !value?.trim()) throw new Error(PM_MESSAGES.discrepancyReasonRequired);
+                  if (qty !== movement.quantity && !value?.trim())
+                    throw new Error(PM_MESSAGES.discrepancyReasonRequired);
                 },
               },
             ]}

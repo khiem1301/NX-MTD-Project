@@ -1,9 +1,10 @@
-import { Alert, Empty, Table, Tag, Tooltip, Typography } from 'antd';
+import { Alert, Empty, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useSyncSessions } from '../hooks/useAttendance';
 import type { SyncSession, SyncStatus } from '../types';
 import { formatDateTime } from '../utils';
+import { DataTable } from '@/components/common/DataTable';
 
 const STATUS_TAG: Record<SyncStatus, { color: string; text: string }> = {
   Running: { color: 'processing', text: ATTENDANCE_TEXT.sync.statusRunning },
@@ -86,9 +87,9 @@ export function SyncSessionTable() {
   ];
 
   return (
-    <Table<SyncSession>
+    <DataTable<SyncSession>
       rowKey="syncSessionId"
-      size="middle"
+      size="small"
       columns={columns}
       dataSource={data ?? []}
       loading={isLoading}
@@ -96,10 +97,7 @@ export function SyncSessionTable() {
       scroll={{ x: 'max-content' }}
       locale={{
         emptyText: (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={ATTENDANCE_TEXT.sync.never}
-          />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={ATTENDANCE_TEXT.sync.never} />
         ),
       }}
     />

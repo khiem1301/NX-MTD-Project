@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
-namespace NX_MTD.Application.Services.Orders;
+namespace NX_MTD.Application.Services;
 
 public sealed class CustomerService : ICustomerService
 {
@@ -17,9 +17,12 @@ public sealed class CustomerService : ICustomerService
         _customers = customers; _audit = audit; _uow = uow;
     }
 
-    public async Task<Result<IReadOnlyList<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
-        Result<IReadOnlyList<CustomerDto>>.Success(
-            await _customers.ListAsync(query.Keyword, query.Status is null ? null : CodeText.ToCode(query.Status), ct));
+    public async Task<Result<PagedResult<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
+        Result<PagedResult<CustomerDto>>.Success(
+            await _customers.ListAsync(query, string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status), ct));
+
+    public async Task<Result<IReadOnlyList<CustomerOptionDto>>> GetOptionsAsync(CancellationToken ct) =>
+        Result<IReadOnlyList<CustomerOptionDto>>.Success(await _customers.ListOptionsAsync(ct));
 
     public async Task<Result<int>> CreateAsync(SaveCustomerDto dto, CancellationToken ct)
     {
@@ -55,15 +58,17 @@ public sealed class CustomerService : ICustomerService
         return Result.Success(Messages.Saved);
     }
 
-    public async Task<Result> DiscontinueAsync(int customerId, CancellationToken ct)
+    public async Task<Result> DiscontinueAsync(int customerId, DiscontinueCustomerDto dto, CancellationToken ct)
     {
         var customer = await _customers.GetByIdAsync(customerId);
         if (customer is null) return Fail.NotFound();
         if (customer.Status == RecordStatus.Discontinued) return Result.Success(Messages.CustomerDiscontinued);
 
         customer.Status = RecordStatus.Discontinued;
+        customer.DiscontinueReason = dto.Reason.Trim();
         _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
-            new { Status = RecordStatus.Active }, new { customer.Status }));
+            new { Status = RecordStatus.Active }, new { customer.Status }, customer.DiscontinueReason,
+            $"Ngừng hợp tác với khách hàng {customer.CustomerName}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.CustomerDiscontinued);
     }
@@ -76,6 +81,7 @@ public sealed class CustomerService : ICustomerService
         if (customer.Status == RecordStatus.Active) return Result.Success(Messages.Saved);
 
         customer.Status = RecordStatus.Active;
+        customer.DiscontinueReason = null;
         _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
             new { Status = RecordStatus.Discontinued }, new { customer.Status }));
         await _uow.SaveChangesAsync();

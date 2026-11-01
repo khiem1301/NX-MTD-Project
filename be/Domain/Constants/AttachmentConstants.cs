@@ -13,6 +13,12 @@ public static class AttachmentOwnerTypes
     public const string AccountingPeriod = "ACCOUNTING_PERIOD";
     public const string AttendanceImport = "ATTENDANCE_IMPORT";
 
+    /// <summary>Loại chứng từ có tệp lưu ở IFileStorage. Tệp bảng lương và file chấm công nhập có kho riêng nên job dọn tệp không đụng tới.</summary>
+    public static readonly IReadOnlyList<string> InFileStorage = new[]
+    {
+        Request, PurchaseOrder, MaterialReceipt, MaterialReturn, DefectRecord, DispatchNote, VehicleTrip, AccountingPeriod,
+    };
+
     public static readonly IReadOnlySet<string> All = new HashSet<string>
     {
         Request, PurchaseOrder, MaterialReceipt, MaterialReturn, DefectRecord,

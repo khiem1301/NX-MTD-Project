@@ -12,7 +12,7 @@ const AFFECTED = [DISPATCH_KEY, ['warehouse'], ['orders']];
 
 const useBase = () => {
   const { user } = useAuth();
-  if (user?.role === ROLES.Manager) return MANAGER_BASE;
+  if (user?.role === ROLES.Manager || user?.role === ROLES.Admin) return MANAGER_BASE;
   if (user?.role === ROLES.Accountant) return ACCOUNTANT_BASE;
   return WAREHOUSE_BASE;
 };
@@ -79,7 +79,10 @@ export const useConfirmDelivery = () =>
 /** TH-16: tải Excel phiếu xuất hàng để in. */
 export const useDownloadDispatch = () => {
   const base = useBase();
-  return useApiMutation(({ id, code }: { id: number; code: string }) => dispatchApi.downloadExcel(base, id, code), {
-    invalidate: [],
-  });
+  return useApiMutation(
+    ({ id, code }: { id: number; code: string }) => dispatchApi.downloadExcel(base, id, code),
+    {
+      invalidate: [],
+    },
+  );
 };

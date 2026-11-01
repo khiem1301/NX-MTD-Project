@@ -29,12 +29,52 @@ export type KpiTarget = {
   createdAt: string;
 };
 
-/** Chỉ tiêu tối đa lập được: BTP kho còn + tổ đang giữ − phần còn phải làm của chỉ tiêu khác. */
-export type KpiCapacity = {
+/** Chỉ tiêu tối đa lập được cho đơn + mã hàng: số lượng đơn đặt − phần đã giao cho các tổ khác. */
+export type KpiOrderCapacity = {
+  orderQty: number;
+  assignedToOthers: number;
+  maxTarget: number;
+  dueDate: string | null;
+  /** Kỳ kết thúc cách ngày giao không quá số ngày này thì cảnh báo. */
+  dueWarningDays: number;
+  orderStatus: string | null;
+  /** Đơn đã dừng, đã hủy hoặc đã giao xong: không đặt chỉ tiêu được. */
+  orderClosed: boolean;
+};
+
+/** Một ô trên lịch KPI: targetQty = 0 là chưa đặt, actualQty = null ở ngày chưa tới. */
+export type KpiCalendarDay = {
+  workDate: string;
+  targetQty: number;
+  actualQty: number | null;
+};
+
+/** BTP khả dụng cho KPI theo ngày: kho + tổ đang giữ − phần các tổ khác phải lấy từ kho. */
+export type KpiBtp = {
   warehouseBtp: number;
   teamHeld: number;
-  committedByOthers: number;
-  maxTarget: number;
+  neededByOthers: number;
+  available: number;
+};
+
+export type KpiCalendar = {
+  kpiTargetId: number;
+  orderCode: string;
+  productCode: string;
+  productName: string;
+  sewingTeamName: string;
+  startDate: string;
+  endDate: string;
+  today: string;
+  dueDate: string;
+  /** Ngày sớm nhất còn sửa được KPI: hôm nay nếu chưa tới editCutoff, không thì ngày mai. */
+  firstEditableDate: string;
+  editCutoff: string;
+  targetFinishedQty: number;
+  finishedQty: number;
+  canEdit: boolean;
+  btp: KpiBtp;
+  days: KpiCalendarDay[];
 };
 
 /** Kết thúc đơn của tổ: một công nhân lệch ở một dòng đơn (báo ở công đoạn cuối nhiều hơn QC đạt + hàng hủy). */
@@ -94,7 +134,6 @@ export type KpiDailyResult = {
 };
 
 /** Quản đốc lập / sửa chỉ tiêu KPI; Admin chỉ xem (MI-17, UC21). */
-export type KpiRole = 'manager' | 'admin';
 
 export type SaveKpiTargetPayload = {
   orderId: number;
@@ -103,5 +142,8 @@ export type SaveKpiTargetPayload = {
   startDate: string;
   endDate: string;
   targetFinishedQty: number;
-  workingDays: number;
+};
+
+export type SaveKpiDailyPlanPayload = {
+  dailyTargets: { workDate: string; targetQty: number }[];
 };

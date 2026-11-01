@@ -5,7 +5,7 @@ import { useChangePassword } from '../hooks/useProfile';
 import type { ChangePasswordPayload } from '../api/profileApi';
 
 /** UC03: nhập lại phải khớp (MSG05); sai mật khẩu hiện tại là 409 (MSG07) nên không bị tự refresh token. */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ requireCurrent = true }: { requireCurrent?: boolean }) {
   const [form] = Form.useForm<ChangePasswordPayload>();
   const change = useChangePassword();
 
@@ -20,17 +20,38 @@ export function ChangePasswordForm() {
           form.setFields([{ name: 'currentPassword', errors: [MESSAGES.hr.wrongCurrentPassword] }]);
           return;
         }
-        form.setFields(Object.entries(error.errors ?? {}).map(([name, errors]) => ({ name: name as keyof ChangePasswordPayload, errors })));
+        form.setFields(
+          Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+            name: name as keyof ChangePasswordPayload,
+            errors,
+          })),
+        );
         if (!error.errors) void message.error(error.message);
       },
     });
 
   return (
-    <Form form={form} layout="vertical" onFinish={handleFinish} disabled={change.isPending} style={{ maxWidth: 420 }}>
-      <Form.Item name="currentPassword" label={MESSAGES.hr.currentPassword} rules={[{ required: true, message: MESSAGES.common.required }]}>
-        <Input.Password autoComplete="current-password" />
-      </Form.Item>
-      <Form.Item name="newPassword" label={MESSAGES.hr.newPassword} rules={[{ required: true, message: MESSAGES.common.required }, { max: 100 }]}>
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleFinish}
+      disabled={change.isPending}
+      style={{ maxWidth: 420 }}
+    >
+      {requireCurrent && (
+        <Form.Item
+          name="currentPassword"
+          label={MESSAGES.hr.currentPassword}
+          rules={[{ required: true, message: MESSAGES.common.required }]}
+        >
+          <Input.Password autoComplete="current-password" />
+        </Form.Item>
+      )}
+      <Form.Item
+        name="newPassword"
+        label={MESSAGES.hr.newPassword}
+        rules={[{ required: true, message: MESSAGES.common.required }, { max: 100 }]}
+      >
         <Input.Password autoComplete="new-password" />
       </Form.Item>
       <Form.Item

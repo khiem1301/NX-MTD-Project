@@ -1,9 +1,9 @@
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Production;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -287,6 +287,21 @@ public class DefectServiceTests : ProductionTestBase
             .Should().Be(ErrorCodes.DefectInvalidStatus);
     }
 
+    [Theory]
+    [InlineData(48 * 60, true)]       // đúng 48 giờ vẫn được
+    [InlineData(48 * 60 + 1, false)]  // quá 1 phút thì không
+    public async Task Object_IsAllowedOnlyWithin48HoursOfRecording(int minutesAgo, bool allowed)
+    {
+        var defect = Existing();
+        defect.RecordedAt = Now.AddMinutes(-minutesAgo);
+
+        var result = await _sut.ObjectAsync(7, defect.DefectRecordId, new ObjectDefectDto("x", RowVer), default);
+
+        result.IsSuccess.Should().Be(allowed);
+        if (!allowed) result.Message.Should().Be(Messages.DefectObjectionExpired);
+        (defect.WorkerObjection is not null).Should().Be(allowed);
+    }
+
     // ========== Xem ==========
 
     [Fact]
@@ -323,6 +338,141 @@ public class DefectServiceTests : ProductionTestBase
         leader.Count(d => d.CanEdit).Should().Be(1);
         manager.Should().HaveCount(3);
         manager.Should().OnlyContain(d => d.CanEdit);
+    }
+
+    // ========== Chấp nhận phiếu sau phản đối (Quản đốc / Admin) ==========
+
+    private DefectService AsManagerService()
+    {
+        AsManager();
+        return new DefectService(Uow, Guard(), _rates, Notifier, Audit, User, Clock);
+    }
+
+    private static DefectRecord WithObjection(DefectRecord d)
+    {
+        d.WorkerObjection = "Không phải lỗi của em";
+        d.ObjectedAt = Now;
+        return d;
+    }
+
+    [Fact]
+    public async Task Confirm_KeepsTheDefectAsConfirmed_AuditsTheNoteAndNotifiesLeadersAndWorker()
+    {
+        var defect = WithObjection(Existing());
+        _employees.Add(new Employee { EmployeeId = 20, TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.TeamLeader } });
+
+        var result = await AsManagerService().ConfirmAsync(defect.DefectRecordId, new ConfirmDefectDto("  Đã kiểm tra, đúng lỗi  ", RowVer), default);
+
+        result.Message.Should().Be(Messages.DefectConfirmed);
+        defect.Status.Should().Be(DefectStatuses.Confirmed);
+        defect.UpdatedAt.Should().Be(Now);
+        Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update && e.Reason == "Đã kiểm tra, đúng lỗi"));
+        Notifier.Received(1).NotifyEmployees(Arg.Is<IEnumerable<int>>(ids => ids.OrderBy(i => i).SequenceEqual(new[] { 7, 20 })),
+            Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task Confirm_NoteIsOptional()
+    {
+        var defect = WithObjection(Existing());
+
+        (await AsManagerService().ConfirmAsync(defect.DefectRecordId, new ConfirmDefectDto(null, RowVer), default)).IsSuccess.Should().BeTrue();
+
+        Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason == null));
+    }
+
+    [Fact]
+    public async Task Confirm_NeedsAManagerAnObjectionAndAnOpenDefect()
+    {
+        var sut = AsManagerService();
+        var none = Existing();
+        var cancelled = WithObjection(Existing(status: DefectStatuses.Cancelled));
+        var confirmed = WithObjection(Existing(status: DefectStatuses.Confirmed));
+        var open = WithObjection(Existing());
+
+        (await sut.ConfirmAsync(none.DefectRecordId, new ConfirmDefectDto(null, RowVer), default)).Message.Should().Be(Messages.DefectNoObjection);
+        (await sut.ConfirmAsync(cancelled.DefectRecordId, new ConfirmDefectDto(null, RowVer), default)).ErrorCode.Should().Be(ErrorCodes.DefectInvalidStatus);
+        (await sut.ConfirmAsync(confirmed.DefectRecordId, new ConfirmDefectDto(null, RowVer), default)).ErrorCode.Should().Be(ErrorCodes.DefectInvalidStatus);
+        (await sut.ConfirmAsync(999, new ConfirmDefectDto(null, RowVer), default)).Kind.Should().Be(ResultKind.NotFound);
+        AsTeamLeader(TeamId);
+        (await _sut.ConfirmAsync(open.DefectRecordId, new ConfirmDefectDto(null, RowVer), default)).Kind.Should().Be(ResultKind.Forbidden);
+        open.Status.Should().Be(DefectStatuses.Recorded);
+    }
+
+    [Fact]
+    public async Task Confirm_InALockedPeriod_IsRejected()
+    {
+        _periods.Add(new AccountingPeriod
+        {
+            PeriodMonth = "2026-10", Status = RecordStatus.Locked, StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 10, 31),
+        });
+        var defect = WithObjection(Existing());
+
+        (await AsManagerService().ConfirmAsync(defect.DefectRecordId, new ConfirmDefectDto(null, RowVer), default))
+            .ErrorCode.Should().Be(ErrorCodes.ProductionPeriodLocked);
+        defect.Status.Should().Be(DefectStatuses.Recorded);
+    }
+
+    [Fact]
+    public async Task AConfirmedDefect_CannotBeCancelledOrObjectedToAgain()
+    {
+        var defect = WithObjection(Existing());
+        var manager = AsManagerService();
+        await manager.ConfirmAsync(defect.DefectRecordId, new ConfirmDefectDto(null, RowVer), default);
+
+        (await manager.CancelAsync(defect.DefectRecordId, new CancelDefectDto("sai", RowVer), default)).ErrorCode
+            .Should().Be(ErrorCodes.DefectInvalidStatus);
+        (await _sut.ObjectAsync(7, defect.DefectRecordId, new ObjectDefectDto("vẫn không đúng", RowVer), default)).Message
+            .Should().Be(Messages.DefectObjectionDecided);
+        defect.Status.Should().Be(DefectStatuses.Confirmed);
+    }
+
+    [Fact]
+    public async Task TheManagerCanInsteadCancelTheDefectAfterAnObjection()
+    {
+        var defect = WithObjection(Existing());
+
+        (await AsManagerService().CancelAsync(defect.DefectRecordId, new CancelDefectDto("Ghi nhầm người", RowVer), default)).IsSuccess.Should().BeTrue();
+
+        defect.Status.Should().Be(DefectStatuses.Cancelled);
+    }
+
+    [Fact]
+    public async Task ListForTeam_Filters_ByStatusTypeObjectionAndTeam()
+    {
+        _teams.Add(new Team { TeamId = 6, TeamCode = "MAY2", TeamName = "Tổ may 2", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active });
+        _employees.Add(Worker(8, teamId: 6));
+        var plain = Existing();
+        var rework = Existing(type: DefectTypes.Rework);
+        var objected = WithObjection(Existing());
+        var confirmed = WithObjection(Existing(status: DefectStatuses.Confirmed));
+        var cancelled = WithObjection(Existing(status: DefectStatuses.Cancelled));
+        var otherTeam = Existing(workerId: 8, teamId: 6);
+        var sut = AsManagerService();
+        async Task<List<int>> Ids(DefectQuery q) =>
+            (await sut.ListForTeamAsync(q, default)).Data!.Items.Select(d => d.DefectRecordId).OrderBy(i => i).ToList();
+        int Id(DefectRecord d) => d.DefectRecordId;
+
+        (await Ids(new DefectQuery { Status = "Confirmed" })).Should().Equal(Id(confirmed));
+        (await Ids(new DefectQuery { Status = "Cancelled" })).Should().Equal(Id(cancelled));
+        (await Ids(new DefectQuery { DefectType = "Rework" })).Should().Equal(Id(rework));
+        (await Ids(new DefectQuery { Objection = "Pending" })).Should().Equal(Id(objected));
+        (await Ids(new DefectQuery { Objection = "Resolved" })).Should().BeEquivalentTo(new[] { Id(confirmed), Id(cancelled) });
+        (await Ids(new DefectQuery { Objection = "None" })).Should().BeEquivalentTo(new[] { Id(plain), Id(rework), Id(otherTeam) });
+        (await Ids(new DefectQuery { SewingTeamId = 6 })).Should().Equal(Id(otherTeam));
+    }
+
+    [Fact]
+    public async Task ListForTeam_TeamLeaderCannotWidenTheTeamWithTheTeamFilter()
+    {
+        _teams.Add(new Team { TeamId = 6, TeamCode = "MAY2", TeamName = "Tổ may 2", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active });
+        _employees.Add(Worker(8, teamId: 6));
+        var mine = Existing();
+        Existing(workerId: 8, teamId: 6);
+
+        var items = (await _sut.ListForTeamAsync(new DefectQuery { SewingTeamId = 6 }, default)).Data!.Items;
+
+        items.Should().ContainSingle().Which.DefectRecordId.Should().Be(mine.DefectRecordId);
     }
 
     [Fact]

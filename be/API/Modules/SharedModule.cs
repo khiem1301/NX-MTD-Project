@@ -20,6 +20,7 @@ public static class SharedModule
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();
         services.AddScoped<IAttachmentService, AttachmentService>();
+        services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         return services;
     }

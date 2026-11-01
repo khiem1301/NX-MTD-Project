@@ -54,12 +54,23 @@ export const lineKey = (l: { orderLineId: number; productComponentMaterialId: nu
 
 export const parseLineKey = (key: string) => {
   const [orderLineId, productComponentMaterialId] = key.split(':');
-  return { orderLineId: Number(orderLineId), productComponentMaterialId: productComponentMaterialId ? Number(productComponentMaterialId) : null };
+  return {
+    orderLineId: Number(orderLineId),
+    productComponentMaterialId: productComponentMaterialId
+      ? Number(productComponentMaterialId)
+      : null,
+  };
 };
 
+/** Khớp WorkOrderLimits ở BE: ghi chú 600 + lý do cắt thiếu 300 luôn vừa cột ghi chú 1.000 ký tự. */
+export const WORK_ORDER_LIMITS = { noteMax: 600, finishReasonMax: 300 } as const;
+
 export const LABELS = {
+  noLines: 'Nhập số kế hoạch hoặc số chi tiết cắt lẻ cho ít nhất một dòng.',
+  duplicateExtra: 'Mỗi chi tiết cắt lẻ chỉ khai một lần cho một màu - size.',
   finishCutting: 'Cắt xong',
-  finishCuttingHint: 'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống báo Quản đốc số vải đã nhận, đã trả và thực dùng. Cắt ít hơn kế hoạch thì phải nêu lý do.',
+  finishCuttingHint:
+    'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống báo Quản đốc số vải đã nhận, đã trả và thực dùng. Cắt ít hơn kế hoạch thì phải nêu lý do.',
   finishCuttingReason: 'Lý do cắt thiếu kế hoạch',
   fabricReceived: 'Đã nhận',
   fabricReturned: 'Đã trả kho',
@@ -75,6 +86,11 @@ export const LABELS = {
   wholeGarment: 'Cả bộ',
   noReplacementRequest: 'Chưa có đơn cắt bù nào đã duyệt và chờ lập lệnh.',
   workOrdersTitle: 'Lệnh cắt',
+  createWorkOrder: 'Lập lệnh cắt',
+  selectOrder: 'Chọn đơn hàng',
+  selectProduct: 'Chọn mã hàng',
+  selectCuttingTeam: 'Chọn tổ cắt',
+  plannedLinesHint: 'Chọn đơn hàng và mã hàng để nhập số kế hoạch cắt.',
   workOrderCode: 'Số lệnh',
   order: 'Đơn hàng',
   product: 'Mã hàng',
@@ -85,6 +101,15 @@ export const LABELS = {
   note: 'Ghi chú',
   orderLine: 'Màu - size',
   plannedQty: 'Kế hoạch',
+  fabricNotEnough: 'Không đủ vải cho lệnh cắt',
+  fabricTooWide: 'Chi tiết rộng hơn khổ vải',
+  fabricNotEstimated: 'Chưa tính được vải',
+  fabricEstimateNote:
+    'Số mét là ước tính theo kích thước từng chi tiết, chưa tính lồng chi tiết nên có thể dư. Lệnh vẫn lưu được.',
+  extraComponents: 'Cắt lẻ thêm thành phần',
+  extraComponentsHint: 'Số chi tiết cắt lẻ không tính vào số đặt của đơn.',
+  addExtraComponent: 'Thêm thành phần',
+  extraPieces: 'Số chi tiết',
   orderedQty: 'Số đặt',
   cutQty: 'Đã cắt',
   handedQty: 'Đã bàn giao',

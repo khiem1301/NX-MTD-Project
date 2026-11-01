@@ -1,9 +1,9 @@
 using FluentAssertions;
 using NSubstitute;
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Orders;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -82,8 +82,7 @@ public class ProductSpecServiceTests
     private static SaveProductNormDto Norm(string component, string color, string size, decimal? length = null, int material = 1) =>
         new(component, color, size, material, length, null, null);
 
-    private static SaveProductVariantDto Variant(int? id, string color, string size, decimal? length = null, decimal? width = null) =>
-        new(id, color, size, length, width);
+    private static SaveProductVariantDto Variant(int? id, string color, string size) => new(id, color, size);
 
     private static SaveProductSpecDto Spec(IReadOnlyList<SaveProductComponentDto> components,
         IReadOnlyList<SaveProductVariantDto> variants, IReadOnlyList<SaveProductNormDto> norms) => new(components, variants, norms);
@@ -96,12 +95,12 @@ public class ProductSpecServiceTests
     }
 
     [Fact]
-    public async Task Save_creates_components_and_the_norm_rows_of_every_existing_variant_and_stores_the_variant_size()
+    public async Task Save_creates_components_and_the_norm_rows_of_every_existing_variant()
     {
-        var m = AddVariant(21, "Đen", "M"); var l = AddVariant(22, "Đen", "L");
+        AddVariant(21, "Đen", "M"); AddVariant(22, "Đen", "L");
         var dto = Spec(
             [Panel("Thân"), Panel("Tay", 2)],
-            [Variant(21, "Đen", "M", 68, 52), Variant(22, "Đen", "L")],
+            [Variant(21, "Đen", "M"), Variant(22, "Đen", "L")],
             [Norm("Thân", "Đen", "M", 68), Norm("Thân", "Đen", "L"), Norm("Tay", "Đen", "M"), Norm("Tay", "Đen", "L")]);
 
         var result = await Create().SaveAsync(1, dto, default);
@@ -110,8 +109,6 @@ public class ProductSpecServiceTests
         _components.Select(c => c.ComponentName).Should().BeEquivalentTo("Thân", "Tay");
         _components.Single(c => c.ComponentName == "Tay").PiecesPerGarment.Should().Be(2);
         _variants.Should().HaveCount(2);   // màu – size lấy từ đơn hàng: không tạo thêm
-        (m.LengthCm, m.WidthCm).Should().Be((68m, 52m));
-        (l.LengthCm, l.WidthCm).Should().Be((null, null));
         _norms.Should().HaveCount(4).And.OnlyContain(n => n.ProductId == 1);
         _norms.Single(n => n.ProductVariantId == 21 && n.ProductComponent.ComponentName == "Thân").LengthCm.Should().Be(68m);
         _audit.Received().Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Product) && e.Action == AuditActions.Update));
@@ -218,7 +215,6 @@ public class ProductSpecServiceTests
     {
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Thân", ComponentType = "PANEL", PiecesPerGarment = 1, Status = RecordStatus.Active };
         var variant = AddVariant(21, "Đen", "M");
-        variant.LengthCm = 68; variant.WidthCm = 52;
         _components.Add(comp);
         _norms.Add(new ProductComponentMaterial
         {
@@ -230,7 +226,7 @@ public class ProductSpecServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.Components.Single().ComponentType.Should().Be("Panel");
-        result.Data.Variants.Single().Should().Match<ProductVariantDto>(v => v.Status == "Active" && v.LengthCm == 68m && v.WidthCm == 52m);
+        result.Data.Variants.Single().Should().Match<ProductVariantDto>(v => v.Status == "Active");
         result.Data.Norms.Single().Should().Match<ProductNormDto>(n => n.ComponentName == "Thân" && n.Color == "Đen" && n.LengthCm == 66m
             && n.MaterialCode == "V1");
         (await Create().GetAsync(99, default)).Kind.Should().Be(NX_MTD.Application.Common.ResultKind.NotFound);

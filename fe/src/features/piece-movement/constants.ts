@@ -73,7 +73,8 @@ export const PM_LABELS = {
   rejectTitle: 'Từ chối phiếu giao việc',
   rejectReason: 'Lý do từ chối',
   order: 'Đơn hàng',
-  noBoard: 'Tổ chưa nhận BTP của đơn này nên chưa có việc để chia. Cần phiếu cấp BTP (bộ đủ) đã được tổ trưởng xác nhận nhận.',
+  noBoard:
+    'Tổ chưa nhận BTP của đơn này nên chưa có việc để chia. Cần phiếu cấp BTP (bộ đủ) đã được tổ trưởng xác nhận nhận.',
   noWorkers: 'Chưa có công nhân nào đang được giao việc ở công đoạn này.',
 } as const;
 
@@ -83,3 +84,13 @@ export const PM_MESSAGES = {
   rejected: 'Đã từ chối phiếu.',
   discrepancyReasonRequired: 'Số xác nhận khác số ghi trên phiếu, vui lòng nhập lý do.',
 } as const;
+
+export const STATUS_OPTIONS = Object.entries(MOVEMENT_STATUS_LABEL).map(([value, l]) => ({
+  value,
+  label: l.text,
+}));
+
+export const TYPE_OPTIONS = Object.entries(MOVEMENT_TYPE_LABEL).map(([value, label]) => ({
+  value,
+  label,
+}));

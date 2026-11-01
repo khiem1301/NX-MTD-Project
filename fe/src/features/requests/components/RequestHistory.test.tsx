@@ -15,7 +15,13 @@ const entry = (patch: Partial<AuditEntry>): AuditEntry => ({
 });
 
 const renderHistory = (history: AuditEntry[]) =>
-  render(<RequestHistory createdByName="Cơ điện" createdAt="2026-10-22T08:00:00+07:00" history={history} />);
+  render(
+    <RequestHistory
+      createdByName="Cơ điện"
+      createdAt="2026-10-22T08:00:00+07:00"
+      history={history}
+    />,
+  );
 
 describe('RequestHistory', () => {
   it('luôn có dòng "Tạo đơn" đầu tiên lấy từ chính đơn', () => {

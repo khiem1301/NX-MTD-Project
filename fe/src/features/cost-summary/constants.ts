@@ -48,4 +48,5 @@ export const COST_SUMMARY_TEXT = {
   },
 } as const;
 
-export const costCategoryLabel = (code: string): string => COST_SUMMARY_TEXT.categoryLabel[code] ?? code;
+export const costCategoryLabel = (code: string): string =>
+  COST_SUMMARY_TEXT.categoryLabel[code] ?? code;

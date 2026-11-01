@@ -1,10 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using NSubstitute;
+using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
-using NX_MTD.Application.Services.Orders;
 using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
@@ -19,6 +19,35 @@ public class ProductServiceTests
     private readonly IClock _clock = Substitute.For<IClock>();
 
     private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
+    private readonly List<ProductImage> _images = [];
+
+    public ProductServiceTests()
+    {
+        var repo = Substitute.For<IGenericRepository<ProductImage>>();
+        repo.Query().Returns(_ => _images.AsTestAsyncQueryable());
+        repo.AddRangeAsync(Arg.Do<IEnumerable<ProductImage>>(es => _images.AddRange(es))).Returns(Task.CompletedTask);
+        repo.When(r => r.RemoveRange(Arg.Any<IEnumerable<ProductImage>>()))
+            .Do(c => { foreach (var e in c.Arg<IEnumerable<ProductImage>>().ToList()) _images.Remove(e); });
+        _uow.Repository<ProductImage>().Returns(repo);
+    }
+
+    private const string KeyA = "PRODUCT/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg";
+    private const string KeyB = "PRODUCT/2026/11/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png";
+    private const string KeyC = "PRODUCT/2026/11/cccccccccccccccccccccccccccccccc.webp";
+
+    private ProductImage Seed(string key, byte sort)
+    {
+        var image = new ProductImage { ProductImageId = sort, ProductId = 1, ImageKey = key, SortOrder = sort };
+        _images.Add(image);
+        return image;
+    }
+
+    private Product ExistingProduct()
+    {
+        var product = new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active };
+        _products.GetByIdAsync(1).Returns(product);
+        return product;
+    }
 
     private ProductService Create() => new(_products, _audit, _uow, _clock, _storage, Options.Create(new AttachmentOptions()));
 
@@ -77,6 +106,79 @@ public class ProductServiceTests
         result.IsSuccess.Should().BeTrue();
         saved!.ProductCode.Should().Be("AO-01");
         saved.Status.Should().Be(RecordStatus.Active);
+    }
+
+    [Fact]
+    public async Task Create_SavesExtraImagesInTheGivenOrder()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        var result = await Create().CreateAsync(Dto() with { ExtraImages = [" " + KeyB, KeyA] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        saved!.ProductImages.Select(i => (i.ImageKey, i.SortOrder)).Should().Equal((KeyB, (byte)1), (KeyA, (byte)2));
+    }
+
+    [Fact]
+    public async Task Create_WithoutExtraImages_SavesNone()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        await Create().CreateAsync(Dto(), default);
+
+        saved!.ProductImages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Update_ReplacesExtraImagesAndKeepsTheNewOrder()
+    {
+        ExistingProduct();
+        Seed(KeyA, 1);
+        Seed(KeyB, 2);
+
+        var result = await Create().UpdateAsync(1, Dto() with { ExtraImages = [KeyB, KeyC] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _images.OrderBy(i => i.SortOrder).Select(i => (i.ImageKey, i.SortOrder, i.ProductId))
+            .Should().Equal((KeyB, (byte)1, 1), (KeyC, (byte)2, 1));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task Update_WithoutTheExtraImagesList_LeavesThemAlone()
+    {
+        ExistingProduct();
+        var a = Seed(KeyA, 1);
+
+        var result = await Create().UpdateAsync(1, Dto(), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _images.Should().ContainSingle().Which.Should().BeSameAs(a);
+    }
+
+    [Fact]
+    public async Task Update_WithTheSameExtraImages_DoesNotRewriteThem()
+    {
+        ExistingProduct();
+        var a = Seed(KeyA, 1);
+        var b = Seed(KeyB, 2);
+
+        await Create().UpdateAsync(1, Dto() with { ExtraImages = [KeyA, KeyB] }, default);
+
+        _images.Should().Equal(a, b);
+    }
+
+    [Fact]
+    public async Task Update_WithAnEmptyList_ClearsTheExtraImages()
+    {
+        ExistingProduct();
+        Seed(KeyA, 1);
+
+        await Create().UpdateAsync(1, Dto() with { ExtraImages = [] }, default);
+
+        _images.Should().BeEmpty();
     }
 
     [Fact]
@@ -484,6 +586,73 @@ public class OrderValidatorTests
         var dto = Dto(new DateOnly(2026, 9, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0));
 
         new CreateOrderDtoValidator().Validate(dto).Errors.Should().Contain(e => e.ErrorMessage.Contains("Ngày giao"));
+    }
+
+    private static bool LineIsValid(string color, int qty, decimal price, string size = "M") =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, color, size, qty, price))).IsValid;
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1_000_000, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(1_000_001, false)]
+    public void OrderedQty_Boundaries(int qty, bool expected) => LineIsValid("Đỏ", qty, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("0.01", true)]
+    [InlineData("100000000", true)]
+    [InlineData("-0.01", false)]
+    [InlineData("100000000.01", false)]
+    [InlineData("1.234", false)]
+    public void CmtUnitPrice_Boundaries(string price, bool expected) =>
+        LineIsValid("Đỏ", 1, decimal.Parse(price, System.Globalization.CultureInfo.InvariantCulture)).Should().Be(expected);
+
+    [Theory]
+    [InlineData(50, true)]
+    [InlineData(51, false)]
+    public void Color_MaxLength(int length, bool expected) => LineIsValid(new string('x', length), 1, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    public void Size_MaxLength(int length, bool expected) => LineIsValid("Đỏ", 1, 100, new string('X', length)).Should().Be(expected);
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", true)]     // 30 ký tự
+    [InlineData(" AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA ", true)]   // 30 ký tự sau khi Trim, như service lưu
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", false)]   // 31 ký tự
+    public void OrderCode_MaxLength_AfterTrim(string code, bool expected)
+    {
+        var dto = new CreateOrderDto(code, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(1000, true)]
+    [InlineData(1001, false)]
+    public void Note_MaxLength(int length, bool expected)
+    {
+        var dto = new CreateOrderDto("DH1", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), new string('x', length), new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Fact]
+    public void DueOnReceivedDate_Passes() =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 10, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0))).IsValid.Should().BeTrue();
+
+    [Fact]
+    public void MissingDates_Fail()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, default, default, null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        var errors = new CreateOrderDtoValidator().Validate(dto).Errors;
+
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.ReceivedDate));
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.DueDate));
     }
 
     [Fact]

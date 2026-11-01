@@ -1,56 +1,35 @@
-import { Alert, Button, Card, Descriptions, Popconfirm, Result, Space, Spin, Table, Tabs, Tag, Tooltip } from 'antd';
 import { useState } from 'react';
+import { Alert, Button, Descriptions, Result, Space, Spin, Tabs, Tag, Tooltip, Typography } from 'antd';
+import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ORDER_DETAIL_TABS } from '@/app/orderDetailTabs';
+import { AuditHistory } from '@/components/common/AuditHistory';
 import { NoteModal } from '@/components/common/NoteModal';
+import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
-import { ORDER_DETAIL_TABS } from '@/app/orderDetailTabs';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
-import { MATERIAL_STATUS_TAG, ORDER_LIMITED_EDIT_STATUSES, ORDER_STATUS_TAG } from '@/constants/orderStatus';
+import {
+  MATERIAL_STATUS_TAG,
+  ORDER_LIMITED_EDIT_STATUSES,
+  ORDER_STATUS_TAG,
+} from '@/constants/orderStatus';
+import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
+import { usePermission } from '@/hooks/usePermission';
 import type { ApiError } from '@/types/api';
 import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { AuditHistory } from '@/components/common/AuditHistory';
-import { usePermission } from '@/hooks/usePermission';
-import { ROLES } from '@/constants/roles';
+import { OrderReadOnlyGrid } from '../components/OrderReadOnlyGrid';
 import { useCancelOrder, useOrder, useStartProduction, useStopOrder } from '../hooks/useOrders';
-import { blockTotal, fromLines } from '../utils/orderGrid';
-import type { OrderLine } from '../types';
+import { blocksTotals, fromLines } from '../utils/orderGrid';
 
 type Pending = 'cancel' | 'stop' | null;
 
-function ReadOnlyGrid({ lines }: { lines: OrderLine[] }) {
-  return (
-    <>
-      {fromLines(lines).map((block) => {
-        const first = lines.find((l) => l.productId === block.productId);
-        return (
-          <Card key={block.key} size="small" style={{ marginBottom: 12 }}
-            title={`${first?.productCode ?? ''} · ${first?.productName ?? ''}`}
-            extra={`${MESSAGES.orders.unitPrice}: ${formatCurrency(block.cmtUnitPrice)} · ${MESSAGES.orders.totalQty}: ${formatQty(blockTotal(block))}`}>
-            <Table
-              size="small"
-              rowKey="key"
-              pagination={false}
-              dataSource={block.rows}
-              columns={[
-                { title: MESSAGES.orders.color, dataIndex: 'color' },
-                ...block.sizes.map((size) => ({
-                  title: size,
-                  align: 'right' as const,
-                  render: (_: unknown, row: (typeof block.rows)[number]) => formatQty(row.cells[size]?.qty ?? null),
-                })),
-              ]}
-            />
-          </Card>
-        );
-      })}
-    </>
-  );
-}
-
-/** UC09: chi tiết đơn hàng. Nút Sửa / Hủy / Dừng theo trạng thái; Hủy chỉ khi Mới, Dừng bắt buộc lý do. */
+/**
+ * UC09: chi tiết đơn hàng là trang riêng (cùng cách với tạo / sửa đơn, vì lưới số lượng và các tab quá rộng cho Modal).
+ * Nút Sửa / Hủy / Dừng theo trạng thái; Hủy chỉ khi Mới, Dừng bắt buộc lý do.
+ */
 export function OrderDetailPage() {
   const { id } = useParams();
   const orderId = Number(id);
@@ -63,12 +42,15 @@ export function OrderDetailPage() {
   const [pending, setPending] = useState<Pending>(null);
 
   if (isLoading) return <Spin />;
-  if ((error as ApiError | null)?.errorCode === ERROR_CODES.CommonNotFound) return <Result status="404" subTitle={MESSAGES.common.notFound} />;
+  if ((error as ApiError | null)?.errorCode === ERROR_CODES.CommonNotFound) {
+    return <Result status="404" subTitle={MESSAGES.common.notFound} />;
+  }
   if (error) return <QueryError error={error} onRetry={() => void refetch()} />;
   if (!data) return null;
 
   const canEdit = data.status === 'New' || ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
   const canStop = ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
+  const totals = blocksTotals(fromLines(data.lines));
 
   const submit = (note: string | null) => {
     const onDone = { onSettled: () => setPending(null) };
@@ -77,48 +59,116 @@ export function OrderDetailPage() {
   };
 
   const tabs = [
-    { key: 'grid', label: MESSAGES.orders.gridTab, children: <ReadOnlyGrid lines={data.lines} /> },
-    ...ORDER_DETAIL_TABS.map((t) => ({ key: t.key, label: t.label, children: <t.Component orderId={data.orderId} /> })),
-    { key: 'history', label: MESSAGES.common.history, children: <AuditHistory history={data.history} /> },
+    {
+      key: 'grid',
+      label: MESSAGES.orders.gridTab,
+      children: <OrderReadOnlyGrid lines={data.lines} />,
+    },
+    ...ORDER_DETAIL_TABS.map((t) => ({
+      key: t.key,
+      label: t.label,
+      children: <t.Component orderId={data.orderId} />,
+    })),
+    {
+      key: 'history',
+      label: MESSAGES.common.history,
+      children: <AuditHistory history={data.history} />,
+    },
   ];
 
   return (
-    <Card
-      title={data.orderCode}
+    <PageCard
+      onBack={() => navigate(ROUTES.orders)}
+      title={
+        <Space size={8} wrap>
+          {data.orderCode}
+          <StatusTag status={data.status} labels={ORDER_STATUS_TAG} />
+          {data.isDelayRisk && <Tag color="red">{MESSAGES.orders.delayRisk}</Tag>}
+        </Space>
+      }
+      description={data.customerName}
       extra={
-        <Space>
-          <Button onClick={() => navigate(ROUTES.orders)}>{MESSAGES.common.close}</Button>
-          {canEdit && <Button onClick={() => navigate(ROUTES.orderEdit(data.orderId))}>{MESSAGES.common.edit}</Button>}
+        <Space wrap>
+          {canEdit && (
+            <Button onClick={() => navigate(ROUTES.orderEdit(data.orderId))}>
+              {MESSAGES.common.edit}
+            </Button>
+          )}
+          {data.status === 'New' && (
+            <Button danger onClick={() => setPending('cancel')}>
+              {MESSAGES.orders.cancelOrder}
+            </Button>
+          )}
+          {canStop && (
+            <Button danger onClick={() => setPending('stop')}>
+              {MESSAGES.orders.stopOrder}
+            </Button>
+          )}
           {data.status === 'New' && hasRole(ROLES.Admin) && (
-            <Tooltip title={data.materialStatus === 'Awaiting' ? MESSAGES.orders.startProductionHint : undefined}>
-              <Popconfirm title={MESSAGES.orders.confirmStartProduction} onConfirm={() => start.mutate(data.rowVer)}>
-                <Button type="primary" loading={start.isPending} disabled={data.materialStatus === 'Awaiting'}>
+            <Tooltip
+              title={
+                data.materialStatus === 'Awaiting' ? MESSAGES.orders.startProductionHint : undefined
+              }
+            >
+              <ConfirmAction
+                title={MESSAGES.orders.confirmStartProduction}
+                onConfirm={() => start.mutate(data.rowVer)}
+              >
+                <Button
+                  type="primary"
+                  loading={start.isPending}
+                  disabled={data.materialStatus === 'Awaiting'}
+                >
                   {MESSAGES.orders.startProduction}
                 </Button>
-              </Popconfirm>
+              </ConfirmAction>
             </Tooltip>
           )}
-          {data.status === 'New' && <Button danger onClick={() => setPending('cancel')}>{MESSAGES.orders.cancelOrder}</Button>}
-          {canStop && <Button danger onClick={() => setPending('stop')}>{MESSAGES.orders.stopOrder}</Button>}
         </Space>
       }
     >
-      {data.stopReason && <Alert type="warning" showIcon message={`${MESSAGES.orders.stopReason}: ${data.stopReason}`} style={{ marginBottom: 16 }} />}
-      <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>
-        <Descriptions.Item label={MESSAGES.orders.customer}>{data.customerName}</Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.receivedDate}>{formatDate(data.receivedDate)}</Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.dueDate}>{formatDate(data.dueDate)}</Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.status}>
-          <Space size={4}>
-            <StatusTag status={data.status} labels={ORDER_STATUS_TAG} />
-            {data.isDelayRisk && <Tag color="red">{MESSAGES.orders.delayRisk}</Tag>}
-          </Space>
+      {data.stopReason && (
+        <Alert
+          type="warning"
+          showIcon
+          message={`${MESSAGES.orders.stopReason}: ${data.stopReason}`}
+        />
+      )}
+      <Descriptions
+        size="small"
+        bordered
+        layout="vertical"
+        column={{ xs: 2, sm: 3, md: 3, lg: 6, xl: 6, xxl: 6 }}
+      >
+        <Descriptions.Item label={MESSAGES.orders.receivedDate}>
+          {formatDate(data.receivedDate)}
         </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.materialStatus}><StatusTag status={data.materialStatus} labels={MATERIAL_STATUS_TAG} /></Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.requests.createdAt}>{formatDateTime(data.createdAt)}</Descriptions.Item>
-        {data.note && <Descriptions.Item label={MESSAGES.orders.note} span={3}>{data.note}</Descriptions.Item>}
+        <Descriptions.Item label={MESSAGES.orders.dueDate}>
+          {formatDate(data.dueDate)}
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.materialStatus}>
+          <StatusTag status={data.materialStatus} labels={MATERIAL_STATUS_TAG} />
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.totalQty}>
+          <b>{formatQty(totals.qty)}</b>
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.totalAmount}>
+          <b>{formatCurrency(totals.amount)}</b>
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.requests.createdAt}>
+          {formatDateTime(data.createdAt)}
+        </Descriptions.Item>
       </Descriptions>
-      <Tabs items={tabs} />
+      {data.note && (
+        <Typography.Paragraph
+          type="secondary"
+          ellipsis={{ rows: 2, expandable: true }}
+          style={{ marginBottom: 0 }}
+        >
+          {`${MESSAGES.orders.note}: ${data.note}`}
+        </Typography.Paragraph>
+      )}
+      <Tabs size="small" items={tabs} />
       {pending && (
         <NoteModal
           open
@@ -131,6 +181,6 @@ export function OrderDetailPage() {
           onSubmit={submit}
         />
       )}
-    </Card>
+    </PageCard>
   );
 }
