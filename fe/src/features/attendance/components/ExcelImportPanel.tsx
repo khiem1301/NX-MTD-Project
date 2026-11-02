@@ -115,7 +115,6 @@ export function ExcelImportPanel() {
               size="small"
               columns={columns}
               dataSource={preview.data.rows}
-              pagination={{ pageSize: 10 }}
               scroll={{ x: 'max-content' }}
             />
           </>

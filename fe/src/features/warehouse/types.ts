@@ -201,6 +201,8 @@ export type ShortDeliveryListItem = {
   resolution: string | null;
   receiptId: number;
   receiptCode: string;
+  /** Nguồn của phiếu nhập: CUSTOMER (khách cấp) hoặc SUPPLIER (mua NCC). */
+  source: string;
   poCode: string | null;
   orderCode: string | null;
   createdAt: string;

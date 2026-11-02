@@ -28,6 +28,9 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
     public const int MaxComponents = 200;
     public const int MaxVariants = 200;
     public const int MaxNorms = 5000;
+    /// <summary>Số bìa của một mã hàng; số dòng tối đa = số bìa × số màu – size.</summary>
+    public const int MaxMarkerNo = 20;
+    public const int MaxMarkerRows = MaxMarkerNo * MaxVariants;
 
     public SaveProductSpecDtoValidator()
     {
@@ -65,5 +68,24 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
             n.RuleFor(i => i.WidthCm).MustBeSizeCm("Chiều rộng chi tiết").When(i => i.WidthCm is not null);
             n.RuleFor(i => i.SpecNote).MaximumLength(200).WithMessage("Ghi chú quy cách tối đa 200 ký tự.");
         }).When(x => x.Norms is { Count: <= MaxNorms });
+        RuleFor(x => x.Markers).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách bìa.")
+            .Must(l => l.Count <= MaxMarkerRows).WithMessage("Danh sách bìa quá dài.");
+        RuleFor(x => x.MarkerFabrics).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách vải của bìa.")
+            .Must(l => l.Count <= MaxMarkerRows).WithMessage("Danh sách vải của bìa quá dài.");
+        RuleForEach(x => x.Markers).ChildRules(m =>
+        {
+            m.RuleFor(i => i.MarkerNo).InclusiveBetween(1, MaxMarkerNo).WithMessage($"Số bìa từ 1 đến {MaxMarkerNo}.");
+            m.RuleFor(i => i.SizeCode).NotEmpty().WithMessage(Messages.Required("size"))
+                .MaximumLength(10).WithMessage("Size tối đa 10 ký tự.");
+            m.RuleFor(i => i.LengthCm).NotNull().WithMessage(Messages.Required("chiều dài bìa")).MustBeSizeCm("Chiều dài bìa");
+            m.RuleFor(i => i.WidthCm).NotNull().WithMessage(Messages.Required("chiều rộng bìa")).MustBeSizeCm("Chiều rộng bìa");
+        }).When(x => x.Markers is { Count: <= MaxMarkerRows });
+        RuleForEach(x => x.MarkerFabrics).ChildRules(f =>
+        {
+            f.RuleFor(i => i.MarkerNo).InclusiveBetween(1, MaxMarkerNo).WithMessage($"Số bìa từ 1 đến {MaxMarkerNo}.");
+            f.RuleFor(i => i.Color).NotEmpty().WithMessage(Messages.Required("màu"))
+                .MaximumLength(50).WithMessage("Màu tối đa 50 ký tự.");
+            f.RuleFor(i => i.MaterialId).GreaterThan(0).WithMessage("Vui lòng chọn vải của bìa.");
+        }).When(x => x.MarkerFabrics is { Count: <= MaxMarkerRows });
     }
 }

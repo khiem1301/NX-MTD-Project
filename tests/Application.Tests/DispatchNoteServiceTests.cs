@@ -16,6 +16,8 @@ public class DispatchNoteServiceTests
 {
     private static readonly DateTime Now = new(2026, 10, 30, 10, 0, 0);
     private static readonly DateOnly Today = new(2026, 10, 30);
+    private static readonly byte[] RowVer = { 1 };
+    private static readonly DispatchActionDto Act = new(RowVer);
 
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IStockService _stock = Substitute.For<IStockService>();
@@ -184,6 +186,22 @@ public class DispatchNoteServiceTests
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
     }
 
+    [Theory]
+    [InlineData(0, true)]      // hôm nay
+    [InlineData(366, true)]    // xa nhất
+    [InlineData(-1, false)]    // quá khứ
+    [InlineData(367, false)]
+    public async Task Create_limits_the_delivery_date_to_today_through_366_days_ahead(int days, bool allowed)
+    {
+        CaptureAdds();
+        var dto = Create((101, 5)) with { DeliveryDate = Today.AddDays(days) };
+
+        var result = await Service().CreateAsync(dto, default);
+
+        if (allowed) result.IsSuccess.Should().BeTrue(result.Message);
+        else result.Message.Should().Be(days < 0 ? WarehouseMessages.DispatchDeliveryDatePast : WarehouseMessages.DispatchDeliveryDateTooFar);
+    }
+
     [Fact]
     public async Task Create_is_blocked_for_a_closed_order()
     {
@@ -216,8 +234,8 @@ public class DispatchNoteServiceTests
         var pending = Note(DispatchStatuses.Pending, (101, 10, null));
         var exported = Note(DispatchStatuses.InDelivery, (101, 10, null));
 
-        (await Service().CancelAsync(pending.DispatchNoteId, default)).IsSuccess.Should().BeTrue();
-        (await Service().CancelAsync(exported.DispatchNoteId, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().CancelAsync(pending.DispatchNoteId, Act, default)).IsSuccess.Should().BeTrue();
+        (await Service().CancelAsync(exported.DispatchNoteId, Act, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
 
         pending.Status.Should().Be(DispatchStatuses.Cancelled);
         exported.Status.Should().Be(DispatchStatuses.InDelivery);
@@ -230,17 +248,17 @@ public class DispatchNoteServiceTests
     {
         var note = Note(DispatchStatuses.Pending, (101, 10, null));
 
-        var without = await Service().ExportAsync(note.DispatchNoteId, 9, default);
+        var without = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
 
         without.ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
         note.Status.Should().Be(DispatchStatuses.Pending);
         await _stock.DidNotReceive().PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());
 
         Photo(note, AttachmentPurposes.SignedDeliveryNote);   // ảnh biên bản giao không thay được ảnh phiếu xuất
-        (await Service().ExportAsync(note.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
+        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
 
         Photo(note, AttachmentPurposes.SignedIssueSlip);
-        (await Service().ExportAsync(note.DispatchNoteId, 9, default)).IsSuccess.Should().BeTrue();
+        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -248,7 +266,7 @@ public class DispatchNoteServiceTests
     {
         var note = Signed((101, 40, null), (102, 10, null));
 
-        var result = await Service().ExportAsync(note.DispatchNoteId, 9, default);
+        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
 
         result.IsSuccess.Should().BeTrue();
         note.Status.Should().Be(DispatchStatuses.InDelivery);
@@ -269,7 +287,7 @@ public class DispatchNoteServiceTests
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure(ErrorCodes.WarehouseInsufficientStock, "x"));
 
-        var result = await Service().ExportAsync(note.DispatchNoteId, 9, default);
+        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
 
         result.IsSuccess.Should().BeFalse();
         note.Status.Should().Be(DispatchStatuses.Pending);
@@ -282,8 +300,8 @@ public class DispatchNoteServiceTests
         var note = Note(DispatchStatuses.InDelivery, (101, 10, null));
         Photo(note, AttachmentPurposes.SignedIssueSlip);
 
-        (await Service().ExportAsync(note.DispatchNoteId, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
-        (await Service().RejectAsync(note.DispatchNoteId, new ReasonDto("x"), 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().RejectAsync(note.DispatchNoteId, new RejectDispatchDto("x", RowVer), 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
     }
 
     [Fact]
@@ -291,7 +309,7 @@ public class DispatchNoteServiceTests
     {
         var note = Note(DispatchStatuses.Pending, (101, 100, null));
 
-        var result = await Service().RejectAsync(note.DispatchNoteId, new ReasonDto(" không đủ hàng "), 9, default);
+        var result = await Service().RejectAsync(note.DispatchNoteId, new RejectDispatchDto(" không đủ hàng ", RowVer), 9, default);
 
         result.IsSuccess.Should().BeTrue();
         note.Status.Should().Be(DispatchStatuses.Rejected);
@@ -303,7 +321,7 @@ public class DispatchNoteServiceTests
     // ---------- Khách nhận hàng ----------
 
     private static ConfirmDeliveryDto Delivery(DispatchNote note, DateOnly date, params int[] received) =>
-        new(date, note.DispatchNoteLines.Select((l, i) => new DeliveryLineInputDto(l.DispatchNoteLineId, received[i])).ToList());
+        new(date, note.DispatchNoteLines.Select((l, i) => new DeliveryLineInputDto(l.DispatchNoteLineId, received[i])).ToList(), RowVer);
 
     private DispatchNote InDelivery(params (int OrderLineId, int Issue, int? Received)[] lines)
     {
@@ -331,11 +349,11 @@ public class DispatchNoteServiceTests
     {
         var note = InDelivery((101, 100, null), (102, 50, null));
 
-        var result = await Service().ConfirmDeliveryAsync(note.DispatchNoteId, Delivery(note, Today.AddDays(1), 100, 50), default);
+        var result = await Service().ConfirmDeliveryAsync(note.DispatchNoteId, Delivery(note, Today, 100, 50), default);
 
         result.IsSuccess.Should().BeTrue();
         note.Status.Should().Be(DispatchStatuses.Delivered);
-        note.CustomerReceivedDate.Should().Be(Today.AddDays(1));
+        note.CustomerReceivedDate.Should().Be(Today);
         _order.Status.Should().Be(OrderStatuses.Delivered);   // 150 nhận ≥ 150 đặt (GBR-23)
     }
 
@@ -375,6 +393,52 @@ public class DispatchNoteServiceTests
     }
 
     [Fact]
+    public async Task Confirm_delivery_rejects_a_date_after_today()
+    {
+        var note = InDelivery((101, 100, null));
+
+        var result = await Service().ConfirmDeliveryAsync(note.DispatchNoteId, Delivery(note, Today.AddDays(1), 100), default);
+
+        result.Message.Should().Be(WarehouseMessages.DispatchReceivedDateFuture);
+        note.Status.Should().Be(DispatchStatuses.InDelivery);
+    }
+
+    [Fact]
+    public async Task Cancel_export_reject_and_confirm_carry_the_row_version_the_user_was_looking_at()
+    {
+        var stale = new byte[] { 9 };
+        var repo = _uow.Repository<DispatchNote>();
+
+        var cancel = Note(DispatchStatuses.Pending, (101, 5, null));
+        await Service().CancelAsync(cancel.DispatchNoteId, new DispatchActionDto(stale), default);
+        repo.Received(1).SetOriginalRowVersion(cancel, stale);
+
+        var signed = Signed((101, 5, null));
+        await Service().ExportAsync(signed.DispatchNoteId, new DispatchActionDto(stale), 9, default);
+        repo.Received(1).SetOriginalRowVersion(signed, stale);
+
+        var reject = Note(DispatchStatuses.Pending, (102, 5, null));
+        await Service().RejectAsync(reject.DispatchNoteId, new RejectDispatchDto("hết hàng", stale), 9, default);
+        repo.Received(1).SetOriginalRowVersion(reject, stale);
+
+        var delivering = InDelivery((101, 5, null));
+        await Service().ConfirmDeliveryAsync(delivering.DispatchNoteId, Delivery(delivering, Today, 5) with { RowVer = stale }, default);
+        repo.Received(1).SetOriginalRowVersion(delivering, stale);
+    }
+
+    [Fact]
+    public async Task Export_is_blocked_when_the_order_was_closed_after_the_note_was_made()
+    {
+        var note = Signed((101, 10, null));
+        _order.Status = OrderStatuses.Cancelled;
+
+        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 5, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderClosed);
+        note.Status.Should().Be(DispatchStatuses.Pending);
+    }
+
+    [Fact]
     public async Task Confirm_delivery_rejects_a_date_before_the_goods_left_the_warehouse()
     {
         var note = InDelivery((101, 100, null));
@@ -388,7 +452,7 @@ public class DispatchNoteServiceTests
     public async Task Confirm_delivery_needs_every_line_and_an_in_delivery_note()
     {
         var note = InDelivery((101, 100, null), (102, 50, null));
-        var missing = new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(note.DispatchNoteLines.First().DispatchNoteLineId, 100) });
+        var missing = new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(note.DispatchNoteLines.First().DispatchNoteLineId, 100) }, RowVer);
         (await Service().ConfirmDeliveryAsync(note.DispatchNoteId, missing, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
 
         var pending = Note(DispatchStatuses.Pending, (101, 10, null));
@@ -446,8 +510,8 @@ public class DispatchNoteServiceTests
         create.Validate(Create((101, 5)) with { DeliveryAddress = " " }).IsValid.Should().BeFalse();
 
         var confirm = new ConfirmDeliveryDtoValidator();
-        confirm.Validate(new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(1, 0) })).IsValid.Should().BeTrue();
-        confirm.Validate(new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(1, -1) })).IsValid.Should().BeFalse();
-        confirm.Validate(new ConfirmDeliveryDto(Today, Array.Empty<DeliveryLineInputDto>())).IsValid.Should().BeFalse();
+        confirm.Validate(new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(1, 0) }, RowVer)).IsValid.Should().BeTrue();
+        confirm.Validate(new ConfirmDeliveryDto(Today, new[] { new DeliveryLineInputDto(1, -1) }, RowVer)).IsValid.Should().BeFalse();
+        confirm.Validate(new ConfirmDeliveryDto(Today, Array.Empty<DeliveryLineInputDto>(), RowVer)).IsValid.Should().BeFalse();
     }
 }

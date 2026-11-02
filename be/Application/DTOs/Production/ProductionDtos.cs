@@ -7,19 +7,31 @@ namespace NX_MTD.Application.DTOs;
 /// <summary>
 /// CurrentRate = đơn giá đã duyệt đang hiệu lực hôm nay. NextRate = đơn giá mới nhất (theo ngày hiệu lực) nếu nó chưa
 /// thành đơn giá hiện hành: Nháp, Chờ duyệt, Bị từ chối, hoặc đã duyệt nhưng chưa tới ngày hiệu lực; null nếu không có.
+/// UpcomingRate = đơn giá đã duyệt, chưa tới ngày hiệu lực, có ngày hiệu lực gần nhất (cột Đơn giá chỉ hiện bản này).
 /// </summary>
 public sealed record OperationDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, byte? SkillLevel, decimal? StandardTimeSec, string TeamType, bool IsFinalStep,
-    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null, bool UsesSemiFinished = false,
-    int? OperationGroupId = null, string? GroupName = null, IReadOnlyList<int>? ComponentIds = null);
+    string Status, decimal? CurrentRate, OperationRateDto? NextRate = null,
+    int? OperationGroupId = null, string? GroupName = null, IReadOnlyList<int>? ComponentIds = null,
+    OperationRateDto? UpcomingRate = null);
+
+/// <summary>Nhóm công đoạn của mã hàng; <c>OperationCount</c> tính cả công đoạn đã ngừng dùng.</summary>
+public sealed record OperationGroupDto(int OperationGroupId, string GroupName, int OperationCount);
+
+public sealed record CreateOperationGroupDto(int ProductId, string GroupName);
+
+public sealed record RenameOperationGroupDto(string GroupName);
+
+/// <summary>Xếp nhiều công đoạn vào một nhóm; <c>OperationGroupId</c> null là bỏ nhóm.</summary>
+public sealed record SetOperationsGroupDto(int ProductId, IReadOnlyList<int> OperationIds, int? OperationGroupId);
 
 public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly EffectiveDate, string Status, string? RejectReason);
 
 /// <summary>TeamType nhận PascalCase "Sewing" | "Cutting" (mặc định Sewing).</summary>
 public sealed record SaveOperationDto(
     int ProductId, string OperationCode, string OperationName, short StationSequence, byte? SkillLevel,
-    decimal? StandardTimeSec, string? TeamType, bool IsFinalStep, bool UsesSemiFinished = false, string? GroupName = null,
+    decimal? StandardTimeSec, string? TeamType, bool IsFinalStep, string? GroupName = null,
     IReadOnlyList<int>? ComponentIds = null);
 
 public sealed record PieceRateDto(
@@ -41,6 +53,8 @@ public sealed record PieceRateQuery : PageQuery
 public sealed record ApprovePieceRateDto(string? Note);
 
 /// <summary>Duyệt nhiều đơn giá chờ duyệt một lần (vd. sau khi nhập công đoạn từ Excel).</summary>
+public sealed record SubmitPieceRatesDto(IReadOnlyList<int> Ids);
+
 public sealed record ApproveManyPieceRatesDto(IReadOnlyList<int> Ids, string? Note);
 
 public sealed record RejectPieceRateDto(string Reason);
@@ -161,7 +175,27 @@ public sealed record OrderLineProgressDto(
 /// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
 public sealed record OperationOptionDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
-    short StationSequence, bool IsFinalStep, bool UsesSemiFinished = false, string? GroupName = null);
+    short StationSequence, bool IsFinalStep, string? GroupName = null, byte? SkillLevel = null);
+
+// ================= Chia dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49) =================
+public sealed record OrderLineTeamQuery : PageQuery
+{
+    /// <summary>Chỉ các dòng đơn chưa chia cho tổ nào.</summary>
+    public bool OnlyUnallotted { get; init; }
+}
+
+public sealed record AllottedTeamDto(int TeamId, string TeamName);
+
+/// <summary>Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia.</summary>
+public sealed record OrderLineTeamDto(
+    int OrderLineId, int OrderId, string OrderCode, DateOnly DueDate, int ProductId, string ProductCode, string ProductName,
+    string Color, string SizeCode, int OrderedQty, IReadOnlyList<AllottedTeamDto> Teams);
+
+/// <summary>Danh sách tổ may mới của dòng đơn; danh sách rỗng là bỏ chia.</summary>
+public sealed record SetOrderLineTeamsDto(int OrderLineId, IReadOnlyList<int> TeamIds);
+
+/// <summary>Chia nhiều dòng đơn cho thêm tổ may một lần; tổ đang được chia giữ nguyên.</summary>
+public sealed record AddOrderLineTeamsDto(IReadOnlyList<int> OrderLineIds, IReadOnlyList<int> TeamIds);
 
 // ================= KI-01: nhập công đoạn từ file Excel quy trình công nghệ =================
 

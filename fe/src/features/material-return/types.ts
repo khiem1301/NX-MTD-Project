@@ -45,6 +45,8 @@ export type ReturnableLine = {
   receivedQty: number;
   returnedQty: number;
   remainingQty: number;
+  /** Vải còn lại gợi ý trả (đã nhận − đã trả − đã cắt); null khi có bàn cắt chưa nhập chiều dài. */
+  suggestedQty: number | null;
 };
 
 export type MaterialReturnQuery = PageParams & { status?: string };

@@ -4,7 +4,12 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { API_DATE, formatQty } from '@/utils/format';
-import { DISPATCH_LABELS, DISPATCH_MESSAGES } from '../constants';
+import {
+  DISPATCH_LABELS,
+  DISPATCH_MAX_DAYS_AHEAD,
+  DISPATCH_MAX_QTY,
+  DISPATCH_MESSAGES,
+} from '../constants';
 import { useCreateDispatch, useDispatchable } from '../hooks/useDispatch';
 import type { DispatchableLine } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
@@ -78,7 +83,12 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
             />
           </Form.Item>
           <Form.Item name="deliveryDate" label={DISPATCH_LABELS.deliveryDate} rules={required}>
-            <AppDatePicker />
+            <AppDatePicker
+              disabledDate={(d) =>
+                d.isBefore(dayjs(), 'day') ||
+                d.isAfter(dayjs().add(DISPATCH_MAX_DAYS_AHEAD, 'day'), 'day')
+              }
+            />
           </Form.Item>
         </Space>
         <Form.Item name="deliveryAddress" label={DISPATCH_LABELS.deliveryAddress} rules={required}>
@@ -112,7 +122,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
               title: DISPATCH_LABELS.exportQty,
               key: 'qty',
               render: (_, l) => {
-                const max = Math.min(l.remainingQty, Math.floor(l.availableQty));
+                const max = Math.min(l.remainingQty, Math.floor(l.availableQty), DISPATCH_MAX_QTY);
                 return (
                   <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
                     <InputNumber min={0} max={max} precision={0} disabled={max <= 0} />

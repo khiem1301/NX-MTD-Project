@@ -2,6 +2,7 @@ export const PRODUCTION_ROUTES = {
   operations: '/operations',
   adminPieceRates: '/admin/piece-rates',
   assignments: '/operation-assignments',
+  orderLineTeams: '/order-line-teams',
   output: '/output-records',
   managerOutput: '/manager/output-records',
   defects: '/defect-records',

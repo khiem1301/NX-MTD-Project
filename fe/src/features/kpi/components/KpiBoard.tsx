@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { KpiTargetFormModal } from './KpiTargetFormModal';
 import { KpiTargetTable } from './KpiTargetTable';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { KPI_TEXT } from '../constants';
 import type { KpiTarget, KpiTargetFilter } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 
-const DEFAULT_FILTER: KpiTargetFilter = { page: 1, pageSize: 20 };
+const DEFAULT_FILTER: KpiTargetFilter = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
 
 /**
  * UC19 / UC21 (MI-17) — chỉ tiêu KPI tổ may kèm thực tế vs chỉ tiêu; chỉ chốt khi kết thúc đơn của tổ. Quản đốc và Admin

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Card, Space, Typography } from 'antd';
 import { BackButton } from './BackButton';
+import { InPageCardContext } from './pageCardContext';
 
 type PageCardProps = {
   title: ReactNode;
@@ -23,7 +24,8 @@ export function PageCard({ title, description, extra, onBack, style, children }:
         <div
           style={{
             whiteSpace: 'normal',
-            padding: '8px 0',
+            // Chỉ giãn khi có mô tả phụ, để tiêu đề cao bằng Card thường của các màn khác.
+            padding: description ? '8px 0' : undefined,
             display: 'flex',
             gap: 8,
             alignItems: 'center',
@@ -42,9 +44,11 @@ export function PageCard({ title, description, extra, onBack, style, children }:
       }
       extra={extra}
     >
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        {children}
-      </Space>
+      <InPageCardContext.Provider value>
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          {children}
+        </Space>
+      </InPageCardContext.Provider>
     </Card>
   );
 }

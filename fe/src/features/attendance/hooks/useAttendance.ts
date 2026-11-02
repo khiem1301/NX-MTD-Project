@@ -10,6 +10,7 @@ import type {
   AttendanceImportResult,
   MapAttendanceCodeRequest,
   TimesheetFilter,
+  SyncStatus,
 } from '../types';
 
 /** Khóa query gom một nơi để invalidate sau mutation không bị sót. */
@@ -20,7 +21,8 @@ export const attendanceKeys = {
   summary: (audience: TimesheetAudience, filter: TimesheetFilter) =>
     [...attendanceKeys.all, 'summary', audience, filter] as const,
   syncHealth: () => [...attendanceKeys.all, 'sync-health'] as const,
-  syncSessions: (take: number) => [...attendanceKeys.all, 'sync-sessions', take] as const,
+  syncSessions: (take: number, status?: SyncStatus) =>
+    [...attendanceKeys.all, 'sync-sessions', take, status] as const,
   unmappedCodes: () => [...attendanceKeys.all, 'unmapped-codes'] as const,
 };
 
@@ -48,10 +50,10 @@ export const useSyncHealth = () =>
     refetchInterval: SYNC_POLL_MS,
   });
 
-export const useSyncSessions = (take = 20) =>
+export const useSyncSessions = (status?: SyncStatus, take = 20) =>
   useQuery({
-    queryKey: attendanceKeys.syncSessions(take),
-    queryFn: () => attendanceApi.getSyncSessions(take),
+    queryKey: attendanceKeys.syncSessions(take, status),
+    queryFn: () => attendanceApi.getSyncSessions(take, status),
   });
 
 export const useUnmappedCodes = () =>

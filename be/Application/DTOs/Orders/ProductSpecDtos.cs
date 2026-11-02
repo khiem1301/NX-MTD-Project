@@ -16,8 +16,16 @@ public sealed record ProductNormDto(int ProductComponentMaterialId, string Compo
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
     decimal? LengthCm, decimal? WidthCm, string? SpecNote);
 
+/// <summary>Kích thước một bìa ở một size. Một bìa tính cho một sản phẩm (DEV-ALL-42).</summary>
+public sealed record ProductMarkerDto(int MarkerNo, string SizeCode, decimal LengthCm, decimal WidthCm);
+
+/// <summary>Vải của một bìa theo màu áo; không đổi theo size.</summary>
+public sealed record ProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId, string MaterialCode, string MaterialName,
+    string MaterialColor);
+
 public sealed record ProductSpecDto(int ProductId, IReadOnlyList<ProductComponentDto> Components,
-    IReadOnlyList<ProductVariantDto> Variants, IReadOnlyList<ProductNormDto> Norms);
+    IReadOnlyList<ProductVariantDto> Variants, IReadOnlyList<ProductNormDto> Norms,
+    IReadOnlyList<ProductMarkerDto> Markers, IReadOnlyList<ProductMarkerFabricDto> MarkerFabrics);
 
 /// <param name="ProductComponentId">null = thành phần mới (hoặc khớp theo tên với thành phần đã có).</param>
 public sealed record SaveProductComponentDto(int? ProductComponentId, string ComponentName, string ComponentType,
@@ -30,9 +38,15 @@ public sealed record SaveProductVariantDto(int? ProductVariantId, string Color, 
 public sealed record SaveProductNormDto(string ComponentName, string Color, string SizeCode, int MaterialId,
     decimal? LengthCm, decimal? WidthCm, string? SpecNote);
 
+/// <param name="LengthCm">Bắt buộc, để null chỉ để validator báo lỗi tiếng Việt khi thiếu.</param>
+public sealed record SaveProductMarkerDto(int MarkerNo, string SizeCode, decimal? LengthCm, decimal? WidthCm);
+
+public sealed record SaveProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId);
+
 /// <summary>
 /// Gửi đủ thành phần, biến thể (đã có, không sửa) và định mức muốn giữ. Thành phần bỏ khỏi danh sách: xóa nếu chưa dùng ở đâu,
 /// ngược lại chuyển sang ngừng dùng. Biến thể không bao giờ bị xóa ở đây. Định mức của các biến thể có trong danh sách được thay bằng danh sách gửi lên.
 /// </summary>
 public sealed record SaveProductSpecDto(IReadOnlyList<SaveProductComponentDto> Components,
-    IReadOnlyList<SaveProductVariantDto> Variants, IReadOnlyList<SaveProductNormDto> Norms);
+    IReadOnlyList<SaveProductVariantDto> Variants, IReadOnlyList<SaveProductNormDto> Norms,
+    IReadOnlyList<SaveProductMarkerDto> Markers, IReadOnlyList<SaveProductMarkerFabricDto> MarkerFabrics);

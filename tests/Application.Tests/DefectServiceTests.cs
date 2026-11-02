@@ -322,6 +322,17 @@ public class DefectServiceTests : ProductionTestBase
     }
 
     [Fact]
+    public async Task ListMine_FiltersByStatus()
+    {
+        Existing(workerId: 7, date: Today);
+        Existing(workerId: 7, date: Today.AddDays(-1), status: DefectStatuses.Confirmed);
+
+        var result = await _sut.ListMineAsync(7, new DefectQuery { Status = "Confirmed" }, default);
+
+        result.Data!.Select(d => d.Status).Should().Equal("Confirmed");
+    }
+
+    [Fact]
     public async Task ListForTeam_LeaderSeesOwnTeamOnly_ManagerSeesAll_CanEditFollowsDeadline()
     {
         Existing(teamId: TeamId, deadline: Now.AddHours(1));

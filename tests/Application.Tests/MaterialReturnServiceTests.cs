@@ -28,6 +28,7 @@ public class MaterialReturnServiceTests
     private readonly List<MaterialIssueLine> _issueLines = new();
     private readonly List<MaterialReturn> _returns = new();
     private readonly List<MaterialReturnLine> _returnLines = new();
+    private readonly List<CuttingLay> _lays = new();
     private readonly Team _team = new() { TeamId = CutTeam, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting };
     private readonly Material _fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
     private readonly MaterialIssue _issue;
@@ -52,7 +53,7 @@ public class MaterialReturnServiceTests
         };
         _issue.MaterialIssueLines.Add(_line);
         _teams.Add(_team); _issues.Add(_issue); _issueLines.Add(_line);
-        Setup(_teams); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines);
+        Setup(_teams); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines); Setup(_lays);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -62,7 +63,13 @@ public class MaterialReturnServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private MaterialReturnService Service() => new(_uow, _stock, _codes, _notifier, _locks, _clock);
+    private MaterialReturnService Service() => new(_uow, _stock, _codes, _notifier, _locks, _clock, new FabricPlanner(_uow));
+
+    private void Lay(int ply, decimal? lengthM) => _lays.Add(new CuttingLay
+    {
+        CuttingTeamId = CutTeam, FabricMaterialId = 1, PlyCount = (short)ply, LayLengthM = lengthM,
+        WorkOrder = new WorkOrder { OrderId = 7 },
+    });
 
     private MaterialReturn Return(string status, decimal returned, decimal? confirmed = null)
     {
@@ -185,6 +192,36 @@ public class MaterialReturnServiceTests
         var only = lines.Should().ContainSingle().Subject;
         only.MaterialIssueLineId.Should().Be(101);
         only.RemainingQty.Should().Be(50);
+    }
+
+    [Fact]
+    public async Task Returnable_suggests_the_fabric_left_after_cutting()
+    {
+        Lay(20, 2.5m);   // đã cắt 50 m trên 100 m đã nhận
+        Return(HandoverStatuses.Pending, 10);   // đang trả 10 m
+
+        var line = (await Service().GetReturnableAsync(CutTeam, default)).Data!.Single();
+
+        line.RemainingQty.Should().Be(90);
+        line.SuggestedQty.Should().Be(40);
+    }
+
+    [Fact]
+    public async Task Returnable_splits_the_suggestion_over_issue_lines_and_skips_it_when_a_lay_has_no_length()
+    {
+        var other = new MaterialIssueLine
+        {
+            MaterialIssueLineId = 101, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
+            IssuedQty = 50, ConfirmedQty = 50,
+        };
+        _issue.MaterialIssueLines.Add(other); _issueLines.Add(other);
+        Lay(10, 3m);   // cắt 30 m, còn 120 m: dòng đầu 100, dòng sau 20
+
+        var lines = (await Service().GetReturnableAsync(CutTeam, default)).Data!;
+        lines.Select(l => l.SuggestedQty).Should().Equal(100m, 20m);
+
+        Lay(5, null);   // bàn chưa có chiều dài: chưa biết đã cắt bao nhiêu
+        (await Service().GetReturnableAsync(CutTeam, default)).Data!.Should().OnlyContain(l => l.SuggestedQty == null);
     }
 
     // ---------- Thủ kho xác nhận / từ chối ----------

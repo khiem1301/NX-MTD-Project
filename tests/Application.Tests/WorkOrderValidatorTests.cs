@@ -51,12 +51,12 @@ public class WorkOrderValidatorTests
     [Theory]
     [InlineData(300, true)]
     [InlineData(301, false)]
-    public void Finish_reason_is_limited(int length, bool valid) =>
-        new FinishCuttingDtoValidator().Validate(new FinishCuttingDto(new string('a', length))).IsValid.Should().Be(valid);
+    public void Close_short_reason_is_limited(int length, bool valid) =>
+        new CloseShortWorkOrderDtoValidator().Validate(new CloseShortWorkOrderDto(new string('a', length))).IsValid.Should().Be(valid);
 
     [Fact]
-    public void Finish_reason_may_be_empty_when_the_plan_was_met() =>
-        new FinishCuttingDtoValidator().Validate(new FinishCuttingDto(null)).IsValid.Should().BeTrue();
+    public void Close_short_needs_a_reason() =>
+        new CloseShortWorkOrderDtoValidator().Validate(new CloseShortWorkOrderDto("  ")).IsValid.Should().BeFalse();
 
     [Fact]
     public void Replacement_work_order_needs_request_team_date_and_a_bounded_note()

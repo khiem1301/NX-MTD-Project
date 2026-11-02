@@ -1,17 +1,16 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { kpiApi } from '../api/kpiApi';
 import { KPI_TEXT } from '../constants';
 import type { KpiOrderCapacity, KpiTarget } from '../types';
 import { KpiTargetFormModal } from './KpiTargetFormModal';
 
-jest.mock('../api/kpiApi', () => ({ kpiApi: { getOrderCapacity: jest.fn() } }));
+jest.mock('../api/kpiApi', () => ({
+  kpiApi: { getOrderCapacity: jest.fn(), getAllottedTeams: jest.fn().mockResolvedValue([]) },
+}));
 jest.mock('@/hooks/useOrderLookups', () => ({
   useOrderLookup: () => ({ data: { items: [] }, isLoading: false }),
   useOrderLineLookup: () => ({ data: [], isLoading: false }),
-}));
-jest.mock('@/hooks/useHrLookups', () => ({
-  useTeamLookup: () => ({ data: [], isLoading: false }),
 }));
 
 const TARGET = {
@@ -50,6 +49,13 @@ const renderForm = (capacity: KpiOrderCapacity, target = TARGET) => {
 };
 
 describe('KpiTargetFormModal', () => {
+  it('lấy danh sách tổ theo đơn + mã hàng đã chia, vẫn hiện tổ của chỉ tiêu đang sửa', async () => {
+    renderForm({ ...CAPACITY, dueDate: '2030-02-20' });
+
+    await waitFor(() => expect(kpiApi.getAllottedTeams).toHaveBeenCalledWith(2, 3));
+    expect(await screen.findByText('Tổ may 1')).toBeInTheDocument();
+  });
+
   it('hiện ngày giao hàng và số lượng đơn', async () => {
     renderForm({ ...CAPACITY, dueDate: '2030-02-20' });
 

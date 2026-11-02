@@ -30,6 +30,7 @@ public interface IPieceRateService
     Task<Result> UpdateAsync(int pieceRateId, SavePieceRateDto dto, CancellationToken ct);
 
     Task<Result> SubmitAsync(int pieceRateId, CancellationToken ct);
+    Task<Result<int>> SubmitManyAsync(SubmitPieceRatesDto dto, CancellationToken ct);
     Task<Result> ApproveAsync(int pieceRateId, ApprovePieceRateDto dto, CancellationToken ct);
     Task<Result> RejectAsync(int pieceRateId, RejectPieceRateDto dto, CancellationToken ct);
 
@@ -41,11 +42,32 @@ public interface IPieceRateService
 }
 
 /// <summary>KI-03 (UC52): tổ trưởng / tổ phó may phân công công nhân × công đoạn; đổi phân công giữ lịch sử.</summary>
+/// <summary>Admin, Kế toán quản lý nhóm công đoạn của mã hàng (DEV-ALL-50).</summary>
+public interface IOperationGroupService
+{
+    Task<Result<IReadOnlyList<OperationGroupDto>>> ListAsync(int productId, CancellationToken ct);
+    Task<Result<int>> CreateAsync(CreateOperationGroupDto dto, CancellationToken ct);
+    Task<Result> RenameAsync(int groupId, RenameOperationGroupDto dto, CancellationToken ct);
+    Task<Result> DeleteAsync(int groupId, CancellationToken ct);
+    Task<Result<int>> SetOperationsGroupAsync(SetOperationsGroupDto dto, CancellationToken ct);
+}
+
+/// <summary>Quản đốc, Admin chia dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49).</summary>
+public interface IOrderLineTeamService
+{
+    Task<Result<PagedResult<OrderLineTeamDto>>> GetPagedAsync(OrderLineTeamQuery query, CancellationToken ct);
+    Task<Result> SetTeamsAsync(SetOrderLineTeamsDto dto, CancellationToken ct);
+    Task<Result<int>> AddTeamsAsync(AddOrderLineTeamsDto dto, CancellationToken ct);
+
+    /// <summary>Tổ may được chia ít nhất một dòng của mã hàng trong đơn, để chọn tổ khi đặt chỉ tiêu KPI.</summary>
+    Task<Result<IReadOnlyList<AllottedTeamDto>>> ListTeamsAsync(int orderId, int productId, CancellationToken ct);
+}
+
 public interface IOperationAssignmentService
 {
     Task<Result<IReadOnlyList<OperationAssignmentDto>>> ListCurrentAsync(int orderId, CancellationToken ct);
 
-    /// <summary>Công đoạn may đang dùng của các mã hàng trong đơn (chọn khi phân công, ghi hàng hỏng).</summary>
+    /// <summary>Công đoạn may đang dùng của các mã hàng trong đơn được chia cho tổ mình (chọn khi phân công, ghi hàng hỏng).</summary>
     Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct);
     Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct);
 

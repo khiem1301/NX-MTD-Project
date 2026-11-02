@@ -11,8 +11,6 @@ public partial class VwOperationAllocationProgress
 
     public int OperationId { get; set; }
 
-    public bool UsesSemiFinished { get; set; }
-
     public int? RequiredQty { get; set; }
 
     public int AllocatedQty { get; set; }

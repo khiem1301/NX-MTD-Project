@@ -112,6 +112,51 @@ public class RequestServiceTests
         saved!.CreatedByTeamId.Should().Be(4);
     }
 
+    private void GivenOrderLines(params OrderLineTeam[] allotted)
+    {
+        var lines = Substitute.For<IGenericRepository<OrderLine>>();
+        lines.Query().Returns(_ => new List<OrderLine> { new() { OrderLineId = 11, OrderId = 1, ProductId = 3 } }.AsTestAsyncQueryable());
+        _uow.Repository<OrderLine>().Returns(lines);
+        var allotments = Substitute.For<IGenericRepository<OrderLineTeam>>();
+        allotments.Query().Returns(_ => allotted.ToList().AsTestAsyncQueryable());
+        _uow.Repository<OrderLineTeam>().Returns(allotments);
+    }
+
+    private static CreateRequestDto BtpDto(int? orderId, int? orderLineId) => new("SemiFinishedRequisition", "t", "nội dung", null,
+        orderId, null, null, null, null, orderLineId is null ? null : [new RequestLineInput(null, orderLineId, null, null, 5)]);
+
+    [Fact]
+    public async Task Create_SewingTeamRequestsProductNotAllotted_IsRejected()
+    {
+        SignIn(Roles.TeamLeader, 4, TeamTypes.Sewing);
+        GivenOrderLines(new OrderLineTeam { OrderLineId = 11, SewingTeamId = 9 });   // chia cho tổ khác
+
+        var result = await Create().CreateAsync(BtpDto(1, 11), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
+        await _requests.DidNotReceive().AddAsync(Arg.Any<Request>());
+    }
+
+    [Fact]
+    public async Task Create_SewingTeamRequestsAllottedProduct_Succeeds()
+    {
+        SignIn(Roles.TeamLeader, 4, TeamTypes.Sewing);
+        GivenOrderLines(new OrderLineTeam { OrderLineId = 11, SewingTeamId = 4 });
+
+        (await Create().CreateAsync(BtpDto(1, 11), default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Create_SewingTeamNamesOrderWithoutAllotment_IsRejected()
+    {
+        SignIn(Roles.TeamLeader, 4, TeamTypes.Sewing);
+        GivenOrderLines();
+
+        var result = await Create().CreateAsync(BtpDto(1, null), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
+    }
+
     [Fact]
     public async Task Create_HandlerValidationFails_ReturnsHandlerErrorAndDoesNotSave()
     {

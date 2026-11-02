@@ -192,9 +192,10 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
         };
     }
 
-    public async Task<PagedResult<OrderLookupDto>> LookupAsync(OrderLookupQuery q, IReadOnlyCollection<string> statuses, CancellationToken ct)
+    public async Task<PagedResult<OrderLookupDto>> LookupAsync(OrderLookupQuery q, IReadOnlyCollection<string> statuses, int? sewingTeamId, CancellationToken ct)
     {
-        var query = _context.CustomerOrders.AsNoTracking().Where(o => statuses.Contains(o.Status));
+        var query = _context.CustomerOrders.AsNoTracking().Where(o => statuses.Contains(o.Status))
+            .Where(o => sewingTeamId == null || o.OrderLines.Any(l => _context.OrderLineTeams.Any(a => a.SewingTeamId == sewingTeamId && a.OrderLineId == l.OrderLineId)));
         if (!string.IsNullOrWhiteSpace(q.Keyword))
         {
             var k = q.Keyword.Trim();
@@ -209,8 +210,9 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     }
 
     /// <summary>Không chọn CmtUnitPrice (D26).</summary>
-    public async Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, CancellationToken ct) =>
+    public async Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, int? sewingTeamId, CancellationToken ct) =>
         await _context.OrderLines.AsNoTracking().Where(l => l.OrderId == orderId)
+            .Where(l => sewingTeamId == null || _context.OrderLineTeams.Any(a => a.SewingTeamId == sewingTeamId && a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
             .Select(l => new OrderLineLookupDto(l.OrderLineId, l.OrderId, l.ProductId, l.ProductVariant.Product.ProductCode,
                 l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty)).ToListAsync(ct);

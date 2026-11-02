@@ -5,6 +5,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { REQUEST_TYPE } from '@/constants/requestTypes';
 import { useRequestInbox, type RequestListItem } from '@/features/requests';
 import { DATE_TIME_FORMAT, formatDate, toApiDate } from '@/utils/format';
@@ -52,6 +53,7 @@ export function AdjustmentPanel() {
   const [range, setRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(30, 'day'), dayjs()]);
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [formOpen, setFormOpen] = useState(false);
   const [prefill, setPrefill] = useState<AdjustmentPrefill | null>(null);
 
@@ -60,7 +62,7 @@ export function AdjustmentPanel() {
     toDate: toApiDate(range[1]),
     keyword: keyword || undefined,
     page,
-    pageSize: 20,
+    pageSize,
   };
   const adjustments = useAdjustments(filter);
   const approved = useRequestInbox({
@@ -166,10 +168,12 @@ export function AdjustmentPanel() {
         scroll={{ x: 'max-content' }}
         pagination={{
           current: adjustments.data?.page ?? page,
-          pageSize: adjustments.data?.pageSize ?? 20,
+          pageSize,
           total: adjustments.data?.totalItems ?? 0,
-          showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
-          onChange: setPage,
+          onChange: (nextPage, nextSize) => {
+            setPage(nextSize === pageSize ? nextPage : 1);
+            setPageSize(nextSize);
+          },
         }}
       />
 

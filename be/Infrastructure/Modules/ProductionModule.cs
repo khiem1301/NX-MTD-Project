@@ -20,7 +20,9 @@ public static class ProductionModule
         services.AddScoped<IPieceRateService, PieceRateService>();
         services.AddSingleton<IExcelOperationParser, ClosedXmlOperationParser>();
         services.AddScoped<IOperationService, OperationService>();
+        services.AddScoped<IOperationGroupService, OperationGroupService>();
         services.AddScoped<IOperationAssignmentService, OperationAssignmentService>();
+        services.AddScoped<IOrderLineTeamService, OrderLineTeamService>();
         services.AddScoped<IOutputService, OutputService>();
         services.AddScoped<IQcBatchService, QcBatchService>();
         services.AddScoped<IDefectService, DefectService>();

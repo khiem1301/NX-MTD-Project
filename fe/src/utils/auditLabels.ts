@@ -148,7 +148,6 @@ const FIELD_LABEL: Record<string, string> = {
   Title: 'Tiêu đề',
   TotalAmount: 'Tổng tiền',
   TripDate: 'Ngày đi',
-  UsesSemiFinished: 'Dùng bán thành phẩm',
   Variants: 'Số biến thể',
   VehicleId: 'Xe',
   VehicleType: 'Loại xe',

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ApiError } from '@/types/api';
 import { Form, message, type UploadFile } from 'antd';
 import { attachmentApi } from '@/hooks/useAttachments';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
@@ -123,8 +124,11 @@ export function useReceiptForm(
         ),
       ),
     );
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    if (failed > 0) void message.warning(fill(LABELS.photoUploadFailed, failed));
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (rejected.length > 0)
+      void message.warning(
+        `${fill(LABELS.photoUploadFailed, rejected.length)} ${(rejected[0]?.reason as ApiError | undefined)?.message ?? ''}`.trim(),
+      );
   };
 
   const handleFinish = (values: FormValues) => {

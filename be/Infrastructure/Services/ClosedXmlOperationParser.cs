@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
 
 namespace NX_MTD.Infrastructure.Services;
 
@@ -143,7 +144,13 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             error ??= "TGCT không được âm.";
             return null;
         }
-        return value == 0 ? null : Math.Round(value, 2);   // DB: DECIMAL(9,2), phải lớn hơn 0 hoặc để trống
+        var rounded = Math.Round(value, 2);   // DB: DECIMAL(9,2), phải lớn hơn 0 hoặc để trống
+        if (rounded > OperationLimits.MaxStandardTimeSec)
+        {
+            error ??= $"TGCT không được vượt quá {OperationLimits.MaxStandardTimeSec}.";
+            return null;
+        }
+        return rounded == 0 ? null : rounded;
     }
 
     /// <summary>Cột TIỀN: đơn giá công đoạn (đồng/sản phẩm). Trống hoặc 0 là chưa có đơn giá. Làm tròn 2 số như cột DB.</summary>
@@ -161,6 +168,11 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             return null;
         }
         var rounded = Math.Round(value, 2);
+        if (rounded > PieceRateLimits.MaxRate)
+        {
+            error ??= string.Format(Messages.PieceRateTooHigh, PieceRateLimits.MaxRate);
+            return null;
+        }
         return rounded == 0 ? null : rounded;
     }
 

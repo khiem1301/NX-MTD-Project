@@ -5,17 +5,70 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
+public static class OperationLimits
+{
+    public const int MinSkillLevel = 1;
+    public const int MaxSkillLevel = 9;
+    public const decimal MaxStandardTimeSec = 9999999.99m;   // DECIMAL(9,2)
+    public const int MaxGroupNameLength = 200;
+    public const int MaxOperationsPerGroupChange = 500;
+}
+
+public static class PieceRateLimits
+{
+    public const decimal MaxRate = 100_000_000m;
+    public const int MaxRatesPerSubmit = 500;
+}
+
 public sealed class SaveOperationDtoValidator : AbstractValidator<SaveOperationDto>
 {
     public SaveOperationDtoValidator()
     {
         RuleFor(x => x.ProductId).GreaterThan(0);
         RuleFor(x => x.OperationCode).NotEmpty().WithMessage(Messages.Required("mã công đoạn")).MaximumLength(30);
+        RuleFor(x => x.OperationCode).Must(c => CodeFormat.IsMatch(c.Trim())).When(x => !string.IsNullOrWhiteSpace(x.OperationCode))
+            .WithMessage(Messages.OperationCodeFormat);   // cột VARCHAR: chữ có dấu sẽ bị mất khi lưu
         RuleFor(x => x.OperationName).NotEmpty().WithMessage(Messages.Required("tên công đoạn")).MaximumLength(200);
         RuleFor(x => x.StationSequence).GreaterThan((short)0);
-        RuleFor(x => x.StandardTimeSec).GreaterThan(0).When(x => x.StandardTimeSec.HasValue);
+        RuleFor(x => x.SkillLevel).InclusiveBetween((byte)OperationLimits.MinSkillLevel, (byte)OperationLimits.MaxSkillLevel)
+            .When(x => x.SkillLevel.HasValue);
+        RuleFor(x => x.StandardTimeSec).GreaterThan(0).LessThanOrEqualTo(OperationLimits.MaxStandardTimeSec).When(x => x.StandardTimeSec.HasValue);
+        RuleFor(x => x.GroupName).MaximumLength(OperationLimits.MaxGroupNameLength);
         RuleFor(x => x.TeamType).Must(t => t is "Sewing" or "Cutting").When(x => !string.IsNullOrWhiteSpace(x.TeamType))
             .WithMessage("Loại tổ phải là Sewing hoặc Cutting.");
+        RuleFor(x => x.IsFinalStep).Must(final => !final).When(x => x.TeamType == "Cutting")
+            .WithMessage(Messages.OperationFinalMustBeSewing);
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex CodeFormat = new("^[A-Za-z0-9._-]+$");
+}
+
+public sealed class CreateOperationGroupDtoValidator : AbstractValidator<CreateOperationGroupDto>
+{
+    public CreateOperationGroupDtoValidator()
+    {
+        RuleFor(x => x.ProductId).GreaterThan(0);
+        RuleFor(x => x.GroupName).NotEmpty().WithMessage(Messages.Required("tên nhóm công đoạn")).MaximumLength(OperationLimits.MaxGroupNameLength);
+    }
+}
+
+public sealed class RenameOperationGroupDtoValidator : AbstractValidator<RenameOperationGroupDto>
+{
+    public RenameOperationGroupDtoValidator() =>
+        RuleFor(x => x.GroupName).NotEmpty().WithMessage(Messages.Required("tên nhóm công đoạn")).MaximumLength(OperationLimits.MaxGroupNameLength);
+}
+
+public sealed class SetOperationsGroupDtoValidator : AbstractValidator<SetOperationsGroupDto>
+{
+    public SetOperationsGroupDtoValidator()
+    {
+        RuleFor(x => x.ProductId).GreaterThan(0);
+        RuleFor(x => x.OperationGroupId).GreaterThan(0).When(x => x.OperationGroupId.HasValue);
+        RuleFor(x => x.OperationIds).NotEmpty();
+        RuleFor(x => x.OperationIds).Must(ids => ids is null || ids.Count <= OperationLimits.MaxOperationsPerGroupChange);
+        RuleForEach(x => x.OperationIds).GreaterThan(0);
+        RuleFor(x => x.OperationIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
+            .WithMessage(Messages.OperationDuplicateInRequest);
     }
 }
 
@@ -29,7 +82,21 @@ public sealed class SavePieceRateDtoValidator : AbstractValidator<SavePieceRateD
     public SavePieceRateDtoValidator()
     {
         RuleFor(x => x.OperationId).GreaterThan(0);
-        RuleFor(x => x.Rate).GreaterThanOrEqualTo(0).WithMessage("Đơn giá không được âm.");
+        RuleFor(x => x.Rate).GreaterThan(0).WithMessage(Messages.PieceRatePositive)
+            .LessThanOrEqualTo(PieceRateLimits.MaxRate).WithMessage(string.Format(Messages.PieceRateTooHigh, PieceRateLimits.MaxRate))
+            .Must(r => decimal.Round(r, 2) == r).WithMessage(Messages.PieceRateScale);
+        RuleFor(x => x.EffectiveDate).NotEmpty().WithMessage(Messages.Required("ngày hiệu lực"));
+    }
+}
+
+public sealed class SubmitPieceRatesDtoValidator : AbstractValidator<SubmitPieceRatesDto>
+{
+    public SubmitPieceRatesDtoValidator()
+    {
+        RuleFor(x => x.Ids).NotEmpty().WithMessage(Messages.PieceRateNoneSelected);
+        RuleFor(x => x.Ids).Must(ids => ids is null || ids.Count <= PieceRateLimits.MaxRatesPerSubmit);
+        RuleForEach(x => x.Ids).GreaterThan(0);
+        RuleFor(x => x.Ids).Must(ids => ids is null || ids.Distinct().Count() == ids.Count);
     }
 }
 
@@ -37,6 +104,13 @@ public sealed class RejectPieceRateDtoValidator : AbstractValidator<RejectPieceR
 {
     public RejectPieceRateDtoValidator() =>
         RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+}
+
+/// <summary>Giới hạn của phân công công đoạn. Mỗi công đoạn kiểm hợp lệ riêng nên phải chặn số công đoạn trong một lần giao.</summary>
+public static class AssignmentLimits
+{
+    public const int MaxOperations = 500;
+    public const int MaxOrderLines = 500;
 }
 
 public sealed class AssignOperationDtoValidator : AbstractValidator<AssignOperationDto>
@@ -49,6 +123,34 @@ public sealed class AssignOperationDtoValidator : AbstractValidator<AssignOperat
     }
 }
 
+public sealed class SetOrderLineTeamsDtoValidator : AbstractValidator<SetOrderLineTeamsDto>
+{
+    public SetOrderLineTeamsDtoValidator()
+    {
+        RuleFor(x => x.OrderLineId).GreaterThan(0);
+        RuleFor(x => x.TeamIds).NotNull();
+        RuleForEach(x => x.TeamIds).GreaterThan(0);
+        RuleFor(x => x.TeamIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
+            .WithMessage(Messages.OrderLineTeamDuplicate);
+    }
+}
+
+public sealed class AddOrderLineTeamsDtoValidator : AbstractValidator<AddOrderLineTeamsDto>
+{
+    public AddOrderLineTeamsDtoValidator()
+    {
+        RuleFor(x => x.OrderLineIds).NotEmpty();
+        RuleFor(x => x.OrderLineIds).Must(ids => ids is null || ids.Count <= AssignmentLimits.MaxOrderLines);
+        RuleForEach(x => x.OrderLineIds).GreaterThan(0);
+        RuleFor(x => x.OrderLineIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
+            .WithMessage(Messages.OrderLineTeamLineDuplicate);
+        RuleFor(x => x.TeamIds).NotEmpty();
+        RuleForEach(x => x.TeamIds).GreaterThan(0);
+        RuleFor(x => x.TeamIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
+            .WithMessage(Messages.OrderLineTeamDuplicate);
+    }
+}
+
 public sealed class AssignOperationsDtoValidator : AbstractValidator<AssignOperationsDto>
 {
     public AssignOperationsDtoValidator()
@@ -56,9 +158,25 @@ public sealed class AssignOperationsDtoValidator : AbstractValidator<AssignOpera
         RuleFor(x => x.OrderId).GreaterThan(0);
         RuleFor(x => x.WorkerId).GreaterThan(0);
         RuleFor(x => x.OperationIds).NotEmpty().WithMessage(Messages.AssignmentOperationsRequired);
+        RuleFor(x => x.OperationIds).Must(ids => ids is null || ids.Count <= AssignmentLimits.MaxOperations)
+            .WithMessage(string.Format(Messages.AssignmentOperationsTooMany, AssignmentLimits.MaxOperations));
         RuleForEach(x => x.OperationIds).GreaterThan(0);
         RuleFor(x => x.OperationIds).Must(ids => ids is null || ids.Distinct().Count() == ids.Count)
             .WithMessage(Messages.AssignmentOperationsDuplicate);
+    }
+}
+
+public sealed class ReplaceAssignmentDtoValidator : AbstractValidator<ReplaceAssignmentDto>
+{
+    public ReplaceAssignmentDtoValidator() => RuleFor(x => x.NewWorkerId).GreaterThan(0);
+}
+
+public sealed class CopyAssignmentsDtoValidator : AbstractValidator<CopyAssignmentsDto>
+{
+    public CopyAssignmentsDtoValidator()
+    {
+        RuleFor(x => x.FromOrderId).GreaterThan(0);
+        RuleFor(x => x.ToOrderId).GreaterThan(0);
     }
 }
 

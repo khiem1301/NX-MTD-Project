@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using NX_MTD.API.Common;
@@ -15,6 +16,17 @@ namespace NX_MTD.API.Extensions;
 
 public static class ApiServiceExtensions
 {
+    /// <summary>Tệp tải lên vượt RequestSizeLimit: lỗi đọc form có gốc là 413 (ASP.NET chỉ giữ câu báo lỗi, không giữ exception), báo như lỗi dung lượng ảnh thay vì lỗi dữ liệu chung.</summary>
+    private static bool IsBodyTooLarge(Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary modelState) =>
+        modelState.Values.SelectMany(v => v.Errors).Any(e => HasTooLargeCause(e.Exception) || e.ErrorMessage.Contains("Request body too large", StringComparison.OrdinalIgnoreCase));
+
+    private static bool HasTooLargeCause(Exception? ex)
+    {
+        for (; ex is not null; ex = ex.InnerException)
+            if (ex is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }) return true;
+        return false;
+    }
+
     public static IServiceCollection AddApiCore(this IServiceCollection services, IConfiguration config)
     {
         var jwt = config.GetSection("Jwt").Get<JwtOptions>() ?? new JwtOptions();
@@ -34,10 +46,15 @@ public static class ApiServiceExtensions
                 o.JsonSerializerOptions.Converters.Add(new VnDateTimeJsonConverter());
             })
             .ConfigureApiBehaviorOptions(o =>
-                o.InvalidModelStateResponseFactory = ctx => new Microsoft.AspNetCore.Mvc.ObjectResult(
+                o.InvalidModelStateResponseFactory = ctx => IsBodyTooLarge(ctx.ModelState)
+                    ? new Microsoft.AspNetCore.Mvc.ObjectResult(ApiResponses.Failure(ErrorCodes.AttachmentFileTooLarge,
+                        string.Format(Messages.AttachmentFileTooLarge,
+                            ctx.HttpContext.RequestServices.GetRequiredService<IOptions<AttachmentOptions>>().Value.MaxFileMb)))
+                    { StatusCode = StatusCodes.Status413PayloadTooLarge }
+                    : new Microsoft.AspNetCore.Mvc.ObjectResult(
                     ApiResponses.Failure(ErrorCodes.CommonValidation, "Dữ liệu không hợp lệ.",
                         ctx.ModelState.Where(kv => kv.Value?.Errors.Count > 0).ToDictionary(
-                            kv => char.ToLowerInvariant(kv.Key[0]) + kv.Key[1..],
+                            kv => kv.Key.Length == 0 ? kv.Key : char.ToLowerInvariant(kv.Key[0]) + kv.Key[1..],
                             kv => kv.Value!.Errors.Select(e => e.ErrorMessage).ToArray())))
                 { StatusCode = StatusCodes.Status400BadRequest });
 

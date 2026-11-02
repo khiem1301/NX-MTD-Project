@@ -23,8 +23,8 @@ public sealed class AttendanceController : AccountantBaseController
         this.ToResponse(await _attendance.GetHealthAsync(ct));
 
     [HttpGet("sync-sessions")]
-    public async Task<IActionResult> GetSyncSessions([FromQuery] int take, CancellationToken ct) =>
-        this.ToResponse(await _attendance.GetSessionsAsync(take, ct));
+    public async Task<IActionResult> GetSyncSessions([FromQuery] int take, [FromQuery] string? status, CancellationToken ct) =>
+        this.ToResponse(await _attendance.GetSessionsAsync(take, status, ct));
 
     /// <summary>Các mã chấm công có lượt quẹt nhưng chưa gắn nhân viên.</summary>
     [HttpGet("unmapped-codes")]

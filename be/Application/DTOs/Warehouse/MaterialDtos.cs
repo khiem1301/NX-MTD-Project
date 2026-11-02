@@ -8,7 +8,7 @@ public sealed record MaterialDto(
     string Color, string Status, DateTime CreatedAt, decimal? WidthCm = null);
 
 /// <summary>MaterialCode để trống → hệ thống tự sinh V-0001 (vải) / PL-0001 (phụ liệu). Color trống = không phân màu.</summary>
-/// WidthCm (cm): khổ vải, dùng ước tính vải cắt bù; chỉ nhập cho vải.
+/// WidthCm (cm): khổ vải, dùng ước tính vải; chỉ nhập cho vải. Unit của vải luôn là m, giá trị gửi lên được bỏ qua.
 public sealed record CreateMaterialDto(string? MaterialCode, string MaterialName, string MaterialType, string Category,
     string Unit, string? Color = null, decimal? WidthCm = null);
 

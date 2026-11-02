@@ -102,6 +102,18 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
         return rows.Select(e => new EmployeeLookupDto(e.EmployeeId, e.EmployeeCode, e.FullName, Roles.FromRoleCode(e.RoleCode),
             e.TeamId, CodeText.ToPascal(e.PayType))).ToList();
     }
+
+    public async Task<IReadOnlyList<EmployeeLookupDto>> LookupUnassignedAsync(IReadOnlyCollection<string>? hidden, CancellationToken ct)
+    {
+        var adminOnly = RoleCodes.AdminAssignedOnly.ToArray();   // EF không dịch Contains trên IReadOnlySet
+        var query = _context.Employees.AsNoTracking().Where(e => e.TeamId == null && e.Status == RecordStatus.Active
+            && !adminOnly.Contains(e.Role.RoleCode));
+        if (hidden is not null) query = query.Where(e => !hidden.Contains(e.Role.RoleCode));
+        var rows = await query.OrderBy(e => e.EmployeeCode)
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.PayType }).ToListAsync(ct);
+        return rows.Select(e => new EmployeeLookupDto(e.EmployeeId, e.EmployeeCode, e.FullName, Roles.FromRoleCode(e.RoleCode),
+            null, CodeText.ToPascal(e.PayType))).ToList();
+    }
 }
 
 public sealed class TeamRepository : GenericRepository<Team>, ITeamRepository
@@ -132,7 +144,8 @@ public sealed class TeamRepository : GenericRepository<Team>, ITeamRepository
 
         var members = _context.Employees.AsNoTracking().Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active);
         if (hidden is not null) members = members.Where(e => !hidden.Contains(e.Role.RoleCode));
-        var rows = await members.OrderBy(e => e.EmployeeCode)
+        var rows = await members.OrderBy(e => e.Role.RoleCode == RoleCodes.TeamLeader ? 0 : e.Role.RoleCode == RoleCodes.TeamDeputy ? 1 : 2)
+            .ThenBy(e => e.EmployeeCode)
             .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.Role.RoleName, e.PayType, e.CurrentGradeCode })
             .ToListAsync(ct);
         var list = rows.Select(e => new TeamMemberDto(e.EmployeeId, e.EmployeeCode, e.FullName, Roles.FromRoleCode(e.RoleCode),

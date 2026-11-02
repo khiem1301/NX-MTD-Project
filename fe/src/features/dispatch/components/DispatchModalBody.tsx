@@ -60,6 +60,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         id: note.dispatchNoteId,
         body: {
           customerReceivedDate: values.receivedDate.format(API_DATE),
+          rowVer: note.rowVer,
           lines: note.lines.map((l) => ({
             dispatchNoteLineId: l.dispatchNoteLineId,
             receivedQty: values.received[String(l.dispatchNoteLineId)] ?? l.issueQty,
@@ -82,7 +83,12 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         {isManager && notExportedYet && (
           <ConfirmAction
             title={DISPATCH_MESSAGES.confirmCancel}
-            onConfirm={() => cancel.mutate(note.dispatchNoteId, { onSuccess: onClose })}
+            onConfirm={() =>
+              cancel.mutate(
+                { id: note.dispatchNoteId, rowVer: note.rowVer },
+                { onSuccess: onClose },
+              )
+            }
           >
             <Button danger loading={cancel.isPending}>
               {DISPATCH_LABELS.cancel}
@@ -100,7 +106,12 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
               <ConfirmAction
                 title={DISPATCH_MESSAGES.confirmExport}
                 disabled={!hasIssuePhoto}
-                onConfirm={() => exportGoods.mutate(note.dispatchNoteId, { onSuccess: onClose })}
+                onConfirm={() =>
+                  exportGoods.mutate(
+                    { id: note.dispatchNoteId, rowVer: note.rowVer },
+                    { onSuccess: onClose },
+                  )
+                }
               >
                 <Button type="primary" disabled={!hasIssuePhoto} loading={exportGoods.isPending}>
                   {DISPATCH_LABELS.export}
@@ -151,7 +162,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
             label={DISPATCH_LABELS.customerReceivedDate}
             rules={[{ required: true, message: MESSAGES.common.required }]}
           >
-            <AppDatePicker />
+            <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
           </Form.Item>
         )}
         <DataTable<DispatchNoteLine>
@@ -170,7 +181,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         onCancel={() => setRejecting(false)}
         onSubmit={(reason) =>
           reject.mutate(
-            { id: note.dispatchNoteId, reason },
+            { id: note.dispatchNoteId, reason, rowVer: note.rowVer },
             {
               onSuccess: () => {
                 setRejecting(false);

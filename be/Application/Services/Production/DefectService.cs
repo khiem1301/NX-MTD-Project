@@ -75,8 +75,10 @@ public sealed class DefectService : IDefectService
 
     public async Task<Result<IReadOnlyList<DefectDto>>> ListMineAsync(int workerId, DefectQuery query, CancellationToken ct)
     {
+        var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var items = await Project(Defects.AsNoTracking()
                 .Where(d => d.ResponsibleWorkerId == workerId && d.Status != DefectStatuses.Cancelled)
+                .Where(d => status == null || d.Status == status)
                 .Where(d => query.From == null || d.WorkDate >= query.From)
                 .Where(d => query.To == null || d.WorkDate <= query.To)
                 .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId))

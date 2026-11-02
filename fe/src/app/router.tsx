@@ -26,13 +26,18 @@ const production = () => import('@/features/production');
 const productionRoutes = [
   {
     path: PRODUCTION_ROUTES.operations,
-    roles: [ROLES.Accountant],
+    roles: [ROLES.Accountant, ROLES.Admin],
     page: async () => (await production()).OperationsPage,
   },
   {
     path: PRODUCTION_ROUTES.adminPieceRates,
     roles: [Admin],
     page: async () => (await production()).AdminPieceRatesPage,
+  },
+  {
+    path: PRODUCTION_ROUTES.orderLineTeams,
+    roles: [Admin, Manager],
+    page: async () => (await production()).OrderLineTeamsPage,
   },
   {
     path: PRODUCTION_ROUTES.assignments,

@@ -26,14 +26,17 @@ public sealed class OperationService : IOperationService
 
     public async Task<Result<IReadOnlyList<OperationDto>>> ListAsync(int productId, bool includeDiscontinued, CancellationToken ct)
     {
+        if (productId <= 0)
+            return Result<IReadOnlyList<OperationDto>>.Failure(ErrorCodes.OperationInvalid, Messages.OperationProductRequired, ResultKind.Validation);
+
         var items = await Operations.AsNoTracking()
             .Where(o => o.ProductId == productId && (includeDiscontinued || o.Status == OperationStatuses.Active))
             .OrderBy(o => o.StationSequence).ThenBy(o => o.OperationCode)
             .Select(o => new OperationDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
                 o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec, o.TeamType, o.IsFinalStep,
-                o.Status, null, null, o.UsesSemiFinished, o.OperationGroupId,
+                o.Status, null, null, o.OperationGroupId,
                 o.OperationGroup == null ? null : o.OperationGroup.GroupName,
-                o.OperationComponents.Select(c => c.ProductComponentId).ToList()))
+                o.OperationComponents.Select(c => c.ProductComponentId).ToList(), null))
             .ToListAsync(ct);
 
         // Một truy vấn lấy mọi đơn giá của mã hàng, rồi chọn đơn giá hiện hành / đơn giá sắp tới trong bộ nhớ.
@@ -52,11 +55,16 @@ public sealed class OperationService : IOperationService
             own ??= [];
 
             var (current, next) = CurrentAndNextRate(own, today);
+            var upcoming = own.Where(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate > today)
+                .OrderBy(r => r.EffectiveDate).FirstOrDefault();
 
             result.Add(item with
             {
                 TeamType = CodeText.ToPascal(item.TeamType), Status = CodeText.ToPascal(item.Status),
                 CurrentRate = current, NextRate = next,
+                UpcomingRate = upcoming is null
+                    ? null
+                    : new OperationRateDto(upcoming.PieceRateId, upcoming.Rate, upcoming.EffectiveDate, CodeText.ToPascal(upcoming.Status), null),
             });
         }
         return Result<IReadOnlyList<OperationDto>>.Success(result);
@@ -73,7 +81,9 @@ public sealed class OperationService : IOperationService
     {
         var current = own.Where(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
             .OrderByDescending(r => r.EffectiveDate).FirstOrDefault();
-        var latest = own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
+        // Bản đang chờ duyệt phải hiện trước, kể cả khi có bản khác ngày muộn hơn, để không cho đặt chồng lên khi Admin chưa quyết định.
+        var latest = own.Where(r => r.Status == PieceRateStatuses.PendingApproval).OrderByDescending(r => r.EffectiveDate).FirstOrDefault()
+            ?? own.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).FirstOrDefault();
         var next = latest is not null && latest.PieceRateId != current?.PieceRateId
             ? new OperationRateDto(latest.PieceRateId, latest.Rate, latest.EffectiveDate,
                 CodeText.ToPascal(latest.Status), latest.Status == PieceRateStatuses.Rejected ? latest.DecisionNote : null)
@@ -83,9 +93,8 @@ public sealed class OperationService : IOperationService
 
     public async Task<Result<int>> CreateAsync(SaveOperationDto dto, CancellationToken ct)
     {
-        var product = await _uow.Repository<Product>().Query().AsNoTracking()
-            .AnyAsync(p => p.ProductId == dto.ProductId, ct);
-        if (!product) return Fail.NotFound<int>();
+        var product = await CheckProductAsync(dto.ProductId, ct);
+        if (product is not null) return Fail.As<int>(product);
 
         var code = dto.OperationCode.Trim().ToUpperInvariant();
         var check = await CheckAsync(dto, code, null, ct);
@@ -98,6 +107,7 @@ public sealed class OperationService : IOperationService
 
         return await _uow.InTransactionAsync(async () =>   // log cần OperationId nên lưu trước
         {
+            if (dto.IsFinalStep) await MoveFinalStepAsync(dto.ProductId, null, ct);
             await _uow.Repository<Operation>().AddAsync(operation);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
@@ -116,13 +126,18 @@ public sealed class OperationService : IOperationService
         var check = await CheckAsync(dto with { ProductId = operation.ProductId }, code, operation, ct);
         if (check is not null) return check;
 
-        var before = Snapshot(operation);
-        Apply(operation, dto, code);
-        var related = await ApplyGroupAndComponentsAsync(operation, dto, ct);
-        if (related is not null) return related;
-        _audit.Add(new AuditEntry(nameof(Operation), operationId, AuditActions.Update, before, Snapshot(operation)));
-        await _uow.SaveChangesAsync();
-        return Result.Success(Messages.Saved);
+        return await _uow.InTransactionAsync(async () =>
+        {
+            if (dto.IsFinalStep && operation.Status == OperationStatuses.Active)
+                await MoveFinalStepAsync(operation.ProductId, operationId, ct);
+            var before = Snapshot(operation);
+            Apply(operation, dto, code);
+            var related = await ApplyGroupAndComponentsAsync(operation, dto, ct);
+            if (related is not null) return related;
+            _audit.Add(new AuditEntry(nameof(Operation), operationId, AuditActions.Update, before, Snapshot(operation)));
+            await _uow.SaveChangesAsync();
+            return Result.Success(Messages.Saved);
+        });
     }
 
     public async Task<Result> DiscontinueAsync(int operationId, CancellationToken ct)
@@ -130,12 +145,36 @@ public sealed class OperationService : IOperationService
         var operation = await _uow.Repository<Operation>().GetByIdAsync(operationId);
         if (operation is null) return Fail.NotFound();
         if (operation.Status == OperationStatuses.Discontinued) return Result.Success(Messages.Saved);
+        // Màn giao việc chỉ hiện công đoạn đang dùng và sản lượng chặn công đoạn đã ngừng: việc đang giao sẽ không thu hồi, không báo xong được.
+        if (await HasOpenWorkAsync(operationId, ct))
+            return Result.Failure(ErrorCodes.OperationHasOpenWork, Messages.OperationHasOpenWork);
 
         operation.Status = OperationStatuses.Discontinued;
         _audit.Add(new AuditEntry(nameof(Operation), operationId, AuditActions.Update,
             new { Status = OperationStatuses.Active }, new { operation.Status }));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
+    }
+
+    private Task<bool> HasOpenWorkAsync(int operationId, CancellationToken ct)
+    {
+        var openLines = _uow.Repository<OrderLine>().Query().Where(l => !OrderStatuses.Closed.Contains(l.Order.Status)).Select(l => l.OrderLineId);
+        var pending = _uow.Repository<WorkAllocation>().Query().Where(w => w.OperationId == operationId
+            && w.Status == HandoverStatuses.Pending && openLines.Contains(w.OrderLineId)).Select(w => w.OperationId);
+        var held = _uow.Repository<VwWorkerOutputCap>().Query().Where(c => c.OperationId == operationId
+            && c.RemainingQty > 0 && openLines.Contains(c.OrderLineId)).Select(c => c.OperationId);
+        return pending.Concat(held).AnyAsync(ct);
+    }
+
+    /// <summary>Mã hàng phải còn và đang sản xuất mới thêm công đoạn được.</summary>
+    private async Task<Result?> CheckProductAsync(int productId, CancellationToken ct)
+    {
+        var product = await _uow.Repository<Product>().Query().AsNoTracking()
+            .Where(p => p.ProductId == productId).Select(p => new { p.ProductCode, p.Status }).FirstOrDefaultAsync(ct);
+        if (product is null) return Fail.NotFound();
+        return product.Status == RecordStatus.Active
+            ? null
+            : Result.Failure(ErrorCodes.ProductNotActive, string.Format(Messages.ProductNotActive, product.ProductCode));
     }
 
     public async Task<Result> ReactivateAsync(int operationId, CancellationToken ct)
@@ -292,6 +331,8 @@ public sealed class OperationService : IOperationService
         if (target is null)
             return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationImportFinalNotFound,
                 Messages.OperationImportFinalNotFound, ResultKind.Validation);
+        if (target.Existing is { Status: not OperationStatuses.Active })
+            return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
         if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct))
             return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
                 Messages.OperationFinalStepExists);
@@ -361,8 +402,8 @@ public sealed class OperationService : IOperationService
     private async Task<Result<ImportPlan>> BuildImportPlanAsync(
         int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct)
     {
-        var productExists = await _uow.Repository<Product>().Query().AsNoTracking().AnyAsync(p => p.ProductId == productId, ct);
-        if (!productExists) return Fail.NotFound<ImportPlan>();
+        var product = await CheckProductAsync(productId, ct);
+        if (product is not null) return Fail.As<ImportPlan>(product);
 
         var parsed = ParseSheets(stream);
         if (!parsed.IsSuccess) return Fail.As<ImportPlan>(parsed);
@@ -481,7 +522,7 @@ public sealed class OperationService : IOperationService
 
     private static object RateSnapshot(PieceRate r) => new { r.OperationId, r.Rate, r.EffectiveDate, r.Status };
 
-    /// <summary>Mã trùng trong mã hàng và "đúng một công đoạn may cuối đang dùng" — báo rõ trước khi DB chặn.</summary>
+    /// <summary>Mã trùng trong mã hàng — báo rõ trước khi DB chặn.</summary>
     private async Task<Result?> CheckAsync(SaveOperationDto dto, string code, Operation? existing, CancellationToken ct)
     {
         var exceptId = existing?.OperationId;
@@ -489,10 +530,24 @@ public sealed class OperationService : IOperationService
             o => o.ProductId == dto.ProductId && o.OperationCode == code && (exceptId == null || o.OperationId != exceptId), ct);
         if (duplicate) return Result.Failure(ErrorCodes.OperationCodeDuplicate, Messages.OperationCodeDuplicate);
 
-        var willBeActive = existing is null || existing.Status == OperationStatuses.Active;
-        if (dto.IsFinalStep && willBeActive && await FinalStepExistsAsync(dto.ProductId, exceptId, ct))
-            return Result.Failure(ErrorCodes.OperationFinalStepExists, Messages.OperationFinalStepExists);
         return null;
+    }
+
+    /// <summary>
+    /// Tick công đoạn cuối ở công đoạn này thì công đoạn cuối đang dùng trước đó tự bỏ tick. Lưu ngay, vì chỉ mục UX_Operation_FinalStep
+    /// không cho hai dòng cùng là công đoạn cuối trong một lô lệnh, mà EF ghi theo thứ tự khóa chứ không theo thứ tự gán.
+    /// </summary>
+    private async Task MoveFinalStepAsync(int productId, int? exceptId, CancellationToken ct)
+    {
+        var others = await Operations.Where(o => o.ProductId == productId && o.IsFinalStep
+            && o.Status == OperationStatuses.Active && (exceptId == null || o.OperationId != exceptId)).ToListAsync(ct);
+        foreach (var other in others)
+        {
+            other.IsFinalStep = false;
+            _audit.Add(new AuditEntry(nameof(Operation), other.OperationId, AuditActions.Update,
+                new { IsFinalStep = true }, new { IsFinalStep = false }));
+        }
+        if (others.Count > 0) await _uow.SaveChangesAsync();
     }
 
     private Task<bool> FinalStepExistsAsync(int productId, int? exceptId, CancellationToken ct) =>
@@ -508,11 +563,10 @@ public sealed class OperationService : IOperationService
         operation.StandardTimeSec = dto.StandardTimeSec;
         operation.TeamType = string.IsNullOrWhiteSpace(dto.TeamType) ? TeamTypes.Sewing : CodeText.ToCode(dto.TeamType);
         operation.IsFinalStep = dto.IsFinalStep;
-        operation.UsesSemiFinished = dto.UsesSemiFinished;
     }
 
     /// <summary>
-    /// Công đoạn to (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
+    /// Nhóm công đoạn (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
     /// cùng mã hàng; danh sách trống = không gắn chi tiết nào. <c>ComponentIds</c> null = giữ nguyên (cập nhật từ import Excel).
     /// </summary>
     private async Task<Result?> ApplyGroupAndComponentsAsync(Operation operation, SaveOperationDto dto, CancellationToken ct)
@@ -554,6 +608,6 @@ public sealed class OperationService : IOperationService
     private static object Snapshot(Operation o) => new
     {
         o.ProductId, o.OperationCode, o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec,
-        o.TeamType, o.IsFinalStep, o.UsesSemiFinished, o.Status,
+        o.TeamType, o.IsFinalStep, o.Status,
     };
 }

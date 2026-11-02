@@ -1,11 +1,11 @@
 # NX-MTD – Mô tả cơ sở dữ liệu
 
-Tài liệu mô tả database **NXMTD** (SQL Server) theo script `NX-MTD_Database.sql` **bản 25/10/2026**. Phần chi tiết cột của từng bảng được sinh trực tiếp từ script nên khớp với DDL; phần tổng quan và luồng nghiệp vụ tóm tắt cách các bảng nối với nhau.
+Tài liệu mô tả database **NXMTD** (SQL Server) theo script `NX-MTD_Database.sql` **bản 02/11/2026**. Phần chi tiết cột của từng bảng được sinh trực tiếp từ script nên khớp với DDL; phần tổng quan và luồng nghiệp vụ tóm tắt cách các bảng nối với nhau.
 
 | Hạng mục | Số lượng |
 |---|---|
-| Bảng | 70 |
-| View | 19 |
+| Bảng | 76 |
+| View | 17 |
 | Hàm | 3 |
 | Trigger | 29 |
 | Thủ tục (stored procedure) | 5 |
@@ -35,7 +35,7 @@ Tài liệu mô tả database **NXMTD** (SQL Server) theo script `NX-MTD_Databas
 - **Lịch sử thay đổi** (ai, lúc nào, giá trị cũ / mới, lý do) ghi vào `AuditLog`, không có bảng lịch sử riêng cho từng bảng.
 - **Tồn kho**: `StockBalance` giữ tồn hiện tại, mỗi mặt hàng trong mỗi kho một dòng; thẻ kho `StockTransaction` chỉ thêm. Cả hai chỉ được ghi qua `usp_Stock_Post`, nên tồn luôn bằng tổng thẻ kho. Giữ chỗ và khả dụng tính ở view `vw_StockBalance` (25/10).
 - **Khóa tháng:** dữ liệu sản xuất, chấm hộ, chi phí thuộc tháng đã khóa (`AccountingPeriod.Status = 'LOCKED'`) bị trigger chặn ghi.
-- **NVL được nhận diện bằng cặp (`MaterialId`, `MaterialColor`)** ở mọi nơi (đơn, định mức, đơn mua, phiếu nhập, phiếu cấp, thẻ kho). `MaterialColor = ''` là NVL không phân màu (khóa, nhãn…).
+- **NVL được nhận diện bằng `MaterialId`** ở mọi nơi (đơn, định mức, đơn mua, phiếu nhập, phiếu cấp, thẻ kho). Màu NVL nằm ở `Material.Color` (26/10): mỗi màu là một dòng `Material`, `Color = ''` là NVL không phân màu (khóa, nhãn…).
 - **Dòng đơn `OrderLine` (một biến thể mã hàng – màu – size)** là đơn vị trung tâm cho cắt, sản lượng, QC, kho BTP / thành phẩm và giao hàng.
 
 Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **FK ghép** khóa ngoại nhiều cột (xem mục "Ràng buộc & index" của bảng); cột *Null* có dấu ✓ là cho phép NULL; kiểu *tính toán* là computed column.
@@ -46,13 +46,13 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 
 | Phân hệ | Bảng | Vai trò |
 |---|---|---|
-| 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
+| 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevelCode`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
 | 4.2 Nhân sự & thông báo | `Team`, `Employee`, `Account`, `GradeEvaluation`, `Announcement`, `AnnouncementTarget`, `Notification` | Tổ, nhân viên, tài khoản, đổi bậc thợ, thông báo |
-| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductVariant`, `ProductComponent`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget` | Dữ liệu gốc của sản xuất |
+| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
 | 4.4 Đơn từ | `Request`, `RequestLine` | 10 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
 | 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua, thanh toán, phiếu nhập |
 | 4.6 Cắt & cấp kho | `WorkOrder`, `WorkOrderLine`, `MaterialIssue`, `MaterialIssueLine`, `MaterialReturn`, `MaterialReturnLine`, `CuttingLay`, `CuttingLayLine`, `CutHandover`, `CutHandoverLine` | Lệnh cắt, cấp NVL / BTP, trả vải, bàn cắt, bàn giao BTP |
-| 4.7 May & QC | `OperationAssignment`, `WorkAllocation`, `OutputRecord`, `DefectRecord`, `QcBatch`, `FgHandover`, `FgHandoverLine` | Phân công, giao / thu hồi việc, sản lượng, hàng lỗi, QC, bàn giao thành phẩm |
+| 4.7 May & QC | `OrderLineTeam`, `OperationAssignment`, `WorkAllocation`, `OutputRecord`, `DefectRecord`, `QcBatch`, `FgHandover`, `FgHandoverLine` | Phân công, giao / thu hồi việc, sản lượng, hàng lỗi, QC, bàn giao thành phẩm |
 | 4.8 Xuất hàng | `DispatchNote`, `DispatchNoteLine` | Phiếu xuất kho thành phẩm kiêm lệnh giao |
 | 4.9 Kho | `StockBalance`, `Stocktake`, `StocktakeLine`, `StockTransaction` | Tồn hiện tại, kiểm kê, thẻ kho |
 | 4.10 Chấm công & suất ăn | `AttendanceSyncSession`, `AttendanceLog`, `AttendanceAdjustment`, `DailyTimesheet`, `DailyMeal`, `TeamMealConfirmation` | Đồng bộ Ronald Jack Pro, bảng công, suất ăn |
@@ -123,17 +123,17 @@ erDiagram
 
 1. `CustomerOrder` → các `OrderLine` (mã hàng – màu – size – số lượng – đơn giá CMT).
 2. `OrderMaterial`: mỗi dòng là một NVL + màu mà đơn cần. `RequiredQty` theo số khách báo, `CustomerQty` là phần khách cấp; `PurchaseQty` và `Source` (`SUPPLIER` / `CUSTOMER` / `BOTH`) là cột tính.
-3. `OrderMaterial` và định mức không nối bằng FK mà khớp theo `(MaterialId, MaterialColor)`; view `vw_OrderMaterialNorm` đặt số khách báo cạnh số tính từ định mức để phát hiện lệch.
-4. Phần phải mua: `PurchaseOrder` / `PurchaseOrderLine` trỏ về `OrderMaterial`. Đơn mua dùng chung nhiều đơn (kim, chỉ…) có `OrderId` NULL và dòng ghi thẳng `MaterialId` + `MaterialColor` (TH-12).
+3. `OrderMaterial` và định mức không nối bằng FK mà khớp theo `MaterialId`.
+4. Phần phải mua: `PurchaseOrder` / `PurchaseOrderLine` trỏ về `OrderMaterial`. Đơn mua dùng chung nhiều đơn (kim, chỉ…) có `OrderId` NULL và dòng ghi thẳng `MaterialId` (TH-12).
 5. Nhập kho: `MaterialReceipt` / `MaterialReceiptLine` (số đạt nhập kho). Số thiếu so với đơn mua xem `vw_PurchaseOrderLineStatus`. Thiếu / lỗi sinh `Request` loại `SHORT_DELIVERY`; phiếu bổ sung có `ShortageRequestId`.
 6. Mỗi dòng phiếu nhập được xác nhận gọi `usp_Stock_Post` kho `MATERIAL`: cộng `StockBalance` và ghi một dòng `StockTransaction`.
 
 ### 3.3 Cắt
 
 1. `WorkOrder` (lệnh cắt) cho tổ cắt theo đơn + mã hàng; `WorkOrderLine` là số cần cắt theo dòng đơn. Dòng cắt bù có `WorkOrderLine.ProductComponentMaterialId` (chi tiết × vải × màu của đúng màu × size); lệnh cắt bù có `SourceRequestId` trỏ về yêu cầu `REPLACEMENT_CUTTING`.
-2. Vải cần cho lệnh cắt tính từ định mức qua `vw_WorkOrderFabricNeed`.
+2. Vải cần cho lệnh cắt cả bộ tính theo bìa: `ProductMarker` cho dài, rộng từng bìa theo size (một bìa một sản phẩm), `ProductMarkerFabric` cho biết bìa đó, với màu áo đó, dùng vải nào. Cắt lẻ và cắt bù tính theo kích thước chi tiết trong `ProductComponentMaterial`.
 3. Thủ kho cấp vải bằng `MaterialIssue` (`WarehouseType = 'MATERIAL'`): xuất chỉ **giữ chỗ**, trừ kho khi tổ trưởng xác nhận nhận. Vải thừa trả lại bằng `MaterialReturn`.
-4. Tổ cắt ghi `CuttingLay` (số lớp, màu vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId` và `CuttingLay.FabricColor`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
+4. Tổ cắt ghi `CuttingLay` (số lớp, chiều dài bàn, vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
 5. `CutHandover` bàn giao BTP vào kho BTP (`usp_Stock_Post` kho `SEMI_FINISHED`).
 
 ### 3.4 May, QC và thành phẩm
@@ -141,8 +141,8 @@ erDiagram
 1. Kho cấp BTP cho tổ may bằng `MaterialIssue` (`WarehouseType = 'SEMI_FINISHED'`, dòng theo `OrderLineId`), thường theo `Request` loại `SEMI_FINISHED_REQUISITION`.
 2. Tổ trưởng phân công công đoạn (`OperationAssignment`), rồi giao việc cho công nhân (25/10):
    - Mỗi sản phẩm qua mỗi công đoạn một lần, nên số lần cần làm của một công đoạn × màu × size = số bộ BTP tổ đã nhận (`MaterialIssueLine.ConfirmedQty`).
-   - Tổ trưởng chia số lần đó cho công nhân tùy ý (`WorkAllocation.Quantity`); tổng số lần đang giao không vượt số bộ đã nhận (50050). Công đoạn có `Operation.UsesSemiFinished` = 1 thì giao kèm BTP (`WorkAllocation.PieceQty`, màn hình điền sẵn bằng số lần, sửa được); công đoạn không dùng BTP thì `WorkAllocation.PieceQty` = 0.
-   - Trần sản lượng của công nhân là số lần được giao (`vw_WorkerOutputCap`); báo vượt bị chặn (50052). Tồn BTP của tổ (`vw_TeamPieceHolding`) chỉ trừ BTP giao kèm. Công đoạn còn bao nhiêu lần chưa giao xem `vw_OperationAllocationProgress`.
+   - Tổ trưởng chia số lần đó cho công nhân tùy ý (`WorkAllocation.Quantity`); tổng số lần đang giao không vượt số bộ đã nhận (50050).
+   - Trần sản lượng của công nhân là số lần được giao (`vw_WorkerOutputCap`); báo vượt bị chặn (50052). Công đoạn còn bao nhiêu lần chưa giao xem `vw_OperationAllocationProgress`.
 3. Sản lượng cuối ca `OutputRecord` khóa đơn giá bằng `PieceRateId`; hàng lỗi `DefectRecord` (`REWORK` / `SCRAP`). Scrap sinh yêu cầu cắt bù.
 4. QA/QC ghi hàng đạt theo đợt (`QcBatch`) và bàn giao vào kho thành phẩm (`FgHandover`).
 5. Quản đốc lập phiếu xuất `DispatchNote` (giữ chỗ), Thủ kho xác nhận xuất (trừ kho), Kế toán xác nhận khách đã nhận.
@@ -185,21 +185,37 @@ Vai trò người dùng (9 vai trò), tham số hệ thống dạng khóa – gi
 | `Description` | NVARCHAR(500) | ✓ |  |  |
 | `UpdatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
-### `GradeLevel` — Bậc thợ A–D và tiền bậc theo ngày hiệu lực
+### `GradeLevelCode` — Danh mục bậc thợ
 
-> Bậc thợ A–D và tiền bậc theo tháng, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15)
+> Danh mục bậc thợ (A, B, C, D...). Admin thêm / sửa / ngừng dùng. Mã bậc là khóa; nhân viên, đánh giá và tiền bậc tham chiếu mã này
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `GradeCode` | VARCHAR(5) |  | **PK** | chỉ chữ in hoa không dấu và số |
+| `GradeName` | NVARCHAR(50) |  |  | tên bậc |
+| `Status` | VARCHAR(10) |  | Mặc định `'ACTIVE'`; giá trị: `ACTIVE`, `INACTIVE` |  |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
+
+**Ràng buộc & index**
+
+- `CK_GLC_Code`: `CHECK GradeCode NOT LIKE '%[^A-Z0-9]%'`
+- `CK_GLC_Status`: giá trị `ACTIVE`, `INACTIVE`
+
+### `GradeLevel` — Tiền bậc theo ngày hiệu lực
+
+> Tiền bậc theo tháng của từng bậc, có ngày hiệu lực; giữ phiên bản cũ (GRADE_LEVEL, UC15). Tên bậc chỉ lưu ở `GradeLevelCode`
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `GradeLevelId` | INT |  | **PK**; tự tăng |  |
-| `GradeCode` | CHAR(1) |  | Giá trị: `A`, `B`, `C`, `D` |  |
-| `GradeName` | NVARCHAR(50) |  |  |  |
+| `GradeCode` | VARCHAR(5) |  | FK → `GradeLevelCode.GradeCode` |  |
 | `MonthlyAmount` | DECIMAL(18,2) |  | `CHECK MonthlyAmount >= 0` |  |
 | `EffectiveDate` | DATE |  |  |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
 **Ràng buộc & index**
 
+- `CK_GradeLevel_Amount`: `CHECK MonthlyAmount >= 0`
 - UNIQUE `UQ_GradeLevel`: (GradeCode, EffectiveDate)
 
 
@@ -380,6 +396,8 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `Phone` | VARCHAR(15) | ✓ |  |  |
 | `Email` | VARCHAR(100) | ✓ |  |  |
 | `DefaultAddress` | NVARCHAR(500) | ✓ |  |  |
+| `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'`; giá trị: `ACTIVE`, `DISCONTINUED` |  |
+| `DiscontinueReason` | NVARCHAR(500) | ✓ |  | lý do ngừng hợp tác (bắt buộc khi ngừng) |
 
 ### `Material` — Nguyên vật liệu
 
@@ -392,9 +410,11 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialId` | INT |  | **PK**; tự tăng |  |
 | `MaterialCode` | VARCHAR(30) |  | UNIQUE |  |
 | `MaterialName` | NVARCHAR(200) |  |  |  |
+| `Color` | NVARCHAR(50) |  | Mặc định `N''` | màu NVL; trống = không phân màu. Cùng loại vải khác màu là hai dòng `Material` |
 | `MaterialType` | tính toán |  | `= (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC' ELSE 'TRIM' END AS VARCHAR(10)))` (PERSISTED) |  |
 | `Category` | VARCHAR(15) |  |  |  |
 | `Unit` | NVARCHAR(20) |  |  | m, kg, cuộn, cái, cuộn chỉ… |
+| `WidthCm` | DECIMAL(7,2) | ✓ | `CHECK WidthCm IS NULL OR WidthCm > 0` | chiều rộng, với vải là khổ vải (cm) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
@@ -416,6 +436,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialTypes` | NVARCHAR(200) | ✓ |  | loại NVL cung cấp (mô tả) |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
+| `DiscontinueReason` | NVARCHAR(500) | ✓ |  | lý do ngừng hợp tác (bắt buộc khi ngừng) |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
 **Ràng buộc & index**
@@ -439,6 +460,23 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 **Ràng buộc & index**
 
 - `CK_Product_Status`: Giá trị: `ACTIVE`, `DISCONTINUED`
+
+### `ProductImage` — Ảnh phụ của mã hàng
+
+> Tối đa 10 ảnh phụ mỗi mã hàng (01/11); ảnh chính vẫn là `Product.SampleImageUrl`
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductImageId` | INT |  | **PK**; tự tăng |  |
+| `ProductId` | INT |  | FK → `Product.ProductId` |  |
+| `ImageKey` | NVARCHAR(500) |  |  | khóa ảnh tải từ máy, vd `PRODUCT/2026/11/<guid>.jpg` |
+| `SortOrder` | TINYINT |  |  | thứ tự hiển thị 1 đến 10 |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
+
+**Ràng buộc & index**
+
+- `CK_ProductImage_Sort`: `CHECK SortOrder BETWEEN 1 AND 10`
+- UNIQUE `UQ_ProductImage_Sort`: (ProductId, SortOrder)
 
 ### `ProductVariant` — Biến thể mã hàng: màu × size
 
@@ -472,7 +510,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ComponentName` | NVARCHAR(100) |  |  |  |
 | `ComponentType` | VARCHAR(10) |  |  |  |
 | `PiecesPerGarment` | SMALLINT |  | Mặc định `1` | số chi tiết trên 1 sản phẩm, vd tay áo = 2 |
-| `SortOrder` | SMALLINT |  | Mặc định `0` |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 
 **Ràng buộc & index**
@@ -482,6 +519,43 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - `CK_PC_Status`: Giá trị: `ACTIVE`, `DISCONTINUED`
 - UNIQUE `UQ_PC`: (ProductId, ComponentName)
 - UNIQUE `UQ_PC_IdProduct`: (ProductComponentId, ProductId) — cho FK ghép ở ProductComponentMaterial
+
+### `ProductMarker` — Bìa cắt của mã hàng theo size
+
+> DEV-ALL-42 (01/11): mỗi dòng là một bìa ở một size, `MarkerNo` là số bìa (1, 2, 3...). Dùng để tính số mét vải của lệnh cắt cả bộ. Một bìa tính cho một sản phẩm; kích thước không phụ thuộc màu nên không nhân theo màu áo
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductMarkerId` | INT |  | **PK**; tự tăng |  |
+| `ProductId` | INT |  | FK → `Product.ProductId` |  |
+| `MarkerNo` | TINYINT |  |  | số bìa |
+| `SizeCode` | VARCHAR(10) |  |  |  |
+| `LengthCm` | DECIMAL(7,2) |  |  | chiều dài bìa (cm) |
+| `WidthCm` | DECIMAL(7,2) |  |  | chiều rộng bìa (cm) |
+
+**Ràng buộc & index**
+
+- `CK_PM_No`: `CHECK MarkerNo > 0`
+- `CK_PM_Size`: `CHECK LengthCm > 0 AND WidthCm > 0`
+- UNIQUE `UQ_PM`: (ProductId, MarkerNo, SizeCode)
+
+### `ProductMarkerFabric` — Vải của bìa theo màu áo
+
+> DEV-ALL-42: bìa nào, với màu áo nào, trải trên vải nào. Vải không đổi theo size. `MarkerNo` khớp `ProductMarker` theo mã hàng, không có khóa ngoại vì một số bìa có nhiều dòng size; backend kiểm mỗi số bìa có đủ kích thước và vải
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductMarkerFabricId` | INT |  | **PK**; tự tăng |  |
+| `ProductId` | INT |  | FK → `Product.ProductId` |  |
+| `MarkerNo` | TINYINT |  |  | số bìa |
+| `Color` | NVARCHAR(50) |  |  | màu áo |
+| `MaterialId` | INT |  | FK → `Material.MaterialId` | vải dùng cho bìa và màu này |
+
+**Ràng buộc & index**
+
+- `CK_PMF_No`: `CHECK MarkerNo > 0`
+- UNIQUE `UQ_PMF`: (ProductId, MarkerNo, Color)
+- Index `IX_PMF_Material ON dbo.ProductMarkerFabric(MaterialId)`
 
 ### `ProductComponentMaterial` — Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết
 
@@ -498,9 +572,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ProductVariantId` | INT |  | FK ghép → `ProductVariant` |  |
 | `ProductComponentId` | INT |  | FK ghép → `ProductComponent` |  |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
-| `MaterialColor` | NVARCHAR(50) |  | Mặc định `N''` | '' = NVL không phân màu; khớp OrderMaterial.MaterialColor |
-| `QtyPerGarment` | DECIMAL(18,4) |  |  | tổng cho 1 sản phẩm (đã tính số chi tiết), theo đơn vị của NVL: m vải, cuộn chỉ, cái khóa… |
-| `WastagePercent` | DECIMAL(5,2) |  | Mặc định `0` |  |
 | `LengthCm` | DECIMAL(7,2) | ✓ |  | kích thước chi tiết (nếu cần), vd dài tay áo |
 | `WidthCm` | DECIMAL(7,2) | ✓ |  |  |
 | `SpecNote` | NVARCHAR(200) | ✓ |  | ghi chú quy cách khác |
@@ -509,11 +580,9 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 - FK `FK_PCM_Variant`: (ProductVariantId, ProductId) → `ProductVariant`(ProductVariantId, ProductId)
 - FK `FK_PCM_Component`: (ProductComponentId, ProductId) → `ProductComponent`(ProductComponentId, ProductId)
-- `CK_PCM_Qty`: `CHECK QtyPerGarment > 0`
-- `CK_PCM_Wastage`: `CHECK WastagePercent BETWEEN 0 AND 100`
 - `CK_PCM_Size`: `CHECK (LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)`
 - UNIQUE `UQ_PCM`: (ProductVariantId, ProductComponentId, MaterialId)
-- Index: `IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId, MaterialColor)`
+- Index: `IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId)`
 
 ### `CustomerOrder` — Đơn hàng gia công
 
@@ -568,8 +637,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 > NVL của đơn (18/10): mỗi dòng = một NVL + màu mà đơn cần. Là bảng trung tâm của phần NVL:
 > phần khách cấp (màn 1.2), dòng đơn mua và dòng phiếu nhập đều trỏ về đây.
-> 23/10: định mức chuyển sang ProductComponentMaterial (theo mã hàng). Hai bên khớp theo (MaterialId, MaterialColor),
-> không có FK; số theo định mức để đối chiếu với RequiredQty xem vw_OrderMaterialNorm.
+> 23/10: định mức chuyển sang ProductComponentMaterial (theo mã hàng). Hai bên khớp theo MaterialId, không có FK.
 > Nguồn suy ra từ số lượng: CustomerQty = 0 là tự mua, CustomerQty >= RequiredQty là khách cấp, còn lại là cả hai.
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
@@ -577,7 +645,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `OrderMaterialId` | INT |  | **PK**; tự tăng |  |
 | `OrderId` | INT |  | FK → `CustomerOrder.OrderId` |  |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
-| `MaterialColor` | NVARCHAR(50) |  | Mặc định `N''` |  |
 | `RequiredQty` | DECIMAL(18,3) |  |  | tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức) |
 | `CustomerQty` | DECIMAL(18,3) |  | Mặc định `0` | khách sẽ cấp (màn 1.2) |
 | `ExpectedDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL này (23/10 thay CustomerExpectedDate); số lần đã nhận xem vw_OrderMaterialDelivery |
@@ -589,7 +656,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 - `CK_OM_Qty`: `CHECK RequiredQty >= 0 AND CustomerQty >= 0`
 - `CK_OM_Delivery`: `CHECK (CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)` — khách có cấp thì phải khai số lần giao
-- UNIQUE `UQ_OM`: (OrderId, MaterialId, MaterialColor)
+- UNIQUE `UQ_OM`: (OrderId, MaterialId)
 
 ### `OperationGroup` — Công đoạn to (nhóm công đoạn)
 
@@ -621,12 +688,11 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `OperationGroupId` | INT | ✓ | FK ghép → `OperationGroup` | công đoạn to chứa công đoạn này; trống = chưa xếp nhóm (25/10) |
 | `OperationCode` | VARCHAR(30) |  |  |  |
 | `OperationName` | NVARCHAR(200) |  |  |  |
-| `StationSequence` | SMALLINT |  |  |  |
-| `SkillLevel` | TINYINT | ✓ |  |  |
+| `StationSequence` | SMALLINT |  | `CHECK StationSequence > 0` |  |
+| `SkillLevel` | TINYINT | ✓ | `CHECK SkillLevel IS NULL OR SkillLevel BETWEEN 1 AND 9` | bậc tay nghề 1 đến 9 |
 | `StandardTimeSec` | DECIMAL(9,2) | ✓ | `CHECK StandardTimeSec IS NULL OR StandardTimeSec > 0` |  |
 | `TeamType` | VARCHAR(10) |  | Mặc định `'SEWING'` |  |
 | `IsFinalStep` | BIT |  | Mặc định `0` |  |
-| `UsesSemiFinished` | BIT |  | Mặc định `0` | 1 = giao việc công đoạn này kèm BTP; 0 = làm trên hàng đang chạy, không kèm BTP (25/10) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 
 **Ràng buộc & index**
@@ -667,7 +733,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `PieceRateId` | INT |  | **PK**; tự tăng |  |
 | `OperationId` | INT |  | FK → `Operation.OperationId` |  |
-| `Rate` | DECIMAL(18,2) |  | `CHECK Rate >= 0` |  |
+| `Rate` | DECIMAL(18,2) |  | `CHECK Rate > 0` | đơn giá phải lớn hơn 0 (02/11, trước là không âm) |
 | `EffectiveDate` | DATE |  |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'DRAFT'` |  |
 | `SubmittedAt` | DATETIME2(0) | ✓ |  |  |
@@ -706,6 +772,22 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - `CK_Kpi_Result`: `CHECK Result IS NULL OR Result IN ('ACHIEVED','NOT_ACHIEVED')`
 - UNIQUE `UQ_Kpi`: (OrderId, ProductId, SewingTeamId, StartDate)
 
+
+### `KpiDailyTarget` — KPI theo từng ngày của một chỉ tiêu
+
+> Lịch KPI. Chưa đặt ngày nào thì chỉ tiêu ngày chia đều theo `WorkingDays`
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `KpiDailyTargetId` | INT |  | **PK**; tự tăng |  |
+| `KpiTargetId` | INT |  | FK → `KpiTarget.KpiTargetId` |  |
+| `WorkDate` | DATE |  |  |  |
+| `TargetQty` | INT |  | `CHECK TargetQty > 0` | chỉ tiêu của ngày |
+
+**Ràng buộc & index**
+
+- `CK_KpiDaily_Qty`: `CHECK TargetQty > 0`
+- UNIQUE `UQ_KpiDaily`: (KpiTargetId, WorkDate)
 
 ### 4.4 Đơn từ
 
@@ -761,7 +843,6 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `RequestLineId` | INT |  | **PK**; tự tăng |  |
 | `RequestId` | INT |  | FK → `Request.RequestId` |  |
 | `MaterialId` | INT | ✓ | FK → `Material.MaterialId` |  |
-| `MaterialColor` | NVARCHAR(50) | ✓ |  |  |
 | `OrderLineId` | INT | ✓ | FK → `OrderLine.OrderLineId` |  |
 | `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | chi tiết × vải cần cắt bù (FR 3.10); 25/10 thay `ProductComponentId` |
 | `ItemDescription` | NVARCHAR(300) | ✓ |  | linh kiện / máy / vật tư máy (đơn cơ điện) |
@@ -771,14 +852,13 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 **Ràng buộc & index**
 
-- `CK_RequestLine_Material`: `CHECK (MaterialId IS NULL AND MaterialColor IS NULL) OR (MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)`
 - `CK_RequestLine_Kind`: `CHECK MaterialId IS NULL OR OrderLineId IS NULL` — dòng NVL hoặc dòng BTP / cắt bù
 - `CK_RequestLine_Item`: `CHECK MaterialId IS NOT NULL OR OrderLineId IS NOT NULL OR ProductComponentMaterialId IS NOT NULL OR ItemDescription IS NOT NULL`
 
 
 ### 4.5 Nhập NVL: đơn mua, thanh toán, phiếu nhập
 
-Đơn mua có hai trạng thái độc lập: hàng (`GoodsStatus`) và thanh toán (`PaymentStatus`). Dòng đơn mua và dòng phiếu nhập xác định NVL theo `OrderMaterialId`, hoặc `MaterialId` + `MaterialColor` khi là đơn mua dùng chung.
+Đơn mua có hai trạng thái độc lập: hàng (`GoodsStatus`) và thanh toán (`PaymentStatus`). Dòng đơn mua và dòng phiếu nhập xác định NVL theo `OrderMaterialId`, hoặc `MaterialId` khi là đơn mua dùng chung.
 
 ### `PurchaseOrder` — Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)
 
@@ -821,7 +901,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 ### `PurchaseOrderLine` — Dòng đơn mua NVL
 
 > Dòng đơn mua xác định NVL theo một trong hai cách (TH-12):
-> OrderMaterialId (NVL + màu của đơn), hoặc OrderMaterialId NULL + MaterialId + MaterialColor (đơn mua dùng chung)
+> OrderMaterialId (NVL + màu của đơn), hoặc OrderMaterialId NULL + MaterialId (đơn mua dùng chung)
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -833,14 +913,13 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `UnitPrice` | DECIMAL(18,2) |  | Mặc định `0` |  |
 | `Amount` | tính toán |  | `= (CONVERT(DECIMAL(18,2), OrderedQty * UnitPrice))` |  |
 | `MaterialId` | INT | ✓ | FK → `Material.MaterialId` | chỉ khi OrderMaterialId NULL |
-| `MaterialColor` | NVARCHAR(50) | ✓ |  |  |
 
 **Ràng buộc & index**
 
 - `CK_POL_Qty`: `CHECK NotReplenishedQty >= 0 AND NotReplenishedQty <= OrderedQty` — đã nhận + không bù <= đặt: backend kiểm tra, số đã nhận xem vw_PurchaseOrderLineStatus
-- `CK_POL_Target`: `CHECK (OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)`
+- `CK_POL_Target`: `CHECK (OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL)`
 - Index UNIQUE: `UQ_POL ON dbo.PurchaseOrderLine(PurchaseOrderId, OrderMaterialId) WHERE OrderMaterialId IS NOT NULL`
-- Index UNIQUE: `UQ_POL_Stock ON dbo.PurchaseOrderLine(PurchaseOrderId, MaterialId, MaterialColor) WHERE OrderMaterialId IS NULL`
+- Index UNIQUE: `UQ_POL_Stock ON dbo.PurchaseOrderLine(PurchaseOrderId, MaterialId) WHERE OrderMaterialId IS NULL`
 
 ### `MaterialReceipt` — Phiếu nhập NVL (mới / bổ sung)
 
@@ -873,7 +952,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 ### `MaterialReceiptLine` — Dòng phiếu nhập NVL
 
-> Dòng phiếu nhập xác định NVL giống PurchaseOrderLine: OrderMaterialId, hoặc MaterialId + MaterialColor (TH-12)
+> Dòng phiếu nhập xác định NVL giống PurchaseOrderLine: OrderMaterialId, hoặc MaterialId (TH-12)
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -884,14 +963,13 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `OriginalReceiptLineId` | INT | ✓ | FK → `MaterialReceiptLine.MaterialReceiptLineId` |  |
 | `AcceptedQty` | DECIMAL(18,3) |  | Mặc định `0` | số đạt nhập kho; thiếu so với đơn mua xem vw_PurchaseOrderLineStatus (23/10 bỏ ShortQty, DefectiveQty) |
 | `MaterialId` | INT | ✓ | FK → `Material.MaterialId` | chỉ khi OrderMaterialId NULL |
-| `MaterialColor` | NVARCHAR(50) | ✓ |  |  |
 
 **Ràng buộc & index**
 
 - `CK_MRL_Qty`: `CHECK AcceptedQty >= 0` (0 = cả lô lỗi / không giao, vẫn có dòng để gắn yêu cầu thiếu)
-- `CK_MRL_Target`: `CHECK (OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL)`
+- `CK_MRL_Target`: `CHECK (OrderMaterialId IS NOT NULL AND MaterialId IS NULL) OR (OrderMaterialId IS NULL AND MaterialId IS NOT NULL)`
 - Index UNIQUE: `UQ_MRL ON dbo.MaterialReceiptLine(MaterialReceiptId, OrderMaterialId) WHERE OrderMaterialId IS NOT NULL`
-- Index UNIQUE: `UQ_MRL_Stock ON dbo.MaterialReceiptLine(MaterialReceiptId, MaterialId, MaterialColor) WHERE OrderMaterialId IS NULL`
+- Index UNIQUE: `UQ_MRL_Stock ON dbo.MaterialReceiptLine(MaterialReceiptId, MaterialId) WHERE OrderMaterialId IS NULL`
 
 
 ### 4.6 Cắt & cấp kho
@@ -974,7 +1052,6 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `MaterialIssueLineId` | INT |  | **PK**; tự tăng |  |
 | `MaterialIssueId` | INT |  | FK → `MaterialIssue.MaterialIssueId` |  |
 | `MaterialId` | INT | ✓ | FK → `Material.MaterialId` | phiếu NVL |
-| `MaterialColor` | NVARCHAR(50) | ✓ |  |  |
 | `OrderLineId` | INT | ✓ | FK → `OrderLine.OrderLineId` | phiếu BTP |
 | `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | phiếu BTP: NULL = bộ đủ; có = chi tiết × vải cắt bù (25/10 thay `ProductComponentId`) |
 | `IssuedQty` | DECIMAL(18,3) |  | `CHECK IssuedQty > 0` |  |
@@ -985,9 +1062,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 - `CK_MIL_Confirmed`: `CHECK ConfirmedQty IS NULL OR (ConfirmedQty >= 0 AND ConfirmedQty <= IssuedQty)`
 - `CK_MIL_Reason`: `CHECK ConfirmedQty IS NULL OR ConfirmedQty = IssuedQty OR DiscrepancyReason IS NOT NULL` — GBR-06
-- `CK_MIL_Item`: `CHECK (MaterialId IS NOT NULL AND MaterialColor IS NOT NULL AND OrderLineId IS NULL) OR (MaterialId IS NULL AND MaterialColor IS NULL AND OrderLineId IS NOT NULL)`
+- `CK_MIL_Item`: `CHECK (MaterialId IS NOT NULL AND OrderLineId IS NULL) OR (MaterialId IS NULL AND OrderLineId IS NOT NULL)`
 - `CK_MIL_Component`: `CHECK ProductComponentMaterialId IS NULL OR OrderLineId IS NOT NULL`
-- UNIQUE `UQ_MIL`: (MaterialIssueId, MaterialId, MaterialColor, OrderLineId, ProductComponentMaterialId)
+- UNIQUE `UQ_MIL`: (MaterialIssueId, MaterialId, OrderLineId, ProductComponentMaterialId)
 
 ### `MaterialReturn` — Phiếu trả vải thừa
 
@@ -1041,8 +1118,8 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `ShiftCode` | VARCHAR(10) |  | Giá trị: `MORNING`, `AFTERNOON`, `OVERTIME` |  |
 | `LaySequence` | SMALLINT |  |  |  |
 | `FabricMaterialId` | INT |  | FK → `Material.MaterialId` | 23/10: bắt buộc |
-| `FabricColor` | NVARCHAR(50) |  |  |  |
 | `PlyCount` | SMALLINT |  | `CHECK PlyCount > 0` |  |
+| `LayLengthM` | DECIMAL(7,2) | Có | `CHECK LayLengthM > 0` | Chiều dài bàn cắt (mét); vải đã cắt của bàn = số lớp × chiều dài bàn cắt |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(10) |  | Mặc định `'RECORDED'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
@@ -1059,7 +1136,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `CuttingLayLineId` | INT |  | **PK**; tự tăng |  |
 | `CuttingLayId` | INT |  | FK → `CuttingLay.CuttingLayId` |  |
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
-| `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải phải trùng `CuttingLay.FabricMaterialId` / `CuttingLay.FabricColor` (25/10 thay `ProductComponentId`) |
+| `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải phải trùng `CuttingLay.FabricMaterialId` (25/10 thay `ProductComponentId`) |
 | `RatioValue` | SMALLINT |  | `CHECK RatioValue > 0` |  |
 | `CalculatedQty` | INT |  | `CHECK CalculatedQty >= 0` | số lớp × tỉ lệ |
 | `ActualQty` | INT |  | `CHECK ActualQty >= 0` | có thể chỉnh, kèm lý do |
@@ -1113,6 +1190,22 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và tổ may. Sản lượng và hàng hỏng khóa đơn giá đã duyệt bằng `PieceRateId`.
 
+### `OrderLineTeam` — Dòng đơn được chia cho tổ may
+
+> Quản đốc chia từng dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49, 02/11). Thay `OrderProductTeam` (chia theo mã hàng). Tổ chỉ phân công, nhận BTP và chia việc cho các dòng đơn đã được chia.
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `OrderLineTeamId` | INT |  | **PK**; tự tăng |  |
+| `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` (xóa dòng đơn thì xóa theo) |  |
+| `SewingTeamId` | INT |  | FK → `Team.TeamId` |  |
+| `AssignedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
+
+**Ràng buộc & index**
+
+- `UQ_OrderLineTeam`: UNIQUE (`OrderLineId`, `SewingTeamId`)
+- Index `IX_OLT_Team ON dbo.OrderLineTeam(SewingTeamId, OrderLineId)`
+
 ### `OperationAssignment` — Phân công công đoạn
 
 > Phân công công đoạn cho công nhân (UC52); đổi phân công = đóng dòng cũ (ValidTo) + mở dòng mới
@@ -1135,8 +1228,7 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 
 ### `WorkAllocation` — Giao / thu hồi việc với công nhân
 
-> 25/10 thay `WorkerPieceMovement` (FR 3.5, 3.6, 3.8; UC53, UC54, UC60). Mỗi dòng là một lần giao hoặc thu hồi số lần làm của một công đoạn × màu × size cho một công nhân, kèm BTP nếu công đoạn dùng BTP. Tổ trưởng chia tùy ý, miễn tổng số lần đang giao của công đoạn × màu × size không vượt số bộ BTP tổ đã nhận (50050).
-> Màn giao việc điền sẵn `WorkAllocation.PieceQty` = `WorkAllocation.Quantity` khi `Operation.UsesSemiFinished` = 1, tổ trưởng sửa được; công đoạn không dùng BTP thì `WorkAllocation.PieceQty` = 0 (50051).
+> 25/10 thay `WorkerPieceMovement` (FR 3.5, 3.6, 3.8; UC53, UC54, UC60). Mỗi dòng là một lần giao hoặc thu hồi số lần làm của một công đoạn × màu × size cho một công nhân. Tổ trưởng chia tùy ý, miễn tổng số lần đang giao của công đoạn × màu × size không vượt số bộ BTP tổ đã nhận (50050).
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -1147,9 +1239,7 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` | màu × size |
 | `OperationId` | INT |  | FK → `Operation.OperationId` | công đoạn, phải thuộc mã hàng của dòng đơn (50044) |
 | `Quantity` | INT |  | `CHECK Quantity > 0` | số lần làm được giao / thu hồi |
-| `PieceQty` | INT |  | Mặc định `0`; `CHECK PieceQty >= 0 AND PieceQty <= Quantity` | số BTP giao kèm / trả lại |
 | `ConfirmedQty` | INT | ✓ |  | số lần công nhân xác nhận |
-| `ConfirmedPieceQty` | INT | ✓ |  | số BTP công nhân xác nhận đã nhận / đã trả |
 | `DiscrepancyReason` | NVARCHAR(500) | ✓ |  | bắt buộc khi số xác nhận khác số giao |
 | `RetrievalReason` | VARCHAR(20) | ✓ |  | thu hồi: OPERATION_CHANGED, WORKER_ABSENT, STYLE_FINISHED |
 | `ConfirmMode` | VARCHAR(10) |  |  | WORKER: CN tự xác nhận; ON_BEHALF: tổ trưởng xác nhận hộ |
@@ -1164,13 +1254,12 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 - `CK_WA_Type`: Giá trị: `HANDOVER`, `RETRIEVAL`
 - `CK_WA_Retr`: `CHECK MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED')`
 - `CK_WA_Mode`, `CK_WA_Behalf`, `CK_WA_Status`, `CK_WA_Reject`: như bảng cũ
-- `CK_WA_Piece`: `CHECK PieceQty >= 0 AND PieceQty <= Quantity`
-- `CK_WA_Confirmed`: hai số xác nhận cùng trống hoặc cùng có; `ConfirmedPieceQty <= ConfirmedQty`; khác số giao thì phải có `DiscrepancyReason`
+- `CK_WA_Confirmed`: `CHECK ConfirmedQty IS NULL OR (ConfirmedQty >= 0 AND (ConfirmedQty = Quantity OR DiscrepancyReason IS NOT NULL))`
 - `CK_WA_ConfirmedStatus`: `CHECK Status <> 'CONFIRMED' OR ConfirmedQty IS NOT NULL`
-- Index: `IX_WA_Line ON dbo.WorkAllocation(SewingTeamId, OrderLineId, OperationId, Status) INCLUDE (MovementType, Quantity, ConfirmedQty, PieceQty, ConfirmedPieceQty)`
+- Index: `IX_WA_Line ON dbo.WorkAllocation(SewingTeamId, OrderLineId, OperationId, Status) INCLUDE (MovementType, Quantity, ConfirmedQty)`
 - Index: `IX_WA_Worker ON dbo.WorkAllocation(WorkerId, OrderLineId, OperationId, Status)`
 
-**Ví dụ:** tổ nhận 400 bộ BTP DH001 Đen M. "KT tay to lần" (dùng BTP) cần làm 400 lần. Chị A nhận 250 lần kèm 250 BTP, chị D nhận 150 lần kèm 150 BTP. "Là bụng tay lần" (không dùng BTP): chị C nhận 400 lần, `WorkAllocation.PieceQty` = 0. Tồn BTP của tổ chỉ giảm 400. Giao tổng lên 401 lần cho một công đoạn thì bị chặn. Chị A nghỉ sau 180 lần: thu hồi 70 lần kèm 70 BTP rồi giao lại cho chị D.
+**Ví dụ:** tổ nhận 400 bộ BTP DH001 Đen M. "KT tay to lần" cần làm 400 lần. Chị A nhận 250 lần, chị D nhận 150 lần. "Là bụng tay lần": chị C nhận 400 lần. Giao tổng lên 401 lần cho một công đoạn thì bị chặn. Chị A nghỉ sau 180 lần: thu hồi 70 lần kèm 70 BTP rồi giao lại cho chị D.
 
 ### `OutputRecord` — Sản lượng công đoạn
 
@@ -1354,7 +1443,7 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 
 ### 4.9 Kho: tồn hiện tại, kiểm kê, thẻ kho
 
-Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (BTP) và `FINISHED` (thành phẩm), hai kho sau theo `OrderLineId`. Mặt hàng chỉ khai một lần ở `StockBalance`; thẻ kho và kiểm kê trỏ về đó bằng `StockBalanceId` (25/10).
+Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED` (thành phẩm), hai kho sau theo `OrderLineId`. Mặt hàng chỉ khai một lần ở `StockBalance`; thẻ kho và kiểm kê trỏ về đó bằng `StockBalanceId` (25/10).
 
 **Ghi kho:** mỗi dòng chứng từ được xác nhận gọi `usp_Stock_Post` một lần, trong transaction của backend. Thủ tục khóa dòng tồn, chặn tồn âm, cập nhật `StockBalance.OnHandQty` và thêm `StockTransaction` với `BalanceAfter` = tồn mới. Ghi thẳng vào `StockTransaction` hoặc sửa `StockBalance.OnHandQty` bị trigger chặn (50047). Thiếu tồn thì báo 50048 và cả transaction của backend bị hủy, nên chứng từ không được xác nhận.
 
@@ -1368,7 +1457,6 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 | `StockBalanceId` | INT |  | **PK**; tự tăng |  |
 | `WarehouseType` | VARCHAR(15) |  |  | MATERIAL, SEMI_FINISHED, FINISHED |
 | `MaterialId` | INT | ✓ | FK → `Material.MaterialId` | kho NVL |
-| `MaterialColor` | NVARCHAR(50) | ✓ |  | kho NVL |
 | `OrderLineId` | INT | ✓ | FK → `OrderLine.OrderLineId` | kho BTP / TP: màu × size |
 | `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | BTP: NULL = bộ đủ; có = chi tiết × vải cắt bù, vd tay áo vải chính và tay áo vải lót là hai dòng (25/10) |
 | `OnHandQty` | DECIMAL(18,3) |  | Mặc định `0`; `CHECK OnHandQty >= 0` | tồn thực hiện tại (GBR-07) |
@@ -1377,10 +1465,10 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 **Ràng buộc & index**
 
 - `CK_SB_WH`: Giá trị: `MATERIAL`, `SEMI_FINISHED`, `FINISHED`
-- `CK_SB_Item`: `CHECK (WarehouseType = 'MATERIAL' AND MaterialId IS NOT NULL AND MaterialColor IS NOT NULL AND OrderLineId IS NULL) OR (WarehouseType <> 'MATERIAL' AND MaterialId IS NULL AND MaterialColor IS NULL AND OrderLineId IS NOT NULL)`
+- `CK_SB_Item`: `CHECK (WarehouseType = 'MATERIAL' AND MaterialId IS NOT NULL AND OrderLineId IS NULL) OR (WarehouseType <> 'MATERIAL' AND MaterialId IS NULL AND OrderLineId IS NOT NULL)`
 - `CK_SB_Component`: `CHECK ProductComponentMaterialId IS NULL OR WarehouseType = 'SEMI_FINISHED'`
 - `CK_SB_OnHand`: `CHECK OnHandQty >= 0`
-- UNIQUE `UQ_SB_Item`: (WarehouseType, MaterialId, MaterialColor, OrderLineId, ProductComponentMaterialId)
+- UNIQUE `UQ_SB_Item`: (WarehouseType, MaterialId, OrderLineId, ProductComponentMaterialId)
 
 ### `Stocktake` — Phiếu kiểm kê
 
@@ -1779,6 +1867,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 | `FileName` | NVARCHAR(255) | ✓ |  |  |
 | `ContentType` | VARCHAR(100) | ✓ |  |  |
 | `IsCurrent` | BIT |  | Mặc định `1` | chụp lại ảnh phiếu ký: ảnh cũ giữ lại, IsCurrent = 0 |
+| `RemovedAt` | DATETIME2(0) | ✓ |  | lúc gỡ ảnh (`IsCurrent` = 0); job dọn tệp xóa ảnh đã gỡ sau 15 ngày |
 | `UploadedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
 **Ràng buộc & index**
@@ -1800,6 +1889,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 | `OldValues` | NVARCHAR(MAX) | ✓ |  | JSON |
 | `NewValues` | NVARCHAR(MAX) | ✓ |  | JSON |
 | `Reason` | NVARCHAR(500) | ✓ |  | bắt buộc khi Quản đốc sửa dữ liệu quá hạn |
+| `Summary` | NVARCHAR(500) | ✓ |  | câu mô tả tiếng Việt do backend dựng lúc ghi; dòng cũ để trống |
 | `ChangedBy` | INT | ✓ | FK → `Employee.EmployeeId` |  |
 | `ChangedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
@@ -1816,15 +1906,13 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 
 | View | Dùng cho | Cách tính |
 |---|---|---|
-| `vw_StockBalance` | Tồn hiện tại của 3 kho | Tồn thực = `StockBalance.OnHandQty` (25/10, trước đây cộng lại thẻ kho); giữ chỗ = phiếu cấp chờ nhận + phiếu xuất TP chờ xuất; khả dụng = tồn thực − giữ chỗ. Theo (`WarehouseType`, `MaterialId`, `MaterialColor`, `OrderLineId`, `ProductComponentMaterialId`); kho BTP tách bộ đủ và chi tiết × vải cắt bù (25/10) |
+| `vw_StockBalance` | Tồn hiện tại của 3 kho | Tồn thực = `StockBalance.OnHandQty` (25/10, trước đây cộng lại thẻ kho); giữ chỗ = phiếu cấp chờ nhận + phiếu xuất TP chờ xuất; khả dụng = tồn thực − giữ chỗ. Theo (`WarehouseType`, `MaterialId`, `OrderLineId`, `ProductComponentMaterialId`); kho BTP tách bộ đủ và chi tiết × vải cắt bù (25/10) |
 | `vw_PurchaseOrderLineStatus` | Dòng đơn mua: đã nhận, còn phải nhận | Đã nhận = Σ số đạt của phiếu nhập đã xác nhận; còn lại = đặt − đã nhận − không bù |
 | `vw_OrderMaterialDelivery` | NVL khách cấp: số lần dự kiến giao, số lần đã nhận (23/10) | Chỉ dòng `CustomerQty` > 0. Số lần đã nhận = số phiếu nhập khách cấp (`PurchaseOrderId` NULL) đã xác nhận có NVL này, kể cả phiếu bổ sung; `ReceivedQty` = Σ số đạt; `RemainingQty` = khách cấp − đã nhận |
 | `vw_PurchaseOrderDelivery` | Đơn mua: số lần NCC dự kiến giao, số lần đã nhận (23/10) | Số lần đã nhận = số phiếu nhập đã xác nhận của đơn mua, kể cả phiếu bổ sung; kèm ngày nhận gần nhất |
 | `vw_WorkOrderLineProgress` | Tiến độ từng dòng lệnh cắt (24/10) | Kế hoạch `WorkOrderLine.PlannedQty`; đã cắt = Σ `CuttingLayLine.ActualQty` cùng lệnh, dòng đơn, `ProductComponentMaterialId`; đã vào kho = Σ `CutHandoverLine.ConfirmedQty` của phiếu `CONFIRMED` cùng chi tiết (`ProductComponentMaterial.ProductComponentId`); có thêm cột chi tiết, vải, màu vải của dòng cắt bù; còn lại = kế hoạch − đã cắt (không âm) |
 | `vw_MaterialStock` | Màn hình kho NVL | `vw_StockBalance` kho `MATERIAL` kèm thông tin `Material` |
-| `vw_OrderMaterialNorm` | Đối chiếu NVL khách báo với định mức (23/10) | Σ `OrderLine.OrderedQty` × `QtyPerGarment` × (1 + hao hụt) theo NVL + màu, FULL JOIN với `OrderMaterial`. `OrderMaterialId` NULL = định mức cần NVL mà đơn chưa khai; `DiffQty` âm = khách báo thiếu |
-| `vw_WorkOrderFabricNeed` | Vải cần cho lệnh cắt (UC19, UC40, UC51) (23/10) | Chỉ thành phần `PANEL` và NVL loại vải. Dòng cả bộ: `PlannedQty` × định mức; dòng cắt bù: `PlannedQty` × định mức của đúng dòng `ProductComponentMaterial` / `PiecesPerGarment` |
-| `vw_TeamPieceHolding` | BTP tổ may đang giữ theo dòng đơn (UC24) | Đã nhận từ kho − BTP giao kèm cho công nhân (`WorkAllocation.ConfirmedPieceQty`) + BTP trả lại; không trừ số lần, nên hàng qua nhiều công đoạn không bị trừ lặp; chỉ đếm bộ đủ (25/10) |
+| `vw_RecutFabricNeed` | Số mét vải ước tính cho dòng lệnh cắt bù (28/10) | Mỗi chi tiết là một hình chữ nhật `ProductComponentMaterial.LengthCm` × `WidthCm`; số miếng một hàng = làm tròn xuống (khổ vải / rộng chi tiết), số hàng = làm tròn lên (số chi tiết / số miếng một hàng), số mét = số hàng × dài chi tiết / 100. Chỉ là ước lượng. `NeedMeters` trống khi thiếu kích thước chi tiết hoặc khổ vải, hoặc chi tiết rộng hơn khổ vải |
 | `vw_WorkerOutputCap` | Trần sản lượng của công nhân theo dòng đơn × công đoạn (25/10) | Σ `WorkAllocation.ConfirmedQty` giao − thu hồi; còn lại = trần − đã may. Công đoạn không dùng BTP vẫn có trần |
 | `vw_OperationAllocationProgress` | Tiến độ chia việc của từng công đoạn (25/10) | Mỗi tổ × dòng đơn đã nhận BTP × công đoạn đang dùng của mã hàng. Cần làm = số bộ BTP tổ đã nhận; đã giao (đã xác nhận, trừ thu hồi); đang chờ xác nhận; chưa giao = kế hoạch − đã giao − đang chờ; đã làm = Σ `OutputRecord.Quantity` |
 | `vw_WorkerDailyEstimatedPay` | Lương tạm tính theo ngày của công nhân may (UC59) | Σ(sản lượng × đơn giá khóa) − Σ(Scrap × đơn giá đó) |
@@ -1875,7 +1963,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId` + `MaterialColor`), `SEMI_FINISHED` (
 | `trg_CuttingLayLine_Check` | `CuttingLayLine` | Dòng đơn thuộc đơn hàng và mã hàng của lệnh cắt (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041); vải / màu của dòng định mức trùng vải bàn cắt (50049) |
 | `trg_CutHandoverLine_Check` | `CutHandoverLine` | Như trên (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041) |
 | `trg_OperationAssignment_Check` | `OperationAssignment` | Công đoạn thuộc một mã hàng của đơn hàng (50044) |
-| `trg_WorkAllocation_Check` | `WorkAllocation` | Công đoạn thuộc mã hàng của dòng đơn (50044); công đoạn không dùng BTP thì không kèm BTP (50051); Σ số lần đang giao của công đoạn × màu × size ≤ số bộ BTP tổ đã nhận, thu hồi không quá số công nhân đang giữ (50050); BTP giao kèm không vượt BTP tổ đã nhận (50053); sau thu hồi trần không nhỏ hơn sản lượng đã báo (50052) |
+| `trg_WorkAllocation_Check` | `WorkAllocation` | Công đoạn thuộc mã hàng của dòng đơn (50044); Σ số lần đang giao của công đoạn × màu × size ≤ số bộ BTP tổ đã nhận, thu hồi không quá số công nhân đang giữ (50050); sau thu hồi trần không nhỏ hơn sản lượng đã báo (50052) |
 | `trg_OutputRecord_Check` | `OutputRecord` | Công đoạn thuộc mã hàng của dòng đơn; đơn giá là của công đoạn đó (50044); Σ sản lượng của công nhân ở công đoạn × dòng đơn không vượt số lần được giao (50052, chặn cứng) |
 | `trg_DefectRecord_Check` | `DefectRecord` | Như trên (50044) |
 | `trg_FgHandoverLine_Check` | `FgHandoverLine` | Dòng đơn thuộc đơn hàng và mã hàng của phiếu bàn giao (50042) |
@@ -1951,7 +2039,10 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `Announcement` | `Employee` |
 | `AnnouncementTarget` | `Announcement`, `Role`, `Team` |
 | `Notification` | `Employee` |
+| `ProductImage` | `Product` |
 | `ProductVariant` | `Product` |
+| `ProductMarker` | `Product` |
+| `ProductMarkerFabric` | `Material`, `Product` |
 | `ProductComponent` | `Product` |
 | `ProductComponentMaterial` | `Material`, `ProductComponent`, `ProductVariant` |
 | `CustomerOrder` | `Customer` |
@@ -1962,6 +2053,7 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `OperationComponent` | `Operation`, `ProductComponent` |
 | `PieceRate` | `Operation` |
 | `KpiTarget` | `CustomerOrder`, `Product`, `Team` |
+| `KpiDailyTarget` | `KpiTarget` |
 | `Request` | `CustomerOrder`, `DefectRecord`, `Employee`, `KpiTarget`, `MaterialIssue`, `MaterialReceipt`, `Team`, `WorkOrder` |
 | `RequestLine` | `Material`, `MaterialReceiptLine`, `OrderLine`, `ProductComponentMaterial`, `Request` |
 | `PurchaseOrder` | `CustomerOrder`, `Request`, `Supplier` |
@@ -1978,6 +2070,7 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `CuttingLayLine` | `CuttingLay`, `OrderLine`, `ProductComponentMaterial` |
 | `CutHandover` | `Employee`, `WorkOrder` |
 | `CutHandoverLine` | `CutHandover`, `OrderLine`, `ProductComponentMaterial` |
+| `OrderLineTeam` | `OrderLine`, `Team` |
 | `OperationAssignment` | `CustomerOrder`, `Employee`, `Operation`, `Team` |
 | `WorkAllocation` | `Employee`, `Operation`, `OrderLine`, `Team` |
 | `OutputRecord` | `Employee`, `Operation`, `OrderLine`, `PieceRate`, `Team` |
@@ -2016,3 +2109,4 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | 25/10/2026 | Thêm `StockBalance` (tồn hiện tại); `StockTransaction` và `StocktakeLine` bỏ cột mặt hàng, thay bằng `StockBalanceId`; thêm `usp_Stock_Post`, `trg_StockTransaction_PostOnly`, `trg_StockBalance_Check`; `vw_StockBalance` đọc tồn từ `StockBalance`. Thêm `OperationGroup` (công đoạn to); `Operation` thêm `OperationGroupId` (FK ghép cùng mã hàng) để tìm công đoạn to ra các công đoạn nhỏ. Thêm `OperationComponent` (công đoạn ↔ chi tiết, nhiều–nhiều); `WorkOrderLine` và `CuttingLayLine` đổi `ProductComponentId` thành `ProductComponentMaterialId` (biết đang cắt chi tiết nào, vải nào, màu nào); thêm THROW 50049 |
 | 25/10/2026 (2) | `RequestLine`, `CutHandoverLine`, `MaterialIssueLine`, `StockBalance` đổi `ProductComponentId` thành `ProductComponentMaterialId` (kho BTP tách chi tiết theo vải); `usp_Stock_Post` nhận `@ProductComponentMaterialId`. `WorkAllocation` thay `WorkerPieceMovement` (`Quantity` = số lần làm, `PieceQty` = BTP giao kèm; tổng số lần giao của công đoạn × màu × size ≤ số bộ BTP tổ đã nhận, tổ trưởng chia tùy ý); `Operation` thêm `UsesSemiFinished`; `vw_WorkerOutputCap` tính trần theo công đoạn; `vw_TeamPieceHolding` chỉ trừ BTP giao kèm; thêm `vw_OperationAllocationProgress`; sản lượng vượt trần bị chặn. THROW 50050-50053 |
 | 25/10/2026 (3) | `OperationAssignment` bỏ `CopiedFromAssignmentId` |
+| 02/11/2026 | Thêm `OrderLineTeam` (chia dòng đơn cho tổ may, thay `OrderProductTeam`); `Operation` thêm `CK_Operation_Skill`, `CK_Operation_Sequence`, `PieceRate.Rate` đổi `>= 0` thành `> 0`; `Operation` bỏ `UsesSemiFinished`, `vw_OperationAllocationProgress` bỏ cột này |

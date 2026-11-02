@@ -36,11 +36,12 @@ public sealed class ShortDeliveryService : IShortDeliveryService
         var page = await ShortDeliveries.AsNoTracking()
             .Where(q => query.AwaitingReplenish != true
                         || (q.Status == RequestStatuses.PendingProcessing && q.ShortageResolution == ShortageResolutions.Replenish))
+            .Where(q => query.ResolvedOnly != true || q.ShortageResolution != null)
             .Where(q => string.IsNullOrEmpty(keyword) || q.RequestCode.Contains(keyword)
                         || q.MaterialReceipt!.ReceiptCode.Contains(keyword))
             .OrderByDescending(q => q.RequestId)
             .Select(q => new ShortDeliveryListItemDto(q.RequestId, q.RequestCode, q.Status, q.ShortageResolution,
-                q.MaterialReceiptId!.Value, q.MaterialReceipt!.ReceiptCode,
+                q.MaterialReceiptId!.Value, q.MaterialReceipt!.ReceiptCode, q.MaterialReceipt.Source!,
                 q.MaterialReceipt.PurchaseOrder == null ? null : q.MaterialReceipt.PurchaseOrder.PoCode,
                 q.Order == null ? null : q.Order.OrderCode, q.CreatedAt))
             .ToPagedAsync(query, ct);
@@ -137,6 +138,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             pol.NotReplenishedQty += Math.Max(0, Math.Min(line.Quantity, room));
         }
 
+        await ReduceCustomerSupplyAsync(request, dto.Note?.Trim(), ct);
         request.ShortageResolution = ShortageResolutions.NoReplenish;
         await _uow.SaveChangesAsync();   // lưu số "không bù" trước khi tính lại trạng thái đơn mua / NVL của đơn
         if (request.MaterialReceipt?.PurchaseOrderId is { } poId) await _supply.RecalculatePurchaseOrderAsync(poId, ct);
@@ -148,6 +150,35 @@ public sealed class ShortDeliveryService : IShortDeliveryService
         if (!done.IsSuccess) return done;
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ShortageResolved);
+    }
+
+    /// <summary>
+    /// Phiếu khách cấp chốt không bù: khách không cấp phần còn thiếu nữa nên số khách cấp giảm xuống bằng số đã nhận thật, phần thiếu
+    /// tự thành số phải mua (cột tính PurchaseQty). Khách chưa giao gì thì bỏ luôn số lần giao (CK_OM_Delivery).
+    /// </summary>
+    private async Task ReduceCustomerSupplyAsync(Request request, string? note, CancellationToken ct)
+    {
+        var ids = request.RequestLines.Where(l => l.MaterialReceiptLine is { PurchaseOrderLineId: null, OrderMaterialId: not null })
+            .Select(l => l.MaterialReceiptLine!.OrderMaterialId!.Value).Distinct().ToList();
+        if (ids.Count == 0) return;
+
+        var materials = await _uow.Repository<OrderMaterial>().Query().Where(m => ids.Contains(m.OrderMaterialId)).ToListAsync(ct);
+        var received = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value) && l.PurchaseOrderLineId == null
+                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
+            .GroupBy(l => l.OrderMaterialId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+
+        foreach (var material in materials)
+        {
+            var actual = received.GetValueOrDefault(material.OrderMaterialId);
+            if (actual >= material.CustomerQty) continue;
+            var before = new { material.CustomerQty, material.ExpectedDeliveryCount };
+            material.CustomerQty = actual;
+            if (actual == 0) material.ExpectedDeliveryCount = null;
+            _audit.Add(new AuditEntry(nameof(OrderMaterial), material.OrderMaterialId, AuditActions.Update, before,
+                new { material.CustomerQty, material.ExpectedDeliveryCount }, note));
+        }
     }
 
     private async Task<Dictionary<int, decimal>> ReplenishedAsync(int requestId, CancellationToken ct) =>

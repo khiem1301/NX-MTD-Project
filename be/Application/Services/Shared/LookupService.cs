@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
@@ -10,27 +11,41 @@ public sealed class LookupService : ILookupService
 {
     private const int MaxOptions = 100;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUser _user;
 
-    public LookupService(IUnitOfWork uow) => _uow = uow;
+    public LookupService(IUnitOfWork uow, ICurrentUser user)
+    {
+        _uow = uow; _user = user;
+    }
+
+    private IQueryable<OrderLineTeam> Allotments => _uow.Repository<OrderLineTeam>().Query();
 
     public async Task<IReadOnlyList<OrderOptionDto>> GetOpenOrdersAsync(string? keyword, CancellationToken ct)
     {
         var kw = keyword?.Trim();
+        var teamId = SewingTeamScope.Of(_user);
+        var allotments = Allotments;
         return await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .Where(o => !OrderStatuses.Closed.Contains(o.Status))
+            .Where(o => teamId == null || o.OrderLines.Any(l => allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId)))
             .Where(o => string.IsNullOrEmpty(kw) || o.OrderCode.Contains(kw))
             .OrderByDescending(o => o.OrderId).Take(MaxOptions)
             .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate))
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<OrderLineOptionDto>> GetOrderLinesAsync(int orderId, CancellationToken ct) =>
-        await _uow.Repository<OrderLine>().Query().AsNoTracking()
+    public async Task<IReadOnlyList<OrderLineOptionDto>> GetOrderLinesAsync(int orderId, CancellationToken ct)
+    {
+        var teamId = SewingTeamScope.Of(_user);
+        var allotments = Allotments;
+        return await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderId == orderId)
+            .Where(l => teamId == null || allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
             .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
                 l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty))
             .ToListAsync(ct);
+    }
 
     public async Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct)
     {

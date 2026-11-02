@@ -82,6 +82,9 @@ public sealed class PieceRateService : IPieceRateService
         if (!PieceRateStatuses.Editable.Contains(rate.Status))
             return Result.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);
 
+        if (!await IsOperationActiveAsync(rate.OperationId, ct))
+            return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
+
         // Công đoạn của một dòng đơn giá không đổi (đổi công đoạn = lập dòng mới).
         if (await DateTakenAsync(rate.OperationId, dto.EffectiveDate, pieceRateId, ct))
             return Result.Failure(ErrorCodes.PieceRateDuplicateDate, Messages.PieceRateDuplicateDate);
@@ -102,6 +105,8 @@ public sealed class PieceRateService : IPieceRateService
         if (rate is null) return Fail.NotFound();
         if (rate.Status != PieceRateStatuses.Draft)
             return Result.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);
+        if (rate.Operation.Status != OperationStatuses.Active)
+            return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
 
         rate.Status = PieceRateStatuses.PendingApproval;
         rate.SubmittedAt = _clock.Now;
@@ -118,12 +123,42 @@ public sealed class PieceRateService : IPieceRateService
         });
     }
 
+    /// <summary>Gửi duyệt nhiều đơn giá Nháp; bỏ qua dòng không còn Nháp hoặc công đoạn đã ngừng. Admin nhận một thông báo chung.</summary>
+    public async Task<Result<int>> SubmitManyAsync(SubmitPieceRatesDto dto, CancellationToken ct)
+    {
+        var rates = await Rates.Include(r => r.Operation)
+            .Where(r => dto.Ids.Contains(r.PieceRateId) && r.Status == PieceRateStatuses.Draft
+                        && r.Operation.Status == OperationStatuses.Active)
+            .ToListAsync(ct);
+        if (rates.Count == 0)
+            return Result<int>.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);
+
+        var now = _clock.Now;
+        return await _uow.InTransactionAsync(async () =>
+        {
+            foreach (var rate in rates)
+            {
+                rate.Status = PieceRateStatuses.PendingApproval;
+                rate.SubmittedAt = now;
+                _audit.Add(new AuditEntry(nameof(PieceRate), rate.PieceRateId, AuditActions.Update,
+                    new { Status = PieceRateStatuses.Draft }, new { rate.Status }));
+            }
+            await _notifier.NotifyRoleAsync(RoleCodes.Admin, new NotificationMessage(NotificationSources.Production,
+                Messages.NotifyPieceRateSubmittedTitle, string.Format(Messages.NotifyPieceRatesSubmittedManyBody, rates.Count),
+                null, null, null), ct);
+            await _uow.SaveChangesAsync();
+            return Result<int>.Success(rates.Count, string.Format(Messages.PieceRatesSubmittedMany, rates.Count));
+        });
+    }
+
     public async Task<Result> ApproveAsync(int pieceRateId, ApprovePieceRateDto dto, CancellationToken ct)
     {
         var rate = await LoadWithOperationAsync(pieceRateId, ct);
         if (rate is null) return Fail.NotFound();
         if (rate.Status != PieceRateStatuses.PendingApproval)
             return Result.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);   // GBR-05: quyết định không đổi lại
+        if (rate.Operation.Status != OperationStatuses.Active)
+            return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
 
         rate.Status = PieceRateStatuses.Approved;
         rate.ApprovedAt = _clock.Now;
@@ -151,7 +186,8 @@ public sealed class PieceRateService : IPieceRateService
             return Result<int>.Failure(ErrorCodes.CommonValidation, Messages.PieceRateNoneSelected, ResultKind.Validation);
 
         var rates = await Rates.Include(r => r.Operation)
-            .Where(r => ids.Contains(r.PieceRateId) && r.Status == PieceRateStatuses.PendingApproval)
+            .Where(r => ids.Contains(r.PieceRateId) && r.Status == PieceRateStatuses.PendingApproval
+                        && r.Operation.Status == OperationStatuses.Active)
             .ToListAsync(ct);
         if (rates.Count == 0)
             return Result<int>.Failure(ErrorCodes.PieceRateInvalidStatus, Messages.PieceRateInvalidStatus);
@@ -204,6 +240,10 @@ public sealed class PieceRateService : IPieceRateService
     private Task<PieceRate?> LoadWithOperationAsync(int pieceRateId, CancellationToken ct) =>
         Rates.Include(r => r.Operation).ThenInclude(o => o.Product)
             .FirstOrDefaultAsync(r => r.PieceRateId == pieceRateId, ct);
+
+    private Task<bool> IsOperationActiveAsync(int operationId, CancellationToken ct) =>
+        _uow.Repository<Operation>().Query().AsNoTracking()
+            .AnyAsync(o => o.OperationId == operationId && o.Status == OperationStatuses.Active, ct);
 
     private Task<bool> DateTakenAsync(int operationId, DateOnly date, int? exceptId, CancellationToken ct) =>
         Rates.AsNoTracking().AnyAsync(r => r.OperationId == operationId && r.EffectiveDate == date

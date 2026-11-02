@@ -94,6 +94,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<OperationComponent> OperationComponents { get; set; }
 
+    public virtual DbSet<OrderLineTeam> OrderLineTeams { get; set; }
+
     public virtual DbSet<OperationGroup> OperationGroups { get; set; }
 
     public virtual DbSet<OrderLine> OrderLines { get; set; }
@@ -117,6 +119,10 @@ public partial class NxMtdDbContext : DbContext
     public virtual DbSet<ProductComponentMaterial> ProductComponentMaterials { get; set; }
 
     public virtual DbSet<ProductImage> ProductImages { get; set; }
+
+    public virtual DbSet<ProductMarker> ProductMarkers { get; set; }
+
+    public virtual DbSet<ProductMarkerFabric> ProductMarkerFabrics { get; set; }
 
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
 

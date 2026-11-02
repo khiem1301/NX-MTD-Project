@@ -36,6 +36,21 @@ public sealed class TeamsController : ManagerBaseController
     public async Task<IActionResult> TransferIn(int id, [FromBody] TransferMembersDto dto, CancellationToken ct) =>
         this.ToResponse(await _teams.TransferInAsync(id, dto, ct));
 
+    [HttpGet("candidates")]
+    public async Task<IActionResult> Candidates(CancellationToken ct) => this.ToResponse(await _teams.CandidatesAsync(ct));
+
+    [HttpPost("{id:int}/add-members")]
+    public async Task<IActionResult> AddMembers(int id, [FromBody] TeamMembersDto dto, CancellationToken ct) =>
+        this.ToResponse(await _teams.AddMembersAsync(id, dto, ct));
+
+    [HttpPost("{id:int}/remove-members")]
+    public async Task<IActionResult> RemoveMembers(int id, [FromBody] TeamMembersDto dto, CancellationToken ct) =>
+        this.ToResponse(await _teams.RemoveMembersAsync(id, dto, ct));
+
+    [HttpPost("{id:int}/dismiss")]
+    public async Task<IActionResult> Dismiss(int id, [FromBody] DismissDto dto, CancellationToken ct) =>
+        this.ToResponse(await _teams.DismissAsync(id, dto, ct));
+
     [HttpPost("{id:int}/appoint")]
     public async Task<IActionResult> Appoint(int id, [FromBody] AppointDto dto, CancellationToken ct) =>
         this.ToResponse(await _teams.AppointAsync(id, dto, ct));

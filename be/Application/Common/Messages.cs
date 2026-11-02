@@ -21,6 +21,7 @@ public static class Messages
     public const string AttendanceEmployeeHasCode = "Nhân viên này đã có mã chấm công.";
     public const string AttendanceCodeNotFound = "Không có lượt quẹt nào mang mã chấm công này.";
     public const string AttendanceEmptyBatch = "Lô dữ liệu chấm công rỗng.";
+    public const string AttendanceSyncStatusInvalid = "Trạng thái phiên đồng bộ không hợp lệ.";
     public const string AttendanceSyncOverdue =
         "Chưa đồng bộ được chấm công hơn 30 phút. Có thể nhập file dự phòng.";                // MSG23
     public const string DateRangeInvalid = "Ngày kết thúc phải không nhỏ hơn ngày bắt đầu.";
@@ -152,6 +153,12 @@ public static class Messages
     public const string TeamMemberNotInTeam = "Nhân viên không thuộc tổ này.";
     public const string TeamAppointed = "Đã bổ nhiệm. Người giữ chức cũ (nếu có) đã chuyển về Công nhân.";
     public const string TeamTransferred = "Đã chuyển {0} nhân viên.";
+    public const string TeamMemberHasTeam = "{0} đang thuộc tổ khác. Dùng Chuyển sang tổ khác.";
+    public const string TeamRemoveLeader = "{0} đang là tổ trưởng / tổ phó. Thôi giữ chức trước khi loại khỏi tổ.";
+    public const string TeamMembersAdded = "Đã thêm {0} nhân viên vào tổ.";
+    public const string TeamMembersRemoved = "Đã loại {0} nhân viên khỏi tổ.";
+    public const string TeamDismissed = "Đã thôi giữ chức. Người này chuyển về Công nhân của tổ.";
+    public const string TeamDismissInvalidRole = "Người này không giữ chức tổ trưởng / tổ phó.";
     public const string TeamAppointInvalidRole = "Chỉ bổ nhiệm được công nhân, tổ trưởng, tổ phó của tổ.";
     public const string CannotActOnSelf = "Không thể tự thao tác trên tài khoản của mình.";
     public const string ResignedWasLeader = "Đã cho nghỉ. Tổ {0} hiện chưa có {1}, hãy bổ nhiệm người thay.";
@@ -207,6 +214,7 @@ public static class Messages
     public const string KpiOrderClosed = "Đơn hàng đã dừng, đã hủy hoặc đã giao xong, không đặt chỉ tiêu được.";
     public const string KpiTeamInvalid = "Tổ may không hợp lệ hoặc đã ngừng hoạt động.";
     public const string KpiProductNotInOrder = "Mã hàng không thuộc đơn hàng đã chọn.";
+    public const string KpiTeamNotAllotted = "Mã hàng này chưa được chia cho tổ. Chia ở màn Chia đơn cho tổ may trước khi đặt chỉ tiêu.";
     public const string KpiPeriodOverlap =
         "Kỳ bị trùng với chỉ tiêu {0:dd/MM/yyyy} - {1:dd/MM/yyyy} của tổ này cho cùng đơn hàng và mã hàng. Kỳ mới phải bắt đầu sau ngày kết thúc của chỉ tiêu đó hoặc kết thúc trước ngày bắt đầu.";
     public const string KpiExceedsOrderQty = "Chỉ tiêu vượt số lượng đơn đặt: đơn đặt {0}, đã giao ở các chỉ tiêu khác {1}, đặt được tối đa {2}.";
@@ -267,6 +275,10 @@ public static class Messages
     public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
+    public const string ProductSpecMarkerDuplicate = "Mỗi bìa chỉ khai một dòng cho mỗi size và mỗi màu.";
+    public const string ProductSpecMarkerReference = "Bìa phải dùng size và màu có trong danh sách màu – size của mã hàng.";
+    public const string ProductSpecMarkerIncomplete = "Mỗi bìa phải có cả kích thước và vải.";
+    public const string ProductSpecMarkerFabricInvalid = "Vải của bìa phải là NVL loại vải đang dùng, và có trong định mức chi tiết cắt của màu đó.";
     public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
     public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng sản xuất.";
     public const string PurchaseOrderOrderDateFuture = "Ngày đặt hàng không được sau hôm nay.";
@@ -296,6 +308,13 @@ public static class Messages
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
     public const string OperationComponentInvalid = "Chi tiết gắn với công đoạn phải thuộc đúng mã hàng của công đoạn.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
+    public const string OperationProductRequired = "Vui lòng chọn mã hàng.";
+    public const string OperationCodeFormat = "Mã công đoạn chỉ gồm chữ không dấu, số và các ký tự . _ -";
+    public const string OperationFinalMustBeSewing = "Công đoạn cuối phải là công đoạn của tổ may.";
+    public const string OperationHasOpenWork = "Không ngừng dùng được: công nhân còn việc đang giao hoặc chưa làm xong của công đoạn này trong đơn đang mở. Hãy thu hồi việc trước.";
+    public const string OperationGroupDuplicate = "Tên nhóm công đoạn đã có trong mã hàng này.";
+    public const string OperationGroupProductMismatch = "Công đoạn và nhóm phải cùng mã hàng.";
+    public const string OperationDuplicateInRequest = "Công đoạn bị chọn trùng.";
     public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
     public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
     public const string OperationProductMismatch = "Công đoạn không thuộc mã hàng của dòng đơn này.";
@@ -319,6 +338,11 @@ public static class Messages
     public const string PieceRateInvalidStatus = "Trạng thái đơn giá không cho phép thao tác này.";
     public const string PieceRateDuplicateDate = "Công đoạn này đã có đơn giá với ngày hiệu lực này.";
     public const string PieceRateSubmitted = "Đã gửi duyệt đơn giá.";
+    public const string PieceRatesSubmittedMany = "Đã gửi duyệt {0} đơn giá.";
+    public const string NotifyPieceRatesSubmittedManyBody = "Có {0} đơn giá công đoạn mới chờ duyệt.";
+    public const string PieceRatePositive = "Đơn giá phải lớn hơn 0.";
+    public const string PieceRateTooHigh = "Đơn giá không được vượt quá {0:N0} đồng.";
+    public const string PieceRateScale = "Đơn giá chỉ có tối đa 2 chữ số thập phân.";
     public const string PieceRateApproved = "Đã duyệt đơn giá.";
     public const string PieceRateRejected = "Đã từ chối đơn giá.";
     /// <summary>MSG18 (GBR-11): chưa có đơn giá được duyệt thì không nhập sản lượng.</summary>
@@ -327,15 +351,28 @@ public static class Messages
     public const string NotifyPieceRateSubmittedBody = "Công đoạn {0} ({1}) có đơn giá mới chờ duyệt.";
     public const string NotifyPieceRateDecidedTitle = "Đơn giá đã được xử lý";
     public const string NotifyPieceRateDecidedBody = "Đơn giá công đoạn {0}: {1}.";
-    public const string AssignmentWorkerInvalid = "Công nhân phải là người đang làm của tổ mình.";
+    public const string AssignmentWorkerInvalid = "Chỉ phân công được cho công nhân đang làm của tổ mình.";
+    public const string AssignmentOperationNotSewing = "Chỉ phân công được công đoạn của tổ may.";
+    public const string AssignmentIncomplete = "Chưa nhận được BTP: còn {0} công đoạn chưa phân công công nhân ({1}). Vào màn Phân công công đoạn để phân công đủ.";
+    public const string AssignmentNoOperations = "Chưa nhận được BTP: mã hàng {0} chưa có công đoạn may đang dùng. Kế toán cần khai công đoạn, sau đó tổ phân công công nhân.";
     public const string AssignmentOrderInvalid = "Đơn hàng không tồn tại hoặc đã đóng.";
     public const string AssignmentNotFound = "Không tìm thấy phân công đang hiệu lực.";
     public const string AssignmentSaved = "Đã lưu phân công.";
     public const string AssignmentOperationsRequired = "Chọn ít nhất một công đoạn.";
     public const string AssignmentOperationsDuplicate = "Công đoạn bị chọn trùng.";
+    public const string AssignmentOperationsTooMany = "Mỗi lần giao tối đa {0} công đoạn.";
     public const string AssignmentClosed = "Đã kết thúc phân công.";
     public const string AssignmentCopied = "Đã chép {0} phân công.";
     public const string AssignmentCopySameOrder = "Đơn nguồn và đơn đích phải khác nhau.";
+    public const string AssignmentProductNotAllotted = "Mã hàng này chưa được chia cho tổ của bạn. Quản đốc cần chia cho tổ trước.";
+    public const string OrderLineNotAllotted = "Màu, size này chưa được chia cho tổ của bạn. Quản đốc cần chia cho tổ trước.";
+    public const string OrderLineLabel = "{0} {1}/{2}";
+    public const string OrderLineTeamTeamInvalid = "Tổ được chia phải là tổ may đang hoạt động.";
+    public const string OrderLineTeamInUse = "Không bỏ được {0}: tổ đã có phiếu cấp BTP của màu, size này, hoặc đây là màu, size cuối của mã hàng mà tổ đã phân công công đoạn, có chỉ tiêu KPI.";
+    public const string OrderLineTeamDuplicate = "Tổ may bị chọn trùng.";
+    public const string OrderLineTeamLineDuplicate = "Dòng đơn bị chọn trùng.";
+    public const string OrderLineTeamNotifyTitle = "Tổ được chia mã hàng mới";
+    public const string OrderLineTeamNotifyBody = "Tổ bạn được chia {0} của đơn {1}, vui lòng phân công công đoạn trước khi nhận BTP.";
     public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
     public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
     public const string OutputQtyMax = "Số lượng tối đa 1.000.000.";

@@ -38,6 +38,8 @@ public partial class Material
 
     public virtual ICollection<ProductComponentMaterial> ProductComponentMaterials { get; set; } = new List<ProductComponentMaterial>();
 
+    public virtual ICollection<ProductMarkerFabric> ProductMarkerFabrics { get; set; } = new List<ProductMarkerFabric>();
+
     public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
 
     public virtual ICollection<RequestLine> RequestLines { get; set; } = new List<RequestLine>();

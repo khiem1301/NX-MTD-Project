@@ -26,6 +26,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     private readonly List<ProductComponentMaterial> _norms = [];
     private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<MaterialReturnLine> _returnLines = [];
+    private readonly List<CuttingLay> _lays = [];
     private readonly Material _fabric = new()
     {
         MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
@@ -35,7 +36,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     public WorkOrderFabricTests()
     {
         SetupQueryable(_requests); SetupQueryable(_orders); SetupQueryable(_teams); SetupQueryable(_lines); SetupQueryable(_workOrders);
-        SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines);
+        SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_lays);
         _orders.Add(new CustomerOrder { OrderId = OrderId, OrderCode = "DH001", Status = OrderStatuses.InProduction });
         _teams.Add(new Team { TeamId = TeamId, TeamCode = "CAT", TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
         _lines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = ProductId, OrderedQty = 200 }
@@ -136,6 +137,78 @@ public class WorkOrderFabricTests : ProductionTestBase
         var result = await Sut().CreateReplacementAsync(Dto(), default);
 
         (result.ErrorCode == NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage).Should().BeFalse();
+    }
+
+    private void AddLay(short plies, decimal? length, int team = TeamId, int order = OrderId, int fabric = FabricId) =>
+        _lays.Add(new CuttingLay { CuttingTeamId = team, FabricMaterialId = fabric, PlyCount = plies, LayLengthM = length, WorkOrder = new WorkOrder { OrderId = order } });
+
+    private void HeldFabric(decimal received, decimal returned)
+    {
+        var issue = new MaterialIssue { WorkOrderId = 7, ReceivingTeamId = TeamId, OrderId = OrderId, WarehouseType = WarehouseTypes.Material, Status = IssueStatuses.Received };
+        var line = new MaterialIssueLine { MaterialId = FabricId, IssuedQty = received, ConfirmedQty = received, MaterialIssue = issue };
+        _issueLines.Add(line);
+        _returnLines.Add(new MaterialReturnLine { MaterialIssueLine = line, ConfirmedQty = returned, ReturnedQty = returned,
+            MaterialReturn = new MaterialReturn { Status = HandoverStatuses.Confirmed, MaterialIssue = issue } });
+    }
+
+    private void SeedWorkOrderWithFabric()
+    {
+        _norms.Add(new ProductComponentMaterial
+        {
+            ProductComponentMaterialId = PcmId, ProductVariantId = _lines[0].ProductVariantId, ProductComponentId = 1, MaterialId = FabricId, Material = _fabric,
+            ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
+        });
+        var wo = new WorkOrder { WorkOrderId = 7, OrderId = OrderId, ProductId = ProductId, CuttingTeamId = TeamId, Status = WorkOrderStatuses.Cutting, Order = _orders[0] };
+        wo.WorkOrderLines.Add(new WorkOrderLine { WorkOrderId = 7, OrderLineId = LineId, PlannedQty = 10, OrderLine = _lines[0] });
+        _workOrders.Add(wo);
+    }
+
+    [Fact]
+    public async Task Fabrics_CutIsPliesTimesLength_AndRemainingIsWhatTheTeamHoldsMinusCut()
+    {
+        SeedWorkOrderWithFabric();
+        HeldFabric(100, 10);        // đang giữ 90 m
+        AddLay(5, 6);               // 30 m
+        AddLay(2, 10.5m);           // 21 m
+
+        var row = (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single();
+
+        (row.HeldQty, row.CutQty, row.RemainingQty, row.UnmeasuredLayCount).Should().Be((90m, 51m, 39m, 0));
+    }
+
+    [Fact]
+    public async Task Fabrics_OnlyCountsLaysOfThisTeamOrderAndFabric()
+    {
+        SeedWorkOrderWithFabric();
+        HeldFabric(100, 0);
+        AddLay(1, 10);
+        AddLay(1, 500, team: 99);
+        AddLay(1, 500, order: 99);
+        AddLay(1, 500, fabric: 99);
+
+        (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single().CutQty.Should().Be(10m);
+    }
+
+    [Fact]
+    public async Task Fabrics_LayWithoutLength_IsCountedSeparately_NotAsZeroCut()
+    {
+        SeedWorkOrderWithFabric();
+        HeldFabric(100, 0);
+        AddLay(3, null);
+
+        var row = (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single();
+
+        (row.CutQty, row.UnmeasuredLayCount).Should().Be((0m, 1));
+    }
+
+    [Fact]
+    public async Task Fabrics_CuttingMoreThanHeld_ShowsANegativeRemainder()
+    {
+        SeedWorkOrderWithFabric();
+        HeldFabric(10, 0);
+        AddLay(2, 10);
+
+        (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single().RemainingQty.Should().Be(-10m);
     }
 
     [Fact]

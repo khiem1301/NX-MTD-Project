@@ -49,7 +49,6 @@ export function WorkdayOvertimeTable({ report }: Props) {
       size="small"
       columns={columns}
       dataSource={report.rows}
-      pagination={{ pageSize: 20 }}
       scroll={{ x: 'max-content' }}
       summary={() => (
         <DataTable.Summary fixed>

@@ -111,7 +111,6 @@ export function PayrollDetailModal({ payrollId, onClose }: Props) {
             size="small"
             columns={columns}
             dataSource={d.payslips}
-            pagination={{ pageSize: 10 }}
             scroll={{ x: 'max-content' }}
           />
         </>

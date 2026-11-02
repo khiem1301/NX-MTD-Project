@@ -229,6 +229,11 @@ public sealed class KpiService : IKpiService
             .AnyAsync(l => l.OrderId == dto.OrderId && l.ProductId == dto.ProductId, ct);
         if (!productInOrder) return Fail(ErrorCodes.KpiInvalidReference, Messages.KpiProductNotInOrder);
 
+        var allotments = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == dto.SewingTeamId);
+        var allotted = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .AnyAsync(l => l.OrderId == dto.OrderId && l.ProductId == dto.ProductId && allotments.Any(a => a.OrderLineId == l.OrderLineId), ct);
+        if (!allotted) return Fail(ErrorCodes.KpiInvalidReference, Messages.KpiTeamNotAllotted);
+
         var periodError = CheckPeriod(dto, existing, order.ReceivedDate);
         if (periodError is not null) return Fail(ErrorCodes.KpiPeriodInvalid, periodError);
 

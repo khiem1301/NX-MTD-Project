@@ -71,10 +71,15 @@ public sealed class AttendanceService : IAttendanceService
             overdue ? Messages.AttendanceSyncOverdue : null);
     }
 
-    public async Task<Result<IReadOnlyList<SyncSessionDto>>> GetSessionsAsync(int take, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<SyncSessionDto>>> GetSessionsAsync(int take, string? status, CancellationToken ct)
     {
+        var code = string.IsNullOrWhiteSpace(status) ? null : CodeText.ToCode(status);
+        if (code is not null && !SyncStatus.All.Contains(code))
+            return Result<IReadOnlyList<SyncSessionDto>>.Failure(
+                ErrorCodes.CommonValidation, Messages.AttendanceSyncStatusInvalid, ResultKind.Validation);
+
         var limit = take is < 1 or > Paging.MaxPageSize ? RecentSessionTake : take;
-        var sessions = await _attendance.GetRecentSessionsAsync(limit, ct);
+        var sessions = await _attendance.GetRecentSessionsAsync(limit, code, ct);
         return Result<IReadOnlyList<SyncSessionDto>>.Success(sessions);
     }
 

@@ -31,6 +31,8 @@ export type DispatchNote = Omit<DispatchNoteListItem, 'totalIssueQty' | 'totalRe
   dispatchedAt: string | null;
   customerReceivedDate: string | null;
   lines: DispatchNoteLine[];
+  /** Phiên bản phiếu đang xem; gửi lại khi hủy, xuất, từ chối, xác nhận giao để phát hiện người khác đã đổi phiếu. */
+  rowVer: string;
 };
 
 export type DispatchableLine = {
@@ -57,4 +59,5 @@ export type CreateDispatchPayload = {
 export type ConfirmDeliveryPayload = {
   customerReceivedDate: string;
   lines: { dispatchNoteLineId: number; receivedQty: number }[];
+  rowVer: string;
 };

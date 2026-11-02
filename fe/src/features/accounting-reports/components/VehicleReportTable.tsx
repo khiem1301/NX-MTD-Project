@@ -51,7 +51,6 @@ export function VehicleReportTable({ report }: Props) {
       size="small"
       columns={columns}
       dataSource={report.vehicles}
-      pagination={{ pageSize: 20 }}
       scroll={{ x: 'max-content' }}
       summary={() => (
         <DataTable.Summary fixed>

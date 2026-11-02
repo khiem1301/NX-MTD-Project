@@ -61,6 +61,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     entries: [
       'operations',
       'admin-piece-rates',
+      'order-line-teams',
       'operation-assignments',
       'piece-movements',
       'output-records',

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
-import { RETURN_LABELS, RETURN_MESSAGES } from '../constants';
+import { RETURN_LABELS, RETURN_MESSAGES, qtyDecimalsRule } from '../constants';
 import { useCreateReturn, useReturnable } from '../hooks/useMaterialReturn';
 import type { ReturnableLine } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
@@ -26,6 +26,12 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
     return [...seen].map(([value, label]) => ({ value, label }));
   }, [returnable.data]);
   const lines = (returnable.data ?? []).filter((l) => l.materialIssueId === issueId);
+  const suggested = Object.fromEntries(
+    lines
+      .filter((l) => (l.suggestedQty ?? 0) > 0)
+      .map((l) => [String(l.materialIssueLineId), l.suggestedQty]),
+  );
+  const canSuggest = lines.length > 0 && lines.every((l) => l.suggestedQty !== null);
 
   const handleFinish = ({ qty, note }: FormValues) => {
     if (issueId === undefined) return;
@@ -38,7 +44,7 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
   return (
     <Modal
       open={open}
-      width={MODAL_WIDTH.md}
+      width={MODAL_WIDTH.lg}
       title={RETURN_LABELS.create}
       okText={MESSAGES.common.confirm}
       cancelText={MESSAGES.common.cancel}
@@ -75,7 +81,16 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
         disabled={create.isPending}
         onFinish={handleFinish}
         key={issueId}
+        initialValues={{ qty: suggested }}
       >
+        {lines.length > 0 && (
+          <Alert
+            type="info"
+            showIcon
+            message={canSuggest ? RETURN_LABELS.suggestHint : RETURN_LABELS.noSuggestHint}
+            style={{ marginBottom: 12 }}
+          />
+        )}
         <DataTable<ReturnableLine>
           rowKey="materialIssueLineId"
           size="small"
@@ -108,10 +123,20 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
               render: formatQty,
             },
             {
+              title: RETURN_LABELS.suggestedQty,
+              dataIndex: 'suggestedQty',
+              align: 'right',
+              render: (v: number | null) => (v === null ? '—' : formatQty(v)),
+            },
+            {
               title: RETURN_LABELS.returnQty,
               key: 'qty',
               render: (_, l) => (
-                <Form.Item name={['qty', String(l.materialIssueLineId)]} noStyle>
+                <Form.Item
+                  name={['qty', String(l.materialIssueLineId)]}
+                  rules={[qtyDecimalsRule]}
+                  style={{ marginBottom: 0 }}
+                >
                   <InputNumber min={0} max={l.remainingQty} />
                 </Form.Item>
               ),

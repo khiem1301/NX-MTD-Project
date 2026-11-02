@@ -57,7 +57,7 @@ public sealed record ShortDeliveryLineDto(
 
 public sealed record ShortDeliveryListItemDto(
     int RequestId, string RequestCode, string Status, string? Resolution, int ReceiptId, string ReceiptCode,
-    string? PoCode, string? OrderCode, DateTime CreatedAt);
+    string Source, string? PoCode, string? OrderCode, DateTime CreatedAt);
 
 public sealed record ShortDeliveryDto(
     int RequestId, string RequestCode, string Status, string? Resolution, string? ResultNote, int ReceiptId,
@@ -73,4 +73,7 @@ public sealed record ShortDeliveryQuery : PageQuery
 {
     /// <summary>true = chỉ yêu cầu đã chọn giao bù và còn đang chờ nhận bù (Thủ kho lập phiếu bổ sung).</summary>
     public bool? AwaitingReplenish { get; init; }
+
+    /// <summary>true = chỉ yêu cầu Quản đốc đã xử lý (giao bù hoặc chốt không bù): phạm vi xem của Thủ kho.</summary>
+    public bool? ResolvedOnly { get; init; }
 }
