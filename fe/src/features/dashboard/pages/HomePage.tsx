@@ -7,11 +7,16 @@ import { OrderProgressPanel } from '../components/OrderProgressPanel';
 const RevenuePanel = lazy(() =>
   import('@/features/revenue').then((m) => ({ default: m.RevenuePanel })),
 );
+const TeamKpiPanel = lazy(() =>
+  import('@/features/kpi').then((m) => ({ default: m.TeamKpiPanel })),
+);
 
 export function HomePage() {
   const { user } = useAuth();
   if (!user) return null;
   const seesProgress = user.role === ROLES.Admin || user.role === ROLES.Manager;
+  const seesTeamKpi =
+    (user.role === ROLES.TeamLeader || user.role === ROLES.TeamDeputy) && user.teamType === 'Sewing';
   return (
     <>
       {user.role === ROLES.Admin && (
@@ -20,6 +25,11 @@ export function HomePage() {
         </Suspense>
       )}
       {seesProgress && <OrderProgressPanel />}
+      {seesTeamKpi && (
+        <Suspense fallback={null}>
+          <TeamKpiPanel />
+        </Suspense>
+      )}
     </>
   );
 }

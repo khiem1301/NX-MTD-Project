@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Button, Empty, Select, Space } from 'antd';
+import { Alert, Button, Empty, Segmented, Select, Space } from 'antd';
 import { CopyOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
@@ -23,12 +23,14 @@ import {
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 import { AssignmentBulkBar } from '../components/AssignmentBulkBar';
+import { AssignmentByWorker } from '../components/AssignmentByWorker';
 import { AssignmentFilterBar } from '../components/AssignmentFilterBar';
 import { AssignmentProgress } from '../components/AssignmentProgress';
 import { assignmentColumns } from '../components/assignmentColumns';
 import { CopyModal } from '../components/CopyModal';
 
 const text = PRODUCTION_TEXT.assignments;
+type AssignmentView = 'operation' | 'worker';
 const NO_FILTER: AssignmentFilter = {
   keyword: undefined,
   group: undefined,
@@ -48,6 +50,7 @@ export function OperationAssignmentsPage() {
   const [orderId, setOrderId] = useState<number | null>(null);
   const [productId, setProductId] = useState<number | null>(null);
   const [copyOpen, setCopyOpen] = useState(false);
+  const [view, setView] = useState<AssignmentView>('operation');
   const { filters: filter, setFilters, pagination } = useTableQuery<AssignmentFilter>(NO_FILTER);
   const [selected, setSelected] = useState<number[]>([]);
   const assignments = useAssignments(orderId);
@@ -85,6 +88,10 @@ export function OperationAssignmentsPage() {
   const picked = selected.filter((id) => visibleIds.has(id));
   const loading = operations.isLoading || assignments.isLoading;
 
+  const changeView = (next: AssignmentView) => {
+    setView(next);
+    setSelected([]);
+  };
   const changeOrder = (id: number | undefined) => {
     setOrderId(id ?? null);
     setProductId(null);
@@ -149,16 +156,29 @@ export function OperationAssignmentsPage() {
           {rows.length > 0 && (
             <>
               <AssignmentProgress total={rows.length} missing={missing} />
-              <AssignmentFilterBar
-                rows={rows}
-                filter={filter}
-                workerOptions={workers.options}
-                onChange={changeFilter}
+              <Segmented<AssignmentView>
+                value={view}
+                onChange={changeView}
+                options={[
+                  { value: 'operation', label: text.views.operation },
+                  { value: 'worker', label: text.views.worker },
+                ]}
               />
+              {view === 'operation' && (
+                <AssignmentFilterBar
+                  rows={rows}
+                  filter={filter}
+                  workerOptions={workers.options}
+                  onChange={changeFilter}
+                />
+              )}
             </>
           )}
+          {view === 'worker' && rows.length > 0 && (
+            <AssignmentByWorker orderId={orderId} rows={rows} workerOptions={workers.options} />
+          )}
           {/* Chung một khối để thanh giao việc dính được trong suốt chiều dài bảng. */}
-          <div>
+          <div hidden={view === 'worker' && rows.length > 0}>
             <DataTable<AssignmentRow>
               rowKey={(r) => r.operation.operationId}
               columns={assignmentColumns(orderId, workers)}

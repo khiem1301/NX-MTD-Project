@@ -265,6 +265,27 @@ export const useCloseAssignment = () =>
     successMessage: PRODUCTION_TEXT.assignments.done.closed,
   });
 
+type SaveWorkerOperationsPayload = {
+  orderId: number;
+  workerId: number;
+  addOperationIds: number[];
+  closeAssignmentIds: number[];
+};
+
+/** Lưu một lần phần thay đổi công đoạn của một công nhân: thêm theo lô, rồi đóng từng phân công bị bỏ tích. */
+export const useSaveWorkerOperations = () =>
+  useApiMutation(
+    async ({ orderId, workerId, addOperationIds, closeAssignmentIds }: SaveWorkerOperationsPayload) => {
+      if (addOperationIds.length > 0)
+        await productionApi.assignMany({ orderId, workerId, operationIds: addOperationIds });
+      for (const id of closeAssignmentIds) await productionApi.closeAssignment(id);
+    },
+    {
+      invalidate: [assignmentsKey, outputKey],
+      successMessage: PRODUCTION_TEXT.assignments.byWorker.saved,
+    },
+  );
+
 export const useCopyAssignments = () =>
   useApiMutation((body: CopyAssignmentsPayload) => productionApi.copyAssignments(body), {
     invalidate: [assignmentsKey, outputKey],

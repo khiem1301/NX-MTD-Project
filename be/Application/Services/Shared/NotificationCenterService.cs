@@ -27,9 +27,12 @@ public sealed class NotificationInboxService : INotificationInboxService
             .Where(a => a.Priority == AnnouncementPriorities.Urgent).Select(a => (long)a.AnnouncementId);
         var page = await Mine.AsNoTracking()
             .Where(n => query.UnreadOnly != true || n.ReadAt == null)
+            .Where(n => query.Group != NotificationGroups.Manual || n.SourceType == NotificationSources.Announcement)
+            .Where(n => query.Group != NotificationGroups.Auto || n.SourceType != NotificationSources.Announcement)
             .OrderByDescending(n => n.NotificationId)
             .Select(n => new NotificationDto(n.NotificationId, n.SourceType, n.Title, n.Message, n.LinkUrl, n.ReadAt != null,
-                n.RefTable == nameof(Announcement) && urgentIds.Contains(n.RefId!.Value), n.CreatedAt))
+                n.RefTable == nameof(Announcement) && urgentIds.Contains(n.RefId!.Value),
+                n.SourceType == NotificationSources.Announcement, n.CreatedAt))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<NotificationDto>>.Success(page);
     }

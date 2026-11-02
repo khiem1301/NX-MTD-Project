@@ -211,6 +211,7 @@ describe('OperationAssignmentsPage', () => {
     mockAssignments = [assignment(1, 1, 7)];
     open();
 
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tình trạng' }));
     fireEvent.click(screen.getByText('Chưa có người (1)'));
 
     expect(screen.queryByText(/OP1 - May cổ/)).not.toBeInTheDocument();
@@ -270,6 +271,7 @@ describe('OperationAssignmentsPage', () => {
   it('dòng đã tích vừa có người khi đang lọc dòng thiếu thì không còn được giao', () => {
     const { rerender } = render(<OperationAssignmentsPage />);
     fireEvent.click(screen.getByText('chọn đơn'));
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tình trạng' }));
     fireEvent.click(screen.getByText('Chưa có người (2)'));
     fireEvent.click(within(rowOf(/OP1 - May cổ/)).getByRole('checkbox'));
     fireEvent.click(within(rowOf(/OP2 - May tay/)).getByRole('checkbox'));
@@ -318,6 +320,7 @@ describe('OperationAssignmentsPage', () => {
     open();
     fireEvent.click(within(rowOf(/OP1 - May cổ/)).getByRole('checkbox'));
 
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Tình trạng' }));
     fireEvent.click(screen.getByText('Chưa có người (2)'));
 
     expect(screen.queryByText(/Đã chọn/)).not.toBeInTheDocument();
