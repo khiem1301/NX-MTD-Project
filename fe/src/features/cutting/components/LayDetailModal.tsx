@@ -2,7 +2,7 @@ import { Descriptions, type TableColumnsType } from 'antd';
 import { DetailDescriptions, DetailModal } from '@/components/common/DetailModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate } from '@/utils/format';
+import { formatDate, formatQty } from '@/utils/format';
 import { LABELS, LAY_STATUS_LABEL, SHIFT_LABEL } from '../constants';
 import type { CuttingLay, CuttingLayLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
@@ -39,6 +39,12 @@ export function LayDetailModal({ lay, onClose }: { lay: CuttingLay | null; onClo
               {lay.fabricColor || '—'}
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.plyCount}>{lay.plyCount}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.layLength}>
+              {lay.layLengthM === null ? '—' : formatQty(lay.layLengthM)}
+            </Descriptions.Item>
+            <Descriptions.Item label={LABELS.layFabricCut}>
+              {lay.fabricUsedM === null ? '—' : formatQty(lay.fabricUsedM)}
+            </Descriptions.Item>
             <Descriptions.Item label={LABELS.sizeRatio}>{lay.sizeRatio}</Descriptions.Item>
             <Descriptions.Item label={LABELS.status}>
               <StatusTag status={lay.status} labels={LAY_STATUS_LABEL} />

@@ -166,4 +166,4 @@ export const ATTENDANCE_TEXT = {
 /** Khoảng ngày tối đa một lần xem, khớp TimesheetQueryValidator.MaxRangeDays của BE. */
 export const MAX_RANGE_DAYS = 62;
 
-export const DEFAULT_PAGE_SIZE = 20;
+export { DEFAULT_PAGE_SIZE } from '@/constants/pagination';

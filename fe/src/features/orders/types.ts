@@ -80,11 +80,29 @@ export type ProductNormItem = {
   widthCm: number | null;
   specNote: string | null;
 };
+/** Kích thước một bìa ở một size; một bìa tính cho một sản phẩm. */
+export type ProductMarkerItem = {
+  markerNo: number;
+  sizeCode: string;
+  lengthCm: number;
+  widthCm: number;
+};
+/** Vải của một bìa theo màu áo. */
+export type ProductMarkerFabricItem = {
+  markerNo: number;
+  color: string;
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+};
 export type ProductSpec = {
   productId: number;
   components: ProductComponentItem[];
   variants: ProductVariantItem[];
   norms: ProductNormItem[];
+  markers: ProductMarkerItem[];
+  markerFabrics: ProductMarkerFabricItem[];
 };
 export type SaveProductSpecPayload = {
   components: {
@@ -107,6 +125,8 @@ export type SaveProductSpecPayload = {
     widthCm: number | null;
     specNote: string | null;
   }[];
+  markers: ProductMarkerItem[];
+  markerFabrics: { markerNo: number; color: string; materialId: number }[];
 };
 export type ProductQuery = {
   page: number;

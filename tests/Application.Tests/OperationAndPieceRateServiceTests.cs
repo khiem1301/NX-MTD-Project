@@ -15,9 +15,12 @@ namespace Application.Tests;
 [Collection(ExcelTestCollection.Name)]
 public class OperationAndPieceRateServiceTests : ProductionTestBase
 {
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", ProductName = "Áo" }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", ProductName = "Áo", Status = RecordStatus.Active }];
     private readonly List<Operation> _operations = [];
     private readonly List<PieceRate> _rates = [];
+    private readonly List<OrderLine> _lines = [];
+    private readonly List<WorkAllocation> _allocations = [];
+    private readonly List<VwWorkerOutputCap> _caps = [];
     private readonly PieceRateService _rateService;
     private readonly OperationService _operationService;
 
@@ -26,6 +29,9 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         SetupQueryable(_products);
         SetupQueryable(_operations);
         SetupQueryable(_rates);
+        SetupQueryable(_lines);
+        SetupQueryable(_allocations);
+        SetupQueryable(_caps);
         _rateService = new PieceRateService(Uow, Audit, Notifier, Clock);
         _operationService = new OperationService(Uow, Audit, Clock, new ClosedXmlOperationParser(), Notifier);
     }
@@ -92,13 +98,54 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task CreateOperation_SecondActiveFinalStep_IsRejected()
+    public async Task CreateOperation_NewFinalStep_MovesFinalFlagFromTheOldOne()
     {
-        AddOperation(1, "OP90", final: true);
+        var old = AddOperation(1, "OP90", final: true);
 
         var result = await _operationService.CreateAsync(OpDto("OP91", final: true), default);
 
-        result.ErrorCode.Should().Be(ErrorCodes.OperationFinalStepExists);
+        result.IsSuccess.Should().BeTrue();
+        old.IsFinalStep.Should().BeFalse();
+        Audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.RecordId == 1 && e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task UpdateOperation_TickingFinal_MovesFinalFlagAndKeepsExactlyOne()
+    {
+        var old = AddOperation(1, "OP90", final: true);
+        var next = AddOperation(2, "OP95", sequence: 2);
+
+        var result = await _operationService.UpdateAsync(2, OpDto("OP95", final: true), default);
+
+        result.IsSuccess.Should().BeTrue();
+        old.IsFinalStep.Should().BeFalse();
+        next.IsFinalStep.Should().BeTrue();
+        _operations.Count(o => o.IsFinalStep).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task DiscontinueOperation_ActiveFinalStep_IsAllowed()
+    {
+        var op = AddOperation(1, "OP90", final: true);
+
+        var result = await _operationService.DiscontinueAsync(1, default);
+
+        result.IsSuccess.Should().BeTrue();
+        op.Status.Should().Be(OperationStatuses.Discontinued);
+    }
+
+    [Fact]
+    public async Task UpdateOperation_TickingFinal_SavesTheOldFinalBeforeTheNewOne()
+    {
+        AddOperation(2, "OP95", final: true, sequence: 2);
+        AddOperation(1, "OP90");
+        var order = new List<string>();
+        Uow.When(u => u.SaveChangesAsync()).Do(_ => order.Add(string.Join(",", _operations.Where(o => o.IsFinalStep).Select(o => o.OperationCode))));
+
+        await _operationService.UpdateAsync(1, OpDto("OP90", final: true), default);
+
+        order.Should().StartWith([""]);   // lần lưu đầu: công đoạn cũ đã bỏ cờ, chưa công đoạn nào là cuối
+        _operations.Count(o => o.IsFinalStep).Should().Be(1);
     }
 
     [Fact]
@@ -188,6 +235,23 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         items[3].NextRate.Should().BeNull();
         items[4].NextRate!.Status.Should().Be("Rejected");
         items[4].NextRate!.RejectReason.Should().Be("Vượt khung");
+        items.Values.Should().OnlyContain(o => o.UpcomingRate == null);
+    }
+
+    [Fact]
+    public async Task ListOperations_UpcomingRate_IsNearestApprovedFutureRate()
+    {
+        AddOperation(1, "OP10", sequence: 1);
+        AddRate(1, 1, 1_000m, Today.AddDays(-10));
+        AddRate(2, 1, 1_500m, Today.AddDays(30));                                  // đã duyệt, xa hơn
+        AddRate(3, 1, 1_200m, Today.AddDays(5));                                   // đã duyệt, gần nhất
+        AddRate(4, 1, 1_100m, Today.AddDays(2), PieceRateStatuses.PendingApproval); // chưa duyệt: không tính
+        AddRate(5, 1, 1_300m, Today.AddDays(1), PieceRateStatuses.Rejected);        // bị từ chối: không tính
+
+        var item = (await _operationService.ListAsync(1, false, default)).Data!.Single();
+
+        item.CurrentRate.Should().Be(1_000m);
+        item.UpcomingRate.Should().BeEquivalentTo(new OperationRateDto(3, 1_200m, Today.AddDays(5), "Approved", null));
     }
 
     // ========== Đơn giá ==========
@@ -399,6 +463,188 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
         item.Status.Should().Be("PendingApproval");
         item.ProductCode.Should().Be("MH001");
     }
+
+    // ---------- Biên và các bảng bị ảnh hưởng (DEV-ALL-50) ----------
+
+    private OrderLine OpenLine(int id, string status = OrderStatuses.InProduction)
+    {
+        var line = new OrderLine { OrderLineId = id, OrderId = id, ProductId = 1, Order = new CustomerOrder { OrderId = id, Status = status } };
+        _lines.Add(line);
+        return line;
+    }
+
+    [Fact]
+    public async Task Discontinue_WorkerStillHoldsWorkOfOpenOrder_IsRejected()
+    {
+        var op = AddOperation(1);
+        OpenLine(50);
+        _caps.Add(new VwWorkerOutputCap { OperationId = 1, OrderLineId = 50, WorkerId = 7, CapQty = 10, OutputQty = 4, RemainingQty = 6 });
+
+        var result = await _operationService.DiscontinueAsync(1, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OperationHasOpenWork);
+        op.Status.Should().Be(OperationStatuses.Active);
+    }
+
+    [Fact]
+    public async Task Discontinue_PendingHandoverOfOpenOrder_IsRejected()
+    {
+        AddOperation(1);
+        OpenLine(50);
+        _allocations.Add(new WorkAllocation { OperationId = 1, OrderLineId = 50, Status = HandoverStatuses.Pending });
+
+        (await _operationService.DiscontinueAsync(1, default)).ErrorCode.Should().Be(ErrorCodes.OperationHasOpenWork);
+    }
+
+    [Fact]
+    public async Task Discontinue_WorkDoneOrOrderClosedOrRejectedHandover_IsAllowed()
+    {
+        var op = AddOperation(1);
+        OpenLine(50);
+        OpenLine(60, OrderStatuses.Cancelled);
+        _caps.Add(new VwWorkerOutputCap { OperationId = 1, OrderLineId = 50, WorkerId = 7, CapQty = 10, OutputQty = 10, RemainingQty = 0 });
+        _caps.Add(new VwWorkerOutputCap { OperationId = 1, OrderLineId = 60, WorkerId = 7, CapQty = 10, OutputQty = 4, RemainingQty = 6 });
+        _allocations.Add(new WorkAllocation { OperationId = 1, OrderLineId = 50, Status = HandoverStatuses.Rejected });
+
+        (await _operationService.DiscontinueAsync(1, default)).IsSuccess.Should().BeTrue();
+
+        op.Status.Should().Be(OperationStatuses.Discontinued);
+    }
+
+    [Fact]
+    public async Task List_PendingRateIsShownEvenWhenAnotherRateHasLaterDate()
+    {
+        AddOperation(1);
+        AddRate(1, 1, 1_000m, Today.AddDays(3), PieceRateStatuses.PendingApproval);
+        AddRate(2, 1, 1_100m, Today.AddDays(9), PieceRateStatuses.Rejected).DecisionNote = "Cao";
+
+        var items = (await _operationService.ListAsync(1, false, default)).Data!;
+
+        items[0].NextRate!.PieceRateId.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Create_ProductDiscontinued_IsRejected()
+    {
+        _products[0].Status = RecordStatus.Discontinued;
+
+        var result = await _operationService.CreateAsync(new SaveOperationDto(1, "OP01", "May", 1, null, null, "Sewing", false), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductNotActive);
+    }
+
+    [Fact]
+    public async Task UpdateRate_OperationDiscontinued_IsRejected()
+    {
+        AddOperation(1, status: OperationStatuses.Discontinued);
+        var rate = AddRate(1, 1, 1_000m, Today, PieceRateStatuses.Draft);
+        Repo<PieceRate>().GetByIdAsync(1).Returns(rate);
+
+        var result = await _rateService.UpdateAsync(1, new SavePieceRateDto(1, 1_200m, Today), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OperationNotActive);
+        rate.Rate.Should().Be(1_000m);
+    }
+
+    [Theory]
+    [InlineData(PieceRateStatuses.Draft)]
+    [InlineData(PieceRateStatuses.PendingApproval)]
+    public async Task SubmitAndApprove_OperationDiscontinued_AreRejected(string status)
+    {
+        AddOperation(1, status: OperationStatuses.Discontinued);
+        var rate = AddRate(1, 1, 1_000m, Today, status);
+
+        var result = status == PieceRateStatuses.Draft
+            ? await _rateService.SubmitAsync(1, default)
+            : await _rateService.ApproveAsync(1, new ApprovePieceRateDto(null), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OperationNotActive);
+        rate.Status.Should().Be(status);
+    }
+
+    [Fact]
+    public async Task ApproveMany_SkipsDiscontinuedOperation()
+    {
+        AddOperation(1);
+        AddOperation(2, "OP20", status: OperationStatuses.Discontinued);
+        AddRate(1, 1, 1_000m, Today, PieceRateStatuses.PendingApproval);
+        AddRate(2, 2, 1_000m, Today, PieceRateStatuses.PendingApproval);
+
+        (await _rateService.ApproveManyAsync(new ApproveManyPieceRatesDto([1, 2], null), default)).Data.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SubmitMany_SubmitsOnlyDraftsOfActiveOperations_NotifiesAdminOnce()
+    {
+        AddOperation(1);
+        AddOperation(2, "OP20", status: OperationStatuses.Discontinued);
+        var draft = AddRate(1, 1, 1_000m, Today, PieceRateStatuses.Draft);
+        var other = AddRate(2, 2, 1_000m, Today, PieceRateStatuses.Draft);
+        var approved = AddRate(3, 1, 1_000m, Today.AddDays(-5));
+
+        var result = await _rateService.SubmitManyAsync(new SubmitPieceRatesDto([1, 2, 3]), default);
+
+        result.Data.Should().Be(1);
+        draft.Status.Should().Be(PieceRateStatuses.PendingApproval);
+        draft.SubmittedAt.Should().Be(Now);
+        other.Status.Should().Be(PieceRateStatuses.Draft);
+        approved.Status.Should().Be(PieceRateStatuses.Approved);
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SubmitMany_NothingToSubmit_IsRejected()
+    {
+        AddOperation(1);
+        AddRate(1, 1, 1_000m, Today.AddDays(-5));
+
+        (await _rateService.SubmitManyAsync(new SubmitPieceRatesDto([1]), default)).ErrorCode.Should().Be(ErrorCodes.PieceRateInvalidStatus);
+    }
+
+    [Theory]
+    [InlineData("0", false)]
+    [InlineData("-1", false)]
+    [InlineData("0.01", true)]
+    [InlineData("1200.50", true)]
+    [InlineData("1200.555", false)]
+    [InlineData("100000000", true)]
+    [InlineData("100000000.01", false)]
+    public void PieceRateValidator_RateBounds(string rate, bool valid) =>
+        new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, decimal.Parse(rate, System.Globalization.CultureInfo.InvariantCulture), Today))
+            .IsValid.Should().Be(valid);
+
+    [Fact]
+    public void PieceRateValidator_MissingDate_IsRejected() =>
+        new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, 100m, default)).IsValid.Should().BeFalse();
+
+    public static TheoryData<int[], bool> SubmitManyIds => new()
+    {
+        { [], false },
+        { [0], false },
+        { [1, 1], false },
+        { [1, 2], true },
+        { Enumerable.Range(1, PieceRateLimits.MaxRatesPerSubmit).ToArray(), true },
+        { Enumerable.Range(1, PieceRateLimits.MaxRatesPerSubmit + 1).ToArray(), false },
+    };
+
+    [Theory]
+    [MemberData(nameof(SubmitManyIds))]
+    public void SubmitManyValidator_Bounds(int[] ids, bool valid) =>
+        new SubmitPieceRatesDtoValidator().Validate(new SubmitPieceRatesDto(ids)).IsValid.Should().Be(valid);
+
+    [Theory]
+    [InlineData("OP01", true)]
+    [InlineData(" op-1.a_b ", true)]
+    [InlineData("Công đoạn", false)]
+    [InlineData("OP 01", false)]
+    public void SaveOperationValidator_CodeFormat(string code, bool valid) =>
+        new SaveOperationDtoValidator().Validate(new SaveOperationDto(1, code, "May", 1, null, null, "Sewing", false)).IsValid.Should().Be(valid);
+
+    [Theory]
+    [InlineData("Sewing", true)]
+    [InlineData("Cutting", false)]
+    public void SaveOperationValidator_FinalStepMustBeSewing(string teamType, bool valid) =>
+        new SaveOperationDtoValidator().Validate(new SaveOperationDto(1, "OP01", "May", 1, null, null, teamType, true)).IsValid.Should().Be(valid);
 }
 
 public class ProductionOperationValidatorTests
@@ -416,11 +662,11 @@ public class ProductionOperationValidatorTests
     }
 
     [Fact]
-    public void PieceRate_RejectNeedsReason_AndRateCannotBeNegative()
+    public void PieceRate_RejectNeedsReason_AndRateMustBePositive()
     {
         new RejectPieceRateDtoValidator().Validate(new RejectPieceRateDto(" ")).IsValid.Should().BeFalse();
         new RejectPieceRateDtoValidator().Validate(new RejectPieceRateDto("Giá cao")).IsValid.Should().BeTrue();
         new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, -1, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();
-        new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, 0, new DateOnly(2026, 10, 1))).IsValid.Should().BeTrue();
+        new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, 0, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();   // Excel cũng coi 0 là chưa có đơn giá
     }
 }

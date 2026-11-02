@@ -7,7 +7,13 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime, formatQty } from '@/utils/format';
-import { RETURN_LABELS, RETURN_MESSAGES, RETURN_STATUS, RETURN_STATUS_LABEL } from '../constants';
+import {
+  RETURN_LABELS,
+  RETURN_MESSAGES,
+  RETURN_STATUS,
+  RETURN_STATUS_LABEL,
+  qtyDecimalsRule,
+} from '../constants';
 import { useCancelReturn, useConfirmReturn, useRejectReturn } from '../hooks/useMaterialReturn';
 import type { MaterialReturn, MaterialReturnLine } from '../types';
 import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
@@ -138,8 +144,8 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
                 canReceive ? (
                   <Form.Item
                     name={['counts', String(l.materialReturnLineId), 'confirmedQty']}
-                    noStyle
-                    rules={[{ required: true, message: MESSAGES.common.required }]}
+                    style={{ marginBottom: 0 }}
+                    rules={[{ required: true, message: MESSAGES.common.required }, qtyDecimalsRule]}
                   >
                     <InputNumber min={0} max={l.returnedQty} />
                   </Form.Item>

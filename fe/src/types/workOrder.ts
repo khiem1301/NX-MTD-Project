@@ -27,4 +27,12 @@ export type FabricRequirement = {
   receivedQty: number;
   returnedQty: number;
   usedQty: number;
+  /** Vải tổ cắt đang giữ của đơn = đã nhận − đã trả về kho. */
+  heldQty: number;
+  /** Vải đã cắt của tổ trên đơn = tổng số lớp × chiều dài bàn cắt. */
+  cutQty: number;
+  /** Vải còn lại = heldQty − cutQty; âm nghĩa là đã cắt nhiều hơn số đang giữ. */
+  remainingQty: number;
+  /** Số bàn chưa có chiều dài bàn cắt nên chưa cộng vào cutQty. */
+  unmeasuredLayCount: number;
 };

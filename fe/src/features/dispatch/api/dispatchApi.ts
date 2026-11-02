@@ -29,9 +29,11 @@ export const dispatchApi = {
   downloadExcel: (base: string, id: number, code: string) =>
     downloadBlob(`${base}/${id}/excel`, `PhieuXuat_${code}.xlsx`),
   create: (body: CreateDispatchPayload) => post<DispatchNote>(MANAGER_BASE, body),
-  cancel: (id: number) => post<null>(`${MANAGER_BASE}/${id}/cancel`),
-  exportGoods: (id: number) => post<null>(`${WAREHOUSE_BASE}/${id}/export`),
-  reject: (id: number, reason: string) => post<null>(`${WAREHOUSE_BASE}/${id}/reject`, { reason }),
+  cancel: (id: number, rowVer: string) => post<null>(`${MANAGER_BASE}/${id}/cancel`, { rowVer }),
+  exportGoods: (id: number, rowVer: string) =>
+    post<null>(`${WAREHOUSE_BASE}/${id}/export`, { rowVer }),
+  reject: (id: number, reason: string, rowVer: string) =>
+    post<null>(`${WAREHOUSE_BASE}/${id}/reject`, { reason, rowVer }),
   confirmDelivery: (id: number, body: ConfirmDeliveryPayload) =>
     post<null>(`${ACCOUNTANT_BASE}/${id}/confirm-delivery`, body),
 };

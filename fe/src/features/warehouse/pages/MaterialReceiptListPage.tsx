@@ -10,6 +10,7 @@ import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { ReceiptDetailModal } from '../components/ReceiptDetailModal';
+import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
 import { ReceiptFormModal } from '../components/ReceiptFormModal';
 import { LABELS, RECEIPT_STATUS_LABEL } from '../constants';
 import { useReceipts } from '../hooks/useReceipts';
@@ -26,13 +27,14 @@ const STATUS_OPTIONS = Object.entries(RECEIPT_STATUS_LABEL).map(([value, l]) => 
   label: l.text,
 }));
 
-/** UC37 / UC39: danh sách phiếu nhập NVL (Thủ kho lập, Quản đốc xác nhận). */
+/** UC37 / UC39: danh sách phiếu nhập NVL (Thủ kho lập, Quản đốc xác nhận). Quản đốc, Admin tạo đơn mua NVL ngay tại đây. */
 export function MaterialReceiptListPage() {
   const table = useTableQuery<Filters>({});
   const receipts = useReceipts(table.params);
   const [viewingId, setViewingId] = useState<number>();
   const [editing, setEditing] = useState<MaterialReceipt | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [purchaseFormOpen, setPurchaseFormOpen] = useState(false);
 
   const openForm = (receipt: MaterialReceipt | null) => {
     setViewingId(undefined);
@@ -76,11 +78,22 @@ export function MaterialReceiptListPage() {
     <Card
       title={LABELS.receiptsTitle}
       extra={
-        <Can roles={[ROLES.WarehouseKeeper]}>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
-            {MESSAGES.common.create}
-          </Button>
-        </Can>
+        <>
+          <Can roles={[ROLES.WarehouseKeeper]}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
+              {MESSAGES.common.create}
+            </Button>
+          </Can>
+          <Can roles={[ROLES.Admin, ROLES.Manager]}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setPurchaseFormOpen(true)}
+            >
+              {LABELS.createStockPurchase}
+            </Button>
+          </Can>
+        </>
       }
     >
       <TableToolbar
@@ -116,6 +129,7 @@ export function MaterialReceiptListPage() {
         onEdit={openForm}
       />
       <ReceiptFormModal open={formOpen} receipt={editing} onClose={() => setFormOpen(false)} />
+      <PurchaseOrderFormModal open={purchaseFormOpen} onClose={() => setPurchaseFormOpen(false)} />
     </Card>
   );
 }

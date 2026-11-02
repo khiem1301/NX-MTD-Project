@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Divider, Result, Space, Spin, Typography } from 'antd';
 import { useSearchParams } from 'react-router-dom';
-import { AuditHistory } from '@/components/common/AuditHistory';
+import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { ERROR_CODES } from '@/constants/errorCodes';
@@ -131,7 +131,7 @@ export function PurchaseOrderModal({ role }: Props) {
           )}
 
           <Divider orientation="left">{text.history}</Divider>
-          <AuditHistory history={data.history} />
+          <AuditHistoryTable history={data.history} />
 
           <PlaceOrderModal open={dialog === 'place'} order={data} onClose={closeDialog} />
           <RepriceModal open={dialog === 'reprice'} order={data} onClose={closeDialog} />

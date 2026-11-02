@@ -17,7 +17,6 @@ export type WorkAllocation = {
   operationId: number;
   operationCode: string;
   operationName: string;
-  usesSemiFinished: boolean;
   quantity: number;
   confirmedQty: number | null;
   discrepancyReason: string | null;
@@ -41,7 +40,6 @@ export type OperationProgress = {
   operationCode: string;
   operationName: string;
   groupName: string | null;
-  usesSemiFinished: boolean;
   requiredQty: number;
   allocatedQty: number;
   pendingQty: number;

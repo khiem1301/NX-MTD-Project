@@ -115,7 +115,6 @@ export function BreakEvenResultTable({ items, filter, onFilterChange }: Props) {
         size="small"
         columns={columns}
         dataSource={items}
-        pagination={{ pageSize: 10 }}
         scroll={{ x: 'max-content' }}
       />
     </Space>

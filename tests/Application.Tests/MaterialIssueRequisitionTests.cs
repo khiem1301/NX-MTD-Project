@@ -22,7 +22,8 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     private readonly IStockService _stock = Substitute.For<IStockService>();
     private readonly IDocumentCodeGenerator _codes = Substitute.For<IDocumentCodeGenerator>();
     private readonly List<Team> _teams = [new Team { TeamId = SewingTeamId, TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
-    private readonly List<OrderLine> _lines = [new OrderLine { OrderLineId = LineId, OrderId = OrderId }];
+    private readonly List<OrderLine> _lines = [new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 3 }.WithVariant(TestVariant.Make(3, "MH3"))];
+    private readonly List<OrderLineTeam> _allotted = [new OrderLineTeam { OrderLineId = LineId, SewingTeamId = SewingTeamId }];
     private readonly List<CustomerOrder> _orders = [new CustomerOrder { OrderId = OrderId, Status = OrderStatuses.InProduction }];
     private readonly List<Request> _requestRows = [];
     private readonly MaterialIssueService _sut;
@@ -31,6 +32,7 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     {
         SetupQueryable(_teams);
         SetupQueryable(_lines);
+        SetupQueryable(_allotted);
         SetupQueryable(_orders);
         SetupQueryable(_requestRows);
         SetupQueryable(new List<MaterialIssue>());
@@ -48,6 +50,30 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
 
     private void GivenRequest(string status, int createdByTeamId = SewingTeamId, string type = RequestTypes.SemiFinishedRequisition) =>
         _requestRows.Add(new Request { RequestId = RequestId, RequestTypeCode = type, Status = status, CreatedByTeamId = createdByTeamId });
+
+    [Fact]
+    public async Task SemiFinishedIssue_LineNotAllottedToTeam_IsRejectedAndNamesTheColorSize()
+    {
+        GivenRequest(RequestStatuses.PendingProcessing);
+        _allotted.Clear();
+
+        var result = await _sut.CreateAsync(Dto(RequestId), 900, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
+        result.Message.Should().Be(string.Format(WarehouseMessages.ProductNotAllottedToTeam, "MH3 Đen/M"));
+        await _requests.DidNotReceiveWithAnyArgs().MarkCompletedAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task SemiFinishedIssue_OnlyOtherColorSizeAllotted_IsRejected()
+    {
+        GivenRequest(RequestStatuses.PendingProcessing);
+        _allotted[0].OrderLineId = LineId + 1;
+
+        var result = await _sut.CreateAsync(Dto(RequestId), 900, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
+    }
 
     [Fact]
     public async Task SemiFinishedIssue_WithoutRequest_IsRejected()

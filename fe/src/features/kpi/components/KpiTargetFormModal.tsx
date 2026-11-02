@@ -42,11 +42,10 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
     disabledDate,
     orders,
     lines,
-    teams,
     editing,
     orderOptions,
     productOptions,
-    teamOptions,
+    teamSelectProps,
     required,
     handleFinish,
     form,
@@ -134,7 +133,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
         <Row gutter={16}>
           <Col xs={24} md={12}>
             <Form.Item name="sewingTeamId" label={text.team} rules={required}>
-              <Select options={teamOptions} loading={teams.isLoading} disabled={editing} />
+              <Select {...teamSelectProps} disabled={editing} />
             </Form.Item>
           </Col>
           <Col xs={24} md={12}>

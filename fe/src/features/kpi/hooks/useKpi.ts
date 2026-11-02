@@ -17,6 +17,14 @@ export const useKpiTargets = (filter: KpiTargetFilter) =>
   });
 
 /** Chỉ tiêu tối đa lập được theo số lượng đơn đặt; chỉ gọi khi đã chọn đơn và mã hàng. */
+/** Tổ may được chia mã hàng của đơn: chỉ các tổ này mới đặt được chỉ tiêu (DEV-ALL-49). */
+export const useAllottedTeams = (orderId: number | null, productId: number | null) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'allotted-teams', orderId, productId],
+    queryFn: () => kpiApi.getAllottedTeams(orderId as number, productId as number),
+    enabled: orderId !== null && productId !== null,
+  });
+
 export const useKpiOrderCapacity = (
   orderId: number | null,
   productId: number | null,

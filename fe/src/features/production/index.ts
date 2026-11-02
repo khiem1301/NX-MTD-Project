@@ -2,6 +2,7 @@ export { DefectRecordsPage } from './pages/DefectRecordsPage';
 export { ManagerDefectsPage } from './pages/ManagerDefectsPage';
 export { MyDefectsPage } from './pages/MyDefectsPage';
 export { OperationAssignmentsPage } from './pages/OperationAssignmentsPage';
+export { OrderLineTeamsPage } from './pages/OrderLineTeamsPage';
 export { OperationsPage } from './pages/OperationsPage';
 export { ManagerOutputPage } from './pages/ManagerOutputPage';
 export { OutputEntryPage } from './pages/OutputEntryPage';

@@ -32,5 +32,5 @@ public interface IWorkOrderService
     /// còn phiếu bàn giao chờ kho, mọi BTP đã cắt đã được kho xác nhận; cắt thiếu kế hoạch thì phải nhập lý do. Lệnh chuyển
     /// COMPLETED và báo Quản đốc.
     /// </summary>
-    Task<Result> FinishCuttingAsync(int workOrderId, int cuttingTeamId, string? reason, CancellationToken ct);
+    Task<Result> CloseShortAsync(int workOrderId, string reason, CancellationToken ct);
 }

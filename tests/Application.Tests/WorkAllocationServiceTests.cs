@@ -45,8 +45,8 @@ public class WorkAllocationServiceTests
         _line = new OrderLine { OrderLineId = 101, OrderId = 7, Order = _order, ProductId = 3, ProductVariant = TestVariant.Make(new Product { ProductId = 3, ProductCode = "AO-01" }, "Đen", "M") };
         _teams.Add(_team); _employees.Add(_worker); _orderLines.Add(_line);
         _employees.Add(new Employee { EmployeeId = 41, TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.TeamLeader } });
-        _operations.Add(Op(SewOpId, "OP09", "Tra tay", usesSemiFinished: true));
-        _operations.Add(Op(IronOpId, "OP10", "Là", usesSemiFinished: false));
+        _operations.Add(Op(SewOpId, "OP09", "Tra tay"));
+        _operations.Add(Op(IronOpId, "OP10", "Là"));
         _progress.Add(Progress(SewOpId, required: 100, allocated: 0, pending: 0));
         _progress.Add(Progress(IronOpId, required: 100, allocated: 0, pending: 0));
         Received(100);
@@ -54,9 +54,9 @@ public class WorkAllocationServiceTests
         Setup(_outputs); Setup(_issueLines);
     }
 
-    private static Operation Op(int id, string code, string name, bool usesSemiFinished, int productId = 3) => new()
+    private static Operation Op(int id, string code, string name, int productId = 3) => new()
     {
-        OperationId = id, ProductId = productId, OperationCode = code, OperationName = name, UsesSemiFinished = usesSemiFinished,
+        OperationId = id, ProductId = productId, OperationCode = code, OperationName = name,
         StationSequence = (short)id, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
     };
 
@@ -75,7 +75,7 @@ public class WorkAllocationServiceTests
     private static VwOperationAllocationProgress Progress(int operationId, int required, int allocated, int pending) => new()
     {
         SewingTeamId = TeamId, OrderLineId = 101, OperationId = operationId, RequiredQty = required, AllocatedQty = allocated,
-        PendingQty = pending, UnallocatedQty = required - allocated - pending, UsesSemiFinished = operationId == SewOpId,
+        PendingQty = pending, UnallocatedQty = required - allocated - pending,
     };
 
     private void Setup<T>(List<T> backing) where T : class
@@ -198,7 +198,7 @@ public class WorkAllocationServiceTests
     [Fact]
     public async Task Handover_is_blocked_for_a_closed_order_and_for_an_operation_of_another_product()
     {
-        _operations.Add(Op(99, "OP99", "May cổ", false, productId: 4));
+        _operations.Add(Op(99, "OP99", "May cổ", productId: 4));
         (await Service().CreateAsync(Handover(10, operationId: 99), TeamId, default)).ErrorCode
             .Should().Be(ErrorCodes.WarehouseInvalidReference);
 
@@ -391,7 +391,6 @@ public class WorkAllocationServiceTests
         operation.OperationId.Should().Be(SewOpId);
         operation.RequiredQty.Should().Be(200);
         operation.UnallocatedQty.Should().Be(100);
-        operation.UsesSemiFinished.Should().BeTrue();
         var worker = board.Workers.Should().ContainSingle().Subject;   // chỉ người đã được giao và đang giữ
         worker.WorkerId.Should().Be(WorkerId);
         worker.HeldQty.Should().Be(80);

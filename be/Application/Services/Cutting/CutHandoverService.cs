@@ -19,12 +19,14 @@ public sealed class CutHandoverService : ICutHandoverService
     private readonly IRequestService _requests;
     private readonly INotificationService _notifier;
     private readonly ILogger<CutHandoverService> _logger;
+    private readonly WorkOrderCompletion _completion;
 
     public CutHandoverService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes, IAppLock locks,
-        IClock clock, IRequestService requests, INotificationService notifier, ILogger<CutHandoverService> logger)
+        IClock clock, IRequestService requests, INotificationService notifier, ILogger<CutHandoverService> logger,
+        WorkOrderCompletion completion)
     {
         _uow = uow; _stock = stock; _codes = codes; _locks = locks; _clock = clock; _requests = requests; _notifier = notifier;
-        _logger = logger;
+        _logger = logger; _completion = completion;
     }
 
     private const string HandoverLink = "/cutting/handovers";
@@ -164,22 +166,21 @@ public sealed class CutHandoverService : ICutHandoverService
             handover.ConfirmedAt = _clock.Now;
             await _uow.SaveChangesAsync();
             await CompleteReplacementRequestAsync(handover.WorkOrderId, ct);
-            await NotifyConfirmedAsync(handover, ct);
+            var completed = await _completion.CompleteIfFullyReceivedAsync(handover.WorkOrderId, ct);
+            await NotifyConfirmedAsync(handover, completed, ct);
             await _uow.SaveChangesAsync();
             _logger.LogInformation("Cut handover {HandoverCode} confirmed by employee {EmployeeId}", handover.HandoverCode, employeeId);
             return Result.Success(WarehouseMessages.HandoverConfirmed);
         });
 
-    /// <summary>
-    /// Báo tổ cắt phiếu bàn giao đã được kho xác nhận. Lệnh cắt KHÔNG tự hoàn thành ở đây: theo swimlane còn bước tổ cắt trả
-    /// vải thừa, rồi bấm "Cắt xong" để hệ thống so vải thực dùng với định mức và báo Quản đốc (WorkOrderService.FinishCuttingAsync).
-    /// </summary>
-    private async Task NotifyConfirmedAsync(CutHandover handover, CancellationToken ct)
+    /// <summary>Báo tổ cắt phiếu bàn giao đã được kho xác nhận; kho nhận đủ kế hoạch thì báo luôn lệnh cắt đã hoàn thành (DEV-ALL-52).</summary>
+    private async Task NotifyConfirmedAsync(CutHandover handover, bool workOrderCompleted, CancellationToken ct)
     {
         var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking().FirstAsync(w => w.WorkOrderId == handover.WorkOrderId, ct);
+        var done = workOrderCompleted ? " Kho đã nhận đủ BTP theo kế hoạch, lệnh cắt đã hoàn thành." : string.Empty;
         await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Warehouse,
             "BTP đã vào kho",
-            $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}. Còn vải thừa thì lập phiếu trả vải, xong thì bấm Cắt xong.",
+            $"Thủ kho đã xác nhận phiếu bàn giao {handover.HandoverCode} của lệnh {wo.WorkOrderCode}.{done} Còn vải thừa thì lập phiếu trả vải.",
             HandoverLink), ct);
     }
 

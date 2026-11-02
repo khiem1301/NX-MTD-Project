@@ -70,10 +70,13 @@ public sealed class CreateReplacementWorkOrderDtoValidator : AbstractValidator<C
     }
 }
 
-public sealed class FinishCuttingDtoValidator : AbstractValidator<FinishCuttingDto>
+public sealed class CloseShortWorkOrderDtoValidator : AbstractValidator<CloseShortWorkOrderDto>
 {
-    public FinishCuttingDtoValidator() =>
-        RuleFor(x => x.Reason).MaxTrimmedLength(WorkOrderLimits.MaxFinishReason, "Lý do cắt thiếu");
+    public CloseShortWorkOrderDtoValidator()
+    {
+        RuleFor(x => x.Reason).Must(r => !string.IsNullOrWhiteSpace(r)).WithMessage(Messages.Required("lý do cắt thiếu"))
+            .MaxTrimmedLength(WorkOrderLimits.MaxFinishReason, "Lý do cắt thiếu");
+    }
 }
 
 public sealed class WorkOrderQueryValidator : PageQueryValidatorBase<WorkOrderQuery>

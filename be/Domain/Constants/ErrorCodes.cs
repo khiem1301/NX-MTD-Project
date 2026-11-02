@@ -83,6 +83,9 @@ public static class ErrorCodes
     public const string TeamTransferFutureDate = "TEAM_TRANSFER_FUTURE_DATE";
     public const string TeamTransferLeader = "TEAM_TRANSFER_LEADER";
     public const string TeamMemberNotInTeam = "TEAM_MEMBER_NOT_IN_TEAM";
+    public const string TeamMemberHasTeam = "TEAM_MEMBER_HAS_TEAM";
+    public const string TeamRemoveLeader = "TEAM_REMOVE_LEADER";
+    public const string TeamDismissInvalidRole = "TEAM_DISMISS_INVALID_ROLE";
 
     // --- Suất ăn (Minh, UC30) ---
     public const string MealTeamNotFound = "MEAL_TEAM_NOT_FOUND";
@@ -177,6 +180,8 @@ public static class ErrorCodes
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
     public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
     public const string OperationInvalid = "OPERATION_INVALID";
+    public const string OperationGroupDuplicate = "OPERATION_GROUP_DUPLICATE";
+    public const string OperationHasOpenWork = "OPERATION_HAS_OPEN_WORK";
     public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
     public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
     public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";
@@ -189,7 +194,12 @@ public static class ErrorCodes
     public const string PieceRateDuplicateDate = "PIECE_RATE_DUPLICATE_DATE";
     public const string PieceRateNotApproved = "PIECE_RATE_NOT_APPROVED";
     public const string AssignmentWorkerInvalid = "ASSIGNMENT_WORKER_INVALID";
+    public const string AssignmentIncomplete = "ASSIGNMENT_INCOMPLETE";
     public const string AssignmentOrderInvalid = "ASSIGNMENT_ORDER_INVALID";
+    public const string AssignmentOperationNotSewing = "ASSIGNMENT_OPERATION_NOT_SEWING";
+    public const string AssignmentProductNotAllotted = "ASSIGNMENT_PRODUCT_NOT_ALLOTTED";
+    public const string OrderLineTeamInvalid = "ORDER_LINE_TEAM_INVALID";
+    public const string OrderLineTeamInUse = "ORDER_LINE_TEAM_IN_USE";
     public const string OutputInvalid = "OUTPUT_INVALID";
     public const string OutputExceedsCap = "OUTPUT_EXCEEDS_CAP";
     public const string ProductionEditDeadlinePassed = "PRODUCTION_EDIT_DEADLINE_PASSED";

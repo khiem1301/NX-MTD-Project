@@ -19,6 +19,8 @@ export const KPI_TEXT = {
     order: 'Đơn hàng',
     product: 'Mã hàng (theo đơn)',
     team: 'Tổ may',
+    teamPickProduct: 'Chọn đơn hàng và mã hàng trước.',
+    teamNotAllotted: 'Mã hàng chưa chia cho tổ nào. Chia ở màn Chia đơn cho tổ may.',
     period: 'Kỳ (từ - đến)',
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
     required: 'Vui lòng nhập thông tin này.',

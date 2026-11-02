@@ -86,6 +86,10 @@ export type CuttingLay = {
   fabricMaterialCode: string | null;
   fabricColor: string;
   plyCount: number;
+  /** Chiều dài bàn cắt (mét); null = bàn nhập trước khi có chiều dài. */
+  layLengthM: number | null;
+  /** Vải đã cắt của bàn = số lớp × chiều dài bàn cắt. */
+  fabricUsedM: number | null;
   sizeRatio: string;
   note: string | null;
   status: string;
@@ -93,7 +97,11 @@ export type CuttingLay = {
   lines: CuttingLayLine[];
 };
 
-export type CuttingLayQuery = PageParams & { workOrderId?: number; workDate?: string };
+export type CuttingLayQuery = PageParams & {
+  workOrderId?: number;
+  workDate?: string;
+  status?: string;
+};
 
 export type SaveCuttingLayPayload = {
   workOrderId: number;
@@ -101,6 +109,7 @@ export type SaveCuttingLayPayload = {
   shiftCode: string;
   fabricMaterialId?: number;
   plyCount: number;
+  layLengthM: number;
   note?: string;
   lines: {
     orderLineId: number;

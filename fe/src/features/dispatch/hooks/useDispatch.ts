@@ -49,20 +49,27 @@ export const useCreateDispatch = () =>
   });
 
 export const useCancelDispatch = () =>
-  useApiMutation((id: number) => dispatchApi.cancel(id), {
-    invalidate: AFFECTED,
-    successMessage: DISPATCH_MESSAGES.cancelled,
-  });
+  useApiMutation(
+    ({ id, rowVer }: { id: number; rowVer: string }) => dispatchApi.cancel(id, rowVer),
+    {
+      invalidate: AFFECTED,
+      successMessage: DISPATCH_MESSAGES.cancelled,
+    },
+  );
 
 export const useExportDispatch = () =>
-  useApiMutation((id: number) => dispatchApi.exportGoods(id), {
-    invalidate: AFFECTED,
-    successMessage: DISPATCH_MESSAGES.exported,
-  });
+  useApiMutation(
+    ({ id, rowVer }: { id: number; rowVer: string }) => dispatchApi.exportGoods(id, rowVer),
+    {
+      invalidate: AFFECTED,
+      successMessage: DISPATCH_MESSAGES.exported,
+    },
+  );
 
 export const useRejectDispatch = () =>
   useApiMutation(
-    ({ id, reason }: { id: number; reason: string }) => dispatchApi.reject(id, reason),
+    ({ id, reason, rowVer }: { id: number; reason: string; rowVer: string }) =>
+      dispatchApi.reject(id, reason, rowVer),
     {
       invalidate: AFFECTED,
       successMessage: DISPATCH_MESSAGES.rejected,

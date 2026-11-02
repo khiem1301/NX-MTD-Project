@@ -444,6 +444,8 @@ public class HrServiceTests
         ok.IsSuccess.Should().BeTrue();
         a.TeamId.Should().Be(5);
         _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.Contains("hiệu lực 24/10/2026")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 5 && e.Summary!.StartsWith("Nhận chuyển đến: Người 8, Người 9")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Chuyển sang tổ Tổ may 1: Người 8, Người 9")));
     }
 
     [Fact]
@@ -462,6 +464,7 @@ public class HrServiceTests
         holder.RoleId.Should().Be(9);
         holder.PayType.Should().Be(PayTypes.PieceRate);
         await _uow.Received(2).SaveChangesAsync();
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Bổ nhiệm Người 8 làm tổ trưởng, Người 7 về Công nhân")));
     }
 
     [Fact]
@@ -475,6 +478,91 @@ public class HrServiceTests
         _teams.GetByIdAsync(4).Returns(TeamOf(TeamTypes.Office));
         (await Teams().AppointAsync(4, new AppointDto(8, TeamPositions.Deputy), default)).ErrorCode
             .Should().Be(ErrorCodes.TeamLeaderInvalidTeam);
+    }
+
+    [Theory]
+    [InlineData("Worker", false)]
+    [InlineData("TeamLeader", true)]
+    [InlineData("TeamDeputy", true)]
+    public void CreateValidator_NoTeam_OnlyLeaderAndDeputyRequireTeam(string role, bool expectError)
+    {
+        var dto = new CreateEmployeeDto("cn3", "Công nhân 3", null, null, null, role, null, "PieceRate", new DateOnly(2026, 10, 24), null);
+
+        new CreateEmployeeDtoValidator().Validate(dto).Errors.Any(e => e.PropertyName == nameof(dto.TeamId)).Should().Be(expectError);
+    }
+
+    [Fact]
+    public async Task AddMembers_UnassignedWorkers_SetsTeamAndLogsEach()
+    {
+        var a = Person(8, RoleCodes.Worker, team: null);
+        var b = Person(9, RoleCodes.Worker, team: null);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+        _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { a, b });
+
+        var result = await Teams().AddMembersAsync(4, new TeamMembersDto(new[] { 8, 9 }, "bổ sung"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        a.TeamId.Should().Be(4);
+        b.TeamId.Should().Be(4);
+        _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.StartsWith("Thêm vào tổ Tổ may 1")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Thêm vào tổ: Người 8, Người 9. bổ sung")));
+    }
+
+    [Fact]
+    public async Task AddMembers_PersonAlreadyInTeam_Fails_InactiveTeam_Fails()
+    {
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+        _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { Person(8, RoleCodes.Worker, team: 5) });
+        (await Teams().AddMembersAsync(4, new TeamMembersDto(new[] { 8 }, null), default)).ErrorCode
+            .Should().Be(ErrorCodes.TeamMemberHasTeam);
+
+        var inactive = TeamOf();
+        inactive.Status = RecordStatus.Discontinued;
+        _teams.GetByIdAsync(4).Returns(inactive);
+        (await Teams().AddMembersAsync(4, new TeamMembersDto(new[] { 8 }, null), default)).ErrorCode
+            .Should().Be(ErrorCodes.TeamNotActive);
+    }
+
+    [Fact]
+    public async Task RemoveMembers_Worker_ClearsTeam_Leader_Fails_OtherTeam_Fails()
+    {
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+        var leader = Person(7, RoleCodes.TeamLeader);
+        _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { leader });
+        (await Teams().RemoveMembersAsync(4, new TeamMembersDto(new[] { 7 }, null), default)).ErrorCode
+            .Should().Be(ErrorCodes.TeamRemoveLeader);
+
+        _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { Person(8, RoleCodes.Worker, team: 5) });
+        (await Teams().RemoveMembersAsync(4, new TeamMembersDto(new[] { 8 }, null), default)).ErrorCode
+            .Should().Be(ErrorCodes.TeamMemberNotInTeam);
+
+        var worker = Person(9, RoleCodes.Worker);
+        _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { worker });
+        var ok = await Teams().RemoveMembersAsync(4, new TeamMembersDto(new[] { 9 }, "nghỉ phép dài"), default);
+
+        ok.IsSuccess.Should().BeTrue();
+        worker.TeamId.Should().BeNull();
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason!.StartsWith("Loại khỏi tổ Tổ may 1")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Loại khỏi tổ: Người 9. nghỉ phép dài")));
+    }
+
+    [Fact]
+    public async Task Dismiss_Deputy_BecomesWorkerKeepsTeam_Worker_Fails()
+    {
+        var deputy = Person(7, RoleCodes.TeamDeputy, pay: PayTypes.Daily);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(deputy);
+
+        var ok = await Teams().DismissAsync(4, new DismissDto(7), default);
+
+        ok.IsSuccess.Should().BeTrue();
+        deputy.RoleId.Should().Be(9);
+        deputy.TeamId.Should().Be(4);
+        deputy.PayType.Should().Be(PayTypes.Daily);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Người 7 thôi giữ chức tổ phó")));
+
+        _employees.GetFullAsync(8, default).ReturnsForAnyArgs(Person(8, RoleCodes.Worker));
+        (await Teams().DismissAsync(4, new DismissDto(8), default)).ErrorCode.Should().Be(ErrorCodes.TeamDismissInvalidRole);
     }
 
     [Fact]

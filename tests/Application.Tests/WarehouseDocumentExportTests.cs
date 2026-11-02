@@ -126,7 +126,7 @@ public class WarehouseDocumentExportTests
             new DateOnly(2026, 10, 24), new[]
             {
                 new DispatchNoteLineDto(1, 9, "AO01", "Trắng", "M", 50, 48),
-            });
+            }, new byte[] { 1 });
         _dispatches.GetByIdAsync(2, default).Returns(Result<DispatchNoteDto>.Success(note));
 
         var result = await Service().ExportDispatchNoteAsync(2, default);

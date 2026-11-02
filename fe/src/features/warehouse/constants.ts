@@ -178,8 +178,9 @@ export const LABELS = {
   order: 'Đơn hàng',
   material: 'NVL',
   color: 'Màu NVL',
-  materialWidthCm: 'Khổ vải (cm)',
-  materialSizeHint: 'Bắt buộc với vải. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt bù.',
+  materialWidthM: 'Khổ vải (m)',
+  materialSizeHint:
+    'Bắt buộc với vải. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt. Vải luôn tính theo mét.',
   materialColorHint:
     'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
   requiredQty: 'Số cần',
@@ -227,6 +228,7 @@ export const LABELS = {
   orderedQty: 'Số mua',
   unitPrice: 'Đơn giá',
   amount: 'Thành tiền',
+  purchaseOrderTotal: 'Tổng tiền',
   supplier: 'Nhà cung cấp',
   orderDate: 'Ngày đặt hàng',
   orderDateRequired: 'Vui lòng chọn ngày đặt hàng.',
@@ -314,7 +316,6 @@ export const INCOMING_TEXT = {
   pendingSearch: 'Tìm mã đơn, khách hàng',
   pendingState: 'NVL',
   materialComplete: 'Đã đủ NVL',
-  createStockPurchase: 'Tạo đơn mua dùng chung',
   open: 'Mở đơn',
   notDeclared: 'Chưa khai báo NVL',
   awaiting: 'Chờ NVL',

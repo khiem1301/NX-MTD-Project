@@ -85,6 +85,12 @@ public sealed record TeamDetailDto(int TeamId, string TeamCode, string TeamName,
 public sealed record SaveTeamDto(string TeamCode, string TeamName, string TeamType);
 public sealed record TransferMembersDto(IReadOnlyList<int> EmployeeIds, DateOnly EffectiveDate, string? Reason);
 
+/// <summary>Thêm nhân viên chưa có tổ vào tổ, hoặc loại khỏi tổ.</summary>
+public sealed record TeamMembersDto(IReadOnlyList<int> EmployeeIds, string? Reason);
+
+/// <summary>Thôi giữ chức tổ trưởng / tổ phó: người đó về Công nhân của tổ.</summary>
+public sealed record DismissDto(int EmployeeId);
+
 /// <param name="Position">Leader hoặc Deputy.</param>
 public sealed record AppointDto(int EmployeeId, string Position);
 

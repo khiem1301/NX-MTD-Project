@@ -45,6 +45,10 @@ public sealed class MaterialService : IMaterialService
         return dto is null ? NotFound() : Result<MaterialDto>.Success(dto);
     }
 
+    /// <summary>Vải luôn tính theo mét, không phụ thuộc giá trị gửi lên; phụ liệu giữ đơn vị người nhập.</summary>
+    private static string UnitOf(string materialType, string? unit) =>
+        materialType == MaterialTypes.Fabric ? MaterialTypes.FabricUnit : unit?.Trim() ?? string.Empty;
+
     public Task<Result<MaterialDto>> CreateAsync(CreateMaterialDto dto, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
@@ -64,7 +68,7 @@ public sealed class MaterialService : IMaterialService
                 MaterialCode = code,
                 MaterialName = name,
                 Category = dto.Category,
-                Unit = dto.Unit.Trim(),
+                Unit = UnitOf(dto.MaterialType, dto.Unit),
                 Color = color,
                 WidthCm = dto.WidthCm,
                 Status = MaterialStatuses.Active,
@@ -90,7 +94,7 @@ public sealed class MaterialService : IMaterialService
         material.MaterialName = name;
         material.Color = color;
         material.Category = dto.Category;
-        material.Unit = dto.Unit.Trim();
+        material.Unit = UnitOf(dto.MaterialType, dto.Unit);
         material.WidthCm = dto.WidthCm;
         await _uow.SaveChangesAsync();
         return Result<MaterialDto>.Success(MapDto(material));

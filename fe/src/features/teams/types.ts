@@ -42,3 +42,4 @@ export type TransferPayload = {
   reason?: string | null;
 };
 export type AppointPosition = 'Leader' | 'Deputy';
+export type TeamMembersPayload = { employeeIds: number[]; reason?: string | null };

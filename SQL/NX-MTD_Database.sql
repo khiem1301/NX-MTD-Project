@@ -89,6 +89,15 @@
    - 01/11/2026  Attachment thêm RemovedAt (lúc gỡ ảnh, IsCurrent = 0): job dọn tệp xóa ảnh đã gỡ sau 15 ngày.
    - 01/11/2026  ProductVariant bỏ LengthCm, WidthCm, CK_PV_Size: số mét vải của lệnh cắt tính từ kích thước chi tiết trong ProductComponentMaterial.
    - 01/11/2026  Thêm ProductImage: ảnh phụ của mã hàng, tối đa 10 (ảnh chính vẫn là Product.SampleImageUrl).
+   - 01/11/2026  CuttingLay thêm LayLengthM: chiều dài bàn cắt, để tính vải đã cắt của bàn (số lớp × chiều dài) và vải còn lại.
+   - 01/11/2026  Thêm ProductMarker, ProductMarkerFabric: bìa cắt theo size và vải của bìa theo màu áo, để tính số mét vải của lệnh cắt cả bộ.
+   - 02/11/2026  Thêm OrderLineTeam: Quản đốc chia từng dòng đơn (mã hàng × màu × size) cho tổ may, thay OrderProductTeam (chia theo mã hàng) đã bỏ.
+   - 02/11/2026  Ràng buộc biên: CK_Operation_Skill (bậc 1 đến 9), CK_Operation_Sequence (thứ tự > 0); CK_PieceRate_Rate đổi từ >= 0 thành > 0.
+   - 02/11/2026  Operation bỏ UsesSemiFinished (từ 26/10 chỉ để tham khảo, không còn quy tắc nào dùng); vw_OperationAllocationProgress bỏ cột này.
+   - 02/11/2026  Rà dữ liệu demo mục 19: mã đơn mua PO-DEMO thành DM-DEMO (tiền tố hệ thống); DEMO-DH001 khớp mốc thời gian (lệnh cắt sau ngày
+                 nhận đơn, giao việc 600 / 500, sản lượng từ 23/09, QC đạt không vượt sản lượng công đoạn cuối, bàn giao TP sau QC, KPI);
+                 bảng công, suất ăn đến 31/10; đơn từ có ngày tạo; ngày giao phiếu xuất, thông báo mẫu theo hiện tại; giá mới đã duyệt
+                 hiệu lực 16/11. Thêm mục 19.6: tổ may 2 và lịch sử tổ, công nhân chưa xếp tổ, KPI theo ngày, sản lượng DEMO-DH003.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -424,6 +433,33 @@ CREATE TABLE dbo.ProductComponentMaterial (
 );
 CREATE INDEX IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId);
 
+-- Bìa cắt của mã hàng (DEV-ALL-42): mỗi dòng là một bìa ở một size, MarkerNo là số bìa (1, 2, 3...). Dùng để tính số mét vải của
+-- lệnh cắt cả bộ. Một bìa tính cho một sản phẩm. Kích thước không phụ thuộc màu nên không nhân theo màu áo.
+CREATE TABLE dbo.ProductMarker (
+    ProductMarkerId     INT IDENTITY(1,1) CONSTRAINT PK_ProductMarker PRIMARY KEY,
+    ProductId           INT            NOT NULL CONSTRAINT FK_PM_Product REFERENCES dbo.Product(ProductId),
+    MarkerNo            TINYINT        NOT NULL,
+    SizeCode            VARCHAR(10)    NOT NULL,
+    LengthCm            DECIMAL(7,2)   NOT NULL,
+    WidthCm             DECIMAL(7,2)   NOT NULL,
+    CONSTRAINT CK_PM_No   CHECK (MarkerNo > 0),
+    CONSTRAINT CK_PM_Size CHECK (LengthCm > 0 AND WidthCm > 0),
+    CONSTRAINT UQ_PM UNIQUE (ProductId, MarkerNo, SizeCode)
+);
+
+-- Bìa nào, với màu áo nào, trải trên vải nào (DEV-ALL-42). Vải không đổi theo size. MarkerNo khớp với ProductMarker theo mã hàng;
+-- không có FK vì một số bìa có nhiều dòng size, backend kiểm mỗi số bìa có đủ kích thước và vải.
+CREATE TABLE dbo.ProductMarkerFabric (
+    ProductMarkerFabricId INT IDENTITY(1,1) CONSTRAINT PK_ProductMarkerFabric PRIMARY KEY,
+    ProductId           INT            NOT NULL CONSTRAINT FK_PMF_Product REFERENCES dbo.Product(ProductId),
+    MarkerNo            TINYINT        NOT NULL,
+    Color               NVARCHAR(50)   NOT NULL,
+    MaterialId          INT            NOT NULL CONSTRAINT FK_PMF_Material REFERENCES dbo.Material(MaterialId),
+    CONSTRAINT CK_PMF_No CHECK (MarkerNo > 0),
+    CONSTRAINT UQ_PMF UNIQUE (ProductId, MarkerNo, Color)
+);
+CREATE INDEX IX_PMF_Material ON dbo.ProductMarkerFabric(MaterialId);
+
 -- Đơn hàng gia công (ORDER) – gốc của mọi dữ liệu sản xuất, kho, tiến độ, doanh thu
 CREATE TABLE dbo.CustomerOrder (
     OrderId          INT IDENTITY(1,1) CONSTRAINT PK_CustomerOrder PRIMARY KEY,
@@ -502,12 +538,11 @@ CREATE TABLE dbo.Operation (
     OperationGroupId INT           NULL,      -- công đoạn to chứa công đoạn này; NULL = chưa xếp nhóm (25/10)
     OperationCode    VARCHAR(30)   NOT NULL,
     OperationName    NVARCHAR(200) NOT NULL,
-    StationSequence  SMALLINT      NOT NULL,
-    SkillLevel       TINYINT       NULL,
+    StationSequence  SMALLINT      NOT NULL CONSTRAINT CK_Operation_Sequence CHECK (StationSequence > 0),
+    SkillLevel       TINYINT       NULL CONSTRAINT CK_Operation_Skill CHECK (SkillLevel IS NULL OR SkillLevel BETWEEN 1 AND 9),
     StandardTimeSec  DECIMAL(9,2)  NULL CONSTRAINT CK_Operation_Time CHECK (StandardTimeSec IS NULL OR StandardTimeSec > 0),
     TeamType         VARCHAR(10)   NOT NULL CONSTRAINT DF_Operation_TeamType DEFAULT 'SEWING',
     IsFinalStep      BIT           NOT NULL CONSTRAINT DF_Operation_Final DEFAULT 0,
-    UsesSemiFinished BIT           NOT NULL CONSTRAINT DF_Operation_Semi DEFAULT 0,   -- 1 = giao việc công đoạn này kèm BTP (25/10)
     Status           VARCHAR(20)   NOT NULL CONSTRAINT DF_Operation_Status DEFAULT 'ACTIVE',
     CONSTRAINT CK_Operation_TeamType CHECK (TeamType IN ('CUTTING','SEWING')),
     CONSTRAINT CK_Operation_Status   CHECK (Status IN ('ACTIVE','DISCONTINUED')),
@@ -535,7 +570,7 @@ CREATE UNIQUE INDEX UX_Operation_FinalStep ON dbo.Operation(ProductId) WHERE IsF
 CREATE TABLE dbo.PieceRate (
     PieceRateId    INT IDENTITY(1,1) CONSTRAINT PK_PieceRate PRIMARY KEY,
     OperationId    INT           NOT NULL CONSTRAINT FK_PieceRate_Operation REFERENCES dbo.Operation(OperationId),
-    Rate           DECIMAL(18,2) NOT NULL CONSTRAINT CK_PieceRate_Rate CHECK (Rate >= 0),
+    Rate           DECIMAL(18,2) NOT NULL CONSTRAINT CK_PieceRate_Rate CHECK (Rate > 0),   -- cột TIỀN bằng 0 trong Excel là chưa có đơn giá
     EffectiveDate  DATE          NOT NULL,
     Status         VARCHAR(20)   NOT NULL CONSTRAINT DF_PieceRate_Status DEFAULT 'DRAFT',
     SubmittedAt    DATETIME2(0)  NULL,
@@ -857,6 +892,7 @@ CREATE TABLE dbo.CuttingLay (
     LaySequence     SMALLINT       NOT NULL,
     FabricMaterialId INT           NOT NULL CONSTRAINT FK_CL_Material REFERENCES dbo.Material(MaterialId),
     PlyCount        SMALLINT       NOT NULL CONSTRAINT CK_CL_Ply CHECK (PlyCount > 0),
+    LayLengthM      DECIMAL(7,2)   NULL CONSTRAINT CK_CL_Length CHECK (LayLengthM > 0),   -- chiều dài bàn cắt (mét); NULL = bàn nhập trước khi có cột này
     Note            NVARCHAR(500)  NULL,
     Status          VARCHAR(10)    NOT NULL CONSTRAINT DF_CL_Status DEFAULT 'RECORDED',
     CreatedAt       DATETIME2(0)   NOT NULL CONSTRAINT DF_CL_CreatedAt DEFAULT (dbo.fn_VnNow()),
@@ -922,6 +958,17 @@ CREATE TABLE dbo.OperationAssignment (
     CONSTRAINT CK_OA_Dates CHECK (ValidTo IS NULL OR ValidTo >= ValidFrom)
 );
 CREATE UNIQUE INDEX UX_OA_Current ON dbo.OperationAssignment(SewingTeamId, OrderId, OperationId, WorkerId) WHERE ValidTo IS NULL;
+
+-- Quản đốc, Admin chia dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49). Tổ cắt chỉ có một tổ nên không chia.
+-- Đơn còn NEW được bỏ dòng nên xóa dòng thì xóa luôn việc chia của dòng đó.
+CREATE TABLE dbo.OrderLineTeam (
+    OrderLineTeamId INT IDENTITY(1,1) CONSTRAINT PK_OrderLineTeam PRIMARY KEY,
+    OrderLineId  INT          NOT NULL CONSTRAINT FK_OLT_OrderLine REFERENCES dbo.OrderLine(OrderLineId) ON DELETE CASCADE,
+    SewingTeamId INT          NOT NULL CONSTRAINT FK_OLT_Team REFERENCES dbo.Team(TeamId),
+    AssignedAt   DATETIME2(0) NOT NULL CONSTRAINT DF_OLT_AssignedAt DEFAULT (dbo.fn_VnNow()),
+    CONSTRAINT UQ_OrderLineTeam UNIQUE (OrderLineId, SewingTeamId)
+);
+CREATE INDEX IX_OLT_Team ON dbo.OrderLineTeam(SewingTeamId, OrderLineId);
 
 -- Giao việc / thu hồi việc với công nhân (25/10 thay WorkerPieceMovement; FR 3.5, 3.6, 3.8; UC53, UC54, UC60).
 -- Quantity = số lần làm công đoạn × màu × size được giao / thu hồi; tổ trưởng chia tùy ý, miễn tổng số lần đang giao của
@@ -2437,7 +2484,7 @@ WITH Received AS (
     WHERE i.WarehouseType = 'SEMI_FINISHED' AND i.Status = 'RECEIVED' AND l.ProductComponentMaterialId IS NULL
     GROUP BY i.ReceivingTeamId, l.OrderLineId
 )
-SELECT  r.SewingTeamId, r.OrderLineId, op.OperationId, op.UsesSemiFinished,
+SELECT  r.SewingTeamId, r.OrderLineId, op.OperationId,
         r.Qty AS RequiredQty,
         ISNULL(a.AllocatedQty, 0) AS AllocatedQty,
         ISNULL(a.PendingQty, 0)   AS PendingQty,
@@ -2954,6 +3001,16 @@ FROM (VALUES (N'Ống quần', @mVaiBe), (N'Chỉ may', @mChiBe)) t (ComponentNa
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p2 AND pc.ComponentName = t.ComponentName
 JOIN dbo.ProductVariant pv   ON pv.ProductId = @p2;
 
+-- Bìa cắt (DEV-ALL-42): áo có bìa 1 (thân) và bìa 2 (tay), áo Xanh phối tay vải Trắng; quần một bìa. Một bìa cho một sản phẩm.
+INSERT dbo.ProductMarker (ProductId, MarkerNo, SizeCode, LengthCm, WidthCm) VALUES
+ (@p1, 1, 'S', 70, 90), (@p1, 1, 'M', 72, 94), (@p1, 1, 'L', 74, 98),
+ (@p1, 2, 'S', 60, 82), (@p1, 2, 'M', 62, 84), (@p1, 2, 'L', 64, 86),
+ (@p2, 1, 'M', 48, 58), (@p2, 1, 'L', 50, 62);
+INSERT dbo.ProductMarkerFabric (ProductId, MarkerNo, Color, MaterialId) VALUES
+ (@p1, 1, N'Đen', @mVai), (@p1, 2, N'Đen', @mVai),
+ (@p1, 1, N'Xanh', @mVaiXanh), (@p1, 2, N'Xanh', @mVaiTrang),
+ (@p2, 1, N'Be', @mVaiBe);
+
 INSERT dbo.Supplier (SupplierName, Phone, Email, Address, MaterialTypes, Note, Status) VALUES
  (N'Công ty Vải Sợi Thành Công (DEMO)', '0901000001', 'vai@thanhcong.demo', N'Quận Tân Phú, TP.HCM', N'Vải chính, vải lót', NULL, 'ACTIVE'),
  (N'Phụ liệu may Hoàng Gia (DEMO)',     '0901000002', 'pl@hoanggia.demo',  N'Quận 10, TP.HCM',      N'Chỉ, khóa, nhãn',  N'Giao hàng trong 2 ngày', 'ACTIVE'),
@@ -2997,25 +3054,25 @@ DECLARE @om1Vai INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE Order
 /* ---------- 3. MI-07: đơn mua ở đủ các trạng thái ---------- */
 INSERT dbo.PurchaseOrder (PoCode, OrderId, SupplierId, OrderDate, GoodsStatus, PaymentStatus, RejectReason, PaymentReturnReason,
                           PaymentDate, PaidAmount, PaymentMethod, PaymentNote, Note) VALUES
- ('PO-DEMO-001', @o1, NULL,  NULL,         'PENDING_FINALISATION', 'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Chờ Quản đốc chốt nhà cung cấp và đơn giá'),
- ('PO-DEMO-002', @o1, NULL,  NULL,         'PENDING_FINALISATION', 'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Mua thêm khóa kéo'),
- ('PO-DEMO-003', @o2, @sup1, '2026-10-19', 'ORDERED',              'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Chờ Kế toán xác nhận thanh toán'),
- ('PO-DEMO-004', @o1, @sup2, '2026-10-16', 'ORDERED',              'RETURNED', NULL, N'Đơn giá khóa kéo cao hơn báo giá, đề nghị kiểm tra lại', NULL, NULL, NULL, NULL, NULL),
- ('PO-DEMO-005', @o1, @sup1, '2026-10-05', 'PARTIALLY_RECEIVED',  'PAID',     NULL, NULL, '2026-10-12', 44000000, 'BANK_TRANSFER', N'Chuyển khoản đợt 1', NULL),
- ('PO-DEMO-006', @o1, NULL,  NULL,         'REJECTED',             'UNPAID',   N'Khách đổi màu vải, hủy đơn mua cũ', NULL, NULL, NULL, NULL, NULL, NULL);
+ ('DM-DEMO-001', @o1, NULL,  NULL,         'PENDING_FINALISATION', 'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Chờ Quản đốc chốt nhà cung cấp và đơn giá'),
+ ('DM-DEMO-002', @o1, NULL,  NULL,         'PENDING_FINALISATION', 'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Mua thêm khóa kéo'),
+ ('DM-DEMO-003', @o2, @sup1, '2026-10-19', 'ORDERED',              'UNPAID',   NULL, NULL, NULL, NULL, NULL, NULL, N'Chờ Kế toán xác nhận thanh toán'),
+ ('DM-DEMO-004', @o1, @sup2, '2026-10-16', 'ORDERED',              'RETURNED', NULL, N'Đơn giá khóa kéo cao hơn báo giá, đề nghị kiểm tra lại', NULL, NULL, NULL, NULL, NULL),
+ ('DM-DEMO-005', @o1, @sup1, '2026-10-05', 'PARTIALLY_RECEIVED',  'PAID',     NULL, NULL, '2026-10-12', 44000000, 'BANK_TRANSFER', N'Chuyển khoản đợt 1', NULL),
+ ('DM-DEMO-006', @o1, NULL,  NULL,         'REJECTED',             'UNPAID',   N'Khách đổi màu vải, hủy đơn mua cũ', NULL, NULL, NULL, NULL, NULL, NULL);
 -- Đơn mua tồn kho dùng chung (TH-12): không gắn đơn hàng
 INSERT dbo.PurchaseOrder (PoCode, OrderId, GoodsStatus, PaymentStatus, Note)
-VALUES ('PO-DEMO-007', NULL, 'PENDING_FINALISATION', 'UNPAID', N'Kim máy dùng chung cho nhiều đơn');
+VALUES ('DM-DEMO-007', NULL, 'PENDING_FINALISATION', 'UNPAID', N'Kim máy dùng chung cho nhiều đơn');
 
-DECLARE @po1 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-001'),
-        @po2 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-002'),
-        @po3 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-003'),
-        @po4 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-004'),
-        @po5 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-005'),
-        @po6 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-006'),
-        @po7 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'PO-DEMO-007');
+DECLARE @po1 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-001'),
+        @po2 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-002'),
+        @po3 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-003'),
+        @po4 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-004'),
+        @po5 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-005'),
+        @po6 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-006'),
+        @po7 INT = (SELECT PurchaseOrderId FROM dbo.PurchaseOrder WHERE PoCode = 'DM-DEMO-007');
 UPDATE dbo.PurchaseOrder SET ExpectedDeliveryCount = CASE PurchaseOrderId WHEN @po5 THEN 2 ELSE 1 END
-WHERE PurchaseOrderId IN (@po3, @po4, @po5);   -- PO-DEMO-005 NCC giao 2 đợt
+WHERE PurchaseOrderId IN (@po3, @po4, @po5);   -- DM-DEMO-005 NCC giao 2 đợt
 
 INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, UnitPrice) VALUES
  (@po1, @om1Vai, 1000, 0), (@po1, @om1Chi, 200, 0),
@@ -3027,7 +3084,7 @@ INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, Unit
 INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, MaterialId, OrderedQty, UnitPrice)
 VALUES (@po7, NULL, @mKim, 20, 0);
 
--- Phiếu nhập đã xác nhận 600/1000 của PO-DEMO-005 (còn phải nhận 400)
+-- Phiếu nhập đã xác nhận 600/1000 của DM-DEMO-005 (còn phải nhận 400)
 INSERT dbo.MaterialReceipt (ReceiptCode, OrderId, PurchaseOrderId, ReceiptDate, Status, ConfirmedBy, ConfirmedAt)
 VALUES ('PN-DEMO-001', @o1, @po5, '2026-10-08', 'CONFIRMED', @thukho, '2026-10-08 15:00:00');
 INSERT dbo.MaterialReceiptLine (MaterialReceiptId, OrderMaterialId, PurchaseOrderLineId, AcceptedQty)
@@ -3055,7 +3112,10 @@ INSERT dbo.PieceRate (OperationId, Rate, EffectiveDate, Status, SubmittedAt, App
  (@a4,  800, '2026-09-01', 'APPROVED', '2026-08-30 10:00:00', '2026-08-31 09:00:00', NULL),
  (@a5, 2000, '2026-09-01', 'APPROVED', '2026-08-30 10:00:00', '2026-08-31 09:00:00', NULL),
  (@a3, 1100, '2026-10-25', 'PENDING_APPROVAL', '2026-10-20 15:00:00', NULL, NULL),
- (@a4,  900, '2026-11-01', 'DRAFT', NULL, NULL, NULL),
+ (@a4,  900, '2026-11-16', 'DRAFT', NULL, NULL, NULL),
+ -- Giá mới đã duyệt, hiệu lực sau hôm nay (bảng công đoạn hiện "→ giá mới từ ngày"); giá mới đang chờ duyệt
+ (@a1, 1300, '2026-11-16', 'APPROVED', '2026-10-29 10:00:00', '2026-10-30 09:00:00', N'Tăng giá từ nửa cuối tháng 11'),
+ (@a5, 2100, '2026-11-09', 'PENDING_APPROVAL', '2026-10-31 15:00:00', NULL, NULL),
  (@a2, 1700, '2026-10-22', 'REJECTED', '2026-10-18 11:00:00', NULL, N'Mức tăng 13% vượt khung, đề nghị trình lại'),
  (@b1, 1300, '2026-10-01', 'APPROVED', '2026-09-28 10:00:00', '2026-09-29 09:00:00', NULL),
  (@b2, 1800, '2026-10-01', 'PENDING_APPROVAL', '2026-10-20 16:00:00', NULL, NULL);
@@ -3075,18 +3135,18 @@ SELECT (SELECT MaterialIssueId FROM dbo.MaterialIssue WHERE IssueCode = 'PC-DEMO
 FROM dbo.OrderLine ol WHERE ol.OrderId = @o1;
 
 /* ---------- 6b. Giao việc cho công nhân (25/10) ---------- */
--- Công đoạn đầu chuyền đánh dấu dùng BTP (chỉ để tham khảo); số lần giao mỗi công nhân là WorkAllocation.Quantity
-UPDATE dbo.Operation SET UsesSemiFinished = 1 WHERE OperationId = @a1;
+-- Số lần giao mỗi công nhân là WorkAllocation.Quantity: nhận BTP sáng 23/10 thì chiều giao hết số bộ của Đen M (600), Đen L (500)
 INSERT dbo.WorkAllocation (MovementType, SewingTeamId, WorkerId, OrderLineId, OperationId, Quantity,
                            ConfirmedQty, ConfirmMode, Status, CreatedAt, ConfirmedAt)
-SELECT 'HANDOVER', @may, a.WorkerId, l.OrderLineId, a.OperationId, 300,
-       300, 'WORKER', 'CONFIRMED', '2026-10-04 07:45:00', '2026-10-04 08:00:00'
-FROM (VALUES (@lM), (@lL)) l(OrderLineId)
-CROSS JOIN (VALUES (@w1, @a1), (@w1, @a2), (@w2, @a3), (@w3, @a4), (@w4, @a5)) a(WorkerId, OperationId);
+SELECT 'HANDOVER', @may, a.WorkerId, ol.OrderLineId, a.OperationId, ol.OrderedQty,
+       ol.OrderedQty, 'WORKER', 'CONFIRMED', '2026-09-23 13:00:00', '2026-09-23 13:15:00'
+FROM dbo.OrderLine ol
+CROSS JOIN (VALUES (@w1, @a1), (@w1, @a2), (@w2, @a3), (@w3, @a4), (@w4, @a5)) a(WorkerId, OperationId)
+WHERE ol.OrderLineId IN (@lM, @lL);
 
-/* ---------- 7. Chấm công (bảng công ngày từ 01/09 đến 20/10) ---------- */
+/* ---------- 7. Chấm công (bảng công ngày từ 01/09 đến 31/10) ---------- */
 CREATE TABLE #Days (D DATE PRIMARY KEY);
-;WITH d AS (SELECT CAST('2026-09-01' AS DATE) AS D UNION ALL SELECT DATEADD(DAY, 1, D) FROM d WHERE D < '2026-10-20')
+;WITH d AS (SELECT CAST('2026-09-01' AS DATE) AS D UNION ALL SELECT DATEADD(DAY, 1, D) FROM d WHERE D < '2026-10-31')
 INSERT #Days SELECT D FROM d
 WHERE DATEDIFF(DAY, 0, D) % 7 <> 6 OR D IN ('2026-10-11', '2026-10-18');   -- Chủ nhật chỉ giữ 11/10 và 18/10 (sản xuất ngày Chủ nhật)
 
@@ -3117,13 +3177,13 @@ IF @sess IS NOT NULL
     WHERE NOT EXISTS (SELECT 1 FROM dbo.AttendanceLog l WHERE l.AttendanceCode = v.Code AND l.PunchTime = v.T);
 
 -- Đơn xin chấm công bù: một đơn đã duyệt (Kế toán chấm hộ CNMAY2 ngày 14/10), một đơn đang chờ duyệt
-INSERT dbo.Request (RequestCode, RequestTypeCode, Status, TargetDate, Title, Content, CreatedBy, CreatedByTeamId, DecidedAt, DecisionNote)
+INSERT dbo.Request (RequestCode, RequestTypeCode, Status, TargetDate, Title, Content, CreatedBy, CreatedByTeamId, CreatedAt, DecidedAt, DecisionNote)
 VALUES ('YC261015-901', 'ATTENDANCE_CORRECTION', 'APPROVED', '2026-10-14', N'Xin chấm công bù cho Nguyễn Thị Lan',
-        N'Công nhân quên quẹt thẻ ra ngày 14/10, có làm đủ ca.', @ttmay, @may, '2026-10-15 09:00:00', N'Đồng ý'),
+        N'Công nhân quên quẹt thẻ ra ngày 14/10, có làm đủ ca.', @ttmay, @may, '2026-10-15 07:50:00', '2026-10-15 09:00:00', N'Đồng ý'),
        ('YC261020-902', 'ATTENDANCE_CORRECTION', 'PENDING_APPROVAL', '2026-10-19', N'Xin chấm công bù cho Lê Thị Mai',
-        N'Máy chấm công không nhận vân tay ngày 19/10.', @ttmay, @may, NULL, NULL);
+        N'Máy chấm công không nhận vân tay ngày 19/10.', @ttmay, @may, '2026-10-20 08:10:00', NULL, NULL);
 
-/* ---------- 8. Suất ăn 01/09..20/10 (đã chốt) ---------- */
+/* ---------- 8. Suất ăn 01/09..31/10 (đã chốt) ---------- */
 INSERT dbo.DailyMeal (MealDate, Status, OfficeCount, GuestCount, MealPrice, GuestNote)
 SELECT d.D, 'OPEN', 5, IIF(DATEDIFF(DAY, 0, d.D) % 7 = 2, 3, 0), 30000, IIF(DATEDIFF(DAY, 0, d.D) % 7 = 2, N'Khách của công ty mẹ', NULL)
 FROM #Days d
@@ -3134,48 +3194,51 @@ INSERT dbo.TeamMealConfirmation (DailyMealId, TeamId, MealCount, AttendanceCount
 SELECT m.DailyMealId, t.TeamId, t.Cnt, t.Cnt, 'CONFIRMED', DATEADD(MINUTE, 8 * 60 + 5, CAST(m.MealDate AS DATETIME2(0)))
 FROM dbo.DailyMeal m
 CROSS JOIN (VALUES (@cat, 8), (@may, 10)) t(TeamId, Cnt)
-WHERE m.Status = 'OPEN' AND m.MealDate <= '2026-10-20'
+WHERE m.Status = 'OPEN' AND m.MealDate <= '2026-10-31'
   AND NOT EXISTS (SELECT 1 FROM dbo.TeamMealConfirmation c WHERE c.DailyMealId = m.DailyMealId AND c.TeamId = t.TeamId);
 
 UPDATE dbo.DailyMeal SET Status = 'CLOSED', ClosedAt = DATEADD(MINUTE, 8 * 60 + 40, CAST(MealDate AS DATETIME2(0)))
-WHERE Status = 'OPEN' AND MealDate <= '2026-10-20';
+WHERE Status = 'OPEN' AND MealDate <= '2026-10-31';
 
-/* ---------- 9. Sản lượng cuối ca 05/10..20/10 (KI-04) ---------- */
+/* ---------- 9. Sản lượng cuối ca 23/09..20/10 (KI-04) ---------- */
+-- Mỗi ngày làm cả Đen M (20–22) và Đen L (16–18): tổng không vượt số được giao (600 / 500),
+-- công đoạn cuối (@a5) luôn đủ cho số QC đạt tới ngày đó.
 CREATE TABLE #Assign (WorkerId INT, OperationId INT);
 INSERT #Assign VALUES (@w1, @a1), (@w1, @a2), (@w2, @a3), (@w3, @a4), (@w4, @a5);
 
 INSERT dbo.OutputRecord (WorkDate, ShiftCode, SewingTeamId, WorkerId, OperationId, OrderLineId, Quantity, PieceRateId,
                          IsOutsideAssignment, NoAttendanceWarning, EditDeadline, Status)
-SELECT d.D, 'AFTERNOON', @may, a.WorkerId, a.OperationId,
-       IIF(DAY(d.D) % 2 = 0, @lL, @lM),
-       25 + ABS(CHECKSUM(d.D, a.WorkerId, a.OperationId)) % 20,
+SELECT d.D, 'AFTERNOON', @may, a.WorkerId, a.OperationId, l.OrderLineId,
+       l.Base + DAY(d.D) % 3,
        pr.PieceRateId,
        0,
        IIF(EXISTS (SELECT 1 FROM dbo.DailyTimesheet t WHERE t.EmployeeId = a.WorkerId AND t.WorkDate = d.D AND t.CheckIn IS NOT NULL), 0, 1),
        dbo.fn_NextWorkingDayEnd(d.D), 'SAVED'
 FROM #Days d
 CROSS JOIN #Assign a
+CROSS JOIN (VALUES (@lM, 20), (@lL, 16)) l(OrderLineId, Base)
 CROSS APPLY (SELECT TOP (1) PieceRateId, Rate FROM dbo.PieceRate
              WHERE OperationId = a.OperationId AND Status = 'APPROVED' AND EffectiveDate <= d.D
              ORDER BY EffectiveDate DESC) pr
-WHERE d.D BETWEEN '2026-10-05' AND '2026-10-20';
+WHERE d.D BETWEEN '2026-09-23' AND '2026-10-20';
 
 /* ---------- 10. QC (KI-06), bàn giao thành phẩm (doanh thu) ---------- */
+-- QC đạt cộng dồn: Đen M 510, Đen L 350; bàn giao sau khi QC đủ số
 INSERT dbo.QcBatch (WorkDate, ShiftCode, BatchTime, SewingTeamId, OrderLineId, FinishedQty, InspectorId, EditDeadline) VALUES
- ('2026-09-24', 'AFTERNOON', '16:00', @may, @lM, 150, @qaqc, '2026-09-24 16:30:00'),
- ('2026-09-25', 'AFTERNOON', '15:30', @may, @lM, 150, @qaqc, '2026-09-25 16:30:00'),
- ('2026-09-26', 'MORNING',   '10:30', @may, @lL, 120, @qaqc, '2026-09-26 11:30:00'),
- ('2026-09-28', 'AFTERNOON', '15:00', @may, @lL, 130, @qaqc, '2026-09-28 16:30:00'),
+ ('2026-10-02', 'AFTERNOON', '15:30', @may, @lM, 120, @qaqc, '2026-10-02 16:30:00'),
+ ('2026-10-03', 'AFTERNOON', '15:30', @may, @lL, 100, @qaqc, '2026-10-03 16:30:00'),
+ ('2026-10-08', 'AFTERNOON', '15:00', @may, @lM, 150, @qaqc, '2026-10-08 16:30:00'),
+ ('2026-10-10', 'MORNING',   '10:30', @may, @lL, 150, @qaqc, '2026-10-10 11:30:00'),
  ('2026-10-13', 'MORNING',   '10:45', @may, @lM,  60, @qaqc, '2026-10-13 11:30:00'),
- ('2026-10-14', 'AFTERNOON', '15:30', @may, @lM,  90, @qaqc, '2026-10-14 16:30:00'),
+ ('2026-10-15', 'AFTERNOON', '15:30', @may, @lM,  90, @qaqc, '2026-10-15 16:30:00'),
  ('2026-10-16', 'AFTERNOON', '15:45', @may, @lL, 100, @qaqc, '2026-10-16 16:30:00'),
  ('2026-10-19', 'AFTERNOON', '15:50', @may, @lM,  30, @qaqc, '2026-10-19 16:30:00'),
- ('2026-10-20', 'AFTERNOON', '15:40', @may, @lM,  30, @qaqc, '2026-10-20 16:30:00');
+ ('2026-10-20', 'AFTERNOON', '15:40', @may, @lM,  60, @qaqc, '2026-10-20 16:30:00');
 
 INSERT dbo.FgHandover (HandoverCode, OrderId, ProductId, InspectorId, HandedAt, Status, ConfirmedBy, ConfirmedAt) VALUES
- ('FG-DEMO-001', @o1, @p1, @qaqc, '2026-09-25 16:00:00', 'CONFIRMED', @thukho, '2026-09-25 16:20:00'),
- ('FG-DEMO-002', @o1, @p1, @qaqc, '2026-09-28 16:00:00', 'CONFIRMED', @thukho, '2026-09-28 16:20:00'),
- ('FG-DEMO-003', @o1, @p1, @qaqc, '2026-10-14 16:00:00', 'CONFIRMED', @thukho, '2026-10-14 16:20:00');
+ ('FG-DEMO-001', @o1, @p1, @qaqc, '2026-10-13 16:00:00', 'CONFIRMED', @thukho, '2026-10-13 16:20:00'),
+ ('FG-DEMO-002', @o1, @p1, @qaqc, '2026-10-10 16:00:00', 'CONFIRMED', @thukho, '2026-10-10 16:20:00'),
+ ('FG-DEMO-003', @o1, @p1, @qaqc, '2026-10-19 16:30:00', 'CONFIRMED', @thukho, '2026-10-19 16:45:00');
 INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty, ConfirmedQty)
 SELECT h.FgHandoverId, v.OrderLineId, v.Qty, v.Qty
 FROM (VALUES ('FG-DEMO-001', @lM, 300), ('FG-DEMO-002', @lL, 250), ('FG-DEMO-003', @lM, 150), ('FG-DEMO-003', @lL, 100)) v(Code, OrderLineId, Qty)
@@ -3206,13 +3269,13 @@ SELECT d.ResponsibleWorkerId, 'PRODUCTION', 'DefectRecord', d.DefectRecordId, N'
 FROM dbo.DefectRecord d WHERE d.DefectCode LIKE 'MAY1-26%' AND d.Status <> 'CANCELLED' AND d.WorkerNotifiedAt IS NOT NULL;
 
 INSERT dbo.Notification (RecipientId, SourceType, RefTable, RefId, Title, Message, PushStatus)
-VALUES (@ketoan, 'SYSTEM', 'PurchaseOrder', @po3, N'Đơn mua chờ thanh toán', N'Đơn mua PO-DEMO-003 đã đặt hàng, chờ Kế toán xác nhận thanh toán.', 'SENT'),
-       (@quandoc, 'SYSTEM', 'PurchaseOrder', @po4, N'Đơn mua bị trả lại', N'Kế toán trả lại đơn mua PO-DEMO-004: đơn giá khóa kéo cao hơn báo giá.', 'SENT');
+VALUES (@ketoan, 'SYSTEM', 'PurchaseOrder', @po3, N'Đơn mua chờ thanh toán', N'Đơn mua DM-DEMO-003 đã đặt hàng, chờ Kế toán xác nhận thanh toán.', 'SENT'),
+       (@quandoc, 'SYSTEM', 'PurchaseOrder', @po4, N'Đơn mua bị trả lại', N'Kế toán trả lại đơn mua DM-DEMO-004: đơn giá khóa kéo cao hơn báo giá.', 'SENT');
 
 /* ---------- 12. KPI tổ may (MI-16/17/18) ---------- */
 INSERT dbo.KpiTarget (OrderId, ProductId, SewingTeamId, StartDate, EndDate, TargetFinishedQty, WorkingDays, Status, Result) VALUES
- (@o1, @p1, @may, '2026-10-01', '2026-10-31', 1200, 22, 'ACTIVE', NULL),
- (@o1, @p1, @may, '2026-09-21', '2026-09-30',  500,  8, 'CLOSED', 'ACHIEVED'),
+ (@o1, @p1, @may, '2026-10-12', '2026-11-07',  600, 24, 'ACTIVE', NULL),
+ (@o1, @p1, @may, '2026-10-01', '2026-10-10',  400,  9, 'CLOSED', 'ACHIEVED'),   -- QC đạt 01–10/10: 520
  (@o1, @p1, @may, '2026-09-10', '2026-09-19',  300,  8, 'CANCELLED', NULL),
  (@o2, @p2, @may, '2026-10-26', '2026-11-30',  800, 25, 'ACTIVE', NULL);
 
@@ -3524,7 +3587,7 @@ INSERT #R (ProductCode, OperationCode, Rate, EffectiveDate, Status, SubmittedAt,
  (N'DEMO-AO01', N'OP03', 1000.00, '2026-09-01', 'APPROVED', '2026-08-30T10:00:00', '2026-08-31T09:00:00', NULL, NULL),
  (N'DEMO-AO01', N'OP03', 1100.00, '2026-10-25', 'APPROVED', '2026-10-20T15:00:00', '2026-10-22T09:00:59', NULL, NULL),
  (N'DEMO-AO01', N'OP04', 800.00, '2026-09-01', 'APPROVED', '2026-08-30T10:00:00', '2026-08-31T09:00:00', NULL, NULL),
- (N'DEMO-AO01', N'OP04', 900.00, '2026-11-01', 'DRAFT', NULL, NULL, NULL, NULL),
+ (N'DEMO-AO01', N'OP04', 900.00, '2026-11-16', 'DRAFT', NULL, NULL, NULL, NULL),
  (N'DEMO-AO01', N'OP05', 2000.00, '2026-09-01', 'APPROVED', '2026-08-30T10:00:00', '2026-08-31T09:00:00', NULL, NULL),
  (N'DEMO-QU02', N'OP01', 1300.00, '2026-10-01', 'APPROVED', '2026-09-28T10:00:00', '2026-09-29T09:00:00', NULL, NULL),
  (N'DEMO-QU02', N'OP02', 1800.00, '2026-10-01', 'PENDING_APPROVAL', '2026-10-20T16:00:00', NULL, NULL, NULL),
@@ -3809,7 +3872,7 @@ JOIN dbo.MaterialReceipt r ON r.ReceiptCode = v.Code;
 
 /* ---------- 3. Lệnh cắt, phiếu cấp vải, bàn cắt, bàn giao BTP của DEMO-DH001 (bù chuỗi kho BTP) ---------- */
 INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, Note, CreatedAt, CompletedAt)
-VALUES ('LC-DEMO-001', @o1, @p1, @cat, '2026-09-22', 'COMPLETED', N'Lệnh cắt đã hoàn thành của DEMO-DH001', '2026-09-15 08:00:00', '2026-09-22 17:00:00');
+VALUES ('LC-DEMO-001', @o1, @p1, @cat, '2026-09-22', 'COMPLETED', N'Lệnh cắt đã hoàn thành của DEMO-DH001', '2026-09-21 08:00:00', '2026-09-22 17:00:00');
 DECLARE @wo1 INT = (SELECT WorkOrderId FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-001');
 INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PlannedQty)
 SELECT @wo1, ol.OrderLineId, ol.OrderedQty FROM dbo.OrderLine ol WHERE ol.OrderId = @o1;
@@ -3843,9 +3906,9 @@ SELECT r.MaterialReturnId, l.MaterialIssueLineId, 8
 FROM dbo.MaterialReturn r JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = r.MaterialIssueId WHERE r.ReturnCode = 'TV-DEMO-001';
 
 -- Bàn cắt: 30 lớp × (M:3, L:2) = 90 M + 60 L; bàn 2: 10 lớp = 30 M + 20 L
-INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, PlyCount, Status, CreatedAt) VALUES
- (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 30, 'RECORDED', '2026-10-24 11:00:00'),
- (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 10, 'RECORDED', '2026-10-26 11:00:00');
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, PlyCount, LayLengthM, Status, CreatedAt) VALUES
+ (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 30, 2.2, 'RECORDED', '2026-10-24 11:00:00'),
+ (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 10, 2.2, 'RECORDED', '2026-10-26 11:00:00');
 INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, RatioValue, CalculatedQty, ActualQty)
 SELECT c.CuttingLayId, v.OrderLineId, v.Ratio, c.PlyCount * v.Ratio, c.PlyCount * v.Ratio
 FROM dbo.CuttingLay c
@@ -3893,6 +3956,12 @@ DECLARE @op1 INT = (SELECT OperationId FROM dbo.Operation WHERE ProductId = @p1 
 INSERT dbo.OperationAssignment (SewingTeamId, OrderId, OperationId, WorkerId, ValidFrom) VALUES
  (@may, @o3, @op1, @w1, '2026-10-25'), (@may, @o3, @op2, @w1, '2026-10-25'), (@may, @o3, @op3, @w2, '2026-10-25'),
  (@may, @o3, @op4, @w3, '2026-10-25'), (@may, @o3, @op5, @w4, '2026-10-25');
+-- Phải phân công đủ công đoạn mới nhận được BTP (DEV-ALL-48): các công đoạn còn lại chia lần lượt cho 4 công nhân
+INSERT dbo.OperationAssignment (SewingTeamId, OrderId, OperationId, WorkerId, ValidFrom)
+SELECT @may, @o3, o.OperationId, CHOOSE(ROW_NUMBER() OVER (ORDER BY o.StationSequence) % 4 + 1, @w1, @w2, @w3, @w4), '2026-10-25'
+FROM dbo.Operation o
+WHERE o.ProductId = @p1 AND o.Status = 'ACTIVE' AND o.TeamType = 'SEWING'
+  AND o.OperationId NOT IN (@op1, @op2, @op3, @op4, @op5);
 -- Tổ đã nhận 50 M + 40 L BTP nên mỗi công đoạn nhận tối đa 50 (M) / 40 (L) lần
 INSERT dbo.WorkAllocation (MovementType, SewingTeamId, WorkerId, OrderLineId, OperationId, Quantity, ConfirmedQty,
                            RetrievalReason, ConfirmMode, Status, CreatedAt, ConfirmedAt) VALUES
@@ -3913,9 +3982,9 @@ SELECT FgHandoverId, @lM, 60 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-0
 -- XH-DEMO-001 và XH-DEMO-003 chờ Thủ kho xuất;
 -- XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
 INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt) VALUES
- ('XH-DEMO-001', @o1, '2026-10-30', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-26 15:00:00', NULL, NULL),
- ('XH-DEMO-002', @o1, '2026-10-27', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-25 15:00:00', @thukho, '2026-10-26 09:00:00'),
- ('XH-DEMO-003', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3', 'PENDING', '2026-10-27 08:00:00', NULL, NULL);
+ ('XH-DEMO-001', @o1, '2026-11-05', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-30 15:00:00', NULL, NULL),
+ ('XH-DEMO-002', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-29 15:00:00', @thukho, '2026-10-31 09:00:00'),
+ ('XH-DEMO-003', @o1, '2026-11-09', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3', 'PENDING', '2026-10-31 08:00:00', NULL, NULL);
 INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, v.OrderLineId, v.Qty
 FROM dbo.DispatchNote d
@@ -4074,8 +4143,8 @@ END;
 BEGIN TRANSACTION;
 
 INSERT dbo.Announcement (Content, Priority, TargetScope, SenderId, SentAt) VALUES
- (N'[DEMO] Thông báo nghỉ lễ: xưởng nghỉ Quốc khánh 2/9 từ 31/8 đến hết 3/9, đi làm lại sáng 4/9. Tổ trưởng nhắc công nhân hoàn thành đơn đang chạy trước kỳ nghỉ.', 'URGENT', 'ALL', @sender, '2026-10-27 08:00:00'),
- (N'[DEMO] Sự kiện sắp tới: liên hoan cuối tháng chiều thứ Bảy 31/10 tại nhà ăn xưởng. Tổ trưởng báo số người tham gia cho Quản đốc trước thứ Sáu.', 'NORMAL', 'ALL', @sender, '2026-10-27 09:00:00');
+ (N'[DEMO] Thông báo nghỉ lễ: xưởng nghỉ Tết Dương lịch thứ Sáu 01/01/2027, đi làm lại sáng thứ Bảy 02/01/2027. Tổ trưởng nhắc công nhân hoàn thành đơn đang chạy trước kỳ nghỉ.', 'URGENT', 'ALL', @sender, '2026-11-02 08:00:00'),
+ (N'[DEMO] Sự kiện sắp tới: khám sức khỏe định kỳ sáng thứ Bảy 14/11 tại nhà ăn xưởng. Tổ trưởng báo danh sách người khám cho Quản đốc trước thứ Năm 12/11.', 'NORMAL', 'ALL', @sender, '2026-11-02 09:00:00');
 
 INSERT dbo.Notification (RecipientId, SourceType, RefTable, RefId, Title, Message, LinkUrl)
 SELECT e.EmployeeId, 'ANNOUNCEMENT', 'Announcement', a.AnnouncementId,
@@ -4083,6 +4152,131 @@ SELECT e.EmployeeId, 'ANNOUNCEMENT', 'Announcement', a.AnnouncementId,
 FROM dbo.Announcement a
 CROSS JOIN dbo.Employee e
 WHERE a.Content LIKE N'[[]DEMO]%' AND e.Status = 'ACTIVE' AND e.EmployeeId <> @sender;
+
+COMMIT TRANSACTION;
+GO
+
+-- Dữ liệu demo (DEV-ALL-49): tổ đã phân công, có phiếu cấp BTP, chỉ tiêu KPI hoặc đơn Xin BTP đang chờ thì được chia mọi màu × size của mã hàng đó.
+INSERT dbo.OrderLineTeam (OrderLineId, SewingTeamId)
+SELECT DISTINCT line.OrderLineId, s.TeamId
+FROM (SELECT a.OrderId, o.ProductId, a.SewingTeamId AS TeamId
+      FROM dbo.OperationAssignment a JOIN dbo.Operation o ON o.OperationId = a.OperationId
+      WHERE a.ValidTo IS NULL
+      UNION
+      SELECT i.OrderId, ol.ProductId, i.ReceivingTeamId
+      FROM dbo.MaterialIssue i
+      JOIN dbo.MaterialIssueLine il ON il.MaterialIssueId = i.MaterialIssueId
+      JOIN dbo.OrderLine ol ON ol.OrderLineId = il.OrderLineId
+      WHERE i.WarehouseType = 'SEMI_FINISHED' AND i.Status <> 'REJECTED'
+      UNION
+      SELECT k.OrderId, k.ProductId, k.SewingTeamId
+      FROM dbo.KpiTarget k
+      WHERE k.Status <> 'CANCELLED'
+      UNION
+      SELECT ol.OrderId, ol.ProductId, r.CreatedByTeamId
+      FROM dbo.Request r
+      JOIN dbo.RequestLine rl ON rl.RequestId = r.RequestId
+      JOIN dbo.OrderLine ol ON ol.OrderLineId = rl.OrderLineId
+      WHERE r.RequestTypeCode = 'SEMI_FINISHED_REQUISITION' AND r.Status = 'PENDING_PROCESSING' AND r.CreatedByTeamId IS NOT NULL) s
+JOIN dbo.OrderLine line ON line.OrderId = s.OrderId AND line.ProductId = s.ProductId;
+GO
+
+/* =====================================================================================
+   19.6 Dữ liệu demo bổ sung (02/11/2026)
+   ---------------------------------------------------------------------------------
+   - Tổ may 2 (MAY2) mở ngày 27/10: tổ trưởng TTMAY2, công nhân CNMAY5–7; CNMAY8 chuyển từ tổ may 1 sang ngày 28/10;
+     CNMOI1 mới vào làm, chưa xếp tổ (thử "Thêm thành viên"). Lịch sử tổ (AuditLog Team) ghi đúng câu backend ghi.
+   - KPI theo ngày của chỉ tiêu DEMO-DH001 đang chạy (12/10–07/11), 25 sản phẩm / ngày.
+   - Sản lượng 27–31/10 của đơn DEMO-DH003 theo số đã giao đã xác nhận.
+   - Bảng công đến 31/10 cho nhân viên mới.
+   Chạy lại không nhân đôi dữ liệu (bỏ qua nếu đã có tổ MAY2).
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+IF EXISTS (SELECT 1 FROM dbo.Team WHERE TeamCode = 'MAY2')
+BEGIN
+    PRINT N'Dữ liệu demo 19.6 đã có (MAY2), bỏ qua.';
+    RETURN;
+END;
+IF NOT EXISTS (SELECT 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH003')
+BEGIN
+    PRINT N'Chưa có dữ liệu demo 19.3 (DEMO-DH003), bỏ qua 19.6.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+INSERT dbo.Team (TeamCode, TeamName, TeamType, CreatedAt) VALUES ('MAY2', N'Tổ may 2', 'SEWING', '2026-10-27 08:00:00');
+DECLARE @may1 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1'),
+        @may2 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY2'),
+        @quandoc INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC'),
+        @admin INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'ADMIN'),
+        @rWorker INT = (SELECT RoleId FROM dbo.Role WHERE RoleCode = 'WORKER'),
+        @rLeader INT = (SELECT RoleId FROM dbo.Role WHERE RoleCode = 'TEAM_LEADER');
+
+-- TTMAY2 vào tổ là công nhân rồi mới được bổ nhiệm tổ trưởng (như thao tác trên màn tổ)
+INSERT dbo.Employee (EmployeeCode, FullName, Gender, RoleId, TeamId, PayType, CurrentGradeCode, AttendanceCode, StartDate, CreatedAt)
+SELECT v.Code, v.FullName, v.Gender, IIF(v.Code = 'TTMAY2', @rLeader, @rWorker), v.TeamId, 'PIECE_RATE', v.Grade, v.AttCode, v.StartDate, v.CreatedAt
+FROM (VALUES ('TTMAY2', N'Trương Văn Bình', 'M', @may2, 'A', 107, '2026-10-26', '2026-10-26 08:00:00'),
+             ('CNMAY5', N'Phạm Thị Hoa',    'F', @may2, 'B', 108, '2026-10-26', '2026-10-26 08:05:00'),
+             ('CNMAY6', N'Đỗ Văn Nam',      'M', @may2, 'C', 109, '2026-10-26', '2026-10-26 08:10:00'),
+             ('CNMAY7', N'Vũ Thị Thu',      'F', @may2, 'C', 110, '2026-10-26', '2026-10-26 08:15:00'),
+             ('CNMAY8', N'Hoàng Văn Long',  'M', @may2, 'B', 111, '2026-10-01', '2026-10-01 08:00:00'),
+             ('CNMOI1', N'Bùi Thị Ngọc',    'F', NULL,  NULL, 112, '2026-11-02', '2026-11-02 08:00:00'))
+     v(Code, FullName, Gender, TeamId, Grade, AttCode, StartDate, CreatedAt);
+INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword)
+SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1
+FROM dbo.Employee e
+WHERE e.EmployeeCode IN ('TTMAY2', 'CNMAY5', 'CNMAY6', 'CNMAY7', 'CNMAY8', 'CNMOI1');
+
+DECLARE @tt2 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TTMAY2'),
+        @w8 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY8');
+
+-- Lịch sử tổ: câu Summary giống TeamService (tạo tổ, thêm thành viên, bổ nhiệm, chuyển tổ)
+INSERT dbo.AuditLog (TableName, RecordId, Action, OldValues, NewValues, Reason, Summary, ChangedBy, ChangedAt) VALUES
+ ('Team', @may2, 'INSERT', NULL, N'{"TeamCode":"MAY2","TeamName":"Tổ may 2","TeamType":"SEWING","Status":"ACTIVE"}', NULL, NULL, @admin, '2026-10-27 08:00:00'),
+ ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Thêm vào tổ: Trương Văn Bình, Phạm Thị Hoa, Đỗ Văn Nam, Vũ Thị Thu. Mở tổ may 2 cho đơn quần short', @quandoc, '2026-10-27 08:10:00'),
+ ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Bổ nhiệm Trương Văn Bình làm tổ trưởng', @quandoc, '2026-10-27 08:15:00'),
+ ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Nhận chuyển đến: Hoàng Văn Long (hiệu lực 28/10/2026)', @quandoc, '2026-10-28 07:45:00'),
+ ('Team', @may1, 'UPDATE', NULL, NULL, NULL, N'Chuyển sang tổ Tổ may 2: Hoàng Văn Long (hiệu lực 28/10/2026)', @quandoc, '2026-10-28 07:45:00'),
+ ('Employee', @tt2, 'UPDATE', N'{"RoleCode":"WORKER"}', N'{"RoleCode":"TEAM_LEADER"}', N'Bổ nhiệm tổ trưởng tổ Tổ may 2', NULL, @quandoc, '2026-10-27 08:15:00'),
+ ('Employee', @w8, 'UPDATE', CONCAT(N'{"TeamId":', @may1, N'}'), CONCAT(N'{"TeamId":', @may2, N'}'), N'Chuyển tổ hiệu lực 28/10/2026', NULL, @quandoc, '2026-10-28 07:45:00');
+
+-- Bảng công: CNMAY8 từ 01/10, tổ may 2 từ 27/10 (Chủ nhật nghỉ)
+;WITH d AS (SELECT CAST('2026-10-01' AS DATE) AS D UNION ALL SELECT DATEADD(DAY, 1, D) FROM d WHERE D < '2026-10-31')
+INSERT dbo.DailyTimesheet (EmployeeId, WorkDate, CheckIn, CheckOut, WorkedHours, WorkdayValue, OvertimeHours, IsMissingPunch)
+SELECT e.EmployeeId, d.D,
+       DATEADD(MINUTE, 7 * 60 + 20 + ABS(CHECKSUM(e.EmployeeId, d.D)) % 10, CAST(d.D AS DATETIME2(0))),
+       DATEADD(MINUTE, 16 * 60 + 30, CAST(d.D AS DATETIME2(0))), 8, 1, 0, 0
+FROM dbo.Employee e
+CROSS JOIN d
+WHERE e.EmployeeCode IN ('TTMAY2', 'CNMAY5', 'CNMAY6', 'CNMAY7', 'CNMAY8')
+  AND DATEDIFF(DAY, 0, d.D) % 7 <> 6
+  AND d.D >= IIF(e.EmployeeCode = 'CNMAY8', '2026-10-01', '2026-10-27');
+
+-- KPI theo ngày của chỉ tiêu DEMO-DH001 đang chạy: 24 ngày làm (trừ Chủ nhật) × 25 = 600
+DECLARE @kpi INT = (SELECT k.KpiTargetId FROM dbo.KpiTarget k JOIN dbo.CustomerOrder o ON o.OrderId = k.OrderId
+                    WHERE o.OrderCode = 'DEMO-DH001' AND k.Status = 'ACTIVE');
+;WITH d AS (SELECT CAST('2026-10-12' AS DATE) AS D UNION ALL SELECT DATEADD(DAY, 1, D) FROM d WHERE D < '2026-11-07')
+INSERT dbo.KpiDailyTarget (KpiTargetId, WorkDate, TargetQty)
+SELECT @kpi, d.D, 25 FROM d WHERE DATEDIFF(DAY, 0, d.D) % 7 <> 6;
+
+-- Sản lượng DEMO-DH003 27–31/10 theo số đã giao đã xác nhận (CNMAY1 còn chờ thu hồi 5 lần nên chỉ báo 25/30)
+DECLARE @o3 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH003');
+;WITH d AS (SELECT CAST('2026-10-27' AS DATE) AS D UNION ALL SELECT DATEADD(DAY, 1, D) FROM d WHERE D < '2026-10-31')
+INSERT dbo.OutputRecord (WorkDate, ShiftCode, SewingTeamId, WorkerId, OperationId, OrderLineId, Quantity, PieceRateId,
+                         IsOutsideAssignment, NoAttendanceWarning, EditDeadline, Status)
+SELECT d.D, 'AFTERNOON', a.SewingTeamId, a.WorkerId, a.OperationId, a.OrderLineId, a.ConfirmedQty / 5 - IIF(a.ConfirmedQty = 30, 1, 0),
+       pr.PieceRateId, 0, 0, dbo.fn_NextWorkingDayEnd(d.D), 'SAVED'
+FROM dbo.WorkAllocation a
+JOIN dbo.OrderLine ol ON ol.OrderLineId = a.OrderLineId AND ol.OrderId = @o3
+CROSS JOIN d
+CROSS APPLY (SELECT TOP (1) PieceRateId FROM dbo.PieceRate
+             WHERE OperationId = a.OperationId AND Status = 'APPROVED' AND EffectiveDate <= d.D
+             ORDER BY EffectiveDate DESC) pr
+WHERE a.MovementType = 'HANDOVER' AND a.Status = 'CONFIRMED';
 
 COMMIT TRANSACTION;
 GO

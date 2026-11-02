@@ -44,10 +44,18 @@ export const API = {
   teams: {
     base: (role: RolePath) => v1(`${role}/teams`),
     byId: (role: RolePath, id: number) => v1(`${role}/teams/${id}`),
+    candidates: (role: RolePath) => v1(`${role}/teams/candidates`),
     action: (
       role: RolePath,
       id: number,
-      action: 'discontinue' | 'reactivate' | 'transfer-in' | 'appoint',
+      action:
+        | 'discontinue'
+        | 'reactivate'
+        | 'transfer-in'
+        | 'appoint'
+        | 'dismiss'
+        | 'add-members'
+        | 'remove-members',
     ) => v1(`${role}/teams/${id}/${action}`),
   },
   hrLookups: {
@@ -177,6 +185,7 @@ export const API = {
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
     orderCapacity: '/api/v1/manager/kpi-targets/order-capacity',
+    allottedTeams: '/api/v1/manager/order-line-teams/teams',
     calendar: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/calendar`,
     dailyPlan: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-plan`,
     finishPreview: (kpiTargetId: number) =>
@@ -210,15 +219,24 @@ export const API = {
     export: '/api/v1/accountant/accounting-reports/export',
   },
   production: {
-    operations: v1('accountant/operations'),
-    operationImportPreview: v1('accountant/operations/import/preview'),
-    operationImport: v1('accountant/operations/import'),
-    operation: (id: number) => v1(`accountant/operations/${id}`),
-    operationDiscontinue: (id: number) => v1(`accountant/operations/${id}/discontinue`),
-    operationReactivate: (id: number) => v1(`accountant/operations/${id}/reactivate`),
+    operations: (role: 'accountant' | 'admin') => v1(`${role}/operations`),
+    operationImportPreview: (role: 'accountant' | 'admin') =>
+      v1(`${role}/operations/import/preview`),
+    operationImport: (role: 'accountant' | 'admin') => v1(`${role}/operations/import`),
+    operation: (role: 'accountant' | 'admin', id: number) => v1(`${role}/operations/${id}`),
+    operationDiscontinue: (role: 'accountant' | 'admin', id: number) =>
+      v1(`${role}/operations/${id}/discontinue`),
+    operationReactivate: (role: 'accountant' | 'admin', id: number) =>
+      v1(`${role}/operations/${id}/reactivate`),
+    operationGroups: (role: 'accountant' | 'admin') => v1(`${role}/operation-groups`),
+    operationGroup: (role: 'accountant' | 'admin', id: number) =>
+      v1(`${role}/operation-groups/${id}`),
+    operationGroupMembers: (role: 'accountant' | 'admin') =>
+      v1(`${role}/operation-groups/operations`),
     pieceRates: (role: 'accountant' | 'admin') => v1(`${role}/piece-rates`),
     pieceRate: (id: number) => v1(`accountant/piece-rates/${id}`),
     pieceRateSubmit: (id: number) => v1(`accountant/piece-rates/${id}/submit`),
+    pieceRateSubmitMany: v1('accountant/piece-rates/submit-many'),
     pieceRateApprove: (id: number) => v1(`admin/piece-rates/${id}/approve`),
     pieceRateApproveMany: v1('admin/piece-rates/approve-many'),
     pieceRateReject: (id: number) => v1(`admin/piece-rates/${id}/reject`),
@@ -228,6 +246,8 @@ export const API = {
     assignmentReplace: (id: number) => v1(`team-leader/operation-assignments/${id}/replace`),
     assignmentClose: (id: number) => v1(`team-leader/operation-assignments/${id}/close`),
     assignmentCopy: v1('team-leader/operation-assignments/copy'),
+    orderLineTeams: v1('manager/order-line-teams'),
+    orderLineTeamsBulk: v1('manager/order-line-teams/bulk'),
     outputGrid: (role: 'team-leader' | 'manager') => v1(`${role}/output-records/grid`),
     output: (role: 'team-leader' | 'manager') => v1(`${role}/output-records`),
     defects: (role: 'team-leader' | 'manager') => v1(`${role}/defect-records`),

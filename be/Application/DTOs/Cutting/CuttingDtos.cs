@@ -8,22 +8,24 @@ public sealed record CuttingLayLineDto(
     int RatioValue, int CalculatedQty, int ActualQty, string? AdjustReason);
 
 /// <param name="FabricColor">Màu của vải (Material.Color, 26/10); '' = không phân màu.</param>
+/// <param name="FabricUsedM">Vải đã cắt của bàn = số lớp × chiều dài bàn cắt; null = bàn chưa có chiều dài.</param>
 public sealed record CuttingLayDto(
     int CuttingLayId, int WorkOrderId, string WorkOrderCode, DateOnly WorkDate, string ShiftCode, int LaySequence,
-    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, string SizeRatio, string? Note,
+    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, decimal? LayLengthM, decimal? FabricUsedM, string SizeRatio, string? Note,
     string Status, DateTime CreatedAt, IReadOnlyList<CuttingLayLineDto> Lines);
 
 /// <summary>ActualQty bỏ trống = bằng số tính (số lớp × tỉ lệ); khác số tính thì bắt buộc AdjustReason.</summary>
 public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentMaterialId, int RatioValue, int? ActualQty, string? AdjustReason);
 
 public sealed record SaveCuttingLayDto(
-    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, int PlyCount,
+    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, int PlyCount, decimal? LayLengthM,
     string? Note, IReadOnlyList<SaveLayLineDto> Lines);
 
 public sealed record CuttingLayQuery : PageQuery
 {
     public int? WorkOrderId { get; init; }
     public DateOnly? WorkDate { get; init; }
+    public string? Status { get; init; }
 }
 
 public sealed record CutHandoverListItemDto(

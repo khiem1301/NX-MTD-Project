@@ -33,6 +33,12 @@ public static class MaterialTypes
     public const string Fabric = "FABRIC";
     public const string Trim = "TRIM";
 
+    /// <summary>Vải luôn tính theo mét, không chọn đơn vị khác (DEV-ALL-46).</summary>
+    public const string FabricUnit = "m";
+
+    /// <summary>Số cm trong một mét: khổ vải nhập và báo bằng mét, lưu cm trong cột Material.WidthCm.</summary>
+    public const decimal CmPerMeter = 100m;
+
     /// <summary>Nhóm hợp lệ theo loại (CHECK constraint của bảng Material).</summary>
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Categories =
         new Dictionary<string, IReadOnlyList<string>>
@@ -137,7 +143,7 @@ public static class WorkOrderStatuses
 {
     public const string Open = "OPEN";
     public const string Cutting = "CUTTING";
-    /// <summary>Tự động khi BTP đã vào kho (phiếu bàn giao được xác nhận) đủ số kế hoạch của mọi dòng; không có nút đóng tay.</summary>
+    /// <summary>Tự động khi BTP đã vào kho (phiếu bàn giao được xác nhận) đủ số kế hoạch của mọi dòng; cắt thiếu thì Quản đốc đóng lệnh (DEV-ALL-52).</summary>
     public const string Completed = "COMPLETED";
     public const string Cancelled = "CANCELLED";
 
@@ -148,6 +154,7 @@ public static class CuttingLayStatuses
 {
     public const string Recorded = "RECORDED";
     public const string Locked = "LOCKED";
+    public static readonly IReadOnlyList<string> All = new[] { Recorded, Locked };
 }
 
 public static class HandoverStatuses
@@ -210,6 +217,8 @@ public static class DispatchStatuses
     public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
 
     /// <summary>Phiếu đã hoặc đang chiếm số hàng của đơn (tính vào tổng đã xuất).</summary>
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { Pending, Rejected, Cancelled, InDelivery, Delivered, PartiallyDelivered };
+
     public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered, PartiallyDelivered };
 }
 

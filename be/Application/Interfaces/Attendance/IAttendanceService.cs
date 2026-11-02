@@ -14,7 +14,7 @@ public interface IAttendanceService
     /// <summary>Tình trạng đồng bộ để cảnh báo MSG23.</summary>
     Task<Result<SyncHealthDto>> GetHealthAsync(CancellationToken ct);
 
-    Task<Result<IReadOnlyList<SyncSessionDto>>> GetSessionsAsync(int take, CancellationToken ct);
+    Task<Result<IReadOnlyList<SyncSessionDto>>> GetSessionsAsync(int take, string? status, CancellationToken ct);
 
     Task<Result<IReadOnlyList<UnmappedCodeDto>>> GetUnmappedCodesAsync(CancellationToken ct);
 

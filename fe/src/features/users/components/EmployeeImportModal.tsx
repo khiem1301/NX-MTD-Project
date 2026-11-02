@@ -92,7 +92,6 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
                 rowKey="rowNumber"
                 size="small"
                 dataSource={data.rows}
-                pagination={{ pageSize: 10, hideOnSinglePage: true }}
                 columns={previewColumns}
               />
             </>
@@ -113,7 +112,6 @@ export function EmployeeImportModal({ open, onClose }: { open: boolean; onClose:
             rowKey="username"
             size="small"
             dataSource={result.created}
-            pagination={{ pageSize: 10, hideOnSinglePage: true }}
             columns={createdColumns}
           />
           {result.failed.length > 0 && (

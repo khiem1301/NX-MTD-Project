@@ -64,6 +64,46 @@ public class MaterialReceiptFlowTests
 
     private ShortDeliveryService ShortDeliveries() => new(_uow, _requests, Supply(), _notifier, _audit);
 
+    private void ShortDelivery(int id, string status, string? resolution) => _requestList.Add(new Request
+    {
+        RequestId = id, RequestCode = "YC" + id, RequestTypeCode = RequestTypes.ShortDelivery, Status = status, ShortageResolution = resolution,
+        MaterialReceiptId = 1, MaterialReceipt = new MaterialReceipt { MaterialReceiptId = 1, ReceiptCode = "PN1", Source = MaterialSources.Customer },
+    });
+
+    [Fact]
+    public async Task GetPagedAsync_ResolvedOnly_HidesRequestsTheManagerHasNotHandled()
+    {
+        ShortDelivery(1, RequestStatuses.PendingProcessing, null);
+        ShortDelivery(2, RequestStatuses.PendingProcessing, ShortageResolutions.Replenish);
+        ShortDelivery(3, RequestStatuses.Completed, ShortageResolutions.NoReplenish);
+        ShortDelivery(4, RequestStatuses.Completed, ShortageResolutions.Replenish);
+
+        var page = await ShortDeliveries().GetPagedAsync(new ShortDeliveryQuery { ResolvedOnly = true }, default);
+
+        page.Data!.Items.Select(i => i.RequestId).Should().BeEquivalentTo([2, 3, 4]);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_ReturnsTheSourceOfTheReceipt()
+    {
+        ShortDelivery(2, RequestStatuses.PendingProcessing, null);
+
+        var page = await ShortDeliveries().GetPagedAsync(new ShortDeliveryQuery(), default);
+
+        page.Data!.Items.Single().Source.Should().Be(MaterialSources.Customer);
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_AwaitingReplenish_OnlyShowsRequestsStillWaitingForGoods()
+    {
+        ShortDelivery(2, RequestStatuses.PendingProcessing, ShortageResolutions.Replenish);
+        ShortDelivery(3, RequestStatuses.Completed, ShortageResolutions.NoReplenish);
+
+        var page = await ShortDeliveries().GetPagedAsync(new ShortDeliveryQuery { ResolvedOnly = true, AwaitingReplenish = true }, default);
+
+        page.Data!.Items.Select(i => i.RequestId).Should().Equal(2);
+    }
+
     // ---------- Dữ liệu mẫu ----------
 
     private static readonly Material Fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
@@ -429,6 +469,81 @@ public class MaterialReceiptFlowTests
         // Đã nhận 80/100 và chốt không bù 20: đơn mua đóng thiếu nhưng NVL của đơn vẫn chưa đủ (Partially Received).
         order.MaterialStatus.Should().Be(OrderMaterialStatuses.Partial);
         await _requests.Received(1).MarkCompletedAsync(900, "Nhà cung cấp hết hàng", Arg.Any<CancellationToken>());
+    }
+
+    /// <summary>Đơn hàng khách hứa cấp 100, đã nhận <paramref name="accepted"/>, Quản đốc đang xử lý phần thiếu.</summary>
+    private OrderMaterial CustomerShortage(decimal accepted, decimal promised = 100)
+    {
+        var (_, _, om, _) = PlacedPo();
+        om.CustomerQty = promised;
+        om.ExpectedDeliveryCount = 1;
+        var receipt = new MaterialReceipt
+        {
+            MaterialReceiptId = 60, ReceiptCode = "PN-60", Source = MaterialSources.Customer, OrderId = om.OrderId, Status = ReceiptStatuses.Confirmed,
+        };
+        var line = new MaterialReceiptLine
+        {
+            MaterialReceiptLineId = 601, MaterialReceiptId = 60, MaterialReceipt = receipt, OrderMaterialId = om.OrderMaterialId, OrderMaterial = om,
+            AcceptedQty = accepted,
+        };
+        receipt.MaterialReceiptLines.Add(line);
+        _receipts.Add(receipt); _receiptLines.Add(line);
+        OpenShortDelivery(receipt, qty: promised - accepted);
+        return om;
+    }
+
+    private Task<Result> CloseWithoutReplenish(string? note = null) =>
+        ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.NoReplenish, null, note), 3, default);
+
+    [Fact]
+    public async Task Resolve_no_replenish_of_customer_supply_lowers_it_to_what_was_received()
+    {
+        var om = CustomerShortage(accepted: 70);
+
+        var result = await CloseWithoutReplenish("Khách hết hàng");
+
+        result.IsSuccess.Should().BeTrue();
+        om.CustomerQty.Should().Be(70);
+        om.ExpectedDeliveryCount.Should().Be(1);
+        _audit.Received().Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(OrderMaterial) && e.Reason == "Khách hết hàng"));
+    }
+
+    [Fact]
+    public async Task Resolve_no_replenish_when_the_customer_delivered_nothing_clears_the_delivery_count()
+    {
+        var om = CustomerShortage(accepted: 0);
+
+        (await CloseWithoutReplenish()).IsSuccess.Should().BeTrue();
+
+        om.CustomerQty.Should().Be(0);
+        om.ExpectedDeliveryCount.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Resolve_no_replenish_ignores_receipts_that_are_not_confirmed()
+    {
+        var om = CustomerShortage(accepted: 70);
+        var pending = new MaterialReceipt { MaterialReceiptId = 61, Status = ReceiptStatuses.Pending };
+        _receiptLines.Add(new MaterialReceiptLine { MaterialReceiptId = 61, MaterialReceipt = pending, OrderMaterialId = om.OrderMaterialId, AcceptedQty = 30 });
+
+        await CloseWithoutReplenish();
+
+        om.CustomerQty.Should().Be(70);
+    }
+
+    [Fact]
+    public async Task Resolve_no_replenish_of_a_purchase_order_leaves_the_customer_supply_alone()
+    {
+        var (po, pol, om, _) = PlacedPo(PurchaseGoodsStatuses.PartiallyReceived);
+        om.CustomerQty = 40;
+        om.ExpectedDeliveryCount = 1;
+        var receipt = PendingSupplierReceipt(po, pol, om, accepted: 80);
+        receipt.Status = ReceiptStatuses.Confirmed;
+        OpenShortDelivery(receipt);
+
+        await CloseWithoutReplenish();
+
+        om.CustomerQty.Should().Be(40);
     }
 
     [Fact]

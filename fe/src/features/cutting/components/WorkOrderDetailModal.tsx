@@ -14,7 +14,7 @@ import {
   WORK_ORDER_STATUS_LABEL,
 } from '../constants';
 import { NoteModal } from '@/components/common/NoteModal';
-import { useCancelWorkOrder, useFinishCutting, useWorkOrder } from '../hooks/useCutting';
+import { useCancelWorkOrder, useCloseShortWorkOrder, useWorkOrder } from '../hooks/useCutting';
 import type { WorkOrder, WorkOrderLine } from '../types';
 import { DetailModal, DetailDescriptions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
@@ -31,21 +31,20 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
   const { hasRole } = usePermission();
   const detail = useWorkOrder(workOrderId);
   const cancel = useCancelWorkOrder();
-  const finish = useFinishCutting();
-  const [finishing, setFinishing] = useState(false);
+  const closeShort = useCloseShortWorkOrder();
+  const [closing, setClosing] = useState(false);
   const w = detail.data;
-  const canEdit = hasRole(ROLES.Admin, ROLES.Manager) && w?.status === WORK_ORDER_STATUS.OPEN;
+  const isManager = hasRole(ROLES.Admin, ROLES.Manager);
+  const canEdit = isManager && w?.status === WORK_ORDER_STATUS.OPEN;
   const total = (pick: (l: WorkOrderLine) => number) =>
     (w?.lines ?? []).reduce((sum, l) => sum + pick(l), 0);
-  // Tổ cắt báo cắt xong khi lệnh đang cắt (đủ kế hoạch thì lệnh đã tự hoàn thành khi kho xác nhận).
-  const canFinish =
-    hasRole(ROLES.TeamLeader, ROLES.TeamDeputy) && w?.status === WORK_ORDER_STATUS.CUTTING;
-  const isShort = total((l) => l.handedQty) < total((l) => l.plannedQty);
+  // DEV-ALL-52: kho nhận đủ BTP thì lệnh tự hoàn thành; cắt thiếu thì Quản đốc / Admin đóng lệnh.
+  const canCloseShort = isManager && w?.status === WORK_ORDER_STATUS.CUTTING;
 
   const actions =
-    canFinish && w ? (
-      <Button type="primary" onClick={() => setFinishing(true)}>
-        {LABELS.finishCutting}
+    canCloseShort && w ? (
+      <Button danger onClick={() => setClosing(true)}>
+        {LABELS.closeShort}
       </Button>
     ) : (
       canEdit &&
@@ -72,20 +71,21 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
       error={detail.error}
     >
       <NoteModal
-        open={finishing}
-        title={LABELS.finishCutting}
-        label={isShort ? LABELS.finishCuttingReason : LABELS.finishCuttingHint}
-        required={isShort}
-        maxLength={WORK_ORDER_LIMITS.finishReasonMax}
-        loading={finish.isPending}
-        onCancel={() => setFinishing(false)}
+        open={closing}
+        title={LABELS.closeShort}
+        label={LABELS.closeShortReason}
+        required
+        maxLength={WORK_ORDER_LIMITS.closeReasonMax}
+        loading={closeShort.isPending}
+        onCancel={() => setClosing(false)}
         onSubmit={(note) =>
           w &&
-          finish.mutate(
-            { id: w.workOrderId, reason: note ?? undefined },
+          note &&
+          closeShort.mutate(
+            { id: w.workOrderId, reason: note },
             {
               onSuccess: () => {
-                setFinishing(false);
+                setClosing(false);
                 onClose();
               },
             },

@@ -25,12 +25,15 @@ public class ProductSpecServiceTests
         new() { MaterialId = 2, MaterialCode = "K1", MaterialName = "Khóa", Unit = "cái", Status = MaterialStatuses.Discontinued },
     ];
     private readonly List<OrderLine> _orderLines = [];
+    private readonly List<ProductMarker> _markers = [];
+    private readonly List<ProductMarkerFabric> _markerFabrics = [];
     private readonly List<WorkOrderLine> _workOrderLines = [];
     private int _nextId = 100;
 
     public ProductSpecServiceTests()
     {
-        Setup(_products); Setup(_materials); Setup(_orderLines); Setup(_workOrderLines);
+        Setup(_products); Setup(_materials); Setup(_orderLines); Setup(_workOrderLines); Setup(_markers);
+        Setup(_markerFabrics, f => f.Material = _materials.First(m => m.MaterialId == f.MaterialId));
         Setup(_components, c => c.ProductComponentId = ++_nextId);
         Setup(_variants, v => v.ProductVariantId = ++_nextId);
         // Quan hệ điều hướng do EF tự nối khi đọc lại; ở đây nối tay cho dòng định mức vừa thêm.
@@ -85,7 +88,20 @@ public class ProductSpecServiceTests
     private static SaveProductVariantDto Variant(int? id, string color, string size) => new(id, color, size);
 
     private static SaveProductSpecDto Spec(IReadOnlyList<SaveProductComponentDto> components,
-        IReadOnlyList<SaveProductVariantDto> variants, IReadOnlyList<SaveProductNormDto> norms) => new(components, variants, norms);
+        IReadOnlyList<SaveProductVariantDto> variants, IReadOnlyList<SaveProductNormDto> norms) => new(components, variants, norms, [], []);
+
+    /// <summary>Áo một thành phần "Thân" màu Đen size M dùng vải 1, kèm bìa 1 khai đủ kích thước và vải.</summary>
+    private SaveProductSpecDto SpecWithMarker(int fabricMaterialId = 1, string size = "M", string color = "Đen", int fabricMarkerNo = 1)
+    {
+        if (_variants.Count == 0) AddVariant(21, "Đen", "M");
+        return Spec([Panel("Thân")], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen", "M")]) with
+        {
+            Markers = [new SaveProductMarkerDto(1, size, 120, 70)],
+            MarkerFabrics = [new SaveProductMarkerFabricDto(fabricMarkerNo, color, fabricMaterialId)],
+        };
+    }
+
+    private void MakeFabric() { _materials[0].MaterialType = MaterialTypes.Fabric; _materials[0].Color = ""; }
 
     private ProductVariant AddVariant(int id, string color, string size, string status = RecordStatus.Active)
     {
@@ -208,6 +224,66 @@ public class ProductSpecServiceTests
         (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", "M", material: 2)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
         (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", "M", material: 99)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
         _norms.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Save_stores_the_markers_and_get_returns_them()
+    {
+        MakeFabric();
+
+        var result = await Create().SaveAsync(1, SpecWithMarker(), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Markers.Should().ContainSingle().Which.Should().Be(new ProductMarkerDto(1, "M", 120, 70));
+        result.Data.MarkerFabrics.Should().ContainSingle().Which.Should().Be(new ProductMarkerFabricDto(1, "Đen", 1, "V1", "Vải", ""));
+    }
+
+    [Fact]
+    public async Task Save_replaces_the_markers_of_the_product_and_leaves_other_products_alone()
+    {
+        MakeFabric();
+        _markers.Add(new ProductMarker { ProductId = 1, MarkerNo = 2, SizeCode = "M", LengthCm = 1, WidthCm = 1 });
+        _markers.Add(new ProductMarker { ProductId = 9, MarkerNo = 1, SizeCode = "M", LengthCm = 1, WidthCm = 1 });
+
+        await Create().SaveAsync(1, SpecWithMarker(), default);
+
+        _markers.Should().HaveCount(2);
+        _markers.Single(m => m.ProductId == 1).MarkerNo.Should().Be(1);
+        _markers.Should().Contain(m => m.ProductId == 9);
+    }
+
+    [Fact]
+    public async Task Save_rejects_markers_that_do_not_match_the_product()
+    {
+        MakeFabric();
+        var sut = Create();
+
+        (await sut.SaveAsync(1, SpecWithMarker(size: "XL"), default)).Message.Should().Be(Messages.ProductSpecMarkerReference);
+        (await sut.SaveAsync(1, SpecWithMarker(color: "Xanh"), default)).Message.Should().Be(Messages.ProductSpecMarkerReference);
+        (await sut.SaveAsync(1, SpecWithMarker(fabricMarkerNo: 2), default)).Message.Should().Be(Messages.ProductSpecMarkerIncomplete);
+
+        var spec = SpecWithMarker();
+        (await sut.SaveAsync(1, spec with { Markers = [spec.Markers[0], spec.Markers[0]] }, default)).Message
+            .Should().Be(Messages.ProductSpecMarkerDuplicate);
+        (await sut.SaveAsync(1, spec with { MarkerFabrics = [spec.MarkerFabrics[0], spec.MarkerFabrics[0]] }, default)).Message
+            .Should().Be(Messages.ProductSpecMarkerDuplicate);
+    }
+
+    [Fact]
+    public async Task Save_rejects_a_marker_fabric_that_is_not_in_the_cut_norm_of_that_color()
+    {
+        MakeFabric();
+        _materials.Add(new Material { MaterialId = 3, MaterialCode = "V3", MaterialName = "Vải", Unit = "m", Color = "Trắng", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active });
+
+        (await Create().SaveAsync(1, SpecWithMarker(fabricMaterialId: 3), default)).Message.Should().Be(Messages.ProductSpecMarkerFabricInvalid);
+    }
+
+    [Fact]
+    public async Task Save_rejects_a_marker_material_that_is_not_a_fabric()
+    {
+        _materials[0].MaterialType = MaterialTypes.Trim;
+
+        (await Create().SaveAsync(1, SpecWithMarker(), default)).Message.Should().Be(Messages.ProductSpecMarkerFabricInvalid);
     }
 
     [Fact]

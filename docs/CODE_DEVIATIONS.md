@@ -92,6 +92,19 @@
 | DEV-ALL-38 | 01/11/2026 | Claude (AI) | UC57, UC22 | Sửa số hàng đạt QC: giới hạn nhập, chặn giảm dưới số đã bàn giao kho thành phẩm | Mở
 | DEV-ALL-39 | 01/11/2026 | Claude (AI) | UC (KPI tổ may) | Chỉ tiêu KPI tổ may: giới hạn kỳ và số lượng, chặn sửa chỉ tiêu dưới số đã làm | Mở
 | DEV-ALL-40 | 01/11/2026 | Claude (AI) | UC09, UC23 | Đơn mua NVL: tạo là đặt hàng luôn; NVL lỗi thiếu tồn tạo đơn từ Mua NVL thay vì đơn mua | Mở
+| DEV-ALL-41 | 01/11/2026 | Claude (AI) | UC45–UC47 | Phiếu xuất hàng: giới hạn nhập, chặn ngày sai, chặn xuất đơn đã đóng, gửi phiên bản phiếu khi thao tác; sửa báo lỗi tải ảnh quá lớn | Mở
+| DEV-ALL-42 | 01/11/2026 | Claude (AI) | UC10, UC19, `ProductMarker`, `ProductMarkerFabric` | Lệnh cắt cả bộ tính số mét vải theo bìa của mã hàng, thay cho kích thước từng chi tiết | Mở
+| DEV-ALL-43 | 01/11/2026 | Claude (AI) | UC51, `CuttingLay` | Bàn cắt lưu chiều dài bàn cắt; tính vải đã cắt và vải còn lại khi nhập bàn | Mở
+| DEV-ALL-44 | 02/11/2026 | Claude (AI) | UC08, UC39 | Thủ kho xem được mọi đơn thiếu NVL Quản đốc đã xử lý, không chỉ đơn đang chờ hàng bù | Mở
+| DEV-ALL-45 | 02/11/2026 | Claude (AI) | UC08, UC39, `OrderMaterial` | Chốt không bù NVL khách cấp: số khách cấp giảm bằng số đã nhận, phần thiếu thành số phải mua | Mở
+| DEV-ALL-46 | 02/11/2026 | Claude (AI) | UC24, `Material` | Vải cố định đơn vị mét; khổ vải nhập và báo bằng mét | Mở
+| DEV-ALL-47 | 02/11/2026 | Claude (AI) | UC23, UC37 | Nút tạo đơn mua NVL chuyển từ màn NVL của đơn sang màn Phiếu nhập NVL | Mở
+| DEV-ALL-48 | 02/11/2026 | Claude (AI) | UC52, GBR-20, UC42 | Tổ may phải phân công đủ công đoạn trước khi nhận BTP; màn phân công chọn công nhân ngay trên từng công đoạn | Mở
+| DEV-ALL-49 | 02/11/2026 | Claude (AI) | UC52, UC42 | Quản đốc, Admin chia dòng đơn (mã hàng × màu × size) cho tổ may; tổ chỉ phân công mã có dòng được chia, chỉ xin và nhận BTP của dòng được chia | Mở |
+| DEV-ALL-50 | 02/11/2026 | Claude (AI) | UC25, UC26 | Admin dùng được màn công đoạn trừ phần đơn giá; thêm quản lý nhóm công đoạn và xếp nhóm nhiều công đoạn | Mở |
+| DEV-ALL-51 | 02/11/2026 | Claude (AI) | UC17, UC18 | Công nhân chưa bắt buộc thuộc tổ; màn Tổ thêm nhân viên vào tổ, loại khỏi tổ, thôi giữ chức tổ trưởng / tổ phó | Mở |
+| DEV-ALL-52 | 02/11/2026 | Claude (AI) | UC19, UC43 | Lệnh cắt tự hoàn thành khi kho nhận đủ BTP theo kế hoạch; bỏ nút "Cắt xong" của tổ cắt; Quản đốc, Admin đóng lệnh cắt thiếu | Mở |
+| DEV-ALL-53 | 02/11/2026 | Claude (AI) | UC51, UC42 | Form bàn cắt bỏ khối vải còn lại; phiếu trả vải thừa tự điền số vải còn lại sau cắt | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -970,7 +983,7 @@
   - **Ghi kho chỉ qua `dbo.usp_Stock_Post`** (trigger chặn ghi thẳng, 50047): `StockService.PostAsync` vẫn kiểm trước cả lô bằng `StockBalance` để báo đủ mọi mặt hàng thiếu, rồi gọi thủ tục cho từng dòng chứng từ trong transaction của caller; thủ tục khóa dòng tồn, chặn tồn âm (50048) và điền `BalanceAfter`. `sp_getapplock` còn dùng cho bước giữ chỗ (`EnsureAvailableAsync`). **Kiểm kê** lưu `StockBalanceId`; mặt hàng chưa có dòng tồn thì tạo dòng tồn 0.
   - **Cắt bù theo dòng định mức (chi tiết × NVL × màu của đúng màu × size)**: `ProductComponentId` → `ProductComponentMaterialId` ở dòng đơn từ, lệnh cắt, bàn cắt, bàn giao BTP, phiếu cấp BTP và `StockBalance`. Tổ may chọn "Tay áo – Vải gió Đen"; bàn cắt bù phải cắt đúng vải của dòng định mức (50049); kho BTP tách tồn theo dòng đó. Mã hàng: lưu định mức theo kiểu **cập nhật / thêm / xóa** (giữ `ProductComponentMaterialId`), không xóa rồi tạo lại; dòng định mức đã được dùng không xóa được, thành phần đã dùng thì ngừng dùng.
   - **Giao việc thay giao / thu hồi BTP** (`WorkAllocation`): mỗi lần giao là số lần làm một công đoạn × màu × size cho một công nhân, kèm BTP nếu công đoạn dùng BTP (`Operation.UsesSemiFinished`). Tổng số lần giao của công đoạn ≤ số bộ BTP tổ đã nhận (50050); BTP giao kèm ≤ BTP tổ giữ (50053); BTP của tổ chỉ giảm theo BTP giao kèm, không giảm theo số lần. **Trần sản lượng theo từng công nhân × công đoạn** (`vw_WorkerOutputCap`): chưa được giao thì không báo được, DB chặn cứng (50052); `OutputService` bỏ trần cấp tổ cũ. Màn Giao việc hiện bảng chia việc (`vw_OperationAllocationProgress`) kèm số đã làm; tìm được theo tên công đoạn to.
-  - **Công đoạn to** (`OperationGroup`), **công đoạn ↔ chi tiết** (`OperationComponent`), **cờ giao kèm BTP**: sửa ở màn Công đoạn và đơn giá; nhập Excel không đổi các trường này. `OperationAssignment.CopiedFromAssignmentId` đã bỏ (sao chép phân công vẫn chạy, chỉ không lưu nguồn).
+  - **Công đoạn to** (`OperationGroup`), **công đoạn ↔ chi tiết** (`OperationComponent`), **cờ giao kèm BTP** (đã bỏ ở DEV-ALL-50): sửa ở màn Công đoạn và đơn giá; nhập Excel không đổi các trường này. `OperationAssignment.CopiedFromAssignmentId` đã bỏ (sao chép phân công vẫn chạy, chỉ không lưu nguồn).
   - Đã thay một phần ở DEV-ALL-14 (bản 26/10 bỏ BTP giao kèm và `vw_TeamPieceHolding`).
 - **Cần sửa trong tài liệu:** Report-3 (UC24, UC40–UC44, UC52–UC55, UC60: giao việc theo công đoạn, trần sản lượng theo công đoạn, kho BTP theo chi tiết × vải); ERD.
 - **Trạng thái:** Đã làm
@@ -1320,4 +1333,198 @@
 - **Giữ nguyên:** đơn chờ chốt đã có trong database vẫn đặt hàng và hủy được ở form cũ.
 - **Chưa xử lý:** đơn tạo tay không còn trạng thái chờ chốt nên không có bước hủy trước khi đặt; đơn Mua NVL chưa liên kết với đơn mua Quản đốc tạo ra nên phải bấm Hoàn thành thủ công.
 - **Cần sửa trong tài liệu:** Report-3 UC09, UC23; ERD (`Request.RequestTypeCode`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-41 · Phiếu xuất hàng: giá trị biên, phiên bản phiếu; báo lỗi tải ảnh quá lớn
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC45–UC47 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `DispatchNoteService`, `DispatchNoteDtoValidators`, ba `DispatchNotesController`, `DispatchNoteDto` (thêm `RowVer`), màn phiếu xuất ở FE; `ApiServiceExtensions`, `ExceptionHandlingMiddleware`; `imageFile`, `useRequestForm`, `useReceiptForm` ở FE.
+- **Tài liệu gốc ghi:** không nêu giới hạn ngày giao, ngày khách nhận, số lượng; không nêu xuất kho khi đơn đã đóng.
+- **Lý do:** yêu cầu của người dùng (kiểm tra validate, giá trị biên; kiểm tra các chỗ tải ảnh).
+- **Code đang làm:**
+  - **Ngày:** ngày giao từ hôm nay đến 366 ngày sau; ngày khách nhận không sau hôm nay.
+  - **Trạng thái đơn:** Thủ kho không xuất được phiếu của đơn đã hủy, dừng hoặc hoàn tất sau khi phiếu được lập.
+  - **Giá trị biên:** số xuất và số khách nhận tối đa 1.000.000 mỗi dòng, tối đa 2.000 dòng; địa chỉ 500, ghi chú 1.000 ký tự sau khi cắt khoảng trắng; có validator cho bộ lọc danh sách.
+  - **Phiên bản phiếu:** hủy, xuất kho, từ chối, xác nhận khách nhận gửi kèm `rowVer` của phiếu đang xem; lệch thì 409 `COMMON_CONCURRENCY_CONFLICT`. Hai API hủy và xuất kho trước đây không có body nay bắt buộc body `{ rowVer }`.
+  - **Tải ảnh:** tệp vượt giới hạn dung lượng trước đây trả 500, nay trả 413 với câu báo dung lượng ảnh; ảnh mã hàng ở FE chỉ nhận JPG, PNG, WebP ngay lúc chọn; cảnh báo ảnh chưa tải được kèm lý do từ máy chủ.
+- **Giữ nguyên:** số xuất không vượt số còn phải giao và thành phẩm khả dụng; ảnh phiếu có ký là bắt buộc trước khi xuất.
+- **Chưa xử lý:** ảnh HEIC từ iPhone bị từ chối, chưa tự chuyển đổi định dạng.
+- **Cần sửa trong tài liệu:** Report-3 UC45, UC46, UC47.
+- **Trạng thái:** Mở
+
+### DEV-ALL-42 · Lệnh cắt cả bộ tính số mét vải theo bìa của mã hàng
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC10, UC19 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** bảng mới `ProductMarker`, `ProductMarkerFabric` (patch `SQL/patches/2026-11-02_all_changes.sql`, `SQL/NX-MTD_Database.sql` đã cập nhật); `GET`, `PUT .../products/{id}/spec` thêm `markers`, `markerFabrics` (`PUT` bắt buộc gửi hai danh sách); `WorkOrderFabricChecker`, `ProductSpecService`; tab "Bìa" ở màn định mức.
+- **Tài liệu gốc ghi:** DEV-ALL-32: lệnh cắt thường tính vải theo kích thước từng chi tiết trong `ProductComponentMaterial`.
+- **Lý do:** yêu cầu của người dùng. Xưởng có sẵn bìa theo mã hàng, nhập kích thước từng chi tiết cho từng màu × size tốn công và kém chính xác hơn bìa.
+- **Code đang làm:**
+  - **Lưu dữ liệu:** `ProductMarker`: mỗi dòng là một bìa (`MarkerNo`) ở một size, có dài, rộng; một bìa tính cho một sản phẩm. `ProductMarkerFabric`: bìa nào, màu áo nào, dùng vải nào; vải không đổi theo size. Bìa không gắn với chi tiết, nên một chi tiết dùng nhiều vải vẫn khai được; mỗi vải dùng trên sản phẩm cần một bìa.
+  - **Tính số mét cả bộ:** với mỗi dòng lệnh, tra các bìa có vải cho màu áo đó; gộp số sản phẩm theo (vải, bìa, size); số bìa ngang khổ = khổ vải ÷ rộng bìa, làm tròn xuống; số hàng = số sản phẩm ÷ số bìa ngang khổ, làm tròn lên; số mét = số hàng × dài bìa. Cộng theo vải rồi so với kho khả dụng + vải tổ cắt đang giữ, nêu đúng vải thiếu.
+  - **Chưa tính được:** bìa chưa có kích thước của size, vải thiếu khổ hoặc không tính theo mét, hoặc vải có trong định mức chi tiết cắt của màu đó mà chưa nằm trên bìa nào (báo để không bị bỏ sót vải thiếu).
+  - **Quyền:** Kế toán và Admin sửa được bìa, cùng quyền với định mức; vai trò khác bị từ chối (403).
+  - **Kiểm tra khi lưu:** không trùng; size và màu phải có trong màu – size của mã hàng; mỗi số bìa có đủ kích thước và vải; vải phải là NVL loại vải đang dùng và có trong định mức chi tiết cắt của màu đó. Vì `MarkerNo` không có FK nên backend kiểm việc khớp số bìa giữa hai bảng.
+- **Giữ nguyên:** vẫn chỉ cảnh báo, không chặn lập lệnh, không lưu kết quả kiểm vải. Cắt lẻ và lệnh cắt bù vẫn tính theo kích thước chi tiết. `ProductComponentMaterial` không đổi.
+- **Chưa xử lý:** mã hàng cũ chưa có bìa báo "chưa tính được" cho đến khi nhập bìa. Số mét là ước tính theo hình chữ nhật của bìa, có thể dư so với sơ đồ giác thực tế. Kho tính tổng mét, không theo từng cuộn.
+- **Cần sửa trong tài liệu:** Report-3 UC10, UC19; ERD (thêm `ProductMarker`, `ProductMarkerFabric`); `NX-MTD_AI_Context.md` mục 4.2.
+- **Trạng thái:** Mở
+
+### DEV-ALL-43 · Bàn cắt: chiều dài bàn cắt, vải đã cắt và vải còn lại
+
+- **Ngày / Người / Task / PR:** 01/11/2026 · Claude (AI) · UC51 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** cột mới `CuttingLay.LayLengthM` (patch `SQL/patches/2026-11-02_all_changes.sql`, `SQL/NX-MTD_Database.sql` đã cập nhật); `POST`, `PUT` bàn cắt bắt buộc thêm `layLengthM`; `CuttingLayDto` thêm `layLengthM`, `fabricUsedM`; `FabricRequirementDto` thêm `heldQty`, `cutQty`, `remainingQty`, `unmeasuredLayCount`; form, chi tiết và danh sách bàn cắt ở FE.
+- **Tài liệu gốc ghi:** bàn cắt chỉ có số lớp và tỉ lệ size, không lưu số mét vải. Vải thực dùng chỉ suy ra khi kết thúc lệnh (đã nhận − đã trả).
+- **Lý do:** yêu cầu của người dùng: biết vải đã cắt và vải còn lại ngay khi nhập sản lượng bàn cắt.
+- **Code đang làm:**
+  - **Vải đã cắt của bàn** = số lớp × chiều dài bàn cắt; tính, không lưu. Vải đã cắt và vải còn lại chỉ dựa vào chiều dài bàn cắt do tổ cắt nhập, không dùng bìa của mã hàng (bìa ở DEV-ALL-42 chỉ để ước tính khi lập lệnh).
+  - **Vải còn lại** = vải tổ đang giữ của đơn (đã nhận − đã trả về kho) − tổng vải đã cắt của tổ trên đơn, tính riêng từng vải. Dùng cùng cách tính "tổ đang giữ" với kiểm vải lệnh cắt, nên nhiều lệnh của một đơn dùng chung số dư.
+  - **Form nhập bàn:** hiện đang giữ, đã cắt, còn lại, bàn này dùng, sau bàn này còn; tính lại ngay khi đổi vải, số lớp, chiều dài. Khi sửa bàn cũ không tính trùng phần bàn đó.
+  - **Giá trị biên:** chiều dài bàn cắt bắt buộc, lớn hơn 0, tối đa 1.000 m, tối đa 2 số lẻ.
+- **Giữ nguyên:** vượt vải còn lại chỉ cảnh báo, không chặn lưu, vì số liệu phiếu nhận vải có thể chưa cập nhật kịp. Số cắt vẫn theo số lớp × tỉ lệ size.
+- **Chưa xử lý:** bàn nhập trước khi có cột để trống chiều dài, không cộng vào số đã cắt (màn hình báo số bàn thiếu); sửa bàn đó thì phải nhập. Vải không tính theo mét không hiện số dư.
+- **Cần sửa trong tài liệu:** Report-3 UC51; ERD (`CuttingLay`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-44 · Thủ kho xem đơn thiếu NVL đã xử lý
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC08, UC39 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `WarehouseKeeper/ShortDeliveriesController`, `ShortDeliveryQuery`, `ShortDeliveryService`.
+- **Tài liệu gốc ghi:** Thủ kho chỉ xem đơn thiếu NVL khi Quản đốc đã chọn giao bù và còn chờ nhận bù.
+- **Lý do:** yêu cầu của người dùng. Đơn Quản đốc chốt không bù hoặc đã nhận đủ biến mất khỏi màn của Thủ kho.
+- **Code đang làm:** Thủ kho thấy mọi đơn Quản đốc đã xử lý (giao bù hoặc chốt không bù), kể cả đơn đã hoàn thành; đơn chưa xử lý vẫn không hiện. Lọc "Đang chờ nhận hàng bù" vẫn dùng được. Thủ kho chỉ lập phiếu bổ sung ở đơn đang chờ hàng bù.
+- **Cần sửa trong tài liệu:** Report-3 UC39.
+- **Trạng thái:** Mở
+
+### DEV-ALL-45 · Chốt không bù NVL khách cấp: phần thiếu chuyển thành số phải mua
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC08, UC39 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `ShortDeliveryService`; `OrderMaterial.CustomerQty`, `ExpectedDeliveryCount`.
+- **Tài liệu gốc ghi:** AI Context 4.1.4: thiếu NVL thì xin khách trước, khách không cấp được mới mua. DEV-ALL-21: chốt không bù phiếu khách cấp chỉ chặn lập thêm phiếu, không đổi số khách cấp, nên số phải mua không tăng.
+- **Lý do:** yêu cầu của người dùng. Trước đây khách hứa 100, giao 70, chốt không bù thì số phải mua vẫn bằng 0, không mua được 30 còn thiếu.
+- **Code đang làm:** khi Quản đốc chốt không bù đơn thiếu của phiếu khách cấp, `CustomerQty` giảm xuống bằng số đã nhận thật (phiếu đã xác nhận), `PurchaseQty` là cột tính nên tự tăng phần thiếu. Khách chưa giao gì thì `ExpectedDeliveryCount` về NULL theo `CK_OM_Delivery`. Ghi AuditLog giá trị cũ, mới, lý do trong cùng giao dịch. Đơn mua NCC không đổi.
+- **Giữ nguyên:** hệ thống không tự tạo đơn mua hay đơn từ; Quản đốc tự tạo đơn mua khi cần. Chốt không bù vẫn chặn lập thêm phiếu khách cấp cho NVL đó.
+- **Chưa xử lý:** đơn thiếu đã chốt không bù trước thay đổi này không được sửa lại số khách cấp; Quản đốc chỉnh tay ở NVL của đơn nếu cần. Phiếu khách cấp còn chờ xác nhận lúc chốt không được tính vào số đã nhận.
+- **Cần sửa trong tài liệu:** Report-3 UC39; `NX-MTD_AI_Context.md` mục 4.1.
+- **Trạng thái:** Mở
+
+### DEV-ALL-46 · Vải cố định đơn vị mét, khổ vải tính bằng mét
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC24 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `MaterialService`, validator NVL, `WorkOrderFabricChecker`, form NVL ở FE. Không đổi schema.
+- **Tài liệu gốc ghi:** `Material.Unit` là chữ tự do; khổ vải nhập bằng cm.
+- **Lý do:** yêu cầu của người dùng. Vải khác mét không tính được vải cần, khổ vải quen dùng đơn vị mét.
+- **Code đang làm:** NVL loại vải luôn lưu `Unit = m`, backend bỏ qua đơn vị gửi lên, form khóa ô đơn vị. Khổ vải trên form nhập bằng mét (tối đa 2 số lẻ), đổi sang cm khi gửi; API và cột `WidthCm` vẫn là cm vì bìa và chi tiết tính bằng cm. Cảnh báo "rộng hơn khổ vải" báo khổ bằng mét.
+- **Giữ nguyên:** phụ liệu nhập đơn vị tự do. Bìa, chi tiết vẫn nhập cm. Chiều dài bàn cắt vẫn là mét.
+- **Chưa xử lý:** database không có ràng buộc đơn vị của vải; vải cũ khác mét (nếu có) đổi sang mét khi sửa và lưu lại NVL, chưa đổi số lượng tồn tương ứng.
+- **Cần sửa trong tài liệu:** Report-3 UC24; ERD (`Material.Unit`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-47 · Nút tạo đơn mua NVL chuyển sang màn Phiếu nhập NVL
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC23, UC37 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OrderMaterialPage`, `MaterialReceiptListPage` ở FE. Không đổi API, schema.
+- **Tài liệu gốc ghi:** Quản đốc tạo đơn mua NVL dùng chung ở màn NVL của đơn (TH-12).
+- **Lý do:** yêu cầu của người dùng.
+- **Code đang làm:** màn NVL của đơn bỏ nút; màn Phiếu nhập NVL có nút "Tạo đơn mua" cho Admin và Quản đốc. Thủ kho không thấy nút, vẫn chỉ lập phiếu nhập. Nút ở màn Đơn mua NVL giữ nguyên.
+- **Cần sửa trong tài liệu:** Report-3 UC23 (màn thao tác).
+- **Trạng thái:** Mở
+
+### DEV-ALL-48 · Phải phân công đủ công đoạn trước khi nhận BTP
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC52, UC42, GBR-20 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `MaterialIssueService.ConfirmAsync`, mã lỗi `ASSIGNMENT_INCOMPLETE`, màn Phân công công đoạn ở FE. Không đổi schema, API phân công giữ nguyên.
+- **Tài liệu gốc ghi:** GBR-20: phân công chỉ là gợi ý nạp lưới sản lượng, không bắt buộc.
+- **Lý do:** yêu cầu của người dùng. Phân công là việc làm trước khi nhận BTP, làm cơ sở cho cả đợt làm đơn: công nhân nào làm công đoạn nào.
+- **Code đang làm:**
+  - **Chặn khi nhận BTP:** tổ may xác nhận nhận phiếu cấp BTP thì mọi công đoạn may đang dùng của các mã hàng trên phiếu phải có ít nhất một công nhân đang làm của tổ; thiếu thì báo 409, nêu số công đoạn thiếu và tối đa 5 mã. Phân công của đơn khác, tổ khác, đã bỏ, hoặc công nhân đã nghỉ, chuyển tổ không tính. Phiếu cấp vải của tổ cắt không kiểm.
+  - **Validate của phân công:** chỉ công đoạn tổ may, chỉ công nhân (không phải tổ trưởng, tổ phó) đang làm của tổ; đơn đã đóng thì không bỏ phân công được; mỗi lần giao 1 đến 500 công đoạn, không trùng.
+  - **Mã hàng chưa có công đoạn:** mã hàng trên phiếu không có công đoạn may đang dùng thì cũng bị chặn, nêu mã hàng, vì chưa phân công được. Màn phân công báo trước: mã được chia mà chưa có công đoạn vẫn hiện trong ô chọn mã với nhãn "chưa khai công đoạn", kèm cảnh báo nêu mã hàng; mặc định mở mã đã có công đoạn.
+  - **Dữ liệu demo:** đơn DEMO-DH003 phân công đủ công đoạn trong `SQL/NX-MTD_Database.sql`; database đã dựng chạy `SQL/patches/2026-11-02_all_changes.sql`.
+  - **Màn phân công:** mỗi công đoạn một dòng, chọn nhiều công nhân ngay trên dòng; chọn thêm là phân công, bỏ chọn là đóng phân công (giữ lịch sử). Có thanh tiến độ; tìm theo mã, tên; lọc theo nhóm, công nhân (kèm số công đoạn đang làm), tình trạng. Bảng phân trang; tích chọn nhiều dòng (giữ khi chuyển trang) rồi giao một lần cho một công nhân, thay hộp phân công nhiều công đoạn. Vẫn có chép từ đơn khác. Bỏ hộp "Đổi người" vì chọn và bỏ chọn đã thay thế.
+- **Giữ nguyên:** sau khi đã nhận BTP, công nhân làm thay vẫn nhập sản lượng được và gắn nhãn ngoài phân công (phần còn lại của GBR-20). Phiếu đã nhận trước thay đổi này không bị ảnh hưởng. API đổi người ở BE vẫn còn.
+- **Chưa xử lý:** phiếu cấp BTP vẫn lập được khi tổ chưa phân công, chỉ chặn lúc tổ nhận. Bỏ phân công sau khi đã nhận BTP không bị chặn, chỉ ảnh hưởng lần nhận sau.
+- **Cần sửa trong tài liệu:** Report-3 UC52, UC42, GBR-20.
+- **Trạng thái:** Mở
+
+### DEV-ALL-49 · Quản đốc, Admin chia dòng đơn (mã hàng × màu × size) cho tổ may
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC52, UC42 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** bảng mới `OrderLineTeam`, `OrderLineTeamService`, `OperationAssignmentService`, `MaterialIssueService`, API `manager/order-line-teams`, `LookupService`, `OrderLookupService`, `RequestService`, `KpiService`; màn mới "Chia đơn cho tổ may", màn Phân công công đoạn. Patch `SQL/patches/2026-11-02_all_changes.sql`.
+- **Tài liệu gốc ghi:** tổ may phân công theo đơn, không có bước chia đơn hoặc mã hàng cho tổ.
+- **Lý do:** yêu cầu của người dùng. Một tổ có thể chỉ làm một mã hàng, một màu hoặc một size trong đơn. Tổ cắt chỉ có một tổ nên không chia.
+- **Code đang làm:**
+  - **Chia:** màn "Chia đơn cho tổ may" cho Admin, Quản đốc liệt kê từng dòng đơn (mã hàng × màu × size) của đơn đang mở, chọn một hoặc nhiều tổ may ngay trên dòng; tích nhiều dòng rồi chia cho thêm tổ một lần (tối đa 500 dòng, tổ đang được chia giữ nguyên). Quan hệ nhiều-nhiều: một dòng có nhiều tổ, một tổ nhận nhiều dòng. Tổ trưởng tổ mới được chia nhận thông báo. Thay đổi ghi nhật ký.
+  - **Không bỏ chia được** (409) tổ có phiếu cấp BTP chưa bị từ chối của đúng dòng đó, hoặc dòng đó là dòng cuối của mã hàng mà tổ đang có phân công hiệu lực, chỉ tiêu KPI chưa hủy.
+  - **Màn phân công và KPI vẫn theo mã hàng,** vì công đoạn khai theo mã, không theo màu, size: tổ được làm mã hàng khi có ít nhất một dòng của mã đó. Đơn có từ 2 mã được chia thì chọn mã, bảng, bộ lọc và tiến độ theo mã đang chọn. API phân công và chép từ đơn khác cũng chặn mã chưa được chia.
+  - **Cấp BTP:** Thủ kho lập phiếu cấp BTP có dòng chưa chia cho tổ nhận thì bị chặn, nêu mã hàng, màu, size.
+  - **Ô chọn đơn và dòng đơn:** API tra cứu (`lookups`, `order-lookups`) chỉ trả đơn có dòng được chia và đúng các dòng đó khi người dùng thuộc tổ may, nên áp dụng cho mọi màn của tổ. Quản đốc, Admin, QA/QC, Thủ kho và tổ cắt không bị giới hạn.
+  - **Đơn từ:** tổ may tạo, sửa đơn nêu dòng đơn chưa được chia, hoặc nêu đơn mà tổ không có dòng nào, thì bị chặn.
+  - **Chỉ tiêu KPI:** ô chọn tổ chỉ liệt kê tổ có ít nhất một dòng của mã hàng; API cũng chặn (409).
+  - **Không chặn thêm ở:** giao việc, sản lượng, hàng hỏng, QC, vì các bước này đã giới hạn theo BTP tổ nhận hoặc sản lượng của tổ, mà BTP đã phải được chia.
+  - **Dòng bị bỏ khỏi đơn** (chỉ khi đơn còn NEW): việc chia của dòng đó bị xóa theo. Dòng mới thêm vào đơn đã chia thì chưa thuộc tổ nào, phải chia thêm.
+  - **Dữ liệu đang có:** patch chia sẵn mọi màu × size của mã hàng cho tổ đang có phân công hiệu lực, phiếu cấp BTP, chỉ tiêu KPI chưa hủy hoặc đơn Xin BTP đang chờ. Đơn khác phải chia trước.
+- **Cần sửa trong tài liệu:** Report-3 UC52, UC42; thêm chức năng chia dòng đơn cho tổ may.
+- **Trạng thái:** Mở
+
+### DEV-ALL-50 · Admin dùng màn công đoạn, thêm quản lý nhóm công đoạn
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC25, UC26 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OperationGroupService`, `OperationService`, API `admin/operations`, `admin/operation-groups`, `accountant/operation-groups`, màn Công đoạn và đơn giá ở FE. Không đổi schema.
+- **Tài liệu gốc ghi:** UC25: Kế toán lập công đoạn. Nhóm công đoạn chỉ tạo được bằng cách gõ tên khi sửa từng công đoạn, không có chức năng quản lý.
+- **Lý do:** yêu cầu của người dùng: chỉnh màn công đoạn và nhóm công đoạn của Admin và Kế toán.
+- **Code đang làm:**
+  - **Admin:** dùng được menu, thêm, sửa, ngừng dùng, dùng lại, nhập Excel công đoạn và quản lý nhóm. Admin chỉ xem đơn giá, không đặt hay gửi duyệt; nhập Excel của Admin không đọc đơn giá (API bỏ qua ngày hiệu lực). Lý do: Admin là người duyệt đơn giá (UC26), không tự đặt rồi tự duyệt.
+  - **Nhóm công đoạn:** thêm, đổi tên, xóa trong một hộp thoại riêng theo mã hàng; tên không trùng trong mã hàng (409). Xóa nhóm đưa công đoạn trong nhóm về chưa có nhóm, vì nhóm chỉ để nhóm và tìm kiếm.
+  - **Xếp nhóm hàng loạt:** tích nhiều công đoạn (giữ khi chuyển trang, tối đa 500) rồi xếp vào nhóm hoặc bỏ nhóm. Công đoạn và nhóm phải cùng mã hàng.
+  - **Màn hình:** bảng phân trang, lọc theo nhóm kể cả "Chưa có nhóm", đổi mã hàng thì xóa bộ lọc. Gọi thống nhất là "Nhóm công đoạn" thay cho "Công đoạn to".
+  - **Validate:** API chặn bậc ngoài 1 đến 9, thời gian chuẩn quá `DECIMAL(9,2)`, tên nhóm quá 200 ký tự, thiếu mã hàng khi lấy danh sách, mã công đoạn có dấu hoặc khoảng trắng, công đoạn cuối của tổ cắt. Đơn giá phải lớn hơn 0 (tài liệu và DB cũ cho phép 0), tối đa 100.000.000 đồng, tối đa 2 chữ số thập phân, bắt buộc ngày hiệu lực. File Excel cũng kiểm giới hạn TGCT và TIỀN theo từng dòng. Patch `SQL/patches/2026-11-02_all_changes.sql` thêm ràng buộc tương ứng ở DB.
+  - **Ảnh hưởng tới các bảng khác:** không ngừng dùng được công đoạn còn việc đang chờ xác nhận hoặc chưa làm xong trong đơn đang mở (`WorkAllocation`, `vw_WorkerOutputCap`), vì màn giao việc ẩn công đoạn đã ngừng nên không thu hồi được và sản lượng cũng bị chặn. Công đoạn đã ngừng không sửa, gửi duyệt hay duyệt đơn giá được (`PieceRate`). Mã hàng đã ngừng không thêm, nhập công đoạn được. Excel không đánh dấu công đoạn cuối lên công đoạn đã ngừng.
+  - **Gửi duyệt hàng loạt:** Kế toán tích nhiều công đoạn có đơn giá Nháp để gửi duyệt một lần, Admin nhận một thông báo chung.
+  - **Bỏ ô tích "Giao việc kèm BTP":** cờ `Operation.UsesSemiFinished` từ 26/10 chỉ để tham khảo, chỉ tạo thẻ chữ "Kèm BTP" ở màn Công đoạn và "Dùng BTP" ở màn Chia việc, không quy tắc nào dùng. Đã bỏ cột, bỏ cột trong `vw_OperationAllocationProgress`, bỏ ở form, API và hai màn hình. Patch `SQL/patches/2026-11-02_all_changes.sql` (dữ liệu cột này bị xóa, trường này cũng bị xóa khỏi JSON của các dòng `AuditLog` của `Operation`, nên các dòng nhật ký cũ mất thông tin về cờ đó); `SQL/NX-MTD_Database.sql` đã sửa theo. API cũ gửi `usesSemiFinished` vẫn được, trường bị bỏ qua.
+  - **Công đoạn cuối:** tick "Là công đoạn cuối" ở một công đoạn thì công đoạn cuối đang dùng trước đó tự bỏ tick (có log), nên mã hàng không bao giờ có hai công đoạn cuối đang dùng. Hệ thống lưu bỏ cờ cũ trước rồi mới ghi công đoạn mới, vì chỉ mục `UX_Operation_FinalStep` chặn hai dòng cùng là công đoạn cuối trong một lô lệnh. Ngừng công đoạn cuối hoặc bỏ tick vẫn được, hộp xác nhận cảnh báo mã hàng sẽ không còn công đoạn cuối. Nhập Excel vẫn báo 409 khi mã hàng đã có công đoạn cuối.
+  - **Lọc theo trạng thái:** màn Công đoạn và màn Tổ bỏ ô "Hiện cả đã ngừng", dùng bộ lọc Trạng thái như các màn danh sách khác. Mặc định là Tất cả nên hiện cả dòng đã ngừng. Dòng tóm tắt của màn Công đoạn vẫn chỉ tính công đoạn đang dùng. Thêm bộ lọc Trạng thái cho màn Bàn cắt (`CuttingLayQuery.Status`, sai giá trị trả 400), Hàng hỏng của tôi (`DefectQuery.Status` ở `ListMineAsync`) và tab Lịch sử đồng bộ (`sync-sessions?status=`, sai giá trị trả 400); ba màn này lọc ở backend vì danh sách có giới hạn số dòng.
+- **Chưa xử lý:** nhập Excel chưa đọc nhóm từ dòng tiêu đề nhóm của file. Gộp hai nhóm làm bằng cách lọc nhóm, tích hết rồi xếp sang nhóm kia.
+- **Cần sửa trong tài liệu:** Report-3 UC25; thêm quyền Admin và chức năng quản lý nhóm công đoạn.
+- **Trạng thái:** Mở
+
+### DEV-ALL-51 · Nhân viên chưa bắt buộc thuộc tổ, quản lý thành viên trong màn Tổ
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC17, UC18 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `EmployeeService`, `TeamService`, validator tạo / sửa nhân viên, import nhân viên Excel, API `admin/teams` và `manager/teams`, màn Tổ ở FE. Không đổi schema (`Employee.TeamId` đã cho phép NULL).
+- **Tài liệu gốc ghi:** UC17: nhân viên Công nhân, Tổ trưởng, Tổ phó bắt buộc chọn tổ khi tạo. UC18: tổ chỉ có chuyển tổ và bổ nhiệm.
+- **Lý do:** yêu cầu của người dùng: tạo nhân viên trước, xếp vào tổ sau; quản lý thành viên ngay trong màn Tổ.
+- **Code đang làm:**
+  - **Tạo, sửa, import nhân viên:** chỉ Tổ trưởng và Tổ phó bắt buộc có tổ (trigger `trg_Employee_TeamLeadership` yêu cầu, và tổ phải là tổ cắt hoặc tổ may). Công nhân và các vai trò khác để trống tổ được, kể cả dòng import Excel không có mã tổ.
+  - **Thêm nhân viên vào tổ** (`POST teams/{id}/add-members`): chỉ thêm người đang làm việc và chưa thuộc tổ nào; người đang ở tổ khác báo 409 `TEAM_MEMBER_HAS_TEAM`, phải dùng chuyển tổ. Tổ phải đang hoạt động. Danh sách người chọn lấy từ `GET teams/candidates` (không gồm Admin, Quản đốc, Kế toán). Có ghi `AuditLog` từng người, người được thêm phải đăng nhập lại.
+  - **Loại khỏi tổ** (`POST teams/{id}/remove-members`): `TeamId` về NULL, người đó chờ được thêm vào tổ khác. Tổ trưởng, tổ phó báo 409 `TEAM_REMOVE_LEADER`, phải thôi giữ chức trước (giống chuyển tổ).
+  - **Điều chuyển sang tổ khác:** giữ nguyên chức năng chuyển tổ có ngày hiệu lực (DEV-KH-10-1), chọn nhiều người trong tổ.
+  - **Thôi giữ chức** (`POST teams/{id}/dismiss`): tổ trưởng hoặc tổ phó về Công nhân, vẫn ở tổ, giữ kiểu lương. Trước đây chỉ rời chức được bằng cách bổ nhiệm người khác.
+  - **Bổ nhiệm:** màn Tổ hiện tổ trưởng, tổ phó đang giữ chức (hoặc "Chưa có"), tổ trưởng và tổ phó xếp đầu danh sách thành viên, tổ trưởng và tổ phó không tích chọn được để chuyển hay loại. Bổ nhiệm giữ nguyên quy tắc DEV-KH-10-2.
+  - **Ảnh hưởng của công nhân chưa có tổ:** không có tổ nên không xuất hiện ở điểm danh, suất ăn, KPI, giao việc của tổ nào cho đến khi được thêm vào tổ.
+- **Cần sửa trong tài liệu:** Report-3 UC17 (tổ không bắt buộc với công nhân), UC18 (thêm, loại thành viên, thôi giữ chức).
+- **Trạng thái:** Mở
+
+### DEV-ALL-52 · Lệnh cắt tự hoàn thành khi kho nhận đủ BTP
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC19, UC43 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `CutHandoverService.ConfirmAsync`, `WorkOrderCompletion` (mới), `WorkOrderService.CloseShortAsync` (thay `FinishCuttingAsync`), API `manager/work-orders/{id}/close-short` (mới, Admin dùng chung), bỏ API `team-leader/work-orders/{id}/finish-cutting`, màn chi tiết lệnh cắt. Không đổi schema.
+- **Tài liệu gốc ghi / code cũ làm:** theo swimlane, BTP vào kho → tổ cắt trả vải thừa → tổ cắt bấm "Cắt xong" thì lệnh mới Hoàn thành và Quản đốc nhận số vải thực dùng (mục 943 của DEV-ALL-15, DEV-ALL-35).
+- **Lý do:** yêu cầu của người dùng: tổ cắt không tự báo cắt xong nữa; Thủ kho nhận đủ số bàn giao theo lệnh thì hệ thống tự cập nhật lệnh cắt Hoàn thành.
+- **Code đang làm:**
+  - **Tự hoàn thành:** ngay khi Thủ kho xác nhận một phiếu bàn giao BTP, nếu mọi dòng của lệnh (màu × size, kể cả dòng chi tiết cắt lẻ) đã nhận đủ số kế hoạch tính theo số kho xác nhận (cộng mọi phiếu đã xác nhận) thì lệnh chuyển `COMPLETED`, ghi `CompletedAt`. Quản đốc nhận thông báo kèm vải đã nhận, đã trả, thực dùng tại thời điểm đó; tổ cắt nhận thông báo "lệnh cắt đã hoàn thành" cùng thông báo phiếu đã vào kho. Nhận dư kế hoạch vẫn tính là đủ.
+  - **Bỏ nút "Cắt xong"** của tổ trưởng, tổ phó cắt. Trả vải thừa không còn là điều kiện để lệnh hoàn thành; tổ cắt vẫn lập phiếu trả vải sau khi lệnh hoàn thành được.
+  - **Cắt thiếu:** Quản đốc hoặc Admin bấm "Đóng lệnh cắt thiếu" ở lệnh đang cắt, lý do bắt buộc (tối đa 300 ký tự, nối vào ghi chú lệnh). Chặn khi còn phiếu bàn giao hoặc phiếu trả vải chờ kho, hoặc còn BTP đã cắt chưa vào kho. Tổ cắt nhận thông báo lệnh đã đóng kèm số đã nhận / kế hoạch và lý do.
+- **Cần sửa trong tài liệu:** Report-3 UC19, UC43 và swimlane tổ cắt: bỏ bước "báo cắt xong", thêm bước Quản đốc đóng lệnh cắt thiếu.
+- **Trạng thái:** Mở
+
+### DEV-ALL-53 · Vải còn lại chuyển sang gợi ý ở phiếu trả vải thừa
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC51, UC42 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** form bàn cắt (`LayFormModal`, bỏ `LayFabricBalance` và `utils/layFabric`), `MaterialReturnService.GetReturnableAsync` (thêm `ReturnableLineDto.SuggestedQty`), màn Lập phiếu trả vải. Không đổi schema.
+- **Code cũ làm:** form bàn cắt hiện khối "Tổ đang giữ … m, đã cắt … m, còn lại … m" và số dư sau bàn này.
+- **Lý do:** yêu cầu của người dùng: form bàn cắt gọn lại; số mét vải còn lại để hệ thống gợi ý khi tổ trưởng cắt trả vải về kho.
+- **Code đang làm:**
+  - **Form bàn cắt:** các ô Ngày cắt, Ca, Vải, Số lớp, Chiều dài bàn cắt nằm một hàng; bỏ khối vải còn lại; nhãn "Vải (tùy chọn)" sửa thành "Vải" vì ô này bắt buộc.
+  - **Phiếu trả vải:** mỗi dòng phiếu cấp có số gợi ý = đã nhận − đã trả / đang trả − đã cắt (Σ số lớp × chiều dài các bàn của tổ trên cùng đơn, cùng vải), chia vào các dòng phiếu cấp cùng đơn, cùng vải (phiếu mới trước), không quá số còn trả được. Chọn phiếu cấp thì ô "Trả lần này" tự điền số gợi ý, tổ trưởng sửa lại theo cuộn vải thực tế. Có bàn cắt chưa nhập chiều dài thì không gợi ý và báo nhập theo cuộn thực tế.
+- **Cần sửa trong tài liệu:** Report-3 UC42 (số trả gợi ý), UC51 (form bàn cắt).
 - **Trạng thái:** Mở

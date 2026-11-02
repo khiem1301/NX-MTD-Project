@@ -30,6 +30,9 @@ public interface IEmployeeRepository : IGenericRepository<Employee>
     /// <summary>D30: gọi dbo.usp_Attendance_MapCode trong transaction hiện tại (thủ tục tự ghi AuditLog).</summary>
     Task MapAttendanceCodeAsync(int attendanceCode, int employeeId, int changedBy, CancellationToken ct);
     Task<IReadOnlyList<EmployeeLookupDto>> LookupMembersAsync(int teamId, IReadOnlyCollection<string>? hiddenRoleCodes, CancellationToken ct);
+
+    /// <summary>Nhân viên đang làm việc, chưa thuộc tổ nào, không phải vai trò chỉ Admin được gán.</summary>
+    Task<IReadOnlyList<EmployeeLookupDto>> LookupUnassignedAsync(IReadOnlyCollection<string>? hiddenRoleCodes, CancellationToken ct);
 }
 
 public interface ITeamRepository : IGenericRepository<Team>
@@ -75,6 +78,10 @@ public interface ITeamService
     Task<Result> ReactivateAsync(int teamId, CancellationToken ct);
     Task<Result> TransferInAsync(int targetTeamId, TransferMembersDto dto, CancellationToken ct);
     Task<Result> AppointAsync(int teamId, AppointDto dto, CancellationToken ct);
+    Task<Result> DismissAsync(int teamId, DismissDto dto, CancellationToken ct);
+    Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(CancellationToken ct);
+    Task<Result> AddMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct);
+    Task<Result> RemoveMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct);
 }
 
 public interface IHrLookupService

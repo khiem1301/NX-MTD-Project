@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { PageCard } from '@/components/common/PageCard';
 import type { RevenueScope } from '../api/revenueApi';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { REVENUE_TEXT } from '../constants';
 import type { RevenueFilter } from '../types';
 import { RevenueTable } from './RevenueTable';
 
-const DEFAULT_FILTER: RevenueFilter = { page: 1, pageSize: 20 };
+const DEFAULT_FILTER: RevenueFilter = { page: 1, pageSize: DEFAULT_PAGE_SIZE };
 
 type RevenueBoardProps = { scope: RevenueScope };
 

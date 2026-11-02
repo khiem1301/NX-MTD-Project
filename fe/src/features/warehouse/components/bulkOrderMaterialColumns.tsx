@@ -4,6 +4,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { MaterialOption } from '@/types/lookup';
 import { LABELS } from '../constants';
+import { formatFabricWidth } from '../utils/fabricWidth';
 import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
 import { rowError, type BulkLine, type Draft, isChanged } from './bulkOrderMaterial';
 
@@ -39,7 +40,7 @@ export const bulkOrderMaterialColumns = ({
     [
       line.original?.materialName ?? option(line)?.materialName,
       line.original?.materialColor ?? option(line)?.color,
-      line.original?.materialWidthCm ? `${line.original.materialWidthCm} cm` : null,
+      line.original?.materialWidthCm ? formatFabricWidth(line.original.materialWidthCm) : null,
     ]
       .filter(Boolean)
       .join(' · ');

@@ -35,6 +35,6 @@ public sealed class DispatchNotesController : ManagerBaseController
         this.ToResponse(await _notes.CreateAsync(dto, ct));
 
     [HttpPost("{id:int}/cancel")]
-    public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>
-        this.ToResponse(await _notes.CancelAsync(id, ct));
+    public async Task<IActionResult> Cancel(int id, [FromBody] DispatchActionDto dto, CancellationToken ct) =>
+        this.ToResponse(await _notes.CancelAsync(id, dto, ct));
 }

@@ -1,5 +1,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using NX_MTD.API.Common;
 using NX_MTD.Application.Common;
 using NX_MTD.Domain.Constants;
@@ -20,6 +21,14 @@ public sealed class ExceptionHandlingMiddleware
     {
         try { await _next(context); }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested) { /* client bỏ request */ }
+        catch (BadHttpRequestException ex) when (ex.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            // Tệp vượt giới hạn của API tải lên (RequestSizeLimit): báo như lỗi dung lượng ảnh thay vì lỗi hệ thống.
+            _logger.LogWarning(ex, "Request body too large on {Method} {Path}", context.Request.Method, context.Request.Path);
+            await Write(context, StatusCodes.Status413PayloadTooLarge, ApiResponses.Failure(ErrorCodes.AttachmentFileTooLarge,
+                string.Format(Messages.AttachmentFileTooLarge,
+                context.RequestServices.GetRequiredService<IOptions<AttachmentOptions>>().Value.MaxFileMb)));
+        }
         catch (DbUpdateConcurrencyException ex)
         {
             _logger.LogWarning(ex, "Concurrency conflict");

@@ -19,7 +19,6 @@ export function SpecVariantsTab({ variants, discontinuedVariants }: SpecVariants
       <DataTable<VariantRow>
         rowKey="key"
         size="small"
-        pagination={{ pageSize: 10, showSizeChanger: false, hideOnSinglePage: true }}
         dataSource={variants}
         columns={[
           { title: text.color, dataIndex: 'color' },

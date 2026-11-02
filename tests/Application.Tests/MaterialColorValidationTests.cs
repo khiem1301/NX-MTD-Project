@@ -54,6 +54,39 @@ public class MaterialColorValidationTests
     // ---------- Danh mục NVL ----------
 
     [Fact]
+    public async Task CreateAsync_Fabric_AlwaysUsesMeters_WhateverUnitIsSent()
+    {
+        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải lụa", MaterialTypes.Fabric, "MAIN_FABRIC", "kg", "Đỏ", 150), default);
+
+        result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Trim_KeepsTheUnitTyped()
+    {
+        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc áo", MaterialTypes.Trim, "BUTTON", " cái "), default);
+
+        result.Data!.Unit.Should().Be("cái");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Fabric_AlwaysUsesMeters()
+    {
+        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN_FABRIC", "cuộn", "Đen", 150), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
+    }
+
+    [Theory]
+    [InlineData(MaterialTypes.Fabric, "", true)]
+    [InlineData(MaterialTypes.Trim, "", false)]
+    [InlineData(MaterialTypes.Trim, "cái", true)]
+    public void Validator_OnlyTrimNeedsAUnit(string type, string unit, bool valid) =>
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null, type == MaterialTypes.Fabric ? 150 : null))
+            .IsValid.Should().Be(valid);
+
+    [Fact]
     public async Task Same_name_and_type_is_allowed_for_another_color_but_not_for_the_same_color()
     {
         var sameColor = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải gió", MaterialTypes.Fabric, "MAIN", "m", " Đen "), default);

@@ -1,18 +1,23 @@
 import { useEffect } from 'react';
-import { AutoComplete, Checkbox, Form, Input, InputNumber, Modal, Select, Switch } from 'antd';
+import { AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useProductSpec } from '@/features/orders';
-import { PRODUCTION_TEXT } from '../constants';
+import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useProduction';
 import type { Operation } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { OperationFinalField } from './OperationFinalField';
 
 type Props = {
   open: boolean;
   productId: number;
   operation: Operation | null;
-  /** Công đoạn to đã có của mã hàng (gợi ý khi gõ). */
+  /** Nhóm đã có của mã hàng (gợi ý khi gõ). */
   groups: string[];
+  /** Mã hàng có công đoạn cuối đang dùng khác công đoạn này (tick ở đây sẽ chuyển cờ sang đây). */
+  hasOtherFinal: boolean;
+  /** Thứ tự và mã gợi ý khi thêm mới. */
+  defaults: { stationSequence: number; operationCode: string };
   onClose: () => void;
   /** Gọi sau khi tạo mới công đoạn (không gọi khi sửa) — để mở tiếp ô nhập đơn giá. */
   onCreated?: (operationId: number) => void;
@@ -25,7 +30,6 @@ type FormValues = {
   skillLevel?: number | null;
   standardTimeSec?: number | null;
   isFinalStep: boolean;
-  usesSemiFinished: boolean;
   groupName?: string;
   componentIds: number[];
 };
@@ -33,12 +37,14 @@ type FormValues = {
 const text = PRODUCTION_TEXT.operations;
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
-/** UC25 — Kế toán sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
+/** UC25 — Kế toán, Admin sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
 export function OperationFormModal({
   open,
   productId,
   operation,
   groups,
+  hasOtherFinal,
+  defaults,
   onClose,
   onCreated,
 }: Props) {
@@ -58,12 +64,13 @@ export function OperationFormModal({
             skillLevel: operation.skillLevel,
             standardTimeSec: operation.standardTimeSec,
             isFinalStep: operation.isFinalStep,
-            usesSemiFinished: operation.usesSemiFinished,
             groupName: operation.groupName ?? undefined,
             componentIds: operation.componentIds,
           }
-        : { isFinalStep: false, usesSemiFinished: false, componentIds: [] },
+        : { ...defaults, isFinalStep: false, componentIds: [] },
     );
+    // Chỉ điền lúc mở hộp thoại; danh sách tải lại sau đó không được ghi đè chỗ đang nhập.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, operation, form]);
 
   const handleFinish = (values: FormValues) => {
@@ -75,9 +82,8 @@ export function OperationFormModal({
         stationSequence: values.stationSequence,
         skillLevel: values.skillLevel ?? null,
         standardTimeSec: values.standardTimeSec ?? null,
-        teamType: 'Sewing',
+        teamType: operation?.teamType ?? 'Sewing',
         isFinalStep: values.isFinalStep,
-        usesSemiFinished: values.usesSemiFinished,
         groupName: values.groupName?.trim() || null,
         componentIds: values.componentIds,
       },
@@ -103,27 +109,66 @@ export function OperationFormModal({
       destroyOnHidden
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Form.Item name="operationCode" label={text.form.code} rules={required}>
-          <Input maxLength={30} />
-        </Form.Item>
-        <Form.Item name="operationName" label={text.form.name} rules={required}>
-          <Input maxLength={200} />
-        </Form.Item>
-        <Form.Item
-          name="stationSequence"
-          label={text.form.sequence}
-          rules={[{ required: true, message: PRODUCTION_TEXT.required }]}
-        >
-          <InputNumber min={1} precision={0} style={{ width: 160 }} />
-        </Form.Item>
-        <Form.Item name="skillLevel" label={text.form.skill}>
-          <InputNumber min={1} max={9} precision={0} style={{ width: 160 }} />
-        </Form.Item>
-        <Form.Item name="standardTimeSec" label={text.form.standardTime}>
-          <InputNumber min={0.01} precision={2} style={{ width: 160 }} />
-        </Form.Item>
+        <Row gutter={12}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="operationCode"
+              label={text.form.code}
+              rules={[
+                ...required,
+                { pattern: OPERATION_LIMITS.codePattern, message: text.form.codeFormat },
+              ]}
+            >
+              <Input maxLength={OPERATION_LIMITS.maxCode} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={16}>
+            <Form.Item name="operationName" label={text.form.name} rules={required}>
+              <Input maxLength={OPERATION_LIMITS.maxName} />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="stationSequence"
+              label={text.form.sequence}
+              rules={[{ required: true, message: PRODUCTION_TEXT.required }]}
+            >
+              <InputNumber
+                min={1}
+                max={OPERATION_LIMITS.maxSequence}
+                precision={0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item name="skillLevel" label={text.form.skill}>
+              <InputNumber
+                min={OPERATION_LIMITS.minSkill}
+                max={OPERATION_LIMITS.maxSkill}
+                precision={0}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item name="standardTimeSec" label={text.form.standardTime}>
+              <InputNumber
+                min={0.01}
+                max={OPERATION_LIMITS.maxStandardTimeSec}
+                precision={2}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
         <Form.Item name="groupName" label={text.form.group} extra={text.form.groupHint}>
-          <AutoComplete allowClear options={groups.map((g) => ({ value: g }))} maxLength={200} />
+          <AutoComplete
+            allowClear
+            options={groups.map((g) => ({ value: g }))}
+            filterOption
+            maxLength={OPERATION_LIMITS.maxGroupName}
+          />
         </Form.Item>
         <Form.Item
           name="componentIds"
@@ -141,15 +186,7 @@ export function OperationFormModal({
             }))}
           />
         </Form.Item>
-        <Form.Item name="usesSemiFinished" valuePropName="checked">
-          <Switch checkedChildren={text.withPieces} unCheckedChildren={text.withoutPieces} />
-        </Form.Item>
-        <div style={{ marginTop: -16, marginBottom: 16, color: '#8c8c8c' }}>
-          {text.form.usesSemiFinished}
-        </div>
-        <Form.Item name="isFinalStep" valuePropName="checked">
-          <Checkbox>{text.form.isFinal}</Checkbox>
-        </Form.Item>
+        <OperationFinalField hasOtherFinal={hasOtherFinal} />
       </Form>
     </Modal>
   );

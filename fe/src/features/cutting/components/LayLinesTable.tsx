@@ -1,6 +1,6 @@
 import { Form, Input, InputNumber } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS, lineKey } from '../constants';
+import { LABELS, LAY_MAX_SMALLINT, lineKey } from '../constants';
 import type { WorkOrderLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 
@@ -25,14 +25,15 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
           render: (_, l) =>
             `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
         },
-        { title: LABELS.plannedQty, dataIndex: 'plannedQty', align: 'right' },
-        { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right' },
+        { title: LABELS.plannedQty, dataIndex: 'plannedQty', align: 'right', width: 90 },
+        { title: LABELS.cutQty, dataIndex: 'cutQty', align: 'right', width: 80 },
         {
           title: LABELS.ratioValue,
           key: 'ratio',
+          width: 90,
           render: (_, l) => (
             <Form.Item name={['ratio', lineKey(l)]} noStyle>
-              <InputNumber min={0} precision={0} style={{ width: 80 }} />
+              <InputNumber min={0} max={LAY_MAX_SMALLINT} precision={0} style={{ width: '100%' }} />
             </Form.Item>
           ),
         },
@@ -40,16 +41,19 @@ export function LayLinesTable({ lines }: LayLinesTableProps) {
           title: LABELS.calculatedQty,
           key: 'calc',
           align: 'right',
+          width: 80,
           render: (_, l) => plyCount * (ratios[lineKey(l)] ?? 0),
         },
         {
           title: LABELS.actualQty,
           key: 'actual',
+          width: 110,
           render: (_, l) => (
             <Form.Item name={['actual', lineKey(l)]} noStyle>
               <InputNumber
                 min={0}
                 precision={0}
+                style={{ width: '100%' }}
                 placeholder={String(plyCount * (ratios[lineKey(l)] ?? 0))}
               />
             </Form.Item>

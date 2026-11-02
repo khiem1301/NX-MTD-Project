@@ -279,6 +279,19 @@ public class MealServiceTests
     }
 
     [Fact]
+    public async Task RunReminderJobAsync_StartedAfterCutoff_LeavesTheDayToAutoClose()
+    {
+        // Backend khởi động sau 08:30: hai job cùng chạy, nhắc lúc này vô ích và sẽ bị trigger chặn sau khi JOB-03 chốt.
+        _clock.Now.Returns(new DateTime(2026, 10, 21, 9, 0, 0));
+        _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(Meal());
+
+        await _sut.RunReminderJobAsync(Today, CancellationToken.None);
+
+        await _repo.DidNotReceiveWithAnyArgs().GetConfirmableTeamsAsync(default);
+        await _repo.DidNotReceiveWithAnyArgs().SaveChangesAsync(default);
+    }
+
+    [Fact]
     public async Task RunReminderJobAsync_UnconfirmedTeam_CreatesAttendanceRowAndStampsRemindedAt()
     {
         var meal = Meal();
@@ -400,6 +413,24 @@ public class MealServiceTests
         meal.AttendanceIncomplete.Should().BeFalse();
         _repo.Received(1).AddConfirmation(Arg.Is<TeamMealConfirmation>(c =>
             c.TeamId == 3 && c.MealCount == 8 && c.Source == MealConfirmationSource.Attendance));
+    }
+
+    [Fact]
+    public async Task RunAutoCloseJobAsync_SavesTeamRowsWhileDayIsStillOpen()
+    {
+        // trg_TeamMeal_Cutoff chặn ghi dòng của tổ khi ngày đã chốt, nên dòng của tổ phải lưu trước khi đổi trạng thái ngày.
+        var meal = Meal();
+        _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
+        _repo.GetConfirmableTeamsAsync(Arg.Any<CancellationToken>()).Returns(new[] { Team() });
+        _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
+        _attendance.GetHealthAsync(Arg.Any<CancellationToken>()).Returns(
+            Result<SyncHealthDto>.Success(new SyncHealthDto(Now0800, 5, 30, false, 0)));
+        var statusAtSave = new List<string>();
+        _repo.When(r => r.SaveChangesAsync(Arg.Any<CancellationToken>())).Do(_ => statusAtSave.Add(meal.Status));
+
+        await _sut.RunAutoCloseJobAsync(Today, CancellationToken.None);
+
+        statusAtSave.Should().Equal(MealStatus.Open, MealStatus.AutoClosed);
     }
 
     [Fact]

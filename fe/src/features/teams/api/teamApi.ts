@@ -1,11 +1,13 @@
 import { API, type RolePath } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse } from '@/types/api';
+import type { EmployeeLookup } from '@/types/hrLookup';
 import type {
   AppointPosition,
   SaveTeamPayload,
   TeamDetail,
   TeamListItem,
+  TeamMembersPayload,
   TransferPayload,
 } from '../types';
 
@@ -31,4 +33,11 @@ export const teamApi = {
     post<unknown>(API.teams.action(role, id, 'transfer-in'), body),
   appoint: (role: RolePath, id: number, employeeId: number, position: AppointPosition) =>
     post<unknown>(API.teams.action(role, id, 'appoint'), { employeeId, position }),
+  dismiss: (role: RolePath, id: number, employeeId: number) =>
+    post<unknown>(API.teams.action(role, id, 'dismiss'), { employeeId }),
+  candidates: (role: RolePath) => get<EmployeeLookup[]>(API.teams.candidates(role)),
+  addMembers: (role: RolePath, id: number, body: TeamMembersPayload) =>
+    post<unknown>(API.teams.action(role, id, 'add-members'), body),
+  removeMembers: (role: RolePath, id: number, body: TeamMembersPayload) =>
+    post<unknown>(API.teams.action(role, id, 'remove-members'), body),
 };

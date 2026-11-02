@@ -33,7 +33,7 @@ describe('FabricCheckAlerts', () => {
 
     expect(screen.getByText('Không đủ vải cho lệnh cắt')).toBeInTheDocument();
     expect(screen.getByText('thiếu 50 m')).toBeInTheDocument();
-    expect(screen.getByText('Chi tiết rộng hơn khổ vải')).toBeInTheDocument();
+    expect(screen.getByText('Bìa hoặc chi tiết rộng hơn khổ vải')).toBeInTheDocument();
     expect(screen.getByText('tay áo rộng hơn khổ')).toBeInTheDocument();
     expect(screen.getAllByText(/Lệnh vẫn lưu được/)).toHaveLength(2);
     expect(screen.queryByText('Chưa tính được vải')).not.toBeInTheDocument();

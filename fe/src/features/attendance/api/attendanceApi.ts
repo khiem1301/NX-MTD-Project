@@ -14,6 +14,7 @@ import type {
   TimesheetFilter,
   TimesheetSummary,
   UnmappedCode,
+  SyncStatus,
 } from '../types';
 
 const asFormData = (file: File): FormData => {
@@ -76,9 +77,9 @@ export const attendanceApi = {
     return res.data.data;
   },
 
-  getSyncSessions: async (take: number): Promise<SyncSession[]> => {
+  getSyncSessions: async (take: number, status?: SyncStatus): Promise<SyncSession[]> => {
     const res = await apiClient.get<ApiResponse<SyncSession[]>>(API.attendance.syncSessions, {
-      params: { take },
+      params: { take, status },
     });
     return res.data.data;
   },

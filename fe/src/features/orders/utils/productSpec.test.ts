@@ -34,6 +34,8 @@ const norm = (
 
 const spec: ProductSpec = {
   productId: 1,
+  markers: [],
+  markerFabrics: [],
   components: [
     {
       productComponentId: 1,

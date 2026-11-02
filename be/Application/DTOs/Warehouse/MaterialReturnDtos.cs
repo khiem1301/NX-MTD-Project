@@ -17,9 +17,14 @@ public sealed record MaterialReturnDto(
     string? RejectReason, IReadOnlyList<MaterialReturnLineDto> Lines);
 
 /// <summary>Vải đã cấp cho tổ cắt (phiếu cấp đã nhận) và số còn trả được của từng dòng.</summary>
+/// <param name="SuggestedQty">
+/// Số vải còn lại gợi ý trả: đã nhận − đã trả / đang trả − đã cắt (Σ số lớp × chiều dài các bàn của tổ trên đơn), chia vào các
+/// dòng phiếu cấp cùng đơn, cùng vải. null khi có bàn cắt chưa nhập chiều dài (chưa tính được số đã cắt).
+/// </param>
 public sealed record ReturnableLineDto(
     int MaterialIssueId, string IssueCode, int MaterialIssueLineId, string OrderCode, string MaterialCode,
-    string MaterialName, string Unit, string MaterialColor, decimal ReceivedQty, decimal ReturnedQty, decimal RemainingQty);
+    string MaterialName, string Unit, string MaterialColor, decimal ReceivedQty, decimal ReturnedQty, decimal RemainingQty,
+    decimal? SuggestedQty = null);
 
 public sealed record CreateReturnLineDto(int MaterialIssueLineId, decimal ReturnedQty);
 

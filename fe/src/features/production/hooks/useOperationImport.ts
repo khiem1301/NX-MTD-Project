@@ -10,10 +10,10 @@ import { PRODUCTION_TEXT } from '../constants';
 const text = PRODUCTION_TEXT.operations.import;
 
 /** Trạng thái và thao tác của màn nhập công đoạn từ Excel: chọn file, xem trước, tùy chọn đơn giá, xác nhận nhập. */
-export function useOperationImport(productId: number, onClose: () => void) {
+export function useOperationImport(productId: number, onClose: () => void, allowRates: boolean) {
   const [file, setFile] = useState<File | null>(null);
   const [finalStt, setFinalStt] = useState<number | undefined>(undefined);
-  const [withRates, setWithRates] = useState(true);
+  const [withRates, setWithRates] = useState(allowRates);
   const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
   const [submitRates, setSubmitRates] = useState(true);
   const preview = usePreviewOperationImport();

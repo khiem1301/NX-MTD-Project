@@ -26,6 +26,12 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         new() { OrderLineId = 21, OrderId = 2, ProductId = 1 },
         new() { OrderLineId = 31, OrderId = 3, ProductId = 1 },
     ];
+    private readonly List<OrderLineTeam> _allotted =
+    [
+        new() { OrderLineId = 11, SewingTeamId = TeamId },
+        new() { OrderLineId = 21, SewingTeamId = TeamId },
+        new() { OrderLineId = 31, SewingTeamId = TeamId },
+    ];
     private readonly List<Operation> _operations = [];
     private readonly List<Employee> _employees = [];
     private readonly OperationAssignmentService _sut;
@@ -36,6 +42,7 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         SetupQueryable(_assignments);
         SetupQueryable(_orders);
         SetupQueryable(_lines);
+        SetupQueryable(_allotted);
         SetupQueryable(_operations);
         SetupQueryable(_employees);
         AsTeamLeader(TeamId);
@@ -59,7 +66,7 @@ public class OperationAssignmentServiceTests : ProductionTestBase
     private Operation Op(int id, string code = "OP10", int productId = 1, string status = OperationStatuses.Active)
     {
         var op = new Operation { OperationId = id, ProductId = productId, OperationCode = code, OperationName = "CĐ " + code,
-            StationSequence = (short)id, Status = status, Product = new Product { ProductId = productId, ProductCode = "MH00" + productId } };
+            StationSequence = (short)id, Status = status, TeamType = TeamTypes.Sewing, Product = new Product { ProductId = productId, ProductCode = "MH00" + productId } };
         _operations.Add(op);
         return op;
     }
@@ -78,9 +85,68 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         result.Data!.Select(o => o.OperationId).Should().Equal(1);
     }
 
+    [Fact]
+    public async Task ListOperations_returns_skill_level_of_operation()
+    {
+        var withLevel = Op(1, "OP10");
+        withLevel.TeamType = TeamTypes.Sewing;
+        withLevel.SkillLevel = 4;
+        Op(2, "OP20").TeamType = TeamTypes.Sewing;   // chưa khai bậc
+
+        var result = await _sut.ListOperationsAsync(orderId: 1, CancellationToken.None);
+
+        result.Data!.Select(o => o.SkillLevel).Should().Equal((byte)4, null);
+    }
+
+    [Fact]
+    public async Task ListOperations_ReturnsOnlyProductsAllottedToOwnTeam()
+    {
+        _lines.Add(new OrderLine { OrderLineId = 12, OrderId = 1, ProductId = 2 });
+        Op(1, "OP10").TeamType = TeamTypes.Sewing;
+        Op(2, "OP20", productId: 2).TeamType = TeamTypes.Sewing;
+
+        var result = await _sut.ListOperationsAsync(orderId: 1, default);
+
+        result.Data!.Select(o => o.OperationId).Should().Equal(1);
+    }
+
+    [Fact]
+    public async Task ListOperations_OneColorSizeAllotted_IsEnoughForTheProduct()
+    {
+        _lines.Add(new OrderLine { OrderLineId = 12, OrderId = 1, ProductId = 1 });   // màu × size khác của cùng mã, không chia cho tổ
+        Op(1, "OP10").TeamType = TeamTypes.Sewing;
+
+        var result = await _sut.ListOperationsAsync(orderId: 1, default);
+
+        result.Data!.Select(o => o.OperationId).Should().Equal(1);
+    }
+
+    [Fact]
+    public async Task Assign_ProductNotAllottedToOwnTeam_IsRejected()
+    {
+        _lines.Add(new OrderLine { OrderLineId = 12, OrderId = 1, ProductId = 2 });
+        Op(2, "OP20", productId: 2);
+        Worker(7);
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 2, 7), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentProductNotAllotted);
+        _assignments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Copy_SkipsProductsNotAllottedToOwnTeam()
+    {
+        _allotted.RemoveAll(a => a.OrderLineId == 21);
+        Current(50, 1, Op(1, "OP10"), Worker(7));
+
+        (await _sut.CopyAsync(new CopyAssignmentsDto(1, 2), default)).Data.Should().Be(0);
+    }
+
     private Employee Worker(int id, int teamId = TeamId, string status = RecordStatus.Active)
     {
-        var e = new Employee { EmployeeId = id, EmployeeCode = "CN" + id, FullName = "Công nhân " + id, TeamId = teamId, Status = status };
+        var e = new Employee { EmployeeId = id, EmployeeCode = "CN" + id, FullName = "Công nhân " + id, TeamId = teamId, Status = status,
+            Role = new Role { RoleCode = RoleCodes.Worker } };
         _employees.Add(e);
         return e;
     }
@@ -311,6 +377,65 @@ public class OperationAssignmentServiceTests : ProductionTestBase
     }
 
     // ---------- Kết thúc phân công ----------
+
+    [Fact]
+    public async Task Assign_CuttingOperation_IsRejected()
+    {
+        Op(1).TeamType = TeamTypes.Cutting;
+        Worker(7);
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 1, 7), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentOperationNotSewing);
+        _assignments.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(RoleCodes.TeamLeader)]
+    [InlineData(RoleCodes.TeamDeputy)]
+    public async Task Assign_LeaderOfOwnTeam_IsRejected(string roleCode)
+    {
+        Op(1);
+        Worker(7).Role.RoleCode = roleCode;
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 1, 7), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentWorkerInvalid);
+        _assignments.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task Lists_InvalidOrderId_IsAValidationError(int orderId)
+    {
+        (await _sut.ListCurrentAsync(orderId, default)).Kind.Should().Be(ResultKind.Validation);
+        (await _sut.ListOperationsAsync(orderId, default)).Kind.Should().Be(ResultKind.Validation);
+    }
+
+    [Fact]
+    public async Task Close_RowOfClosedOrder_IsRejectedAndKeepsRowOpen()
+    {
+        var row = Current(50, 3, Op(1), Worker(7));   // đơn 3 đã hủy
+
+        var result = await _sut.CloseAsync(50, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AssignmentOrderInvalid);
+        row.ValidTo.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Copy_SkipsCuttingOperationsAndLeaders()
+    {
+        var cutting = Op(1);
+        cutting.TeamType = TeamTypes.Cutting;
+        Current(50, 1, cutting, Worker(7));
+        var leader = Worker(8);
+        leader.Role.RoleCode = RoleCodes.TeamLeader;
+        Current(51, 1, Op(2, "OP20"), leader);
+
+        (await _sut.CopyAsync(new CopyAssignmentsDto(1, 2), default)).Data.Should().Be(0);
+    }
 
     [Fact]
     public async Task Close_SetsValidToToday()

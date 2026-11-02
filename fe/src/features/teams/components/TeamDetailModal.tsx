@@ -1,60 +1,43 @@
-import { Button, Result, Space, Spin, Tabs, type TableColumnsType } from 'antd';
+import { Button, Result, Space, Spin, Tabs, Tag, Typography, type TableColumnsType } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { AuditHistory } from '@/components/common/AuditHistory';
+import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { QueryError } from '@/components/common/QueryError';
 import { PAY_TYPE_LABEL, ROLE_LABEL } from '@/constants/hr';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
 import { fill } from '@/utils/format';
-import { useAppoint, useTeam } from '../hooks/useTeams';
-import type { AppointPosition, TeamMember } from '../types';
+import { useRemoveMembers, useTeam } from '../hooks/useTeams';
+import { APPOINTABLE_ROLES, isLeadership } from '../teamRoles';
+import type { TeamDetail, TeamMember } from '../types';
+import { AddMembersModal } from './AddMembersModal';
+import { TeamMemberActions } from './TeamMemberActions';
 import { TransferModal } from './TransferModal';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 
-const APPOINTABLE_ROLES = ['Worker', 'TeamLeader', 'TeamDeputy'];
-const POSITION_ROLE: Record<AppointPosition, string> = {
-  Leader: 'TeamLeader',
-  Deputy: 'TeamDeputy',
-};
-const POSITION_LABEL: Record<AppointPosition, string> = { Leader: 'tổ trưởng', Deputy: 'tổ phó' };
+const nameOf = (team: TeamDetail, role: string) =>
+  team.members.find((m) => m.role === role)?.fullName ?? MESSAGES.hr.noLeader;
 
-/** Chi tiết tổ mở theo query ?id=: thành viên, bổ nhiệm tổ trưởng / tổ phó (D33), chuyển tổ (D32), lịch sử. */
+/**
+ * Chi tiết tổ mở theo query ?id=: thành viên, thêm / loại nhân viên, chuyển tổ (D32),
+ * bổ nhiệm và thôi giữ chức tổ trưởng / tổ phó (D33), lịch sử.
+ */
 export function TeamDetailModal() {
   const [params, setParams] = useSearchParams();
   const idParam = Number(params.get('id'));
   const id = Number.isInteger(idParam) && idParam > 0 ? idParam : null;
   const { data, isLoading, error: queryError, refetch } = useTeam(id);
   const error = queryError as ApiError | null;
-  const appoint = useAppoint();
+  const remove = useRemoveMembers();
   const [selected, setSelected] = useState<number[]>([]);
   const [transferring, setTransferring] = useState(false);
+  const [adding, setAdding] = useState(false);
 
-  const canAppoint = data !== undefined && data.teamType !== 'Office' && data.status === 'Active';
-  const holderOf = (position: AppointPosition, exceptId: number): TeamMember | undefined =>
-    data?.members.find((m) => m.role === POSITION_ROLE[position] && m.employeeId !== exceptId);
-
-  const appointButton = (m: TeamMember, position: AppointPosition) => {
-    if (m.role === POSITION_ROLE[position]) return null;
-    const holder = holderOf(position, m.employeeId);
-    const label = position === 'Leader' ? MESSAGES.hr.appointLeader : MESSAGES.hr.appointDeputy;
-    const run = () => appoint.mutate({ id: data?.teamId ?? 0, employeeId: m.employeeId, position });
-    return holder ? (
-      <ConfirmAction
-        title={fill(MESSAGES.hr.appointConfirm, holder.fullName, POSITION_LABEL[position])}
-        onConfirm={run}
-      >
-        <Button size="small">{label}</Button>
-      </ConfirmAction>
-    ) : (
-      <Button size="small" onClick={run}>
-        {label}
-      </Button>
-    );
-  };
+  const isActive = data?.status === 'Active';
+  const canAppoint = data !== undefined && data.teamType !== 'Office' && isActive;
 
   const columns: TableColumnsType<TeamMember> = [
     { title: MESSAGES.hr.employeeCode, dataIndex: 'employeeCode' },
@@ -77,11 +60,8 @@ export function TeamDetailModal() {
     {
       title: MESSAGES.common.actions,
       render: (_: unknown, m) =>
-        canAppoint && APPOINTABLE_ROLES.includes(m.role) ? (
-          <Space>
-            {appointButton(m, 'Leader')}
-            {appointButton(m, 'Deputy')}
-          </Space>
+        data && canAppoint && APPOINTABLE_ROLES.includes(m.role) ? (
+          <TeamMemberActions team={data} member={m} />
         ) : null,
     },
   ];
@@ -91,6 +71,12 @@ export function TeamDetailModal() {
     setParams({});
   };
 
+  const handleRemove = () =>
+    remove.mutate(
+      { id: data?.teamId ?? 0, body: { employeeIds: selected } },
+      { onSuccess: () => setSelected([]) },
+    );
+
   return (
     <DetailModal
       open={id !== null}
@@ -98,12 +84,26 @@ export function TeamDetailModal() {
       title={data ? `${data.teamCode} · ${data.teamName}` : undefined}
       extra={
         data && (
-          <Button
-            disabled={selected.length === 0 || data.status !== 'Active'}
-            onClick={() => setTransferring(true)}
-          >
-            {MESSAGES.hr.transfer}
-          </Button>
+          <Space wrap>
+            <Button disabled={!isActive} onClick={() => setAdding(true)}>
+              {MESSAGES.hr.addMembers}
+            </Button>
+            <ConfirmAction
+              title={fill(MESSAGES.hr.removeConfirm, String(selected.length))}
+              disabled={selected.length === 0}
+              onConfirm={handleRemove}
+            >
+              <Button danger disabled={selected.length === 0}>
+                {MESSAGES.hr.removeMembers}
+              </Button>
+            </ConfirmAction>
+            <Button
+              disabled={selected.length === 0 || !isActive}
+              onClick={() => setTransferring(true)}
+            >
+              {MESSAGES.hr.transfer}
+            </Button>
+          </Space>
         )
       }
     >
@@ -119,39 +119,56 @@ export function TeamDetailModal() {
           items={[
             {
               key: 'members',
-              label: MESSAGES.hr.members,
+              label: `${MESSAGES.hr.members} (${data.members.length})`,
               children: (
-                <DataTable<TeamMember>
-                  rowKey="employeeId"
-                  size="small"
-                  pagination={false}
-                  columns={columns}
-                  dataSource={data.members}
-                  rowSelection={{
-                    selectedRowKeys: selected,
-                    onChange: (keys) => setSelected(keys as number[]),
-                  }}
-                />
+                <>
+                  <Space wrap style={{ marginBottom: 8 }}>
+                    <Tag>
+                      {MESSAGES.hr.leader}: {nameOf(data, 'TeamLeader')}
+                    </Tag>
+                    <Tag>
+                      {MESSAGES.hr.deputy}: {nameOf(data, 'TeamDeputy')}
+                    </Tag>
+                  </Space>
+                  <DataTable<TeamMember>
+                    rowKey="employeeId"
+                    size="small"
+                    pagination={false}
+                    columns={columns}
+                    dataSource={data.members}
+                    rowSelection={{
+                      selectedRowKeys: selected,
+                      onChange: (keys) => setSelected(keys as number[]),
+                      getCheckboxProps: (m) => ({ disabled: isLeadership(m) }),
+                    }}
+                  />
+                  <Typography.Text type="secondary">
+                    {MESSAGES.hr.leadersMustResign}
+                  </Typography.Text>
+                </>
               ),
             },
             {
               key: 'history',
               label: MESSAGES.hr.history,
-              children: <AuditHistory history={data.history} />,
+              children: <AuditHistoryTable history={data.history} />,
             },
           ]}
         />
       )}
       {data && (
-        <TransferModal
-          open={transferring}
-          fromTeamId={data.teamId}
-          employeeIds={selected}
-          onClose={() => {
-            setTransferring(false);
-            setSelected([]);
-          }}
-        />
+        <>
+          <AddMembersModal open={adding} teamId={data.teamId} onClose={() => setAdding(false)} />
+          <TransferModal
+            open={transferring}
+            fromTeamId={data.teamId}
+            employeeIds={selected}
+            onClose={() => {
+              setTransferring(false);
+              setSelected([]);
+            }}
+          />
+        </>
       )}
     </DetailModal>
   );
