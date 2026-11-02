@@ -24,6 +24,9 @@ export const kpiApi = {
     get<{ teamId: number; teamName: string }[]>(API.kpi.allottedTeams, { orderId, productId }),
   getTargets: (filter: KpiTargetFilter) => get<Paginated<KpiTarget>>(API.kpi.targets, filter),
 
+  getTeamTargets: (filter: KpiTargetFilter) =>
+    get<Paginated<KpiTarget>>(API.kpi.teamTargets, filter),
+
   getTargetById: (kpiTargetId: number) => get<KpiTarget>(`${API.kpi.targets}/${kpiTargetId}`),
 
   getDailyResults: (kpiTargetId: number) =>

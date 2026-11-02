@@ -184,6 +184,8 @@ export type OperationOption = {
   isFinalStep: boolean;
   groupName: string | null;
   skillLevel: number | null;
+  /** Thời gian chuẩn của công đoạn (giây). */
+  standardTimeSec?: number | null;
 };
 
 /** Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia (DEV-ALL-49). */

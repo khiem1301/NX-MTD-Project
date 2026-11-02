@@ -121,7 +121,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
         };
         await _uow.Repository<WorkAllocation>().AddAsync(allocation);
         var verb = dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi";
-        _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
+        _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Production,
             dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
             $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
             + ", vui lòng kiểm tra và xác nhận.",
@@ -223,7 +223,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
                     .Where(e => e.TeamId == allocation.SewingTeamId && e.Status == RecordStatus.Active
                                 && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
                     .Select(e => e.EmployeeId).ToListAsync(ct);
-                _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Warehouse,
+                _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Production,
                     allocation.Status == HandoverStatuses.Confirmed ? "Công nhân đã xác nhận việc được giao" : "Công nhân từ chối phiếu giao việc",
                     $"{allocation.Operation.OperationName} ({allocation.OrderLine.ProductVariant.Color} - {allocation.OrderLine.ProductVariant.SizeCode}): {(allocation.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
                     null));

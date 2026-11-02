@@ -65,7 +65,7 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
             .OrderBy(o => o.Product.ProductCode).ThenBy(o => o.StationSequence)
             .Select(o => new OperationOptionDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
                 o.OperationName, o.StationSequence, o.IsFinalStep,
-                o.OperationGroup == null ? null : o.OperationGroup.GroupName, o.SkillLevel))
+                o.OperationGroup == null ? null : o.OperationGroup.GroupName, o.SkillLevel, o.StandardTimeSec))
             .ToListAsync(ct);
         return Result<IReadOnlyList<OperationOptionDto>>.Success(items);
     }

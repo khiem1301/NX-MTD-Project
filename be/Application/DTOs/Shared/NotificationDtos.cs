@@ -3,11 +3,14 @@ using NX_MTD.Application.Common;
 namespace NX_MTD.Application.DTOs;
 
 public sealed record NotificationDto(long NotificationId, string SourceType, string Title, string Message, string? LinkUrl,
-    bool IsRead, bool IsUrgent, DateTime CreatedAt);
+    bool IsRead, bool IsUrgent, bool IsManual, DateTime CreatedAt);
 
 public sealed record NotificationQuery : PageQuery
 {
     public bool? UnreadOnly { get; init; }
+
+    /// <summary>MANUAL (cấp trên gửi) / AUTO (hệ thống tự tạo); bỏ trống = tất cả.</summary>
+    public string? Group { get; init; }
 }
 
 public sealed record UnreadCountDto(int Count);

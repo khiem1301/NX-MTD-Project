@@ -175,7 +175,7 @@ public sealed record OrderLineProgressDto(
 /// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
 public sealed record OperationOptionDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
-    short StationSequence, bool IsFinalStep, string? GroupName = null, byte? SkillLevel = null);
+    short StationSequence, bool IsFinalStep, string? GroupName = null, byte? SkillLevel = null, decimal? StandardTimeSec = null);
 
 // ================= Chia dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49) =================
 public sealed record OrderLineTeamQuery : PageQuery

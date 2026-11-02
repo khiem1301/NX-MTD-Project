@@ -1,4 +1,4 @@
-import { Input, Segmented } from 'antd';
+import { Input, Select } from 'antd';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { fill } from '@/utils/format';
@@ -69,7 +69,9 @@ export function AssignmentFilterBar({
             value={filter.workerId}
             onChange={(workerId) => onChange({ workerId })}
           />
-          <Segmented<AssignmentState>
+          <Select<AssignmentState>
+            aria-label={text.filterState}
+            style={{ width: 190 }}
             value={filter.state}
             onChange={(state) => onChange({ state })}
             options={[

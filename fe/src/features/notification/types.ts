@@ -8,10 +8,13 @@ export type NotificationItem = {
   linkUrl: string | null;
   isRead: boolean;
   isUrgent: boolean;
+  isManual: boolean;
   createdAt: string;
 };
 
-export type NotificationQuery = PageParams & { unreadOnly?: boolean };
+export type NotificationGroup = 'MANUAL' | 'AUTO';
+
+export type NotificationQuery = PageParams & { unreadOnly?: boolean; group?: NotificationGroup };
 
 export type Announcement = {
   announcementId: number;
