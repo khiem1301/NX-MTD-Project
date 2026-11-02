@@ -14,7 +14,7 @@ public sealed class ShortDeliveriesController : WarehouseKeeperBaseController
 
     [HttpGet]
     public async Task<IActionResult> GetPaged([FromQuery] ShortDeliveryQuery query, CancellationToken ct) =>
-        this.ToResponse(await _shortDeliveries.GetPagedAsync(query with { AwaitingReplenish = true }, ct));
+        this.ToResponse(await _shortDeliveries.GetPagedAsync(query with { ResolvedOnly = true }, ct));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>

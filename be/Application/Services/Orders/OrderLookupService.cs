@@ -10,22 +10,23 @@ public sealed class OrderLookupService : IOrderLookupService
 {
     private readonly ICustomerOrderRepository _orders;
     private readonly IProductRepository _products;
+    private readonly ICurrentUser _user;
 
-    public OrderLookupService(ICustomerOrderRepository orders, IProductRepository products)
+    public OrderLookupService(ICustomerOrderRepository orders, IProductRepository products, ICurrentUser user)
     {
-        _orders = orders; _products = products;
+        _orders = orders; _products = products; _user = user;
     }
 
     public async Task<Result<PagedResult<OrderLookupDto>>> OrdersAsync(OrderLookupQuery query, CancellationToken ct)
     {
         IReadOnlyCollection<string> statuses = OrderStatuses.Running;
         if (!string.IsNullOrWhiteSpace(query.Status)) statuses = new[] { CodeText.ToCode(query.Status) };
-        return Result<PagedResult<OrderLookupDto>>.Success(await _orders.LookupAsync(query, statuses, ct));
+        return Result<PagedResult<OrderLookupDto>>.Success(await _orders.LookupAsync(query, statuses, SewingTeamScope.Of(_user), ct));
     }
 
     public async Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, CancellationToken ct) =>
         await _orders.ExistsAsync(orderId, ct)
-            ? Result<IReadOnlyList<OrderLineLookupDto>>.Success(await _orders.LookupLinesAsync(orderId, ct))
+            ? Result<IReadOnlyList<OrderLineLookupDto>>.Success(await _orders.LookupLinesAsync(orderId, SewingTeamScope.Of(_user), ct))
             : Fail.NotFound<IReadOnlyList<OrderLineLookupDto>>();
 
     public async Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct) =>

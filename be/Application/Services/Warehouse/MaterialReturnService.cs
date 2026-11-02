@@ -20,10 +20,12 @@ public sealed class MaterialReturnService : IMaterialReturnService
     private readonly IAppLock _locks;
     private readonly IClock _clock;
 
+    private readonly FabricPlanner _planner;
+
     public MaterialReturnService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes,
-        INotificationService notifier, IAppLock locks, IClock clock)
+        INotificationService notifier, IAppLock locks, IClock clock, FabricPlanner planner)
     {
-        _uow = uow; _stock = stock; _codes = codes; _notifier = notifier; _locks = locks; _clock = clock;
+        _uow = uow; _stock = stock; _codes = codes; _notifier = notifier; _locks = locks; _clock = clock; _planner = planner;
     }
 
     private IQueryable<MaterialReturn> Returns => _uow.Repository<MaterialReturn>().Query();
@@ -71,18 +73,48 @@ public sealed class MaterialReturnService : IMaterialReturnService
             .OrderByDescending(l => l.MaterialIssueId).ThenBy(l => l.MaterialIssueLineId)
             .Select(l => new
             {
-                l.MaterialIssueId, l.MaterialIssue.IssueCode, l.MaterialIssueLineId, l.MaterialIssue.Order.OrderCode,
+                l.MaterialIssueId, l.MaterialIssue.IssueCode, l.MaterialIssueLineId, l.MaterialIssue.OrderId, l.MaterialIssue.Order.OrderCode,
+                MaterialId = l.MaterialId!.Value,
                 l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit, Color = l.Material.Color,
                 Received = l.ConfirmedQty ?? 0,
             }).ToListAsync(ct);
         var returned = await ReturnedAsync(lines.Select(l => l.MaterialIssueLineId).ToList(), null, ct);
-        var result = lines.Select(l =>
+        var rows = lines.Select(l =>
         {
             var done = returned.GetValueOrDefault(l.MaterialIssueLineId);
-            return new ReturnableLineDto(l.MaterialIssueId, l.IssueCode, l.MaterialIssueLineId, l.OrderCode, l.MaterialCode,
-                l.MaterialName, l.Unit, l.Color, l.Received, done, Math.Max(0, l.Received - done));
-        }).Where(l => l.RemainingQty > 0).ToList();
-        return Result<IReadOnlyList<ReturnableLineDto>>.Success(result);
+            return (l.OrderId, l.MaterialId, Dto: new ReturnableLineDto(l.MaterialIssueId, l.IssueCode, l.MaterialIssueLineId,
+                l.OrderCode, l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Received, done, Math.Max(0, l.Received - done)));
+        }).Where(r => r.Dto.RemainingQty > 0).ToList();
+        return Result<IReadOnlyList<ReturnableLineDto>>.Success(await WithSuggestionAsync(cuttingTeamId, rows, ct));
+    }
+
+    /// <summary>
+    /// Gợi ý số trả: vải còn lại của (đơn, vải) = Σ còn trả được − đã cắt; rót vào các dòng theo thứ tự hiện (phiếu mới trước),
+    /// mỗi dòng không quá số còn trả được của dòng đó.
+    /// </summary>
+    private async Task<IReadOnlyList<ReturnableLineDto>> WithSuggestionAsync(int cuttingTeamId,
+        List<(int OrderId, int MaterialId, ReturnableLineDto Dto)> rows, CancellationToken ct)
+    {
+        var cutByOrder = new Dictionary<int, Dictionary<int, (decimal CutQty, int UnmeasuredLays)>>();
+        foreach (var orderId in rows.Select(r => r.OrderId).Distinct())
+            cutByOrder[orderId] = await _planner.GetCutAsync(cuttingTeamId, orderId, ct);
+
+        var left = new Dictionary<(int, int), decimal?>();
+        var result = new List<ReturnableLineDto>(rows.Count);
+        foreach (var (orderId, materialId, dto) in rows)
+        {
+            var key = (orderId, materialId);
+            if (!left.TryGetValue(key, out var pool))
+            {
+                var (cutQty, unmeasured) = cutByOrder[orderId].GetValueOrDefault(materialId);
+                var remaining = rows.Where(r => r.OrderId == orderId && r.MaterialId == materialId).Sum(r => r.Dto.RemainingQty);
+                pool = unmeasured > 0 ? null : Math.Max(0, remaining - cutQty);
+            }
+            var take = pool is null ? (decimal?)null : Math.Min(pool.Value, dto.RemainingQty);
+            left[key] = pool - (take ?? 0);
+            result.Add(dto with { SuggestedQty = take });
+        }
+        return result;
     }
 
     public async Task<Result<MaterialReturnDto>> CreateAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)

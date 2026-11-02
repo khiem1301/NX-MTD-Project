@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import dayjs, { type Dayjs } from 'dayjs';
-import { Alert, Button, Form, Input, InputNumber, Modal, Select, Space } from 'antd';
+import { Alert, Button, Form, Input, InputNumber, Modal, Select, Space, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -11,7 +11,8 @@ import type { CreatePurchaseOrderPayload } from '../types';
 import { isNewMaterial, newMaterialName } from '../newMaterial';
 import { MaterialFreeSelect } from './MaterialFreeSelect';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { toApiDate } from '@/utils/format';
+import { formatCurrency, toApiDate } from '@/utils/format';
+import { purchaseOrderTotal } from '../utils/purchaseOrderTotal';
 import { PurchaseOrderTimingFields } from './PurchaseOrderTimingFields';
 
 type PurchaseOrderFormModalProps = {
@@ -237,6 +238,9 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
             </>
           )}
         </Form.List>
+        <Typography.Paragraph strong style={{ marginTop: 16 }} data-testid="purchase-order-total">
+          {`${LABELS.purchaseOrderTotal}: ${formatCurrency(purchaseOrderTotal(lines))}`}
+        </Typography.Paragraph>
         <Form.Item name="note" label={LABELS.note} style={{ marginTop: 16 }}>
           <Input.TextArea rows={2} maxLength={1000} />
         </Form.Item>

@@ -19,6 +19,8 @@ export const KPI_TEXT = {
     order: 'Đơn hàng',
     product: 'Mã hàng (theo đơn)',
     team: 'Tổ may',
+    teamPickProduct: 'Chọn đơn hàng và mã hàng trước.',
+    teamNotAllotted: 'Mã hàng chưa chia cho tổ nào. Chia ở màn Chia đơn cho tổ may.',
     period: 'Kỳ (từ - đến)',
     targetFinishedQty: 'Chỉ tiêu cả kỳ',
     required: 'Vui lòng nhập thông tin này.',
@@ -76,6 +78,11 @@ export const KPI_TEXT = {
   listPageTitle: 'Chỉ tiêu KPI tổ may',
   listPageSubtitle:
     'Một đơn hàng, mã hàng và tổ may có thể có nhiều chỉ tiêu nhưng các kỳ không được trùng ngày; một đơn có thể chia cho nhiều tổ. Bấm KPI theo ngày để đặt trên lịch.',
+
+  teamPanel: {
+    title: 'KPI của tổ',
+    empty: 'Tổ chưa được giao chỉ tiêu KPI nào.',
+  },
 
   filter: {
     statusPlaceholder: 'Trạng thái',

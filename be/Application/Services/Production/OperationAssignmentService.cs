@@ -8,9 +8,9 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// KI-03 (UC52): tổ trưởng / tổ phó tổ may phân công công nhân × công đoạn theo đơn hàng. Đổi phân công = đóng dòng
-/// cũ (<c>ValidTo</c>) rồi mở dòng mới, không sửa đè (giữ lịch sử). Phân công chỉ là gợi ý nạp lưới sản lượng:
-/// công đoạn ngoài phân công vẫn nhập được cho riêng ca đó (GBR-20).
+/// KI-03 (UC52): tổ trưởng / tổ phó tổ may phân công công nhân × công đoạn của mã hàng được chia cho tổ (DEV-ALL-49). Đổi phân công = đóng dòng
+/// cũ (<c>ValidTo</c>) rồi mở dòng mới, không sửa đè (giữ lịch sử). Tổ phải phân công đủ mọi công đoạn trước khi nhận BTP của đơn
+/// (DEV-ALL-48, kiểm ở <see cref="MaterialIssueService"/>). Sau đó công đoạn ngoài phân công vẫn nhập được cho riêng ca đó (GBR-20).
 /// </summary>
 public sealed class OperationAssignmentService : IOperationAssignmentService
 {
@@ -25,8 +25,19 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
 
     private IQueryable<OperationAssignment> Assignments => _uow.Repository<OperationAssignment>().Query();
 
+    /// <summary>Mã hàng của đơn mà tổ được chia ít nhất một màu × size (DEV-ALL-49).</summary>
+    private IQueryable<int> AllottedProductIds(int teamId, int orderId)
+    {
+        var allotted = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == teamId);
+        return _uow.Repository<OrderLine>().Query()
+            .Where(l => l.OrderId == orderId && allotted.Any(a => a.OrderLineId == l.OrderLineId))
+            .Select(l => l.ProductId);
+    }
+
     public async Task<Result<IReadOnlyList<OperationAssignmentDto>>> ListCurrentAsync(int orderId, CancellationToken ct)
     {
+        if (orderId <= 0)
+            return Result<IReadOnlyList<OperationAssignmentDto>>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid, ResultKind.Validation);
         var team = _guard.ResolveSewingTeam(null);
         if (!team.IsSuccess) return Fail.As<IReadOnlyList<OperationAssignmentDto>>(team);
 
@@ -42,17 +53,19 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
 
     public async Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct)
     {
+        if (orderId <= 0)
+            return Result<IReadOnlyList<OperationOptionDto>>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid, ResultKind.Validation);
         var team = _guard.ResolveSewingTeam(null);
         if (!team.IsSuccess) return Fail.As<IReadOnlyList<OperationOptionDto>>(team);
 
-        var productIds = _uow.Repository<OrderLine>().Query().Where(l => l.OrderId == orderId).Select(l => l.ProductId);
+        var productIds = AllottedProductIds(team.Data, orderId);
         var items = await _uow.Repository<Operation>().Query().AsNoTracking()
             .Where(o => productIds.Contains(o.ProductId) && o.Status == OperationStatuses.Active
                 && o.TeamType == TeamTypes.Sewing)
             .OrderBy(o => o.Product.ProductCode).ThenBy(o => o.StationSequence)
             .Select(o => new OperationOptionDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
-                o.OperationName, o.StationSequence, o.IsFinalStep, o.UsesSemiFinished,
-                o.OperationGroup == null ? null : o.OperationGroup.GroupName))
+                o.OperationName, o.StationSequence, o.IsFinalStep,
+                o.OperationGroup == null ? null : o.OperationGroup.GroupName, o.SkillLevel, o.StandardTimeSec))
             .ToListAsync(ct);
         return Result<IReadOnlyList<OperationOptionDto>>.Success(items);
     }
@@ -137,6 +150,8 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         var row = await FindCurrentAsync(assignmentId, team.Data, ct);
         if (row is null)
             return Result.Failure(ErrorCodes.CommonNotFound, Messages.AssignmentNotFound, ResultKind.NotFound);
+        if (await FindOpenOrderAsync(row.OrderId, ct) is null)
+            return Result.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
 
         row.ValidTo = _clock.Today;
         await _uow.SaveChangesAsync();
@@ -156,14 +171,14 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         if (target is null)
             return Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
 
-        var targetProductIds = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Where(l => l.OrderId == dto.ToOrderId).Select(l => l.ProductId).Distinct().ToListAsync(ct);
+        var targetProductIds = await AllottedProductIds(team.Data, dto.ToOrderId).ToListAsync(ct);
 
         var sources = await Assignments.AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.FromOrderId && a.ValidTo == null
-                        && a.Operation.Status == OperationStatuses.Active
+                        && a.Operation.Status == OperationStatuses.Active && a.Operation.TeamType == TeamTypes.Sewing
                         && targetProductIds.Contains(a.Operation.ProductId)
-                        && a.Worker.Status == RecordStatus.Active && a.Worker.TeamId == team.Data)
+                        && a.Worker.Status == RecordStatus.Active && a.Worker.TeamId == team.Data
+                        && a.Worker.Role.RoleCode == RoleCodes.Worker)
             .ToListAsync(ct);
         var current = await Assignments.AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.ToOrderId && a.ValidTo == null)
@@ -191,14 +206,19 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         if (operation is null) return Fail.NotFound();
         if (operation.Status != OperationStatuses.Active)
             return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
+        if (operation.TeamType != TeamTypes.Sewing)
+            return Result.Failure(ErrorCodes.AssignmentOperationNotSewing, Messages.AssignmentOperationNotSewing);
 
         var productInOrder = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .AnyAsync(l => l.OrderId == orderId && l.ProductId == operation.ProductId, ct);
         if (!productInOrder)
             return Result.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
+        if (!await AllottedProductIds(teamId, orderId).AnyAsync(id => id == operation.ProductId, ct))
+            return Result.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.AssignmentProductNotAllotted);
 
         var workerOk = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .AnyAsync(e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
+            .AnyAsync(e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active
+                           && e.Role.RoleCode == RoleCodes.Worker, ct);
         return workerOk ? null : Result.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid);
     }
 

@@ -147,7 +147,9 @@ public sealed class MealService : IMealService
     public async Task RunReminderJobAsync(DateOnly date, CancellationToken ct)
     {
         var meal = await _meals.GetOrCreateAsync(date, ct);
-        if (meal.Status != MealStatus.Open) return;   // đã chốt, không còn gì để nhắc
+        // Đã chốt, hoặc backend khởi động sau giờ chốt: không nhắc nữa, để JOB-03 chốt (hai job chạy cùng lúc thì
+        // dòng nhắc lưu sau khi ngày đã chốt bị trg_TeamMeal_Cutoff chặn).
+        if (await IsLockedAsync(meal, ct)) return;
 
         var teams = await _meals.GetConfirmableTeamsAsync(ct);
         foreach (var team in teams)
@@ -189,6 +191,9 @@ public sealed class MealService : IMealService
             Upsert(meal, existing, team.TeamId, count, count,
                 MealConfirmationSource.Attendance, confirmedAt: null, remindedAt: null);
         }
+        // Lưu dòng của các tổ khi ngày còn OPEN: cùng một lần lưu thì EF cập nhật DailyMeal (bảng cha) trước,
+        // trg_TeamMeal_Cutoff thấy ngày đã chốt và chặn (50020). Lỗi giữa hai lần lưu thì ngày vẫn OPEN, job chạy lại được.
+        await _meals.SaveChangesAsync(ct);
 
         meal.OfficeCount = await _meals.GetOfficeAttendanceCountAsync(date, ct);
 

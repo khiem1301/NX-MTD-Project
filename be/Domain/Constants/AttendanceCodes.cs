@@ -13,6 +13,7 @@ public static class SyncStatus
     public const string Running = "RUNNING";
     public const string Succeeded = "SUCCEEDED";
     public const string Failed = "FAILED";
+    public static readonly IReadOnlyList<string> All = new[] { Running, Succeeded, Failed };
 }
 
 /// <summary>Nguồn của một dòng bảng công ngày (DailyTimesheet.Source).</summary>

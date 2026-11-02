@@ -180,7 +180,6 @@ export function MonthlyCostImportPanel({ periodMonth, disabled }: Props) {
               size="small"
               columns={columns}
               dataSource={preview.data.rows}
-              pagination={{ pageSize: 10 }}
               scroll={{ x: 'max-content' }}
             />
           </>

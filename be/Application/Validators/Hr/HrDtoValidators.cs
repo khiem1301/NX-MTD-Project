@@ -12,7 +12,8 @@ internal static class HrRules
     public static readonly string[] Positions = { TeamPositions.Leader, TeamPositions.Deputy };
 
     public static bool IsKnownRole(string role) => Roles.IsKnown(role);
-    public static bool NeedsTeam(string role) => role is Roles.TeamLeader or Roles.TeamDeputy or Roles.Worker;
+    /// <summary>Chỉ tổ trưởng / tổ phó bắt buộc có tổ; công nhân có thể chưa thuộc tổ nào, thêm vào tổ ở màn Tổ.</summary>
+    public static bool NeedsTeam(string role) => role is Roles.TeamLeader or Roles.TeamDeputy;
 }
 
 public sealed class ChangePasswordDtoValidator : AbstractValidator<ChangePasswordDto>
@@ -108,6 +109,21 @@ public sealed class TransferMembersDtoValidator : AbstractValidator<TransferMemb
             .Must(l => l.Distinct().Count() == l.Count).WithMessage("Danh sách nhân viên bị trùng.");
         RuleFor(x => x.Reason).MaximumLength(500);
     }
+}
+
+public sealed class TeamMembersDtoValidator : AbstractValidator<TeamMembersDto>
+{
+    public TeamMembersDtoValidator()
+    {
+        RuleFor(x => x.EmployeeIds).NotEmpty().Must(l => l.Count <= 200).WithMessage("Tối đa 200 nhân viên.")
+            .Must(l => l.Distinct().Count() == l.Count).WithMessage("Danh sách nhân viên bị trùng.");
+        RuleFor(x => x.Reason).MaximumLength(500);
+    }
+}
+
+public sealed class DismissDtoValidator : AbstractValidator<DismissDto>
+{
+    public DismissDtoValidator() => RuleFor(x => x.EmployeeId).GreaterThan(0);
 }
 
 public sealed class AppointDtoValidator : AbstractValidator<AppointDto>

@@ -839,6 +839,11 @@ Dùng thống nhất ở tên bảng, entity, API, type FE, scope commit.
 | Suất ăn | `MealRegistration` | `meal-registrations` |
 | Bảng lương | `Payroll` | `payrolls` |
 | Tổ / Chuyền | `Team` | `teams` |
+| Thêm nhân viên vào tổ, loại khỏi tổ, thôi giữ chức tổ trưởng / tổ phó | `Employee.TeamId`, `Employee.RoleId` | `teams/{id}/add-members`, `remove-members`, `dismiss` |
+| Bìa cắt của mã hàng (kích thước theo size) | `ProductMarker` | nằm trong định mức mã hàng (`products/{id}/spec`) |
+| Vải dùng cho bìa theo màu áo | `ProductMarkerFabric` | nằm trong định mức mã hàng (`products/{id}/spec`) |
+| Chia dòng đơn (mã hàng × màu × size) cho tổ may | `OrderLineTeam` | `order-line-teams` |
+| Nhóm công đoạn (công đoạn to) của mã hàng | `OperationGroup` | `operation-groups` |
 
 > Bổ sung thuật ngữ mới vào bảng này trước khi code.
 

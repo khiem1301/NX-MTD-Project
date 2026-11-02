@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Alert, Button, Tabs, Typography, message } from 'antd';
-import { AuditHistory } from '@/components/common/AuditHistory';
+import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { ModalActions } from '@/components/common/DetailModal';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { fill } from '@/utils/format';
 import { useSaveProductSpec } from '../hooks/useOrders';
 import type { ProductDetail, ProductListItem, ProductSpec } from '../types';
+import {
+  toMarkerPayload,
+  toMarkerRows,
+  validateMarkers,
+  type MarkerRow,
+} from '../utils/markerSpec';
 import {
   removeComponent,
   toMaterialOption,
@@ -18,6 +24,7 @@ import {
   type VariantRow,
 } from '../utils/productSpec';
 import { SpecComponentsTab } from './SpecComponentsTab';
+import { SpecMarkersTab } from './SpecMarkersTab';
 import { SpecNormsTab } from './SpecNormsTab';
 import { SpecVariantsTab } from './SpecVariantsTab';
 
@@ -28,7 +35,7 @@ type ProductSpecEditorProps = {
   spec: ProductSpec;
   detail: ProductDetail | undefined;
   showHistory: boolean;
-  /** Admin chỉ xem: Kế toán là người nhập thành phần và định mức. */
+  /** Chế độ chỉ xem. Kế toán và Admin đều sửa được định mức nên màn mã hàng không bật. */
   readOnly?: boolean;
   onDirtyChange: (dirty: boolean) => void;
   onClose: () => void;
@@ -50,9 +57,10 @@ export function ProductSpecEditor({
   const [components, setComponents] = useState<ComponentRow[]>(initial.components);
   const [variants] = useState<VariantRow[]>(initial.variants);
   const [norms, setNorms] = useState<NormRow[]>(initial.norms);
+  const [markers, setMarkers] = useState<MarkerRow[]>(() => toMarkerRows(spec, initial.variants));
   const [error, setError] = useState('');
 
-  const snapshot = JSON.stringify({ components, variants, norms });
+  const snapshot = JSON.stringify({ components, variants, norms, markers });
   const [baseline] = useState(snapshot);
   useEffect(() => {
     onDirtyChange(snapshot !== baseline);
@@ -70,10 +78,15 @@ export function ProductSpecEditor({
   };
 
   const handleSave = () => {
-    const problem = validate(components, variants, norms);
+    const problem =
+      validate(components, variants, norms) ||
+      validateMarkers(markers, variants, norms, components, materialOptions);
     setError(problem);
     if (problem) return;
-    save.mutate({ id: product.productId, body: toPayload(components, variants, norms) });
+    save.mutate({
+      id: product.productId,
+      body: { ...toPayload(components, variants, norms), ...toMarkerPayload(markers, variants) },
+    });
   };
 
   const discontinued = spec.components
@@ -133,12 +146,28 @@ export function ProductSpecEditor({
               />
             ),
           },
+          {
+            key: 'markers',
+            label: `${text.tabMarkers} (${markers.length})`,
+            children: (
+              <SpecMarkersTab
+                markers={markers}
+                setMarkers={setMarkers}
+                variants={variants}
+                norms={norms}
+                components={components}
+                materialOptions={materialOptions}
+                materialsLoading={materials.isLoading}
+                readOnly={readOnly}
+              />
+            ),
+          },
           ...(showHistory && detail
             ? [
                 {
                   key: 'history',
                   label: MESSAGES.common.history,
-                  children: <AuditHistory history={detail.history} />,
+                  children: <AuditHistoryTable history={detail.history} />,
                 },
               ]
             : []),

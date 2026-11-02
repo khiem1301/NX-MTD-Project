@@ -20,7 +20,7 @@ type SpecComponentsTabProps = {
   onRemove: (key: string) => void;
   /** Tên các thành phần đã ngừng dùng (đã có số liệu sản xuất), chỉ để báo. */
   discontinued: string[];
-  /** Admin chỉ xem: Kế toán là người nhập. */
+  /** Chế độ chỉ xem. Kế toán và Admin đều sửa được nên màn mã hàng không bật. */
   readOnly?: boolean;
 };
 

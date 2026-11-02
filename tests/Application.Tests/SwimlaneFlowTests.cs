@@ -28,7 +28,9 @@ public class SwimlaneFlowTests : ProductionTestBase
     public SwimlaneFlowTests()
     {
         SetupQueryable(_issues); SetupQueryable(_orders); SetupQueryable(_workOrders);
+        SetupQueryable(new List<OrderLine>()); SetupQueryable(new List<Operation>()); SetupQueryable(new List<OperationAssignment>());
         SetupQueryable(_handovers); SetupQueryable(_handoverLines); SetupQueryable(_lays);
+        SetupQueryable(new List<MaterialIssueLine>()); SetupQueryable(new List<MaterialReturnLine>()); SetupQueryable(new List<Material>());
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
     }
@@ -106,7 +108,7 @@ public class SwimlaneFlowTests : ProductionTestBase
     // ---------- Tổ cắt rút phiếu bàn giao BTP ----------
 
     private CutHandoverService Handovers() => new(Uow, _stock, Substitute.For<IDocumentCodeGenerator>(), Substitute.For<IAppLock>(), Clock,
-        _requests, Notifier, NullLogger<CutHandoverService>.Instance);
+        _requests, Notifier, NullLogger<CutHandoverService>.Instance, new WorkOrderCompletion(Uow, new FabricPlanner(Uow), Notifier, Clock));
 
     private WorkOrder CuttingWorkOrder(int plannedQty = 100, string status = WorkOrderStatuses.Cutting)
     {
@@ -169,11 +171,11 @@ public class SwimlaneFlowTests : ProductionTestBase
 
     // ---------- Trạng thái lệnh cắt bám theo tiến trình + thông báo ----------
 
-    private async Task<WorkOrder> ConfirmHandoverAsync(int plannedQty, int handed, int confirmed)
+    private async Task<WorkOrder> ConfirmHandoverAsync(int plannedQty, int handed, int confirmed, WorkOrder? existing = null, int id = 1)
     {
-        var wo = CuttingWorkOrder(plannedQty);
+        var wo = existing ?? CuttingWorkOrder(plannedQty);
         wo.Order = new CustomerOrder { OrderId = 1, OrderCode = "DH001" };
-        var h = Handover(wo, HandoverStatuses.Pending, handed: handed);
+        var h = Handover(wo, HandoverStatuses.Pending, handed: handed, id: id);
         var dto = new ConfirmCutHandoverDto([new ConfirmHandoverLineDto(h.CutHandoverLines.Single().CutHandoverLineId, confirmed,
             confirmed == handed ? null : "Thiếu khi đếm")]);
 
@@ -182,14 +184,38 @@ public class SwimlaneFlowTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Work_order_does_not_complete_when_the_warehouse_confirms_the_full_plan_the_cutting_team_still_returns_fabric_and_finishes()
+    public async Task Work_order_completes_by_itself_when_the_warehouse_confirms_the_full_plan()
     {
         var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 100);
 
-        wo.Status.Should().Be(WorkOrderStatuses.Cutting);   // hoàn thành do tổ cắt báo "Cắt xong" sau trả vải (swimlane)
-        await Notifier.DidNotReceive().NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        wo.Status.Should().Be(WorkOrderStatuses.Completed);   // DEV-ALL-52: không còn nút "Cắt xong"
+        wo.CompletedAt.Should().NotBeNull();
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("LC-7") && m.Message.Contains("tự hoàn thành")), Arg.Any<CancellationToken>());
         await Notifier.Received(1).NotifyTeamLeadersAsync(CuttingTeam,
-            Arg.Is<NotificationMessage>(m => m.Message.Contains("Cắt xong")), Arg.Any<CancellationToken>());
+            Arg.Is<NotificationMessage>(m => m.Message.Contains("lệnh cắt đã hoàn thành")), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Work_order_completes_when_the_second_handover_makes_the_plan_full()
+    {
+        var wo = await ConfirmHandoverAsync(plannedQty: 100, handed: 60, confirmed: 60);
+        wo.Status.Should().Be(WorkOrderStatuses.Cutting);
+
+        await ConfirmHandoverAsync(plannedQty: 100, handed: 40, confirmed: 40, existing: wo, id: 2);
+
+        wo.Status.Should().Be(WorkOrderStatuses.Completed);
+    }
+
+    [Fact]
+    public async Task An_extra_component_line_must_also_be_received_in_full()
+    {
+        var wo = CuttingWorkOrder(plannedQty: 100);
+        wo.WorkOrderLines.Add(new WorkOrderLine { WorkOrderLineId = 2, WorkOrderId = 7, OrderLineId = 11, ProductComponentMaterialId = 900, PlannedQty = 20 });
+
+        await ConfirmHandoverAsync(plannedQty: 100, handed: 100, confirmed: 100, existing: wo);
+
+        wo.Status.Should().Be(WorkOrderStatuses.Cutting);   // còn 20 chi tiết cắt lẻ chưa vào kho
     }
 
     [Fact]

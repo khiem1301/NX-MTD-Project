@@ -58,7 +58,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             orderby l.Order.OrderCode, l.ProductVariant.Color, l.ProductVariant.SizeCode, o.StationSequence
             select new OperationProgressDto(l.OrderLineId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode,
                 l.ProductVariant.Color, l.ProductVariant.SizeCode, o.OperationId, o.OperationCode, o.OperationName,
-                o.OperationGroup == null ? null : o.OperationGroup.GroupName, v.UsesSemiFinished, v.RequiredQty ?? 0,
+                o.OperationGroup == null ? null : o.OperationGroup.GroupName, v.RequiredQty ?? 0,
                 v.AllocatedQty, v.PendingQty, v.UnallocatedQty ?? 0, v.OutputQty)).ToListAsync(ct);
 
         var rows = await Allocations.AsNoTracking()
@@ -121,7 +121,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
         };
         await _uow.Repository<WorkAllocation>().AddAsync(allocation);
         var verb = dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi";
-        _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Warehouse,
+        _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Production,
             dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
             $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
             + ", vui lòng kiểm tra và xác nhận.",
@@ -223,7 +223,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
                     .Where(e => e.TeamId == allocation.SewingTeamId && e.Status == RecordStatus.Active
                                 && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
                     .Select(e => e.EmployeeId).ToListAsync(ct);
-                _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Warehouse,
+                _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Production,
                     allocation.Status == HandoverStatuses.Confirmed ? "Công nhân đã xác nhận việc được giao" : "Công nhân từ chối phiếu giao việc",
                     $"{allocation.Operation.OperationName} ({allocation.OrderLine.ProductVariant.Color} - {allocation.OrderLine.ProductVariant.SizeCode}): {(allocation.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
                     null));
@@ -300,7 +300,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             m.SewingTeam.TeamName, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
             m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color,
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
-            m.Operation.UsesSemiFinished, m.Quantity, m.ConfirmedQty,
+            m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
             m.CreatedAt, m.ConfirmedAt));
 }

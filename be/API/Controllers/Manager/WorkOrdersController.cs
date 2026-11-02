@@ -24,7 +24,7 @@ public sealed class WorkOrdersController : ManagerBaseController
     public async Task<IActionResult> Create([FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CreateAsync(dto, ct));
 
-    /// <summary>Kiểm vải theo kích thước chi tiết khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
+    /// <summary>Kiểm vải theo bìa của mã hàng khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
     [HttpPost("fabric-check")]
     public async Task<IActionResult> CheckFabric([FromBody] CheckWorkOrderFabricDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.CheckFabricAsync(dto, ct));
@@ -42,6 +42,11 @@ public sealed class WorkOrdersController : ManagerBaseController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] SaveWorkOrderDto dto, CancellationToken ct) =>
         this.ToResponse(await _workOrders.UpdateAsync(id, dto, ct));
+
+    /// <summary>Đóng lệnh cắt thiếu (DEV-ALL-52): cắt đủ thì lệnh tự hoàn thành khi kho nhận đủ BTP, không cần gọi.</summary>
+    [HttpPost("{id:int}/close-short")]
+    public async Task<IActionResult> CloseShort(int id, [FromBody] CloseShortWorkOrderDto dto, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.CloseShortAsync(id, dto.Reason, ct));
 
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, CancellationToken ct) =>

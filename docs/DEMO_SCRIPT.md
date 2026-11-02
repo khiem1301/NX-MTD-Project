@@ -11,9 +11,11 @@ Mật khẩu các tài khoản mẫu: `123456` (Admin đổi được sau khi đ
 | Thủ kho | `THUKHO` |
 | Tổ trưởng cắt / may | `TTCAT` / `TTMAY` |
 | QA/QC | `QAQC1` |
-| Công nhân may | `CNMAY1`…`CNMAY4` |
+| Công nhân may | `CNMAY1`…`CNMAY4` (tổ 1), `CNMAY5`…`CNMAY20` (tổ 2) |
+| Tổ trưởng / tổ phó khác | `TTMAY2`, `TPMAY`, `TPMAY2`, `TPCAT` |
+| Cơ điện | `CODIEN` |
 
-Đơn demo: **DEMO-DH001** (mã hàng DEMO-AO01, 5 dòng màu × size) và **DEMO-DH003** (2 dòng Đen M / L). Hai tổ may, một tổ cắt.
+Đơn demo: **DEMO-DH001** (mã hàng DEMO-AO01, 5 dòng màu × size), **DEMO-DH003** (2 dòng Đen M / L) và **DEMO-DH005…013** ở các trạng thái khác (mục dưới). Hai tổ may, một tổ cắt.
 
 ### Phiếu đang chờ sẵn để bấm thử (đơn DEMO-DH003 / DEMO-DH001, mục 19.3 của script)
 
@@ -33,6 +35,36 @@ Kho đã có tồn qua thẻ kho (tồn vải Đen 650 m, giữ chỗ 150 m; BTP
 | Công nhân (`CNMAY1`, `CNMAY3`) | Giao việc / thu hồi việc đang chờ | Tự xác nhận hoặc từ chối (nêu lý do); tổ trưởng xác nhận hộ khi công nhân vắng |
 | Kế toán (`KETOAN`) | Phiếu xuất `XH-DEMO-002` (đang giao) | Xác nhận khách đã nhận |
 | Thủ kho | Đơn xin `YC-DEMO-001` (vải) và `YC-DEMO-002` (BTP) | Lập phiếu cấp theo đơn xin |
+
+### Dữ liệu để test đủ chức năng (mục 19.7 của script)
+
+DB đang có sẵn thì chạy `SQL/patches/2026-11-02_demo_full_test_data.sql`, rồi khởi động lại backend để băm mật khẩu tài khoản mới. Script chỉ thêm dữ liệu, chạy lại không nhân đôi. Các việc dưới đây đã có sẵn dữ liệu để bấm thử:
+
+| Chức năng | Ai | Dữ liệu | Cách thử |
+|---|---|---|---|
+| Đăng nhập, tài khoản | Admin | `NVKHOA1` (khóa), `NVNGHI1` (đã nghỉ) | Đăng nhập bị chặn; Admin mở khóa `NVKHOA1` |
+| Danh mục ngừng dùng | Admin | Công ty C, `DEMO-NGUNG01`, `DEMO-NGUNG04`, tổ `MAY3`, xe `51E-000.00`, bậc E | Lọc trạng thái, xem danh sách |
+| Đơn hàng mọi trạng thái | Admin | `DEMO-DH005` Mới, `DH007` Đã hủy, `DH008` Đã dừng, `DH009` Đang giao, `DH010` Giao một phần, `DH011` Đã giao, `DH012` Hoàn tất | Lọc trạng thái; `DH010` có thẻ nguy cơ trễ |
+| Chờ khai báo NVL, mã chưa có công đoạn | `QUANDOC`, `TTMAY2` | `DH005` (mã `DEMO-SM03`) | Khai NVL; màn Phân công báo mã hàng chưa khai công đoạn |
+| Đơn đủ NVL | Admin, `QUANDOC` | `DH006` (khách cấp đủ) | Chuyển sang sản xuất, tạo lệnh cắt |
+| Danh sách công nhân dài | `TTMAY2` | Tổ may 2 có 16 công nhân (`CNMAY5`…`CNMAY20`) | Phân công công đoạn → Theo công nhân |
+| Đơn từ đủ 11 loại | `CODIEN`, `TTMAY`, `TTCAT`, `THUKHO` | `YC-DEMO-003`…`021`, đủ 6 trạng thái | Sửa, hủy, duyệt, từ chối, hoàn thành |
+| NVL lỗi tự tạo đơn | `QUANDOC` | `YC-DEMO-011` (kho đủ), `YC-DEMO-012` (kho thiếu) | Duyệt → tự tạo đơn Xin NVL, và đơn Mua NVL cho phần thiếu |
+| Cắt bù | `QUANDOC`, `TTMAY` | `YC-DEMO-014` chờ duyệt, `YC-DEMO-015` đã duyệt, phiếu `MAY1-261030-901` chưa có đơn | Duyệt; lập lệnh cắt bù; tổ may tạo đơn từ phiếu hàng hủy |
+| Thiếu hàng khi nhập | `QUANDOC` | `YC-DEMO-016` (`PN-DEMO-013` thiếu 30 m) | Chọn giao bù hoặc không bù |
+| Phiếu bị trả, từ chối, đã hủy | `THUKHO`, `QUANDOC` | `PN-DEMO-016`, `PC-DEMO-901`, `TV-DEMO-002`…`004`, `BG-DEMO-901/902`, `TP-DEMO-210/310`, `XH-DEMO-310/410`, `KK-DEMO-003` | Xem lý do, lọc trạng thái, lập lại |
+| Phiếu xuất chờ xuất | `THUKHO` | `XH-DEMO-210` | Thiếu ảnh bị chặn; từ chối được |
+| Xác nhận khách nhận | `KETOAN` | `XH-DEMO-009` | Xác nhận kèm ảnh biên bản |
+| Kiểm kê kho BTP, thành phẩm | `QUANDOC` | `KK-DEMO-004`, `KK-DEMO-005` | Duyệt hoặc trả lại |
+| Giao việc | `TTMAY` | Giao hộ và công nhân từ chối ở `DH003` (OP06, OP07) | Xem trạng thái, lý do |
+| Hàng hỏng bị phản đối | `TTMAY` | `MAY1-261102-901` | Xem lý do phản đối của công nhân |
+| Chấm công | `KETOAN`, tổ trưởng | Lượt quẹt 02/11: thiếu giờ ra (`CNMAY5`), tăng ca (`CNMAY3`), mã `999` chưa gán nhân viên; phiên đồng bộ lỗi; chấm hộ `CNMAY6`, `CNMAY7`, `CNMAY8` | Xem bảng công; gán mã chấm công |
+| Bậc thợ | Admin, `QUANDOC` | Đề xuất của `CNMAY2` (chờ), `CNMAY4` (đã áp dụng), `CNMAY6` (không áp dụng) | Duyệt, xem lịch sử |
+| Bảng lương | `KETOAN`, Admin | 05 đã duyệt + khóa tháng, 06 nháp, 07 bị trả lại, 09 chờ duyệt, 10 đã duyệt | Gửi duyệt, duyệt, từ chối, mở lại |
+| Hòa vốn | Admin | Tháng **2026-10** có sẵn một lần tính: `DEMO-AO01` có lãi, `DEMO-QU02` nguy cơ lỗ | Xem kết quả, bấm tính lại |
+| Thông báo | mọi vai trò | Gửi theo tổ, theo vai trò, toàn xưởng; hệ thống đủ 4 nguồn; có cái đã đọc | Hộp thư lọc Từ quản lý / Hệ thống |
+
+Chưa có sẵn: ảnh và file đính kèm (`Attachment`, `ProductImage`) vì cần file thật, hãy tải lên khi thử. Xác nhận suất ăn chỉ làm được trước giờ chốt 08:30 của đúng ngày (`2026-11-03` đang mở, tổ may 1 đã xác nhận).
 
 Giao việc: vào **Giao việc** (`TTMAY`), chọn đơn DEMO-DH003 → mỗi công đoạn × màu × size hiện "Cần làm" = số bộ BTP tổ đã nhận (M: 50, L: 40 trước khi nhận PC-DEMO-006), "Đã giao", "Chờ xác nhận", "Chưa giao".
 
@@ -56,7 +88,7 @@ Kết thúc bằng Admin / Quản đốc mở **Trang chủ**: bảng *Tiến đ
 
 1. Kế toán nhập chấm công (hoặc dùng dữ liệu đồng bộ máy RJ), xem **Lương tạm tính** của công nhân.
 2. Kế toán nhập bảng lương tháng, gửi duyệt; Admin duyệt rồi khóa tháng.
-3. Kế toán nhập chi phí tháng; Admin vào **Hòa vốn**, chọn tháng **2026-08** (đã có sẵn doanh thu, chi phí và bảng lương đã duyệt) rồi "Tính toán".
+3. Kế toán nhập chi phí tháng; Admin vào **Hòa vốn**, chọn tháng **2026-10** (đã có sẵn doanh thu, chi phí và bảng lương đã duyệt) rồi "Tính toán".
 
 ## Việc phụ có sẵn dữ liệu demo
 

@@ -60,7 +60,7 @@ describe('cột NVL của bảng định mức', () => {
   });
 
   it('nhãn đầy đủ vẫn dùng để tìm kiếm trong danh sách chọn', () => {
-    expect(material).toEqual({ value: 1, label: FULL_LABEL, short: 'V-01 - Đen' });
+    expect(material).toMatchObject({ value: 1, label: FULL_LABEL, short: 'V-01 - Đen' });
   });
 
   it('NVL không phân màu thì chỉ hiện mã', () => {

@@ -1,6 +1,7 @@
-import { Form, Modal, Typography } from 'antd';
+import { Form, Modal, Typography, message } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useCopyAssignments } from '../hooks/useProduction';
 
@@ -36,10 +37,31 @@ export function CopyModal({
         layout="vertical"
         preserve={false}
         onFinish={(values) =>
-          copy.mutate({ fromOrderId: values.fromOrderId, toOrderId }, { onSuccess: onClose })
+          copy.mutate(
+            { fromOrderId: values.fromOrderId, toOrderId },
+            {
+              onSuccess: (count) => {
+                if (count === 0) void message.info(text.done.noneCopied);
+                else void message.success(fill(text.done.copied, count));
+                onClose();
+              },
+            },
+          )
         }
       >
-        <Form.Item name="fromOrderId" label={text.copyFrom} rules={required}>
+        <Form.Item
+          name="fromOrderId"
+          label={text.copyFrom}
+          rules={[
+            ...required,
+            {
+              validator: (_, value) =>
+                value === toOrderId
+                  ? Promise.reject(new Error(text.copySameOrder))
+                  : Promise.resolve(),
+            },
+          ]}
+        >
           <OrderSelect width="100%" />
         </Form.Item>
       </Form>

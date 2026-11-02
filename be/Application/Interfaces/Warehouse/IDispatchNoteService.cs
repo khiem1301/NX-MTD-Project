@@ -12,12 +12,12 @@ public interface IDispatchNoteService
     Task<Result<DispatchNoteDto>> CreateAsync(CreateDispatchNoteDto dto, CancellationToken ct);
 
     /// <summary>Quản đốc hủy phiếu chưa xuất; số giữ chỗ được nhả.</summary>
-    Task<Result> CancelAsync(int dispatchNoteId, CancellationToken ct);
+    Task<Result> CancelAsync(int dispatchNoteId, DispatchActionDto dto, CancellationToken ct);
 
     /// <summary>Thủ kho xuất hàng (cần ảnh phiếu có Quản đốc ký): trừ kho thành phẩm, phiếu PENDING sang IN_DELIVERY.</summary>
-    Task<Result> ExportAsync(int dispatchNoteId, int employeeId, CancellationToken ct);
+    Task<Result> ExportAsync(int dispatchNoteId, DispatchActionDto dto, int employeeId, CancellationToken ct);
 
-    Task<Result> RejectAsync(int dispatchNoteId, ReasonDto dto, int employeeId, CancellationToken ct);
+    Task<Result> RejectAsync(int dispatchNoteId, RejectDispatchDto dto, int employeeId, CancellationToken ct);
 
     /// <summary>Kế toán xác nhận khách đã nhận (ngày nhận + số nhận từng dòng).</summary>
     Task<Result> ConfirmDeliveryAsync(int dispatchNoteId, ConfirmDeliveryDto dto, CancellationToken ct);

@@ -93,7 +93,7 @@ public class ProductValidatorTests
         string component = "Thân", int materialId = 1) =>
         new([new SaveProductComponentDto(null, component, "Panel", pieces)],
             [new SaveProductVariantDto(null, color, size)],
-            [new SaveProductNormDto("Thân", "Đỏ", "M", materialId, normLength, normWidth, note)]);
+            [new SaveProductNormDto("Thân", "Đỏ", "M", materialId, normLength, normWidth, note)], [], []);
 
     private static bool SpecIsValid(SaveProductSpecDto dto) => new SaveProductSpecDtoValidator().Validate(dto).IsValid;
 
@@ -153,7 +153,7 @@ public class ProductValidatorTests
     private static SaveProductSpecDto Counts(int components, int variants, int norms) =>
         new(Enumerable.Range(0, components).Select(i => new SaveProductComponentDto(null, $"C{i}", "Panel", 1)).ToList(),
             Enumerable.Range(0, variants).Select(i => new SaveProductVariantDto(null, $"M{i}", "M")).ToList(),
-            Enumerable.Range(0, norms).Select(i => new SaveProductNormDto("C0", "M0", "M", i + 1, null, null, null)).ToList());
+            Enumerable.Range(0, norms).Select(i => new SaveProductNormDto("C0", "M0", "M", i + 1, null, null, null)).ToList(), [], []);
 
     [Theory]
     [InlineData(200, 200, 5000, true)]
@@ -167,7 +167,7 @@ public class ProductValidatorTests
     public void OversizedList_ReportsOneMessageAndSkipsPerItemChecks()
     {
         var invalidItems = Enumerable.Range(0, 5001).Select(_ => new SaveProductNormDto("", "", "", 0, null, null, null)).ToList();
-        var dto = new SaveProductSpecDto([], [], invalidItems);
+        var dto = new SaveProductSpecDto([], [], invalidItems, [], []);
 
         new SaveProductSpecDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage)
             .Should().Equal("Tối đa 5.000 dòng định mức (tính theo từng màu – size) cho mỗi lần lưu.");
@@ -176,10 +176,58 @@ public class ProductValidatorTests
     [Fact]
     public void MissingLists_AreRejectedWithoutCrashing()
     {
-        var result = new SaveProductSpecDtoValidator().Validate(new SaveProductSpecDto(null!, null!, null!));
+        var result = new SaveProductSpecDtoValidator().Validate(new SaveProductSpecDto(null!, null!, null!, null!, null!));
 
         result.IsValid.Should().BeFalse();
-        result.Errors.Should().HaveCount(3);
+        result.Errors.Should().HaveCount(5);
+    }
+
+    private static SaveProductSpecDto WithMarker(int no = 1, decimal? length = 70, decimal? width = 50, string size = "M") =>
+        Spec() with { Markers = [new SaveProductMarkerDto(no, size, length, width)], MarkerFabrics = [new SaveProductMarkerFabricDto(no, "Đỏ", 1)] };
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(20, true)]
+    [InlineData(0, false)]
+    [InlineData(21, false)]
+    public void MarkerNo_Boundaries(int no, bool expected) => SpecIsValid(WithMarker(no)).Should().Be(expected);
+
+    [Theory]
+    [InlineData("0.01", true)]
+    [InlineData("99999.99", true)]
+    [InlineData("0", false)]
+    [InlineData("100000", false)]
+    [InlineData("1.234", false)]
+    public void MarkerSize_Boundaries(string value, bool expected)
+    {
+        var size = decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture);
+
+        SpecIsValid(WithMarker(length: size)).Should().Be(expected);
+        SpecIsValid(WithMarker(width: size)).Should().Be(expected);
+    }
+
+    [Fact]
+    public void MarkerSize_IsRequired()
+    {
+        SpecIsValid(WithMarker(length: null)).Should().BeFalse();
+        SpecIsValid(WithMarker(width: null)).Should().BeFalse();
+        SpecIsValid(WithMarker(size: " ")).Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkerFabric_NeedsAColorAndAMaterial()
+    {
+        SpecIsValid(WithMarker() with { MarkerFabrics = [new SaveProductMarkerFabricDto(1, "", 1)] }).Should().BeFalse();
+        SpecIsValid(WithMarker() with { MarkerFabrics = [new SaveProductMarkerFabricDto(1, "Đỏ", 0)] }).Should().BeFalse();
+    }
+
+    [Fact]
+    public void OversizedMarkerList_ReportsOneMessage()
+    {
+        var markers = Enumerable.Range(0, 4001).Select(_ => new SaveProductMarkerDto(0, "", null, null)).ToList();
+
+        new SaveProductSpecDtoValidator().Validate(Spec() with { Markers = markers }).Errors.Select(e => e.ErrorMessage)
+            .Should().Equal("Danh sách bìa quá dài.");
     }
 
     [Fact]

@@ -9,7 +9,8 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// UC10 (phần định mức): thành phần PANEL / TRIM, biến thể màu × size và định mức NVL của từng biến thể, khai báo một lần
-/// cho mã hàng. Lưu theo kiểu "gửi đủ danh sách": mục bỏ đi được xóa khi chưa dùng, còn dùng thì chuyển sang ngừng dùng.
+/// cho mã hàng, kèm bìa cắt theo size và vải của bìa theo màu (DEV-ALL-42). Lưu theo kiểu "gửi đủ danh sách": mục bỏ đi được xóa
+/// khi chưa dùng, còn dùng thì chuyển sang ngừng dùng.
 /// </summary>
 public sealed class ProductSpecService : IProductSpecService
 {
@@ -43,12 +44,21 @@ public sealed class ProductSpecService : IProductSpecService
                 n.Material.MaterialName, n.Material.Unit, n.Material.Color,
                 n.LengthCm, n.WidthCm, n.SpecNote))
             .ToListAsync(ct);
+        var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking()
+            .Where(m => m.ProductId == productId).OrderBy(m => m.MarkerNo).ThenBy(m => m.SizeCode)
+            .Select(m => new ProductMarkerDto(m.MarkerNo, m.SizeCode, m.LengthCm, m.WidthCm))
+            .ToListAsync(ct);
+        var markerFabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking()
+            .Where(f => f.ProductId == productId).OrderBy(f => f.MarkerNo).ThenBy(f => f.Color)
+            .Select(f => new ProductMarkerFabricDto(f.MarkerNo, f.Color, f.MaterialId, f.Material.MaterialCode,
+                f.Material.MaterialName, f.Material.Color))
+            .ToListAsync(ct);
 
         return Result<ProductSpecDto>.Success(new ProductSpecDto(productId,
             components.Select(c => new ProductComponentDto(c.ProductComponentId, c.ComponentName, CodeText.ToPascal(c.ComponentType),
                 c.PiecesPerGarment, CodeText.ToPascal(c.Status))).ToList(),
             variants.Select(v => new ProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode, CodeText.ToPascal(v.Status))).ToList(),
-            norms));
+            norms, markers, markerFabrics));
     }
 
     public async Task<Result<ProductSpecDto>> SaveAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
@@ -92,9 +102,19 @@ public sealed class ProductSpecService : IProductSpecService
         var (componentByName, variantByKey) = await UpsertComponentsAndVariantsAsync(productId, componentMatch, variantMatch);
         var failed = await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), keptVariantIds, componentByName, variantByKey, ct);
         if (failed is not null) return failed;
+        await WriteMarkersAsync(productId, dto, ct);
 
-        _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, null,
-            new { Spec = new { Components = dto.Components.Count, Variants = dto.Variants.Count, Norms = dto.Norms.Count } }));
+        _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, null, new
+        {
+            Spec = new
+            {
+                Components = dto.Components.Count,
+                Variants = dto.Variants.Count,
+                Norms = dto.Norms.Count,
+                Markers = dto.Markers.Count,
+                MarkerFabrics = dto.MarkerFabrics.Count,
+            },
+        }));
         await _uow.SaveChangesAsync();
         return Result<int>.Success(productId, Messages.Saved);
     }
@@ -180,7 +200,10 @@ public sealed class ProductSpecService : IProductSpecService
             {
                 row = new ProductComponentMaterial
                 {
-                    ProductId = productId, ProductVariantId = key.Item1, ProductComponentId = key.Item2, MaterialId = key.Item3,
+                    ProductId = productId,
+                    ProductVariantId = key.Item1,
+                    ProductComponentId = key.Item2,
+                    MaterialId = key.Item3,
                 };
                 await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
             }
@@ -194,6 +217,32 @@ public sealed class ProductSpecService : IProductSpecService
         if (inUse.Count > 0) return Fail.As<int>(Invalid(Messages.ProductSpecNormInUse));
         _uow.Repository<ProductComponentMaterial>().RemoveRange(stale);
         return null;
+    }
+
+    /// <summary>Bước 4: thay toàn bộ bìa của mã hàng theo danh sách gửi lên. Không bảng nào trỏ vào bìa nên xóa rồi thêm lại được.</summary>
+    private async Task WriteMarkersAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
+    {
+        var markers = _uow.Repository<ProductMarker>();
+        var fabrics = _uow.Repository<ProductMarkerFabric>();
+        markers.RemoveRange(await markers.Query().Where(m => m.ProductId == productId).ToListAsync(ct));
+        fabrics.RemoveRange(await fabrics.Query().Where(f => f.ProductId == productId).ToListAsync(ct));
+        await _uow.SaveChangesAsync();   // xóa trước rồi thêm để khỏi đụng khóa UQ_PM, UQ_PMF
+
+        await markers.AddRangeAsync(dto.Markers.Select(m => new ProductMarker
+        {
+            ProductId = productId,
+            MarkerNo = (byte)m.MarkerNo,
+            SizeCode = m.SizeCode.Trim().ToUpperInvariant(),
+            LengthCm = m.LengthCm!.Value,
+            WidthCm = m.WidthCm!.Value,
+        }).ToList());
+        await fabrics.AddRangeAsync(dto.MarkerFabrics.Select(f => new ProductMarkerFabric
+        {
+            ProductId = productId,
+            MarkerNo = (byte)f.MarkerNo,
+            Color = f.Color.Trim(),
+            MaterialId = f.MaterialId,
+        }).ToList());
     }
 
     private async Task<Result<ProductSpecDto>?> ValidateAsync(SaveProductSpecDto dto, CancellationToken ct)
@@ -216,8 +265,38 @@ public sealed class ProductSpecService : IProductSpecService
         var materialIds = dto.Norms.Select(n => n.MaterialId).Distinct().ToArray();
         var active = await _uow.Repository<Material>().Query()
             .CountAsync(m => materialIds.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active, ct);
-        return active == materialIds.Length ? null : Invalid(Messages.ProductSpecMaterialInvalid);
+        if (active != materialIds.Length) return Invalid(Messages.ProductSpecMaterialInvalid);
+        return await ValidateMarkersAsync(dto, ct);
     }
+
+    /// <summary>Bìa: không trùng, đúng size và màu của mã hàng, mỗi số bìa đủ kích thước và vải, vải có trong định mức chi tiết cắt của màu đó.</summary>
+    private async Task<Result<ProductSpecDto>?> ValidateMarkersAsync(SaveProductSpecDto dto, CancellationToken ct)
+    {
+        if (dto.Markers.GroupBy(m => (m.MarkerNo, Upper(m.SizeCode))).Any(g => g.Count() > 1)
+            || dto.MarkerFabrics.GroupBy(f => (f.MarkerNo, Upper(f.Color))).Any(g => g.Count() > 1))
+            return Invalid(Messages.ProductSpecMarkerDuplicate);
+
+        var sizes = dto.Variants.Select(v => Upper(v.SizeCode)).ToHashSet();
+        var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();
+        if (dto.Markers.Any(m => !sizes.Contains(Upper(m.SizeCode))) || dto.MarkerFabrics.Any(f => !colors.Contains(Upper(f.Color))))
+            return Invalid(Messages.ProductSpecMarkerReference);
+        if (!dto.Markers.Select(m => m.MarkerNo).ToHashSet().SetEquals(dto.MarkerFabrics.Select(f => f.MarkerNo)))
+            return Invalid(Messages.ProductSpecMarkerIncomplete);
+
+        var panels = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) == ComponentTypes.Panel)
+            .Select(c => Upper(c.ComponentName)).ToHashSet();
+        var panelNorms = dto.Norms.Where(n => panels.Contains(Upper(n.ComponentName)))
+            .Select(n => (Upper(n.Color), n.MaterialId)).ToHashSet();
+        if (dto.MarkerFabrics.Any(f => !panelNorms.Contains((Upper(f.Color), f.MaterialId))))
+            return Invalid(Messages.ProductSpecMarkerFabricInvalid);
+
+        var fabricIds = dto.MarkerFabrics.Select(f => f.MaterialId).Distinct().ToArray();
+        var fabrics = await _uow.Repository<Material>().Query().CountAsync(m => fabricIds.Contains(m.MaterialId)
+            && m.MaterialType == MaterialTypes.Fabric && m.Status == MaterialStatuses.Active, ct);
+        return fabrics == fabricIds.Length ? null : Invalid(Messages.ProductSpecMarkerFabricInvalid);
+    }
+
+    private static string Upper(string value) => value.Trim().ToUpperInvariant();
 
     /// <summary>Dòng định mức đã được dùng ở lệnh cắt, đơn từ, bàn cắt, bàn giao, phiếu cấp hoặc dòng tồn kho BTP.</summary>
     private async Task<HashSet<int>> UsedNormIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct)

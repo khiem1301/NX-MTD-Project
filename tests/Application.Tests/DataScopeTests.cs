@@ -1,6 +1,10 @@
 using System.Reflection;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using NSubstitute;
+using NX_MTD.Application.Common;
+using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 
 namespace Application.Tests;
@@ -49,6 +53,32 @@ public class DataScopeTests
         }
 
         violations.Should().BeEmpty("dữ liệu tầng Mật không được lộ sang vai trò khác");
+    }
+
+    [Fact]
+    public async Task Team_leader_kpi_list_uses_team_from_token_not_from_query()
+    {
+        var kpi = Substitute.For<IKpiService>();
+        kpi.GetPagedAsync(Arg.Any<KpiTargetQuery>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PagedResult<KpiTargetDto>>.Success(new PagedResult<KpiTargetDto>(Array.Empty<KpiTargetDto>(), 1, 10, 0)));
+        var user = Substitute.For<ICurrentUser>();
+        user.TeamId.Returns(3);
+        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(kpi, user)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        await controller.GetPaged(new KpiTargetQuery { SewingTeamId = 99 }, default);
+
+        await kpi.Received(1).GetPagedAsync(Arg.Is<KpiTargetQuery>(q => q.SewingTeamId == 3), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void Team_leader_kpi_controller_is_read_only()
+    {
+        var controller = typeof(NX_MTD.API.Controllers.TeamLeader.KpiTargetsController);
+        controller.GetMethods().SelectMany(m => m.GetCustomAttributes<Microsoft.AspNetCore.Mvc.Routing.HttpMethodAttribute>())
+            .SelectMany(a => a.HttpMethods).Should().OnlyContain(m => m == "GET");
     }
 
     [Fact]

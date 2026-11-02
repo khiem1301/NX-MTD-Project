@@ -36,9 +36,9 @@ public interface ICustomerOrderRepository : IGenericRepository<CustomerOrder>
     Task<string?> GetMaxCodeAsync(string prefix, CancellationToken ct);
     Task<PagedResult<OrderListItemDto>> ListAsync(OrderQuery query, string? statusCode, CancellationToken ct);
     Task<OrderDetailDto?> GetDetailAsync(int orderId, CancellationToken ct);       // History rỗng
-    Task<PagedResult<OrderLookupDto>> LookupAsync(OrderLookupQuery query, IReadOnlyCollection<string> statuses, CancellationToken ct);
+    Task<PagedResult<OrderLookupDto>> LookupAsync(OrderLookupQuery query, IReadOnlyCollection<string> statuses, int? sewingTeamId, CancellationToken ct);
     Task<bool> ExistsAsync(int orderId, CancellationToken ct);
-    Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, CancellationToken ct);
+    Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, int? sewingTeamId, CancellationToken ct);
 }
 
 public interface ICustomerService

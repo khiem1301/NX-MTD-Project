@@ -38,6 +38,42 @@ public class AttendanceServiceTests
         new() { EmployeeId = id, EmployeeCode = "CN007", FullName = "Nguyễn Văn A",
             AttendanceCode = attendanceCode, Status = status };
 
+    // ---------- GetSessionsAsync ----------
+
+    [Fact]
+    public async Task GetSessionsAsync_PassesStatusAsDbCode()
+    {
+        _repo.GetRecentSessionsAsync(20, SyncStatus.Failed, Arg.Any<CancellationToken>()).Returns([]);
+
+        var result = await _sut.GetSessionsAsync(20, "Failed", CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await _repo.Received(1).GetRecentSessionsAsync(20, SyncStatus.Failed, Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task GetSessionsAsync_NoStatus_DoesNotFilter(string? status)
+    {
+        _repo.GetRecentSessionsAsync(20, null, Arg.Any<CancellationToken>()).Returns([]);
+
+        await _sut.GetSessionsAsync(20, status, CancellationToken.None);
+
+        await _repo.Received(1).GetRecentSessionsAsync(20, null, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetSessionsAsync_UnknownStatus_IsValidationError()
+    {
+        var result = await _sut.GetSessionsAsync(20, "Nope", CancellationToken.None);
+
+        result.Kind.Should().Be(ResultKind.Validation);
+        result.ErrorCode.Should().Be(ErrorCodes.CommonValidation);
+        await _repo.DidNotReceiveWithAnyArgs().GetRecentSessionsAsync(default, default, default);
+    }
+
     // ---------- IngestAsync (UC61) ----------
 
     [Fact]

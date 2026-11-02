@@ -1,5 +1,5 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Button } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 
 /** Cột cuối của bảng nhập liệu: nút xóa dòng (cố định bên phải khi bảng cuộn ngang). */
@@ -8,11 +8,10 @@ export const deleteRowColumn = <T extends { key: string }>(onDelete: (key: strin
   width: 48,
   fixed: 'right' as const,
   render: (_: unknown, r: T) => (
-    <Button
-      type="text"
+    <IconAction
+      title={MESSAGES.common.delete}
       danger
       icon={<DeleteOutlined />}
-      aria-label={MESSAGES.common.delete}
       onClick={() => onDelete(r.key)}
     />
   ),

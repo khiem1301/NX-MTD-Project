@@ -4,9 +4,11 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
+import { useOperationRole } from '../hooks/useOperationRole';
 import { usePieceRates } from '../hooks/useProduction';
-import type { PieceRate } from '../types';
+import type { Operation, PieceRate } from '../types';
 import { DataTable } from '@/components/common/DataTable';
+import { DetailModal } from '@/components/common/DetailModal';
 
 const text = PRODUCTION_TEXT.pieceRates;
 
@@ -34,9 +36,29 @@ const columns: ColumnsType<PieceRate> = [
   },
 ];
 
-/** Lịch sử đơn giá của một công đoạn (mở rộng dòng trên màn công đoạn): mọi bản, kể cả Nháp và bị từ chối. */
+/** Hộp thoại lịch sử đơn giá của công đoạn đang xem. */
+export function PieceRateHistoryModal({
+  operation,
+  onClose,
+}: {
+  operation: Operation | null;
+  onClose: () => void;
+}) {
+  return (
+    <DetailModal
+      open={operation !== null}
+      onClose={onClose}
+      title={operation ? `${operation.operationCode} - ${operation.operationName}` : undefined}
+      size="md"
+    >
+      {operation && <PieceRateHistory operationId={operation.operationId} />}
+    </DetailModal>
+  );
+}
+
+/** Lịch sử đơn giá của một công đoạn (mở rộng dòng trên màn công đoạn): Kế toán thấy mọi bản, Admin không thấy bản Nháp. */
 export function PieceRateHistory({ operationId }: { operationId: number }) {
-  const rates = usePieceRates('accountant', { page: 1, pageSize: 50, operationId });
+  const rates = usePieceRates(useOperationRole(), { page: 1, pageSize: 50, operationId });
 
   return (
     <>

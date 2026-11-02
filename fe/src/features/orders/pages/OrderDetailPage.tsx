@@ -1,9 +1,20 @@
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Result, Space, Spin, Tabs, Tag, Tooltip, Typography } from 'antd';
+import {
+  Alert,
+  Button,
+  Descriptions,
+  Result,
+  Space,
+  Spin,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ORDER_DETAIL_TABS } from '@/app/orderDetailTabs';
-import { AuditHistory } from '@/components/common/AuditHistory';
+import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { NoteModal } from '@/components/common/NoteModal';
 import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
@@ -72,7 +83,7 @@ export function OrderDetailPage() {
     {
       key: 'history',
       label: MESSAGES.common.history,
-      children: <AuditHistory history={data.history} />,
+      children: <AuditHistoryTable history={data.history} />,
     },
   ];
 

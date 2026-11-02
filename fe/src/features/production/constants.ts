@@ -16,8 +16,30 @@ export const DEFECT_MAX_RANGE_DAYS = 366;
 
 /** Số lượng sản lượng tối đa mỗi dòng, khớp OutputLimits.MaxQty ở BE. */
 export const OUTPUT_MAX_QTY = 1_000_000;
+/** Khớp AssignmentLimits.MaxOperations ở BE. */
+export const ASSIGNMENT_MAX_OPERATIONS = 500;
+/** Khớp `AssignmentLimits.MaxOrderLines` ở BE. */
+export const ALLOT_MAX_LINES = 500;
+/** Khớp `OperationLimits` ở BE. */
+export const OPERATION_LIMITS = {
+  maxSequence: 32767,
+  minSkill: 1,
+  maxSkill: 9,
+  maxStandardTimeSec: 9999999.99,
+  maxGroupName: 200,
+  maxGroupChange: 500,
+  maxSearch: 100,
+  maxCode: 30,
+  maxName: 200,
+  codePattern: /^[A-Za-z0-9._-]+$/,
+} as const;
+/** Khớp `PieceRateLimits` ở BE. */
+export const PIECE_RATE_LIMITS = { min: 0.01, max: 100_000_000 } as const;
+export const ASSIGNMENT_SEARCH_MAX_LENGTH = 100;
 
 /** Chuỗi hiển thị của luồng công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01..KI-11). Lỗi nghiệp vụ lấy message từ BE. */
+export const SEWING_TEAM_TYPE = 'SEWING';
+
 export const PRODUCTION_TEXT = {
   saved: 'Đã lưu.',
   required: 'Vui lòng nhập thông tin này.',
@@ -33,6 +55,49 @@ export const PRODUCTION_TEXT = {
     title: 'Công đoạn và đơn giá',
     subtitle:
       'Nhập công đoạn của mã hàng từ Excel rồi đặt đơn giá từng công đoạn (có ngày hiệu lực), gửi Admin duyệt. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
+    adminSubtitle:
+      'Nhập và sửa công đoạn, nhóm công đoạn của mã hàng. Đơn giá do Kế toán đặt, Admin duyệt ở màn Duyệt đơn giá công đoạn. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
+    summary: '{0} công đoạn đang dùng, {1} chưa có nhóm, {2} chưa có đơn giá được duyệt.',
+    noRate: 'Chưa có',
+    selectProductHint:
+      'Chọn mã hàng để xem, nhập công đoạn và đơn giá. Mã hàng chưa có công đoạn thì bấm Nhập từ Excel hoặc Thêm công đoạn.',
+    rateFilter: {
+      label: 'Đơn giá',
+      missing: 'Chưa có giá duyệt ({0})',
+      draft: 'Có bản Nháp ({0})',
+      pending: 'Đang chờ duyệt ({0})',
+      rejected: 'Bị từ chối ({0})',
+    },
+    finalDiscontinueConfirm:
+      'Đây là công đoạn cuối. Ngừng dùng thì mã hàng không còn công đoạn cuối: chưa tính được hàng hoàn thiện và chưa kết thúc được chỉ tiêu KPI cho đến khi chọn công đoạn cuối khác.',
+    manageGroups: 'Nhóm công đoạn',
+    noGroupFilter: 'Chưa có nhóm ({0})',
+    groups: {
+      title: 'Nhóm công đoạn của {0}',
+      hint: 'Nhóm chỉ để gom và tìm công đoạn, không ảnh hưởng phân công, đơn giá, sản lượng.',
+      addPlaceholder: 'Tên nhóm mới, vd May tay',
+      add: 'Thêm nhóm',
+      name: 'Tên nhóm',
+      count: 'Số công đoạn',
+      rename: 'Đổi tên',
+      remove: 'Xóa nhóm',
+      removeConfirm: 'Xóa nhóm này? {0} công đoạn trong nhóm sẽ về chưa có nhóm.',
+      empty: 'Mã hàng này chưa có nhóm công đoạn.',
+    },
+    bulk: {
+      selected: 'Đã chọn {0} công đoạn. Xếp vào:',
+      group: 'Chọn nhóm',
+      noGroups: 'Chưa có nhóm. Thêm ở nút Nhóm công đoạn.',
+      apply: 'Xếp nhóm',
+      ungroup: 'Bỏ nhóm',
+      clear: 'Bỏ chọn',
+      tooMany: 'Mỗi lần đổi tối đa {0} công đoạn, hãy bỏ bớt.',
+      done: 'Đã đổi nhóm {0} công đoạn.',
+      none: 'Các công đoạn đã chọn đã đúng nhóm này, không có gì thay đổi.',
+      submitRates: 'Gửi duyệt {0} đơn giá Nháp',
+      submitConfirm: 'Gửi {0} đơn giá Nháp cho Admin duyệt?',
+      submitDone: 'Đã gửi duyệt {0} đơn giá.',
+    },
     edit: 'Sửa công đoạn',
     add: 'Thêm công đoạn',
     addTitle: 'Thêm công đoạn',
@@ -96,7 +161,6 @@ export const PRODUCTION_TEXT = {
         Error: { text: 'Lỗi', color: 'red' },
       } as Record<string, StatusLabel>,
     },
-    showDiscontinued: 'Hiện cả công đoạn đã ngừng',
     discontinue: 'Ngừng dùng',
     reactivate: 'Dùng lại',
     discontinueConfirm: 'Ngừng dùng công đoạn này? Sản lượng cũ vẫn giữ nguyên.',
@@ -104,35 +168,35 @@ export const PRODUCTION_TEXT = {
       code: 'Mã',
       name: 'Tên công đoạn',
       sequence: 'Thứ tự',
-      skill: 'Bậc khó',
-      standardTime: 'Thời gian chuẩn (giây)',
+      skill: 'Bậc',
+      standardTime: 'TG chuẩn (s)',
       teamType: 'Loại tổ',
-      isFinal: 'Công đoạn cuối',
-      group: 'Công đoạn to',
-      usesPieces: 'Giao việc',
-      rate: 'Đơn giá hiện hành',
-      nextRate: 'Đơn giá mới (chưa hiệu lực)',
+      operation: 'Công đoạn',
+      isFinal: 'Cuối',
+      group: 'Nhóm công đoạn',
+      rate: 'Đơn giá',
       status: 'Trạng thái',
     },
+    /** Dòng đơn giá mới dưới đơn giá đang áp dụng: "→ 1.700 ₫ từ 22/11/2026". */
+    nextRateLine: '→ {0} từ {1}',
     form: {
       code: 'Mã công đoạn',
       name: 'Tên công đoạn',
-      sequence: 'Thứ tự trên chuyền',
-      skill: 'Bậc khó (1-9)',
-      standardTime: 'Thời gian chuẩn (giây)',
+      sequence: 'Thứ tự',
+      skill: 'Bậc (1-9)',
+      standardTime: 'TG chuẩn (giây)',
       isFinal: 'Là công đoạn cuối (tính hàng hoàn thiện)',
-      usesSemiFinished: 'Giao việc kèm BTP (công đoạn nhận BTP từ tổ, vd ráp thân)',
-      group: 'Công đoạn to',
+      isFinalMoves: 'Công đoạn cuối hiện tại sẽ chuyển sang công đoạn này.',
+      codeFormat: 'Mã chỉ gồm chữ không dấu, số và các ký tự . _ -',
+      group: 'Nhóm công đoạn',
       groupHint:
         'Chọn hoặc gõ tên mới (vd May tay) để nhóm các công đoạn nhỏ; tìm theo tên này ở màn Giao việc.',
       components: 'Chi tiết công đoạn làm trên',
       componentsHint:
         'Một công đoạn có thể làm trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước, Thân sau). Bỏ trống nếu không gắn chi tiết.',
     },
-    filterGroup: 'Lọc theo công đoạn to',
-    searchOperation: 'Tìm tên hoặc mã công đoạn',
-    withPieces: 'Kèm BTP',
-    withoutPieces: 'Không kèm BTP',
+    filterGroup: 'Nhóm',
+    searchOperation: 'Tìm mã, tên',
     teamType: { Sewing: 'Tổ may', Cutting: 'Tổ cắt' } as Record<string, string>,
     status: {
       Active: { text: 'Đang dùng', color: 'green' },
@@ -173,7 +237,10 @@ export const PRODUCTION_TEXT = {
       operation: 'Công đoạn',
       rate: 'Đơn giá (đồng/sản phẩm)',
       effectiveDate: 'Ngày hiệu lực',
-      rateMin: 'Đơn giá phải lớn hơn hoặc bằng 0.',
+      rateMin: 'Đơn giá phải lớn hơn 0.',
+      rateMax: 'Đơn giá không được vượt quá 100.000.000 đồng.',
+      pastDateHint:
+        'Ngày hiệu lực đã qua: sau khi duyệt, đơn giá này áp dụng cho sản lượng nhập mới của các ngày từ đó. Sản lượng đã nhập giữ nguyên đơn giá cũ.',
       currentRate: 'Đơn giá hiện hành',
     },
     done: {
@@ -189,35 +256,111 @@ export const PRODUCTION_TEXT = {
     } as Record<PieceRateStatus, StatusLabel>,
   },
 
+  orderLineTeams: {
+    title: 'Chia đơn cho tổ may',
+    subtitle:
+      'Chia từng màu, size của đơn cho tổ may làm. Tổ chỉ xin và nhận BTP của màu, size được chia, và phân công công đoạn của mã hàng có màu, size đó. Một dòng có thể chia cho nhiều tổ.',
+    search: 'Tìm đơn, mã hàng, màu, size',
+    onlyUnallotted: 'Chỉ dòng chưa chia',
+    teamPlaceholder: 'Chưa chia, chọn tổ may',
+    teamAria: 'Tổ may của {0} - {1} - {2}/{3}',
+    teamGone: '{0} (ngừng hoạt động)',
+    saved: 'Đã lưu việc chia đơn.',
+    empty: 'Không có dòng đơn nào trong các đơn đang mở.',
+    selectedCount: 'Đã chọn {0} dòng. Chia thêm cho:',
+    bulkTeams: 'Chọn tổ may',
+    bulkApply: 'Chia',
+    bulkClear: 'Bỏ chọn',
+    tooManySelected: 'Mỗi lần chia tối đa {0} dòng, hãy bỏ bớt.',
+    bulkDone: 'Đã thêm {0} lượt chia.',
+    bulkNone: 'Các dòng đã chọn đều đã chia cho tổ này, không có gì thay đổi.',
+    columns: {
+      order: 'Đơn hàng',
+      dueDate: 'Ngày giao',
+      product: 'Mã hàng',
+      color: 'Màu',
+      size: 'Size',
+      qty: 'Số lượng',
+      teams: 'Tổ may',
+    },
+  },
+
   assignments: {
     title: 'Phân công công đoạn',
     subtitle:
-      'Phân công công nhân cho từng công đoạn theo đơn hàng. Đổi phân công giữ lại lịch sử. Phân công chỉ để nạp sẵn lưới sản lượng.',
-    assign: 'Phân công',
-    assignTitle: 'Phân công công đoạn',
-    replace: 'Đổi người',
-    replaceTitle: 'Đổi công nhân của công đoạn',
-    close: 'Bỏ phân công',
-    closeConfirm: 'Bỏ phân công này? Lịch sử vẫn được giữ.',
+      'Đặt công nhân cho từng công đoạn của đơn, làm cơ sở cho cả đợt làm đơn. Phải có đủ người ở mọi công đoạn trước khi nhận BTP. Đổi người giữ lại lịch sử.',
+    workerPlaceholder: 'Chưa có người, chọn công nhân',
+    search: 'Tìm mã, tên',
+    filterGroup: 'Nhóm',
+    filterWorker: 'Công nhân',
+    filterState: 'Tình trạng',
+    workerLoad: '{0} ({1} công đoạn)',
+    stateAll: 'Tất cả ({0})',
+    stateMissing: 'Chưa có người ({0})',
+    stateCovered: 'Đã có người ({0})',
+    selectedCount: 'Đã chọn {0} công đoạn. Giao cho:',
+    bulkWorker: 'Chọn công nhân',
+    bulkApply: 'Giao việc',
+    bulkClear: 'Bỏ chọn',
+    selectOrderHint:
+      'Chọn đơn hàng để đặt công nhân cho từng công đoạn. Chỉ hiện đơn có mã hàng được chia cho tổ.',
+    noOrders: 'Chưa có đơn nào được chia cho tổ. Quản đốc cần chia mã hàng cho tổ trước.',
+    selectProduct: 'Mã hàng',
+    productOption: '{0} ({1}/{2} công đoạn)',
+    productNoOperations: '{0} (chưa khai công đoạn)',
+    noOperations:
+      'Mã hàng {0} chưa có công đoạn may đang dùng nên tổ chưa phân công và chưa nhận được BTP của mã này. Kế toán cần khai công đoạn trước.',
+    noMatch: 'Không có công đoạn phù hợp với bộ lọc.',
+    views: { operation: 'Theo công đoạn', worker: 'Theo công nhân' },
+    byWorker: {
+      searchWorker: 'Tìm mã, tên công nhân',
+      workerAll: 'Tất cả ({0})',
+      workerIdle: 'Chưa có việc ({0})',
+      noWorkerMatch: 'Không có công nhân phù hợp.',
+      columns: { worker: 'Công nhân', load: 'Số công đoạn', operations: 'Công đoạn đang làm' },
+      modalColumns: {
+        group: 'Nhóm',
+        skill: 'Bậc',
+        time: 'Thời gian (giây)',
+        workers: 'Số người làm',
+      },
+      noOperationsYet: 'Chưa có việc',
+      moreOperations: '+{0}',
+      pick: 'Chọn công đoạn',
+      modalTitle: 'Chọn công đoạn cho {0}',
+      modalHint: 'Tích các công đoạn công nhân này làm, rồi bấm Lưu. Bỏ tích là thôi giao.',
+      changes: 'Thêm {0}, bỏ {1}',
+      noChanges: 'Chưa thay đổi gì.',
+      saved: 'Đã lưu phân công.',
+      tooManyAdded: 'Mỗi lần lưu thêm tối đa {0} công đoạn, hãy bỏ bớt.',
+    },
+    noWorkers: 'Tổ chưa có công nhân đang làm.',
+    tooManySelected: 'Mỗi lần giao tối đa {0} công đoạn, hãy bỏ bớt.',
+    copySameOrder: 'Đơn nguồn phải khác đơn đang chọn.',
+    workerGone: '{0} (đã nghỉ hoặc chuyển tổ)',
+    coverageDone: 'Đã phân công đủ {0} công đoạn. Tổ có thể nhận BTP của mã hàng này.',
+    coverageMissing:
+      'Còn {0}/{1} công đoạn chưa có người. Phân công đủ thì tổ mới nhận được BTP của mã hàng này.',
     copy: 'Chép từ đơn khác',
     copyTitle: 'Chép phân công từ đơn khác',
     copyFrom: 'Đơn nguồn',
     copyHint:
       'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
     columns: {
-      product: 'Mã hàng',
       operation: 'Công đoạn',
+      skill: 'Bậc',
       worker: 'Công nhân',
-      validFrom: 'Từ ngày',
     },
-    form: { operation: 'Công đoạn', operations: 'Công đoạn (chọn nhiều)', worker: 'Công nhân' },
     done: {
       assigned: 'Đã phân công.',
-      replaced: 'Đã đổi công nhân.',
       closed: 'Đã bỏ phân công.',
-      copied: 'Đã chép phân công.',
+      added: 'Đã giao {0} công đoạn.',
+      addedSkipped: 'Đã giao {0} công đoạn, bỏ qua {1} công đoạn công nhân đang làm.',
+      noneAdded: 'Công nhân đã làm tất cả công đoạn đã chọn, không có gì thay đổi.',
+      copied: 'Đã chép {0} phân công.',
+      noneCopied: 'Không có phân công nào để chép từ đơn này.',
     },
-    empty: 'Đơn này chưa có phân công cho tổ của bạn.',
+    empty: 'Mã hàng này chưa có công đoạn may đang dùng.',
   },
 
   output: {

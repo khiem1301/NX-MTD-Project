@@ -24,6 +24,9 @@ public partial class CuttingLay
 
     public short PlyCount { get; set; }
 
+    /// <summary>Chiều dài bàn cắt (mét); null = bàn nhập trước khi có cột này.</summary>
+    public decimal? LayLengthM { get; set; }
+
     public string? Note { get; set; }
 
     public string Status { get; set; } = null!;

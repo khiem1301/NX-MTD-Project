@@ -10,13 +10,19 @@ export const productionMenu: MenuEntry[] = [
     key: 'operations',
     label: PRODUCTION_TEXT.operations.title,
     path: PRODUCTION_ROUTES.operations,
-    roles: [ROLES.Accountant],
+    roles: [ROLES.Accountant, ROLES.Admin],
   },
   {
     key: 'admin-piece-rates',
     label: PRODUCTION_TEXT.pieceRates.adminTitle,
     path: PRODUCTION_ROUTES.adminPieceRates,
     roles: [ROLES.Admin],
+  },
+  {
+    key: 'order-line-teams',
+    label: PRODUCTION_TEXT.orderLineTeams.title,
+    path: PRODUCTION_ROUTES.orderLineTeams,
+    roles: [ROLES.Admin, ROLES.Manager],
   },
   {
     key: 'operation-assignments',

@@ -21,7 +21,7 @@ public interface IAttendanceRepository
 
     Task<DateTime?> GetLastSucceededAtAsync(CancellationToken ct);
 
-    Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, CancellationToken ct);
+    Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, string? status, CancellationToken ct);
 
     Task<IReadOnlyList<UnmappedCodeDto>> GetUnmappedCodesAsync(CancellationToken ct);
 

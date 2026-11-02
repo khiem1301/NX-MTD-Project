@@ -28,8 +28,6 @@ public partial class Operation
 
     public bool IsFinalStep { get; set; }
 
-    public bool UsesSemiFinished { get; set; }
-
     public string Status { get; set; } = null!;
 
     public virtual ICollection<DefectRecord> DefectRecords { get; set; } = new List<DefectRecord>();

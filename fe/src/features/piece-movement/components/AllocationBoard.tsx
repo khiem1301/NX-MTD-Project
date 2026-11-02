@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { SearchOutlined, RollbackOutlined, EyeOutlined } from '@ant-design/icons';
-import { Alert, Button, Input, Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { SearchOutlined, RollbackOutlined, EyeOutlined, SendOutlined } from '@ant-design/icons';
+import { Alert, Input, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -57,10 +57,7 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
       render: (_, o) => (
         <Space direction="vertical" size={0}>
           <Typography.Text>{`${o.operationCode} - ${o.operationName}`}</Typography.Text>
-          <Space size={4}>
-            {o.groupName && <Tag color="geekblue">{o.groupName}</Tag>}
-            {o.usesSemiFinished && <Tag color="blue">{PM_LABELS.usesPieces}</Tag>}
-          </Space>
+          <Space size={4}>{o.groupName && <Tag color="geekblue">{o.groupName}</Tag>}</Space>
         </Space>
       ),
     },
@@ -78,21 +75,19 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
       title: MESSAGES.common.actions,
       key: 'action',
       render: (_, o) => (
-        <Space size={4}>
+        <Space size={0}>
           <IconAction
             title={MESSAGES.common.view}
             icon={<EyeOutlined />}
             onClick={() => setViewing(o)}
           />
           {canEdit && (
-            <Button
-              type="primary"
-              size="small"
+            <IconAction
+              title={PM_LABELS.giveAction}
+              icon={<SendOutlined />}
               disabled={o.unallocatedQty <= 0}
               onClick={() => setTarget({ kind: 'HANDOVER', progress: o })}
-            >
-              {PM_LABELS.giveAction}
-            </Button>
+            />
           )}
         </Space>
       ),
@@ -126,7 +121,6 @@ export function AllocationBoard({ canEdit }: { canEdit: boolean }) {
         columns={columns}
         dataSource={rows}
         loading={board.isFetching}
-        pagination={{ pageSize: 50, hideOnSinglePage: true }}
       />
       <DetailModal
         open={viewing !== null}

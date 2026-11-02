@@ -8,7 +8,12 @@ import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime } from '@/utils/format';
 import { ShortDeliveryModal } from '../components/ShortDeliveryModal';
-import { LABELS, SHORTAGE_RESOLUTION_LABEL, SHORTAGE_STATUS_LABEL } from '../constants';
+import {
+  LABELS,
+  SHORTAGE_RESOLUTION_LABEL,
+  SHORTAGE_STATUS_LABEL,
+  SOURCE_LABEL,
+} from '../constants';
 import { useShortDeliveries } from '../hooks/useShortDeliveries';
 import type { ShortDeliveryListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
@@ -35,6 +40,11 @@ export function ShortDeliveryListPage() {
       dataIndex: 'requestCode',
     },
     { title: LABELS.receiptCode, dataIndex: 'receiptCode' },
+    {
+      title: LABELS.receiptSource,
+      dataIndex: 'source',
+      render: (v: string) => SOURCE_LABEL[v] ?? v,
+    },
     { title: LABELS.purchaseOrder, dataIndex: 'poCode', render: (v: string | null) => v ?? '—' },
     { title: LABELS.order, dataIndex: 'orderCode', render: (v: string | null) => v ?? '—' },
     {

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -39,6 +40,8 @@ public sealed class RequestService : IRequestService
             dto.DefectRecordId, dto.TargetDate, dto.Title, dto.Content, dto.Lines ?? Array.Empty<RequestLineInput>(), null);
         var check = await _handlers.For(type).ValidateAsync(draft, ct);
         if (!check.IsSuccess) return Fail.As<int>(check);
+        var allotted = await CheckAllottedAsync(draft, ct);
+        if (allotted is not null) return Fail.As<int>(allotted);
 
         var request = await NewRequestAsync(draft, policy, _user.EmployeeId, _user.TeamId, ct);
         await _requests.AddAsync(request);
@@ -82,6 +85,8 @@ public sealed class RequestService : IRequestService
             lines, request.RequestId);
         var check = await _handlers.For(request.RequestTypeCode).ValidateAsync(draft, ct);
         if (!check.IsSuccess) return check;
+        var allotted = await CheckAllottedAsync(draft, ct);
+        if (allotted is not null) return allotted;
 
         _requests.SetOriginalRowVersion(request, dto.RowVer);
         var before = new { request.Title, request.Content, request.TargetDate, LineCount = request.RequestLines.Count };
@@ -186,6 +191,20 @@ public sealed class RequestService : IRequestService
         request.ResultNote = resultNote?.Trim();
         request.CompletedAt = _clock.Now;
         request.UpdatedAt = _clock.Now;
+    }
+
+    /// <summary>DEV-ALL-49: đơn từ của tổ may chỉ được nêu dòng đơn (mã hàng × màu × size) được chia cho tổ. Không có dòng đơn thì tổ phải được chia ít nhất một dòng của đơn.</summary>
+    private async Task<Result?> CheckAllottedAsync(RequestDraft draft, CancellationToken ct)
+    {
+        if (SewingTeamScope.Of(_user) is not { } teamId) return null;
+        var allotments = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == teamId);
+        var lineIds = draft.Lines.Where(l => l.OrderLineId != null).Select(l => l.OrderLineId!.Value).Distinct().ToList();
+        var ok = lineIds.Count > 0
+            ? !await _uow.Repository<OrderLine>().Query().AnyAsync(l => lineIds.Contains(l.OrderLineId)
+                && !allotments.Any(a => a.OrderLineId == l.OrderLineId), ct)
+            : draft.OrderId is not { } orderId || await _uow.Repository<OrderLine>().Query().AnyAsync(l => l.OrderId == orderId
+                && allotments.Any(a => a.OrderLineId == l.OrderLineId), ct);
+        return ok ? null : Result.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.OrderLineNotAllotted);
     }
 
     private async Task<Request> NewRequestAsync(RequestDraft d, RequestTypePolicy policy, int? createdBy, int? teamId,

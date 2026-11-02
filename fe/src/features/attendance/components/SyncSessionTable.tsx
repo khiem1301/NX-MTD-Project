@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Alert, Empty, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ATTENDANCE_TEXT } from '../constants';
@@ -5,6 +6,9 @@ import { useSyncSessions } from '../hooks/useAttendance';
 import type { SyncSession, SyncStatus } from '../types';
 import { formatDateTime } from '../utils';
 import { DataTable } from '@/components/common/DataTable';
+import { FilterSelect } from '@/components/common/FilterSelect';
+import { TableToolbar } from '@/components/common/TableToolbar';
+import { MESSAGES } from '@/constants/messages';
 
 const STATUS_TAG: Record<SyncStatus, { color: string; text: string }> = {
   Running: { color: 'processing', text: ATTENDANCE_TEXT.sync.statusRunning },
@@ -12,9 +16,15 @@ const STATUS_TAG: Record<SyncStatus, { color: string; text: string }> = {
   Failed: { color: 'error', text: ATTENDANCE_TEXT.sync.statusFailed },
 };
 
+const STATUS_OPTIONS = (Object.keys(STATUS_TAG) as SyncStatus[]).map((value) => ({
+  value,
+  label: STATUS_TAG[value].text,
+}));
+
 /** Lịch sử đồng bộ JOB-01 và các lần nhập file Excel dự phòng. */
 export function SyncSessionTable() {
-  const { data, isLoading, error } = useSyncSessions();
+  const [status, setStatus] = useState<SyncStatus>();
+  const { data, isLoading, error } = useSyncSessions(status);
 
   if (error) {
     return <Alert type="error" showIcon message={(error as { message: string }).message} />;
@@ -87,19 +97,34 @@ export function SyncSessionTable() {
   ];
 
   return (
-    <DataTable<SyncSession>
-      rowKey="syncSessionId"
-      size="small"
-      columns={columns}
-      dataSource={data ?? []}
-      loading={isLoading}
-      pagination={false}
-      scroll={{ x: 'max-content' }}
-      locale={{
-        emptyText: (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={ATTENDANCE_TEXT.sync.never} />
-        ),
-      }}
-    />
+    <>
+      <TableToolbar
+        filters={
+          <FilterSelect<SyncStatus>
+            value={status}
+            placeholder={ATTENDANCE_TEXT.table.syncStatus}
+            options={STATUS_OPTIONS}
+            onChange={setStatus}
+            style={{ width: 170 }}
+          />
+        }
+      />
+      <DataTable<SyncSession>
+        rowKey="syncSessionId"
+        size="small"
+        columns={columns}
+        dataSource={data ?? []}
+        loading={isLoading}
+        scroll={{ x: 'max-content' }}
+        locale={{
+          emptyText: (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={status ? MESSAGES.common.empty : ATTENDANCE_TEXT.sync.never}
+            />
+          ),
+        }}
+      />
+    </>
   );
 }

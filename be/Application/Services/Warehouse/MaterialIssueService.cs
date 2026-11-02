@@ -31,6 +31,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
     }
 
     private const string IssueLink = "/warehouse/material-issues";
+    private const int MaxMissingOperationsShown = 5;
 
     private IQueryable<MaterialIssue> Issues => _uow.Repository<MaterialIssue>().Query();
 
@@ -94,7 +95,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         _uow.InTransactionAsync(async () =>
         {
             var issue = await Issues.Include(i => i.MaterialIssueLines).FirstOrDefaultAsync(i => i.MaterialIssueId == issueId, ct);
-            var check = CheckPending(issue, teamId);
+            var check = CheckPending(issue, teamId) ?? await CheckOperationsAssignedAsync(issue!, ct);
             if (check is not null) return check;
 
             var byId = dto.Lines.ToDictionary(l => l.MaterialIssueLineId);
@@ -129,6 +130,40 @@ public sealed class MaterialIssueService : IMaterialIssueService
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.IssueReceived);
         });
+
+    /// <summary>
+    /// Tổ may phải phân công đủ trước khi nhận BTP (DEV-ALL-48): mọi công đoạn may đang dùng của các mã hàng trên phiếu đều có ít nhất
+    /// một công nhân đang làm của tổ. Mã hàng chưa khai công đoạn cũng bị chặn vì chưa phân công được.
+    /// </summary>
+    private async Task<Result?> CheckOperationsAssignedAsync(MaterialIssue issue, CancellationToken ct)
+    {
+        if (issue.WarehouseType != WarehouseTypes.SemiFinished) return null;
+        var lineIds = issue.MaterialIssueLines.Where(l => l.OrderLineId != null).Select(l => l.OrderLineId!.Value).ToList();
+        var products = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => lineIds.Contains(l.OrderLineId))
+            .Select(l => new { l.ProductId, l.ProductVariant.Product.ProductCode }).Distinct().ToListAsync(ct);
+        var productIds = products.Select(p => p.ProductId).ToList();
+        var operations = _uow.Repository<Operation>().Query().AsNoTracking()
+            .Where(o => productIds.Contains(o.ProductId) && o.Status == OperationStatuses.Active && o.TeamType == TeamTypes.Sewing);
+
+        var withOperations = await operations.Select(o => o.ProductId).Distinct().ToListAsync(ct);
+        var noOperations = products.Where(p => !withOperations.Contains(p.ProductId)).Select(p => p.ProductCode).ToList();
+        if (noOperations.Count > 0)
+            return Result.Failure(ErrorCodes.AssignmentIncomplete, string.Format(Messages.AssignmentNoOperations, string.Join(", ", noOperations)));
+
+        var assignments = _uow.Repository<OperationAssignment>().Query();
+        var missing = await operations
+            .Where(o => !assignments.Any(a => a.OperationId == o.OperationId && a.OrderId == issue.OrderId
+                                                 && a.SewingTeamId == issue.ReceivingTeamId && a.ValidTo == null
+                                                 && a.Worker.Status == RecordStatus.Active && a.Worker.TeamId == issue.ReceivingTeamId))
+            .OrderBy(o => o.ProductId).ThenBy(o => o.StationSequence)
+            .Select(o => o.OperationCode).ToListAsync(ct);
+        if (missing.Count == 0) return null;
+
+        var names = missing.Count <= MaxMissingOperationsShown
+            ? string.Join(", ", missing)
+            : $"{string.Join(", ", missing.Take(MaxMissingOperationsShown))}...";
+        return Result.Failure(ErrorCodes.AssignmentIncomplete, string.Format(Messages.AssignmentIncomplete, missing.Count, names));
+    }
 
     /// <summary>
     /// Tổ may xác nhận nhận BTP (swimlane III.3.4) thì đơn chuyển sang IN_PRODUCTION nếu còn NEW và NVL không còn chờ.
@@ -245,7 +280,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             : (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.MaterialNotInWorkOrder), null);
     }
 
-    /// <summary>Cấp BTP: tổ nhận phải là tổ may đang hoạt động, dòng đơn phải thuộc đơn.</summary>
+    /// <summary>Cấp BTP: tổ nhận phải là tổ may đang hoạt động, dòng đơn phải thuộc đơn, mã hàng phải được chia cho tổ (DEV-ALL-49).</summary>
     private async Task<(Result<MaterialIssueDto>?, IssueTarget?)> ResolveSewingAsync(CreateMaterialIssueDto dto,
         CancellationToken ct)
     {
@@ -260,6 +295,11 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (variants.Count != ids.Count)
             return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
 
+        var notAllotted = await FindNotAllottedLinesAsync(dto.ReceivingTeamId!.Value, ids, ct);
+        if (notAllotted.Count > 0)
+            return (Fail(ErrorCodes.AssignmentProductNotAllotted,
+                string.Format(WarehouseMessages.ProductNotAllottedToTeam, string.Join(", ", notAllotted))), null);
+
         // THROW 50041: chi tiết lẻ phải là dòng định mức vải (PANEL) của đúng màu × size của dòng đơn.
         var pieceLines = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).ToList();
         if (pieceLines.Count > 0)
@@ -273,6 +313,19 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm), null);
         }
         return (null, new IssueTarget(dto.OrderId!.Value, dto.ReceivingTeamId!.Value, null));
+    }
+
+    private async Task<List<string>> FindNotAllottedLinesAsync(int teamId, IReadOnlyCollection<int> orderLineIds, CancellationToken ct)
+    {
+        var allotted = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == teamId).Select(a => a.OrderLineId);
+        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => orderLineIds.Contains(l.OrderLineId) && !allotted.Contains(l.OrderLineId))
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode }).ToListAsync(ct);
+        var labels = lines.Take(MaxMissingOperationsShown)
+            .Select(l => string.Format(Messages.OrderLineLabel, l.ProductCode, l.Color, l.SizeCode)).ToList();
+        if (lines.Count > MaxMissingOperationsShown) labels.Add("...");
+        return labels;
     }
 
     /// <summary>

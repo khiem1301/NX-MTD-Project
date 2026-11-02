@@ -2,9 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { Form } from 'antd';
 import dayjs from 'dayjs';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
-import { useTeamLookup } from '@/hooks/useHrLookups';
 import { fill, formatDate, toApiDate } from '@/utils/format';
-import { useKpiOrderCapacity, useSaveKpiTarget } from './useKpi';
+import { useAllottedTeams, useKpiOrderCapacity, useSaveKpiTarget } from './useKpi';
 import type { Props } from '../components/KpiTargetFormModal';
 import { type Dayjs } from 'dayjs';
 import { KPI_TEXT } from '../constants';
@@ -30,7 +29,8 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
       : null;
   const orders = useOrderLookup();
   const lines = useOrderLineLookup(orderId);
-  const teams = useTeamLookup();
+  const teams = useAllottedTeams(orderId, productId);
+  const sewingTeamId = Form.useWatch('sewingTeamId', form);
   const editing = target !== null;
 
   useEffect(() => {
@@ -66,9 +66,25 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     return [...seen].map(([value, label]) => ({ value, label }));
   }, [lines.data, target]);
 
-  const teamOptions = (teams.data ?? [])
-    .filter((t) => t.teamType === 'Sewing')
-    .map((t) => ({ value: t.teamId, label: t.teamName }));
+  const options = useMemo(() => {
+    const allotted = (teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }));
+    return target && !allotted.some((o) => o.value === target.sewingTeamId)
+      ? [{ value: target.sewingTeamId, label: target.sewingTeamName }, ...allotted]
+      : allotted;
+  }, [teams.data, target]);
+
+  const teamSelectProps = {
+    options,
+    loading: teams.isFetching,
+    notFoundContent: productId === null ? text.teamPickProduct : text.teamNotAllotted,
+  };
+
+  // Đổi đơn hoặc mã hàng mà tổ đang chọn không được chia mã mới thì bỏ chọn tổ.
+  useEffect(() => {
+    if (editing || !teams.data || sewingTeamId === undefined) return;
+    if (!teams.data.some((t) => t.teamId === sewingTeamId))
+      form.setFieldValue('sewingTeamId', undefined);
+  }, [editing, teams.data, sewingTeamId, form]);
 
   const required = [{ required: true, message: text.required }];
   // Lập mới không chọn được ngày đã qua; chỉ tiêu đang chạy có thể đã bắt đầu từ trước nên để BE kiểm mốc bị đổi.
@@ -99,11 +115,10 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     disabledDate,
     orders,
     lines,
-    teams,
     editing,
     orderOptions,
     productOptions,
-    teamOptions,
+    teamSelectProps,
     required,
     handleFinish,
     form,

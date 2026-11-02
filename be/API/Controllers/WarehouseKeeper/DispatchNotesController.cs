@@ -31,10 +31,10 @@ public sealed class DispatchNotesController : WarehouseKeeperBaseController
         this.ToExcelFile(await exports.ExportDispatchNoteAsync(id, ct));
 
     [HttpPost("{id:int}/export")]
-    public async Task<IActionResult> Export(int id, CancellationToken ct) =>
-        this.ToResponse(await _notes.ExportAsync(id, _user.EmployeeId, ct));
+    public async Task<IActionResult> Export(int id, [FromBody] DispatchActionDto dto, CancellationToken ct) =>
+        this.ToResponse(await _notes.ExportAsync(id, dto, _user.EmployeeId, ct));
 
     [HttpPost("{id:int}/reject")]
-    public async Task<IActionResult> Reject(int id, [FromBody] ReasonDto dto, CancellationToken ct) =>
+    public async Task<IActionResult> Reject(int id, [FromBody] RejectDispatchDto dto, CancellationToken ct) =>
         this.ToResponse(await _notes.RejectAsync(id, dto, _user.EmployeeId, ct));
 }

@@ -15,7 +15,7 @@ namespace Application.Tests;
 [Collection(ExcelTestCollection.Name)]
 public class OperationImportTests : ProductionTestBase
 {
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "LUNA", ProductName = "Áo dạ" }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "LUNA", ProductName = "Áo dạ", Status = RecordStatus.Active }];
     private readonly List<Operation> _operations = [];
     private readonly List<PieceRate> _rates = [];
     private readonly OperationService _sut;
@@ -386,5 +386,64 @@ public class OperationImportTests : ProductionTestBase
 
         rejected.Status.Should().Be(PieceRateStatuses.PendingApproval);
         rejected.DecisionNote.Should().BeNull();
+    }
+
+    // ---------- Giá trị biên của file (DEV-ALL-50) ----------
+
+    private async Task<OperationImportRowDto> PreviewFirstRow(Action<IXLWorksheet> edit)
+    {
+        var file = Workbook(wb => edit(wb.Worksheets.First()));
+        var result = await _sut.PreviewImportAsync(1, file, null, null, default);
+        return result.Data!.Rows.First(r => r.Stt == 1);
+    }
+
+    [Theory]
+    [InlineData(9999999.99, true)]
+    [InlineData(10000000, false)]
+    public async Task Preview_StandardTimeBound(double time, bool ok)
+    {
+        var row = await PreviewFirstRow(ws => ws.Cell(7, 4).Value = time);
+
+        (row.Action != "Error").Should().Be(ok);
+    }
+
+    [Fact]
+    public async Task Preview_TinyStandardTimeRoundingToZero_IsTreatedAsEmpty()
+    {
+        var row = await PreviewFirstRow(ws => ws.Cell(7, 4).Value = 0.001);
+
+        row.Action.Should().NotBe("Error");
+        row.StandardTimeSec.Should().BeNull();   // CK_Operation_Time không nhận 0
+    }
+
+    [Theory]
+    [InlineData(100000000, true)]
+    [InlineData(100000000.01, false)]
+    public async Task Preview_RateBound(double rate, bool ok)
+    {
+        var row = await PreviewFirstRow(ws => ws.Cell(7, 6).Value = rate);
+
+        (row.Action != "Error").Should().Be(ok);
+    }
+
+    [Fact]
+    public async Task Preview_ProductDiscontinued_IsRejected()
+    {
+        _products[0].Status = RecordStatus.Discontinued;
+
+        var result = await _sut.PreviewImportAsync(1, Workbook(), null, null, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductNotActive);
+    }
+
+    [Fact]
+    public async Task Import_FinalStepOnDiscontinuedOperation_IsRejected()
+    {
+        _operations.Add(new Operation { OperationId = 1, ProductId = 1, OperationCode = "OP01", OperationName = "KT", StationSequence = 1,
+            Status = OperationStatuses.Discontinued, TeamType = TeamTypes.Sewing });
+
+        var result = await _sut.ImportAsync(1, Workbook(), null, 1, null, false, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OperationNotActive);
     }
 }

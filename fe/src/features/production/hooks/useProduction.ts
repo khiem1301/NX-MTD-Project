@@ -1,8 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { useApiMutation } from '@/hooks/useApiMutation';
+import { lookupApi } from '@/services/lookupApi';
 import { productionApi } from '../api/productionApi';
 import { PRODUCTION_TEXT } from '../constants';
+import { useOperationRole } from './useOperationRole';
 import type {
+  AddOrderLineTeamsPayload,
+  SetOrderLineTeamsPayload,
   AssignManyPayload,
   AssignPayload,
   CancelDefectPayload,
@@ -21,6 +25,8 @@ import type {
   QcBatchQuery,
   QcRole,
   SaveOperationPayload,
+  SetOperationsGroupPayload,
+  OrderLineTeamParams,
   SaveOutputPayload,
   SavePieceRatePayload,
   UpdateQcBatchPayload,
@@ -30,33 +36,40 @@ export const PRODUCTION_KEY = ['production'] as const;
 const operationsKey = [...PRODUCTION_KEY, 'operations'] as const;
 const pieceRatesKey = [...PRODUCTION_KEY, 'piece-rates'] as const;
 const assignmentsKey = [...PRODUCTION_KEY, 'assignments'] as const;
+const orderLineTeamsKey = [...PRODUCTION_KEY, 'order-line-teams'] as const;
 const outputKey = [...PRODUCTION_KEY, 'output'] as const;
 const qcKey = [...PRODUCTION_KEY, 'qc'] as const;
 const defectsKey = [...PRODUCTION_KEY, 'defects'] as const;
 
 // ---------- Công đoạn ----------
 
-export const useOperations = (productId: number | null, includeDiscontinued = false) =>
-  useQuery({
-    queryKey: [...operationsKey, productId, includeDiscontinued],
-    queryFn: () => productionApi.listOperations(productId!, includeDiscontinued),
+/** Lấy cả công đoạn đã ngừng; màn hình tự lọc theo trạng thái. */
+export const useOperations = (productId: number | null) => {
+  const role = useOperationRole();
+  return useQuery({
+    queryKey: [...operationsKey, productId],
+    queryFn: () => productionApi.listOperations(role, productId!, true),
     enabled: productId !== null,
   });
+};
 
-export const useSaveOperation = (id: number | null) =>
-  useApiMutation(
+export const useSaveOperation = (id: number | null) => {
+  const role = useOperationRole();
+  return useApiMutation(
     /** Trả mã công đoạn (tạo mới: mã vừa tạo) để màn hình mở tiếp ô nhập đơn giá. */
     async (body: SaveOperationPayload): Promise<number> => {
-      if (id === null) return productionApi.createOperation(body);
-      await productionApi.updateOperation(id, body);
+      if (id === null) return productionApi.createOperation(role, body);
+      await productionApi.updateOperation(role, id, body);
       return id;
     },
     { invalidate: [operationsKey], successMessage: PRODUCTION_TEXT.saved },
   );
+};
 
 /** Xem trước file Excel quy trình công nghệ: không ghi DB nên không invalidate. */
-export const usePreviewOperationImport = () =>
-  useApiMutation(
+export const usePreviewOperationImport = () => {
+  const role = useOperationRole();
+  return useApiMutation(
     ({
       file,
       ...params
@@ -65,23 +78,76 @@ export const usePreviewOperationImport = () =>
       productId: number;
       sheetName?: string;
       effectiveDate?: string;
-    }) => productionApi.previewOperationImport(file, params),
+    }) => productionApi.previewOperationImport(role, file, params),
     { invalidate: [] },
   );
+};
 
-export const useImportOperations = () =>
-  useApiMutation(
+export const useImportOperations = () => {
+  const role = useOperationRole();
+  return useApiMutation(
     ({ file, params }: { file: File; params: OperationImportParams }) =>
-      productionApi.importOperations(file, params),
+      productionApi.importOperations(role, file, params),
     { invalidate: [operationsKey, pieceRatesKey] },
   );
+};
 
-export const useToggleOperation = () =>
-  useApiMutation(
+export const useToggleOperation = () => {
+  const role = useOperationRole();
+  return useApiMutation(
     ({ id, discontinue }: { id: number; discontinue: boolean }) =>
-      discontinue ? productionApi.discontinueOperation(id) : productionApi.reactivateOperation(id),
+      discontinue
+        ? productionApi.discontinueOperation(role, id)
+        : productionApi.reactivateOperation(role, id),
     { invalidate: [operationsKey, pieceRatesKey], successMessage: PRODUCTION_TEXT.saved },
   );
+};
+
+// ---------- Nhóm công đoạn ----------
+
+/** Nằm dưới khóa công đoạn: lưu công đoạn có thể tạo nhóm mới, đổi nhóm thì danh sách công đoạn cũng đổi. */
+export const useOperationGroups = (productId: number | null) => {
+  const role = useOperationRole();
+  return useQuery({
+    queryKey: [...operationsKey, 'groups', productId],
+    queryFn: () => productionApi.listOperationGroups(role, productId!),
+    enabled: productId !== null,
+  });
+};
+
+export const useCreateOperationGroup = () => {
+  const role = useOperationRole();
+  return useApiMutation(
+    ({ productId, groupName }: { productId: number; groupName: string }) =>
+      productionApi.createOperationGroup(role, productId, groupName),
+    { invalidate: [operationsKey], successMessage: PRODUCTION_TEXT.saved },
+  );
+};
+
+export const useRenameOperationGroup = () => {
+  const role = useOperationRole();
+  return useApiMutation(
+    ({ id, groupName }: { id: number; groupName: string }) =>
+      productionApi.renameOperationGroup(role, id, groupName),
+    { invalidate: [operationsKey], successMessage: PRODUCTION_TEXT.saved },
+  );
+};
+
+export const useDeleteOperationGroup = () => {
+  const role = useOperationRole();
+  return useApiMutation((id: number) => productionApi.deleteOperationGroup(role, id), {
+    invalidate: [operationsKey],
+    successMessage: PRODUCTION_TEXT.saved,
+  });
+};
+
+export const useSetOperationsGroup = () => {
+  const role = useOperationRole();
+  return useApiMutation(
+    (body: SetOperationsGroupPayload) => productionApi.setOperationsGroup(role, body),
+    { invalidate: [operationsKey] },
+  );
+};
 
 // ---------- Đơn giá ----------
 
@@ -104,6 +170,11 @@ export const useSubmitPieceRate = () =>
   useApiMutation((id: number) => productionApi.submitPieceRate(id), {
     invalidate: [pieceRatesKey, operationsKey],
     successMessage: PRODUCTION_TEXT.pieceRates.done.submitted,
+  });
+
+export const useSubmitPieceRates = () =>
+  useApiMutation((ids: number[]) => productionApi.submitPieceRates(ids), {
+    invalidate: [pieceRatesKey, operationsKey],
   });
 
 export const useApprovePieceRate = () =>
@@ -133,6 +204,25 @@ export const useRejectPieceRate = () =>
     },
   );
 
+// ---------- Chia mã hàng của đơn cho tổ may ----------
+
+export const useOrderLineTeams = (params: OrderLineTeamParams) =>
+  useQuery({
+    queryKey: [...orderLineTeamsKey, params],
+    queryFn: () => productionApi.listOrderLineTeams(params),
+  });
+
+export const useSetOrderLineTeams = () =>
+  useApiMutation((body: SetOrderLineTeamsPayload) => productionApi.setOrderLineTeams(body), {
+    invalidate: [orderLineTeamsKey],
+    successMessage: PRODUCTION_TEXT.orderLineTeams.saved,
+  });
+
+export const useAddOrderLineTeams = () =>
+  useApiMutation((body: AddOrderLineTeamsPayload) => productionApi.addOrderLineTeams(body), {
+    invalidate: [orderLineTeamsKey],
+  });
+
 // ---------- Phân công ----------
 
 export const useAssignments = (orderId: number | null) =>
@@ -150,6 +240,14 @@ export const useAssignableOperations = (orderId: number | null) =>
     enabled: orderId !== null,
   });
 
+/** Dòng đơn của các mã hàng được chia cho tổ, để biết cả mã chưa có công đoạn. Không dùng cache tra cứu: việc chia có thể vừa đổi. */
+export const useAllottedOrderLines = (orderId: number | null) =>
+  useQuery({
+    queryKey: [...assignmentsKey, 'order-lines', orderId],
+    queryFn: () => lookupApi.orderLines(orderId!),
+    enabled: orderId !== null,
+  });
+
 export const useAssignOperation = () =>
   useApiMutation((body: AssignPayload) => productionApi.assign(body), {
     invalidate: [assignmentsKey, outputKey],
@@ -159,18 +257,7 @@ export const useAssignOperation = () =>
 export const useAssignOperations = () =>
   useApiMutation((body: AssignManyPayload) => productionApi.assignMany(body), {
     invalidate: [assignmentsKey, outputKey],
-    successMessage: PRODUCTION_TEXT.assignments.done.assigned,
   });
-
-export const useReplaceAssignment = () =>
-  useApiMutation(
-    ({ id, newWorkerId }: { id: number; newWorkerId: number }) =>
-      productionApi.replaceAssignment(id, newWorkerId),
-    {
-      invalidate: [assignmentsKey, outputKey],
-      successMessage: PRODUCTION_TEXT.assignments.done.replaced,
-    },
-  );
 
 export const useCloseAssignment = () =>
   useApiMutation((id: number) => productionApi.closeAssignment(id), {
@@ -178,10 +265,30 @@ export const useCloseAssignment = () =>
     successMessage: PRODUCTION_TEXT.assignments.done.closed,
   });
 
+type SaveWorkerOperationsPayload = {
+  orderId: number;
+  workerId: number;
+  addOperationIds: number[];
+  closeAssignmentIds: number[];
+};
+
+/** Lưu một lần phần thay đổi công đoạn của một công nhân: thêm theo lô, rồi đóng từng phân công bị bỏ tích. */
+export const useSaveWorkerOperations = () =>
+  useApiMutation(
+    async ({ orderId, workerId, addOperationIds, closeAssignmentIds }: SaveWorkerOperationsPayload) => {
+      if (addOperationIds.length > 0)
+        await productionApi.assignMany({ orderId, workerId, operationIds: addOperationIds });
+      for (const id of closeAssignmentIds) await productionApi.closeAssignment(id);
+    },
+    {
+      invalidate: [assignmentsKey, outputKey],
+      successMessage: PRODUCTION_TEXT.assignments.byWorker.saved,
+    },
+  );
+
 export const useCopyAssignments = () =>
   useApiMutation((body: CopyAssignmentsPayload) => productionApi.copyAssignments(body), {
     invalidate: [assignmentsKey, outputKey],
-    successMessage: PRODUCTION_TEXT.assignments.done.copied,
   });
 
 // ---------- Sản lượng ----------

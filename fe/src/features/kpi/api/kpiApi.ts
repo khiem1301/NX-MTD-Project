@@ -20,7 +20,12 @@ const put = async <T>(url: string, body?: unknown): Promise<T> =>
   (await apiClient.put<ApiResponse<T>>(url, body)).data.data;
 
 export const kpiApi = {
+  getAllottedTeams: (orderId: number, productId: number) =>
+    get<{ teamId: number; teamName: string }[]>(API.kpi.allottedTeams, { orderId, productId }),
   getTargets: (filter: KpiTargetFilter) => get<Paginated<KpiTarget>>(API.kpi.targets, filter),
+
+  getTeamTargets: (filter: KpiTargetFilter) =>
+    get<Paginated<KpiTarget>>(API.kpi.teamTargets, filter),
 
   getTargetById: (kpiTargetId: number) => get<KpiTarget>(`${API.kpi.targets}/${kpiTargetId}`),
 

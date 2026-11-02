@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Card, Result, Space, Tabs } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
-import { AuditHistory } from '@/components/common/AuditHistory';
+import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { DetailModal } from '@/components/common/DetailModal';
 import { NoteModal } from '@/components/common/NoteModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -109,7 +109,7 @@ export function EmployeeDetailModal() {
               {
                 key: 'history',
                 label: MESSAGES.hr.history,
-                children: <AuditHistory history={data.history} />,
+                children: <AuditHistoryTable history={data.history} />,
               },
             ]}
           />

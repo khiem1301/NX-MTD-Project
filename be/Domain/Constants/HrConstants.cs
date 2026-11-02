@@ -97,3 +97,10 @@ public static class NotificationSources
     public const string Production = "PRODUCTION";
     public const string System = "SYSTEM";
 }
+
+/// <summary>Nhóm lọc hộp thư: MANUAL = cấp trên gửi tay (ANNOUNCEMENT), AUTO = hệ thống tự tạo (các nguồn còn lại).</summary>
+public static class NotificationGroups
+{
+    public const string Manual = "MANUAL";
+    public const string Auto = "AUTO";
+}

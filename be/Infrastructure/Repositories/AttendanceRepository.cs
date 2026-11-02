@@ -83,8 +83,9 @@ public sealed class AttendanceRepository : IAttendanceRepository
             .Where(s => s.Status == SyncStatus.Succeeded && s.FinishedAt != null)
             .MaxAsync(s => s.FinishedAt, ct);
 
-    public async Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, CancellationToken ct) =>
+    public async Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, string? status, CancellationToken ct) =>
         await _context.AttendanceSyncSessions.AsNoTracking()
+            .Where(s => status == null || s.Status == status)
             .OrderByDescending(s => s.StartedAt)
             .Take(take)
             .Select(s => new SyncSessionDto(

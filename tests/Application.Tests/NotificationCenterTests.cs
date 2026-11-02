@@ -121,6 +121,23 @@ public class NotificationCenterTests
     }
 
     [Fact]
+    public async Task The_inbox_can_be_split_into_manager_announcements_and_automatic_notifications()
+    {
+        var manual = Note(Me, title: "từ quản lý"); manual.SourceType = NotificationSources.Announcement;
+        Note(Me, title: "tự động");
+
+        var manualItems = (await Inbox().ListMineAsync(new NotificationQuery { Group = NotificationGroups.Manual }, default)).Data!.Items;
+        var autoItems = (await Inbox().ListMineAsync(new NotificationQuery { Group = NotificationGroups.Auto }, default)).Data!.Items;
+        var all = (await Inbox().ListMineAsync(new NotificationQuery(), default)).Data!.Items;
+
+        manualItems.Select(n => n.Title).Should().Equal("từ quản lý");
+        manualItems.Single().IsManual.Should().BeTrue();
+        autoItems.Select(n => n.Title).Should().Equal("tự động");
+        autoItems.Single().IsManual.Should().BeFalse();
+        all.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task An_urgent_announcement_is_flagged_in_the_inbox()
     {
         var announcement = new Announcement { AnnouncementId = 1, Content = "x", Priority = AnnouncementPriorities.Urgent, SenderId = Me };

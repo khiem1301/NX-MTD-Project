@@ -107,14 +107,15 @@ export const useSaveWorkOrder = () => {
   );
 };
 
-/** Tổ cắt báo cắt xong: lệnh chuyển Hoàn thành (cắt thiếu kế hoạch thì phải nêu lý do). */
-export const useFinishCutting = () => {
+/** Quản đốc / Admin đóng lệnh cắt thiếu (DEV-ALL-52); cắt đủ thì lệnh tự hoàn thành khi kho nhận đủ BTP. */
+export const useCloseShortWorkOrder = () => {
   const role = useManagerRolePath();
   return useApiMutation(
-    ({ id, reason }: { id: number; reason?: string }) => cuttingApi.finishCutting(role, id, reason),
+    ({ id, reason }: { id: number; reason: string }) =>
+      cuttingApi.closeShortWorkOrder(role, id, reason),
     {
       invalidate: [CUTTING_KEY],
-      successMessage: MESSAGES.cutting.workOrderFinished,
+      successMessage: MESSAGES.cutting.workOrderClosedShort,
     },
   );
 };

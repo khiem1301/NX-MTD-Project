@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { FABRIC_UNIT } from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
 import type { Material, SaveMaterialPayload } from '../types';
+import { cmToMeters, MAX_FABRIC_WIDTH_M, metersToCm } from '../utils/fabricWidth';
 
 type MaterialFormModalProps = {
   open: boolean;
@@ -14,25 +16,36 @@ type MaterialFormModalProps = {
   onSaved?: (material: Material) => void;
 };
 
+/** Khổ vải trên form nhập bằng mét; API nhận cm (widthCm). */
+type FormValues = Omit<SaveMaterialPayload, 'widthCm'> & { widthM?: number | null };
+
 const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
   value: t,
   label: MATERIAL_TYPE_LABEL[t],
 }));
 
 export function MaterialFormModal({ open, material, onClose, onSaved }: MaterialFormModalProps) {
-  const [form] = Form.useForm<SaveMaterialPayload>();
+  const [form] = Form.useForm<FormValues>();
   const save = useSaveMaterial();
   const materialType = Form.useWatch('materialType', form);
+  const isFabric = materialType === MATERIAL_TYPE.FABRIC;
 
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    if (material) form.setFieldsValue(material);
+    if (material) form.setFieldsValue({ ...material, widthM: cmToMeters(material.widthCm) });
   }, [open, material, form]);
 
-  const handleFinish = (values: SaveMaterialPayload) => {
-    const body =
-      values.materialType === MATERIAL_TYPE.FABRIC ? values : { ...values, widthCm: null };
+  // Vải cố định đơn vị mét, không cho sửa.
+  useEffect(() => {
+    if (isFabric) form.setFieldValue('unit', FABRIC_UNIT);
+  }, [isFabric, form]);
+
+  const handleFinish = ({ widthM, ...values }: FormValues) => {
+    const body: SaveMaterialPayload = {
+      ...values,
+      widthCm: values.materialType === MATERIAL_TYPE.FABRIC ? metersToCm(widthM) : null,
+    };
     save.mutate(
       { id: material?.materialId, body },
       {
@@ -43,7 +56,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
         onError: (error) =>
           form.setFields(
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-              name: name as keyof SaveMaterialPayload,
+              name: (name === 'widthCm' ? 'widthM' : name) as keyof FormValues,
               errors,
             })),
           ),
@@ -112,7 +125,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
               label={LABELS.unit}
               rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
             >
-              <Input maxLength={20} />
+              <Input maxLength={20} disabled={isFabric} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
@@ -126,15 +139,20 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
             </Typography.Paragraph>
           </Col>
           {/* Phụ liệu (cúc, khóa, chỉ...) tính theo đơn vị đếm, không có khổ: chỉ vải mới nhập khổ vải. */}
-          {materialType === MATERIAL_TYPE.FABRIC && (
+          {isFabric && (
             <>
               <Col xs={24} sm={12}>
                 <Form.Item
-                  name="widthCm"
-                  label={LABELS.materialWidthCm}
+                  name="widthM"
+                  label={LABELS.materialWidthM}
                   rules={[{ required: true, message: MESSAGES.common.required }]}
                 >
-                  <InputNumber min={0.01} max={99999} precision={2} style={{ width: '100%' }} />
+                  <InputNumber
+                    min={0.01}
+                    max={MAX_FABRIC_WIDTH_M}
+                    precision={2}
+                    style={{ width: '100%' }}
+                  />
                 </Form.Item>
               </Col>
               <Col xs={24}>

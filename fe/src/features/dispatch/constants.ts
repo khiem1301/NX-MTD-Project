@@ -20,6 +20,10 @@ export const DISPATCH_STATUS_LABEL: Record<string, StatusLabel> = {
 
 export const DISPATCH_PHOTO_MAX = 5;
 
+/** Khớp DispatchLimits ở BE: số lượng mỗi dòng tối đa 1.000.000, ngày giao trong 366 ngày tới. */
+export const DISPATCH_MAX_QTY = 1_000_000;
+export const DISPATCH_MAX_DAYS_AHEAD = 366;
+
 export const DISPATCH_LABELS = {
   title: 'Phiếu xuất hàng',
   create: 'Lập phiếu xuất',

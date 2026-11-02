@@ -276,16 +276,19 @@ public sealed class WorkOrderService : IWorkOrderService
         return Result.Success(WarehouseMessages.WorkOrderCancelled);
     }
 
-    public async Task<Result> FinishCuttingAsync(int workOrderId, int cuttingTeamId, string? reason, CancellationToken ct)
+    /// <summary>
+    /// Quản đốc / Admin đóng lệnh cắt thiếu (DEV-ALL-52): cắt đủ thì lệnh đã tự hoàn thành khi kho nhận đủ (WorkOrderCompletion),
+    /// nên chỉ dùng khi không cắt đủ được. Phải hết phiếu bàn giao / trả vải chờ kho và BTP đã cắt đã vào kho hết.
+    /// </summary>
+    public async Task<Result> CloseShortAsync(int workOrderId, string reason, CancellationToken ct)
     {
         var wo = await WorkOrders.Include(w => w.WorkOrderLines).Include(w => w.Order)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
         if (wo is null) return WarehouseFailures.NotFound();
-        if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch();
         if (wo.Status != WorkOrderStatuses.Cutting)
             return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotFinishable);
 
-        reason = reason?.Trim();
+        reason = reason.Trim();
         var check = await CheckFinishableAsync(wo, reason, ct);
         if (check.Failure is not null) return check.Failure;
         var (inWarehouse, planned) = (check.InWarehouse, check.Planned);
@@ -296,13 +299,10 @@ public sealed class WorkOrderService : IWorkOrderService
         wo.Status = WorkOrderStatuses.Completed;
         wo.CompletedAt = _clock.Now;
         wo.Note = note.Length == 0 ? null : note;
-        var shortText = inWarehouse < planned ? $" Cắt {inWarehouse}/{planned}: {reason}." : string.Empty;
-        var fabrics = await GetFabricsAsync(await WorkOrders.AsNoTracking().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
-            .FirstAsync(w => w.WorkOrderId == workOrderId, ct), ct);
-        await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Production, "Lệnh cắt đã cắt xong",
-            $"Tổ cắt báo lệnh {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) cắt xong, BTP đã vào kho.{shortText}{FabricUsage(fabrics)}", WorkOrderLink), ct);
+        await _notifier.NotifyTeamLeadersAsync(wo.CuttingTeamId, new NotificationMessage(NotificationSources.Production, "Lệnh cắt đã đóng",
+            $"Quản đốc đã đóng lệnh {wo.WorkOrderCode} (đơn {wo.Order.OrderCode}) khi cắt {inWarehouse}/{planned}: {reason}.", WorkOrderLink), ct);
         await _uow.SaveChangesAsync();
-        _logger.LogInformation("Work order {WorkOrderId} finished by cutting team: {InWarehouse}/{Planned}", workOrderId, inWarehouse, planned);
+        _logger.LogInformation("Work order {WorkOrderId} closed short: {InWarehouse}/{Planned}", workOrderId, inWarehouse, planned);
         return Result.Success(WarehouseMessages.WorkOrderFinishedCutting);
     }
 
@@ -451,7 +451,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var need = new Dictionary<int, (decimal Meters, string Label)>();
         foreach (var (pcmId, pieces) in lines)
         {
-            if (!norms.TryGetValue(pcmId, out var n) || n.Unit != "m") continue;
+            if (!norms.TryGetValue(pcmId, out var n) || n.Unit != MaterialTypes.FabricUnit) continue;
             var meters = PieceFabricEstimator.NeedMeters(pieces, n.LengthCm, n.WidthCm, n.FabricWidthCm);
             if (meters is null) continue;
             var label = $"{n.MaterialCode} {n.MaterialName}{(n.Color == "" ? "" : $" ({n.Color})")}";
@@ -478,6 +478,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var infos = (await _planner.GetFabricsAsync(lines, ct)).ToDictionary(f => f.MaterialId);
         var issued = await _planner.GetIssuedAsync(wo.WorkOrderId, ct);
         var (received, returned) = await _planner.GetUsageAsync(wo.WorkOrderId, ct);
+        var cut = await _planner.GetCutAsync(wo.CuttingTeamId, wo.OrderId, ct);
 
         // Vải đã cấp / trả cho lệnh nhưng không (còn) nằm trong định mức vẫn phải hiện.
         var extra = issued.Keys.Concat(received.Keys).Concat(returned.Keys).Where(id => !infos.ContainsKey(id)).Distinct().ToList();
@@ -494,18 +495,13 @@ public sealed class WorkOrderService : IWorkOrderService
             var got = received.GetValueOrDefault(n.MaterialId);
             var back = returned.GetValueOrDefault(n.MaterialId);
             var available = await _stock.GetAvailableAsync(StockKey.Material(n.MaterialId), ct);
+            var held = Math.Max(0, await _planner.GetTeamHoldingAsync(wo.CuttingTeamId, wo.OrderId, n.MaterialId, ct));
+            var (cutQty, unmeasured) = cut.GetValueOrDefault(n.MaterialId);
             result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.Unit, n.MaterialColor,
-                issued.GetValueOrDefault(n.MaterialId), available, got, back, Math.Max(0, got - back)));
+                issued.GetValueOrDefault(n.MaterialId), available, got, back, Math.Max(0, got - back),
+                held, cutQty, held - cutQty, unmeasured));
         }
         return result;
-    }
-
-    /// <summary>Vải đã nhận, đã trả, thực dùng của lệnh (không so định mức); hiện trong thông báo cho Quản đốc.</summary>
-    private static string FabricUsage(IEnumerable<FabricRequirementDto> fabrics)
-    {
-        var rows = fabrics.Where(f => f.ReceivedQty > 0).Select(f =>
-            $"{f.MaterialCode}: nhận {Format(f.ReceivedQty)}, trả {Format(f.ReturnedQty)}, thực dùng {Format(f.UsedQty)} {f.Unit}").ToList();
-        return rows.Count == 0 ? string.Empty : $" Vải: {string.Join("; ", rows)}.";
     }
 
     private async Task<Dictionary<(int OrderLineId, int? ProductComponentMaterialId), int>> HandedQtyAsync(int workOrderId, CancellationToken ct) =>

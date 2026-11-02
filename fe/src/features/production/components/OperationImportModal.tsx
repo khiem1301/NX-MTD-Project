@@ -10,17 +10,30 @@ import { operationImportColumns } from './operationImportColumns';
 import { OperationImportRateOptions } from './OperationImportRateOptions';
 import { OperationImportSummary } from './OperationImportSummary';
 
-type Props = { open: boolean; productId: number; productLabel: string; onClose: () => void };
+type Props = {
+  open: boolean;
+  productId: number;
+  productLabel: string;
+  /** Admin nhập công đoạn không kèm đơn giá (DEV-ALL-50). */
+  allowRates: boolean;
+  onClose: () => void;
+};
 
 const text = PRODUCTION_TEXT.operations.import;
 
 /**
- * KI-01 (UC25) — Kế toán nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ: chọn file là xem trước ngay
+ * KI-01 (UC25) — Kế toán, Admin nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ: chọn file là xem trước ngay
  * (thêm mới / cập nhật / không đổi / lỗi), chọn sheet nếu file có nhiều bảng, chọn công đoạn cuối. Cột TIỀN được đọc
  * thành đơn giá công đoạn hiệu lực từ ngày chọn (Nháp, hoặc gửi Admin duyệt luôn).
  * Trang chỉ gắn hộp thoại khi đang mở nên state tự reset mỗi lần mở.
  */
-export function OperationImportModal({ open, productId, productLabel, onClose }: Props) {
+export function OperationImportModal({
+  open,
+  productId,
+  productLabel,
+  allowRates,
+  onClose,
+}: Props) {
   const {
     file,
     setFile,
@@ -40,7 +53,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     handleConfirm,
     importable,
     finalOptions,
-  } = useOperationImport(productId, onClose);
+  } = useOperationImport(productId, onClose, allowRates);
 
   return (
     <Modal
@@ -122,21 +135,23 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               </Space>
             </Space>
 
-            <OperationImportRateOptions
-              data={data}
-              withRates={withRates}
-              effectiveDate={effectiveDate}
-              submitRates={submitRates}
-              onWithRatesChange={(checked) => {
-                setWithRates(checked);
-                runPreview(file, { withRates: checked });
-              }}
-              onEffectiveDateChange={(date) => {
-                setEffectiveDate(date);
-                runPreview(file, { date });
-              }}
-              onSubmitRatesChange={setSubmitRates}
-            />
+            {allowRates && (
+              <OperationImportRateOptions
+                data={data}
+                withRates={withRates}
+                effectiveDate={effectiveDate}
+                submitRates={submitRates}
+                onWithRatesChange={(checked) => {
+                  setWithRates(checked);
+                  runPreview(file, { withRates: checked });
+                }}
+                onEffectiveDateChange={(date) => {
+                  setEffectiveDate(date);
+                  runPreview(file, { date });
+                }}
+                onSubmitRatesChange={setSubmitRates}
+              />
+            )}
 
             <OperationImportSummary data={data} ratesOn={ratesOn} />
 
@@ -145,7 +160,6 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
               size="small"
               columns={operationImportColumns}
               dataSource={data.rows}
-              pagination={{ pageSize: 10, showSizeChanger: false }}
               scroll={{ x: 'max-content' }}
             />
           </>

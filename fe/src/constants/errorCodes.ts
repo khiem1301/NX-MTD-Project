@@ -51,6 +51,9 @@ export const ERROR_CODES = {
   TeamTransferFutureDate: 'TEAM_TRANSFER_FUTURE_DATE',
   TeamTransferLeader: 'TEAM_TRANSFER_LEADER',
   TeamMemberNotInTeam: 'TEAM_MEMBER_NOT_IN_TEAM',
+  TeamMemberHasTeam: 'TEAM_MEMBER_HAS_TEAM',
+  TeamRemoveLeader: 'TEAM_REMOVE_LEADER',
+  TeamDismissInvalidRole: 'TEAM_DISMISS_INVALID_ROLE',
   // Kho, cắt (Thái)
   WarehouseInsufficientStock: 'WAREHOUSE_INSUFFICIENT_STOCK',
   WarehouseInvalidStatus: 'WAREHOUSE_INVALID_STATUS',

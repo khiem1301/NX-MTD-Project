@@ -15,6 +15,7 @@ import type { PieceRate, PieceRateQuery, PieceRateStatus } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { pieceRateColumns } from '../components/pieceRateColumns';
 
@@ -33,7 +34,11 @@ const STATUS_OPTIONS = (['PendingApproval', 'Approved', 'Rejected'] as PieceRate
  * đơn giá đang chờ duyệt. Kế toán đặt và gửi duyệt đơn giá ngay trên màn "Công đoạn và đơn giá".
  */
 export function AdminPieceRatesPage() {
-  const [query, setQuery] = useState<PieceRateQuery>({ page: 1, pageSize: 100, status: undefined });
+  const [query, setQuery] = useState<PieceRateQuery>({
+    page: 1,
+    pageSize: DEFAULT_PAGE_SIZE,
+    status: undefined,
+  });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [approvingMany, setApprovingMany] = useState(false);
   const [approving, setApproving] = useState<PieceRate | null>(null);
@@ -98,8 +103,6 @@ export function AdminPieceRatesPage() {
           pageSize: rates.data?.pageSize ?? query.pageSize,
           total: rates.data?.totalItems ?? 0,
           showSizeChanger: true,
-          pageSizeOptions: [20, 50, 100],
-          showTotal: (total, [from, to]) => `${from}–${to} / ${total} dòng`,
           onChange: (page, pageSize) => {
             setSelectedIds([]);
             setQuery({ ...query, page, pageSize });

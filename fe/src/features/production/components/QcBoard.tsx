@@ -9,6 +9,7 @@ import { ReasonModal } from '@/components/common/ReasonModal';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatDateTime, formatQty, toApiDate } from '@/utils/format';
 import { QcCreateModal } from './QcBatchModals';
+import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { shiftText } from '../constants';
 import { useDeleteQcBatch, useQcBatches } from '../hooks/useProduction';
 import type { QcBatch, QcBatchQuery, QcRole } from '../types';
@@ -26,7 +27,7 @@ const text = PRODUCTION_TEXT.qc;
  */
 export function QcBoard({ role }: { role: QcRole }) {
   const isManager = role === 'manager';
-  const [query, setQuery] = useState<QcBatchQuery>({ page: 1, pageSize: 20 });
+  const [query, setQuery] = useState<QcBatchQuery>({ page: 1, pageSize: DEFAULT_PAGE_SIZE });
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<QcBatch | null>(null);
   const [deleting, setDeleting] = useState<QcBatch | null>(null);

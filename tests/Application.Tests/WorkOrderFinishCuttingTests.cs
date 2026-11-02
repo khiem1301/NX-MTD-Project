@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>Tổ cắt báo cắt xong khi cắt ít hơn kế hoạch: BTP đã cắt phải được kho xác nhận hết; thiếu kế hoạch thì cần lý do.</summary>
+/// <summary>Quản đốc đóng lệnh cắt thiếu (DEV-ALL-52): BTP đã cắt phải được kho xác nhận hết, không còn phiếu chờ kho.</summary>
 public class WorkOrderFinishCuttingTests : ProductionTestBase
 {
     private const int TeamId = 2, LineId = 11;
@@ -28,6 +28,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
         SetupQueryable(_workOrders); SetupQueryable(_handoverLines); SetupQueryable(_layLines);
         SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_returns); SetupQueryable(_norms);
         SetupQueryable(new List<Material> { _fabric });
+        SetupQueryable(new List<CuttingLay>());
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _wo = new WorkOrder
         {
@@ -88,27 +89,25 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     });
 
     [Fact]
-    public async Task ShortCut_EverythingHandedAndConfirmed_CompletesWithReasonAndTellsTheManager()
+    public async Task ShortCut_EverythingHandedAndConfirmed_ClosesWithReasonAndTellsTheCuttingTeam()
     {
         Cut(80); Handover(HandoverStatuses.Confirmed, 80, 80);
 
-        var result = await Sut().FinishCuttingAsync(7, TeamId, "Hết vải", default);
+        var result = await Sut().CloseShortAsync(7, "Hết vải", default);
 
         result.IsSuccess.Should().BeTrue();
         _wo.Status.Should().Be(WorkOrderStatuses.Completed);
         _wo.Note.Should().Contain("Hết vải");
-        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("80/100") && m.Message.Contains("Hết vải")), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task FullPlan_NeedsNoReason()
+    public async Task OnlyACuttingWorkOrder_CanBeClosed()
     {
-        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
+        _wo.Status = WorkOrderStatuses.Open;
 
-        (await Sut().FinishCuttingAsync(7, TeamId, null, default)).IsSuccess.Should().BeTrue();
-
-        _wo.Status.Should().Be(WorkOrderStatuses.Completed);
+        (await Sut().CloseShortAsync(7, "Hết vải", default)).Message.Should().Be(WarehouseMessages.WorkOrderNotFinishable);
     }
 
     [Fact]
@@ -118,29 +117,28 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
         var issue = IssueReceived(120);
         _returns.Add(new MaterialReturn { Status = HandoverStatuses.Pending, MaterialIssue = issue.MaterialIssue });
 
-        var blocked = await Sut().FinishCuttingAsync(7, TeamId, null, default);
+        var blocked = await Sut().CloseShortAsync(7, "Hết vải", default);
 
         blocked.Message.Should().Be(WarehouseMessages.WorkOrderHasPendingReturn);
         _wo.Status.Should().Be(WorkOrderStatuses.Cutting);
 
         _returns.Clear();
-        (await Sut().FinishCuttingAsync(7, TeamId, null, default)).IsSuccess.Should().BeTrue();
+        (await Sut().CloseShortAsync(7, "Hết vải", default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Finishing_TellsTheManagerHowMuchFabricWasReceivedReturnedAndUsed()
+    public async Task AutoCompletion_TellsTheManagerHowMuchFabricWasReceivedReturnedAndUsed()
     {
         Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
         Norm();
         var issue = IssueReceived(120);             // nhận 120 m
         Return(issue, 15, HandoverStatuses.Confirmed);   // trả 15 m → dùng 105 m
-        Return(issue, 40, HandoverStatuses.Pending);     // phiếu trả chưa xác nhận không tính (và đang chờ → chặn)
-        _returns.Add(new MaterialReturn { Status = HandoverStatuses.Cancelled, MaterialIssue = issue.MaterialIssue });
-        _returnLines.RemoveAll(r => r.MaterialReturn.Status == HandoverStatuses.Pending);
+        Return(issue, 40, HandoverStatuses.Pending);     // phiếu trả chưa xác nhận không tính
 
-        var result = await Sut().FinishCuttingAsync(7, TeamId, null, default);
+        var completed = await new WorkOrderCompletion(Uow, new FabricPlanner(Uow), Notifier, Clock).CompleteIfFullyReceivedAsync(7, default);
 
-        result.IsSuccess.Should().BeTrue();
+        completed.Should().BeTrue();
+        _wo.Status.Should().Be(WorkOrderStatuses.Completed);
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("V01") && m.Message.Contains("nhận 120")
                 && m.Message.Contains("trả 15") && m.Message.Contains("thực dùng 105") && !m.Message.Contains("định mức")),
@@ -152,7 +150,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     {
         Cut(80); Handover(HandoverStatuses.Confirmed, 80, 80);
 
-        var result = await Sut().FinishCuttingAsync(7, TeamId, "  ", default);
+        var result = await Sut().CloseShortAsync(7, "  ", default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
         result.Message.Should().Contain("80/100");
@@ -163,24 +161,19 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     public async Task APendingHandover_OrCutNotYetHandedOver_BlocksFinishing()
     {
         Cut(80); Handover(HandoverStatuses.Pending, 80, null);
-        (await Sut().FinishCuttingAsync(7, TeamId, "x", default)).Message.Should().Be(WarehouseMessages.WorkOrderHasPendingHandoverToFinish);
+        (await Sut().CloseShortAsync(7, "x", default)).Message.Should().Be(WarehouseMessages.WorkOrderHasPendingHandoverToFinish);
 
         _handoverLines.Clear();
         Cut(10); Handover(HandoverStatuses.Confirmed, 80, 80);   // cắt 90, kho mới nhận 80
-        var result = await Sut().FinishCuttingAsync(7, TeamId, "x", default);
+        var result = await Sut().CloseShortAsync(7, "x", default);
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
         result.Message.Should().Contain("10");
         _wo.Status.Should().Be(WorkOrderStatuses.Cutting);
     }
 
     [Fact]
-    public async Task OnlyTheOwnTeam_AndOnlyAWorkOrderThatIsCutting_CanFinish()
+    public async Task AnUnknownWorkOrder_IsNotFound()
     {
-        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
-
-        (await Sut().FinishCuttingAsync(7, 99, null, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
-        _wo.Status = WorkOrderStatuses.Open;
-        (await Sut().FinishCuttingAsync(7, TeamId, null, default)).Message.Should().Be(WarehouseMessages.WorkOrderNotFinishable);
-        (await Sut().FinishCuttingAsync(99, TeamId, null, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Sut().CloseShortAsync(99, "x", default)).Kind.Should().Be(ResultKind.NotFound);
     }
 }

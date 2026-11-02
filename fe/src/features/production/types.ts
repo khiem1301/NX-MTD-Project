@@ -36,10 +36,10 @@ export type Operation = {
   status: OperationStatus;
   currentRate: number | null;
   nextRate: OperationRate | null;
-  /** true = giao việc công đoạn này kèm BTP (bắt buộc cho luồng giao việc). */
-  usesSemiFinished: boolean;
+  /** Đơn giá đã duyệt, chưa tới ngày hiệu lực, gần nhất; cột Đơn giá chỉ hiện bản này. */
+  upcomingRate: OperationRate | null;
   operationGroupId: number | null;
-  /** Công đoạn to chứa công đoạn này (vd "May tay"). */
+  /** Nhóm chứa công đoạn này (vd "May tay"). */
   groupName: string | null;
   /** Các chi tiết (thành phần) công đoạn làm trên đó. */
   componentIds: number[];
@@ -103,6 +103,22 @@ export type OperationImportParams = {
   submitRates?: boolean;
 };
 
+/** API công đoạn theo vai trò: Admin không đặt được đơn giá (DEV-ALL-50). */
+export type OperationRole = 'accountant' | 'admin';
+
+/** Nhóm công đoạn của mã hàng; `operationCount` tính cả công đoạn đã ngừng dùng. */
+export type OperationGroup = {
+  operationGroupId: number;
+  groupName: string;
+  operationCount: number;
+};
+
+export type SetOperationsGroupPayload = {
+  productId: number;
+  operationIds: number[];
+  operationGroupId: number | null;
+};
+
 export type SaveOperationPayload = {
   productId: number;
   operationCode: string;
@@ -112,7 +128,6 @@ export type SaveOperationPayload = {
   standardTimeSec?: number | null;
   teamType?: 'Sewing' | 'Cutting';
   isFinalStep: boolean;
-  usesSemiFinished?: boolean;
   groupName?: string | null;
   componentIds?: number[];
 };
@@ -167,9 +182,37 @@ export type OperationOption = {
   operationName: string;
   stationSequence: number;
   isFinalStep: boolean;
-  usesSemiFinished: boolean;
   groupName: string | null;
+  skillLevel: number | null;
+  /** Thời gian chuẩn của công đoạn (giây). */
+  standardTimeSec?: number | null;
 };
+
+/** Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia (DEV-ALL-49). */
+export type OrderLineTeamRow = {
+  orderLineId: number;
+  orderId: number;
+  orderCode: string;
+  dueDate: string;
+  productId: number;
+  productCode: string;
+  productName: string;
+  color: string;
+  sizeCode: string;
+  orderedQty: number;
+  teams: { teamId: number; teamName: string }[];
+};
+
+export type OrderLineTeamParams = {
+  keyword?: string;
+  onlyUnallotted?: boolean;
+  page: number;
+  pageSize: number;
+};
+
+export type SetOrderLineTeamsPayload = { orderLineId: number; teamIds: number[] };
+
+export type AddOrderLineTeamsPayload = { orderLineIds: number[]; teamIds: number[] };
 
 export type AssignPayload = { orderId: number; operationId: number; workerId: number };
 export type AssignManyPayload = { orderId: number; workerId: number; operationIds: number[] };

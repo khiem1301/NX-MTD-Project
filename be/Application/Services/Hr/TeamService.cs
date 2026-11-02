@@ -9,6 +9,8 @@ namespace NX_MTD.Application.Services;
 /// <summary>UC18: quản lý tổ (Admin + Quản đốc). Chuyển tổ và bổ nhiệm tổ trưởng / tổ phó.</summary>
 public sealed class TeamService : ITeamService
 {
+    private const int MaxLogLength = 500;   // AuditLog.Reason / Summary
+
     private readonly ITeamRepository _teams;
     private readonly IEmployeeRepository _employees;
     private readonly IAuditLogService _audit;
@@ -118,6 +120,7 @@ public sealed class TeamService : ITeamService
             return Result.Failure(ErrorCodes.TeamTransferLeader, string.Format(Messages.TeamTransferLeader, leader.FullName));
 
         var moving = people.Where(p => p.TeamId != targetTeamId).ToList();
+        var oldTeams = moving.ToDictionary(p => p.EmployeeId, p => p.TeamId);
         var reason = $"Chuyển tổ, hiệu lực {dto.EffectiveDate:dd/MM/yyyy}. {dto.Reason?.Trim()}".Trim();
         foreach (var person in moving)
         {
@@ -128,6 +131,7 @@ public sealed class TeamService : ITeamService
             _audit.Add(new AuditEntry(nameof(Employee), person.EmployeeId, AuditActions.Update,
                 new { TeamId = oldTeam }, new { TeamId = targetTeamId }, reason));
         }
+        LogTransfer(team, moving, oldTeams, dto.EffectiveDate);
         await _uow.SaveChangesAsync();
         return Result.Success(string.Format(Messages.TeamTransferred, moving.Count));
     }
@@ -160,9 +164,101 @@ public sealed class TeamService : ITeamService
                 await _uow.SaveChangesAsync();
             }
             ChangeRole(person, newRoleId, person.Role.RoleCode, roleCode, $"Bổ nhiệm {label} tổ {team.TeamName}");
+            LogTeam(teamId, holder is null
+                ? $"Bổ nhiệm {person.FullName} làm {label}"
+                : $"Bổ nhiệm {person.FullName} làm {label}, {holder.FullName} về Công nhân");
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.TeamAppointed);
         });
+    }
+
+    /// <summary>Thôi giữ chức: người đó về Công nhân (giữ kiểu lương), vẫn ở lại tổ.</summary>
+    public async Task<Result> DismissAsync(int teamId, DismissDto dto, CancellationToken ct)
+    {
+        var team = await _teams.GetByIdAsync(teamId);
+        if (team is null) return Fail.NotFound();
+        var person = await _employees.GetFullAsync(dto.EmployeeId, ct);
+        if (person is null || person.TeamId != teamId || person.Status != RecordStatus.Active || !_scope.CanSee(person.Role.RoleCode))
+            return Result.Failure(ErrorCodes.TeamMemberNotInTeam, Messages.TeamMemberNotInTeam);
+        var oldCode = person.Role.RoleCode;
+        if (oldCode is not (RoleCodes.TeamLeader or RoleCodes.TeamDeputy))
+            return Result.Failure(ErrorCodes.TeamDismissInvalidRole, Messages.TeamDismissInvalidRole);
+
+        var label = oldCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó";
+        ChangeRole(person, await _employees.GetRoleIdAsync(RoleCodes.Worker, ct), oldCode, RoleCodes.Worker,
+            $"Thôi giữ chức {label} tổ {team.TeamName}");
+        LogTeam(teamId, $"{person.FullName} thôi giữ chức {label}, về Công nhân");
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.TeamDismissed);
+    }
+
+    public async Task<Result<IReadOnlyList<EmployeeLookupDto>>> CandidatesAsync(CancellationToken ct) =>
+        Result<IReadOnlyList<EmployeeLookupDto>>.Success(await _employees.LookupUnassignedAsync(_scope.HiddenRoleCodes, ct));
+
+    /// <summary>Thêm nhân viên chưa thuộc tổ nào vào tổ. Người đang ở tổ khác phải dùng chuyển tổ để có ngày hiệu lực.</summary>
+    public async Task<Result> AddMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct)
+    {
+        var team = await _teams.GetByIdAsync(teamId);
+        if (team is null) return Fail.NotFound();
+        if (team.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.TeamNotActive, Messages.TeamNotActive);
+        var people = await _employees.GetActiveByIdsAsync(dto.EmployeeIds.ToList(), ct);
+        if (people.Count != dto.EmployeeIds.Count || people.Any(p => !_scope.CanSee(p.Role.RoleCode))) return Fail.NotFound();
+        var taken = people.FirstOrDefault(p => p.TeamId is not null);
+        if (taken is not null)
+            return Result.Failure(ErrorCodes.TeamMemberHasTeam, string.Format(Messages.TeamMemberHasTeam, taken.FullName));
+
+        SetTeam(people, null, teamId, $"Thêm vào tổ {team.TeamName}. {dto.Reason?.Trim()}".Trim());
+        LogTeam(teamId, $"Thêm vào tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
+        await _uow.SaveChangesAsync();
+        return Result.Success(string.Format(Messages.TeamMembersAdded, people.Count));
+    }
+
+    /// <summary>Loại khỏi tổ: TeamId về null, người đó chờ được thêm vào tổ khác. Tổ trưởng / tổ phó phải thôi giữ chức trước.</summary>
+    public async Task<Result> RemoveMembersAsync(int teamId, TeamMembersDto dto, CancellationToken ct)
+    {
+        var team = await _teams.GetByIdAsync(teamId);
+        if (team is null) return Fail.NotFound();
+        var people = await _employees.GetActiveByIdsAsync(dto.EmployeeIds.ToList(), ct);
+        if (people.Count != dto.EmployeeIds.Count || people.Any(p => !_scope.CanSee(p.Role.RoleCode))) return Fail.NotFound();
+        if (people.Any(p => p.TeamId != teamId)) return Result.Failure(ErrorCodes.TeamMemberNotInTeam, Messages.TeamMemberNotInTeam);
+        var leader = people.FirstOrDefault(p => p.Role.RoleCode is RoleCodes.TeamLeader or RoleCodes.TeamDeputy);
+        if (leader is not null)
+            return Result.Failure(ErrorCodes.TeamRemoveLeader, string.Format(Messages.TeamRemoveLeader, leader.FullName));
+
+        SetTeam(people, teamId, null, $"Loại khỏi tổ {team.TeamName}. {dto.Reason?.Trim()}".Trim());
+        LogTeam(teamId, $"Loại khỏi tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
+        await _uow.SaveChangesAsync();
+        return Result.Success(string.Format(Messages.TeamMembersRemoved, people.Count));
+    }
+
+    /// <summary>Lịch sử của tổ (tab Lịch sử): thành viên đổi, bổ nhiệm, thôi giữ chức. Lịch sử từng người nằm ở bản ghi Employee.</summary>
+    private void LogTeam(int teamId, string text)
+    {
+        var shown = text.Length <= MaxLogLength ? text : text[..(MaxLogLength - 1)] + "…";
+        _audit.Add(new AuditEntry(nameof(Team), teamId, AuditActions.Update, null, null, null, shown));
+    }
+
+    private static string Names(IEnumerable<Employee> people) => string.Join(", ", people.Select(p => p.FullName));
+
+    /// <summary>Tổ nhận ghi người chuyển đến; mỗi tổ cũ ghi người chuyển đi.</summary>
+    private void LogTransfer(Team target, List<Employee> moved, Dictionary<int, int?> oldTeams, DateOnly effectiveDate)
+    {
+        if (moved.Count == 0) return;
+        LogTeam(target.TeamId, $"Nhận chuyển đến: {Names(moved)} (hiệu lực {effectiveDate:dd/MM/yyyy})");
+        foreach (var group in moved.Where(p => oldTeams[p.EmployeeId] is not null).GroupBy(p => oldTeams[p.EmployeeId]!.Value))
+            LogTeam(group.Key, $"Chuyển sang tổ {target.TeamName}: {Names(group)} (hiệu lực {effectiveDate:dd/MM/yyyy})");
+    }
+
+    private void SetTeam(IEnumerable<Employee> people, int? from, int? to, string reason)
+    {
+        foreach (var person in people)
+        {
+            person.TeamId = to;
+            person.UpdatedAt = _clock.Now;
+            if (person.Account is not null) person.Account.SecurityStamp = Guid.NewGuid();
+            _audit.Add(new AuditEntry(nameof(Employee), person.EmployeeId, AuditActions.Update,
+                new { TeamId = from }, new { TeamId = to }, reason));
+        }
     }
 
     private void ChangeRole(Employee e, int newRoleId, string oldCode, string newCode, string reason)

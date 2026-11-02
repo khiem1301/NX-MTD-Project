@@ -1,9 +1,9 @@
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// Số mét vải ước tính để cắt một chi tiết, dùng cho lệnh cắt thường và cắt bù (cùng công thức <c>vw_RecutFabricNeed</c>): chi tiết là hình chữ nhật dài × rộng; số miếng
-/// xếp ngang khổ vải = làm tròn xuống (khổ / rộng chi tiết); số hàng = làm tròn lên (số chi tiết / số miếng một hàng);
-/// số mét = số hàng × dài chi tiết / 100. Không xoay, không lồng chi tiết. Null = thiếu kích thước hoặc chi tiết rộng hơn khổ vải.
+/// Số mét vải ước tính cho một hình chữ nhật dài × rộng: bìa của lệnh cắt cả bộ, chi tiết của cắt lẻ và cắt bù (cùng công thức <c>vw_RecutFabricNeed</c>).
+/// Số miếng xếp ngang khổ vải = làm tròn xuống (khổ / rộng); số hàng = làm tròn lên (số miếng / số miếng một hàng);
+/// số mét = số hàng × dài / 100. Không xoay, không lồng. Null = thiếu kích thước hoặc rộng hơn khổ vải.
 /// </summary>
 public static class PieceFabricEstimator
 {

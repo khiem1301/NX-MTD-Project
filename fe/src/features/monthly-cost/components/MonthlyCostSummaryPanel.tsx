@@ -97,7 +97,6 @@ export function MonthlyCostSummaryPanel({ summary }: Props) {
         size="small"
         columns={columns}
         dataSource={summary.items}
-        pagination={{ pageSize: 10 }}
         scroll={{ x: 'max-content' }}
       />
     </Card>

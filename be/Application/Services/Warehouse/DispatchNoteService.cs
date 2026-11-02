@@ -33,6 +33,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
         _clock = clock; _logger = logger;
     }
 
+    private const int MaxDeliveryDaysAhead = 366;
+
     private IQueryable<DispatchNote> Notes => _uow.Repository<DispatchNote>().Query();
 
     public async Task<Result<PagedResult<DispatchNoteListItemDto>>> GetPagedAsync(DispatchNoteQuery query,
@@ -62,7 +64,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 d.DispatchedAt, d.CustomerReceivedDate,
                 d.DispatchNoteLines.OrderBy(l => l.DispatchNoteLineId).Select(l => new DispatchNoteLineDto(
                     l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
-                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty, l.ReceivedQty)).ToList()))
+                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty, l.ReceivedQty)).ToList(), d.RowVer))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<DispatchNoteDto>() : Result<DispatchNoteDto>.Success(dto);
     }
@@ -94,6 +96,12 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return enough.IsSuccess ? null : WarehouseFailures.From<int>(enough);
     }
 
+    /// <summary>Ngày giao từ hôm nay đến 366 ngày sau; null là hợp lệ.</summary>
+    private string? CheckDeliveryDate(DateOnly date) =>
+        date < _clock.Today ? WarehouseMessages.DispatchDeliveryDatePast
+        : date > _clock.Today.AddDays(MaxDeliveryDaysAhead) ? WarehouseMessages.DispatchDeliveryDateTooFar
+        : null;
+
     public async Task<Result<DispatchNoteDto>> CreateAsync(CreateDispatchNoteDto dto, CancellationToken ct)
     {
         var created = await _uow.InTransactionAsync(async () =>
@@ -102,6 +110,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
             if (order is null) return WarehouseFailures.NotFound<int>();
             if (OrderStatuses.Closed.Contains(order.Status))
                 return Result<int>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+            var dateError = CheckDeliveryDate(dto.DeliveryDate);
+            if (dateError is not null) return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
 
             var invalid = await CheckQuantitiesAsync(dto, order, ct);
             if (invalid is not null) return invalid;
@@ -129,11 +139,12 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return created.IsSuccess ? await GetByIdAsync(created.Data, ct) : WarehouseFailures.From<DispatchNoteDto>(created);
     }
 
-    public async Task<Result> CancelAsync(int dispatchNoteId, CancellationToken ct)
+    public async Task<Result> CancelAsync(int dispatchNoteId, DispatchActionDto dto, CancellationToken ct)
     {
         var note = await Notes.FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
         if (note is null) return WarehouseFailures.NotFound();
         if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+        _uow.Repository<DispatchNote>().SetOriginalRowVersion(note, dto.RowVer);
 
         var from = note.Status;
         note.Status = DispatchStatuses.Cancelled;
@@ -143,17 +154,21 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return Result.Success(WarehouseMessages.DispatchCancelled);
     }
 
-    public Task<Result> ExportAsync(int dispatchNoteId, int employeeId, CancellationToken ct) =>
+    public Task<Result> ExportAsync(int dispatchNoteId, DispatchActionDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
             var note = await Notes.Include(d => d.DispatchNoteLines).Include(d => d.Order)
                 .FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
             if (note is null) return WarehouseFailures.NotFound();
             if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+            // Đơn đã hủy / dừng / hoàn tất sau khi lập phiếu thì không xuất kho nữa.
+            if (OrderStatuses.Closed.Contains(note.Order.Status))
+                return Result.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
             // Thủ kho chụp ảnh phiếu xuất có Quản đốc ký rồi mới xuất.
             if (!await HasPhotoAsync(dispatchNoteId, AttachmentPurposes.SignedIssueSlip, ct))
                 return Result.Failure(ErrorCodes.DispatchIssuePhotoRequired, WarehouseMessages.DispatchIssuePhotoRequired);
 
+            _uow.Repository<DispatchNote>().SetOriginalRowVersion(note, dto.RowVer);
             var today = _clock.Today;
             var posted = await _stock.PostAsync(note.DispatchNoteLines
                 .Select(l => new StockMovement(StockKey.Finished(l.OrderLineId), -l.IssueQty, StockDocTypes.DispatchNote,
@@ -174,11 +189,12 @@ public sealed class DispatchNoteService : IDispatchNoteService
             return Result.Success(WarehouseMessages.DispatchExported);
         });
 
-    public async Task<Result> RejectAsync(int dispatchNoteId, ReasonDto dto, int employeeId, CancellationToken ct)
+    public async Task<Result> RejectAsync(int dispatchNoteId, RejectDispatchDto dto, int employeeId, CancellationToken ct)
     {
         var note = await Notes.Include(d => d.Order).FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
         if (note is null) return WarehouseFailures.NotFound();
         if (note.Status != DispatchStatuses.Pending) return WarehouseFailures.InvalidStatus();
+        _uow.Repository<DispatchNote>().SetOriginalRowVersion(note, dto.RowVer);
 
         note.Status = DispatchStatuses.Rejected;
         note.RejectReason = dto.Reason.Trim();
@@ -202,9 +218,12 @@ public sealed class DispatchNoteService : IDispatchNoteService
             // Biên bản giao hàng có khách ký là chứng từ xác nhận khách đã nhận.
             if (!await HasPhotoAsync(dispatchNoteId, AttachmentPurposes.SignedDeliveryNote, ct))
                 return Result.Failure(ErrorCodes.DispatchDeliveryPhotoRequired, WarehouseMessages.DispatchDeliveryPhotoRequired);
+            if (dto.CustomerReceivedDate > _clock.Today)
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchReceivedDateFuture, ResultKind.Validation);
             if (note.DispatchedAt is { } sent && dto.CustomerReceivedDate < DateOnly.FromDateTime(sent))
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchReceivedDateInvalid);
 
+            _uow.Repository<DispatchNote>().SetOriginalRowVersion(note, dto.RowVer);
             var byId = dto.Lines.ToDictionary(l => l.DispatchNoteLineId);
             if (byId.Count != note.DispatchNoteLines.Count || note.DispatchNoteLines.Any(l => !byId.ContainsKey(l.DispatchNoteLineId)))
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);

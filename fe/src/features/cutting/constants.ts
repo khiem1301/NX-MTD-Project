@@ -63,15 +63,19 @@ export const parseLineKey = (key: string) => {
 };
 
 /** Khớp WorkOrderLimits ở BE: ghi chú 600 + lý do cắt thiếu 300 luôn vừa cột ghi chú 1.000 ký tự. */
-export const WORK_ORDER_LIMITS = { noteMax: 600, finishReasonMax: 300 } as const;
+export const WORK_ORDER_LIMITS = { noteMax: 600, closeReasonMax: 300 } as const;
+
+/** Khớp SaveCuttingLayDtoValidator.MaxLayLengthM ở BE. */
+export const LAY_MAX_LENGTH_M = 1000;
+/** Số lớp và tỉ lệ size tối đa, khớp cột SMALLINT của bàn cắt. */
+export const LAY_MAX_SMALLINT = 32767;
 
 export const LABELS = {
   noLines: 'Nhập số kế hoạch hoặc số chi tiết cắt lẻ cho ít nhất một dòng.',
   duplicateExtra: 'Mỗi chi tiết cắt lẻ chỉ khai một lần cho một màu - size.',
-  finishCutting: 'Cắt xong',
-  finishCuttingHint:
-    'Báo lệnh cắt xong khi tổ đã cắt và bàn giao hết, kho đã xác nhận, vải thừa đã trả kho. Hệ thống báo Quản đốc số vải đã nhận, đã trả và thực dùng. Cắt ít hơn kế hoạch thì phải nêu lý do.',
-  finishCuttingReason: 'Lý do cắt thiếu kế hoạch',
+  closeShort: 'Đóng lệnh cắt thiếu',
+  closeShortReason:
+    'Lý do cắt thiếu kế hoạch. Cắt đủ thì lệnh tự hoàn thành khi kho nhận đủ BTP, không cần đóng. Chỉ đóng được khi không còn phiếu bàn giao, phiếu trả vải chờ kho và BTP đã cắt đã vào kho hết.',
   fabricReceived: 'Đã nhận',
   fabricReturned: 'Đã trả kho',
   fabricUsed: 'Thực dùng',
@@ -102,10 +106,10 @@ export const LABELS = {
   orderLine: 'Màu - size',
   plannedQty: 'Kế hoạch',
   fabricNotEnough: 'Không đủ vải cho lệnh cắt',
-  fabricTooWide: 'Chi tiết rộng hơn khổ vải',
+  fabricTooWide: 'Bìa hoặc chi tiết rộng hơn khổ vải',
   fabricNotEstimated: 'Chưa tính được vải',
   fabricEstimateNote:
-    'Số mét là ước tính theo kích thước từng chi tiết, chưa tính lồng chi tiết nên có thể dư. Lệnh vẫn lưu được.',
+    'Số mét là ước tính theo kích thước bìa và khổ vải, có thể dư so với sơ đồ giác thực tế. Lệnh vẫn lưu được.',
   extraComponents: 'Cắt lẻ thêm thành phần',
   extraComponentsHint: 'Số chi tiết cắt lẻ không tính vào số đặt của đơn.',
   addExtraComponent: 'Thêm thành phần',
@@ -126,8 +130,10 @@ export const LABELS = {
   shift: 'Ca',
   laySequence: 'Bàn số',
   fabricColor: 'Màu vải',
-  fabricMaterial: 'Vải (tùy chọn)',
+  fabricMaterial: 'Vải',
   plyCount: 'Số lớp',
+  layLength: 'Chiều dài bàn cắt (m)',
+  layFabricCut: 'Vải đã cắt (m)',
   sizeRatio: 'Tỉ lệ size',
   ratioValue: 'Tỉ lệ',
   calculatedQty: 'Số tính',

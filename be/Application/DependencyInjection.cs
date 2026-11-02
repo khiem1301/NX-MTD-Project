@@ -26,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IAttachmentOwnerAccess, MaterialReceiptAttachmentAccess>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<FabricPlanner>();
+        services.AddScoped<WorkOrderCompletion>();
         services.AddScoped<WorkOrderFabricChecker>();
         services.AddScoped<IWorkOrderService, WorkOrderService>();
         services.AddScoped<IMaterialIssueService, MaterialIssueService>();

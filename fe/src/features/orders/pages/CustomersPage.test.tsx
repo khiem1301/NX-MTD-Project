@@ -18,8 +18,8 @@ const customer = (id: number) => ({
   discontinueReason: null,
 });
 
-const page = (items: unknown[], current = 1, total = 45) => ({
-  data: { items, page: current, pageSize: 20, totalItems: total, totalPages: 3 },
+const page = (items: unknown[], current = 1, total = 25) => ({
+  data: { items, page: current, pageSize: 10, totalItems: total, totalPages: 3 },
   isFetching: false,
   error: null,
   refetch: jest.fn(),
@@ -36,7 +36,7 @@ describe('CustomersPage', () => {
     expect(screen.getByText('Khách 1')).toBeInTheDocument();
     expect(screen.getByText('Khách 2')).toBeInTheDocument();
     expect(useCustomers).toHaveBeenLastCalledWith(
-      expect.objectContaining({ page: 1, pageSize: 20 }),
+      expect.objectContaining({ page: 1, pageSize: 10 }),
     );
   });
 
@@ -47,12 +47,12 @@ describe('CustomersPage', () => {
     fireEvent.click(screen.getByTitle('2'));
 
     expect(useCustomers).toHaveBeenLastCalledWith(
-      expect.objectContaining({ page: 2, pageSize: 20 }),
+      expect.objectContaining({ page: 2, pageSize: 10 }),
     );
   });
 
   it('tổng số trang tính theo tổng của máy chủ, không theo số dòng đang có', () => {
-    useCustomers.mockReturnValue(page([customer(1)], 1, 45));
+    useCustomers.mockReturnValue(page([customer(1)], 1, 25));
 
     render(<CustomersPage />);
 

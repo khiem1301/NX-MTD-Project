@@ -12,6 +12,9 @@ export const MAX_VARIANTS = 200;
 /** Tính sau khi mỗi dòng định mức được nở ra từng màu – size. */
 export const MAX_NORMS = 5000;
 
+/** Mã loại NVL vải, đúng giá trị API lookup trả về. */
+const MATERIAL_TYPE_FABRIC = 'FABRIC';
+
 /** Kích thước bỏ trống được; đã nhập thì phải lớn hơn 0 và không vượt giới hạn cột (vượt thì database báo tràn số). */
 const sizeProblem = (name: string, label: string, value: number | null): string =>
   value !== null && (value <= 0 || value > MAX_SIZE_CM) ? fill(text.sizeRange, name, label) : '';
@@ -106,7 +109,7 @@ export function toRows(spec: ProductSpec): {
 }
 
 /** `label`: đủ mã, tên, màu, đơn vị (danh sách chọn và tìm kiếm); `short`: chỉ mã - màu (ô đã chọn trong bảng hẹp). */
-export type MaterialOption = { value: number; label: string; short: string };
+export type MaterialOption = { value: number; label: string; short: string; isFabric: boolean };
 
 export const toMaterialOption = (m: {
   materialId: number;
@@ -114,10 +117,12 @@ export const toMaterialOption = (m: {
   materialName: string;
   color: string;
   unit: string;
+  materialType?: string;
 }): MaterialOption => ({
   value: m.materialId,
   label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
   short: `${m.materialCode}${m.color ? ` - ${m.color}` : ''}`,
+  isFabric: m.materialType === MATERIAL_TYPE_FABRIC,
 });
 
 /** Số dòng định mức máy chủ sẽ nhận: mỗi dòng nở ra từng màu – size còn tồn tại (xem `toPayload`). */
@@ -177,7 +182,7 @@ export function toPayload(
   components: ComponentRow[],
   variants: VariantRow[],
   norms: NormRow[],
-): SaveProductSpecPayload {
+): Omit<SaveProductSpecPayload, 'markers' | 'markerFabrics'> {
   const byKey = new Map(variants.map((v) => [variantKey(v.color, v.sizeCode), v]));
   const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   return {

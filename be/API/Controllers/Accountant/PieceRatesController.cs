@@ -24,6 +24,10 @@ public sealed class PieceRatesController : AccountantBaseController
     public async Task<IActionResult> Update(int id, [FromBody] SavePieceRateDto dto, CancellationToken ct) =>
         this.ToResponse(await _rates.UpdateAsync(id, dto, ct));
 
+    [HttpPost("submit-many")]
+    public async Task<IActionResult> SubmitMany([FromBody] SubmitPieceRatesDto dto, CancellationToken ct) =>
+        this.ToResponse(await _rates.SubmitManyAsync(dto, ct));
+
     [HttpPost("{id:int}/submit")]
     public async Task<IActionResult> Submit(int id, CancellationToken ct) =>
         this.ToResponse(await _rates.SubmitAsync(id, ct));

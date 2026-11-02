@@ -4,15 +4,12 @@ import { useSearchParams } from 'react-router-dom';
 import { Button } from 'antd';
 import { PageCard } from '@/components/common/PageCard';
 import { MESSAGES } from '@/constants/messages';
-import { ROLES } from '@/constants/roles';
 import { useOrderOptions } from '@/hooks/useLookups';
-import { usePermission } from '@/hooks/usePermission';
 import { orderMaterialColumns } from '../components/orderMaterialColumns';
 import { OrderMaterialBulkEditor } from '../components/OrderMaterialBulkEditor';
 import { OrderMaterialFormModal } from '../components/OrderMaterialFormModal';
 import { OrderMaterialTable } from '../components/OrderMaterialTable';
 import { PendingMaterialOrdersTable } from '../components/PendingMaterialOrdersTable';
-import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
 import { INCOMING_TEXT, LABELS } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
 import type { OrderMaterial } from '../types';
@@ -21,10 +18,8 @@ import type { OrderMaterial } from '../types';
  * UC09 (phần NVL): Admin / Quản đốc khai báo NVL khách cấp, phải mua của đơn. Số cần theo định mức đọc từ
  * định mức của mã hàng (màn Mã hàng).
  * Màn chính là danh sách đơn chờ khai báo / mua NVL; bấm Mở đơn mới sang NVL của đơn đó (đơn nằm trên đường dẫn ?orderId=).
- * Quản đốc tạo đơn mua NVL dùng chung (kim, chỉ...) ở màn danh sách, không gắn mã đơn hàng.
  */
 export function OrderMaterialPage() {
-  const { hasRole } = usePermission();
   // Đơn đang xem nằm trên đường dẫn (?orderId=) để bấm thông báo "Có đơn hàng mới" là mở thẳng đơn đó.
   const [params, setParams] = useSearchParams();
   const orderId = Number(params.get('orderId')) || undefined;
@@ -34,7 +29,6 @@ export function OrderMaterialPage() {
   const remove = useDeleteOrderMaterial();
   const [editing, setEditing] = useState<OrderMaterial | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [stockFormOpen, setStockFormOpen] = useState(false);
   const [bulkEditing, setBulkEditing] = useState(false);
   const orderCode = useOrderOptions().data?.find((o) => o.orderId === orderId)?.orderCode;
 
@@ -62,19 +56,8 @@ export function OrderMaterialPage() {
 
   if (orderId === undefined) {
     return (
-      <PageCard
-        title={INCOMING_TEXT.pendingTitle}
-        description={INCOMING_TEXT.pendingHint}
-        extra={
-          hasRole(ROLES.Admin, ROLES.Manager) && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setStockFormOpen(true)}>
-              {INCOMING_TEXT.createStockPurchase}
-            </Button>
-          )
-        }
-      >
+      <PageCard title={INCOMING_TEXT.pendingTitle} description={INCOMING_TEXT.pendingHint}>
         <PendingMaterialOrdersTable onPick={setOrderId} />
-        <PurchaseOrderFormModal open={stockFormOpen} onClose={() => setStockFormOpen(false)} />
       </PageCard>
     );
   }

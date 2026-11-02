@@ -6,9 +6,14 @@ namespace NX_MTD.Application.DTOs;
 /// Vải của lệnh cắt (29/10: không còn lượng cần theo định mức): đã cấp (chờ nhận + đã nhận), khả dụng trong kho, tổ đã nhận,
 /// đã trả lại kho (phiếu trả đã xác nhận) và thực dùng = đã nhận − đã trả.
 /// </summary>
+/// <param name="HeldQty">Vải tổ cắt đang giữ của đơn = đã nhận − đã trả về kho.</param>
+/// <param name="CutQty">Vải đã cắt của tổ trên đơn = Σ số lớp × chiều dài bàn cắt.</param>
+/// <param name="RemainingQty">Vải còn lại = HeldQty − CutQty; âm nghĩa là đã cắt nhiều hơn số đang giữ.</param>
+/// <param name="UnmeasuredLayCount">Số bàn dùng vải này chưa có chiều dài bàn cắt nên chưa cộng vào CutQty.</param>
 public sealed record FabricRequirementDto(
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
-    decimal IssuedQty, decimal AvailableQty, decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0);
+    decimal IssuedQty, decimal AvailableQty, decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0,
+    decimal HeldQty = 0, decimal CutQty = 0, decimal RemainingQty = 0, int UnmeasuredLayCount = 0);
 
 public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
@@ -31,8 +36,8 @@ public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialCode
 /// <summary>Kiểm vải khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
 public sealed record CheckWorkOrderFabricDto(int OrderId, int CuttingTeamId, IReadOnlyList<SaveWorkOrderLineDto> Lines);
 
-/// <param name="Reason">Bắt buộc khi BTP vào kho chưa đủ kế hoạch (cắt thiếu).</param>
-public sealed record FinishCuttingDto(string? Reason);
+/// <param name="Reason">Lý do cắt thiếu kế hoạch, bắt buộc.</param>
+public sealed record CloseShortWorkOrderDto(string Reason);
 
 /// <param name="ProductComponentMaterialId">null = cả bộ; có giá trị = cắt lẻ thêm chi tiết này, PlannedQty là số chi tiết (không tính vào trần số đặt).</param>
 public sealed record SaveWorkOrderLineDto(int OrderLineId, int PlannedQty, int? ProductComponentMaterialId = null);

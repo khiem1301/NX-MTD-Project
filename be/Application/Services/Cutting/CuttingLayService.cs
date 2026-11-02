@@ -13,10 +13,11 @@ public sealed class CuttingLayService : ICuttingLayService
 {
     private readonly IUnitOfWork _uow;
     private readonly IAppLock _locks;
+    private readonly IClock _clock;
 
-    public CuttingLayService(IUnitOfWork uow, IAppLock locks)
+    public CuttingLayService(IUnitOfWork uow, IAppLock locks, IClock clock)
     {
-        _uow = uow; _locks = locks;
+        _uow = uow; _locks = locks; _clock = clock;
     }
 
     private IQueryable<CuttingLay> Lays => _uow.Repository<CuttingLay>().Query();
@@ -28,6 +29,7 @@ public sealed class CuttingLayService : ICuttingLayService
             .Where(l => l.CuttingTeamId == cuttingTeamId)
             .Where(l => query.WorkOrderId == null || l.WorkOrderId == query.WorkOrderId)
             .Where(l => query.WorkDate == null || l.WorkDate == query.WorkDate)
+            .Where(l => string.IsNullOrEmpty(query.Status) || l.Status == query.Status)
             .OrderByDescending(l => l.WorkDate).ThenByDescending(l => l.CuttingLayId)
             .Select(ToDto())
             .ToPagedAsync(query, ct);
@@ -116,6 +118,8 @@ public sealed class CuttingLayService : ICuttingLayService
             .ToDictionary(g => g.Key, g => g.Sum(l => l.PlannedQty));
         if (dto.Lines.Any(l => !planned.ContainsKey((l.OrderLineId, l.ProductComponentMaterialId))))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
+        var date = CheckWorkDate(dto.WorkDate, wo);
+        if (date is not null) return date;
         var fabric = await CheckFabricAsync(dto, wo, ct);
         if (fabric is not null) return fabric;
 
@@ -131,9 +135,22 @@ public sealed class CuttingLayService : ICuttingLayService
         lay.ShiftCode = dto.ShiftCode;
         lay.FabricMaterialId = dto.FabricMaterialId;
         lay.PlyCount = (short)dto.PlyCount;
+        lay.LayLengthM = dto.LayLengthM;
         lay.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         lay.CuttingLayLines = lines;
         return cap;
+    }
+
+    /// <summary>Bàn cắt đã làm rồi mới ghi: ngày cắt không sau hôm nay, không trước ngày lập lệnh cắt.</summary>
+    private Result? CheckWorkDate(DateOnly workDate, WorkOrder wo)
+    {
+        if (workDate > _clock.Today)
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayWorkDateFuture);
+        var created = DateOnly.FromDateTime(wo.CreatedAt);
+        return workDate < created
+            ? Result.Failure(ErrorCodes.WarehouseInvalidReference,
+                string.Format(WarehouseMessages.LayWorkDateBeforeWorkOrder, created.ToString("dd/MM/yyyy")))
+            : null;
     }
 
     /// <summary>Vải của bàn phải là vải chi tiết PANEL trong định mức của các dòng đơn trên bàn; bàn cắt bù chi tiết phải đúng vải của dòng định mức.</summary>
@@ -240,7 +257,7 @@ public sealed class CuttingLayService : ICuttingLayService
     private static System.Linq.Expressions.Expression<Func<CuttingLay, CuttingLayDto>> ToDto() => l =>
         new CuttingLayDto(l.CuttingLayId, l.WorkOrderId, l.WorkOrder.WorkOrderCode, l.WorkDate, l.ShiftCode,
             l.LaySequence, l.FabricMaterialId, l.FabricMaterial.MaterialCode,
-            l.FabricMaterial.Color, l.PlyCount, string.Empty, l.Note, l.Status, l.CreatedAt,
+            l.FabricMaterial.Color, l.PlyCount, l.LayLengthM, l.PlyCount * l.LayLengthM, string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
                 x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.Material.Color == "" ? "" : " " + x.ProductComponentMaterial.Material.Color),
                 x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,

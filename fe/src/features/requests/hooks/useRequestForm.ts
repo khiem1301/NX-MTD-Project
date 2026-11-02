@@ -29,8 +29,11 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
         attachmentApi.upload('Request', requestId, f.originFileObj as File, 'Photo'),
       ),
     );
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    if (failed > 0) void message.warning(fill(MESSAGES.requests.photoUploadFailed, failed));
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    if (rejected.length > 0)
+      void message.warning(
+        `${fill(MESSAGES.requests.photoUploadFailed, rejected.length)} ${(rejected[0]?.reason as ApiError | undefined)?.message ?? ''}`.trim(),
+      );
   };
 
   const handleFinish = async (values: FormValues) => {

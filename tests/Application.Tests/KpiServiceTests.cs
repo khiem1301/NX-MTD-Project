@@ -27,6 +27,7 @@ public class KpiServiceTests
     private readonly List<Product> _products = [];
     private readonly List<Team> _teams = [];
     private readonly List<OrderLine> _orderLines = [];
+    private bool _allottedToAllTeams = true;
     private readonly List<VwKpiDailyResult> _dailyResults = [];
     private readonly List<KpiDailyTarget> _days = [];
     private readonly KpiService _sut;
@@ -38,6 +39,11 @@ public class KpiServiceTests
         SetupQueryable(_products);
         SetupQueryable(_teams);
         SetupQueryable(_orderLines);
+        var allotments = Substitute.For<IGenericRepository<OrderLineTeam>>();
+        allotments.Query().Returns(_ => (_allottedToAllTeams
+            ? _orderLines.SelectMany(l => _teams.Select(t => new OrderLineTeam { OrderLineId = l.OrderLineId, SewingTeamId = t.TeamId })).ToList()
+            : new List<OrderLineTeam>()).AsTestAsyncQueryable());
+        _uow.Repository<OrderLineTeam>().Returns(allotments);
         SetupQueryable(_dailyResults);
         SetupQueryable(_days).When(r => r.RemoveRange(Arg.Any<IEnumerable<KpiDailyTarget>>()))
             .Do(c => c.Arg<IEnumerable<KpiDailyTarget>>().ToList().ForEach(d => _days.Remove(d)));
@@ -378,6 +384,19 @@ public class KpiServiceTests
 
         (await _sut.GetOrderCapacityAsync(1, 1, null, CancellationToken.None)).Data.Should().Be(new KpiOrderCapacityDto(1500, 650, 850, default(DateOnly), 3, "InProduction", false));
         (await _sut.GetOrderCapacityAsync(1, 1, 1, CancellationToken.None)).Data!.MaxTarget.Should().Be(1250);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ProductNotAllottedToTeam_IsRejected()
+    {
+        GivenSetup();
+        _allottedToAllTeams = false;
+
+        var result = await _sut.CreateAsync(Dto(), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.KpiInvalidReference);
+        result.Message.Should().Be(Messages.KpiTeamNotAllotted);
+        _kpiTargets.Should().BeEmpty();
     }
 
     [Fact]

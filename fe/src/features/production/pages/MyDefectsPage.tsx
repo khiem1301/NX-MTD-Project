@@ -2,6 +2,7 @@ import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { FilterSelect } from '@/components/common/FilterSelect';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -11,16 +12,23 @@ import { formatCurrency, formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { isObjectionOpen } from '../defectRules';
 import { useMyDefects, useObjectDefect } from '../hooks/useProduction';
-import type { Defect } from '../types';
+import type { Defect, DefectStatus } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
 
 const text = PRODUCTION_TEXT.defects;
 const mine = PRODUCTION_TEXT.myDefects;
 
+/** Phiếu đã hủy không hiện cho công nhân nên không có trong bộ lọc. */
+const STATUS_OPTIONS: { value: DefectStatus; label: string }[] = [
+  { value: 'Recorded', label: text.status.Recorded.text },
+  { value: 'Confirmed', label: text.status.Confirmed.text },
+];
+
 /** UC56 — công nhân xem phiếu hàng hỏng được ghi cho mình và phản hồi khi ghi sai. */
 export function MyDefectsPage() {
-  const defects = useMyDefects({ page: 1, pageSize: 100 });
+  const [status, setStatus] = useState<DefectStatus>();
+  const defects = useMyDefects({ page: 1, pageSize: 100, status });
   const objectDefect = useObjectDefect();
   const [objecting, setObjecting] = useState<Defect | null>(null);
 
@@ -85,6 +93,13 @@ export function MyDefectsPage() {
 
   return (
     <PageCard title={mine.title} description={mine.subtitle}>
+      <FilterSelect<DefectStatus>
+        value={status}
+        placeholder={text.columns.status}
+        options={STATUS_OPTIONS}
+        onChange={setStatus}
+        style={{ width: 200 }}
+      />
       <QueryError error={defects.error} onRetry={() => void defects.refetch()} />
 
       <DataTable<Defect>
@@ -93,9 +108,8 @@ export function MyDefectsPage() {
         columns={columns}
         dataSource={defects.data}
         loading={defects.isFetching}
-        locale={{ emptyText: mine.empty }}
+        locale={{ emptyText: status ? MESSAGES.common.empty : mine.empty }}
         scroll={{ x: 'max-content' }}
-        pagination={false}
       />
 
       <ReasonModal
