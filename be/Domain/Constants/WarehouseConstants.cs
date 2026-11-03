@@ -195,6 +195,10 @@ public static class RetrievalReasons
     public const string OperationChanged = "OPERATION_CHANGED";
     public const string WorkerAbsent = "WORKER_ABSENT";
     public const string StyleFinished = "STYLE_FINISHED";
+    /// <summary>Cuối ngày công nhân chưa làm hết phần được giao: tổ trưởng hoặc hệ thống thu hồi phần còn lại.</summary>
+    public const string EndOfDay = "END_OF_DAY";
+    /// <summary>Tổ trưởng hạ số giao của ngày xuống.</summary>
+    public const string Adjusted = "ADJUSTED";
 
     public static readonly IReadOnlyList<string> All = new[] { OperationChanged, WorkerAbsent, StyleFinished };
 }
@@ -204,6 +208,10 @@ public static class ConfirmModes
 {
     public const string Worker = "WORKER";
     public const string OnBehalf = "ON_BEHALF";
+    /// <summary>Tổ trưởng giao việc theo ngày: phiếu ghi xong là CONFIRMED, không chờ công nhân.</summary>
+    public const string Leader = "LEADER";
+    /// <summary>Hệ thống tự thu hồi phần chưa làm hết cuối ngày.</summary>
+    public const string System = "SYSTEM";
 }
 
 /// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>

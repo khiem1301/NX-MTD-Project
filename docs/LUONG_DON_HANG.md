@@ -8,8 +8,8 @@ Cột "Màn hình" là tên mục trong menu bên trái của vai trò đó.
 
 | # | Ai | Màn hình | Làm gì | Hệ thống tự làm / chặn | Trạng thái đơn |
 |---|---|---|---|---|---|
-| 1 | Admin | Đơn hàng | Tạo đơn: khách, ngày nhận / giao, các dòng mã hàng × màu × size × số lượng × đơn giá CMT | Gửi thông báo "Có đơn hàng mới" cho Quản đốc, bấm vào mở thẳng đơn ở màn NVL của đơn | NEW, NVL chờ (Awaiting) |
-| 2 | Quản đốc | NVL của đơn | Thấy đơn trong bảng "Đơn hàng chờ khai báo / mua NVL". Khai báo từng NVL: cần bao nhiêu, khách cấp bao nhiêu (kèm số lần khách giao dự kiến). Định mức nằm ở màn Mã hàng (Admin khai một lần), màn này chỉ hiện "cần theo định mức" để đối chiếu | Số phải mua = cần − khách cấp. Nếu khách cấp thì báo Thủ kho | NEW |
+| 1 | Admin | Đơn hàng | Tạo đơn: khách, ngày nhận / giao, các dòng mã hàng × màu × size × số lượng × đơn giá CMT | Gửi thông báo "Có đơn hàng mới" cho Quản đốc, bấm vào mở thẳng tab NVL của đơn trong chi tiết đơn. Admin tạo xong cũng chuyển sang tab này | NEW, NVL chờ (Awaiting) |
+| 2 | Quản đốc | Đơn hàng → chi tiết → tab NVL của đơn | Quản đốc chỉ xem thông tin đơn (không có đơn giá), không sửa được. Khai báo NVL theo hai cách: Thêm theo mã hàng (chọn mã trong đơn, nhập số cho các NVL định mức của mã đó) hoặc Thêm NVL ngoài (chọn NVL bất kỳ). Mỗi NVL ghi cần bao nhiêu, khách cấp bao nhiêu (kèm số lần khách giao dự kiến). Định mức nằm ở màn Mã hàng (Admin khai một lần), màn này chỉ hiện "cần theo định mức" để đối chiếu | Số phải mua = cần − khách cấp. Nếu khách cấp thì báo Thủ kho | NEW |
 | 3 | Quản đốc | NVL của đơn → Tạo (khi chưa chọn đơn) | Lập đơn mua NVL cho đơn (các dòng phải mua điền sẵn) | Chỉ cho mua NVL đã khai báo ở bước 2 | NEW |
 | 4 | Quản đốc | Đơn mua NVL | Đặt hàng với nhà cung cấp (chọn NCC, đơn giá, ngày hẹn giao) | Báo Kế toán chờ thanh toán, báo Thủ kho có đơn mua chờ nhận | NEW |
 | 5 | Kế toán | Thanh toán đơn mua | Xác nhận thanh toán (kèm ảnh chứng từ) hoặc trả lại Quản đốc | Không chặn việc nhận hàng (xem mục "Lưu ý") | NEW |
@@ -23,7 +23,7 @@ Cột "Màn hình" là tên mục trong menu bên trái của vai trò đó.
 | 13 | Quản đốc | Chỉ tiêu KPI tổ may | Lập KPI cho tổ may (nhập tổng cả kỳ). Xem kết quả từng ngày ở bảng kết quả của KPI | Chặn khi tổng KPI còn hiệu lực của đơn + mã hàng vượt BTP (bộ đủ) đã vào kho; báo số còn đặt được | IN_PRODUCTION |
 | 14 | Tổ trưởng may | Đơn từ của tôi | Gửi đơn "Xin BTP" cho Thủ kho | Chỉ tổ may được tạo | IN_PRODUCTION |
 | 15 | Thủ kho → Tổ trưởng may | Phiếu cấp NVL / BTP | Thủ kho cấp BTP theo đơn xin, tổ trưởng may xác nhận nhận | Trừ kho BTP; đơn xin tự hoàn thành sau khi cấp | IN_PRODUCTION (đơn NEW tự sang IN_PRODUCTION khi tổ may xác nhận nhận BTP) |
-| 16 | Tổ trưởng may → Công nhân | Giao việc cho công nhân; Việc được giao cho tôi | Tổ trưởng chia việc theo công đoạn (số lần làm), công nhân xác nhận (hoặc tổ trưởng xác nhận hộ có lý do) | Tổng số lần giao của công đoạn không vượt số bộ BTP tổ đã nhận; sản lượng không vượt số lần được giao | IN_PRODUCTION |
+| 16 | Tổ trưởng may → Công nhân | Giao sản lượng theo ngày; Sản lượng công đoạn được giao | Tổ trưởng giao số lần làm của từng công nhân × công đoạn theo ngày (có hiệu lực ngay), cuối ngày thu hồi phần chưa làm hết kèm lý do | Tổng số lần giao của công đoạn không vượt số bộ BTP tổ đã nhận; sản lượng không vượt số lần được giao | IN_PRODUCTION |
 | 17 | Tổ trưởng may | Phân công công đoạn, Sản lượng cuối ca | Phân công công đoạn cho công nhân, nhập sản lượng cuối ca | Sản lượng không vượt BTP công nhân đang giữ (MSG16); đơn giá khóa theo ngày nhập | IN_PRODUCTION |
 | 18 | QA/QC | Hàng hoàn thiện (QC) | Nhập số hàng đạt ra chuyền | Là số "thực tế" của KPI | IN_PRODUCTION |
 | 19 | QA/QC → Thủ kho | Bàn giao thành phẩm | Lập phiếu bàn giao, Thủ kho đếm và nhận vào kho thành phẩm | Tổng bàn giao không vượt tổng QC đạt. Đây là nguồn doanh thu tháng | IN_PRODUCTION |
@@ -36,7 +36,7 @@ Hủy / dừng đơn: Admin bấm Hủy (CANCELLED) hoặc Dừng (STOPPED, có 
 ## Kết quả đối chiếu
 
 **Khớp.** Mỗi bước nhận đúng kết quả của bước trước:
-- Đơn mới hiện ở danh sách chờ khai báo của Quản đốc, thông báo dẫn thẳng tới đơn.
+- Đơn mới hiện ở màn Đơn hàng của Quản đốc, thông báo dẫn thẳng tới tab NVL của đơn.
 - Đơn mua đã đặt hàng và NVL khách cấp hiện ở màn NVL chờ nhận của Thủ kho; phiếu nhập xác nhận xong thì số còn phải nhận giảm.
 - Nhập đủ NVL thì đơn chuyển từ "chờ NVL" sang đủ, Admin mới chuyển sản xuất được.
 - BTP đi đúng chuỗi cắt → kho → tổ may → công nhân → QC → kho thành phẩm → giao hàng. Mỗi bước trừ / cộng đúng kho và chặn vượt số.

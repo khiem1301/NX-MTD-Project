@@ -10,9 +10,8 @@
    Chỉ thêm dữ liệu, không xóa. Chạy lại không nhân đôi (bỏ qua nếu đã có đơn DEMO-DH005).
    Ảnh và file đính kèm không có ở đây: Attachment, ProductImage cần file thật, tải lên trên giao diện.
    Tài khoản mới dùng placeholder mật khẩu: cần khởi động lại backend để băm mật khẩu 123456.
+   Chạy trên DB đang có: sqlcmd -S localhost -E -C -I -f 65001 -d NXMTD -i <file này>
    ===================================================================================== */
-USE NXMTD;
-GO
 SET NOCOUNT ON;
 SET QUOTED_IDENTIFIER ON;
 SET XACT_ABORT ON;
@@ -120,7 +119,7 @@ INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword, Status, Locke
 SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1,
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), 'LOCKED', 'ACTIVE'),
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), CAST('2026-10-30 09:00:00' AS DATETIME2(0)), NULL),
-       CASE e.EmployeeCode WHEN 'NVKHOA1' THEN N'Nhập sai mật khẩu nhiều lần' WHEN 'NVNGHI1' THEN N'Nhân viên đã nghỉ việc' END
+       CASE e.EmployeeCode WHEN 'NVKHOA1' THEN N'Admin tạm khóa để thử chức năng mở khóa' WHEN 'NVNGHI1' THEN N'Nhân viên đã nghỉ việc' END
 FROM dbo.Employee e
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Account a WHERE a.EmployeeId = e.EmployeeId);
 

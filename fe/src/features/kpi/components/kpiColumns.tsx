@@ -3,6 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { fill, formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import type { KpiTarget, KpiTargetStatus } from '../types';
+import { KpiLinesCell } from './KpiLinesCell';
 
 export const KPI_STATUS_OPTIONS = (
   Object.entries(KPI_TEXT.statusLabel) as [KpiTargetStatus, { text: string }][]
@@ -21,8 +22,15 @@ export const kpiTargetColumns = (showTeam: boolean): ColumnsType<KpiTarget> => [
     render: (code: string, row) => <Tooltip title={row.productName}>{code}</Tooltip>,
   },
   ...(showTeam
-    ? ([{ title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamName' }] as ColumnsType<KpiTarget>)
+    ? ([
+        { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamName' },
+      ] as ColumnsType<KpiTarget>)
     : []),
+  {
+    title: KPI_TEXT.table.lines,
+    key: 'lines',
+    render: (_, row) => <KpiLinesCell lines={row.lines} />,
+  },
   {
     title: KPI_TEXT.table.period,
     key: 'period',
@@ -53,7 +61,9 @@ export const kpiTargetColumns = (showTeam: boolean): ColumnsType<KpiTarget> => [
     key: 'status',
     render: (_, row) => {
       // Đã có kết quả thì chỉ tiêu đã đóng, chỉ cần hiện kết quả.
-      const label = row.result ? KPI_TEXT.resultLabel[row.result] : KPI_TEXT.statusLabel[row.status];
+      const label = row.result
+        ? KPI_TEXT.resultLabel[row.result]
+        : KPI_TEXT.statusLabel[row.status];
       return <Tag color={label.color}>{label.text}</Tag>;
     },
   },

@@ -157,7 +157,7 @@ Quy tắc:
 ### FE
 `/admin/orders` (danh sách), `/admin/orders/new`, `/admin/orders/:id` (chi tiết: lưới, lịch sử), `/admin/orders/:id/edit`, `/admin/products`, `/admin/customers`.
 Lưới màu × size: mỗi khối là một mã hàng + đơn giá; hàng = màu, cột = size. Đơn đang sản xuất thì ô dòng cũ khóa, vẫn thêm màu / size mới.
-**Tab "NVL của đơn"**: chỗ gắn ở `fe/src/app/orderDetailTabs.ts` (`ORDER_DETAIL_TABS`, hiện rỗng) – Thái thêm component của mình vào.
+**Tab "NVL của đơn"**: gắn ở `fe/src/app/orderDetailTabs.ts` (`ORDER_DETAIL_TABS`), component `OrderMaterialsTab` của feature kho (DEV-ALL-59).
 
 ---
 

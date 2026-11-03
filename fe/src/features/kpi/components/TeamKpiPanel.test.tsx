@@ -28,11 +28,17 @@ const TARGET: KpiTarget = {
   actualFinishedQty: 40,
   percentAchieved: 40,
   createdAt: '2026-10-13T08:00:00',
+  lines: [
+    { orderLineId: 11, color: 'Đen', sizeCode: 'M', targetQty: 60, actualQty: 30 },
+    { orderLineId: 12, color: 'Đen', sizeCode: 'L', targetQty: 40, actualQty: 10 },
+  ],
 };
 
 const renderPanel = () =>
   render(
-    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <TeamKpiPanel />
     </QueryClientProvider>,
   );

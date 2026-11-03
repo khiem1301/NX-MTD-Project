@@ -18,6 +18,10 @@ public sealed class WorkAllocationConfiguration : IEntityTypeConfiguration<WorkA
 
         entity.HasIndex(e => new { e.WorkerId, e.OrderLineId, e.OperationId, e.Status }, "IX_WA_Worker");
 
+        entity.HasIndex(e => new { e.SewingTeamId, e.WorkDate }, "IX_WA_Day");
+
+        entity.Property(e => e.WorkDate).HasDefaultValueSql("(CONVERT([date],[dbo].[fn_VnNow]()))");
+        entity.Property(e => e.RetrievalNote).HasMaxLength(500);
         entity.Property(e => e.ConfirmMode)
             .HasMaxLength(10)
             .IsUnicode(false);

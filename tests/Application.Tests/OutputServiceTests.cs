@@ -461,6 +461,20 @@ public class OutputServiceTests : ProductionTestBase
     }
 
     [Fact]
+    public async Task Grid_ReturnsOperationGroupName()
+    {
+        _caps.Clear();
+        Assign(TeamId, 1, 7);
+        Assign(TeamId, 2, 7);
+        _operations.First(o => o.OperationId == 1).OperationGroup = new OperationGroup { GroupName = "May túi" };
+
+        var rows = (await _sut.GetGridAsync(Today, "MORNING", LineId, null, default)).Data!.Rows;
+
+        rows.Single(r => r.OperationId == 1).GroupName.Should().Be("May túi");
+        rows.Single(r => r.OperationId == 2).GroupName.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Grid_OperationWithoutApprovedRate_IsFlagged()
     {
         _caps.Clear();

@@ -3,11 +3,11 @@ import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatQty } from '@/utils/format';
 import { blockTotal, fromLines, rowTotal } from '../utils/orderGrid';
-import type { OrderLine } from '../types';
+import type { OrderDisplayLine } from '../types';
 import { BlockSummaryRow } from './BlockSummaryRow';
 
-/** Lưới số lượng của đơn (màu × size) theo từng mã hàng, chỉ đọc; có tổng theo màu và theo size. */
-export function OrderReadOnlyGrid({ lines }: { lines: OrderLine[] }) {
+/** Lưới số lượng của đơn (màu × size) theo từng mã hàng, chỉ đọc; có tổng theo màu và theo size. Dòng không có giá (Quản đốc) thì không hiện tiền. */
+export function OrderReadOnlyGrid({ lines }: { lines: OrderDisplayLine[] }) {
   return (
     <>
       {fromLines(lines).map((block) => {
@@ -19,7 +19,10 @@ export function OrderReadOnlyGrid({ lines }: { lines: OrderLine[] }) {
             size="small"
             style={{ marginBottom: 12 }}
             title={`${first?.productCode ?? ''} · ${first?.productName ?? ''}`}
-            extra={`${MESSAGES.orders.unitPrice}: ${formatCurrency(block.cmtUnitPrice)} · ${MESSAGES.orders.totalAmount}: ${formatCurrency(total * (block.cmtUnitPrice ?? 0))}`}
+            extra={
+              block.cmtUnitPrice !== null &&
+              `${MESSAGES.orders.unitPrice}: ${formatCurrency(block.cmtUnitPrice)} · ${MESSAGES.orders.totalAmount}: ${formatCurrency(total * block.cmtUnitPrice)}`
+            }
           >
             <DataTable
               rowKey="key"

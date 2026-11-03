@@ -23,6 +23,8 @@ const row: NormRow = {
   variantKeys: [],
 };
 
+const mockAddMaterial = jest.fn();
+
 function Host() {
   const [norms, setNorms] = useState([row]);
   return (
@@ -36,6 +38,7 @@ function Host() {
         materialsLoading: false,
         variantOptions: [],
         setNorms,
+        onAddMaterial: mockAddMaterial,
       })}
     />
   );
@@ -57,6 +60,16 @@ describe('cột NVL của bảng định mức', () => {
     fireEvent.mouseEnter(materialSelect);
 
     expect(await screen.findByText(FULL_LABEL)).toBeInTheDocument();
+  });
+
+  it('danh sách chọn NVL có nút Thêm NVL mới cho đúng dòng', () => {
+    const { container } = render(<Host />);
+
+    const materialSelect = container.querySelectorAll('.ant-select-selector')[1] as HTMLElement;
+    fireEvent.mouseDown(materialSelect);
+    fireEvent.click(screen.getByRole('button', { name: /Thêm NVL mới/ }));
+
+    expect(mockAddMaterial).toHaveBeenCalledWith('n1');
   });
 
   it('nhãn đầy đủ vẫn dùng để tìm kiếm trong danh sách chọn', () => {

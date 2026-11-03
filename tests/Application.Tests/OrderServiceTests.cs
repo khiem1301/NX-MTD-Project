@@ -337,8 +337,59 @@ public class CustomerOrderServiceTests
         await _uow.Received(1).BeginTransactionAsync();
         await _uow.Received(2).SaveChangesAsync();
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Insert));
-        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.LinkUrl == $"/manager/orders/{saved.OrderId}?tab=materials"), Arg.Any<CancellationToken>());
         await _uow.Received(1).CommitTransactionAsync();
+    }
+
+    [Fact]
+    public async Task GetOverview_OrderExists_HasNoPriceAndNoHistory()
+    {
+        _orders.GetDetailAsync(5, default).Returns(new OrderDetailDto
+        {
+            OrderId = 5, OrderCode = "DH2610-001", Status = "New", MaterialStatus = "Awaiting",
+            Lines = new[] { new OrderLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 12500) },
+        });
+
+        var result = await Create().GetOverviewAsync(5, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Lines.Single().Should().Be(new OrderLineLookupDto(7, 5, 1, "AO-01", "Áo", "Đỏ", "M", 10));
+        typeof(OrderOverviewDto).GetProperties().Select(p => p.Name).Should().NotContain(["RowVer", "History"]);
+        await _audit.DidNotReceiveWithAnyArgs().GetHistoryAsync(default!, default, default);
+    }
+
+    [Fact]
+    public async Task GetOverview_OrderMissing_ReturnsNotFound()
+    {
+        var result = await Create().GetOverviewAsync(5, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task ListOverview_HasOrders_KeepsPagingAndDropsAmount()
+    {
+        var row = new OrderListItemDto(5, "DH2610-001", "Công ty A", new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1),
+            "New", "Awaiting", false, 10, 125000, "AO-01");
+        _orders.ListAsync(Arg.Any<OrderQuery>(), null, default)
+            .Returns(new PagedResult<OrderListItemDto>(new[] { row }, 2, 20, 21));
+
+        var result = await Create().ListOverviewAsync(new OrderQuery(), default);
+
+        result.Data!.TotalItems.Should().Be(21);
+        result.Data.Page.Should().Be(2);
+        result.Data.Items.Single().TotalQty.Should().Be(10);
+        typeof(OrderOverviewListItemDto).GetProperties().Select(p => p.Name).Should().NotContain("TotalAmount");
+    }
+
+    [Fact]
+    public async Task ListOverview_UnknownStatus_ReturnsValidationFailure()
+    {
+        var result = await Create().ListOverviewAsync(new OrderQuery { Status = "Nope" }, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Kind.Should().Be(ResultKind.Validation);
     }
 
     [Fact]

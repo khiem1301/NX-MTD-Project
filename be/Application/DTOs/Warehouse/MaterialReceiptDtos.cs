@@ -7,10 +7,14 @@ public sealed record MaterialReceiptListItemDto(
     int? PurchaseOrderId, string? PoCode, DateOnly ReceiptDate, string Status, DateTime SubmittedAt,
     DateTime? ConfirmedAt, string? ConfirmedByName, int LineCount);
 
+/// <param name="ToReplenishQty">Phiếu thường: số còn thiếu sau phiếu này (đặt hoặc khách cấp − đã nhận ở các phiếu xác nhận trước
+/// − số phiếu này); phiếu bổ sung: số Quản đốc chọn giao bù.</param>
+/// <param name="DeliveryNo">Phiếu này là lần nhận thứ mấy của NVL (dòng đơn mua hoặc NVL khách cấp).</param>
+/// <param name="ExpectedDeliveryCount">Số lần giao dự kiến của nguồn (đơn mua hoặc NVL khách cấp), mặc định 1.</param>
 public sealed record MaterialReceiptLineDto(
     int MaterialReceiptLineId, int? OrderMaterialId, int? PurchaseOrderLineId, int? OriginalReceiptLineId,
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
-    decimal? UnitPrice, decimal? ToReplenishQty, decimal AcceptedQty);
+    decimal? UnitPrice, decimal? ToReplenishQty, decimal AcceptedQty, int? DeliveryNo = null, int? ExpectedDeliveryCount = null);
 
 /// <param name="ReceiptType">Mới (New) hoặc Bổ sung (Supplementary): phiếu bổ sung là phiếu có ShortageRequestId.</param>
 /// <param name="OriginalReceiptId">Phiếu bổ sung: phiếu gốc = phiếu nhập đã sinh ra yêu cầu thiếu NVL.</param>

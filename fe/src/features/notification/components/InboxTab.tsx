@@ -22,7 +22,9 @@ export function InboxTab() {
       render: (_, n) => (
         <Space direction="vertical" size={0}>
           <Space size={4}>
-            <Tag color={n.isManual ? 'blue' : 'default'}>{n.isManual ? 'Từ quản lý' : 'Hệ thống'}</Tag>
+            <Tag color={n.isManual ? 'blue' : 'default'}>
+              {n.isManual ? 'Từ quản lý' : 'Hệ thống'}
+            </Tag>
             {n.isUrgent && <Tag color="red">Khẩn</Tag>}
             <strong style={{ fontWeight: n.isRead ? 400 : 600 }}>{n.title}</strong>
           </Space>
@@ -55,7 +57,9 @@ export function InboxTab() {
             { value: 'MANUAL', label: 'Từ quản lý' },
             { value: 'AUTO', label: 'Hệ thống' },
           ]}
-          onChange={(v) => table.setFilters({ group: v === 'ALL' ? undefined : (v as NotificationGroup) })}
+          onChange={(v) =>
+            table.setFilters({ group: v === 'ALL' ? undefined : (v as NotificationGroup) })
+          }
         />
         <Checkbox onChange={(e) => table.setFilters({ unreadOnly: e.target.checked || undefined })}>
           Chỉ chưa đọc

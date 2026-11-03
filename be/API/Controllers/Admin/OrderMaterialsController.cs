@@ -12,11 +12,6 @@ public sealed class OrderMaterialsController : AdminBaseController
 
     public OrderMaterialsController(IOrderMaterialService orderMaterials) => _orderMaterials = orderMaterials;
 
-    /// <summary>Đơn đang chạy mà NVL chưa về đủ (kể cả đơn mới chưa khai báo NVL).</summary>
-    [HttpGet("pending-orders")]
-    public async Task<IActionResult> GetPendingOrders([FromQuery] PendingMaterialOrderQuery query, CancellationToken ct) =>
-        this.ToResponse(await _orderMaterials.GetPendingOrdersAsync(query, ct));
-
     /// <summary>Bảng NVL của đơn: tìm kiếm, lọc, phân trang.</summary>
     [HttpGet("paged")]
     public async Task<IActionResult> GetPaged([FromQuery] OrderMaterialPageQuery query, CancellationToken ct) =>
@@ -26,9 +21,19 @@ public sealed class OrderMaterialsController : AdminBaseController
     public async Task<IActionResult> GetByOrder([FromQuery] int orderId, CancellationToken ct) =>
         this.ToResponse(await _orderMaterials.GetByOrderAsync(orderId, ct));
 
+    /// <summary>Mã hàng trong đơn và NVL định mức của từng mã.</summary>
+    [HttpGet("product-materials")]
+    public async Task<IActionResult> GetProductMaterials([FromQuery] int orderId, CancellationToken ct) =>
+        this.ToResponse(await _orderMaterials.GetProductMaterialsAsync(orderId, ct));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateOrderMaterialDto dto, CancellationToken ct) =>
         this.ToResponse(await _orderMaterials.CreateAsync(dto, ct));
+
+    /// <summary>Thêm các NVL của một mã hàng cùng lúc.</summary>
+    [HttpPost("batch")]
+    public async Task<IActionResult> CreateBatch([FromBody] CreateOrderMaterialBatchDto dto, CancellationToken ct) =>
+        this.ToResponse(await _orderMaterials.CreateBatchAsync(dto, ct));
 
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateOrderMaterialDto dto, CancellationToken ct) =>

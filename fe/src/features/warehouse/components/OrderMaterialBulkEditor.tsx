@@ -11,11 +11,13 @@ import { warehouseApi } from '../api/warehouseApi';
 import { WAREHOUSE_KEY } from '../hooks/useMaterials';
 import type { OrderMaterial } from '../types';
 import {
+  applyDraftChange,
   EMPTY_DRAFT,
   isChanged,
   matchesKeyword,
   rowError,
   toLine,
+  toLinePayload,
   type BulkLine,
   type Draft,
 } from './bulkOrderMaterial';
@@ -52,12 +54,7 @@ export function OrderMaterialBulkEditor({
 
   const patch = (key: string, change: Partial<Draft>) =>
     setLines((prev) =>
-      prev.map((l) => {
-        if (l.key !== key) return l;
-        const draft = { ...l.draft, ...change };
-        if (draft.customerQty <= 0) draft.expectedDeliveryCount = null;
-        return { ...l, draft };
-      }),
+      prev.map((l) => (l.key === key ? { ...l, draft: applyDraftChange(l.draft, change) } : l)),
     );
 
   const addLine = () =>
@@ -82,15 +79,7 @@ export function OrderMaterialBulkEditor({
     let saved = 0;
     try {
       for (const line of changed) {
-        const d = line.draft;
-        const body = {
-          orderId,
-          materialId: line.materialId as number,
-          requiredQty: d.requiredQty,
-          customerQty: d.customerQty,
-          expectedDeliveryCount: d.customerQty > 0 ? d.expectedDeliveryCount : null,
-          note: d.note.trim() || undefined,
-        };
+        const body = { orderId, ...toLinePayload(line) };
         if (line.original) {
           await warehouseApi.updateOrderMaterial(role, line.original.orderMaterialId, body);
         } else {

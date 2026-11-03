@@ -15,6 +15,8 @@ export const ROUTES = {
   orderNew: '/admin/orders/new',
   orderDetail: (id: number | string) => `/admin/orders/${id}`,
   orderEdit: (id: number | string) => `/admin/orders/${id}/edit`,
+  managerOrders: '/manager/orders',
+  managerOrderDetail: (id: number | string) => `/manager/orders/${id}`,
   // Đơn từ (Khiêm)
   requests: '/requests',
   requestInbox: '/requests/inbox',

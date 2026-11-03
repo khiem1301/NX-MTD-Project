@@ -9,11 +9,12 @@ namespace NX_MTD.API.Controllers.TeamLeader;
 public sealed class WorkAllocationsController : TeamLeaderBaseController
 {
     private readonly IWorkAllocationService _allocations;
+    private readonly IDailyWorkAllocationService _daily;
     private readonly ICurrentUser _user;
 
-    public WorkAllocationsController(IWorkAllocationService allocations, ICurrentUser user)
+    public WorkAllocationsController(IWorkAllocationService allocations, IDailyWorkAllocationService daily, ICurrentUser user)
     {
-        _allocations = allocations; _user = user;
+        _allocations = allocations; _daily = daily; _user = user;
     }
 
     /// <summary>Tài khoản không gắn tổ → 0 để không khớp dữ liệu tổ nào.</summary>
@@ -26,6 +27,19 @@ public sealed class WorkAllocationsController : TeamLeaderBaseController
     [HttpGet("board")]
     public async Task<IActionResult> GetBoard([FromQuery] int? orderId, CancellationToken ct) =>
         this.ToResponse(await _allocations.GetBoardAsync(TeamId, orderId, ct));
+
+    /// <summary>Giao việc theo ngày: các công đoạn đã phân công trước khi may cùng phần đã giao của ngày.</summary>
+    [HttpGet("daily")]
+    public async Task<IActionResult> GetDaily([FromQuery] DateOnly workDate, [FromQuery] int orderId, [FromQuery] int? orderLineId, CancellationToken ct) =>
+        this.ToResponse(await _daily.GetBoardAsync(TeamId, workDate, orderId, orderLineId, ct));
+
+    [HttpPut("daily")]
+    public async Task<IActionResult> SaveDaily([FromBody] SaveDailyAllocationDto dto, CancellationToken ct) =>
+        this.ToResponse(await _daily.SaveAsync(dto, TeamId, ct));
+
+    [HttpPost("daily/retrieve-remaining")]
+    public async Task<IActionResult> RetrieveRemaining([FromBody] RetrieveDailyAllocationDto dto, CancellationToken ct) =>
+        this.ToResponse(await _daily.RetrieveRemainingAsync(dto, TeamId, ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkAllocationDto dto, CancellationToken ct) =>

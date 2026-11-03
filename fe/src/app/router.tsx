@@ -91,7 +91,7 @@ const warehouseRoutes = [
   {
     path: ROUTES.orderMaterials,
     roles: [Admin, Manager],
-    page: async () => (await warehouse()).OrderMaterialPage,
+    page: async () => (await warehouse()).OrderMaterialLinkRedirect,
   },
   {
     path: ROUTES.incomingMaterials,
@@ -225,6 +225,15 @@ const orderRoutes = [
   children: [{ path, lazy: async () => ({ Component: await page() }) }],
 }));
 
+// Quản đốc xem đơn hàng (không có đơn giá, GBR-02) và khai báo NVL của đơn; không sửa được đơn.
+const managerOrderRoutes = [
+  { path: ROUTES.managerOrders, page: async () => (await orders()).OrderOverviewListPage },
+  { path: `${ROUTES.managerOrders}/:id`, page: async () => (await orders()).OrderOverviewPage },
+].map(({ path, page }) => ({
+  element: <ProtectedRoute roles={[Manager]} />,
+  children: [{ path, lazy: async () => ({ Component: await page() }) }],
+}));
+
 // Kế toán nhập thành phần và định mức NVL của mã hàng (cùng trang Mã hàng, chỉ danh sách + Định mức).
 const accountantProductRoutes = [
   {
@@ -281,6 +290,7 @@ export const router = createBrowserRouter([
           ...warehouseRoutes,
           ...requestRoutes,
           ...orderRoutes,
+          ...managerOrderRoutes,
           ...accountantProductRoutes,
           ...hrRoutes,
           // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.

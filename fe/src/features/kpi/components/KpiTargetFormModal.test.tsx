@@ -1,13 +1,38 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { kpiApi } from '../api/kpiApi';
 import { KPI_TEXT } from '../constants';
-import type { KpiOrderCapacity, KpiTarget } from '../types';
+import type { KpiLineCapacity, KpiOrderCapacity, KpiTarget } from '../types';
 import { KpiTargetFormModal } from './KpiTargetFormModal';
 
 jest.mock('../api/kpiApi', () => ({
-  kpiApi: { getOrderCapacity: jest.fn(), getAllottedTeams: jest.fn().mockResolvedValue([]) },
+  kpiApi: {
+    getOrderCapacity: jest.fn(),
+    getAllottedTeams: jest.fn().mockResolvedValue([]),
+    getLineCapacity: jest.fn(),
+  },
 }));
+
+const LINES: KpiLineCapacity[] = [
+  {
+    orderLineId: 11,
+    color: 'Đen',
+    sizeCode: 'M',
+    orderedQty: 300,
+    assignedToOthers: 100,
+    maxTarget: 200,
+    actualQty: 0,
+  },
+  {
+    orderLineId: 12,
+    color: 'Trắng',
+    sizeCode: 'L',
+    orderedQty: 500,
+    assignedToOthers: 200,
+    maxTarget: 300,
+    actualQty: 20,
+  },
+];
 jest.mock('@/hooks/useOrderLookups', () => ({
   useOrderLookup: () => ({ data: { items: [] }, isLoading: false }),
   useOrderLineLookup: () => ({ data: [], isLoading: false }),
@@ -25,6 +50,10 @@ const TARGET = {
   startDate: '2030-01-05',
   endDate: '2030-01-18',
   targetFinishedQty: 100,
+  lines: [
+    { orderLineId: 11, color: 'Đen', sizeCode: 'M', targetQty: 60, actualQty: 0 },
+    { orderLineId: 12, color: 'Trắng', sizeCode: 'L', targetQty: 40, actualQty: 20 },
+  ],
 } as KpiTarget;
 
 const CAPACITY: KpiOrderCapacity = {
@@ -37,8 +66,9 @@ const CAPACITY: KpiOrderCapacity = {
   orderClosed: false,
 };
 
-const renderForm = (capacity: KpiOrderCapacity, target = TARGET) => {
+const renderForm = (capacity: KpiOrderCapacity, target = TARGET, lines = LINES) => {
   (kpiApi.getOrderCapacity as jest.Mock).mockResolvedValue(capacity);
+  (kpiApi.getLineCapacity as jest.Mock).mockResolvedValue(lines);
   render(
     <QueryClientProvider
       client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
@@ -86,6 +116,47 @@ describe('KpiTargetFormModal', () => {
 
     expect(await screen.findByText(KPI_TEXT.form.orderDelivering)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Lưu/ })).toBeEnabled();
+  });
+
+  it('nhập theo màu × size của tổ, tổng cả kỳ là tổng các dòng', async () => {
+    renderForm({ ...CAPACITY, dueDate: '2030-02-20' });
+
+    await waitFor(() =>
+      expect(kpiApi.getLineCapacity).toHaveBeenCalledWith({
+        orderId: 2,
+        productId: 3,
+        sewingTeamId: 4,
+        exceptKpiTargetId: 1,
+      }),
+    );
+    expect(await screen.findByLabelText('Chỉ tiêu màu Đen, size M')).toHaveValue('60');
+    expect(screen.getByLabelText('Chỉ tiêu màu Trắng, size L')).toHaveValue('40');
+    expect(screen.getAllByText(KPI_TEXT.form.lineActual).length).toBeGreaterThan(0);
+    expect(screen.getByText(`${KPI_TEXT.form.linesTotal}:`, { exact: false })).toHaveTextContent(
+      '100',
+    );
+    expect(screen.getByRole('button', { name: /Lưu/ })).toBeEnabled();
+  });
+
+  it('một màu × size vượt số còn lại thì khóa nút lưu', async () => {
+    renderForm({ ...CAPACITY, dueDate: '2030-02-20' });
+    const input = await screen.findByLabelText('Chỉ tiêu màu Đen, size M');
+
+    fireEvent.change(input, { target: { value: '201' } });
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Lưu/ })).toBeDisabled());
+    fireEvent.change(input, { target: { value: '200' } });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Lưu/ })).toBeEnabled());
+  });
+
+  it('chỉ tiêu cũ chỉ có số tổng thì nhắc nhập lại theo màu × size, chưa cho lưu', async () => {
+    renderForm({ ...CAPACITY, dueDate: '2030-02-20' }, { ...TARGET, lines: [] });
+
+    expect(
+      await screen.findByText(/lập trước khi chia theo màu × size \(tổng 100\)/),
+    ).toBeInTheDocument();
+    await screen.findByLabelText('Chỉ tiêu màu Đen, size M');
+    expect(screen.getByRole('button', { name: /Lưu/ })).toBeDisabled();
   });
 
   it('cảnh báo khi kỳ kết thúc sau ngày giao', async () => {

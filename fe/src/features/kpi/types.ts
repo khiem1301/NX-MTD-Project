@@ -27,6 +27,29 @@ export type KpiTarget = {
   actualFinishedQty: number;
   percentAchieved: number;
   createdAt: string;
+  /** Chỉ tiêu theo màu × size; rỗng ở chỉ tiêu cũ chỉ có số tổng. */
+  lines: KpiTargetLine[] | null;
+};
+
+/** Chỉ tiêu của một dòng đơn (màu × size); actualQty = QC đạt của tổ ở dòng đó trong kỳ. */
+export type KpiTargetLine = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  targetQty: number;
+  actualQty: number;
+};
+
+/** Một màu × size của mã hàng đã chia cho tổ: số đặt − phần đã giao cho tổ khác = tối đa đặt được. */
+export type KpiLineCapacity = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  orderedQty: number;
+  assignedToOthers: number;
+  maxTarget: number;
+  /** QC đạt của chỉ tiêu đang sửa ở dòng này (không hạ chỉ tiêu dưới số này); lập mới thì 0. */
+  actualQty: number;
 };
 
 /** Chỉ tiêu tối đa lập được cho đơn + mã hàng: số lượng đơn đặt − phần đã giao cho các tổ khác. */
@@ -141,7 +164,8 @@ export type SaveKpiTargetPayload = {
   sewingTeamId: number;
   startDate: string;
   endDate: string;
-  targetFinishedQty: number;
+  /** Chỉ tiêu cả kỳ = tổng các dòng, BE tự tính. */
+  lines: { orderLineId: number; targetQty: number }[];
 };
 
 export type SaveKpiDailyPlanPayload = {

@@ -1,39 +1,21 @@
 import { useState } from 'react';
-import {
-  Alert,
-  Button,
-  Descriptions,
-  Result,
-  Space,
-  Spin,
-  Tabs,
-  Tag,
-  Tooltip,
-  Typography,
-} from 'antd';
+import { Button, Result, Space, Spin, Tag, Tooltip } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ORDER_DETAIL_TABS } from '@/app/orderDetailTabs';
-import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { NoteModal } from '@/components/common/NoteModal';
 import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
-import {
-  MATERIAL_STATUS_TAG,
-  ORDER_LIMITED_EDIT_STATUSES,
-  ORDER_STATUS_TAG,
-} from '@/constants/orderStatus';
+import { ORDER_LIMITED_EDIT_STATUSES, ORDER_STATUS_TAG } from '@/constants/orderStatus';
 import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
 import { usePermission } from '@/hooks/usePermission';
 import type { ApiError } from '@/types/api';
-import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { OrderReadOnlyGrid } from '../components/OrderReadOnlyGrid';
+import { OrderDetailTabs } from '../components/OrderDetailTabs';
+import { OrderSummary } from '../components/OrderSummary';
 import { useCancelOrder, useOrder, useStartProduction, useStopOrder } from '../hooks/useOrders';
-import { blocksTotals, fromLines } from '../utils/orderGrid';
 
 type Pending = 'cancel' | 'stop' | null;
 
@@ -61,31 +43,12 @@ export function OrderDetailPage() {
 
   const canEdit = data.status === 'New' || ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
   const canStop = ORDER_LIMITED_EDIT_STATUSES.includes(data.status);
-  const totals = blocksTotals(fromLines(data.lines));
 
   const submit = (note: string | null) => {
     const onDone = { onSettled: () => setPending(null) };
     if (pending === 'cancel') cancel.mutate({ reason: note, rowVer: data.rowVer }, onDone);
     if (pending === 'stop') stop.mutate({ reason: note ?? '', rowVer: data.rowVer }, onDone);
   };
-
-  const tabs = [
-    {
-      key: 'grid',
-      label: MESSAGES.orders.gridTab,
-      children: <OrderReadOnlyGrid lines={data.lines} />,
-    },
-    ...ORDER_DETAIL_TABS.map((t) => ({
-      key: t.key,
-      label: t.label,
-      children: <t.Component orderId={data.orderId} />,
-    })),
-    {
-      key: 'history',
-      label: MESSAGES.common.history,
-      children: <AuditHistoryTable history={data.history} />,
-    },
-  ];
 
   return (
     <PageCard
@@ -138,48 +101,13 @@ export function OrderDetailPage() {
         </Space>
       }
     >
-      {data.stopReason && (
-        <Alert
-          type="warning"
-          showIcon
-          message={`${MESSAGES.orders.stopReason}: ${data.stopReason}`}
-        />
-      )}
-      <Descriptions
-        size="small"
-        bordered
-        layout="vertical"
-        column={{ xs: 2, sm: 3, md: 3, lg: 6, xl: 6, xxl: 6 }}
-      >
-        <Descriptions.Item label={MESSAGES.orders.receivedDate}>
-          {formatDate(data.receivedDate)}
-        </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.dueDate}>
-          {formatDate(data.dueDate)}
-        </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.materialStatus}>
-          <StatusTag status={data.materialStatus} labels={MATERIAL_STATUS_TAG} />
-        </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.totalQty}>
-          <b>{formatQty(totals.qty)}</b>
-        </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.orders.totalAmount}>
-          <b>{formatCurrency(totals.amount)}</b>
-        </Descriptions.Item>
-        <Descriptions.Item label={MESSAGES.requests.createdAt}>
-          {formatDateTime(data.createdAt)}
-        </Descriptions.Item>
-      </Descriptions>
-      {data.note && (
-        <Typography.Paragraph
-          type="secondary"
-          ellipsis={{ rows: 2, expandable: true }}
-          style={{ marginBottom: 0 }}
-        >
-          {`${MESSAGES.orders.note}: ${data.note}`}
-        </Typography.Paragraph>
-      )}
-      <Tabs size="small" items={tabs} />
+      <OrderSummary order={data} showAmount />
+      <OrderDetailTabs
+        orderId={data.orderId}
+        status={data.status}
+        lines={data.lines}
+        history={data.history}
+      />
       {pending && (
         <NoteModal
           open

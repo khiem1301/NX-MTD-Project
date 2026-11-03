@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { lazy, Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
@@ -6,12 +6,14 @@ import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { MESSAGES } from '@/constants/messages';
-import { foldVietnamese } from '@/utils/colorSearch';
 import {
+  filterNorms,
   newKey,
+  patchRow,
   variantKey,
   type ComponentRow,
   type MaterialOption,
+  type NormFilter,
   type NormRow,
   type VariantRow,
 } from '../utils/productSpec';
@@ -19,13 +21,10 @@ import { specNormColumns } from './specNormColumns';
 
 const text = MESSAGES.orders.spec;
 
-type NormFilter = {
-  keyword?: string;
-  component?: string;
-  materialId?: number;
-  color?: string;
-  size?: string;
-};
+/** Nạp lười để màn mã hàng không kéo cả feature kho. */
+const MaterialFormModal = lazy(() =>
+  import('@/features/warehouse').then((m) => ({ default: m.MaterialFormModal })),
+);
 
 type SpecNormsTabProps = {
   norms: NormRow[];
@@ -47,6 +46,7 @@ export function SpecNormsTab({
 }: SpecNormsTabProps) {
   const [normFilter, setNormFilter] = useState<NormFilter>({});
   const [normPage, setNormPage] = useState({ current: 1, pageSize: 10 });
+  const [addingMaterialFor, setAddingMaterialFor] = useState<string | null>(null);
 
   const variantOptions = useMemo(
     () =>
@@ -78,24 +78,12 @@ export function SpecNormsTab({
   const sizeFilterOptions = [
     ...new Set(variants.map((v) => v.sizeCode.trim()).filter(Boolean)),
   ].map((s) => ({ value: s, label: s }));
-  const appliesTo = (r: NormRow, match: (v: VariantRow) => boolean) =>
-    r.variantKeys.some((k) =>
-      variants.some((v) => variantKey(v.color, v.sizeCode) === k && match(v)),
-    );
-  const visibleNorms = norms.filter((r) => {
-    const f = effectiveFilter;
-    if (f.component && r.componentKey !== f.component) return false;
-    if (f.materialId !== undefined && r.materialId !== f.materialId) return false;
-    if (f.color && !appliesTo(r, (v) => v.color.trim() === f.color)) return false;
-    if (f.size && !appliesTo(r, (v) => v.sizeCode.trim() === f.size)) return false;
-    const kw = foldVietnamese(f.keyword ?? '');
-    return (
-      !kw ||
-      foldVietnamese(
-        `${componentLabel(r.componentKey)} ${materialLabel(r.materialId)} ${r.specNote}`,
-      ).includes(kw)
-    );
-  });
+  const visibleNorms = filterNorms(
+    norms,
+    effectiveFilter,
+    variants,
+    (r) => `${componentLabel(r.componentKey)} ${materialLabel(r.materialId)} ${r.specNote}`,
+  );
   const changeFilter = (change: Partial<NormFilter>) => {
     setNormFilter((f) => ({ ...f, ...change }));
     setNormPage((p) => ({ ...p, current: 1 }));
@@ -190,11 +178,22 @@ export function SpecNormsTab({
           materialsLoading,
           variantOptions,
           setNorms,
+          onAddMaterial: setAddingMaterialFor,
         })}
       />
       <Button type="dashed" icon={<PlusOutlined />} style={{ marginTop: 8 }} onClick={addNorm}>
         {text.addNorm}
       </Button>
+      {addingMaterialFor && (
+        <Suspense fallback={null}>
+          <MaterialFormModal
+            open
+            material={null}
+            onClose={() => setAddingMaterialFor(null)}
+            onSaved={(m) => patchRow(setNorms, addingMaterialFor, { materialId: m.materialId })}
+          />
+        </Suspense>
+      )}
     </>
   );
 }

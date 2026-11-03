@@ -382,6 +382,7 @@ export const MESSAGES = {
       allVariants: 'Chọn tất cả',
       note: 'Ghi chú quy cách',
       addNorm: 'Thêm dòng định mức',
+      addMaterial: 'Thêm NVL mới',
       markerHint:
         'Bìa dùng để tính số mét vải của lệnh cắt cả bộ. Mỗi bìa tính cho một sản phẩm: nhập dài, rộng theo từng size và chọn vải cho từng màu áo. Mỗi loại vải dùng trên sản phẩm cần một bìa.',
       markerEmpty: 'Mã hàng chưa có bìa, lệnh cắt sẽ báo chưa tính được vải.',

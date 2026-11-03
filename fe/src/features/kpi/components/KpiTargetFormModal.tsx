@@ -1,4 +1,4 @@
-import { Alert, Col, Descriptions, Form, InputNumber, Modal, Row, Select, Tag } from 'antd';
+import { Alert, Col, Descriptions, Form, Modal, Row, Select, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
@@ -9,7 +9,8 @@ import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppRangePicker } from '@/components/common/DateInputs';
 import { useKpiTargetForm } from '../hooks/useKpiTargetForm';
-import { KPI_MAX_QTY, periodLimitRule } from '../utils/periodRule';
+import { periodLimitRule } from '../utils/periodRule';
+import { KpiLineTargetsTable } from './KpiLineTargetsTable';
 
 export type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
 
@@ -28,7 +29,7 @@ function DueTag({ dueDate }: { dueDate: string }) {
 
 /**
  * UC19 — Quản đốc lập / sửa chỉ tiêu KPI tổ may. Một đơn + mã hàng + tổ có nhiều chỉ tiêu nhưng các kỳ không trùng ngày (BE báo
- * nếu trùng); các chỉ tiêu cộng lại không vượt số lượng đơn đặt. Kỳ kết thúc sau hoặc sát ngày giao hàng chỉ cảnh báo, vẫn lưu
+ * nếu trùng); chỉ tiêu nhập theo từng màu × size tổ được chia, các tổ cộng lại không vượt số đặt của từng màu × size. Kỳ kết thúc sau hoặc sát ngày giao hàng chỉ cảnh báo, vẫn lưu
  * được. KPI từng ngày đặt riêng trên lịch KPI. Khi sửa, đơn / mã hàng / tổ không đổi được để khỏi lệch kết quả đã tính.
  */
 export function KpiTargetFormModal({ open, target, onClose }: Props) {
@@ -38,6 +39,13 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
     capacity,
     overCapacity,
     orderClosed,
+    canSave,
+    total,
+    lineQty,
+    lineRows,
+    lineLoading,
+    hasTeam,
+    legacyTotal,
     warning,
     disabledDate,
     orders,
@@ -54,12 +62,12 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
   return (
     <Modal
       open={open}
-      width={MODAL_WIDTH.md}
+      width={MODAL_WIDTH.lg}
       title={editing ? text.editTitle : text.addTitle}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
-      okButtonProps={{ disabled: overCapacity || orderClosed }}
+      okButtonProps={{ disabled: !canSave }}
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
@@ -95,7 +103,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
           <Descriptions
             size="small"
             bordered
-            column={{ xs: 1, md: 2 }}
+            column={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }}
             style={{ marginBottom: 16 }}
             items={[
               {
@@ -177,16 +185,15 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
             style={{ marginBottom: 16 }}
           />
         )}
-        <Form.Item
-          name="targetFinishedQty"
-          label={text.targetFinishedQty}
-          rules={[
-            ...required,
-            { type: 'number', min: 1, message: text.qtyMin },
-            { type: 'number', max: KPI_MAX_QTY, message: text.qtyMax },
-          ]}
-        >
-          <InputNumber min={1} max={KPI_MAX_QTY} precision={0} style={{ width: 200 }} />
+        <Form.Item label={text.lines} required>
+          <KpiLineTargetsTable
+            lines={lineRows}
+            values={lineQty}
+            loading={lineLoading}
+            hasTeam={hasTeam}
+            total={total}
+            legacyTotal={legacyTotal}
+          />
         </Form.Item>
       </Form>
     </Modal>

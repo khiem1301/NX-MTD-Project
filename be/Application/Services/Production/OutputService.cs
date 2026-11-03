@@ -91,7 +91,7 @@ public sealed class OutputService : IOutputService
     {
         var operationIds = keys.Select(k => k.OperationId).Distinct().ToList();
         var workerIds = keys.Select(k => k.WorkerId).Distinct().ToList();
-        var operations = await _uow.Repository<Operation>().Query().AsNoTracking()
+        var operations = await _uow.Repository<Operation>().Query().AsNoTracking().Include(o => o.OperationGroup)
             .Where(o => operationIds.Contains(o.OperationId)).ToDictionaryAsync(o => o.OperationId, ct);
         var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
             .Where(e => workerIds.Contains(e.EmployeeId)).ToDictionaryAsync(e => e.EmployeeId, ct);
@@ -122,7 +122,7 @@ public sealed class OutputService : IOutputService
                 record?.IsOutsideAssignment ?? !assigned.Contains((operationId, workerId)),
                 record?.NoAttendanceWarning ?? false, canEdit, record?.EditDeadline, record?.RowVer,
                 capByKey.TryGetValue((operationId, workerId), out var cap) ? cap.CapQty ?? 0 : 0,
-                cap?.OutputQty ?? 0));
+                cap?.OutputQty ?? 0, operation.OperationGroup?.GroupName));
         }
         return rows;
     }

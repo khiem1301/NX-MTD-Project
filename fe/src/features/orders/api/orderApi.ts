@@ -8,6 +8,9 @@ import type {
   CustomerQuery,
   OrderDetail,
   OrderListItem,
+  OrderOverview,
+  OrderOverviewListItem,
+  OrderOverviewQuery,
   OrderQuery,
   ProductDetail,
   ProductListItem,
@@ -66,6 +69,9 @@ export const orderApi = {
   list: (q: OrderQuery) => get<Paginated<OrderListItem>>(API.customerOrders.base, q),
   nextCode: () => get<string>(API.customerOrders.nextCode),
   get: (id: number) => get<OrderDetail>(API.customerOrders.byId(id)),
+  overviews: (q: OrderOverviewQuery) =>
+    get<Paginated<OrderOverviewListItem>>(API.customerOrders.overviews, q),
+  overview: (id: number) => get<OrderOverview>(API.customerOrders.overviewById(id)),
   create: (body: CreateOrderPayload) => post<number>(API.customerOrders.base, body),
   update: (id: number, body: UpdateOrderPayload) => put<unknown>(API.customerOrders.byId(id), body),
   cancel: (id: number, reason: string | null, rowVer: string) =>

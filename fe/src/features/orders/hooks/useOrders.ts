@@ -6,6 +6,7 @@ import { useProductScope } from './useProductScope';
 import type {
   CreateOrderPayload,
   CustomerQuery,
+  OrderOverviewQuery,
   OrderQuery,
   ProductQuery,
   SaveCustomerPayload,
@@ -115,6 +116,21 @@ export const useOrder = (id: number | null) =>
     queryKey: [...ORDERS_KEY, 'detail', id],
     queryFn: () => orderApi.get(id as number),
     enabled: id !== null,
+  });
+
+/** Quản đốc xem đơn: dữ liệu khác với của Admin nên dùng khóa riêng. */
+export const useOrderOverviews = (query: OrderOverviewQuery) =>
+  useQuery({
+    queryKey: [...ORDERS_KEY, 'overview-list', query],
+    queryFn: () => orderApi.overviews(query),
+    placeholderData: keepPreviousData,
+  });
+
+export const useOrderOverview = (id: number) =>
+  useQuery({
+    queryKey: [...ORDERS_KEY, 'overview', id],
+    queryFn: () => orderApi.overview(id),
+    enabled: Number.isInteger(id),
   });
 
 /** Mã gợi ý chỉ lấy khi mở form tạo đơn; không cache để mã luôn mới. */

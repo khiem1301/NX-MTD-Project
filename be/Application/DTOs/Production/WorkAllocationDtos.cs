@@ -4,10 +4,10 @@ namespace NX_MTD.Application.DTOs;
 
 /// <summary>Một lần giao / thu hồi việc với công nhân (WorkAllocation): số lần làm công đoạn × màu × size.</summary>
 public sealed record WorkAllocationDto(
-    int WorkAllocationId, string MovementType, int SewingTeamId, string TeamName, int WorkerId, string WorkerCode,
+    int WorkAllocationId, DateOnly WorkDate, string MovementType, int SewingTeamId, string TeamName, int WorkerId, string WorkerCode,
     string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode,
     int OperationId, string OperationCode, string OperationName, int Quantity,
-    int? ConfirmedQty, string? DiscrepancyReason, string? RetrievalReason, string ConfirmMode,
+    int? ConfirmedQty, string? DiscrepancyReason, string? RetrievalReason, string? RetrievalNote, string ConfirmMode,
     string? OnBehalfReason, string Status, string? RejectReason, DateTime CreatedAt, DateTime? ConfirmedAt);
 
 /// <summary>Tiến độ chia việc của một công đoạn × dòng đơn (vw_OperationAllocationProgress): cần làm = số bộ BTP tổ đã nhận.</summary>
@@ -42,3 +42,31 @@ public sealed record WorkAllocationQuery : PageQuery
     public int? WorkerId { get; init; }
     public int? OrderId { get; init; }
 }
+
+// ---------- Giao sản lượng công đoạn theo ngày ----------
+
+/// <summary>
+/// Một dòng giao việc của ngày: công nhân × dòng đơn × công đoạn. <c>IsAssigned</c> = công đoạn đã phân công cho công nhân
+/// trước khi bắt đầu may; dòng không có cờ này là công đoạn tổ trưởng thêm ngoài phân công.
+/// </summary>
+/// <param name="AllocatedQty">Số lần giao của ngày (giao − thu hồi), cũng là trần sản lượng cuối ca của ngày.</param>
+/// <param name="OutputQty">Sản lượng cuối ca đã báo của ngày.</param>
+/// <param name="RemainingQty">Phần giao của ngày chưa làm hết, có thể thu hồi (đã chặn theo số công nhân còn giữ).</param>
+/// <param name="UnallocatedQty">Số lần còn giao được của công đoạn × dòng đơn trên toàn tổ.</param>
+public sealed record DailyAllocationRowDto(
+    int WorkerId, string WorkerCode, string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color,
+    string SizeCode, int OperationId, string OperationCode, string OperationName, string? GroupName, bool IsAssigned,
+    int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty);
+
+public sealed record DailyAllocationBoardDto(DateOnly WorkDate, IReadOnlyList<DailyAllocationRowDto> Rows);
+
+/// <param name="Quantity">Số lần giao của ngày sau khi lưu (không phải phần giao thêm). 0 = bỏ phần giao của ngày.</param>
+public sealed record SaveDailyAllocationItem(int WorkerId, int OrderLineId, int OperationId, int Quantity);
+
+/// <param name="Reason">Bắt buộc khi có dòng hạ số giao xuống (ghi vào phiếu thu hồi).</param>
+public sealed record SaveDailyAllocationDto(DateOnly WorkDate, IReadOnlyList<SaveDailyAllocationItem> Items, string? Reason);
+
+/// <param name="WorkerIds">Rỗng = mọi công nhân của tổ.</param>
+public sealed record RetrieveDailyAllocationDto(DateOnly WorkDate, IReadOnlyList<int>? WorkerIds, string Reason);
+
+public sealed record DailyAllocationResultDto(int Added, int Adjusted, int Retrieved);

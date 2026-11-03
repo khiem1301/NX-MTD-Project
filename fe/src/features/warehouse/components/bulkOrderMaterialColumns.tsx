@@ -12,6 +12,8 @@ type Options = {
   materialOptions: MaterialOption[];
   /** Mã NVL đã có trong bảng (dòng cũ + dòng mới) để ô chọn không cho chọn trùng. */
   usedMaterialIds: number[];
+  /** NVL đã định sẵn (thêm theo mã hàng): dòng mới cũng không chọn lại NVL. */
+  lockMaterial?: boolean;
   showErrors: boolean;
   onPatch: (key: string, change: Partial<Draft>) => void;
   onPickMaterial: (key: string, materialId: number) => void;
@@ -27,6 +29,7 @@ const SMALL = { fontSize: 12 };
 export const bulkOrderMaterialColumns = ({
   materialOptions,
   usedMaterialIds,
+  lockMaterial = false,
   showErrors,
   onPatch,
   onPickMaterial,
@@ -52,8 +55,10 @@ export const bulkOrderMaterialColumns = ({
       width: MATERIAL_WIDTH,
       render: (_, line) => (
         <>
-          {line.original ? (
-            <Typography.Text strong>{line.original.materialCode} </Typography.Text>
+          {line.original || lockMaterial ? (
+            <Typography.Text strong>
+              {line.original?.materialCode ?? option(line)?.materialCode}{' '}
+            </Typography.Text>
           ) : (
             <Select
               size="small"

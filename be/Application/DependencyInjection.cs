@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<IDispatchNoteService, DispatchNoteService>();
         services.AddScoped<IWarehouseDocumentExportService, WarehouseDocumentExportService>();   // TH-16
         services.AddScoped<IWorkAllocationService, WorkAllocationService>();
+        services.AddScoped<IDailyWorkAllocationService, DailyWorkAllocationService>();
         services.AddScoped<IMaterialReturnService, MaterialReturnService>();
         services.AddScoped<IStocktakeService, StocktakeService>();
         services.AddScoped<IVehicleService, VehicleService>();
