@@ -1,5 +1,5 @@
 import { SIZE_ORDER } from '@/constants/orderStatus';
-import type { OrderLine, OrderLineInput } from '../types';
+import type { OrderDisplayLine, OrderLineInput } from '../types';
 
 export type GridCell = { orderLineId: number | null; qty: number | null };
 export type GridRow = { key: string; color: string; cells: Record<string, GridCell> };
@@ -21,8 +21,8 @@ export const sortSizes = (sizes: string[]): string[] => {
   return [...new Set(sizes)].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
 };
 
-/** Gom dòng theo (mã hàng, đơn giá): cùng mã hàng nhưng khác giá thành 2 khối, không mất dữ liệu. */
-export const fromLines = (lines: OrderLine[]): ProductBlock[] => {
+/** Gom dòng theo (mã hàng, đơn giá): cùng mã hàng nhưng khác giá thành 2 khối, không mất dữ liệu. Dòng không có giá (Quản đốc) gom theo mã hàng. */
+export const fromLines = (lines: OrderDisplayLine[]): ProductBlock[] => {
   const blocks = new Map<string, ProductBlock>();
   for (const l of lines) {
     const blockKey = `${l.productId}|${l.cmtUnitPrice}`;
@@ -31,7 +31,7 @@ export const fromLines = (lines: OrderLine[]): ProductBlock[] => {
       block = {
         key: blockKey,
         productId: l.productId,
-        cmtUnitPrice: l.cmtUnitPrice,
+        cmtUnitPrice: l.cmtUnitPrice ?? null,
         sizes: [],
         rows: [],
       };

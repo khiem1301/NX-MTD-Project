@@ -85,7 +85,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
                     l.PurchaseOrderLine == null ? null : l.PurchaseOrderLine.UnitPrice, null,
-                    l.AcceptedQty)).ToList()))
+                    l.AcceptedQty, null, null)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<MaterialReceiptDto>();
 
@@ -93,8 +93,59 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             .Where(q => q.MaterialReceiptId == receiptId && q.RequestTypeCode == RequestTypes.ShortDelivery)
             .Select(q => (int?)q.RequestId).FirstOrDefaultAsync(ct);
 
-        dto = await WithReplenishQtyAsync(dto, ct);
+        dto = await WithReplenishQtyAsync(await WithDeliveryProgressAsync(dto, ct), ct);
         return Result<MaterialReceiptDto>.Success(dto with { ShortDeliveryRequestId = shortDeliveryId });
+    }
+
+    /// <summary>
+    /// Mỗi dòng: lần nhận thứ mấy / số lần giao dự kiến, và số còn thiếu sau phiếu này (Cần bù) = đặt − không bù (đơn mua) hoặc khách cấp
+    /// − đã nhận ở các phiếu đã xác nhận trước phiếu này − số phiếu này. Phiếu chưa xác nhận tính mọi phiếu đã xác nhận là "trước".
+    /// </summary>
+    private async Task<MaterialReceiptDto> WithDeliveryProgressAsync(MaterialReceiptDto dto, CancellationToken ct)
+    {
+        var polIds = dto.Lines.Where(l => l.PurchaseOrderLineId != null).Select(l => l.PurchaseOrderLineId!.Value).ToList();
+        var omIds = dto.Lines.Where(l => l.PurchaseOrderLineId == null && l.OrderMaterialId != null)
+            .Select(l => l.OrderMaterialId!.Value).ToList();
+        if (polIds.Count == 0 && omIds.Count == 0) return dto;
+
+        var receiptId = dto.MaterialReceiptId;
+        var confirmedAt = dto.Status == ReceiptStatuses.Confirmed ? dto.ConfirmedAt : null;
+        var earlier = await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+            .Where(l => l.MaterialReceiptId != receiptId && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed
+                        && (confirmedAt == null || l.MaterialReceipt.ConfirmedAt < confirmedAt
+                            || (l.MaterialReceipt.ConfirmedAt == confirmedAt && l.MaterialReceiptId < receiptId))
+                        && ((l.PurchaseOrderLineId != null && polIds.Contains(l.PurchaseOrderLineId.Value))
+                            || (l.PurchaseOrderLineId == null && l.OrderMaterialId != null && omIds.Contains(l.OrderMaterialId.Value))))
+            .Select(l => new { l.PurchaseOrderLineId, l.OrderMaterialId, l.MaterialReceiptId, l.AcceptedQty })
+            .ToListAsync(ct);
+        var purchaseLines = await _uow.Repository<PurchaseOrderLine>().Query().AsNoTracking()
+            .Where(p => polIds.Contains(p.PurchaseOrderLineId))
+            .Select(p => new { p.PurchaseOrderLineId, Expected = p.OrderedQty - p.NotReplenishedQty, p.PurchaseOrder.ExpectedDeliveryCount })
+            .ToDictionaryAsync(p => p.PurchaseOrderLineId, ct);
+        var materials = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(m => omIds.Contains(m.OrderMaterialId))
+            .Select(m => new { m.OrderMaterialId, Expected = m.CustomerQty, m.ExpectedDeliveryCount })
+            .ToDictionaryAsync(m => m.OrderMaterialId, ct);
+
+        return dto with
+        {
+            Lines = dto.Lines.Select(l =>
+            {
+                var (expected, count, before) = l.PurchaseOrderLineId is { } pol && purchaseLines.TryGetValue(pol, out var p)
+                    ? (p.Expected, p.ExpectedDeliveryCount, earlier.Where(e => e.PurchaseOrderLineId == pol).ToList())
+                    : l.PurchaseOrderLineId == null && l.OrderMaterialId is { } om && materials.TryGetValue(om, out var m)
+                        ? (m.Expected, m.ExpectedDeliveryCount,
+                            earlier.Where(e => e.PurchaseOrderLineId == null && e.OrderMaterialId == om).ToList())
+                        : (0m, (short?)null, null);
+                if (before is null) return l;
+                return l with
+                {
+                    ToReplenishQty = Math.Max(0m, expected - before.Sum(e => e.AcceptedQty) - l.AcceptedQty),
+                    DeliveryNo = before.Select(e => e.MaterialReceiptId).Distinct().Count() + 1,
+                    ExpectedDeliveryCount = count ?? 1,
+                };
+            }).ToList(),
+        };
     }
 
     /// <summary>Phiếu bổ sung: số cần bù của từng dòng = ReplenishQty Quản đốc đã chọn trên đơn thiếu NVL.</summary>

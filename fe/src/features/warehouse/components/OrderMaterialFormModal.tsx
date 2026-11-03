@@ -19,6 +19,8 @@ type OrderMaterialFormModalProps = {
   open: boolean;
   orderId: number;
   orderMaterial: OrderMaterial | null;
+  /** NVL đơn đã khai báo: không cho chọn lại vì mỗi NVL chỉ có một dòng trong đơn. */
+  declared: OrderMaterial[];
   onClose: () => void;
 };
 
@@ -28,6 +30,7 @@ export function OrderMaterialFormModal({
   open,
   orderId,
   orderMaterial,
+  declared,
   onClose,
 }: OrderMaterialFormModalProps) {
   const [form] = Form.useForm<FormValues>();
@@ -58,10 +61,16 @@ export function OrderMaterialFormModal({
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
 
-  const materialOptions = (materials.data ?? []).map((m) => ({
-    value: m.materialId,
-    label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
-  }));
+  const materialOptions = (materials.data ?? [])
+    .filter(
+      (m) =>
+        m.materialId === orderMaterial?.materialId ||
+        !declared.some((om) => om.materialId === m.materialId),
+    )
+    .map((m) => ({
+      value: m.materialId,
+      label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+    }));
   if (orderMaterial && !materialOptions.some((o) => o.value === orderMaterial.materialId)) {
     materialOptions.push({
       value: orderMaterial.materialId,
@@ -77,7 +86,7 @@ export function OrderMaterialFormModal({
       title={
         orderMaterial
           ? `${MESSAGES.common.edit} ${orderMaterial.materialCode}`
-          : MESSAGES.common.create
+          : LABELS.addExternalMaterial
       }
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}

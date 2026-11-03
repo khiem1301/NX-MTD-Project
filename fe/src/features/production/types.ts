@@ -224,6 +224,8 @@ export type OutputGridRow = {
   operationId: number;
   operationCode: string;
   operationName: string;
+  /** Nhóm công đoạn; nhập sản lượng nhóm sẽ điền cho mọi công đoạn trong nhóm. */
+  groupName?: string | null;
   workerId: number;
   workerCode: string;
   workerName: string;

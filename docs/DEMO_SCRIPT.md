@@ -38,7 +38,7 @@ Kho đã có tồn qua thẻ kho (tồn vải Đen 650 m, giữ chỗ 150 m; BTP
 
 ### Dữ liệu để test đủ chức năng (mục 19.7 của script)
 
-DB đang có sẵn thì chạy `SQL/patches/2026-11-02_demo_full_test_data.sql`, rồi khởi động lại backend để băm mật khẩu tài khoản mới. Script chỉ thêm dữ liệu, chạy lại không nhân đôi. Các việc dưới đây đã có sẵn dữ liệu để bấm thử:
+DB đang có sẵn thì chạy `sqlcmd -S localhost -E -C -I -f 65001 -d NXMTD -i SQL/patches/2026-11-02_demo_full_test_data.sql`, rồi khởi động lại backend để băm mật khẩu tài khoản mới. Script chỉ thêm dữ liệu, chạy lại không nhân đôi. Các việc dưới đây đã có sẵn dữ liệu để bấm thử:
 
 | Chức năng | Ai | Dữ liệu | Cách thử |
 |---|---|---|---|
@@ -77,7 +77,7 @@ Giao việc: vào **Giao việc** (`TTMAY`), chọn đơn DEMO-DH003 → mỗi c
 | 3 | Quản đốc / Thủ kho | Đặt hàng đơn mua với **số lần NCC giao dự kiến = 2**; Thủ kho lập phiếu nhập lần 1 và đính kèm ảnh chứng từ; Quản đốc xác nhận. Lập tiếp lần 2 còn thiếu | Đơn mua NVL, NVL chờ nhận, Phiếu nhập NVL | NVL chờ nhận hiện "đã nhận / dự kiến"; Quản đốc không xác nhận được khi chưa có ảnh; sau lần giao cuối còn thiếu thì tự sinh "Thiếu NVL khi nhập" |
 | 4 | Quản đốc | Chọn giao bù cho đơn thiếu; Thủ kho lập phiếu bổ sung | Thiếu NVL khi nhập | Đủ hàng bù thì đơn thiếu tự hoàn thành, đơn mua thành "Đã nhận đủ" |
 | 5 | Tổ trưởng cắt | Ghi bàn cắt, bàn giao BTP vào kho (có thể rút phiếu khi Thủ kho chưa nhận) | Bàn cắt, Bàn giao BTP | Thủ kho nhận → tồn kho BTP tăng; Quản đốc đặt KPI không vượt BTP trong kho, và đóng lệnh cắt ở chi tiết lệnh |
-| 6 | Tổ trưởng may | Chọn đơn ở bảng chia việc, bấm Giao ở từng công đoạn (số lần làm, tối đa số bộ BTP tổ đã nhận); công nhân xác nhận | Giao việc cho công nhân, Việc được giao cho tôi | Công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (có lý do); chưa được giao việc thì không báo sản lượng được |
+| 6 | Tổ trưởng may | Chọn ngày, đơn, mở từng công nhân và nhập số lần giao của ngày (công đoạn đã phân công lấy sẵn, thêm được công đoạn ngoài phân công; tối đa số bộ BTP tổ đã nhận); cuối ngày bấm Thu hồi cuối ngày kèm lý do | Giao sản lượng theo ngày, Sản lượng công đoạn được giao | Phiếu của tổ trưởng có hiệu lực ngay; chưa được giao việc thì không báo sản lượng được; phần chưa làm hết bị thu hồi (hệ thống tự thu sau hạn sửa sản lượng) |
 | 7 | Tổ trưởng may | Nhập sản lượng cuối ca | Sản lượng cuối ca | Vượt số lần được giao ở công đoạn đó thì bị chặn (MSG16) |
 | 8 | QA/QC | Nhập đợt QC, rồi lập phiếu bàn giao thành phẩm; Thủ kho nhận | Kiểm hoàn thiện, Bàn giao thành phẩm | Kho thành phẩm tăng đúng số Thủ kho đếm |
 | 9 | Quản đốc → Thủ kho → Kế toán | Lập phiếu xuất, xuất hàng, xác nhận khách nhận | Phiếu xuất hàng | Đơn chuyển Đang giao → Giao một phần / Đã giao |

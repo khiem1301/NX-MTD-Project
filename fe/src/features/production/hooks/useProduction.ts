@@ -275,7 +275,12 @@ type SaveWorkerOperationsPayload = {
 /** Lưu một lần phần thay đổi công đoạn của một công nhân: thêm theo lô, rồi đóng từng phân công bị bỏ tích. */
 export const useSaveWorkerOperations = () =>
   useApiMutation(
-    async ({ orderId, workerId, addOperationIds, closeAssignmentIds }: SaveWorkerOperationsPayload) => {
+    async ({
+      orderId,
+      workerId,
+      addOperationIds,
+      closeAssignmentIds,
+    }: SaveWorkerOperationsPayload) => {
       if (addOperationIds.length > 0)
         await productionApi.assignMany({ orderId, workerId, operationIds: addOperationIds });
       for (const id of closeAssignmentIds) await productionApi.closeAssignment(id);

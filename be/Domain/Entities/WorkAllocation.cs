@@ -10,6 +10,9 @@ public partial class WorkAllocation
 {
     public int WorkAllocationId { get; set; }
 
+    /// <summary>Ngày làm việc của phiếu: giao việc của ngày nào thì là trần sản lượng cuối ca của ngày đó.</summary>
+    public DateOnly WorkDate { get; set; }
+
     public string MovementType { get; set; } = null!;
 
     public int SewingTeamId { get; set; }
@@ -27,6 +30,8 @@ public partial class WorkAllocation
     public string? DiscrepancyReason { get; set; }
 
     public string? RetrievalReason { get; set; }
+
+    public string? RetrievalNote { get; set; }
 
     public string ConfirmMode { get; set; } = null!;
 

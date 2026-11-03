@@ -8,7 +8,8 @@ import type {
   AllocationQuery,
   ConfirmAllocationPayload,
   ConfirmOnBehalfPayload,
-  CreateAllocationPayload,
+  RetrieveDailyPayload,
+  SaveDailyPayload,
 } from '../types';
 
 export const PM_KEY = ['piece-movement'] as const;
@@ -32,10 +33,23 @@ export const useBoard = (orderId: number | undefined) =>
     enabled: orderId !== undefined,
   });
 
-export const useCreateAllocation = () =>
-  useApiMutation((body: CreateAllocationPayload) => pieceMovementApi.create(body), {
+export const useDailyBoard = (workDate: string, orderId: number | undefined) =>
+  useQuery({
+    queryKey: [...PM_KEY, 'daily', workDate, orderId],
+    queryFn: () => pieceMovementApi.daily(workDate, orderId as number),
+    enabled: orderId !== undefined,
+  });
+
+export const useSaveDaily = () =>
+  useApiMutation((body: SaveDailyPayload) => pieceMovementApi.saveDaily(body), {
     invalidate: AFFECTED,
-    successMessage: PM_MESSAGES.created,
+    successMessage: PM_MESSAGES.dailySaved,
+  });
+
+export const useRetrieveRemaining = () =>
+  useApiMutation((body: RetrieveDailyPayload) => pieceMovementApi.retrieveRemaining(body), {
+    invalidate: AFFECTED,
+    successMessage: PM_MESSAGES.dailyRetrieved,
   });
 
 export const useConfirmOnBehalf = () =>

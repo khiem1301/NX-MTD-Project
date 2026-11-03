@@ -37,6 +37,24 @@ public sealed class OutputQueryService : IOutputQueryService
         return totals.ToDictionary(x => x.KpiTargetId, x => x.Total);
     }
 
+    public async Task<IReadOnlyDictionary<(int KpiTargetId, int OrderLineId), int>> GetKpiLineFinishedAsync(
+        IReadOnlyCollection<int> kpiTargetIds, CancellationToken ct)
+    {
+        if (kpiTargetIds.Count == 0) return new Dictionary<(int, int), int>();
+        var ids = kpiTargetIds.ToList();
+        // Cùng cách đếm với vw_KpiDailyResult: QC của tổ, đúng đơn + mã hàng, trong kỳ của chỉ tiêu.
+        var rows = await (
+                from k in _uow.Repository<KpiTarget>().Query().AsNoTracking()
+                where ids.Contains(k.KpiTargetId)
+                join b in _uow.Repository<QcBatch>().Query().AsNoTracking() on k.SewingTeamId equals b.SewingTeamId
+                join l in _uow.Repository<OrderLine>().Query().AsNoTracking() on b.OrderLineId equals l.OrderLineId
+                where l.OrderId == k.OrderId && l.ProductId == k.ProductId && b.WorkDate >= k.StartDate && b.WorkDate <= k.EndDate
+                group b by new { k.KpiTargetId, b.OrderLineId } into g
+                select new { g.Key.KpiTargetId, g.Key.OrderLineId, Qty = g.Sum(b => b.FinishedQty) })
+            .ToListAsync(ct);
+        return rows.ToDictionary(r => (r.KpiTargetId, r.OrderLineId), r => r.Qty);
+    }
+
     public async Task<IReadOnlyList<KpiDailyResultDto>> GetKpiDailyResultsAsync(int kpiTargetId, CancellationToken ct) =>
         await _uow.Repository<VwKpiDailyResult>().Query().AsNoTracking()
             .Where(v => v.KpiTargetId == kpiTargetId)

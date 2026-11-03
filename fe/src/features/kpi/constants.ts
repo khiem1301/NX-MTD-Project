@@ -43,6 +43,23 @@ export const KPI_TEXT = {
     capacityAssigned: 'Đã giao ở các chỉ tiêu khác',
     capacityMax: 'Tối đa lập được',
     capacityExceeds: 'Chỉ tiêu vượt số lượng đơn đặt, chưa lưu được.',
+    lines: 'Chỉ tiêu theo màu × size',
+    linesPickTeam: 'Chọn tổ may để nhập chỉ tiêu cho từng màu × size tổ được chia.',
+    linesEmpty: 'Tổ chưa được chia màu × size nào của mã hàng này.',
+    linesLegacy:
+      'Chỉ tiêu này lập trước khi chia theo màu × size (tổng {0}). Nhập số cho từng màu × size rồi lưu lại.',
+    lineColor: 'Màu',
+    lineSize: 'Size',
+    lineOrdered: 'Số đặt',
+    lineAssigned: 'Đã giao tổ khác',
+    lineMax: 'Tối đa',
+    lineActual: 'Đã làm',
+    lineTarget: 'Chỉ tiêu',
+    lineInput: 'Chỉ tiêu màu {0}, size {1}',
+    lineExceeds: 'Vượt số còn lại của màu × size',
+    lineBelowActual: 'Không nhỏ hơn số đã làm ({0})',
+    linesTotal: 'Chỉ tiêu cả kỳ (tổng các màu × size)',
+    linesRequired: 'Nhập chỉ tiêu cho ít nhất một màu × size.',
   },
 
   calendar: {
@@ -96,6 +113,11 @@ export const KPI_TEXT = {
     progress: 'Tiến độ (thực tế / chỉ tiêu)',
     progressValue: '{0} / {1} ({2}%)',
     status: 'Trạng thái',
+    lines: 'Màu × size',
+    lineCount: '{0} màu × size',
+    noLines: 'Chưa chia',
+    noLinesHint: 'Chỉ tiêu lập trước khi chia theo màu × size, chỉ có số tổng.',
+    lineValue: '{0} / {1}',
   },
 
   finish: {

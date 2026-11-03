@@ -32,6 +32,8 @@ public partial class KpiTarget
 
     public virtual ICollection<KpiDailyTarget> KpiDailyTargets { get; set; } = new List<KpiDailyTarget>();
 
+    public virtual ICollection<KpiTargetLine> KpiTargetLines { get; set; } = new List<KpiTargetLine>();
+
     public virtual CustomerOrder Order { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;

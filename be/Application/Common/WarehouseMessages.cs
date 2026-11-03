@@ -117,6 +117,7 @@ public static class WarehouseMessages
     public const string FabricRequired = "Vui lòng chọn vải của bàn cắt.";
     public const string OrderMaterialDuplicateOf = "Đơn hàng đã có NVL {0}; hãy sửa dòng đó thay vì thêm mới.";
     public const string OrderMaterialQtyRequired = "Phải nhập số cần hoặc số khách cấp lớn hơn 0.";
+    public const string OrderMaterialLinesRequired = "Phải có ít nhất một NVL.";
 
     public const string LayQtyExceedsPlan = "Số cắt vượt số kế hoạch + % dư cho phép";
     public const string LayQtyOverPlanWarning = "Đã lưu. Lưu ý: số cắt vượt số kế hoạch (vẫn trong % dư cho phép).";
@@ -145,6 +146,16 @@ public static class WarehouseMessages
     public const string DispatchRejected = "Đã từ chối phiếu xuất hàng, số giữ chỗ đã được nhả.";
     public const string DispatchDelivered = "Đã xác nhận khách nhận hàng.";
     public const string DispatchReceivedExceedsIssued = "Số khách nhận không được lớn hơn số đã xuất.";
+    public const string DailyItemsRequired = "Chưa có dòng giao việc nào.";
+    public const string DailyTooManyItems = "Mỗi lần lưu tối đa 500 dòng, hãy bỏ bớt.";
+    public const string DailyDuplicateItems = "Một công nhân, dòng đơn, công đoạn chỉ được nhập một dòng.";
+    public const string DailyQtyRange = "Số lần giao phải từ 0 đến 100.000.";
+    public const string DailyDateInFuture = "Chỉ giao việc cho hôm nay hoặc các ngày đã qua.";
+    public const string DailyReasonRequired = "Hạ số giao xuống phải ghi lý do.";
+    public const string DailyExceedsUnallocated = "Số giao vượt số lần còn giao được của công đoạn";
+    public const string DailyBelowOutput = "Số giao của ngày không được nhỏ hơn sản lượng công nhân đã báo";
+    public const string DailyNothingToRetrieve = "Không có phần việc nào chưa làm hết để thu hồi.";
+    public const string DailyAutoRetrieveNote = "Hệ thống tự thu hồi: cuối ngày công nhân chưa làm hết phần được giao.";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
     public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải (đã gồm màu) của bàn cắt.";

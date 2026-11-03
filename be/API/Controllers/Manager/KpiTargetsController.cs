@@ -45,6 +45,12 @@ public sealed class KpiTargetsController : ManagerBaseController
         [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
         this.ToResponse(await _kpi.GetOrderCapacityAsync(orderId, productId, exceptKpiTargetId, ct));
 
+    /// <summary>Các màu × size của mã hàng đã chia cho tổ và số đặt được của từng dòng, cho form lập KPI.</summary>
+    [HttpGet("line-capacity")]
+    public async Task<IActionResult> GetLineCapacity([FromQuery] int orderId, [FromQuery] int productId,
+        [FromQuery] int sewingTeamId, [FromQuery] int? exceptKpiTargetId, CancellationToken ct) =>
+        this.ToResponse(await _kpi.GetLineCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
+
     /// <summary>Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng.</summary>
     [HttpGet("{id:int}/calendar")]
     public async Task<IActionResult> GetCalendar(int id, CancellationToken ct) =>

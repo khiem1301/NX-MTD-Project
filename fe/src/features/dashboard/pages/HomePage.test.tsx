@@ -3,7 +3,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { HomePage } from './HomePage';
 
 jest.mock('@/hooks/useAuth', () => ({ useAuth: jest.fn() }));
-jest.mock('../components/OrderProgressPanel', () => ({ OrderProgressPanel: () => <div>tiến độ</div> }));
+jest.mock('../components/OrderProgressPanel', () => ({
+  OrderProgressPanel: () => <div>tiến độ</div>,
+}));
 jest.mock('@/features/revenue', () => ({ RevenuePanel: () => <div>doanh thu</div> }));
 jest.mock('@/features/kpi', () => ({ TeamKpiPanel: () => <div>kpi của tổ</div> }));
 

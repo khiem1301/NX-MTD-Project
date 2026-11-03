@@ -30,6 +30,8 @@ public class KpiServiceTests
     private bool _allottedToAllTeams = true;
     private readonly List<VwKpiDailyResult> _dailyResults = [];
     private readonly List<KpiDailyTarget> _days = [];
+    private readonly List<KpiTargetLine> _kpiLines = [];
+    private readonly List<QcBatch> _qc = [];
     private readonly KpiService _sut;
 
     public KpiServiceTests()
@@ -45,6 +47,15 @@ public class KpiServiceTests
             : new List<OrderLineTeam>()).AsTestAsyncQueryable());
         _uow.Repository<OrderLineTeam>().Returns(allotments);
         SetupQueryable(_dailyResults);
+        SetupQueryable(_qc);
+        var lineRepo = SetupQueryable(_kpiLines);
+        lineRepo.AddRangeAsync(Arg.Do<IEnumerable<KpiTargetLine>>(lines => lines.ToList().ForEach(x =>
+        {
+            x.OrderLine = _orderLines.First(l => l.OrderLineId == x.OrderLineId);
+            _kpiLines.Add(x);
+        }))).Returns(Task.CompletedTask);
+        lineRepo.When(r => r.RemoveRange(Arg.Any<IEnumerable<KpiTargetLine>>()))
+            .Do(c => c.Arg<IEnumerable<KpiTargetLine>>().ToList().ForEach(x => _kpiLines.Remove(x)));
         SetupQueryable(_days).When(r => r.RemoveRange(Arg.Any<IEnumerable<KpiDailyTarget>>()))
             .Do(c => c.Arg<IEnumerable<KpiDailyTarget>>().ToList().ForEach(d => _days.Remove(d)));
 
@@ -99,7 +110,7 @@ public class KpiServiceTests
 
     private static SaveKpiTargetDto Dto(int orderId = 1, int productId = 1, int teamId = 1, DateOnly? start = null,
         DateOnly? end = null, int targetQty = 1000) =>
-        new(orderId, productId, teamId, start ?? Start, end ?? End, targetQty);
+        new(orderId, productId, teamId, start ?? Start, end ?? End, [new SaveKpiTargetLineDto(orderId * 1000 + productId, targetQty)]);
 
     private void GivenSetup()
     {
@@ -356,7 +367,7 @@ public class KpiServiceTests
         var result = await _sut.CreateAsync(Dto(targetQty: 1001), CancellationToken.None);
 
         result.ErrorCode.Should().Be(ErrorCodes.KpiExceedsOrderQty);
-        result.Message.Should().Be(string.Format(Messages.KpiExceedsOrderQty, 1000, 0, 1000));
+        result.Message.Should().Be(string.Format(Messages.KpiLineExceedsOrderQty, "Đen", "M", 1000, 0, 1000));   // dòng duy nhất của mã hàng
         _kpiTargets.Should().BeEmpty();
     }
 
@@ -418,6 +429,100 @@ public class KpiServiceTests
         await _uow.Received(2).SaveChangesAsync();   // lưu chỉ tiêu (lấy Id) rồi lưu AuditLog, cùng transaction
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
             e.TableName == nameof(KpiTarget) && e.Action == AuditActions.Insert && e.OldValues == null));
+    }
+
+    // ---------- Chỉ tiêu theo màu × size (DEV-ALL-62) ----------
+
+    /// <summary>Mã hàng 1 của đơn 1 có hai dòng: Đen M (đặt 600, id 11) và Trắng L (đặt 400, id 12).</summary>
+    private void GivenTwoColorLines()
+    {
+        _orders.Add(Order());
+        _products.Add(Product());
+        _teams.Add(SewingTeam());
+        _teams.Add(SewingTeam(2, "Tổ may 2"));
+        _orderLines.Add(new OrderLine { OrderLineId = 11, OrderId = 1, OrderedQty = 600 }.WithVariant(TestVariant.Make(1, color: "Đen", size: "M")));
+        _orderLines.Add(new OrderLine { OrderLineId = 12, OrderId = 1, OrderedQty = 400 }.WithVariant(TestVariant.Make(1, color: "Trắng", size: "L")));
+    }
+
+    private static SaveKpiTargetDto LinesDto(int teamId, params SaveKpiTargetLineDto[] lines) => new(1, 1, teamId, Start, End, lines);
+
+    [Fact]
+    public async Task CreateAsync_WithColorSizeLines_SavesLinesAndTotalIsTheirSum()
+    {
+        GivenTwoColorLines();
+
+        var result = await _sut.CreateAsync(LinesDto(1, new(11, 300), new(12, 200)), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.TargetFinishedQty.Should().Be(500);
+        result.Data.Lines.Should().BeEquivalentTo([
+            new KpiTargetLineDto(11, "Đen", "M", 300, 0), new KpiTargetLineDto(12, "Trắng", "L", 200, 0)]);
+        _kpiLines.Should().OnlyContain(x => x.KpiTargetId == result.Data.KpiTargetId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_LineAboveWhatOtherTeamsLeft_IsRejectedWithColorAndSize()
+    {
+        GivenTwoColorLines();
+        (await _sut.CreateAsync(LinesDto(1, new SaveKpiTargetLineDto(11, 500)), default)).IsSuccess.Should().BeTrue();
+
+        var over = await _sut.CreateAsync(LinesDto(2, new(11, 101), new(12, 100)), default);
+
+        over.ErrorCode.Should().Be(ErrorCodes.KpiExceedsOrderQty);
+        over.Message.Should().Be(string.Format(Messages.KpiLineExceedsOrderQty, "Đen", "M", 600, 500, 100));
+        (await _sut.CreateAsync(LinesDto(2, new(11, 100), new(12, 400)), default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CreateAsync_LineOfAnotherProductOrNotAllotted_IsRejected()
+    {
+        GivenTwoColorLines();
+
+        var result = await _sut.CreateAsync(LinesDto(1, new(11, 10), new(99, 10)), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.KpiInvalidReference);
+        result.Message.Should().Be(Messages.KpiLineNotAllotted);
+        _kpiTargets.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task LineCapacity_ClosedTargetCountsQcOfTheLine_CancelledDoesNotCount()
+    {
+        GivenTwoColorLines();
+        _kpiTargets.Add(Target(1, 1, 1, 2, Start, End, targetQty: 300, status: KpiStatuses.Closed));
+        _kpiTargets.Add(Target(2, 1, 1, 2, End.AddDays(1), End.AddDays(5), targetQty: 400, status: KpiStatuses.Cancelled));
+        _kpiLines.Add(new KpiTargetLine { KpiTargetId = 1, OrderLineId = 11, TargetQty = 300 });
+        _kpiLines.Add(new KpiTargetLine { KpiTargetId = 2, OrderLineId = 11, TargetQty = 400 });
+        _qc.Add(new QcBatch { SewingTeamId = 2, OrderLineId = 11, WorkDate = Start.AddDays(3), FinishedQty = 120 });
+        _qc.Add(new QcBatch { SewingTeamId = 2, OrderLineId = 11, WorkDate = End.AddDays(1), FinishedQty = 999 });   // ngoài kỳ
+
+        var lines = (await _sut.GetLineCapacityAsync(1, 1, 1, null, default)).Data!;
+
+        lines.Should().BeEquivalentTo([
+            new KpiLineCapacityDto(11, "Đen", "M", 600, 120, 480, 0), new KpiLineCapacityDto(12, "Trắng", "L", 400, 0, 400, 0)]);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_LineCannotGoBelowItsQcOrBeDropped_AndLinesAreReplaced()
+    {
+        GivenTwoColorLines();
+        _clock.Today.Returns(new DateOnly(2026, 10, 15));
+        _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 300, order: _orders[0], product: _products[0], team: _teams[0]));
+        _kpiLines.Add(new KpiTargetLine { KpiTargetId = 1, OrderLineId = 11, TargetQty = 300, OrderLine = _orderLines[0] });
+        _qc.Add(new QcBatch { SewingTeamId = 1, OrderLineId = 11, WorkDate = new DateOnly(2026, 10, 5), FinishedQty = 50 });
+
+        var below = await _sut.UpdateAsync(1, LinesDto(1, new(11, 49), new(12, 100)), default);
+        below.ErrorCode.Should().Be(ErrorCodes.KpiPlanInvalid);
+        below.Message.Should().Be(string.Format(Messages.KpiLineBelowActual, "Đen", "M", 50));
+        (await _sut.UpdateAsync(1, LinesDto(1, new SaveKpiTargetLineDto(12, 100)), default)).Message
+            .Should().Be(string.Format(Messages.KpiLineBelowActual, "Đen", "M", 50));
+
+        var ok = await _sut.UpdateAsync(1, LinesDto(1, new(11, 50), new(12, 100)), default);
+
+        ok.IsSuccess.Should().BeTrue();
+        ok.Data!.TargetFinishedQty.Should().Be(150);
+        ok.Data.Lines.Should().BeEquivalentTo([
+            new KpiTargetLineDto(11, "Đen", "M", 50, 50), new KpiTargetLineDto(12, "Trắng", "L", 100, 0)]);
     }
 
     // ---------- UpdateAsync ----------
@@ -700,24 +805,51 @@ public class SaveKpiTargetDtoValidatorTests
 {
     private readonly SaveKpiTargetDtoValidator _validator = new();
 
+    private static IReadOnlyList<SaveKpiTargetLineDto> L(int qty) => [new SaveKpiTargetLineDto(1, qty)];
+
+    private SaveKpiTargetDto WithLines(params SaveKpiTargetLineDto[] lines) =>
+        new(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), lines);
+
+    [Fact]
+    public void Lines_MustHaveAtLeastOne_NoDuplicate_AndSumWithinMax()
+    {
+        _validator.Validate(WithLines()).Errors.Should().ContainSingle(e => e.ErrorMessage == Messages.KpiLinesRequired);
+        _validator.Validate(WithLines(new(1, 10), new(1, 20))).Errors
+            .Should().ContainSingle(e => e.ErrorMessage == Messages.KpiLineDuplicate);
+        _validator.Validate(WithLines(new(1, 600_000), new(2, 400_000))).IsValid.Should().BeTrue();
+        _validator.Validate(WithLines(new(1, 600_000), new(2, 400_001))).Errors
+            .Should().ContainSingle(e => e.ErrorMessage == Messages.KpiTargetQtyMax);
+        _validator.Validate(WithLines(new(1, int.MaxValue), new(2, int.MaxValue))).IsValid.Should().BeFalse();   // tổng không tràn INT
+    }
+
+    [Fact]
+    public void Lines_NullOrTooMany_AreRejectedWithoutThrowing()
+    {
+        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), null!))
+            .IsValid.Should().BeFalse();
+        _validator.Validate(WithLines(null!)).IsValid.Should().BeFalse();
+        var many = Enumerable.Range(1, KpiLimits.MaxLines + 1).Select(i => new SaveKpiTargetLineDto(i, 1)).ToArray();
+        _validator.Validate(WithLines(many)).Errors.Should().ContainSingle(e => e.ErrorMessage == Messages.KpiLinesTooMany);
+    }
+
     [Fact]
     public void Valid_HasNoError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000))
+        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), L(1000)))
             .ShouldNotHaveAnyValidationErrors();
 
     [Fact]
     public void EndDateBeforeStartDate_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 1), 1000))
+        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 1), L(1000)))
             .ShouldHaveValidationErrorFor(x => x.EndDate);
 
     [Fact]
     public void NonPositiveTargetQty_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 0))
-            .ShouldHaveValidationErrorFor(x => x.TargetFinishedQty);
+        _validator.TestValidate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), L(0)))
+            .ShouldHaveValidationErrorFor("Lines[0]");
 
     [Fact]
     public void MissingOrder_HasError() =>
-        _validator.TestValidate(new SaveKpiTargetDto(0, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), 1000))
+        _validator.TestValidate(new SaveKpiTargetDto(0, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), L(1000)))
             .ShouldHaveValidationErrorFor(x => x.OrderId);
 
     [Theory]
@@ -728,7 +860,7 @@ public class SaveKpiTargetDtoValidatorTests
     [InlineData(1_000_001, false)]
     [InlineData(int.MaxValue, false)]
     public void TargetQty_Boundaries(int qty, bool valid) =>
-        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), qty))
+        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 31), L(qty)))
             .IsValid.Should().Be(valid);
 
     [Theory]
@@ -739,14 +871,14 @@ public class SaveKpiTargetDtoValidatorTests
     public void Period_IsLimitedTo366Days(int extraDays, bool valid)
     {
         var start = new DateOnly(2026, 11, 2);
-        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, start, start.AddDays(Math.Min(extraDays, 2_000_000)), 1000))
+        _validator.Validate(new SaveKpiTargetDto(1, 1, 1, start, start.AddDays(Math.Min(extraDays, 2_000_000)), L(1000)))
             .IsValid.Should().Be(valid);
     }
 
     [Fact]
     public void MissingDates_AreReportedWithoutThrowing()
     {
-        var result = _validator.Validate(new SaveKpiTargetDto(1, 1, 1, default, default, 1000));
+        var result = _validator.Validate(new SaveKpiTargetDto(1, 1, 1, default, default, L(1000)));
         result.IsValid.Should().BeFalse();
     }
 }

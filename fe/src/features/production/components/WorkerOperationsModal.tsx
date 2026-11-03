@@ -70,7 +70,10 @@ const columns: ColumnsType<AssignmentRow> = [
     width: 110,
     align: 'center',
     render: (_, row) => (
-      <Tag color={row.assignments.length === 0 ? 'orange' : 'default'} style={{ marginInlineEnd: 0 }}>
+      <Tag
+        color={row.assignments.length === 0 ? 'orange' : 'default'}
+        style={{ marginInlineEnd: 0 }}
+      >
         {row.assignments.length}
       </Tag>
     ),

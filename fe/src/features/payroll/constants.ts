@@ -12,7 +12,7 @@ export const PAYROLL_TEXT = {
   myPayslipPageSubtitle: 'Chỉ xem được phiếu lương của tháng đã được Admin duyệt.',
 
   estimatedPay: {
-    pageTitle: 'Sản lượng và lương tạm tính',
+    pageTitle: 'Sản lượng ước tính',
     pageSubtitle:
       'Số liệu tạm tính theo sản lượng đã nhập, không phải lương chính thức. Lương chính thức xem ở Phiếu lương của tôi sau khi Admin duyệt.',
     estimateTag: 'Tạm tính',
@@ -23,22 +23,22 @@ export const PAYROLL_TEXT = {
       output: 'Sản lượng',
       outputAmount: 'Tiền sản phẩm',
       sundayBonus: 'Thưởng Chủ nhật',
-      scrap: 'Trừ hàng hỏng (Scrap)',
+      scrap: 'Trừ hàng hủy',
       estimatedPay: 'Lương tạm tính',
     },
     columns: {
       date: 'Ngày',
       output: 'Sản lượng',
-      scrap: 'Scrap',
+      scrap: 'Hàng hủy',
       outputAmount: 'Tiền sản phẩm',
       sundayBonus: 'Thưởng CN',
-      scrapAmount: 'Trừ Scrap',
+      scrapAmount: 'Trừ hàng hủy',
       estimatedPay: 'Tạm tính',
       sunday: 'Chủ nhật',
     },
     detail: {
       outputs: 'Sản lượng theo công đoạn',
-      scraps: 'Hàng hỏng bị trừ',
+      scraps: 'Hàng hủy bị trừ',
       operation: 'Công đoạn',
       shift: 'Ca',
       order: 'Đơn hàng',

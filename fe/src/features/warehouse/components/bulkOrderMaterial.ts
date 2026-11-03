@@ -40,6 +40,21 @@ export const toLine = (om: OrderMaterial): BulkLine => ({
   draft: toDraft(om),
 });
 
+/** Khách không cấp thì không có số lần giao (CK_OM_Delivery). */
+export const applyDraftChange = (draft: Draft, change: Partial<Draft>): Draft => {
+  const next = { ...draft, ...change };
+  return next.customerQty > 0 ? next : { ...next, expectedDeliveryCount: null };
+};
+
+/** Dữ liệu gửi API của một dòng đã chọn NVL. */
+export const toLinePayload = (line: BulkLine) => ({
+  materialId: line.materialId as number,
+  requiredQty: line.draft.requiredQty,
+  customerQty: line.draft.customerQty,
+  expectedDeliveryCount: line.draft.customerQty > 0 ? line.draft.expectedDeliveryCount : null,
+  note: line.draft.note.trim() || undefined,
+});
+
 /** Dòng cần gửi lên: NVL mới thêm, hoặc NVL cũ có thay đổi so với bản gốc. */
 export const isChanged = (line: BulkLine): boolean => {
   if (!line.original) return true;

@@ -98,7 +98,10 @@
                  nhận đơn, giao việc 600 / 500, sản lượng từ 23/09, QC đạt không vượt sản lượng công đoạn cuối, bàn giao TP sau QC, KPI);
                  bảng công, suất ăn đến 31/10; đơn từ có ngày tạo; ngày giao phiếu xuất, thông báo mẫu theo hiện tại; giá mới đã duyệt
                  hiệu lực 16/11. Thêm mục 19.6: tổ may 2 và lịch sử tổ, công nhân chưa xếp tổ, KPI theo ngày, sản lượng DEMO-DH003.
+   - 03/11/2026  Thêm KpiTargetLine: chỉ tiêu KPI chia theo dòng đơn (màu × size); chỉ tiêu demo được chia theo tỉ lệ số còn trống của dòng.
+   - 03/11/2026  WorkAllocation thêm WorkDate, RetrievalNote; ConfirmMode thêm LEADER, SYSTEM; RetrievalReason thêm END_OF_DAY, ADJUSTED (giao việc theo ngày).
    - 02/11/2026  Thêm mục 19.7: dữ liệu demo đủ loại và trạng thái để test mọi chức năng (đơn DEMO-DH005…013, đủ 11 loại đơn từ, chấm công, lương, hòa vốn, thông báo); công đoạn cuối DEMO-QU02 chuyển sang công đoạn đang dùng.
+   - 02/11/2026  Thêm mục 19.8: dữ liệu thử nhập sản lượng theo nhóm công đoạn (nhóm May túi của DEMO-AO01, CNMAY1, DEMO-DH003 dòng Đen L).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -615,6 +618,18 @@ CREATE TABLE dbo.KpiDailyTarget (
 );
 GO
 
+-- Chỉ tiêu theo từng dòng đơn (màu × size) của một chỉ tiêu KPI (DEV-ALL-62); KpiTarget.TargetFinishedQty = Σ TargetQty.
+-- Các tổ cùng mã hàng chia nhau số đặt của từng dòng; chỉ tiêu tạo trước 03/11 có thể chưa có dòng (chỉ có số tổng).
+CREATE TABLE dbo.KpiTargetLine (
+    KpiTargetLineId INT IDENTITY(1,1) CONSTRAINT PK_KpiTargetLine PRIMARY KEY,
+    KpiTargetId     INT NOT NULL CONSTRAINT FK_KpiLine_Kpi REFERENCES dbo.KpiTarget(KpiTargetId),
+    OrderLineId     INT NOT NULL CONSTRAINT FK_KpiLine_OrderLine REFERENCES dbo.OrderLine(OrderLineId),
+    TargetQty       INT NOT NULL CONSTRAINT CK_KpiLine_Qty CHECK (TargetQty > 0),
+    CONSTRAINT UQ_KpiTargetLine UNIQUE (KpiTargetId, OrderLineId)
+);
+CREATE INDEX IX_KpiLine_OrderLine ON dbo.KpiTargetLine(OrderLineId) INCLUDE (TargetQty);
+GO
+
 /* =====================================================================================
    4. ĐƠN TỪ (REQUEST)   (UC07, UC08, FR 2.2, FR 3.2)
    ---------------------------------------------------------------------------------
@@ -978,6 +993,7 @@ CREATE INDEX IX_OLT_Team ON dbo.OrderLineTeam(SewingTeamId, OrderLineId);
 -- Trần sản lượng = Σ ConfirmedQty giao − thu hồi (vw_WorkerOutputCap)
 CREATE TABLE dbo.WorkAllocation (
     WorkAllocationId  INT IDENTITY(1,1) CONSTRAINT PK_WorkAllocation PRIMARY KEY,
+    WorkDate          DATE           NOT NULL CONSTRAINT DF_WA_WorkDate DEFAULT (CAST(dbo.fn_VnNow() AS DATE)),  -- ngày làm việc của phiếu (03/11)
     MovementType      VARCHAR(10)    NOT NULL,             -- HANDOVER: giao; RETRIEVAL: thu hồi
     SewingTeamId      INT            NOT NULL CONSTRAINT FK_WA_Team REFERENCES dbo.Team(TeamId),
     WorkerId          INT            NOT NULL CONSTRAINT FK_WA_Worker REFERENCES dbo.Employee(EmployeeId),
@@ -987,6 +1003,7 @@ CREATE TABLE dbo.WorkAllocation (
     ConfirmedQty      INT            NULL,                 -- số lần công nhân xác nhận
     DiscrepancyReason NVARCHAR(500)  NULL,
     RetrievalReason   VARCHAR(20)    NULL,
+    RetrievalNote     NVARCHAR(500)  NULL,                 -- lý do thu hồi cuối ngày (chữ tự do)
     ConfirmMode       VARCHAR(10)    NOT NULL,             -- WORKER: CN tự xác nhận; ON_BEHALF: tổ trưởng xác nhận hộ
     OnBehalfReason    NVARCHAR(500)  NULL,
     Status            VARCHAR(10)    NOT NULL CONSTRAINT DF_WA_Status DEFAULT 'PENDING',
@@ -994,9 +1011,9 @@ CREATE TABLE dbo.WorkAllocation (
     CreatedAt         DATETIME2(0)   NOT NULL CONSTRAINT DF_WA_CreatedAt DEFAULT (dbo.fn_VnNow()),
     ConfirmedAt       DATETIME2(0)   NULL,
     CONSTRAINT CK_WA_Type    CHECK (MovementType IN ('HANDOVER','RETRIEVAL')),
-    CONSTRAINT CK_WA_Retr    CHECK (MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED')),
-    CONSTRAINT CK_WA_Mode    CHECK (ConfirmMode IN ('WORKER','ON_BEHALF')),
-    CONSTRAINT CK_WA_Behalf  CHECK (ConfirmMode = 'WORKER' OR OnBehalfReason IS NOT NULL),
+    CONSTRAINT CK_WA_Retr    CHECK (MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED','END_OF_DAY','ADJUSTED')),
+    CONSTRAINT CK_WA_Mode    CHECK (ConfirmMode IN ('WORKER','ON_BEHALF','LEADER','SYSTEM')),   -- LEADER: tổ trưởng giao trực tiếp; SYSTEM: tự thu hồi cuối ngày
+    CONSTRAINT CK_WA_Behalf  CHECK (ConfirmMode <> 'ON_BEHALF' OR OnBehalfReason IS NOT NULL),
     CONSTRAINT CK_WA_Status  CHECK (Status IN ('PENDING','CONFIRMED','REJECTED')),
     CONSTRAINT CK_WA_Confirmed CHECK (ConfirmedQty IS NULL OR (ConfirmedQty >= 0 AND (ConfirmedQty = Quantity OR DiscrepancyReason IS NOT NULL))),
     CONSTRAINT CK_WA_ConfirmedStatus CHECK (Status <> 'CONFIRMED' OR ConfirmedQty IS NOT NULL),
@@ -1004,6 +1021,7 @@ CREATE TABLE dbo.WorkAllocation (
 );
 CREATE INDEX IX_WA_Line ON dbo.WorkAllocation(SewingTeamId, OrderLineId, OperationId, Status) INCLUDE (MovementType, Quantity, ConfirmedQty);
 CREATE INDEX IX_WA_Worker ON dbo.WorkAllocation(WorkerId, OrderLineId, OperationId, Status);
+CREATE INDEX IX_WA_Day ON dbo.WorkAllocation(SewingTeamId, WorkDate) INCLUDE (WorkerId, OrderLineId, OperationId, MovementType, ConfirmedQty, Status);
 
 -- Sản lượng công đoạn cuối ca (OUTPUT_RECORD, UC55). Đơn giá khóa lúc nhập bằng PieceRateId (đơn giá đã duyệt không sửa được)
 CREATE TABLE dbo.OutputRecord (
@@ -2839,7 +2857,7 @@ INSERT @d VALUES
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
  ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết nào'), ('PieceRate', N'Đơn giá công đoạn'),
  ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductVariant', N'Biến thể mã hàng: màu × size'), ('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
- ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'),
+ ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
@@ -4402,7 +4420,7 @@ INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword, Status, Locke
 SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1,
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), 'LOCKED', 'ACTIVE'),
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), CAST('2026-10-30 09:00:00' AS DATETIME2(0)), NULL),
-       CASE e.EmployeeCode WHEN 'NVKHOA1' THEN N'Nhập sai mật khẩu nhiều lần' WHEN 'NVNGHI1' THEN N'Nhân viên đã nghỉ việc' END
+       CASE e.EmployeeCode WHEN 'NVKHOA1' THEN N'Admin tạm khóa để thử chức năng mở khóa' WHEN 'NVNGHI1' THEN N'Nhân viên đã nghỉ việc' END
 FROM dbo.Employee e
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Account a WHERE a.EmployeeId = e.EmployeeId);
 
@@ -4930,6 +4948,106 @@ INSERT dbo.Notification (RecipientId, SourceType, Title, Message, LinkUrl, ReadA
 DROP TABLE #Ch;
 COMMIT TRANSACTION;
 PRINT N'Đã thêm dữ liệu demo 19.7.';
+GO
+
+/* =====================================================================================
+   19.8 Dữ liệu demo để thử nhập sản lượng theo nhóm công đoạn (02/11/2026)
+   ---------------------------------------------------------------------------------
+   Nhóm "May túi" của DEMO-AO01, công nhân CNMAY1, đơn DEMO-DH003 dòng Đen L:
+   - 11 công đoạn có đơn giá đã duyệt và đã giao việc 10 lần: nhập được.
+   - OP91 có đơn giá nhưng chưa giao việc; OP90 đã phân công nhưng chưa có đơn giá: chưa giao việc nên không hiện trong khung nhập.
+   Chạy lại không nhân đôi (bỏ qua nếu CNMAY1 đã có giao việc OP12 ở dòng này).
+   Chạy trên DB đang có: sqlcmd -S localhost -E -C -I -f 65001 -d NXMTD -i <file này>
+   ===================================================================================== */
+SET NOCOUNT ON;
+SET QUOTED_IDENTIFIER ON;
+SET XACT_ABORT ON;
+
+DECLARE @p INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
+        @o3 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH003'),
+        @may1 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1'),
+        @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY1');
+DECLARE @line INT = (SELECT l.OrderLineId FROM dbo.OrderLine l JOIN dbo.ProductVariant v ON v.ProductVariantId = l.ProductVariantId
+                     WHERE l.OrderId = @o3 AND l.ProductId = @p AND v.Color = N'Đen' AND v.SizeCode = 'L');
+
+IF @line IS NULL OR @w1 IS NULL
+BEGIN
+    PRINT N'Chưa có dữ liệu demo 19.3 (DEMO-DH003), bỏ qua 19.8.';
+    RETURN;
+END;
+IF EXISTS (SELECT 1 FROM dbo.WorkAllocation a JOIN dbo.Operation o ON o.OperationId = a.OperationId
+           WHERE a.WorkerId = @w1 AND a.OrderLineId = @line AND o.ProductId = @p AND o.OperationCode = 'OP12')
+BEGIN
+    PRINT N'Dữ liệu demo 19.8 đã có, bỏ qua.';
+    RETURN;
+END;
+
+BEGIN TRANSACTION;
+
+SELECT o.OperationId, o.OperationCode INTO #G
+FROM dbo.Operation o JOIN dbo.OperationGroup g ON g.OperationGroupId = o.OperationGroupId
+WHERE o.ProductId = @p AND g.GroupName = N'May túi' AND o.Status = 'ACTIVE';
+
+INSERT dbo.PieceRate (OperationId, Rate, EffectiveDate, Status, SubmittedAt, ApprovedAt)
+SELECT g.OperationId, 1200, '2026-10-01', 'APPROVED', '2026-09-28 09:00:00', '2026-09-29 09:00:00'
+FROM #G g
+WHERE g.OperationCode <> 'OP90'
+  AND NOT EXISTS (SELECT 1 FROM dbo.PieceRate r WHERE r.OperationId = g.OperationId AND r.EffectiveDate = '2026-10-01')
+  AND NOT EXISTS (SELECT 1 FROM dbo.PieceRate r WHERE r.OperationId = g.OperationId AND r.Status = 'APPROVED' AND r.EffectiveDate <= '2026-11-02');
+
+INSERT dbo.OperationAssignment (SewingTeamId, OrderId, OperationId, WorkerId, ValidFrom, AssignedAt)
+SELECT @may1, @o3, g.OperationId, @w1, '2026-10-25', '2026-10-25 08:00:00'
+FROM #G g
+WHERE NOT EXISTS (SELECT 1 FROM dbo.OperationAssignment a WHERE a.SewingTeamId = @may1 AND a.OrderId = @o3
+                  AND a.OperationId = g.OperationId AND a.WorkerId = @w1 AND a.ValidTo IS NULL);
+
+INSERT dbo.WorkAllocation (MovementType, SewingTeamId, WorkerId, OrderLineId, OperationId, Quantity, ConfirmedQty, ConfirmMode, Status, CreatedAt, ConfirmedAt)
+SELECT 'HANDOVER', @may1, @w1, @line, g.OperationId, 10, 10, 'WORKER', 'CONFIRMED', '2026-10-30 08:00:00', '2026-10-30 08:15:00'
+FROM #G g WHERE g.OperationCode NOT IN ('OP90', 'OP91');
+
+DROP TABLE #G;
+COMMIT TRANSACTION;
+PRINT N'Đã thêm dữ liệu demo 19.8.';
+GO
+
+/* ---------- Chia chỉ tiêu KPI demo theo màu × size (DEV-ALL-62) ----------
+   Số tổng của chỉ tiêu chia cho các dòng của mã hàng đã chia cho tổ, theo tỉ lệ số còn trống của dòng
+   (số đặt − phần đã giao ở chỉ tiêu khác). Không đủ chỗ thì để nguyên. Giống SQL/patches/2026-11-03_all_changes.sql. */
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRANSACTION;
+DECLARE @k INT = 0, @team INT, @order INT, @product INT, @qty INT;
+WHILE 1 = 1
+BEGIN
+    SELECT TOP (1) @k = k.KpiTargetId, @team = k.SewingTeamId, @order = k.OrderId, @product = k.ProductId, @qty = k.TargetFinishedQty
+    FROM dbo.KpiTarget k
+    WHERE k.KpiTargetId > @k AND k.Status <> 'CANCELLED'
+      AND NOT EXISTS (SELECT 1 FROM dbo.KpiTargetLine x WHERE x.KpiTargetId = k.KpiTargetId)
+    ORDER BY k.KpiTargetId;
+    IF @@ROWCOUNT = 0 BREAK;
+
+    WITH f AS (
+        SELECT l.OrderLineId, CAST(l.OrderedQty - ISNULL(u.Used, 0) AS BIGINT) AS Free
+        FROM dbo.OrderLine l
+        OUTER APPLY (SELECT SUM(x.TargetQty) AS Used
+                     FROM dbo.KpiTargetLine x JOIN dbo.KpiTarget o ON o.KpiTargetId = x.KpiTargetId
+                     WHERE x.OrderLineId = l.OrderLineId AND o.Status <> 'CANCELLED') u
+        WHERE l.OrderId = @order AND l.ProductId = @product
+          AND EXISTS (SELECT 1 FROM dbo.OrderLineTeam t WHERE t.OrderLineId = l.OrderLineId AND t.SewingTeamId = @team)
+    ), g AS (
+        SELECT OrderLineId, @qty * Free / SUM(Free) OVER () AS Base, SUM(Free) OVER () AS TotalFree,
+               ROW_NUMBER() OVER (ORDER BY OrderLineId) AS Rn
+        FROM f WHERE Free > 0
+    ), h AS (
+        SELECT OrderLineId, Base, TotalFree, Rn, @qty - SUM(Base) OVER () AS Rem FROM g
+    )
+    INSERT dbo.KpiTargetLine (KpiTargetId, OrderLineId, TargetQty)
+    SELECT @k, OrderLineId, CAST(Base + IIF(Rn <= Rem, 1, 0) AS INT)
+    FROM h
+    WHERE TotalFree >= @qty AND Base + IIF(Rn <= Rem, 1, 0) > 0;
+END;
+COMMIT TRANSACTION;
+PRINT N'Đã chia chỉ tiêu KPI demo theo màu × size.';
 GO
 
 PRINT N'NX-MTD: tạo database xong.';

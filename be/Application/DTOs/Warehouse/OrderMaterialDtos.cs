@@ -27,3 +27,18 @@ public sealed record CreateOrderMaterialDto(
 public sealed record UpdateOrderMaterialDto(
     int MaterialId, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
     string? Note) : IOrderMaterialInput;
+
+/// <summary>Một NVL trong định mức của mã hàng.</summary>
+public sealed record ProductMaterialOptionDto(
+    int MaterialId, string MaterialCode, string MaterialName, string MaterialType, string Unit, string Color);
+
+/// <summary>Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt.</summary>
+public sealed record OrderProductMaterialsDto(
+    int ProductId, string ProductCode, string ProductName, IReadOnlyList<ProductMaterialOptionDto> Materials);
+
+public sealed record CreateOrderMaterialLineDto(
+    int MaterialId, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
+    string? Note) : IOrderMaterialInput;
+
+/// <summary>Thêm nhiều NVL của đơn cùng lúc: một dòng lỗi thì không lưu dòng nào.</summary>
+public sealed record CreateOrderMaterialBatchDto(int OrderId, IReadOnlyList<CreateOrderMaterialLineDto> Lines);

@@ -9,9 +9,10 @@ public interface IOrderMaterialService
 
     /// <summary>Bảng NVL của đơn có tìm kiếm, lọc, phân trang; GetByOrderAsync vẫn trả đủ dòng cho các form.</summary>
     Task<Result<PagedResult<OrderMaterialDto>>> GetPagedAsync(OrderMaterialPageQuery query, CancellationToken ct);
-    /// <summary>Đơn đang chạy mà NVL chưa về đủ (kể cả đơn chưa khai báo NVL), để Quản đốc / Admin khai báo và đặt mua.</summary>
-    Task<Result<PagedResult<PendingMaterialOrderDto>>> GetPendingOrdersAsync(PendingMaterialOrderQuery query, CancellationToken ct);
+    /// <summary>Mã hàng trong đơn, mỗi mã kèm các NVL định mức để khai báo cho đơn.</summary>
+    Task<Result<IReadOnlyList<OrderProductMaterialsDto>>> GetProductMaterialsAsync(int orderId, CancellationToken ct);
     Task<Result<OrderMaterialDto>> CreateAsync(CreateOrderMaterialDto dto, CancellationToken ct);
+    Task<Result<IReadOnlyList<OrderMaterialDto>>> CreateBatchAsync(CreateOrderMaterialBatchDto dto, CancellationToken ct);
     Task<Result<OrderMaterialDto>> UpdateAsync(int orderMaterialId, UpdateOrderMaterialDto dto, CancellationToken ct);
     Task<Result> DeleteAsync(int orderMaterialId, CancellationToken ct);
 }

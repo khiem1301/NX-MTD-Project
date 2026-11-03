@@ -152,6 +152,11 @@ export const LABELS = {
   receiptType: 'Loại phiếu',
   originalReceipt: 'Phiếu gốc',
   toReplenishQty: 'Cần bù',
+  toReplenishQtyHint:
+    'Số còn thiếu sau phiếu này: số đặt (hoặc khách cấp) trừ số đã nhận ở các lần trước và lần này. Phiếu bổ sung: số Quản đốc chọn giao bù.',
+  deliveryNo: 'Lần nhận',
+  deliveryNoHint: 'Phiếu này là lần nhận thứ mấy của NVL / số lần giao dự kiến',
+  deliveryNoValue: '{0}/{1}',
   shortagesTitle: 'Thiếu NVL khi nhập',
   shortageCode: 'Mã yêu cầu',
   shortageResolution: 'Cách xử lý',
@@ -174,7 +179,14 @@ export const LABELS = {
   status: 'Trạng thái',
   discontinue: 'Ngừng dùng',
   reactivate: 'Dùng lại',
-  orderMaterialsTitle: 'NVL của đơn hàng',
+  bulkEditOrderMaterials: 'Sửa cả đơn',
+  addByProduct: 'Thêm theo mã hàng',
+  addExternalMaterial: 'Thêm NVL ngoài',
+  selectProduct: 'Chọn mã hàng trong đơn',
+  productMaterialsHint:
+    'Nhập số cho từng NVL của mã hàng. NVL đơn này không dùng thì xóa khỏi bảng trước khi lưu.',
+  productAllDeclared: 'Các NVL của mã hàng này đã có trong đơn.',
+  productNoNorm: 'Mã hàng này chưa có NVL trong định mức. Dùng Thêm NVL ngoài để thêm vào đơn.',
   order: 'Đơn hàng',
   material: 'NVL',
   color: 'Màu NVL',
@@ -308,23 +320,8 @@ export const ORDER_MATERIAL_FILTER_TEXT = {
   receiptDone: 'Đã nhận đủ',
 } as const;
 
-/** Đơn chờ khai báo NVL (Quản đốc / Admin) và màn NVL chờ nhận (Thủ kho). */
+/** Màn NVL chờ nhận (Thủ kho). */
 export const INCOMING_TEXT = {
-  pendingTitle: 'Đơn hàng chờ khai báo / mua NVL',
-  pendingHint: 'Bấm Mở đơn để khai báo NVL khách cấp và NVL phải mua, rồi lập đơn mua.',
-  pendingEmpty: 'Không có đơn nào đang chờ NVL.',
-  pendingSearch: 'Tìm mã đơn, khách hàng',
-  pendingState: 'NVL',
-  materialComplete: 'Đã đủ NVL',
-  open: 'Mở đơn',
-  notDeclared: 'Chưa khai báo NVL',
-  awaiting: 'Chờ NVL',
-  partial: 'NVL về một phần',
-  customerName: 'Khách hàng',
-  dueDate: 'Hạn giao',
-  materialLines: 'Số dòng NVL',
-  customerQty: 'Khách cấp',
-  toBuyQty: 'Phải mua',
   title: 'NVL chờ nhận',
   subtitle:
     'NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. Hàng về thì bấm Lập phiếu nhập, số còn phải nhận được điền sẵn.',

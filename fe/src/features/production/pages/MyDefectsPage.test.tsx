@@ -13,7 +13,7 @@ jest.mock('../hooks/useProduction', () => ({
 }));
 
 describe('MyDefectsPage', () => {
-  it('lọc theo trạng thái ở server, không có lựa chọn Đã hủy', async () => {
+  it('lọc theo trạng thái ở server, không có lựa chọn Phiếu đã hủy', async () => {
     render(<MyDefectsPage />);
     expect(mockUseMyDefects).toHaveBeenLastCalledWith({
       page: 1,
@@ -22,7 +22,7 @@ describe('MyDefectsPage', () => {
     });
 
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0] as HTMLElement);
-    expect(screen.queryByText('Đã hủy')).not.toBeInTheDocument();
+    expect(screen.queryByText('Phiếu đã hủy')).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText('Đã chấp nhận'));
 
     expect(mockUseMyDefects).toHaveBeenLastCalledWith({

@@ -84,6 +84,12 @@ public interface ICustomerOrderService
     Task<Result<PagedResult<OrderListItemDto>>> ListAsync(OrderQuery query, CancellationToken ct);
     Task<Result<string>> SuggestCodeAsync(CancellationToken ct);
     Task<Result<OrderDetailDto>> GetAsync(int orderId, CancellationToken ct);
+
+    /// <summary>Danh sách đơn không có thành tiền (GBR-02).</summary>
+    Task<Result<PagedResult<OrderOverviewListItemDto>>> ListOverviewAsync(OrderQuery query, CancellationToken ct);
+
+    /// <summary>Chi tiết đơn không có đơn giá, không có lịch sử (lịch sử chứa đơn giá, GBR-02).</summary>
+    Task<Result<OrderOverviewDto>> GetOverviewAsync(int orderId, CancellationToken ct);
     Task<Result<int>> CreateAsync(CreateOrderDto dto, CancellationToken ct);
     Task<Result> UpdateAsync(int orderId, UpdateOrderDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int orderId, CancelOrderDto dto, CancellationToken ct);

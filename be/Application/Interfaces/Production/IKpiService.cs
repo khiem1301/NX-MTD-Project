@@ -19,6 +19,10 @@ public interface IKpiService
     /// <summary>Chỉ tiêu tối đa lập được cho (đơn, mã hàng): form lập KPI hiển thị và validate dùng chung một công thức.</summary>
     Task<Result<KpiOrderCapacityDto>> GetOrderCapacityAsync(int orderId, int productId, int? exceptKpiTargetId, CancellationToken ct);
 
+    /// <summary>Các dòng (màu × size) của mã hàng đã chia cho tổ và số đặt được của từng dòng, cho form lập KPI (DEV-ALL-62).</summary>
+    Task<Result<IReadOnlyList<KpiLineCapacityDto>>> GetLineCapacityAsync(int orderId, int productId, int sewingTeamId,
+        int? exceptKpiTargetId, CancellationToken ct);
+
     Task<Result<KpiTargetDto>> CreateAsync(SaveKpiTargetDto dto, CancellationToken ct);
 
     /// <summary>Chỉ sửa được khi Status = ACTIVE (còn trong kỳ, chưa bị đóng/hủy).</summary>

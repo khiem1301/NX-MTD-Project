@@ -86,7 +86,7 @@ public sealed record OutputGridRowDto(
     int OperationId, string OperationCode, string OperationName, int WorkerId, string WorkerCode, string WorkerName,
     long? OutputRecordId, int? Quantity, decimal? UnitRate, bool RateApproved, bool IsOutsideAssignment,
     bool NoAttendanceWarning, bool CanEdit, DateTime? EditDeadline, byte[]? RowVer,
-    int CapQty = 0, int ReportedQty = 0);
+    int CapQty = 0, int ReportedQty = 0, string? GroupName = null);
 
 public sealed record OutputGridDto(
     DateOnly WorkDate, string ShiftCode, int OrderLineId, int SewingTeamId, int ReceivedFromWarehouse,

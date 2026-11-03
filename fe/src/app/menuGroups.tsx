@@ -21,9 +21,9 @@ import type { MenuGroup } from '@/components/layout/menuModel';
 export const MENU_GROUPS: MenuGroup[] = [
   {
     key: 'orders',
-    label: 'Đơn hàng',
+    label: 'Quản lí đơn hàng',
     icon: <ShoppingOutlined />,
-    entries: ['orders', 'products', 'products-accountant', 'customers'],
+    entries: ['orders', 'manager-orders', 'products', 'products-accountant', 'customers'],
   },
   {
     key: 'purchase',
@@ -37,7 +37,6 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: <ContainerOutlined />,
     entries: [
       'materials',
-      'order-materials',
       'incoming-materials',
       'material-receipts',
       'short-deliveries',

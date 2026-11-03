@@ -57,36 +57,64 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private static bool IsFullyReceived(OrderMaterialDto m) => m.RequiredQty > 0 && m.ReceivedQty >= m.RequiredQty;
 
-    /// <summary>Đơn đang chạy chờ NVL, đơn chưa khai báo lên đầu rồi đến hạn giao gần nhất. Lọc "Đã đủ NVL" để mở lại đơn đã xong phần NVL.</summary>
-    public async Task<Result<PagedResult<PendingMaterialOrderDto>>> GetPendingOrdersAsync(PendingMaterialOrderQuery query,
-        CancellationToken ct)
+    /// <summary>Chỉ lấy NVL của những màu × size đơn đặt; NVL hoặc thành phần đã ngừng dùng không khai báo được nên bỏ qua.</summary>
+    public async Task<Result<IReadOnlyList<OrderProductMaterialsDto>>> GetProductMaterialsAsync(int orderId, CancellationToken ct)
     {
-        var running = new[] { OrderStatuses.New, OrderStatuses.InProduction };
-        var keyword = query.Keyword?.Trim();
-        var state = query.MaterialState;
-        var page = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
-            .Where(o => running.Contains(o.Status))
-            .Where(o => state == PendingMaterialStates.Complete
-                ? o.MaterialStatus == OrderMaterialStatuses.Complete
-                : o.MaterialStatus != OrderMaterialStatuses.Complete)
-            .Where(o => state != PendingMaterialStates.NotDeclared || !o.OrderMaterials.Any())
-            .Where(o => state != PendingMaterialStates.Awaiting
-                        || (o.OrderMaterials.Any() && o.MaterialStatus == OrderMaterialStatuses.Awaiting))
-            .Where(o => state != PendingMaterialStates.Partial
-                        || (o.OrderMaterials.Any() && o.MaterialStatus == OrderMaterialStatuses.Partial))
-            .Where(o => string.IsNullOrEmpty(keyword) || o.OrderCode.Contains(keyword) || o.Customer.CustomerName.Contains(keyword))
-            .OrderBy(o => o.OrderMaterials.Any() ? 1 : 0).ThenBy(o => o.DueDate).ThenBy(o => o.OrderId)
-            .Select(o => new PendingMaterialOrderDto(o.OrderId, o.OrderCode, o.Customer.CustomerName, o.DueDate, o.Status,
-                o.MaterialStatus, o.OrderMaterials.Count, o.OrderMaterials.Sum(m => (decimal?)m.CustomerQty) ?? 0m,
-                o.OrderMaterials.Sum(m => (decimal?)m.PurchaseQty) ?? 0m))
-            .ToPagedAsync(query, ct);
-        return Result<PagedResult<PendingMaterialOrderDto>>.Success(page with
-        {
-            Items = page.Items.Select(r => r with
+        if (!await _uow.Repository<CustomerOrder>().Query().AnyAsync(o => o.OrderId == orderId, ct))
+            return Fail.NotFound<IReadOnlyList<OrderProductMaterialsDto>>();
+
+        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
+            .Select(l => new { l.ProductVariantId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName })
+            .ToListAsync(ct);
+        var variantIds = lines.Select(l => l.ProductVariantId).Distinct().ToList();
+        var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(n => variantIds.Contains(n.ProductVariantId) && n.Material.Status == MaterialStatuses.Active
+                && n.ProductComponent.Status == RecordStatus.Active)
+            .Select(n => new
             {
-                Status = CodeText.ToPascal(r.Status), MaterialStatus = CodeText.ToPascal(r.MaterialStatus),
-            }).ToList(),
-        });
+                n.ProductId,
+                Material = new ProductMaterialOptionDto(n.MaterialId, n.Material.MaterialCode, n.Material.MaterialName,
+                    n.Material.MaterialType ?? string.Empty, n.Material.Unit, n.Material.Color),
+            })
+            .ToListAsync(ct);
+
+        return Result<IReadOnlyList<OrderProductMaterialsDto>>.Success(lines
+            .GroupBy(l => (l.ProductId, l.ProductCode, l.ProductName))
+            .OrderBy(g => g.Key.ProductCode)
+            .Select(g => new OrderProductMaterialsDto(g.Key.ProductId, g.Key.ProductCode, g.Key.ProductName, norms
+                .Where(n => n.ProductId == g.Key.ProductId)
+                .Select(n => n.Material)
+                .Distinct()
+                .OrderBy(m => m.MaterialType).ThenBy(m => m.MaterialCode).ThenBy(m => m.Color)
+                .ToList()))
+            .ToList());
+    }
+
+    /// <summary>Kiểm tra hết các dòng rồi mới thêm và lưu một lần, nên một dòng lỗi thì không lưu dòng nào.</summary>
+    public async Task<Result<IReadOnlyList<OrderMaterialDto>>> CreateBatchAsync(CreateOrderMaterialBatchDto dto, CancellationToken ct)
+    {
+        var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
+        if (order is null) return Fail.As<IReadOnlyList<OrderMaterialDto>>(NotFound());
+        if (OrderStatuses.Closed.Contains(order.Status))
+            return Fail.As<IReadOnlyList<OrderMaterialDto>>(Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed));
+
+        var entities = new List<OrderMaterial>();
+        foreach (var line in dto.Lines)
+        {
+            var entity = new OrderMaterial { OrderId = dto.OrderId };
+            var check = await ApplyAsync(entity, line, ct);
+            if (check is not null) return Fail.As<IReadOnlyList<OrderMaterialDto>>(check);
+            entities.Add(entity);
+        }
+
+        foreach (var entity in entities)
+        {
+            await _uow.Repository<OrderMaterial>().AddAsync(entity);
+            if (entity.CustomerQty > 0) await NotifyCustomerSupplyAsync(order.OrderId, order.OrderCode, entity, ct);
+        }
+        await _uow.SaveChangesAsync();
+        return await GetByOrderAsync(dto.OrderId, ct);
     }
 
     public async Task<Result<OrderMaterialDto>> CreateAsync(CreateOrderMaterialDto dto, CancellationToken ct)
@@ -95,7 +123,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
         if (order is null) return NotFound();
         if (OrderStatuses.Closed.Contains(order.Status))
-            return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
+            return Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
 
         var entity = new OrderMaterial { OrderId = dto.OrderId };
         var check = await ApplyAsync(entity, dto, ct);
@@ -114,13 +142,13 @@ public sealed class OrderMaterialService : IOrderMaterialService
         if (entity is null) return NotFound();
 
         if (await IsOrderClosedAsync(entity.OrderId, ct))
-            return Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
+            return Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
 
         var oldCustomerQty = entity.CustomerQty;
         var oldDeliveryCount = entity.ExpectedDeliveryCount;
         var keyChanged = entity.MaterialId != dto.MaterialId;
         if (keyChanged && await HasReceiptsAsync(orderMaterialId, ct))
-            return Fail(ErrorCodes.WarehouseOrderMaterialInUse, WarehouseMessages.OrderMaterialInUse);
+            return Failure(ErrorCodes.WarehouseOrderMaterialInUse, WarehouseMessages.OrderMaterialInUse);
 
         var check = await ApplyAsync(entity, dto, ct);
         if (check is not null) return check;
@@ -159,13 +187,13 @@ public sealed class OrderMaterialService : IOrderMaterialService
         if (material is null) return NotFound();
         if (material.Status != MaterialStatuses.Active
             && (entity.MaterialId != dto.MaterialId || entity.OrderMaterialId == 0))
-            return Fail(ErrorCodes.WarehouseMaterialInactive, WarehouseMessages.MaterialInactive);
+            return Failure(ErrorCodes.WarehouseMaterialInactive, WarehouseMessages.MaterialInactive);
 
         // UQ_OM (đơn, NVL): NVL đã gồm màu nên mỗi màu là một dòng riêng.
         var duplicate = await OrderMaterials.AnyAsync(om => om.OrderId == entity.OrderId && om.MaterialId == dto.MaterialId
             && om.OrderMaterialId != entity.OrderMaterialId, ct);
         if (duplicate)
-            return Fail(ErrorCodes.WarehouseOrderMaterialDuplicate, string.Format(WarehouseMessages.OrderMaterialDuplicateOf,
+            return Failure(ErrorCodes.WarehouseOrderMaterialDuplicate, string.Format(WarehouseMessages.OrderMaterialDuplicateOf,
                 MaterialLabel(material)));
 
         entity.MaterialId = dto.MaterialId;
@@ -230,6 +258,6 @@ public sealed class OrderMaterialService : IOrderMaterialService
     private static Result<OrderMaterialDto> NotFound() =>
         Result<OrderMaterialDto>.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);
 
-    private static Result<OrderMaterialDto> Fail(string code, string message) =>
+    private static Result<OrderMaterialDto> Failure(string code, string message) =>
         Result<OrderMaterialDto>.Failure(code, message);
 }

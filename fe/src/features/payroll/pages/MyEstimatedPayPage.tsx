@@ -122,35 +122,40 @@ export function MyEstimatedPayPage() {
       {data && data.days.length > 0 && (
         <>
           <Row gutter={[16, 16]}>
-            <Col xs={12} md={6}>
-              <Card size="small">
-                <Statistic title={text.totals.output} value={formatQty(data.totalOutputQty)} />
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card size="small">
-                <Statistic
-                  title={text.totals.outputAmount}
-                  value={formatCurrency(data.totalOutputAmount)}
-                />
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card size="small">
-                <Statistic
-                  title={`${text.totals.sundayBonus} / ${text.totals.scrap}`}
-                  value={`${formatCurrency(data.totalSundayBonus)} / −${formatCurrency(data.totalScrapAmount)}`}
-                />
-              </Card>
-            </Col>
-            <Col xs={12} md={6}>
-              <Card size="small">
-                <Statistic
-                  title={`${text.totals.estimatedPay} (${text.estimateTag})`}
-                  value={formatCurrency(data.totalEstimatedPay)}
-                />
-              </Card>
-            </Col>
+            {[
+              { key: 'output', title: text.totals.output, value: formatQty(data.totalOutputQty) },
+              {
+                key: 'amount',
+                title: text.totals.outputAmount,
+                value: formatCurrency(data.totalOutputAmount),
+              },
+              {
+                key: 'sunday',
+                title: text.totals.sundayBonus,
+                value: formatCurrency(data.totalSundayBonus),
+              },
+              {
+                key: 'scrap',
+                title: text.totals.scrap,
+                value: `−${formatCurrency(data.totalScrapAmount)}`,
+              },
+              {
+                key: 'pay',
+                title: `${text.totals.estimatedPay} (${text.estimateTag})`,
+                value: formatCurrency(data.totalEstimatedPay),
+              },
+            ].map((s) => (
+              // Mỗi số một thẻ, thẻ co giãn và xuống dòng theo bề rộng màn hình để tiêu đề, số không bị cắt.
+              <Col key={s.key} flex="1 1 170px">
+                <Card size="small" style={{ height: '100%' }}>
+                  <Statistic
+                    title={s.title}
+                    value={s.value}
+                    valueStyle={{ fontSize: 20, wordBreak: 'break-word' }}
+                  />
+                </Card>
+              </Col>
+            ))}
           </Row>
 
           <DataTable<MyEstimatedPayDay>

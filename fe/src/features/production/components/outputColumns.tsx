@@ -1,7 +1,5 @@
-import { DeleteOutlined } from '@ant-design/icons';
 import { InputNumber, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { IconAction } from '@/components/common/IconAction';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
@@ -14,18 +12,14 @@ type OutputColumnsOptions = {
   isManager: boolean;
   /** Số lượng đang sửa theo khóa dòng; chưa sửa thì hiện số đã lưu. */
   edits: Record<string, number | null>;
-  isExtraRow: (row: OutputGridRow) => boolean;
   onQuantityChange: (row: OutputGridRow, value: number | null) => void;
-  onRemoveExtra: (row: OutputGridRow) => void;
 };
 
-/** Cột lưới sản lượng cuối ca: nhập số lượng ngay trên dòng, xóa được dòng ngoài phân công vừa thêm. */
+/** Cột lưới sản lượng cuối ca: nhập số lượng ngay trên dòng. */
 export const outputColumns = ({
   isManager,
   edits,
-  isExtraRow,
   onQuantityChange,
-  onRemoveExtra,
 }: OutputColumnsOptions): ColumnsType<OutputGridRow> => [
   {
     title: text.columns.operation,
@@ -81,18 +75,5 @@ export const outputColumns = ({
     title: text.columns.warnings,
     key: 'warnings',
     render: (_, r) => <OutputRowTags row={r} />,
-  },
-  {
-    title: '',
-    key: 'remove',
-    render: (_, r) =>
-      r.outputRecordId === null && isExtraRow(r) ? (
-        <IconAction
-          title={text.removeRow}
-          icon={<DeleteOutlined />}
-          danger
-          onClick={() => onRemoveExtra(r)}
-        />
-      ) : null,
   },
 ];

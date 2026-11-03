@@ -296,11 +296,11 @@ public sealed class WorkAllocationService : IWorkAllocationService
     }
 
     private static IQueryable<WorkAllocationDto> Project(IQueryable<WorkAllocation> q) =>
-        q.Select(m => new WorkAllocationDto(m.WorkAllocationId, m.MovementType, m.SewingTeamId,
+        q.Select(m => new WorkAllocationDto(m.WorkAllocationId, m.WorkDate, m.MovementType, m.SewingTeamId,
             m.SewingTeam.TeamName, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
             m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color,
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
             m.Quantity, m.ConfirmedQty,
-            m.DiscrepancyReason, m.RetrievalReason, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
+            m.DiscrepancyReason, m.RetrievalReason, m.RetrievalNote, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
             m.CreatedAt, m.ConfirmedAt));
 }

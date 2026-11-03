@@ -105,6 +105,15 @@
 | DEV-ALL-51 | 02/11/2026 | Claude (AI) | UC17, UC18 | Công nhân chưa bắt buộc thuộc tổ; màn Tổ thêm nhân viên vào tổ, loại khỏi tổ, thôi giữ chức tổ trưởng / tổ phó | Mở |
 | DEV-ALL-52 | 02/11/2026 | Claude (AI) | UC19, UC43 | Lệnh cắt tự hoàn thành khi kho nhận đủ BTP theo kế hoạch; bỏ nút "Cắt xong" của tổ cắt; Quản đốc, Admin đóng lệnh cắt thiếu | Mở |
 | DEV-ALL-53 | 02/11/2026 | Claude (AI) | UC51, UC42 | Form bàn cắt bỏ khối vải còn lại; phiếu trả vải thừa tự điền số vải còn lại sau cắt | Mở |
+| DEV-ALL-54 | 02/11/2026 | Claude (AI) | UC05, UC20 | Hộp thư lọc Từ quản lý / Hệ thống, trả thêm `IsManual`; thông báo phân việc đổi nguồn từ WAREHOUSE sang PRODUCTION | Mở |
+| DEV-ALL-55 | 02/11/2026 | Claude (AI) | UC52 | Phân công công đoạn thêm chế độ Theo công nhân: bảng công nhân, khung chọn công đoạn có nút Lưu | Mở |
+| DEV-ALL-56 | 02/11/2026 | Claude (AI) | UC19 (KPI), UC21 | Tổ trưởng, tổ phó may xem KPI của tổ ở trang chủ; thêm API chỉ đọc `GET team-leader/kpi-targets` | Mở |
+| DEV-ALL-57 | 02/11/2026 | Claude (AI) | UC55, GBR-20 | Tổ trưởng nhập sản lượng theo công nhân: bảng công nhân, khung nhập theo nhóm công đoạn, nhập nhóm tự điền từng công đoạn; lưới cũ chỉ còn cho Quản đốc | Mở |
+| DEV-ALL-58 | 02/11/2026 | Claude (AI) | Dữ liệu demo, `Customer`, `Operation` | Dữ liệu demo 19.7, 19.8: thêm khách hàng ngoài công ty mẹ, đổi công đoạn cuối DEMO-QU02, đổi trạng thái có sẵn của tháng 2026-05 | Mở |
+| DEV-ALL-59 | 02/11/2026 | Claude (AI) | UC09 (phần NVL) | NVL của đơn khai báo ở tab trong chi tiết đơn, sau khi đơn đã tạo; bỏ màn và API đơn chờ NVL; Quản đốc xem được đơn hàng (không có đơn giá, không sửa); thêm API `GET manager/customer-orders` | Mở |
+| DEV-ALL-60 | 03/11/2026 | Claude (AI) | UC09 (phần NVL) | Thêm NVL của đơn theo hai cách: chọn mã hàng trong đơn rồi nhập số cho các NVL định mức, hoặc chọn NVL ngoài; thêm API `GET .../order-materials/product-materials`, `POST .../order-materials/batch` | Mở |
+| DEV-ALL-61 | 03/11/2026 | Claude (AI) | UC10, UC38 | Ô chọn NVL ở tab Định mức NVL của Định mức mã hàng có nút Thêm NVL mới; thêm API `POST accountant/materials` | Mở |
+| DEV-ALL-62 | 03/11/2026 | Claude (AI) | UC19 (KPI), UC21, bảng mới `KpiTargetLine` | Chỉ tiêu KPI tổ may nhập theo từng màu × size tổ được chia; các tổ cùng mã hàng chia nhau số đặt của từng màu × size; bảng KPI xem chỉ tiêu và QC đạt theo màu × size | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1527,4 +1536,133 @@
   - **Form bàn cắt:** các ô Ngày cắt, Ca, Vải, Số lớp, Chiều dài bàn cắt nằm một hàng; bỏ khối vải còn lại; nhãn "Vải (tùy chọn)" sửa thành "Vải" vì ô này bắt buộc.
   - **Phiếu trả vải:** mỗi dòng phiếu cấp có số gợi ý = đã nhận − đã trả / đang trả − đã cắt (Σ số lớp × chiều dài các bàn của tổ trên cùng đơn, cùng vải), chia vào các dòng phiếu cấp cùng đơn, cùng vải (phiếu mới trước), không quá số còn trả được. Chọn phiếu cấp thì ô "Trả lần này" tự điền số gợi ý, tổ trưởng sửa lại theo cuộn vải thực tế. Có bàn cắt chưa nhập chiều dài thì không gợi ý và báo nhập theo cuộn thực tế.
 - **Cần sửa trong tài liệu:** Report-3 UC42 (số trả gợi ý), UC51 (form bàn cắt).
+- **Trạng thái:** Mở
+
+### DEV-ALL-54 · Hộp thư tách thông báo do cấp trên gửi và do hệ thống tạo
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC05, UC20 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `NotificationQuery.Group`, `NotificationDto.IsManual`, `NotificationGroups`, màn hộp thư (`InboxTab`), `WorkAllocationService`; không đổi schema.
+- **Tài liệu gốc ghi:** AI Context 4.8: thông báo gồm `Announcement` → `Notification`, không nêu việc lọc theo nguồn.
+- **Code đang làm:** hộp thư lọc Tất cả / Từ quản lý (`SourceType = ANNOUNCEMENT`) / Hệ thống (các nguồn còn lại), mỗi dòng có nhãn nguồn. Hai thông báo phân việc của `WorkAllocationService` đổi nguồn từ WAREHOUSE sang PRODUCTION; thông báo đã tạo trước đó giữ nguồn cũ.
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC05 (bộ lọc hộp thư).
+- **Trạng thái:** Mở
+
+### DEV-ALL-55 · Phân công công đoạn theo công nhân
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC52 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OperationAssignmentsPage`, `AssignmentByWorker`, `WorkerOperationsModal`, `useSaveWorkerOperations`, `OperationOptionDto.StandardTimeSec`, bộ lọc tình trạng đổi thành dropdown; không đổi schema.
+- **Tài liệu gốc ghi:** UC52: chọn công nhân theo từng công đoạn.
+- **Code đang làm:** giữ màn cũ và thêm nút chuyển sang Theo công nhân: bảng công nhân kèm số công đoạn và các công đoạn đang làm, khung chọn công đoạn có lọc nhóm, tình trạng và nút Lưu. Lưu gồm một lần thêm theo lô rồi đóng từng phân công bị bỏ tích, chưa có API đóng hàng loạt nên không gói trong một transaction: lỗi giữa chừng thì phần trước vẫn đã lưu.
+- **Lý do:** yêu cầu của người dùng, tổ đông người khó tìm công nhân trong ô chọn.
+- **Cần sửa trong tài liệu:** Report-3 UC52 (thêm cách phân công theo công nhân).
+- **Trạng thái:** Mở
+
+### DEV-ALL-56 · KPI của tổ ở trang chủ tổ trưởng may
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC19 (KPI), UC21 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `TeamLeader/KpiTargetsController` (`GET /api/v1/team-leader/kpi-targets`), `TeamKpiPanel`, `HomePage`, `kpiColumns`; không đổi schema.
+- **Tài liệu gốc ghi:** AI Context 4.8: KPI tổ may do Quản đốc lập, không nêu màn xem cho tổ trưởng.
+- **Code đang làm:** tổ trưởng, tổ phó tổ may thấy khối KPI của tổ ở trang chủ, mặc định chỉ tiêu đang theo dõi, chỉ đọc. Tổ lấy từ token, bỏ qua `sewingTeamId` gửi lên (R1).
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC19 (KPI), UC21 (trang chủ theo vai trò).
+- **Trạng thái:** Mở
+
+### DEV-ALL-57 · Nhập sản lượng cuối ca theo công nhân và theo nhóm công đoạn
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC55, GBR-20 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OutputEntryBoard`, `OutputByWorker`, `WorkerOutputModal`, `workerOutputColumns`, `utils/outputWorkerBoard`, `useOutputEntry`, bỏ `OutputExtraRowBar`; `OutputGridRowDto.GroupName`. Không đổi schema, không đổi quy tắc lưu ở BE. DEV-KI-14-1: tổ trưởng không còn dạng thẻ trên điện thoại.
+- **Tài liệu gốc ghi:** AI Context 4.3.5: lưới nạp sẵn từ phân công theo công nhân × công đoạn, công đoạn ngoài phân công thêm được cho riêng ca đó (GBR-20).
+- **Code đang làm:**
+  - Tổ trưởng, tổ phó thấy bảng công nhân của tổ theo ngày, ca, dòng đơn; mở khung của từng người để nhập và bấm Lưu. Quản đốc vẫn dùng lưới cũ (UC22).
+  - Công đoạn chia theo nhóm. Nhập ở dòng nhóm điền cùng số cho các công đoạn lưu được của nhóm (còn hạn sửa, có đơn giá duyệt, còn số lần được giao); sửa lại từng công đoạn vẫn được.
+  - Khung nhập chỉ hiện các công đoạn lấy từ màn Giao việc (đã giao và công nhân đã xác nhận), kèm dòng đã nhập từ trước. Bỏ thao tác thêm công đoạn ngoài phân công (GBR-20) ở màn tổ trưởng: theo quyết định của người dùng, muốn báo công đoạn nào thì giao ở màn Giao việc trước; trần `vw_WorkerOutputCap` (MSG16, trigger 50052) giữ nguyên. Công đoạn đã giao nhưng ngoài phân công vẫn hiện, có nhãn Ngoài phân công.
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC55 (màn nhập, nhập theo nhóm), GBR-20.
+- **Trạng thái:** Mở
+
+### DEV-ALL-58 · Dữ liệu demo đủ chức năng (mục 19.7, 19.8)
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · dữ liệu demo · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `SQL/NX-MTD_Database.sql` mục 19.7, `SQL/patches/2026-11-02_demo_full_test_data.sql`, `SQL/patches/2026-11-02_demo_output_group_test_data.sql`; không đổi schema.
+- **Tài liệu gốc ghi:** AI Context mục 1: khách hàng duy nhất là công ty mẹ (seed 1 dòng `Customer`). Coding Rules 3.12: migrate đặt ở `SQL/Migrations/`.
+- **Code đang làm:** thêm Công ty B và Công ty C (ngừng) để thử danh sách và lọc. Công đoạn cuối DEMO-QU02 chuyển sang công đoạn đang dùng có thứ tự lớn nhất vì công đoạn cuối cũ đã ngừng dùng. Tháng 2026-05 chuyển LOCKED. Patch đặt ở `SQL/patches/` theo cách repo đang làm, không có `SQL/Migrations/`.
+- **Lý do:** yêu cầu tạo dữ liệu test đủ chức năng của người dùng.
+- **Cần sửa trong tài liệu:** không có, chỉ là dữ liệu demo; cần xóa Công ty B, C nếu vẫn giữ quy tắc một khách hàng khi demo.
+- **Trạng thái:** Mở
+
+### DEV-ALL-59 · NVL của đơn nằm trong chi tiết đơn; Quản đốc xem đơn hàng
+
+- **Ngày / Người / Task / PR:** 02/11/2026 · Claude (AI) · UC09 (phần NVL) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `Manager/CustomerOrdersController` (`GET /api/v1/manager/customer-orders`, `GET .../{id}`), `CustomerOrderService` (`ListOverviewAsync`, `GetOverviewAsync`, link thông báo đơn mới), `OrderOverviewPage`, `OrderOverviewListPage`, `OrderDetailTabs`, `OrderMaterialsTab`, `OrderMaterialLinkRedirect`; bỏ `OrderMaterialPage`, `PendingMaterialOrdersTable`, `GET admin|manager/order-materials/pending-orders`; không đổi schema. Thay phần đơn chờ khai báo của DEV-ALL-10 và DEV-ALL-26.
+- **Tài liệu gốc ghi:** AI Context mục 3 và 4.1: đơn hàng do Admin quản lý, vai trò Quản đốc không có màn đơn hàng. DEV-ALL-10, DEV-ALL-26: NVL của đơn khai báo ở màn riêng `/warehouse/order-materials`, thông báo "Có đơn hàng mới" mở màn đó.
+- **Code đang làm:**
+  - Tạo đơn không nhập NVL. Tạo xong chuyển sang chi tiết đơn, tab "NVL của đơn"; thêm, sửa, sửa cả đơn, xóa NVL đều ở tab này. Đơn đã đóng thì tab chỉ đọc.
+  - Admin và Quản đốc đều khai báo NVL ở tab này như trước đây ở màn riêng.
+  - Bỏ menu và màn "NVL của đơn" cùng danh sách đơn chờ khai báo / mua NVL, theo quyết định của người dùng. Quản đốc, Admin tìm đơn cần NVL ở màn Đơn hàng (cột NVL). Thông báo đơn mới trỏ `/manager/orders/{id}?tab=materials`; đường dẫn cũ `/warehouse/order-materials` trong thông báo đã gửi chỉ còn chuyển hướng tới đơn hoặc danh sách đơn.
+  - Quản đốc có menu "Đơn hàng" và màn chi tiết, chỉ xem: không có nút tạo, sửa, hủy, dừng, chuyển sản xuất; API tạo, sửa, hủy, dừng vẫn chỉ Admin gọi được. Lọc theo trạng thái và tìm kiếm; không có ô lọc khách hàng vì API danh sách khách chỉ dành cho Admin.
+  - Giữ GBR-02: API của Quản đốc không trả đơn giá CMT, thành tiền; không có tab Lịch sử vì lịch sử đơn chứa đơn giá.
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC09 (luồng, màn NVL của đơn, quyền Quản đốc); AI Context mục 3 (vai trò Quản đốc).
+- **Trạng thái:** Mở
+
+### DEV-ALL-60 · Thêm NVL của đơn theo mã hàng hoặc NVL ngoài
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC09 (phần NVL) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `OrderMaterialService` (`GetProductMaterialsAsync`, `CreateBatchAsync`), `GET /api/v1/{admin|manager}/order-materials/product-materials`, `POST /api/v1/{admin|manager}/order-materials/batch`, `OrderMaterialsTab`, `OrderMaterialByProductModal`; không đổi schema. Bổ sung DEV-ALL-59.
+- **Tài liệu gốc ghi:** UC09: khai báo từng NVL của đơn, chọn trong toàn bộ danh mục NVL.
+- **Code đang làm:**
+  - Tab NVL của đơn có hai nút. "Thêm theo mã hàng": chọn mã hàng trong đơn (đơn một mã thì tự chọn), bảng liệt kê NVL định mức của những màu × size đơn đặt, nhập số cần, khách cấp, số lần giao, ghi chú. "Thêm NVL ngoài": form từng dòng như trước, ô chọn NVL không có NVL đã có trong đơn.
+  - Số lượng vẫn nhập tay, không tính từ định mức vì định mức không còn lượng dùng. NVL dùng chung cho nhiều mã hàng vẫn chỉ một dòng trong đơn (`UQ_OM`), không ghi NVL thuộc mã nào.
+  - Bảng không hiện NVL đơn đã khai báo, NVL hoặc thành phần đã ngừng dùng. NVL không dùng thì xóa khỏi bảng; mọi dòng còn lại phải có số. Lưu cả bảng một lần: một dòng lỗi thì không lưu dòng nào.
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC09 (luồng thêm NVL của đơn).
+- **Trạng thái:** Mở
+
+### DEV-ALL-61 · Thêm NVL mới ngay ở màn định mức mã hàng
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC10, UC38 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `POST /api/v1/accountant/materials`, `SpecNormsTab`, `specNormColumns`, `useSaveMaterial`; không đổi schema.
+- **Tài liệu gốc ghi:** UC38: Thủ kho quản lý danh mục NVL. Admin, Quản đốc được thêm nhanh khi khai báo NVL của đơn. Coding Rules 4.3: feature không import chéo feature khác.
+- **Code đang làm:**
+  - Ô chọn NVL trên từng dòng định mức có nút Thêm NVL mới như màn Thêm NVL ngoài; tạo xong tự chọn NVL đó cho dòng đang sửa.
+  - Kế toán được thêm NVL mới vì là người nhập định mức. Sửa, ngừng dùng NVL vẫn chỉ Thủ kho.
+  - Feature đơn hàng nạp lười `MaterialFormModal` qua `index.ts` của feature kho, như `purchase` đang dùng `PurchaseOrderFormModal`.
+- **Lý do:** yêu cầu của người dùng.
+- **Cần sửa trong tài liệu:** Report-3 UC10, UC38 (quyền thêm NVL của Kế toán); AI Context mục 3.
+- **Trạng thái:** Mở
+
+### DEV-ALL-62 · Chỉ tiêu KPI tổ may chia theo màu × size
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC19 (KPI tổ may), UC21 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** schema: bảng mới `KpiTargetLine` (`KpiTargetId`, `OrderLineId`, `TargetQty`; `UQ_KpiTargetLine`), patch `SQL/patches/2026-11-03_all_changes.sql`, script chính đã cập nhật. API: `SaveKpiTargetDto` bỏ `TargetFinishedQty`, thêm `Lines` (`orderLineId`, `targetQty`); `KpiTargetDto` thêm `Lines` (màu, size, chỉ tiêu, QC đạt); thêm `GET manager/kpi-targets/line-capacity`. `KpiService`, `IOutputQueryService.GetKpiLineFinishedAsync`, `KpiTargetFormModal`, `KpiLineTargetsTable`, cột Màu × size ở bảng KPI và KPI của tổ ở trang chủ. Bổ sung DEV-ALL-23, DEV-ALL-49.
+- **Tài liệu gốc ghi:** UC19 / FR 3.14: chỉ tiêu KPI theo đơn + mã hàng + tổ + kỳ, một số `TargetFinishedQty`. DEV-ALL-23: tổng chỉ tiêu các tổ không vượt Σ số đặt của mã hàng. DEV-ALL-49: KPI vẫn theo mã hàng, chưa chia màu, size.
+- **Lý do:** yêu cầu của người dùng. Khi nhiều tổ cùng làm một mã hàng, chia KPI chỉ có số lượng nên không biết tổ nào làm màu, size nào.
+- **Code đang làm:**
+  - **Lập / sửa:** chọn tổ xong, form liệt kê các màu × size của mã hàng đã chia cho tổ (`OrderLineTeam`): số đặt, đã giao cho tổ khác, tối đa; Quản đốc, Admin nhập chỉ tiêu từng dòng, để trống là không giao. Chỉ tiêu cả kỳ = tổng các dòng (BE tính, vẫn lưu ở `KpiTarget.TargetFinishedQty` nên lịch KPI theo ngày, kết thúc đơn, thông báo nhận thành phẩm không đổi).
+  - **Trần theo từng dòng:** chỉ tiêu dòng ≤ số đặt − phần đã giao cho tổ khác ở dòng đó (chỉ tiêu đang chạy tính số giao, đã đóng tính QC đạt của dòng trong kỳ, đã hủy không tính), 409 `KPI_EXCEEDS_ORDER_QTY` nêu màu, size. Vẫn kiểm cả mã hàng như DEV-ALL-23 vì chỉ tiêu cũ có thể chỉ có số tổng.
+  - **Dòng không hợp lệ:** dòng không thuộc mã hàng hoặc chưa chia cho tổ thì 409 `KPI_INVALID_REFERENCE`. Validator: ít nhất một dòng, tối đa 500, không trùng dòng, mỗi dòng 1 đến 1.000.000, tổng tối đa 1.000.000.
+  - **Sửa:** dòng mới thêm, dòng bỏ đi xóa, dòng còn sửa số. Một dòng không được hạ (hoặc bỏ) dưới số QC đạt của tổ ở dòng đó trong kỳ (409 `KPI_PLAN_INVALID`). Nhật ký ghi cả danh sách dòng trước và sau.
+  - **Xem:** bảng KPI (Quản đốc, Admin) và KPI của tổ ở trang chủ tổ trưởng có cột Màu × size: bấm xem QC đạt / chỉ tiêu từng màu × size. QC đạt theo dòng đếm như `vw_KpiDailyResult`: QC của tổ, đúng đơn + mã hàng, trong kỳ.
+  - **Chỉ tiêu cũ:** patch chia số tổng của chỉ tiêu chưa hủy cho các màu × size đã chia cho tổ, theo tỉ lệ số còn trống của từng dòng; không đủ chỗ thì để nguyên, bảng hiện "Chưa chia", sửa thì form nhắc nhập lại theo màu × size.
+  - **Không đổi:** KPI theo ngày vẫn theo tổng của chỉ tiêu, không chia màu × size.
+- **Ảnh hưởng người khác:** Minh (KPI tổ may), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới.
+- **Cần sửa trong tài liệu:** Report-3 UC19, UC21, FR 3.14 (form lập KPI theo màu × size, trần theo dòng); `NX-MTD_AI_Context.md` mục 4.8 (KPI tổ may) và 6.2 (bảng mới); `NX-MTD_Database.dbml`, `NX-MTD_Database_Mo_ta.md`, ERD.
+- **Trạng thái:** Mở
+
+### DEV-ALL-63 · Giao sản lượng công đoạn theo ngày cho công nhân
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC53, UC54, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** schema: `WorkAllocation` thêm `WorkDate`, `RetrievalNote`; `CK_WA_Mode` thêm `LEADER`, `SYSTEM`; `CK_WA_Behalf` chỉ bắt lý do với `ON_BEHALF`; `CK_WA_Retr` thêm `END_OF_DAY`, `ADJUSTED`; thêm `IX_WA_Day`; patch `SQL/patches/2026-11-03_all_changes.sql`, script chính đã cập nhật. API (`team-leader/work-allocations`): `GET daily`, `PUT daily`, `POST daily/retrieve-remaining`; `WorkAllocationDto` thêm `workDate`, `retrievalNote`. BE: `DailyWorkAllocationService`, `WorkAllocationAutoRetrieveJob`. FE: màn "Giao sản lượng theo ngày" (`DailyAllocationBoard`, `DailyWorkerModal`, `RetrieveRemainingModal`) thay bảng chia việc theo công đoạn và khung Giao / Thu hồi của từng công đoạn.
+- **Tài liệu gốc ghi:** UC53 / UC54 / UC60: tổ trưởng chia việc theo công đoạn (số lần làm), công nhân xác nhận hoặc tổ trưởng xác nhận hộ; không có khái niệm ngày. Trần sản lượng cộng dồn theo công nhân × dòng đơn × công đoạn.
+- **Code đang làm:**
+  - **Giao theo ngày:** mỗi ngày tổ trưởng chọn ngày, đơn, dòng đơn; bảng công nhân của tổ (đã giao, đã làm, chưa làm hết trong ngày). Khung của từng công nhân lấy sẵn các công đoạn đã phân công (`OperationAssignment`) trước khi may, nhập số lần giao của ngày, nhập ở dòng nhóm thì điền cả nhóm như màn Sản lượng cuối ca. Thêm được công đoạn ngoài phân công (gắn nhãn).
+  - **Phiếu của tổ trưởng ghi là CONFIRMED ngay** (`ConfirmMode = LEADER`, `ConfirmedQty = Quantity`), công nhân không phải xác nhận. Đường xác nhận / từ chối của công nhân và xác nhận hộ giữ nguyên cho phiếu PENDING cũ. Chỉ giao cho hôm nay hoặc ngày đã qua.
+  - **Lưu là "số của ngày":** BE so với số giao ròng của ngày, giao thêm phần chênh (tối đa số còn giao được của công đoạn, 409 `ALLOCATION_EXCEEDS_REQUIRED`); hạ số thì ghi phiếu thu hồi `ADJUSTED`, bắt buộc lý do (`RetrievalNote`), không hạ dưới sản lượng đã báo của ngày (409 `PIECE_RETRIEVAL_EXCEEDS_HOLDING`).
+  - **Thu hồi cuối ngày:** tổ trưởng bấm Thu hồi cuối ngày (chọn công nhân hoặc cả tổ, bắt buộc lý do): thu phần được giao nhưng chưa làm hết của ngày (`END_OF_DAY`). Nếu không thu, `WorkAllocationAutoRetrieveJob` (15 phút một lần) tự thu các ngày đã qua hạn sửa sản lượng (ngày D thu khi sang D+2), `ConfirmMode = SYSTEM`, ghi lý do tự động.
+  - **Trần sản lượng không đổi:** `vw_WorkerOutputCap`, `trg_OutputRecord_Check`, `trg_WorkAllocation_Check` vẫn cộng dồn giao − thu hồi. Vì phần chưa làm hết của mỗi ngày bị thu hồi nên trần cộng dồn bằng phần giao còn lại; trong lúc ngày D chưa được thu, báo sản lượng của ngày D+1 vẫn tính trên phần dư đó. Phiếu cũ: `WorkDate` = ngày tạo.
+  - **Màn đổi tên:** "Giao việc cho công nhân" thành "Giao sản lượng công đoạn theo ngày" (menu: Giao sản lượng theo ngày). Tab Phiếu giao / thu hồi giữ, thêm cột ngày làm việc và lý do thu hồi. Màn Phân công công đoạn (`OperationAssignment`) không đổi.
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh (sản lượng, UC55), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới. Chưa có test tích hợp trên SQL Server cho trigger với phiếu LEADER / SYSTEM.
+- **Cần sửa trong tài liệu:** Report-3 UC53, UC54, UC60 (giao theo ngày, thu hồi cuối ngày, không còn xác nhận của công nhân với phiếu của tổ trưởng); FR 3.5, 3.6, 3.8; `NX-MTD_AI_Context.md` mục 4.3; `NX-MTD_Database_Mo_ta.md`, DBML, ERD (WorkAllocation).
 - **Trạng thái:** Mở

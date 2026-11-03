@@ -1,3 +1,4 @@
+import { foldVietnamese } from '@/utils/colorSearch';
 import { MESSAGES } from '@/constants/messages';
 import { fill, formatQty } from '@/utils/format';
 import type { ProductNormItem, ProductSpec, SaveProductSpecPayload } from '../types';
@@ -241,3 +242,32 @@ export const dropRow = <T extends { key: string }>(
   set: (updater: (rows: T[]) => T[]) => void,
   key: string,
 ) => set((rows) => rows.filter((r) => r.key !== key));
+
+export type NormFilter = {
+  keyword?: string;
+  component?: string;
+  materialId?: number;
+  color?: string;
+  size?: string;
+};
+
+/** Lọc bảng định mức; searchText cho biết chữ dùng để tìm từ khóa trên từng dòng. */
+export const filterNorms = (
+  norms: NormRow[],
+  filter: NormFilter,
+  variants: VariantRow[],
+  searchText: (row: NormRow) => string,
+): NormRow[] => {
+  const appliesTo = (r: NormRow, match: (v: VariantRow) => boolean) =>
+    r.variantKeys.some((k) =>
+      variants.some((v) => variantKey(v.color, v.sizeCode) === k && match(v)),
+    );
+  const keyword = foldVietnamese(filter.keyword ?? '');
+  return norms.filter((r) => {
+    if (filter.component && r.componentKey !== filter.component) return false;
+    if (filter.materialId !== undefined && r.materialId !== filter.materialId) return false;
+    if (filter.color && !appliesTo(r, (v) => v.color.trim() === filter.color)) return false;
+    if (filter.size && !appliesTo(r, (v) => v.sizeCode.trim() === filter.size)) return false;
+    return !keyword || foldVietnamese(searchText(r)).includes(keyword);
+  });
+};
