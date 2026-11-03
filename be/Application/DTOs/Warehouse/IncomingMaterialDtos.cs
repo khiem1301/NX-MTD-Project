@@ -10,20 +10,6 @@ public sealed record OrderMaterialPageQuery : PageQuery
     public string? ReceiptState { get; init; }
 }
 
-/// <summary>Lọc danh sách đơn chờ NVL; MaterialState là một giá trị của <see cref="PendingMaterialStates"/>.</summary>
-public sealed record PendingMaterialOrderQuery : PageQuery
-{
-    public string? MaterialState { get; init; }
-}
-
-/// <summary>
-/// Đơn hàng còn việc về NVL cho Quản đốc / Admin: đơn đang chạy mà NVL chưa về đủ. MaterialLines = 0 nghĩa là chưa ai khai báo
-/// "NVL của đơn". ToBuyQty = Σ số phải mua đã khai báo; CustomerQty = Σ số khách cấp đã khai báo.
-/// </summary>
-public sealed record PendingMaterialOrderDto(
-    int OrderId, string OrderCode, string CustomerName, DateOnly DueDate, string Status, string MaterialStatus,
-    int MaterialLines, decimal CustomerQty, decimal ToBuyQty);
-
 /// <summary>NVL khách sẽ cấp mà kho chưa nhận đủ (số lần giao dự kiến do Quản đốc khai báo ở "NVL của đơn"; đã nhận = số phiếu nhập đã xác nhận).</summary>
 public sealed record IncomingCustomerMaterialDto(
     int OrderMaterialId, int OrderId, string OrderCode, string MaterialCode, string MaterialName, string MaterialColor,

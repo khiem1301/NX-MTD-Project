@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useBlocker, useNavigate } from 'react-router-dom';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
-import { ORDER_LIMITED_EDIT_STATUSES } from '@/constants/orderStatus';
+import { ORDER_LIMITED_EDIT_STATUSES, ORDER_MATERIALS_TAB } from '@/constants/orderStatus';
 import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
@@ -129,7 +129,9 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
       );
     } else {
       create.mutate(body, {
-        onSuccess: (newId) => done(newId as number),
+        // Đơn tạo xong mới khai báo NVL: mở thẳng tab NVL của đơn.
+        onSuccess: (newId) =>
+          navigate(`${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`),
         onError: (e) => {
           setDirty(true);
           handleError(e);

@@ -42,3 +42,35 @@ public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBeh
         RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
     }
 }
+
+public sealed class SaveDailyAllocationDtoValidator : AbstractValidator<SaveDailyAllocationDto>
+{
+    public const int MaxItems = 500;
+    public const int MaxQuantity = 100_000;
+
+    public SaveDailyAllocationDtoValidator()
+    {
+        RuleFor(x => x.Items).NotEmpty().WithMessage(WarehouseMessages.DailyItemsRequired)
+            .Must(i => i.Count <= MaxItems).WithMessage(WarehouseMessages.DailyTooManyItems)
+            .Must(i => i.Select(x => (x.WorkerId, x.OrderLineId, x.OperationId)).Distinct().Count() == i.Count)
+            .WithMessage(WarehouseMessages.DailyDuplicateItems);
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.WorkerId).GreaterThan(0).WithMessage(WarehouseMessages.WorkerRequired);
+            item.RuleFor(i => i.OrderLineId).GreaterThan(0);
+            item.RuleFor(i => i.OperationId).GreaterThan(0).WithMessage(WarehouseMessages.OperationRequired);
+            item.RuleFor(i => i.Quantity).InclusiveBetween(0, MaxQuantity).WithMessage(WarehouseMessages.DailyQtyRange);
+        });
+        RuleFor(x => x.Reason).MaximumLength(500);
+    }
+}
+
+public sealed class RetrieveDailyAllocationDtoValidator : AbstractValidator<RetrieveDailyAllocationDto>
+{
+    public RetrieveDailyAllocationDtoValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
+        RuleFor(x => x.WorkerIds).Must(w => w is null || w.Count <= SaveDailyAllocationDtoValidator.MaxItems)
+            .WithMessage(WarehouseMessages.DailyTooManyItems);
+    }
+}

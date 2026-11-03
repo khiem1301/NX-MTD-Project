@@ -336,6 +336,50 @@ public class MaterialReceiptFlowTests
     }
 
     [Fact]
+    public async Task GetById_shows_the_delivery_number_and_what_is_still_missing_after_this_receipt()
+    {
+        var (po, line, om, _) = PlacedPo(ordered: 100, required: 100, expectedDeliveries: 2);
+        var first = PendingSupplierReceipt(po, line, om, accepted: 60, id: 40);
+        first.Status = ReceiptStatuses.Confirmed;
+        first.ConfirmedAt = Now.AddDays(-1);
+        var second = PendingSupplierReceipt(po, line, om, accepted: 30, id: 50);
+
+        var pending = (await Receipts().GetByIdAsync(second.MaterialReceiptId, default)).Data!.Lines.Single();
+        pending.DeliveryNo.Should().Be(2);
+        pending.ExpectedDeliveryCount.Should().Be(2);
+        pending.ToReplenishQty.Should().Be(10);   // 100 − 60 − 30
+
+        second.Status = ReceiptStatuses.Confirmed;
+        second.ConfirmedAt = Now;
+        var earlier = (await Receipts().GetByIdAsync(first.MaterialReceiptId, default)).Data!.Lines.Single();
+        earlier.DeliveryNo.Should().Be(1);           // phiếu xác nhận sau không tính là lần trước
+        earlier.ToReplenishQty.Should().Be(40);      // 100 − 60 tại lần nhận đó
+    }
+
+    [Fact]
+    public async Task GetById_customer_receipt_counts_against_the_customer_supplied_qty()
+    {
+        var om = new OrderMaterial { OrderMaterialId = 31, OrderId = 7, MaterialId = 1, Material = Fabric, CustomerQty = 100, ExpectedDeliveryCount = 1 };
+        _orderMaterials.Add(om);
+        var receipt = new MaterialReceipt
+        {
+            MaterialReceiptId = 60, ReceiptCode = "PN-60", Source = MaterialSources.Customer, OrderId = 7, Status = ReceiptStatuses.Pending,
+        };
+        var receiptLine = new MaterialReceiptLine
+        {
+            MaterialReceiptLineId = 601, MaterialReceiptId = 60, MaterialReceipt = receipt, OrderMaterialId = 31, OrderMaterial = om, AcceptedQty = 70,
+        };
+        receipt.MaterialReceiptLines.Add(receiptLine);
+        _receipts.Add(receipt); _receiptLines.Add(receiptLine);
+
+        var dtoLine = (await Receipts().GetByIdAsync(60, default)).Data!.Lines.Single();
+
+        dtoLine.ToReplenishQty.Should().Be(30);
+        dtoLine.DeliveryNo.Should().Be(1);
+        dtoLine.ExpectedDeliveryCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task Confirm_does_not_stage_a_shortage_while_more_deliveries_are_expected()
     {
         var (po, line, om, order) = PlacedPo(ordered: 100, required: 100, expectedDeliveries: 2);

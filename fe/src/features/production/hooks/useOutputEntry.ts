@@ -1,20 +1,19 @@
 import { useMemo, useState } from 'react';
 import { message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useAuth } from '@/hooks/useAuth';
-import { useTeamLookup, useTeamMemberLookup } from '@/hooks/useHrLookups';
+import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow, OutputLineInput, OutputRole, ShiftCode } from '../types';
 import { outputKeyOf } from '../utils';
-import { useAssignableOperations, useOutputGrid, useSaveOutput } from './useProduction';
+import { useOutputGrid, useSaveOutput } from './useProduction';
 
 const text = PRODUCTION_TEXT.output;
 
 /**
- * Trạng thái và thao tác của lưới sản lượng cuối ca: bộ lọc (ngày, ca, tổ, đơn, dòng đơn), số lượng đang sửa,
- * dòng ngoài phân công vừa thêm (GBR-20) và lưu. Giao diện chỉ lo hiển thị.
+ * Trạng thái và thao tác của màn sản lượng cuối ca: bộ lọc (ngày, ca, tổ, đơn, dòng đơn), số lượng đang sửa
+ * trên lưới của Quản đốc và lưu. Giao diện chỉ lo hiển thị.
  */
 export function useOutputEntry(role: OutputRole) {
   const isManager = role === 'manager';
@@ -26,14 +25,7 @@ export function useOutputEntry(role: OutputRole) {
   const [edits, setEdits] = useState<Record<string, number | null>>({});
   const [reason, setReason] = useState('');
   const [warnings, setWarnings] = useState<string[]>([]);
-  // Dòng ngoài phân công tổ trưởng vừa thêm, chưa lưu (GBR-20); lưu xong thì lưới tải lại từ BE.
-  const [extraRows, setExtraRows] = useState<OutputGridRow[]>([]);
-  const [extraOperationId, setExtraOperationId] = useState<number | undefined>(undefined);
-  const [extraWorkerId, setExtraWorkerId] = useState<number | undefined>(undefined);
 
-  const { user } = useAuth();
-  const operations = useAssignableOperations(isManager ? null : orderId);
-  const members = useTeamMemberLookup(isManager ? null : (user?.teamId ?? null));
   const lines = useOrderLineLookup(orderId);
   const teams = useTeamLookup();
   const save = useSaveOutput(role);
@@ -48,13 +40,7 @@ export function useOutputEntry(role: OutputRole) {
         }
       : null;
   const grid = useOutputGrid(role, query);
-  const rows = useMemo(() => {
-    const gridRows = grid.data?.rows ?? [];
-    return [
-      ...gridRows,
-      ...extraRows.filter((e) => !gridRows.some((g) => outputKeyOf(g) === outputKeyOf(e))),
-    ];
-  }, [grid.data, extraRows]);
+  const rows = useMemo(() => grid.data?.rows ?? [], [grid.data]);
 
   const changedRows = useMemo<OutputLineInput[]>(
     () =>
@@ -75,50 +61,15 @@ export function useOutputEntry(role: OutputRole) {
   const resetEdits = () => {
     setEdits({});
     setWarnings([]);
-    setExtraRows([]);
   };
 
-  const addExtraRow = () => {
-    const operation = operations.data?.find((o) => o.operationId === extraOperationId);
-    const worker = members.data?.find((m) => m.employeeId === extraWorkerId);
-    if (!operation || !worker) return;
-    setExtraRows((prev) => [
-      ...prev,
-      {
-        operationId: operation.operationId,
-        operationCode: operation.operationCode,
-        operationName: operation.operationName,
-        workerId: worker.employeeId,
-        workerCode: worker.employeeCode,
-        workerName: worker.fullName,
-        outputRecordId: null,
-        quantity: null,
-        unitRate: null,
-        rateApproved: true,
-        isOutsideAssignment: true,
-        capQty: 0,
-        reportedQty: 0,
-        noAttendanceWarning: false,
-        canEdit: true,
-        editDeadline: null,
-        rowVer: null,
-      },
-    ]);
-    setExtraOperationId(undefined);
-    setExtraWorkerId(undefined);
-  };
-
-  const handleSave = () => {
-    if (!query || changedRows.length === 0) {
+  const saveRows = (toSave: OutputLineInput[], onDone?: () => void) => {
+    if (!query || toSave.length === 0) {
       void message.info(text.nothingChanged);
       return;
     }
-    if (isManager && reason.trim() === '') {
-      void message.error(text.reasonRequired);
-      return;
-    }
     save.mutate(
-      { ...query, reason: reason.trim() || undefined, rows: changedRows },
+      { ...query, reason: reason.trim() || undefined, rows: toSave },
       {
         onSuccess: (result) => {
           void message.success(
@@ -126,11 +77,19 @@ export function useOutputEntry(role: OutputRole) {
           );
           setWarnings(result.warnings);
           setEdits({});
-          setExtraRows([]);
           setReason('');
+          onDone?.();
         },
       },
     );
+  };
+
+  const handleSave = () => {
+    if (isManager && changedRows.length > 0 && reason.trim() === '') {
+      void message.error(text.reasonRequired);
+      return;
+    }
+    saveRows(changedRows);
   };
 
   const lineOptions = (lines.data ?? []).map((l) => ({
@@ -143,14 +102,6 @@ export function useOutputEntry(role: OutputRole) {
 
   const changeQuantity = (row: OutputGridRow, value: number | null) =>
     setEdits((prev) => ({ ...prev, [outputKeyOf(row)]: value }));
-
-  const removeExtraRow = (row: OutputGridRow) => {
-    setExtraRows((prev) => prev.filter((e) => outputKeyOf(e) !== outputKeyOf(row)));
-    setEdits((prev) => {
-      const { [outputKeyOf(row)]: _removed, ...rest } = prev;
-      return rest;
-    });
-  };
 
   return {
     workDate,
@@ -168,13 +119,6 @@ export function useOutputEntry(role: OutputRole) {
     setReason,
     warnings,
     setWarnings,
-    extraRows,
-    extraOperationId,
-    setExtraOperationId,
-    extraWorkerId,
-    setExtraWorkerId,
-    operations,
-    members,
     lines,
     teams,
     save,
@@ -183,8 +127,7 @@ export function useOutputEntry(role: OutputRole) {
     rows,
     changedRows,
     resetEdits,
-    addExtraRow,
-    removeExtraRow,
+    saveRows,
     handleSave,
     lineOptions,
     teamOptions,

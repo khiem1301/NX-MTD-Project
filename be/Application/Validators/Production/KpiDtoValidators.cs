@@ -10,6 +10,7 @@ public static class KpiLimits
     public const int MaxQty = 1_000_000;
     public const int MaxPeriodDays = 366;
     public const int MaxDailyRows = 366;
+    public const int MaxLines = 500;
     public static readonly IReadOnlySet<string> Statuses = new HashSet<string> { "Active", "Closed", "Cancelled" };
 }
 
@@ -35,8 +36,18 @@ public sealed class SaveKpiTargetDtoValidator : AbstractValidator<SaveKpiTargetD
             .WithMessage(Messages.KpiPeriodTooLong)
             .When(x => x.StartDate != default && x.EndDate >= x.StartDate);
 
-        RuleFor(x => x.TargetFinishedQty).GreaterThan(0).WithMessage(Messages.KpiTargetQtyMustBePositive)
-            .LessThanOrEqualTo(KpiLimits.MaxQty).WithMessage(Messages.KpiTargetQtyMax);
+        // Chỉ tiêu cả kỳ = Σ các dòng màu × size (DEV-ALL-62).
+        RuleFor(x => x.Lines).Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage(Messages.KpiLinesRequired)
+            .Must(lines => lines.Count <= KpiLimits.MaxLines).WithMessage(Messages.KpiLinesTooMany)
+            .Must(lines => lines.All(l => l is not null)).WithMessage(Messages.KpiLineQtyMustBePositive)
+            .Must(lines => lines.Select(l => l.OrderLineId).Distinct().Count() == lines.Count).WithMessage(Messages.KpiLineDuplicate)
+            .Must(lines => lines.Sum(l => (long)l.TargetQty) <= KpiLimits.MaxQty).WithMessage(Messages.KpiTargetQtyMax);
+        RuleForEach(x => x.Lines).Cascade(CascadeMode.Stop)
+            .Must(l => l.OrderLineId > 0).WithMessage(Messages.KpiLineNotAllotted)
+            .Must(l => l.TargetQty > 0).WithMessage(Messages.KpiLineQtyMustBePositive)
+            .Must(l => l.TargetQty <= KpiLimits.MaxQty).WithMessage(Messages.KpiLineQtyMax)
+            .When(x => x.Lines is not null && x.Lines.Count <= KpiLimits.MaxLines && x.Lines.All(l => l is not null));
     }
 }
 

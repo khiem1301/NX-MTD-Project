@@ -15,6 +15,10 @@ public interface IOutputQueryService
     /// <summary>Σ hàng hoàn thiện cả kỳ của từng chỉ tiêu KPI (vw_KpiDailyResult); chỉ tiêu chưa có QC không có trong kết quả.</summary>
     Task<IReadOnlyDictionary<int, int>> GetKpiFinishedTotalsAsync(IReadOnlyCollection<int> kpiTargetIds, CancellationToken ct);
 
+    /// <summary>QC đạt trong kỳ của từng chỉ tiêu KPI theo dòng đơn (màu × size), khóa (KpiTargetId, OrderLineId); dòng chưa có QC không có trong kết quả.</summary>
+    Task<IReadOnlyDictionary<(int KpiTargetId, int OrderLineId), int>> GetKpiLineFinishedAsync(
+        IReadOnlyCollection<int> kpiTargetIds, CancellationToken ct);
+
     /// <summary>Kết quả KPI theo ngày của một chỉ tiêu (chỉ ngày có QC nhập), tăng dần theo ngày.</summary>
     Task<IReadOnlyList<KpiDailyResultDto>> GetKpiDailyResultsAsync(int kpiTargetId, CancellationToken ct);
 

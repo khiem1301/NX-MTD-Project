@@ -97,6 +97,14 @@ public sealed record OrderDetailDto
     public IReadOnlyList<AuditLogDto> History { get; init; } = Array.Empty<AuditLogDto>();
 }
 
+// ---- Xem đơn không có dữ liệu mật (GBR-02: KHÔNG có đơn giá, thành tiền, lịch sử; không có RowVer vì chỉ đọc) ----
+public sealed record OrderOverviewListItemDto(int OrderId, string OrderCode, string CustomerName, DateOnly ReceivedDate, DateOnly DueDate,
+    string Status, string MaterialStatus, bool IsDelayRisk, int TotalQty, string ProductCodes);
+
+public sealed record OrderOverviewDto(int OrderId, string OrderCode, string CustomerName, DateOnly ReceivedDate, DateOnly DueDate,
+    string Status, string MaterialStatus, bool IsDelayRisk, string? StopReason, string? Note, DateTime CreatedAt,
+    IReadOnlyList<OrderLineLookupDto> Lines);
+
 // ---- Tra cứu cho luồng khác (D26: KHÔNG có đơn giá) ----
 public sealed record OrderLookupQuery : PageQuery
 {

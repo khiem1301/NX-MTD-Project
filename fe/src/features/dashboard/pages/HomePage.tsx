@@ -16,7 +16,8 @@ export function HomePage() {
   if (!user) return null;
   const seesProgress = user.role === ROLES.Admin || user.role === ROLES.Manager;
   const seesTeamKpi =
-    (user.role === ROLES.TeamLeader || user.role === ROLES.TeamDeputy) && user.teamType === 'Sewing';
+    (user.role === ROLES.TeamLeader || user.role === ROLES.TeamDeputy) &&
+    user.teamType === 'Sewing';
   return (
     <>
       {user.role === ROLES.Admin && (

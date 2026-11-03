@@ -52,3 +52,15 @@ public sealed class UpdateOrderMaterialDtoValidator : AbstractValidator<UpdateOr
 {
     public UpdateOrderMaterialDtoValidator() => Include(new OrderMaterialInputValidator());
 }
+
+public sealed class CreateOrderMaterialBatchDtoValidator : AbstractValidator<CreateOrderMaterialBatchDto>
+{
+    public CreateOrderMaterialBatchDtoValidator()
+    {
+        RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("Vui lòng chọn đơn hàng.");
+        RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.OrderMaterialLinesRequired);
+        RuleForEach(x => x.Lines).SetValidator(new OrderMaterialInputValidator());
+        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.MaterialId).Distinct().Count() == l.Count)
+            .WithMessage(WarehouseMessages.DuplicateLine);
+    }
+}

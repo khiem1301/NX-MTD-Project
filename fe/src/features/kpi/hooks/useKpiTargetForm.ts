@@ -3,11 +3,23 @@ import { Form } from 'antd';
 import dayjs from 'dayjs';
 import { useOrderLineLookup, useOrderLookup } from '@/hooks/useOrderLookups';
 import { fill, formatDate, toApiDate } from '@/utils/format';
-import { useAllottedTeams, useKpiOrderCapacity, useSaveKpiTarget } from './useKpi';
+import {
+  useAllottedTeams,
+  useKpiLineCapacity,
+  useKpiOrderCapacity,
+  useSaveKpiTarget,
+} from './useKpi';
 import type { Props } from '../components/KpiTargetFormModal';
 import { type Dayjs } from 'dayjs';
 import { KPI_TEXT } from '../constants';
 import { dueWarning } from '../utils/dueWarning';
+import {
+  lineQtyError,
+  sumLineQty,
+  toLineQtyValues,
+  toPayloadLines,
+  type LineQtyValues,
+} from '../utils/lineTargets';
 
 const text = KPI_TEXT.form;
 
@@ -18,10 +30,17 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
   const save = useSaveKpiTarget(target?.kpiTargetId ?? null);
   const orderId = Form.useWatch('orderId', form) ?? null;
   const productId = Form.useWatch('productId', form) ?? null;
-  const qty = Form.useWatch('targetFinishedQty', form);
+  const sewingTeamId = Form.useWatch('sewingTeamId', form) ?? null;
+  const lineQty = Form.useWatch('lineQty', form);
   const capacity = useKpiOrderCapacity(orderId, productId, target?.kpiTargetId).data;
-  const overCapacity = capacity !== undefined && (qty ?? 0) > capacity.maxTarget;
+  const lineCapacity = useKpiLineCapacity(orderId, productId, sewingTeamId, target?.kpiTargetId);
+  const lineRows = useMemo(() => lineCapacity.data ?? [], [lineCapacity.data]);
+  // Chỉ tiêu cả kỳ = tổng các màu × size (DEV-ALL-62).
+  const total = sumLineQty(lineRows, lineQty);
+  const hasLineError = lineRows.some((l) => lineQtyError(l, lineQty?.[String(l.orderLineId)]));
+  const overCapacity = capacity !== undefined && total > capacity.maxTarget;
   const orderClosed = capacity?.orderClosed === true;
+  const canSave = total > 0 && !hasLineError && !overCapacity && !orderClosed;
   const period = Form.useWatch('period', form);
   const warning =
     capacity?.dueDate && period?.[1]
@@ -30,8 +49,10 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
   const orders = useOrderLookup();
   const lines = useOrderLineLookup(orderId);
   const teams = useAllottedTeams(orderId, productId);
-  const sewingTeamId = Form.useWatch('sewingTeamId', form);
   const editing = target !== null;
+  /** Chỉ tiêu cũ chỉ có số tổng: phải nhập lại theo màu × size khi sửa. */
+  const legacyTotal =
+    target !== null && (target.lines ?? []).length === 0 ? target.targetFinishedQty : null;
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +63,7 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
         productId: target.productId,
         sewingTeamId: target.sewingTeamId,
         period: [dayjs(target.startDate), dayjs(target.endDate)],
-        targetFinishedQty: target.targetFinishedQty,
+        lineQty: toLineQtyValues(target.lines),
       });
     }
   }, [open, target, form]);
@@ -81,7 +102,7 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
 
   // Đổi đơn hoặc mã hàng mà tổ đang chọn không được chia mã mới thì bỏ chọn tổ.
   useEffect(() => {
-    if (editing || !teams.data || sewingTeamId === undefined) return;
+    if (editing || !teams.data || sewingTeamId === null) return;
     if (!teams.data.some((t) => t.teamId === sewingTeamId))
       form.setFieldValue('sewingTeamId', undefined);
   }, [editing, teams.data, sewingTeamId, form]);
@@ -98,7 +119,7 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
         sewingTeamId: values.sewingTeamId,
         startDate: toApiDate(values.period[0]),
         endDate: toApiDate(values.period[1]),
-        targetFinishedQty: values.targetFinishedQty,
+        lines: toPayloadLines(lineRows, values.lineQty),
       },
       { onSuccess: onClose },
     );
@@ -111,6 +132,13 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
     capacity,
     overCapacity,
     orderClosed,
+    canSave,
+    total,
+    lineQty,
+    lineRows,
+    lineLoading: lineCapacity.isFetching,
+    hasTeam: sewingTeamId !== null,
+    legacyTotal,
     warning,
     disabledDate,
     orders,
@@ -130,5 +158,5 @@ type FormValues = {
   productId: number;
   sewingTeamId: number;
   period: [Dayjs, Dayjs];
-  targetFinishedQty: number;
+  lineQty?: LineQtyValues;
 };

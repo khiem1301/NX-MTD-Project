@@ -45,3 +45,9 @@ export const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'FREE'] as c
 
 /** D27: đơn sửa tự do khi Mới; đang sản xuất / giao chỉ sửa số lượng, đơn giá, thêm dòng. */
 export const ORDER_LIMITED_EDIT_STATUSES: readonly OrderStatus[] = ['InProduction', 'InDelivery', 'PartiallyDelivered'];
+
+/** Đơn đã đóng: không thêm, sửa, xóa NVL của đơn được nữa (khớp OrderStatuses.Closed ở BE). */
+export const ORDER_CLOSED_STATUSES: readonly OrderStatus[] = ['Cancelled', 'Stopped', 'Delivered', 'Completed'];
+
+/** Khóa tab trong chi tiết đơn (?tab=): mở thẳng tab NVL của đơn. */
+export const ORDER_MATERIALS_TAB = 'materials';

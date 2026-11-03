@@ -1,5 +1,6 @@
 export { MaterialListPage } from './pages/MaterialListPage';
-export { OrderMaterialPage } from './pages/OrderMaterialPage';
+export { OrderMaterialLinkRedirect } from './pages/OrderMaterialLinkRedirect';
+export { OrderMaterialsTab } from './components/OrderMaterialsTab';
 export { IncomingMaterialsPage } from './pages/IncomingMaterialsPage';
 export { MaterialReceiptListPage } from './pages/MaterialReceiptListPage';
 export { MaterialIssueListPage } from './pages/MaterialIssueListPage';
@@ -7,6 +8,7 @@ export { InventoryPage } from './pages/InventoryPage';
 export { PieceHoldingsPage } from './pages/PieceHoldingsPage';
 export { ShortDeliveryListPage } from './pages/ShortDeliveryListPage';
 export { warehouseMenu } from './menu';
+export { MaterialFormModal } from './components/MaterialFormModal';
 export { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from './constants';
 export { useBalances } from './hooks/useInventory';

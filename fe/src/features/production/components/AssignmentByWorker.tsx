@@ -55,7 +55,8 @@ export function AssignmentByWorker({ orderId, rows, workerOptions }: AssignmentB
   const kw = foldVietnamese(keyword.trim());
   const data = all.filter(
     (w) =>
-      (filter === ALL || w.operations.length === 0) && (!kw || foldVietnamese(w.label).includes(kw)),
+      (filter === ALL || w.operations.length === 0) &&
+      (!kw || foldVietnamese(w.label).includes(kw)),
   );
   const editing = workerOptions.find((o) => o.value === editingId) ?? null;
 
@@ -72,7 +73,10 @@ export function AssignmentByWorker({ orderId, rows, workerOptions }: AssignmentB
       align: 'center',
       sorter: (a, b) => a.operations.length - b.operations.length,
       render: (_, w) => (
-        <Tag color={w.operations.length === 0 ? 'orange' : 'default'} style={{ marginInlineEnd: 0 }}>
+        <Tag
+          color={w.operations.length === 0 ? 'orange' : 'default'}
+          style={{ marginInlineEnd: 0 }}
+        >
           {w.operations.length}
         </Tag>
       ),
@@ -102,7 +106,11 @@ export function AssignmentByWorker({ orderId, rows, workerOptions }: AssignmentB
       title: MESSAGES.common.actions,
       key: 'actions',
       render: (_, w) => (
-        <IconAction title={t.pick} icon={<EditOutlined />} onClick={() => setEditingId(w.workerId)} />
+        <IconAction
+          title={t.pick}
+          icon={<EditOutlined />}
+          onClick={() => setEditingId(w.workerId)}
+        />
       ),
     },
   ];

@@ -29,6 +29,27 @@ const line = (
   cmtUnitPrice: price,
 });
 
+describe('fromLines không có đơn giá (Quản đốc)', () => {
+  it('gom theo mã hàng, đơn giá null, thành tiền 0', () => {
+    const line = {
+      orderLineId: 1,
+      productId: 1,
+      productCode: 'AO-01',
+      productName: 'Áo',
+      color: 'Đỏ',
+      orderedQty: 10,
+    };
+    const blocks = fromLines([
+      { ...line, sizeCode: 'S' },
+      { ...line, orderLineId: 2, sizeCode: 'M' },
+    ]);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]?.cmtUnitPrice).toBeNull();
+    expect(blocksTotals(blocks)).toEqual({ qty: 20, amount: 0 });
+  });
+});
+
 describe('orderGrid', () => {
   it('fromLines → toLines trả lại đúng tập dòng', () => {
     const lines = [line(1, 'Đỏ', 'S', 10), line(2, 'Đỏ', 'M', 20), line(3, 'Xanh', 'M', 5)];

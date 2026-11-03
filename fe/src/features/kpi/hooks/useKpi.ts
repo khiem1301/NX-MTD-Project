@@ -44,6 +44,25 @@ export const useKpiOrderCapacity = (
     enabled: orderId !== null && productId !== null,
   });
 
+/** Các màu × size của mã hàng đã chia cho tổ và số đặt được của từng dòng; chỉ gọi khi đã chọn đơn, mã hàng và tổ. */
+export const useKpiLineCapacity = (
+  orderId: number | null,
+  productId: number | null,
+  sewingTeamId: number | null,
+  exceptKpiTargetId?: number,
+) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'line-capacity', orderId, productId, sewingTeamId, exceptKpiTargetId],
+    queryFn: () =>
+      kpiApi.getLineCapacity({
+        orderId: orderId as number,
+        productId: productId as number,
+        sewingTeamId: sewingTeamId as number,
+        exceptKpiTargetId,
+      }),
+    enabled: orderId !== null && productId !== null && sewingTeamId !== null,
+  });
+
 /** Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng. */
 export const useKpiCalendar = (kpiTargetId: number | null) =>
   useQuery({

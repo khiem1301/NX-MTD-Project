@@ -1,11 +1,11 @@
 import { Card, Tabs } from 'antd';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
-import { AllocationBoard } from '../components/AllocationBoard';
-import { PM_LABELS } from '../constants';
 import { AllocationHistory } from '../components/AllocationHistory';
+import { DailyAllocationBoard } from '../components/DailyAllocationBoard';
+import { PM_LABELS } from '../constants';
 
-/** UC53 / UC54: tổ trưởng / tổ phó may chia việc cho công nhân theo công đoạn, xác nhận hộ khi công nhân chưa xác nhận. */
+/** UC53 / UC54: tổ trưởng / tổ phó may giao sản lượng công đoạn theo ngày cho công nhân, thu hồi phần chưa làm hết cuối ngày. */
 export function LeaderPieceMovementsPage() {
   const { user } = useAuth();
   const canEdit = user?.role === ROLES.TeamLeader || user?.role === ROLES.TeamDeputy;
@@ -16,7 +16,7 @@ export function LeaderPieceMovementsPage() {
           {
             key: 'board',
             label: PM_LABELS.boardTab,
-            children: <AllocationBoard canEdit={canEdit} />,
+            children: <DailyAllocationBoard canEdit={canEdit} />,
           },
           { key: 'history', label: PM_LABELS.historyTab, children: <AllocationHistory /> },
         ]}

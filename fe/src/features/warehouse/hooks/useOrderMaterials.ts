@@ -4,8 +4,8 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useRolePath } from '@/hooks/useRolePath';
 import { warehouseApi } from '../api/warehouseApi';
 import type {
+  CreateOrderMaterialsPayload,
   OrderMaterialPageQuery,
-  PendingMaterialOrderQuery,
   SaveOrderMaterialPayload,
 } from '../types';
 import { WAREHOUSE_KEY } from './useMaterials';
@@ -28,13 +28,21 @@ export const useOrderMaterialPage = (params: OrderMaterialPageQuery) => {
   });
 };
 
-/** Đơn chờ khai báo / còn phải mua NVL (Admin, Quản đốc). */
-export const usePendingMaterialOrders = (params: PendingMaterialOrderQuery) => {
+/** Mã hàng trong đơn kèm NVL định mức, để thêm NVL theo mã hàng. */
+export const useOrderProductMaterials = (orderId: number) => {
   const role = useRolePath();
   return useQuery({
-    queryKey: [...WAREHOUSE_KEY, 'pending-material-orders', role, params],
-    queryFn: () => warehouseApi.getPendingMaterialOrders(role, params),
+    queryKey: [...WAREHOUSE_KEY, 'order-materials', role, 'products', orderId],
+    queryFn: () => warehouseApi.getOrderProductMaterials(role, orderId),
   });
+};
+
+export const useCreateOrderMaterials = () => {
+  const role = useRolePath();
+  return useApiMutation(
+    (body: CreateOrderMaterialsPayload) => warehouseApi.createOrderMaterials(role, body),
+    { invalidate: [WAREHOUSE_KEY], successMessage: MESSAGES.warehouse.orderMaterialSaved },
+  );
 };
 
 export const useSaveOrderMaterial = () => {

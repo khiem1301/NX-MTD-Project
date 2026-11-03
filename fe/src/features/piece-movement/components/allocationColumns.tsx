@@ -1,7 +1,7 @@
 import { Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime } from '@/utils/format';
+import { formatDate, formatDateTime } from '@/utils/format';
 import {
   CONFIRM_MODE_LABEL,
   MOVEMENT_STATUS,
@@ -17,6 +17,7 @@ export function allocationColumns(
   withWorker: boolean,
 ): TableColumnsType<WorkAllocation> {
   return [
+    { title: PM_LABELS.workDateShort, dataIndex: 'workDate', render: (v: string) => formatDate(v) },
     {
       title: PM_LABELS.type,
       dataIndex: 'movementType',
@@ -28,6 +29,7 @@ export function allocationColumns(
               {RETRIEVAL_REASON_LABEL[m.retrievalReason]}
             </Typography.Text>
           )}
+          {m.retrievalNote && <Typography.Text type="secondary">{m.retrievalNote}</Typography.Text>}
         </Space>
       ),
     },

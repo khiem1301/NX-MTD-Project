@@ -83,92 +83,156 @@ public class IncomingMaterialTests
     private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
     private IncomingMaterialService Incoming() => new(_uow, new MaterialSupplyUpdater(_uow));
 
-    // ---------- Đơn chờ khai báo NVL ----------
+    // ---------- NVL theo mã hàng trong đơn ----------
+
+    private void OrderedVariant(int orderId, int variantId, int productId = 1, string code = "AO-01") =>
+        _orderLines.Add(new OrderLine
+        {
+            OrderLineId = _orderLines.Count + 1, OrderId = orderId, ProductId = productId, ProductVariantId = variantId,
+            ProductVariant = new ProductVariant
+            {
+                ProductVariantId = variantId, ProductId = productId, Color = "Đỏ", SizeCode = "M",
+                Product = new Product { ProductId = productId, ProductCode = code, ProductName = "Áo " + code },
+            },
+        });
+
+    private void Norm(int variantId, Material material, int productId = 1, string componentStatus = RecordStatus.Active) =>
+        _norms.Add(new ProductComponentMaterial
+        {
+            ProductComponentMaterialId = _norms.Count + 1, ProductId = productId, ProductVariantId = variantId,
+            MaterialId = material.MaterialId, Material = material,
+            ProductComponent = new ProductComponent { Status = componentStatus },
+        });
+
+    private static Material OtherMat(int id, string code, string status = MaterialStatuses.Active) =>
+        new() { MaterialId = id, MaterialCode = code, MaterialName = code, Unit = "m", Color = "", Status = status, MaterialType = "FABRIC" };
 
     [Fact]
-    public async Task A_new_order_without_any_declared_nvl_is_listed_as_waiting()
+    public async Task GetProductMaterials_OrderNotFound_ReturnsNotFound()
     {
-        Order(1, "DH-NEW");
+        var result = await OrderMaterials().GetProductMaterialsAsync(404, default);
 
-        var result = await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default);
-
-        var row = result.Data!.Items.Single();
-        row.OrderCode.Should().Be("DH-NEW");
-        row.MaterialLines.Should().Be(0);
-        row.Status.Should().Be("New");
-        row.MaterialStatus.Should().Be("Awaiting");
-        row.CustomerName.Should().Be("Công ty ABC");
+        result.Kind.Should().Be(ResultKind.NotFound);
     }
 
     [Fact]
-    public async Task Pending_orders_sum_what_the_customer_supplies_and_what_must_be_bought_and_sort_by_due_date()
+    public async Task GetProductMaterials_SameMaterialOnManyVariants_ListedOnce()
     {
-        var late = Order(1, "DH-LATE", dueInDays: 20);
-        var soon = Order(2, "DH-SOON", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Partial, dueInDays: 5);
-        OrderMat(late, 1, 100, 50);
-        OrderMat(late, 2, 40, null);
-        OrderMat(soon, 3, 0, 300);
+        Order(1, "DH-1");
+        OrderedVariant(1, 10);
+        OrderedVariant(1, 11);
+        var fabric = OtherMat(5, "VAI05");
+        Norm(10, fabric);
+        Norm(11, fabric);
 
-        var rows = (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default)).Data!.Items;
+        var products = (await OrderMaterials().GetProductMaterialsAsync(1, default)).Data!;
 
-        rows.Select(r => r.OrderCode).Should().Equal("DH-SOON", "DH-LATE");
-        rows[1].MaterialLines.Should().Be(2);
-        rows[1].CustomerQty.Should().Be(140);
-        rows[1].ToBuyQty.Should().Be(50);
-        rows[0].ToBuyQty.Should().Be(300);
+        products.Should().ContainSingle();
+        products[0].ProductCode.Should().Be("AO-01");
+        products[0].Materials.Select(m => m.MaterialId).Should().Equal(5);
     }
 
     [Fact]
-    public async Task Pending_orders_leave_out_completed_closed_and_fully_supplied_orders()
+    public async Task GetProductMaterials_VariantNotOrdered_MaterialExcluded()
     {
-        Order(1, "DH-DONE", status: OrderStatuses.Completed, material: OrderMaterialStatuses.Complete);
-        Order(2, "DH-CANCELLED", status: OrderStatuses.Cancelled);
-        Order(3, "DH-FULL", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Complete);
-        Order(4, "DH-OK");
+        Order(1, "DH-1");
+        OrderedVariant(1, 10);
+        Norm(10, OtherMat(5, "VAI05"));
+        Norm(99, OtherMat(6, "VAI06"));
 
-        (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery(), default)).Data!.Items.Select(r => r.OrderCode)
-            .Should().Equal("DH-OK");
-    }
+        var products = (await OrderMaterials().GetProductMaterialsAsync(1, default)).Data!;
 
-    private async Task<IEnumerable<string>> PendingCodes(PendingMaterialOrderQuery query) =>
-        (await OrderMaterials().GetPendingOrdersAsync(query, default)).Data!.Items.Select(r => r.OrderCode);
-
-    [Fact]
-    public async Task Pending_orders_put_undeclared_orders_first_even_when_their_due_date_is_later()
-    {
-        OrderMat(Order(1, "DH-CO", dueInDays: 3), 1, 10, null);
-        Order(2, "DH-CHUA", dueInDays: 30);
-
-        (await PendingCodes(new PendingMaterialOrderQuery())).Should().Equal("DH-CHUA", "DH-CO");
-    }
-
-    [Theory]
-    [InlineData(PendingMaterialStates.NotDeclared, "DH-CHUA")]
-    [InlineData(PendingMaterialStates.Awaiting, "DH-CHO")]
-    [InlineData(PendingMaterialStates.Partial, "DH-MOTPHAN")]
-    [InlineData(PendingMaterialStates.Complete, "DH-DU")]
-    public async Task Pending_orders_filter_by_material_state(string state, string expected)
-    {
-        Order(1, "DH-CHUA");
-        OrderMat(Order(2, "DH-CHO"), 1, 10, null);
-        OrderMat(Order(3, "DH-MOTPHAN", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Partial), 2, 10, null);
-        OrderMat(Order(4, "DH-DU", status: OrderStatuses.InProduction, material: OrderMaterialStatuses.Complete), 3, 10, null);
-
-        (await PendingCodes(new PendingMaterialOrderQuery { MaterialState = state })).Should().Equal(expected);
+        products[0].Materials.Select(m => m.MaterialId).Should().Equal(5);
     }
 
     [Fact]
-    public async Task Pending_orders_search_by_order_code_and_customer_and_page_on_the_server()
+    public async Task GetProductMaterials_DiscontinuedMaterialOrComponent_Excluded()
     {
-        Order(1, "DH-A");
-        Order(2, "DH-B");
-        Order(3, "DH-C");
+        Order(1, "DH-1");
+        OrderedVariant(1, 10);
+        Norm(10, OtherMat(5, "VAI05", MaterialStatuses.Discontinued));
+        Norm(10, OtherMat(6, "VAI06"), componentStatus: RecordStatus.Discontinued);
 
-        (await PendingCodes(new PendingMaterialOrderQuery { Keyword = " DH-B " })).Should().Equal("DH-B");
-        (await PendingCodes(new PendingMaterialOrderQuery { Keyword = "Công ty ABC" })).Should().HaveCount(3);
-        var page = (await OrderMaterials().GetPendingOrdersAsync(new PendingMaterialOrderQuery { Page = 2, PageSize = 2 }, default)).Data!;
-        page.TotalItems.Should().Be(3);
-        page.Items.Should().ContainSingle();
+        var products = (await OrderMaterials().GetProductMaterialsAsync(1, default)).Data!;
+
+        products[0].Materials.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetProductMaterials_ProductWithoutNorm_ReturnedWithEmptyMaterials()
+    {
+        Order(1, "DH-1");
+        OrderedVariant(1, 10);
+        OrderedVariant(1, 20, 2, "AO-02");
+        Norm(20, OtherMat(5, "VAI05"), 2);
+
+        var products = (await OrderMaterials().GetProductMaterialsAsync(1, default)).Data!;
+
+        products.Select(p => p.ProductCode).Should().Equal("AO-01", "AO-02");
+        products[0].Materials.Should().BeEmpty();
+        products[1].Materials.Should().ContainSingle();
+    }
+
+    // ---------- Thêm nhiều NVL cùng lúc ----------
+
+    private static CreateOrderMaterialLineDto BatchLine(int materialId = 1, decimal required = 10, decimal customer = 0, short? count = null) =>
+        new(materialId, required, customer, count, null);
+
+    [Fact]
+    public async Task CreateBatch_ValidLines_AddsAllAndSavesOnce()
+    {
+        Order(1, "DH-1");
+        _materials.Add(OtherMat(2, "CHI02"));
+
+        var result = await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine(), BatchLine(2)]), default);
+
+        result.IsSuccess.Should().BeTrue();
+        await _uow.Repository<OrderMaterial>().Received(2).AddAsync(Arg.Any<OrderMaterial>());
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateBatch_OneLineAlreadyInOrder_SavesNothing()
+    {
+        var o = Order(1, "DH-1");
+        OrderMat(o, 1, 0);
+        _materials.Add(OtherMat(2, "CHI02"));
+
+        var result = await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine(2), BatchLine()]), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderMaterialDuplicate);
+        await _uow.Repository<OrderMaterial>().DidNotReceive().AddAsync(Arg.Any<OrderMaterial>());
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateBatch_OrderClosed_Fails()
+    {
+        Order(1, "DH-1", OrderStatuses.Closed.First());
+
+        var result = await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine()]), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderClosed);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task CreateBatch_OrderNotFound_ReturnsNotFound()
+    {
+        var result = await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(404, [BatchLine()]), default);
+
+        result.Kind.Should().Be(ResultKind.NotFound);
+    }
+
+    [Fact]
+    public async Task CreateBatch_CustomerSupplyLine_NotifiesWarehouseKeeperOnlyForThatLine()
+    {
+        Order(1, "DH-1");
+        _materials.Add(OtherMat(2, "CHI02"));
+
+        await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine(customer: 5, count: 1), BatchLine(2)]), default);
+
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     // ---------- Bảng NVL của đơn ----------

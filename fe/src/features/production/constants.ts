@@ -367,7 +367,7 @@ export const PRODUCTION_TEXT = {
     title: 'Sản lượng cuối ca',
     managerTitle: 'Sửa sản lượng sau hạn',
     subtitle:
-      'Nhập số sản phẩm của từng công nhân theo công đoạn trong ca. Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
+      'Chọn ngày, ca và dòng đơn rồi nhập sản lượng cho từng công nhân. Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
     managerSubtitle:
       'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký.',
     date: 'Ngày làm việc',
@@ -379,11 +379,32 @@ export const PRODUCTION_TEXT = {
     received: 'BTP tổ đã nhận từ kho',
     allocatedHelp:
       'Sản lượng của mỗi công nhân không vượt số lần được giao (màn Giao việc) ở đúng công đoạn đó.',
-    noRows:
-      'Chưa có phân công nào cho dòng đơn này. Hãy phân công công đoạn trước, hoặc thêm dòng ngoài phân công bên trên.',
-    addOutside: 'Thêm dòng ngoài phân công',
-    addRow: 'Thêm dòng',
-    removeRow: 'Bỏ dòng',
+    noRows: 'Chưa có phân công nào cho dòng đơn này. Tổ trưởng cần phân công công đoạn trước.',
+    byWorker: {
+      search: 'Tìm mã, tên công nhân',
+      stateLabel: 'Tình trạng nhập',
+      stateAll: 'Tất cả ({0})',
+      stateMissing: 'Còn thiếu ({0})',
+      stateDone: 'Đã nhập đủ ({0})',
+      noWorkers: 'Không có công nhân phù hợp.',
+      columns: { entered: 'Công đoạn đã nhập', total: 'Tổng sản lượng' },
+      enteredValue: '{0} / {1}',
+      enter: 'Nhập sản lượng',
+      modalTitle: 'Nhập sản lượng: {0}',
+      modalHint:
+        'Các công đoạn lấy từ màn Giao việc (công nhân đã xác nhận). Nhập ở dòng nhóm để điền cùng số cho các công đoạn nhập được trong nhóm, rồi sửa lại từng công đoạn nếu cần. Số 0 ở dòng đã nhập nghĩa là xóa dòng đó.',
+      groupRow: 'Nhóm {0} (nhập được {1}/{2} công đoạn)',
+      noGroup: 'chưa đặt tên',
+      groupInput: 'Sản lượng nhóm {0}',
+      groupPlaceholder: 'Cả nhóm',
+      operationInput: 'Sản lượng {0}',
+      noOperations:
+        'Công nhân chưa được giao việc nào ở dòng đơn này. Hãy giao ở màn Giao việc và chờ công nhân xác nhận.',
+      overTitle: 'Chưa lưu được vì có số vượt số lần được giao:',
+      overCap: '{0}: chỉ còn được báo {1}.',
+      overNotAllocated:
+        '{0}: công nhân chưa được giao việc này. Hãy giao ở màn Giao việc và chờ xác nhận.',
+    },
     nothingChanged: 'Chưa có thay đổi nào để lưu.',
     columns: {
       operation: 'Công đoạn',
@@ -541,7 +562,7 @@ export const PRODUCTION_TEXT = {
     },
     type: {
       Rework: { text: 'Sửa lại', color: 'gold' },
-      Scrap: { text: 'Hủy (trừ lương)', color: 'red' },
+      Scrap: { text: 'Hàng hủy', color: 'red' },
     } as Record<DefectType, StatusLabel>,
     reason: {
       SkippedStitch: 'Bỏ mũi',
@@ -554,7 +575,7 @@ export const PRODUCTION_TEXT = {
     status: {
       Recorded: { text: 'Đã ghi', color: 'blue' },
       Confirmed: { text: 'Đã chấp nhận', color: 'green' },
-      Cancelled: { text: 'Đã hủy', color: 'default' },
+      Cancelled: { text: 'Phiếu đã hủy', color: 'default' },
     } as Record<DefectStatus, StatusLabel>,
   },
 

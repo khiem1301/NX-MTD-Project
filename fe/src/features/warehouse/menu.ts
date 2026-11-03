@@ -7,12 +7,6 @@ const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
 export const warehouseMenu: MenuEntry[] = [
   { key: 'materials', label: 'Danh mục NVL', path: ROUTES.materials, roles: [WarehouseKeeper] },
   {
-    key: 'order-materials',
-    label: 'NVL của đơn',
-    path: ROUTES.orderMaterials,
-    roles: [Admin, Manager],
-  },
-  {
     key: 'incoming-materials',
     label: 'NVL chờ nhận',
     path: ROUTES.incomingMaterials,

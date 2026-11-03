@@ -238,6 +238,14 @@ public static class Messages
     public const string KpiDailyTargetQtyMax = "KPI của ngày tối đa 1.000.000.";
     public const string KpiDailyTargetTooMany = "Một lần lưu tối đa 366 ngày.";
     public const string KpiTargetQtyMustBePositive = "Chỉ tiêu sản lượng phải lớn hơn 0.";
+    public const string KpiLinesRequired = "Vui lòng nhập chỉ tiêu cho ít nhất một màu × size.";
+    public const string KpiLinesTooMany = "Một chỉ tiêu tối đa 500 màu × size.";
+    public const string KpiLineDuplicate = "Mỗi màu × size chỉ nhập một lần.";
+    public const string KpiLineQtyMustBePositive = "Chỉ tiêu của mỗi màu × size phải lớn hơn 0.";
+    public const string KpiLineQtyMax = "Chỉ tiêu của mỗi màu × size tối đa 1.000.000.";
+    public const string KpiLineNotAllotted = "Có màu × size không thuộc mã hàng hoặc chưa được chia cho tổ.";
+    public const string KpiLineExceedsOrderQty = "Màu {0}, size {1} vượt số lượng đơn đặt: đặt {2}, đã giao cho tổ khác {3}, đặt được tối đa {4}.";
+    public const string KpiLineBelowActual = "Màu {0}, size {1}: chỉ tiêu không được nhỏ hơn số tổ đã làm được ({2}).";
 
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
     public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";

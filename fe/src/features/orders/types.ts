@@ -135,7 +135,8 @@ export type ProductQuery = {
   status?: ProductStatus;
 };
 
-export type OrderListItem = {
+/** Dòng danh sách đơn cho Quản đốc: không có thành tiền (GBR-02). */
+export type OrderOverviewListItem = {
   orderId: number;
   orderCode: string;
   customerName: string;
@@ -145,11 +146,12 @@ export type OrderListItem = {
   materialStatus: OrderMaterialStatus;
   isDelayRisk: boolean;
   totalQty: number;
-  totalAmount: number;
   productCodes: string;
 };
 
-export type OrderLine = {
+export type OrderListItem = OrderOverviewListItem & { totalAmount: number };
+
+export type OrderOverviewLine = {
   orderLineId: number;
   productId: number;
   productCode: string;
@@ -157,7 +159,27 @@ export type OrderLine = {
   color: string;
   sizeCode: string;
   orderedQty: number;
-  cmtUnitPrice: number;
+};
+
+export type OrderLine = OrderOverviewLine & { cmtUnitPrice: number };
+
+/** Dòng đơn để hiển thị: chỉ Admin có đơn giá. */
+export type OrderDisplayLine = OrderOverviewLine & { cmtUnitPrice?: number };
+
+/** Chi tiết đơn cho Quản đốc: không có đơn giá, lịch sử (GBR-02). */
+export type OrderOverview = {
+  orderId: number;
+  orderCode: string;
+  customerName: string;
+  receivedDate: string;
+  dueDate: string;
+  status: OrderStatus;
+  materialStatus: OrderMaterialStatus;
+  isDelayRisk: boolean;
+  stopReason: string | null;
+  note: string | null;
+  createdAt: string;
+  lines: OrderOverviewLine[];
 };
 
 export type OrderDetail = {
@@ -198,6 +220,13 @@ export type CreateOrderPayload = {
   lines: OrderLineInput[];
 };
 export type UpdateOrderPayload = CreateOrderPayload & { rowVer: string };
+
+export type OrderOverviewQuery = {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: OrderStatus;
+};
 
 export type OrderQuery = {
   page: number;

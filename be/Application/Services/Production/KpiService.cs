@@ -44,7 +44,7 @@ public sealed class KpiService : IKpiService
     private static readonly Expression<Func<KpiTarget, KpiTargetDto>> ToDto = k => new KpiTargetDto(
         k.KpiTargetId, k.OrderId, k.Order.OrderCode, k.ProductId, k.Product.ProductCode, k.Product.ProductName,
         k.SewingTeamId, k.SewingTeam.TeamName, k.StartDate, k.EndDate, k.TargetFinishedQty, k.WorkingDays,
-        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m);   // thực tế điền sau (WithActualAsync)
+        Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m, null);   // thực tế, dòng điền sau (WithActualAsync)
 
     public async Task<Result<PagedResult<KpiTargetDto>>> GetPagedAsync(KpiTargetQuery query, CancellationToken ct)
     {
@@ -78,15 +78,33 @@ public sealed class KpiService : IKpiService
     private async Task<List<KpiTargetDto>> WithActualAsync(List<KpiTargetDto> items, CancellationToken ct)
     {
         if (items.Count == 0) return items;
-        var totals = await _output.GetKpiFinishedTotalsAsync(items.Select(i => i.KpiTargetId).ToList(), ct);
+        var ids = items.Select(i => i.KpiTargetId).ToList();
+        var totals = await _output.GetKpiFinishedTotalsAsync(ids, ct);
+        var lines = await LinesOfAsync(ids, ct);
         return items.Select(i =>
         {
             var actual = totals.GetValueOrDefault(i.KpiTargetId);
             var percent = i.TargetFinishedQty > 0
                 ? Math.Round(100m * actual / i.TargetFinishedQty, 2, MidpointRounding.AwayFromZero)
                 : 0m;
-            return i with { ActualFinishedQty = actual, PercentAchieved = percent };
+            return i with { ActualFinishedQty = actual, PercentAchieved = percent, Lines = lines.GetValueOrDefault(i.KpiTargetId, []) };
         }).ToList();
+    }
+
+    /// <summary>Chỉ tiêu theo màu × size của các chỉ tiêu, kèm QC đạt của từng dòng — hai truy vấn cho cả trang.</summary>
+    private async Task<Dictionary<int, IReadOnlyList<KpiTargetLineDto>>> LinesOfAsync(List<int> ids, CancellationToken ct)
+    {
+        var rows = await _uow.Repository<KpiTargetLine>().Query().AsNoTracking()
+            .Where(x => ids.Contains(x.KpiTargetId))
+            .OrderBy(x => x.OrderLineId)
+            .Select(x => new { x.KpiTargetId, x.OrderLineId, x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.TargetQty })
+            .ToListAsync(ct);
+        if (rows.Count == 0) return [];
+        var done = await _output.GetKpiLineFinishedAsync(ids, ct);
+        return rows.GroupBy(r => r.KpiTargetId).ToDictionary(g => g.Key, g => (IReadOnlyList<KpiTargetLineDto>)g
+            .Select(r => new KpiTargetLineDto(r.OrderLineId, r.Color, r.SizeCode, r.TargetQty,
+                done.GetValueOrDefault((r.KpiTargetId, r.OrderLineId))))
+            .ToList());
     }
 
     /// <summary>DTO trả API phải là PascalCase (Coding Rules 2.2); DB lưu UPPER_SNAKE.</summary>
@@ -117,10 +135,12 @@ public sealed class KpiService : IKpiService
         {
             await _uow.Repository<KpiTarget>().AddAsync(target);
             await _uow.SaveChangesAsync();
-            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target)));
+            await _uow.Repository<KpiTargetLine>().AddRangeAsync(dto.Lines.Select(l =>
+                new KpiTargetLine { KpiTargetId = target.KpiTargetId, OrderLineId = l.OrderLineId, TargetQty = l.TargetQty }));
+            _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Insert, null, Snapshot(target, dto.Lines)));
             // Tổ trưởng tổ may là người thực hiện chỉ tiêu.
             await _notifier.NotifyTeamLeadersAsync(dto.SewingTeamId, new NotificationMessage(NotificationSources.Production,
-                "Có chỉ tiêu KPI mới", $"Quản đốc giao chỉ tiêu {dto.TargetFinishedQty} sản phẩm từ {dto.StartDate:dd/MM/yyyy} đến {dto.EndDate:dd/MM/yyyy}.",
+                "Có chỉ tiêu KPI mới", $"Quản đốc giao chỉ tiêu {target.TargetFinishedQty} sản phẩm từ {dto.StartDate:dd/MM/yyyy} đến {dto.EndDate:dd/MM/yyyy}.",
                 KpiLink), ct);
             await _uow.SaveChangesAsync();
             return Result.Success();
@@ -143,7 +163,8 @@ public sealed class KpiService : IKpiService
         var check = await ValidateAsync(dto, target, ct);
         if (check is not null) return check;
         var actual = (await _output.GetKpiFinishedTotalsAsync([kpiTargetId], ct)).GetValueOrDefault(kpiTargetId);
-        if (dto.TargetFinishedQty < actual)
+        var totalQty = dto.Lines.Sum(l => l.TargetQty);
+        if (totalQty < actual)
             return Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiTargetBelowActual, actual));
 
         // Đổi kỳ thì bỏ các ngày nằm ngoài kỳ mới; chỉ tiêu cả kỳ mới không được nhỏ hơn tổng KPI các ngày còn lại.
@@ -157,16 +178,32 @@ public sealed class KpiService : IKpiService
 
         var kept = oldDays.Except(outside).ToList();
         var keptSum = kept.Sum(d => d.TargetQty);
-        if (keptSum > dto.TargetFinishedQty)
+        if (keptSum > totalQty)
             return Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiTotalBelowPlan, keptSum));
 
-        var before = Snapshot(target);
+        var lineRepo = _uow.Repository<KpiTargetLine>();
+        var oldLines = await lineRepo.Query().Where(x => x.KpiTargetId == kpiTargetId).ToListAsync(ct);
+        var before = Snapshot(target, oldLines.Select(x => new SaveKpiTargetLineDto(x.OrderLineId, x.TargetQty)));
         days.RemoveRange(outside);
+        await ReplaceLinesAsync(lineRepo, kpiTargetId, oldLines, dto.Lines);
         Apply(target, dto);
         if (kept.Count > 0) target.WorkingDays = (short)kept.Count;
-        _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update, before, Snapshot(target)));
+        _audit.Add(new AuditEntry(nameof(KpiTarget), kpiTargetId, AuditActions.Update, before, Snapshot(target, dto.Lines)));
         await _uow.SaveChangesAsync();
         return await GetByIdAsync(kpiTargetId, ct);
+    }
+
+    /// <summary>Dòng bỏ đi thì xóa, dòng còn thì sửa số, dòng mới thì thêm.</summary>
+    private static async Task ReplaceLinesAsync(IGenericRepository<KpiTargetLine> repo, int kpiTargetId, List<KpiTargetLine> oldLines,
+        IReadOnlyList<SaveKpiTargetLineDto> lines)
+    {
+        var wanted = lines.ToDictionary(l => l.OrderLineId, l => l.TargetQty);
+        repo.RemoveRange(oldLines.Where(x => !wanted.ContainsKey(x.OrderLineId)).ToList());
+        foreach (var line in oldLines.Where(x => wanted.ContainsKey(x.OrderLineId)))
+            line.TargetQty = wanted[line.OrderLineId];
+        var existing = oldLines.Select(x => x.OrderLineId).ToHashSet();
+        await repo.AddRangeAsync(lines.Where(l => !existing.Contains(l.OrderLineId))
+            .Select(l => new KpiTargetLine { KpiTargetId = kpiTargetId, OrderLineId = l.OrderLineId, TargetQty = l.TargetQty }));
     }
 
     public async Task<Result> CancelAsync(int kpiTargetId, CancellationToken ct)
@@ -246,11 +283,77 @@ public sealed class KpiService : IKpiService
         if (overlap is not null)
             return Fail(ErrorCodes.KpiPeriodOverlap, string.Format(Messages.KpiPeriodOverlap, overlap.StartDate, overlap.EndDate));
 
+        var lineError = await ValidateLinesAsync(dto, exceptKpiTargetId, ct);
+        if (lineError is not null) return lineError;
+
+        // Chỉ tiêu cũ chưa chia màu × size chỉ có số tổng, nên vẫn kiểm cả mã hàng.
         var capacity = await ComputeOrderCapacityAsync(dto.OrderId, dto.ProductId, exceptKpiTargetId, ct);
-        return dto.TargetFinishedQty > capacity.MaxTarget
+        return dto.Lines.Sum(l => l.TargetQty) > capacity.MaxTarget
             ? Fail(ErrorCodes.KpiExceedsOrderQty,
                 string.Format(Messages.KpiExceedsOrderQty, capacity.OrderQty, capacity.AssignedToOthers, capacity.MaxTarget))
             : null;
+    }
+
+    /// <summary>Mỗi dòng phải thuộc mã hàng đã chia cho tổ, không vượt số còn lại của dòng; khi sửa không hạ dưới số QC đạt của dòng.</summary>
+    private async Task<Result<KpiTargetDto>?> ValidateLinesAsync(SaveKpiTargetDto dto, int? exceptKpiTargetId, CancellationToken ct)
+    {
+        var capacity = await ComputeLineCapacityAsync(dto.OrderId, dto.ProductId, dto.SewingTeamId, exceptKpiTargetId, ct);
+        var byLine = capacity.ToDictionary(c => c.OrderLineId);
+        foreach (var line in dto.Lines)
+        {
+            if (!byLine.TryGetValue(line.OrderLineId, out var cap))
+                return Fail(ErrorCodes.KpiInvalidReference, Messages.KpiLineNotAllotted);
+            if (line.TargetQty > cap.MaxTarget)
+                return Fail(ErrorCodes.KpiExceedsOrderQty, string.Format(Messages.KpiLineExceedsOrderQty,
+                    cap.Color, cap.SizeCode, cap.OrderedQty, cap.AssignedToOthers, cap.MaxTarget));
+        }
+
+        var given = dto.Lines.ToDictionary(l => l.OrderLineId, l => l.TargetQty);
+        var below = capacity.FirstOrDefault(c => c.ActualQty > given.GetValueOrDefault(c.OrderLineId));
+        return below is null
+            ? null
+            : Fail(ErrorCodes.KpiPlanInvalid, string.Format(Messages.KpiLineBelowActual, below.Color, below.SizeCode, below.ActualQty));
+    }
+
+    public async Task<Result<IReadOnlyList<KpiLineCapacityDto>>> GetLineCapacityAsync(int orderId, int productId, int sewingTeamId,
+        int? exceptKpiTargetId, CancellationToken ct) =>
+        Result<IReadOnlyList<KpiLineCapacityDto>>.Success(
+            await ComputeLineCapacityAsync(orderId, productId, sewingTeamId, exceptKpiTargetId, ct));
+
+    /// <summary>
+    /// Các dòng (màu × size) của mã hàng đã chia cho tổ. Đã giao cho tổ khác = Σ chỉ tiêu theo dòng của các chỉ tiêu khác
+    /// (đang chạy tính số giao, đã đóng tính QC đạt của dòng, đã hủy không tính).
+    /// </summary>
+    private async Task<List<KpiLineCapacityDto>> ComputeLineCapacityAsync(int orderId, int productId, int sewingTeamId,
+        int? exceptKpiTargetId, CancellationToken ct)
+    {
+        var allotments = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == sewingTeamId);
+        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderId == orderId && l.ProductId == productId && allotments.Any(a => a.OrderLineId == l.OrderLineId))
+            .OrderBy(l => l.OrderLineId)
+            .Select(l => new { l.OrderLineId, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty })
+            .ToListAsync(ct);
+        if (lines.Count == 0) return [];
+
+        var others = await (
+                from x in _uow.Repository<KpiTargetLine>().Query().AsNoTracking()
+                join k in Targets.AsNoTracking() on x.KpiTargetId equals k.KpiTargetId
+                where k.OrderId == orderId && k.ProductId == productId && k.Status != KpiStatuses.Cancelled
+                      && (exceptKpiTargetId == null || k.KpiTargetId != exceptKpiTargetId)
+                select new { x.KpiTargetId, x.OrderLineId, x.TargetQty, k.Status })
+            .ToListAsync(ct);
+        var doneIds = others.Where(o => o.Status == KpiStatuses.Closed).Select(o => o.KpiTargetId).Distinct().ToList();
+        if (exceptKpiTargetId is int self) doneIds.Add(self);
+        var done = await _output.GetKpiLineFinishedAsync(doneIds, ct);
+
+        return lines.Select(l =>
+        {
+            var assigned = others.Where(o => o.OrderLineId == l.OrderLineId)
+                .Sum(o => o.Status == KpiStatuses.Closed ? done.GetValueOrDefault((o.KpiTargetId, o.OrderLineId)) : o.TargetQty);
+            var actual = exceptKpiTargetId is int id ? done.GetValueOrDefault((id, l.OrderLineId)) : 0;
+            return new KpiLineCapacityDto(l.OrderLineId, l.Color, l.SizeCode, l.OrderedQty, assigned,
+                Math.Max(0, l.OrderedQty - assigned), actual);
+        }).ToList();
     }
 
     public async Task<Result<KpiOrderCapacityDto>> GetOrderCapacityAsync(int orderId, int productId, int? exceptKpiTargetId,
@@ -295,13 +398,14 @@ public sealed class KpiService : IKpiService
         target.SewingTeamId = dto.SewingTeamId;
         target.StartDate = dto.StartDate;
         target.EndDate = dto.EndDate;
-        target.TargetFinishedQty = dto.TargetFinishedQty;
+        target.TargetFinishedQty = dto.Lines.Sum(l => l.TargetQty);
         target.WorkingDays = KpiCalendarService.WorkingDaysIn(dto.StartDate, dto.EndDate);
     }
 
-    private static object Snapshot(KpiTarget t) => new
+    private static object Snapshot(KpiTarget t, IEnumerable<SaveKpiTargetLineDto> lines) => new
     {
         t.OrderId, t.ProductId, t.SewingTeamId, t.StartDate, t.EndDate, t.TargetFinishedQty, t.WorkingDays, t.Status,
+        Lines = lines.Select(l => new { l.OrderLineId, l.TargetQty }).ToList(),
     };
 
     private static Result<KpiTargetDto> NotFound() =>

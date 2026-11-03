@@ -15,6 +15,35 @@ public class OrderMaterialValidatorTests
     private static string[] Errors(CreateOrderMaterialDto dto) =>
         new CreateOrderMaterialDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage).ToArray();
 
+    // ---------- thêm nhiều NVL cùng lúc ----------
+
+    private static CreateOrderMaterialLineDto Line(int materialId, decimal required, decimal customer, short? count, string? note) =>
+        new(materialId, required, customer, count, note);
+
+    private static string[] BatchErrors(params CreateOrderMaterialLineDto[] lines) =>
+        new CreateOrderMaterialBatchDtoValidator().Validate(new CreateOrderMaterialBatchDto(1, lines))
+            .Errors.Select(e => e.ErrorMessage).ToArray();
+
+    [Fact]
+    public void Batch_ValidLines_NoError() =>
+        BatchErrors(Line(1, 10, 0, null, null), Line(2, 0, 5, 1, null)).Should().BeEmpty();
+
+    [Fact]
+    public void Batch_NoLines_Rejected() =>
+        BatchErrors().Should().Equal("Phải có ít nhất một NVL.");
+
+    [Fact]
+    public void Batch_SameMaterialTwice_Rejected() =>
+        BatchErrors(Line(1, 10, 0, null, null), Line(1, 5, 0, null, null)).Should().Equal("Một dòng bị khai báo nhiều lần.");
+
+    [Fact]
+    public void Batch_LineBreaksRules_UsesSameRulesAsSingleLine() =>
+        BatchErrors(Line(1, -1, 0, null, null)).Should().Equal("Số cần không được âm.");
+
+    [Fact]
+    public void Batch_CustomerSupplyWithoutDeliveryCount_Rejected() =>
+        BatchErrors(Line(1, 10, 5, null, null)).Should().ContainSingle();
+
     // ---------- số cần ----------
 
     [Theory]
@@ -146,10 +175,8 @@ public class OrderMaterialValidatorTests
     public void PageQueries_HaveVietnameseMessages()
     {
         var paged = new OrderMaterialPageQueryValidator().Validate(new OrderMaterialPageQuery { OrderId = 0, Page = 0, PageSize = 101, Supply = "x", ReceiptState = "y" });
-        var pending = new PendingMaterialOrderQueryValidator().Validate(new PendingMaterialOrderQuery { MaterialState = "z" });
 
         paged.Errors.Select(e => e.ErrorMessage).Should().BeEquivalentTo("Vui lòng chọn đơn hàng.", "Số trang phải từ 1 trở lên.",
             "Số dòng mỗi trang phải từ 1 đến 100.", "Nguồn cấp không hợp lệ.", "Tình trạng nhận không hợp lệ.");
-        pending.Errors.Select(e => e.ErrorMessage).Should().Equal("Tình trạng NVL không hợp lệ.");
     }
 }

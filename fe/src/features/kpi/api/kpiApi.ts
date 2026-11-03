@@ -5,6 +5,7 @@ import type {
   EndOfOrderPreview,
   KpiCalendar,
   KpiDailyResult,
+  KpiLineCapacity,
   KpiOrderCapacity,
   KpiTarget,
   KpiTargetFilter,
@@ -38,6 +39,13 @@ export const kpiApi = {
 
   getOrderCapacity: (params: { orderId: number; productId: number; exceptKpiTargetId?: number }) =>
     get<KpiOrderCapacity>(API.kpi.orderCapacity, params),
+
+  getLineCapacity: (params: {
+    orderId: number;
+    productId: number;
+    sewingTeamId: number;
+    exceptKpiTargetId?: number;
+  }) => get<KpiLineCapacity[]>(API.kpi.lineCapacity, params),
 
   saveDailyPlan: (kpiTargetId: number, body: SaveKpiDailyPlanPayload) =>
     put<KpiCalendar>(API.kpi.dailyPlan(kpiTargetId), body),

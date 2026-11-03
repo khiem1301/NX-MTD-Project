@@ -70,6 +70,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<KpiTarget> KpiTargets { get; set; }
 
+    public virtual DbSet<KpiTargetLine> KpiTargetLines { get; set; }
+
     public virtual DbSet<Material> Materials { get; set; }
 
     public virtual DbSet<MaterialIssue> MaterialIssues { get; set; }

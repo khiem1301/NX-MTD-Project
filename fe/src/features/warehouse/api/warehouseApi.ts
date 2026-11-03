@@ -17,10 +17,10 @@ import type {
   MaterialReceiptQuery,
   CreatePurchaseOrderPayload,
   IncomingMaterials,
+  CreateOrderMaterialsPayload,
   OrderMaterial,
   OrderMaterialPageQuery,
-  PendingMaterialOrder,
-  PendingMaterialOrderQuery,
+  OrderProductMaterials,
   PurchaseOrder,
   PurchaseOrderListItem,
   PurchaseOrderQuery,
@@ -62,16 +62,16 @@ export const warehouseApi = {
   /** Admin / Quản đốc: bảng NVL của đơn có tìm kiếm, lọc, phân trang. */
   getOrderMaterialPage: (role: RolePath, params: OrderMaterialPageQuery) =>
     get<Paginated<OrderMaterial>>(`${API.warehouse.orderMaterials(role)}/paged`, params),
-  /** Admin / Quản đốc: đơn đang chạy mà NVL chưa về đủ (kể cả đơn mới chưa khai báo NVL). */
-  getPendingMaterialOrders: (role: RolePath, params: PendingMaterialOrderQuery) =>
-    get<Paginated<PendingMaterialOrder>>(
-      `${API.warehouse.orderMaterials(role)}/pending-orders`,
-      params,
-    ),
   /** Thủ kho: NVL khách sẽ cấp và đơn mua đã đặt mà kho chưa nhận đủ. */
   getIncomingMaterials: () => get<IncomingMaterials>(API.warehouse.incomingMaterials),
+  getOrderProductMaterials: (role: RolePath, orderId: number) =>
+    get<OrderProductMaterials[]>(`${API.warehouse.orderMaterials(role)}/product-materials`, {
+      orderId,
+    }),
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
     post<OrderMaterial>(API.warehouse.orderMaterials(role), body),
+  createOrderMaterials: (role: RolePath, body: CreateOrderMaterialsPayload) =>
+    post<OrderMaterial[]>(`${API.warehouse.orderMaterials(role)}/batch`, body),
   updateOrderMaterial: (role: RolePath, id: number, body: SaveOrderMaterialPayload) =>
     put<OrderMaterial>(`${API.warehouse.orderMaterials(role)}/${id}`, body),
   deleteOrderMaterial: async (role: RolePath, id: number): Promise<void> => {

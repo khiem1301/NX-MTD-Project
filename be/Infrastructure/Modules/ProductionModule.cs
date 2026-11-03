@@ -27,6 +27,7 @@ public static class ProductionModule
         services.AddScoped<IQcBatchService, QcBatchService>();
         services.AddScoped<IDefectService, DefectService>();
         services.AddScoped<IDefectAutoConfirmService, DefectAutoConfirmService>();
+        services.AddHostedService<WorkAllocationAutoRetrieveJob>();   // cuối ngày chưa làm hết → thu hồi, ghi lý do
         services.AddHostedService<DefectAutoConfirmJob>();   // quá 48 giờ không phản đối → CONFIRMED
         services.AddScoped<IEndOfOrderService, EndOfOrderService>();
         services.AddScoped<IRequestTypeHandler, ReplacementCuttingRequestHandler>();   // KI-09

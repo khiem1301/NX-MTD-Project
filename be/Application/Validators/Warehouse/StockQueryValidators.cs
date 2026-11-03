@@ -5,19 +5,6 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
-public sealed class PendingMaterialOrderQueryValidator : AbstractValidator<PendingMaterialOrderQuery>
-{
-    public PendingMaterialOrderQueryValidator()
-    {
-        RuleFor(x => x.Page).GreaterThan(0).WithMessage("Số trang phải từ 1 trở lên.");
-        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize)
-            .WithMessage($"Số dòng mỗi trang phải từ 1 đến {PageQuery.MaxPageSize}.");
-        RuleFor(x => x.Keyword).MaximumLength(100).WithMessage("Từ khóa tối đa 100 ký tự.");
-        RuleFor(x => x.MaterialState).Must(s => PendingMaterialStates.All.Contains(s!))
-            .When(x => !string.IsNullOrEmpty(x.MaterialState)).WithMessage("Tình trạng NVL không hợp lệ.");
-    }
-}
-
 public sealed class OrderMaterialPageQueryValidator : AbstractValidator<OrderMaterialPageQuery>
 {
     public OrderMaterialPageQueryValidator()

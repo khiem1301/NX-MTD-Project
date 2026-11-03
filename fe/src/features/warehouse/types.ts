@@ -1,3 +1,5 @@
+import type { MaterialOption } from '@/types/lookup';
+
 // Khớp DTO BE (Application/DTOs/*). Không tự đổi tên field.
 
 export type PageParams = { page: number; pageSize: number; keyword?: string };
@@ -51,6 +53,20 @@ export type OrderMaterial = {
   materialWidthCm?: number | null;
 };
 
+/** Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt. */
+export type OrderProductMaterials = {
+  productId: number;
+  productCode: string;
+  productName: string;
+  materials: MaterialOption[];
+};
+
+/** Thêm nhiều NVL cùng lúc: một dòng lỗi thì không lưu dòng nào. */
+export type CreateOrderMaterialsPayload = {
+  orderId: number;
+  lines: Omit<SaveOrderMaterialPayload, 'orderId'>[];
+};
+
 /** NVL đã gồm màu (26/10) nên không nhập màu riêng. */
 export type SaveOrderMaterialPayload = {
   orderId?: number;
@@ -89,8 +105,12 @@ export type MaterialReceiptLine = {
   unit: string;
   materialColor: string;
   unitPrice: number | null;
+  /** Phiếu thường: còn thiếu sau phiếu này; phiếu bổ sung: số Quản đốc chọn giao bù. */
   toReplenishQty: number | null;
   acceptedQty: number;
+  /** Phiếu này là lần nhận thứ mấy của NVL / số lần giao dự kiến. */
+  deliveryNo: number | null;
+  expectedDeliveryCount: number | null;
 };
 
 export type MaterialReceipt = Omit<MaterialReceiptListItem, 'lineCount'> & {
@@ -371,19 +391,6 @@ export type TeamPieceHolding = {
   onLineQty: number;
 };
 
-/** Đơn đang chạy mà NVL chưa về đủ (materialLines = 0: chưa ai khai báo "NVL của đơn"). */
-export type PendingMaterialOrder = {
-  orderId: number;
-  orderCode: string;
-  customerName: string;
-  dueDate: string;
-  status: string;
-  materialStatus: string;
-  materialLines: number;
-  customerQty: number;
-  toBuyQty: number;
-};
-
 export const ORDER_MATERIAL_SUPPLY = { Customer: 'Customer', Purchase: 'Purchase' } as const;
 export type OrderMaterialSupply =
   (typeof ORDER_MATERIAL_SUPPLY)[keyof typeof ORDER_MATERIAL_SUPPLY];
@@ -399,22 +406,6 @@ export type OrderMaterialPageQuery = {
   keyword?: string;
   supply?: OrderMaterialSupply;
   receiptState?: OrderMaterialReceiptState;
-};
-
-export const PENDING_MATERIAL_STATE = {
-  NotDeclared: 'NotDeclared',
-  Awaiting: 'Awaiting',
-  Partial: 'Partial',
-  Complete: 'Complete',
-} as const;
-export type PendingMaterialState =
-  (typeof PENDING_MATERIAL_STATE)[keyof typeof PENDING_MATERIAL_STATE];
-
-export type PendingMaterialOrderQuery = {
-  page: number;
-  pageSize: number;
-  keyword?: string;
-  materialState?: PendingMaterialState;
 };
 
 /** NVL khách sẽ cấp mà kho chưa nhận đủ. */

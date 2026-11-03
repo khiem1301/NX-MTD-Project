@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { Button, Input, InputNumber, Select, Tooltip, type TableColumnsType } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Button, Divider, Input, InputNumber, Select, Tooltip, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { dropRow, patchRow, type MaterialOption, type NormRow } from '../utils/productSpec';
 import { deleteRowColumn } from './deleteRowColumn';
@@ -12,6 +13,8 @@ type SpecNormColumnsOptions = {
   materialsLoading: boolean;
   variantOptions: { value: string; label: string }[];
   setNorms: Dispatch<SetStateAction<NormRow[]>>;
+  /** Tạo NVL mới ngay tại ô chọn NVL của dòng này. */
+  onAddMaterial: (rowKey: string) => void;
 };
 
 /** Cột bảng "Định mức NVL": ô nhập trực tiếp trên từng dòng, cột đầu và cột xóa cố định khi cuộn ngang. */
@@ -21,6 +24,7 @@ export const specNormColumns = ({
   materialsLoading,
   variantOptions,
   setNorms,
+  onAddMaterial,
 }: SpecNormColumnsOptions): TableColumnsType<NormRow> => [
   {
     title: text.component,
@@ -51,6 +55,15 @@ export const specNormColumns = ({
           popupMatchSelectWidth={false}
           style={{ width: 200 }}
           onChange={(v) => patchRow(setNorms, r.key, { materialId: v })}
+          dropdownRender={(menu) => (
+            <>
+              {menu}
+              <Divider style={{ margin: '8px 0' }} />
+              <Button type="link" icon={<PlusOutlined />} onClick={() => onAddMaterial(r.key)}>
+                {text.addMaterial}
+              </Button>
+            </>
+          )}
         />
       </Tooltip>
     ),

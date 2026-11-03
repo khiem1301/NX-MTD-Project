@@ -1,6 +1,6 @@
 /** Tiền tố role trong URL BE: /api/v1/<role>/<resource>. */
 export type ProductScope = 'admin' | 'accountant';
-export type RolePath = 'admin' | 'manager' | 'warehouse-keeper' | 'team-leader';
+export type RolePath = 'admin' | 'manager' | 'warehouse-keeper' | 'team-leader' | 'accountant';
 
 const v1 = (path: string): string => `/api/v1/${path}`;
 
@@ -85,6 +85,9 @@ export const API = {
     cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
     stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
     startProduction: (id: number) => v1(`admin/customer-orders/${id}/start-production`),
+    /** Quản đốc chỉ xem, không có đơn giá (GBR-02). */
+    overviews: v1('manager/customer-orders'),
+    overviewById: (id: number) => v1(`manager/customer-orders/${id}`),
   },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {
@@ -186,6 +189,7 @@ export const API = {
     targets: '/api/v1/manager/kpi-targets',
     teamTargets: '/api/v1/team-leader/kpi-targets',
     orderCapacity: '/api/v1/manager/kpi-targets/order-capacity',
+    lineCapacity: '/api/v1/manager/kpi-targets/line-capacity',
     allottedTeams: '/api/v1/manager/order-line-teams/teams',
     calendar: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/calendar`,
     dailyPlan: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-plan`,

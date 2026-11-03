@@ -53,6 +53,27 @@ public sealed class CustomerOrderService : ICustomerOrderService
         return Result<OrderDetailDto>.Success(detail with { History = history });
     }
 
+    public async Task<Result<PagedResult<OrderOverviewListItemDto>>> ListOverviewAsync(OrderQuery query, CancellationToken ct)
+    {
+        var list = await ListAsync(query, ct);
+        if (!list.IsSuccess) return Fail.As<PagedResult<OrderOverviewListItemDto>>(list);
+        var page = list.Data!;
+        var items = page.Items.Select(o => new OrderOverviewListItemDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate,
+            o.DueDate, o.Status, o.MaterialStatus, o.IsDelayRisk, o.TotalQty, o.ProductCodes)).ToList();
+        return Result<PagedResult<OrderOverviewListItemDto>>.Success(
+            new PagedResult<OrderOverviewListItemDto>(items, page.Page, page.PageSize, page.TotalItems));
+    }
+
+    public async Task<Result<OrderOverviewDto>> GetOverviewAsync(int orderId, CancellationToken ct)
+    {
+        var o = await _orders.GetDetailAsync(orderId, ct);
+        if (o is null) return Fail.NotFound<OrderOverviewDto>();
+        var lines = o.Lines.Select(l => new OrderLineLookupDto(l.OrderLineId, o.OrderId, l.ProductId, l.ProductCode, l.ProductName,
+            l.Color, l.SizeCode, l.OrderedQty)).ToList();
+        return Result<OrderOverviewDto>.Success(new OrderOverviewDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate, o.DueDate,
+            o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.Note, o.CreatedAt, lines));
+    }
+
     public async Task<Result<int>> CreateAsync(CreateOrderDto dto, CancellationToken ct)
     {
         var code = dto.OrderCode.Trim().ToUpperInvariant();
@@ -84,7 +105,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
             await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.System,
                 Messages.NotifyNewOrderTitle,
                 string.Format(Messages.NotifyNewOrderBody, order.OrderCode, order.DueDate.ToString("dd/MM/yyyy")),
-                $"/warehouse/order-materials?orderId={order.OrderId}", nameof(CustomerOrder), order.OrderId), ct);
+                $"/manager/orders/{order.OrderId}?tab=materials", nameof(CustomerOrder), order.OrderId), ct);
             await _uow.SaveChangesAsync();
             return Result<int>.Success(order.OrderId, Messages.Saved);
         });
