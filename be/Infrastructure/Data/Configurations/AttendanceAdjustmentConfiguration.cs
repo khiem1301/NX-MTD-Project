@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -21,7 +22,7 @@ public sealed class AttendanceAdjustmentConfiguration : IEntityTypeConfiguration
             .IsUnicode(false);
         entity.Property(e => e.CheckIn).HasPrecision(0);
         entity.Property(e => e.CheckOut).HasPrecision(0);
-        entity.Property(e => e.Reason).HasMaxLength(500);
+        entity.Property(e => e.Reason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.RecordedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");

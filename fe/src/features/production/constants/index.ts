@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import type { DefectReason, ShiftCode } from '../types';
 import { OPERATIONS_TEXT, PIECE_RATES_TEXT } from './operationText';
 import { ORDER_LINE_TEAMS_TEXT, ASSIGNMENTS_TEXT } from './assignmentText';
@@ -6,7 +7,7 @@ import { DEFECTS_TEXT, REPLACEMENT_TEXT, MY_DEFECTS_TEXT } from './defectText';
 
 /** Số lượng hàng hỏng tối đa mỗi phiếu và độ dài ghi chú / lý do / trả lời, khớp DefectLimits ở BE. */
 export const DEFECT_MAX_QTY = 1_000_000;
-export const DEFECT_TEXT_MAX = 500;
+export const DEFECT_TEXT_MAX = REASON_MAX_LENGTH;
 /** Khoảng ngày lọc danh sách phiếu hàng hỏng tối đa (ngày), khớp BE. */
 export const DEFECT_MAX_RANGE_DAYS = 366;
 

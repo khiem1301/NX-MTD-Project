@@ -33,6 +33,7 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         new() { OrderLineId = 31, SewingTeamId = TeamId },
     ];
     private readonly List<Operation> _operations = [];
+    private readonly List<PieceRate> _rates = [];
     private readonly List<Employee> _employees = [];
     private readonly OperationAssignmentService _sut;
     private int _nextId = 100;
@@ -44,6 +45,7 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         SetupQueryable(_lines);
         SetupQueryable(_allotted);
         SetupQueryable(_operations);
+        SetupQueryable(_rates);
         SetupQueryable(_employees);
         AsTeamLeader(TeamId);
         Repo<OperationAssignment>().When(r => r.AddAsync(Arg.Any<OperationAssignment>())).Do(c =>
@@ -63,10 +65,16 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         _sut = new OperationAssignmentService(Uow, Guard(), Clock);
     }
 
-    private Operation Op(int id, string code = "OP10", int productId = 1, string status = OperationStatuses.Active)
+    private Operation Op(int id, string code = "OP10", int productId = 1, string status = OperationStatuses.Active, bool hasRate = true)
     {
         var op = new Operation { OperationId = id, ProductId = productId, OperationCode = code, OperationName = "CĐ " + code,
             StationSequence = (short)id, Status = status, TeamType = TeamTypes.Sewing, Product = new Product { ProductId = productId, ProductCode = "MH00" + productId } };
+        if (hasRate)
+        {
+            var rate = TestRates.Approved(id);
+            op.PieceRates.Add(rate);
+            _rates.Add(rate);
+        }
         _operations.Add(op);
         return op;
     }
@@ -232,6 +240,78 @@ public class OperationAssignmentServiceTests : ProductionTestBase
     }
 
     // ---------- Gán ----------
+
+    [Fact]
+    public async Task Assign_OperationWithoutApprovedRate_IsRejected()
+    {
+        Op(1, hasRate: false);
+        Worker(7);
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 1, 7), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+        result.Message.Should().Contain("OP10");
+        _assignments.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(PieceRateStatuses.Draft)]
+    [InlineData(PieceRateStatuses.PendingApproval)]
+    [InlineData(PieceRateStatuses.Rejected)]
+    public async Task Assign_OperationWhoseRateIsNotApproved_IsRejected(string status)
+    {
+        Op(1, hasRate: false);
+        _rates.Add(TestRates.Approved(1, status));
+        Worker(7);
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 1, 7), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+    }
+
+    [Fact]
+    public async Task Assign_OperationWhoseRateStartsInTheFuture_IsRejected()
+    {
+        Op(1, hasRate: false);
+        var future = TestRates.Approved(1);
+        future.EffectiveDate = Today.AddDays(1);
+        _rates.Add(future);
+        Worker(7);
+
+        var result = await _sut.AssignAsync(new AssignOperationDto(1, 1, 7), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+    }
+
+    [Fact]
+    public async Task AssignMany_OneOperationWithoutRate_SavesNothing()
+    {
+        Op(1);
+        Op(2, "OP20", hasRate: false);
+        Worker(7);
+
+        var result = await _sut.AssignManyAsync(new AssignOperationsDto(1, 7, [1, 2]), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+        result.Message.Should().Contain("OP20").And.NotContain("OP10");
+        _assignments.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Copy_SkipsOperationsWithoutApprovedRate()
+    {
+        var rated = Op(1);
+        var unrated = Op(2, "OP20", hasRate: false);
+        var worker = Worker(7);
+        Current(50, 1, rated, worker);
+        Current(51, 1, unrated, worker);
+
+        var result = await _sut.CopyAsync(new CopyAssignmentsDto(1, 2), default);
+
+        result.Data.Should().Be(1);
+        _assignments.Where(a => a.OrderId == 2).Select(a => a.OperationId).Should().Equal(1);
+    }
 
     [Fact]
     public async Task Assign_Valid_OpensRowFromTodayForOwnTeam()

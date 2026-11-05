@@ -156,6 +156,11 @@ public sealed class WorkAllocationService : IWorkAllocationService
         if (dto.MovementType == PieceMovementTypes.Handover
             && (operation.Status != RecordStatus.Active || operation.TeamType != TeamTypes.Sewing))
             return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable));
+        if (dto.MovementType == PieceMovementTypes.Handover)
+        {
+            var noRate = await AllocationRateCheck.FindMissingAsync(_uow, [operation.OperationId], _clock.Today, ct);
+            if (noRate is not null) return new AllocationRefs(Result<int>.Failure(ErrorCodes.PieceRateNotApproved, noRate));
+        }
         return new AllocationRefs(null, line, operation);
     }
 

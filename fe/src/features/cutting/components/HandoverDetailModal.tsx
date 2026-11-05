@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useEffect, useState } from 'react';
 import { Alert, Button, Form, Input, InputNumber, Space } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
@@ -158,7 +159,7 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
                         rules={[reasonRule(index, l.handedQty)]}
                         style={{ marginBottom: 0 }}
                       >
-                        <Input maxLength={500} />
+                        <Input maxLength={REASON_MAX_LENGTH} />
                       </Form.Item>
                     ) : (
                       (l.discrepancyReason ?? '—')

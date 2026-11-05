@@ -1,3 +1,5 @@
+import { PASSWORD_MAX_LENGTH } from './limits';
+
 export const MESSAGES = {
   common: {
     networkError: 'Mất kết nối. Dữ liệu đang nhập vẫn được giữ, vui lòng thử lại.', // MSG28
@@ -166,6 +168,9 @@ export const MESSAGES = {
     currentPassword: 'Mật khẩu hiện tại',
     newPassword: 'Mật khẩu mới',
     confirmPassword: 'Nhập lại mật khẩu mới',
+    fullNameInvalid: 'Họ tên chỉ gồm chữ cái và khoảng trắng, không được có số hay ký tự đặc biệt.',
+    codeInvalid: 'Mã chỉ gồm chữ, số và . _ -',
+    passwordTooLong: `Mật khẩu tối đa ${PASSWORD_MAX_LENGTH} ký tự.`,
     passwordMismatch: 'Mật khẩu nhập lại không khớp.', // MSG05
     passwordChanged: 'Đã đổi mật khẩu. Các thiết bị khác đã được đăng xuất.', // MSG08
     wrongCurrentPassword: 'Mật khẩu hiện tại không đúng.', // MSG07
@@ -269,7 +274,7 @@ export const MESSAGES = {
     customerDiscontinue: 'Ngừng hợp tác',
     customerReactivate: 'Hợp tác lại',
     customerDiscontinueConfirm:
-      'Ngừng hợp tác (đơn cũ vẫn giữ nguyên, không tạo được đơn mới) — nhập lý do',
+      'Ngừng hợp tác (đơn cũ vẫn giữ nguyên, không tạo được đơn mới). Lý do không bắt buộc',
     customerDiscontinueReason: 'Lý do ngừng hợp tác',
     customerActive: 'Đang hợp tác',
     customerInactive: 'Ngừng hợp tác',
@@ -286,6 +291,8 @@ export const MESSAGES = {
     dueDate: 'Ngày giao',
     note: 'Ghi chú',
     totalQty: 'Tổng SL',
+    deliveredQty: 'Đã giao',
+    remainingToDeliver: 'Còn phải giao',
     totalAmount: 'Thành tiền CMT',
     materialStatus: 'NVL',
     delayRisk: 'Nguy cơ trễ',

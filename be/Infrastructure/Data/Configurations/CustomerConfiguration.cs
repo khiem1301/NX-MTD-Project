@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -17,7 +18,7 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         entity.Property(e => e.Email)
             .HasMaxLength(100)
             .IsUnicode(false);
-        entity.Property(e => e.DiscontinueReason).HasMaxLength(500);
+        entity.Property(e => e.DiscontinueReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Phone)
             .HasMaxLength(15)
             .IsUnicode(false);

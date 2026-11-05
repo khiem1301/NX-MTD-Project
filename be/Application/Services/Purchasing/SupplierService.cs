@@ -93,9 +93,9 @@ public sealed class SupplierService : ISupplierService
         if (supplier.Status == RecordStatus.Discontinued) return Result.Success(Messages.SupplierDiscontinued);
 
         supplier.Status = RecordStatus.Discontinued;
-        supplier.DiscontinueReason = dto.Reason.Trim();
+        supplier.DiscontinueReason = Clean(dto.Reason);
         _audit.Add(new AuditEntry(nameof(Supplier), supplierId, AuditActions.Update,
-            new { Status = RecordStatus.Active }, new { supplier.Status }, dto.Reason.Trim(),
+            new { Status = RecordStatus.Active }, new { supplier.Status }, supplier.DiscontinueReason,
             $"Ngừng hợp tác với nhà cung cấp {supplier.SupplierName}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.SupplierDiscontinued);

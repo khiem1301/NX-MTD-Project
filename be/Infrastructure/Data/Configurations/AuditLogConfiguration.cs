@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -18,7 +19,7 @@ public sealed class AuditLogConfiguration : IEntityTypeConfiguration<AuditLog>
         entity.Property(e => e.ChangedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.Reason).HasMaxLength(500);
+        entity.Property(e => e.Reason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Summary).HasMaxLength(500);
         entity.Property(e => e.TableName)
             .HasMaxLength(50)

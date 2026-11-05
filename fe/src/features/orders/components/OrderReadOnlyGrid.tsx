@@ -2,7 +2,7 @@ import { Card } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatQty } from '@/utils/format';
-import { blockTotal, fromLines, rowTotal } from '../utils/orderGrid';
+import { blockTotal, fromLines, rowDelivered, rowTotal } from '../utils/orderGrid';
 import type { OrderDisplayLine } from '../types';
 import { BlockSummaryRow } from './BlockSummaryRow';
 
@@ -41,6 +41,18 @@ export function OrderReadOnlyGrid({ lines }: { lines: OrderDisplayLine[] }) {
                   align: 'right' as const,
                   render: (_: unknown, row: (typeof block.rows)[number]) =>
                     formatQty(rowTotal(block, row)),
+                },
+                {
+                  title: MESSAGES.orders.deliveredQty,
+                  align: 'right' as const,
+                  render: (_: unknown, row: (typeof block.rows)[number]) =>
+                    formatQty(rowDelivered(block, row)),
+                },
+                {
+                  title: MESSAGES.orders.remainingToDeliver,
+                  align: 'right' as const,
+                  render: (_: unknown, row: (typeof block.rows)[number]) =>
+                    formatQty(Math.max(rowTotal(block, row) - rowDelivered(block, row), 0)),
                 },
               ]}
               summary={() =>

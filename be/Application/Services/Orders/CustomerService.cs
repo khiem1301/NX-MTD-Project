@@ -65,7 +65,7 @@ public sealed class CustomerService : ICustomerService
         if (customer.Status == RecordStatus.Discontinued) return Result.Success(Messages.CustomerDiscontinued);
 
         customer.Status = RecordStatus.Discontinued;
-        customer.DiscontinueReason = dto.Reason.Trim();
+        customer.DiscontinueReason = Clean(dto.Reason);
         _audit.Add(new AuditEntry(nameof(Customer), customerId, AuditActions.Update,
             new { Status = RecordStatus.Active }, new { customer.Status }, customer.DiscontinueReason,
             $"Ngừng hợp tác với khách hàng {customer.CustomerName}"));

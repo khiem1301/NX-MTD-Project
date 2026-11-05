@@ -55,7 +55,7 @@ public sealed class RejectDispatchDtoValidator : AbstractValidator<RejectDispatc
 {
     public RejectDispatchDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaxTrimmedLength(500, "Lý do");
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaxTrimmedLength(TextLimits.Reason, "Lý do");
         RuleFor(x => x.RowVer).NotEmpty().WithMessage(DispatchLimits.StaleRowVer);
     }
 }

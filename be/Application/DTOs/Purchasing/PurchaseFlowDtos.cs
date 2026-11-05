@@ -59,8 +59,8 @@ public sealed record PlacePurchaseOrderDto(
     int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount, string? Note,
     IReadOnlyList<PlacePurchaseLineDto> Lines, byte[] RowVer);
 
-/// <summary>Lý do ngừng hợp tác với nhà cung cấp (bắt buộc, ghi vào nhật ký).</summary>
-public sealed record DiscontinueSupplierDto(string Reason);
+/// <summary>Lý do ngừng hợp tác với nhà cung cấp (không bắt buộc, ghi vào nhật ký nếu có).</summary>
+public sealed record DiscontinueSupplierDto(string? Reason);
 
 public sealed record CancelPurchaseOrderDto(string Reason, byte[] RowVer);
 

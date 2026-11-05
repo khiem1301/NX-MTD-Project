@@ -52,7 +52,7 @@ public sealed class RejectRequestDtoValidator : AbstractValidator<RejectRequestD
 {
     public RejectRequestDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(1000);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }
@@ -70,7 +70,7 @@ public sealed class CancelRequestDtoValidator : AbstractValidator<CancelRequestD
 {
     public CancelRequestDtoValidator()
     {
-        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }

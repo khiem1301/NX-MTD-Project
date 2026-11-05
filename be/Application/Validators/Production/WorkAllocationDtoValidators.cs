@@ -29,7 +29,7 @@ public sealed class ConfirmWorkAllocationDtoValidator : AbstractValidator<Confir
     public ConfirmWorkAllocationDtoValidator()
     {
         RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
-        RuleFor(x => x.DiscrepancyReason).MaximumLength(500);
+        RuleFor(x => x.DiscrepancyReason).MaximumLength(TextLimits.Reason);
     }
 }
 
@@ -38,8 +38,8 @@ public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBeh
     public ConfirmOnBehalfDtoValidator()
     {
         RuleFor(x => x.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
-        RuleFor(x => x.DiscrepancyReason).MaximumLength(500);
-        RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
+        RuleFor(x => x.DiscrepancyReason).MaximumLength(TextLimits.Reason);
+        RuleFor(x => x.OnBehalfReason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
     }
 }
 
@@ -61,6 +61,6 @@ public sealed class SaveDailyAllocationDtoValidator : AbstractValidator<SaveDail
             item.RuleFor(i => i.OperationId).GreaterThan(0).WithMessage(WarehouseMessages.OperationRequired);
             item.RuleFor(i => i.Quantity).InclusiveBetween(0, MaxQuantity).WithMessage(WarehouseMessages.DailyQtyRange);
         });
-        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);
     }
 }

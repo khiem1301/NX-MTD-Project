@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, Modal } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
@@ -63,7 +64,7 @@ export function ResignEmployeeModal({
           label={MESSAGES.hr.resignReason}
           rules={[{ required: true, whitespace: true, message: MESSAGES.common.reasonRequired }]}
         >
-          <Input.TextArea rows={3} maxLength={500} showCount />
+          <Input.TextArea rows={3} maxLength={REASON_MAX_LENGTH} showCount />
         </Form.Item>
       </Form>
     </Modal>

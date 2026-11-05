@@ -29,6 +29,7 @@ public class WorkAllocationServiceTests
     private readonly List<Employee> _employees = new();
     private readonly List<OrderLine> _orderLines = new();
     private readonly List<Operation> _operations = new();
+    private readonly List<PieceRate> _rates = new();
     private readonly List<WorkAllocation> _allocations = new();
     private readonly List<VwOperationAllocationProgress> _progress = new();
     private readonly List<OutputRecord> _outputs = new();
@@ -41,6 +42,7 @@ public class WorkAllocationServiceTests
     public WorkAllocationServiceTests()
     {
         _clock.Now.Returns(Now);
+        _clock.Today.Returns(DateOnly.FromDateTime(Now));
         _worker = new Employee { EmployeeId = WorkerId, EmployeeCode = "CNMAY1", FullName = "Công nhân 1", TeamId = TeamId, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.Worker } };
         _line = new OrderLine { OrderLineId = 101, OrderId = 7, Order = _order, ProductId = 3, ProductVariant = TestVariant.Make(new Product { ProductId = 3, ProductCode = "AO-01" }, "Đen", "M") };
         _teams.Add(_team); _employees.Add(_worker); _orderLines.Add(_line);
@@ -50,15 +52,19 @@ public class WorkAllocationServiceTests
         _progress.Add(Progress(SewOpId, required: 100, allocated: 0, pending: 0));
         _progress.Add(Progress(IronOpId, required: 100, allocated: 0, pending: 0));
         Received(100);
-        Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_allocations); Setup(_progress);
+        Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_rates); Setup(_allocations); Setup(_progress);
         Setup(_outputs); Setup(_issueLines);
     }
 
-    private static Operation Op(int id, string code, string name, int productId = 3) => new()
+    private Operation Op(int id, string code, string name, int productId = 3)
     {
-        OperationId = id, ProductId = productId, OperationCode = code, OperationName = name,
-        StationSequence = (short)id, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
-    };
+        _rates.Add(TestRates.Approved(id));
+        return new()
+        {
+            OperationId = id, ProductId = productId, OperationCode = code, OperationName = name,
+            StationSequence = (short)id, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
+        };
+    }
 
     /// <summary>Tổ đã nhận <paramref name="qty"/> bộ BTP của dòng đơn 101 (phiếu cấp BTP đã nhận, dòng bộ đủ).</summary>
     private void Received(int qty)
@@ -148,6 +154,19 @@ public class WorkAllocationServiceTests
         (await Service().CreateAsync(Handover(40, SewOpId), TeamId, default)).IsSuccess.Should().BeTrue();
 
         added.Select(a => a.Quantity).Should().Equal(40, 40);
+    }
+
+    [Fact]
+    public async Task Handover_is_blocked_while_the_operation_has_no_approved_rate()
+    {
+        _rates.Clear();
+        Received(100);
+
+        var result = await Service().CreateAsync(Handover(10), TeamId, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+        result.Message.Should().Contain("OP09");
     }
 
     [Fact]

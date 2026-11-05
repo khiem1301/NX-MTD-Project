@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Descriptions, Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { QtyInput } from '@/components/common/QtyInput';
@@ -97,7 +98,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
               },
             ]}
           >
-            <Input maxLength={500} />
+            <Input maxLength={REASON_MAX_LENGTH} />
           </Form.Item>
           {onBehalf && (
             <Form.Item
@@ -107,7 +108,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
                 { required: true, whitespace: true, message: MESSAGES.common.reasonRequired },
               ]}
             >
-              <Input.TextArea rows={2} maxLength={500} showCount />
+              <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
             </Form.Item>
           )}
         </Form>

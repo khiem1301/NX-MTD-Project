@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -30,7 +31,7 @@ public sealed class ConfirmMaterialReturnDtoValidator : AbstractValidator<Confir
             line.RuleFor(l => l.ConfirmedQty).Cascade(CascadeMode.Stop)
                 .GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative)
                 .PrecisionScale(18, 3, false).WithMessage(WarehouseMessages.ConfirmedQtyDecimals);
-            line.RuleFor(l => l.DiscrepancyReason).MaxTrimmedLength(500, "Lý do lệch");
+            line.RuleFor(l => l.DiscrepancyReason).MaxTrimmedLength(TextLimits.Reason, "Lý do lệch");
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.MaterialReturnLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);

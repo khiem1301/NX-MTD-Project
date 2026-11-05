@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, InputNumber, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
@@ -58,7 +59,7 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             ]}
             style={{ marginBottom: 0 }}
           >
-            <Input maxLength={500} />
+            <Input maxLength={REASON_MAX_LENGTH} />
           </Form.Item>
         ) : (
           (l.discrepancyReason ?? '—')

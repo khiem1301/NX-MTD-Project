@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -65,14 +66,14 @@ public sealed class PlacePurchaseOrderDtoValidator : AbstractValidator<PlacePurc
 public sealed class DiscontinueSupplierDtoValidator : AbstractValidator<DiscontinueSupplierDto>
 {
     public DiscontinueSupplierDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaxTrimmedLength(500, "Lý do");   // MSG09
+        RuleFor(x => x.Reason).MaxTrimmedLength(TextLimits.Reason, "Lý do");
 }
 
 public sealed class CancelPurchaseOrderDtoValidator : AbstractValidator<CancelPurchaseOrderDto>
 {
     public CancelPurchaseOrderDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }
@@ -113,7 +114,7 @@ public sealed class ReturnPaymentDtoValidator : AbstractValidator<ReturnPaymentD
 {
     public ReturnPaymentDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }

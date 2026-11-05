@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, InputNumber, Tag } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
@@ -119,7 +120,7 @@ export function LayLinesTable({ lines, editingLines }: LayLinesTableProps) {
                 },
               ]}
             >
-              <Input maxLength={500} />
+              <Input maxLength={REASON_MAX_LENGTH} />
             </Form.Item>
           ),
         },

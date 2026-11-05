@@ -167,6 +167,8 @@ export type OrderOverviewLine = {
   color: string;
   sizeCode: string;
   orderedQty: number;
+  /** Số đã giao (tổng số xuất của phiếu xuất đã giao). */
+  deliveredQty?: number;
 };
 
 export type OrderLine = OrderOverviewLine & { cmtUnitPrice: number };

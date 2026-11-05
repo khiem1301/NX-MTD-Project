@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { PASSWORD_MAX_LENGTH } from '@/constants/limits';
+import { MESSAGES } from '@/constants/messages';
 import { profileApi } from '../api/profileApi';
 import { ChangePasswordForm } from './ChangePasswordForm';
 
@@ -49,5 +51,27 @@ describe('ChangePasswordForm', () => {
         confirmPassword: 'moi123',
       }),
     );
+  });
+
+  it('mật khẩu mới đúng 50 ký tự thì gọi API', async () => {
+    (profileApi.changePassword as jest.Mock).mockResolvedValue({
+      accessToken: 'a',
+      refreshToken: 'r',
+      user: {},
+    });
+    const password = 'a'.repeat(PASSWORD_MAX_LENGTH);
+    renderForm();
+    fill('cu', password, password);
+
+    await waitFor(() => expect(profileApi.changePassword).toHaveBeenCalledTimes(1));
+  });
+
+  it('mật khẩu mới 51 ký tự thì báo quá dài và không gọi API', async () => {
+    const password = 'a'.repeat(PASSWORD_MAX_LENGTH + 1);
+    renderForm();
+    fill('cu', password, password);
+
+    expect(await screen.findByText(MESSAGES.hr.passwordTooLong)).toBeInTheDocument();
+    expect(profileApi.changePassword).not.toHaveBeenCalled();
   });
 });

@@ -88,6 +88,7 @@ export function GradeCodeFormModal({ editing, onClose }: GradeCodeFormModalProps
           <Form.Item
             name="gradeCode"
             label={GR_LABELS.codeCode}
+            normalize={(v: string | undefined) => v?.replace(/[^A-Za-z0-9]/g, '')}
             rules={[
               { required: true, message: MESSAGES.common.required },
               { pattern: /^[A-Za-z0-9]{1,5}$/, message: 'Chỉ gồm chữ và số, tối đa 5 ký tự.' },

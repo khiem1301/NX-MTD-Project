@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useEffect } from 'react';
 import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -139,7 +140,7 @@ export function AdjustmentFormModal({ open, prefill, onClose }: Props) {
           label={text.reason}
           rules={[{ required: true, whitespace: true, message: text.required }]}
         >
-          <Input.TextArea rows={3} maxLength={500} showCount />
+          <Input.TextArea rows={3} maxLength={REASON_MAX_LENGTH} showCount />
         </Form.Item>
       </Form>
     </Modal>

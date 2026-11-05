@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -21,7 +22,7 @@ public sealed class WorkAllocationConfiguration : IEntityTypeConfiguration<WorkA
         entity.HasIndex(e => new { e.SewingTeamId, e.WorkDate }, "IX_WA_Day");
 
         entity.Property(e => e.WorkDate).HasDefaultValueSql("(CONVERT([date],[dbo].[fn_VnNow]()))");
-        entity.Property(e => e.RetrievalNote).HasMaxLength(500);
+        entity.Property(e => e.RetrievalNote).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.ConfirmMode)
             .HasMaxLength(10)
             .IsUnicode(false);
@@ -29,12 +30,12 @@ public sealed class WorkAllocationConfiguration : IEntityTypeConfiguration<WorkA
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
+        entity.Property(e => e.DiscrepancyReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.MovementType)
             .HasMaxLength(10)
             .IsUnicode(false);
-        entity.Property(e => e.OnBehalfReason).HasMaxLength(500);
-        entity.Property(e => e.RejectReason).HasMaxLength(500);
+        entity.Property(e => e.OnBehalfReason).HasMaxLength(TextLimits.Reason);
+        entity.Property(e => e.RejectReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.RetrievalReason)
             .HasMaxLength(20)
             .IsUnicode(false);

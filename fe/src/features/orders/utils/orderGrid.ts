@@ -1,7 +1,7 @@
 import { SIZE_ORDER } from '@/constants/orderStatus';
 import type { OrderDisplayLine, OrderLineInput } from '../types';
 
-export type GridCell = { orderLineId: number | null; qty: number | null };
+export type GridCell = { orderLineId: number | null; qty: number | null; deliveredQty?: number };
 export type GridRow = { key: string; color: string; cells: Record<string, GridCell> };
 export type ProductBlock = {
   key: string;
@@ -43,7 +43,11 @@ export const fromLines = (lines: OrderDisplayLine[]): ProductBlock[] => {
       row = { key: `${blockKey}|${l.color}`, color: l.color, cells: {} };
       block.rows.push(row);
     }
-    row.cells[l.sizeCode] = { orderLineId: l.orderLineId, qty: l.orderedQty };
+    row.cells[l.sizeCode] = {
+      orderLineId: l.orderLineId,
+      qty: l.orderedQty,
+      deliveredQty: l.deliveredQty ?? 0,
+    };
   }
   return [...blocks.values()].map((b) => ({ ...b, sizes: sortSizes(b.sizes) }));
 };
@@ -97,3 +101,11 @@ export const newBlock = (): ProductBlock => ({
   sizes: [...DEFAULT_SIZES],
   rows: [{ key: `new-row-${blockSeq}`, color: '', cells: {} }],
 });
+
+/** Số đã giao của một màu (cộng mọi size). */
+export const rowDelivered = (b: ProductBlock, r: GridRow): number =>
+  b.sizes.reduce((s, size) => s + (r.cells[size]?.deliveredQty ?? 0), 0);
+
+/** Tổng số đã giao của mọi dòng đơn. */
+export const linesDelivered = (lines: OrderDisplayLine[]): number =>
+  lines.reduce((s, l) => s + (l.deliveredQty ?? 0), 0);

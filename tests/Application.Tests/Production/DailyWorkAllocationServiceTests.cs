@@ -27,6 +27,7 @@ public class DailyWorkAllocationServiceTests
     private readonly List<Employee> _employees = new();
     private readonly List<OrderLine> _orderLines = new();
     private readonly List<Operation> _operations = new();
+    private readonly List<PieceRate> _rates = new();
     private readonly List<WorkAllocation> _allocations = new();
     private readonly List<VwOperationAllocationProgress> _progress = new();
     private readonly List<OutputRecord> _outputs = new();
@@ -54,12 +55,13 @@ public class DailyWorkAllocationServiceTests
             OperationId = OpId, ProductId = 3, OperationCode = "OP09", OperationName = "Tra tay", StationSequence = 9,
             Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
         });
+        _rates.Add(TestRates.Approved(OpId));
         _progress.Add(new VwOperationAllocationProgress
         {
             SewingTeamId = TeamId, OrderLineId = 101, OperationId = OpId, RequiredQty = 100, UnallocatedQty = 100,
         });
         _allotted.Add(new OrderLineTeam { OrderLineId = 101, SewingTeamId = TeamId });
-        Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_allocations);
+        Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_rates); Setup(_allocations);
         Setup(_progress); Setup(_outputs); Setup(_assignments); Setup(_allotted);
     }
 
@@ -110,6 +112,19 @@ public class DailyWorkAllocationServiceTests
         var m = added.Should().ContainSingle().Subject;
         (m.WorkDate, m.MovementType, m.Quantity, m.ConfirmedQty).Should().Be((Today, PieceMovementTypes.Handover, 60, 60));
         (m.Status, m.ConfirmMode).Should().Be((HandoverStatuses.Confirmed, ConfirmModes.Leader));
+    }
+
+    [Fact]
+    public async Task Save_is_blocked_while_the_operation_has_no_approved_rate()
+    {
+        _rates.Clear();
+        CaptureAdds();
+
+        var result = await Service().SaveAsync(Save(60), TeamId, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+        result.Message.Should().Contain("OP09");
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -16,7 +17,7 @@ public sealed class StocktakeConfiguration : IEntityTypeConfiguration<Stocktake>
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.ReturnReason).HasMaxLength(500);
+        entity.Property(e => e.ReturnReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Scope).HasMaxLength(300);
         entity.Property(e => e.Status)
             .HasMaxLength(20)

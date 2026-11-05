@@ -154,7 +154,7 @@ public class PartnerValidatorTests
     [Theory]
     [InlineData(500, true)]
     [InlineData(501, false)]
-    [InlineData(0, false)]
+    [InlineData(0, true)]
     public void DiscontinueReason_Boundaries(int length, bool expected)
     {
         var reason = Pad(length);
@@ -164,9 +164,11 @@ public class PartnerValidatorTests
     }
 
     [Fact]
-    public void DiscontinueReason_BlankIsRejected_AndLengthIsCountedAfterTrim()
+    public void DiscontinueReason_IsOptional_AndLengthIsCountedAfterTrim()
     {
-        new DiscontinueCustomerDtoValidator().Validate(new DiscontinueCustomerDto("   ")).IsValid.Should().BeFalse();
+        new DiscontinueCustomerDtoValidator().Validate(new DiscontinueCustomerDto("   ")).IsValid.Should().BeTrue();
+        new DiscontinueCustomerDtoValidator().Validate(new DiscontinueCustomerDto(null)).IsValid.Should().BeTrue();
+        new DiscontinueSupplierDtoValidator().Validate(new DiscontinueSupplierDto(null)).IsValid.Should().BeTrue();
         new DiscontinueCustomerDtoValidator().Validate(new DiscontinueCustomerDto(" " + Pad(500) + " ")).IsValid.Should().BeTrue();
         new DiscontinueSupplierDtoValidator().Validate(new DiscontinueSupplierDto(" " + Pad(500) + " ")).IsValid.Should().BeTrue();
     }

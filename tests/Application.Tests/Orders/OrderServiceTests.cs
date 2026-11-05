@@ -449,13 +449,13 @@ public class CustomerOrderServiceTests
         _orders.GetDetailAsync(5, default).Returns(new OrderDetailDto
         {
             OrderId = 5, OrderCode = "DH2610-001", Status = "New", MaterialStatus = "Awaiting",
-            Lines = new[] { new OrderLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 12500) },
+            Lines = new[] { new OrderLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 12500, 4) },
         });
 
         var result = await Create().GetOverviewAsync(5, default);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data!.Lines.Single().Should().Be(new OrderLineLookupDto(7, 5, 1, "AO-01", "Áo", "Đỏ", "M", 10));
+        result.Data!.Lines.Single().Should().Be(new OrderOverviewLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 4));
         typeof(OrderOverviewDto).GetProperties().Select(p => p.Name).Should().NotContain(["RowVer", "History"]);
         await _audit.DidNotReceiveWithAnyArgs().GetHistoryAsync(default!, default, default);
     }

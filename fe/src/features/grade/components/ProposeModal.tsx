@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { GR_LABELS } from '../constants';
@@ -51,7 +52,7 @@ export function ProposeModal({ open, onClose }: { open: boolean; onClose: () => 
           label={GR_LABELS.reason}
           rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
         >
-          <Input.TextArea rows={3} maxLength={500} showCount />
+          <Input.TextArea rows={3} maxLength={REASON_MAX_LENGTH} showCount />
         </Form.Item>
       </Form>
     </Modal>

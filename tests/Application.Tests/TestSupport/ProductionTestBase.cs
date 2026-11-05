@@ -2,6 +2,7 @@ using NSubstitute;
 using NX_MTD.Application.Services;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
+using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
@@ -11,7 +12,6 @@ public abstract class ProductionTestBase
     /// <summary>Thứ Tư 21/10/2026 10:00.</summary>
     protected static readonly DateTime Now = new(2026, 10, 21, 10, 0, 0);
     protected static readonly DateOnly Today = new(2026, 10, 21);
-
     protected readonly IUnitOfWork Uow = Substitute.For<IUnitOfWork>();
     protected readonly ICurrentUser User = Substitute.For<ICurrentUser>();
     protected readonly IClock Clock = Substitute.For<IClock>();

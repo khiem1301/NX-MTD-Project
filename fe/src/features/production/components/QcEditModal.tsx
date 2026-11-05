@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useEffect } from 'react';
 import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
@@ -76,7 +77,7 @@ export function QcEditModal({
             label={text.form.reason}
             rules={[{ required: true, whitespace: true, message: MESSAGES.common.reasonRequired }]}
           >
-            <Input.TextArea rows={2} maxLength={500} showCount />
+            <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
           </Form.Item>
         )}
       </Form>

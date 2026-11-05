@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 
@@ -8,8 +9,6 @@ type ReasonModalProps = {
   onSubmit: (reason: string) => void;
   onCancel: () => void;
 };
-
-const REASON_MAX_LENGTH = 500;
 
 /** Hộp nhập lý do bắt buộc cho thao tác từ chối / trả lại. */
 export function ReasonModal({ open, title, loading, onSubmit, onCancel }: ReasonModalProps) {

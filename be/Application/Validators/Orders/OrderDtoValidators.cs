@@ -24,7 +24,7 @@ public sealed class CustomerQueryValidator : PageQueryValidatorBase<CustomerQuer
 public sealed class DiscontinueCustomerDtoValidator : AbstractValidator<DiscontinueCustomerDto>
 {
     public DiscontinueCustomerDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaxTrimmedLength(500, "Lý do");   // MSG09
+        RuleFor(x => x.Reason).MaxTrimmedLength(TextLimits.Reason, "Lý do");
 }
 
 public sealed class SaveCustomerDtoValidator : AbstractValidator<SaveCustomerDto>
@@ -145,7 +145,7 @@ public sealed class StopOrderDtoValidator : AbstractValidator<StopOrderDto>
 {
     public StopOrderDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }
@@ -154,7 +154,7 @@ public sealed class CancelOrderDtoValidator : AbstractValidator<CancelOrderDto>
 {
     public CancelOrderDtoValidator()
     {
-        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }

@@ -1,8 +1,8 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Input, Space, Typography } from 'antd';
 import { PRODUCTION_TEXT } from '../constants';
 
 const text = PRODUCTION_TEXT.output;
-const REASON_MAX_LENGTH = 500;
 
 type OutputReasonFieldProps = {
   value: string;

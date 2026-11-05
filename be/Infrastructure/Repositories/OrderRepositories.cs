@@ -191,7 +191,8 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
                 Lines = o.OrderLines.OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
                     .Select(l => new OrderLineDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode,
                         l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
-                        l.OrderedQty, l.CmtUnitPrice)).ToList(),
+                        l.OrderedQty, l.CmtUnitPrice,
+                        _context.VwOrderLineProgresses.Where(v => v.OrderLineId == l.OrderLineId).Select(v => v.DeliveredQty).FirstOrDefault())).ToList(),
             }).FirstOrDefaultAsync(ct);
         return dto is null ? null : dto with
         {

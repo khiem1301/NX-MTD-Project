@@ -327,7 +327,7 @@ CREATE TABLE dbo.Customer (
     Email           VARCHAR(100)  NULL,
     DefaultAddress  NVARCHAR(500) NULL,
     Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_Customer_Status DEFAULT 'ACTIVE',
-    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
@@ -363,7 +363,7 @@ CREATE TABLE dbo.Supplier (
     MaterialTypes  NVARCHAR(200) NULL,       -- loại NVL cung cấp (mô tả)
     Note           NVARCHAR(500) NULL,
     Status         VARCHAR(20)   NOT NULL CONSTRAINT DF_Supplier_Status DEFAULT 'ACTIVE',
-    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CreatedAt      DATETIME2(0)  NOT NULL CONSTRAINT DF_Supplier_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Supplier_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
@@ -2848,12 +2848,12 @@ INSERT @seed (Code, FullName, RoleCode, TeamId, PayType) VALUES
  ('KETOAN',   N'Kế toán mẫu',         'ACCOUNTANT',       @vp,   'MONTHLY'),
  ('THUKHO',   N'Thủ kho mẫu',         'WAREHOUSE_KEEPER', @vp,   'MONTHLY'),
  ('TTCAT',    N'Tổ trưởng tổ cắt',    'TEAM_LEADER',      @cat,  'MONTHLY'),
- ('TTMAY',    N'Tổ trưởng tổ may 1',  'TEAM_LEADER',      @may1, 'MONTHLY'),
- ('TPMAY',    N'Tổ phó tổ may 1',     'TEAM_DEPUTY',      @may1, 'MONTHLY'),
- ('QAQC1',    N'QA/QC mẫu',           'QAQC',             @vp,   'DAILY'),
+ ('TTMAY',    N'Tổ trưởng tổ may một',  'TEAM_LEADER',      @may1, 'MONTHLY'),
+ ('TPMAY',    N'Tổ phó tổ may một',     'TEAM_DEPUTY',      @may1, 'MONTHLY'),
+ ('QAQC1',    N'Nhân viên kiểm hàng mẫu',           'QAQC',             @vp,   'DAILY'),
  ('CODIEN',   N'Cơ điện mẫu',         'ELECTRICIAN',      @vp,   'MONTHLY'),
- ('CNMAY1',   N'Công nhân may 1',     'WORKER',           @may1, 'PIECE_RATE'),
- ('CNCAT1',   N'Công nhân cắt 1',     'WORKER',           @cat,  'DAILY');
+ ('CNMAY1',   N'Công nhân may một',     'WORKER',           @may1, 'PIECE_RATE'),
+ ('CNCAT1',   N'Công nhân cắt một',     'WORKER',           @cat,  'DAILY');
 
 INSERT dbo.Employee (EmployeeCode, FullName, RoleId, TeamId, PayType, StartDate)
 SELECT s.Code, s.FullName, r.RoleId, s.TeamId, s.PayType, '2026-01-01'

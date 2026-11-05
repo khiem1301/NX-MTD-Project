@@ -68,8 +68,8 @@ public sealed class CustomerOrderService : ICustomerOrderService
     {
         var o = await _orders.GetDetailAsync(orderId, ct);
         if (o is null) return Fail.NotFound<OrderOverviewDto>();
-        var lines = o.Lines.Select(l => new OrderLineLookupDto(l.OrderLineId, o.OrderId, l.ProductId, l.ProductCode, l.ProductName,
-            l.Color, l.SizeCode, l.OrderedQty)).ToList();
+        var lines = o.Lines.Select(l => new OrderOverviewLineDto(l.OrderLineId, l.ProductId, l.ProductCode, l.ProductName,
+            l.Color, l.SizeCode, l.OrderedQty, l.DeliveredQty)).ToList();
         return Result<OrderOverviewDto>.Success(new OrderOverviewDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate, o.DueDate,
             o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.Note, o.CreatedAt, lines));
     }
