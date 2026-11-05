@@ -1,7 +1,8 @@
-import { Alert, Button, Descriptions, Flex, InputNumber, Space, Tooltip, Typography } from 'antd';
+import { Alert, Button, Descriptions, Flex, Space, Tooltip, Typography } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
 import { fill, formatDate, formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { KPI_TEXT } from '../constants';
 import { useSaveKpiDailyPlan } from '../hooks/useKpi';
 import { useKpiDailyPlan } from '../hooks/useKpiDailyPlan';
@@ -41,11 +42,10 @@ export function KpiCalendarBody({ data, editable }: KpiCalendarBodyProps) {
     return (
       <>
         {editable && !plan.isLocked(day) ? (
-          <InputNumber
+          <QtyInput
             size="small"
             min={0}
             max={KPI_MAX_QTY}
-            precision={0}
             controls={false}
             aria-label={fill(text.dayInput, date)}
             placeholder={text.kpi}

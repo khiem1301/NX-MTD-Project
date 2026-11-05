@@ -1,6 +1,8 @@
 import { Button, Form, Input, InputNumber, Space } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import { isNewMaterial } from '../utils/newMaterial';
 import { MaterialFreeSelect } from './MaterialFreeSelect';
@@ -41,7 +43,13 @@ export function PurchaseOrderLineRow({
         }
       </Form.Item>
       <Form.Item name={[name, 'orderedQty']} rules={required}>
-        <InputNumber addonBefore={LABELS.orderedQty} min={0.001} style={{ width: 170 }} />
+        <QtyInput
+          decimals={MATERIAL_QTY_DECIMALS}
+          max={MAX_MATERIAL_QTY}
+          addonBefore={LABELS.orderedQty}
+          min={0.001}
+          style={{ width: 170 }}
+        />
       </Form.Item>
       <Form.Item
         name={[name, 'unitPrice']}

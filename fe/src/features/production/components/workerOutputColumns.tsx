@@ -1,8 +1,9 @@
 import type { MouseEvent } from 'react';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
-import { InputNumber, Space, Tag, Typography } from 'antd';
+import { Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { fill, formatCurrency } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
 import { canFill } from '../utils/outputWorkerBoard';
@@ -70,24 +71,22 @@ export const workerOutputColumns = ({
     render: (_, r) =>
       r.kind === 'group' ? (
         <span onClick={stopToggle}>
-          <InputNumber
+          <QtyInput
             aria-label={fill(t.groupInput, r.name ?? t.noGroup)}
             placeholder={t.groupPlaceholder}
             disabled={!r.rows.some(canFill)}
             min={0}
             max={OUTPUT_MAX_QTY}
-            precision={0}
             style={{ width: 120 }}
             value={groupQty[r.groupKey] ?? null}
             onChange={(v) => onGroupChange(r.groupKey, r.rows, v)}
           />
         </span>
       ) : (
-        <InputNumber
+        <QtyInput
           aria-label={fill(t.operationInput, r.row.operationCode)}
           min={0}
           max={OUTPUT_MAX_QTY}
-          precision={0}
           style={{ width: 120 }}
           status={overRows.includes(r.row) ? 'error' : undefined}
           disabled={!r.row.canEdit || !r.row.rateApproved}

@@ -48,7 +48,7 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 |---|---|---|
 | 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevelCode`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
 | 4.2 Nhân sự & thông báo | `Team`, `Employee`, `Account`, `GradeEvaluation`, `Announcement`, `AnnouncementTarget`, `Notification` | Tổ, nhân viên, tài khoản, đổi bậc thợ, thông báo |
-| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
+| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductColorImage`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
 | 4.4 Đơn từ | `Request`, `RequestLine` | 10 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
 | 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua, thanh toán, phiếu nhập |
 | 4.6 Cắt & cấp kho | `WorkOrder`, `WorkOrderLine`, `MaterialIssue`, `MaterialIssueLine`, `MaterialReturn`, `MaterialReturnLine`, `CuttingLay`, `CuttingLayLine`, `CutHandover`, `CutHandoverLine` | Lệnh cắt, cấp NVL / BTP, trả vải, bàn cắt, bàn giao BTP |
@@ -65,7 +65,10 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 ```mermaid
 erDiagram
     Product ||--o{ ProductImage : "ảnh phụ (tối đa 5)"
-    Product ||--o{ ProductVariant : "màu x size"
+    Product ||--o{ ProductColor : "màu áo"
+    ProductColor ||--o{ ProductColorImage : "ảnh theo màu (1-3)"
+    ProductColor ||--o{ ProductVariant : "màu x size"
+    Product ||--o{ ProductVariant : "biến thể"
     Product ||--o{ ProductComponent : "gồm"
     ProductVariant ||--o{ ProductComponentMaterial : "định mức"
     ProductComponent ||--o{ ProductComponentMaterial : "định mức"
@@ -463,20 +466,53 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 ### `ProductImage` — Ảnh phụ của mã hàng
 
-> Tối đa 10 ảnh phụ mỗi mã hàng (01/11); ảnh chính vẫn là `Product.SampleImageUrl`
+> Tối đa 5 ảnh phụ mỗi mã hàng (01/11, 05/11 giảm từ 10 còn 5); ảnh chính vẫn là `Product.SampleImageUrl`
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `ProductImageId` | INT |  | **PK**; tự tăng |  |
 | `ProductId` | INT |  | FK → `Product.ProductId` |  |
 | `ImageKey` | NVARCHAR(500) |  |  | khóa ảnh tải từ máy, vd `PRODUCT/2026/11/<guid>.jpg` |
-| `SortOrder` | TINYINT |  |  | thứ tự hiển thị 1 đến 10 |
+| `SortOrder` | TINYINT |  |  | thứ tự hiển thị 1 đến 5 |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
 **Ràng buộc & index**
 
-- `CK_ProductImage_Sort`: `CHECK SortOrder BETWEEN 1 AND 10`
+- `CK_ProductImage_Sort`: `CHECK SortOrder BETWEEN 1 AND 5`
 - UNIQUE `UQ_ProductImage_Sort`: (ProductId, SortOrder)
+
+### `ProductColor` — Màu áo của mã hàng
+
+> 05/11, DEV-ALL-71: nơi duy nhất lưu tên màu. `ProductVariant`, `ProductMarkerFabric` và `ProductColorImage` trỏ về đây bằng `ProductColorId`, nên đổi tên một màu thì mọi nơi đổi theo và không có tên màu lệch nhau. Màu được tạo khi đơn hàng có màu mới, hoặc khi khai ảnh cho màu ở form mã hàng
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductColorId` | INT |  | **PK**; tự tăng |  |
+| `ProductId` | INT |  | FK → `Product.ProductId` |  |
+| `Color` | NVARCHAR(50) |  |  | tên màu, vd Xanh navy |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
+
+**Ràng buộc & index**
+
+- UNIQUE `UQ_PCol`: (ProductId, Color) — collation CI nên không trùng cả khi khác hoa thường
+- UNIQUE `UQ_PCol_IdProduct`: (ProductColorId, ProductId) — cho FK ghép ở ProductVariant, ProductMarkerFabric
+
+### `ProductColorImage` — Ảnh theo màu áo của mã hàng
+
+> Mỗi màu áo của mã hàng có 1 đến 3 ảnh (05/11, DEV-ALL-71)
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductColorImageId` | INT |  | **PK**; tự tăng |  |
+| `ProductColorId` | INT |  | FK → `ProductColor.ProductColorId` |  |
+| `ImageKey` | NVARCHAR(500) |  |  | khóa ảnh tải từ máy, vd `PRODUCT/2026/11/<guid>.jpg` |
+| `SortOrder` | TINYINT |  |  | thứ tự hiển thị trong màu, 1 đến 3 |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
+
+**Ràng buộc & index**
+
+- `CK_ProductColorImage_Sort`: `CHECK SortOrder BETWEEN 1 AND 3`
+- UNIQUE `UQ_ProductColorImage_Sort`: (ProductColorId, SortOrder)
 
 ### `ProductVariant` — Biến thể mã hàng: màu × size
 
@@ -487,14 +523,15 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `ProductVariantId` | INT |  | **PK**; tự tăng |  |
 | `ProductId` | INT |  | FK → `Product.ProductId` |  |
-| `Color` | NVARCHAR(50) |  |  | màu sản phẩm |
+| `ProductColorId` | INT |  | FK ghép (ProductColorId, ProductId) → `ProductColor` | màu sản phẩm (05/11 thay cột `Color`, DEV-ALL-71) |
 | `SizeCode` | VARCHAR(10) |  |  | XS, S, M, L, XL, XXL, 3XL, FREE… |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 
 **Ràng buộc & index**
 
 - `CK_PV_Status`: Giá trị: `ACTIVE`, `DISCONTINUED`
-- UNIQUE `UQ_PV`: (ProductId, Color, SizeCode)
+- `FK_PV_Color`: (ProductColorId, ProductId) → `ProductColor` — màu của đúng mã hàng
+- UNIQUE `UQ_PV`: (ProductColorId, SizeCode)
 - UNIQUE `UQ_PV_IdProduct`: (ProductVariantId, ProductId) — cho FK ghép ở ProductComponentMaterial
 
 ### `ProductComponent` — Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)
@@ -548,13 +585,14 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ProductMarkerFabricId` | INT |  | **PK**; tự tăng |  |
 | `ProductId` | INT |  | FK → `Product.ProductId` |  |
 | `MarkerNo` | TINYINT |  |  | số bìa |
-| `Color` | NVARCHAR(50) |  |  | màu áo |
+| `ProductColorId` | INT |  | FK ghép (ProductColorId, ProductId) → `ProductColor` | màu áo (05/11 thay cột `Color`, DEV-ALL-71) |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` | vải dùng cho bìa và màu này |
 
 **Ràng buộc & index**
 
 - `CK_PMF_No`: `CHECK MarkerNo > 0`
-- UNIQUE `UQ_PMF`: (ProductId, MarkerNo, Color)
+- `FK_PMF_Color`: (ProductColorId, ProductId) → `ProductColor`
+- UNIQUE `UQ_PMF`: (ProductId, MarkerNo, ProductColorId)
 - Index `IX_PMF_Material ON dbo.ProductMarkerFabric(MaterialId)`
 
 ### `ProductComponentMaterial` — Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết
@@ -2040,9 +2078,11 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `AnnouncementTarget` | `Announcement`, `Role`, `Team` |
 | `Notification` | `Employee` |
 | `ProductImage` | `Product` |
-| `ProductVariant` | `Product` |
+| `ProductColor` | `Product` |
+| `ProductColorImage` | `ProductColor` |
+| `ProductVariant` | `Product`, `ProductColor` |
 | `ProductMarker` | `Product` |
-| `ProductMarkerFabric` | `Material`, `Product` |
+| `ProductMarkerFabric` | `Material`, `Product`, `ProductColor` |
 | `ProductComponent` | `Product` |
 | `ProductComponentMaterial` | `Material`, `ProductComponent`, `ProductVariant` |
 | `CustomerOrder` | `Customer` |

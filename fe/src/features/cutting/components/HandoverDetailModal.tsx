@@ -15,6 +15,7 @@ import {
 import type { ConfirmHandoverPayload, CutHandoverLine } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
 import { HandoverInfo } from './HandoverInfo';
 
 type HandoverDetailModalProps = { handoverId: number | undefined; onClose: () => void };
@@ -140,7 +141,7 @@ export function HandoverDetailModal({ handoverId, onClose }: HandoverDetailModal
                         noStyle
                         rules={[{ required: true, message: MESSAGES.common.required }]}
                       >
-                        <InputNumber min={0} max={l.handedQty} precision={0} />
+                        <QtyInput min={0} max={l.handedQty} />
                       </Form.Item>
                     ) : (
                       (l.confirmedQty ?? '—')

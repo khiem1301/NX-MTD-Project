@@ -22,11 +22,11 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly List<ProductMarkerFabric> _markerFabrics = [];
     private readonly List<ProductVariant> _variants =
     [
-        new() { ProductVariantId = SizeM, ProductId = ProductId, Color = "Đen", SizeCode = "M" },
-        new() { ProductVariantId = SizeL, ProductId = ProductId, Color = "Đen", SizeCode = "L" },
-        new() { ProductVariantId = SizeXl, ProductId = ProductId, Color = "Đen", SizeCode = "XL" },
-        new() { ProductVariantId = RedM, ProductId = ProductId, Color = "Đỏ", SizeCode = "M" },
-        new() { ProductVariantId = BlueM, ProductId = ProductId, Color = "Xanh", SizeCode = "M" },
+        new() { ProductVariantId = SizeM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "M" },
+        new() { ProductVariantId = SizeL, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "L" },
+        new() { ProductVariantId = SizeXl, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "XL" },
+        new() { ProductVariantId = RedM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M" },
+        new() { ProductVariantId = BlueM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Xanh" }, SizeCode = "M" },
     ];
     private readonly List<OrderLine> _lines = [];
     private readonly List<MaterialIssueLine> _issueLines = [];
@@ -59,7 +59,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
         _markers.Add(new ProductMarker { ProductId = ProductId, MarkerNo = no, SizeCode = size, LengthCm = length, WidthCm = width });
 
     private void OnFabric(byte no, string color = "Đen", Material? material = null) =>
-        _markerFabrics.Add(new ProductMarkerFabric { ProductId = ProductId, MarkerNo = no, Color = color, MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric });
+        _markerFabrics.Add(new ProductMarkerFabric { ProductId = ProductId, MarkerNo = no, ProductColor = new ProductColor { Color = color }, MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric });
 
     private static ProductComponent Component(string name, string type = ComponentTypes.Panel, string status = RecordStatus.Active) =>
         new() { ComponentName = name, PiecesPerGarment = 1, ComponentType = type, Status = status };

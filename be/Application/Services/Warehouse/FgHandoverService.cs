@@ -59,7 +59,7 @@ public sealed class FgHandoverService : IFgHandoverService
                 h.Product.ProductCode, h.InspectorId, h.Inspector.FullName, h.HandedAt, h.Status,
                 h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName, h.ConfirmedAt, h.RejectReason,
                 h.FgHandoverLines.OrderBy(l => l.FgHandoverLineId).Select(l => new FgHandoverLineDto(
-                    l.FgHandoverLineId, l.OrderLineId, l.OrderLine.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, l.HandedQty,
+                    l.FgHandoverLineId, l.OrderLineId, l.OrderLine.ProductVariant.ProductColor.Color, l.OrderLine.ProductVariant.SizeCode, l.HandedQty,
                     l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<FgHandoverDto>();
@@ -237,8 +237,8 @@ public sealed class FgHandoverService : IFgHandoverService
     {
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderId == orderId && (productId == null || l.ProductId == productId))
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode })
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
             .ToListAsync(ct);
         var ids = lines.Select(l => l.OrderLineId).ToList();
         var qc = await _output.GetQcFinishedByOrderLineAsync(ids, ct);

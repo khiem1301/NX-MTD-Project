@@ -41,9 +41,9 @@ public sealed class LookupService : ILookupService
         return await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderId == orderId)
             .Where(l => teamId == null || allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId))
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
             .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
-                l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty))
+                l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty))
             .ToListAsync(ct);
     }
 

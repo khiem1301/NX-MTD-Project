@@ -38,6 +38,8 @@ public partial class Product
 
     public virtual ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
 
+    public virtual ICollection<ProductColor> ProductColors { get; set; } = new List<ProductColor>();
+
     public virtual ICollection<ProductMarker> ProductMarkers { get; set; } = new List<ProductMarker>();
 
     public virtual ICollection<ProductMarkerFabric> ProductMarkerFabrics { get; set; } = new List<ProductMarkerFabric>();

@@ -55,7 +55,7 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
                 l.ProductId,
                 Order = l.Order.OrderCode,
                 Product = l.ProductVariant.Product.ProductCode,
-                l.ProductVariant.Color,
+                l.ProductVariant.ProductColor.Color,
                 l.ProductVariant.SizeCode
             }).ToListAsync(ct);
         var lineIds = lines.Select(l => l.OrderLineId).ToList();

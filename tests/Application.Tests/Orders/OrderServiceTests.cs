@@ -20,15 +20,42 @@ public class ProductServiceTests
 
     private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
     private readonly List<ProductImage> _images = [];
+    private readonly List<ProductColor> _colors = [];
+    private readonly List<ProductColorImage> _colorImages = [];
+    private readonly List<ProductVariant> _variants = [];
+    private readonly List<ProductMarkerFabric> _fabrics = [];
 
     public ProductServiceTests()
     {
-        var repo = Substitute.For<IGenericRepository<ProductImage>>();
-        repo.Query().Returns(_ => _images.AsTestAsyncQueryable());
-        repo.AddRangeAsync(Arg.Do<IEnumerable<ProductImage>>(es => _images.AddRange(es))).Returns(Task.CompletedTask);
-        repo.When(r => r.RemoveRange(Arg.Any<IEnumerable<ProductImage>>()))
-            .Do(c => { foreach (var e in c.Arg<IEnumerable<ProductImage>>().ToList()) _images.Remove(e); });
-        _uow.Repository<ProductImage>().Returns(repo);
+        Setup(_images);
+        Setup(_colors);
+        Setup(_colorImages);
+        Setup(_variants);
+        Setup(_fabrics);
+    }
+
+    private void Setup<T>(List<T> backing) where T : class
+    {
+        var repo = Substitute.For<IGenericRepository<T>>();
+        repo.Query().Returns(_ => backing.AsTestAsyncQueryable());
+        repo.AddAsync(Arg.Do<T>(backing.Add)).Returns(Task.CompletedTask);
+        repo.AddRangeAsync(Arg.Do<IEnumerable<T>>(es => backing.AddRange(es))).Returns(Task.CompletedTask);
+        repo.When(r => r.RemoveRange(Arg.Any<IEnumerable<T>>()))
+            .Do(c => { foreach (var e in c.Arg<IEnumerable<T>>().ToList()) backing.Remove(e); });
+        _uow.Repository<T>().Returns(repo);
+    }
+
+    private ProductColor SeedColor(int id, string color, params string[] keys)
+    {
+        var c = new ProductColor { ProductColorId = id, ProductId = 1, Color = color };
+        foreach (var (key, index) in keys.Select((k, i) => (k, i)))
+        {
+            var image = new ProductColorImage { ProductColorId = id, ProductColor = c, ImageKey = key, SortOrder = (byte)(index + 1) };
+            c.ProductColorImages.Add(image);
+            _colorImages.Add(image);
+        }
+        _colors.Add(c);
+        return c;
     }
 
     private const string KeyA = "PRODUCT/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg";
@@ -182,6 +209,73 @@ public class ProductServiceTests
     }
 
     [Fact]
+    public async Task Create_SavesColorImagesNumberedWithinEachColor()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        await Create().CreateAsync(Dto() with { ColorImages = [new(" Đỏ ", [KeyA, KeyB]), new("Xanh", [KeyC])] }, default);
+
+        saved!.ProductColors.Select(c => c.Color).Should().Equal("Đỏ", "Xanh");
+        saved.ProductColors.SelectMany(c => c.ProductColorImages.Select(i => (c.Color, i.ImageKey, i.SortOrder)))
+            .Should().Equal(("Đỏ", KeyA, (byte)1), ("Đỏ", KeyB, (byte)2), ("Xanh", KeyC, (byte)1));
+    }
+
+    [Fact]
+    public async Task Update_ColorAlreadyOnProduct_ReusesItIgnoringCase()
+    {
+        ExistingProduct();
+        var red = SeedColor(4, "Đỏ", KeyA);
+
+        await Create().UpdateAsync(1, Dto() with { ColorImages = [new(" đỏ ", [KeyB, KeyC])] }, default);
+
+        _colors.Should().ContainSingle().Which.Should().BeSameAs(red);
+        _colorImages.Select(i => (i.ProductColor.Color, i.ProductColorId, i.ImageKey, i.SortOrder))
+            .Should().Equal(("Đỏ", 4, KeyB, (byte)1), ("Đỏ", 4, KeyC, (byte)2));
+    }
+
+    [Fact]
+    public async Task Update_NewColor_CreatesProductColorAndKeepsExtraImages()
+    {
+        ExistingProduct();
+        var extra = Seed(KeyA, 1);
+
+        var result = await Create().UpdateAsync(1, Dto() with { ColorImages = [new("Xanh", [KeyC])] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _images.Should().ContainSingle().Which.Should().BeSameAs(extra);
+        _colors.Should().ContainSingle().Which.Should().Match<ProductColor>(c => c.Color == "Xanh" && c.ProductId == 1);
+        _colorImages.Should().ContainSingle().Which.ProductColor.Should().BeSameAs(_colors[0]);
+    }
+
+    [Fact]
+    public async Task Update_WithTheSameColorImagesInAnotherColorOrder_DoesNotRewriteThem()
+    {
+        ExistingProduct();
+        SeedColor(4, "Đỏ", KeyA);
+        SeedColor(5, "Xanh", KeyB);
+        var before = _colorImages.ToList();
+
+        await Create().UpdateAsync(1, Dto() with { ColorImages = [new("Xanh", [KeyB]), new("Đỏ", [KeyA])] }, default);
+
+        _colorImages.Should().Equal(before);
+    }
+
+    [Fact]
+    public async Task Update_DroppedColorOnlyUsedForImages_IsDeleted_ButAColorWithVariantsStays()
+    {
+        ExistingProduct();
+        SeedColor(4, "Đỏ", KeyA);
+        var blue = SeedColor(5, "Xanh", KeyB);
+        _variants.Add(new ProductVariant { ProductVariantId = 9, ProductId = 1, ProductColorId = 5, SizeCode = "M" });
+
+        await Create().UpdateAsync(1, Dto() with { ColorImages = [] }, default);
+
+        _colorImages.Should().BeEmpty();
+        _colors.Should().ContainSingle().Which.Should().BeSameAs(blue);
+    }
+
+    [Fact]
     public async Task Update_ChangeCodeWhenUsed_Fails()
     {
         _products.GetByIdAsync(1).Returns(new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active });
@@ -229,6 +323,7 @@ public class CustomerOrderServiceTests
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
     private readonly List<ProductVariant> _variants = [];
+    private readonly List<ProductColor> _newColors = [];
 
     public CustomerOrderServiceTests()
     {
@@ -236,6 +331,12 @@ public class CustomerOrderServiceTests
         variantRepo.Query().Returns(_ => _variants.AsTestAsyncQueryable());
         variantRepo.AddAsync(Arg.Do<ProductVariant>(v => _variants.Add(v))).Returns(Task.CompletedTask);
         _uow.Repository<ProductVariant>().Returns(variantRepo);
+        // Màu áo: màu của các biến thể đang có, cộng màu service vừa tạo.
+        var colorRepo = Substitute.For<IGenericRepository<ProductColor>>();
+        colorRepo.Query().Returns(_ => _variants.Select(v => v.ProductColor).Concat(_newColors)
+            .DistinctBy(c => (c.ProductId, c.Color.ToUpperInvariant())).AsTestAsyncQueryable());
+        colorRepo.AddAsync(Arg.Do<ProductColor>(_newColors.Add)).Returns(Task.CompletedTask);
+        _uow.Repository<ProductColor>().Returns(colorRepo);
         _clock.Now.Returns(new DateTime(2026, 10, 23, 8, 0, 0));
         _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Active);
         _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(Array.Empty<string>());
@@ -409,6 +510,32 @@ public class CustomerOrderServiceTests
     }
 
     [Fact]
+    public async Task Create_NewColorInTwoSizes_CreatesOneProductColorSharedByBothVariants()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, " Đỏ ", "M"), L(null, "đỏ", "L") });
+
+        await Create().CreateAsync(dto, default);
+
+        _newColors.Should().ContainSingle().Which.Should().Match<ProductColor>(c => c.Color == "Đỏ" && c.ProductId == 1);
+        _variants.Should().OnlyContain(v => ReferenceEquals(v.ProductColor, _newColors[0]));
+    }
+
+    [Fact]
+    public async Task Create_ColorAlreadyOnProduct_NewSizeReusesTheColor()
+    {
+        var existing = TestVariant.Make(1, "AO-01", "Đỏ", "M");
+        _variants.Add(existing);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "ĐỎ", "XL") });
+
+        await Create().CreateAsync(dto, default);
+
+        _newColors.Should().BeEmpty();
+        _variants.Last().ProductColor.Should().BeSameAs(existing.ProductColor);
+    }
+
+    [Fact]
     public async Task Create_ExistingVariantIgnoringCase_IsReusedNotDuplicated()
     {
         var existing = TestVariant.Make(1, "AO-01", "Đỏ", "M");
@@ -428,7 +555,7 @@ public class CustomerOrderServiceTests
     [Fact]
     public async Task Create_DiscontinuedVariant_IsRejected()
     {
-        _variants.Add(new ProductVariant { ProductVariantId = 5, ProductId = 1, Color = "Đỏ", SizeCode = "M", Status = RecordStatus.Discontinued });
+        _variants.Add(new ProductVariant { ProductVariantId = 5, ProductId = 1, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M", Status = RecordStatus.Discontinued });
         var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
             new[] { L(null, "Đỏ", "M") });
 

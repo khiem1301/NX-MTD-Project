@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, InputNumber, Modal } from 'antd';
+import { Form, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, lineKey, parseLineKey } from '../constants';
 import { useCreateHandover, useHandoverable } from '../hooks/useCutting';
@@ -7,6 +7,7 @@ import type { HandoverableLine } from '../types';
 import { confirmDialog } from '@/utils/confirmDialog';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type HandoverCreateModalProps = { open: boolean; workOrderId: number; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -67,7 +68,7 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
               key: 'qty',
               render: (_, l) => (
                 <Form.Item name={['qty', lineKey(l)]} noStyle>
-                  <InputNumber min={0} max={l.remainingQty} precision={0} />
+                  <QtyInput min={0} max={l.remainingQty} />
                 </Form.Item>
               ),
             },

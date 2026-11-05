@@ -1,8 +1,9 @@
 import type { MouseEvent } from 'react';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
-import { InputNumber, Space, Tag, Typography } from 'antd';
+import { Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { fill } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { PM_LABELS } from '../constants';
 import type { DailyAllocationRow } from '../types';
 import { maxGiveOf, minGiveOf } from '../utils/dailyBoard';
@@ -76,22 +77,20 @@ export const dailyModalColumns = ({
     render: (_, r) =>
       r.kind === 'group' ? (
         <span onClick={stopToggle}>
-          <InputNumber
+          <QtyInput
             aria-label={fill(PM_LABELS.groupInput, r.name ?? PM_LABELS.noGroup)}
             placeholder={PM_LABELS.groupPlaceholder}
             min={0}
-            precision={0}
             style={{ width: 120 }}
             value={groupQty[r.groupKey] ?? null}
             onChange={(v) => onGroupChange(r.groupKey, r.rows, v)}
           />
         </span>
       ) : (
-        <InputNumber
+        <QtyInput
           aria-label={fill(PM_LABELS.operationInput, r.row.operationCode)}
           min={minGiveOf(r.row)}
           max={maxGiveOf(r.row)}
-          precision={0}
           style={{ width: 120 }}
           value={valueOf(r.row)}
           onChange={(v) => onQuantityChange(r.row, v)}

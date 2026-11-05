@@ -102,7 +102,7 @@ public sealed class CuttingLayService : ICuttingLayService
     private async Task<(Result? Error, WorkOrder? WorkOrder)> LoadWorkOrderAsync(int workOrderId, int teamId,
         CancellationToken ct)
     {
-        var wo = await _uow.Repository<WorkOrder>().Query().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+        var wo = await _uow.Repository<WorkOrder>().Query().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
         if (wo is null) return (WarehouseFailures.NotFound(), null);
         if (wo.CuttingTeamId != teamId) return (WarehouseFailures.TeamMismatch(), null);
@@ -216,7 +216,7 @@ public sealed class CuttingLayService : ICuttingLayService
             switch (CuttingLayCalculator.Check(plan, before, line.ActualQty, surplus))
             {
                 case CutCapCheck.OverCap:
-                    over.Add($"{ol.ProductVariant.Color}-{ol.ProductVariant.SizeCode}: kế hoạch {plan}, tối đa {CuttingLayCalculator.Cap(plan, surplus)}, đã cắt {before}, bàn này {line.ActualQty}");
+                    over.Add($"{ol.ProductVariant.ProductColor.Color}-{ol.ProductVariant.SizeCode}: kế hoạch {plan}, tối đa {CuttingLayCalculator.Cap(plan, surplus)}, đã cắt {before}, bàn này {line.ActualQty}");
                     break;
                 case CutCapCheck.OverPlanWithinSurplus:
                     warn = true;
@@ -260,6 +260,6 @@ public sealed class CuttingLayService : ICuttingLayService
             l.FabricMaterial.Color, l.PlyCount, l.LayLengthM, l.PlyCount * l.LayLengthM, string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
                 x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.Material.Color == "" ? "" : " " + x.ProductComponentMaterial.Material.Color),
-                x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,
+                x.OrderLine.ProductVariant.ProductColor.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,
                 x.AdjustReason)).ToList());
 }

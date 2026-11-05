@@ -31,7 +31,7 @@ public sealed class StockRepository : IStockRepository
             return string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";
         }
         return await _context.OrderLines.AsNoTracking().Where(l => l.OrderLineId == key.OrderLineId)
-            .Select(l => l.ProductVariant.Product.ProductCode + " " + l.ProductVariant.Color + "-" + l.ProductVariant.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
+            .Select(l => l.ProductVariant.Product.ProductCode + " " + l.ProductVariant.ProductColor.Color + "-" + l.ProductVariant.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
     }
 
     public async Task PostAsync(StockMovement m, CancellationToken ct)
@@ -110,7 +110,7 @@ public sealed class StockRepository : IStockRepository
         var teams = await _context.Teams.AsNoTracking().Where(t => teamIds.Contains(t.TeamId))
             .ToDictionaryAsync(t => t.TeamId, t => t.TeamName, ct);
         var lines = await _context.OrderLines.AsNoTracking().Where(l => lineIds.Contains(l.OrderLineId))
-            .Select(l => new { l.OrderLineId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode })
+            .Select(l => new { l.OrderLineId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
             .ToDictionaryAsync(l => l.OrderLineId, ct);
 
         return received
@@ -175,12 +175,12 @@ public sealed class StockRepository : IStockRepository
                       && (query.OrderId == null || l.OrderId == query.OrderId)
                       && (string.IsNullOrEmpty(keyword) || l.ProductVariant.Product.ProductCode.Contains(keyword)
                           || l.ProductVariant.Product.ProductName.Contains(keyword) || l.Order.OrderCode.Contains(keyword))
-                      && (string.IsNullOrEmpty(query.Color) || l.ProductVariant.Color == query.Color)
+                      && (string.IsNullOrEmpty(query.Color) || l.ProductVariant.ProductColor.Color == query.Color)
                       && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
-                orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode,
+                orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                     c.ProductComponentId
                 select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
-                    l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
+                    l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                     b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentMaterialId,
                     pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName + (pcm.Material.Color == "" ? "" : " " + pcm.Material.Color));
         return q.ToPagedAsync(query, ct);

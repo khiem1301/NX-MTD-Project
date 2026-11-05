@@ -14,7 +14,8 @@ internal static class TestVariant
     public static ProductVariant Make(Product product, string color = "Đen", string size = "M") => new()
     {
         ProductVariantId = Interlocked.Increment(ref _next), ProductId = product.ProductId, Product = product,
-        Color = color, SizeCode = size, Status = RecordStatus.Active,
+        ProductColor = new ProductColor { ProductColorId = Interlocked.Increment(ref _next), ProductId = product.ProductId, Color = color },
+        SizeCode = size, Status = RecordStatus.Active,
     };
 
     public static ProductVariant Make(int productId, string productCode = "MH001", string color = "Đen", string size = "M") =>

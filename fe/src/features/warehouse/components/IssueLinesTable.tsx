@@ -4,6 +4,8 @@ import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { MaterialIssueLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 
 type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 
@@ -30,7 +32,7 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             rules={[{ required: true, message: MESSAGES.common.required }]}
             noStyle
           >
-            <InputNumber min={0} max={l.issuedQty} />
+            <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.issuedQty} />
           </Form.Item>
         ) : (
           formatQty(l.confirmedQty)

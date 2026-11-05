@@ -1,10 +1,11 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Flex, Form, InputNumber, Select, Typography, type FormInstance } from 'antd';
+import { Button, Flex, Form, Select, Typography, type FormInstance } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderLineComponents } from '@/hooks/useLookups';
 import type { OrderLineOption } from '@/types/lookup';
+import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS } from '../constants';
 
 const required = [{ required: true, message: MESSAGES.common.required }];
@@ -104,13 +105,7 @@ export function ExtraComponentLines({ form, lines }: ExtraComponentLinesProps) {
                         rules={required}
                         style={NO_MARGIN}
                       >
-                        <InputNumber
-                          size="small"
-                          min={1}
-                          max={MAX_PIECES}
-                          precision={0}
-                          style={{ width: '100%' }}
-                        />
+                        <QtyInput size="small" min={1} max={MAX_PIECES} style={{ width: '100%' }} />
                       </Form.Item>
                     ),
                   },

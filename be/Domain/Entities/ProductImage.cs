@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Ảnh phụ của mã hàng (tối đa 10, SortOrder 1-10). Ảnh chính là Product.SampleImageUrl.
+/// Ảnh phụ của mã hàng (tối đa 5, SortOrder 1-5). Ảnh chính là Product.SampleImageUrl.
 /// </summary>
 public partial class ProductImage
 {

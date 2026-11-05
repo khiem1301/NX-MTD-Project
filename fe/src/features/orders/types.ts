@@ -34,13 +34,19 @@ export type ProductListItem = {
   sampleImageUrl: string | null;
   /** Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5). */
   extraImages: string[];
+  /** Ảnh theo màu áo, xếp theo tên màu (mỗi màu 1-3 ảnh). */
+  colorImages: ProductColorImages[];
   status: ProductStatus;
   isUsed: boolean;
   createdAt: string;
 };
+/** Ảnh của một màu áo: khóa ảnh theo thứ tự hiển thị. */
+export type ProductColorImages = { color: string; images: string[] };
 export type ProductDetail = ProductListItem & {
   description: string | null;
   lastSizeRatio: string | null;
+  /** Màu đã có biến thể (do đơn hàng tạo), để gợi ý khi khai ảnh theo màu. */
+  colors: string[];
   history: AuditEntry[];
 };
 export type SaveProductPayload = {
@@ -49,6 +55,8 @@ export type SaveProductPayload = {
   sampleImageUrl?: string | null;
   /** Ảnh phụ theo thứ tự hiển thị (tối đa 5); bỏ trống = giữ nguyên, mảng rỗng = xóa hết. */
   extraImages?: string[];
+  /** Ảnh theo màu áo; bỏ trống = giữ nguyên, mảng rỗng = xóa hết. */
+  colorImages?: ProductColorImages[];
   description?: string | null;
 };
 /** Định mức theo mã hàng (UC10): thành phần, biến thể màu × size và NVL của từng biến thể. */

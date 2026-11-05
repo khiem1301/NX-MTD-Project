@@ -1,5 +1,6 @@
-import { Descriptions, Form, Input, InputNumber, Modal } from 'antd';
+import { Descriptions, Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MOVEMENT_TYPE_LABEL, PM_LABELS, PM_MESSAGES } from '../constants';
 import { useConfirmByWorker, useConfirmOnBehalf } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
@@ -80,7 +81,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
             label={PM_LABELS.confirmedQty}
             rules={[{ required: true, message: MESSAGES.common.required }]}
           >
-            <InputNumber min={1} max={movement.quantity} precision={0} />
+            <QtyInput min={1} max={movement.quantity} />
           </Form.Item>
           <Form.Item
             name="discrepancyReason"

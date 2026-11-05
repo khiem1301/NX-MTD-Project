@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal } from 'antd';
+import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { QtyInput } from '@/components/common/QtyInput';
 import { useUpdateQcBatch } from '../hooks/useQcBatches';
 import type { QcBatch, QcRole } from '../types';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
@@ -67,7 +68,7 @@ export function QcEditModal({
             { type: 'number', max: OUTPUT_MAX_QTY, message: text.form.qtyMax },
           ]}
         >
-          <InputNumber min={1} max={OUTPUT_MAX_QTY} precision={0} style={{ width: 180 }} />
+          <QtyInput min={1} max={OUTPUT_MAX_QTY} style={{ width: 180 }} />
         </Form.Item>
         {needReason && (
           <Form.Item

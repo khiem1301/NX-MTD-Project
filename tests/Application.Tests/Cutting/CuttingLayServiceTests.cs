@@ -23,7 +23,7 @@ public class CuttingLayServiceTests : ProductionTestBase
         wo.WorkOrderLines.Add(new WorkOrderLine
         {
             WorkOrderId = 7, OrderLineId = 11, PlannedQty = 100,
-            OrderLine = new OrderLine { OrderLineId = 11, ProductVariant = new ProductVariant { Color = "Đen", SizeCode = "M" } },
+            OrderLine = new OrderLine { OrderLineId = 11, ProductVariant = new ProductVariant { ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "M" } },
         });
         SetupQueryable(new List<WorkOrder> { wo });
         SetupQueryable(new List<CuttingLay>());

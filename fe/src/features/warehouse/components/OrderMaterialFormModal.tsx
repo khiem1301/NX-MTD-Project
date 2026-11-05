@@ -15,6 +15,8 @@ import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 
 type OrderMaterialFormModalProps = {
   open: boolean;
@@ -119,7 +121,11 @@ export function OrderMaterialFormModal({
               ]}
               initialValue={0}
             >
-              <InputNumber style={{ width: '100%' }} />
+              <QtyInput
+                decimals={MATERIAL_QTY_DECIMALS}
+                max={MAX_MATERIAL_QTY}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
@@ -137,7 +143,11 @@ export function OrderMaterialFormModal({
               ]}
               initialValue={0}
             >
-              <InputNumber style={{ width: '100%' }} />
+              <QtyInput
+                decimals={MATERIAL_QTY_DECIMALS}
+                max={MAX_MATERIAL_QTY}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>

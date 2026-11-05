@@ -27,13 +27,19 @@ public class ProductSpecServiceTests
     private readonly List<OrderLine> _orderLines = [];
     private readonly List<ProductMarker> _markers = [];
     private readonly List<ProductMarkerFabric> _markerFabrics = [];
+    private readonly List<ProductColor> _colors = [];
     private readonly List<WorkOrderLine> _workOrderLines = [];
     private int _nextId = 100;
 
     public ProductSpecServiceTests()
     {
         Setup(_products); Setup(_materials); Setup(_orderLines); Setup(_workOrderLines); Setup(_markers);
-        Setup(_markerFabrics, f => f.Material = _materials.First(m => m.MaterialId == f.MaterialId));
+        Setup(_colors);
+        Setup(_markerFabrics, f =>
+        {
+            f.Material = _materials.First(m => m.MaterialId == f.MaterialId);
+            f.ProductColor = _colors.First(c => c.ProductColorId == f.ProductColorId);
+        });
         Setup(_components, c => c.ProductComponentId = ++_nextId);
         Setup(_variants, v => v.ProductVariantId = ++_nextId);
         // Quan hệ điều hướng do EF tự nối khi đọc lại; ở đây nối tay cho dòng định mức vừa thêm.
@@ -105,9 +111,20 @@ public class ProductSpecServiceTests
 
     private ProductVariant AddVariant(int id, string color, string size, string status = RecordStatus.Active)
     {
-        var v = new ProductVariant { ProductVariantId = id, ProductId = 1, Color = color, SizeCode = size, Status = status };
+        var v = new ProductVariant { ProductVariantId = id, ProductId = 1, ProductColor = ColorOf(color), SizeCode = size, Status = status };
+        v.ProductColorId = v.ProductColor.ProductColorId;
         _variants.Add(v);
         return v;
+    }
+
+    /// <summary>Màu áo của mã hàng 1: cùng tên (không phân biệt hoa thường) dùng chung một dòng như database.</summary>
+    private ProductColor ColorOf(string color)
+    {
+        var found = _colors.FirstOrDefault(c => string.Equals(c.Color, color, StringComparison.OrdinalIgnoreCase));
+        if (found is not null) return found;
+        var created = new ProductColor { ProductColorId = 500 + _colors.Count, ProductId = 1, Color = color };
+        _colors.Add(created);
+        return created;
     }
 
     [Fact]

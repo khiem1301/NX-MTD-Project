@@ -1,15 +1,4 @@
-import {
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Radio,
-  Select,
-  Space,
-  Upload,
-  message,
-} from 'antd';
+import { Button, Form, Input, Modal, Radio, Select, Space, Upload, message } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
@@ -20,6 +9,8 @@ import { LABELS, MATERIAL_SOURCE, MAX_RECEIPT_PHOTOS, SOURCE_LABEL } from '../co
 import type { MaterialReceipt, ReceiptPreset } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { useReceiptForm } from '../hooks/useReceiptForm';
 
 export type ReceiptFormModalProps = {
@@ -124,7 +115,13 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
                     </Form.Item>
                   )}
                   <Form.Item name={[field.name, 'acceptedQty']} rules={required}>
-                    <InputNumber addonBefore={LABELS.acceptedQty} min={0} style={{ width: 160 }} />
+                    <QtyInput
+                      decimals={MATERIAL_QTY_DECIMALS}
+                      max={MAX_MATERIAL_QTY}
+                      addonBefore={LABELS.acceptedQty}
+                      min={0}
+                      style={{ width: 160 }}
+                    />
                   </Form.Item>
                   <Button
                     icon={<DeleteOutlined />}

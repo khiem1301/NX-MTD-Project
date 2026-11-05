@@ -48,7 +48,14 @@ describe('ExtraImagesInput', () => {
     setup(keys(2));
 
     expect(screen.getAllByTestId('thumb')).toHaveLength(2);
-    expect(screen.getByText(/Đã chọn 2\/10 ảnh phụ/)).toBeInTheDocument();
+    expect(screen.getByText(/Đã chọn 2\/5 ảnh phụ/)).toBeInTheDocument();
+  });
+
+  it('ảnh theo màu: đủ số ảnh tối đa truyền vào (3) thì không còn nút thêm', () => {
+    render(<ExtraImagesInput value={keys(3)} max={3} countText="{0}/{1} ảnh" />);
+
+    expect(screen.getByText('3/3 ảnh')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Thêm ảnh/ })).not.toBeInTheDocument();
   });
 
   it('bỏ một ảnh thì chỉ ảnh đó bị bỏ', () => {
@@ -59,8 +66,8 @@ describe('ExtraImagesInput', () => {
     expect(changes.at(-1)).toEqual([keys(3)[0], keys(3)[2]]);
   });
 
-  it('đủ 10 ảnh thì không còn nút thêm', () => {
-    setup(keys(10));
+  it('đủ 5 ảnh thì không còn nút thêm', () => {
+    setup(keys(5));
 
     expect(screen.queryByRole('button', { name: /Thêm ảnh/ })).not.toBeInTheDocument();
   });
@@ -74,11 +81,11 @@ describe('ExtraImagesInput', () => {
   });
 
   it('chọn nhiều ảnh vượt số chỗ còn lại thì chỉ tải số ảnh còn chỗ', async () => {
-    const { changes, pick } = setup(keys(9));
+    const { changes, pick } = setup(keys(4));
 
     pick([png('a.png'), png('b.png'), png('c.png')]);
 
-    await waitFor(() => expect(changes.at(-1)).toHaveLength(10));
+    await waitFor(() => expect(changes.at(-1)).toHaveLength(5));
     expect(upload).toHaveBeenCalledTimes(1);
   });
 
