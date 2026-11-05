@@ -20,8 +20,8 @@ public sealed class OrderLookupsController : CommonBaseController
         this.ToResponse(await _lookups.OrdersAsync(query, ct));
 
     [HttpGet("orders/{id:int}/lines")]
-    public async Task<IActionResult> Lines(int id, CancellationToken ct) =>
-        this.ToResponse(await _lookups.LinesAsync(id, ct));
+    public async Task<IActionResult> Lines(int id, [FromQuery] int? sewingTeamId, CancellationToken ct) =>
+        this.ToResponse(await _lookups.LinesAsync(id, sewingTeamId, ct));
 
     [HttpGet("products")]
     public async Task<IActionResult> Products([FromQuery] PageQuery query, CancellationToken ct) =>

@@ -102,6 +102,8 @@
    - 03/11/2026  WorkAllocation thêm WorkDate, RetrievalNote; ConfirmMode thêm LEADER, SYSTEM; RetrievalReason thêm END_OF_DAY, ADJUSTED (giao việc theo ngày).
    - 02/11/2026  Thêm mục 19.7: dữ liệu demo đủ loại và trạng thái để test mọi chức năng (đơn DEMO-DH005…013, đủ 11 loại đơn từ, chấm công, lương, hòa vốn, thông báo); công đoạn cuối DEMO-QU02 chuyển sang công đoạn đang dùng.
    - 02/11/2026  Thêm mục 19.8: dữ liệu thử nhập sản lượng theo nhóm công đoạn (nhóm May túi của DEMO-AO01, CNMAY1, DEMO-DH003 dòng Đen L).
+   - 03/11/2026  Phiếu xuất hàng bỏ trạng thái PARTIALLY_DELIVERED và cột DispatchNoteLine.ReceivedQty (khách nhận đúng số xuất);
+                 vw_OrderLineProgress tính số đã giao theo số xuất của phiếu DELIVERED (DEV-ALL-70).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -1146,19 +1148,17 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
     RowVer              ROWVERSION,
-    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
+    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED')),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
-    CONSTRAINT CK_DN_Delivered CHECK (Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL),
-    CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
+    CONSTRAINT CK_DN_Delivered CHECK (Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL),
+    CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
 );
 CREATE INDEX IX_DN_Order ON dbo.DispatchNote(OrderId, Status);
 CREATE TABLE dbo.DispatchNoteLine (
     DispatchNoteLineId INT IDENTITY(1,1) CONSTRAINT PK_DispatchNoteLine PRIMARY KEY,
     DispatchNoteId     INT NOT NULL CONSTRAINT FK_DNL_DN REFERENCES dbo.DispatchNote(DispatchNoteId),
     OrderLineId        INT NOT NULL CONSTRAINT FK_DNL_OrderLine REFERENCES dbo.OrderLine(OrderLineId),
-    IssueQty           INT NOT NULL CONSTRAINT CK_DNL_Qty CHECK (IssueQty > 0),
-    ReceivedQty        INT NULL,       -- khách nhận thực tế (không vượt số xuất)
-    CONSTRAINT CK_DNL_Received CHECK (ReceivedQty IS NULL OR ReceivedQty BETWEEN 0 AND IssueQty),
+    IssueQty           INT NOT NULL CONSTRAINT CK_DNL_Qty CHECK (IssueQty > 0),   -- giao luôn thành công: khách nhận đúng số xuất (GBR-24)
     CONSTRAINT UQ_DNL UNIQUE (DispatchNoteId, OrderLineId)
 );
 GO
@@ -2581,8 +2581,8 @@ OUTER APPLY (SELECT SUM(CAST(l.ConfirmedQty AS INT)) Qty FROM dbo.MaterialIssueL
 OUTER APPLY (SELECT SUM(FinishedQty) Qty FROM dbo.QcBatch WHERE OrderLineId = ol.OrderLineId) qc
 OUTER APPLY (SELECT SUM(l.ConfirmedQty) Qty FROM dbo.FgHandoverLine l JOIN dbo.FgHandover h ON h.FgHandoverId = l.FgHandoverId
              WHERE l.OrderLineId = ol.OrderLineId AND h.Status = 'CONFIRMED') fg
-OUTER APPLY (SELECT SUM(l.ReceivedQty) Qty FROM dbo.DispatchNoteLine l JOIN dbo.DispatchNote d ON d.DispatchNoteId = l.DispatchNoteId
-             WHERE l.OrderLineId = ol.OrderLineId AND d.Status IN ('DELIVERED','PARTIALLY_DELIVERED')) dl
+OUTER APPLY (SELECT SUM(l.IssueQty) Qty FROM dbo.DispatchNoteLine l JOIN dbo.DispatchNote d ON d.DispatchNoteId = l.DispatchNoteId
+             WHERE l.OrderLineId = ol.OrderLineId AND d.Status = 'DELIVERED') dl
 OUTER APPLY (SELECT SUM(CASE WHEN DefectType = 'REWORK' THEN Quantity ELSE 0 END) ReworkQty,
                     SUM(CASE WHEN DefectType = 'SCRAP'  THEN Quantity ELSE 0 END) ScrapQty
              FROM dbo.DefectRecord WHERE OrderLineId = ol.OrderLineId AND Status <> 'CANCELLED') df;
@@ -4550,18 +4550,17 @@ INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty, ConfirmedQty)
 SELECT h.FgHandoverId, l.OrderLineId, l.OrderedQty, l.OrderedQty
 FROM #Ch c JOIN dbo.FgHandover h ON h.HandoverCode = 'TP-DEMO-' + c.N JOIN dbo.OrderLine l ON l.OrderId = c.OrderId;
 
--- Phiếu xuất đã xuất kho: DH009 đang giao; DH010 giao một phần (khách nhận thiếu 5 cái); DH011, DH012 giao đủ
+-- Phiếu xuất đã xuất kho: DH009 đang giao; DH010 đã giao đợt 1 (còn hàng chưa giao); DH011, DH012 giao đủ
 INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt, CustomerReceivedDate)
 SELECT 'XH-DEMO-' + c.N, c.OrderId, v.DeliveryDate, N'Kho khách hàng, KCN Tân Bình, TP.HCM', v.Note, v.Status, '2026-10-30 16:00:00', @thukho, '2026-10-31 08:00:00', v.ReceivedDate
 FROM #Ch c
 JOIN (VALUES ('009', CAST('2026-11-03' AS DATE), N'Đang trên đường giao', 'IN_DELIVERY', CAST(NULL AS DATE)),
-             ('010', '2026-10-31', N'Khách nhận thiếu 5 cái size M', 'PARTIALLY_DELIVERED', '2026-10-31'),
+             ('010', '2026-10-31', N'Giao đợt 1', 'DELIVERED', '2026-10-31'),
              ('011', '2026-10-31', NULL, 'DELIVERED', '2026-10-31'),
              ('012', '2026-10-31', NULL, 'DELIVERED', '2026-10-31')) v(N, DeliveryDate, Note, Status, ReceivedDate) ON v.N = c.N;
-INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty, ReceivedQty)
+INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, l.OrderLineId,
-       IIF(c.N = '010', IIF(pv.SizeCode = 'M', 60, 40), l.OrderedQty),
-       CASE c.N WHEN '009' THEN NULL WHEN '010' THEN IIF(pv.SizeCode = 'M', 55, 40) ELSE l.OrderedQty END
+       IIF(c.N = '010', IIF(pv.SizeCode = 'M', 60, 40), l.OrderedQty)
 FROM #Ch c JOIN dbo.DispatchNote d ON d.DispatchCode = 'XH-DEMO-' + c.N
 JOIN dbo.OrderLine l ON l.OrderId = c.OrderId JOIN dbo.ProductVariant pv ON pv.ProductVariantId = l.ProductVariantId;
 

@@ -1,6 +1,6 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
-import { MONTHLY_COST_ROUTES } from './routes';
+import { MONTHLY_COST_ROUTES } from '@/constants/routes';
 import { MONTHLY_COST_TEXT } from './constants';
 
 export const monthlyCostMenu: MenuEntry[] = [

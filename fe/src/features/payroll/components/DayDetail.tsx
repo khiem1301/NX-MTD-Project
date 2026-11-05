@@ -4,8 +4,7 @@ import { useMyEstimatedPayDay } from '../hooks/usePayroll';
 import type { MyOutputLine, MyScrapLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 import type { ColumnsType } from 'antd/es/table';
-import { formatQty } from '@/utils/format';
-import { formatCurrency } from '../utils';
+import { formatQty, formatCurrency } from '@/utils/format';
 import { PAYROLL_TEXT } from '../constants';
 
 const text = PAYROLL_TEXT.estimatedPay;

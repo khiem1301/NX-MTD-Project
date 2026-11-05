@@ -3,7 +3,7 @@ import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { useCopyAssignments } from '../hooks/useProduction';
+import { useCopyAssignments } from '../hooks/useAssignments';
 
 const text = PRODUCTION_TEXT.assignments;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];

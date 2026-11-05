@@ -7,7 +7,7 @@ const mockUseMyDefects = jest.fn((_query: { status?: string }) => ({
   error: null,
 }));
 
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/useDefects', () => ({
   useMyDefects: (query: { status?: string }) => mockUseMyDefects(query),
   useObjectDefect: () => ({ mutate: jest.fn(), isPending: false }),
 }));

@@ -3,7 +3,7 @@ import { Button, Card, Checkbox, Flex, Input, Segmented, Space } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ATTENDANCE_TEXT, MAX_RANGE_DAYS } from '../constants';
-import { type DateRange } from '../utils';
+import { type DateRange } from '../utils/timesheet';
 import { AppRangePicker } from '@/components/common/DateInputs';
 
 type Preset = 'today' | 'week' | 'month';

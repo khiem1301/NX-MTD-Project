@@ -20,7 +20,7 @@ import { useCreateRequest } from '@/features/requests';
 import { useOrderLineComponents } from '@/hooks/useLookups';
 import { formatDate, toApiDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { PRODUCTION_KEY } from '../hooks/useProduction';
+import { PRODUCTION_KEY } from '../hooks/productionKeys';
 import type { Defect } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';

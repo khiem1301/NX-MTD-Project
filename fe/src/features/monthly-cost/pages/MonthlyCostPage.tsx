@@ -8,13 +8,13 @@ import { MonthlyCostImportPanel } from '../components/MonthlyCostImportPanel';
 import { MonthlyCostSummaryPanel } from '../components/MonthlyCostSummaryPanel';
 import { MONTHLY_COST_TEXT } from '../constants';
 import { useMonthlyCostByMonth } from '../hooks/useMonthlyCost';
-import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { API_MONTH, toApiMonth } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC12/UC33 — Kế toán: tải file mẫu, xem trước rồi nhập chi phí tháng từ Excel; xem chi phí đã nhập. */
 export function MonthlyCostPage() {
-  const [periodMonth, setPeriodMonth] = useState(() => toPeriodMonth(currentPeriodMonth()));
+  const [periodMonth, setPeriodMonth] = useState(() => toApiMonth(dayjs()));
   const monthlyCost = useMonthlyCostByMonth(periodMonth);
   const error = monthlyCost.error as ApiError | null;
   const notFound = error?.errorCode === ERROR_CODES.MonthlyCostNotFound;
@@ -26,9 +26,9 @@ export function MonthlyCostPage() {
         <Typography.Text>{MONTHLY_COST_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker
           allowClear={false}
-          value={dayjs(periodMonth, PERIOD_MONTH_FORMAT)}
+          value={dayjs(periodMonth, API_MONTH)}
           onChange={(value: Dayjs | null) => {
-            if (value) setPeriodMonth(toPeriodMonth(value));
+            if (value) setPeriodMonth(toApiMonth(value));
           }}
         />
       </Space>

@@ -6,7 +6,7 @@ import { MESSAGES } from '@/constants/messages';
 import { PAYROLL_ROW_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
 import { useConfirmImport, usePreviewImport } from '../hooks/usePayroll';
 import type { PayrollExcelRowPreview } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 import { confirmDialog } from '@/utils/confirmDialog';
 import { DataTable } from '@/components/common/DataTable';
 

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Form, Input, InputNumber, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useUpdateQcBatch } from '../hooks/useProduction';
+import { useUpdateQcBatch } from '../hooks/useQcBatches';
 import type { QcBatch, QcRole } from '../types';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 

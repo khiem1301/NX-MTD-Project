@@ -27,7 +27,7 @@ import { DispatchInfo } from './DispatchInfo';
 import { DispatchPhotos } from './DispatchPhotos';
 import { dispatchLineColumns } from './dispatchLineColumns';
 
-type FormValues = { receivedDate: Dayjs; received: Record<string, number> };
+type FormValues = { receivedDate: Dayjs };
 
 export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClose: () => void }) {
   const { hasRole } = usePermission();
@@ -61,10 +61,6 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         body: {
           customerReceivedDate: values.receivedDate.format(API_DATE),
           rowVer: note.rowVer,
-          lines: note.lines.map((l) => ({
-            dispatchNoteLineId: l.dispatchNoteLineId,
-            receivedQty: values.received[String(l.dispatchNoteLineId)] ?? l.issueQty,
-          })),
         },
       },
       { onSuccess: onClose },
@@ -148,12 +144,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         form={form}
         disabled={confirm.isPending}
         style={{ marginTop: 16 }}
-        initialValues={{
-          receivedDate: dayjs(),
-          received: Object.fromEntries(
-            note.lines.map((l) => [String(l.dispatchNoteLineId), l.issueQty]),
-          ),
-        }}
+        initialValues={{ receivedDate: dayjs() }}
         onFinish={handleFinish}
       >
         {canConfirm && (
@@ -170,7 +161,7 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
           size="small"
           pagination={false}
           dataSource={note.lines}
-          columns={dispatchLineColumns(canConfirm)}
+          columns={dispatchLineColumns}
         />
       </Form>
       <DispatchPhotos note={note} />

@@ -11,8 +11,9 @@ export type DailyWorker = {
   workerId: number;
   label: string;
   rows: DailyAllocationRow[];
-  /** Số công đoạn đã được giao trong ngày. */
+  /** Số công đoạn có việc trong ngày: tồn từ hôm trước hoặc được giao thêm. */
   operationCount: number;
+  carriedQty: number;
   allocatedQty: number;
   outputQty: number;
   remainingQty: number;
@@ -31,13 +32,13 @@ export const buildDailyWorkers = (
     const own = rows.filter(
       (r) => r.workerId === m.value && (orderLineId === undefined || r.orderLineId === orderLineId),
     );
-    const given = own.filter((r) => r.allocatedQty > 0);
     return {
       workerId: m.value,
       label: m.label,
       rows: own,
-      operationCount: given.length,
-      allocatedQty: given.reduce((s, r) => s + r.allocatedQty, 0),
+      operationCount: own.filter((r) => r.carriedQty + r.allocatedQty > 0).length,
+      carriedQty: own.reduce((s, r) => s + r.carriedQty, 0),
+      allocatedQty: own.reduce((s, r) => s + Math.max(0, r.allocatedQty), 0),
       outputQty: own.reduce((s, r) => s + r.outputQty, 0),
       remainingQty: own.reduce((s, r) => s + r.remainingQty, 0),
     };
@@ -55,13 +56,6 @@ export const filterDailyWorkers = (
         (state === DAILY_STATE.IDLE ? w.operationCount === 0 : w.operationCount > 0)) &&
       (!kw || foldVietnamese(w.label).includes(kw)),
   );
-};
-
-/** Các dòng đơn có trong bảng, không trùng, theo thứ tự xuất hiện. */
-export const dailyOrderLines = (rows: readonly DailyAllocationRow[]) => {
-  const seen = new Map<number, DailyAllocationRow>();
-  for (const r of rows) if (!seen.has(r.orderLineId)) seen.set(r.orderLineId, r);
-  return [...seen.values()];
 };
 
 export type DailyGroup = { key: string; name: string | null; rows: DailyAllocationRow[] };
@@ -98,12 +92,33 @@ export const extraRowFrom = (
     operationName: op.operationName,
     groupName: op.groupName,
     isAssigned: false,
+    carriedQty: 0,
     allocatedQty: 0,
     outputQty: 0,
     remainingQty: 0,
     unallocatedQty: op.unallocatedQty,
+    previousQty: 0,
   };
 };
 
 /** Số giao tối đa ở dòng: phần đã giao trong ngày cộng số còn giao được của cả tổ. */
 export const maxGiveOf = (row: DailyAllocationRow) => row.allocatedQty + row.unallocatedQty;
+
+/** Số giao tối thiểu ở dòng: tồn từ hôm trước cộng số giao phải đủ phần đã báo sản lượng trong ngày. */
+export const minGiveOf = (row: DailyAllocationRow) => Math.max(0, row.outputQty - row.carriedQty);
+
+/** Đưa số giao về trong khoảng nhập được của dòng. */
+export const clampGive = (row: DailyAllocationRow, value: number) =>
+  Math.min(Math.max(value, minGiveOf(row)), maxGiveOf(row));
+
+/** "Giao như lần trước": số của lần giao gần nhất cho các dòng đã từng giao, đưa về khoảng nhập được; dòng chưa từng giao bỏ qua. */
+export const previousEdits = (rows: readonly DailyAllocationRow[]): Record<string, number> =>
+  Object.fromEntries(
+    rows.filter((r) => r.previousQty > 0).map((r) => [rowKeyOf(r), clampGive(r, r.previousQty)]),
+  );
+
+/** Công đoạn khớp ô tìm theo mã, tên hoặc màu-size; `keyword` đã bỏ dấu (foldVietnamese). */
+export const matchesOperation = (row: DailyAllocationRow, keyword: string) =>
+  foldVietnamese(`${row.color}-${row.sizeCode} ${row.operationCode} ${row.operationName}`).includes(
+    keyword,
+  );

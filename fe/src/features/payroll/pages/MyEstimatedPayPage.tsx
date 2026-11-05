@@ -6,11 +6,10 @@ import { Alert, Card, Col, Empty, Row, Space, Spin, Statistic, Tag, Typography }
 import type { ColumnsType } from 'antd/es/table';
 import dayjs, { type Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
-import { formatDate, formatQty, toApiDate } from '@/utils/format';
+import { formatDate, formatQty, toApiDate, formatCurrency } from '@/utils/format';
 import { PAYROLL_TEXT } from '../constants';
 import { useMyEstimatedPay } from '../hooks/usePayroll';
 import type { MyEstimatedPayDay } from '../types';
-import { formatCurrency } from '../utils';
 import { PageCard } from '@/components/common/PageCard';
 import { DetailModal } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';

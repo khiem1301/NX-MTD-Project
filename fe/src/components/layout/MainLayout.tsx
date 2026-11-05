@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from './AppHeader';
 import { buildNavigation, findActiveLeaf } from './menuModel';
 import { SideMenu } from './SideMenu';
-import { useMediaQuery } from './useMediaQuery';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Brand } from './Brand';
 import './layout.css';
 

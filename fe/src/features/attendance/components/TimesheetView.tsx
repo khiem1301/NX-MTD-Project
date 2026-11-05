@@ -10,7 +10,7 @@ import type { TimesheetAudience } from '../api/attendanceApi';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useTimesheets, useTimesheetSummary } from '../hooks/useAttendance';
 import { useTimesheetFilter } from '../hooks/useTimesheetFilter';
-import { formatNumber } from '../utils';
+import { formatNumber } from '@/utils/format';
 import { StatTiles, type StatTile } from './StatTiles';
 import { TimesheetFilterBar } from './TimesheetFilterBar';
 import { TimesheetTable } from './TimesheetTable';

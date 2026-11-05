@@ -114,6 +114,14 @@
 | DEV-ALL-60 | 03/11/2026 | Claude (AI) | UC09 (phần NVL) | Thêm NVL của đơn theo hai cách: chọn mã hàng trong đơn rồi nhập số cho các NVL định mức, hoặc chọn NVL ngoài; thêm API `GET .../order-materials/product-materials`, `POST .../order-materials/batch` | Mở |
 | DEV-ALL-61 | 03/11/2026 | Claude (AI) | UC10, UC38 | Ô chọn NVL ở tab Định mức NVL của Định mức mã hàng có nút Thêm NVL mới; thêm API `POST accountant/materials` | Mở |
 | DEV-ALL-62 | 03/11/2026 | Claude (AI) | UC19 (KPI), UC21, bảng mới `KpiTargetLine` | Chỉ tiêu KPI tổ may nhập theo từng màu × size tổ được chia; các tổ cùng mã hàng chia nhau số đặt của từng màu × size; bảng KPI xem chỉ tiêu và QC đạt theo màu × size | Mở |
+| DEV-ALL-63 | 03/11/2026 | Claude (AI) | UC53, UC54, UC60, `WorkAllocation` | Giao sản lượng công đoạn theo ngày, phiếu của tổ trưởng CONFIRMED ngay, thu hồi cuối ngày (phần thu hồi cuối ngày đã thay bằng DEV-ALL-64) | Mở |
+| DEV-ALL-64 | 03/11/2026 | Claude (AI) | UC53, UC55, UC60, `WorkAllocation` | Không thu hồi cuối ngày: phần chưa làm hết chuyển sang hôm sau cho chính công nhân; "Giao như lần trước"; nhập sản lượng vượt số được giao thì chuyển phần vượt từ người cùng công đoạn / phần tổ chưa giao | Mở |
+| DEV-ALL-65 | 03/11/2026 | Claude (AI) | UC38 | Quản đốc và Admin quản lý danh mục NVL như Thủ kho (xem, thêm, sửa, ngừng dùng / dùng lại); thêm API `GET`, `GET {id}`, `PUT {id}`, `PATCH {id}/status` ở `admin/materials`, `manager/materials` | Mở |
+| DEV-ALL-66 | 03/11/2026 | Claude (AI) | UC45, UC47, GBR-24 | Kế toán xác nhận giao không nhập số khách nhận (nhận = xuất, phiếu luôn DELIVERED); xuất kho báo thêm Quản đốc (Admin nhận bản sao theo DEV-ALL-67) | Mở |
+| DEV-ALL-67 | 03/11/2026 | Claude (AI) | Thông báo (`Notification`), mọi UC có thông báo | Thông báo gửi Quản đốc thì Admin nhận bản sao; việc do Quản đốc làm thì các Quản đốc khác nhận bản sao; người thao tác không nhận thông báo việc của chính mình | Mở |
+| DEV-ALL-68 | 03/11/2026 | Claude (AI) | UC53, UC55 | Giao sản lượng theo ngày và Sản lượng cuối ca: bắt buộc chọn đơn hàng → mã hàng → màu - size trước khi giao / nhập (bỏ chế độ xem mọi dòng đơn ở màn giao việc); chỉ chọn được và BE chỉ nhận đơn / mã hàng / màu - size đã chia cho tổ | Mở |
+| DEV-ALL-69 | 03/11/2026 | Claude (AI) | UC22, UC55 | Màn Sửa sản lượng sau hạn của Quản đốc dùng cùng bố cục với Sản lượng cuối ca của tổ trưởng (bảng công nhân → khung nhập theo công nhân), lý do sửa nhập trong khung của từng công nhân | Mở |
+| DEV-ALL-70 | 03/11/2026 | Claude (AI) | UC47, GBR-23, GBR-24, `DispatchNote`, `DispatchNoteLine`, `vw_OrderLineProgress` | Phiếu xuất hàng bỏ trạng thái PARTIALLY_DELIVERED và cột ReceivedQty; số đã giao của đơn tính theo số xuất của phiếu đã giao | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1665,4 +1673,100 @@
 - **Lý do:** yêu cầu của người dùng.
 - **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh (sản lượng, UC55), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới. Chưa có test tích hợp trên SQL Server cho trigger với phiếu LEADER / SYSTEM.
 - **Cần sửa trong tài liệu:** Report-3 UC53, UC54, UC60 (giao theo ngày, thu hồi cuối ngày, không còn xác nhận của công nhân với phiếu của tổ trưởng); FR 3.5, 3.6, 3.8; `NX-MTD_AI_Context.md` mục 4.3; `NX-MTD_Database_Mo_ta.md`, DBML, ERD (WorkAllocation).
+- **Trạng thái:** Mở
+
+### DEV-ALL-64 · Giao việc chuyển sang hôm sau, chuyển phần vượt khi nhập sản lượng cuối ca
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC53, UC55, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** không đổi schema (dùng `WorkAllocation.WorkDate`, `RetrievalReason = ADJUSTED`, `ConfirmMode = LEADER` đã có từ DEV-ALL-63; trigger 50050 / 50052 giữ nguyên). API: bỏ `POST team-leader/work-allocations/daily/retrieve-remaining`; `GET daily` thêm `carriedQty`, `previousQty` ở mỗi dòng; `DailyAllocationResultDto` bỏ `retrieved`; `GET .../output-records/grid` thêm `transferableQty` ở mỗi dòng, `POST .../output-records` thêm `transferExcess` ở thân lưu. BE: bỏ `WorkAllocationAutoRetrieveJob`, `RetrieveRemainingAsync`, `AutoRetrieveAsync`; thêm `OutputCapTransfer`. FE: bỏ nút / modal Thu hồi cuối ngày; bảng và khung giao việc thêm cột Tồn từ hôm trước, nút Giao như lần trước; khung nhập sản lượng của công nhân có cảnh báo chuyển phần vượt và hỏi xác nhận.
+- **Tài liệu gốc ghi:** DEV-ALL-63: cuối ngày phần chưa làm hết được thu hồi (tổ trưởng bấm, hoặc hệ thống tự thu sau hạn sửa sản lượng). UC55: sản lượng vượt số lần được giao thì chặn (MSG16), tổ trưởng phải sang màn Giao việc giao thêm.
+- **Code đang làm:**
+  - **Không thu hồi cuối ngày:** phần chưa làm hết của các ngày trước là "Tồn từ hôm trước" của chính công nhân đó. Trần sản lượng của ngày = tồn từ hôm trước + giao trong ngày (trần cộng dồn `vw_WorkerOutputCap` vốn đã như vậy). Hạ số giao của ngày: tồn + số giao mới không nhỏ hơn sản lượng đã báo trong ngày. Phiếu `END_OF_DAY` / `SYSTEM` cũ vẫn hiện trong lịch sử.
+  - **Giao như lần trước:** khung giao việc điền lại số giao ròng của lần giao gần nhất trước ngày đang xem cho từng công đoạn, đưa về khoảng nhập được.
+  - **Trách nhiệm theo công đoạn, không theo BTP vật lý:** một BTP qua nhiều công đoạn do nhiều người làm thì mỗi người chịu trách nhiệm số lần của công đoạn mình; hàng chuyền tay giữa các công nhân trong ngày không phải ghi.
+  - **Chuyển phần vượt cuối ca:** hai người chia nhau một công đoạn mà làm lệch so với lúc giao, khi nhập sản lượng người làm vượt, màn hình báo phần vượt chuyển được (phần dư của người cùng tổ, cùng công đoạn × dòng đơn, cộng phần tổ chưa giao). Tổ trưởng xác nhận thì trong một giao dịch: thu hồi `ADJUSTED` từ người dư nhiều trước (ghi lý do vào `RetrievalNote`), thiếu thì lấy phần tổ chưa giao, giao phần vượt cho người báo vượt, rồi mới ghi sản lượng. Lưu thu hồi, giao, sản lượng theo thứ tự (gọi `SaveChanges` mỗi bước) để trigger 50050 / 50052 thấy đúng trần. Người đang báo thêm trong cùng lần lưu không bị lấy phần dư. Không đủ nguồn thì chặn như cũ (409 `OUTPUT_EXCEEDS_CAP`).
+- **Lý do:** yêu cầu của người dùng: một BTP có nhiều công đoạn chia cho nhiều người, hàng chuyền liên tục nên tổ trưởng không thể thu hồi / giao lại trong ngày; tổ trưởng chỉ nhập sản lượng cuối ca.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh (sản lượng, UC55). Không cần chạy patch DB.
+- **Cần sửa trong tài liệu:** Report-3 UC53, UC55 (MSG16: cho chuyển phần vượt), UC60; FR 3.5, 3.6, 3.8; `NX-MTD_AI_Context.md` mục 4.3; `NX-MTD_Database_Mo_ta.md` mục 4.7 (`WorkAllocation`: không còn thu hồi cuối ngày, ví dụ chuyển phần vượt).
+- **Trạng thái:** Mở
+
+### DEV-ALL-65 · Quản đốc, Admin quản lý danh mục NVL
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC38 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** API: `admin/materials` và `manager/materials` thêm `GET` (danh sách phân trang), `GET {id}`, `PUT {id}`, `PATCH {id}/status` (trước chỉ có `POST` thêm nhanh). FE: menu và route "Danh mục NVL" (`ROUTES.materials`) mở cho Admin, Quản đốc; trang dùng chung `MaterialListPage`, gọi API theo role đang đăng nhập. Không đổi schema.
+- **Tài liệu gốc ghi:** UC38: Thủ kho quản lý danh mục NVL. Quản đốc / Admin chỉ thêm nhanh NVL mới khi lập NVL của đơn (UC09), sửa / ngừng dùng vẫn do Thủ kho.
+- **Code đang làm:** Quản đốc và Admin xem, tìm, lọc, thêm, sửa, ngừng dùng / dùng lại NVL như Thủ kho, cùng quy tắc kiểm tra của `IMaterialService` (trùng mã, màu NVL...).
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Thái (UC38, danh mục NVL).
+- **Cần sửa trong tài liệu:** Report-3 UC38 (thêm actor Quản đốc, Admin); `NX-MTD_AI_Context.md` mục 3 (quyền theo role).
+- **Trạng thái:** Mở
+
+### DEV-ALL-66 · Xác nhận giao không nhập số khách nhận; xuất kho báo Quản đốc
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC45, UC47 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `DispatchNoteService` (`ConfirmDeliveryAsync`, `ExportAsync`), `ConfirmDeliveryDto` (bỏ `Lines`, bỏ `DeliveryLineInputDto`), `ConfirmDeliveryDtoValidator`, `WarehouseMessages.DispatchReceivedExceedsIssued` (bỏ). API `POST accountant/dispatch-notes/{id}/confirm-delivery` chỉ còn thân `{ customerReceivedDate, rowVer }`. FE: màn chi tiết phiếu xuất bỏ ô nhập số khách nhận, cột Khách nhận chỉ hiển thị. Không đổi schema.
+- **Tài liệu gốc ghi:** UC47 / AI_Context mục 4.4: Kế toán xác nhận khách đã nhận → `DELIVERED` / `PARTIALLY_DELIVERED`; GBR-24: giao hàng luôn thành công. Code trước đây cho Kế toán nhập số khách nhận từng dòng (≤ số xuất). Xuất kho chỉ báo Kế toán.
+- **Code đang làm:**
+  - **Khách nhận = số xuất:** Kế toán chỉ chọn ngày khách nhận và tải ảnh biên bản giao; hệ thống ghi `ReceivedQty = IssueQty` cho mọi dòng, phiếu luôn `DELIVERED`. Phiếu không còn vào `PARTIALLY_DELIVERED` (giá trị vẫn giữ trong `CK_DN_Status` cho dữ liệu cũ). Trạng thái đơn hàng vẫn theo GBR-23 (`PARTIALLY_DELIVERED` khi tổng đã giao < số đặt).
+  - **Thông báo khi xuất kho:** ngoài Kế toán, báo thêm Quản đốc "Hàng đã xuất kho"; Admin nhận bản sao thông báo của Quản đốc (DEV-ALL-67).
+  - **Hủy phiếu:** giữ như cũ, Quản đốc chỉ hủy được phiếu `PENDING` (hàng chưa xuất kho).
+- **Lý do:** yêu cầu của người dùng. Nhập số khách nhận nhỏ hơn số xuất làm phần chênh lệch đã trừ kho nhưng không quay lại kho, không lập phiếu giao bù được và đơn không lên được `DELIVERED`.
+- **Ảnh hưởng người khác:** Thái (xuất hàng UC45–47).
+- **Cần sửa trong tài liệu:** Report-3 UC47 (bỏ bước nhập số khách nhận, bỏ `PARTIALLY_DELIVERED` của phiếu), UC46 (thông báo Quản đốc, Admin); `NX-MTD_AI_Context.md` mục 4.4.
+- **Trạng thái:** Mở
+
+### DEV-ALL-67 · Admin nhận thông báo của Quản đốc; Quản đốc khác nhận thông báo việc Quản đốc làm
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · thông báo (KH-12) · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `NotificationService` (Infrastructure, thêm `ICurrentUser`). Không đổi `INotificationService`, không đổi chỗ gọi trong các service, không đổi schema. Thông báo chung (`Announcement`, `NotificationCenterService`) không đổi.
+- **Tài liệu gốc ghi:** mỗi UC nêu người nhận thông báo riêng (VD UC37 phiếu nhập chờ xác nhận báo Quản đốc, UC46 Thủ kho từ chối phiếu xuất báo Quản đốc); Admin chỉ nhận một số thông báo (nguy cơ trễ hạn JOB-04, duyệt đơn giá, đề xuất bậc...).
+- **Code đang làm:** áp chung cho mọi thông báo gửi qua `INotificationService`:
+  - **Admin nhận bản sao** mọi thông báo có Quản đốc trong danh sách người nhận (thông báo Quản đốc nhận được coi là việc quan trọng cấp quản lý): phiếu nhập chờ xác nhận, đơn từ chờ Quản đốc xử lý, phiếu xuất bị từ chối, xuất kho, lệnh cắt hoàn thành, nhận thành phẩm báo KPI, kiểm kê chờ duyệt, thiếu NVL, đơn mua...
+  - **Quản đốc khác nhận bản sao** mọi thông báo phát sinh từ thao tác của một Quản đốc (VD Quản đốc lập phiếu xuất → Thủ kho và các Quản đốc khác cùng nhận). Bản sao này không kéo thêm Admin.
+  - **Người thao tác không nhận** thông báo về việc chính mình làm (trước đây Quản đốc / Admin thao tác có thể tự nhận).
+  - Cùng một thông báo chỉ ghi một lần cho mỗi người trong một request (gọi Quản đốc rồi gọi Admin với cùng nội dung không bị trùng).
+  - Job nền và agent chấm công không có người thao tác: chỉ áp luật Admin nhận bản sao.
+- **Lý do:** yêu cầu của người dùng: hoạt động có thông báo quan trọng thì báo thêm Admin; thông báo do Quản đốc làm thì báo cho các Quản đốc khác.
+- **Ảnh hưởng người khác:** tất cả luồng có thông báo (Khiêm, Kiều, Thái, Minh, Thảo); Admin và Quản đốc sẽ nhận nhiều thông báo hơn.
+- **Cần sửa trong tài liệu:** Report-3 các UC có bước thông báo (người nhận); `NX-MTD_AI_Context.md` mục 4.8 (Thông báo).
+- **Trạng thái:** Mở
+
+### DEV-ALL-68 · Chọn đơn hàng, mã hàng, màu - size trước khi giao việc và nhập sản lượng
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC53, UC55 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** FE: component dùng chung `OrderLinePicker` (`components/common`), `OrderSelect` (thêm `sewingTeamId`, `disabled`), `useOrderOptions` / `useOrderLineLookup` (thêm `sewingTeamId`), `DailyAllocationBoard` (Giao sản lượng theo ngày), `OutputFilterBar` / `useOutputEntry` (Sản lượng cuối ca). BE: `DailyWorkAllocationService` (`GetBoardAsync`, `ValidateAsync`), `OutputService` (`GetGridAsync`, `SaveAsync`), `LookupService.GetOpenOrdersAsync`, `OrderLookupService.LinesAsync`. API: `GET common/lookups/orders` và `GET common/order-lookups/orders/{id}/lines` nhận thêm `sewingTeamId` (tùy chọn). Không đổi schema.
+- **Tài liệu gốc ghi:** DEV-ALL-63: màn giao việc chọn ngày, đơn, dòng đơn (dòng đơn không bắt buộc, để trống là xem mọi dòng đơn). Sản lượng cuối ca chọn dòng đơn trong một ô "mã hàng - màu - size".
+- **Code đang làm:**
+  - Cả hai màn chọn theo thứ tự **Đơn hàng → Mã hàng → Màu - Size** (ô màu - size chỉ hiện các màu - size của mã hàng đã chọn, kèm số đặt nếu có). Đơn chỉ có một mã hàng thì mã đó được chọn sẵn.
+  - **Giao sản lượng theo ngày:** chưa chọn đủ thì bảng công nhân trống và báo "Chọn mã hàng và màu - size để giao việc"; bỏ lựa chọn "Tất cả dòng đơn". Khung giao việc của công nhân chỉ có công đoạn của dòng đơn đã chọn.
+  - **Sản lượng cuối ca:** vẫn bắt buộc dòng đơn như trước, tách ô chọn thành mã hàng và màu - size. Quản đốc phải chọn tổ may trước; đổi tổ thì bỏ đơn, dòng đơn đã chọn.
+  - **Chỉ phần đã chia cho tổ (`OrderLineTeam`, DEV-ALL-49):** ô đơn hàng, mã hàng, màu - size chỉ hiện đơn / dòng đơn đã chia cho tổ (tổ trưởng: tổ của mình; Quản đốc: tổ đang chọn qua `sewingTeamId`, tổ may truyền tổ khác vẫn chỉ thấy tổ mình). BE chặn thêm: bảng giao việc bỏ dòng đơn chưa chia cho tổ; lưu giao việc, tải lưới và lưu sản lượng với dòng đơn chưa chia trả 409 `ASSIGNMENT_PRODUCT_NOT_ALLOTTED` (MSG "Màu, size này chưa được chia cho tổ của bạn..."). Trước đây màn giao việc hiện mọi dòng đơn cùng mã hàng và màn sản lượng không kiểm tra việc chia.
+- **Lý do:** yêu cầu của người dùng: phải chọn đơn hàng, mã hàng, màu, size rồi mới giao để công nhân biết đang may cái gì; chỉ được chọn phần đã giao cho tổ.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh (UC55 sản lượng).
+- **Cần sửa trong tài liệu:** Report-3 UC53, UC55 (mockup bộ lọc); `NX-MTD_AI_Context.md` mục 4.3.
+- **Trạng thái:** Mở
+
+### DEV-ALL-69 · Màn Sửa sản lượng sau hạn dùng bố cục của Sản lượng cuối ca
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC22, UC55 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** FE: `OutputEntryBoard`, `OutputByWorker` (dùng được cho tổ may Quản đốc chọn), `WorkerOutputModal` (thêm `requireReason`), `useOutputEntry` (bỏ số đang sửa trên lưới, lý do chung, `handleSave`); thêm `OutputReasonField`, `WorkerOutputAlerts`; xóa `outputColumns.tsx`, `OutputMobileList.tsx` (lưới công nhân × công đoạn và dạng thẻ trên điện thoại của Quản đốc), `outputKeyOf`. Không đổi API, không đổi schema.
+- **Tài liệu gốc ghi:** UC22 / KI-11: Quản đốc sửa sản lượng sau hạn trên lưới công nhân × công đoạn, ghi một lý do cho cả lần lưu.
+- **Code đang làm:**
+  - Quản đốc chọn ngày, ca, **tổ may**, đơn hàng, mã hàng, màu - size (DEV-ALL-68) → bảng công nhân của tổ đó (số công đoạn đã nhập trong ca, tổng sản lượng, cảnh báo chưa chấm công; tìm và lọc chưa nhập / đã nhập) → bấm công nhân mở khung nhập theo nhóm công đoạn như tổ trưởng (điền theo nhóm, tìm công đoạn, cảnh báo vượt số giao, chuyển phần vượt).
+  - **Lý do sửa** nằm trong khung nhập của từng công nhân, bắt buộc với Quản đốc (chưa ghi thì nút Lưu bị khóa và báo "Quản đốc sửa sản lượng phải ghi lý do."); mỗi lần lưu là sản lượng của một công nhân. Quản đốc vẫn sửa được dòng đã quá hạn (cờ `canEdit` do BE trả), tổ trưởng thì không. Khung của tổ trưởng không có ô lý do.
+  - Điện thoại: dùng chung bảng công nhân của tổ trưởng thay cho dạng thẻ riêng của Quản đốc.
+- **Lý do:** yêu cầu của người dùng: màn của Quản đốc gần giống màn Sản lượng cuối ca của tổ trưởng.
+- **Ảnh hưởng người khác:** Minh (UC55 sản lượng), Kiều (UC22 sửa dữ liệu quá hạn).
+- **Cần sửa trong tài liệu:** Report-3 UC22 (mockup, lý do theo từng lần lưu của công nhân), UC55.
+- **Trạng thái:** Mở
+
+### DEV-ALL-70 · Phiếu xuất hàng bỏ trạng thái giao một phần và số khách nhận
+
+- **Ngày / Người / Task / PR:** 03/11/2026 · Claude (AI) · UC45–UC47 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** schema: `CK_DN_Status`, `CK_DN_Delivered`, `CK_DN_Dispatched` bỏ `PARTIALLY_DELIVERED`; bỏ cột `DispatchNoteLine.ReceivedQty` và `CK_DNL_Received`; `vw_OrderLineProgress.DeliveredQty` = tổng `IssueQty` của phiếu `DELIVERED`. Patch `SQL/patches/2026-11-03_dispatch_delivered_only.sql` (chuyển phiếu `PARTIALLY_DELIVERED` cũ thành `DELIVERED`, đơn `PARTIALLY_DELIVERED` đã đủ số thành `DELIVERED`); `SQL/NX-MTD_Database.sql` (bảng, view, dữ liệu demo XH-DEMO-010) và `docs/NX-MTD_Database.dbml` đã cập nhật. BE: `DispatchStatuses` (bỏ `PartiallyDelivered`), `DispatchNoteLine` (bỏ `ReceivedQty`), `DispatchNoteListItemDto` (bỏ `TotalReceivedQty`), `DispatchNoteLineDto` (bỏ `ReceivedQty`), `DispatchNoteService`, `DispatchNoteAttachmentAccess`, Excel phiếu xuất (bỏ cột "SL khách nhận"). FE: bỏ trạng thái "Giao một phần" (bộ lọc, nhãn), bỏ cột Khách nhận ở danh sách và chi tiết phiếu; "Đã giao đủ" đổi thành "Đã giao".
+- **Tài liệu gốc ghi:** AI_Context 4.4 / UC47: Kế toán xác nhận khách đã nhận → `DELIVERED` / `PARTIALLY_DELIVERED`; DB có `ReceivedQty` (khách nhận thực tế ≤ số xuất). DEV-ALL-66 đã bỏ ô nhập số khách nhận (ghi bằng số xuất) nhưng còn giữ cột và trạng thái.
+- **Code đang làm:** phiếu xuất chỉ còn PENDING / REJECTED / CANCELLED / IN_DELIVERY / DELIVERED. Kế toán xác nhận khách nhận (ngày + ảnh biên bản) thì phiếu `DELIVERED`, khách nhận đúng số xuất. Đơn hàng vẫn có `PARTIALLY_DELIVERED` theo GBR-23: tổng số xuất của các phiếu đã giao < số đặt.
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Thái (xuất hàng UC45–47), Khiêm (tiến độ đơn UC21 đọc `vw_OrderLineProgress`), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới (entity không còn `ReceivedQty`). Patch dữ liệu demo cũ `SQL/patches/2026-11-02_demo_full_test_data.sql` còn ghi `ReceivedQty` / `PARTIALLY_DELIVERED`: chỉ chạy được trước patch này.
+- **Cần sửa trong tài liệu:** Report-3 UC47 (bỏ giao một phần, bỏ số khách nhận), sơ đồ trạng thái phiếu xuất; `NX-MTD_AI_Context.md` mục 4.4 và bảng trạng thái (`DispatchNote.Status`); `NX-MTD_Database_Mo_ta.md`, ERD (`DispatchNoteLine`).
 - **Trạng thái:** Mở

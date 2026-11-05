@@ -2,7 +2,7 @@ import { Alert, Space, Tag, Typography } from 'antd';
 import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import type { SyncHealth } from '../types';
-import { formatDateTime } from '../utils';
+import { formatDateTime } from '@/utils/format';
 
 /**
  * MSG23: quá ngưỡng ATTENDANCE_ALERT_MINUTES mà chưa đồng bộ được thì cảnh báo,

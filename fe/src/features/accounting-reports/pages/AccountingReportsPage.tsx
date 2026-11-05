@@ -14,14 +14,14 @@ import {
   useWorkdayOvertimeReport,
 } from '../hooks/useAccountingReports';
 import type { AccountingReportFilter } from '../types';
-import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { API_MONTH, toApiMonth } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC36 — Kế toán: chọn tháng, xem 3 báo cáo vận hành (công/tăng ca, suất ăn, sổ xe), xuất Excel. */
 export function AccountingReportsPage() {
   const [filter, setFilter] = useState<AccountingReportFilter>(() => ({
-    periodMonth: toPeriodMonth(currentPeriodMonth()),
+    periodMonth: toApiMonth(dayjs()),
   }));
 
   const workdays = useWorkdayOvertimeReport(filter);
@@ -76,9 +76,9 @@ export function AccountingReportsPage() {
           <Typography.Text>{ACCOUNTING_REPORT_TEXT.periodMonth}</Typography.Text>
           <AppMonthPicker
             allowClear={false}
-            value={dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT)}
+            value={dayjs(filter.periodMonth, API_MONTH)}
             onChange={(value: Dayjs | null) => {
-              if (value) setFilter({ periodMonth: toPeriodMonth(value) });
+              if (value) setFilter({ periodMonth: toApiMonth(value) });
             }}
           />
         </Space>

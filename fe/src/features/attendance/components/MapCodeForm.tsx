@@ -2,7 +2,7 @@ import { Alert, Button, Descriptions, Form, Space } from 'antd';
 import { ATTENDANCE_TEXT } from '../constants';
 import type { UnmappedCode } from '../types';
 import { EmployeePicker } from './EmployeePicker';
-import { formatDateTime } from '../utils';
+import { formatDateTime } from '@/utils/format';
 
 type FormValues = { employeeId: number };
 

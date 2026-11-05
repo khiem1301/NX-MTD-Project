@@ -3,7 +3,8 @@ import { Alert, Button, Select, Space, Typography, message } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { fill } from '@/utils/format';
 import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
-import { useSetOperationsGroup, useSubmitPieceRates } from '../hooks/useProduction';
+import { useSetOperationsGroup } from '../hooks/useOperations';
+import { useSubmitPieceRates } from '../hooks/usePieceRates';
 import type { OperationGroup } from '../types';
 
 const text = PRODUCTION_TEXT.operations.bulk;

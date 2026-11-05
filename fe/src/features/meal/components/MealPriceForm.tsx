@@ -3,7 +3,7 @@ import { Alert, Button, Descriptions, Form, InputNumber, Space } from 'antd';
 import { MEAL_TEXT } from '../constants';
 import { useSetMealPrice } from '../hooks/useMeal';
 import type { DailyMealSummary } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 
 type FormValues = { mealPrice: number };
 

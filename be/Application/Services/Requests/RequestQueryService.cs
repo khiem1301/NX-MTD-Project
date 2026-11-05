@@ -13,12 +13,12 @@ public sealed class RequestQueryService : IRequestQueryService
     private readonly IRequestRepository _requests;
     private readonly ICurrentUser _user;
     private readonly IAuditLogService _audit;
-    private readonly ISystemSettingService _settings;
+    private readonly ISystemSettingReader _settings;
     private readonly RequestAccess _access;
     private readonly RequestTypeHandlers _handlers;
 
     public RequestQueryService(IRequestRepository requests, ICurrentUser user, IAuditLogService audit,
-        ISystemSettingService settings, RequestAccess access, RequestTypeHandlers handlers)
+        ISystemSettingReader settings, RequestAccess access, RequestTypeHandlers handlers)
     {
         _requests = requests; _user = user; _audit = audit; _settings = settings; _access = access; _handlers = handlers;
     }

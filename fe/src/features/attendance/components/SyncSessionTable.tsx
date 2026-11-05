@@ -4,7 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useSyncSessions } from '../hooks/useAttendance';
 import type { SyncSession, SyncStatus } from '../types';
-import { formatDateTime } from '../utils';
+import { formatDateTime } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { TableToolbar } from '@/components/common/TableToolbar';

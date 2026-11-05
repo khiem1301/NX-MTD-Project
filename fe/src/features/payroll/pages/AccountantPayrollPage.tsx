@@ -8,13 +8,13 @@ import { PayrollImportPanel } from '../components/PayrollImportPanel';
 import { PayrollSummaryPanel } from '../components/PayrollSummaryPanel';
 import { PAYROLL_TEXT } from '../constants';
 import { usePayrollByMonth } from '../hooks/usePayroll';
-import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { API_MONTH, toApiMonth } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC31 — Kế toán: xuất dữ liệu tính lương theo tháng, nhập bảng lương đã tính từ Excel, gửi duyệt. */
 export function AccountantPayrollPage() {
-  const [periodMonth, setPeriodMonth] = useState(() => toPeriodMonth(currentPeriodMonth()));
+  const [periodMonth, setPeriodMonth] = useState(() => toApiMonth(dayjs()));
   const payroll = usePayrollByMonth(periodMonth);
   const error = payroll.error as ApiError | null;
   const notFound = error?.errorCode === ERROR_CODES.PayrollNotFound;
@@ -31,9 +31,9 @@ export function AccountantPayrollPage() {
         <Typography.Text>{PAYROLL_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker
           allowClear={false}
-          value={dayjs(periodMonth, PERIOD_MONTH_FORMAT)}
+          value={dayjs(periodMonth, API_MONTH)}
           onChange={(value: Dayjs | null) => {
-            if (value) setPeriodMonth(toPeriodMonth(value));
+            if (value) setPeriodMonth(toApiMonth(value));
           }}
         />
       </Space>

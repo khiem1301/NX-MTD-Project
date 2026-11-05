@@ -15,7 +15,7 @@ import { MESSAGES } from '@/constants/messages';
 import { fill, formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { Operation } from '../types';
-import { editableRate } from '../utils';
+import { editableRate } from '../utils/outputRules';
 
 const text = PRODUCTION_TEXT.operations;
 const rateText = PRODUCTION_TEXT.pieceRates;

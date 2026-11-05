@@ -10,7 +10,6 @@ export type DispatchNoteListItem = {
   status: string;
   createdAt: string;
   totalIssueQty: number;
-  totalReceivedQty: number | null;
 };
 
 export type DispatchNoteLine = {
@@ -20,10 +19,9 @@ export type DispatchNoteLine = {
   color: string;
   sizeCode: string;
   issueQty: number;
-  receivedQty: number | null;
 };
 
-export type DispatchNote = Omit<DispatchNoteListItem, 'totalIssueQty' | 'totalReceivedQty'> & {
+export type DispatchNote = Omit<DispatchNoteListItem, 'totalIssueQty'> & {
   deliveryAddress: string;
   note: string | null;
   rejectReason: string | null;
@@ -58,6 +56,5 @@ export type CreateDispatchPayload = {
 
 export type ConfirmDeliveryPayload = {
   customerReceivedDate: string;
-  lines: { dispatchNoteLineId: number; receivedQty: number }[];
   rowVer: string;
 };

@@ -10,7 +10,7 @@ import { DefectFormModal } from './DefectFormModal';
 import { ReplacementCuttingModal } from './ReplacementCuttingModal';
 import { ConfirmDefectModal } from './ConfirmDefectModal';
 import { PRODUCTION_TEXT } from '../constants';
-import { useCancelDefect, useConfirmDefect, useDefects } from '../hooks/useProduction';
+import { useCancelDefect, useConfirmDefect, useDefects } from '../hooks/useDefects';
 import type { Defect, DefectFilters, OutputRole } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';

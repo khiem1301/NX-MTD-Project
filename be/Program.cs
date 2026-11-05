@@ -4,7 +4,6 @@ using NX_MTD.API.Modules;
 using NX_MTD.Application;
 using NX_MTD.Infrastructure;
 using NX_MTD.Infrastructure.Data;
-using NX_MTD.Infrastructure.Modules;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,9 +18,8 @@ builder.Services.AddRequestModule();
 builder.Services.AddOrderModule();
 builder.Services.AddHrModule();
 
-// ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ----
-// builder.Services.AddProductionModule(builder.Configuration);   // Kiều
-// builder.Services.AddWarehouseModule(builder.Configuration);    // Thái
+// ---- Modules: mỗi luồng thêm ĐÚNG 1 dòng của mình, mỗi module nằm trong file riêng ở API/Modules ----
+builder.Services.AddWarehouseModule();                            // Thái, Thảo
 builder.Services.AddAttendanceModule(builder.Configuration);      // Minh
 builder.Services.AddPayrollModule(builder.Configuration);         // Minh
 builder.Services.AddKpiModule(builder.Configuration);             // Minh

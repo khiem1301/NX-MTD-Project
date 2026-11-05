@@ -10,16 +10,21 @@ export const useOrderLookup = (keyword?: string, status?: string) =>
     queryFn: () => orderLookupApi.orders({ keyword, status, pageSize: 50 }),
   });
 
-export const useOrderLineLookup = (orderId: number | null) =>
+/** sewingTeamId: Quản đốc / Admin chỉ lấy dòng chia cho tổ đang chọn (tổ may tự lọc theo tổ mình ở BE). */
+export const useOrderLineLookup = (orderId: number | null, sewingTeamId?: number) =>
   useQuery({
-    queryKey: [...KEY, 'order-lines', orderId],
-    queryFn: () => orderLookupApi.orderLines(orderId as number),
+    queryKey: [...KEY, 'order-lines', orderId, sewingTeamId],
+    queryFn: () => orderLookupApi.orderLines(orderId as number, sewingTeamId),
     enabled: orderId !== null,
   });
 
 /** Màu đã khai ở các mã hàng (gợi ý khi nhập màu). */
 export const useProductColors = () =>
-  useQuery({ queryKey: [...KEY, 'product-colors'], queryFn: () => orderLookupApi.productColors(), staleTime: 60_000 });
+  useQuery({
+    queryKey: [...KEY, 'product-colors'],
+    queryFn: () => orderLookupApi.productColors(),
+    staleTime: 60_000,
+  });
 
 /** Mã hàng đang dùng (ACTIVE). */
 export const useProductLookup = (keyword?: string) =>

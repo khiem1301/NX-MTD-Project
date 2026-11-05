@@ -1,6 +1,8 @@
 import type { OutputGridRow } from '../types';
 import {
   buildOutputWorkers,
+  canTransfer,
+  excessOf,
   filterOutputWorkers,
   groupOutputRows,
   OUTPUT_WORKER_STATE,
@@ -18,10 +20,20 @@ const row = (over: Partial<OutputGridRow>): OutputGridRow =>
     noAttendanceWarning: false,
     capQty: 10,
     reportedQty: 0,
+    transferableQty: 0,
     ...over,
   }) as OutputGridRow;
 
 describe('outputWorkerBoard', () => {
+  it('phần vượt chuyển được khi không quá số người cùng công đoạn và phần tổ chưa giao còn dư', () => {
+    const r = row({ capQty: 100, reportedQty: 30, quantity: 10, transferableQty: 25 });
+
+    expect(excessOf(r, 80)).toBe(0);
+    expect(excessOf(r, 100)).toBe(20);
+    expect(canTransfer(r, 105)).toBe(true);
+    expect(canTransfer(r, 106)).toBe(false);
+  });
+
   it('gộp theo công nhân, giữ cả người chưa có công đoạn', () => {
     const workers = buildOutputWorkers(
       [row({ operationId: 1, quantity: 5 }), row({ operationId: 2 })],

@@ -5,6 +5,8 @@ import {
   filterDailyWorkers,
   groupDailyRows,
   maxGiveOf,
+  minGiveOf,
+  previousEdits,
 } from './dailyBoard';
 
 const row = (over: Partial<DailyAllocationRow>): DailyAllocationRow =>
@@ -13,10 +15,12 @@ const row = (over: Partial<DailyAllocationRow>): DailyAllocationRow =>
     orderLineId: 1,
     operationId: 1,
     groupName: null,
+    carriedQty: 0,
     allocatedQty: 0,
     outputQty: 0,
     remainingQty: 0,
     unallocatedQty: 0,
+    previousQty: 0,
     ...over,
   }) as DailyAllocationRow;
 
@@ -79,5 +83,24 @@ describe('dailyBoard', () => {
 
   it('số giao tối đa là phần đã giao trong ngày cộng số còn giao được', () => {
     expect(maxGiveOf(row({ allocatedQty: 12, unallocatedQty: 30 }))).toBe(42);
+  });
+
+  it('tồn từ hôm trước tính vào số công đoạn có việc và hạ được số giao tối thiểu', () => {
+    const carried = row({ carriedQty: 15, outputQty: 20 });
+    const [worker] = buildDailyWorkers([carried], members, undefined);
+
+    expect(worker).toMatchObject({ operationCount: 1, carriedQty: 15, allocatedQty: 0 });
+    expect(minGiveOf(carried)).toBe(5);
+    expect(minGiveOf(row({ carriedQty: 30, outputQty: 20 }))).toBe(0);
+  });
+
+  it('giao như lần trước chỉ điền dòng đã từng giao, đưa về khoảng nhập được', () => {
+    const edits = previousEdits([
+      row({ operationId: 1, previousQty: 50, allocatedQty: 0, unallocatedQty: 40 }),
+      row({ operationId: 2, previousQty: 10, outputQty: 25, unallocatedQty: 100 }),
+      row({ operationId: 3, previousQty: 0 }),
+    ]);
+
+    expect(edits).toEqual({ '7-1-1': 40, '7-1-2': 25 });
   });
 });

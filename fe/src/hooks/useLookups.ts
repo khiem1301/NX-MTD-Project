@@ -3,10 +3,10 @@ import { lookupApi } from '@/services/lookupApi';
 
 const LOOKUP_STALE_MS = 60_000;
 
-export const useOrderOptions = () =>
+export const useOrderOptions = (sewingTeamId?: number) =>
   useQuery({
-    queryKey: ['lookups', 'orders'],
-    queryFn: () => lookupApi.orders(),
+    queryKey: ['lookups', 'orders', sewingTeamId],
+    queryFn: () => lookupApi.orders(undefined, sewingTeamId),
     staleTime: LOOKUP_STALE_MS,
   });
 

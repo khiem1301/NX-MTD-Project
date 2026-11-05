@@ -12,7 +12,7 @@ import { formatDate } from '@/utils/format';
 import { OrderLineTeamBulkBar } from '../components/OrderLineTeamBulkBar';
 import { OrderLineTeamSelect } from '../components/OrderLineTeamSelect';
 import { PRODUCTION_TEXT, SEWING_TEAM_TYPE } from '../constants';
-import { useOrderLineTeams } from '../hooks/useProduction';
+import { useOrderLineTeams } from '../hooks/useOrderLineTeams';
 import type { OrderLineTeamRow } from '../types';
 
 const text = PRODUCTION_TEXT.orderLineTeams;

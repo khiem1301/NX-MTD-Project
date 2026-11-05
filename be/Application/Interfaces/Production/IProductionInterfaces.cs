@@ -39,6 +39,10 @@ public interface IPieceRateService
 
     /// <summary>Đơn giá APPROVED có EffectiveDate lớn nhất ≤ ngày; null nếu chưa có (MSG18, GBR-11).</summary>
     Task<EffectivePieceRate?> FindEffectiveAsync(int operationId, DateOnly date, CancellationToken ct);
+
+    /// <summary>Như FindEffectiveAsync cho nhiều công đoạn trong một truy vấn; công đoạn chưa có đơn giá duyệt không có trong kết quả.</summary>
+    Task<IReadOnlyDictionary<int, EffectivePieceRate>> FindEffectiveManyAsync(IReadOnlyCollection<int> operationIds, DateOnly date,
+        CancellationToken ct);
 }
 
 /// <summary>KI-03 (UC52): tổ trưởng / tổ phó may phân công công nhân × công đoạn; đổi phân công giữ lịch sử.</summary>

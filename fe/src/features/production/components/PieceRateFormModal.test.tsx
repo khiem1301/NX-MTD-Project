@@ -4,7 +4,7 @@ import type { Operation } from '../types';
 import { PieceRateFormModal } from './PieceRateFormModal';
 
 const mockSave = jest.fn();
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/usePieceRates', () => ({
   useSavePieceRate: () => ({ mutate: mockSave, isPending: false }),
 }));
 

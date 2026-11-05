@@ -2,11 +2,10 @@ import { Alert, Button, Card, Descriptions, Space, Tag } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { DownloadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime, formatMonth } from '@/utils/format';
+import { formatDateTime, formatMonth, formatCurrency } from '@/utils/format';
 import { PAYROLL_STATUS_LABEL, PAYROLL_TEXT } from '../constants';
 import { useDownloadImportedFile, useSubmitPayroll } from '../hooks/usePayroll';
 import type { PayrollSummary } from '../types';
-import { formatCurrency } from '../utils';
 
 type Props = { periodMonth: string; summary: PayrollSummary };
 

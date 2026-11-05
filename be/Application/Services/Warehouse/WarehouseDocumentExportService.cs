@@ -109,9 +109,9 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
         AddIf(info, "Ghi chú", d.Note);
 
         var rows = d.Lines.Select((l, n) => (IReadOnlyList<object?>)new object?[]
-            { n + 1, l.ProductCode, l.Color, l.SizeCode, l.IssueQty, l.ReceivedQty }).ToList();
+            { n + 1, l.ProductCode, l.Color, l.SizeCode, l.IssueQty }).ToList();
         var doc = new PrintableDocument("PHIẾU XUẤT HÀNG", d.DispatchCode, info,
-            new[] { "STT", "Mã hàng", "Màu", "Size", "SL xuất", "SL khách nhận" }, rows,
+            new[] { "STT", "Mã hàng", "Màu", "Size", "SL xuất" }, rows,
             new[] { "Quản đốc", "Thủ kho", "Người nhận hàng" });
         return Build(doc, "PhieuXuat");
     }
@@ -150,6 +150,6 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
     private static string DispatchStatus(string s) => Norm(s) switch
     {
         "PENDING" => "Chờ xuất kho", "REJECTED" => "Thủ kho từ chối", "CANCELLED" => "Đã hủy",
-        "INDELIVERY" => "Đang giao", "DELIVERED" => "Đã giao", "PARTIALLYDELIVERED" => "Giao một phần", _ => s,
+        "INDELIVERY" => "Đang giao", "DELIVERED" => "Đã giao", _ => s,
     };
 }

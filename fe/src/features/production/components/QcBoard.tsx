@@ -11,7 +11,7 @@ import { formatDate, formatDateTime, formatQty, toApiDate } from '@/utils/format
 import { QcCreateModal } from './QcBatchModals';
 import { DEFAULT_PAGE_SIZE } from '@/constants/pagination';
 import { shiftText } from '../constants';
-import { useDeleteQcBatch, useQcBatches } from '../hooks/useProduction';
+import { useDeleteQcBatch, useQcBatches } from '../hooks/useQcBatches';
 import type { QcBatch, QcBatchQuery, QcRole } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';

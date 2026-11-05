@@ -1,7 +1,7 @@
 import { Alert, Descriptions } from 'antd';
 import { ACCOUNTING_REPORT_TEXT } from '../constants';
 import type { MealReport } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 
 type Props = { report: MealReport };
 

@@ -1,5 +1,5 @@
 import { InputNumber, type InputNumberProps } from 'antd';
-import { moneyFormatter, moneyParser } from '../utils';
+import { moneyFormatter, moneyParser } from '../utils/gradeLevels';
 
 /** Ô nhập tiền: phải chuyển tiếp props vì Form.Item truyền value / onChange vào phần tử con trực tiếp. */
 export const MoneyInput = (props: InputNumberProps) => (

@@ -1,5 +1,7 @@
 import { fill, formatQty } from '@/utils/format';
+import type { MaterialOption } from '@/types/lookup';
 import { LABELS } from '../constants';
+import type { OrderMaterial } from '../types';
 
 /** Giới hạn khớp OrderMaterialInputValidator ở BE (cột DECIMAL(18,3) và SMALLINT). */
 export const MAX_QTY = 100_000_000;
@@ -31,3 +33,31 @@ export const deliveryCountProblem = (value: number | null | undefined): string |
 /** Ghi chú tối đa 500 ký tự, tính sau khi cắt khoảng trắng đầu cuối (khớp BE). */
 export const noteProblem = (value: string | null | undefined): string | null =>
   (value ?? '').trim().length > MAX_NOTE_LENGTH ? fill(LABELS.noteMax, MAX_NOTE_LENGTH) : null;
+
+/**
+ * NVL chọn được cho một dòng NVL của đơn: bỏ NVL đơn đã khai báo (mỗi NVL một dòng), trừ NVL của chính dòng đang sửa;
+ * NVL đang sửa đã ngừng dùng (không còn trong danh mục) vẫn hiện để giữ giá trị.
+ */
+export const orderMaterialOptions = (
+  materials: readonly MaterialOption[],
+  orderMaterial: OrderMaterial | null,
+  declared: readonly OrderMaterial[],
+) => {
+  const options = materials
+    .filter(
+      (m) =>
+        m.materialId === orderMaterial?.materialId ||
+        !declared.some((om) => om.materialId === m.materialId),
+    )
+    .map((m) => ({
+      value: m.materialId,
+      label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+    }));
+  if (orderMaterial && !options.some((o) => o.value === orderMaterial.materialId)) {
+    options.push({
+      value: orderMaterial.materialId,
+      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
+    });
+  }
+  return options;
+};

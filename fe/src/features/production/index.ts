@@ -9,5 +9,3 @@ export { OutputEntryPage } from './pages/OutputEntryPage';
 export { AdminPieceRatesPage } from './pages/AdminPieceRatesPage';
 export { ManagerQcBatchesPage } from './pages/ManagerQcBatchesPage';
 export { QcBatchesPage } from './pages/QcBatchesPage';
-export { productionMenu } from './menu';
-export { PRODUCTION_ROUTES } from './routes';

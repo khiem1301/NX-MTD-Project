@@ -15,12 +15,8 @@ import { PieceRateHistoryModal } from '../components/PieceRateHistory';
 import { PRODUCTION_TEXT } from '../constants';
 import { useOperationBoard } from '../hooks/useOperationBoard';
 import { useOperationRole } from '../hooks/useOperationRole';
-import {
-  useOperationGroups,
-  useOperations,
-  useSubmitPieceRate,
-  useToggleOperation,
-} from '../hooks/useProduction';
+import { useOperationGroups, useOperations, useToggleOperation } from '../hooks/useOperations';
+import { useSubmitPieceRate } from '../hooks/usePieceRates';
 import type { Operation } from '../types';
 import {
   countOperations,

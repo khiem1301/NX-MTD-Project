@@ -9,9 +9,9 @@ public sealed class RequestAttachmentAccess : IAttachmentOwnerAccess
 
     private readonly IRequestRepository _requests;
     private readonly RequestAccess _access;
-    private readonly ISystemSettingService _settings;
+    private readonly ISystemSettingReader _settings;
 
-    public RequestAttachmentAccess(IRequestRepository requests, RequestAccess access, ISystemSettingService settings)
+    public RequestAttachmentAccess(IRequestRepository requests, RequestAccess access, ISystemSettingReader settings)
     {
         _requests = requests; _access = access; _settings = settings;
     }

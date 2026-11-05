@@ -390,6 +390,11 @@ public static class Messages
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
     /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
     public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số lần được giao ({1}): còn tối đa {2}. Hãy giao thêm việc cho công nhân ở màn Giao việc.";
+    /// <summary>DEV-ALL-64: chuyển phần báo vượt từ người cùng công đoạn / phần tổ chưa giao.</summary>
+    public const string OutputTransferNotEnough = "Công đoạn {0} báo vượt số được giao {1} lần nhưng người cùng công đoạn và phần tổ chưa giao chỉ còn {2}.";
+    public const string OutputTransferNote = "Chuyển sang {0} khi nhập sản lượng ca {1} ngày {2} (báo vượt số được giao).";
+    public const string OutputTransferDone = "Đã chuyển {0} lần {1} từ {2} sang {3}.";
+    public const string OutputTransferFromPool = "phần tổ chưa giao";
     /// <summary>MSG17: công nhân chưa có chấm công hôm đó (cảnh báo, không chặn).</summary>
     public const string OutputNoAttendanceWarning = "{0} chưa có giờ chấm công ngày {1}.";
     public const string OutputSaved = "Đã lưu sản lượng.";

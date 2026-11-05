@@ -41,7 +41,7 @@ const mockWorkers = {
   loading: false,
 };
 
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/useAssignments', () => ({
   useAssignableOperations: () => mockOperations,
   useAllottedOrderLines: () => ({ data: mockLines, error: null }),
   useAssignments: () => ({ data: mockAssignments, isSuccess: true, isLoading: false, error: null }),

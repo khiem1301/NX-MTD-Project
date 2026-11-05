@@ -10,7 +10,8 @@ import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
 import { fill } from '@/utils/format';
 import { useRemoveMembers, useTeam } from '../hooks/useTeams';
-import { APPOINTABLE_ROLES, isLeadership } from '../teamRoles';
+import { APPOINTABLE_ROLES, isLeadership } from '../utils/teamRoles';
+
 import type { TeamDetail, TeamMember } from '../types';
 import { AddMembersModal } from './AddMembersModal';
 import { TeamMemberActions } from './TeamMemberActions';

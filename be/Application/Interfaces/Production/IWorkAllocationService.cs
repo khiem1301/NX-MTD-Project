@@ -26,18 +26,12 @@ public interface IWorkAllocationService
 }
 
 /// <summary>
-/// Giao sản lượng công đoạn theo ngày cho công nhân: tổ trưởng nhập số lần giao của từng ngày (trần sản lượng cuối ca của ngày),
-/// thu hồi phần chưa làm hết cuối ngày; hệ thống tự thu hồi nếu ngày đã qua hạn sửa sản lượng mà tổ trưởng chưa thu.
+/// Giao sản lượng công đoạn theo ngày cho công nhân: tổ trưởng nhập số lần giao thêm của từng ngày; phần chưa làm hết của ngày trước
+/// chuyển sang ngày sau cho chính công nhân đó, không thu hồi (DEV-ALL-64).
 /// </summary>
 public interface IDailyWorkAllocationService
 {
     Task<Result<DailyAllocationBoardDto>> GetBoardAsync(int teamId, DateOnly workDate, int orderId, int? orderLineId, CancellationToken ct);
 
     Task<Result<DailyAllocationResultDto>> SaveAsync(SaveDailyAllocationDto dto, int teamId, CancellationToken ct);
-
-    /// <summary>Tổ trưởng thu hồi phần chưa làm hết của ngày, bắt buộc lý do.</summary>
-    Task<Result<DailyAllocationResultDto>> RetrieveRemainingAsync(RetrieveDailyAllocationDto dto, int teamId, CancellationToken ct);
-
-    /// <summary>Hệ thống thu hồi phần chưa làm hết của các ngày đã qua hạn sửa sản lượng. Trả số phiếu thu hồi đã ghi.</summary>
-    Task<int> AutoRetrieveAsync(CancellationToken ct);
 }

@@ -30,7 +30,9 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
   const [orderId, setOrderId] = useState<number>();
   const lines = useDispatchable(orderId);
   const create = useCreateDispatch();
-  const required = [{ required: true, whitespace: true, message: MESSAGES.common.required }];
+  const required = [{ required: true, message: MESSAGES.common.required }];
+  // whitespace chỉ dùng cho ô chữ: gắn vào ô ngày (Dayjs) thì validator luôn báo thiếu.
+  const requiredText = [{ required: true, whitespace: true, message: MESSAGES.common.required }];
 
   const handleFinish = (values: FormValues) => {
     if (orderId === undefined) return;
@@ -91,7 +93,11 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
             />
           </Form.Item>
         </Space>
-        <Form.Item name="deliveryAddress" label={DISPATCH_LABELS.deliveryAddress} rules={required}>
+        <Form.Item
+          name="deliveryAddress"
+          label={DISPATCH_LABELS.deliveryAddress}
+          rules={requiredText}
+        >
           <Input maxLength={500} />
         </Form.Item>
         <Form.Item name="note" label={DISPATCH_LABELS.note}>

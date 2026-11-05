@@ -1,7 +1,7 @@
 import { Select } from 'antd';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { useSetOrderLineTeams } from '../hooks/useProduction';
+import { useSetOrderLineTeams } from '../hooks/useOrderLineTeams';
 import type { OrderLineTeamRow } from '../types';
 
 const text = PRODUCTION_TEXT.orderLineTeams;

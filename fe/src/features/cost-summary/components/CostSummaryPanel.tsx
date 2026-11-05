@@ -5,8 +5,7 @@ import { MESSAGES } from '@/constants/messages';
 import { COST_SUMMARY_TEXT, costCategoryLabel } from '../constants';
 import { useExportCostSummary } from '../hooks/useCostSummary';
 import type { CostByProduct, CostFixedItem, CostSummary, CostSummaryFilter } from '../types';
-import { formatCurrency } from '../utils';
-import { formatMonth } from '@/utils/format';
+import { formatMonth, formatCurrency } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = { summary: CostSummary; filter: CostSummaryFilter };

@@ -6,7 +6,6 @@ export const DISPATCH_STATUS = {
   CANCELLED: 'CANCELLED',
   IN_DELIVERY: 'IN_DELIVERY',
   DELIVERED: 'DELIVERED',
-  PARTIALLY_DELIVERED: 'PARTIALLY_DELIVERED',
 } as const;
 
 export const DISPATCH_STATUS_LABEL: Record<string, StatusLabel> = {
@@ -14,8 +13,7 @@ export const DISPATCH_STATUS_LABEL: Record<string, StatusLabel> = {
   REJECTED: { text: 'Kho từ chối', color: 'red' },
   CANCELLED: { text: 'Đã hủy', color: 'default' },
   IN_DELIVERY: { text: 'Đang giao', color: 'blue' },
-  DELIVERED: { text: 'Đã giao đủ', color: 'green' },
-  PARTIALLY_DELIVERED: { text: 'Giao một phần', color: 'orange' },
+  DELIVERED: { text: 'Đã giao', color: 'green' },
 };
 
 export const DISPATCH_PHOTO_MAX = 5;
@@ -36,7 +34,6 @@ export const DISPATCH_LABELS = {
   status: 'Trạng thái',
   createdAt: 'Ngày lập',
   issueQty: 'Số xuất',
-  receivedQty: 'Khách nhận',
   orderLine: 'Mã hàng - màu - size',
   orderedQty: 'Đặt',
   issuedQty: 'Đã xuất',

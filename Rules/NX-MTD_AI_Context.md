@@ -229,7 +229,7 @@ Map vào `constants/messages.ts` (FE) và `message` của `Result` (BE); mỗi l
 
 **Frontend (`nxmtd-web`)**
 - Node ≥ 24, npm, TS strict, không `any`, không `@ts-ignore` (được `@ts-expect-error` kèm lý do), hạn chế `as` và `!`.
-- Feature-based theo nghiệp vụ (`features/<auth|users|orders|warehouse|cutting|sewing|qaqc|attendance|meal|payroll|...>/{api,components,hooks,pages,utils,constants.ts,types.ts,index.ts}`); import feature khác chỉ qua `index.ts`, alias `@/`.
+- Feature-based theo nghiệp vụ (`features/<auth|users|orders|warehouse|cutting|sewing|qaqc|attendance|meal|payroll|...>/{api,components,hooks,pages,utils,constants.ts,types.ts,index.ts}`); import feature khác chỉ qua `index.ts` (riêng `app/` import `features/x/menu.ts` và `routes.tsx` để giữ lazy load), alias `@/`.
 - Luồng gọi API: component → hook (TanStack Query) → `features/x/api` → `services/apiClient.ts` (Axios, `env.apiBaseUrl` từ `VITE_API_BASE_URL`). Không fetch trong component. Không đưa dữ liệu API vào Zustand. Invalidate query sau mutation. Mọi màn có loading / data / empty / error.
 - Form antd + Zod, disable submit khi đang gửi, modal xác nhận cho thao tác không hoàn tác. Chuỗi trong `constants/messages.ts`. Ẩn nút theo role bằng `usePermission()` / `<Can>` (chỉ là UX). Hiển thị giờ `Asia/Ho_Chi_Minh` dạng `dd/MM/yyyy HH:mm`, tiền `1.250.000 ₫`. Component ≤ 200 dòng.
 
