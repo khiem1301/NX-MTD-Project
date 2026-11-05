@@ -61,7 +61,7 @@ public sealed class StocktakeService : IStocktakeService
                         + (l.StockBalance.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.StockBalance.ProductComponentMaterial.Material.Color),
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.Order.OrderCode,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Product.ProductCode,
-                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.Color,
+                    l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.ProductColor.Color,
                     l.StockBalance.OrderLine == null ? null : l.StockBalance.OrderLine.ProductVariant.SizeCode, l.BookQty, l.CountedQty,
                     (l.CountedQty ?? l.BookQty) - l.BookQty, l.Note,
                     s.Status == StocktakeStatuses.PendingApproval ? l.StockBalance.OnHandQty : null)).ToList()))

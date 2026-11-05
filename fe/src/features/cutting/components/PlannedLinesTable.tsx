@@ -1,6 +1,7 @@
-import { Form, InputNumber, Typography } from 'antd';
+import { Form, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import type { OrderLineOption } from '@/types/lookup';
+import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS } from '../constants';
 
 /** Đơn nhiều màu – size thì bảng cuộn bên trong, nút Lưu vẫn nằm trong màn hình. */
@@ -38,13 +39,7 @@ export function PlannedLinesTable({ lines }: { lines: OrderLineOption[] }) {
           width: 150,
           render: (_, l) => (
             <Form.Item name={['planned', String(l.orderLineId)]} noStyle>
-              <InputNumber
-                size="small"
-                min={0}
-                max={l.orderedQty}
-                precision={0}
-                style={{ width: '100%' }}
-              />
+              <QtyInput size="small" min={0} max={l.orderedQty} style={{ width: '100%' }} />
             </Form.Item>
           ),
         },

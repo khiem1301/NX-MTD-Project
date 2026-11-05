@@ -6,7 +6,7 @@ import { ProductImage } from './ProductImage';
 
 type ProductGalleryModalProps = { product: ProductListItem | null; onClose: () => void };
 
-/** Xem tất cả ảnh của một mã hàng: ảnh chính và các ảnh phụ (bấm vào ảnh để phóng to). */
+/** Xem tất cả ảnh của một mã hàng: ảnh chính, các ảnh phụ và ảnh theo màu (bấm vào ảnh để phóng to). */
 export function ProductGalleryModal({ product, onClose }: ProductGalleryModalProps) {
   const text = MESSAGES.orders;
   return (
@@ -38,6 +38,22 @@ export function ProductGalleryModal({ product, onClose }: ProductGalleryModalPro
               <ProductImage key={key} value={key} size={120} />
             ))}
           </Flex>
+          <Typography.Title level={5} style={{ marginTop: 16 }}>
+            {text.colorImages}
+          </Typography.Title>
+          {product.colorImages.length === 0 && (
+            <Typography.Text type="secondary">{text.noColorImages}</Typography.Text>
+          )}
+          {product.colorImages.map((row) => (
+            <div key={row.color} style={{ marginBottom: 12 }}>
+              <Typography.Text strong>{row.color}</Typography.Text>
+              <Flex wrap gap={8} style={{ marginTop: 4 }}>
+                {row.images.map((key) => (
+                  <ProductImage key={key} value={key} size={120} />
+                ))}
+              </Flex>
+            </div>
+          ))}
         </>
       )}
     </Modal>

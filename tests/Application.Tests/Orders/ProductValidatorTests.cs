@@ -57,9 +57,9 @@ public class ProductValidatorTests
     [Theory]
     [InlineData(0, true)]
     [InlineData(1, true)]
-    [InlineData(10, true)]
-    [InlineData(11, false)]
-    public void ExtraImages_AtMostTen(int count, bool expected) =>
+    [InlineData(5, true)]
+    [InlineData(6, false)]
+    public void ExtraImages_AtMostFive(int count, bool expected) =>
         ProductIsValid(extraImages: Enumerable.Range(1, count).Select(ImageKey).ToList()).Should().Be(expected);
 
     [Fact]
@@ -81,10 +81,69 @@ public class ProductValidatorTests
     [Fact]
     public void ExtraImages_ReportsOneMessageForTooMany()
     {
-        var dto = new SaveProductDto("AO-01", "Áo", null, null, Enumerable.Range(1, 11).Select(ImageKey).ToList());
+        var dto = new SaveProductDto("AO-01", "Áo", null, null, Enumerable.Range(1, 6).Select(ImageKey).ToList());
 
-        new SaveProductDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage).Should().Equal("Tối đa 10 ảnh phụ.");
+        new SaveProductDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage).Should().Equal("Tối đa 5 ảnh phụ.");
     }
+
+    // ---------- ảnh theo màu ----------
+
+    private static ProductColorImagesDto ColorImages(string color, int from, int count) =>
+        new(color, Enumerable.Range(from, count).Select(ImageKey).ToList());
+
+    private static FluentValidation.Results.ValidationResult ValidateColors(params ProductColorImagesDto[] colors) =>
+        new SaveProductDtoValidator().Validate(new SaveProductDto("AO-01", "Áo", null, null, null, colors));
+
+    [Theory]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(3, true)]
+    [InlineData(4, false)]
+    public void ColorImages_EachColorHasOneToThree(int count, bool expected) =>
+        ValidateColors(ColorImages("Đỏ", 1, count)).IsValid.Should().Be(expected);
+
+    [Fact]
+    public void ColorImages_CanBeOmittedOrEmpty()
+    {
+        ProductIsValid().Should().BeTrue();
+        ValidateColors().IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ColorImages_SameColorTwice_IsRejected_IgnoringCaseAndSpaces() =>
+        ValidateColors(ColorImages("Đỏ", 1, 1), ColorImages(" đỏ ", 2, 1)).Errors.Select(e => e.ErrorMessage)
+            .Should().Equal("Mỗi màu chỉ khai ảnh một lần.");
+
+    [Fact]
+    public void ColorImages_SameImageInTwoColors_IsRejected() =>
+        ValidateColors(ColorImages("Đỏ", 1, 1), ColorImages("Xanh", 1, 1)).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ColorImages_ColorRequired(string color) =>
+        ValidateColors(ColorImages(color, 1, 1)).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData(50, true)]
+    [InlineData(51, false)]
+    public void ColorImages_ColorMaxLength(int length, bool expected) =>
+        ValidateColors(ColorImages(new string('a', length), 1, 1)).IsValid.Should().Be(expected);
+
+    [Fact]
+    public void ColorImages_MustBeUploadedImageKeys() =>
+        ValidateColors(new ProductColorImagesDto("Đỏ", ["https://a.vn/x.jpg"])).IsValid.Should().BeFalse();
+
+    [Theory]
+    [InlineData(30, true)]
+    [InlineData(31, false)]
+    public void ColorImages_AtMostThirtyColors(int colors, bool expected) =>
+        ValidateColors(Enumerable.Range(1, colors).Select(i => ColorImages($"Màu {i}", i, 1)).ToArray()).IsValid.Should().Be(expected);
+
+    [Fact]
+    public void ColorImages_TooManyImages_ReportsTheColor() =>
+        ValidateColors(ColorImages("Đỏ", 1, 4)).Errors.Select(e => e.ErrorMessage)
+            .Should().Equal("Màu Đỏ phải có từ 1 đến 3 ảnh.");
 
     // ---------- định mức ----------
 

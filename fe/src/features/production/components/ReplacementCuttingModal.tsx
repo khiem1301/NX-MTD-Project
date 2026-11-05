@@ -1,16 +1,5 @@
 import { useEffect } from 'react';
-import {
-  Button,
-  Descriptions,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Typography,
-  message,
-} from 'antd';
+import { Button, Descriptions, Form, Input, Modal, Select, Space, Typography, message } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
@@ -24,6 +13,7 @@ import { PRODUCTION_KEY } from '../hooks/productionKeys';
 import type { Defect } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type Props = { defect: Defect | null; onClose: () => void };
 
@@ -139,12 +129,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                       ]}
                       style={{ marginBottom: 0 }}
                     >
-                      <InputNumber
-                        min={1}
-                        max={defect?.quantity}
-                        precision={0}
-                        placeholder={text.quantity}
-                      />
+                      <QtyInput min={1} max={defect?.quantity} placeholder={text.quantity} />
                     </Form.Item>
                     {fields.length > 1 && (
                       <MinusCircleOutlined onClick={() => remove(field.name)} />

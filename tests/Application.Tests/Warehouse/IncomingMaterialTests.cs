@@ -91,7 +91,7 @@ public class IncomingMaterialTests
             OrderLineId = _orderLines.Count + 1, OrderId = orderId, ProductId = productId, ProductVariantId = variantId,
             ProductVariant = new ProductVariant
             {
-                ProductVariantId = variantId, ProductId = productId, Color = "Đỏ", SizeCode = "M",
+                ProductVariantId = variantId, ProductId = productId, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M",
                 Product = new Product { ProductId = productId, ProductCode = code, ProductName = "Áo " + code },
             },
         });

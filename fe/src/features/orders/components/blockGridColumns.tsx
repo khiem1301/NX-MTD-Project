@@ -1,11 +1,17 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { InputNumber, Space, type TableColumnsType } from 'antd';
+import { Space, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { ColorAutoComplete } from './ColorAutoComplete';
 import { rowTotal, type GridRow, type ProductBlock } from '../utils/orderGrid';
-import { colorErrorKey, qtyErrorKey, type BlockErrors } from '../utils/orderValidation';
+import {
+  colorErrorKey,
+  MAX_ORDER_QTY,
+  qtyErrorKey,
+  type BlockErrors,
+} from '../utils/orderValidation';
 
 export const rowHasOldLine = (row: GridRow): boolean =>
   Object.values(row.cells).some((c) => c.orderLineId !== null);
@@ -66,8 +72,9 @@ export const blockGridColumns = ({
     render: (_: unknown, row: GridRow, index: number) => {
       const cell = row.cells[size];
       return (
-        <InputNumber
+        <QtyInput
           size="small"
+          max={MAX_ORDER_QTY}
           status={errors[qtyErrorKey(row.key, size)] ? 'error' : undefined}
           controls={false}
           style={{ width: '100%' }}

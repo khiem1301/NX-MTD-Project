@@ -10,10 +10,14 @@ public sealed class ProductMarkerFabricConfiguration : IEntityTypeConfiguration<
     {
         entity.ToTable("ProductMarkerFabric", tb => tb.HasComment("Vải của bìa cắt theo màu áo"));
 
-        entity.HasIndex(e => new { e.ProductId, e.MarkerNo, e.Color }, "UQ_PMF").IsUnique();
+        entity.HasIndex(e => new { e.ProductId, e.MarkerNo, e.ProductColorId }, "UQ_PMF").IsUnique();
         entity.HasIndex(e => e.MaterialId, "IX_PMF_Material");
 
-        entity.Property(e => e.Color).HasMaxLength(50);
+        entity.HasOne(d => d.ProductColor).WithMany(p => p.ProductMarkerFabrics)
+            .HasPrincipalKey(p => new { p.ProductColorId, p.ProductId })
+            .HasForeignKey(d => new { d.ProductColorId, d.ProductId })
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_PMF_Color");
 
         entity.HasOne(d => d.Product).WithMany(p => p.ProductMarkerFabrics)
             .HasForeignKey(d => d.ProductId)

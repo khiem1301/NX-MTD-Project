@@ -1,22 +1,13 @@
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import {
-  Alert,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Upload,
-  message,
-} from 'antd';
+import { Alert, Button, Form, Input, Modal, Select, Space, Upload, message } from 'antd';
 import dayjs from 'dayjs';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { RequestDetail } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { useRequestForm } from '../hooks/useRequestForm';
 import { EMPTY_LINE } from '../hooks/useRequestForm';
 
@@ -102,7 +93,12 @@ export function RequestFormModal({
                     name={[f.name, 'quantity']}
                     rules={[{ required: true, message: MESSAGES.common.required }]}
                   >
-                    <InputNumber min={0.001} placeholder={MESSAGES.requests.quantity} />
+                    <QtyInput
+                      decimals={MATERIAL_QTY_DECIMALS}
+                      max={MAX_MATERIAL_QTY}
+                      min={0.001}
+                      placeholder={MESSAGES.requests.quantity}
+                    />
                   </Form.Item>
                   {fields.length > 1 && (
                     <MinusCircleOutlined

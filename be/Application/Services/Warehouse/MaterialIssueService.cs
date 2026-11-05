@@ -69,7 +69,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
                     l.Material == null ? null : l.Material.Color, l.OrderLineId, l.ProductComponentMaterialId,
                     l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode,
-                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.Color, l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode,
+                    l.OrderLine == null ? null : l.OrderLine.ProductVariant.ProductColor.Color, l.OrderLine == null ? null : l.OrderLine.ProductVariant.SizeCode,
                     l.IssuedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<MaterialIssueDto>();
@@ -265,7 +265,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         CancellationToken ct)
     {
         var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking()
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor)
             .FirstOrDefaultAsync(w => w.WorkOrderId == dto.WorkOrderId, ct);
         if (wo is null) return (WarehouseFailures.NotFound<MaterialIssueDto>(), null);
         if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
@@ -320,8 +320,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var allotted = _uow.Repository<OrderLineTeam>().Query().Where(a => a.SewingTeamId == teamId).Select(a => a.OrderLineId);
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => orderLineIds.Contains(l.OrderLineId) && !allotted.Contains(l.OrderLineId))
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new { l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode }).ToListAsync(ct);
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode }).ToListAsync(ct);
         var labels = lines.Take(MaxMissingOperationsShown)
             .Select(l => string.Format(Messages.OrderLineLabel, l.ProductCode, l.Color, l.SizeCode)).ToList();
         if (lines.Count > MaxMissingOperationsShown) labels.Add("...");

@@ -41,6 +41,7 @@ public static class AuditText
         ["DateOfBirth"] = "Ngày sinh", ["DecisionNote"] = "Ghi chú duyệt", ["Description"] = "Mô tả",
         ["DueDate"] = "Ngày giao", ["EffectiveDate"] = "Ngày hiệu lực", ["ExpectedDeliveryCount"] = "Số lần giao dự kiến",
         ["ExtraImages"] = "Số ảnh phụ",
+        ["ColorImages"] = "Số ảnh theo màu",
         ["FullName"] = "Họ tên", ["Gender"] = "Giới tính", ["GoodsStatus"] = "Trạng thái hàng", ["GradeCode"] = "Mã bậc thợ",
         ["GradeName"] = "Tên bậc thợ", ["MonthlyAmount"] = "Số tiền theo tháng", ["Note"] = "Ghi chú",
         ["OrderDate"] = "Ngày đặt", ["PaidAmount"] = "Số tiền đã trả", ["PayType"] = "Hình thức lương",

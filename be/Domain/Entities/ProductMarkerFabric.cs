@@ -9,11 +9,13 @@ public partial class ProductMarkerFabric
 
     public byte MarkerNo { get; set; }
 
-    public string Color { get; set; } = null!;
+    public int ProductColorId { get; set; }
 
     public int MaterialId { get; set; }
 
     public virtual Material Material { get; set; } = null!;
+
+    public virtual ProductColor ProductColor { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;
 }

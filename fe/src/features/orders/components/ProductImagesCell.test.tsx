@@ -12,6 +12,7 @@ const product = (change: Partial<ProductListItem>): ProductListItem => ({
   productName: 'Áo',
   sampleImageUrl: 'PRODUCT/2026/11/main.png',
   extraImages: [],
+  colorImages: [],
   status: 'Active',
   isUsed: false,
   createdAt: '2026-11-01T00:00:00',
@@ -38,6 +39,23 @@ describe('ProductImagesCell', () => {
     fireEvent.click(screen.getByText('+3'));
 
     expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it('+N tính cả ảnh theo màu', () => {
+    render(
+      <ProductImagesCell
+        product={product({
+          extraImages: ['a'],
+          colorImages: [
+            { color: 'Đỏ', images: ['b', 'c'] },
+            { color: 'Xanh', images: ['d'] },
+          ],
+        })}
+        onOpenGallery={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByText('+4')).toBeInTheDocument();
   });
 
   it('chưa có ảnh chính nhưng có ảnh phụ thì vẫn xem được ảnh phụ', () => {

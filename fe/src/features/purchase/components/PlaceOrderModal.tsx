@@ -8,6 +8,8 @@ import { usePlaceOrder, useSupplierOptions } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -150,9 +152,10 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
                       { required: true, type: 'number', min: 0.001, message: text.qtyRequired },
                     ]}
                   >
-                    <InputNumber
+                    <QtyInput
+                      decimals={MATERIAL_QTY_DECIMALS}
+                      max={MAX_MATERIAL_QTY}
                       min={0}
-                      precision={3}
                       addonAfter={line?.unit}
                       style={{ width: 170 }}
                     />

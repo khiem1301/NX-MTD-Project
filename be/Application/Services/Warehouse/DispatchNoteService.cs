@@ -62,7 +62,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 d.RejectReason, d.DispatchedByNavigation == null ? null : d.DispatchedByNavigation.FullName,
                 d.DispatchedAt, d.CustomerReceivedDate,
                 d.DispatchNoteLines.OrderBy(l => l.DispatchNoteLineId).Select(l => new DispatchNoteLineDto(
-                    l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
+                    l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.ProductColor.Color,
                     l.OrderLine.ProductVariant.SizeCode, l.IssueQty)).ToList(), d.RowVer))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<DispatchNoteDto>() : Result<DispatchNoteDto>.Success(dto);
@@ -266,8 +266,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
     private async Task<IReadOnlyList<DispatchableLineDto>> DispatchableAsync(int orderId, CancellationToken ct)
     {
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new { l.OrderLineId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty })
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty })
             .ToListAsync(ct);
         var ids = lines.Select(l => l.OrderLineId).ToList();
         // Mảng (không phải IReadOnlySet) để EF dịch được thành IN (...).

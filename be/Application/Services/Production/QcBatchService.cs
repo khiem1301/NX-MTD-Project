@@ -39,7 +39,7 @@ public sealed class QcBatchService : IQcBatchService
             .OrderByDescending(b => b.WorkDate).ThenByDescending(b => b.BatchTime).ThenByDescending(b => b.QcBatchId)
             .Select(b => new QcBatchDto(b.QcBatchId, b.WorkDate, b.ShiftCode, b.BatchTime, b.SewingTeamId,
                 b.SewingTeam.TeamName, b.OrderLineId, b.OrderLine.Order.OrderCode, b.OrderLine.ProductVariant.Product.ProductCode,
-                b.OrderLine.ProductVariant.Color, b.OrderLine.ProductVariant.SizeCode, b.FinishedQty, b.InspectorId, b.Inspector.FullName,
+                b.OrderLine.ProductVariant.ProductColor.Color, b.OrderLine.ProductVariant.SizeCode, b.FinishedQty, b.InspectorId, b.Inspector.FullName,
                 b.EditDeadline, false, b.RowVer))
             .ToPagedAsync(query, ct);
 

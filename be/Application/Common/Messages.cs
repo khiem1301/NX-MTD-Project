@@ -75,6 +75,11 @@ public static class Messages
     public const string ProductCodeLocked = "Mã hàng đã dùng trong đơn hàng, không đổi được mã.";
     public const string ProductNotActive = "Mã hàng {0} đã ngừng sản xuất.";
     public const string ProductInvalidStatus = "Trạng thái mã hàng không cho phép thao tác này.";
+    public const string ProductImageInvalid = "Ảnh không hợp lệ, vui lòng chọn lại ảnh.";
+    public const string ProductImageUsedTwice = "Không dùng một ảnh hai lần.";
+    public const string ProductColorImagesTooManyColors = "Tối đa {0} màu có ảnh.";
+    public const string ProductColorImagesColorDuplicate = "Mỗi màu chỉ khai ảnh một lần.";
+    public const string ProductColorImagesCount = "Màu {0} phải có từ {1} đến {2} ảnh.";
     public const string OrderCodeDuplicate = "Mã đơn hàng đã tồn tại.";
     public const string OrderNotEditable = "Đơn hàng ở trạng thái này không sửa được.";
     public const string OrderLineRemoveNotAllowed = "Đơn đã vào sản xuất, không xóa được dòng đơn.";

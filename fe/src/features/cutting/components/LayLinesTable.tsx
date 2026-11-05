@@ -5,6 +5,7 @@ import { LABELS, LAY_MAX_SMALLINT, lineKey } from '../constants';
 import type { CuttingLayLine, WorkOrderLine } from '../types';
 import { cutBeforeOf, remainingToCut } from '../utils/layRemaining';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type LayLinesTableProps = {
   lines: WorkOrderLine[];
@@ -85,9 +86,8 @@ export function LayLinesTable({ lines, editingLines }: LayLinesTableProps) {
           width: 110,
           render: (_, l) => (
             <Form.Item name={['actual', lineKey(l)]} noStyle>
-              <InputNumber
+              <QtyInput
                 min={0}
-                precision={0}
                 style={{ width: '100%' }}
                 placeholder={String(plyCount * (ratios[lineKey(l)] ?? 0))}
               />

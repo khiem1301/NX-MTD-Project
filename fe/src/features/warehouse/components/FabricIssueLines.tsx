@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Form, InputNumber, Space, Typography, type FormInstance } from 'antd';
 import { formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import { useWorkOrderFabrics } from '../hooks/useIssues';
 
@@ -41,7 +43,8 @@ export function FabricIssueLines({ form, workOrderId }: FabricIssueLinesProps) {
                 {formatQty(fabric?.availableQty)} {fabric?.unit}
               </Typography.Text>
               <Form.Item name={[field.name, 'issuedQty']}>
-                <InputNumber
+                <QtyInput
+                  decimals={MATERIAL_QTY_DECIMALS}
                   addonBefore={LABELS.issueNow}
                   min={0.001}
                   max={fabric?.availableQty}

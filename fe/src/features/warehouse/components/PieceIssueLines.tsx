@@ -1,9 +1,10 @@
-import { Button, Form, InputNumber, Select, Space } from 'antd';
+import { Button, Form, Select, Space } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { useOrderLineOptions } from '@/hooks/useLookups';
 import { formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
 import { pieceKey } from '../utils/pieceKey';
@@ -51,12 +52,7 @@ export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
                 <Select placeholder={LABELS.orderLine} options={options} style={{ width: 380 }} />
               </Form.Item>
               <Form.Item name={[field.name, 'issuedQty']} rules={required}>
-                <InputNumber
-                  addonBefore={LABELS.issuedQty}
-                  min={1}
-                  precision={0}
-                  style={{ width: 180 }}
-                />
+                <QtyInput addonBefore={LABELS.issuedQty} min={1} style={{ width: 180 }} />
               </Form.Item>
               <Button icon={<DeleteOutlined />} onClick={() => remove(field.name)} />
             </Space>

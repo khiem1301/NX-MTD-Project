@@ -53,10 +53,13 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
         }
         var page = await query.OrderBy(p => p.ProductCode)
             .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt,
-                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
+                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList(),
+                ColorImages = p.ProductColors.Where(c => c.ProductColorImages.Any()).OrderBy(c => c.Color)
+                    .Select(c => new ProductColorImagesDto(c.Color,
+                        c.ProductColorImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList())).ToList() })
             .ToPagedAsync(q, ct);
         var items = page.Items.Select(p => new ProductListItemDto(p.ProductId, p.ProductCode, p.ProductName,
-            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages)).ToList();
+            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages, p.ColorImages)).ToList();
         return new PagedResult<ProductListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
@@ -65,14 +68,19 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
         var p = await _context.Products.AsNoTracking().Where(x => x.ProductId == productId)
             .Select(x => new { x.ProductId, x.ProductCode, x.ProductName, x.SampleImageUrl, x.Description,
                 x.Status, IsUsed = x.ProductVariants.Any(v => v.OrderLines.Any()), x.CreatedAt,
-                ExtraImages = x.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
+                ExtraImages = x.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList(),
+                ColorImages = x.ProductColors.Where(c => c.ProductColorImages.Any()).OrderBy(c => c.Color)
+                    .Select(c => new ProductColorImagesDto(c.Color,
+                        c.ProductColorImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList())).ToList(),
+                Colors = x.ProductColors.OrderBy(c => c.Color).Select(c => c.Color).ToList() })
             .FirstOrDefaultAsync(ct);
         if (p is null) return null;
         // Tỉ lệ size của bàn cắt gần nhất không còn lưu trên Product mà đọc từ vw_ProductLastSizeRatio.
         var lastSizeRatio = await _context.VwProductLastSizeRatios.AsNoTracking()
             .Where(v => v.ProductId == productId).Select(v => v.SizeRatio).FirstOrDefaultAsync(ct);
         return new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
-            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages, Array.Empty<AuditLogDto>());
+            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages,
+            p.ColorImages, p.Colors, Array.Empty<AuditLogDto>());
     }
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>
@@ -105,7 +113,7 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
 
     public async Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct)
     {
-        var colors = await _context.ProductVariants.AsNoTracking().Select(v => v.Color).Distinct().ToListAsync(ct);
+        var colors = await _context.ProductColors.AsNoTracking().Select(c => c.Color).Distinct().ToListAsync(ct);
         return colors.GroupBy(c => c.Trim(), StringComparer.OrdinalIgnoreCase).Select(g => g.First())
             .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
@@ -116,7 +124,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     public CustomerOrderRepository(NxMtdDbContext db) : base(db) { }
 
     public Task<CustomerOrder?> GetWithLinesAsync(int orderId, CancellationToken ct) =>
-        _context.CustomerOrders.Include(o => o.OrderLines).ThenInclude(l => l.ProductVariant)
+        _context.CustomerOrders.Include(o => o.OrderLines).ThenInclude(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
 
     public Task<string?> GetCustomerStatusAsync(int customerId, CancellationToken ct) =>
@@ -180,9 +188,9 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
                 ReceivedDate = o.ReceivedDate, DueDate = o.DueDate, Status = o.Status, MaterialStatus = o.MaterialStatus,
                 IsDelayRisk = o.IsDelayRisk ?? false, StopReason = o.StopReason, Note = o.Note, CreatedAt = o.CreatedAt,
                 UpdatedAt = o.UpdatedAt, RowVer = o.RowVer,
-                Lines = o.OrderLines.OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+                Lines = o.OrderLines.OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
                     .Select(l => new OrderLineDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode,
-                        l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode,
+                        l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                         l.OrderedQty, l.CmtUnitPrice)).ToList(),
             }).FirstOrDefaultAsync(ct);
         return dto is null ? null : dto with
@@ -213,7 +221,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     public async Task<IReadOnlyList<OrderLineLookupDto>> LookupLinesAsync(int orderId, int? sewingTeamId, CancellationToken ct) =>
         await _context.OrderLines.AsNoTracking().Where(l => l.OrderId == orderId)
             .Where(l => sewingTeamId == null || _context.OrderLineTeams.Any(a => a.SewingTeamId == sewingTeamId && a.OrderLineId == l.OrderLineId))
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
             .Select(l => new OrderLineLookupDto(l.OrderLineId, l.OrderId, l.ProductId, l.ProductVariant.Product.ProductCode,
-                l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty)).ToListAsync(ct);
+                l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty)).ToListAsync(ct);
 }

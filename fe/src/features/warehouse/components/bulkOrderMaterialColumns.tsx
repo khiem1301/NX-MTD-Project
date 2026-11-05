@@ -3,6 +3,8 @@ import { Input, InputNumber, Select, Typography, type TableColumnsType } from 'a
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { MaterialOption } from '@/types/lookup';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import { formatFabricWidth } from '../utils/fabricWidth';
 import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
@@ -91,7 +93,9 @@ export const bulkOrderMaterialColumns = ({
       key: 'requiredQty',
       width: QTY_WIDTH,
       render: (_, line) => (
-        <InputNumber
+        <QtyInput
+          decimals={MATERIAL_QTY_DECIMALS}
+          max={MAX_MATERIAL_QTY}
           size="small"
           style={{ width: '100%' }}
           suffix={unitOf(line)}
@@ -110,7 +114,9 @@ export const bulkOrderMaterialColumns = ({
       key: 'customerQty',
       width: QTY_WIDTH,
       render: (_, line) => (
-        <InputNumber
+        <QtyInput
+          decimals={MATERIAL_QTY_DECIMALS}
+          max={MAX_MATERIAL_QTY}
           size="small"
           style={{ width: '100%' }}
           suffix={unitOf(line)}

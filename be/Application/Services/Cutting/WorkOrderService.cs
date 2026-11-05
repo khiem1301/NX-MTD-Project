@@ -63,7 +63,7 @@ public sealed class WorkOrderService : IWorkOrderService
     public async Task<Result<WorkOrderDto>> GetByIdAsync(int workOrderId, int? cuttingTeamId, CancellationToken ct)
     {
         var wo = await WorkOrders.AsNoTracking().Include(w => w.Order).Include(w => w.Product).Include(w => w.CuttingTeam)
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
@@ -74,9 +74,9 @@ public sealed class WorkOrderService : IWorkOrderService
             .GroupBy(l => new { l.OrderLineId, l.ProductComponentMaterialId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
             .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
         var handed = await HandedQtyAsync(workOrderId, ct);
-        var lines = wo.WorkOrderLines.OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
+        var lines = wo.WorkOrderLines.OrderBy(l => l.OrderLine.ProductVariant.ProductColor.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
             .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponentId)
-            .Select(l => new WorkOrderLineDto(l.WorkOrderLineId, l.OrderLineId, l.OrderLine.ProductVariant.Color,
+            .Select(l => new WorkOrderLineDto(l.WorkOrderLineId, l.OrderLineId, l.OrderLine.ProductVariant.ProductColor.Color,
                 l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId, ComponentLabels.Of(l.ProductComponentMaterial) ?? string.Empty,
                 l.PlannedQty, cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId)),
                 handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId))))
@@ -93,7 +93,7 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         if (wo.Status != WorkOrderStatuses.Open || wo.SourceRequestId is not null) return [];
         var lines = wo.WorkOrderLines.Select(l => new CutLine(l.OrderLine.ProductVariantId, l.PlannedQty,
-            VariantLabel(l.OrderLine.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode), l.ProductComponentMaterialId)).ToList();
+            VariantLabel(l.OrderLine.ProductVariant.ProductColor.Color, l.OrderLine.ProductVariant.SizeCode), l.ProductComponentMaterialId)).ToList();
         return await _fabricChecker.CheckAsync(wo.OrderId, wo.CuttingTeamId, lines, ct);
     }
 
@@ -104,7 +104,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var ids = dto.Lines.Select(l => l.OrderLineId).ToArray();
         var variants = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId)
-            .Select(l => new { l.OrderLineId, l.ProductVariantId, l.ProductVariant.Color, l.ProductVariant.SizeCode })
+            .Select(l => new { l.OrderLineId, l.ProductVariantId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
             .ToDictionaryAsync(l => l.OrderLineId, ct);
         var lines = dto.Lines.Where(l => variants.ContainsKey(l.OrderLineId))
             .Select(l =>
@@ -120,7 +120,7 @@ public sealed class WorkOrderService : IWorkOrderService
         CancellationToken ct)
     {
         var wo = await WorkOrders.AsNoTracking().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
-            .ThenInclude(o => o.ProductVariant).FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
+            .ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor).FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
         return wo is null
             ? WarehouseFailures.NotFound<IReadOnlyList<FabricRequirementDto>>()
             : Result<IReadOnlyList<FabricRequirementDto>>.Success(await GetFabricsAsync(wo, ct));
@@ -160,7 +160,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .Select(r => new ReplacementRequestDto(r.RequestId, r.RequestCode, r.OrderId!.Value, r.Order!.OrderCode,
                 r.RequestLines.Select(l => l.OrderLine!.ProductVariant.Product.ProductCode).FirstOrDefault() ?? string.Empty, r.Content,
                 r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new ReplacementRequestLineDto(l.OrderLineId!.Value,
-                    l.OrderLine!.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId!.Value,
+                    l.OrderLine!.ProductVariant.ProductColor.Color, l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId!.Value,
                     l.ProductComponentMaterial!.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color), (int)l.Quantity)).ToList()))
             .ToListAsync(ct);
         return Result<IReadOnlyList<ReplacementRequestDto>>.Success(requests);
@@ -207,7 +207,7 @@ public sealed class WorkOrderService : IWorkOrderService
 
         var lineIds = request.RequestLines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
         var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Include(l => l.ProductVariant)
+            .Include(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .Where(l => lineIds.Contains(l.OrderLineId) && l.OrderId == request.OrderId).ToDictionaryAsync(l => l.OrderLineId, ct);
         if (orderLines.Count != lineIds.Count) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder));
         var productIds = orderLines.Values.Select(l => l.ProductId).Distinct().ToList();
@@ -385,7 +385,7 @@ public sealed class WorkOrderService : IWorkOrderService
         if (!teamOk) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.CuttingTeamInvalid);
 
         var ids = dto.Lines.Select(l => l.OrderLineId).Distinct().ToList();
-        var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant)
+        var orderLines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId && l.ProductId == dto.ProductId)
             .ToDictionaryAsync(l => l.OrderLineId, ct);
         if (orderLines.Count != ids.Count) return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder);
@@ -424,7 +424,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var over = dto.Lines.Where(l => l.ProductComponentMaterialId is null)
             .Select(l => (Line: orderLines[l.OrderLineId], Other: planned.GetValueOrDefault(l.OrderLineId), l.PlannedQty))
             .Where(x => x.Other + x.PlannedQty > x.Line.OrderedQty)
-            .Select(x => $"{x.Line.ProductVariant.Color}-{x.Line.ProductVariant.SizeCode}: đặt {x.Line.OrderedQty}, đã lên lệnh {x.Other}, lệnh này {x.PlannedQty}")
+            .Select(x => $"{x.Line.ProductVariant.ProductColor.Color}-{x.Line.ProductVariant.SizeCode}: đặt {x.Line.OrderedQty}, đã lên lệnh {x.Other}, lệnh này {x.PlannedQty}")
             .ToList();
         return over.Count == 0
             ? null

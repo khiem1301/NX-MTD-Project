@@ -84,13 +84,19 @@ public sealed class ProductService : IProductService
             Status = RecordStatus.Active,
             CreatedAt = _clock.Now,
         };
-        foreach (var (key, index) in (ExtraKeys(dto) ?? []).Select((k, i) => (k, i)))
-            product.ProductImages.Add(NewImage(key, index));
+        foreach (var image in ExtraImages(dto) ?? []) product.ProductImages.Add(image);
+        foreach (var row in dto.ColorImages ?? [])   // mã hàng mới: màu nào cũng là màu mới
+        {
+            var color = NewColor(product.ProductId, row.Color);
+            foreach (var image in NewColorImages(row)) color.ProductColorImages.Add(image);
+            product.ProductColors.Add(color);
+        }
         return await _uow.InTransactionAsync(async () =>   // D17: log cần ProductId
         {
             await _products.AddAsync(product);
             await _uow.SaveChangesAsync();
-            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null, Snapshot(product, product.ProductImages.Count)));
+            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null,
+                Snapshot(product, product.ProductImages.Count, product.ProductColors.Sum(c => c.ProductColorImages.Count))));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(product.ProductId, Messages.Saved);
         });
@@ -102,41 +108,119 @@ public sealed class ProductService : IProductService
         if (product is null) return Fail.NotFound();
 
         var code = dto.ProductCode.Trim().ToUpperInvariant();
-        if (code != product.ProductCode)
-        {
-            if (await _products.IsUsedAsync(productId, ct))
-                return Result.Failure(ErrorCodes.ProductCodeLocked, Messages.ProductCodeLocked);
-            if (await _products.CodeExistsAsync(code, productId, ct))
-                return Result.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
-        }
+        var codeError = await CheckCodeChangeAsync(product, code, ct);
+        if (codeError is not null) return codeError;
 
-        var images = _uow.Repository<ProductImage>();
-        var current = await images.Query().Where(i => i.ProductId == productId).OrderBy(i => i.SortOrder).ToListAsync(ct);
-        var requested = ExtraKeys(dto);
-        var replaceImages = requested is not null && !current.Select(i => i.ImageKey).SequenceEqual(requested);
-
-        var before = Snapshot(product, current.Count);
+        var extras = await LoadExtraImagesAsync(productId, ExtraImages(dto, productId), ct);
+        var colors = await LoadColorImagesAsync(productId, dto.ColorImages, ct);
+        var before = Snapshot(product, extras.Current.Count, colors.Current.Count);
         product.ProductCode = code;
         product.ProductName = dto.ProductName.Trim();
         product.SampleImageUrl = Clean(dto.SampleImageUrl);
         product.Description = Clean(dto.Description);
         _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, before,
-            Snapshot(product, replaceImages ? requested!.Count : current.Count)));
-        if (!replaceImages)
+            Snapshot(product, extras.FinalCount, colors.FinalCount)));
+        if (!extras.Changed && !colors.Changed)
         {
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.Saved);
         }
         return await _uow.InTransactionAsync(async () =>
         {
-            // UQ_ProductImage_Sort (ProductId, SortOrder): gỡ hết ảnh cũ trước rồi mới ghi danh sách mới.
-            images.RemoveRange(current);
+            // UQ_ProductImage_Sort, UQ_ProductColorImage_Sort: gỡ hết ảnh cũ trước rồi mới ghi danh sách mới.
+            if (extras.Changed) _uow.Repository<ProductImage>().RemoveRange(extras.Current);
+            if (colors.Changed) _uow.Repository<ProductColorImage>().RemoveRange(colors.Current);
             await _uow.SaveChangesAsync();
-            await images.AddRangeAsync(requested!.Select((key, index) => NewImage(key, index, productId)).ToList());
+            if (extras.Changed) await _uow.Repository<ProductImage>().AddRangeAsync(extras.Replacement!);
+            if (colors.Changed) await WriteColorImagesAsync(productId, colors, ct);
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.Saved);
         });
     }
+
+    private async Task<Result?> CheckCodeChangeAsync(Product product, string code, CancellationToken ct)
+    {
+        if (code == product.ProductCode) return null;
+        if (await _products.IsUsedAsync(product.ProductId, ct))
+            return Result.Failure(ErrorCodes.ProductCodeLocked, Messages.ProductCodeLocked);
+        if (await _products.CodeExistsAsync(code, product.ProductId, ct))
+            return Result.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
+        return null;
+    }
+
+    /// <summary>Ảnh đang có và danh sách thay thế (null = giữ nguyên, kể cả khi gửi lên đúng như cũ).</summary>
+    private sealed record ImageSet<T>(List<T> Current, List<T>? Replacement)
+    {
+        public bool Changed => Replacement is not null;
+        public int FinalCount => Replacement?.Count ?? Current.Count;
+    }
+
+    private async Task<ImageSet<ProductImage>> LoadExtraImagesAsync(int productId, List<ProductImage>? requested, CancellationToken ct)
+    {
+        var current = await _uow.Repository<ProductImage>().Query().Where(i => i.ProductId == productId)
+            .OrderBy(i => i.SortOrder).ToListAsync(ct);
+        var same = requested is null || current.Select(i => i.ImageKey).SequenceEqual(requested.Select(i => i.ImageKey));
+        return new(current, same ? null : requested);
+    }
+
+    /// <summary>Màu áo của mã hàng, ảnh theo màu đang có và danh sách thay thế (null = giữ nguyên).</summary>
+    private sealed record ColorImageSet(List<ProductColor> Colors, List<ProductColorImage> Current,
+        IReadOnlyList<ProductColorImagesDto>? Replacement)
+    {
+        public bool Changed => Replacement is not null;
+        public int FinalCount => Replacement?.Sum(r => r.Images.Count) ?? Current.Count;
+    }
+
+    private async Task<ColorImageSet> LoadColorImagesAsync(int productId, IReadOnlyList<ProductColorImagesDto>? requested,
+        CancellationToken ct)
+    {
+        var colors = await _uow.Repository<ProductColor>().Query().Include(c => c.ProductColorImages)
+            .Where(c => c.ProductId == productId).ToListAsync(ct);
+        var current = colors.SelectMany(c => c.ProductColorImages).ToList();
+        var same = requested is null || SameColorImages(colors, requested);
+        return new(colors, current, same ? null : requested);
+    }
+
+    /// <summary>Gửi lên đúng ảnh của từng màu như đang có (thứ tự màu không quan trọng) thì không ghi lại.</summary>
+    private static bool SameColorImages(List<ProductColor> colors, IReadOnlyList<ProductColorImagesDto> requested)
+    {
+        var now = colors.Where(c => c.ProductColorImages.Count > 0).ToDictionary(c => ColorKey(c.Color),
+            c => c.ProductColorImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList());
+        return now.Count == requested.Count && requested.All(r =>
+            now.TryGetValue(ColorKey(r.Color), out var keys) && keys.SequenceEqual(r.Images.Select(k => k.Trim())));
+    }
+
+    /// <summary>
+    /// Ghi ảnh theo màu (ảnh cũ đã gỡ): màu đã có thì dùng lại (khớp tên không phân biệt hoa thường), chưa có thì tạo.
+    /// Màu bị bỏ khỏi danh sách mà không có biến thể, vải của bìa (tức chỉ được tạo để khai ảnh) thì xóa luôn.
+    /// </summary>
+    private async Task WriteColorImagesAsync(int productId, ColorImageSet set, CancellationToken ct)
+    {
+        var byKey = set.Colors.ToDictionary(c => ColorKey(c.Color));
+        foreach (var row in set.Replacement!)
+        {
+            if (!byKey.TryGetValue(ColorKey(row.Color), out var color))
+            {
+                color = NewColor(productId, row.Color);
+                await _uow.Repository<ProductColor>().AddAsync(color);
+            }
+            var images = NewColorImages(row).ToList();
+            images.ForEach(i => { i.ProductColor = color; i.ProductColorId = color.ProductColorId; });
+            await _uow.Repository<ProductColorImage>().AddRangeAsync(images);
+        }
+
+        var kept = set.Replacement!.Select(r => ColorKey(r.Color)).ToHashSet();
+        var dropped = set.Colors.Where(c => !kept.Contains(ColorKey(c.Color))).Select(c => c.ProductColorId).ToList();
+        if (dropped.Count == 0) return;
+        var used = (await _uow.Repository<ProductVariant>().Query().Where(v => dropped.Contains(v.ProductColorId))
+                .Select(v => v.ProductColorId).ToListAsync(ct))
+            .Concat(await _uow.Repository<ProductMarkerFabric>().Query().Where(f => dropped.Contains(f.ProductColorId))
+                .Select(f => f.ProductColorId).ToListAsync(ct))
+            .ToHashSet();
+        _uow.Repository<ProductColor>().RemoveRange(set.Colors.Where(c => dropped.Contains(c.ProductColorId) && !used.Contains(c.ProductColorId)));
+    }
+
+    private static string ColorKey(string color) => color.Trim().ToUpperInvariant();
 
     public Task<Result> DiscontinueAsync(int productId, CancellationToken ct) =>
         ChangeStatusAsync(productId, RecordStatus.Active, RecordStatus.Discontinued);
@@ -158,11 +242,28 @@ public sealed class ProductService : IProductService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    private static object Snapshot(Product p, int extraImages) =>
-        new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages };
+    private static object Snapshot(Product p, int extraImages, int colorImages) =>
+        new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages, ColorImages = colorImages };
 
-    private static List<string>? ExtraKeys(SaveProductDto dto) => dto.ExtraImages?.Select(k => k.Trim()).ToList();
+    /// <summary>Ảnh phụ theo thứ tự gửi lên; null = không gửi (giữ nguyên).</summary>
+    private List<ProductImage>? ExtraImages(SaveProductDto dto, int productId = 0) =>
+        dto.ExtraImages?.Select((key, index) => new ProductImage
+        {
+            ProductId = productId,
+            ImageKey = key.Trim(),
+            SortOrder = (byte)(index + 1),
+            CreatedAt = _clock.Now,
+        }).ToList();
 
-    private ProductImage NewImage(string key, int index, int productId = 0) =>
-        new() { ProductId = productId, ImageKey = key, SortOrder = (byte)(index + 1), CreatedAt = _clock.Now };
+    private ProductColor NewColor(int productId, string color) =>
+        new() { ProductId = productId, Color = color.Trim(), CreatedAt = _clock.Now };
+
+    /// <summary>Ảnh của một màu theo thứ tự gửi lên, SortOrder 1-3.</summary>
+    private IEnumerable<ProductColorImage> NewColorImages(ProductColorImagesDto row) =>
+        row.Images.Select((key, index) => new ProductColorImage
+        {
+            ImageKey = key.Trim(),
+            SortOrder = (byte)(index + 1),
+            CreatedAt = _clock.Now,
+        });
 }

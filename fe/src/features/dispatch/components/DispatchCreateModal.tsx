@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Form, Input, InputNumber, Modal, Space } from 'antd';
+import { Form, Input, Modal, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -15,6 +15,7 @@ import type { DispatchableLine } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type DispatchCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = {
@@ -131,7 +132,7 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
                 const max = Math.min(l.remainingQty, Math.floor(l.availableQty), DISPATCH_MAX_QTY);
                 return (
                   <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
-                    <InputNumber min={0} max={max} precision={0} disabled={max <= 0} />
+                    <QtyInput min={0} max={max} disabled={max <= 0} />
                   </Form.Item>
                 );
               },

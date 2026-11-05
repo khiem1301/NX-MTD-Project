@@ -134,7 +134,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
         var threshold = await _settings.GetIntAsync(SettingKeys.KpiOtAutoThresholdPct, DefaultThresholdPct, ct);
         var today = _clock.Today;
 
-        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant)
+        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .Where(l => l.OrderId == target.OrderId && l.ProductId == target.ProductId).ToListAsync(ct);
         var lineIds = lines.Select(l => l.OrderLineId).ToList();
 
@@ -212,7 +212,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
             .Where(e => reported.Select(r => r.WorkerId).Distinct().Contains(e.EmployeeId))
             .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName }).ToListAsync(ct);
 
-        foreach (var line in lines.OrderBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode))
+        foreach (var line in lines.OrderBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode))
         {
             var perWorker = reported.Where(r => r.OrderLineId == line.OrderLineId && r.Qty > 0).OrderBy(r => r.WorkerId).ToList();
             var totalReported = perWorker.Sum(r => r.Qty);
@@ -220,7 +220,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
             foreach (var (r, qty) in perWorker.Zip(Distribute(diff, perWorker.Select(r => r.Qty).ToList())))
             {
                 var w = workers.First(x => x.EmployeeId == r.WorkerId);
-                rows.Add(new EndOfOrderRowDto(line.OrderLineId, line.ProductVariant.Color, line.ProductVariant.SizeCode,
+                rows.Add(new EndOfOrderRowDto(line.OrderLineId, line.ProductVariant.ProductColor.Color, line.ProductVariant.SizeCode,
                     r.WorkerId, w.EmployeeCode, w.FullName, r.Qty, qty));
             }
         }

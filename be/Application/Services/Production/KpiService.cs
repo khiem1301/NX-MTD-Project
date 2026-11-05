@@ -97,7 +97,7 @@ public sealed class KpiService : IKpiService
         var rows = await _uow.Repository<KpiTargetLine>().Query().AsNoTracking()
             .Where(x => ids.Contains(x.KpiTargetId))
             .OrderBy(x => x.OrderLineId)
-            .Select(x => new { x.KpiTargetId, x.OrderLineId, x.OrderLine.ProductVariant.Color, x.OrderLine.ProductVariant.SizeCode, x.TargetQty })
+            .Select(x => new { x.KpiTargetId, x.OrderLineId, x.OrderLine.ProductVariant.ProductColor.Color, x.OrderLine.ProductVariant.SizeCode, x.TargetQty })
             .ToListAsync(ct);
         if (rows.Count == 0) return [];
         var done = await _output.GetKpiLineFinishedAsync(ids, ct);
@@ -331,7 +331,7 @@ public sealed class KpiService : IKpiService
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderId == orderId && l.ProductId == productId && allotments.Any(a => a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.OrderLineId)
-            .Select(l => new { l.OrderLineId, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty })
+            .Select(l => new { l.OrderLineId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty })
             .ToListAsync(ct);
         if (lines.Count == 0) return [];
 

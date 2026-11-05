@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Alert, Form, Input, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { RETURN_LABELS, RETURN_MESSAGES, qtyDecimalsRule } from '../constants';
@@ -7,6 +7,8 @@ import { useCreateReturn, useReturnable } from '../hooks/useMaterialReturn';
 import type { ReturnableLine } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 
 type ReturnCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null>; note?: string };
@@ -137,7 +139,7 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
                   rules={[qtyDecimalsRule]}
                   style={{ marginBottom: 0 }}
                 >
-                  <InputNumber min={0} max={l.remainingQty} />
+                  <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.remainingQty} />
                 </Form.Item>
               ),
             },

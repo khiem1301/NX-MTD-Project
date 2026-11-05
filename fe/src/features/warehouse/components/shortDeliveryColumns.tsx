@@ -1,5 +1,7 @@
-import { Form, InputNumber, Space, type TableColumnsType } from 'antd';
+import { Form, Space, type TableColumnsType } from 'antd';
 import { formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import type { ShortDeliveryLine } from '../types';
 
@@ -32,7 +34,8 @@ export const shortDeliveryColumns = ({
           title: LABELS.replenishQty,
           key: 'replenish',
           render: (_: unknown, l: ShortDeliveryLine) => (
-            <InputNumber
+            <QtyInput
+              decimals={MATERIAL_QTY_DECIMALS}
               min={0}
               max={l.shortfallQty}
               value={replenishOf(l)}
@@ -67,7 +70,8 @@ export const shortDeliveryColumns = ({
                 noStyle
                 initialValue={remaining(l)}
               >
-                <InputNumber
+                <QtyInput
+                  decimals={MATERIAL_QTY_DECIMALS}
                   min={0}
                   max={remaining(l)}
                   addonBefore={LABELS.acceptedQty}

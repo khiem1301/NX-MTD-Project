@@ -59,6 +59,34 @@ public sealed class SaveProductDtoValidator : AbstractValidator<SaveProductDto>
             .Must(l => l!.All(k => k is not null && SampleImageKey.IsValid(k.Trim()))).WithMessage("Ảnh phụ không hợp lệ, vui lòng chọn lại ảnh.")
             .Must(l => l!.Select(k => k.Trim()).Distinct().Count() == l!.Count).WithMessage("Không dùng một ảnh hai lần.")
             .When(x => x.ExtraImages is not null);
+        RuleFor(x => x.ColorImages).Cascade(CascadeMode.Stop)
+            .Must(l => l!.Count <= ProductImageLimits.MaxColors)
+            .WithMessage(string.Format(Messages.ProductColorImagesTooManyColors, ProductImageLimits.MaxColors))
+            .Must(l => l!.All(c => c is not null))
+            .WithMessage(Messages.ProductImageInvalid)
+            .Must(l => l!.Select(c => c.Color?.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == l!.Count)
+            .WithMessage(Messages.ProductColorImagesColorDuplicate)
+            .Must(l => l!.SelectMany(c => c.Images ?? []).Select(k => k?.Trim()).Distinct().Count() == l!.Sum(c => c.Images?.Count ?? 0))
+            .WithMessage(Messages.ProductImageUsedTwice)
+            .When(x => x.ColorImages is not null);
+        RuleForEach(x => x.ColorImages).SetValidator(new ProductColorImagesDtoValidator())
+            .When(x => x.ColorImages is not null && x.ColorImages.All(c => c is not null));
+    }
+}
+
+/// <summary>Ảnh của một màu áo: tên màu như ProductVariant.Color, 1-3 khóa ảnh tải từ máy (DEV-ALL-71).</summary>
+public sealed class ProductColorImagesDtoValidator : AbstractValidator<ProductColorImagesDto>
+{
+    public ProductColorImagesDtoValidator()
+    {
+        RuleFor(x => x.Color).NotEmpty().WithMessage(Messages.Required("màu"))
+            .MaxTrimmedLength(ProductImageLimits.ColorMaxLength, "Màu");
+        RuleFor(x => x.Images).Cascade(CascadeMode.Stop)
+            .Must(l => l is not null && l.Count is >= ProductImageLimits.MinPerColor and <= ProductImageLimits.MaxPerColor)
+            .WithMessage(x => string.Format(Messages.ProductColorImagesCount, x.Color?.Trim(),
+                ProductImageLimits.MinPerColor, ProductImageLimits.MaxPerColor))
+            .Must(l => l!.All(k => k is not null && SampleImageKey.IsValid(k.Trim())))
+            .WithMessage(Messages.ProductImageInvalid);
     }
 }
 

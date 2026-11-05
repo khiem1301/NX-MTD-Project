@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, InputNumber, Modal, Select, Typography } from 'antd';
+import { Form, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -11,6 +11,7 @@ import { useCreateQcBatch, useOnLineQty } from '../hooks/useQcBatches';
 import type { ShiftCode } from '../types';
 import { AppDatePicker, AppTimePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { QtyInput } from '@/components/common/QtyInput';
 
 const text = PRODUCTION_TEXT.qc;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -121,7 +122,7 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
             { type: 'number', max: OUTPUT_MAX_QTY, message: text.form.qtyMax },
           ]}
         >
-          <InputNumber min={1} max={OUTPUT_MAX_QTY} precision={0} style={{ width: 180 }} />
+          <QtyInput min={1} max={OUTPUT_MAX_QTY} style={{ width: 180 }} />
         </Form.Item>
       </Form>
     </Modal>
