@@ -3,7 +3,8 @@ import type { ColumnsType } from 'antd/es/table';
 import type { Paginated } from '@/types/api';
 import { ATTENDANCE_TEXT, DEFAULT_PAGE_SIZE } from '../constants';
 import type { DailyTimesheet } from '../types';
-import { formatDate, formatHours, formatNumber, formatTime, workdayTone } from '../utils';
+import { formatDate, formatNumber, formatTime } from '@/utils/format';
+import { formatHours, workdayTone } from '../utils/timesheet';
 import { DataTable } from '@/components/common/DataTable';
 import { StatusTags } from './StatusTags';
 

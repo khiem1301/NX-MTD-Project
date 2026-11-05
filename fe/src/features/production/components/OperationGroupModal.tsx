@@ -15,7 +15,7 @@ import {
   useDeleteOperationGroup,
   useOperationGroups,
   useRenameOperationGroup,
-} from '../hooks/useProduction';
+} from '../hooks/useOperations';
 import type { OperationGroup } from '../types';
 
 const text = PRODUCTION_TEXT.operations.groups;

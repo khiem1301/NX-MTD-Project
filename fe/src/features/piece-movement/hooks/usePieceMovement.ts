@@ -8,7 +8,6 @@ import type {
   AllocationQuery,
   ConfirmAllocationPayload,
   ConfirmOnBehalfPayload,
-  RetrieveDailyPayload,
   SaveDailyPayload,
 } from '../types';
 
@@ -33,23 +32,22 @@ export const useBoard = (orderId: number | undefined) =>
     enabled: orderId !== undefined,
   });
 
-export const useDailyBoard = (workDate: string, orderId: number | undefined) =>
+/** Bảng giao việc của một dòng đơn (màu × size) trong ngày; chưa chọn dòng đơn thì không tải (DEV-ALL-68). */
+export const useDailyBoard = (
+  workDate: string,
+  orderId: number | undefined,
+  orderLineId: number | undefined,
+) =>
   useQuery({
-    queryKey: [...PM_KEY, 'daily', workDate, orderId],
-    queryFn: () => pieceMovementApi.daily(workDate, orderId as number),
-    enabled: orderId !== undefined,
+    queryKey: [...PM_KEY, 'daily', workDate, orderId, orderLineId],
+    queryFn: () => pieceMovementApi.daily(workDate, orderId as number, orderLineId as number),
+    enabled: orderId !== undefined && orderLineId !== undefined,
   });
 
 export const useSaveDaily = () =>
   useApiMutation((body: SaveDailyPayload) => pieceMovementApi.saveDaily(body), {
     invalidate: AFFECTED,
     successMessage: PM_MESSAGES.dailySaved,
-  });
-
-export const useRetrieveRemaining = () =>
-  useApiMutation((body: RetrieveDailyPayload) => pieceMovementApi.retrieveRemaining(body), {
-    invalidate: AFFECTED,
-    successMessage: PM_MESSAGES.dailyRetrieved,
   });
 
 export const useConfirmOnBehalf = () =>

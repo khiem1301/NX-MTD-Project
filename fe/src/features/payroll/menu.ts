@@ -1,6 +1,6 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
-import { PAYROLL_ROUTES } from './routes';
+import { PAYROLL_ROUTES } from '@/constants/routes';
 import { PAYROLL_TEXT } from './constants';
 
 export const payrollMenu: MenuEntry[] = [

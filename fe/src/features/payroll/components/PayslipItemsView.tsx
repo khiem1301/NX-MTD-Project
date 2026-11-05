@@ -3,7 +3,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { MESSAGES } from '@/constants/messages';
 import { PAYROLL_TEXT } from '../constants';
 import type { PayslipItem } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = {

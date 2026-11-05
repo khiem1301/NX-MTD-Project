@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Select } from 'antd';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
-import { isNewMaterial, NEW_MATERIAL_PREFIX, newMaterialName } from '../newMaterial';
+import { isNewMaterial, NEW_MATERIAL_PREFIX, newMaterialName } from '../utils/newMaterial';
 
 const MAX_NAME_LENGTH = 200;
 

@@ -11,7 +11,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { REQUIRED_RULES } from '../constants';
 import { levelColumns } from './levelColumns';
 import { MoneyInput } from './MoneyInput';
-import { currentLevel, levelsAround } from '../utils';
+import { currentLevel, levelsAround } from '../utils/gradeLevels';
 
 /** Đổi tiền một bậc: đặt mức mới từ một ngày hiệu lực, kể cả ngày trong tương lai; chọn trùng ngày một mức đã hẹn thì thay mức đó. */
 export function ChangeAmountModal({

@@ -1,7 +1,7 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
+import { PURCHASE_ROUTES } from '@/constants/routes';
 import { PURCHASE_TEXT } from './constants';
-import { PURCHASE_ROUTES } from './routes';
 
 export const purchaseMenu: MenuEntry[] = [
   {

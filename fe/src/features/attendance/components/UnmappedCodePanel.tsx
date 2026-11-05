@@ -5,7 +5,8 @@ import { LinkOutlined } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useMapAttendanceCode, useUnmappedCodes } from '../hooks/useAttendance';
 import type { UnmappedCode } from '../types';
-import { formatDateTime } from '../utils';
+import { formatDateTime } from '@/utils/format';
+
 import { MapCodeForm } from './MapCodeForm';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';

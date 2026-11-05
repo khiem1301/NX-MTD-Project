@@ -26,13 +26,14 @@ const text = PRODUCTION_TEXT.output;
 const t = text.byWorker;
 
 /**
- * Tổ trưởng / tổ phó nhập sản lượng theo công nhân: bảng công nhân của tổ, kèm số công đoạn đã nhập trong ca.
- * Nút thao tác mở khung nhập sản lượng của người đó.
+ * Nhập sản lượng theo công nhân: bảng công nhân của tổ, kèm số công đoạn đã nhập trong ca. Nút thao tác mở khung nhập
+ * sản lượng của người đó. Tổ trưởng / tổ phó dùng cho tổ mình; Quản đốc dùng cho tổ may đang chọn, phải ghi lý do sửa.
  */
 export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
   const { user } = useAuth();
-  const { query, rows, grid, save, saveRows } = entry;
-  const members = useTeamMemberLookup(user?.teamId ?? null);
+  const { isManager, teamId, query, rows, grid, save, saveRows } = entry;
+  // Quản đốc xem tổ may đang chọn; tổ trưởng / tổ phó xem tổ của mình.
+  const members = useTeamMemberLookup(isManager ? teamId : (user?.teamId ?? null));
   const [keyword, setKeyword] = useState('');
   const [state, setState] = useState<OutputWorkerState>(OUTPUT_WORKER_STATE.ALL);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -143,7 +144,10 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
           worker={editing}
           rows={editing.rows}
           saving={save.isPending}
-          onSave={(changed) => saveRows(changed, () => setEditingId(null))}
+          requireReason={isManager}
+          onSave={(changed, transferExcess, reason) =>
+            saveRows(changed, () => setEditingId(null), transferExcess, reason)
+          }
           onClose={() => setEditingId(null)}
         />
       )}

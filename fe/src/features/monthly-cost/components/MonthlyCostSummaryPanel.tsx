@@ -1,13 +1,12 @@
 import { Alert, Card, Descriptions, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime, formatMonth } from '@/utils/format';
+import { formatDateTime, formatMonth, formatCurrency } from '@/utils/format';
 import {
   MONTHLY_COST_CATEGORY_LABEL,
   MONTHLY_COST_TEXT,
   MONTHLY_COST_TYPE_LABEL,
 } from '../constants';
 import type { MonthlyCostItem, MonthlyCostSummary } from '../types';
-import { formatCurrency } from '../utils';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = { summary: MonthlyCostSummary };

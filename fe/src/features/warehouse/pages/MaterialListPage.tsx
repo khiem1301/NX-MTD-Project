@@ -30,7 +30,7 @@ const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
   label: MATERIAL_TYPE_LABEL[t],
 }));
 
-/** UC38: Thủ kho quản lý danh mục NVL (vải / phụ liệu). */
+/** UC38: Thủ kho, Quản đốc, Admin quản lý danh mục NVL (vải / phụ liệu); API theo role đang đăng nhập (DEV-ALL-65). */
 export function MaterialListPage() {
   const table = useTableQuery<Filters>({});
   const materials = useMaterials(table.params);

@@ -28,16 +28,16 @@ describe('buildNavigation', () => {
   it('gom mục cùng nhóm thành menu con và chỉ giữ mục đúng vai trò', () => {
     const nav = buildNavigation(entries, groups, ROLES.Admin, ['profile'], home);
 
-    expect(nav.items.map((i) => i.key)).toEqual(['/', 'orders', '/new']);
+    expect(nav.items.map((i) => i.key)).toEqual(['/', 'orders', 'other']);
     expect(nav.items[1]?.children?.map((c) => c.key)).toEqual(['/admin/orders', '/admin/products']);
   });
 
-  it('nhóm chỉ còn một mục thì hiện thẳng, không tạo menu con', () => {
-    const nav = buildNavigation(entries, groups, ROLES.TeamLeader, ['profile'], home);
-
-    expect(nav.items.map((i) => i.key)).toEqual(['/', 'req', '/new']);
+  it('nhóm chỉ còn một mục vẫn hiện thành nhóm có menu con', () => {
     const single = buildNavigation(entries.filter((e) => e.key !== 'requests-inbox'), groups, ROLES.TeamLeader, ['profile'], home);
-    expect(single.items.find((i) => i.key === '/requests')?.children).toBeUndefined();
+
+    const req = single.items.find((i) => i.key === 'req');
+    expect(req?.children?.map((c) => c.key)).toEqual(['/requests']);
+    expect(single.items.find((i) => i.key === '/requests')).toBeUndefined();
   });
 
   it('mục chưa xếp nhóm rơi vào nhóm Khác nên không bị mất', () => {

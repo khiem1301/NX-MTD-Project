@@ -6,7 +6,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { canCancelDefect, canConfirmDefect, defectStateOf } from '../defectRules';
+import { canCancelDefect, canConfirmDefect, defectStateOf } from '../utils/defectRules';
 import type { Defect } from '../types';
 
 const text = PRODUCTION_TEXT.defects;

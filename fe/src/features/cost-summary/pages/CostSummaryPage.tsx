@@ -8,14 +8,14 @@ import { CostSummaryPanel } from '../components/CostSummaryPanel';
 import { COST_SUMMARY_TEXT } from '../constants';
 import { useCostSummary } from '../hooks/useCostSummary';
 import type { CostSummaryFilter } from '../types';
-import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { API_MONTH, toApiMonth } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC12 — Admin: chọn tháng, xem tổng hợp chi phí (vật tư + lương), xuất Excel. Dữ liệu "mật" (GBR-02). */
 export function CostSummaryPage() {
   const [filter, setFilter] = useState<CostSummaryFilter>(() => ({
-    periodMonth: toPeriodMonth(currentPeriodMonth()),
+    periodMonth: toApiMonth(dayjs()),
   }));
 
   const costSummary = useCostSummary(filter);
@@ -28,9 +28,9 @@ export function CostSummaryPage() {
         <Typography.Text>{COST_SUMMARY_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker
           allowClear={false}
-          value={dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT)}
+          value={dayjs(filter.periodMonth, API_MONTH)}
           onChange={(value: Dayjs | null) => {
-            if (value) setFilter({ periodMonth: toPeriodMonth(value) });
+            if (value) setFilter({ periodMonth: toApiMonth(value) });
           }}
         />
       </Space>

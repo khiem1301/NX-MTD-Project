@@ -78,8 +78,20 @@ export const groupOutputRows = (rows: readonly OutputGridRow[]): OutputGroup[] =
 export const remainingOf = (row: OutputGridRow) =>
   Math.max(0, row.capQty - (row.reportedQty - (row.quantity ?? 0)));
 
+/** Phần báo vượt số còn được báo; 0 = không vượt. */
+export const excessOf = (row: OutputGridRow, quantity: number) =>
+  Math.max(0, quantity - remainingOf(row));
+
+/** Phần vượt chuyển được hết từ người cùng công đoạn còn dư và phần tổ chưa giao. */
+export const canTransfer = (row: OutputGridRow, quantity: number) =>
+  excessOf(row, quantity) <= row.transferableQty;
+
 /** Lưu được sản lượng ở công đoạn này: đã có đơn giá duyệt và còn số lần được giao. */
 export const canEnter = (row: OutputGridRow) => row.rateApproved && remainingOf(row) > 0;
 
 /** Nhập sản lượng nhóm chỉ điền vào công đoạn lưu được: còn hạn sửa, có đơn giá duyệt, còn số lần được giao. */
 export const canFill = (row: OutputGridRow) => row.canEdit && canEnter(row);
+
+/** Công đoạn khớp ô tìm theo mã hoặc tên; `keyword` đã bỏ dấu (foldVietnamese). */
+export const matchesOperation = (row: OutputGridRow, keyword: string) =>
+  foldVietnamese(`${row.operationCode} ${row.operationName}`).includes(keyword);

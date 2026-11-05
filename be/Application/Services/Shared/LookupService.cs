@@ -20,10 +20,10 @@ public sealed class LookupService : ILookupService
 
     private IQueryable<OrderLineTeam> Allotments => _uow.Repository<OrderLineTeam>().Query();
 
-    public async Task<IReadOnlyList<OrderOptionDto>> GetOpenOrdersAsync(string? keyword, CancellationToken ct)
+    public async Task<IReadOnlyList<OrderOptionDto>> GetOpenOrdersAsync(string? keyword, int? sewingTeamId, CancellationToken ct)
     {
         var kw = keyword?.Trim();
-        var teamId = SewingTeamScope.Of(_user);
+        var teamId = SewingTeamScope.Of(_user) ?? sewingTeamId;
         var allotments = Allotments;
         return await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .Where(o => !OrderStatuses.Closed.Contains(o.Status))

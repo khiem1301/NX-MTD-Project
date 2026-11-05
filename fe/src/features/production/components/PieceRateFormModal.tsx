@@ -4,9 +4,10 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, toApiDate } from '@/utils/format';
 import { PIECE_RATE_LIMITS, PRODUCTION_TEXT } from '../constants';
-import { useSavePieceRate } from '../hooks/useProduction';
+import { useSavePieceRate } from '../hooks/usePieceRates';
 import type { Operation } from '../types';
-import { editableRate } from '../utils';
+import { editableRate } from '../utils/outputRules';
+
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 

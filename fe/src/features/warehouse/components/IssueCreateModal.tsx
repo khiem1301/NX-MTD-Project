@@ -8,7 +8,7 @@ import { LABELS, TEAM_TYPE, WAREHOUSE_TYPE } from '../constants';
 import { useCreateIssue, useIssuableWorkOrders } from '../hooks/useIssues';
 import type { CreateIssuePayload } from '../types';
 import { FabricIssueLines } from './FabricIssueLines';
-import { parsePieceKey } from '../utils';
+import { parsePieceKey } from '../utils/pieceKey';
 import { PieceIssueLines } from './PieceIssueLines';
 import { RequisitionSelect } from './RequisitionSelect';
 import { MODAL_WIDTH } from '@/components/common/modalSize';

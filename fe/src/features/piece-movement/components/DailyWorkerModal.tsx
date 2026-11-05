@@ -1,23 +1,26 @@
 import { useMemo, useState } from 'react';
-import { Input, Modal, Select, Typography } from 'antd';
+import { HistoryOutlined, SearchOutlined } from '@ant-design/icons';
+import { Button, Input, Modal, Select, Space, Tooltip, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
+import { groupRowKey, useGroupAccordion } from '@/hooks/useGroupAccordion';
 import { fill } from '@/utils/format';
 import { DAILY_REASON_MAX_LENGTH, PM_LABELS } from '../constants';
 import { useSaveDaily } from '../hooks/usePieceMovement';
 import type { DailyAllocationRow, OperationProgress } from '../types';
 import {
+  clampGive,
   extraRowFrom,
   groupDailyRows,
-  maxGiveOf,
+  matchesOperation,
+  previousEdits,
   rowKeyOf,
   type DailyWorker,
 } from '../utils/dailyBoard';
 import { dailyModalColumns, type DailyTableRow } from './dailyModalColumns';
 
-const TABLE_SCROLL = { x: 560, y: 'calc(100vh - 480px)' };
-const GROUP_ROW_STYLE = { background: 'rgba(0, 0, 0, 0.03)' };
+const TABLE_SCROLL = { x: 560, y: 'calc(100vh - 520px)' };
 
 type DailyWorkerModalProps = {
   worker: DailyWorker;
@@ -29,8 +32,10 @@ type DailyWorkerModalProps = {
 };
 
 /**
- * Giao việc trong ngày cho một công nhân: công đoạn đã phân công lấy sẵn, thêm được công đoạn ngoài phân công. Nhập ở dòng nhóm thì
- * điền cùng số cho cả nhóm. Số của ngày là trần sản lượng cuối ca; hạ số xuống phải ghi lý do.
+ * Giao việc trong ngày cho một công nhân: công đoạn đã phân công lấy sẵn, thêm được công đoạn ngoài phân công. Bảng chỉ mở
+ * một nhóm mỗi lúc (bấm nhóm để mở/đóng), có ô tìm công đoạn khi nhóm có nhiều công đoạn. Nhập ở dòng nhóm thì
+ * điền cùng số cho cả nhóm; "Giao như lần trước" điền lại số của lần giao gần nhất. Trần sản lượng cuối ca = tồn từ hôm trước + số
+ * giao trong ngày; hạ số xuống phải ghi lý do.
  */
 export function DailyWorkerModal({
   worker,
@@ -51,21 +56,34 @@ export function DailyWorkerModal({
   const hasDecrease = changed.some((r) => valueOf(r) < r.allocatedQty);
   const multiLine = new Set(rows.map((r) => r.orderLineId)).size > 1;
 
-  const tableRows = groupDailyRows(rows).flatMap((g): DailyTableRow[] => [
-    { kind: 'group', key: `g:${g.key}`, groupKey: g.key, name: g.name, rows: g.rows },
-    ...g.rows.map((row): DailyTableRow => ({ kind: 'operation', key: rowKeyOf(row), row })),
-  ]);
+  const accordion = useGroupAccordion(groupDailyRows(rows), matchesOperation);
+  const tableRows = accordion.sections.flatMap(
+    ({ group: g, shownRows, isOpen }): DailyTableRow[] => [
+      {
+        kind: 'group',
+        key: groupRowKey(g.key),
+        groupKey: g.key,
+        name: g.name,
+        rows: g.rows,
+        isOpen,
+        changedCount: g.rows.filter((r) => changed.includes(r)).length,
+      },
+      ...(isOpen
+        ? shownRows.map((row): DailyTableRow => ({ kind: 'operation', key: rowKeyOf(row), row }))
+        : []),
+    ],
+  );
   const addable = operations.filter(
     (o) => !rows.some((r) => r.orderLineId === o.orderLineId && r.operationId === o.operationId),
   );
+  const hasPrevious = rows.some((r) => r.previousQty > 0);
 
   const fillGroup = (groupKey: string, groupRows: DailyAllocationRow[], value: number | null) => {
     setGroupQty((prev) => ({ ...prev, [groupKey]: value }));
     if (value === null) return;
     setEdits((prev) => {
       const next = { ...prev };
-      for (const r of groupRows)
-        next[rowKeyOf(r)] = Math.min(Math.max(value, r.outputQty), maxGiveOf(r));
+      for (const r of groupRows) next[rowKeyOf(r)] = clampGive(r, value);
       return next;
     });
   };
@@ -110,22 +128,41 @@ export function DailyWorkerModal({
     >
       <Typography.Paragraph type="secondary">{PM_LABELS.workerModalHint}</Typography.Paragraph>
       {canEdit && (
-        <Select<string>
-          showSearch
-          optionFilterProp="label"
-          style={{ width: '100%', marginBottom: 12 }}
-          placeholder={PM_LABELS.addOperationPlaceholder}
-          value={null}
-          onChange={(key) => {
-            const op = addable.find((o) => `${o.orderLineId}-${o.operationId}` === key);
-            if (op) setExtras((prev) => [...prev, extraRowFrom(worker, op)]);
-          }}
-          options={addable.map((o) => ({
-            value: `${o.orderLineId}-${o.operationId}`,
-            label: `${o.color}-${o.sizeCode} · ${o.operationCode} - ${o.operationName}`,
-          }))}
-        />
+        <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
+          <Select<string>
+            showSearch
+            optionFilterProp="label"
+            style={{ width: '100%' }}
+            placeholder={PM_LABELS.addOperationPlaceholder}
+            value={null}
+            onChange={(key) => {
+              const op = addable.find((o) => `${o.orderLineId}-${o.operationId}` === key);
+              if (op) setExtras((prev) => [...prev, extraRowFrom(worker, op)]);
+            }}
+            options={addable.map((o) => ({
+              value: `${o.orderLineId}-${o.operationId}`,
+              label: `${o.color}-${o.sizeCode} · ${o.operationCode} - ${o.operationName}`,
+            }))}
+          />
+          <Tooltip title={PM_LABELS.giveLikePreviousHint}>
+            <Button
+              icon={<HistoryOutlined />}
+              disabled={!hasPrevious}
+              onClick={() => setEdits((prev) => ({ ...prev, ...previousEdits(rows) }))}
+            >
+              {PM_LABELS.giveLikePrevious}
+            </Button>
+          </Tooltip>
+        </Space.Compact>
       )}
+      <Input
+        allowClear
+        prefix={<SearchOutlined />}
+        style={{ marginBottom: 12 }}
+        placeholder={PM_LABELS.searchOperation}
+        value={accordion.keyword}
+        onChange={(e) => accordion.setKeyword(e.target.value)}
+      />
       <DataTable<DailyTableRow>
         rowKey="key"
         size="small"
@@ -133,7 +170,8 @@ export function DailyWorkerModal({
         dataSource={tableRows}
         pagination={false}
         scroll={TABLE_SCROLL}
-        onRow={(r) => (r.kind === 'group' ? { style: GROUP_ROW_STYLE } : {})}
+        locale={accordion.keyword.trim() ? { emptyText: PM_LABELS.noMatchOperation } : undefined}
+        onRow={(r) => (r.kind === 'group' ? accordion.groupRowProps(r.groupKey, r.isOpen) : {})}
       />
       {hasDecrease && (
         <Input.TextArea

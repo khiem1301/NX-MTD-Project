@@ -1,32 +1,47 @@
 import { useState } from 'react';
-import { Alert, Modal, Space, Typography } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
+import { Input, Modal, Space, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
+import { groupRowKey, useGroupAccordion } from '@/hooks/useGroupAccordion';
+import { confirmDialog } from '@/utils/confirmDialog';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow, OutputLineInput } from '../types';
-import { canFill, groupOutputRows, remainingOf } from '../utils/outputWorkerBoard';
+import {
+  canFill,
+  canTransfer,
+  excessOf,
+  groupOutputRows,
+  matchesOperation,
+} from '../utils/outputWorkerBoard';
+import { OutputReasonField } from './OutputReasonField';
+import { WorkerOutputAlerts } from './WorkerOutputAlerts';
 import { workerOutputColumns, type WorkerOutputTableRow } from './workerOutputColumns';
 
 const text = PRODUCTION_TEXT.output;
 const t = text.byWorker;
 /** Phần thân bảng cuộn trong khung để modal không dài quá màn hình; màn hẹp thì cuộn ngang. */
-const TABLE_SCROLL = { x: 620, y: 'calc(100vh - 400px)' };
-const GROUP_ROW_STYLE = { background: 'rgba(0, 0, 0, 0.03)' };
+const TABLE_SCROLL = { x: 620, y: 'calc(100vh - 440px)' };
 
 type WorkerOutputModalProps = {
   worker: { workerId: number; label: string };
   /** Các công đoạn công nhân đã được giao việc ở dòng đơn này. */
   rows: OutputGridRow[];
   saving: boolean;
-  onSave: (rows: OutputLineInput[]) => void;
+  /** `transferExcess` = có dòng vượt số được giao và tổ trưởng đã xác nhận chuyển phần vượt. */
+  onSave: (rows: OutputLineInput[], transferExcess: boolean, reason?: string) => void;
   onClose: () => void;
+  /** Quản đốc sửa (kể cả sau hạn): bắt buộc ghi lý do sửa. */
+  requireReason?: boolean;
 };
 
 /**
- * Nhập sản lượng của một công nhân trong ca: các công đoạn lấy từ màn Giao việc, chia theo nhóm.
+ * Nhập sản lượng của một công nhân trong ca: các công đoạn lấy từ màn Giao việc, chia theo nhóm. Bảng chỉ mở một nhóm
+ * mỗi lúc (bấm nhóm để mở/đóng), có ô tìm công đoạn khi nhóm có nhiều công đoạn.
  * Nhập ở dòng nhóm thì điền cùng số đó cho các công đoạn nhập được trong nhóm; sửa lại từng công đoạn sau đó vẫn được.
+ * Báo vượt số được giao mà người cùng công đoạn / phần tổ chưa giao còn đủ thì hỏi xác nhận rồi chuyển phần vượt khi lưu.
  */
 export function WorkerOutputModal({
   worker,
@@ -34,8 +49,11 @@ export function WorkerOutputModal({
   saving,
   onSave,
   onClose,
+  requireReason = false,
 }: WorkerOutputModalProps) {
   const [edits, setEdits] = useState<Record<number, number | null>>({});
+  const [reason, setReason] = useState('');
+  const missingReason = requireReason && reason.trim() === '';
   const [groupQty, setGroupQty] = useState<Record<string, number | null>>({});
 
   // Ô để trống không đổi gì; số 0 ở dòng đã nhập nghĩa là xóa dòng đó.
@@ -45,16 +63,31 @@ export function WorkerOutputModal({
       ? [{ row, quantity }]
       : [];
   });
-  const overRows = changed.filter((c) => c.quantity > remainingOf(c.row)).map((c) => c.row);
+  const over = changed.filter((c) => excessOf(c.row, c.quantity) > 0);
+  const transferable = over.filter((c) => canTransfer(c.row, c.quantity));
+  const overRows = over.filter((c) => !canTransfer(c.row, c.quantity)).map((c) => c.row);
 
-  const tableRows = groupOutputRows(rows).flatMap((g): WorkerOutputTableRow[] => [
-    { kind: 'group', key: `g:${g.key}`, groupKey: g.key, name: g.name, rows: g.rows },
-    ...g.rows.map((row): WorkerOutputTableRow => ({
-      kind: 'operation',
-      key: `o:${row.operationId}`,
-      row,
-    })),
-  ]);
+  const accordion = useGroupAccordion(groupOutputRows(rows), matchesOperation);
+  const tableRows = accordion.sections.flatMap(
+    ({ group: g, shownRows, isOpen }): WorkerOutputTableRow[] => [
+      {
+        kind: 'group',
+        key: groupRowKey(g.key),
+        groupKey: g.key,
+        name: g.name,
+        rows: g.rows,
+        isOpen,
+        changedCount: changed.filter((c) => g.rows.includes(c.row)).length,
+      },
+      ...(isOpen
+        ? shownRows.map((row): WorkerOutputTableRow => ({
+            kind: 'operation',
+            key: `o:${row.operationId}`,
+            row,
+          }))
+        : []),
+    ],
+  );
 
   const fillGroup = (groupKey: string, groupRows: OutputGridRow[], value: number | null) => {
     setGroupQty((prev) => ({ ...prev, [groupKey]: value }));
@@ -75,15 +108,26 @@ export function WorkerOutputModal({
       setEdits((prev) => ({ ...prev, [operationId]: value })),
   });
 
-  const save = () =>
-    onSave(
-      changed.map(({ row, quantity }) => ({
-        operationId: row.operationId,
-        workerId: worker.workerId,
-        quantity,
-        rowVer: row.rowVer,
-      })),
-    );
+  const save = () => {
+    const toSave = changed.map(({ row, quantity }) => ({
+      operationId: row.operationId,
+      workerId: worker.workerId,
+      quantity,
+      rowVer: row.rowVer,
+    }));
+    // Chỉ Quản đốc gửi lý do sửa; tổ trưởng / tổ phó không có ô lý do.
+    const send = (transferExcess: boolean) =>
+      requireReason ? onSave(toSave, transferExcess, reason) : onSave(toSave, transferExcess);
+    if (transferable.length === 0) {
+      send(false);
+      return;
+    }
+    confirmDialog({
+      title: t.transferConfirmTitle,
+      content: t.transferConfirmContent,
+      onOk: () => send(true),
+    });
+  };
 
   return (
     <Modal
@@ -93,25 +137,28 @@ export function WorkerOutputModal({
       title={fill(t.modalTitle, worker.label)}
       okText={`${text.save}${changed.length > 0 ? ` (${changed.length})` : ''}`}
       cancelText={MESSAGES.common.cancel}
-      okButtonProps={{ disabled: changed.length === 0 || overRows.length > 0 }}
+      okButtonProps={{ disabled: changed.length === 0 || overRows.length > 0 || missingReason }}
       confirmLoading={saving}
       onOk={save}
       onCancel={onClose}
     >
       <Space direction="vertical" style={{ width: '100%' }}>
         <Typography.Text type="secondary">{t.modalHint}</Typography.Text>
-        {overRows.length > 0 && (
-          <Alert
-            type="error"
-            showIcon
-            message={t.overTitle}
-            description={overRows.map((r) => (
-              <div key={r.operationId}>
-                {r.capQty > 0
-                  ? fill(t.overCap, r.operationCode, remainingOf(r))
-                  : fill(t.overNotAllocated, r.operationCode)}
-              </div>
-            ))}
+        {requireReason && (
+          <OutputReasonField
+            value={reason}
+            onChange={setReason}
+            showError={missingReason && changed.length > 0}
+          />
+        )}
+        <WorkerOutputAlerts overRows={overRows} transferable={transferable} />
+        {rows.length > 0 && (
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder={t.searchOperation}
+            value={accordion.keyword}
+            onChange={(e) => accordion.setKeyword(e.target.value)}
           />
         )}
         <DataTable<WorkerOutputTableRow>
@@ -121,8 +168,10 @@ export function WorkerOutputModal({
           pagination={false}
           tableLayout="fixed"
           scroll={TABLE_SCROLL}
-          locale={{ emptyText: t.noOperations }}
-          onRow={(r) => (r.kind === 'group' ? { style: GROUP_ROW_STYLE } : {})}
+          locale={{
+            emptyText: accordion.keyword.trim() ? t.noMatchOperation : t.noOperations,
+          }}
+          onRow={(r) => (r.kind === 'group' ? accordion.groupRowProps(r.groupKey, r.isOpen) : {})}
         />
       </Space>
     </Modal>

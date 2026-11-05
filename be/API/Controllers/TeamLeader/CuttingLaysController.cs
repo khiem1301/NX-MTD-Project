@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NX_MTD.API.Common;
+using NX_MTD.API.Filters;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 

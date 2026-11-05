@@ -5,7 +5,12 @@ import type { MenuEntry } from '@/types/menu';
 const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
 
 export const warehouseMenu: MenuEntry[] = [
-  { key: 'materials', label: 'Danh mục NVL', path: ROUTES.materials, roles: [WarehouseKeeper] },
+  {
+    key: 'materials',
+    label: 'Danh mục NVL',
+    path: ROUTES.materials,
+    roles: [WarehouseKeeper, Admin, Manager],
+  },
   {
     key: 'incoming-materials',
     label: 'NVL chờ nhận',

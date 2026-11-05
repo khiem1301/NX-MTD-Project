@@ -7,6 +7,7 @@ using NX_MTD.Infrastructure.Common;
 using NX_MTD.Infrastructure.Data;
 using NX_MTD.Infrastructure.Repositories;
 using NX_MTD.Infrastructure.Security;
+using NX_MTD.Infrastructure.Settings;
 
 namespace NX_MTD.Infrastructure;
 
@@ -22,11 +23,11 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<ITokenService, TokenService>();
 
-        // Kho, cắt (Thái)
+        services.AddMemoryCache();
         services.AddSingleton<IClock, VnClock>();
+        services.AddScoped<ISystemSettingReader, SystemSettingReader>();
         services.AddScoped<IAppLock, SqlAppLock>();
         services.AddScoped<IDocumentCodeGenerator, DocumentCodeGenerator>();
-        services.AddScoped<IStockRepository, StockRepository>();
         return services;
     }
 }

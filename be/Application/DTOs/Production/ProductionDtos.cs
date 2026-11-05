@@ -82,11 +82,13 @@ public sealed record CopyAssignmentsDto(int FromOrderId, int ToOrderId);
 // ================= KI-04 + KI-11: sản lượng cuối ca (UC55) =================
 
 /// <summary>Một dòng lưới: một công nhân × công đoạn của một dòng đơn trong ca. Quantity = null nghĩa là chưa nhập.</summary>
+/// <param name="TransferableQty">DEV-ALL-64: báo vượt số được giao thì chuyển được tối đa chừng này từ người cùng công đoạn còn dư
+/// và phần tổ chưa giao.</param>
 public sealed record OutputGridRowDto(
     int OperationId, string OperationCode, string OperationName, int WorkerId, string WorkerCode, string WorkerName,
     long? OutputRecordId, int? Quantity, decimal? UnitRate, bool RateApproved, bool IsOutsideAssignment,
     bool NoAttendanceWarning, bool CanEdit, DateTime? EditDeadline, byte[]? RowVer,
-    int CapQty = 0, int ReportedQty = 0, string? GroupName = null);
+    int CapQty = 0, int ReportedQty = 0, string? GroupName = null, int TransferableQty = 0);
 
 public sealed record OutputGridDto(
     DateOnly WorkDate, string ShiftCode, int OrderLineId, int SewingTeamId, int ReceivedFromWarehouse,
@@ -96,9 +98,11 @@ public sealed record OutputGridDto(
 public sealed record OutputLineInput(int OperationId, int WorkerId, int Quantity, byte[]? RowVer = null);
 
 /// <summary>SewingTeamId chỉ Quản đốc điền (sửa hộ tổ); Reason bắt buộc khi sửa sau hạn (UC22). Quantity 0 = xóa dòng đã nhập.</summary>
+/// <param name="TransferExcess">DEV-ALL-64: true = dòng vượt số được giao thì chuyển phần vượt từ người cùng công đoạn còn dư, rồi phần
+/// tổ chưa giao (tổ trưởng đã xác nhận); false = chặn như cũ.</param>
 public sealed record SaveOutputDto(
     DateOnly WorkDate, string ShiftCode, int OrderLineId, int? SewingTeamId, string? Reason,
-    IReadOnlyList<OutputLineInput> Rows);
+    IReadOnlyList<OutputLineInput> Rows, bool TransferExcess = false);
 
 public sealed record OutputSaveResultDto(int Inserted, int Updated, int Deleted, IReadOnlyList<string> Warnings);
 

@@ -142,7 +142,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
             </Form.Item>
           </Col>
         </Row>
-        <LayLinesTable lines={workOrder.lines} />
+        <LayLinesTable lines={workOrder.lines} editingLines={lay?.lines} />
         <Form.Item name="note" label={LABELS.note} style={{ marginTop: 16, marginBottom: 0 }}>
           <Input.TextArea rows={2} maxLength={500} />
         </Form.Item>

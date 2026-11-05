@@ -7,7 +7,6 @@ export { MaterialIssueListPage } from './pages/MaterialIssueListPage';
 export { InventoryPage } from './pages/InventoryPage';
 export { PieceHoldingsPage } from './pages/PieceHoldingsPage';
 export { ShortDeliveryListPage } from './pages/ShortDeliveryListPage';
-export { warehouseMenu } from './menu';
 export { MaterialFormModal } from './components/MaterialFormModal';
 export { PurchaseOrderFormModal } from './components/PurchaseOrderFormModal';
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from './constants';

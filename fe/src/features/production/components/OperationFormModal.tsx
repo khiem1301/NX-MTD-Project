@@ -3,7 +3,7 @@ import { AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select } from 
 import { MESSAGES } from '@/constants/messages';
 import { useProductSpec } from '@/features/orders';
 import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
-import { useSaveOperation } from '../hooks/useProduction';
+import { useSaveOperation } from '../hooks/useOperations';
 import type { Operation } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { OperationFinalField } from './OperationFinalField';

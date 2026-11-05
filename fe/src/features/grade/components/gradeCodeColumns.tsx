@@ -13,7 +13,7 @@ import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { GR_LABELS } from '../constants';
 import type { GradeCode, GradeLevel } from '../types';
-import { currentLevel, upcomingLevels } from '../utils';
+import { currentLevel, upcomingLevels } from '../utils/gradeLevels';
 import { UpcomingLevelsCell } from './UpcomingLevelsCell';
 
 type GradeCodeColumnsOptions = {

@@ -29,6 +29,10 @@ export const MESSAGES = {
     pageSizeLabel: 'Số dòng mỗi trang',
     empty: 'Chưa có dữ liệu',
     noData: 'Không có dữ liệu phù hợp.', // MSG02
+    selectProduct: 'Chọn mã hàng',
+    selectColorSize: 'Chọn màu - size',
+    selectProductFirst: 'Chọn mã hàng trước',
+    orderedQty: 'đặt {0}',
     close: 'Đóng',
     history: 'Lịch sử',
     historyTime: 'Thời gian',

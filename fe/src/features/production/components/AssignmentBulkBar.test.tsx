@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { ASSIGNMENT_MAX_OPERATIONS } from '../constants';
 import { AssignmentBulkBar } from './AssignmentBulkBar';
 
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/useAssignments', () => ({
   useAssignOperations: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 

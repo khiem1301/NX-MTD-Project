@@ -11,7 +11,10 @@ const get = async <T>(url: string, params?: object): Promise<T> =>
 /** GET /api/v1/common/order-lookups/... (mọi vai trò trừ Công nhân). */
 export const orderLookupApi = {
   orders: (params?: LookupParams) => get<Paginated<OrderLookup>>(API.orderLookups.orders, params),
-  orderLines: (orderId: number) => get<OrderLineLookup[]>(API.orderLookups.orderLines(orderId)),
-  products: (params?: LookupParams) => get<Paginated<ProductLookup>>(API.orderLookups.products, params),
+  /** sewingTeamId: Quản đốc / Admin chỉ lấy dòng chia cho tổ đang chọn. */
+  orderLines: (orderId: number, sewingTeamId?: number) =>
+    get<OrderLineLookup[]>(API.orderLookups.orderLines(orderId), { sewingTeamId }),
+  products: (params?: LookupParams) =>
+    get<Paginated<ProductLookup>>(API.orderLookups.products, params),
   productColors: () => get<string[]>(API.orderLookups.productColors),
 };

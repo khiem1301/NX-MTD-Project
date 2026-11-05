@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { Alert, Card, Empty, List, Spin, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { formatDateTime, formatMonth } from '@/utils/format';
+import { formatDateTime, formatMonth, formatCurrency } from '@/utils/format';
 import { PayslipItemsView } from '../components/PayslipItemsView';
 import { PAYROLL_TEXT } from '../constants';
 import { useMyPayslip, useMyPayslips } from '../hooks/usePayroll';
-import { formatCurrency } from '../utils';
 import { PageCard } from '@/components/common/PageCard';
 
 /** UC06 — mọi vai trò xem phiếu lương của chính mình, chỉ xem được các tháng Admin đã duyệt. */

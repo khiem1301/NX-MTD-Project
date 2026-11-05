@@ -882,7 +882,7 @@ Table DispatchNote [note: 'Phiếu xuất kho thành phẩm (kiêm lệnh giao h
   DeliveryDate date [not null, note: 'Ngày giao dự kiến']
   DeliveryAddress nvarchar(500) [not null, note: 'Địa chỉ giao hàng']
   Note nvarchar(1000) [note: 'Ghi chú giao hàng cho tài xế / khách']
-  Status varchar(25) [not null, default: 'PENDING', check: `Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')`, note: 'Trạng thái: PENDING, REJECTED, CANCELLED, IN_DELIVERY, DELIVERED, PARTIALLY_DELIVERED']
+  Status varchar(25) [not null, default: 'PENDING', check: `Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED')`, note: 'Trạng thái: PENDING, REJECTED, CANCELLED, IN_DELIVERY, DELIVERED (giao luôn thành công, không có giao một phần)']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
   RejectReason nvarchar(500) [note: 'Lý do thủ kho từ chối xuất (ví dụ không đủ hàng)']
   DispatchedBy int [note: 'Thủ kho xác nhận xuất']
@@ -891,8 +891,8 @@ Table DispatchNote [note: 'Phiếu xuất kho thành phẩm (kiêm lệnh giao h
   RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
   checks {
     `Status <> 'REJECTED' OR RejectReason IS NOT NULL` [name: 'CK_DN_Reject']
-    `Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL` [name: 'CK_DN_Delivered']
-    `Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL)` [name: 'CK_DN_Dispatched']
+    `Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL` [name: 'CK_DN_Delivered']
+    `Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL)` [name: 'CK_DN_Dispatched']
   }
 
   indexes {
@@ -999,11 +999,7 @@ Table DispatchNoteLine [note: 'Dòng phiếu xuất kho'] {
   DispatchNoteLineId int [pk, increment, note: 'Khóa chính, tự tăng']
   DispatchNoteId int [not null, note: 'Phiếu xuất kho']
   OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
-  IssueQty int [not null, check: `IssueQty > 0`, note: 'Số lượng xuất']
-  ReceivedQty int [note: 'Số lượng khách nhận thực tế, không vượt số xuất']
-  checks {
-    `ReceivedQty IS NULL OR ReceivedQty BETWEEN 0 AND IssueQty` [name: 'CK_DNL_Received']
-  }
+  IssueQty int [not null, check: `IssueQty > 0`, note: 'Số lượng xuất; khách nhận đúng số này khi phiếu DELIVERED']
 
   indexes {
     (DispatchNoteId, OrderLineId) [unique, name: 'UQ_DNL']

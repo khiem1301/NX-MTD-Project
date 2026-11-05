@@ -14,7 +14,8 @@ import {
   PRODUCTION_TEXT,
   SHIFT_OPTIONS,
 } from '../constants';
-import { useAssignableOperations, useCreateDefect } from '../hooks/useProduction';
+import { useAssignableOperations } from '../hooks/useAssignments';
+import { useCreateDefect } from '../hooks/useDefects';
 import type { DefectReason, DefectType, ShiftCode } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';

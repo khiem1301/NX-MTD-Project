@@ -64,13 +64,3 @@ public sealed class SaveDailyAllocationDtoValidator : AbstractValidator<SaveDail
         RuleFor(x => x.Reason).MaximumLength(500);
     }
 }
-
-public sealed class RetrieveDailyAllocationDtoValidator : AbstractValidator<RetrieveDailyAllocationDto>
-{
-    public RetrieveDailyAllocationDtoValidator()
-    {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
-        RuleFor(x => x.WorkerIds).Must(w => w is null || w.Count <= SaveDailyAllocationDtoValidator.MaxItems)
-            .WithMessage(WarehouseMessages.DailyTooManyItems);
-    }
-}

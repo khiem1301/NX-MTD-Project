@@ -7,7 +7,7 @@ import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
-import { useCreateQcBatch, useOnLineQty } from '../hooks/useProduction';
+import { useCreateQcBatch, useOnLineQty } from '../hooks/useQcBatches';
 import type { ShiftCode } from '../types';
 import { AppDatePicker, AppTimePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';

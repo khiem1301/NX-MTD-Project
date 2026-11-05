@@ -102,7 +102,8 @@ public interface ICustomerOrderService
 public interface IOrderLookupService
 {
     Task<Result<PagedResult<OrderLookupDto>>> OrdersAsync(OrderLookupQuery query, CancellationToken ct);
-    Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, CancellationToken ct);
+    /// <summary>Tổ may chỉ thấy dòng chia cho tổ; Quản đốc / Admin truyền sewingTeamId để lọc theo tổ đang chọn.</summary>
+    Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, int? sewingTeamId, CancellationToken ct);
     Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct);
     Task<Result<IReadOnlyList<string>>> ColorsAsync(CancellationToken ct);
 }

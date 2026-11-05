@@ -11,15 +11,22 @@ import type {
 
 /** Dropdown dùng chung nhiều feature (GET /api/v1/common/lookups/...). */
 export const lookupApi = {
-  orders: async (keyword?: string): Promise<OrderOption[]> =>
-    (await apiClient.get<ApiResponse<OrderOption[]>>(API.lookups.orders, { params: { keyword } }))
-      .data.data,
+  /** sewingTeamId: Quản đốc / Admin lọc đơn có dòng chia cho tổ đang chọn (tổ may tự lọc theo tổ mình ở BE). */
+  orders: async (keyword?: string, sewingTeamId?: number): Promise<OrderOption[]> =>
+    (
+      await apiClient.get<ApiResponse<OrderOption[]>>(API.lookups.orders, {
+        params: { keyword, sewingTeamId },
+      })
+    ).data.data,
   orderLines: async (orderId: number): Promise<OrderLineOption[]> =>
     (await apiClient.get<ApiResponse<OrderLineOption[]>>(API.lookups.orderLines(orderId))).data
       .data,
   orderLineComponents: async (orderLineId: number): Promise<ComponentOption[]> =>
-    (await apiClient.get<ApiResponse<ComponentOption[]>>(API.lookups.orderLineComponents(orderLineId)))
-      .data.data,
+    (
+      await apiClient.get<ApiResponse<ComponentOption[]>>(
+        API.lookups.orderLineComponents(orderLineId),
+      )
+    ).data.data,
   teams: async (teamType?: string): Promise<TeamOption[]> =>
     (await apiClient.get<ApiResponse<TeamOption[]>>(API.lookups.teams, { params: { teamType } }))
       .data.data,

@@ -24,9 +24,9 @@ public sealed class OrderLookupService : IOrderLookupService
         return Result<PagedResult<OrderLookupDto>>.Success(await _orders.LookupAsync(query, statuses, SewingTeamScope.Of(_user), ct));
     }
 
-    public async Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, CancellationToken ct) =>
+    public async Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, int? sewingTeamId, CancellationToken ct) =>
         await _orders.ExistsAsync(orderId, ct)
-            ? Result<IReadOnlyList<OrderLineLookupDto>>.Success(await _orders.LookupLinesAsync(orderId, SewingTeamScope.Of(_user), ct))
+            ? Result<IReadOnlyList<OrderLineLookupDto>>.Success(await _orders.LookupLinesAsync(orderId, SewingTeamScope.Of(_user) ?? sewingTeamId, ct))
             : Fail.NotFound<IReadOnlyList<OrderLineLookupDto>>();
 
     public async Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct) =>

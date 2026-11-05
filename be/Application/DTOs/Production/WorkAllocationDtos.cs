@@ -49,14 +49,16 @@ public sealed record WorkAllocationQuery : PageQuery
 /// Một dòng giao việc của ngày: công nhân × dòng đơn × công đoạn. <c>IsAssigned</c> = công đoạn đã phân công cho công nhân
 /// trước khi bắt đầu may; dòng không có cờ này là công đoạn tổ trưởng thêm ngoài phân công.
 /// </summary>
-/// <param name="AllocatedQty">Số lần giao của ngày (giao − thu hồi), cũng là trần sản lượng cuối ca của ngày.</param>
+/// <param name="CarriedQty">Phần các ngày trước chưa làm hết, chuyển sang ngày này (DEV-ALL-64: cuối ngày không thu hồi).</param>
+/// <param name="AllocatedQty">Số lần giao thêm của ngày (giao − thu hồi). Trần sản lượng của ngày = tồn từ hôm trước + số này.</param>
 /// <param name="OutputQty">Sản lượng cuối ca đã báo của ngày.</param>
-/// <param name="RemainingQty">Phần giao của ngày chưa làm hết, có thể thu hồi (đã chặn theo số công nhân còn giữ).</param>
+/// <param name="RemainingQty">Phần chưa làm hết tính cả tồn từ hôm trước (đã chặn theo số công nhân còn giữ), chuyển sang hôm sau.</param>
 /// <param name="UnallocatedQty">Số lần còn giao được của công đoạn × dòng đơn trên toàn tổ.</param>
+/// <param name="PreviousQty">Số giao ròng của lần giao gần nhất trước ngày này; 0 = chưa giao lần nào.</param>
 public sealed record DailyAllocationRowDto(
     int WorkerId, string WorkerCode, string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color,
     string SizeCode, int OperationId, string OperationCode, string OperationName, string? GroupName, bool IsAssigned,
-    int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty);
+    int CarriedQty, int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty, int PreviousQty);
 
 public sealed record DailyAllocationBoardDto(DateOnly WorkDate, IReadOnlyList<DailyAllocationRowDto> Rows);
 
@@ -66,7 +68,4 @@ public sealed record SaveDailyAllocationItem(int WorkerId, int OrderLineId, int 
 /// <param name="Reason">Bắt buộc khi có dòng hạ số giao xuống (ghi vào phiếu thu hồi).</param>
 public sealed record SaveDailyAllocationDto(DateOnly WorkDate, IReadOnlyList<SaveDailyAllocationItem> Items, string? Reason);
 
-/// <param name="WorkerIds">Rỗng = mọi công nhân của tổ.</param>
-public sealed record RetrieveDailyAllocationDto(DateOnly WorkDate, IReadOnlyList<int>? WorkerIds, string Reason);
-
-public sealed record DailyAllocationResultDto(int Added, int Adjusted, int Retrieved);
+public sealed record DailyAllocationResultDto(int Added, int Adjusted);

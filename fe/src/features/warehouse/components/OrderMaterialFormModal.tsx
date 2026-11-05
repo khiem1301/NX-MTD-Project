@@ -8,6 +8,7 @@ import {
   deliveryCountProblem,
   MAX_NOTE_LENGTH,
   noteProblem,
+  orderMaterialOptions,
   qtyProblem,
 } from '../utils/orderMaterialRules';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
@@ -61,22 +62,7 @@ export function OrderMaterialFormModal({
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
 
-  const materialOptions = (materials.data ?? [])
-    .filter(
-      (m) =>
-        m.materialId === orderMaterial?.materialId ||
-        !declared.some((om) => om.materialId === m.materialId),
-    )
-    .map((m) => ({
-      value: m.materialId,
-      label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
-    }));
-  if (orderMaterial && !materialOptions.some((o) => o.value === orderMaterial.materialId)) {
-    materialOptions.push({
-      value: orderMaterial.materialId,
-      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
-    });
-  }
+  const materialOptions = orderMaterialOptions(materials.data ?? [], orderMaterial, declared);
   const required = [{ required: true, message: MESSAGES.common.required }];
 
   return (

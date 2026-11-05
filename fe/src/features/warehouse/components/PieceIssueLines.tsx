@@ -6,7 +6,7 @@ import { useOrderLineOptions } from '@/hooks/useLookups';
 import { formatQty } from '@/utils/format';
 import { LABELS, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
-import { pieceKey } from '../utils';
+import { pieceKey } from '../utils/pieceKey';
 
 type PieceIssueLinesProps = { orderId: number | undefined };
 
