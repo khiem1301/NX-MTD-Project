@@ -2,6 +2,12 @@ import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { normalizePhone, phoneRule } from '@/utils/phone';
+import {
+  CODE_PATTERN,
+  normalizeCode,
+  normalizePersonName,
+  PERSON_NAME_PATTERN,
+} from '@/utils/textInput';
 import { PAY_TYPE_LABEL, type PayType } from '@/constants/hr';
 import type { EmployeeDetail, TempPassword } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
@@ -61,9 +67,11 @@ export function EmployeeFormModal({
         <Form.Item
           name="employeeCode"
           label={MESSAGES.hr.employeeCode}
+          normalize={normalizeCode}
           rules={[
             { required: true, whitespace: true, message: MESSAGES.common.required },
             { max: 20 },
+            { pattern: CODE_PATTERN, message: MESSAGES.hr.codeInvalid },
           ]}
         >
           <Input disabled={employee !== null} />
@@ -71,9 +79,11 @@ export function EmployeeFormModal({
         <Form.Item
           name="fullName"
           label={MESSAGES.hr.fullName}
+          normalize={normalizePersonName}
           rules={[
             { required: true, whitespace: true, message: MESSAGES.common.required },
             { max: 100 },
+            { pattern: PERSON_NAME_PATTERN, message: MESSAGES.hr.fullNameInvalid },
           ]}
         >
           <Input />

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -35,7 +36,7 @@ public sealed class CustomerOrderConfiguration : IEntityTypeConfiguration<Custom
             .HasMaxLength(25)
             .IsUnicode(false)
             .HasDefaultValue("NEW");
-        entity.Property(e => e.StopReason).HasMaxLength(500);
+        entity.Property(e => e.StopReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.UpdatedAt).HasPrecision(0);
 
         entity.HasOne(d => d.Customer).WithMany(p => p.CustomerOrders)

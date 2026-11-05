@@ -34,7 +34,7 @@ export const customerApi = {
   options: () => get<CustomerOption[]>(API.customers.options),
   create: (body: SaveCustomerPayload) => post<number>(API.customers.base, body),
   update: (id: number, body: SaveCustomerPayload) => put<unknown>(API.customers.byId(id), body),
-  discontinue: (id: number, reason: string) =>
+  discontinue: (id: number, reason: string | null) =>
     post<void>(API.customers.discontinue(id), { reason }),
   reactivate: (id: number) => post<void>(API.customers.reactivate(id)),
 };

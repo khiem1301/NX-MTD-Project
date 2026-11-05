@@ -5,7 +5,6 @@ export const MOVEMENT_TYPE = { HANDOVER: 'HANDOVER', RETRIEVAL: 'RETRIEVAL' } as
 /** Mỗi lần lưu tối đa số dòng này (BE: SaveDailyAllocationDtoValidator.MaxItems). */
 export const DAILY_MAX_ITEMS = 500;
 export const DAILY_MAX_QTY = 100000;
-export const DAILY_REASON_MAX_LENGTH = 500;
 export const DAILY_SEARCH_MAX_LENGTH = 100;
 
 export const MOVEMENT_TYPE_LABEL: Record<string, string> = {

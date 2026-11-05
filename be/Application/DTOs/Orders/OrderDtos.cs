@@ -15,7 +15,7 @@ public sealed record CustomerQuery : PageQuery
 /// <summary>Khách hàng rút gọn cho ô chọn (form đơn hàng, bộ lọc đơn hàng): không phân trang, không có SĐT / email / địa chỉ.</summary>
 public sealed record CustomerOptionDto(int CustomerId, string CustomerName, string Status);
 /// <summary>Lý do ngừng hợp tác với khách hàng (bắt buộc, lưu vào hồ sơ và nhật ký).</summary>
-public sealed record DiscontinueCustomerDto(string Reason);
+public sealed record DiscontinueCustomerDto(string? Reason);
 public sealed record SaveCustomerDto(string CustomerName, string? Phone, string? Email, string? DefaultAddress);
 
 // ---- Mã hàng ----
@@ -82,8 +82,9 @@ public sealed record OrderQuery : PageQuery
 public sealed record OrderListItemDto(int OrderId, string OrderCode, string CustomerName, DateOnly ReceivedDate, DateOnly DueDate,
     string Status, string MaterialStatus, bool IsDelayRisk, int TotalQty, decimal TotalAmount, string ProductCodes);
 
+/// <summary>DeliveredQty: số đã giao của dòng đơn = tổng số xuất của các phiếu xuất đã DELIVERED (vw_OrderLineProgress).</summary>
 public sealed record OrderLineDto(int OrderLineId, int ProductId, string ProductCode, string ProductName, string Color,
-    string SizeCode, int OrderedQty, decimal CmtUnitPrice);
+    string SizeCode, int OrderedQty, decimal CmtUnitPrice, int DeliveredQty);
 
 public sealed record OrderDetailDto
 {
@@ -111,7 +112,11 @@ public sealed record OrderOverviewListItemDto(int OrderId, string OrderCode, str
 
 public sealed record OrderOverviewDto(int OrderId, string OrderCode, string CustomerName, DateOnly ReceivedDate, DateOnly DueDate,
     string Status, string MaterialStatus, bool IsDelayRisk, string? StopReason, string? Note, DateTime CreatedAt,
-    IReadOnlyList<OrderLineLookupDto> Lines);
+    IReadOnlyList<OrderOverviewLineDto> Lines);
+
+/// <summary>Dòng đơn khi xem (không có đơn giá); DeliveredQty = tổng số xuất của phiếu đã giao.</summary>
+public sealed record OrderOverviewLineDto(int OrderLineId, int ProductId, string ProductCode, string ProductName,
+    string Color, string SizeCode, int OrderedQty, int DeliveredQty);
 
 // ---- Tra cứu cho luồng khác (D26: KHÔNG có đơn giá) ----
 public sealed record OrderLookupQuery : PageQuery

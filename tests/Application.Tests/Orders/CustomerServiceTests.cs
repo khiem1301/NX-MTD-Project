@@ -40,6 +40,20 @@ public class CustomerServiceTests
         await _uow.Received(1).SaveChangesAsync();
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task Discontinue_withoutReason_succeedsAndStoresNoReason(string? reason)
+    {
+        var c = Existing(RecordStatus.Active);
+
+        var result = await Sut().DiscontinueAsync(3, new DiscontinueCustomerDto(reason), default);
+
+        result.IsSuccess.Should().BeTrue();
+        c.Status.Should().Be(RecordStatus.Discontinued);
+        c.DiscontinueReason.Should().BeNull();
+    }
+
     [Fact]
     public async Task Discontinue_whenAlreadyDiscontinued_changesNothing()
     {

@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -26,7 +27,7 @@ public sealed class ConfirmFgHandoverDtoValidator : AbstractValidator<ConfirmFgH
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l.ConfirmedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(500);
+            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(TextLimits.Reason);
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.FgHandoverLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);

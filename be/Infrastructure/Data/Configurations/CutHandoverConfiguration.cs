@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -19,7 +20,7 @@ public sealed class CutHandoverConfiguration : IEntityTypeConfiguration<CutHando
         entity.Property(e => e.HandoverCode)
             .HasMaxLength(30)
             .IsUnicode(false);
-        entity.Property(e => e.RejectReason).HasMaxLength(500);
+        entity.Property(e => e.RejectReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Status)
             .HasMaxLength(20)
             .IsUnicode(false)

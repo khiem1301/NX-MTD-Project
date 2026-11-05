@@ -170,9 +170,11 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
 
         var targetProductIds = await AllottedProductIds(team.Data, dto.ToOrderId).ToListAsync(ct);
 
+        var today = _clock.Today;
         var sources = await Assignments.AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.FromOrderId && a.ValidTo == null
                         && a.Operation.Status == OperationStatuses.Active && a.Operation.TeamType == TeamTypes.Sewing
+                        && a.Operation.PieceRates.Any(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
                         && targetProductIds.Contains(a.Operation.ProductId)
                         && a.Worker.Status == RecordStatus.Active && a.Worker.TeamId == team.Data
                         && a.Worker.Role.RoleCode == RoleCodes.Worker)
@@ -224,6 +226,9 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
             if (!allotted.Contains(operation.ProductId))
                 return Result.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.AssignmentProductNotAllotted);
         }
+
+        var noRate = await AllocationRateCheck.FindMissingAsync(_uow, operationIds, _clock.Today, ct);
+        if (noRate is not null) return Result.Failure(ErrorCodes.PieceRateNotApproved, noRate);
 
         var workerOk = await _uow.Repository<Employee>().Query().AsNoTracking()
             .AnyAsync(e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active

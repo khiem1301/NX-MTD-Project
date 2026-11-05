@@ -41,7 +41,7 @@ public sealed class ConfirmIssueDtoValidator : AbstractValidator<ConfirmIssueDto
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l.ConfirmedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(500);
+            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(TextLimits.Reason);
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.MaterialIssueLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);

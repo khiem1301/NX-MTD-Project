@@ -125,6 +125,20 @@ public class PurchaseFlowServiceTests
             && e.Reason == "Giao hàng trễ nhiều lần"));
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("  ")]
+    public async Task DiscontinueSupplier_WithoutReason_SucceedsAndStoresNoReason(string? reason)
+    {
+        var supplier = Supplier();
+
+        var result = await Suppliers().DiscontinueAsync(3, new DiscontinueSupplierDto(reason), default);
+
+        result.IsSuccess.Should().BeTrue();
+        supplier.Status.Should().Be(RecordStatus.Discontinued);
+        supplier.DiscontinueReason.Should().BeNull();
+    }
+
     [Fact]
     public async Task ReactivateSupplier_AlreadyActive_ChangesNothing()
     {

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -17,7 +18,7 @@ public sealed class MaterialIssueLineConfiguration : IEntityTypeConfiguration<Ma
         entity.HasIndex(e => new { e.MaterialIssueId, e.MaterialId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_MIL").IsUnique();
 
         entity.Property(e => e.ConfirmedQty).HasColumnType("decimal(18, 3)");
-        entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
+        entity.Property(e => e.DiscrepancyReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.IssuedQty).HasColumnType("decimal(18, 3)");
 
         entity.HasOne(d => d.Material).WithMany(p => p.MaterialIssueLines)

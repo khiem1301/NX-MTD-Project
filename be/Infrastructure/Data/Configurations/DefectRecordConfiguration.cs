@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -32,7 +33,7 @@ public sealed class DefectRecordConfiguration : IEntityTypeConfiguration<DefectR
             .IsUnicode(false);
         entity.Property(e => e.EditDeadline).HasPrecision(0);
         entity.Property(e => e.ObjectedAt).HasPrecision(0);
-        entity.Property(e => e.ReasonNote).HasMaxLength(500);
+        entity.Property(e => e.ReasonNote).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.RecordedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
@@ -48,7 +49,7 @@ public sealed class DefectRecordConfiguration : IEntityTypeConfiguration<DefectR
             .HasDefaultValue("RECORDED");
         entity.Property(e => e.UpdatedAt).HasPrecision(0);
         entity.Property(e => e.WorkerNotifiedAt).HasPrecision(0);
-        entity.Property(e => e.WorkerObjection).HasMaxLength(500);
+        entity.Property(e => e.WorkerObjection).HasMaxLength(TextLimits.Reason);
 
         entity.HasOne(d => d.Operation).WithMany(p => p.DefectRecords)
             .HasForeignKey(d => d.OperationId)

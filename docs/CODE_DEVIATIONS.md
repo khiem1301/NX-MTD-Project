@@ -123,6 +123,11 @@
 | DEV-ALL-69 | 03/11/2026 | Claude (AI) | UC22, UC55 | Màn Sửa sản lượng sau hạn của Quản đốc dùng cùng bố cục với Sản lượng cuối ca của tổ trưởng (bảng công nhân → khung nhập theo công nhân), lý do sửa nhập trong khung của từng công nhân | Mở |
 | DEV-ALL-70 | 03/11/2026 | Claude (AI) | UC47, GBR-23, GBR-24, `DispatchNote`, `DispatchNoteLine`, `vw_OrderLineProgress` | Phiếu xuất hàng bỏ trạng thái PARTIALLY_DELIVERED và cột ReceivedQty; số đã giao của đơn tính theo số xuất của phiếu đã giao | Mở |
 | DEV-ALL-71 | 05/11/2026 | Claude (AI) | UC10, `ProductImage`, `ProductVariant`, `ProductMarkerFabric`, bảng mới `ProductColor`, `ProductColorImage` | Màu áo thành bảng `ProductColor` (biến thể, vải bìa, ảnh theo màu trỏ `ProductColorId`, bỏ cột `Color`); ảnh phụ giảm từ 10 còn 5; mỗi màu có 1-3 ảnh | Mở |
+| DEV-ALL-72 | 05/11/2026 | Claude (AI) | `ChangePasswordDto`, mọi ô "Lý do", R2 (AI_Context) | Mật khẩu mới tối đa 50 ký tự; mọi ô "Lý do" tối đa 500 ký tự (hằng số `TextLimits` ở BE, `constants/limits.ts` ở FE); lý do của đơn từ giảm từ 1.000 xuống 500 | Mở |
+| DEV-ALL-73 | 05/11/2026 | Claude (AI) | UC53, UC55, UC60 (giao việc, phân công) | Công đoạn phải có đơn giá được duyệt (hiệu lực đến ngày giao) mới giao / phân công được cho công nhân | Mở |
+| DEV-ALL-74 | 05/11/2026 | Claude (AI) | UC15, UC16 (nhân viên), UC18 (tổ) | Họ tên nhân viên chỉ gồm chữ cái và khoảng trắng; các ô mã chặn ký tự không cho phép ngay khi gõ | Mở |
+| DEV-ALL-75 | 05/11/2026 | Claude (AI) | UC09 (chi tiết đơn hàng) | Chi tiết đơn hàng hiện số đã giao và số còn phải giao theo màu, và tổng đã giao / tổng đặt | Mở |
+| DEV-ALL-76 | 05/11/2026 | Claude (AI) | UC06, UC38 (khách hàng, nhà cung cấp) | Ngừng hợp tác với khách hàng / nhà cung cấp không bắt buộc ghi lý do | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1789,4 +1794,62 @@
 - **Lý do:** yêu cầu của người dùng (mỗi màu 1-3 ảnh, ảnh phụ còn 5). Lúc đầu ảnh theo màu chép tên màu như `ProductMarkerFabric`; người dùng chỉ ra tên màu sẽ lệch giữa các bảng vì không có khóa ngoại, nên tách màu thành bảng riêng.
 - **Ảnh hưởng người khác:** Khiêm (UC10 mã hàng, đơn hàng), Thái (lệnh cắt, bìa cắt, xuất hàng), Minh (giao việc, sản lượng, KPI), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới (entity không còn `ProductVariant.Color`). Câu SQL tự viết đọc `ProductVariant.Color` phải join `ProductColor`. Các patch dữ liệu demo cũ (`SQL/patches/2026-11-02_demo_*.sql`) còn ghi `ProductVariant.Color`, chỉ chạy được trước patch này.
 - **Cần sửa trong tài liệu:** Report-3 UC10 (ảnh phụ tối đa 5, ảnh theo màu, mockup form mã hàng); ERD và `NX-MTD_Database_Giai_thich.md` (bảng `ProductColor`, `ProductColorImage`; `ProductVariant`, `ProductMarkerFabric` bỏ `Color`); `NX-MTD_AI_Context.md` mục 8 dòng "giới hạn 5 ảnh".
+- **Trạng thái:** Mở
+
+### DEV-ALL-72 · Mật khẩu mới tối đa 50 ký tự; mọi ô "Lý do" tối đa 500 ký tự
+
+- **Ngày / Người / Task / PR:** 05/11/2026 · Claude (AI) · UC03 (đổi mật khẩu), mọi UC có ô "Lý do" · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `ChangePasswordDtoValidator` (mật khẩu mới), các validator có ô lý do (đơn hàng, mua hàng, kho, cắt, sản xuất, giao việc, nhân sự, bậc thợ, chấm công, lương, đơn từ), cấu hình EF các cột lý do, tham số `@Reason` của `usp_Attendance_ApplyAdjustment` trong `AttendanceRepository`. FE: `ChangePasswordForm`, các ô nhập lý do. Không đổi schema (các cột lý do vốn đã NVARCHAR(500), `Account.LockReason` vẫn 300).
+- **Tài liệu gốc ghi:** `NX-MTD_AI_Context.md` R2: không có luật mật khẩu (chỉ hai lần nhập khớp). Report-3 không ghi độ dài tối đa của ô lý do.
+- **Code đang làm:**
+  - **Mật khẩu mới** tối đa **50** ký tự (trước đây 100 ở BE); không có độ dài tối thiểu. Đăng nhập vẫn không giới hạn trên để tài khoản cũ còn vào được.
+  - **Lý do** tối đa **500** ký tự ở mọi nơi, lấy từ `TextLimits.Reason` (BE) và `REASON_MAX_LENGTH` (FE) thay cho số 500 rải rác. Lý do của đơn từ (`RequestDtoValidators`) giảm từ 1.000 xuống 500. Ngoại lệ giữ nguyên: lý do khóa tài khoản 300 (cột `Account.LockReason`), lý do cắt thiếu 300 (nối vào ghi chú lệnh cắt, DEV trước đó).
+  - Tham số `@Reason` của `usp_Attendance_ApplyAdjustment` ở `AttendanceRepository` lấy theo `TextLimits.Reason` (trước đây số 500 viết cứng).
+- **Lý do:** yêu cầu của người dùng (kiểm tra giá trị biên của Search, Lý do, Mật khẩu). Mật khẩu được băm BCrypt (work factor 11) nên độ dài tối đa 50 không ảnh hưởng cột `PasswordHash`.
+- **Ảnh hưởng người khác:** Khiêm (đơn từ UC, đơn hàng), Thái (kho, cắt), Minh (sản xuất, giao việc, chấm công, lương). Đơn từ cũ có lý do dài hơn 500 vẫn đọc được nhưng không sửa lại được nếu không rút ngắn.
+- **Cần sửa trong tài liệu:** Report-3 UC03 (thêm "mật khẩu tối đa 50 ký tự"), các UC có ô lý do (giới hạn 500 ký tự); `NX-MTD_AI_Context.md` mục R2.
+- **Trạng thái:** Mở
+
+### DEV-ALL-73 · Công đoạn phải có đơn giá được duyệt mới giao được cho công nhân
+
+- **Ngày / Người / Task / PR:** 05/11/2026 · Claude (AI) · UC53, UC55, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `OperationAssignmentService` (phân công một / nhiều công đoạn, sao chép phân công), `WorkAllocationService` (giao việc), `DailyWorkAllocationService` (giao theo ngày), lớp mới `AllocationRateCheck`, thông báo `Messages.AllocationPieceRateMissing`. Không đổi schema, không đổi API (lỗi trả 409, mã `PIECE_RATE_NOT_APPROVED` đã có).
+- **Tài liệu gốc ghi:** Report-3 MSG18: chưa có đơn giá duyệt thì không nhập được sản lượng. Giao việc / phân công không đòi đơn giá.
+- **Code đang làm:** công đoạn chưa có đơn giá **Approved** hiệu lực đến ngày giao (Nháp, Chờ duyệt, Từ chối, hoặc đơn giá bắt đầu sau ngày giao không tính) thì không phân công, không giao (phiếu giao, giao theo ngày với số lượng > 0) được; thông báo nêu mã công đoạn thiếu đơn giá. Giảm số giao và thu hồi không bị chặn. Sao chép phân công từ đơn khác bỏ qua công đoạn chưa có đơn giá. Ngày giao tính theo hôm nay (phân công, phiếu giao) hoặc ngày làm việc của phiếu (giao theo ngày).
+- **Lý do:** yêu cầu của người dùng. Tránh giao việc rồi mới biết không nhập được sản lượng (MSG18).
+- **Ảnh hưởng người khác:** Minh (đơn giá công đoạn, giao việc, sản lượng), Thái (tổ may). Công đoạn mới tạo phải được Admin duyệt đơn giá trước khi tổ trưởng giao việc.
+- **Cần sửa trong tài liệu:** Report-3 UC53 / UC55 / UC60 (điều kiện trước: công đoạn đã có đơn giá duyệt), MSG18.
+- **Trạng thái:** Mở
+
+### DEV-ALL-74 · Họ tên nhân viên chỉ có chữ cái; ô mã chặn ký tự không cho phép
+
+- **Ngày / Người / Task / PR:** 05/11/2026 · Claude (AI) · UC15, UC16, UC18 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `PersonNameRule`, `CreateEmployeeDtoValidator`, `AdminUpdateEmployeeDtoValidator`, `ManagerUpdateEmployeeDtoValidator` (kể cả nhập Excel vì dùng chung validator). FE: `utils/textInput.ts`; ô Họ tên, Mã nhân viên (`EmployeeFormModal`), Mã tổ (`TeamFormModal`), Mã công đoạn (`OperationFormModal`), Mã bậc thợ (`GradeCodeFormModal`). Dữ liệu mẫu `SQL/NX-MTD_Database.sql` và patch `SQL/patches/2026-11-05_employee_name_letters_only.sql` (đổi 5 tên mẫu có số hoặc `/` sang chữ).
+- **Tài liệu gốc ghi:** Report-3 không ghi ký tự được phép trong họ tên.
+- **Code đang làm:** họ tên gồm chữ cái (kể cả tiếng Việt có dấu) và một dấu cách giữa các từ, tối đa 100 ký tự; không số, không dấu gạch, chấm, nháy, `/`. BE trả 400 kèm thông báo; FE bỏ ký tự không hợp lệ ngay khi gõ hoặc dán và vẫn báo lỗi nếu còn sai. Ô mã chỉ nhận chữ, số và `. _ -` (mã bậc thợ chỉ chữ và số, tối đa 5), khớp quy tắc BE đã có. Ô số điện thoại và ô số lượng đã có bộ lọc từ trước. Nhân viên cũ có tên chứa số hay ký tự đặc biệt vẫn xem được nhưng phải sửa tên khi lưu lại.
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Khiêm (nhân viên, nhập Excel): file Excel có họ tên chứa số hoặc ký tự đặc biệt sẽ báo lỗi ở dòng đó. Morgan (dữ liệu mẫu).
+- **Cần sửa trong tài liệu:** Report-3 UC15 / UC16 / UC18 (quy tắc họ tên), mẫu Excel nhập nhân viên.
+- **Trạng thái:** Mở
+
+### DEV-ALL-75 · Chi tiết đơn hàng hiện số đã giao
+
+- **Ngày / Người / Task / PR:** 05/11/2026 · Claude (AI) · UC09 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `OrderLineDto.DeliveredQty` (chi tiết Admin), `OrderOverviewLineDto` mới thay cho `OrderLineLookupDto` trong `OrderOverviewDto` (chi tiết Quản đốc), `OrderRepository.GetDetailAsync` đọc `vw_OrderLineProgress.DeliveredQty`. FE: `OrderReadOnlyGrid`, `OrderSummary`, `orderGrid.ts`. Không đổi schema.
+- **Tài liệu gốc ghi:** Report-3 UC09 chi tiết đơn không có số đã giao (tiến độ giao nằm ở Trang chủ).
+- **Code đang làm:** lưới số lượng của đơn có thêm cột Đã giao và Còn phải giao theo từng màu; phần thông tin chung có "Đã giao / Tổng SL". Số đã giao = tổng số xuất của phiếu xuất ở trạng thái `DELIVERED` (DEV-ALL-70). Admin và Quản đốc đều thấy (không phải dữ liệu mật).
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Khiêm (UC09, UC21), Thái (xuất hàng).
+- **Cần sửa trong tài liệu:** Report-3 UC09 (mockup chi tiết đơn).
+- **Trạng thái:** Mở
+
+### DEV-ALL-76 · Ngừng hợp tác với khách hàng / nhà cung cấp không bắt buộc ghi lý do
+
+- **Ngày / Người / Task / PR:** 05/11/2026 · Claude (AI) · UC06, UC38 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `DiscontinueCustomerDto`, `DiscontinueSupplierDto` (`Reason` nhận null), validator bỏ bắt buộc, `CustomerService`, `SupplierService`. FE: hộp nhập lý do ở `CustomersPage`, `SuppliersPage` dùng `NoteModal` không bắt buộc. Không đổi schema (cột `DiscontinueReason` vốn cho NULL).
+- **Tài liệu gốc ghi:** `NX-MTD_Database.sql` ghi lý do ngừng hợp tác bắt buộc; Report-3 MSG09.
+- **Code đang làm:** lý do để trống (hoặc toàn khoảng trắng) vẫn ngừng được, `DiscontinueReason` lưu NULL và nhật ký không có lý do; nhập thì tối đa 500 ký tự (DEV-ALL-72).
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Khiêm (khách hàng), Thái (nhà cung cấp).
+- **Cần sửa trong tài liệu:** Report-3 UC khách hàng / nhà cung cấp (bỏ MSG09 ở bước ngừng hợp tác), `NX-MTD_Database.sql` chú thích cột `DiscontinueReason`.
 - **Trạng thái:** Mở

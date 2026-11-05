@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { PlusOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { Button, Card, Space, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
-import { ReasonModal } from '@/components/common/ReasonModal';
+import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { CustomerFormModal } from '../components/CustomerFormModal';
@@ -125,9 +126,12 @@ export function CustomersPage() {
         dataSource={customers.data?.items ?? []}
         pagination={table.pagination(customers.data?.totalItems)}
       />
-      <ReasonModal
+      <NoteModal
         open={stopping !== null}
         title={MESSAGES.orders.customerDiscontinueConfirm}
+        label={MESSAGES.common.reason}
+        required={false}
+        maxLength={REASON_MAX_LENGTH}
         loading={toggle.isPending}
         onCancel={() => setStopping(null)}
         onSubmit={(reason) =>

@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useMemo, useState } from 'react';
 import { HistoryOutlined, SearchOutlined } from '@ant-design/icons';
 import { Button, Input, Modal, Select, Space, Tooltip, Typography } from 'antd';
@@ -6,7 +7,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
 import { groupRowKey, useGroupAccordion } from '@/hooks/useGroupAccordion';
 import { fill } from '@/utils/format';
-import { DAILY_REASON_MAX_LENGTH, PM_LABELS } from '../constants';
+import { PM_LABELS } from '../constants';
 import { useSaveDaily } from '../hooks/usePieceMovement';
 import type { DailyAllocationRow, OperationProgress } from '../types';
 import {
@@ -176,7 +177,7 @@ export function DailyWorkerModal({
       {hasDecrease && (
         <Input.TextArea
           rows={2}
-          maxLength={DAILY_REASON_MAX_LENGTH}
+          maxLength={REASON_MAX_LENGTH}
           showCount
           style={{ marginTop: 12 }}
           placeholder={PM_LABELS.reasonLabel}

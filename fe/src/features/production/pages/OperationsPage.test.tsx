@@ -168,14 +168,13 @@ describe('OperationsPage', () => {
       expect(screen.getByRole('spinbutton', { name: 'Thứ tự' })).toHaveValue('4');
     });
 
-    it('mã có dấu hoặc khoảng trắng thì báo lỗi', async () => {
+    it('mã có dấu hoặc khoảng trắng thì ô tự bỏ các ký tự đó', async () => {
       openAdd();
 
-      fireEvent.change(screen.getByRole('textbox', { name: 'Mã công đoạn' }), {
-        target: { value: 'Công đoạn 1' },
-      });
+      const input = screen.getByRole('textbox', { name: 'Mã công đoạn' });
+      fireEvent.change(input, { target: { value: 'Công đoạn 1' } });
 
-      expect(await screen.findByText(/Mã chỉ gồm chữ không dấu/)).toBeInTheDocument();
+      expect(await screen.findByDisplayValue('Cngon1')).toBe(input);
     });
   });
 

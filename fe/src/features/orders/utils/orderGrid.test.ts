@@ -3,6 +3,8 @@ import {
   blockTotal,
   blocksTotals,
   fromLines,
+  linesDelivered,
+  rowDelivered,
   rowTotal,
   sizeTotal,
   sortSizes,
@@ -119,5 +121,35 @@ describe('orderGrid', () => {
     expect(rowTotal(block, block.rows[1] as GridRow)).toBe(5);
     expect(sizeTotal(block, 'S')).toBe(15);
     expect(sizeTotal(block, 'M')).toBe(20);
+  });
+});
+
+describe('số đã giao của đơn', () => {
+  const delivered = (
+    id: number,
+    color: string,
+    size: string,
+    qty: number,
+    done?: number,
+  ): OrderLine => ({
+    ...line(id, color, size, qty),
+    deliveredQty: done,
+  });
+
+  it('cộng số đã giao theo màu (mọi size) và theo cả đơn', () => {
+    const lines = [
+      delivered(1, 'Đỏ', 'S', 100, 40),
+      delivered(2, 'Đỏ', 'M', 100, 60),
+      delivered(3, 'Xanh', 'S', 50, 0),
+    ];
+    const [block] = fromLines(lines);
+    expect(block).toBeDefined();
+    const red = block?.rows.find((r) => r.color === 'Đỏ');
+    expect(block && red && rowDelivered(block, red)).toBe(100);
+    expect(linesDelivered(lines)).toBe(100);
+  });
+
+  it('dòng chưa có số đã giao tính là 0', () => {
+    expect(linesDelivered([delivered(1, 'Đỏ', 'S', 10)])).toBe(0);
   });
 });

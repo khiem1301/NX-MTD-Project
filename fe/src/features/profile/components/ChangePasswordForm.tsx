@@ -1,5 +1,6 @@
 import { Button, Form, Input, message } from 'antd';
 import { ERROR_CODES } from '@/constants/errorCodes';
+import { PASSWORD_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { useChangePassword } from '../hooks/useProfile';
 import type { ChangePasswordPayload } from '../api/profileApi';
@@ -50,7 +51,10 @@ export function ChangePasswordForm({ requireCurrent = true }: { requireCurrent?:
       <Form.Item
         name="newPassword"
         label={MESSAGES.hr.newPassword}
-        rules={[{ required: true, message: MESSAGES.common.required }, { max: 100 }]}
+        rules={[
+          { required: true, message: MESSAGES.common.required },
+          { max: PASSWORD_MAX_LENGTH, message: MESSAGES.hr.passwordTooLong },
+        ]}
       >
         <Input.Password autoComplete="new-password" />
       </Form.Item>

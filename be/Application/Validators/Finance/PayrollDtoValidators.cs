@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -10,7 +11,7 @@ public sealed class RejectPayrollDtoValidator : AbstractValidator<RejectPayrollD
     public RejectPayrollDtoValidator()
     {
         RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired)
-            .MaximumLength(500).WithMessage("Lý do tối đa 500 ký tự.");
+            .MaximumLength(TextLimits.Reason).WithMessage($"Lý do tối đa {TextLimits.Reason} ký tự.");
     }
 }
 
@@ -20,6 +21,6 @@ public sealed class ReopenPayrollDtoValidator : AbstractValidator<ReopenPayrollD
     public ReopenPayrollDtoValidator()
     {
         RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired)
-            .MaximumLength(500).WithMessage("Lý do tối đa 500 ký tự.");
+            .MaximumLength(TextLimits.Reason).WithMessage($"Lý do tối đa {TextLimits.Reason} ký tự.");
     }
 }

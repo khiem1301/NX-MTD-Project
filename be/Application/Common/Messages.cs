@@ -360,6 +360,7 @@ public static class Messages
     public const string PieceRateRejected = "Đã từ chối đơn giá.";
     /// <summary>MSG18 (GBR-11): chưa có đơn giá được duyệt thì không nhập sản lượng.</summary>
     public const string PieceRateNotApproved = "Công đoạn {0} chưa có đơn giá được duyệt hiệu lực đến ngày {1}, chưa nhập được sản lượng.";
+    public const string AllocationPieceRateMissing = "Công đoạn {0} chưa có đơn giá được duyệt, chưa giao được cho công nhân.";
     public const string NotifyPieceRateSubmittedTitle = "Đơn giá chờ duyệt";
     public const string NotifyPieceRateSubmittedBody = "Công đoạn {0} ({1}) có đơn giá mới chờ duyệt.";
     public const string NotifyPieceRateDecidedTitle = "Đơn giá đã được xử lý";

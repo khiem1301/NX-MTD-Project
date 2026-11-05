@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -17,7 +18,7 @@ public sealed class MaterialReturnConfiguration : IEntityTypeConfiguration<Mater
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
         entity.Property(e => e.Note).HasMaxLength(500);
-        entity.Property(e => e.RejectReason).HasMaxLength(500);
+        entity.Property(e => e.RejectReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.ReturnCode)
             .HasMaxLength(30)
             .IsUnicode(false);

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -16,7 +17,7 @@ public sealed class CutHandoverLineConfiguration : IEntityTypeConfiguration<CutH
 
         entity.HasIndex(e => new { e.CutHandoverId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_CHL").IsUnique();
 
-        entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
+        entity.Property(e => e.DiscrepancyReason).HasMaxLength(TextLimits.Reason);
 
         entity.HasOne(d => d.CutHandover).WithMany(p => p.CutHandoverLines)
             .HasForeignKey(d => d.CutHandoverId)

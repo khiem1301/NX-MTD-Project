@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
@@ -73,7 +74,11 @@ export function TransferModal({ open, fromTeamId, employeeIds, onClose }: Transf
         >
           <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
         </Form.Item>
-        <Form.Item name="reason" label={MESSAGES.hr.transferReason} rules={[{ max: 500 }]}>
+        <Form.Item
+          name="reason"
+          label={MESSAGES.hr.transferReason}
+          rules={[{ max: REASON_MAX_LENGTH }]}
+        >
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>

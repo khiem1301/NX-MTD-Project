@@ -17,7 +17,7 @@ export const PURCHASE_TEXT = {
   editSupplier: 'Sửa nhà cung cấp',
   discontinue: 'Ngừng hợp tác',
   reactivate: 'Hợp tác lại',
-  discontinueTitle: 'Ngừng hợp tác (đơn mua cũ vẫn giữ nguyên) — nhập lý do',
+  discontinueTitle: 'Ngừng hợp tác (đơn mua cũ vẫn giữ nguyên). Lý do không bắt buộc',
   searchSupplier: 'Tìm theo tên, số điện thoại',
   searchOrder: 'Tìm theo mã đơn mua, mã đơn hàng, nhà cung cấp',
   allStatus: 'Tất cả trạng thái',

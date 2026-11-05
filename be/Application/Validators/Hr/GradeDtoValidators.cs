@@ -48,7 +48,7 @@ public sealed class ProposeGradeDtoValidator : AbstractValidator<ProposeGradeDto
     {
         RuleFor(x => x.WorkerId).GreaterThan(0).WithMessage("Vui lòng chọn công nhân.");
         RuleFor(x => x.ProposedGradeCode).Must(GradeCodes.IsWellFormed).WithMessage(Messages.GradeCodeMalformed);
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
     }
 }
 
@@ -58,7 +58,7 @@ public sealed class SetGradeDtoValidator : AbstractValidator<SetGradeDto>
     {
         RuleFor(x => x.WorkerId).GreaterThan(0);
         RuleFor(x => x.GradeCode).Must(c => GradeCodes.IsWellFormed(c?.ToUpperInvariant())).WithMessage(Messages.GradeCodeMalformed);
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(500);
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaximumLength(TextLimits.Reason);
     }
 }
 

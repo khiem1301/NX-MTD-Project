@@ -303,6 +303,10 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
             if (item.Quantity > 0 && (op.Status != RecordStatus.Active || op.TeamType != TeamTypes.Sewing))
                 return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable);
         }
+
+        var giving = dto.Items.Where(i => i.Quantity > 0).Select(i => i.OperationId).Distinct().ToList();
+        var noRate = await AllocationRateCheck.FindMissingAsync(_uow, giving, dto.WorkDate, ct);
+        if (noRate is not null) return Result<DailyAllocationResultDto>.Failure(ErrorCodes.PieceRateNotApproved, noRate);
         return null;
     }
 

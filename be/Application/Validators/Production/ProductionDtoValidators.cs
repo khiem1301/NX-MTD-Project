@@ -103,7 +103,7 @@ public sealed class SubmitPieceRatesDtoValidator : AbstractValidator<SubmitPiece
 public sealed class RejectPieceRateDtoValidator : AbstractValidator<RejectPieceRateDto>
 {
     public RejectPieceRateDtoValidator() =>
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
 }
 
 /// <summary>Giới hạn của phân công công đoạn. Mỗi công đoạn kiểm hợp lệ riêng nên phải chặn số công đoạn trong một lần giao.</summary>
@@ -188,7 +188,7 @@ public static class OutputLimits
 {
     public const int MaxQty = 1_000_000;
     public const int MaxRows = 2000;
-    public const int MaxReason = 500;
+    public const int MaxReason = TextLimits.Reason;
 }
 
 public sealed class SaveOutputDtoValidator : AbstractValidator<SaveOutputDto>
@@ -216,11 +216,11 @@ public sealed class SaveOutputDtoValidator : AbstractValidator<SaveOutputDto>
 
 public sealed class QcBatchQueryValidator : PageQueryValidatorBase<QcBatchQuery> { }
 
-/// <summary>Giới hạn của đợt QC. Số đạt tối đa 1.000.000 (cột INT, và tổng với số đã QC khi so với trần không được tràn); lý do tối đa 500 (cột nhật ký).</summary>
+/// <summary>Giới hạn của đợt QC. Số đạt tối đa 1.000.000 (cột INT, và tổng với số đã QC khi so với trần không được tràn); lý do tối đa 500 (TextLimits.Reason).</summary>
 public static class QcLimits
 {
     public const int MaxQty = 1_000_000;
-    public const int MaxReason = 500;
+    public const int MaxReason = TextLimits.Reason;
 }
 
 public sealed class CreateQcBatchDtoValidator : AbstractValidator<CreateQcBatchDto>
@@ -255,11 +255,11 @@ public sealed class DeleteQcBatchDtoValidator : AbstractValidator<DeleteQcBatchD
     }
 }
 
-/// <summary>Giới hạn của phiếu hàng hỏng. Số lượng tối đa 1.000.000 (cột INT); ghi chú, lý do tối đa 500 (cột NVARCHAR(500)).</summary>
+/// <summary>Giới hạn của phiếu hàng hỏng. Số lượng tối đa 1.000.000 (cột INT); ghi chú, lý do tối đa 500 (TextLimits.Reason, cột NVARCHAR(500)).</summary>
 public static class DefectLimits
 {
     public const int MaxQty = 1_000_000;
-    public const int MaxText = 500;
+    public const int MaxText = TextLimits.Reason;
     /// <summary>Khoảng ngày lọc danh sách tối đa 366 ngày (một năm).</summary>
     public const int MaxRangeDays = 366;
     public const string StaleRowVer = "Thiếu phiên bản dữ liệu, hãy tải lại trang.";
