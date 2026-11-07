@@ -38,7 +38,7 @@ public class DailyWorkAllocationServiceTests
     {
         _clock.Now.Returns(Now);
         _clock.Today.Returns(Today);
-        var order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction };
+        var order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction, ReceivedDate = new DateOnly(2026, 10, 1) };
         _teams.Add(new Team { TeamId = TeamId, TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing });
         _employees.Add(new Employee
         {
@@ -99,6 +99,44 @@ public class DailyWorkAllocationServiceTests
 
     private static SaveDailyAllocationDto Save(int qty, string? reason = null) =>
         new(Today, new[] { new SaveDailyAllocationItem(WorkerId, 101, OpId, qty) }, reason);
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-30)]
+    [InlineData(-1500)]
+    [InlineData(1)]
+    public async Task Save_only_accepts_today_and_past_days_are_view_only(int dayOffset)
+    {
+        CaptureAdds();
+        var dto = new SaveDailyAllocationDto(Today.AddDays(dayOffset),
+            new[] { new SaveDailyAllocationItem(WorkerId, 101, OpId, 60) }, null);
+
+        var result = await Service().SaveAsync(dto, TeamId, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(WarehouseMessages.DailyDateMustBeToday);
+    }
+
+    [Fact]
+    public async Task Board_of_a_past_day_can_still_be_viewed()
+    {
+        var result = await Service().GetBoardAsync(TeamId, Today.AddDays(-3), 7, null, default);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_is_blocked_when_today_is_before_the_order_was_received()
+    {
+        CaptureAdds();
+        _orderLines.Single().Order.ReceivedDate = Today.AddDays(3);
+
+        var result = await Service().SaveAsync(Save(60), TeamId, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain(Today.ToString("dd/MM/yyyy"));
+    }
+
 
     [Fact]
     public async Task Save_records_a_confirmed_handover_for_the_day()

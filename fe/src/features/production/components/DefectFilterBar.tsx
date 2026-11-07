@@ -1,6 +1,6 @@
 import { message } from 'antd';
 import type { Dayjs } from 'dayjs';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { TableToolbar } from '@/components/common/TableToolbar';
@@ -67,11 +67,7 @@ export function DefectFilterBar({ filters, isManager, onChange }: DefectFilterBa
             placeholder={text.searchPlaceholder}
             onSearch={(keyword) => onChange({ keyword: keyword.trim() || undefined })}
           />
-          <AppRangePicker
-            allowClear
-            placeholder={text.filters.range}
-            onChange={(v) => changeRange(v as [Dayjs | null, Dayjs | null] | null)}
-          />
+          <AppDateRangeFields allowPartial onChange={changeRange} />
           {isManager && (
             <TeamFilter
               value={filters.sewingTeamId}

@@ -80,7 +80,7 @@ public class IncomingMaterialTests
             MaterialReceipt = new MaterialReceipt { Status = status },
         });
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, Substitute.For<IClock>());
     private IncomingMaterialService Incoming() => new(_uow, new MaterialSupplyUpdater(_uow));
 
     // ---------- NVL theo mã hàng trong đơn ----------

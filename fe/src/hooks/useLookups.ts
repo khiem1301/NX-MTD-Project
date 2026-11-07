@@ -1,3 +1,4 @@
+import dayjs, { type Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import { lookupApi } from '@/services/lookupApi';
 
@@ -39,3 +40,19 @@ export const useMaterialOptions = () =>
     queryFn: () => lookupApi.materials(),
     staleTime: LOOKUP_STALE_MS,
   });
+
+/**
+ * Ngày làm việc chọn được: từ ngày nhận đơn đến hôm nay (thời gian gia công). Chưa chọn đơn thì lấy ngày nhận đơn sớm nhất trong
+ * các đơn đang mở, nên không chọn được ngày trước mọi đơn. Khớp kiểm tra ở BE (ProductionGuard.BeforeOrderStart).
+ */
+export const useWorkDateRange = (orderId: number | undefined) => {
+  const orders = useOrderOptions();
+  const options = orders.data ?? [];
+  const starts =
+    orderId === undefined
+      ? options.map((o) => o.receivedDate)
+      : options.filter((o) => o.orderId === orderId).map((o) => o.receivedDate);
+  const start = starts.length === 0 ? undefined : starts.reduce((min, d) => (d < min ? d : min));
+  return (date: Dayjs) =>
+    date.isAfter(dayjs(), 'day') || (start !== undefined && date.isBefore(dayjs(start), 'day'));
+};

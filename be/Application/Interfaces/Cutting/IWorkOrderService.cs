@@ -17,6 +17,9 @@ public interface IWorkOrderService
     /// <summary>Vải của lệnh cắt: đã cấp / đã nhận / đã trả / thực dùng, khả dụng trong kho (UC40).</summary>
     Task<Result<IReadOnlyList<FabricRequirementDto>>> GetFabricRequirementsAsync(int workOrderId, CancellationToken ct);
 
+    /// <summary>Số mét vải cần cho các dòng của lệnh theo màu (và size nếu có); bỏ trống = cả lệnh. Chỉ để đề xuất số cấp (DEV-ALL-77).</summary>
+    Task<Result<IReadOnlyList<FabricNeedDto>>> GetFabricNeedsAsync(int workOrderId, string? color, string? sizeCode, CancellationToken ct);
+
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
 
     /// <summary>Đơn cắt bù đã duyệt và chưa có lệnh cắt bù (Quản đốc chọn khi lập lệnh cắt bù).</summary>

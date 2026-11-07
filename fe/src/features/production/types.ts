@@ -338,7 +338,7 @@ export type OnLineQty = {
 
 // ---------- KI-08: hàng hỏng ----------
 
-export type DefectType = 'Rework' | 'Scrap';
+export type DefectType = 'Rework' | 'Scrap' | 'OutputErr';
 export type DefectStatus = 'Recorded' | 'Confirmed' | 'Cancelled';
 export type DefectReason =
   'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';

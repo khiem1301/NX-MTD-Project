@@ -44,6 +44,8 @@ export type OrderMaterial = {
   customerQty: number;
   /** Số lần khách dự kiến giao (bắt buộc khi khách cấp); receivedCount = số phiếu nhập đã xác nhận. */
   expectedDeliveryCount: number | null;
+  /** Ngày khách dự kiến giao (yyyy-MM-dd), có khi khách cấp. */
+  expectedDeliveryDate?: string | null;
   receivedCount: number;
   purchaseQty: number | null;
   source: string | null;
@@ -74,6 +76,7 @@ export type SaveOrderMaterialPayload = {
   requiredQty: number;
   customerQty: number;
   expectedDeliveryCount?: number | null;
+  expectedDeliveryDate?: string | null;
   note?: string;
 };
 
@@ -169,6 +172,8 @@ export type CreatePurchaseOrderPayload = {
   supplierId: number;
   /** Ngày đặt hàng (yyyy-MM-dd), không sau hôm nay. */
   orderDate: string;
+  /** Ngày nhà cung cấp dự kiến giao (yyyy-MM-dd), không trước ngày đặt, không sau hạn giao của đơn hàng. */
+  expectedDeliveryDate: string;
   /** Số lần nhà cung cấp dự kiến giao, từ 1 đến 99. */
   expectedDeliveryCount: number;
   note?: string;
@@ -422,6 +427,7 @@ export type IncomingCustomerMaterial = {
   outstandingQty: number;
   /** Số lần khách dự kiến giao và số lần kho đã nhận (phiếu nhập đã xác nhận). */
   expectedDeliveryCount: number | null;
+  expectedDeliveryDate?: string | null;
   receivedCount: number;
 };
 
@@ -433,6 +439,7 @@ export type IncomingSupplierMaterial = {
   orderCode: string | null;
   supplierName: string | null;
   expectedDeliveryCount: number | null;
+  expectedDeliveryDate?: string | null;
   receivedCount: number;
   purchaseOrderLineId: number;
   materialCode: string;
@@ -479,3 +486,12 @@ export type ReceiptPreset = {
   /** Nhận cả đơn mua: mỗi dòng NVL còn phải nhận một dòng phiếu (thay cho purchaseOrderLineId / acceptedQty). */
   purchaseLines?: { purchaseOrderLineId: number; acceptedQty: number }[];
 };
+
+/** Dòng (màu - size) của lệnh cắt, để chọn khi đề xuất số vải cần cấp. */
+export type WorkOrderLineInfo = {
+  productCode: string;
+  lines: { color: string; sizeCode: string }[];
+};
+
+/** Số mét vải một NVL cần cho các dòng đã chọn của lệnh cắt (GET .../fabric-needs). */
+export type FabricNeed = { materialId: number; needMeters: number };

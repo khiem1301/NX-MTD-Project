@@ -49,7 +49,7 @@ public class MaterialColorValidationTests
 
     private MaterialService Materials() => new(_uow, _locks);
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier);
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, Substitute.For<IClock>());
 
     // ---------- Danh mục NVL ----------
 
@@ -157,7 +157,7 @@ public class MaterialColorValidationTests
         var validator = new CreateOrderMaterialDtoValidator();
         validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 0, null, null)).IsValid.Should().BeFalse();
         validator.Validate(new CreateOrderMaterialDto(7, 1, 10, 0, null, null)).IsValid.Should().BeTrue();
-        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 5, 1, null)).IsValid.Should().BeTrue();
+        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 5, 1, null, new DateOnly(2026, 12, 1))).IsValid.Should().BeTrue();
     }
 
     // ---------- Phiếu cấp ----------

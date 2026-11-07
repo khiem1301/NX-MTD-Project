@@ -154,6 +154,7 @@ public sealed class OutputService : IOutputService
         if (line is null)
             return Result<OutputSaveResultDto>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
         if (!await IsAllottedAsync(team.Data, line.OrderLineId, ct)) return NotAllotted<OutputSaveResultDto>();
+        if (ProductionGuard.BeforeOrderStart(dto.WorkDate, line.Order.ReceivedDate) is { } beforeStart) return Invalid(beforeStart);
 
         var existing = await LoadExistingAsync(dto, shift, team.Data, ct);
         var newDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate);
@@ -211,7 +212,7 @@ public sealed class OutputService : IOutputService
     private async Task<OrderLine?> FindOpenLineAsync(int orderLineId, CancellationToken ct)
     {
         var closed = OrderStatuses.Closed.ToArray();
-        return await _uow.Repository<OrderLine>().Query().AsNoTracking()
+        return await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
             .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId && !closed.Contains(l.Order.Status), ct);
     }
 

@@ -44,6 +44,7 @@ public static class ErrorCodes
     // Đơn từ (KH-06)
     public const string RequestTypeNotAllowed = "REQUEST_TYPE_NOT_ALLOWED";
     public const string RequestInvalidStatus = "REQUEST_INVALID_STATUS";
+    public const string RequestLinesInvalid = "REQUEST_LINES_INVALID";
     public const string RequestManualCompleteNotAllowed = "REQUEST_MANUAL_COMPLETE_NOT_ALLOWED";
 
     // Mã hàng, đơn hàng (KH-08)
@@ -63,6 +64,7 @@ public static class ErrorCodes
     public const string OrderLineKeyLocked = "ORDER_LINE_KEY_LOCKED";
     public const string OrderInvalidStatus = "ORDER_INVALID_STATUS";
     public const string OrderMaterialsAwaiting = "ORDER_MATERIALS_AWAITING";
+    public const string OrderFullyDispatched = "ORDER_FULLY_DISPATCHED";
     public const string CustomerNameDuplicate = "CUSTOMER_NAME_DUPLICATE";
     public const string CustomerNotActive = "CUSTOMER_NOT_ACTIVE";
 
@@ -93,6 +95,7 @@ public static class ErrorCodes
     public const string MealLocked = "MEAL_LOCKED";               // trigger trg_TeamMeal_Cutoff (THROW 50020)
     public const string MealGuestLocked = "MEAL_GUEST_LOCKED";     // trigger trg_DailyMeal_GuestCutoff (THROW 50021)
     public const string MealNotClosedYet = "MEAL_NOT_CLOSED_YET";
+    public const string MealCountExceedsMembers = "MEAL_COUNT_EXCEEDS_MEMBERS";
 
     // --- Bảng lương + khóa tháng (Minh, UC06/UC31/UC32) ---
     public const string PayrollNotFound = "PAYROLL_NOT_FOUND";
@@ -162,6 +165,8 @@ public static class ErrorCodes
     public const string VehicleInactive = "VEHICLE_INACTIVE";
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
+    public const string ReturnPendingExists = "RETURN_PENDING_EXISTS";
+    public const string ReturnExceedsLeftover = "RETURN_EXCEEDS_LEFTOVER";
     public const string AllocationExceedsRequired = "ALLOCATION_EXCEEDS_REQUIRED";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";

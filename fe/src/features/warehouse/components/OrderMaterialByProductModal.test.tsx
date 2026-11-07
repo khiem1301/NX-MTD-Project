@@ -103,6 +103,7 @@ describe('OrderMaterialByProductModal', () => {
           requiredQty: 12,
           customerQty: 0,
           expectedDeliveryCount: null,
+          expectedDeliveryDate: null,
           note: undefined,
         },
       ],

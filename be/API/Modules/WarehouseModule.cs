@@ -20,6 +20,8 @@ public static class WarehouseModule
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
         services.AddScoped<IShortDeliveryService, ShortDeliveryService>();
         services.AddScoped<IRequestTypeHandler, ShortDeliveryRequestHandler>();
+        services.AddScoped<IRequestTypeHandler, MaterialRequisitionRequestHandler>();        // Xin NVL (DEV-ALL-77)
+        services.AddScoped<IRequestTypeHandler, SemiFinishedRequisitionRequestHandler>();    // Xin BTP (DEV-ALL-77)
         services.AddScoped<IAttachmentOwnerAccess, MaterialReceiptAttachmentAccess>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<IMaterialIssueService, MaterialIssueService>();

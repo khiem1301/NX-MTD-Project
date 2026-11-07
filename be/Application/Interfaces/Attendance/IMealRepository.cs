@@ -30,6 +30,9 @@ public interface IMealRepository
     /// <summary>Số nhân viên của tổ đã có giờ vào hôm đó (bảng công DailyTimesheet, đã tính sẵn từ chấm công).</summary>
     Task<int> GetTeamAttendanceCountAsync(int teamId, DateOnly date, CancellationToken ct);
 
+    /// <summary>Số người đang làm trong tổ (Employee.TeamId, Status = ACTIVE) — trần số suất ăn tổ trưởng được đặt.</summary>
+    Task<int> GetTeamMemberCountAsync(int teamId, CancellationToken ct);
+
     /// <summary>Số nhân viên văn phòng (Team.TeamType = OFFICE) đã có giờ vào hôm đó.</summary>
     Task<int> GetOfficeAttendanceCountAsync(DateOnly date, CancellationToken ct);
 

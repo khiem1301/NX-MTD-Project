@@ -22,6 +22,8 @@ export type DailyTableRow =
   | { kind: 'operation'; key: string; row: DailyAllocationRow };
 
 type DailyModalColumnsOptions = {
+  /** false = ngày đã qua, chỉ xem. */
+  editable: boolean;
   multiLine: boolean;
   groupQty: Record<string, number | null>;
   valueOf: (row: DailyAllocationRow) => number;
@@ -34,6 +36,7 @@ const stopToggle = (e: MouseEvent) => e.stopPropagation();
 
 /** Cột khung giao việc một công nhân: dòng nhóm (bấm để mở/đóng) có ô điền cả nhóm, dòng công đoạn có ô sửa riêng. */
 export const dailyModalColumns = ({
+  editable,
   multiLine,
   groupQty,
   valueOf,
@@ -81,6 +84,7 @@ export const dailyModalColumns = ({
             aria-label={fill(PM_LABELS.groupInput, r.name ?? PM_LABELS.noGroup)}
             placeholder={PM_LABELS.groupPlaceholder}
             min={0}
+            disabled={!editable}
             style={{ width: 120 }}
             value={groupQty[r.groupKey] ?? null}
             onChange={(v) => onGroupChange(r.groupKey, r.rows, v)}
@@ -89,6 +93,7 @@ export const dailyModalColumns = ({
       ) : (
         <QtyInput
           aria-label={fill(PM_LABELS.operationInput, r.row.operationCode)}
+          disabled={!editable}
           min={minGiveOf(r.row)}
           max={maxGiveOf(r.row)}
           style={{ width: 120 }}

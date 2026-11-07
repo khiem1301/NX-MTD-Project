@@ -6,7 +6,7 @@ import { fill, formatDate, formatQty } from '@/utils/format';
 import { DELIVERING_ORDER_STATUSES, KPI_TEXT } from '../constants';
 import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 import { useKpiTargetForm } from '../hooks/useKpiTargetForm';
 import { periodLimitRule } from '../utils/periodRule';
 import { DueTag } from './DueTag';
@@ -139,7 +139,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
               label={text.period}
               rules={[...required, periodLimitRule(text.periodMax)]}
             >
-              <AppRangePicker style={{ width: '100%' }} disabledDate={disabledDate} />
+              <AppDateRangeFields disabledDate={disabledDate} />
             </Form.Item>
           </Col>
         </Row>

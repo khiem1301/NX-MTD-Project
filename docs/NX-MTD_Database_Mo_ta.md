@@ -48,7 +48,7 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 |---|---|---|
 | 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevelCode`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
 | 4.2 Nhân sự & thông báo | `Team`, `Employee`, `Account`, `GradeEvaluation`, `Announcement`, `AnnouncementTarget`, `Notification` | Tổ, nhân viên, tài khoản, đổi bậc thợ, thông báo |
-| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductColorImage`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
+| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
 | 4.4 Đơn từ | `Request`, `RequestLine` | 10 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
 | 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua, thanh toán, phiếu nhập |
 | 4.6 Cắt & cấp kho | `WorkOrder`, `WorkOrderLine`, `MaterialIssue`, `MaterialIssueLine`, `MaterialReturn`, `MaterialReturnLine`, `CuttingLay`, `CuttingLayLine`, `CutHandover`, `CutHandoverLine` | Lệnh cắt, cấp NVL / BTP, trả vải, bàn cắt, bàn giao BTP |
@@ -66,7 +66,6 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 erDiagram
     Product ||--o{ ProductImage : "ảnh phụ (tối đa 5)"
     Product ||--o{ ProductColor : "màu áo"
-    ProductColor ||--o{ ProductColorImage : "ảnh theo màu (1-3)"
     ProductColor ||--o{ ProductVariant : "màu x size"
     Product ||--o{ ProductVariant : "biến thể"
     Product ||--o{ ProductComponent : "gồm"
@@ -483,7 +482,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 ### `ProductColor` — Màu áo của mã hàng
 
-> 05/11, DEV-ALL-71: nơi duy nhất lưu tên màu. `ProductVariant`, `ProductMarkerFabric` và `ProductColorImage` trỏ về đây bằng `ProductColorId`, nên đổi tên một màu thì mọi nơi đổi theo và không có tên màu lệch nhau. Màu được tạo khi đơn hàng có màu mới, hoặc khi khai ảnh cho màu ở form mã hàng
+> 05/11, DEV-ALL-71: nơi duy nhất lưu tên màu. `ProductVariant` và `ProductMarkerFabric` trỏ về đây bằng `ProductColorId`, nên đổi tên một màu thì mọi nơi đổi theo và không có tên màu lệch nhau. Màu được tạo khi đơn hàng có màu mới, hoặc khi khai ảnh cho màu ở form mã hàng
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -496,23 +495,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 - UNIQUE `UQ_PCol`: (ProductId, Color) — collation CI nên không trùng cả khi khác hoa thường
 - UNIQUE `UQ_PCol_IdProduct`: (ProductColorId, ProductId) — cho FK ghép ở ProductVariant, ProductMarkerFabric
-
-### `ProductColorImage` — Ảnh theo màu áo của mã hàng
-
-> Mỗi màu áo của mã hàng có 1 đến 3 ảnh (05/11, DEV-ALL-71)
-
-| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
-|---|---|:-:|---|---|
-| `ProductColorImageId` | INT |  | **PK**; tự tăng |  |
-| `ProductColorId` | INT |  | FK → `ProductColor.ProductColorId` |  |
-| `ImageKey` | NVARCHAR(500) |  |  | khóa ảnh tải từ máy, vd `PRODUCT/2026/11/<guid>.jpg` |
-| `SortOrder` | TINYINT |  |  | thứ tự hiển thị trong màu, 1 đến 3 |
-| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
-
-**Ràng buộc & index**
-
-- `CK_ProductColorImage_Sort`: `CHECK SortOrder BETWEEN 1 AND 3`
-- UNIQUE `UQ_ProductColorImage_Sort`: (ProductColorId, SortOrder)
 
 ### `ProductVariant` — Biến thể mã hàng: màu × size
 
@@ -686,6 +668,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `RequiredQty` | DECIMAL(18,3) |  |  | tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức) |
 | `CustomerQty` | DECIMAL(18,3) |  | Mặc định `0` | khách sẽ cấp (màn 1.2) |
 | `ExpectedDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL này (23/10 thay CustomerExpectedDate); số lần đã nhận xem vw_OrderMaterialDelivery |
+| `ExpectedDeliveryDate` | DATE | ✓ |  | ngày khách dự kiến giao NVL; chỉ có khi khách cấp (07/11, DEV-ALL-82) |
 | `PurchaseQty` | tính toán |  | `= (CASE WHEN RequiredQty > CustomerQty THEN RequiredQty - CustomerQty ELSE 0 END)` | phần xưởng phải mua |
 | `Source` | tính toán |  | `= (CONVERT(VARCHAR(10), CASE WHEN CustomerQty = 0 THEN 'SUPPLIER' WHEN CustomerQty >= RequiredQty THEN 'CUSTOMER' ELSE 'BOTH' END))` |  |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
@@ -694,6 +677,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 - `CK_OM_Qty`: `CHECK RequiredQty >= 0 AND CustomerQty >= 0`
 - `CK_OM_Delivery`: `CHECK (CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)` — khách có cấp thì phải khai số lần giao
+- `CK_OM_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR CustomerQty > 0`
 - UNIQUE `UQ_OM`: (OrderId, MaterialId)
 
 ### `OperationGroup` — Công đoạn to (nhóm công đoạn)
@@ -913,6 +897,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `SourceRequestId` | INT | ✓ | FK → `Request.RequestId` | yêu cầu NVL / thiếu NVL |
 | `OrderDate` | DATE | ✓ |  |  |
 | `ExpectedDeliveryCount` | SMALLINT | ✓ |  | số lần NCC dự kiến giao (23/10 thay ExpectedDeliveryDate); số lần đã nhận xem vw_PurchaseOrderDelivery |
+| `ExpectedDeliveryDate` | DATE | ✓ |  | ngày NCC dự kiến giao, không trước `OrderDate` (07/11, DEV-ALL-82) |
 | `GoodsStatus` | VARCHAR(25) |  | Mặc định `'PENDING_FINALISATION'` |  |
 | `PaymentStatus` | VARCHAR(20) |  | Mặc định `'UNPAID'` |  |
 | `RejectReason` | NVARCHAR(500) | ✓ |  |  |
@@ -935,6 +920,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 - `CK_PO_Ordered`: `CHECK GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED') OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)`
 - `CK_PO_Reject`: `CHECK GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL`
 - `CK_PO_DeliveryCount`: `CHECK ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`
+- `CK_PO_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate`
 
 ### `PurchaseOrderLine` — Dòng đơn mua NVL
 
@@ -2079,7 +2065,6 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `Notification` | `Employee` |
 | `ProductImage` | `Product` |
 | `ProductColor` | `Product` |
-| `ProductColorImage` | `ProductColor` |
 | `ProductVariant` | `Product`, `ProductColor` |
 | `ProductMarker` | `Product` |
 | `ProductMarkerFabric` | `Material`, `Product`, `ProductColor` |

@@ -104,13 +104,18 @@ public sealed class DefectService : IDefectService
         var (operation, worker) = (refs.Operation!, refs.Worker!);
 
         int? scrapRateId = null;
-        if (input.Type == DefectTypes.Scrap)
+        if (input.Type != DefectTypes.Rework)
         {
             var rate = await _rates.FindEffectiveAsync(dto.OperationId, dto.WorkDate, ct);
             if (rate is null)   // MSG18: Scrap trừ lương theo đơn giá duyệt nên phải có đơn giá
                 return Result<int>.Failure(ErrorCodes.PieceRateNotApproved, string.Format(Messages.PieceRateNotApproved,
                     operation.OperationCode, dto.WorkDate.ToString("dd/MM/yyyy")));
             scrapRateId = rate.PieceRateId;   // khóa tại thời điểm ghi (CK_DR_Rate)
+        }
+        if (input.Type == DefectTypes.OutputError)
+        {
+            var excess = await CheckOutputErrorQuantityAsync(dto, ct);
+            if (excess is not null) return excess;
         }
 
         var defect = await BuildDefectAsync(dto, team.Data, input, scrapRateId, ct);
@@ -122,7 +127,7 @@ public sealed class DefectService : IDefectService
             _notifier.NotifyEmployees([worker.EmployeeId], new NotificationMessage(NotificationSources.Production,
                 Messages.NotifyDefectTitle,
                 string.Format(Messages.NotifyDefectBody, dto.WorkDate.ToString("dd/MM/yyyy"), dto.Quantity,
-                    input.Type == DefectTypes.Scrap ? "hỏng không sửa được (Scrap)" : "cần sửa lại (Rework)", operation.OperationName),
+                    DescribeType(input.Type), operation.OperationName),
                 null, nameof(DefectRecord), defect.DefectRecordId));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(defect.DefectRecordId, Messages.DefectSaved);
@@ -138,8 +143,9 @@ public sealed class DefectService : IDefectService
     private DefectInput ValidateInput(CreateDefectDto dto)
     {
         var type = CodeText.ToCode(dto.DefectType);
-        if (type is not (DefectTypes.Rework or DefectTypes.Scrap)) return new DefectInput(Invalid(Messages.DefectTypeInvalid));
+        if (!DefectTypes.All.Contains(type)) return new DefectInput(Invalid(Messages.DefectTypeInvalid));
         var reasonCode = CodeText.ToCode(dto.ReasonCode);
+        if (type == DefectTypes.OutputError) reasonCode = DefectReasons.Other;   // nhập sai sản lượng: lý do là ghi chú bắt buộc
         if (!DefectReasons.All.Contains(reasonCode)) return new DefectInput(Invalid(Messages.DefectReasonInvalid));
         var note = string.IsNullOrWhiteSpace(dto.ReasonNote) ? null : dto.ReasonNote.Trim();
         if (reasonCode == DefectReasons.Other && note is null) return new DefectInput(Invalid(Messages.DefectNoteRequired));   // CK_DR_Other
@@ -159,10 +165,12 @@ public sealed class DefectService : IDefectService
     private async Task<DefectRefs> ValidateReferencesAsync(CreateDefectDto dto, int teamId, CancellationToken ct)
     {
         var closed = OrderStatuses.Closed.ToArray();
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
             .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
         if (line is null)
             return new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid));
+        if (ProductionGuard.BeforeOrderStart(dto.WorkDate, line.Order.ReceivedDate) is { } beforeStart)
+            return new DefectRefs(Invalid(beforeStart));
 
         var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId, ct);
@@ -207,6 +215,8 @@ public sealed class DefectService : IDefectService
         var window = _guard.CheckEditWindow(defect.EditDeadline, reason);
         if (window is not null) return window;
         if (await _guard.IsPeriodLockedAsync(defect.WorkDate, ct)) return _guard.PeriodLockedFailure(defect.WorkDate);
+        var overCap = await CheckCancelOutputErrorAsync(defect, ct);
+        if (overCap is not null) return overCap;
 
         _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
         defect.Status = DefectStatuses.Cancelled;
@@ -334,6 +344,49 @@ public sealed class DefectService : IDefectService
         d.DefectCode, d.WorkDate, d.ShiftCode, d.SewingTeamId, d.OrderLineId, d.OperationId, d.ResponsibleWorkerId,
         d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote, d.PieceRateId,
     };
+
+    private static string DescribeType(string type) => type switch
+    {
+        DefectTypes.Scrap => "hỏng không sửa được (Scrap)",
+        DefectTypes.OutputError => Messages.DefectOutputErrorBody,
+        _ => "cần sửa lại (Rework)",
+    };
+
+    /// <summary>
+    /// Phiếu nhập sai sản lượng chỉ trừ được phần công nhân đã nhập ở công đoạn đó trong ngày, kể cả các phiếu nhập sai đã ghi trước
+    /// (DEV-ALL-79). Trả null khi số trừ hợp lệ.
+    /// </summary>
+    private async Task<Result<int>?> CheckOutputErrorQuantityAsync(CreateDefectDto dto, CancellationToken ct)
+    {
+        var date = dto.WorkDate.ToString("dd/MM/yyyy");
+        var output = await _uow.Repository<OutputRecord>().Query().AsNoTracking()
+            .Where(r => r.WorkDate == dto.WorkDate && r.WorkerId == dto.ResponsibleWorkerId
+                        && r.OrderLineId == dto.OrderLineId && r.OperationId == dto.OperationId)
+            .SumAsync(r => (int?)r.Quantity, ct) ?? 0;
+        if (output == 0) return Invalid(string.Format(Messages.DefectOutputErrorNoOutput, date));
+
+        var deducted = await Defects.AsNoTracking()
+            .Where(d => d.DefectType == DefectTypes.OutputError && d.Status != DefectStatuses.Cancelled && d.WorkDate == dto.WorkDate
+                        && d.ResponsibleWorkerId == dto.ResponsibleWorkerId && d.OrderLineId == dto.OrderLineId
+                        && d.OperationId == dto.OperationId)
+            .SumAsync(d => (int?)d.Quantity, ct) ?? 0;
+        var left = output - deducted;
+        return dto.Quantity > left
+            ? Invalid(string.Format(Messages.DefectOutputErrorExceeds, date, output, deducted, left))
+            : null;
+    }
+
+    /// <summary>Hủy phiếu nhập sai trả sản lượng về cho công nhân nên không được làm sản lượng vượt trần số lần được giao.</summary>
+    private async Task<Result?> CheckCancelOutputErrorAsync(DefectRecord defect, CancellationToken ct)
+    {
+        if (defect.DefectType != DefectTypes.OutputError) return null;
+        var remaining = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
+            .Where(c => c.WorkerId == defect.ResponsibleWorkerId && c.OrderLineId == defect.OrderLineId && c.OperationId == defect.OperationId)
+            .Select(c => c.RemainingQty).FirstOrDefaultAsync(ct);
+        return remaining is { } left && left < defect.Quantity
+            ? Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectOutputErrorCancelOverCap)
+            : null;
+    }
 
     private static Result<int> Invalid(string message) =>
         Result<int>.Failure(ErrorCodes.DefectInvalid, message, ResultKind.Validation);

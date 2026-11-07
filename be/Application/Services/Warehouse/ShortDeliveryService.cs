@@ -175,7 +175,11 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             if (actual >= material.CustomerQty) continue;
             var before = new { material.CustomerQty, material.ExpectedDeliveryCount };
             material.CustomerQty = actual;
-            if (actual == 0) material.ExpectedDeliveryCount = null;
+            if (actual == 0)
+            {
+                material.ExpectedDeliveryCount = null;
+                material.ExpectedDeliveryDate = null;   // CK_OM_DeliveryDate
+            }
             _audit.Add(new AuditEntry(nameof(OrderMaterial), material.OrderMaterialId, AuditActions.Update, before,
                 new { material.CustomerQty, material.ExpectedDeliveryCount }, note));
         }

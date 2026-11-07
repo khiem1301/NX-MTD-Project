@@ -2,6 +2,7 @@ import { Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { OrderLinePicker } from '@/components/common/OrderLinePicker';
+import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import type { OutputEntryState } from '../hooks/useOutputEntry';
@@ -27,12 +28,13 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
     teamOptions,
     resetWarnings,
   } = entry;
+  const disabledWorkDate = useWorkDateRange(orderId ?? undefined);
   return (
     <Space wrap>
       <AppDatePicker
         allowClear={false}
         value={workDate}
-        disabledDate={(d) => d.isAfter(dayjs(), 'day')}
+        disabledDate={disabledWorkDate}
         onChange={(v) => {
           setWorkDate(v ?? dayjs());
           resetWarnings();

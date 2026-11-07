@@ -53,13 +53,10 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
         }
         var page = await query.OrderBy(p => p.ProductCode)
             .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl, p.Status, IsUsed = p.ProductVariants.Any(v => v.OrderLines.Any()), p.CreatedAt,
-                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList(),
-                ColorImages = p.ProductColors.Where(c => c.ProductColorImages.Any()).OrderBy(c => c.Color)
-                    .Select(c => new ProductColorImagesDto(c.Color,
-                        c.ProductColorImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList())).ToList() })
+                ExtraImages = p.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList() })
             .ToPagedAsync(q, ct);
         var items = page.Items.Select(p => new ProductListItemDto(p.ProductId, p.ProductCode, p.ProductName,
-            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages, p.ColorImages)).ToList();
+            p.SampleImageUrl, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages)).ToList();
         return new PagedResult<ProductListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
@@ -69,9 +66,6 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             .Select(x => new { x.ProductId, x.ProductCode, x.ProductName, x.SampleImageUrl, x.Description,
                 x.Status, IsUsed = x.ProductVariants.Any(v => v.OrderLines.Any()), x.CreatedAt,
                 ExtraImages = x.ProductImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList(),
-                ColorImages = x.ProductColors.Where(c => c.ProductColorImages.Any()).OrderBy(c => c.Color)
-                    .Select(c => new ProductColorImagesDto(c.Color,
-                        c.ProductColorImages.OrderBy(i => i.SortOrder).Select(i => i.ImageKey).ToList())).ToList(),
                 Colors = x.ProductColors.OrderBy(c => c.Color).Select(c => c.Color).ToList() })
             .FirstOrDefaultAsync(ct);
         if (p is null) return null;
@@ -80,7 +74,7 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             .Where(v => v.ProductId == productId).Select(v => v.SizeRatio).FirstOrDefaultAsync(ct);
         return new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
             p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages,
-            p.ColorImages, p.Colors, Array.Empty<AuditLogDto>());
+            p.Colors, Array.Empty<AuditLogDto>());
     }
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>

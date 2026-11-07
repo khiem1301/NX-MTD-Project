@@ -6,6 +6,7 @@ import { AppDatePicker } from '@/components/common/DateInputs';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';
 import { OrderLinePicker } from '@/components/common/OrderLinePicker';
+import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
@@ -37,8 +38,11 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
   const [state, setState] = useState<DailyState>(DAILY_STATE.ALL);
   const [editingId, setEditingId] = useState<number | null>(null);
   const apiDate = toApiDate(workDate);
+  // Chỉ giao và sửa trong ngày hôm nay; sang ngày sau chỉ xem (BE chặn cùng quy tắc).
+  const isToday = workDate.isSame(dayjs(), 'day');
   // Ô mã hàng, màu - size lấy các dòng đơn đã chia cho tổ; bảng giao việc chỉ tải đúng dòng đơn đang chọn.
   const orderLines = useOrderLineLookup(orderId ?? null);
+  const disabledWorkDate = useWorkDateRange(orderId);
   const daily = useDailyBoard(apiDate, orderId, orderLineId);
   // Công đoạn để thêm ngoài phân công: chỉ cần khi đã chọn dòng đơn.
   const board = useBoard(orderLineId === undefined ? undefined : orderId);
@@ -103,7 +107,7 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
           allowClear={false}
           aria-label={PM_LABELS.workDate}
           value={workDate}
-          disabledDate={(d) => d.isAfter(dayjs(), 'day')}
+          disabledDate={disabledWorkDate}
           onChange={(v) => setWorkDate(v ?? dayjs())}
         />
         <OrderSelect
@@ -152,6 +156,7 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
           ]}
         />
       </Space>
+      {!isToday && <Alert type="info" showIcon message={PM_LABELS.pastDayReadOnly} />}
       <QueryError error={daily.error} onRetry={() => void daily.refetch()} />
       <QueryError error={members.error} onRetry={() => void members.refetch()} />
       <QueryError error={orderLines.error} onRetry={() => void orderLines.refetch()} />
@@ -177,7 +182,7 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
           key={`${editing.workerId}-${apiDate}`}
           worker={editing}
           workDate={apiDate}
-          canEdit={canEdit}
+          canEdit={canEdit && isToday}
           operations={operations}
           onClose={() => setEditingId(null)}
         />

@@ -15,6 +15,9 @@ public sealed record FabricRequirementDto(
     decimal IssuedQty, decimal AvailableQty, decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0,
     decimal HeldQty = 0, decimal CutQty = 0, decimal RemainingQty = 0, int UnmeasuredLayCount = 0);
 
+/// <summary>Số mét vải một NVL cần cho các dòng (màu, size) đã chọn của lệnh cắt: Thủ kho dùng để đề xuất số cấp.</summary>
+public sealed record FabricNeedDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor, decimal NeedMeters);
+
 public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
     int CuttingTeamId, string CuttingTeamName, DateOnly DueDate, string Status, int TotalPlannedQty, DateTime CreatedAt);

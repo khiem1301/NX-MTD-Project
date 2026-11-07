@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Form, Input, InputNumber, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { VL_LABELS } from '../constants';
+import { PLATE_EXAMPLE, PLATE_PATTERN, VEHICLE_LIMITS, VL_LABELS, VL_MESSAGES } from '../constants';
 import { useSaveVehicle } from '../hooks/useVehicleLog';
 import type { SaveVehiclePayload, Vehicle } from '../types';
 
@@ -41,8 +41,13 @@ export function VehicleFormModal({ open, vehicle, onClose }: VehicleFormModalPro
         disabled={save.isPending}
         onFinish={(body) => save.mutate({ id: vehicle?.vehicleId, body }, { onSuccess: onClose })}
       >
-        <Form.Item name="plateNumber" label={VL_LABELS.plate} rules={required}>
-          <Input maxLength={20} />
+        <Form.Item
+          name="plateNumber"
+          label={VL_LABELS.plate}
+          normalize={(v: string | undefined) => v?.toUpperCase()}
+          rules={[...required, { pattern: PLATE_PATTERN, message: VL_MESSAGES.plateInvalid }]}
+        >
+          <Input maxLength={20} placeholder={PLATE_EXAMPLE} />
         </Form.Item>
         <Form.Item name="vehicleType" label={VL_LABELS.vehicleType} rules={required}>
           <Input maxLength={50} />
@@ -52,7 +57,13 @@ export function VehicleFormModal({ open, vehicle, onClose }: VehicleFormModalPro
           label={VL_LABELS.fuelNorm}
           rules={[{ required: true, message: MESSAGES.common.required }]}
         >
-          <InputNumber min={0.1} max={9999} step={0.5} style={{ width: 200 }} />
+          <InputNumber
+            min={0.1}
+            max={VEHICLE_LIMITS.maxFuelNorm}
+            precision={2}
+            step={0.5}
+            style={{ width: 200 }}
+          />
         </Form.Item>
       </Form>
     </Modal>

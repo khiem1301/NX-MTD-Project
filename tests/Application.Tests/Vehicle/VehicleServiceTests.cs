@@ -276,10 +276,10 @@ public class VehicleServiceTests
     public void Validators_require_plate_type_norm_driver_and_valid_km()
     {
         var vehicle = new SaveVehicleDtoValidator();
-        vehicle.Validate(new SaveVehicleDto("29C-1", "Xe tải", 12m)).IsValid.Should().BeTrue();
+        vehicle.Validate(new SaveVehicleDto("29C-12345", "Xe tải", 12m)).IsValid.Should().BeTrue();
         vehicle.Validate(new SaveVehicleDto("", "Xe tải", 12m)).IsValid.Should().BeFalse();
-        vehicle.Validate(new SaveVehicleDto("29C-1", "", 12m)).IsValid.Should().BeFalse();
-        vehicle.Validate(new SaveVehicleDto("29C-1", "Xe tải", 0m)).IsValid.Should().BeFalse();
+        vehicle.Validate(new SaveVehicleDto("29C-12345", "", 12m)).IsValid.Should().BeFalse();
+        vehicle.Validate(new SaveVehicleDto("29C-12345", "Xe tải", 0m)).IsValid.Should().BeFalse();
 
         var start = new StartVehicleTripDtoValidator();
         start.Validate(Start(0)).IsValid.Should().BeTrue();

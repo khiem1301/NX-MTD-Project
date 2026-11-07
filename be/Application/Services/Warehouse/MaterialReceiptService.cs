@@ -218,6 +218,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
         var original = await Receipts.Include(r => r.MaterialReceiptLines)
             .FirstAsync(r => r.MaterialReceiptId == request!.MaterialReceiptId, ct);
+        var supplementaryDate = await CheckReceiptDateAsync(dto.ReceiptDate, original.OrderId, null, ct);
+        if (supplementaryDate is not null)
+            return Result<MaterialReceiptDto>.Failure(ErrorCodes.WarehouseInvalidReference, supplementaryDate, ResultKind.Validation);
         var invalid = await CheckSupplementaryLinesAsync(dto, request!, ct);
         if (invalid is not null) return invalid;
 
@@ -542,6 +545,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         if (order is null) return WarehouseFailures.NotFound<ResolvedReceipt>();
         if (OrderStatuses.Closed.Contains(order.Status))
             return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed);
+        var dateError = DocumentDateRules.CheckDocumentDate(dto.ReceiptDate, _clock.Today, order.ReceivedDate, WarehouseMessages.LabelReceiptDate);
+        if (dateError is not null)
+            return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
 
         var ids = dto.Lines.Select(l => l.OrderMaterialId ?? 0).ToList();
         if (ids.Any(i => i <= 0))
@@ -572,6 +578,20 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             dto.Lines.Select(l => new ResolvedLine(l.OrderMaterialId, null, null, l.AcceptedQty)).ToList()));
     }
 
+    /// <summary>Ngày nhập của phiếu theo đơn mua hoặc phiếu bổ sung: quy tắc ngày chứng từ + không trước ngày đặt đơn mua.</summary>
+    private async Task<string?> CheckReceiptDateAsync(DateOnly receiptDate, int? orderId, DateOnly? purchaseOrderDate, CancellationToken ct)
+    {
+        DateOnly? received = orderId is { } id
+            ? await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+                .Where(o => o.OrderId == id).Select(o => (DateOnly?)o.ReceivedDate).FirstOrDefaultAsync(ct)
+            : null;
+        var error = DocumentDateRules.CheckDocumentDate(receiptDate, _clock.Today, received, WarehouseMessages.LabelReceiptDate);
+        if (error is not null) return error;
+        return purchaseOrderDate is { } placed && receiptDate < placed
+            ? string.Format(WarehouseMessages.ReceiptBeforePurchaseDate, placed)
+            : null;
+    }
+
     /// <summary>Đơn mua phải đang đặt / nhận một phần và đơn hàng gắn với nó chưa đóng.</summary>
     private async Task<Result<ResolvedReceipt>?> CheckReceivableAsync(PurchaseOrder po, CancellationToken ct)
     {
@@ -594,6 +614,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         if (po is null) return WarehouseFailures.NotFound<ResolvedReceipt>();
         var notReceivable = await CheckReceivableAsync(po, ct);
         if (notReceivable is not null) return notReceivable;
+        var dateCheck = await CheckReceiptDateAsync(dto.ReceiptDate, po.OrderId, po.OrderDate, ct);
+        if (dateCheck is not null) return Result<ResolvedReceipt>.Failure(ErrorCodes.WarehouseInvalidReference, dateCheck, ResultKind.Validation);
 
         var byId = po.PurchaseOrderLines.ToDictionary(l => l.PurchaseOrderLineId);
         if (dto.Lines.Any(l => l.PurchaseOrderLineId is null || !byId.ContainsKey(l.PurchaseOrderLineId.Value)))

@@ -2,21 +2,21 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 import type { DefectObjectionFilter, DefectReason, DefectStatus, DefectType } from '../types';
 
 export const DEFECTS_TEXT = {
-  title: 'Hàng hỏng',
-  managerTitle: 'Hàng hỏng của các tổ',
+  title: 'Phiếu lỗi / điều chỉnh',
+  managerTitle: 'Phiếu lỗi / điều chỉnh của các tổ',
   subtitle:
-    'Ghi hàng hỏng (sửa lại hoặc hủy) và công nhân gây lỗi. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
+    'Ghi hàng hỏng (sửa lại hoặc hủy) hoặc điều chỉnh sản lượng nhập sai của công nhân. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
   managerSubtitle:
-    'Quản đốc xem phiếu hàng hỏng của các tổ. Công nhân phản đối thì chấp nhận phiếu (giữ phiếu) hoặc hủy phiếu ghi sai (bắt buộc lý do).',
-  add: 'Ghi hàng hỏng',
-  addTitle: 'Ghi hàng hỏng',
+    'Quản đốc xem phiếu lỗi và phiếu điều chỉnh sản lượng của các tổ. Công nhân phản đối thì chấp nhận phiếu (giữ phiếu) hoặc hủy phiếu ghi sai (bắt buộc lý do).',
+  add: 'Ghi phiếu',
+  addTitle: 'Ghi phiếu lỗi / điều chỉnh',
   cancel: 'Hủy phiếu',
-  cancelTitle: 'Hủy phiếu hàng hỏng',
+  cancelTitle: 'Hủy phiếu',
   filterDate: 'Lọc theo ngày',
   searchPlaceholder: 'Tìm theo công nhân, mã hàng, tổ, mã phiếu',
   objected: 'Công nhân phản hồi',
   confirm: 'Chấp nhận phiếu',
-  confirmTitle: 'Chấp nhận phiếu hàng hỏng',
+  confirmTitle: 'Chấp nhận phiếu',
   confirmHint:
     'Công nhân phản đối phiếu này. Chấp nhận thì phiếu được giữ nguyên và công nhân không phản đối lại được; nếu phiếu ghi sai hãy hủy phiếu.',
   confirmNote: 'Ghi chú (không bắt buộc)',
@@ -25,7 +25,7 @@ export const DEFECTS_TEXT = {
   filters: {
     range: ['Từ ngày', 'Đến ngày'] as [string, string],
     team: 'Tổ',
-    type: 'Loại hỏng',
+    type: 'Loại phiếu',
     status: 'Phiếu',
     objection: 'Phản đối',
   },
@@ -75,22 +75,27 @@ export const DEFECTS_TEXT = {
     line: 'Dòng đơn',
     operation: 'Công đoạn',
     worker: 'Công nhân gây lỗi',
-    type: 'Loại hỏng',
+    type: 'Loại phiếu',
     qty: 'Số lượng',
     qtyMin: 'Số lượng phải lớn hơn 0.',
     qtyMax: 'Số lượng tối đa 1.000.000.',
     reason: 'Lý do',
     note: 'Ghi chú',
     noteRequired: 'Lý do "Khác" bắt buộc ghi chú.',
+    outputErrorNote: 'Lý do nhập sai',
+    outputErrorNoteRequired: 'Vui lòng ghi rõ nhập sai thế nào.',
+    outputErrorHint:
+      'Trừ số lượng nhập sai khỏi sản lượng và tiền của công nhân ở công đoạn này (theo đơn giá đang duyệt), tính lại tiến độ và số còn phải làm. Không phải hàng hỏng. Số trừ không vượt sản lượng công nhân đã nhập trong ngày.',
   },
   done: {
-    created: 'Đã ghi hàng hỏng và thông báo cho công nhân.',
-    cancelled: 'Đã hủy phiếu hàng hỏng.',
-    confirmed: 'Đã chấp nhận phiếu hàng hỏng.',
+    created: 'Đã ghi phiếu và thông báo cho công nhân.',
+    cancelled: 'Đã hủy phiếu.',
+    confirmed: 'Đã chấp nhận phiếu.',
   },
   type: {
     Rework: { text: 'Sửa lại', color: 'gold' },
     Scrap: { text: 'Hàng hủy', color: 'red' },
+    OutputErr: { text: 'Nhập sai sản lượng', color: 'purple' },
   } as Record<DefectType, StatusLabel>,
   reason: {
     SkippedStitch: 'Bỏ mũi',
@@ -126,14 +131,14 @@ export const REPLACEMENT_TEXT = {
 } as const;
 
 export const MY_DEFECTS_TEXT = {
-  title: 'Hàng hỏng của tôi',
+  title: 'Phiếu lỗi / điều chỉnh của tôi',
   subtitle:
-    'Các phiếu hàng hỏng tổ trưởng ghi cho bạn. Hàng hủy trừ vào lương tạm tính; nếu ghi sai hãy phản hồi.',
+    'Các phiếu tổ trưởng ghi cho bạn. Hàng hủy và số nhập sai bị trừ vào sản lượng, lương tạm tính; nếu ghi sai hãy phản hồi.',
   object: 'Phản hồi',
-  objectTitle: 'Phản hồi phiếu hàng hỏng',
+  objectTitle: 'Phản hồi phiếu',
   objection: 'Nội dung phản hồi',
   objectionRequired: 'Vui lòng nhập nội dung phản hồi.',
   done: 'Đã gửi phản hồi cho tổ trưởng.',
-  empty: 'Bạn chưa có phiếu hàng hỏng nào.',
+  empty: 'Bạn chưa có phiếu nào.',
   rejected: 'Phản hồi bị bác',
 } as const;

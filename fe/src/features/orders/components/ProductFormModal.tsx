@@ -10,7 +10,6 @@ import {
   productNameSchema,
   toFieldPath,
 } from '../utils/productValidation';
-import { ColorImagesField } from './ColorImagesField';
 import { ExtraImagesInput } from './ExtraImagesInput';
 import { SampleImageInput } from './SampleImageInput';
 import type { NamePath } from 'antd/es/form/interface';
@@ -44,7 +43,6 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         productName: product.productName,
         sampleImageUrl: product.sampleImageUrl ?? undefined,
         extraImages: product.extraImages,
-        colorImages: product.colorImages,
       });
     }
   }, [open, product, form]);
@@ -65,7 +63,7 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         },
         onError: (error) =>
           form.setFields(
-            // Lỗi của từng màu (vd "colorImages[0].images") hiện ngay dưới ô của màu đó. Tên field do BE trả về
+            // Lỗi theo field (vd "extraImages[0]") hiện ngay dưới ô tương ứng. Tên field do BE trả về
             // lúc chạy nên không kiểm được kiểu khi biên dịch.
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({
               name: toFieldPath(name) as NamePath<SaveProductPayload>,
@@ -145,7 +143,6 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
             </Form.Item>
           </Col>
         </Row>
-        <ColorImagesField suggestions={detail.data?.colors} />
       </Form>
     </Modal>
   );

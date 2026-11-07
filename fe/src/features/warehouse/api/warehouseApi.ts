@@ -5,6 +5,8 @@ import type { ApiResponse, Paginated } from '@/types/api';
 import { downloadBlob } from '@/utils/downloadFile';
 import type { FabricRequirement, WorkOrderListItem } from '@/types/workOrder';
 import type {
+  FabricNeed,
+  WorkOrderLineInfo,
   ConfirmIssuePayload,
   CreateIssuePayload,
   Material,
@@ -130,6 +132,10 @@ export const warehouseApi = {
   /** Lệnh cắt gần nhất để Thủ kho chọn khi cấp vải (UC40); lọc trạng thái ở hook. */
   getRecentWorkOrders: (role: RolePath) =>
     get<Paginated<WorkOrderListItem>>(API.cutting.workOrders(role), { pageSize: MAX_PAGE_SIZE }),
+  getWorkOrderLines: (role: RolePath, workOrderId: number) =>
+    get<WorkOrderLineInfo>(`${API.cutting.workOrders(role)}/${workOrderId}`),
+  getFabricNeeds: (role: RolePath, workOrderId: number, q: { color?: string; sizeCode?: string }) =>
+    get<FabricNeed[]>(`${API.cutting.workOrders(role)}/${workOrderId}/fabric-needs`, q),
   getWorkOrderFabrics: (role: RolePath, workOrderId: number) =>
     get<FabricRequirement[]>(`${API.cutting.workOrders(role)}/${workOrderId}/fabrics`),
 

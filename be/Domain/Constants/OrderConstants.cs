@@ -32,20 +32,9 @@ public static class SizeCodes
 }
 
 /// <summary>
-/// Ảnh của mã hàng: một ảnh chính (Product.SampleImageUrl), tối đa 5 ảnh phụ (ProductImage)
-/// và mỗi màu áo 1-3 ảnh (ProductColorImage, DEV-ALL-71).
+/// Ảnh của mã hàng: một ảnh chính (Product.SampleImageUrl) và tối đa 5 ảnh phụ (ProductImage). Ảnh theo màu áo đã bỏ (DEV-ALL-80).
 /// </summary>
 public static class ProductImageLimits
 {
     public const int MaxExtra = 5;
-
-    public const int MinPerColor = 1;
-
-    public const int MaxPerColor = 3;
-
-    /// <summary>Số màu có ảnh tối đa mỗi lần lưu, chặn yêu cầu quá lớn.</summary>
-    public const int MaxColors = 30;
-
-    /// <summary>Độ dài tên màu, khớp ProductVariant.Color / ProductColorImage.Color NVARCHAR(50).</summary>
-    public const int ColorMaxLength = 50;
 }

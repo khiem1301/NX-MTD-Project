@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { DataTable } from '@/components/common/DataTable';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { PageCard } from '@/components/common/PageCard';
 import { QueryError } from '@/components/common/QueryError';
@@ -70,7 +70,8 @@ export function AuditLogPage() {
               options={Object.entries(AUDIT_ACTION).map(([value, a]) => ({ value, label: a.text }))}
               onChange={(action?: string) => table.setFilters({ action })}
             />
-            <AppRangePicker
+            <AppDateRangeFields
+              allowPartial
               onChange={(range: [Dayjs | null, Dayjs | null] | null) =>
                 table.setFilters({
                   fromDate: range?.[0]?.format(API_DATE),

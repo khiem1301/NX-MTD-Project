@@ -38,7 +38,6 @@ const product: ProductListItem = {
   productName: 'Áo khoác',
   sampleImageUrl: null,
   extraImages: [],
-  colorImages: [],
   status: 'Active',
   isUsed: false,
   createdAt: '2026-10-01T00:00:00',
@@ -79,48 +78,6 @@ describe('ProductFormModal', () => {
 
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
     expect(mutate.mock.calls[0][0].body.extraImages).toEqual(extra);
-  });
-
-  it('sửa mã hàng: ảnh theo màu đang có được gửi lại khi lưu', async () => {
-    const colorImages = [
-      { color: 'Đỏ', images: ['PRODUCT/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg'] },
-    ];
-    detailData = { description: null };
-    renderModal({ ...product, colorImages });
-
-    clickSave();
-
-    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(mutate.mock.calls[0][0].body.colorImages).toEqual(colorImages);
-  });
-
-  it('lỗi thiếu màu tự hết ngay khi gõ màu, không phải bấm Lưu lại', async () => {
-    detailData = { description: null };
-    renderModal(product);
-
-    fireEvent.click(screen.getByRole('button', { name: /Thêm màu/ }));
-    clickSave();
-    expect(await screen.findByText('Vui lòng nhập màu.')).toBeInTheDocument();
-
-    fireEvent.change(screen.getByPlaceholderText('Màu áo, vd Xanh navy'), {
-      target: { value: 'Trắng' },
-    });
-
-    await waitFor(() => expect(screen.queryByText('Vui lòng nhập màu.')).not.toBeInTheDocument());
-  });
-
-  it('thêm màu mà chưa chọn ảnh thì báo lỗi và không gửi', async () => {
-    detailData = { description: null };
-    renderModal(product);
-
-    fireEvent.click(screen.getByRole('button', { name: /Thêm màu/ }));
-    fireEvent.change(screen.getByPlaceholderText('Màu áo, vd Xanh navy'), {
-      target: { value: 'Đỏ' },
-    });
-    clickSave();
-
-    expect(await screen.findByText('Chọn từ 1 đến 3 ảnh cho màu này.')).toBeInTheDocument();
-    expect(mutate).not.toHaveBeenCalled();
   });
 
   it('chi tiết chưa tải xong thì nút Lưu bị khóa để không ghi đè mô tả bằng giá trị trống', () => {

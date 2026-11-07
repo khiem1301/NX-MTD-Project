@@ -9,6 +9,10 @@ jest.mock('../api/requestApi', () => ({
   requestApi: { detail: jest.fn(), act: jest.fn(), types: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));
+jest.mock('@/services/env', () => ({ env: { apiBaseUrl: 'http://localhost' } }));
+jest.mock('@/services/lookupApi', () => ({
+  lookupApi: { materials: jest.fn().mockResolvedValue([]) },
+}));
 jest.mock('@/components/common/attachments', () => ({
   AttachmentGallery: () => <div>gallery</div>,
 }));

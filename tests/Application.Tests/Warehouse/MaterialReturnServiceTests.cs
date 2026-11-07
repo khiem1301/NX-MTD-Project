@@ -121,16 +121,50 @@ public class MaterialReturnServiceTests
     [Fact]
     public async Task Return_cannot_exceed_what_was_received_and_not_yet_returned()
     {
-        Return(HandoverStatuses.Confirmed, 40, confirmed: 38);   // đã trả 38 (kho đếm)
-        Return(HandoverStatuses.Pending, 20);                    // đang chờ trả 20 → còn trả được 100 − 38 − 20 = 42
+        Return(HandoverStatuses.Confirmed, 40, confirmed: 38);   // đã trả 38 (kho đếm) → còn trả được 100 − 38 = 62
 
-        var over = await Service().CreateAsync(Create(43), CutTeam, default);
+        var over = await Service().CreateAsync(Create(63), CutTeam, default);
 
         over.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
-        over.Message.Should().Contain("còn trả được 42");
+        over.Message.Should().Contain("còn trả được 62");
 
         CaptureAdds();
-        (await Service().CreateAsync(Create(42), CutTeam, default)).IsSuccess.Should().BeTrue();
+        (await Service().CreateAsync(Create(62), CutTeam, default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task A_line_with_a_return_still_waiting_for_the_warehouse_cannot_be_returned_again()
+    {
+        Return(HandoverStatuses.Pending, 20);
+
+        var result = await Service().CreateAsync(Create(10), CutTeam, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ReturnPendingExists);
+    }
+
+    [Fact]
+    public async Task Return_cannot_exceed_the_fabric_left_after_cutting()
+    {
+        Lay(ply: 10, lengthM: 4m);   // đã cắt 40 → còn thừa 100 − 40 = 60
+
+        var over = await Service().CreateAsync(Create(61), CutTeam, default);
+
+        over.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsLeftover);
+        over.Message.Should().Contain("còn thừa 60");
+
+        CaptureAdds();
+        (await Service().CreateAsync(Create(60), CutTeam, default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Return_is_not_capped_by_cutting_while_a_lay_has_no_length_yet()
+    {
+        Lay(ply: 10, lengthM: null);
+        CaptureAdds();
+
+        var result = await Service().CreateAsync(Create(100), CutTeam, default);
+
+        result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]

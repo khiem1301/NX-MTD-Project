@@ -23,4 +23,9 @@ public sealed class WorkOrdersController : WarehouseKeeperBaseController
     [HttpGet("{id:int}/fabrics")]
     public async Task<IActionResult> GetFabrics(int id, CancellationToken ct) =>
         this.ToResponse(await _workOrders.GetFabricRequirementsAsync(id, ct));
+
+    /// <summary>Đề xuất số vải cần cấp theo màu (và size) của lệnh cắt.</summary>
+    [HttpGet("{id:int}/fabric-needs")]
+    public async Task<IActionResult> GetFabricNeeds(int id, [FromQuery] string? color, [FromQuery] string? sizeCode, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.GetFabricNeedsAsync(id, color, sizeCode, ct));
 }

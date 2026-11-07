@@ -16,7 +16,7 @@ const DEFAULT_THUMB = 80;
 type Props = {
   value?: string[];
   onChange?: (value: string[]) => void;
-  /** Số ảnh tối đa; mặc định là số ảnh phụ của mã hàng. Ảnh theo màu dùng MAX_COLOR_IMAGES. */
+  /** Số ảnh tối đa; mặc định là số ảnh phụ của mã hàng. */
   max?: number;
   /** Dòng đếm dưới ô ảnh ({0} = số đã chọn, {1} = tối đa) và câu báo khi đã đủ ({0} = tối đa). */
   countText?: string;

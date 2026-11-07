@@ -26,6 +26,11 @@ public static class DefectTypes
 {
     public const string Rework = "REWORK";
     public const string Scrap = "SCRAP";
+
+    /// <summary>Tổ trưởng nhập sai sản lượng công đoạn: trừ khỏi sản lượng và tiền của công nhân, không phải hàng lỗi vật lý (DEV-ALL-79).</summary>
+    public const string OutputError = "OUTPUT_ERR";
+
+    public static readonly IReadOnlyList<string> All = new[] { Rework, Scrap, OutputError };
 }
 
 /// <summary>DefectRecord.Status.</summary>

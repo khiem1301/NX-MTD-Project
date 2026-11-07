@@ -189,7 +189,7 @@ public sealed class VehicleService : IVehicleService
     private async Task<VehicleTripDto> ReloadAsync(int id, CancellationToken ct) =>
         ToDto(await Trips.AsNoTracking().Include(t => t.Vehicle).Include(t => t.DispatchNote).Include(t => t.DriverEmployee).FirstAsync(t => t.VehicleTripId == id, ct));
 
-    private static string Normalize(string plate) => plate.Trim().ToUpperInvariant();
+    private static string Normalize(string plate) => VehiclePlate.Normalize(plate);
 
     private static decimal NormLiters(decimal normPer100Km, int distance) => normPer100Km * distance / 100m;
 

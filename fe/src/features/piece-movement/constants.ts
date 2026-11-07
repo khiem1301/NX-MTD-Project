@@ -101,6 +101,7 @@ export const PM_LABELS = {
   changes: 'Đã sửa {0} dòng',
   noChanges: 'Chưa thay đổi gì.',
   noBoard: 'Đơn này chưa có màu - size nào được chia cho tổ nên chưa có việc để giao.',
+  pastDayReadOnly: 'Ngày đã qua: chỉ xem, không giao hay sửa được nữa.',
   noWorkers: 'Không có công nhân phù hợp.',
   lineSizeSeparator: '-',
 } as const;

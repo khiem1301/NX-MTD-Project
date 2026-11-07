@@ -73,7 +73,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             {
                 p.PurchaseOrderId, p.PoCode, p.OrderId, OrderCode = p.Order == null ? null : p.Order.OrderCode,
                 p.SupplierId, SupplierName = p.Supplier == null ? null : p.Supplier.SupplierName,
-                p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryCount, p.Note, p.RejectReason,
+                p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryCount, p.ExpectedDeliveryDate, p.Note, p.RejectReason,
                 p.PaymentReturnReason, p.PaymentDate, p.PaidAmount, p.PaymentMethod, p.PaymentNote,
                 p.CreatedAt, p.RowVer,
             })
@@ -95,7 +95,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             header.PaymentReturnReason, header.PaymentDate, header.PaidAmount,
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
             lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
-            PermissionsFor(header.GoodsStatus, header.PaymentStatus), history));
+            PermissionsFor(header.GoodsStatus, header.PaymentStatus), history, header.ExpectedDeliveryDate));
     }
 
     // ---------- Quản đốc ----------
@@ -109,6 +109,9 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
         var invalid = ValidatePlaceInput(po, dto);
         if (invalid is not null) return invalid;
+        var dateError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDate, dto.OrderDate, po.OrderId, ct);
+        if (dateError is not null)
+            return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, dateError, ResultKind.Validation);
 
         var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
             .FirstOrDefaultAsync(s => s.SupplierId == dto.SupplierId, ct);
@@ -124,7 +127,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         return await _uow.InTransactionAsync(async () =>
         {
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
-                new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, Lines = Snapshot(po) }));
+                new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate, Lines = Snapshot(po) }));
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier.SupplierName),
                 string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
@@ -164,6 +167,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         po.SupplierId = supplier.SupplierId;
         po.OrderDate = dto.OrderDate;
         po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
+        po.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
         po.Note = Clean(dto.Note) ?? po.Note;
         po.GoodsStatus = PurchaseGoodsStatuses.Ordered;
     }

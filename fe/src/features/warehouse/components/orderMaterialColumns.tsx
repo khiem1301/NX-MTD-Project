@@ -3,7 +3,7 @@ import { Space, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MESSAGES } from '@/constants/messages';
-import { formatQty } from '@/utils/format';
+import { formatDate, formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
 import { formatFabricWidth } from '../utils/fabricWidth';
@@ -58,6 +58,11 @@ export const orderMaterialColumns = (
       om.expectedDeliveryCount === null
         ? '—'
         : `${om.receivedCount} / ${om.expectedDeliveryCount} ${LABELS.deliveryUnit}`,
+  },
+  {
+    title: LABELS.expectedDeliveryDate,
+    key: 'expectedDeliveryDate',
+    render: (_, om) => formatDate(om.expectedDeliveryDate ?? null),
   },
   {
     title: LABELS.receivedQty,
