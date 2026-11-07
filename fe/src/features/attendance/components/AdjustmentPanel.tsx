@@ -15,7 +15,7 @@ import type { AdjustmentFilter, AttendanceAdjustment } from '../types';
 import { AdjustmentFormModal, type AdjustmentPrefill } from './AdjustmentFormModal';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { DataTable } from '@/components/common/DataTable';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 
 const text = ATTENDANCE_TEXT.adjust;
 const shortTime = (v: string | null) => (v ? v.slice(0, 5) : '—');
@@ -132,7 +132,7 @@ export function AdjustmentPanel() {
       </Card>
 
       <Space wrap>
-        <AppRangePicker
+        <AppDateRangeFields
           allowClear={false}
           value={range}
           onChange={(v) => {

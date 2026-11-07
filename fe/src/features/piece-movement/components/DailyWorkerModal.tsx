@@ -90,6 +90,7 @@ export function DailyWorkerModal({
   };
 
   const columns = dailyModalColumns({
+    editable: canEdit,
     multiLine,
     groupQty,
     valueOf,

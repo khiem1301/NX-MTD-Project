@@ -10,6 +10,9 @@ public static class RequestModule
     {
         services.AddScoped<RequestAccess>();
         services.AddScoped<RequestTypeHandlers>();
+        services.AddScoped<IRequestTypeHandler, SparePartsRequestHandler>();       // Cơ điện xin linh kiện: số nguyên, có trần
+        services.AddScoped<IRequestTypeHandler, MachineSuppliesRequestHandler>();  // Cơ điện xin vật tư máy
+        services.AddScoped<IRequestTypeHandler, NewMachineRequestHandler>();       // Cơ điện xin máy mới
         services.AddScoped<IRequestRepository, RequestRepository>();
         services.AddScoped<IRequestService, RequestService>();
         services.AddScoped<IRequestQueryService, RequestQueryService>();

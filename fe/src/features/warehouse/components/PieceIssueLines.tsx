@@ -8,6 +8,7 @@ import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '../hooks/useInventory';
 import { pieceKey } from '../utils/pieceKey';
+import { PieceSuggestionBar } from './PieceSuggestionBar';
 
 type PieceIssueLinesProps = { orderId: number | undefined };
 
@@ -16,6 +17,7 @@ type PieceIssueLinesProps = { orderId: number | undefined };
  * đang có trong kho (hàng cắt bù); lựa chọn lưu ở field pieceKey = "dòng đơn:chi tiết".
  */
 export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
+  const form = Form.useFormInstance();
   const lines = useOrderLineOptions(orderId);
   const balances = useBalances({
     warehouseType: WAREHOUSE_TYPE.SEMI_FINISHED,
@@ -24,10 +26,12 @@ export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
     pageSize: MAX_PAGE_SIZE,
   });
   const items = balances.data?.items ?? [];
-  const available = new Map(
-    items
-      .filter((b) => b.productComponentMaterialId === null)
-      .map((b) => [b.orderLineId, b.availableQty]),
+  const available = new Map<number, number>(
+    items.flatMap((b) =>
+      b.productComponentMaterialId === null && b.orderLineId !== null
+        ? [[b.orderLineId, b.availableQty] as [number, number]]
+        : [],
+    ),
   );
   const wholeOptions = (lines.data ?? []).map((l) => ({
     value: pieceKey(l.orderLineId, null),
@@ -46,6 +50,20 @@ export function PieceIssueLines({ orderId }: PieceIssueLinesProps) {
     <Form.List name="lines">
       {(fields, { add, remove }) => (
         <>
+          <PieceSuggestionBar
+            lines={lines.data ?? []}
+            available={available}
+            taken={
+              new Set(
+                fields
+                  .map(
+                    (f) => form.getFieldValue(['lines', f.name, 'pieceKey']) as string | undefined,
+                  )
+                  .filter((k): k is string => !!k),
+              )
+            }
+            onAdd={(suggestions) => suggestions.forEach((s) => add(s))}
+          />
           {fields.map((field) => (
             <Space key={field.key} align="start" wrap>
               <Form.Item name={[field.name, 'pieceKey']} rules={required}>

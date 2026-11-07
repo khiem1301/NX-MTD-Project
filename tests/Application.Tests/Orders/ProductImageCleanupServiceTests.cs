@@ -17,14 +17,12 @@ public class ProductImageCleanupServiceTests
     private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
     private readonly List<Product> _products = [];
     private readonly List<ProductImage> _images = [];
-    private readonly List<ProductColorImage> _colorImages = [];
     private readonly List<StoredFile> _files = [];
 
     public ProductImageCleanupServiceTests()
     {
         Setup(_products);
         Setup(_images);
-        Setup(_colorImages);
         _storage.ListAsync("PRODUCT", Arg.Any<CancellationToken>()).Returns(_ => Task.FromResult<IReadOnlyList<StoredFile>>(_files.ToList()));
         _storage.DeleteAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
     }
@@ -55,17 +53,6 @@ public class ProductImageCleanupServiceTests
 
         deleted.Should().Be(2);
         Deleted().Should().BeEquivalentTo(Key('c'), Key('d', "webp"));
-    }
-
-    [Fact]
-    public async Task Keeps_files_used_as_color_images()
-    {
-        _colorImages.Add(new ProductColorImage { ProductColorId = 1, ImageKey = Key('a'), SortOrder = 1 });
-        _files.AddRange([new(Key('a'), Old), new(Key('b'), Old)]);
-
-        (await Create().RunAsync(Now, default)).Should().Be(1);
-
-        Deleted().Should().BeEquivalentTo(Key('b'));
     }
 
     [Fact]

@@ -8,6 +8,8 @@ export type Draft = {
   requiredQty: number;
   customerQty: number;
   expectedDeliveryCount: number | null;
+  /** Ngày khách dự kiến giao (yyyy-MM-dd), chỉ khi khách cấp. */
+  expectedDeliveryDate: string | null;
   note: string;
 };
 
@@ -23,6 +25,7 @@ export const EMPTY_DRAFT: Draft = {
   requiredQty: 0,
   customerQty: 0,
   expectedDeliveryCount: null,
+  expectedDeliveryDate: null,
   note: '',
 };
 
@@ -30,6 +33,7 @@ export const toDraft = (om: OrderMaterial): Draft => ({
   requiredQty: om.requiredQty,
   customerQty: om.customerQty,
   expectedDeliveryCount: om.expectedDeliveryCount,
+  expectedDeliveryDate: om.expectedDeliveryDate ?? null,
   note: om.note ?? '',
 });
 
@@ -43,7 +47,9 @@ export const toLine = (om: OrderMaterial): BulkLine => ({
 /** Khách không cấp thì không có số lần giao (CK_OM_Delivery). */
 export const applyDraftChange = (draft: Draft, change: Partial<Draft>): Draft => {
   const next = { ...draft, ...change };
-  return next.customerQty > 0 ? next : { ...next, expectedDeliveryCount: null };
+  return next.customerQty > 0
+    ? next
+    : { ...next, expectedDeliveryCount: null, expectedDeliveryDate: null };
 };
 
 /** Dữ liệu gửi API của một dòng đã chọn NVL. */
@@ -52,6 +58,7 @@ export const toLinePayload = (line: BulkLine) => ({
   requiredQty: line.draft.requiredQty,
   customerQty: line.draft.customerQty,
   expectedDeliveryCount: line.draft.customerQty > 0 ? line.draft.expectedDeliveryCount : null,
+  expectedDeliveryDate: line.draft.customerQty > 0 ? line.draft.expectedDeliveryDate : null,
   note: line.draft.note.trim() || undefined,
 });
 
@@ -64,6 +71,7 @@ export const isChanged = (line: BulkLine): boolean => {
     o.requiredQty !== d.requiredQty ||
     o.customerQty !== d.customerQty ||
     o.expectedDeliveryCount !== d.expectedDeliveryCount ||
+    o.expectedDeliveryDate !== d.expectedDeliveryDate ||
     o.note !== d.note
   );
 };
@@ -82,7 +90,8 @@ export const rowError = (line: BulkLine): string | null => {
     noteProblem(d.note);
   if (problem) return problem;
   if (d.requiredQty <= 0 && d.customerQty <= 0) return LABELS.qtyRequiredOrCustomer;
-  if (d.customerQty > 0 && !d.expectedDeliveryCount) return MESSAGES.common.required;
+  if (d.customerQty > 0 && (!d.expectedDeliveryCount || !d.expectedDeliveryDate))
+    return MESSAGES.common.required;
   return null;
 };
 

@@ -34,7 +34,7 @@ public class OrderMaterialClosedOrderTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private OrderMaterialService Sut() => new(_uow, _notifier);
+    private OrderMaterialService Sut() => new(_uow, _notifier, Substitute.For<IClock>());
 
     private OrderMaterial Line(string orderStatus, decimal required = 100)
     {

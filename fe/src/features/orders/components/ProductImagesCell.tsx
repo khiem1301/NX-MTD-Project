@@ -5,11 +5,9 @@ import { ProductImage } from './ProductImage';
 
 type ProductImagesCellProps = { product: ProductListItem; onOpenGallery: () => void };
 
-/** Cột ảnh của danh sách mã hàng: ảnh chính, kèm "+N" khi còn ảnh phụ hoặc ảnh theo màu (bấm để xem tất cả). */
+/** Cột ảnh của danh sách mã hàng: ảnh chính, kèm "+N" khi còn ảnh phụ (bấm để xem tất cả). */
 export function ProductImagesCell({ product, onOpenGallery }: ProductImagesCellProps) {
-  const extra =
-    product.extraImages.length +
-    product.colorImages.reduce((sum, row) => sum + row.images.length, 0);
+  const extra = product.extraImages.length;
   return (
     <Space size={4}>
       {product.sampleImageUrl ? <ProductImage value={product.sampleImageUrl} /> : '—'}

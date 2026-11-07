@@ -27,6 +27,8 @@ public sealed class OrderMaterialInputValidator : AbstractValidator<IOrderMateri
             .NotNull().WithMessage(WarehouseMessages.CustomerDeliveryCountRequired)
             .Must(c => c is >= 1 and <= MaxDeliveryCount).WithMessage($"Số lần giao dự kiến phải từ 1 đến {MaxDeliveryCount}.")
             .When(x => x.CustomerQty > 0);
+        RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired).When(x => x.CustomerQty > 0);
+        RuleFor(x => x.ExpectedDeliveryDate).Null().WithMessage(WarehouseMessages.ExpectedDeliveryNotAllowed).When(x => x.CustomerQty == 0);
         RuleFor(x => x.ExpectedDeliveryCount).Null().When(x => x.CustomerQty == 0)
             .WithMessage(WarehouseMessages.CustomerDeliveryCountNotAllowed);
         // Chỉ báo khi từng số đã hợp lệ, tránh hai thông báo cho cùng một ô.

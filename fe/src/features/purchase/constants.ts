@@ -88,6 +88,8 @@ export const PURCHASE_TEXT = {
     orderDateRequired: 'Vui lòng chọn ngày đặt hàng.',
     expectedDate: 'Số lần nhà cung cấp dự kiến giao',
     expectedDateRequired: 'Nhập số lần giao dự kiến (từ 1 trở lên).',
+    expectedDeliveryDate: 'Ngày nhà cung cấp dự kiến giao',
+    expectedDeliveryDateRequired: 'Vui lòng chọn ngày dự kiến giao.',
     note: 'Ghi chú',
     priceRequired: 'Nhập đơn giá lớn hơn 0.',
     qtyRequired: 'Nhập số lượng lớn hơn 0.',

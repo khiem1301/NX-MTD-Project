@@ -8,7 +8,7 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Dọn ảnh mồ côi của mã hàng: file trong thư mục PRODUCT mà không còn Product.SampleImageUrl, ProductImage.ImageKey
-/// hay ProductColorImage.ImageKey nào trỏ tới.
+/// nào trỏ tới.
 /// Ảnh được tải lên ngay khi người dùng chọn, trước khi bấm Lưu, nên chỉ xóa file cũ hơn <see cref="GracePeriod"/>
 /// để không xóa nhầm ảnh của form đang mở. Chỉ đụng file đúng dạng khóa ảnh mã hàng (<see cref="SampleImageKey"/>).
 /// </summary>
@@ -34,8 +34,7 @@ public sealed class ProductImageCleanupService : IProductImageCleanupService
         var mainImages = await _uow.Repository<Product>().Query().Where(p => p.SampleImageUrl != null)
             .Select(p => p.SampleImageUrl!).ToListAsync(ct);
         var extraImages = await _uow.Repository<ProductImage>().Query().Select(i => i.ImageKey).ToListAsync(ct);
-        var colorImages = await _uow.Repository<ProductColorImage>().Query().Select(i => i.ImageKey).ToListAsync(ct);
-        var used = mainImages.Concat(extraImages).Concat(colorImages).ToHashSet(StringComparer.Ordinal);
+        var used = mainImages.Concat(extraImages).ToHashSet(StringComparer.Ordinal);
 
         var deleted = 0;
         foreach (var file in old.Where(f => !used.Contains(f.Key)))

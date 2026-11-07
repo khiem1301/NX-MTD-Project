@@ -8,7 +8,8 @@ namespace NX_MTD.Application.DTOs;
 public sealed record OrderMaterialDto(
     int OrderMaterialId, int OrderId, int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string MaterialColor, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
-    int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty, decimal? MaterialWidthCm = null);
+    int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty, decimal? MaterialWidthCm = null,
+    DateOnly? ExpectedDeliveryDate = null);
 
 /// <summary>Phần chung của tạo / sửa NVL của đơn (dùng chung validator).</summary>
 public interface IOrderMaterialInput
@@ -17,16 +18,17 @@ public interface IOrderMaterialInput
     decimal RequiredQty { get; }
     decimal CustomerQty { get; }
     short? ExpectedDeliveryCount { get; }
+    DateOnly? ExpectedDeliveryDate { get; }
     string? Note { get; }
 }
 
 public sealed record CreateOrderMaterialDto(
     int OrderId, int MaterialId, decimal RequiredQty, decimal CustomerQty,
-    short? ExpectedDeliveryCount, string? Note) : IOrderMaterialInput;
+    short? ExpectedDeliveryCount, string? Note, DateOnly? ExpectedDeliveryDate = null) : IOrderMaterialInput;
 
 public sealed record UpdateOrderMaterialDto(
     int MaterialId, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
-    string? Note) : IOrderMaterialInput;
+    string? Note, DateOnly? ExpectedDeliveryDate = null) : IOrderMaterialInput;
 
 /// <summary>Một NVL trong định mức của mã hàng.</summary>
 public sealed record ProductMaterialOptionDto(
@@ -38,7 +40,7 @@ public sealed record OrderProductMaterialsDto(
 
 public sealed record CreateOrderMaterialLineDto(
     int MaterialId, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
-    string? Note) : IOrderMaterialInput;
+    string? Note, DateOnly? ExpectedDeliveryDate = null) : IOrderMaterialInput;
 
 /// <summary>Thêm nhiều NVL của đơn cùng lúc: một dòng lỗi thì không lưu dòng nào.</summary>
 public sealed record CreateOrderMaterialBatchDto(int OrderId, IReadOnlyList<CreateOrderMaterialLineDto> Lines);

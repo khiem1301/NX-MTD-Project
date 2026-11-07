@@ -272,7 +272,7 @@ public sealed class DefectQueryValidator : PageQueryValidatorBase<DefectQuery>
         RuleFor(x => x.SewingTeamId).GreaterThan(0).When(x => x.SewingTeamId is not null).WithMessage("Tổ không hợp lệ.");
         RuleFor(x => x.Status).Must(s => DefectStatuses.All.Contains(CodeText.ToCode(s!)))
             .When(x => !string.IsNullOrEmpty(x.Status)).WithMessage("Trạng thái phiếu lỗi không hợp lệ.");
-        RuleFor(x => x.DefectType).Must(t => CodeText.ToCode(t!) is DefectTypes.Rework or DefectTypes.Scrap)
+        RuleFor(x => x.DefectType).Must(t => DefectTypes.All.Contains(CodeText.ToCode(t!)))
             .When(x => !string.IsNullOrEmpty(x.DefectType)).WithMessage(Messages.DefectTypeInvalid);
         RuleFor(x => x.Objection).Must(o => DefectObjectionFilters.All.Contains(o!))
             .When(x => !string.IsNullOrEmpty(x.Objection)).WithMessage("Tình trạng phản đối không hợp lệ.");
@@ -296,7 +296,7 @@ public sealed class CreateDefectDtoValidator : AbstractValidator<CreateDefectDto
         RuleFor(x => x.Quantity).Cascade(CascadeMode.Stop)
             .GreaterThan(0).WithMessage(Messages.OutputQtyInvalid)
             .LessThanOrEqualTo(DefectLimits.MaxQty).WithMessage(Messages.OutputQtyMax);
-        RuleFor(x => x.DefectType).Must(t => CodeText.ToCode(t ?? string.Empty) is DefectTypes.Rework or DefectTypes.Scrap)
+        RuleFor(x => x.DefectType).Must(t => DefectTypes.All.Contains(CodeText.ToCode(t ?? string.Empty)))
             .WithMessage(Messages.DefectTypeInvalid);
         RuleFor(x => x.ReasonCode).Must(c => DefectReasons.All.Contains(CodeText.ToCode(c ?? string.Empty)))
             .WithMessage(Messages.DefectReasonInvalid);

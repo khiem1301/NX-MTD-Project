@@ -212,6 +212,9 @@ public sealed class StocktakeService : IStocktakeService
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeWarehouseInvalid);
         if (dto.StocktakeDate > _clock.Today)
             return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.StocktakeDateFuture);
+        var stale = DocumentDateRules.CheckDocumentDate(dto.StocktakeDate, _clock.Today, null, WarehouseMessages.LabelStocktakeDate);
+        if (stale is not null)
+            return Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, stale, ResultKind.Validation);
 
         var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
         var keys = dto.Lines.Select(l => isMaterial ? $"{l.MaterialId}" : $"{l.OrderLineId}|{(dto.WarehouseType == WarehouseTypes.SemiFinished ? l.ProductComponentMaterialId : null)}").ToList();

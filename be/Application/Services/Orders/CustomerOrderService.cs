@@ -148,7 +148,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (order is null) return Fail.NotFound();
         if (order.Status != OrderStatuses.New)
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled, ct);
     }
 
     public async Task<Result> StopAsync(int orderId, StopOrderDto dto, CancellationToken ct)
@@ -157,7 +157,10 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (order is null) return Fail.NotFound();
         if (!OrderStatuses.Stoppable.Contains(order.Status))
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Stopped, dto.Reason, dto.Reason.Trim(), Messages.OrderStopped);
+        // Hàng đã xuất hết (đang giao + đã giao) thì không còn phần nào để dừng: chờ khách nhận là đơn sang Đã giao.
+        if (await IsFullyDispatchedAsync(orderId, ct))
+            return Result.Failure(ErrorCodes.OrderFullyDispatched, Messages.OrderFullyDispatched);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Stopped, dto.Reason, dto.Reason.Trim(), Messages.OrderStopped, ct);
     }
 
     public async Task<Result> StartProductionAsync(int orderId, StartOrderProductionDto dto, CancellationToken ct)
@@ -168,11 +171,11 @@ public sealed class CustomerOrderService : ICustomerOrderService
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
         if (order.MaterialStatus == OrderMaterialStatuses.Awaiting)
             return Result.Failure(ErrorCodes.OrderMaterialsAwaiting, Messages.OrderMaterialsAwaiting);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.InProduction, null, null, Messages.OrderStarted);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.InProduction, null, null, Messages.OrderStarted, ct);
     }
 
     private async Task<Result> ChangeStatusAsync(CustomerOrder order, byte[] rowVer, string to, string? reason,
-        string? stopReason, string successMessage)
+        string? stopReason, string successMessage, CancellationToken ct)
     {
         _orders.SetOriginalRowVersion(order, rowVer);
         var from = order.Status;
@@ -181,8 +184,20 @@ public sealed class CustomerOrderService : ICustomerOrderService
         order.UpdatedAt = _clock.Now;
         _audit.Add(new AuditEntry(nameof(CustomerOrder), order.OrderId, AuditActions.Update, new { Status = from },
             new { Status = to }, Clean(reason)));
+        if (to is OrderStatuses.Cancelled or OrderStatuses.Stopped) await new OrderCloseCascade(_uow, _audit, _notifier).RunAsync(order, to, _clock.Now, ct);
         await _uow.SaveChangesAsync();
         return Result.Success(successMessage);
+    }
+
+    /// <summary>Số đã xuất kho (đang giao + đã giao) của các phiếu xuất đã phủ hết số đặt của đơn.</summary>
+    private async Task<bool> IsFullyDispatchedAsync(int orderId, CancellationToken ct)
+    {
+        var ordered = await _lines.Query().Where(l => l.OrderId == orderId).SumAsync(l => l.OrderedQty, ct);
+        var shipped = await _uow.Repository<DispatchNoteLine>().Query()
+            .Where(l => l.DispatchNote.OrderId == orderId
+                        && (l.DispatchNote.Status == DispatchStatuses.InDelivery || l.DispatchNote.Status == DispatchStatuses.Delivered))
+            .SumAsync(l => l.IssueQty, ct);
+        return ordered > 0 && shipped >= ordered;
     }
 
     /// <summary>Không phải NEW: mã đơn, khách, ngày nhận phải giữ nguyên. Đổi mã khi NEW: kiểm trùng.</summary>

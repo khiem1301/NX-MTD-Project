@@ -128,6 +128,14 @@
 | DEV-ALL-74 | 05/11/2026 | Claude (AI) | UC15, UC16 (nhân viên), UC18 (tổ) | Họ tên nhân viên chỉ gồm chữ cái và khoảng trắng; các ô mã chặn ký tự không cho phép ngay khi gõ | Mở |
 | DEV-ALL-75 | 05/11/2026 | Claude (AI) | UC09 (chi tiết đơn hàng) | Chi tiết đơn hàng hiện số đã giao và số còn phải giao theo màu, và tổng đã giao / tổng đặt | Mở |
 | DEV-ALL-76 | 05/11/2026 | Claude (AI) | UC06, UC38 (khách hàng, nhà cung cấp) | Ngừng hợp tác với khách hàng / nhà cung cấp không bắt buộc ghi lý do | Mở |
+| DEV-ALL-77 | 06/11/2026 | Claude (AI) | UC40 (cấp vải / BTP), UC53, UC55, UC56, UC57, đơn Xin NVL / Xin BTP | Ghi hàng hỏng, sản lượng, QC chỉ trong thời gian gia công của đơn (giao theo ngày: xem DEV-ALL-78); validate dòng và số lượng đơn Xin NVL / Xin BTP (vải lẻ 2 chữ số, NVL khác vải và BTP số nguyên); phiếu cấp vải / BTP có đề xuất theo mã hàng + màu (+ size) | Mở |
+| DEV-ALL-78 | 06/11/2026 | Claude (AI) | UC53, UC60 (giao sản lượng theo ngày) | Chỉ giao và sửa trong ngày hôm nay; sang ngày hôm sau chỉ xem được | Mở |
+| DEV-ALL-79 | 06/11/2026 | Claude (AI) | UC56 (phiếu lỗi), UC55, UC59, `DefectRecord`, 3 trigger, 3 view | Thêm loại phiếu OUTPUT_ERR "Nhập sai sản lượng": trừ sản lượng và tiền của công nhân, tính lại trần sản lượng và tiến độ; đổi tên màn Hàng hỏng thành Phiếu lỗi / điều chỉnh | Mở |
+| DEV-ALL-80 | 06/11/2026 | Claude (AI) | UC10 (mã hàng), `ProductColorImage` | Bỏ ảnh theo màu của mã hàng (bỏ bảng `ProductColorImage`, API `colorImages`, mục "Ảnh theo màu" ở form); giữ bảng `ProductColor` và 5 ảnh phụ. Thay phần ảnh theo màu của DEV-ALL-71 | Mở |
+| DEV-ALL-81 | 07/11/2026 | Claude (AI) | UC09, UC49, UC47, UC19, `CustomerOrder.Status`, `DispatchNote`, `WorkOrder`, `KpiTarget` | Chặn dừng đơn khi hàng đã xuất hết (`ORDER_FULLY_DISPATCHED`); hủy / dừng đơn tự hủy phiếu xuất PENDING, lệnh cắt OPEN chưa làm gì và KPI ACTIVE | Mở |
+| DEV-ALL-82 | 07/11/2026 | Claude (AI) | UC41–UC46 (phiếu cấp, phiếu nhập, kiểm kê, trả vải thừa), UC09, `PurchaseOrder`, `OrderMaterial` | Quy tắc ngày chứng từ kho (không tương lai, không trước ngày nhận đơn, không quá 7 ngày trước); thêm `ExpectedDeliveryDate` cho đơn mua và NVL khách cấp; siết kiểm trả vải thừa (một phiếu chờ mỗi dòng, không vượt số thừa theo số đã cắt) | Mở |
+| DEV-ALL-83 | 07/11/2026 | Claude (AI) | UC35 (xe, chuyến xe), đơn xin của Cơ điện (`SPARE_PARTS`, `MACHINE_SUPPLIES`, `NEW_MACHINE`) | Siết kiểm biển số, số xăng, tiền xăng, số km, định mức xăng; đơn xin linh kiện / vật tư / máy chỉ nhận số nguyên có trần (9.999 / 99) và bắt buộc có dòng | Mở |
+| DEV-ALL-84 | 07/11/2026 | Claude (AI) | UC30 (suất ăn) | Số suất ăn tổ trưởng xác nhận không được vượt số người đang làm trong tổ | Mở |
 | DEV-ALL-15 | 28/10/2026 | Claude (AI) | UC10, UC15–UC17, UC19, UC26, UC27, UC41–UC43, UC52–UC56 | Sửa theo sheet ghi chú: UI theo vai trò và loại tổ, tìm kiếm tức thì, KPI theo BTP khả dụng và chỉ chốt cuối đơn, tăng ca, phiếu lỗi lệch kiểm cuối đơn, bậc thợ động, Quản đốc quản lý tài khoản (trừ Admin, Kế toán); đối chiếu swimlane: xuất hàng có Quản đốc duyệt, ảnh phiếu ký / biên bản giao bắt buộc, lệnh cắt hoàn thành sau trả vải thừa + so vải, NVL lỗi tự tạo phiếu xin / đơn mua, nhận thành phẩm báo KPI, "không bù" NCC giữ PARTIAL; thông báo hệ thống cho luồng cắt, kho, KPI | Đã làm |
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
@@ -1852,4 +1860,120 @@
 - **Lý do:** yêu cầu của người dùng.
 - **Ảnh hưởng người khác:** Khiêm (khách hàng), Thái (nhà cung cấp).
 - **Cần sửa trong tài liệu:** Report-3 UC khách hàng / nhà cung cấp (bỏ MSG09 ở bước ngừng hợp tác), `NX-MTD_Database.sql` chú thích cột `DiscontinueReason`.
+- **Trạng thái:** Mở
+
+### DEV-ALL-77 · Ngày làm việc trong thời gian gia công; validate đơn Xin NVL / BTP; đề xuất khi cấp vải / BTP
+
+- **Ngày / Người / Task / PR:** 06/11/2026 · Claude (AI) · UC40, UC53, UC55, UC56, UC57 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - BE: `ProductionGuard.BeforeOrderStart`, `DefectService`, `OutputService`, `QcBatchService`, `DailyWorkAllocationService` (kiểm ngày); `RequisitionRequestHandlers` (đơn Xin NVL / Xin BTP, đăng ký ở `WarehouseModule`, mã lỗi `REQUEST_LINES_INVALID`); `WorkOrderService.GetFabricNeedsAsync` và API mới `GET warehouse-keeper/work-orders/{id}/fabric-needs?color=&sizeCode=`. Không đổi schema.
+  - FE: bộ chọn ngày ở form hàng hỏng, giao việc theo ngày, sản lượng cuối ca (`useWorkDateRange`); form đơn xin (`RequestFormModal`); thanh đề xuất ở `IssueCreateModal` (`FabricSuggestionBar`, `PieceSuggestionBar`).
+- **Tài liệu gốc ghi:** Report-3 chỉ cấm ngày chưa tới (MSG ngày tương lai); đơn Xin NVL / BTP dùng form chung, chỉ kiểm số lượng > 0.
+- **Code đang làm:**
+  - **Thời gian gia công:** ngày làm việc của phiếu hàng hỏng, sản lượng cuối ca, đợt QC và giao việc theo ngày phải từ ngày nhận đơn trở đi và không quá hôm nay; sai thì báo "Ngày … trước ngày nhận đơn …". Ô chọn ngày ở FE chặn cùng khoảng này sau khi chọn đơn.
+  - **Đơn Xin NVL / Xin BTP:** phải có 1 đến 50 dòng, không trùng; ngày cần không trước hôm nay khi tạo mới. **Xin NVL:** mỗi dòng phải chọn NVL trong danh mục đang dùng (không còn gõ tên tự do); **vải** nhập số lẻ tối đa 2 chữ số sau dấu phẩy, **NVL khác vải** (chỉ, cúc, phụ liệu…) chỉ nhập số nguyên, tối đa 9.999.999 mỗi dòng; đổi sang NVL không phải vải thì số đã nhập tự làm tròn. **Xin BTP:** số nguyên từ 1 đến 1.000.000. Loại đơn khác (linh kiện, máy…) giữ cách nhập cũ (lẻ tối đa 3 chữ số). Đơn Xin NVL cũ chỉ có tên hàng (chưa gắn NVL) phải chọn lại NVL khi sửa.
+  - **Đề xuất khi lập phiếu cấp:** cấp BTP: chọn mã hàng + màu (+ size) rồi "Thêm dòng đề xuất" thêm các dòng đơn khớp, số cấp = nhỏ hơn của khả dụng trong kho BTP và số đặt, bỏ dòng hết hàng hoặc đã có. Cấp vải: chọn màu (+ size) của lệnh cắt rồi "Đề xuất số cấp" điền số mét cần (tính theo bìa / định mức, cùng bộ tính cảnh báo vải của lệnh cắt), không vượt khả dụng trong kho; Thủ kho vẫn sửa được trước khi lưu.
+- **Lý do:** yêu cầu của người dùng. Tổ trưởng may chọn được ngày nhiều năm trước khi ghi hàng hỏng và giao sản lượng; số lượng đơn xin không bị chặn đúng kiểu.
+- **Ảnh hưởng người khác:** Minh (sản xuất, QC, giao việc), Thái (kho, cắt, đơn xin).
+- **Cần sửa trong tài liệu:** Report-3 UC53 / UC55 / UC56 / UC57 (khoảng ngày hợp lệ), UC40 (đề xuất số cấp), đơn Xin NVL / Xin BTP (quy tắc dòng và số lượng).
+- **Trạng thái:** Mở
+
+### DEV-ALL-78 · Giao sản lượng công đoạn theo ngày: chỉ sửa trong ngày, sang ngày sau chỉ xem
+
+- **Ngày / Người / Task / PR:** 06/11/2026 · Claude (AI) · UC53, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `DailyWorkAllocationService.SaveAsync`, `WarehouseMessages.DailyDateMustBeToday` (thay `DailyDateInFuture`). FE: `DailyAllocationBoard`, `DailyWorkerModal`, `dailyModalColumns`. Không đổi schema, không đổi API.
+- **Tài liệu gốc ghi:** DEV-ALL-63: "Chỉ giao cho hôm nay hoặc ngày đã qua" (cho giao bù ngày cũ).
+- **Code đang làm:** `PUT team-leader/work-allocations/daily` chỉ nhận `workDate` = hôm nay (ngày đã qua hoặc chưa tới trả 409 `WAREHOUSE_INVALID_REFERENCE`, thông báo "Chỉ giao và sửa việc trong ngày hôm nay..."). `GET daily` vẫn xem được mọi ngày. Trên màn Giao sản lượng theo ngày, chọn ngày đã qua thì có thông báo "chỉ xem", các ô nhập số giao và nút Lưu bị khóa. Bộ chọn ngày vẫn chỉ cho từ ngày nhận đơn đến hôm nay (DEV-ALL-77).
+- **Lý do:** yêu cầu của người dùng: tổ trưởng không được giao hay sửa sản lượng cho quá khứ; sang ngày hôm sau chỉ còn xem.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh (UC55 sản lượng cuối ca: phần chuyển sang hôm sau vẫn tự tính, không phụ thuộc việc sửa ngày cũ).
+- **Cần sửa trong tài liệu:** Report-3 UC53 / UC60 (điều kiện: chỉ giao trong ngày); DEV-ALL-63 dòng "ngày đã qua" nay thay bằng mục này.
+- **Trạng thái:** Mở
+
+### DEV-ALL-79 · Phiếu lỗi thêm loại "Nhập sai sản lượng"; màn Hàng hỏng đổi tên thành Phiếu lỗi / điều chỉnh
+
+- **Ngày / Người / Task / PR:** 06/11/2026 · Claude (AI) · UC56, UC55, UC59 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - Schema: `CK_DR_Type` thêm `'OUTPUT_ERR'` (cột `DefectType` là VARCHAR(10) nên mã loại là `OUTPUT_ERR`); `trg_WorkAllocation_Check`, `trg_OutputRecord_Check`, `vw_WorkerOutputCap`, `vw_OperationAllocationProgress`, `vw_WorkerDailyEstimatedPay` tính sản lượng hiệu lực = Σ `OutputRecord` − Σ phiếu `OUTPUT_ERR` chưa hủy. Patch `SQL/patches/2026-11-06_defect_output_error.sql` (đã chạy thử trên DB tạm: dựng mới và nâng cấp từ bản cũ, chạy lại không lỗi); `SQL/NX-MTD_Database.sql` đã cập nhật.
+  - BE: `DefectTypes.OutputError` / `DefectTypes.All`, `DefectService` (ghi phiếu, hủy phiếu), validator `CreateDefectDto` / `DefectQuery`, `Messages`, `AuditText`. API không đổi, `defectType` nhận thêm `OutputErr`.
+  - FE: `DefectFormModal`, `defectText.ts`, `types.ts`, `auditLabels.ts`; tên màn ở menu, tiêu đề trang, thông báo.
+- **Tài liệu gốc ghi:** UC56: phiếu lỗi có hai loại Rework (không trừ sản lượng) và Scrap (trừ tiền theo đơn giá khóa); màn tên "Hàng hỏng".
+- **Code đang làm:**
+  - **Loại mới "Nhập sai sản lượng"** (`OUTPUT_ERR`): tổ trưởng may chọn công nhân, dòng đơn, công đoạn, **ngày đã nhập sai** và số lượng cần trừ. Phiếu **không sửa bản ghi sản lượng cũ** mà trừ bên ngoài (phiếu điều chỉnh âm): sản lượng của công nhân = đã nhập − Σ phiếu. Hệ quả: trần sản lượng còn lại của công nhân tăng lên (nhập lại số đúng được), số "đã làm" của công đoạn giảm nên số còn phải làm / BTP còn trên chuyền tính lại, tiền sản phẩm trong lương tạm tính giảm theo đơn giá duyệt khóa lúc ghi (như Scrap) và tiền Chủ nhật tính trên phần còn lại.
+  - **Ràng buộc:** bắt buộc ghi chú lý do nhập sai (mã lý do tự đặt là Khác); phải có đơn giá duyệt (MSG18); số trừ không vượt sản lượng công nhân đã nhập đúng công đoạn trong **ngày đó** trừ các phiếu nhập sai đã ghi (không tính phiếu đã hủy); hủy phiếu chỉ được khi công nhân còn chỗ dưới trần số lần được giao (hủy trả sản lượng lại). Công nhân vẫn được thông báo và phản hồi như các loại khác; hạn sửa, khóa tháng giữ nguyên.
+  - **Không đổi:** tỉ lệ lỗi, `ReworkQty` / `ScrapQty`, tồn BTP trong kho, cắt bù và các số liệu hàng hỏng thật không tính loại này (không phải hàng lỗi vật lý, hàng không rời xưởng). NVL: hệ thống không có số NVL nào suy ra từ sản lượng công đoạn nên không có số NVL để cộng lại.
+  - **Tên màn hình:** "Hàng hỏng" thành "Phiếu lỗi / điều chỉnh" (Quản đốc: "Phiếu lỗi / điều chỉnh của các tổ"; công nhân: "Phiếu lỗi / điều chỉnh của tôi"). Đường dẫn `/defect-records` giữ nguyên.
+- **Lý do:** yêu cầu của người dùng: tổ trưởng nhập sai sản lượng công đoạn cần một đường chính thức để trừ sản lượng của công nhân (sau hạn sửa, hoặc khi không muốn sửa bản ghi cũ) và tính lại số liệu BTP.
+- **Ảnh hưởng người khác:** Minh (UC55 sản lượng, UC56 phiếu lỗi), Kiều (lương tạm tính UC59, view `vw_WorkerDailyEstimatedPay`), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới, nếu không ghi phiếu loại mới sẽ vướng `CK_DR_Type`.
+- **Cần sửa trong tài liệu:** Report-3 UC56 (loại phiếu thứ ba, tên màn hình), UC55 / UC59 (sản lượng hiệu lực), `NX-MTD_AI_Context.md` mục `DefectRecord.DefectType`; `NX-MTD_Database_Mo_ta.md` bảng `DefectRecord`, các view nêu trên.
+- **Trạng thái:** Mở
+
+### DEV-ALL-80 · Bỏ ảnh theo màu của mã hàng
+
+- **Ngày / Người / Task / PR:** 06/11/2026 · Claude (AI) · UC10 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - Schema: bỏ bảng `ProductColorImage` (patch `SQL/patches/2026-11-06_drop_product_color_image.sql`, đã chạy thử trên DB tạm: dựng mới và nâng cấp từ bản cũ, chạy lại không lỗi); `SQL/NX-MTD_Database.sql`, `docs/NX-MTD_Database.dbml`, `docs/NX-MTD_Database_Mo_ta.md` đã cập nhật. Bảng `ProductColor` (nơi duy nhất lưu tên màu) và `ProductImage` (tối đa 5 ảnh phụ) giữ nguyên.
+  - BE: bỏ entity / cấu hình `ProductColorImage`, `ProductColorImagesDto`, trường `colorImages` ở `ProductListItemDto`, `ProductDetailDto`, `SaveProductDto`; `ProductService`, validator, `ProductImageCleanupService` (không còn tính ảnh theo màu là ảnh đang dùng); bỏ các thông báo liên quan. `ProductDetailDto.colors` (các màu đã có biến thể) vẫn trả như cũ.
+  - FE: bỏ `ColorImagesField`, `ColorImagesRow`, mục "Ảnh theo màu" ở form mã hàng, ở khung xem tất cả ảnh, số "+N" ở cột ảnh danh sách mã hàng chỉ còn đếm ảnh phụ.
+- **Tài liệu gốc ghi:** DEV-ALL-71: mỗi màu áo có 1-3 ảnh (`ProductColorImage`); mã hàng có 1 ảnh chính và tối đa 5 ảnh phụ.
+- **Code đang làm:** mã hàng chỉ còn 1 ảnh chính và tối đa 5 ảnh phụ, không có ảnh theo màu. Phần "ảnh theo màu" của DEV-ALL-71 không còn hiệu lực (phần tách màu thành `ProductColor` vẫn giữ). Dữ liệu ảnh theo màu đã nhập bị xóa cùng bảng; file ảnh trên ổ lưu trữ do job dọn ảnh mồ côi xóa sau 24 giờ.
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Khiêm (UC10 mã hàng), Morgan (schema). DB đang chạy phải chạy patch trước hoặc sau khi chạy backend mới đều được (backend mới không còn đọc bảng này); chạy patch thì mất dữ liệu ảnh theo màu.
+- **Cần sửa trong tài liệu:** Report-3 UC10 (bỏ ảnh theo màu, mockup form mã hàng); ERD và `NX-MTD_Database_Giai_thich.md` (bỏ `ProductColorImage`); `NX-MTD_AI_Context.md` mục 8.
+- **Trạng thái:** Mở
+
+### DEV-ALL-81 · Dừng đơn chặn khi hàng đã xuất hết; hủy / dừng đơn tự hủy phiếu xuất, lệnh cắt, KPI đang chờ
+
+- **Ngày / Người / Task / PR:** 07/11/2026 · Claude (AI) · UC09, UC49 (phiếu xuất hàng) · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** `CustomerOrder.Status`, `DispatchNote.Status`, mã lỗi `ORDER_FULLY_DISPATCHED`. Không đổi schema.
+- **Tài liệu gốc ghi:** hủy / dừng đơn không nói gì về phiếu xuất hàng của đơn.
+- **Code đang làm:**
+  - **Dừng đơn** (đơn `IN_PRODUCTION` / `IN_DELIVERY` / `PARTIALLY_DELIVERED`, kể cả đã giao một phần) bị chặn khi tổng số của các phiếu `IN_DELIVERY` + `DELIVERED` ≥ tổng số đặt: trả `ORDER_FULLY_DISPATCHED` (409). Lúc đó không còn phần nào để dừng; khách nhận xong thì đơn tự sang `DELIVERED` (GBR-23). Phiếu `PENDING`, `REJECTED`, `CANCELLED` không tính.
+  - **Hủy hoặc dừng đơn tự hủy mọi phiếu xuất `PENDING` của đơn** (cùng lần lưu), ghi lịch sử từng phiếu và báo Thủ kho. Phiếu `IN_DELIVERY` / `DELIVERED` giữ nguyên. Vì dừng chỉ được khi còn phần chưa xuất, đơn `STOPPED` có phiếu `IN_DELIVERY` đang giao vẫn xác nhận giao được nhưng giữ `STOPPED` (không thể thành `DELIVERED` vì số xuất chưa đủ).
+  - **Hủy hoặc dừng đơn cũng xử lý lệnh cắt và KPI:** lệnh cắt chưa làm gì (`OPEN`, chưa có bàn cắt, chưa có phiếu cấp vải trừ phiếu bị từ chối) thì **hủy**; lệnh đã có việc (có bàn cắt / phiếu cấp, hoặc đang `CUTTING`) thì **đóng** (`COMPLETED`, ghi lý do vào ghi chú) nếu đủ điều kiện như Quản đốc đóng tay (hết phiếu bàn giao / trả vải chờ kho, BTP đã cắt đã vào kho hết; điều kiện dùng chung `WorkOrderFinishCheck`), chưa đủ thì để nguyên và báo Quản đốc đóng sau. Báo tổ trưởng / tổ phó tổ cắt. Chỉ tiêu KPI `ACTIVE` của đơn thì hủy, báo tổ may. Ghi lịch sử từng bản ghi (`OrderCloseCascade`).
+  - **Giữ nguyên:** lệnh cắt chưa đủ điều kiện đóng, KPI đã đóng kỳ, phiếu cấp NVL và phiếu bàn giao thành phẩm / bán thành phẩm chờ xác nhận (hàng đã rời tay người giao), đơn từ đang chờ duyệt, đơn mua NVL, giao việc theo ngày (đã bị chặn lập mới khi đơn đóng).
+- **Lý do:** yêu cầu của người dùng: phiếu `PENDING` bị treo khi đơn đóng; đơn đã xuất hết hàng thì không nên dừng.
+- **Ảnh hưởng người khác:** Thủ kho (phiếu xuất), tổ trưởng / tổ phó tổ cắt (lệnh cắt), tổ trưởng / tổ phó tổ may (KPI) nhận thông báo khi bản ghi bị hủy tự động.
+- **Cần sửa trong tài liệu:** Report-3 UC09 (điều kiện dừng đơn), UC49 (phiếu xuất tự hủy), UC47 (lệnh cắt tự hủy / đóng), UC19 (KPI tự hủy); `NX-MTD_AI_Context.md` mục trạng thái đơn hàng.
+- **Trạng thái:** Mở
+
+### DEV-ALL-82 · Ngày chứng từ kho, ngày dự kiến giao hàng, kiểm trả vải thừa
+
+- **Ngày / Người / Task / PR:** 07/11/2026 · Claude (AI) · UC41–UC46, UC09 · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - Schema: thêm `OrderMaterial.ExpectedDeliveryDate`, `PurchaseOrder.ExpectedDeliveryDate` (DATE, NULL) + `CK_OM_DeliveryDate`, `CK_PO_DeliveryDate`. Patch `SQL/patches/2026-11-07_expected_delivery_date.sql` (chạy lại không lỗi); `SQL/NX-MTD_Database.sql`, `docs/NX-MTD_Database.dbml`, `docs/NX-MTD_Database_Mo_ta.md` đã cập nhật. Chưa chạy thử patch trên DB thật.
+  - BE: `DocumentDateRules` (dùng chung), `MaterialIssueService`, `MaterialReceiptService`, `StocktakeService`, `OrderMaterialService`, `PurchaseOrderService`, `PurchaseOrderFlowService`, `PurchaseDeliveryDate`, `ShortDeliveryService` (xóa ngày khi khách cấp về 0), `MaterialReturnService`, validators, DTO, mã lỗi `RETURN_PENDING_EXISTS`, `RETURN_EXCEEDS_LEFTOVER`.
+  - FE: form tạo đơn mua, form đặt hàng, form NVL của đơn (từng dòng và sửa cả đơn), cột ngày ở danh sách NVL của đơn và màn NVL chờ nhận, chi tiết đơn mua.
+- **Tài liệu gốc ghi:** không có quy tắc cho ngày phiếu cấp / phiếu nhập (kiểm kê chỉ cấm ngày tương lai); đơn mua và NVL khách cấp chỉ có số lần giao dự kiến (23/10 đã bỏ ngày dự kiến); trả vải thừa chỉ kiểm số trả ≤ số còn lại của dòng phiếu cấp.
+- **Code đang làm:**
+  - **Ngày phiếu cấp, ngày phiếu nhập (kể cả phiếu bổ sung), ngày kiểm kê:** không sau hôm nay, không trước hôm nay quá 7 ngày (`DocumentDateRules.MaxBackDays`), và (phiếu cấp, phiếu nhập có đơn) không trước ngày nhận đơn. Phiếu nhập theo đơn mua còn không trước ngày đặt đơn mua. Lỗi trả 400 (validation).
+  - **Ngày dự kiến giao:** bắt buộc khi tạo đơn mua, khi đặt hàng đơn chờ chốt và khi NVL của đơn có khách cấp (`CustomerQty > 0`); khách không cấp thì phải để trống. Không trước hôm nay, không trước ngày đặt (đơn mua), không sau hạn giao của đơn hàng (nếu đơn mua / NVL gắn đơn). Ngày giữ nguyên khi sửa thì không kiểm lại (sửa ghi chú đơn cũ vẫn được). Số lần giao dự kiến giữ nguyên. Dữ liệu cũ để trống ngày.
+  - **Trả vải thừa:** mỗi dòng phiếu cấp chỉ có một phiếu trả đang chờ Thủ kho xác nhận (`RETURN_PENDING_EXISTS`); tổng số trả theo (đơn, vải) không vượt số vải còn thừa theo số đã cắt, cộng các phiếu cấp cùng đơn, cùng vải (`RETURN_EXCEEDS_LEFTOVER`), không chặn khi còn bàn cắt chưa nhập chiều dài. Giữ nguyên: số trả ≤ còn lại của dòng, phiếu cấp phải `RECEIVED`, số xác nhận ≤ số tổ trả, lệch phải có lý do.
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Thủ kho (lập phiếu cấp / nhập / kiểm kê, trả vải), Quản đốc (đặt hàng, khai NVL khách cấp), tổ cắt (trả vải), Morgan (schema). DB đang chạy phải chạy patch trước khi chạy backend mới, nếu không đọc / ghi đơn mua và NVL của đơn sẽ lỗi cột.
+- **Cần sửa trong tài liệu:** Report-3 UC41–UC46 (quy tắc ngày, trả vải thừa), UC09 và UC23 (ngày dự kiến giao); ERD và `NX-MTD_Database_Giai_thich.md` (hai cột và hai CHECK mới); `NX-MTD_AI_Context.md` mục `PurchaseOrder`, `OrderMaterial`.
+- **Trạng thái:** Mở
+
+### DEV-ALL-83 · Kiểm biển số, xăng, tiền xăng; đơn xin của Cơ điện chỉ số nguyên có trần
+
+- **Ngày / Người / Task / PR:** 07/11/2026 · Claude (AI) · UC35, đơn xin của Cơ điện · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** không đổi schema. BE: `VehiclePlate`, `VehicleLimits`, `VehicleDtoValidators`, `MachineRequestHandlers` (đăng ký ở `RequestModule`), `Messages`, `WarehouseMessages`. FE: `features/vehicle-log` (`VehicleFormModal`, `TripCompleteModal`, `TripModals`, `constants`), `features/requests` (`lineQuantity`, `constants`).
+- **Tài liệu gốc ghi:** biển số chỉ cần duy nhất; xăng / tiền xăng chỉ kiểm ≥ 0; đơn xin linh kiện / máy / vật tư nhận số lẻ đến 3 chữ số, trần chung 9.999.999, không bắt buộc có dòng.
+- **Code đang làm:**
+  - **Biển số:** đúng mẫu ô tô (mã tỉnh 2 số, 1-2 chữ cái, gạch ngang, 4-5 số, biển mới có dấu chấm trước 2 số cuối), ví dụ `51C-123.45`, `30F-1234`; tự viết hoa, vẫn duy nhất. Biển đã lưu không đúng mẫu vẫn dùng được, chỉ bị kiểm khi sửa xe.
+  - **Số xăng:** lớn hơn 0, tối đa 1.000 lít, tối đa 2 số lẻ. **Tiền xăng:** số nguyên đồng lớn hơn 0, tối đa 100.000.000 ₫. Phải nhập cả hai hoặc để trống cả hai (0 không còn hợp lệ). **Số km** (đầu, cuối) tối đa 9.999.999; **định mức xăng** tối đa 2 số lẻ.
+  - **Đơn xin của Cơ điện:** linh kiện và vật tư máy là số nguyên 1-9.999 mỗi dòng, máy mới số nguyên 1-99 mỗi dòng; bắt buộc có ít nhất một dòng, tối đa 50 dòng, không trùng tên hàng, ngày cần không ở quá khứ (dùng chung kiểm của đơn Xin NVL / BTP).
+- **Lý do:** yêu cầu của người dùng.
+- **Ảnh hưởng người khác:** Kế toán (nhập xe, chuyến xe), Cơ điện (đơn xin), tester (dữ liệu mẫu hiện có vẫn hợp lệ).
+- **Cần sửa trong tài liệu:** Report-3 UC35 (quy tắc biển số, xăng, tiền xăng) và mục đơn xin của Cơ điện (số nguyên, trần).
+- **Trạng thái:** Mở
+
+### DEV-ALL-84 · Số suất ăn của tổ không vượt số người trong tổ
+
+- **Ngày / Người / Task / PR:** 07/11/2026 · Claude (AI) · UC30 · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** không đổi schema. BE: `MealService.ConfirmTeamMealAsync`, `IMealRepository` / `MealRepository` (`GetTeamMemberCountAsync`), `ErrorCodes.MealCountExceedsMembers`, `Messages`.
+- **Tài liệu gốc ghi:** tổ trưởng xác nhận số suất, chỉ kiểm ≥ 0.
+- **Code đang làm:** số suất xác nhận phải ≤ số người đang làm (`Status = ACTIVE`) của tổ, vượt thì trả 409 `MEAL_COUNT_EXCEEDS_MEMBERS`. Suất do job tự lấy từ chấm công thì không cần kiểm (chấm công không vượt số người).
+- **Lý do:** yêu cầu của người dùng, tránh đặt dư suất.
+- **Ảnh hưởng người khác:** Tổ trưởng (xác nhận suất ăn), Kế toán (tổng suất).
+- **Cần sửa trong tài liệu:** Report-3 UC30 (quy tắc kiểm số suất).
 - **Trạng thái:** Mở

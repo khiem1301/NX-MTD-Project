@@ -24,26 +24,20 @@ public sealed record ProductQuery : PageQuery
     public string? Status { get; init; }   // PascalCase: Active / Discontinued; null = tất cả
 }
 
-/// <summary>Ảnh của một màu áo (1-3 khóa ảnh tải từ máy, theo thứ tự hiển thị), DEV-ALL-71.</summary>
-public sealed record ProductColorImagesDto(string Color, IReadOnlyList<string> Images);
-
 /// <param name="ExtraImages">Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5); ảnh chính là SampleImageUrl.</param>
-/// <param name="ColorImages">Ảnh theo màu áo, xếp theo tên màu.</param>
 public sealed record ProductListItemDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
-    string Status, bool IsUsed, DateTime CreatedAt, IReadOnlyList<string> ExtraImages,
-    IReadOnlyList<ProductColorImagesDto> ColorImages);
+    string Status, bool IsUsed, DateTime CreatedAt, IReadOnlyList<string> ExtraImages);
 
-/// <param name="Colors">Các màu áo đã có biến thể (do đơn hàng tạo), để gợi ý khi khai ảnh theo màu.</param>
+/// <param name="Colors">Các màu áo đã có biến thể (do đơn hàng tạo).</param>
 public sealed record ProductDetailDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
     string? Description, string? LastSizeRatio, string Status, bool IsUsed, DateTime CreatedAt,
-    IReadOnlyList<string> ExtraImages, IReadOnlyList<ProductColorImagesDto> ColorImages, IReadOnlyList<string> Colors,
+    IReadOnlyList<string> ExtraImages, IReadOnlyList<string> Colors,
     IReadOnlyList<AuditLogDto> History);
 
 /// <param name="SampleImageUrl">Ảnh chính: khóa ảnh tải từ máy, hoặc đường dẫn http/https (dữ liệu cũ).</param>
 /// <param name="ExtraImages">Ảnh phụ (tối đa 5, khóa ảnh tải từ máy, theo thứ tự hiển thị). null = giữ nguyên, danh sách rỗng = xóa hết.</param>
-/// <param name="ColorImages">Ảnh theo màu áo (mỗi màu 1-3 ảnh, không trùng màu). null = giữ nguyên, danh sách rỗng = xóa hết.</param>
 public sealed record SaveProductDto(string ProductCode, string ProductName, string? SampleImageUrl, string? Description,
-    IReadOnlyList<string>? ExtraImages = null, IReadOnlyList<ProductColorImagesDto>? ColorImages = null);
+    IReadOnlyList<string>? ExtraImages = null);
 
 // ---- Đơn hàng ----
 /// <param name="OrderLineId">null = dòng mới; có giá trị = dòng cũ (sửa).</param>

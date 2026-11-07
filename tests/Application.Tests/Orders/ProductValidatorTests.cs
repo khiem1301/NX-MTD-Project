@@ -86,65 +86,6 @@ public class ProductValidatorTests
         new SaveProductDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage).Should().Equal("Tối đa 5 ảnh phụ.");
     }
 
-    // ---------- ảnh theo màu ----------
-
-    private static ProductColorImagesDto ColorImages(string color, int from, int count) =>
-        new(color, Enumerable.Range(from, count).Select(ImageKey).ToList());
-
-    private static FluentValidation.Results.ValidationResult ValidateColors(params ProductColorImagesDto[] colors) =>
-        new SaveProductDtoValidator().Validate(new SaveProductDto("AO-01", "Áo", null, null, null, colors));
-
-    [Theory]
-    [InlineData(0, false)]
-    [InlineData(1, true)]
-    [InlineData(3, true)]
-    [InlineData(4, false)]
-    public void ColorImages_EachColorHasOneToThree(int count, bool expected) =>
-        ValidateColors(ColorImages("Đỏ", 1, count)).IsValid.Should().Be(expected);
-
-    [Fact]
-    public void ColorImages_CanBeOmittedOrEmpty()
-    {
-        ProductIsValid().Should().BeTrue();
-        ValidateColors().IsValid.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ColorImages_SameColorTwice_IsRejected_IgnoringCaseAndSpaces() =>
-        ValidateColors(ColorImages("Đỏ", 1, 1), ColorImages(" đỏ ", 2, 1)).Errors.Select(e => e.ErrorMessage)
-            .Should().Equal("Mỗi màu chỉ khai ảnh một lần.");
-
-    [Fact]
-    public void ColorImages_SameImageInTwoColors_IsRejected() =>
-        ValidateColors(ColorImages("Đỏ", 1, 1), ColorImages("Xanh", 1, 1)).IsValid.Should().BeFalse();
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ColorImages_ColorRequired(string color) =>
-        ValidateColors(ColorImages(color, 1, 1)).IsValid.Should().BeFalse();
-
-    [Theory]
-    [InlineData(50, true)]
-    [InlineData(51, false)]
-    public void ColorImages_ColorMaxLength(int length, bool expected) =>
-        ValidateColors(ColorImages(new string('a', length), 1, 1)).IsValid.Should().Be(expected);
-
-    [Fact]
-    public void ColorImages_MustBeUploadedImageKeys() =>
-        ValidateColors(new ProductColorImagesDto("Đỏ", ["https://a.vn/x.jpg"])).IsValid.Should().BeFalse();
-
-    [Theory]
-    [InlineData(30, true)]
-    [InlineData(31, false)]
-    public void ColorImages_AtMostThirtyColors(int colors, bool expected) =>
-        ValidateColors(Enumerable.Range(1, colors).Select(i => ColorImages($"Màu {i}", i, 1)).ToArray()).IsValid.Should().Be(expected);
-
-    [Fact]
-    public void ColorImages_TooManyImages_ReportsTheColor() =>
-        ValidateColors(ColorImages("Đỏ", 1, 4)).Errors.Select(e => e.ErrorMessage)
-            .Should().Equal("Màu Đỏ phải có từ 1 đến 3 ảnh.");
-
     // ---------- định mức ----------
 
     private static SaveProductSpecDto Spec(short pieces = 1,

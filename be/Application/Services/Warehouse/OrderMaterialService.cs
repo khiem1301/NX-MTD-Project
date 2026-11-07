@@ -14,10 +14,11 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notifier;
+    private readonly IClock _clock;
 
-    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier)
+    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, IClock clock)
     {
-        _uow = uow; _notifier = notifier;
+        _uow = uow; _notifier = notifier; _clock = clock;
     }
 
     private IQueryable<OrderMaterial> OrderMaterials => _uow.Repository<OrderMaterial>().Query();
@@ -196,12 +197,32 @@ public sealed class OrderMaterialService : IOrderMaterialService
             return Failure(ErrorCodes.WarehouseOrderMaterialDuplicate, string.Format(WarehouseMessages.OrderMaterialDuplicateOf,
                 MaterialLabel(material)));
 
+        var dateError = await CheckExpectedDeliveryDateAsync(entity, dto, ct);
+        if (dateError is not null) return Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
+
         entity.MaterialId = dto.MaterialId;
         entity.RequiredQty = dto.RequiredQty;
         entity.CustomerQty = dto.CustomerQty;
         entity.ExpectedDeliveryCount = entity.CustomerQty > 0 ? dto.ExpectedDeliveryCount : null;   // CK_OM_Delivery
+        entity.ExpectedDeliveryDate = entity.CustomerQty > 0 ? dto.ExpectedDeliveryDate : null;   // CK_OM_DeliveryDate
         entity.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         return null;
+    }
+
+    /// <summary>
+    /// Khách có cấp thì phải khai ngày dự kiến giao (không trước hôm nay, không sau hạn giao của đơn); khách không cấp thì để trống.
+    /// Giữ nguyên ngày cũ (không đổi) thì không kiểm lại, để sửa ghi chú của đơn đã quá ngày vẫn được.
+    /// </summary>
+    private async Task<string?> CheckExpectedDeliveryDateAsync(OrderMaterial entity, IOrderMaterialInput dto, CancellationToken ct)
+    {
+        if (dto.CustomerQty <= 0)
+            return dto.ExpectedDeliveryDate is null ? null : WarehouseMessages.ExpectedDeliveryNotAllowed;
+        if (dto.ExpectedDeliveryDate is not { } date) return null;   // bắt buộc kiểm ở validator
+        if (entity.ExpectedDeliveryDate == date) return null;
+
+        var due = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+            .Where(o => o.OrderId == entity.OrderId).Select(o => (DateOnly?)o.DueDate).FirstOrDefaultAsync(ct);
+        return DocumentDateRules.CheckExpectedDelivery(date, _clock.Today, null, due);
     }
 
     private async Task<Result<OrderMaterialDto>> GetOneAsync(int orderId, int orderMaterialId, CancellationToken ct)
@@ -250,13 +271,17 @@ public sealed class OrderMaterialService : IOrderMaterialService
     private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount) => new(
         om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
         (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty, om.Material.WidthCm);
+        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty, om.Material.WidthCm,
+        om.ExpectedDeliveryDate);
 
     private static string MaterialLabel(Material m) =>
         string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";
 
     private static Result<OrderMaterialDto> NotFound() =>
         Result<OrderMaterialDto>.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);
+
+    private static Result<OrderMaterialDto> Failure(string code, string message, ResultKind kind) =>
+        Result<OrderMaterialDto>.Failure(code, message, kind);
 
     private static Result<OrderMaterialDto> Failure(string code, string message) =>
         Result<OrderMaterialDto>.Failure(code, message);

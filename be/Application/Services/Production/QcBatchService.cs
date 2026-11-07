@@ -68,10 +68,12 @@ public sealed class QcBatchService : IQcBatchService
         if (team is null) return Fail.NotFound<int>();
 
         var closed = OrderStatuses.Closed.ToArray();
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
             .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
         if (line is null)
             return Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
+        if (ProductionGuard.BeforeOrderStart(dto.WorkDate, line.Order.ReceivedDate) is { } beforeStart)
+            return Result<int>.Failure(ErrorCodes.OutputInvalid, beforeStart, ResultKind.Validation);
 
         var duplicate = await Batches.AsNoTracking().AnyAsync(b => b.WorkDate == dto.WorkDate && b.ShiftCode == shift
             && b.BatchTime == dto.BatchTime && b.SewingTeamId == dto.SewingTeamId && b.OrderLineId == dto.OrderLineId, ct);

@@ -20,16 +20,12 @@ public class ProductServiceTests
 
     private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
     private readonly List<ProductImage> _images = [];
-    private readonly List<ProductColor> _colors = [];
-    private readonly List<ProductColorImage> _colorImages = [];
     private readonly List<ProductVariant> _variants = [];
     private readonly List<ProductMarkerFabric> _fabrics = [];
 
     public ProductServiceTests()
     {
         Setup(_images);
-        Setup(_colors);
-        Setup(_colorImages);
         Setup(_variants);
         Setup(_fabrics);
     }
@@ -45,18 +41,6 @@ public class ProductServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private ProductColor SeedColor(int id, string color, params string[] keys)
-    {
-        var c = new ProductColor { ProductColorId = id, ProductId = 1, Color = color };
-        foreach (var (key, index) in keys.Select((k, i) => (k, i)))
-        {
-            var image = new ProductColorImage { ProductColorId = id, ProductColor = c, ImageKey = key, SortOrder = (byte)(index + 1) };
-            c.ProductColorImages.Add(image);
-            _colorImages.Add(image);
-        }
-        _colors.Add(c);
-        return c;
-    }
 
     private const string KeyA = "PRODUCT/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg";
     private const string KeyB = "PRODUCT/2026/11/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png";
@@ -209,73 +193,6 @@ public class ProductServiceTests
     }
 
     [Fact]
-    public async Task Create_SavesColorImagesNumberedWithinEachColor()
-    {
-        Product? saved = null;
-        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
-
-        await Create().CreateAsync(Dto() with { ColorImages = [new(" Đỏ ", [KeyA, KeyB]), new("Xanh", [KeyC])] }, default);
-
-        saved!.ProductColors.Select(c => c.Color).Should().Equal("Đỏ", "Xanh");
-        saved.ProductColors.SelectMany(c => c.ProductColorImages.Select(i => (c.Color, i.ImageKey, i.SortOrder)))
-            .Should().Equal(("Đỏ", KeyA, (byte)1), ("Đỏ", KeyB, (byte)2), ("Xanh", KeyC, (byte)1));
-    }
-
-    [Fact]
-    public async Task Update_ColorAlreadyOnProduct_ReusesItIgnoringCase()
-    {
-        ExistingProduct();
-        var red = SeedColor(4, "Đỏ", KeyA);
-
-        await Create().UpdateAsync(1, Dto() with { ColorImages = [new(" đỏ ", [KeyB, KeyC])] }, default);
-
-        _colors.Should().ContainSingle().Which.Should().BeSameAs(red);
-        _colorImages.Select(i => (i.ProductColor.Color, i.ProductColorId, i.ImageKey, i.SortOrder))
-            .Should().Equal(("Đỏ", 4, KeyB, (byte)1), ("Đỏ", 4, KeyC, (byte)2));
-    }
-
-    [Fact]
-    public async Task Update_NewColor_CreatesProductColorAndKeepsExtraImages()
-    {
-        ExistingProduct();
-        var extra = Seed(KeyA, 1);
-
-        var result = await Create().UpdateAsync(1, Dto() with { ColorImages = [new("Xanh", [KeyC])] }, default);
-
-        result.IsSuccess.Should().BeTrue();
-        _images.Should().ContainSingle().Which.Should().BeSameAs(extra);
-        _colors.Should().ContainSingle().Which.Should().Match<ProductColor>(c => c.Color == "Xanh" && c.ProductId == 1);
-        _colorImages.Should().ContainSingle().Which.ProductColor.Should().BeSameAs(_colors[0]);
-    }
-
-    [Fact]
-    public async Task Update_WithTheSameColorImagesInAnotherColorOrder_DoesNotRewriteThem()
-    {
-        ExistingProduct();
-        SeedColor(4, "Đỏ", KeyA);
-        SeedColor(5, "Xanh", KeyB);
-        var before = _colorImages.ToList();
-
-        await Create().UpdateAsync(1, Dto() with { ColorImages = [new("Xanh", [KeyB]), new("Đỏ", [KeyA])] }, default);
-
-        _colorImages.Should().Equal(before);
-    }
-
-    [Fact]
-    public async Task Update_DroppedColorOnlyUsedForImages_IsDeleted_ButAColorWithVariantsStays()
-    {
-        ExistingProduct();
-        SeedColor(4, "Đỏ", KeyA);
-        var blue = SeedColor(5, "Xanh", KeyB);
-        _variants.Add(new ProductVariant { ProductVariantId = 9, ProductId = 1, ProductColorId = 5, SizeCode = "M" });
-
-        await Create().UpdateAsync(1, Dto() with { ColorImages = [] }, default);
-
-        _colorImages.Should().BeEmpty();
-        _colors.Should().ContainSingle().Which.Should().BeSameAs(blue);
-    }
-
-    [Fact]
     public async Task Update_ChangeCodeWhenUsed_Fails()
     {
         _products.GetByIdAsync(1).Returns(new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active });
@@ -324,6 +241,11 @@ public class CustomerOrderServiceTests
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
     private readonly List<ProductVariant> _variants = [];
     private readonly List<ProductColor> _newColors = [];
+    private readonly List<DispatchNote> _notes = [];
+    private readonly List<OrderLine> _orderLines = [];
+    private readonly List<WorkOrder> _workOrders = [];
+    private readonly List<KpiTarget> _kpis = [];
+    private readonly List<CutHandoverLine> _handoverLines = [];
 
     public CustomerOrderServiceTests()
     {
@@ -337,6 +259,28 @@ public class CustomerOrderServiceTests
             .DistinctBy(c => (c.ProductId, c.Color.ToUpperInvariant())).AsTestAsyncQueryable());
         colorRepo.AddAsync(Arg.Do<ProductColor>(_newColors.Add)).Returns(Task.CompletedTask);
         _uow.Repository<ProductColor>().Returns(colorRepo);
+        var noteRepo = Substitute.For<IGenericRepository<DispatchNote>>();
+        noteRepo.Query().Returns(_ => _notes.AsTestAsyncQueryable());
+        _uow.Repository<DispatchNote>().Returns(noteRepo);
+        var noteLineRepo = Substitute.For<IGenericRepository<DispatchNoteLine>>();
+        noteLineRepo.Query().Returns(_ => _notes.SelectMany(n => n.DispatchNoteLines).AsTestAsyncQueryable());
+        _uow.Repository<DispatchNoteLine>().Returns(noteLineRepo);
+        _lines.Query().Returns(_ => _orderLines.AsTestAsyncQueryable());
+        var woRepo = Substitute.For<IGenericRepository<WorkOrder>>();
+        woRepo.Query().Returns(_ => _workOrders.AsTestAsyncQueryable());
+        _uow.Repository<WorkOrder>().Returns(woRepo);
+        var kpiRepo = Substitute.For<IGenericRepository<KpiTarget>>();
+        kpiRepo.Query().Returns(_ => _kpis.AsTestAsyncQueryable());
+        _uow.Repository<KpiTarget>().Returns(kpiRepo);
+        var handoverLineRepo = Substitute.For<IGenericRepository<CutHandoverLine>>();
+        handoverLineRepo.Query().Returns(_ => _handoverLines.AsTestAsyncQueryable());
+        _uow.Repository<CutHandoverLine>().Returns(handoverLineRepo);
+        var returnRepo = Substitute.For<IGenericRepository<MaterialReturn>>();
+        returnRepo.Query().Returns(_ => new List<MaterialReturn>().AsTestAsyncQueryable());
+        _uow.Repository<MaterialReturn>().Returns(returnRepo);
+        var layLineRepo = Substitute.For<IGenericRepository<CuttingLayLine>>();
+        layLineRepo.Query().Returns(_ => new List<CuttingLayLine>().AsTestAsyncQueryable());
+        _uow.Repository<CuttingLayLine>().Returns(layLineRepo);
         _clock.Now.Returns(new DateTime(2026, 10, 23, 8, 0, 0));
         _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Active);
         _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(Array.Empty<string>());
@@ -729,6 +673,110 @@ public class CustomerOrderServiceTests
         result.IsSuccess.Should().BeTrue();
         running.Status.Should().Be(OrderStatuses.Stopped);
         running.StopReason.Should().Be("khách hủy");
+    }
+
+    private static DispatchNote Note(int id, string status, params int[] qtys)
+    {
+        var note = new DispatchNote { DispatchNoteId = id, DispatchCode = $"PX-{id}", OrderId = 5, Status = status };
+        note.DispatchNoteLines = qtys.Select(q => new DispatchNoteLine { IssueQty = q, DispatchNote = note }).ToList();
+        return note;
+    }
+
+    [Fact]
+    public async Task Cancel_New_CancelsPendingDispatchNotes_AndKeepsIssuedOnes()
+    {
+        var pending = Note(1, DispatchStatuses.Pending, 10);
+        var sent = Note(2, DispatchStatuses.InDelivery, 10);
+        _notes.AddRange([pending, sent]);
+        var order = Existing(OrderStatuses.New);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().CancelAsync(5, new CancelOrderDto(null, RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        pending.Status.Should().Be(DispatchStatuses.Cancelled);
+        sent.Status.Should().Be(DispatchStatuses.InDelivery);
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Stop_PartiallyDelivered_CancelsPendingNotes_AndKeepsDeliveredOnes()
+    {
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
+        var delivered = Note(1, DispatchStatuses.Delivered, 40);
+        var pending = Note(2, DispatchStatuses.Pending, 60);
+        _notes.AddRange([delivered, pending]);
+        var order = Existing(OrderStatuses.PartiallyDelivered);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.Status.Should().Be(OrderStatuses.Stopped);
+        pending.Status.Should().Be(DispatchStatuses.Cancelled);
+        delivered.Status.Should().Be(DispatchStatuses.Delivered);
+    }
+
+    [Theory]
+    [InlineData(DispatchStatuses.Delivered)]
+    [InlineData(DispatchStatuses.InDelivery)]
+    public async Task Stop_AllQtyIssued_Fails(string lastNoteStatus)
+    {
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
+        _notes.AddRange([Note(1, DispatchStatuses.Delivered, 40), Note(2, lastNoteStatus, 60)]);
+        var order = Existing(OrderStatuses.PartiallyDelivered);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderFullyDispatched);
+        order.Status.Should().Be(OrderStatuses.PartiallyDelivered);
+    }
+
+    [Fact]
+    public async Task Stop_CancelsIdleWorkOrders_ClosesWorkedOnes_AndCancelsActiveKpi()
+    {
+        var idle = new WorkOrder { WorkOrderId = 1, OrderId = 5, WorkOrderCode = "LC-1", Status = WorkOrderStatuses.Open };
+        var rejectedIssueOnly = new WorkOrder { WorkOrderId = 2, OrderId = 5, WorkOrderCode = "LC-2", Status = WorkOrderStatuses.Open,
+            MaterialIssues = [new MaterialIssue { Status = IssueStatuses.Rejected }] };
+        var withLay = new WorkOrder { WorkOrderId = 3, OrderId = 5, WorkOrderCode = "LC-3", Status = WorkOrderStatuses.Open,
+            CuttingLays = [new CuttingLay()] };
+        var withIssue = new WorkOrder { WorkOrderId = 4, OrderId = 5, WorkOrderCode = "LC-4", Status = WorkOrderStatuses.Open,
+            MaterialIssues = [new MaterialIssue { Status = IssueStatuses.Received }] };
+        var cutting = new WorkOrder { WorkOrderId = 5, OrderId = 5, WorkOrderCode = "LC-5", Status = WorkOrderStatuses.Cutting, Note = "ghi chú" };
+        var done = new WorkOrder { WorkOrderId = 7, OrderId = 5, WorkOrderCode = "LC-7", Status = WorkOrderStatuses.Completed };
+        var otherOrder = new WorkOrder { WorkOrderId = 6, OrderId = 9, WorkOrderCode = "LC-6", Status = WorkOrderStatuses.Open };
+        _workOrders.AddRange([idle, rejectedIssueOnly, withLay, withIssue, cutting, done, otherOrder]);
+        var active = new KpiTarget { KpiTargetId = 1, OrderId = 5, Status = KpiStatuses.Active };
+        var closed = new KpiTarget { KpiTargetId = 2, OrderId = 5, Status = KpiStatuses.Closed };
+        var otherKpi = new KpiTarget { KpiTargetId = 3, OrderId = 9, Status = KpiStatuses.Active };
+        _kpis.AddRange([active, closed, otherKpi]);
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _workOrders.Select(w => w.Status).Should().Equal(WorkOrderStatuses.Cancelled, WorkOrderStatuses.Cancelled,
+            WorkOrderStatuses.Completed, WorkOrderStatuses.Completed, WorkOrderStatuses.Completed, WorkOrderStatuses.Completed,
+            WorkOrderStatuses.Open);
+        cutting.Note.Should().Be("ghi chú\n" + Messages.OrderCloseReasonStopped);
+        cutting.CompletedAt.Should().Be(_clock.Now);
+        _kpis.Select(k => k.Status).Should().Equal(KpiStatuses.Cancelled, KpiStatuses.Closed, KpiStatuses.Active);
+    }
+
+    [Fact]
+    public async Task Stop_WorkOrderWithPendingHandover_StaysOpenAndNotifiesManager()
+    {
+        var cutting = new WorkOrder { WorkOrderId = 5, OrderId = 5, WorkOrderCode = "LC-5", Status = WorkOrderStatuses.Cutting };
+        _workOrders.Add(cutting);
+        _handoverLines.Add(new CutHandoverLine { CutHandover = new CutHandover { WorkOrderId = 5, Status = HandoverStatuses.Pending } });
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        cutting.Status.Should().Be(WorkOrderStatuses.Cutting);
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 }
 

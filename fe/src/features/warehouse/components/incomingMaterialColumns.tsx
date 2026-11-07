@@ -4,7 +4,7 @@ import { Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatQty } from '@/utils/format';
+import { formatDate, formatQty } from '@/utils/format';
 import { INCOMING_TEXT, MATERIAL_SOURCE, PO_GOODS_STATUS_LABEL } from '../constants';
 import type {
   ClosedShortPurchase,
@@ -105,6 +105,11 @@ export const customerColumns = (
     render: (_, r) => deliveryCell(r.expectedDeliveryCount, r.receivedCount),
   },
   {
+    title: text.expectedDeliveryDate,
+    key: 'expectedDeliveryDate',
+    render: (_, r) => formatDate(r.expectedDeliveryDate ?? null),
+  },
+  {
     title: MESSAGES.common.actions,
     key: 'action',
     render: (_, r) =>
@@ -137,6 +142,11 @@ export const supplierColumns = (
     title: text.deliveries,
     key: 'deliveries',
     render: (_, r) => deliveryCell(r.expectedDeliveryCount, r.receivedCount),
+  },
+  {
+    title: text.expectedDeliveryDate,
+    key: 'expectedDeliveryDate',
+    render: (_, r) => formatDate(r.expectedDeliveryDate ?? null),
   },
   {
     title: text.goodsStatus,

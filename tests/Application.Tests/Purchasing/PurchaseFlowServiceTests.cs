@@ -618,7 +618,7 @@ public class PurchaseFlowValidatorTests
         var validator = new PlacePurchaseOrderDtoValidator();
         var today = new DateOnly(2026, 10, 27);
         PlacePurchaseOrderDto Dto(int supplier, decimal price) =>
-            new(supplier, today, 1, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer);
+            new(supplier, today, 1, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer, today.AddDays(5));
 
         validator.Validate(Dto(3, 1000)).IsValid.Should().BeTrue();
         validator.Validate(Dto(0, 1000)).IsValid.Should().BeFalse();
@@ -632,7 +632,7 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, new DateOnly(2026, 11, 1), 1, null, [line]))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, new DateOnly(2026, 11, 1), 1, null, [line], new DateOnly(2026, 11, 10)))
             .IsValid.Should().Be(valid);
     }
 
@@ -646,10 +646,21 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, price);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line]))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line], new DateOnly(2026, 11, 10)))
             .IsValid.Should().Be(valid);
     }
 
+
+    [Fact]
+    public void CreatePurchaseOrder_RequiresExpectedDeliveryDate()
+    {
+        var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
+        var validator = new CreatePurchaseOrderDtoValidator();
+
+        validator.Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 1, null, [line])).IsValid.Should().BeFalse();
+        validator.Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 1, null, [line], new DateOnly(2026, 11, 10)))
+            .IsValid.Should().BeTrue();
+    }
     [Fact]
     public void CreatePurchaseOrder_RequiresOrderDate()
     {

@@ -8,6 +8,7 @@ import { usePlaceOrder, useSupplierOptions } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 
@@ -23,6 +24,7 @@ type FormValues = {
   supplierId: number;
   orderDate: Dayjs;
   expectedDeliveryCount: number;
+  expectedDeliveryDate: Dayjs;
   note: string | null;
   lines: LineValues[];
 };
@@ -34,6 +36,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
   const suppliers = useSupplierOptions(open);
   const text = PURCHASE_TEXT.place;
   const lines = Form.useWatch('lines', form) ?? [];
+  const orderDate = Form.useWatch('orderDate', form);
   const total = lines.reduce((sum, l) => sum + (l?.orderedQty ?? 0) * (l?.unitPrice ?? 0), 0);
 
   useEffect(() => {
@@ -66,6 +69,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
         supplierId: values.supplierId,
         orderDate: toApiDate(values.orderDate),
         expectedDeliveryCount: values.expectedDeliveryCount,
+        expectedDeliveryDate: toApiDate(values.expectedDeliveryDate),
         note: values.note?.trim() || null,
         lines: values.lines.map((l) => ({
           purchaseOrderLineId: l.purchaseOrderLineId,
@@ -129,6 +133,13 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
             rules={[{ required: true, type: 'number', min: 1, message: text.expectedDateRequired }]}
           >
             <InputNumber min={1} max={99} precision={0} style={{ width: 150 }} />
+          </Form.Item>
+          <Form.Item
+            name="expectedDeliveryDate"
+            label={text.expectedDeliveryDate}
+            rules={[{ required: true, message: text.expectedDeliveryDateRequired }]}
+          >
+            <AppDatePicker disabledDate={(d) => isExpectedDeliveryDateDisabled(d, orderDate)} />
           </Form.Item>
         </Space>
 

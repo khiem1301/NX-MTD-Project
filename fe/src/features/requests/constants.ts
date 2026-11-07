@@ -42,3 +42,20 @@ export const AUDIT_ACTION_LABEL: Partial<Record<AuditEntry['action'], string>> =
   REJECT: 'Từ chối',
   CONFIRM: 'Hoàn thành',
 };
+
+/** Giới hạn dòng đơn xin, khớp RequisitionLimits và RequestLineInputValidator ở BE (DEV-ALL-77). */
+export const REQUEST_LINE_LIMITS = {
+  maxLines: 50,
+  /** NVL, linh kiện: tối đa 3 số lẻ. */
+  maxMaterialQty: 9_999_999,
+  /** Cơ điện xin linh kiện, vật tư máy: số nguyên, tối đa 9.999 (khớp MachineRequestLimits ở BE). */
+  maxPartsQty: 9_999,
+  /** Cơ điện xin máy mới: số nguyên, tối đa 99. */
+  maxMachineQty: 99,
+  /** BTP đếm theo bộ (số nguyên). */
+  maxPieceQty: 1_000_000,
+} as const;
+
+/** Vải được nhập số lẻ tối đa 2 chữ số; NVL khác vải chỉ nhập số nguyên (khớp RequisitionLimits.FabricDecimals ở BE). */
+export const FABRIC_MATERIAL_TYPE = 'FABRIC';
+export const FABRIC_QTY_DECIMALS = 2;

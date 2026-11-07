@@ -22,6 +22,8 @@ public partial class PurchaseOrder
 
     public short? ExpectedDeliveryCount { get; set; }
 
+    public DateOnly? ExpectedDeliveryDate { get; set; }
+
     public string GoodsStatus { get; set; } = null!;
 
     public string PaymentStatus { get; set; } = null!;

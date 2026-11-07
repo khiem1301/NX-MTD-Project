@@ -111,6 +111,7 @@ public class MealServiceTests
         var meal = Meal();
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
+        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(12);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(9);
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
 
@@ -134,6 +135,7 @@ public class MealServiceTests
         };
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
+        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(12);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(8);
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(existing);
 
@@ -143,6 +145,21 @@ public class MealServiceTests
         existing.Source.Should().Be(MealConfirmationSource.Confirmed);
         existing.ConfirmedAt.Should().NotBeNull();
         _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
+    }
+
+    [Fact]
+    public async Task ConfirmTeamMealAsync_CountExceedsMembers_ReturnsFailureAndDoesNotSave()
+    {
+        _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
+        _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(Meal());
+        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(10);
+
+        var result = await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 11), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.MealCountExceedsMembers);
+        _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
+        await _repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     // ---------- SetGuestMealAsync ----------

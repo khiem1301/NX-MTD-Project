@@ -112,8 +112,8 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
 
     public async Task<Result<DailyAllocationResultDto>> SaveAsync(SaveDailyAllocationDto dto, int teamId, CancellationToken ct)
     {
-        if (dto.WorkDate > _clock.Today)
-            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DailyDateInFuture);
+        if (dto.WorkDate != _clock.Today)
+            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DailyDateMustBeToday);
         return await _uow.InTransactionAsync(() => SaveInTransactionAsync(dto, teamId, ct));
     }
 
@@ -284,8 +284,11 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
 
         var lineIds = dto.Items.Select(i => i.OrderLineId).Distinct().ToList();
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Where(l => lineIds.Contains(l.OrderLineId)).Select(l => new { l.OrderLineId, l.ProductId, l.Order.Status }).ToListAsync(ct);
+            .Where(l => lineIds.Contains(l.OrderLineId)).Select(l => new { l.OrderLineId, l.ProductId, l.Order.Status, l.Order.ReceivedDate }).ToListAsync(ct);
         if (lines.Count != lineIds.Count) return WarehouseFailures.NotFound<DailyAllocationResultDto>();
+        var beforeStart = lines.Select(l => ProductionGuard.BeforeOrderStart(dto.WorkDate, l.ReceivedDate)).FirstOrDefault(m => m is not null);
+        if (beforeStart is not null)
+            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, beforeStart);
         if (await Allotted(teamId).CountAsync(a => lineIds.Contains(a.OrderLineId), ct) != lineIds.Count)
             return Result<DailyAllocationResultDto>.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.OrderLineNotAllotted);
         if (lines.Any(l => OrderStatuses.Closed.Contains(l.Status)))

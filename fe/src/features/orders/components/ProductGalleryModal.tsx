@@ -38,22 +38,6 @@ export function ProductGalleryModal({ product, onClose }: ProductGalleryModalPro
               <ProductImage key={key} value={key} size={120} />
             ))}
           </Flex>
-          <Typography.Title level={5} style={{ marginTop: 16 }}>
-            {text.colorImages}
-          </Typography.Title>
-          {product.colorImages.length === 0 && (
-            <Typography.Text type="secondary">{text.noColorImages}</Typography.Text>
-          )}
-          {product.colorImages.map((row) => (
-            <div key={row.color} style={{ marginBottom: 12 }}>
-              <Typography.Text strong>{row.color}</Typography.Text>
-              <Flex wrap gap={8} style={{ marginTop: 4 }}>
-                {row.images.map((key) => (
-                  <ProductImage key={key} value={key} size={120} />
-                ))}
-              </Flex>
-            </div>
-          ))}
         </>
       )}
     </Modal>

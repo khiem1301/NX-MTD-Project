@@ -7,8 +7,10 @@ namespace Application.Tests;
 /// <summary>NVL của đơn: giá trị biên của số cần, số khách cấp, số lần giao dự kiến và ghi chú.</summary>
 public class OrderMaterialValidatorTests
 {
+    private static readonly DateOnly Soon = new(2026, 12, 1);
+
     private static CreateOrderMaterialDto Dto(decimal required = 100, decimal customer = 0, short? count = null, string? note = null,
-        int orderId = 1, int materialId = 1) => new(orderId, materialId, required, customer, count, note);
+        int orderId = 1, int materialId = 1) => new(orderId, materialId, required, customer, count, note, customer > 0 ? Soon : null);
 
     private static bool Valid(CreateOrderMaterialDto dto) => new CreateOrderMaterialDtoValidator().Validate(dto).IsValid;
 
@@ -18,7 +20,7 @@ public class OrderMaterialValidatorTests
     // ---------- thêm nhiều NVL cùng lúc ----------
 
     private static CreateOrderMaterialLineDto Line(int materialId, decimal required, decimal customer, short? count, string? note) =>
-        new(materialId, required, customer, count, note);
+        new(materialId, required, customer, count, note, customer > 0 ? Soon : null);
 
     private static string[] BatchErrors(params CreateOrderMaterialLineDto[] lines) =>
         new CreateOrderMaterialBatchDtoValidator().Validate(new CreateOrderMaterialBatchDto(1, lines))

@@ -254,6 +254,9 @@ public sealed class MaterialIssueService : IMaterialIssueService
             .FirstOrDefaultAsync(o => o.OrderId == target!.OrderId, ct);
         if (order is null || OrderStatuses.Closed.Contains(order.Status))
             return (Fail(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderClosed), null);
+        var dateError = DocumentDateRules.CheckDocumentDate(dto.IssueDate, _clock.Today, order.ReceivedDate, WarehouseMessages.LabelIssueDate);
+        if (dateError is not null)
+            return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation), null);
 
         return await IsRequestValidAsync(dto, target!, ct)
             ? (null, target)

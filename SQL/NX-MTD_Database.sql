@@ -104,9 +104,13 @@
    - 02/11/2026  Thêm mục 19.8: dữ liệu thử nhập sản lượng theo nhóm công đoạn (nhóm May túi của DEMO-AO01, CNMAY1, DEMO-DH003 dòng Đen L).
    - 03/11/2026  Phiếu xuất hàng bỏ trạng thái PARTIALLY_DELIVERED và cột DispatchNoteLine.ReceivedQty (khách nhận đúng số xuất);
                  vw_OrderLineProgress tính số đã giao theo số xuất của phiếu DELIVERED (DEV-ALL-70).
+   - 06/11/2026  Bỏ ảnh theo màu của mã hàng: bỏ bảng ProductColorImage (ProductColor vẫn giữ làm nơi lưu tên màu) (DEV-ALL-80).
+   - 06/11/2026  Phiếu lỗi thêm loại OUTPUT_ERR (tổ trưởng nhập sai sản lượng công đoạn): trừ khỏi sản lượng và tiền của công nhân, trần sản lượng và tiến độ làm
+                 được tính lại (trg_WorkAllocation_Check, trg_OutputRecord_Check, vw_WorkerOutputCap, vw_OperationAllocationProgress, vw_WorkerDailyEstimatedPay) (DEV-ALL-79).
+   - 07/11/2026  Thêm OrderMaterial.ExpectedDeliveryDate (ngày khách dự kiến giao, chỉ khi khách cấp) và PurchaseOrder.ExpectedDeliveryDate (ngày NCC dự kiến giao, không trước ngày đặt); giữ ExpectedDeliveryCount (DEV-ALL-82).
    - 05/11/2026  ProductImage giảm còn tối đa 5 ảnh phụ (CK_ProductImage_Sort 1-5). Thêm ProductColor (màu áo của mã hàng,
                  nơi duy nhất lưu tên màu): ProductVariant, ProductMarkerFabric bỏ cột Color, trỏ ProductColorId (FK ghép
-                 với ProductId); UQ_PV thành (ProductColorId, SizeCode). Thêm ProductColorImage: mỗi màu 1-3 ảnh (DEV-ALL-71).
+                 với ProductId); UQ_PV thành (ProductColorId, SizeCode). (ảnh theo màu đã bỏ ở DEV-ALL-80).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -403,17 +407,6 @@ CREATE TABLE dbo.ProductImage (
     CONSTRAINT UQ_ProductImage_Sort UNIQUE (ProductId, SortOrder)
 );
 
--- Ảnh theo màu áo của mã hàng (05/11, DEV-ALL-71): mỗi màu 1-3 ảnh (SortOrder 1-3, mỗi vị trí một ảnh).
-CREATE TABLE dbo.ProductColorImage (
-    ProductColorImageId INT IDENTITY(1,1) CONSTRAINT PK_ProductColorImage PRIMARY KEY,
-    ProductColorId      INT           NOT NULL CONSTRAINT FK_ProductColorImage_Color REFERENCES dbo.ProductColor(ProductColorId),
-    ImageKey            NVARCHAR(500) NOT NULL,   -- khóa ảnh tải từ máy, vd PRODUCT/2026/11/<guid>.jpg
-    SortOrder           TINYINT       NOT NULL,   -- thứ tự hiển thị trong màu, 1-3
-    CreatedAt           DATETIME2(0)  NOT NULL CONSTRAINT DF_ProductColorImage_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    CONSTRAINT CK_ProductColorImage_Sort CHECK (SortOrder BETWEEN 1 AND 3),
-    CONSTRAINT UQ_ProductColorImage_Sort UNIQUE (ProductColorId, SortOrder)
-);
-
 -- Biến thể của mã hàng (23/10): một màu × một size, vd Áo khoác – Xanh – S.
 -- OrderLine trỏ về đây bằng ProductVariantId nên đơn chỉ dùng được biến thể đã khai báo định mức.
 CREATE TABLE dbo.ProductVariant (
@@ -545,12 +538,14 @@ CREATE TABLE dbo.OrderMaterial (
     RequiredQty          DECIMAL(18,3)  NOT NULL,                                        -- tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức)
     CustomerQty          DECIMAL(18,3)  NOT NULL CONSTRAINT DF_OM_Customer DEFAULT 0,   -- khách sẽ cấp (màn 1.2)
     ExpectedDeliveryCount SMALLINT      NULL,                                            -- số lần khách dự kiến giao NVL này; số lần đã nhận xem vw_OrderMaterialDelivery
+    ExpectedDeliveryDate DATE           NULL,                                            -- ngày dự kiến khách giao (nhập khi khách có cấp; 07/11/2026)
     PurchaseQty          AS (CASE WHEN RequiredQty > CustomerQty THEN RequiredQty - CustomerQty ELSE 0 END), -- phần xưởng phải mua
     Source               AS (CONVERT(VARCHAR(10), CASE WHEN CustomerQty = 0 THEN 'SUPPLIER'
                                                        WHEN CustomerQty >= RequiredQty THEN 'CUSTOMER' ELSE 'BOTH' END)),
     Note                 NVARCHAR(500)  NULL,
     CONSTRAINT CK_OM_Qty  CHECK (RequiredQty >= 0 AND CustomerQty >= 0),
     CONSTRAINT CK_OM_Delivery CHECK ((CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)), -- khách có cấp thì phải khai số lần giao
+    CONSTRAINT CK_OM_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR CustomerQty > 0),
     CONSTRAINT UQ_OM UNIQUE (OrderId, MaterialId)
 );
 
@@ -743,6 +738,7 @@ CREATE TABLE dbo.PurchaseOrder (
     SourceRequestId       INT            NULL CONSTRAINT FK_PO_Request REFERENCES dbo.Request(RequestId),   -- yêu cầu NVL / thiếu NVL
     OrderDate             DATE           NULL,
     ExpectedDeliveryCount SMALLINT       NULL,  -- số lần NCC dự kiến giao; số lần đã nhận xem vw_PurchaseOrderDelivery
+    ExpectedDeliveryDate  DATE           NULL,  -- ngày NCC dự kiến giao (07/11/2026)
     GoodsStatus           VARCHAR(25)    NOT NULL CONSTRAINT DF_PO_GoodsStatus DEFAULT 'PENDING_FINALISATION',
     PaymentStatus         VARCHAR(20)    NOT NULL CONSTRAINT DF_PO_PaymentStatus DEFAULT 'UNPAID',
     RejectReason          NVARCHAR(500)  NULL,
@@ -764,7 +760,8 @@ CREATE TABLE dbo.PurchaseOrder (
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
-    CONSTRAINT CK_PO_DeliveryCount CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1)
+    CONSTRAINT CK_PO_DeliveryCount CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1),
+    CONSTRAINT CK_PO_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate)
 );
 
 -- Dòng đơn mua xác định NVL theo một trong hai cách (TH-12):
@@ -1101,7 +1098,7 @@ CREATE TABLE dbo.DefectRecord (
     RecordedAt          DATETIME2(0)   NOT NULL CONSTRAINT DF_DR_RecordedAt DEFAULT (dbo.fn_VnNow()),
     UpdatedAt           DATETIME2(0)   NULL,
     RowVer              ROWVERSION,
-    CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP')),
+    CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP','OUTPUT_ERR')),   -- OUTPUT_ERR: tổ trưởng nhập sai sản lượng công đoạn, trừ khỏi sản lượng của công nhân (DEV-ALL-79)
     CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')),
     CONSTRAINT CK_DR_Other  CHECK (DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL),
     CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CONFIRMED','CANCELLED','LOCKED')),   -- CONFIRMED: Quản đốc chấp nhận phiếu sau khi công nhân phản đối
@@ -2028,7 +2025,10 @@ BEGIN
                             FROM dbo.WorkAllocation w
                             WHERE w.Status = 'CONFIRMED' AND w.WorkerId = k.WorkerId
                               AND w.OrderLineId = k.OrderLineId AND w.OperationId = k.OperationId) c
-               OUTER APPLY (SELECT SUM(o.Quantity) Qty FROM dbo.OutputRecord o
+               OUTER APPLY (SELECT SUM(o.Quantity) - ISNULL((SELECT SUM(d.Quantity) FROM dbo.DefectRecord d
+                                                          WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED' AND d.ResponsibleWorkerId = k.WorkerId
+                                                            AND d.OrderLineId = k.OrderLineId AND d.OperationId = k.OperationId), 0) Qty
+                            FROM dbo.OutputRecord o
                             WHERE o.WorkerId = k.WorkerId AND o.OrderLineId = k.OrderLineId AND o.OperationId = k.OperationId) o
                WHERE o.Qty > ISNULL(c.Qty, 0))
         THROW 50052, N'Thu hồi làm số lần còn lại nhỏ hơn sản lượng công nhân đã báo.', 1;
@@ -2050,7 +2050,10 @@ BEGIN
                             FROM dbo.WorkAllocation w
                             WHERE w.Status = 'CONFIRMED' AND w.WorkerId = k.WorkerId
                               AND w.OrderLineId = k.OrderLineId AND w.OperationId = k.OperationId) c
-               OUTER APPLY (SELECT SUM(o.Quantity) Qty FROM dbo.OutputRecord o
+               OUTER APPLY (SELECT SUM(o.Quantity) - ISNULL((SELECT SUM(d.Quantity) FROM dbo.DefectRecord d
+                                                          WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED' AND d.ResponsibleWorkerId = k.WorkerId
+                                                            AND d.OrderLineId = k.OrderLineId AND d.OperationId = k.OperationId), 0) Qty
+                            FROM dbo.OutputRecord o
                             WHERE o.WorkerId = k.WorkerId AND o.OrderLineId = k.OrderLineId AND o.OperationId = k.OperationId) o
                WHERE o.Qty > ISNULL(c.Qty, 0))
         THROW 50052, N'Sản lượng vượt số lần được giao cho công nhân ở công đoạn này.', 1;
@@ -2505,6 +2508,10 @@ WITH Moves AS (
 ), Outp AS (
     SELECT WorkerId, OrderLineId, OperationId, SUM(Quantity) AS OutputQty
     FROM dbo.OutputRecord GROUP BY WorkerId, OrderLineId, OperationId
+), OutErr AS (
+    SELECT ResponsibleWorkerId AS WorkerId, OrderLineId, OperationId, SUM(Quantity) AS ErrorQty
+    FROM dbo.DefectRecord WHERE DefectType = 'OUTPUT_ERR' AND Status <> 'CANCELLED'
+    GROUP BY ResponsibleWorkerId, OrderLineId, OperationId
 ), Scrap AS (
     SELECT ResponsibleWorkerId AS WorkerId, OrderLineId, OperationId, SUM(Quantity) AS ScrapQty
     FROM dbo.DefectRecord WHERE DefectType = 'SCRAP' AND Status <> 'CANCELLED'
@@ -2512,11 +2519,12 @@ WITH Moves AS (
 )
 SELECT mv.WorkerId, mv.OrderLineId, mv.OperationId,
        mv.CapQty,
-       ISNULL(o.OutputQty, 0) AS OutputQty,
+       ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0) AS OutputQty,
        ISNULL(s.ScrapQty, 0)  AS ScrapQty,
-       mv.CapQty - ISNULL(o.OutputQty, 0) AS RemainingQty
+       mv.CapQty - (ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0)) AS RemainingQty
 FROM Moves mv
 LEFT JOIN Outp o  ON o.WorkerId = mv.WorkerId AND o.OrderLineId = mv.OrderLineId AND o.OperationId = mv.OperationId
+LEFT JOIN OutErr oe ON oe.WorkerId = mv.WorkerId AND oe.OrderLineId = mv.OrderLineId AND oe.OperationId = mv.OperationId
 LEFT JOIN Scrap s ON s.WorkerId = mv.WorkerId AND s.OrderLineId = mv.OrderLineId AND s.OperationId = mv.OperationId;
 GO
 
@@ -2536,7 +2544,7 @@ SELECT  r.SewingTeamId, r.OrderLineId, op.OperationId,
         ISNULL(a.AllocatedQty, 0) AS AllocatedQty,
         ISNULL(a.PendingQty, 0)   AS PendingQty,
         r.Qty - ISNULL(a.AllocatedQty, 0) - ISNULL(a.PendingQty, 0) AS UnallocatedQty,
-        ISNULL(o.OutputQty, 0)    AS OutputQty
+        ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0) AS OutputQty
 FROM Received r
 JOIN dbo.OrderLine ol ON ol.OrderLineId = r.OrderLineId
 JOIN dbo.Operation op ON op.ProductId = ol.ProductId AND op.TeamType = 'SEWING' AND op.Status = 'ACTIVE'
@@ -2545,39 +2553,49 @@ OUTER APPLY (SELECT SUM(CASE WHEN w.Status = 'CONFIRMED' THEN IIF(w.MovementType
              FROM dbo.WorkAllocation w
              WHERE w.SewingTeamId = r.SewingTeamId AND w.OrderLineId = r.OrderLineId AND w.OperationId = op.OperationId) a
 OUTER APPLY (SELECT SUM(x.Quantity) AS OutputQty FROM dbo.OutputRecord x
-             WHERE x.SewingTeamId = r.SewingTeamId AND x.OrderLineId = r.OrderLineId AND x.OperationId = op.OperationId) o;
+             WHERE x.SewingTeamId = r.SewingTeamId AND x.OrderLineId = r.OrderLineId AND x.OperationId = op.OperationId) o
+OUTER APPLY (SELECT SUM(d.Quantity) AS ErrorQty FROM dbo.DefectRecord d
+             WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED'
+               AND d.SewingTeamId = r.SewingTeamId AND d.OrderLineId = r.OrderLineId AND d.OperationId = op.OperationId) oe;
 GO
 
--- Lương tạm tính theo ngày của công nhân may (UC59): Σ(SL × đơn giá khóa) − Σ(Scrap × đơn giá đó)
+-- Lương tạm tính theo ngày của công nhân may (UC59): Σ(SL × đơn giá khóa) − Σ(Scrap × đơn giá đó);
+-- SL đã trừ phần tổ trưởng nhập sai (phiếu OUTPUT_ERR) theo đơn giá khóa của phiếu
 CREATE VIEW dbo.vw_WorkerDailyEstimatedPay
 AS
 WITH Outp AS (
     SELECT r.WorkerId, r.WorkDate, SUM(r.Quantity) AS OutputQty, SUM(r.Quantity * pr.Rate) AS OutputAmount
     FROM dbo.OutputRecord r JOIN dbo.PieceRate pr ON pr.PieceRateId = r.PieceRateId
     GROUP BY r.WorkerId, r.WorkDate
+), OutErr AS (
+    SELECT d.ResponsibleWorkerId AS WorkerId, d.WorkDate, SUM(d.Quantity) AS ErrorQty, SUM(d.Quantity * pr.Rate) AS ErrorAmount
+    FROM dbo.DefectRecord d JOIN dbo.PieceRate pr ON pr.PieceRateId = d.PieceRateId
+    WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED'
+    GROUP BY d.ResponsibleWorkerId, d.WorkDate
 ), Scrap AS (
     SELECT d.ResponsibleWorkerId AS WorkerId, d.WorkDate, SUM(d.Quantity) AS ScrapQty, SUM(d.Quantity * pr.Rate) AS ScrapAmount
     FROM dbo.DefectRecord d JOIN dbo.PieceRate pr ON pr.PieceRateId = d.PieceRateId
     WHERE d.DefectType = 'SCRAP' AND d.Status <> 'CANCELLED'
     GROUP BY d.ResponsibleWorkerId, d.WorkDate
 ), Days AS (
-    SELECT WorkerId, WorkDate FROM Outp UNION SELECT WorkerId, WorkDate FROM Scrap
+    SELECT WorkerId, WorkDate FROM Outp UNION SELECT WorkerId, WorkDate FROM OutErr UNION SELECT WorkerId, WorkDate FROM Scrap
 ), Mult AS (
     SELECT CAST(SettingValue AS DECIMAL(4,2)) AS SundayMultiplier FROM dbo.SystemSetting WHERE SettingKey = 'SUNDAY_PAY_MULTIPLIER'
 )
 SELECT d.WorkerId, e.EmployeeCode, e.FullName, d.WorkDate,
        CAST(IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, 1, 0) AS BIT) AS IsSunday,
-       ISNULL(o.OutputQty, 0)    AS OutputQty,
+       ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0)       AS OutputQty,
        ISNULL(s.ScrapQty, 0)     AS ScrapQty,
-       ISNULL(o.OutputAmount, 0) AS OutputAmount,
-       CAST(ISNULL(o.OutputAmount, 0) * (IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1) - 1) AS DECIMAL(18,2)) AS SundayBonus,
+       ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0) AS OutputAmount,
+       CAST((ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0)) * (IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1) - 1) AS DECIMAL(18,2)) AS SundayBonus,
        ISNULL(s.ScrapAmount, 0)  AS ScrapAmount,
-       CAST(ISNULL(o.OutputAmount, 0) * IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1)
+       CAST((ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0)) * IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1)
          - ISNULL(s.ScrapAmount, 0) AS DECIMAL(18,2)) AS EstimatedPay      -- Chủ nhật: tiền sản phẩm x hệ số, khoản trừ Scrap giữ nguyên
 FROM Days d
 OUTER APPLY (SELECT SundayMultiplier FROM Mult) m
 JOIN dbo.Employee e ON e.EmployeeId = d.WorkerId AND e.PayType = 'PIECE_RATE'
 LEFT JOIN Outp o  ON o.WorkerId = d.WorkerId AND o.WorkDate = d.WorkDate
+LEFT JOIN OutErr oe ON oe.WorkerId = d.WorkerId AND oe.WorkDate = d.WorkDate
 LEFT JOIN Scrap s ON s.WorkerId = d.WorkerId AND s.WorkDate = d.WorkDate;
 GO
 
@@ -2885,7 +2903,7 @@ INSERT @d VALUES
  ('Notification', N'Thông báo người dùng (giữ 90 ngày)'),
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
  ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết nào'), ('PieceRate', N'Đơn giá công đoạn'),
- ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductColor', N'Màu áo của mã hàng'), ('ProductColorImage', N'Ảnh theo màu áo của mã hàng'), ('ProductVariant', N'Biến thể mã hàng: màu × size'),('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
+ ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductColor', N'Màu áo của mã hàng'), ('ProductVariant', N'Biến thể mã hàng: màu × size'),('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
  ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
@@ -4354,7 +4372,7 @@ GO
    - Đủ 11 loại đơn từ và 6 trạng thái; phiếu nhập, cấp, trả, bàn giao, xuất, kiểm kê ở các trạng thái còn thiếu.
    - Chấm công (lượt quẹt, phiên đồng bộ, chấm hộ), suất ăn, bậc thợ, bảng lương, khóa tháng, chi phí, hòa vốn, thông báo.
    Chỉ thêm dữ liệu, không xóa. Chạy lại không nhân đôi (bỏ qua nếu đã có đơn DEMO-DH005).
-   Ảnh và file đính kèm không có ở đây: Attachment, ProductImage, ProductColorImage cần file thật, tải lên trên giao diện.
+   Ảnh và file đính kèm không có ở đây: Attachment, ProductImage cần file thật, tải lên trên giao diện.
    Tài khoản mới dùng placeholder mật khẩu: cần khởi động lại backend để băm mật khẩu 123456.
    ===================================================================================== */
 SET NOCOUNT ON;

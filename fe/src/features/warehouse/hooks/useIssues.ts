@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { useRolePath } from '@/hooks/useRolePath';
@@ -83,4 +83,25 @@ export const useDownloadIssue = () => {
       invalidate: [],
     },
   );
+};
+
+export const useWorkOrderLines = (workOrderId: number | undefined) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...CUTTING_KEY, 'work-order-lines', role, workOrderId],
+    queryFn: () => warehouseApi.getWorkOrderLines(role, workOrderId ?? 0),
+    enabled: workOrderId !== undefined,
+  });
+};
+
+/** Nhu cầu vải theo màu / size đã chọn của lệnh cắt; gọi khi bấm Đề xuất nên dùng fetch, không tự chạy. */
+export const useFabricNeedsFetcher = (workOrderId: number | undefined) => {
+  const role = useRolePath();
+  const client = useQueryClient();
+  return (color: string, sizeCode?: string) =>
+    client.fetchQuery({
+      queryKey: [...CUTTING_KEY, 'fabric-needs', role, workOrderId, color, sizeCode],
+      queryFn: () => warehouseApi.getFabricNeeds(role, workOrderId ?? 0, { color, sizeCode }),
+      staleTime: 0,
+    });
 };

@@ -6,12 +6,15 @@ import type { ApiError, ApiResponse } from '@/types/api';
 import type { Attachment, AttachmentOwnerType, AttachmentPurpose } from '@/types/attachment';
 
 const attachmentKeys = {
-  list: (ownerType: AttachmentOwnerType, ownerId: number) => ['attachments', ownerType, ownerId] as const,
+  list: (ownerType: AttachmentOwnerType, ownerId: number) =>
+    ['attachments', ownerType, ownerId] as const,
 };
 
 export const attachmentApi = {
   list: async (ownerType: AttachmentOwnerType, ownerId: number): Promise<Attachment[]> => {
-    const res = await apiClient.get<ApiResponse<Attachment[]>>(API.attachments.base, { params: { ownerType, ownerId } });
+    const res = await apiClient.get<ApiResponse<Attachment[]>>(API.attachments.base, {
+      params: { ownerType, ownerId },
+    });
     return res.data.data;
   },
   upload: async (
@@ -32,7 +35,9 @@ export const attachmentApi = {
     await apiClient.delete(API.attachments.byId(attachmentId));
   },
   content: async (attachmentId: number): Promise<Blob> => {
-    const res = await apiClient.get<Blob>(API.attachments.content(attachmentId), { responseType: 'blob' });
+    const res = await apiClient.get<Blob>(API.attachments.content(attachmentId), {
+      responseType: 'blob',
+    });
     return res.data;
   },
 };
@@ -48,7 +53,8 @@ export const useUploadAttachment = (ownerType: AttachmentOwnerType, ownerId: num
   const queryClient = useQueryClient();
   return useMutation<Attachment, ApiError, { file: File; purpose: AttachmentPurpose }>({
     mutationFn: ({ file, purpose }) => attachmentApi.upload(ownerType, ownerId, file, purpose),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: attachmentKeys.list(ownerType, ownerId) }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: attachmentKeys.list(ownerType, ownerId) }),
   });
 };
 
@@ -56,7 +62,8 @@ export const useRemoveAttachment = (ownerType: AttachmentOwnerType, ownerId: num
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, number>({
     mutationFn: attachmentApi.remove,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: attachmentKeys.list(ownerType, ownerId) }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: attachmentKeys.list(ownerType, ownerId) }),
   });
 };
 

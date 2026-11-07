@@ -3,7 +3,8 @@ import { hrLookupApi } from '@/services/hrLookupApi';
 
 const KEY = ['hr-lookups'] as const;
 
-export const useTeamLookup = () => useQuery({ queryKey: [...KEY, 'teams'], queryFn: hrLookupApi.teams });
+export const useTeamLookup = () =>
+  useQuery({ queryKey: [...KEY, 'teams'], queryFn: hrLookupApi.teams });
 
 export const useTeamMemberLookup = (teamId: number | null) =>
   useQuery({

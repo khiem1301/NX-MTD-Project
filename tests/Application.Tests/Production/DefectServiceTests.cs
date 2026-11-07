@@ -23,6 +23,8 @@ public class DefectServiceTests : ProductionTestBase
     private readonly List<Employee> _employees = [];
     private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
     private readonly List<AccountingPeriod> _periods = [];
+    private readonly List<OutputRecord> _outputs = [];
+    private readonly List<VwWorkerOutputCap> _caps = [];
     private readonly DefectService _sut;
     private int _nextId = 1;
 
@@ -34,6 +36,8 @@ public class DefectServiceTests : ProductionTestBase
         SetupQueryable(_employees);
         SetupQueryable(_teams);
         SetupQueryable(_periods);
+        SetupQueryable(_outputs);
+        SetupQueryable(_caps);
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         AsTeamLeader(TeamId);
 
@@ -503,5 +507,151 @@ public class DefectServiceTests : ProductionTestBase
         (await Search("Tổ may 1")).Should().ContainSingle().Which.ResponsibleWorkerId.Should().Be(7);
         (await Search(productCode)).Should().HaveCount(2);
         (await Search("khong-co")).Should().BeEmpty();
+    }
+
+    // ========== Nhập sai sản lượng (OUTPUT_ERR, DEV-ALL-79) ==========
+
+    private void Output(int qty, int worker = 7, DateOnly? date = null) =>
+        _outputs.Add(new OutputRecord { WorkDate = date ?? Today, WorkerId = worker, OrderLineId = LineId, OperationId = 1, Quantity = qty });
+
+    private static CreateDefectDto CreateOutputError(int qty = 4, string? note = "Nhập nhầm 10 thành 20", int worker = 7, DateOnly? date = null) =>
+        Create("OutputErr", qty, "Other", note, worker, date);
+
+    [Fact]
+    public async Task CreateOutputError_LocksRate_UsesOtherReasonAndNotifiesTheWorker()
+    {
+        Output(10);
+
+        var result = await _sut.CreateAsync(CreateOutputError(), default);
+
+        result.IsSuccess.Should().BeTrue();
+        var defect = _defects.Single();
+        defect.DefectType.Should().Be(DefectTypes.OutputError);
+        defect.DefectReasonCode.Should().Be(DefectReasons.Other);
+        defect.ReasonNote.Should().Be("Nhập nhầm 10 thành 20");
+        defect.PieceRateId.Should().Be(100);
+        Notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Is<NotificationMessage>(m => m.Message.Contains("nhập sai sản lượng")));
+    }
+
+    [Fact]
+    public async Task CreateOutputError_IgnoresTheReasonCodeSent_AlwaysOther()
+    {
+        Output(10);
+
+        var result = await _sut.CreateAsync(Create("OutputErr", 4, "Torn", "Nhập nhầm"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _defects.Single().DefectReasonCode.Should().Be(DefectReasons.Other);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("   ")]
+    public async Task CreateOutputError_NeedsAnExplanation(string? note)
+    {
+        Output(10);
+
+        var result = await _sut.CreateAsync(CreateOutputError(note: note), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(Messages.DefectNoteRequired);
+        _defects.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateOutputError_WithoutOutputThatDay_IsRejected()
+    {
+        Output(10, date: Today.AddDays(-1));
+
+        var result = await _sut.CreateAsync(CreateOutputError(), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain(Today.ToString("dd/MM/yyyy"));
+        _defects.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateOutputError_OtherWorkersOutputDoesNotCount()
+    {
+        Output(10, worker: 8);
+
+        (await _sut.CreateAsync(CreateOutputError(), default)).IsSuccess.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    [InlineData(1, true)]
+    public async Task CreateOutputError_CannotExceedTheOutputOfTheDay(int qty, bool expected)
+    {
+        Output(10);
+
+        (await _sut.CreateAsync(CreateOutputError(qty), default)).IsSuccess.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(3, true)]
+    [InlineData(4, false)]
+    public async Task CreateOutputError_CountsTheDeductionsAlreadyRecorded(int qty, bool expected)
+    {
+        Output(10);
+        Existing(type: DefectTypes.OutputError).Quantity = 7;
+
+        var result = await _sut.CreateAsync(CreateOutputError(qty), default);
+
+        result.IsSuccess.Should().Be(expected);
+        if (!expected) result.Message.Should().Contain("chỉ còn trừ được 3");
+    }
+
+    [Fact]
+    public async Task CreateOutputError_CancelledDeductionsAreNotCounted()
+    {
+        Output(10);
+        Existing(type: DefectTypes.OutputError, status: DefectStatuses.Cancelled).Quantity = 7;
+
+        (await _sut.CreateAsync(CreateOutputError(10), default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CreateOutputError_WithoutApprovedRate_IsRejected()
+    {
+        Output(10);
+        _rates.FindEffectiveAsync(1, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns((EffectivePieceRate?)null);
+
+        var result = await _sut.CreateAsync(CreateOutputError(), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRateNotApproved);
+    }
+
+    [Fact]
+    public async Task CancelOutputError_WhenTheWorkerHasNoRoomLeftUnderTheCap_IsRejected()
+    {
+        var defect = Existing(type: DefectTypes.OutputError);
+        _caps.Add(new VwWorkerOutputCap { WorkerId = 7, OrderLineId = LineId, OperationId = 1, RemainingQty = 1 });
+
+        var result = await _sut.CancelAsync(defect.DefectRecordId, new CancelDefectDto(null, RowVer), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Be(Messages.DefectOutputErrorCancelOverCap);
+        defect.Status.Should().Be(DefectStatuses.Recorded);
+    }
+
+    [Fact]
+    public async Task CancelOutputError_WithRoomUnderTheCap_ReturnsTheOutputToTheWorker()
+    {
+        var defect = Existing(type: DefectTypes.OutputError);
+        _caps.Add(new VwWorkerOutputCap { WorkerId = 7, OrderLineId = LineId, OperationId = 1, RemainingQty = 2 });
+
+        var result = await _sut.CancelAsync(defect.DefectRecordId, new CancelDefectDto(null, RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        defect.Status.Should().Be(DefectStatuses.Cancelled);
+    }
+
+    [Fact]
+    public async Task ScrapAndRework_AreNotAffectedByTheOutputCheck()
+    {
+        (await _sut.CreateAsync(Create("Scrap"), default)).IsSuccess.Should().BeTrue();
+        (await _sut.CreateAsync(Create("Rework", 2, "Torn"), default)).IsSuccess.Should().BeTrue();
     }
 }
