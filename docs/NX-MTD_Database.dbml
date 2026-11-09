@@ -240,13 +240,7 @@ Table ProductComponentMaterial [note: 'Định mức NVL theo biến thể × th
   ProductVariantId int [not null, note: 'Biến thể (màu × size) mà định mức này áp dụng']
   ProductComponentId int [not null, note: 'Thành phần dùng NVL này; FK ghép cùng ProductId nên phải đúng mã hàng']
   MaterialId int [not null, note: 'Vật tư']
-  LengthCm decimal(7,2) [note: 'Kích thước chi tiết (nếu cần), vd dài tay áo']
-  WidthCm decimal(7,2) [note: 'Chiều rộng chi tiết (nếu cần), vd rộng thân']
   SpecNote nvarchar(200) [note: 'Ghi chú quy cách khác']
-  checks {
-    `(LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)` [name: 'CK_PCM_Size']
-  }
-
   indexes {
     (ProductVariantId, ProductComponentId, MaterialId) [unique, name: 'UQ_PCM']
     (MaterialId) [name: 'IX_PCM_Material']
@@ -1145,7 +1139,6 @@ Table Material [note: 'Nguyên vật liệu'] {
   MaterialType varchar(10) [note: 'Cột tính từ Category: FABRIC (vải, đi qua tổ cắt) hoặc TRIM (phụ liệu, cấp thẳng cho tổ may); không nhập']
   Category varchar(15) [not null, check: `Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB', 'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE', 'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')`, note: 'Loại cụ thể, người dùng chọn; quyết định MaterialType. Vải: MAIN_FABRIC, LINING, INTERLINING, RIB. Phụ liệu: THREAD, ZIPPER, BUTTON, SNAP, ELASTIC, TAPE, LABEL, HANG_TAG, PADDING, PACKAGING, OTHER']
   Unit nvarchar(20) [not null, note: 'Đơn vị tính: m, kg, cuộn, cái, cuộn chỉ...']
-  WidthCm decimal(7,2) [check: `WidthCm IS NULL OR WidthCm > 0`, note: 'Chiều rộng, với vải là khổ vải (cm)']
   Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
 
@@ -1252,26 +1245,41 @@ Table Product [note: 'Mã hàng'] {
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
 }
 
-Table ProductMarker [note: 'Bìa cắt của mã hàng: mỗi dòng là một bìa ở một size; một bìa tính cho một sản phẩm'] {
+Table ProductMarker [note: 'Bìa cắt của đơn (DEV-ALL-85): phía trên giác theo tỉ lệ size của đơn; chỉ để ước mét vải (mét = số lớp × LengthM), bàn cắt không gắn bìa'] {
   ProductMarkerId int [pk, increment, note: 'Khóa chính, tự tăng']
-  ProductId int [not null, note: 'Mã hàng']
-  MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Số bìa: 1, 2, 3...']
-  SizeCode varchar(10) [not null, note: 'Size']
-  LengthCm decimal(7,2) [not null, note: 'Chiều dài bìa']
-  WidthCm decimal(7,2) [not null, note: 'Chiều rộng bìa']
-  checks {
-    `LengthCm > 0 AND WidthCm > 0` [name: 'CK_PM_Size']
-  }
+  OrderId int [not null, ref: > CustomerOrder.OrderId, note: 'Đơn hàng của bìa']
+  ProductId int [not null, ref: > Product.ProductId, note: 'Mã hàng, phải có trong đơn (trigger 50055)']
+  MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Nhóm bìa của mã hàng (thân, tay...), khớp ProductMarkerFabric / ProductMarkerComponent']
+  MarkerCode varchar(20) [not null, note: 'Mã bìa trong nhóm: 1A, 1B...']
+  LengthM decimal(7,2) [not null, check: `LengthM > 0`, note: 'Chiều dài bìa (m)']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'ACTIVE / DISCONTINUED']
 
   indexes {
-    (ProductId, MarkerNo, SizeCode) [unique, name: 'UQ_PM']
+    (OrderId, ProductId, MarkerNo, MarkerCode) [unique, name: 'UQ_PM']
+    ProductId [name: 'IX_PM_Product']
   }
 }
 
-Table ProductMarkerFabric [note: 'Bìa nào, với màu áo nào, trải trên vải nào; vải không đổi theo size. MarkerNo khớp ProductMarker theo mã hàng, không có FK'] {
+Table ProductMarkerRatio [note: 'Tỉ lệ size của bìa: số sản phẩm mỗi size trên một lớp (DEV-ALL-85)'] {
+  ProductMarkerId int [pk, ref: > ProductMarker.ProductMarkerId, note: 'Bìa']
+  SizeCode varchar(10) [pk, note: 'Size, phải có trong đơn của bìa (trigger 50055)']
+  PiecesPerPly smallint [not null, check: `PiecesPerPly > 0`, note: 'Số sản phẩm size này trên 1 lớp']
+}
+
+Table ProductMarkerComponent [note: 'Chi tiết nằm trên nhóm bìa nào, khai ở mã hàng; dùng ước mét cắt lẻ / cắt bù (DEV-ALL-85)'] {
+  ProductId int [pk, note: 'Mã hàng']
+  MarkerNo tinyint [pk, check: `MarkerNo > 0`, note: 'Nhóm bìa']
+  ProductComponentId int [pk, note: 'Chi tiết; FK ghép cùng ProductId']
+
+  indexes {
+    ProductComponentId [name: 'IX_PMC_Component']
+  }
+}
+
+Table ProductMarkerFabric [note: 'Nhóm bìa nào, với màu áo nào, trải trên vải nào; khai ở mã hàng. MarkerNo khớp ProductMarker, ProductMarkerComponent theo (ProductId, MarkerNo), không có FK'] {
   ProductMarkerFabricId int [pk, increment, note: 'Khóa chính, tự tăng']
   ProductId int [not null, note: 'Mã hàng']
-  MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Số bìa']
+  MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Nhóm bìa']
   ProductColorId int [not null, note: 'Màu áo (ProductColor, cùng mã hàng)']
   MaterialId int [not null, note: 'Vải']
 
@@ -1328,6 +1336,7 @@ Ref FK_PCM_Variant: ProductComponentMaterial.(ProductVariantId, ProductId) > Pro
 Ref FK_OrderLine_Variant: OrderLine.(ProductVariantId, ProductId) > ProductVariant.(ProductVariantId, ProductId)
 Ref FK_PV_Color: ProductVariant.(ProductColorId, ProductId) > ProductColor.(ProductColorId, ProductId)
 Ref FK_PMF_Color: ProductMarkerFabric.(ProductColorId, ProductId) > ProductColor.(ProductColorId, ProductId)
+Ref FK_PMC_Component: ProductMarkerComponent.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
 Ref FK_MRL_POL: MaterialReceiptLine.PurchaseOrderLineId > PurchaseOrderLine.PurchaseOrderLineId
 Ref FK_PCM_Component: ProductComponentMaterial.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
 Ref FK_OC_Component: OperationComponent.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
@@ -1500,7 +1509,9 @@ TableGroup S03_DonHang [note: '3. KHÁCH HÀNG, MÃ HÀNG, ĐƠN HÀNG, CÔNG Đ
   ProductVariant
   ProductComponent
   ProductMarker
+  ProductMarkerRatio
   ProductMarkerFabric
+  ProductMarkerComponent
   ProductComponentMaterial
   CustomerOrder
   OrderLine

@@ -48,7 +48,7 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 |---|---|---|
 | 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevelCode`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
 | 4.2 Nhân sự & thông báo | `Team`, `Employee`, `Account`, `GradeEvaluation`, `Announcement`, `AnnouncementTarget`, `Notification` | Tổ, nhân viên, tài khoản, đổi bậc thợ, thông báo |
-| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerFabric`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
+| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerRatio`, `ProductMarkerFabric`, `ProductMarkerComponent`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
 | 4.4 Đơn từ | `Request`, `RequestLine` | 10 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
 | 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua, thanh toán, phiếu nhập |
 | 4.6 Cắt & cấp kho | `WorkOrder`, `WorkOrderLine`, `MaterialIssue`, `MaterialIssueLine`, `MaterialReturn`, `MaterialReturnLine`, `CuttingLay`, `CuttingLayLine`, `CutHandover`, `CutHandoverLine` | Lệnh cắt, cấp NVL / BTP, trả vải, bàn cắt, bàn giao BTP |
@@ -117,7 +117,7 @@ erDiagram
 ### 3.1 Mã hàng và định mức (cập nhật 23/10)
 
 1. `Product` là mã hàng (style). Mỗi mã hàng khai báo các **biến thể** `ProductVariant` (một màu × một size) và các **thành phần** `ProductComponent`: chi tiết cắt từ vải (`PANEL`: thân trước, tay áo ×2…) hoặc phụ liệu (`TRIM`: khóa, nhãn, chỉ…).
-2. `ProductComponentMaterial` là định mức: với **từng biến thể × từng thành phần**, dùng NVL nào, màu NVL nào, bao nhiêu cho 1 sản phẩm, % hao hụt và kích thước chi tiết (`LengthCm`, `WidthCm`, `SpecNote`). Ví dụ áo Xanh – S có tay áo dài 58 cm, vải Trắng; áo Đen – M có tay áo dài 60 cm, vải Đen.
+2. `ProductComponentMaterial` là định mức: với **từng biến thể × từng thành phần**, dùng NVL nào, màu NVL nào, bao nhiêu cho 1 sản phẩm và ghi chú quy cách (`SpecNote`); không còn kích thước chi tiết (DEV-ALL-85). Ví dụ áo Xanh có tay áo vải Trắng, áo Đen tay áo vải Đen.
 3. FK ghép `(ProductVariantId, ProductId)` và `(ProductComponentId, ProductId)` bảo đảm biến thể và thành phần của một dòng định mức thuộc cùng một mã hàng.
 4. `OrderLine` trỏ thẳng `ProductVariantId` (FK ghép cùng `ProductId`), nên đơn hàng chỉ dùng được biến thể đã khai báo; màu, size đọc từ `ProductVariant`.
 
@@ -133,7 +133,7 @@ erDiagram
 ### 3.3 Cắt
 
 1. `WorkOrder` (lệnh cắt) cho tổ cắt theo đơn + mã hàng; `WorkOrderLine` là số cần cắt theo dòng đơn. Dòng cắt bù có `WorkOrderLine.ProductComponentMaterialId` (chi tiết × vải × màu của đúng màu × size); lệnh cắt bù có `SourceRequestId` trỏ về yêu cầu `REPLACEMENT_CUTTING`.
-2. Vải cần cho lệnh cắt cả bộ tính theo bìa: `ProductMarker` cho dài, rộng từng bìa theo size (một bìa một sản phẩm), `ProductMarkerFabric` cho biết bìa đó, với màu áo đó, dùng vải nào. Cắt lẻ và cắt bù tính theo kích thước chi tiết trong `ProductComponentMaterial`.
+2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết nhóm bìa với màu áo nào trải trên vải nào; `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
 3. Thủ kho cấp vải bằng `MaterialIssue` (`WarehouseType = 'MATERIAL'`): xuất chỉ **giữ chỗ**, trừ kho khi tổ trưởng xác nhận nhận. Vải thừa trả lại bằng `MaterialReturn`.
 4. Tổ cắt ghi `CuttingLay` (số lớp, chiều dài bàn, vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
 5. `CutHandover` bàn giao BTP vào kho BTP (`usp_Stock_Post` kho `SEMI_FINISHED`).
@@ -416,7 +416,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialType` | tính toán |  | `= (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC' ELSE 'TRIM' END AS VARCHAR(10)))` (PERSISTED) |  |
 | `Category` | VARCHAR(15) |  |  |  |
 | `Unit` | NVARCHAR(20) |  |  | m, kg, cuộn, cái, cuộn chỉ… |
-| `WidthCm` | DECIMAL(7,2) | ✓ | `CHECK WidthCm IS NULL OR WidthCm > 0` | chiều rộng, với vải là khổ vải (cm) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
@@ -539,34 +538,61 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - UNIQUE `UQ_PC`: (ProductId, ComponentName)
 - UNIQUE `UQ_PC_IdProduct`: (ProductComponentId, ProductId) — cho FK ghép ở ProductComponentMaterial
 
-### `ProductMarker` — Bìa cắt của mã hàng theo size
+### `ProductMarker` — Bìa cắt của đơn
 
-> DEV-ALL-42 (01/11): mỗi dòng là một bìa ở một size, `MarkerNo` là số bìa (1, 2, 3...). Dùng để tính số mét vải của lệnh cắt cả bộ. Một bìa tính cho một sản phẩm; kích thước không phụ thuộc màu nên không nhân theo màu áo
+> DEV-ALL-85 (09/11): bìa do phía trên giác theo tỉ lệ size của từng đơn. Mỗi bìa thuộc một đơn × mã hàng × nhóm bìa (`MarkerNo`), có mã trong nhóm (1A, 1B...) và chiều dài cố định; tỉ lệ size ở `ProductMarkerRatio`. Chỉ dùng để ước số mét vải khi lập lệnh cắt: mét = số lớp × `LengthM`, số lớp = max theo size của ⌈cần ÷ `PiecesPerPly`⌉. Bàn cắt không gắn bìa (một lần nhập có thể dùng nhiều bìa): mét và sản lượng thực tế lấy từ `CuttingLay` / `CuttingLayLine`
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `ProductMarkerId` | INT |  | **PK**; tự tăng |  |
-| `ProductId` | INT |  | FK → `Product.ProductId` |  |
-| `MarkerNo` | TINYINT |  |  | số bìa |
-| `SizeCode` | VARCHAR(10) |  |  |  |
-| `LengthCm` | DECIMAL(7,2) |  |  | chiều dài bìa (cm) |
-| `WidthCm` | DECIMAL(7,2) |  |  | chiều rộng bìa (cm) |
+| `OrderId` | INT |  | FK → `CustomerOrder.OrderId` | đơn của bìa |
+| `ProductId` | INT |  | FK → `Product.ProductId` | phải có trong đơn (trigger 50055) |
+| `MarkerNo` | TINYINT |  |  | nhóm bìa của mã hàng (thân, tay...) |
+| `MarkerCode` | VARCHAR(20) |  |  | mã bìa trong nhóm: 1A, 1B... |
+| `LengthM` | DECIMAL(7,2) |  |  | chiều dài bìa (m) |
+| `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` | `ACTIVE`, `DISCONTINUED` |
 
 **Ràng buộc & index**
 
-- `CK_PM_No`: `CHECK MarkerNo > 0`
-- `CK_PM_Size`: `CHECK LengthCm > 0 AND WidthCm > 0`
-- UNIQUE `UQ_PM`: (ProductId, MarkerNo, SizeCode)
+- `CK_PM_No`: `CHECK MarkerNo > 0`; `CK_PM_Length`: `CHECK LengthM > 0`
+- `CK_PM_Status`: `CHECK Status IN ('ACTIVE','DISCONTINUED')`
+- UNIQUE `UQ_PM`: (OrderId, ProductId, MarkerNo, MarkerCode)
+- Index `IX_PM_Product ON dbo.ProductMarker(ProductId)`
+- Trigger `trg_ProductMarker_Check` (50055): mã hàng có dòng trong đơn; nhóm bìa đã khai vải ở `ProductMarkerFabric`; đổi đơn / mã hàng không làm tỉ lệ có size ngoài đơn
 
-### `ProductMarkerFabric` — Vải của bìa theo màu áo
+### `ProductMarkerRatio` — Tỉ lệ size của bìa
 
-> DEV-ALL-42: bìa nào, với màu áo nào, trải trên vải nào. Vải không đổi theo size. `MarkerNo` khớp `ProductMarker` theo mã hàng, không có khóa ngoại vì một số bìa có nhiều dòng size; backend kiểm mỗi số bìa có đủ kích thước và vải
+> DEV-ALL-85: số sản phẩm mỗi size trên một lớp vải. Size không có dòng = bìa không cắt size đó
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductMarkerId` | INT |  | **PK**; FK → `ProductMarker.ProductMarkerId` |  |
+| `SizeCode` | VARCHAR(10) |  | **PK** | phải là size có trong đơn của bìa |
+| `PiecesPerPly` | SMALLINT |  | `CHECK > 0` | số sản phẩm size này trên 1 lớp |
+
+- Trigger `trg_ProductMarkerRatio_Check` (50055): size có trong đơn hàng của mã hàng đó
+
+### `ProductMarkerComponent` — Chi tiết trên nhóm bìa
+
+> DEV-ALL-85: khai một lần ở mã hàng; dùng ước mét cho dòng cắt lẻ / cắt bù. Một chi tiết có thể nằm trên nhiều nhóm (vd tay áo vải chính và vải lót)
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `ProductId` | INT |  | **PK**; FK ghép → `ProductComponent` |  |
+| `MarkerNo` | TINYINT |  | **PK**; `CHECK > 0` | nhóm bìa |
+| `ProductComponentId` | INT |  | **PK**; FK ghép (ProductComponentId, ProductId) → `ProductComponent` |  |
+
+- Index `IX_PMC_Component ON dbo.ProductMarkerComponent(ProductComponentId)`
+
+### `ProductMarkerFabric` — Vải của nhóm bìa theo màu áo
+
+> DEV-ALL-42, DEV-ALL-85: nhóm bìa nào, với màu áo nào, trải trên vải nào; khai một lần ở mã hàng. `MarkerNo` là nhóm bìa, khớp `ProductMarker` và `ProductMarkerComponent` theo (ProductId, MarkerNo), không có khóa ngoại vì không có bảng nhóm bìa riêng
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `ProductMarkerFabricId` | INT |  | **PK**; tự tăng |  |
 | `ProductId` | INT |  | FK → `Product.ProductId` |  |
-| `MarkerNo` | TINYINT |  |  | số bìa |
+| `MarkerNo` | TINYINT |  |  | nhóm bìa |
 | `ProductColorId` | INT |  | FK ghép (ProductColorId, ProductId) → `ProductColor` | màu áo (05/11 thay cột `Color`, DEV-ALL-71) |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` | vải dùng cho bìa và màu này |
 
@@ -577,10 +603,10 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - UNIQUE `UQ_PMF`: (ProductId, MarkerNo, ProductColorId)
 - Index `IX_PMF_Material ON dbo.ProductMarkerFabric(MaterialId)`
 
-### `ProductComponentMaterial` — Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết
+### `ProductComponentMaterial` — Định mức NVL theo biến thể × thành phần
 
 > Định mức NVL theo biến thể (23/10, thay OrderMaterialNorm): với mỗi biến thể (màu × size) và mỗi thành phần,
-> dùng NVL nào, màu NVL nào, bao nhiêu cho 1 sản phẩm, kích thước chi tiết. Một thành phần có thể dùng nhiều NVL
+> dùng NVL nào, màu NVL nào (09/11 bỏ kích thước chi tiết, DEV-ALL-85). Một thành phần có thể dùng nhiều NVL
 > (vd cổ áo = vải chính + mex). Ghi tường minh từng biến thể, không dùng NULL = "mọi màu / mọi size";
 > màn hình nhập có nút "áp dụng cho các size / màu khác" để đỡ nhập tay.
 > ProductId lặp lại để FK ghép bảo đảm biến thể và thành phần cùng một mã hàng.
@@ -592,15 +618,12 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ProductVariantId` | INT |  | FK ghép → `ProductVariant` |  |
 | `ProductComponentId` | INT |  | FK ghép → `ProductComponent` |  |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
-| `LengthCm` | DECIMAL(7,2) | ✓ |  | kích thước chi tiết (nếu cần), vd dài tay áo |
-| `WidthCm` | DECIMAL(7,2) | ✓ |  |  |
 | `SpecNote` | NVARCHAR(200) | ✓ |  | ghi chú quy cách khác |
 
 **Ràng buộc & index**
 
 - FK `FK_PCM_Variant`: (ProductVariantId, ProductId) → `ProductVariant`(ProductVariantId, ProductId)
 - FK `FK_PCM_Component`: (ProductComponentId, ProductId) → `ProductComponent`(ProductComponentId, ProductId)
-- `CK_PCM_Size`: `CHECK (LengthCm IS NULL OR LengthCm > 0) AND (WidthCm IS NULL OR WidthCm > 0)`
 - UNIQUE `UQ_PCM`: (ProductVariantId, ProductComponentId, MaterialId)
 - Index: `IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId)`
 
@@ -1131,7 +1154,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 ### `CuttingLay` — Bàn cắt
 
 > Bàn cắt (CUTTING_LAY, FR 2.7): số lớp × tỉ lệ size. Tỉ lệ size nằm ở CuttingLayLine.RatioValue;
-> tỉ lệ gần nhất của mã hàng (để điền sẵn) xem vw_ProductLastSizeRatio
+> một lần nhập có thể dùng nhiều bìa nên bàn cắt không gắn bìa; vải đã cắt = Σ PlyCount × LayLengthM (DEV-ALL-85)
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -1936,7 +1959,6 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `vw_PurchaseOrderDelivery` | Đơn mua: số lần NCC dự kiến giao, số lần đã nhận (23/10) | Số lần đã nhận = số phiếu nhập đã xác nhận của đơn mua, kể cả phiếu bổ sung; kèm ngày nhận gần nhất |
 | `vw_WorkOrderLineProgress` | Tiến độ từng dòng lệnh cắt (24/10) | Kế hoạch `WorkOrderLine.PlannedQty`; đã cắt = Σ `CuttingLayLine.ActualQty` cùng lệnh, dòng đơn, `ProductComponentMaterialId`; đã vào kho = Σ `CutHandoverLine.ConfirmedQty` của phiếu `CONFIRMED` cùng chi tiết (`ProductComponentMaterial.ProductComponentId`); có thêm cột chi tiết, vải, màu vải của dòng cắt bù; còn lại = kế hoạch − đã cắt (không âm) |
 | `vw_MaterialStock` | Màn hình kho NVL | `vw_StockBalance` kho `MATERIAL` kèm thông tin `Material` |
-| `vw_RecutFabricNeed` | Số mét vải ước tính cho dòng lệnh cắt bù (28/10) | Mỗi chi tiết là một hình chữ nhật `ProductComponentMaterial.LengthCm` × `WidthCm`; số miếng một hàng = làm tròn xuống (khổ vải / rộng chi tiết), số hàng = làm tròn lên (số chi tiết / số miếng một hàng), số mét = số hàng × dài chi tiết / 100. Chỉ là ước lượng. `NeedMeters` trống khi thiếu kích thước chi tiết hoặc khổ vải, hoặc chi tiết rộng hơn khổ vải |
 | `vw_WorkerOutputCap` | Trần sản lượng của công nhân theo dòng đơn × công đoạn (25/10) | Σ `WorkAllocation.ConfirmedQty` giao − thu hồi; còn lại = trần − đã may. Công đoạn không dùng BTP vẫn có trần |
 | `vw_OperationAllocationProgress` | Tiến độ chia việc của từng công đoạn (25/10) | Mỗi tổ × dòng đơn đã nhận BTP × công đoạn đang dùng của mã hàng. Cần làm = số bộ BTP tổ đã nhận; đã giao (đã xác nhận, trừ thu hồi); đang chờ xác nhận; chưa giao = kế hoạch − đã giao − đang chờ; đã làm = Σ `OutputRecord.Quantity` |
 | `vw_WorkerDailyEstimatedPay` | Lương tạm tính theo ngày của công nhân may (UC59) | Σ(sản lượng × đơn giá khóa) − Σ(Scrap × đơn giá đó) |
@@ -1946,7 +1968,6 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `vw_PayrollExportData` | Dữ liệu xuất cho Kế toán làm lương (UC31) | Ngày công, tăng ca, sản lượng × đơn giá, bậc thợ |
 | `vw_TeamActingLeader` | Tổ phó đang thay tổ trưởng hôm nay | Sau `LEADER_ABSENT_CHECK_TIME` mà tổ trưởng chưa có giờ vào (không quẹt, chưa được chấm hộ) thì `IsActingLeader = 1` cho tổ phó của tổ đó |
 | `vw_DailyMealTotal` | Suất ăn mỗi ngày (UC30) | Suất của tổ cộng từ `TeamMealConfirmation`, tổng suất, thành tiền |
-| `vw_ProductLastSizeRatio` | Điền sẵn tỉ lệ size khi tạo bàn cắt (FR 2.7) | Tỉ lệ size của bàn cắt bộ đủ gần nhất theo mã hàng (bỏ bàn cắt bù chi tiết), vd `S:1 M:2 L:2 XL:1` |
 
 ---
 
@@ -2066,7 +2087,9 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `ProductImage` | `Product` |
 | `ProductColor` | `Product` |
 | `ProductVariant` | `Product`, `ProductColor` |
-| `ProductMarker` | `Product` |
+| `ProductMarker` | `CustomerOrder`, `Product` |
+| `ProductMarkerRatio` | `ProductMarker` |
+| `ProductMarkerComponent` | `ProductComponent` |
 | `ProductMarkerFabric` | `Material`, `Product`, `ProductColor` |
 | `ProductComponent` | `Product` |
 | `ProductComponentMaterial` | `Material`, `ProductComponent`, `ProductVariant` |
