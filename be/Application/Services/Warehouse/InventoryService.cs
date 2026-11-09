@@ -5,7 +5,7 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC24: xem tồn 3 kho, thẻ kho và BTP tổ may đã nhận / còn trên chuyền.</summary>
+/// <summary>UC24: xem tồn 3 kho, thẻ kho, BTP tổ may và báo cáo nhập xuất tồn.</summary>
 public sealed class InventoryService : IInventoryService
 {
     private readonly IStockRepository _stock;
@@ -28,4 +28,8 @@ public sealed class InventoryService : IInventoryService
     public async Task<Result<IReadOnlyList<TeamPieceHoldingDto>>> GetTeamHoldingsAsync(int? sewingTeamId,
         int? orderId, CancellationToken ct) =>
         Result<IReadOnlyList<TeamPieceHoldingDto>>.Success(await _stock.GetTeamHoldingsAsync(sewingTeamId, orderId, ct));
+
+    public async Task<Result<PagedResult<NxtSummaryDto>>> GetNxtSummaryAsync(NxtReportQuery query,
+        CancellationToken ct) =>
+        Result<PagedResult<NxtSummaryDto>>.Success(await _stock.GetNxtSummaryAsync(query, ct));
 }

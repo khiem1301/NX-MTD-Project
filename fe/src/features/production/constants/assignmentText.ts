@@ -91,6 +91,8 @@ export const ASSIGNMENTS_TEXT = {
   columns: {
     operation: 'Công đoạn',
     skill: 'Bậc',
+    unitRate: 'Đơn giá',
+    noRate: 'Chưa có',
     worker: 'Công nhân',
   },
   done: {

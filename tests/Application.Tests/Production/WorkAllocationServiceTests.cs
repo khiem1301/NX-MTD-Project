@@ -91,7 +91,8 @@ public class WorkAllocationServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private WorkAllocationService Service() => new(_uow, _notifier, _audit, _locks, _clock);
+    private WorkAllocationService Service() =>
+        new(_uow, _notifier, _audit, _locks, _clock, new PieceRateService(_uow, _audit, _notifier, _clock));
 
     private WorkAllocation Allocation(string type, string status, int qty, int? confirmed = null, int worker = WorkerId,
         int operationId = SewOpId, string? retrievalReason = null)

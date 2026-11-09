@@ -21,6 +21,8 @@ const row = (over: Partial<DailyAllocationRow>): DailyAllocationRow =>
     remainingQty: 0,
     unallocatedQty: 0,
     previousQty: 0,
+    unitRate: null,
+    rateApproved: false,
     ...over,
   }) as DailyAllocationRow;
 

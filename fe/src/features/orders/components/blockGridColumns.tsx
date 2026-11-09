@@ -1,11 +1,11 @@
-import { DeleteOutlined } from '@ant-design/icons';
+import { CopyOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Space, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { QtyInput } from '@/components/common/QtyInput';
 import { ColorAutoComplete } from './ColorAutoComplete';
-import { rowTotal, type GridRow, type ProductBlock } from '../utils/orderGrid';
+import { copyGridRow, rowTotal, type GridRow, type ProductBlock } from '../utils/orderGrid';
 import {
   colorErrorKey,
   MAX_ORDER_QTY,
@@ -31,7 +31,7 @@ type BlockGridColumnsOptions = {
   onChange: (block: ProductBlock) => void;
 };
 
-/** Cột lưới màu (hàng) × size (cột) của một khối mã hàng: màu, số lượng từng size, tổng, nút xóa dòng. */
+/** Cột lưới màu (hàng) × size (cột) của một khối mã hàng: màu, số lượng từng size, tổng, xóa / sao chép dòng. */
 export const blockGridColumns = ({
   block,
   locked,
@@ -92,15 +92,27 @@ export const blockGridColumns = ({
   },
   {
     title: '',
-    width: 40,
-    render: (_: unknown, row, index) =>
-      locked && rowHasOldLine(row) ? null : (
+    width: 72,
+    render: (_: unknown, row, index) => (
+      <Space size={0}>
+        {!(locked && rowHasOldLine(row)) && (
+          <IconAction
+            danger
+            title={MESSAGES.common.delete}
+            icon={<DeleteOutlined />}
+            onClick={() => onChange({ ...block, rows: block.rows.filter((_r, i) => i !== index) })}
+          />
+        )}
         <IconAction
-          danger
-          title={MESSAGES.common.delete}
-          icon={<DeleteOutlined />}
-          onClick={() => onChange({ ...block, rows: block.rows.filter((_r, i) => i !== index) })}
+          title={MESSAGES.common.copy}
+          icon={<CopyOutlined />}
+          onClick={() => {
+            const rows = [...block.rows];
+            rows.splice(index + 1, 0, copyGridRow(row));
+            onChange({ ...block, rows });
+          }}
         />
-      ),
+      </Space>
+    ),
   },
 ];

@@ -36,3 +36,22 @@ public sealed class StockCardQueryValidator : AbstractValidator<StockCardQuery>
         RuleFor(x => x.OrderLineId).NotNull().When(x => x.WarehouseType != WarehouseTypes.Material);
     }
 }
+
+public sealed class NxtReportQueryValidator : AbstractValidator<NxtReportQuery>
+{
+    public NxtReportQueryValidator()
+    {
+        RuleFor(x => x.WarehouseType).Must(t => WarehouseTypes.All.Contains(t))
+            .WithMessage("Loại kho không hợp lệ.");
+        RuleFor(x => x.OrderId).GreaterThan(0).WithMessage("Vui lòng chọn đơn hàng.");
+        RuleFor(x => x.FromDate).NotEqual(default(DateOnly)).WithMessage("Vui lòng chọn từ ngày.");
+        RuleFor(x => x.ToDate).NotEqual(default(DateOnly)).WithMessage("Vui lòng chọn đến ngày.");
+        RuleFor(x => x.ToDate).GreaterThanOrEqualTo(x => x.FromDate)
+            .When(x => x.FromDate != default && x.ToDate != default)
+            .WithMessage("Đến ngày phải từ ngày bắt đầu trở đi.");
+        RuleFor(x => x.Page).GreaterThan(0).WithMessage("Số trang phải từ 1 trở lên.");
+        RuleFor(x => x.PageSize).InclusiveBetween(1, PageQuery.MaxPageSize)
+            .WithMessage($"Số dòng mỗi trang phải từ 1 đến {PageQuery.MaxPageSize}.");
+        RuleFor(x => x.Keyword).MaximumLength(100).WithMessage("Từ khóa tối đa 100 ký tự.");
+    }
+}

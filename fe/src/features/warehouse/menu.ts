@@ -48,4 +48,10 @@ export const warehouseMenu: MenuEntry[] = [
     path: ROUTES.inventories,
     roles: [WarehouseKeeper, Manager, Admin],
   },
+  {
+    key: 'nxt-report',
+    label: 'Báo cáo nhập xuất tồn',
+    path: ROUTES.nxtReport,
+    roles: [WarehouseKeeper, Manager, Admin],
+  },
 ];

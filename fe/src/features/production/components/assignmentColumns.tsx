@@ -1,5 +1,6 @@
 import { Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { formatCurrency } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { AssignmentRow } from '../utils/assignmentBoard';
 import { AssignmentWorkerSelect } from './AssignmentWorkerSelect';
@@ -8,7 +9,7 @@ const text = PRODUCTION_TEXT.assignments;
 
 type Workers = { options: { value: number; label: string }[]; loading: boolean };
 
-/** Cột của bảng phân công: công đoạn, bậc, công nhân (chọn ngay trên dòng). */
+/** Cột của bảng phân công: công đoạn, bậc, đơn giá, công nhân (chọn ngay trên dòng). */
 export const assignmentColumns = (
   orderId: number,
   workers: Workers,
@@ -29,6 +30,18 @@ export const assignmentColumns = (
     width: 70,
     align: 'center',
     render: (_, { operation: o }) => o.skillLevel ?? '—',
+  },
+  {
+    title: text.columns.unitRate,
+    key: 'unitRate',
+    width: 110,
+    align: 'right',
+    render: (_, { operation: o }) =>
+      o.unitRate == null ? (
+        <Typography.Text type="secondary">{text.columns.noRate}</Typography.Text>
+      ) : (
+        formatCurrency(o.unitRate)
+      ),
   },
   {
     title: text.columns.worker,

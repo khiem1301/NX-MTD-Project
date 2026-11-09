@@ -9,4 +9,5 @@ public interface IInventoryService
     Task<Result<IReadOnlyList<StockCardEntryDto>>> GetStockCardAsync(StockCardQuery query, CancellationToken ct);
     Task<Result<IReadOnlyList<TeamPieceHoldingDto>>> GetTeamHoldingsAsync(int? sewingTeamId, int? orderId,
         CancellationToken ct);
+    Task<Result<PagedResult<NxtSummaryDto>>> GetNxtSummaryAsync(NxtReportQuery query, CancellationToken ct);
 }

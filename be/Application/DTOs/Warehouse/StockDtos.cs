@@ -50,3 +50,19 @@ public sealed record StockCardEntryDto(
 public sealed record TeamPieceHoldingDto(
     int SewingTeamId, string TeamName, int OrderLineId, string OrderCode, string ProductCode, string Color,
     string SizeCode, int ReceivedQty, int FinishedQty, int ScrapQty, int OnLineQty);
+
+/// <summary>Bộ lọc báo cáo nhập xuất tồn tổng hợp theo đơn và kỳ.</summary>
+public sealed record NxtReportQuery : PageQuery
+{
+    public string WarehouseType { get; init; } = WarehouseTypes.Material;
+    public int OrderId { get; init; }
+    public DateOnly FromDate { get; init; }
+    public DateOnly ToDate { get; init; }
+}
+
+/// <summary>Một dòng NXT: tồn đầu / nhập / xuất / tồn cuối trong kỳ.</summary>
+public sealed record NxtSummaryDto(
+    string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
+    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
+    string? ProductName, string? Color, string? SizeCode, int? ProductComponentMaterialId, string? ComponentName,
+    decimal OpeningQty, decimal InQty, decimal OutQty, decimal ClosingQty);

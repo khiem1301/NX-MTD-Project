@@ -55,7 +55,37 @@ describe('ProductBlockEditor', () => {
     // antd Table có cuộn ngang render tiêu đề 2 lần nên dùng getAll*.
     expect(screen.getAllByLabelText('Xóa size S').length).toBeGreaterThan(0);
     expect(screen.getAllByLabelText('Xóa').length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText('Sao chép').length).toBeGreaterThan(0);
     expect(screen.getByDisplayValue('Đỏ')).not.toBeDisabled();
+  });
+
+  it('sao chép dòng màu: thêm dòng mới giữ số lượng, màu trống', () => {
+    const onChange = jest.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ProductBlockEditor
+          block={oldBlock}
+          locked={false}
+          productLabels={{ 1: 'AO-01 · Áo' }}
+          onChange={onChange}
+          onRemove={jest.fn()}
+          onCreateProduct={jest.fn()}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.click(screen.getAllByLabelText('Sao chép')[0]!);
+    expect(onChange).toHaveBeenCalled();
+    const next = onChange.mock.calls[0]![0] as ProductBlock;
+    expect(next.rows).toHaveLength(2);
+    expect(next.rows[1]?.color).toBe('');
+    expect(next.rows[1]?.cells.S).toEqual({ orderLineId: null, qty: 10 });
+    expect(next.rows[1]?.cells.M).toEqual({ orderLineId: null, qty: 20 });
+  });
+
+  it('đơn đã vào sản xuất: vẫn sao chép được dòng để thêm màu cùng số lượng', () => {
+    renderEditor(true);
+    expect(screen.getAllByLabelText('Sao chép').length).toBeGreaterThan(0);
   });
 
   it('hai màu trở lên: hiện dòng tổng theo size', () => {

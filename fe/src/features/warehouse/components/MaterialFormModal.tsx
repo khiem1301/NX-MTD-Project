@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
-import { Col, Form, Input, InputNumber, Modal, Row, Select, Typography } from 'antd';
+import { Col, Form, Input, Modal, Row, Select, Typography } from 'antd';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { FABRIC_UNIT } from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
 import type { Material, SaveMaterialPayload } from '../types';
-import { cmToMeters, MAX_FABRIC_WIDTH_M, metersToCm } from '../utils/fabricWidth';
 
 type MaterialFormModalProps = {
   open: boolean;
@@ -16,8 +15,7 @@ type MaterialFormModalProps = {
   onSaved?: (material: Material) => void;
 };
 
-/** Khổ vải trên form nhập bằng mét; API nhận cm (widthCm). */
-type FormValues = Omit<SaveMaterialPayload, 'widthCm'> & { widthM?: number | null };
+type FormValues = Omit<SaveMaterialPayload, 'widthCm'>;
 
 const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
   value: t,
@@ -33,7 +31,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    if (material) form.setFieldsValue({ ...material, widthM: cmToMeters(material.widthCm) });
+    if (material) form.setFieldsValue({ ...material });
   }, [open, material, form]);
 
   // Vải cố định đơn vị mét, không cho sửa.
@@ -41,10 +39,14 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     if (isFabric) form.setFieldValue('unit', FABRIC_UNIT);
   }, [isFabric, form]);
 
-  const handleFinish = ({ widthM, ...values }: FormValues) => {
+  const handleFinish = (values: FormValues) => {
+    // Danh mục không nhập khổ: tạo mới = null; sửa = giữ khổ đã lưu.
     const body: SaveMaterialPayload = {
       ...values,
-      widthCm: values.materialType === MATERIAL_TYPE.FABRIC ? metersToCm(widthM) : null,
+      widthCm:
+        values.materialType === MATERIAL_TYPE.FABRIC
+          ? (material?.widthCm ?? null)
+          : null,
     };
     save.mutate(
       { id: material?.materialId, body },
@@ -56,7 +58,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
         onError: (error) =>
           form.setFields(
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-              name: (name === 'widthCm' ? 'widthM' : name) as keyof FormValues,
+              name: name as keyof FormValues,
               errors,
             })),
           ),
@@ -134,34 +136,10 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
             </Form.Item>
           </Col>
           <Col xs={24}>
-            <Typography.Paragraph type="secondary" style={{ marginTop: -8 }}>
+            <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 0 }}>
               {LABELS.materialColorHint}
             </Typography.Paragraph>
           </Col>
-          {/* Phụ liệu (cúc, khóa, chỉ...) tính theo đơn vị đếm, không có khổ: chỉ vải mới nhập khổ vải. */}
-          {isFabric && (
-            <>
-              <Col xs={24} sm={12}>
-                <Form.Item
-                  name="widthM"
-                  label={LABELS.materialWidthM}
-                  rules={[{ required: true, message: MESSAGES.common.required }]}
-                >
-                  <InputNumber
-                    min={0.01}
-                    max={MAX_FABRIC_WIDTH_M}
-                    precision={2}
-                    style={{ width: '100%' }}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24}>
-                <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 0 }}>
-                  {LABELS.materialSizeHint}
-                </Typography.Paragraph>
-              </Col>
-            </>
-          )}
         </Row>
       </Form>
     </Modal>

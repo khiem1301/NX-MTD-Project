@@ -381,6 +381,37 @@ export type StockCardEntry = {
   balanceAfter: number;
 };
 
+/** Báo cáo nhập xuất tồn tổng hợp theo đơn + kỳ. */
+export type NxtReportQuery = PageParams & {
+  warehouseType: string;
+  orderId: number;
+  fromDate: string;
+  toDate: string;
+};
+
+export type NxtSummary = {
+  warehouseType: string;
+  materialId: number | null;
+  materialCode: string | null;
+  materialName: string | null;
+  materialType: string | null;
+  unit: string | null;
+  materialColor: string | null;
+  orderLineId: number | null;
+  orderId: number | null;
+  orderCode: string | null;
+  productCode: string | null;
+  productName: string | null;
+  color: string | null;
+  sizeCode: string | null;
+  productComponentMaterialId: number | null;
+  componentName: string | null;
+  openingQty: number;
+  inQty: number;
+  outQty: number;
+  closingQty: number;
+};
+
 /** BTP tổ may theo dòng đơn (26/10): số bộ đã nhận từ kho, đã QC đạt, hàng hủy, còn trên chuyền. */
 export type TeamPieceHolding = {
   sewingTeamId: number;

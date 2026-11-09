@@ -102,6 +102,29 @@ export const newBlock = (): ProductBlock => ({
   rows: [{ key: `new-row-${blockSeq}`, color: '', cells: {} }],
 });
 
+/** Sao chép dòng màu: giữ số lượng từng size, màu trống để đổi; ô mới không gắn orderLineId. */
+export const copyGridRow = (row: GridRow): GridRow => {
+  const cells: Record<string, GridCell> = {};
+  for (const [size, cell] of Object.entries(row.cells)) {
+    cells[size] = { orderLineId: null, qty: cell.qty };
+  }
+  return { key: `row-copy-${Date.now()}-${(blockSeq += 1)}`, color: '', cells };
+};
+
+/** Sao chép cả đơn sang form tạo mới: giữ màu / size / SL / giá, bỏ orderLineId. */
+export const cloneBlocksForNewOrder = (lines: OrderDisplayLine[]): ProductBlock[] =>
+  fromLines(lines).map((b) => ({
+    ...b,
+    key: `copy-block-${(blockSeq += 1)}`,
+    rows: b.rows.map((r) => {
+      const cells: Record<string, GridCell> = {};
+      for (const [size, cell] of Object.entries(r.cells)) {
+        cells[size] = { orderLineId: null, qty: cell.qty };
+      }
+      return { key: `copy-row-${(blockSeq += 1)}`, color: r.color, cells };
+    }),
+  }));
+
 /** Số đã giao của một màu (cộng mọi size). */
 export const rowDelivered = (b: ProductBlock, r: GridRow): number =>
   b.sizes.reduce((s, size) => s + (r.cells[size]?.deliveredQty ?? 0), 0);

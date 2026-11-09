@@ -68,6 +68,11 @@ export function OrderDetailPage() {
               {MESSAGES.common.edit}
             </Button>
           )}
+          {hasRole(ROLES.Admin) && (
+            <Button onClick={() => navigate(`${ROUTES.orderNew}?copyFrom=${data.orderId}`)}>
+              {MESSAGES.orders.copyOrder}
+            </Button>
+          )}
           {data.status === 'New' && (
             <Button danger onClick={() => setPending('cancel')}>
               {MESSAGES.orders.cancelOrder}

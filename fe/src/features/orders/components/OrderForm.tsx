@@ -16,9 +16,14 @@ import { ProductBlockEditor } from './ProductBlockEditor';
 import { ProductFormModal } from './ProductFormModal';
 import type { OrderDetail } from '../types';
 
-export type OrderFormProps = { orderId: number | null; detail: OrderDetail | undefined };
+export type OrderFormProps = {
+  orderId: number | null;
+  detail: OrderDetail | undefined;
+  /** Đơn nguồn khi tạo bằng Sao chép đơn (không phải chế độ sửa). */
+  copyFrom?: OrderDetail;
+};
 
-export function OrderForm({ orderId, detail }: OrderFormProps) {
+export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
   const {
     isEdit,
     navigate,
@@ -44,13 +49,14 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
     setCustomerOpen,
     productBlock,
     setProductBlock,
-  } = useOrderForm({ orderId, detail });
+  } = useOrderForm({ orderId, detail, copyFrom });
   const { token } = theme.useToken();
   const saving = create.isPending || update.isPending;
   const goBack = () => navigate(isEdit ? ROUTES.orderDetail(orderId as number) : ROUTES.orders);
   const saveError =
     lineError ??
     (Object.keys(blockErrors).length > 0 ? MESSAGES.orders.validation.fixLines : undefined);
+  const pageDescription = locked && editable ? MESSAGES.orders.lockedEditHint : undefined;
 
   // Thanh tổng và nút Lưu dính đáy màn hình: đơn nhiều mã hàng không phải cuộn xuống cuối để lưu.
   const footerStyle: CSSProperties = {
@@ -76,7 +82,7 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
           ? `${MESSAGES.orders.editOrder} ${detail?.orderCode ?? ''}`
           : MESSAGES.orders.createOrder
       }
-      description={locked && editable ? MESSAGES.orders.lockedEditHint : undefined}
+      description={pageDescription}
       extra={detail && <StatusTag status={detail.status} labels={ORDER_STATUS_TAG} />}
     >
       <div>
@@ -85,6 +91,14 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
             type="warning"
             showIcon
             message={MESSAGES.orders.notEditable}
+            style={{ marginBottom: 12 }}
+          />
+        )}
+        {copyFrom && (
+          <Alert
+            type="info"
+            showIcon
+            message={MESSAGES.orders.copyOrderHint.replace('{0}', copyFrom.orderCode)}
             style={{ marginBottom: 12 }}
           />
         )}
@@ -99,7 +113,7 @@ export function OrderForm({ orderId, detail }: OrderFormProps) {
         >
           <OrderHeaderFields
             customers={customers.data ?? []}
-            currentCustomerId={detail?.customerId}
+            currentCustomerId={detail?.customerId ?? copyFrom?.customerId}
             locked={locked}
             onAddCustomer={() => setCustomerOpen(true)}
           />
