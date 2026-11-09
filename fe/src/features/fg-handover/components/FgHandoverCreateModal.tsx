@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Form, InputNumber, Modal, Select } from 'antd';
+import { Alert, Form, Modal, Select } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { FG_LABELS, FG_MESSAGES } from '../constants';
@@ -8,6 +8,7 @@ import type { FgHandoverableLine } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type FgHandoverCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -120,12 +121,7 @@ export function FgHandoverCreateModal({ open, onClose }: FgHandoverCreateModalPr
               key: 'qty',
               render: (_, l) => (
                 <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
-                  <InputNumber
-                    min={0}
-                    max={l.remainingQty}
-                    precision={0}
-                    disabled={l.remainingQty === 0}
-                  />
+                  <QtyInput min={0} max={l.remainingQty} disabled={l.remainingQty === 0} />
                 </Form.Item>
               ),
             },

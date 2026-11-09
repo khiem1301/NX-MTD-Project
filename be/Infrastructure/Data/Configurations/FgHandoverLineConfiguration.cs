@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -16,7 +17,7 @@ public sealed class FgHandoverLineConfiguration : IEntityTypeConfiguration<FgHan
 
         entity.HasIndex(e => new { e.FgHandoverId, e.OrderLineId }, "UQ_FGHL").IsUnique();
 
-        entity.Property(e => e.DiscrepancyReason).HasMaxLength(500);
+        entity.Property(e => e.DiscrepancyReason).HasMaxLength(TextLimits.Reason);
 
         entity.HasOne(d => d.FgHandover).WithMany(p => p.FgHandoverLines)
             .HasForeignKey(d => d.FgHandoverId)

@@ -13,7 +13,8 @@ namespace NX_MTD.Application.Services;
 /// <list type="bullet">
 /// <item>Đơn giá khóa lúc nhập: lấy đơn giá APPROVED hiệu lực tại ngày làm việc; chưa có thì chặn (MSG18, GBR-11).</item>
 /// <item>Trần (MSG16, database 25/10): sản lượng của công nhân ở một công đoạn × dòng đơn ≤ số lần tổ trưởng đã giao và
-/// công nhân đã xác nhận (<c>vw_WorkerOutputCap</c>); chưa được giao thì trần bằng 0. Database cũng chặn cứng (50052).</item>
+/// công nhân đã xác nhận (<c>vw_WorkerOutputCap</c>); chưa được giao thì trần bằng 0. Database cũng chặn cứng (50052).
+/// DEV-ALL-64: tổ trưởng xác nhận chuyển thì phần vượt lấy từ người cùng công đoạn còn dư / phần tổ chưa giao (<see cref="OutputCapTransfer"/>).</item>
 /// <item>Hạn sửa (GBR-09): hết ngày làm việc kế tiếp; sau hạn chỉ Quản đốc sửa, bắt buộc lý do, ghi AuditLog (MSG20).</item>
 /// <item>Công nhân chưa có giờ vào hôm đó: cảnh báo MSG17, không chặn.</item>
 /// </list>
@@ -24,11 +25,15 @@ public sealed class OutputService : IOutputService
     private readonly ProductionGuard _guard;
     private readonly IPieceRateService _rates;
     private readonly IAuditLogService _audit;
+    private readonly IAppLock _locks;
     private readonly IClock _clock;
+    private readonly OutputCapTransfer _transfer;
 
-    public OutputService(IUnitOfWork uow, ProductionGuard guard, IPieceRateService rates, IAuditLogService audit, IClock clock)
+    public OutputService(IUnitOfWork uow, ProductionGuard guard, IPieceRateService rates, IAuditLogService audit, IAppLock locks,
+        IClock clock)
     {
-        _uow = uow; _guard = guard; _rates = rates; _audit = audit; _clock = clock;
+        _uow = uow; _guard = guard; _rates = rates; _audit = audit; _locks = locks; _clock = clock;
+        _transfer = new OutputCapTransfer(uow, clock);
     }
 
     private IQueryable<OutputRecord> Records => _uow.Repository<OutputRecord>().Query();
@@ -44,9 +49,9 @@ public sealed class OutputService : IOutputService
         var team = _guard.ResolveSewingTeam(sewingTeamId);
         if (!team.IsSuccess) return Fail.As<OutputGridDto>(team);
 
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId, ct);
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().FirstOrDefaultAsync(l => l.OrderLineId == orderLineId, ct);
         if (line is null) return Fail.NotFound<OutputGridDto>();
+        if (!await IsAllottedAsync(team.Data, orderLineId, ct)) return NotAllotted<OutputGridDto>();
 
         var assignments = await _uow.Repository<OperationAssignment>().Query().AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == line.OrderId && a.ValidTo == null
@@ -71,6 +76,8 @@ public sealed class OutputService : IOutputService
         var assigned = assignments.Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
         var recordByKey = records.ToDictionary(r => (r.OperationId, r.WorkerId));
         var rows = await BuildGridRowsAsync(workDate, keys, operations, workers, recordByKey, capByKey, assigned, ct);
+        var sources = await _transfer.LoadSourcesAsync(team.Data, orderLineId, teamWorkerIds, ct);
+        rows = rows.Select(r => r with { TransferableQty = sources.TransferableTo(r.OperationId, r.WorkerId) }).ToList();
 
         var received = await ReceivedAsync(team.Data, orderLineId, ct);
         return Result<OutputGridDto>.Success(new OutputGridDto(workDate, shift, orderLineId, team.Data, received, rows));
@@ -106,6 +113,9 @@ public sealed class OutputService : IOutputService
         HashSet<(int OperationId, int WorkerId)> assigned, CancellationToken ct)
     {
         var newRowOpen = _clock.Now <= ProductionGuard.NextWorkingDayEnd(workDate) || _guard.IsManager;
+        // Đơn giá hiện hành chỉ phụ thuộc công đoạn và ngày: đọc một lần cho mọi công đoạn chưa có bản ghi, không đọc theo từng dòng.
+        var rates = await _rates.FindEffectiveManyAsync(
+            keys.Where(k => !recordByKey.ContainsKey(k)).Select(k => k.OperationId).Distinct().ToList(), workDate, ct);
         var rows = new List<OutputGridRowDto>();
         foreach (var (operationId, workerId) in keys.OrderBy(k => operations[k.OperationId].StationSequence)
                      .ThenBy(k => workers[k.WorkerId].EmployeeCode))
@@ -113,7 +123,7 @@ public sealed class OutputService : IOutputService
             var operation = operations[operationId];
             var worker = workers[workerId];
             recordByKey.TryGetValue((operationId, workerId), out var record);
-            var rate = record is null ? await _rates.FindEffectiveAsync(operationId, workDate, ct) : null;
+            var rate = record is null ? rates.GetValueOrDefault(operationId) : null;
             var canEdit = record is null ? newRowOpen : _clock.Now <= record.EditDeadline || _guard.IsManager;
 
             rows.Add(new OutputGridRowDto(operationId, operation.OperationCode, operation.OperationName, workerId,
@@ -143,6 +153,8 @@ public sealed class OutputService : IOutputService
         var line = await FindOpenLineAsync(dto.OrderLineId, ct);
         if (line is null)
             return Result<OutputSaveResultDto>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
+        if (!await IsAllottedAsync(team.Data, line.OrderLineId, ct)) return NotAllotted<OutputSaveResultDto>();
+        if (ProductionGuard.BeforeOrderStart(dto.WorkDate, line.Order.ReceivedDate) is { } beforeStart) return Invalid(beforeStart);
 
         var existing = await LoadExistingAsync(dto, shift, team.Data, ct);
         var newDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate);
@@ -162,12 +174,12 @@ public sealed class OutputService : IOutputService
         // 3) Cảnh báo MSG17 + cờ ngoài phân công cho các dòng mới.
         var (attendedWorkerIds, assigned, warnings) = await CollectWarningsAsync(dto, team.Data, line, plan, lookups, ct);
 
-        // 4) Ghi cùng AuditLog trong một transaction.
-        var written = await PersistAsync(dto, shift, team.Data, plan, lookups.Rates, assigned, attendedWorkerIds, newDeadline, reason);
+        // 4) Chuyển phần vượt (nếu có) rồi ghi sản lượng cùng AuditLog trong một transaction.
+        var written = await PersistAsync(dto, shift, team.Data, plan, lookups, assigned, attendedWorkerIds, newDeadline, reason, ct);
         if (!written.IsSuccess) return Fail.As<OutputSaveResultDto>(written);
 
-        return Result<OutputSaveResultDto>.Success(
-            new OutputSaveResultDto(plan.Inserts.Count, plan.Updates.Count, plan.Deletes.Count, warnings), Messages.OutputSaved);
+        return Result<OutputSaveResultDto>.Success(new OutputSaveResultDto(plan.Inserts.Count, plan.Updates.Count, plan.Deletes.Count,
+            [.. written.Data!, .. warnings]), Messages.OutputSaved);
     }
 
     /// <summary>Công nhân có chấm công trong ngày, cặp (công đoạn, công nhân) được phân công và cảnh báo MSG17 cho công nhân mới chưa chấm công.</summary>
@@ -191,10 +203,16 @@ public sealed class OutputService : IOutputService
     }
 
     /// <summary>Dòng đơn chưa đóng; null nếu không có hoặc đơn đã đóng.</summary>
+    /// <summary>Tổ chỉ báo sản lượng màu × size đã được chia cho tổ (DEV-ALL-49, DEV-ALL-68).</summary>
+    private Task<bool> IsAllottedAsync(int teamId, int orderLineId, CancellationToken ct) =>
+        _uow.Repository<OrderLineTeam>().Query().AnyAsync(a => a.SewingTeamId == teamId && a.OrderLineId == orderLineId, ct);
+
+    private static Result<T> NotAllotted<T>() => Result<T>.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.OrderLineNotAllotted);
+
     private async Task<OrderLine?> FindOpenLineAsync(int orderLineId, CancellationToken ct)
     {
         var closed = OrderStatuses.Closed.ToArray();
-        return await _uow.Repository<OrderLine>().Query().AsNoTracking()
+        return await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
             .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId && !closed.Contains(l.Order.Status), ct);
     }
 
@@ -246,17 +264,14 @@ public sealed class OutputService : IOutputService
     private async Task<Result<Dictionary<int, EffectivePieceRate>>> LoadRatesAsync(OutputPlan plan, DateOnly workDate,
         Dictionary<int, Operation> operations, CancellationToken ct)
     {
-        var rates = new Dictionary<int, EffectivePieceRate>();
-        foreach (var operationId in plan.Inserts.Select(i => i.OperationId).Distinct())
-        {
-            var rate = await _rates.FindEffectiveAsync(operationId, workDate, ct);
-            if (rate is null)   // MSG18: chưa có đơn giá duyệt thì không nhập sản lượng
-                return Result<Dictionary<int, EffectivePieceRate>>.Failure(ErrorCodes.PieceRateNotApproved,
-                    string.Format(Messages.PieceRateNotApproved, operations[operationId].OperationCode,
-                        workDate.ToString("dd/MM/yyyy")));
-            rates[operationId] = rate;
-        }
-        return Result<Dictionary<int, EffectivePieceRate>>.Success(rates);
+        var operationIds = plan.Inserts.Select(i => i.OperationId).Distinct().ToList();
+        var found = await _rates.FindEffectiveManyAsync(operationIds, workDate, ct);
+        // MSG18: chưa có đơn giá duyệt thì không nhập sản lượng
+        var missing = operationIds.FirstOrDefault(id => !found.ContainsKey(id));
+        if (missing != 0)
+            return Result<Dictionary<int, EffectivePieceRate>>.Failure(ErrorCodes.PieceRateNotApproved,
+                string.Format(Messages.PieceRateNotApproved, operations[missing].OperationCode, workDate.ToString("dd/MM/yyyy")));
+        return Result<Dictionary<int, EffectivePieceRate>>.Success(found.ToDictionary(r => r.Key, r => r.Value));
     }
 
     /// <summary>Nạp công đoạn / công nhân / đơn giá của các dòng đổi và kiểm: còn hoạt động, đúng mã hàng, đúng tổ, đã có đơn giá duyệt, không vượt trần.</summary>
@@ -289,30 +304,54 @@ public sealed class OutputService : IOutputService
         if (!ratesResult.IsSuccess) return Fail.As<OutputLookups>(ratesResult);
         var rates = ratesResult.Data!;
 
-        var capFailure = await CheckCapsAsync(teamId, dto.OrderLineId, changing, operations, ct);
-        if (capFailure is not null) return Fail.As<OutputLookups>(capFailure);
+        var shortages = await CheckCapsAsync(dto.OrderLineId, changing, operations, dto.TransferExcess, ct);
+        if (!shortages.IsSuccess) return Fail.As<OutputLookups>(shortages);
 
-        return Result<OutputLookups>.Success(new OutputLookups(workers, rates, workerIds));
+        // Phần tăng thêm của từng dòng trong lần lưu này: không lấy phần dư của người đang báo thêm khi chuyển.
+        var increase = changing.ToDictionary(c => (c.OperationId, c.WorkerId), c => c.Quantity - (c.Record?.Quantity ?? 0));
+        return Result<OutputLookups>.Success(new OutputLookups(workers, rates, workerIds, operations, shortages.Data!, increase));
     }
 
-    /// <summary>Ghi dòng mới / đổi / xóa cùng AuditLog trong một transaction; đơn giá khóa theo ngày nhập.</summary>
-    private async Task<Result> PersistAsync(
-        SaveOutputDto dto, string shift, int teamId, OutputPlan plan, Dictionary<int, EffectivePieceRate> rates,
-        HashSet<(int OperationId, int WorkerId)> assigned, List<int> attendedWorkerIds, DateTime newDeadline, string? reason)
+    /// <summary>
+    /// Ghi dòng mới / đổi / xóa cùng AuditLog trong một transaction; đơn giá khóa theo ngày nhập. Có phần vượt thì ghi phiếu chuyển
+    /// trước (khóa giao việc của dòng đơn như màn Giao việc) để trigger thấy trần mới. Trả các dòng thông báo đã chuyển.
+    /// </summary>
+    private async Task<Result<List<string>>> PersistAsync(
+        SaveOutputDto dto, string shift, int teamId, OutputPlan plan, OutputLookups lookups,
+        HashSet<(int OperationId, int WorkerId)> assigned, List<int> attendedWorkerIds, DateTime newDeadline, string? reason,
+        CancellationToken ct)
     {
         var created = new List<OutputRecord>();
         return await _uow.InTransactionAsync(async () =>
         {
-            created = await AddInsertsAsync(dto, shift, teamId, plan, rates, assigned, attendedWorkerIds, newDeadline);
+            var moved = new List<string>();
+            if (lookups.Shortages.Count > 0)
+            {
+                await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
+                var transfer = await _transfer.ApplyAsync(new OutputCapTransfer.Context(teamId, dto.OrderLineId, dto.WorkDate, shift),
+                    lookups.Shortages, lookups.OutputIncrease, lookups.Operations, ct);
+                if (!transfer.IsSuccess) return transfer;
+                moved = transfer.Data!;
+            }
+
+            created = await AddInsertsAsync(dto, shift, teamId, plan, lookups.Rates, assigned, attendedWorkerIds, newDeadline);
             ApplyUpdatesAndDeletes(plan, reason);
             await _uow.SaveChangesAsync();   // lấy OutputRecordId của dòng mới trước khi ghi log Insert
 
             foreach (var record in created)
                 _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Insert, null,
-                    new { record.WorkDate, record.ShiftCode, record.WorkerId, record.OperationId, record.OrderLineId,
-                          record.Quantity, record.PieceRateId }, reason));
+                    new
+                    {
+                        record.WorkDate,
+                        record.ShiftCode,
+                        record.WorkerId,
+                        record.OperationId,
+                        record.OrderLineId,
+                        record.Quantity,
+                        record.PieceRateId
+                    }, reason));
             await _uow.SaveChangesAsync();
-            return Result.Success();
+            return Result<List<string>>.Success(moved);
         });
     }
 
@@ -325,12 +364,19 @@ public sealed class OutputService : IOutputService
         {
             var record = new OutputRecord
             {
-                WorkDate = dto.WorkDate, ShiftCode = shift, SewingTeamId = teamId, WorkerId = row.WorkerId,
-                OperationId = row.OperationId, OrderLineId = dto.OrderLineId, Quantity = row.Quantity,
+                WorkDate = dto.WorkDate,
+                ShiftCode = shift,
+                SewingTeamId = teamId,
+                WorkerId = row.WorkerId,
+                OperationId = row.OperationId,
+                OrderLineId = dto.OrderLineId,
+                Quantity = row.Quantity,
                 PieceRateId = rates[row.OperationId].PieceRateId,   // đơn giá khóa theo ngày nhập
                 IsOutsideAssignment = !assigned.Contains((row.OperationId, row.WorkerId)),
                 NoAttendanceWarning = !attendedWorkerIds.Contains(row.WorkerId),
-                EditDeadline = newDeadline, Status = OutputStatuses.Saved, EnteredAt = _clock.Now,
+                EditDeadline = newDeadline,
+                Status = OutputStatuses.Saved,
+                EnteredAt = _clock.Now,
             };
             await _uow.Repository<OutputRecord>().AddAsync(record);
             created.Add(record);
@@ -364,18 +410,22 @@ public sealed class OutputService : IOutputService
         public bool IsEmpty => Inserts.Count == 0 && Updates.Count == 0 && Deletes.Count == 0;
     }
 
-    /// <summary>Dữ liệu tra cứu đã nạp và kiểm cho các dòng đổi.</summary>
+    /// <summary>Dữ liệu tra cứu đã nạp và kiểm cho các dòng đổi; Shortages = phần vượt cần chuyển trước khi ghi (DEV-ALL-64).</summary>
     private sealed record OutputLookups(
-        Dictionary<int, Employee> Workers, Dictionary<int, EffectivePieceRate> Rates, List<int> WorkerIds);
+        Dictionary<int, Employee> Workers, Dictionary<int, EffectivePieceRate> Rates, List<int> WorkerIds,
+        Dictionary<int, Operation> Operations, List<OutputCapTransfer.Shortage> Shortages,
+        Dictionary<(int OperationId, int WorkerId), int> OutputIncrease);
 
     // ---------- Trần (MSG16) ----------
 
     /// <summary>Trần theo công nhân × công đoạn: Σ sản lượng ≤ số lần đã giao và được công nhân xác nhận (WorkAllocation).
-    /// Chưa được giao thì trần bằng 0 (trigger trg_OutputRecord_Check chặn cứng, THROW 50052).</summary>
-    private async Task<Result?> CheckCapsAsync(int teamId, int orderLineId,
+    /// Chưa được giao thì trần bằng 0 (trigger trg_OutputRecord_Check chặn cứng, THROW 50052). Có <paramref name="transferExcess"/> thì
+    /// dòng vượt không chặn mà trả phần vượt để chuyển trước khi ghi (DEV-ALL-64).</summary>
+    private async Task<Result<List<OutputCapTransfer.Shortage>>> CheckCapsAsync(int orderLineId,
         List<(int OperationId, int WorkerId, int Quantity, OutputRecord? Record)> changing,
-        Dictionary<int, Operation> operations, CancellationToken ct)
+        Dictionary<int, Operation> operations, bool transferExcess, CancellationToken ct)
     {
+        var shortages = new List<OutputCapTransfer.Shortage>();
         foreach (var row in changing)
         {
             var cap = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
@@ -387,11 +437,13 @@ public sealed class OutputService : IOutputService
                 .Where(r => r.WorkerId == row.WorkerId && r.OrderLineId == orderLineId && r.OperationId == row.OperationId
                             && (recordId == null || r.OutputRecordId != recordId))
                 .SumAsync(r => (int?)r.Quantity, ct) ?? 0;
-            if (others + row.Quantity > cap)
-                return Result.Failure(ErrorCodes.OutputExceedsCap, string.Format(Messages.OutputExceedsCap,
+            if (others + row.Quantity <= cap) continue;
+            if (!transferExcess)
+                return Result<List<OutputCapTransfer.Shortage>>.Failure(ErrorCodes.OutputExceedsCap, string.Format(Messages.OutputExceedsCap,
                     operations[row.OperationId].OperationCode, cap, Math.Max(0, cap - others)));
+            shortages.Add(new OutputCapTransfer.Shortage(row.OperationId, row.WorkerId, others + row.Quantity - cap));
         }
-        return null;
+        return Result<List<OutputCapTransfer.Shortage>>.Success(shortages);
     }
 
     private async Task<int> ReceivedAsync(int teamId, int orderLineId, CancellationToken ct) =>

@@ -68,8 +68,8 @@ public sealed class CustomerOrderService : ICustomerOrderService
     {
         var o = await _orders.GetDetailAsync(orderId, ct);
         if (o is null) return Fail.NotFound<OrderOverviewDto>();
-        var lines = o.Lines.Select(l => new OrderLineLookupDto(l.OrderLineId, o.OrderId, l.ProductId, l.ProductCode, l.ProductName,
-            l.Color, l.SizeCode, l.OrderedQty)).ToList();
+        var lines = o.Lines.Select(l => new OrderOverviewLineDto(l.OrderLineId, l.ProductId, l.ProductCode, l.ProductName,
+            l.Color, l.SizeCode, l.OrderedQty, l.DeliveredQty)).ToList();
         return Result<OrderOverviewDto>.Success(new OrderOverviewDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate, o.DueDate,
             o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.Note, o.CreatedAt, lines));
     }
@@ -148,7 +148,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (order is null) return Fail.NotFound();
         if (order.Status != OrderStatuses.New)
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled, ct);
     }
 
     public async Task<Result> StopAsync(int orderId, StopOrderDto dto, CancellationToken ct)
@@ -157,7 +157,10 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (order is null) return Fail.NotFound();
         if (!OrderStatuses.Stoppable.Contains(order.Status))
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Stopped, dto.Reason, dto.Reason.Trim(), Messages.OrderStopped);
+        // Hàng đã xuất hết (đang giao + đã giao) thì không còn phần nào để dừng: chờ khách nhận là đơn sang Đã giao.
+        if (await IsFullyDispatchedAsync(orderId, ct))
+            return Result.Failure(ErrorCodes.OrderFullyDispatched, Messages.OrderFullyDispatched);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Stopped, dto.Reason, dto.Reason.Trim(), Messages.OrderStopped, ct);
     }
 
     public async Task<Result> StartProductionAsync(int orderId, StartOrderProductionDto dto, CancellationToken ct)
@@ -168,11 +171,11 @@ public sealed class CustomerOrderService : ICustomerOrderService
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
         if (order.MaterialStatus == OrderMaterialStatuses.Awaiting)
             return Result.Failure(ErrorCodes.OrderMaterialsAwaiting, Messages.OrderMaterialsAwaiting);
-        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.InProduction, null, null, Messages.OrderStarted);
+        return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.InProduction, null, null, Messages.OrderStarted, ct);
     }
 
     private async Task<Result> ChangeStatusAsync(CustomerOrder order, byte[] rowVer, string to, string? reason,
-        string? stopReason, string successMessage)
+        string? stopReason, string successMessage, CancellationToken ct)
     {
         _orders.SetOriginalRowVersion(order, rowVer);
         var from = order.Status;
@@ -181,8 +184,20 @@ public sealed class CustomerOrderService : ICustomerOrderService
         order.UpdatedAt = _clock.Now;
         _audit.Add(new AuditEntry(nameof(CustomerOrder), order.OrderId, AuditActions.Update, new { Status = from },
             new { Status = to }, Clean(reason)));
+        if (to is OrderStatuses.Cancelled or OrderStatuses.Stopped) await new OrderCloseCascade(_uow, _audit, _notifier).RunAsync(order, to, _clock.Now, ct);
         await _uow.SaveChangesAsync();
         return Result.Success(successMessage);
+    }
+
+    /// <summary>Số đã xuất kho (đang giao + đã giao) của các phiếu xuất đã phủ hết số đặt của đơn.</summary>
+    private async Task<bool> IsFullyDispatchedAsync(int orderId, CancellationToken ct)
+    {
+        var ordered = await _lines.Query().Where(l => l.OrderId == orderId).SumAsync(l => l.OrderedQty, ct);
+        var shipped = await _uow.Repository<DispatchNoteLine>().Query()
+            .Where(l => l.DispatchNote.OrderId == orderId
+                        && (l.DispatchNote.Status == DispatchStatuses.InDelivery || l.DispatchNote.Status == DispatchStatuses.Delivered))
+            .SumAsync(l => l.IssueQty, ct);
+        return ordered > 0 && shipped >= ordered;
     }
 
     /// <summary>Không phải NEW: mã đơn, khách, ngày nhận phải giữ nguyên. Đổi mã khi NEW: kiểm trùng.</summary>
@@ -269,13 +284,17 @@ public sealed class CustomerOrderService : ICustomerOrderService
     /// <summary>
     /// Dòng đơn trỏ <c>ProductVariantId</c> (màu × size của mã hàng, FK ghép với ProductId). Màu × size chưa khai báo thì tạo
     /// biến thể mới (ACTIVE) để Admin lưu đơn như cũ; định mức của biến thể mới khai ở màn Mã hàng.
+    /// Màu chưa có ở mã hàng thì tạo ProductColor trước (DEV-ALL-71).
     /// </summary>
     private async Task<Result<IReadOnlyDictionary<VariantKey, ProductVariant>>> ResolveVariantsAsync(
         IReadOnlyList<OrderLineInput> inputs, CancellationToken ct)
     {
         var productIds = inputs.Select(i => i.ProductId).Distinct().ToArray();
-        var existing = await _uow.Repository<ProductVariant>().Query().Where(v => productIds.Contains(v.ProductId)).ToListAsync(ct);
-        var map = existing.ToDictionary(v => KeyOf(v.ProductId, v.Color, v.SizeCode));
+        var colors = (await _uow.Repository<ProductColor>().Query().Where(c => productIds.Contains(c.ProductId)).ToListAsync(ct))
+            .ToDictionary(c => (c.ProductId, ColorKey(c.Color)));
+        var existing = await _uow.Repository<ProductVariant>().Query().Include(v => v.ProductColor)
+            .Where(v => productIds.Contains(v.ProductId)).ToListAsync(ct);
+        var map = existing.ToDictionary(v => KeyOf(v.ProductId, v.ProductColor.Color, v.SizeCode));
         foreach (var input in inputs)
         {
             var key = KeyOf(input.ProductId, input.Color, input.SizeCode);
@@ -288,7 +307,9 @@ public sealed class CustomerOrderService : ICustomerOrderService
             }
             var created = new ProductVariant
             {
-                ProductId = input.ProductId, Color = input.Color.Trim(), SizeCode = input.SizeCode.Trim().ToUpperInvariant(),
+                ProductId = input.ProductId,
+                ProductColor = await ColorOfAsync(colors, input.ProductId, input.Color),
+                SizeCode = input.SizeCode.Trim().ToUpperInvariant(),
                 Status = RecordStatus.Active,
             };
             await _uow.Repository<ProductVariant>().AddAsync(created);
@@ -297,9 +318,22 @@ public sealed class CustomerOrderService : ICustomerOrderService
         return Result<IReadOnlyDictionary<VariantKey, ProductVariant>>.Success(map);
     }
 
+    private static string ColorKey(string color) => color.Trim().ToUpperInvariant();
+
+    /// <summary>Màu áo theo tên (không phân biệt hoa thường); chưa có thì tạo, dùng chung cho mọi size cùng màu trong lần lưu.</summary>
+    private async Task<ProductColor> ColorOfAsync(Dictionary<(int, string), ProductColor> colors, int productId, string color)
+    {
+        var key = (productId, ColorKey(color));
+        if (colors.TryGetValue(key, out var found)) return found;
+        var created = new ProductColor { ProductId = productId, Color = color.Trim(), CreatedAt = _clock.Now };
+        await _uow.Repository<ProductColor>().AddAsync(created);
+        colors[key] = created;
+        return created;
+    }
+
     private static bool SameKey(OrderLine l, OrderLineInput i) =>
         l.ProductId == i.ProductId
-        && string.Equals(l.ProductVariant.Color, i.Color.Trim(), StringComparison.OrdinalIgnoreCase)
+        && string.Equals(l.ProductVariant.ProductColor.Color, i.Color.Trim(), StringComparison.OrdinalIgnoreCase)
         && string.Equals(l.ProductVariant.SizeCode, i.SizeCode.Trim(), StringComparison.OrdinalIgnoreCase);
 
     private static bool KeyChanged(OrderLine l, OrderLineInput i) => !SameKey(l, i);
@@ -330,7 +364,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
     private static object Snapshot(CustomerOrder o) => new
     {
         o.OrderCode, o.CustomerId, o.ReceivedDate, o.DueDate, o.Note, o.Status, o.StopReason,
-        Lines = o.OrderLines.OrderBy(l => l.ProductId).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty, l.CmtUnitPrice }).ToList(),
+        Lines = o.OrderLines.OrderBy(l => l.ProductId).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty, l.CmtUnitPrice }).ToList(),
     };
 }

@@ -49,8 +49,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
             .OrderByDescending(d => d.DispatchNoteId)
             .Select(d => new DispatchNoteListItemDto(d.DispatchNoteId, d.DispatchCode, d.OrderId, d.Order.OrderCode,
                 d.Order.Customer.CustomerName, d.DeliveryDate, d.Status, d.CreatedAt,
-                d.DispatchNoteLines.Sum(l => l.IssueQty),
-                d.CustomerReceivedDate == null ? (int?)null : d.DispatchNoteLines.Sum(l => l.ReceivedQty ?? 0)))
+                d.DispatchNoteLines.Sum(l => l.IssueQty)))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<DispatchNoteListItemDto>>.Success(page);
     }
@@ -63,8 +62,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 d.RejectReason, d.DispatchedByNavigation == null ? null : d.DispatchedByNavigation.FullName,
                 d.DispatchedAt, d.CustomerReceivedDate,
                 d.DispatchNoteLines.OrderBy(l => l.DispatchNoteLineId).Select(l => new DispatchNoteLineDto(
-                    l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
-                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty, l.ReceivedQty)).ToList(), d.RowVer))
+                    l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.ProductColor.Color,
+                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty)).ToList(), d.RowVer))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<DispatchNoteDto>() : Result<DispatchNoteDto>.Success(dto);
     }
@@ -179,9 +178,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
             note.DispatchedBy = employeeId;
             note.DispatchedAt = _clock.Now;
             if (OrderStatuses.Running.Contains(note.Order.Status)) note.Order.Status = OrderStatuses.InDelivery;
-            await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
-                "Hàng đã xuất, chờ xác nhận khách nhận",
-                $"Phiếu {note.DispatchCode} đã xuất kho; khi khách nhận hàng vui lòng xác nhận và chụp biên bản giao.", null), ct);
+            await NotifyExportedAsync(note, ct);
             _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Confirm,
                 new { Status = DispatchStatuses.Pending }, new { note.Status }));
             await _uow.SaveChangesAsync();
@@ -211,7 +208,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
     public Task<Result> ConfirmDeliveryAsync(int dispatchNoteId, ConfirmDeliveryDto dto, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
-            var note = await Notes.Include(d => d.DispatchNoteLines).Include(d => d.Order)
+            var note = await Notes.Include(d => d.Order)
                 .FirstOrDefaultAsync(d => d.DispatchNoteId == dispatchNoteId, ct);
             if (note is null) return WarehouseFailures.NotFound();
             if (note.Status != DispatchStatuses.InDelivery) return WarehouseFailures.InvalidStatus();
@@ -224,21 +221,10 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchReceivedDateInvalid);
 
             _uow.Repository<DispatchNote>().SetOriginalRowVersion(note, dto.RowVer);
-            var byId = dto.Lines.ToDictionary(l => l.DispatchNoteLineId);
-            if (byId.Count != note.DispatchNoteLines.Count || note.DispatchNoteLines.Any(l => !byId.ContainsKey(l.DispatchNoteLineId)))
-                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);
-            foreach (var line in note.DispatchNoteLines)
-            {
-                var received = byId[line.DispatchNoteLineId].ReceivedQty;
-                if (received > line.IssueQty)
-                    return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DispatchReceivedExceedsIssued);
-                line.ReceivedQty = received;
-            }
-
-            var all = note.DispatchNoteLines.All(l => l.ReceivedQty == l.IssueQty);
-            note.Status = all ? DispatchStatuses.Delivered : DispatchStatuses.PartiallyDelivered;
+            // Giao hàng luôn thành công (GBR-24): khách nhận đúng số đã xuất (DEV-ALL-66, DEV-ALL-70).
+            note.Status = DispatchStatuses.Delivered;
             note.CustomerReceivedDate = dto.CustomerReceivedDate;
-            await _uow.SaveChangesAsync();   // lưu số khách nhận trước khi cộng dồn trạng thái đơn hàng
+            await _uow.SaveChangesAsync();   // lưu trạng thái đã giao trước khi cộng dồn trạng thái đơn hàng
 
             await UpdateOrderDeliveryStatusAsync(note.Order, ct);
             _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Confirm,
@@ -247,16 +233,30 @@ public sealed class DispatchNoteService : IDispatchNoteService
             return Result.Success(WarehouseMessages.DispatchDelivered);
         });
 
-    /// <summary>GBR-23: đơn DELIVERED khi tổng khách đã nhận ≥ số đặt; còn lại PARTIALLY_DELIVERED.</summary>
+    /// <summary>GBR-23: đơn DELIVERED khi tổng số xuất của các phiếu đã giao ≥ số đặt; còn lại PARTIALLY_DELIVERED.</summary>
     private async Task UpdateOrderDeliveryStatusAsync(CustomerOrder order, CancellationToken ct)
     {
         if (OrderStatuses.Closed.Contains(order.Status)) return;
         var ordered = await _uow.Repository<OrderLine>().Query().Where(l => l.OrderId == order.OrderId).SumAsync(l => l.OrderedQty, ct);
         var delivered = await _uow.Repository<DispatchNoteLine>().Query()
             .Where(l => l.DispatchNote.OrderId == order.OrderId
-                        && (l.DispatchNote.Status == DispatchStatuses.Delivered || l.DispatchNote.Status == DispatchStatuses.PartiallyDelivered))
-            .SumAsync(l => l.ReceivedQty ?? 0, ct);
+                        && l.DispatchNote.Status == DispatchStatuses.Delivered)
+            .SumAsync(l => l.IssueQty, ct);
         order.Status = delivered >= ordered ? OrderStatuses.Delivered : OrderStatuses.PartiallyDelivered;
+    }
+
+    /// <summary>
+    /// Hàng rời kho: Kế toán chờ xác nhận khách nhận; Quản đốc nắm phiếu đã xuất (DEV-ALL-66), Admin nhận bản sao
+    /// thông báo của Quản đốc (DEV-ALL-67).
+    /// </summary>
+    private async Task NotifyExportedAsync(DispatchNote note, CancellationToken ct)
+    {
+        await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
+            "Hàng đã xuất, chờ xác nhận khách nhận",
+            $"Phiếu {note.DispatchCode} đã xuất kho; khi khách nhận hàng vui lòng xác nhận và chụp biên bản giao.", null), ct);
+        var exported = new NotificationMessage(NotificationSources.Warehouse, "Hàng đã xuất kho",
+            $"Thủ kho đã xuất kho phiếu {note.DispatchCode} cho đơn {note.Order.OrderCode}, hàng đang giao.", null);
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, exported, ct);
     }
 
     private Task<bool> HasPhotoAsync(int dispatchNoteId, string purpose, CancellationToken ct) =>
@@ -266,8 +266,8 @@ public sealed class DispatchNoteService : IDispatchNoteService
     private async Task<IReadOnlyList<DispatchableLineDto>> DispatchableAsync(int orderId, CancellationToken ct)
     {
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new { l.OrderLineId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty })
+            .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
+            .Select(l => new { l.OrderLineId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty })
             .ToListAsync(ct);
         var ids = lines.Select(l => l.OrderLineId).ToList();
         // Mảng (không phải IReadOnlySet) để EF dịch được thành IN (...).
@@ -318,7 +318,7 @@ public sealed class DispatchNoteAttachmentAccess : IAttachmentOwnerAccess
         {
             // Thủ kho chụp ảnh phiếu xuất có Quản đốc ký trước / lúc xuất hàng; Kế toán chụp biên bản khi hàng đang giao hoặc vừa xác nhận.
             Roles.WarehouseKeeper => status is DispatchStatuses.Pending or DispatchStatuses.InDelivery,
-            Roles.Accountant => status is DispatchStatuses.InDelivery or DispatchStatuses.Delivered or DispatchStatuses.PartiallyDelivered,
+            Roles.Accountant => status is DispatchStatuses.InDelivery or DispatchStatuses.Delivered,
             _ => false,
         };
     }

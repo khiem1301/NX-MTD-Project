@@ -1,5 +1,7 @@
-import { Descriptions, Form, Input, InputNumber, Modal } from 'antd';
+import { REASON_MAX_LENGTH } from '@/constants/limits';
+import { Descriptions, Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MOVEMENT_TYPE_LABEL, PM_LABELS, PM_MESSAGES } from '../constants';
 import { useConfirmByWorker, useConfirmOnBehalf } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
@@ -80,7 +82,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
             label={PM_LABELS.confirmedQty}
             rules={[{ required: true, message: MESSAGES.common.required }]}
           >
-            <InputNumber min={1} max={movement.quantity} precision={0} />
+            <QtyInput min={1} max={movement.quantity} />
           </Form.Item>
           <Form.Item
             name="discrepancyReason"
@@ -96,7 +98,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
               },
             ]}
           >
-            <Input maxLength={500} />
+            <Input maxLength={REASON_MAX_LENGTH} />
           </Form.Item>
           {onBehalf && (
             <Form.Item
@@ -106,7 +108,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
                 { required: true, whitespace: true, message: MESSAGES.common.reasonRequired },
               ]}
             >
-              <Input.TextArea rows={2} maxLength={500} showCount />
+              <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
             </Form.Item>
           )}
         </Form>

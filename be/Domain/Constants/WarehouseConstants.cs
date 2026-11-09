@@ -214,7 +214,10 @@ public static class ConfirmModes
     public const string System = "SYSTEM";
 }
 
-/// <summary>DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công, không có trạng thái giao thất bại (GBR-24).</summary>
+/// <summary>
+/// DispatchNote.Status (CK_DN_Status). Giao hàng luôn thành công (GBR-24): không có giao thất bại, không có giao một phần,
+/// khách nhận đúng số xuất (DEV-ALL-70).
+/// </summary>
 public static class DispatchStatuses
 {
     public const string Pending = "PENDING";
@@ -222,12 +225,11 @@ public static class DispatchStatuses
     public const string Cancelled = "CANCELLED";
     public const string InDelivery = "IN_DELIVERY";
     public const string Delivered = "DELIVERED";
-    public const string PartiallyDelivered = "PARTIALLY_DELIVERED";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { Pending, Rejected, Cancelled, InDelivery, Delivered };
 
     /// <summary>Phiếu đã hoặc đang chiếm số hàng của đơn (tính vào tổng đã xuất).</summary>
-    public static readonly IReadOnlySet<string> All = new HashSet<string> { Pending, Rejected, Cancelled, InDelivery, Delivered, PartiallyDelivered };
-
-    public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered, PartiallyDelivered };
+    public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered };
 }
 
 public static class ShiftCodes

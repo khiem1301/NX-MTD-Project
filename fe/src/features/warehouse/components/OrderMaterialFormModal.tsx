@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
+import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
@@ -8,12 +9,18 @@ import {
   deliveryCountProblem,
   MAX_NOTE_LENGTH,
   noteProblem,
+  orderMaterialOptions,
   qtyProblem,
 } from '../utils/orderMaterialRules';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { QtyInput } from '@/components/common/QtyInput';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
+import { toApiDate } from '@/utils/format';
 
 type OrderMaterialFormModalProps = {
   open: boolean;
@@ -24,7 +31,9 @@ type OrderMaterialFormModalProps = {
   onClose: () => void;
 };
 
-type FormValues = SaveOrderMaterialPayload;
+type FormValues = Omit<SaveOrderMaterialPayload, 'expectedDeliveryDate'> & {
+  expectedDeliveryDate?: Dayjs | null;
+};
 
 export function OrderMaterialFormModal({
   open,
@@ -47,6 +56,9 @@ export function OrderMaterialFormModal({
       ...orderMaterial,
       note: orderMaterial.note ?? undefined,
       expectedDeliveryCount: orderMaterial.expectedDeliveryCount ?? undefined,
+      expectedDeliveryDate: orderMaterial.expectedDeliveryDate
+        ? dayjs(orderMaterial.expectedDeliveryDate)
+        : undefined,
     });
   }, [open, orderMaterial, form]);
 
@@ -57,26 +69,15 @@ export function OrderMaterialFormModal({
       // Khách không cấp thì không có số lần giao (CK_OM_Delivery).
       expectedDeliveryCount:
         (values.customerQty ?? 0) > 0 ? (values.expectedDeliveryCount ?? null) : null,
+      expectedDeliveryDate:
+        (values.customerQty ?? 0) > 0 && values.expectedDeliveryDate
+          ? toApiDate(values.expectedDeliveryDate)
+          : null,
     };
     save.mutate({ id: orderMaterial?.orderMaterialId, body }, { onSuccess: onClose });
   };
 
-  const materialOptions = (materials.data ?? [])
-    .filter(
-      (m) =>
-        m.materialId === orderMaterial?.materialId ||
-        !declared.some((om) => om.materialId === m.materialId),
-    )
-    .map((m) => ({
-      value: m.materialId,
-      label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
-    }));
-  if (orderMaterial && !materialOptions.some((o) => o.value === orderMaterial.materialId)) {
-    materialOptions.push({
-      value: orderMaterial.materialId,
-      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
-    });
-  }
+  const materialOptions = orderMaterialOptions(materials.data ?? [], orderMaterial, declared);
   const required = [{ required: true, message: MESSAGES.common.required }];
 
   return (
@@ -133,7 +134,11 @@ export function OrderMaterialFormModal({
               ]}
               initialValue={0}
             >
-              <InputNumber style={{ width: '100%' }} />
+              <QtyInput
+                decimals={MATERIAL_QTY_DECIMALS}
+                max={MAX_MATERIAL_QTY}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
@@ -151,7 +156,11 @@ export function OrderMaterialFormModal({
               ]}
               initialValue={0}
             >
-              <InputNumber style={{ width: '100%' }} />
+              <QtyInput
+                decimals={MATERIAL_QTY_DECIMALS}
+                max={MAX_MATERIAL_QTY}
+                style={{ width: '100%' }}
+              />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
@@ -169,6 +178,23 @@ export function OrderMaterialFormModal({
               ]}
             >
               <InputNumber disabled={(customerQty ?? 0) <= 0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Col>
+        </Row>
+        <Row gutter={12}>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              name="expectedDeliveryDate"
+              label={LABELS.expectedDeliveryDate}
+              rules={[
+                { required: (customerQty ?? 0) > 0, message: LABELS.expectedDeliveryDateRequired },
+              ]}
+            >
+              <AppDatePicker
+                disabled={(customerQty ?? 0) <= 0}
+                style={{ width: '100%' }}
+                disabledDate={(d) => isExpectedDeliveryDateDisabled(d)}
+              />
             </Form.Item>
           </Col>
         </Row>

@@ -1,5 +1,6 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Form, Input, InputNumber } from 'antd';
+import { Alert, Button, Descriptions, Form, Input } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -18,6 +19,8 @@ import { useCancelReturn, useConfirmReturn, useRejectReturn } from '../hooks/use
 import type { MaterialReturn, MaterialReturnLine } from '../types';
 import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
@@ -147,7 +150,7 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
                     style={{ marginBottom: 0 }}
                     rules={[{ required: true, message: MESSAGES.common.required }, qtyDecimalsRule]}
                   >
-                    <InputNumber min={0} max={l.returnedQty} />
+                    <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.returnedQty} />
                   </Form.Item>
                 ) : l.confirmedQty === null ? (
                   '—'
@@ -166,7 +169,7 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
                     rules={[reasonRule(l.materialReturnLineId, l.returnedQty)]}
                     style={{ marginBottom: 0 }}
                   >
-                    <Input maxLength={500} />
+                    <Input maxLength={REASON_MAX_LENGTH} />
                   </Form.Item>
                 ) : (
                   (l.discrepancyReason ?? '—')

@@ -37,10 +37,6 @@ public sealed class WorkAllocationsController : TeamLeaderBaseController
     public async Task<IActionResult> SaveDaily([FromBody] SaveDailyAllocationDto dto, CancellationToken ct) =>
         this.ToResponse(await _daily.SaveAsync(dto, TeamId, ct));
 
-    [HttpPost("daily/retrieve-remaining")]
-    public async Task<IActionResult> RetrieveRemaining([FromBody] RetrieveDailyAllocationDto dto, CancellationToken ct) =>
-        this.ToResponse(await _daily.RetrieveRemainingAsync(dto, TeamId, ct));
-
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateWorkAllocationDto dto, CancellationToken ct) =>
         this.ToResponse(await _allocations.CreateAsync(dto, TeamId, ct));

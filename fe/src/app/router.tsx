@@ -1,279 +1,67 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/guards/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { ROLES } from '@/constants/roles';
 import { ROUTES } from '@/constants/routes';
-import { ACCOUNTING_REPORT_ROUTES } from '@/features/accounting-reports/routes';
-import { ATTENDANCE_ROUTES } from '@/features/attendance/routes';
-import { BREAK_EVEN_ROUTES } from '@/features/break-even/routes';
-import { COST_SUMMARY_ROUTES } from '@/features/cost-summary/routes';
 import { HomePage } from '@/features/dashboard';
-import { REQUEST_CREATOR_ROLES, REQUEST_HANDLER_ROLES } from '@/features/requests/menu';
-import { KPI_ROUTES } from '@/features/kpi/routes';
-import { MEAL_ROUTES } from '@/features/meal/routes';
-import { MONTHLY_COST_ROUTES } from '@/features/monthly-cost/routes';
-import { PAYROLL_ROUTES } from '@/features/payroll/routes';
-import { PRODUCTION_ROUTES } from '@/features/production/routes';
-import { PURCHASE_ROUTES } from '@/features/purchase/routes';
-import { REVENUE_ROUTES } from '@/features/revenue/routes';
+import { accountingReportRoutes } from '@/features/accounting-reports/routes';
+import { attendanceRoutes } from '@/features/attendance/routes';
+import { auditLogRoutes } from '@/features/audit-log/routes';
+import { breakEvenRoutes } from '@/features/break-even/routes';
+import { costSummaryRoutes } from '@/features/cost-summary/routes';
+import { cuttingRoutes } from '@/features/cutting/routes';
+import { dispatchRoutes } from '@/features/dispatch/routes';
+import { fgHandoverRoutes } from '@/features/fg-handover/routes';
+import { gradeRoutes } from '@/features/grade/routes';
+import { kpiRoutes } from '@/features/kpi/routes';
+import { materialReturnRoutes } from '@/features/material-return/routes';
+import { mealRoutes } from '@/features/meal/routes';
+import { monthlyCostRoutes } from '@/features/monthly-cost/routes';
+import { notificationRoutes } from '@/features/notification/routes';
+import { orderRoutes } from '@/features/orders/routes';
+import { payrollRoutes } from '@/features/payroll/routes';
+import { pieceMovementRoutes } from '@/features/piece-movement/routes';
+import { productionRoutes } from '@/features/production/routes';
+import { profileRoutes } from '@/features/profile/routes';
+import { purchaseRoutes } from '@/features/purchase/routes';
+import { requestRoutes } from '@/features/requests/routes';
+import { revenueRoutes } from '@/features/revenue/routes';
+import { stocktakeRoutes } from '@/features/stocktake/routes';
+import { teamRoutes } from '@/features/teams/routes';
+import { userRoutes } from '@/features/users/routes';
+import { vehicleLogRoutes } from '@/features/vehicle-log/routes';
+import { warehouseRoutes } from '@/features/warehouse/routes';
 
-const { Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy } = ROLES;
-const warehouse = () => import('@/features/warehouse');
-const cutting = () => import('@/features/cutting');
-const production = () => import('@/features/production');
-
-// Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều): mỗi trang lazy load, chỉ mở cho role được dùng.
-const productionRoutes = [
-  {
-    path: PRODUCTION_ROUTES.operations,
-    roles: [ROLES.Accountant, ROLES.Admin],
-    page: async () => (await production()).OperationsPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.adminPieceRates,
-    roles: [Admin],
-    page: async () => (await production()).AdminPieceRatesPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.orderLineTeams,
-    roles: [Admin, Manager],
-    page: async () => (await production()).OrderLineTeamsPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.assignments,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await production()).OperationAssignmentsPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.output,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await production()).OutputEntryPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.defects,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await production()).DefectRecordsPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.qcBatches,
-    roles: [ROLES.QaQc],
-    page: async () => (await production()).QcBatchesPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.managerOutput,
-    roles: [Admin, Manager],
-    page: async () => (await production()).ManagerOutputPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.managerDefects,
-    roles: [Admin, Manager],
-    page: async () => (await production()).ManagerDefectsPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.managerQcBatches,
-    roles: [Admin, Manager],
-    page: async () => (await production()).ManagerQcBatchesPage,
-  },
-  {
-    path: PRODUCTION_ROUTES.myDefects,
-    roles: [ROLES.Worker],
-    page: async () => (await production()).MyDefectsPage,
-  },
+// Mỗi luồng khai báo route ở features/<x>/routes.tsx (lazy load theo trang) rồi thêm một dòng vào mảng dưới.
+// Chỉ import routes.tsx / menu.ts của feature: import index.ts sẽ kéo cả feature vào bundle chính.
+const featureRoutes = [
+  ...profileRoutes, // Khiêm
+  ...userRoutes, // Khiêm
+  ...teamRoutes, // Khiêm
+  ...orderRoutes, // Khiêm
+  ...requestRoutes, // Khiêm
+  ...notificationRoutes, // Khiêm (KH-12)
+  ...gradeRoutes, // Khiêm (KH-14)
+  ...auditLogRoutes, // Khiêm (KH-22)
+  ...warehouseRoutes, // Thái
+  ...cuttingRoutes, // Thái
+  ...fgHandoverRoutes, // Thái (TH-11)
+  ...dispatchRoutes, // Thái (TH-14)
+  ...materialReturnRoutes, // Thái (TH-10)
+  ...pieceMovementRoutes, // Thái (TH-19)
+  ...stocktakeRoutes, // Thảo (TA-02)
+  ...vehicleLogRoutes, // Thảo (TA-03)
+  ...productionRoutes, // Minh làm hộ Kiều (KI-01..KI-11)
+  ...attendanceRoutes, // Minh
+  ...mealRoutes, // Minh
+  ...payrollRoutes, // Minh
+  ...purchaseRoutes, // Minh (MI-07)
+  ...monthlyCostRoutes, // Minh
+  ...kpiRoutes, // Minh
+  ...revenueRoutes, // Minh
+  ...breakEvenRoutes, // Minh
+  ...costSummaryRoutes, // Minh (MI-19, UC12)
+  ...accountingReportRoutes, // Minh (MI-19, UC36)
 ];
-
-// Kho, cắt (Thái): mỗi trang lazy load + chỉ mở cho role được dùng.
-const warehouseRoutes = [
-  {
-    path: ROUTES.materials,
-    roles: [WarehouseKeeper],
-    page: async () => (await warehouse()).MaterialListPage,
-  },
-  {
-    path: ROUTES.orderMaterials,
-    roles: [Admin, Manager],
-    page: async () => (await warehouse()).OrderMaterialLinkRedirect,
-  },
-  {
-    path: ROUTES.incomingMaterials,
-    roles: [WarehouseKeeper],
-    page: async () => (await warehouse()).IncomingMaterialsPage,
-  },
-  {
-    path: ROUTES.materialReceipts,
-    roles: [WarehouseKeeper, Admin, Manager],
-    page: async () => (await warehouse()).MaterialReceiptListPage,
-  },
-  {
-    path: ROUTES.shortDeliveries,
-    roles: [WarehouseKeeper, Admin, Manager],
-    page: async () => (await warehouse()).ShortDeliveryListPage,
-  },
-  {
-    path: ROUTES.materialIssues,
-    roles: [WarehouseKeeper, TeamLeader, TeamDeputy],
-    page: async () => (await warehouse()).MaterialIssueListPage,
-  },
-  {
-    path: ROUTES.pieceHoldings,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await warehouse()).PieceHoldingsPage,
-  },
-  {
-    path: ROUTES.inventories,
-    roles: [WarehouseKeeper, Manager, Admin],
-    page: async () => (await warehouse()).InventoryPage,
-  },
-  {
-    path: ROUTES.workOrders,
-    roles: [Admin, Manager, WarehouseKeeper, TeamLeader, TeamDeputy],
-    page: async () => (await cutting()).WorkOrderListPage,
-  },
-  {
-    path: ROUTES.cuttingLays,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await cutting()).CuttingLayPage,
-  },
-  {
-    path: ROUTES.fgHandovers,
-    roles: [ROLES.QaQc, WarehouseKeeper],
-    page: async () => (await import('@/features/fg-handover')).FgHandoverPage,
-  },
-  {
-    path: ROUTES.dispatchNotes,
-    roles: [Admin, Manager, WarehouseKeeper, ROLES.Accountant],
-    page: async () => (await import('@/features/dispatch')).DispatchNotesPage,
-  },
-  {
-    path: ROUTES.pieceMovements,
-    roles: [TeamLeader, TeamDeputy],
-    page: async () => (await import('@/features/piece-movement')).LeaderPieceMovementsPage,
-  },
-  {
-    path: ROUTES.myPieceMovements,
-    roles: [ROLES.Worker],
-    page: async () => (await import('@/features/piece-movement')).MyPieceMovementsPage,
-  },
-  {
-    path: ROUTES.materialReturns,
-    roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
-    page: async () => (await import('@/features/material-return')).MaterialReturnPage,
-  },
-  {
-    path: ROUTES.stocktakes,
-    roles: [WarehouseKeeper, Manager, Admin],
-    page: async () => (await import('@/features/stocktake')).StocktakePage,
-  },
-  {
-    path: ROUTES.vehicleLog,
-    roles: [ROLES.Accountant],
-    page: async () => (await import('@/features/vehicle-log')).VehicleLogPage,
-  },
-  {
-    path: ROUTES.notifications,
-    roles: Object.values(ROLES),
-    page: async () => (await import('@/features/notification')).NotificationsPage,
-  },
-  {
-    path: ROUTES.grades,
-    roles: [TeamLeader, TeamDeputy, Admin, Manager],
-    page: async () => (await import('@/features/grade')).GradePage,
-  },
-  {
-    path: ROUTES.auditLogs,
-    roles: [Admin],
-    page: async () => (await import('@/features/audit-log')).AuditLogPage,
-  },
-  {
-    path: ROUTES.cutHandovers,
-    roles: [TeamLeader, TeamDeputy, WarehouseKeeper],
-    page: async () => (await cutting()).CutHandoverPage,
-  },
-].map(({ path, roles, page }) => ({
-  element: <ProtectedRoute roles={roles} />,
-  children: [{ path, lazy: async () => ({ Component: await page() }) }],
-}));
-
-// Đơn từ (Khiêm): quyền chi tiết theo (vai trò, loại đơn) do BE kiểm.
-const requests = () => import('@/features/requests');
-const requestRoutes = [
-  {
-    path: ROUTES.requests,
-    roles: [...REQUEST_CREATOR_ROLES],
-    page: async () => (await requests()).MyRequestsPage,
-  },
-  {
-    path: ROUTES.requestInbox,
-    roles: [...REQUEST_HANDLER_ROLES],
-    page: async () => (await requests()).RequestInboxPage,
-  },
-].map(({ path, roles, page }) => ({
-  element: <ProtectedRoute roles={roles} />,
-  children: [{ path, lazy: async () => ({ Component: await page() }) }],
-}));
-
-// Mã hàng, đơn hàng (Khiêm): chỉ Admin vì có đơn giá CMT (D26).
-const orders = () => import('@/features/orders');
-const orderRoutes = [
-  { path: ROUTES.orders, page: async () => (await orders()).OrdersPage },
-  { path: ROUTES.orderNew, page: async () => (await orders()).OrderFormPage },
-  { path: `${ROUTES.orders}/:id`, page: async () => (await orders()).OrderDetailPage },
-  { path: `${ROUTES.orders}/:id/edit`, page: async () => (await orders()).OrderFormPage },
-  { path: ROUTES.products, page: async () => (await orders()).ProductsPage },
-  { path: ROUTES.customers, page: async () => (await orders()).CustomersPage },
-].map(({ path, page }) => ({
-  element: <ProtectedRoute roles={[Admin]} />,
-  children: [{ path, lazy: async () => ({ Component: await page() }) }],
-}));
-
-// Quản đốc xem đơn hàng (không có đơn giá, GBR-02) và khai báo NVL của đơn; không sửa được đơn.
-const managerOrderRoutes = [
-  { path: ROUTES.managerOrders, page: async () => (await orders()).OrderOverviewListPage },
-  { path: `${ROUTES.managerOrders}/:id`, page: async () => (await orders()).OrderOverviewPage },
-].map(({ path, page }) => ({
-  element: <ProtectedRoute roles={[Manager]} />,
-  children: [{ path, lazy: async () => ({ Component: await page() }) }],
-}));
-
-// Kế toán nhập thành phần và định mức NVL của mã hàng (cùng trang Mã hàng, chỉ danh sách + Định mức).
-const accountantProductRoutes = [
-  {
-    element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-    children: [
-      {
-        path: ROUTES.accountantProducts,
-        lazy: async () => ({ Component: (await orders()).ProductsPage }),
-      },
-    ],
-  },
-];
-
-// Nhân sự (Khiêm): hồ sơ mọi vai trò; nhân viên Admin + Quản đốc (API theo vai trò); tổ Admin + Quản đốc.
-const profile = () => import('@/features/profile');
-const users = () => import('@/features/users');
-const teams = () => import('@/features/teams');
-const hrRoutes = [
-  { path: ROUTES.profile, roles: undefined, page: async () => (await profile()).ProfilePage },
-  { path: ROUTES.adminEmployees, roles: [Admin], page: async () => (await users()).EmployeesPage },
-  {
-    path: `${ROUTES.adminEmployees}/:id`,
-    roles: [Admin],
-    page: async () => (await users()).EmployeeDetailRedirect,
-  },
-  {
-    path: ROUTES.managerEmployees,
-    roles: [Manager],
-    page: async () => (await users()).EmployeesPage,
-  },
-  {
-    path: `${ROUTES.managerEmployees}/:id`,
-    roles: [Manager],
-    page: async () => (await users()).EmployeeDetailRedirect,
-  },
-  { path: ROUTES.teams, roles: [Admin, Manager], page: async () => (await teams()).TeamsPage },
-].map(({ path, roles, page }) => ({
-  element: <ProtectedRoute roles={roles} />,
-  children: [{ path, lazy: async () => ({ Component: await page() }) }],
-}));
 
 export const router = createBrowserRouter([
   {
@@ -285,246 +73,7 @@ export const router = createBrowserRouter([
     children: [
       {
         element: <MainLayout />,
-        children: [
-          { index: true, element: <HomePage /> },
-          ...warehouseRoutes,
-          ...requestRoutes,
-          ...orderRoutes,
-          ...managerOrderRoutes,
-          ...accountantProductRoutes,
-          ...hrRoutes,
-          // Route của từng luồng: thêm tại đây, bọc <ProtectedRoute roles={[...]} /> nếu giới hạn role.
-
-          // --- Chấm công (Minh) ---
-          {
-            element: (
-              <ProtectedRoute roles={Object.values(ROLES).filter((r) => r !== ROLES.Admin)} />
-            ),
-            children: [
-              {
-                path: ATTENDANCE_ROUTES.myAttendance,
-                lazy: async () => ({
-                  Component: (await import('@/features/attendance')).MyAttendancePage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: ATTENDANCE_ROUTES.attendance,
-                lazy: async () => ({
-                  Component: (await import('@/features/attendance')).AttendancePage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.TeamLeader, ROLES.TeamDeputy]} />,
-            children: [
-              {
-                path: ATTENDANCE_ROUTES.teamAttendance,
-                lazy: async () => ({
-                  Component: (await import('@/features/attendance')).TeamAttendancePage,
-                }),
-              },
-            ],
-          },
-
-          // --- Suất ăn (Minh) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.TeamLeader, ROLES.TeamDeputy]} />,
-            children: [
-              {
-                path: MEAL_ROUTES.teamMeal,
-                lazy: async () => ({ Component: (await import('@/features/meal')).TeamMealPage }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: MEAL_ROUTES.summary,
-                lazy: async () => ({
-                  Component: (await import('@/features/meal')).MealSummaryPage,
-                }),
-              },
-            ],
-          },
-
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin]} />,
-            children: [
-              {
-                path: MEAL_ROUTES.settings,
-                lazy: async () => ({
-                  Component: (await import('@/features/meal')).MealSettingsPage,
-                }),
-              },
-            ],
-          },
-
-          // --- Bảng lương (Minh) ---
-          {
-            path: PAYROLL_ROUTES.myPayslip,
-            lazy: async () => ({ Component: (await import('@/features/payroll')).MyPayslipPage }),
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Worker]} />,
-            children: [
-              {
-                path: PAYROLL_ROUTES.myEstimatedPay,
-                lazy: async () => ({
-                  Component: (await import('@/features/payroll')).MyEstimatedPayPage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: PAYROLL_ROUTES.accountant,
-                lazy: async () => ({
-                  Component: (await import('@/features/payroll')).AccountantPayrollPage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin]} />,
-            children: [
-              {
-                path: PAYROLL_ROUTES.approval,
-                lazy: async () => ({
-                  Component: (await import('@/features/payroll')).PayrollApprovalPage,
-                }),
-              },
-            ],
-          },
-
-          // --- Nhà cung cấp + đơn mua + thanh toán (Minh, MI-07) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin]} />,
-            children: [
-              {
-                path: PURCHASE_ROUTES.suppliers,
-                lazy: async () => ({
-                  Component: (await import('@/features/purchase')).SuppliersPage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin, ROLES.Manager]} />,
-            children: [
-              {
-                path: PURCHASE_ROUTES.orders,
-                lazy: async () => ({
-                  Component: (await import('@/features/purchase')).PurchaseOrdersPage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: PURCHASE_ROUTES.payments,
-                lazy: async () => ({
-                  Component: (await import('@/features/purchase')).PurchasePaymentsPage,
-                }),
-              },
-            ],
-          },
-
-          // --- Chi phí tháng (Minh) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: MONTHLY_COST_ROUTES.accountant,
-                lazy: async () => ({
-                  Component: (await import('@/features/monthly-cost')).MonthlyCostPage,
-                }),
-              },
-            ],
-          },
-
-          // --- KPI tổ may (Minh) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin, ROLES.Manager]} />,
-            children: [
-              {
-                path: KPI_ROUTES.targets,
-                lazy: async () => ({
-                  Component: (await import('@/features/kpi')).KpiTargetListPage,
-                }),
-              },
-            ],
-          },
-
-          // --- Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (Minh làm hộ Kiều, KI-01..KI-11) ---
-          ...productionRoutes.map(({ path, roles, page }) => ({
-            element: <ProtectedRoute roles={roles} />,
-            children: [{ path, lazy: async () => ({ Component: await page() }) }],
-          })),
-
-          // --- Doanh thu (Minh, UC27, GBR-02: Kế toán + Admin) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: REVENUE_ROUTES.accountant,
-                lazy: async () => ({
-                  Component: (await import('@/features/revenue')).AccountantRevenuePage,
-                }),
-              },
-            ],
-          },
-          {
-            element: <ProtectedRoute roles={[ROLES.Admin]} />,
-            children: [
-              {
-                path: REVENUE_ROUTES.admin,
-                lazy: async () => ({
-                  Component: (await import('@/features/revenue')).AdminRevenuePage,
-                }),
-              },
-
-              // --- Hòa vốn + giá trị thặng dư (Minh, UC11, chỉ Admin, GBR-02) ---
-              {
-                path: BREAK_EVEN_ROUTES.admin,
-                lazy: async () => ({
-                  Component: (await import('@/features/break-even')).BreakEvenPage,
-                }),
-              },
-
-              // --- Tổng hợp chi phí (Minh, MI-19, UC12, chỉ Admin, GBR-02) ---
-              {
-                path: COST_SUMMARY_ROUTES.admin,
-                lazy: async () => ({
-                  Component: (await import('@/features/cost-summary')).CostSummaryPage,
-                }),
-              },
-            ],
-          },
-
-          // --- Báo cáo kế toán (Minh, MI-19, UC36, chỉ Kế toán) ---
-          {
-            element: <ProtectedRoute roles={[ROLES.Accountant]} />,
-            children: [
-              {
-                path: ACCOUNTING_REPORT_ROUTES.accountant,
-                lazy: async () => ({
-                  Component: (await import('@/features/accounting-reports')).AccountingReportsPage,
-                }),
-              },
-            ],
-          },
-        ],
+        children: [{ index: true, element: <HomePage /> }, ...featureRoutes],
       },
     ],
   },

@@ -32,15 +32,15 @@ public sealed class ProductSpecService : IProductSpecService
             .Select(c => new { c.ProductComponentId, c.ComponentName, c.ComponentType, c.PiecesPerGarment, c.Status })
             .ToListAsync(ct);
         var variants = await _uow.Repository<ProductVariant>().Query().AsNoTracking()
-            .Where(v => v.ProductId == productId).OrderBy(v => v.Color).ThenBy(v => v.SizeCode)
-            .Select(v => new { v.ProductVariantId, v.Color, v.SizeCode, v.Status })
+            .Where(v => v.ProductId == productId).OrderBy(v => v.ProductColor.Color).ThenBy(v => v.SizeCode)
+            .Select(v => new { v.ProductVariantId, v.ProductColor.Color, v.SizeCode, v.Status })
             .ToListAsync(ct);
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => n.ProductId == productId)
             .OrderBy(n => n.ProductComponentId)
-            .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductVariant.Color).ThenBy(n => n.ProductVariant.SizeCode)
+            .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductVariant.ProductColor.Color).ThenBy(n => n.ProductVariant.SizeCode)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
-                n.ProductVariant.Color, n.ProductVariant.SizeCode, n.MaterialId, n.Material.MaterialCode,
+                n.ProductVariant.ProductColor.Color, n.ProductVariant.SizeCode, n.MaterialId, n.Material.MaterialCode,
                 n.Material.MaterialName, n.Material.Unit, n.Material.Color,
                 n.LengthCm, n.WidthCm, n.SpecNote))
             .ToListAsync(ct);
@@ -49,8 +49,8 @@ public sealed class ProductSpecService : IProductSpecService
             .Select(m => new ProductMarkerDto(m.MarkerNo, m.SizeCode, m.LengthCm, m.WidthCm))
             .ToListAsync(ct);
         var markerFabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking()
-            .Where(f => f.ProductId == productId).OrderBy(f => f.MarkerNo).ThenBy(f => f.Color)
-            .Select(f => new ProductMarkerFabricDto(f.MarkerNo, f.Color, f.MaterialId, f.Material.MaterialCode,
+            .Where(f => f.ProductId == productId).OrderBy(f => f.MarkerNo).ThenBy(f => f.ProductColor.Color)
+            .Select(f => new ProductMarkerFabricDto(f.MarkerNo, f.ProductColor.Color, f.MaterialId, f.Material.MaterialCode,
                 f.Material.MaterialName, f.Material.Color))
             .ToListAsync(ct);
 
@@ -80,7 +80,8 @@ public sealed class ProductSpecService : IProductSpecService
     private async Task<Result<int>> ApplySpecAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
     {
         var components = await _uow.Repository<ProductComponent>().Query().Where(c => c.ProductId == productId).ToListAsync(ct);
-        var variants = await _uow.Repository<ProductVariant>().Query().Where(v => v.ProductId == productId).ToListAsync(ct);
+        var variants = await _uow.Repository<ProductVariant>().Query().Include(v => v.ProductColor)
+            .Where(v => v.ProductId == productId).ToListAsync(ct);
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().Where(n => n.ProductId == productId).ToListAsync(ct);
 
         // Khớp dòng gửi lên với dòng đang có: theo Id, không có Id thì theo tên (thành phần) / màu + size (biến thể).
@@ -89,7 +90,7 @@ public sealed class ProductSpecService : IProductSpecService
             : components.FirstOrDefault(e => Same(e.ComponentName, c.ComponentName)))).ToList();
         var variantMatch = dto.Variants.Select(v => (Input: v, Entity: v.ProductVariantId is { } id
             ? variants.FirstOrDefault(e => e.ProductVariantId == id)
-            : variants.FirstOrDefault(e => Same(e.Color, v.Color) && Same(e.SizeCode, v.SizeCode)))).ToList();
+            : variants.FirstOrDefault(e => Same(e.ProductColor.Color, v.Color) && Same(e.SizeCode, v.SizeCode)))).ToList();
         if (componentMatch.Any(m => m.Input.ProductComponentId is not null && m.Entity is null)
             || variantMatch.Any(m => m.Input.ProductVariantId is not null && m.Entity is null))
             return Fail.NotFound<int>();
@@ -171,7 +172,7 @@ public sealed class ProductSpecService : IProductSpecService
         foreach (var (_, entity) in variantMatch)
         {
             var v = entity!;
-            variantByKey[(v.Color.ToUpperInvariant(), v.SizeCode)] = v;
+            variantByKey[(v.ProductColor.Color.ToUpperInvariant(), v.SizeCode)] = v;
         }
         await _uow.SaveChangesAsync();
         return (componentByName, variantByKey);
@@ -228,6 +229,10 @@ public sealed class ProductSpecService : IProductSpecService
         fabrics.RemoveRange(await fabrics.Query().Where(f => f.ProductId == productId).ToListAsync(ct));
         await _uow.SaveChangesAsync();   // xóa trước rồi thêm để khỏi đụng khóa UQ_PM, UQ_PMF
 
+        // Màu của bìa đã kiểm nằm trong danh sách màu – size (đều do đơn hàng tạo) nên luôn có ProductColor.
+        var colorIds = (await _uow.Repository<ProductColor>().Query().Where(c => c.ProductId == productId).ToListAsync(ct))
+            .ToDictionary(c => Upper(c.Color), c => c.ProductColorId);
+
         await markers.AddRangeAsync(dto.Markers.Select(m => new ProductMarker
         {
             ProductId = productId,
@@ -240,7 +245,7 @@ public sealed class ProductSpecService : IProductSpecService
         {
             ProductId = productId,
             MarkerNo = (byte)f.MarkerNo,
-            Color = f.Color.Trim(),
+            ProductColorId = colorIds[Upper(f.Color)],
             MaterialId = f.MaterialId,
         }).ToList());
     }

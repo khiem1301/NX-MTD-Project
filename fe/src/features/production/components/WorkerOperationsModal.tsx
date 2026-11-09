@@ -10,7 +10,7 @@ import {
   ASSIGNMENT_SEARCH_MAX_LENGTH,
   PRODUCTION_TEXT,
 } from '../constants';
-import { useSaveWorkerOperations } from '../hooks/useProduction';
+import { useSaveWorkerOperations } from '../hooks/useAssignments';
 import {
   ASSIGNMENT_STATE,
   assignmentGroups,

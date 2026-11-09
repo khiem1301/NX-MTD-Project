@@ -1,9 +1,12 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Form, Input, InputNumber, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { MaterialIssueLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
 
 type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 
@@ -30,7 +33,7 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             rules={[{ required: true, message: MESSAGES.common.required }]}
             noStyle
           >
-            <InputNumber min={0} max={l.issuedQty} />
+            <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.issuedQty} />
           </Form.Item>
         ) : (
           formatQty(l.confirmedQty)
@@ -56,7 +59,7 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
             ]}
             style={{ marginBottom: 0 }}
           >
-            <Input maxLength={500} />
+            <Input maxLength={REASON_MAX_LENGTH} />
           </Form.Item>
         ) : (
           (l.discrepancyReason ?? '—')

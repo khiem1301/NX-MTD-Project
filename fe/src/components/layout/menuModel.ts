@@ -76,17 +76,13 @@ export function buildNavigation(
     );
     const shown = members.filter((m) => !hidden.includes(m.key));
     if (shown.length === 0) continue;
-    const [only] = shown;
-    if (shown.length === 1 && only) {
-      items.push({ key: only.path, label: only.label, icon: group.icon });
-    } else {
-      items.push({
-        key: group.key,
-        label: group.label,
-        icon: group.icon,
-        children: shown.map((m) => ({ key: m.path, label: m.label })),
-      });
-    }
+    // Luôn hiện thành nhóm, kể cả khi vai trò chỉ thấy một mục, để mục nào cũng nằm dưới nhóm nghiệp vụ của nó.
+    items.push({
+      key: group.key,
+      label: group.label,
+      icon: group.icon,
+      children: shown.map((m) => ({ key: m.path, label: m.label })),
+    });
   }
   return { items, leaves };
 }

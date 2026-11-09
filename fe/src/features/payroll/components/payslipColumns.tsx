@@ -5,7 +5,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import { PAYROLL_TEXT } from '../constants';
 import type { Payslip } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 
 type PayslipColumnsOptions = {
   onView: (row: Payslip) => void;

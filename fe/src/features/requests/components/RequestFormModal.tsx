@@ -1,22 +1,12 @@
-import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
-import {
-  Alert,
-  Button,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Upload,
-  message,
-} from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
+import { Alert, Form, Input, Modal, Select, Upload, message } from 'antd';
 import dayjs from 'dayjs';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { RequestDetail } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { RequestLineFields } from './RequestLineFields';
 import { useRequestForm } from '../hooks/useRequestForm';
 import { EMPTY_LINE } from '../hooks/useRequestForm';
 
@@ -38,6 +28,7 @@ export function RequestFormModal({
 }: RequestFormModalProps) {
   const { create, update, options, handleFinish, initialValues, form, files, setFiles } =
     useRequestForm({ editing, onSaved });
+  const requestType = Form.useWatch('requestType', form);
 
   return (
     <Modal
@@ -65,6 +56,7 @@ export function RequestFormModal({
         >
           <Select
             disabled={!!editing}
+            onChange={() => form.setFieldValue('lines', [EMPTY_LINE])}
             options={options.map((o) => ({ value: o.requestType, label: o.label }))}
           />
         </Form.Item>
@@ -84,40 +76,7 @@ export function RequestFormModal({
         <Form.Item name="targetDate" label={MESSAGES.requests.targetDate}>
           <AppDatePicker disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
         </Form.Item>
-        <Form.List name="lines">
-          {(fields, { add, remove }) => (
-            <>
-              {fields.map((f) => (
-                <Space key={f.key} align="baseline">
-                  <Form.Item
-                    name={[f.name, 'itemDescription']}
-                    rules={[
-                      { required: true, whitespace: true, message: MESSAGES.common.required },
-                      { max: 300 },
-                    ]}
-                  >
-                    <Input placeholder={MESSAGES.requests.itemDescription} style={{ width: 340 }} />
-                  </Form.Item>
-                  <Form.Item
-                    name={[f.name, 'quantity']}
-                    rules={[{ required: true, message: MESSAGES.common.required }]}
-                  >
-                    <InputNumber min={0.001} placeholder={MESSAGES.requests.quantity} />
-                  </Form.Item>
-                  {fields.length > 1 && (
-                    <MinusCircleOutlined
-                      aria-label={MESSAGES.common.delete}
-                      onClick={() => remove(f.name)}
-                    />
-                  )}
-                </Space>
-              ))}
-              <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)}>
-                {MESSAGES.requests.addLine}
-              </Button>
-            </>
-          )}
-        </Form.List>
+        <RequestLineFields form={form} requestType={requestType} />
         {!editing && (
           <Form.Item label={fill(MESSAGES.requests.photos, maxPhotos)} style={{ marginTop: 16 }}>
             <Upload

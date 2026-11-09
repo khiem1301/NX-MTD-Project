@@ -1,32 +1,33 @@
 import { useMemo, useState } from 'react';
-import { EditOutlined, RollbackOutlined } from '@ant-design/icons';
-import { Alert, Button, Input, Select, Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { EditOutlined } from '@ant-design/icons';
+import { Alert, Input, Select, Space, Tag, Typography, type TableColumnsType } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';
+import { OrderLinePicker } from '@/components/common/OrderLinePicker';
+import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamMemberLookup } from '@/hooks/useHrLookups';
+import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, toApiDate } from '@/utils/format';
 import { DAILY_SEARCH_MAX_LENGTH, PM_LABELS } from '../constants';
 import { useBoard, useDailyBoard } from '../hooks/usePieceMovement';
 import {
   buildDailyWorkers,
   DAILY_STATE,
-  dailyOrderLines,
   filterDailyWorkers,
   type DailyState,
   type DailyWorker,
 } from '../utils/dailyBoard';
 import { DailyWorkerModal } from './DailyWorkerModal';
-import { RetrieveRemainingModal } from './RetrieveRemainingModal';
 
 /**
- * Giao sản lượng công đoạn theo ngày (bố cục như màn Sản lượng cuối ca): chọn ngày, đơn, dòng đơn; bảng công nhân của tổ kèm số đã giao,
- * đã làm, chưa làm hết trong ngày. Nút Giao việc mở khung nhập số lần giao từng công đoạn; Thu hồi cuối ngày thu phần chưa làm hết.
+ * Giao sản lượng công đoạn theo ngày (bố cục như màn Sản lượng cuối ca): chọn ngày, đơn, dòng đơn; bảng công nhân của tổ kèm tồn từ
+ * hôm trước, số giao trong ngày, đã làm, chưa làm hết (chuyển sang hôm sau). Nút Giao việc mở khung nhập số lần giao từng công đoạn.
  */
 export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
   const { user } = useAuth();
@@ -36,10 +37,15 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
   const [keyword, setKeyword] = useState('');
   const [state, setState] = useState<DailyState>(DAILY_STATE.ALL);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [retrieving, setRetrieving] = useState(false);
   const apiDate = toApiDate(workDate);
-  const daily = useDailyBoard(apiDate, orderId);
-  const board = useBoard(orderId);
+  // Chỉ giao và sửa trong ngày hôm nay; sang ngày sau chỉ xem (BE chặn cùng quy tắc).
+  const isToday = workDate.isSame(dayjs(), 'day');
+  // Ô mã hàng, màu - size lấy các dòng đơn đã chia cho tổ; bảng giao việc chỉ tải đúng dòng đơn đang chọn.
+  const orderLines = useOrderLineLookup(orderId ?? null);
+  const disabledWorkDate = useWorkDateRange(orderId);
+  const daily = useDailyBoard(apiDate, orderId, orderLineId);
+  // Công đoạn để thêm ngoài phân công: chỉ cần khi đã chọn dòng đơn.
+  const board = useBoard(orderLineId === undefined ? undefined : orderId);
   const members = useTeamMemberLookup(user?.teamId ?? null);
 
   const workerOptions = useMemo(
@@ -50,16 +56,15 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
     [members.data],
   );
   const rows = useMemo(() => daily.data?.rows ?? [], [daily.data]);
+  // Phải chọn đủ đơn, mã hàng, màu - size mới giao được (DEV-ALL-68).
   const workers = useMemo(
-    () => buildDailyWorkers(rows, workerOptions, orderLineId),
+    () => (orderLineId === undefined ? [] : buildDailyWorkers(rows, workerOptions, orderLineId)),
     [rows, workerOptions, orderLineId],
   );
   const visible = filterDailyWorkers(workers, keyword, state);
   const editing = workers.find((w) => w.workerId === editingId) ?? null;
-  const lines = useMemo(() => dailyOrderLines(rows), [rows]);
-  const operations = (board.data?.operations ?? []).filter(
-    (o) => orderLineId === undefined || o.orderLineId === orderLineId,
-  );
+  const lines = orderLines.data ?? [];
+  const operations = (board.data?.operations ?? []).filter((o) => o.orderLineId === orderLineId);
 
   const columns: TableColumnsType<DailyWorker> = [
     {
@@ -78,7 +83,8 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
         </Tag>
       ),
     },
-    { title: PM_LABELS.allocated, dataIndex: 'allocatedQty', width: 150, align: 'right' },
+    { title: PM_LABELS.carried, dataIndex: 'carriedQty', width: 140, align: 'right' },
+    { title: PM_LABELS.allocated, dataIndex: 'allocatedQty', width: 140, align: 'right' },
     { title: PM_LABELS.output, dataIndex: 'outputQty', width: 100, align: 'right' },
     { title: PM_LABELS.remaining, dataIndex: 'remainingQty', width: 130, align: 'right' },
     {
@@ -101,7 +107,7 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
           allowClear={false}
           aria-label={PM_LABELS.workDate}
           value={workDate}
-          disabledDate={(d) => d.isAfter(dayjs(), 'day')}
+          disabledDate={disabledWorkDate}
           onChange={(v) => setWorkDate(v ?? dayjs())}
         />
         <OrderSelect
@@ -113,20 +119,13 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
           placeholder={PM_LABELS.selectOrder}
           width={300}
         />
-        <Select<number>
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          style={{ width: 280 }}
-          placeholder={orderId === undefined ? PM_LABELS.selectFirst : PM_LABELS.allOrderLines}
-          disabled={orderId === undefined}
-          loading={daily.isLoading}
+        <OrderLinePicker
+          lines={lines}
           value={orderLineId}
           onChange={setOrderLineId}
-          options={lines.map((l) => ({
-            value: l.orderLineId,
-            label: `${l.productCode} - ${l.color} - ${l.sizeCode}`,
-          }))}
+          disabled={orderId === undefined}
+          disabledPlaceholder={PM_LABELS.selectFirst}
+          loading={orderLines.isLoading}
         />
         <Input.Search
           allowClear
@@ -156,19 +155,12 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
             },
           ]}
         />
-        {canEdit && (
-          <Button
-            icon={<RollbackOutlined />}
-            disabled={orderId === undefined}
-            onClick={() => setRetrieving(true)}
-          >
-            {PM_LABELS.retrieveRemaining}
-          </Button>
-        )}
       </Space>
+      {!isToday && <Alert type="info" showIcon message={PM_LABELS.pastDayReadOnly} />}
       <QueryError error={daily.error} onRetry={() => void daily.refetch()} />
       <QueryError error={members.error} onRetry={() => void members.refetch()} />
-      {orderId !== undefined && daily.isSuccess && lines.length === 0 && (
+      <QueryError error={orderLines.error} onRetry={() => void orderLines.refetch()} />
+      {orderId !== undefined && orderLines.isSuccess && lines.length === 0 && (
         <Alert type="warning" showIcon message={PM_LABELS.noBoard} />
       )}
       <DataTable<DailyWorker>
@@ -176,23 +168,23 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
         columns={columns}
         dataSource={visible}
         loading={daily.isFetching || members.isLoading}
-        locale={{ emptyText: orderId === undefined ? PM_LABELS.selectOrder : PM_LABELS.noWorkers }}
+        locale={{
+          emptyText:
+            orderId === undefined
+              ? PM_LABELS.selectOrder
+              : orderLineId === undefined
+                ? PM_LABELS.selectOrderLine
+                : PM_LABELS.noWorkers,
+        }}
       />
       {editing && (
         <DailyWorkerModal
           key={`${editing.workerId}-${apiDate}`}
           worker={editing}
           workDate={apiDate}
-          canEdit={canEdit}
+          canEdit={canEdit && isToday}
           operations={operations}
           onClose={() => setEditingId(null)}
-        />
-      )}
-      {retrieving && (
-        <RetrieveRemainingModal
-          workDate={apiDate}
-          workerOptions={workerOptions}
-          onClose={() => setRetrieving(false)}
         />
       )}
     </Space>

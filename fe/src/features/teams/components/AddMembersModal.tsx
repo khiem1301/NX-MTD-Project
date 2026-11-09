@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Empty, Form, Input, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { ROLE_LABEL } from '@/constants/hr';
@@ -55,7 +56,11 @@ export function AddMembersModal({ open, teamId, onClose }: AddMembersModalProps)
             notFoundContent={<Empty description={MESSAGES.hr.addMembersEmpty} />}
           />
         </Form.Item>
-        <Form.Item name="reason" label={MESSAGES.hr.transferReason} rules={[{ max: 500 }]}>
+        <Form.Item
+          name="reason"
+          label={MESSAGES.hr.transferReason}
+          rules={[{ max: REASON_MAX_LENGTH }]}
+        >
           <Input.TextArea rows={2} />
         </Form.Item>
       </Form>

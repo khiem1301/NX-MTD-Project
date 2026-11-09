@@ -10,11 +10,10 @@ public sealed class ProductVariantConfiguration : IEntityTypeConfiguration<Produ
     {
         entity.ToTable("ProductVariant", tb => tb.HasComment("Biến thể mã hàng: màu × size"));
 
-        entity.HasIndex(e => new { e.ProductId, e.Color, e.SizeCode }, "UQ_PV").IsUnique();
+        entity.HasIndex(e => new { e.ProductColorId, e.SizeCode }, "UQ_PV").IsUnique();
 
         entity.HasIndex(e => new { e.ProductVariantId, e.ProductId }, "UQ_PV_IdProduct").IsUnique();
 
-        entity.Property(e => e.Color).HasMaxLength(50);
         entity.Property(e => e.SizeCode)
             .HasMaxLength(10)
             .IsUnicode(false);
@@ -27,5 +26,11 @@ public sealed class ProductVariantConfiguration : IEntityTypeConfiguration<Produ
             .HasForeignKey(d => d.ProductId)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_PV_Product");
+
+        entity.HasOne(d => d.ProductColor).WithMany(p => p.ProductVariants)
+            .HasPrincipalKey(p => new { p.ProductColorId, p.ProductId })
+            .HasForeignKey(d => new { d.ProductColorId, d.ProductId })
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_PV_Color");
     }
 }

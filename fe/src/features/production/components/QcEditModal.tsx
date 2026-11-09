@@ -1,7 +1,9 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal } from 'antd';
+import { Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useUpdateQcBatch } from '../hooks/useProduction';
+import { QtyInput } from '@/components/common/QtyInput';
+import { useUpdateQcBatch } from '../hooks/useQcBatches';
 import type { QcBatch, QcRole } from '../types';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 
@@ -67,7 +69,7 @@ export function QcEditModal({
             { type: 'number', max: OUTPUT_MAX_QTY, message: text.form.qtyMax },
           ]}
         >
-          <InputNumber min={1} max={OUTPUT_MAX_QTY} precision={0} style={{ width: 180 }} />
+          <QtyInput min={1} max={OUTPUT_MAX_QTY} style={{ width: 180 }} />
         </Form.Item>
         {needReason && (
           <Form.Item
@@ -75,7 +77,7 @@ export function QcEditModal({
             label={text.form.reason}
             rules={[{ required: true, whitespace: true, message: MESSAGES.common.reasonRequired }]}
           >
-            <Input.TextArea rows={2} maxLength={500} showCount />
+            <Input.TextArea rows={2} maxLength={REASON_MAX_LENGTH} showCount />
           </Form.Item>
         )}
       </Form>

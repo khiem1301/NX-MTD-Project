@@ -122,6 +122,9 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<ProductImage> ProductImages { get; set; }
 
+    public virtual DbSet<ProductColor> ProductColors { get; set; }
+
+
     public virtual DbSet<ProductMarker> ProductMarkers { get; set; }
 
     public virtual DbSet<ProductMarkerFabric> ProductMarkerFabrics { get; set; }

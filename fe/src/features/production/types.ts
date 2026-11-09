@@ -242,6 +242,8 @@ export type OutputGridRow = {
   capQty: number;
   /** Tổng sản lượng đã báo của công nhân ở công đoạn này (mọi ca, mọi ngày). */
   reportedQty: number;
+  /** Báo vượt số được giao thì chuyển được tối đa chừng này từ người cùng công đoạn còn dư và phần tổ chưa giao. */
+  transferableQty: number;
 };
 
 export type OutputGrid = {
@@ -274,6 +276,8 @@ export type SaveOutputPayload = {
   sewingTeamId?: number;
   reason?: string;
   rows: OutputLineInput[];
+  /** true = dòng vượt số được giao thì chuyển phần vượt trước khi lưu (tổ trưởng đã xác nhận). */
+  transferExcess?: boolean;
 };
 
 export type OutputSaveResult = {
@@ -334,7 +338,7 @@ export type OnLineQty = {
 
 // ---------- KI-08: hàng hỏng ----------
 
-export type DefectType = 'Rework' | 'Scrap';
+export type DefectType = 'Rework' | 'Scrap' | 'OutputErr';
 export type DefectStatus = 'Recorded' | 'Confirmed' | 'Cancelled';
 export type DefectReason =
   'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';

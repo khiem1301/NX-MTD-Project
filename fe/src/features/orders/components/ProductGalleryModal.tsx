@@ -6,7 +6,7 @@ import { ProductImage } from './ProductImage';
 
 type ProductGalleryModalProps = { product: ProductListItem | null; onClose: () => void };
 
-/** Xem tất cả ảnh của một mã hàng: ảnh chính và các ảnh phụ (bấm vào ảnh để phóng to). */
+/** Xem tất cả ảnh của một mã hàng: ảnh chính, các ảnh phụ và ảnh theo màu (bấm vào ảnh để phóng to). */
 export function ProductGalleryModal({ product, onClose }: ProductGalleryModalProps) {
   const text = MESSAGES.orders;
   return (

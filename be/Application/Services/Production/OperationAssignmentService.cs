@@ -95,13 +95,10 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
         var team = _guard.ResolveSewingTeam(null);
         if (!team.IsSuccess) return Fail.As<int>(team);
 
-        // Kiểm hợp lệ từng công đoạn trước; một công đoạn sai thì không lưu công đoạn nào.
+        // Kiểm hợp lệ mọi công đoạn trước; một công đoạn sai thì không lưu công đoạn nào.
         var operationIds = dto.OperationIds.Distinct().ToList();
-        foreach (var operationId in operationIds)
-        {
-            var check = await ValidateAsync(team.Data, dto.OrderId, operationId, dto.WorkerId, ct);
-            if (check is not null) return Fail.As<int>(check);
-        }
+        var check = await ValidateManyAsync(team.Data, dto.OrderId, operationIds, dto.WorkerId, ct);
+        if (check is not null) return Fail.As<int>(check);
 
         var already = await Assignments.AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.OrderId && a.WorkerId == dto.WorkerId && a.ValidTo == null
@@ -173,9 +170,11 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
 
         var targetProductIds = await AllottedProductIds(team.Data, dto.ToOrderId).ToListAsync(ct);
 
+        var today = _clock.Today;
         var sources = await Assignments.AsNoTracking()
             .Where(a => a.SewingTeamId == team.Data && a.OrderId == dto.FromOrderId && a.ValidTo == null
                         && a.Operation.Status == OperationStatuses.Active && a.Operation.TeamType == TeamTypes.Sewing
+                        && a.Operation.PieceRates.Any(r => r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= today)
                         && targetProductIds.Contains(a.Operation.ProductId)
                         && a.Worker.Status == RecordStatus.Active && a.Worker.TeamId == team.Data
                         && a.Worker.Role.RoleCode == RoleCodes.Worker)
@@ -196,25 +195,40 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
     }
 
     /// <summary>Đơn còn mở, công đoạn đang dùng và thuộc một mã hàng của đơn, công nhân đang làm của đúng tổ này.</summary>
-    private async Task<Result?> ValidateAsync(int teamId, int orderId, int operationId, int workerId, CancellationToken ct)
+    private Task<Result?> ValidateAsync(int teamId, int orderId, int operationId, int workerId, CancellationToken ct) =>
+        ValidateManyAsync(teamId, orderId, [operationId], workerId, ct);
+
+    /// <summary>
+    /// Như ValidateAsync cho nhiều công đoạn của cùng một công nhân, đọc đơn / công đoạn / mã hàng / công nhân mỗi thứ một lần
+    /// thay vì một lượt truy vấn cho từng công đoạn. Công đoạn sai đầu tiên (theo thứ tự gửi lên) quyết định lỗi trả về.
+    /// </summary>
+    private async Task<Result?> ValidateManyAsync(int teamId, int orderId, IReadOnlyList<int> operationIds, int workerId,
+        CancellationToken ct)
     {
         if (await FindOpenOrderAsync(orderId, ct) is null)
             return Result.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid);
 
-        var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(o => o.OperationId == operationId, ct);
-        if (operation is null) return Fail.NotFound();
-        if (operation.Status != OperationStatuses.Active)
-            return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
-        if (operation.TeamType != TeamTypes.Sewing)
-            return Result.Failure(ErrorCodes.AssignmentOperationNotSewing, Messages.AssignmentOperationNotSewing);
+        var operations = await _uow.Repository<Operation>().Query().AsNoTracking()
+            .Where(o => operationIds.Contains(o.OperationId))
+            .Select(o => new { o.OperationId, o.ProductId, o.Status, o.TeamType }).ToDictionaryAsync(o => o.OperationId, ct);
+        var productsInOrder = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderId == orderId).Select(l => l.ProductId).Distinct().ToListAsync(ct);
+        var allotted = await AllottedProductIds(teamId, orderId).Distinct().ToListAsync(ct);
+        foreach (var operationId in operationIds)
+        {
+            if (!operations.TryGetValue(operationId, out var operation)) return Fail.NotFound();
+            if (operation.Status != OperationStatuses.Active)
+                return Result.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
+            if (operation.TeamType != TeamTypes.Sewing)
+                return Result.Failure(ErrorCodes.AssignmentOperationNotSewing, Messages.AssignmentOperationNotSewing);
+            if (!productsInOrder.Contains(operation.ProductId))
+                return Result.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
+            if (!allotted.Contains(operation.ProductId))
+                return Result.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.AssignmentProductNotAllotted);
+        }
 
-        var productInOrder = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .AnyAsync(l => l.OrderId == orderId && l.ProductId == operation.ProductId, ct);
-        if (!productInOrder)
-            return Result.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch);
-        if (!await AllottedProductIds(teamId, orderId).AnyAsync(id => id == operation.ProductId, ct))
-            return Result.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.AssignmentProductNotAllotted);
+        var noRate = await AllocationRateCheck.FindMissingAsync(_uow, operationIds, _clock.Today, ct);
+        if (noRate is not null) return Result.Failure(ErrorCodes.PieceRateNotApproved, noRate);
 
         var workerOk = await _uow.Repository<Employee>().Query().AsNoTracking()
             .AnyAsync(e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active

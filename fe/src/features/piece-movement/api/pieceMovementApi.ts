@@ -6,7 +6,6 @@ import type {
   ConfirmOnBehalfPayload,
   DailyAllocationBoard,
   DailyAllocationResult,
-  RetrieveDailyPayload,
   SaveDailyPayload,
   WorkAllocation,
   WorkAllocationBoard,
@@ -25,11 +24,9 @@ export const WORKER_BASE = '/api/v1/worker/work-allocations';
 export const pieceMovementApi = {
   list: (base: string, q: AllocationQuery) => get<Paginated<WorkAllocation>>(base, q),
   board: (orderId?: number) => get<WorkAllocationBoard>(`${LEADER_BASE}/board`, { orderId }),
-  daily: (workDate: string, orderId: number) =>
-    get<DailyAllocationBoard>(`${LEADER_BASE}/daily`, { workDate, orderId }),
+  daily: (workDate: string, orderId: number, orderLineId: number) =>
+    get<DailyAllocationBoard>(`${LEADER_BASE}/daily`, { workDate, orderId, orderLineId }),
   saveDaily: (body: SaveDailyPayload) => put<DailyAllocationResult>(`${LEADER_BASE}/daily`, body),
-  retrieveRemaining: (body: RetrieveDailyPayload) =>
-    post<DailyAllocationResult>(`${LEADER_BASE}/daily/retrieve-remaining`, body),
   confirmOnBehalf: (id: number, body: ConfirmOnBehalfPayload) =>
     post<null>(`${LEADER_BASE}/${id}/confirm-on-behalf`, body),
   confirmByWorker: (id: number, body: ConfirmAllocationPayload) =>

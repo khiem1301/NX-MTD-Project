@@ -51,9 +51,23 @@ export const VL_LABELS = {
 } as const;
 
 export const VL_MESSAGES = {
+  plateInvalid: 'Biển số không đúng định dạng (ví dụ 51C-123.45 hoặc 30F-1234).',
+  fuelBothRequired: 'Phải nhập cả số xăng và tiền xăng, hoặc để trống cả hai.',
   vehicleSaved: 'Đã lưu xe.',
   tripStarted: 'Đã ghi chuyến, chờ kết thúc chuyến.',
   tripCompleted: 'Đã kết thúc chuyến.',
   confirmDiscontinue:
     'Ngừng sử dụng xe này? Xe không được ghi thêm chuyến nhưng dữ liệu cũ vẫn giữ.',
+} as const;
+
+/** Biển số ô tô: mã tỉnh, 1-2 chữ cái, gạch ngang, 4-5 số (biển mới có dấu chấm trước 2 số cuối); khớp VehiclePlate ở BE. */
+export const PLATE_PATTERN = /^[1-9]\d[A-Z]{1,2}\d?-(\d{3}\.\d{2}|\d{4,5})$/;
+export const PLATE_EXAMPLE = '51C-123.45';
+
+/** Trần nhập liệu của xe / chuyến xe, khớp VehicleLimits ở BE. */
+export const VEHICLE_LIMITS = {
+  maxOdometer: 9_999_999,
+  maxFuelLiters: 1_000,
+  maxFuelCost: 100_000_000,
+  maxFuelNorm: 9_999,
 } as const;

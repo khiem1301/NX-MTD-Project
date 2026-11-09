@@ -1,17 +1,21 @@
 import { useEffect } from 'react';
-import dayjs, { type Dayjs } from 'dayjs';
-import { Alert, Button, Form, Input, InputNumber, Modal, Select, Space, Typography } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
+import { Alert, Button, Form, Input, Modal, Select, Typography } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS } from '../constants';
 import { useOrderMaterials } from '../hooks/useOrderMaterials';
 import { useCreatePurchaseOrder, useSupplierOptions } from '../hooks/usePurchaseOrders';
-import type { CreatePurchaseOrderPayload } from '../types';
-import { isNewMaterial, newMaterialName } from '../newMaterial';
-import { MaterialFreeSelect } from './MaterialFreeSelect';
+import {
+  EMPTY_PURCHASE_LINE,
+  toPurchaseOrderPayload,
+  type PurchaseOrderFormValues,
+  type PurchaseOrderLineValues,
+} from '../utils/purchaseOrderForm';
+import { PurchaseOrderLineRow } from './PurchaseOrderLineRow';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { formatCurrency, toApiDate } from '@/utils/format';
+import { formatCurrency } from '@/utils/format';
 import { purchaseOrderTotal } from '../utils/purchaseOrderTotal';
 import { PurchaseOrderTimingFields } from './PurchaseOrderTimingFields';
 
@@ -20,48 +24,12 @@ type PurchaseOrderFormModalProps = {
   onClose: () => void;
 };
 
-type LineValues = {
-  material?: number | string;
-  unit?: string;
-  newMaterialColor?: string;
-  orderedQty: number;
-  unitPrice: number;
-};
-type FormValues = {
-  orderId?: number;
-  supplierId?: number;
-  orderDate?: Dayjs;
-  expectedDeliveryCount?: number;
-  note?: string;
-  lines: LineValues[];
-};
-
-const EMPTY_LINE: LineValues = { orderedQty: 1, unitPrice: 0 };
-
-const toPayload = (values: FormValues): CreatePurchaseOrderPayload => ({
-  orderId: values.orderId,
-  supplierId: values.supplierId as number,
-  orderDate: toApiDate(values.orderDate as Dayjs),
-  expectedDeliveryCount: values.expectedDeliveryCount as number,
-  note: values.note,
-  lines: values.lines.map(({ material, unit, newMaterialColor, ...rest }) =>
-    isNewMaterial(material)
-      ? {
-          ...rest,
-          newMaterialName: newMaterialName(material),
-          newMaterialUnit: unit,
-          newMaterialColor,
-        }
-      : { ...rest, materialId: material },
-  ),
-});
-
 /**
  * Quản đốc tạo đơn mua NVL, tạo xong là đặt hàng luôn (nhà cung cấp, số lượng, đơn giá, ngày đặt, số lần giao). Chọn đơn hàng: các dòng lấy từ NVL của đơn (phần "phải mua"), nhập đơn giá.
  * Để trống đơn hàng: mua dự trữ dùng chung (kim, chỉ...); NVL chưa có trong danh mục thì gõ tên + đơn vị để thêm mới.
  */
 export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModalProps) {
-  const [form] = Form.useForm<FormValues>();
+  const [form] = Form.useForm<PurchaseOrderFormValues>();
   const create = useCreatePurchaseOrder();
   const orderId = Form.useWatch('orderId', form);
   const orderMaterials = useOrderMaterials(orderId);
@@ -72,20 +40,24 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    form.setFieldsValue({ orderDate: dayjs(), expectedDeliveryCount: 1, lines: [EMPTY_LINE] });
+    form.setFieldsValue({
+      orderDate: dayjs(),
+      expectedDeliveryCount: 1,
+      lines: [EMPTY_PURCHASE_LINE],
+    });
   }, [open, form]);
 
   // Chọn đơn hàng → điền sẵn các dòng NVL còn phải mua của đơn; bỏ chọn → về một dòng trống.
   useEffect(() => {
     if (!linked) {
-      form.setFieldsValue({ lines: [EMPTY_LINE] });
+      form.setFieldsValue({ lines: [EMPTY_PURCHASE_LINE] });
       return;
     }
     if (!orderMaterials.data) return;
     form.setFieldsValue({
       lines: orderMaterials.data
         .filter((om) => (om.purchaseQty ?? 0) > 0)
-        .map<LineValues>((om) => ({
+        .map<PurchaseOrderLineValues>((om) => ({
           material: om.materialId,
           orderedQty: om.purchaseQty ?? 0,
           unitPrice: 0,
@@ -117,7 +89,7 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
       <Form
         form={form}
         layout="vertical"
-        onFinish={(values) => create.mutate(toPayload(values), { onSuccess: onClose })}
+        onFinish={(values) => create.mutate(toPurchaseOrderPayload(values), { onSuccess: onClose })}
         disabled={create.isPending}
       >
         <Form.Item name="supplierId" label={LABELS.supplier} rules={required}>
@@ -160,53 +132,13 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
           {(fields, { add, remove }) => (
             <>
               {fields.map((field) => (
-                <Space key={field.key} align="start" wrap style={{ display: 'flex' }}>
-                  <Form.Item name={[field.name, 'material']} rules={required}>
-                    <MaterialFreeSelect disabled={linked} />
-                  </Form.Item>
-                  <Form.Item noStyle shouldUpdate>
-                    {({ getFieldValue }) =>
-                      isNewMaterial(getFieldValue(['lines', field.name, 'material'])) && (
-                        <Space align="start">
-                          <Form.Item name={[field.name, 'unit']} rules={required}>
-                            <Input
-                              placeholder={LABELS.unit}
-                              maxLength={20}
-                              style={{ width: 110 }}
-                            />
-                          </Form.Item>
-                          <Form.Item name={[field.name, 'newMaterialColor']}>
-                            <Input
-                              placeholder={LABELS.color}
-                              maxLength={50}
-                              style={{ width: 130 }}
-                            />
-                          </Form.Item>
-                        </Space>
-                      )
-                    }
-                  </Form.Item>
-                  <Form.Item name={[field.name, 'orderedQty']} rules={required}>
-                    <InputNumber
-                      addonBefore={LABELS.orderedQty}
-                      min={0.001}
-                      style={{ width: 170 }}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name={[field.name, 'unitPrice']}
-                    rules={[
-                      { required: true, type: 'number', min: 0.01, message: LABELS.priceRequired },
-                    ]}
-                  >
-                    <InputNumber addonBefore={LABELS.unitPrice} min={0} style={{ width: 190 }} />
-                  </Form.Item>
-                  <Button
-                    icon={<DeleteOutlined />}
-                    onClick={() => remove(field.name)}
-                    disabled={fields.length === 1}
-                  />
-                </Space>
+                <PurchaseOrderLineRow
+                  key={field.key}
+                  name={field.name}
+                  linked={linked}
+                  canRemove={fields.length > 1}
+                  onRemove={() => remove(field.name)}
+                />
               ))}
               <div style={{ marginTop: 4 }}>
                 {linked ? (
@@ -230,7 +162,11 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                     }}
                   />
                 ) : (
-                  <Button type="dashed" icon={<PlusOutlined />} onClick={() => add(EMPTY_LINE)}>
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => add(EMPTY_PURCHASE_LINE)}
+                  >
                     {LABELS.addLine}
                   </Button>
                 )}

@@ -42,12 +42,6 @@ export function DispatchNotesPage() {
     { title: DISPATCH_LABELS.customer, dataIndex: 'customerName' },
     { title: DISPATCH_LABELS.deliveryDate, dataIndex: 'deliveryDate', render: formatDate },
     { title: DISPATCH_LABELS.issueQty, dataIndex: 'totalIssueQty', align: 'right' },
-    {
-      title: DISPATCH_LABELS.receivedQty,
-      dataIndex: 'totalReceivedQty',
-      align: 'right',
-      render: (v: number | null) => v ?? '—',
-    },
     { title: DISPATCH_LABELS.createdAt, dataIndex: 'createdAt', render: formatDateTime },
     {
       title: DISPATCH_LABELS.status,

@@ -34,7 +34,7 @@ export const useCustomerOptions = () =>
 
 export const useToggleCustomer = () =>
   useApiMutation(
-    ({ id, reason }: { id: number; reason?: string }) =>
+    ({ id, reason }: { id: number; reason?: string | null }) =>
       reason === undefined ? customerApi.reactivate(id) : customerApi.discontinue(id, reason),
     { invalidate: [CUSTOMERS_KEY], successMessage: MESSAGES.common.saved },
   );

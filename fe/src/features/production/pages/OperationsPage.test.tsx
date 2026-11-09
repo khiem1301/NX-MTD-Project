@@ -33,14 +33,16 @@ let mockOperations: Operation[] = [];
 let mockGroups: OperationGroup[] = [];
 
 jest.mock('../hooks/useOperationRole', () => ({ useOperationRole: () => mockRole }));
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/usePieceRates', () => ({
+  useSubmitPieceRate: () => ({ mutate: jest.fn() }),
+  useSubmitPieceRates: () => ({ mutate: mockSubmitRates, isPending: false }),
+}));
+jest.mock('../hooks/useOperations', () => ({
   useOperations: () => ({ data: mockOperations, isSuccess: true, isFetching: false, error: null }),
   useOperationGroups: () => ({ data: mockGroups, isLoading: false, error: null }),
   useToggleOperation: () => ({ mutate: jest.fn() }),
-  useSubmitPieceRate: () => ({ mutate: jest.fn() }),
   useSaveOperation: () => ({ mutate: jest.fn(), isPending: false }),
   useSetOperationsGroup: () => ({ mutate: mockSetGroup, isPending: false }),
-  useSubmitPieceRates: () => ({ mutate: mockSubmitRates, isPending: false }),
   useCreateOperationGroup: () => ({ mutate: mockCreateGroup, isPending: false }),
   useRenameOperationGroup: () => ({ mutate: mockRename, isPending: false }),
   useDeleteOperationGroup: () => ({ mutate: mockDelete, isPending: false }),
@@ -166,14 +168,13 @@ describe('OperationsPage', () => {
       expect(screen.getByRole('spinbutton', { name: 'Thứ tự' })).toHaveValue('4');
     });
 
-    it('mã có dấu hoặc khoảng trắng thì báo lỗi', async () => {
+    it('mã có dấu hoặc khoảng trắng thì ô tự bỏ các ký tự đó', async () => {
       openAdd();
 
-      fireEvent.change(screen.getByRole('textbox', { name: 'Mã công đoạn' }), {
-        target: { value: 'Công đoạn 1' },
-      });
+      const input = screen.getByRole('textbox', { name: 'Mã công đoạn' });
+      fireEvent.change(input, { target: { value: 'Công đoạn 1' } });
 
-      expect(await screen.findByText(/Mã chỉ gồm chữ không dấu/)).toBeInTheDocument();
+      expect(await screen.findByDisplayValue('Cngon1')).toBe(input);
     });
   });
 

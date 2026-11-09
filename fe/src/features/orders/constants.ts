@@ -6,4 +6,6 @@ export const PRODUCT_STATUS_TAG: Record<string, StatusLabel> = {
 };
 
 /** Ảnh phụ tối đa của một mã hàng (khớp ProductImageLimits.MaxExtra ở BE); ảnh chính là sampleImageUrl. */
-export const MAX_EXTRA_IMAGES = 10;
+export const MAX_EXTRA_IMAGES = 5;
+
+export const COLOR_MAX_LENGTH = 50;

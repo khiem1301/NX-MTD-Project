@@ -17,3 +17,13 @@ export const productNameSchema = z
   .refine((v) => v.length <= 200, text.nameMax);
 
 export const productDescriptionSchema = z.string().max(1000, text.descriptionMax);
+
+/** Tên lỗi BE trả về (vd "ExtraImages[0]") → đường dẫn field của Form antd (["extraImages", 0]). */
+export function toFieldPath(name: string): (string | number)[] {
+  return name
+    .split(/[.[\]]/)
+    .filter(Boolean)
+    .map((part) =>
+      /^\d+$/.test(part) ? Number(part) : part.charAt(0).toLowerCase() + part.slice(1),
+    );
+}

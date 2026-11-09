@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { Alert, Button, Descriptions, Form, InputNumber, Space, Tag } from 'antd';
+import { Alert, Button, Descriptions, Form, Space, Tag } from 'antd';
 import { formatDateTime } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MEAL_TEXT } from '../constants';
 import { useConfirmTeamMeal } from '../hooks/useMeal';
 import type { TeamMealSuggestion } from '../types';
@@ -68,7 +69,7 @@ export function TeamMealConfirmForm({ date, suggestion }: Props) {
             { type: 'number', min: 0, message: 'Số suất ăn phải lớn hơn hoặc bằng 0.' },
           ]}
         >
-          <InputNumber min={0} style={{ width: '100%' }} disabled={suggestion.isLocked} />
+          <QtyInput min={0} style={{ width: '100%' }} disabled={suggestion.isLocked} />
         </Form.Item>
         <Button
           type="primary"

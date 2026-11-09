@@ -1,6 +1,6 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
-import { ATTENDANCE_ROUTES } from './routes';
+import { ATTENDANCE_ROUTES } from '@/constants/routes';
 import { ATTENDANCE_TEXT } from './constants';
 
 export const attendanceMenu: MenuEntry[] = [

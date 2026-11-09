@@ -1,7 +1,7 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
+import { PRODUCTION_ROUTES } from '@/constants/routes';
 import { PRODUCTION_TEXT } from './constants';
-import { PRODUCTION_ROUTES } from './routes';
 
 const teamRoles = [ROLES.TeamLeader, ROLES.TeamDeputy];
 

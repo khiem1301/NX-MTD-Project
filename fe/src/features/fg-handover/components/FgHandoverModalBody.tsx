@@ -1,5 +1,6 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useState } from 'react';
-import { Alert, Button, Descriptions, Form, Input, InputNumber } from 'antd';
+import { Alert, Button, Descriptions, Form, Input } from 'antd';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -16,6 +17,7 @@ import {
 import type { FgHandover, FgHandoverLine } from '../types';
 import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
@@ -140,7 +142,7 @@ export function FgHandoverModalBody({
                     noStyle
                     rules={[{ required: true, message: MESSAGES.common.required }]}
                   >
-                    <InputNumber min={0} max={l.handedQty} precision={0} />
+                    <QtyInput min={0} max={l.handedQty} />
                   </Form.Item>
                 ) : (
                   (l.confirmedQty ?? '—')
@@ -157,7 +159,7 @@ export function FgHandoverModalBody({
                     rules={[reasonRule(l.fgHandoverLineId, l.handedQty)]}
                     style={{ marginBottom: 0 }}
                   >
-                    <Input maxLength={500} />
+                    <Input maxLength={REASON_MAX_LENGTH} />
                   </Form.Item>
                 ) : (
                   (l.discrepancyReason ?? '—')

@@ -39,7 +39,7 @@ public static class AuditText
         ["ActualQty"] = "Số lượng thực tế", ["AttendanceCode"] = "Mã chấm công", ["ConfirmedQty"] = "Số lượng xác nhận",
         ["Content"] = "Nội dung", ["CurrentGradeCode"] = "Bậc thợ hiện tại", ["CustomerReceivedDate"] = "Ngày khách nhận",
         ["DateOfBirth"] = "Ngày sinh", ["DecisionNote"] = "Ghi chú duyệt", ["Description"] = "Mô tả",
-        ["DueDate"] = "Ngày giao", ["EffectiveDate"] = "Ngày hiệu lực", ["ExpectedDeliveryCount"] = "Số lần giao dự kiến",
+        ["DueDate"] = "Ngày giao", ["EffectiveDate"] = "Ngày hiệu lực", ["ExpectedDeliveryCount"] = "Số lần giao dự kiến", ["ExpectedDeliveryDate"] = "Ngày dự kiến giao",
         ["ExtraImages"] = "Số ảnh phụ",
         ["FullName"] = "Họ tên", ["Gender"] = "Giới tính", ["GoodsStatus"] = "Trạng thái hàng", ["GradeCode"] = "Mã bậc thợ",
         ["GradeName"] = "Tên bậc thợ", ["MonthlyAmount"] = "Số tiền theo tháng", ["Note"] = "Ghi chú",
@@ -59,7 +59,7 @@ public static class AuditText
         ["INDELIVERY"] = "Đang giao", ["LOCKED"] = "Đã khóa", ["NEW"] = "Mới", ["OPEN"] = "Mở", ["ORDERED"] = "Đã đặt hàng",
         ["PAID"] = "Đã thanh toán", ["PENDING"] = "Chờ xử lý", ["PENDING_APPROVAL"] = "Chờ duyệt", ["PENDINGAPPROVAL"] = "Chờ duyệt",
         ["RECORDED"] = "Đã ghi nhận", ["REJECTED"] = "Từ chối", ["RESIGNED"] = "Đã nghỉ việc", ["STARTED"] = "Đang sản xuất",
-        ["UNPAID"] = "Chưa thanh toán", ["REWORK"] = "Cần sửa lại", ["SCRAP"] = "Hỏng không sửa được",
+        ["UNPAID"] = "Chưa thanh toán", ["REWORK"] = "Cần sửa lại", ["SCRAP"] = "Hỏng không sửa được", ["OUTPUT_ERR"] = "Nhập sai sản lượng",
     };
 
     /// <summary>Mã / tên dùng để gọi bản ghi (ưu tiên mã nghiệp vụ), theo thứ tự các field thường có trong giá trị đã log.</summary>

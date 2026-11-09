@@ -1,11 +1,10 @@
 import { Alert, Button, Space, Switch, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DownloadOutlined } from '@ant-design/icons';
-import { formatDateTime } from '@/utils/format';
+import { formatDateTime, formatCurrency } from '@/utils/format';
 import { BREAK_EVEN_TEXT, RISK_LABEL } from '../constants';
 import { useExportBreakEven } from '../hooks/useBreakEven';
 import type { BreakEvenFilter, BreakEvenResultItem } from '../types';
-import { formatCurrency } from '../utils';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = {

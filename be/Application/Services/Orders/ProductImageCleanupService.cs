@@ -7,7 +7,8 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// Dọn ảnh mồ côi của mã hàng: file trong thư mục PRODUCT mà không còn Product.SampleImageUrl hay ProductImage.ImageKey nào trỏ tới.
+/// Dọn ảnh mồ côi của mã hàng: file trong thư mục PRODUCT mà không còn Product.SampleImageUrl, ProductImage.ImageKey
+/// nào trỏ tới.
 /// Ảnh được tải lên ngay khi người dùng chọn, trước khi bấm Lưu, nên chỉ xóa file cũ hơn <see cref="GracePeriod"/>
 /// để không xóa nhầm ảnh của form đang mở. Chỉ đụng file đúng dạng khóa ảnh mã hàng (<see cref="SampleImageKey"/>).
 /// </summary>

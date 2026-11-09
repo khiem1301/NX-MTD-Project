@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { Button, Card, Checkbox, Flex, Input, Segmented, Space } from 'antd';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
 import { ATTENDANCE_TEXT, MAX_RANGE_DAYS } from '../constants';
-import { type DateRange } from '../utils';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { type DateRange } from '../utils/timesheet';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 
 type Preset = 'today' | 'week' | 'month';
 
@@ -36,15 +35,10 @@ export function TimesheetFilterBar({
   onReset,
   showKeyword = true,
 }: Props) {
-  const [picking, setPicking] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
   // BE từ chối khoảng rộng hơn MAX_RANGE_DAYS, nên khóa sẵn ở lịch thay vì để người dùng chọn rồi báo lỗi.
-  const disabledDate = (current: Dayjs): boolean => {
+  const disabledDate = (current: Dayjs, { other }: { other: Dayjs | null }): boolean => {
     if (current.isAfter(dayjs().endOf('day'))) return true;
-
-    const anchor = picking?.[0] ?? picking?.[1];
-    if (!anchor) return false;
-    return Math.abs(current.diff(anchor, 'day')) >= MAX_RANGE_DAYS;
+    return other ? Math.abs(current.diff(other, 'day')) >= MAX_RANGE_DAYS : false;
   };
 
   const applyPreset = (preset: Preset): void => onRangeChange(PRESET_RANGE[preset]());
@@ -67,18 +61,13 @@ export function TimesheetFilterBar({
           ]}
         />
 
-        <AppRangePicker
+        <AppDateRangeFields
           value={range}
           allowClear={false}
           disabledDate={disabledDate}
-          onCalendarChange={(value) => setPicking(value)}
-          onOpenChange={(open) => {
-            if (!open) setPicking(null);
-          }}
           onChange={(value) => {
             if (value?.[0] && value[1]) onRangeChange([value[0], value[1]]);
           }}
-          style={{ minWidth: 240 }}
         />
 
         {showKeyword ? (

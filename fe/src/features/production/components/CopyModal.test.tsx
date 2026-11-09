@@ -5,7 +5,7 @@ import { CopyModal } from './CopyModal';
 const mockCopy = jest.fn();
 let mockPick = 9;
 
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/useAssignments', () => ({
   useCopyAssignments: () => ({ mutate: mockCopy, isPending: false }),
 }));
 jest.mock('@/components/common/OrderSelect', () => ({

@@ -1,7 +1,7 @@
 import { Select } from 'antd';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { useAssignOperation, useCloseAssignment } from '../hooks/useProduction';
+import { useAssignOperation, useCloseAssignment } from '../hooks/useAssignments';
 import type { AssignmentRow } from '../utils/assignmentBoard';
 
 const text = PRODUCTION_TEXT.assignments;

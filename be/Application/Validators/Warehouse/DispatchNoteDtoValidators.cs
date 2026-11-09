@@ -43,15 +43,6 @@ public sealed class ConfirmDeliveryDtoValidator : AbstractValidator<ConfirmDeliv
     {
         RuleFor(x => x.RowVer).NotEmpty().WithMessage(DispatchLimits.StaleRowVer);
         RuleFor(x => x.CustomerReceivedDate).NotEmpty().WithMessage(WarehouseMessages.CustomerReceivedDateRequired);
-        RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
-        RuleFor(x => x.Lines).Must(l => l is null || l.Count <= DispatchLimits.MaxLines)
-            .WithMessage(WarehouseMessages.DispatchTooManyLines);
-        RuleForEach(x => x.Lines).Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage(WarehouseMessages.LinesRequired)
-            .Must(l => l.ReceivedQty >= 0).WithMessage(WarehouseMessages.QtyMustNotBeNegative)
-            .Must(l => l.ReceivedQty <= DispatchLimits.MaxQty).WithMessage(WarehouseMessages.DispatchQtyMax);
-        RuleFor(x => x.Lines).Must(l => l is null || l.Where(x => x is not null).Select(x => x.DispatchNoteLineId).Distinct().Count() == l.Count(x => x is not null))
-            .WithMessage(WarehouseMessages.DuplicateLine);
     }
 }
 
@@ -64,7 +55,7 @@ public sealed class RejectDispatchDtoValidator : AbstractValidator<RejectDispatc
 {
     public RejectDispatchDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaxTrimmedLength(500, "Lý do");
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(WarehouseMessages.ReasonRequired).MaxTrimmedLength(TextLimits.Reason, "Lý do");
         RuleFor(x => x.RowVer).NotEmpty().WithMessage(DispatchLimits.StaleRowVer);
     }
 }

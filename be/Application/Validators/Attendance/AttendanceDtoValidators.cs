@@ -107,7 +107,7 @@ public sealed class CreateAttendanceAdjustmentDtoValidator : AbstractValidator<C
 
         RuleFor(x => x.Reason)
             .NotEmpty().WithMessage(Messages.ReasonRequired)              // GBR-25, MSG09
-            .MaximumLength(500).WithMessage("Lý do tối đa 500 ký tự.");
+            .MaximumLength(TextLimits.Reason).WithMessage($"Lý do tối đa {TextLimits.Reason} ký tự.");
 
         RuleFor(x => x.RequestId).GreaterThan(0).When(x => x.RequestId.HasValue);
 

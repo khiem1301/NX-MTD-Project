@@ -102,6 +102,15 @@
    - 03/11/2026  WorkAllocation thêm WorkDate, RetrievalNote; ConfirmMode thêm LEADER, SYSTEM; RetrievalReason thêm END_OF_DAY, ADJUSTED (giao việc theo ngày).
    - 02/11/2026  Thêm mục 19.7: dữ liệu demo đủ loại và trạng thái để test mọi chức năng (đơn DEMO-DH005…013, đủ 11 loại đơn từ, chấm công, lương, hòa vốn, thông báo); công đoạn cuối DEMO-QU02 chuyển sang công đoạn đang dùng.
    - 02/11/2026  Thêm mục 19.8: dữ liệu thử nhập sản lượng theo nhóm công đoạn (nhóm May túi của DEMO-AO01, CNMAY1, DEMO-DH003 dòng Đen L).
+   - 03/11/2026  Phiếu xuất hàng bỏ trạng thái PARTIALLY_DELIVERED và cột DispatchNoteLine.ReceivedQty (khách nhận đúng số xuất);
+                 vw_OrderLineProgress tính số đã giao theo số xuất của phiếu DELIVERED (DEV-ALL-70).
+   - 06/11/2026  Bỏ ảnh theo màu của mã hàng: bỏ bảng ProductColorImage (ProductColor vẫn giữ làm nơi lưu tên màu) (DEV-ALL-80).
+   - 06/11/2026  Phiếu lỗi thêm loại OUTPUT_ERR (tổ trưởng nhập sai sản lượng công đoạn): trừ khỏi sản lượng và tiền của công nhân, trần sản lượng và tiến độ làm
+                 được tính lại (trg_WorkAllocation_Check, trg_OutputRecord_Check, vw_WorkerOutputCap, vw_OperationAllocationProgress, vw_WorkerDailyEstimatedPay) (DEV-ALL-79).
+   - 07/11/2026  Thêm OrderMaterial.ExpectedDeliveryDate (ngày khách dự kiến giao, chỉ khi khách cấp) và PurchaseOrder.ExpectedDeliveryDate (ngày NCC dự kiến giao, không trước ngày đặt); giữ ExpectedDeliveryCount (DEV-ALL-82).
+   - 05/11/2026  ProductImage giảm còn tối đa 5 ảnh phụ (CK_ProductImage_Sort 1-5). Thêm ProductColor (màu áo của mã hàng,
+                 nơi duy nhất lưu tên màu): ProductVariant, ProductMarkerFabric bỏ cột Color, trỏ ProductColorId (FK ghép
+                 với ProductId); UQ_PV thành (ProductColorId, SizeCode). (ảnh theo màu đã bỏ ở DEV-ALL-80).
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -322,7 +331,7 @@ CREATE TABLE dbo.Customer (
     Email           VARCHAR(100)  NULL,
     DefaultAddress  NVARCHAR(500) NULL,
     Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_Customer_Status DEFAULT 'ACTIVE',
-    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
@@ -358,7 +367,7 @@ CREATE TABLE dbo.Supplier (
     MaterialTypes  NVARCHAR(200) NULL,       -- loại NVL cung cấp (mô tả)
     Note           NVARCHAR(500) NULL,
     Status         VARCHAR(20)   NOT NULL CONSTRAINT DF_Supplier_Status DEFAULT 'ACTIVE',
-    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (bắt buộc khi ngừng)
+    DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CreatedAt      DATETIME2(0)  NOT NULL CONSTRAINT DF_Supplier_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Supplier_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
@@ -375,14 +384,26 @@ CREATE TABLE dbo.Product (
     CONSTRAINT CK_Product_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
 
--- Ảnh phụ của mã hàng (01/11): ảnh chính là Product.SampleImageUrl; ở đây tối đa 10 ảnh phụ (SortOrder 1-10, mỗi vị trí một ảnh).
+-- Màu áo của mã hàng (05/11, DEV-ALL-71): nơi duy nhất lưu tên màu. Biến thể (màu × size), vải của bìa theo màu
+-- và ảnh theo màu trỏ về đây bằng ProductColorId, nên tên màu không bị chép ra nhiều bảng rồi lệch nhau.
+-- Màu được tạo khi đơn hàng có màu mới, hoặc khi khai ảnh cho màu ở form mã hàng.
+CREATE TABLE dbo.ProductColor (
+    ProductColorId  INT IDENTITY(1,1) CONSTRAINT PK_ProductColor PRIMARY KEY,
+    ProductId       INT           NOT NULL CONSTRAINT FK_PCol_Product REFERENCES dbo.Product(ProductId),
+    Color           NVARCHAR(50)  NOT NULL,   -- vd Xanh navy; không trùng trong một mã hàng (không phân biệt hoa thường)
+    CreatedAt       DATETIME2(0)  NOT NULL CONSTRAINT DF_PCol_CreatedAt DEFAULT (dbo.fn_VnNow()),
+    CONSTRAINT UQ_PCol UNIQUE (ProductId, Color),
+    CONSTRAINT UQ_PCol_IdProduct UNIQUE (ProductColorId, ProductId)   -- cho FK ghép ở ProductVariant và ProductMarkerFabric
+);
+
+-- Ảnh phụ của mã hàng (01/11, 05/11 giảm còn 5): ảnh chính là Product.SampleImageUrl; ở đây tối đa 5 ảnh phụ (SortOrder 1-5, mỗi vị trí một ảnh).
 CREATE TABLE dbo.ProductImage (
     ProductImageId  INT IDENTITY(1,1) CONSTRAINT PK_ProductImage PRIMARY KEY,
     ProductId       INT           NOT NULL CONSTRAINT FK_ProductImage_Product REFERENCES dbo.Product(ProductId),
     ImageKey        NVARCHAR(500) NOT NULL,   -- khóa ảnh tải từ máy, vd PRODUCT/2026/11/<guid>.jpg
-    SortOrder       TINYINT       NOT NULL,   -- thứ tự hiển thị 1-10
+    SortOrder       TINYINT       NOT NULL,   -- thứ tự hiển thị 1-5
     CreatedAt       DATETIME2(0)  NOT NULL CONSTRAINT DF_ProductImage_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    CONSTRAINT CK_ProductImage_Sort CHECK (SortOrder BETWEEN 1 AND 10),
+    CONSTRAINT CK_ProductImage_Sort CHECK (SortOrder BETWEEN 1 AND 5),
     CONSTRAINT UQ_ProductImage_Sort UNIQUE (ProductId, SortOrder)
 );
 
@@ -391,11 +412,12 @@ CREATE TABLE dbo.ProductImage (
 CREATE TABLE dbo.ProductVariant (
     ProductVariantId  INT IDENTITY(1,1) CONSTRAINT PK_ProductVariant PRIMARY KEY,
     ProductId         INT           NOT NULL CONSTRAINT FK_PV_Product REFERENCES dbo.Product(ProductId),
-    Color             NVARCHAR(50)  NOT NULL,        -- màu sản phẩm
+    ProductColorId    INT           NOT NULL,        -- màu sản phẩm (05/11: thay cột Color, DEV-ALL-71)
     SizeCode          VARCHAR(10)   NOT NULL,        -- XS, S, M, L, XL, XXL, 3XL, FREE…
     Status            VARCHAR(20)   NOT NULL CONSTRAINT DF_PV_Status DEFAULT 'ACTIVE',
     CONSTRAINT CK_PV_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
-    CONSTRAINT UQ_PV UNIQUE (ProductId, Color, SizeCode),
+    CONSTRAINT FK_PV_Color FOREIGN KEY (ProductColorId, ProductId) REFERENCES dbo.ProductColor(ProductColorId, ProductId),  -- màu của đúng mã hàng
+    CONSTRAINT UQ_PV UNIQUE (ProductColorId, SizeCode),
     CONSTRAINT UQ_PV_IdProduct UNIQUE (ProductVariantId, ProductId)   -- cho FK ghép ở ProductComponentMaterial và OrderLine
 );
 
@@ -457,10 +479,11 @@ CREATE TABLE dbo.ProductMarkerFabric (
     ProductMarkerFabricId INT IDENTITY(1,1) CONSTRAINT PK_ProductMarkerFabric PRIMARY KEY,
     ProductId           INT            NOT NULL CONSTRAINT FK_PMF_Product REFERENCES dbo.Product(ProductId),
     MarkerNo            TINYINT        NOT NULL,
-    Color               NVARCHAR(50)   NOT NULL,
+    ProductColorId      INT            NOT NULL,     -- màu áo (05/11: thay cột Color, DEV-ALL-71)
     MaterialId          INT            NOT NULL CONSTRAINT FK_PMF_Material REFERENCES dbo.Material(MaterialId),
     CONSTRAINT CK_PMF_No CHECK (MarkerNo > 0),
-    CONSTRAINT UQ_PMF UNIQUE (ProductId, MarkerNo, Color)
+    CONSTRAINT FK_PMF_Color FOREIGN KEY (ProductColorId, ProductId) REFERENCES dbo.ProductColor(ProductColorId, ProductId),
+    CONSTRAINT UQ_PMF UNIQUE (ProductId, MarkerNo, ProductColorId)
 );
 CREATE INDEX IX_PMF_Material ON dbo.ProductMarkerFabric(MaterialId);
 
@@ -515,12 +538,14 @@ CREATE TABLE dbo.OrderMaterial (
     RequiredQty          DECIMAL(18,3)  NOT NULL,                                        -- tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức)
     CustomerQty          DECIMAL(18,3)  NOT NULL CONSTRAINT DF_OM_Customer DEFAULT 0,   -- khách sẽ cấp (màn 1.2)
     ExpectedDeliveryCount SMALLINT      NULL,                                            -- số lần khách dự kiến giao NVL này; số lần đã nhận xem vw_OrderMaterialDelivery
+    ExpectedDeliveryDate DATE           NULL,                                            -- ngày dự kiến khách giao (nhập khi khách có cấp; 07/11/2026)
     PurchaseQty          AS (CASE WHEN RequiredQty > CustomerQty THEN RequiredQty - CustomerQty ELSE 0 END), -- phần xưởng phải mua
     Source               AS (CONVERT(VARCHAR(10), CASE WHEN CustomerQty = 0 THEN 'SUPPLIER'
                                                        WHEN CustomerQty >= RequiredQty THEN 'CUSTOMER' ELSE 'BOTH' END)),
     Note                 NVARCHAR(500)  NULL,
     CONSTRAINT CK_OM_Qty  CHECK (RequiredQty >= 0 AND CustomerQty >= 0),
     CONSTRAINT CK_OM_Delivery CHECK ((CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)), -- khách có cấp thì phải khai số lần giao
+    CONSTRAINT CK_OM_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR CustomerQty > 0),
     CONSTRAINT UQ_OM UNIQUE (OrderId, MaterialId)
 );
 
@@ -713,6 +738,7 @@ CREATE TABLE dbo.PurchaseOrder (
     SourceRequestId       INT            NULL CONSTRAINT FK_PO_Request REFERENCES dbo.Request(RequestId),   -- yêu cầu NVL / thiếu NVL
     OrderDate             DATE           NULL,
     ExpectedDeliveryCount SMALLINT       NULL,  -- số lần NCC dự kiến giao; số lần đã nhận xem vw_PurchaseOrderDelivery
+    ExpectedDeliveryDate  DATE           NULL,  -- ngày NCC dự kiến giao (07/11/2026)
     GoodsStatus           VARCHAR(25)    NOT NULL CONSTRAINT DF_PO_GoodsStatus DEFAULT 'PENDING_FINALISATION',
     PaymentStatus         VARCHAR(20)    NOT NULL CONSTRAINT DF_PO_PaymentStatus DEFAULT 'UNPAID',
     RejectReason          NVARCHAR(500)  NULL,
@@ -734,7 +760,8 @@ CREATE TABLE dbo.PurchaseOrder (
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
-    CONSTRAINT CK_PO_DeliveryCount CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1)
+    CONSTRAINT CK_PO_DeliveryCount CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1),
+    CONSTRAINT CK_PO_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate)
 );
 
 -- Dòng đơn mua xác định NVL theo một trong hai cách (TH-12):
@@ -1071,7 +1098,7 @@ CREATE TABLE dbo.DefectRecord (
     RecordedAt          DATETIME2(0)   NOT NULL CONSTRAINT DF_DR_RecordedAt DEFAULT (dbo.fn_VnNow()),
     UpdatedAt           DATETIME2(0)   NULL,
     RowVer              ROWVERSION,
-    CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP')),
+    CONSTRAINT CK_DR_Type   CHECK (DefectType IN ('REWORK','SCRAP','OUTPUT_ERR')),   -- OUTPUT_ERR: tổ trưởng nhập sai sản lượng công đoạn, trừ khỏi sản lượng của công nhân (DEV-ALL-79)
     CONSTRAINT CK_DR_Reason CHECK (DefectReasonCode IN ('SKIPPED_STITCH','CROOKED_SEAM','WRONG_SIZE','TORN','STAINED','OTHER')),
     CONSTRAINT CK_DR_Other  CHECK (DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL),
     CONSTRAINT CK_DR_Status CHECK (Status IN ('RECORDED','CONFIRMED','CANCELLED','LOCKED')),   -- CONFIRMED: Quản đốc chấp nhận phiếu sau khi công nhân phản đối
@@ -1146,19 +1173,17 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
     RowVer              ROWVERSION,
-    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED')),
+    CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED')),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
-    CONSTRAINT CK_DN_Delivered CHECK (Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL),
-    CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
+    CONSTRAINT CK_DN_Delivered CHECK (Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL),
+    CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))
 );
 CREATE INDEX IX_DN_Order ON dbo.DispatchNote(OrderId, Status);
 CREATE TABLE dbo.DispatchNoteLine (
     DispatchNoteLineId INT IDENTITY(1,1) CONSTRAINT PK_DispatchNoteLine PRIMARY KEY,
     DispatchNoteId     INT NOT NULL CONSTRAINT FK_DNL_DN REFERENCES dbo.DispatchNote(DispatchNoteId),
     OrderLineId        INT NOT NULL CONSTRAINT FK_DNL_OrderLine REFERENCES dbo.OrderLine(OrderLineId),
-    IssueQty           INT NOT NULL CONSTRAINT CK_DNL_Qty CHECK (IssueQty > 0),
-    ReceivedQty        INT NULL,       -- khách nhận thực tế (không vượt số xuất)
-    CONSTRAINT CK_DNL_Received CHECK (ReceivedQty IS NULL OR ReceivedQty BETWEEN 0 AND IssueQty),
+    IssueQty           INT NOT NULL CONSTRAINT CK_DNL_Qty CHECK (IssueQty > 0),   -- giao luôn thành công: khách nhận đúng số xuất (GBR-24)
     CONSTRAINT UQ_DNL UNIQUE (DispatchNoteId, OrderLineId)
 );
 GO
@@ -2000,7 +2025,10 @@ BEGIN
                             FROM dbo.WorkAllocation w
                             WHERE w.Status = 'CONFIRMED' AND w.WorkerId = k.WorkerId
                               AND w.OrderLineId = k.OrderLineId AND w.OperationId = k.OperationId) c
-               OUTER APPLY (SELECT SUM(o.Quantity) Qty FROM dbo.OutputRecord o
+               OUTER APPLY (SELECT SUM(o.Quantity) - ISNULL((SELECT SUM(d.Quantity) FROM dbo.DefectRecord d
+                                                          WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED' AND d.ResponsibleWorkerId = k.WorkerId
+                                                            AND d.OrderLineId = k.OrderLineId AND d.OperationId = k.OperationId), 0) Qty
+                            FROM dbo.OutputRecord o
                             WHERE o.WorkerId = k.WorkerId AND o.OrderLineId = k.OrderLineId AND o.OperationId = k.OperationId) o
                WHERE o.Qty > ISNULL(c.Qty, 0))
         THROW 50052, N'Thu hồi làm số lần còn lại nhỏ hơn sản lượng công nhân đã báo.', 1;
@@ -2022,7 +2050,10 @@ BEGIN
                             FROM dbo.WorkAllocation w
                             WHERE w.Status = 'CONFIRMED' AND w.WorkerId = k.WorkerId
                               AND w.OrderLineId = k.OrderLineId AND w.OperationId = k.OperationId) c
-               OUTER APPLY (SELECT SUM(o.Quantity) Qty FROM dbo.OutputRecord o
+               OUTER APPLY (SELECT SUM(o.Quantity) - ISNULL((SELECT SUM(d.Quantity) FROM dbo.DefectRecord d
+                                                          WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED' AND d.ResponsibleWorkerId = k.WorkerId
+                                                            AND d.OrderLineId = k.OrderLineId AND d.OperationId = k.OperationId), 0) Qty
+                            FROM dbo.OutputRecord o
                             WHERE o.WorkerId = k.WorkerId AND o.OrderLineId = k.OrderLineId AND o.OperationId = k.OperationId) o
                WHERE o.Qty > ISNULL(c.Qty, 0))
         THROW 50052, N'Sản lượng vượt số lần được giao cho công nhân ở công đoạn này.', 1;
@@ -2477,6 +2508,10 @@ WITH Moves AS (
 ), Outp AS (
     SELECT WorkerId, OrderLineId, OperationId, SUM(Quantity) AS OutputQty
     FROM dbo.OutputRecord GROUP BY WorkerId, OrderLineId, OperationId
+), OutErr AS (
+    SELECT ResponsibleWorkerId AS WorkerId, OrderLineId, OperationId, SUM(Quantity) AS ErrorQty
+    FROM dbo.DefectRecord WHERE DefectType = 'OUTPUT_ERR' AND Status <> 'CANCELLED'
+    GROUP BY ResponsibleWorkerId, OrderLineId, OperationId
 ), Scrap AS (
     SELECT ResponsibleWorkerId AS WorkerId, OrderLineId, OperationId, SUM(Quantity) AS ScrapQty
     FROM dbo.DefectRecord WHERE DefectType = 'SCRAP' AND Status <> 'CANCELLED'
@@ -2484,11 +2519,12 @@ WITH Moves AS (
 )
 SELECT mv.WorkerId, mv.OrderLineId, mv.OperationId,
        mv.CapQty,
-       ISNULL(o.OutputQty, 0) AS OutputQty,
+       ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0) AS OutputQty,
        ISNULL(s.ScrapQty, 0)  AS ScrapQty,
-       mv.CapQty - ISNULL(o.OutputQty, 0) AS RemainingQty
+       mv.CapQty - (ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0)) AS RemainingQty
 FROM Moves mv
 LEFT JOIN Outp o  ON o.WorkerId = mv.WorkerId AND o.OrderLineId = mv.OrderLineId AND o.OperationId = mv.OperationId
+LEFT JOIN OutErr oe ON oe.WorkerId = mv.WorkerId AND oe.OrderLineId = mv.OrderLineId AND oe.OperationId = mv.OperationId
 LEFT JOIN Scrap s ON s.WorkerId = mv.WorkerId AND s.OrderLineId = mv.OrderLineId AND s.OperationId = mv.OperationId;
 GO
 
@@ -2508,7 +2544,7 @@ SELECT  r.SewingTeamId, r.OrderLineId, op.OperationId,
         ISNULL(a.AllocatedQty, 0) AS AllocatedQty,
         ISNULL(a.PendingQty, 0)   AS PendingQty,
         r.Qty - ISNULL(a.AllocatedQty, 0) - ISNULL(a.PendingQty, 0) AS UnallocatedQty,
-        ISNULL(o.OutputQty, 0)    AS OutputQty
+        ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0) AS OutputQty
 FROM Received r
 JOIN dbo.OrderLine ol ON ol.OrderLineId = r.OrderLineId
 JOIN dbo.Operation op ON op.ProductId = ol.ProductId AND op.TeamType = 'SEWING' AND op.Status = 'ACTIVE'
@@ -2517,39 +2553,49 @@ OUTER APPLY (SELECT SUM(CASE WHEN w.Status = 'CONFIRMED' THEN IIF(w.MovementType
              FROM dbo.WorkAllocation w
              WHERE w.SewingTeamId = r.SewingTeamId AND w.OrderLineId = r.OrderLineId AND w.OperationId = op.OperationId) a
 OUTER APPLY (SELECT SUM(x.Quantity) AS OutputQty FROM dbo.OutputRecord x
-             WHERE x.SewingTeamId = r.SewingTeamId AND x.OrderLineId = r.OrderLineId AND x.OperationId = op.OperationId) o;
+             WHERE x.SewingTeamId = r.SewingTeamId AND x.OrderLineId = r.OrderLineId AND x.OperationId = op.OperationId) o
+OUTER APPLY (SELECT SUM(d.Quantity) AS ErrorQty FROM dbo.DefectRecord d
+             WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED'
+               AND d.SewingTeamId = r.SewingTeamId AND d.OrderLineId = r.OrderLineId AND d.OperationId = op.OperationId) oe;
 GO
 
--- Lương tạm tính theo ngày của công nhân may (UC59): Σ(SL × đơn giá khóa) − Σ(Scrap × đơn giá đó)
+-- Lương tạm tính theo ngày của công nhân may (UC59): Σ(SL × đơn giá khóa) − Σ(Scrap × đơn giá đó);
+-- SL đã trừ phần tổ trưởng nhập sai (phiếu OUTPUT_ERR) theo đơn giá khóa của phiếu
 CREATE VIEW dbo.vw_WorkerDailyEstimatedPay
 AS
 WITH Outp AS (
     SELECT r.WorkerId, r.WorkDate, SUM(r.Quantity) AS OutputQty, SUM(r.Quantity * pr.Rate) AS OutputAmount
     FROM dbo.OutputRecord r JOIN dbo.PieceRate pr ON pr.PieceRateId = r.PieceRateId
     GROUP BY r.WorkerId, r.WorkDate
+), OutErr AS (
+    SELECT d.ResponsibleWorkerId AS WorkerId, d.WorkDate, SUM(d.Quantity) AS ErrorQty, SUM(d.Quantity * pr.Rate) AS ErrorAmount
+    FROM dbo.DefectRecord d JOIN dbo.PieceRate pr ON pr.PieceRateId = d.PieceRateId
+    WHERE d.DefectType = 'OUTPUT_ERR' AND d.Status <> 'CANCELLED'
+    GROUP BY d.ResponsibleWorkerId, d.WorkDate
 ), Scrap AS (
     SELECT d.ResponsibleWorkerId AS WorkerId, d.WorkDate, SUM(d.Quantity) AS ScrapQty, SUM(d.Quantity * pr.Rate) AS ScrapAmount
     FROM dbo.DefectRecord d JOIN dbo.PieceRate pr ON pr.PieceRateId = d.PieceRateId
     WHERE d.DefectType = 'SCRAP' AND d.Status <> 'CANCELLED'
     GROUP BY d.ResponsibleWorkerId, d.WorkDate
 ), Days AS (
-    SELECT WorkerId, WorkDate FROM Outp UNION SELECT WorkerId, WorkDate FROM Scrap
+    SELECT WorkerId, WorkDate FROM Outp UNION SELECT WorkerId, WorkDate FROM OutErr UNION SELECT WorkerId, WorkDate FROM Scrap
 ), Mult AS (
     SELECT CAST(SettingValue AS DECIMAL(4,2)) AS SundayMultiplier FROM dbo.SystemSetting WHERE SettingKey = 'SUNDAY_PAY_MULTIPLIER'
 )
 SELECT d.WorkerId, e.EmployeeCode, e.FullName, d.WorkDate,
        CAST(IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, 1, 0) AS BIT) AS IsSunday,
-       ISNULL(o.OutputQty, 0)    AS OutputQty,
+       ISNULL(o.OutputQty, 0) - ISNULL(oe.ErrorQty, 0)       AS OutputQty,
        ISNULL(s.ScrapQty, 0)     AS ScrapQty,
-       ISNULL(o.OutputAmount, 0) AS OutputAmount,
-       CAST(ISNULL(o.OutputAmount, 0) * (IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1) - 1) AS DECIMAL(18,2)) AS SundayBonus,
+       ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0) AS OutputAmount,
+       CAST((ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0)) * (IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1) - 1) AS DECIMAL(18,2)) AS SundayBonus,
        ISNULL(s.ScrapAmount, 0)  AS ScrapAmount,
-       CAST(ISNULL(o.OutputAmount, 0) * IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1)
+       CAST((ISNULL(o.OutputAmount, 0) - ISNULL(oe.ErrorAmount, 0)) * IIF(DATEDIFF(DAY, 0, d.WorkDate) % 7 = 6, ISNULL(m.SundayMultiplier, 1), 1)
          - ISNULL(s.ScrapAmount, 0) AS DECIMAL(18,2)) AS EstimatedPay      -- Chủ nhật: tiền sản phẩm x hệ số, khoản trừ Scrap giữ nguyên
 FROM Days d
 OUTER APPLY (SELECT SundayMultiplier FROM Mult) m
 JOIN dbo.Employee e ON e.EmployeeId = d.WorkerId AND e.PayType = 'PIECE_RATE'
 LEFT JOIN Outp o  ON o.WorkerId = d.WorkerId AND o.WorkDate = d.WorkDate
+LEFT JOIN OutErr oe ON oe.WorkerId = d.WorkerId AND oe.WorkDate = d.WorkDate
 LEFT JOIN Scrap s ON s.WorkerId = d.WorkerId AND s.WorkDate = d.WorkDate;
 GO
 
@@ -2557,7 +2603,7 @@ GO
 -- (bàn giao và cấp BTP chỉ đếm bộ đủ; chi tiết cắt bù lẻ không tính là sản phẩm)
 CREATE VIEW dbo.vw_OrderLineProgress
 AS
-SELECT  ol.OrderLineId, ol.OrderId, o.OrderCode, ol.ProductId, p.ProductCode, ol.ProductVariantId, pv.Color, pv.SizeCode, ol.OrderedQty,
+SELECT  ol.OrderLineId, ol.OrderId, o.OrderCode, ol.ProductId, p.ProductCode, ol.ProductVariantId, pcol.Color, pv.SizeCode, ol.OrderedQty,
         ISNULL(cut.Qty, 0)       AS CutQty,
         ISNULL(ch.Qty, 0)        AS CutHandedToWarehouseQty,
         ISNULL(sfi.Qty, 0)       AS IssuedToSewingQty,
@@ -2573,6 +2619,7 @@ FROM dbo.OrderLine ol
 JOIN dbo.CustomerOrder o ON o.OrderId = ol.OrderId
 JOIN dbo.Product p ON p.ProductId = ol.ProductId
 JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
+JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
 OUTER APPLY (SELECT SUM(ActualQty) Qty FROM dbo.CuttingLayLine WHERE OrderLineId = ol.OrderLineId AND ProductComponentMaterialId IS NULL) cut
 OUTER APPLY (SELECT SUM(l.ConfirmedQty) Qty FROM dbo.CutHandoverLine l JOIN dbo.CutHandover h ON h.CutHandoverId = l.CutHandoverId
              WHERE l.OrderLineId = ol.OrderLineId AND l.ProductComponentMaterialId IS NULL AND h.Status = 'CONFIRMED') ch
@@ -2581,8 +2628,8 @@ OUTER APPLY (SELECT SUM(CAST(l.ConfirmedQty AS INT)) Qty FROM dbo.MaterialIssueL
 OUTER APPLY (SELECT SUM(FinishedQty) Qty FROM dbo.QcBatch WHERE OrderLineId = ol.OrderLineId) qc
 OUTER APPLY (SELECT SUM(l.ConfirmedQty) Qty FROM dbo.FgHandoverLine l JOIN dbo.FgHandover h ON h.FgHandoverId = l.FgHandoverId
              WHERE l.OrderLineId = ol.OrderLineId AND h.Status = 'CONFIRMED') fg
-OUTER APPLY (SELECT SUM(l.ReceivedQty) Qty FROM dbo.DispatchNoteLine l JOIN dbo.DispatchNote d ON d.DispatchNoteId = l.DispatchNoteId
-             WHERE l.OrderLineId = ol.OrderLineId AND d.Status IN ('DELIVERED','PARTIALLY_DELIVERED')) dl
+OUTER APPLY (SELECT SUM(l.IssueQty) Qty FROM dbo.DispatchNoteLine l JOIN dbo.DispatchNote d ON d.DispatchNoteId = l.DispatchNoteId
+             WHERE l.OrderLineId = ol.OrderLineId AND d.Status = 'DELIVERED') dl
 OUTER APPLY (SELECT SUM(CASE WHEN DefectType = 'REWORK' THEN Quantity ELSE 0 END) ReworkQty,
                     SUM(CASE WHEN DefectType = 'SCRAP'  THEN Quantity ELSE 0 END) ScrapQty
              FROM dbo.DefectRecord WHERE OrderLineId = ol.OrderLineId AND Status <> 'CANCELLED') df;
@@ -2819,12 +2866,12 @@ INSERT @seed (Code, FullName, RoleCode, TeamId, PayType) VALUES
  ('KETOAN',   N'Kế toán mẫu',         'ACCOUNTANT',       @vp,   'MONTHLY'),
  ('THUKHO',   N'Thủ kho mẫu',         'WAREHOUSE_KEEPER', @vp,   'MONTHLY'),
  ('TTCAT',    N'Tổ trưởng tổ cắt',    'TEAM_LEADER',      @cat,  'MONTHLY'),
- ('TTMAY',    N'Tổ trưởng tổ may 1',  'TEAM_LEADER',      @may1, 'MONTHLY'),
- ('TPMAY',    N'Tổ phó tổ may 1',     'TEAM_DEPUTY',      @may1, 'MONTHLY'),
- ('QAQC1',    N'QA/QC mẫu',           'QAQC',             @vp,   'DAILY'),
+ ('TTMAY',    N'Tổ trưởng tổ may một',  'TEAM_LEADER',      @may1, 'MONTHLY'),
+ ('TPMAY',    N'Tổ phó tổ may một',     'TEAM_DEPUTY',      @may1, 'MONTHLY'),
+ ('QAQC1',    N'Nhân viên kiểm hàng mẫu',           'QAQC',             @vp,   'DAILY'),
  ('CODIEN',   N'Cơ điện mẫu',         'ELECTRICIAN',      @vp,   'MONTHLY'),
- ('CNMAY1',   N'Công nhân may 1',     'WORKER',           @may1, 'PIECE_RATE'),
- ('CNCAT1',   N'Công nhân cắt 1',     'WORKER',           @cat,  'DAILY');
+ ('CNMAY1',   N'Công nhân may một',     'WORKER',           @may1, 'PIECE_RATE'),
+ ('CNCAT1',   N'Công nhân cắt một',     'WORKER',           @cat,  'DAILY');
 
 INSERT dbo.Employee (EmployeeCode, FullName, RoleId, TeamId, PayType, StartDate)
 SELECT s.Code, s.FullName, r.RoleId, s.TeamId, s.PayType, '2026-01-01'
@@ -2856,7 +2903,7 @@ INSERT @d VALUES
  ('Notification', N'Thông báo người dùng (giữ 90 ngày)'),
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
  ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết nào'), ('PieceRate', N'Đơn giá công đoạn'),
- ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductVariant', N'Biến thể mã hàng: màu × size'), ('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
+ ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductColor', N'Màu áo của mã hàng'), ('ProductVariant', N'Biến thể mã hàng: màu × size'),('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
  ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
@@ -2977,10 +3024,13 @@ DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'D
 
 -- Biến thể, thành phần và định mức (23/10). Phải có trước OrderLine (FK_OrderLine_Variant).
 -- Xanh – S chưa có trong đơn nào: biến thể khai báo trước, đơn sau mới dùng.
-INSERT dbo.ProductVariant (ProductId, Color, SizeCode) VALUES
- (@p1, N'Đen', 'S'), (@p1, N'Đen', 'M'), (@p1, N'Đen', 'L'),
- (@p1, N'Xanh', 'S'), (@p1, N'Xanh', 'M'), (@p1, N'Xanh', 'L'),
- (@p2, N'Be', 'M'), (@p2, N'Be', 'L');
+INSERT dbo.ProductColor (ProductId, Color) VALUES (@p1, N'Đen'), (@p1, N'Xanh'), (@p2, N'Be');
+INSERT dbo.ProductVariant (ProductId, ProductColorId, SizeCode)
+SELECT c.ProductId, c.ProductColorId, v.SizeCode
+FROM (VALUES (@p1, N'Đen', 'S'), (@p1, N'Đen', 'M'), (@p1, N'Đen', 'L'),
+             (@p1, N'Xanh', 'S'), (@p1, N'Xanh', 'M'), (@p1, N'Xanh', 'L'),
+             (@p2, N'Be', 'M'), (@p2, N'Be', 'L')) v (ProductId, Color, SizeCode)
+JOIN dbo.ProductColor c ON c.ProductId = v.ProductId AND c.Color = v.Color;
 
 INSERT dbo.ProductComponent (ProductId, ComponentName, ComponentType, PiecesPerGarment) VALUES
  (@p1, N'Thân trước', 'PANEL', 2), (@p1, N'Thân sau', 'PANEL', 1), (@p1, N'Tay áo', 'PANEL', 2),
@@ -2992,24 +3042,26 @@ INSERT dbo.ProductComponent (ProductId, ComponentName, ComponentType, PiecesPerG
 -- Đen – M: tay dài 60 cm, vải Đen)
 INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId, LengthCm, WidthCm)
 SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
-       CASE WHEN pv.Color = N'Xanh' AND pc.ComponentName = N'Tay áo' THEN @mVaiTrang
-            WHEN pv.Color = N'Xanh' THEN @mVaiXanh ELSE @mVai END,
+       CASE WHEN pcol.Color = N'Xanh' AND pc.ComponentName = N'Tay áo' THEN @mVaiTrang
+            WHEN pcol.Color = N'Xanh' THEN @mVaiXanh ELSE @mVai END,
        s.LengthCm, s.WidthCm
 FROM (VALUES (N'Thân trước', 'S', 66, 30), (N'Thân trước', 'M', 68, 31), (N'Thân trước', 'L', 70, 32),
              (N'Thân sau',   'S', 66, 52), (N'Thân sau',   'M', 68, 54), (N'Thân sau',   'L', 70, 56),
              (N'Tay áo',     'S', 58, 40), (N'Tay áo',     'M', 60, 41), (N'Tay áo',     'L', 62, 42))
      s (ComponentName, SizeCode, LengthCm, WidthCm)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = s.ComponentName
-JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1 AND pv.SizeCode = s.SizeCode;
+JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1 AND pv.SizeCode = s.SizeCode
+JOIN dbo.ProductColor pcol   ON pcol.ProductColorId = pv.ProductColorId;
 
 -- Phụ liệu áo: như nhau mọi size; chỉ theo màu áo (Đen / Xanh), khóa và nhãn không phân màu
 INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId)
 SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
-       CASE WHEN t.ByColor = 1 AND pv.Color = N'Xanh' THEN @mChiXanh ELSE t.MaterialId END
+       CASE WHEN t.ByColor = 1 AND pcol.Color = N'Xanh' THEN @mChiXanh ELSE t.MaterialId END
 FROM (VALUES (N'Khóa kéo', @mKhoa, 0), (N'Nhãn', @mNhan, 0), (N'Chỉ may', @mChi, 1))
      t (ComponentName, MaterialId, ByColor)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = t.ComponentName
-JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1;
+JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1
+JOIN dbo.ProductColor pcol   ON pcol.ProductColorId = pv.ProductColorId;
 
 -- Quần short
 INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId, LengthCm, WidthCm)
@@ -3025,10 +3077,12 @@ INSERT dbo.ProductMarker (ProductId, MarkerNo, SizeCode, LengthCm, WidthCm) VALU
  (@p1, 1, 'S', 70, 90), (@p1, 1, 'M', 72, 94), (@p1, 1, 'L', 74, 98),
  (@p1, 2, 'S', 60, 82), (@p1, 2, 'M', 62, 84), (@p1, 2, 'L', 64, 86),
  (@p2, 1, 'M', 48, 58), (@p2, 1, 'L', 50, 62);
-INSERT dbo.ProductMarkerFabric (ProductId, MarkerNo, Color, MaterialId) VALUES
- (@p1, 1, N'Đen', @mVai), (@p1, 2, N'Đen', @mVai),
- (@p1, 1, N'Xanh', @mVaiXanh), (@p1, 2, N'Xanh', @mVaiTrang),
- (@p2, 1, N'Be', @mVaiBe);
+INSERT dbo.ProductMarkerFabric (ProductId, MarkerNo, ProductColorId, MaterialId)
+SELECT c.ProductId, f.MarkerNo, c.ProductColorId, f.MaterialId
+FROM (VALUES (@p1, 1, N'Đen', @mVai), (@p1, 2, N'Đen', @mVai),
+             (@p1, 1, N'Xanh', @mVaiXanh), (@p1, 2, N'Xanh', @mVaiTrang),
+             (@p2, 1, N'Be', @mVaiBe)) f (ProductId, MarkerNo, Color, MaterialId)
+JOIN dbo.ProductColor c ON c.ProductId = f.ProductId AND c.Color = f.Color;
 
 INSERT dbo.Supplier (SupplierName, Phone, Email, Address, MaterialTypes, Note, Status) VALUES
  (N'Công ty Vải Sợi Thành Công (DEMO)', '0901000001', 'vai@thanhcong.demo', N'Quận Tân Phú, TP.HCM', N'Vải chính, vải lót', NULL, 'ACTIVE'),
@@ -3050,14 +3104,18 @@ SELECT v.OrderId, pv.ProductVariantId, pv.ProductId, v.Qty, v.Price
 FROM (VALUES (1, @o1, @p1, N'Đen',  'S', 300, 28000), (2, @o1, @p1, N'Đen',  'M', 600, 28000), (3, @o1, @p1, N'Đen', 'L', 500, 28000),
              (4, @o1, @p1, N'Xanh', 'M', 300, 28000), (5, @o1, @p1, N'Xanh', 'L', 200, 28000),
              (6, @o2, @p2, N'Be',   'M', 400, 18000), (7, @o2, @p2, N'Be',   'L', 400, 18000)) v(Seq, OrderId, ProductId, Color, SizeCode, Qty, Price)
-JOIN dbo.ProductVariant pv ON pv.ProductId = v.ProductId AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode
+JOIN dbo.ProductColor pcol ON pcol.ProductId = v.ProductId AND pcol.Color = v.Color
+JOIN dbo.ProductVariant pv ON pv.ProductColorId = pcol.ProductColorId AND pv.SizeCode = v.SizeCode
 ORDER BY v.Seq;
 DECLARE @lS INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
-                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'S'),
+                   JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
+                   WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'S'),
         @lM INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
-                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'M'),
+                   JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
+                   WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'M'),
         @lL INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
-                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'L');
+                   JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
+                   WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'L');
 
 INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount) VALUES
  (@o1, @mVai,  2000, 0, NULL), (@o1, @mChi, 200, 0, NULL),
@@ -3844,9 +3902,11 @@ DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'D
 DECLARE @sup1 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Công ty Vải Sợi Thành Công%'),
         @sup2 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Phụ liệu may Hoàng Gia%');
 DECLARE @lM INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
-                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'M'),
+                   JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
+                   WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'M'),
         @lL INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
-                   WHERE ol.OrderId = @o1 AND pv.Color = N'Đen' AND pv.SizeCode = 'L');
+                   JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
+                   WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'L');
 
 /* ---------- 1. Đơn mới DEMO-DH003: dòng đơn + NVL của đơn ---------- */
 INSERT dbo.CustomerOrder (OrderCode, CustomerId, ReceivedDate, DueDate, MaterialStatus, Status, Note)
@@ -3856,7 +3916,8 @@ DECLARE @o3 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO
 INSERT dbo.OrderLine (OrderId, ProductVariantId, ProductId, OrderedQty, CmtUnitPrice)
 SELECT @o3, pv.ProductVariantId, pv.ProductId, v.Qty, 28000
 FROM (VALUES (N'Đen', 'M', 120), (N'Đen', 'L', 100)) v(Color, SizeCode, Qty)
-JOIN dbo.ProductVariant pv ON pv.ProductId = @p1 AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+JOIN dbo.ProductColor pcol ON pcol.ProductId = @p1 AND pcol.Color = v.Color
+JOIN dbo.ProductVariant pv ON pv.ProductColorId = pcol.ProductColorId AND pv.SizeCode = v.SizeCode;
 DECLARE @l3M INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
                     WHERE ol.OrderId = @o3 AND pv.SizeCode = 'M'),
         @l3L INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
@@ -4125,7 +4186,8 @@ DECLARE @o4 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO
 INSERT dbo.OrderLine (OrderId, ProductVariantId, ProductId, OrderedQty, CmtUnitPrice)
 SELECT @o4, pv.ProductVariantId, pv.ProductId, v.Qty, 28000
 FROM (VALUES (N'Đen', 'S', 120), (N'Xanh', 'M', 150), (N'Xanh', 'L', 100)) v(Color, SizeCode, Qty)
-JOIN dbo.ProductVariant pv ON pv.ProductId = @p1 AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+JOIN dbo.ProductColor pcol ON pcol.ProductId = @p1 AND pcol.Color = v.Color
+JOIN dbo.ProductVariant pv ON pv.ProductColorId = pcol.ProductColorId AND pv.SizeCode = v.SizeCode;
 
 -- NVL của đơn: số cần ≈ định mức × số đặt (vải Xanh thân, vải Trắng tay, vải Đen, phụ liệu), công ty tự mua
 INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
@@ -4386,7 +4448,10 @@ INSERT dbo.Product (ProductCode, ProductName, Description, Status) VALUES
  ('DEMO-SM03', N'Sơ mi DEMO', N'Mã hàng mới, chưa khai định mức và công đoạn', 'ACTIVE'),
  ('DEMO-NGUNG04', N'Áo thun cũ DEMO', N'Đã ngừng sản xuất', 'DISCONTINUED');
 DECLARE @pSm INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-SM03');
-INSERT dbo.ProductVariant (ProductId, Color, SizeCode) VALUES (@pSm, N'Trắng', 'M'), (@pSm, N'Trắng', 'L');
+INSERT dbo.ProductColor (ProductId, Color) VALUES (@pSm, N'Trắng');
+INSERT dbo.ProductVariant (ProductId, ProductColorId, SizeCode)
+SELECT @pSm, ProductColorId, s.SizeCode FROM dbo.ProductColor CROSS JOIN (VALUES ('M'), ('L')) s (SizeCode)
+WHERE ProductId = @pSm AND Color = N'Trắng';
 
 INSERT dbo.GradeLevelCode (GradeCode, GradeName, Status) VALUES ('E', N'Bậc E – Thử việc (ngừng dùng)', 'INACTIVE');
 INSERT dbo.GradeLevel (GradeCode, MonthlyAmount, EffectiveDate) VALUES ('E', 0, '2026-01-01');
@@ -4451,7 +4516,8 @@ FROM (VALUES
  v(OrderCode, ProductCode, Color, SizeCode, Qty, Price)
 JOIN dbo.CustomerOrder o ON o.OrderCode = v.OrderCode
 JOIN dbo.Product p ON p.ProductCode = v.ProductCode
-JOIN dbo.ProductVariant pv ON pv.ProductId = p.ProductId AND pv.Color = v.Color AND pv.SizeCode = v.SizeCode;
+JOIN dbo.ProductColor pcol ON pcol.ProductId = p.ProductId AND pcol.Color = v.Color
+JOIN dbo.ProductVariant pv ON pv.ProductColorId = pcol.ProductColorId AND pv.SizeCode = v.SizeCode;
 
 -- DEMO-DH005 đã chia cho tổ may 2: màn Phân công báo mã hàng chưa khai công đoạn
 INSERT dbo.OrderLineTeam (OrderLineId, SewingTeamId)
@@ -4550,18 +4616,17 @@ INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty, ConfirmedQty)
 SELECT h.FgHandoverId, l.OrderLineId, l.OrderedQty, l.OrderedQty
 FROM #Ch c JOIN dbo.FgHandover h ON h.HandoverCode = 'TP-DEMO-' + c.N JOIN dbo.OrderLine l ON l.OrderId = c.OrderId;
 
--- Phiếu xuất đã xuất kho: DH009 đang giao; DH010 giao một phần (khách nhận thiếu 5 cái); DH011, DH012 giao đủ
+-- Phiếu xuất đã xuất kho: DH009 đang giao; DH010 đã giao đợt 1 (còn hàng chưa giao); DH011, DH012 giao đủ
 INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt, CustomerReceivedDate)
 SELECT 'XH-DEMO-' + c.N, c.OrderId, v.DeliveryDate, N'Kho khách hàng, KCN Tân Bình, TP.HCM', v.Note, v.Status, '2026-10-30 16:00:00', @thukho, '2026-10-31 08:00:00', v.ReceivedDate
 FROM #Ch c
 JOIN (VALUES ('009', CAST('2026-11-03' AS DATE), N'Đang trên đường giao', 'IN_DELIVERY', CAST(NULL AS DATE)),
-             ('010', '2026-10-31', N'Khách nhận thiếu 5 cái size M', 'PARTIALLY_DELIVERED', '2026-10-31'),
+             ('010', '2026-10-31', N'Giao đợt 1', 'DELIVERED', '2026-10-31'),
              ('011', '2026-10-31', NULL, 'DELIVERED', '2026-10-31'),
              ('012', '2026-10-31', NULL, 'DELIVERED', '2026-10-31')) v(N, DeliveryDate, Note, Status, ReceivedDate) ON v.N = c.N;
-INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty, ReceivedQty)
+INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, l.OrderLineId,
-       IIF(c.N = '010', IIF(pv.SizeCode = 'M', 60, 40), l.OrderedQty),
-       CASE c.N WHEN '009' THEN NULL WHEN '010' THEN IIF(pv.SizeCode = 'M', 55, 40) ELSE l.OrderedQty END
+       IIF(c.N = '010', IIF(pv.SizeCode = 'M', 60, 40), l.OrderedQty)
 FROM #Ch c JOIN dbo.DispatchNote d ON d.DispatchCode = 'XH-DEMO-' + c.N
 JOIN dbo.OrderLine l ON l.OrderId = c.OrderId JOIN dbo.ProductVariant pv ON pv.ProductVariantId = l.ProductVariantId;
 
@@ -4968,7 +5033,8 @@ DECLARE @p INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO
         @may1 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1'),
         @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY1');
 DECLARE @line INT = (SELECT l.OrderLineId FROM dbo.OrderLine l JOIN dbo.ProductVariant v ON v.ProductVariantId = l.ProductVariantId
-                     WHERE l.OrderId = @o3 AND l.ProductId = @p AND v.Color = N'Đen' AND v.SizeCode = 'L');
+                     JOIN dbo.ProductColor pcol ON pcol.ProductColorId = v.ProductColorId
+                     WHERE l.OrderId = @o3 AND l.ProductId = @p AND pcol.Color = N'Đen' AND v.SizeCode = 'L');
 
 IF @line IS NULL OR @w1 IS NULL
 BEGIN

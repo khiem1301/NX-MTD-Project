@@ -1,6 +1,8 @@
 import { Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { OrderLinePicker } from '@/components/common/OrderLinePicker';
+import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import type { OutputEntryState } from '../hooks/useOutputEntry';
@@ -8,7 +10,7 @@ import type { ShiftCode } from '../types';
 
 type OutputFilterBarProps = { entry: OutputEntryState; isManager: boolean };
 
-/** Bộ lọc của lưới sản lượng: ngày, ca, tổ (Quản đốc), đơn hàng và dòng đơn. Đổi bộ lọc thì bỏ các số đang sửa. */
+/** Bộ lọc của lưới sản lượng: ngày, ca, tổ (Quản đốc), đơn hàng, mã hàng, màu - size (DEV-ALL-68). Đổi bộ lọc thì ẩn cảnh báo của lần lưu trước. */
 export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
   const {
     workDate,
@@ -24,18 +26,18 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
     teams,
     lines,
     teamOptions,
-    lineOptions,
-    resetEdits,
+    resetWarnings,
   } = entry;
+  const disabledWorkDate = useWorkDateRange(orderId ?? undefined);
   return (
     <Space wrap>
       <AppDatePicker
         allowClear={false}
         value={workDate}
-        disabledDate={(d) => d.isAfter(dayjs(), 'day')}
+        disabledDate={disabledWorkDate}
         onChange={(v) => {
           setWorkDate(v ?? dayjs());
-          resetEdits();
+          resetWarnings();
         }}
       />
       <Select<ShiftCode>
@@ -44,7 +46,7 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
         options={SHIFT_OPTIONS}
         onChange={(v) => {
           setShift(v);
-          resetEdits();
+          resetWarnings();
         }}
       />
       {isManager && (
@@ -56,33 +58,37 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
           loading={teams.isLoading}
           onChange={(v) => {
             setTeamId(v);
-            resetEdits();
+            // Đơn, mã hàng, màu - size phải là phần đã chia cho tổ vừa chọn.
+            setOrderId(null);
+            setOrderLineId(null);
+            resetWarnings();
           }}
         />
       )}
       <OrderSelect
         value={orderId ?? undefined}
-        placeholder={PRODUCTION_TEXT.selectOrder}
+        sewingTeamId={isManager ? (teamId ?? undefined) : undefined}
+        disabled={isManager && teamId === null}
+        placeholder={
+          isManager && teamId === null
+            ? PRODUCTION_TEXT.selectTeamFirst
+            : PRODUCTION_TEXT.selectOrder
+        }
         onChange={(v) => {
           setOrderId(v ?? null);
           setOrderLineId(null);
-          resetEdits();
+          resetWarnings();
         }}
       />
-      <Select<number>
-        style={{ width: 300 }}
-        showSearch
-        optionFilterProp="label"
-        placeholder={
-          orderId === null ? PRODUCTION_TEXT.selectFirst : PRODUCTION_TEXT.selectOrderLine
-        }
-        disabled={orderId === null}
-        loading={lines.isLoading}
+      <OrderLinePicker
+        lines={lines.data ?? []}
         value={orderLineId ?? undefined}
-        options={lineOptions}
+        disabled={orderId === null}
+        disabledPlaceholder={PRODUCTION_TEXT.selectFirst}
+        loading={lines.isLoading}
         onChange={(v) => {
-          setOrderLineId(v);
-          resetEdits();
+          setOrderLineId(v ?? null);
+          resetWarnings();
         }}
       />
     </Space>

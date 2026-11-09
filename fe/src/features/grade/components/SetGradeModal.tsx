@@ -1,3 +1,4 @@
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Alert, Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
@@ -103,7 +104,7 @@ export function SetGradeModal({ open, onClose }: { open: boolean; onClose: () =>
           label={GR_LABELS.setReason}
           rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
         >
-          <Input.TextArea rows={3} maxLength={500} showCount />
+          <Input.TextArea rows={3} maxLength={REASON_MAX_LENGTH} showCount />
         </Form.Item>
       </Form>
     </Modal>

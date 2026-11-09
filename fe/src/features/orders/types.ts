@@ -41,6 +41,8 @@ export type ProductListItem = {
 export type ProductDetail = ProductListItem & {
   description: string | null;
   lastSizeRatio: string | null;
+  /** Màu đã có biến thể (do đơn hàng tạo). */
+  colors: string[];
   history: AuditEntry[];
 };
 export type SaveProductPayload = {
@@ -159,6 +161,8 @@ export type OrderOverviewLine = {
   color: string;
   sizeCode: string;
   orderedQty: number;
+  /** Số đã giao (tổng số xuất của phiếu xuất đã giao). */
+  deliveredQty?: number;
 };
 
 export type OrderLine = OrderOverviewLine & { cmtUnitPrice: number };

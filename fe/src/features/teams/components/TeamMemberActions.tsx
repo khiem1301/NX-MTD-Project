@@ -5,7 +5,8 @@ import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { useAppoint, useDismiss } from '../hooks/useTeams';
-import { isLeadership } from '../teamRoles';
+import { isLeadership } from '../utils/teamRoles';
+
 import type { AppointPosition, TeamDetail, TeamMember } from '../types';
 
 const POSITION_ROLE: Record<AppointPosition, string> = {

@@ -38,7 +38,7 @@ public sealed class SaveCuttingLayDtoValidator : AbstractValidator<SaveCuttingLa
             line.RuleFor(l => l.OrderLineId).GreaterThan(0).WithMessage(WarehouseMessages.LayOrderLineRequired);
             line.RuleFor(l => l.RatioValue).InclusiveBetween(1, short.MaxValue).WithMessage(WarehouseMessages.LayRatioRange);
             line.RuleFor(l => l.ActualQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-            line.RuleFor(l => l.AdjustReason).MaxTrimmedLength(500, "Lý do sửa số");
+            line.RuleFor(l => l.AdjustReason).MaxTrimmedLength(TextLimits.Reason, "Lý do sửa số");
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => (x.OrderLineId, x.ProductComponentMaterialId)).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
@@ -66,7 +66,7 @@ public sealed class ConfirmCutHandoverDtoValidator : AbstractValidator<ConfirmCu
         RuleForEach(x => x.Lines).ChildRules(line =>
         {
             line.RuleFor(l => l.ConfirmedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
-            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(500);
+            line.RuleFor(l => l.DiscrepancyReason).MaximumLength(TextLimits.Reason);
         });
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.CutHandoverLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);

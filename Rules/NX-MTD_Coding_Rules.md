@@ -424,6 +424,7 @@ nxmtd-web/
 - **Feature chia theo nghiệp vụ, không theo role** (giống Services ở BE). Role chỉ quyết định route, menu và nút được hiển thị.
 - Chỉ một feature dùng → đặt trong feature đó. ≥ 2 feature dùng → chuyển lên `components/`, `hooks/`, `utils/`, `types/`.
 - Bên ngoài chỉ import feature qua `index.ts`: `import { MaterialIssueListPage } from '@/features/warehouse'`. Cấm import sâu vào file bên trong feature khác; feature không import chéo feature khác.
+  - **Ngoại lệ (lazy load, mục 4.10):** `app/` được import trực tiếp `features/<x>/menu.ts` và `features/<x>/routes.tsx`. `index.ts` re-export mọi page nên import nó lúc khởi động sẽ kéo cả feature vào bundle chính. Vì vậy hai file này chỉ chứa dữ liệu (mục menu, đường dẫn, quyền, `() => import('./pages/XPage')`), không import tĩnh page hay component nặng, và `index.ts` không export lại chúng.
 - `services/` chỉ chứa cấu hình HTTP và hạ tầng dùng chung. Hàm gọi từng endpoint nằm ở `features/<x>/api/`.
 - `store/` **không** chứa dữ liệu lấy từ API (để TanStack Query quản lý).
 - Đường dẫn API (có tiền tố role khớp BE) khai báo tập trung ở `constants/apiEndpoints.ts`.
@@ -713,7 +714,7 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 
 ### 4.10 Routing
 
-- Khai báo tập trung ở `app/router.tsx`, lazy load theo page.
+- Mỗi feature khai báo route của mình ở `features/<x>/routes.tsx` (dùng `toPageRoutes` trong `components/guards/pageRoutes.tsx`, lazy load theo page); `app/router.tsx` chỉ gộp các mảng route lại. Đường dẫn URL khai báo tập trung ở `constants/routes.ts`.
 - Route bảo vệ bằng `<ProtectedRoute roles={[...]}>`; URL kebab-case: `/warehouse/material-issues`.
 
 ### 4.11 Bảo mật
@@ -810,7 +811,7 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 **Frontend**
 - [ ] `npm run typecheck`, `lint`, `test`, `build` đều pass
 - [ ] Không có `any`, `@ts-ignore`, `console.log`
-- [ ] Code đặt đúng feature, chỉ import feature khác qua `index.ts`, dùng alias `@/`
+- [ ] Code đặt đúng feature, chỉ import feature khác qua `index.ts` (riêng `app/` import `menu.ts` / `routes.tsx` của feature, mục 4.3), dùng alias `@/`
 - [ ] Gọi API qua hook → `features/<x>/api` → `apiClient`; invalidate query sau mutation
 - [ ] Có xử lý loading / empty / error
 - [ ] Hành động không hoàn tác được có xác nhận; chức năng ẩn theo role

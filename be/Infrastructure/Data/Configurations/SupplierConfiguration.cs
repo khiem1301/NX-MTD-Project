@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -21,7 +22,7 @@ public sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
             .IsUnicode(false);
         entity.Property(e => e.MaterialTypes).HasMaxLength(200);
         entity.Property(e => e.Note).HasMaxLength(500);
-        entity.Property(e => e.DiscontinueReason).HasMaxLength(500);
+        entity.Property(e => e.DiscontinueReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Phone)
             .HasMaxLength(15)
             .IsUnicode(false);

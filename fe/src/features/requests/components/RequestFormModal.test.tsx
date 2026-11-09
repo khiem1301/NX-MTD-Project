@@ -7,6 +7,10 @@ jest.mock('../api/requestApi', () => ({
   requestApi: { create: jest.fn(), update: jest.fn(), types: jest.fn() },
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));
+jest.mock('@/services/env', () => ({ env: { apiBaseUrl: 'http://localhost' } }));
+jest.mock('@/services/lookupApi', () => ({
+  lookupApi: { materials: jest.fn().mockResolvedValue([]) },
+}));
 
 const TYPES = [
   'SpareParts',

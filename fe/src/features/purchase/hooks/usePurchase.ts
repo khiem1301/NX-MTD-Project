@@ -44,7 +44,7 @@ export const useSaveSupplier = (id: number | null) =>
 
 export const useToggleSupplier = () =>
   useApiMutation(
-    ({ id, reason }: { id: number; reason?: string }) =>
+    ({ id, reason }: { id: number; reason?: string | null }) =>
       reason === undefined
         ? purchaseApi.reactivateSupplier(id)
         : purchaseApi.discontinueSupplier(id, reason),

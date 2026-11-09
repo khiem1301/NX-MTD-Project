@@ -1,0 +1,899 @@
+using FluentAssertions;
+using Microsoft.Extensions.Options;
+using NSubstitute;
+using NX_MTD.Application.Services;
+using NX_MTD.Application.Common;
+using NX_MTD.Application.DTOs;
+using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
+using NX_MTD.Domain.Constants;
+using NX_MTD.Domain.Entities;
+
+namespace Application.Tests;
+
+public class ProductServiceTests
+{
+    private readonly IProductRepository _products = Substitute.For<IProductRepository>();
+    private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
+    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly IClock _clock = Substitute.For<IClock>();
+
+    private readonly IFileStorage _storage = Substitute.For<IFileStorage>();
+    private readonly List<ProductImage> _images = [];
+    private readonly List<ProductVariant> _variants = [];
+    private readonly List<ProductMarkerFabric> _fabrics = [];
+
+    public ProductServiceTests()
+    {
+        Setup(_images);
+        Setup(_variants);
+        Setup(_fabrics);
+    }
+
+    private void Setup<T>(List<T> backing) where T : class
+    {
+        var repo = Substitute.For<IGenericRepository<T>>();
+        repo.Query().Returns(_ => backing.AsTestAsyncQueryable());
+        repo.AddAsync(Arg.Do<T>(backing.Add)).Returns(Task.CompletedTask);
+        repo.AddRangeAsync(Arg.Do<IEnumerable<T>>(es => backing.AddRange(es))).Returns(Task.CompletedTask);
+        repo.When(r => r.RemoveRange(Arg.Any<IEnumerable<T>>()))
+            .Do(c => { foreach (var e in c.Arg<IEnumerable<T>>().ToList()) backing.Remove(e); });
+        _uow.Repository<T>().Returns(repo);
+    }
+
+
+    private const string KeyA = "PRODUCT/2026/11/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.jpg";
+    private const string KeyB = "PRODUCT/2026/11/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.png";
+    private const string KeyC = "PRODUCT/2026/11/cccccccccccccccccccccccccccccccc.webp";
+
+    private ProductImage Seed(string key, byte sort)
+    {
+        var image = new ProductImage { ProductImageId = sort, ProductId = 1, ImageKey = key, SortOrder = sort };
+        _images.Add(image);
+        return image;
+    }
+
+    private Product ExistingProduct()
+    {
+        var product = new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active };
+        _products.GetByIdAsync(1).Returns(product);
+        return product;
+    }
+
+    private ProductService Create() => new(_products, _audit, _uow, _clock, _storage, Options.Create(new AttachmentOptions()));
+
+    private static readonly byte[] Png = { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0 };
+
+    [Fact]
+    public async Task UploadSampleImage_Png_ReturnsStorageKey()
+    {
+        _storage.SaveAsync(Arg.Any<byte[]>(), "PRODUCT", ".png", Arg.Any<CancellationToken>()).Returns("PRODUCT/2026/10/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.png");
+
+        var result = await Create().UploadSampleImageAsync(new FileUpload(Png, "a.png"), default);
+
+        result.IsSuccess.Should().BeTrue();
+        SampleImageKey.IsValid(result.Data).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UploadSampleImage_NotAnImage_Fails()
+    {
+        var result = await Create().UploadSampleImageAsync(new FileUpload(new byte[] { 1, 2, 3, 4 }, "a.png"), default);
+
+        result.IsSuccess.Should().BeFalse();
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
+    }
+
+    [Fact]
+    public async Task OpenSampleImage_InvalidKey_NotFound()
+    {
+        var result = await Create().OpenSampleImageAsync("../secret.png", default);
+
+        result.IsSuccess.Should().BeFalse();
+        await _storage.DidNotReceiveWithAnyArgs().OpenReadAsync(default!, default);
+    }
+
+    private static SaveProductDto Dto(string code = "AO-01") => new(code, "Áo thun", null, null);
+
+    [Fact]
+    public async Task Create_DuplicateCode_Fails()
+    {
+        _products.CodeExistsAsync("AO-01", null, default).ReturnsForAnyArgs(true);
+
+        var result = await Create().CreateAsync(Dto(), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductCodeDuplicate);
+        await _products.DidNotReceiveWithAnyArgs().AddAsync(default!);
+    }
+
+    [Fact]
+    public async Task Create_NormalizesCodeUpper()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        var result = await Create().CreateAsync(Dto(" ao-01 "), default);
+
+        result.IsSuccess.Should().BeTrue();
+        saved!.ProductCode.Should().Be("AO-01");
+        saved.Status.Should().Be(RecordStatus.Active);
+    }
+
+    [Fact]
+    public async Task Create_SavesExtraImagesInTheGivenOrder()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        var result = await Create().CreateAsync(Dto() with { ExtraImages = [" " + KeyB, KeyA] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        saved!.ProductImages.Select(i => (i.ImageKey, i.SortOrder)).Should().Equal((KeyB, (byte)1), (KeyA, (byte)2));
+    }
+
+    [Fact]
+    public async Task Create_WithoutExtraImages_SavesNone()
+    {
+        Product? saved = null;
+        _products.When(x => x.AddAsync(Arg.Any<Product>())).Do(c => saved = c.Arg<Product>());
+
+        await Create().CreateAsync(Dto(), default);
+
+        saved!.ProductImages.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Update_ReplacesExtraImagesAndKeepsTheNewOrder()
+    {
+        ExistingProduct();
+        Seed(KeyA, 1);
+        Seed(KeyB, 2);
+
+        var result = await Create().UpdateAsync(1, Dto() with { ExtraImages = [KeyB, KeyC] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _images.OrderBy(i => i.SortOrder).Select(i => (i.ImageKey, i.SortOrder, i.ProductId))
+            .Should().Equal((KeyB, (byte)1, 1), (KeyC, (byte)2, 1));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task Update_WithoutTheExtraImagesList_LeavesThemAlone()
+    {
+        ExistingProduct();
+        var a = Seed(KeyA, 1);
+
+        var result = await Create().UpdateAsync(1, Dto(), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _images.Should().ContainSingle().Which.Should().BeSameAs(a);
+    }
+
+    [Fact]
+    public async Task Update_WithTheSameExtraImages_DoesNotRewriteThem()
+    {
+        ExistingProduct();
+        var a = Seed(KeyA, 1);
+        var b = Seed(KeyB, 2);
+
+        await Create().UpdateAsync(1, Dto() with { ExtraImages = [KeyA, KeyB] }, default);
+
+        _images.Should().Equal(a, b);
+    }
+
+    [Fact]
+    public async Task Update_WithAnEmptyList_ClearsTheExtraImages()
+    {
+        ExistingProduct();
+        Seed(KeyA, 1);
+
+        await Create().UpdateAsync(1, Dto() with { ExtraImages = [] }, default);
+
+        _images.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Update_ChangeCodeWhenUsed_Fails()
+    {
+        _products.GetByIdAsync(1).Returns(new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active });
+        _products.IsUsedAsync(1, default).ReturnsForAnyArgs(true);
+
+        var result = await Create().UpdateAsync(1, Dto("AO-02"), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductCodeLocked);
+    }
+
+    [Fact]
+    public async Task Update_RenameWhenUsed_SucceedsAndAudits()
+    {
+        var product = new Product { ProductId = 1, ProductCode = "AO-01", ProductName = "x", Status = RecordStatus.Active };
+        _products.GetByIdAsync(1).Returns(product);
+        _products.IsUsedAsync(1, default).ReturnsForAnyArgs(true);
+
+        var result = await Create().UpdateAsync(1, Dto("AO-01") with { ProductName = "Tên mới" }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        product.ProductName.Should().Be("Tên mới");
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task Discontinue_AlreadyDiscontinued_Fails()
+    {
+        _products.GetByIdAsync(1).Returns(new Product { ProductId = 1, Status = RecordStatus.Discontinued });
+
+        var result = await Create().DiscontinueAsync(1, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductInvalidStatus);
+    }
+}
+
+public class CustomerOrderServiceTests
+{
+    private static readonly byte[] RowVer = { 1 };
+
+    private readonly ICustomerOrderRepository _orders = Substitute.For<ICustomerOrderRepository>();
+    private readonly IProductRepository _products = Substitute.For<IProductRepository>();
+    private readonly IGenericRepository<OrderLine> _lines = Substitute.For<IGenericRepository<OrderLine>>();
+    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
+    private readonly INotificationService _notifier = Substitute.For<INotificationService>();
+    private readonly List<ProductVariant> _variants = [];
+    private readonly List<ProductColor> _newColors = [];
+    private readonly List<DispatchNote> _notes = [];
+    private readonly List<OrderLine> _orderLines = [];
+    private readonly List<WorkOrder> _workOrders = [];
+    private readonly List<KpiTarget> _kpis = [];
+    private readonly List<CutHandoverLine> _handoverLines = [];
+
+    public CustomerOrderServiceTests()
+    {
+        var variantRepo = Substitute.For<IGenericRepository<ProductVariant>>();
+        variantRepo.Query().Returns(_ => _variants.AsTestAsyncQueryable());
+        variantRepo.AddAsync(Arg.Do<ProductVariant>(v => _variants.Add(v))).Returns(Task.CompletedTask);
+        _uow.Repository<ProductVariant>().Returns(variantRepo);
+        // Màu áo: màu của các biến thể đang có, cộng màu service vừa tạo.
+        var colorRepo = Substitute.For<IGenericRepository<ProductColor>>();
+        colorRepo.Query().Returns(_ => _variants.Select(v => v.ProductColor).Concat(_newColors)
+            .DistinctBy(c => (c.ProductId, c.Color.ToUpperInvariant())).AsTestAsyncQueryable());
+        colorRepo.AddAsync(Arg.Do<ProductColor>(_newColors.Add)).Returns(Task.CompletedTask);
+        _uow.Repository<ProductColor>().Returns(colorRepo);
+        var noteRepo = Substitute.For<IGenericRepository<DispatchNote>>();
+        noteRepo.Query().Returns(_ => _notes.AsTestAsyncQueryable());
+        _uow.Repository<DispatchNote>().Returns(noteRepo);
+        var noteLineRepo = Substitute.For<IGenericRepository<DispatchNoteLine>>();
+        noteLineRepo.Query().Returns(_ => _notes.SelectMany(n => n.DispatchNoteLines).AsTestAsyncQueryable());
+        _uow.Repository<DispatchNoteLine>().Returns(noteLineRepo);
+        _lines.Query().Returns(_ => _orderLines.AsTestAsyncQueryable());
+        var woRepo = Substitute.For<IGenericRepository<WorkOrder>>();
+        woRepo.Query().Returns(_ => _workOrders.AsTestAsyncQueryable());
+        _uow.Repository<WorkOrder>().Returns(woRepo);
+        var kpiRepo = Substitute.For<IGenericRepository<KpiTarget>>();
+        kpiRepo.Query().Returns(_ => _kpis.AsTestAsyncQueryable());
+        _uow.Repository<KpiTarget>().Returns(kpiRepo);
+        var handoverLineRepo = Substitute.For<IGenericRepository<CutHandoverLine>>();
+        handoverLineRepo.Query().Returns(_ => _handoverLines.AsTestAsyncQueryable());
+        _uow.Repository<CutHandoverLine>().Returns(handoverLineRepo);
+        var returnRepo = Substitute.For<IGenericRepository<MaterialReturn>>();
+        returnRepo.Query().Returns(_ => new List<MaterialReturn>().AsTestAsyncQueryable());
+        _uow.Repository<MaterialReturn>().Returns(returnRepo);
+        var layLineRepo = Substitute.For<IGenericRepository<CuttingLayLine>>();
+        layLineRepo.Query().Returns(_ => new List<CuttingLayLine>().AsTestAsyncQueryable());
+        _uow.Repository<CuttingLayLine>().Returns(layLineRepo);
+        _clock.Now.Returns(new DateTime(2026, 10, 23, 8, 0, 0));
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Active);
+        _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(Array.Empty<string>());
+    }
+
+    private CustomerOrderService Create() => new(_orders, _products, _lines, _uow, _clock, _audit, _notifier);
+
+    private static OrderLineInput L(int? id, string color, string size, int qty = 10, int product = 1, decimal price = 12500) =>
+        new(id, product, color, size, qty, price);
+
+    private static UpdateOrderDto Update(params OrderLineInput[] lines) =>
+        new("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null, lines, RowVer);
+
+    private static CustomerOrder Existing(string status, params OrderLine[] lines)
+    {
+        var order = new CustomerOrder
+        {
+            OrderId = 5, OrderCode = "DH2610-001", CustomerId = 1, ReceivedDate = new DateOnly(2026, 10, 1),
+            DueDate = new DateOnly(2026, 11, 1), Status = status,
+        };
+        foreach (var l in lines) order.OrderLines.Add(l);
+        return order;
+    }
+
+    /// <summary>Dòng đơn đã có sẵn biến thể (màu × size) khai báo cho mã hàng 1.</summary>
+    private OrderLine Line(int id, string color, string size, int qty = 10)
+    {
+        var variant = TestVariant.Make(1, "AO-01", color, size);
+        _variants.Add(variant);
+        return new() { OrderLineId = id, OrderId = 5, ProductId = 1, ProductVariantId = variant.ProductVariantId, ProductVariant = variant, OrderedQty = qty, CmtUnitPrice = 12500 };
+    }
+
+    [Fact]
+    public async Task Create_DiscontinuedCustomer_FailsWithCode()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Discontinued);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CustomerNotActive);
+    }
+
+    [Fact]
+    public async Task Create_UnknownCustomer_FailsNotFound()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs((string?)null);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task Update_KeepingTheSameDiscontinuedCustomer_IsAllowed_ButSwitchingToOneIsNot()
+    {
+        _orders.GetCustomerStatusAsync(default, default).ReturnsForAnyArgs(RecordStatus.Discontinued);
+        var order = Existing(OrderStatuses.New, Line(1, "Đỏ", "M"));
+        _orders.GetWithLinesAsync(5, default).Returns(order);
+
+        var same = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M")), default);
+        same.ErrorCode.Should().NotBe(ErrorCodes.CustomerNotActive);
+
+        var other = Update(L(1, "Đỏ", "M")) with { CustomerId = 2 };
+        var switched = await Create().UpdateAsync(5, other, default);
+        switched.ErrorCode.Should().Be(ErrorCodes.CustomerNotActive);
+    }
+
+    [Fact]
+    public async Task Create_InactiveProduct_FailsWithCode()
+    {
+        _products.FindInactiveCodesAsync(default!, default).ReturnsForAnyArgs(new[] { "AO-01" });
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductNotActive);
+        result.Message.Should().Contain("AO-01");
+    }
+
+    [Fact]
+    public async Task Create_UsesTransactionAuditsAndNotifiesManager()
+    {
+        var dto = new CreateOrderDto("dh2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "m") });
+        CustomerOrder? saved = null;
+        _orders.When(x => x.AddAsync(Arg.Any<CustomerOrder>())).Do(c => saved = c.Arg<CustomerOrder>());
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeTrue();
+        saved!.OrderCode.Should().Be("DH2610-001");
+        saved.Status.Should().Be(OrderStatuses.New);
+        saved.OrderLines.Single().ProductVariant.SizeCode.Should().Be("M");
+        await _uow.Received(1).BeginTransactionAsync();
+        await _uow.Received(2).SaveChangesAsync();
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Insert));
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.LinkUrl == $"/manager/orders/{saved.OrderId}?tab=materials"), Arg.Any<CancellationToken>());
+        await _uow.Received(1).CommitTransactionAsync();
+    }
+
+    [Fact]
+    public async Task GetOverview_OrderExists_HasNoPriceAndNoHistory()
+    {
+        _orders.GetDetailAsync(5, default).Returns(new OrderDetailDto
+        {
+            OrderId = 5, OrderCode = "DH2610-001", Status = "New", MaterialStatus = "Awaiting",
+            Lines = new[] { new OrderLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 12500, 4) },
+        });
+
+        var result = await Create().GetOverviewAsync(5, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Lines.Single().Should().Be(new OrderOverviewLineDto(7, 1, "AO-01", "Áo", "Đỏ", "M", 10, 4));
+        typeof(OrderOverviewDto).GetProperties().Select(p => p.Name).Should().NotContain(["RowVer", "History"]);
+        await _audit.DidNotReceiveWithAnyArgs().GetHistoryAsync(default!, default, default);
+    }
+
+    [Fact]
+    public async Task GetOverview_OrderMissing_ReturnsNotFound()
+    {
+        var result = await Create().GetOverviewAsync(5, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task ListOverview_HasOrders_KeepsPagingAndDropsAmount()
+    {
+        var row = new OrderListItemDto(5, "DH2610-001", "Công ty A", new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1),
+            "New", "Awaiting", false, 10, 125000, "AO-01");
+        _orders.ListAsync(Arg.Any<OrderQuery>(), null, default)
+            .Returns(new PagedResult<OrderListItemDto>(new[] { row }, 2, 20, 21));
+
+        var result = await Create().ListOverviewAsync(new OrderQuery(), default);
+
+        result.Data!.TotalItems.Should().Be(21);
+        result.Data.Page.Should().Be(2);
+        result.Data.Items.Single().TotalQty.Should().Be(10);
+        typeof(OrderOverviewListItemDto).GetProperties().Select(p => p.Name).Should().NotContain("TotalAmount");
+    }
+
+    [Fact]
+    public async Task ListOverview_UnknownStatus_ReturnsValidationFailure()
+    {
+        var result = await Create().ListOverviewAsync(new OrderQuery { Status = "Nope" }, default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Kind.Should().Be(ResultKind.Validation);
+    }
+
+    [Fact]
+    public async Task Create_NewColorAndSize_CreatesTheVariantAndPointsTheLineAtIt()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "m"), L(null, "Đỏ", "L") });
+        CustomerOrder? saved = null;
+        _orders.When(x => x.AddAsync(Arg.Any<CustomerOrder>())).Do(c => saved = c.Arg<CustomerOrder>());
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _variants.Should().HaveCount(2).And.OnlyContain(v => v.ProductId == 1 && v.Status == RecordStatus.Active);
+        saved!.OrderLines.Select(l => l.ProductVariant.SizeCode).Should().BeEquivalentTo("M", "L");
+        saved.OrderLines.Should().OnlyContain(l => l.ProductId == l.ProductVariant.ProductId);   // FK ghép (ProductVariantId, ProductId)
+    }
+
+    [Fact]
+    public async Task Create_NewColorInTwoSizes_CreatesOneProductColorSharedByBothVariants()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, " Đỏ ", "M"), L(null, "đỏ", "L") });
+
+        await Create().CreateAsync(dto, default);
+
+        _newColors.Should().ContainSingle().Which.Should().Match<ProductColor>(c => c.Color == "Đỏ" && c.ProductId == 1);
+        _variants.Should().OnlyContain(v => ReferenceEquals(v.ProductColor, _newColors[0]));
+    }
+
+    [Fact]
+    public async Task Create_ColorAlreadyOnProduct_NewSizeReusesTheColor()
+    {
+        var existing = TestVariant.Make(1, "AO-01", "Đỏ", "M");
+        _variants.Add(existing);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "ĐỎ", "XL") });
+
+        await Create().CreateAsync(dto, default);
+
+        _newColors.Should().BeEmpty();
+        _variants.Last().ProductColor.Should().BeSameAs(existing.ProductColor);
+    }
+
+    [Fact]
+    public async Task Create_ExistingVariantIgnoringCase_IsReusedNotDuplicated()
+    {
+        var existing = TestVariant.Make(1, "AO-01", "Đỏ", "M");
+        _variants.Add(existing);
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "đỏ", "m") });
+        CustomerOrder? saved = null;
+        _orders.When(x => x.AddAsync(Arg.Any<CustomerOrder>())).Do(c => saved = c.Arg<CustomerOrder>());
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _variants.Should().ContainSingle();
+        saved!.OrderLines.Single().ProductVariant.Should().BeSameAs(existing);
+    }
+
+    [Fact]
+    public async Task Create_DiscontinuedVariant_IsRejected()
+    {
+        _variants.Add(new ProductVariant { ProductVariantId = 5, ProductId = 1, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M", Status = RecordStatus.Discontinued });
+        var dto = new CreateOrderDto("DH2610-001", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null,
+            new[] { L(null, "Đỏ", "M") });
+
+        var result = await Create().CreateAsync(dto, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ProductNotActive);
+    }
+
+    [Fact]
+    public async Task SuggestCode_IncrementsMonthly()
+    {
+        _orders.GetMaxCodeAsync("DH2610-", default).ReturnsForAnyArgs("DH2610-009");
+        (await Create().SuggestCodeAsync(default)).Data.Should().Be("DH2610-010");
+
+        _orders.GetMaxCodeAsync("DH2610-", default).ReturnsForAnyArgs((string?)null);
+        (await Create().SuggestCodeAsync(default)).Data.Should().Be("DH2610-001");
+    }
+
+    [Fact]
+    public async Task Update_New_RemovesMissingLine()
+    {
+        var keep = Line(1, "Đỏ", "M");
+        var drop = Line(2, "Đỏ", "L");
+        var order = Existing(OrderStatuses.New, keep, drop);
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M", 20)), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.OrderLines.Should().ContainSingle().Which.OrderedQty.Should().Be(20);
+        _lines.Received(1).Remove(drop);
+    }
+
+    [Fact]
+    public async Task Update_New_ReAddSameKey_ReusesLineInsteadOfDeleting()
+    {
+        var old = Line(1, "Đỏ", "M");
+        var order = Existing(OrderStatuses.New, old);
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(null, "đỏ", "m", 99)), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.OrderLines.Should().ContainSingle().Which.Should().BeSameAs(old);
+        old.OrderedQty.Should().Be(99);
+        _lines.DidNotReceiveWithAnyArgs().Remove(default!);
+    }
+
+    [Fact]
+    public async Task Update_InProduction_RemoveLine_Fails()
+    {
+        var order = Existing(OrderStatuses.InProduction, Line(1, "Đỏ", "M"), Line(2, "Đỏ", "L"));
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M")), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderLineRemoveNotAllowed);
+    }
+
+    [Fact]
+    public async Task Update_InProduction_ChangeColor_Fails()
+    {
+        var order = Existing(OrderStatuses.InProduction, Line(1, "Đỏ", "M"));
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Xanh", "M")), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderLineKeyLocked);
+    }
+
+    [Fact]
+    public async Task Update_InProduction_ChangeQtyAndAddLine_Succeeds()
+    {
+        var order = Existing(OrderStatuses.InProduction, Line(1, "Đỏ", "M"));
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M", 50), L(null, "Đỏ", "XL")), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.OrderLines.Should().HaveCount(2);
+        order.OrderLines.First().OrderedQty.Should().Be(50);
+    }
+
+    [Fact]
+    public async Task Update_InProduction_ChangeCustomer_Fails()
+    {
+        var order = Existing(OrderStatuses.InProduction, Line(1, "Đỏ", "M"));
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(order);
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M")) with { CustomerId = 2 }, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderNotEditable);
+        result.Message.Should().Be(Messages.OrderHeaderLocked);
+    }
+
+    [Fact]
+    public async Task Update_Delivered_Fails()
+    {
+        _orders.GetWithLinesAsync(5, default).ReturnsForAnyArgs(Existing(OrderStatuses.Delivered, Line(1, "Đỏ", "M")));
+
+        var result = await Create().UpdateAsync(5, Update(L(1, "Đỏ", "M")), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderNotEditable);
+    }
+
+    [Fact]
+    public async Task Cancel_InProduction_Fails()
+    {
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
+
+        var result = await Create().CancelAsync(5, new CancelOrderDto(null, RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderInvalidStatus);
+    }
+
+    [Theory]
+    [InlineData(OrderMaterialStatuses.Partial)]
+    [InlineData(OrderMaterialStatuses.Complete)]
+    public async Task StartProduction_NewWithMaterials_MovesToInProduction(string materialStatus)
+    {
+        var order = Existing(OrderStatuses.New);
+        order.MaterialStatus = materialStatus;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.Status.Should().Be(OrderStatuses.InProduction);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(CustomerOrder) && e.Action == AuditActions.Update));
+    }
+
+    [Fact]
+    public async Task StartProduction_WhileAwaitingMaterials_IsRejected()
+    {
+        var order = Existing(OrderStatuses.New);
+        order.MaterialStatus = OrderMaterialStatuses.Awaiting;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderMaterialsAwaiting);
+        order.Status.Should().Be(OrderStatuses.New);
+    }
+
+    [Theory]
+    [InlineData(OrderStatuses.InProduction)]
+    [InlineData(OrderStatuses.Stopped)]
+    [InlineData(OrderStatuses.Cancelled)]
+    public async Task StartProduction_WhenNotNew_IsRejected(string status)
+    {
+        var order = Existing(status);
+        order.MaterialStatus = OrderMaterialStatuses.Complete;
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StartProductionAsync(5, new StartOrderProductionDto(RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderInvalidStatus);
+    }
+
+    [Fact]
+    public async Task Stop_New_Fails_AndInProduction_SetsReason()
+    {
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.New));
+        (await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default)).ErrorCode
+            .Should().Be(ErrorCodes.OrderInvalidStatus);
+
+        var running = Existing(OrderStatuses.InProduction);
+        _orders.GetByIdAsync(5).Returns(running);
+        var result = await Create().StopAsync(5, new StopOrderDto(" khách hủy ", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        running.Status.Should().Be(OrderStatuses.Stopped);
+        running.StopReason.Should().Be("khách hủy");
+    }
+
+    private static DispatchNote Note(int id, string status, params int[] qtys)
+    {
+        var note = new DispatchNote { DispatchNoteId = id, DispatchCode = $"PX-{id}", OrderId = 5, Status = status };
+        note.DispatchNoteLines = qtys.Select(q => new DispatchNoteLine { IssueQty = q, DispatchNote = note }).ToList();
+        return note;
+    }
+
+    [Fact]
+    public async Task Cancel_New_CancelsPendingDispatchNotes_AndKeepsIssuedOnes()
+    {
+        var pending = Note(1, DispatchStatuses.Pending, 10);
+        var sent = Note(2, DispatchStatuses.InDelivery, 10);
+        _notes.AddRange([pending, sent]);
+        var order = Existing(OrderStatuses.New);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().CancelAsync(5, new CancelOrderDto(null, RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        pending.Status.Should().Be(DispatchStatuses.Cancelled);
+        sent.Status.Should().Be(DispatchStatuses.InDelivery);
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Stop_PartiallyDelivered_CancelsPendingNotes_AndKeepsDeliveredOnes()
+    {
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
+        var delivered = Note(1, DispatchStatuses.Delivered, 40);
+        var pending = Note(2, DispatchStatuses.Pending, 60);
+        _notes.AddRange([delivered, pending]);
+        var order = Existing(OrderStatuses.PartiallyDelivered);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        order.Status.Should().Be(OrderStatuses.Stopped);
+        pending.Status.Should().Be(DispatchStatuses.Cancelled);
+        delivered.Status.Should().Be(DispatchStatuses.Delivered);
+    }
+
+    [Theory]
+    [InlineData(DispatchStatuses.Delivered)]
+    [InlineData(DispatchStatuses.InDelivery)]
+    public async Task Stop_AllQtyIssued_Fails(string lastNoteStatus)
+    {
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
+        _notes.AddRange([Note(1, DispatchStatuses.Delivered, 40), Note(2, lastNoteStatus, 60)]);
+        var order = Existing(OrderStatuses.PartiallyDelivered);
+        _orders.GetByIdAsync(5).Returns(order);
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.OrderFullyDispatched);
+        order.Status.Should().Be(OrderStatuses.PartiallyDelivered);
+    }
+
+    [Fact]
+    public async Task Stop_CancelsIdleWorkOrders_ClosesWorkedOnes_AndCancelsActiveKpi()
+    {
+        var idle = new WorkOrder { WorkOrderId = 1, OrderId = 5, WorkOrderCode = "LC-1", Status = WorkOrderStatuses.Open };
+        var rejectedIssueOnly = new WorkOrder { WorkOrderId = 2, OrderId = 5, WorkOrderCode = "LC-2", Status = WorkOrderStatuses.Open,
+            MaterialIssues = [new MaterialIssue { Status = IssueStatuses.Rejected }] };
+        var withLay = new WorkOrder { WorkOrderId = 3, OrderId = 5, WorkOrderCode = "LC-3", Status = WorkOrderStatuses.Open,
+            CuttingLays = [new CuttingLay()] };
+        var withIssue = new WorkOrder { WorkOrderId = 4, OrderId = 5, WorkOrderCode = "LC-4", Status = WorkOrderStatuses.Open,
+            MaterialIssues = [new MaterialIssue { Status = IssueStatuses.Received }] };
+        var cutting = new WorkOrder { WorkOrderId = 5, OrderId = 5, WorkOrderCode = "LC-5", Status = WorkOrderStatuses.Cutting, Note = "ghi chú" };
+        var done = new WorkOrder { WorkOrderId = 7, OrderId = 5, WorkOrderCode = "LC-7", Status = WorkOrderStatuses.Completed };
+        var otherOrder = new WorkOrder { WorkOrderId = 6, OrderId = 9, WorkOrderCode = "LC-6", Status = WorkOrderStatuses.Open };
+        _workOrders.AddRange([idle, rejectedIssueOnly, withLay, withIssue, cutting, done, otherOrder]);
+        var active = new KpiTarget { KpiTargetId = 1, OrderId = 5, Status = KpiStatuses.Active };
+        var closed = new KpiTarget { KpiTargetId = 2, OrderId = 5, Status = KpiStatuses.Closed };
+        var otherKpi = new KpiTarget { KpiTargetId = 3, OrderId = 9, Status = KpiStatuses.Active };
+        _kpis.AddRange([active, closed, otherKpi]);
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _workOrders.Select(w => w.Status).Should().Equal(WorkOrderStatuses.Cancelled, WorkOrderStatuses.Cancelled,
+            WorkOrderStatuses.Completed, WorkOrderStatuses.Completed, WorkOrderStatuses.Completed, WorkOrderStatuses.Completed,
+            WorkOrderStatuses.Open);
+        cutting.Note.Should().Be("ghi chú\n" + Messages.OrderCloseReasonStopped);
+        cutting.CompletedAt.Should().Be(_clock.Now);
+        _kpis.Select(k => k.Status).Should().Equal(KpiStatuses.Cancelled, KpiStatuses.Closed, KpiStatuses.Active);
+    }
+
+    [Fact]
+    public async Task Stop_WorkOrderWithPendingHandover_StaysOpenAndNotifiesManager()
+    {
+        var cutting = new WorkOrder { WorkOrderId = 5, OrderId = 5, WorkOrderCode = "LC-5", Status = WorkOrderStatuses.Cutting };
+        _workOrders.Add(cutting);
+        _handoverLines.Add(new CutHandoverLine { CutHandover = new CutHandover { WorkOrderId = 5, Status = HandoverStatuses.Pending } });
+        _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
+
+        var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        cutting.Status.Should().Be(WorkOrderStatuses.Cutting);
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+}
+
+public class OrderValidatorTests
+{
+    private static CreateOrderDto Dto(DateOnly due, params OrderLineInput[] lines) =>
+        new("DH2610-001", 1, new DateOnly(2026, 10, 1), due, null, lines);
+
+    [Fact]
+    public void DuplicateLineKey_IgnoringCase_Fails()
+    {
+        var dto = Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0), new OrderLineInput(null, 1, "đỏ", "m", 2, 0));
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public void TheSameProductWithTwoPrices_Fails_ButOneProductWithManyColorsAndSizes_Passes()
+    {
+        var twoPrices = Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 100), new OrderLineInput(null, 1, "Xanh", "M", 1, 120));
+        var validator = new CreateOrderDtoValidator();
+
+        validator.Validate(twoPrices).Errors.Should().Contain(e => e.ErrorMessage.Contains("chỉ khai một lần"));
+
+        var onePrice = Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 100), new OrderLineInput(null, 1, "Xanh", "L", 1, 100),
+            new OrderLineInput(null, 2, "Đỏ", "M", 1, 90));
+        validator.Validate(onePrice).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void DueBeforeReceived_Fails()
+    {
+        var dto = Dto(new DateOnly(2026, 9, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0));
+
+        new CreateOrderDtoValidator().Validate(dto).Errors.Should().Contain(e => e.ErrorMessage.Contains("Ngày giao"));
+    }
+
+    private static bool LineIsValid(string color, int qty, decimal price, string size = "M") =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 11, 1), new OrderLineInput(null, 1, color, size, qty, price))).IsValid;
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(1_000_000, true)]
+    [InlineData(0, false)]
+    [InlineData(-1, false)]
+    [InlineData(1_000_001, false)]
+    public void OrderedQty_Boundaries(int qty, bool expected) => LineIsValid("Đỏ", qty, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("0.01", true)]
+    [InlineData("100000000", true)]
+    [InlineData("-0.01", false)]
+    [InlineData("100000000.01", false)]
+    [InlineData("1.234", false)]
+    public void CmtUnitPrice_Boundaries(string price, bool expected) =>
+        LineIsValid("Đỏ", 1, decimal.Parse(price, System.Globalization.CultureInfo.InvariantCulture)).Should().Be(expected);
+
+    [Theory]
+    [InlineData(50, true)]
+    [InlineData(51, false)]
+    public void Color_MaxLength(int length, bool expected) => LineIsValid(new string('x', length), 1, 100).Should().Be(expected);
+
+    [Theory]
+    [InlineData(10, true)]
+    [InlineData(11, false)]
+    public void Size_MaxLength(int length, bool expected) => LineIsValid("Đỏ", 1, 100, new string('X', length)).Should().Be(expected);
+
+    [Theory]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", true)]     // 30 ký tự
+    [InlineData(" AAAAAAAAAAAAAAAAAAAAAAAAAAAAAA ", true)]   // 30 ký tự sau khi Trim, như service lưu
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", false)]   // 31 ký tự
+    public void OrderCode_MaxLength_AfterTrim(string code, bool expected)
+    {
+        var dto = new CreateOrderDto(code, 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(1000, true)]
+    [InlineData(1001, false)]
+    public void Note_MaxLength(int length, bool expected)
+    {
+        var dto = new CreateOrderDto("DH1", 1, new DateOnly(2026, 10, 1), new DateOnly(2026, 11, 1), new string('x', length), new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        new CreateOrderDtoValidator().Validate(dto).IsValid.Should().Be(expected);
+    }
+
+    [Fact]
+    public void DueOnReceivedDate_Passes() =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 10, 1), new OrderLineInput(null, 1, "Đỏ", "M", 1, 0))).IsValid.Should().BeTrue();
+
+    [Fact]
+    public void MissingDates_Fail()
+    {
+        var dto = new CreateOrderDto("DH2610-001", 1, default, default, null, new[] { new OrderLineInput(null, 1, "Đỏ", "M", 1, 0) });
+
+        var errors = new CreateOrderDtoValidator().Validate(dto).Errors;
+
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.ReceivedDate));
+        errors.Should().Contain(e => e.PropertyName == nameof(dto.DueDate));
+    }
+
+    [Fact]
+    public void NoLines_Fails() =>
+        new CreateOrderDtoValidator().Validate(Dto(new DateOnly(2026, 11, 1))).IsValid.Should().BeFalse();
+
+    [Fact]
+    public void Stop_EmptyReason_HasMsg09() =>
+        new StopOrderDtoValidator().Validate(new StopOrderDto("", new byte[] { 1 })).Errors
+            .Should().Contain(e => e.ErrorMessage == Messages.ReasonRequired);
+
+    [Fact]
+    public void LookupDtos_HaveNoPriceProperties()
+    {
+        foreach (var type in new[] { typeof(OrderLookupDto), typeof(OrderLineLookupDto), typeof(ProductLookupDto) })
+            type.GetProperties().Select(p => p.Name).Should().NotContain(new[] { "CmtUnitPrice", "TotalAmount" });
+    }
+}

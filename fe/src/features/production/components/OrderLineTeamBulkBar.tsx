@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Button, Select, Space, Typography, message } from 'antd';
 import { fill } from '@/utils/format';
 import { ALLOT_MAX_LINES, PRODUCTION_TEXT } from '../constants';
-import { useAddOrderLineTeams } from '../hooks/useProduction';
+import { useAddOrderLineTeams } from '../hooks/useOrderLineTeams';
 
 const text = PRODUCTION_TEXT.orderLineTeams;
 

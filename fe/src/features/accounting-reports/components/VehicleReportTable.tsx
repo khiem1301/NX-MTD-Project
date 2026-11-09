@@ -2,7 +2,7 @@ import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ACCOUNTING_REPORT_TEXT } from '../constants';
 import type { VehicleReport, VehicleTripReportRow } from '../types';
-import { formatCurrency, formatNumber } from '../utils';
+import { formatCurrency, formatNumber } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = { report: VehicleReport };

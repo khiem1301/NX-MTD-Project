@@ -2,7 +2,15 @@ import {
   productCodeSchema,
   productDescriptionSchema,
   productNameSchema,
+  toFieldPath,
 } from './productValidation';
+
+describe('toFieldPath', () => {
+  it('đổi tên lỗi BE thành đường dẫn field của form', () => {
+    expect(toFieldPath('ExtraImages[0]')).toEqual(['extraImages', 0]);
+    expect(toFieldPath('ProductCode')).toEqual(['productCode']);
+  });
+});
 
 describe('mã hàng', () => {
   it('mã chỉ gồm chữ không dấu, số và . _ -, tối đa 30 ký tự tính sau khi trim', () => {

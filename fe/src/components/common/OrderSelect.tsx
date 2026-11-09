@@ -10,6 +10,9 @@ type OrderSelectProps = {
   width?: number | string;
   /** Câu báo khi không có đơn nào để chọn. */
   notFoundContent?: string;
+  /** Quản đốc / Admin chọn tổ may: chỉ hiện đơn có dòng chia cho tổ đó (DEV-ALL-68). */
+  sewingTeamId?: number;
+  disabled?: boolean;
 };
 
 const DEFAULT_WIDTH = 260;
@@ -22,12 +25,15 @@ export function OrderSelect({
   allowClear,
   width,
   notFoundContent,
+  sewingTeamId,
+  disabled,
 }: OrderSelectProps) {
-  const orders = useOrderOptions();
+  const orders = useOrderOptions(sewingTeamId);
   return (
     <Select
       showSearch
       allowClear={allowClear}
+      disabled={disabled}
       value={value}
       onChange={onChange}
       placeholder={placeholder}

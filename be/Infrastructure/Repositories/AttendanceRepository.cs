@@ -153,7 +153,7 @@ public sealed class AttendanceRepository : IAttendanceRepository
             command.Parameters.Add(new SqlParameter("@EmployeeId", SqlDbType.Int) { Value = dto.EmployeeId });
             command.Parameters.Add(new SqlParameter("@WorkDate", SqlDbType.Date) { Value = dto.WorkDate.ToDateTime(TimeOnly.MinValue) });
             command.Parameters.Add(new SqlParameter("@AdjustmentType", SqlDbType.VarChar, 20) { Value = dto.AdjustmentType });
-            command.Parameters.Add(new SqlParameter("@Reason", SqlDbType.NVarChar, 500) { Value = dto.Reason });
+            command.Parameters.Add(new SqlParameter("@Reason", SqlDbType.NVarChar, TextLimits.Reason) { Value = dto.Reason });
             command.Parameters.Add(new SqlParameter("@RequestId", SqlDbType.Int)
             {
                 Value = (object?)dto.RequestId ?? DBNull.Value,

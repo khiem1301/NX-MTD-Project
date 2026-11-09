@@ -35,8 +35,21 @@ describe('rowError', () => {
     expect(rowError(line({}))).toBeNull();
     expect(rowError(line({ requiredQty: 100_000_000 }))).toBeNull();
     expect(
-      rowError(line({ requiredQty: 0, customerQty: 5, expectedDeliveryCount: 99 })),
+      rowError(
+        line({
+          requiredQty: 0,
+          customerQty: 5,
+          expectedDeliveryCount: 99,
+          expectedDeliveryDate: '2026-12-01',
+        }),
+      ),
     ).toBeNull();
+  });
+
+  it('khách cấp mà chưa chọn ngày dự kiến giao thì báo thiếu', () => {
+    expect(
+      rowError(line({ customerQty: 5, expectedDeliveryCount: 1, expectedDeliveryDate: null })),
+    ).toBe('Vui lòng nhập thông tin này.');
   });
 
   it('chưa chọn NVL, hoặc cả hai số bằng 0, hoặc khách cấp mà thiếu số lần giao', () => {

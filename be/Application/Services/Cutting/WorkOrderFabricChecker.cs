@@ -54,14 +54,14 @@ public sealed class WorkOrderFabricChecker
         var variantIds = lines.Select(l => l.ProductVariantId).Distinct().ToArray();
         var variants = await _uow.Repository<ProductVariant>().Query().AsNoTracking()
             .Where(v => variantIds.Contains(v.ProductVariantId))
-            .Select(v => new Variant(v.ProductVariantId, v.ProductId, v.Color, v.SizeCode))
+            .Select(v => new Variant(v.ProductVariantId, v.ProductId, v.ProductColor.Color, v.SizeCode))
             .ToDictionaryAsync(v => v.ProductVariantId, ct);
         var norms = await LoadNormsAsync(variantIds, ct);
         var productIds = variants.Values.Select(v => v.ProductId).Distinct().ToArray();
         var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Where(m => productIds.Contains(m.ProductId))
             .Select(m => new MarkerSize(m.ProductId, m.MarkerNo, m.SizeCode, m.LengthCm, m.WidthCm)).ToListAsync(ct);
         var fabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking().Where(f => productIds.Contains(f.ProductId))
-            .Select(f => new MarkerFabric(f.ProductId, f.MarkerNo, f.Color, new Fabric(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName,
+            .Select(f => new MarkerFabric(f.ProductId, f.MarkerNo, f.ProductColor.Color, new Fabric(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName,
                 f.Material.Color, f.Material.Unit, f.Material.WidthCm)))
             .ToListAsync(ct);
 

@@ -84,13 +84,13 @@ public sealed class ProductService : IProductService
             Status = RecordStatus.Active,
             CreatedAt = _clock.Now,
         };
-        foreach (var (key, index) in (ExtraKeys(dto) ?? []).Select((k, i) => (k, i)))
-            product.ProductImages.Add(NewImage(key, index));
+        foreach (var image in ExtraImages(dto) ?? []) product.ProductImages.Add(image);
         return await _uow.InTransactionAsync(async () =>   // D17: log cần ProductId
         {
             await _products.AddAsync(product);
             await _uow.SaveChangesAsync();
-            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null, Snapshot(product, product.ProductImages.Count)));
+            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null,
+                Snapshot(product, product.ProductImages.Count)));
             await _uow.SaveChangesAsync();
             return Result<int>.Success(product.ProductId, Messages.Saved);
         });
@@ -102,40 +102,56 @@ public sealed class ProductService : IProductService
         if (product is null) return Fail.NotFound();
 
         var code = dto.ProductCode.Trim().ToUpperInvariant();
-        if (code != product.ProductCode)
-        {
-            if (await _products.IsUsedAsync(productId, ct))
-                return Result.Failure(ErrorCodes.ProductCodeLocked, Messages.ProductCodeLocked);
-            if (await _products.CodeExistsAsync(code, productId, ct))
-                return Result.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
-        }
+        var codeError = await CheckCodeChangeAsync(product, code, ct);
+        if (codeError is not null) return codeError;
 
-        var images = _uow.Repository<ProductImage>();
-        var current = await images.Query().Where(i => i.ProductId == productId).OrderBy(i => i.SortOrder).ToListAsync(ct);
-        var requested = ExtraKeys(dto);
-        var replaceImages = requested is not null && !current.Select(i => i.ImageKey).SequenceEqual(requested);
-
-        var before = Snapshot(product, current.Count);
+        var extras = await LoadExtraImagesAsync(productId, ExtraImages(dto, productId), ct);
+        var before = Snapshot(product, extras.Current.Count);
         product.ProductCode = code;
         product.ProductName = dto.ProductName.Trim();
         product.SampleImageUrl = Clean(dto.SampleImageUrl);
         product.Description = Clean(dto.Description);
         _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, before,
-            Snapshot(product, replaceImages ? requested!.Count : current.Count)));
-        if (!replaceImages)
+            Snapshot(product, extras.FinalCount)));
+        if (!extras.Changed)
         {
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.Saved);
         }
         return await _uow.InTransactionAsync(async () =>
         {
-            // UQ_ProductImage_Sort (ProductId, SortOrder): gỡ hết ảnh cũ trước rồi mới ghi danh sách mới.
-            images.RemoveRange(current);
+            // UQ_ProductImage_Sort: gỡ hết ảnh cũ trước rồi mới ghi danh sách mới.
+            if (extras.Changed) _uow.Repository<ProductImage>().RemoveRange(extras.Current);
             await _uow.SaveChangesAsync();
-            await images.AddRangeAsync(requested!.Select((key, index) => NewImage(key, index, productId)).ToList());
+            if (extras.Changed) await _uow.Repository<ProductImage>().AddRangeAsync(extras.Replacement!);
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.Saved);
         });
+    }
+
+    private async Task<Result?> CheckCodeChangeAsync(Product product, string code, CancellationToken ct)
+    {
+        if (code == product.ProductCode) return null;
+        if (await _products.IsUsedAsync(product.ProductId, ct))
+            return Result.Failure(ErrorCodes.ProductCodeLocked, Messages.ProductCodeLocked);
+        if (await _products.CodeExistsAsync(code, product.ProductId, ct))
+            return Result.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
+        return null;
+    }
+
+    /// <summary>Ảnh đang có và danh sách thay thế (null = giữ nguyên, kể cả khi gửi lên đúng như cũ).</summary>
+    private sealed record ImageSet<T>(List<T> Current, List<T>? Replacement)
+    {
+        public bool Changed => Replacement is not null;
+        public int FinalCount => Replacement?.Count ?? Current.Count;
+    }
+
+    private async Task<ImageSet<ProductImage>> LoadExtraImagesAsync(int productId, List<ProductImage>? requested, CancellationToken ct)
+    {
+        var current = await _uow.Repository<ProductImage>().Query().Where(i => i.ProductId == productId)
+            .OrderBy(i => i.SortOrder).ToListAsync(ct);
+        var same = requested is null || current.Select(i => i.ImageKey).SequenceEqual(requested.Select(i => i.ImageKey));
+        return new(current, same ? null : requested);
     }
 
     public Task<Result> DiscontinueAsync(int productId, CancellationToken ct) =>
@@ -161,8 +177,13 @@ public sealed class ProductService : IProductService
     private static object Snapshot(Product p, int extraImages) =>
         new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages };
 
-    private static List<string>? ExtraKeys(SaveProductDto dto) => dto.ExtraImages?.Select(k => k.Trim()).ToList();
-
-    private ProductImage NewImage(string key, int index, int productId = 0) =>
-        new() { ProductId = productId, ImageKey = key, SortOrder = (byte)(index + 1), CreatedAt = _clock.Now };
+    /// <summary>Ảnh phụ theo thứ tự gửi lên; null = không gửi (giữ nguyên).</summary>
+    private List<ProductImage>? ExtraImages(SaveProductDto dto, int productId = 0) =>
+        dto.ExtraImages?.Select((key, index) => new ProductImage
+        {
+            ProductId = productId,
+            ImageKey = key.Trim(),
+            SortOrder = (byte)(index + 1),
+            CreatedAt = _clock.Now,
+        }).ToList();
 }

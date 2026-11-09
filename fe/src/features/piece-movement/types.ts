@@ -82,7 +82,10 @@ export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason
 
 export type AllocationFilters = { status?: string; movementType?: string };
 
-/** Một dòng giao việc của ngày: công nhân × dòng đơn × công đoạn. `allocatedQty` là trần sản lượng cuối ca của ngày. */
+/**
+ * Một dòng giao việc của ngày: công nhân × dòng đơn × công đoạn. Trần sản lượng cuối ca của ngày = `carriedQty` (tồn từ hôm trước)
+ * + `allocatedQty` (giao thêm trong ngày); phần chưa làm hết chuyển sang hôm sau, không thu hồi.
+ */
 export type DailyAllocationRow = {
   workerId: number;
   workerCode: string;
@@ -98,10 +101,13 @@ export type DailyAllocationRow = {
   groupName: string | null;
   /** Công đoạn đã phân công cho công nhân trước khi may; false = tổ trưởng thêm ngoài phân công. */
   isAssigned: boolean;
+  carriedQty: number;
   allocatedQty: number;
   outputQty: number;
   remainingQty: number;
   unallocatedQty: number;
+  /** Số giao của lần giao gần nhất trước ngày này; 0 = chưa giao lần nào. */
+  previousQty: number;
 };
 
 export type DailyAllocationBoard = { workDate: string; rows: DailyAllocationRow[] };
@@ -113,5 +119,4 @@ export type SaveDailyItem = {
   quantity: number;
 };
 export type SaveDailyPayload = { workDate: string; items: SaveDailyItem[]; reason?: string };
-export type RetrieveDailyPayload = { workDate: string; workerIds?: number[]; reason: string };
-export type DailyAllocationResult = { added: number; adjusted: number; retrieved: number };
+export type DailyAllocationResult = { added: number; adjusted: number };

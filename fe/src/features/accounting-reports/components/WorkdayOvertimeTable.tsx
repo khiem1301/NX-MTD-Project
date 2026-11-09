@@ -2,7 +2,7 @@ import {} from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ACCOUNTING_REPORT_TEXT } from '../constants';
 import type { WorkdayOvertimeReport, WorkdayOvertimeRow } from '../types';
-import { formatNumber } from '../utils';
+import { formatNumber } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 
 type Props = { report: WorkdayOvertimeReport };

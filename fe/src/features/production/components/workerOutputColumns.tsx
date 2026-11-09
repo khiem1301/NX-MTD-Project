@@ -1,6 +1,9 @@
-import { InputNumber, Tag, Typography } from 'antd';
+import type { MouseEvent } from 'react';
+import { DownOutlined, RightOutlined } from '@ant-design/icons';
+import { Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { fill, formatCurrency } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { OUTPUT_MAX_QTY, PRODUCTION_TEXT } from '../constants';
 import type { OutputGridRow } from '../types';
 import { canFill } from '../utils/outputWorkerBoard';
@@ -10,7 +13,16 @@ const text = PRODUCTION_TEXT.output;
 const t = text.byWorker;
 
 export type WorkerOutputTableRow =
-  | { kind: 'group'; key: string; groupKey: string; name: string | null; rows: OutputGridRow[] }
+  | {
+      kind: 'group';
+      key: string;
+      groupKey: string;
+      name: string | null;
+      rows: OutputGridRow[];
+      isOpen: boolean;
+      /** Số công đoạn trong nhóm đã sửa mà chưa lưu, để thấy được cả khi nhóm đang đóng. */
+      changedCount: number;
+    }
   | { kind: 'operation'; key: string; row: OutputGridRow };
 
 type WorkerOutputColumnsOptions = {
@@ -21,7 +33,13 @@ type WorkerOutputColumnsOptions = {
   onQuantityChange: (operationId: number, value: number | null) => void;
 };
 
-/** Cột của khung nhập sản lượng một công nhân: dòng nhóm có ô điền cả nhóm, dòng công đoạn có ô sửa riêng. */
+/** Bấm vào ô nhập ở dòng nhóm không làm mở/đóng nhóm. */
+const stopToggle = (e: MouseEvent) => e.stopPropagation();
+
+/**
+ * Cột của khung nhập sản lượng một công nhân: dòng nhóm (bấm để mở/đóng) có ô điền cả nhóm, dòng công đoạn có ô sửa
+ * riêng.
+ */
 export const workerOutputColumns = ({
   groupQty,
   overRows,
@@ -35,9 +53,13 @@ export const workerOutputColumns = ({
     ellipsis: true,
     render: (_, r) =>
       r.kind === 'group' ? (
-        <Typography.Text strong>
-          {fill(t.groupRow, r.name ?? t.noGroup, r.rows.filter(canFill).length, r.rows.length)}
-        </Typography.Text>
+        <Space size={8} aria-expanded={r.isOpen}>
+          {r.isOpen ? <DownOutlined /> : <RightOutlined />}
+          <Typography.Text strong>
+            {fill(t.groupRow, r.name ?? t.noGroup, r.rows.filter(canFill).length, r.rows.length)}
+          </Typography.Text>
+          {r.changedCount > 0 && <Tag color="blue">{fill(t.groupChanged, r.changedCount)}</Tag>}
+        </Space>
       ) : (
         `${r.row.operationCode} - ${r.row.operationName}`
       ),
@@ -48,23 +70,23 @@ export const workerOutputColumns = ({
     width: 150,
     render: (_, r) =>
       r.kind === 'group' ? (
-        <InputNumber
-          aria-label={fill(t.groupInput, r.name ?? t.noGroup)}
-          placeholder={t.groupPlaceholder}
-          disabled={!r.rows.some(canFill)}
-          min={0}
-          max={OUTPUT_MAX_QTY}
-          precision={0}
-          style={{ width: 120 }}
-          value={groupQty[r.groupKey] ?? null}
-          onChange={(v) => onGroupChange(r.groupKey, r.rows, v)}
-        />
+        <span onClick={stopToggle}>
+          <QtyInput
+            aria-label={fill(t.groupInput, r.name ?? t.noGroup)}
+            placeholder={t.groupPlaceholder}
+            disabled={!r.rows.some(canFill)}
+            min={0}
+            max={OUTPUT_MAX_QTY}
+            style={{ width: 120 }}
+            value={groupQty[r.groupKey] ?? null}
+            onChange={(v) => onGroupChange(r.groupKey, r.rows, v)}
+          />
+        </span>
       ) : (
-        <InputNumber
+        <QtyInput
           aria-label={fill(t.operationInput, r.row.operationCode)}
           min={0}
           max={OUTPUT_MAX_QTY}
-          precision={0}
           style={{ width: 120 }}
           status={overRows.includes(r.row) ? 'error' : undefined}
           disabled={!r.row.canEdit || !r.row.rateApproved}

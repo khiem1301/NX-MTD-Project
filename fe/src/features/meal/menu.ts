@@ -1,6 +1,6 @@
 import { ROLES } from '@/constants/roles';
 import type { MenuEntry } from '@/types/menu';
-import { MEAL_ROUTES } from './routes';
+import { MEAL_ROUTES } from '@/constants/routes';
 import { MEAL_TEXT } from './constants';
 
 export const mealMenu: MenuEntry[] = [

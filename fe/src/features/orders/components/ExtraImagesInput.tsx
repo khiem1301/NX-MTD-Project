@@ -11,12 +11,31 @@ import { isAcceptableImage } from '../utils/imageFile';
 import { ProductImage } from './ProductImage';
 
 const text = MESSAGES.orders;
-const THUMB = 80;
+const DEFAULT_THUMB = 80;
 
-type Props = { value?: string[]; onChange?: (value: string[]) => void };
+type Props = {
+  value?: string[];
+  onChange?: (value: string[]) => void;
+  /** Số ảnh tối đa; mặc định là số ảnh phụ của mã hàng. */
+  max?: number;
+  /** Dòng đếm dưới ô ảnh ({0} = số đã chọn, {1} = tối đa) và câu báo khi đã đủ ({0} = tối đa). */
+  countText?: string;
+  fullText?: string;
+  thumb?: number;
+};
 
-/** Ảnh phụ của mã hàng (tối đa 5): chọn được nhiều ảnh một lần, tải lên ngay khi chọn, giá trị form là các khóa ảnh trả về từ máy chủ. */
-export function ExtraImagesInput({ value = [], onChange }: Props) {
+/**
+ * Danh sách ảnh của mã hàng (ảnh phụ, hoặc ảnh của một màu áo): chọn được nhiều ảnh một lần, tải lên ngay khi chọn,
+ * giá trị form là các khóa ảnh trả về từ máy chủ.
+ */
+export function ExtraImagesInput({
+  value = [],
+  onChange,
+  max = MAX_EXTRA_IMAGES,
+  countText = text.extraImagesCount,
+  fullText = text.extraImagesFull,
+  thumb = DEFAULT_THUMB,
+}: Props) {
   const [uploading, setUploading] = useState(0);
   // Chọn nhiều ảnh cùng lúc thì các lần tải xong chồng lên nhau: giữ danh sách mới nhất và số chỗ đã giữ cho ảnh đang tải.
   const latest = useRef(value);
@@ -30,8 +49,8 @@ export function ExtraImagesInput({ value = [], onChange }: Props) {
       void message.error(text.imageHint);
       return Upload.LIST_IGNORE;
     }
-    if (latest.current.length + reserved.current >= MAX_EXTRA_IMAGES) {
-      void message.warning(fill(text.extraImagesFull, MAX_EXTRA_IMAGES));
+    if (latest.current.length + reserved.current >= max) {
+      void message.warning(fill(fullText, max));
       return Upload.LIST_IGNORE;
     }
     reserved.current += 1;
@@ -50,14 +69,14 @@ export function ExtraImagesInput({ value = [], onChange }: Props) {
     return false;
   };
 
-  const full = value.length >= MAX_EXTRA_IMAGES;
+  const full = value.length >= max;
 
   return (
     <Flex vertical gap={8}>
       <Flex wrap gap={8}>
         {value.map((key) => (
-          <div key={key} style={{ position: 'relative', width: THUMB, height: THUMB }}>
-            <ProductImage value={key} size={THUMB} />
+          <div key={key} style={{ position: 'relative', width: thumb, height: thumb }}>
+            <ProductImage value={key} size={thumb} />
             <div
               style={{
                 position: 'absolute',
@@ -85,7 +104,7 @@ export function ExtraImagesInput({ value = [], onChange }: Props) {
             showUploadList={false}
             beforeUpload={beforeUpload}
           >
-            <Button type="dashed" loading={uploading > 0} style={{ width: THUMB, height: THUMB }}>
+            <Button type="dashed" loading={uploading > 0} style={{ width: thumb, height: thumb }}>
               <div>
                 <PlusOutlined />
                 <div>{text.addExtraImage}</div>
@@ -94,9 +113,7 @@ export function ExtraImagesInput({ value = [], onChange }: Props) {
           </Upload>
         )}
       </Flex>
-      <Typography.Text type="secondary">
-        {fill(text.extraImagesCount, value.length, MAX_EXTRA_IMAGES)}
-      </Typography.Text>
+      <Typography.Text type="secondary">{fill(countText, value.length, max)}</Typography.Text>
     </Flex>
   );
 }

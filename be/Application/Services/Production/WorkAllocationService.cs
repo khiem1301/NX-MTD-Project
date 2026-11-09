@@ -55,9 +55,9 @@ public sealed class WorkAllocationService : IWorkAllocationService
             join l in _uow.Repository<OrderLine>().Query() on v.OrderLineId equals l.OrderLineId
             join o in _uow.Repository<Operation>().Query() on v.OperationId equals o.OperationId
             where v.SewingTeamId == teamId && (orderId == null || l.OrderId == orderId)
-            orderby l.Order.OrderCode, l.ProductVariant.Color, l.ProductVariant.SizeCode, o.StationSequence
+            orderby l.Order.OrderCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, o.StationSequence
             select new OperationProgressDto(l.OrderLineId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode,
-                l.ProductVariant.Color, l.ProductVariant.SizeCode, o.OperationId, o.OperationCode, o.OperationName,
+                l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, o.OperationId, o.OperationCode, o.OperationName,
                 o.OperationGroup == null ? null : o.OperationGroup.GroupName, v.RequiredQty ?? 0,
                 v.AllocatedQty, v.PendingQty, v.UnallocatedQty ?? 0, v.OutputQty)).ToListAsync(ct);
 
@@ -123,7 +123,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
         var verb = dto.MovementType == PieceMovementTypes.Handover ? "giao" : "thu hồi";
         _notifier.NotifyEmployees(new[] { dto.WorkerId }, new NotificationMessage(NotificationSources.Production,
             dto.MovementType == PieceMovementTypes.Handover ? "Bạn được giao việc" : "Việc được thu hồi từ bạn",
-            $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.Color} - {line.ProductVariant.SizeCode})"
+            $"Tổ trưởng ghi {verb} {dto.Quantity} lần \"{operation.OperationName}\" ({line.ProductVariant.ProductColor.Color} - {line.ProductVariant.SizeCode})"
             + ", vui lòng kiểm tra và xác nhận.",
             null));
         await _uow.SaveChangesAsync();
@@ -142,7 +142,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
             return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseTeamMismatch, WarehouseMessages.WorkerNotInTeam,
                 ResultKind.Forbidden));
 
-        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order).Include(l => l.ProductVariant)
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order).Include(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId, ct);
         if (line is null) return new AllocationRefs(WarehouseFailures.NotFound<int>());
         if (OrderStatuses.Closed.Contains(line.Order.Status))
@@ -156,6 +156,11 @@ public sealed class WorkAllocationService : IWorkAllocationService
         if (dto.MovementType == PieceMovementTypes.Handover
             && (operation.Status != RecordStatus.Active || operation.TeamType != TeamTypes.Sewing))
             return new AllocationRefs(Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OperationNotAllocatable));
+        if (dto.MovementType == PieceMovementTypes.Handover)
+        {
+            var noRate = await AllocationRateCheck.FindMissingAsync(_uow, [operation.OperationId], _clock.Today, ct);
+            if (noRate is not null) return new AllocationRefs(Result<int>.Failure(ErrorCodes.PieceRateNotApproved, noRate));
+        }
         return new AllocationRefs(null, line, operation);
     }
 
@@ -204,7 +209,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
         Func<WorkAllocation, Task<Result>> apply, bool notifyLeaders) =>
         _uow.InTransactionAsync(async () =>
         {
-            var allocation = await Allocations.Include(m => m.OrderLine).ThenInclude(l => l.ProductVariant)
+            var allocation = await Allocations.Include(m => m.OrderLine).ThenInclude(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
                 .Include(m => m.Operation).FirstOrDefaultAsync(m => m.WorkAllocationId == allocationId, ct);
             if (allocation is null || !allowed(allocation)) return WarehouseFailures.NotFound();
             if (allocation.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
@@ -225,7 +230,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
                     .Select(e => e.EmployeeId).ToListAsync(ct);
                 _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Production,
                     allocation.Status == HandoverStatuses.Confirmed ? "Công nhân đã xác nhận việc được giao" : "Công nhân từ chối phiếu giao việc",
-                    $"{allocation.Operation.OperationName} ({allocation.OrderLine.ProductVariant.Color} - {allocation.OrderLine.ProductVariant.SizeCode}): {(allocation.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
+                    $"{allocation.Operation.OperationName} ({allocation.OrderLine.ProductVariant.ProductColor.Color} - {allocation.OrderLine.ProductVariant.SizeCode}): {(allocation.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
                     null));
             }
             await _uow.SaveChangesAsync();
@@ -298,7 +303,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
     private static IQueryable<WorkAllocationDto> Project(IQueryable<WorkAllocation> q) =>
         q.Select(m => new WorkAllocationDto(m.WorkAllocationId, m.WorkDate, m.MovementType, m.SewingTeamId,
             m.SewingTeam.TeamName, m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId,
-            m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.Color,
+            m.OrderLine.Order.OrderCode, m.OrderLine.ProductVariant.Product.ProductCode, m.OrderLine.ProductVariant.ProductColor.Color,
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
             m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.RetrievalNote, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,

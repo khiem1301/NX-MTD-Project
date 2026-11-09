@@ -10,6 +10,7 @@ namespace NX_MTD.Application.Services;
 /// <summary>
 /// UC42 (TH-10): CHỈ tổ cắt trả vải thừa, theo phiếu cấp gốc (đã nhận); số trả ≤ số đã nhận − số đã trả (kể cả đang chờ).
 /// Thủ kho đếm, xác nhận (cộng kho NVL, lệch phải có lý do) hoặc từ chối có lý do. Tổ may không trả phụ liệu.
+/// Chặn thêm: mỗi dòng chỉ một phiếu chờ xác nhận; số trả không vượt số vải còn thừa theo số đã cắt (khi tính được).
 /// </summary>
 public sealed class MaterialReturnService : IMaterialReturnService
 {
@@ -148,6 +149,14 @@ public sealed class MaterialReturnService : IMaterialReturnService
         if (over.Count > 0)
             return Result<int>.Failure(ErrorCodes.ReturnExceedsIssued, $"{WarehouseMessages.ReturnExceedsIssued}: {string.Join("; ", over)}.");
 
+        // Mỗi dòng chỉ có một phiếu trả chờ xác nhận tại một thời điểm (tránh trả trùng / chia nhỏ để lách số còn lại).
+        var lineIds = dto.Lines.Select(l => l.MaterialIssueLineId).ToList();
+        if (await _uow.Repository<MaterialReturnLine>().Query().AnyAsync(l => lineIds.Contains(l.MaterialIssueLineId)
+                && l.MaterialReturn.Status == HandoverStatuses.Pending, ct))
+            return Result<int>.Failure(ErrorCodes.ReturnPendingExists, WarehouseMessages.ReturnPendingExists);
+        var leftover = await CheckLeftoverAsync(dto, cuttingTeamId, ct);
+        if (leftover is not null) return Result<int>.Failure(ErrorCodes.ReturnExceedsLeftover, leftover);
+
         var ret = new MaterialReturn
         {
             ReturnCode = await _codes.NextAsync<MaterialReturn>(DocumentPrefixes.MaterialReturn, r => r.ReturnCode, ct),
@@ -164,6 +173,32 @@ public sealed class MaterialReturnService : IMaterialReturnService
         await _uow.SaveChangesAsync();
         return Result<int>.Success(ret.MaterialReturnId, WarehouseMessages.ReturnCreated);
     }
+
+    /// <summary>
+    /// Số trả của mỗi loại vải trong đơn không vượt số vải còn thừa theo số đã cắt (số còn trả được của mọi phiếu cấp cùng đơn,
+    /// cùng vải trừ số đã cắt của tổ). Chưa tính được (có bàn cắt chưa nhập chiều dài) thì không chặn theo số đã cắt.
+    /// Trả về thông báo lỗi, null nếu hợp lệ.
+    /// </summary>
+    private async Task<string?> CheckLeftoverAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
+    {
+        var returnable = (await GetReturnableAsync(cuttingTeamId, ct)).Data!;
+        var byLine = returnable.ToDictionary(r => r.MaterialIssueLineId);
+        var problems = new List<string>();
+        foreach (var group in dto.Lines.Where(l => byLine.ContainsKey(l.MaterialIssueLineId))
+                     .GroupBy(l => FabricKey(byLine[l.MaterialIssueLineId])))
+        {
+            var pool = returnable.Where(r => FabricKey(r) == group.Key).Select(r => r.SuggestedQty).ToList();
+            if (pool.Any(p => p is null)) continue;
+            var left = pool.Sum(p => p!.Value);
+            var asked = group.Sum(l => l.ReturnedQty);
+            if (asked > left)
+                problems.Add($"{group.Key.MaterialCode} {group.Key.MaterialColor} (đơn {group.Key.OrderCode}): còn thừa {left:0.###}, trả {asked:0.###}");
+        }
+        return problems.Count == 0 ? null : $"{WarehouseMessages.ReturnExceedsLeftover}: {string.Join("; ", problems)}.";
+    }
+
+    private static (string OrderCode, string MaterialCode, string MaterialColor) FabricKey(ReturnableLineDto r) =>
+        (r.OrderCode, r.MaterialCode, r.MaterialColor);
 
     public Task<Result> ConfirmAsync(int returnId, ConfirmMaterialReturnDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>

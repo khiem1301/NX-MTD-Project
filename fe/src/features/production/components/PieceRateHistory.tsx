@@ -5,7 +5,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useOperationRole } from '../hooks/useOperationRole';
-import { usePieceRates } from '../hooks/useProduction';
+import { usePieceRates } from '../hooks/usePieceRates';
 import type { Operation, PieceRate } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 import { DetailModal } from '@/components/common/DetailModal';

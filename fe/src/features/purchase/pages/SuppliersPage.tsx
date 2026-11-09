@@ -3,9 +3,10 @@ import { Button, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, PlayCircleOutlined, StopOutlined } from '@ant-design/icons';
 import { IconAction } from '@/components/common/IconAction';
-import { ReasonModal } from '@/components/common/ReasonModal';
+import { NoteModal } from '@/components/common/NoteModal';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
+import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { SupplierFormModal } from '../components/SupplierFormModal';
@@ -118,9 +119,12 @@ export function SuppliersPage() {
         loading={suppliers.isFetching}
         pagination={table.pagination(suppliers.data?.totalItems)}
       />
-      <ReasonModal
+      <NoteModal
         open={stopping !== null}
         title={PURCHASE_TEXT.discontinueTitle}
+        label={MESSAGES.common.reason}
+        required={false}
+        maxLength={REASON_MAX_LENGTH}
         loading={toggle.isPending}
         onCancel={() => setStopping(null)}
         onSubmit={(reason) =>

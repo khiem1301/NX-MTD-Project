@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -25,7 +26,7 @@ public sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purcha
             .HasMaxLength(20)
             .IsUnicode(false);
         entity.Property(e => e.PaymentNote).HasMaxLength(500);
-        entity.Property(e => e.PaymentReturnReason).HasMaxLength(500);
+        entity.Property(e => e.PaymentReturnReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.PaymentStatus)
             .HasMaxLength(20)
             .IsUnicode(false)
@@ -33,7 +34,7 @@ public sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purcha
         entity.Property(e => e.PoCode)
             .HasMaxLength(30)
             .IsUnicode(false);
-        entity.Property(e => e.RejectReason).HasMaxLength(500);
+        entity.Property(e => e.RejectReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.RowVer)
             .IsRowVersion()
             .IsConcurrencyToken();

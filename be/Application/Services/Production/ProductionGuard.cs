@@ -43,6 +43,12 @@ public sealed class ProductionGuard
         return Result<int>.Failure(ErrorCodes.ProductionForbidden, Messages.ProductionSewingTeamOnly, ResultKind.Forbidden);
     }
 
+    /// <summary>Thông báo lỗi nếu ngày làm việc nằm trước ngày nhận đơn (ngoài thời gian gia công); null nếu hợp lệ. Ngày tương lai kiểm riêng.</summary>
+    public static string? BeforeOrderStart(DateOnly workDate, DateOnly orderReceivedDate) =>
+        workDate < orderReceivedDate
+            ? string.Format(Messages.WorkDateBeforeOrderStart, workDate.ToString("dd/MM/yyyy"), orderReceivedDate.ToString("dd/MM/yyyy"))
+            : null;
+
     /// <summary>Hết ngày làm việc kế tiếp sau <paramref name="workDate"/>, bỏ qua Chủ nhật — cùng công thức
     /// <c>fn_NextWorkingDayEnd</c> trong DB.</summary>
     public static DateTime NextWorkingDayEnd(DateOnly workDate)

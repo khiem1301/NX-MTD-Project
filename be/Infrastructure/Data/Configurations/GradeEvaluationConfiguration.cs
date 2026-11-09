@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -27,7 +28,7 @@ public sealed class GradeEvaluationConfiguration : IEntityTypeConfiguration<Grad
         entity.Property(e => e.ProposedGradeCode)
             .HasMaxLength(5)
             .IsUnicode(false);
-        entity.Property(e => e.Reason).HasMaxLength(500);
+        entity.Property(e => e.Reason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.Status)
             .HasMaxLength(20)
             .IsUnicode(false)

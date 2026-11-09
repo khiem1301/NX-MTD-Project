@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, Input, Modal, Tooltip } from 'antd';
+import { Col, Divider, Form, Input, Modal, Row, Tooltip } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { zodRule } from '@/utils/zodRule';
@@ -8,10 +8,15 @@ import {
   productCodeSchema,
   productDescriptionSchema,
   productNameSchema,
+  toFieldPath,
 } from '../utils/productValidation';
 import { ExtraImagesInput } from './ExtraImagesInput';
 import { SampleImageInput } from './SampleImageInput';
+import type { NamePath } from 'antd/es/form/interface';
 import type { ProductListItem, SaveProductPayload } from '../types';
+
+const MODAL_WIDTH = 820;
+const BODY_MAX_HEIGHT = 'calc(100vh - 240px)';
 
 type ProductFormModalProps = {
   open: boolean;
@@ -58,8 +63,10 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         },
         onError: (error) =>
           form.setFields(
+            // Lỗi theo field (vd "extraImages[0]") hiện ngay dưới ô tương ứng. Tên field do BE trả về
+            // lúc chạy nên không kiểm được kiểu khi biên dịch.
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-              name: name as keyof SaveProductPayload,
+              name: toFieldPath(name) as NamePath<SaveProductPayload>,
               errors,
             })),
           ),
@@ -75,46 +82,67 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
       title={product ? `${MESSAGES.common.edit} ${product.productCode}` : MESSAGES.common.create}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
-      width={640}
+      width={MODAL_WIDTH}
       confirmLoading={save.isPending}
       okButtonProps={{ disabled: loadingDetail }}
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
+      // Thân modal tự cuộn để nút Lưu luôn hiện, kể cả khi khai nhiều màu.
+      styles={{ body: { maxHeight: BODY_MAX_HEIGHT, overflowY: 'auto', overflowX: 'hidden' } }}
     >
       {detail.error && <QueryError error={detail.error} onRetry={() => void detail.refetch()} />}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
-        <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
-          <Form.Item
-            name="productCode"
-            label={MESSAGES.orders.productCode}
-            required
-            rules={[zodRule(productCodeSchema)]}
-          >
-            <Input disabled={locked} />
-          </Form.Item>
-        </Tooltip>
-        <Form.Item
-          name="productName"
-          label={MESSAGES.orders.productName}
-          required
-          rules={[zodRule(productNameSchema)]}
-        >
-          <Input />
-        </Form.Item>
-        <Form.Item name="sampleImageUrl" label={MESSAGES.orders.sampleImage} rules={[{ max: 500 }]}>
-          <SampleImageInput />
-        </Form.Item>
-        <Form.Item name="extraImages" label={MESSAGES.orders.extraImages}>
-          <ExtraImagesInput />
-        </Form.Item>
+        <Row gutter={16}>
+          <Col xs={24} md={9}>
+            <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
+              <Form.Item
+                name="productCode"
+                label={MESSAGES.orders.productCode}
+                required
+                rules={[zodRule(productCodeSchema)]}
+              >
+                <Input disabled={locked} />
+              </Form.Item>
+            </Tooltip>
+          </Col>
+          <Col xs={24} md={15}>
+            <Form.Item
+              name="productName"
+              label={MESSAGES.orders.productName}
+              required
+              rules={[zodRule(productNameSchema)]}
+            >
+              <Input />
+            </Form.Item>
+          </Col>
+        </Row>
         <Form.Item
           name="description"
           label={MESSAGES.orders.description}
           rules={[zodRule(productDescriptionSchema)]}
         >
-          <Input.TextArea rows={2} />
+          <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
         </Form.Item>
+        <Divider orientation="left" orientationMargin={0} style={{ marginTop: 0 }}>
+          {MESSAGES.orders.images}
+        </Divider>
+        <Row gutter={16}>
+          <Col xs={24} md={9}>
+            <Form.Item
+              name="sampleImageUrl"
+              label={MESSAGES.orders.sampleImage}
+              rules={[{ max: 500 }]}
+            >
+              <SampleImageInput />
+            </Form.Item>
+          </Col>
+          <Col xs={24} md={15}>
+            <Form.Item name="extraImages" label={MESSAGES.orders.extraImages}>
+              <ExtraImagesInput />
+            </Form.Item>
+          </Col>
+        </Row>
       </Form>
     </Modal>
   );

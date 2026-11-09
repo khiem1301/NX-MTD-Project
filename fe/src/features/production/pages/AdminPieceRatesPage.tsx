@@ -10,7 +10,7 @@ import {
   useApprovePieceRate,
   usePieceRates,
   useRejectPieceRate,
-} from '../hooks/useProduction';
+} from '../hooks/usePieceRates';
 import type { PieceRate, PieceRateQuery, PieceRateStatus } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';

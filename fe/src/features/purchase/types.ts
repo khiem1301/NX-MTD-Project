@@ -104,6 +104,7 @@ export type PurchaseOrderDetail = {
   orderDate: string | null;
   /** Số lần NCC dự kiến giao; receivedCount = số phiếu nhập đã xác nhận (kể cả phiếu bổ sung). */
   expectedDeliveryCount: number | null;
+  expectedDeliveryDate?: string | null;
   receivedCount: number;
   note: string | null;
   rejectReason: string | null;
@@ -132,6 +133,7 @@ export type PlacePayload = {
   supplierId: number;
   orderDate: string;
   expectedDeliveryCount: number;
+  expectedDeliveryDate: string;
   note: string | null;
   lines: { purchaseOrderLineId: number; orderedQty: number; unitPrice: number }[];
   rowVer: string;

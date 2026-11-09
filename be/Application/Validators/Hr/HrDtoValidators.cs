@@ -20,7 +20,8 @@ public sealed class ChangePasswordDtoValidator : AbstractValidator<ChangePasswor
 {
     public ChangePasswordDtoValidator()
     {
-        RuleFor(x => x.NewPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu mới")).MaximumLength(100);
+        RuleFor(x => x.NewPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu mới"))
+            .MaximumLength(TextLimits.Password).WithMessage($"Mật khẩu tối đa {TextLimits.Password} ký tự.");
         RuleFor(x => x.ConfirmPassword).NotEmpty().WithMessage(Messages.Required("mật khẩu nhập lại"))
             .Equal(x => x.NewPassword).WithMessage(Messages.PasswordMismatch);   // MSG05
     }
@@ -33,7 +34,8 @@ public sealed class CreateEmployeeDtoValidator : AbstractValidator<CreateEmploye
         RuleFor(x => x.EmployeeCode).NotEmpty().WithMessage(Messages.Required("mã nhân viên")).MaximumLength(20)
             .Must(c => System.Text.RegularExpressions.Regex.IsMatch(c.Trim(), "^[A-Za-z0-9._-]+$"))
             .WithMessage("Mã nhân viên chỉ gồm chữ, số và . _ -");
-        RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
+        RuleFor(x => x.FullName).Cascade(CascadeMode.Stop).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100)
+            .MustBePersonName();
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.DateOfBirth).LessThan(DateOnly.FromDateTime(DateTime.Today)).When(x => x.DateOfBirth is not null);
         RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
@@ -48,7 +50,8 @@ public sealed class AdminUpdateEmployeeDtoValidator : AbstractValidator<AdminUpd
 {
     public AdminUpdateEmployeeDtoValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
+        RuleFor(x => x.FullName).Cascade(CascadeMode.Stop).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100)
+            .MustBePersonName();
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
@@ -63,7 +66,8 @@ public sealed class ManagerUpdateEmployeeDtoValidator : AbstractValidator<Manage
 {
     public ManagerUpdateEmployeeDtoValidator()
     {
-        RuleFor(x => x.FullName).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100);
+        RuleFor(x => x.FullName).Cascade(CascadeMode.Stop).NotEmpty().WithMessage(Messages.Required("họ tên")).MaximumLength(100)
+            .MustBePersonName();
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
         RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.");
@@ -78,7 +82,7 @@ public sealed class ResignEmployeeDtoValidator : AbstractValidator<ResignEmploye
 {
     public ResignEmployeeDtoValidator()
     {
-        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(500);   // MSG09
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);   // MSG09
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }
@@ -107,7 +111,7 @@ public sealed class TransferMembersDtoValidator : AbstractValidator<TransferMemb
     {
         RuleFor(x => x.EmployeeIds).NotEmpty().Must(l => l.Count <= 200).WithMessage("Tối đa 200 nhân viên.")
             .Must(l => l.Distinct().Count() == l.Count).WithMessage("Danh sách nhân viên bị trùng.");
-        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);
     }
 }
 
@@ -117,7 +121,7 @@ public sealed class TeamMembersDtoValidator : AbstractValidator<TeamMembersDto>
     {
         RuleFor(x => x.EmployeeIds).NotEmpty().Must(l => l.Count <= 200).WithMessage("Tối đa 200 nhân viên.")
             .Must(l => l.Distinct().Count() == l.Count).WithMessage("Danh sách nhân viên bị trùng.");
-        RuleFor(x => x.Reason).MaximumLength(500);
+        RuleFor(x => x.Reason).MaximumLength(TextLimits.Reason);
     }
 }
 

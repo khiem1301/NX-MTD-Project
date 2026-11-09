@@ -8,6 +8,10 @@ const qtyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 }
 export const formatQty = (value: number | null | undefined): string =>
   value === null || value === undefined ? '—' : qtyFormatter.format(value);
 
+/** Số công / giờ có thể lẻ, bỏ số 0 thừa: 1.00 → 1, 0.50 → 0,5. */
+export const formatNumber = (value: number, maxDigits = 2): string =>
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: maxDigits }).format(value);
+
 const pad = (n: string | undefined): string => (n ?? '').padStart(2, '0');
 
 /** "2026-10-20" → "20/10/2026". BE trả ngày dạng DateOnly nên không đổi múi giờ. */
@@ -34,7 +38,9 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits
 
 /** 1250000 → "1.250.000 ₫" */
 export const formatCurrency = (value: number | null | undefined): string =>
-  value === null || value === undefined ? EMPTY : `${currencyFormatter.format(Math.round(value))} ₫`;
+  value === null || value === undefined
+    ? EMPTY
+    : `${currencyFormatter.format(Math.round(value))} ₫`;
 
 /** Định dạng hiển thị và nhập liệu duy nhất cho toàn hệ thống (Rules FE: dd/MM/yyyy HH:mm). */
 export const DATE_FORMAT = 'DD/MM/YYYY';

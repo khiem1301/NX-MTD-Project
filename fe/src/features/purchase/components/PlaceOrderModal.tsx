@@ -8,6 +8,9 @@ import { usePlaceOrder, useSupplierOptions } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -21,6 +24,7 @@ type FormValues = {
   supplierId: number;
   orderDate: Dayjs;
   expectedDeliveryCount: number;
+  expectedDeliveryDate: Dayjs;
   note: string | null;
   lines: LineValues[];
 };
@@ -32,6 +36,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
   const suppliers = useSupplierOptions(open);
   const text = PURCHASE_TEXT.place;
   const lines = Form.useWatch('lines', form) ?? [];
+  const orderDate = Form.useWatch('orderDate', form);
   const total = lines.reduce((sum, l) => sum + (l?.orderedQty ?? 0) * (l?.unitPrice ?? 0), 0);
 
   useEffect(() => {
@@ -64,6 +69,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
         supplierId: values.supplierId,
         orderDate: toApiDate(values.orderDate),
         expectedDeliveryCount: values.expectedDeliveryCount,
+        expectedDeliveryDate: toApiDate(values.expectedDeliveryDate),
         note: values.note?.trim() || null,
         lines: values.lines.map((l) => ({
           purchaseOrderLineId: l.purchaseOrderLineId,
@@ -128,6 +134,13 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
           >
             <InputNumber min={1} max={99} precision={0} style={{ width: 150 }} />
           </Form.Item>
+          <Form.Item
+            name="expectedDeliveryDate"
+            label={text.expectedDeliveryDate}
+            rules={[{ required: true, message: text.expectedDeliveryDateRequired }]}
+          >
+            <AppDatePicker disabledDate={(d) => isExpectedDeliveryDateDisabled(d, orderDate)} />
+          </Form.Item>
         </Space>
 
         <Form.List name="lines">
@@ -150,9 +163,10 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
                       { required: true, type: 'number', min: 0.001, message: text.qtyRequired },
                     ]}
                   >
-                    <InputNumber
+                    <QtyInput
+                      decimals={MATERIAL_QTY_DECIMALS}
+                      max={MAX_MATERIAL_QTY}
                       min={0}
-                      precision={3}
                       addonAfter={line?.unit}
                       style={{ width: 170 }}
                     />

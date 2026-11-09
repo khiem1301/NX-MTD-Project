@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Button, Select, Space, Typography, message } from 'antd';
 import { fill } from '@/utils/format';
 import { ASSIGNMENT_MAX_OPERATIONS, PRODUCTION_TEXT } from '../constants';
-import { useAssignOperations } from '../hooks/useProduction';
+import { useAssignOperations } from '../hooks/useAssignments';
 
 const text = PRODUCTION_TEXT.assignments;
 

@@ -16,8 +16,6 @@ public partial class DispatchNoteLine
 
     public int IssueQty { get; set; }
 
-    public int? ReceivedQty { get; set; }
-
     public virtual DispatchNote DispatchNote { get; set; } = null!;
 
     public virtual OrderLine OrderLine { get; set; } = null!;

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Form, Input, Modal, Select } from 'antd';
 import { TEAM_TYPE_LABEL, type TeamType } from '@/constants/hr';
+import { CODE_PATTERN, normalizeCode } from '@/utils/textInput';
 import { MESSAGES } from '@/constants/messages';
 import { useSaveTeam } from '../hooks/useTeams';
 import type { SaveTeamPayload, TeamListItem } from '../types';
@@ -57,9 +58,11 @@ export function TeamFormModal({ open, team, onClose }: TeamFormModalProps) {
         <Form.Item
           name="teamCode"
           label={MESSAGES.hr.teamCode}
+          normalize={normalizeCode}
           rules={[
             { required: true, whitespace: true, message: MESSAGES.common.required },
             { max: 20 },
+            { pattern: CODE_PATTERN, message: MESSAGES.hr.codeInvalid },
           ]}
         >
           <Input />

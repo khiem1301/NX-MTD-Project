@@ -3,7 +3,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { MATERIAL_STATUS_TAG } from '@/constants/orderStatus';
 import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
-import { blocksTotals, fromLines } from '../utils/orderGrid';
+import { blocksTotals, fromLines, linesDelivered } from '../utils/orderGrid';
 import type { OrderDisplayLine, OrderOverview } from '../types';
 
 type OrderSummaryProps = {
@@ -15,6 +15,7 @@ type OrderSummaryProps = {
 /** Thông tin chung của đơn: lý do dừng, ngày, tình trạng NVL, tổng số lượng, ghi chú. */
 export function OrderSummary({ order, showAmount = false }: OrderSummaryProps) {
   const totals = blocksTotals(fromLines(order.lines));
+  const delivered = linesDelivered(order.lines);
 
   return (
     <>
@@ -29,7 +30,7 @@ export function OrderSummary({ order, showAmount = false }: OrderSummaryProps) {
         size="small"
         bordered
         layout="vertical"
-        column={{ xs: 2, sm: 3, md: 3, lg: 6, xl: 6, xxl: 6 }}
+        column={{ xs: 2, sm: 3, md: 3, lg: 7, xl: 7, xxl: 7 }}
       >
         <Descriptions.Item label={MESSAGES.orders.receivedDate}>
           {formatDate(order.receivedDate)}
@@ -42,6 +43,9 @@ export function OrderSummary({ order, showAmount = false }: OrderSummaryProps) {
         </Descriptions.Item>
         <Descriptions.Item label={MESSAGES.orders.totalQty}>
           <b>{formatQty(totals.qty)}</b>
+        </Descriptions.Item>
+        <Descriptions.Item label={MESSAGES.orders.deliveredQty}>
+          <b>{`${formatQty(delivered)} / ${formatQty(totals.qty)}`}</b>
         </Descriptions.Item>
         {showAmount && (
           <Descriptions.Item label={MESSAGES.orders.totalAmount}>

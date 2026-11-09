@@ -31,8 +31,10 @@ public static class SizeCodes
     public static readonly IReadOnlyList<string> Ordered = new[] { "XS", "S", "M", "L", "XL", "XXL", "3XL", "FREE" };
 }
 
-/// <summary>Ảnh của mã hàng: một ảnh chính (Product.SampleImageUrl) và tối đa 10 ảnh phụ (ProductImage).</summary>
+/// <summary>
+/// Ảnh của mã hàng: một ảnh chính (Product.SampleImageUrl) và tối đa 5 ảnh phụ (ProductImage). Ảnh theo màu áo đã bỏ (DEV-ALL-80).
+/// </summary>
 public static class ProductImageLimits
 {
-    public const int MaxExtra = 10;
+    public const int MaxExtra = 5;
 }

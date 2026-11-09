@@ -9,14 +9,14 @@ import { BreakEvenResultTable } from '../components/BreakEvenResultTable';
 import { BREAK_EVEN_TEXT } from '../constants';
 import { useBreakEven } from '../hooks/useBreakEven';
 import type { BreakEvenFilter } from '../types';
-import { PERIOD_MONTH_FORMAT, currentPeriodMonth, toPeriodMonth } from '../utils';
+import { API_MONTH, toApiMonth } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
 /** UC11 — Admin: chọn tháng + cách phân bổ, chạy tính hòa vốn, xem/xuất kết quả (mật, chỉ Admin — GBR-02). */
 export function BreakEvenPage() {
   const [filter, setFilter] = useState<BreakEvenFilter>(() => ({
-    periodMonth: toPeriodMonth(currentPeriodMonth()),
+    periodMonth: toApiMonth(dayjs()),
     history: false,
   }));
 
@@ -31,9 +31,9 @@ export function BreakEvenPage() {
         <Typography.Text>{BREAK_EVEN_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker
           allowClear={false}
-          value={dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT)}
+          value={dayjs(filter.periodMonth, API_MONTH)}
           onChange={(value: Dayjs | null) => {
-            if (value) setFilter({ ...filter, periodMonth: toPeriodMonth(value) });
+            if (value) setFilter({ ...filter, periodMonth: toApiMonth(value) });
           }}
         />
       </Space>

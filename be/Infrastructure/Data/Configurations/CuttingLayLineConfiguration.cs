@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Infrastructure.Data.Configurations;
@@ -16,7 +17,7 @@ public sealed class CuttingLayLineConfiguration : IEntityTypeConfiguration<Cutti
 
         entity.HasIndex(e => new { e.CuttingLayId, e.OrderLineId, e.ProductComponentMaterialId }, "UQ_CLL").IsUnique();
 
-        entity.Property(e => e.AdjustReason).HasMaxLength(500);
+        entity.Property(e => e.AdjustReason).HasMaxLength(TextLimits.Reason);
 
         entity.HasOne(d => d.CuttingLay).WithMany(p => p.CuttingLayLines)
             .HasForeignKey(d => d.CuttingLayId)

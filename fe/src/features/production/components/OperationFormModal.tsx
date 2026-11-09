@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
+import { normalizeCode } from '@/utils/textInput';
 import { MESSAGES } from '@/constants/messages';
 import { useProductSpec } from '@/features/orders';
 import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
-import { useSaveOperation } from '../hooks/useProduction';
+import { useSaveOperation } from '../hooks/useOperations';
 import type { Operation } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { OperationFinalField } from './OperationFinalField';
@@ -114,6 +115,7 @@ export function OperationFormModal({
             <Form.Item
               name="operationCode"
               label={text.form.code}
+              normalize={normalizeCode}
               rules={[
                 ...required,
                 { pattern: OPERATION_LIMITS.codePattern, message: text.form.codeFormat },

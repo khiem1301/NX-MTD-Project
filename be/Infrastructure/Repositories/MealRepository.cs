@@ -73,6 +73,10 @@ public sealed class MealRepository : IMealRepository
             .Distinct()
             .CountAsync(ct);
 
+    public Task<int> GetTeamMemberCountAsync(int teamId, CancellationToken ct) =>
+        _context.Employees.AsNoTracking()
+            .CountAsync(e => e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
+
     public Task<int> GetOfficeAttendanceCountAsync(DateOnly date, CancellationToken ct) =>
         _context.DailyTimesheets.AsNoTracking()
             .Where(t => t.WorkDate == date && t.CheckIn != null

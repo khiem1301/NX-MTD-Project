@@ -1,5 +1,4 @@
-import { Alert, Col, Descriptions, Form, Modal, Row, Select, Tag } from 'antd';
-import dayjs from 'dayjs';
+import { Alert, Col, Descriptions, Form, Modal, Row, Select } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
@@ -7,25 +6,15 @@ import { fill, formatDate, formatQty } from '@/utils/format';
 import { DELIVERING_ORDER_STATUSES, KPI_TEXT } from '../constants';
 import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { AppRangePicker } from '@/components/common/DateInputs';
+import { AppDateRangeFields } from '@/components/common/DateInputs';
 import { useKpiTargetForm } from '../hooks/useKpiTargetForm';
 import { periodLimitRule } from '../utils/periodRule';
+import { DueTag } from './DueTag';
 import { KpiLineTargetsTable } from './KpiLineTargetsTable';
 
 export type Props = { open: boolean; target: KpiTarget | null; onClose: () => void };
 
 const text = KPI_TEXT.form;
-
-/** Nhãn số ngày còn tới ngày giao hàng. */
-function DueTag({ dueDate }: { dueDate: string }) {
-  const daysLeft = dayjs(dueDate).diff(dayjs().startOf('day'), 'day');
-  if (daysLeft < 0) return <Tag color="red">{fill(text.dueOverdue, -daysLeft)}</Tag>;
-  return daysLeft === 0 ? (
-    <Tag color="orange">{text.dueToday}</Tag>
-  ) : (
-    <Tag>{fill(text.dueDaysLeft, daysLeft)}</Tag>
-  );
-}
 
 /**
  * UC19 — Quản đốc lập / sửa chỉ tiêu KPI tổ may. Một đơn + mã hàng + tổ có nhiều chỉ tiêu nhưng các kỳ không trùng ngày (BE báo
@@ -150,7 +139,7 @@ export function KpiTargetFormModal({ open, target, onClose }: Props) {
               label={text.period}
               rules={[...required, periodLimitRule(text.periodMax)]}
             >
-              <AppRangePicker style={{ width: '100%' }} disabledDate={disabledDate} />
+              <AppDateRangeFields disabledDate={disabledDate} />
             </Form.Item>
           </Col>
         </Row>

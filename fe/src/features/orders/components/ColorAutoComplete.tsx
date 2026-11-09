@@ -2,24 +2,28 @@ import { AutoComplete } from 'antd';
 import { useMemo } from 'react';
 import { useProductColors } from '@/hooks/useOrderLookups';
 import { filterColors } from '@/utils/colorSearch';
+import { COLOR_MAX_LENGTH } from '../constants';
 
 type ColorAutoCompleteProps = {
-  value: string;
-  onChange: (value: string) => void;
+  /** value / onChange để trống khi đặt trong Form.Item (Form.Item tự truyền vào). */
+  value?: string;
+  onChange?: (value: string) => void;
   disabled?: boolean;
   size?: 'small' | 'middle' | 'large';
   status?: 'error';
+  placeholder?: string;
   /** Màu đang có trong form (chưa lưu) cũng được gợi ý. */
   extraColors?: readonly string[];
 };
 
 /** Ô màu: gợi ý các màu đã khai ở mã hàng trước (gõ không dấu cũng được), vẫn nhập được màu mới. */
 export function ColorAutoComplete({
-  value,
+  value = '',
   onChange,
   disabled,
   size,
   status,
+  placeholder,
   extraColors = [],
 }: ColorAutoCompleteProps) {
   const colors = useProductColors();
@@ -40,7 +44,8 @@ export function ColorAutoComplete({
       disabled={disabled}
       size={size}
       status={status}
-      maxLength={50}
+      placeholder={placeholder}
+      maxLength={COLOR_MAX_LENGTH}
       style={{ width: '100%' }}
       onChange={onChange}
       defaultActiveFirstOption

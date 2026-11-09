@@ -1,8 +1,14 @@
 import { DeleteOutlined } from '@ant-design/icons';
 import { Input, InputNumber, Select, Typography, type TableColumnsType } from 'antd';
+import dayjs from 'dayjs';
+import { AppDatePicker } from '@/components/common/DateInputs';
+import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
+import { toApiDate } from '@/utils/format';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { MaterialOption } from '@/types/lookup';
+import { QtyInput } from '@/components/common/QtyInput';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
 import { formatFabricWidth } from '../utils/fabricWidth';
 import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
@@ -22,6 +28,7 @@ type Options = {
 
 const QTY_WIDTH = 130;
 const DELIVERY_WIDTH = 90;
+const DATE_WIDTH = 140;
 const MATERIAL_WIDTH = 380;
 const SMALL = { fontSize: 12 };
 
@@ -91,7 +98,9 @@ export const bulkOrderMaterialColumns = ({
       key: 'requiredQty',
       width: QTY_WIDTH,
       render: (_, line) => (
-        <InputNumber
+        <QtyInput
+          decimals={MATERIAL_QTY_DECIMALS}
+          max={MAX_MATERIAL_QTY}
           size="small"
           style={{ width: '100%' }}
           suffix={unitOf(line)}
@@ -110,7 +119,9 @@ export const bulkOrderMaterialColumns = ({
       key: 'customerQty',
       width: QTY_WIDTH,
       render: (_, line) => (
-        <InputNumber
+        <QtyInput
+          decimals={MATERIAL_QTY_DECIMALS}
+          max={MAX_MATERIAL_QTY}
           size="small"
           style={{ width: '100%' }}
           suffix={unitOf(line)}
@@ -143,6 +154,25 @@ export const bulkOrderMaterialColumns = ({
             }
             value={line.draft.expectedDeliveryCount}
             onChange={(v) => onPatch(line.key, { expectedDeliveryCount: v })}
+          />
+        ) : (
+          '—'
+        ),
+    },
+    {
+      title: LABELS.expectedDeliveryDate,
+      key: 'expectedDeliveryDate',
+      width: DATE_WIDTH,
+      render: (_, line) =>
+        line.draft.customerQty > 0 ? (
+          <AppDatePicker
+            size="small"
+            style={{ width: '100%' }}
+            aria-label={LABELS.expectedDeliveryDate}
+            status={showErrors && !line.draft.expectedDeliveryDate ? 'error' : undefined}
+            value={line.draft.expectedDeliveryDate ? dayjs(line.draft.expectedDeliveryDate) : null}
+            disabledDate={(d) => isExpectedDeliveryDateDisabled(d)}
+            onChange={(d) => onPatch(line.key, { expectedDeliveryDate: d ? toApiDate(d) : null })}
           />
         ) : (
           '—'

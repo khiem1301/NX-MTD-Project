@@ -65,6 +65,17 @@ public static class Messages
     public const string RequestCancelled = "Đã hủy đơn.";
     public const string RequestCompleted = "Đã hoàn thành đơn.";
     public const string RequestContentRequired = "Vui lòng nhập nội dung đơn.";
+    public const string RequisitionLinesRequired = "Đơn xin phải có ít nhất một dòng.";
+    public const string RequisitionMaterialRequired = "Đơn Xin NVL phải chọn NVL trong danh mục cho từng dòng.";
+    public const string RequisitionMaterialInvalid = "NVL đã chọn không còn dùng hoặc không tồn tại.";
+    public const string RequisitionFabricQtyInvalid = "Vải {0}: số lượng phải lớn hơn 0, tối đa 2 chữ số sau dấu phẩy và không quá 9.999.999.";
+    public const string RequisitionOtherQtyInvalid = "NVL {0} không phải vải nên phải là số nguyên (không số lẻ) từ 1 đến 9.999.999.";
+    public const string RequisitionItemRequired = "Mỗi dòng phải ghi tên hàng cần xin.";
+    public const string RequisitionDuplicateItem = "Hàng cần xin bị nhập trùng ở nhiều dòng; gộp thành một dòng.";
+    public const string RequisitionPieceQtyInvalid = "Số lượng BTP phải là số nguyên từ 1 đến 1.000.000.";
+    public const string MachineRequestQtyInvalid = "Số lượng phải là số nguyên (không số lẻ) từ 1 đến {0}.";
+    public const string RequisitionTargetDatePast = "Ngày cần không được trước hôm nay.";
+    public const string RequisitionTooManyLines = "Đơn xin tối đa {0} dòng.";
     public const string NotifyNewRequestTitle = "Có đơn mới cần xử lý";
     public const string NotifyNewRequestBody = "Đơn {0} ({1}) đang chờ bạn xử lý.";
     public const string NotifyRequestChangedTitle = "Đơn của bạn đã được cập nhật";
@@ -75,11 +86,23 @@ public static class Messages
     public const string ProductCodeLocked = "Mã hàng đã dùng trong đơn hàng, không đổi được mã.";
     public const string ProductNotActive = "Mã hàng {0} đã ngừng sản xuất.";
     public const string ProductInvalidStatus = "Trạng thái mã hàng không cho phép thao tác này.";
+    public const string ProductImageInvalid = "Ảnh không hợp lệ, vui lòng chọn lại ảnh.";
+    public const string ProductImageUsedTwice = "Không dùng một ảnh hai lần.";
     public const string OrderCodeDuplicate = "Mã đơn hàng đã tồn tại.";
     public const string OrderNotEditable = "Đơn hàng ở trạng thái này không sửa được.";
     public const string OrderLineRemoveNotAllowed = "Đơn đã vào sản xuất, không xóa được dòng đơn.";
     public const string OrderLineKeyLocked = "Đơn đã vào sản xuất, không đổi mã hàng / màu / size của dòng cũ.";
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
+    public const string OrderFullyDispatched = "Hàng của đơn đã xuất hết cho khách, không dừng được đơn. Chờ khách nhận hàng là đơn sang Đã giao.";
+    public const string NotifyDispatchAutoCancelTitle = "Phiếu xuất hàng bị hủy do đơn đóng";
+    public const string NotifyDispatchAutoCancelBody = "Phiếu {0} của đơn {1} chưa xuất kho đã được hủy vì đơn hàng đã hủy / dừng.";
+    public const string OrderCloseReasonCancelled = "Tự động xử lý do đơn hàng bị hủy.";
+    public const string OrderCloseReasonStopped = "Tự động xử lý do đơn hàng bị dừng.";
+    public const string NotifyWorkOrderAutoClosedTitle = "Lệnh cắt đã đóng do đơn hàng dừng / hủy";
+    public const string NotifyWorkOrderAutoClosedBody = "Lệnh cắt {0} của đơn {1} đã được hủy hoặc đóng vì đơn hàng đã hủy / dừng.";
+    public const string NotifyWorkOrderStillOpenTitle = "Lệnh cắt chưa đóng được khi đơn dừng / hủy";
+    public const string NotifyWorkOrderStillOpenBody = "Lệnh cắt {0} của đơn {1} còn phiếu bàn giao / trả vải chờ kho hoặc BTP đã cắt chưa vào kho, vui lòng xử lý rồi đóng lệnh.";
+    public const string NotifyKpiAutoCancelBody = "Chỉ tiêu KPI {0} sản phẩm của đơn {1} đã bị hủy vì đơn hàng đã hủy / dừng.";
     public const string OrderCancelled = "Đã hủy đơn hàng.";
     public const string OrderStopped = "Đã dừng đơn hàng.";
     public const string EmployeeImportSummary = "{0} dòng hợp lệ, {1} dòng lỗi, {2} dòng trùng. Chỉ các dòng hợp lệ được nhập.";
@@ -176,6 +199,7 @@ public static class Messages
     public const string MealSettingsCutoffRange = "Giờ chốt phải trong khoảng từ {0} đến {1}.";
     public const string MealNotClosedYet = "Suất ăn ngày này chưa chốt.";
     public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
+    public const string MealCountExceedsMembers = "Số suất ăn ({0}) không được vượt quá số người trong tổ ({1}).";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealKitchenNotified = "Đã báo bếp.";
     public const string NotifyMealReminderTitle = "Nhắc xác nhận suất ăn";
@@ -355,6 +379,7 @@ public static class Messages
     public const string PieceRateRejected = "Đã từ chối đơn giá.";
     /// <summary>MSG18 (GBR-11): chưa có đơn giá được duyệt thì không nhập sản lượng.</summary>
     public const string PieceRateNotApproved = "Công đoạn {0} chưa có đơn giá được duyệt hiệu lực đến ngày {1}, chưa nhập được sản lượng.";
+    public const string AllocationPieceRateMissing = "Công đoạn {0} chưa có đơn giá được duyệt, chưa giao được cho công nhân.";
     public const string NotifyPieceRateSubmittedTitle = "Đơn giá chờ duyệt";
     public const string NotifyPieceRateSubmittedBody = "Công đoạn {0} ({1}) có đơn giá mới chờ duyệt.";
     public const string NotifyPieceRateDecidedTitle = "Đơn giá đã được xử lý";
@@ -382,6 +407,7 @@ public static class Messages
     public const string OrderLineTeamNotifyTitle = "Tổ được chia mã hàng mới";
     public const string OrderLineTeamNotifyBody = "Tổ bạn được chia {0} của đơn {1}, vui lòng phân công công đoạn trước khi nhận BTP.";
     public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
+    public const string WorkDateBeforeOrderStart = "Ngày {0} trước ngày nhận đơn {1}. Chỉ ghi, giao việc trong thời gian gia công của đơn (từ ngày nhận đơn đến hôm nay).";
     public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
     public const string OutputQtyMax = "Số lượng tối đa 1.000.000.";
     public const string OutputTooManyRows = "Một lần lưu tối đa 2.000 dòng sản lượng.";
@@ -390,6 +416,11 @@ public static class Messages
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
     /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
     public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số lần được giao ({1}): còn tối đa {2}. Hãy giao thêm việc cho công nhân ở màn Giao việc.";
+    /// <summary>DEV-ALL-64: chuyển phần báo vượt từ người cùng công đoạn / phần tổ chưa giao.</summary>
+    public const string OutputTransferNotEnough = "Công đoạn {0} báo vượt số được giao {1} lần nhưng người cùng công đoạn và phần tổ chưa giao chỉ còn {2}.";
+    public const string OutputTransferNote = "Chuyển sang {0} khi nhập sản lượng ca {1} ngày {2} (báo vượt số được giao).";
+    public const string OutputTransferDone = "Đã chuyển {0} lần {1} từ {2} sang {3}.";
+    public const string OutputTransferFromPool = "phần tổ chưa giao";
     /// <summary>MSG17: công nhân chưa có chấm công hôm đó (cảnh báo, không chặn).</summary>
     public const string OutputNoAttendanceWarning = "{0} chưa có giờ chấm công ngày {1}.";
     public const string OutputSaved = "Đã lưu sản lượng.";
@@ -406,7 +437,11 @@ public static class Messages
     public const string QcBatchSaved = "Đã lưu đợt QC.";
     public const string QcBatchDeleted = "Đã xóa đợt QC.";
     public const string DefectReasonInvalid = "Lý do lỗi không hợp lệ.";
-    public const string DefectTypeInvalid = "Loại lỗi phải là Rework hoặc Scrap.";
+    public const string DefectTypeInvalid = "Loại phiếu phải là Rework, Scrap hoặc Nhập sai sản lượng.";
+    public const string DefectOutputErrorNoOutput = "Công nhân không có sản lượng công đoạn này trong ngày {0} để trừ.";
+    public const string DefectOutputErrorExceeds = "Số trừ vượt sản lượng đã nhập: ngày {0} công nhân có {1}, đã trừ {2}, chỉ còn trừ được {3}.";
+    public const string DefectOutputErrorBody = "nhập sai sản lượng (đã trừ khỏi sản lượng của bạn)";
+    public const string DefectOutputErrorCancelOverCap = "Không hủy được: công nhân đã nhập lại sản lượng, hủy phiếu này sẽ làm sản lượng vượt số lần được giao.";
     public const string DefectNoteRequired = "Lý do 'Khác' bắt buộc ghi chú.";
     public const string DefectInvalidStatus = "Phiếu lỗi này không còn hiệu lực để thao tác.";
     public const string DefectSaved = "Đã ghi phiếu lỗi.";

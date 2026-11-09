@@ -7,8 +7,7 @@ import { REVENUE_TEXT } from '../constants';
 import { useExportRevenue, useRevenue, useRevenueFilterOptions } from '../hooks/useRevenue';
 import type { RevenueScope } from '../api/revenueApi';
 import type { RevenueFilter, RevenueSummary } from '../types';
-import { PERIOD_MONTH_FORMAT, formatCurrency } from '../utils';
-import { formatMonth } from '@/utils/format';
+import { formatMonth, API_MONTH, formatCurrency } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
 import { AppMonthPicker } from '@/components/common/DateInputs';
 
@@ -55,12 +54,12 @@ export function RevenueTable({ scope, filter, onFilterChange }: Props) {
         <AppMonthPicker
           placeholder={REVENUE_TEXT.filter.periodMonth}
           allowClear
-          value={filter.periodMonth ? dayjs(filter.periodMonth, PERIOD_MONTH_FORMAT) : null}
+          value={filter.periodMonth ? dayjs(filter.periodMonth, API_MONTH) : null}
           onChange={(value: Dayjs | null) =>
             onFilterChange({
               ...filter,
               page: 1,
-              periodMonth: value ? value.format(PERIOD_MONTH_FORMAT) : undefined,
+              periodMonth: value ? value.format(API_MONTH) : undefined,
             })
           }
         />

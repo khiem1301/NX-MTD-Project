@@ -4,11 +4,10 @@ namespace NX_MTD.Application.DTOs;
 
 public sealed record DispatchNoteListItemDto(
     int DispatchNoteId, string DispatchCode, int OrderId, string OrderCode, string CustomerName, DateOnly DeliveryDate,
-    string Status, DateTime CreatedAt, int TotalIssueQty, int? TotalReceivedQty);
+    string Status, DateTime CreatedAt, int TotalIssueQty);
 
 public sealed record DispatchNoteLineDto(
-    int DispatchNoteLineId, int OrderLineId, string ProductCode, string Color, string SizeCode, int IssueQty,
-    int? ReceivedQty);
+    int DispatchNoteLineId, int OrderLineId, string ProductCode, string Color, string SizeCode, int IssueQty);
 
 public sealed record DispatchNoteDto(
     int DispatchNoteId, string DispatchCode, int OrderId, string OrderCode, string CustomerName, DateOnly DeliveryDate,
@@ -25,10 +24,11 @@ public sealed record DispatchLineInputDto(int OrderLineId, int IssueQty);
 public sealed record CreateDispatchNoteDto(int OrderId, DateOnly DeliveryDate, string DeliveryAddress, string? Note,
     IReadOnlyList<DispatchLineInputDto> Lines);
 
-public sealed record DeliveryLineInputDto(int DispatchNoteLineId, int ReceivedQty);
-
-/// <summary>Kế toán xác nhận khách nhận; RowVer là phiên bản phiếu đang xem để phát hiện người khác đã đổi phiếu.</summary>
-public sealed record ConfirmDeliveryDto(DateOnly CustomerReceivedDate, IReadOnlyList<DeliveryLineInputDto> Lines, byte[] RowVer);
+/// <summary>
+/// Kế toán xác nhận khách nhận (khách nhận đúng số đã xuất); RowVer là phiên bản phiếu đang xem để phát hiện người khác
+/// đã đổi phiếu.
+/// </summary>
+public sealed record ConfirmDeliveryDto(DateOnly CustomerReceivedDate, byte[] RowVer);
 
 /// <summary>Hủy phiếu hoặc xuất hàng: chỉ cần phiên bản phiếu đang xem.</summary>
 public sealed record DispatchActionDto(byte[] RowVer);

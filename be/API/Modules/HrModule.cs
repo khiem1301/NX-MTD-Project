@@ -1,5 +1,6 @@
 using NX_MTD.Application.Services;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Infrastructure.Excel;
 using NX_MTD.Infrastructure.Repositories;
 using NX_MTD.Infrastructure.Security;
 
@@ -18,6 +19,9 @@ public static class HrModule
         services.AddScoped<IAccountAdminService, AccountAdminService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IHrLookupService, HrLookupService>();
+        services.AddScoped<IGradeService, GradeService>();
+        services.AddSingleton<IExcelEmployeeParser, ClosedXmlEmployeeParser>();   // KH-22
+        services.AddScoped<IEmployeeImportService, EmployeeImportService>();
         return services;
     }
 }

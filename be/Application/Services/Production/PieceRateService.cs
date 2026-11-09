@@ -223,6 +223,22 @@ public sealed class PieceRateService : IPieceRateService
         return rate;
     }
 
+    public async Task<IReadOnlyDictionary<int, EffectivePieceRate>> FindEffectiveManyAsync(IReadOnlyCollection<int> operationIds,
+        DateOnly date, CancellationToken ct)
+    {
+        var ids = operationIds.Distinct().ToArray();
+        if (ids.Length == 0) return new Dictionary<int, EffectivePieceRate>();
+        var rates = await Rates.AsNoTracking()
+            .Where(r => ids.Contains(r.OperationId) && r.Status == PieceRateStatuses.Approved && r.EffectiveDate <= date)
+            .Select(r => new { r.OperationId, r.EffectiveDate, r.PieceRateId, r.Rate })
+            .ToListAsync(ct);
+        return rates.GroupBy(r => r.OperationId).ToDictionary(g => g.Key, g =>
+        {
+            var top = g.OrderByDescending(r => r.EffectiveDate).ThenByDescending(r => r.PieceRateId).First();
+            return new EffectivePieceRate(top.PieceRateId, top.Rate);
+        });
+    }
+
     private Task<Result> DecideAsync(PieceRate rate, string action, string? reason, string outcome, string message,
         CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>

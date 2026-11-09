@@ -10,7 +10,7 @@ import {
   usePreviewMonthlyCostImport,
 } from '../hooks/useMonthlyCost';
 import type { MonthlyCostExcelRowPreview } from '../types';
-import { formatCurrency } from '../utils';
+import { formatCurrency } from '@/utils/format';
 import { confirmDialog } from '@/utils/confirmDialog';
 import { DataTable } from '@/components/common/DataTable';
 

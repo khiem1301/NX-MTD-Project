@@ -22,7 +22,7 @@ const row = (over: Partial<OrderLineTeamRow> = {}): OrderLineTeamRow => ({
 });
 let mockRows: OrderLineTeamRow[] = [];
 
-jest.mock('../hooks/useProduction', () => ({
+jest.mock('../hooks/useOrderLineTeams', () => ({
   useOrderLineTeams: (params: unknown) => {
     mockParams(params);
     return {

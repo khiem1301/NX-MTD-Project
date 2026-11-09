@@ -13,6 +13,24 @@ jest.mock('../hooks/useOrders', () => ({
 // Ô ảnh kéo theo cấu hình môi trường (import.meta) mà jest không đọc được; test này không cần ảnh.
 jest.mock('./SampleImageInput', () => ({ SampleImageInput: () => null }));
 jest.mock('./ExtraImagesInput', () => ({ ExtraImagesInput: () => null }));
+// Ô màu gọi API gợi ý màu (cần QueryClient); thay bằng ô nhập thường.
+jest.mock('./ColorAutoComplete', () => ({
+  ColorAutoComplete: ({
+    value,
+    onChange,
+    placeholder,
+  }: {
+    value?: string;
+    onChange?: (v: string) => void;
+    placeholder?: string;
+  }) => (
+    <input
+      placeholder={placeholder}
+      value={value ?? ''}
+      onChange={(e) => onChange?.(e.target.value)}
+    />
+  ),
+}));
 
 const product: ProductListItem = {
   productId: 7,

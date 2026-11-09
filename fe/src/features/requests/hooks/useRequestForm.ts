@@ -42,7 +42,8 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
       content: values.content ?? null,
       targetDate: values.targetDate ? toApiDate(values.targetDate) : null,
       lines: (values.lines ?? []).map((l) => ({
-        itemDescription: l.itemDescription,
+        materialId: l.materialId ?? null,
+        itemDescription: l.materialId ? null : l.itemDescription,
         quantity: l.quantity,
       })),
     };
@@ -71,6 +72,7 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
         content: editing.content ?? undefined,
         targetDate: editing.targetDate ? dayjs(editing.targetDate) : undefined,
         lines: editing.lines.map((l) => ({
+          materialId: l.materialId ?? undefined,
           itemDescription: l.itemDescription ?? '',
           quantity: l.quantity,
         })),
@@ -94,7 +96,7 @@ type FormValues = {
   title?: string;
   content?: string;
   targetDate?: Dayjs;
-  lines?: { itemDescription: string; quantity: number }[];
+  lines?: { materialId?: number; itemDescription?: string; quantity: number }[];
 };
 
 export const EMPTY_LINE = { itemDescription: '', quantity: 1 };

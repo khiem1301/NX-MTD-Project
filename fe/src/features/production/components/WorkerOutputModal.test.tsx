@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { confirmDialog } from '@/utils/confirmDialog';
 import type { OutputGridRow } from '../types';
 import { WorkerOutputModal } from './WorkerOutputModal';
+
+jest.mock('@/utils/confirmDialog', () => ({
+  confirmDialog: jest.fn((props: { onOk?: () => void }) => props.onOk?.()),
+}));
 
 const row = (over: Partial<OutputGridRow>): OutputGridRow => ({
   operationId: 1,
@@ -21,6 +26,7 @@ const row = (over: Partial<OutputGridRow>): OutputGridRow => ({
   rowVer: null,
   capQty: 100,
   reportedQty: 0,
+  transferableQty: 0,
   ...over,
 });
 
@@ -31,7 +37,7 @@ const ROWS = [
   row({ operationId: 3, operationCode: 'OP3', groupName: 'Tay' }),
 ];
 
-const setup = (rows: OutputGridRow[] = ROWS) => {
+const setup = (rows: OutputGridRow[] = ROWS, requireReason = false) => {
   const onSave = jest.fn();
   render(
     <WorkerOutputModal
@@ -40,6 +46,7 @@ const setup = (rows: OutputGridRow[] = ROWS) => {
       saving={false}
       onSave={onSave}
       onClose={jest.fn()}
+      requireReason={requireReason}
     />,
   );
   return onSave;
@@ -56,7 +63,29 @@ describe('WorkerOutputModal', () => {
 
     expect(input('Sản lượng OP1').value).toBe('20');
     expect(input('Sản lượng OP2').value).toBe('20');
+
+    fireEvent.click(screen.getByText(/Nhóm Tay/));
     expect(input('Sản lượng OP3').value).toBe('');
+  });
+
+  it('chỉ mở một nhóm mỗi lúc: mặc định nhóm đầu, mở nhóm khác thì nhóm đang mở tự đóng', () => {
+    setup();
+    expect(screen.queryByRole('spinbutton', { name: 'Sản lượng OP3' })).toBeNull();
+
+    fireEvent.click(screen.getByText(/Nhóm Tay/));
+
+    expect(screen.queryByRole('spinbutton', { name: 'Sản lượng OP1' })).toBeNull();
+    expect(input('Sản lượng OP3')).toBeTruthy();
+  });
+
+  it('ô tìm công đoạn mở nhóm có công đoạn khớp', () => {
+    setup();
+    fireEvent.change(screen.getByPlaceholderText('Tìm mã, tên công đoạn'), {
+      target: { value: 'op3' },
+    });
+
+    expect(input('Sản lượng OP3')).toBeTruthy();
+    expect(screen.queryByText(/Nhóm Túi/)).toBeNull();
   });
 
   it('sửa lại từng công đoạn sau khi điền nhóm và lưu đúng số đã sửa', () => {
@@ -65,10 +94,13 @@ describe('WorkerOutputModal', () => {
     type('Sản lượng OP2', '15');
     fireEvent.click(saveButton());
 
-    expect(onSave).toHaveBeenCalledWith([
-      { operationId: 1, workerId: 7, quantity: 20, rowVer: null },
-      { operationId: 2, workerId: 7, quantity: 15, rowVer: null },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [
+        { operationId: 1, workerId: 7, quantity: 20, rowVer: null },
+        { operationId: 2, workerId: 7, quantity: 15, rowVer: null },
+      ],
+      false,
+    );
   });
 
   it('không điền vào công đoạn đã hết hạn sửa', () => {
@@ -109,6 +141,31 @@ describe('WorkerOutputModal', () => {
     expect(saveButton()).toBeDisabled();
   });
 
+  it('vượt số được giao nhưng chuyển được thì hỏi xác nhận rồi lưu kèm chuyển phần vượt', () => {
+    const onSave = setup([
+      row({ operationId: 1, operationCode: 'OP1', capQty: 100, transferableQty: 30 }),
+    ]);
+
+    type('Sản lượng OP1', '120');
+    expect(screen.getByText(/OP1: vượt 20/)).toBeInTheDocument();
+    fireEvent.click(saveButton());
+
+    expect(confirmDialog).toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledWith(
+      [{ operationId: 1, workerId: 7, quantity: 120, rowVer: null }],
+      true,
+    );
+  });
+
+  it('vượt quá cả phần chuyển được thì báo lỗi và khóa nút lưu', () => {
+    setup([row({ operationId: 1, operationCode: 'OP1', capQty: 100, transferableQty: 10 })]);
+
+    type('Sản lượng OP1', '120');
+
+    expect(screen.getByText(/chỉ chuyển được thêm 10/)).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+  });
+
   it('không có ô chọn thêm công đoạn; chưa được giao việc thì báo cần giao ở màn Giao việc', () => {
     setup([]);
 
@@ -121,8 +178,34 @@ describe('WorkerOutputModal', () => {
     type('Sản lượng OP1', '0');
     fireEvent.click(saveButton());
 
-    expect(onSave).toHaveBeenCalledWith([
-      { operationId: 1, workerId: 7, quantity: 0, rowVer: null },
-    ]);
+    expect(onSave).toHaveBeenCalledWith(
+      [{ operationId: 1, workerId: 7, quantity: 0, rowVer: null }],
+      false,
+    );
+  });
+
+  it('tổ trưởng không có ô lý do sửa', () => {
+    setup();
+
+    expect(screen.queryByRole('textbox', { name: 'Lý do sửa (bắt buộc)' })).not.toBeInTheDocument();
+  });
+
+  it('Quản đốc sửa mà chưa ghi lý do thì báo và không lưu được; ghi lý do thì gửi kèm lý do', () => {
+    const onSave = setup(ROWS, true);
+    type('Sản lượng OP1', '5');
+
+    expect(saveButton()).toBeDisabled();
+    expect(screen.getByText('Quản đốc sửa sản lượng phải ghi lý do.')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lý do sửa (bắt buộc)' }), {
+      target: { value: 'Tổ báo thiếu' },
+    });
+    fireEvent.click(saveButton());
+
+    expect(onSave).toHaveBeenCalledWith(
+      [{ operationId: 1, workerId: 7, quantity: 5, rowVer: null }],
+      false,
+      'Tổ báo thiếu',
+    );
   });
 });

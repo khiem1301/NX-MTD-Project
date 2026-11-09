@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Alert, Button, Form, Input, InputNumber, Space } from 'antd';
+import { Alert, Button, Form, Input, Space } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MEAL_TEXT } from '../constants';
 import { useSetGuestMeal } from '../hooks/useMeal';
 import type { DailyMealSummary } from '../types';
@@ -47,7 +48,7 @@ export function GuestMealForm({ date, summary }: Props) {
             { type: 'number', min: 0, message: 'Số suất khách phải lớn hơn hoặc bằng 0.' },
           ]}
         >
-          <InputNumber min={0} style={{ width: '100%' }} disabled={locked} />
+          <QtyInput min={0} style={{ width: '100%' }} disabled={locked} />
         </Form.Item>
 
         <Form.Item name="guestNote" label={MEAL_TEXT.guestForm.guestNote}>

@@ -1,5 +1,6 @@
-import { Form, Input, InputNumber, type TablePaginationConfig } from 'antd';
+import { Form, Input, type TablePaginationConfig } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MAX_QTY, QTY_DECIMALS, type StockBalance } from '@/features/warehouse';
 import { formatQty } from '@/utils/format';
 import { ST_LABELS } from '../constants';
@@ -45,10 +46,9 @@ export function StocktakeCountTable({
           key: 'counted',
           render: (_, b) => (
             <Form.Item name={['counted', targetKey(b)]} noStyle>
-              <InputNumber
-                min={0}
+              <QtyInput
                 max={MAX_QTY}
-                precision={isMaterial ? QTY_DECIMALS : 0}
+                decimals={isMaterial ? QTY_DECIMALS : 0}
                 style={{ width: 140 }}
               />
             </Form.Item>

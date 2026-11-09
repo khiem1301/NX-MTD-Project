@@ -30,6 +30,9 @@ export function PurchaseOrderInfo({ order: data }: { order: PurchaseOrderDetail 
           ? '—'
           : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
       </Descriptions.Item>
+      <Descriptions.Item label={PURCHASE_TEXT.place.expectedDeliveryDate}>
+        {formatDate(data.expectedDeliveryDate ?? null)}
+      </Descriptions.Item>
       <Descriptions.Item label={text.total}>
         <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
       </Descriptions.Item>

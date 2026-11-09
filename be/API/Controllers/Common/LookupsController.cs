@@ -16,8 +16,8 @@ public sealed class LookupsController : CommonBaseController
     public LookupsController(ILookupService lookups) => _lookups = lookups;
 
     [HttpGet("orders")]
-    public async Task<IActionResult> Orders([FromQuery] string? keyword, CancellationToken ct) =>
-        this.ToResponse(Result<IReadOnlyList<OrderOptionDto>>.Success(await _lookups.GetOpenOrdersAsync(keyword, ct)));
+    public async Task<IActionResult> Orders([FromQuery] string? keyword, [FromQuery] int? sewingTeamId, CancellationToken ct) =>
+        this.ToResponse(Result<IReadOnlyList<OrderOptionDto>>.Success(await _lookups.GetOpenOrdersAsync(keyword, sewingTeamId, ct)));
 
     [HttpGet("orders/{orderId:int}/lines")]
     public async Task<IActionResult> OrderLines(int orderId, CancellationToken ct) =>

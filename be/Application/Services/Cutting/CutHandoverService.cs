@@ -61,7 +61,7 @@ public sealed class CutHandoverService : ICutHandoverService
                 h.CutHandoverLines.OrderBy(l => l.CutHandoverLineId).Select(l => new CutHandoverLineDto(
                     l.CutHandoverLineId, l.OrderLineId, l.ProductComponentMaterialId,
                     l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
-                    l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.Color,
+                    l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.ProductColor.Color,
                     l.OrderLine.ProductVariant.SizeCode, l.HandedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<CutHandoverDto>();
@@ -74,7 +74,7 @@ public sealed class CutHandoverService : ICutHandoverService
         int cuttingTeamId, CancellationToken ct)
     {
         var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking()
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material)
             .FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
@@ -96,7 +96,7 @@ public sealed class CutHandoverService : ICutHandoverService
     private async Task<Result<int>> StoreHandoverAsync(CreateCutHandoverDto dto, int cuttingTeamId, CancellationToken ct)
     {
         var wo = await _uow.Repository<WorkOrder>().Query()
-            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant)
+            .Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine).ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.ProductComponent)
             .Include(w => w.WorkOrderLines).ThenInclude(l => l.ProductComponentMaterial!).ThenInclude(p => p.Material).Include(w => w.CuttingLays)
             .FirstOrDefaultAsync(w => w.WorkOrderId == dto.WorkOrderId, ct);
@@ -255,14 +255,14 @@ public sealed class CutHandoverService : ICutHandoverService
 
         // Mỗi (dòng đơn, chi tiết) của lệnh một dòng: lệnh thường chỉ có bộ đủ (chi tiết null), lệnh cắt bù có từng chi tiết.
         return wo.WorkOrderLines.DistinctBy(l => (l.OrderLineId, l.ProductComponentMaterialId))
-            .OrderBy(l => l.OrderLine.ProductVariant.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
+            .OrderBy(l => l.OrderLine.ProductVariant.ProductColor.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
             .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponentId)
             .Select(l =>
             {
                 var c = cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId));
                 var h = handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId));
                 return new HandoverableLineDto(l.OrderLineId, l.ProductComponentMaterialId, ComponentLabels.Of(l.ProductComponentMaterial),
-                    l.OrderLine.ProductVariant.Color, l.OrderLine.ProductVariant.SizeCode, c, h, Math.Max(0, c - h));
+                    l.OrderLine.ProductVariant.ProductColor.Color, l.OrderLine.ProductVariant.SizeCode, c, h, Math.Max(0, c - h));
             }).ToList();
     }
 

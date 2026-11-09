@@ -69,6 +69,11 @@ public sealed class MealService : IMealService
         if (await IsLockedAsync(meal, ct))
             return Result.Failure(ErrorCodes.MealLocked, Messages.MealLocked);        // MSG22
 
+        var memberCount = await _meals.GetTeamMemberCountAsync(teamId, ct);
+        if (dto.MealCount > memberCount)
+            return Result.Failure(ErrorCodes.MealCountExceedsMembers,
+                string.Format(Messages.MealCountExceedsMembers, dto.MealCount, memberCount));
+
         var attendanceCount = await _meals.GetTeamAttendanceCountAsync(teamId, dto.MealDate, ct);
         var existing = await _meals.FindConfirmationAsync(meal.DailyMealId, teamId, ct);
         Upsert(meal, existing, teamId, dto.MealCount, attendanceCount,

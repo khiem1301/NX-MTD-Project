@@ -1,6 +1,7 @@
-import { Alert, Form, InputNumber, Tooltip, Typography } from 'antd';
+import { Alert, Form, Tooltip, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { fill, formatQty } from '@/utils/format';
+import { QtyInput } from '@/components/common/QtyInput';
 import { KPI_TEXT } from '../constants';
 import type { KpiLineCapacity } from '../types';
 import { KPI_MAX_QTY } from '../utils/periodRule';
@@ -113,11 +114,10 @@ function LinesTable({ lines, values, loading, hasTeam }: Omit<Props, 'total' | '
             return (
               <Tooltip title={error}>
                 <Form.Item name={['lineQty', String(l.orderLineId)]} noStyle>
-                  <InputNumber
+                  <QtyInput
                     size="small"
                     min={0}
                     max={KPI_MAX_QTY}
-                    precision={0}
                     status={error ? 'error' : undefined}
                     aria-label={fill(text.lineInput, l.color, l.sizeCode)}
                     style={{ width: '100%' }}

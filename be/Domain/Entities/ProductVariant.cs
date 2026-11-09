@@ -12,13 +12,15 @@ public partial class ProductVariant
 
     public int ProductId { get; set; }
 
-    public string Color { get; set; } = null!;
+    public int ProductColorId { get; set; }
 
     public string SizeCode { get; set; } = null!;
 
     public string Status { get; set; } = null!;
 
     public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
+
+    public virtual ProductColor ProductColor { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;
 

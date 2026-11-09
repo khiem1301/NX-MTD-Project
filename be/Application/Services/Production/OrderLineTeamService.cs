@@ -36,7 +36,7 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
 
     private static IQueryable<LineRow> ToRows(IQueryable<OrderLine> lines) => lines.Select(l => new LineRow(l.OrderLineId, l.OrderId,
         l.Order.OrderCode, l.Order.Status, l.Order.DueDate, l.ProductId, l.ProductVariant.Product.ProductCode,
-        l.ProductVariant.Product.ProductName, l.ProductVariant.Color, l.ProductVariant.SizeCode, l.OrderedQty));
+        l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty));
 
     public async Task<Result<PagedResult<OrderLineTeamDto>>> GetPagedAsync(OrderLineTeamQuery query, CancellationToken ct)
     {
@@ -46,10 +46,10 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
             .Where(l => !OrderStatuses.Closed.Contains(l.Order.Status))
             .Where(l => string.IsNullOrEmpty(keyword) || l.Order.OrderCode.Contains(keyword)
                         || l.ProductVariant.Product.ProductCode.Contains(keyword) || l.ProductVariant.Product.ProductName.Contains(keyword)
-                        || l.ProductVariant.Color.Contains(keyword) || l.ProductVariant.SizeCode.Contains(keyword))
+                        || l.ProductVariant.ProductColor.Color.Contains(keyword) || l.ProductVariant.SizeCode.Contains(keyword))
             .Where(l => !query.OnlyUnallotted || !allotments.Any(a => a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.Order.DueDate).ThenBy(l => l.OrderId).ThenBy(l => l.ProductVariant.Product.ProductCode)
-            .ThenBy(l => l.ProductVariant.Color).ThenBy(l => l.ProductVariant.SizeCode);
+            .ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode);
         var page = await ToRows(filtered).ToPagedAsync(query, ct);
 
         var lineIds = page.Items.Select(r => r.OrderLineId).ToList();
