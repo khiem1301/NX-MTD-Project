@@ -664,6 +664,76 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     [InlineData("Cutting", false)]
     public void SaveOperationValidator_FinalStepMustBeSewing(string teamType, bool valid) =>
         new SaveOperationDtoValidator().Validate(new SaveOperationDto(1, "OP01", "May", 1, null, null, teamType, true)).IsValid.Should().Be(valid);
+
+    // ========== Công đoạn ↔ chi tiết vải × vải (DEV-ALL-86) ==========
+
+    private const int Body = 10, Label = 11, MainFabric = 100, Lining = 101, Thread = 102;
+
+    /// <summary>Định mức: Thân (PANEL) dùng vải chính, vải lót và chỉ; Nhãn (TRIM) dùng chỉ.</summary>
+    private void SetupNorms()
+    {
+        var body = new ProductComponent { ProductComponentId = Body, ProductId = 1, ComponentName = "Thân", ComponentType = ComponentTypes.Panel };
+        var label = new ProductComponent { ProductComponentId = Label, ProductId = 1, ComponentName = "Nhãn", ComponentType = ComponentTypes.Trim };
+        Material M(int id, string type) => new() { MaterialId = id, MaterialType = type };
+        ProductComponentMaterial N(ProductComponent c, Material m) => new()
+        {
+            ProductId = 1, ProductComponentId = c.ProductComponentId, ProductComponent = c, MaterialId = m.MaterialId, Material = m,
+        };
+        SetupQueryable(new List<ProductComponentMaterial>
+        {
+            N(body, M(MainFabric, MaterialTypes.Fabric)), N(body, M(Lining, MaterialTypes.Fabric)),
+            N(body, M(Thread, MaterialTypes.Trim)), N(label, M(Thread, MaterialTypes.Trim)),
+        });
+    }
+
+    private Task<Result<int>> CreateWith(params (int Component, int Material)[] links) =>
+        _operationService.CreateAsync(OpDto() with
+        {
+            ComponentFabrics = links.Select(l => new OperationComponentFabricDto(l.Component, l.Material)).ToList(),
+        }, default);
+
+    [Fact]
+    public async Task CreateOperation_LinksEachFabricOfAPanelSeparately()
+    {
+        SetupNorms();
+        Operation? added = null;
+        Repo<Operation>().When(r => r.AddAsync(Arg.Any<Operation>())).Do(c => added = c.Arg<Operation>());
+
+        var result = await CreateWith((Body, MainFabric), (Body, Lining), (Body, MainFabric));
+
+        result.IsSuccess.Should().BeTrue();
+        added!.OperationComponents.Select(c => (c.ProductComponentId, c.MaterialId, c.ProductId))
+            .Should().BeEquivalentTo([(Body, MainFabric, 1), (Body, Lining, 1)]);
+    }
+
+    [Theory]
+    [InlineData(Label, Thread)]      // phụ liệu không gắn công đoạn
+    [InlineData(Body, Thread)]       // NVL không phải vải
+    [InlineData(Body, 999)]          // vải không có trong định mức của chi tiết
+    [InlineData(99, MainFabric)]     // chi tiết của mã hàng khác / không tồn tại
+    public async Task CreateOperation_LinkThatIsNotAFabricOfAPanel_IsRejected(int component, int material)
+    {
+        SetupNorms();
+
+        var result = await CreateWith((component, material));
+
+        result.Kind.Should().Be(ResultKind.Validation);
+        result.Message.Should().Be(Messages.OperationComponentInvalid);
+    }
+
+    [Fact]
+    public void Validator_ComponentFabrics_LimitAndIds()
+    {
+        var validator = new SaveOperationDtoValidator();
+        SaveOperationDto With(int count, int id = 1) => OpDto() with
+        {
+            ComponentFabrics = Enumerable.Range(0, count).Select(_ => new OperationComponentFabricDto(id, id)).ToList(),
+        };
+
+        validator.Validate(With(OperationLimits.MaxComponentFabrics)).IsValid.Should().BeTrue();
+        validator.Validate(With(OperationLimits.MaxComponentFabrics + 1)).IsValid.Should().BeFalse();
+        validator.Validate(With(1, 0)).IsValid.Should().BeFalse();
+    }
 }
 
 public class ProductionOperationValidatorTests
@@ -688,4 +758,5 @@ public class ProductionOperationValidatorTests
         new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, -1, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();
         new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, 0, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();   // Excel cũng coi 0 là chưa có đơn giá
     }
+
 }

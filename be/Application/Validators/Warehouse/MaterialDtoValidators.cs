@@ -18,10 +18,6 @@ public sealed class CreateMaterialDtoValidator : AbstractValidator<CreateMateria
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);
-        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
-        // Vải bắt buộc có khổ vải (dùng ước tính vải cắt bù).
-        RuleFor(x => x.WidthCm).NotNull().WithMessage(WarehouseMessages.FabricWidthRequired)
-            .When(x => x.MaterialType == MaterialTypes.Fabric);
     }
 }
 
@@ -37,10 +33,6 @@ public sealed class UpdateMaterialDtoValidator : AbstractValidator<UpdateMateria
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);
-        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
-        // Vải bắt buộc có khổ vải (dùng ước tính vải cắt bù).
-        RuleFor(x => x.WidthCm).NotNull().WithMessage(WarehouseMessages.FabricWidthRequired)
-            .When(x => x.MaterialType == MaterialTypes.Fabric);
     }
 }
 

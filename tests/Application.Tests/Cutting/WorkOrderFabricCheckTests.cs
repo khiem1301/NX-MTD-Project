@@ -11,15 +11,20 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>Lệnh cắt thường: cả bộ tính số mét theo bìa của mã hàng và khổ vải (DEV-ALL-42), cắt lẻ theo kích thước chi tiết; chỉ cảnh báo.</summary>
+/// <summary>
+/// Lệnh cắt thường ước vải theo bìa của đơn (DEV-ALL-85): cả bộ = số lớp × chiều dài bìa, số lớp = max theo size của ⌈cần ÷ số sản phẩm
+/// size đó trên 1 lớp⌉, chọn bìa ít mét nhất; cắt lẻ theo bìa của nhóm chứa chi tiết, tối thiểu một lớp. Chỉ cảnh báo.
+/// </summary>
 public class WorkOrderFabricCheckTests : ProductionTestBase
 {
-    private const int OrderId = 1, TeamId = 2, ProductId = 1, FabricId = 100, SizeM = 1, SizeL = 2, SizeXl = 3, RedM = 4, BlueM = 5, NormThan = 11;
+    private const int OrderId = 1, TeamId = 2, ProductId = 1, FabricId = 100, SizeM = 1, SizeL = 2, SizeXl = 3, RedM = 4, BlueM = 5,
+        NormThan = 11, Body = 31, Sleeve = 32;
 
     private readonly IStockService _stock = Substitute.For<IStockService>();
     private readonly List<ProductComponentMaterial> _norms = [];
     private readonly List<ProductMarker> _markers = [];
     private readonly List<ProductMarkerFabric> _markerFabrics = [];
+    private readonly List<ProductMarkerComponent> _markerComponents = [];
     private readonly List<ProductVariant> _variants =
     [
         new() { ProductVariantId = SizeM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "M" },
@@ -37,46 +42,67 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly List<WorkOrderLine> _workOrderLines = [];
     private readonly Material _fabric = new()
     {
-        MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric, WidthCm = 150,
+        MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
     };
     private readonly Material _white = new()
     {
-        MaterialId = 200, MaterialCode = "V02", MaterialName = "Vải gió", Unit = "m", Color = "Trắng", MaterialType = MaterialTypes.Fabric, WidthCm = 120,
+        MaterialId = 200, MaterialCode = "V02", MaterialName = "Vải gió", Unit = "m", Color = "Trắng", MaterialType = MaterialTypes.Fabric,
     };
 
     public WorkOrderFabricCheckTests()
     {
         SetupQueryable(_norms); SetupQueryable(_lines); SetupQueryable(_issueLines); SetupQueryable(_returnLines);
         SetupQueryable(_orders); SetupQueryable(_teams); SetupQueryable(_workOrders); SetupQueryable(_workOrderLines);
-        SetupQueryable(_markers); SetupQueryable(_markerFabrics); SetupQueryable(_variants);
+        SetupQueryable(_markers); SetupQueryable(_markerFabrics); SetupQueryable(_markerComponents); SetupQueryable(_variants);
         Available(1000);
     }
 
     private void Available(decimal meters) =>
         _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(meters);
 
-    private void Marker(byte no, string size, decimal length, decimal width) =>
-        _markers.Add(new ProductMarker { ProductId = ProductId, MarkerNo = no, SizeCode = size, LengthCm = length, WidthCm = width });
+    /// <summary>Bìa của đơn: tỉ lệ dạng "M:2 L:1".</summary>
+    private void Marker(string code, byte group, decimal length, string ratio, int order = OrderId, string status = RecordStatus.Active)
+    {
+        var marker = new ProductMarker
+        {
+            ProductMarkerId = _markers.Count + 1, OrderId = order, ProductId = ProductId, MarkerNo = group, MarkerCode = code, LengthM = length,
+            Status = status,
+        };
+        foreach (var part in ratio.Split(' '))
+        {
+            var bits = part.Split(':');
+            marker.ProductMarkerRatios.Add(new ProductMarkerRatio { SizeCode = bits[0], PiecesPerPly = short.Parse(bits[1]) });
+        }
+        _markers.Add(marker);
+    }
 
-    private void OnFabric(byte no, string color = "Đen", Material? material = null) =>
-        _markerFabrics.Add(new ProductMarkerFabric { ProductId = ProductId, MarkerNo = no, ProductColor = new ProductColor { Color = color }, MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric });
+    private void OnFabric(byte group, string color = "Đen", Material? material = null) =>
+        _markerFabrics.Add(new ProductMarkerFabric
+        {
+            ProductId = ProductId, MarkerNo = group, ProductColor = new ProductColor { Color = color },
+            MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric,
+        });
 
-    private static ProductComponent Component(string name, string type = ComponentTypes.Panel, string status = RecordStatus.Active) =>
-        new() { ComponentName = name, PiecesPerGarment = 1, ComponentType = type, Status = status };
+    private void OnGroup(byte group, int componentId) =>
+        _markerComponents.Add(new ProductMarkerComponent { ProductId = ProductId, MarkerNo = group, ProductComponentId = componentId });
 
-    private ProductComponentMaterial Norm(int variantId, string name = "Thân", decimal? length = 70, decimal? width = 50,
-        Material? material = null, int id = NormThan, string type = ComponentTypes.Panel, string status = RecordStatus.Active)
+    private ProductComponentMaterial Norm(int variantId, string name = "Thân", Material? material = null, int id = NormThan,
+        string type = ComponentTypes.Panel, string status = RecordStatus.Active, int componentId = Body, short pieces = 1)
     {
         var norm = new ProductComponentMaterial
         {
-            ProductComponentMaterialId = id, ProductVariantId = variantId, MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric,
-            ProductComponent = Component(name, type, status), LengthCm = length, WidthCm = width,
+            ProductComponentMaterialId = id, ProductVariantId = variantId, ProductComponentId = componentId,
+            MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric,
+            ProductComponent = new ProductComponent
+            {
+                ProductComponentId = componentId, ComponentName = name, PiecesPerGarment = pieces, ComponentType = type, Status = status,
+            },
         };
         _norms.Add(norm);
         return norm;
     }
 
-    private WorkOrderFabricChecker Sut() => new(Uow, _stock, new FabricPlanner(Uow));
+    private WorkOrderFabricChecker Sut() => new(Uow, _stock, new FabricPlanner(Uow), Settings);
 
     private Task<IReadOnlyList<WorkOrderFabricCheckDto>> CheckAll(params CutLine[] lines) => Sut().CheckAsync(OrderId, TeamId, lines, default);
 
@@ -86,243 +112,237 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
 
     private static CutLine Extra(int planned, int norm = NormThan) => new(SizeM, planned, "Đen - M", norm);
 
-    // ---------- cả bộ theo bìa ----------
+    /// <summary>Áo Đen M, L trên nhóm bìa 1 (thân), vải V01.</summary>
+    private void BodyOnGroupOne()
+    {
+        Norm(SizeM); Norm(SizeL, id: 12);
+        OnFabric(1); OnGroup(1, Body);
+    }
+
+    // ---------- cả bộ theo bìa của đơn ----------
 
     [Fact]
-    public async Task CheckAsync_WholeSet_FitsMarkersAcrossTheFabric()
+    public async Task Whole_PliesFollowTheSizeThatNeedsTheMostLayers()
     {
-        Marker(1, "M", 120, 70);    // khổ 150: 2 bìa một hàng; 100 áo → 50 hàng × 1,2 m
-        OnFabric(1);
+        BodyOnGroupOne();
+        Marker("1A", 1, 1.65m, "M:2 L:1");
 
-        (await Check(Whole(SizeM, 100))).NeedMeters.Should().Be(60m);
+        var row = await Check(Whole(SizeM, 80), Whole(SizeL, 40, "Đen - L"));   // max(80/2, 40/1) = 40 lớp
+
+        (row.Status, row.NeedMeters).Should().Be((FabricCheckStatuses.Enough, 66m));
     }
 
     [Fact]
-    public async Task CheckAsync_EachSize_UsesItsOwnMarkerSize()
+    public async Task Whole_ChoosesTheMarkerNeedingTheFewestMeters()
     {
-        Marker(1, "M", 120, 70); Marker(1, "L", 125, 75); Marker(1, "XL", 130, 80);
-        OnFabric(1);
+        BodyOnGroupOne();
+        Marker("1A", 1, 2.2m, "M:2 L:1");   // M30: 15 lớp × 2,2 = 33 m
+        Marker("1B", 1, 2.1m, "M:4");       // M30: 8 lớp × 2,1 = 16,8 m
 
-        (await Check(Whole(SizeM, 100), Whole(SizeL, 80, "Đen - L"), Whole(SizeXl, 30, "Đen - XL"))).NeedMeters.Should().Be(149m);
+        (await Check(Whole(SizeM, 30))).NeedMeters.Should().Be(16.8m);
     }
 
     [Fact]
-    public async Task CheckAsync_TwoMarkersOnTheSameFabric_AreAddedTogether()
+    public async Task Whole_MarkerWithoutANeededSize_IsNotACandidate()
     {
-        Marker(1, "M", 100, 75); Marker(2, "M", 50, 75);
-        OnFabric(1); OnFabric(2);
+        BodyOnGroupOne();
+        Marker("1B", 1, 2.1m, "M:4");
 
-        (await Check(Whole(SizeM, 2))).NeedMeters.Should().Be(1.5m);
+        var row = await Check(Whole(SizeM, 10), Whole(SizeL, 10, "Đen - L"));
+
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.Message.Should().Contain("bìa của đơn cho nhóm 1").And.Contain("L");
+    }
+
+    [Theory]
+    [InlineData(RecordStatus.Discontinued, OrderId)]
+    [InlineData(RecordStatus.Active, 99)]
+    public async Task Whole_DiscontinuedMarkersAndMarkersOfOtherOrders_AreIgnored(string status, int order)
+    {
+        BodyOnGroupOne();
+        Marker("1A", 1, 2m, "M:1", order, status);
+
+        (await Check(Whole(SizeM, 10))).Status.Should().Be(FabricCheckStatuses.Unknown);
     }
 
     [Fact]
-    public async Task CheckAsync_ColorsWithDifferentFabrics_NameTheFabricThatIsShort()
+    public async Task Whole_MarkerOffTheOrderRatio_WarnsWithTheSurplus()
     {
-        Marker(1, "M", 120, 70); Marker(2, "M", 40, 30);
-        OnFabric(1); OnFabric(2, material: _white);
-        _stock.GetAvailableAsync(StockKey.Material(_white.MaterialId), Arg.Any<CancellationToken>()).Returns(0.1m);
+        BodyOnGroupOne();
+        Marker("1A", 1, 2.2m, "M:2 L:1");   // lệnh chỉ M30: 15 lớp, dư 15 áo L
 
-        var rows = await CheckAll(Whole(SizeM, 4));
+        var row = await Check(Whole(SizeM, 30));
 
-        rows.Select(r => (r.MaterialCode, r.Status)).Should().Equal(("V01", FabricCheckStatuses.Enough), ("V02", FabricCheckStatuses.Short));
-        rows[1].Message.Should().StartWith("V02 Vải gió (Trắng): thiếu khoảng 0,3 m");
+        row.Status.Should().Be(FabricCheckStatuses.Enough);
+        row.Message.Should().Contain("1A").And.Contain("dư 15");
     }
 
     [Fact]
-    public async Task CheckAsync_SameMarker_UsesTheFabricOfEachShirtColor()
+    public async Task Whole_SurplusWithinTheAllowedPercent_HasNoWarning()
     {
-        Marker(1, "M", 100, 75);
-        OnFabric(1); OnFabric(1, "Đỏ", _white);
+        Settings.GetDecimalAsync(SettingKeys.CutSurplusPercent, Arg.Any<decimal>(), Arg.Any<CancellationToken>()).Returns(50m);
+        BodyOnGroupOne();
+        Marker("1A", 1, 2.2m, "M:2 L:1");   // dư 15 ≤ 50% × 30
 
-        var rows = await CheckAll(Whole(SizeM, 2), Whole(RedM, 4, "Đỏ - M"));
-
-        rows.Select(r => (r.MaterialCode, r.NeedMeters)).Should().Equal(("V01", 1m), ("V02", 4m));   // khổ 120 chỉ xếp được 1 bìa một hàng
+        (await Check(Whole(SizeM, 30))).Message.Should().BeNull();
     }
 
     [Fact]
-    public async Task CheckAsync_ColorsSharingAFabric_ArePooledBeforeRoundingTheRows()
+    public async Task Whole_TwoMarkerGroupsOnTheSameFabric_AreAddedTogether()
     {
-        Marker(2, "M", 40, 30);     // khổ 120: 4 bìa một hàng; 5 + 3 = 8 áo → 2 hàng, tính riêng từng màu sẽ thành 3 hàng
-        OnFabric(2, "Đỏ", _white); OnFabric(2, "Xanh", _white);
+        BodyOnGroupOne();
+        OnFabric(2);
+        Marker("1A", 1, 2m, "M:1");
+        Marker("2A", 2, 1m, "M:1");
 
-        (await Check(Whole(RedM, 5, "Đỏ - M"), Whole(BlueM, 3, "Xanh - M"))).NeedMeters.Should().Be(0.8m);
+        (await Check(Whole(SizeM, 10))).NeedMeters.Should().Be(30m);
     }
 
     [Fact]
-    public async Task CheckAsync_FabricUsedAsMainAndAsContrast_IsSummedAcrossMarkers()
+    public async Task Whole_SameGroupOnDifferentFabricsByShirtColor_EstimatesEachFabric()
     {
-        Marker(1, "M", 100, 75); Marker(2, "M", 50, 75);
-        OnFabric(1); OnFabric(2, "Đỏ");   // vải Đen: bìa 1 của áo Đen, bìa 2 của áo Đỏ
+        Norm(SizeM); Norm(BlueM, material: _white, id: 13);
+        OnFabric(1); OnFabric(1, "Xanh", _white); OnGroup(1, Body);
+        Marker("1A", 1, 2m, "M:2");
 
-        (await Check(Whole(SizeM, 2), Whole(RedM, 2, "Đỏ - M"))).NeedMeters.Should().Be(1.5m);
+        var rows = await CheckAll(Whole(SizeM, 10), Whole(BlueM, 4, "Xanh - M"));
+
+        rows.Select(r => (r.MaterialCode, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)4m)]);
     }
 
     [Fact]
-    public async Task CheckAsync_ColorCaseAndSpaces_DoNotBreakTheMatch()
+    public async Task Whole_ColorCaseAndSpaces_DoNotBreakTheMatch()
     {
-        Marker(1, "m", 100, 75);
-        OnFabric(1, " đen ");
+        Norm(SizeM);
+        OnFabric(1, " đen "); OnGroup(1, Body);
+        Marker("1A", 1, 2m, "M:1");
 
-        (await Check(Whole(SizeM, 2))).NeedMeters.Should().Be(1m);
+        (await Check(Whole(SizeM, 3))).NeedMeters.Should().Be(6m);
     }
 
-    // ---------- cắt lẻ theo chi tiết ----------
+    // ---------- cắt lẻ theo nhóm bìa chứa chi tiết ----------
 
-    [Fact]
-    public async Task CheckAsync_ExtraComponent_IsAddedToTheSameFabric()
+    [Theory]
+    [InlineData(7, 3.2)]   // 2 tay / áo × M2 = 4 tay / lớp → 2 lớp × 1,6 m
+    [InlineData(1, 1.6)]   // tối thiểu một chiều dài bìa
+    public async Task Extra_UsesTheMarkerOfTheGroupHoldingTheComponent(int pieces, double meters)
     {
-        Marker(1, "M", 100, 75);
-        OnFabric(1);
-        Norm(SizeM);                // 6 miếng, 3 miếng một hàng → 2 hàng × 0,7 m
+        Norm(SizeM, "Tay áo", componentId: Sleeve, pieces: 2);
+        OnFabric(2); OnGroup(2, Sleeve);
+        Marker("2A", 2, 1.6m, "M:2");
 
-        (await Check(Whole(SizeM, 2), Extra(6))).NeedMeters.Should().Be(2.4m);
+        (await Check(Extra(pieces))).NeedMeters.Should().Be((decimal)meters);
     }
 
     [Fact]
-    public async Task CheckAsync_OnlyExtraComponent_CountsOnlyThatComponent()
+    public async Task Extra_ComponentOnNoGroup_NamesTheComponent()
     {
-        Norm(SizeM, "Thân");
-        Norm(SizeM, "Tay", length: 58, width: 40, id: 12);
+        Norm(SizeM, "Tay áo", componentId: Sleeve);
+        OnFabric(2);
 
-        (await Check(Extra(3))).NeedMeters.Should().Be(0.7m);
+        var row = await Check(Extra(3));
+
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.Message.Should().Contain("nhóm bìa cho chi tiết Tay áo");
+    }
+
+    [Fact]
+    public async Task Extra_IsAddedToTheWholeSetsOnTheSameFabric()
+    {
+        Norm(SizeM); Norm(SizeM, "Tay áo", id: 14, componentId: Sleeve, pieces: 2);
+        OnFabric(1); OnFabric(2); OnGroup(1, Body); OnGroup(2, Sleeve);
+        Marker("1A", 1, 2m, "M:1");
+        Marker("2A", 2, 1m, "M:2");
+
+        // cả bộ: thân 5 lớp × 2 m + tay ⌈5 ÷ 2⌉ = 3 lớp × 1 m; cắt lẻ 3 tay: 1 lớp × 1 m
+        (await Check(Whole(SizeM, 5), Extra(3, 14))).NeedMeters.Should().Be(14m);
     }
 
     // ---------- đủ / thiếu ----------
 
     [Fact]
-    public async Task CheckAsync_EnoughFabric_HasNoMessage()
+    public async Task EnoughFabric_HasNoMessage()
     {
-        Marker(1, "M", 70, 75); OnFabric(1);
-        Available(0.7m);    // đúng bằng số cần
+        BodyOnGroupOne();
+        Marker("1A", 1, 2m, "M:1");
 
-        var row = await Check(Whole(SizeM, 2));
+        var row = await Check(Whole(SizeM, 10));
 
-        row.Status.Should().Be(FabricCheckStatuses.Enough);
-        row.Message.Should().BeNull();
+        (row.Status, row.NeedMeters, row.AvailableQty, row.Message).Should().Be((FabricCheckStatuses.Enough, 20m, 1000m, (string?)null));
     }
 
     [Fact]
-    public async Task CheckAsync_ShortFabric_SaysHowMuchIsMissing()
+    public async Task ShortFabric_SaysHowMuchIsMissing()
     {
-        Marker(1, "M", 70, 75); OnFabric(1);
-        Available(0.5m);
+        Available(15);
+        BodyOnGroupOne();
+        Marker("1A", 1, 2m, "M:1");
 
-        var row = await Check(Whole(SizeM, 2));
+        var row = await Check(Whole(SizeM, 10));
 
         row.Status.Should().Be(FabricCheckStatuses.Short);
-        row.Message.Should().Be("V01 Vải gió (Đen): thiếu khoảng 0,2 m (cần khoảng 0,7 m, có 0,5 m: kho 0,5, tổ đang giữ 0).");
+        row.Message.Should().Contain("thiếu khoảng 5 m").And.Contain("cần khoảng 20 m");
     }
 
     [Fact]
-    public async Task CheckAsync_FabricHeldByTheTeam_Counts()
+    public async Task FabricHeldByTheTeam_Counts()
     {
-        Marker(1, "M", 70, 75); OnFabric(1);
-        Available(0.2m);
-        _issueLines.Add(new MaterialIssueLine
-        {
-            MaterialId = FabricId, ConfirmedQty = 0.5m,
-            MaterialIssue = new MaterialIssue { ReceivingTeamId = TeamId, OrderId = OrderId, WarehouseType = WarehouseTypes.Material, Status = IssueStatuses.Received },
-        });
+        Available(15);
+        var issue = new MaterialIssue { OrderId = OrderId, ReceivingTeamId = TeamId, WarehouseType = WarehouseTypes.Material, Status = IssueStatuses.Received };
+        _issueLines.Add(new MaterialIssueLine { MaterialId = FabricId, IssuedQty = 5, ConfirmedQty = 5, MaterialIssue = issue });
+        BodyOnGroupOne();
+        Marker("1A", 1, 2m, "M:1");
 
-        (await Check(Whole(SizeM, 2))).Status.Should().Be(FabricCheckStatuses.Enough);
+        (await Check(Whole(SizeM, 10))).Status.Should().Be(FabricCheckStatuses.Enough);
     }
 
     // ---------- không tính được ----------
 
     [Fact]
-    public async Task CheckAsync_MarkerWiderThanTheFabric_NamesTheMarkerAndSize()
+    public async Task FabricInTheNormButOnNoMarkerGroup_IsNotSilentlyLeftOut()
     {
-        Marker(1, "M", 70, 151); OnFabric(1);
+        BodyOnGroupOne();
+        Norm(SizeM, "Lót", _white, id: 15, componentId: 33);
+        Marker("1A", 1, 2m, "M:1");
 
-        var row = await Check(Whole(SizeM, 3));
+        var white = (await CheckAll(Whole(SizeM, 10))).Single(r => r.MaterialId == _white.MaterialId);
 
-        row.Status.Should().Be(FabricCheckStatuses.TooWide);
-        row.Message.Should().Be("V01 Vải gió (Đen): rộng hơn khổ vải 1,5 m: bìa 1 size M (151 cm).");
+        white.Status.Should().Be(FabricCheckStatuses.Unknown);
+        white.Message.Should().Contain("bìa cho màu Đen");
     }
 
     [Fact]
-    public async Task CheckAsync_MarkerAsWideAsTheFabric_IsFine()
+    public async Task FabricNotInMeters_CannotBeEstimated()
     {
-        Marker(1, "M", 70, 150); OnFabric(1);
+        var kg = new Material { MaterialId = 300, MaterialCode = "V03", MaterialName = "Vải cân", Unit = "kg", Color = "", MaterialType = MaterialTypes.Fabric };
+        Norm(SizeM, material: kg);
+        OnFabric(1, material: kg); OnGroup(1, Body);
+        Marker("1A", 1, 2m, "M:1");
 
-        (await Check(Whole(SizeM, 1))).Status.Should().Be(FabricCheckStatuses.Enough);
-    }
-
-    [Fact]
-    public async Task CheckAsync_MarkerWithoutThisSize_NamesTheMarkerAndSize()
-    {
-        Marker(1, "L", 70, 75); OnFabric(1);
-
-        var row = await Check(Whole(SizeM, 3));
+        var row = await Check(Whole(SizeM, 10));
 
         row.Status.Should().Be(FabricCheckStatuses.Unknown);
-        row.Message.Should().Be("V01 Vải gió (Đen): chưa tính được vì còn thiếu: bìa 1 size M.");
+        row.Message.Should().Contain("không tính theo mét");
     }
 
     [Fact]
-    public async Task CheckAsync_FabricInTheNormButOnNoMarker_IsNotSilentlyLeftOut()
+    public async Task ColorSizeWithoutFabricNorm_IsReportedNotTreatedAsEnough()
     {
-        Marker(1, "M", 70, 75); OnFabric(1);
-        Norm(SizeM);
-        Norm(SizeM, "Cổ", material: _white, id: 12);    // vải phối chưa có bìa: không được báo đủ vải
+        var row = await Check(Whole(RedM, 10, "Đỏ - M"));
 
-        var rows = await CheckAll(Whole(SizeM, 2));
-
-        rows.Select(r => (r.MaterialCode, r.Status)).Should().Equal(("V01", FabricCheckStatuses.Enough), ("V02", FabricCheckStatuses.Unknown));
-        rows[1].Message.Should().Be("V02 Vải gió (Trắng): chưa tính được vì còn thiếu: bìa cho màu Đen.");
-    }
-
-    [Fact]
-    public async Task CheckAsync_ExtraComponentWithoutSize_NamesTheComponent()
-    {
-        Norm(SizeM, "Tay", length: null);
-
-        (await Check(Extra(3))).Message.Should().Be("V01 Vải gió (Đen): chưa tính được vì còn thiếu: Tay Đen - M.");
-    }
-
-    [Fact]
-    public async Task CheckAsync_LongLists_AreShortened()
-    {
-        for (var i = 1; i <= 5; i++) Norm(SizeM, $"CT{i}", length: null, id: i);
-
-        (await Check(Enumerable.Range(1, 5).Select(i => Extra(1, i)).ToArray())).Message
-            .Should().EndWith("CT1 Đen - M, CT2 Đen - M, CT3 Đen - M và 2 mục khác.");
-    }
-
-    [Fact]
-    public async Task CheckAsync_FabricWithoutWidthOrNotInMeters_CannotBeEstimated()
-    {
-        Marker(1, "M", 70, 75);
-        OnFabric(1, material: new Material { MaterialId = 7, MaterialCode = "V07", MaterialName = "Vải", Unit = "m", Color = "", MaterialType = MaterialTypes.Fabric });
-        (await Check(Whole(SizeM, 1))).Message.Should().Be("V07 Vải: chưa tính được vì NVL chưa có khổ vải.");
-
-        _markerFabrics.Clear();
-        OnFabric(1, material: new Material { MaterialId = 8, MaterialCode = "V08", MaterialName = "Vải", Unit = "kg", Color = "", MaterialType = MaterialTypes.Fabric, WidthCm = 150 });
-        (await Check(Whole(SizeM, 1))).Message.Should().Be("V08 Vải: chưa tính được vì NVL không tính theo mét.");
-    }
-
-    [Fact]
-    public async Task CheckAsync_ColorSizeWithoutFabricNorm_IsReportedNotTreatedAsEnough()
-    {
-        var row = await Check(Whole(SizeM, 3));
-
-        row.MaterialId.Should().Be(0);
         row.Status.Should().Be(FabricCheckStatuses.Unknown);
-        row.Message.Should().Be("Chưa tính được vải cho Đen - M vì chưa có định mức vải.");
+        row.Message.Should().Contain("Đỏ - M");
     }
 
-    // ---------- phạm vi ----------
-
     [Fact]
-    public async Task CheckAsync_TrimsDiscontinuedComponentsAndNonFabrics_NeedNoMarker()
+    public async Task TrimsAndDiscontinuedComponents_NeedNoMarker()
     {
-        Marker(1, "M", 70, 75); OnFabric(1);
-        Norm(SizeM);
-        Norm(SizeM, "Khóa", type: ComponentTypes.Trim, material: _white, id: 12);
-        Norm(SizeM, "Cũ", status: RecordStatus.Discontinued, material: _white, id: 13);
-        Norm(SizeM, "Mex", material: new Material { MaterialId = 8, MaterialCode = "K1", MaterialName = "Mex", Unit = "m", Color = "", MaterialType = "TRIM" }, id: 14);
+        BodyOnGroupOne();
+        Marker("1A", 1, 2m, "M:1");
+        Norm(SizeM, "Nhãn", _white, id: 16, type: ComponentTypes.Trim, componentId: 34);
+        Norm(SizeM, "Cổ cũ", _white, id: 17, status: RecordStatus.Discontinued, componentId: 35);
 
-        (await Check(Whole(SizeM, 2))).NeedMeters.Should().Be(0.7m);
+        (await CheckAll(Whole(SizeM, 10))).Should().ContainSingle(r => r.MaterialId == FabricId);
     }
 
     // ---------- lưu lệnh có cắt lẻ ----------

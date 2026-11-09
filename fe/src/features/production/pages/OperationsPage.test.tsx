@@ -26,7 +26,7 @@ const op = (operationId: number, over: Partial<Operation> = {}) =>
     upcomingRate: null,
     operationGroupId: null,
     groupName: null,
-    componentIds: [],
+    componentFabrics: [],
     ...over,
   }) as Operation;
 let mockOperations: Operation[] = [];

@@ -10,7 +10,6 @@ import type { MaterialOption } from '@/types/lookup';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
-import { formatFabricWidth } from '../utils/fabricWidth';
 import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
 import { rowError, type BulkLine, type Draft, isChanged } from './bulkOrderMaterial';
 
@@ -45,12 +44,11 @@ export const bulkOrderMaterialColumns = ({
   const option = (line: BulkLine) => materialOptions.find((m) => m.materialId === line.materialId);
   const unitOf = (line: BulkLine) => line.original?.unit ?? option(line)?.unit;
 
-  /** Tên, màu, khổ vải của NVL trên một dòng; bỏ qua phần không có. */
+  /** Tên, màu của NVL trên một dòng; bỏ qua phần không có. */
   const detailOf = (line: BulkLine) =>
     [
       line.original?.materialName ?? option(line)?.materialName,
       line.original?.materialColor ?? option(line)?.color,
-      line.original?.materialWidthCm ? formatFabricWidth(line.original.materialWidthCm) : null,
     ]
       .filter(Boolean)
       .join(' · ');

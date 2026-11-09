@@ -24,18 +24,21 @@ describe('FabricCheckAlerts', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('thiếu vải và chi tiết rộng hơn khổ hiện ở hai cảnh báo riêng, kèm ghi chú ước tính', () => {
+  it('thiếu vải và bìa lệch tỉ lệ hiện ở hai cảnh báo riêng; chỉ phần thiếu vải kèm ghi chú ước tính', () => {
     render(
       <FabricCheckAlerts
-        checks={[check(1, 'Short', 'thiếu 50 m'), check(2, 'TooWide', 'tay áo rộng hơn khổ')]}
+        checks={[
+          check(1, 'Short', 'thiếu 50 m'),
+          check(2, 'Enough', 'Bìa 1A lệch tỉ lệ lệnh, dư 15 sản phẩm'),
+        ]}
       />,
     );
 
     expect(screen.getByText('Không đủ vải cho lệnh cắt')).toBeInTheDocument();
     expect(screen.getByText('thiếu 50 m')).toBeInTheDocument();
-    expect(screen.getByText('Bìa hoặc chi tiết rộng hơn khổ vải')).toBeInTheDocument();
-    expect(screen.getByText('tay áo rộng hơn khổ')).toBeInTheDocument();
-    expect(screen.getAllByText(/Lệnh vẫn lưu được/)).toHaveLength(2);
+    expect(screen.getByText('Bìa lệch tỉ lệ lệnh cắt')).toBeInTheDocument();
+    expect(screen.getByText('Bìa 1A lệch tỉ lệ lệnh, dư 15 sản phẩm')).toBeInTheDocument();
+    expect(screen.getAllByText(/Lệnh vẫn lưu được/)).toHaveLength(1);
     expect(screen.queryByText('Chưa tính được vải')).not.toBeInTheDocument();
   });
 

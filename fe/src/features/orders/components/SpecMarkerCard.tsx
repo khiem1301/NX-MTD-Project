@@ -1,22 +1,21 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Button, Card, Col, InputNumber, Row, Select } from 'antd';
+import { Button, Card, Col, Row, Select, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import { codeKey, type MarkerRow, type MarkerSize } from '../utils/markerSpec';
-import { MAX_SIZE_CM, type MaterialOption } from '../utils/productSpec';
+import { codeKey, type MarkerRow } from '../utils/markerSpec';
+import type { MaterialOption } from '../utils/productSpec';
 
 const text = MESSAGES.orders.spec;
 
-/** Hàng của bảng con: một size hoặc một màu. */
-type CodeRow = { code: string };
-const toRow = (code: string): CodeRow => ({ code });
+/** Hàng của bảng vải: một màu áo. */
+type ColorRow = { code: string };
 
 type SpecMarkerCardProps = {
   marker: MarkerRow;
-  no: number;
-  sizes: string[];
   colors: string[];
+  /** Chi tiết cắt (Panel) chọn được cho nhóm. */
+  panelOptions: { value: string; label: string }[];
   /** Vải chọn được cho từng màu áo: lấy từ định mức chi tiết cắt của màu đó. */
   fabricOptions: (color: string) => MaterialOption[];
   materialsLoading: boolean;
@@ -25,38 +24,18 @@ type SpecMarkerCardProps = {
   onRemove: () => void;
 };
 
-/** Một bìa: kích thước theo từng size và vải theo từng màu áo. */
+/** Một nhóm bìa: các chi tiết cắt chung bìa và vải theo từng màu áo. */
 export function SpecMarkerCard({
   marker,
-  no,
-  sizes,
   colors,
+  panelOptions,
   fabricOptions,
   materialsLoading,
   readOnly,
   onChange,
   onRemove,
 }: SpecMarkerCardProps) {
-  const sizeOf = (size: string): MarkerSize =>
-    marker.sizes[codeKey(size)] ?? { lengthCm: null, widthCm: null };
-  const patchSize = (size: string, change: Partial<MarkerSize>) =>
-    onChange({
-      sizes: { ...marker.sizes, [codeKey(size)]: { ...sizeOf(size), ...change } },
-    });
-  const sizeInput = (size: string, field: keyof MarkerSize, label: string) => (
-    <InputNumber
-      size="small"
-      min={0.01}
-      max={MAX_SIZE_CM}
-      precision={2}
-      disabled={readOnly}
-      aria-label={`${label} ${size}`}
-      value={sizeOf(size)[field]}
-      onChange={(value) => patchSize(size, { [field]: value })}
-      style={{ width: '100%' }}
-    />
-  );
-
+  const no = marker.markerNo;
   return (
     <Card
       size="small"
@@ -75,32 +54,25 @@ export function SpecMarkerCard({
     >
       <Row gutter={16}>
         <Col xs={24} md={12}>
-          <DataTable<CodeRow>
-            rowKey="code"
-            size="small"
-            pagination={false}
-            dataSource={sizes.map(toRow)}
-            columns={[
-              { title: text.size, width: 90, dataIndex: 'code' },
-              {
-                title: text.length,
-                key: 'length',
-                render: (_, { code }) => sizeInput(code, 'lengthCm', text.length),
-              },
-              {
-                title: text.width,
-                key: 'width',
-                render: (_, { code }) => sizeInput(code, 'widthCm', text.width),
-              },
-            ]}
+          <Typography.Text strong>{text.markerComponents}</Typography.Text>
+          <Select
+            mode="multiple"
+            disabled={readOnly}
+            aria-label={fill(text.markerComponentsOf, no)}
+            placeholder={text.markerComponentsPlaceholder}
+            value={marker.componentKeys}
+            options={panelOptions}
+            optionFilterProp="label"
+            onChange={(componentKeys: string[]) => onChange({ componentKeys })}
+            style={{ width: '100%', marginTop: 8 }}
           />
         </Col>
         <Col xs={24} md={12}>
-          <DataTable<CodeRow>
+          <DataTable<ColorRow>
             rowKey="code"
             size="small"
             pagination={false}
-            dataSource={colors.map(toRow)}
+            dataSource={colors.map((code) => ({ code }))}
             columns={[
               { title: text.color, width: 110, dataIndex: 'code' },
               {

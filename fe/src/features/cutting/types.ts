@@ -22,7 +22,7 @@ export type WorkOrderFabricCheck = {
   materialCode: string;
   materialName: string;
   materialColor: string;
-  status: 'Enough' | 'Short' | 'TooWide' | 'Unknown';
+  status: 'Enough' | 'Short' | 'Unknown';
   needMeters: number | null;
   availableQty: number | null;
   message: string | null;

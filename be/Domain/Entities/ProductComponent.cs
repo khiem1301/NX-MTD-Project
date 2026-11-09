@@ -25,4 +25,6 @@ public partial class ProductComponent
     public virtual Product Product { get; set; } = null!;
 
     public virtual ICollection<ProductComponentMaterial> ProductComponentMaterials { get; set; } = new List<ProductComponentMaterial>();
+
+    public virtual ICollection<ProductMarkerComponent> ProductMarkerComponents { get; set; } = new List<ProductMarkerComponent>();
 }

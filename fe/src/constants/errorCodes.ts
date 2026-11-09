@@ -35,6 +35,7 @@ export const ERROR_CODES = {
   OrderLineKeyLocked: 'ORDER_LINE_KEY_LOCKED',
   OrderInvalidStatus: 'ORDER_INVALID_STATUS',
   OrderFullyDispatched: 'ORDER_FULLY_DISPATCHED',
+  OrderMarkerInvalid: 'ORDER_MARKER_INVALID',
   // Nhân sự, tài khoản, tổ (KH-10)
   AuthWrongCurrentPassword: 'AUTH_WRONG_CURRENT_PASSWORD',
   EmployeeCodeDuplicate: 'EMPLOYEE_CODE_DUPLICATE',

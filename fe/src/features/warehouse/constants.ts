@@ -190,9 +190,6 @@ export const LABELS = {
   order: 'Đơn hàng',
   material: 'NVL',
   color: 'Màu NVL',
-  materialWidthM: 'Khổ vải (m)',
-  materialSizeHint:
-    'Bắt buộc với vải. Khổ vải dùng để ước tính số mét vải khi lập lệnh cắt. Vải luôn tính theo mét.',
   materialColorHint:
     'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
   requiredQty: 'Số cần',

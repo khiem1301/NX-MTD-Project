@@ -15,7 +15,7 @@ const norm = (
   component: string,
   color: string,
   size: string,
-  length: number | null = null,
+  note: string | null = null,
   material = 1,
 ) => ({
   productComponentMaterialId: id,
@@ -27,14 +27,13 @@ const norm = (
   materialName: 'Vải',
   unit: 'm',
   materialColor: 'Đen',
-  lengthCm: length,
-  widthCm: null,
-  specNote: null,
+  materialType: 'FABRIC',
+  specNote: note,
 });
 
 const spec: ProductSpec = {
   productId: 1,
-  markers: [],
+  markerComponents: [],
   markerFabrics: [],
   components: [
     {
@@ -73,8 +72,8 @@ const spec: ProductSpec = {
     },
   ],
   norms: [
-    norm(1, 'Thân', 'Đen', 'M', 60),
-    norm(2, 'Thân', 'Đen', 'L', 60),
+    norm(1, 'Thân', 'Đen', 'M', 'may kép'),
+    norm(2, 'Thân', 'Đen', 'L', 'may kép'),
     norm(3, 'Cổ cũ', 'Đen', 'M'),
     norm(4, 'Thân', 'Đỏ', 'S'),
   ],
@@ -91,10 +90,10 @@ describe('productSpec', () => {
     expect(rows.norms[0]?.variantKeys).toEqual([variantKey('Đen', 'M'), variantKey('Đen', 'L')]);
   });
 
-  it('định mức (kích thước chi tiết) khác nhau giữa các size thì tách dòng', () => {
+  it('định mức (ghi chú quy cách) khác nhau giữa các size thì tách dòng', () => {
     const rows = toRows({
       ...spec,
-      norms: [norm(1, 'Thân', 'Đen', 'M', 60), norm(2, 'Thân', 'Đen', 'L', 62)],
+      norms: [norm(1, 'Thân', 'Đen', 'M', 'may kép'), norm(2, 'Thân', 'Đen', 'L', 'may đơn')],
     });
 
     expect(rows.norms).toHaveLength(2);
@@ -105,9 +104,9 @@ describe('productSpec', () => {
 
     const payload = toPayload(rows.components, rows.variants, rows.norms);
 
-    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.lengthCm}`)).toEqual([
-      'Đen-M:60',
-      'Đen-L:60',
+    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.specNote}`)).toEqual([
+      'Đen-M:may kép',
+      'Đen-L:may kép',
     ]);
     expect(payload.norms.every((n) => n.componentName === 'Thân')).toBe(true);
     expect(payload.variants.map((v) => v.productVariantId)).toEqual([10, 11]);
@@ -179,21 +178,6 @@ describe('productSpec', () => {
       ...base.components.slice(1),
     ];
 
-    it.each([0.01, 99999.99, null])('kích thước chi tiết %s hợp lệ', (size) => {
-      expect(
-        validate(base.components, base.variants, [row({ lengthCm: size, widthCm: size })]),
-      ).toBe('');
-    });
-
-    it.each([0, 100000])('kích thước chi tiết %s bị chặn', (size) => {
-      expect(validate(base.components, base.variants, [row({ lengthCm: size })])).toContain(
-        'chiều dài chi tiết',
-      );
-      expect(validate(base.components, base.variants, [row({ widthCm: size })])).toContain(
-        'chiều rộng chi tiết',
-      );
-    });
-
     it.each([1, 99])('số chi tiết trên một sản phẩm %s hợp lệ', (pieces) => {
       expect(validate(withComponent({ piecesPerGarment: pieces }), base.variants, [])).toBe('');
     });
@@ -245,8 +229,6 @@ describe('productSpec', () => {
         key: `n${i}`,
         componentKey: (base.components[0] as ComponentRow).key,
         materialId: i + 1,
-        lengthCm: null,
-        widthCm: null,
         specNote: '',
         variantKeys: variants.map((v) => variantKey(v.color, v.sizeCode)),
       }));

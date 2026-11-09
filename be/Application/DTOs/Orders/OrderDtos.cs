@@ -30,7 +30,7 @@ public sealed record ProductListItemDto(int ProductId, string ProductCode, strin
 
 /// <param name="Colors">Các màu áo đã có biến thể (do đơn hàng tạo).</param>
 public sealed record ProductDetailDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
-    string? Description, string? LastSizeRatio, string Status, bool IsUsed, DateTime CreatedAt,
+    string? Description, string Status, bool IsUsed, DateTime CreatedAt,
     IReadOnlyList<string> ExtraImages, IReadOnlyList<string> Colors,
     IReadOnlyList<AuditLogDto> History);
 

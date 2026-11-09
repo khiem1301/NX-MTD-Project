@@ -41,8 +41,8 @@ export type Operation = {
   operationGroupId: number | null;
   /** Nhóm chứa công đoạn này (vd "May tay"). */
   groupName: string | null;
-  /** Các chi tiết (thành phần) công đoạn làm trên đó. */
-  componentIds: number[];
+  /** Chi tiết vải × vải công đoạn làm trên đó (DEV-ALL-86). */
+  componentFabrics: OperationComponentFabric[];
 };
 
 /** Dòng xem trước khi nhập công đoạn từ Excel. Action: dòng nào thêm mới / cập nhật / không đổi / lỗi. */
@@ -129,7 +129,7 @@ export type SaveOperationPayload = {
   teamType?: 'Sewing' | 'Cutting';
   isFinalStep: boolean;
   groupName?: string | null;
-  componentIds?: number[];
+  componentFabrics?: OperationComponentFabric[];
 };
 
 export type PieceRateStatus = 'Draft' | 'PendingApproval' | 'Approved' | 'Rejected';
@@ -413,3 +413,6 @@ export type CreateDefectPayload = {
 export type CancelDefectPayload = { reason?: string; rowVer: string };
 export type ObjectDefectPayload = { objection: string; rowVer: string };
 export type ConfirmDefectPayload = { note?: string; rowVer: string };
+
+/** Một chi tiết vải (PANEL) × một vải trong định mức của chi tiết đó. */
+export type OperationComponentFabric = { productComponentId: number; materialId: number };

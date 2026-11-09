@@ -51,6 +51,7 @@ public static class ErrorCodes
     public const string ProductCodeDuplicate = "PRODUCT_CODE_DUPLICATE";
     public const string ProductCodeLocked = "PRODUCT_CODE_LOCKED";
     public const string ProductSpecInvalid = "PRODUCT_SPEC_INVALID";
+    public const string OrderMarkerInvalid = "ORDER_MARKER_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
     public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";

@@ -107,3 +107,10 @@ public interface IOrderLookupService
     Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct);
     Task<Result<IReadOnlyList<string>>> ColorsAsync(CancellationToken ct);
 }
+
+/// <summary>Bìa cắt của đơn (DEV-ALL-85): xem theo đơn, lưu theo từng mã hàng của đơn.</summary>
+public interface IOrderMarkerService
+{
+    Task<Result<OrderMarkersDto>> GetAsync(int orderId, CancellationToken ct);
+    Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+}

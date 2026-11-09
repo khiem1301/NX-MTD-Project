@@ -5,8 +5,7 @@ import type { ProductNormItem, ProductSpec, SaveProductSpecPayload } from '../ty
 
 const text = MESSAGES.orders.specValidation;
 
-/** Giới hạn khớp SaveProductSpecDtoValidator ở BE (cột DECIMAL(7,2), SMALLINT và số dòng mỗi lần lưu). */
-export const MAX_SIZE_CM = 99999.99;
+/** Giới hạn khớp SaveProductSpecDtoValidator ở BE (cột SMALLINT và số dòng mỗi lần lưu). */
 export const MAX_PIECES_PER_GARMENT = 99;
 export const MAX_COMPONENTS = 200;
 export const MAX_VARIANTS = 200;
@@ -15,10 +14,6 @@ export const MAX_NORMS = 5000;
 
 /** Mã loại NVL vải, đúng giá trị API lookup trả về. */
 const MATERIAL_TYPE_FABRIC = 'FABRIC';
-
-/** Kích thước bỏ trống được; đã nhập thì phải lớn hơn 0 và không vượt giới hạn cột (vượt thì database báo tràn số). */
-const sizeProblem = (name: string, label: string, value: number | null): string =>
-  value !== null && (value <= 0 || value > MAX_SIZE_CM) ? fill(text.sizeRange, name, label) : '';
 
 /**
  * Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều biến thể (màu × size) cùng lúc.
@@ -29,8 +24,6 @@ export type NormRow = {
   componentKey?: string;
   /** NVL đã gồm màu (26/10: màu nằm trong Material.Color). */
   materialId?: number;
-  lengthCm: number | null;
-  widthCm: number | null;
   specNote: string;
   variantKeys: string[];
 };
@@ -54,7 +47,7 @@ export const variantKey = (color: string, sizeCode: string) =>
   `${color.trim().toUpperCase()}|${sizeCode.trim().toUpperCase()}`;
 
 const sameRowKey = (n: ProductNormItem) =>
-  [n.componentName, n.materialId, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
+  [n.componentName, n.materialId, n.specNote ?? ''].join('¦');
 
 let counter = 0;
 export const newKey = () => `k${++counter}`;
@@ -98,8 +91,6 @@ export function toRows(spec: ProductSpec): {
       key: newKey(),
       componentKey,
       materialId: n.materialId,
-      lengthCm: n.lengthCm,
-      widthCm: n.widthCm,
       specNote: n.specNote ?? '',
       variantKeys: [],
     };
@@ -158,10 +149,6 @@ export function validate(
     const name = n.componentKey === undefined ? undefined : nameByKey.get(n.componentKey);
     if (name === undefined || n.materialId === undefined)
       return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
-    const problem =
-      sizeProblem(name, text.normLength, n.lengthCm) ||
-      sizeProblem(name, text.normWidth, n.widthCm);
-    if (problem) return problem;
     if (n.variantKeys.length === 0)
       return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
   }
@@ -183,7 +170,7 @@ export function toPayload(
   components: ComponentRow[],
   variants: VariantRow[],
   norms: NormRow[],
-): Omit<SaveProductSpecPayload, 'markers' | 'markerFabrics'> {
+): Omit<SaveProductSpecPayload, 'markerComponents' | 'markerFabrics'> {
   const byKey = new Map(variants.map((v) => [variantKey(v.color, v.sizeCode), v]));
   const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   return {
@@ -208,8 +195,6 @@ export function toPayload(
             color: v.color.trim(),
             sizeCode: v.sizeCode.trim(),
             materialId: n.materialId!,
-            lengthCm: n.lengthCm,
-            widthCm: n.widthCm,
             specNote: n.specNote.trim() || null,
           };
         }),

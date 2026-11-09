@@ -56,7 +56,7 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task CreateAsync_Fabric_AlwaysUsesMeters_WhateverUnitIsSent()
     {
-        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải lụa", MaterialTypes.Fabric, "MAIN_FABRIC", "kg", "Đỏ", 150), default);
+        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải lụa", MaterialTypes.Fabric, "MAIN_FABRIC", "kg", "Đỏ"), default);
 
         result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
     }
@@ -72,7 +72,7 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task UpdateAsync_Fabric_AlwaysUsesMeters()
     {
-        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN_FABRIC", "cuộn", "Đen", 150), default);
+        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN_FABRIC", "cuộn", "Đen"), default);
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
@@ -83,7 +83,7 @@ public class MaterialColorValidationTests
     [InlineData(MaterialTypes.Trim, "", false)]
     [InlineData(MaterialTypes.Trim, "cái", true)]
     public void Validator_OnlyTrimNeedsAUnit(string type, string unit, bool valid) =>
-        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null, type == MaterialTypes.Fabric ? 150 : null))
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null))
             .IsValid.Should().Be(valid);
 
     [Fact]
@@ -124,18 +124,6 @@ public class MaterialColorValidationTests
     {
         new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN", "m", new string('x', 51)))
             .IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Material_validator_needs_positive_width_when_given()
-    {
-        var validator = new CreateMaterialDtoValidator();
-
-        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 150)).IsValid.Should().BeTrue();
-        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, null)).IsValid.Should().BeFalse();   // vải bắt buộc có khổ
-        validator.Validate(new CreateMaterialDto(null, "Chỉ", MaterialTypes.Trim, "THREAD", "cuộn", null, null)).IsValid.Should().BeTrue();   // phụ liệu không cần khổ
-        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 0)).IsValid.Should().BeFalse();
-        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, -1)).IsValid.Should().BeFalse();
     }
 
     // ---------- NVL của đơn ----------

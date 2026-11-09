@@ -2,7 +2,6 @@ import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { ProductSpec, SaveProductSpecPayload } from '../types';
 import {
-  MAX_SIZE_CM,
   newKey,
   type ComponentRow,
   type MaterialOption,
@@ -12,53 +11,61 @@ import {
 
 const text = MESSAGES.orders.specValidation;
 
-/** Số bìa tối đa của một mã hàng, khớp SaveProductSpecDtoValidator ở BE. */
+/** Số nhóm bìa tối đa của một mã hàng, khớp SaveProductSpecDtoValidator ở BE (số nhóm 1..20). */
 export const MAX_MARKERS = 20;
 
-export type MarkerSize = { lengthCm: number | null; widthCm: number | null };
-
 /**
- * Một bìa trên màn hình: kích thước theo size và vải theo màu áo. Số bìa là vị trí trong danh sách, không lưu trong dòng,
- * nên xóa một bìa thì các bìa sau tự dồn số. Khóa của `sizes` và `fabrics` là `codeKey`.
+ * Một nhóm bìa trên màn hình (DEV-ALL-85): các chi tiết cắt (Panel) cắt chung một bìa và vải theo màu áo.
+ * Bìa cụ thể (mã, dài, tỉ lệ size) do đơn hàng khai. Số nhóm giữ cố định khi xóa nhóm khác, vì bìa của đơn trỏ theo số nhóm.
+ * Khóa của `fabrics` là `codeKey(màu)`; `componentKeys` là `ComponentRow.key`.
  */
 export type MarkerRow = {
   key: string;
-  sizes: Record<string, MarkerSize>;
+  markerNo: number;
+  componentKeys: string[];
   fabrics: Record<string, number | undefined>;
 };
 
 /** Khóa so khớp size và màu: không phân biệt hoa thường, khoảng trắng đầu cuối. */
 export const codeKey = (value: string) => value.trim().toUpperCase();
 
-export const emptyMarker = (): MarkerRow => ({ key: newKey(), sizes: {}, fabrics: {} });
+/** Nhóm mới lấy số nhỏ nhất chưa dùng. */
+export const emptyMarker = (markers: MarkerRow[]): MarkerRow => {
+  const used = new Set(markers.map((m) => m.markerNo));
+  let markerNo = 1;
+  while (used.has(markerNo)) markerNo++;
+  return { key: newKey(), markerNo, componentKeys: [], fabrics: {} };
+};
 
 /** Các giá trị khác nhau của một cột màu hoặc size, giữ cách viết gốc để hiển thị. */
 const distinctBy = (values: string[]): string[] => [
   ...new Map(values.map((v) => [codeKey(v), v.trim()])).values(),
 ];
 
-export const distinctSizes = (variants: VariantRow[]) =>
-  distinctBy(variants.map((v) => v.sizeCode));
 export const distinctColors = (variants: VariantRow[]) => distinctBy(variants.map((v) => v.color));
 
-/** Gom dòng máy chủ thành từng bìa, xếp theo số bìa. Chỉ giữ size và màu của màu – size còn dùng. */
-export function toMarkerRows(spec: ProductSpec, variants: VariantRow[]): MarkerRow[] {
-  const sizes = new Set(variants.map((v) => codeKey(v.sizeCode)));
+/** Gom dòng máy chủ thành từng nhóm bìa, xếp theo số nhóm. Chỉ giữ chi tiết còn dùng và màu còn trong màu – size. */
+export function toMarkerRows(
+  spec: ProductSpec,
+  variants: VariantRow[],
+  components: ComponentRow[],
+): MarkerRow[] {
   const colors = new Set(variants.map((v) => codeKey(v.color)));
+  const keyByName = new Map(components.map((c) => [codeKey(c.componentName), c.key]));
   const byNo = new Map<number, MarkerRow>();
-  const rowOf = (no: number): MarkerRow => {
-    const row = byNo.get(no) ?? emptyMarker();
-    byNo.set(no, row);
+  const rowOf = (markerNo: number): MarkerRow => {
+    const row = byNo.get(markerNo) ?? { key: newKey(), markerNo, componentKeys: [], fabrics: {} };
+    byNo.set(markerNo, row);
     return row;
   };
-  for (const m of spec.markers) {
-    if (sizes.has(codeKey(m.sizeCode)))
-      rowOf(m.markerNo).sizes[codeKey(m.sizeCode)] = { lengthCm: m.lengthCm, widthCm: m.widthCm };
+  for (const m of spec.markerComponents) {
+    const key = keyByName.get(codeKey(m.componentName));
+    if (key !== undefined) rowOf(m.markerNo).componentKeys.push(key);
   }
   for (const f of spec.markerFabrics) {
     if (colors.has(codeKey(f.color))) rowOf(f.markerNo).fabrics[codeKey(f.color)] = f.materialId;
   }
-  return [...byNo.entries()].sort(([a], [b]) => a - b).map(([, row]) => row);
+  return [...byNo.values()].sort((a, b) => a.markerNo - b.markerNo);
 }
 
 /** Vải chọn được cho một màu: NVL loại vải có trong định mức chi tiết cắt của màu đó, khớp kiểm tra ở BE. */
@@ -83,30 +90,22 @@ export function fabricOptionsFor(
   return materialOptions.filter((m) => m.isFabric && used.has(m.value));
 }
 
-const sizeIsValid = (value: number) => value > 0 && value <= MAX_SIZE_CM;
-
-/** Lỗi nhập một bìa; chuỗi rỗng = hợp lệ. `no` là số bìa hiển thị. */
+/** Lỗi nhập một nhóm; chuỗi rỗng = hợp lệ. */
 function markerProblem(
   marker: MarkerRow,
-  no: number,
-  variants: VariantRow[],
+  colors: string[],
+  panelKeys: Set<string>,
   allowedFabrics: (color: string) => Set<number>,
 ): string {
-  const entries = Object.values(marker.sizes).filter(
-    (s) => s.lengthCm !== null || s.widthCm !== null,
-  );
-  if (entries.some((s) => s.lengthCm === null || s.widthCm === null))
-    return fill(text.markerSizePair, no);
-  if (entries.some((s) => !sizeIsValid(s.lengthCm ?? 0) || !sizeIsValid(s.widthCm ?? 0)))
-    return fill(text.markerSizeRange, no);
-
-  const fabrics = distinctColors(variants).filter((c) => marker.fabrics[codeKey(c)] !== undefined);
-  if (entries.length === 0 || fabrics.length === 0) return fill(text.markerIncomplete, no);
+  const no = marker.markerNo;
+  const fabrics = colors.filter((c) => marker.fabrics[codeKey(c)] !== undefined);
+  const components = marker.componentKeys.filter((k) => panelKeys.has(k));
+  if (components.length === 0 || fabrics.length === 0) return fill(text.markerIncomplete, no);
   const wrong = fabrics.find((c) => !allowedFabrics(c).has(marker.fabrics[codeKey(c)] as number));
   return wrong === undefined ? '' : fill(text.markerFabricNotInNorm, no, wrong);
 }
 
-/** Lỗi nhập bìa (hiện cho người dùng trước khi gửi); chuỗi rỗng = hợp lệ. */
+/** Lỗi nhập nhóm bìa (hiện cho người dùng trước khi gửi); chuỗi rỗng = hợp lệ. */
 export function validateMarkers(
   markers: MarkerRow[],
   variants: VariantRow[],
@@ -115,35 +114,44 @@ export function validateMarkers(
   materialOptions: MaterialOption[],
 ): string {
   if (markers.length > MAX_MARKERS) return fill(text.maxMarkers, MAX_MARKERS);
+  const panels = components.filter((c) => c.componentType === 'Panel');
+  const panelKeys = new Set(panels.map((c) => c.key));
+  const colors = distinctColors(variants);
   const allowedFabrics = (color: string) =>
     new Set(fabricOptionsFor(color, norms, components, materialOptions).map((o) => o.value));
-  for (const [index, marker] of markers.entries()) {
-    const problem = markerProblem(marker, index + 1, variants, allowedFabrics);
+  for (const marker of markers) {
+    const problem = markerProblem(marker, colors, panelKeys, allowedFabrics);
     if (problem) return problem;
   }
-  return '';
+  if (markers.length === 0) return '';
+  const grouped = new Set(markers.flatMap((m) => m.componentKeys));
+  const missing = panels.find((c) => !grouped.has(c.key));
+  return missing ? fill(text.panelWithoutMarker, missing.componentName.trim()) : '';
 }
 
-/** Mỗi bìa nở ra từng size và từng màu đã nhập; số bìa lấy theo vị trí trong danh sách. */
+/** Mỗi nhóm nở ra từng chi tiết và từng màu đã chọn vải. Chi tiết đã xóa hoặc đổi thành phụ liệu thì bỏ. */
 export function toMarkerPayload(
   markers: MarkerRow[],
   variants: VariantRow[],
-): Pick<SaveProductSpecPayload, 'markers' | 'markerFabrics'> {
-  const sizes = distinctSizes(variants);
+  components: ComponentRow[],
+): Pick<SaveProductSpecPayload, 'markerComponents' | 'markerFabrics'> {
   const colors = distinctColors(variants);
+  const panelName = new Map(
+    components
+      .filter((c) => c.componentType === 'Panel')
+      .map((c) => [c.key, c.componentName.trim()]),
+  );
   return {
-    markers: markers.flatMap((m, index) =>
-      sizes.flatMap((sizeCode) => {
-        const size = m.sizes[codeKey(sizeCode)];
-        return size?.lengthCm && size.widthCm
-          ? [{ markerNo: index + 1, sizeCode, lengthCm: size.lengthCm, widthCm: size.widthCm }]
-          : [];
+    markerComponents: markers.flatMap((m) =>
+      m.componentKeys.flatMap((k) => {
+        const componentName = panelName.get(k);
+        return componentName === undefined ? [] : [{ markerNo: m.markerNo, componentName }];
       }),
     ),
-    markerFabrics: markers.flatMap((m, index) =>
+    markerFabrics: markers.flatMap((m) =>
       colors.flatMap((color) => {
         const materialId = m.fabrics[codeKey(color)];
-        return materialId === undefined ? [] : [{ markerNo: index + 1, color, materialId }];
+        return materialId === undefined ? [] : [{ markerNo: m.markerNo, color, materialId }];
       }),
     ),
   };

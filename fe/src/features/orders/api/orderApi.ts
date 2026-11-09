@@ -11,12 +11,14 @@ import type {
   OrderOverview,
   OrderOverviewListItem,
   OrderOverviewQuery,
+  OrderMarkers,
   OrderQuery,
   ProductDetail,
   ProductListItem,
   ProductQuery,
   ProductSpec,
   SaveCustomerPayload,
+  SaveOrderMarkersPayload,
   SaveProductPayload,
   SaveProductSpecPayload,
   UpdateOrderPayload,
@@ -80,4 +82,11 @@ export const orderApi = {
     post<unknown>(API.customerOrders.startProduction(id), { rowVer }),
   stop: (id: number, reason: string, rowVer: string) =>
     post<unknown>(API.customerOrders.stop(id), { reason, rowVer }),
+};
+
+/** Bìa cắt của đơn (DEV-ALL-85). */
+export const orderMarkerApi = {
+  get: (orderId: number) => get<OrderMarkers>(API.orderMarkers.byOrder(orderId)),
+  save: (orderId: number, productId: number, body: SaveOrderMarkersPayload) =>
+    put<OrderMarkers>(API.orderMarkers.byProduct(orderId, productId), body),
 };

@@ -17,8 +17,6 @@ const row: NormRow = {
   key: 'n1',
   componentKey: 'c1',
   materialId: 1,
-  lengthCm: null,
-  widthCm: null,
   specNote: '',
   variantKeys: [],
 };

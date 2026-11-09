@@ -76,6 +76,7 @@ erDiagram
     OperationGroup ||--o{ Operation : "công đoạn to gồm công đoạn nhỏ"
     Operation ||--o{ OperationComponent : "làm trên chi tiết"
     ProductComponent ||--o{ OperationComponent : "được làm ở công đoạn"
+    Material ||--o{ OperationComponent : "vải của chi tiết ở công đoạn"
     Operation ||--o{ PieceRate : "đơn giá"
 
     Customer ||--o{ CustomerOrder : "đặt"
@@ -750,25 +751,28 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - Index: `IX_Operation_Group ON dbo.Operation(OperationGroupId) WHERE OperationGroupId IS NOT NULL`
 - Index UNIQUE: `UX_Operation_FinalStep ON dbo.Operation(ProductId) WHERE IsFinalStep = 1 AND Status = 'ACTIVE'`
 
-### `OperationComponent` — Công đoạn làm trên chi tiết nào
+### `OperationComponent` — Công đoạn làm trên chi tiết vải nào, vải nào
 
-> Nhiều–nhiều (25/10): "Lộn tay" → Tay áo; "Tra tay" → Tay áo + Thân trước + Thân sau.
-> Công đoạn không gắn chi tiết (là, đi lấy hàng, kiểm hàng) thì không có dòng. Công đoạn và chi tiết phải cùng mã hàng.
+> Nhiều–nhiều (25/10; 09/11 thêm `MaterialId`, DEV-ALL-86): "Lộn tay" → Tay áo × vải chính; "Tra tay" → Tay áo + Thân trước + Thân sau, mỗi chi tiết theo từng vải của nó
+> (vải chính, vải lót là hai dòng; vải theo màu nên một chi tiết có thể có nhiều dòng). Chỉ chi tiết PANEL và NVL loại vải có trong định mức của chi tiết đó (backend kiểm).
+> Công đoạn không gắn chi tiết (là, đi lấy hàng, kiểm hàng, gắn mác) thì không có dòng. Công đoạn và chi tiết phải cùng mã hàng.
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
-| `OperationId` | INT |  | **PK** (cùng `ProductComponentId`); FK ghép → `Operation` | công đoạn |
-| `ProductComponentId` | INT |  | **PK**; FK ghép → `ProductComponent` | chi tiết công đoạn làm trên đó |
+| `OperationId` | INT |  | **PK** (cùng `ProductComponentId`, `MaterialId`); FK ghép → `Operation` | công đoạn |
+| `ProductComponentId` | INT |  | **PK**; FK ghép → `ProductComponent` | chi tiết vải công đoạn làm trên đó |
 | `ProductId` | INT |  |  | mã hàng chung của công đoạn và chi tiết (dùng cho hai FK ghép) |
+| `MaterialId` | INT |  | **PK**; FK → `Material` | vải của chi tiết |
 
 **Ràng buộc & index**
 
-- PK `PK_OperationComponent`: (OperationId, ProductComponentId) — một cặp chỉ một dòng
+- PK `PK_OperationComponent`: (OperationId, ProductComponentId, MaterialId) — một bộ chỉ một dòng
 - FK `FK_OC_Operation`: (OperationId, ProductId) → `Operation`(OperationId, ProductId)
 - FK `FK_OC_Component`: (ProductComponentId, ProductId) → `ProductComponent`(ProductComponentId, ProductId)
-- Index: `IX_OC_Component ON dbo.OperationComponent(ProductComponentId)`
+- FK `FK_OC_Material`: MaterialId → `Material`(MaterialId)
+- Index: `IX_OC_Component ON dbo.OperationComponent(ProductComponentId)`, `IX_OC_Material ON dbo.OperationComponent(MaterialId)`
 
-**Tra cứu:** chi tiết "Tay áo" qua những công đoạn nào: lọc `OperationComponent.ProductComponentId`, nối `Operation`. Công đoạn "Tra tay" dùng chi tiết nào: lọc `OperationComponent.OperationId`. Bảng chỉ để tra cứu; phân công, đơn giá, sản lượng không đổi.
+**Tra cứu:** chi tiết "Tay áo" (vải nào) qua những công đoạn nào: lọc `OperationComponent.ProductComponentId` (và `MaterialId`), nối `Operation`. Công đoạn "Tra tay" dùng chi tiết nào, vải nào: lọc `OperationComponent.OperationId`. Bảng chỉ để tra cứu; phân công, đơn giá, sản lượng không đổi. Lưu định mức mã hàng mà bỏ vải khỏi chi tiết (hoặc chi tiết đổi thành phụ liệu) thì liên kết tương ứng bị gỡ.
 
 ### `PieceRate` — Đơn giá công đoạn
 
@@ -2098,7 +2102,7 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `OrderMaterial` | `CustomerOrder`, `Material` |
 | `OperationGroup` | `Product` |
 | `Operation` | `OperationGroup`, `Product` |
-| `OperationComponent` | `Operation`, `ProductComponent` |
+| `OperationComponent` | `Operation`, `ProductComponent`, `Material` |
 | `PieceRate` | `Operation` |
 | `KpiTarget` | `CustomerOrder`, `Product`, `Team` |
 | `KpiDailyTarget` | `KpiTarget` |
@@ -2158,3 +2162,4 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | 25/10/2026 (2) | `RequestLine`, `CutHandoverLine`, `MaterialIssueLine`, `StockBalance` đổi `ProductComponentId` thành `ProductComponentMaterialId` (kho BTP tách chi tiết theo vải); `usp_Stock_Post` nhận `@ProductComponentMaterialId`. `WorkAllocation` thay `WorkerPieceMovement` (`Quantity` = số lần làm, `PieceQty` = BTP giao kèm; tổng số lần giao của công đoạn × màu × size ≤ số bộ BTP tổ đã nhận, tổ trưởng chia tùy ý); `Operation` thêm `UsesSemiFinished`; `vw_WorkerOutputCap` tính trần theo công đoạn; `vw_TeamPieceHolding` chỉ trừ BTP giao kèm; thêm `vw_OperationAllocationProgress`; sản lượng vượt trần bị chặn. THROW 50050-50053 |
 | 25/10/2026 (3) | `OperationAssignment` bỏ `CopiedFromAssignmentId` |
 | 02/11/2026 | Thêm `OrderLineTeam` (chia dòng đơn cho tổ may, thay `OrderProductTeam`); `Operation` thêm `CK_Operation_Skill`, `CK_Operation_Sequence`, `PieceRate.Rate` đổi `>= 0` thành `> 0`; `Operation` bỏ `UsesSemiFinished`, `vw_OperationAllocationProgress` bỏ cột này |
+| 09/11/2026 | `OperationComponent` thêm `MaterialId` (FK `Material`), PK thành (OperationId, ProductComponentId, MaterialId): công đoạn gắn chi tiết vải × vải (DEV-ALL-86) |

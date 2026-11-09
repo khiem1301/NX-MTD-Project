@@ -99,8 +99,6 @@ export function SpecNormsTab({
         key: newKey(),
         componentKey: undefined,
         materialId: undefined,
-        lengthCm: null,
-        widthCm: null,
         specNote: '',
         variantKeys: variantOptions.map((o) => o.value),
       },

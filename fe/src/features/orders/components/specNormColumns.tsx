@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Divider, Input, InputNumber, Select, Tooltip, type TableColumnsType } from 'antd';
+import { Button, Divider, Input, Select, Tooltip, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { dropRow, patchRow, type MaterialOption, type NormRow } from '../utils/productSpec';
 import { deleteRowColumn } from './deleteRowColumn';
@@ -66,32 +66,6 @@ export const specNormColumns = ({
           )}
         />
       </Tooltip>
-    ),
-  },
-  {
-    title: text.length,
-    render: (_, r) => (
-      <InputNumber
-        size="small"
-        min={0}
-        precision={2}
-        value={r.lengthCm}
-        style={{ width: 90 }}
-        onChange={(v) => patchRow(setNorms, r.key, { lengthCm: v })}
-      />
-    ),
-  },
-  {
-    title: text.width,
-    render: (_, r) => (
-      <InputNumber
-        size="small"
-        min={0}
-        precision={2}
-        value={r.widthCm}
-        style={{ width: 90 }}
-        onChange={(v) => patchRow(setNorms, r.key, { widthCm: v })}
-      />
     ),
   },
   {

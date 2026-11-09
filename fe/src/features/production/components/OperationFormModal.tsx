@@ -6,6 +6,11 @@ import { useProductSpec } from '@/features/orders';
 import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useOperations';
 import type { Operation } from '../types';
+import {
+  componentFabricKey,
+  componentFabricOptions,
+  fromComponentFabricKeys,
+} from '../utils/componentFabric';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { OperationFinalField } from './OperationFinalField';
 
@@ -32,7 +37,7 @@ type FormValues = {
   standardTimeSec?: number | null;
   isFinalStep: boolean;
   groupName?: string;
-  componentIds: number[];
+  componentFabricKeys: string[];
 };
 
 const text = PRODUCTION_TEXT.operations;
@@ -66,9 +71,9 @@ export function OperationFormModal({
             standardTimeSec: operation.standardTimeSec,
             isFinalStep: operation.isFinalStep,
             groupName: operation.groupName ?? undefined,
-            componentIds: operation.componentIds,
+            componentFabricKeys: operation.componentFabrics.map(componentFabricKey),
           }
-        : { ...defaults, isFinalStep: false, componentIds: [] },
+        : { ...defaults, isFinalStep: false, componentFabricKeys: [] },
     );
     // Chỉ điền lúc mở hộp thoại; danh sách tải lại sau đó không được ghi đè chỗ đang nhập.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,7 +91,7 @@ export function OperationFormModal({
         teamType: operation?.teamType ?? 'Sewing',
         isFinalStep: values.isFinalStep,
         groupName: values.groupName?.trim() || null,
-        componentIds: values.componentIds,
+        componentFabrics: fromComponentFabricKeys(values.componentFabricKeys),
       },
       {
         onSuccess: (operationId) => {
@@ -173,7 +178,7 @@ export function OperationFormModal({
           />
         </Form.Item>
         <Form.Item
-          name="componentIds"
+          name="componentFabricKeys"
           label={text.form.components}
           extra={text.form.componentsHint}
         >
@@ -182,10 +187,7 @@ export function OperationFormModal({
             allowClear
             optionFilterProp="label"
             loading={spec.isLoading}
-            options={(spec.data?.components ?? []).map((c) => ({
-              value: c.productComponentId,
-              label: c.componentName,
-            }))}
+            options={componentFabricOptions(spec.data)}
           />
         </Form.Item>
         <OperationFinalField hasOtherFinal={hasOtherFinal} />

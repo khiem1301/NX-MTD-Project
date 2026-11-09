@@ -14,9 +14,7 @@ public sealed class ProductComponentMaterialConfiguration : IEntityTypeConfigura
 
         entity.HasIndex(e => new { e.ProductVariantId, e.ProductComponentId, e.MaterialId }, "UQ_PCM").IsUnique();
 
-        entity.Property(e => e.LengthCm).HasColumnType("decimal(7, 2)");
         entity.Property(e => e.SpecNote).HasMaxLength(200);
-        entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
 
         entity.HasOne(d => d.Material).WithMany(p => p.ProductComponentMaterials)
             .HasForeignKey(d => d.MaterialId)

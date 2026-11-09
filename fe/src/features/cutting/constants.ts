@@ -106,7 +106,7 @@ export const LABELS = {
   orderLine: 'Màu - size',
   plannedQty: 'Kế hoạch',
   fabricNotEnough: 'Không đủ vải cho lệnh cắt',
-  fabricTooWide: 'Bìa hoặc chi tiết rộng hơn khổ vải',
+  fabricRatioWarning: 'Bìa lệch tỉ lệ lệnh cắt',
   fabricNotEstimated: 'Chưa tính được vải',
   fabricEstimateNote:
     'Số mét là ước tính theo kích thước bìa và khổ vải, có thể dư so với sơ đồ giác thực tế. Lệnh vẫn lưu được.',

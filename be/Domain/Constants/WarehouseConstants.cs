@@ -36,8 +36,6 @@ public static class MaterialTypes
     /// <summary>Vải luôn tính theo mét, không chọn đơn vị khác (DEV-ALL-46).</summary>
     public const string FabricUnit = "m";
 
-    /// <summary>Số cm trong một mét: khổ vải nhập và báo bằng mét, lưu cm trong cột Material.WidthCm.</summary>
-    public const decimal CmPerMeter = 100m;
 
     /// <summary>Nhóm hợp lệ theo loại (CHECK constraint của bảng Material).</summary>
     public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Categories =
@@ -135,7 +133,6 @@ public static class FabricCheckStatuses
 {
     public const string Enough = "Enough";
     public const string Short = "Short";
-    public const string TooWide = "TooWide";
     public const string Unknown = "Unknown";
 }
 

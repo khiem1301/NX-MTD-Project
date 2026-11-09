@@ -10,12 +10,12 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>
-/// DB 29/10 bỏ lượng vải theo định mức: lệnh cắt thường không còn kiểm vải khi lập. Lệnh cắt bù ước tính số mét theo kích thước chi tiết
-/// và khổ vải (cùng công thức vw_RecutFabricNeed) rồi so với kho khả dụng + vải tổ cắt đang giữ.
+/// Lệnh cắt bù ước số mét vải theo bìa của đơn chứa chi tiết (DEV-ALL-85): số miếng trên một lớp = số sản phẩm size đó × số chi tiết
+/// trên một sản phẩm, tối thiểu một lớp; so với kho khả dụng + vải tổ cắt đang giữ. Vải của lệnh: đã cấp, đã cắt, còn lại.
 /// </summary>
 public class WorkOrderFabricTests : ProductionTestBase
 {
-    private const int OrderId = 1, TeamId = 2, FabricId = 100, LineId = 11, ProductId = 1, PcmId = 900;
+    private const int OrderId = 1, TeamId = 2, FabricId = 100, LineId = 11, ProductId = 1, PcmId = 900, SleeveId = 1;
 
     private readonly IStockService _stock = Substitute.For<IStockService>();
     private readonly List<Request> _requests = [];
@@ -27,20 +27,25 @@ public class WorkOrderFabricTests : ProductionTestBase
     private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<MaterialReturnLine> _returnLines = [];
     private readonly List<CuttingLay> _lays = [];
+    private readonly List<ProductVariant> _variants = [];
+    private readonly List<ProductMarkerFabric> _groupFabrics = [];
+    private readonly List<ProductMarkerComponent> _groupComponents = [];
+    private readonly List<ProductMarker> _markers = [];
     private readonly Material _fabric = new()
     {
         MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
-        WidthCm = 150,
     };
 
     public WorkOrderFabricTests()
     {
         SetupQueryable(_requests); SetupQueryable(_orders); SetupQueryable(_teams); SetupQueryable(_lines); SetupQueryable(_workOrders);
         SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_lays);
+        SetupQueryable(_variants); SetupQueryable(_groupFabrics); SetupQueryable(_groupComponents); SetupQueryable(_markers);
         _orders.Add(new CustomerOrder { OrderId = OrderId, OrderCode = "DH001", Status = OrderStatuses.InProduction });
         _teams.Add(new Team { TeamId = TeamId, TeamCode = "CAT", TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
         _lines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = ProductId, OrderedQty = 200 }
             .WithVariant(TestVariant.Make(ProductId, "MH001", "Đen", "M")));
+        _variants.Add(_lines[0].ProductVariant);
         _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(1m);
     }
 
@@ -48,17 +53,39 @@ public class WorkOrderFabricTests : ProductionTestBase
     {
         var codes = Substitute.For<IDocumentCodeGenerator>();
         return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance, Clock,
-            new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow)));
+            new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), Settings));
     }
 
-    /// <summary>Chi tiết cần cắt bù: dài 70 cm, rộng 50 cm → khổ 150 cm xếp được 3 miếng một hàng.</summary>
-    private void RecutRequest(int pieces, decimal? length = 70, decimal? width = 50)
+    /// <summary>Cắt bù tay áo (2 chi tiết / sản phẩm); bìa tay 2A của đơn dài 1,6 m, M2 → 4 tay M trên một lớp.</summary>
+    private void RecutRequest(int pieces, bool withMarker = true)
     {
+        var variant = _lines[0].ProductVariant;
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = PcmId, ProductVariantId = _lines[0].ProductVariantId, ProductComponentId = 1, MaterialId = FabricId,
-            LengthCm = length, WidthCm = width, Material = _fabric,
+            ProductComponentMaterialId = PcmId, ProductId = ProductId, ProductVariantId = variant.ProductVariantId, ProductVariant = variant,
+            ProductComponentId = SleeveId, MaterialId = FabricId, Material = _fabric,
+            ProductComponent = new ProductComponent
+            {
+                ProductComponentId = SleeveId, ComponentName = "Tay áo", ComponentType = ComponentTypes.Panel, PiecesPerGarment = 2,
+                Status = RecordStatus.Active,
+            },
         });
+        _groupFabrics.Add(new ProductMarkerFabric
+        {
+            ProductId = ProductId, MarkerNo = 2, ProductColorId = variant.ProductColorId, ProductColor = variant.ProductColor,
+            MaterialId = FabricId, Material = _fabric,
+        });
+        _groupComponents.Add(new ProductMarkerComponent { ProductId = ProductId, MarkerNo = 2, ProductComponentId = SleeveId });
+        if (withMarker)
+        {
+            var marker = new ProductMarker
+            {
+                ProductMarkerId = 1, OrderId = OrderId, ProductId = ProductId, MarkerNo = 2, MarkerCode = "2A", LengthM = 1.6m,
+                Status = RecordStatus.Active,
+            };
+            marker.ProductMarkerRatios.Add(new ProductMarkerRatio { ProductMarkerId = 1, SizeCode = "M", PiecesPerPly = 2 });
+            _markers.Add(marker);
+        }
         _requests.Add(new Request
         {
             RequestId = 5, RequestCode = "YC5", RequestTypeCode = RequestTypes.ReplacementCutting, Status = RequestStatuses.Approved, OrderId = OrderId,
@@ -67,28 +94,6 @@ public class WorkOrderFabricTests : ProductionTestBase
     }
 
     private static CreateReplacementWorkOrderDto Dto() => new(5, TeamId, Today.AddDays(3), null);
-
-    [Theory]
-    [InlineData(7, 70, 50, 150, 2.1)]    // 3 miếng / hàng → 3 hàng × 70 cm
-    [InlineData(6, 70, 50, 150, 1.4)]    // 2 hàng
-    [InlineData(1, 70, 50, 150, 0.7)]
-    [InlineData(4, 100, 40, 150, 2.0)]   // 3 miếng / hàng → 2 hàng × 100 cm = 2 m
-    public void Estimator_countsRowsAcrossTheFabricWidth(int pieces, double length, double width, double fabric, double expected)
-    {
-        var meters = PieceFabricEstimator.NeedMeters(pieces, (decimal)length, (decimal)width, (decimal)fabric);
-
-        meters.Should().Be((decimal)expected);
-    }
-
-    [Theory]
-    [InlineData(null, 50.0, 150.0)]
-    [InlineData(70.0, null, 150.0)]
-    [InlineData(70.0, 50.0, null)]
-    [InlineData(70.0, 160.0, 150.0)]   // chi tiết rộng hơn khổ vải
-    public void Estimator_returnsNullWhenASizeIsMissingOrThePieceDoesNotFit(double? length, double? width, double? fabric)
-    {
-        PieceFabricEstimator.NeedMeters(5, (decimal?)length, (decimal?)width, (decimal?)fabric).Should().BeNull();
-    }
 
     [Fact]
     public async Task Recut_DueDateInThePast_IsRejected()
@@ -104,13 +109,25 @@ public class WorkOrderFabricTests : ProductionTestBase
     [Fact]
     public async Task Recut_WhenStockIsShort_NamesTheFabricAndTheEstimate()
     {
-        RecutRequest(7);   // cần khoảng 2,1 m, kho còn 1 m
+        RecutRequest(7);   // 7 tay ÷ 4 tay / lớp → 2 lớp × 1,6 m = 3,2 m, kho còn 1 m
 
         var result = await Sut().CreateReplacementAsync(Dto(), default);
 
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage);
-        result.Message.Should().Contain("V01").And.Contain("2,1").And.Contain("kho 1");
+        result.Message.Should().Contain("V01").And.Contain("3,2").And.Contain("kho 1");
+    }
+
+    [Fact]
+    public async Task Recut_FewPieces_StillNeedOneMarkerLength()
+    {
+        _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(1.5m);
+        RecutRequest(1);   // 1 tay vẫn cần một lớp = 1,6 m > 1,5 m
+
+        var result = await Sut().CreateReplacementAsync(Dto(), default);
+
+        result.ErrorCode.Should().Be(NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage);
+        result.Message.Should().Contain("1,6");
     }
 
     [Fact]
@@ -125,14 +142,14 @@ public class WorkOrderFabricTests : ProductionTestBase
 
         var result = await Sut().CreateReplacementAsync(Dto(), default);
 
-        // Đủ vải (kho 1 + tổ giữ 5 ≥ 2,1) nên không còn lỗi thiếu vải; bước đọc lại chi tiết lệnh của nguồn giả không chạy được.
+        // Đủ vải (kho 1 + tổ giữ 5 ≥ 3,2) nên không còn lỗi thiếu vải; bước đọc lại chi tiết lệnh của nguồn giả không chạy được.
         (result.ErrorCode == NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage).Should().BeFalse();
     }
 
     [Fact]
-    public async Task Recut_WithoutSizesTheEstimateIsSkippedAndTheOrderIsNotBlocked()
+    public async Task Recut_WithoutAnOrderMarkerTheEstimateIsSkippedAndTheOrderIsNotBlocked()
     {
-        RecutRequest(7, length: null, width: null);
+        RecutRequest(7, withMarker: false);
 
         var result = await Sut().CreateReplacementAsync(Dto(), default);
 

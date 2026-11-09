@@ -127,6 +127,10 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<ProductMarker> ProductMarkers { get; set; }
 
+    public virtual DbSet<ProductMarkerRatio> ProductMarkerRatios { get; set; }
+
+    public virtual DbSet<ProductMarkerComponent> ProductMarkerComponents { get; set; }
+
     public virtual DbSet<ProductMarkerFabric> ProductMarkerFabrics { get; set; }
 
     public virtual DbSet<ProductVariant> ProductVariants { get; set; }
@@ -179,13 +183,9 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<VwPayrollExportDatum> VwPayrollExportData { get; set; }
 
-    public virtual DbSet<VwProductLastSizeRatio> VwProductLastSizeRatios { get; set; }
-
     public virtual DbSet<VwPurchaseOrderDelivery> VwPurchaseOrderDeliveries { get; set; }
 
     public virtual DbSet<VwPurchaseOrderLineStatus> VwPurchaseOrderLineStatuses { get; set; }
-
-    public virtual DbSet<VwRecutFabricNeed> VwRecutFabricNeeds { get; set; }
 
     public virtual DbSet<VwStockBalance> VwStockBalances { get; set; }
 

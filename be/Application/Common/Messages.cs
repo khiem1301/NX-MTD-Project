@@ -307,9 +307,17 @@ public static class Messages
     public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu – size.";
-    public const string ProductSpecMarkerDuplicate = "Mỗi bìa chỉ khai một dòng cho mỗi size và mỗi màu.";
-    public const string ProductSpecMarkerReference = "Bìa phải dùng size và màu có trong danh sách màu – size của mã hàng.";
-    public const string ProductSpecMarkerIncomplete = "Mỗi bìa phải có cả kích thước và vải.";
+    public const string ProductSpecMarkerDuplicate = "Mỗi nhóm bìa chỉ khai mỗi chi tiết một lần và mỗi màu một vải.";
+    public const string ProductSpecMarkerReference = "Nhóm bìa phải dùng chi tiết cắt (PANEL) của mã hàng và màu có trong danh sách màu – size.";
+    public const string ProductSpecMarkerIncomplete = "Mỗi nhóm bìa phải có cả chi tiết và vải.";
+    public const string ProductSpecPanelWithoutMarker = "Đã khai nhóm bìa thì mọi chi tiết cắt (PANEL) phải nằm trên ít nhất một nhóm bìa.";
+    public const string ProductSpecMarkerGroupInUse = "Không bỏ được nhóm bìa đang có bìa của đơn hàng; xóa bìa của đơn trước.";
+    public const string OrderMarkerOrderClosed = "Đơn hàng đã dừng, đã hủy hoặc đã giao xong, không sửa bìa cắt được.";
+    public const string OrderMarkerProductNotInOrder = "Mã hàng không có trong đơn hàng.";
+    public const string OrderMarkerCodeDuplicate = "Mã bìa bị trùng trong cùng một nhóm bìa.";
+    public const string OrderMarkerGroupWithoutFabric = "Nhóm bìa {0} chưa khai vải theo màu áo ở định mức mã hàng.";
+    public const string OrderMarkerSizeNotInOrder = "Size {0} không có trong đơn hàng của mã hàng này.";
+    public const string OrderMarkerAuditSummary = "Cập nhật bìa cắt của đơn";
     public const string ProductSpecMarkerFabricInvalid = "Vải của bìa phải là NVL loại vải đang dùng, và có trong định mức chi tiết cắt của màu đó.";
     public const string ProductSpecMaterialInvalid = "NVL trong định mức không tồn tại hoặc đã ngừng dùng.";
     public const string ProductVariantInactive = "Màu – size {0} của mã hàng {1} đã ngừng sản xuất.";
@@ -338,7 +346,8 @@ public static class Messages
 
     // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
-    public const string OperationComponentInvalid = "Chi tiết gắn với công đoạn phải thuộc đúng mã hàng của công đoạn.";
+    public const string OperationComponentInvalid = "Công đoạn chỉ gắn chi tiết vải (PANEL) của đúng mã hàng, kèm vải có trong định mức của chi tiết đó.";
+    public const string OperationComponentFabricTooMany = "Một công đoạn gắn tối đa {0} dòng chi tiết × vải.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationProductRequired = "Vui lòng chọn mã hàng.";
     public const string OperationCodeFormat = "Mã công đoạn chỉ gồm chữ không dấu, số và các ký tự . _ -";

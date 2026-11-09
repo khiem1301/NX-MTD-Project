@@ -8,7 +8,6 @@ public static class WarehouseMessages
     public const string InsufficientStock = "Tồn kho không đủ";
     public const string InvalidStatus = "Phiếu không ở trạng thái cho phép thao tác này.";
     public const string WorkOrderDueBeforeStart = "Hạn lệnh cắt phải sau ngày bắt đầu của đơn hàng ({0}).";
-    public const string FabricWidthRequired = "Vải bắt buộc nhập khổ vải.";
     public const string WorkOrderDueInPast = "Không đặt lệnh cắt có hạn trong quá khứ.";
     public const string OrderClosed = "Đơn hàng đã đóng, không thể lập thêm phiếu.";
     public const string TeamMismatch = "Phiếu không thuộc tổ của bạn.";
@@ -75,13 +74,15 @@ public static class WarehouseMessages
     public const string ReturnQtyDecimals = "Số trả tối đa 3 số lẻ.";
     public const string ConfirmedQtyDecimals = "Số kho đếm tối đa 3 số lẻ.";
     public const string FabricCheckShort = "{0}: thiếu khoảng {1} m (cần khoảng {2} m, có {3} m: kho {4}, tổ đang giữ {5}).";
-    public const string FabricCheckTooWide = "{0}: rộng hơn khổ vải {1} m: {2}.";
     public const string FabricCheckNoSize = "{0}: chưa tính được vì còn thiếu: {1}.";
-    public const string FabricCheckNoWidth = "{0}: chưa tính được vì NVL chưa có khổ vải.";
     public const string FabricCheckNotMeters = "{0}: chưa tính được vì NVL không tính theo mét.";
     public const string FabricCheckNoNorm = "Chưa tính được vải cho {0} vì chưa có định mức vải.";
-    /// <summary>Tên một bìa ở một size trong thông báo kiểm vải.</summary>
-    public const string FabricCheckMarkerLabel = "bìa {0} size {1}";
+    /// <summary>Đơn chưa có bìa (đang dùng) cắt được đủ size cần của một nhóm bìa (DEV-ALL-85).</summary>
+    public const string FabricCheckNoOrderMarkerLabel = "bìa của đơn cho nhóm {0} (size {1})";
+    /// <summary>Chi tiết cắt lẻ / cắt bù chưa nằm trên nhóm bìa nào trải trên vải này.</summary>
+    public const string FabricCheckNoMarkerGroupLabel = "nhóm bìa cho chi tiết {0}";
+    /// <summary>Bìa được chọn lệch tỉ lệ lệnh: số sản phẩm dư vượt ngưỡng CUT_SURPLUS_PERCENT (BR-08).</summary>
+    public const string FabricCheckRatioWarning = "Bìa {0} lệch tỉ lệ lệnh, dư {1} sản phẩm; nên xin phía trên bìa phù hợp.";
     /// <summary>Vải có trong định mức của màu nhưng chưa nằm trên bìa nào, nên chưa cộng được phần vải này.</summary>
     public const string FabricCheckNoMarkerLabel = "bìa cho màu {0}";
     public const string WorkOrderComponentInvalid = "Chi tiết cắt lẻ phải là chi tiết vải đang dùng trong định mức của đúng màu – size.";
