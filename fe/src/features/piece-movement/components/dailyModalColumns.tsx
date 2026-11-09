@@ -72,7 +72,7 @@ export const dailyModalColumns = ({
     width: 110,
     align: 'right',
     render: (_, r) =>
-      r.kind === 'group' ? null : r.row.unitRate == null ? (
+      r.kind === 'group' ? null : r.row.unitRate === null || r.row.unitRate === undefined ? (
         <Typography.Text type="secondary">{PM_LABELS.noRate}</Typography.Text>
       ) : (
         formatCurrency(r.row.unitRate)

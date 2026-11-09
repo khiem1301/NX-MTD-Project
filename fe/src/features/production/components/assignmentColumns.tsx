@@ -37,7 +37,7 @@ export const assignmentColumns = (
     width: 110,
     align: 'right',
     render: (_, { operation: o }) =>
-      o.unitRate == null ? (
+      o.unitRate === null || o.unitRate === undefined ? (
         <Typography.Text type="secondary">{text.columns.noRate}</Typography.Text>
       ) : (
         formatCurrency(o.unitRate)

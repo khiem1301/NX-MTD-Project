@@ -57,7 +57,7 @@ export function allocationColumns(
       key: 'unitRate',
       align: 'right',
       render: (_, m) =>
-        m.unitRate == null ? (
+        m.unitRate === null || m.unitRate === undefined ? (
           <Typography.Text type="secondary">{PM_LABELS.noRate}</Typography.Text>
         ) : (
           formatCurrency(m.unitRate)
