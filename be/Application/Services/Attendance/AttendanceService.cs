@@ -17,15 +17,18 @@ public sealed class AttendanceService : IAttendanceService
     private const int RecentSessionTake = 20;
 
     private readonly IAttendanceRepository _attendance;
+    private readonly IMealRegistrationSeeder _mealSeeder;
     private readonly ISystemSettingReader _settings;
     private readonly IClock _clock;
     private readonly IExcelAttendanceParser _excelParser;
     private readonly ILogger<AttendanceService> _logger;
 
-    public AttendanceService(IAttendanceRepository attendance, ISystemSettingReader settings, IClock clock,
+    public AttendanceService(IAttendanceRepository attendance, IMealRegistrationSeeder mealSeeder,
+        ISystemSettingReader settings, IClock clock,
         IExcelAttendanceParser excelParser, ILogger<AttendanceService> logger)
     {
         _attendance = attendance;
+        _mealSeeder = mealSeeder;
         _settings = settings;
         _clock = clock;
         _excelParser = excelParser;
@@ -38,6 +41,12 @@ public sealed class AttendanceService : IAttendanceService
             return Result<IngestResultDto>.Failure(ErrorCodes.AttendanceEmptyBatch, Messages.AttendanceEmptyBatch);
 
         var result = await _attendance.IngestBatchAsync(dto.Punches, source, dto.FileName, ct);
+
+        if (result.Inserted > 0)
+        {
+            var dates = dto.Punches.Select(p => DateOnly.FromDateTime(p.PunchTime)).Distinct();
+            await _mealSeeder.SeedForDatesAsync(dates, ct);
+        }
 
         _logger.LogInformation(
             "Attendance ingest {Source}: session {SessionId}, received {Received}, inserted {Inserted}, " +
@@ -53,8 +62,15 @@ public sealed class AttendanceService : IAttendanceService
         var lastId = await _attendance.GetLastSourceRecordIdAsync(ct);
         var lastAt = await _attendance.GetLastSucceededAtAsync(ct);
         var interval = await _settings.GetIntAsync(SettingKeys.AttendanceSyncMinutes, 10, ct);
+        var syncEmployees = await _settings.GetAsync(SettingKeys.RjEmployeeSyncRequested, ct) == "1";
 
-        return Result<SyncCursorDto>.Success(new SyncCursorDto(lastId, lastAt, interval));
+        return Result<SyncCursorDto>.Success(new SyncCursorDto(lastId, lastAt, interval, syncEmployees));
+    }
+
+    public async Task<Result> RecordAgentHeartbeatAsync(CancellationToken ct)
+    {
+        await _attendance.RecordAgentHeartbeatAsync(_clock.Now, ct);
+        return Result.Success();
     }
 
     public async Task<Result<SyncHealthDto>> GetHealthAsync(CancellationToken ct)
@@ -103,7 +119,9 @@ public sealed class AttendanceService : IAttendanceService
         if (holder is not null && holder.EmployeeId != dto.EmployeeId)
             return Result.Failure(ErrorCodes.AttendanceCodeAlreadyMapped, Messages.AttendanceCodeAlreadyMapped);
 
-        if (!await _attendance.HasPunchesForCodeAsync(dto.AttendanceCode, ct))
+        var known = await _attendance.HasPunchesForCodeAsync(dto.AttendanceCode, ct)
+                    || await _attendance.HasRjEmployeeAsync(dto.AttendanceCode, ct);
+        if (!known)
             return Result.Failure(ErrorCodes.AttendanceCodeNotFound, Messages.AttendanceCodeNotFound,
                 ResultKind.NotFound);
 
@@ -113,6 +131,30 @@ public sealed class AttendanceService : IAttendanceService
             dto.AttendanceCode, dto.EmployeeId, changedBy);
 
         return Result.Success(Messages.Saved);
+    }
+
+    public async Task<Result> SyncRjEmployeesAsync(SyncRjEmployeesDto dto, CancellationToken ct)
+    {
+        await _attendance.ReplaceRjEmployeesAsync(dto.Employees, _clock.Now, ct);
+        await _settings.SetAsync(SettingKeys.RjEmployeeSyncRequested, "0",
+            "Yêu cầu đồng bộ NV từ RJ (1 = chờ agent)", ct);
+        _logger.LogInformation("RJ employee snapshot: {Count} dòng", dto.Employees.Count);
+        return Result.Success(Messages.Saved);
+    }
+
+    public async Task<Result> RequestRjEmployeeSyncAsync(CancellationToken ct)
+    {
+        await _settings.SetAsync(SettingKeys.RjEmployeeSyncRequested, "1",
+            "Yêu cầu đồng bộ NV từ RJ (1 = chờ agent)", ct);
+        _logger.LogInformation("Đã ghi yêu cầu đồng bộ nhân viên RJ; chờ agent đọc máy.");
+        return Result.Success(Messages.AttendanceRjEmployeeSyncRequested);
+    }
+
+    public async Task<Result<IReadOnlyList<RjEmployeeDto>>> GetRjEmployeesAsync(
+        bool onlyUnmapped, CancellationToken ct)
+    {
+        var rows = await _attendance.GetRjEmployeesAsync(onlyUnmapped, ct);
+        return Result<IReadOnlyList<RjEmployeeDto>>.Success(rows);
     }
 
     public async Task<Result<PagedResult<DailyTimesheetDto>>> GetTimesheetsAsync(
@@ -219,6 +261,12 @@ public sealed class AttendanceService : IAttendanceService
             return Result<IngestResultDto>.Failure(ErrorCodes.AttendanceExcelEmpty, Messages.AttendanceExcelEmpty);
 
         var result = await _attendance.IngestBatchAsync(punches, SyncSource.ExcelImport, fileName, ct);
+
+        if (result.Inserted > 0)
+        {
+            var dates = punches.Select(p => DateOnly.FromDateTime(p.PunchTime)).Distinct();
+            await _mealSeeder.SeedForDatesAsync(dates, ct);
+        }
 
         _logger.LogInformation(
             "Attendance Excel import {FileName}: received {Received}, inserted {Inserted}, duplicates {Duplicates}, " +

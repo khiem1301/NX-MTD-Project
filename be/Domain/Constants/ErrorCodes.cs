@@ -96,6 +96,11 @@ public static class ErrorCodes
     public const string MealGuestLocked = "MEAL_GUEST_LOCKED";     // trigger trg_DailyMeal_GuestCutoff (THROW 50021)
     public const string MealNotClosedYet = "MEAL_NOT_CLOSED_YET";
     public const string MealCountExceedsMembers = "MEAL_COUNT_EXCEEDS_MEMBERS";
+    public const string MealNoAttendance = "MEAL_NO_ATTENDANCE";
+    public const string MealEmployeeNotInTeam = "MEAL_EMPLOYEE_NOT_IN_TEAM";
+    public const string EmployeeFloorRoleWebCreateForbidden = "EMPLOYEE_FLOOR_ROLE_WEB_CREATE_FORBIDDEN";
+    public const string EmployeeRjNotFound = "EMPLOYEE_RJ_NOT_FOUND";
+    public const string EmployeeRjAlreadyImported = "EMPLOYEE_RJ_ALREADY_IMPORTED";
 
     // --- Bảng lương + khóa tháng (Minh, UC06/UC31/UC32) ---
     public const string PayrollNotFound = "PAYROLL_NOT_FOUND";

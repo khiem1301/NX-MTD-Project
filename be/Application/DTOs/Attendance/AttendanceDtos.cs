@@ -12,8 +12,9 @@ public sealed record IngestPunchesDto(IReadOnlyList<AttendancePunchDto> Punches,
 public sealed record IngestResultDto(
     int SyncSessionId, int Received, int Inserted, int SkippedLockedMonth, int Duplicates, int Unmapped);
 
-/// <summary>Mốc để agent biết đọc tiếp từ CheckInOut.ID nào.</summary>
-public sealed record SyncCursorDto(int? LastSourceRecordId, DateTime? LastSucceededAt, int SyncIntervalMinutes);
+/// <summary>Mốc để agent biết đọc tiếp từ CheckInOut.ID nào; SyncEmployeesRequested = web vừa bấm đồng bộ NV RJ.</summary>
+public sealed record SyncCursorDto(
+    int? LastSourceRecordId, DateTime? LastSucceededAt, int SyncIntervalMinutes, bool SyncEmployeesRequested);
 
 // ---------- Theo dõi đồng bộ (UC28) ----------
 
@@ -33,6 +34,20 @@ public sealed record SyncHealthDto(
 public sealed record UnmappedCodeDto(int AttendanceCode, int PunchCount, DateTime FirstPunchAt, DateTime LastPunchAt);
 
 public sealed record MapAttendanceCodeDto(int AttendanceCode, int EmployeeId);
+
+// ---------- Snapshot nhân viên RJ (để gán mã / tạo NV) ----------
+
+/// <summary>Một dòng NHANVIEN từ agent (chỉ mã + tên, không vân tay/mật khẩu).</summary>
+public sealed record RjEmployeePunchDto(int AttendanceCode, string FullName, string? RjEmployeeCode);
+
+/// <summary>Lô snapshot agent đẩy lên; backend replace-all.</summary>
+public sealed record SyncRjEmployeesDto(IReadOnlyList<RjEmployeePunchDto> Employees);
+
+/// <summary>Dòng hiển thị trên web kèm trạng thái đã gắn nhân viên hệ thống chưa.</summary>
+public sealed record RjEmployeeDto(
+    int AttendanceCode, string FullName, string? RjEmployeeCode,
+    bool IsMapped, int? EmployeeId, string? EmployeeCode, string? EmployeeFullName,
+    DateTime SyncedAt);
 
 // ---------- Bảng công ngày (UC28, UC58) ----------
 

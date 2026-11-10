@@ -10,7 +10,24 @@ public sealed class ConfirmTeamMealDtoValidator : AbstractValidator<ConfirmTeamM
     public ConfirmTeamMealDtoValidator()
     {
         RuleFor(x => x.MealDate).NotEmpty().WithMessage("Vui lòng chọn ngày.");
-        RuleFor(x => x.MealCount).GreaterThanOrEqualTo(0).WithMessage(Messages.MealCountInvalid);
+        // MealCount bỏ qua — số suất lấy từ checklist WillEat.
+    }
+}
+
+public sealed class SetTeamMemberMealDtoValidator : AbstractValidator<SetTeamMemberMealDto>
+{
+    public SetTeamMemberMealDtoValidator()
+    {
+        RuleFor(x => x.MealDate).NotEmpty().WithMessage("Vui lòng chọn ngày.");
+        RuleFor(x => x.EmployeeId).GreaterThan(0).WithMessage("Vui lòng chọn nhân viên.");
+    }
+}
+
+public sealed class SetMyMealDtoValidator : AbstractValidator<SetMyMealDto>
+{
+    public SetMyMealDtoValidator()
+    {
+        // MealDate null = hôm nay (service lấy từ clock).
     }
 }
 

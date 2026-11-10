@@ -11,6 +11,21 @@ export const mealMenu: MenuEntry[] = [
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy],
   },
   {
+    key: 'my-meal',
+    label: MEAL_TEXT.myPageTitle,
+    path: MEAL_ROUTES.myMeal,
+    roles: [
+      ROLES.Manager,
+      ROLES.Accountant,
+      ROLES.WarehouseKeeper,
+      ROLES.TeamLeader,
+      ROLES.TeamDeputy,
+      ROLES.QaQc,
+      ROLES.Electrician,
+      ROLES.Worker,
+    ],
+  },
+  {
     key: 'meal-summary',
     label: MEAL_TEXT.summaryPageTitle,
     path: MEAL_ROUTES.summary,

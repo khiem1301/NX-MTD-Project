@@ -1,5 +1,5 @@
 import { IconAction } from '@/components/common/IconAction';
-import { Button, Card, Space, type TableColumnsType } from 'antd';
+import { Alert, Button, Card, Space, type TableColumnsType } from 'antd';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { QueryError } from '@/components/common/QueryError';
@@ -46,6 +46,7 @@ export function EmployeesPage() {
   const [importing, setImporting] = useState(false);
   const [tempPassword, setTempPassword] = useState<TempPassword | null>(null);
 
+  // Lọc danh sách vẫn xem được CN (đã import từ RJ); form tạo chỉ hiện role văn phòng.
   const roleOptions = (Object.keys(ROLE_LABEL) as Role[])
     .filter((r) => isAdmin || !MANAGER_HIDDEN_ROLES.includes(r))
     .map((r) => ({ value: r, label: ROLE_LABEL[r] }));
@@ -123,6 +124,14 @@ export function EmployeesPage() {
         )
       }
     >
+      {canManage ? (
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={MESSAGES.hr.floorFromRjHint}
+        />
+      ) : null}
       <TableToolbar
         filters={
           <>

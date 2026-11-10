@@ -31,4 +31,14 @@ public sealed class AttendanceSyncController : ControllerBase
     [HttpPost("punches")]
     public async Task<IActionResult> Ingest([FromBody] IngestPunchesDto dto, CancellationToken ct) =>
         this.ToResponse(await _attendance.IngestAsync(dto, SyncSource.RjSync, ct));
+
+    /// <summary>Nhận snapshot NHANVIEN từ RJ (chỉ mã + tên). Replace-all.</summary>
+    [HttpPost("employees")]
+    public async Task<IActionResult> SyncEmployees([FromBody] SyncRjEmployeesDto dto, CancellationToken ct) =>
+        this.ToResponse(await _attendance.SyncRjEmployeesAsync(dto, ct));
+
+    /// <summary>Agent báo đã chạy xong chu kỳ dù không có lượt quẹt mới.</summary>
+    [HttpPost("heartbeat")]
+    public async Task<IActionResult> Heartbeat(CancellationToken ct) =>
+        this.ToResponse(await _attendance.RecordAgentHeartbeatAsync(ct));
 }

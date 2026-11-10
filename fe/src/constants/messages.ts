@@ -93,7 +93,8 @@ export const MESSAGES = {
   },
   meal: {
     settingsSaved: 'Đã lưu giờ chốt suất ăn.',
-    confirmSaved: 'Đã xác nhận số suất ăn của tổ.',
+    confirmSaved: 'Đã xác nhận suất ăn của tổ.',
+    memberUpdated: 'Đã cập nhật suất ăn.',
     guestSaved: 'Đã lưu suất khách.',
     kitchenNotified: 'Đã báo bếp.',
     priceSaved: 'Đã lưu đơn giá suất ăn.',
@@ -194,8 +195,10 @@ export const MESSAGES = {
     status: 'Trạng thái',
     account: 'Tài khoản',
     employeesTitle: 'Nhân viên',
-    addEmployee: 'Thêm nhân viên',
+    addEmployee: 'Thêm nhân viên văn phòng',
     editEmployee: 'Sửa nhân viên',
+    floorFromRjHint:
+      'Chỉ Admin / Quản đốc cấp tài khoản. Công nhân: Chấm công → Nhân viên RJ → Tạo trên hệ thống. Kế toán chỉ xem danh sách.',
     resign: 'Cho nghỉ việc',
     resignReason: 'Lý do nghỉ việc',
     lockAccount: 'Khóa tài khoản',

@@ -21,6 +21,9 @@ public interface IAttendanceRepository
 
     Task<DateTime?> GetLastSucceededAtAsync(CancellationToken ct);
 
+    /// <summary>Ghi phiên RJ_SYNC thành công 0 lượt — agent đã liên lạc được, không có quẹt mới.</summary>
+    Task RecordAgentHeartbeatAsync(DateTime at, CancellationToken ct);
+
     Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, string? status, CancellationToken ct);
 
     Task<IReadOnlyList<UnmappedCodeDto>> GetUnmappedCodesAsync(CancellationToken ct);
@@ -29,6 +32,14 @@ public interface IAttendanceRepository
 
     /// <summary>Có lượt quẹt nào mang mã này chưa (để chặn map mã không tồn tại).</summary>
     Task<bool> HasPunchesForCodeAsync(int attendanceCode, CancellationToken ct);
+
+    /// <summary>Mã có trong snapshot RJ (đã đồng bộ từ NHANVIEN) chưa.</summary>
+    Task<bool> HasRjEmployeeAsync(int attendanceCode, CancellationToken ct);
+
+    /// <summary>Xóa hết rồi ghi lại snapshot NV từ agent.</summary>
+    Task ReplaceRjEmployeesAsync(IReadOnlyList<RjEmployeePunchDto> employees, DateTime syncedAt, CancellationToken ct);
+
+    Task<IReadOnlyList<RjEmployeeDto>> GetRjEmployeesAsync(bool onlyUnmapped, CancellationToken ct);
 
     Task<Employee?> GetEmployeeAsync(int employeeId, CancellationToken ct);
 

@@ -56,8 +56,9 @@ public class HrServiceTests
     private static Team TeamOf(string type = TeamTypes.Sewing, int id = 4) =>
         new() { TeamId = id, TeamName = "Tổ may 1", TeamType = type, Status = RecordStatus.Active };
 
-    private static CreateEmployeeDto NewEmployee(string role = "Worker", int? att = null) =>
-        new("cn2", "Công nhân 2", null, null, null, role, 4, "PieceRate", new DateOnly(2026, 10, 24), att);
+    // Chỉ vai trò văn phòng được tạo trên web; công nhân / tổ trưởng / tổ phó lấy từ máy chấm công RJ.
+    private static CreateEmployeeDto NewEmployee(string role = "WarehouseKeeper", int? att = null) =>
+        new("nv2", "Nhân viên 2", null, null, null, role, 4, "PieceRate", new DateOnly(2026, 10, 24), att);
 
     // ---- Đổi mật khẩu ----
     [Fact]
@@ -129,6 +130,19 @@ public class HrServiceTests
 
     // ---- Tạo nhân viên ----
     [Fact]
+    public void CreateEmployeeValidator_UnknownRole_IsInvalid_NotAnException()
+    {
+        var errors = new CreateEmployeeDtoValidator().Validate(NewEmployee("Giám đốc")).Errors;
+
+        errors.Should().ContainSingle(e => e.PropertyName == nameof(CreateEmployeeDto.Role)).Which.ErrorMessage.Should().Be("Vai trò không hợp lệ.");
+    }
+
+    [Fact]
+    public void CreateEmployeeValidator_FloorRole_IsRejectedWithTheRjMessage() =>
+        new CreateEmployeeDtoValidator().Validate(NewEmployee("Worker")).Errors
+            .Should().Contain(e => e.ErrorMessage == Messages.EmployeeFloorRoleWebCreateForbidden);
+
+    [Fact]
     public async Task Create_DuplicateCode_Fails()
     {
         _employees.CodeExistsAsync("CN2", default).ReturnsForAnyArgs(true);
@@ -138,26 +152,77 @@ public class HrServiceTests
         result.ErrorCode.Should().Be(ErrorCodes.EmployeeCodeDuplicate);
     }
 
-    [Fact]
-    public async Task Create_SecondLeaderSameTeam_FailsWithHolderName()
+    [Theory]
+    [InlineData("Worker")]
+    [InlineData("TeamLeader")]
+    [InlineData("TeamDeputy")]
+    public async Task Create_FloorRole_IsForbiddenOnTheWeb(string role)
     {
-        _teams.GetByIdAsync(4).Returns(TeamOf());
-        _employees.FindTeamRoleHolderAsync(4, RoleCodes.TeamLeader, null, default).ReturnsForAnyArgs(Person(9, RoleCodes.TeamLeader));
+        var result = await Employees().CreateAsync(NewEmployee(role), default);
 
-        var result = await Employees().CreateAsync(NewEmployee("TeamLeader"), default);
-
-        result.ErrorCode.Should().Be(ErrorCodes.TeamLeaderExists);
-        result.Message.Should().Contain("Người 9");
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.EmployeeFloorRoleWebCreateForbidden);
+        result.Kind.Should().Be(ResultKind.Validation);
+        await _employees.DidNotReceive().AddAsync(Arg.Any<Employee>());
+        await _uow.DidNotReceive().SaveChangesAsync();
     }
 
     [Fact]
-    public async Task Create_LeaderInOfficeTeam_Fails()
+    public async Task Create_ByAccountant_IsForbidden()
     {
+        _user.Role.Returns(Roles.Accountant);
+
+        var result = await Employees().CreateAsync(NewEmployee(), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AuthForbidden);
+        result.Kind.Should().Be(ResultKind.Forbidden);
+        await _employees.DidNotReceive().AddAsync(Arg.Any<Employee>());
+    }
+
+    // Tổ trưởng / tổ phó không tạo mới trên web nữa, mà được lên chức từ công nhân đã import từ RJ: quy tắc tổ vẫn áp dụng.
+    [Fact]
+    public async Task ManagerUpdate_PromoteToSecondLeaderInSameTeam_FailsWithHolderName()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+        _teams.GetByIdAsync(4).Returns(TeamOf());
+        _employees.FindTeamRoleHolderAsync(4, RoleCodes.TeamLeader, 7, default).ReturnsForAnyArgs(Person(9, RoleCodes.TeamLeader));
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("TeamLeader", 4), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.TeamLeaderExists);
+        result.Message.Should().Contain("Người 9");
+        person.Role.RoleCode.Should().Be(RoleCodes.Worker);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_PromoteToLeaderInOfficeTeam_Fails()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.Worker, team: 4);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
         _teams.GetByIdAsync(4).Returns(TeamOf(TeamTypes.Office));
 
-        var result = await Employees().CreateAsync(NewEmployee("TeamLeader"), default);
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("TeamLeader", 4), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.TeamLeaderInvalidTeam);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task ManagerUpdate_CannotTurnOfficeStaffIntoAFloorRole()
+    {
+        _user.Role.Returns(Roles.Manager);
+        var person = Person(7, RoleCodes.WarehouseKeeper, team: null);
+        _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
+
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", 4), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.EmployeeFloorRoleWebCreateForbidden);
+        person.Role.RoleCode.Should().Be(RoleCodes.WarehouseKeeper);
+        await _uow.DidNotReceive().SaveChangesAsync();
     }
 
     [Fact]
@@ -295,7 +360,7 @@ public class HrServiceTests
         var person = Person(7, RoleCodes.Manager, team: null);
         _employees.GetFullAsync(7, default).ReturnsForAnyArgs(person);
 
-        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("Worker", null), default);
+        var result = await Employees().ManagerUpdateAsync(7, ManagerEdit("WarehouseKeeper", null), default);
 
         result.Kind.Should().Be(ResultKind.Forbidden);
         result.Message.Should().Be(Messages.ManagerCannotAssignRole);

@@ -3,8 +3,7 @@ using NX_MTD.Application.DTOs;
 
 namespace NX_MTD.Application.Interfaces;
 
-/// <summary>UC30: suất ăn hằng ngày — tổ trưởng xác nhận số suất tổ, Kế toán nhập suất khách,
-/// xem tổng hợp và nhập đơn giá. JOB-02/JOB-03 cũng gọi qua interface này.</summary>
+/// <summary>UC30: suất ăn hằng ngày — tick từ chấm công, bỏ tick cá nhân/tổ trưởng, chốt 08:30.</summary>
 public interface IMealService
 {
     // ---------- Tổ trưởng ----------
@@ -12,6 +11,16 @@ public interface IMealService
     Task<Result<TeamMealSuggestionDto>> GetTeamSuggestionAsync(int teamId, DateOnly date, CancellationToken ct);
 
     Task<Result> ConfirmTeamMealAsync(int teamId, ConfirmTeamMealDto dto, CancellationToken ct);
+
+    Task<Result<TeamMealMembersDto>> GetTeamMembersAsync(int teamId, DateOnly date, CancellationToken ct);
+
+    Task<Result> SetTeamMemberMealAsync(int teamId, int actorEmployeeId, SetTeamMemberMealDto dto, CancellationToken ct);
+
+    // ---------- Cá nhân ----------
+
+    Task<Result<MyMealDto>> GetMyMealAsync(int employeeId, DateOnly date, CancellationToken ct);
+
+    Task<Result> SetMyMealAsync(int employeeId, SetMyMealDto dto, CancellationToken ct);
 
     // ---------- Kế toán ----------
 
@@ -26,9 +35,9 @@ public interface IMealService
 
     // ---------- Job nền (MI-04) ----------
 
-    /// <summary>JOB-02 08:15: với tổ chưa xác nhận, ghi nhận số gợi ý hiện tại + mốc đã nhắc.</summary>
+    /// <summary>JOB-02 08:15: seed từ chấm công + nhắc tổ chưa xác nhận.</summary>
     Task RunReminderJobAsync(DateOnly date, CancellationToken ct);
 
-    /// <summary>JOB-03 08:30: tổ chưa xác nhận lấy theo số đã quẹt, văn phòng lấy theo số đã quẹt, rồi khóa ngày.</summary>
+    /// <summary>JOB-03 08:30: seed lần cuối, cộng MealCount/OfficeCount từ WillEat, rồi khóa ngày.</summary>
     Task RunAutoCloseJobAsync(DateOnly date, CancellationToken ct);
 }

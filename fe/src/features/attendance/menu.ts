@@ -8,7 +8,7 @@ export const attendanceMenu: MenuEntry[] = [
     key: 'attendance',
     label: ATTENDANCE_TEXT.pageTitle,
     path: ATTENDANCE_ROUTES.attendance,
-    roles: [ROLES.Accountant],
+    roles: [ROLES.Admin, ROLES.Manager, ROLES.Accountant],
   },
   {
     key: 'team-attendance',

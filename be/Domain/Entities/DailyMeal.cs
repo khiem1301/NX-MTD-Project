@@ -31,4 +31,6 @@ public partial class DailyMeal
     public DateTime? KitchenNotifiedAt { get; set; }
 
     public virtual ICollection<TeamMealConfirmation> TeamMealConfirmations { get; set; } = new List<TeamMealConfirmation>();
+
+    public virtual ICollection<MealRegistration> MealRegistrations { get; set; } = new List<MealRegistration>();
 }

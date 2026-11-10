@@ -11,7 +11,7 @@ export const attendanceRoutes = toPageRoutes([
   },
   {
     path: ATTENDANCE_ROUTES.attendance,
-    roles: [ROLES.Accountant],
+    roles: [ROLES.Admin, ROLES.Manager, ROLES.Accountant],
     page: async () => (await import('./pages/AttendancePage')).AttendancePage,
   },
   {

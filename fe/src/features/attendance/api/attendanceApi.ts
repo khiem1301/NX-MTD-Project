@@ -14,6 +14,7 @@ import type {
   TimesheetFilter,
   TimesheetSummary,
   UnmappedCode,
+  RjEmployee,
   SyncStatus,
 } from '../types';
 
@@ -91,6 +92,26 @@ export const attendanceApi = {
 
   mapCode: async (body: MapAttendanceCodeRequest): Promise<void> => {
     await apiClient.post(API.attendance.mapCode, body);
+  },
+
+  /** Yêu cầu agent đồng bộ lại snapshot NHANVIEN từ máy RJ. */
+  requestRjEmployeeSync: async (): Promise<void> => {
+    await apiClient.post(API.attendance.syncRjEmployees);
+  },
+
+  getRjEmployees: async (onlyUnmapped = false): Promise<RjEmployee[]> => {
+    const res = await apiClient.get<ApiResponse<RjEmployee[]>>(API.attendance.rjEmployees, {
+      params: { onlyUnmapped },
+    });
+    return res.data.data;
+  },
+
+  /** Admin / Quản đốc / Kế toán — dùng khi tạo NV. */
+  getRjEmployeesCommon: async (onlyUnmapped = false): Promise<RjEmployee[]> => {
+    const res = await apiClient.get<ApiResponse<RjEmployee[]>>(API.rjEmployees, {
+      params: { onlyUnmapped },
+    });
+    return res.data.data;
   },
 
   // ---------- Chấm công hộ (GBR-25) ----------

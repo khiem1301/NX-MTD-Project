@@ -71,6 +71,18 @@ export type MapAttendanceCodeRequest = {
   employeeId: number;
 };
 
+/** Snapshot nhân viên từ Ronald Jack Pro (agent đẩy lên). */
+export type RjEmployee = {
+  attendanceCode: number;
+  fullName: string;
+  rjEmployeeCode: string | null;
+  isMapped: boolean;
+  employeeId: number | null;
+  employeeCode: string | null;
+  employeeFullName: string | null;
+  syncedAt: string;
+};
+
 export type DailyTimesheet = {
   dailyTimesheetId: number;
   employeeId: number;

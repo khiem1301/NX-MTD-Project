@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
+import { ATTENDANCE_TEXT } from '@/features/attendance/constants';
+import { RjEmployeePickerModal } from '@/features/attendance/components/RjEmployeePickerModal';
 import { normalizePhone, phoneRule } from '@/utils/phone';
 import {
   CODE_PATTERN,
@@ -14,9 +17,16 @@ import { DetailModal } from '@/components/common/DetailModal';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { useEmployeeForm } from '../hooks/useEmployeeForm';
 
+export type EmployeeDraft = {
+  fullName?: string;
+  attendanceCode?: number;
+};
+
 export type EmployeeFormModalProps = {
   open: boolean;
   employee: EmployeeDetail | null;
+  /** Prefill khi tạo mới (vd chọn từ RJ). */
+  draft?: EmployeeDraft | null;
   /** Admin sửa đủ trường; Quản đốc sửa được hồ sơ, tổ và vai trò (trừ Admin / Quản đốc / Kế toán) nhưng không đổi kiểu lương (UC16). */
   isAdmin: boolean;
   onClose: () => void;
@@ -32,12 +42,14 @@ const PAY_OPTIONS = (Object.keys(PAY_TYPE_LABEL) as PayType[]).map((p) => ({
 export function EmployeeFormModal({
   open,
   employee,
+  draft,
   isAdmin,
   onClose,
   onCreated,
 }: EmployeeFormModalProps) {
+  const [rjOpen, setRjOpen] = useState(false);
   const { teams, saving, roleOptions, roleLocked, suggest, handleFinish, initialValues, form } =
-    useEmployeeForm({ employee, isAdmin, onClose, onCreated });
+    useEmployeeForm({ employee, isAdmin, onClose, onCreated, draft });
 
   return (
     <DetailModal
@@ -139,10 +151,15 @@ export function EmployeeFormModal({
             <Input disabled value={employee.currentGradeCode ?? '—'} />
           </Form.Item>
         )}
-        <Space wrap>
+        <Space wrap align="start">
           <Form.Item name="attendanceCode" label={MESSAGES.hr.attendanceCode}>
             <InputNumber min={1} max={99999999} precision={0} controls={false} />
           </Form.Item>
+          {!employee ? (
+            <Form.Item label=" ">
+              <Button onClick={() => setRjOpen(true)}>{ATTENDANCE_TEXT.rj.pick}</Button>
+            </Form.Item>
+          ) : null}
           <Form.Item
             name="startDate"
             label={MESSAGES.hr.startDate}
@@ -152,6 +169,16 @@ export function EmployeeFormModal({
           </Form.Item>
         </Space>
       </Form>
+      <RjEmployeePickerModal
+        open={rjOpen}
+        onClose={() => setRjOpen(false)}
+        onPick={(row) => {
+          form.setFieldsValue({
+            fullName: row.fullName,
+            attendanceCode: row.attendanceCode,
+          });
+        }}
+      />
     </DetailModal>
   );
 }

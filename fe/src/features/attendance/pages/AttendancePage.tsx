@@ -3,20 +3,20 @@ import {
   EditOutlined,
   FileExcelOutlined,
   HistoryOutlined,
-  LinkOutlined,
+  TeamOutlined,
   TableOutlined,
 } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import { useSyncHealth } from '../hooks/useAttendance';
 import { AdjustmentPanel } from '../components/AdjustmentPanel';
 import { ExcelImportPanel } from '../components/ExcelImportPanel';
+import { RjEmployeePanel } from '../components/RjEmployeePanel';
 import { SyncHealthBanner } from '../components/SyncHealthBanner';
 import { SyncSessionTable } from '../components/SyncSessionTable';
 import { TimesheetView } from '../components/TimesheetView';
-import { UnmappedCodePanel } from '../components/UnmappedCodePanel';
 import { PageCard } from '@/components/common/PageCard';
 
-/** UC28 — màn chấm công của Kế toán: bảng công toàn xưởng, gán mã, lịch sử đồng bộ. */
+/** UC28 — bảng công, tạo công nhân từ RJ, lịch sử đồng bộ (không còn gán mã tay). */
 export function AttendancePage() {
   const { data: health } = useSyncHealth();
 
@@ -25,8 +25,19 @@ export function AttendancePage() {
       <SyncHealthBanner health={health} />
 
       <Tabs
-        defaultActiveKey="timesheet"
+        defaultActiveKey="rj-employees"
         items={[
+          {
+            key: 'rj-employees',
+            label: (
+              <Badge count={health?.unmappedCodeCount ?? 0} offset={[10, -2]} size="small">
+                <span>
+                  <TeamOutlined /> {ATTENDANCE_TEXT.tabs.rjEmployees}
+                </span>
+              </Badge>
+            ),
+            children: <RjEmployeePanel />,
+          },
           {
             key: 'timesheet',
             label: (
@@ -35,17 +46,6 @@ export function AttendancePage() {
               </span>
             ),
             children: <TimesheetView audience="accountant" />,
-          },
-          {
-            key: 'unmapped',
-            label: (
-              <Badge count={health?.unmappedCodeCount ?? 0} offset={[10, -2]} size="small">
-                <span>
-                  <LinkOutlined /> {ATTENDANCE_TEXT.tabs.unmapped}
-                </span>
-              </Badge>
-            ),
-            children: <UnmappedCodePanel />,
           },
           {
             key: 'sessions',

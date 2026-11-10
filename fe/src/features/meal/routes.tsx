@@ -10,6 +10,11 @@ export const mealRoutes = toPageRoutes([
     page: async () => (await import('./pages/TeamMealPage')).TeamMealPage,
   },
   {
+    path: MEAL_ROUTES.myMeal,
+    roles: Object.values(ROLES).filter((r) => r !== ROLES.Admin),
+    page: async () => (await import('./pages/MyMealPage')).MyMealPage,
+  },
+  {
     path: MEAL_ROUTES.summary,
     roles: [ROLES.Accountant],
     page: async () => (await import('./pages/MealSummaryPage')).MealSummaryPage,

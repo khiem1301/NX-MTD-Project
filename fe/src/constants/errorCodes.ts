@@ -76,6 +76,8 @@ export const ERROR_CODES = {
   MealLocked: 'MEAL_LOCKED',
   MealGuestLocked: 'MEAL_GUEST_LOCKED',
   MealNotClosedYet: 'MEAL_NOT_CLOSED_YET',
+  MealNoAttendance: 'MEAL_NO_ATTENDANCE',
+  MealEmployeeNotInTeam: 'MEAL_EMPLOYEE_NOT_IN_TEAM',
   // Bảng lương (Minh)
   PayrollNotFound: 'PAYROLL_NOT_FOUND',
   PayrollInvalidStatus: 'PAYROLL_INVALID_STATUS',

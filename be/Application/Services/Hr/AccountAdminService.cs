@@ -28,6 +28,8 @@ public sealed class AccountAdminService : IAccountAdminService
 
     public async Task<Result> LockAsync(int employeeId, LockAccountDto dto, CancellationToken ct)
     {
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden, ResultKind.Forbidden);
         if (employeeId == _user.EmployeeId) return Result.Failure(ErrorCodes.AccountCannotLockSelf, Messages.AccountCannotLockSelf);
         var account = await FindAccountAsync(employeeId, ct);
         if (account is null) return Fail.NotFound();
@@ -45,6 +47,8 @@ public sealed class AccountAdminService : IAccountAdminService
 
     public async Task<Result> UnlockAsync(int employeeId, CancellationToken ct)
     {
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden, ResultKind.Forbidden);
         var employee = await _employees.GetFullAsync(employeeId, ct);
         var account = employee?.Account;
         if (employee is null || account is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
@@ -62,6 +66,9 @@ public sealed class AccountAdminService : IAccountAdminService
 
     public async Task<Result<TemporaryPasswordDto>> ResetPasswordAsync(int employeeId, CancellationToken ct)
     {
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result<TemporaryPasswordDto>.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden,
+                ResultKind.Forbidden);
         if (employeeId == _user.EmployeeId)
             return Result<TemporaryPasswordDto>.Failure(ErrorCodes.AccountCannotLockSelf, Messages.CannotActOnSelf);
         var employee = await _employees.GetFullAsync(employeeId, ct);

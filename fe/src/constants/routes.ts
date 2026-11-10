@@ -53,6 +53,7 @@ export const ATTENDANCE_ROUTES = {
 
 export const MEAL_ROUTES = {
   teamMeal: '/team/meals',
+  myMeal: '/my/meals',
   summary: '/meals/summary',
   settings: '/admin/meal-settings',
 } as const;
