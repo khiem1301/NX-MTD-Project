@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { MaterialFormModalSlot } from '@/app/featureSlots';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
@@ -20,11 +21,6 @@ import {
 import { specNormColumns } from './specNormColumns';
 
 const text = MESSAGES.orders.spec;
-
-/** Nạp lười để màn mã hàng không kéo cả feature kho. */
-const MaterialFormModal = lazy(() =>
-  import('@/features/warehouse').then((m) => ({ default: m.MaterialFormModal })),
-);
 
 type SpecNormsTabProps = {
   norms: NormRow[];
@@ -166,7 +162,7 @@ export function SpecNormsTab({
       </Button>
       {addingMaterialFor && (
         <Suspense fallback={null}>
-          <MaterialFormModal
+          <MaterialFormModalSlot
             open
             material={null}
             onClose={() => setAddingMaterialFor(null)}

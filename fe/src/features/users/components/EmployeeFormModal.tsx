@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { ATTENDANCE_TEXT } from '@/features/attendance/constants';
-import { RjEmployeePickerModal } from '@/features/attendance/components/RjEmployeePickerModal';
+import { RjEmployeePickerModal } from '@/components/common/RjEmployeePickerModal';
 import { normalizePhone, phoneRule } from '@/utils/phone';
 import {
   CODE_PATTERN,
@@ -12,7 +11,8 @@ import {
   PERSON_NAME_PATTERN,
 } from '@/utils/textInput';
 import { PAY_TYPE_LABEL, type PayType } from '@/constants/hr';
-import type { EmployeeDetail, TempPassword } from '../types';
+import type { TempPassword } from '@/types/auth';
+import type { EmployeeDetail } from '../types';
 import { DetailModal } from '@/components/common/DetailModal';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { useEmployeeForm } from '../hooks/useEmployeeForm';
@@ -157,7 +157,7 @@ export function EmployeeFormModal({
           </Form.Item>
           {!employee ? (
             <Form.Item label=" ">
-              <Button onClick={() => setRjOpen(true)}>{ATTENDANCE_TEXT.rj.pick}</Button>
+              <Button onClick={() => setRjOpen(true)}>{MESSAGES.hr.rj.pick}</Button>
             </Form.Item>
           ) : null}
           <Form.Item

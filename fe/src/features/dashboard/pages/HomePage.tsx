@@ -1,15 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { Suspense } from 'react';
+import { RevenuePanelSlot, TeamKpiPanelSlot } from '@/app/featureSlots';
 import { ROLES } from '@/constants/roles';
 import { useAuth } from '@/hooks/useAuth';
 import { OrderProgressPanel } from '../components/OrderProgressPanel';
-
-// Nạp lười để trang chủ không kéo cả các trang doanh thu vào gói chính.
-const RevenuePanel = lazy(() =>
-  import('@/features/revenue').then((m) => ({ default: m.RevenuePanel })),
-);
-const TeamKpiPanel = lazy(() =>
-  import('@/features/kpi').then((m) => ({ default: m.TeamKpiPanel })),
-);
 
 export function HomePage() {
   const { user } = useAuth();
@@ -22,13 +15,13 @@ export function HomePage() {
     <>
       {user.role === ROLES.Admin && (
         <Suspense fallback={null}>
-          <RevenuePanel />
+          <RevenuePanelSlot />
         </Suspense>
       )}
       {seesProgress && <OrderProgressPanel />}
       {seesTeamKpi && (
         <Suspense fallback={null}>
-          <TeamKpiPanel />
+          <TeamKpiPanelSlot />
         </Suspense>
       )}
     </>

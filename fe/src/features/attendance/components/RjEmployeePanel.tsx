@@ -4,9 +4,10 @@ import type { ColumnsType } from 'antd/es/table';
 import { SyncOutlined, UserAddOutlined } from '@ant-design/icons';
 import { DataTable } from '@/components/common/DataTable';
 import { IconAction } from '@/components/common/IconAction';
+import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
-import { TempPasswordModal } from '@/features/users/components/TempPasswordModal';
-import type { TempPassword } from '@/features/users/types';
+import { TempPasswordModal } from '@/components/common/TempPasswordModal';
+import type { TempPassword } from '@/types/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime } from '@/utils/format';
 import { ATTENDANCE_TEXT } from '../constants';
@@ -15,13 +16,12 @@ import {
   useRequestRjEmployeeSync,
   useRjEmployees,
 } from '../hooks/useAttendance';
-import type { RjEmployee } from '../types';
+import type { RjEmployee } from '@/types/rjEmployee';
 
 /** Danh sách NV từ RJ: mọi role được vào màn có thể xem + đồng bộ; chỉ Admin / Quản đốc cấp tài khoản. */
 export function RjEmployeePanel() {
   const { user } = useAuth();
-  const canProvision =
-    user?.role === ROLES.Admin || user?.role === ROLES.Manager;
+  const canProvision = user?.role === ROLES.Admin || user?.role === ROLES.Manager;
   const [onlyUnmapped, setOnlyUnmapped] = useState(true);
   const { data, isLoading, error, refetch, isFetching } = useRjEmployees(onlyUnmapped);
   const importFromRj = useImportEmployeeFromRj();
@@ -40,7 +40,7 @@ export function RjEmployeePanel() {
       render: (v: number) => <Tag color="blue">{v}</Tag>,
     },
     {
-      title: ATTENDANCE_TEXT.rj.rjCode,
+      title: MESSAGES.hr.rj.code,
       dataIndex: 'rjEmployeeCode',
       width: 120,
       render: (v: string | null) => v ?? '—',
@@ -135,7 +135,7 @@ export function RjEmployeePanel() {
         scroll={{ x: 'max-content' }}
         locale={{
           emptyText: (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={ATTENDANCE_TEXT.rj.empty} />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={MESSAGES.hr.rj.empty} />
           ),
         }}
       />

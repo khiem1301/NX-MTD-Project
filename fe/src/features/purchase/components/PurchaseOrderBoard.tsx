@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Card, Space } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { QueryError } from '@/components/common/QueryError';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { PurchaseOrderFormModal } from '@/features/warehouse';
+import { PurchaseOrderFormModalSlot } from '@/app/featureSlots';
 import { PurchaseOrderModal } from './PurchaseOrderModal';
 import { PurchaseOrderTable } from './PurchaseOrderTable';
 import { GOODS_STATUS_OPTIONS, PAYMENT_STATUS_OPTIONS, PURCHASE_TEXT } from '../constants';
@@ -79,7 +79,11 @@ export function PurchaseOrderBoard({ role }: { role: PurchaseRole }) {
         </Space>
       </Card>
       <PurchaseOrderModal role={role} />
-      {isManager && <PurchaseOrderFormModal open={creating} onClose={() => setCreating(false)} />}
+      {isManager && creating && (
+        <Suspense fallback={null}>
+          <PurchaseOrderFormModalSlot open onClose={() => setCreating(false)} />
+        </Suspense>
+      )}
     </PageCard>
   );
 }

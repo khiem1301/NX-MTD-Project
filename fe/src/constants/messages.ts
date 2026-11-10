@@ -190,6 +190,14 @@ export const MESSAGES = {
     grade: 'Bậc thợ',
     gradeHint: 'Đổi bậc ở màn đánh giá bậc (KH-14).',
     attendanceCode: 'Mã chấm công',
+    /** NV trên máy Ronald Jack Pro: dùng ở màn chấm công và form nhân viên. */
+    rj: {
+      code: 'Mã NV RJ',
+      employee: 'Nhân viên',
+      empty: 'Chưa có dữ liệu NV từ RJ. Kiểm tra agent đang chạy và đã đồng bộ.',
+      pick: 'Chọn từ RJ…',
+      pickTitle: 'Chọn mã chấm công từ Ronald Jack Pro (cho nhân viên văn phòng)',
+    },
     startDate: 'Ngày vào làm',
     resignDate: 'Ngày nghỉ',
     status: 'Trạng thái',
