@@ -15,7 +15,7 @@ export const ATTENDANCE_TEXT = {
 
   rj: {
     title: 'Nhân viên trên máy Ronald Jack Pro',
-    hint: 'Công nhân tạo từ danh sách này — chỉ Admin / Quản đốc được cấp tài khoản. Kế toán xem danh sách và đồng bộ dữ liệu. Mật khẩu tạm 6 số do hệ thống sinh; tên đăng nhập = mã NV trên RJ.',
+    hint: 'Công nhân tạo từ danh sách này — chỉ Admin / Quản đốc được cấp tài khoản. Kế toán xem danh sách và đồng bộ dữ liệu. Mật khẩu tạm 6 số do hệ thống sinh; tên đăng nhập tự sinh từ họ tên (vd Nguyễn Văn Sáng → SangNV); mã NV RJ chỉ dùng để map chấm công.',
     onlyUnmapped: 'Chỉ hiện chưa tạo trên hệ thống',
     mappedTo: 'Đã có trên hệ thống',
     unmapped: 'Chưa tạo',

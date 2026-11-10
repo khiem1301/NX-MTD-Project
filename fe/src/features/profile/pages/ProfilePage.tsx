@@ -35,6 +35,7 @@ export function ProfilePage() {
               <Descriptions.Item label={MESSAGES.hr.employeeCode}>
                 {p.employeeCode}
               </Descriptions.Item>
+              <Descriptions.Item label={MESSAGES.hr.username}>{p.username}</Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.fullName}>{p.fullName}</Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.role}>{p.roleName}</Descriptions.Item>
               <Descriptions.Item label={MESSAGES.hr.team}>{p.teamName ?? '—'}</Descriptions.Item>

@@ -14,6 +14,7 @@ public static class HrModule
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddSingleton<ITemporaryPasswordGenerator, TemporaryPasswordGenerator>();
+        services.AddSingleton<IUsernameGenerator, UsernameGenerator>();
         services.AddScoped<IProfileService, ProfileService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IAccountAdminService, AccountAdminService>();

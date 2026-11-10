@@ -66,7 +66,7 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
             x.EmployeeId, x.EmployeeCode, x.FullName, x.Gender, x.DateOfBirth, x.Phone, x.AvatarUrl,
             x.Role.RoleCode, x.Role.RoleName, x.TeamId, TeamName = x.Team == null ? null : x.Team.TeamName,
             x.PayType, x.CurrentGradeCode, x.AttendanceCode, x.StartDate, x.ResignDate, x.Status, x.RowVer,
-            Account = x.Account == null ? null : new AccountInfoDto(x.Account.AccountId, x.EmployeeCode,
+            Account = x.Account == null ? null : new AccountInfoDto(x.Account.AccountId, x.Account.Username,
                 x.Account.Status, x.Account.IsTemporaryPassword, x.Account.LockedAt, x.Account.LockReason),
         }).FirstOrDefaultAsync(ct);
         if (e is null) return null;

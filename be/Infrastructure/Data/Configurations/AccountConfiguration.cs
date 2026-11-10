@@ -12,6 +12,7 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         entity.ToTable("Account", tb => tb.HasComment("Tài khoản đăng nhập (1–1 nhân viên)"));
 
         entity.HasIndex(e => e.EmployeeId, "UQ_Account_Employee").IsUnique();
+        entity.HasIndex(e => e.Username, "UQ_Account_Username").IsUnique();
 
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
@@ -25,6 +26,9 @@ public sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
             .HasMaxLength(20)
             .IsUnicode(false)
             .HasDefaultValue("ACTIVE");
+        entity.Property(e => e.Username)
+            .HasMaxLength(50)
+            .IsUnicode(false);
 
         entity.HasOne(d => d.Employee).WithOne(p => p.Account)
             .HasForeignKey<Account>(d => d.EmployeeId)

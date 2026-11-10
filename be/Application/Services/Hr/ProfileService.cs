@@ -30,9 +30,9 @@ public sealed class ProfileService : IProfileService
         // UC04: bậc thợ chỉ có ý nghĩa với người của tổ may.
         var showGrade = e.Team?.TeamType == TeamTypes.Sewing
                         && e.Role.RoleCode is RoleCodes.Worker or RoleCodes.TeamLeader or RoleCodes.TeamDeputy;
-        return Result<ProfileDto>.Success(new ProfileDto(e.EmployeeId, e.EmployeeCode, e.FullName, e.Gender, e.DateOfBirth,
-            e.Phone, e.AvatarUrl, Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName, e.Team?.TeamName, e.StartDate,
-            showGrade ? e.CurrentGradeCode : null, e.Account?.IsTemporaryPassword ?? false));
+        return Result<ProfileDto>.Success(new ProfileDto(e.EmployeeId, e.EmployeeCode, e.Account?.Username ?? e.EmployeeCode,
+            e.FullName, e.Gender, e.DateOfBirth, e.Phone, e.AvatarUrl, Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName,
+            e.Team?.TeamName, e.StartDate, showGrade ? e.CurrentGradeCode : null, e.Account?.IsTemporaryPassword ?? false));
     }
 
     public async Task<Result<LoginResultDto>> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct)

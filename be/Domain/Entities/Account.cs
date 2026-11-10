@@ -12,6 +12,9 @@ public partial class Account
 
     public int EmployeeId { get; set; }
 
+    /// <summary>Tên đăng nhập (sinh từ họ tên, vd ThaiPH). Không đổi sau khi tạo.</summary>
+    public string Username { get; set; } = null!;
+
     public string PasswordHash { get; set; } = null!;
 
     public bool IsTemporaryPassword { get; set; }

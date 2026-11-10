@@ -4,9 +4,9 @@ namespace NX_MTD.Application.DTOs;
 
 // ---- Hồ sơ + đổi mật khẩu (UC03, UC04) ----
 /// <summary>UC04: chỉ đọc. Không có kiểu lương, mã chấm công, trạng thái tài khoản.</summary>
-public sealed record ProfileDto(int EmployeeId, string EmployeeCode, string FullName, string? Gender, DateOnly? DateOfBirth,
-    string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamName, DateOnly StartDate,
-    string? CurrentGradeCode, bool IsTemporaryPassword);
+public sealed record ProfileDto(int EmployeeId, string EmployeeCode, string Username, string FullName, string? Gender,
+    DateOnly? DateOfBirth, string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamName,
+    DateOnly StartDate, string? CurrentGradeCode, bool IsTemporaryPassword);
 
 public sealed record ChangePasswordDto(string? CurrentPassword, string NewPassword, string ConfirmPassword);
 
