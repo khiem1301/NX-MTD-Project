@@ -96,7 +96,6 @@ export const MESSAGES = {
     confirmSaved: 'Đã xác nhận suất ăn của tổ.',
     memberUpdated: 'Đã cập nhật suất ăn.',
     guestSaved: 'Đã lưu suất khách.',
-    kitchenNotified: 'Đã báo bếp.',
     priceSaved: 'Đã lưu đơn giá suất ăn.',
   },
   payroll: {

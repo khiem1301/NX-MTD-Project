@@ -205,7 +205,6 @@ public static class Messages
     public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealCountExceedsMembers = "Số suất ăn ({0}) không được vượt quá số người trong tổ ({1}).";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
-    public const string MealKitchenNotified = "Đã báo bếp.";
     public const string MealNoAttendance =
         "Chưa có chấm công hôm nay nên chưa có suất ăn. Chỉ người đã quẹt vân tay mới được tick.";
     public const string EmployeeFloorRoleWebCreateForbidden =

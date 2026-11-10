@@ -28,9 +28,6 @@ public interface IMealService
 
     Task<Result<DailyMealSummaryDto>> GetSummaryAsync(DateOnly date, CancellationToken ct);
 
-    /// <summary>Đánh dấu đã báo bếp ngoài hệ thống (không gọi bếp thật qua đây).</summary>
-    Task<Result> MarkKitchenNotifiedAsync(DateOnly date, CancellationToken ct);
-
     Task<Result> SetMealPriceAsync(SetMealPriceDto dto, CancellationToken ct);
 
     // ---------- Job nền (MI-04) ----------

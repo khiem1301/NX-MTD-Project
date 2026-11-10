@@ -37,7 +37,5 @@ export const mealApi = {
 
   getSummary: (date: string) => get<DailyMealSummary>(API.meal.summary, { date }),
   setGuestMeal: (body: SetGuestMealPayload) => post<void>(API.meal.guestCount, body),
-  markKitchenNotified: (date: string) =>
-    post<void>(API.meal.kitchenNotification, undefined, { date }),
   setMealPrice: (body: SetMealPricePayload) => post<void>(API.meal.price, body),
 };
