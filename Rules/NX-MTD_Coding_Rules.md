@@ -422,10 +422,12 @@ nxmtd-web/
 ```
 
 - **Feature chia theo nghiệp vụ, không theo role** (giống Services ở BE). Role chỉ quyết định route, menu và nút được hiển thị.
-- Chỉ một feature dùng → đặt trong feature đó. ≥ 2 feature dùng → chuyển lên `components/`, `hooks/`, `utils/`, `types/`.
+- Chỉ một feature dùng → đặt trong feature đó. ≥ 2 feature dùng → chuyển lên `components/`, `hooks/`, `utils/`, `types/`, `constants/` (hàm gọi API dùng chung → `services/`, xem dưới).
+  - Ô chọn / modal dùng chung có lấy dữ liệu (VD `OrderSelect`, `RjEmployeePickerModal`, `TempPasswordModal`) đặt ở `components/common/`, lấy dữ liệu qua hook ở `hooks/`. Form nghiệp vụ đầy đủ của một feature (VD form đơn mua của kho) **không** chuyển lên `components/`, mà đi qua điểm mở rộng ở `app/` (ngoại lệ thứ hai bên dưới).
 - Bên ngoài chỉ import feature qua `index.ts`: `import { MaterialIssueListPage } from '@/features/warehouse'`. Cấm import sâu vào file bên trong feature khác; feature không import chéo feature khác.
-  - **Ngoại lệ (lazy load, mục 4.10):** `app/` được import trực tiếp `features/<x>/menu.ts` và `features/<x>/routes.tsx`. `index.ts` re-export mọi page nên import nó lúc khởi động sẽ kéo cả feature vào bundle chính. Vì vậy hai file này chỉ chứa dữ liệu (mục menu, đường dẫn, quyền, `() => import('./pages/XPage')`), không import tĩnh page hay component nặng, và `index.ts` không export lại chúng.
-- `services/` chỉ chứa cấu hình HTTP và hạ tầng dùng chung. Hàm gọi từng endpoint nằm ở `features/<x>/api/`.
+  - **Ngoại lệ 1 (lazy load, mục 4.10):** `app/` được import trực tiếp `features/<x>/menu.ts` và `features/<x>/routes.tsx`. `index.ts` re-export mọi page nên import nó lúc khởi động sẽ kéo cả feature vào bundle chính. Vì vậy hai file này chỉ chứa dữ liệu (mục menu, đường dẫn, quyền, `() => import('./pages/XPage')`), không import tĩnh page hay component nặng, và `index.ts` không export lại chúng.
+  - **Ngoại lệ 2 (điểm mở rộng):** feature cần hiện component của feature khác (panel trang chủ, tab, form) thì **không** import feature đó, mà import từ một file điểm mở rộng ở `app/`: `app/featureSlots.ts` (component lẻ, đặt tên `<Component>Slot`) hoặc file riêng cho một màn (VD `app/orderDetailTabs.ts`). File điểm mở rộng chỉ chứa `lazy(() => import('@/features/<x>').then(...))` qua `index.ts` của feature chủ, không import tĩnh feature nào; chỗ dùng bọc `<Suspense>`. Feature chủ export component đó ở `index.ts`.
+- `services/` chứa cấu hình HTTP, hạ tầng dùng chung và **hàm gọi API dùng chung cho ≥ 2 feature** (VD `lookupApi.ts`, `requestApi.ts`, `stockApi.ts`); hook đi kèm đặt ở `hooks/`. Hàm gọi endpoint chỉ một feature dùng nằm ở `features/<x>/api/`.
 - `store/` **không** chứa dữ liệu lấy từ API (để TanStack Query quản lý).
 - Đường dẫn API (có tiền tố role khớp BE) khai báo tập trung ở `constants/apiEndpoints.ts`.
 - File test đặt cạnh file nguồn: `Button.tsx` / `Button.test.tsx`; `test/` chỉ dành cho setup và mock.
@@ -811,7 +813,7 @@ export const useMaterialIssues = (params: MaterialIssueQuery) =>
 **Frontend**
 - [ ] `npm run typecheck`, `lint`, `test`, `build` đều pass
 - [ ] Không có `any`, `@ts-ignore`, `console.log`
-- [ ] Code đặt đúng feature, chỉ import feature khác qua `index.ts` (riêng `app/` import `menu.ts` / `routes.tsx` của feature, mục 4.3), dùng alias `@/`
+- [ ] Code đặt đúng feature, feature không import feature khác (dùng chung → `components/`, `hooks/`, `services/`, `types/`; component của feature khác → điểm mở rộng ở `app/`); `app/` chỉ import feature qua `index.ts`, riêng `menu.ts` / `routes.tsx` (mục 4.3); dùng alias `@/`
 - [ ] Gọi API qua hook → `features/<x>/api` → `apiClient`; invalidate query sau mutation
 - [ ] Có xử lý loading / empty / error
 - [ ] Hành động không hoàn tác được có xác nhận; chức năng ẩn theo role
