@@ -20,6 +20,7 @@ public class DailyWorkAllocationServiceTests
 
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
+    private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IAppLock _locks = Substitute.For<IAppLock>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
@@ -72,7 +73,8 @@ public class DailyWorkAllocationServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private DailyWorkAllocationService Service() => new(_uow, _notifier, _locks, _clock);
+    private DailyWorkAllocationService Service() =>
+        new(_uow, _notifier, _locks, _clock, new PieceRateService(_uow, _audit, _notifier, _clock));
 
     private List<WorkAllocation> CaptureAdds()
     {

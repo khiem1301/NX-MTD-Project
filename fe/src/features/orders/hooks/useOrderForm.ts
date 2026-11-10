@@ -10,7 +10,14 @@ import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
 import { toApiDate } from '@/utils/format';
 import { useCreateOrder, useCustomerOptions, useNextOrderCode, useUpdateOrder } from './useOrders';
-import { blocksTotals, fromLines, newBlock, toLines, type ProductBlock } from '../utils/orderGrid';
+import {
+  blocksTotals,
+  cloneBlocksForNewOrder,
+  fromLines,
+  newBlock,
+  toLines,
+  type ProductBlock,
+} from '../utils/orderGrid';
 import { validateBlocks } from '../utils/orderValidation';
 import type { OrderFormProps } from '../components/OrderForm';
 
@@ -23,8 +30,8 @@ export type HeaderValues = {
 };
 
 /** Trạng thái và xử lý của OrderForm; component chỉ lo giao diện. */
-export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) {
-  const { orderId, detail } = props;
+export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 'copyFrom'>) {
+  const { orderId, detail, copyFrom } = props;
   const isEdit = orderId !== null;
   const navigate = useNavigate();
   const [form] = Form.useForm<HeaderValues>();
@@ -32,13 +39,18 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
   const customers = useCustomerOptions();
   const create = useCreateOrder();
   const update = useUpdateOrder(orderId ?? 0);
+  const seedLines = detail?.lines ?? copyFrom?.lines;
 
   const [blocks, setBlocks] = useState<ProductBlock[]>(() =>
-    detail ? fromLines(detail.lines) : [newBlock()],
+    detail
+      ? fromLines(detail.lines)
+      : copyFrom
+        ? cloneBlocksForNewOrder(copyFrom.lines)
+        : [newBlock()],
   );
   const [labels, setLabels] = useState<Record<number, string>>(() =>
     Object.fromEntries(
-      (detail?.lines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`]),
+      (seedLines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`]),
     ),
   );
   const [lineError, setLineError] = useState<string>();
@@ -148,7 +160,13 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail'>) 
         dueDate: dayjs(detail.dueDate),
         note: detail.note ?? undefined,
       }
-    : { receivedDate: dayjs() };
+    : copyFrom
+      ? {
+          customerId: copyFrom.customerId,
+          receivedDate: dayjs(),
+          note: copyFrom.note ?? undefined,
+        }
+      : { receivedDate: dayjs() };
 
   return {
     initialValues,

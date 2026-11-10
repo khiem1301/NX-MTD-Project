@@ -38,6 +38,7 @@ export const ROUTES = {
   pieceMovements: '/warehouse/piece-movements',
   myPieceMovements: '/my-piece-movements',
   inventories: '/warehouse/inventories',
+  nxtReport: '/warehouse/nxt-report',
   pieceHoldings: '/warehouse/piece-holdings',
   workOrders: '/cutting/work-orders',
   cuttingLays: '/cutting/lays',
@@ -52,6 +53,7 @@ export const ATTENDANCE_ROUTES = {
 
 export const MEAL_ROUTES = {
   teamMeal: '/team/meals',
+  myMeal: '/my/meals',
   summary: '/meals/summary',
   settings: '/admin/meal-settings',
 } as const;

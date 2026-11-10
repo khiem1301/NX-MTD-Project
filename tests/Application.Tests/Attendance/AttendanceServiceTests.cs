@@ -17,6 +17,7 @@ public class AttendanceServiceTests
     private static readonly DateTime Now = new(2026, 10, 20, 9, 0, 0);
 
     private readonly IAttendanceRepository _repo = Substitute.For<IAttendanceRepository>();
+    private readonly IMealRegistrationSeeder _mealSeeder = Substitute.For<IMealRegistrationSeeder>();
     private readonly ISystemSettingReader _settings = Substitute.For<ISystemSettingReader>();
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IExcelAttendanceParser _excel = Substitute.For<IExcelAttendanceParser>();
@@ -28,7 +29,8 @@ public class AttendanceServiceTests
         _clock.Today.Returns(DateOnly.FromDateTime(Now));
         _settings.GetIntAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(call => call.ArgAt<int>(1));
-        _sut = new AttendanceService(_repo, _settings, _clock, _excel, NullLogger<AttendanceService>.Instance);
+        _sut = new AttendanceService(_repo, _mealSeeder, _settings, _clock, _excel,
+            NullLogger<AttendanceService>.Instance);
     }
 
     private static AttendancePunchDto Punch(int code = 101, int? sourceId = 1) =>

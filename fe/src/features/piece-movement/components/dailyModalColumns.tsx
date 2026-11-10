@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react';
 import { DownOutlined, RightOutlined } from '@ant-design/icons';
 import { Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { fill } from '@/utils/format';
+import { fill, formatCurrency } from '@/utils/format';
 import { QtyInput } from '@/components/common/QtyInput';
 import { PM_LABELS } from '../constants';
 import type { DailyAllocationRow } from '../types';
@@ -64,6 +64,18 @@ export const dailyModalColumns = ({
           {`${r.row.operationCode} - ${r.row.operationName}`}{' '}
           {!r.row.isAssigned && <Tag color="purple">{PM_LABELS.outsideAssignment}</Tag>}
         </>
+      ),
+  },
+  {
+    title: PM_LABELS.unitRate,
+    key: 'unitRate',
+    width: 110,
+    align: 'right',
+    render: (_, r) =>
+      r.kind === 'group' ? null : r.row.unitRate === null || r.row.unitRate === undefined ? (
+        <Typography.Text type="secondary">{PM_LABELS.noRate}</Typography.Text>
+      ) : (
+        formatCurrency(r.row.unitRate)
       ),
   },
   {

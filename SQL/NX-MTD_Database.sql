@@ -1330,6 +1330,14 @@ CREATE INDEX IX_AL_Employee ON dbo.AttendanceLog(EmployeeId, WorkDate) INCLUDE (
 CREATE INDEX IX_AL_Unmapped ON dbo.AttendanceLog(AttendanceCode) WHERE EmployeeId IS NULL;
 CREATE UNIQUE INDEX UX_AL_SourceRecord ON dbo.AttendanceLog(SourceRecordId) WHERE SourceRecordId IS NOT NULL;
 
+-- Cache danh sách NV từ RJ (chỉ mã + tên) để web gán mã / tạo NV; agent replace-all mỗi chu kỳ
+CREATE TABLE dbo.RjEmployeeSnapshot (
+    AttendanceCode  INT            NOT NULL CONSTRAINT PK_RjEmployeeSnapshot PRIMARY KEY,
+    FullName        NVARCHAR(200)  NOT NULL,
+    RjEmployeeCode  NVARCHAR(50)   NULL,
+    SyncedAt        DATETIME2(0)   NOT NULL CONSTRAINT DF_RjEmp_SyncedAt DEFAULT (dbo.fn_VnNow())
+);
+
 -- Chấm hộ của Kế toán (đủ công) cho trường hợp ngoại lệ (GBR-25)
 CREATE TABLE dbo.AttendanceAdjustment (
     AttendanceAdjustmentId INT IDENTITY(1,1) CONSTRAINT PK_AttendanceAdjustment PRIMARY KEY,
@@ -1401,6 +1409,20 @@ CREATE TABLE dbo.TeamMealConfirmation (
     CONSTRAINT CK_TMC_Confirmed CHECK (Source = 'ATTENDANCE' OR ConfirmedAt IS NOT NULL),
     CONSTRAINT UQ_TMC UNIQUE (DailyMealId, TeamId)
 );
+
+-- Suất ăn từng nhân viên: sinh từ người đã quẹt; bỏ tick trước giờ chốt; MealCount tổ = Σ WillEat
+CREATE TABLE dbo.MealRegistration (
+    MealRegistrationId  INT IDENTITY(1,1) CONSTRAINT PK_MealRegistration PRIMARY KEY,
+    DailyMealId         INT           NOT NULL CONSTRAINT FK_MR_DailyMeal REFERENCES dbo.DailyMeal(DailyMealId),
+    EmployeeId          INT           NOT NULL CONSTRAINT FK_MR_Employee REFERENCES dbo.Employee(EmployeeId),
+    TeamId              INT           NULL CONSTRAINT FK_MR_Team REFERENCES dbo.Team(TeamId),
+    WillEat             BIT           NOT NULL CONSTRAINT DF_MR_WillEat DEFAULT 1,
+    UpdatedByEmployeeId INT           NULL CONSTRAINT FK_MR_UpdatedBy REFERENCES dbo.Employee(EmployeeId),
+    UpdatedAt           DATETIME2(0)  NULL,
+    CONSTRAINT UQ_MR UNIQUE (DailyMealId, EmployeeId)
+);
+CREATE INDEX IX_MR_DailyMeal_Team ON dbo.MealRegistration(DailyMealId, TeamId)
+    INCLUDE (WillEat, EmployeeId);
 GO
 
 /* =====================================================================================
@@ -1813,6 +1835,14 @@ CREATE TRIGGER dbo.trg_TeamMeal_Cutoff ON dbo.TeamMealConfirmation AFTER INSERT,
 BEGIN
     SET NOCOUNT ON;
     -- JOB-03 tạo dòng ATTENDANCE cho tổ chưa xác nhận trước khi đổi trạng thái ngày, nên chỉ chặn khi ngày đã chốt
+    IF EXISTS (SELECT 1 FROM inserted i JOIN dbo.DailyMeal m ON m.DailyMealId = i.DailyMealId WHERE m.Status <> 'OPEN')
+       OR EXISTS (SELECT 1 FROM deleted d JOIN dbo.DailyMeal m ON m.DailyMealId = d.DailyMealId WHERE m.Status <> 'OPEN')
+        THROW 50020, N'Đã chốt suất ăn lúc 08:30, không thể thay đổi.', 1;
+END;
+GO
+CREATE TRIGGER dbo.trg_MealRegistration_Cutoff ON dbo.MealRegistration AFTER INSERT, UPDATE, DELETE AS
+BEGIN
+    SET NOCOUNT ON;
     IF EXISTS (SELECT 1 FROM inserted i JOIN dbo.DailyMeal m ON m.DailyMealId = i.DailyMealId WHERE m.Status <> 'OPEN')
        OR EXISTS (SELECT 1 FROM deleted d JOIN dbo.DailyMeal m ON m.DailyMealId = d.DailyMealId WHERE m.Status <> 'OPEN')
         THROW 50020, N'Đã chốt suất ăn lúc 08:30, không thể thay đổi.', 1;
@@ -2882,6 +2912,8 @@ DECLARE @vp   INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'VP');
 DECLARE @cat  INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'CAT');
 DECLARE @may1 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1');
 
+-- Role văn phòng + tổ trưởng/phó mẫu. Công nhân seed chỉ phục vụ mục 19 (demo sản xuất);
+-- trên DB đang chạy hãy chạy SQL/cleanup_demo_workers.sql rồi import từ RJ.
 DECLARE @seed TABLE (Code VARCHAR(20), FullName NVARCHAR(100), RoleCode VARCHAR(30), TeamId INT, PayType VARCHAR(20));
 INSERT @seed (Code, FullName, RoleCode, TeamId, PayType) VALUES
  ('QUANDOC',  N'Quản đốc mẫu',        'MANAGER',          @vp,   'MONTHLY'),
@@ -2941,8 +2973,10 @@ INSERT @d VALUES
  ('DispatchNote', N'Phiếu xuất kho thành phẩm (kiêm lệnh giao hàng)'), ('DispatchNoteLine', N'Dòng phiếu xuất kho'),
  ('Stocktake', N'Phiếu kiểm kê'), ('StocktakeLine', N'Dòng kiểm kê'), ('StockBalance', N'Tồn hiện tại theo mặt hàng và kho'), ('StockTransaction', N'Thẻ kho (ghi qua usp_Stock_Post)'),
  ('AttendanceSyncSession', N'Lần đồng bộ RJ / import Excel chấm công'), ('AttendanceLog', N'Lượt quẹt vân tay (3 trường lấy từ RJ)'),
+ ('RjEmployeeSnapshot', N'Cache NV từ Ronald Jack Pro (mã chấm công + tên)'),
  ('AttendanceAdjustment', N'Chấm hộ của Kế toán'), ('DailyTimesheet', N'Bảng công ngày'),
  ('DailyMeal', N'Suất ăn ngày (gồm suất khách)'), ('TeamMealConfirmation', N'Xác nhận suất ăn của tổ'),
+ ('MealRegistration', N'Suất ăn theo nhân viên (tick từ chấm công)'),
  ('AccountingPeriod', N'Kỳ kế toán (tháng), khóa / mở khóa'), ('Payroll', N'Bảng lương tháng (import)'),
  ('Payslip', N'Phiếu lương'), ('PayslipItem', N'Khoản trên phiếu lương'),
  ('MonthlyCost', N'Chi phí tháng theo khoản mục'), ('BreakEvenResult', N'Kết quả hòa vốn theo mã hàng'),

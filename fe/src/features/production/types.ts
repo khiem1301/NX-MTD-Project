@@ -172,6 +172,8 @@ export type OperationAssignment = {
   workerCode: string;
   workerName: string;
   validFrom: string;
+  unitRate: number | null;
+  rateApproved: boolean;
 };
 
 export type OperationOption = {
@@ -186,6 +188,8 @@ export type OperationOption = {
   skillLevel: number | null;
   /** Thời gian chuẩn của công đoạn (giây). */
   standardTimeSec?: number | null;
+  unitRate: number | null;
+  rateApproved: boolean;
 };
 
 /** Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia (DEV-ALL-49). */

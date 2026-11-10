@@ -126,7 +126,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
             </Form.Item>
           </Col>
           <Col xs={24}>
-            <Typography.Paragraph type="secondary" style={{ marginTop: -8 }}>
+            <Typography.Paragraph type="secondary" style={{ marginTop: -8, marginBottom: 0 }}>
               {LABELS.materialColorHint}
             </Typography.Paragraph>
           </Col>

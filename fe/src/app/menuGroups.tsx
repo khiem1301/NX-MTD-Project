@@ -49,6 +49,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       'fg-handovers',
       'dispatch-notes',
       'inventories',
+      'nxt-report',
       'stocktakes',
     ],
   },
@@ -122,6 +123,7 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: <UserOutlined />,
     entries: [
       'my-attendance',
+      'my-meal',
       'my-payslip',
       'my-estimated-pay',
       'my-piece-movements',

@@ -48,7 +48,8 @@ public class EmployeeImportTests
         return user;
     }
 
-    private static EmployeeExcelRowDto Row(int n, string code, string role = "Worker", string? team = "MAY1", string? error = null, int? att = null,
+    // Import Excel chỉ tạo vai trò văn phòng; công nhân / tổ trưởng / tổ phó lấy từ máy chấm công RJ nên mặc định dùng Thủ kho.
+    private static EmployeeExcelRowDto Row(int n, string code, string role = "WarehouseKeeper", string? team = "MAY1", string? error = null, int? att = null,
         string name = "Nguyễn Văn A", string pay = "PieceRate") =>
         new(n, code, name, "Nam", null, "0901234567", role, team, pay, new DateOnly(2026, 1, 5), att, error);
 
@@ -73,7 +74,7 @@ public class EmployeeImportTests
     [Fact]
     public async Task Role_pay_type_and_gender_accept_common_spellings()
     {
-        Rows(Row(2, "A1", role: "team_leader", pay: "khoán"), Row(3, "A2", role: "WORKER", pay: "Daily"), Row(4, "A3", role: "qa qc", team: null, pay: "monthly"));
+        Rows(Row(2, "A1", role: "warehouse_keeper", pay: "khoán"), Row(3, "A2", role: "ELECTRICIAN", pay: "Daily"), Row(4, "A3", role: "qa qc", team: null, pay: "monthly"));
 
         var preview = (await Service().PreviewAsync(Stream.Null, default)).Data!;
 
@@ -82,19 +83,33 @@ public class EmployeeImportTests
     }
 
     [Fact]
-    public async Task A_leader_without_a_team_and_a_repeated_attendance_code_are_flagged()
+    public async Task Floor_roles_are_rejected_because_they_come_from_the_rj_machine()
     {
-        Rows(Row(2, "B1", role: "TeamLeader", team: null), Row(3, "B2", att: 55), Row(4, "B3", att: 55));
+        Rows(Row(2, "F1", role: "Worker"), Row(3, "F2", role: "team_leader", team: null), Row(4, "F3", role: "TeamDeputy"));
 
         var preview = (await Service().PreviewAsync(Stream.Null, default)).Data!;
 
-        preview.Rows.Single(r => r.RowNumber == 2).Status.Should().Be(EmployeeImportService.StatusError);
-        preview.Rows.Single(r => r.RowNumber == 3).Status.Should().Be(EmployeeImportService.StatusValid);
-        preview.Rows.Single(r => r.RowNumber == 4).Status.Should().Be(EmployeeImportService.StatusDuplicate);
+        preview.ValidCount.Should().Be(0);
+        preview.ErrorCount.Should().Be(3);
+        preview.Rows.Should().OnlyContain(r => r.Status == EmployeeImportService.StatusError && r.Message == Messages.EmployeeFloorRoleWebCreateForbidden);
+        var imported = (await Service().ImportAsync(Stream.Null, default)).Data!;
+        imported.CreatedCount.Should().Be(0);
+        await _employees.DidNotReceive().CreateAsync(Arg.Any<CreateEmployeeDto>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task A_worker_without_a_team_is_valid()
+    public async Task A_repeated_attendance_code_is_flagged_as_duplicate()
+    {
+        Rows(Row(2, "B2", att: 55), Row(3, "B3", att: 55));
+
+        var preview = (await Service().PreviewAsync(Stream.Null, default)).Data!;
+
+        preview.Rows.Single(r => r.RowNumber == 2).Status.Should().Be(EmployeeImportService.StatusValid);
+        preview.Rows.Single(r => r.RowNumber == 3).Status.Should().Be(EmployeeImportService.StatusDuplicate);
+    }
+
+    [Fact]
+    public async Task An_office_employee_without_a_team_is_valid()
     {
         Rows(Row(2, "B1", team: null));
 

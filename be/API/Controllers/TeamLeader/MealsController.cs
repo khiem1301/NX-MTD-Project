@@ -7,7 +7,7 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.API.Controllers.TeamLeader;
 
-/// <summary>UC30 — tổ trưởng/tổ phó xem gợi ý và xác nhận số suất ăn của tổ mình (GBR-01, FR 5.1).</summary>
+/// <summary>UC30 — tổ trưởng/tổ phó rà soát checklist suất ăn của tổ (GBR-01, FR 5.1).</summary>
 public sealed class MealsController : TeamLeaderBaseController
 {
     private readonly IMealService _meals;
@@ -28,11 +28,25 @@ public sealed class MealsController : TeamLeaderBaseController
         return this.ToResponse(await _meals.GetTeamSuggestionAsync(teamId, date ?? _clock.Today, ct));
     }
 
+    [HttpGet("members")]
+    public async Task<IActionResult> GetMembers([FromQuery] DateOnly? date, CancellationToken ct)
+    {
+        if (_user.TeamId is not { } teamId) return NoTeam();
+        return this.ToResponse(await _meals.GetTeamMembersAsync(teamId, date ?? _clock.Today, ct));
+    }
+
     [HttpPost("confirmation")]
     public async Task<IActionResult> Confirm([FromBody] ConfirmTeamMealDto dto, CancellationToken ct)
     {
         if (_user.TeamId is not { } teamId) return NoTeam();
         return this.ToResponse(await _meals.ConfirmTeamMealAsync(teamId, dto, ct));
+    }
+
+    [HttpPatch("members")]
+    public async Task<IActionResult> SetMemberMeal([FromBody] SetTeamMemberMealDto dto, CancellationToken ct)
+    {
+        if (_user.TeamId is not { } teamId) return NoTeam();
+        return this.ToResponse(await _meals.SetTeamMemberMealAsync(teamId, _user.EmployeeId, dto, ct));
     }
 
     private IActionResult NoTeam() =>

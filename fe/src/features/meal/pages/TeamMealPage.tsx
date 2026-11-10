@@ -1,15 +1,19 @@
 import dayjs from 'dayjs';
 import { Alert, Spin } from 'antd';
-import { MEAL_TEXT } from '../constants';
-import { TeamMealConfirmForm } from '../components/TeamMealConfirmForm';
-import { useTeamMealSuggestion } from '../hooks/useMeal';
-import { toApiDate } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
+import { toApiDate } from '@/utils/format';
+import { TeamMealMemberList } from '../components/TeamMealMemberList';
+import { MEAL_TEXT } from '../constants';
+import { useTeamMealMembers, useTeamMealSuggestion } from '../hooks/useMeal';
 
-/** UC30 — tổ trưởng/tổ phó xem gợi ý và xác nhận suất ăn tổ mình hôm nay (GBR-01, phạm vi do BE ép). */
+/** UC30 — tổ trưởng/tổ phó rà soát checklist suất ăn tổ mình hôm nay. */
 export function TeamMealPage() {
   const date = toApiDate(dayjs());
-  const { data, isLoading, error } = useTeamMealSuggestion(date);
+  const suggestion = useTeamMealSuggestion(date);
+  const members = useTeamMealMembers(date);
+
+  const error = suggestion.error ?? members.error;
+  const isLoading = suggestion.isLoading || members.isLoading;
 
   return (
     <PageCard title={MEAL_TEXT.teamPageTitle} description={MEAL_TEXT.teamPageSubtitle}>
@@ -17,7 +21,9 @@ export function TeamMealPage() {
         <Alert type="error" showIcon message={(error as { message: string }).message} />
       ) : null}
       {isLoading ? <Spin /> : null}
-      {data ? <TeamMealConfirmForm date={date} suggestion={data} /> : null}
+      {suggestion.data && members.data ? (
+        <TeamMealMemberList date={date} members={members.data} suggestion={suggestion.data} />
+      ) : null}
     </PageCard>
   );
 }

@@ -36,6 +36,8 @@ import type {
   ShortDeliveryQuery,
   StockCardEntry,
   StockCardQuery,
+  NxtReportQuery,
+  NxtSummary,
   TeamPieceHolding,
 } from '../types';
 
@@ -139,6 +141,8 @@ export const warehouseApi = {
 
   getStockCard: (role: RolePath, q: StockCardQuery) =>
     get<StockCardEntry[]>(`${API.warehouse.inventories(role)}/stock-card`, q),
+  getNxtReport: (role: RolePath, q: NxtReportQuery) =>
+    get<Paginated<NxtSummary>>(`${API.warehouse.inventories(role)}/nxt-report`, q),
   getTeamHoldings: (role: RolePath, orderId?: number) =>
     role === 'team-leader'
       ? get<TeamPieceHolding[]>(API.warehouse.pieceHoldings(role), { orderId })

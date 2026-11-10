@@ -51,10 +51,17 @@ public sealed record EmployeeDetailDto
     public IReadOnlyList<AuditLogDto> History { get; init; } = Array.Empty<AuditLogDto>();
 }
 
-/// <param name="Role">PascalCase: Worker, TeamLeader...</param>
+/// <param name="Role">PascalCase: chỉ role văn phòng (Admin, Manager, Accountant, WarehouseKeeper, QaQc, Electrician).</param>
 /// <param name="PayType">PascalCase: PieceRate, Daily, Monthly.</param>
 public sealed record CreateEmployeeDto(string EmployeeCode, string FullName, string? Gender, DateOnly? DateOfBirth, string? Phone,
     string Role, int? TeamId, string PayType, DateOnly StartDate, int? AttendanceCode);
+
+/// <summary>Tạo công nhân từ snapshot RJ (mã chấm công + họ tên). Vai trò mặc định Worker; tổ trưởng/phó bổ nhiệm sau.</summary>
+public sealed record ImportEmployeeFromRjDto(
+    int AttendanceCode,
+    int? TeamId,
+    string? PayType,
+    DateOnly? StartDate);
 
 /// <summary>Trả MỘT lần (D29). Không log, không lưu bản rõ.</summary>
 public sealed record CreatedEmployeeDto(int EmployeeId, string Username, string TemporaryPassword);

@@ -8,25 +8,31 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC30 (suất ăn): tổ trưởng xác nhận số suất tổ (gợi ý từ chấm công), Kế toán nhập suất khách,
-/// xem tổng hợp và nhập đơn giá. JOB-02 (08:15) và JOB-03 (08:30, MI-04) cũng gọi qua đây.
+/// UC30: tick suất ăn từ chấm công, công nhân/tổ trưởng bỏ tick, JOB-02/JOB-03 chốt theo WillEat.
 /// </summary>
 public sealed class MealService : IMealService
 {
     private readonly IMealRepository _meals;
+    private readonly IMealRegistrationSeeder _seeder;
     private readonly IAttendanceService _attendance;
     private readonly ISystemSettingReader _settings;
     private readonly INotificationService _notifier;
     private readonly IClock _clock;
     private readonly ILogger<MealService> _logger;
 
-    /// <summary>Màn xác nhận suất ăn của tổ trưởng (FE: MEAL_ROUTES.teamMeal).</summary>
     private const string MealLink = "/team/meals";
 
-    public MealService(IMealRepository meals, IAttendanceService attendance, ISystemSettingReader settings,
-        INotificationService notifier, IClock clock, ILogger<MealService> logger)
+    public MealService(
+        IMealRepository meals,
+        IMealRegistrationSeeder seeder,
+        IAttendanceService attendance,
+        ISystemSettingReader settings,
+        INotificationService notifier,
+        IClock clock,
+        ILogger<MealService> logger)
     {
         _meals = meals;
+        _seeder = seeder;
         _attendance = attendance;
         _settings = settings;
         _notifier = notifier;
@@ -43,9 +49,14 @@ public sealed class MealService : IMealService
             return Result<TeamMealSuggestionDto>.Failure(ErrorCodes.MealTeamNotFound, Messages.MealTeamNotFound,
                 ResultKind.NotFound);
 
-        var suggested = await _meals.GetTeamAttendanceCountAsync(teamId, date, ct);
+        await _seeder.SeedForDateAsync(date, ct);
 
         var meal = await _meals.FindByDateAsync(date, ct);
+        var attendanceCount = await _meals.GetTeamAttendanceCountAsync(teamId, date, ct);
+        var willEat = meal is null
+            ? attendanceCount
+            : await _meals.CountWillEatAsync(meal.DailyMealId, teamId, ct);
+
         TeamMealConfirmation? confirmation = null;
         var locked = false;
         if (meal is not null)
@@ -55,8 +66,9 @@ public sealed class MealService : IMealService
         }
 
         return Result<TeamMealSuggestionDto>.Success(new TeamMealSuggestionDto(
-            date, teamId, team.TeamName, suggested,
-            confirmation?.MealCount, ToPascalOrNull(confirmation?.Source), confirmation?.ConfirmedAt, locked));
+            date, teamId, team.TeamName, attendanceCount,
+            confirmation?.MealCount ?? willEat, ToPascalOrNull(confirmation?.Source),
+            confirmation?.ConfirmedAt, locked));
     }
 
     public async Task<Result> ConfirmTeamMealAsync(int teamId, ConfirmTeamMealDto dto, CancellationToken ct)
@@ -65,25 +77,119 @@ public sealed class MealService : IMealService
         if (team is null)
             return Result.Failure(ErrorCodes.MealTeamNotFound, Messages.MealTeamNotFound, ResultKind.NotFound);
 
+        await _seeder.SeedForDateAsync(dto.MealDate, ct);
+
         var meal = await _meals.GetOrCreateAsync(dto.MealDate, ct);
         if (await IsLockedAsync(meal, ct))
-            return Result.Failure(ErrorCodes.MealLocked, Messages.MealLocked);        // MSG22
-
-        var memberCount = await _meals.GetTeamMemberCountAsync(teamId, ct);
-        if (dto.MealCount > memberCount)
-            return Result.Failure(ErrorCodes.MealCountExceedsMembers,
-                string.Format(Messages.MealCountExceedsMembers, dto.MealCount, memberCount));
+            return Result.Failure(ErrorCodes.MealLocked, Messages.MealLocked);
 
         var attendanceCount = await _meals.GetTeamAttendanceCountAsync(teamId, dto.MealDate, ct);
+        var mealCount = await _meals.CountWillEatAsync(meal.DailyMealId, teamId, ct);
         var existing = await _meals.FindConfirmationAsync(meal.DailyMealId, teamId, ct);
-        Upsert(meal, existing, teamId, dto.MealCount, attendanceCount,
+        Upsert(meal, existing, teamId, mealCount, attendanceCount,
             MealConfirmationSource.Confirmed, confirmedAt: _clock.Now, remindedAt: null);
 
         await _meals.SaveChangesAsync(ct);
 
         _logger.LogInformation("Tổ {TeamId} xác nhận {MealCount} suất ăn ngày {MealDate}",
-            teamId, dto.MealCount, dto.MealDate);
+            teamId, mealCount, dto.MealDate);
         return Result.Success(Messages.Saved);
+    }
+
+    public async Task<Result<TeamMealMembersDto>> GetTeamMembersAsync(int teamId, DateOnly date, CancellationToken ct)
+    {
+        var team = await _meals.GetTeamAsync(teamId, ct);
+        if (team is null)
+            return Result<TeamMealMembersDto>.Failure(ErrorCodes.MealTeamNotFound, Messages.MealTeamNotFound,
+                ResultKind.NotFound);
+
+        await _seeder.SeedForDateAsync(date, ct);
+
+        var meal = await _meals.GetOrCreateAsync(date, ct);
+        var regs = await _meals.GetTeamRegistrationsAsync(meal.DailyMealId, teamId, ct);
+        var members = regs.Select(r => new TeamMealMemberDto(
+            r.EmployeeId, r.Employee.EmployeeCode, r.Employee.FullName, r.WillEat, HasAttendance: true)).ToList();
+
+        return Result<TeamMealMembersDto>.Success(new TeamMealMembersDto(
+            date, teamId, team.TeamName,
+            members.Count, members.Count(m => m.WillEat),
+            await IsLockedAsync(meal, ct), members));
+    }
+
+    public async Task<Result> SetTeamMemberMealAsync(
+        int teamId, int actorEmployeeId, SetTeamMemberMealDto dto, CancellationToken ct)
+    {
+        var team = await _meals.GetTeamAsync(teamId, ct);
+        if (team is null)
+            return Result.Failure(ErrorCodes.MealTeamNotFound, Messages.MealTeamNotFound, ResultKind.NotFound);
+
+        await _seeder.SeedForDateAsync(dto.MealDate, ct);
+
+        var meal = await _meals.GetOrCreateAsync(dto.MealDate, ct);
+        if (await IsLockedAsync(meal, ct))
+            return Result.Failure(ErrorCodes.MealLocked, Messages.MealLocked);
+
+        var employee = await _meals.GetEmployeeAsync(dto.EmployeeId, ct);
+        if (employee is null || employee.TeamId != teamId)
+            return Result.Failure(ErrorCodes.MealEmployeeNotInTeam, Messages.MealEmployeeNotInTeam,
+                ResultKind.Validation);
+
+        var reg = await _meals.FindRegistrationTrackedAsync(meal.DailyMealId, dto.EmployeeId, ct);
+        if (reg is null)
+            return Result.Failure(ErrorCodes.MealNoAttendance, Messages.MealNoAttendance, ResultKind.Validation);
+
+        reg.WillEat = dto.WillEat;
+        reg.UpdatedByEmployeeId = actorEmployeeId;
+        reg.UpdatedAt = _clock.Now;
+
+        await SyncTeamConfirmationAsync(meal, teamId, dto.MealDate, markConfirmed: true, ct);
+        await _meals.SaveChangesAsync(ct);
+        return Result.Success(Messages.MealMemberUpdated);
+    }
+
+    // ---------- Cá nhân ----------
+
+    public async Task<Result<MyMealDto>> GetMyMealAsync(int employeeId, DateOnly date, CancellationToken ct)
+    {
+        await _seeder.SeedForDateAsync(date, ct);
+
+        var meal = await _meals.FindByDateAsync(date, ct);
+        var locked = meal is not null && await IsLockedAsync(meal, ct);
+        var punched = await _meals.HasCheckInAsync(employeeId, date, ct);
+        if (meal is null)
+            return Result<MyMealDto>.Success(new MyMealDto(date, punched, false, locked));
+
+        var reg = await _meals.FindRegistrationAsync(meal.DailyMealId, employeeId, ct);
+        if (reg is null)
+            // Đã quẹt nhưng suất đã chốt trước khi seed (quẹt sau giờ chốt) → vẫn báo đã quẹt.
+            return Result<MyMealDto>.Success(new MyMealDto(date, punched, false, locked));
+
+        return Result<MyMealDto>.Success(new MyMealDto(date, true, reg.WillEat, locked));
+    }
+
+    public async Task<Result> SetMyMealAsync(int employeeId, SetMyMealDto dto, CancellationToken ct)
+    {
+        var date = dto.MealDate ?? _clock.Today;
+        await _seeder.SeedForDateAsync(date, ct);
+
+        var meal = await _meals.GetOrCreateAsync(date, ct);
+        if (await IsLockedAsync(meal, ct))
+            return Result.Failure(ErrorCodes.MealLocked, Messages.MealLocked);
+
+        var reg = await _meals.FindRegistrationTrackedAsync(meal.DailyMealId, employeeId, ct);
+        if (reg is null)
+            return Result.Failure(ErrorCodes.MealNoAttendance, Messages.MealNoAttendance, ResultKind.Validation);
+
+        // Chỉ người đã quẹt mới có dòng; được bỏ tick hoặc tick lại.
+        reg.WillEat = dto.WillEat;
+        reg.UpdatedByEmployeeId = employeeId;
+        reg.UpdatedAt = _clock.Now;
+
+        if (reg.TeamId is { } teamId)
+            await SyncTeamConfirmationAsync(meal, teamId, date, markConfirmed: false, ct);
+
+        await _meals.SaveChangesAsync(ct);
+        return Result.Success(Messages.MealMemberUpdated);
     }
 
     // ---------- Kế toán ----------
@@ -92,7 +198,7 @@ public sealed class MealService : IMealService
     {
         var meal = await _meals.GetOrCreateAsync(dto.MealDate, ct);
         if (await IsLockedAsync(meal, ct))
-            return Result.Failure(ErrorCodes.MealGuestLocked, Messages.MealGuestLocked);   // MSG22
+            return Result.Failure(ErrorCodes.MealGuestLocked, Messages.MealGuestLocked);
 
         meal.GuestCount = dto.GuestCount;
         meal.GuestNote = dto.GuestNote;
@@ -103,17 +209,26 @@ public sealed class MealService : IMealService
 
     public async Task<Result<DailyMealSummaryDto>> GetSummaryAsync(DateOnly date, CancellationToken ct)
     {
+        await _seeder.SeedForDateAsync(date, ct);
+
         var meal = await _meals.GetOrCreateAsync(date, ct);
         var rows = await BuildTeamRowsAsync(meal, date, ct);
         var suggestedPrice = meal.MealPrice ?? await _meals.GetPreviousMealPriceAsync(date, ct);
 
-        // Tổng suất tính như vw_DailyMealTotal: suất các tổ + khối văn phòng + khách; thành tiền = tổng × đơn giá.
-        var teamTotal = rows.Where(r => r.Source != null).Sum(r => r.MealCount);   // chỉ tổ đã có dòng xác nhận, không tính gợi ý
-        var totalMeals = teamTotal + meal.OfficeCount + meal.GuestCount;
+        var teamTotal = rows.Where(r => r.Source != null).Sum(r => r.MealCount);
+        // Tổ chưa có confirmation: dùng số WillEat hiện tại (gợi ý) để Kế toán xem trước giờ chốt.
+        if (meal.Status == MealStatus.Open)
+            teamTotal = rows.Sum(r => r.MealCount);
+
+        var officeCount = meal.Status == MealStatus.Open
+            ? await _meals.CountOfficeWillEatAsync(meal.DailyMealId, ct)
+            : meal.OfficeCount;
+
+        var totalMeals = teamTotal + officeCount + meal.GuestCount;
         var totalAmount = meal.MealPrice is null ? (decimal?)null : Math.Round(totalMeals * meal.MealPrice.Value, 2);
 
         return Result<DailyMealSummaryDto>.Success(new DailyMealSummaryDto(
-            meal.DailyMealId, date, CodeText.ToPascal(meal.Status), meal.OfficeCount, meal.GuestCount, meal.GuestNote,
+            meal.DailyMealId, date, CodeText.ToPascal(meal.Status), officeCount, meal.GuestCount, meal.GuestNote,
             teamTotal, totalMeals, meal.MealPrice, suggestedPrice, totalAmount,
             meal.AttendanceIncomplete, meal.AutoClosedAt, meal.ClosedAt, meal.KitchenNotifiedAt, rows));
     }
@@ -147,13 +262,13 @@ public sealed class MealService : IMealService
         return Result.Success(Messages.Saved);
     }
 
-    // ---------- Job nền (MI-04) ----------
+    // ---------- Job nền ----------
 
     public async Task RunReminderJobAsync(DateOnly date, CancellationToken ct)
     {
+        await _seeder.SeedForDateAsync(date, ct);
+
         var meal = await _meals.GetOrCreateAsync(date, ct);
-        // Đã chốt, hoặc backend khởi động sau giờ chốt: không nhắc nữa, để JOB-03 chốt (hai job chạy cùng lúc thì
-        // dòng nhắc lưu sau khi ngày đã chốt bị trg_TeamMeal_Cutoff chặn).
         if (await IsLockedAsync(meal, ct)) return;
 
         var teams = await _meals.GetConfirmableTeamsAsync(ct);
@@ -162,9 +277,10 @@ public sealed class MealService : IMealService
             var existing = await _meals.FindConfirmationAsync(meal.DailyMealId, team.TeamId, ct);
             if (existing is { Source: MealConfirmationSource.Confirmed }) continue;
 
-            var count = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
-            var alreadyReminded = existing?.RemindedAt is not null;   // job chạy lại sau khi restart: không nhắc lần hai
-            Upsert(meal, existing, team.TeamId, count, count,
+            var attendanceCount = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
+            var mealCount = await _meals.CountWillEatAsync(meal.DailyMealId, team.TeamId, ct);
+            var alreadyReminded = existing?.RemindedAt is not null;
+            Upsert(meal, existing, team.TeamId, mealCount, attendanceCount,
                 MealConfirmationSource.Attendance, confirmedAt: null, remindedAt: _clock.Now);
 
             if (alreadyReminded) continue;
@@ -172,38 +288,46 @@ public sealed class MealService : IMealService
             if (leaderIds.Count > 0)
                 _notifier.NotifyEmployees(leaderIds, new NotificationMessage(NotificationSources.System,
                     Messages.NotifyMealReminderTitle,
-                    string.Format(Messages.NotifyMealReminderBody, team.TeamName, date.ToString("dd/MM/yyyy"), count,
+                    string.Format(Messages.NotifyMealReminderBody, team.TeamName, date.ToString("dd/MM/yyyy"), mealCount,
                         (await _settings.GetTimeAsync(SettingKeys.MealCutoffTime, new TimeOnly(8, 30), ct)).ToString("HH:mm")),
                     MealLink, nameof(TeamMealConfirmation)));
         }
 
-        await _meals.SaveChangesAsync(ct);   // lưu cả dòng nhắc lẫn Notification (cùng DbContext) trong một lần
+        await _meals.SaveChangesAsync(ct);
         _logger.LogInformation("JOB-02: đã nhắc các tổ chưa xác nhận suất ăn ngày {MealDate}", date);
     }
 
     public async Task RunAutoCloseJobAsync(DateOnly date, CancellationToken ct)
     {
+        await _seeder.SeedForDateAsync(date, ct);
+
         var meal = await _meals.GetOrCreateAsync(date, ct);
-        if (meal.Status != MealStatus.Open) return;    // đã chốt rồi (job chạy lại do restart)
+        if (meal.Status != MealStatus.Open) return;
 
         var teams = await _meals.GetConfirmableTeamsAsync(ct);
         foreach (var team in teams)
         {
             var existing = await _meals.FindConfirmationAsync(meal.DailyMealId, team.TeamId, ct);
-            if (existing is { Source: MealConfirmationSource.Confirmed }) continue;   // giữ nguyên số tổ trưởng đã chốt
+            var attendanceCount = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
+            var mealCount = await _meals.CountWillEatAsync(meal.DailyMealId, team.TeamId, ct);
 
-            var count = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
-            Upsert(meal, existing, team.TeamId, count, count,
+            if (existing is { Source: MealConfirmationSource.Confirmed })
+            {
+                // Giữ Source CONFIRMED nhưng cập nhật MealCount theo checklist mới nhất.
+                existing.MealCount = mealCount;
+                existing.AttendanceCount = attendanceCount;
+                continue;
+            }
+
+            Upsert(meal, existing, team.TeamId, mealCount, attendanceCount,
                 MealConfirmationSource.Attendance, confirmedAt: null, remindedAt: null);
         }
-        // Lưu dòng của các tổ khi ngày còn OPEN: cùng một lần lưu thì EF cập nhật DailyMeal (bảng cha) trước,
-        // trg_TeamMeal_Cutoff thấy ngày đã chốt và chặn (50020). Lỗi giữa hai lần lưu thì ngày vẫn OPEN, job chạy lại được.
+
         await _meals.SaveChangesAsync(ct);
 
-        meal.OfficeCount = await _meals.GetOfficeAttendanceCountAsync(date, ct);
+        // Sau seed: OfficeCount = số VP còn tick (có thể = 0 nếu tất cả bỏ suất).
+        meal.OfficeCount = await _meals.CountOfficeWillEatAsync(meal.DailyMealId, ct);
 
-        // "đồng bộ chấm công lần cuối" (AI Context 4.6): không có API nào ép RJ đồng bộ lại từ đây
-        // (agent tự đẩy mỗi 10 phút), nên chỉ đọc tình trạng đồng bộ hiện tại để đánh dấu thiếu dữ liệu.
         var health = await _attendance.GetHealthAsync(ct);
         meal.AttendanceIncomplete = health.Data?.IsOverdue ?? false;
 
@@ -219,11 +343,8 @@ public sealed class MealService : IMealService
 
     // ---------- Dùng chung ----------
 
-    /// <summary>Trả API dạng chuỗi PascalCase (Rules mục 2.2); null khi tổ chưa có dòng xác nhận.</summary>
     private static string? ToPascalOrNull(string? code) => code is null ? null : CodeText.ToPascal(code);
 
-    /// <summary>Khóa khi đã qua trạng thái OPEN, hoặc hôm nay đã quá giờ chốt (phòng khi JOB-03 chưa kịp chạy);
-    /// trigger của DB vẫn là tuyến chặn cuối cùng (MSG22).</summary>
     private async Task<bool> IsLockedAsync(DailyMeal meal, CancellationToken ct)
     {
         if (meal.Status != MealStatus.Open) return true;
@@ -233,7 +354,6 @@ public sealed class MealService : IMealService
         return TimeOnly.FromDateTime(_clock.Now) >= cutoff;
     }
 
-    /// <summary>Thêm/sửa dòng xác nhận của một tổ (tổng suất do vw_DailyMealTotal cộng từ các dòng này).</summary>
     private void Upsert(DailyMeal meal, TeamMealConfirmation? existing, int teamId, int mealCount,
         int attendanceCount, string source, DateTime? confirmedAt, DateTime? remindedAt)
     {
@@ -248,7 +368,32 @@ public sealed class MealService : IMealService
         existing.Source = source;
         if (confirmedAt is not null) existing.ConfirmedAt = confirmedAt;
         if (remindedAt is not null) existing.RemindedAt = remindedAt;
+    }
 
+    /// <summary>Đồng bộ số tổng tổ sau khi đổi tick từng người.</summary>
+    private async Task SyncTeamConfirmationAsync(
+        DailyMeal meal, int teamId, DateOnly date, bool markConfirmed, CancellationToken ct)
+    {
+        var existing = await _meals.FindConfirmationAsync(meal.DailyMealId, teamId, ct);
+        var attendanceCount = await _meals.GetTeamAttendanceCountAsync(teamId, date, ct);
+        var mealCount = await _meals.CountWillEatAsync(meal.DailyMealId, teamId, ct);
+
+        // CountWillEat dùng AsNoTracking nên chưa thấy WillEat vừa sửa trên tracked entity → chỉnh tay ±1 khi cần.
+        // Đơn giản hơn: đếm lại từ tracked team registrations.
+        var regs = await _meals.GetTeamRegistrationsAsync(meal.DailyMealId, teamId, ct);
+        mealCount = regs.Count(r => r.WillEat);
+
+        if (markConfirmed || existing is { Source: MealConfirmationSource.Confirmed })
+        {
+            Upsert(meal, existing, teamId, mealCount, attendanceCount,
+                MealConfirmationSource.Confirmed,
+                confirmedAt: existing?.ConfirmedAt ?? _clock.Now, remindedAt: null);
+        }
+        else
+        {
+            Upsert(meal, existing, teamId, mealCount, attendanceCount,
+                MealConfirmationSource.Attendance, confirmedAt: null, remindedAt: null);
+        }
     }
 
     private async Task<IReadOnlyList<TeamMealRowDto>> BuildTeamRowsAsync(DailyMeal meal, DateOnly date, CancellationToken ct)
@@ -260,15 +405,19 @@ public sealed class MealService : IMealService
         var rows = new List<TeamMealRowDto>(teams.Count);
         foreach (var team in teams)
         {
+            var willEat = await _meals.CountWillEatAsync(meal.DailyMealId, team.TeamId, ct);
+            var attendance = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
+
             if (confirmations.TryGetValue(team.TeamId, out var c))
             {
-                rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, c.MealCount, c.AttendanceCount,
+                // Khi còn OPEN ưu tiên số WillEat mới nhất; đã chốt dùng MealCount đã lưu.
+                var count = meal.Status == MealStatus.Open ? willEat : c.MealCount;
+                rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, count, c.AttendanceCount,
                     ToPascalOrNull(c.Source), c.ConfirmedAt));
                 continue;
             }
 
-            var suggested = await _meals.GetTeamAttendanceCountAsync(team.TeamId, date, ct);
-            rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, suggested, suggested, null, null));
+            rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, willEat, attendance, null, null));
         }
 
         return rows;

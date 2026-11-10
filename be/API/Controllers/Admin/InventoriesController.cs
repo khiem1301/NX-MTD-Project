@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Admin;
 
-/// <summary>UC24: tồn 3 kho, thẻ kho, BTP tổ may đang giữ.</summary>
+/// <summary>UC24: tồn 3 kho, thẻ kho, BTP tổ may đang giữ, báo cáo NXT.</summary>
 public sealed class InventoriesController : AdminBaseController
 {
     private readonly IInventoryService _inventory;
@@ -19,6 +19,10 @@ public sealed class InventoriesController : AdminBaseController
     [HttpGet("stock-card")]
     public async Task<IActionResult> GetStockCard([FromQuery] StockCardQuery query, CancellationToken ct) =>
         this.ToResponse(await _inventory.GetStockCardAsync(query, ct));
+
+    [HttpGet("nxt-report")]
+    public async Task<IActionResult> GetNxtReport([FromQuery] NxtReportQuery query, CancellationToken ct) =>
+        this.ToResponse(await _inventory.GetNxtSummaryAsync(query, ct));
 
     [HttpGet("team-holdings")]
     public async Task<IActionResult> GetTeamHoldings([FromQuery] int? teamId, [FromQuery] int? orderId,

@@ -711,11 +711,11 @@
 - **Ngày / Người / Task / PR:** 22/10/2026 · Minh (AI) làm hộ Kiều · KI-03, KI-08 (FE) · (chưa có PR)
 - **Ảnh hưởng tới:** UC52 (phân công công đoạn), UC56 (ghi hàng hỏng), `OperationAssignmentsController`, `IOperationAssignmentService`
 - **Tài liệu gốc ghi:** Không nêu API nào cho tổ trưởng lấy danh sách công đoạn của đơn. API công đoạn hiện có (`accountant/operations`) chỉ mở cho Kế toán và kèm đơn giá hiện hành.
-- **Code đang làm:** `ListOperationsAsync(orderId)`: công đoạn đang dùng, thuộc tổ may, của các mã hàng có trong đơn, sắp theo mã hàng + thứ tự; không trả đơn giá để tổ trưởng không thấy giá.
-- **Lý do:** Màn phân công và màn ghi hàng hỏng cần ô chọn công đoạn theo đơn.
+- **Code đang làm:** `ListOperationsAsync(orderId)`: công đoạn đang dùng, thuộc tổ may, của các mã hàng có trong đơn, sắp theo mã hàng + thứ tự; **đã kèm đơn giá hiệu lực hôm nay** (`UnitRate` / `RateApproved`) để tổ trưởng xem khi phân công; công nhân xem đơn giá trên phiếu giao việc.
+- **Lý do:** Màn phân công và màn ghi hàng hỏng cần ô chọn công đoạn theo đơn; sau này bổ sung hiện đơn giá theo yêu cầu nghiệp vụ.
 - **Ảnh hưởng người khác:** Kiều: cùng endpoint dùng cho các màn FE của KI-03 / KI-08.
 - **Cần sửa trong tài liệu:** không.
-- **Trạng thái:** Mở
+- **Trạng thái:** Mở (đã bổ sung đơn giá)
 
 ### DEV-KI-01-2 · Nhập công đoạn từ file Excel quy trình công nghệ
 

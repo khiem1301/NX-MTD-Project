@@ -19,6 +19,19 @@ export const MANAGER_HIDDEN_ROLES: readonly Role[] = ['Admin', 'Accountant'];
 /** Chỉ Admin được gán hoặc đổi các vai trò này (BE: RoleCodes.AdminAssignedOnly). */
 export const ADMIN_ASSIGNED_ROLES: readonly Role[] = ['Admin', 'Manager', 'Accountant'];
 
+/** Vai trò tạo trên web (văn phòng). Công nhân / tổ trưởng / tổ phó chỉ import từ RJ. */
+export const OFFICE_CREATABLE_ROLES: readonly Role[] = [
+  'Admin',
+  'Manager',
+  'Accountant',
+  'WarehouseKeeper',
+  'QaQc',
+  'Electrician',
+];
+
+/** Vai trò sàn chỉ đến từ Ronald Jack Pro (BE: RoleCodes.FloorFromRj). */
+export const FLOOR_FROM_RJ_ROLES: readonly Role[] = ['Worker', 'TeamLeader', 'TeamDeputy'];
+
 export type PayType = 'PieceRate' | 'Daily' | 'Monthly';
 export const PAY_TYPE_LABEL: Record<PayType, string> = {
   PieceRate: 'Khoán sản phẩm',

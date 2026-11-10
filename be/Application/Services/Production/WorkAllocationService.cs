@@ -20,11 +20,12 @@ public sealed class WorkAllocationService : IWorkAllocationService
     private readonly IAuditLogService _audit;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
+    private readonly IPieceRateService _rates;
 
     public WorkAllocationService(IUnitOfWork uow, INotificationService notifier,
-        IAuditLogService audit, IAppLock locks, IClock clock)
+        IAuditLogService audit, IAppLock locks, IClock clock, IPieceRateService rates)
     {
-        _uow = uow; _notifier = notifier; _audit = audit; _locks = locks; _clock = clock;
+        _uow = uow; _notifier = notifier; _audit = audit; _locks = locks; _clock = clock; _rates = rates;
     }
 
     private IQueryable<WorkAllocation> Allocations => _uow.Repository<WorkAllocation>().Query();
@@ -45,7 +46,7 @@ public sealed class WorkAllocationService : IWorkAllocationService
                             || m.Operation.OperationName.Contains(keyword))
                 .OrderByDescending(m => m.WorkAllocationId))
             .ToPagedAsync(query, ct);
-        return Result<PagedResult<WorkAllocationDto>>.Success(page);
+        return Result<PagedResult<WorkAllocationDto>>.Success(await WithRatesAsync(page, ct));
     }
 
     public async Task<Result<WorkAllocationBoardDto>> GetBoardAsync(int teamId, int? orderId, CancellationToken ct)
@@ -297,7 +298,27 @@ public sealed class WorkAllocationService : IWorkAllocationService
     private async Task<Result<WorkAllocationDto>> GetOneAsync(int id, CancellationToken ct)
     {
         var dto = await Project(Allocations.AsNoTracking().Where(m => m.WorkAllocationId == id)).FirstOrDefaultAsync(ct);
-        return dto is null ? WarehouseFailures.NotFound<WorkAllocationDto>() : Result<WorkAllocationDto>.Success(dto);
+        if (dto is null) return WarehouseFailures.NotFound<WorkAllocationDto>();
+        var rates = await _rates.FindEffectiveManyAsync(new[] { dto.OperationId }, dto.WorkDate, ct);
+        rates.TryGetValue(dto.OperationId, out var rate);
+        return Result<WorkAllocationDto>.Success(dto with { UnitRate = rate?.Rate, RateApproved = rate is not null });
+    }
+
+    private async Task<PagedResult<WorkAllocationDto>> WithRatesAsync(PagedResult<WorkAllocationDto> page, CancellationToken ct)
+    {
+        if (page.Items.Count == 0) return page;
+        var rateByKey = new Dictionary<(DateOnly Date, int OperationId), EffectivePieceRate>();
+        foreach (var group in page.Items.GroupBy(i => i.WorkDate))
+        {
+            var rates = await _rates.FindEffectiveManyAsync(group.Select(i => i.OperationId).Distinct().ToList(), group.Key, ct);
+            foreach (var (operationId, rate) in rates) rateByKey[(group.Key, operationId)] = rate;
+        }
+        var items = page.Items.Select(m =>
+        {
+            rateByKey.TryGetValue((m.WorkDate, m.OperationId), out var rate);
+            return m with { UnitRate = rate?.Rate, RateApproved = rate is not null };
+        }).ToList();
+        return new PagedResult<WorkAllocationDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
     private static IQueryable<WorkAllocationDto> Project(IQueryable<WorkAllocation> q) =>
@@ -307,5 +328,5 @@ public sealed class WorkAllocationService : IWorkAllocationService
             m.OrderLine.ProductVariant.SizeCode, m.OperationId, m.Operation.OperationCode, m.Operation.OperationName,
             m.Quantity, m.ConfirmedQty,
             m.DiscrepancyReason, m.RetrievalReason, m.RetrievalNote, m.ConfirmMode, m.OnBehalfReason, m.Status, m.RejectReason,
-            m.CreatedAt, m.ConfirmedAt));
+            m.CreatedAt, m.ConfirmedAt, null, false));
 }

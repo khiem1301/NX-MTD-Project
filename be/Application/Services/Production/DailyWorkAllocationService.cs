@@ -19,10 +19,12 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     private readonly INotificationService _notifier;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
+    private readonly IPieceRateService _rates;
 
-    public DailyWorkAllocationService(IUnitOfWork uow, INotificationService notifier, IAppLock locks, IClock clock)
+    public DailyWorkAllocationService(IUnitOfWork uow, INotificationService notifier, IAppLock locks, IClock clock,
+        IPieceRateService rates)
     {
-        _uow = uow; _notifier = notifier; _locks = locks; _clock = clock;
+        _uow = uow; _notifier = notifier; _locks = locks; _clock = clock; _rates = rates;
     }
 
     private IQueryable<WorkAllocation> Allocations => _uow.Repository<WorkAllocation>().Query();
@@ -106,7 +108,14 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
             }
         }
         var sequence = operations.ToDictionary(o => o.OperationId, o => o.StationSequence);
-        var ordered = rows.OrderBy(r => r.WorkerName).ThenBy(r => r.OrderLineId).ThenBy(r => sequence[r.OperationId]).ToList();
+        var rates = await _rates.FindEffectiveManyAsync(rows.Select(r => r.OperationId).Distinct().ToList(), workDate, ct);
+        var ordered = rows
+            .Select(r =>
+            {
+                rates.TryGetValue(r.OperationId, out var rate);
+                return r with { UnitRate = rate?.Rate, RateApproved = rate is not null };
+            })
+            .OrderBy(r => r.WorkerName).ThenBy(r => r.OrderLineId).ThenBy(r => sequence[r.OperationId]).ToList();
         return Result<DailyAllocationBoardDto>.Success(new DailyAllocationBoardDto(workDate, ordered));
     }
 

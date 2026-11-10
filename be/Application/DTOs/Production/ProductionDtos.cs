@@ -66,7 +66,8 @@ public sealed record EffectivePieceRate(int PieceRateId, decimal Rate);
 
 public sealed record OperationAssignmentDto(
     int OperationAssignmentId, int OrderId, int OperationId, string OperationCode, string OperationName,
-    int ProductId, string ProductCode, int WorkerId, string WorkerCode, string WorkerName, DateOnly ValidFrom);
+    int ProductId, string ProductCode, int WorkerId, string WorkerCode, string WorkerName, DateOnly ValidFrom,
+    decimal? UnitRate = null, bool RateApproved = false);
 
 public sealed record AssignOperationDto(int OrderId, int OperationId, int WorkerId);
 
@@ -176,10 +177,11 @@ public sealed record OrderLineProgressDto(
     int OrderedQty, int CutQty, int CutHandedToWarehouseQty, int IssuedToSewingQty, int FinishedQty,
     int FinishedReceivedQty, int DeliveredQty, int ReworkQty, int ScrapQty, decimal? DefectRatePct);
 
-/// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Không kèm đơn giá.</summary>
+/// <summary>Công đoạn may đang dùng của các mã hàng trong một đơn, để tổ trưởng chọn khi phân công / ghi hàng hỏng. Kèm đơn giá hiệu lực hôm nay.</summary>
 public sealed record OperationOptionDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
-    short StationSequence, bool IsFinalStep, string? GroupName = null, byte? SkillLevel = null, decimal? StandardTimeSec = null);
+    short StationSequence, bool IsFinalStep, string? GroupName = null, byte? SkillLevel = null, decimal? StandardTimeSec = null,
+    decimal? UnitRate = null, bool RateApproved = false);
 
 // ================= Chia dòng đơn (mã hàng × màu × size) cho tổ may (DEV-ALL-49) =================
 public sealed record OrderLineTeamQuery : PageQuery

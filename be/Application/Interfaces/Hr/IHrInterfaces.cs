@@ -56,6 +56,8 @@ public interface IEmployeeService
     Task<Result<PagedResult<EmployeeListItemDto>>> ListAsync(EmployeeQuery query, CancellationToken ct);
     Task<Result<EmployeeDetailDto>> GetAsync(int employeeId, CancellationToken ct);
     Task<Result<CreatedEmployeeDto>> CreateAsync(CreateEmployeeDto dto, CancellationToken ct);
+    /// <summary>Import công nhân từ RJ: tạo Employee + tài khoản + mật khẩu tạm (username = mã NV từ RJ).</summary>
+    Task<Result<CreatedEmployeeDto>> ImportFromRjAsync(ImportEmployeeFromRjDto dto, CancellationToken ct);
     Task<Result> AdminUpdateAsync(int employeeId, AdminUpdateEmployeeDto dto, CancellationToken ct);
     Task<Result> ManagerUpdateAsync(int employeeId, ManagerUpdateEmployeeDto dto, CancellationToken ct);
     Task<Result> ResignAsync(int employeeId, ResignEmployeeDto dto, CancellationToken ct);

@@ -1,4 +1,4 @@
-import { EyeOutlined } from '@ant-design/icons';
+import { CopyOutlined, EyeOutlined } from '@ant-design/icons';
 import { Space, Tag, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -19,6 +19,8 @@ export const ORDER_STATUS_OPTIONS = (Object.keys(ORDER_STATUS_LABEL) as OrderSta
 
 type OrderListColumnsOptions<T> = {
   onView: (order: T) => void;
+  /** Admin: mở form tạo đơn mới với dữ liệu copy từ đơn này. */
+  onCopy?: (order: T) => void;
   /** Cột chèn sau Tổng SL (Admin: thành tiền CMT). */
   extraColumns?: TableColumnsType<T>;
 };
@@ -26,6 +28,7 @@ type OrderListColumnsOptions<T> = {
 /** Cột danh sách đơn hàng dùng chung cho Admin và Quản đốc. */
 export const orderListColumns = <T extends OrderOverviewListItem>({
   onView,
+  onCopy,
   extraColumns = [],
 }: OrderListColumnsOptions<T>): TableColumnsType<T> => [
   { title: MESSAGES.orders.orderCode, dataIndex: 'orderCode' },
@@ -54,7 +57,16 @@ export const orderListColumns = <T extends OrderOverviewListItem>({
     title: MESSAGES.common.actions,
     key: 'action',
     render: (_, o) => (
-      <IconAction title={MESSAGES.common.view} icon={<EyeOutlined />} onClick={() => onView(o)} />
+      <Space size={0}>
+        <IconAction title={MESSAGES.common.view} icon={<EyeOutlined />} onClick={() => onView(o)} />
+        {onCopy && (
+          <IconAction
+            title={MESSAGES.orders.copyOrder}
+            icon={<CopyOutlined />}
+            onClick={() => onCopy(o)}
+          />
+        )}
+      </Space>
     ),
   },
 ];

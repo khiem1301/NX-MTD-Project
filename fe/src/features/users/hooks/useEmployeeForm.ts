@@ -1,6 +1,13 @@
 import { Form } from 'antd';
 import dayjs from 'dayjs';
-import { ADMIN_ASSIGNED_ROLES, suggestPayType, ROLE_LABEL, type PayType } from '@/constants/hr';
+import {
+  ADMIN_ASSIGNED_ROLES,
+  FLOOR_FROM_RJ_ROLES,
+  OFFICE_CREATABLE_ROLES,
+  suggestPayType,
+  ROLE_LABEL,
+  type PayType,
+} from '@/constants/hr';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import type { ApiError } from '@/types/api';
 import { toApiDate } from '@/utils/format';
@@ -11,9 +18,9 @@ import { ROLES, type Role } from '@/constants/roles';
 
 /** Trạng thái và xử lý của EmployeeFormModal; component chỉ lo giao diện. */
 export function useEmployeeForm(
-  props: Pick<EmployeeFormModalProps, 'employee' | 'isAdmin' | 'onClose' | 'onCreated'>,
+  props: Pick<EmployeeFormModalProps, 'employee' | 'isAdmin' | 'onClose' | 'onCreated' | 'draft'>,
 ) {
-  const { employee, isAdmin, onClose, onCreated } = props;
+  const { employee, isAdmin, onClose, onCreated, draft } = props;
   const [form] = Form.useForm<FormValues>();
   const teams = useTeamLookup();
   const create = useCreateEmployee();
@@ -21,11 +28,15 @@ export function useEmployeeForm(
   const saving = create.isPending || update.isPending;
   // Quản đốc không gán được Admin / Quản đốc / Kế toán; nhân viên đang là Quản đốc thì khóa ô vai trò, hiện đúng vai trò hiện tại.
   const roleLocked = !isAdmin && !!employee && ADMIN_ASSIGNED_ROLES.includes(employee.role);
-  const roleOptions =
-    isAdmin || roleLocked
+  // Tạo mới: chỉ role văn phòng. Sửa: giữ role sàn hiện có (bổ nhiệm TT/TP ở màn Tổ).
+  const roleOptions = (() => {
+    const base = employee
       ? ROLE_OPTIONS
-      : ROLE_OPTIONS.filter((o) => !ADMIN_ASSIGNED_ROLES.includes(o.value));
-
+      : ROLE_OPTIONS.filter((o) => OFFICE_CREATABLE_ROLES.includes(o.value));
+    if (isAdmin || roleLocked) return base;
+    return base.filter((o) => !ADMIN_ASSIGNED_ROLES.includes(o.value));
+  })();
+  const isFloorEmployee = !!employee && FLOOR_FROM_RJ_ROLES.includes(employee.role);
   const suggest = () => {
     const values = form.getFieldsValue();
     const teamType = teams.data?.find((t) => t.teamId === values.teamId)?.teamType;
@@ -92,13 +103,18 @@ export function useEmployeeForm(
         startDate: dayjs(employee.startDate),
         attendanceCode: employee.attendanceCode ?? undefined,
       }
-    : { startDate: dayjs(), payType: 'Monthly' };
+    : {
+        startDate: dayjs(),
+        payType: 'Monthly',
+        fullName: draft?.fullName,
+        attendanceCode: draft?.attendanceCode,
+      };
 
   return {
     teams,
     saving,
     roleOptions,
-    roleLocked,
+    roleLocked: roleLocked || isFloorEmployee,
     suggest,
     handleFinish,
     initialValues,

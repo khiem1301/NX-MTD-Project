@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Domain.Entities;
 using NX_MTD.Infrastructure.Data;
 
 namespace NX_MTD.Infrastructure.Settings;
@@ -15,11 +16,13 @@ public sealed class SystemSettingReader : ISystemSettingReader
 
     private readonly NxMtdDbContext _context;
     private readonly IMemoryCache _cache;
+    private readonly IClock _clock;
 
-    public SystemSettingReader(NxMtdDbContext context, IMemoryCache cache)
+    public SystemSettingReader(NxMtdDbContext context, IMemoryCache cache, IClock clock)
     {
         _context = context;
         _cache = cache;
+        _clock = clock;
     }
 
     public async Task<string?> GetAsync(string key, CancellationToken ct)
@@ -53,6 +56,30 @@ public sealed class SystemSettingReader : ISystemSettingReader
     {
         var raw = await GetAsync(key, ct);
         return TimeOnly.TryParse(raw, CultureInfo.InvariantCulture, out var value) ? value : fallback;
+    }
+
+    public async Task SetAsync(string key, string value, string? description, CancellationToken ct)
+    {
+        var row = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == key, ct);
+        if (row is null)
+        {
+            _context.SystemSettings.Add(new SystemSetting
+            {
+                SettingKey = key,
+                SettingValue = value,
+                Description = description,
+                UpdatedAt = _clock.Now,
+            });
+        }
+        else
+        {
+            row.SettingValue = value;
+            row.UpdatedAt = _clock.Now;
+            if (description is not null) row.Description = description;
+        }
+
+        await _context.SaveChangesAsync(ct);
+        Invalidate(key);
     }
 
     public void Invalidate(string key) => _cache.Remove(CacheKey(key));

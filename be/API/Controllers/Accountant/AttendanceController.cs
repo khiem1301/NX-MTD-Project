@@ -1,12 +1,18 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NX_MTD.API.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.API.Controllers.Accountant;
 
-/// <summary>UC28 — Kế toán theo dõi đồng bộ, map mã chấm công và xem bảng công toàn xưởng.</summary>
-public sealed class AttendanceController : AccountantBaseController
+/// <summary>UC28 — Admin / Quản đốc / Kế toán: đồng bộ RJ, xem snapshot NV, bảng công.
+/// Chỉ Admin / Quản đốc tạo tài khoản (qua API Nhân viên); Kế toán chỉ xem danh sách RJ.</summary>
+[ApiController]
+[Route("api/v1/accountant/[controller]")]
+[Authorize(Roles = Roles.Accountant + "," + Roles.Admin + "," + Roles.Manager)]
+public sealed class AttendanceController : ControllerBase
 {
     private readonly IAttendanceService _attendance;
     private readonly ICurrentUser _user;
@@ -26,15 +32,15 @@ public sealed class AttendanceController : AccountantBaseController
     public async Task<IActionResult> GetSyncSessions([FromQuery] int take, [FromQuery] string? status, CancellationToken ct) =>
         this.ToResponse(await _attendance.GetSessionsAsync(take, status, ct));
 
-    /// <summary>Các mã chấm công có lượt quẹt nhưng chưa gắn nhân viên.</summary>
-    [HttpGet("unmapped-codes")]
-    public async Task<IActionResult> GetUnmappedCodes(CancellationToken ct) =>
-        this.ToResponse(await _attendance.GetUnmappedCodesAsync(ct));
+    /// <summary>Danh sách NV trên máy RJ (snapshot agent). onlyUnmapped = chỉ mã chưa tạo trên hệ thống.</summary>
+    [HttpGet("rj-employees")]
+    public async Task<IActionResult> GetRjEmployees([FromQuery] bool onlyUnmapped, CancellationToken ct) =>
+        this.ToResponse(await _attendance.GetRjEmployeesAsync(onlyUnmapped, ct));
 
-    /// <summary>Gán mã chấm công cho nhân viên: nhận lại lượt quẹt cũ và tính lại bảng công.</summary>
-    [HttpPost("map-code")]
-    public async Task<IActionResult> MapCode([FromBody] MapAttendanceCodeDto dto, CancellationToken ct) =>
-        this.ToResponse(await _attendance.MapCodeAsync(dto, _user.EmployeeId, ct));
+    /// <summary>Yêu cầu agent đồng bộ lại danh sách NHANVIEN từ máy RJ.</summary>
+    [HttpPost("rj-employees/sync")]
+    public async Task<IActionResult> RequestRjEmployeeSync(CancellationToken ct) =>
+        this.ToResponse(await _attendance.RequestRjEmployeeSyncAsync(ct));
 
     [HttpGet("timesheets")]
     public async Task<IActionResult> GetTimesheets([FromQuery] TimesheetQuery query, CancellationToken ct) =>
@@ -47,7 +53,7 @@ public sealed class AttendanceController : AccountantBaseController
 
     // ---------- Chấm bù (UC29) ----------
 
-    /// <summary>Kế toán chấm bù cho nhân viên (GBR-25: bắt buộc lý do).</summary>
+    /// <summary>Chấm bù cho nhân viên (GBR-25: bắt buộc lý do).</summary>
     [HttpPost("adjustments")]
     public async Task<IActionResult> CreateAdjustment([FromBody] CreateAttendanceAdjustmentDto dto, CancellationToken ct) =>
         this.ToResponse(await _attendance.CreateAdjustmentAsync(dto, _user.EmployeeId, ct));
@@ -59,7 +65,7 @@ public sealed class AttendanceController : AccountantBaseController
 
     // ---------- Import Excel chấm công (UC29) ----------
 
-    /// <summary>Xem trước file Excel dự phòng (chưa ghi DB), để Kế toán kiểm tra trước khi nhập.</summary>
+    /// <summary>Xem trước file Excel dự phòng (chưa ghi DB).</summary>
     [HttpPost("import/preview")]
     public async Task<IActionResult> PreviewExcel(IFormFile file, CancellationToken ct)
     {
@@ -67,7 +73,7 @@ public sealed class AttendanceController : AccountantBaseController
         return this.ToResponse(await _attendance.PreviewExcelAsync(stream, file.FileName, ct));
     }
 
-    /// <summary>Nhập file Excel dự phòng (Source = EXCEL_IMPORT). Trả về kết quả như đồng bộ RJ (MSG24).</summary>
+    /// <summary>Nhập file Excel dự phòng (Source = EXCEL_IMPORT).</summary>
     [HttpPost("import")]
     public async Task<IActionResult> ImportExcel(IFormFile file, CancellationToken ct)
     {

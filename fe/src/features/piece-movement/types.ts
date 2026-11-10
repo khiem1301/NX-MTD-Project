@@ -29,6 +29,9 @@ export type WorkAllocation = {
   rejectReason: string | null;
   createdAt: string;
   confirmedAt: string | null;
+  /** Đơn giá công đoạn hiệu lực theo ngày giao; null = chưa có đơn giá duyệt. */
+  unitRate: number | null;
+  rateApproved: boolean;
 };
 
 /** Tiến độ chia việc của một công đoạn × dòng đơn. */
@@ -108,6 +111,8 @@ export type DailyAllocationRow = {
   unallocatedQty: number;
   /** Số giao của lần giao gần nhất trước ngày này; 0 = chưa giao lần nào. */
   previousQty: number;
+  unitRate: number | null;
+  rateApproved: boolean;
 };
 
 export type DailyAllocationBoard = { workDate: string; rows: DailyAllocationRow[] };

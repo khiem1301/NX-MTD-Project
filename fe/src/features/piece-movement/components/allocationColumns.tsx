@@ -1,7 +1,7 @@
 import { Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import {
   CONFIRM_MODE_LABEL,
   MOVEMENT_STATUS,
@@ -51,6 +51,17 @@ export function allocationColumns(
       title: PM_LABELS.operation,
       key: 'operation',
       render: (_, m) => `${m.operationCode} - ${m.operationName}`,
+    },
+    {
+      title: PM_LABELS.unitRate,
+      key: 'unitRate',
+      align: 'right',
+      render: (_, m) =>
+        m.unitRate === null || m.unitRate === undefined ? (
+          <Typography.Text type="secondary">{PM_LABELS.noRate}</Typography.Text>
+        ) : (
+          formatCurrency(m.unitRate)
+        ),
     },
     { title: PM_LABELS.quantity, dataIndex: 'quantity', align: 'right' },
     {

@@ -11,6 +11,9 @@ public interface IAttendanceService
     /// <summary>Mốc đọc tiếp cho agent.</summary>
     Task<Result<SyncCursorDto>> GetCursorAsync(CancellationToken ct);
 
+    /// <summary>Agent báo đã chạy chu kỳ xong dù không có lượt quẹt mới (cập nhật sức khỏe đồng bộ).</summary>
+    Task<Result> RecordAgentHeartbeatAsync(CancellationToken ct);
+
     /// <summary>Tình trạng đồng bộ để cảnh báo MSG23.</summary>
     Task<Result<SyncHealthDto>> GetHealthAsync(CancellationToken ct);
 
@@ -20,6 +23,15 @@ public interface IAttendanceService
 
     /// <summary>UC28: Kế toán gán mã chấm công chưa có chủ cho nhân viên.</summary>
     Task<Result> MapCodeAsync(MapAttendanceCodeDto dto, int changedBy, CancellationToken ct);
+
+    /// <summary>Agent đẩy danh sách NHANVIEN (mã + tên) từ RJData.mdb.</summary>
+    Task<Result> SyncRjEmployeesAsync(SyncRjEmployeesDto dto, CancellationToken ct);
+
+    /// <summary>Web yêu cầu agent đồng bộ lại snapshot NHANVIEN từ máy RJ.</summary>
+    Task<Result> RequestRjEmployeeSyncAsync(CancellationToken ct);
+
+    /// <summary>Danh sách NV trên máy RJ (snapshot) để gán mã / tạo NV.</summary>
+    Task<Result<IReadOnlyList<RjEmployeeDto>>> GetRjEmployeesAsync(bool onlyUnmapped, CancellationToken ct);
 
     /// <summary>UC28 / UC58: bảng công ngày. Truyền scope để giới hạn phạm vi xem theo vai trò (R1).</summary>
     Task<Result<PagedResult<DailyTimesheetDto>>> GetTimesheetsAsync(

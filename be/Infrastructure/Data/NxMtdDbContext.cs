@@ -46,6 +46,10 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<DailyMeal> DailyMeals { get; set; }
 
+    public virtual DbSet<MealRegistration> MealRegistrations { get; set; }
+
+    public virtual DbSet<RjEmployeeSnapshot> RjEmployeeSnapshots { get; set; }
+
     public virtual DbSet<DailyTimesheet> DailyTimesheets { get; set; }
 
     public virtual DbSet<DefectRecord> DefectRecords { get; set; }

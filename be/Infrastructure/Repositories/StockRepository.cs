@@ -186,6 +186,112 @@ public sealed class StockRepository : IStockRepository
         return q.ToPagedAsync(query, ct);
     }
 
+    public async Task<PagedResult<NxtSummaryDto>> GetNxtSummaryAsync(NxtReportQuery query, CancellationToken ct)
+    {
+        var candidates = query.WarehouseType == WarehouseTypes.Material
+            ? await MaterialNxtCandidatesAsync(query, ct)
+            : await PieceNxtCandidatesAsync(query, ct);
+        if (candidates.Count == 0)
+            return new PagedResult<NxtSummaryDto>(Array.Empty<NxtSummaryDto>(), query.SafePage, query.SafePageSize, 0);
+
+        var balanceIds = candidates.Select(c => c.StockBalanceId).ToList();
+        var openings = await LoadOpeningQtyAsync(balanceIds, query.FromDate, ct);
+        var period = await _context.StockTransactions.AsNoTracking()
+            .Where(t => balanceIds.Contains(t.StockBalanceId)
+                        && t.TransactionDate >= query.FromDate && t.TransactionDate <= query.ToDate)
+            .GroupBy(t => t.StockBalanceId)
+            .Select(g => new
+            {
+                StockBalanceId = g.Key,
+                InQty = g.Sum(t => t.QtyChange > 0 ? t.QtyChange : 0m),
+                OutQty = g.Sum(t => t.QtyChange < 0 ? -t.QtyChange : 0m),
+            })
+            .ToDictionaryAsync(x => x.StockBalanceId, ct);
+
+        var rows = candidates
+            .Select(c =>
+            {
+                var opening = openings.GetValueOrDefault(c.StockBalanceId);
+                period.TryGetValue(c.StockBalanceId, out var move);
+                var inQty = move?.InQty ?? 0m;
+                var outQty = move?.OutQty ?? 0m;
+                var closing = opening + inQty - outQty;
+                return new NxtSummaryDto(c.WarehouseType, c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialType,
+                    c.Unit, c.MaterialColor, c.OrderLineId, c.OrderId, c.OrderCode, c.ProductCode, c.ProductName,
+                    c.Color, c.SizeCode, c.ProductComponentMaterialId, c.ComponentName, opening, inQty, outQty, closing);
+            })
+            .Where(r => r.OpeningQty != 0 || r.InQty != 0 || r.OutQty != 0 || r.ClosingQty != 0)
+            .ToList();
+
+        var total = rows.Count;
+        var page = rows.Skip(query.Skip).Take(query.SafePageSize).ToList();
+        return new PagedResult<NxtSummaryDto>(page, query.SafePage, query.SafePageSize, total);
+    }
+
+    private sealed record NxtCandidate(
+        int StockBalanceId, string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName,
+        string? MaterialType, string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode,
+        string? ProductCode, string? ProductName, string? Color, string? SizeCode, int? ProductComponentMaterialId,
+        string? ComponentName);
+
+    private async Task<List<NxtCandidate>> MaterialNxtCandidatesAsync(NxtReportQuery query, CancellationToken ct)
+    {
+        var keyword = query.Keyword?.Trim();
+        var orderCode = await _context.CustomerOrders.AsNoTracking()
+            .Where(o => o.OrderId == query.OrderId).Select(o => o.OrderCode).FirstOrDefaultAsync(ct);
+        return await (
+            from b in _context.StockBalances.AsNoTracking()
+            join m in _context.Materials on b.MaterialId equals m.MaterialId
+            where b.WarehouseType == WarehouseTypes.Material
+                  && _context.OrderMaterials.Any(o => o.OrderId == query.OrderId && o.MaterialId == b.MaterialId)
+                  && (string.IsNullOrEmpty(keyword)
+                      || m.MaterialCode.Contains(keyword) || m.MaterialName.Contains(keyword))
+            orderby m.MaterialCode, m.Color
+            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
+                m.MaterialType, m.Unit, m.Color, null, query.OrderId, orderCode, null, null, null, null, null, null)
+        ).ToListAsync(ct);
+    }
+
+    private async Task<List<NxtCandidate>> PieceNxtCandidatesAsync(NxtReportQuery query, CancellationToken ct)
+    {
+        var keyword = query.Keyword?.Trim();
+        return await (
+            from b in _context.StockBalances.AsNoTracking()
+            join l in _context.OrderLines on b.OrderLineId equals l.OrderLineId
+            join pcm in _context.ProductComponentMaterials on b.ProductComponentMaterialId equals pcm.ProductComponentMaterialId into pcmj
+            from pcm in pcmj.DefaultIfEmpty()
+            let c = pcm.ProductComponent
+            where b.WarehouseType == query.WarehouseType && l.OrderId == query.OrderId
+                  && (string.IsNullOrEmpty(keyword)
+                      || l.ProductVariant.Product.ProductCode.Contains(keyword)
+                      || l.ProductVariant.Product.ProductName.Contains(keyword)
+                      || l.Order.OrderCode.Contains(keyword))
+            orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color,
+                l.ProductVariant.SizeCode, c.ProductComponentId
+            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
+                l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
+                l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, b.ProductComponentMaterialId,
+                pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName
+                    + (pcm.Material.Color == "" ? "" : " " + pcm.Material.Color))
+        ).ToListAsync(ct);
+    }
+
+    private async Task<Dictionary<int, decimal>> LoadOpeningQtyAsync(IReadOnlyList<int> balanceIds, DateOnly fromDate,
+        CancellationToken ct)
+    {
+        var priorIds = await _context.StockTransactions.AsNoTracking()
+            .Where(t => balanceIds.Contains(t.StockBalanceId) && t.TransactionDate < fromDate)
+            .GroupBy(t => t.StockBalanceId)
+            .Select(g => new { StockBalanceId = g.Key, TxId = g.Max(t => t.StockTransactionId) })
+            .ToListAsync(ct);
+        if (priorIds.Count == 0) return new Dictionary<int, decimal>();
+
+        var txIds = priorIds.Select(x => x.TxId).ToList();
+        return await _context.StockTransactions.AsNoTracking()
+            .Where(t => txIds.Contains(t.StockTransactionId))
+            .ToDictionaryAsync(t => t.StockBalanceId, t => t.BalanceAfter, ct);
+    }
+
     /// <summary>Lấy mã chứng từ cho thẻ kho: mỗi loại chứng từ một truy vấn.</summary>
     private async Task<Dictionary<(string, int), string>> LoadDocCodesAsync(IReadOnlyList<StockTransaction> rows,
         CancellationToken ct)
