@@ -27,6 +27,17 @@ public class RbacControllerTests
         ["Worker"] = Roles.Worker,
     };
 
+    /// <summary>Controller nằm ở thư mục vai trò nhưng được mở cho nhiều vai trò hơn thư mục đó (có chủ đích).
+    /// Vẫn phải khớp đúng từng vai trò, không được nới thêm.</summary>
+    private static readonly Dictionary<Type, string> RolesOverride = new()
+    {
+        // UC28: Admin / Quản đốc cũng đồng bộ NV từ RJ và xem bảng công cùng Kế toán.
+        [typeof(NX_MTD.API.Controllers.Accountant.AttendanceController)] = Roles.Accountant + "," + Roles.Admin + "," + Roles.Manager,
+    };
+
+    private static string ExpectedRoles(Type controller) =>
+        RolesOverride.TryGetValue(controller, out var roles) ? roles : RolesByFolder[Folder(controller)];
+
     private static IEnumerable<Type> Controllers() =>
         Api.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false }
                                   && typeof(ControllerBase).IsAssignableFrom(t)
@@ -44,7 +55,7 @@ public class RbacControllerTests
     [MemberData(nameof(RoleControllers))]
     public void Controller_chi_cho_dung_vai_tro_cua_thu_muc(Type controller)
     {
-        var expected = RolesByFolder[Folder(controller)];
+        var expected = ExpectedRoles(controller);
         var authorize = AuthorizeOf(controller).ToList();
 
         authorize.Should().NotBeEmpty($"{controller.Name} nằm ở thư mục {Folder(controller)} nên phải khóa theo vai trò");

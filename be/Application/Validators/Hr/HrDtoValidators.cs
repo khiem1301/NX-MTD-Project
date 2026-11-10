@@ -39,10 +39,11 @@ public sealed class CreateEmployeeDtoValidator : AbstractValidator<CreateEmploye
         RuleFor(x => x.Gender).Must(g => g is "M" or "F").When(x => x.Gender is not null).WithMessage("Giới tính chỉ nhận M hoặc F.");
         RuleFor(x => x.DateOfBirth).LessThan(DateOnly.FromDateTime(DateTime.Today)).When(x => x.DateOfBirth is not null);
         RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
-        RuleFor(x => x.Role).Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.")
-            .Must(r => RoleCodes.IsOfficeCreatable(Roles.ToRoleCode(r)))
-            .When(x => HrRules.IsKnownRole(x.Role))
-            .WithMessage(Messages.EmployeeFloorRoleWebCreateForbidden);
+        // Cascade Stop: vai trò lạ báo "không hợp lệ" ngay, không đi tiếp xuống ToRoleCode (sẽ ném ngoại lệ).
+        // Không dùng .When(IsKnownRole) ở cuối chuỗi: nó áp dụng cho cả rule IsKnownRole và làm mất lỗi này.
+        RuleFor(x => x.Role).Cascade(CascadeMode.Stop)
+            .Must(HrRules.IsKnownRole).WithMessage("Vai trò không hợp lệ.")
+            .Must(r => RoleCodes.IsOfficeCreatable(Roles.ToRoleCode(r))).WithMessage(Messages.EmployeeFloorRoleWebCreateForbidden);
         RuleFor(x => x.PayType).Must(HrRules.PayTypes.Contains).WithMessage("Kiểu lương không hợp lệ.");
         RuleFor(x => x.AttendanceCode).InclusiveBetween(1, 99_999_999).When(x => x.AttendanceCode is not null);
         RuleFor(x => x.TeamId).NotNull().When(x => HrRules.NeedsTeam(x.Role)).WithMessage(Messages.Required("tổ"));
