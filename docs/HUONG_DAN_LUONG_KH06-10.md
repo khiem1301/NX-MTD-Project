@@ -14,7 +14,7 @@
 | I | Nhật ký thay đổi (`AuditLog`) + ảnh đính kèm (`Attachment`) | KH-07 | ✔ | ✔ |
 | J, K | Đơn từ: khung 10 loại đơn, duyệt / từ chối / hoàn thành | KH-06 | ✔ | ✔ |
 | L | Khách hàng, mã hàng, đơn hàng màu × size, tra cứu cho luồng khác | KH-08 | ✔ | ✔ |
-| M | Đóng gói Review 1 (`docs/REVIEW-1.md`) | KH-09 | — | — |
+| M | Đóng gói Review 1 | KH-09 | — | — |
 | N | Nhân viên, tài khoản, tổ, hồ sơ, đổi mật khẩu | KH-10 | ✔ | ✔ |
 
 Cấu trúc code (repo này là **1 project**, namespace `NX_MTD.*`, khác với runbook mô tả 4 project):

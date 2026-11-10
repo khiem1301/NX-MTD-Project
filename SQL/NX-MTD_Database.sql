@@ -5119,7 +5119,7 @@ GO
 
 /* ---------- Chia chỉ tiêu KPI demo theo màu × size (DEV-ALL-62) ----------
    Số tổng của chỉ tiêu chia cho các dòng của mã hàng đã chia cho tổ, theo tỉ lệ số còn trống của dòng
-   (số đặt − phần đã giao ở chỉ tiêu khác). Không đủ chỗ thì để nguyên. Giống SQL/patches/2026-11-03_all_changes.sql. */
+   (số đặt − phần đã giao ở chỉ tiêu khác). Không đủ chỗ thì để nguyên. */
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
 BEGIN TRANSACTION;
