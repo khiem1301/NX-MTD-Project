@@ -1,5 +1,6 @@
 import { Alert, Button, Checkbox, Space, Table, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDateTime } from '@/utils/format';
 import { MEAL_TEXT } from '../constants';
 import { useConfirmTeamMeal, useSetTeamMemberMeal } from '../hooks/useMeal';
@@ -11,10 +12,12 @@ type Props = {
   suggestion: TeamMealSuggestion;
 };
 
-/** Checklist suất ăn tổ: mặc định tick người đã quẹt; tổ trưởng bỏ tick hộ. */
+/** Checklist suất ăn tổ: mặc định tick người đã quẹt; tổ trưởng bỏ tick hộ (kể cả suất của mình). */
 export function TeamMealMemberList({ date, members, suggestion }: Props) {
+  const { user } = useAuth();
   const setMember = useSetTeamMemberMeal(date);
   const confirm = useConfirmTeamMeal(date);
+  const selfId = user?.employeeId;
 
   const sourceKey = suggestion.source ?? 'none';
   const sourceLabel =
@@ -33,6 +36,15 @@ export function TeamMealMemberList({ date, members, suggestion }: Props) {
     {
       title: MEAL_TEXT.checklist.name,
       dataIndex: 'fullName',
+      render: (name: string, row) =>
+        row.employeeId === selfId ? (
+          <Space size={8}>
+            <span>{name}</span>
+            <Tag color="blue">{MEAL_TEXT.checklist.you}</Tag>
+          </Space>
+        ) : (
+          name
+        ),
     },
     {
       title: MEAL_TEXT.checklist.willEat,

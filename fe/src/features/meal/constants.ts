@@ -2,7 +2,7 @@
 export const MEAL_TEXT = {
   teamPageTitle: 'Suất ăn của tổ',
   teamPageSubtitle:
-    'Người đã quẹt vân tay được tick sẵn. Bỏ tick hộ nếu công nhân không ăn; xác nhận trước giờ chốt.',
+    'Người đã quẹt (kể cả bạn) được tick sẵn. Bỏ tick nếu không ăn; xác nhận trước giờ chốt để khóa số suất tổ.',
   myPageTitle: 'Suất ăn của tôi',
   myPageSubtitle: 'Bỏ tick nếu hôm nay bạn không ăn. Chỉ hiện khi đã quẹt vân tay.',
   settingsPageTitle: 'Giờ chốt suất ăn',
@@ -40,9 +40,10 @@ export const MEAL_TEXT = {
     code: 'Mã NV',
     name: 'Họ tên',
     willEat: 'Suất ăn',
+    you: 'Bạn',
     attendanceCount: 'Đã quẹt',
     mealCount: 'Còn tick',
-    hint: 'Chỉ hiện người đã quẹt. Bỏ tick nếu không ăn; có thể tick lại trước giờ chốt.',
+    hint: 'Chỉ hiện người đã quẹt (gồm tổ trưởng/tổ phó). Bỏ tick nếu không ăn; có thể tick lại trước giờ chốt.',
     empty: 'Chưa có ai trong tổ quẹt vân tay hôm nay.',
   },
 
@@ -66,7 +67,6 @@ export const MEAL_TEXT = {
   },
 
   summary: {
-    status: 'Trạng thái',
     team: 'Tổ',
     mealCount: 'Số suất',
     attendanceCount: 'Số đã quẹt',
@@ -76,9 +76,6 @@ export const MEAL_TEXT = {
     teamTotal: 'Tổng suất tổ',
     totalMeals: 'Tổng cộng',
     attendanceIncomplete: 'Thiếu dữ liệu chấm công lúc chốt',
-    notifyKitchen: 'Báo bếp',
-    kitchenNotifiedAt: 'Đã báo bếp lúc',
-    notifyDisabledHint: 'Chỉ báo bếp được sau khi đã chốt suất ăn.',
   },
 
   priceForm: {
@@ -89,10 +86,4 @@ export const MEAL_TEXT = {
     disabledHint: 'Chỉ nhập đơn giá sau khi ngày này đã chốt suất ăn.',
   },
 
-  statusLabel: {
-    Open: 'Đang mở',
-    AutoClosed: 'Đã chốt tự động',
-    Closed: 'Đã chốt',
-    KitchenNotified: 'Đã báo bếp',
-  },
 } as const;

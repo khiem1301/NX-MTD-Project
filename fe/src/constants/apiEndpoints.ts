@@ -145,7 +145,6 @@ export const API = {
     myToday: '/api/v1/common/my-meals/today',
     summary: '/api/v1/accountant/meals/summary',
     guestCount: '/api/v1/accountant/meals/guest-count',
-    kitchenNotification: '/api/v1/accountant/meals/kitchen-notification',
     price: '/api/v1/accountant/meals/price',
     settings: '/api/v1/admin/meal-settings',
   },
