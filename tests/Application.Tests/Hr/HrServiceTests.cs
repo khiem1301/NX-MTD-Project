@@ -17,11 +17,13 @@ public class HrServiceTests
     private static readonly byte[] RowVer = { 1 };
 
     private readonly IEmployeeRepository _employees = Substitute.For<IEmployeeRepository>();
+    private readonly IAccountRepository _accountRepo = Substitute.For<IAccountRepository>();
     private readonly ITeamRepository _teams = Substitute.For<ITeamRepository>();
     private readonly IGenericRepository<Account> _accounts = Substitute.For<IGenericRepository<Account>>();
     private readonly IAuthService _auth = Substitute.For<IAuthService>();
     private readonly IPasswordHasher _hasher = Substitute.For<IPasswordHasher>();
     private readonly ITemporaryPasswordGenerator _passwords = Substitute.For<ITemporaryPasswordGenerator>();
+    private readonly IUsernameGenerator _usernames = new UsernameGenerator();
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUser _user = Substitute.For<ICurrentUser>();
@@ -42,7 +44,7 @@ public class HrServiceTests
     private EmployeeScope Scope() => new(_user);
 
     private EmployeeService Employees() =>
-        new(_employees, _teams, _hasher, _passwords, _audit, _uow, _user, _clock, Scope());
+        new(_employees, _accountRepo, _teams, _hasher, _passwords, _usernames, _audit, _uow, _user, _clock, Scope());
 
     private TeamService Teams() => new(_teams, _employees, _audit, _uow, _clock, Scope());
 
@@ -50,7 +52,10 @@ public class HrServiceTests
     {
         EmployeeId = id, EmployeeCode = $"E{id}", FullName = $"Người {id}", TeamId = team, Status = RecordStatus.Active,
         PayType = pay, StartDate = new DateOnly(2026, 1, 1), Role = new Role { RoleCode = role },
-        Account = new Account { AccountId = id, SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active },
+        Account = new Account
+        {
+            AccountId = id, Username = $"E{id}", SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active,
+        },
     };
 
     private static Team TeamOf(string type = TeamTypes.Sewing, int id = 4) =>
@@ -247,7 +252,9 @@ public class HrServiceTests
 
         result.IsSuccess.Should().BeTrue();
         Regex.IsMatch(result.Data!.TemporaryPassword, @"^\d{6}$").Should().BeTrue();
-        saved!.Account!.PasswordHash.Should().NotBe(result.Data.TemporaryPassword);
+        result.Data.Username.Should().Be("VienN"); // Nhân viên 2 → VienN
+        saved!.Account!.Username.Should().Be("VienN");
+        saved.Account.PasswordHash.Should().NotBe(result.Data.TemporaryPassword);
         saved.Account.IsTemporaryPassword.Should().BeTrue();
         // Lưu nhân viên (lấy Id) → map mã chấm công → lưu AuditLog.
         Received.InOrder(() =>
