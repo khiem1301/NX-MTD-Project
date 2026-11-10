@@ -60,6 +60,8 @@ export const PM_LABELS = {
   worker: 'Công nhân',
   orderLine: 'Dòng đơn',
   type: 'Loại',
+  unitRate: 'Đơn giá',
+  noRate: 'Chưa có đơn giá',
   quantity: 'Số lần làm',
   confirmedQty: 'Số lần xác nhận',
   status: 'Trạng thái',

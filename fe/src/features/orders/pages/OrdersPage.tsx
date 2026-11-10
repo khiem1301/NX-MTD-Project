@@ -26,6 +26,7 @@ export function OrdersPage() {
 
   const columns = orderListColumns<OrderListItem>({
     onView: (o) => navigate(ROUTES.orderDetail(o.orderId)),
+    onCopy: (o) => navigate(`${ROUTES.orderNew}?copyFrom=${o.orderId}`),
     extraColumns: [
       {
         title: MESSAGES.orders.totalAmount,

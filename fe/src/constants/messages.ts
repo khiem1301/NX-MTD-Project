@@ -19,6 +19,7 @@ export const MESSAGES = {
     edit: 'Sửa',
     printExcel: 'In / xuất Excel',
     delete: 'Xóa',
+    copy: 'Sao chép',
     view: 'Xem',
     search: 'Tìm theo mã, tên...',
     reason: 'Lý do',
@@ -244,6 +245,9 @@ export const MESSAGES = {
     customersTitle: 'Khách hàng',
     ordersTitle: 'Đơn hàng',
     createOrder: 'Tạo đơn hàng',
+    copyOrder: 'Sao chép đơn',
+    copyOrderHint:
+      'Đang tạo đơn mới từ {0}. Mã đơn lấy mới; ngày giao cần chọn lại. NVL của đơn không được copy.',
     editOrder: 'Sửa đơn hàng',
     productCode: 'Mã hàng',
     productName: 'Tên mã hàng',

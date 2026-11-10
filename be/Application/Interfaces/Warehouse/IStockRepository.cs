@@ -26,4 +26,5 @@ public interface IStockRepository
     Task<PagedResult<StockBalanceDto>> GetBalancesAsync(StockBalanceQuery query, CancellationToken ct);
     Task<IReadOnlyList<StockCardEntryDto>> GetStockCardAsync(StockKey key, CancellationToken ct);
     Task<IReadOnlyList<TeamPieceHoldingDto>> GetTeamHoldingsAsync(int? sewingTeamId, int? orderId, CancellationToken ct);
+    Task<PagedResult<NxtSummaryDto>> GetNxtSummaryAsync(NxtReportQuery query, CancellationToken ct);
 }

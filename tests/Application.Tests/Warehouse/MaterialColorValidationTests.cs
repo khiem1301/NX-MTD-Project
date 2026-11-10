@@ -132,7 +132,7 @@ public class MaterialColorValidationTests
         var validator = new CreateMaterialDtoValidator();
 
         validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 150)).IsValid.Should().BeTrue();
-        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, null)).IsValid.Should().BeFalse();   // vải bắt buộc có khổ
+        validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, null)).IsValid.Should().BeTrue();   // danh mục không bắt buộc khổ
         validator.Validate(new CreateMaterialDto(null, "Chỉ", MaterialTypes.Trim, "THREAD", "cuộn", null, null)).IsValid.Should().BeTrue();   // phụ liệu không cần khổ
         validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 0)).IsValid.Should().BeFalse();
         validator.Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, -1)).IsValid.Should().BeFalse();

@@ -3,6 +3,7 @@ using NSubstitute;
 using NX_MTD.Application.Services;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -62,8 +63,10 @@ public class OperationAssignmentServiceTests : ProductionTestBase
                 _assignments.Add(row);
             }
         });
-        _sut = new OperationAssignmentService(Uow, Guard(), Clock);
+        _sut = new OperationAssignmentService(Uow, Guard(), Clock, Rates());
     }
+
+    private IPieceRateService Rates() => new PieceRateService(Uow, Audit, Notifier, Clock);
 
     private Operation Op(int id, string code = "OP10", int productId = 1, string status = OperationStatuses.Active, bool hasRate = true)
     {
@@ -179,7 +182,7 @@ public class OperationAssignmentServiceTests : ProductionTestBase
         AsCuttingTeamLeader();
         Op(1);
         Worker(7);
-        var service = new OperationAssignmentService(Uow, Guard(), Clock);
+        var service = new OperationAssignmentService(Uow, Guard(), Clock, Rates());
 
         var result = await service.AssignAsync(new AssignOperationDto(1, 1, 7), default);
 

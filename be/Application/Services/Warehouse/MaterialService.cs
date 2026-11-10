@@ -95,7 +95,11 @@ public sealed class MaterialService : IMaterialService
         material.Color = color;
         material.Category = dto.Category;
         material.Unit = UnitOf(dto.MaterialType, dto.Unit);
-        material.WidthCm = dto.WidthCm;
+        // Danh mục không nhập khổ: chỉ ghi WidthCm khi client gửi giá trị, tránh xóa khổ đã lưu.
+        if (dto.WidthCm is not null)
+            material.WidthCm = dto.WidthCm;
+        else if (dto.MaterialType != MaterialTypes.Fabric)
+            material.WidthCm = null;
         await _uow.SaveChangesAsync();
         return Result<MaterialDto>.Success(MapDto(material));
     }

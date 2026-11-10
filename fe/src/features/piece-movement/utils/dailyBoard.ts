@@ -98,6 +98,8 @@ export const extraRowFrom = (
     remainingQty: 0,
     unallocatedQty: op.unallocatedQty,
     previousQty: 0,
+    unitRate: null,
+    rateApproved: false,
   };
 };
 

@@ -17,10 +17,11 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
     private readonly IUnitOfWork _uow;
     private readonly ProductionGuard _guard;
     private readonly IClock _clock;
+    private readonly IPieceRateService _rates;
 
-    public OperationAssignmentService(IUnitOfWork uow, ProductionGuard guard, IClock clock)
+    public OperationAssignmentService(IUnitOfWork uow, ProductionGuard guard, IClock clock, IPieceRateService rates)
     {
-        _uow = uow; _guard = guard; _clock = clock;
+        _uow = uow; _guard = guard; _clock = clock; _rates = rates;
     }
 
     private IQueryable<OperationAssignment> Assignments => _uow.Repository<OperationAssignment>().Query();
@@ -46,9 +47,16 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
             .OrderBy(a => a.Operation.StationSequence).ThenBy(a => a.Worker.EmployeeCode)
             .Select(a => new OperationAssignmentDto(a.OperationAssignmentId, a.OrderId, a.OperationId,
                 a.Operation.OperationCode, a.Operation.OperationName, a.Operation.ProductId,
-                a.Operation.Product.ProductCode, a.WorkerId, a.Worker.EmployeeCode, a.Worker.FullName, a.ValidFrom))
+                a.Operation.Product.ProductCode, a.WorkerId, a.Worker.EmployeeCode, a.Worker.FullName, a.ValidFrom,
+                null, false))
             .ToListAsync(ct);
-        return Result<IReadOnlyList<OperationAssignmentDto>>.Success(items);
+        var rates = await _rates.FindEffectiveManyAsync(items.Select(i => i.OperationId).ToList(), _clock.Today, ct);
+        var withRates = items.Select(a =>
+        {
+            rates.TryGetValue(a.OperationId, out var rate);
+            return a with { UnitRate = rate?.Rate, RateApproved = rate is not null };
+        }).ToList();
+        return Result<IReadOnlyList<OperationAssignmentDto>>.Success(withRates);
     }
 
     public async Task<Result<IReadOnlyList<OperationOptionDto>>> ListOperationsAsync(int orderId, CancellationToken ct)
@@ -65,9 +73,16 @@ public sealed class OperationAssignmentService : IOperationAssignmentService
             .OrderBy(o => o.Product.ProductCode).ThenBy(o => o.StationSequence)
             .Select(o => new OperationOptionDto(o.OperationId, o.ProductId, o.Product.ProductCode, o.OperationCode,
                 o.OperationName, o.StationSequence, o.IsFinalStep,
-                o.OperationGroup == null ? null : o.OperationGroup.GroupName, o.SkillLevel, o.StandardTimeSec))
+                o.OperationGroup == null ? null : o.OperationGroup.GroupName, o.SkillLevel, o.StandardTimeSec,
+                null, false))
             .ToListAsync(ct);
-        return Result<IReadOnlyList<OperationOptionDto>>.Success(items);
+        var rates = await _rates.FindEffectiveManyAsync(items.Select(i => i.OperationId).ToList(), _clock.Today, ct);
+        var withRates = items.Select(o =>
+        {
+            rates.TryGetValue(o.OperationId, out var rate);
+            return o with { UnitRate = rate?.Rate, RateApproved = rate is not null };
+        }).ToList();
+        return Result<IReadOnlyList<OperationOptionDto>>.Success(withRates);
     }
 
     public async Task<Result<int>> AssignAsync(AssignOperationDto dto, CancellationToken ct)

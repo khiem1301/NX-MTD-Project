@@ -2,6 +2,8 @@ import type { OrderLine } from '../types';
 import {
   blockTotal,
   blocksTotals,
+  cloneBlocksForNewOrder,
+  copyGridRow,
   fromLines,
   linesDelivered,
   rowDelivered,
@@ -151,5 +153,39 @@ describe('số đã giao của đơn', () => {
 
   it('dòng chưa có số đã giao tính là 0', () => {
     expect(linesDelivered([delivered(1, 'Đỏ', 'S', 10)])).toBe(0);
+  });
+});
+
+describe('copyGridRow', () => {
+  it('giữ số lượng, bỏ màu và orderLineId', () => {
+    const source: GridRow = {
+      key: 'r1',
+      color: 'Cam',
+      cells: {
+        S: { orderLineId: 11, qty: 10, deliveredQty: 2 },
+        M: { orderLineId: 12, qty: 20 },
+      },
+    };
+    const copied = copyGridRow(source);
+    expect(copied.key).not.toBe(source.key);
+    expect(copied.color).toBe('');
+    expect(copied.cells.S).toEqual({ orderLineId: null, qty: 10 });
+    expect(copied.cells.M).toEqual({ orderLineId: null, qty: 20 });
+  });
+});
+
+describe('cloneBlocksForNewOrder', () => {
+  it('giữ màu / size / số lượng, bỏ orderLineId để tạo đơn mới', () => {
+    const [block] = cloneBlocksForNewOrder([
+      line(1, 'Đỏ', 'S', 10),
+      line(2, 'Đỏ', 'M', 20),
+      line(3, 'Xanh', 'S', 5),
+    ]);
+    expect(block?.rows).toHaveLength(2);
+    expect(block?.rows[0]?.color).toBe('Đỏ');
+    expect(block?.rows[0]?.cells.S).toEqual({ orderLineId: null, qty: 10 });
+    expect(block?.rows[0]?.cells.M).toEqual({ orderLineId: null, qty: 20 });
+    expect(block?.rows[1]?.color).toBe('Xanh');
+    expect(block?.rows[1]?.cells.S).toEqual({ orderLineId: null, qty: 5 });
   });
 });

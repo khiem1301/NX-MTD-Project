@@ -8,7 +8,8 @@ public sealed record WorkAllocationDto(
     string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode,
     int OperationId, string OperationCode, string OperationName, int Quantity,
     int? ConfirmedQty, string? DiscrepancyReason, string? RetrievalReason, string? RetrievalNote, string ConfirmMode,
-    string? OnBehalfReason, string Status, string? RejectReason, DateTime CreatedAt, DateTime? ConfirmedAt);
+    string? OnBehalfReason, string Status, string? RejectReason, DateTime CreatedAt, DateTime? ConfirmedAt,
+    decimal? UnitRate = null, bool RateApproved = false);
 
 /// <summary>Tiến độ chia việc của một công đoạn × dòng đơn (vw_OperationAllocationProgress): cần làm = số bộ BTP tổ đã nhận.</summary>
 public sealed record OperationProgressDto(
@@ -58,7 +59,8 @@ public sealed record WorkAllocationQuery : PageQuery
 public sealed record DailyAllocationRowDto(
     int WorkerId, string WorkerCode, string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color,
     string SizeCode, int OperationId, string OperationCode, string OperationName, string? GroupName, bool IsAssigned,
-    int CarriedQty, int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty, int PreviousQty);
+    int CarriedQty, int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty, int PreviousQty,
+    decimal? UnitRate = null, bool RateApproved = false);
 
 public sealed record DailyAllocationBoardDto(DateOnly WorkDate, IReadOnlyList<DailyAllocationRowDto> Rows);
 
