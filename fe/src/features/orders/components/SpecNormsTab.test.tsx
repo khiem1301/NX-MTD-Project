@@ -27,7 +27,7 @@ const row = (key: string): NormRow => ({
   componentKey: 'c1',
   materialId: 1,
   specNote: '',
-  variantKeys: [],
+  colorKeys: [],
 });
 
 function Host() {

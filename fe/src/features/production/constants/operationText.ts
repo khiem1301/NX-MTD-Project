@@ -143,7 +143,7 @@ export const OPERATIONS_TEXT = {
       'Chọn hoặc gõ tên mới (vd May tay) để nhóm các công đoạn nhỏ; tìm theo tên này ở màn Giao việc.',
     components: 'Chi tiết vải công đoạn làm trên',
     componentsHint:
-      'Chọn chi tiết vải theo từng vải (vd Tra tay: Tay áo – vải chính, Thân trước – vải chính; chi tiết có vải lót thì chọn thêm dòng vải lót). Chỉ hiện chi tiết cắt (Panel) đã khai vải ở định mức mã hàng; bỏ trống nếu không gắn chi tiết.',
+      'Chỉ chi tiết cắt (Panel); vải của chi tiết lấy theo định mức mã hàng (vải lót, mex, bo khai thành chi tiết riêng, vd Lót tay áo, Mex cổ). Một công đoạn có thể làm trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước, Thân sau). Bỏ trống nếu không gắn chi tiết.',
   },
   filterGroup: 'Nhóm',
   searchOperation: 'Tìm mã, tên',

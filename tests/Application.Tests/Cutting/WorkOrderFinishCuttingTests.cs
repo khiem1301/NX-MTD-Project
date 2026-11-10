@@ -38,24 +38,24 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
         _wo.WorkOrderLines.Add(new WorkOrderLine
         {
             WorkOrderId = 7, OrderLineId = LineId, PlannedQty = 100,
-            OrderLine = new OrderLine { OrderLineId = LineId, ProductVariantId = 5 },
+            OrderLine = new OrderLine { OrderLineId = LineId, ProductVariantId = 5, ProductVariant = new ProductVariant { ProductVariantId = 5, ProductColorId = 5 } },
         });
         _workOrders.Add(_wo);
     }
 
     private WorkOrderService Sut() => new(Uow, Substitute.For<IStockService>(), new FabricPlanner(Uow),
         Substitute.For<IDocumentCodeGenerator>(), Notifier, NullLogger<WorkOrderService>.Instance, Clock,
-        new WorkOrderFabricChecker(Uow, Substitute.For<IStockService>(), new FabricPlanner(Uow), Settings));
+        new WorkOrderFabricChecker(Uow, Substitute.For<IStockService>(), new FabricPlanner(Uow), new BranchAndBoundMarkerSolver()));
 
     private readonly Material _fabric = new()
     {
         MaterialId = 100, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
     };
 
-    /// <summary>Dòng định mức vải thân (PANEL) của biến thể 5: cho biết vải nào thuộc lệnh cắt.</summary>
+    /// <summary>Dòng định mức vải thân (PANEL) của màu 5 (biến thể 5): cho biết vải nào thuộc lệnh cắt.</summary>
     private void Norm() => _norms.Add(new ProductComponentMaterial
     {
-        ProductComponentMaterialId = 900, ProductVariantId = 5, ProductComponentId = 1, MaterialId = 100,
+        ProductComponentMaterialId = 900, ProductColorId = 5, ProductComponentId = 1, MaterialId = 100,
         Material = _fabric, ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
     });
 

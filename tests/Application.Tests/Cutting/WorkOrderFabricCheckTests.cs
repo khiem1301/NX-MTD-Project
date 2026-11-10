@@ -27,11 +27,11 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly List<ProductMarkerComponent> _markerComponents = [];
     private readonly List<ProductVariant> _variants =
     [
-        new() { ProductVariantId = SizeM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "M" },
-        new() { ProductVariantId = SizeL, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "L" },
-        new() { ProductVariantId = SizeXl, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đen" }, SizeCode = "XL" },
-        new() { ProductVariantId = RedM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M" },
-        new() { ProductVariantId = BlueM, ProductId = ProductId, ProductColor = new ProductColor { Color = "Xanh" }, SizeCode = "M" },
+        new() { ProductVariantId = SizeM, ProductId = ProductId, ProductColorId = 1, ProductColor = new ProductColor { ProductColorId = 1, Color = "Đen" }, SizeCode = "M" },
+        new() { ProductVariantId = SizeL, ProductId = ProductId, ProductColorId = 1, ProductColor = new ProductColor { ProductColorId = 1, Color = "Đen" }, SizeCode = "L" },
+        new() { ProductVariantId = SizeXl, ProductId = ProductId, ProductColorId = 1, ProductColor = new ProductColor { ProductColorId = 1, Color = "Đen" }, SizeCode = "XL" },
+        new() { ProductVariantId = RedM, ProductId = ProductId, ProductColorId = 2, ProductColor = new ProductColor { ProductColorId = 2, Color = "Đỏ" }, SizeCode = "M" },
+        new() { ProductVariantId = BlueM, ProductId = ProductId, ProductColorId = 3, ProductColor = new ProductColor { ProductColorId = 3, Color = "Xanh" }, SizeCode = "M" },
     ];
     private readonly List<OrderLine> _lines = [];
     private readonly List<MaterialIssueLine> _issueLines = [];
@@ -42,11 +42,21 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly List<WorkOrderLine> _workOrderLines = [];
     private readonly Material _fabric = new()
     {
-        MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
+        MaterialId = FabricId,
+        MaterialCode = "V01",
+        MaterialName = "Vải gió",
+        Unit = "m",
+        Color = "Đen",
+        MaterialType = MaterialTypes.Fabric,
     };
     private readonly Material _white = new()
     {
-        MaterialId = 200, MaterialCode = "V02", MaterialName = "Vải gió", Unit = "m", Color = "Trắng", MaterialType = MaterialTypes.Fabric,
+        MaterialId = 200,
+        MaterialCode = "V02",
+        MaterialName = "Vải gió",
+        Unit = "m",
+        Color = "Trắng",
+        MaterialType = MaterialTypes.Fabric,
     };
 
     public WorkOrderFabricCheckTests()
@@ -65,7 +75,12 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     {
         var marker = new ProductMarker
         {
-            ProductMarkerId = _markers.Count + 1, OrderId = order, ProductId = ProductId, MarkerNo = group, MarkerCode = code, LengthM = length,
+            ProductMarkerId = _markers.Count + 1,
+            OrderId = order,
+            ProductId = ProductId,
+            MarkerNo = group,
+            MarkerCode = code,
+            LengthM = length,
             Status = status,
         };
         foreach (var part in ratio.Split(' '))
@@ -79,8 +94,11 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private void OnFabric(byte group, string color = "Đen", Material? material = null) =>
         _markerFabrics.Add(new ProductMarkerFabric
         {
-            ProductId = ProductId, MarkerNo = group, ProductColor = new ProductColor { Color = color },
-            MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric,
+            ProductId = ProductId,
+            MarkerNo = group,
+            ProductColor = new ProductColor { Color = color },
+            MaterialId = (material ?? _fabric).MaterialId,
+            Material = material ?? _fabric,
         });
 
     private void OnGroup(byte group, int componentId) =>
@@ -91,18 +109,25 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     {
         var norm = new ProductComponentMaterial
         {
-            ProductComponentMaterialId = id, ProductVariantId = variantId, ProductComponentId = componentId,
-            MaterialId = (material ?? _fabric).MaterialId, Material = material ?? _fabric,
+            ProductComponentMaterialId = id,
+            ProductColorId = _variants.Concat(_lines.Select(l => l.ProductVariant)).First(v => v.ProductVariantId == variantId).ProductColorId,
+            ProductComponentId = componentId,
+            MaterialId = (material ?? _fabric).MaterialId,
+            Material = material ?? _fabric,
             ProductComponent = new ProductComponent
             {
-                ProductComponentId = componentId, ComponentName = name, PiecesPerGarment = pieces, ComponentType = type, Status = status,
+                ProductComponentId = componentId,
+                ComponentName = name,
+                PiecesPerGarment = pieces,
+                ComponentType = type,
+                Status = status,
             },
         };
         _norms.Add(norm);
         return norm;
     }
 
-    private WorkOrderFabricChecker Sut() => new(Uow, _stock, new FabricPlanner(Uow), Settings);
+    private WorkOrderFabricChecker Sut() => new(Uow, _stock, new FabricPlanner(Uow), new BranchAndBoundMarkerSolver());
 
     private Task<IReadOnlyList<WorkOrderFabricCheckDto>> CheckAll(params CutLine[] lines) => Sut().CheckAsync(OrderId, TeamId, lines, default);
 
@@ -166,7 +191,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Whole_MarkerOffTheOrderRatio_WarnsWithTheSurplus()
+    public async Task CheckAsync_WholeWithEnoughFabric_ShowsMarkersToUseAndSurplus()
     {
         BodyOnGroupOne();
         Marker("1A", 1, 2.2m, "M:2 L:1");   // lệnh chỉ M30: 15 lớp, dư 15 áo L
@@ -174,17 +199,26 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
         var row = await Check(Whole(SizeM, 30));
 
         row.Status.Should().Be(FabricCheckStatuses.Enough);
-        row.Message.Should().Contain("1A").And.Contain("dư 15");
+        row.Message.Should().BeNull();
+        var plan = row.MarkerPlans.Should().ContainSingle().Subject;
+        (plan.MarkerNo, plan.IsExtra, plan.Meters, plan.Surplus, plan.IsProvenOptimal).Should().Be((1, false, 33m, 15, true));
+        var marker = plan.Markers.Should().ContainSingle().Subject;
+        (marker.MarkerCode, marker.LengthM, marker.Plies, marker.Meters).Should().Be(("1A", 2.2m, 15, 33m));
+        marker.Ratio.Select(r => $"{r.SizeCode}{r.PiecesPerPly}").Should().Equal("M2", "L1");   // theo thứ tự size, không theo chữ cái
     }
 
     [Fact]
-    public async Task Whole_SurplusWithinTheAllowedPercent_HasNoWarning()
+    public async Task CheckAsync_WholeWithSeveralMarkers_CombinesForFewestMeters()
     {
-        Settings.GetDecimalAsync(SettingKeys.CutSurplusPercent, Arg.Any<decimal>(), Arg.Any<CancellationToken>()).Returns(50m);
         BodyOnGroupOne();
-        Marker("1A", 1, 2.2m, "M:2 L:1");   // dư 15 ≤ 50% × 30
+        Marker("1A", 1, 2m, "M:1 L:1");
+        Marker("1B", 1, 1m, "L:1");   // M10, L30: 1A × 10 (20 m) + 1B × 20 (20 m) = 40 m, rẻ hơn 1A × 30 = 60 m
 
-        (await Check(Whole(SizeM, 30))).Message.Should().BeNull();
+        var row = await Check(Whole(SizeM, 10), Whole(SizeL, 30));
+
+        row.NeedMeters.Should().Be(40m);
+        row.MarkerPlans!.Single().Markers.Select(m => (m.MarkerCode, m.Plies, m.Meters)).Should().Equal(("1A", 10, 20m), ("1B", 20, 20m));
+        (row.WarehouseQty + row.HoldingQty).Should().Be(row.AvailableQty);
     }
 
     [Fact]
@@ -352,7 +386,10 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
 
     private int SeedOrderLine()
     {
-        var line = new OrderLine { OrderLineId = 21, OrderId = OrderId, ProductId = 1, OrderedQty = 10 }.WithVariant(TestVariant.Make(1, "MH1", "Đen", "M"));
+        var variant = TestVariant.Make(1, "MH1", "Đen", "M");
+        variant.ProductColorId = _variants[0].ProductColorId;   // cùng màu Đen với các size M, L, XL ở trên
+        variant.ProductColor = _variants[0].ProductColor;
+        var line = new OrderLine { OrderLineId = 21, OrderId = OrderId, ProductId = 1, OrderedQty = 10 }.WithVariant(variant);
         _lines.Add(line);
         _orders.Add(new CustomerOrder { OrderId = OrderId, OrderCode = "DH1", Status = OrderStatuses.InProduction, ReceivedDate = Today.AddDays(-5) });
         _teams.Add(new Team { TeamId = TeamId, TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
@@ -362,14 +399,25 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private static SaveWorkOrderDto Save(params SaveWorkOrderLineDto[] lines) => new(OrderId, 1, TeamId, Today.AddDays(5), null, lines);
 
     [Fact]
-    public async Task ExtraComponent_OfAnotherColorSize_IsRefusedWithAClearMessage()
+    public async Task CreateAsync_ExtraComponentOfAnotherColor_IsRefused()
     {
         SeedOrderLine();
-        Norm(SizeL);
+        Norm(RedM);
 
         var result = await Service().CreateAsync(Save(new(21, 5), new(21, 3, NormThan)), default);
 
         result.Message.Should().Be(WarehouseMessages.WorkOrderComponentInvalid);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ExtraComponentOfSameColorOtherSize_UsesTheColorNorm()
+    {
+        SeedOrderLine();
+        Norm(SizeL);   // định mức theo màu (DEV-ALL-87): dòng định mức của màu Đen dùng được cho dòng đơn Đen – M
+
+        var result = await Service().CreateAsync(Save(new(21, 5), new(21, 3, NormThan)), default);
+
+        result.Message.Should().NotBe(WarehouseMessages.WorkOrderComponentInvalid);
     }
 
     [Fact]

@@ -30,12 +30,13 @@ public class ProductSpecServiceTests
     private readonly List<ProductMarkerComponent> _markerComponents = [];
     private readonly List<ProductColor> _colors = [];
     private readonly List<WorkOrderLine> _workOrderLines = [];
+    private readonly List<OperationComponent> _operationLinks = [];
     private int _nextId = 100;
 
     public ProductSpecServiceTests()
     {
         Setup(_products); Setup(_materials); Setup(_orderLines); Setup(_workOrderLines); Setup(_markers);
-        Setup(_colors);
+        Setup(_colors); Setup(_operationLinks);
         Setup(_markerFabrics, f =>
         {
             f.Material = _materials.First(m => m.MaterialId == f.MaterialId);
@@ -47,12 +48,12 @@ public class ProductSpecServiceTests
         // Quan hệ điều hướng do EF tự nối khi đọc lại; ở đây nối tay cho dòng định mức vừa thêm.
         Setup(_norms, n =>
         {
-            n.ProductVariant = _variants.First(v => v.ProductVariantId == n.ProductVariantId);
+            n.ProductColor = _colors.First(c => c.ProductColorId == n.ProductColorId);
             n.ProductComponent = _components.First(c => c.ProductComponentId == n.ProductComponentId);
             n.Material = _materials.First(m => m.MaterialId == n.MaterialId);
         });
         foreach (var empty in new[] { typeof(RequestLine), typeof(CuttingLayLine), typeof(CutHandoverLine), typeof(MaterialIssueLine),
-                     typeof(StockBalance), typeof(OperationComponent) })
+                     typeof(StockBalance) })
             SetupEmpty(empty);
     }
 
@@ -80,7 +81,7 @@ public class ProductSpecServiceTests
         // Quan hệ điều hướng của dòng định mức đã seed: EF tự nối khi đọc, ở đây nối tay.
         foreach (var n in _norms)
         {
-            n.ProductVariant ??= _variants.FirstOrDefault(v => v.ProductVariantId == n.ProductVariantId)!;
+            n.ProductColor ??= _colors.FirstOrDefault(c => c.ProductColorId == n.ProductColorId)!;
             n.ProductComponent ??= _components.FirstOrDefault(c => c.ProductComponentId == n.ProductComponentId)!;
             n.Material ??= _materials.FirstOrDefault(m => m.MaterialId == n.MaterialId)!;
         }
@@ -90,8 +91,11 @@ public class ProductSpecServiceTests
     private static SaveProductComponentDto Panel(string name, short pieces = 1, int? id = null) =>
         new(id, name, "Panel", pieces);
 
-    private static SaveProductNormDto Norm(string component, string color, string size, string? note = null, int material = 1) =>
-        new(component, color, size, material, note);
+    private static SaveProductNormDto Norm(string component, string color, string? note = null, int material = 1) =>
+        new(component, color, material, note);
+
+    /// <summary>Màu áo của biến thể đã thêm (định mức theo màu, DEV-ALL-87).</summary>
+    private int ColorIdOf(int variantId) => _variants.First(v => v.ProductVariantId == variantId).ProductColorId;
 
     private static SaveProductVariantDto Variant(int? id, string color, string size) => new(id, color, size);
 
@@ -102,7 +106,7 @@ public class ProductSpecServiceTests
     private SaveProductSpecDto SpecWithMarker(int fabricMaterialId = 1, string component = "Thân", string color = "Đen", int fabricMarkerNo = 1)
     {
         if (_variants.Count == 0) AddVariant(21, "Đen", "M");
-        return Spec([Panel("Thân")], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen", "M")]) with
+        return Spec([Panel("Thân")], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen")]) with
         {
             MarkerComponents = [new SaveProductMarkerComponentDto(1, component)],
             MarkerFabrics = [new SaveProductMarkerFabricDto(fabricMarkerNo, color, fabricMaterialId)],
@@ -130,13 +134,13 @@ public class ProductSpecServiceTests
     }
 
     [Fact]
-    public async Task Save_creates_components_and_the_norm_rows_of_every_existing_variant()
+    public async Task Save_creates_components_and_one_norm_row_per_color_shared_by_every_size()
     {
         AddVariant(21, "Đen", "M"); AddVariant(22, "Đen", "L");
         var dto = Spec(
             [Panel("Thân"), Panel("Tay", 2)],
             [Variant(21, "Đen", "M"), Variant(22, "Đen", "L")],
-            [Norm("Thân", "Đen", "M", "May viền"), Norm("Thân", "Đen", "L"), Norm("Tay", "Đen", "M"), Norm("Tay", "Đen", "L")]);
+            [Norm("Thân", "Đen", "May viền"), Norm("Tay", "Đen")]);
 
         var result = await Create().SaveAsync(1, dto, default);
 
@@ -144,8 +148,8 @@ public class ProductSpecServiceTests
         _components.Select(c => c.ComponentName).Should().BeEquivalentTo("Thân", "Tay");
         _components.Single(c => c.ComponentName == "Tay").PiecesPerGarment.Should().Be(2);
         _variants.Should().HaveCount(2);   // màu – size lấy từ đơn hàng: không tạo thêm
-        _norms.Should().HaveCount(4).And.OnlyContain(n => n.ProductId == 1);
-        _norms.Single(n => n.ProductVariantId == 21 && n.ProductComponent.ComponentName == "Thân").SpecNote.Should().Be("May viền");
+        _norms.Should().HaveCount(2).And.OnlyContain(n => n.ProductId == 1 && n.ProductColorId == ColorIdOf(21));   // M và L cùng màu Đen
+        _norms.Single(n => n.ProductComponent.ComponentName == "Thân").SpecNote.Should().Be("May viền");
         _audit.Received().Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Product) && e.Action == AuditActions.Update));
     }
 
@@ -168,10 +172,10 @@ public class ProductSpecServiceTests
         var gone = new ProductComponent { ProductComponentId = 12, ProductId = 1, ComponentName = "Cổ", ComponentType = "PANEL", Status = RecordStatus.Active };
         AddVariant(21, "Đen", "M");
         _components.AddRange([comp, gone]);
-        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 1, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1, SpecNote = "Cũ" });
-        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 2, ProductId = 1, ProductVariantId = 21, ProductComponentId = 12, MaterialId = 1, SpecNote = "Cũ" });
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 1, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 11, MaterialId = 1, SpecNote = "Cũ" });
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 2, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 12, MaterialId = 1, SpecNote = "Cũ" });
 
-        var result = await Create().SaveAsync(1, Spec([Panel("Thân", id: 11)], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen", "M", "Mới")]), default);
+        var result = await Create().SaveAsync(1, Spec([Panel("Thân", id: 11)], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen", "Mới")]), default);
 
         result.IsSuccess.Should().BeTrue();
         _components.Should().ContainSingle().Which.ComponentName.Should().Be("Thân");   // "Cổ" chưa dùng ở đâu nên bị xóa
@@ -184,7 +188,7 @@ public class ProductSpecServiceTests
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
         var variant = AddVariant(21, "Đỏ", "S");
         _components.Add(comp);
-        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1 });
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 11, MaterialId = 1 });
         _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });   // lệnh cắt bù đang trỏ vào dòng định mức
         _orderLines.Add(new OrderLine { OrderLineId = 5, ProductVariantId = 21 });
 
@@ -202,11 +206,11 @@ public class ProductSpecServiceTests
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
         AddVariant(21, "Đen", "M");
         _components.Add(comp);
-        var norm = new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1, SpecNote = "Cũ" };
+        var norm = new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 11, MaterialId = 1, SpecNote = "Cũ" };
         _norms.Add(norm);
         _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });
 
-        var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [Variant(21, "Đen", "M")], [Norm("Tay", "Đen", "M", "Mới")]), default);
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [Variant(21, "Đen", "M")], [Norm("Tay", "Đen", "Mới")]), default);
 
         result.IsSuccess.Should().BeTrue();
         _norms.Should().ContainSingle().Which.Should().BeSameAs(norm);
@@ -220,7 +224,7 @@ public class ProductSpecServiceTests
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
         AddVariant(21, "Đen", "M");
         _components.Add(comp);
-        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductVariantId = 21, ProductComponentId = 11, MaterialId = 1 });
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 11, MaterialId = 1 });
         _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 3 });
 
         var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [Variant(21, "Đen", "M")], []), default);   // bỏ hết định mức
@@ -238,10 +242,10 @@ public class ProductSpecServiceTests
 
         (await Create().SaveAsync(1, Spec([Panel("A"), Panel("a")], variants, []), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
         (await Create().SaveAsync(1, Spec([Panel("A")], [Variant(21, "Đen", "M"), Variant(21, "đen", "m")], []), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
-        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("Không có", "Đen", "M")]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
-        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", "M"), Norm("A", "Đen", "M")]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
-        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", "M", material: 2)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
-        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", "M", material: 99)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
+        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("Không có", "Đen")]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
+        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen"), Norm("A", "Đen")]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
+        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", material: 2)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
+        (await Create().SaveAsync(1, Spec([Panel("A")], variants, [Norm("A", "Đen", material: 99)]), default)).ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
         _norms.Should().BeEmpty();
     }
 
@@ -325,6 +329,73 @@ public class ProductSpecServiceTests
         (await Create().SaveAsync(1, SpecWithMarker(), default)).Message.Should().Be(Messages.ProductSpecMarkerFabricInvalid);
     }
 
+    // ========== DEV-ALL-86: mỗi chi tiết cắt một vải ở một màu – size, công đoạn chỉ gắn chi tiết vải ==========
+
+    private void AddActiveMaterial(int id, string type) => _materials.Add(new Material
+    {
+        MaterialId = id, MaterialCode = $"M{id}", MaterialName = "NVL", Unit = "m", Color = "", MaterialType = type, Status = MaterialStatuses.Active,
+    });
+
+    [Fact]
+    public async Task Save_rejects_a_cut_panel_with_two_fabrics_in_the_same_color()
+    {
+        MakeFabric();
+        AddActiveMaterial(3, MaterialTypes.Fabric);
+        AddVariant(21, "Đen", "M");
+
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay áo")], [Variant(21, "Đen", "M")],
+            [Norm("Tay áo", "Đen"), Norm("Tay áo", "Đen", material: 3)]), default);
+
+        result.Message.Should().Be(string.Format(Messages.ProductSpecPanelManyFabrics, "Tay áo", "Đen"));
+    }
+
+    [Fact]
+    public async Task Save_accepts_a_lining_declared_as_its_own_panel_and_trims_on_a_panel()
+    {
+        MakeFabric();
+        AddActiveMaterial(3, MaterialTypes.Fabric);
+        AddActiveMaterial(4, MaterialTypes.Trim);
+        AddVariant(21, "Đen", "M");
+
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay áo"), Panel("Lót tay áo")], [Variant(21, "Đen", "M")],
+            [Norm("Tay áo", "Đen"), Norm("Tay áo", "Đen", material: 4), Norm("Lót tay áo", "Đen", material: 3)]), default);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_rejects_main_fabric_and_interlining_on_one_cut_panel_but_accepts_the_interlining_as_its_own_panel()
+    {
+        MakeFabric();
+        AddActiveMaterial(3, MaterialTypes.Fabric);   // mex (INTERLINING) cũng là NVL loại vải
+        AddVariant(21, "Đen", "M");
+        var variants = new[] { Variant(21, "Đen", "M") };
+
+        var together = await Create().SaveAsync(1, Spec([Panel("Cổ áo")], variants,
+            [Norm("Cổ áo", "Đen"), Norm("Cổ áo", "Đen", material: 3)]), default);
+        var apart = await Create().SaveAsync(1, Spec([Panel("Cổ áo"), Panel("Mex cổ")], variants,
+            [Norm("Cổ áo", "Đen"), Norm("Mex cổ", "Đen", material: 3)]), default);
+
+        together.Message.Should().Be(string.Format(Messages.ProductSpecPanelManyFabrics, "Cổ áo", "Đen"));
+        apart.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_unlinks_operations_from_a_component_that_becomes_a_trim()
+    {
+        _components.Add(new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Nhãn", ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1, Status = RecordStatus.Active });
+        _components.Add(new ProductComponent { ProductComponentId = 12, ProductId = 1, ComponentName = "Thân", ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1, Status = RecordStatus.Active });
+        _operationLinks.AddRange([new OperationComponent { OperationId = 5, ProductComponentId = 11, ProductId = 1 },
+            new OperationComponent { OperationId = 5, ProductComponentId = 12, ProductId = 1 }]);
+        AddVariant(21, "Đen", "M");
+
+        var result = await Create().SaveAsync(1, Spec([new SaveProductComponentDto(11, "Nhãn", "Trim", 1), Panel("Thân", id: 12)],
+            [Variant(21, "Đen", "M")], []), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _operationLinks.Should().ContainSingle().Which.ProductComponentId.Should().Be(12);
+    }
+
     [Fact]
     public async Task Get_returns_components_variants_and_norms_with_pascal_case_codes_and_sizes()
     {
@@ -333,7 +404,7 @@ public class ProductSpecServiceTests
         _components.Add(comp);
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = 1, ProductId = 1, ProductVariantId = 21, ProductVariant = variant, ProductComponentId = 11,
+            ProductComponentMaterialId = 1, ProductId = 1, ProductColorId = variant.ProductColorId, ProductColor = variant.ProductColor, ProductComponentId = 11,
             ProductComponent = comp, MaterialId = 1, Material = _materials[0], SpecNote = "May viền",
         });
 

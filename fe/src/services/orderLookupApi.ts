@@ -1,7 +1,12 @@
-import { API } from '@/constants/apiEndpoints';
+import { API, type ProductScope } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
-import type { OrderLineLookup, OrderLookup, ProductLookup } from '@/types/orderLookup';
+import type {
+  OrderLineLookup,
+  OrderLookup,
+  ProductComponentLookup,
+  ProductLookup,
+} from '@/types/orderLookup';
 
 type LookupParams = { keyword?: string; page?: number; pageSize?: number; status?: string };
 
@@ -17,4 +22,8 @@ export const orderLookupApi = {
   products: (params?: LookupParams) =>
     get<Paginated<ProductLookup>>(API.orderLookups.products, params),
   productColors: () => get<string[]>(API.orderLookups.productColors),
+  /** Chi tiết của mã hàng, đọc từ API định mức (Admin / Kế toán). */
+  productComponents: async (productId: number, scope: ProductScope) =>
+    (await get<{ components: ProductComponentLookup[] }>(API.products.spec(productId, scope)))
+      .components,
 };

@@ -9,7 +9,7 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
 {
     /// <summary>
     /// Số dòng tối đa mỗi lần lưu: một yêu cầu gửi đủ mọi dòng và được ghi trong một giao dịch, nên không để danh sách lớn vô hạn.
-    /// MaxNorms tính sau khi mỗi dòng định mức nở ra từng màu – size (thành phần × màu – size × NVL), khớp frontend (productSpec.ts).
+    /// MaxNorms tính sau khi mỗi dòng định mức nở ra từng màu áo (thành phần × màu × NVL, DEV-ALL-87), khớp frontend (productSpec.ts).
     /// </summary>
     public const int MaxComponents = 200;
     public const int MaxVariants = 200;
@@ -26,7 +26,7 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
             .Must(l => l.Count <= MaxVariants).WithMessage("Tối đa 200 màu – size cho mỗi mã hàng.");
         RuleFor(x => x.Norms).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách định mức.")
             .Must(l => l.Count <= MaxNorms)
-            .WithMessage("Tối đa 5.000 dòng định mức (tính theo từng màu – size) cho mỗi lần lưu.");
+            .WithMessage("Tối đa 5.000 dòng định mức (tính theo từng màu) cho mỗi lần lưu.");
         // Danh sách quá lớn hoặc thiếu thì không kiểm từng dòng nữa, đã có lỗi ở trên.
         RuleForEach(x => x.Components).ChildRules(c =>
         {
@@ -48,7 +48,6 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
         {
             n.RuleFor(i => i.ComponentName).NotEmpty().WithMessage("Vui lòng chọn thành phần.");
             n.RuleFor(i => i.Color).NotEmpty().WithMessage(Messages.Required("màu"));
-            n.RuleFor(i => i.SizeCode).NotEmpty().WithMessage(Messages.Required("size"));
             n.RuleFor(i => i.MaterialId).GreaterThan(0).WithMessage("Vui lòng chọn NVL.");
             n.RuleFor(i => i.SpecNote).MaximumLength(200).WithMessage("Ghi chú quy cách tối đa 200 ký tự.");
         }).When(x => x.Norms is { Count: <= MaxNorms });

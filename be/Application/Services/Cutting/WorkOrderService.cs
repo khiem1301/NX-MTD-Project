@@ -236,10 +236,7 @@ public sealed class WorkOrderService : IWorkOrderService
         var productIds = orderLines.Values.Select(l => l.ProductId).Distinct().ToList();
         if (productIds.Count != 1) return new ReplacementCheck(Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ProductNotInOrder));
 
-        // Vải ước theo bìa của đơn chứa chi tiết cần cắt bù (DEV-ALL-85) phải đủ trong kho + vải tổ cắt đang giữ.
-        var fabric = await CheckRecutFabricAsync(request.OrderId.Value, dto.CuttingTeamId,
-            request.RequestLines.Select(l => (l.ProductComponentMaterialId!.Value, (int)l.Quantity)).ToList(), ct);
-        if (fabric is not null) return new ReplacementCheck(fabric);
+        // Vải của lệnh cắt bù chỉ cảnh báo, không chặn (hệ thống ước tính, có thể chênh lệch với thực tế): xem kiểm vải ở chi tiết lệnh.
         return new ReplacementCheck(null, productIds[0], order.OrderCode);
     }
 
@@ -379,18 +376,18 @@ public sealed class WorkOrderService : IWorkOrderService
         return components ?? await CheckPlanCapAsync(dto, orderLines, exceptWorkOrderId, ct);
     }
 
-    /// <summary>Dòng cắt lẻ phải là chi tiết vải (PANEL) đang dùng trong định mức của đúng màu – size (trùng kiểm tra của trg_WorkOrderLine_Check để báo lỗi rõ).</summary>
+    /// <summary>Dòng cắt lẻ phải là chi tiết vải (PANEL) đang dùng trong định mức của đúng màu áo (định mức theo màu, DEV-ALL-87) (trùng kiểm tra của trg_WorkOrderLine_Check để báo lỗi rõ).</summary>
     private async Task<Result<WorkOrderDto>?> CheckExtraComponentsAsync(SaveWorkOrderDto dto, IReadOnlyDictionary<int, OrderLine> orderLines, CancellationToken ct)
     {
         var extras = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).ToList();
         if (extras.Count == 0) return null;
         var normIds = extras.Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToArray();
-        var variantOf = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+        var colorOf = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
                         && p.ProductComponent.Status == RecordStatus.Active)
-            .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
-        var ok = extras.All(l => variantOf.TryGetValue(l.ProductComponentMaterialId!.Value, out var variantId)
-                                 && variantId == orderLines[l.OrderLineId].ProductVariantId);
+            .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductColorId, ct);
+        var ok = extras.All(l => colorOf.TryGetValue(l.ProductComponentMaterialId!.Value, out var colorId)
+                                 && colorId == orderLines[l.OrderLineId].ProductVariant.ProductColorId);
         return ok ? null : Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.WorkOrderComponentInvalid);
     }
 
@@ -416,35 +413,9 @@ public sealed class WorkOrderService : IWorkOrderService
             : Fail(ErrorCodes.CuttingPlanExceedsOrder, $"{WarehouseMessages.PlanExceedsOrder}: {string.Join("; ", over)}.");
     }
 
-    /// <summary>
-    /// Lệnh cắt bù: ước số mét vải theo bìa của đơn chứa chi tiết (tối thiểu một chiều dài bìa, DEV-ALL-85), so với vải khả dụng trong kho
-    /// + vải tổ cắt đang giữ; thiếu thì chặn. Chưa có bìa / nhóm bìa thì không ước được và cho qua.
-    /// </summary>
-    private async Task<Result<WorkOrderDto>?> CheckRecutFabricAsync(int orderId, int cuttingTeamId,
-        IReadOnlyCollection<(int ProductComponentMaterialId, int Pieces)> lines, CancellationToken ct)
-    {
-        var ids = lines.Select(l => l.ProductComponentMaterialId).Distinct().ToArray();
-        var variants = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(n => ids.Contains(n.ProductComponentMaterialId))
-            .Select(n => new { n.ProductComponentMaterialId, n.ProductVariantId, n.ProductVariant.ProductColor.Color, n.ProductVariant.SizeCode })
-            .ToDictionaryAsync(n => n.ProductComponentMaterialId, ct);
-        var cutLines = lines.Where(l => variants.ContainsKey(l.ProductComponentMaterialId))
-            .Select(l =>
-            {
-                var v = variants[l.ProductComponentMaterialId];
-                return new CutLine(v.ProductVariantId, l.Pieces, VariantLabel(v.Color, v.SizeCode), l.ProductComponentMaterialId);
-            }).ToList();
-
-        var shortages = (await _fabricChecker.CheckAsync(orderId, cuttingTeamId, cutLines, ct))
-            .Where(c => c.Status == FabricCheckStatuses.Short).Select(c => c.Message).ToList();
-        return shortages.Count == 0
-            ? null
-            : Fail(ErrorCodes.CuttingFabricShortage, $"{WarehouseMessages.FabricShortage}: {string.Join(" ", shortages)}");
-    }
-
     private async Task<IReadOnlyList<FabricRequirementDto>> GetFabricsAsync(WorkOrder wo, CancellationToken ct)
     {
-        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId)).ToList();
+        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariant.ProductColorId, l.ProductComponentMaterialId)).ToList();
         var infos = (await _planner.GetFabricsAsync(lines, ct)).ToDictionary(f => f.MaterialId);
         var issued = await _planner.GetIssuedAsync(wo.WorkOrderId, ct);
         var (received, returned) = await _planner.GetUsageAsync(wo.WorkOrderId, ct);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Image } from 'antd';
 import { productApi } from '../api/orderApi';
-import { useProductScope } from '../hooks/useProductScope';
+import { useProductScope } from '@/hooks/useProductScope';
 
 const isRemoteUrl = (v: string) => /^https?:\/\//i.test(v);
 

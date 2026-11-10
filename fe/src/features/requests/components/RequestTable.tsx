@@ -7,7 +7,7 @@ import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
 import type { Paginated } from '@/types/api';
 import { formatDate, formatDateTime } from '@/utils/format';
 import { REQUEST_STATUS_TAG } from '../constants';
-import type { RequestListItem } from '../types';
+import type { RequestListItem } from '@/types/request';
 import { DataTable } from '@/components/common/DataTable';
 
 type RequestTableProps = {

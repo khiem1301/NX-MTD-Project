@@ -92,7 +92,7 @@ public class ProductValidatorTests
         string component = "Thân", int materialId = 1) =>
         new([new SaveProductComponentDto(null, component, "Panel", pieces)],
             [new SaveProductVariantDto(null, color, size)],
-            [new SaveProductNormDto("Thân", "Đỏ", "M", materialId, note)], [], []);
+            [new SaveProductNormDto("Thân", "Đỏ", materialId, note)], [], []);
 
     private static bool SpecIsValid(SaveProductSpecDto dto) => new SaveProductSpecDtoValidator().Validate(dto).IsValid;
 
@@ -127,7 +127,7 @@ public class ProductValidatorTests
     private static SaveProductSpecDto Counts(int components, int variants, int norms) =>
         new(Enumerable.Range(0, components).Select(i => new SaveProductComponentDto(null, $"C{i}", "Panel", 1)).ToList(),
             Enumerable.Range(0, variants).Select(i => new SaveProductVariantDto(null, $"M{i}", "M")).ToList(),
-            Enumerable.Range(0, norms).Select(i => new SaveProductNormDto("C0", "M0", "M", i + 1, null)).ToList(), [], []);
+            Enumerable.Range(0, norms).Select(i => new SaveProductNormDto("C0", "M0", i + 1, null)).ToList(), [], []);
 
     [Theory]
     [InlineData(200, 200, 5000, true)]
@@ -140,11 +140,11 @@ public class ProductValidatorTests
     [Fact]
     public void OversizedList_ReportsOneMessageAndSkipsPerItemChecks()
     {
-        var invalidItems = Enumerable.Range(0, 5001).Select(_ => new SaveProductNormDto("", "", "", 0, null)).ToList();
+        var invalidItems = Enumerable.Range(0, 5001).Select(_ => new SaveProductNormDto("", "", 0, null)).ToList();
         var dto = new SaveProductSpecDto([], [], invalidItems, [], []);
 
         new SaveProductSpecDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage)
-            .Should().Equal("Tối đa 5.000 dòng định mức (tính theo từng màu – size) cho mỗi lần lưu.");
+            .Should().Equal("Tối đa 5.000 dòng định mức (tính theo từng màu) cho mỗi lần lưu.");
     }
 
     [Fact]

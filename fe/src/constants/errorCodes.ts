@@ -67,7 +67,6 @@ export const ERROR_CODES = {
   WarehouseMaterialInactive: 'WAREHOUSE_MATERIAL_INACTIVE',
   WarehouseOrderMaterialDuplicate: 'WAREHOUSE_ORDER_MATERIAL_DUPLICATE',
   WarehouseOrderMaterialInUse: 'WAREHOUSE_ORDER_MATERIAL_IN_USE',
-  CuttingFabricShortage: 'CUTTING_FABRIC_SHORTAGE',
   CuttingPlanExceedsOrder: 'CUTTING_PLAN_EXCEEDS_ORDER',
   CuttingQtyExceedsPlan: 'CUTTING_QTY_EXCEEDS_PLAN',
   CuttingHandoverExceedsCut: 'CUTTING_HANDOVER_EXCEEDS_CUT',

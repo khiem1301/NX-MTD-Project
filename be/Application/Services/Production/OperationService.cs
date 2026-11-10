@@ -36,7 +36,7 @@ public sealed class OperationService : IOperationService
                 o.OperationName, o.StationSequence, o.SkillLevel, o.StandardTimeSec, o.TeamType, o.IsFinalStep,
                 o.Status, null, null, o.OperationGroupId,
                 o.OperationGroup == null ? null : o.OperationGroup.GroupName,
-                o.OperationComponents.Select(c => new OperationComponentFabricDto(c.ProductComponentId, c.MaterialId)).ToList(), null))
+                o.OperationComponents.Select(c => c.ProductComponentId).ToList(), null))
             .ToListAsync(ct);
 
         // Một truy vấn lấy mọi đơn giá của mã hàng, rồi chọn đơn giá hiện hành / đơn giá sắp tới trong bộ nhớ.
@@ -566,7 +566,8 @@ public sealed class OperationService : IOperationService
     }
 
     /// <summary>
-    /// Nhóm công đoạn: gõ tên, chưa có thì tạo cho mã hàng. Chi tiết × vải công đoạn làm trên đó: xem <see cref="ApplyComponentFabricsAsync"/>.
+    /// Nhóm công đoạn (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết vải công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
+    /// là PANEL của cùng mã hàng (DEV-ALL-86: vải của chi tiết tra qua định mức, mỗi chi tiết một vải ở một màu – size); danh sách trống = không gắn chi tiết nào. <c>ComponentIds</c> null = giữ nguyên (cập nhật từ import Excel).
     /// </summary>
     private async Task<Result?> ApplyGroupAndComponentsAsync(Operation operation, SaveOperationDto dto, CancellationToken ct)
     {
@@ -587,35 +588,21 @@ public sealed class OperationService : IOperationService
             }
             operation.OperationGroup = group;
         }
-        return dto.ComponentFabrics is null ? null : await ApplyComponentFabricsAsync(operation, dto.ComponentFabrics, ct);
-    }
 
-    /// <summary>
-    /// Công đoạn làm trên chi tiết vải nào, vải nào (DEV-ALL-86), nhiều–nhiều. Mỗi cặp phải là chi tiết PANEL của mã hàng và NVL loại vải
-    /// có trong định mức của chi tiết đó; danh sách trống = không gắn chi tiết nào. Gọi với danh sách null thì giữ nguyên (import Excel).
-    /// </summary>
-    private async Task<Result?> ApplyComponentFabricsAsync(Operation operation, IReadOnlyList<OperationComponentFabricDto> fabrics,
-        CancellationToken ct)
-    {
-        var wanted = fabrics.Select(f => (f.ProductComponentId, f.MaterialId)).Distinct().ToList();
-        var componentIds = wanted.Select(w => w.ProductComponentId).Distinct().ToList();
-        var allowed = (await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-                .Where(n => n.ProductId == operation.ProductId && componentIds.Contains(n.ProductComponentId)
-                            && n.ProductComponent.ComponentType == ComponentTypes.Panel && n.Material.MaterialType == MaterialTypes.Fabric)
-                .Select(n => new { n.ProductComponentId, n.MaterialId }).Distinct().ToListAsync(ct))
-            .Select(n => (n.ProductComponentId, n.MaterialId)).ToHashSet();
-        if (wanted.Any(w => !allowed.Contains(w)))
+        if (dto.ComponentIds is null) return null;
+        var wanted = dto.ComponentIds.Distinct().ToList();
+        var valid = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
+            .CountAsync(c => wanted.Contains(c.ProductComponentId) && c.ProductId == operation.ProductId
+                             && c.ComponentType == ComponentTypes.Panel, ct);
+        if (valid != wanted.Count)
             return Result.Failure(ErrorCodes.OperationInvalid, Messages.OperationComponentInvalid, ResultKind.Validation);
 
         var current = operation.OperationId == 0
             ? new List<OperationComponent>()
             : await _uow.Repository<OperationComponent>().Query().Where(c => c.OperationId == operation.OperationId).ToListAsync(ct);
-        _uow.Repository<OperationComponent>().RemoveRange(current.Where(c => !wanted.Contains((c.ProductComponentId, c.MaterialId))).ToList());
-        foreach (var (componentId, materialId) in wanted.Where(w => !current.Any(c => (c.ProductComponentId, c.MaterialId) == w)))
-            operation.OperationComponents.Add(new OperationComponent
-            {
-                ProductComponentId = componentId, MaterialId = materialId, ProductId = operation.ProductId,
-            });
+        _uow.Repository<OperationComponent>().RemoveRange(current.Where(c => !wanted.Contains(c.ProductComponentId)).ToList());
+        foreach (var id in wanted.Where(id => current.All(c => c.ProductComponentId != id)))
+            operation.OperationComponents.Add(new OperationComponent { ProductComponentId = id, ProductId = operation.ProductId });
         return null;
     }
 

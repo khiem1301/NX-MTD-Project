@@ -309,12 +309,14 @@ export const MESSAGES = {
       maxComponents: 'Tối đa {0} thành phần cho mỗi mã hàng.',
       maxVariants: 'Tối đa {0} màu – size cho mỗi mã hàng.',
       maxNorms:
-        'Định mức sau khi áp dụng cho từng màu – size có {0} dòng, tối đa {1}. Hãy bớt dòng định mức hoặc bớt màu – size được áp dụng.',
+        'Định mức sau khi áp dụng cho từng màu có {0} dòng, tối đa {1}. Hãy bớt dòng định mức hoặc bớt màu được áp dụng.',
       maxMarkers: 'Tối đa {0} nhóm bìa cho mỗi mã hàng.',
       markerIncomplete:
         'Nhóm bìa {0}: phải chọn ít nhất một chi tiết cắt và vải cho ít nhất một màu.',
       markerFabricNotInNorm: 'Nhóm bìa {0}: vải của màu {1} không có trong định mức chi tiết cắt.',
       panelWithoutMarker: 'Chi tiết cắt "{0}" chưa nằm trong nhóm bìa nào.',
+      panelManyFabrics:
+        'Chi tiết cắt "{0}" màu {1} khai hơn một vải. Mỗi chi tiết cắt chỉ một vải: tách vải lót, mex, bo thành chi tiết riêng (vd "Lót {0}", "Mex {0}").',
     },
     notEditable: 'Đơn hàng ở trạng thái này không sửa được.',
     validation: {
@@ -393,7 +395,7 @@ export const MESSAGES = {
         'Sản phẩm gồm những gì, khai một lần cho mọi màu – size. Chi tiết cắt (Panel) đi qua tổ cắt; phụ liệu (Trim) như khóa, cúc, nhãn, chỉ cấp thẳng cho tổ may.',
       variantHint: 'Màu – size lấy từ các đơn hàng của mã hàng (không thêm / xóa ở đây).',
       normHint:
-        'Mỗi dòng cho biết một thành phần của mã hàng dùng NVL nào. Chọn nhiều màu – size để dùng chung một dòng.',
+        'Mỗi dòng cho biết một thành phần của mã hàng dùng NVL nào, theo màu áo; mọi size của một màu dùng chung định mức. Chọn nhiều màu để dùng chung một dòng.',
       componentName: 'Tên thành phần',
       componentType: 'Loại',
       typePanel: 'Chi tiết cắt (Panel)',
@@ -407,7 +409,7 @@ export const MESSAGES = {
       component: 'Thành phần',
       material: 'NVL',
       materialColor: 'Màu NVL',
-      appliesTo: 'Áp dụng cho màu – size',
+      appliesTo: 'Áp dụng cho màu',
       allVariants: 'Chọn tất cả',
       note: 'Ghi chú quy cách',
       addNorm: 'Thêm dòng định mức',

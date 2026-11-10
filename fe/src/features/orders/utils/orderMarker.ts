@@ -99,3 +99,10 @@ export const piecesOf = (row: OrderMarkerRow, size: string) => row.pieces[sizeKe
 export const withPieces = (row: OrderMarkerRow, size: string, value: number | null) => ({
   pieces: { ...row.pieces, [sizeKey(size)]: value },
 });
+
+/**
+ * Khóa dựng lại bảng bìa của một mã hàng: chỉ đổi khi nội dung bìa trên máy chủ đổi (vd sau khi lưu), không đổi mỗi lần tải lại
+ * cùng dữ liệu — nếu không bảng bị dựng lại (giật hình) và mất phần đang nhập.
+ */
+export const markerVersion = (product: OrderMarkerProduct) =>
+  `${product.productId}:${JSON.stringify(product.markers)}:${product.sizes.join(',')}:${product.markerGroups.join(',')}`;

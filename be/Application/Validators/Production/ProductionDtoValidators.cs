@@ -12,8 +12,6 @@ public static class OperationLimits
     public const decimal MaxStandardTimeSec = 9999999.99m;   // DECIMAL(9,2)
     public const int MaxGroupNameLength = 200;
     public const int MaxOperationsPerGroupChange = 500;
-    /// <summary>Số dòng chi tiết × vải tối đa của một công đoạn (DEV-ALL-86): vải theo màu nên một chi tiết có thể nhiều dòng.</summary>
-    public const int MaxComponentFabrics = 500;
 }
 
 public static class PieceRateLimits
@@ -40,10 +38,6 @@ public sealed class SaveOperationDtoValidator : AbstractValidator<SaveOperationD
             .WithMessage("Loại tổ phải là Sewing hoặc Cutting.");
         RuleFor(x => x.IsFinalStep).Must(final => !final).When(x => x.TeamType == "Cutting")
             .WithMessage(Messages.OperationFinalMustBeSewing);
-        RuleFor(x => x.ComponentFabrics!.Count).LessThanOrEqualTo(OperationLimits.MaxComponentFabrics).When(x => x.ComponentFabrics is not null)
-            .WithMessage(string.Format(Messages.OperationComponentFabricTooMany, OperationLimits.MaxComponentFabrics));
-        RuleForEach(x => x.ComponentFabrics).Must(f => f.ProductComponentId > 0 && f.MaterialId > 0)
-            .WithMessage(Messages.OperationComponentInvalid);
     }
 
     private static readonly System.Text.RegularExpressions.Regex CodeFormat = new("^[A-Za-z0-9._-]+$");

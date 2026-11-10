@@ -2,7 +2,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { customerApi, orderApi, orderMarkerApi, productApi } from '../api/orderApi';
-import { useProductScope } from './useProductScope';
+import { useProductScope } from '@/hooks/useProductScope';
 import type {
   CreateOrderPayload,
   CustomerQuery,

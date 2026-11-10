@@ -13,11 +13,8 @@ public sealed record OperationDto(
     int OperationId, int ProductId, string ProductCode, string OperationCode, string OperationName,
     short StationSequence, byte? SkillLevel, decimal? StandardTimeSec, string TeamType, bool IsFinalStep,
     string Status, decimal? CurrentRate, OperationRateDto? NextRate = null,
-    int? OperationGroupId = null, string? GroupName = null, IReadOnlyList<OperationComponentFabricDto>? ComponentFabrics = null,
+    int? OperationGroupId = null, string? GroupName = null, IReadOnlyList<int>? ComponentIds = null,
     OperationRateDto? UpcomingRate = null);
-
-/// <summary>Công đoạn làm trên chi tiết vải nào, vải nào (DEV-ALL-86): chi tiết PANEL × NVL loại vải có trong định mức của chi tiết đó.</summary>
-public sealed record OperationComponentFabricDto(int ProductComponentId, int MaterialId);
 
 /// <summary>Nhóm công đoạn của mã hàng; <c>OperationCount</c> tính cả công đoạn đã ngừng dùng.</summary>
 public sealed record OperationGroupDto(int OperationGroupId, string GroupName, int OperationCount);
@@ -35,7 +32,7 @@ public sealed record OperationRateDto(int PieceRateId, decimal Rate, DateOnly Ef
 public sealed record SaveOperationDto(
     int ProductId, string OperationCode, string OperationName, short StationSequence, byte? SkillLevel,
     decimal? StandardTimeSec, string? TeamType, bool IsFinalStep, string? GroupName = null,
-    IReadOnlyList<OperationComponentFabricDto>? ComponentFabrics = null);
+    IReadOnlyList<int>? ComponentIds = null);
 
 public sealed record PieceRateDto(
     int PieceRateId, int OperationId, string OperationCode, string OperationName, int ProductId, string ProductCode,

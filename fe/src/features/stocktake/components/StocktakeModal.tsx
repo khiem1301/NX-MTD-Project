@@ -4,7 +4,7 @@ import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ROLES } from '@/constants/roles';
-import { WAREHOUSE_TYPE_LABEL } from '@/features/warehouse';
+import { WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
 import { usePermission } from '@/hooks/usePermission';
 import { fill, formatDate, formatDateTime, formatQty } from '@/utils/format';
 import { ST_LABELS, ST_MESSAGES, STOCKTAKE_STATUS, STOCKTAKE_STATUS_LABEL } from '../constants';

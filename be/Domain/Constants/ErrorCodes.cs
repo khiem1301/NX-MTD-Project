@@ -151,7 +151,6 @@ public static class ErrorCodes
     public const string WarehouseMaterialInUse = "WAREHOUSE_MATERIAL_IN_USE";
     public const string WarehouseOrderMaterialDuplicate = "WAREHOUSE_ORDER_MATERIAL_DUPLICATE";
     public const string WarehouseOrderMaterialInUse = "WAREHOUSE_ORDER_MATERIAL_IN_USE";
-    public const string CuttingFabricShortage = "CUTTING_FABRIC_SHORTAGE";
     public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";

@@ -1,25 +1,16 @@
 import { useEffect, useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Col, Divider, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
+import { Button, Divider, Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { LABELS } from '../constants';
-import {
-  deliveryCountProblem,
-  MAX_NOTE_LENGTH,
-  noteProblem,
-  orderMaterialOptions,
-  qtyProblem,
-} from '../utils/orderMaterialRules';
+import { MAX_NOTE_LENGTH, noteProblem, orderMaterialOptions } from '../utils/orderMaterialRules';
 import { useSaveOrderMaterial } from '../hooks/useOrderMaterials';
 import type { OrderMaterial, SaveOrderMaterialPayload } from '../types';
 import { MaterialFormModal } from './MaterialFormModal';
+import { OrderMaterialQtyFields } from './OrderMaterialQtyFields';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { QtyInput } from '@/components/common/QtyInput';
-import { AppDatePicker } from '@/components/common/DateInputs';
-import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
-import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { toApiDate } from '@/utils/format';
 
 type OrderMaterialFormModalProps = {
@@ -114,90 +105,7 @@ export function OrderMaterialFormModal({
             )}
           />
         </Form.Item>
-        <Row gutter={16}>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              name="requiredQty"
-              label={LABELS.requiredQty}
-              dependencies={['customerQty']}
-              rules={[
-                ...required,
-                {
-                  validator: async (_rule, value?: number) => {
-                    const problem = qtyProblem(LABELS.requiredQtyName, value);
-                    if (problem) throw new Error(problem);
-                    const customer = form.getFieldValue('customerQty') as number | undefined;
-                    if ((value ?? 0) <= 0 && (customer ?? 0) <= 0)
-                      throw new Error(LABELS.qtyRequiredOrCustomer);
-                  },
-                },
-              ]}
-              initialValue={0}
-            >
-              <QtyInput
-                decimals={MATERIAL_QTY_DECIMALS}
-                max={MAX_MATERIAL_QTY}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              name="customerQty"
-              label={LABELS.customerQty}
-              rules={[
-                ...required,
-                {
-                  validator: async (_rule, value?: number) => {
-                    const problem = qtyProblem(LABELS.customerQtyName, value);
-                    if (problem) throw new Error(problem);
-                  },
-                },
-              ]}
-              initialValue={0}
-            >
-              <QtyInput
-                decimals={MATERIAL_QTY_DECIMALS}
-                max={MAX_MATERIAL_QTY}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              name="expectedDeliveryCount"
-              label={LABELS.expectedDeliveryCount}
-              rules={[
-                { required: (customerQty ?? 0) > 0, message: MESSAGES.common.required },
-                {
-                  validator: async (_rule, value?: number) => {
-                    const problem = deliveryCountProblem(value);
-                    if (problem) throw new Error(problem);
-                  },
-                },
-              ]}
-            >
-              <InputNumber disabled={(customerQty ?? 0) <= 0} style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-        </Row>
-        <Row gutter={12}>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              name="expectedDeliveryDate"
-              label={LABELS.expectedDeliveryDate}
-              rules={[
-                { required: (customerQty ?? 0) > 0, message: LABELS.expectedDeliveryDateRequired },
-              ]}
-            >
-              <AppDatePicker
-                disabled={(customerQty ?? 0) <= 0}
-                style={{ width: '100%' }}
-                disabledDate={(d) => isExpectedDeliveryDateDisabled(d)}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+        <OrderMaterialQtyFields customerQty={customerQty} />
         <Form.Item
           name="note"
           label={LABELS.note}

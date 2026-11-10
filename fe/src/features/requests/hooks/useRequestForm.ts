@@ -7,7 +7,7 @@ import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
 import { fill, toApiDate } from '@/utils/format';
 import { GENERIC_FORM_TYPES } from '../constants';
-import { useCreateRequest, useRequestTypes, useUpdateRequest } from './useRequests';
+import { useCreateRequest, useRequestTypes, useUpdateRequest } from '@/hooks/useRequests';
 import type { RequestFormModalProps } from '../components/RequestFormModal';
 import { type Dayjs } from 'dayjs';
 import type { RequestType } from '@/constants/requestTypes';

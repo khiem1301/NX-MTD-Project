@@ -6,11 +6,10 @@ import { formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { PURCHASE_TEXT } from '../constants';
 import { usePlaceOrder, useSupplierOptions } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
+import { PlaceOrderLines } from './PlaceOrderLines';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
-import { QtyInput } from '@/components/common/QtyInput';
-import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -143,53 +142,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
           </Form.Item>
         </Space>
 
-        <Form.List name="lines">
-          {(fields) =>
-            fields.map((field, index) => {
-              const line = order.lines[index];
-              return (
-                <Space key={field.key} align="baseline" wrap style={{ display: 'flex' }}>
-                  <Form.Item name={[field.name, 'purchaseOrderLineId']} hidden>
-                    <InputNumber />
-                  </Form.Item>
-                  <Typography.Text style={{ display: 'inline-block', width: 230 }}>
-                    {line
-                      ? `${line.materialName}${line.materialColor ? ` (${line.materialColor})` : ''}`
-                      : ''}
-                  </Typography.Text>
-                  <Form.Item
-                    name={[field.name, 'orderedQty']}
-                    rules={[
-                      { required: true, type: 'number', min: 0.001, message: text.qtyRequired },
-                    ]}
-                  >
-                    <QtyInput
-                      decimals={MATERIAL_QTY_DECIMALS}
-                      max={MAX_MATERIAL_QTY}
-                      min={0}
-                      addonAfter={line?.unit}
-                      style={{ width: 170 }}
-                    />
-                  </Form.Item>
-                  <Form.Item
-                    name={[field.name, 'unitPrice']}
-                    rules={[
-                      { required: true, type: 'number', min: 0.01, message: text.priceRequired },
-                    ]}
-                  >
-                    <InputNumber
-                      min={0}
-                      precision={0}
-                      addonAfter="₫"
-                      placeholder={PURCHASE_TEXT.detail.unitPrice}
-                      style={{ width: 170 }}
-                    />
-                  </Form.Item>
-                </Space>
-              );
-            })
-          }
-        </Form.List>
+        <PlaceOrderLines orderLines={order.lines} />
 
         <Form.Item name="note" label={text.note}>
           <Input.TextArea rows={2} maxLength={1000} showCount />

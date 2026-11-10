@@ -10,9 +10,9 @@ public sealed record ProductComponentDto(int ProductComponentId, string Componen
 /// <summary>Biến thể (màu × size) do đơn hàng tạo ra, chỉ đọc ở màn định mức.</summary>
 public sealed record ProductVariantDto(int ProductVariantId, string Color, string SizeCode, string Status);
 
-/// <summary>Một dòng định mức = một NVL của một thành phần cho một biến thể (29/10: không còn lượng / hao hụt; 09/11: không còn
-/// kích thước chi tiết, DEV-ALL-85). MaterialColor = Material.Color (26/10: màu nằm trong NVL).</summary>
-public sealed record ProductNormDto(int ProductComponentMaterialId, string ComponentName, string Color, string SizeCode,
+/// <summary>Một dòng định mức = một NVL của một thành phần cho một màu áo, dùng chung mọi size (29/10: không còn lượng / hao hụt;
+/// 09/11: không còn kích thước chi tiết, DEV-ALL-85; theo màu, DEV-ALL-87). MaterialColor = Material.Color (26/10: màu nằm trong NVL).</summary>
+public sealed record ProductNormDto(int ProductComponentMaterialId, string ComponentName, string Color,
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor, string? SpecNote,
     string MaterialType = "");
 
@@ -34,8 +34,8 @@ public sealed record SaveProductComponentDto(int? ProductComponentId, string Com
 /// <summary>Biến thể phải đã có (do đơn hàng tạo); gửi lên để dòng định mức tham chiếu, lưu định mức không sửa biến thể.</summary>
 public sealed record SaveProductVariantDto(int? ProductVariantId, string Color, string SizeCode);
 
-/// <summary>Dòng định mức tham chiếu thành phần và biến thể bằng tên / màu / size để lưu cùng lúc với thành phần và biến thể mới.</summary>
-public sealed record SaveProductNormDto(string ComponentName, string Color, string SizeCode, int MaterialId, string? SpecNote);
+/// <summary>Dòng định mức tham chiếu thành phần bằng tên và màu áo (phải có trong danh sách màu – size) để lưu cùng lúc với thành phần mới.</summary>
+public sealed record SaveProductNormDto(string ComponentName, string Color, int MaterialId, string? SpecNote);
 
 /// <summary>Chi tiết (theo tên, loại PANEL) nằm trên nhóm bìa MarkerNo.</summary>
 public sealed record SaveProductMarkerComponentDto(int MarkerNo, string ComponentName);

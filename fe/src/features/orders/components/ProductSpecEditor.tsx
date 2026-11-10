@@ -14,6 +14,7 @@ import {
   type MarkerRow,
 } from '../utils/markerSpec';
 import {
+  panelFabricProblem,
   removeComponent,
   toMaterialOption,
   toPayload,
@@ -82,6 +83,7 @@ export function ProductSpecEditor({
   const handleSave = () => {
     const problem =
       validate(components, variants, norms) ||
+      panelFabricProblem(components, variants, norms, materialOptions) ||
       validateMarkers(markers, variants, norms, components, materialOptions);
     setError(problem);
     if (problem) return;

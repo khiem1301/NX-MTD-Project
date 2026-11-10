@@ -1,51 +1,30 @@
+using NX_MTD.Application.Interfaces;
+
 namespace NX_MTD.Application.Services;
 
-/// <summary>Một bìa của đơn để chọn khi ước vải: mã, chiều dài (m), số sản phẩm mỗi size trên một lớp.</summary>
-public sealed record MarkerOption(string Code, decimal LengthM, IReadOnlyDictionary<string, short> Ratio);
-
-/// <summary>Bìa được chọn: số lớp, số mét = số lớp × chiều dài, số sản phẩm dư so với nhu cầu (tính cả size lệnh không cần).</summary>
-public sealed record MarkerChoice(string Code, int Plies, decimal Meters, int Surplus);
-
-/// <summary>Số miếng chi tiết cần cắt lẻ / cắt bù ở một size; PiecesPerGarment = số chi tiết trên một sản phẩm.</summary>
-public sealed record PieceNeed(string SizeCode, int Pieces, short PiecesPerGarment);
-
 /// <summary>
-/// Ước mét vải theo bìa của đơn (DEV-ALL-85). Cắt cả bộ: số lớp = max theo size của ⌈cần ÷ số sản phẩm size đó trên 1 lớp⌉,
-/// mét = số lớp × chiều dài; chọn bìa có đủ size cần, ít mét nhất, rồi dư ít nhất, rồi theo mã. Cắt lẻ / cắt bù: số miếng trên 1 lớp
-/// = số sản phẩm size đó × số chi tiết trên 1 sản phẩm, tối thiểu một lớp (một chiều dài bìa). Không kết hợp nhiều bìa.
+/// Ước mét vải theo bìa của đơn (DEV-ALL-85), ghép nhiều bìa cho ít mét nhất (DEV-ALL-88). Mỗi bài toán là một nhóm bìa × một vải:
+/// tìm số lớp nguyên xⱼ ≥ 0 của từng bìa j sao cho với mọi điều kiện (size s, hệ số f, số cần N): Σⱼ rⱼₛ · f · xⱼ ≥ N,
+/// và tổng mét Σⱼ Dⱼ · xⱼ nhỏ nhất. Cắt cả bộ: f = 1, N = số sản phẩm size s. Cắt lẻ / cắt bù: f = số chi tiết trên một sản phẩm,
+/// N = số miếng (tối thiểu một lớp). Bằng mét thì ít dư → ít loại bìa → ít lớp → theo mã bìa. Không giới hạn số loại bìa.
+/// Dựng bài toán ở đây, giải bằng <see cref="IMarkerPlanSolver"/>.
 /// </summary>
 public static class MarkerFabricEstimator
 {
-    public static MarkerChoice? ChooseWhole(IReadOnlyDictionary<string, int> need, IEnumerable<MarkerOption> markers)
-    {
-        var sizes = need.Where(n => n.Value > 0).ToList();
-        if (sizes.Count == 0) return null;
-        return markers
-            .Where(m => sizes.All(s => m.Ratio.ContainsKey(s.Key)))
-            .Select(m =>
-            {
-                var plies = sizes.Max(s => Ceil(s.Value, m.Ratio[s.Key]));
-                var surplus = m.Ratio.Sum(r => plies * r.Value - need.GetValueOrDefault(r.Key));
-                return new MarkerChoice(m.Code, plies, plies * m.LengthM, surplus);
-            })
-            .OrderBy(c => c.Meters).ThenBy(c => c.Surplus).ThenBy(c => c.Code, StringComparer.Ordinal)
-            .FirstOrDefault();
-    }
+    /// <summary>Cắt cả bộ: need = số sản phẩm mỗi size. Null khi không có nhu cầu hoặc có size không bìa nào có.</summary>
+    public static MarkerPlan? ChooseWhole(IReadOnlyDictionary<string, int> need, IEnumerable<MarkerOption> markers, IMarkerPlanSolver solver) =>
+        Solve(need.Where(n => n.Value > 0).Select(n => new MarkerRequirement(MarkerProblem.SizeKey(n.Key), n.Value, 1)).ToList(),
+            markers, solver);
 
-    public static MarkerChoice? ChooseExtra(IReadOnlyList<PieceNeed> need, IEnumerable<MarkerOption> markers)
-    {
-        var pieces = need.Where(n => n.Pieces > 0).ToList();
-        if (pieces.Count == 0) return null;
-        return markers
-            .Where(m => pieces.All(p => m.Ratio.ContainsKey(p.SizeCode)))
-            .Select(m =>
-            {
-                var plies = Math.Max(1, pieces.Max(p => Ceil(p.Pieces, m.Ratio[p.SizeCode] * Math.Max((short)1, p.PiecesPerGarment))));
-                return new MarkerChoice(m.Code, plies, plies * m.LengthM, 0);
-            })
-            .OrderBy(c => c.Meters).ThenBy(c => c.Code, StringComparer.Ordinal)
-            .FirstOrDefault();
-    }
+    /// <summary>Cắt lẻ / cắt bù: nhu cầu theo miếng; một lớp cắt được (số sản phẩm của size × số chi tiết trên một sản phẩm) miếng.</summary>
+    public static MarkerPlan? ChooseExtra(IReadOnlyList<PieceNeed> need, IEnumerable<MarkerOption> markers, IMarkerPlanSolver solver) =>
+        Solve(need.Where(n => n.Pieces > 0)
+            .Select(n => new MarkerRequirement(MarkerProblem.SizeKey(n.SizeCode), n.Pieces, Math.Max(1, (int)n.PiecesPerGarment))).ToList(),
+            markers, solver);
 
-    private static int Ceil(int need, int perPly) => (need + perPly - 1) / perPly;
+    private static MarkerPlan? Solve(List<MarkerRequirement> requirements, IEnumerable<MarkerOption> markers, IMarkerPlanSolver solver)
+    {
+        var problem = MarkerProblem.Create(requirements, markers);
+        return problem is null ? null : solver.Solve(problem);
+    }
 }

@@ -73,4 +73,4 @@ export const formatTime = (value: string | null | undefined): string => {
 
 /** fill('Đã đủ {0} ảnh', 5) → 'Đã đủ 5 ảnh'. */
 export const fill = (template: string, ...args: (string | number)[]): string =>
-  args.reduce<string>((text, v, i) => text.replace(`{${i}}`, String(v)), template);
+  args.reduce<string>((text, v, i) => text.replaceAll(`{${i}}`, String(v)), template);

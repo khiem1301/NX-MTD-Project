@@ -67,11 +67,11 @@ export type ProductVariantItem = {
   sizeCode: string;
   status: string;
 };
+/** Định mức theo màu áo, dùng chung mọi size (DEV-ALL-87). */
 export type ProductNormItem = {
   productComponentMaterialId: number;
   componentName: string;
   color: string;
-  sizeCode: string;
   materialId: number;
   materialCode: string;
   materialName: string;
@@ -118,7 +118,6 @@ export type SaveProductSpecPayload = {
   norms: {
     componentName: string;
     color: string;
-    sizeCode: string;
     materialId: number;
     specNote: string | null;
   }[];

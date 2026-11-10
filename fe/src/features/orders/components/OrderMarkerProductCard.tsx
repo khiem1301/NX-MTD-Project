@@ -13,7 +13,7 @@ import {
   validateOrderMarkers,
   type OrderMarkerRow,
 } from '../utils/orderMarker';
-import { orderMarkerColumns } from './orderMarkerColumns';
+import { orderMarkerColumns, orderMarkerTableWidth } from './orderMarkerColumns';
 
 const text = MESSAGES.orders.markers;
 
@@ -60,20 +60,25 @@ export function OrderMarkerProductCard({
       {noGroups && <Typography.Text type="secondary">{text.noGroups}</Typography.Text>}
       {error && <Alert type="warning" showIcon message={error} style={{ marginBottom: 8 }} />}
       {!noGroups && (
-        <DataTable<OrderMarkerRow>
-          rowKey="key"
-          size="small"
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-          locale={{ emptyText: text.noMarkers }}
-          dataSource={rows}
-          columns={orderMarkerColumns({
-            sizes: product.sizes,
-            groups: product.markerGroups,
-            readOnly: !editable,
-            setRows,
-          })}
-        />
+        // Không dùng scroll / cột ghim của antd (phải đo lại mỗi lần vẽ, mở tab bị giật): bảng bề rộng cố định, khung ngoài tự cuộn khi màn hẹp.
+        <div style={{ overflowX: 'auto' }}>
+          <DataTable<OrderMarkerRow>
+            rowKey="key"
+            size="small"
+            pagination={false}
+            tableLayout="fixed"
+            scroll={undefined}
+            style={{ minWidth: orderMarkerTableWidth(product.sizes.length, !editable) }}
+            locale={{ emptyText: text.noMarkers }}
+            dataSource={rows}
+            columns={orderMarkerColumns({
+              sizes: product.sizes,
+              groups: product.markerGroups,
+              readOnly: !editable,
+              setRows,
+            })}
+          />
+        </div>
       )}
       {editable && rows.length < ORDER_MARKER_LIMITS.maxMarkers && (
         <Space style={{ marginTop: 8 }}>

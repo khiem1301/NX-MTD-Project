@@ -45,7 +45,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
 
         var products = lines.GroupBy(l => l.ProductId).OrderBy(g => g.First().ProductCode)
             .Select(g => new OrderMarkerProductDto(g.Key, g.First().ProductCode, g.First().ProductName,
-                SortSizes(g.Select(l => l.SizeCode)),
+                SizeOrder.Sort(g.Select(l => l.SizeCode)),
                 groups.Where(x => x.ProductId == g.Key).Select(x => (int)x.MarkerNo).OrderBy(n => n).ToList(),
                 markers.Where(m => m.ProductId == g.Key).Select(m => m.Dto with { Status = CodeText.ToPascal(m.Dto.Status) }).ToList()))
             .ToList();
@@ -120,12 +120,6 @@ public sealed class OrderMarkerService : IOrderMarkerService
         await _uow.SaveChangesAsync();
         return Result<int>.Success(orderId);
     }
-
-    /// <summary>Size theo thứ tự chuẩn (SizeCodes.Ordered), size lạ xếp sau theo chữ cái.</summary>
-    private static List<string> SortSizes(IEnumerable<string> sizes) =>
-        sizes.Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(s => SizeCodes.Ordered.Contains(s) ? SizeCodes.Ordered.ToList().IndexOf(s) : SizeCodes.Ordered.Count).ThenBy(s => s)
-            .ToList();
 
     private static string Upper(string value) => value.Trim().ToUpperInvariant();
 

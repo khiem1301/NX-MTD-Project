@@ -243,6 +243,6 @@ public class SwimlaneFlowTests : ProductionTestBase
 
     private WorkOrderService WorkOrdersService() => new(Uow, _stock, new FabricPlanner(Uow), Substitute.For<IDocumentCodeGenerator>(),
         Notifier, NullLogger<WorkOrderService>.Instance, Clock,
-        new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), Settings));
+        new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), new BranchAndBoundMarkerSolver()));
 
 }

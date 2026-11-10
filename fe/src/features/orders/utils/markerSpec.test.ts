@@ -11,7 +11,7 @@ import {
 } from './markerSpec';
 import {
   toMaterialOption,
-  variantKey,
+  colorKey as normColorKey,
   type ComponentRow,
   type NormRow,
   type VariantRow,
@@ -43,12 +43,12 @@ const norm = (componentKey: string, materialId: number, ...keys: string[]): Norm
   componentKey,
   materialId,
   specNote: '',
-  variantKeys: keys,
+  colorKeys: keys,
 });
 const norms = [
-  norm('than', 1, variantKey('Đen', 'M'), variantKey('Đen', 'L')),
-  norm('than', 2, variantKey('Đỏ', 'M')),
-  norm('khoa', 3, variantKey('Đen', 'M')),
+  norm('than', 1, normColorKey('Đen')),
+  norm('than', 2, normColorKey('Đỏ')),
+  norm('khoa', 3, normColorKey('Đen')),
 ];
 
 const material = (materialId: number, materialType: string) =>

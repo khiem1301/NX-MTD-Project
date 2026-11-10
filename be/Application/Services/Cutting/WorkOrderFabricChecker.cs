@@ -14,8 +14,8 @@ public sealed record CutLine(int ProductVariantId, int PlannedQty, string Varian
 /// <summary>
 /// Kiểm vải của lệnh cắt theo bìa của đơn (DEV-ALL-85), riêng từng NVL vải: số mét cần (<see cref="MarkerFabricEstimator"/>) có đủ so với
 /// kho khả dụng + vải tổ cắt đang giữ không. Cả bộ: nhu cầu gom theo (nhóm bìa, vải) — vải tra theo nhóm bìa × màu áo ở mã hàng — rồi
-/// chọn bìa của đơn. Cắt lẻ: chi tiết tìm nhóm bìa chứa nó và trải trên đúng vải. Thiếu bìa / nhóm bìa thì báo chưa tính được; bìa lệch
-/// tỉ lệ lệnh thì cảnh báo. Chỉ để cảnh báo, không lưu.
+/// ghép các bìa của đơn cho ít mét nhất. Cắt lẻ: chi tiết tìm nhóm bìa chứa nó và trải trên đúng vải. Thiếu bìa / nhóm bìa thì báo chưa
+/// tính được. Luôn trả số mét cần và bìa nên dùng (hệ thống ước tính, có thể chênh lệch với thực tế). Chỉ để cảnh báo, không lưu, không chặn.
 /// </summary>
 public sealed class WorkOrderFabricChecker
 {
@@ -25,11 +25,11 @@ public sealed class WorkOrderFabricChecker
     private readonly IUnitOfWork _uow;
     private readonly IStockService _stock;
     private readonly FabricPlanner _planner;
-    private readonly ISystemSettingReader _settings;
+    private readonly IMarkerPlanSolver _solver;
 
-    public WorkOrderFabricChecker(IUnitOfWork uow, IStockService stock, FabricPlanner planner, ISystemSettingReader settings)
+    public WorkOrderFabricChecker(IUnitOfWork uow, IStockService stock, FabricPlanner planner, IMarkerPlanSolver solver)
     {
-        _uow = uow; _stock = stock; _planner = planner; _settings = settings;
+        _uow = uow; _stock = stock; _planner = planner; _solver = solver;
     }
 
     private sealed record Fabric(int MaterialId, string Code, string Name, string Color, string Unit)
@@ -37,9 +37,10 @@ public sealed class WorkOrderFabricChecker
         public string Label => $"{Code} {Name}{(Color == "" ? "" : $" ({Color})")}";
     }
 
-    private sealed record Variant(int ProductVariantId, int ProductId, string Color, string SizeCode);
+    private sealed record Variant(int ProductVariantId, int ProductId, int ProductColorId, string Color, string SizeCode);
 
-    private sealed record Norm(int ProductComponentMaterialId, int ProductVariantId, int ProductComponentId, string ComponentName,
+    /// <summary>Dòng định mức vải của chi tiết cắt, theo màu áo (DEV-ALL-87): size lấy từ dòng lệnh.</summary>
+    private sealed record Norm(int ProductComponentMaterialId, int ProductColorId, int ProductComponentId, string ComponentName,
         short PiecesPerGarment, Fabric Fabric);
 
     private sealed record GroupFabric(int ProductId, byte MarkerNo, string Color, Fabric Fabric);
@@ -51,24 +52,23 @@ public sealed class WorkOrderFabricChecker
     private sealed record Data(Dictionary<int, Variant> Variants, List<Norm> Norms, List<GroupFabric> Fabrics,
         List<GroupComponent> Components, List<OrderMarker> Markers);
 
-    /// <summary>Số mét ước tính của một phần việc trên một vải; Problem = chưa tính được, Warning = bìa lệch tỉ lệ.</summary>
-    private sealed record Estimate(Fabric Fabric, decimal Meters, string? Problem = null, string? Warning = null);
+    /// <summary>Số mét ước tính của một phần việc trên một vải; Problem = chưa tính được, Plan = bìa nên dùng.</summary>
+    private sealed record Estimate(Fabric Fabric, decimal Meters, string? Problem = null, FabricMarkerPlanDto? Plan = null);
 
     public async Task<IReadOnlyList<WorkOrderFabricCheckDto>> CheckAsync(int orderId, int cuttingTeamId,
         IReadOnlyList<CutLine> lines, CancellationToken ct)
     {
         var data = await LoadAsync(orderId, lines, ct);
-        var surplusPercent = await _settings.GetDecimalAsync(SettingKeys.CutSurplusPercent, 0m, ct);
         var whole = lines.Where(l => l.ProductComponentMaterialId is null && l.PlannedQty > 0 && data.Variants.ContainsKey(l.ProductVariantId)).ToList();
-        var estimates = WholeEstimates(whole, data, surplusPercent).Concat(ExtraEstimates(lines, data))
+        var estimates = WholeEstimates(whole, data).Concat(ExtraEstimates(lines, data))
             .Concat(UnplacedFabrics(whole, data)).ToList();
 
         var result = new List<WorkOrderFabricCheckDto>();
         foreach (var fabric in estimates.GroupBy(e => e.Fabric.MaterialId).OrderBy(g => g.First().Fabric.Code))
             result.Add(await CheckFabricAsync(orderId, cuttingTeamId, fabric.ToList(), ct));
 
-        var known = data.Norms.Select(n => n.ProductVariantId).ToHashSet();
-        var noFabric = lines.Where(l => !known.Contains(l.ProductVariantId) && !HasGroupFabric(l, data))
+        var known = data.Norms.Select(n => n.ProductColorId).ToHashSet();
+        var noFabric = lines.Where(l => !(data.Variants.TryGetValue(l.ProductVariantId, out var v) && known.Contains(v.ProductColorId)) && !HasGroupFabric(l, data))
             .Select(l => l.VariantLabel).Distinct().ToList();
         if (noFabric.Count > 0)
             result.Add(new WorkOrderFabricCheckDto(0, string.Empty, string.Empty, string.Empty, FabricCheckStatuses.Unknown, null, null,
@@ -81,13 +81,14 @@ public sealed class WorkOrderFabricChecker
     {
         var variantIds = lines.Select(l => l.ProductVariantId).Distinct().ToArray();
         var variants = await _uow.Repository<ProductVariant>().Query().AsNoTracking().Where(v => variantIds.Contains(v.ProductVariantId))
-            .Select(v => new Variant(v.ProductVariantId, v.ProductId, v.ProductColor.Color, v.SizeCode))
+            .Select(v => new Variant(v.ProductVariantId, v.ProductId, v.ProductColorId, v.ProductColor.Color, v.SizeCode))
             .ToDictionaryAsync(v => v.ProductVariantId, ct);
         var productIds = variants.Values.Select(v => v.ProductId).Distinct().ToArray();
+        var colorIds = variants.Values.Select(v => v.ProductColorId).Distinct().ToArray();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(p => variantIds.Contains(p.ProductVariantId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+            .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
                         && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
-            .Select(p => new Norm(p.ProductComponentMaterialId, p.ProductVariantId, p.ProductComponentId, p.ProductComponent.ComponentName,
+            .Select(p => new Norm(p.ProductComponentMaterialId, p.ProductColorId, p.ProductComponentId, p.ProductComponent.ComponentName,
                 p.ProductComponent.PiecesPerGarment,
                 new Fabric(p.MaterialId, p.Material.MaterialCode, p.Material.MaterialName, p.Material.Color, p.Material.Unit)))
             .ToListAsync(ct);
@@ -104,15 +105,21 @@ public sealed class WorkOrderFabricChecker
     {
         var rows = await _uow.Repository<ProductMarker>().Query().AsNoTracking()
             .Where(m => m.OrderId == orderId && productIds.Contains(m.ProductId) && m.Status == RecordStatus.Active)
-            .Select(m => new { m.ProductId, m.MarkerNo, m.MarkerCode, m.LengthM,
-                Ratios = m.ProductMarkerRatios.Select(r => new { r.SizeCode, r.PiecesPerPly }).ToList() })
+            .Select(m => new
+            {
+                m.ProductId,
+                m.MarkerNo,
+                m.MarkerCode,
+                m.LengthM,
+                Ratios = m.ProductMarkerRatios.Select(r => new { r.SizeCode, r.PiecesPerPly }).ToList(),
+            })
             .ToListAsync(ct);
         return rows.Select(m => new OrderMarker(m.ProductId, m.MarkerNo, new MarkerOption(m.MarkerCode, m.LengthM,
             m.Ratios.ToDictionary(r => r.SizeCode, r => r.PiecesPerPly, StringComparer.OrdinalIgnoreCase)))).ToList();
     }
 
-    /// <summary>Cả bộ: nhu cầu mỗi size gom theo (mã hàng, nhóm bìa, vải), chọn một bìa của đơn cho mỗi nhóm.</summary>
-    private static IEnumerable<Estimate> WholeEstimates(List<CutLine> whole, Data data, decimal surplusPercent)
+    /// <summary>Cả bộ: nhu cầu mỗi size gom theo (mã hàng, nhóm bìa, vải), ghép các bìa của đơn trong nhóm cho ít mét nhất.</summary>
+    private IEnumerable<Estimate> WholeEstimates(List<CutLine> whole, Data data)
     {
         var rows = from line in whole
                    let v = data.Variants[line.ProductVariantId]
@@ -124,27 +131,25 @@ public sealed class WorkOrderFabricChecker
             var need = group.GroupBy(r => r.SizeCode, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Sum(r => r.PlannedQty), StringComparer.OrdinalIgnoreCase);
             var (productId, markerNo, _) = group.Key;
-            var choice = MarkerFabricEstimator.ChooseWhole(need, MarkersOf(data, productId, markerNo));
+            var choice = MarkerFabricEstimator.ChooseWhole(need, MarkersOf(data, productId, markerNo), _solver);
             var fabric = group.First().Fabric;
             if (choice is null)
             {
                 yield return new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, markerNo, string.Join(", ", need.Keys)));
                 continue;
             }
-            var allowed = Math.Ceiling(need.Values.Sum() * surplusPercent / 100m);
-            var warning = choice.Surplus > allowed ? string.Format(WarehouseMessages.FabricCheckRatioWarning, choice.Code, choice.Surplus) : null;
-            yield return new Estimate(fabric, choice.Meters, Warning: warning);
+            yield return new Estimate(fabric, choice.Meters, Plan: PlanDto(markerNo, isExtra: false, choice));
         }
     }
 
-    /// <summary>Cắt lẻ / cắt bù: chi tiết tìm nhóm bìa chứa nó và trải trên đúng vải của dòng định mức, chọn bìa ít mét nhất.</summary>
-    private static IEnumerable<Estimate> ExtraEstimates(IReadOnlyList<CutLine> lines, Data data)
+    /// <summary>Cắt lẻ / cắt bù: chi tiết tìm nhóm bìa chứa nó và trải trên đúng vải của dòng định mức, ghép bìa cho ít mét nhất.</summary>
+    private IEnumerable<Estimate> ExtraEstimates(IReadOnlyList<CutLine> lines, Data data)
     {
         var rows = from line in lines
                    where line.ProductComponentMaterialId is not null && line.PlannedQty > 0
                    from n in data.Norms
-                   where n.ProductComponentMaterialId == line.ProductComponentMaterialId
-                   let v = data.Variants[n.ProductVariantId]
+                   where n.ProductComponentMaterialId == line.ProductComponentMaterialId && data.Variants.ContainsKey(line.ProductVariantId)
+                   let v = data.Variants[line.ProductVariantId]
                    select (Line: line, Norm: n, Variant: v, Group: GroupOf(data, v, n));
         foreach (var missing in rows.Where(r => r.Group is null))
             yield return new Estimate(missing.Norm.Fabric, 0,
@@ -152,12 +157,12 @@ public sealed class WorkOrderFabricChecker
         foreach (var group in rows.Where(r => r.Group is not null).GroupBy(r => (r.Variant.ProductId, r.Group!.Value, r.Norm.Fabric.MaterialId)))
         {
             var need = group.Select(r => new PieceNeed(r.Variant.SizeCode, r.Line.PlannedQty, r.Norm.PiecesPerGarment)).ToList();
-            var choice = MarkerFabricEstimator.ChooseExtra(need, MarkersOf(data, group.Key.ProductId, group.Key.Value));
+            var choice = MarkerFabricEstimator.ChooseExtra(need, MarkersOf(data, group.Key.ProductId, group.Key.Value), _solver);
             var fabric = group.First().Norm.Fabric;
             yield return choice is null
                 ? new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, group.Key.Value,
                     string.Join(", ", need.Select(p => p.SizeCode).Distinct(StringComparer.OrdinalIgnoreCase))))
-                : new Estimate(fabric, choice.Meters);
+                : new Estimate(fabric, choice.Meters, Plan: PlanDto(group.Key.Value, isExtra: true, choice));
         }
     }
 
@@ -174,9 +179,17 @@ public sealed class WorkOrderFabricChecker
         from line in whole
         let v = data.Variants[line.ProductVariantId]
         from n in data.Norms
-        where n.ProductVariantId == v.ProductVariantId
+        where n.ProductColorId == v.ProductColorId
               && !data.Fabrics.Any(f => f.ProductId == v.ProductId && SameText(f.Color, v.Color) && f.Fabric.MaterialId == n.Fabric.MaterialId)
         select new Estimate(n.Fabric, 0, string.Format(WarehouseMessages.FabricCheckNoMarkerLabel, v.Color));
+
+    /// <summary>Phương án của một nhóm bìa để hiển thị: từng bìa với số lớp, số mét và tỉ lệ size (theo thứ tự size).</summary>
+    private static FabricMarkerPlanDto PlanDto(byte markerNo, bool isExtra, MarkerPlan plan) =>
+        new(markerNo, isExtra, plan.Meters, plan.Surplus, plan.IsProvenOptimal, plan.Uses.Select(u => new FabricMarkerUseDto(
+                u.Code, u.LengthM, u.Plies, u.Meters,
+                (u.Ratio ?? new Dictionary<string, int>()).OrderBy(r => SizeOrder.Rank(r.Key)).ThenBy(r => r.Key, StringComparer.Ordinal)
+                    .Select(r => new MarkerRatioDto(r.Key, (short)r.Value)).ToList()))
+            .ToList());
 
     private static IEnumerable<MarkerOption> MarkersOf(Data data, int productId, byte markerNo) =>
         data.Markers.Where(m => m.ProductId == productId && m.MarkerNo == markerNo).Select(m => m.Option);
@@ -190,8 +203,7 @@ public sealed class WorkOrderFabricChecker
     private async Task<WorkOrderFabricCheckDto> CheckFabricAsync(int orderId, int cuttingTeamId, IReadOnlyList<Estimate> estimates, CancellationToken ct)
     {
         var f = estimates[0].Fabric;
-        WorkOrderFabricCheckDto Row(string status, string? message, decimal? need = null, decimal? available = null) =>
-            new(f.MaterialId, f.Code, f.Name, f.Color, status, need, available, message);
+        WorkOrderFabricCheckDto Row(string status, string? message) => new(f.MaterialId, f.Code, f.Name, f.Color, status, null, null, message);
 
         if (f.Unit != MaterialTypes.FabricUnit) return Row(FabricCheckStatuses.Unknown, string.Format(WarehouseMessages.FabricCheckNotMeters, f.Label));
         var problems = estimates.Where(e => e.Problem is not null).Select(e => e.Problem!).Distinct().ToList();
@@ -199,14 +211,14 @@ public sealed class WorkOrderFabricChecker
             return Row(FabricCheckStatuses.Unknown, string.Format(WarehouseMessages.FabricCheckNoSize, f.Label, Names(problems)));
 
         var need = estimates.Sum(e => e.Meters);
-        var warning = string.Join(" ", estimates.Where(e => e.Warning is not null).Select(e => e.Warning).Distinct());
         var warehouse = await _stock.GetAvailableAsync(StockKey.Material(f.MaterialId), ct);
         var holding = Math.Max(0, await _planner.GetTeamHoldingAsync(cuttingTeamId, orderId, f.MaterialId, ct));
         var available = warehouse + holding;
-        if (available >= need) return Row(FabricCheckStatuses.Enough, warning.Length == 0 ? null : warning, need, available);
-        var shortMessage = string.Format(WarehouseMessages.FabricCheckShort, f.Label, Format(need - available), Format(need),
-            Format(available), Format(warehouse), Format(holding));
-        return Row(FabricCheckStatuses.Short, warning.Length == 0 ? shortMessage : $"{shortMessage} {warning}", need, available);
+        var plans = estimates.Where(e => e.Plan is not null).Select(e => e.Plan!).OrderBy(p => p.IsExtra).ThenBy(p => p.MarkerNo).ToList();
+        var message = available >= need ? null : string.Format(WarehouseMessages.FabricCheckShort, f.Label, Format(need - available),
+            Format(need), Format(available), Format(warehouse), Format(holding));
+        return new WorkOrderFabricCheckDto(f.MaterialId, f.Code, f.Name, f.Color,
+            message is null ? FabricCheckStatuses.Enough : FabricCheckStatuses.Short, need, available, message, plans, warehouse, holding);
     }
 
     /// <summary>Tối đa 3 tên để cảnh báo không quá dài; còn lại ghi số lượng.</summary>

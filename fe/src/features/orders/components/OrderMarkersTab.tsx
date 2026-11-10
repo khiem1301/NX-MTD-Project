@@ -1,6 +1,7 @@
-import { Empty, Flex, Spin, Typography } from 'antd';
+import { Empty, Flex, Skeleton, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderMarkers } from '../hooks/useOrders';
+import { markerVersion } from '../utils/orderMarker';
 import { OrderMarkerProductCard } from './OrderMarkerProductCard';
 
 const text = MESSAGES.orders.markers;
@@ -14,7 +15,8 @@ type OrderMarkersTabProps = {
 /** Tab "Bìa cắt" của chi tiết đơn (DEV-ALL-85): Admin, Quản đốc khai bìa theo từng mã hàng để lệnh cắt ước số mét vải. */
 export function OrderMarkersTab({ orderId, isClosed }: OrderMarkersTabProps) {
   const markers = useOrderMarkers(orderId);
-  if (markers.isLoading) return <Spin />;
+  // Khung chờ giữ chỗ gần bằng bảng thật để lúc tải xong trang không nhảy chiều cao.
+  if (markers.isLoading) return <Skeleton active paragraph={{ rows: 4 }} />;
   const products = markers.data?.products ?? [];
 
   return (
@@ -26,7 +28,7 @@ export function OrderMarkersTab({ orderId, isClosed }: OrderMarkersTabProps) {
       <Flex vertical gap={12}>
         {products.map((p) => (
           <OrderMarkerProductCard
-            key={`${p.productId}-${markers.dataUpdatedAt}`}
+            key={markerVersion(p)}
             orderId={orderId}
             product={p}
             readOnly={isClosed}

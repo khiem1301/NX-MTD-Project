@@ -1,10 +1,8 @@
 import { Select } from 'antd';
-import { useQuery } from '@tanstack/react-query';
-import { requestApi } from '@/features/requests';
-import type { RequestType } from '@/constants/requestTypes';
+import { REQUEST_STATUS, type RequestType } from '@/constants/requestTypes';
+import { useRequestInbox } from '@/hooks/useRequests';
 
 const PAGE_SIZE = 100;
-const PENDING = 'PendingProcessing';
 
 type RequisitionSelectProps = {
   /** MaterialRequisition (xin NVL, tổ cắt) hoặc SemiFinishedRequisition (xin BTP, tổ may). */
@@ -21,9 +19,11 @@ export function RequisitionSelect({
   onChange,
   disabled,
 }: RequisitionSelectProps) {
-  const requests = useQuery({
-    queryKey: ['requests', 'requisitions', requestType],
-    queryFn: () => requestApi.inbox({ page: 1, pageSize: PAGE_SIZE, requestType, status: PENDING }),
+  const requests = useRequestInbox({
+    page: 1,
+    pageSize: PAGE_SIZE,
+    requestType,
+    status: REQUEST_STATUS.PendingProcessing,
   });
   return (
     <Select

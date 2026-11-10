@@ -1,17 +1,7 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
 
-// Giá trị khớp CHECK constraint DB / hằng số BE (Domain/Constants/WarehouseConstants.cs).
-export const WAREHOUSE_TYPE = {
-  MATERIAL: 'MATERIAL',
-  SEMI_FINISHED: 'SEMI_FINISHED',
-  FINISHED: 'FINISHED',
-} as const;
-
-export const WAREHOUSE_TYPE_LABEL: Record<string, string> = {
-  MATERIAL: 'Kho NVL',
-  SEMI_FINISHED: 'Kho BTP',
-  FINISHED: 'Kho thành phẩm',
-};
+/** Loại kho dùng chung với kiểm kê: khai báo ở constants/warehouse. */
+export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
 
 export const MATERIAL_TYPE = { FABRIC: 'FABRIC', TRIM: 'TRIM' } as const;
 

@@ -108,8 +108,11 @@
                  thêm ProductMarkerRatio (tỉ lệ size), ProductMarkerComponent (chi tiết trên nhóm bìa), trigger 50055; ProductComponentMaterial
                  bỏ LengthCm, WidthCm; bỏ vw_RecutFabricNeed, vw_ProductLastSizeRatio. Bàn cắt không gắn bìa.
                  Bỏ Material.WidthCm (khổ vải) và chiều rộng bìa: khổ vải cố định 1,5 m ở backend.
-   - 09/11/2026  OperationComponent gắn công đoạn với chi tiết vải × vải (DEV-ALL-86): thêm MaterialId (FK Material), PK thành
-                 (OperationId, ProductComponentId, MaterialId). Chỉ chi tiết PANEL và NVL loại vải có trong định mức chi tiết đó (backend kiểm).
+   - 09/11/2026  OperationComponent chỉ gắn chi tiết vải (PANEL) (DEV-ALL-86): vải của chi tiết tra qua ProductComponentMaterial; mỗi chi tiết cắt
+                 chỉ một vải ở một màu áo (vải lót, mex, bo khai thành chi tiết riêng, backend kiểm), nên gắn chi tiết là biết vải.
+   - 09/11/2026  ProductComponentMaterial theo màu áo, không theo size (DEV-ALL-87): ProductVariantId thay bằng ProductColorId (FK ghép ProductColor),
+                 UQ_PCM thành (ProductColorId, ProductComponentId, MaterialId). Size của chứng từ (lệnh cắt, bàn cắt, kho BTP, phiếu cấp) lấy từ
+                 OrderLine; trigger 50041 so màu của định mức với màu của dòng đơn.
    - 06/11/2026  Bỏ ảnh theo màu của mã hàng: bỏ bảng ProductColorImage (ProductColor vẫn giữ làm nơi lưu tên màu) (DEV-ALL-80).
    - 06/11/2026  Phiếu lỗi thêm loại OUTPUT_ERR (tổ trưởng nhập sai sản lượng công đoạn): trừ khỏi sản lượng và tiền của công nhân, trần sản lượng và tiến độ làm
                  được tính lại (trg_WorkAllocation_Check, trg_OutputRecord_Check, vw_WorkerOutputCap, vw_OperationAllocationProgress, vw_WorkerDailyEstimatedPay) (DEV-ALL-79).
@@ -397,7 +400,7 @@ CREATE TABLE dbo.ProductColor (
     Color           NVARCHAR(50)  NOT NULL,   -- vd Xanh navy; không trùng trong một mã hàng (không phân biệt hoa thường)
     CreatedAt       DATETIME2(0)  NOT NULL CONSTRAINT DF_PCol_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT UQ_PCol UNIQUE (ProductId, Color),
-    CONSTRAINT UQ_PCol_IdProduct UNIQUE (ProductColorId, ProductId)   -- cho FK ghép ở ProductVariant và ProductMarkerFabric
+    CONSTRAINT UQ_PCol_IdProduct UNIQUE (ProductColorId, ProductId)   -- cho FK ghép ở ProductVariant, ProductComponentMaterial và ProductMarkerFabric
 );
 
 -- Ảnh phụ của mã hàng (01/11, 05/11 giảm còn 5): ảnh chính là Product.SampleImageUrl; ở đây tối đa 5 ảnh phụ (SortOrder 1-5, mỗi vị trí một ảnh).
@@ -422,7 +425,7 @@ CREATE TABLE dbo.ProductVariant (
     CONSTRAINT CK_PV_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT FK_PV_Color FOREIGN KEY (ProductColorId, ProductId) REFERENCES dbo.ProductColor(ProductColorId, ProductId),  -- màu của đúng mã hàng
     CONSTRAINT UQ_PV UNIQUE (ProductColorId, SizeCode),
-    CONSTRAINT UQ_PV_IdProduct UNIQUE (ProductVariantId, ProductId)   -- cho FK ghép ở ProductComponentMaterial và OrderLine
+    CONSTRAINT UQ_PV_IdProduct UNIQUE (ProductVariantId, ProductId)   -- cho FK ghép ở OrderLine
 );
 
 -- Thành phần của mã hàng (23/10): sản phẩm gồm những gì. Khai báo một lần cho mã hàng, dùng chung mọi màu / size.
@@ -442,21 +445,21 @@ CREATE TABLE dbo.ProductComponent (
     CONSTRAINT UQ_PC_IdProduct UNIQUE (ProductComponentId, ProductId)  -- cho FK ghép ở ProductComponentMaterial
 );
 
--- Định mức NVL theo biến thể (23/10, thay OrderMaterialNorm): với mỗi biến thể (màu × size) và mỗi thành phần,
--- dùng NVL nào (đã gồm màu, vì màu là cột của Material); 28/10 bỏ QtyPerGarment, 09/11 bỏ kích thước chi tiết (DEV-ALL-85). Một thành phần có thể dùng nhiều NVL
--- (vd cổ áo = vải chính + mex). Ghi tường minh từng biến thể, không dùng NULL = "mọi màu / mọi size";
--- màn hình nhập có nút "áp dụng cho các size / màu khác" để đỡ nhập tay.
--- ProductId lặp lại để FK ghép bảo đảm biến thể và thành phần cùng một mã hàng.
+-- Định mức NVL theo màu áo (23/10, thay OrderMaterialNorm; 09/11 theo màu, không theo size, DEV-ALL-87): với mỗi màu áo và mỗi thành phần,
+-- dùng NVL nào (đã gồm màu, vì màu là cột của Material); 28/10 bỏ QtyPerGarment, 09/11 bỏ kích thước chi tiết (DEV-ALL-85).
+-- Mọi size của một màu dùng chung định mức; size của chứng từ lấy từ dòng đơn (OrderLine). Một phụ liệu có thể dùng nhiều NVL;
+-- chi tiết cắt (PANEL) chỉ một vải ở một màu (DEV-ALL-86, backend kiểm; vải lót, mex, bo khai thành chi tiết riêng).
+-- ProductId lặp lại để FK ghép bảo đảm màu và thành phần cùng một mã hàng.
 CREATE TABLE dbo.ProductComponentMaterial (
     ProductComponentMaterialId INT IDENTITY(1,1) CONSTRAINT PK_ProductComponentMaterial PRIMARY KEY,
     ProductId           INT            NOT NULL,
-    ProductVariantId    INT            NOT NULL,
+    ProductColorId      INT            NOT NULL,     -- màu áo (09/11 thay ProductVariantId, DEV-ALL-87)
     ProductComponentId  INT            NOT NULL,
     MaterialId          INT            NOT NULL CONSTRAINT FK_PCM_Material REFERENCES dbo.Material(MaterialId),
     SpecNote            NVARCHAR(200)  NULL,         -- ghi chú quy cách khác
-    CONSTRAINT FK_PCM_Variant   FOREIGN KEY (ProductVariantId, ProductId)   REFERENCES dbo.ProductVariant(ProductVariantId, ProductId),
+    CONSTRAINT FK_PCM_Color     FOREIGN KEY (ProductColorId, ProductId)     REFERENCES dbo.ProductColor(ProductColorId, ProductId),
     CONSTRAINT FK_PCM_Component FOREIGN KEY (ProductComponentId, ProductId) REFERENCES dbo.ProductComponent(ProductComponentId, ProductId),
-    CONSTRAINT UQ_PCM UNIQUE (ProductVariantId, ProductComponentId, MaterialId)
+    CONSTRAINT UQ_PCM UNIQUE (ProductColorId, ProductComponentId, MaterialId)
 );
 CREATE INDEX IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId);
 
@@ -608,21 +611,19 @@ CREATE TABLE dbo.Operation (
 );
 CREATE INDEX IX_Operation_Group ON dbo.Operation(OperationGroupId) WHERE OperationGroupId IS NOT NULL;
 
--- Công đoạn làm trên chi tiết vải nào, vải nào (25/10; 09/11 thêm MaterialId, DEV-ALL-86), nhiều–nhiều: "Lộn tay" → Tay áo × vải chính;
--- "Tra tay" → Tay áo + Thân, mỗi chi tiết theo từng vải của nó (vải chính, vải lót là hai dòng). Chỉ chi tiết PANEL và NVL loại vải
--- có trong định mức của chi tiết đó (backend kiểm; vải theo màu nên một chi tiết có thể có nhiều dòng vải).
--- Công đoạn không gắn chi tiết (là, đi lấy hàng, kiểm hàng, gắn mác) thì không có dòng. Công đoạn và chi tiết phải cùng mã hàng
+-- Công đoạn làm trên chi tiết vải nào (25/10; 09/11 chỉ chi tiết PANEL, DEV-ALL-86), nhiều–nhiều: "Lộn tay" → Tay áo; "Tra tay" → Tay áo + Thân trước + Thân sau.
+-- Vải của chi tiết tra qua ProductComponentMaterial: mỗi chi tiết cắt chỉ một vải ở một màu áo (vải lót, mex, bo khai thành
+-- chi tiết riêng, vd "Lót tay áo", "Mex cổ"), backend kiểm. Công đoạn không gắn chi tiết (là, đi lấy hàng, kiểm hàng, gắn mác) thì không có dòng.
+-- Công đoạn và chi tiết phải cùng mã hàng
 CREATE TABLE dbo.OperationComponent (
     OperationId        INT NOT NULL,
     ProductComponentId INT NOT NULL,
     ProductId          INT NOT NULL,
-    MaterialId         INT NOT NULL CONSTRAINT FK_OC_Material REFERENCES dbo.Material(MaterialId),
-    CONSTRAINT PK_OperationComponent PRIMARY KEY (OperationId, ProductComponentId, MaterialId),
+    CONSTRAINT PK_OperationComponent PRIMARY KEY (OperationId, ProductComponentId),
     CONSTRAINT FK_OC_Operation FOREIGN KEY (OperationId, ProductId)        REFERENCES dbo.Operation(OperationId, ProductId),
     CONSTRAINT FK_OC_Component FOREIGN KEY (ProductComponentId, ProductId) REFERENCES dbo.ProductComponent(ProductComponentId, ProductId)
 );
 CREATE INDEX IX_OC_Component ON dbo.OperationComponent(ProductComponentId);
-CREATE INDEX IX_OC_Material ON dbo.OperationComponent(MaterialId);
 -- Đúng một công đoạn may cuối cho mỗi mã hàng
 CREATE UNIQUE INDEX UX_Operation_FinalStep ON dbo.Operation(ProductId) WHERE IsFinalStep = 1 AND Status = 'ACTIVE';
 
@@ -877,8 +878,8 @@ CREATE TABLE dbo.WorkOrder (
     CONSTRAINT CK_WO_Status  CHECK (Status IN ('OPEN','CUTTING','COMPLETED','CANCELLED'))
 );
 
--- Số cần cắt theo màu × size. Cắt bù từng chi tiết: ProductComponentMaterialId = dòng định mức (chi tiết PANEL × NVL × màu
--- của đúng biến thể) cần cắt, PlannedQty = số chi tiết; lệnh cắt thường: NULL = cả bộ, PlannedQty = số sản phẩm; có chi tiết = cắt lẻ thêm thành phần, PlannedQty = số chi tiết (01/11)
+-- Số cần cắt theo màu × size. Cắt bù từng chi tiết: ProductComponentMaterialId = dòng định mức (chi tiết PANEL × NVL của đúng màu áo;
+-- size theo OrderLineId) cần cắt, PlannedQty = số chi tiết; lệnh cắt thường: NULL = cả bộ, PlannedQty = số sản phẩm; có chi tiết = cắt lẻ thêm thành phần, PlannedQty = số chi tiết (01/11)
 CREATE TABLE dbo.WorkOrderLine (
     WorkOrderLineId    INT IDENTITY(1,1) CONSTRAINT PK_WorkOrderLine PRIMARY KEY,
     WorkOrderId        INT           NOT NULL CONSTRAINT FK_WOL_WO REFERENCES dbo.WorkOrder(WorkOrderId),
@@ -1660,10 +1661,11 @@ BEGIN
         THROW 50047, N'Số tồn chỉ được thay đổi qua dbo.usp_Stock_Post.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.OrderLine ol                 ON ol.OrderLineId = i.OrderLineId
+               JOIN dbo.ProductVariant olv           ON olv.ProductVariantId = ol.ProductVariantId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
-               WHERE pcm.ProductVariantId <> ol.ProductVariantId OR pc.ComponentType <> 'PANEL')
-        THROW 50041, N'Chi tiết tồn kho phải là chi tiết vải trong định mức của đúng màu × size của dòng đơn.', 1;
+               WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
+        THROW 50041, N'Chi tiết tồn kho phải là chi tiết vải trong định mức của đúng màu của dòng đơn.', 1;
 END;
 GO
 
@@ -1839,7 +1841,7 @@ END;
 GO
 
 /* ---------- Kiểm tra dòng phiếu khớp đầu phiếu (rà D3-D9, 23/10) ----------
-   50041: chi tiết / dòng định mức không thuộc mã hàng (hoặc màu × size) của dòng đơn, hoặc không phải chi tiết vải
+   50041: chi tiết / dòng định mức không thuộc mã hàng (hoặc màu áo) của dòng đơn, hoặc không phải chi tiết vải
    50042: dòng phiếu trỏ sang đơn hàng / mã hàng / phiếu khác với đầu phiếu
    50043: NVL của dòng phiếu nhập khác NVL của dòng đơn mua
    50044: công đoạn / đơn giá không khớp mã hàng của dòng đơn
@@ -1893,10 +1895,11 @@ BEGIN
         THROW 50042, N'Dòng lệnh cắt phải thuộc đúng đơn hàng và mã hàng của lệnh cắt.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.OrderLine ol                 ON ol.OrderLineId = i.OrderLineId
+               JOIN dbo.ProductVariant olv           ON olv.ProductVariantId = ol.ProductVariantId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
-               WHERE pcm.ProductVariantId <> ol.ProductVariantId OR pc.ComponentType <> 'PANEL')
-        THROW 50041, N'Chi tiết cắt phải là chi tiết vải (PANEL) trong định mức của đúng màu × size của dòng đơn.', 1;
+               WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
+        THROW 50041, N'Chi tiết cắt phải là chi tiết vải (PANEL) trong định mức của đúng màu của dòng đơn.', 1;
 END;
 GO
 
@@ -1917,9 +1920,10 @@ BEGIN
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
                JOIN dbo.Request r                    ON r.RequestId = i.RequestId
                LEFT JOIN dbo.OrderLine ol            ON ol.OrderLineId = i.OrderLineId
+               LEFT JOIN dbo.ProductVariant olv      ON olv.ProductVariantId = ol.ProductVariantId
                LEFT JOIN dbo.WorkOrder wo            ON wo.WorkOrderId = r.WorkOrderId
                WHERE pc.ComponentType <> 'PANEL'
-                  OR (ol.OrderLineId IS NOT NULL AND pcm.ProductVariantId <> ol.ProductVariantId)
+                  OR (ol.OrderLineId IS NOT NULL AND pcm.ProductColorId <> olv.ProductColorId)
                   OR (ol.OrderLineId IS NULL AND pcm.ProductId <> ISNULL(wo.ProductId, pcm.ProductId)))
         THROW 50041, N'Chi tiết cắt bù phải là chi tiết vải trong định mức của đúng màu × size / mã hàng của lệnh cắt.', 1;
 END;
@@ -1980,10 +1984,11 @@ BEGIN
         THROW 50042, N'Dòng phiếu cấp BTP thuộc đơn hàng khác với phiếu cấp.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.OrderLine ol                 ON ol.OrderLineId = i.OrderLineId
+               JOIN dbo.ProductVariant olv           ON olv.ProductVariantId = ol.ProductVariantId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
-               WHERE pcm.ProductVariantId <> ol.ProductVariantId OR pc.ComponentType <> 'PANEL')
-        THROW 50041, N'Chi tiết cấp BTP phải là chi tiết vải trong định mức của đúng màu × size của dòng đơn.', 1;
+               WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
+        THROW 50041, N'Chi tiết cấp BTP phải là chi tiết vải trong định mức của đúng màu của dòng đơn.', 1;
 END;
 GO
 
@@ -2009,10 +2014,11 @@ BEGIN
         THROW 50042, N'Dòng bàn cắt phải thuộc đúng đơn hàng và mã hàng của lệnh cắt.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.OrderLine ol                 ON ol.OrderLineId = i.OrderLineId
+               JOIN dbo.ProductVariant olv           ON olv.ProductVariantId = ol.ProductVariantId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
-               WHERE pcm.ProductVariantId <> ol.ProductVariantId OR pc.ComponentType <> 'PANEL')
-        THROW 50041, N'Chi tiết cắt phải là chi tiết vải (PANEL) trong định mức của đúng màu × size của dòng đơn.', 1;
+               WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
+        THROW 50041, N'Chi tiết cắt phải là chi tiết vải (PANEL) trong định mức của đúng màu của dòng đơn.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.CuttingLay cl                ON cl.CuttingLayId = i.CuttingLayId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
@@ -2032,10 +2038,11 @@ BEGIN
         THROW 50042, N'Dòng bàn giao BTP phải thuộc đúng đơn hàng và mã hàng của lệnh cắt.', 1;
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.OrderLine ol                 ON ol.OrderLineId = i.OrderLineId
+               JOIN dbo.ProductVariant olv           ON olv.ProductVariantId = ol.ProductVariantId
                JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
-               WHERE pcm.ProductVariantId <> ol.ProductVariantId OR pc.ComponentType <> 'PANEL')
-        THROW 50041, N'Chi tiết bàn giao phải là chi tiết vải trong định mức của đúng màu × size của dòng đơn.', 1;
+               WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
+        THROW 50041, N'Chi tiết bàn giao phải là chi tiết vải trong định mức của đúng màu của dòng đơn.', 1;
 END;
 GO
 
@@ -2917,9 +2924,9 @@ INSERT @d VALUES
  ('Announcement', N'Thông báo nhanh'), ('AnnouncementTarget', N'Phạm vi nhận thông báo nhanh'),
  ('Notification', N'Thông báo người dùng (giữ 90 ngày)'),
  ('Customer', N'Khách hàng (công ty mẹ)'), ('CustomerOrder', N'Đơn hàng gia công'), ('OrderLine', N'Dòng đơn mã hàng–màu–size'),
- ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết vải nào, vải nào'), ('PieceRate', N'Đơn giá công đoạn'),
+ ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết vải nào'), ('PieceRate', N'Đơn giá công đoạn'),
  ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductColor', N'Màu áo của mã hàng'), ('ProductVariant', N'Biến thể mã hàng: màu × size'),('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
- ('ProductComponentMaterial', N'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
+ ('ProductComponentMaterial', N'Định mức NVL theo màu áo × thành phần: dùng NVL nào (đã gồm màu NVL)'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
  ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
@@ -3050,32 +3057,31 @@ INSERT dbo.ProductComponent (ProductId, ComponentName, ComponentType, PiecesPerG
  (@p1, N'Khóa kéo',   'TRIM',  1), (@p1, N'Nhãn',     'TRIM',  1), (@p1, N'Chỉ may', 'TRIM',  1),
  (@p2, N'Ống quần',   'PANEL', 2), (@p2, N'Chỉ may',  'TRIM',  1);
 
--- Vải theo chi tiết: theo màu áo, riêng biến thể Xanh phối tay áo vải Trắng (09/11 bỏ kích thước chi tiết, DEV-ALL-85)
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId)
-SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
+-- Vải theo chi tiết: theo màu áo (mọi size dùng chung), riêng màu Xanh phối tay áo vải Trắng (09/11 bỏ kích thước chi tiết, DEV-ALL-85;
+-- theo màu, không theo size, DEV-ALL-87)
+INSERT dbo.ProductComponentMaterial (ProductId, ProductColorId, ProductComponentId, MaterialId)
+SELECT pcol.ProductId, pcol.ProductColorId, pc.ProductComponentId,
        CASE WHEN pcol.Color = N'Xanh' AND pc.ComponentName = N'Tay áo' THEN @mVaiTrang
             WHEN pcol.Color = N'Xanh' THEN @mVaiXanh ELSE @mVai END
 FROM (VALUES (N'Thân trước'), (N'Thân sau'), (N'Tay áo')) s (ComponentName)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = s.ComponentName
-JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1
-JOIN dbo.ProductColor pcol   ON pcol.ProductColorId = pv.ProductColorId;
+JOIN dbo.ProductColor pcol   ON pcol.ProductId = @p1;
 
--- Phụ liệu áo: như nhau mọi size; chỉ theo màu áo (Đen / Xanh), khóa và nhãn không phân màu
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId)
-SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId,
+-- Phụ liệu áo: chỉ theo màu áo (Đen / Xanh), khóa và nhãn không phân màu
+INSERT dbo.ProductComponentMaterial (ProductId, ProductColorId, ProductComponentId, MaterialId)
+SELECT pcol.ProductId, pcol.ProductColorId, pc.ProductComponentId,
        CASE WHEN t.ByColor = 1 AND pcol.Color = N'Xanh' THEN @mChiXanh ELSE t.MaterialId END
 FROM (VALUES (N'Khóa kéo', @mKhoa, 0), (N'Nhãn', @mNhan, 0), (N'Chỉ may', @mChi, 1))
      t (ComponentName, MaterialId, ByColor)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p1 AND pc.ComponentName = t.ComponentName
-JOIN dbo.ProductVariant pv   ON pv.ProductId = @p1
-JOIN dbo.ProductColor pcol   ON pcol.ProductColorId = pv.ProductColorId;
+JOIN dbo.ProductColor pcol   ON pcol.ProductId = @p1;
 
 -- Quần short
-INSERT dbo.ProductComponentMaterial (ProductId, ProductVariantId, ProductComponentId, MaterialId)
-SELECT pv.ProductId, pv.ProductVariantId, pc.ProductComponentId, t.MaterialId
+INSERT dbo.ProductComponentMaterial (ProductId, ProductColorId, ProductComponentId, MaterialId)
+SELECT pcol.ProductId, pcol.ProductColorId, pc.ProductComponentId, t.MaterialId
 FROM (VALUES (N'Ống quần', @mVaiBe), (N'Chỉ may', @mChiBe)) t (ComponentName, MaterialId)
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p2 AND pc.ComponentName = t.ComponentName
-JOIN dbo.ProductVariant pv   ON pv.ProductId = @p2;
+JOIN dbo.ProductColor pcol   ON pcol.ProductId = @p2;
 
 -- Nhóm bìa của mã hàng (DEV-ALL-85): áo nhóm 1 (thân) và nhóm 2 (tay), áo Xanh phối tay vải Trắng; quần một nhóm.
 -- Bìa của từng đơn (ProductMarker, ProductMarkerRatio) thêm ở cuối phần dữ liệu demo, sau khi có đơn hàng.
@@ -3813,10 +3819,10 @@ JOIN dbo.OperationGroup g ON g.ProductId = o.ProductId
                         WHEN o.OperationName LIKE N'%túi%' THEN N'May túi' END
 WHERE o.OperationGroupId IS NULL;
 
--- Công đoạn ↔ chi tiết vải × vải (25/10, DEV-ALL-86): demo nối theo từ khóa trong tên công đoạn, rồi lấy mọi vải của chi tiết đó trong định mức;
+-- Công đoạn ↔ chi tiết vải (25/10, DEV-ALL-86): demo nối theo từ khóa trong tên công đoạn;
 -- một công đoạn có thể khớp nhiều chi tiết. Phụ liệu (nhãn) không gắn công đoạn
-INSERT dbo.OperationComponent (OperationId, ProductComponentId, ProductId, MaterialId)
-SELECT DISTINCT o.OperationId, pc.ProductComponentId, o.ProductId, pcm.MaterialId
+INSERT dbo.OperationComponent (OperationId, ProductComponentId, ProductId)
+SELECT DISTINCT o.OperationId, pc.ProductComponentId, o.ProductId
 FROM dbo.Operation o
 JOIN dbo.Product p ON p.ProductId = o.ProductId AND p.ProductCode = N'DEMO-AO01'
 JOIN (VALUES (N'%tay%', N'Tay áo'), (N'%thân trước%', N'Thân trước'), (N'%TT %', N'Thân trước'),
@@ -3825,10 +3831,7 @@ JOIN (VALUES (N'%tay%', N'Tay áo'), (N'%thân trước%', N'Thân trước'), (
              (N'Chắp vai con', N'Thân trước'), (N'Chắp vai con', N'Thân sau')) k(Pattern, ComponentName)
   ON o.OperationName LIKE k.Pattern
 JOIN dbo.ProductComponent pc ON pc.ProductId = o.ProductId AND pc.ComponentName = k.ComponentName AND pc.ComponentType = 'PANEL'
-JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentId = pc.ProductComponentId
-JOIN dbo.Material m ON m.MaterialId = pcm.MaterialId AND m.MaterialType = 'FABRIC'
-WHERE NOT EXISTS (SELECT 1 FROM dbo.OperationComponent x
-                  WHERE x.OperationId = o.OperationId AND x.ProductComponentId = pc.ProductComponentId AND x.MaterialId = pcm.MaterialId);
+WHERE NOT EXISTS (SELECT 1 FROM dbo.OperationComponent x WHERE x.OperationId = o.OperationId AND x.ProductComponentId = pc.ProductComponentId);
 
 -- Đơn giá công đoạn: khớp theo (mã hàng, mã công đoạn, ngày hiệu lực)
 UPDATE r SET Rate = s.Rate, Status = s.Status, SubmittedAt = s.SubmittedAt, ApprovedAt = s.ApprovedAt,
@@ -4795,14 +4798,15 @@ FROM (VALUES
  ('YC-DEMO-021', NULL, @l3M, NULL, NULL, 10, NULL, NULL)) v(Code, MaterialId, OrderLineId, Pcm, Item, Qty, Replenish, ReceiptLine)
 JOIN dbo.Request r ON r.RequestCode = v.Code;
 
--- Cắt bù: dòng là chi tiết vải "Thân trước" đúng màu × size của phiếu hàng hủy
+-- Cắt bù: dòng là chi tiết vải "Thân trước" đúng màu của phiếu hàng hủy (size theo dòng đơn)
 INSERT dbo.RequestLine (RequestId, OrderLineId, ProductComponentMaterialId, Quantity)
 SELECT r.RequestId, d.OrderLineId, pcm.ProductComponentMaterialId, 1
 FROM dbo.Request r
 JOIN dbo.DefectRecord d ON d.DefectRecordId = r.DefectRecordId
 JOIN dbo.OrderLine l ON l.OrderLineId = d.OrderLineId
 JOIN dbo.ProductComponent pc ON pc.ProductId = l.ProductId AND pc.ComponentName = N'Thân trước'
-JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentId = pc.ProductComponentId AND pcm.ProductVariantId = l.ProductVariantId
+JOIN dbo.ProductVariant lv ON lv.ProductVariantId = l.ProductVariantId
+JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentId = pc.ProductComponentId AND pcm.ProductColorId = lv.ProductColorId
 WHERE r.RequestCode IN ('YC-DEMO-014', 'YC-DEMO-015');
 
 -- Thiếu hàng khi nhập: dòng trỏ về dòng phiếu nhập gốc

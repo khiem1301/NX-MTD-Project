@@ -91,7 +91,8 @@ public class IncomingMaterialTests
             OrderLineId = _orderLines.Count + 1, OrderId = orderId, ProductId = productId, ProductVariantId = variantId,
             ProductVariant = new ProductVariant
             {
-                ProductVariantId = variantId, ProductId = productId, ProductColor = new ProductColor { Color = "Đỏ" }, SizeCode = "M",
+                ProductVariantId = variantId, ProductId = productId, ProductColorId = variantId,
+                ProductColor = new ProductColor { ProductColorId = variantId, Color = "Đỏ" }, SizeCode = "M",
                 Product = new Product { ProductId = productId, ProductCode = code, ProductName = "Áo " + code },
             },
         });
@@ -99,7 +100,7 @@ public class IncomingMaterialTests
     private void Norm(int variantId, Material material, int productId = 1, string componentStatus = RecordStatus.Active) =>
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = _norms.Count + 1, ProductId = productId, ProductVariantId = variantId,
+            ProductComponentMaterialId = _norms.Count + 1, ProductId = productId, ProductColorId = variantId,   // test: mỗi biến thể một màu
             MaterialId = material.MaterialId, Material = material,
             ProductComponent = new ProductComponent { Status = componentStatus },
         });

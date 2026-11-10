@@ -1,5 +1,6 @@
 import type { OrderMarkerProduct } from '../types';
 import {
+  markerVersion,
   newOrderMarkerRow,
   toOrderMarkerRows,
   toOrderMarkersPayload,
@@ -88,5 +89,18 @@ describe('validateOrderMarkers', () => {
       'trùng',
     );
     expect(validateOrderMarkers([row(), row({ key: 'x', markerNo: 2 })], sizes)).toBe('');
+  });
+});
+
+describe('markerVersion', () => {
+  it('tải lại cùng dữ liệu thì không đổi (bảng không dựng lại), bìa đổi sau khi lưu thì đổi', () => {
+    const reloaded = JSON.parse(JSON.stringify(product)) as typeof product;
+    const saved = {
+      ...product,
+      markers: [{ ...(product.markers[0] as (typeof product.markers)[number]), lengthM: 2.3 }],
+    };
+
+    expect(markerVersion(reloaded)).toBe(markerVersion(product));
+    expect(markerVersion(saved)).not.toBe(markerVersion(product));
   });
 });

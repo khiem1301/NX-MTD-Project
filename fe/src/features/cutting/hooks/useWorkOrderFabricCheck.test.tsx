@@ -17,6 +17,9 @@ const check = (materialId: number): WorkOrderFabricCheck => ({
   needMeters: 100,
   availableQty: 50,
   message: 'Thiếu vải',
+  markerPlans: null,
+  warehouseQty: null,
+  holdingQty: null,
 });
 
 const body = (orderId: number): CheckWorkOrderFabricPayload => ({

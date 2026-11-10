@@ -49,12 +49,12 @@ public sealed class LookupService : ILookupService
 
     public async Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct)
     {
-        var variantId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductVariantId).FirstOrDefaultAsync(ct);
-        if (variantId is null) return [];
-        // Mỗi dòng định mức (chi tiết vải × NVL × màu) của đúng màu × size là một lựa chọn cắt bù.
+        var colorId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == orderLineId).Select(l => (int?)l.ProductVariant.ProductColorId).FirstOrDefaultAsync(ct);
+        if (colorId is null) return [];
+        // Mỗi dòng định mức (chi tiết vải × NVL) của đúng màu áo là một lựa chọn cắt bù (định mức theo màu, DEV-ALL-87).
         return await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(p => p.ProductVariantId == variantId && p.ProductComponent.ComponentType == ComponentTypes.Panel
+            .Where(p => p.ProductColorId == colorId && p.ProductComponent.ComponentType == ComponentTypes.Panel
                         && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .OrderBy(p => p.ProductComponentId).ThenBy(p => p.ProductComponentMaterialId)
             .Select(p => new ComponentOptionDto(p.ProductComponentMaterialId,

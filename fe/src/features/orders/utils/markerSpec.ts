@@ -76,14 +76,14 @@ export function fabricOptionsFor(
   materialOptions: MaterialOption[],
 ): MaterialOption[] {
   const panels = new Set(components.filter((c) => c.componentType === 'Panel').map((c) => c.key));
-  const prefix = `${codeKey(color)}|`;
+  const wanted = codeKey(color);
   const used = new Set(
     norms
       .filter(
         (n) =>
           n.componentKey !== undefined &&
           panels.has(n.componentKey) &&
-          n.variantKeys.some((k) => k.startsWith(prefix)),
+          n.colorKeys.includes(wanted),
       )
       .map((n) => n.materialId),
   );

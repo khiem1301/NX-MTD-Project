@@ -38,9 +38,9 @@ public sealed class ProductSpecService : IProductSpecService
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => n.ProductId == productId)
             .OrderBy(n => n.ProductComponentId)
-            .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductVariant.ProductColor.Color).ThenBy(n => n.ProductVariant.SizeCode)
+            .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductColor.Color)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
-                n.ProductVariant.ProductColor.Color, n.ProductVariant.SizeCode, n.MaterialId, n.Material.MaterialCode,
+                n.ProductColor.Color, n.MaterialId, n.Material.MaterialCode,
                 n.Material.MaterialName, n.Material.Unit, n.Material.Color, n.SpecNote, n.Material.MaterialType ?? ""))
             .ToListAsync(ct);
         var markers = await _uow.Repository<ProductMarkerComponent>().Query().AsNoTracking()
@@ -97,11 +97,13 @@ public sealed class ProductSpecService : IProductSpecService
         if (variantMatch.Any(m => m.Entity is null)) return Fail.As<int>(Invalid(Messages.ProductSpecVariantFromOrders));
 
         var keptComponents = componentMatch.Where(m => m.Entity is not null).Select(m => m.Entity!).ToHashSet();
-        var keptVariantIds = variantMatch.Select(m => m.Entity!.ProductVariantId).ToHashSet();
+        // Định mức theo màu áo (DEV-ALL-87): màu của các màu – size gửi lên.
+        var colorByName = variantMatch.Select(m => m.Entity!.ProductColor).DistinctBy(c => c.ProductColorId)
+            .ToDictionary(c => Upper(c.Color), c => c.ProductColorId);
         await ClearMarkerGroupsAsync(productId, ct);   // trước khi gỡ thành phần: ProductMarkerComponent trỏ vào thành phần
         var removeNorms = await RemoveDroppedComponentsAsync(productId, components, keptComponents, norms, ct);
-        var (componentByName, variantByKey) = await UpsertComponentsAndVariantsAsync(productId, componentMatch, variantMatch);
-        var failed = await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), keptVariantIds, componentByName, variantByKey, ct);
+        var componentByName = await UpsertComponentsAsync(productId, componentMatch);
+        var failed = await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), colorByName, componentByName, ct);
         if (failed is not null) return failed;
         await RemoveStaleOperationLinksAsync(productId, dto, componentByName, ct);
         await WriteMarkerGroupsAsync(productId, dto, componentByName, ct);
@@ -123,7 +125,7 @@ public sealed class ProductSpecService : IProductSpecService
 
     /// <summary>
     /// Bước 1: gỡ thành phần bị bỏ (xóa nếu chưa dùng, còn dùng thì ngừng dùng) cùng định mức và liên kết công đoạn của nó.
-    /// Trả về các dòng định mức đã gỡ (định mức của biến thể giữ lại sẽ ghi lại theo danh sách gửi lên).
+    /// Trả về các dòng định mức đã gỡ (định mức của màu giữ lại sẽ ghi lại theo danh sách gửi lên).
     /// </summary>
     private async Task<List<ProductComponentMaterial>> RemoveDroppedComponentsAsync(int productId, List<ProductComponent> components,
         HashSet<ProductComponent> keptComponents, List<ProductComponentMaterial> norms, CancellationToken ct)
@@ -152,11 +154,9 @@ public sealed class ProductSpecService : IProductSpecService
         return removeNorms;
     }
 
-    /// <summary>Bước 2: cập nhật / thêm thành phần và biến thể để có Id cho định mức.</summary>
-    private async Task<(Dictionary<string, ProductComponent> ByName, Dictionary<(string, string), ProductVariant> ByKey)>
-        UpsertComponentsAndVariantsAsync(int productId,
-            List<(SaveProductComponentDto Input, ProductComponent? Entity)> componentMatch,
-            List<(SaveProductVariantDto Input, ProductVariant? Entity)> variantMatch)
+    /// <summary>Bước 2: cập nhật / thêm thành phần để có Id cho định mức (màu – size do đơn hàng tạo, không sửa ở đây).</summary>
+    private async Task<Dictionary<string, ProductComponent>> UpsertComponentsAsync(int productId,
+        List<(SaveProductComponentDto Input, ProductComponent? Entity)> componentMatch)
     {
         var componentByName = new Dictionary<string, ProductComponent>(StringComparer.OrdinalIgnoreCase);
         foreach (var (input, entity) in componentMatch)
@@ -169,14 +169,8 @@ public sealed class ProductSpecService : IProductSpecService
             if (entity is null) await _uow.Repository<ProductComponent>().AddAsync(c);
             componentByName[c.ComponentName] = c;
         }
-        var variantByKey = new Dictionary<(string, string), ProductVariant>();
-        foreach (var (_, entity) in variantMatch)
-        {
-            var v = entity!;
-            variantByKey[(v.ProductColor.Color.ToUpperInvariant(), v.SizeCode)] = v;
-        }
         await _uow.SaveChangesAsync();
-        return (componentByName, variantByKey);
+        return componentByName;
     }
 
     /// <summary>
@@ -184,18 +178,17 @@ public sealed class ProductSpecService : IProductSpecService
     /// trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại). Trả về lỗi nếu định mức bị bỏ đã được dùng.
     /// </summary>
     private async Task<Result<int>?> WriteNormsAsync(int productId, SaveProductSpecDto dto, List<ProductComponentMaterial> remainingNorms,
-        HashSet<int> keptVariantIds, Dictionary<string, ProductComponent> componentByName,
-        Dictionary<(string, string), ProductVariant> variantByKey, CancellationToken ct)
+        Dictionary<string, int> colorByName, Dictionary<string, ProductComponent> componentByName, CancellationToken ct)
     {
         var keptComponentIds = componentByName.Values.Select(c => c.ProductComponentId).ToHashSet();
+        var keptColorIds = colorByName.Values.ToHashSet();
         var existing = remainingNorms
-            .Where(n => keptVariantIds.Contains(n.ProductVariantId) && keptComponentIds.Contains(n.ProductComponentId))
-            .ToDictionary(n => (n.ProductVariantId, n.ProductComponentId, n.MaterialId));
+            .Where(n => keptColorIds.Contains(n.ProductColorId) && keptComponentIds.Contains(n.ProductComponentId))
+            .ToDictionary(n => (n.ProductColorId, n.ProductComponentId, n.MaterialId));
         var wanted = new HashSet<(int, int, int)>();
         foreach (var n in dto.Norms)
         {
-            var key = (variantByKey[(n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant())].ProductVariantId,
-                componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId);
+            var key = (colorByName[Upper(n.Color)], componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId);
             wanted.Add(key);
             var row = existing.GetValueOrDefault(key);
             if (row is null)
@@ -203,7 +196,7 @@ public sealed class ProductSpecService : IProductSpecService
                 row = new ProductComponentMaterial
                 {
                     ProductId = productId,
-                    ProductVariantId = key.Item1,
+                    ProductColorId = key.Item1,
                     ProductComponentId = key.Item2,
                     MaterialId = key.Item3,
                 };
@@ -220,18 +213,17 @@ public sealed class ProductSpecService : IProductSpecService
     }
 
     /// <summary>
-    /// Liên kết công đoạn ↔ chi tiết × vải (DEV-ALL-86) chỉ là dữ liệu tra cứu: gỡ cặp không còn trong định mức chi tiết cắt
-    /// (bỏ vải khỏi chi tiết, hoặc chi tiết đổi thành phụ liệu).
+    /// Liên kết công đoạn ↔ chi tiết (DEV-ALL-86) chỉ gắn chi tiết vải: chi tiết đổi thành phụ liệu thì gỡ liên kết của nó.
     /// </summary>
     private async Task RemoveStaleOperationLinksAsync(int productId, SaveProductSpecDto dto, Dictionary<string, ProductComponent> componentByName,
         CancellationToken ct)
     {
-        var panels = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) == ComponentTypes.Panel)
-            .Select(c => Upper(c.ComponentName)).ToHashSet();
-        var kept = dto.Norms.Where(n => panels.Contains(Upper(n.ComponentName)))
-            .Select(n => (componentByName[n.ComponentName.Trim()].ProductComponentId, n.MaterialId)).ToHashSet();
-        var links = await _uow.Repository<OperationComponent>().Query().Where(oc => oc.ProductId == productId).ToListAsync(ct);
-        _uow.Repository<OperationComponent>().RemoveRange(links.Where(l => !kept.Contains((l.ProductComponentId, l.MaterialId))).ToList());
+        var trimIds = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) != ComponentTypes.Panel)
+            .Select(c => componentByName[c.ComponentName.Trim()].ProductComponentId).ToHashSet();
+        if (trimIds.Count == 0) return;
+        var links = await _uow.Repository<OperationComponent>().Query()
+            .Where(oc => oc.ProductId == productId && trimIds.Contains(oc.ProductComponentId)).ToListAsync(ct);
+        _uow.Repository<OperationComponent>().RemoveRange(links);
     }
 
     /// <summary>Gỡ nhóm bìa của mã hàng (chi tiết trên nhóm, vải theo màu) để ghi lại theo danh sách gửi lên. Không bảng nào trỏ vào hai bảng này.</summary>
@@ -275,20 +267,37 @@ public sealed class ProductSpecService : IProductSpecService
             return Invalid(Messages.ProductSpecVariantDuplicate);
 
         var componentNames = dto.Components.Select(c => c.ComponentName.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var variantKeys = dto.Variants.Select(v => (v.Color.Trim().ToUpperInvariant(), v.SizeCode.Trim().ToUpperInvariant())).ToHashSet();
-        if (dto.Norms.Any(n => !componentNames.Contains(n.ComponentName.Trim())
-                               || !variantKeys.Contains((n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant()))))
+        var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();
+        if (dto.Norms.Any(n => !componentNames.Contains(n.ComponentName.Trim()) || !colors.Contains(Upper(n.Color))))
             return Invalid(Messages.ProductSpecNormReference);
-        // UQ_PCM: mỗi (biến thể, thành phần, NVL) một dòng.
-        if (dto.Norms.GroupBy(n => (n.Color.Trim().ToUpperInvariant(), n.SizeCode.Trim().ToUpperInvariant(),
-                n.ComponentName.Trim().ToUpperInvariant(), n.MaterialId)).Any(g => g.Count() > 1))
+        // UQ_PCM: mỗi (màu, thành phần, NVL) một dòng.
+        if (dto.Norms.GroupBy(n => (Upper(n.Color), Upper(n.ComponentName), n.MaterialId)).Any(g => g.Count() > 1))
             return Invalid(Messages.ProductSpecNormDuplicate);
 
         var materialIds = dto.Norms.Select(n => n.MaterialId).Distinct().ToArray();
         var active = await _uow.Repository<Material>().Query()
-            .CountAsync(m => materialIds.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active, ct);
-        if (active != materialIds.Length) return Invalid(Messages.ProductSpecMaterialInvalid);
+            .Where(m => materialIds.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active)
+            .Select(m => new { m.MaterialId, m.MaterialType }).ToListAsync(ct);
+        if (active.Count != materialIds.Length) return Invalid(Messages.ProductSpecMaterialInvalid);
+        var multiFabric = PanelWithManyFabrics(dto, active.Where(m => m.MaterialType == MaterialTypes.Fabric).Select(m => m.MaterialId).ToHashSet());
+        if (multiFabric is not null) return Invalid(multiFabric);
         return await ValidateMarkerGroupsAsync(productId, dto, ct);
+    }
+
+    /// <summary>
+    /// DEV-ALL-86: mỗi chi tiết cắt (PANEL) chỉ một vải ở một màu áo, vải lót, mex, bo (cũng là NVL loại vải) khai thành chi tiết riêng; nhờ vậy công đoạn gắn chi tiết
+    /// là biết vải. Trả về thông báo lỗi của chi tiết đầu tiên khai hơn một vải, hoặc null.
+    /// </summary>
+    private static string? PanelWithManyFabrics(SaveProductSpecDto dto, HashSet<int> fabricIds)
+    {
+        var panels = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) == ComponentTypes.Panel)
+            .Select(c => Upper(c.ComponentName)).ToHashSet();
+        var many = dto.Norms.Where(n => fabricIds.Contains(n.MaterialId) && panels.Contains(Upper(n.ComponentName)))
+            .GroupBy(n => (Upper(n.ComponentName), Upper(n.Color)))
+            .FirstOrDefault(g => g.Select(n => n.MaterialId).Distinct().Count() > 1);
+        if (many is null) return null;
+        var first = many.First();
+        return string.Format(Messages.ProductSpecPanelManyFabrics, first.ComponentName.Trim(), first.Color.Trim());
     }
 
     /// <summary>

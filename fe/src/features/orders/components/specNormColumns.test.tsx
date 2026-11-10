@@ -18,7 +18,7 @@ const row: NormRow = {
   componentKey: 'c1',
   materialId: 1,
   specNote: '',
-  variantKeys: [],
+  colorKeys: [],
 };
 
 const mockAddMaterial = jest.fn();
@@ -34,7 +34,7 @@ function Host() {
         componentOptions: [{ value: 'c1', label: 'Thân' }],
         materialOptions: [material],
         materialsLoading: false,
-        variantOptions: [],
+        colorOptions: [],
         setNorms,
         onAddMaterial: mockAddMaterial,
       })}

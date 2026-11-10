@@ -3,7 +3,7 @@ import { tokenStorage } from '@/services/tokenStorage';
 import { useAuthStore } from '@/store/authStore';
 import type { ApiError } from '@/types/api';
 import type { LoginRequest, LoginResult } from '@/types/auth';
-import { authApi } from '../api/authApi';
+import { authApi } from '@/services/authApi';
 
 export const useLogin = () => {
   const setSession = useAuthStore((s) => s.setSession);

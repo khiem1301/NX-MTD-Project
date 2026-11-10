@@ -57,7 +57,6 @@ public static class WarehouseMessages
     public const string CuttingTeamInvalid = "Tổ nhận phải là tổ cắt đang hoạt động.";
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
-    public const string FabricShortage = "Không đủ vải để cắt bù";
     public const string LayLengthRequired = "Vui lòng nhập chiều dài bàn cắt.";
     public const string LayLengthInvalid = "Chiều dài bàn cắt phải lớn hơn 0.";
     public const string LayLengthMax = "Chiều dài bàn cắt tối đa 1.000 m.";
@@ -81,8 +80,6 @@ public static class WarehouseMessages
     public const string FabricCheckNoOrderMarkerLabel = "bìa của đơn cho nhóm {0} (size {1})";
     /// <summary>Chi tiết cắt lẻ / cắt bù chưa nằm trên nhóm bìa nào trải trên vải này.</summary>
     public const string FabricCheckNoMarkerGroupLabel = "nhóm bìa cho chi tiết {0}";
-    /// <summary>Bìa được chọn lệch tỉ lệ lệnh: số sản phẩm dư vượt ngưỡng CUT_SURPLUS_PERCENT (BR-08).</summary>
-    public const string FabricCheckRatioWarning = "Bìa {0} lệch tỉ lệ lệnh, dư {1} sản phẩm; nên xin phía trên bìa phù hợp.";
     /// <summary>Vải có trong định mức của màu nhưng chưa nằm trên bìa nào, nên chưa cộng được phần vải này.</summary>
     public const string FabricCheckNoMarkerLabel = "bìa cho màu {0}";
     public const string WorkOrderComponentInvalid = "Chi tiết cắt lẻ phải là chi tiết vải đang dùng trong định mức của đúng màu – size.";
@@ -114,7 +111,7 @@ public static class WarehouseMessages
     public const string MaterialColorInUse = "NVL đã được dùng (định mức, NVL của đơn, chứng từ hoặc tồn kho) nên không đổi màu được; hãy tạo NVL mới cho màu khác.";
     public const string IssueLineMaterialOnly = "Phiếu cấp NVL chỉ gồm dòng NVL (chọn NVL, không chọn dòng đơn / chi tiết).";
     public const string IssueLinePieceOnly = "Phiếu cấp BTP chỉ gồm dòng BTP (chọn dòng đơn, không chọn NVL).";
-    public const string ComponentNotInVariantNorm = "Chi tiết phải là chi tiết vải trong định mức của đúng màu × size của dòng đơn.";
+    public const string ComponentNotInVariantNorm = "Chi tiết phải là chi tiết vải trong định mức của đúng màu áo của dòng đơn.";
     public const string FabricRequired = "Vui lòng chọn vải của bàn cắt.";
     public const string OrderMaterialDuplicateOf = "Đơn hàng đã có NVL {0}; hãy sửa dòng đó thay vì thêm mới.";
     public const string OrderMaterialQtyRequired = "Phải nhập số cần hoặc số khách cấp lớn hơn 0.";

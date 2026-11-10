@@ -234,15 +234,15 @@ Table AttendanceLog [note: 'Lượt quẹt vân tay (3 trường lấy từ RJ)'
   }
 }
 
-Table ProductComponentMaterial [note: 'Định mức NVL theo biến thể × thành phần: NVL, màu NVL, lượng / sản phẩm, hao hụt, kích thước chi tiết'] {
+Table ProductComponentMaterial [note: 'Định mức NVL theo màu áo × thành phần (DEV-ALL-87): dùng NVL nào; mọi size của một màu dùng chung'] {
   ProductComponentMaterialId int [pk, increment, note: 'Khóa chính, tự tăng']
   ProductId int [not null, note: 'Mã hàng']
-  ProductVariantId int [not null, note: 'Biến thể (màu × size) mà định mức này áp dụng']
+  ProductColorId int [not null, note: 'Màu áo mà định mức này áp dụng (mọi size); size của chứng từ lấy từ OrderLine']
   ProductComponentId int [not null, note: 'Thành phần dùng NVL này; FK ghép cùng ProductId nên phải đúng mã hàng']
   MaterialId int [not null, note: 'Vật tư']
   SpecNote nvarchar(200) [note: 'Ghi chú quy cách khác']
   indexes {
-    (ProductVariantId, ProductComponentId, MaterialId) [unique, name: 'UQ_PCM']
+    (ProductColorId, ProductComponentId, MaterialId) [unique, name: 'UQ_PCM']
     (MaterialId) [name: 'IX_PCM_Material']
   }
 }
@@ -716,16 +716,14 @@ Table FgHandover [note: 'Bàn giao thành phẩm'] {
   }
 }
 
-Table OperationComponent [note: 'Công đoạn làm trên chi tiết vải nào, vải nào (DEV-ALL-86)'] {
-  OperationId int [not null, note: 'Công đoạn (khóa chính cùng ProductComponentId, MaterialId)']
-  ProductComponentId int [not null, note: 'Chi tiết vải (PANEL) mà công đoạn làm trên đó; một công đoạn có thể gắn nhiều chi tiết']
+Table OperationComponent [note: 'Công đoạn làm trên chi tiết vải (PANEL) nào; vải tra qua ProductComponentMaterial (DEV-ALL-86)'] {
+  OperationId int [not null, note: 'Công đoạn (khóa chính cùng ProductComponentId)']
+  ProductComponentId int [not null, note: 'Chi tiết vải (PANEL) mà công đoạn làm trên đó, mỗi chi tiết một vải ở một màu – size; một công đoạn có thể gắn nhiều chi tiết']
   ProductId int [not null, note: 'Mã hàng chung của công đoạn và chi tiết (cho hai FK ghép)']
-  MaterialId int [not null, note: 'Vải của chi tiết (NVL loại vải có trong định mức chi tiết đó; vải chính, vải lót là hai dòng)']
 
   indexes {
-    (OperationId, ProductComponentId, MaterialId) [pk, name: 'PK_OperationComponent']
+    (OperationId, ProductComponentId) [pk, name: 'PK_OperationComponent']
     ProductComponentId [name: 'IX_OC_Component']
-    MaterialId [name: 'IX_OC_Material']
   }
 }
 
@@ -1334,7 +1332,7 @@ Table Attachment [note: 'Tệp / ảnh đính kèm'] {
   }
 }
 
-Ref FK_PCM_Variant: ProductComponentMaterial.(ProductVariantId, ProductId) > ProductVariant.(ProductVariantId, ProductId)
+Ref FK_PCM_Color: ProductComponentMaterial.(ProductColorId, ProductId) > ProductColor.(ProductColorId, ProductId)
 Ref FK_OrderLine_Variant: OrderLine.(ProductVariantId, ProductId) > ProductVariant.(ProductVariantId, ProductId)
 Ref FK_PV_Color: ProductVariant.(ProductColorId, ProductId) > ProductColor.(ProductColorId, ProductId)
 Ref FK_PMF_Color: ProductMarkerFabric.(ProductColorId, ProductId) > ProductColor.(ProductColorId, ProductId)
@@ -1342,7 +1340,6 @@ Ref FK_PMC_Component: ProductMarkerComponent.(ProductComponentId, ProductId) > P
 Ref FK_MRL_POL: MaterialReceiptLine.PurchaseOrderLineId > PurchaseOrderLine.PurchaseOrderLineId
 Ref FK_PCM_Component: ProductComponentMaterial.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
 Ref FK_OC_Component: OperationComponent.(ProductComponentId, ProductId) > ProductComponent.(ProductComponentId, ProductId)
-Ref FK_OC_Material: OperationComponent.MaterialId > Material.MaterialId
 Ref FK_AL_Session: AttendanceLog.SyncSessionId > AttendanceSyncSession.SyncSessionId
 Ref FK_Request_MaterialReceipt: Request.MaterialReceiptId > MaterialReceipt.MaterialReceiptId
 Ref FK_MRL_Receipt: MaterialReceiptLine.MaterialReceiptId > MaterialReceipt.MaterialReceiptId

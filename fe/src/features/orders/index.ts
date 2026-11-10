@@ -5,5 +5,3 @@ export { OrderOverviewPage } from './pages/OrderOverviewPage';
 export { OrderOverviewListPage } from './pages/OrderOverviewListPage';
 export { OrdersPage } from './pages/OrdersPage';
 export { ProductsPage } from './pages/ProductsPage';
-export { useProductSpec } from './hooks/useOrders';
-export type { ProductSpec } from './types';

@@ -53,7 +53,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     {
         var codes = Substitute.For<IDocumentCodeGenerator>();
         return new WorkOrderService(Uow, _stock, new FabricPlanner(Uow), codes, Notifier, NullLogger<WorkOrderService>.Instance, Clock,
-            new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), Settings));
+            new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), new BranchAndBoundMarkerSolver()));
     }
 
     /// <summary>Cắt bù tay áo (2 chi tiết / sản phẩm); bìa tay 2A của đơn dài 1,6 m, M2 → 4 tay M trên một lớp.</summary>
@@ -62,25 +62,42 @@ public class WorkOrderFabricTests : ProductionTestBase
         var variant = _lines[0].ProductVariant;
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = PcmId, ProductId = ProductId, ProductVariantId = variant.ProductVariantId, ProductVariant = variant,
-            ProductComponentId = SleeveId, MaterialId = FabricId, Material = _fabric,
+            ProductComponentMaterialId = PcmId,
+            ProductId = ProductId,
+            ProductColorId = variant.ProductColorId,
+            ProductColor = variant.ProductColor,
+            ProductComponentId = SleeveId,
+            MaterialId = FabricId,
+            Material = _fabric,
             ProductComponent = new ProductComponent
             {
-                ProductComponentId = SleeveId, ComponentName = "Tay áo", ComponentType = ComponentTypes.Panel, PiecesPerGarment = 2,
+                ProductComponentId = SleeveId,
+                ComponentName = "Tay áo",
+                ComponentType = ComponentTypes.Panel,
+                PiecesPerGarment = 2,
                 Status = RecordStatus.Active,
             },
         });
         _groupFabrics.Add(new ProductMarkerFabric
         {
-            ProductId = ProductId, MarkerNo = 2, ProductColorId = variant.ProductColorId, ProductColor = variant.ProductColor,
-            MaterialId = FabricId, Material = _fabric,
+            ProductId = ProductId,
+            MarkerNo = 2,
+            ProductColorId = variant.ProductColorId,
+            ProductColor = variant.ProductColor,
+            MaterialId = FabricId,
+            Material = _fabric,
         });
         _groupComponents.Add(new ProductMarkerComponent { ProductId = ProductId, MarkerNo = 2, ProductComponentId = SleeveId });
         if (withMarker)
         {
             var marker = new ProductMarker
             {
-                ProductMarkerId = 1, OrderId = OrderId, ProductId = ProductId, MarkerNo = 2, MarkerCode = "2A", LengthM = 1.6m,
+                ProductMarkerId = 1,
+                OrderId = OrderId,
+                ProductId = ProductId,
+                MarkerNo = 2,
+                MarkerCode = "2A",
+                LengthM = 1.6m,
                 Status = RecordStatus.Active,
             };
             marker.ProductMarkerRatios.Add(new ProductMarkerRatio { ProductMarkerId = 1, SizeCode = "M", PiecesPerPly = 2 });
@@ -106,32 +123,41 @@ public class WorkOrderFabricTests : ProductionTestBase
         result.Message.Should().Be(NX_MTD.Application.Common.WarehouseMessages.WorkOrderDueInPast);
     }
 
+    /// <summary>Kiểm vải của các dòng cắt bù như ở chi tiết lệnh (size lấy từ dòng đơn).</summary>
+    private Task<IReadOnlyList<WorkOrderFabricCheckDto>> CheckRecut(int pieces) =>
+        new WorkOrderFabricChecker(Uow, _stock, new FabricPlanner(Uow), new BranchAndBoundMarkerSolver())
+            .CheckAsync(OrderId, TeamId, [new CutLine(_lines[0].ProductVariantId, pieces, "Đen - M", PcmId)], default);
+
     [Fact]
-    public async Task Recut_WhenStockIsShort_NamesTheFabricAndTheEstimate()
+    public async Task CreateReplacementAsync_StockShort_IsNotBlockedOnlyWarned()
     {
         RecutRequest(7);   // 7 tay ÷ 4 tay / lớp → 2 lớp × 1,6 m = 3,2 m, kho còn 1 m
 
         var result = await Sut().CreateReplacementAsync(Dto(), default);
+        var row = (await CheckRecut(7)).Single();
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage);
-        result.Message.Should().Contain("V01").And.Contain("3,2").And.Contain("kho 1");
+        // Không còn lỗi thiếu vải; bước đọc lại chi tiết lệnh của nguồn giả không chạy được nên không xét IsSuccess.
+        (result.Message ?? string.Empty).Should().NotContain("V01");
+        row.Status.Should().Be(FabricCheckStatuses.Short);
+        row.Message.Should().Contain("V01").And.Contain("3,2").And.Contain("kho 1");
+        var plan = row.MarkerPlans.Should().ContainSingle().Subject;
+        (plan.MarkerNo, plan.IsExtra, plan.Surplus).Should().Be((2, true, 1));   // 2 lớp × 4 tay = 8 miếng, cần 7
+        plan.Markers.Single().Should().Match<FabricMarkerUseDto>(m => m.MarkerCode == "2A" && m.Plies == 2 && m.Meters == 3.2m);
     }
 
     [Fact]
-    public async Task Recut_FewPieces_StillNeedOneMarkerLength()
+    public async Task CheckAsync_RecutFewPieces_NeedsOneMarkerLength()
     {
         _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(1.5m);
         RecutRequest(1);   // 1 tay vẫn cần một lớp = 1,6 m > 1,5 m
 
-        var result = await Sut().CreateReplacementAsync(Dto(), default);
+        var row = (await CheckRecut(1)).Single();
 
-        result.ErrorCode.Should().Be(NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage);
-        result.Message.Should().Contain("1,6");
+        (row.Status, row.NeedMeters).Should().Be((FabricCheckStatuses.Short, 1.6m));
     }
 
     [Fact]
-    public async Task Recut_TeamHoldingCountsTowardsTheAvailableFabric()
+    public async Task CheckAsync_RecutWithTeamHolding_CountsItAsAvailable()
     {
         RecutRequest(7);
         var issue = new MaterialIssue
@@ -140,20 +166,18 @@ public class WorkOrderFabricTests : ProductionTestBase
         };
         _issueLines.Add(new MaterialIssueLine { MaterialIssueId = 1, MaterialId = FabricId, IssuedQty = 5, ConfirmedQty = 5, MaterialIssue = issue });
 
-        var result = await Sut().CreateReplacementAsync(Dto(), default);
-
-        // Đủ vải (kho 1 + tổ giữ 5 ≥ 3,2) nên không còn lỗi thiếu vải; bước đọc lại chi tiết lệnh của nguồn giả không chạy được.
-        (result.ErrorCode == NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage).Should().BeFalse();
+        (await CheckRecut(7)).Single().Status.Should().Be(FabricCheckStatuses.Enough);   // kho 1 + tổ giữ 5 ≥ 3,2
     }
 
     [Fact]
-    public async Task Recut_WithoutAnOrderMarkerTheEstimateIsSkippedAndTheOrderIsNotBlocked()
+    public async Task CheckAsync_RecutWithoutOrderMarker_ReturnsUnknown()
     {
         RecutRequest(7, withMarker: false);
 
-        var result = await Sut().CreateReplacementAsync(Dto(), default);
+        var row = (await CheckRecut(7)).Single();
 
-        (result.ErrorCode == NX_MTD.Domain.Constants.ErrorCodes.CuttingFabricShortage).Should().BeFalse();
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.MarkerPlans.Should().BeNull();
     }
 
     private void AddLay(short plies, decimal? length, int team = TeamId, int order = OrderId, int fabric = FabricId) =>
@@ -172,7 +196,11 @@ public class WorkOrderFabricTests : ProductionTestBase
     {
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = PcmId, ProductVariantId = _lines[0].ProductVariantId, ProductComponentId = 1, MaterialId = FabricId, Material = _fabric,
+            ProductComponentMaterialId = PcmId,
+            ProductColorId = _lines[0].ProductVariant.ProductColorId,
+            ProductComponentId = 1,
+            MaterialId = FabricId,
+            Material = _fabric,
             ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
         });
         var wo = new WorkOrder { WorkOrderId = 7, OrderId = OrderId, ProductId = ProductId, CuttingTeamId = TeamId, Status = WorkOrderStatuses.Cutting, Order = _orders[0] };
@@ -231,10 +259,14 @@ public class WorkOrderFabricTests : ProductionTestBase
     [Fact]
     public async Task Fabrics_listsTheWorkOrderFabricsWithIssuedReceivedReturnedAndUsed()
     {
-        var variantId = _lines[0].ProductVariantId;
+        var colorId = _lines[0].ProductVariant.ProductColorId;
         _norms.Add(new ProductComponentMaterial
         {
-            ProductComponentMaterialId = PcmId, ProductVariantId = variantId, ProductComponentId = 1, MaterialId = FabricId, Material = _fabric,
+            ProductComponentMaterialId = PcmId,
+            ProductColorId = colorId,
+            ProductComponentId = 1,
+            MaterialId = FabricId,
+            Material = _fabric,
             ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentType = ComponentTypes.Panel, PiecesPerGarment = 1 },
         });
         var wo = new WorkOrder

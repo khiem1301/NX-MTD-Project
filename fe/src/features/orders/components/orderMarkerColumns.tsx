@@ -19,6 +19,22 @@ const STATUS_OPTIONS: { value: OrderMarkerStatus; label: string }[] = [
   { value: 'Discontinued', label: text.discontinued },
 ];
 
+/**
+ * Bề rộng cột (px). Cột có bề rộng cố định; bảng có bề rộng tối thiểu tính sẵn và cuộn bằng khung ngoài, để antd không phải
+ * đo nội dung ô nhập mỗi lần vẽ (đo theo nội dung làm thanh cuộn hiện / mất liên tục, bảng giật hình).
+ */
+const WIDTH = { group: 110, code: 120, length: 110, size: 76, status: 130, remove: 48 } as const;
+const FULL = { width: '100%' } as const;
+
+/** Bề rộng tối thiểu của bảng (tổng bề rộng cột). */
+export const orderMarkerTableWidth = (sizeCount: number, readOnly: boolean) =>
+  WIDTH.group +
+  WIDTH.code +
+  WIDTH.length +
+  sizeCount * WIDTH.size +
+  WIDTH.status +
+  (readOnly ? 0 : WIDTH.remove);
+
 type OrderMarkerColumnsOptions = {
   sizes: string[];
   groups: number[];
@@ -34,24 +50,28 @@ export const orderMarkerColumns = ({
   setRows,
 }: OrderMarkerColumnsOptions): TableColumnsType<OrderMarkerRow> => {
   const patch = (key: string, change: Partial<OrderMarkerRow>) => patchRow(setRows, key, change);
+  const groupOptions = groups.map((g) => ({ value: g, label: fill(text.groupLabel, g) }));
   return [
     {
       title: text.group,
-      fixed: 'left' as const,
+      key: 'group',
+      width: WIDTH.group,
       render: (_, r) => (
         <Select
           size="small"
           disabled={readOnly}
           aria-label={text.group}
           value={r.markerNo}
-          options={groups.map((g) => ({ value: g, label: fill(text.groupLabel, g) }))}
-          style={{ width: 100 }}
+          options={groupOptions}
+          style={FULL}
           onChange={(markerNo: number) => patch(r.key, { markerNo })}
         />
       ),
     },
     {
       title: text.code,
+      key: 'code',
+      width: WIDTH.code,
       render: (_, r) => (
         <Input
           size="small"
@@ -59,13 +79,15 @@ export const orderMarkerColumns = ({
           aria-label={text.code}
           maxLength={ORDER_MARKER_LIMITS.maxCodeLength}
           value={r.markerCode}
-          style={{ width: 100 }}
+          style={FULL}
           onChange={(e) => patch(r.key, { markerCode: e.target.value })}
         />
       ),
     },
     {
       title: text.lengthM,
+      key: 'length',
+      width: WIDTH.length,
       render: (_, r) => (
         <InputNumber
           size="small"
@@ -75,7 +97,7 @@ export const orderMarkerColumns = ({
           max={ORDER_MARKER_LIMITS.maxLengthM}
           precision={2}
           value={r.lengthM}
-          style={{ width: 90 }}
+          style={FULL}
           onChange={(lengthM) => patch(r.key, { lengthM })}
         />
       ),
@@ -83,6 +105,7 @@ export const orderMarkerColumns = ({
     ...sizes.map((size) => ({
       title: size,
       key: `size-${size}`,
+      width: WIDTH.size,
       render: (_: unknown, r: OrderMarkerRow) => (
         <InputNumber
           size="small"
@@ -92,13 +115,15 @@ export const orderMarkerColumns = ({
           max={ORDER_MARKER_LIMITS.maxPiecesPerPly}
           precision={0}
           value={piecesOf(r, size)}
-          style={{ width: 64 }}
+          style={FULL}
           onChange={(value) => patch(r.key, withPieces(r, size, value))}
         />
       ),
     })),
     {
       title: text.status,
+      key: 'status',
+      width: WIDTH.status,
       render: (_, r) => (
         <Select
           size="small"
@@ -106,11 +131,14 @@ export const orderMarkerColumns = ({
           aria-label={text.status}
           value={r.status}
           options={STATUS_OPTIONS}
-          style={{ width: 120 }}
+          style={FULL}
           onChange={(status: OrderMarkerStatus) => patch(r.key, { status })}
         />
       ),
     },
-    ...(readOnly ? [] : [deleteRowColumn<OrderMarkerRow>((key) => dropRow(setRows, key))]),
+    // Bỏ ghim phải của cột xóa: bảng không cuộn bằng antd nên cột ghim chỉ làm antd đo lại vô ích.
+    ...(readOnly
+      ? []
+      : [{ ...deleteRowColumn<OrderMarkerRow>((key) => dropRow(setRows, key)), fixed: undefined }]),
   ];
 };

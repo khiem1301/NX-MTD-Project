@@ -1,10 +1,12 @@
 import type { ProductSpec } from '../types';
 import {
+  panelFabricProblem,
   removeComponent,
+  toMaterialOption,
   toPayload,
   toRows,
+  colorKey,
   validate,
-  variantKey,
   type ComponentRow,
   type NormRow,
   type VariantRow,
@@ -14,14 +16,12 @@ const norm = (
   id: number,
   component: string,
   color: string,
-  size: string,
   note: string | null = null,
   material = 1,
 ) => ({
   productComponentMaterialId: id,
   componentName: component,
   color,
-  sizeCode: size,
   materialId: material,
   materialCode: 'V1',
   materialName: 'Vải',
@@ -71,43 +71,49 @@ const spec: ProductSpec = {
       status: 'Discontinued',
     },
   ],
-  norms: [
-    norm(1, 'Thân', 'Đen', 'M', 'may kép'),
-    norm(2, 'Thân', 'Đen', 'L', 'may kép'),
-    norm(3, 'Cổ cũ', 'Đen', 'M'),
-    norm(4, 'Thân', 'Đỏ', 'S'),
-  ],
+  // Định mức theo màu (DEV-ALL-87): một dòng cho màu Đen dùng chung size M, L; màu Đỏ đã ngừng dùng.
+  norms: [norm(1, 'Thân', 'Đen', 'may kép'), norm(3, 'Cổ cũ', 'Đen'), norm(4, 'Thân', 'Đỏ')],
 };
 
 describe('productSpec', () => {
-  it('gộp các biến thể cùng định mức thành một dòng và bỏ thành phần / biến thể đã ngừng dùng', () => {
+  it('mỗi màu một dòng định mức và bỏ thành phần / màu đã ngừng dùng', () => {
     const rows = toRows(spec);
 
     expect(rows.components.map((c) => c.componentName)).toEqual(['Thân']);
     expect(rows.variants).toHaveLength(2);
     expect(rows.norms).toHaveLength(1);
     expect(rows.norms[0]?.componentKey).toBe(rows.components[0]?.key);
-    expect(rows.norms[0]?.variantKeys).toEqual([variantKey('Đen', 'M'), variantKey('Đen', 'L')]);
+    expect(rows.norms[0]?.colorKeys).toEqual([colorKey('Đen')]);
   });
 
-  it('định mức (ghi chú quy cách) khác nhau giữa các size thì tách dòng', () => {
-    const rows = toRows({
+  it('cùng định mức ở nhiều màu thì gộp một dòng, khác ghi chú quy cách thì tách dòng', () => {
+    const twoColors = {
       ...spec,
-      norms: [norm(1, 'Thân', 'Đen', 'M', 'may kép'), norm(2, 'Thân', 'Đen', 'L', 'may đơn')],
+      variants: [
+        ...spec.variants.slice(0, 2),
+        { productVariantId: 13, color: 'Xanh', sizeCode: 'M', status: 'Active' },
+      ],
+    };
+    const same = toRows({
+      ...twoColors,
+      norms: [norm(1, 'Thân', 'Đen', 'may kép'), norm(2, 'Thân', 'Xanh', 'may kép')],
+    });
+    const different = toRows({
+      ...twoColors,
+      norms: [norm(1, 'Thân', 'Đen', 'may kép'), norm(2, 'Thân', 'Xanh', 'may đơn')],
     });
 
-    expect(rows.norms).toHaveLength(2);
+    expect(same.norms).toHaveLength(1);
+    expect(same.norms[0]?.colorKeys).toEqual([colorKey('Đen'), colorKey('Xanh')]);
+    expect(different.norms).toHaveLength(2);
   });
 
-  it('toPayload nở mỗi dòng ra từng biến thể được chọn', () => {
+  it('toPayload nở mỗi dòng ra từng màu được chọn, không theo size', () => {
     const rows = toRows(spec);
 
     const payload = toPayload(rows.components, rows.variants, rows.norms);
 
-    expect(payload.norms.map((n) => `${n.color}-${n.sizeCode}:${n.specNote}`)).toEqual([
-      'Đen-M:may kép',
-      'Đen-L:may kép',
-    ]);
+    expect(payload.norms.map((n) => `${n.color}:${n.specNote}`)).toEqual(['Đen:may kép']);
     expect(payload.norms.every((n) => n.componentName === 'Thân')).toBe(true);
     expect(payload.variants.map((v) => v.productVariantId)).toEqual([10, 11]);
   });
@@ -150,10 +156,10 @@ describe('productSpec', () => {
       expect(validate(base.components, base.variants, [row({ materialId: undefined })])).not.toBe(
         '',
       );
-      expect(validate(base.components, base.variants, [row({ variantKeys: [] })])).not.toBe('');
+      expect(validate(base.components, base.variants, [row({ colorKeys: [] })])).not.toBe('');
     });
 
-    it('bắt trùng NVL cùng thành phần và màu – size, trùng tên thành phần, trùng màu – size', () => {
+    it('bắt trùng NVL cùng thành phần và màu, trùng tên thành phần, trùng màu – size', () => {
       expect(
         validate(base.components, base.variants, [row({ key: 'a' }), row({ key: 'b' })]),
       ).not.toBe('');
@@ -230,7 +236,7 @@ describe('productSpec', () => {
         componentKey: (base.components[0] as ComponentRow).key,
         materialId: i + 1,
         specNote: '',
-        variantKeys: variants.map((v) => variantKey(v.color, v.sizeCode)),
+        colorKeys: variants.map((v) => colorKey(v.color)),
       }));
 
     it('số thành phần và màu – size: đúng 200 thì qua, 201 thì bị chặn', () => {
@@ -240,16 +246,70 @@ describe('productSpec', () => {
       expect(validate(base.components, manyVariants(201), [])).toContain('Tối đa 200 màu');
     });
 
-    it('số dòng định mức tính sau khi nở theo màu – size: đúng 5.000 thì qua, 5.001 thì bị chặn', () => {
+    it('số dòng định mức tính sau khi nở theo màu: đúng 5.000 thì qua, 5.001 thì bị chặn', () => {
       const variants = manyVariants(200);
       const atLimit = manyNorms(25, variants);
       const oneMore = {
         ...(manyNorms(26, variants)[25] as NormRow),
-        variantKeys: [variantKey('C0', 'M')],
+        colorKeys: [colorKey('C0')],
       };
 
       expect(validate(base.components, variants, atLimit)).toBe('');
       expect(validate(base.components, variants, [...atLimit, oneMore])).toContain('5.001 dòng');
     });
+  });
+});
+
+describe('panelFabricProblem (DEV-ALL-86)', () => {
+  const material = (materialId: number, materialType: string) =>
+    toMaterialOption({
+      materialId,
+      materialCode: `M${materialId}`,
+      materialName: 'NVL',
+      color: '',
+      unit: 'm',
+      materialType,
+    });
+  const materials = [material(1, 'FABRIC'), material(2, 'FABRIC'), material(3, 'TRIM')];
+  const variants: VariantRow[] = [{ key: 'v1', productVariantId: 1, color: 'Đen', sizeCode: 'M' }];
+  const component = (key: string, componentType: 'Panel' | 'Trim'): ComponentRow => ({
+    key,
+    productComponentId: null,
+    componentName: key,
+    componentType,
+    piecesPerGarment: 1,
+  });
+  const norm = (componentKey: string, materialId: number): NormRow => ({
+    key: `${componentKey}-${materialId}`,
+    componentKey,
+    materialId,
+    specNote: '',
+    colorKeys: [colorKey('Đen')],
+  });
+  const check = (components: ComponentRow[], norms: NormRow[]) =>
+    panelFabricProblem(components, variants, norms, materials);
+
+  it('chi tiết cắt khai hai vải ở cùng màu thì báo, kèm tên chi tiết và màu', () => {
+    expect(check([component('Tay áo', 'Panel')], [norm('Tay áo', 1), norm('Tay áo', 2)])).toBe(
+      'Chi tiết cắt "Tay áo" màu Đen khai hơn một vải. Mỗi chi tiết cắt chỉ một vải: tách vải lót, mex, bo thành chi tiết riêng (vd "Lót Tay áo", "Mex Tay áo").',
+    );
+  });
+
+  it('vải lót là chi tiết riêng, phụ liệu trên chi tiết cắt, hoặc phụ liệu nhiều NVL thì hợp lệ', () => {
+    const components = [
+      component('Tay áo', 'Panel'),
+      component('Lót', 'Panel'),
+      component('Khóa', 'Trim'),
+    ];
+
+    expect(
+      check(components, [
+        norm('Tay áo', 1),
+        norm('Tay áo', 3),
+        norm('Lót', 2),
+        norm('Khóa', 1),
+        norm('Khóa', 2),
+      ]),
+    ).toBe('');
   });
 });

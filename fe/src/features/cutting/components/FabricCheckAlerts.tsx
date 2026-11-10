@@ -1,46 +1,65 @@
 import { Alert, Flex } from 'antd';
 import { LABELS } from '../constants';
 import type { WorkOrderFabricCheck } from '../types';
+import { fabricPlanLine } from '../utils/fabricPlan';
 
 type Check = WorkOrderFabricCheck;
+
+const Note = ({ text }: { text: string }) => (
+  <div style={{ fontSize: 12, opacity: 0.65 }}>{text}</div>
+);
 
 const Group = ({
   type,
   title,
-  rows,
+  lines,
+  note,
 }: {
   type: 'warning' | 'info';
   title: string;
-  rows: Check[];
+  lines: { key: number; text: string }[];
+  note?: string;
 }) =>
-  rows.length === 0 ? null : (
+  lines.length === 0 ? null : (
     <Alert
       type={type}
       showIcon
       message={
         <>
           <strong>{title}</strong>
-          {rows.map((r) => (
-            <div key={r.materialId}>{r.message}</div>
+          {lines.map((l) => (
+            <div key={l.key}>{l.text}</div>
           ))}
-          {type === 'warning' && (
-            <div style={{ fontSize: 12, opacity: 0.65 }}>{LABELS.fabricEstimateNote}</div>
-          )}
+          {note && <Note text={note} />}
         </>
       }
     />
   );
 
-/** Cảnh báo vải của lệnh cắt ước theo bìa của đơn (DEV-ALL-85): chỉ hiển thị, không chặn lập lệnh. Đủ vải, bìa đúng tỉ lệ thì không hiện gì. */
+/**
+ * Vải của lệnh cắt ước theo bìa của đơn (DEV-ALL-85, ghép bìa DEV-ALL-88): luôn hiện số mét cần và bìa nên dùng (kèm tỉ lệ size của bìa)
+ * do hệ thống tính (ước tính, có thể chênh lệch với thực tế); thiếu vải, chưa tính được thì cảnh báo riêng. Chỉ hiển thị, không chặn lập lệnh.
+ */
 export function FabricCheckAlerts({ checks }: { checks: Check[] }) {
-  const of = (status: Check['status']) => checks.filter((c) => c.status === status);
-  const ratioWarnings = checks.filter((c) => c.status === 'Enough' && c.message);
-  if (checks.every((c) => c.status === 'Enough' && !c.message)) return null;
+  const linesOf = (status: Check['status']) =>
+    checks
+      .filter((c) => c.status === status)
+      .map((c) => ({ key: c.materialId, text: c.message ?? '' }));
+  const plans = checks.flatMap((c) => {
+    const text = fabricPlanLine(c);
+    return text === null ? [] : [{ key: c.materialId, text }];
+  });
+  if (checks.length === 0) return null;
   return (
     <Flex vertical gap={8} style={{ marginTop: 12 }}>
-      <Group type="warning" title={LABELS.fabricNotEnough} rows={of('Short')} />
-      <Group type="info" title={LABELS.fabricRatioWarning} rows={ratioWarnings} />
-      <Group type="info" title={LABELS.fabricNotEstimated} rows={of('Unknown')} />
+      <Group type="info" title={LABELS.fabricPlan} lines={plans} note={LABELS.fabricPlanNote} />
+      <Group
+        type="warning"
+        title={LABELS.fabricNotEnough}
+        lines={linesOf('Short')}
+        note={LABELS.fabricEstimateNote}
+      />
+      <Group type="info" title={LABELS.fabricNotEstimated} lines={linesOf('Unknown')} />
     </Flex>
   );
 }

@@ -4,13 +4,13 @@ import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import type { ApiError } from '@/types/api';
-import { requestApi } from '../api/requestApi';
+import { requestApi } from '@/services/requestApi';
 import type {
   CreateRequestBody,
   RequestAction,
   RequestListQuery,
   UpdateRequestBody,
-} from '../types';
+} from '@/types/request';
 
 export const REQUESTS_KEY = ['requests'] as const;
 
