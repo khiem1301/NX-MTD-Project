@@ -1,6 +1,6 @@
 import { Alert, Button, Modal, Typography, message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import type { TempPassword } from '../types';
+import type { TempPassword } from '@/types/auth';
 
 type TempPasswordModalProps = { value: TempPassword | null; onClose: () => void };
 

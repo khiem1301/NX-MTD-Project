@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
 import { normalizeCode } from '@/utils/textInput';
 import { MESSAGES } from '@/constants/messages';
-import { useProductSpec } from '@/features/orders';
+import { useProductComponents } from '@/hooks/useOrderLookups';
 import { OPERATION_LIMITS, PRODUCTION_TEXT } from '../constants';
 import { useSaveOperation } from '../hooks/useOperations';
 import type { Operation } from '../types';
@@ -36,6 +36,8 @@ type FormValues = {
 };
 
 const text = PRODUCTION_TEXT.operations;
+/** DEV-ALL-86: công đoạn chỉ gắn chi tiết cắt (đúng giá trị API định mức trả về); mỗi chi tiết cắt một vải nên gắn chi tiết là biết vải. */
+const COMPONENT_TYPE_PANEL = 'Panel';
 const required = [{ required: true, whitespace: true, message: PRODUCTION_TEXT.required }];
 
 /** UC25 — Kế toán, Admin sửa một công đoạn đã nhập từ Excel (vd. đánh dấu công đoạn cuối). Mỗi mã hàng đúng một công đoạn cuối đang dùng (BE kiểm). */
@@ -51,7 +53,7 @@ export function OperationFormModal({
 }: Props) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveOperation(operation?.operationId ?? null);
-  const spec = useProductSpec(open ? productId : undefined);
+  const components = useProductComponents(open ? productId : undefined);
 
   useEffect(() => {
     if (!open) return;
@@ -181,11 +183,10 @@ export function OperationFormModal({
             mode="multiple"
             allowClear
             optionFilterProp="label"
-            loading={spec.isLoading}
-            options={(spec.data?.components ?? []).map((c) => ({
-              value: c.productComponentId,
-              label: c.componentName,
-            }))}
+            loading={components.isLoading}
+            options={(components.data ?? [])
+              .filter((c) => c.componentType === COMPONENT_TYPE_PANEL)
+              .map((c) => ({ value: c.productComponentId, label: c.componentName }))}
           />
         </Form.Item>
         <OperationFinalField hasOtherFinal={hasOtherFinal} />

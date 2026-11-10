@@ -6,7 +6,7 @@ import viVN from 'antd/es/locale/vi_VN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { antdTheme } from '@/app/theme';
+import { antdTheme } from '@/styles/theme';
 import { queryClient } from '@/services/queryClient';
 import { AuthBootstrap } from './AuthBootstrap';
 

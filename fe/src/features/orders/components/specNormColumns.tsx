@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Divider, Input, InputNumber, Select, Tooltip, type TableColumnsType } from 'antd';
+import { Button, Divider, Input, Select, Tooltip, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { dropRow, patchRow, type MaterialOption, type NormRow } from '../utils/productSpec';
 import { deleteRowColumn } from './deleteRowColumn';
@@ -11,7 +11,8 @@ type SpecNormColumnsOptions = {
   componentOptions: { value: string; label: string }[];
   materialOptions: MaterialOption[];
   materialsLoading: boolean;
-  variantOptions: { value: string; label: string }[];
+  /** Màu áo chọn được (định mức theo màu, DEV-ALL-87). */
+  colorOptions: { value: string; label: string }[];
   setNorms: Dispatch<SetStateAction<NormRow[]>>;
   /** Tạo NVL mới ngay tại ô chọn NVL của dòng này. */
   onAddMaterial: (rowKey: string) => void;
@@ -22,7 +23,7 @@ export const specNormColumns = ({
   componentOptions,
   materialOptions,
   materialsLoading,
-  variantOptions,
+  colorOptions,
   setNorms,
   onAddMaterial,
 }: SpecNormColumnsOptions): TableColumnsType<NormRow> => [
@@ -69,42 +70,16 @@ export const specNormColumns = ({
     ),
   },
   {
-    title: text.length,
-    render: (_, r) => (
-      <InputNumber
-        size="small"
-        min={0}
-        precision={2}
-        value={r.lengthCm}
-        style={{ width: 90 }}
-        onChange={(v) => patchRow(setNorms, r.key, { lengthCm: v })}
-      />
-    ),
-  },
-  {
-    title: text.width,
-    render: (_, r) => (
-      <InputNumber
-        size="small"
-        min={0}
-        precision={2}
-        value={r.widthCm}
-        style={{ width: 90 }}
-        onChange={(v) => patchRow(setNorms, r.key, { widthCm: v })}
-      />
-    ),
-  },
-  {
     title: text.appliesTo,
     render: (_, r) => (
       <Select
         size="small"
         mode="multiple"
         maxTagCount="responsive"
-        value={r.variantKeys}
-        options={variantOptions}
+        value={r.colorKeys}
+        options={colorOptions}
         style={{ minWidth: 220 }}
-        onChange={(v) => patchRow(setNorms, r.key, { variantKeys: v })}
+        onChange={(v) => patchRow(setNorms, r.key, { colorKeys: v })}
         dropdownRender={(menu) => (
           <>
             {menu}
@@ -113,7 +88,7 @@ export const specNormColumns = ({
               size="small"
               onClick={() =>
                 patchRow(setNorms, r.key, {
-                  variantKeys: variantOptions.map((o) => o.value),
+                  colorKeys: colorOptions.map((o) => o.value),
                 })
               }
             >

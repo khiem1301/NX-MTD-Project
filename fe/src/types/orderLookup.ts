@@ -20,3 +20,10 @@ export type OrderLineLookup = {
 };
 
 export type ProductLookup = { productId: number; productCode: string; productName: string };
+
+/** Chi tiết của mã hàng (lấy từ định mức), để luồng khác chọn chi tiết. */
+export type ProductComponentLookup = {
+  productComponentId: number;
+  componentName: string;
+  componentType: 'Panel' | 'Trim';
+};

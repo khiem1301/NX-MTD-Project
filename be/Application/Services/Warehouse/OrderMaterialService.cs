@@ -58,18 +58,18 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private static bool IsFullyReceived(OrderMaterialDto m) => m.RequiredQty > 0 && m.ReceivedQty >= m.RequiredQty;
 
-    /// <summary>Chỉ lấy NVL của những màu × size đơn đặt; NVL hoặc thành phần đã ngừng dùng không khai báo được nên bỏ qua.</summary>
+    /// <summary>Chỉ lấy NVL của những màu áo đơn đặt (định mức theo màu, DEV-ALL-87); NVL hoặc thành phần đã ngừng dùng không khai báo được nên bỏ qua.</summary>
     public async Task<Result<IReadOnlyList<OrderProductMaterialsDto>>> GetProductMaterialsAsync(int orderId, CancellationToken ct)
     {
         if (!await _uow.Repository<CustomerOrder>().Query().AnyAsync(o => o.OrderId == orderId, ct))
             return Fail.NotFound<IReadOnlyList<OrderProductMaterialsDto>>();
 
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .Select(l => new { l.ProductVariantId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName })
+            .Select(l => new { l.ProductVariant.ProductColorId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName })
             .ToListAsync(ct);
-        var variantIds = lines.Select(l => l.ProductVariantId).Distinct().ToList();
+        var colorIds = lines.Select(l => l.ProductColorId).Distinct().ToList();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(n => variantIds.Contains(n.ProductVariantId) && n.Material.Status == MaterialStatuses.Active
+            .Where(n => colorIds.Contains(n.ProductColorId) && n.Material.Status == MaterialStatuses.Active
                 && n.ProductComponent.Status == RecordStatus.Active)
             .Select(n => new
             {
@@ -271,7 +271,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
     private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount) => new(
         om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
         (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty, om.Material.WidthCm,
+        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty,
         om.ExpectedDeliveryDate);
 
     private static string MaterialLabel(Material m) =>

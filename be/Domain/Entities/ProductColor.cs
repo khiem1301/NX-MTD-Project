@@ -17,6 +17,8 @@ public partial class ProductColor
     public virtual Product Product { get; set; } = null!;
 
 
+    public virtual ICollection<ProductComponentMaterial> ProductComponentMaterials { get; set; } = new List<ProductComponentMaterial>();
+
     public virtual ICollection<ProductMarkerFabric> ProductMarkerFabrics { get; set; } = new List<ProductMarkerFabric>();
 
     public virtual ICollection<ProductVariant> ProductVariants { get; set; } = new List<ProductVariant>();

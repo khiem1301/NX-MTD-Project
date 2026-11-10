@@ -51,9 +51,7 @@ jest.mock('@/hooks/useOrderLookups', () => ({
   useProductLookup: () => ({
     data: { items: [{ productId: 1, productCode: 'AO', productName: 'Áo' }] },
   }),
-}));
-jest.mock('@/features/orders', () => ({
-  useProductSpec: () => ({ data: undefined, isLoading: false }),
+  useProductComponents: () => ({ data: undefined, isLoading: false }),
 }));
 jest.mock('../components/ProductSelect', () => ({
   ProductSelect: ({ onChange }: { onChange: (id: number) => void }) => (

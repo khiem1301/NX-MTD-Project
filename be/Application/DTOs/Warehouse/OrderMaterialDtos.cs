@@ -8,7 +8,7 @@ namespace NX_MTD.Application.DTOs;
 public sealed record OrderMaterialDto(
     int OrderMaterialId, int OrderId, int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string MaterialColor, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
-    int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty, decimal? MaterialWidthCm = null,
+    int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty,
     DateOnly? ExpectedDeliveryDate = null);
 
 /// <summary>Phần chung của tạo / sửa NVL của đơn (dùng chung validator).</summary>

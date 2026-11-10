@@ -4,7 +4,7 @@ import { Dropdown, Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { MESSAGES } from '@/constants/messages';
 import { ROUTES } from '@/constants/routes';
-import { useLogout } from '@/features/auth';
+import { useLogout } from '@/hooks/useLogout';
 import type { UserInfo } from '@/types/auth';
 import { UserAvatar } from './UserAvatar';
 

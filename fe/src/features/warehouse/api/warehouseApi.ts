@@ -34,8 +34,6 @@ import type {
   ShortDelivery,
   ShortDeliveryListItem,
   ShortDeliveryQuery,
-  StockBalance,
-  StockBalanceQuery,
   StockCardEntry,
   StockCardQuery,
   NxtReportQuery,
@@ -141,8 +139,6 @@ export const warehouseApi = {
   getWorkOrderFabrics: (role: RolePath, workOrderId: number) =>
     get<FabricRequirement[]>(`${API.cutting.workOrders(role)}/${workOrderId}/fabrics`),
 
-  getBalances: (role: RolePath, q: StockBalanceQuery) =>
-    get<Paginated<StockBalance>>(API.warehouse.inventories(role), q),
   getStockCard: (role: RolePath, q: StockCardQuery) =>
     get<StockCardEntry[]>(`${API.warehouse.inventories(role)}/stock-card`, q),
   getNxtReport: (role: RolePath, q: NxtReportQuery) =>

@@ -6,7 +6,7 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { RequestDetailModal } from '../components/RequestDetailModal';
 import { RequestFilters, type RequestFilterValue } from '../components/RequestFilters';
 import { RequestTable } from '../components/RequestTable';
-import { useRequestInbox } from '../hooks/useRequests';
+import { useRequestInbox } from '@/hooks/useRequests';
 
 /** UC08: đơn thuộc loại mình xử lý. Không chọn trạng thái = đang mở (BE mặc định). */
 export function RequestInboxPage() {

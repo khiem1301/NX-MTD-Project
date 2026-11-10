@@ -12,7 +12,7 @@ import { RequestFilters, type RequestFilterValue } from '../components/RequestFi
 import { RequestFormModal } from '../components/RequestFormModal';
 import { RequestTable } from '../components/RequestTable';
 import { DEFAULT_MAX_PHOTOS, GENERIC_FORM_TYPES } from '../constants';
-import { useMyRequests, useRequestTypes } from '../hooks/useRequests';
+import { useMyRequests, useRequestTypes } from '@/hooks/useRequests';
 
 /** UC07: đơn do mình tạo (tổ trưởng / tổ phó: đơn của cả tổ, D15). */
 export function MyRequestsPage() {

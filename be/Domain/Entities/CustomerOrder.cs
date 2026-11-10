@@ -52,6 +52,8 @@ public partial class CustomerOrder
 
     public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
 
+    public virtual ICollection<ProductMarker> ProductMarkers { get; set; } = new List<ProductMarker>();
+
     public virtual ICollection<OrderMaterial> OrderMaterials { get; set; } = new List<OrderMaterial>();
 
     public virtual ICollection<PurchaseOrder> PurchaseOrders { get; set; } = new List<PurchaseOrder>();

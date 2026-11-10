@@ -2,7 +2,7 @@ import type { ProductSpec } from '../types';
 import {
   codeKey,
   distinctColors,
-  distinctSizes,
+  emptyMarker,
   fabricOptionsFor,
   toMarkerPayload,
   toMarkerRows,
@@ -11,7 +11,7 @@ import {
 } from './markerSpec';
 import {
   toMaterialOption,
-  variantKey,
+  colorKey as normColorKey,
   type ComponentRow,
   type NormRow,
   type VariantRow,
@@ -32,21 +32,23 @@ const component = (key: string, componentType: 'Panel' | 'Trim'): ComponentRow =
   componentType,
   piecesPerGarment: 1,
 });
-const components = [component('than', 'Panel'), component('khoa', 'Trim')];
+const components = [
+  component('than', 'Panel'),
+  component('tay', 'Panel'),
+  component('khoa', 'Trim'),
+];
 
 const norm = (componentKey: string, materialId: number, ...keys: string[]): NormRow => ({
   key: `${componentKey}-${materialId}`,
   componentKey,
   materialId,
-  lengthCm: null,
-  widthCm: null,
   specNote: '',
-  variantKeys: keys,
+  colorKeys: keys,
 });
 const norms = [
-  norm('than', 1, variantKey('Đen', 'M'), variantKey('Đen', 'L')),
-  norm('than', 2, variantKey('Đỏ', 'M')),
-  norm('khoa', 3, variantKey('Đen', 'M')),
+  norm('than', 1, normColorKey('Đen')),
+  norm('than', 2, normColorKey('Đỏ')),
+  norm('khoa', 3, normColorKey('Đen')),
 ];
 
 const material = (materialId: number, materialType: string) =>
@@ -62,7 +64,8 @@ const materials = [material(1, 'FABRIC'), material(2, 'FABRIC'), material(3, 'TR
 
 const marker = (change: Partial<MarkerRow> = {}): MarkerRow => ({
   key: 'b1',
-  sizes: { M: { lengthCm: 120, widthCm: 70 } },
+  markerNo: 1,
+  componentKeys: ['than', 'tay'],
   fabrics: { [codeKey('Đen')]: 1 },
   ...change,
 });
@@ -77,19 +80,25 @@ describe('fabricOptionsFor', () => {
   });
 });
 
-describe('distinctSizes, distinctColors', () => {
-  it('bỏ trùng theo màu – size', () => {
-    expect(distinctSizes(variants)).toEqual(['M', 'L']);
+describe('distinctColors', () => {
+  it('bỏ trùng theo màu', () => {
     expect(distinctColors(variants)).toEqual(['Đen', 'Đỏ']);
+  });
+});
+
+describe('emptyMarker', () => {
+  it('lấy số nhóm nhỏ nhất chưa dùng', () => {
+    expect(emptyMarker([]).markerNo).toBe(1);
+    expect(emptyMarker([marker({ markerNo: 1 }), marker({ markerNo: 3 })]).markerNo).toBe(2);
   });
 });
 
 describe('toMarkerRows', () => {
   const spec = {
-    markers: [
-      { markerNo: 2, sizeCode: 'M', lengthCm: 40, widthCm: 30 },
-      { markerNo: 1, sizeCode: 'M', lengthCm: 120, widthCm: 70 },
-      { markerNo: 1, sizeCode: 'XXL', lengthCm: 130, widthCm: 80 },
+    markerComponents: [
+      { markerNo: 2, componentName: 'TAY' },
+      { markerNo: 1, componentName: 'than' },
+      { markerNo: 1, componentName: 'Cổ cũ' },
     ],
     markerFabrics: [
       {
@@ -111,49 +120,41 @@ describe('toMarkerRows', () => {
     ],
   } as unknown as ProductSpec;
 
-  it('gom theo số bìa và bỏ size, màu không còn dùng', () => {
-    const rows = toMarkerRows(spec, variants);
+  it('gom theo số nhóm, giữ số nhóm và bỏ chi tiết, màu không còn dùng', () => {
+    const rows = toMarkerRows(spec, variants, components);
 
-    expect(rows).toHaveLength(2);
-    expect(rows[0]?.sizes).toEqual({ M: { lengthCm: 120, widthCm: 70 } });
+    expect(rows.map((r) => r.markerNo)).toEqual([1, 2]);
+    expect(rows[0]?.componentKeys).toEqual(['than']);
     expect(rows[0]?.fabrics).toEqual({ [codeKey('Đen')]: 1 });
-    expect(rows[1]?.sizes).toEqual({ M: { lengthCm: 40, widthCm: 30 } });
+    expect(rows[1]?.componentKeys).toEqual(['tay']);
     expect(rows[1]?.fabrics).toEqual({});
   });
 });
 
 describe('validateMarkers', () => {
-  it('chấp nhận bìa đủ kích thước và vải, hoặc không có bìa nào', () => {
+  it('chấp nhận nhóm đủ chi tiết và vải, hoặc không có nhóm nào', () => {
     expect(validate([marker()])).toBe('');
     expect(validate([])).toBe('');
   });
 
-  it('báo thiếu một trong hai kích thước của một size', () => {
-    expect(validate([marker({ sizes: { M: { lengthCm: 120, widthCm: null } } })])).toContain(
-      'Bìa 1',
-    );
+  it('báo nhóm chưa có chi tiết hoặc chưa có vải', () => {
+    expect(validate([marker({ componentKeys: [] })])).toContain('Nhóm bìa 1');
+    expect(validate([marker({ fabrics: {} })])).toContain('Nhóm bìa 1');
   });
 
-  it('báo kích thước ngoài giới hạn', () => {
-    expect(validate([marker({ sizes: { M: { lengthCm: 0, widthCm: 70 } } })])).not.toBe('');
-    expect(validate([marker({ sizes: { M: { lengthCm: 100000, widthCm: 70 } } })])).not.toBe('');
-    expect(validate([marker({ sizes: { M: { lengthCm: 99999.99, widthCm: 70 } } })])).toBe('');
+  it('báo chi tiết cắt chưa nằm trong nhóm nào', () => {
+    expect(validate([marker({ componentKeys: ['than'] })])).toContain('"tay"');
   });
 
-  it('báo bìa chưa có kích thước hoặc chưa có vải', () => {
-    expect(validate([marker({ sizes: {} })])).not.toBe('');
-    expect(validate([marker({ fabrics: {} })])).not.toBe('');
-  });
+  it('báo vải không còn trong định mức của màu, kèm đúng số nhóm', () => {
+    const wrong = marker({ key: 'b2', markerNo: 4, fabrics: { [codeKey('Đen')]: 2 } });
 
-  it('báo vải không còn trong định mức của màu, và đúng số bìa', () => {
-    const wrong = marker({ key: 'b2', fabrics: { [codeKey('Đen')]: 2 } });
-
-    expect(validate([marker(), wrong])).toContain('Bìa 2');
+    expect(validate([marker(), wrong])).toContain('Nhóm bìa 4');
     expect(validate([marker(), wrong])).toContain('Đen');
   });
 
-  it('giới hạn số bìa', () => {
-    const rows = Array.from({ length: 21 }, (_, i) => marker({ key: `b${i}` }));
+  it('giới hạn số nhóm', () => {
+    const rows = Array.from({ length: 21 }, (_, i) => marker({ key: `b${i}`, markerNo: i + 1 }));
 
     expect(validate(rows)).toContain('20');
     expect(validate(rows.slice(0, 20))).toBe('');
@@ -161,33 +162,32 @@ describe('validateMarkers', () => {
 });
 
 describe('toMarkerPayload', () => {
-  it('nở từng bìa ra size và màu, số bìa theo vị trí', () => {
+  it('nở từng nhóm ra chi tiết và màu, giữ số nhóm', () => {
     const rows = [
-      marker({ key: 'b1' }),
-      marker({
-        key: 'b2',
-        sizes: { M: { lengthCm: 40, widthCm: 30 }, L: { lengthCm: null, widthCm: null } },
-      }),
+      marker({ componentKeys: ['than'] }),
+      marker({ key: 'b2', markerNo: 3, componentKeys: ['tay'] }),
     ];
 
-    expect(toMarkerPayload(rows, variants)).toEqual({
-      markers: [
-        { markerNo: 1, sizeCode: 'M', lengthCm: 120, widthCm: 70 },
-        { markerNo: 2, sizeCode: 'M', lengthCm: 40, widthCm: 30 },
+    expect(toMarkerPayload(rows, variants, components)).toEqual({
+      markerComponents: [
+        { markerNo: 1, componentName: 'than' },
+        { markerNo: 3, componentName: 'tay' },
       ],
       markerFabrics: [
         { markerNo: 1, color: 'Đen', materialId: 1 },
-        { markerNo: 2, color: 'Đen', materialId: 1 },
+        { markerNo: 3, color: 'Đen', materialId: 1 },
       ],
     });
   });
 
-  it('không gửi dòng màu đã bỏ chọn vải', () => {
+  it('bỏ màu đã bỏ chọn vải và chi tiết đã xóa', () => {
     const payload = toMarkerPayload(
-      [marker({ fabrics: { [codeKey('Đen')]: undefined } })],
+      [marker({ componentKeys: ['than', 'da-xoa'], fabrics: { [codeKey('Đen')]: undefined } })],
       variants,
+      components,
     );
 
     expect(payload.markerFabrics).toEqual([]);
+    expect(payload.markerComponents).toEqual([{ markerNo: 1, componentName: 'than' }]);
   });
 });

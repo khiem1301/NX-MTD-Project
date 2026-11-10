@@ -2,7 +2,7 @@ import { Select } from 'antd';
 import { useOrderOptions } from '@/hooks/useLookups';
 import { formatDate } from '@/utils/format';
 import { LABELS, MATERIAL_ORDER_SCOPE } from '../constants';
-import type { MaterialOrderScope } from '../types';
+import type { MaterialOrderScope } from '@/types/stock';
 
 type StockOrderFilterProps = {
   orderId?: number;

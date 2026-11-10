@@ -239,18 +239,18 @@ public sealed class StocktakeService : IStocktakeService
     private async Task<Result<List<StocktakeLine>>?> ValidateOrderLinesAsync(SaveStocktakeDto dto, CancellationToken ct)
     {
         var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
-        var variants = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
-            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
-        if (variants.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
+        var colors = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariant.ProductColorId, ct);
+        if (colors.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
 
         var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
         if (normIds.Count == 0) return null;
         var norms = await _uow.Repository<ProductComponentMaterial>().Query()
             .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
                         && p.Material.MaterialType == MaterialTypes.Fabric)
-            .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
+            .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductColorId, ct);
         return dto.Lines.Any(l => l.ProductComponentMaterialId is { } pcm
-                                  && (!norms.TryGetValue(pcm, out var v) || v != variants[l.OrderLineId!.Value]))
+                                  && (!norms.TryGetValue(pcm, out var c) || c != colors[l.OrderLineId!.Value]))
             ? Result<List<StocktakeLine>>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm)
             : null;
     }

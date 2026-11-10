@@ -6,7 +6,6 @@ import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
-import { formatFabricWidth } from '../utils/fabricWidth';
 
 type OrderMaterialColumnsOptions = {
   onEdit: (om: OrderMaterial) => void;
@@ -42,11 +41,6 @@ export const orderMaterialColumns = (
   { title: LABELS.materialCode, dataIndex: 'materialCode' },
   { title: LABELS.materialName, dataIndex: 'materialName' },
   { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  {
-    title: LABELS.materialWidthM,
-    dataIndex: 'materialWidthCm',
-    render: (v: number | null) => formatFabricWidth(v),
-  },
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: qtyWithUnit },

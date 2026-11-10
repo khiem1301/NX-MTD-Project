@@ -24,3 +24,6 @@ export type AuthTokens = {
 
 export type LoginResult = AuthTokens & { user: UserInfo };
 export type LoginRequest = { username: string; password: string };
+
+/** Mật khẩu tạm BE trả về một lần khi tạo / đặt lại tài khoản (D29). */
+export type TempPassword = { username: string; temporaryPassword: string };

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App } from 'antd';
-import { employeeApi } from '@/features/users/api/employeeApi';
+import { rjEmployeeApi } from '@/services/rjEmployeeApi';
 import { useRolePath } from '@/hooks/useRolePath';
 import type { ApiError } from '@/types/api';
+import type { ImportRjEmployeePayload } from '@/types/rjEmployee';
 import { formatDateTime } from '@/utils/format';
 import { attendanceApi, type TimesheetAudience } from '../api/attendanceApi';
 import { ATTENDANCE_TEXT } from '../constants';
@@ -75,14 +76,6 @@ export const useRjEmployees = (onlyUnmapped: boolean, enabled = true) =>
     refetchInterval: SYNC_POLL_MS,
   });
 
-/** Dùng trên form Nhân sự (Admin/Quản đốc) qua API common. */
-export const useRjEmployeesCommon = (onlyUnmapped: boolean, enabled = true) =>
-  useQuery({
-    queryKey: [...attendanceKeys.all, 'rj-employees-common', onlyUnmapped] as const,
-    queryFn: () => attendanceApi.getRjEmployeesCommon(onlyUnmapped),
-    enabled,
-  });
-
 /** Gán mã xong thì bảng công và số liệu đổi theo, nên làm mới cả nhánh attendance. */
 export const useMapAttendanceCode = () => {
   const queryClient = useQueryClient();
@@ -145,9 +138,9 @@ export const useImportEmployeeFromRj = () => {
   return useMutation<
     { employeeId: number; username: string; temporaryPassword: string },
     ApiError,
-    { attendanceCode: number; teamId?: number | null; payType?: string | null }
+    ImportRjEmployeePayload
   >({
-    mutationFn: (body) => employeeApi.importFromRj(role, body),
+    mutationFn: (body) => rjEmployeeApi.importToEmployee(role, body),
     onSuccess: async () => {
       message.success(ATTENDANCE_TEXT.rj.importSuccess);
       await queryClient.invalidateQueries({ queryKey: attendanceKeys.all });

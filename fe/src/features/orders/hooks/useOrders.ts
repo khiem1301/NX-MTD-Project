@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { MESSAGES } from '@/constants/messages';
 import { useApiMutation } from '@/hooks/useApiMutation';
-import { customerApi, orderApi, productApi } from '../api/orderApi';
-import { useProductScope } from './useProductScope';
+import { customerApi, orderApi, orderMarkerApi, productApi } from '../api/orderApi';
+import { useProductScope } from '@/hooks/useProductScope';
 import type {
   CreateOrderPayload,
   CustomerQuery,
@@ -10,6 +10,7 @@ import type {
   OrderQuery,
   ProductQuery,
   SaveCustomerPayload,
+  SaveOrderMarkersPayload,
   SaveProductPayload,
   SaveProductSpecPayload,
   UpdateOrderPayload,
@@ -175,5 +176,23 @@ export const useStopOrder = (id: number) =>
     ({ reason, rowVer }: { reason: string; rowVer: string }) => orderApi.stop(id, reason, rowVer),
     {
       invalidate: [ORDERS_KEY, LOOKUPS_KEY],
+    },
+  );
+
+/** Bìa cắt của đơn (DEV-ALL-85): Admin, Quản đốc khai bìa theo từng mã hàng của đơn. */
+export const useOrderMarkers = (orderId: number) =>
+  useQuery({
+    queryKey: [...ORDERS_KEY, 'markers', orderId],
+    queryFn: () => orderMarkerApi.get(orderId),
+  });
+
+/** Lưu bìa: lệnh cắt ước vải theo bìa nên làm mới cả nhóm cắt. */
+export const useSaveOrderMarkers = (orderId: number) =>
+  useApiMutation(
+    ({ productId, body }: { productId: number; body: SaveOrderMarkersPayload }) =>
+      orderMarkerApi.save(orderId, productId, body),
+    {
+      invalidate: [[...ORDERS_KEY, 'markers', orderId], ['cutting']],
+      successMessage: MESSAGES.common.saved,
     },
   );

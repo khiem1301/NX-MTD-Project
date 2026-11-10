@@ -35,6 +35,7 @@ export const ERROR_CODES = {
   OrderLineKeyLocked: 'ORDER_LINE_KEY_LOCKED',
   OrderInvalidStatus: 'ORDER_INVALID_STATUS',
   OrderFullyDispatched: 'ORDER_FULLY_DISPATCHED',
+  OrderMarkerInvalid: 'ORDER_MARKER_INVALID',
   // Nhân sự, tài khoản, tổ (KH-10)
   AuthWrongCurrentPassword: 'AUTH_WRONG_CURRENT_PASSWORD',
   EmployeeCodeDuplicate: 'EMPLOYEE_CODE_DUPLICATE',
@@ -66,7 +67,6 @@ export const ERROR_CODES = {
   WarehouseMaterialInactive: 'WAREHOUSE_MATERIAL_INACTIVE',
   WarehouseOrderMaterialDuplicate: 'WAREHOUSE_ORDER_MATERIAL_DUPLICATE',
   WarehouseOrderMaterialInUse: 'WAREHOUSE_ORDER_MATERIAL_IN_USE',
-  CuttingFabricShortage: 'CUTTING_FABRIC_SHORTAGE',
   CuttingPlanExceedsOrder: 'CUTTING_PLAN_EXCEEDS_ORDER',
   CuttingQtyExceedsPlan: 'CUTTING_QTY_EXCEEDS_PLAN',
   CuttingHandoverExceedsCut: 'CUTTING_HANDOVER_EXCEEDS_CUT',

@@ -15,15 +15,13 @@ type MaterialFormModalProps = {
   onSaved?: (material: Material) => void;
 };
 
-type FormValues = Omit<SaveMaterialPayload, 'widthCm'>;
-
 const TYPE_OPTIONS = Object.values(MATERIAL_TYPE).map((t) => ({
   value: t,
   label: MATERIAL_TYPE_LABEL[t],
 }));
 
 export function MaterialFormModal({ open, material, onClose, onSaved }: MaterialFormModalProps) {
-  const [form] = Form.useForm<FormValues>();
+  const [form] = Form.useForm<SaveMaterialPayload>();
   const save = useSaveMaterial();
   const materialType = Form.useWatch('materialType', form);
   const isFabric = materialType === MATERIAL_TYPE.FABRIC;
@@ -31,7 +29,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    if (material) form.setFieldsValue({ ...material });
+    if (material) form.setFieldsValue(material);
   }, [open, material, form]);
 
   // Vải cố định đơn vị mét, không cho sửa.
@@ -39,15 +37,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     if (isFabric) form.setFieldValue('unit', FABRIC_UNIT);
   }, [isFabric, form]);
 
-  const handleFinish = (values: FormValues) => {
-    // Danh mục không nhập khổ: tạo mới = null; sửa = giữ khổ đã lưu.
-    const body: SaveMaterialPayload = {
-      ...values,
-      widthCm:
-        values.materialType === MATERIAL_TYPE.FABRIC
-          ? (material?.widthCm ?? null)
-          : null,
-    };
+  const handleFinish = (body: SaveMaterialPayload) => {
     save.mutate(
       { id: material?.materialId, body },
       {
@@ -58,7 +48,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
         onError: (error) =>
           form.setFields(
             Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-              name: name as keyof FormValues,
+              name: name as keyof SaveMaterialPayload,
               errors,
             })),
           ),

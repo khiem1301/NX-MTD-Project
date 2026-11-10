@@ -19,9 +19,9 @@ import {
   useResetPassword,
   useUnlockAccount,
 } from '../hooks/useEmployees';
-import type { TempPassword } from '../types';
+import type { TempPassword } from '@/types/auth';
 import { EmployeeFormModal } from './EmployeeFormModal';
-import { TempPasswordModal } from './TempPasswordModal';
+import { TempPasswordModal } from '@/components/common/TempPasswordModal';
 import { EmployeeInfo } from './EmployeeInfo';
 import { ResignEmployeeModal } from './ResignEmployeeModal';
 

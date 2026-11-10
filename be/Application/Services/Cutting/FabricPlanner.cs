@@ -15,23 +15,23 @@ public sealed class FabricPlanner
 
     /// <summary>
     /// Các NVL vải (chi tiết PANEL × NVL loại vải, theo định mức của mã hàng) mà các dòng lệnh cắt dùng. Dòng cả bộ lấy mọi
-    /// vải thân của biến thể; dòng cắt bù chỉ lấy đúng dòng định mức của nó. Không còn số lượng theo định mức (DB 29/10).
+    /// vải thân của màu áo (định mức theo màu, DEV-ALL-87); dòng cắt bù chỉ lấy đúng dòng định mức của nó. Không còn số lượng theo định mức (DB 29/10).
     /// </summary>
     public async Task<IReadOnlyList<FabricInfo>> GetFabricsAsync(IEnumerable<FabricLine> lines, CancellationToken ct)
     {
         var list = lines.ToList();
-        var variantIds = list.Select(d => d.ProductVariantId).Distinct().ToArray();
+        var colorIds = list.Select(d => d.ProductColorId).Distinct().ToArray();
         var rows = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(p => variantIds.Contains(p.ProductVariantId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+            .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
                         && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new
             {
-                p.ProductComponentMaterialId, p.ProductVariantId, p.MaterialId,
+                p.ProductComponentMaterialId, p.ProductColorId, p.MaterialId,
                 p.Material.MaterialCode, p.Material.MaterialName, p.Material.Unit, p.Material.Color,
             })
             .ToListAsync(ct);
         return rows
-            .Where(r => list.Any(d => d.ProductVariantId == r.ProductVariantId
+            .Where(r => list.Any(d => d.ProductColorId == r.ProductColorId
                                       && (d.ProductComponentMaterialId == null || d.ProductComponentMaterialId == r.ProductComponentMaterialId)))
             .GroupBy(r => r.MaterialId)
             .Select(g => g.First())
@@ -109,7 +109,7 @@ public sealed class FabricPlanner
     }
 }
 
-/// <summary>Một dòng của lệnh cắt: biến thể (màu × size); ProductComponentMaterialId null = cả bộ, có giá trị = chỉ dòng định mức đó (cắt bù).</summary>
-public sealed record FabricLine(int ProductVariantId, int? ProductComponentMaterialId);
+/// <summary>Một dòng của lệnh cắt: màu áo của dòng đơn; ProductComponentMaterialId null = cả bộ, có giá trị = chỉ dòng định mức đó (cắt bù).</summary>
+public sealed record FabricLine(int ProductColorId, int? ProductComponentMaterialId);
 
 public sealed record FabricInfo(int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor);

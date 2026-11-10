@@ -1,11 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { requestApi } from '../api/requestApi';
-import type { RequestDetail, RequestPermissions } from '../types';
+import { requestApi } from '@/services/requestApi';
+import type { RequestDetail, RequestPermissions } from '@/types/request';
 import { RequestDetailModal } from './RequestDetailModal';
 
-jest.mock('../api/requestApi', () => ({
+jest.mock('@/services/requestApi', () => ({
   requestApi: { detail: jest.fn(), act: jest.fn(), types: jest.fn().mockResolvedValue([]) },
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));

@@ -1,6 +1,7 @@
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
 using NX_MTD.Infrastructure.Excel;
+using NX_MTD.Infrastructure.Optimization;
 using NX_MTD.Infrastructure.Repositories;
 
 namespace NX_MTD.API.Modules;
@@ -34,6 +35,7 @@ public static class WarehouseModule
 
         // Cắt
         services.AddScoped<FabricPlanner>();
+        services.AddSingleton<IMarkerPlanSolver, OrToolsMarkerPlanSolver>();   // ghép bìa ít mét nhất (DEV-ALL-88)
         services.AddScoped<WorkOrderCompletion>();
         services.AddScoped<WorkOrderFabricChecker>();
         services.AddScoped<IWorkOrderService, WorkOrderService>();

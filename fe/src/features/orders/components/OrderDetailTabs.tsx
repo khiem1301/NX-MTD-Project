@@ -6,9 +6,11 @@ import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { MESSAGES } from '@/constants/messages';
 import { ORDER_CLOSED_STATUSES, type OrderStatus } from '@/constants/orderStatus';
 import type { OrderDetail, OrderDisplayLine } from '../types';
+import { OrderMarkersTab } from './OrderMarkersTab';
 import { OrderReadOnlyGrid } from './OrderReadOnlyGrid';
 
 const GRID_TAB = 'grid';
+const MARKERS_TAB = 'markers';
 const HISTORY_TAB = 'history';
 
 type OrderDetailTabsProps = {
@@ -29,6 +31,11 @@ export function OrderDetailTabs({ orderId, status, lines, history }: OrderDetail
       key: GRID_TAB,
       label: MESSAGES.orders.gridTab,
       children: <OrderReadOnlyGrid lines={lines} />,
+    },
+    {
+      key: MARKERS_TAB,
+      label: MESSAGES.orders.markersTab,
+      children: <OrderMarkersTab orderId={orderId} isClosed={isClosed} />,
     },
     ...ORDER_DETAIL_TABS.map((t) => ({
       key: t.key,

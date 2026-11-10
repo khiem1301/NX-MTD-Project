@@ -6,7 +6,7 @@ import { useOrderLineOptions } from '@/hooks/useLookups';
 import { formatQty } from '@/utils/format';
 import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS, WAREHOUSE_TYPE } from '../constants';
-import { useBalances } from '../hooks/useInventory';
+import { useBalances } from '@/hooks/useStockBalances';
 import { pieceKey } from '../utils/pieceKey';
 import { PieceSuggestionBar } from './PieceSuggestionBar';
 

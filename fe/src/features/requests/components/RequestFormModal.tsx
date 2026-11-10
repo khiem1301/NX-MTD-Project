@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import type { RequestDetail } from '../types';
+import type { RequestDetail } from '@/types/request';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { RequestLineFields } from './RequestLineFields';
 import { useRequestForm } from '../hooks/useRequestForm';

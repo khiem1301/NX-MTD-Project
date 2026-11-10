@@ -1,0 +1,144 @@
+import type { Dispatch, SetStateAction } from 'react';
+import { Input, InputNumber, Select, type TableColumnsType } from 'antd';
+import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
+import type { OrderMarkerStatus } from '../types';
+import {
+  ORDER_MARKER_LIMITS,
+  piecesOf,
+  withPieces,
+  type OrderMarkerRow,
+} from '../utils/orderMarker';
+import { dropRow, patchRow } from '../utils/productSpec';
+import { deleteRowColumn } from './deleteRowColumn';
+
+const text = MESSAGES.orders.markers;
+
+const STATUS_OPTIONS: { value: OrderMarkerStatus; label: string }[] = [
+  { value: 'Active', label: text.active },
+  { value: 'Discontinued', label: text.discontinued },
+];
+
+/**
+ * Bề rộng cột (px). Cột có bề rộng cố định; bảng có bề rộng tối thiểu tính sẵn và cuộn bằng khung ngoài, để antd không phải
+ * đo nội dung ô nhập mỗi lần vẽ (đo theo nội dung làm thanh cuộn hiện / mất liên tục, bảng giật hình).
+ */
+const WIDTH = { group: 110, code: 120, length: 110, size: 76, status: 130, remove: 48 } as const;
+const FULL = { width: '100%' } as const;
+
+/** Bề rộng tối thiểu của bảng (tổng bề rộng cột). */
+export const orderMarkerTableWidth = (sizeCount: number, readOnly: boolean) =>
+  WIDTH.group +
+  WIDTH.code +
+  WIDTH.length +
+  sizeCount * WIDTH.size +
+  WIDTH.status +
+  (readOnly ? 0 : WIDTH.remove);
+
+type OrderMarkerColumnsOptions = {
+  sizes: string[];
+  groups: number[];
+  readOnly: boolean;
+  setRows: Dispatch<SetStateAction<OrderMarkerRow[]>>;
+};
+
+/** Cột bảng bìa của một mã hàng: nhóm, mã, dài, số sản phẩm theo từng size của đơn, trạng thái. */
+export const orderMarkerColumns = ({
+  sizes,
+  groups,
+  readOnly,
+  setRows,
+}: OrderMarkerColumnsOptions): TableColumnsType<OrderMarkerRow> => {
+  const patch = (key: string, change: Partial<OrderMarkerRow>) => patchRow(setRows, key, change);
+  const groupOptions = groups.map((g) => ({ value: g, label: fill(text.groupLabel, g) }));
+  return [
+    {
+      title: text.group,
+      key: 'group',
+      width: WIDTH.group,
+      render: (_, r) => (
+        <Select
+          size="small"
+          disabled={readOnly}
+          aria-label={text.group}
+          value={r.markerNo}
+          options={groupOptions}
+          style={FULL}
+          onChange={(markerNo: number) => patch(r.key, { markerNo })}
+        />
+      ),
+    },
+    {
+      title: text.code,
+      key: 'code',
+      width: WIDTH.code,
+      render: (_, r) => (
+        <Input
+          size="small"
+          disabled={readOnly}
+          aria-label={text.code}
+          maxLength={ORDER_MARKER_LIMITS.maxCodeLength}
+          value={r.markerCode}
+          style={FULL}
+          onChange={(e) => patch(r.key, { markerCode: e.target.value })}
+        />
+      ),
+    },
+    {
+      title: text.lengthM,
+      key: 'length',
+      width: WIDTH.length,
+      render: (_, r) => (
+        <InputNumber
+          size="small"
+          disabled={readOnly}
+          aria-label={text.lengthM}
+          min={0.01}
+          max={ORDER_MARKER_LIMITS.maxLengthM}
+          precision={2}
+          value={r.lengthM}
+          style={FULL}
+          onChange={(lengthM) => patch(r.key, { lengthM })}
+        />
+      ),
+    },
+    ...sizes.map((size) => ({
+      title: size,
+      key: `size-${size}`,
+      width: WIDTH.size,
+      render: (_: unknown, r: OrderMarkerRow) => (
+        <InputNumber
+          size="small"
+          disabled={readOnly}
+          aria-label={`${text.code} ${r.markerCode} ${size}`}
+          min={1}
+          max={ORDER_MARKER_LIMITS.maxPiecesPerPly}
+          precision={0}
+          value={piecesOf(r, size)}
+          style={FULL}
+          onChange={(value) => patch(r.key, withPieces(r, size, value))}
+        />
+      ),
+    })),
+    {
+      title: text.status,
+      key: 'status',
+      width: WIDTH.status,
+      render: (_, r) => (
+        <Select
+          size="small"
+          disabled={readOnly}
+          aria-label={text.status}
+          value={r.status}
+          options={STATUS_OPTIONS}
+          style={FULL}
+          onChange={(status: OrderMarkerStatus) => patch(r.key, { status })}
+        />
+      ),
+    },
+    // Bỏ ghim phải của cột xóa: bảng không cuộn bằng antd nên cột ghim chỉ làm antd đo lại vô ích.
+    ...(readOnly
+      ? []
+      : [{ ...deleteRowColumn<OrderMarkerRow>((key) => dropRow(setRows, key)), fixed: undefined }]),
+  ];
+};

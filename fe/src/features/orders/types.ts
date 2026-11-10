@@ -40,7 +40,6 @@ export type ProductListItem = {
 };
 export type ProductDetail = ProductListItem & {
   description: string | null;
-  lastSizeRatio: string | null;
   /** Màu đã có biến thể (do đơn hàng tạo). */
   colors: string[];
   history: AuditEntry[];
@@ -68,26 +67,24 @@ export type ProductVariantItem = {
   sizeCode: string;
   status: string;
 };
+/** Định mức theo màu áo, dùng chung mọi size (DEV-ALL-87). */
 export type ProductNormItem = {
   productComponentMaterialId: number;
   componentName: string;
   color: string;
-  sizeCode: string;
   materialId: number;
   materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
-  lengthCm: number | null;
-  widthCm: number | null;
   specNote: string | null;
+  /** FABRIC / TRIM. */
+  materialType: string;
 };
-/** Kích thước một bìa ở một size; một bìa tính cho một sản phẩm. */
-export type ProductMarkerItem = {
+/** Chi tiết cắt (Panel) thuộc một nhóm bìa; bìa cụ thể do đơn hàng khai (DEV-ALL-85). */
+export type ProductMarkerComponentItem = {
   markerNo: number;
-  sizeCode: string;
-  lengthCm: number;
-  widthCm: number;
+  componentName: string;
 };
 /** Vải của một bìa theo màu áo. */
 export type ProductMarkerFabricItem = {
@@ -103,7 +100,7 @@ export type ProductSpec = {
   components: ProductComponentItem[];
   variants: ProductVariantItem[];
   norms: ProductNormItem[];
-  markers: ProductMarkerItem[];
+  markerComponents: ProductMarkerComponentItem[];
   markerFabrics: ProductMarkerFabricItem[];
 };
 export type SaveProductSpecPayload = {
@@ -121,13 +118,10 @@ export type SaveProductSpecPayload = {
   norms: {
     componentName: string;
     color: string;
-    sizeCode: string;
     materialId: number;
-    lengthCm: number | null;
-    widthCm: number | null;
     specNote: string | null;
   }[];
-  markers: ProductMarkerItem[];
+  markerComponents: ProductMarkerComponentItem[];
   markerFabrics: { markerNo: number; color: string; materialId: number }[];
 };
 export type ProductQuery = {
@@ -240,4 +234,29 @@ export type OrderQuery = {
   customerId?: number;
   dueFrom?: string;
   dueTo?: string;
+};
+/** Bìa cắt của đơn (DEV-ALL-85): số sản phẩm size này trên một lớp vải. */
+export type MarkerRatio = { sizeCode: string; piecesPerPly: number };
+export type OrderMarkerStatus = 'Active' | 'Discontinued';
+export type OrderMarker = {
+  productMarkerId: number;
+  markerNo: number;
+  markerCode: string;
+  lengthM: number;
+  status: OrderMarkerStatus;
+  ratios: MarkerRatio[];
+};
+/** Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai vải ở mã hàng, và các bìa của đơn. */
+export type OrderMarkerProduct = {
+  productId: number;
+  productCode: string;
+  productName: string;
+  sizes: string[];
+  markerGroups: number[];
+  markers: OrderMarker[];
+};
+export type OrderMarkers = { orderId: number; products: OrderMarkerProduct[] };
+/** Gửi đủ bìa của một mã hàng trong đơn; bìa không có trong danh sách bị xóa. */
+export type SaveOrderMarkersPayload = {
+  markers: (Omit<OrderMarker, 'productMarkerId'> & { productMarkerId: number | null })[];
 };
