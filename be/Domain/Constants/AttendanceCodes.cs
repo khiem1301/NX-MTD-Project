@@ -38,6 +38,8 @@ public static class AdjustmentType
 public static class SettingKeys
 {
     public const string AttendanceSyncMinutes = "ATTENDANCE_SYNC_MINUTES";
+    /// <summary>Web yêu cầu agent đồng bộ lại snapshot NHANVIEN từ RJ; giá trị "1" = đang chờ.</summary>
+    public const string RjEmployeeSyncRequested = "RJ_EMPLOYEE_SYNC_REQUESTED";
     /// <summary>Dung sai xăng vượt định mức (%) trước khi cảnh báo, mặc định 15 (MSG30, UC35).</summary>
     public const string FuelNormTolerancePercent = "FUEL_NORM_TOLERANCE_PERCENT";
     public const string AttendanceAlertMinutes = "ATTENDANCE_ALERT_MINUTES";

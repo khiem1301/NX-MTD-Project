@@ -7,6 +7,7 @@ namespace NX_MTD.Agent;
 /// <summary>
 /// Chu kỳ đồng bộ: lấy mốc từ API → đọc lượt quẹt mới từ RJData.mdb → gửi lô lên API → lặp.
 /// Việc bỏ trùng / bỏ tháng khóa / tính lại bảng công do usp_Attendance_IngestBatch lo (Rules mục 6.4).
+/// Trong lúc chờ chu kỳ, poll cursor ~10s để bắt yêu cầu đồng bộ NV từ web.
 /// </summary>
 public sealed class SyncWorker : BackgroundService
 {
@@ -14,6 +15,7 @@ public sealed class SyncWorker : BackgroundService
     private const int MaxBatchSize = 5000;
 
     private static readonly TimeSpan DefaultInterval = TimeSpan.FromMinutes(10);
+    private static readonly TimeSpan CommandPollSlice = TimeSpan.FromSeconds(10);
 
     private readonly AttendanceApiClient _api;
     private readonly RjAccessReader _reader;
@@ -50,7 +52,7 @@ public sealed class SyncWorker : BackgroundService
                 _logger.LogError(ex, "Lỗi chu kỳ đồng bộ chấm công. Thử lại sau {Interval} phút.", _interval.TotalMinutes);
             }
 
-            await Task.Delay(_interval, stoppingToken);
+            await WaitOrHandleEmployeeSyncRequestAsync(_interval, stoppingToken);
         }
     }
 
@@ -81,12 +83,15 @@ public sealed class SyncWorker : BackgroundService
             ? TimeSpan.FromMinutes(cursor.SyncIntervalMinutes)
             : ResolveInterval();
 
+        await SyncEmployeesAsync(ct);
+
         // Dọn hết lượt tồn đọng trong một chu kỳ (chia lô nếu vượt batchSize).
         while (!ct.IsCancellationRequested)
         {
             var punches = _reader.ReadNewPunches(lastId, batchSize);
             if (punches.Count == 0)
             {
+                await _api.SendHeartbeatAsync(ct);
                 _logger.LogInformation("Đồng bộ xong, mốc hiện tại ID {LastId}. Chờ {Interval} phút.",
                     lastId, interval.TotalMinutes);
                 break;
@@ -107,6 +112,49 @@ public sealed class SyncWorker : BackgroundService
         }
 
         return interval;
+    }
+
+    /// <summary>Chờ hết chu kỳ nhưng mỗi 10 giây kiểm tra web có yêu cầu đồng bộ NV không.</summary>
+    private async Task WaitOrHandleEmployeeSyncRequestAsync(TimeSpan interval, CancellationToken ct)
+    {
+        var remaining = interval;
+        while (remaining > TimeSpan.Zero && !ct.IsCancellationRequested)
+        {
+            var delay = remaining < CommandPollSlice ? remaining : CommandPollSlice;
+            await Task.Delay(delay, ct);
+            remaining -= delay;
+
+            try
+            {
+                var cursor = await _api.GetCursorAsync(ct);
+                if (cursor?.SyncEmployeesRequested == true)
+                {
+                    // Thoát chờ → vòng ngoài chạy SyncOnce (NV + lượt quẹt) để cập nhật mốc sức khỏe đồng bộ.
+                    _logger.LogInformation("Nhận yêu cầu đồng bộ từ web; chạy chu kỳ đầy đủ ngay.");
+                    return;
+                }
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Không kiểm tra được yêu cầu đồng bộ; thử lại sau.");
+            }
+        }
+    }
+
+    private async Task SyncEmployeesAsync(CancellationToken ct)
+    {
+        var employees = _reader.ReadEmployees();
+        if (!await _api.SendEmployeesAsync(employees, ct))
+        {
+            _logger.LogWarning("Gửi snapshot {Count} nhân viên RJ thất bại.", employees.Count);
+            return;
+        }
+
+        _logger.LogInformation("Đã đồng bộ {Count} nhân viên từ RJ (NHANVIEN).", employees.Count);
     }
 
     private TimeSpan ResolveInterval() =>

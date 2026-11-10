@@ -24,6 +24,8 @@ public static class Messages
     public const string AttendanceSyncStatusInvalid = "Trạng thái phiên đồng bộ không hợp lệ.";
     public const string AttendanceSyncOverdue =
         "Chưa đồng bộ được chấm công hơn 30 phút. Có thể nhập file dự phòng.";                // MSG23
+    public const string AttendanceRjEmployeeSyncRequested =
+        "Đã gửi yêu cầu. Agent sẽ đồng bộ nhân viên và lượt quẹt từ máy RJ trong vài giây (cần agent đang chạy).";
     public const string DateRangeInvalid = "Ngày kết thúc phải không nhỏ hơn ngày bắt đầu.";
     public const string DateRangeTooWide = "Khoảng ngày tối đa là {0} ngày.";
     public const string AttendanceAdjustmentExists = "Nhân viên này đã có chấm bù cho ngày này.";
@@ -128,6 +130,8 @@ public static class Messages
     public const string GradeProposed = "Đã gửi đề xuất bậc thợ.";
     public const string GradeAlreadyDecided = "Đề xuất đã được quyết định, không đổi được (GBR-22).";
     public const string ManagerCannotAssignRole = "Quản đốc không gán hoặc đổi được vai trò Admin, Quản đốc, Kế toán.";
+    public const string EmployeeAccountManageForbidden =
+        "Chỉ Admin và Quản đốc được tạo / quản lý tài khoản nhân viên.";
     public const string GradeWorkerInvalid = "Chỉ đặt bậc cho công nhân đang làm việc.";
     public const string GradeSupersededNote = "Quản đốc đã đặt bậc trực tiếp nên đề xuất này không còn hiệu lực.";
     public const string GradeSetToday = "Hôm nay bạn đã đặt bậc cho công nhân này.";
@@ -202,9 +206,21 @@ public static class Messages
     public const string MealCountExceedsMembers = "Số suất ăn ({0}) không được vượt quá số người trong tổ ({1}).";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealKitchenNotified = "Đã báo bếp.";
+    public const string MealNoAttendance =
+        "Chưa có chấm công hôm nay nên chưa có suất ăn. Chỉ người đã quẹt vân tay mới được tick.";
+    public const string EmployeeFloorRoleWebCreateForbidden =
+        "Công nhân / tổ trưởng / tổ phó chỉ được tạo bằng cách lấy từ máy chấm công Ronald Jack Pro.";
+    public const string EmployeeRjNotFound =
+        "Không tìm thấy mã chấm công này trên danh sách RJ. Kiểm tra agent đã đồng bộ nhân viên chưa.";
+    public const string EmployeeRjAlreadyImported =
+        "Mã chấm công này đã được gắn với nhân viên trên hệ thống.";
+    public const string EmployeeImportedFromRj =
+        "Đã tạo nhân viên từ Ronald Jack Pro. Mật khẩu tạm chỉ hiện một lần.";
+    public const string MealEmployeeNotInTeam = "Nhân viên không thuộc tổ của bạn.";
+    public const string MealMemberUpdated = "Đã cập nhật suất ăn.";
     public const string NotifyMealReminderTitle = "Nhắc xác nhận suất ăn";
     public const string NotifyMealReminderBody =
-        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hệ thống đang tạm lấy theo số người đã quẹt ({2}); vui lòng xác nhận trước {3}.";
+        "Tổ {0} chưa xác nhận suất ăn ngày {1}. Hiện còn {2} suất đang tick; vui lòng rà soát trước {3}.";
 
     // --- Bảng lương + khóa tháng (UC06, UC31, UC32) ---
     public const string PayrollNotFound = "Không tìm thấy bảng lương.";

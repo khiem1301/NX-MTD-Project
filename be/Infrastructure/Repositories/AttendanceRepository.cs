@@ -83,6 +83,25 @@ public sealed class AttendanceRepository : IAttendanceRepository
             .Where(s => s.Status == SyncStatus.Succeeded && s.FinishedAt != null)
             .MaxAsync(s => s.FinishedAt, ct);
 
+    public async Task RecordAgentHeartbeatAsync(DateTime at, CancellationToken ct)
+    {
+        var lastId = await _context.AttendanceSyncSessions.AsNoTracking()
+            .Where(s => s.Status == SyncStatus.Succeeded && s.LastSourceRecordId != null)
+            .MaxAsync(s => (int?)s.LastSourceRecordId, ct);
+
+        await _context.AttendanceSyncSessions.AddAsync(new AttendanceSyncSession
+        {
+            Source = SyncSource.RjSync,
+            StartedAt = at,
+            FinishedAt = at,
+            LastSourceRecordId = lastId,
+            RecordsReceived = 0,
+            RecordsInserted = 0,
+            Status = SyncStatus.Succeeded,
+        }, ct);
+        await _context.SaveChangesAsync(ct);
+    }
+
     public async Task<IReadOnlyList<SyncSessionDto>> GetRecentSessionsAsync(int take, string? status, CancellationToken ct) =>
         await _context.AttendanceSyncSessions.AsNoTracking()
             .Where(s => status == null || s.Status == status)
@@ -119,6 +138,48 @@ public sealed class AttendanceRepository : IAttendanceRepository
 
     public Task<bool> HasPunchesForCodeAsync(int attendanceCode, CancellationToken ct) =>
         _context.AttendanceLogs.AsNoTracking().AnyAsync(l => l.AttendanceCode == attendanceCode, ct);
+
+    public Task<bool> HasRjEmployeeAsync(int attendanceCode, CancellationToken ct) =>
+        _context.RjEmployeeSnapshots.AsNoTracking().AnyAsync(r => r.AttendanceCode == attendanceCode, ct);
+
+    public async Task ReplaceRjEmployeesAsync(
+        IReadOnlyList<RjEmployeePunchDto> employees, DateTime syncedAt, CancellationToken ct)
+    {
+        await _context.RjEmployeeSnapshots.ExecuteDeleteAsync(ct);
+
+        // Một mã chấm công chỉ giữ một dòng (lấy bản đầu nếu RJ trùng).
+        var rows = employees
+            .Where(e => e.AttendanceCode > 0 && !string.IsNullOrWhiteSpace(e.FullName))
+            .GroupBy(e => e.AttendanceCode)
+            .Select(g => g.First())
+            .Select(e => new RjEmployeeSnapshot
+            {
+                AttendanceCode = e.AttendanceCode,
+                FullName = e.FullName.Trim(),
+                RjEmployeeCode = string.IsNullOrWhiteSpace(e.RjEmployeeCode) ? null : e.RjEmployeeCode.Trim(),
+                SyncedAt = syncedAt,
+            });
+
+        await _context.RjEmployeeSnapshots.AddRangeAsync(rows, ct);
+        await _context.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<RjEmployeeDto>> GetRjEmployeesAsync(bool onlyUnmapped, CancellationToken ct)
+    {
+        var query =
+            from s in _context.RjEmployeeSnapshots.AsNoTracking()
+            join e in _context.Employees.AsNoTracking() on s.AttendanceCode equals e.AttendanceCode into eg
+            from e in eg.DefaultIfEmpty()
+            where !onlyUnmapped || e == null
+            orderby s.AttendanceCode
+            select new RjEmployeeDto(
+                s.AttendanceCode, s.FullName, s.RjEmployeeCode,
+                e != null, e != null ? e.EmployeeId : null,
+                e != null ? e.EmployeeCode : null, e != null ? e.FullName : null,
+                s.SyncedAt);
+
+        return await query.ToListAsync(ct);
+    }
 
     // ---------- Chấm bù (UC29) ----------
 

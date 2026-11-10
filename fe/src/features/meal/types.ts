@@ -16,12 +16,47 @@ export type TeamMealSuggestion = {
   isLocked: boolean;
 };
 
+export type TeamMealMember = {
+  employeeId: number;
+  employeeCode: string;
+  fullName: string;
+  willEat: boolean;
+  hasAttendance: boolean;
+};
+
+export type TeamMealMembers = {
+  mealDate: string;
+  teamId: number;
+  teamName: string;
+  attendanceCount: number;
+  mealCount: number;
+  isLocked: boolean;
+  members: TeamMealMember[];
+};
+
+export type MyMeal = {
+  mealDate: string;
+  hasAttendance: boolean;
+  willEat: boolean;
+  isLocked: boolean;
+};
+
 /** Giờ nhắc xác nhận và giờ tự chốt suất ăn, dạng HH:mm. */
 export type MealSettings = { reminderTime: string; cutoffTime: string };
 
 export type ConfirmTeamMealPayload = {
   mealDate: string;
-  mealCount: number;
+};
+
+export type SetTeamMemberMealPayload = {
+  mealDate: string;
+  employeeId: number;
+  willEat: boolean;
+};
+
+export type SetMyMealPayload = {
+  mealDate?: string;
+  willEat: boolean;
 };
 
 export type SetGuestMealPayload = {

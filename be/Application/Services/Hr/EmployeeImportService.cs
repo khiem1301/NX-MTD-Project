@@ -102,6 +102,8 @@ public sealed class EmployeeImportService : IEmployeeImportService
             if (!seen.Add(code)) { result.Add((Row(StatusDuplicate, Messages.EmployeeImportRepeated), null)); continue; }
 
             var role = NormalizeRole(r.Role);
+            if (role is not null && RoleCodes.IsFloorFromRj(Roles.ToRoleCode(role)))
+            { result.Add((Row(StatusError, Messages.EmployeeFloorRoleWebCreateForbidden), null)); continue; }
             // Quản đốc không nhập được nhân viên vai trò Admin / Quản đốc / Kế toán.
             if (role is not null && !_scope.CanAssign(Roles.ToRoleCode(role)))
             { result.Add((Row(StatusError, Messages.ManagerCannotAssignRole), null)); continue; }

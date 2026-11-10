@@ -17,8 +17,9 @@ public static class AttendanceModule
         services.AddScoped<IAttendanceRepository, AttendanceRepository>();
         services.AddScoped<IAttendanceService, AttendanceService>();
 
-        // Suất ăn (UC30) + 3 job nền (MI-04)
+        // Suất ăn (UC30) + seed từ chấm công + 3 job nền (MI-04)
         services.AddScoped<IMealRepository, MealRepository>();
+        services.AddScoped<IMealRegistrationSeeder, MealRegistrationSeeder>();
         services.AddScoped<IMealService, MealService>();
         services.AddScoped<IMealSettingsService, MealSettingsService>();
         services.AddHostedService<AttendanceSyncMonitorJob>();

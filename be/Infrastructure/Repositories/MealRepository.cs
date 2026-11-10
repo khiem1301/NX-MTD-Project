@@ -92,5 +92,56 @@ public sealed class MealRepository : IMealRepository
             .Select(m => m.MealPrice)
             .FirstOrDefaultAsync(ct);
 
+    public async Task<IReadOnlyList<(int EmployeeId, int? TeamId)>> GetUnregisteredAttendeesAsync(
+        int dailyMealId, DateOnly date, CancellationToken ct)
+    {
+        var registered = _context.MealRegistrations.AsNoTracking()
+            .Where(r => r.DailyMealId == dailyMealId)
+            .Select(r => r.EmployeeId);
+
+        return await _context.DailyTimesheets.AsNoTracking()
+            .Where(t => t.WorkDate == date && t.CheckIn != null && !registered.Contains(t.EmployeeId))
+            .Select(t => new ValueTuple<int, int?>(t.EmployeeId, t.Employee.TeamId))
+            .Distinct()
+            .ToListAsync(ct);
+    }
+
+    public Task<bool> HasCheckInAsync(int employeeId, DateOnly date, CancellationToken ct) =>
+        _context.DailyTimesheets.AsNoTracking()
+            .AnyAsync(t => t.EmployeeId == employeeId && t.WorkDate == date && t.CheckIn != null, ct);
+
+    public void AddRegistration(MealRegistration registration) =>
+        _context.MealRegistrations.Add(registration);
+
+    public Task<MealRegistration?> FindRegistrationAsync(int dailyMealId, int employeeId, CancellationToken ct) =>
+        _context.MealRegistrations.AsNoTracking()
+            .FirstOrDefaultAsync(r => r.DailyMealId == dailyMealId && r.EmployeeId == employeeId, ct);
+
+    public Task<MealRegistration?> FindRegistrationTrackedAsync(int dailyMealId, int employeeId, CancellationToken ct) =>
+        _context.MealRegistrations
+            .FirstOrDefaultAsync(r => r.DailyMealId == dailyMealId && r.EmployeeId == employeeId, ct);
+
+    public async Task<IReadOnlyList<MealRegistration>> GetTeamRegistrationsAsync(
+        int dailyMealId, int teamId, CancellationToken ct) =>
+        await _context.MealRegistrations
+            .Include(r => r.Employee)
+            .Where(r => r.DailyMealId == dailyMealId && r.TeamId == teamId)
+            .OrderBy(r => r.Employee.FullName)
+            .ToListAsync(ct);
+
+    public Task<int> CountWillEatAsync(int dailyMealId, int? teamId, CancellationToken ct) =>
+        _context.MealRegistrations.AsNoTracking()
+            .CountAsync(r => r.DailyMealId == dailyMealId && r.WillEat
+                             && (teamId == null || r.TeamId == teamId), ct);
+
+    public Task<int> CountOfficeWillEatAsync(int dailyMealId, CancellationToken ct) =>
+        _context.MealRegistrations.AsNoTracking()
+            .CountAsync(r => r.DailyMealId == dailyMealId && r.WillEat
+                             && r.Team != null && r.Team.TeamType == TeamTypes.Office, ct);
+
+    public Task<Employee?> GetEmployeeAsync(int employeeId, CancellationToken ct) =>
+        _context.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.EmployeeId == employeeId, ct);
+
     public Task SaveChangesAsync(CancellationToken ct) => _context.SaveChangesAsync(ct);
 }

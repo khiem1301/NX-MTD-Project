@@ -7,10 +7,32 @@ export const ATTENDANCE_TEXT = {
 
   tabs: {
     timesheet: 'Bảng công ngày',
-    unmapped: 'Mã chưa gán',
+    rjEmployees: 'Nhân viên RJ',
     sessions: 'Lịch sử đồng bộ',
     adjustments: 'Chấm công hộ',
     import: 'Import Excel dự phòng',
+  },
+
+  rj: {
+    title: 'Nhân viên trên máy Ronald Jack Pro',
+    hint: 'Công nhân tạo từ danh sách này — chỉ Admin / Quản đốc được cấp tài khoản. Kế toán xem danh sách và đồng bộ dữ liệu. Mật khẩu tạm 6 số do hệ thống sinh; tên đăng nhập = mã NV trên RJ.',
+    onlyUnmapped: 'Chỉ hiện chưa tạo trên hệ thống',
+    empty: 'Chưa có dữ liệu NV từ RJ. Kiểm tra agent đang chạy và đã đồng bộ.',
+    rjCode: 'Mã NV RJ',
+    mappedTo: 'Đã có trên hệ thống',
+    unmapped: 'Chưa tạo',
+    map: 'Gán vào nhân viên văn phòng',
+    import: 'Tạo công nhân trên hệ thống',
+    importSuccess: 'Đã tạo công nhân từ Ronald Jack Pro.',
+    importConfirm: 'Tạo tài khoản công nhân cho {0} (mã chấm công {1})? Mật khẩu tạm chỉ hiện một lần.',
+    sync: 'Đồng bộ từ RJ',
+    syncSuccess:
+      'Đã gửi yêu cầu đồng bộ. Agent sẽ cập nhật nhân viên và lượt quẹt trong vài giây.',
+    syncHealthyToast: 'Đồng bộ lượt quẹt bình thường. Đồng bộ gần nhất: {0}',
+    syncHint: 'Agent đọc lại NHANVIEN và lượt quẹt mới từ máy Ronald Jack Pro.',
+    pickTitle: 'Chọn mã chấm công từ Ronald Jack Pro (cho nhân viên văn phòng)',
+    pick: 'Chọn từ RJ…',
+    syncedAt: 'Đồng bộ lúc',
   },
 
   adjust: {
@@ -117,9 +139,10 @@ export const ATTENDANCE_TEXT = {
   },
 
   sync: {
-    healthyTitle: 'Đồng bộ chấm công bình thường',
-    overdueTitle: 'Chưa đồng bộ được chấm công hơn {0} phút', // MSG23
-    overdueHint: 'Có thể nhập file dự phòng từ Ronald Jack Pro.',
+    healthyTitle: 'Đồng bộ lượt quẹt bình thường',
+    overdueTitle: 'Chưa đồng bộ được lượt quẹt chấm công hơn {0} phút', // MSG23
+    overdueHint:
+      'Cảnh báo này theo lượt quẹt vân tay, không phải danh sách nhân viên RJ. Bấm “Đồng bộ từ RJ” hoặc nhập file dự phòng.',
     never: 'Chưa từng đồng bộ',
     minutesAgo: '{0} phút trước',
     sourceRjSync: 'Máy chấm công',

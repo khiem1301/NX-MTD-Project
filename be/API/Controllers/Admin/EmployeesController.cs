@@ -27,6 +27,11 @@ public sealed class EmployeesController : AdminBaseController
     public async Task<IActionResult> Create([FromBody] CreateEmployeeDto dto, CancellationToken ct) =>
         this.ToResponse(await _employees.CreateAsync(dto, ct));
 
+    /// <summary>Tạo công nhân từ snapshot Ronald Jack Pro; mật khẩu tạm trả một lần.</summary>
+    [HttpPost("from-rj"), ResponseCache(NoStore = true)]
+    public async Task<IActionResult> ImportFromRj([FromBody] ImportEmployeeFromRjDto dto, CancellationToken ct) =>
+        this.ToResponse(await _employees.ImportFromRjAsync(dto, ct));
+
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] AdminUpdateEmployeeDto dto, CancellationToken ct) =>
         this.ToResponse(await _employees.AdminUpdateAsync(id, dto, ct));

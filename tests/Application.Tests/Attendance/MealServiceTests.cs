@@ -18,6 +18,7 @@ public class MealServiceTests
     private static readonly DateTime Now0800 = new(2026, 10, 21, 8, 0, 0);
 
     private readonly IMealRepository _repo = Substitute.For<IMealRepository>();
+    private readonly IMealRegistrationSeeder _seeder = Substitute.For<IMealRegistrationSeeder>();
     private readonly IAttendanceService _attendance = Substitute.For<IAttendanceService>();
     private readonly ISystemSettingReader _settings = Substitute.For<ISystemSettingReader>();
     private readonly INotificationService _notifier = Substitute.For<INotificationService>();
@@ -30,7 +31,8 @@ public class MealServiceTests
         _clock.Today.Returns(Today);
         _settings.GetTimeAsync(SettingKeys.MealCutoffTime, Arg.Any<TimeOnly>(), Arg.Any<CancellationToken>())
             .Returns(new TimeOnly(8, 30));
-        _sut = new MealService(_repo, _attendance, _settings, _notifier, _clock, NullLogger<MealService>.Instance);
+        _sut = new MealService(_repo, _seeder, _attendance, _settings, _notifier, _clock,
+            NullLogger<MealService>.Instance);
     }
 
     private static Team Team(int id = 3, string name = "Tổ may 1") =>
@@ -54,7 +56,7 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task GetTeamSuggestionAsync_NoDailyMealYet_ReturnsSuggestionWithoutConfirmation()
+    public async Task GetTeamSuggestionAsync_NoDailyMealYet_ReturnsSuggestionFromAttendance()
     {
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(12);
@@ -64,7 +66,7 @@ public class MealServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.SuggestedCount.Should().Be(12);
-        result.Data.MealCount.Should().BeNull();
+        result.Data.MealCount.Should().Be(12);
         result.Data.IsLocked.Should().BeFalse();
     }
 
@@ -106,16 +108,16 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task ConfirmTeamMealAsync_NewConfirmation_AddsRow()
+    public async Task ConfirmTeamMealAsync_NewConfirmation_AddsRowFromWillEat()
     {
         var meal = Meal();
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
-        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(12);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(9);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(10);
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
 
-        var result = await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 10), CancellationToken.None);
+        var result = await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         _repo.Received(1).AddConfirmation(Arg.Is<TeamMealConfirmation>(c =>
@@ -135,11 +137,11 @@ public class MealServiceTests
         };
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
-        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(12);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(8);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(11);
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(existing);
 
-        await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 11), CancellationToken.None);
+        await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today), CancellationToken.None);
 
         existing.MealCount.Should().Be(11);
         existing.Source.Should().Be(MealConfirmationSource.Confirmed);
@@ -147,19 +149,57 @@ public class MealServiceTests
         _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
     }
 
+    // ---------- SetMyMealAsync / SetTeamMemberMealAsync ----------
+
     [Fact]
-    public async Task ConfirmTeamMealAsync_CountExceedsMembers_ReturnsFailureAndDoesNotSave()
+    public async Task SetMyMealAsync_NoRegistration_ReturnsNoAttendance()
+    {
+        var meal = Meal();
+        _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
+        _repo.FindRegistrationTrackedAsync(meal.DailyMealId, 7, Arg.Any<CancellationToken>())
+            .Returns((MealRegistration?)null);
+
+        var result = await _sut.SetMyMealAsync(7, new SetMyMealDto(Today, false), CancellationToken.None);
+
+        result.ErrorCode.Should().Be(ErrorCodes.MealNoAttendance);
+    }
+
+    [Fact]
+    public async Task SetMyMealAsync_HasRegistration_Unticks()
+    {
+        var meal = Meal();
+        var reg = new MealRegistration
+        {
+            DailyMealId = meal.DailyMealId, EmployeeId = 7, TeamId = 3, WillEat = true,
+            Employee = new Employee { EmployeeId = 7, EmployeeCode = "CN07", FullName = "A" },
+        };
+        _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
+        _repo.FindRegistrationTrackedAsync(meal.DailyMealId, 7, Arg.Any<CancellationToken>()).Returns(reg);
+        _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(1);
+        _repo.GetTeamRegistrationsAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>())
+            .Returns(new[] { reg });
+        _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>())
+            .Returns((TeamMealConfirmation?)null);
+
+        var result = await _sut.SetMyMealAsync(7, new SetMyMealDto(Today, false), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        reg.WillEat.Should().BeFalse();
+        await _repo.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task SetTeamMemberMealAsync_EmployeeNotInTeam_Fails()
     {
         _repo.GetTeamAsync(3, Arg.Any<CancellationToken>()).Returns(Team());
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(Meal());
-        _repo.GetTeamMemberCountAsync(3, Arg.Any<CancellationToken>()).Returns(10);
+        _repo.GetEmployeeAsync(99, Arg.Any<CancellationToken>())
+            .Returns(new Employee { EmployeeId = 99, TeamId = 8, EmployeeCode = "X", FullName = "Y" });
 
-        var result = await _sut.ConfirmTeamMealAsync(3, new ConfirmTeamMealDto(Today, 11), CancellationToken.None);
+        var result = await _sut.SetTeamMemberMealAsync(
+            3, 1, new SetTeamMemberMealDto(Today, 99, false), CancellationToken.None);
 
-        result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ErrorCodes.MealCountExceedsMembers);
-        _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
-        await _repo.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        result.ErrorCode.Should().Be(ErrorCodes.MealEmployeeNotInTeam);
     }
 
     // ---------- SetGuestMealAsync ----------
@@ -200,6 +240,8 @@ public class MealServiceTests
         _repo.GetConfirmationsAsync(meal.DailyMealId, Arg.Any<CancellationToken>())
             .Returns(Array.Empty<TeamMealConfirmation>());
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(6);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(6);
+        _repo.CountOfficeWillEatAsync(meal.DailyMealId, Arg.Any<CancellationToken>()).Returns(0);
 
         var result = await _sut.GetSummaryAsync(Today, CancellationToken.None);
 
@@ -316,6 +358,7 @@ public class MealServiceTests
         _repo.GetConfirmableTeamsAsync(Arg.Any<CancellationToken>()).Returns(new[] { Team() });
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(5);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(5);
 
         await _sut.RunReminderJobAsync(Today, CancellationToken.None);
 
@@ -335,6 +378,7 @@ public class MealServiceTests
         _repo.GetConfirmableTeamsAsync(Arg.Any<CancellationToken>()).Returns(new[] { Team() });
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(5);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(5);
         _repo.GetTeamLeaderIdsAsync(3, Arg.Any<CancellationToken>()).Returns(new[] { 11, 12 });
 
         await _sut.RunReminderJobAsync(Today, CancellationToken.None);
@@ -342,7 +386,7 @@ public class MealServiceTests
         _notifier.Received(1).NotifyEmployees(
             Arg.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { 11, 12 })),
             Arg.Is<NotificationMessage>(m => m.SourceType == NotificationSources.System
-                && m.Title == Messages.NotifyMealReminderTitle && m.Message.Contains("21/10/2026") && m.Message.Contains("(5)")));
+                && m.Title == Messages.NotifyMealReminderTitle && m.Message.Contains("21/10/2026") && m.Message.Contains("5")));
     }
 
     [Fact]
@@ -411,14 +455,15 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task RunAutoCloseJobAsync_UnconfirmedTeam_FillsFromAttendanceAndLocksDay()
+    public async Task RunAutoCloseJobAsync_UnconfirmedTeam_FillsFromWillEatAndLocksDay()
     {
         var meal = Meal();
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
         _repo.GetConfirmableTeamsAsync(Arg.Any<CancellationToken>()).Returns(new[] { Team() });
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns((TeamMealConfirmation?)null);
         _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(8);
-        _repo.GetOfficeAttendanceCountAsync(Today, Arg.Any<CancellationToken>()).Returns(4);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(8);
+        _repo.CountOfficeWillEatAsync(meal.DailyMealId, Arg.Any<CancellationToken>()).Returns(4);
         _attendance.GetHealthAsync(Arg.Any<CancellationToken>()).Returns(
             Result<SyncHealthDto>.Success(new SyncHealthDto(Now0800, 5, 30, false, 0)));
 
@@ -451,7 +496,7 @@ public class MealServiceTests
     }
 
     [Fact]
-    public async Task RunAutoCloseJobAsync_ConfirmedTeam_KeepsLeaderValue()
+    public async Task RunAutoCloseJobAsync_ConfirmedTeam_RefreshesMealCountFromWillEat()
     {
         var meal = Meal();
         var confirmed = new TeamMealConfirmation
@@ -462,13 +507,16 @@ public class MealServiceTests
         _repo.GetOrCreateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
         _repo.GetConfirmableTeamsAsync(Arg.Any<CancellationToken>()).Returns(new[] { Team() });
         _repo.FindConfirmationAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(confirmed);
-        _repo.GetOfficeAttendanceCountAsync(Today, Arg.Any<CancellationToken>()).Returns(2);
+        _repo.GetTeamAttendanceCountAsync(3, Today, Arg.Any<CancellationToken>()).Returns(12);
+        _repo.CountWillEatAsync(meal.DailyMealId, 3, Arg.Any<CancellationToken>()).Returns(11);
+        _repo.CountOfficeWillEatAsync(meal.DailyMealId, Arg.Any<CancellationToken>()).Returns(2);
         _attendance.GetHealthAsync(Arg.Any<CancellationToken>()).Returns(
             Result<SyncHealthDto>.Success(new SyncHealthDto(Now0800, 5, 30, false, 0)));
 
         await _sut.RunAutoCloseJobAsync(Today, CancellationToken.None);
 
-        confirmed.MealCount.Should().Be(15);
+        confirmed.MealCount.Should().Be(11);
+        confirmed.Source.Should().Be(MealConfirmationSource.Confirmed);
         _repo.DidNotReceiveWithAnyArgs().AddConfirmation(default!);
     }
 
@@ -495,13 +543,8 @@ public class MealValidatorTests
     private readonly SetMealPriceDtoValidator _price = new();
 
     [Fact]
-    public void Confirm_NegativeMealCount_HasError() =>
-        _confirm.TestValidate(new ConfirmTeamMealDto(new DateOnly(2026, 10, 21), -1))
-            .ShouldHaveValidationErrorFor(x => x.MealCount);
-
-    [Fact]
     public void Confirm_Valid_HasNoError() =>
-        _confirm.TestValidate(new ConfirmTeamMealDto(new DateOnly(2026, 10, 21), 10))
+        _confirm.TestValidate(new ConfirmTeamMealDto(new DateOnly(2026, 10, 21)))
             .ShouldNotHaveAnyValidationErrors();
 
     [Fact]

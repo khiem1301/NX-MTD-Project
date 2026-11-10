@@ -1,44 +1,27 @@
-import { Alert, Space, Tag, Typography } from 'antd';
-import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { Alert, Space, Tag } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
 import { ATTENDANCE_TEXT } from '../constants';
 import type { SyncHealth } from '../types';
 import { formatDateTime } from '@/utils/format';
 
 /**
- * MSG23: quá ngưỡng ATTENDANCE_ALERT_MINUTES mà chưa đồng bộ được thì cảnh báo,
- * kèm gợi ý nhập file dự phòng. Bình thường vẫn hiện một dòng xanh để Kế toán yên tâm.
+ * MSG23: chỉ hiện khi quá hạn đồng bộ. Trạng thái bình thường không gắn banner cố định
+ * (thông báo tạm khi bấm Đồng bộ từ RJ).
  */
 export function SyncHealthBanner({ health }: { health: SyncHealth | undefined }) {
-  if (!health) return null;
+  if (!health?.isOverdue) return null;
 
   const lastText =
     health.lastSucceededAt === null
       ? ATTENDANCE_TEXT.sync.never
       : formatDateTime(health.lastSucceededAt);
 
-  if (!health.isOverdue) {
-    return (
-      <Alert
-        type="success"
-        showIcon
-        icon={<CheckCircleOutlined />}
-        message={
-          <Space size={8} wrap>
-            <span>{ATTENDANCE_TEXT.sync.healthyTitle}</span>
-            <Typography.Text type="secondary">
-              {ATTENDANCE_TEXT.stats.lastSync}: {lastText}
-            </Typography.Text>
-          </Space>
-        }
-      />
-    );
-  }
-
   return (
     <Alert
       type="warning"
       showIcon
       icon={<WarningOutlined />}
+      style={{ marginBottom: 16 }}
       message={ATTENDANCE_TEXT.sync.overdueTitle.replace(
         '{0}',
         String(health.alertThresholdMinutes),

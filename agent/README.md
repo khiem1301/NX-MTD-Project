@@ -3,9 +3,10 @@
 Console .NET chạy trên máy Windows cài phần mềm Ronald Jack Pro. Mỗi chu kỳ agent:
 
 1. Gọi `GET /api/v1/agent/attendance-sync/cursor` để lấy mốc `CheckInOut.ID` đã đồng bộ và chu kỳ chạy (`ATTENDANCE_SYNC_MINUTES`).
-2. Đọc bảng `CheckInOut` từ `RJData.mdb` (Access) bằng OleDb, chỉ 3 cột `ID`, `MaChamCong`, `GioCham`, điều kiện `ID > mốc`.
-3. Gửi lô qua `POST /api/v1/agent/attendance-sync/punches` với header `X-Agent-Key`.
-4. Bỏ trùng, bỏ tháng khóa, tính lại bảng công do thủ tục `usp_Attendance_IngestBatch` phía DB lo (GBR-16) — gửi lại cùng lô không sinh bản ghi trùng.
+2. Đọc `NHANVIEN` (`MaChamCong`, `TenNhanVien`, `MaNhanVien`, chỉ `UserEnable`) → `POST /api/v1/agent/attendance-sync/employees` (replace snapshot trên web).
+3. Đọc bảng `CheckInOut` từ `RJData.mdb` (Access) bằng OleDb, chỉ 3 cột `ID`, `MaChamCong`, `GioCham`, điều kiện `ID > mốc`.
+4. Gửi lô qua `POST /api/v1/agent/attendance-sync/punches` với header `X-Agent-Key`.
+5. Bỏ trùng, bỏ tháng khóa, tính lại bảng công do thủ tục `usp_Attendance_IngestBatch` phía DB lo (GBR-16) — gửi lại cùng lô không sinh bản ghi trùng.
 
 ## Yêu cầu
 

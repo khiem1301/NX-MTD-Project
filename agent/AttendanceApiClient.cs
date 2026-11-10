@@ -4,11 +4,12 @@ using Microsoft.Extensions.Options;
 
 namespace NX_MTD.Agent;
 
-public sealed record CursorResult(int? LastSourceRecordId, DateTime? LastSucceededAt, int SyncIntervalMinutes);
+public sealed record CursorResult(
+    int? LastSourceRecordId, DateTime? LastSucceededAt, int SyncIntervalMinutes, bool SyncEmployeesRequested);
 
 public sealed record IngestResult(int SyncSessionId, int Received, int Inserted, int SkippedLockedMonth, int Duplicates, int Unmapped);
 
-/// <summary>Gọi API backend của luồng đồng bộ (UC61): lấy mốc đọc tiếp và gửi lô lượt quẹt.</summary>
+/// <summary>Gọi API backend của luồng đồng bộ (UC61): mốc, lượt quẹt, snapshot NV.</summary>
 public sealed class AttendanceApiClient
 {
     public const string ApiKeyHeader = "X-Agent-Key";
@@ -54,7 +55,35 @@ public sealed class AttendanceApiClient
         return envelope is { Success: true } ? envelope.Data : null;
     }
 
+    /// <summary>Đẩy snapshot NHANVIEN (replace-all phía backend).</summary>
+    public async Task<bool> SendEmployeesAsync(IReadOnlyList<RjEmployee> employees, CancellationToken ct)
+    {
+        var payload = new EmployeesPayload(
+            employees.Select(e => new EmployeePayload(e.AttendanceCode, e.FullName, e.RjEmployeeCode)).ToList());
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/agent/attendance-sync/employees");
+        request.Headers.Add(ApiKeyHeader, _options.ApiKey);
+        request.Content = JsonContent.Create(payload, options: Json);
+
+        using var response = await _http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        var envelope = await response.Content.ReadFromJsonAsync<ApiEnvelope<object>>(Json, ct);
+        return envelope is { Success: true };
+    }
+
+    /// <summary>Báo đã chạy chu kỳ xong khi không có lượt quẹt mới (cập nhật banner sức khỏe).</summary>
+    public async Task SendHeartbeatAsync(CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/agent/attendance-sync/heartbeat");
+        request.Headers.Add(ApiKeyHeader, _options.ApiKey);
+        using var response = await _http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+    }
+
     private sealed record PunchPayload(int? SourceRecordId, int AttendanceCode, DateTime PunchTime);
     private sealed record IngestPayload(List<PunchPayload> Punches, string? FileName);
+    private sealed record EmployeePayload(int AttendanceCode, string FullName, string? RjEmployeeCode);
+    private sealed record EmployeesPayload(List<EmployeePayload> Employees);
     private sealed record ApiEnvelope<T>(bool Success, T? Data, string? Message, string? ErrorCode);
 }

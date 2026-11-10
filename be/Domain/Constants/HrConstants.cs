@@ -19,6 +19,21 @@ public static class RoleCodes
 
     /// <summary>Chỉ Admin được gán hoặc đổi các vai trò này; Quản đốc vẫn thấy nhân viên vai trò Quản đốc nhưng không đổi được vai trò.</summary>
     public static readonly IReadOnlySet<string> AdminAssignedOnly = new HashSet<string> { Admin, Manager, Accountant };
+
+    /// <summary>Vai trò tạo trên web (văn phòng). Công nhân / tổ trưởng / tổ phó chỉ import từ Ronald Jack Pro.</summary>
+    public static readonly IReadOnlySet<string> OfficeCreatable = new HashSet<string>
+    {
+        Admin, Manager, Accountant, WarehouseKeeper, QaQc, Electrician,
+    };
+
+    /// <summary>Vai trò chỉ đến từ máy chấm công (RJ), không tạo tay trên web.</summary>
+    public static readonly IReadOnlySet<string> FloorFromRj = new HashSet<string>
+    {
+        Worker, TeamLeader, TeamDeputy,
+    };
+
+    public static bool IsOfficeCreatable(string roleCode) => OfficeCreatable.Contains(roleCode);
+    public static bool IsFloorFromRj(string roleCode) => FloorFromRj.Contains(roleCode);
 }
 
 public static class TeamPositions

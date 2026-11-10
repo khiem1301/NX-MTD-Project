@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -8,6 +10,8 @@ namespace NX_MTD.Application.Services;
 
 public sealed class EmployeeService : IEmployeeService
 {
+    private static readonly Regex EmployeeCodePattern = new("^[A-Za-z0-9._-]+$", RegexOptions.Compiled);
+
     private readonly IEmployeeRepository _employees;
     private readonly ITeamRepository _teams;
     private readonly IPasswordHasher _hasher;
@@ -44,41 +48,59 @@ public sealed class EmployeeService : IEmployeeService
         return Result<EmployeeDetailDto>.Success(detail with { History = history });
     }
 
-    /// <summary>UC17: luôn tạo kèm tài khoản, tên đăng nhập = mã NV, mật khẩu tạm hiện một lần (D29).</summary>
+    /// <summary>UC17: luôn tạo kèm tài khoản, tên đăng nhập = mã NV, mật khẩu tạm hiện một lần (D29).
+    /// Chỉ role văn phòng; công nhân / tổ trưởng / tổ phó tạo qua ImportFromRjAsync.</summary>
     public async Task<Result<CreatedEmployeeDto>> CreateAsync(CreateEmployeeDto dto, CancellationToken ct)
     {
         var code = dto.EmployeeCode.Trim().ToUpperInvariant();
         if (await _employees.CodeExistsAsync(code, ct))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeCodeDuplicate, Messages.EmployeeCodeDuplicate);
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden,
+                ResultKind.Forbidden);
+
         var roleCode = Roles.ToRoleCode(dto.Role);
+        if (!RoleCodes.IsOfficeCreatable(roleCode))
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeFloorRoleWebCreateForbidden,
+                Messages.EmployeeFloorRoleWebCreateForbidden, ResultKind.Validation);
         // Quản đốc không tạo được nhân viên vai trò Admin / Quản đốc / Kế toán (GBR-01).
         if (!_scope.CanAssign(roleCode))
             return Result<CreatedEmployeeDto>.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, dto.AttendanceCode, null, ct);
         if (!check.IsSuccess) return Fail.As<CreatedEmployeeDto>(check);
 
-        var tempPassword = _passwords.Generate();
-        var employee = new Employee
-        {
-            EmployeeCode = code, FullName = dto.FullName.Trim(), Gender = dto.Gender, DateOfBirth = dto.DateOfBirth,
-            Phone = Clean(dto.Phone), RoleId = await _employees.GetRoleIdAsync(roleCode, ct), TeamId = dto.TeamId,
-            PayType = CodeText.ToCode(dto.PayType), StartDate = dto.StartDate, Status = RecordStatus.Active, CreatedAt = _clock.Now,
-            Account = new Account
-            {
-                PasswordHash = _hasher.Hash(tempPassword), IsTemporaryPassword = true,
-                SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active, CreatedAt = _clock.Now,
-            },
-        };
+        return await CreateWithAccountAsync(code, dto.FullName.Trim(), dto.Gender, dto.DateOfBirth, Clean(dto.Phone),
+            roleCode, dto.TeamId, CodeText.ToCode(dto.PayType), dto.StartDate, dto.AttendanceCode, Messages.EmployeeCreated, ct);
+    }
 
-        return await _uow.InTransactionAsync(async () =>
-        {
-            await _employees.AddAsync(employee);
-            await _uow.SaveChangesAsync();   // lấy EmployeeId; trigger tổ trưởng chạy ở đây
-            if (dto.AttendanceCode is int att) await _employees.MapAttendanceCodeAsync(att, employee.EmployeeId, _user.EmployeeId, ct);
-            _audit.Add(new AuditEntry(nameof(Employee), employee.EmployeeId, AuditActions.Insert, null, Snapshot(employee, roleCode)));
-            await _uow.SaveChangesAsync();
-            return Result<CreatedEmployeeDto>.Success(new CreatedEmployeeDto(employee.EmployeeId, code, tempPassword), Messages.EmployeeCreated);
-        });
+    /// <summary>Import công nhân từ snapshot RJ: username = mã NV RJ (hoặc mã chấm công), mật khẩu tạm 6 số do hệ thống sinh
+    /// (không lấy PassWord từ máy RJ). Chỉ Admin / Quản đốc.</summary>
+    public async Task<Result<CreatedEmployeeDto>> ImportFromRjAsync(ImportEmployeeFromRjDto dto, CancellationToken ct)
+    {
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden,
+                ResultKind.Forbidden);
+
+        var snap = await _uow.Repository<RjEmployeeSnapshot>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(s => s.AttendanceCode == dto.AttendanceCode, ct);
+        if (snap is null)
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeRjNotFound, Messages.EmployeeRjNotFound, ResultKind.NotFound);
+
+        if (await _employees.AttendanceCodeTakenAsync(dto.AttendanceCode, null, ct))
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeRjAlreadyImported, Messages.EmployeeRjAlreadyImported);
+
+        var code = await ResolveRjEmployeeCodeAsync(snap, ct);
+        if (code is null)
+            return Result<CreatedEmployeeDto>.Failure(ErrorCodes.EmployeeCodeDuplicate, Messages.EmployeeCodeDuplicate);
+
+        var roleCode = RoleCodes.Worker;
+        var payType = string.IsNullOrWhiteSpace(dto.PayType) ? PayTypes.PieceRate : CodeText.ToCode(dto.PayType);
+        var startDate = dto.StartDate ?? _clock.Today;
+        var check = await CheckPlacementAsync(roleCode, dto.TeamId, dto.AttendanceCode, null, ct);
+        if (!check.IsSuccess) return Fail.As<CreatedEmployeeDto>(check);
+
+        return await CreateWithAccountAsync(code, snap.FullName.Trim(), null, null, null,
+            roleCode, dto.TeamId, payType, startDate, dto.AttendanceCode, Messages.EmployeeImportedFromRj, ct);
     }
 
     public async Task<Result> AdminUpdateAsync(int employeeId, AdminUpdateEmployeeDto dto, CancellationToken ct)
@@ -88,6 +110,9 @@ public sealed class EmployeeService : IEmployeeService
         if (employee.Status != RecordStatus.Active) return Result.Failure(ErrorCodes.EmployeeNotActive, Messages.EmployeeNotActive);
 
         var roleCode = Roles.ToRoleCode(dto.Role);
+        if (RoleCodes.IsFloorFromRj(roleCode) && !RoleCodes.IsFloorFromRj(employee.Role.RoleCode))
+            return Result.Failure(ErrorCodes.EmployeeFloorRoleWebCreateForbidden, Messages.EmployeeFloorRoleWebCreateForbidden,
+                ResultKind.Validation);
         var attChanged = dto.AttendanceCode != employee.AttendanceCode;
         var check = await CheckPlacementAsync(roleCode, dto.TeamId, attChanged ? dto.AttendanceCode : null, employeeId, ct);
         if (!check.IsSuccess) return check;
@@ -115,6 +140,9 @@ public sealed class EmployeeService : IEmployeeService
 
         // GBR-01: Quản đốc không được gán vai trò Admin / Quản đốc / Kế toán (cũng là những vai trò anh ta không nhìn thấy).
         var roleCode = Roles.ToRoleCode(dto.Role);
+        if (RoleCodes.IsFloorFromRj(roleCode) && !RoleCodes.IsFloorFromRj(employee.Role.RoleCode))
+            return Result.Failure(ErrorCodes.EmployeeFloorRoleWebCreateForbidden, Messages.EmployeeFloorRoleWebCreateForbidden,
+                ResultKind.Validation);
         var roleChanged = roleCode != employee.Role.RoleCode;
         if (roleChanged && !(_scope.CanAssign(roleCode) && _scope.CanAssign(employee.Role.RoleCode)))
             return Result.Failure(ErrorCodes.AuthForbidden, Messages.ManagerCannotAssignRole, ResultKind.Forbidden);
@@ -140,6 +168,8 @@ public sealed class EmployeeService : IEmployeeService
 
     public async Task<Result> ResignAsync(int employeeId, ResignEmployeeDto dto, CancellationToken ct)
     {
+        if (_user.Role is not (Roles.Admin or Roles.Manager))
+            return Result.Failure(ErrorCodes.AuthForbidden, Messages.EmployeeAccountManageForbidden, ResultKind.Forbidden);
         if (employeeId == _user.EmployeeId) return Result.Failure(ErrorCodes.AccountCannotLockSelf, Messages.CannotActOnSelf);
         var employee = await _employees.GetFullAsync(employeeId, ct);
         if (employee is null || !_scope.CanSee(employee.Role.RoleCode)) return Fail.NotFound();
@@ -162,6 +192,55 @@ public sealed class EmployeeService : IEmployeeService
             ? string.Format(Messages.ResignedWasLeader, employee.Team?.TeamName, employee.Role.RoleCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó")
             : Messages.EmployeeResigned;
         return Result.Success(message);
+    }
+
+    private async Task<Result<CreatedEmployeeDto>> CreateWithAccountAsync(
+        string code, string fullName, string? gender, DateOnly? dateOfBirth, string? phone,
+        string roleCode, int? teamId, string payType, DateOnly startDate, int? attendanceCode,
+        string successMessage, CancellationToken ct)
+    {
+        var tempPassword = _passwords.Generate();
+        var employee = new Employee
+        {
+            EmployeeCode = code, FullName = fullName, Gender = gender, DateOfBirth = dateOfBirth,
+            Phone = phone, RoleId = await _employees.GetRoleIdAsync(roleCode, ct), TeamId = teamId,
+            PayType = payType, StartDate = startDate, Status = RecordStatus.Active, CreatedAt = _clock.Now,
+            Account = new Account
+            {
+                PasswordHash = _hasher.Hash(tempPassword), IsTemporaryPassword = true,
+                SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active, CreatedAt = _clock.Now,
+            },
+        };
+
+        return await _uow.InTransactionAsync(async () =>
+        {
+            await _employees.AddAsync(employee);
+            await _uow.SaveChangesAsync();
+            if (attendanceCode is int att)
+                await _employees.MapAttendanceCodeAsync(att, employee.EmployeeId, _user.EmployeeId, ct);
+            _audit.Add(new AuditEntry(nameof(Employee), employee.EmployeeId, AuditActions.Insert, null, Snapshot(employee, roleCode)));
+            await _uow.SaveChangesAsync();
+            return Result<CreatedEmployeeDto>.Success(new CreatedEmployeeDto(employee.EmployeeId, code, tempPassword), successMessage);
+        });
+    }
+
+    /// <summary>Ưu tiên mã NV trên RJ; nếu trùng / không hợp lệ thì dùng mã chấm công.</summary>
+    private async Task<string?> ResolveRjEmployeeCodeAsync(RjEmployeeSnapshot snap, CancellationToken ct)
+    {
+        var candidates = new List<string>();
+        if (!string.IsNullOrWhiteSpace(snap.RjEmployeeCode))
+        {
+            var fromRj = snap.RjEmployeeCode.Trim().ToUpperInvariant();
+            if (EmployeeCodePattern.IsMatch(fromRj)) candidates.Add(fromRj);
+        }
+        var fromAtt = snap.AttendanceCode.ToString();
+        if (!candidates.Contains(fromAtt, StringComparer.Ordinal)) candidates.Add(fromAtt);
+
+        foreach (var code in candidates)
+        {
+            if (!await _employees.CodeExistsAsync(code, ct)) return code;
+        }
+        return null;
     }
 
     /// <summary>Tổ hợp lệ, tổ trưởng / tổ phó đúng loại tổ và không trùng người (D31), mã chấm công chưa ai giữ.</summary>

@@ -4,7 +4,12 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using NX_MTD.Agent;
 
-var builder = Host.CreateApplicationBuilder(args);
+// Content root = thư mục chứa appsettings của agent (bin khi publish, hoặc project khi dotnet run).
+var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory,
+});
 
 builder.Services.Configure<AgentOptions>(builder.Configuration.GetSection(AgentOptions.SectionName));
 builder.Services.AddSingleton<RjAccessReader>();

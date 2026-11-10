@@ -7,10 +7,13 @@ namespace NX_MTD.Agent;
 /// <summary>Một lượt quẹt đọc từ bảng CheckInOut của Ronald Jack Pro.</summary>
 public sealed record RjPunch(int SourceRecordId, int AttendanceCode, DateTime PunchTime);
 
+/// <summary>Một nhân viên từ bảng NHANVIEN (chỉ mã + tên).</summary>
+public sealed record RjEmployee(int AttendanceCode, string FullName, string? RjEmployeeCode);
+
 /// <summary>
-/// Đọc RJData.mdb (Access) bằng OleDb, chỉ lấy 3 cột theo Rules mục 4.6:
-/// ID → SourceRecordId, MaChamCong → AttendanceCode, GioCham → PunchTime.
-/// Không đọc vân tay, mật khẩu, ảnh hay bảng nhân viên/máy của RJ.
+/// Đọc RJData.mdb (Access) bằng OleDb.
+/// CheckInOut: ID, MaChamCong, GioCham. NHANVIEN: MaChamCong, TenNhanVien, MaNhanVien.
+/// Không đọc vân tay, mật khẩu, ảnh.
 /// </summary>
 public sealed class RjAccessReader
 {
@@ -41,6 +44,46 @@ public sealed class RjAccessReader
         }
 
         return punches;
+    }
+
+    /// <summary>Đọc nhân viên đang bật trên RJ (UserEnable = True).</summary>
+    public IReadOnlyList<RjEmployee> ReadEmployees()
+    {
+        var rows = new List<RjEmployee>();
+        var connectionString = $"Provider={_options.Provider};Data Source={_options.DbPath};";
+
+        using var connection = new OleDbConnection(connectionString);
+        connection.Open();
+
+        // Access: UserEnable là Yes/No; MaChamCong có thể Number.
+        const string sql =
+            "SELECT MaChamCong, TenNhanVien, MaNhanVien FROM NHANVIEN WHERE UserEnable = True";
+        using var command = new OleDbCommand(sql, connection);
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            if (!TryToInt(reader.GetValue(0), out var code) || code <= 0) continue;
+            var name = Convert.ToString(reader.GetValue(1), CultureInfo.InvariantCulture)?.Trim();
+            if (string.IsNullOrWhiteSpace(name)) continue;
+            var rjCode = Convert.ToString(reader.GetValue(2), CultureInfo.InvariantCulture)?.Trim();
+            rows.Add(new RjEmployee(code, name, string.IsNullOrWhiteSpace(rjCode) ? null : rjCode));
+        }
+
+        return rows;
+    }
+
+    private static bool TryToInt(object value, out int result)
+    {
+        try
+        {
+            result = Convert.ToInt32(value, CultureInfo.InvariantCulture);
+            return true;
+        }
+        catch
+        {
+            result = 0;
+            return false;
+        }
     }
 
     /// <summary>GioCham thường là Date/Time; đề phòng file xuất giữ giá trị thành chuỗi.</summary>

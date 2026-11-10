@@ -11,6 +11,9 @@ public interface ISystemSettingReader
     Task<decimal> GetDecimalAsync(string key, decimal fallback, CancellationToken ct);
     Task<TimeOnly> GetTimeAsync(string key, TimeOnly fallback, CancellationToken ct);
 
+    /// <summary>Ghi / cập nhật một khóa; bỏ cache để lần đọc sau lấy giá trị mới ngay.</summary>
+    Task SetAsync(string key, string value, string? description, CancellationToken ct);
+
     /// <summary>Bỏ giá trị đã nhớ của một khóa để lần đọc sau lấy giá trị mới ngay (sau khi Admin đổi cấu hình).</summary>
     void Invalidate(string key);
 }
