@@ -23,10 +23,12 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
   const confirm = useConfirmPayment(order.purchaseOrderId);
   const text = PURCHASE_TEXT.pay;
   const amount = Form.useWatch('paidAmount', form);
+  const orderTotal = Math.round(order.totalAmount);
   const differs =
     typeof amount === 'number' &&
     amount > 0 &&
-    Math.round(amount) !== Math.round(order.totalAmount);
+    Math.round(amount) !== orderTotal &&
+    Math.round(amount) <= orderTotal;
 
   useEffect(() => {
     if (!open) return;
@@ -73,7 +75,16 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
         <Form.Item
           name="paidAmount"
           label={text.amount}
-          rules={[{ required: true, type: 'number', min: 0.01, message: text.amountRequired }]}
+          validateTrigger="onSubmit"
+          rules={[
+            { required: true, type: 'number', min: 0.01, message: text.amountRequired },
+            {
+              validator: async (_, value) => {
+                if (typeof value !== 'number' || value <= order.totalAmount) return;
+                throw new Error(text.amountExceedsTotal);
+              },
+            },
+          ]}
           extra={`${PURCHASE_TEXT.detail.total}: ${formatCurrency(order.totalAmount)}`}
         >
           <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 240 }} />

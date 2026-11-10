@@ -26,6 +26,7 @@ public static class PurchaseGoodsStatuses
 public static class PurchasePaymentStatuses
 {
     public const string Paid = "PAID";
+    public const string PartiallyPaid = "PARTIALLY_PAID";
     public const string Returned = "RETURNED";
 }
 

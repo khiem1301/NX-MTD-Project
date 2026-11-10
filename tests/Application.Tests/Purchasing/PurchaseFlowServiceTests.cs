@@ -58,7 +58,8 @@ public class PurchaseFlowServiceTests
         {
             PurchaseOrderId = id, PoCode = "DM-20261027-001", GoodsStatus = goods, PaymentStatus = payment,
             CreatedAt = Now, RowVer = RowVer,
-            PurchaseOrderLines = new List<PurchaseOrderLine> { Line(11, 100, 0), Line(12, 50, 0) },
+            // Tổng mặc định 1.500.000 (dùng cho UC34: PaidAmount không được vượt tổng đơn).
+            PurchaseOrderLines = new List<PurchaseOrderLine> { Line(11, 100, 10_000), Line(12, 50, 10_000) },
         };
         _pos.Add(po);
         _poRepo.GetByIdAsync(id).Returns(po);
@@ -348,16 +349,40 @@ public class PurchaseFlowServiceTests
     {
         var po = Po(PurchaseGoodsStatuses.Ordered);
 
-        var result = await Flow().ConfirmPaymentAsync(5, Pay(), default);
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_500_000), default);
 
         result.IsSuccess.Should().BeTrue();
         po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
         po.PaymentMethod.Should().Be(PaymentMethods.BankTransfer);   // PascalCase → mã DB
-        po.PaidAmount.Should().Be(1_000_000);
+        po.PaidAmount.Should().Be(1_500_000);
         po.PaymentDate.Should().Be(Today);
         _poRepo.Received(1).SetOriginalRowVersion(po, RowVer);
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(PurchaseOrder) && e.Action == AuditActions.Confirm));
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_AmountLessThanTotal_MarksPartiallyPaid()
+    {
+        var po = Po(PurchaseGoodsStatuses.Ordered);
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000), default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.PartiallyPaid);
+        po.PaidAmount.Should().Be(1_000_000);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_ClosedShort_MarksPaidEvenIfAmountLessThanTotal()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000), default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
+        po.PaidAmount.Should().Be(1_000_000);
     }
 
     [Theory]
@@ -375,17 +400,32 @@ public class PurchaseFlowServiceTests
     }
 
     [Theory]
-    [InlineData("Barter", 1_000, false)]
-    [InlineData("Cash", 0, false)]
-    [InlineData("Cash", 1_000, true)]
-    public async Task ConfirmPayment_MethodAndAmount_AreChecked(string method, double amount, bool ok)
+    [InlineData("Barter", 1_000, false, null)]
+    [InlineData("Cash", 0, false, null)]
+    [InlineData("Cash", 1_000, true, PurchasePaymentStatuses.PartiallyPaid)]
+    [InlineData("Cash", 1_500_000, true, PurchasePaymentStatuses.Paid)]
+    [InlineData("Cash", 1_500_001, false, null)]
+    public async Task ConfirmPayment_MethodAndAmount_AreChecked(string method, double amount, bool ok, string? expectedStatus)
     {
-        Po(PurchaseGoodsStatuses.Ordered);
+        var po = Po(PurchaseGoodsStatuses.Ordered);
 
         var result = await Flow().ConfirmPaymentAsync(5, Pay(method, amount: (decimal)amount), default);
 
         result.IsSuccess.Should().Be(ok);
         if (!ok) result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        else po.PaymentStatus.Should().Be(expectedStatus);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_AmountExceedsOrderTotal_ReturnsPaymentInvalid()
+    {
+        Po(PurchaseGoodsStatuses.Ordered);
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_500_001), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        result.Message.Should().Be(Messages.PaymentAmountExceedsTotal);
     }
 
     [Fact]

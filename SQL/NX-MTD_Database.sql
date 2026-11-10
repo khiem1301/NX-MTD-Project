@@ -797,9 +797,10 @@ CREATE TABLE dbo.PurchaseOrder (
     RowVer                ROWVERSION,
     CONSTRAINT CK_PO_GoodsStatus CHECK (GoodsStatus IN ('PENDING_FINALISATION','ORDERED','PARTIALLY_RECEIVED','RECEIVED',
                                                          'CLOSED_SHORT','CUSTOMER_SUPPLIED','REJECTED')),
-    CONSTRAINT CK_PO_PaymentStatus CHECK (PaymentStatus IN ('UNPAID','PAID','RETURNED')),
+    CONSTRAINT CK_PO_PaymentStatus CHECK (PaymentStatus IN ('UNPAID','PAID','PARTIALLY_PAID','RETURNED')),
     CONSTRAINT CK_PO_PaymentMethod CHECK (PaymentMethod IS NULL OR PaymentMethod IN ('BANK_TRANSFER','CASH')),
-    CONSTRAINT CK_PO_Paid   CHECK (PaymentStatus <> 'PAID' OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)),
+    CONSTRAINT CK_PO_Paid   CHECK (PaymentStatus NOT IN ('PAID','PARTIALLY_PAID')
+                                    OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)),
     CONSTRAINT CK_PO_PayReturn CHECK (PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL),
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),

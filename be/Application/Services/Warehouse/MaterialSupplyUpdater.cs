@@ -55,6 +55,11 @@ public sealed class MaterialSupplyUpdater
         po.GoodsStatus = allSettled
             ? (anyNotReplenished ? PurchaseGoodsStatuses.ClosedShort : PurchaseGoodsStatuses.Received)
             : (anyReceived ? PurchaseGoodsStatuses.PartiallyReceived : PurchaseGoodsStatuses.Ordered);
+
+        // Chốt không bù: phần còn lại không trả thêm → thanh toán một phần thành đã thanh toán.
+        if (po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort
+            && po.PaymentStatus == PurchasePaymentStatuses.PartiallyPaid)
+            po.PaymentStatus = PurchasePaymentStatuses.Paid;
     }
 
     /// <summary>

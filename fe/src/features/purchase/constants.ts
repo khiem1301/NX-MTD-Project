@@ -70,6 +70,8 @@ export const PURCHASE_TEXT = {
     unitPrice: 'Đơn giá',
     amount: 'Thành tiền',
     total: 'Tổng giá trị',
+    /** Chỉ hiện khi đơn Chốt không bù: bằng tổng số đã thanh toán. */
+    actualTotal: 'Tổng giá trị thực tế',
   },
 
   actions: {
@@ -110,6 +112,7 @@ export const PURCHASE_TEXT = {
     method: 'Hình thức',
     note: 'Ghi chú',
     differsFromTotal: 'Số tiền khác giá trị đơn mua.',
+    amountExceedsTotal: 'Số tiền thanh toán không được lớn hơn giá trị đơn mua.',
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amountRequired: 'Nhập số tiền lớn hơn 0.',
     methodRequired: 'Vui lòng chọn hình thức.',
@@ -145,6 +148,7 @@ export const GOODS_STATUS_LABEL: Record<PoGoodsStatus, StatusLabel> = {
 
 export const PAYMENT_STATUS_LABEL: Record<PoPaymentStatus, StatusLabel> = {
   Unpaid: { text: 'Chưa thanh toán', color: 'gold' },
+  PartiallyPaid: { text: 'Thanh toán một phần', color: 'cyan' },
   Paid: { text: 'Đã thanh toán', color: 'green' },
   Returned: { text: 'Bị trả lại', color: 'red' },
 };

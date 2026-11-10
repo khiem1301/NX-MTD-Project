@@ -230,7 +230,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
     public async Task<Result> ConfirmPaymentAsync(int purchaseOrderId, ConfirmPaymentDto dto, CancellationToken ct)
     {
-        var po = await _uow.Repository<PurchaseOrder>().GetByIdAsync(purchaseOrderId);
+        var po = await LoadWithLinesAsync(purchaseOrderId, ct);
         if (po is null) return Fail.NotFound();
         if (!CanPay(po.GoodsStatus, po.PaymentStatus))
             return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
@@ -240,12 +240,18 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentMethodInvalid, ResultKind.Validation);
         if (dto.PaidAmount <= 0)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountInvalid, ResultKind.Validation);
+        var orderTotal = po.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice);
+        if (dto.PaidAmount > orderTotal)
+            return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountExceedsTotal, ResultKind.Validation);
         if (dto.PaymentDate > _clock.Today)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentDateFuture, ResultKind.Validation);
 
         _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
         var from = po.PaymentStatus;
-        po.PaymentStatus = PurchasePaymentStatuses.Paid;
+        // Chốt không bù: tổng thực tế = số đã trả → coi là đã thanh toán đủ.
+        po.PaymentStatus = po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort || dto.PaidAmount >= orderTotal
+            ? PurchasePaymentStatuses.Paid
+            : PurchasePaymentStatuses.PartiallyPaid;
         po.PaymentDate = dto.PaymentDate;
         po.PaidAmount = dto.PaidAmount;
         po.PaymentMethod = method;

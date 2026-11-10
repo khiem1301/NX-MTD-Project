@@ -50,7 +50,7 @@ export type PoGoodsStatus =
   | 'CustomerSupplied'
   | 'Rejected';
 
-export type PoPaymentStatus = 'Unpaid' | 'Paid' | 'Returned';
+export type PoPaymentStatus = 'Unpaid' | 'Paid' | 'PartiallyPaid' | 'Returned';
 
 export type PaymentMethod = 'BankTransfer' | 'Cash';
 
