@@ -211,6 +211,7 @@ export const MESSAGES = {
     tempPasswordWarning:
       'Mật khẩu chỉ hiện một lần. Hãy đưa cho nhân viên và nhắc đổi khi đăng nhập.',
     username: 'Tên đăng nhập',
+    usernameAutoHint: 'Tự sinh từ họ tên khi tạo (vd Thái → ThaiPH). Không đổi sau này.',
     copy: 'Sao chép',
     copied: 'Đã sao chép.',
     teamsTitle: 'Tổ',

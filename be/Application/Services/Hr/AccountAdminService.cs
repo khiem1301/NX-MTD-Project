@@ -82,7 +82,7 @@ public sealed class AccountAdminService : IAccountAdminService
         _audit.Add(new AuditEntry(nameof(Account), account.AccountId, AuditActions.Update, null, new { PasswordReset = true },
             Summary: $"Đặt lại mật khẩu tạm cho nhân viên {employee.EmployeeCode}"));
         await _uow.SaveChangesAsync();
-        return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(employee.EmployeeCode, temp), Messages.PasswordResetDone);
+        return Result<TemporaryPasswordDto>.Success(new TemporaryPasswordDto(account.Username, temp), Messages.PasswordResetDone);
     }
 
     /// <summary>Tài khoản của nhân viên trong phạm vi người thao tác (Quản đốc không thấy Admin / Kế toán).</summary>

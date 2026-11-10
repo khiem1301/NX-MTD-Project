@@ -111,6 +111,16 @@
    - 05/11/2026  ProductImage giảm còn tối đa 5 ảnh phụ (CK_ProductImage_Sort 1-5). Thêm ProductColor (màu áo của mã hàng,
                  nơi duy nhất lưu tên màu): ProductVariant, ProductMarkerFabric bỏ cột Color, trỏ ProductColorId (FK ghép
                  với ProductId); UQ_PV thành (ProductColorId, SizeCode). (ảnh theo màu đã bỏ ở DEV-ALL-80).
+   - 10/11/2026  (HR/RJ hybrid + suất ăn theo người + username)
+                 · Thêm RjEmployeeSnapshot: cache nhẹ NV từ Ronald Jack Pro (AttendanceCode, FullName, RjEmployeeCode,
+                   SyncedAt); agent replace-all mỗi chu kỳ; web gán mã / tạo công nhân. Patch:
+                   SQL/patches/2026-11-10_rj_employee_snapshot.sql.
+                 · Thêm MealRegistration (+ IX_MR_DailyMeal_Team, trg_MealRegistration_Cutoff): suất ăn từng NV,
+                   sinh từ DailyTimesheet.CheckIn (WillEat mặc định 1); tổ trưởng/công nhân bỏ tick trước giờ chốt;
+                   TeamMealConfirmation.MealCount = Σ WillEat. Patch: SQL/patches/2026-11-10_meal_registration.sql.
+                 · Account.Username: tên đăng nhập tách khỏi Employee.EmployeeCode (mã NV chỉ map RJ). UQ_Account_Username;
+                   seed Username = EmployeeCode; NV mới backend sinh từ họ tên (ThaiPH, trùng → 01/02). Patch:
+                   SQL/patches/2026-11-10_account_username.sql.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -243,6 +253,7 @@ CREATE TABLE dbo.Account (
     AccountId           INT IDENTITY(1,1) CONSTRAINT PK_Account PRIMARY KEY,
     EmployeeId          INT           NOT NULL CONSTRAINT UQ_Account_Employee UNIQUE
                                       CONSTRAINT FK_Account_Employee REFERENCES dbo.Employee(EmployeeId),
+    Username            VARCHAR(50)   NOT NULL,          -- tên đăng nhập (sinh từ họ tên; seed = EmployeeCode)
     PasswordHash        NVARCHAR(500) NOT NULL,          -- chỉ lưu hash (ASP.NET Identity / BCrypt)
     IsTemporaryPassword BIT           NOT NULL CONSTRAINT DF_Account_IsTemp DEFAULT 1,
     SecurityStamp       UNIQUEIDENTIFIER NOT NULL CONSTRAINT DF_Account_Stamp DEFAULT NEWID(), -- đổi khi đổi/đặt lại mật khẩu → đăng xuất phiên khác
@@ -251,8 +262,9 @@ CREATE TABLE dbo.Account (
     LockReason          NVARCHAR(300) NULL,
     CreatedAt           DATETIME2(0)  NOT NULL CONSTRAINT DF_Account_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Account_Status CHECK (Status IN ('ACTIVE','LOCKED')),
-    CONSTRAINT CK_Account_Lock   CHECK (Status <> 'LOCKED' OR LockedAt IS NOT NULL)   -- tên đăng nhập = Employee.EmployeeCode
+    CONSTRAINT CK_Account_Lock   CHECK (Status <> 'LOCKED' OR LockedAt IS NOT NULL)
 );
+CREATE UNIQUE INDEX UQ_Account_Username ON dbo.Account(Username);
 
 -- Đánh giá / đổi bậc thợ (GRADE_EVALUATION, UC16, UC17, UC50). Tổ trưởng đề xuất, Admin xét;
 -- dòng APPLIED chính là lịch sử đổi bậc (bậc cũ, bậc mới, lý do, ngày hiệu lực); người xét ghi ở AuditLog (APPROVE / REJECT).
@@ -2862,8 +2874,8 @@ INSERT dbo.Team (TeamCode, TeamName, TeamType) VALUES
 -- Tài khoản Admin đầu tiên. PasswordHash phải được backend ghi đè bằng hash thật khi seed lần đầu.
 INSERT dbo.Employee (EmployeeCode, FullName, RoleId, TeamId, PayType, StartDate)
 VALUES ('ADMIN', N'Quản trị hệ thống', @rAdmin, (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'VP'), 'MONTHLY', '2026-01-01');
-INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword)
-VALUES (SCOPE_IDENTITY(), N'__SET_BY_BACKEND_SEED__', 1);
+INSERT dbo.Account (EmployeeId, Username, PasswordHash, IsTemporaryPassword)
+VALUES (SCOPE_IDENTITY(), 'ADMIN', N'__SET_BY_BACKEND_SEED__', 1);
 
 -- Kỳ kế toán năm 2026
 ;WITH m AS (SELECT 1 AS n UNION ALL SELECT n + 1 FROM m WHERE n < 12)
@@ -2878,8 +2890,8 @@ GO
    17b. TÀI KHOẢN MẪU (SeedAuth, 21/10/2026)
    ---------------------------------------------------------------------------------
    Tổ may mẫu MAY1 + mỗi vai trò một nhân viên / tài khoản để test đăng nhập và phân quyền.
-   Tên đăng nhập = EmployeeCode. PasswordHash là placeholder, backend ghi đè bằng hash thật khi seed
-   (giống tài khoản ADMIN). Chạy lại nhiều lần không lỗi (idempotent).
+   Tên đăng nhập (Account.Username) seed = EmployeeCode. PasswordHash là placeholder, backend ghi đè
+   bằng hash thật khi seed (giống tài khoản ADMIN). Chạy lại nhiều lần không lỗi (idempotent).
    ===================================================================================== */
 SET NOCOUNT ON;
 
@@ -2910,14 +2922,14 @@ SELECT s.Code, s.FullName, r.RoleId, s.TeamId, s.PayType, '2026-01-01'
 FROM @seed s JOIN dbo.Role r ON r.RoleCode = s.RoleCode
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Employee e WHERE e.EmployeeCode = s.Code);
 
-INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword)
-SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1
+INSERT dbo.Account (EmployeeId, Username, PasswordHash, IsTemporaryPassword)
+SELECT e.EmployeeId, e.EmployeeCode, N'__SET_BY_BACKEND_SEED__', 1
 FROM dbo.Employee e
 WHERE e.EmployeeCode IN (SELECT Code FROM @seed)
   AND NOT EXISTS (SELECT 1 FROM dbo.Account a WHERE a.EmployeeId = e.EmployeeId);
 
 -- Kiểm tra nhanh danh sách tài khoản (bỏ comment khi cần):
--- SELECT e.EmployeeCode AS Username, r.RoleCode, t.TeamCode
+-- SELECT a.Username, e.EmployeeCode, r.RoleCode, t.TeamCode
 -- FROM dbo.Account a JOIN dbo.Employee e ON e.EmployeeId = a.EmployeeId
 -- JOIN dbo.Role r ON r.RoleId = e.RoleId LEFT JOIN dbo.Team t ON t.TeamId = e.TeamId
 -- ORDER BY a.AccountId;
@@ -3011,8 +3023,8 @@ FROM (VALUES ('CNMAY2', N'Nguyễn Thị Lan', 'C', 104), ('CNMAY3', N'Trần V�
              ('CNMAY4', N'Lê Thị Mai', 'B', 106)) v(Code, FullName, Grade, AttCode)
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Employee e WHERE e.EmployeeCode = v.Code);
 
-INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword)
-SELECT e.EmployeeId, k.PasswordHash, k.IsTemporaryPassword
+INSERT dbo.Account (EmployeeId, Username, PasswordHash, IsTemporaryPassword)
+SELECT e.EmployeeId, e.EmployeeCode, k.PasswordHash, k.IsTemporaryPassword
 FROM dbo.Employee e
 CROSS JOIN (SELECT a.PasswordHash, a.IsTemporaryPassword FROM dbo.Account a
             JOIN dbo.Employee x ON x.EmployeeId = a.EmployeeId WHERE x.EmployeeCode = 'KETOAN') k
@@ -4341,8 +4353,8 @@ FROM (VALUES ('TTMAY2', N'Trương Văn Bình', 'M', @may2, 'A', 107, '2026-10-2
              ('CNMAY8', N'Hoàng Văn Long',  'M', @may2, 'B', 111, '2026-10-01', '2026-10-01 08:00:00'),
              ('CNMOI1', N'Bùi Thị Ngọc',    'F', NULL,  NULL, 112, '2026-11-02', '2026-11-02 08:00:00'))
      v(Code, FullName, Gender, TeamId, Grade, AttCode, StartDate, CreatedAt);
-INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword)
-SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1
+INSERT dbo.Account (EmployeeId, Username, PasswordHash, IsTemporaryPassword)
+SELECT e.EmployeeId, e.EmployeeCode, N'__SET_BY_BACKEND_SEED__', 1
 FROM dbo.Employee e
 WHERE e.EmployeeCode IN ('TTMAY2', 'CNMAY5', 'CNMAY6', 'CNMAY7', 'CNMAY8', 'CNMOI1');
 
@@ -4515,8 +4527,8 @@ FROM (VALUES
  ('CNMAY19', N'Trịnh Thị Oanh',     'F', @rWorker, @may2, 'PIECE_RATE', 'C',  128, '2026-10-26', NULL, 'ACTIVE'),
  ('CNMAY20', N'Vương Văn Hải',      'M', @rWorker, @may2, 'PIECE_RATE', 'A',  129, '2026-10-26', NULL, 'ACTIVE'))
  v(Code, FullName, Gender, RoleId, TeamId, PayType, Grade, AttCode, StartDate, ResignDate, Status);
-INSERT dbo.Account (EmployeeId, PasswordHash, IsTemporaryPassword, Status, LockedAt, LockReason)
-SELECT e.EmployeeId, N'__SET_BY_BACKEND_SEED__', 1,
+INSERT dbo.Account (EmployeeId, Username, PasswordHash, IsTemporaryPassword, Status, LockedAt, LockReason)
+SELECT e.EmployeeId, e.EmployeeCode, N'__SET_BY_BACKEND_SEED__', 1,
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), 'LOCKED', 'ACTIVE'),
        IIF(e.EmployeeCode IN ('NVKHOA1', 'NVNGHI1'), CAST('2026-10-30 09:00:00' AS DATETIME2(0)), NULL),
        CASE e.EmployeeCode WHEN 'NVKHOA1' THEN N'Admin tạm khóa để thử chức năng mở khóa' WHEN 'NVNGHI1' THEN N'Nhân viên đã nghỉ việc' END
