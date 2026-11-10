@@ -5,8 +5,7 @@ import type { ProductNormItem, ProductSpec, SaveProductSpecPayload } from '../ty
 
 const text = MESSAGES.orders.specValidation;
 
-/** Giới hạn khớp SaveProductSpecDtoValidator ở BE (cột DECIMAL(7,2), SMALLINT và số dòng mỗi lần lưu). */
-export const MAX_SIZE_CM = 99999.99;
+/** Giới hạn khớp SaveProductSpecDtoValidator ở BE (cột SMALLINT và số dòng mỗi lần lưu). */
 export const MAX_PIECES_PER_GARMENT = 99;
 export const MAX_COMPONENTS = 200;
 export const MAX_VARIANTS = 200;
@@ -16,12 +15,9 @@ export const MAX_NORMS = 5000;
 /** Mã loại NVL vải, đúng giá trị API lookup trả về. */
 const MATERIAL_TYPE_FABRIC = 'FABRIC';
 
-/** Kích thước bỏ trống được; đã nhập thì phải lớn hơn 0 và không vượt giới hạn cột (vượt thì database báo tràn số). */
-const sizeProblem = (name: string, label: string, value: number | null): string =>
-  value !== null && (value <= 0 || value > MAX_SIZE_CM) ? fill(text.sizeRange, name, label) : '';
-
 /**
- * Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều biến thể (màu × size) cùng lúc.
+ * Một dòng định mức trên màn hình: một NVL của một thành phần, áp dụng cho nhiều màu áo cùng lúc (định mức theo màu,
+ * mọi size dùng chung, DEV-ALL-87).
  * Thành phần được trỏ bằng khóa dòng (`ComponentRow.key`) chứ không bằng tên, nên đổi tên thành phần thì dòng định mức đi theo.
  */
 export type NormRow = {
@@ -29,10 +25,9 @@ export type NormRow = {
   componentKey?: string;
   /** NVL đã gồm màu (26/10: màu nằm trong Material.Color). */
   materialId?: number;
-  lengthCm: number | null;
-  widthCm: number | null;
   specNote: string;
-  variantKeys: string[];
+  /** Khóa màu (`colorKey`) các màu áo dùng dòng này. */
+  colorKeys: string[];
 };
 
 export type ComponentRow = {
@@ -53,15 +48,25 @@ export type VariantRow = {
 export const variantKey = (color: string, sizeCode: string) =>
   `${color.trim().toUpperCase()}|${sizeCode.trim().toUpperCase()}`;
 
+/** Khóa so khớp màu áo: không phân biệt hoa thường, khoảng trắng đầu cuối. */
+export const colorKey = (color: string) => color.trim().toUpperCase();
+
+/** Các màu áo khác nhau của danh sách màu – size, giữ cách viết gốc để hiển thị. */
+export const colorOptions = (variants: VariantRow[]) => [
+  ...new Map(
+    variants.map((v) => [colorKey(v.color), { value: colorKey(v.color), label: v.color.trim() }]),
+  ).values(),
+];
+
 const sameRowKey = (n: ProductNormItem) =>
-  [n.componentName, n.materialId, n.lengthCm ?? '', n.widthCm ?? '', n.specNote ?? ''].join('¦');
+  [n.componentName, n.materialId, n.specNote ?? ''].join('¦');
 
 let counter = 0;
 export const newKey = () => `k${++counter}`;
 
 /**
- * Máy chủ lưu định mức theo từng biến thể; trên màn hình gộp các biến thể có cùng định mức thành một dòng
- * (đỡ nhập lặp) và chỉ giữ thành phần / biến thể còn dùng.
+ * Máy chủ lưu định mức theo từng màu áo; trên màn hình gộp các màu có cùng định mức thành một dòng
+ * (đỡ nhập lặp) và chỉ giữ thành phần / màu còn dùng.
  */
 export function toRows(spec: ProductSpec): {
   components: ComponentRow[];
@@ -87,23 +92,20 @@ export function toRows(spec: ProductSpec): {
     }));
 
   const keyByName = new Map(components.map((c) => [c.componentName.toUpperCase(), c.key]));
-  const activeVariants = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
+  const activeColors = new Set(variants.map((v) => colorKey(v.color)));
   const groups = new Map<string, NormRow>();
   for (const n of spec.norms) {
     const componentKey = keyByName.get(n.componentName.toUpperCase());
-    if (componentKey === undefined || !activeVariants.has(variantKey(n.color, n.sizeCode)))
-      continue;
+    if (componentKey === undefined || !activeColors.has(colorKey(n.color))) continue;
     const k = sameRowKey(n);
     const row = groups.get(k) ?? {
       key: newKey(),
       componentKey,
       materialId: n.materialId,
-      lengthCm: n.lengthCm,
-      widthCm: n.widthCm,
       specNote: n.specNote ?? '',
-      variantKeys: [],
+      colorKeys: [],
     };
-    row.variantKeys.push(variantKey(n.color, n.sizeCode));
+    row.colorKeys.push(colorKey(n.color));
     groups.set(k, row);
   }
   return { components, variants, norms: [...groups.values()] };
@@ -126,10 +128,10 @@ export const toMaterialOption = (m: {
   isFabric: m.materialType === MATERIAL_TYPE_FABRIC,
 });
 
-/** Số dòng định mức máy chủ sẽ nhận: mỗi dòng nở ra từng màu – size còn tồn tại (xem `toPayload`). */
+/** Số dòng định mức máy chủ sẽ nhận: mỗi dòng nở ra từng màu còn tồn tại (xem `toPayload`). */
 const expandedNormCount = (variants: VariantRow[], norms: NormRow[]): number => {
-  const known = new Set(variants.map((v) => variantKey(v.color, v.sizeCode)));
-  return norms.reduce((sum, n) => sum + n.variantKeys.filter((vk) => known.has(vk)).length, 0);
+  const known = new Set(variants.map((v) => colorKey(v.color)));
+  return norms.reduce((sum, n) => sum + n.colorKeys.filter((k) => known.has(k)).length, 0);
 };
 
 /** Lỗi nhập định mức (hiện cho người dùng trước khi gửi); chuỗi rỗng = hợp lệ. */
@@ -158,18 +160,13 @@ export function validate(
     const name = n.componentKey === undefined ? undefined : nameByKey.get(n.componentKey);
     if (name === undefined || n.materialId === undefined)
       return 'Mỗi dòng định mức phải chọn thành phần và NVL.';
-    const problem =
-      sizeProblem(name, text.normLength, n.lengthCm) ||
-      sizeProblem(name, text.normWidth, n.widthCm);
-    if (problem) return problem;
-    if (n.variantKeys.length === 0)
-      return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu – size.';
+    if (n.colorKeys.length === 0) return 'Mỗi dòng định mức phải áp dụng cho ít nhất một màu.';
   }
   const seen = new Set<string>();
   for (const n of norms) {
-    for (const vk of n.variantKeys) {
-      const k = `${n.componentKey}¦${n.materialId}¦${vk}`;
-      if (seen.has(k)) return 'Một NVL chỉ khai một dòng cho mỗi thành phần và màu – size.';
+    for (const ck of n.colorKeys) {
+      const k = `${n.componentKey}¦${n.materialId}¦${ck}`;
+      if (seen.has(k)) return 'Một NVL chỉ khai một dòng cho mỗi thành phần và màu.';
       seen.add(k);
     }
   }
@@ -178,13 +175,13 @@ export function validate(
   return '';
 }
 
-/** Nở mỗi dòng định mức ra từng biến thể (máy chủ lưu theo biến thể × thành phần × NVL). */
+/** Nở mỗi dòng định mức ra từng màu áo (máy chủ lưu theo màu × thành phần × NVL, DEV-ALL-87). */
 export function toPayload(
   components: ComponentRow[],
   variants: VariantRow[],
   norms: NormRow[],
-): Omit<SaveProductSpecPayload, 'markers' | 'markerFabrics'> {
-  const byKey = new Map(variants.map((v) => [variantKey(v.color, v.sizeCode), v]));
+): Omit<SaveProductSpecPayload, 'markerComponents' | 'markerFabrics'> {
+  const colorByKey = new Map(colorOptions(variants).map((o) => [o.value, o.label]));
   const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   return {
     components: components.map((c) => ({
@@ -199,20 +196,14 @@ export function toPayload(
       sizeCode: v.sizeCode.trim(),
     })),
     norms: norms.flatMap((n) =>
-      n.variantKeys
-        .filter((vk) => byKey.has(vk))
-        .map((vk) => {
-          const v = byKey.get(vk)!;
-          return {
-            componentName: nameByKey.get(n.componentKey!)!,
-            color: v.color.trim(),
-            sizeCode: v.sizeCode.trim(),
-            materialId: n.materialId!,
-            lengthCm: n.lengthCm,
-            widthCm: n.widthCm,
-            specNote: n.specNote.trim() || null,
-          };
-        }),
+      n.colorKeys
+        .filter((ck) => colorByKey.has(ck))
+        .map((ck) => ({
+          componentName: nameByKey.get(n.componentKey!)!,
+          color: colorByKey.get(ck)!,
+          materialId: n.materialId!,
+          specNote: n.specNote.trim() || null,
+        })),
     ),
   };
 }
@@ -248,26 +239,52 @@ export type NormFilter = {
   component?: string;
   materialId?: number;
   color?: string;
-  size?: string;
 };
 
 /** Lọc bảng định mức; searchText cho biết chữ dùng để tìm từ khóa trên từng dòng. */
 export const filterNorms = (
   norms: NormRow[],
   filter: NormFilter,
-  variants: VariantRow[],
   searchText: (row: NormRow) => string,
 ): NormRow[] => {
-  const appliesTo = (r: NormRow, match: (v: VariantRow) => boolean) =>
-    r.variantKeys.some((k) =>
-      variants.some((v) => variantKey(v.color, v.sizeCode) === k && match(v)),
-    );
   const keyword = foldVietnamese(filter.keyword ?? '');
   return norms.filter((r) => {
     if (filter.component && r.componentKey !== filter.component) return false;
     if (filter.materialId !== undefined && r.materialId !== filter.materialId) return false;
-    if (filter.color && !appliesTo(r, (v) => v.color.trim() === filter.color)) return false;
-    if (filter.size && !appliesTo(r, (v) => v.sizeCode.trim() === filter.size)) return false;
+    if (filter.color && !r.colorKeys.includes(colorKey(filter.color))) return false;
     return !keyword || foldVietnamese(searchText(r)).includes(keyword);
   });
 };
+
+/**
+ * DEV-ALL-86: mỗi chi tiết cắt (Panel) chỉ một vải ở một màu áo, vải lót, mex, bo (cũng là NVL loại vải) khai thành chi tiết riêng; nhờ vậy công đoạn gắn chi tiết
+ * là biết vải (BE cũng kiểm). Chuỗi rỗng = hợp lệ.
+ */
+export function panelFabricProblem(
+  components: ComponentRow[],
+  variants: VariantRow[],
+  norms: NormRow[],
+  materialOptions: MaterialOption[],
+): string {
+  const fabrics = new Set(materialOptions.filter((m) => m.isFabric).map((m) => m.value));
+  const panelName = new Map(
+    components
+      .filter((c) => c.componentType === 'Panel')
+      .map((c) => [c.key, c.componentName.trim()]),
+  );
+  const fabricOf = new Map<string, number>();
+  for (const n of norms) {
+    const name = n.componentKey === undefined ? undefined : panelName.get(n.componentKey);
+    if (name === undefined || n.materialId === undefined || !fabrics.has(n.materialId)) continue;
+    for (const ck of n.colorKeys) {
+      const key = `${n.componentKey}¦${ck}`;
+      const other = fabricOf.get(key);
+      if (other !== undefined && other !== n.materialId) {
+        const color = colorOptions(variants).find((o) => o.value === ck)?.label ?? ck;
+        return fill(text.panelManyFabrics, name, color);
+      }
+      fabricOf.set(key, n.materialId);
+    }
+  }
+  return '';
+}

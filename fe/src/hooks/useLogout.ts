@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { tokenStorage } from '@/services/tokenStorage';
 import { useAuthStore } from '@/store/authStore';
-import { authApi } from '../api/authApi';
+import { authApi } from '@/services/authApi';
 
 export const useLogout = () => {
   const navigate = useNavigate();

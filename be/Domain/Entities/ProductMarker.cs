@@ -1,19 +1,28 @@
 namespace NX_MTD.Domain.Entities;
 
-/// <summary>Một bìa cắt của mã hàng ở một size: dài, rộng. MarkerNo là số bìa; một bìa tính cho một sản phẩm (DEV-ALL-42).</summary>
+/// <summary>
+/// Bìa cắt của đơn (DEV-ALL-85): phía trên giác theo tỉ lệ size của đơn. MarkerNo là nhóm bìa của mã hàng, MarkerCode là mã bìa
+/// trong nhóm (1A, 1B...). Chỉ dùng để ước số mét vải khi lập lệnh cắt; bàn cắt không gắn bìa.
+/// </summary>
 public partial class ProductMarker
 {
     public int ProductMarkerId { get; set; }
+
+    public int OrderId { get; set; }
 
     public int ProductId { get; set; }
 
     public byte MarkerNo { get; set; }
 
-    public string SizeCode { get; set; } = null!;
+    public string MarkerCode { get; set; } = null!;
 
-    public decimal LengthCm { get; set; }
+    public decimal LengthM { get; set; }
 
-    public decimal WidthCm { get; set; }
+    public string Status { get; set; } = null!;
+
+    public virtual CustomerOrder Order { get; set; } = null!;
 
     public virtual Product Product { get; set; } = null!;
+
+    public virtual ICollection<ProductMarkerRatio> ProductMarkerRatios { get; set; } = new List<ProductMarkerRatio>();
 }

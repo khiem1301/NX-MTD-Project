@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
-import { authApi } from '@/features/auth/api/authApi';
+import { authApi } from '@/services/authApi';
 import { queryClient } from '@/services/queryClient';
 import { setSessionExpiredHandler } from '@/services/apiClient';
 import { tokenStorage } from '@/services/tokenStorage';

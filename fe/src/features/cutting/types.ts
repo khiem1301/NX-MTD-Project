@@ -22,10 +22,34 @@ export type WorkOrderFabricCheck = {
   materialCode: string;
   materialName: string;
   materialColor: string;
-  status: 'Enough' | 'Short' | 'TooWide' | 'Unknown';
+  status: 'Enough' | 'Short' | 'Unknown';
   needMeters: number | null;
   availableQty: number | null;
   message: string | null;
+  /** Bìa nên dùng theo từng nhóm bìa, hệ thống ghép cho ít mét nhất (ước tính); null = chưa tính được. */
+  markerPlans: FabricMarkerPlan[] | null;
+  /** Có = kho khả dụng + tổ cắt đang giữ của đơn. */
+  warehouseQty: number | null;
+  holdingQty: number | null;
+};
+
+/** Phương án trải bìa của một nhóm bìa trên một vải (DEV-ALL-88). isExtra = phần cắt lẻ / cắt bù; surplus = sản phẩm (cắt lẻ: miếng) dư. */
+export type FabricMarkerPlan = {
+  markerNo: number;
+  isExtra: boolean;
+  meters: number;
+  surplus: number;
+  isProvenOptimal: boolean;
+  markers: FabricMarkerUse[];
+};
+
+/** Một bìa trong phương án: plies lớp × lengthM = meters; ratio theo thứ tự size. */
+export type FabricMarkerUse = {
+  markerCode: string;
+  lengthM: number;
+  plies: number;
+  meters: number;
+  ratio: { sizeCode: string; piecesPerPly: number }[];
 };
 
 export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {

@@ -1,7 +1,8 @@
-import { deliveryCountProblem, MAX_QTY, noteProblem, qtyProblem } from './orderMaterialRules';
+import { MAX_MATERIAL_QTY } from '@/constants/quantity';
+import { deliveryCountProblem, noteProblem, qtyProblem } from './orderMaterialRules';
 
 describe('qtyProblem', () => {
-  it.each([0, 0.001, 1, 99_999_999.999, MAX_QTY, 1234.5])('%s hợp lệ', (v) => {
+  it.each([0, 0.001, 1, 99_999_999.999, MAX_MATERIAL_QTY, 1234.5])('%s hợp lệ', (v) => {
     expect(qtyProblem('Số cần', v)).toBeNull();
   });
 
@@ -14,9 +15,12 @@ describe('qtyProblem', () => {
     expect(qtyProblem('Số cần', v)).toBe('Số cần không được âm.');
   });
 
-  it.each([MAX_QTY + 0.001, MAX_QTY + 1, 1e15, 1e30, Infinity])('%s bị báo vượt giới hạn', (v) => {
-    expect(qtyProblem('Số khách cấp', v)).toBe('Số khách cấp tối đa 100.000.000.');
-  });
+  it.each([MAX_MATERIAL_QTY + 0.001, MAX_MATERIAL_QTY + 1, 1e15, 1e30, Infinity])(
+    '%s bị báo vượt giới hạn',
+    (v) => {
+      expect(qtyProblem('Số khách cấp', v)).toBe('Số khách cấp tối đa 100.000.000.');
+    },
+  );
 
   it.each([1.2345, 0.0004, 0.0001, 10.0005])('%s bị báo quá 3 số lẻ', (v) => {
     expect(qtyProblem('Số cần', v)).toBe('Số cần tối đa 3 số lẻ.');

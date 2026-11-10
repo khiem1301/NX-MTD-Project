@@ -1,4 +1,5 @@
-import { lazy, Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { MaterialFormModalSlot } from '@/app/featureSlots';
 import { PlusOutlined } from '@ant-design/icons';
 import { Button, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
@@ -9,8 +10,8 @@ import { MESSAGES } from '@/constants/messages';
 import {
   filterNorms,
   newKey,
+  colorOptions as toColorOptions,
   patchRow,
-  variantKey,
   type ComponentRow,
   type MaterialOption,
   type NormFilter,
@@ -20,11 +21,6 @@ import {
 import { specNormColumns } from './specNormColumns';
 
 const text = MESSAGES.orders.spec;
-
-/** Nạp lười để màn mã hàng không kéo cả feature kho. */
-const MaterialFormModal = lazy(() =>
-  import('@/features/warehouse').then((m) => ({ default: m.MaterialFormModal })),
-);
 
 type SpecNormsTabProps = {
   norms: NormRow[];
@@ -48,14 +44,7 @@ export function SpecNormsTab({
   const [normPage, setNormPage] = useState({ current: 1, pageSize: 10 });
   const [addingMaterialFor, setAddingMaterialFor] = useState<string | null>(null);
 
-  const variantOptions = useMemo(
-    () =>
-      variants.map((v) => ({
-        value: variantKey(v.color, v.sizeCode),
-        label: `${v.color || '?'} - ${v.sizeCode || '?'}`,
-      })),
-    [variants],
-  );
+  const colorOptions = useMemo(() => toColorOptions(variants), [variants]);
   // Chọn theo khóa dòng, nên đổi tên thành phần thì nhãn đổi theo mà dòng định mức không mất liên kết.
   const componentOptions = components.map((c) => ({
     value: c.key,
@@ -72,16 +61,12 @@ export function SpecNormsTab({
   };
   const materialLabel = (id: number | undefined) =>
     materialOptions.find((m) => m.value === id)?.label ?? '';
-  const colorFilterOptions = [...new Set(variants.map((v) => v.color.trim()).filter(Boolean))].map(
-    (c) => ({ value: c, label: c }),
-  );
-  const sizeFilterOptions = [
-    ...new Set(variants.map((v) => v.sizeCode.trim()).filter(Boolean)),
-  ].map((s) => ({ value: s, label: s }));
+  const colorFilterOptions = colorOptions
+    .filter((o) => o.label)
+    .map((o) => ({ value: o.label, label: o.label }));
   const visibleNorms = filterNorms(
     norms,
     effectiveFilter,
-    variants,
     (r) => `${componentLabel(r.componentKey)} ${materialLabel(r.materialId)} ${r.specNote}`,
   );
   const changeFilter = (change: Partial<NormFilter>) => {
@@ -99,10 +84,8 @@ export function SpecNormsTab({
         key: newKey(),
         componentKey: undefined,
         materialId: undefined,
-        lengthCm: null,
-        widthCm: null,
         specNote: '',
-        variantKeys: variantOptions.map((o) => o.value),
+        colorKeys: colorOptions.map((o) => o.value),
       },
     ]);
   };
@@ -142,13 +125,6 @@ export function SpecNormsTab({
               options={colorFilterOptions}
               onChange={(v) => changeFilter({ color: v })}
             />
-            <FilterSelect
-              value={normFilter.size}
-              placeholder={text.size}
-              style={{ width: 130 }}
-              options={sizeFilterOptions}
-              onChange={(v) => changeFilter({ size: v })}
-            />
             {hasNormFilter && (
               <span style={{ opacity: 0.65 }}>
                 {text.normShown
@@ -176,7 +152,7 @@ export function SpecNormsTab({
           componentOptions,
           materialOptions,
           materialsLoading,
-          variantOptions,
+          colorOptions,
           setNorms,
           onAddMaterial: setAddingMaterialFor,
         })}
@@ -186,7 +162,7 @@ export function SpecNormsTab({
       </Button>
       {addingMaterialFor && (
         <Suspense fallback={null}>
-          <MaterialFormModal
+          <MaterialFormModalSlot
             open
             material={null}
             onClose={() => setAddingMaterialFor(null)}

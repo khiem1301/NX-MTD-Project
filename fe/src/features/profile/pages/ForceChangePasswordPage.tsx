@@ -1,6 +1,6 @@
 import { Alert, Button, Card, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
-import { useLogout } from '@/features/auth';
+import { useLogout } from '@/hooks/useLogout';
 import { ChangePasswordForm } from '../components/ChangePasswordForm';
 
 /**

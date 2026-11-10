@@ -14,6 +14,7 @@ import {
   type MarkerRow,
 } from '../utils/markerSpec';
 import {
+  panelFabricProblem,
   removeComponent,
   toMaterialOption,
   toPayload,
@@ -57,7 +58,9 @@ export function ProductSpecEditor({
   const [components, setComponents] = useState<ComponentRow[]>(initial.components);
   const [variants] = useState<VariantRow[]>(initial.variants);
   const [norms, setNorms] = useState<NormRow[]>(initial.norms);
-  const [markers, setMarkers] = useState<MarkerRow[]>(() => toMarkerRows(spec, initial.variants));
+  const [markers, setMarkers] = useState<MarkerRow[]>(() =>
+    toMarkerRows(spec, initial.variants, initial.components),
+  );
   const [error, setError] = useState('');
 
   const snapshot = JSON.stringify({ components, variants, norms, markers });
@@ -80,12 +83,16 @@ export function ProductSpecEditor({
   const handleSave = () => {
     const problem =
       validate(components, variants, norms) ||
+      panelFabricProblem(components, variants, norms, materialOptions) ||
       validateMarkers(markers, variants, norms, components, materialOptions);
     setError(problem);
     if (problem) return;
     save.mutate({
       id: product.productId,
-      body: { ...toPayload(components, variants, norms), ...toMarkerPayload(markers, variants) },
+      body: {
+        ...toPayload(components, variants, norms),
+        ...toMarkerPayload(markers, variants, components),
+      },
     });
   };
 

@@ -50,13 +50,13 @@ public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
             || draft.Lines.GroupBy(l => l.ProductComponentMaterialId).Any(g => g.Count() > 1))
             return Invalid(Messages.ReplacementCuttingLines);
 
-        // Dòng cắt bù phải là dòng định mức (chi tiết PANEL × vải) đang dùng của đúng biến thể của phiếu hàng hỏng
-        // (trg_RequestLine_Check cũng chặn lệch màu × size).
+        // Dòng cắt bù phải là dòng định mức (chi tiết PANEL × vải) đang dùng của đúng màu áo của phiếu hàng hỏng
+        // (định mức theo màu, DEV-ALL-87; trg_RequestLine_Check cũng chặn lệch màu).
         var normIds = draft.Lines.Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
-        var variantId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
-            .Where(l => l.OrderLineId == defect.OrderLineId).Select(l => l.ProductVariantId).FirstAsync(ct);
+        var colorId = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => l.OrderLineId == defect.OrderLineId).Select(l => l.ProductVariant.ProductColorId).FirstAsync(ct);
         var validNorms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductVariantId == variantId
+            .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductColorId == colorId
                              && p.ProductComponent.ComponentType == ComponentTypes.Panel
                              && p.ProductComponent.Status == RecordStatus.Active, ct);
         if (validNorms != normIds.Count) return Invalid(Messages.ReplacementCuttingLines);

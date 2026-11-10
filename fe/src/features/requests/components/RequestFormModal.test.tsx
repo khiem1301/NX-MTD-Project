@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { requestApi } from '../api/requestApi';
+import { requestApi } from '@/services/requestApi';
 import { RequestFormModal } from './RequestFormModal';
 
-jest.mock('../api/requestApi', () => ({
+jest.mock('@/services/requestApi', () => ({
   requestApi: { create: jest.fn(), update: jest.fn(), types: jest.fn() },
 }));
 jest.mock('@/hooks/useAttachments', () => ({ attachmentApi: { upload: jest.fn() } }));

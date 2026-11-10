@@ -664,6 +664,42 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     [InlineData("Cutting", false)]
     public void SaveOperationValidator_FinalStepMustBeSewing(string teamType, bool valid) =>
         new SaveOperationDtoValidator().Validate(new SaveOperationDto(1, "OP01", "May", 1, null, null, teamType, true)).IsValid.Should().Be(valid);
+
+    // ========== Công đoạn ↔ chi tiết vải (DEV-ALL-86) ==========
+
+    private const int Body = 10, Label = 11;
+
+    private void SetupComponents() => SetupQueryable(new List<ProductComponent>
+    {
+        new() { ProductComponentId = Body, ProductId = 1, ComponentName = "Thân", ComponentType = ComponentTypes.Panel },
+        new() { ProductComponentId = Label, ProductId = 1, ComponentName = "Nhãn", ComponentType = ComponentTypes.Trim },
+    });
+
+    [Fact]
+    public async Task CreateOperation_LinksAPanelComponent()
+    {
+        SetupComponents();
+        Operation? added = null;
+        Repo<Operation>().When(r => r.AddAsync(Arg.Any<Operation>())).Do(c => added = c.Arg<Operation>());
+
+        var result = await _operationService.CreateAsync(OpDto() with { ComponentIds = [Body, Body] }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        added!.OperationComponents.Should().ContainSingle().Which.ProductComponentId.Should().Be(Body);
+    }
+
+    [Theory]
+    [InlineData(Label)]   // phụ liệu không gắn công đoạn
+    [InlineData(99)]      // chi tiết của mã hàng khác / không tồn tại
+    public async Task CreateOperation_ComponentThatIsNotAPanelOfTheProduct_IsRejected(int component)
+    {
+        SetupComponents();
+
+        var result = await _operationService.CreateAsync(OpDto() with { ComponentIds = [component] }, default);
+
+        result.Kind.Should().Be(ResultKind.Validation);
+        result.Message.Should().Be(Messages.OperationComponentInvalid);
+    }
 }
 
 public class ProductionOperationValidatorTests
@@ -688,4 +724,5 @@ public class ProductionOperationValidatorTests
         new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, -1, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();
         new SavePieceRateDtoValidator().Validate(new SavePieceRateDto(1, 0, new DateOnly(2026, 10, 1))).IsValid.Should().BeFalse();   // Excel cũng coi 0 là chưa có đơn giá
     }
+
 }

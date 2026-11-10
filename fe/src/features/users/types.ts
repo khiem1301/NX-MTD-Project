@@ -1,6 +1,7 @@
 import type { PayType } from '@/constants/hr';
 import type { Role } from '@/constants/roles';
 import type { AuditEntry } from '@/types/attachment';
+import type { TempPassword } from '@/types/auth';
 
 export type EmployeeListItem = {
   employeeId: number;
@@ -88,5 +89,4 @@ export type ManagerUpdatePayload = {
 };
 
 /** Trả MỘT lần: không lưu vào store / localStorage, không log. */
-export type TempPassword = { username: string; temporaryPassword: string };
 export type CreatedEmployee = TempPassword & { employeeId: number };

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Công đoạn làm trên chi tiết nào
+/// Công đoạn làm trên chi tiết vải (PANEL) nào (DEV-ALL-86); vải của chi tiết tra qua ProductComponentMaterial
 /// </summary>
 public partial class OperationComponent
 {

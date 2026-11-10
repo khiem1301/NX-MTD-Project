@@ -1,6 +1,7 @@
 import { API, type RolePath } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
+import type { TempPassword } from '@/types/auth';
 import type {
   AdminUpdatePayload,
   CreateEmployeePayload,
@@ -9,7 +10,6 @@ import type {
   EmployeeListItem,
   EmployeeQuery,
   ManagerUpdatePayload,
-  TempPassword,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -25,15 +25,6 @@ export const employeeApi = {
   get: (role: RolePath, id: number) => get<EmployeeDetail>(API.employees.byId(role, id)),
   create: (role: RolePath, body: CreateEmployeePayload) =>
     post<CreatedEmployee>(API.employees.base(role), body),
-  importFromRj: (
-    role: RolePath,
-    body: {
-      attendanceCode: number;
-      teamId?: number | null;
-      payType?: string | null;
-      startDate?: string | null;
-    },
-  ) => post<CreatedEmployee>(API.employees.fromRj(role), body),
   adminUpdate: (id: number, body: AdminUpdatePayload) =>
     put<unknown>(API.employees.byId('admin', id), body),
   managerUpdate: (id: number, body: ManagerUpdatePayload) =>

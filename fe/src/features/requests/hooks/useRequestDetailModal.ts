@@ -4,8 +4,8 @@ import { useSearchParams } from 'react-router-dom';
 import { MESSAGES } from '@/constants/messages';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import type { ApiError } from '@/types/api';
-import { useRequestAction, useRequestDetail } from './useRequests';
-import type { RequestAction, RequestDetail } from '../types';
+import { useRequestAction, useRequestDetail } from '@/hooks/useRequests';
+import type { RequestAction, RequestDetail } from '@/types/request';
 
 export const PENDING_MODAL: Record<
   ActionKind,

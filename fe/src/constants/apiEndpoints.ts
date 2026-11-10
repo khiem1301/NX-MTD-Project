@@ -93,6 +93,12 @@ export const API = {
     overviews: v1('manager/customer-orders'),
     overviewById: (id: number) => v1(`manager/customer-orders/${id}`),
   },
+  /** Bìa cắt của đơn (DEV-ALL-85): Admin và Quản đốc dùng chung API manager. */
+  orderMarkers: {
+    byOrder: (orderId: number) => v1(`manager/order-markers/${orderId}`),
+    byProduct: (orderId: number, productId: number) =>
+      v1(`manager/order-markers/${orderId}/products/${productId}`),
+  },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {
     orders: v1('common/order-lookups/orders'),

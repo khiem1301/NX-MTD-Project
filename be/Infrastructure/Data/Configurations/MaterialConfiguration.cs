@@ -36,6 +36,5 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
             .IsUnicode(false)
             .HasDefaultValue("ACTIVE");
         entity.Property(e => e.Unit).HasMaxLength(20);
-        entity.Property(e => e.WidthCm).HasColumnType("decimal(7, 2)");
     }
 }

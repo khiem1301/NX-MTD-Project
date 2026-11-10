@@ -1,24 +1,23 @@
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { fill, formatQty } from '@/utils/format';
 import type { MaterialOption } from '@/types/lookup';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
 
-/** Giới hạn khớp OrderMaterialInputValidator ở BE (cột DECIMAL(18,3) và SMALLINT). */
-export const MAX_QTY = 100_000_000;
-export const QTY_DECIMALS = 3;
+/** Giới hạn khớp OrderMaterialInputValidator ở BE (cột SMALLINT); số lượng dùng constants/quantity. */
 export const MAX_DELIVERY_COUNT = 99;
 export const MAX_NOTE_LENGTH = 500;
 
 const hasValidScale = (value: number): boolean =>
-  Number.isInteger(Number((value * 10 ** QTY_DECIMALS).toFixed(6)));
+  Number.isInteger(Number((value * 10 ** MATERIAL_QTY_DECIMALS).toFixed(6)));
 
 /** Lỗi của một số lượng; null nếu hợp lệ. Số lượng không được âm, tối đa 100.000.000 và 3 số lẻ. */
 export const qtyProblem = (label: string, value: number | null | undefined): string | null => {
   if (value === null || value === undefined) return null;
-  if (!Number.isFinite(value)) return fill(LABELS.qtyMax, label, formatQty(MAX_QTY));
+  if (!Number.isFinite(value)) return fill(LABELS.qtyMax, label, formatQty(MAX_MATERIAL_QTY));
   if (value < 0) return fill(LABELS.qtyNegative, label);
-  if (value > MAX_QTY) return fill(LABELS.qtyMax, label, formatQty(MAX_QTY));
-  if (!hasValidScale(value)) return fill(LABELS.qtyScale, label, QTY_DECIMALS);
+  if (value > MAX_MATERIAL_QTY) return fill(LABELS.qtyMax, label, formatQty(MAX_MATERIAL_QTY));
+  if (!hasValidScale(value)) return fill(LABELS.qtyScale, label, MATERIAL_QTY_DECIMALS);
   return null;
 };
 

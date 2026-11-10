@@ -157,10 +157,10 @@ public sealed class CuttingLayService : ICuttingLayService
     private async Task<Result?> CheckFabricAsync(SaveCuttingLayDto dto, WorkOrder wo, CancellationToken ct)
     {
         // Vải của bàn (đã gồm màu, 26/10) phải là vải chi tiết PANEL trong định mức của các dòng đơn trên bàn.
-        var variantIds = wo.WorkOrderLines.Where(l => dto.Lines.Any(d => d.OrderLineId == l.OrderLineId))
-            .Select(l => l.OrderLine.ProductVariantId).Distinct().ToList();
+        var colorIds = wo.WorkOrderLines.Where(l => dto.Lines.Any(d => d.OrderLineId == l.OrderLineId))
+            .Select(l => l.OrderLine.ProductVariant.ProductColorId).Distinct().ToList();
         if (!await _uow.Repository<ProductComponentMaterial>().Query()
-                .AnyAsync(p => variantIds.Contains(p.ProductVariantId) && p.MaterialId == dto.FabricMaterialId
+                .AnyAsync(p => colorIds.Contains(p.ProductColorId) && p.MaterialId == dto.FabricMaterialId
                                && p.Material.MaterialType == MaterialTypes.Fabric
                                && p.ProductComponent.ComponentType == ComponentTypes.Panel, ct))
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.MaterialNotInWorkOrder);

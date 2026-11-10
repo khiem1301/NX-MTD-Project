@@ -22,8 +22,6 @@ public partial class Material
 
     public string Unit { get; set; } = null!;
 
-    public decimal? WidthCm { get; set; }
-
     public string Status { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }

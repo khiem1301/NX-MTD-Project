@@ -9,7 +9,7 @@ import type {
   RequestListQuery,
   RequestTypeOption,
   UpdateRequestBody,
-} from '../types';
+} from '@/types/request';
 
 const data = <T>(res: { data: ApiResponse<T> }): T => res.data.data;
 

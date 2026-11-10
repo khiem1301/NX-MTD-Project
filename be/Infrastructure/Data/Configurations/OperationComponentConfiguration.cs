@@ -10,7 +10,7 @@ public sealed class OperationComponentConfiguration : IEntityTypeConfiguration<O
     {
         entity.HasKey(e => new { e.OperationId, e.ProductComponentId });
 
-        entity.ToTable("OperationComponent", tb => tb.HasComment("Công đoạn làm trên chi tiết nào"));
+        entity.ToTable("OperationComponent", tb => tb.HasComment("Công đoạn làm trên chi tiết vải nào"));
 
         entity.HasIndex(e => e.ProductComponentId, "IX_OC_Component");
 

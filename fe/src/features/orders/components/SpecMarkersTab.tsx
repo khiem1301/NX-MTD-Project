@@ -4,7 +4,6 @@ import { Button, Empty, Flex, Typography } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import {
   distinctColors,
-  distinctSizes,
   emptyMarker,
   fabricOptionsFor,
   MAX_MARKERS,
@@ -34,7 +33,7 @@ type SpecMarkersTabProps = {
   readOnly?: boolean;
 };
 
-/** Tab "Bìa": kích thước bìa theo size và vải của bìa theo màu áo, dùng để tính số mét vải của lệnh cắt cả bộ. */
+/** Tab "Nhóm bìa": chi tiết cắt chung bìa và vải theo màu áo; bìa cụ thể (dài, tỉ lệ size) khai ở đơn hàng (DEV-ALL-85). */
 export function SpecMarkersTab({
   markers,
   setMarkers,
@@ -45,8 +44,10 @@ export function SpecMarkersTab({
   materialsLoading,
   readOnly = false,
 }: SpecMarkersTabProps) {
-  const sizes = distinctSizes(variants);
   const colors = distinctColors(variants);
+  const panelOptions = components
+    .filter((c) => c.componentType === 'Panel' && c.componentName.trim())
+    .map((c) => ({ value: c.key, label: c.componentName.trim() }));
 
   return (
     <>
@@ -55,13 +56,12 @@ export function SpecMarkersTab({
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={text.markerEmpty} />
       )}
       <Flex vertical gap={12}>
-        {markers.map((marker, index) => (
+        {markers.map((marker) => (
           <SpecMarkerCard
             key={marker.key}
             marker={marker}
-            no={index + 1}
-            sizes={sizes}
             colors={colors}
+            panelOptions={panelOptions}
             fabricOptions={(color) => fabricOptionsFor(color, norms, components, materialOptions)}
             materialsLoading={materialsLoading}
             readOnly={readOnly}
@@ -75,7 +75,7 @@ export function SpecMarkersTab({
           type="dashed"
           icon={<PlusOutlined />}
           style={{ marginTop: 12 }}
-          onClick={() => setMarkers((rows) => [...rows, emptyMarker()])}
+          onClick={() => setMarkers((rows) => [...rows, emptyMarker(rows)])}
         >
           {text.addMarker}
         </Button>

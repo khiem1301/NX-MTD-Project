@@ -32,9 +32,21 @@ public sealed record WorkOrderDto(
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
     IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks);
 
-/// <summary>Vải theo kích thước chi tiết của một NVL. Status là một giá trị của FabricCheckStatuses; Message = null khi đủ vải. MaterialId = 0: dòng báo màu – size chưa có định mức vải.</summary>
+/// <summary>
+/// Vải ước theo bìa của đơn (DEV-ALL-85, ghép bìa DEV-ALL-88), riêng từng NVL. Status là một giá trị của FabricCheckStatuses; Message = null khi đủ vải.
+/// MaterialId = 0: dòng báo màu – size chưa có định mức vải. AvailableQty = WarehouseQty (kho khả dụng) + HoldingQty (tổ cắt đang giữ).
+/// </summary>
+/// <param name="MarkerPlans">Bìa nên dùng theo từng nhóm bìa, hệ thống ghép cho ít mét nhất (ước tính, có thể chênh lệch với thực tế); rỗng khi chưa tính được.</param>
 public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
-    string Status, decimal? NeedMeters, decimal? AvailableQty, string? Message);
+    string Status, decimal? NeedMeters, decimal? AvailableQty, string? Message,
+    IReadOnlyList<FabricMarkerPlanDto>? MarkerPlans = null, decimal? WarehouseQty = null, decimal? HoldingQty = null);
+
+/// <summary>Phương án trải bìa của một nhóm bìa trên một vải. IsExtra = phần cắt lẻ / cắt bù; Surplus = sản phẩm (cắt lẻ: miếng) dư.</summary>
+public sealed record FabricMarkerPlanDto(int MarkerNo, bool IsExtra, decimal Meters, int Surplus, bool IsProvenOptimal,
+    IReadOnlyList<FabricMarkerUseDto> Markers);
+
+/// <summary>Một bìa trong phương án: trải Plies lớp × LengthM = Meters; Ratio = số sản phẩm mỗi size trên một lớp (theo thứ tự size).</summary>
+public sealed record FabricMarkerUseDto(string MarkerCode, decimal LengthM, int Plies, decimal Meters, IReadOnlyList<MarkerRatioDto> Ratio);
 
 /// <summary>Kiểm vải khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
 public sealed record CheckWorkOrderFabricDto(int OrderId, int CuttingTeamId, IReadOnlyList<SaveWorkOrderLineDto> Lines);

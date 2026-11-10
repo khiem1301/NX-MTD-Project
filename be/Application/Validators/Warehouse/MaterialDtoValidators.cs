@@ -18,8 +18,6 @@ public sealed class CreateMaterialDtoValidator : AbstractValidator<CreateMateria
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);
-        // Khổ vải không bắt buộc trên danh mục; cắt sẽ báo khi thiếu WidthCm.
-        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
     }
 }
 
@@ -35,8 +33,6 @@ public sealed class UpdateMaterialDtoValidator : AbstractValidator<UpdateMateria
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);
-        // Khổ vải không bắt buộc trên danh mục; cắt sẽ báo khi thiếu WidthCm.
-        RuleFor(x => x.WidthCm).GreaterThan(0).When(x => x.WidthCm is not null);
     }
 }
 

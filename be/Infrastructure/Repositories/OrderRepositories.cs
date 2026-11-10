@@ -69,11 +69,8 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
                 Colors = x.ProductColors.OrderBy(c => c.Color).Select(c => c.Color).ToList() })
             .FirstOrDefaultAsync(ct);
         if (p is null) return null;
-        // Tỉ lệ size của bàn cắt gần nhất không còn lưu trên Product mà đọc từ vw_ProductLastSizeRatio.
-        var lastSizeRatio = await _context.VwProductLastSizeRatios.AsNoTracking()
-            .Where(v => v.ProductId == productId).Select(v => v.SizeRatio).FirstOrDefaultAsync(ct);
         return new ProductDetailDto(p.ProductId, p.ProductCode, p.ProductName, p.SampleImageUrl,
-            p.Description, lastSizeRatio, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages,
+            p.Description, CodeText.ToPascal(p.Status), p.IsUsed, p.CreatedAt, p.ExtraImages,
             p.Colors, Array.Empty<AuditLogDto>());
     }
 

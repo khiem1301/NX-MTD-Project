@@ -274,7 +274,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting))
             return (Fail(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderNotIssuable), null);
 
-        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariantId, l.ProductComponentMaterialId)).ToList();
+        var lines = wo.WorkOrderLines.Select(l => new FabricLine(l.OrderLine.ProductVariant.ProductColorId, l.ProductComponentMaterialId)).ToList();
         var fabrics = (await _planner.GetFabricsAsync(lines, ct))
             .Select(n => n.MaterialId).ToHashSet();
         var allInPlan = dto.Lines.All(l => fabrics.Contains(l.MaterialId!.Value));
@@ -292,10 +292,10 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (!teamOk) return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.SewingTeamInvalid), null);
 
         var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
-        var variants = await _uow.Repository<OrderLine>().Query()
+        var colors = await _uow.Repository<OrderLine>().Query()
             .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId)
-            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariantId, ct);
-        if (variants.Count != ids.Count)
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariant.ProductColorId, ct);
+        if (colors.Count != ids.Count)
             return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
 
         var notAllotted = await FindNotAllottedLinesAsync(dto.ReceivingTeamId!.Value, ids, ct);
@@ -303,7 +303,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             return (Fail(ErrorCodes.AssignmentProductNotAllotted,
                 string.Format(WarehouseMessages.ProductNotAllottedToTeam, string.Join(", ", notAllotted))), null);
 
-        // THROW 50041: chi tiết lẻ phải là dòng định mức vải (PANEL) của đúng màu × size của dòng đơn.
+        // THROW 50041: chi tiết lẻ phải là dòng định mức vải (PANEL) của đúng màu áo của dòng đơn (định mức theo màu, DEV-ALL-87).
         var pieceLines = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).ToList();
         if (pieceLines.Count > 0)
         {
@@ -311,8 +311,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
             var norms = await _uow.Repository<ProductComponentMaterial>().Query()
                 .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
                             && p.Material.MaterialType == MaterialTypes.Fabric)
-                .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductVariantId, ct);
-            if (pieceLines.Any(l => !norms.TryGetValue(l.ProductComponentMaterialId!.Value, out var v) || v != variants[l.OrderLineId!.Value]))
+                .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductColorId, ct);
+            if (pieceLines.Any(l => !norms.TryGetValue(l.ProductComponentMaterialId!.Value, out var c) || c != colors[l.OrderLineId!.Value]))
                 return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm), null);
         }
         return (null, new IssueTarget(dto.OrderId!.Value, dto.ReceivingTeamId!.Value, null));

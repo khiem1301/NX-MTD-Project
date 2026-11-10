@@ -566,8 +566,8 @@ public sealed class OperationService : IOperationService
     }
 
     /// <summary>
-    /// Nhóm công đoạn (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
-    /// cùng mã hàng; danh sách trống = không gắn chi tiết nào. <c>ComponentIds</c> null = giữ nguyên (cập nhật từ import Excel).
+    /// Nhóm công đoạn (gõ tên, chưa có thì tạo cho mã hàng) và các chi tiết vải công đoạn làm trên đó (nhiều–nhiều). Chi tiết phải
+    /// là PANEL của cùng mã hàng (DEV-ALL-86: vải của chi tiết tra qua định mức, mỗi chi tiết một vải ở một màu – size); danh sách trống = không gắn chi tiết nào. <c>ComponentIds</c> null = giữ nguyên (cập nhật từ import Excel).
     /// </summary>
     private async Task<Result?> ApplyGroupAndComponentsAsync(Operation operation, SaveOperationDto dto, CancellationToken ct)
     {
@@ -592,7 +592,8 @@ public sealed class OperationService : IOperationService
         if (dto.ComponentIds is null) return null;
         var wanted = dto.ComponentIds.Distinct().ToList();
         var valid = await _uow.Repository<ProductComponent>().Query().AsNoTracking()
-            .CountAsync(c => wanted.Contains(c.ProductComponentId) && c.ProductId == operation.ProductId, ct);
+            .CountAsync(c => wanted.Contains(c.ProductComponentId) && c.ProductId == operation.ProductId
+                             && c.ComponentType == ComponentTypes.Panel, ct);
         if (valid != wanted.Count)
             return Result.Failure(ErrorCodes.OperationInvalid, Messages.OperationComponentInvalid, ResultKind.Validation);
 

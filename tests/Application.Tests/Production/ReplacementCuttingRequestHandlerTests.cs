@@ -34,13 +34,17 @@ public class ReplacementCuttingRequestHandlerTests : ProductionTestBase
         SetupQueryable(_defects);
         SetupQueryable(_requests);
         SetupQueryable(_components);
-        // Mỗi chi tiết có một dòng định mức (Id = Id chi tiết) của biến thể 21 (mã hàng 1) hoặc 22 (mã hàng khác).
+        // Mỗi chi tiết có một dòng định mức (Id = Id chi tiết) của màu 31 (mã hàng 1, màu của biến thể 21) hoặc 32 (mã hàng khác).
         _norms.AddRange(_components.Select(c => new ProductComponentMaterial
         {
             ProductComponentMaterialId = c.ProductComponentId, ProductId = c.ProductId, ProductComponentId = c.ProductComponentId,
-            ProductComponent = c, ProductVariantId = c.ProductId == 1 ? 21 : 22, MaterialId = 1,
+            ProductComponent = c, ProductColorId = c.ProductId == 1 ? 31 : 32, MaterialId = 1,
         }));
-        _orderLines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 1, ProductVariantId = 21 });
+        _orderLines.Add(new OrderLine
+        {
+            OrderLineId = LineId, OrderId = OrderId, ProductId = 1, ProductVariantId = 21,
+            ProductVariant = new ProductVariant { ProductVariantId = 21, ProductId = 1, ProductColorId = 31 },
+        });
         SetupQueryable(_norms);
         SetupQueryable(_orderLines);
         AsTeamLeader(TeamId);

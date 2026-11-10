@@ -10,8 +10,7 @@ import type { MaterialOption } from '@/types/lookup';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
-import { formatFabricWidth } from '../utils/fabricWidth';
-import { deliveryCountProblem, qtyProblem } from '../utils/orderMaterialRules';
+import { deliveryCountProblem, MAX_NOTE_LENGTH, qtyProblem } from '../utils/orderMaterialRules';
 import { rowError, type BulkLine, type Draft, isChanged } from './bulkOrderMaterial';
 
 type Options = {
@@ -45,15 +44,37 @@ export const bulkOrderMaterialColumns = ({
   const option = (line: BulkLine) => materialOptions.find((m) => m.materialId === line.materialId);
   const unitOf = (line: BulkLine) => line.original?.unit ?? option(line)?.unit;
 
-  /** Tên, màu, khổ vải của NVL trên một dòng; bỏ qua phần không có. */
+  /** Tên, màu của NVL trên một dòng; bỏ qua phần không có. */
   const detailOf = (line: BulkLine) =>
     [
       line.original?.materialName ?? option(line)?.materialName,
       line.original?.materialColor ?? option(line)?.color,
-      line.original?.materialWidthCm ? formatFabricWidth(line.original.materialWidthCm) : null,
     ]
       .filter(Boolean)
       .join(' · ');
+
+  /** Cột số cần / số khách cấp: cùng ô nhập, cùng kiểm lỗi. */
+  const qtyColumn = (
+    field: 'requiredQty' | 'customerQty',
+    title: string,
+    name: string,
+  ): TableColumnsType<BulkLine>[number] => ({
+    title,
+    key: field,
+    width: QTY_WIDTH,
+    render: (_, line) => (
+      <QtyInput
+        decimals={MATERIAL_QTY_DECIMALS}
+        max={MAX_MATERIAL_QTY}
+        size="small"
+        style={{ width: '100%' }}
+        suffix={unitOf(line)}
+        status={showErrors && qtyProblem(name, line.draft[field]) ? 'error' : undefined}
+        value={line.draft[field]}
+        onChange={(v) => onPatch(line.key, { [field]: v ?? 0 })}
+      />
+    ),
+  });
 
   return [
     {
@@ -93,48 +114,8 @@ export const bulkOrderMaterialColumns = ({
         </>
       ),
     },
-    {
-      title: LABELS.requiredQty,
-      key: 'requiredQty',
-      width: QTY_WIDTH,
-      render: (_, line) => (
-        <QtyInput
-          decimals={MATERIAL_QTY_DECIMALS}
-          max={MAX_MATERIAL_QTY}
-          size="small"
-          style={{ width: '100%' }}
-          suffix={unitOf(line)}
-          status={
-            showErrors && qtyProblem(LABELS.requiredQtyName, line.draft.requiredQty)
-              ? 'error'
-              : undefined
-          }
-          value={line.draft.requiredQty}
-          onChange={(v) => onPatch(line.key, { requiredQty: v ?? 0 })}
-        />
-      ),
-    },
-    {
-      title: LABELS.customerQty,
-      key: 'customerQty',
-      width: QTY_WIDTH,
-      render: (_, line) => (
-        <QtyInput
-          decimals={MATERIAL_QTY_DECIMALS}
-          max={MAX_MATERIAL_QTY}
-          size="small"
-          style={{ width: '100%' }}
-          suffix={unitOf(line)}
-          status={
-            showErrors && qtyProblem(LABELS.customerQtyName, line.draft.customerQty)
-              ? 'error'
-              : undefined
-          }
-          value={line.draft.customerQty}
-          onChange={(v) => onPatch(line.key, { customerQty: v ?? 0 })}
-        />
-      ),
-    },
+    qtyColumn('requiredQty', LABELS.requiredQty, LABELS.requiredQtyName),
+    qtyColumn('customerQty', LABELS.customerQty, LABELS.customerQtyName),
     {
       title: LABELS.deliveryCountShort,
       key: 'expectedDeliveryCount',
@@ -187,7 +168,7 @@ export const bulkOrderMaterialColumns = ({
           <>
             <Input
               size="small"
-              maxLength={500}
+              maxLength={MAX_NOTE_LENGTH}
               status={error ? 'error' : undefined}
               value={line.draft.note}
               onChange={(e) => onPatch(line.key, { note: e.target.value })}

@@ -1,6 +1,7 @@
 import { API } from '@/constants/apiEndpoints';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
+import type { RjEmployee } from '@/types/rjEmployee';
 import type {
   AdjustmentFilter,
   AttendanceAdjustment,
@@ -14,7 +15,6 @@ import type {
   TimesheetFilter,
   TimesheetSummary,
   UnmappedCode,
-  RjEmployee,
   SyncStatus,
 } from '../types';
 
@@ -101,14 +101,6 @@ export const attendanceApi = {
 
   getRjEmployees: async (onlyUnmapped = false): Promise<RjEmployee[]> => {
     const res = await apiClient.get<ApiResponse<RjEmployee[]>>(API.attendance.rjEmployees, {
-      params: { onlyUnmapped },
-    });
-    return res.data.data;
-  },
-
-  /** Admin / Quản đốc / Kế toán — dùng khi tạo NV. */
-  getRjEmployeesCommon: async (onlyUnmapped = false): Promise<RjEmployee[]> => {
-    const res = await apiClient.get<ApiResponse<RjEmployee[]>>(API.rjEmployees, {
       params: { onlyUnmapped },
     });
     return res.data.data;

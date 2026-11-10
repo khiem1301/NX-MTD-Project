@@ -1,5 +1,5 @@
 import { apiClient } from '@/services/apiClient';
-import { requestApi } from './requestApi';
+import { requestApi } from '@/services/requestApi';
 
 jest.mock('@/services/apiClient', () => ({
   apiClient: { post: jest.fn(), get: jest.fn(), put: jest.fn() },
