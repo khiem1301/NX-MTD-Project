@@ -73,6 +73,15 @@ export const SHORTAGE_RESOLUTION = {
   NO_REPLENISH: 'NO_REPLENISH',
 } as const;
 
+/** Trạng thái đơn thiếu NVL còn mở (BE: RequestStatuses.PendingProcessing). */
+export const SHORTAGE_OPEN_STATUS = 'PENDING_PROCESSING';
+
+/** Lọc danh sách đơn thiếu NVL: chỉ đơn Quản đốc đã chọn giao bù và đang chờ hàng bù về. */
+export const SHORTAGE_SCOPE_AWAITING = 'awaiting';
+export const SHORTAGE_SCOPE_OPTIONS = [
+  { value: SHORTAGE_SCOPE_AWAITING, label: 'Đang chờ nhận hàng bù' },
+];
+
 export const SHORTAGE_RESOLUTION_LABEL: Record<string, StatusLabel> = {
   REPLENISH: { text: 'Giao bù', color: 'blue' },
   NO_REPLENISH: { text: 'Không bù', color: 'orange' },
@@ -138,6 +147,7 @@ export const LABELS = {
   selectPurchaseOrder: 'Chọn đơn mua',
   purchaseLine: 'Dòng đơn mua',
   outstandingQty: 'Còn phải nhận',
+  deliveriesReached: 'đã nhận đủ {0} lần giao',
   receiptSource: 'Nguồn nhập',
   receiptType: 'Loại phiếu',
   originalReceipt: 'Phiếu gốc',
@@ -148,6 +158,8 @@ export const LABELS = {
   deliveryNoHint: 'Phiếu này là lần nhận thứ mấy của NVL / số lần giao dự kiến',
   deliveryNoValue: '{0}/{1}',
   shortagesTitle: 'Thiếu NVL khi nhập',
+  shortageResolveTitle: 'Xử lý thiếu NVL',
+  shortageReceiveTitle: 'Nhận hàng bù',
   shortageCode: 'Mã yêu cầu',
   shortageResolution: 'Cách xử lý',
   shortfallQty: 'Thiếu + lỗi',
@@ -172,6 +184,8 @@ export const LABELS = {
   bulkEditOrderMaterials: 'Sửa cả đơn',
   addByProduct: 'Thêm theo mã hàng',
   addExternalMaterial: 'Thêm NVL ngoài',
+  externalMaterialsHint:
+    'Thêm nhiều NVL cùng lúc, mỗi dòng một NVL. Số lần và ngày khách giao khai ở Lịch khách giao NVL của cả đơn.',
   selectProduct: 'Chọn mã hàng trong đơn',
   productMaterialsHint:
     'Nhập số cho từng NVL của mã hàng. NVL đơn này không dùng thì xóa khỏi bảng trước khi lưu.',
@@ -184,12 +198,27 @@ export const LABELS = {
     'Để trống nếu không phân màu. Cùng loại vải khác màu là hai NVL riêng; NVL đã dùng thì không đổi màu được.',
   requiredQty: 'Số cần',
   customerQty: 'Khách cấp',
-  expectedDeliveryCount: 'Số lần khách giao dự kiến',
   expectedDeliveryDate: 'Ngày dự kiến giao',
   expectedDeliveryDateRequired: 'Vui lòng chọn ngày dự kiến giao.',
-  deliveryCountShort: 'Số lần giao',
-  deliveries: 'Lần giao',
-  deliveryUnit: 'lần',
+  customerDeliveryPlan: 'Lịch khách giao NVL',
+  customerDeliveryCount: 'Số lần khách giao',
+  customerDeliveryDate: 'Ngày khách dự kiến giao',
+  customerDeliveryValue: 'Đã giao {0} / {1} lần · {2}',
+  customerDeliveryMissing:
+    'Đơn có NVL khách cấp nhưng chưa khai lịch giao. Kho sẽ coi như khách giao 1 lần.',
+  customerDeliveryHint:
+    'Số lần và ngày giao dùng chung cho mọi NVL khách cấp của đơn. Mỗi phiếu nhập khách cấp là một lần giao, dù có bao nhiêu NVL.',
+  editCustomerDelivery: 'Khai lịch giao',
+  customerDeliveryLateTag: '(đã quá ngày)',
+  customerDeliveryFullNotice:
+    'Đơn đã nhận đủ {0} lần khách giao: thêm hoặc tăng NVL khách cấp sẽ bị chặn. Tăng số lần khách giao (kèm ngày giao mới) trước.',
+  customerDeliveryLateNotice:
+    'Lịch khách giao đã quá ngày ({0}). Cập nhật ngày giao để kho biết khi nào hàng về.',
+  replenishDeliveryCount: 'Số lần giao bù dự kiến',
+  replenishDate: 'Ngày dự kiến giao bù',
+  replenishDateRequired: 'Vui lòng chọn ngày dự kiến giao bù.',
+  replenishPlan: 'Giao bù',
+  replenishPlanValue: '{0} / {1} lần · {2}',
   purchaseQty: 'Phải mua',
   source: 'Nguồn',
   receivedQty: 'Đã nhập',
@@ -213,7 +242,6 @@ export const LABELS = {
   qtyNegative: '{0} không được âm.',
   qtyMax: '{0} tối đa {1}.',
   qtyScale: '{0} tối đa {1} số lẻ.',
-  deliveryCountRange: 'Số lần giao dự kiến phải là số nguyên từ 1 đến {0}.',
   noteMax: 'Ghi chú tối đa {0} ký tự.',
   nothingToBuy:
     'Đơn hàng này chưa có NVL nào cần mua (cột "Phải mua" bằng 0). Hãy khai báo NVL của đơn trước.',
@@ -335,7 +363,6 @@ export const INCOMING_TEXT = {
   customerEmpty: 'Chưa có NVL khách cấp nào đang chờ nhận.',
   supplierEmpty: 'Chưa có đơn mua nào đang chờ nhận.',
   goodsStatus: 'Tình trạng đơn mua',
-  canReceiveMore: 'Còn nhận tiếp được',
   closedShortSection: 'Đơn mua đã đóng do giao thiếu (không nhận tiếp)',
   closedShortHint:
     'Phần còn thiếu đã được chốt không bù, không lập thêm phiếu nhập cho các đơn này.',
@@ -357,4 +384,34 @@ export const INCOMING_TEXT = {
   received: 'Đã nhận',
   outstanding: 'Còn phải nhận',
   createReceipt: 'Lập phiếu nhập',
+  searchCustomer: 'Tìm đơn hàng, mã / tên NVL, màu',
+  searchPurchase: 'Tìm đơn mua, đơn hàng, nhà cung cấp, NVL',
+  searchShortage: 'Tìm mã yêu cầu, số phiếu',
+  filterOrder: 'Đơn hàng',
+  filterSupplier: 'Nhà cung cấp',
+  filterGoodsStatus: 'Tình trạng',
+  tabCustomer: 'Khách cấp',
+  tabSupplier: 'Mua nhà cung cấp',
+  tabClosedShort: 'Đã đóng thiếu',
+  noResult: 'Không có dòng nào khớp từ khoá.',
+  receivedProgress: 'Đã nhận',
+  tabReplenish: 'Giao bù',
+  replenishHint:
+    'Đơn thiếu NVL khi nhập (đủ số lần giao mà còn thiếu). Đơn Quản đốc đã chọn giao bù: hàng bù về thì bấm Lập phiếu bổ sung; đơn khác chỉ để xem.',
+  replenishEmpty: 'Chưa có đơn thiếu nào.',
+  notResolved: 'Chưa xử lý',
+  moreMaterials: 'khác',
+  materialCode: 'Mã NVL',
+  materialName: 'Tên NVL',
 } as const;
+
+/** Mã tab của màn NVL chờ nhận. */
+export const INCOMING_TAB = {
+  CUSTOMER: 'customer',
+  SUPPLIER: 'supplier',
+  REPLENISH: 'replenish',
+  CLOSED_SHORT: 'closedShort',
+} as const;
+
+/** Tỷ lệ phần trăm tối đa của thanh tiến độ nhận. */
+export const PERCENT_MAX = 100;

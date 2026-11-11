@@ -128,6 +128,13 @@
    - 06/11/2026  Phiếu lỗi thêm loại OUTPUT_ERR (tổ trưởng nhập sai sản lượng công đoạn): trừ khỏi sản lượng và tiền của công nhân, trần sản lượng và tiến độ làm
                  được tính lại (trg_WorkAllocation_Check, trg_OutputRecord_Check, vw_WorkerOutputCap, vw_OperationAllocationProgress, vw_WorkerDailyEstimatedPay) (DEV-ALL-79).
    - 07/11/2026  Thêm OrderMaterial.ExpectedDeliveryDate (ngày khách dự kiến giao, chỉ khi khách cấp) và PurchaseOrder.ExpectedDeliveryDate (ngày NCC dự kiến giao, không trước ngày đặt); giữ ExpectedDeliveryCount (DEV-ALL-82).
+   - 11/11/2026  Giao >= 2 lần thì có khoảng ngày giao: thêm OrderMaterial.ExpectedDeliveryDateTo, PurchaseOrder.ExpectedDeliveryDateTo; đơn thiếu NVL
+                 chọn giao bù lưu số lần giao bù (Request.ExpectedDeliveryCount) và ngày / khoảng ngày giao bù (Request.TargetDate, TargetDateTo).
+                 Patch: SQL/patches/2026-11-11_delivery_date_range.sql (DEV-ALL-94).
+   - 11/11/2026  Số lần giao + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên CustomerOrder (CustomerDeliveryCount,
+                 CustomerDeliveryDate, CustomerDeliveryDateTo); OrderMaterial bỏ ExpectedDeliveryCount / ExpectedDeliveryDate / ExpectedDeliveryDateTo;
+                 RequestLine thêm PurchaseOrderLineId, OrderMaterialId (nguồn dòng SHORT_DELIVERY, kể cả dòng chưa về lần nào);
+                 vw_OrderMaterialDelivery đếm số lần theo đơn. Patch: SQL/patches/2026-11-11_order_delivery_plan.sql (DEV-ALL-95).
    - 05/11/2026  ProductImage giảm còn tối đa 5 ảnh phụ (CK_ProductImage_Sort 1-5). Thêm ProductColor (màu áo của mã hàng,
                  nơi duy nhất lưu tên màu): ProductVariant, ProductMarkerFabric bỏ cột Color, trỏ ProductColorId (FK ghép
                  với ProductId); UQ_PV thành (ProductColorId, SizeCode). (ảnh theo màu đã bỏ ở DEV-ALL-80).
@@ -529,6 +536,9 @@ CREATE TABLE dbo.CustomerOrder (
     IsDelayRisk      AS (CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT)), -- cờ, không phải trạng thái; tính từ DelayRiskSince
     StopReason       NVARCHAR(500)  NULL,
     Note             NVARCHAR(1000) NULL,
+    CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
+    CustomerDeliveryDate   DATE     NULL,     -- ngày khách dự kiến giao; giao >= 2 lần: ngày giao từ
+    CustomerDeliveryDateTo DATE     NULL,     -- giao >= 2 lần: ngày giao đến
     CreatedAt        DATETIME2(0)   NOT NULL CONSTRAINT DF_CustomerOrder_CreatedAt DEFAULT (dbo.fn_VnNow()),
     UpdatedAt        DATETIME2(0)   NULL,
     RowVer           ROWVERSION,
@@ -536,7 +546,10 @@ CREATE TABLE dbo.CustomerOrder (
     CONSTRAINT CK_CustomerOrder_Status CHECK (Status IN ('NEW','IN_PRODUCTION',
                                                          'IN_DELIVERY','PARTIALLY_DELIVERED','DELIVERED','COMPLETED','CANCELLED','STOPPED')),
     CONSTRAINT CK_CustomerOrder_Dates  CHECK (DueDate >= ReceivedDate),
-    CONSTRAINT CK_CustomerOrder_Stop   CHECK (Status <> 'STOPPED' OR StopReason IS NOT NULL)
+    CONSTRAINT CK_CustomerOrder_Stop   CHECK (Status <> 'STOPPED' OR StopReason IS NOT NULL),
+    CONSTRAINT CK_CO_CustomerDelivery CHECK ((CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1)
+        AND (CustomerDeliveryDateTo IS NULL OR (CustomerDeliveryDate IS NOT NULL AND CustomerDeliveryDateTo >= CustomerDeliveryDate
+                                                AND CustomerDeliveryCount >= 2)))
 );
 CREATE INDEX IX_CustomerOrder_Status ON dbo.CustomerOrder(Status, DueDate);
 
@@ -594,15 +607,11 @@ CREATE TABLE dbo.OrderMaterial (
     MaterialId           INT            NOT NULL CONSTRAINT FK_OM_Material REFERENCES dbo.Material(MaterialId),
     RequiredQty          DECIMAL(18,3)  NOT NULL,                                        -- tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức)
     CustomerQty          DECIMAL(18,3)  NOT NULL CONSTRAINT DF_OM_Customer DEFAULT 0,   -- khách sẽ cấp (màn 1.2)
-    ExpectedDeliveryCount SMALLINT      NULL,                                            -- số lần khách dự kiến giao NVL này; số lần đã nhận xem vw_OrderMaterialDelivery
-    ExpectedDeliveryDate DATE           NULL,                                            -- ngày dự kiến khách giao (nhập khi khách có cấp; 07/11/2026)
     PurchaseQty          AS (CASE WHEN RequiredQty > CustomerQty THEN RequiredQty - CustomerQty ELSE 0 END), -- phần xưởng phải mua
     Source               AS (CONVERT(VARCHAR(10), CASE WHEN CustomerQty = 0 THEN 'SUPPLIER'
                                                        WHEN CustomerQty >= RequiredQty THEN 'CUSTOMER' ELSE 'BOTH' END)),
     Note                 NVARCHAR(500)  NULL,
     CONSTRAINT CK_OM_Qty  CHECK (RequiredQty >= 0 AND CustomerQty >= 0),
-    CONSTRAINT CK_OM_Delivery CHECK ((CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)), -- khách có cấp thì phải khai số lần giao
-    CONSTRAINT CK_OM_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR CustomerQty > 0),
     CONSTRAINT UQ_OM UNIQUE (OrderId, MaterialId)
 );
 
@@ -744,7 +753,9 @@ CREATE TABLE dbo.Request (
     MaterialIssueId      INT            NULL,   -- phiếu cấp phát bị lỗi (FR 2.5) – FK thêm sau
     MaterialReceiptId    INT            NULL,   -- phiếu nhập (kể cả phiếu bổ sung) sinh ra yêu cầu thiếu NVL; mỗi phiếu tối đa 1 yêu cầu – FK thêm sau
     DefectRecordId       INT            NULL,   -- phiếu hàng hỏng Scrap sinh ra yêu cầu cắt bù – FK thêm sau
-    TargetDate           DATE           NULL,   -- ngày cần NVL / BTP; ngày xin chấm công bù; ngày dự kiến bù NVL (SHORT_DELIVERY)
+    TargetDate           DATE           NULL,   -- ngày cần NVL / BTP; ngày xin chấm công bù; ngày dự kiến bù NVL (SHORT_DELIVERY; giao bù >= 2 lần: ngày từ)
+    TargetDateTo         DATE           NULL,   -- SHORT_DELIVERY giao bù >= 2 lần: ngày giao bù đến (11/11/2026)
+    ExpectedDeliveryCount SMALLINT      NULL,   -- SHORT_DELIVERY chọn giao bù: số lần dự kiến giao bù (11/11/2026)
     Title                NVARCHAR(200)  NULL,
     Content              NVARCHAR(2000) NULL,   -- nội dung và lý do của người tạo
     CreatedBy            INT            NULL CONSTRAINT FK_Request_CreatedBy REFERENCES dbo.Employee(EmployeeId), -- NULL = hệ thống tạo
@@ -768,7 +779,9 @@ CREATE TABLE dbo.Request (
         OR (RequestTypeCode <> 'OTHER' AND HandlerRoleCode IS NULL AND HandlerTeamId IS NULL)),
     CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
-    CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH'))
+    CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')),
+    CONSTRAINT CK_Request_Delivery CHECK ((ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1)
+        AND (TargetDateTo IS NULL OR (TargetDate IS NOT NULL AND TargetDateTo >= TargetDate AND ExpectedDeliveryCount >= 2)))
 );
 CREATE INDEX IX_Request_Inbox ON dbo.Request(RequestTypeCode, Status) INCLUDE (CreatedAt);
 CREATE INDEX IX_Request_CreatedBy ON dbo.Request(CreatedBy, Status);
@@ -783,7 +796,10 @@ CREATE TABLE dbo.RequestLine (
     ItemDescription   NVARCHAR(300)  NULL,   -- linh kiện / máy / vật tư máy (đơn cơ điện)
     Quantity          DECIMAL(18,3)  NOT NULL CONSTRAINT CK_RequestLine_Qty CHECK (Quantity > 0),
     ReplenishQty      DECIMAL(18,3)  NULL,   -- SHORT_DELIVERY: số NCC/khách sẽ bù (Quản đốc nhập)
-    MaterialReceiptLineId INT        NULL,   -- SHORT_DELIVERY: dòng phiếu nhập bị thiếu / lỗi (Quantity = số thiếu / lỗi báo) – FK thêm sau
+    MaterialReceiptLineId INT        NULL,   -- SHORT_DELIVERY: dòng phiếu nhập bị thiếu / lỗi (Quantity = số thiếu / lỗi báo) – FK thêm sau; NULL = dòng chưa về lần nào
+    PurchaseOrderLineId INT          NULL,   -- SHORT_DELIVERY: dòng đơn mua còn thiếu (11/11/2026, DEV-ALL-95) – FK thêm sau
+    OrderMaterialId   INT            NULL,   -- SHORT_DELIVERY: NVL khách cấp còn thiếu (11/11/2026, DEV-ALL-95) – FK thêm sau
+    CONSTRAINT CK_RequestLine_Source   CHECK (PurchaseOrderLineId IS NULL OR OrderMaterialId IS NULL),
     CONSTRAINT CK_RequestLine_Kind     CHECK (MaterialId IS NULL OR OrderLineId IS NULL),   -- dòng NVL hoặc dòng BTP / cắt bù, không cả hai
     CONSTRAINT CK_RequestLine_Item     CHECK (MaterialId IS NOT NULL OR OrderLineId IS NOT NULL OR ProductComponentMaterialId IS NOT NULL OR ItemDescription IS NOT NULL)
 );
@@ -804,7 +820,8 @@ CREATE TABLE dbo.PurchaseOrder (
     SourceRequestId       INT            NULL CONSTRAINT FK_PO_Request REFERENCES dbo.Request(RequestId),   -- yêu cầu NVL / thiếu NVL
     OrderDate             DATE           NULL,
     ExpectedDeliveryCount SMALLINT       NULL,  -- số lần NCC dự kiến giao; số lần đã nhận xem vw_PurchaseOrderDelivery
-    ExpectedDeliveryDate  DATE           NULL,  -- ngày NCC dự kiến giao (07/11/2026)
+    ExpectedDeliveryDate  DATE           NULL,  -- ngày NCC dự kiến giao (07/11/2026); giao >= 2 lần: ngày giao từ
+    ExpectedDeliveryDateTo DATE          NULL,  -- giao >= 2 lần: ngày giao đến (11/11/2026)
     GoodsStatus           VARCHAR(25)    NOT NULL CONSTRAINT DF_PO_GoodsStatus DEFAULT 'PENDING_FINALISATION',
     PaymentStatus         VARCHAR(20)    NOT NULL CONSTRAINT DF_PO_PaymentStatus DEFAULT 'UNPAID',
     RejectReason          NVARCHAR(500)  NULL,
@@ -828,7 +845,9 @@ CREATE TABLE dbo.PurchaseOrder (
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_PO_DeliveryCount CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1),
-    CONSTRAINT CK_PO_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate)
+    CONSTRAINT CK_PO_DeliveryDate CHECK (ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate),
+    CONSTRAINT CK_PO_DeliveryDateTo CHECK (ExpectedDeliveryDateTo IS NULL OR (ExpectedDeliveryDate IS NOT NULL
+        AND ExpectedDeliveryDateTo >= ExpectedDeliveryDate AND ExpectedDeliveryCount >= 2))
 );
 
 -- Dòng đơn mua xác định NVL theo một trong hai cách (TH-12):
@@ -1659,7 +1678,9 @@ ALTER TABLE dbo.Request ADD
     CONSTRAINT FK_Request_MaterialReceipt FOREIGN KEY (MaterialReceiptId)    REFERENCES dbo.MaterialReceipt(MaterialReceiptId),
     CONSTRAINT FK_Request_DefectRecord    FOREIGN KEY (DefectRecordId)       REFERENCES dbo.DefectRecord(DefectRecordId);
 ALTER TABLE dbo.RequestLine ADD
-    CONSTRAINT FK_RequestLine_ReceiptLine FOREIGN KEY (MaterialReceiptLineId) REFERENCES dbo.MaterialReceiptLine(MaterialReceiptLineId);
+    CONSTRAINT FK_RequestLine_ReceiptLine FOREIGN KEY (MaterialReceiptLineId) REFERENCES dbo.MaterialReceiptLine(MaterialReceiptLineId),
+    CONSTRAINT FK_RequestLine_POL         FOREIGN KEY (PurchaseOrderLineId)   REFERENCES dbo.PurchaseOrderLine(PurchaseOrderLineId),
+    CONSTRAINT FK_RequestLine_OM          FOREIGN KEY (OrderMaterialId)       REFERENCES dbo.OrderMaterial(OrderMaterialId);
 -- Mỗi phiếu nhập chỉ sinh tối đa một yêu cầu thiếu NVL của chính nó (phiếu bổ sung vẫn thiếu thì sinh yêu cầu tiếp theo); mỗi phiếu Scrap tối đa một yêu cầu cắt bù
 CREATE UNIQUE INDEX UX_Request_Receipt ON dbo.Request(MaterialReceiptId) WHERE MaterialReceiptId IS NOT NULL AND RequestTypeCode = 'SHORT_DELIVERY';
 CREATE UNIQUE INDEX UX_Request_Defect  ON dbo.Request(DefectRecordId)    WHERE DefectRecordId IS NOT NULL;
@@ -2543,17 +2564,22 @@ OUTER APPLY (SELECT SUM(rl.AcceptedQty) AS ReceivedQty
              WHERE rl.PurchaseOrderLineId = pl.PurchaseOrderLineId) r;
 GO
 
--- NVL khách cấp của đơn: số lần dự kiến giao (OrderMaterial) cạnh số lần đã nhận và số đã nhận.
--- Đã nhận = phiếu nhập khách cấp (PurchaseOrderId NULL) ĐÃ XÁC NHẬN có dòng NVL này, kể cả phiếu bổ sung
+-- NVL khách cấp của đơn: số lần dự kiến giao và số lần đã nhận dùng chung cả đơn hàng (CustomerOrder.CustomerDeliveryCount; một phiếu
+-- khách cấp thường đã xác nhận của đơn là một lần giao — DEV-ALL-95); số đã nhận = Σ phiếu khách cấp đã xác nhận có NVL này, kể cả phiếu bổ sung.
 CREATE VIEW dbo.vw_OrderMaterialDelivery
 AS
 SELECT  om.OrderMaterialId, om.OrderId, om.MaterialId,
-        om.CustomerQty, om.ExpectedDeliveryCount,
-        ISNULL(r.ReceivedCount, 0) AS ReceivedCount,
+        om.CustomerQty, co.CustomerDeliveryCount AS ExpectedDeliveryCount,
+        ISNULL(d.ReceivedCount, 0) AS ReceivedCount,
         ISNULL(r.ReceivedQty, 0)   AS ReceivedQty,
         CASE WHEN om.CustomerQty > ISNULL(r.ReceivedQty, 0) THEN om.CustomerQty - ISNULL(r.ReceivedQty, 0) ELSE 0 END AS RemainingQty
 FROM dbo.OrderMaterial om
-OUTER APPLY (SELECT COUNT(DISTINCT rc.MaterialReceiptId) AS ReceivedCount, SUM(rl.AcceptedQty) AS ReceivedQty
+JOIN dbo.CustomerOrder co ON co.OrderId = om.OrderId
+OUTER APPLY (SELECT COUNT(*) AS ReceivedCount
+             FROM dbo.MaterialReceipt rc
+             WHERE rc.OrderId = om.OrderId AND rc.PurchaseOrderId IS NULL AND rc.ShortageRequestId IS NULL
+               AND rc.Status = 'CONFIRMED') d
+OUTER APPLY (SELECT SUM(rl.AcceptedQty) AS ReceivedQty
              FROM dbo.MaterialReceiptLine rl
              JOIN dbo.MaterialReceipt rc ON rc.MaterialReceiptId = rl.MaterialReceiptId
                                         AND rc.Status = 'CONFIRMED' AND rc.PurchaseOrderId IS NULL
@@ -2561,7 +2587,8 @@ OUTER APPLY (SELECT COUNT(DISTINCT rc.MaterialReceiptId) AS ReceivedCount, SUM(r
 WHERE om.CustomerQty > 0;
 GO
 
--- Đơn mua: số lần NCC dự kiến giao cạnh số lần đã nhận (số phiếu nhập ĐÃ XÁC NHẬN của đơn mua, kể cả phiếu bổ sung)
+-- Đơn mua: số lần NCC dự kiến giao cạnh số lần đã nhận (số phiếu nhập thường ĐÃ XÁC NHẬN của đơn mua; phiếu bổ sung không đếm,
+-- giao bù đếm theo đơn thiếu NVL — 11/11/2026, DEV-ALL-94). Ngày nhận cuối tính cả phiếu bổ sung
 CREATE VIEW dbo.vw_PurchaseOrderDelivery
 AS
 SELECT  po.PurchaseOrderId, po.PoCode, po.OrderId, po.SupplierId, po.GoodsStatus,
@@ -2569,7 +2596,7 @@ SELECT  po.PurchaseOrderId, po.PoCode, po.OrderId, po.SupplierId, po.GoodsStatus
         ISNULL(r.ReceivedCount, 0) AS ReceivedCount,
         r.LastReceiptDate
 FROM dbo.PurchaseOrder po
-OUTER APPLY (SELECT COUNT(*) AS ReceivedCount, MAX(rc.ReceiptDate) AS LastReceiptDate
+OUTER APPLY (SELECT SUM(CASE WHEN rc.ShortageRequestId IS NULL THEN 1 ELSE 0 END) AS ReceivedCount, MAX(rc.ReceiptDate) AS LastReceiptDate
              FROM dbo.MaterialReceipt rc
              WHERE rc.PurchaseOrderId = po.PurchaseOrderId AND rc.Status = 'CONFIRMED') r;
 GO
@@ -3197,11 +3224,12 @@ DECLARE @lS INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductV
                    JOIN dbo.ProductColor pcol ON pcol.ProductColorId = pv.ProductColorId
                    WHERE ol.OrderId = @o1 AND pcol.Color = N'Đen' AND pv.SizeCode = 'L');
 
-INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount) VALUES
- (@o1, @mVai,  2000, 0, NULL), (@o1, @mChi, 200, 0, NULL),
- (@o1, @mKhoa, 1900, 400, 2), (@o1, @mNhan, 1900, 1900, 1),
- (@o1, @mVaiXanh, 520, 0, NULL), (@o1, @mVaiTrang, 210, 0, NULL), (@o1, @mChiXanh, 55, 0, NULL), -- áo Xanh: thân vải Xanh, tay vải Trắng
- (@o2, @mVaiBe, 800, 0, NULL), (@o2, @mChiBe, 100, 0, NULL);
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty) VALUES
+ (@o1, @mVai,  2000, 0), (@o1, @mChi, 200, 0),
+ (@o1, @mKhoa, 1900, 400), (@o1, @mNhan, 1900, 1900),
+ (@o1, @mVaiXanh, 520, 0), (@o1, @mVaiTrang, 210, 0), (@o1, @mChiXanh, 55, 0), -- áo Xanh: thân vải Xanh, tay vải Trắng
+ (@o2, @mVaiBe, 800, 0), (@o2, @mChiBe, 100, 0);
+UPDATE dbo.CustomerOrder SET CustomerDeliveryCount = 2 WHERE OrderId = @o1;   -- khách giao khóa + nhãn trong 2 lần
 DECLARE @om1Vai INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o1 AND MaterialId = @mVai),
         @om1Chi INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o1 AND MaterialId = @mChi),
         @om1Khoa INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o1 AND MaterialId = @mKhoa),
@@ -4001,8 +4029,8 @@ DECLARE @l3M INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.Product
         @l3L INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
                     WHERE ol.OrderId = @o3 AND pv.SizeCode = 'L');
 
-INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount) VALUES
- (@o3, @mVai, 320, 0, NULL), (@o3, @mChi, 25, 0, NULL), (@o3, @mKhoa, 220, 0, NULL), (@o3, @mNhan, 220, 0, NULL);
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty) VALUES
+ (@o3, @mVai, 320, 0), (@o3, @mChi, 25, 0), (@o3, @mKhoa, 220, 0), (@o3, @mNhan, 220, 0);
 DECLARE @om3Vai  INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mVai),
         @om3Khoa INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mKhoa),
         @om3Nhan INT = (SELECT OrderMaterialId FROM dbo.OrderMaterial WHERE OrderId = @o3 AND MaterialId = @mNhan);
@@ -4271,8 +4299,8 @@ JOIN dbo.ProductColor pcol ON pcol.ProductId = @p1 AND pcol.Color = v.Color
 JOIN dbo.ProductVariant pv ON pv.ProductColorId = pcol.ProductColorId AND pv.SizeCode = v.SizeCode;
 
 -- NVL của đơn: số cần ≈ định mức × số đặt (vải Xanh thân, vải Trắng tay, vải Đen, phụ liệu), công ty tự mua
-INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
-SELECT @o4, m.MaterialId, v.Qty, 0, NULL
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
+SELECT @o4, m.MaterialId, v.Qty, 0
 FROM (VALUES ('DEMO-VAI02', 260), ('DEMO-VAI03', 105), ('DEMO-VAI01', 175), ('DEMO-CHI02', 25), ('DEMO-CHI01', 15),
              ('DEMO-KHOA01', 370), ('DEMO-NHAN01', 370)) v(Code, Qty)
 JOIN dbo.Material m ON m.MaterialCode = v.Code;
@@ -4605,13 +4633,15 @@ INSERT dbo.OrderLineTeam (OrderLineId, SewingTeamId)
 SELECT l.OrderLineId, @may2 FROM dbo.OrderLine l JOIN dbo.CustomerOrder o ON o.OrderId = l.OrderId WHERE o.OrderCode = 'DEMO-DH005';
 
 -- NVL của đơn: DH006 và các đơn đã giao do khách cấp; DH008, DH013 mua ngoài
-INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
-SELECT o.OrderId, @mVaiBe, q.Qty, q.Qty, 1
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
+SELECT o.OrderId, @mVaiBe, q.Qty, q.Qty
 FROM dbo.CustomerOrder o
 CROSS APPLY (SELECT SUM(l.OrderedQty) Qty FROM dbo.OrderLine l WHERE l.OrderId = o.OrderId) q
 WHERE o.OrderCode IN ('DEMO-DH006', 'DEMO-DH009', 'DEMO-DH010', 'DEMO-DH011', 'DEMO-DH012');
-INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, ExpectedDeliveryCount)
-SELECT OrderId, @mChiBe, 20, 20, 1 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH006';
+INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
+SELECT OrderId, @mChiBe, 20, 20 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH006';
+UPDATE dbo.CustomerOrder SET CustomerDeliveryCount = 1
+WHERE OrderCode IN ('DEMO-DH006', 'DEMO-DH009', 'DEMO-DH010', 'DEMO-DH011', 'DEMO-DH012');
 INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
 SELECT OrderId, @mVaiXanh, 100, 0 FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH008';
 INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
@@ -4888,8 +4918,9 @@ JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentId = pc.ProductComp
 WHERE r.RequestCode IN ('YC-DEMO-014', 'YC-DEMO-015');
 
 -- Thiếu hàng khi nhập: dòng trỏ về dòng phiếu nhập gốc
-INSERT dbo.RequestLine (RequestId, MaterialId, Quantity, ReplenishQty, MaterialReceiptLineId)
-SELECT q.RequestId, COALESCE(m.MaterialId, rl.MaterialId), v.Qty, v.Replenish, rl.MaterialReceiptLineId
+INSERT dbo.RequestLine (RequestId, MaterialId, Quantity, ReplenishQty, MaterialReceiptLineId, PurchaseOrderLineId, OrderMaterialId)
+SELECT q.RequestId, COALESCE(m.MaterialId, rl.MaterialId), v.Qty, v.Replenish, rl.MaterialReceiptLineId, rl.PurchaseOrderLineId,
+       CASE WHEN rl.PurchaseOrderLineId IS NULL THEN rl.OrderMaterialId END
 FROM (VALUES ('YC-DEMO-016', 30, CAST(NULL AS DECIMAL(18,3))), ('YC-DEMO-017', 5, 0)) v(Code, Qty, Replenish)
 JOIN dbo.Request q ON q.RequestCode = v.Code
 JOIN dbo.MaterialReceiptLine rl ON rl.MaterialReceiptId = q.MaterialReceiptId

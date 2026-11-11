@@ -7,8 +7,10 @@ import type { OrderMaterial } from '../types';
 import { orderMaterialColumns } from './orderMaterialColumns';
 import { OrderMaterialBulkEditor } from './OrderMaterialBulkEditor';
 import { OrderMaterialByProductModal } from './OrderMaterialByProductModal';
+import { OrderMaterialExternalModal } from './OrderMaterialExternalModal';
 import { OrderMaterialFormModal } from './OrderMaterialFormModal';
 import { OrderMaterialTable } from './OrderMaterialTable';
+import { CustomerDeliveryPlan } from './CustomerDeliveryPlan';
 
 type OrderMaterialsTabProps = {
   orderId: number;
@@ -24,8 +26,9 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
   const [formOpen, setFormOpen] = useState(false);
   const [bulkEditing, setBulkEditing] = useState(false);
   const [byProductOpen, setByProductOpen] = useState(false);
+  const [externalOpen, setExternalOpen] = useState(false);
 
-  const openForm = (om: OrderMaterial | null) => {
+  const openForm = (om: OrderMaterial) => {
     setEditing(om);
     setFormOpen(true);
   };
@@ -48,6 +51,7 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
 
   return (
     <>
+      <CustomerDeliveryPlan orderId={orderId} isClosed={isClosed} />
       <OrderMaterialTable
         orderId={orderId}
         columns={columns}
@@ -59,7 +63,7 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
                   {LABELS.bulkEditOrderMaterials}
                 </Button>
               )}
-              <Button icon={<PlusOutlined />} onClick={() => openForm(null)}>
+              <Button icon={<PlusOutlined />} onClick={() => setExternalOpen(true)}>
                 {LABELS.addExternalMaterial}
               </Button>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setByProductOpen(true)}>
@@ -69,13 +73,22 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
           )
         }
       />
-      <OrderMaterialFormModal
-        open={formOpen}
-        orderId={orderId}
-        orderMaterial={editing}
-        declared={list.data ?? []}
-        onClose={() => setFormOpen(false)}
-      />
+      {editing && (
+        <OrderMaterialFormModal
+          open={formOpen}
+          orderId={orderId}
+          orderMaterial={editing}
+          declared={list.data ?? []}
+          onClose={() => setFormOpen(false)}
+        />
+      )}
+      {externalOpen && (
+        <OrderMaterialExternalModal
+          orderId={orderId}
+          declared={list.data ?? []}
+          onClose={() => setExternalOpen(false)}
+        />
+      )}
       {byProductOpen && (
         <OrderMaterialByProductModal
           orderId={orderId}

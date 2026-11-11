@@ -27,11 +27,12 @@ public class IncomingMaterialTests
     private readonly List<VwPurchaseOrderDelivery> _poDeliveries = [];
     private readonly List<ProductComponentMaterial> _norms = [];
     private readonly List<RequestLine> _requestLines = [];
+    private readonly List<MaterialReceipt> _receipts = [];
 
     public IncomingMaterialTests()
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_poLines); Setup(_receiptLines); Setup(_materials); Setup(_orderLines);
-        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms); Setup(_requestLines);
+        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms); Setup(_requestLines); Setup(_receipts);
         _materials.Add(Mat());
         _uow.Repository<OrderMaterial>().AddAsync(Arg.Do<OrderMaterial>(om => { om.OrderMaterialId = 99; om.Material = _materials[0]; _orderMaterials.Add(om); })).Returns(Task.CompletedTask);
     }
@@ -63,9 +64,10 @@ public class IncomingMaterialTests
         var om = new OrderMaterial
         {
             OrderMaterialId = id, OrderId = o.OrderId, Order = o, MaterialId = 1, Material = Mat(),
-            CustomerQty = customerQty, PurchaseQty = purchaseQty, ExpectedDeliveryCount = deliveries,
+            CustomerQty = customerQty, PurchaseQty = purchaseQty,
         };
         o.OrderMaterials.Add(om);
+        o.CustomerDeliveryCount = deliveries;   // lịch khách giao của cả đơn (DEV-ALL-95)
         _orderMaterials.Add(om);
         return om;
     }
@@ -80,7 +82,7 @@ public class IncomingMaterialTests
             MaterialReceipt = new MaterialReceipt { Status = status },
         });
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, Substitute.For<IClock>());
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
     private IncomingMaterialService Incoming() => new(_uow, new MaterialSupplyUpdater(_uow));
 
     // ---------- NVL theo mã hàng trong đơn ----------
@@ -176,8 +178,8 @@ public class IncomingMaterialTests
 
     // ---------- Thêm nhiều NVL cùng lúc ----------
 
-    private static CreateOrderMaterialLineDto BatchLine(int materialId = 1, decimal required = 10, decimal customer = 0, short? count = null) =>
-        new(materialId, required, customer, count, null);
+    private static CreateOrderMaterialLineDto BatchLine(int materialId = 1, decimal required = 10, decimal customer = 0) =>
+        new(materialId, required, customer, null);
 
     [Fact]
     public async Task CreateBatch_ValidLines_AddsAllAndSavesOnce()
@@ -231,7 +233,7 @@ public class IncomingMaterialTests
         Order(1, "DH-1");
         _materials.Add(OtherMat(2, "CHI02"));
 
-        await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine(customer: 5, count: 1), BatchLine(2)]), default);
+        await OrderMaterials().CreateBatchAsync(new CreateOrderMaterialBatchDto(1, [BatchLine(customer: 5), BatchLine(2)]), default);
 
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
@@ -405,12 +407,12 @@ public class IncomingMaterialTests
         var order = Order(1, "DH001");
 
         var result = await OrderMaterials().CreateAsync(
-            new CreateOrderMaterialDto(1, 1, 500, 500, (short)3, null), default);
+            new CreateOrderMaterialDto(1, 1, 500, 500, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper,
             Arg.Is<NotificationMessage>(m => m.LinkUrl == "/warehouse/incoming-materials" && m.Message.Contains("DH001")
-                && m.Message.Contains("500") && m.Message.Contains("3 lần") && m.Message.Contains("Vải cotton")),
+                && m.Message.Contains("500") && m.Message.Contains("Vải cotton")),
             Arg.Any<CancellationToken>());
     }
 
@@ -419,7 +421,7 @@ public class IncomingMaterialTests
     {
         Order(1, "DH001");
 
-        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, 500, 0, null, null), default);
+        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(1, 1, 500, 0, null), default);
 
         result.IsSuccess.Should().BeTrue();
         await _notifier.DidNotReceive().NotifyRoleAsync(Arg.Any<string>(), Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());

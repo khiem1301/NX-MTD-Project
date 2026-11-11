@@ -55,6 +55,10 @@ export const API_MONTH = 'YYYY-MM';
 /** Giá trị gửi lên API cho cột DATE. */
 export const toApiDate = (value: Dayjs): string => value.format(API_DATE);
 
+/** Như toApiDate nhưng nhận ngày có thể trống (trả null). */
+export const toApiDateOrNull = (value: Dayjs | null | undefined): string | null =>
+  value ? value.format(API_DATE) : null;
+
 /** Giá trị gửi lên API cho kỳ tháng. */
 export const toApiMonth = (value: Dayjs): string => value.format(API_MONTH);
 

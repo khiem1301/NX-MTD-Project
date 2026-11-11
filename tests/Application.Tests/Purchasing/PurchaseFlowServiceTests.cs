@@ -686,8 +686,18 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, price);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line], new DateOnly(2026, 11, 10)))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line], new DateOnly(2026, 11, 10),
+            new DateOnly(2026, 11, 20)))
             .IsValid.Should().Be(valid);
+    }
+
+    [Fact]
+    public void Validate_PurchaseOrderDeliversTwiceWithoutDateTo_IsInvalid()
+    {
+        var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
+
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 2, null, [line],
+            new DateOnly(2026, 11, 10))).IsValid.Should().BeFalse();
     }
 
 

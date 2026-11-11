@@ -52,6 +52,7 @@ export const MESSAGES = {
     materialStatusChanged: 'Đã cập nhật trạng thái NVL.',
     confirmDiscontinue: 'Ngừng sử dụng NVL này?',
     orderMaterialSaved: 'Đã lưu NVL của đơn.',
+    customerDeliverySaved: 'Đã lưu lịch khách giao NVL của đơn.',
     confirmDeleteOrderMaterial: 'Xóa NVL này khỏi đơn? Thao tác không hoàn tác được.',
     orderMaterialDeleted: 'Đã xóa NVL của đơn.',
     purchaseOrderCreated: 'Đã tạo đơn mua NVL.',

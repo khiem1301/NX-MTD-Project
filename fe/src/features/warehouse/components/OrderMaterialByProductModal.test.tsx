@@ -5,6 +5,7 @@ import { OrderMaterialByProductModal } from './OrderMaterialByProductModal';
 
 const mockMutate = jest.fn();
 let mockProducts: OrderProductMaterials[] = [];
+jest.mock('./CustomerPlanNotice', () => ({ CustomerPlanNotice: () => null }));
 jest.mock('../hooks/useOrderMaterials', () => ({
   useOrderProductMaterials: () => ({ data: mockProducts, isLoading: false }),
   useCreateOrderMaterials: () => ({ mutate: mockMutate, isPending: false }),
@@ -102,8 +103,6 @@ describe('OrderMaterialByProductModal', () => {
           materialId: 2,
           requiredQty: 12,
           customerQty: 0,
-          expectedDeliveryCount: null,
-          expectedDeliveryDate: null,
           note: undefined,
         },
       ],

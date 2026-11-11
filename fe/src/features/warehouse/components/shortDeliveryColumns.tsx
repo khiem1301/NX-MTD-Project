@@ -1,4 +1,4 @@
-import { Form, Space, type TableColumnsType } from 'antd';
+import { Form, Space, Typography, type TableColumnsType } from 'antd';
 import { formatQty } from '@/utils/format';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
@@ -15,6 +15,8 @@ type ShortDeliveryColumnsOptions = {
   onReplenishChange: (line: ShortDeliveryLine, qty: number) => void;
 };
 
+const withUnit = (line: ShortDeliveryLine, qty: number) => `${formatQty(qty)} ${line.unit}`;
+
 /** Cột các dòng thiếu của yêu cầu giao thiếu NVL: số thiếu, số bên giao bù (Quản đốc chọn), số đã bù và ô nhận hàng bù (Thủ kho). */
 export const shortDeliveryColumns = ({
   canEditReplenish,
@@ -23,11 +25,25 @@ export const shortDeliveryColumns = ({
   remaining,
   onReplenishChange,
 }: ShortDeliveryColumnsOptions): TableColumnsType<ShortDeliveryLine> => [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
-  { title: LABELS.materialName, dataIndex: 'materialName' },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  { title: LABELS.unit, dataIndex: 'unit' },
-  { title: LABELS.shortfallQty, dataIndex: 'shortfallQty', align: 'right', render: formatQty },
+  {
+    title: LABELS.material,
+    key: 'material',
+    render: (_, l) => (
+      <Space direction="vertical" size={0}>
+        <b>{l.materialCode}</b>
+        <Typography.Text type="secondary">
+          {l.materialName}
+          {l.materialColor ? ` - ${l.materialColor}` : ''}
+        </Typography.Text>
+      </Space>
+    ),
+  },
+  {
+    title: LABELS.shortfallQty,
+    key: 'shortfallQty',
+    align: 'right',
+    render: (_, l) => withUnit(l, l.shortfallQty),
+  },
   ...(canEditReplenish
     ? [
         {
@@ -37,8 +53,10 @@ export const shortDeliveryColumns = ({
             <QtyInput
               decimals={MATERIAL_QTY_DECIMALS}
               min={0}
-              max={l.shortfallQty}
+              max={Math.max(0, l.shortfallQty - l.replenishedQty)}
               value={replenishOf(l)}
+              addonAfter={l.unit}
+              style={{ width: 150 }}
               onChange={(v) => onReplenishChange(l, v ?? 0)}
             />
           ),
@@ -47,15 +65,16 @@ export const shortDeliveryColumns = ({
     : [
         {
           title: LABELS.replenishQty,
-          dataIndex: 'replenishQty',
+          key: 'replenishQty',
           align: 'right' as const,
-          render: (v: number | null) => (v === null ? '—' : formatQty(v)),
+          render: (_: unknown, l: ShortDeliveryLine) =>
+            l.replenishQty === null ? '—' : withUnit(l, l.replenishQty),
         },
         {
           title: LABELS.replenishedQty,
-          dataIndex: 'replenishedQty',
+          key: 'replenishedQty',
           align: 'right' as const,
-          render: formatQty,
+          render: (_: unknown, l: ShortDeliveryLine) => withUnit(l, l.replenishedQty),
         },
       ]),
   ...(canReceive
@@ -63,22 +82,21 @@ export const shortDeliveryColumns = ({
         {
           title: LABELS.acceptedQty,
           key: 'accepted',
+          align: 'right' as const,
           render: (_: unknown, l: ShortDeliveryLine) => (
-            <Space>
-              <Form.Item
-                name={['lines', l.materialReceiptLineId, 'acceptedQty']}
-                noStyle
-                initialValue={remaining(l)}
-              >
-                <QtyInput
-                  decimals={MATERIAL_QTY_DECIMALS}
-                  min={0}
-                  max={remaining(l)}
-                  addonBefore={LABELS.acceptedQty}
-                  style={{ width: 150 }}
-                />
-              </Form.Item>
-            </Space>
+            <Form.Item
+              name={['lines', l.requestLineId, 'acceptedQty']}
+              noStyle
+              initialValue={remaining(l)}
+            >
+              <QtyInput
+                decimals={MATERIAL_QTY_DECIMALS}
+                min={0}
+                max={remaining(l)}
+                addonAfter={l.unit}
+                style={{ width: 160 }}
+              />
+            </Form.Item>
           ),
         },
       ]

@@ -1,10 +1,11 @@
-import { FileAddOutlined } from '@ant-design/icons';
+import { EyeOutlined, FileAddOutlined } from '@ant-design/icons';
 import type { ReactNode } from 'react';
-import { Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { Space, Tag, Tooltip, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate, formatQty } from '@/utils/format';
+import { formatQty } from '@/utils/format';
+import { formatDeliveryWindow } from '@/utils/expectedDelivery';
 import { INCOMING_TEXT, MATERIAL_SOURCE, PO_GOODS_STATUS_LABEL } from '../constants';
 import type {
   ClosedShortPurchase,
@@ -12,7 +13,9 @@ import type {
   IncomingSupplierMaterial,
   ReceiptPreset,
 } from '../types';
+import type { OrderGroup } from '../utils/groupByOrder';
 import type { PurchaseOrderGroup } from '../utils/groupByPurchaseOrder';
+import { MaterialCodeTip } from './MaterialCodeTip';
 
 const text = INCOMING_TEXT;
 
@@ -64,41 +67,53 @@ const purchaseHeadColumns = <T extends PurchaseLine>(): TableColumnsType<Purchas
   },
   { title: text.supplier, dataIndex: 'supplierName', render: (v: string | null) => v ?? '—' },
   lineColumn<T>(text.material, 'material', (l) => (
-    <>
-      <b>{l.materialCode}</b> {l.materialName}
-      {l.materialColor ? ` - ${l.materialColor}` : ''}
-    </>
+    <MaterialCodeTip code={l.materialCode} name={l.materialName} color={l.materialColor} />
   )),
   lineColumn<T>(text.ordered, 'ordered', (l) => formatQty(l.orderedQty), 'right'),
   lineColumn<T>(text.received, 'received', (l) => formatQty(l.receivedQty), 'right'),
 ];
 
+/** NVL đầu tiên của đơn kèm thẻ "+N khác" (trỏ vào thì liệt kê mã các NVL còn lại). */
+const materialsCell = (
+  lines: { materialCode: string; materialName: string; materialColor: string }[],
+) => {
+  const [first] = lines;
+  const more = lines.length - 1;
+  return (
+    <>
+      {first && (
+        <MaterialCodeTip
+          code={first.materialCode}
+          name={first.materialName}
+          color={first.materialColor}
+        />
+      )}
+      {more > 0 && (
+        <Tooltip
+          title={lines
+            .slice(1)
+            .map((l) => l.materialCode)
+            .join(', ')}
+        >
+          <Tag style={{ marginLeft: 6 }}>
+            +{more} {text.moreMaterials}
+          </Tag>
+        </Tooltip>
+      )}
+    </>
+  );
+};
+
 export const customerColumns = (
   onReceive: OnReceive,
-): TableColumnsType<IncomingCustomerMaterial> => [
-  { title: text.order, dataIndex: 'orderCode' },
+  onView: (orderId: number) => void,
+): TableColumnsType<OrderGroup<IncomingCustomerMaterial>> => [
   {
-    title: text.material,
-    key: 'material',
-    render: (_, r) => (
-      <>
-        <b>{r.materialCode}</b> {r.materialName}
-      </>
-    ),
+    title: text.order,
+    dataIndex: 'orderCode',
+    sorter: (a, b) => a.orderCode.localeCompare(b.orderCode),
   },
-  { title: text.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  { title: text.customerAgreed, dataIndex: 'customerQty', align: 'right', render: formatQty },
-  { title: text.received, dataIndex: 'receivedQty', align: 'right', render: formatQty },
-  {
-    title: text.outstanding,
-    dataIndex: 'outstandingQty',
-    align: 'right',
-    render: (v: number, r) => (
-      <b>
-        {formatQty(v)} {r.unit}
-      </b>
-    ),
-  },
+  { title: text.material, key: 'material', render: (_, r) => materialsCell(r.lines) },
   {
     title: text.deliveries,
     key: 'deliveries',
@@ -107,72 +122,117 @@ export const customerColumns = (
   {
     title: text.expectedDeliveryDate,
     key: 'expectedDeliveryDate',
-    render: (_, r) => formatDate(r.expectedDeliveryDate ?? null),
+    render: (_, r) => formatDeliveryWindow(r.expectedDeliveryDate, r.expectedDeliveryDateTo),
   },
   {
     title: MESSAGES.common.actions,
     key: 'action',
-    render: (_, r) =>
-      receiveAction(() =>
-        onReceive({
-          source: MATERIAL_SOURCE.CUSTOMER,
-          orderId: r.orderId,
-          orderMaterialId: r.orderMaterialId,
-          acceptedQty: r.outstandingQty,
-        }),
-      ),
+    render: (_, r) => (
+      <Space size={0}>
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onView(r.orderId)}
+        />
+        {receiveAction(() =>
+          onReceive({
+            source: MATERIAL_SOURCE.CUSTOMER,
+            orderId: r.orderId,
+            acceptedQty: 0,
+            customerLines: r.lines
+              .filter((l) => l.outstandingQty > 0)
+              .map((l) => ({ orderMaterialId: l.orderMaterialId, acceptedQty: l.outstandingQty })),
+          }),
+        )}
+      </Space>
+    ),
   },
 ];
 
 export const supplierColumns = (
   onReceive: OnReceive,
+  onView: (purchaseOrderId: number) => void,
 ): TableColumnsType<PurchaseOrderGroup<IncomingSupplierMaterial>> => [
-  ...purchaseHeadColumns<IncomingSupplierMaterial>(),
-  lineColumn<IncomingSupplierMaterial>(
-    text.outstanding,
-    'outstanding',
-    (l) => (
-      <b>
-        {formatQty(l.outstandingQty)} {l.unit}
-      </b>
-    ),
-    'right',
-  ),
+  { title: text.purchaseOrder, dataIndex: 'poCode' },
+  {
+    title: text.order,
+    dataIndex: 'orderCode',
+    render: (v: string | null) => v ?? text.stockPurchase,
+  },
+  { title: text.supplier, dataIndex: 'supplierName', render: (v: string | null) => v ?? '—' },
+  {
+    title: text.material,
+    key: 'material',
+    render: (_, r) => {
+      const first = r.lines[0];
+      const more = r.lines.length - 1;
+      return (
+        <>
+          {first && (
+            <MaterialCodeTip
+              code={first.materialCode}
+              name={first.materialName}
+              color={first.materialColor}
+            />
+          )}
+          {more > 0 && (
+            <Tooltip
+              title={r.lines
+                .slice(1)
+                .map((l) => l.materialCode)
+                .join(', ')}
+            >
+              <Tag style={{ marginLeft: 6 }}>
+                +{more} {text.moreMaterials}
+              </Tag>
+            </Tooltip>
+          )}
+        </>
+      );
+    },
+  },
   {
     title: text.deliveries,
     key: 'deliveries',
-    render: (_, r) => deliveryCell(r.expectedDeliveryCount, r.receivedCount),
-  },
-  {
-    title: text.expectedDeliveryDate,
-    key: 'expectedDeliveryDate',
-    render: (_, r) => formatDate(r.expectedDeliveryDate ?? null),
-  },
-  {
-    title: text.goodsStatus,
-    dataIndex: 'goodsStatus',
-    render: (v: string) => (
+    render: (_, r) => (
       <Space direction="vertical" size={0}>
-        <StatusTag status={v} labels={PO_GOODS_STATUS_LABEL} />
-        <Typography.Text type="success">{text.canReceiveMore}</Typography.Text>
+        {deliveryCell(r.expectedDeliveryCount, r.receivedCount)}
+        {r.expectedDeliveryDate && (
+          <Typography.Text type="secondary">
+            {formatDeliveryWindow(r.expectedDeliveryDate, r.expectedDeliveryDateTo)}
+          </Typography.Text>
+        )}
       </Space>
     ),
   },
   {
+    title: text.goodsStatus,
+    dataIndex: 'goodsStatus',
+    render: (v: string) => <StatusTag status={v} labels={PO_GOODS_STATUS_LABEL} />,
+  },
+  {
     title: MESSAGES.common.actions,
     key: 'action',
-    render: (_, r) =>
-      receiveAction(() =>
-        onReceive({
-          source: MATERIAL_SOURCE.SUPPLIER,
-          purchaseOrderId: r.purchaseOrderId,
-          acceptedQty: 0,
-          purchaseLines: r.lines.map((l) => ({
-            purchaseOrderLineId: l.purchaseOrderLineId,
-            acceptedQty: l.outstandingQty,
-          })),
-        }),
-      ),
+    render: (_, r) => (
+      <Space size={0}>
+        <IconAction
+          title={MESSAGES.common.view}
+          icon={<EyeOutlined />}
+          onClick={() => onView(r.purchaseOrderId)}
+        />
+        {receiveAction(() =>
+          onReceive({
+            source: MATERIAL_SOURCE.SUPPLIER,
+            purchaseOrderId: r.purchaseOrderId,
+            acceptedQty: 0,
+            purchaseLines: r.lines.map((l) => ({
+              purchaseOrderLineId: l.purchaseOrderLineId,
+              acceptedQty: l.outstandingQty,
+            })),
+          }),
+        )}
+      </Space>
+    ),
   },
 ];
 

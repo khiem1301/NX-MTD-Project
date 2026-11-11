@@ -11,6 +11,8 @@ import { ShortDeliveryModal } from '../components/ShortDeliveryModal';
 import {
   LABELS,
   SHORTAGE_RESOLUTION_LABEL,
+  SHORTAGE_SCOPE_AWAITING,
+  SHORTAGE_SCOPE_OPTIONS,
   SHORTAGE_STATUS_LABEL,
   SOURCE_LABEL,
 } from '../constants';
@@ -22,8 +24,6 @@ import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 
 type Filters = { keyword?: string; awaitingReplenish?: boolean };
-
-const SCOPE_OPTIONS = [{ value: 'awaiting', label: 'Đang chờ nhận hàng bù' }];
 
 /**
  * UC08 / UC39: đơn thiếu NVL khi nhập (hệ thống tự tạo từ phiếu nhập có hàng thiếu / lỗi). Quản đốc chọn giao bù hoặc
@@ -88,11 +88,13 @@ export function ShortDeliveryListPage() {
               style={{ width: 280 }}
             />
             <FilterSelect
-              value={table.filters.awaitingReplenish ? 'awaiting' : undefined}
+              value={table.filters.awaitingReplenish ? SHORTAGE_SCOPE_AWAITING : undefined}
               placeholder={LABELS.status}
-              options={SCOPE_OPTIONS}
+              options={SHORTAGE_SCOPE_OPTIONS}
               onChange={(scope) =>
-                table.setFilters({ awaitingReplenish: scope === 'awaiting' ? true : undefined })
+                table.setFilters({
+                  awaitingReplenish: scope === SHORTAGE_SCOPE_AWAITING ? true : undefined,
+                })
               }
               style={{ width: 220 }}
             />

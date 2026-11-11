@@ -27,7 +27,7 @@ export const warehouseMenu: MenuEntry[] = [
     key: 'short-deliveries',
     label: 'Thiếu NVL khi nhập',
     path: ROUTES.shortDeliveries,
-    roles: [WarehouseKeeper, Admin, Manager],
+    roles: [Admin, Manager],
   },
   {
     key: 'material-issues',
@@ -46,12 +46,6 @@ export const warehouseMenu: MenuEntry[] = [
     key: 'inventories',
     label: 'Tồn kho',
     path: ROUTES.inventories,
-    roles: [WarehouseKeeper, Manager, Admin],
-  },
-  {
-    key: 'nxt-report',
-    label: 'Báo cáo nhập xuất tồn',
-    path: ROUTES.nxtReport,
     roles: [WarehouseKeeper, Manager, Admin],
   },
 ];

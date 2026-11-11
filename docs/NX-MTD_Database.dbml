@@ -296,6 +296,9 @@ Table CustomerOrder [note: 'Đơn hàng gia công'] {
   IsDelayRisk bit [note: 'Cờ cảnh báo nguy cơ trễ đơn do JOB-04 đặt; không phải trạng thái đơn (cột tính: CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT))']
   StopReason nvarchar(500) [note: 'Lý do tạm dừng / hủy đơn']
   Note nvarchar(1000) [note: 'Ghi chú chung của đơn hàng']
+  CustomerDeliveryCount smallint [check: `CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1`, note: 'Số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11/2026, DEV-ALL-95)']
+  CustomerDeliveryDate date [note: 'Ngày khách dự kiến giao NVL; giao >= 2 lần: ngày giao từ (DEV-ALL-95)']
+  CustomerDeliveryDateTo date [check: `CustomerDeliveryDateTo IS NULL OR (CustomerDeliveryDate IS NOT NULL AND CustomerDeliveryDateTo >= CustomerDeliveryDate AND CustomerDeliveryCount >= 2)`, note: 'Giao >= 2 lần: ngày giao đến (DEV-ALL-95)']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
   UpdatedAt datetime2(0) [note: 'Lần sửa gần nhất (giờ Việt Nam)']
   RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']
@@ -488,15 +491,11 @@ Table OrderMaterial [note: 'NVL của đơn: cần bao nhiêu, khách cấp bao 
   MaterialId int [not null, note: 'Vật tư']
   RequiredQty decimal(18,3) [not null, note: 'Tổng lượng NVL đơn cần, nhập tay theo số liệu khách đã báo']
   CustomerQty decimal(18,3) [not null, default: 0, note: 'Lượng khách sẽ cấp (màn 1.2); 0 = xưởng tự mua toàn bộ']
-  ExpectedDeliveryCount smallint [note: 'Số lần khách dự kiến giao NVL này; bắt buộc khi khách có cấp. Số lần đã nhận xem vw_OrderMaterialDelivery']
-  ExpectedDeliveryDate date [note: 'Ngày khách dự kiến giao NVL; chỉ có khi khách cấp (07/11/2026, DEV-ALL-82)']
   PurchaseQty decimal(19,3) [note: 'Cột tính: phần xưởng phải mua = cần − khách cấp (không âm)']
   Source varchar(10) [note: 'Cột tính: SUPPLIER (khách không cấp), CUSTOMER (khách cấp đủ), BOTH (khách cấp một phần, xưởng mua phần còn lại)']
   Note nvarchar(500) [note: 'Ghi chú về NVL này của đơn']
   checks {
     `RequiredQty >= 0 AND CustomerQty >= 0` [name: 'CK_OM_Qty']
-    `(CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)` [name: 'CK_OM_Delivery']
-    `ExpectedDeliveryDate IS NULL OR CustomerQty > 0` [name: 'CK_OM_DeliveryDate']
   }
 
   indexes {
@@ -967,6 +966,8 @@ Table Request [note: 'Đơn từ (11 loại, gồm yêu cầu NVL / BTP / mua NV
   MaterialReceiptId int [note: 'Phiếu nhập sinh ra yêu cầu xử lý thiếu NVL. Mỗi phiếu tối đa một yêu cầu; phiếu bổ sung vẫn thiếu thì sinh yêu cầu tiếp theo, tạo thành chuỗi']
   DefectRecordId int [note: 'Phiếu hàng hỏng Scrap sinh ra yêu cầu cắt bù']
   TargetDate date [note: 'Ngày áp dụng theo loại đơn: ngày cần NVL / BTP, ngày xin chấm công bù, hoặc ngày dự kiến bù NVL (SHORT_DELIVERY)']
+  TargetDateTo date [note: 'SHORT_DELIVERY giao bù >= 2 lần: ngày giao bù đến (11/11/2026, DEV-ALL-94)']
+  ExpectedDeliveryCount smallint [note: 'SHORT_DELIVERY chọn giao bù: tổng số lần dự kiến giao bù, cộng dồn qua các lần chọn (11/11/2026, DEV-ALL-94)']
   Title nvarchar(200) [note: 'Tiêu đề']
   Content nvarchar(2000) [note: 'Nội dung và lý do của người tạo']
   CreatedBy int [note: 'Người lập đơn từ; trống nếu hệ thống tự tạo']
@@ -1103,6 +1104,8 @@ Table RequestLine [note: 'Dòng chi tiết đơn từ'] {
   Quantity decimal(18,3) [not null, check: `Quantity > 0`, note: 'Số lượng yêu cầu']
   ReplenishQty decimal(18,3) [note: 'Số lượng nhà cung cấp hoặc khách sẽ bù, do Quản đốc nhập']
   MaterialReceiptLineId int [note: 'SHORT_DELIVERY: dòng phiếu nhập bị thiếu hoặc lỗi; Quantity của dòng này = số thiếu / lỗi báo']
+  PurchaseOrderLineId int [ref: > PurchaseOrderLine.PurchaseOrderLineId, note: 'SHORT_DELIVERY: dòng đơn mua còn thiếu, kể cả dòng chưa về lần nào (11/11/2026, DEV-ALL-95)']
+  OrderMaterialId int [ref: > OrderMaterial.OrderMaterialId, note: 'SHORT_DELIVERY: NVL khách cấp còn thiếu, kể cả NVL chưa về lần nào (DEV-ALL-95). CK_RequestLine_Source: không có cả hai']
   checks {
     `MaterialId IS NULL OR OrderLineId IS NULL` [name: 'CK_RequestLine_Kind']
     `MaterialId IS NOT NULL OR OrderLineId IS NOT NULL OR ProductComponentMaterialId IS NOT NULL OR ItemDescription IS NOT NULL` [name: 'CK_RequestLine_Item']
@@ -1191,6 +1194,7 @@ Table PurchaseOrder [note: 'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn
   OrderDate date [note: 'Ngày lập đơn']
   ExpectedDeliveryCount smallint [check: `ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`, note: 'Số lần NCC dự kiến giao. Số lần đã nhận xem vw_PurchaseOrderDelivery']
   ExpectedDeliveryDate date [check: `ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate`, note: 'Ngày NCC dự kiến giao, không trước ngày đặt (07/11/2026, DEV-ALL-82)']
+  ExpectedDeliveryDateTo date [check: `ExpectedDeliveryDateTo IS NULL OR (ExpectedDeliveryDate IS NOT NULL AND ExpectedDeliveryDateTo >= ExpectedDeliveryDate AND ExpectedDeliveryCount >= 2)`, note: 'Giao >= 2 lần: ngày NCC giao đến (11/11/2026, DEV-ALL-94)']
   GoodsStatus varchar(25) [not null, default: 'PENDING_FINALISATION', check: `GoodsStatus IN ('PENDING_FINALISATION','ORDERED','PARTIALLY_RECEIVED','RECEIVED', 'CLOSED_SHORT','CUSTOMER_SUPPLIED','REJECTED')`, note: 'Trạng thái hàng: nháp, đã đặt, nhận một phần, đã nhận đủ...']
   PaymentStatus varchar(20) [not null, default: 'UNPAID', check: `PaymentStatus IN ('UNPAID','PAID','RETURNED')`, note: 'Trạng thái thanh toán, tách riêng với trạng thái hàng']
   RejectReason nvarchar(500) [note: 'Lý do từ chối (bắt buộc khi trạng thái là REJECTED)']

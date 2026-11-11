@@ -37,7 +37,9 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(om => new
             {
                 om.OrderMaterialId, om.OrderId, om.Order.OrderCode, om.Material.MaterialCode, om.Material.MaterialName,
-                MaterialColor = om.Material.Color, om.Material.Unit, om.CustomerQty, om.ExpectedDeliveryCount, om.ExpectedDeliveryDate,
+                MaterialColor = om.Material.Color, om.Material.Unit, om.CustomerQty,
+                ExpectedDeliveryCount = om.Order.CustomerDeliveryCount, ExpectedDeliveryDate = om.Order.CustomerDeliveryDate,
+                ExpectedDeliveryDateTo = om.Order.CustomerDeliveryDateTo,   // lịch khách giao của cả đơn (DEV-ALL-95)
             })
             .ToListAsync(ct);
         if (rows.Count == 0) return [];
@@ -59,7 +61,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(r => new IncomingCustomerMaterialDto(r.OrderMaterialId, r.OrderId, r.OrderCode, r.MaterialCode, r.MaterialName,
                 r.MaterialColor, r.Unit, r.CustomerQty, received.GetValueOrDefault(r.OrderMaterialId),
                 r.CustomerQty - received.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryCount,
-                counts.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryDate))
+                counts.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryDate, r.ExpectedDeliveryDateTo))
             .Where(r => r.OutstandingQty > 0 && !closedShort.Contains(r.OrderMaterialId))
             .OrderBy(r => r.OrderCode).ThenBy(r => r.MaterialCode)
             .ToList();
@@ -74,7 +76,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 
-    /// <summary>Số lần giao đã nhận theo đơn mua.</summary>
+    /// <summary>Số lần đơn mua đã giao (số phiếu thường đã xác nhận của cả đơn mua — vw_PurchaseOrderDelivery).</summary>
     private Task<Dictionary<int, int>> DeliveryCountsAsync(int[] purchaseOrderIds, CancellationToken ct) =>
         _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
             .Where(v => purchaseOrderIds.Contains(v.PurchaseOrderId))
@@ -118,7 +120,8 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 l.PurchaseOrderId, l.PurchaseOrder.PoCode, l.PurchaseOrder.OrderId,
                 OrderCode = l.PurchaseOrder.Order == null ? null : l.PurchaseOrder.Order.OrderCode,
                 SupplierName = l.PurchaseOrder.Supplier == null ? null : l.PurchaseOrder.Supplier.SupplierName,
-                l.PurchaseOrder.GoodsStatus, l.PurchaseOrder.ExpectedDeliveryCount, l.PurchaseOrder.ExpectedDeliveryDate, l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
+                l.PurchaseOrder.GoodsStatus, l.PurchaseOrder.ExpectedDeliveryCount, l.PurchaseOrder.ExpectedDeliveryDate,
+                l.PurchaseOrder.ExpectedDeliveryDateTo, l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
                 MaterialCode = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                 MaterialName = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                 Unit = l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
@@ -138,7 +141,8 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 return new IncomingSupplierMaterialDto(r.PurchaseOrderId, r.PoCode, r.OrderId, r.OrderCode, r.SupplierName,
                     r.ExpectedDeliveryCount, counts.GetValueOrDefault(r.PurchaseOrderId), r.PurchaseOrderLineId,
                     r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
-                    r.OrderedQty, got, r.OrderedQty - got - r.NotReplenishedQty, r.GoodsStatus, r.ExpectedDeliveryDate);
+                    r.OrderedQty, got, r.OrderedQty - got - r.NotReplenishedQty, r.GoodsStatus, r.ExpectedDeliveryDate,
+                    r.ExpectedDeliveryDateTo);
             })
             .Where(r => r.OutstandingQty > 0)
             .OrderBy(r => r.PoCode).ThenBy(r => r.MaterialCode)

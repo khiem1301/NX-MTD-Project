@@ -21,14 +21,6 @@ export const qtyProblem = (label: string, value: number | null | undefined): str
   return null;
 };
 
-/** Số lần giao dự kiến: số nguyên từ 1 đến 99; chỉ kiểm khi đã nhập (bắt buộc hay không do khách có cấp hay không). */
-export const deliveryCountProblem = (value: number | null | undefined): string | null => {
-  if (value === null || value === undefined) return null;
-  return Number.isInteger(value) && value >= 1 && value <= MAX_DELIVERY_COUNT
-    ? null
-    : fill(LABELS.deliveryCountRange, MAX_DELIVERY_COUNT);
-};
-
 /** Ghi chú tối đa 500 ký tự, tính sau khi cắt khoảng trắng đầu cuối (khớp BE). */
 export const noteProblem = (value: string | null | undefined): string | null =>
   (value ?? '').trim().length > MAX_NOTE_LENGTH ? fill(LABELS.noteMax, MAX_NOTE_LENGTH) : null;

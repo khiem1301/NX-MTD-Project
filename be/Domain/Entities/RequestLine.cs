@@ -26,6 +26,12 @@ public partial class RequestLine
 
     public int? MaterialReceiptLineId { get; set; }
 
+    /// <summary>SHORT_DELIVERY: dòng đơn mua còn thiếu (kể cả dòng chưa về lần nào — DEV-ALL-95).</summary>
+    public int? PurchaseOrderLineId { get; set; }
+
+    /// <summary>SHORT_DELIVERY: NVL khách cấp còn thiếu (kể cả NVL chưa về lần nào — DEV-ALL-95).</summary>
+    public int? OrderMaterialId { get; set; }
+
     public virtual Material? Material { get; set; }
 
     public virtual MaterialReceiptLine? MaterialReceiptLine { get; set; }

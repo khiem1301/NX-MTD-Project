@@ -14,7 +14,7 @@ public sealed record PurchaseOrderLineDto(
 public sealed record PurchaseOrderDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
     string GoodsStatus, string PaymentStatus, string? Note, DateTime CreatedAt,
-    IReadOnlyList<PurchaseOrderLineDto> Lines);
+    IReadOnlyList<PurchaseOrderLineDto> Lines, short? ExpectedDeliveryCount = null, int ReceivedCount = 0);
 
 /// <summary>
 /// Chọn NVL có sẵn (MaterialId) hoặc nhập NVL mới (NewMaterialName + NewMaterialUnit): NVL mới được thêm vào
@@ -27,7 +27,8 @@ public sealed record SavePurchaseOrderLineDto(int? MaterialId, string? NewMateri
 /// <summary>OrderId để trống = đơn mua dự trữ (kim, chỉ... dùng chung nhiều đơn). Bắt buộc có nhà cung cấp đang hợp tác; một đơn mua không cần mua hết NVL của đơn hàng.</summary>
 /// <summary>Tạo đơn mua = đặt hàng luôn: đã có nhà cung cấp, số lượng, đơn giá, ngày đặt và số lần giao dự kiến, đơn vào trạng thái đã đặt.</summary>
 public sealed record CreatePurchaseOrderDto(int? OrderId, int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount,
-    string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines, DateOnly? ExpectedDeliveryDate = null);
+    string? Note, IReadOnlyList<SavePurchaseOrderLineDto> Lines, DateOnly? ExpectedDeliveryDate = null,
+    DateOnly? ExpectedDeliveryDateTo = null);
 
 public sealed record PurchaseOrderQuery : PageQuery
 {

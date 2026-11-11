@@ -5,7 +5,6 @@ export { IncomingMaterialsPage } from './pages/IncomingMaterialsPage';
 export { MaterialReceiptListPage } from './pages/MaterialReceiptListPage';
 export { MaterialIssueListPage } from './pages/MaterialIssueListPage';
 export { InventoryPage } from './pages/InventoryPage';
-export { NxtReportPage } from './pages/NxtReportPage';
 export { PieceHoldingsPage } from './pages/PieceHoldingsPage';
 export { ShortDeliveryListPage } from './pages/ShortDeliveryListPage';
 export { MaterialFormModal } from './components/MaterialFormModal';

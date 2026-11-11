@@ -14,11 +14,11 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notifier;
-    private readonly IClock _clock;
+    private readonly DeliveryCountGuard _deliveries;
 
-    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, IClock clock)
+    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, DeliveryCountGuard deliveries)
     {
-        _uow = uow; _notifier = notifier; _clock = clock;
+        _uow = uow; _notifier = notifier; _deliveries = deliveries;
     }
 
     private IQueryable<OrderMaterial> OrderMaterials => _uow.Repository<OrderMaterial>().Query();
@@ -32,9 +32,12 @@ public sealed class OrderMaterialService : IOrderMaterialService
 
         var received = await ReceivedQtyAsync(orderId, ct);
         var deliveries = await ReceivedCountsAsync(orderId, ct);
+        var plan = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(o => o.OrderId == orderId, ct) ?? new CustomerOrder();
 
         return Result<IReadOnlyList<OrderMaterialDto>>.Success(rows
-            .Select(om => ToDto(om, received.GetValueOrDefault(om.OrderMaterialId), deliveries.GetValueOrDefault(om.OrderMaterialId)))
+            .Select(om => ToDto(om, received.GetValueOrDefault(om.OrderMaterialId),
+                deliveries.GetValueOrDefault(om.OrderMaterialId), plan))
             .ToList());
     }
 
@@ -146,7 +149,6 @@ public sealed class OrderMaterialService : IOrderMaterialService
             return Failure(ErrorCodes.WarehouseOrderClosed, WarehouseMessages.OrderMaterialOrderClosed);
 
         var oldCustomerQty = entity.CustomerQty;
-        var oldDeliveryCount = entity.ExpectedDeliveryCount;
         var keyChanged = entity.MaterialId != dto.MaterialId;
         if (keyChanged && await HasReceiptsAsync(orderMaterialId, ct))
             return Failure(ErrorCodes.WarehouseOrderMaterialInUse, WarehouseMessages.OrderMaterialInUse);
@@ -154,8 +156,8 @@ public sealed class OrderMaterialService : IOrderMaterialService
         var check = await ApplyAsync(entity, dto, ct);
         if (check is not null) return check;
 
-        // Báo Thủ kho khi số khách cấp hoặc số lần giao dự kiến thay đổi (không báo lại khi chỉ sửa ghi chú).
-        if (entity.CustomerQty > 0 && (entity.CustomerQty != oldCustomerQty || entity.ExpectedDeliveryCount != oldDeliveryCount))
+        // Báo Thủ kho khi số khách cấp thay đổi (không báo lại khi chỉ sửa ghi chú; lịch giao báo khi khai ở cả đơn).
+        if (entity.CustomerQty > 0 && entity.CustomerQty != oldCustomerQty)
         {
             var orderCode = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
                 .Where(o => o.OrderId == entity.OrderId).Select(o => o.OrderCode).FirstAsync(ct);
@@ -196,33 +198,27 @@ public sealed class OrderMaterialService : IOrderMaterialService
         if (duplicate)
             return Failure(ErrorCodes.WarehouseOrderMaterialDuplicate, string.Format(WarehouseMessages.OrderMaterialDuplicateOf,
                 MaterialLabel(material)));
-
-        var dateError = await CheckExpectedDeliveryDateAsync(entity, dto, ct);
-        if (dateError is not null) return Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
+        if (dto.CustomerQty > entity.CustomerQty && await CustomerDeliveriesFullAsync(entity.OrderId, ct) is { } full)
+            return Failure(ErrorCodes.CustomerDeliveryFull, full);
 
         entity.MaterialId = dto.MaterialId;
         entity.RequiredQty = dto.RequiredQty;
         entity.CustomerQty = dto.CustomerQty;
-        entity.ExpectedDeliveryCount = entity.CustomerQty > 0 ? dto.ExpectedDeliveryCount : null;   // CK_OM_Delivery
-        entity.ExpectedDeliveryDate = entity.CustomerQty > 0 ? dto.ExpectedDeliveryDate : null;   // CK_OM_DeliveryDate
         entity.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         return null;
     }
 
     /// <summary>
-    /// Khách có cấp thì phải khai ngày dự kiến giao (không trước hôm nay, không sau hạn giao của đơn); khách không cấp thì để trống.
-    /// Giữ nguyên ngày cũ (không đổi) thì không kiểm lại, để sửa ghi chú của đơn đã quá ngày vẫn được.
+    /// DEV-ALL-95: thêm / tăng NVL khách cấp khi đơn đã nhận đủ số lần khách giao thì NVL đó không còn lượt giao nào (phiếu thường bị
+    /// chặn, cũng không phải hàng thiếu) — bắt Quản đốc tăng số lần giao trước. Trả thông báo lỗi, null nếu còn lượt giao.
     /// </summary>
-    private async Task<string?> CheckExpectedDeliveryDateAsync(OrderMaterial entity, IOrderMaterialInput dto, CancellationToken ct)
+    private async Task<string?> CustomerDeliveriesFullAsync(int orderId, CancellationToken ct)
     {
-        if (dto.CustomerQty <= 0)
-            return dto.ExpectedDeliveryDate is null ? null : WarehouseMessages.ExpectedDeliveryNotAllowed;
-        if (dto.ExpectedDeliveryDate is not { } date) return null;   // bắt buộc kiểm ở validator
-        if (entity.ExpectedDeliveryDate == date) return null;
-
-        var due = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
-            .Where(o => o.OrderId == entity.OrderId).Select(o => (DateOnly?)o.DueDate).FirstOrDefaultAsync(ct);
-        return DocumentDateRules.CheckExpectedDelivery(date, _clock.Today, null, due);
+        var expected = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().Where(o => o.OrderId == orderId)
+            .Select(o => o.CustomerDeliveryCount).FirstOrDefaultAsync(ct) ?? 1;
+        return await _deliveries.CustomerDeliveriesAsync(orderId, null, ct) >= expected
+            ? string.Format(WarehouseMessages.CustomerDeliveryFull, expected)
+            : null;
     }
 
     private async Task<Result<OrderMaterialDto>> GetOneAsync(int orderId, int orderMaterialId, CancellationToken ct)
@@ -232,7 +228,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
         return one is null ? NotFound() : Result<OrderMaterialDto>.Success(one);
     }
 
-    /// <summary>Thủ kho cần biết khách sẽ cấp NVL gì, bao nhiêu, dự kiến giao mấy lần để chuẩn bị nhận hàng.</summary>
+    /// <summary>Thủ kho cần biết khách sẽ cấp NVL gì, bao nhiêu để chuẩn bị nhận hàng (lịch giao báo khi khai ở cả đơn).</summary>
     private async Task NotifyCustomerSupplyAsync(int orderId, string orderCode, OrderMaterial entity, CancellationToken ct)
     {
         var material = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => m.MaterialId == entity.MaterialId)
@@ -240,7 +236,7 @@ public sealed class OrderMaterialService : IOrderMaterialService
         await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
             Messages.NotifyIncomingCustomerTitle,
             string.Format(Messages.NotifyIncomingCustomerBody, orderCode, entity.CustomerQty.ToString("0.###"), material.Unit,
-                material.MaterialName, entity.ExpectedDeliveryCount),
+                material.MaterialName),
             IncomingLink, nameof(CustomerOrder), orderId), ct);
     }
 
@@ -263,16 +259,20 @@ public sealed class OrderMaterialService : IOrderMaterialService
     private Task<bool> HasReceiptsAsync(int orderMaterialId, CancellationToken ct) =>
         _uow.Repository<MaterialReceiptLine>().Query().AnyAsync(l => l.OrderMaterialId == orderMaterialId, ct);
 
-    /// <summary>Số phiếu nhập đã xác nhận của từng NVL khách cấp (vw_OrderMaterialDelivery.ReceivedCount).</summary>
+    /// <summary>Số lần khách đã giao (của cả đơn, giống nhau ở mọi NVL khách cấp — vw_OrderMaterialDelivery.ReceivedCount).</summary>
     private async Task<Dictionary<int, int>> ReceivedCountsAsync(int orderId, CancellationToken ct) =>
         await _uow.Repository<VwOrderMaterialDelivery>().Query().AsNoTracking().Where(v => v.OrderId == orderId)
             .ToDictionaryAsync(v => v.OrderMaterialId, v => v.ReceivedCount, ct);
 
-    private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount) => new(
-        om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
-        (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-        om.ExpectedDeliveryCount, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty,
-        om.ExpectedDeliveryDate);
+    /// <summary>Lịch khách giao (của cả đơn) chỉ gắn vào NVL khách có cấp.</summary>
+    private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount, CustomerOrder plan)
+    {
+        var supplied = om.CustomerQty > 0;
+        return new(om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
+            (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
+            supplied ? plan.CustomerDeliveryCount : null, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty,
+            supplied ? plan.CustomerDeliveryDate : null, supplied ? plan.CustomerDeliveryDateTo : null);
+    }
 
     private static string MaterialLabel(Material m) =>
         string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";

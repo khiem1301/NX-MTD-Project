@@ -1,6 +1,7 @@
 import { Descriptions, Typography } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { formatCurrency, formatDate } from '@/utils/format';
+import { formatDeliveryWindow } from '@/utils/expectedDelivery';
 import { GOODS_STATUS_LABEL, PAYMENT_STATUS_LABEL, PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail } from '../types';
 
@@ -31,7 +32,7 @@ export function PurchaseOrderInfo({ order: data }: { order: PurchaseOrderDetail 
           : `${data.receivedCount} / ${data.expectedDeliveryCount}`}
       </Descriptions.Item>
       <Descriptions.Item label={PURCHASE_TEXT.place.expectedDeliveryDate}>
-        {formatDate(data.expectedDeliveryDate ?? null)}
+        {formatDeliveryWindow(data.expectedDeliveryDate, data.expectedDeliveryDateTo)}
       </Descriptions.Item>
       <Descriptions.Item label={text.total}>
         <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>

@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Alert, Space, Tabs } from 'antd';
+import { Alert, Space, Tabs, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDateRangeFields } from '@/components/common/DateInputs';
 import { OrderSelect } from '@/components/common/OrderSelect';
-import { PageCard } from '@/components/common/PageCard';
 import { API_DATE, toApiDate } from '@/utils/format';
-import { NxtReportTable } from '../components/NxtReportTable';
 import { LABELS, WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '../constants';
+import { NxtReportTable } from './NxtReportTable';
 
 type Period = { fromDate: string; toDate: string };
 
@@ -15,13 +14,14 @@ const defaultPeriod = (): Period => {
   return { fromDate: toApiDate(today.startOf('month')), toDate: toApiDate(today) };
 };
 
-/** Báo cáo nhập xuất tồn tổng hợp theo đơn hàng và kỳ (3 kho). */
-export function NxtReportPage() {
+/** Tab "Báo cáo nhập xuất tồn" của màn Tồn kho: tổng hợp theo đơn hàng và kỳ, mỗi kho một tab con. */
+export function NxtReportPanel() {
   const [orderId, setOrderId] = useState<number>();
   const [period, setPeriod] = useState<Period>(defaultPeriod);
 
   return (
-    <PageCard title={LABELS.nxtReportTitle} description={LABELS.nxtReportSubtitle}>
+    <>
+      <Typography.Paragraph type="secondary">{LABELS.nxtReportSubtitle}</Typography.Paragraph>
       <Space wrap style={{ marginBottom: 16 }}>
         <OrderSelect
           allowClear
@@ -59,6 +59,6 @@ export function NxtReportPage() {
           }))}
         />
       )}
-    </PageCard>
+    </>
   );
 }

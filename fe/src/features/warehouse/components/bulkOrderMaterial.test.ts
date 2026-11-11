@@ -1,5 +1,11 @@
 import type { MaterialOption } from '@/types/lookup';
-import { EMPTY_DRAFT, matchesKeyword, rowError, type BulkLine } from './bulkOrderMaterial';
+import {
+  applyDraftChange,
+  EMPTY_DRAFT,
+  matchesKeyword,
+  rowError,
+  type BulkLine,
+} from './bulkOrderMaterial';
 
 const OPTIONS = [
   { materialId: 2, materialCode: 'CHI01', materialName: 'Chỉ may', color: 'Xanh', unit: 'cuộn' },
@@ -34,51 +40,32 @@ describe('rowError', () => {
   it('dòng hợp lệ không có lỗi', () => {
     expect(rowError(line({}))).toBeNull();
     expect(rowError(line({ requiredQty: 100_000_000 }))).toBeNull();
-    expect(
-      rowError(
-        line({
-          requiredQty: 0,
-          customerQty: 5,
-          expectedDeliveryCount: 99,
-          expectedDeliveryDate: '2026-12-01',
-        }),
-      ),
-    ).toBeNull();
+    // Lịch khách giao khai ở cả đơn (DEV-ALL-95): dòng khách cấp không cần số lần / ngày giao.
+    expect(rowError(line({ requiredQty: 0, customerQty: 5 }))).toBeNull();
   });
 
-  it('khách cấp mà chưa chọn ngày dự kiến giao thì báo thiếu', () => {
-    expect(
-      rowError(line({ customerQty: 5, expectedDeliveryCount: 1, expectedDeliveryDate: null })),
-    ).toBe('Vui lòng nhập thông tin này.');
-  });
-
-  it('chưa chọn NVL, hoặc cả hai số bằng 0, hoặc khách cấp mà thiếu số lần giao', () => {
+  it('chưa chọn NVL hoặc cả hai số bằng 0 thì báo', () => {
     expect(rowError(line({}, null))).toBe('Vui lòng nhập thông tin này.');
     expect(rowError(line({ requiredQty: 0 }))).toBe(
       'Phải nhập số cần hoặc số khách cấp lớn hơn 0.',
-    );
-    expect(rowError(line({ customerQty: 5, expectedDeliveryCount: null }))).toBe(
-      'Vui lòng nhập thông tin này.',
     );
   });
 
   it('số lượng vượt giới hạn hoặc quá 3 số lẻ thì báo đúng ô', () => {
     expect(rowError(line({ requiredQty: 100_000_001 }))).toBe('Số cần tối đa 100.000.000.');
     expect(rowError(line({ requiredQty: 1.2345 }))).toBe('Số cần tối đa 3 số lẻ.');
-    expect(rowError(line({ customerQty: 1e15, expectedDeliveryCount: 1 }))).toBe(
-      'Số khách cấp tối đa 100.000.000.',
-    );
-  });
-
-  it('số lần giao ngoài 1..99 hoặc không nguyên thì báo; khách không cấp thì bỏ qua', () => {
-    const range = 'Số lần giao dự kiến phải là số nguyên từ 1 đến 99.';
-    expect(rowError(line({ customerQty: 5, expectedDeliveryCount: 100 }))).toBe(range);
-    expect(rowError(line({ customerQty: 5, expectedDeliveryCount: 1.5 }))).toBe(range);
-    expect(rowError(line({ customerQty: 0, expectedDeliveryCount: 100 }))).toBeNull();
+    expect(rowError(line({ customerQty: 1e15 }))).toBe('Số khách cấp tối đa 100.000.000.');
   });
 
   it('ghi chú quá 500 ký tự thì báo', () => {
     expect(rowError(line({ note: 'n'.repeat(501) }))).toBe('Ghi chú tối đa 500 ký tự.');
     expect(rowError(line({ note: ` ${'n'.repeat(500)} ` }))).toBeNull();
+  });
+});
+
+describe('applyDraftChange', () => {
+  it('chỉ đổi ô được sửa', () => {
+    const next = applyDraftChange({ ...EMPTY_DRAFT, requiredQty: 3 }, { customerQty: 5 });
+    expect(next).toEqual({ ...EMPTY_DRAFT, requiredQty: 3, customerQty: 5 });
   });
 });

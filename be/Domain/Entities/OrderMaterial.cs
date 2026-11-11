@@ -18,10 +18,6 @@ public partial class OrderMaterial
 
     public decimal CustomerQty { get; set; }
 
-    public short? ExpectedDeliveryCount { get; set; }
-
-    public DateOnly? ExpectedDeliveryDate { get; set; }
-
     public decimal? PurchaseQty { get; set; }
 
     public string? Source { get; set; }

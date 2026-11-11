@@ -1,6 +1,7 @@
 using FluentValidation;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
+using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.Application.Validators;
 
@@ -9,7 +10,6 @@ public sealed class OrderMaterialInputValidator : AbstractValidator<IOrderMateri
     /// <summary>Cột DECIMAL(18,3): vượt thì database báo tràn số (lỗi hệ thống), quá 3 số lẻ thì bị làm tròn âm thầm.</summary>
     public const decimal MaxQty = 100_000_000m;
     public const int QtyDecimals = 3;
-    public const int MaxDeliveryCount = 99;
 
     public OrderMaterialInputValidator()
     {
@@ -22,15 +22,6 @@ public sealed class OrderMaterialInputValidator : AbstractValidator<IOrderMateri
             .GreaterThanOrEqualTo(0).WithMessage("Số khách cấp không được âm.")
             .LessThanOrEqualTo(MaxQty).WithMessage("Số khách cấp tối đa 100.000.000.")
             .Must(HasValidScale).WithMessage($"Số khách cấp tối đa {QtyDecimals} số lẻ.");
-        // CK_OM_Delivery: khách có cấp thì bắt buộc khai số lần giao (>= 1); khách không cấp thì để trống.
-        RuleFor(x => x.ExpectedDeliveryCount).Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage(WarehouseMessages.CustomerDeliveryCountRequired)
-            .Must(c => c is >= 1 and <= MaxDeliveryCount).WithMessage($"Số lần giao dự kiến phải từ 1 đến {MaxDeliveryCount}.")
-            .When(x => x.CustomerQty > 0);
-        RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired).When(x => x.CustomerQty > 0);
-        RuleFor(x => x.ExpectedDeliveryDate).Null().WithMessage(WarehouseMessages.ExpectedDeliveryNotAllowed).When(x => x.CustomerQty == 0);
-        RuleFor(x => x.ExpectedDeliveryCount).Null().When(x => x.CustomerQty == 0)
-            .WithMessage(WarehouseMessages.CustomerDeliveryCountNotAllowed);
         // Chỉ báo khi từng số đã hợp lệ, tránh hai thông báo cho cùng một ô.
         RuleFor(x => x).Must(x => x.RequiredQty > 0 || x.CustomerQty > 0).WithName("RequiredQty")
             .WithMessage(WarehouseMessages.OrderMaterialQtyRequired)
@@ -64,5 +55,19 @@ public sealed class CreateOrderMaterialBatchDtoValidator : AbstractValidator<Cre
         RuleForEach(x => x.Lines).SetValidator(new OrderMaterialInputValidator());
         RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.MaterialId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
+    }
+}
+
+/// <summary>Lịch khách giao NVL của cả đơn: số lần 1–99, ngày bắt buộc, giao từ 2 lần trở lên thì có ngày giao đến (DEV-ALL-95).</summary>
+public sealed class SaveOrderCustomerDeliveryDtoValidator : AbstractValidator<SaveOrderCustomerDeliveryDto>
+{
+    public SaveOrderCustomerDeliveryDtoValidator()
+    {
+        RuleFor(x => x.DeliveryCount).InclusiveBetween((short)1, DeliveryLimits.MaxCount)
+            .WithMessage(string.Format(WarehouseMessages.CustomerDeliveryCountInvalid, DeliveryLimits.MaxCount));
+        RuleFor(x => x.DeliveryDate).NotEqual(default(DateOnly)).WithMessage(WarehouseMessages.ExpectedDeliveryRequired);
+        RuleFor(x => x.DeliveryDateTo)
+            .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.DeliveryCount, x.DeliveryDate, to) is null)
+            .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.DeliveryCount, x.DeliveryDate, to));
     }
 }

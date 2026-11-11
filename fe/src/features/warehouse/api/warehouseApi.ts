@@ -20,6 +20,7 @@ import type {
   CreatePurchaseOrderPayload,
   IncomingMaterials,
   CreateOrderMaterialsPayload,
+  OrderCustomerDelivery,
   OrderMaterial,
   OrderMaterialPageQuery,
   OrderProductMaterials,
@@ -28,6 +29,7 @@ import type {
   PurchaseOrderQuery,
   ResolveShortDeliveryPayload,
   SaveMaterialPayload,
+  SaveOrderCustomerDeliveryPayload,
   SaveOrderMaterialPayload,
   SaveReceiptPayload,
   SaveSupplementaryPayload,
@@ -76,6 +78,16 @@ export const warehouseApi = {
     post<OrderMaterial[]>(`${API.warehouse.orderMaterials(role)}/batch`, body),
   updateOrderMaterial: (role: RolePath, id: number, body: SaveOrderMaterialPayload) =>
     put<OrderMaterial>(`${API.warehouse.orderMaterials(role)}/${id}`, body),
+  /** Lịch khách giao NVL của cả đơn (DEV-ALL-95). */
+  getCustomerDelivery: (role: RolePath, orderId: number) =>
+    get<OrderCustomerDelivery>(
+      `${API.warehouse.orderMaterials(role)}/customer-delivery/${orderId}`,
+    ),
+  saveCustomerDelivery: (role: RolePath, orderId: number, body: SaveOrderCustomerDeliveryPayload) =>
+    put<OrderCustomerDelivery>(
+      `${API.warehouse.orderMaterials(role)}/customer-delivery/${orderId}`,
+      body,
+    ),
   deleteOrderMaterial: async (role: RolePath, id: number): Promise<void> => {
     await apiClient.delete(`${API.warehouse.orderMaterials(role)}/${id}`);
   },

@@ -33,4 +33,21 @@ public static class DocumentDateRules
         if (orderDueDate is { } due && date > due) return string.Format(WarehouseMessages.ExpectedDeliveryAfterDue, due);
         return null;
     }
+
+    /// <summary>Giao từ số lần này trở lên thì ngày dự kiến giao là một khoảng (từ ngày – đến ngày).</summary>
+    public const int RangeDeliveryCount = 2;
+
+    /// <summary>Có nhập khoảng ngày giao không (giao từ <see cref="RangeDeliveryCount"/> lần trở lên).</summary>
+    public static bool IsRangeDelivery(short? count) => count >= RangeDeliveryCount;
+
+    /// <summary>
+    /// Khoảng ngày giao: giao từ <see cref="RangeDeliveryCount"/> lần trở lên thì bắt buộc có ngày giao đến, không trước ngày giao từ.
+    /// Giao một lần thì bỏ qua ngày giao đến (service tự để trống).
+    /// </summary>
+    public static string? CheckDeliveryRange(short? count, DateOnly? from, DateOnly? to)
+    {
+        if (!IsRangeDelivery(count)) return null;
+        if (to is not { } end) return WarehouseMessages.DeliveryDateToRequired;
+        return from is { } start && end < start ? WarehouseMessages.DeliveryDateToBeforeFrom : null;
+    }
 }
