@@ -20,10 +20,6 @@ public partial class CuttingLay
 
     public short LaySequence { get; set; }
 
-    public int FabricMaterialId { get; set; }
-
-    /// <summary>Số mét vải tổ cắt đã dùng cho bàn (DEV-ALL-90); null = bàn cũ chưa có chiều dài bàn cắt.</summary>
-    public decimal? FabricUsedM { get; set; }
 
     public string? Note { get; set; }
 
@@ -35,7 +31,8 @@ public partial class CuttingLay
 
     public virtual Team CuttingTeam { get; set; } = null!;
 
-    public virtual Material FabricMaterial { get; set; } = null!;
+    /// <summary>Số mét từng vải của bàn (DEV-ALL-93).</summary>
+    public virtual ICollection<CuttingLayFabric> CuttingLayFabrics { get; set; } = new List<CuttingLayFabric>();
 
     public virtual WorkOrder WorkOrder { get; set; } = null!;
 }

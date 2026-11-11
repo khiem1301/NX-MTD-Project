@@ -45,6 +45,23 @@ public sealed class FabricPlanner
             .ToList();
     }
 
+    /// <summary>Vải mỗi dòng cần (DEV-ALL-93): cả bộ = mọi vải chi tiết PANEL của màu áo; cắt bù / cắt lẻ = vải của dòng định mức.</summary>
+    public async Task<IReadOnlyDictionary<FabricLine, IReadOnlyList<int>>> FabricIdsByLineAsync(IEnumerable<FabricLine> lines,
+        CancellationToken ct)
+    {
+        var list = lines.Distinct().ToList();
+        var colorIds = list.Select(d => d.ProductColorId).Distinct().ToArray();
+        var rows = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
+            .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
+                        && p.Material.MaterialType == MaterialTypes.Fabric)
+            .Select(p => new { p.ProductComponentMaterialId, p.ProductColorId, p.MaterialId })
+            .ToListAsync(ct);
+        return list.ToDictionary(d => d, d => (IReadOnlyList<int>)rows
+            .Where(r => r.ProductColorId == d.ProductColorId
+                        && (d.ProductComponentMaterialId == null || d.ProductComponentMaterialId == r.ProductComponentMaterialId))
+            .Select(r => r.MaterialId).Distinct().OrderBy(id => id).ToList());
+    }
+
     /// <summary>Vải tổ cắt đang giữ của đơn = đã nhận (phiếu cấp RECEIVED) − đã trả về kho (phiếu trả CONFIRMED).</summary>
     public async Task<decimal> GetTeamHoldingAsync(int cuttingTeamId, int orderId, int materialId,
         CancellationToken ct)
@@ -70,12 +87,12 @@ public sealed class FabricPlanner
     /// </summary>
     public async Task<Dictionary<int, (decimal CutQty, int UnmeasuredLays)>> GetCutAsync(int cuttingTeamId, int orderId, CancellationToken ct)
     {
-        var lays = await _uow.Repository<CuttingLay>().Query().AsNoTracking()
-            .Where(l => l.CuttingTeamId == cuttingTeamId && l.WorkOrder.OrderId == orderId)
-            .Select(l => new { l.FabricMaterialId, l.FabricUsedM })
+        var fabrics = await _uow.Repository<CuttingLayFabric>().Query().AsNoTracking()
+            .Where(f => f.CuttingLay.CuttingTeamId == cuttingTeamId && f.CuttingLay.WorkOrder.OrderId == orderId)
+            .Select(f => new { f.MaterialId, f.UsedM })
             .ToListAsync(ct);
-        return lays.GroupBy(l => l.FabricMaterialId).ToDictionary(g => g.Key, g =>
-            (g.Sum(l => l.FabricUsedM ?? 0m), g.Count(l => l.FabricUsedM is null)));
+        return fabrics.GroupBy(f => f.MaterialId).ToDictionary(g => g.Key, g =>
+            (g.Sum(f => f.UsedM ?? 0m), g.Count(f => f.UsedM is null)));
     }
 
     /// <summary>Vải đã cấp theo lệnh cắt: phiếu chờ nhận tính số cấp, phiếu đã nhận tính số xác nhận.

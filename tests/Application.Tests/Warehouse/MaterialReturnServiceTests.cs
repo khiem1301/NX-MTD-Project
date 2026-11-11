@@ -29,6 +29,7 @@ public class MaterialReturnServiceTests
     private readonly List<MaterialReturn> _returns = new();
     private readonly List<MaterialReturnLine> _returnLines = new();
     private readonly List<CuttingLay> _lays = new();
+    private readonly List<CuttingLayFabric> _layFabrics = new();
     private readonly Team _team = new() { TeamId = CutTeam, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting };
     private readonly Material _fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
     private readonly MaterialIssue _issue;
@@ -53,7 +54,7 @@ public class MaterialReturnServiceTests
         };
         _issue.MaterialIssueLines.Add(_line);
         _teams.Add(_team); _issues.Add(_issue); _issueLines.Add(_line);
-        Setup(_teams); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines); Setup(_lays);
+        Setup(_teams); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines); Setup(_lays); Setup(_layFabrics);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -65,10 +66,10 @@ public class MaterialReturnServiceTests
 
     private MaterialReturnService Service() => new(_uow, _stock, _codes, _notifier, _locks, _clock, new FabricPlanner(_uow));
 
-    private void Lay(decimal? usedM) => _lays.Add(new CuttingLay
+    private void Lay(decimal? usedM) => _layFabrics.Add(new CuttingLayFabric
     {
-        CuttingTeamId = CutTeam, FabricMaterialId = 1, FabricUsedM = usedM,
-        WorkOrder = new WorkOrder { OrderId = 7 },
+        MaterialId = 1, UsedM = usedM,
+        CuttingLay = new CuttingLay { CuttingTeamId = CutTeam, WorkOrder = new WorkOrder { OrderId = 7 } },
     });
 
     private MaterialReturn Return(string status, decimal returned, decimal? confirmed = null)

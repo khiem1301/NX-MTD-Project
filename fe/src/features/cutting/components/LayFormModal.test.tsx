@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { LABELS } from '../constants';
@@ -11,6 +11,24 @@ jest.mock('../hooks/useCutting', () => ({
   useSaveLay: () => ({ mutate: mockSave, isPending: false }),
 }));
 
+const fabric = (materialId: number, code: string, cutQty: number) => ({
+  materialId,
+  materialCode: code,
+  materialName: code === 'V01' ? 'Kaki' : 'Lót',
+  unit: 'm',
+  materialColor: '',
+  issuedQty: 100,
+  availableQty: 0,
+  receivedQty: 100,
+  returnedQty: 0,
+  usedQty: 100,
+  heldQty: 100,
+  cutQty,
+  remainingQty: 100 - cutQty,
+  unmeasuredLayCount: 0,
+});
+
+/** Áo Đen cả bộ dùng 2 vải: thân V01 (còn 40 m), lót V02 (còn 90 m). */
 const workOrder = {
   workOrderId: 7,
   workOrderCode: 'LC-7',
@@ -26,51 +44,51 @@ const workOrder = {
       plannedQty: 100,
       cutQty: 0,
       handedQty: 0,
+      fabricMaterialIds: [1, 2],
     },
   ],
-  fabrics: [
-    {
-      materialId: 1,
-      materialCode: 'V01',
-      materialName: 'Kaki',
-      unit: 'm',
-      materialColor: '',
-      issuedQty: 100,
-      availableQty: 0,
-      receivedQty: 100,
-      returnedQty: 0,
-      usedQty: 100,
-      heldQty: 100,
-      cutQty: 60,
-      remainingQty: 40,
-      unmeasuredLayCount: 0,
-    },
-  ],
+  fabrics: [fabric(1, 'V01', 60), fabric(2, 'V02', 10)],
 } as unknown as WorkOrder;
 
 const renderModal = () =>
   render(<LayFormModal open workOrder={workOrder} lay={null} onClose={jest.fn()} />);
 
-const fabricInput = () => screen.getByLabelText(LABELS.layFabricUsed);
+const usedInput = (code: string) => screen.getByLabelText(`${LABELS.layFabricUsed} ${code}`);
 const qtyInput = () => screen.getByLabelText(`${LABELS.actualQty} Đen - M`);
 const save = () => fireEvent.click(screen.getByRole('button', { name: MESSAGES.common.save }));
 
 describe('LayFormModal', () => {
   beforeEach(() => mockSave.mockReset());
 
-  it('hiện vải còn lại của tổ và tính lại khi nhập số mét', async () => {
+  it('chưa nhập số lượng thì chưa hiện vải; cắt cả bộ thì hiện đủ mọi vải của bộ', async () => {
     renderModal();
-    fireEvent.change(fabricInput(), { target: { value: '15' } });
+    expect(screen.getByText(LABELS.layFabricsEmpty)).toBeInTheDocument();
 
-    const balance = screen.getByTestId('lay-fabric-balance');
-    await waitFor(() => expect(within(balance).getByText('25')).toBeInTheDocument());
-    expect(within(balance).getByText('40')).toBeInTheDocument();
+    fireEvent.change(qtyInput(), { target: { value: '20' } });
+
+    expect(await screen.findByLabelText(`${LABELS.layFabricUsed} V01`)).toBeInTheDocument();
+    expect(usedInput('V02')).toBeInTheDocument();
   });
 
-  it('chặn số mét vượt vải còn lại của tổ', async () => {
+  it('bắt buộc nhập đủ số mét mọi vải', async () => {
     renderModal();
-    fireEvent.change(fabricInput(), { target: { value: '41' } });
     fireEvent.change(qtyInput(), { target: { value: '20' } });
+    fireEvent.change(await screen.findByLabelText(`${LABELS.layFabricUsed} V01`), {
+      target: { value: '30' },
+    });
+    save();
+
+    expect(await screen.findByText(MESSAGES.common.required)).toBeInTheDocument();
+    expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it('chặn vải vượt số còn lại của tổ', async () => {
+    renderModal();
+    fireEvent.change(qtyInput(), { target: { value: '20' } });
+    fireEvent.change(await screen.findByLabelText(`${LABELS.layFabricUsed} V01`), {
+      target: { value: '41' },
+    });
+    fireEvent.change(usedInput('V02'), { target: { value: '5' } });
     save();
 
     expect(
@@ -79,26 +97,22 @@ describe('LayFormModal', () => {
     expect(mockSave).not.toHaveBeenCalled();
   });
 
-  it('bắt buộc nhập số mét vải đã dùng', async () => {
+  it('gửi số lượng sau cắt và số mét từng vải', async () => {
     renderModal();
     fireEvent.change(qtyInput(), { target: { value: '20' } });
-    save();
-
-    expect(await screen.findByText(MESSAGES.common.required)).toBeInTheDocument();
-    expect(mockSave).not.toHaveBeenCalled();
-  });
-
-  it('gửi số lượng sau cắt và số mét vải', async () => {
-    renderModal();
-    fireEvent.change(fabricInput(), { target: { value: '40' } });
-    fireEvent.change(qtyInput(), { target: { value: '20' } });
+    fireEvent.change(await screen.findByLabelText(`${LABELS.layFabricUsed} V01`), {
+      target: { value: '40' },
+    });
+    fireEvent.change(usedInput('V02'), { target: { value: '12,5' } });
     save();
 
     await waitFor(() => expect(mockSave).toHaveBeenCalled());
     expect(mockSave.mock.calls[0][0].body).toMatchObject({
       workOrderId: 7,
-      fabricMaterialId: 1,
-      fabricUsedM: 40,
+      fabrics: [
+        { materialId: 1, usedM: 40 },
+        { materialId: 2, usedM: 12.5 },
+      ],
       lines: [{ orderLineId: 10, productComponentMaterialId: null, actualQty: 20 }],
     });
   });

@@ -1,6 +1,12 @@
 import type { FabricRequirement } from '@/types/workOrder';
 import type { CuttingLayLine, WorkOrderLine } from '../types';
-import { cutBeforeOf, remainingToCut, teamFabricBalance } from './layRemaining';
+import {
+  cutBeforeOf,
+  formatLayFabrics,
+  remainingToCut,
+  requiredFabricIds,
+  teamFabricBalance,
+} from './layRemaining';
 
 const line = (over: Partial<WorkOrderLine> = {}): WorkOrderLine => ({
   workOrderLineId: 1,
@@ -12,6 +18,7 @@ const line = (over: Partial<WorkOrderLine> = {}): WorkOrderLine => ({
   plannedQty: 100,
   cutQty: 60,
   handedQty: 0,
+  fabricMaterialIds: [1],
   ...over,
 });
 
@@ -57,12 +64,30 @@ describe('teamFabricBalance', () => {
   });
 
   it('sửa bàn cũ cùng vải: không tính trùng số mét của chính bàn đó', () => {
-    const b = teamFabricBalance(fabric(), { fabricMaterialId: 1, fabricUsedM: 20 }, 50);
+    const b = teamFabricBalance(
+      fabric(),
+      {
+        fabrics: [
+          { materialId: 1, materialCode: 'V01', materialName: '', materialColor: '', usedM: 20 },
+        ],
+      },
+      50,
+    );
     expect([b.usedBefore, b.left, b.after]).toEqual([40, 60, 10]);
   });
 
   it('sửa bàn cũ nhưng đổi sang vải khác: không trừ bàn đó', () => {
-    expect(teamFabricBalance(fabric(), { fabricMaterialId: 2, fabricUsedM: 20 }, 0).left).toBe(40);
+    expect(
+      teamFabricBalance(
+        fabric(),
+        {
+          fabrics: [
+            { materialId: 2, materialCode: 'V02', materialName: '', materialColor: '', usedM: 20 },
+          ],
+        },
+        0,
+      ).left,
+    ).toBe(40);
   });
 
   it('đã dùng nhiều hơn đang giữ: còn lại 0, sau bàn này âm (vượt)', () => {
@@ -91,5 +116,36 @@ describe('remainingToCut', () => {
     expect(remainingToCut(100, 60, 0)).toBe(40);
     expect(remainingToCut(100, 60, 30)).toBe(10);
     expect(remainingToCut(100, 60, 45)).toBe(-5);
+  });
+});
+
+describe('requiredFabricIds', () => {
+  it('hợp vải các dòng có số lượng; dòng trống / 0 không tính', () => {
+    const lines = [
+      line({ orderLineId: 10, fabricMaterialIds: [1, 2] }),
+      line({ orderLineId: 11, fabricMaterialIds: [1, 3] }),
+      line({ orderLineId: 12, fabricMaterialIds: [4] }),
+    ];
+    expect(requiredFabricIds(lines, { '10:': 5, '11:': 3, '12:': 0 })).toEqual([1, 2, 3]);
+    expect(requiredFabricIds(lines, {})).toEqual([]);
+  });
+
+  it('dòng cắt bù chỉ cần vải của chi tiết', () => {
+    const lines = [line({ productComponentMaterialId: 7, fabricMaterialIds: [2] })];
+    expect(requiredFabricIds(lines, { '10:7': 4 })).toEqual([2]);
+  });
+});
+
+describe('formatLayFabrics', () => {
+  it('liệt kê mã vải và số mét; bàn cũ chưa có số mét ghi —', () => {
+    const f = (code: string, usedM: number | null) => ({
+      materialId: 1,
+      materialCode: code,
+      materialName: '',
+      materialColor: '',
+      usedM,
+    });
+    expect(formatLayFabrics([f('V01', 66), f('V02', null)], String)).toBe('V01: 66; V02: —');
+    expect(formatLayFabrics([], String)).toBe('—');
   });
 });

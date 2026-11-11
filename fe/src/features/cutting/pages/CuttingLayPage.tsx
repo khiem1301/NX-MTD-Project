@@ -15,6 +15,7 @@ import { LABELS, LAY_STATUS, LAY_STATUS_LABEL, SHIFT_LABEL, WORK_ORDER_STATUS } 
 import { useLays, useWorkOrder, useWorkOrders } from '../hooks/useCutting';
 import type { CuttingLay } from '../types';
 import { LayDetailModal } from '../components/LayDetailModal';
+import { formatLayFabrics } from '../utils/layRemaining';
 import { DataTable } from '@/components/common/DataTable';
 
 const CUTTABLE: readonly string[] = [WORK_ORDER_STATUS.OPEN, WORK_ORDER_STATUS.CUTTING];
@@ -50,12 +51,10 @@ export function CuttingLayPage() {
     },
     { title: LABELS.shift, dataIndex: 'shiftCode', render: (v: string) => SHIFT_LABEL[v] ?? v },
     { title: LABELS.laySequence, dataIndex: 'laySequence', align: 'right' },
-    { title: LABELS.fabricColor, dataIndex: 'fabricColor', render: (v: string) => v || '—' },
     {
-      title: LABELS.layFabricUsed,
-      dataIndex: 'fabricUsedM',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatQty(v)),
+      title: LABELS.layFabrics,
+      key: 'fabrics',
+      render: (_, l) => formatLayFabrics(l.fabrics, formatQty),
     },
     { title: LABELS.sizeSummary, dataIndex: 'sizeSummary' },
     {

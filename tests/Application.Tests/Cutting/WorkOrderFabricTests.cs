@@ -27,6 +27,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<MaterialReturnLine> _returnLines = [];
     private readonly List<CuttingLay> _lays = [];
+    private readonly List<CuttingLayFabric> _layFabrics = [];
     private readonly List<ProductVariant> _variants = [];
     private readonly List<ProductMarkerFabric> _groupFabrics = [];
     private readonly List<ProductMarkerComponent> _groupComponents = [];
@@ -39,7 +40,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     public WorkOrderFabricTests()
     {
         SetupQueryable(_requests); SetupQueryable(_orders); SetupQueryable(_teams); SetupQueryable(_lines); SetupQueryable(_workOrders);
-        SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_lays);
+        SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_lays); SetupQueryable(_layFabrics);
         SetupQueryable(_variants); SetupQueryable(_groupFabrics); SetupQueryable(_groupComponents); SetupQueryable(_markers);
         _orders.Add(new CustomerOrder { OrderId = OrderId, OrderCode = "DH001", Status = OrderStatuses.InProduction });
         _teams.Add(new Team { TeamId = TeamId, TeamCode = "CAT", TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
@@ -181,7 +182,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     }
 
     private void AddLay(decimal? usedM, int team = TeamId, int order = OrderId, int fabric = FabricId) =>
-        _lays.Add(new CuttingLay { CuttingTeamId = team, FabricMaterialId = fabric, FabricUsedM = usedM, WorkOrder = new WorkOrder { OrderId = order } });
+        _layFabrics.Add(new CuttingLayFabric { MaterialId = fabric, UsedM = usedM, CuttingLay = new CuttingLay { CuttingTeamId = team, WorkOrder = new WorkOrder { OrderId = order } } });
 
     private void HeldFabric(decimal received, decimal returned)
     {

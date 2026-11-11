@@ -4,6 +4,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { formatDate, formatQty } from '@/utils/format';
 import { LABELS, LAY_STATUS_LABEL, SHIFT_LABEL } from '../constants';
 import type { CuttingLay, CuttingLayLine } from '../types';
+import { formatLayFabrics } from '../utils/layRemaining';
 import { DataTable } from '@/components/common/DataTable';
 
 const columns: TableColumnsType<CuttingLayLine> = [
@@ -32,11 +33,8 @@ export function LayDetailModal({ lay, onClose }: { lay: CuttingLay | null; onClo
             <Descriptions.Item label={LABELS.shift}>
               {SHIFT_LABEL[lay.shiftCode] ?? lay.shiftCode}
             </Descriptions.Item>
-            <Descriptions.Item label={LABELS.fabricColor}>
-              {lay.fabricColor || '—'}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.layFabricUsed}>
-              {lay.fabricUsedM === null ? '—' : formatQty(lay.fabricUsedM)}
+            <Descriptions.Item label={LABELS.layFabrics} span={2}>
+              {formatLayFabrics(lay.fabrics, formatQty)}
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.sizeSummary}>{lay.sizeSummary}</Descriptions.Item>
             <Descriptions.Item label={LABELS.status}>

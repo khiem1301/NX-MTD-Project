@@ -1,24 +1,16 @@
 import { useEffect } from 'react';
-import { Col, Form, Input, Modal, Row, Select, message } from 'antd';
+import { Col, Form, Input, Modal, Row, Select, Typography, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import {
-  LABELS,
-  LAY_FABRIC_DECIMALS,
-  LAY_MAX_FABRIC_USED_M,
-  SHIFT_OPTIONS,
-  lineKey,
-  parseLineKey,
-} from '../constants';
+import { LABELS, SHIFT_OPTIONS, lineKey, parseLineKey } from '../constants';
 import { useSaveLay } from '../hooks/useCutting';
 import type { CuttingLay, SaveCuttingLayPayload, WorkOrder } from '../types';
-import { teamFabricBalance } from '../utils/layRemaining';
+import { requiredFabricIds } from '../utils/layRemaining';
 import { LayFabricBalance } from './LayFabricBalance';
 import { LayLinesTable } from './LayLinesTable';
-import { API_DATE, fill, formatQty } from '@/utils/format';
+import { API_DATE } from '@/utils/format';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
-import { QtyInput } from '@/components/common/QtyInput';
 
 const FULL = { width: '100%' };
 
@@ -29,22 +21,22 @@ type LayFormModalProps = {
   onClose: () => void;
 };
 
-type FormValues = Omit<SaveCuttingLayPayload, 'workDate' | 'lines' | 'workOrderId'> & {
+type FormValues = Pick<SaveCuttingLayPayload, 'shiftCode' | 'note'> & {
   workDate: Dayjs;
   qty: Record<string, number | null>;
+  fabricUsed: Record<string, number | null>;
 };
 
 /**
- * UC51: nhập bàn cắt của lệnh cắt: số lượng sau cắt từng màu - size và số mét vải đã dùng của cả bàn (DEV-ALL-90).
- * Hiện vải còn lại của tổ trên đơn; số mét vượt số còn lại thì báo ngay (BE cũng chặn), BE chặn vượt kế hoạch + % dư.
+ * UC51: nhập bàn cắt của lệnh cắt: số lượng sau cắt từng màu - size và số mét đã dùng của từng vải (DEV-ALL-90, DEV-ALL-93).
+ * Vải phải nhập = hợp vải các dòng có số lượng (cả bộ: mọi vải của bộ). Vượt vải còn lại của tổ thì báo ngay (BE cũng chặn).
  */
 export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProps) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveLay();
-  const fabricId = Form.useWatch('fabricMaterialId', form);
-  const usedM = (Form.useWatch('fabricUsedM', form) as number | null | undefined) ?? 0;
-  const fabric = workOrder.fabrics.find((f) => f.materialId === fabricId);
-  const balance = fabric ? teamFabricBalance(fabric, lay, usedM) : null;
+  const qty = (Form.useWatch('qty', form) as FormValues['qty'] | undefined) ?? {};
+  const fabricIds = requiredFabricIds(workOrder.lines, qty);
+  const fabrics = fabricIds.flatMap((id) => workOrder.fabrics.filter((f) => f.materialId === id));
 
   useEffect(() => {
     if (!open) return;
@@ -54,21 +46,16 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
         ? {
             workDate: dayjs(lay.workDate),
             shiftCode: lay.shiftCode,
-            fabricMaterialId: lay.fabricMaterialId ?? undefined,
-            fabricUsedM: lay.fabricUsedM ?? undefined,
             note: lay.note ?? undefined,
             qty: Object.fromEntries(lay.lines.map((l) => [lineKey(l), l.actualQty])),
+            fabricUsed: Object.fromEntries(lay.fabrics.map((f) => [String(f.materialId), f.usedM])),
           }
-        : {
-            workDate: dayjs(),
-            shiftCode: SHIFT_OPTIONS[0]?.value,
-            fabricMaterialId: workOrder.fabrics[0]?.materialId,
-          },
+        : { workDate: dayjs(), shiftCode: SHIFT_OPTIONS[0]?.value },
     );
   }, [open, lay, workOrder, form]);
 
-  const handleFinish = ({ qty, workDate, ...rest }: FormValues) => {
-    const lines = Object.entries(qty ?? {})
+  const handleFinish = ({ qty: lineQty, fabricUsed, workDate, ...rest }: FormValues) => {
+    const lines = Object.entries(lineQty ?? {})
       .filter(([, q]) => (q ?? 0) > 0)
       .map(([id, q]) => ({ ...parseLineKey(id), actualQty: q ?? 0 }));
     if (lines.length === 0) return void message.warning(MESSAGES.cutting.layQtyRequired);
@@ -76,20 +63,13 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
       ...rest,
       workOrderId: workOrder.workOrderId,
       workDate: workDate.format(API_DATE),
+      fabrics: fabricIds.map((id) => ({ materialId: id, usedM: fabricUsed?.[String(id)] ?? 0 })),
       lines,
     };
     save.mutate({ id: lay?.cuttingLayId, body }, { onSuccess: onClose });
   };
 
-  const fabricOptions = workOrder.fabrics.map((f) => ({
-    value: f.materialId,
-    label: `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
-  }));
   const required = [{ required: true, message: MESSAGES.common.required }];
-  const withinRemaining = async (_rule: unknown, value?: number | null) => {
-    if (balance && (value ?? 0) > balance.left)
-      throw new Error(fill(MESSAGES.cutting.layFabricOverRemaining, formatQty(balance.left)));
-  };
 
   return (
     <Modal
@@ -109,7 +89,7 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
         <Row gutter={12}>
-          <Col xs={12} md={5}>
+          <Col xs={12} md={6}>
             <Form.Item name="workDate" label={LABELS.workDate} rules={required}>
               <AppDatePicker
                 style={FULL}
@@ -119,35 +99,18 @@ export function LayFormModal({ open, workOrder, lay, onClose }: LayFormModalProp
               />
             </Form.Item>
           </Col>
-          <Col xs={12} md={4}>
+          <Col xs={12} md={5}>
             <Form.Item name="shiftCode" label={LABELS.shift} rules={required}>
               <Select options={SHIFT_OPTIONS} />
             </Form.Item>
           </Col>
-          <Col xs={24} md={9}>
-            <Form.Item name="fabricMaterialId" label={LABELS.fabricMaterial} rules={required}>
-              <Select options={fabricOptions} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={6}>
-            <Form.Item
-              name="fabricUsedM"
-              label={LABELS.layFabricUsed}
-              dependencies={['fabricMaterialId']}
-              rules={[...required, { validator: withinRemaining }]}
-            >
-              <QtyInput
-                min={0.01}
-                max={LAY_MAX_FABRIC_USED_M}
-                decimals={LAY_FABRIC_DECIMALS}
-                style={FULL}
-              />
-            </Form.Item>
-          </Col>
         </Row>
-        {balance && <LayFabricBalance balance={balance} />}
         <LayLinesTable lines={workOrder.lines} editingLines={lay?.lines} />
-        <Form.Item name="note" label={LABELS.note} style={{ marginTop: 16, marginBottom: 0 }}>
+        <Typography.Title level={5} style={{ marginTop: 16 }}>
+          {LABELS.layFabrics}
+        </Typography.Title>
+        <LayFabricBalance fabrics={fabrics} lay={lay} />
+        <Form.Item name="note" label={LABELS.note} style={{ marginBottom: 0 }}>
           <Input.TextArea rows={2} maxLength={500} />
         </Form.Item>
       </Form>

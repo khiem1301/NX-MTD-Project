@@ -27,12 +27,18 @@ public sealed class SaveCuttingLayDtoValidator : AbstractValidator<SaveCuttingLa
         RuleFor(x => x.WorkOrderId).GreaterThan(0).WithMessage(WarehouseMessages.LayWorkOrderRequired);
         RuleFor(x => x.WorkDate).NotEqual(default(DateOnly)).WithMessage(WarehouseMessages.LayWorkDateRequired);
         RuleFor(x => x.ShiftCode).Must(s => ShiftCodes.All.Contains(s)).WithMessage(WarehouseMessages.LayShiftInvalid);
-        RuleFor(x => x.FabricMaterialId).GreaterThan(0).WithMessage(WarehouseMessages.FabricRequired);
-        RuleFor(x => x.FabricUsedM).Cascade(CascadeMode.Stop)
-            .NotNull().WithMessage(WarehouseMessages.LayFabricUsedRequired)
-            .GreaterThan(0m).WithMessage(WarehouseMessages.LayFabricUsedInvalid)
-            .LessThanOrEqualTo(MaxFabricUsedM).WithMessage(WarehouseMessages.LayFabricUsedMax)
-            .Must(v => decimal.Round(v!.Value, 2) == v.Value).WithMessage(WarehouseMessages.LayFabricUsedDecimals);
+        RuleFor(x => x.Fabrics).NotEmpty().WithMessage(WarehouseMessages.FabricRequired);
+        RuleForEach(x => x.Fabrics).ChildRules(f =>
+        {
+            f.RuleFor(l => l.MaterialId).GreaterThan(0).WithMessage(WarehouseMessages.FabricRequired);
+            f.RuleFor(l => l.UsedM).Cascade(CascadeMode.Stop)
+                .NotNull().WithMessage(WarehouseMessages.LayFabricUsedRequired)
+                .GreaterThan(0m).WithMessage(WarehouseMessages.LayFabricUsedInvalid)
+                .LessThanOrEqualTo(MaxFabricUsedM).WithMessage(WarehouseMessages.LayFabricUsedMax)
+                .Must(v => decimal.Round(v!.Value, 2) == v.Value).WithMessage(WarehouseMessages.LayFabricUsedDecimals);
+        });
+        RuleFor(x => x.Fabrics).Must(f => f is null || f.Select(x => x.MaterialId).Distinct().Count() == f.Count)
+            .WithMessage(WarehouseMessages.DuplicateLine);
         RuleFor(x => x.Note).MaxTrimmedLength(500, "Ghi chú");
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LayQtyRequired);
         RuleForEach(x => x.Lines).ChildRules(line =>

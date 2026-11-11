@@ -119,6 +119,8 @@
                  Patch SQL/patches/2026-11-11_request_other.sql.
    - 11/11/2026  WorkOrder thêm FabricTolerancePercent (DEV-ALL-92): trần đơn xin NVL theo lệnh cắt = số mét hệ thống tính × (1 + tỉ lệ).
                  Patch SQL/patches/2026-11-11_work_order_fabric_tolerance.sql.
+   - 11/11/2026  Bàn cắt nhiều vải (DEV-ALL-93): thêm CuttingLayFabric (số mét từng vải); CuttingLay bỏ FabricMaterialId, FabricUsedM;
+                 trg_CuttingLayLine_Check bỏ 50049. Patch SQL/patches/2026-11-11_cutting_lay_fabrics.sql.
    - 09/11/2026  ProductComponentMaterial theo màu áo, không theo size (DEV-ALL-87): ProductVariantId thay bằng ProductColorId (FK ghép ProductColor),
                  UQ_PCM thành (ProductColorId, ProductComponentId, MaterialId). Size của chứng từ (lệnh cắt, bàn cắt, kho BTP, phiếu cấp) lấy từ
                  OrderLine; trigger 50041 so màu của định mức với màu của dòng đơn.
@@ -992,9 +994,10 @@ CREATE TABLE dbo.MaterialReturnLine (
     CONSTRAINT UQ_MRetL UNIQUE (MaterialReturnId, MaterialIssueLineId)
 );
 
--- Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (CuttingLayLine.ActualQty) và số mét vải đã dùng
--- của cả bàn (FabricUsedM), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không
--- gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ FabricUsedM, vải còn lại = đang giữ − đã cắt (backend chặn bàn vượt số còn lại).
+-- Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (CuttingLayLine.ActualQty) và số mét đã dùng của từng
+-- vải (CuttingLayFabric), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90, DEV-ALL-93). Cắt cả bộ thì đủ mọi vải chi tiết của màu áo,
+-- cắt bù / cắt lẻ thì vải của chi tiết (backend kiểm). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không gắn bìa (DEV-ALL-85);
+-- vải đã cắt của tổ trên đơn = Σ CuttingLayFabric.UsedM theo vải, vải còn lại = đang giữ − đã cắt (backend chặn vải vượt số còn lại).
 CREATE TABLE dbo.CuttingLay (
     CuttingLayId    INT IDENTITY(1,1) CONSTRAINT PK_CuttingLay PRIMARY KEY,
     WorkOrderId     INT            NOT NULL CONSTRAINT FK_CL_WO REFERENCES dbo.WorkOrder(WorkOrderId),
@@ -1002,13 +1005,19 @@ CREATE TABLE dbo.CuttingLay (
     WorkDate        DATE           NOT NULL,
     ShiftCode       VARCHAR(10)    NOT NULL CONSTRAINT CK_CL_Shift CHECK (ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')),
     LaySequence     SMALLINT       NOT NULL,
-    FabricMaterialId INT           NOT NULL CONSTRAINT FK_CL_Material REFERENCES dbo.Material(MaterialId),
-    FabricUsedM     DECIMAL(9,2)   NULL CONSTRAINT CK_CL_FabricUsed CHECK (FabricUsedM > 0),   -- số mét vải đã dùng của bàn; NULL = bàn cũ chưa có số mét
     Note            NVARCHAR(500)  NULL,
     Status          VARCHAR(10)    NOT NULL CONSTRAINT DF_CL_Status DEFAULT 'RECORDED',
     CreatedAt       DATETIME2(0)   NOT NULL CONSTRAINT DF_CL_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_CL_Status CHECK (Status IN ('RECORDED','LOCKED')),
     CONSTRAINT UQ_CL UNIQUE (CuttingTeamId, WorkDate, ShiftCode, LaySequence)
+);
+-- Số mét từng vải của bàn cắt (DEV-ALL-93)
+CREATE TABLE dbo.CuttingLayFabric (
+    CuttingLayFabricId INT IDENTITY(1,1) CONSTRAINT PK_CuttingLayFabric PRIMARY KEY,
+    CuttingLayId     INT           NOT NULL CONSTRAINT FK_CLF_Lay REFERENCES dbo.CuttingLay(CuttingLayId),
+    MaterialId       INT           NOT NULL CONSTRAINT FK_CLF_Material REFERENCES dbo.Material(MaterialId),
+    UsedM            DECIMAL(9,2)  NULL CONSTRAINT CK_CLF_UsedM CHECK (UsedM > 0),   -- NULL = bàn cũ chưa có số mét
+    CONSTRAINT UQ_CLF UNIQUE (CuttingLayId, MaterialId)
 );
 CREATE TABLE dbo.CuttingLayLine (
     CuttingLayLineId INT IDENTITY(1,1) CONSTRAINT PK_CuttingLayLine PRIMARY KEY,
@@ -2081,11 +2090,7 @@ BEGIN
                JOIN dbo.ProductComponent pc          ON pc.ProductComponentId = pcm.ProductComponentId
                WHERE pcm.ProductColorId <> olv.ProductColorId OR pc.ComponentType <> 'PANEL')
         THROW 50041, N'Chi tiết cắt phải là chi tiết vải (PANEL) trong định mức của đúng màu của dòng đơn.', 1;
-    IF EXISTS (SELECT 1 FROM inserted i
-               JOIN dbo.CuttingLay cl                ON cl.CuttingLayId = i.CuttingLayId
-               JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductComponentMaterialId = i.ProductComponentMaterialId
-               WHERE pcm.MaterialId <> cl.FabricMaterialId)
-        THROW 50049, N'Chi tiết cắt bù dùng vải (đã gồm màu) khác vải của bàn cắt.', 1;
+    -- 50049 (vải chi tiết cắt bù = vải của bàn) bỏ từ DEV-ALL-93: bàn có nhiều vải, backend kiểm đủ đúng bộ vải của các dòng.
 END;
 GO
 
@@ -2996,7 +3001,7 @@ INSERT @d VALUES
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
  ('MaterialReceipt', N'Phiếu nhập NVL (mới / bổ sung)'), ('MaterialReceiptLine', N'Dòng phiếu nhập NVL'),
  ('WorkOrder', N'Lệnh cắt'), ('WorkOrderLine', N'Dòng lệnh cắt'), ('CuttingLay', N'Bàn cắt'),
- ('CuttingLayLine', N'Số cắt theo size của bàn cắt'), ('CutHandover', N'Bàn giao BTP vào kho'), ('CutHandoverLine', N'Dòng bàn giao BTP'),
+ ('CuttingLayLine', N'Số cắt theo size của bàn cắt'), ('CuttingLayFabric', N'Số mét từng vải của bàn cắt'), ('CutHandover', N'Bàn giao BTP vào kho'), ('CutHandoverLine', N'Dòng bàn giao BTP'),
  ('MaterialIssue', N'Phiếu cấp kho: NVL cho tổ cắt/may hoặc BTP cho tổ may'), ('MaterialIssueLine', N'Dòng phiếu cấp kho'),
  ('MaterialReturn', N'Phiếu trả vải thừa'), ('MaterialReturnLine', N'Dòng phiếu trả vải thừa'),
  ('OperationAssignment', N'Phân công công đoạn'), ('WorkAllocation', N'Giao / thu hồi việc với công nhân'),
@@ -4059,9 +4064,12 @@ SELECT r.MaterialReturnId, l.MaterialIssueLineId, 8
 FROM dbo.MaterialReturn r JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = r.MaterialIssueId WHERE r.ReturnCode = 'TV-DEMO-001';
 
 -- Bàn cắt: bàn 1 cắt 90 M + 60 L, dùng 66 m vải; bàn 2 cắt 30 M + 20 L, dùng 22 m (số lượng sau cắt + số mét, DEV-ALL-90)
-INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, FabricUsedM, Status, CreatedAt) VALUES
- (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 66, 'RECORDED', '2026-10-24 11:00:00'),
- (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 22, 'RECORDED', '2026-10-26 11:00:00');
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, Status, CreatedAt) VALUES
+ (@wo2, @cat, '2026-10-24', 'MORNING', 1, 'RECORDED', '2026-10-24 11:00:00'),
+ (@wo2, @cat, '2026-10-26', 'MORNING', 1, 'RECORDED', '2026-10-26 11:00:00');
+INSERT dbo.CuttingLayFabric (CuttingLayId, MaterialId, UsedM)
+SELECT c.CuttingLayId, @mVai, CASE WHEN c.WorkDate = '2026-10-24' THEN 66 ELSE 22 END
+FROM dbo.CuttingLay c WHERE c.WorkOrderId = @wo2;
 INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, ActualQty)
 SELECT c.CuttingLayId, v.OrderLineId, CASE WHEN c.WorkDate = '2026-10-24' THEN v.Qty1 ELSE v.Qty2 END
 FROM dbo.CuttingLay c
@@ -4648,9 +4656,12 @@ SELECT i.MaterialIssueId, @mVaiBe, m.RequiredQty, m.RequiredQty
 FROM #Ch c JOIN dbo.MaterialIssue i ON i.IssueCode = 'PC-DEMO-1' + c.N JOIN dbo.OrderMaterial m ON m.OrderId = c.OrderId;
 
 -- Bàn cắt: cắt đủ số đặt của từng dòng, dùng 20 m vải
-INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, FabricUsedM, Status, CreatedAt)
-SELECT w.WorkOrderId, @cat, '2026-10-26', 'AFTERNOON', CAST(c.N AS SMALLINT), @mVaiBe, 20, 'RECORDED', '2026-10-26 15:00:00'
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, Status, CreatedAt)
+SELECT w.WorkOrderId, @cat, '2026-10-26', 'AFTERNOON', CAST(c.N AS SMALLINT), 'RECORDED', '2026-10-26 15:00:00'
 FROM #Ch c JOIN dbo.WorkOrder w ON w.WorkOrderCode = 'LC-DEMO-' + c.N;
+INSERT dbo.CuttingLayFabric (CuttingLayId, MaterialId, UsedM)
+SELECT y.CuttingLayId, @mVaiBe, 20
+FROM #Ch c JOIN dbo.WorkOrder w ON w.WorkOrderCode = 'LC-DEMO-' + c.N JOIN dbo.CuttingLay y ON y.WorkOrderId = w.WorkOrderId;
 INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, ActualQty)
 SELECT y.CuttingLayId, l.OrderLineId, l.OrderedQty
 FROM #Ch c JOIN dbo.WorkOrder w ON w.WorkOrderCode = 'LC-DEMO-' + c.N

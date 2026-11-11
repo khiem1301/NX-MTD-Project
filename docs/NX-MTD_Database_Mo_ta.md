@@ -135,7 +135,7 @@ erDiagram
 1. `WorkOrder` (lệnh cắt) cho tổ cắt theo đơn + mã hàng; `WorkOrderLine` là số cần cắt theo dòng đơn. Dòng cắt bù có `WorkOrderLine.ProductComponentMaterialId` (chi tiết × vải của đúng màu áo; size theo dòng đơn); lệnh cắt bù có `SourceRequestId` trỏ về yêu cầu `REPLACEMENT_CUTTING`.
 2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết màu áo nào dùng nhóm bìa nào và trải trên vải nào (vải lấy từ định mức của chi tiết trên nhóm; các màu dùng chung đúng một bộ nhóm là một dạng bìa, DEV-ALL-89); `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
 3. Thủ kho cấp vải bằng `MaterialIssue` (`WarehouseType = 'MATERIAL'`): xuất chỉ **giữ chỗ**, trừ kho khi tổ trưởng xác nhận nhận. Vải thừa trả lại bằng `MaterialReturn`.
-4. Tổ cắt ghi `CuttingLay` (số lớp, chiều dài bàn, vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
+4. Tổ cắt ghi `CuttingLay`, `CuttingLayFabric` (số mét từng vải) và `CuttingLayLine` (số lượng sau cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`) (DEV-ALL-90, DEV-ALL-93). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
 5. `CutHandover` bàn giao BTP vào kho BTP (`usp_Stock_Post` kho `SEMI_FINISHED`).
 
 ### 3.4 May, QC và thành phẩm
@@ -1160,9 +1160,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 ### `CuttingLay` — Bàn cắt
 
-> Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (`CuttingLayLine.ActualQty`) và số mét vải đã dùng
-> của cả bàn (`FabricUsedM`), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không
-> gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ `FabricUsedM`, vải còn lại = đang giữ − đã cắt (backend chặn bàn vượt số còn lại).
+> Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (`CuttingLayLine.ActualQty`) và số mét đã dùng của từng
+> vải (`CuttingLayFabric`), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90, DEV-ALL-93). Một lần nhập có thể dùng nhiều bìa nên bàn
+> cắt không gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ `CuttingLayFabric.UsedM` theo vải, vải còn lại = đang giữ − đã cắt.
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -1172,8 +1172,6 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `WorkDate` | DATE |  |  |  |
 | `ShiftCode` | VARCHAR(10) |  | Giá trị: `MORNING`, `AFTERNOON`, `OVERTIME` |  |
 | `LaySequence` | SMALLINT |  |  |  |
-| `FabricMaterialId` | INT |  | FK → `Material.MaterialId` | 23/10: bắt buộc |
-| `FabricUsedM` | DECIMAL(9,2) | ✓ | `CHECK FabricUsedM > 0` | Số mét vải đã dùng của bàn (DEV-ALL-90); trống = bàn cũ chưa có chiều dài bàn cắt |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(10) |  | Mặc định `'RECORDED'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
@@ -1183,6 +1181,19 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 - `CK_CL_Status`: Giá trị: `RECORDED`, `LOCKED`
 - UNIQUE `UQ_CL`: (CuttingTeamId, WorkDate, ShiftCode, LaySequence)
 
+### `CuttingLayFabric` — Số mét từng vải của bàn cắt (DEV-ALL-93)
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `CuttingLayFabricId` | INT |  | **PK**; tự tăng |  |
+| `CuttingLayId` | INT |  | FK → `CuttingLay.CuttingLayId` |  |
+| `MaterialId` | INT |  | FK → `Material.MaterialId` | Cắt cả bộ: đủ mọi vải chi tiết của màu áo; cắt bù / cắt lẻ: vải của chi tiết (backend kiểm) |
+| `UsedM` | DECIMAL(9,2) | ✓ | `CHECK UsedM > 0` | Không vượt vải còn lại của tổ trên đơn (backend kiểm); trống = bàn cũ chưa có chiều dài bàn cắt |
+
+**Ràng buộc & index**
+
+- UNIQUE `UQ_CLF`: (CuttingLayId, MaterialId)
+
 ### `CuttingLayLine` — Số cắt theo size của bàn cắt
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
@@ -1190,7 +1201,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `CuttingLayLineId` | INT |  | **PK**; tự tăng |  |
 | `CuttingLayId` | INT |  | FK → `CuttingLay.CuttingLayId` |  |
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
-| `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải phải trùng `CuttingLay.FabricMaterialId` (25/10 thay `ProductComponentId`) |
+| `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải của chi tiết phải có trong `CuttingLayFabric` của bàn (25/10 thay `ProductComponentId`; DEV-ALL-93) |
 | `ActualQty` | INT |  | `CHECK ActualQty >= 0` | Số lượng sau cắt (cắt bù: số chi tiết), tổ cắt nhập thẳng (DEV-ALL-90) |
 
 **Ràng buộc & index**
@@ -2008,7 +2019,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `trg_MaterialIssue_Check` | `MaterialIssue` | Đơn hàng của phiếu cấp trùng đơn hàng của lệnh cắt (50042) |
 | `trg_MaterialIssueLine_Check` | `MaterialIssueLine` | Phiếu NVL chỉ có dòng NVL, phiếu BTP chỉ có dòng BTP (50045); dòng BTP thuộc đơn hàng của phiếu (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041) |
 | `trg_MaterialReturnLine_Check` | `MaterialReturnLine` | Dòng trả là dòng của phiếu cấp mà phiếu trả gắn vào (50042) |
-| `trg_CuttingLayLine_Check` | `CuttingLayLine` | Dòng đơn thuộc đơn hàng và mã hàng của lệnh cắt (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041); vải / màu của dòng định mức trùng vải bàn cắt (50049) |
+| `trg_CuttingLayLine_Check` | `CuttingLayLine` | Dòng đơn thuộc đơn hàng và mã hàng của lệnh cắt (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041); 50049 bỏ từ DEV-ALL-93 (bàn nhiều vải, backend kiểm) |
 | `trg_CutHandoverLine_Check` | `CutHandoverLine` | Như trên (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041) |
 | `trg_OperationAssignment_Check` | `OperationAssignment` | Công đoạn thuộc một mã hàng của đơn hàng (50044) |
 | `trg_WorkAllocation_Check` | `WorkAllocation` | Công đoạn thuộc mã hàng của dòng đơn (50044); Σ số lần đang giao của công đoạn × màu × size ≤ số bộ BTP tổ đã nhận, thu hồi không quá số công nhân đang giữ (50050); sau thu hồi trần không nhỏ hơn sản lượng đã báo (50052) |

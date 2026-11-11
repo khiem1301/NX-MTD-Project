@@ -77,12 +77,13 @@ public sealed class WorkOrderService : IWorkOrderService
             .GroupBy(l => new { l.OrderLineId, l.ProductComponentMaterialId }).Select(g => new { g.Key, Qty = g.Sum(l => l.ActualQty) })
             .ToDictionaryAsync(x => (x.Key.OrderLineId, x.Key.ProductComponentMaterialId), x => x.Qty, ct);
         var handed = await HandedQtyAsync(workOrderId, ct);
+        var fabricsOf = await _planner.FabricIdsByLineAsync(wo.WorkOrderLines.Select(FabricLineOf), ct);
         var lines = wo.WorkOrderLines.OrderBy(l => l.OrderLine.ProductVariant.ProductColor.Color).ThenBy(l => l.OrderLine.ProductVariant.SizeCode)
             .ThenBy(l => l.ProductComponentMaterial == null ? 0 : l.ProductComponentMaterial.ProductComponentId)
             .Select(l => new WorkOrderLineDto(l.WorkOrderLineId, l.OrderLineId, l.OrderLine.ProductVariant.ProductColor.Color,
                 l.OrderLine.ProductVariant.SizeCode, l.ProductComponentMaterialId, ComponentLabels.Of(l.ProductComponentMaterial) ?? string.Empty,
                 l.PlannedQty, cut.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId)),
-                handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId))))
+                handed.GetValueOrDefault((l.OrderLineId, l.ProductComponentMaterialId)), fabricsOf[FabricLineOf(l)]))
             .ToList();
 
         return Result<WorkOrderDto>.Success(new WorkOrderDto(wo.WorkOrderId, wo.WorkOrderCode, wo.OrderId,
@@ -101,6 +102,9 @@ public sealed class WorkOrderService : IWorkOrderService
     }
 
     private static string VariantLabel(string color, string size) => $"{color} - {size}";
+
+    private static FabricLine FabricLineOf(WorkOrderLine l) =>
+        new(l.OrderLine.ProductVariant.ProductColorId, l.ProductComponentMaterialId);
 
     public async Task<Result<IReadOnlyList<WorkOrderFabricCheckDto>>> CheckFabricAsync(CheckWorkOrderFabricDto dto, CancellationToken ct)
     {
