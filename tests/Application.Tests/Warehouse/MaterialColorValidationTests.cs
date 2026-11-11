@@ -30,6 +30,7 @@ public class MaterialColorValidationTests
         _orders.Add(new CustomerOrder { OrderId = 7, OrderCode = "DH-7", Status = OrderStatuses.New });
         Setup(_materials); Setup(_norms); Setup(_orderMaterials); Setup(_orders);
         Setup(new List<PurchaseOrderLine>()); Setup(new List<MaterialReceiptLine>()); Setup(new List<MaterialIssueLine>());
+        Setup(new List<MaterialReceipt>());
         Setup(new List<StockBalance>()); Setup(new List<OrderLine>()); Setup(new List<VwOrderMaterialDelivery>());
         _uow.Repository<Material>().AddAsync(Arg.Do<Material>(m => { m.MaterialId = 50; _materials.Add(m); })).Returns(Task.CompletedTask);
     }
@@ -49,7 +50,7 @@ public class MaterialColorValidationTests
 
     private MaterialService Materials() => new(_uow, _locks);
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, Substitute.For<IClock>());
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
 
     // ---------- Danh mục NVL ----------
 
@@ -133,7 +134,7 @@ public class MaterialColorValidationTests
     {
         _orderMaterials.Add(new OrderMaterial { OrderMaterialId = 3, OrderId = 7, MaterialId = 1, Material = _materials[0], RequiredQty = 10 });
 
-        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(7, 1, 20, 0, null, null), default);
+        var result = await OrderMaterials().CreateAsync(new CreateOrderMaterialDto(7, 1, 20, 0, null), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderMaterialDuplicate);
         result.Message.Should().Contain("V-0001").And.Contain("(Đen)");
@@ -143,9 +144,9 @@ public class MaterialColorValidationTests
     public void An_order_material_line_needs_a_required_or_customer_qty()
     {
         var validator = new CreateOrderMaterialDtoValidator();
-        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 0, null, null)).IsValid.Should().BeFalse();
-        validator.Validate(new CreateOrderMaterialDto(7, 1, 10, 0, null, null)).IsValid.Should().BeTrue();
-        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 5, 1, null, new DateOnly(2026, 12, 1))).IsValid.Should().BeTrue();
+        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 0, null)).IsValid.Should().BeFalse();
+        validator.Validate(new CreateOrderMaterialDto(7, 1, 10, 0, null)).IsValid.Should().BeTrue();
+        validator.Validate(new CreateOrderMaterialDto(7, 1, 0, 5, null)).IsValid.Should().BeTrue();
     }
 
     // ---------- Phiếu cấp ----------

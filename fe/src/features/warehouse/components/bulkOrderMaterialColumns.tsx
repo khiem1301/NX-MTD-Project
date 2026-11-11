@@ -1,16 +1,12 @@
 import { DeleteOutlined } from '@ant-design/icons';
-import { Input, InputNumber, Select, Typography, type TableColumnsType } from 'antd';
-import dayjs from 'dayjs';
-import { AppDatePicker } from '@/components/common/DateInputs';
-import { isExpectedDeliveryDateDisabled } from '@/utils/expectedDelivery';
-import { toApiDate } from '@/utils/format';
+import { Input, Select, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { MaterialOption } from '@/types/lookup';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { LABELS } from '../constants';
-import { deliveryCountProblem, MAX_NOTE_LENGTH, qtyProblem } from '../utils/orderMaterialRules';
+import { MAX_NOTE_LENGTH, qtyProblem } from '../utils/orderMaterialRules';
 import { rowError, type BulkLine, type Draft, isChanged } from './bulkOrderMaterial';
 
 type Options = {
@@ -26,12 +22,10 @@ type Options = {
 };
 
 const QTY_WIDTH = 130;
-const DELIVERY_WIDTH = 90;
-const DATE_WIDTH = 140;
 const MATERIAL_WIDTH = 380;
 const SMALL = { fontSize: 12 };
 
-/** Cột bảng sửa cả đơn: dòng cũ chỉ đọc NVL, dòng mới chọn NVL; các ô số lượng, số lần giao, ghi chú sửa được. */
+/** Cột bảng sửa cả đơn: dòng cũ chỉ đọc NVL, dòng mới chọn NVL; các ô số lượng, ghi chú sửa được (lịch giao khai ở cả đơn). */
 export const bulkOrderMaterialColumns = ({
   materialOptions,
   usedMaterialIds,
@@ -116,49 +110,6 @@ export const bulkOrderMaterialColumns = ({
     },
     qtyColumn('requiredQty', LABELS.requiredQty, LABELS.requiredQtyName),
     qtyColumn('customerQty', LABELS.customerQty, LABELS.customerQtyName),
-    {
-      title: LABELS.deliveryCountShort,
-      key: 'expectedDeliveryCount',
-      width: DELIVERY_WIDTH,
-      render: (_, line) =>
-        line.draft.customerQty > 0 ? (
-          <InputNumber
-            size="small"
-            style={{ width: '100%' }}
-            aria-label={LABELS.expectedDeliveryCount}
-            status={
-              showErrors &&
-              (!line.draft.expectedDeliveryCount ||
-                deliveryCountProblem(line.draft.expectedDeliveryCount))
-                ? 'error'
-                : undefined
-            }
-            value={line.draft.expectedDeliveryCount}
-            onChange={(v) => onPatch(line.key, { expectedDeliveryCount: v })}
-          />
-        ) : (
-          '—'
-        ),
-    },
-    {
-      title: LABELS.expectedDeliveryDate,
-      key: 'expectedDeliveryDate',
-      width: DATE_WIDTH,
-      render: (_, line) =>
-        line.draft.customerQty > 0 ? (
-          <AppDatePicker
-            size="small"
-            style={{ width: '100%' }}
-            aria-label={LABELS.expectedDeliveryDate}
-            status={showErrors && !line.draft.expectedDeliveryDate ? 'error' : undefined}
-            value={line.draft.expectedDeliveryDate ? dayjs(line.draft.expectedDeliveryDate) : null}
-            disabledDate={(d) => isExpectedDeliveryDateDisabled(d)}
-            onChange={(d) => onPatch(line.key, { expectedDeliveryDate: d ? toApiDate(d) : null })}
-          />
-        ) : (
-          '—'
-        ),
-    },
     {
       title: LABELS.note,
       key: 'note',

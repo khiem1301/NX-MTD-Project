@@ -645,6 +645,9 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `IsDelayRisk` | BIT | ✓ | *tính toán*: `IIF(DelayRiskSince IS NULL, 0, 1)` | cờ, không phải trạng thái; không ghi trực tiếp |
 | `StopReason` | NVARCHAR(500) | ✓ |  |  |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
+| `CustomerDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11, DEV-ALL-95) |
+| `CustomerDeliveryDate` | DATE | ✓ |  | ngày khách dự kiến giao NVL; giao >= 2 lần: ngày giao từ (DEV-ALL-95) |
+| `CustomerDeliveryDateTo` | DATE | ✓ |  | giao >= 2 lần: ngày giao đến (DEV-ALL-95) |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `UpdatedAt` | DATETIME2(0) | ✓ |  |  |
 | `RowVer` | ROWVERSION |  | khóa lạc quan (concurrency) |  |
@@ -655,6 +658,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - `CK_CustomerOrder_Status`: Giá trị: `NEW`, `IN_PRODUCTION`, `IN_DELIVERY`, `PARTIALLY_DELIVERED`, `DELIVERED`, `COMPLETED`, `CANCELLED`, `STOPPED`
 - `CK_CustomerOrder_Dates`: `CHECK DueDate >= ReceivedDate`
 - `CK_CustomerOrder_Stop`: `CHECK Status <> 'STOPPED' OR StopReason IS NOT NULL`
+- `CK_CO_CustomerDelivery`: `CHECK (CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1) AND (CustomerDeliveryDateTo IS NULL OR (CustomerDeliveryDate IS NOT NULL AND CustomerDeliveryDateTo >= CustomerDeliveryDate AND CustomerDeliveryCount >= 2))`
 - Index: `IX_CustomerOrder_Status ON dbo.CustomerOrder(Status, DueDate)`
 
 ### `OrderLine` — Dòng đơn mã hàng–màu–size
@@ -691,8 +695,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
 | `RequiredQty` | DECIMAL(18,3) |  |  | tổng cần theo số liệu khách báo, nhập tay (không tính từ định mức) |
 | `CustomerQty` | DECIMAL(18,3) |  | Mặc định `0` | khách sẽ cấp (màn 1.2) |
-| `ExpectedDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL này (23/10 thay CustomerExpectedDate); số lần đã nhận xem vw_OrderMaterialDelivery |
-| `ExpectedDeliveryDate` | DATE | ✓ |  | ngày khách dự kiến giao NVL; chỉ có khi khách cấp (07/11, DEV-ALL-82) |
 | `PurchaseQty` | tính toán |  | `= (CASE WHEN RequiredQty > CustomerQty THEN RequiredQty - CustomerQty ELSE 0 END)` | phần xưởng phải mua |
 | `Source` | tính toán |  | `= (CONVERT(VARCHAR(10), CASE WHEN CustomerQty = 0 THEN 'SUPPLIER' WHEN CustomerQty >= RequiredQty THEN 'CUSTOMER' ELSE 'BOTH' END))` |  |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
@@ -700,8 +702,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 **Ràng buộc & index**
 
 - `CK_OM_Qty`: `CHECK RequiredQty >= 0 AND CustomerQty >= 0`
-- `CK_OM_Delivery`: `CHECK (CustomerQty = 0 AND ExpectedDeliveryCount IS NULL) OR (CustomerQty > 0 AND ExpectedDeliveryCount IS NOT NULL AND ExpectedDeliveryCount >= 1)` — khách có cấp thì phải khai số lần giao
-- `CK_OM_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR CustomerQty > 0`
 - UNIQUE `UQ_OM`: (OrderId, MaterialId)
 
 ### `OperationGroup` — Công đoạn to (nhóm công đoạn)
@@ -869,6 +869,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `ResultNote` | NVARCHAR(1000) | ✓ |  |  |
 | `CompletedAt` | DATETIME2(0) | ✓ |  |  |
 | `ShortageResolution` | VARCHAR(20) | ✓ |  | chỉ SHORT_DELIVERY (FR 1.6) |
+| `TargetDateTo` | DATE | ✓ |  | SHORT_DELIVERY giao bù >= 2 lần: ngày giao bù đến (11/11, DEV-ALL-94) |
+| `ExpectedDeliveryCount` | SMALLINT | ✓ |  | SHORT_DELIVERY: tổng số lần dự kiến giao bù, cộng dồn (11/11, DEV-ALL-94) |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `UpdatedAt` | DATETIME2(0) | ✓ |  |  |
 | `RowVer` | ROWVERSION |  | khóa lạc quan (concurrency) |  |
@@ -880,6 +882,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 - `CK_Request_Status`: Giá trị: `PENDING_APPROVAL`, `PENDING_PROCESSING`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`
 - `CK_Request_Reject`: `CHECK Status <> 'REJECTED' OR DecisionNote IS NOT NULL`
 - `CK_Request_Shortage`: `CHECK ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')`
+- `CK_Request_Delivery`: `CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1) AND (TargetDateTo IS NULL OR (TargetDate IS NOT NULL AND TargetDateTo >= TargetDate AND ExpectedDeliveryCount >= 2))`
 - Index: `IX_Request_Inbox ON dbo.Request(RequestTypeCode, Status) INCLUDE (CreatedAt)`
 - Index: `IX_Request_CreatedBy ON dbo.Request(CreatedBy, Status)`
 - Index UNIQUE: `UX_Request_Receipt ON dbo.Request(MaterialReceiptId) WHERE MaterialReceiptId IS NOT NULL AND RequestTypeCode = 'SHORT_DELIVERY'`
@@ -900,11 +903,14 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `Quantity` | DECIMAL(18,3) |  | `CHECK Quantity > 0` |  |
 | `ReplenishQty` | DECIMAL(18,3) | ✓ |  | SHORT_DELIVERY: số NCC/khách sẽ bù (Quản đốc nhập) |
 | `MaterialReceiptLineId` | INT | ✓ | FK → `MaterialReceiptLine.MaterialReceiptLineId` (thêm ở mục 14) | SHORT_DELIVERY: dòng phiếu nhập thiếu / lỗi (Quantity = số thiếu / lỗi báo) – FK thêm sau |
+| `PurchaseOrderLineId` | INT | ✓ | FK → `PurchaseOrderLine.PurchaseOrderLineId` | SHORT_DELIVERY: dòng đơn mua còn thiếu, kể cả dòng chưa về lần nào (11/11, DEV-ALL-95) |
+| `OrderMaterialId` | INT | ✓ | FK → `OrderMaterial.OrderMaterialId` | SHORT_DELIVERY: NVL khách cấp còn thiếu, kể cả NVL chưa về lần nào (11/11, DEV-ALL-95) |
 
 **Ràng buộc & index**
 
 - `CK_RequestLine_Kind`: `CHECK MaterialId IS NULL OR OrderLineId IS NULL` — dòng NVL hoặc dòng BTP / cắt bù
 - `CK_RequestLine_Item`: `CHECK MaterialId IS NOT NULL OR OrderLineId IS NOT NULL OR ProductComponentMaterialId IS NOT NULL OR ItemDescription IS NOT NULL`
+- `CK_RequestLine_Source`: `CHECK PurchaseOrderLineId IS NULL OR OrderMaterialId IS NULL` — nguồn của dòng SHORT_DELIVERY (11/11, DEV-ALL-95)
 
 
 ### 4.5 Nhập NVL: đơn mua, thanh toán, phiếu nhập
@@ -927,6 +933,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `OrderDate` | DATE | ✓ |  |  |
 | `ExpectedDeliveryCount` | SMALLINT | ✓ |  | số lần NCC dự kiến giao (23/10 thay ExpectedDeliveryDate); số lần đã nhận xem vw_PurchaseOrderDelivery |
 | `ExpectedDeliveryDate` | DATE | ✓ |  | ngày NCC dự kiến giao, không trước `OrderDate` (07/11, DEV-ALL-82) |
+| `ExpectedDeliveryDateTo` | DATE | ✓ |  | giao >= 2 lần: ngày NCC giao đến (11/11, DEV-ALL-94) |
 | `GoodsStatus` | VARCHAR(25) |  | Mặc định `'PENDING_FINALISATION'` |  |
 | `PaymentStatus` | VARCHAR(20) |  | Mặc định `'UNPAID'` |  |
 | `RejectReason` | NVARCHAR(500) | ✓ |  |  |
@@ -950,6 +957,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 - `CK_PO_Reject`: `CHECK GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL`
 - `CK_PO_DeliveryCount`: `CHECK ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`
 - `CK_PO_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate`
+- `CK_PO_DeliveryDateTo`: `CHECK ExpectedDeliveryDateTo IS NULL OR (ExpectedDeliveryDate IS NOT NULL AND ExpectedDeliveryDateTo >= ExpectedDeliveryDate AND ExpectedDeliveryCount >= 2)`
 
 ### `PurchaseOrderLine` — Dòng đơn mua NVL
 
@@ -1969,8 +1977,8 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 |---|---|---|
 | `vw_StockBalance` | Tồn hiện tại của 3 kho | Tồn thực = `StockBalance.OnHandQty` (25/10, trước đây cộng lại thẻ kho); giữ chỗ = phiếu cấp chờ nhận + phiếu xuất TP chờ xuất; khả dụng = tồn thực − giữ chỗ. Theo (`WarehouseType`, `MaterialId`, `OrderLineId`, `ProductComponentMaterialId`); kho BTP tách bộ đủ và chi tiết × vải cắt bù (25/10) |
 | `vw_PurchaseOrderLineStatus` | Dòng đơn mua: đã nhận, còn phải nhận | Đã nhận = Σ số đạt của phiếu nhập đã xác nhận; còn lại = đặt − đã nhận − không bù |
-| `vw_OrderMaterialDelivery` | NVL khách cấp: số lần dự kiến giao, số lần đã nhận (23/10) | Chỉ dòng `CustomerQty` > 0. Số lần đã nhận = số phiếu nhập khách cấp (`PurchaseOrderId` NULL) đã xác nhận có NVL này, kể cả phiếu bổ sung; `ReceivedQty` = Σ số đạt; `RemainingQty` = khách cấp − đã nhận |
-| `vw_PurchaseOrderDelivery` | Đơn mua: số lần NCC dự kiến giao, số lần đã nhận (23/10) | Số lần đã nhận = số phiếu nhập đã xác nhận của đơn mua, kể cả phiếu bổ sung; kèm ngày nhận gần nhất |
+| `vw_OrderMaterialDelivery` | NVL khách cấp: số lần dự kiến giao, số lần đã nhận (23/10) | Chỉ dòng `CustomerQty` > 0. Số lần dự kiến = `CustomerOrder.CustomerDeliveryCount`; số lần đã nhận = số phiếu khách cấp thường (không phải bổ sung) đã xác nhận của cả đơn (11/11, DEV-ALL-95); `ReceivedQty` = Σ số đạt (kể cả phiếu bổ sung); `RemainingQty` = khách cấp − đã nhận |
+| `vw_PurchaseOrderDelivery` | Đơn mua: số lần NCC dự kiến giao, số lần đã nhận (23/10) | Số lần đã nhận = số phiếu nhập thường đã xác nhận của đơn mua (phiếu bổ sung không đếm — 11/11, DEV-ALL-94); kèm ngày nhận gần nhất |
 | `vw_WorkOrderLineProgress` | Tiến độ từng dòng lệnh cắt (24/10) | Kế hoạch `WorkOrderLine.PlannedQty`; đã cắt = Σ `CuttingLayLine.ActualQty` cùng lệnh, dòng đơn, `ProductComponentMaterialId`; đã vào kho = Σ `CutHandoverLine.ConfirmedQty` của phiếu `CONFIRMED` cùng chi tiết (`ProductComponentMaterial.ProductComponentId`); có thêm cột chi tiết, vải, màu vải của dòng cắt bù; còn lại = kế hoạch − đã cắt (không âm) |
 | `vw_MaterialStock` | Màn hình kho NVL | `vw_StockBalance` kho `MATERIAL` kèm thông tin `Material` |
 | `vw_WorkerOutputCap` | Trần sản lượng của công nhân theo dòng đơn × công đoạn (25/10) | Σ `WorkAllocation.ConfirmedQty` giao − thu hồi; còn lại = trần − đã may. Công đoạn không dùng BTP vẫn có trần |

@@ -9,8 +9,12 @@ namespace NX_MTD.API.Controllers.Manager;
 public sealed class OrderMaterialsController : ManagerBaseController
 {
     private readonly IOrderMaterialService _orderMaterials;
+    private readonly ICustomerDeliveryPlanService _customerDelivery;
 
-    public OrderMaterialsController(IOrderMaterialService orderMaterials) => _orderMaterials = orderMaterials;
+    public OrderMaterialsController(IOrderMaterialService orderMaterials, ICustomerDeliveryPlanService customerDelivery)
+    {
+        _orderMaterials = orderMaterials; _customerDelivery = customerDelivery;
+    }
 
     /// <summary>Bảng NVL của đơn: tìm kiếm, lọc, phân trang.</summary>
     [HttpGet("paged")]
@@ -38,6 +42,16 @@ public sealed class OrderMaterialsController : ManagerBaseController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateOrderMaterialDto dto, CancellationToken ct) =>
         this.ToResponse(await _orderMaterials.UpdateAsync(id, dto, ct));
+
+    /// <summary>Lịch khách giao NVL của cả đơn: số lần, ngày / khoảng ngày dự kiến (DEV-ALL-95).</summary>
+    [HttpGet("customer-delivery/{orderId:int}")]
+    public async Task<IActionResult> GetCustomerDelivery(int orderId, CancellationToken ct) =>
+        this.ToResponse(await _customerDelivery.GetAsync(orderId, ct));
+
+    [HttpPut("customer-delivery/{orderId:int}")]
+    public async Task<IActionResult> SaveCustomerDelivery(int orderId, [FromBody] SaveOrderCustomerDeliveryDto dto,
+        CancellationToken ct) =>
+        this.ToResponse(await _customerDelivery.SaveAsync(orderId, dto, ct));
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) =>

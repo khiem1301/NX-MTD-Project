@@ -102,9 +102,11 @@ export type PurchaseOrderDetail = {
   goodsStatus: PoGoodsStatus;
   paymentStatus: PoPaymentStatus;
   orderDate: string | null;
-  /** Số lần NCC dự kiến giao; receivedCount = số phiếu nhập đã xác nhận (kể cả phiếu bổ sung). */
+  /** Số lần NCC dự kiến giao; receivedCount = số phiếu nhập thường đã xác nhận (phiếu bổ sung không đếm). */
   expectedDeliveryCount: number | null;
   expectedDeliveryDate?: string | null;
+  /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
+  expectedDeliveryDateTo?: string | null;
   receivedCount: number;
   note: string | null;
   rejectReason: string | null;
@@ -134,6 +136,8 @@ export type PlacePayload = {
   orderDate: string;
   expectedDeliveryCount: number;
   expectedDeliveryDate: string;
+  /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
+  expectedDeliveryDateTo?: string | null;
   note: string | null;
   lines: { purchaseOrderLineId: number; orderedQty: number; unitPrice: number }[];
   rowVer: string;

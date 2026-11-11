@@ -259,3 +259,9 @@ public static class PurchaseOrderStatuses
     public const string PendingFinalisation = "PENDING_FINALISATION";
     public const string Unpaid = "UNPAID";
 }
+
+/// <summary>Số lần giao dự kiến (NVL khách cấp, đơn mua, giao bù): từ 1 đến <see cref="MaxCount"/>.</summary>
+public static class DeliveryLimits
+{
+    public const short MaxCount = 99;
+}

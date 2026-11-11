@@ -64,7 +64,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
-                    l.OrderedQty, l.UnitPrice, l.Amount, 0m, l.NotReplenishedQty)).ToList()))
+                    l.OrderedQty, l.UnitPrice, l.Amount, 0m, l.NotReplenishedQty)).ToList(),
+                p.ExpectedDeliveryCount, 0))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<PurchaseOrderDto>();
 
@@ -75,8 +76,12 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                         && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
             .GroupBy(l => l.PurchaseOrderLineId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
             .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+        // Số lần đơn mua đã giao (dùng chung cả đơn) = số phiếu thường đã xác nhận (DEV-ALL-95).
+        var deliveries = await _uow.Repository<VwPurchaseOrderDelivery>().Query().AsNoTracking()
+            .Where(v => v.PurchaseOrderId == purchaseOrderId).Select(v => v.ReceivedCount).FirstOrDefaultAsync(ct);
         return Result<PurchaseOrderDto>.Success(dto with
         {
+            ReceivedCount = deliveries,
             Lines = dto.Lines.Select(l => l with { ReceivedQty = received.GetValueOrDefault(l.PurchaseOrderLineId) }).ToList(),
         });
     }
@@ -91,7 +96,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         if (dto.OrderDate > _clock.Today)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
                 ResultKind.Validation);
-        var deliveryError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDate, dto.OrderDate, dto.OrderId, ct);
+        var deliveryError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDate,
+            PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo), dto.OrderDate, dto.OrderId, ct);
         if (deliveryError is not null)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderDateInvalid, deliveryError, ResultKind.Validation);
 
@@ -143,18 +149,15 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             OrderDate = dto.OrderDate,
             ExpectedDeliveryCount = dto.ExpectedDeliveryCount,
             ExpectedDeliveryDate = dto.ExpectedDeliveryDate,
+            ExpectedDeliveryDateTo = PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo),
             GoodsStatus = PurchaseGoodsStatuses.Ordered,
             PaymentStatus = PurchaseOrderStatuses.Unpaid,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
             CreatedAt = _clock.Now,
             PurchaseOrderLines = lines.Select(l => orderMaterials.TryGetValue(l.MaterialId, out var omId)
                 ? new PurchaseOrderLine { OrderMaterialId = omId, OrderedQty = l.OrderedQty, UnitPrice = l.UnitPrice }
-                : new PurchaseOrderLine
-                {
-                    MaterialId = l.MaterialId,
-                    OrderedQty = l.OrderedQty,
-                    UnitPrice = l.UnitPrice,
-                }).ToList(),
+                : new PurchaseOrderLine { MaterialId = l.MaterialId, OrderedQty = l.OrderedQty, UnitPrice = l.UnitPrice })
+                .ToList(),
         };
         await _uow.Repository<PurchaseOrder>().AddAsync(po);
         await _uow.SaveChangesAsync();   // log và thông báo cần PurchaseOrderId nên lưu trước (cùng transaction)
@@ -162,7 +165,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
             .Where(s => s.SupplierId == dto.SupplierId).Select(s => s.SupplierName).FirstAsync(ct);
         _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Insert, null,
-            new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate, Lines = po.PurchaseOrderLines.Count }));
+            new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate, po.ExpectedDeliveryDateTo,
+                Lines = po.PurchaseOrderLines.Count }));
         await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
             Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier),
             string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);

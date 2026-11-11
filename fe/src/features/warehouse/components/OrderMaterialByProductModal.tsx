@@ -15,6 +15,7 @@ import {
   type Draft,
 } from './bulkOrderMaterial';
 import { bulkOrderMaterialColumns } from './bulkOrderMaterialColumns';
+import { CustomerPlanNotice } from './CustomerPlanNotice';
 
 type OrderMaterialByProductModalProps = {
   orderId: number;
@@ -99,6 +100,7 @@ export function OrderMaterialByProductModal({
       onOk={handleOk}
       onCancel={onClose}
     >
+      <CustomerPlanNotice orderId={orderId} />
       <Form layout="vertical">
         <Form.Item label={LABELS.product} required>
           <Select

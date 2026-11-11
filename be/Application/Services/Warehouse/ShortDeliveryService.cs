@@ -19,11 +19,15 @@ public sealed class ShortDeliveryService : IShortDeliveryService
     private readonly MaterialSupplyUpdater _supply;
     private readonly INotificationService _notifier;
     private readonly IAuditLogService _audit;
+    private readonly DeliveryCountGuard _deliveries;
+    private readonly ShortageTracker _shortages;
+    private readonly IClock _clock;
 
     public ShortDeliveryService(IUnitOfWork uow, IRequestService requests, MaterialSupplyUpdater supply,
-        INotificationService notifier, IAuditLogService audit)
+        INotificationService notifier, IAuditLogService audit, DeliveryCountGuard deliveries, ShortageTracker shortages, IClock clock)
     {
         _uow = uow; _requests = requests; _supply = supply; _notifier = notifier; _audit = audit;
+        _deliveries = deliveries; _shortages = shortages; _clock = clock;
     }
 
     private IQueryable<Request> ShortDeliveries =>
@@ -54,6 +58,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             .Select(q => new
             {
                 q.RequestId, q.RequestCode, q.Status, q.ShortageResolution, q.ResultNote, ReceiptId = q.MaterialReceiptId,
+                q.ExpectedDeliveryCount, q.TargetDate, q.TargetDateTo,
                 ReceiptCode = q.MaterialReceipt!.ReceiptCode, Source = q.MaterialReceipt.Source!,
                 PoCode = q.MaterialReceipt.PurchaseOrder == null ? null : q.MaterialReceipt.PurchaseOrder.PoCode,
                 OrderCode = q.Order == null ? null : q.Order.OrderCode, q.CreatedAt,
@@ -66,19 +71,21 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             }).FirstOrDefaultAsync(ct);
         if (head is null) return WarehouseFailures.NotFound<ShortDeliveryDto>();
 
-        var done = await ReplenishedAsync(requestId, ct);
+        var done = await _shortages.ReplenishedAsync(requestId, includePending: false, ct);
+        var deliveredCount = await _deliveries.ReplenishCountAsync(requestId, ct);
         return Result<ShortDeliveryDto>.Success(new ShortDeliveryDto(head.RequestId, head.RequestCode, head.Status,
             head.ShortageResolution, head.ResultNote, head.ReceiptId!.Value, head.ReceiptCode, head.Source, head.PoCode,
             head.OrderCode, head.CreatedAt,
-            head.Lines.Select(l => new ShortDeliveryLineDto(l.RequestLineId, l.MaterialReceiptLineId!.Value, l.MaterialId,
+            head.Lines.Select(l => new ShortDeliveryLineDto(l.RequestLineId, l.MaterialReceiptLineId, l.MaterialId,
                 l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Quantity, l.ReplenishQty,
-                done.GetValueOrDefault(l.MaterialReceiptLineId!.Value))).ToList()));
+                done.GetValueOrDefault(l.RequestLineId))).ToList(),
+            head.ExpectedDeliveryCount, deliveredCount, head.TargetDate, head.TargetDateTo));
     }
 
     public Task<Result> ResolveAsync(int requestId, ResolveShortDeliveryDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
-            var request = await ShortDeliveries.Include(q => q.RequestLines).ThenInclude(l => l.MaterialReceiptLine)
+            var request = await ShortDeliveries.Include(q => q.RequestLines)
                 .Include(q => q.MaterialReceipt)
                 .FirstOrDefaultAsync(q => q.RequestId == requestId, ct);
             if (request is null) return WarehouseFailures.NotFound();
@@ -90,40 +97,75 @@ public sealed class ShortDeliveryService : IShortDeliveryService
                 : await CloseWithoutReplenishAsync(request, dto, employeeId, ct);
         });
 
+    /// <summary>
+    /// Giao bù: lưu số bù từng dòng, số lần và ngày / khoảng ngày dự kiến giao bù (DEV-ALL-94). Đơn có thể được chọn giao bù lại
+    /// khi đã nhận đủ số lần giao bù mà còn thiếu: số lần giao bù cộng dồn (đã giao + số lần đợt này) để giới hạn phiếu bổ sung.
+    /// </summary>
     private async Task<Result> ReplenishAsync(Request request, ResolveShortDeliveryDto dto, int employeeId,
         CancellationToken ct)
     {
-        var input = (dto.Lines ?? Array.Empty<ReplenishInputDto>()).ToDictionary(l => l.RequestLineId);
-        if (input.Keys.Any(id => request.RequestLines.All(l => l.RequestLineId != id)))
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ShortageResolutionInvalid);
+        var dateError = new[] { dto.ExpectedDeliveryDate, ReplenishDateTo(dto) }.OfType<DateOnly>()
+            .Select(d => DocumentDateRules.CheckExpectedDelivery(d, _clock.Today, null, null)).FirstOrDefault(e => e is not null);
+        if (dateError is not null) return Result.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
+        var linesError = await ApplyReplenishQtyAsync(request, dto, ct);
+        if (linesError is not null) return linesError;
 
-        // Không nhập số thì mặc định bù đủ phần thiếu / lỗi của từng dòng.
-        foreach (var line in request.RequestLines)
-        {
-            var qty = input.TryGetValue(line.RequestLineId, out var i) ? i.ReplenishQty : line.Quantity;
-            if (qty > line.Quantity)
-                return Result.Failure(ErrorCodes.ShortageExceeded,
-                    $"{WarehouseMessages.ReplenishExceedsShortage}: tối đa {line.Quantity:0.###}.");
-            line.ReplenishQty = qty;
-        }
-        if (request.RequestLines.All(l => l.ReplenishQty is null or 0))
-            return Result.Failure(ErrorCodes.ShortageExceeded, WarehouseMessages.ShortageResolutionInvalid);
-
+        var delivered = await _deliveries.ReplenishCountAsync(request.RequestId, ct);
+        request.ExpectedDeliveryCount = (short)(delivered + dto.ExpectedDeliveryCount!.Value);
+        request.TargetDate = dto.ExpectedDeliveryDate;
+        request.TargetDateTo = ReplenishDateTo(dto);
         request.ShortageResolution = ShortageResolutions.Replenish;
         _audit.Add(new AuditEntry(nameof(Request), request.RequestId, AuditActions.Update, null,
-            new { request.ShortageResolution }, dto.Note?.Trim()));
+            new { request.ShortageResolution, request.ExpectedDeliveryCount, request.TargetDate, request.TargetDateTo },
+            dto.Note?.Trim()));
         await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-            "Chờ nhận hàng giao bù", $"Quản đốc chọn giao bù cho {request.RequestCode}, lập phiếu bổ sung khi hàng về.",
+            WarehouseMessages.NotifyReplenishTitle,
+            string.Format(WarehouseMessages.NotifyReplenishBody, request.RequestCode, dto.ExpectedDeliveryCount,
+                DeliveryWindow(request.TargetDate, request.TargetDateTo)),
             null, nameof(Request), request.RequestId), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ShortageResolved);
     }
 
+    private static DateOnly? ReplenishDateTo(ResolveShortDeliveryDto dto) =>
+        DocumentDateRules.IsRangeDelivery(dto.ExpectedDeliveryCount) ? dto.ExpectedDeliveryDateTo : null;
+
+    private static string DeliveryWindow(DateOnly? from, DateOnly? to) =>
+        to is { } end
+            ? string.Format(WarehouseMessages.DeliveryWindowRange, from, end)
+            : string.Format(WarehouseMessages.DeliveryWindowSingle, from);
+
+    /// <summary>
+    /// Số bù đợt này của từng dòng không vượt phần thiếu chưa nhận bù (không nhập số thì mặc định bù đủ phần đó);
+    /// lưu <c>ReplenishQty</c> = đã nhận bù + số bù đợt này để phiếu bổ sung và việc hoàn thành đơn tính đúng.
+    /// </summary>
+    private async Task<Result?> ApplyReplenishQtyAsync(Request request, ResolveShortDeliveryDto dto, CancellationToken ct)
+    {
+        var input = (dto.Lines ?? Array.Empty<ReplenishInputDto>()).ToDictionary(l => l.RequestLineId);
+        if (input.Keys.Any(id => request.RequestLines.All(l => l.RequestLineId != id)))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ShortageResolutionInvalid);
+
+        var done = await _shortages.ReplenishedAsync(request.RequestId, includePending: false, ct);
+        var anyQty = false;
+        foreach (var line in request.RequestLines)
+        {
+            var received = done.GetValueOrDefault(line.RequestLineId);
+            var remaining = Math.Max(0m, line.Quantity - received);
+            var qty = input.TryGetValue(line.RequestLineId, out var i) ? i.ReplenishQty : remaining;
+            if (qty > remaining)
+                return Result.Failure(ErrorCodes.ShortageExceeded,
+                    $"{WarehouseMessages.ReplenishExceedsShortage}: tối đa {remaining:0.###}.");
+            line.ReplenishQty = received + qty;
+            anyQty |= qty > 0;
+        }
+        return anyQty ? null : Result.Failure(ErrorCodes.ShortageExceeded, WarehouseMessages.ShortageResolutionInvalid);
+    }
+
     private async Task<Result> CloseWithoutReplenishAsync(Request request, ResolveShortDeliveryDto dto, int employeeId,
         CancellationToken ct)
     {
-        var purchaseLineIds = request.RequestLines.Select(l => l.MaterialReceiptLine?.PurchaseOrderLineId)
-            .Where(id => id is not null).Select(id => id!.Value).Distinct().ToList();
+        var purchaseLineIds = request.RequestLines.Where(l => l.PurchaseOrderLineId != null)
+            .Select(l => l.PurchaseOrderLineId!.Value).Distinct().ToList();
         var purchaseLines = await _uow.Repository<PurchaseOrderLine>().Query()
             .Where(l => purchaseLineIds.Contains(l.PurchaseOrderLineId)).ToDictionaryAsync(l => l.PurchaseOrderLineId, ct);
         var received = await _supply.ReceivedByPurchaseLineAsync(purchaseLineIds, ct);
@@ -131,7 +173,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
         foreach (var line in request.RequestLines)
         {
             line.ReplenishQty = 0;
-            if (line.MaterialReceiptLine?.PurchaseOrderLineId is not { } polId || !purchaseLines.TryGetValue(polId, out var pol))
+            if (line.PurchaseOrderLineId is not { } polId || !purchaseLines.TryGetValue(polId, out var pol))
                 continue;   // phiếu khách cấp: không có đơn mua để chốt, chỉ ghi nhận không bù
             // Đã nhận + không bù không vượt số đặt (CK_POL_Qty chặn NotReplenishedQty > OrderedQty).
             var room = pol.OrderedQty - received.GetValueOrDefault(polId) - pol.NotReplenishedQty;
@@ -154,12 +196,12 @@ public sealed class ShortDeliveryService : IShortDeliveryService
 
     /// <summary>
     /// Phiếu khách cấp chốt không bù: khách không cấp phần còn thiếu nữa nên số khách cấp giảm xuống bằng số đã nhận thật, phần thiếu
-    /// tự thành số phải mua (cột tính PurchaseQty). Khách chưa giao gì thì bỏ luôn số lần giao (CK_OM_Delivery).
+    /// tự thành số phải mua (cột tính PurchaseQty). Lịch khách giao khai ở cả đơn nên không đổi ở đây (DEV-ALL-95).
     /// </summary>
     private async Task ReduceCustomerSupplyAsync(Request request, string? note, CancellationToken ct)
     {
-        var ids = request.RequestLines.Where(l => l.MaterialReceiptLine is { PurchaseOrderLineId: null, OrderMaterialId: not null })
-            .Select(l => l.MaterialReceiptLine!.OrderMaterialId!.Value).Distinct().ToList();
+        var ids = request.RequestLines.Where(l => l.PurchaseOrderLineId == null && l.OrderMaterialId != null)
+            .Select(l => l.OrderMaterialId!.Value).Distinct().ToList();
         if (ids.Count == 0) return;
 
         var materials = await _uow.Repository<OrderMaterial>().Query().Where(m => ids.Contains(m.OrderMaterialId)).ToListAsync(ct);
@@ -173,24 +215,12 @@ public sealed class ShortDeliveryService : IShortDeliveryService
         {
             var actual = received.GetValueOrDefault(material.OrderMaterialId);
             if (actual >= material.CustomerQty) continue;
-            var before = new { material.CustomerQty, material.ExpectedDeliveryCount };
+            var before = new { material.CustomerQty };
             material.CustomerQty = actual;
-            if (actual == 0)
-            {
-                material.ExpectedDeliveryCount = null;
-                material.ExpectedDeliveryDate = null;   // CK_OM_DeliveryDate
-            }
             _audit.Add(new AuditEntry(nameof(OrderMaterial), material.OrderMaterialId, AuditActions.Update, before,
-                new { material.CustomerQty, material.ExpectedDeliveryCount }, note));
+                new { material.CustomerQty }, note));
         }
     }
-
-    private async Task<Dictionary<int, decimal>> ReplenishedAsync(int requestId, CancellationToken ct) =>
-        await _uow.Repository<MaterialReceiptLine>().Query()
-            .Where(l => l.OriginalReceiptLineId != null && l.MaterialReceipt.ShortageRequestId == requestId
-                        && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed)
-            .GroupBy(l => l.OriginalReceiptLineId!.Value).Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
 }
 
 /// <summary>SHORT_DELIVERY chỉ do hệ thống tạo và chỉ đóng bằng "giao bù đủ" hoặc "chốt không bù" (không bấm hoàn thành tay).</summary>

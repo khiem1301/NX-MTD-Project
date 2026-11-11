@@ -41,7 +41,7 @@ public sealed class SupplementaryLineDtoValidator : AbstractValidator<Supplement
 {
     public SupplementaryLineDtoValidator()
     {
-        RuleFor(x => x.OriginalReceiptLineId).GreaterThan(0);
+        RuleFor(x => x.RequestLineId).GreaterThan(0);
         RuleFor(x => x.AcceptedQty).GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.QtyMustNotBeNegative);
     }
 }
@@ -54,7 +54,7 @@ public sealed class SaveSupplementaryReceiptDtoValidator : AbstractValidator<Sav
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new SupplementaryLineDtoValidator());
-        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.OriginalReceiptLineId).Distinct().Count() == l.Count)
+        RuleFor(x => x.Lines).Must(l => l is null || l.Select(x => x.RequestLineId).Distinct().Count() == l.Count)
             .WithMessage(WarehouseMessages.DuplicateLine);
         RuleFor(x => x.Lines).Must(l => l is null || l.Any(x => x.AcceptedQty > 0))
             .WithMessage(WarehouseMessages.QtyMustBePositive).OverridePropertyName("acceptedQty");
@@ -70,6 +70,17 @@ public sealed class ResolveShortDeliveryDtoValidator : AbstractValidator<Resolve
         RuleFor(x => x.Note).MaximumLength(500);
         RuleForEach(x => x.Lines).ChildRules(l => l.RuleFor(i => i.ReplenishQty).GreaterThanOrEqualTo(0)
             .WithMessage(WarehouseMessages.QtyMustNotBeNegative));
+        // Giao bù: số lần và ngày / khoảng ngày dự kiến giao bù (DEV-ALL-94).
+        When(x => x.Resolution == ShortageResolutions.Replenish, () =>
+        {
+            RuleFor(x => x.ExpectedDeliveryCount)
+                .Must(c => c >= 1 && c <= DeliveryLimits.MaxCount)
+                .WithMessage(string.Format(WarehouseMessages.ReplenishCountInvalid, DeliveryLimits.MaxCount));
+            RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ReplenishDateRequired);
+            RuleFor(x => x.ExpectedDeliveryDateTo)
+                .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to) is null)
+                .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to));
+        });
     }
 }
 

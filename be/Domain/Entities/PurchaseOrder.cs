@@ -24,6 +24,9 @@ public partial class PurchaseOrder
 
     public DateOnly? ExpectedDeliveryDate { get; set; }
 
+    /// <summary>Giao từ 2 lần trở lên: ngày giao đến (ExpectedDeliveryDate là ngày giao từ).</summary>
+    public DateOnly? ExpectedDeliveryDateTo { get; set; }
+
     public string GoodsStatus { get; set; } = null!;
 
     public string PaymentStatus { get; set; } = null!;

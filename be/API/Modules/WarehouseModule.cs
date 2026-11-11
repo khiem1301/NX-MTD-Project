@@ -18,6 +18,9 @@ public static class WarehouseModule
         services.AddScoped<IOrderMaterialService, OrderMaterialService>();
         services.AddScoped<IIncomingMaterialService, IncomingMaterialService>();   // màn NVL chờ nhận của Thủ kho
         services.AddScoped<MaterialSupplyUpdater>();
+        services.AddScoped<DeliveryCountGuard>();   // số phiếu nhập không vượt số lần giao (DEV-ALL-94)
+        services.AddScoped<ShortageTracker>();       // thiếu NVL theo cả đơn, hàng bù theo dòng đơn thiếu (DEV-ALL-95)
+        services.AddScoped<ICustomerDeliveryPlanService, CustomerDeliveryPlanService>();   // lịch khách giao NVL của đơn (DEV-ALL-95)
         services.AddScoped<IMaterialReceiptService, MaterialReceiptService>();
         services.AddScoped<IShortDeliveryService, ShortDeliveryService>();
         services.AddScoped<IRequestTypeHandler, ShortDeliveryRequestHandler>();

@@ -11,6 +11,10 @@ jest.mock('../hooks/useOrderMaterials', () => ({
   useDeleteOrderMaterial: () => ({ mutate: jest.fn() }),
 }));
 jest.mock('./OrderMaterialFormModal', () => ({ OrderMaterialFormModal: () => null }));
+jest.mock('./OrderMaterialExternalModal', () => ({
+  OrderMaterialExternalModal: () => <span>hộp thêm NVL ngoài</span>,
+}));
+jest.mock('./CustomerDeliveryPlan', () => ({ CustomerDeliveryPlan: () => null }));
 jest.mock('./OrderMaterialBulkEditor', () => ({ OrderMaterialBulkEditor: () => null }));
 jest.mock('./OrderMaterialByProductModal', () => ({
   OrderMaterialByProductModal: () => <span>hộp thêm theo mã hàng</span>,
@@ -55,6 +59,14 @@ describe('OrderMaterialsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: new RegExp(LABELS.addByProduct) }));
 
     expect(screen.getByText('hộp thêm theo mã hàng')).toBeInTheDocument();
+  });
+
+  it('bấm thêm NVL ngoài thì mở hộp nhập nhiều dòng', () => {
+    render(<OrderMaterialsTab orderId={5} isClosed={false} />);
+
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(LABELS.addExternalMaterial) }));
+
+    expect(screen.getByText('hộp thêm NVL ngoài')).toBeInTheDocument();
   });
 
   it('đơn đã đóng thì chỉ xem', () => {

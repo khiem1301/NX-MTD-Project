@@ -360,7 +360,8 @@ public static class Messages
     public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn giá trị đơn mua.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
-    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, dự kiến giao {4} lần. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
+    public const string NotifyCustomerDeliveryBody = "Đơn {0}: khách dự kiến giao NVL {1} lần, {2}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
     public const string NotifyIncomingPoTitle = "Có đơn mua NVL chờ nhận";
     public const string NotifyIncomingPoBody = "Đơn mua {0} (NCC {1}) đã đặt hàng. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
     public const string NotifyPoPlacedTitle = "Đơn mua chờ thanh toán";

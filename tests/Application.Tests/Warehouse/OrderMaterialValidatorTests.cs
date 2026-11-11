@@ -4,13 +4,15 @@ using NX_MTD.Application.Validators;
 
 namespace Application.Tests;
 
-/// <summary>NVL của đơn: giá trị biên của số cần, số khách cấp, số lần giao dự kiến và ghi chú.</summary>
+/// <summary>
+/// NVL của đơn: giá trị biên của số cần, số khách cấp và ghi chú. Lịch khách giao (số lần, ngày) khai ở cả đơn hàng (DEV-ALL-95).
+/// </summary>
 public class OrderMaterialValidatorTests
 {
     private static readonly DateOnly Soon = new(2026, 12, 1);
 
-    private static CreateOrderMaterialDto Dto(decimal required = 100, decimal customer = 0, short? count = null, string? note = null,
-        int orderId = 1, int materialId = 1) => new(orderId, materialId, required, customer, count, note, customer > 0 ? Soon : null);
+    private static CreateOrderMaterialDto Dto(decimal required = 100, decimal customer = 0, string? note = null,
+        int orderId = 1, int materialId = 1) => new(orderId, materialId, required, customer, note);
 
     private static bool Valid(CreateOrderMaterialDto dto) => new CreateOrderMaterialDtoValidator().Validate(dto).IsValid;
 
@@ -19,8 +21,8 @@ public class OrderMaterialValidatorTests
 
     // ---------- thêm nhiều NVL cùng lúc ----------
 
-    private static CreateOrderMaterialLineDto Line(int materialId, decimal required, decimal customer, short? count, string? note) =>
-        new(materialId, required, customer, count, note, customer > 0 ? Soon : null);
+    private static CreateOrderMaterialLineDto Line(int materialId, decimal required, decimal customer, string? note = null) =>
+        new(materialId, required, customer, note);
 
     private static string[] BatchErrors(params CreateOrderMaterialLineDto[] lines) =>
         new CreateOrderMaterialBatchDtoValidator().Validate(new CreateOrderMaterialBatchDto(1, lines))
@@ -28,7 +30,7 @@ public class OrderMaterialValidatorTests
 
     [Fact]
     public void Batch_ValidLines_NoError() =>
-        BatchErrors(Line(1, 10, 0, null, null), Line(2, 0, 5, 1, null)).Should().BeEmpty();
+        BatchErrors(Line(1, 10, 0), Line(2, 0, 5)).Should().BeEmpty();
 
     [Fact]
     public void Batch_NoLines_Rejected() =>
@@ -36,15 +38,11 @@ public class OrderMaterialValidatorTests
 
     [Fact]
     public void Batch_SameMaterialTwice_Rejected() =>
-        BatchErrors(Line(1, 10, 0, null, null), Line(1, 5, 0, null, null)).Should().Equal("Một dòng bị khai báo nhiều lần.");
+        BatchErrors(Line(1, 10, 0), Line(1, 5, 0)).Should().Equal("Một dòng bị khai báo nhiều lần.");
 
     [Fact]
     public void Batch_LineBreaksRules_UsesSameRulesAsSingleLine() =>
-        BatchErrors(Line(1, -1, 0, null, null)).Should().Equal("Số cần không được âm.");
-
-    [Fact]
-    public void Batch_CustomerSupplyWithoutDeliveryCount_Rejected() =>
-        BatchErrors(Line(1, 10, 5, null, null)).Should().ContainSingle();
+        BatchErrors(Line(1, -1, 0)).Should().Equal("Số cần không được âm.");
 
     // ---------- số cần ----------
 
@@ -87,14 +85,14 @@ public class OrderMaterialValidatorTests
     [InlineData("1.2345", false)]
     [InlineData("-1", false)]
     public void CustomerQty_Boundaries(string value, bool expected) =>
-        Valid(Dto(customer: decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture), count: 1)).Should().Be(expected);
+        Valid(Dto(customer: decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture))).Should().Be(expected);
 
     [Fact]
     public void CustomerQty_ErrorMessages_AreVietnamese()
     {
-        Errors(Dto(customer: -1, count: 1)).Should().Equal("Số khách cấp không được âm.");
-        Errors(Dto(customer: 100_000_001, count: 1)).Should().Equal("Số khách cấp tối đa 100.000.000.");
-        Errors(Dto(customer: 1.2345m, count: 1)).Should().Equal("Số khách cấp tối đa 3 số lẻ.");
+        Errors(Dto(customer: -1)).Should().Equal("Số khách cấp không được âm.");
+        Errors(Dto(customer: 100_000_001)).Should().Equal("Số khách cấp tối đa 100.000.000.");
+        Errors(Dto(customer: 1.2345m)).Should().Equal("Số khách cấp tối đa 3 số lẻ.");
     }
 
     // ---------- cả hai số ----------
@@ -106,36 +104,44 @@ public class OrderMaterialValidatorTests
     }
 
     [Fact]
-    public void RequiredZero_IsFine_WhenTheCustomerSupplies() => Valid(Dto(required: 0, customer: 50, count: 1)).Should().BeTrue();
+    public void RequiredZero_IsFine_WhenTheCustomerSupplies() => Valid(Dto(required: 0, customer: 50)).Should().BeTrue();
 
     [Fact]
-    public void CustomerSupplyingMoreThanRequired_IsFine() => Valid(Dto(required: 10, customer: 50, count: 1)).Should().BeTrue();
+    public void CustomerSupplyingMoreThanRequired_IsFine() => Valid(Dto(required: 10, customer: 50)).Should().BeTrue();
 
-    // ---------- số lần giao dự kiến ----------
+    // ---------- lịch khách giao của cả đơn (DEV-ALL-95) ----------
+
+    private static string[] PlanErrors(short count, DateOnly date, DateOnly? dateTo = null) =>
+        new SaveOrderCustomerDeliveryDtoValidator().Validate(new SaveOrderCustomerDeliveryDto(count, date, dateTo))
+            .Errors.Select(e => e.ErrorMessage).ToArray();
 
     [Theory]
     [InlineData((short)1, true)]
     [InlineData((short)99, true)]
-    [InlineData((short)100, false)]       // trước đây nhận tới 32767 trong khi giao diện chặn ở 99
-    [InlineData((short)32767, false)]
+    [InlineData((short)100, false)]
     [InlineData((short)0, false)]
-    [InlineData((short)-1, false)]
-    public void DeliveryCount_Boundaries_WhenTheCustomerSupplies(short count, bool expected) =>
-        Valid(Dto(customer: 50, count: count)).Should().Be(expected);
+    public void Validate_CustomerDeliveryCount_Boundaries(short count, bool expected) =>
+        (PlanErrors(count, Soon, count >= 2 ? Soon.AddDays(9) : null).Length == 0).Should().Be(expected);
 
     [Fact]
-    public void DeliveryCount_IsRequired_WhenTheCustomerSupplies_WithVietnameseMessage() =>
-        Errors(Dto(customer: 50, count: null)).Should().Equal("Khách có cấp NVL thì phải nhập số lần dự kiến giao (từ 1 trở lên).");
+    public void Validate_CustomerDeliveryCountOutOfRange_HasOneVietnameseMessage() =>
+        PlanErrors(100, Soon, Soon.AddDays(9)).Should().Equal("Số lần khách giao NVL phải từ 1 đến 99.");
 
     [Fact]
-    public void DeliveryCount_OutOfRange_HasOneVietnameseMessage() =>
-        Errors(Dto(customer: 50, count: 100)).Should().Equal("Số lần giao dự kiến phải từ 1 đến 99.");
+    public void Validate_CustomerDeliversTwiceWithoutDateTo_ReturnsDateToRequired() =>
+        PlanErrors(2, Soon).Should().Equal("Giao từ 2 lần trở lên thì nhập khoảng ngày giao (từ ngày – đến ngày).");
 
-    [Theory]
-    [InlineData((short)1)]
-    [InlineData((short)99)]
-    public void DeliveryCount_MustBeEmpty_WhenTheCustomerDoesNotSupply(short count) =>
-        Errors(Dto(customer: 0, count: count)).Should().Equal("Khách không cấp NVL thì không nhập số lần giao.");
+    [Fact]
+    public void Validate_DateToBeforeDateFrom_ReturnsBeforeFromError() =>
+        PlanErrors(2, Soon, Soon.AddDays(-1)).Should().Equal("Ngày giao đến không được trước ngày giao từ.");
+
+    [Fact]
+    public void Validate_CustomerDeliversOnceWithDateTo_IgnoresDateTo() =>
+        PlanErrors(1, Soon, Soon.AddDays(-1)).Should().BeEmpty();
+
+    [Fact]
+    public void Validate_CustomerDeliveryWithoutDate_ReturnsDateRequired() =>
+        PlanErrors(1, default).Should().Equal("Vui lòng nhập ngày dự kiến giao hàng.");
 
     // ---------- ghi chú, mã ----------
 
@@ -166,9 +172,9 @@ public class OrderMaterialValidatorTests
     {
         var validator = new UpdateOrderMaterialDtoValidator();
 
-        validator.Validate(new UpdateOrderMaterialDto(1, 100_000_000, 0, null, null)).IsValid.Should().BeTrue();
-        validator.Validate(new UpdateOrderMaterialDto(1, 100_000_001, 0, null, null)).IsValid.Should().BeFalse();
-        validator.Validate(new UpdateOrderMaterialDto(1, 1, 5, 100, null)).IsValid.Should().BeFalse();
+        validator.Validate(new UpdateOrderMaterialDto(1, 100_000_000, 0, null)).IsValid.Should().BeTrue();
+        validator.Validate(new UpdateOrderMaterialDto(1, 100_000_001, 0, null)).IsValid.Should().BeFalse();
+        validator.Validate(new UpdateOrderMaterialDto(1, 1, -5, null)).IsValid.Should().BeFalse();
     }
 
     // ---------- bộ lọc danh sách ----------

@@ -23,6 +23,7 @@ public class OrderMaterialClosedOrderTests
     public OrderMaterialClosedOrderTests()
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receiptLines); Setup(_deliveries);
+        Setup(new List<MaterialReceipt>());
         _materials.Add(new Material { MaterialId = 1, MaterialCode = "V1", MaterialName = "Vải", Unit = "m", Status = MaterialStatuses.Active, MaterialType = "FABRIC" });
     }
 
@@ -34,7 +35,7 @@ public class OrderMaterialClosedOrderTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private OrderMaterialService Sut() => new(_uow, _notifier, Substitute.For<IClock>());
+    private OrderMaterialService Sut() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
 
     private OrderMaterial Line(string orderStatus, decimal required = 100)
     {
@@ -45,7 +46,7 @@ public class OrderMaterialClosedOrderTests
         return om;
     }
 
-    private static UpdateOrderMaterialDto Edit(decimal required) => new(1, required, 0, null, null);
+    private static UpdateOrderMaterialDto Edit(decimal required) => new(1, required, 0, null);
 
     public static TheoryData<string> ClosedStatuses => new() { OrderStatuses.Cancelled, OrderStatuses.Stopped, OrderStatuses.Delivered, OrderStatuses.Completed };
 
@@ -86,7 +87,7 @@ public class OrderMaterialClosedOrderTests
     {
         Line(status);
 
-        var result = await Sut().CreateAsync(new CreateOrderMaterialDto(1, 1, 5, 0, null, null), default);
+        var result = await Sut().CreateAsync(new CreateOrderMaterialDto(1, 1, 5, 0, null), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderClosed);
         result.Message.Should().Be(WarehouseMessages.OrderMaterialOrderClosed);

@@ -3,7 +3,7 @@ import { Space, Typography, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { MESSAGES } from '@/constants/messages';
-import { formatDate, formatQty } from '@/utils/format';
+import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
 
@@ -44,20 +44,6 @@ export const orderMaterialColumns = (
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: qtyWithUnit },
-  {
-    title: LABELS.deliveries,
-    key: 'deliveries',
-    align: 'right',
-    render: (_, om) =>
-      om.expectedDeliveryCount === null
-        ? '—'
-        : `${om.receivedCount} / ${om.expectedDeliveryCount} ${LABELS.deliveryUnit}`,
-  },
-  {
-    title: LABELS.expectedDeliveryDate,
-    key: 'expectedDeliveryDate',
-    render: (_, om) => formatDate(om.expectedDeliveryDate ?? null),
-  },
   {
     title: LABELS.receivedQty,
     dataIndex: 'receivedQty',

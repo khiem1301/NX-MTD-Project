@@ -6,6 +6,7 @@ import { warehouseApi } from '../api/warehouseApi';
 import type {
   CreateOrderMaterialsPayload,
   OrderMaterialPageQuery,
+  SaveOrderCustomerDeliveryPayload,
   SaveOrderMaterialPayload,
 } from '../types';
 import { WAREHOUSE_KEY } from './useMaterials';
@@ -62,4 +63,22 @@ export const useDeleteOrderMaterial = () => {
     invalidate: [WAREHOUSE_KEY],
     successMessage: MESSAGES.warehouse.orderMaterialDeleted,
   });
+};
+
+/** Lịch khách giao NVL của cả đơn (DEV-ALL-95). */
+export const useCustomerDelivery = (orderId: number) => {
+  const role = useRolePath();
+  return useQuery({
+    queryKey: [...WAREHOUSE_KEY, 'customer-delivery', role, orderId],
+    queryFn: () => warehouseApi.getCustomerDelivery(role, orderId),
+  });
+};
+
+export const useSaveCustomerDelivery = (orderId: number) => {
+  const role = useRolePath();
+  return useApiMutation(
+    (body: SaveOrderCustomerDeliveryPayload) =>
+      warehouseApi.saveCustomerDelivery(role, orderId, body),
+    { invalidate: [WAREHOUSE_KEY], successMessage: MESSAGES.warehouse.customerDeliverySaved },
+  );
 };

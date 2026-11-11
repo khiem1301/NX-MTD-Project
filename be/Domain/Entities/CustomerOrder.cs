@@ -30,6 +30,15 @@ public partial class CustomerOrder
 
     public string? Note { get; set; }
 
+    /// <summary>Số lần khách dự kiến giao NVL của cả đơn (DEV-ALL-95); một phiếu khách cấp thường đã xác nhận là một lần.</summary>
+    public short? CustomerDeliveryCount { get; set; }
+
+    /// <summary>Ngày khách dự kiến giao NVL; giao từ 2 lần trở lên: ngày giao từ.</summary>
+    public DateOnly? CustomerDeliveryDate { get; set; }
+
+    /// <summary>Giao từ 2 lần trở lên: ngày giao đến.</summary>
+    public DateOnly? CustomerDeliveryDateTo { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

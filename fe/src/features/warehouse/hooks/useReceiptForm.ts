@@ -6,12 +6,18 @@ import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
-import { API_DATE, fill, formatQty } from '@/utils/format';
+import { API_DATE, fill } from '@/utils/format';
 import { LABELS, MATERIAL_SOURCE } from '../constants';
 import { useOrderMaterials } from './useOrderMaterials';
 import { usePurchaseOrder, usePurchaseOrders } from './usePurchaseOrders';
 import { useSaveReceipt } from './useReceipts';
 import type { SaveReceiptPayload } from '../types';
+import {
+  addableLineOptions,
+  customerLineOptions,
+  optionsForRow,
+  purchaseLineOptions,
+} from '../utils/receiptLineOptions';
 import type { ReceiptFormModalProps } from '../components/ReceiptFormModal';
 import { type Dayjs } from 'dayjs';
 
@@ -58,7 +64,7 @@ export function useReceiptForm(
               orderId: preset.orderId,
               purchaseOrderId: preset.purchaseOrderId,
               receiptDate: dayjs(),
-              lines: preset.purchaseLines ?? [
+              lines: preset.purchaseLines ?? preset.customerLines ?? [
                 {
                   orderMaterialId: preset.orderMaterialId,
                   purchaseOrderLineId: preset.purchaseOrderLineId,
@@ -86,23 +92,17 @@ export function useReceiptForm(
       const po = purchaseOrder.data;
       if (!po || po.purchaseOrderId !== purchaseOrderId) return;
       fill(
-        po.lines
-          .map((l) => ({
-            purchaseOrderLineId: l.purchaseOrderLineId,
-            acceptedQty: l.orderedQty - l.receivedQty - l.notReplenishedQty,
-          }))
-          .filter((l) => l.acceptedQty > 0),
+        purchaseLineOptions(po.lines, po.expectedDeliveryCount, po.receivedCount)
+          .filter((o) => !o.disabled)
+          .map((o) => ({ purchaseOrderLineId: o.value, acceptedQty: o.outstanding })),
       );
     } else {
       const rows = orderMaterials.data;
       if (!rows || orderId === undefined || rows.some((om) => om.orderId !== orderId)) return;
       fill(
-        rows
-          .map((om) => ({
-            orderMaterialId: om.orderMaterialId,
-            acceptedQty: om.customerQty - om.receivedQty,
-          }))
-          .filter((l) => l.acceptedQty > 0),
+        customerLineOptions(rows)
+          .filter((o) => !o.disabled)
+          .map((o) => ({ orderMaterialId: o.value, acceptedQty: o.outstanding })),
       );
     }
   }, [isSupplier, purchaseOrder.data, purchaseOrderId, orderMaterials.data, orderId, form]);
@@ -156,33 +156,25 @@ export function useReceiptForm(
     );
   };
 
-  const customerOptions = (orderMaterials.data ?? []).map((om) => ({
-    value: om.orderMaterialId,
-    outstanding: om.customerQty - om.receivedQty,
-    label: `${om.materialCode} ${om.materialName}${om.materialColor ? ` - ${om.materialColor}` : ''} (${om.unit})`,
-  }));
   const purchaseOrderOptions = (purchaseOrders.data?.items ?? []).map((po) => ({
     value: po.purchaseOrderId,
     label: `${po.poCode} · ${po.orderCode ?? LABELS.stockPurchaseTag} · ${po.supplierName ?? '—'}`,
   }));
-  const purchaseLineOptions = (purchaseOrder.data?.lines ?? []).map((l) => {
-    const outstanding = l.orderedQty - l.receivedQty - l.notReplenishedQty;
-    return {
-      value: l.purchaseOrderLineId,
-      disabled: outstanding <= 0,
-      outstanding,
-      label: `${l.materialCode} ${l.materialName}${l.materialColor ? ` - ${l.materialColor}` : ''} · ${LABELS.outstandingQty} ${formatQty(outstanding)} ${l.unit}`,
-    };
-  });
   const required = [{ required: true, message: MESSAGES.common.required }];
 
+  // Chỉ NVL thuộc lần giao này: khách cấp thì NVL khách có cấp, NCC thì dòng của đơn mua đã chọn;
+  // NVL đã có ở dòng khác của phiếu thì không chọn lại.
+  const lineOptions = isSupplier
+    ? purchaseLineOptions(
+        purchaseOrder.data?.lines ?? [],
+        purchaseOrder.data?.expectedDeliveryCount,
+        purchaseOrder.data?.receivedCount,
+      )
+    : customerLineOptions(orderMaterials.data ?? []);
+  const chosen = (lines ?? []).map((l) => (isSupplier ? l.purchaseOrderLineId : l.orderMaterialId));
+  const rowOptions = (rowIndex: number) => optionsForRow(lineOptions, chosen, rowIndex);
   // Dòng NVL còn phải nhận mà phiếu chưa có: chọn thêm từ danh sách thay vì thêm dòng trống.
-  const chosen = new Set(
-    (lines ?? []).map((l) => (isSupplier ? l.purchaseOrderLineId : l.orderMaterialId)),
-  );
-  const addableOptions = (isSupplier ? purchaseLineOptions : customerOptions).filter(
-    (o) => !chosen.has(o.value) && !('disabled' in o && o.disabled) && o.outstanding > 0,
-  );
+  const addableOptions = addableLineOptions(lineOptions, chosen);
 
   return {
     handleClose,
@@ -197,9 +189,8 @@ export function useReceiptForm(
     purchaseOrders,
     resetLines,
     handleFinish,
-    customerOptions,
+    rowOptions,
     purchaseOrderOptions,
-    purchaseLineOptions,
     required,
     form,
   };

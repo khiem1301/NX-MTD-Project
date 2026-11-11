@@ -30,6 +30,12 @@ public partial class Request
 
     public DateOnly? TargetDate { get; set; }
 
+    /// <summary>SHORT_DELIVERY giao bù từ 2 lần trở lên: ngày giao bù đến.</summary>
+    public DateOnly? TargetDateTo { get; set; }
+
+    /// <summary>SHORT_DELIVERY chọn giao bù: số lần dự kiến giao bù.</summary>
+    public short? ExpectedDeliveryCount { get; set; }
+
     public string? Title { get; set; }
 
     public string? Content { get; set; }

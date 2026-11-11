@@ -44,9 +44,4 @@ export const warehouseRoutes = toPageRoutes([
     roles: [ROLES.WarehouseKeeper, ROLES.Manager, ROLES.Admin],
     page: async () => (await import('./pages/InventoryPage')).InventoryPage,
   },
-  {
-    path: ROUTES.nxtReport,
-    roles: [ROLES.WarehouseKeeper, ROLES.Manager, ROLES.Admin],
-    page: async () => (await import('./pages/NxtReportPage')).NxtReportPage,
-  },
 ]);

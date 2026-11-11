@@ -34,10 +34,9 @@ public sealed class MaterialSupplyUpdater
         (await _uow.Repository<RequestLine>().Query().AsNoTracking()
             .Where(l => l.Request.RequestTypeCode == RequestTypes.ShortDelivery
                         && l.Request.ShortageResolution == ShortageResolutions.NoReplenish
-                        && l.MaterialReceiptLine != null && l.MaterialReceiptLine.PurchaseOrderLineId == null
-                        && l.MaterialReceiptLine.OrderMaterialId != null
-                        && orderMaterialIds.Contains(l.MaterialReceiptLine.OrderMaterialId.Value))
-            .Select(l => l.MaterialReceiptLine!.OrderMaterialId!.Value)
+                        && l.PurchaseOrderLineId == null && l.OrderMaterialId != null
+                        && orderMaterialIds.Contains(l.OrderMaterialId.Value))
+            .Select(l => l.OrderMaterialId!.Value)
             .Distinct().ToListAsync(ct)).ToHashSet();
 
     public async Task RecalculatePurchaseOrderAsync(int purchaseOrderId, CancellationToken ct)

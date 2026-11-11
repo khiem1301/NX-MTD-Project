@@ -38,9 +38,8 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
     purchaseOrders,
     resetLines,
     handleFinish,
-    customerOptions,
+    rowOptions,
     purchaseOrderOptions,
-    purchaseLineOptions,
     addableOptions,
     handleClose,
     photos,
@@ -101,7 +100,7 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
                     <Form.Item name={[field.name, 'purchaseOrderLineId']} rules={required}>
                       <Select
                         placeholder={LABELS.purchaseLine}
-                        options={purchaseLineOptions}
+                        options={rowOptions(field.name)}
                         style={{ width: 420 }}
                       />
                     </Form.Item>
@@ -109,7 +108,7 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
                     <Form.Item name={[field.name, 'orderMaterialId']} rules={required}>
                       <Select
                         placeholder={LABELS.material}
-                        options={customerOptions}
+                        options={rowOptions(field.name)}
                         style={{ width: 360 }}
                       />
                     </Form.Item>

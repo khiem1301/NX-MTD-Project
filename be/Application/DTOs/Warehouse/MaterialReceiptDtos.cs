@@ -34,7 +34,8 @@ public sealed record SaveReceiptLineDto(int? OrderMaterialId, int? PurchaseOrder
 public sealed record SaveMaterialReceiptDto(int? OrderId, string Source, int? PurchaseOrderId, DateOnly ReceiptDate,
     string? Note, IReadOnlyList<SaveReceiptLineDto> Lines);
 
-public sealed record SupplementaryLineDto(int OriginalReceiptLineId, decimal AcceptedQty);
+/// <summary>Một dòng phiếu bổ sung: nhận bù cho dòng đơn thiếu NVL (DEV-ALL-95: theo dòng đơn thiếu, kể cả NVL chưa về lần nào).</summary>
+public sealed record SupplementaryLineDto(int RequestLineId, decimal AcceptedQty);
 
 /// <summary>Phiếu bổ sung: bên giao bù theo yêu cầu thiếu NVL đã chọn "giao bù".</summary>
 public sealed record SaveSupplementaryReceiptDto(int ShortageRequestId, DateOnly ReceiptDate, string? Note,
@@ -52,10 +53,11 @@ public sealed record MaterialReceiptQuery : PageQuery
 
 // ---------- Xử lý thiếu NVL khi nhập (UC08, SHORT_DELIVERY) ----------
 
+/// <param name="MaterialReceiptLineId">Dòng phiếu nhập gốc; null = NVL chưa về lần nào khi đơn đủ số lần giao (DEV-ALL-95).</param>
 /// <param name="ShortfallQty">Số còn thiếu của dòng phiếu nhập gốc khi hệ thống tạo yêu cầu (số cần bù).</param>
 /// <param name="ReplenishedQty">Đã nhận bù (phiếu bổ sung đã xác nhận).</param>
 public sealed record ShortDeliveryLineDto(
-    int RequestLineId, int MaterialReceiptLineId, int MaterialId, string MaterialCode, string MaterialName,
+    int RequestLineId, int? MaterialReceiptLineId, int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal ShortfallQty,
     decimal? ReplenishQty, decimal ReplenishedQty);
 
@@ -63,15 +65,24 @@ public sealed record ShortDeliveryListItemDto(
     int RequestId, string RequestCode, string Status, string? Resolution, int ReceiptId, string ReceiptCode,
     string Source, string? PoCode, string? OrderCode, DateTime CreatedAt);
 
+/// <param name="ExpectedDeliveryCount">Tổng số lần giao bù dự kiến (cộng dồn qua các lần Quản đốc chọn giao bù).</param>
+/// <param name="ReplenishDeliveryCount">Số lần đã giao bù (phiếu bổ sung đã xác nhận).</param>
+/// <param name="ExpectedDeliveryDate">Ngày dự kiến giao bù (giao từ 2 lần: ngày từ).</param>
+/// <param name="ExpectedDeliveryDateTo">Giao bù từ 2 lần: ngày đến.</param>
 public sealed record ShortDeliveryDto(
     int RequestId, string RequestCode, string Status, string? Resolution, string? ResultNote, int ReceiptId,
     string ReceiptCode, string Source, string? PoCode, string? OrderCode, DateTime CreatedAt,
-    IReadOnlyList<ShortDeliveryLineDto> Lines);
+    IReadOnlyList<ShortDeliveryLineDto> Lines, short? ExpectedDeliveryCount = null, int ReplenishDeliveryCount = 0,
+    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
 
 public sealed record ReplenishInputDto(int RequestLineId, decimal ReplenishQty);
 
 /// <param name="Resolution">REPLENISH (giao bù) hoặc NO_REPLENISH (chốt không bù).</param>
-public sealed record ResolveShortDeliveryDto(string Resolution, IReadOnlyList<ReplenishInputDto>? Lines, string? Note);
+/// <param name="ExpectedDeliveryCount">Giao bù: số lần dự kiến giao bù đợt này (bắt buộc, 1–99).</param>
+/// <param name="ExpectedDeliveryDate">Giao bù: ngày dự kiến giao bù (giao từ 2 lần: ngày từ).</param>
+/// <param name="ExpectedDeliveryDateTo">Giao bù từ 2 lần: ngày đến.</param>
+public sealed record ResolveShortDeliveryDto(string Resolution, IReadOnlyList<ReplenishInputDto>? Lines, string? Note,
+    short? ExpectedDeliveryCount = null, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
 
 public sealed record ShortDeliveryQuery : PageQuery
 {

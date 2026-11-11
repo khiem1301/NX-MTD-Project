@@ -161,6 +161,8 @@ public static class ErrorCodes
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
     public const string ReceiptShortageClosed = "RECEIPT_SHORTAGE_CLOSED";
+    public const string ReceiptDeliveryCountReached = "RECEIPT_DELIVERY_COUNT_REACHED";
+    public const string CustomerDeliveryFull = "CUSTOMER_DELIVERY_FULL";
     public const string FgHandoverExceedsQc = "FG_HANDOVER_EXCEEDS_QC";
     public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
     public const string AnnouncementInvalid = "ANNOUNCEMENT_INVALID";
