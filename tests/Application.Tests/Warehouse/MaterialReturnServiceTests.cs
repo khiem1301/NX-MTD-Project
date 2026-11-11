@@ -65,9 +65,9 @@ public class MaterialReturnServiceTests
 
     private MaterialReturnService Service() => new(_uow, _stock, _codes, _notifier, _locks, _clock, new FabricPlanner(_uow));
 
-    private void Lay(int ply, decimal? lengthM) => _lays.Add(new CuttingLay
+    private void Lay(decimal? usedM) => _lays.Add(new CuttingLay
     {
-        CuttingTeamId = CutTeam, FabricMaterialId = 1, PlyCount = (short)ply, LayLengthM = lengthM,
+        CuttingTeamId = CutTeam, FabricMaterialId = 1, FabricUsedM = usedM,
         WorkOrder = new WorkOrder { OrderId = 7 },
     });
 
@@ -145,7 +145,7 @@ public class MaterialReturnServiceTests
     [Fact]
     public async Task Return_cannot_exceed_the_fabric_left_after_cutting()
     {
-        Lay(ply: 10, lengthM: 4m);   // đã cắt 40 → còn thừa 100 − 40 = 60
+        Lay(usedM: 40m);   // đã cắt 40 → còn thừa 100 − 40 = 60
 
         var over = await Service().CreateAsync(Create(61), CutTeam, default);
 
@@ -159,7 +159,7 @@ public class MaterialReturnServiceTests
     [Fact]
     public async Task Return_is_not_capped_by_cutting_while_a_lay_has_no_length_yet()
     {
-        Lay(ply: 10, lengthM: null);
+        Lay(usedM: null);
         CaptureAdds();
 
         var result = await Service().CreateAsync(Create(100), CutTeam, default);
@@ -231,7 +231,7 @@ public class MaterialReturnServiceTests
     [Fact]
     public async Task Returnable_suggests_the_fabric_left_after_cutting()
     {
-        Lay(20, 2.5m);   // đã cắt 50 m trên 100 m đã nhận
+        Lay(50m);   // đã cắt 50 m trên 100 m đã nhận
         Return(HandoverStatuses.Pending, 10);   // đang trả 10 m
 
         var line = (await Service().GetReturnableAsync(CutTeam, default)).Data!.Single();
@@ -249,12 +249,12 @@ public class MaterialReturnServiceTests
             IssuedQty = 50, ConfirmedQty = 50,
         };
         _issue.MaterialIssueLines.Add(other); _issueLines.Add(other);
-        Lay(10, 3m);   // cắt 30 m, còn 120 m: dòng đầu 100, dòng sau 20
+        Lay(30m);   // cắt 30 m, còn 120 m: dòng đầu 100, dòng sau 20
 
         var lines = (await Service().GetReturnableAsync(CutTeam, default)).Data!;
         lines.Select(l => l.SuggestedQty).Should().Equal(100m, 20m);
 
-        Lay(5, null);   // bàn chưa có chiều dài: chưa biết đã cắt bao nhiêu
+        Lay(null);   // bàn cũ chưa có số mét vải: chưa biết đã cắt bao nhiêu
         (await Service().GetReturnableAsync(CutTeam, default)).Data!.Should().OnlyContain(l => l.SuggestedQty == null);
     }
 

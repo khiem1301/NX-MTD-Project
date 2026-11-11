@@ -1,4 +1,5 @@
-import { Form, message, type UploadFile } from 'antd';
+import { Form, Modal, message, type UploadFile } from 'antd';
+import type { Role } from '@/constants/roles';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { MESSAGES } from '@/constants/messages';
@@ -6,7 +7,7 @@ import { attachmentApi } from '@/hooks/useAttachments';
 import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
 import { fill, toApiDate } from '@/utils/format';
-import { GENERIC_FORM_TYPES } from '../constants';
+import { GENERIC_FORM_TYPES, NO_LINE_TYPES } from '../constants';
 import { useCreateRequest, useRequestTypes, useUpdateRequest } from '@/hooks/useRequests';
 import type { RequestFormModalProps } from '../components/RequestFormModal';
 import { type Dayjs } from 'dayjs';
@@ -36,23 +37,54 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
       );
   };
 
+  /** Đổi loại đơn khi đã nhập dòng thì hỏi trước; đồng ý thì xóa các dòng (mỗi loại dùng cột khác nhau). */
+  const changeType = (next: RequestType) => {
+    const apply = () => {
+      form.setFieldsValue({
+        requestType: next,
+        lines: [EMPTY_LINE],
+        workOrderId: undefined,
+        orderId: undefined,
+      });
+    };
+    const lines = (form.getFieldValue('lines') ?? []) as NonNullable<FormValues['lines']>;
+    const typed = lines.some((l) => l.materialId || l.itemDescription?.trim());
+    if (!typed) return apply();
+    Modal.confirm({
+      title: MESSAGES.requests.changeTypeTitle,
+      content: MESSAGES.requests.changeTypeContent,
+      okText: MESSAGES.common.confirm,
+      cancelText: MESSAGES.common.cancel,
+      onOk: apply,
+    });
+  };
+
   const handleFinish = async (values: FormValues) => {
+    const noLines = NO_LINE_TYPES.includes(values.requestType);
     const body = {
       title: values.title ?? null,
       content: values.content ?? null,
       targetDate: values.targetDate ? toApiDate(values.targetDate) : null,
-      lines: (values.lines ?? []).map((l) => ({
-        materialId: l.materialId ?? null,
-        itemDescription: l.materialId ? null : l.itemDescription,
-        quantity: l.quantity,
-      })),
+      lines: noLines
+        ? []
+        : (values.lines ?? []).map((l) => ({
+            materialId: l.materialId ?? null,
+            itemDescription: l.materialId ? null : l.itemDescription,
+            quantity: l.quantity,
+          })),
     };
     try {
       if (editing) {
         await update.mutateAsync({ ...body, rowVer: editing.rowVer });
         onSaved(editing.requestId);
       } else {
-        const newId = await create.mutateAsync({ ...body, requestType: values.requestType });
+        const newId = await create.mutateAsync({
+          ...body,
+          requestType: values.requestType,
+          handlerRole: noLines ? values.handlerRole : null,
+          workOrderId: values.workOrderId ?? null,
+          orderId: values.workOrderId ? (values.orderId ?? null) : null,
+        });
         await uploadPhotos(newId);
         void message.success(MESSAGES.requests.created);
         onSaved(newId);
@@ -68,6 +100,7 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
   const initialValues: Partial<FormValues> = editing
     ? {
         requestType: editing.requestType,
+        workOrderId: editing.workOrderId ?? undefined,
         title: editing.title ?? undefined,
         content: editing.content ?? undefined,
         targetDate: editing.targetDate ? dayjs(editing.targetDate) : undefined,
@@ -83,6 +116,7 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
     create,
     update,
     options,
+    changeType,
     handleFinish,
     initialValues,
     form,
@@ -93,6 +127,9 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
 
 type FormValues = {
   requestType: RequestType;
+  handlerRole?: Role;
+  workOrderId?: number;
+  orderId?: number;
   title?: string;
   content?: string;
   targetDate?: Dayjs;

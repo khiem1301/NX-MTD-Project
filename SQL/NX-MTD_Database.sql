@@ -113,6 +113,12 @@
    - 10/11/2026  Dạng bìa theo màu áo (DEV-ALL-89): ProductMarkerFabric giữ nguyên cấu trúc, nay mỗi dòng là "màu dùng nhóm bìa" và MaterialId
                  do backend lấy từ định mức của các chi tiết trên nhóm. Các màu dùng chung nhóm phải dùng chung mọi nhóm (một dạng bìa); ở mỗi
                  màu, các chi tiết trong một nhóm cùng vải, màu có nhóm mà chi tiết khác vải thì sang dạng bìa riêng.
+   - 11/11/2026  Bàn cắt nhập số lượng sau cắt và số mét vải đã dùng (DEV-ALL-90): CuttingLay thêm FabricUsedM, bỏ PlyCount, LayLengthM;
+                 CuttingLayLine bỏ RatioValue, CalculatedQty, AdjustReason. Patch SQL/patches/2026-11-11_cutting_lay_fabric_used.sql.
+   - 11/11/2026  Đơn từ loại OTHER (DEV-ALL-91): Request thêm HandlerRoleCode, HandlerTeamId, CK_Request_Handler.
+                 Patch SQL/patches/2026-11-11_request_other.sql.
+   - 11/11/2026  WorkOrder thêm FabricTolerancePercent (DEV-ALL-92): trần đơn xin NVL theo lệnh cắt = số mét hệ thống tính × (1 + tỉ lệ).
+                 Patch SQL/patches/2026-11-11_work_order_fabric_tolerance.sql.
    - 09/11/2026  ProductComponentMaterial theo màu áo, không theo size (DEV-ALL-87): ProductVariantId thay bằng ProductColorId (FK ghép ProductColor),
                  UQ_PCM thành (ProductColorId, ProductComponentId, MaterialId). Size của chứng từ (lệnh cắt, bàn cắt, kho BTP, phiếu cấp) lấy từ
                  OrderLine; trigger 50041 so màu của định mức với màu của dòng đơn.
@@ -551,7 +557,7 @@ CREATE INDEX IX_OrderLine_Product ON dbo.OrderLine(ProductId);
 -- (MarkerNo, khớp ProductMarkerFabric / ProductMarkerComponent theo (ProductId, MarkerNo)), có mã trong nhóm (1A, 1B...) và
 -- chiều dài cố định; tỉ lệ size ở ProductMarkerRatio. Chỉ dùng để ước số mét vải khi lập lệnh cắt: mét = số lớp × LengthM,
 -- số lớp = max theo size của ⌈cần ÷ PiecesPerPly⌉. Bàn cắt không gắn bìa (một lần nhập có thể dùng nhiều bìa): số mét và
--- sản lượng thực tế lấy từ CuttingLay.PlyCount × LayLengthM và CuttingLayLine.
+-- sản lượng thực tế lấy từ CuttingLay.FabricUsedM và CuttingLayLine.ActualQty (DEV-ALL-90).
 CREATE TABLE dbo.ProductMarker (
     ProductMarkerId INT IDENTITY(1,1) CONSTRAINT PK_ProductMarker PRIMARY KEY,
     OrderId         INT           NOT NULL CONSTRAINT FK_PM_Order REFERENCES dbo.CustomerOrder(OrderId),
@@ -721,6 +727,7 @@ GO
    MATERIAL_REQUISITION          Tổ trưởng cắt / may         Thủ kho       không  (yêu cầu NVL)
    SEMI_FINISHED_REQUISITION     Tổ trưởng may               Thủ kho       không  (yêu cầu BTP)
    MATERIAL_PURCHASE             Hệ thống (NVL lỗi thiếu tồn) Quản đốc     không  (Quản đốc đọc rồi tự tạo đơn mua)
+   OTHER                         Mọi người dùng              Người tạo chọn có     (HandlerRoleCode; tổ trưởng = tổ của người tạo, DEV-ALL-91)
    Quy tắc ai tạo / ai xử lý nằm ở backend. Lịch sử đổi trạng thái ghi vào AuditLog.
    ===================================================================================== */
 
@@ -740,6 +747,8 @@ CREATE TABLE dbo.Request (
     Content              NVARCHAR(2000) NULL,   -- nội dung và lý do của người tạo
     CreatedBy            INT            NULL CONSTRAINT FK_Request_CreatedBy REFERENCES dbo.Employee(EmployeeId), -- NULL = hệ thống tạo
     CreatedByTeamId      INT            NULL CONSTRAINT FK_Request_Team REFERENCES dbo.Team(TeamId),
+    HandlerRoleCode      VARCHAR(30)    NULL,   -- chỉ OTHER: vai trò xử lý người tạo chọn
+    HandlerTeamId        INT            NULL CONSTRAINT FK_Request_HandlerTeam REFERENCES dbo.Team(TeamId), -- OTHER gửi tổ trưởng: tổ của người tạo
     DecidedAt            DATETIME2(0)   NULL,
     DecisionNote         NVARCHAR(1000) NULL,   -- ghi chú khi duyệt; lý do khi từ chối (bắt buộc)
     ResultNote           NVARCHAR(1000) NULL,
@@ -750,7 +759,11 @@ CREATE TABLE dbo.Request (
     UpdatedAt            DATETIME2(0)   NULL,
     RowVer               ROWVERSION,
     CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION',
-        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE')),
+        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE','OTHER')),
+    CONSTRAINT CK_Request_Handler CHECK (
+        (RequestTypeCode = 'OTHER' AND ((ISNULL(HandlerRoleCode, '') = 'TEAM_LEADER' AND HandlerTeamId IS NOT NULL)
+            OR (ISNULL(HandlerRoleCode, '') IN ('ADMIN','MANAGER','ACCOUNTANT','WAREHOUSE_KEEPER') AND HandlerTeamId IS NULL)))
+        OR (RequestTypeCode <> 'OTHER' AND HandlerRoleCode IS NULL AND HandlerTeamId IS NULL)),
     CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
     CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH'))
@@ -893,6 +906,9 @@ CREATE TABLE dbo.WorkOrder (
     DueDate           DATE           NOT NULL,
     Status            VARCHAR(20)    NOT NULL CONSTRAINT DF_WO_Status DEFAULT 'OPEN',
     Note              NVARCHAR(1000) NULL,
+    -- tỉ lệ sai lệch (%) trên số mét vải hệ thống tính: trần tổng các đơn xin NVL của lệnh (DEV-ALL-92)
+    FabricTolerancePercent DECIMAL(5,2) NOT NULL CONSTRAINT DF_WO_FabricTolerance DEFAULT 0
+                      CONSTRAINT CK_WO_FabricTolerance CHECK (FabricTolerancePercent BETWEEN 0 AND 100),
     CreatedAt         DATETIME2(0)   NOT NULL CONSTRAINT DF_WO_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CompletedAt       DATETIME2(0)   NULL,
     CONSTRAINT CK_WO_Status  CHECK (Status IN ('OPEN','CUTTING','COMPLETED','CANCELLED'))
@@ -976,8 +992,9 @@ CREATE TABLE dbo.MaterialReturnLine (
     CONSTRAINT UQ_MRetL UNIQUE (MaterialReturnId, MaterialIssueLineId)
 );
 
--- Bàn cắt (CUTTING_LAY, FR 2.7): số lớp × tỉ lệ size. Tỉ lệ size nằm ở CuttingLayLine.RatioValue. Một lần nhập có thể dùng nhiều bìa
--- nên bàn cắt không gắn bìa; vải đã cắt = Σ PlyCount × LayLengthM (DEV-ALL-85)
+-- Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (CuttingLayLine.ActualQty) và số mét vải đã dùng
+-- của cả bàn (FabricUsedM), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không
+-- gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ FabricUsedM, vải còn lại = đang giữ − đã cắt (backend chặn bàn vượt số còn lại).
 CREATE TABLE dbo.CuttingLay (
     CuttingLayId    INT IDENTITY(1,1) CONSTRAINT PK_CuttingLay PRIMARY KEY,
     WorkOrderId     INT            NOT NULL CONSTRAINT FK_CL_WO REFERENCES dbo.WorkOrder(WorkOrderId),
@@ -986,8 +1003,7 @@ CREATE TABLE dbo.CuttingLay (
     ShiftCode       VARCHAR(10)    NOT NULL CONSTRAINT CK_CL_Shift CHECK (ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')),
     LaySequence     SMALLINT       NOT NULL,
     FabricMaterialId INT           NOT NULL CONSTRAINT FK_CL_Material REFERENCES dbo.Material(MaterialId),
-    PlyCount        SMALLINT       NOT NULL CONSTRAINT CK_CL_Ply CHECK (PlyCount > 0),
-    LayLengthM      DECIMAL(7,2)   NULL CONSTRAINT CK_CL_Length CHECK (LayLengthM > 0),   -- chiều dài bàn cắt (mét); NULL = bàn nhập trước khi có cột này
+    FabricUsedM     DECIMAL(9,2)   NULL CONSTRAINT CK_CL_FabricUsed CHECK (FabricUsedM > 0),   -- số mét vải đã dùng của bàn; NULL = bàn cũ chưa có số mét
     Note            NVARCHAR(500)  NULL,
     Status          VARCHAR(10)    NOT NULL CONSTRAINT DF_CL_Status DEFAULT 'RECORDED',
     CreatedAt       DATETIME2(0)   NOT NULL CONSTRAINT DF_CL_CreatedAt DEFAULT (dbo.fn_VnNow()),
@@ -999,11 +1015,7 @@ CREATE TABLE dbo.CuttingLayLine (
     CuttingLayId     INT           NOT NULL CONSTRAINT FK_CLL_Lay REFERENCES dbo.CuttingLay(CuttingLayId),
     OrderLineId      INT           NOT NULL CONSTRAINT FK_CLL_OrderLine REFERENCES dbo.OrderLine(OrderLineId),
     ProductComponentMaterialId INT NULL CONSTRAINT FK_CLL_PCM REFERENCES dbo.ProductComponentMaterial(ProductComponentMaterialId), -- NULL = cả bộ; có = chi tiết × NVL cắt bù (25/10)
-    RatioValue       SMALLINT      NOT NULL CONSTRAINT CK_CLL_Ratio CHECK (RatioValue > 0),
-    CalculatedQty    INT           NOT NULL CONSTRAINT CK_CLL_Calc CHECK (CalculatedQty >= 0),   -- số lớp × tỉ lệ
-    ActualQty        INT           NOT NULL CONSTRAINT CK_CLL_Actual CHECK (ActualQty >= 0),     -- có thể chỉnh, kèm lý do
-    AdjustReason     NVARCHAR(500) NULL,
-    CONSTRAINT CK_CLL_Reason CHECK (ActualQty = CalculatedQty OR AdjustReason IS NOT NULL),
+    ActualQty        INT           NOT NULL CONSTRAINT CK_CLL_Actual CHECK (ActualQty >= 0),     -- số lượng sau cắt (cắt bù: số chi tiết)
     CONSTRAINT UQ_CLL UNIQUE (CuttingLayId, OrderLineId, ProductComponentMaterialId)
 );
 
@@ -4046,14 +4058,14 @@ INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, ReturnedQt
 SELECT r.MaterialReturnId, l.MaterialIssueLineId, 8
 FROM dbo.MaterialReturn r JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = r.MaterialIssueId WHERE r.ReturnCode = 'TV-DEMO-001';
 
--- Bàn cắt: 30 lớp × (M:3, L:2) = 90 M + 60 L; bàn 2: 10 lớp = 30 M + 20 L
-INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, PlyCount, LayLengthM, Status, CreatedAt) VALUES
- (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 30, 2.2, 'RECORDED', '2026-10-24 11:00:00'),
- (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 10, 2.2, 'RECORDED', '2026-10-26 11:00:00');
-INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, RatioValue, CalculatedQty, ActualQty)
-SELECT c.CuttingLayId, v.OrderLineId, v.Ratio, c.PlyCount * v.Ratio, c.PlyCount * v.Ratio
+-- Bàn cắt: bàn 1 cắt 90 M + 60 L, dùng 66 m vải; bàn 2 cắt 30 M + 20 L, dùng 22 m (số lượng sau cắt + số mét, DEV-ALL-90)
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, FabricUsedM, Status, CreatedAt) VALUES
+ (@wo2, @cat, '2026-10-24', 'MORNING', 1, @mVai, 66, 'RECORDED', '2026-10-24 11:00:00'),
+ (@wo2, @cat, '2026-10-26', 'MORNING', 1, @mVai, 22, 'RECORDED', '2026-10-26 11:00:00');
+INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, ActualQty)
+SELECT c.CuttingLayId, v.OrderLineId, CASE WHEN c.WorkDate = '2026-10-24' THEN v.Qty1 ELSE v.Qty2 END
 FROM dbo.CuttingLay c
-CROSS JOIN (VALUES (@l3M, 3), (@l3L, 2)) v(OrderLineId, Ratio)
+CROSS JOIN (VALUES (@l3M, 90, 30), (@l3L, 60, 20)) v(OrderLineId, Qty1, Qty2)
 WHERE c.WorkOrderId = @wo2;
 
 -- Bàn giao BTP: BG-DEMO-002 đã nhập kho BTP (90 M + 60 L); BG-DEMO-003 đang chờ Thủ kho xác nhận (30 M + 20 L)
@@ -4635,12 +4647,12 @@ INSERT dbo.MaterialIssueLine (MaterialIssueId, MaterialId, IssuedQty, ConfirmedQ
 SELECT i.MaterialIssueId, @mVaiBe, m.RequiredQty, m.RequiredQty
 FROM #Ch c JOIN dbo.MaterialIssue i ON i.IssueCode = 'PC-DEMO-1' + c.N JOIN dbo.OrderMaterial m ON m.OrderId = c.OrderId;
 
--- Bàn cắt: 10 lớp × tỉ lệ (số lượng dòng / 10)
-INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, PlyCount, LayLengthM, Status, CreatedAt)
-SELECT w.WorkOrderId, @cat, '2026-10-26', 'AFTERNOON', CAST(c.N AS SMALLINT), @mVaiBe, 10, 2.0, 'RECORDED', '2026-10-26 15:00:00'
+-- Bàn cắt: cắt đủ số đặt của từng dòng, dùng 20 m vải
+INSERT dbo.CuttingLay (WorkOrderId, CuttingTeamId, WorkDate, ShiftCode, LaySequence, FabricMaterialId, FabricUsedM, Status, CreatedAt)
+SELECT w.WorkOrderId, @cat, '2026-10-26', 'AFTERNOON', CAST(c.N AS SMALLINT), @mVaiBe, 20, 'RECORDED', '2026-10-26 15:00:00'
 FROM #Ch c JOIN dbo.WorkOrder w ON w.WorkOrderCode = 'LC-DEMO-' + c.N;
-INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, RatioValue, CalculatedQty, ActualQty)
-SELECT y.CuttingLayId, l.OrderLineId, l.OrderedQty / 10, l.OrderedQty, l.OrderedQty
+INSERT dbo.CuttingLayLine (CuttingLayId, OrderLineId, ActualQty)
+SELECT y.CuttingLayId, l.OrderLineId, l.OrderedQty
 FROM #Ch c JOIN dbo.WorkOrder w ON w.WorkOrderCode = 'LC-DEMO-' + c.N
 JOIN dbo.CuttingLay y ON y.WorkOrderId = w.WorkOrderId JOIN dbo.OrderLine l ON l.OrderId = c.OrderId;
 

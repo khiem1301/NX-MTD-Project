@@ -8,6 +8,9 @@ type WorkOrderSelectProps = {
   value?: number;
   onChange?: (workOrderId: number | undefined) => void;
   placeholder?: string;
+  disabled?: boolean;
+  /** Mặc định 420 px; trong form dùng '100%'. */
+  width?: number | string;
 };
 
 const WIDTH = 420;
@@ -19,6 +22,8 @@ export function WorkOrderSelect({
   value,
   onChange,
   placeholder,
+  disabled,
+  width = WIDTH,
 }: WorkOrderSelectProps) {
   return (
     <Select
@@ -28,8 +33,9 @@ export function WorkOrderSelect({
       onChange={onChange}
       placeholder={placeholder}
       loading={loading}
+      disabled={disabled}
       optionFilterProp="label"
-      style={{ width: WIDTH }}
+      style={{ width }}
       options={(workOrders ?? []).map((w) => ({
         value: w.workOrderId,
         label: `${w.workOrderCode} · ${w.orderCode} · ${w.productCode} · hạn ${formatDate(w.dueDate)}`,

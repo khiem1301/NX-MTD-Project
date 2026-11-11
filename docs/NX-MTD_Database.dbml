@@ -374,6 +374,7 @@ Table WorkOrder [note: 'Lệnh cắt'] {
   DueDate date [not null, note: 'Hạn hoàn thành cắt']
   Status varchar(20) [not null, default: 'OPEN', check: `Status IN ('OPEN','CUTTING','COMPLETED','CANCELLED')`, note: 'Trạng thái: OPEN, CUTTING, COMPLETED, CANCELLED']
   Note nvarchar(1000) [note: 'Ghi chú cho tổ cắt']
+  FabricTolerancePercent decimal(5,2) [not null, default: 0, check: `FabricTolerancePercent BETWEEN 0 AND 100`, note: 'Tỉ lệ sai lệch (%) trên số mét vải hệ thống tính: trần tổng các đơn xin NVL theo lệnh = cần × (1 + tỉ lệ) (DEV-ALL-92)']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
   CompletedAt datetime2(0) [note: 'Thời điểm hoàn thành lệnh']
 }
@@ -925,8 +926,7 @@ Table CuttingLay [note: 'Bàn cắt'] {
   ShiftCode varchar(10) [not null, check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
   LaySequence smallint [not null, note: 'Số thứ tự bàn cắt trong ca của tổ cắt (bàn 1, 2, 3... của ngày và ca đó), đánh lại từ 1 mỗi ca; không trùng trong cùng tổ, ngày, ca']
   FabricMaterialId int [not null, note: 'Vải dùng cho bàn cắt (bắt buộc), để đối chiếu với vải cần của lệnh cắt']
-  PlyCount smallint [not null, check: `PlyCount > 0`, note: 'Số lớp vải trên bàn']
-  LayLengthM decimal(7,2) [check: `LayLengthM > 0`, note: 'Chiều dài bàn cắt (mét); vải đã cắt của bàn = số lớp × chiều dài bàn cắt. NULL = bàn nhập trước khi có cột này']
+  FabricUsedM decimal(9,2) [check: `FabricUsedM > 0`, note: 'Số mét vải tổ cắt đã dùng cho cả bàn (DEV-ALL-90), không vượt vải còn lại của tổ trên đơn (backend kiểm). NULL = bàn cũ chưa có chiều dài bàn cắt']
   Note nvarchar(500) [note: 'Ghi chú của tổ cắt về bàn cắt']
   Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','LOCKED')`, note: 'Trạng thái: RECORDED, LOCKED']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
@@ -949,7 +949,7 @@ Table AnnouncementTarget [note: 'Phạm vi nhận thông báo nhanh'] {
 Table Request [note: 'Đơn từ (11 loại, gồm yêu cầu NVL / BTP / mua NVL)'] {
   RequestId int [pk, increment, note: 'Khóa chính, tự tăng']
   RequestCode varchar(30) [not null, unique, note: 'Mã đơn từ, không trùng']
-  RequestTypeCode varchar(30) [not null, check: `RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION', 'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE')`, note: 'Loại đơn từ (11 loại cố định)']
+  RequestTypeCode varchar(30) [not null, check: `RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION', 'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE','OTHER')`, note: 'Loại đơn từ (12 loại cố định; OTHER = đơn Khác, DEV-ALL-91)']
   Status varchar(20) [not null, check: `Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')`, note: 'Trạng thái: PENDING_APPROVAL, PENDING_PROCESSING, APPROVED, REJECTED, COMPLETED, CANCELLED']
   OrderId int [note: 'Đơn hàng']
   WorkOrderId int [note: 'Lệnh cắt liên quan (NVL lỗi, yêu cầu NVL của tổ cắt)']
@@ -962,6 +962,8 @@ Table Request [note: 'Đơn từ (11 loại, gồm yêu cầu NVL / BTP / mua NV
   Content nvarchar(2000) [note: 'Nội dung và lý do của người tạo']
   CreatedBy int [note: 'Người lập đơn từ; trống nếu hệ thống tự tạo']
   CreatedByTeamId int [note: 'Tổ của người lập đơn']
+  HandlerRoleCode varchar(30) [note: 'Chỉ OTHER: vai trò xử lý người tạo chọn (ADMIN, MANAGER, ACCOUNTANT, WAREHOUSE_KEEPER, TEAM_LEADER); CK_Request_Handler']
+  HandlerTeamId int [ref: > Team.TeamId, note: 'OTHER gửi TEAM_LEADER: tổ của người tạo, tổ trưởng / tổ phó tổ này xử lý']
   DecidedAt datetime2(0) [note: 'Thời điểm duyệt hoặc từ chối']
   DecisionNote nvarchar(1000) [note: 'Ghi chú của người duyệt; khi từ chối đây là lý do (bắt buộc)']
   ResultNote nvarchar(1000) [note: 'Kết quả xử lý']
@@ -1065,13 +1067,7 @@ Table CuttingLayLine [note: 'Số cắt theo size của bàn cắt'] {
   CuttingLayId int [not null, note: 'Bàn cắt chứa dòng này']
   OrderLineId int [not null, note: 'Dòng đơn (mã hàng + màu + size)']
   ProductComponentMaterialId int [note: 'NULL = cắt cả bộ; có giá trị = dòng định mức đang cắt bù; vải / màu phải trùng vải của bàn cắt']
-  RatioValue smallint [not null, check: `RatioValue > 0`, note: 'Tỉ lệ size trên bàn (số cắt = số lớp x tỉ lệ)']
-  CalculatedQty int [not null, check: `CalculatedQty >= 0`, note: 'Số cắt tính được = số lớp x tỉ lệ size']
-  ActualQty int [not null, check: `ActualQty >= 0`, note: 'Số cắt thực tế; có thể chỉnh nhưng phải ghi lý do']
-  AdjustReason nvarchar(500) [note: 'Lý do khi sửa số cắt']
-  checks {
-    `ActualQty = CalculatedQty OR AdjustReason IS NOT NULL` [name: 'CK_CLL_Reason']
-  }
+  ActualQty int [not null, check: `ActualQty >= 0`, note: 'Số lượng sản phẩm (cắt bù: số chi tiết) sau khi cắt, tổ cắt nhập thẳng (DEV-ALL-90)']
 
   indexes {
     (CuttingLayId, OrderLineId, ProductComponentMaterialId) [unique, name: 'UQ_CLL']

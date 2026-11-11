@@ -31,7 +31,9 @@ public class RequisitionRequestHandlerTests : ProductionTestBase
         SetupQueryable(_materials);
     }
 
-    private MaterialRequisitionRequestHandler Nvl() => new(Clock, Uow);
+    private readonly IWorkOrderFabricNeeds _needs = Substitute.For<IWorkOrderFabricNeeds>();
+
+    private MaterialRequisitionRequestHandler Nvl() => new(Clock, Uow, User, _needs);
 
     private SemiFinishedRequisitionRequestHandler Btp() => new(Clock);
 

@@ -1,24 +1,21 @@
 import { Descriptions, type TableColumnsType } from 'antd';
 import { DetailDescriptions, DetailModal } from '@/components/common/DetailModal';
 import { StatusTag } from '@/components/common/StatusTag';
-import { MESSAGES } from '@/constants/messages';
 import { formatDate, formatQty } from '@/utils/format';
 import { LABELS, LAY_STATUS_LABEL, SHIFT_LABEL } from '../constants';
 import type { CuttingLay, CuttingLayLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 
 const columns: TableColumnsType<CuttingLayLine> = [
-  { title: LABELS.orderLine, key: 'line', render: (_, l) => `${l.color} - ${l.sizeCode}` },
-  { title: LABELS.calculatedQty, dataIndex: 'calculatedQty', align: 'right' },
-  { title: LABELS.actualQty, dataIndex: 'actualQty', align: 'right' },
   {
-    title: MESSAGES.common.reason,
-    dataIndex: 'adjustReason',
-    render: (v: string | null) => v ?? '—',
+    title: LABELS.orderLine,
+    key: 'line',
+    render: (_, l) => `${l.color} - ${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`,
   },
+  { title: LABELS.actualQty, dataIndex: 'actualQty', align: 'right' },
 ];
 
-/** Chi tiết một bàn cắt: thông tin chung và số cắt từng màu - size (kèm lý do khi số thực tế khác số tính). */
+/** Chi tiết một bàn cắt: thông tin chung, số mét vải đã dùng và số lượng sau cắt từng màu - size (DEV-ALL-90). */
 export function LayDetailModal({ lay, onClose }: { lay: CuttingLay | null; onClose: () => void }) {
   return (
     <DetailModal
@@ -38,14 +35,10 @@ export function LayDetailModal({ lay, onClose }: { lay: CuttingLay | null; onClo
             <Descriptions.Item label={LABELS.fabricColor}>
               {lay.fabricColor || '—'}
             </Descriptions.Item>
-            <Descriptions.Item label={LABELS.plyCount}>{lay.plyCount}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.layLength}>
-              {lay.layLengthM === null ? '—' : formatQty(lay.layLengthM)}
-            </Descriptions.Item>
-            <Descriptions.Item label={LABELS.layFabricCut}>
+            <Descriptions.Item label={LABELS.layFabricUsed}>
               {lay.fabricUsedM === null ? '—' : formatQty(lay.fabricUsedM)}
             </Descriptions.Item>
-            <Descriptions.Item label={LABELS.sizeRatio}>{lay.sizeRatio}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.sizeSummary}>{lay.sizeSummary}</Descriptions.Item>
             <Descriptions.Item label={LABELS.status}>
               <StatusTag status={lay.status} labels={LAY_STATUS_LABEL} />
             </Descriptions.Item>

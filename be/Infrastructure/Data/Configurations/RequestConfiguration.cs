@@ -37,6 +37,9 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         entity.Property(e => e.RequestTypeCode)
             .HasMaxLength(30)
             .IsUnicode(false);
+        entity.Property(e => e.HandlerRoleCode)
+            .HasMaxLength(30)
+            .IsUnicode(false);
         entity.Property(e => e.ResultNote).HasMaxLength(1000);
         entity.Property(e => e.RowVer)
             .IsRowVersion()
@@ -57,6 +60,10 @@ public sealed class RequestConfiguration : IEntityTypeConfiguration<Request>
         entity.HasOne(d => d.CreatedByTeam).WithMany(p => p.Requests)
             .HasForeignKey(d => d.CreatedByTeamId)
             .HasConstraintName("FK_Request_Team");
+
+        entity.HasOne(d => d.HandlerTeam).WithMany()
+            .HasForeignKey(d => d.HandlerTeamId)
+            .HasConstraintName("FK_Request_HandlerTeam");
 
         entity.HasOne(d => d.DefectRecord).WithOne(p => p.Request)
             .HasForeignKey<Request>(d => d.DefectRecordId)

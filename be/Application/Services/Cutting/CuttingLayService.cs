@@ -8,16 +8,22 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC51: tổ trưởng cắt nhập bàn cắt theo lệnh cắt; chặn khi vượt kế hoạch + % dư, cảnh báo khi vượt kế hoạch.</summary>
+/// <summary>
+/// UC51: tổ trưởng cắt nhập bàn cắt theo lệnh cắt: số lượng sau cắt từng màu - size và số mét vải đã dùng của bàn (DEV-ALL-90).
+/// Chặn khi vượt kế hoạch + % dư hoặc vượt vải còn lại của tổ; cảnh báo khi vượt kế hoạch.
+/// </summary>
 public sealed class CuttingLayService : ICuttingLayService
 {
+    private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
+
     private readonly IUnitOfWork _uow;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
+    private readonly FabricPlanner _planner;
 
-    public CuttingLayService(IUnitOfWork uow, IAppLock locks, IClock clock)
+    public CuttingLayService(IUnitOfWork uow, IAppLock locks, IClock clock, FabricPlanner planner)
     {
-        _uow = uow; _locks = locks; _clock = clock;
+        _uow = uow; _locks = locks; _clock = clock; _planner = planner;
     }
 
     private IQueryable<CuttingLay> Lays => _uow.Repository<CuttingLay>().Query();
@@ -33,14 +39,14 @@ public sealed class CuttingLayService : ICuttingLayService
             .OrderByDescending(l => l.WorkDate).ThenByDescending(l => l.CuttingLayId)
             .Select(ToDto())
             .ToPagedAsync(query, ct);
-        return Result<PagedResult<CuttingLayDto>>.Success(page with { Items = page.Items.Select(WithSizeRatio).ToList() });
+        return Result<PagedResult<CuttingLayDto>>.Success(page with { Items = page.Items.Select(WithSizeSummary).ToList() });
     }
 
     public async Task<Result<CuttingLayDto>> GetByIdAsync(int layId, int cuttingTeamId, CancellationToken ct)
     {
         var dto = await Lays.AsNoTracking().Where(l => l.CuttingLayId == layId).Select(ToDto()).FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<CuttingLayDto>();
-        dto = WithSizeRatio(dto);
+        dto = WithSizeSummary(dto);
         var teamId = await Lays.Where(l => l.CuttingLayId == layId).Select(l => l.CuttingTeamId).FirstAsync(ct);
         return teamId == cuttingTeamId ? Result<CuttingLayDto>.Success(dto) : WarehouseFailures.TeamMismatch<CuttingLayDto>();
     }
@@ -120,13 +126,15 @@ public sealed class CuttingLayService : ICuttingLayService
             return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LayOrderLineNotInWorkOrder);
         var date = CheckWorkDate(dto.WorkDate, wo);
         if (date is not null) return date;
-        var fabric = await CheckFabricAsync(dto, wo, ct);
+        var fabric = await CheckFabricAsync(dto, wo, ct) ?? await CheckFabricRemainingAsync(dto, wo, lay.CuttingLayId, ct);
         if (fabric is not null) return fabric;
 
-        var lines = BuildLines(dto);
-        if (lines.Any(l => l.ActualQty != l.CalculatedQty && string.IsNullOrEmpty(l.AdjustReason)))
-            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReasonRequired);
-
+        var lines = dto.Lines.Select(l => new CuttingLayLine
+        {
+            OrderLineId = l.OrderLineId,
+            ProductComponentMaterialId = l.ProductComponentMaterialId,
+            ActualQty = l.ActualQty,
+        }).ToList();
         var cap = await CheckCapAsync(wo, lay.CuttingLayId, lines, planned, ct);
         if (!cap.IsSuccess) return cap;
 
@@ -134,8 +142,7 @@ public sealed class CuttingLayService : ICuttingLayService
         lay.WorkDate = dto.WorkDate;
         lay.ShiftCode = dto.ShiftCode;
         lay.FabricMaterialId = dto.FabricMaterialId;
-        lay.PlyCount = (short)dto.PlyCount;
-        lay.LayLengthM = dto.LayLengthM;
+        lay.FabricUsedM = dto.FabricUsedM;
         lay.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
         lay.CuttingLayLines = lines;
         return cap;
@@ -178,24 +185,26 @@ public sealed class CuttingLayService : ICuttingLayService
         return null;
     }
 
-    private static List<CuttingLayLine> BuildLines(SaveCuttingLayDto dto)
+    /// <summary>
+    /// Vải còn lại của tổ trên đơn = vải tổ đang giữ (đã nhận − đã trả về kho) − số mét các bàn khác của tổ trên đơn đã dùng,
+    /// cùng cách tính với "vải còn lại" ở lệnh cắt. Bàn này dùng nhiều hơn số còn lại thì chặn. Bàn cũ chưa có số mét không trừ được.
+    /// </summary>
+    private async Task<Result?> CheckFabricRemainingAsync(SaveCuttingLayDto dto, WorkOrder wo, int exceptLayId, CancellationToken ct)
     {
-        var lines = dto.Lines.Select(l =>
-        {
-            var calculated = CuttingLayCalculator.CalculatedQty(dto.PlyCount, l.RatioValue);
-            var actual = l.ActualQty ?? calculated;
-            return new CuttingLayLine
-            {
-                OrderLineId = l.OrderLineId,
-                ProductComponentMaterialId = l.ProductComponentMaterialId,
-                RatioValue = (short)l.RatioValue,
-                CalculatedQty = calculated,
-                ActualQty = actual,
-                AdjustReason = actual == calculated ? null : l.AdjustReason?.Trim(),
-            };
-        }).ToList();
-        return lines;
+        var held = Math.Max(0, await _planner.GetTeamHoldingAsync(wo.CuttingTeamId, wo.OrderId, dto.FabricMaterialId, ct));
+        var usedByOthers = await Lays
+            .Where(l => l.CuttingTeamId == wo.CuttingTeamId && l.WorkOrder.OrderId == wo.OrderId
+                        && l.FabricMaterialId == dto.FabricMaterialId && l.CuttingLayId != exceptLayId)
+            .SumAsync(l => l.FabricUsedM ?? 0m, ct);
+        var remaining = Math.Max(0, held - usedByOthers);
+        var used = dto.FabricUsedM ?? 0m;
+        return used <= remaining
+            ? null
+            : Result.Failure(ErrorCodes.WarehouseInsufficientStock,
+                string.Format(WarehouseMessages.LayFabricOverRemaining, Format(used), Format(remaining)));
     }
+
+    private static string Format(decimal qty) => qty.ToString("#,0.##", Vietnamese);
 
     private async Task<Result> CheckCapAsync(WorkOrder wo, int exceptLayId, IReadOnlyList<CuttingLayLine> lines,
         IReadOnlyDictionary<(int OrderLineId, int? ProductComponentMaterialId), int> planned, CancellationToken ct)
@@ -244,22 +253,21 @@ public sealed class CuttingLayService : ICuttingLayService
         return (short)((max ?? 0) + 1);
     }
 
-    /// <summary>VD "S:2, M:3, L:2"; lệnh nhiều màu thì ghi kèm màu "Đỏ-S:2".</summary>
-    private static CuttingLayDto WithSizeRatio(CuttingLayDto lay)
+    /// <summary>Số lượng sau cắt theo size, VD "S:20, M:30"; lệnh nhiều màu thì ghi kèm màu "Đỏ-S:20".</summary>
+    private static CuttingLayDto WithSizeSummary(CuttingLayDto lay)
     {
         var multiColor = lay.Lines.Select(l => l.Color).Distinct().Count() > 1;
         return lay with
         {
-            SizeRatio = string.Join(", ", lay.Lines.Select(l => $"{(multiColor ? l.Color + "-" : string.Empty)}{l.SizeCode}:{l.RatioValue}")),
+            SizeSummary = string.Join(", ", lay.Lines.Select(l => $"{(multiColor ? l.Color + "-" : string.Empty)}{l.SizeCode}:{l.ActualQty}")),
         };
     }
 
     private static System.Linq.Expressions.Expression<Func<CuttingLay, CuttingLayDto>> ToDto() => l =>
         new CuttingLayDto(l.CuttingLayId, l.WorkOrderId, l.WorkOrder.WorkOrderCode, l.WorkDate, l.ShiftCode,
             l.LaySequence, l.FabricMaterialId, l.FabricMaterial.MaterialCode,
-            l.FabricMaterial.Color, l.PlyCount, l.LayLengthM, l.PlyCount * l.LayLengthM, string.Empty, l.Note, l.Status, l.CreatedAt,
+            l.FabricMaterial.Color, l.FabricUsedM, string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
                 x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.Material.Color == "" ? "" : " " + x.ProductComponentMaterial.Material.Color),
-                x.OrderLine.ProductVariant.ProductColor.Color, x.OrderLine.ProductVariant.SizeCode, x.RatioValue, x.CalculatedQty, x.ActualQty,
-                x.AdjustReason)).ToList());
+                x.OrderLine.ProductVariant.ProductColor.Color, x.OrderLine.ProductVariant.SizeCode, x.ActualQty)).ToList());
 }

@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
-import { Col, Form, Input, Modal, Row, Select, message } from 'antd';
+import { Col, Form, Modal, Row, Select, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderLineOptions, useOrderOptions, useTeamOptions } from '@/hooks/useLookups';
-import { CUTTING_TEAM_TYPE, LABELS, WORK_ORDER_LIMITS } from '../constants';
+import { CUTTING_TEAM_TYPE, LABELS } from '../constants';
 import { useSaveWorkOrder, useWorkOrderFabricCheck } from '../hooks/useCutting';
 import type { SaveWorkOrderPayload, WorkOrder } from '../types';
 import {
@@ -16,6 +16,7 @@ import {
 import { ExtraComponentLines } from './ExtraComponentLines';
 import { PlannedLinesTable } from './PlannedLinesTable';
 import { FabricCheckAlerts } from './FabricCheckAlerts';
+import { WorkOrderNoteFields } from './WorkOrderNoteFields';
 import { API_DATE } from '@/utils/format';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
@@ -62,6 +63,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
       cuttingTeamId: workOrder.cuttingTeamId,
       dueDate: dayjs(workOrder.dueDate),
       note: workOrder.note ?? undefined,
+      fabricTolerancePercent: workOrder.fabricTolerancePercent,
       ...splitWorkOrderLines(workOrder.lines),
     });
   }, [open, workOrder, form]);
@@ -179,13 +181,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
         <PlannedLinesTable lines={productLines} />
         <ExtraComponentLines form={form} lines={productLines} />
         <FabricCheckAlerts checks={fabricChecks} />
-        <Form.Item name="note" label={LABELS.note} style={{ marginTop: 12, marginBottom: 0 }}>
-          <Input.TextArea
-            autoSize={{ minRows: 1, maxRows: 3 }}
-            maxLength={WORK_ORDER_LIMITS.noteMax}
-            showCount
-          />
-        </Form.Item>
+        <WorkOrderNoteFields />
       </Form>
     </Modal>
   );

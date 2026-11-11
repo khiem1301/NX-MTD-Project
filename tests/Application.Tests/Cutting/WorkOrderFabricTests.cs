@@ -180,8 +180,8 @@ public class WorkOrderFabricTests : ProductionTestBase
         row.MarkerPlans.Should().BeNull();
     }
 
-    private void AddLay(short plies, decimal? length, int team = TeamId, int order = OrderId, int fabric = FabricId) =>
-        _lays.Add(new CuttingLay { CuttingTeamId = team, FabricMaterialId = fabric, PlyCount = plies, LayLengthM = length, WorkOrder = new WorkOrder { OrderId = order } });
+    private void AddLay(decimal? usedM, int team = TeamId, int order = OrderId, int fabric = FabricId) =>
+        _lays.Add(new CuttingLay { CuttingTeamId = team, FabricMaterialId = fabric, FabricUsedM = usedM, WorkOrder = new WorkOrder { OrderId = order } });
 
     private void HeldFabric(decimal received, decimal returned)
     {
@@ -209,12 +209,12 @@ public class WorkOrderFabricTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Fabrics_CutIsPliesTimesLength_AndRemainingIsWhatTheTeamHoldsMinusCut()
+    public async Task Fabrics_CutIsSumOfFabricUsed_AndRemainingIsWhatTheTeamHoldsMinusCut()
     {
         SeedWorkOrderWithFabric();
         HeldFabric(100, 10);        // đang giữ 90 m
-        AddLay(5, 6);               // 30 m
-        AddLay(2, 10.5m);           // 21 m
+        AddLay(30);
+        AddLay(21);
 
         var row = (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single();
 
@@ -226,20 +226,20 @@ public class WorkOrderFabricTests : ProductionTestBase
     {
         SeedWorkOrderWithFabric();
         HeldFabric(100, 0);
-        AddLay(1, 10);
-        AddLay(1, 500, team: 99);
-        AddLay(1, 500, order: 99);
-        AddLay(1, 500, fabric: 99);
+        AddLay(10);
+        AddLay(500, team: 99);
+        AddLay(500, order: 99);
+        AddLay(500, fabric: 99);
 
         (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single().CutQty.Should().Be(10m);
     }
 
     [Fact]
-    public async Task Fabrics_LayWithoutLength_IsCountedSeparately_NotAsZeroCut()
+    public async Task Fabrics_LayWithoutFabricUsed_IsCountedSeparately_NotAsZeroCut()
     {
         SeedWorkOrderWithFabric();
         HeldFabric(100, 0);
-        AddLay(3, null);
+        AddLay(null);
 
         var row = (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single();
 
@@ -251,7 +251,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     {
         SeedWorkOrderWithFabric();
         HeldFabric(10, 0);
-        AddLay(2, 10);
+        AddLay(20);
 
         (await Sut().GetFabricRequirementsAsync(7, default)).Data!.Single().RemainingQty.Should().Be(-10m);
     }

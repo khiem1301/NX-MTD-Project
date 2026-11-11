@@ -25,7 +25,8 @@ public sealed class RequestQueryService : IRequestQueryService
 
     public IReadOnlyList<RequestTypeOptionDto> GetCreatableTypes() =>
         _access.CreatableTypes()
-            .Select(p => new RequestTypeOptionDto(CodeText.ToPascal(p.RequestType), p.Label, p.NeedsApproval, p.HandlerRole))
+            .Select(p => new RequestTypeOptionDto(CodeText.ToPascal(p.RequestType), p.Label, p.NeedsApproval, p.HandlerRole,
+                p.HandlerChosenOnCreate ? _access.ChoosableHandlerRoles() : null))
             .ToList();
 
     public async Task<Result<PagedResult<RequestListItemDto>>> ListMineAsync(RequestQuery query, CancellationToken ct)
@@ -54,8 +55,13 @@ public sealed class RequestQueryService : IRequestQueryService
         if (invalid is not null) return Fail.As<PagedResult<RequestListItemDto>>(invalid);
 
         var types = filter.RequestTypes is null ? handled : handled.Intersect(filter.RequestTypes).ToList();
-        return Result<PagedResult<RequestListItemDto>>.Success(
-            await _requests.ListAsync(filter with { RequestTypes = types }, ct));
+        var withOther = filter.RequestTypes is null || filter.RequestTypes.Contains(RequestTypes.Other);
+        return Result<PagedResult<RequestListItemDto>>.Success(await _requests.ListAsync(filter with
+        {
+            RequestTypes = types,
+            OtherHandlerRoleCodes = withOther ? _access.HandledRoleCodes() : null,
+            OtherHandlerTeamId = withOther ? _access.HandledTeamId() : null,
+        }, ct));
     }
 
     public async Task<Result<RequestDetailDto>> GetDetailAsync(int requestId, CancellationToken ct)
@@ -64,11 +70,12 @@ public sealed class RequestQueryService : IRequestQueryService
         if (detail is null) return Fail.NotFound<RequestDetailDto>();
 
         var type = CodeText.ToCode(detail.RequestType);
-        if (!_access.CanView(type, detail.CreatedBy, detail.CreatedByTeamId)) return Fail.NotFound<RequestDetailDto>();
+        var chosen = new ChosenHandler(detail.HandlerRole is null ? null : Roles.ToRoleCode(detail.HandlerRole), detail.HandlerTeamId);
+        if (!_access.CanView(type, detail.CreatedBy, detail.CreatedByTeamId, chosen)) return Fail.NotFound<RequestDetailDto>();
 
         var history = await _audit.GetHistoryAsync(nameof(Request), requestId, ct);
         var permissions = _access.PermissionsFor(type, CodeText.ToCode(detail.Status), detail.CreatedBy,
-            detail.CreatedByTeamId, _handlers.For(type).AllowManualComplete);
+            detail.CreatedByTeamId, _handlers.For(type).AllowManualComplete, chosen);
         var maxPhotos = await _settings.GetIntAsync(SettingKeys.RequestMaxPhotos, DefaultMaxPhotos, ct);
         return Result<RequestDetailDto>.Success(detail with { History = history, Permissions = permissions, MaxPhotos = maxPhotos });
     }

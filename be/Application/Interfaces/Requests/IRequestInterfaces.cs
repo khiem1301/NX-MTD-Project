@@ -26,11 +26,14 @@ public interface IRequestTypeHandler
     Task<Result> OnStatusChangedAsync(Request request, string oldStatus, CancellationToken ct);
 }
 
-public sealed record RequestHeader(int RequestId, string RequestType, string Status, int? CreatedBy, int? CreatedByTeamId);
+public sealed record RequestHeader(int RequestId, string RequestType, string Status, int? CreatedBy, int? CreatedByTeamId,
+    string? HandlerRoleCode = null, int? HandlerTeamId = null);
 
 /// <param name="RequestTypes">Mã DB; null = không lọc.</param>
+/// <param name="OtherHandlerRoleCodes">Lấy thêm đơn Khác gửi các vai trò này; OtherHandlerTeamId: gửi tổ trưởng của tổ này.</param>
 public sealed record RequestListFilter(PageQuery Page, int? CreatedBy, int? CreatedByTeamId,
-    IReadOnlyCollection<string>? RequestTypes, IReadOnlyCollection<string>? Statuses);
+    IReadOnlyCollection<string>? RequestTypes, IReadOnlyCollection<string>? Statuses,
+    IReadOnlyCollection<string>? OtherHandlerRoleCodes = null, int? OtherHandlerTeamId = null);
 
 public interface IRequestRepository : IGenericRepository<Request>
 {

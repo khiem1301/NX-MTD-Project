@@ -5,9 +5,6 @@ namespace Application.Tests;
 
 public class CuttingLayCalculatorTests
 {
-    [Fact]
-    public void CalculatedQty_PliesTimesRatio() => CuttingLayCalculator.CalculatedQty(40, 3).Should().Be(120);
-
     [Theory]
     [InlineData(150, 3, 154)]
     [InlineData(100, 3, 103)]

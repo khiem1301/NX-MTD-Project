@@ -26,8 +26,13 @@ public sealed class FabricPlanner
                         && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new
             {
-                p.ProductComponentMaterialId, p.ProductColorId, p.MaterialId,
-                p.Material.MaterialCode, p.Material.MaterialName, p.Material.Unit, p.Material.Color,
+                p.ProductComponentMaterialId,
+                p.ProductColorId,
+                p.MaterialId,
+                p.Material.MaterialCode,
+                p.Material.MaterialName,
+                p.Material.Unit,
+                p.Material.Color,
             })
             .ToListAsync(ct);
         return rows
@@ -60,17 +65,17 @@ public sealed class FabricPlanner
     }
 
     /// <summary>
-    /// Vải tổ cắt đã cắt trên đơn, theo NVL: Σ số lớp × chiều dài bàn cắt của các bàn. Bàn chưa có chiều dài (nhập trước khi có cột)
-    /// không cộng được nên đếm riêng để màn hình báo số đã cắt chưa đủ.
+    /// Vải tổ cắt đã cắt trên đơn, theo NVL: Σ số mét vải đã dùng của các bàn (DEV-ALL-90). Bàn cũ chưa có số mét (nhập trước khi có
+    /// chiều dài bàn cắt) không cộng được nên đếm riêng để màn hình báo số đã cắt chưa đủ.
     /// </summary>
     public async Task<Dictionary<int, (decimal CutQty, int UnmeasuredLays)>> GetCutAsync(int cuttingTeamId, int orderId, CancellationToken ct)
     {
         var lays = await _uow.Repository<CuttingLay>().Query().AsNoTracking()
             .Where(l => l.CuttingTeamId == cuttingTeamId && l.WorkOrder.OrderId == orderId)
-            .Select(l => new { l.FabricMaterialId, l.PlyCount, l.LayLengthM })
+            .Select(l => new { l.FabricMaterialId, l.FabricUsedM })
             .ToListAsync(ct);
         return lays.GroupBy(l => l.FabricMaterialId).ToDictionary(g => g.Key, g =>
-            (g.Sum(l => l.PlyCount * (l.LayLengthM ?? 0m)), g.Count(l => l.LayLengthM is null)));
+            (g.Sum(l => l.FabricUsedM ?? 0m), g.Count(l => l.FabricUsedM is null)));
     }
 
     /// <summary>Vải đã cấp theo lệnh cắt: phiếu chờ nhận tính số cấp, phiếu đã nhận tính số xác nhận.

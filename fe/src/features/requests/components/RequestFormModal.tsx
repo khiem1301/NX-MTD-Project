@@ -1,14 +1,19 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Form, Input, Modal, Select, Upload, message } from 'antd';
+import { Col, Form, Input, Modal, Row, Select, Upload, message } from 'antd';
 import dayjs from 'dayjs';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
+import { ROLE_LABEL } from '@/constants/hr';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { RequestDetail } from '@/types/request';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { CUTTING_TEAM_TYPE, NO_LINE_TYPES } from '../constants';
 import { RequestLineFields } from './RequestLineFields';
+import { WorkOrderRequisitionField } from './WorkOrderRequisitionField';
+import { useWorkOrderAllowance } from '../hooks/useWorkOrderRequisition';
+import { useAuth } from '@/hooks/useAuth';
 import { useRequestForm } from '../hooks/useRequestForm';
-import { EMPTY_LINE } from '../hooks/useRequestForm';
+import type { RequestType } from '@/constants/requestTypes';
 
 export type RequestFormModalProps = {
   open: boolean;
@@ -18,7 +23,9 @@ export type RequestFormModalProps = {
   onSaved: (requestId: number) => void;
 };
 
-/** Form chung cho 3 loại đơn của Cơ điện: tiêu đề, nội dung, ngày cần, dòng linh kiện + số lượng, ảnh. */
+const required = { required: true, message: MESSAGES.common.required };
+
+/** Form chung của các loại đơn tạo tay: chọn loại, người xử lý (đơn Khác), tiêu đề, nội dung, ngày cần, dòng, ảnh. */
 export function RequestFormModal({
   open,
   editing,
@@ -26,9 +33,29 @@ export function RequestFormModal({
   onClose,
   onSaved,
 }: RequestFormModalProps) {
-  const { create, update, options, handleFinish, initialValues, form, files, setFiles } =
-    useRequestForm({ editing, onSaved });
-  const requestType = Form.useWatch('requestType', form);
+  const {
+    create,
+    update,
+    options,
+    changeType,
+    handleFinish,
+    initialValues,
+    form,
+    files,
+    setFiles,
+  } = useRequestForm({ editing, onSaved });
+  const requestType = Form.useWatch('requestType', form) as RequestType | undefined;
+  const noLines = requestType !== undefined && NO_LINE_TYPES.includes(requestType);
+  const handlerRoles = options.find((o) => o.requestType === requestType)?.handlerRoleOptions;
+  const { user } = useAuth();
+  const byWorkOrder =
+    requestType === 'MaterialRequisition' &&
+    (editing ? editing.workOrderId !== null : user?.teamType === CUTTING_TEAM_TYPE);
+  const workOrderId = Form.useWatch('workOrderId', form) as number | undefined;
+  const allowance = useWorkOrderAllowance(
+    byWorkOrder ? workOrderId : undefined,
+    editing?.requestId,
+  );
 
   return (
     <Modal
@@ -40,7 +67,7 @@ export function RequestFormModal({
       onOk={() => form.submit()}
       onCancel={onClose}
       destroyOnHidden
-      width={640}
+      width={760}
     >
       <Form
         form={form}
@@ -49,34 +76,71 @@ export function RequestFormModal({
         onFinish={handleFinish}
         initialValues={initialValues}
       >
-        <Form.Item
-          name="requestType"
-          label={MESSAGES.requests.type}
-          rules={[{ required: true, message: MESSAGES.common.required }]}
-        >
-          <Select
-            disabled={!!editing}
-            onChange={() => form.setFieldValue('lines', [EMPTY_LINE])}
-            options={options.map((o) => ({ value: o.requestType, label: o.label }))}
-          />
-        </Form.Item>
-        <Form.Item name="title" label={MESSAGES.requests.titleField} rules={[{ max: 200 }]}>
-          <Input />
-        </Form.Item>
+        <Row gutter={12}>
+          <Col xs={24} sm={noLines && !editing ? 12 : 24}>
+            {/* Ô chọn không gắn thẳng vào form để hỏi trước khi đổi loại (xóa dòng đã nhập). */}
+            <Form.Item label={MESSAGES.requests.type} required>
+              <Select
+                value={requestType}
+                disabled={!!editing}
+                placeholder={MESSAGES.requests.typePlaceholder}
+                aria-label={MESSAGES.requests.type}
+                onChange={changeType}
+                options={options.map((o) => ({ value: o.requestType, label: o.label }))}
+              />
+              <Form.Item name="requestType" noStyle rules={[required]}>
+                <Input type="hidden" />
+              </Form.Item>
+            </Form.Item>
+          </Col>
+          {noLines && !editing && (
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="handlerRole"
+                label={MESSAGES.requests.handlerRole}
+                rules={[required]}
+              >
+                <Select
+                  placeholder={MESSAGES.requests.handlerRolePlaceholder}
+                  aria-label={MESSAGES.requests.handlerRole}
+                  options={(handlerRoles ?? []).map((r) => ({ value: r, label: ROLE_LABEL[r] }))}
+                />
+              </Form.Item>
+            </Col>
+          )}
+        </Row>
+        <Row gutter={12}>
+          <Col xs={24} sm={16}>
+            <Form.Item name="title" label={MESSAGES.requests.titleField} rules={[{ max: 200 }]}>
+              <Input />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item name="targetDate" label={MESSAGES.requests.targetDate}>
+              <AppDatePicker
+                style={{ width: '100%' }}
+                disabledDate={(d) => d.isBefore(dayjs(), 'day')}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
         <Form.Item
           name="content"
           label={MESSAGES.requests.content}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 2000 },
-          ]}
+          rules={[{ ...required, whitespace: true }, { max: 2000 }]}
         >
-          <Input.TextArea rows={3} />
+          <Input.TextArea rows={3} placeholder={MESSAGES.requests.contentPlaceholder} />
         </Form.Item>
-        <Form.Item name="targetDate" label={MESSAGES.requests.targetDate}>
-          <AppDatePicker disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
-        </Form.Item>
-        <RequestLineFields form={form} requestType={requestType} />
+        {byWorkOrder && (
+          <WorkOrderRequisitionField form={form} allowance={allowance.data} locked={!!editing} />
+        )}
+        {requestType && !noLines && (
+          <RequestLineFields
+            form={form}
+            requestType={requestType}
+            allowance={byWorkOrder && workOrderId ? allowance.data : undefined}
+          />
+        )}
         {!editing && (
           <Form.Item label={fill(MESSAGES.requests.photos, maxPhotos)} style={{ marginTop: 16 }}>
             <Upload
@@ -100,14 +164,6 @@ export function RequestFormModal({
               )}
             </Upload>
           </Form.Item>
-        )}
-        {editing && (
-          <Alert
-            type="info"
-            showIcon
-            message={MESSAGES.attachments.title}
-            description={MESSAGES.requests.attachmentsHint}
-          />
         )}
       </Form>
     </Modal>

@@ -26,6 +26,9 @@ public partial class WorkOrder
 
     public string? Note { get; set; }
 
+    /// <summary>Tỉ lệ sai lệch (%) cho phép trên số mét vải hệ thống tính: trần đơn xin NVL của lệnh (DEV-ALL-92).</summary>
+    public decimal FabricTolerancePercent { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? CompletedAt { get; set; }

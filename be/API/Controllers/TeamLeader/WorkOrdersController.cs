@@ -28,4 +28,9 @@ public sealed class WorkOrdersController : TeamLeaderBaseController
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct) =>
         this.ToResponse(await _workOrders.GetByIdAsync(id, TeamId, ct));
+
+    /// <summary>Vải của lệnh để lập đơn xin NVL theo lệnh (DEV-ALL-92); exceptRequestId = đơn đang sửa.</summary>
+    [HttpGet("{id:int}/material-allowance")]
+    public async Task<IActionResult> GetMaterialAllowance(int id, [FromQuery] int? exceptRequestId, CancellationToken ct) =>
+        this.ToResponse(await _workOrders.GetMaterialAllowanceAsync(id, TeamId, exceptRequestId, ct));
 }

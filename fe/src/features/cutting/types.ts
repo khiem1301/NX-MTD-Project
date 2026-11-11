@@ -59,6 +59,8 @@ export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {
   lines: WorkOrderLine[];
   fabrics: FabricRequirement[];
   fabricChecks: WorkOrderFabricCheck[];
+  /** Tỉ lệ sai lệch (%) trên số mét hệ thống tính: trần đơn xin NVL theo lệnh. */
+  fabricTolerancePercent: number;
 };
 
 export type WorkOrderQuery = PageParams & { status?: string; orderId?: number };
@@ -69,6 +71,7 @@ export type SaveWorkOrderPayload = {
   cuttingTeamId: number;
   dueDate: string;
   note?: string;
+  fabricTolerancePercent?: number;
   lines: SaveWorkOrderLine[];
 };
 
@@ -93,10 +96,8 @@ export type CuttingLayLine = {
   componentName: string | null;
   color: string;
   sizeCode: string;
-  ratioValue: number;
-  calculatedQty: number;
+  /** Số lượng sau cắt (cắt bù: số chi tiết). */
   actualQty: number;
-  adjustReason: string | null;
 };
 
 export type CuttingLay = {
@@ -109,12 +110,10 @@ export type CuttingLay = {
   fabricMaterialId: number | null;
   fabricMaterialCode: string | null;
   fabricColor: string;
-  plyCount: number;
-  /** Chiều dài bàn cắt (mét); null = bàn nhập trước khi có chiều dài. */
-  layLengthM: number | null;
-  /** Vải đã cắt của bàn = số lớp × chiều dài bàn cắt. */
+  /** Số mét vải đã dùng của bàn (DEV-ALL-90); null = bàn cũ chưa có số mét. */
   fabricUsedM: number | null;
-  sizeRatio: string;
+  /** Số lượng sau cắt theo size, VD "M:90, L:60". */
+  sizeSummary: string;
   note: string | null;
   status: string;
   createdAt: string;
@@ -132,15 +131,12 @@ export type SaveCuttingLayPayload = {
   workDate: string;
   shiftCode: string;
   fabricMaterialId?: number;
-  plyCount: number;
-  layLengthM: number;
+  fabricUsedM: number;
   note?: string;
   lines: {
     orderLineId: number;
     productComponentMaterialId: number | null;
-    ratioValue: number;
-    actualQty?: number;
-    adjustReason?: string;
+    actualQty: number;
   }[];
 };
 

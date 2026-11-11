@@ -2,23 +2,25 @@ using NX_MTD.Application.Common;
 
 namespace NX_MTD.Application.DTOs;
 
-/// <summary>ProductComponentMaterialId null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù.</summary>
+/// <summary>ProductComponentMaterialId null = cả bộ; có giá trị = chi tiết lẻ của lệnh cắt bù. ActualQty = số lượng sau khi cắt.</summary>
 public sealed record CuttingLayLineDto(
     int CuttingLayLineId, int OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string Color, string SizeCode,
-    int RatioValue, int CalculatedQty, int ActualQty, string? AdjustReason);
+    int ActualQty);
 
 /// <param name="FabricColor">Màu của vải (Material.Color, 26/10); '' = không phân màu.</param>
-/// <param name="FabricUsedM">Vải đã cắt của bàn = số lớp × chiều dài bàn cắt; null = bàn chưa có chiều dài.</param>
+/// <param name="FabricUsedM">Số mét vải tổ cắt đã dùng cho bàn (DEV-ALL-90); null = bàn cũ chưa có chiều dài bàn cắt.</param>
+/// <param name="SizeSummary">Số lượng sau cắt theo size, VD "M:90, L:60".</param>
 public sealed record CuttingLayDto(
     int CuttingLayId, int WorkOrderId, string WorkOrderCode, DateOnly WorkDate, string ShiftCode, int LaySequence,
-    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, int PlyCount, decimal? LayLengthM, decimal? FabricUsedM, string SizeRatio, string? Note,
+    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, decimal? FabricUsedM, string SizeSummary, string? Note,
     string Status, DateTime CreatedAt, IReadOnlyList<CuttingLayLineDto> Lines);
 
-/// <summary>ActualQty bỏ trống = bằng số tính (số lớp × tỉ lệ); khác số tính thì bắt buộc AdjustReason.</summary>
-public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentMaterialId, int RatioValue, int? ActualQty, string? AdjustReason);
+/// <summary>ActualQty = số lượng sản phẩm (cắt bù: chi tiết) sau khi cắt của dòng.</summary>
+public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentMaterialId, int ActualQty);
 
+/// <param name="FabricUsedM">Số mét vải đã dùng của cả bàn; không vượt vải còn lại của tổ trên đơn.</param>
 public sealed record SaveCuttingLayDto(
-    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, int PlyCount, decimal? LayLengthM,
+    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, decimal? FabricUsedM,
     string? Note, IReadOnlyList<SaveLayLineDto> Lines);
 
 public sealed record CuttingLayQuery : PageQuery

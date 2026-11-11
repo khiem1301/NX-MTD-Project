@@ -862,6 +862,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `Content` | NVARCHAR(2000) | ✓ |  | nội dung và lý do của người tạo |
 | `CreatedBy` | INT | ✓ | FK → `Employee.EmployeeId` | NULL = hệ thống tạo |
 | `CreatedByTeamId` | INT | ✓ | FK → `Team.TeamId` |  |
+| `HandlerRoleCode` | VARCHAR(30) | ✓ |  | Chỉ đơn `OTHER`: vai trò xử lý người tạo chọn (DEV-ALL-91) |
+| `HandlerTeamId` | INT | ✓ | FK → `Team.TeamId` | Đơn `OTHER` gửi `TEAM_LEADER`: tổ của người tạo |
 | `DecidedAt` | DATETIME2(0) | ✓ |  |  |
 | `DecisionNote` | NVARCHAR(1000) | ✓ |  | ghi chú khi duyệt; lý do khi từ chối (bắt buộc) |
 | `ResultNote` | NVARCHAR(1000) | ✓ |  |  |
@@ -873,7 +875,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 **Ràng buộc & index**
 
-- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`
+- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`, `MATERIAL_PURCHASE`, `OTHER`
+- `CK_Request_Handler`: chỉ `OTHER` có `HandlerRoleCode` (bắt buộc); `TEAM_LEADER` thì có `HandlerTeamId`, vai trò khác thì không
 - `CK_Request_Status`: Giá trị: `PENDING_APPROVAL`, `PENDING_PROCESSING`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`
 - `CK_Request_Reject`: `CHECK Status <> 'REJECTED' OR DecisionNote IS NOT NULL`
 - `CK_Request_Shortage`: `CHECK ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')`
@@ -1041,6 +1044,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `DueDate` | DATE |  |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'OPEN'` |  |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
+| `FabricTolerancePercent` | DECIMAL(5,2) |  | Mặc định `0`; `CHECK` 0–100 | Tỉ lệ sai lệch (%) trên số mét vải hệ thống tính: trần tổng các đơn xin NVL theo lệnh (DEV-ALL-92) |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `CompletedAt` | DATETIME2(0) | ✓ |  |  |
 
@@ -1156,8 +1160,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 ### `CuttingLay` — Bàn cắt
 
-> Bàn cắt (CUTTING_LAY, FR 2.7): số lớp × tỉ lệ size. Tỉ lệ size nằm ở CuttingLayLine.RatioValue;
-> một lần nhập có thể dùng nhiều bìa nên bàn cắt không gắn bìa; vải đã cắt = Σ PlyCount × LayLengthM (DEV-ALL-85)
+> Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (`CuttingLayLine.ActualQty`) và số mét vải đã dùng
+> của cả bàn (`FabricUsedM`), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không
+> gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ `FabricUsedM`, vải còn lại = đang giữ − đã cắt (backend chặn bàn vượt số còn lại).
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -1168,8 +1173,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `ShiftCode` | VARCHAR(10) |  | Giá trị: `MORNING`, `AFTERNOON`, `OVERTIME` |  |
 | `LaySequence` | SMALLINT |  |  |  |
 | `FabricMaterialId` | INT |  | FK → `Material.MaterialId` | 23/10: bắt buộc |
-| `PlyCount` | SMALLINT |  | `CHECK PlyCount > 0` |  |
-| `LayLengthM` | DECIMAL(7,2) | Có | `CHECK LayLengthM > 0` | Chiều dài bàn cắt (mét); vải đã cắt của bàn = số lớp × chiều dài bàn cắt |
+| `FabricUsedM` | DECIMAL(9,2) | ✓ | `CHECK FabricUsedM > 0` | Số mét vải đã dùng của bàn (DEV-ALL-90); trống = bàn cũ chưa có chiều dài bàn cắt |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(10) |  | Mặc định `'RECORDED'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
@@ -1187,14 +1191,10 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `CuttingLayId` | INT |  | FK → `CuttingLay.CuttingLayId` |  |
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
 | `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải phải trùng `CuttingLay.FabricMaterialId` (25/10 thay `ProductComponentId`) |
-| `RatioValue` | SMALLINT |  | `CHECK RatioValue > 0` |  |
-| `CalculatedQty` | INT |  | `CHECK CalculatedQty >= 0` | số lớp × tỉ lệ |
-| `ActualQty` | INT |  | `CHECK ActualQty >= 0` | có thể chỉnh, kèm lý do |
-| `AdjustReason` | NVARCHAR(500) | ✓ |  |  |
+| `ActualQty` | INT |  | `CHECK ActualQty >= 0` | Số lượng sau cắt (cắt bù: số chi tiết), tổ cắt nhập thẳng (DEV-ALL-90) |
 
 **Ràng buộc & index**
 
-- `CK_CLL_Reason`: `CHECK ActualQty = CalculatedQty OR AdjustReason IS NOT NULL`
 - UNIQUE `UQ_CLL`: (CuttingLayId, OrderLineId, ProductComponentMaterialId)
 
 ### `CutHandover` — Bàn giao BTP vào kho

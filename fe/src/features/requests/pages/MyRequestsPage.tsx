@@ -11,6 +11,7 @@ import { RequestDetailModal } from '../components/RequestDetailModal';
 import { RequestFilters, type RequestFilterValue } from '../components/RequestFilters';
 import { RequestFormModal } from '../components/RequestFormModal';
 import { RequestTable } from '../components/RequestTable';
+import { useRequestStatusCounts } from '../hooks/useRequestStatusCounts';
 import { DEFAULT_MAX_PHOTOS, GENERIC_FORM_TYPES } from '../constants';
 import { useMyRequests, useRequestTypes } from '@/hooks/useRequests';
 
@@ -21,6 +22,7 @@ export function MyRequestsPage() {
   const table = useTableQuery<RequestFilterValue>({});
   const [creating, setCreating] = useState(false);
   const requests = useMyRequests(table.params);
+  const counts = useRequestStatusCounts('mine', table.filters);
   const { data: types } = useRequestTypes();
   const canCreate = (types ?? []).some((t) => GENERIC_FORM_TYPES.includes(t.requestType));
   const isTeamRole = user?.role === ROLES.TeamLeader || user?.role === ROLES.TeamDeputy;
@@ -39,7 +41,7 @@ export function MyRequestsPage() {
       }
     >
       <Space direction="vertical" style={{ width: '100%' }}>
-        <RequestFilters value={table.filters} onChange={table.setFilters} />
+        <RequestFilters value={table.filters} onChange={table.setFilters} counts={counts} />
         <QueryError error={requests.error} onRetry={() => void requests.refetch()} />
         <RequestTable
           data={requests.data}

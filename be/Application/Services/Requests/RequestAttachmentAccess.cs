@@ -21,7 +21,8 @@ public sealed class RequestAttachmentAccess : IAttachmentOwnerAccess
     public async Task<bool> CanReadAsync(int ownerId, CancellationToken ct)
     {
         var r = await _requests.GetHeaderAsync(ownerId, ct);
-        return r is not null && _access.CanView(r.RequestType, r.CreatedBy, r.CreatedByTeamId);
+        return r is not null && _access.CanView(r.RequestType, r.CreatedBy, r.CreatedByTeamId,
+            new ChosenHandler(r.HandlerRoleCode, r.HandlerTeamId));
     }
 
     /// <summary>Chỉ phía người tạo, khi đơn còn chờ (UC07).</summary>

@@ -38,6 +38,13 @@ public partial class Request
 
     public int? CreatedByTeamId { get; set; }
 
+    /// <summary>Đơn Khác (DEV-ALL-91): vai trò xử lý người tạo chọn; gửi tổ trưởng thì kèm tổ của người tạo.</summary>
+    public string? HandlerRoleCode { get; set; }
+
+    public int? HandlerTeamId { get; set; }
+
+    public virtual Team? HandlerTeam { get; set; }
+
     public DateTime? DecidedAt { get; set; }
 
     public string? DecisionNote { get; set; }

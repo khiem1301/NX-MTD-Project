@@ -62,12 +62,18 @@ public abstract class RequisitionRequestHandler : IRequestTypeHandler
 /// <summary>
 /// Xin NVL (tổ cắt, tổ may): mỗi dòng phải chọn NVL trong danh mục đang dùng. Vải: số lượng lớn hơn 0, tối đa 2 chữ số sau dấu phẩy;
 /// NVL khác vải (chỉ, cúc, phụ liệu…): số nguyên. Tối đa 9.999.999 mỗi dòng.
+/// Có chọn lệnh cắt (tổ cắt, DEV-ALL-92): chỉ xin vải hệ thống tính cho lệnh, tổng các đơn xin NVL của lệnh không vượt trần của lệnh.
 /// </summary>
 public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandler
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUser _user;
+    private readonly IWorkOrderFabricNeeds _needs;
 
-    public MaterialRequisitionRequestHandler(IClock clock, IUnitOfWork uow) : base(clock) => _uow = uow;
+    public MaterialRequisitionRequestHandler(IClock clock, IUnitOfWork uow, ICurrentUser user, IWorkOrderFabricNeeds needs) : base(clock)
+    {
+        _uow = uow; _user = user; _needs = needs;
+    }
 
     public override string RequestType => RequestTypes.MaterialRequisition;
 
@@ -94,8 +100,34 @@ public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandle
                 return Invalid(string.Format(isFabric ? Messages.RequisitionFabricQtyInvalid : Messages.RequisitionOtherQtyInvalid,
                     material.MaterialName));
         }
-        return Result.Success();
+        return draft.WorkOrderId is int workOrderId
+            ? await CheckWorkOrderCapAsync(draft, workOrderId, materials.ToDictionary(m => m.Key, m => m.Value.MaterialName), ct)
+            : Result.Success();
     }
+
+    /// <summary>Lệnh của tổ, đang mở / đang cắt; mỗi NVL là vải hệ thống tính được cho lệnh; đã xin ở đơn khác + đơn này ≤ trần.</summary>
+    private async Task<Result> CheckWorkOrderCapAsync(RequestDraft draft, int workOrderId, IReadOnlyDictionary<int, string> names,
+        CancellationToken ct)
+    {
+        var wo = await _needs.LoadAsync(workOrderId, ct);
+        if (wo is null || wo.CuttingTeamId != _user.TeamId || wo.Status is not (WorkOrderStatuses.Open or WorkOrderStatuses.Cutting)
+            || (draft.OrderId is int orderId && orderId != wo.OrderId))
+            return Invalid(Messages.RequisitionWorkOrderInvalid);
+
+        var allowance = (await _needs.AllowanceAsync(wo, draft.RequestId, ct)).ToDictionary(a => a.MaterialId);
+        var over = new List<string>();
+        foreach (var line in draft.Lines)
+        {
+            var id = line.MaterialId!.Value;
+            if (!allowance.TryGetValue(id, out var a) || a.CapQty is not { } cap)
+                return Invalid(string.Format(Messages.RequisitionNotWorkOrderFabric, names[id]));
+            if (a.RequestedQty + line.Quantity > cap)
+                over.Add(string.Format(Messages.RequisitionOverCapLine, names[id], Qty(cap), Qty(a.RequestedQty), Qty(line.Quantity)));
+        }
+        return over.Count == 0 ? Result.Success() : Invalid(string.Format(Messages.RequisitionOverWorkOrderCap, string.Join("; ", over)));
+    }
+
+    private static string Qty(decimal value) => value.ToString("#,0.##", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
 }
 
 /// <summary>Xin BTP (tổ may): số lượng bộ là số nguyên từ 1 đến 1.000.000.</summary>

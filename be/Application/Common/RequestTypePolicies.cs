@@ -3,8 +3,10 @@ using NX_MTD.Domain.Constants;
 namespace NX_MTD.Application.Common;
 
 /// <param name="CreatorTeamTypes">null = không giới hạn loại tổ; có giá trị = người tạo phải thuộc tổ loại này.</param>
+/// <param name="HandlerChosenOnCreate">true = người tạo chọn vai trò xử lý (đơn Khác, DEV-ALL-91); HandlerRole để rỗng.</param>
 public sealed record RequestTypePolicy(string RequestType, IReadOnlyCollection<string> CreatorRoles,
-    IReadOnlyCollection<string>? CreatorTeamTypes, string HandlerRole, bool NeedsApproval, string Label)
+    IReadOnlyCollection<string>? CreatorTeamTypes, string HandlerRole, bool NeedsApproval, string Label,
+    bool HandlerChosenOnCreate = false)
 {
     public bool CanCreate(string role, string? teamTypeCode) =>
         CreatorRoles.Contains(role)
@@ -19,6 +21,15 @@ public static class RequestTypePolicies
     private static readonly string[] CuttingOnly = { TeamTypes.Cutting };
     private static readonly string[] SewingOnly = { TeamTypes.Sewing };
     private static readonly string[] CuttingOrSewing = { TeamTypes.Cutting, TeamTypes.Sewing };
+    private static readonly string[] Everyone =
+    {
+        Roles.Admin, Roles.Manager, Roles.Accountant, Roles.WarehouseKeeper, Roles.TeamLeader, Roles.TeamDeputy,
+        Roles.QaQc, Roles.Electrician, Roles.Worker,
+    };
+
+    /// <summary>Vai trò chọn được cho đơn Khác (DEV-ALL-91).</summary>
+    public static readonly IReadOnlyList<string> ChoosableHandlerRoles =
+        new[] { Roles.Admin, Roles.Manager, Roles.Accountant, Roles.WarehouseKeeper, Roles.TeamLeader };
 
     public static readonly IReadOnlyDictionary<string, RequestTypePolicy> All = new[]
     {
@@ -34,6 +45,7 @@ public static class RequestTypePolicies
         new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, false, "Xin NVL"),
         new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, false, "Xin BTP"),
         new RequestTypePolicy(RequestTypes.MaterialPurchase, NoCreator, null, Roles.Manager, false, "Mua NVL"),
+        new RequestTypePolicy(RequestTypes.Other, Everyone, null, string.Empty, true, "Khác", HandlerChosenOnCreate: true),
     }.ToDictionary(p => p.RequestType);
 
     public static readonly IReadOnlyDictionary<string, string> StatusLabels = new Dictionary<string, string>

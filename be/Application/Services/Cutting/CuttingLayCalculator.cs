@@ -7,11 +7,9 @@ public enum CutCapCheck
     OverCap,
 }
 
-/// <summary>UC51: số cắt = số lớp × tỉ lệ size; tổng cắt ≤ kế hoạch + % dư (CUT_SURPLUS_PERCENT).</summary>
+/// <summary>UC51: tổng số lượng sau cắt các bàn ≤ kế hoạch + % dư (CUT_SURPLUS_PERCENT).</summary>
 public static class CuttingLayCalculator
 {
-    public static int CalculatedQty(int plyCount, int ratioValue) => plyCount * ratioValue;
-
     /// <summary>Trần làm tròn xuống: kế hoạch 150, dư 3% → 154.</summary>
     public static int Cap(int plannedQty, decimal surplusPercent) =>
         (int)Math.Floor(plannedQty * (1 + surplusPercent / 100m));

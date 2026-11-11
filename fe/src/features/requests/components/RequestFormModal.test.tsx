@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MESSAGES } from '@/constants/messages';
 import { requestApi } from '@/services/requestApi';
 import { RequestFormModal } from './RequestFormModal';
 
@@ -18,11 +19,13 @@ const TYPES = [
   'MachineSupplies',
   'MaterialRequisition',
   'AttendanceCorrection',
+  'Other',
 ].map((t) => ({
   requestType: t,
   label: t,
   needsApproval: true,
-  handlerRole: 'Admin',
+  handlerRole: t === 'Other' ? '' : 'Admin',
+  handlerRoleOptions: t === 'Other' ? ['Accountant', 'TeamLeader'] : null,
 }));
 
 const renderModal = () => {
@@ -36,27 +39,57 @@ const renderModal = () => {
   );
 };
 
+// getByRole rất chậm trên DOM antd trong jsdom nên dùng class của rc-select.
+const openTypeSelect = async () => {
+  await waitFor(() => expect(requestApi.types).toHaveBeenCalled());
+  fireEvent.mouseDown(document.querySelector('.ant-select-selector') as Element);
+  await waitFor(() => expect(typeOptions().length).toBeGreaterThan(0));
+};
+const typeOptions = () => document.querySelectorAll('.ant-select-item-option');
+const chooseOther = async () => {
+  await openTypeSelect();
+  fireEvent.click(document.querySelector('.ant-select-item-option[title="Other"]') as Element);
+};
+
 describe('RequestFormModal', () => {
   beforeEach(() => (requestApi.create as jest.Mock).mockReset());
 
-  it('chỉ liệt kê loại đơn dùng form chung (Cơ điện + Xin NVL / BTP), bỏ loại có form riêng', async () => {
+  it('ô chọn loại đơn chỉ liệt kê loại dùng form chung', async () => {
     renderModal();
+    await openTypeSelect();
 
-    // getByRole rất chậm trên DOM antd trong jsdom nên dùng class của rc-select.
-    await waitFor(() => expect(requestApi.types).toHaveBeenCalled());
-    fireEvent.mouseDown(document.querySelector('.ant-select-selector') as Element);
-
-    await waitFor(() =>
-      expect(document.querySelectorAll('.ant-select-item-option')).toHaveLength(4),
-    );
+    expect(typeOptions()).toHaveLength(5);
+    expect(document.querySelector('[title="AttendanceCorrection"]')).toBeNull();
   });
 
-  it('thiếu nội dung thì báo lỗi và không gọi API tạo đơn', async () => {
+  it('thiếu loại đơn và nội dung thì báo lỗi, không gọi API tạo đơn', async () => {
     renderModal();
 
-    fireEvent.click(screen.getByText('Lưu'));
+    fireEvent.click(screen.getByText(MESSAGES.common.save));
 
     await waitFor(() => expect(document.querySelector('[aria-invalid="true"]')).not.toBeNull());
+    expect(requestApi.create).not.toHaveBeenCalled();
+  });
+
+  it('đơn Khác: hiện ô người xử lý, không có dòng chi tiết', async () => {
+    renderModal();
+    await chooseOther();
+
+    expect(await screen.findByText(MESSAGES.requests.handlerRole)).toBeInTheDocument();
+    expect(screen.queryByText(MESSAGES.requests.addLine)).not.toBeInTheDocument();
+  });
+
+  it('đơn Khác thiếu người xử lý thì không gửi', async () => {
+    renderModal();
+    await chooseOther();
+    await screen.findByText(MESSAGES.requests.handlerRole);
+    fireEvent.change(screen.getByPlaceholderText(MESSAGES.requests.contentPlaceholder), {
+      target: { value: 'Xin nghỉ chiều' },
+    });
+
+    fireEvent.click(screen.getByText(MESSAGES.common.save));
+
+    expect(await screen.findByText(MESSAGES.common.required)).toBeInTheDocument();
     expect(requestApi.create).not.toHaveBeenCalled();
   });
 });

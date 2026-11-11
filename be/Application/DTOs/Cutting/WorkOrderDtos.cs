@@ -7,9 +7,9 @@ namespace NX_MTD.Application.DTOs;
 /// đã trả lại kho (phiếu trả đã xác nhận) và thực dùng = đã nhận − đã trả.
 /// </summary>
 /// <param name="HeldQty">Vải tổ cắt đang giữ của đơn = đã nhận − đã trả về kho.</param>
-/// <param name="CutQty">Vải đã cắt của tổ trên đơn = Σ số lớp × chiều dài bàn cắt.</param>
+/// <param name="CutQty">Vải đã cắt của tổ trên đơn = Σ số mét vải đã dùng của các bàn.</param>
 /// <param name="RemainingQty">Vải còn lại = HeldQty − CutQty; âm nghĩa là đã cắt nhiều hơn số đang giữ.</param>
-/// <param name="UnmeasuredLayCount">Số bàn dùng vải này chưa có chiều dài bàn cắt nên chưa cộng vào CutQty.</param>
+/// <param name="UnmeasuredLayCount">Số bàn dùng vải này chưa có số mét vải đã dùng (bàn cũ) nên chưa cộng vào CutQty.</param>
 public sealed record FabricRequirementDto(
     int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
     decimal IssuedQty, decimal AvailableQty, decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0,
@@ -30,7 +30,8 @@ public sealed record WorkOrderDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
     string ProductName, int CuttingTeamId, string CuttingTeamName, int? SourceRequestId, DateOnly DueDate,
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
-    IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks);
+    IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks,
+    decimal FabricTolerancePercent = 0);
 
 /// <summary>
 /// Vải ước theo bìa của đơn (DEV-ALL-85, ghép bìa DEV-ALL-88), riêng từng NVL. Status là một giá trị của FabricCheckStatuses; Message = null khi đủ vải.
@@ -68,8 +69,16 @@ public sealed record ReplacementRequestLineDto(int OrderLineId, string Color, st
 /// <summary>Lập lệnh cắt bù từ một đơn cắt bù đã duyệt; dòng lệnh lấy từ dòng đơn (chi tiết + số lượng).</summary>
 public sealed record CreateReplacementWorkOrderDto(int RequestId, int CuttingTeamId, DateOnly DueDate, string? Note);
 
+/// <param name="FabricTolerancePercent">Tỉ lệ sai lệch (%) trên số mét vải hệ thống tính, làm trần đơn xin NVL của lệnh (DEV-ALL-92).</param>
 public sealed record SaveWorkOrderDto(int OrderId, int ProductId, int CuttingTeamId, DateOnly DueDate, string? Note,
-    IReadOnlyList<SaveWorkOrderLineDto> Lines);
+    IReadOnlyList<SaveWorkOrderLineDto> Lines, decimal FabricTolerancePercent = 0);
+
+/// <summary>
+/// Vải của lệnh cắt cho đơn xin NVL (DEV-ALL-92): số mét hệ thống tính, trần = cần × (1 + tỉ lệ sai lệch), đã xin ở các đơn xin NVL
+/// khác của lệnh (trừ đơn bị từ chối / hủy), còn xin được. NeedQty null = chưa tính được (mã hàng chưa có bìa), không xin theo lệnh được.
+/// </summary>
+public sealed record WorkOrderMaterialAllowanceDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
+    string Unit, decimal? NeedQty, decimal? CapQty, decimal RequestedQty, decimal? RemainingQty);
 
 public sealed record WorkOrderQuery : PageQuery
 {

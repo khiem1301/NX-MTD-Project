@@ -8,6 +8,7 @@ import {
 } from '@/constants/requestTypes';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { fill } from '@/utils/format';
 
 /** 'All' chỉ dùng ở hộp "Đơn cần xử lý": bỏ lọc trạng thái (BE mặc định chỉ hiện đơn đang mở). */
 export type RequestFilterValue = {
@@ -19,20 +20,29 @@ export type RequestFilterValue = {
 type RequestFiltersProps = {
   value: RequestFilterValue;
   onChange: (patch: RequestFilterValue) => void;
-  /** Trang "Đơn cần xử lý": không chọn trạng thái = đang mở (BE mặc định); có thêm lựa chọn "Tất cả". */
-  emptyStatusLabel?: string;
+  /** Số đơn của các trạng thái đang chờ, ghi kèm tên trạng thái. */
+  counts?: Partial<Record<RequestStatus, number>>;
+  /** Hộp "Đơn cần xử lý": không chọn trạng thái = đang mở (BE mặc định); có thêm lựa chọn "Tất cả". */
+  inbox?: boolean;
 };
 
 const TYPE_OPTIONS = (Object.keys(REQUEST_TYPE_LABEL) as RequestType[]).map((v) => ({
   value: v,
   label: REQUEST_TYPE_LABEL[v],
 }));
-const STATUS_OPTIONS = (Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[]).map((v) => ({
-  value: v,
-  label: REQUEST_STATUS_LABEL[v],
-}));
+const STATUSES = Object.keys(REQUEST_STATUS_LABEL) as RequestStatus[];
 
-export function RequestFilters({ value, onChange, emptyStatusLabel }: RequestFiltersProps) {
+export function RequestFilters({ value, onChange, counts = {}, inbox }: RequestFiltersProps) {
+  const statusOptions = [
+    ...(inbox ? [{ value: 'All' as const, label: MESSAGES.requests.allStatuses }] : []),
+    ...STATUSES.map((s) => ({
+      value: s,
+      label: counts[s]
+        ? fill(MESSAGES.requests.statusWithCount, REQUEST_STATUS_LABEL[s], counts[s])
+        : REQUEST_STATUS_LABEL[s],
+    })),
+  ];
+
   return (
     <Space wrap>
       <DebouncedSearch
@@ -51,15 +61,11 @@ export function RequestFilters({ value, onChange, emptyStatusLabel }: RequestFil
       />
       <Select
         allowClear
-        placeholder={emptyStatusLabel ?? MESSAGES.requests.status}
+        placeholder={inbox ? MESSAGES.requests.allOpen : MESSAGES.requests.status}
         value={value.status}
-        options={
-          emptyStatusLabel
-            ? [{ value: 'All' as const, label: MESSAGES.requests.allStatuses }, ...STATUS_OPTIONS]
-            : STATUS_OPTIONS
-        }
+        options={statusOptions}
         onChange={(status?: RequestStatus | 'All') => onChange({ status })}
-        style={{ width: 180 }}
+        style={{ width: 200 }}
       />
     </Space>
   );

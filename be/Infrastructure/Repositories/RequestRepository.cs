@@ -17,7 +17,8 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
 
     public Task<RequestHeader?> GetHeaderAsync(int requestId, CancellationToken ct) =>
         _context.Requests.AsNoTracking().Where(r => r.RequestId == requestId)
-            .Select(r => new RequestHeader(r.RequestId, r.RequestTypeCode, r.Status, r.CreatedBy, r.CreatedByTeamId))
+            .Select(r => new RequestHeader(r.RequestId, r.RequestTypeCode, r.Status, r.CreatedBy, r.CreatedByTeamId,
+                r.HandlerRoleCode, r.HandlerTeamId))
             .FirstOrDefaultAsync(ct);
 
     public async Task<IReadOnlyList<int>> TeamLeaderIdsAsync(int teamId, CancellationToken ct) =>
@@ -41,7 +42,15 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
         var q = _context.Requests.AsNoTracking();
         if (f.CreatedBy is int by) q = q.Where(r => r.CreatedBy == by);
         if (f.CreatedByTeamId is int team) q = q.Where(r => r.CreatedByTeamId == team);
-        if (f.RequestTypes is { } types) q = q.Where(r => types.Contains(r.RequestTypeCode));
+        if (f.RequestTypes is { } types)
+        {
+            var roles = f.OtherHandlerRoleCodes ?? Array.Empty<string>();
+            var handlerTeam = f.OtherHandlerTeamId;
+            q = q.Where(r => types.Contains(r.RequestTypeCode)
+                             || (r.RequestTypeCode == RequestTypes.Other
+                                 && (roles.Contains(r.HandlerRoleCode!)
+                                     || (handlerTeam != null && r.HandlerRoleCode == RoleCodes.TeamLeader && r.HandlerTeamId == handlerTeam))));
+        }
         if (f.Statuses is { } statuses) q = q.Where(r => statuses.Contains(r.Status));
         if (!string.IsNullOrWhiteSpace(f.Page.Keyword))
         {
@@ -52,10 +61,16 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
         var page = await q.OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.RequestId)
             .Select(r => new
             {
-                r.RequestId, r.RequestCode, r.RequestTypeCode, r.Status, r.Title, r.TargetDate,
+                r.RequestId,
+                r.RequestCode,
+                r.RequestTypeCode,
+                r.Status,
+                r.Title,
+                r.TargetDate,
                 CreatedByName = r.CreatedByNavigation == null ? null : r.CreatedByNavigation.FullName,
                 TeamName = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamName,
-                r.CreatedAt, r.DecidedAt,
+                r.CreatedAt,
+                r.DecidedAt,
             })
             .ToPagedAsync(f.Page, ct);
 
@@ -70,13 +85,30 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
         var dto = await _context.Requests.AsNoTracking().Where(r => r.RequestId == requestId)
             .Select(r => new RequestDetailDto
             {
-                RequestId = r.RequestId, RequestCode = r.RequestCode, RequestType = r.RequestTypeCode, Status = r.Status,
-                Title = r.Title, Content = r.Content, TargetDate = r.TargetDate, OrderId = r.OrderId,
+                RequestId = r.RequestId,
+                RequestCode = r.RequestCode,
+                RequestType = r.RequestTypeCode,
+                Status = r.Status,
+                Title = r.Title,
+                Content = r.Content,
+                TargetDate = r.TargetDate,
+                OrderId = r.OrderId,
                 OrderCode = r.Order == null ? null : r.Order.OrderCode,
-                CreatedBy = r.CreatedBy, CreatedByName = r.CreatedByNavigation == null ? null : r.CreatedByNavigation.FullName,
-                CreatedByTeamId = r.CreatedByTeamId, TeamName = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamName,
-                CreatedAt = r.CreatedAt, DecidedAt = r.DecidedAt, DecisionNote = r.DecisionNote, ResultNote = r.ResultNote,
-                CompletedAt = r.CompletedAt, ShortageResolution = r.ShortageResolution, RowVer = r.RowVer,
+                WorkOrderId = r.WorkOrderId, WorkOrderCode = r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode,
+                CreatedBy = r.CreatedBy,
+                CreatedByName = r.CreatedByNavigation == null ? null : r.CreatedByNavigation.FullName,
+                CreatedByTeamId = r.CreatedByTeamId,
+                TeamName = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamName,
+                HandlerRole = r.HandlerRoleCode,
+                HandlerTeamId = r.HandlerTeamId,
+                HandlerTeamName = r.HandlerTeam == null ? null : r.HandlerTeam.TeamName,
+                CreatedAt = r.CreatedAt,
+                DecidedAt = r.DecidedAt,
+                DecisionNote = r.DecisionNote,
+                ResultNote = r.ResultNote,
+                CompletedAt = r.CompletedAt,
+                ShortageResolution = r.ShortageResolution,
+                RowVer = r.RowVer,
                 Lines = r.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new RequestLineDto(
                     l.RequestLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Color,
                     l.OrderLineId,
@@ -92,6 +124,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
             RequestType = CodeText.ToPascal(dto.RequestType),
             Status = CodeText.ToPascal(dto.Status),
             ShortageResolution = dto.ShortageResolution is null ? null : CodeText.ToPascal(dto.ShortageResolution),
+            HandlerRole = dto.HandlerRole is null ? null : Roles.FromRoleCode(dto.HandlerRole),
         };
     }
 }

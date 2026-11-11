@@ -16,13 +16,8 @@ public partial class CuttingLayLine
 
     public int? ProductComponentMaterialId { get; set; }
 
-    public short RatioValue { get; set; }
-
-    public int CalculatedQty { get; set; }
-
+    /// <summary>Số lượng sản phẩm (cắt bù: chi tiết) sau khi cắt, tổ cắt nhập thẳng (DEV-ALL-90).</summary>
     public int ActualQty { get; set; }
-
-    public string? AdjustReason { get; set; }
 
     public virtual CuttingLay CuttingLay { get; set; } = null!;
 

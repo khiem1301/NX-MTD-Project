@@ -42,13 +42,42 @@ public sealed class RequestService : IRequestService
         if (!check.IsSuccess) return Fail.As<int>(check);
         var allotted = await CheckAllottedAsync(draft, ct);
         if (allotted is not null) return Fail.As<int>(allotted);
+        var (handlerError, chosen) = ResolveChosenHandler(policy, dto.HandlerRole);
+        if (handlerError is not null) return Fail.As<int>(handlerError);
 
-        var request = await NewRequestAsync(draft, policy, _user.EmployeeId, _user.TeamId, ct);
+        // Đơn Khác của người không thuộc vai trò tổ: không gắn tổ, để tổ trưởng (người xử lý) không thành phía người tạo.
+        var teamId = policy.HandlerChosenOnCreate && !Roles.IsTeamRole(_user.Role) ? null : _user.TeamId;
+        var request = await NewRequestAsync(draft, policy, _user.EmployeeId, teamId, ct);
+        request.HandlerRoleCode = chosen?.RoleCode;
+        request.HandlerTeamId = chosen?.TeamId;
         await _requests.AddAsync(request);
-        await NotifyHandlersAsync(policy, request, ct);
+        await NotifyNewRequestAsync(policy, chosen, request, ct);
         await _uow.SaveChangesAsync();   // D18: không ghi AuditLog INSERT
         return Result<int>.Success(request.RequestId, Messages.Submitted);   // MSG10
     }
+
+    /// <summary>Đơn Khác (DEV-ALL-91): vai trò xử lý bắt buộc, trong danh sách chọn được; tổ trưởng thì là tổ của người tạo.</summary>
+    private (Result? Error, ChosenHandler? Chosen) ResolveChosenHandler(RequestTypePolicy policy, string? handlerRole)
+    {
+        if (!policy.HandlerChosenOnCreate) return (null, null);
+        if (string.IsNullOrWhiteSpace(handlerRole)) return (HandlerRoleInvalid(Messages.RequestHandlerRoleRequired), null);
+        var role = handlerRole.Trim();
+        if (!_access.ChoosableHandlerRoles().Contains(role)) return (HandlerRoleInvalid(Messages.RequestHandlerRoleInvalid), null);
+        return (null, new ChosenHandler(Roles.ToRoleCode(role), role == Roles.TeamLeader ? _user.TeamId : null));
+    }
+
+    private static Result HandlerRoleInvalid(string message) => Result.Failure(ErrorCodes.CommonValidation, message,
+        ResultKind.Validation, new Dictionary<string, string[]> { ["handlerRole"] = new[] { message } });
+
+    private Task NotifyNewRequestAsync(RequestTypePolicy policy, ChosenHandler? chosen, Request request, CancellationToken ct)
+    {
+        if (chosen is null) return NotifyHandlersAsync(Roles.ToRoleCode(policy.HandlerRole), policy, request, ct);
+        return chosen.TeamId is int team
+            ? NotifyTeamLeadersAsync(team, request, policy, ct)
+            : NotifyHandlersAsync(chosen.RoleCode!, policy, request, ct);
+    }
+
+    private static ChosenHandler ChosenOf(Request r) => new(r.HandlerRoleCode, r.HandlerTeamId);
 
     public async Task<Request> StageSystemRequestAsync(RequestDraft draft, CancellationToken ct, int? teamId = null)
     {
@@ -58,7 +87,7 @@ public sealed class RequestService : IRequestService
         // Đơn của riêng một tổ do tổ trưởng xử lý (tăng ca) báo tổ trưởng tổ đó; loại khác (vd. đơn xin NVL do hệ thống tạo
         // cho một tổ) báo người xử lý theo vai trò như mọi đơn.
         if (teamId is not null && policy.HandlerRole == Roles.TeamLeader) await NotifyTeamLeadersAsync(teamId.Value, request, policy, ct);
-        else await NotifyHandlersAsync(policy, request, ct);
+        else await NotifyHandlersAsync(Roles.ToRoleCode(policy.HandlerRole), policy, request, ct);
         return request;
     }
 
@@ -124,7 +153,7 @@ public sealed class RequestService : IRequestService
     public async Task<Result> CompleteAsync(int requestId, CompleteRequestDto dto, CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode, ChosenOf(request))) return Fail.NotFound();
         if (!_handlers.For(request.RequestTypeCode).AllowManualComplete)
             return Result.Failure(ErrorCodes.RequestManualCompleteNotAllowed, Messages.RequestManualCompleteNotAllowed);
         if (!RequestStatuses.Completable.Contains(request.Status))
@@ -153,7 +182,7 @@ public sealed class RequestService : IRequestService
         CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
-        if (request is null || !_access.IsHandler(request.RequestTypeCode)) return Fail.NotFound();
+        if (request is null || !_access.IsHandler(request.RequestTypeCode, ChosenOf(request))) return Fail.NotFound();
         var allowed = to == RequestStatuses.Approved
             ? request.Status == RequestStatuses.PendingApproval
             : RequestStatuses.Rejectable.Contains(request.Status);
@@ -245,8 +274,8 @@ public sealed class RequestService : IRequestService
         ProductComponentMaterialId = l.ProductComponentMaterialId, ItemDescription = l.ItemDescription?.Trim(), Quantity = l.Quantity,
     };
 
-    private Task NotifyHandlersAsync(RequestTypePolicy policy, Request request, CancellationToken ct) =>
-        _notifier.NotifyRoleAsync(Roles.ToRoleCode(policy.HandlerRole), new NotificationMessage(
+    private Task NotifyHandlersAsync(string roleCode, RequestTypePolicy policy, Request request, CancellationToken ct) =>
+        _notifier.NotifyRoleAsync(roleCode, new NotificationMessage(
             NotificationSources.Request, Messages.NotifyNewRequestTitle,
             string.Format(Messages.NotifyNewRequestBody, request.RequestCode, policy.Label), InboxLink), ct);
 

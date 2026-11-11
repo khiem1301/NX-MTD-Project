@@ -67,6 +67,13 @@ public static class Messages
     public const string RequestCancelled = "Đã hủy đơn.";
     public const string RequestCompleted = "Đã hoàn thành đơn.";
     public const string RequestContentRequired = "Vui lòng nhập nội dung đơn.";
+    public const string RequestHandlerRoleRequired = "Vui lòng chọn người xử lý đơn.";
+    public const string RequestHandlerRoleInvalid = "Không gửi được đơn cho vai trò này.";
+    public const string RequisitionWorkOrderInvalid = "Lệnh cắt không phải của tổ hoặc đã xong / đã hủy.";
+    public const string RequisitionNotWorkOrderFabric = "{0} không có trong số vải hệ thống tính cho lệnh cắt này.";
+    public const string RequisitionOverWorkOrderCap = "Vượt trần vải của lệnh cắt (số mét hệ thống tính + tỉ lệ sai lệch): {0}.";
+    public const string RequisitionOverCapLine = "{0}: trần {1}, các đơn khác đã xin {2}, đơn này {3}";
+    public const string OtherRequestNoLines = "Đơn khác không có dòng chi tiết, ghi yêu cầu ở phần nội dung.";
     public const string RequisitionLinesRequired = "Đơn xin phải có ít nhất một dòng.";
     public const string RequisitionMaterialRequired = "Đơn Xin NVL phải chọn NVL trong danh mục cho từng dòng.";
     public const string RequisitionMaterialInvalid = "NVL đã chọn không còn dùng hoặc không tồn tại.";

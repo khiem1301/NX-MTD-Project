@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PlusOutlined, EditOutlined, EyeOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Space, type TableColumnsType } from 'antd';
+import { Button, Card, Space, type TableColumnsType } from 'antd';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
@@ -51,16 +51,15 @@ export function CuttingLayPage() {
     { title: LABELS.shift, dataIndex: 'shiftCode', render: (v: string) => SHIFT_LABEL[v] ?? v },
     { title: LABELS.laySequence, dataIndex: 'laySequence', align: 'right' },
     { title: LABELS.fabricColor, dataIndex: 'fabricColor', render: (v: string) => v || '—' },
-    { title: LABELS.plyCount, dataIndex: 'plyCount', align: 'right' },
     {
-      title: LABELS.layFabricCut,
+      title: LABELS.layFabricUsed,
       dataIndex: 'fabricUsedM',
       align: 'right',
       render: (v: number | null) => (v === null ? '—' : formatQty(v)),
     },
-    { title: LABELS.sizeRatio, dataIndex: 'sizeRatio' },
+    { title: LABELS.sizeSummary, dataIndex: 'sizeSummary' },
     {
-      title: LABELS.actualQty,
+      title: LABELS.totalCutQty,
       key: 'total',
       align: 'right',
       render: (_, l) => l.lines.reduce((s, x) => s + x.actualQty, 0),
@@ -122,18 +121,11 @@ export function CuttingLayPage() {
           style={{ width: 200 }}
         />
       </Space>
-      {workOrderId === undefined && (
-        <Alert
-          type="info"
-          showIcon
-          message={LABELS.selectWorkOrderHint}
-          style={{ marginBottom: 16 }}
-        />
-      )}
       <QueryError error={lays.error ?? workOrder.error} onRetry={() => void lays.refetch()} />
       <DataTable
         rowKey="cuttingLayId"
         columns={columns}
+        locale={workOrderId === undefined ? { emptyText: LABELS.selectWorkOrderHint } : undefined}
         dataSource={workOrderId === undefined ? [] : lays.data?.items}
         loading={lays.isFetching}
         pagination={table.pagination(lays.data?.totalItems)}
