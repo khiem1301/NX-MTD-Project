@@ -10,23 +10,28 @@ namespace NX_MTD.Application.Services;
 /// <summary>
 /// DEV-ALL-49: Quản đốc, Admin chia dòng đơn (mã hàng × màu × size) cho tổ may; một dòng có thể chia cho nhiều tổ. Tổ chỉ xin, nhận BTP
 /// của dòng được chia. Phân công công đoạn và KPI vẫn theo mã hàng, tổ được làm khi có ít nhất một dòng của mã đó.
+/// Mỗi tổ chỉ nhận đơn mới khi đơn đang làm đạt % nhập kho TP / SL đặt (TEAM_ORDER_PROGRESS_GATE_PCT).
 /// </summary>
 public sealed class OrderLineTeamService : IOrderLineTeamService
 {
     private const string AssignmentLink = "/operation-assignments";
     private const int MaxLinesInNotification = 5;
+    private const int DefaultProgressGatePct = 90;
 
     private readonly IUnitOfWork _uow;
     private readonly IAuditLogService _audit;
     private readonly INotificationService _notifier;
+    private readonly ISystemSettingReader _settings;
 
-    public OrderLineTeamService(IUnitOfWork uow, IAuditLogService audit, INotificationService notifier)
+    public OrderLineTeamService(IUnitOfWork uow, IAuditLogService audit, INotificationService notifier,
+        ISystemSettingReader settings)
     {
-        _uow = uow; _audit = audit; _notifier = notifier;
+        _uow = uow; _audit = audit; _notifier = notifier; _settings = settings;
     }
 
     private IQueryable<OrderLineTeam> Allotments => _uow.Repository<OrderLineTeam>().Query();
     private IQueryable<OrderLine> Lines => _uow.Repository<OrderLine>().Query();
+    private IQueryable<VwOrderLineProgress> Progress => _uow.Repository<VwOrderLineProgress>().Query();
 
     private sealed record LineRow(int OrderLineId, int OrderId, string OrderCode, string OrderStatus, DateOnly DueDate, int ProductId,
         string ProductCode, string ProductName, string Color, string SizeCode, int OrderedQty)
@@ -83,7 +88,9 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var removed = current.Where(a => !dto.TeamIds.Contains(a.SewingTeamId)).ToList();
         if (added.Count == 0 && removed.Count == 0) return Result.Success();
 
-        var invalid = await CheckNewTeamsAsync(added, ct) ?? await CheckRemovableAsync(line, removed, ct);
+        var invalid = await CheckNewTeamsAsync(added, ct)
+                      ?? await CheckTeamOrderGateAsync(added, line.OrderId, ct)
+                      ?? await CheckRemovableAsync(line, removed, ct);
         if (invalid is not null) return invalid;
 
         _uow.Repository<OrderLineTeam>().RemoveRange(removed);
@@ -107,6 +114,12 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var taken = current.Select(a => (a.OrderLineId, a.SewingTeamId)).ToHashSet();
         var added = lines.SelectMany(l => dto.TeamIds.Where(t => !taken.Contains((l.OrderLineId, t))).Select(teamId => (line: l, teamId))).ToList();
         if (added.Count == 0) return Result<int>.Success(0);
+
+        foreach (var group in added.GroupBy(a => (a.teamId, a.line.OrderId)))
+        {
+            if (await CheckTeamOrderGateAsync([group.Key.teamId], group.Key.OrderId, ct) is { } busy)
+                return Fail.As<int>(busy);
+        }
 
         await _uow.Repository<OrderLineTeam>().AddRangeAsync(added.Select(a => NewRow(a.line.OrderLineId, a.teamId)).ToList());
         foreach (var group in added.GroupBy(a => a.line.OrderLineId))
@@ -139,6 +152,53 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var valid = await _uow.Repository<Team>().Query().AsNoTracking()
             .CountAsync(t => added.Contains(t.TeamId) && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);
         return valid == added.Count ? null : Result.Failure(ErrorCodes.OrderLineTeamInvalid, Messages.OrderLineTeamTeamInvalid);
+    }
+
+    /// <summary>
+    /// Tổ chỉ nhận đơn mới khi mọi đơn mở khác đang chia cho tổ đã đạt % nhập kho TP / SL đặt (hoặc đã đóng).
+    /// </summary>
+    private async Task<Result?> CheckTeamOrderGateAsync(IReadOnlyCollection<int> teamIds, int newOrderId, CancellationToken ct)
+    {
+        if (teamIds.Count == 0) return null;
+        var gate = await _settings.GetIntAsync(SettingKeys.TeamOrderProgressGatePct, DefaultProgressGatePct, ct);
+
+        foreach (var teamId in teamIds.Distinct())
+        {
+            var otherOrderIds = await Allotments.AsNoTracking()
+                .Where(a => a.SewingTeamId == teamId && a.OrderLine.OrderId != newOrderId
+                            && !OrderStatuses.Closed.Contains(a.OrderLine.Order.Status))
+                .Select(a => a.OrderLine.OrderId)
+                .Distinct()
+                .ToListAsync(ct);
+
+            foreach (var orderId in otherOrderIds)
+            {
+                var (orderCode, percent) = await GetOrderWarehouseProgressAsync(orderId, ct);
+                if (percent >= gate) continue;
+                return Result.Failure(ErrorCodes.TeamOrderBusy,
+                    string.Format(Messages.TeamOrderBusy, orderCode, percent.ToString("0.#"), gate));
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>% = Σ FinishedReceivedQty / Σ OrderedQty toàn đơn (vw_OrderLineProgress).</summary>
+    private async Task<(string OrderCode, decimal Percent)> GetOrderWarehouseProgressAsync(int orderId, CancellationToken ct)
+    {
+        var rows = await Progress.AsNoTracking().Where(v => v.OrderId == orderId)
+            .Select(v => new { v.OrderCode, v.OrderedQty, v.FinishedReceivedQty }).ToListAsync(ct);
+        if (rows.Count == 0)
+        {
+            var code = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
+                .Where(o => o.OrderId == orderId).Select(o => o.OrderCode).FirstOrDefaultAsync(ct) ?? orderId.ToString();
+            return (code, 0m);
+        }
+
+        var ordered = rows.Sum(r => r.OrderedQty);
+        var received = rows.Sum(r => r.FinishedReceivedQty);
+        var percent = ordered <= 0 ? 0m : Math.Round(100m * received / ordered, 1, MidpointRounding.AwayFromZero);
+        return (rows[0].OrderCode, percent);
     }
 
     /// <summary>Không bỏ được tổ đã có phiếu cấp BTP của dòng này, hoặc đây là dòng cuối của mã hàng mà tổ đã phân công, có chỉ tiêu KPI.</summary>

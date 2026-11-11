@@ -36,6 +36,8 @@ public class OrderLineTeamServiceTests : ProductionTestBase
     private readonly List<OperationAssignment> _assignments = [];
     private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<KpiTarget> _kpis = [];
+    private readonly List<VwOrderLineProgress> _progress = [];
+    private readonly ISystemSettingReader _settings = Substitute.For<ISystemSettingReader>();
     private readonly OrderLineTeamService _sut;
 
     public OrderLineTeamServiceTests()
@@ -47,9 +49,11 @@ public class OrderLineTeamServiceTests : ProductionTestBase
         SetupQueryable(_assignments);
         SetupQueryable(_issueLines);
         SetupQueryable(_kpis);
+        SetupQueryable(_progress);
+        _settings.GetIntAsync(SettingKeys.TeamOrderProgressGatePct, 90, Arg.Any<CancellationToken>()).Returns(90);
         Line(LineRed, OrderId, ProductId, "MH3", "Đỏ", "M", 30);
         Line(LineBlue, OrderId, ProductId, "MH3", "Xanh", "L", 20);
-        _sut = new OrderLineTeamService(Uow, Audit, Notifier);
+        _sut = new OrderLineTeamService(Uow, Audit, Notifier, _settings);
     }
 
     private OrderLine Line(int id, int orderId, int productId, string code, string color, string size, int qty)
@@ -65,13 +69,22 @@ public class OrderLineTeamServiceTests : ProductionTestBase
 
     private OrderLineTeam Allot(int teamId, int lineId = LineRed)
     {
+        var line = _lines.First(l => l.OrderLineId == lineId);
         var row = new OrderLineTeam
         {
             OrderLineId = lineId, SewingTeamId = teamId, SewingTeam = _teams.First(t => t.TeamId == teamId),
+            OrderLine = line,
         };
         _allotted.Add(row);
         return row;
     }
+
+    private void Progress(int orderId, string code, int orderedQty, int finishedReceivedQty) =>
+        _progress.Add(new VwOrderLineProgress
+        {
+            OrderId = orderId, OrderCode = code, OrderedQty = orderedQty, FinishedReceivedQty = finishedReceivedQty,
+            ProductCode = "MH", Color = "Đỏ", SizeCode = "M",
+        });
 
     private Task<Result> Set(params int[] teamIds) => _sut.SetTeamsAsync(new SetOrderLineTeamsDto(LineRed, teamIds), default);
 
@@ -323,6 +336,67 @@ public class OrderLineTeamServiceTests : ProductionTestBase
         var result = await _sut.AddTeamsAsync(new AddOrderLineTeamsDto([LineRed], [7]), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.OrderLineTeamInvalid);
+    }
+
+    [Fact]
+    public async Task SetTeams_SameOrderAdditionalLine_IsAllowedWhileBusyOnSameOrder()
+    {
+        Allot(TeamA);
+        Progress(OrderId, "DH001", 50, 0);
+
+        var result = await _sut.SetTeamsAsync(new SetOrderLineTeamsDto(LineBlue, [TeamA]), default);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SetTeams_OtherOrderWhileBelowGate_IsRejected()
+    {
+        Allot(TeamA);
+        Progress(OrderId, "DH001", 100, 50); // 50%
+        _orders.Add(new CustomerOrder
+        {
+            OrderId = 3, OrderCode = "DH003", Status = OrderStatuses.InProduction, DueDate = new DateOnly(2026, 12, 1),
+        });
+        Line(31, 3, ProductId, "MH3", "Đỏ", "S", 10);
+
+        var result = await _sut.SetTeamsAsync(new SetOrderLineTeamsDto(31, [TeamA]), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.TeamOrderBusy);
+        result.Message.Should().Be(string.Format(Messages.TeamOrderBusy, "DH001", "50", 90));
+        await Uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task SetTeams_OtherOrderWhenAtOrAboveGate_IsAllowed()
+    {
+        Allot(TeamA);
+        Progress(OrderId, "DH001", 100, 90); // 90%
+        _orders.Add(new CustomerOrder
+        {
+            OrderId = 3, OrderCode = "DH003", Status = OrderStatuses.InProduction, DueDate = new DateOnly(2026, 12, 1),
+        });
+        Line(31, 3, ProductId, "MH3", "Đỏ", "S", 10);
+
+        var result = await _sut.SetTeamsAsync(new SetOrderLineTeamsDto(31, [TeamA]), default);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SetTeams_OtherOrderClosed_DoesNotBlock()
+    {
+        _orders.Add(new CustomerOrder
+        {
+            OrderId = 3, OrderCode = "DH003", Status = OrderStatuses.Completed, DueDate = new DateOnly(2026, 10, 1),
+        });
+        Line(31, 3, ProductId, "MH3", "Đỏ", "S", 10);
+        Allot(TeamA, 31);
+        Progress(3, "DH003", 10, 0);
+
+        var result = await Set(TeamA);
+
+        result.IsSuccess.Should().BeTrue();
     }
 
     public static TheoryData<int[], int[]> InvalidAddDtos => new()
