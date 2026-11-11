@@ -133,7 +133,7 @@ erDiagram
 ### 3.3 Cắt
 
 1. `WorkOrder` (lệnh cắt) cho tổ cắt theo đơn + mã hàng; `WorkOrderLine` là số cần cắt theo dòng đơn. Dòng cắt bù có `WorkOrderLine.ProductComponentMaterialId` (chi tiết × vải của đúng màu áo; size theo dòng đơn); lệnh cắt bù có `SourceRequestId` trỏ về yêu cầu `REPLACEMENT_CUTTING`.
-2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết nhóm bìa với màu áo nào trải trên vải nào; `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
+2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết màu áo nào dùng nhóm bìa nào và trải trên vải nào (vải lấy từ định mức của chi tiết trên nhóm; các màu dùng chung đúng một bộ nhóm là một dạng bìa, DEV-ALL-89); `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
 3. Thủ kho cấp vải bằng `MaterialIssue` (`WarehouseType = 'MATERIAL'`): xuất chỉ **giữ chỗ**, trừ kho khi tổ trưởng xác nhận nhận. Vải thừa trả lại bằng `MaterialReturn`.
 4. Tổ cắt ghi `CuttingLay` (số lớp, chiều dài bàn, vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
 5. `CutHandover` bàn giao BTP vào kho BTP (`usp_Stock_Post` kho `SEMI_FINISHED`).
@@ -586,7 +586,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 ### `ProductMarkerFabric` — Vải của nhóm bìa theo màu áo
 
-> DEV-ALL-42, DEV-ALL-85: nhóm bìa nào, với màu áo nào, trải trên vải nào; khai một lần ở mã hàng. `MarkerNo` là nhóm bìa, khớp `ProductMarker` và `ProductMarkerComponent` theo (ProductId, MarkerNo), không có khóa ngoại vì không có bảng nhóm bìa riêng
+> DEV-ALL-42, DEV-ALL-85: nhóm bìa nào, với màu áo nào, trải trên vải nào; khai một lần ở mã hàng. `MarkerNo` là nhóm bìa, khớp `ProductMarker` và `ProductMarkerComponent` theo (ProductId, MarkerNo), không có khóa ngoại vì không có bảng nhóm bìa riêng. 10/11 (DEV-ALL-89): mỗi dòng nghĩa là màu áo dùng nhóm bìa. Dạng bìa = các màu dùng chung đúng một bộ nhóm; ở mỗi màu các chi tiết trong một nhóm cùng vải, màu có nhóm mà chi tiết khác vải thì sang dạng bìa riêng; bìa của đơn thuộc nhóm nên dùng cho đúng các màu của dạng đó; `MaterialId` không do người dùng chọn mà backend lấy từ định mức (`ProductComponentMaterial`) của các chi tiết trên nhóm ở màu đó, chặn khi các chi tiết khác vải, nên không lệch với định mức
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -2163,3 +2163,4 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | 02/11/2026 | Thêm `OrderLineTeam` (chia dòng đơn cho tổ may, thay `OrderProductTeam`); `Operation` thêm `CK_Operation_Skill`, `CK_Operation_Sequence`, `PieceRate.Rate` đổi `>= 0` thành `> 0`; `Operation` bỏ `UsesSemiFinished`, `vw_OperationAllocationProgress` bỏ cột này |
 | 09/11/2026 | `OperationComponent` chỉ gắn chi tiết vải (PANEL); mỗi chi tiết cắt một vải ở một màu áo, vải lót, mex, bo là chi tiết riêng (DEV-ALL-86, backend kiểm, không đổi cấu trúc bảng) |
 | 09/11/2026 | `ProductComponentMaterial` theo màu áo, không theo size: `ProductVariantId` thay bằng `ProductColorId` (FK ghép `ProductColor`), `UQ_PCM` (ProductColorId, ProductComponentId, MaterialId); 6 trigger 50041 so màu của định mức với màu dòng đơn (DEV-ALL-87) |
+| 10/11/2026 | Dạng bìa theo màu áo (DEV-ALL-89): `ProductMarkerFabric` giữ cấu trúc, mỗi dòng là màu dùng nhóm bìa, `MaterialId` do backend lấy từ định mức của các chi tiết trên nhóm; các màu dùng chung nhóm phải dùng chung mọi nhóm, mỗi nhóm một vải ở mỗi màu. Patch `SQL/patches/2026-11-10_marker_layouts.sql` |

@@ -844,7 +844,7 @@ Dùng thống nhất ở tên bảng, entity, API, type FE, scope commit.
 | Tổ / Chuyền | `Team` | `teams` |
 | Thêm nhân viên vào tổ, loại khỏi tổ, thôi giữ chức tổ trưởng / tổ phó | `Employee.TeamId`, `Employee.RoleId` | `teams/{id}/add-members`, `remove-members`, `dismiss` |
 | Bìa cắt của mã hàng (kích thước theo size) | `ProductMarker` | nằm trong định mức mã hàng (`products/{id}/spec`) |
-| Vải dùng cho bìa theo màu áo | `ProductMarkerFabric` | nằm trong định mức mã hàng (`products/{id}/spec`) |
+| Màu áo dùng nhóm bìa (kèm vải, lấy từ định mức); dạng bìa = các màu dùng chung một bộ nhóm bìa | `ProductMarkerFabric` | nằm trong định mức mã hàng (`products/{id}/spec`) |
 | Chia dòng đơn (mã hàng × màu × size) cho tổ may | `OrderLineTeam` | `order-line-teams` |
 | Nhóm công đoạn (công đoạn to) của mã hàng | `OperationGroup` | `operation-groups` |
 

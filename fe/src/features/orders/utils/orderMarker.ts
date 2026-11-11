@@ -42,7 +42,7 @@ export const toOrderMarkerRows = (product: OrderMarkerProduct): OrderMarkerRow[]
 export const newOrderMarkerRow = (product: OrderMarkerProduct): OrderMarkerRow => ({
   key: newKey(),
   productMarkerId: null,
-  markerNo: product.markerGroups.length === 1 ? product.markerGroups[0] : undefined,
+  markerNo: product.markerGroups.length === 1 ? product.markerGroups[0]?.markerNo : undefined,
   markerCode: '',
   lengthM: null,
   status: 'Active',
@@ -105,4 +105,4 @@ export const withPieces = (row: OrderMarkerRow, size: string, value: number | nu
  * cùng dữ liệu — nếu không bảng bị dựng lại (giật hình) và mất phần đang nhập.
  */
 export const markerVersion = (product: OrderMarkerProduct) =>
-  `${product.productId}:${JSON.stringify(product.markers)}:${product.sizes.join(',')}:${product.markerGroups.join(',')}`;
+  `${product.productId}:${JSON.stringify(product.markers)}:${product.sizes.join(',')}:${JSON.stringify(product.markerGroups)}`;

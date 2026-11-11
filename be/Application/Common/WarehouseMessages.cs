@@ -77,7 +77,7 @@ public static class WarehouseMessages
     public const string FabricCheckNotMeters = "{0}: chưa tính được vì NVL không tính theo mét.";
     public const string FabricCheckNoNorm = "Chưa tính được vải cho {0} vì chưa có định mức vải.";
     /// <summary>Đơn chưa có bìa (đang dùng) cắt được đủ size cần của một nhóm bìa (DEV-ALL-85).</summary>
-    public const string FabricCheckNoOrderMarkerLabel = "bìa của đơn cho nhóm {0} (size {1})";
+    public const string FabricCheckNoOrderMarkerLabel = "bìa của đơn cho nhóm {0}, màu {1} (size {2})";
     /// <summary>Chi tiết cắt lẻ / cắt bù chưa nằm trên nhóm bìa nào trải trên vải này.</summary>
     public const string FabricCheckNoMarkerGroupLabel = "nhóm bìa cho chi tiết {0}";
     /// <summary>Vải có trong định mức của màu nhưng chưa nằm trên bìa nào, nên chưa cộng được phần vải này.</summary>

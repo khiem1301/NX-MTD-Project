@@ -102,16 +102,20 @@ public class ProductSpecServiceTests
     private static SaveProductSpecDto Spec(IReadOnlyList<SaveProductComponentDto> components,
         IReadOnlyList<SaveProductVariantDto> variants, IReadOnlyList<SaveProductNormDto> norms) => new(components, variants, norms, [], []);
 
-    /// <summary>Áo một thành phần "Thân" màu Đen size M dùng vải 1, kèm nhóm bìa 1 có chi tiết Thân và vải theo màu.</summary>
-    private SaveProductSpecDto SpecWithMarker(int fabricMaterialId = 1, string component = "Thân", string color = "Đen", int fabricMarkerNo = 1)
+    /// <summary>Áo một thành phần "Thân" màu Đen size M dùng vải 1, kèm nhóm bìa 1 có chi tiết Thân, màu Đen dùng nhóm.</summary>
+    private SaveProductSpecDto SpecWithMarker(string component = "Thân", string color = "Đen", int colorMarkerNo = 1)
     {
         if (_variants.Count == 0) AddVariant(21, "Đen", "M");
         return Spec([Panel("Thân")], [Variant(21, "Đen", "M")], [Norm("Thân", "Đen")]) with
         {
             MarkerComponents = [new SaveProductMarkerComponentDto(1, component)],
-            MarkerFabrics = [new SaveProductMarkerFabricDto(fabricMarkerNo, color, fabricMaterialId)],
+            MarkerColors = [new SaveProductMarkerColorDto(colorMarkerNo, color)],
         };
     }
+
+    private static SaveProductMarkerComponentDto OnGroup(int markerNo, string component) => new(markerNo, component);
+
+    private static SaveProductMarkerColorDto GroupColor(int markerNo, string color) => new(markerNo, color);
 
     private void MakeFabric() { _materials[0].MaterialType = MaterialTypes.Fabric; _materials[0].Color = ""; }
 
@@ -250,7 +254,7 @@ public class ProductSpecServiceTests
     }
 
     [Fact]
-    public async Task Save_stores_the_marker_groups_and_get_returns_them()
+    public async Task Save_stores_the_marker_groups_with_the_fabric_taken_from_the_norm_and_get_returns_them()
     {
         MakeFabric();
 
@@ -283,24 +287,28 @@ public class ProductSpecServiceTests
 
         (await sut.SaveAsync(1, SpecWithMarker(component: "Tay"), default)).Message.Should().Be(Messages.ProductSpecMarkerReference);
         (await sut.SaveAsync(1, SpecWithMarker(color: "Xanh"), default)).Message.Should().Be(Messages.ProductSpecMarkerReference);
-        (await sut.SaveAsync(1, SpecWithMarker(fabricMarkerNo: 2), default)).Message.Should().Be(Messages.ProductSpecMarkerIncomplete);
+        (await sut.SaveAsync(1, SpecWithMarker(colorMarkerNo: 2), default)).Message.Should().Be(Messages.ProductSpecMarkerIncomplete);
 
         var spec = SpecWithMarker();
         (await sut.SaveAsync(1, spec with { MarkerComponents = [spec.MarkerComponents[0], spec.MarkerComponents[0]] }, default)).Message
             .Should().Be(Messages.ProductSpecMarkerDuplicate);
-        (await sut.SaveAsync(1, spec with { MarkerFabrics = [spec.MarkerFabrics[0], spec.MarkerFabrics[0]] }, default)).Message
+        (await sut.SaveAsync(1, spec with { MarkerColors = [spec.MarkerColors[0], spec.MarkerColors[0]] }, default)).Message
             .Should().Be(Messages.ProductSpecMarkerDuplicate);
     }
 
     [Fact]
-    public async Task Save_rejects_a_cut_panel_left_off_every_marker_group()
+    public async Task Save_rejects_a_cut_panel_left_off_every_marker_group_of_a_color()
     {
         MakeFabric();
         var spec = SpecWithMarker();
 
-        var result = await Create().SaveAsync(1, spec with { Components = [Panel("Thân"), Panel("Tay")] }, default);
+        var result = await Create().SaveAsync(1, spec with
+        {
+            Components = [Panel("Thân"), Panel("Tay")],
+            Norms = [Norm("Thân", "Đen"), Norm("Tay", "Đen")],
+        }, default);
 
-        result.Message.Should().Be(Messages.ProductSpecPanelWithoutMarker);
+        result.Message.Should().Be(string.Format(Messages.ProductSpecPanelWithoutMarker, "Đen", "Tay"));
     }
 
     [Fact]
@@ -313,20 +321,166 @@ public class ProductSpecServiceTests
     }
 
     [Fact]
-    public async Task Save_rejects_a_marker_fabric_that_is_not_in_the_cut_norm_of_that_color()
-    {
-        MakeFabric();
-        _materials.Add(new Material { MaterialId = 3, MaterialCode = "V3", MaterialName = "Vải", Unit = "m", Color = "Trắng", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active });
-
-        (await Create().SaveAsync(1, SpecWithMarker(fabricMaterialId: 3), default)).Message.Should().Be(Messages.ProductSpecMarkerFabricInvalid);
-    }
-
-    [Fact]
-    public async Task Save_rejects_a_marker_material_that_is_not_a_fabric()
+    public async Task Save_rejects_a_marker_group_whose_panels_have_no_fabric_in_a_color_that_uses_it()
     {
         _materials[0].MaterialType = MaterialTypes.Trim;
 
-        (await Create().SaveAsync(1, SpecWithMarker(), default)).Message.Should().Be(Messages.ProductSpecMarkerFabricInvalid);
+        (await Create().SaveAsync(1, SpecWithMarker(), default)).Message
+            .Should().Be(string.Format(Messages.ProductSpecMarkerNoFabric, 1, "Đen"));
+    }
+
+    // ========== DEV-ALL-89: màu dùng nhóm bìa, vải của nhóm lấy từ định mức, bìa của đơn chưa xong khóa nhóm ==========
+
+    /// <summary>Áo Thân trước + Thân sau, màu Xanh hai chi tiết cùng vải 1, màu Đen thân sau vải 3.</summary>
+    private SaveProductSpecDto TwoColorSpec(params SaveProductMarkerComponentDto[] groups) =>
+        Spec([Panel("Thân trước"), Panel("Thân sau")], [Variant(21, "Xanh", "M"), Variant(22, "Đen", "M")],
+            [Norm("Thân trước", "Xanh"), Norm("Thân sau", "Xanh"), Norm("Thân trước", "Đen"), Norm("Thân sau", "Đen", material: 3)]) with
+        {
+            MarkerComponents = groups,
+        };
+
+    private void TwoColorSetup()
+    {
+        MakeFabric();
+        AddActiveMaterial(3, MaterialTypes.Fabric);
+        AddVariant(21, "Xanh", "M");
+        AddVariant(22, "Đen", "M");
+    }
+
+    [Fact]
+    public async Task Save_rejects_a_marker_group_whose_panels_use_different_fabrics_in_its_color()
+    {
+        TwoColorSetup();
+
+        var result = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Đen")],
+        }, default);
+
+        result.Message.Should().Be(string.Format(Messages.ProductSpecMarkerManyFabrics, 1, "Đen"));
+    }
+
+    [Fact]
+    public async Task Save_rejects_a_color_that_shares_only_some_groups_of_a_layout()
+    {
+        // Đen không dùng được nhóm thân chung (thân sau khác vải) nên có nhóm thân riêng: khi đó Đen là dạng bìa riêng, không chung cả nhóm tay.
+        TwoColorSetup();
+        var spec = TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau"), OnGroup(2, "Thân trước"), OnGroup(3, "Thân sau"),
+            OnGroup(4, "Tay")) with
+        {
+            Components = [Panel("Thân trước"), Panel("Thân sau"), Panel("Tay")],
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Đen"), GroupColor(3, "Đen"), GroupColor(4, "Xanh"), GroupColor(4, "Đen")],
+        };
+
+        var result = await Create().SaveAsync(1, spec with { Norms = [.. spec.Norms, Norm("Tay", "Xanh"), Norm("Tay", "Đen")] }, default);
+
+        result.Message.Should().Be(string.Format(Messages.ProductSpecLayoutGroups, "Đen", "Xanh", 4));
+    }
+
+    [Fact]
+    public async Task Save_accepts_two_colors_in_one_layout_when_every_group_has_one_fabric_in_each_color_even_if_they_split_fabrics_differently()
+    {
+        TwoColorSetup();
+        var spec = TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(2, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(1, "Đen"), GroupColor(2, "Xanh"), GroupColor(2, "Đen")],
+        };
+
+        var result = await Create().SaveAsync(1, spec, default);
+
+        result.IsSuccess.Should().BeTrue();   // Xanh: hai thân cùng vải; Đen: thân sau khác vải, nhưng mỗi nhóm vẫn một vải ở mỗi màu
+    }
+
+    [Fact]
+    public async Task Save_lets_each_layout_split_its_panels_into_its_own_marker_groups_and_writes_the_fabric_of_each()
+    {
+        TwoColorSetup();
+
+        var result = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau"),
+            OnGroup(2, "Thân trước"), OnGroup(3, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Đen"), GroupColor(3, "Đen")],
+        }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _markerFabrics.Select(f => (f.MarkerNo, f.ProductColorId, f.MaterialId)).Should().BeEquivalentTo(new[]
+        {
+            ((byte)1, ColorOf("Xanh").ProductColorId, 1), ((byte)2, ColorOf("Đen").ProductColorId, 1), ((byte)3, ColorOf("Đen").ProductColorId, 3),
+        });
+    }
+
+    [Fact]
+    public async Task Save_accepts_colors_with_the_same_fabric_split_in_one_layout_even_with_different_fabrics()
+    {
+        TwoColorSetup();
+        var spec = TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(1, "Đen")],
+            Norms = [Norm("Thân trước", "Xanh"), Norm("Thân sau", "Xanh"), Norm("Thân trước", "Đen", material: 3), Norm("Thân sau", "Đen", material: 3)],
+        };
+
+        (await Create().SaveAsync(1, spec, default)).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_rejects_a_panel_on_two_marker_groups_of_the_same_color()
+    {
+        TwoColorSetup();
+
+        var result = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau"), OnGroup(2, "Thân trước")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Xanh")],
+        }, default);
+
+        result.Message.Should().Be(string.Format(Messages.ProductSpecPanelManyMarkers, "Xanh", "Thân trước"));
+    }
+
+    /// <summary>Đơn DH9 có bìa 1A ở nhóm 1; nhóm 1 đang gồm thân trước + thân sau.</summary>
+    private void OrderMarkerOnGroupOne(string status = OrderStatuses.InProduction)
+    {
+        var order = new CustomerOrder { OrderId = 9, OrderCode = "DH9", Status = status };
+        _markers.Add(new ProductMarker { ProductId = 1, OrderId = 9, Order = order, MarkerNo = 1, MarkerCode = "1A", LengthM = 2, Status = RecordStatus.Active });
+        foreach (var name in new[] { "Thân trước", "Thân sau" })
+        {
+            var component = new ProductComponent { ProductComponentId = ++_nextId, ProductId = 1, ComponentName = name, ComponentType = ComponentTypes.Panel, Status = RecordStatus.Active };
+            _components.Add(component);
+            _markerComponents.Add(new ProductMarkerComponent { ProductId = 1, MarkerNo = 1, ProductComponentId = component.ProductComponentId, ProductComponent = component });
+        }
+    }
+
+    [Fact]
+    public async Task Save_rejects_changing_the_panels_of_a_group_with_a_marker_of_an_open_order_but_lets_its_colors_change()
+    {
+        TwoColorSetup();
+        OrderMarkerOnGroupOne();
+
+        var fewerPanels = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(2, "Thân sau"),
+            OnGroup(3, "Thân trước"), OnGroup(4, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Xanh"), GroupColor(3, "Đen"), GroupColor(4, "Đen")],
+        }, default);
+        var otherColor = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(1, "Thân sau"),
+            OnGroup(2, "Thân trước"), OnGroup(3, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Đen"), GroupColor(3, "Đen")],
+        }, default);
+
+        fewerPanels.Message.Should().Be(string.Format(Messages.ProductSpecMarkerGroupLocked, 1, "DH9"));
+        otherColor.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Save_lets_a_group_change_its_panels_when_its_markers_belong_to_closed_orders()
+    {
+        TwoColorSetup();
+        OrderMarkerOnGroupOne(OrderStatuses.Completed);
+
+        var split = await Create().SaveAsync(1, TwoColorSpec(OnGroup(1, "Thân trước"), OnGroup(2, "Thân sau")) with
+        {
+            MarkerColors = [GroupColor(1, "Xanh"), GroupColor(2, "Xanh")],
+        }, default);
+
+        split.IsSuccess.Should().BeTrue();
     }
 
     // ========== DEV-ALL-86: mỗi chi tiết cắt một vải ở một màu – size, công đoạn chỉ gắn chi tiết vải ==========

@@ -125,7 +125,7 @@ public sealed class WorkOrderFabricChecker
                    let v = data.Variants[line.ProductVariantId]
                    from f in data.Fabrics
                    where f.ProductId == v.ProductId && SameText(f.Color, v.Color)
-                   select (Key: (v.ProductId, f.MarkerNo, f.Fabric.MaterialId), f.Fabric, v.SizeCode, line.PlannedQty);
+                   select (Key: (v.ProductId, f.MarkerNo, f.Fabric.MaterialId), f.Fabric, v.ProductColorId, v.Color, v.SizeCode, line.PlannedQty);
         foreach (var group in rows.GroupBy(r => r.Key))
         {
             var need = group.GroupBy(r => r.SizeCode, StringComparer.OrdinalIgnoreCase)
@@ -135,7 +135,8 @@ public sealed class WorkOrderFabricChecker
             var fabric = group.First().Fabric;
             if (choice is null)
             {
-                yield return new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, markerNo, string.Join(", ", need.Keys)));
+                yield return new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, markerNo,
+                    Names(group.Select(r => r.Color).Distinct().ToList()), string.Join(", ", need.Keys)));
                 continue;
             }
             yield return new Estimate(fabric, choice.Meters, Plan: PlanDto(markerNo, isExtra: false, choice));
@@ -161,6 +162,7 @@ public sealed class WorkOrderFabricChecker
             var fabric = group.First().Norm.Fabric;
             yield return choice is null
                 ? new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, group.Key.Value,
+                    Names(group.Select(r => r.Variant.Color).Distinct().ToList()),
                     string.Join(", ", need.Select(p => p.SizeCode).Distinct(StringComparer.OrdinalIgnoreCase))))
                 : new Estimate(fabric, choice.Meters, Plan: PlanDto(group.Key.Value, isExtra: true, choice));
         }
@@ -191,6 +193,7 @@ public sealed class WorkOrderFabricChecker
                     .Select(r => new MarkerRatioDto(r.Key, (short)r.Value)).ToList()))
             .ToList());
 
+    /// <summary>Bìa của đơn trong nhóm. Nhóm thuộc một dạng bìa (DEV-ALL-89) nên chỉ các màu của dạng đó đi vào nhóm và dùng các bìa này.</summary>
     private static IEnumerable<MarkerOption> MarkersOf(Data data, int productId, byte markerNo) =>
         data.Markers.Where(m => m.ProductId == productId && m.MarkerNo == markerNo).Select(m => m.Option);
 

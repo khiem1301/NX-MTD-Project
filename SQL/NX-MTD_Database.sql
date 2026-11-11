@@ -110,6 +110,9 @@
                  Bỏ Material.WidthCm (khổ vải) và chiều rộng bìa: khổ vải cố định 1,5 m ở backend.
    - 09/11/2026  OperationComponent chỉ gắn chi tiết vải (PANEL) (DEV-ALL-86): vải của chi tiết tra qua ProductComponentMaterial; mỗi chi tiết cắt
                  chỉ một vải ở một màu áo (vải lót, mex, bo khai thành chi tiết riêng, backend kiểm), nên gắn chi tiết là biết vải.
+   - 10/11/2026  Dạng bìa theo màu áo (DEV-ALL-89): ProductMarkerFabric giữ nguyên cấu trúc, nay mỗi dòng là "màu dùng nhóm bìa" và MaterialId
+                 do backend lấy từ định mức của các chi tiết trên nhóm. Các màu dùng chung nhóm phải dùng chung mọi nhóm (một dạng bìa); ở mỗi
+                 màu, các chi tiết trong một nhóm cùng vải, màu có nhóm mà chi tiết khác vải thì sang dạng bìa riêng.
    - 09/11/2026  ProductComponentMaterial theo màu áo, không theo size (DEV-ALL-87): ProductVariantId thay bằng ProductColorId (FK ghép ProductColor),
                  UQ_PCM thành (ProductColorId, ProductComponentId, MaterialId). Size của chứng từ (lệnh cắt, bàn cắt, kho BTP, phiếu cấp) lấy từ
                  OrderLine; trigger 50041 so màu của định mức với màu của dòng đơn.
@@ -465,6 +468,10 @@ CREATE INDEX IX_PCM_Material ON dbo.ProductComponentMaterial(MaterialId);
 
 -- Nhóm bìa nào, với màu áo nào, trải trên vải nào (DEV-ALL-42, DEV-ALL-85). Khai một lần ở mã hàng. MarkerNo là nhóm bìa (thân, tay...),
 -- khớp ProductMarker (bìa của đơn) và ProductMarkerComponent theo (ProductId, MarkerNo); không có bảng nhóm bìa riêng nên không có FK.
+-- 10/11 (DEV-ALL-89): mỗi dòng nghĩa là màu áo dùng nhóm bìa. Dạng bìa = các màu dùng chung đúng một bộ nhóm: màu dùng chung một
+-- nhóm thì dùng chung mọi nhóm; ở mỗi màu các chi tiết trong nhóm cùng vải, màu có nhóm mà chi tiết khác vải thì sang dạng bìa riêng.
+-- Bìa của đơn thuộc nhóm nên dùng cho đúng các màu của dạng đó. MaterialId không do người dùng chọn: backend lấy vải định mức (ProductComponentMaterial) của các chi tiết trên nhóm
+-- ở màu đó và chặn khi các chi tiết khác vải, nên không lệch với định mức.
 CREATE TABLE dbo.ProductMarkerFabric (
     ProductMarkerFabricId INT IDENTITY(1,1) CONSTRAINT PK_ProductMarkerFabric PRIMARY KEY,
     ProductId           INT            NOT NULL CONSTRAINT FK_PMF_Product REFERENCES dbo.Product(ProductId),
@@ -3117,7 +3124,8 @@ FROM (VALUES (N'Ống quần', @mVaiBe), (N'Chỉ may', @mChiBe)) t (ComponentNa
 JOIN dbo.ProductComponent pc ON pc.ProductId = @p2 AND pc.ComponentName = t.ComponentName
 JOIN dbo.ProductColor pcol   ON pcol.ProductId = @p2;
 
--- Nhóm bìa của mã hàng (DEV-ALL-85): áo nhóm 1 (thân) và nhóm 2 (tay), áo Xanh phối tay vải Trắng; quần một nhóm.
+-- Nhóm bìa của mã hàng (DEV-ALL-85, DEV-ALL-89): áo một dạng bìa cho cả Đen và Xanh: nhóm 1 (thân), nhóm 2 (tay); áo Xanh phối tay vải
+-- Trắng nhưng mỗi nhóm vẫn một vải ở mỗi màu nên dùng chung được; quần một nhóm.
 -- Bìa của từng đơn (ProductMarker, ProductMarkerRatio) thêm ở cuối phần dữ liệu demo, sau khi có đơn hàng.
 INSERT dbo.ProductMarkerFabric (ProductId, MarkerNo, ProductColorId, MaterialId)
 SELECT c.ProductId, f.MarkerNo, c.ProductColorId, f.MaterialId
@@ -5159,7 +5167,7 @@ GO
 
 /* ---------- Bìa cắt theo đơn (DEV-ALL-85) ----------
    Chi tiết trên nhóm bìa của mã hàng demo; mỗi đơn demo có DEMO-AO01 / DEMO-QU02 một bìa <nhóm>A mỗi nhóm, tỉ lệ theo size có
-   trong đơn (áo S1 M2 L1, quần M1 L1), chiều dài = số sản phẩm / lớp × (áo: thân 0,55 m, tay 0,40 m; quần 0,35 m).
+   trong đơn ở các màu dùng nhóm (áo S1 M2 L1, quần M1 L1), chiều dài = số sản phẩm / lớp × (áo: thân 0,55 m, tay 0,40 m; quần 0,35 m).
    DEMO-DH001 thêm bìa 1B (thân, chỉ M, M4, 2,10 m) để thử chọn bìa. Chạy lại không thêm trùng. */
 SET NOCOUNT ON;
 INSERT dbo.ProductMarkerComponent (ProductId, MarkerNo, ProductComponentId)
@@ -5185,7 +5193,8 @@ JOIN dbo.Product p         ON p.ProductId = ol.ProductId
 JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
 JOIN @plan pl              ON pl.ProductCode = p.ProductCode AND pl.SizeCode = pv.SizeCode
 WHERE o.OrderCode LIKE 'DEMO-%'
-  AND EXISTS (SELECT 1 FROM dbo.ProductMarkerFabric f WHERE f.ProductId = ol.ProductId AND f.MarkerNo = pl.MarkerNo);
+  AND EXISTS (SELECT 1 FROM dbo.ProductMarkerFabric f WHERE f.ProductId = ol.ProductId AND f.MarkerNo = pl.MarkerNo
+                                                       AND f.ProductColorId = pv.ProductColorId);   -- size của các màu dùng nhóm (DEV-ALL-89)
 
 INSERT dbo.ProductMarker (OrderId, ProductId, MarkerNo, MarkerCode, LengthM)
 SELECT x.OrderId, x.ProductId, x.MarkerNo, CONCAT(x.MarkerNo, 'A'), SUM(x.Pieces * x.MetersPerPiece)

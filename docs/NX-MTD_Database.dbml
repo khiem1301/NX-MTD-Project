@@ -1276,7 +1276,7 @@ Table ProductMarkerComponent [note: 'Chi tiết nằm trên nhóm bìa nào, kha
   }
 }
 
-Table ProductMarkerFabric [note: 'Nhóm bìa nào, với màu áo nào, trải trên vải nào; khai ở mã hàng. MarkerNo khớp ProductMarker, ProductMarkerComponent theo (ProductId, MarkerNo), không có FK'] {
+Table ProductMarkerFabric [note: 'Màu áo nào dùng nhóm bìa nào và trải trên vải nào; khai ở mã hàng. MarkerNo khớp ProductMarker, ProductMarkerComponent theo (ProductId, MarkerNo), không có FK. DEV-ALL-89: MaterialId do backend lấy từ định mức của các chi tiết trên nhóm; dạng bìa = các màu dùng chung đúng một bộ nhóm; ở mỗi màu các chi tiết trong nhóm cùng vải'] {
   ProductMarkerFabricId int [pk, increment, note: 'Khóa chính, tự tăng']
   ProductId int [not null, note: 'Mã hàng']
   MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Nhóm bìa']

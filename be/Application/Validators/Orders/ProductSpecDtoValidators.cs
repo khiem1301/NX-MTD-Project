@@ -53,20 +53,19 @@ public sealed class SaveProductSpecDtoValidator : AbstractValidator<SaveProductS
         }).When(x => x.Norms is { Count: <= MaxNorms });
         RuleFor(x => x.MarkerComponents).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách chi tiết của nhóm bìa.")
             .Must(l => l.Count <= MaxMarkerRows).WithMessage("Danh sách chi tiết của nhóm bìa quá dài.");
-        RuleFor(x => x.MarkerFabrics).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách vải của nhóm bìa.")
-            .Must(l => l.Count <= MaxMarkerRows).WithMessage("Danh sách vải của nhóm bìa quá dài.");
+        RuleFor(x => x.MarkerColors).Cascade(CascadeMode.Stop).NotNull().WithMessage("Thiếu danh sách màu của nhóm bìa.")
+            .Must(l => l.Count <= MaxMarkerRows).WithMessage("Danh sách màu của nhóm bìa quá dài.");
         RuleForEach(x => x.MarkerComponents).ChildRules(m =>
         {
             m.RuleFor(i => i.MarkerNo).InclusiveBetween(1, MaxMarkerNo).WithMessage($"Nhóm bìa từ 1 đến {MaxMarkerNo}.");
             m.RuleFor(i => i.ComponentName).NotEmpty().WithMessage("Vui lòng chọn chi tiết của nhóm bìa.")
                 .MaximumLength(100).WithMessage("Tên thành phần tối đa 100 ký tự.");
         }).When(x => x.MarkerComponents is { Count: <= MaxMarkerRows });
-        RuleForEach(x => x.MarkerFabrics).ChildRules(f =>
+        RuleForEach(x => x.MarkerColors).ChildRules(f =>
         {
             f.RuleFor(i => i.MarkerNo).InclusiveBetween(1, MaxMarkerNo).WithMessage($"Nhóm bìa từ 1 đến {MaxMarkerNo}.");
             f.RuleFor(i => i.Color).NotEmpty().WithMessage(Messages.Required("màu"))
                 .MaximumLength(50).WithMessage("Màu tối đa 50 ký tự.");
-            f.RuleFor(i => i.MaterialId).GreaterThan(0).WithMessage("Vui lòng chọn vải của nhóm bìa.");
-        }).When(x => x.MarkerFabrics is { Count: <= MaxMarkerRows });
+        }).When(x => x.MarkerColors is { Count: <= MaxMarkerRows });
     }
 }

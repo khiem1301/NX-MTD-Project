@@ -7,12 +7,8 @@ import { useMaterialOptions } from '@/hooks/useLookups';
 import { fill } from '@/utils/format';
 import { useSaveProductSpec } from '../hooks/useOrders';
 import type { ProductDetail, ProductListItem, ProductSpec } from '../types';
-import {
-  toMarkerPayload,
-  toMarkerRows,
-  validateMarkers,
-  type MarkerRow,
-} from '../utils/markerSpec';
+import { toLayoutRows, toMarkerPayload, type LayoutRow } from '../utils/markerSpec';
+import { validateLayouts } from '../utils/markerValidation';
 import {
   panelFabricProblem,
   removeComponent,
@@ -58,12 +54,12 @@ export function ProductSpecEditor({
   const [components, setComponents] = useState<ComponentRow[]>(initial.components);
   const [variants] = useState<VariantRow[]>(initial.variants);
   const [norms, setNorms] = useState<NormRow[]>(initial.norms);
-  const [markers, setMarkers] = useState<MarkerRow[]>(() =>
-    toMarkerRows(spec, initial.variants, initial.components),
+  const [layouts, setLayouts] = useState<LayoutRow[]>(() =>
+    toLayoutRows(spec, initial.variants, initial.components),
   );
   const [error, setError] = useState('');
 
-  const snapshot = JSON.stringify({ components, variants, norms, markers });
+  const snapshot = JSON.stringify({ components, variants, norms, layouts });
   const [baseline] = useState(snapshot);
   useEffect(() => {
     onDirtyChange(snapshot !== baseline);
@@ -84,14 +80,14 @@ export function ProductSpecEditor({
     const problem =
       validate(components, variants, norms) ||
       panelFabricProblem(components, variants, norms, materialOptions) ||
-      validateMarkers(markers, variants, norms, components, materialOptions);
+      validateLayouts(layouts, variants, norms, components, materialOptions);
     setError(problem);
     if (problem) return;
     save.mutate({
       id: product.productId,
       body: {
         ...toPayload(components, variants, norms),
-        ...toMarkerPayload(markers, variants, components),
+        ...toMarkerPayload(layouts, variants, components),
       },
     });
   };
@@ -155,16 +151,15 @@ export function ProductSpecEditor({
           },
           {
             key: 'markers',
-            label: `${text.tabMarkers} (${markers.length})`,
+            label: `${text.tabMarkers} (${layouts.flatMap((l) => l.groups).length})`,
             children: (
               <SpecMarkersTab
-                markers={markers}
-                setMarkers={setMarkers}
+                layouts={layouts}
+                setLayouts={setLayouts}
                 variants={variants}
                 norms={norms}
                 components={components}
                 materialOptions={materialOptions}
-                materialsLoading={materials.isLoading}
                 readOnly={readOnly}
               />
             ),

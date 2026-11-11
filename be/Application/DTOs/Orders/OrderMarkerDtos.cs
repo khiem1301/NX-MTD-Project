@@ -9,9 +9,15 @@ public sealed record MarkerRatioDto(string SizeCode, short PiecesPerPly);
 public sealed record OrderMarkerDto(int ProductMarkerId, int MarkerNo, string MarkerCode, decimal LengthM, string Status,
     IReadOnlyList<MarkerRatioDto> Ratios);
 
-/// <summary>Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai ở mã hàng (có vải), và các bìa của đơn.</summary>
+/// <summary>
+/// Nhóm bìa đã khai ở mã hàng và các màu của đơn dùng nhóm đó (DEV-ALL-89): mỗi nhóm thuộc một dạng bìa, nên bìa của nhóm dùng cho
+/// đúng các màu này, không chọn màu riêng cho bìa.
+/// </summary>
+public sealed record OrderMarkerGroupDto(int MarkerNo, IReadOnlyList<string> Colors);
+
+/// <summary>Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai ở mã hàng (kèm màu dùng nhóm), và các bìa của đơn.</summary>
 public sealed record OrderMarkerProductDto(int ProductId, string ProductCode, string ProductName, IReadOnlyList<string> Sizes,
-    IReadOnlyList<int> MarkerGroups, IReadOnlyList<OrderMarkerDto> Markers);
+    IReadOnlyList<OrderMarkerGroupDto> MarkerGroups, IReadOnlyList<OrderMarkerDto> Markers);
 
 public sealed record OrderMarkersDto(int OrderId, IReadOnlyList<OrderMarkerProductDto> Products);
 
