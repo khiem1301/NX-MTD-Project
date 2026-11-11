@@ -205,7 +205,6 @@ public static class Messages
     public const string MealCountInvalid = "Số suất ăn phải lớn hơn hoặc bằng 0.";
     public const string MealCountExceedsMembers = "Số suất ăn ({0}) không được vượt quá số người trong tổ ({1}).";
     public const string MealPriceInvalid = "Đơn giá suất ăn phải lớn hơn hoặc bằng 0.";
-    public const string MealKitchenNotified = "Đã báo bếp.";
     public const string MealNoAttendance =
         "Chưa có chấm công hôm nay nên chưa có suất ăn. Chỉ người đã quẹt vân tay mới được tick.";
     public const string EmployeeFloorRoleWebCreateForbidden =
@@ -351,6 +350,7 @@ public static class Messages
     public const string PaymentReturned = "Đã trả lại Quản đốc kèm lý do.";
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
+    public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn giá trị đơn mua.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
     public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}, dự kiến giao {4} lần. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";

@@ -8,7 +8,7 @@ import { useMealSummary } from '../hooks/useMeal';
 import { toApiDate } from '@/utils/format';
 import { PageCard } from '@/components/common/PageCard';
 
-/** UC30 (FR 5.2–5.4) / MI-04 — Kế toán: suất khách, tổng hợp suất ăn ngày, báo bếp, đơn giá. */
+/** UC30 (FR 5.2–5.4) / MI-04 — Kế toán: suất khách, tổng hợp suất ăn ngày, đơn giá. */
 export function MealSummaryPage() {
   const date = toApiDate(dayjs());
   const { data, isLoading, error } = useMealSummary(date);

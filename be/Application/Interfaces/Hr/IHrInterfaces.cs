@@ -10,6 +10,12 @@ public interface ITemporaryPasswordGenerator
     string Generate();
 }
 
+public interface IUsernameGenerator
+{
+    /// <summary>Gốc username từ họ tên (vd Phạm Hoàng Thái → ThaiPH). Không gồm hậu tố 01/02.</summary>
+    string FromFullName(string fullName);
+}
+
 public interface IEmployeeRepository : IGenericRepository<Employee>
 {
     /// <summary>Tracked, kèm Account, Role, Team.</summary>
@@ -56,7 +62,7 @@ public interface IEmployeeService
     Task<Result<PagedResult<EmployeeListItemDto>>> ListAsync(EmployeeQuery query, CancellationToken ct);
     Task<Result<EmployeeDetailDto>> GetAsync(int employeeId, CancellationToken ct);
     Task<Result<CreatedEmployeeDto>> CreateAsync(CreateEmployeeDto dto, CancellationToken ct);
-    /// <summary>Import công nhân từ RJ: tạo Employee + tài khoản + mật khẩu tạm (username = mã NV từ RJ).</summary>
+    /// <summary>Import công nhân từ RJ: tạo Employee + tài khoản; username sinh từ họ tên; mã NV map RJ.</summary>
     Task<Result<CreatedEmployeeDto>> ImportFromRjAsync(ImportEmployeeFromRjDto dto, CancellationToken ct);
     Task<Result> AdminUpdateAsync(int employeeId, AdminUpdateEmployeeDto dto, CancellationToken ct);
     Task<Result> ManagerUpdateAsync(int employeeId, ManagerUpdateEmployeeDto dto, CancellationToken ct);

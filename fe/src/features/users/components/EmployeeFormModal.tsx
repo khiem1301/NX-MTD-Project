@@ -88,6 +88,15 @@ export function EmployeeFormModal({
         >
           <Input disabled={employee !== null} />
         </Form.Item>
+        {employee?.account ? (
+          <Form.Item label={MESSAGES.hr.username}>
+            <Input disabled value={employee.account.username} />
+          </Form.Item>
+        ) : (
+          <Form.Item label={MESSAGES.hr.username}>
+            <Input disabled placeholder={MESSAGES.hr.usernameAutoHint} />
+          </Form.Item>
+        )}
         <Form.Item
           name="fullName"
           label={MESSAGES.hr.fullName}

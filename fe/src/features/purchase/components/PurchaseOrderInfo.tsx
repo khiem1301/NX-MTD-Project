@@ -36,6 +36,11 @@ export function PurchaseOrderInfo({ order: data }: { order: PurchaseOrderDetail 
       <Descriptions.Item label={text.total}>
         <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
       </Descriptions.Item>
+      {data.goodsStatus === 'ClosedShort' && (
+        <Descriptions.Item label={text.actualTotal}>
+          <Typography.Text strong>{formatCurrency(data.paidAmount ?? 0)}</Typography.Text>
+        </Descriptions.Item>
+      )}
       <Descriptions.Item label={text.note}>{data.note ?? '—'}</Descriptions.Item>
     </Descriptions>
   );

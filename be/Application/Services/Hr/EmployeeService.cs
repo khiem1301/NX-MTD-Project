@@ -13,21 +13,23 @@ public sealed class EmployeeService : IEmployeeService
     private static readonly Regex EmployeeCodePattern = new("^[A-Za-z0-9._-]+$", RegexOptions.Compiled);
 
     private readonly IEmployeeRepository _employees;
+    private readonly IAccountRepository _accounts;
     private readonly ITeamRepository _teams;
     private readonly IPasswordHasher _hasher;
     private readonly ITemporaryPasswordGenerator _passwords;
+    private readonly IUsernameGenerator _usernames;
     private readonly IAuditLogService _audit;
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
     private readonly EmployeeScope _scope;
 
-    public EmployeeService(IEmployeeRepository employees, ITeamRepository teams, IPasswordHasher hasher,
-        ITemporaryPasswordGenerator passwords, IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock,
-        EmployeeScope scope)
+    public EmployeeService(IEmployeeRepository employees, IAccountRepository accounts, ITeamRepository teams,
+        IPasswordHasher hasher, ITemporaryPasswordGenerator passwords, IUsernameGenerator usernames,
+        IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock, EmployeeScope scope)
     {
-        _employees = employees; _teams = teams; _hasher = hasher; _passwords = passwords; _audit = audit; _uow = uow;
-        _user = user; _clock = clock; _scope = scope;
+        _employees = employees; _accounts = accounts; _teams = teams; _hasher = hasher; _passwords = passwords;
+        _usernames = usernames; _audit = audit; _uow = uow; _user = user; _clock = clock; _scope = scope;
     }
 
     public async Task<Result<PagedResult<EmployeeListItemDto>>> ListAsync(EmployeeQuery query, CancellationToken ct)
@@ -200,6 +202,7 @@ public sealed class EmployeeService : IEmployeeService
         string successMessage, CancellationToken ct)
     {
         var tempPassword = _passwords.Generate();
+        var username = await AllocateUsernameAsync(fullName, ct);
         var employee = new Employee
         {
             EmployeeCode = code, FullName = fullName, Gender = gender, DateOfBirth = dateOfBirth,
@@ -207,6 +210,7 @@ public sealed class EmployeeService : IEmployeeService
             PayType = payType, StartDate = startDate, Status = RecordStatus.Active, CreatedAt = _clock.Now,
             Account = new Account
             {
+                Username = username,
                 PasswordHash = _hasher.Hash(tempPassword), IsTemporaryPassword = true,
                 SecurityStamp = Guid.NewGuid(), Status = RecordStatus.Active, CreatedAt = _clock.Now,
             },
@@ -220,8 +224,23 @@ public sealed class EmployeeService : IEmployeeService
                 await _employees.MapAttendanceCodeAsync(att, employee.EmployeeId, _user.EmployeeId, ct);
             _audit.Add(new AuditEntry(nameof(Employee), employee.EmployeeId, AuditActions.Insert, null, Snapshot(employee, roleCode)));
             await _uow.SaveChangesAsync();
-            return Result<CreatedEmployeeDto>.Success(new CreatedEmployeeDto(employee.EmployeeId, code, tempPassword), successMessage);
+            return Result<CreatedEmployeeDto>.Success(
+                new CreatedEmployeeDto(employee.EmployeeId, username, tempPassword), successMessage);
         });
+    }
+
+    /// <summary>ThaiPH → ThaiPH01 → ThaiPH02 … tối đa 99.</summary>
+    private async Task<string> AllocateUsernameAsync(string fullName, CancellationToken ct)
+    {
+        var bas = _usernames.FromFullName(fullName);
+        if (bas.Length > 48) bas = bas[..48];
+        if (!await _accounts.UsernameExistsAsync(bas, ct)) return bas;
+        for (var i = 1; i <= 99; i++)
+        {
+            var candidate = $"{bas}{i:D2}";
+            if (!await _accounts.UsernameExistsAsync(candidate, ct)) return candidate;
+        }
+        return $"{bas}{Guid.NewGuid():N}"[..50];
     }
 
     /// <summary>Ưu tiên mã NV trên RJ; nếu trùng / không hợp lệ thì dùng mã chấm công.</summary>

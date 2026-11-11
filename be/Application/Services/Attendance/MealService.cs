@@ -233,21 +233,6 @@ public sealed class MealService : IMealService
             meal.AttendanceIncomplete, meal.AutoClosedAt, meal.ClosedAt, meal.KitchenNotifiedAt, rows));
     }
 
-    public async Task<Result> MarkKitchenNotifiedAsync(DateOnly date, CancellationToken ct)
-    {
-        var meal = await _meals.FindByDateAsync(date, ct);
-        if (meal is null)
-            return Result.Failure(ErrorCodes.MealNotFound, Messages.MealNotFound, ResultKind.NotFound);
-        if (meal.Status == MealStatus.Open)
-            return Result.Failure(ErrorCodes.MealNotClosedYet, Messages.MealNotClosedYet);
-
-        meal.Status = MealStatus.KitchenNotified;
-        meal.KitchenNotifiedAt = _clock.Now;
-        await _meals.SaveChangesAsync(ct);
-
-        return Result.Success(Messages.MealKitchenNotified);
-    }
-
     public async Task<Result> SetMealPriceAsync(SetMealPriceDto dto, CancellationToken ct)
     {
         var meal = await _meals.FindByDateAsync(dto.MealDate, ct);

@@ -93,7 +93,14 @@ export const MENU_GROUPS: MenuGroup[] = [
     key: 'attendance-meals',
     label: 'Chấm công & suất ăn',
     icon: <ClockCircleOutlined />,
-    entries: ['attendance', 'team-attendance', 'team-meal', 'meal-summary', 'meal-settings'],
+    entries: [
+      'attendance',
+      'team-attendance',
+      'team-meal',
+      'my-meal',
+      'meal-summary',
+      'meal-settings',
+    ],
   },
   {
     key: 'finance',
@@ -123,7 +130,6 @@ export const MENU_GROUPS: MenuGroup[] = [
     icon: <UserOutlined />,
     entries: [
       'my-attendance',
-      'my-meal',
       'my-payslip',
       'my-estimated-pay',
       'my-piece-movements',

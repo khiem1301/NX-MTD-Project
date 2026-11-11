@@ -14,12 +14,11 @@ export const mealMenu: MenuEntry[] = [
     key: 'my-meal',
     label: MEAL_TEXT.myPageTitle,
     path: MEAL_ROUTES.myMeal,
+    // Tổ trưởng / tổ phó tick suất của mình trên màn Suất ăn của tổ.
     roles: [
       ROLES.Manager,
       ROLES.Accountant,
       ROLES.WarehouseKeeper,
-      ROLES.TeamLeader,
-      ROLES.TeamDeputy,
       ROLES.QaQc,
       ROLES.Electrician,
       ROLES.Worker,

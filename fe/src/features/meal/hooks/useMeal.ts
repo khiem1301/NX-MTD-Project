@@ -78,12 +78,6 @@ export const useSetGuestMeal = (date: string) =>
     successMessage: MESSAGES.meal.guestSaved,
   });
 
-export const useMarkKitchenNotified = (date: string) =>
-  useApiMutation(() => mealApi.markKitchenNotified(date), {
-    invalidate: [summaryKey(date)],
-    successMessage: MESSAGES.meal.kitchenNotified,
-  });
-
 export const useSetMealPrice = (date: string) =>
   useApiMutation((body: SetMealPricePayload) => mealApi.setMealPrice(body), {
     invalidate: [summaryKey(date)],

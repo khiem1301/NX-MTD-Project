@@ -265,42 +265,6 @@ public class MealServiceTests
         result.Data.SuggestedMealPrice.Should().Be(25000m);
     }
 
-    // ---------- MarkKitchenNotifiedAsync ----------
-
-    [Fact]
-    public async Task MarkKitchenNotifiedAsync_NotFound_ReturnsNotFound()
-    {
-        _repo.FindByDateAsync(Today, Arg.Any<CancellationToken>()).Returns((DailyMeal?)null);
-
-        var result = await _sut.MarkKitchenNotifiedAsync(Today, CancellationToken.None);
-
-        result.Kind.Should().Be(ResultKind.NotFound);
-        result.ErrorCode.Should().Be(ErrorCodes.MealNotFound);
-    }
-
-    [Fact]
-    public async Task MarkKitchenNotifiedAsync_StillOpen_ReturnsNotClosedYetFailure()
-    {
-        _repo.FindByDateAsync(Today, Arg.Any<CancellationToken>()).Returns(Meal());
-
-        var result = await _sut.MarkKitchenNotifiedAsync(Today, CancellationToken.None);
-
-        result.ErrorCode.Should().Be(ErrorCodes.MealNotClosedYet);
-    }
-
-    [Fact]
-    public async Task MarkKitchenNotifiedAsync_Closed_SetsStatusAndTimestamp()
-    {
-        var meal = Meal(status: MealStatus.AutoClosed);
-        _repo.FindByDateAsync(Today, Arg.Any<CancellationToken>()).Returns(meal);
-
-        var result = await _sut.MarkKitchenNotifiedAsync(Today, CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        meal.Status.Should().Be(MealStatus.KitchenNotified);
-        meal.KitchenNotifiedAt.Should().Be(Now0800);
-    }
-
     // ---------- SetMealPriceAsync ----------
 
     [Fact]

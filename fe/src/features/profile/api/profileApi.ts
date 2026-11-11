@@ -7,6 +7,7 @@ import type { LoginResult } from '@/types/auth';
 export type Profile = {
   employeeId: number;
   employeeCode: string;
+  username: string;
   fullName: string;
   gender: string | null;
   dateOfBirth: string | null;

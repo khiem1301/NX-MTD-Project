@@ -110,7 +110,7 @@ export function PurchaseOrderModal({ role }: Props) {
             scroll={{ x: 'max-content' }}
           />
 
-          {data.paymentStatus === 'Paid' && (
+          {(data.paymentStatus === 'Paid' || data.paymentStatus === 'PartiallyPaid') && (
             <>
               <Divider orientation="left">{text.paymentInfo}</Divider>
               <PaymentInfo order={data} />
