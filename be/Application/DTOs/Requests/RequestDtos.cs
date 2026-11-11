@@ -8,9 +8,10 @@ public sealed record RequestLineInput(int? MaterialId, int? OrderLineId, int? Pr
     string? ItemDescription, decimal Quantity);
 
 /// <param name="RequestType">PascalCase, vd. "SpareParts".</param>
+/// <param name="HandlerRole">PascalCase; chỉ đơn Khác (DEV-ALL-91).</param>
 public sealed record CreateRequestDto(string RequestType, string? Title, string? Content, DateOnly? TargetDate,
     int? OrderId, int? WorkOrderId, int? KpiTargetId, int? MaterialIssueId, int? DefectRecordId,
-    IReadOnlyList<RequestLineInput>? Lines);
+    IReadOnlyList<RequestLineInput>? Lines, string? HandlerRole = null);
 
 public sealed record UpdateRequestDto(string? Title, string? Content, DateOnly? TargetDate,
     IReadOnlyList<RequestLineInput>? Lines, byte[] RowVer);
@@ -26,7 +27,8 @@ public sealed record RequestQuery : PageQuery
     public string? Status { get; init; }        // PascalCase
 }
 
-public sealed record RequestTypeOptionDto(string RequestType, string Label, bool NeedsApproval, string HandlerRole);
+public sealed record RequestTypeOptionDto(string RequestType, string Label, bool NeedsApproval, string HandlerRole,
+    IReadOnlyList<string>? HandlerRoleOptions = null);
 
 public sealed record RequestListItemDto(int RequestId, string RequestCode, string RequestType, string Status,
     string? Title, DateOnly? TargetDate, string? CreatedByName, string? TeamName, DateTime CreatedAt, DateTime? DecidedAt);
@@ -50,10 +52,15 @@ public sealed record RequestDetailDto
     public DateOnly? TargetDate { get; init; }
     public int? OrderId { get; init; }
     public string? OrderCode { get; init; }
+    public int? WorkOrderId { get; init; }
+    public string? WorkOrderCode { get; init; }
     public int? CreatedBy { get; init; }
     public string? CreatedByName { get; init; }
     public int? CreatedByTeamId { get; init; }
     public string? TeamName { get; init; }
+    public string? HandlerRole { get; init; }
+    public string? HandlerTeamName { get; init; }
+    public int? HandlerTeamId { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? DecidedAt { get; init; }
     public string? DecisionNote { get; init; }

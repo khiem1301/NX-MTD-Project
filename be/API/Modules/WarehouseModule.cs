@@ -38,6 +38,7 @@ public static class WarehouseModule
         services.AddSingleton<IMarkerPlanSolver, OrToolsMarkerPlanSolver>();   // ghép bìa ít mét nhất (DEV-ALL-88)
         services.AddScoped<WorkOrderCompletion>();
         services.AddScoped<WorkOrderFabricChecker>();
+        services.AddScoped<IWorkOrderFabricNeeds, WorkOrderFabricNeeds>();
         services.AddScoped<IWorkOrderService, WorkOrderService>();
         services.AddScoped<ICuttingLayService, CuttingLayService>();
         services.AddScoped<ICutHandoverService, CutHandoverService>();

@@ -7,8 +7,8 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.API.Controllers.Common;
 
-/// <summary>D12: phía người xử lý đơn. Chi tiết dùng chung GET /common/requests/{id}.</summary>
-[Authorize(Roles = Roles.Handlers)]
+/// <summary>D12: phía người xử lý đơn. Chi tiết dùng chung GET /common/requests/{id}. Tổ trưởng / tổ phó: đơn Khác gửi tổ (DEV-ALL-91).</summary>
+[Authorize(Roles = Roles.Handlers + "," + Roles.TeamLeaderOrDeputy)]
 public sealed class RequestInboxController : CommonBaseController
 {
     private readonly IRequestService _requests;

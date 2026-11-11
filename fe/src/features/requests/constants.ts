@@ -5,6 +5,7 @@ import {
   type RequestType,
 } from '@/constants/requestTypes';
 import type { AuditEntry } from '@/types/attachment';
+import type { TeamType } from '@/types/auth';
 
 const STATUS_COLOR: Record<RequestStatus, string> = {
   PendingApproval: 'gold',
@@ -30,7 +31,38 @@ export const GENERIC_FORM_TYPES: readonly RequestType[] = [
   'MaterialRequisition',
   'SemiFinishedRequisition',
   'DefectiveMaterial',
+  'Other',
 ];
+
+/** Loại đơn có bước duyệt, khớp NeedsApproval của RequestTypePolicies ở BE. */
+export const APPROVAL_TYPES: readonly RequestType[] = [
+  'SpareParts',
+  'NewMachine',
+  'AttendanceCorrection',
+  'MaterialSupplement',
+  'DefectiveMaterial',
+  'ReplacementCutting',
+  'Other',
+];
+
+/** Đơn Khác chỉ có nội dung, không có dòng chi tiết. */
+export const NO_LINE_TYPES: readonly RequestType[] = ['Other'];
+
+/** Tab trạng thái đang chờ, hiện kèm số đơn. */
+export const WAITING_STATUSES: readonly RequestStatus[] = [
+  'PendingApproval',
+  'PendingProcessing',
+  'Approved',
+];
+
+/** Tổ cắt xin NVL được theo lệnh cắt của tổ (DEV-ALL-92). */
+export const CUTTING_TEAM_TYPE: TeamType = 'Cutting';
+
+/** Lệnh cắt gắn được vào đơn xin NVL: đang mở / đang cắt (khớp kiểm ở BE, DEV-ALL-92). */
+export const CUTTABLE_WORK_ORDER_STATUSES: readonly string[] = ['OPEN', 'CUTTING'];
+
+/** Trạng thái còn mở: ngày cần đã qua thì báo quá hạn. */
+export const OPEN_STATUSES: readonly RequestStatus[] = WAITING_STATUSES;
 
 /** Dùng khi chưa có chi tiết đơn nào để đọc `maxPhotos` (SystemSetting REQUEST_MAX_PHOTOS). BE vẫn chặn. */
 export const DEFAULT_MAX_PHOTOS = 5;

@@ -17,6 +17,7 @@ public sealed class WorkOrderConfiguration : IEntityTypeConfiguration<WorkOrder>
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
         entity.Property(e => e.Note).HasMaxLength(1000);
+        entity.Property(e => e.FabricTolerancePercent).HasColumnType("decimal(5, 2)");
         entity.Property(e => e.Status)
             .HasMaxLength(20)
             .IsUnicode(false)

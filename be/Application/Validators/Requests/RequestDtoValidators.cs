@@ -24,6 +24,7 @@ public sealed class CreateRequestDtoValidator : AbstractValidator<CreateRequestD
         RuleFor(x => x.Content).NotEmpty().WithMessage(Messages.RequestContentRequired).MaximumLength(2000);
         RuleFor(x => x.Lines).Must(l => l is null || l.Count <= 50).WithMessage("Tối đa 50 dòng.");
         RuleForEach(x => x.Lines).SetValidator(new RequestLineInputValidator());
+        RuleFor(x => x.HandlerRole).MaximumLength(30);
     }
 }
 

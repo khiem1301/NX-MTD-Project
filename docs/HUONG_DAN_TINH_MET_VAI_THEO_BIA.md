@@ -41,28 +41,49 @@ Bài cắt lẻ / cắt bù được giải **riêng** với bài cắt cả b�
 
 ---
 
-## 3. Bước 2: công thức chung
+## 3. Bước 2: lập công thức cho từng bài toán
 
-### Ký hiệu (cho một bài toán)
+### Nói bằng lời
 
-| Ký hiệu | Ý nghĩa |
-|---|---|
-| j | các bìa đang dùng của đơn thuộc nhóm bìa đó |
-| Dⱼ | chiều dài bìa j (m) |
-| rⱼₛ | số áo size s trên 1 lớp của bìa j (0 nếu bìa không có size đó) |
-| Nₛ | số cần cắt của size s (áo, hoặc miếng khi cắt lẻ) |
-| f | hệ số: 1 khi cắt cả bộ; số chi tiết trên 1 áo khi cắt lẻ |
-| **xⱼ** | **số lớp trải bìa j**: số nguyên ≥ 0, đây là thứ cần tìm |
+Với mỗi bìa, ta chọn **trải bao nhiêu lớp**. Mỗi lớp bìa j:
+- **tốn** đúng chiều dài bìa, Dⱼ mét;
+- **cho ra** rⱼₛ áo size s (theo tỉ lệ bìa).
+
+Cần chọn số lớp sao cho **size nào cũng cắt đủ** và **tổng số mét nhỏ nhất**.
+
+### Ký hiệu
+
+| Ký hiệu | Ý nghĩa | Ví dụ 1 (mục 6) |
+|---|---|---|
+| j | một bìa đang dùng của đơn, thuộc nhóm bìa đang xét | A, B, C |
+| Dⱼ | chiều dài bìa j (m) | D_A = 2,1 |
+| rⱼₛ | số áo size s trên 1 lớp bìa j (0 nếu bìa không có size đó) | r_A,L = 2; r_A,M = 0 |
+| Nₛ | số cần cắt của size s (áo; cắt lẻ thì là miếng) | N_L = 130 |
+| f | số chi tiết trên 1 áo: cắt cả bộ thì f = 1; cắt lẻ tay áo thì f = 2 | 1 |
+| **xⱼ** | **số lớp trải bìa j**: số nguyên ≥ 0, là **ẩn cần tìm** | a, b, c |
 
 ### Công thức
 
 ```
-Điều kiện (mọi size s):   Σⱼ rⱼₛ · f · xⱼ  ≥  Nₛ        cắt đủ, được phép dư
-Mục tiêu:                 Σⱼ Dⱼ · xⱼ        →  nhỏ nhất  tổng mét ít nhất
-Số dư:                    Σ (mọi áo / miếng cắt ra) − Σ Nₛ   tính cả size lệnh không cần
+Tìm các số nguyên  x₁, x₂, …, xₙ ≥ 0
+
+(1) Cắt đủ, với MỖI size s cần cắt:
+        r₁ₛ·f·x₁ + r₂ₛ·f·x₂ + … + rₙₛ·f·xₙ  ≥  Nₛ
+        └──────── số áo size s cắt ra ───────┘    └ số cần ┘
+
+(2) Tổng mét nhỏ nhất:
+        Mét = D₁·x₁ + D₂·x₂ + … + Dₙ·xₙ   →  nhỏ nhất
+
+(3) Số dư của phương án (để so sánh khi bằng mét):
+        Dư = (tổng số áo / miếng cắt ra, tính cả size lệnh không cần) − (tổng số cần)
 ```
 
-Không giới hạn số loại bìa được ghép. Bìa nào có xⱼ = 0 là không dùng.
+Cách đọc:
+- (1) có **một dòng cho mỗi size**. Vế trái là số áo size s cắt ra: lấy số áo size s trên 1 lớp nhân số lớp, rồi cộng qua mọi bìa. Dấu **≥** nghĩa là được cắt dư, không được thiếu.
+- (2) là tổng mét của tất cả các lớp đã trải.
+- Không giới hạn số loại bìa được ghép. Bìa nào có xⱼ = 0 là không dùng.
+
+Ví dụ: bìa A (1S, 2L) trải 48 lớp cho 48 áo S và 96 áo L, tốn 48 × 2,1 = 100,8 m.
 
 ### Hai phương án bằng mét thì chọn theo thứ tự
 
@@ -73,7 +94,7 @@ Không giới hạn số loại bìa được ghép. Bìa nào có xⱼ = 0 là 
 
 ### Không tính được khi
 
-- có size cần cắt mà **không bìa nào** trong nhóm có size đó (đơn chưa nhập bìa, hoặc bìa thiếu size);
+- có size cần cắt mà **không bìa nào** trong nhóm có size đó (đơn chưa nhập bìa, hoặc bìa thiếu size): điều kiện (1) của size đó không bao giờ đủ;
 - chi tiết cắt lẻ chưa nằm trong nhóm bìa nào;
 - vải có trong định mức nhưng không nhóm bìa nào dùng;
 - vải không tính theo mét.
@@ -82,31 +103,80 @@ Không giới hạn số loại bìa được ghép. Bìa nào có xⱼ = 0 là 
 
 ## 4. Bước 3: giải bài toán
 
-Số lớp phải là số nguyên, nên đây là bài toán **quy hoạch nguyên**. Nhóm có nhiều bìa thì số tổ hợp rất lớn, không thể thử hết bằng tay. Hệ thống giải theo thứ tự:
+### 4.1 Vì sao cần bộ giải
 
-### 4.1 Thử nhanh: duyệt nhánh có cận dưới (`BranchAndBoundMarkerSolver`, tối đa 20.000 bước)
+Số lớp phải là **số nguyên**, nên không giải được bằng phép chia đơn giản. Đây là bài toán **quy hoạch nguyên**. Nhóm 2–3 bìa còn tính tay được (xem mục 6), nhưng nhóm nhiều bìa có rất nhiều tổ hợp số lớp. Hệ thống giải theo sơ đồ:
 
-1. **Phương án ban đầu (tham lam):** lặp đến khi đủ hàng. Mỗi lần chọn bìa có **mét / số áo còn thiếu mà 1 lớp bù được** thấp nhất, rồi thêm 1 lớp. Cách này cho ngay một phương án đủ hàng, làm mốc so sánh.
-2. **Duyệt nhánh:** thử số lớp của bìa thứ nhất (từ nhiều đến ít), với mỗi lựa chọn thì thử tiếp bìa thứ hai trên phần còn thiếu, và cứ thế. Bìa cuối không cần thử: lấy đúng số lớp vừa đủ bù phần còn thiếu.
-3. **Cắt nhánh:** ở mỗi bước, ước số mét tối thiểu còn phải trải:
-   ```
-   cận dưới = mét đã dùng + max theo từng size còn thiếu của
-              ( số còn thiếu × mét rẻ nhất cho 1 áo size đó trong các bìa chưa xét )
-   ```
-   Nếu cận dưới đã lớn hơn phương án tốt nhất đang có thì bỏ cả nhánh.
-4. Duyệt hết trong giới hạn thì kết quả **chắc chắn tối ưu** và dùng luôn. Nhóm 2–4 bìa thường chỉ mất vài mili giây.
+```
+Bài toán ──► (A) Duyệt nhánh nhanh, tối đa 20.000 bước
+                 ├─ duyệt hết  ──► chắc chắn ít mét nhất ──► DÙNG
+                 └─ chưa hết (thường từ 5 bìa trở lên)
+                        ▼
+             (B) Google.OrTools CP-SAT, mỗi bước tối đa 1 giây
+                 ├─ có kết quả ──► so với (A), lấy phương án tốt hơn ──► DÙNG
+                 └─ lỗi / không ra kết quả
+                        ▼
+             (C) Duyệt nhánh đầy đủ, tối đa 200.000 bước ──► DÙNG
+```
 
-### 4.2 Nhóm lớn: Google.OrTools CP-SAT (`OrToolsMarkerPlanSolver`)
+Kết quả không chứng minh được là ít mét nhất (hết giờ, hết số bước) vẫn được dùng, nhưng có ghi thêm **"(chưa chắc là ít mét nhất)"**.
 
-Khi lần thử nhanh chưa duyệt hết (thường từ 5 bìa trở lên), hệ thống đưa đúng công thức ở mục 3 cho bộ giải quy hoạch nguyên CP-SAT:
+### 4.2 Duyệt nhánh có cận dưới (`BranchAndBoundMarkerSolver`)
+
+Các bìa được xếp theo mã. Ở mỗi bước, "còn thiếu" của size s là Nₛ trừ số áo size s đã cắt ra.
+
+**Bước 3a: tìm phương án mốc (tham lam).** Lặp lại đến khi đủ hàng: chọn bìa có
+
+```
+giá 1 áo của bìa j = Dⱼ / (số áo còn thiếu mà 1 lớp bìa j bù được)
+```
+
+nhỏ nhất, thêm 1 lớp bìa đó. Kết quả là một phương án đủ hàng nhưng chưa chắc ít mét nhất. Nó dùng làm **mốc**: phương án tìm sau phải tốt hơn mốc mới được giữ.
+
+**Bước 3b: thử lần lượt số lớp từng bìa.**
+- Bìa thứ nhất: thử số lớp từ **nhiều nhất còn có ích** xuống 0:
+  ```
+  số lớp nhiều nhất còn có ích = max theo size ⌈ còn thiếu của size s / (rⱼₛ · f) ⌉
+  ```
+  (trải thêm nữa chỉ ra hàng dư).
+- Với mỗi lựa chọn, tính lại phần còn thiếu, rồi thử bìa thứ hai, cứ thế.
+- **Bìa cuối không thử**: lấy đúng số lớp vừa đủ bù phần còn thiếu.
+
+**Bước 3c: cắt nhánh bằng cận dưới.** Trước khi thử tiếp, ước số mét **ít nhất** mà nhánh này còn có thể đạt:
+
+```
+cận dưới = mét đã dùng + max theo size còn thiếu ( số còn thiếu × giá 1 áo rẻ nhất của size đó trong các bìa chưa xét )
+                                                                 └─ giá 1 áo = Dⱼ / (rⱼₛ · f) ─┘
+```
+
+Nếu **cận dưới > số mét của mốc** thì nhánh này không thể tốt hơn mốc: bỏ cả nhánh, khỏi thử tiếp.
+
+**Bước 3d: cập nhật mốc.** Khi một nhánh đủ hàng, so phương án đó với mốc theo thứ tự ở mục 3 (mét → dư → số loại bìa → số lớp → mã bìa). Tốt hơn thì nó thành mốc mới.
+
+Duyệt hết mà không vượt giới hạn số bước thì mốc cuối cùng **chắc chắn ít mét nhất**. Nhóm 2–4 bìa thường chỉ mất vài mili giây.
+
+**Minh họa** (nhóm 1, màu Xanh ở ví dụ 2): cần M = 10. Bìa 1A (2M, 2,2 m) có giá 1 áo M = 2,2 / 2 = 1,1 m; bìa 1B (2M, 1,0 m) có giá 1 áo M = 1,0 / 2 = 0,5 m.
+
+- 3a: 1B luôn rẻ hơn, nên mốc = 1B × 5 lớp = **5 m**.
+- 3b–3c: thử số lớp 1A từ ⌈10/2⌉ = 5 xuống 0. Bìa còn lại chỉ có 1B, giá 0,5 m/áo M.
+
+| Số lớp 1A | Mét đã dùng | M còn thiếu | Cận dưới | Xử lý |
+|---|---|---|---|---|
+| 5 | 11,0 | 0 | | đủ hàng, 11 m > 5 m: không thay mốc |
+| 4 | 8,8 | 2 | 8,8 + 2 × 0,5 = 9,8 | > 5: bỏ nhánh |
+| 3 | 6,6 | 4 | 8,6 | > 5: bỏ nhánh |
+| 2 | 4,4 | 6 | 7,4 | > 5: bỏ nhánh |
+| 1 | 2,2 | 8 | 6,2 | > 5: bỏ nhánh |
+| 0 | 0 | 10 | 0 + 10 × 0,5 = 5,0 | không lớn hơn 5: thử tiếp, 1B (bìa cuối) = ⌈10/2⌉ = 5 lớp = 5 m, bằng mốc |
+
+Kết quả: **1B × 5 lớp = 5 m**, chắc chắn ít mét nhất.
+
+### 4.3 Nhóm nhiều bìa: Google.OrTools CP-SAT (`OrToolsMarkerPlanSolver`)
+
+Hệ thống đưa đúng công thức (1), (2), (3) ở mục 3 cho bộ giải quy hoạch nguyên CP-SAT:
 - chiều dài đổi sang **cm** vì CP-SAT chỉ nhận số nguyên (2,2 m thành 220);
-- tối ưu **lần lượt** 4 mục tiêu; mỗi bước giữ nguyên kết quả bước trước: tổng mét → số dư → số loại bìa → số lớp;
+- tối ưu **lần lượt** 4 mục tiêu, bước sau giữ nguyên kết quả bước trước: **tổng mét → số dư → số loại bìa → số lớp**;
 - mỗi bước tối đa **1 giây**. Đo thử với nhóm 5–20 bìa: 0,1–0,2 giây, đều chứng minh được tối ưu.
-
-### 4.3 Dự phòng
-
-- CP-SAT lỗi (vd thiếu thư viện native) thì dùng duyệt nhánh đầy đủ (200.000 bước).
-- Hết giờ mà chưa chứng minh được tối ưu thì vẫn dùng phương án tốt nhất tìm được, và ghi thêm **"(chưa chắc là ít mét nhất)"**.
 
 ---
 
@@ -128,37 +198,105 @@ Có   = kho khả dụng của vải + vải tổ cắt đang giữ của đơn
 
 ## 6. Ví dụ 1: ghép bìa cho một nhóm
 
-**Cần cắt:** S = 33, M = 100, L = 130 áo.
+### Đề bài
+
+**Cần cắt:** S = 33, M = 100, L = 130 áo (cắt cả bộ, f = 1). Tổng cần: 33 + 100 + 130 = **263 áo**.
 
 **Bìa của đơn trong nhóm thân:**
 
-| Bìa | Tỉ lệ (áo / lớp) | Dài |
+| Bìa | Tỉ lệ (áo / lớp) | Áo / lớp | Dài |
+|---|---|---|---|
+| A | 1S, 2L | 3 | 2,1 m |
+| B | 3M, 1L | 4 | 2,8 m |
+| C | 1S, 1M, 1L | 3 | 2,1 m |
+
+### Lập công thức
+
+Gọi a, b, c là số lớp của A, B, C (số nguyên ≥ 0).
+
+```
+(1) S:  1a + 0b + 1c  ≥  33
+    M:  0a + 3b + 1c  ≥ 100
+    L:  2a + 1b + 1c  ≥ 130
+
+(2) Mét = 2,1a + 2,8b + 2,1c  →  nhỏ nhất
+```
+
+### Lời giải
+
+**Bước 1: nếu chỉ dùng một bìa.** Chỉ C có đủ cả S, M, L. Size cần nhiều lớp nhất là L: c = max(33, 100, 130) = 130 lớp, tức 130 × 2,1 = **273 m**. Dư 97 áo S và 30 áo M (**127 áo**).
+
+**Bước 2: ít mét tương đương ít dư.** Tính số mét cho 1 áo của mỗi bìa = chiều dài bìa / tổng số áo trên 1 lớp (cột "Áo / lớp"):
+
+| Bìa | Tổng áo trên 1 lớp | Mét cho 1 áo |
 |---|---|---|
-| A | 1S, 2L | 2,1 m |
-| B | 3M, 1L | 2,8 m |
-| C | 1S, 1M, 1L | 2,1 m |
+| A | 1S + 2L = 3 áo | 2,1 / 3 = 0,7 m |
+| B | 3M + 1L = 4 áo | 2,8 / 4 = 0,7 m |
+| C | 1S + 1M + 1L = 3 áo | 2,1 / 3 = 0,7 m |
 
-**Công thức:** gọi a, b, c là số lớp của A, B, C.
+Cả 3 bìa đều tốn **0,7 m cho 1 áo**, dù áo đó là size nào. Do đó:
 
 ```
-S:  a + c        ≥  33
-M:  3b + c       ≥ 100
-L:  2a + b + c   ≥ 130
-Nhỏ nhất:  2,1a + 2,8b + 2,1c
+Mét = 0,7 × (tổng áo cắt ra) = 0,7 × (263 + Dư)
 ```
 
-**Nếu chỉ dùng một bìa:** chỉ C có đủ cả S, M, L. Khi đó cần max(33, 100, 130) = 130 lớp = **273 m**, dư 97 áo S và 30 áo M (127 áo).
+Muốn ít mét thì phải ít dư.
 
-**Hệ thống ghép bìa:**
+**Bước 3: có cách nào không dư không?** Cho cả 3 điều kiện đúng bằng:
+
+```
+a + c = 33          →  a = 33 − c
+3b + c = 100        →  b = (100 − c) / 3
+2a + b + c = 130    →  2(33 − c) + (100 − c)/3 + c = 130  →  c = −23
+```
+
+c âm, nên **không thể cắt mà không dư**.
+
+**Bước 4: dư ít nhất là bao nhiêu?** Nhân điều kiện L với 9, điều kiện M với 5 rồi cộng:
+
+```
+9 × (2a + b + c) + 5 × (3b + c)  ≥  9 × 130 + 5 × 100
+                18a + 24b + 14c  ≥  1670
+```
+
+Tổng áo cắt ra là 3a + 4b + 3c (mỗi lớp A cho 3 áo, B cho 4 áo, C cho 3 áo, theo bảng ở bước 2). Nhân 6 được 18a + 24b + 18c, không nhỏ hơn 18a + 24b + 14c. Suy ra:
+
+```
+6 × (tổng áo) ≥ 1670  →  tổng áo ≥ 278,3  →  tổng áo ≥ 279
+Dư ≥ 279 − 263 = 16;   Mét ≥ 0,7 × 279 = 195,3 m
+```
+
+Không có phương án nào dưới **195,3 m**.
+
+**Bước 5: tìm phương án đạt 195,3 m.** Thử c nhỏ, rồi lấy b vừa đủ M, a vừa đủ L:
+
+```
+b = ⌈(100 − c) / 3⌉        (điều kiện M: 3b + c ≥ 100)
+a = ⌈(130 − b − c) / 2⌉    (điều kiện L: 2a + b + c ≥ 130)
+```
+
+Hai công thức trên chỉ lo cho M và L, nên phải **kiểm tra lại điều kiện S**: số áo S cắt ra là a + c, phải ≥ 33. Ở mọi dòng dưới đây a + c đều ≥ 48, nên S luôn đủ, và phần S thừa chính là số dư.
+
+| c | b | a | S cắt ra = a + c (cần ≥ 33) | Tổng áo = 3a + 4b + 3c | Mét |
+|---|---|---|---|---|---|
+| 0 | 34 | 48 | 48 | 280 | 196,0 |
+| **1** | **33** | **48** | **49** | **279** | **195,3** |
+| 2 | 33 | 48 | 50 | 282 | 197,4 |
+| 3 | 33 | 47 | 50 | 282 | 197,4 |
+| 4 | 32 | 47 | 51 | 281 | 196,7 |
+
+c = 1 cho đúng 279 áo, bằng cận dưới ở bước 4, nên đây là **ít mét nhất**. Bỏ C (c = 0) chỉ đạt 280 áo: ghép 3 bìa là cần thiết.
+
+**Kiểm tra:**
 
 | Bìa | Số lớp | Mét | S | M | L |
 |---|---|---|---|---|---|
-| A (1S, 2L) | 48 | 100,8 | 48 | 0 | 96 |
-| B (3M, 1L) | 33 | 92,4 | 0 | 99 | 33 |
-| C (1S, 1M, 1L) | 1 | 2,1 | 1 | 1 | 1 |
-| **Cộng** | **82** | **195,3** | 49 (dư 16) | 100 | 130 |
+| A (1S, 2L) | 48 | 48 × 2,1 = 100,8 | 48 | 0 | 96 |
+| B (3M, 1L) | 33 | 33 × 2,8 = 92,4 | 0 | 99 | 33 |
+| C (1S, 1M, 1L) | 1 | 1 × 2,1 = 2,1 | 1 | 1 | 1 |
+| **Cộng** | **82** | **195,3** | 49 ≥ 33 (dư 16) | 100 ≥ 100 | 130 ≥ 130 |
 
-Kết quả ít hơn **77,7 m** (khoảng 28%) so với chỉ dùng C. Không có cách nào đủ hàng mà không dư: giải hệ cho đúng số cần ra số lớp âm.
+**Đáp số:** 195,3 m, dư 16 áo S. Ít hơn **77,7 m** (khoảng 28%) so với chỉ dùng C.
 
 Trên màn hình:
 
@@ -167,6 +305,8 @@ Trên màn hình:
 ---
 
 ## 7. Ví dụ 2: một lệnh cắt đầy đủ
+
+### Đề bài
 
 **Mã hàng AO01:**
 - Chi tiết cắt: Thân trước, Thân sau, Tay áo (2 tay/áo).
@@ -183,37 +323,92 @@ Trên màn hình:
 
 **Lệnh cắt:** Đen S10, M20, L10; Xanh M10 (cắt cả bộ); cộng **cắt lẻ 7 tay áo Đen M**.
 
-**Bước 1: chia bài toán**
+**Vải đang có:** kho V01-Đen 30 m, tổ cắt đang giữ 5 m; kho V01-Xanh 20 m.
 
-| Bài toán | Nhu cầu |
-|---|---|
-| (AO01, nhóm 1, V01-Đen) | S10, M20, L10 áo |
-| (AO01, nhóm 2, V01-Đen) | S10, M20, L10 áo |
-| (AO01, nhóm 2, V01-Đen, cắt lẻ) | 7 miếng tay M |
-| (AO01, nhóm 1, V01-Xanh) | M10 áo |
-| (AO01, nhóm 2, V01-Xanh) | M10 áo |
+### Bước 1: chia bài toán
 
-**Bước 2–3: giải từng bài**
+| Bài toán | Nhu cầu | f |
+|---|---|---|
+| (I) nhóm 1, V01-Đen | S10, M20, L10 áo | 1 |
+| (II) nhóm 2, V01-Đen | S10, M20, L10 áo | 1 |
+| (III) nhóm 2, V01-Đen, cắt lẻ | 7 miếng tay M | 2 |
+| (IV) nhóm 1, V01-Xanh | M10 áo | 1 |
+| (V) nhóm 2, V01-Xanh | M10 áo | 1 |
 
-| Bài toán | Các lựa chọn | Hệ thống chọn | Mét | Dư |
-|---|---|---|---|---|
-| nhóm 1, Đen | 1A × 10 = 22 m | 1A × 10 | 22,0 | 0 |
-| nhóm 2, Đen | 2A × 10 = 16 m | 2A × 10 | 16,0 | 0 |
-| nhóm 2, Đen, cắt lẻ 7 tay M | 1 lớp 2A = 2 áo M × 2 tay = 4 miếng → cần ⌈7/4⌉ = 2 lớp | 2A × 2 | 3,2 | 1 miếng |
-| nhóm 1, Xanh M10 | 1A × 5 = 11 m (dư 5S, 5L) hoặc **1B × 5 = 5 m** | 1B × 5 | 5,0 | 0 |
-| nhóm 2, Xanh M10 | 2A × 5 = 8 m | 2A × 5 | 8,0 | 10 (5S, 5L) |
+### Bước 2–3: lập công thức và giải từng bài
 
-**Bước 4: so với vải đang có** (giả sử kho V01-Đen 30 m, tổ cắt đang giữ 5 m; kho V01-Xanh 20 m)
+Ký hiệu x = số lớp 1A, y = số lớp 1B, z = số lớp 2A.
+
+**(I) Nhóm 1, Đen**
+
+```
+S:  x       ≥ 10
+M:  2x + 2y ≥ 20
+L:  x       ≥ 10
+Mét = 2,2x + 1,0y → nhỏ nhất
+```
+
+S và L chỉ có ở 1A, nên x ≥ 10. Với x = 10 thì M = 20, đã đủ, nên y = 0.
+→ **1A × 10 = 22,0 m**, dư 0.
+
+**(II) Nhóm 2, Đen**
+
+```
+S: z ≥ 10     M: 2z ≥ 20     L: z ≥ 10
+Mét = 1,6z → nhỏ nhất
+```
+
+→ z = 10, **2A × 10 = 16,0 m**, dư 0.
+
+**(III) Nhóm 2, Đen, cắt lẻ 7 tay M** (f = 2: mỗi áo M trên bìa cho 2 miếng tay)
+
+```
+M:  2 × 2 × z ≥ 7   →   4z ≥ 7   →   z ≥ 1,75   →   z = 2
+Mét = 1,6 × 2 = 3,2 m
+```
+
+→ **2A × 2 = 3,2 m**. 2 lớp cắt ra 8 miếng tay M (dư 1 miếng), cùng 2 áo S và 2 áo L trên bìa mà lệnh không cần (mỗi áo tính 1). Hệ thống ghi **dư 5** = 1 + 2 + 2.
+
+**(IV) Nhóm 1, Xanh M10**
+
+```
+M:  2x + 2y ≥ 10
+Mét = 2,2x + 1,0y → nhỏ nhất
+```
+
+Giá 1 áo M: 1A = 2,2 / 2 = 1,1 m, 1B = 1,0 / 2 = 0,5 m. Dùng toàn 1B: y = 10 / 2 = 5, x = 0 (cách tìm từng bước xem minh họa ở mục 4.2).
+→ **1B × 5 = 5,0 m**, dư 0. Nếu dùng 1A × 5 thì tốn 11 m và dư 5S, 5L.
+
+**(V) Nhóm 2, Xanh M10**
+
+```
+M:  2z ≥ 10  →  z = 5
+Mét = 1,6 × 5 = 8,0 m
+```
+
+→ **2A × 5 = 8,0 m**. Bìa chỉ có 2A, nên cắt kèm 5S, 5L: dư 10.
+
+**Tổng hợp:**
+
+| Bài toán | Hệ thống chọn | Mét | Dư |
+|---|---|---|---|
+| (I) nhóm 1, Đen | 1A × 10 | 22,0 | 0 |
+| (II) nhóm 2, Đen | 2A × 10 | 16,0 | 0 |
+| (III) nhóm 2, Đen, cắt lẻ | 2A × 2 | 3,2 | 5 |
+| (IV) nhóm 1, Xanh | 1B × 5 | 5,0 | 0 |
+| (V) nhóm 2, Xanh | 2A × 5 | 8,0 | 10 |
+
+### Bước 4: so với vải đang có
 
 | Vải | Cần | Có | Kết quả |
 |---|---|---|---|
-| V01-Đen | 22 + 16 + 3,2 = **41,2 m** | 30 + 5 = 35 m | **Thiếu khoảng 6,2 m** |
-| V01-Xanh | 5 + 8 = **13 m** | 20 m | **Đủ** |
+| V01-Đen | (I) + (II) + (III) = 22 + 16 + 3,2 = **41,2 m** | 30 + 5 = 35 m | 35 < 41,2: **thiếu 41,2 − 35 = 6,2 m** |
+| V01-Xanh | (IV) + (V) = 5 + 8 = **13 m** | 20 m | 20 ≥ 13: **đủ** |
 
 Trên màn hình:
 
 > ℹ️ **Số mét vải cần và bìa nên dùng**
-> V01 Vải (Đen): cần khoảng 41,2 m. Nhóm bìa 1: 1A (1S, 2M, 1L) × 10 lớp; Nhóm bìa 2: 2A (1S, 2M, 1L) × 10 lớp; Cắt lẻ / cắt bù, nhóm bìa 2: 2A (1S, 2M, 1L) × 2 lớp (dư 1)
+> V01 Vải (Đen): cần khoảng 41,2 m. Nhóm bìa 1: 1A (1S, 2M, 1L) × 10 lớp; Nhóm bìa 2: 2A (1S, 2M, 1L) × 10 lớp; Cắt lẻ / cắt bù, nhóm bìa 2: 2A (1S, 2M, 1L) × 2 lớp (dư 5)
 > V01 Vải (Xanh): cần khoảng 13 m. Nhóm bìa 1: 1B (2M) × 5 lớp; Nhóm bìa 2: 2A (1S, 2M, 1L) × 5 lớp (dư 10)
 >
 > ⚠️ **Không đủ vải cho lệnh cắt**

@@ -14,7 +14,7 @@ const product: OrderMarkerProduct = {
   productCode: 'AO-01',
   productName: 'Áo',
   sizes,
-  markerGroups: [1],
+  markerGroups: [{ markerNo: 1, colors: ['Đen', 'Xanh'] }],
   markers: [
     {
       productMarkerId: 3,
@@ -59,7 +59,14 @@ describe('toOrderMarkerRows, toOrderMarkersPayload', () => {
 
   it('bìa mới tự chọn nhóm khi mã hàng chỉ có một nhóm', () => {
     expect(newOrderMarkerRow(product).markerNo).toBe(1);
-    expect(newOrderMarkerRow({ ...product, markerGroups: [1, 2] }).markerNo).toBeUndefined();
+    const twoGroups = {
+      ...product,
+      markerGroups: [
+        { markerNo: 1, colors: ['Đen'] },
+        { markerNo: 2, colors: ['Xanh'] },
+      ],
+    };
+    expect(newOrderMarkerRow(twoGroups).markerNo).toBeUndefined();
   });
 });
 

@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { LABELS } from '../constants';
 import { FabricCheckAlerts } from './FabricCheckAlerts';
 import type { FabricMarkerPlan, WorkOrderFabricCheck } from '../types';
 
@@ -62,7 +63,7 @@ describe('FabricCheckAlerts', () => {
         'V01 Vải: cần khoảng 195,3 m. Nhóm bìa 1: A (1S, 2L) × 48 lớp, B (3M, 1L) × 33 lớp (dư 16)',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText(/có thể chênh lệch với thực tế/)).toBeInTheDocument();
+    expect(screen.getByText(LABELS.fabricPlanNote)).toBeInTheDocument();
     expect(screen.queryByText('Không đủ vải cho lệnh cắt')).not.toBeInTheDocument();
   });
 
@@ -75,7 +76,7 @@ describe('FabricCheckAlerts', () => {
     expect(screen.getByText('Không đủ vải cho lệnh cắt')).toBeInTheDocument();
     expect(screen.getByText('thiếu 50 m')).toBeInTheDocument();
     expect(screen.getByText(/A \(1S, 2L\) × 48 lớp/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Lệnh vẫn lưu được/)).toHaveLength(1);
+    expect(screen.getAllByText(LABELS.fabricEstimateNote)).toHaveLength(1);
   });
 
   it('chưa tính được thì hiện riêng, không gọi là thiếu vải, không có bìa nên dùng', () => {

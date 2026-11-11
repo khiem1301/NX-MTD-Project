@@ -26,7 +26,10 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         _uow = uow; _stock = stock; _planner = planner; _codes = codes; _notifier = notifier; _logger = logger; _clock = clock;
         _fabricChecker = fabricChecker;
+        _needs = new WorkOrderFabricNeeds(uow, fabricChecker);
     }
+
+    private readonly WorkOrderFabricNeeds _needs;
 
     private const string WorkOrderLink = "/cutting/work-orders";
 
@@ -85,7 +88,7 @@ public sealed class WorkOrderService : IWorkOrderService
         return Result<WorkOrderDto>.Success(new WorkOrderDto(wo.WorkOrderId, wo.WorkOrderCode, wo.OrderId,
             wo.Order.OrderCode, wo.ProductId, wo.Product.ProductCode, wo.Product.ProductName, wo.CuttingTeamId,
             wo.CuttingTeam.TeamName, wo.SourceRequestId, wo.DueDate, wo.Status, wo.Note, wo.CreatedAt, lines,
-            await GetFabricsAsync(wo, ct), await FabricChecksAsync(wo, ct)));
+            await GetFabricsAsync(wo, ct), await FabricChecksAsync(wo, ct), wo.FabricTolerancePercent));
     }
 
     /// <summary>Chỉ kiểm lệnh thường chưa bắt đầu cắt: khi đã cắt, vải tổ đang giữ không còn phản ánh phần còn phải cắt.</summary>
@@ -129,24 +132,27 @@ public sealed class WorkOrderService : IWorkOrderService
     public async Task<Result<IReadOnlyList<FabricNeedDto>>> GetFabricNeedsAsync(int workOrderId, string? color, string? sizeCode,
         CancellationToken ct)
     {
-        var wo = await WorkOrders.AsNoTracking().Include(w => w.WorkOrderLines).ThenInclude(l => l.OrderLine)
-            .ThenInclude(o => o.ProductVariant).ThenInclude(v => v.ProductColor).FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
+        var wo = await _needs.LoadAsync(workOrderId, ct);
         if (wo is null) return WarehouseFailures.NotFound<IReadOnlyList<FabricNeedDto>>();
 
         var colorKey = color?.Trim();
         var sizeKey = sizeCode?.Trim();
         var lines = wo.WorkOrderLines
             .Where(l => string.IsNullOrEmpty(colorKey) || string.Equals(l.OrderLine.ProductVariant.ProductColor.Color, colorKey, StringComparison.OrdinalIgnoreCase))
-            .Where(l => string.IsNullOrEmpty(sizeKey) || string.Equals(l.OrderLine.ProductVariant.SizeCode, sizeKey, StringComparison.OrdinalIgnoreCase))
-            .Select(l => new CutLine(l.OrderLine.ProductVariantId, l.PlannedQty,
-                VariantLabel(l.OrderLine.ProductVariant.ProductColor.Color, l.OrderLine.ProductVariant.SizeCode), l.ProductComponentMaterialId))
-            .ToList();
-        if (lines.Count == 0) return Result<IReadOnlyList<FabricNeedDto>>.Success([]);
-
-        var checks = await _fabricChecker.CheckAsync(wo.OrderId, wo.CuttingTeamId, lines, ct);
-        IReadOnlyList<FabricNeedDto> needs = checks.Where(c => c.MaterialId > 0 && c.NeedMeters is > 0)
+            .Where(l => string.IsNullOrEmpty(sizeKey) || string.Equals(l.OrderLine.ProductVariant.SizeCode, sizeKey, StringComparison.OrdinalIgnoreCase));
+        var checks = await _needs.NeedsAsync(wo, lines, ct);
+        IReadOnlyList<FabricNeedDto> needs = checks.Where(c => c.NeedMeters is > 0)
             .Select(c => new FabricNeedDto(c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialColor, c.NeedMeters!.Value)).ToList();
         return Result<IReadOnlyList<FabricNeedDto>>.Success(needs);
+    }
+
+    public async Task<Result<IReadOnlyList<WorkOrderMaterialAllowanceDto>>> GetMaterialAllowanceAsync(int workOrderId, int cuttingTeamId,
+        int? exceptRequestId, CancellationToken ct)
+    {
+        var wo = await _needs.LoadAsync(workOrderId, ct);
+        if (wo is null) return WarehouseFailures.NotFound<IReadOnlyList<WorkOrderMaterialAllowanceDto>>();
+        if (wo.CuttingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<IReadOnlyList<WorkOrderMaterialAllowanceDto>>();
+        return Result<IReadOnlyList<WorkOrderMaterialAllowanceDto>>.Success(await _needs.AllowanceAsync(wo, exceptRequestId, ct));
     }
 
     public async Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct)
@@ -255,7 +261,9 @@ public sealed class WorkOrderService : IWorkOrderService
             Note = string.IsNullOrWhiteSpace(dto.Note) ? $"Cắt bù theo {request.RequestCode}" : dto.Note.Trim(),
             WorkOrderLines = request.RequestLines.Select(l => new WorkOrderLine
             {
-                OrderLineId = l.OrderLineId!.Value, ProductComponentMaterialId = l.ProductComponentMaterialId, PlannedQty = (int)l.Quantity,
+                OrderLineId = l.OrderLineId!.Value,
+                ProductComponentMaterialId = l.ProductComponentMaterialId,
+                PlannedQty = (int)l.Quantity,
             }).ToList(),
         };
         await _uow.Repository<WorkOrder>().AddAsync(wo);
@@ -460,6 +468,7 @@ public sealed class WorkOrderService : IWorkOrderService
         wo.CuttingTeamId = dto.CuttingTeamId;
         wo.DueDate = dto.DueDate;
         wo.Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
+        wo.FabricTolerancePercent = dto.FabricTolerancePercent;
         wo.WorkOrderLines = dto.Lines.Select(l => new WorkOrderLine
         {
             OrderLineId = l.OrderLineId,

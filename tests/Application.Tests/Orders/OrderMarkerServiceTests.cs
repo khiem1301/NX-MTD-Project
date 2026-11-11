@@ -10,7 +10,10 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>Bìa cắt của đơn (DEV-ALL-85): nhóm bìa phải đã khai vải, size thuộc đơn, mã bìa không trùng, gửi đủ danh sách thì thay bìa.</summary>
+/// <summary>
+/// Bìa cắt của đơn (DEV-ALL-85): nhóm bìa phải đã khai vải, size thuộc đơn, mã bìa không trùng, gửi đủ danh sách thì thay bìa.
+/// DEV-ALL-89: nhóm thuộc một dạng bìa nên bìa dùng cho các màu dùng nhóm; size phải có trong đơn ở các màu đó.
+/// </summary>
 public class OrderMarkerServiceTests
 {
     private const int OrderId = 1, ProductId = 7;
@@ -19,20 +22,25 @@ public class OrderMarkerServiceTests
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly List<CustomerOrder> _orders = [new() { OrderId = OrderId, OrderCode = "DH1", Status = OrderStatuses.InProduction }];
     private readonly List<OrderLine> _lines = [];
-    private readonly List<ProductMarkerFabric> _fabrics = [new() { ProductId = ProductId, MarkerNo = 1 }, new() { ProductId = ProductId, MarkerNo = 2 }];
+    private readonly List<ProductMarkerFabric> _fabrics = [];
     private readonly List<ProductMarker> _markers = [];
     private readonly List<ProductMarkerRatio> _ratios = [];
     private int _nextId = 100;
 
+    /// <summary>Đơn có áo Đen S, M, L và Xanh M, L. Nhóm 1 dùng cho Đen, nhóm 2 cho Xanh (dạng bìa riêng).</summary>
     public OrderMarkerServiceTests()
     {
-        foreach (var size in new[] { "S", "M", "L" })
+        var product = new Product { ProductId = ProductId, ProductCode = "AO-01", ProductName = "Áo" };
+        foreach (var (color, size) in new[] { ("Đen", "S"), ("Đen", "M"), ("Đen", "L"), ("Xanh", "M"), ("Xanh", "L") })
             _lines.Add(new OrderLine { OrderLineId = _lines.Count + 1, OrderId = OrderId, OrderedQty = 10 }
-                .WithVariant(TestVariant.Make(new Product { ProductId = ProductId, ProductCode = "AO-01", ProductName = "Áo" }, "Đen", size)));
-        Setup(_orders); Setup(_lines); Setup(_fabrics);
+                .WithVariant(TestVariant.Make(product, color, size)));
+        _fabrics.AddRange([GroupColor(1, "Đen"), GroupColor(2, "Xanh")]);
+        Setup(_orders); Setup(_lines); Setup(_fabrics); Setup(_ratios);
         Setup(_markers, m => m.ProductMarkerId = ++_nextId);
-        Setup(_ratios);
     }
+
+    private static ProductMarkerFabric GroupColor(byte group, string color) =>
+        new() { ProductId = ProductId, MarkerNo = group, ProductColorId = TestVariant.ColorOf(ProductId, color).ProductColorId };
 
     private void Setup<T>(List<T> backing, Action<T>? onAdd = null) where T : class
     {
@@ -56,13 +64,22 @@ public class OrderMarkerServiceTests
     [Fact]
     public async Task Save_AddsMarkersWithTheirRatio_UpperCasingTheCode()
     {
-        var result = await Save(Marker("1a"), Marker("2A", 2, 1.6m));
+        var result = await Save(Marker("1a"), Marker("2A", 2, 1.6m, ratio: [("M", 2), ("L", 1)]));
 
         result.IsSuccess.Should().BeTrue();
         _markers.Select(m => (m.MarkerNo, m.MarkerCode, m.LengthM, m.Status)).Should()
             .BeEquivalentTo([((byte)1, "1A", 2.2m, RecordStatus.Active), ((byte)2, "2A", 1.6m, RecordStatus.Active)]);
-        _markers[0].ProductMarkerRatios.Select(r => (r.SizeCode, r.PiecesPerPly)).Should()
+        _markers.Single(m => m.MarkerNo == 1).ProductMarkerRatios.Select(r => (r.SizeCode, r.PiecesPerPly)).Should()
             .BeEquivalentTo([("S", (short)1), ("M", (short)2), ("L", (short)1)]);
+    }
+
+    [Fact]
+    public async Task Get_ReturnsEachGroupWithTheColorsOfTheOrderThatUseIt()
+    {
+        var product = (await Sut().GetAsync(OrderId, default)).Data!.Products.Single();
+
+        product.MarkerGroups.ToDictionary(g => g.MarkerNo, g => g.Colors.ToHashSet()).Should().BeEquivalentTo(
+            new Dictionary<int, HashSet<string>> { [1] = ["Đen"], [2] = ["Xanh"] });
     }
 
     [Fact]
@@ -84,7 +101,11 @@ public class OrderMarkerServiceTests
 
     [Fact]
     public async Task Save_SizeNotInTheOrder_IsRejected() =>
-        (await Save(Marker(ratio: ("XL", 1)))).Message.Should().Be(string.Format(Messages.OrderMarkerSizeNotInOrder, "XL"));
+        (await Save(Marker(ratio: ("XL", 1)))).Message.Should().Be(string.Format(Messages.OrderMarkerSizeNotInOrder, "1A", "XL"));
+
+    [Fact]
+    public async Task Save_SizeOfTheOrderButNotOfTheColorsOfTheGroup_IsRejected() =>
+        (await Save(Marker("2A", 2))).Message.Should().Be(string.Format(Messages.OrderMarkerSizeNotInOrder, "2A", "S"));
 
     [Fact]
     public async Task Save_SameCodeTwiceInAGroup_IsRejected() =>

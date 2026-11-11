@@ -157,7 +157,7 @@ public class ProductValidatorTests
     }
 
     private static SaveProductSpecDto WithMarker(int no = 1, string component = "Thân") =>
-        Spec() with { MarkerComponents = [new SaveProductMarkerComponentDto(no, component)], MarkerFabrics = [new SaveProductMarkerFabricDto(no, "Đỏ", 1)] };
+        Spec() with { MarkerComponents = [new SaveProductMarkerComponentDto(no, component)], MarkerColors = [new SaveProductMarkerColorDto(no, "Đỏ")] };
 
     [Theory]
     [InlineData(1, true)]
@@ -174,10 +174,10 @@ public class ProductValidatorTests
         SpecIsValid(WithMarker(component: new string('x', length))).Should().Be(expected);
 
     [Fact]
-    public void MarkerFabric_NeedsAColorAndAMaterial()
+    public void MarkerColor_NeedsAColorOfBoundedLength()
     {
-        SpecIsValid(WithMarker() with { MarkerFabrics = [new SaveProductMarkerFabricDto(1, "", 1)] }).Should().BeFalse();
-        SpecIsValid(WithMarker() with { MarkerFabrics = [new SaveProductMarkerFabricDto(1, "Đỏ", 0)] }).Should().BeFalse();
+        SpecIsValid(WithMarker() with { MarkerColors = [new SaveProductMarkerColorDto(1, "")] }).Should().BeFalse();
+        SpecIsValid(WithMarker() with { MarkerColors = [new SaveProductMarkerColorDto(1, new string('x', 51))] }).Should().BeFalse();
     }
 
     [Fact]

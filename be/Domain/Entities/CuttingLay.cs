@@ -22,10 +22,8 @@ public partial class CuttingLay
 
     public int FabricMaterialId { get; set; }
 
-    public short PlyCount { get; set; }
-
-    /// <summary>Chiều dài bàn cắt (mét); null = bàn nhập trước khi có cột này.</summary>
-    public decimal? LayLengthM { get; set; }
+    /// <summary>Số mét vải tổ cắt đã dùng cho bàn (DEV-ALL-90); null = bàn cũ chưa có chiều dài bàn cắt.</summary>
+    public decimal? FabricUsedM { get; set; }
 
     public string? Note { get; set; }
 

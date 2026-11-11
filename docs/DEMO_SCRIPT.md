@@ -38,7 +38,7 @@ Kho đã có tồn qua thẻ kho (tồn vải Đen 650 m, giữ chỗ 150 m; BTP
 
 ### Dữ liệu để test đủ chức năng (mục 19.7 của script)
 
-DB đang có sẵn thì chạy `sqlcmd -S localhost -E -C -I -f 65001 -d NXMTD -i SQL/patches/2026-11-02_demo_full_test_data.sql`, rồi khởi động lại backend để băm mật khẩu tài khoản mới. Script chỉ thêm dữ liệu, chạy lại không nhân đôi. Các việc dưới đây đã có sẵn dữ liệu để bấm thử:
+Dữ liệu nằm ở mục 19.7 của `SQL/NX-MTD_Database.sql`: tạo DB mới từ script này là có, rồi khởi động lại backend để băm mật khẩu tài khoản mới. Các việc dưới đây đã có sẵn dữ liệu để bấm thử:
 
 | Chức năng | Ai | Dữ liệu | Cách thử |
 |---|---|---|---|

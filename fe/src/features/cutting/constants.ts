@@ -63,19 +63,26 @@ export const parseLineKey = (key: string) => {
 };
 
 /** Khớp WorkOrderLimits ở BE: ghi chú 600 + lý do cắt thiếu 300 luôn vừa cột ghi chú 1.000 ký tự. */
-export const WORK_ORDER_LIMITS = { noteMax: 600, closeReasonMax: 300 } as const;
+export const WORK_ORDER_LIMITS = {
+  noteMax: 600,
+  closeReasonMax: 300,
+  /** Khớp WorkOrderLimits.MaxFabricTolerancePercent ở BE. */
+  maxFabricTolerance: 100,
+  fabricToleranceDecimals: 2,
+} as const;
 
-/** Khớp SaveCuttingLayDtoValidator.MaxLayLengthM ở BE. */
-export const LAY_MAX_LENGTH_M = 1000;
-/** Số lớp và tỉ lệ size tối đa, khớp cột SMALLINT của bàn cắt. */
-export const LAY_MAX_SMALLINT = 32767;
+/** Khớp SaveCuttingLayDtoValidator.MaxFabricUsedM ở BE. */
+export const LAY_MAX_FABRIC_USED_M = 10000;
+/** Khớp SaveCuttingLayDtoValidator.MaxLineQty ở BE. */
+export const LAY_MAX_LINE_QTY = 100000;
+/** Số mét vải nhập tối đa 2 số lẻ (cột DECIMAL(9,2)). */
+export const LAY_FABRIC_DECIMALS = 2;
 
 export const LABELS = {
   noLines: 'Nhập số kế hoạch hoặc số chi tiết cắt lẻ cho ít nhất một dòng.',
   duplicateExtra: 'Mỗi chi tiết cắt lẻ chỉ khai một lần cho một màu - size.',
   closeShort: 'Đóng lệnh cắt thiếu',
-  closeShortReason:
-    'Lý do cắt thiếu kế hoạch. Cắt đủ thì lệnh tự hoàn thành khi kho nhận đủ BTP, không cần đóng. Chỉ đóng được khi không còn phiếu bàn giao, phiếu trả vải chờ kho và BTP đã cắt đã vào kho hết.',
+  closeShortReason: 'Lý do cắt thiếu (chỉ đóng khi không còn phiếu chờ kho)',
   fabricReceived: 'Đã nhận',
   fabricReturned: 'Đã trả kho',
   fabricUsed: 'Thực dùng',
@@ -103,12 +110,13 @@ export const LABELS = {
   status: 'Trạng thái',
   totalPlannedQty: 'Tổng kế hoạch',
   note: 'Ghi chú',
+  fabricTolerance: 'Tỉ lệ sai lệch vải',
+  fabricToleranceHint: 'Trần đơn xin NVL theo lệnh = số mét hệ thống tính + tỉ lệ này.',
   orderLine: 'Màu - size',
   plannedQty: 'Kế hoạch',
   fabricNotEnough: 'Không đủ vải cho lệnh cắt',
   fabricPlan: 'Số mét vải cần và bìa nên dùng',
-  fabricPlanNote:
-    'Hệ thống ghép bìa của đơn cho ít mét nhất; đây là ước tính, có thể chênh lệch với thực tế.',
+  fabricPlanNote: 'Ước tính.',
   fabricPlanRow: '{0}: cần khoảng {1} m. {2}',
   planGroup: 'Nhóm bìa {0}: {1}{2}',
   planExtra: 'Cắt lẻ / cắt bù, nhóm bìa {0}: {1}{2}',
@@ -119,8 +127,7 @@ export const LABELS = {
   listSeparator: ', ',
   planSeparator: '; ',
   fabricNotEstimated: 'Chưa tính được vải',
-  fabricEstimateNote:
-    'Số mét là ước tính theo bìa của đơn, có thể chênh lệch với thực tế. Lệnh vẫn lưu được.',
+  fabricEstimateNote: 'Ước tính, lệnh vẫn lưu được.',
   extraComponents: 'Cắt lẻ thêm thành phần',
   extraComponentsHint: 'Số chi tiết cắt lẻ không tính vào số đặt của đơn.',
   addExtraComponent: 'Thêm thành phần',
@@ -139,20 +146,19 @@ export const LABELS = {
   cancelWorkOrder: 'Hủy lệnh',
   laysTitle: 'Bàn cắt',
   workOrder: 'Lệnh cắt',
-  selectWorkOrderHint: 'Chọn lệnh cắt của tổ để xem và nhập bàn cắt.',
+  selectWorkOrderHint: 'Chọn lệnh cắt.',
   workDate: 'Ngày cắt',
   shift: 'Ca',
   laySequence: 'Bàn số',
   fabricColor: 'Màu vải',
   fabricMaterial: 'Vải',
-  plyCount: 'Số lớp',
-  layLength: 'Chiều dài bàn cắt (m)',
-  layFabricCut: 'Vải đã cắt (m)',
-  sizeRatio: 'Tỉ lệ size',
-  ratioValue: 'Tỉ lệ',
-  calculatedQty: 'Số tính',
-  actualQty: 'Số thực tế',
-  adjustReason: 'Lý do sửa số',
+  layFabricUsed: 'Số mét vải đã dùng (m)',
+  sizeSummary: 'Số lượng theo size',
+  actualQty: 'Số lượng sau cắt',
+  totalCutQty: 'Tổng sau cắt',
+  teamFabricLeft: 'Vải còn lại của tổ (m)',
+  teamFabricAfter: 'Sau bàn này',
+  teamFabricUnmeasured: '{0} bàn cũ chưa có số mét',
   handoversTitle: 'Bàn giao BTP vào kho',
   handoverCode: 'Số phiếu',
   handedAt: 'Giao lúc',

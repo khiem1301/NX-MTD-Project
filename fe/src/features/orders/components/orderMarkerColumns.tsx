@@ -2,7 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { Input, InputNumber, Select, type TableColumnsType } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import type { OrderMarkerStatus } from '../types';
+import type { OrderMarkerGroup, OrderMarkerStatus } from '../types';
 import {
   ORDER_MARKER_LIMITS,
   piecesOf,
@@ -23,7 +23,14 @@ const STATUS_OPTIONS: { value: OrderMarkerStatus; label: string }[] = [
  * Bề rộng cột (px). Cột có bề rộng cố định; bảng có bề rộng tối thiểu tính sẵn và cuộn bằng khung ngoài, để antd không phải
  * đo nội dung ô nhập mỗi lần vẽ (đo theo nội dung làm thanh cuộn hiện / mất liên tục, bảng giật hình).
  */
-const WIDTH = { group: 110, code: 120, length: 110, size: 76, status: 130, remove: 48 } as const;
+const WIDTH = {
+  group: 180,
+  code: 120,
+  length: 110,
+  size: 76,
+  status: 130,
+  remove: 48,
+} as const;
 const FULL = { width: '100%' } as const;
 
 /** Bề rộng tối thiểu của bảng (tổng bề rộng cột). */
@@ -37,12 +44,15 @@ export const orderMarkerTableWidth = (sizeCount: number, readOnly: boolean) =>
 
 type OrderMarkerColumnsOptions = {
   sizes: string[];
-  groups: number[];
+  groups: OrderMarkerGroup[];
   readOnly: boolean;
   setRows: Dispatch<SetStateAction<OrderMarkerRow[]>>;
 };
 
-/** Cột bảng bìa của một mã hàng: nhóm, mã, dài, số sản phẩm theo từng size của đơn, trạng thái. */
+/**
+ * Cột bảng bìa của một mã hàng: nhóm (kèm màu dùng nhóm, DEV-ALL-89: bìa dùng cho đúng các màu đó), mã, dài, số sản phẩm theo
+ * từng size của đơn, trạng thái.
+ */
 export const orderMarkerColumns = ({
   sizes,
   groups,
@@ -50,7 +60,10 @@ export const orderMarkerColumns = ({
   setRows,
 }: OrderMarkerColumnsOptions): TableColumnsType<OrderMarkerRow> => {
   const patch = (key: string, change: Partial<OrderMarkerRow>) => patchRow(setRows, key, change);
-  const groupOptions = groups.map((g) => ({ value: g, label: fill(text.groupLabel, g) }));
+  const groupOptions = groups.map((g) => ({
+    value: g.markerNo,
+    label: fill(text.groupWithColors, g.markerNo, g.colors.join(', ')),
+  }));
   return [
     {
       title: text.group,

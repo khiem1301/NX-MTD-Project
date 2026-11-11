@@ -133,7 +133,7 @@ erDiagram
 ### 3.3 Cắt
 
 1. `WorkOrder` (lệnh cắt) cho tổ cắt theo đơn + mã hàng; `WorkOrderLine` là số cần cắt theo dòng đơn. Dòng cắt bù có `WorkOrderLine.ProductComponentMaterialId` (chi tiết × vải của đúng màu áo; size theo dòng đơn); lệnh cắt bù có `SourceRequestId` trỏ về yêu cầu `REPLACEMENT_CUTTING`.
-2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết nhóm bìa với màu áo nào trải trên vải nào; `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
+2. Vải cần cho lệnh cắt ước theo bìa của đơn (DEV-ALL-85): `ProductMarker` (chiều dài) và `ProductMarkerRatio` (tỉ lệ size) do phía trên giác cho từng đơn; `ProductMarkerFabric` cho biết màu áo nào dùng nhóm bìa nào và trải trên vải nào (vải lấy từ định mức của chi tiết trên nhóm; các màu dùng chung đúng một bộ nhóm là một dạng bìa, DEV-ALL-89); `ProductMarkerComponent` cho biết chi tiết nằm trên nhóm bìa nào (cắt lẻ / cắt bù). Mét = số lớp × chiều dài bìa; chỉ để cảnh báo đủ / thiếu, bàn cắt không gắn bìa.
 3. Thủ kho cấp vải bằng `MaterialIssue` (`WarehouseType = 'MATERIAL'`): xuất chỉ **giữ chỗ**, trừ kho khi tổ trưởng xác nhận nhận. Vải thừa trả lại bằng `MaterialReturn`.
 4. Tổ cắt ghi `CuttingLay` (số lớp, chiều dài bàn, vải) và `CuttingLayLine` (tỉ lệ size → số cắt; bàn của lệnh cắt bù ghi `CuttingLayLine.ProductComponentMaterialId`, vải của dòng định mức phải trùng `CuttingLay.FabricMaterialId`). Tiến độ từng dòng lệnh cắt xem `vw_WorkOrderLineProgress`.
 5. `CutHandover` bàn giao BTP vào kho BTP (`usp_Stock_Post` kho `SEMI_FINISHED`).
@@ -586,7 +586,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 ### `ProductMarkerFabric` — Vải của nhóm bìa theo màu áo
 
-> DEV-ALL-42, DEV-ALL-85: nhóm bìa nào, với màu áo nào, trải trên vải nào; khai một lần ở mã hàng. `MarkerNo` là nhóm bìa, khớp `ProductMarker` và `ProductMarkerComponent` theo (ProductId, MarkerNo), không có khóa ngoại vì không có bảng nhóm bìa riêng
+> DEV-ALL-42, DEV-ALL-85: nhóm bìa nào, với màu áo nào, trải trên vải nào; khai một lần ở mã hàng. `MarkerNo` là nhóm bìa, khớp `ProductMarker` và `ProductMarkerComponent` theo (ProductId, MarkerNo), không có khóa ngoại vì không có bảng nhóm bìa riêng. 10/11 (DEV-ALL-89): mỗi dòng nghĩa là màu áo dùng nhóm bìa. Dạng bìa = các màu dùng chung đúng một bộ nhóm; ở mỗi màu các chi tiết trong một nhóm cùng vải, màu có nhóm mà chi tiết khác vải thì sang dạng bìa riêng; bìa của đơn thuộc nhóm nên dùng cho đúng các màu của dạng đó; `MaterialId` không do người dùng chọn mà backend lấy từ định mức (`ProductComponentMaterial`) của các chi tiết trên nhóm ở màu đó, chặn khi các chi tiết khác vải, nên không lệch với định mức
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -862,6 +862,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `Content` | NVARCHAR(2000) | ✓ |  | nội dung và lý do của người tạo |
 | `CreatedBy` | INT | ✓ | FK → `Employee.EmployeeId` | NULL = hệ thống tạo |
 | `CreatedByTeamId` | INT | ✓ | FK → `Team.TeamId` |  |
+| `HandlerRoleCode` | VARCHAR(30) | ✓ |  | Chỉ đơn `OTHER`: vai trò xử lý người tạo chọn (DEV-ALL-91) |
+| `HandlerTeamId` | INT | ✓ | FK → `Team.TeamId` | Đơn `OTHER` gửi `TEAM_LEADER`: tổ của người tạo |
 | `DecidedAt` | DATETIME2(0) | ✓ |  |  |
 | `DecisionNote` | NVARCHAR(1000) | ✓ |  | ghi chú khi duyệt; lý do khi từ chối (bắt buộc) |
 | `ResultNote` | NVARCHAR(1000) | ✓ |  |  |
@@ -873,7 +875,8 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 **Ràng buộc & index**
 
-- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`
+- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`, `MATERIAL_PURCHASE`, `OTHER`
+- `CK_Request_Handler`: chỉ `OTHER` có `HandlerRoleCode` (bắt buộc); `TEAM_LEADER` thì có `HandlerTeamId`, vai trò khác thì không
 - `CK_Request_Status`: Giá trị: `PENDING_APPROVAL`, `PENDING_PROCESSING`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`
 - `CK_Request_Reject`: `CHECK Status <> 'REJECTED' OR DecisionNote IS NOT NULL`
 - `CK_Request_Shortage`: `CHECK ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')`
@@ -1041,6 +1044,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `DueDate` | DATE |  |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'OPEN'` |  |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
+| `FabricTolerancePercent` | DECIMAL(5,2) |  | Mặc định `0`; `CHECK` 0–100 | Tỉ lệ sai lệch (%) trên số mét vải hệ thống tính: trần tổng các đơn xin NVL theo lệnh (DEV-ALL-92) |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `CompletedAt` | DATETIME2(0) | ✓ |  |  |
 
@@ -1156,8 +1160,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 ### `CuttingLay` — Bàn cắt
 
-> Bàn cắt (CUTTING_LAY, FR 2.7): số lớp × tỉ lệ size. Tỉ lệ size nằm ở CuttingLayLine.RatioValue;
-> một lần nhập có thể dùng nhiều bìa nên bàn cắt không gắn bìa; vải đã cắt = Σ PlyCount × LayLengthM (DEV-ALL-85)
+> Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (`CuttingLayLine.ActualQty`) và số mét vải đã dùng
+> của cả bàn (`FabricUsedM`), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90). Một lần nhập có thể dùng nhiều bìa nên bàn cắt không
+> gắn bìa (DEV-ALL-85); vải đã cắt của tổ trên đơn = Σ `FabricUsedM`, vải còn lại = đang giữ − đã cắt (backend chặn bàn vượt số còn lại).
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -1168,8 +1173,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `ShiftCode` | VARCHAR(10) |  | Giá trị: `MORNING`, `AFTERNOON`, `OVERTIME` |  |
 | `LaySequence` | SMALLINT |  |  |  |
 | `FabricMaterialId` | INT |  | FK → `Material.MaterialId` | 23/10: bắt buộc |
-| `PlyCount` | SMALLINT |  | `CHECK PlyCount > 0` |  |
-| `LayLengthM` | DECIMAL(7,2) | Có | `CHECK LayLengthM > 0` | Chiều dài bàn cắt (mét); vải đã cắt của bàn = số lớp × chiều dài bàn cắt |
+| `FabricUsedM` | DECIMAL(9,2) | ✓ | `CHECK FabricUsedM > 0` | Số mét vải đã dùng của bàn (DEV-ALL-90); trống = bàn cũ chưa có chiều dài bàn cắt |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(10) |  | Mặc định `'RECORDED'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
@@ -1187,14 +1191,10 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 | `CuttingLayId` | INT |  | FK → `CuttingLay.CuttingLayId` |  |
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
 | `ProductComponentMaterialId` | INT | ✓ | FK → `ProductComponentMaterial.ProductComponentMaterialId` | trống = cả bộ; có = chi tiết × vải × màu cắt bù; vải phải trùng `CuttingLay.FabricMaterialId` (25/10 thay `ProductComponentId`) |
-| `RatioValue` | SMALLINT |  | `CHECK RatioValue > 0` |  |
-| `CalculatedQty` | INT |  | `CHECK CalculatedQty >= 0` | số lớp × tỉ lệ |
-| `ActualQty` | INT |  | `CHECK ActualQty >= 0` | có thể chỉnh, kèm lý do |
-| `AdjustReason` | NVARCHAR(500) | ✓ |  |  |
+| `ActualQty` | INT |  | `CHECK ActualQty >= 0` | Số lượng sau cắt (cắt bù: số chi tiết), tổ cắt nhập thẳng (DEV-ALL-90) |
 
 **Ràng buộc & index**
 
-- `CK_CLL_Reason`: `CHECK ActualQty = CalculatedQty OR AdjustReason IS NOT NULL`
 - UNIQUE `UQ_CLL`: (CuttingLayId, OrderLineId, ProductComponentMaterialId)
 
 ### `CutHandover` — Bàn giao BTP vào kho
@@ -2163,3 +2163,4 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | 02/11/2026 | Thêm `OrderLineTeam` (chia dòng đơn cho tổ may, thay `OrderProductTeam`); `Operation` thêm `CK_Operation_Skill`, `CK_Operation_Sequence`, `PieceRate.Rate` đổi `>= 0` thành `> 0`; `Operation` bỏ `UsesSemiFinished`, `vw_OperationAllocationProgress` bỏ cột này |
 | 09/11/2026 | `OperationComponent` chỉ gắn chi tiết vải (PANEL); mỗi chi tiết cắt một vải ở một màu áo, vải lót, mex, bo là chi tiết riêng (DEV-ALL-86, backend kiểm, không đổi cấu trúc bảng) |
 | 09/11/2026 | `ProductComponentMaterial` theo màu áo, không theo size: `ProductVariantId` thay bằng `ProductColorId` (FK ghép `ProductColor`), `UQ_PCM` (ProductColorId, ProductComponentId, MaterialId); 6 trigger 50041 so màu của định mức với màu dòng đơn (DEV-ALL-87) |
+| 10/11/2026 | Dạng bìa theo màu áo (DEV-ALL-89): `ProductMarkerFabric` giữ cấu trúc, mỗi dòng là màu dùng nhóm bìa, `MaterialId` do backend lấy từ định mức của các chi tiết trên nhóm; các màu dùng chung nhóm phải dùng chung mọi nhóm, mỗi nhóm một vải ở mỗi màu. Patch `SQL/patches/2026-11-10_marker_layouts.sql` |

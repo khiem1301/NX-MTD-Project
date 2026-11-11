@@ -180,7 +180,7 @@ export function toPayload(
   components: ComponentRow[],
   variants: VariantRow[],
   norms: NormRow[],
-): Omit<SaveProductSpecPayload, 'markerComponents' | 'markerFabrics'> {
+): Omit<SaveProductSpecPayload, 'markerComponents' | 'markerColors'> {
   const colorByKey = new Map(colorOptions(variants).map((o) => [o.value, o.label]));
   const nameByKey = new Map(components.map((c) => [c.key, c.componentName.trim()]));
   return {

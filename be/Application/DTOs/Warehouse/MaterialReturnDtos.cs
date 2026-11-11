@@ -18,7 +18,7 @@ public sealed record MaterialReturnDto(
 
 /// <summary>Vải đã cấp cho tổ cắt (phiếu cấp đã nhận) và số còn trả được của từng dòng.</summary>
 /// <param name="SuggestedQty">
-/// Số vải còn lại gợi ý trả: đã nhận − đã trả / đang trả − đã cắt (Σ số lớp × chiều dài các bàn của tổ trên đơn), chia vào các
+/// Số vải còn lại gợi ý trả: đã nhận − đã trả / đang trả − đã cắt (Σ số mét vải đã dùng các bàn của tổ trên đơn), chia vào các
 /// dòng phiếu cấp cùng đơn, cùng vải. null khi có bàn cắt chưa nhập chiều dài (chưa tính được số đã cắt).
 /// </param>
 public sealed record ReturnableLineDto(

@@ -19,6 +19,8 @@ public interface IWorkOrderService
 
     /// <summary>Số mét vải cần cho các dòng của lệnh theo màu (và size nếu có); bỏ trống = cả lệnh. Chỉ để đề xuất số cấp (DEV-ALL-77).</summary>
     Task<Result<IReadOnlyList<FabricNeedDto>>> GetFabricNeedsAsync(int workOrderId, string? color, string? sizeCode, CancellationToken ct);
+    Task<Result<IReadOnlyList<WorkOrderMaterialAllowanceDto>>> GetMaterialAllowanceAsync(int workOrderId, int cuttingTeamId,
+        int? exceptRequestId, CancellationToken ct);
 
     Task<Result<WorkOrderDto>> CreateAsync(SaveWorkOrderDto dto, CancellationToken ct);
 

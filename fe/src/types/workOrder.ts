@@ -15,6 +15,22 @@ export type WorkOrderListItem = {
   createdAt: string;
 };
 
+/**
+ * Vải của lệnh cắt cho đơn xin NVL theo lệnh (DEV-ALL-92): cần = số mét hệ thống tính, trần = cần × (1 + tỉ lệ sai lệch),
+ * đã xin ở các đơn khác của lệnh, còn xin được. needQty null = chưa tính được, không xin theo lệnh được.
+ */
+export type WorkOrderMaterialAllowance = {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  unit: string;
+  needQty: number | null;
+  capQty: number | null;
+  requestedQty: number;
+  remainingQty: number | null;
+};
+
 /** Vải của lệnh cắt: đã cấp, khả dụng trong kho, tổ đã nhận / đã trả lại kho / thực dùng (không còn so với định mức). */
 export type FabricRequirement = {
   materialId: number;
@@ -29,10 +45,10 @@ export type FabricRequirement = {
   usedQty: number;
   /** Vải tổ cắt đang giữ của đơn = đã nhận − đã trả về kho. */
   heldQty: number;
-  /** Vải đã cắt của tổ trên đơn = tổng số lớp × chiều dài bàn cắt. */
+  /** Vải đã cắt của tổ trên đơn = tổng số mét vải đã dùng của các bàn. */
   cutQty: number;
   /** Vải còn lại = heldQty − cutQty; âm nghĩa là đã cắt nhiều hơn số đang giữ. */
   remainingQty: number;
-  /** Số bàn chưa có chiều dài bàn cắt nên chưa cộng vào cutQty. */
+  /** Số bàn cũ chưa có số mét vải đã dùng nên chưa cộng vào cutQty. */
   unmeasuredLayCount: number;
 };

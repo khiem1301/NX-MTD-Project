@@ -245,6 +245,34 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     }
 
     [Fact]
+    public async Task Whole_EachColorOnlyUsesTheMarkersOfTheGroupsOfItsOwnLayout()
+    {
+        // DEV-ALL-89: Đen dùng nhóm 1 (bìa 1A, 2 m); Xanh khác cách chia vải nên ở dạng bìa riêng, nhóm 3 (bìa 3C, 3 m).
+        Norm(SizeM); Norm(BlueM, material: _white, id: 13);
+        OnFabric(1); OnFabric(3, "Xanh", _white); OnGroup(1, Body); OnGroup(3, Body);
+        Marker("1A", 1, 2m, "M:2");
+        Marker("3C", 3, 3m, "M:2");
+
+        var rows = await CheckAll(Whole(SizeM, 10), Whole(BlueM, 4, "Xanh - M"));
+
+        rows.Select(r => (r.MaterialCode, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)6m)]);
+        rows.Single(r => r.MaterialCode == "V02").MarkerPlans!.Single().Markers.Single().MarkerCode.Should().Be("3C");
+    }
+
+    [Fact]
+    public async Task Whole_GroupOfAColorWithoutMarkers_NamesTheGroupAndTheColor()
+    {
+        Norm(BlueM, material: _white, id: 13);
+        OnFabric(3, "Xanh", _white); OnGroup(3, Body);
+        Marker("1A", 1, 2m, "M:2");
+
+        var row = await Check(Whole(BlueM, 4, "Xanh - M"));
+
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.Message.Should().Contain("bìa của đơn cho nhóm 3, màu Xanh");
+    }
+
+    [Fact]
     public async Task Whole_ColorCaseAndSpaces_DoNotBreakTheMatch()
     {
         Norm(SizeM);

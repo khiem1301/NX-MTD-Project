@@ -19,7 +19,7 @@ public sealed record ProductNormDto(int ProductComponentMaterialId, string Compo
 /// <summary>Chi tiết nằm trên nhóm bìa nào (DEV-ALL-85). Bìa (chiều dài, tỉ lệ size) khai theo đơn ở OrderMarkerService.</summary>
 public sealed record ProductMarkerComponentDto(int MarkerNo, string ComponentName);
 
-/// <summary>Vải của một nhóm bìa theo màu áo; không đổi theo size.</summary>
+/// <summary>Màu áo dùng nhóm bìa và vải nhóm trải ở màu đó; vải do backend lấy từ định mức của các chi tiết trên nhóm (DEV-ALL-89).</summary>
 public sealed record ProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId, string MaterialCode, string MaterialName,
     string MaterialColor);
 
@@ -40,13 +40,14 @@ public sealed record SaveProductNormDto(string ComponentName, string Color, int 
 /// <summary>Chi tiết (theo tên, loại PANEL) nằm trên nhóm bìa MarkerNo.</summary>
 public sealed record SaveProductMarkerComponentDto(int MarkerNo, string ComponentName);
 
-public sealed record SaveProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId);
+/// <summary>Màu áo dùng nhóm bìa MarkerNo (DEV-ALL-89). Không gửi vải: backend lấy vải định mức của các chi tiết trên nhóm ở màu đó.</summary>
+public sealed record SaveProductMarkerColorDto(int MarkerNo, string Color);
 
 /// <summary>
 /// Gửi đủ thành phần, biến thể (đã có, không sửa) và định mức muốn giữ. Thành phần bỏ khỏi danh sách: xóa nếu chưa dùng ở đâu,
 /// ngược lại chuyển sang ngừng dùng. Biến thể không bao giờ bị xóa ở đây. Định mức của các biến thể có trong danh sách được thay bằng danh sách gửi lên.
-/// Nhóm bìa (chi tiết + vải theo màu) thay nguyên theo danh sách gửi lên.
+/// Nhóm bìa (chi tiết + màu dùng nhóm) thay nguyên theo danh sách gửi lên.
 /// </summary>
 public sealed record SaveProductSpecDto(IReadOnlyList<SaveProductComponentDto> Components,
     IReadOnlyList<SaveProductVariantDto> Variants, IReadOnlyList<SaveProductNormDto> Norms,
-    IReadOnlyList<SaveProductMarkerComponentDto> MarkerComponents, IReadOnlyList<SaveProductMarkerFabricDto> MarkerFabrics);
+    IReadOnlyList<SaveProductMarkerComponentDto> MarkerComponents, IReadOnlyList<SaveProductMarkerColorDto> MarkerColors);

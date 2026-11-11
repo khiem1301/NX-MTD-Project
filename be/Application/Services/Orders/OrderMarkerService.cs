@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
@@ -8,7 +9,8 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// Bìa cắt của đơn (DEV-ALL-85): phía trên giác theo tỉ lệ size của từng đơn. Mỗi bìa thuộc đơn × mã hàng × nhóm bìa (khai ở mã hàng),
+/// Bìa cắt của đơn (DEV-ALL-85): phía trên giác theo tỉ lệ size của từng đơn. Mỗi bìa thuộc đơn × mã hàng × nhóm bìa (khai ở mã hàng)
+/// (DEV-ALL-89: nhóm thuộc một dạng bìa, nên bìa dùng cho đúng các màu của dạng đó; màu cần bìa riêng thì nằm ở dạng bìa riêng),
 /// có mã bìa, chiều dài (m) và tỉ lệ size. Chỉ dùng để ước số mét vải khi lập lệnh cắt (WorkOrderFabricChecker); bàn cắt không gắn bìa
 /// nên bìa sửa, xóa được bất cứ lúc nào khi đơn còn chạy.
 /// </summary>
@@ -22,17 +24,18 @@ public sealed class OrderMarkerService : IOrderMarkerService
         _uow = uow; _audit = audit;
     }
 
+    /// <summary>Dòng đơn của một mã hàng: màu, size (để chọn màu của bìa và kiểm size của tỉ lệ).</summary>
+    private sealed record LineColor(int ProductId, string ProductCode, string ProductName, int ProductColorId, string Color, string SizeCode);
+
     public async Task<Result<OrderMarkersDto>> GetAsync(int orderId, CancellationToken ct)
     {
         if (!await _uow.Repository<CustomerOrder>().Query().AnyAsync(o => o.OrderId == orderId, ct))
             return Fail.NotFound<OrderMarkersDto>();
 
-        var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .Select(l => new { l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName, l.ProductVariant.SizeCode })
-            .ToListAsync(ct);
+        var lines = await LinesAsync(l => l.OrderId == orderId, ct);
         var productIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var groups = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking().Where(f => productIds.Contains(f.ProductId))
-            .Select(f => new { f.ProductId, f.MarkerNo }).Distinct().ToListAsync(ct);
+            .Select(f => new { f.ProductId, f.MarkerNo, f.ProductColorId }).ToListAsync(ct);
         var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Where(m => m.OrderId == orderId)
             .OrderBy(m => m.MarkerNo).ThenBy(m => m.MarkerCode)
             .Select(m => new
@@ -46,11 +49,20 @@ public sealed class OrderMarkerService : IOrderMarkerService
         var products = lines.GroupBy(l => l.ProductId).OrderBy(g => g.First().ProductCode)
             .Select(g => new OrderMarkerProductDto(g.Key, g.First().ProductCode, g.First().ProductName,
                 SizeOrder.Sort(g.Select(l => l.SizeCode)),
-                groups.Where(x => x.ProductId == g.Key).Select(x => (int)x.MarkerNo).OrderBy(n => n).ToList(),
+                groups.Where(x => x.ProductId == g.Key).GroupBy(x => (int)x.MarkerNo).OrderBy(x => x.Key)
+                    .Select(x => new OrderMarkerGroupDto(x.Key, g.Where(l => x.Any(c => c.ProductColorId == l.ProductColorId))
+                        .Select(l => l.Color).Distinct().Order().ToList()))
+                    .ToList(),
                 markers.Where(m => m.ProductId == g.Key).Select(m => m.Dto with { Status = CodeText.ToPascal(m.Dto.Status) }).ToList()))
             .ToList();
         return Result<OrderMarkersDto>.Success(new OrderMarkersDto(orderId, products));
     }
+
+    private Task<List<LineColor>> LinesAsync(Expression<Func<OrderLine, bool>> filter, CancellationToken ct) =>
+        _uow.Repository<OrderLine>().Query().AsNoTracking().Where(filter)
+            .Select(l => new LineColor(l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
+                l.ProductVariant.ProductColorId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode))
+            .ToListAsync(ct);
 
     public async Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
     {
@@ -60,7 +72,8 @@ public sealed class OrderMarkerService : IOrderMarkerService
 
         var existing = await _uow.Repository<ProductMarker>().Query().Include(m => m.ProductMarkerRatios)
             .Where(m => m.OrderId == orderId && m.ProductId == productId).ToListAsync(ct);
-        var check = await ValidateAsync(orderId, productId, dto, existing, ct);
+        var lines = await LinesAsync(l => l.OrderId == orderId && l.ProductId == productId, ct);
+        var check = await ValidateAsync(productId, dto, existing, lines, ct);
         if (check is not null) return check;
 
         var saved = await _uow.InTransactionAsync(() => WriteAsync(orderId, productId, dto, existing));
@@ -69,27 +82,36 @@ public sealed class OrderMarkerService : IOrderMarkerService
         return Result<OrderMarkersDto>.Success(result.Data!, Messages.Saved);
     }
 
-    /// <summary>Mã hàng có trong đơn, nhóm bìa đã khai vải, mã bìa không trùng trong nhóm, size thuộc đơn, Id là bìa của đúng đơn và mã hàng.</summary>
-    private async Task<Result<OrderMarkersDto>?> ValidateAsync(int orderId, int productId, SaveOrderMarkersDto dto,
-        List<ProductMarker> existing, CancellationToken ct)
+    /// <summary>Mã hàng có trong đơn, nhóm bìa đã khai vải, mã bìa không trùng trong nhóm, Id là bìa của đúng đơn và mã hàng, size hợp lệ.</summary>
+    private async Task<Result<OrderMarkersDto>?> ValidateAsync(int productId, SaveOrderMarkersDto dto, List<ProductMarker> existing,
+        List<LineColor> lines, CancellationToken ct)
     {
-        var sizes = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId && l.ProductId == productId)
-            .Select(l => l.ProductVariant.SizeCode).Distinct().ToListAsync(ct);
-        if (sizes.Count == 0) return Invalid(Messages.OrderMarkerProductNotInOrder);
+        if (lines.Count == 0) return Invalid(Messages.OrderMarkerProductNotInOrder);
 
         var existingIds = existing.Select(m => m.ProductMarkerId).ToHashSet();
         if (dto.Markers.Any(m => m.ProductMarkerId is { } id && !existingIds.Contains(id))) return Fail.NotFound<OrderMarkersDto>();
         if (dto.Markers.GroupBy(m => (m.MarkerNo, Upper(m.MarkerCode))).Any(g => g.Count() > 1))
             return Invalid(Messages.OrderMarkerCodeDuplicate);
 
-        var groups = await _uow.Repository<ProductMarkerFabric>().Query().Where(f => f.ProductId == productId)
-            .Select(f => (int)f.MarkerNo).Distinct().ToListAsync(ct);
-        var noFabric = dto.Markers.Select(m => m.MarkerNo).Where(n => !groups.Contains(n)).Distinct().ToList();
+        var groupColors = (await _uow.Repository<ProductMarkerFabric>().Query().Where(f => f.ProductId == productId)
+                .Select(f => new { f.MarkerNo, f.ProductColorId }).ToListAsync(ct))
+            .Select(f => ((int)f.MarkerNo, f.ProductColorId)).ToHashSet();
+        var noFabric = dto.Markers.Select(m => m.MarkerNo).Where(n => groupColors.All(g => g.Item1 != n)).Distinct().ToList();
         if (noFabric.Count > 0) return Invalid(string.Format(Messages.OrderMarkerGroupWithoutFabric, string.Join(", ", noFabric)));
 
-        var orderSizes = sizes.Select(Upper).ToHashSet();
-        var wrong = dto.Markers.SelectMany(m => m.Ratios).Select(r => Upper(r.SizeCode)).Where(s => !orderSizes.Contains(s)).Distinct().ToList();
-        return wrong.Count > 0 ? Invalid(string.Format(Messages.OrderMarkerSizeNotInOrder, string.Join(", ", wrong))) : null;
+        var problem = dto.Markers.Select(m => MarkerSizeProblem(m, lines, groupColors)).FirstOrDefault(p => p is not null);
+        return problem is null ? null : Invalid(problem);
+    }
+
+    /// <summary>
+    /// DEV-ALL-89: bìa dùng cho các màu của đơn dùng nhóm bìa (cùng dạng bìa), nên size trong tỉ lệ phải có trong đơn ở các màu đó.
+    /// Trả về thông báo lỗi hoặc null.
+    /// </summary>
+    private static string? MarkerSizeProblem(SaveOrderMarkerDto marker, List<LineColor> lines, HashSet<(int, int)> groupColors)
+    {
+        var sizes = lines.Where(l => groupColors.Contains((marker.MarkerNo, l.ProductColorId))).Select(l => Upper(l.SizeCode)).ToHashSet();
+        var wrong = marker.Ratios.Select(r => Upper(r.SizeCode)).Where(s => !sizes.Contains(s)).Distinct().ToList();
+        return wrong.Count == 0 ? null : string.Format(Messages.OrderMarkerSizeNotInOrder, Upper(marker.MarkerCode), string.Join(", ", wrong));
     }
 
     /// <summary>Xóa bìa bỏ đi và tỉ lệ cũ trước (khóa UQ_PM), rồi cập nhật / thêm bìa và ghi lại tỉ lệ.</summary>

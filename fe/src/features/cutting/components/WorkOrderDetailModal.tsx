@@ -6,7 +6,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import type { FabricRequirement } from '@/types/workOrder';
-import { formatDate, formatQty } from '@/utils/format';
+import { formatDate, formatNumber, formatQty } from '@/utils/format';
 import {
   LABELS,
   WORK_ORDER_LIMITS,
@@ -101,6 +101,9 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
             >{`${w.productCode} ${w.productName}`}</Descriptions.Item>
             <Descriptions.Item label={LABELS.cuttingTeam}>{w.cuttingTeamName}</Descriptions.Item>
             <Descriptions.Item label={LABELS.dueDate}>{formatDate(w.dueDate)}</Descriptions.Item>
+            <Descriptions.Item
+              label={LABELS.fabricTolerance}
+            >{`${formatNumber(w.fabricTolerancePercent)}%`}</Descriptions.Item>
             <Descriptions.Item label={LABELS.status}>
               <StatusTag status={w.status} labels={WORK_ORDER_STATUS_LABEL} />
             </Descriptions.Item>

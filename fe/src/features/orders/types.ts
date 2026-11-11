@@ -122,7 +122,8 @@ export type SaveProductSpecPayload = {
     specNote: string | null;
   }[];
   markerComponents: ProductMarkerComponentItem[];
-  markerFabrics: { markerNo: number; color: string; materialId: number }[];
+  /** Màu áo dùng nhóm bìa (DEV-ALL-89); vải của nhóm do máy chủ lấy từ định mức. */
+  markerColors: { markerNo: number; color: string }[];
 };
 export type ProductQuery = {
   page: number;
@@ -246,13 +247,15 @@ export type OrderMarker = {
   status: OrderMarkerStatus;
   ratios: MarkerRatio[];
 };
-/** Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai vải ở mã hàng, và các bìa của đơn. */
+/** Nhóm bìa đã khai ở mã hàng và các màu của đơn dùng nhóm đó (DEV-ALL-89): bìa của nhóm dùng cho đúng các màu này. */
+export type OrderMarkerGroup = { markerNo: number; colors: string[] };
+/** Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai ở mã hàng (kèm màu dùng nhóm), và các bìa của đơn. */
 export type OrderMarkerProduct = {
   productId: number;
   productCode: string;
   productName: string;
   sizes: string[];
-  markerGroups: number[];
+  markerGroups: OrderMarkerGroup[];
   markers: OrderMarker[];
 };
 export type OrderMarkers = { orderId: number; products: OrderMarkerProduct[] };

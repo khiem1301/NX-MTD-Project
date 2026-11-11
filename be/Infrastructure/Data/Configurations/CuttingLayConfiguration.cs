@@ -10,7 +10,7 @@ public sealed class CuttingLayConfiguration : IEntityTypeConfiguration<CuttingLa
     {
         entity.ToTable("CuttingLay", tb => tb.HasComment("Bàn cắt"));
 
-        entity.Property(e => e.LayLengthM).HasColumnType("decimal(7, 2)");
+        entity.Property(e => e.FabricUsedM).HasColumnType("decimal(9, 2)");
 
         entity.HasIndex(e => new { e.CuttingTeamId, e.WorkDate, e.ShiftCode, e.LaySequence }, "UQ_CL").IsUnique();
 

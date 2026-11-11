@@ -16,6 +16,7 @@ public static class WorkOrderLimits
     /// <summary>Mỗi dòng là một màu – size (tối đa 200) hoặc một chi tiết cắt lẻ của màu – size đó.</summary>
     public const int MaxLines = 1000;
     public const int MaxPlannedQty = 1_000_000;
+    public const decimal MaxFabricTolerancePercent = 100m;
 }
 
 public sealed class SaveWorkOrderDtoValidator : AbstractValidator<SaveWorkOrderDto>
@@ -27,6 +28,9 @@ public sealed class SaveWorkOrderDtoValidator : AbstractValidator<SaveWorkOrderD
         RuleFor(x => x.CuttingTeamId).GreaterThan(0).WithMessage("Vui lòng chọn tổ cắt.");
         RuleFor(x => x.DueDate).NotEmpty().WithMessage(Messages.Required("hạn cắt"));
         RuleFor(x => x.Note).MaxTrimmedLength(WorkOrderLimits.MaxNote, "Ghi chú");
+        RuleFor(x => x.FabricTolerancePercent)
+            .InclusiveBetween(0m, WorkOrderLimits.MaxFabricTolerancePercent).WithMessage(WarehouseMessages.WorkOrderToleranceRange)
+            .Must(v => decimal.Round(v, 2) == v).WithMessage(WarehouseMessages.WorkOrderToleranceDecimals);
         RuleFor(x => x.Lines).Cascade(CascadeMode.Stop).NotEmpty().WithMessage(WarehouseMessages.LinesRequired)
             .Must(l => l.Count <= WorkOrderLimits.MaxLines).WithMessage($"Tối đa {WorkOrderLimits.MaxLines} dòng.");
         RuleForEach(x => x.Lines).SetValidator(new SaveWorkOrderLineDtoValidator());

@@ -1,12 +1,13 @@
 import { IconAction } from '@/components/common/IconAction';
 import { EyeOutlined } from '@ant-design/icons';
-import { type TableColumnsType, type TablePaginationConfig } from 'antd';
+import { Tag, Typography, type TableColumnsType, type TablePaginationConfig } from 'antd';
+import dayjs from 'dayjs';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
 import type { Paginated } from '@/types/api';
 import { formatDate, formatDateTime } from '@/utils/format';
-import { REQUEST_STATUS_TAG } from '../constants';
+import { OPEN_STATUSES, REQUEST_STATUS_TAG } from '../constants';
 import type { RequestListItem } from '@/types/request';
 import { DataTable } from '@/components/common/DataTable';
 
@@ -50,7 +51,18 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
       render: (v: string | null) => v ?? '—',
     },
     { title: MESSAGES.requests.createdAt, dataIndex: 'createdAt', render: formatDateTime },
-    { title: MESSAGES.requests.targetDate, dataIndex: 'targetDate', render: formatDate },
+    {
+      title: MESSAGES.requests.targetDate,
+      dataIndex: 'targetDate',
+      render: (v: string | null, r) =>
+        isOverdue(r) ? (
+          <Typography.Text type="danger">
+            {formatDate(v)} <Tag color="red">{MESSAGES.requests.overdue}</Tag>
+          </Typography.Text>
+        ) : (
+          formatDate(v)
+        ),
+    },
     {
       title: MESSAGES.requests.status,
       dataIndex: 'status',
@@ -63,7 +75,10 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
         <IconAction
           title={MESSAGES.common.view}
           icon={<EyeOutlined />}
-          onClick={() => onOpen(r.requestId)}
+          onClick={(e) => {
+            e?.stopPropagation();
+            onOpen(r.requestId);
+          }}
         />
       ),
     },
@@ -77,6 +92,13 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
       columns={columns}
       dataSource={data?.items ?? []}
       pagination={pagination}
+      onRow={(r) => ({ onClick: () => onOpen(r.requestId), style: { cursor: 'pointer' } })}
     />
   );
 }
+
+/** Đơn còn mở mà ngày cần đã qua. */
+const isOverdue = (r: RequestListItem) =>
+  r.targetDate !== null &&
+  OPEN_STATUSES.includes(r.status) &&
+  dayjs(r.targetDate).isBefore(dayjs(), 'day');

@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// UC10 (phần định mức): thành phần PANEL / TRIM, biến thể màu × size và định mức NVL của từng biến thể, khai báo một lần
-/// cho mã hàng, kèm nhóm bìa: chi tiết nằm trên nhóm nào và vải của nhóm theo màu (DEV-ALL-85; bìa theo đơn ở OrderMarkerService). Lưu theo kiểu "gửi đủ danh sách": mục bỏ đi được xóa
+/// cho mã hàng, kèm nhóm bìa: chi tiết nằm trên nhóm nào, màu nào dùng nhóm và vải nhóm trải ở màu đó lấy từ định mức (DEV-ALL-85, DEV-ALL-89; bìa theo đơn ở OrderMarkerService). Lưu theo kiểu "gửi đủ danh sách": mục bỏ đi được xóa
 /// khi chưa dùng, còn dùng thì chuyển sang ngừng dùng.
 /// </summary>
 public sealed class ProductSpecService : IProductSpecService
@@ -116,7 +116,7 @@ public sealed class ProductSpecService : IProductSpecService
                 Variants = dto.Variants.Count,
                 Norms = dto.Norms.Count,
                 MarkerComponents = dto.MarkerComponents.Count,
-                MarkerFabrics = dto.MarkerFabrics.Count,
+                MarkerColors = dto.MarkerColors.Count,
             },
         }));
         await _uow.SaveChangesAsync();
@@ -226,7 +226,9 @@ public sealed class ProductSpecService : IProductSpecService
         _uow.Repository<OperationComponent>().RemoveRange(links);
     }
 
-    /// <summary>Gỡ nhóm bìa của mã hàng (chi tiết trên nhóm, vải theo màu) để ghi lại theo danh sách gửi lên. Không bảng nào trỏ vào hai bảng này.</summary>
+    /// <summary>
+    /// Gỡ nhóm bìa của mã hàng (chi tiết trên nhóm, màu dùng nhóm) để ghi lại theo danh sách gửi lên. Không bảng nào trỏ vào hai bảng này.
+    /// </summary>
     private async Task ClearMarkerGroupsAsync(int productId, CancellationToken ct)
     {
         var components = _uow.Repository<ProductMarkerComponent>();
@@ -236,13 +238,17 @@ public sealed class ProductSpecService : IProductSpecService
         await _uow.SaveChangesAsync();   // xóa trước rồi thêm để khỏi đụng khóa PK_ProductMarkerComponent, UQ_PMF
     }
 
-    /// <summary>Bước 4: ghi nhóm bìa của mã hàng (DEV-ALL-85): chi tiết nằm trên nhóm nào, nhóm trải trên vải nào theo màu áo.</summary>
+    /// <summary>
+    /// Bước 4: ghi nhóm bìa của mã hàng (DEV-ALL-85): chi tiết nằm trên nhóm nào, màu áo nào dùng nhóm. Vải của nhóm × màu không lấy
+    /// từ người dùng mà từ định mức của các chi tiết trên nhóm ở màu đó (DEV-ALL-89; đã kiểm đúng một vải), nên không lệch với định mức.
+    /// </summary>
     private async Task WriteMarkerGroupsAsync(int productId, SaveProductSpecDto dto, Dictionary<string, ProductComponent> componentByName,
         CancellationToken ct)
     {
         // Màu của nhóm bìa đã kiểm nằm trong danh sách màu – size (đều do đơn hàng tạo) nên luôn có ProductColor.
         var colorIds = (await _uow.Repository<ProductColor>().Query().Where(c => c.ProductId == productId).ToListAsync(ct))
             .ToDictionary(c => Upper(c.Color), c => c.ProductColorId);
+        var groupFabrics = GroupFabrics(dto, await FabricIdsAsync(dto, ct));
 
         await _uow.Repository<ProductMarkerComponent>().AddRangeAsync(dto.MarkerComponents.Select(m => new ProductMarkerComponent
         {
@@ -250,13 +256,38 @@ public sealed class ProductSpecService : IProductSpecService
             MarkerNo = (byte)m.MarkerNo,
             ProductComponentId = componentByName[m.ComponentName.Trim()].ProductComponentId,
         }).ToList());
-        await _uow.Repository<ProductMarkerFabric>().AddRangeAsync(dto.MarkerFabrics.Select(f => new ProductMarkerFabric
+        await _uow.Repository<ProductMarkerFabric>().AddRangeAsync(dto.MarkerColors.Select(f => new ProductMarkerFabric
         {
             ProductId = productId,
             MarkerNo = (byte)f.MarkerNo,
             ProductColorId = colorIds[Upper(f.Color)],
-            MaterialId = f.MaterialId,
+            MaterialId = groupFabrics[(f.MarkerNo, Upper(f.Color))].Single(),
         }).ToList());
+    }
+
+    /// <summary>NVL loại vải trong số NVL của định mức gửi lên.</summary>
+    private async Task<HashSet<int>> FabricIdsAsync(SaveProductSpecDto dto, CancellationToken ct)
+    {
+        var materialIds = dto.Norms.Select(n => n.MaterialId).Distinct().ToArray();
+        return (await _uow.Repository<Material>().Query()
+            .Where(m => materialIds.Contains(m.MaterialId) && m.MaterialType == MaterialTypes.Fabric)
+            .Select(m => m.MaterialId).ToListAsync(ct)).ToHashSet();
+    }
+
+    /// <summary>
+    /// Vải của từng (nhóm bìa, màu dùng nhóm) (DEV-ALL-89): các NVL loại vải trong định mức của các chi tiết trên nhóm ở màu đó.
+    /// Hợp lệ khi đúng một vải; nhóm × màu không có dòng nào là chưa có vải.
+    /// </summary>
+    private static Dictionary<(int MarkerNo, string Color), HashSet<int>> GroupFabrics(SaveProductSpecDto dto, HashSet<int> fabricIds)
+    {
+        var used = dto.MarkerColors.Select(c => (c.MarkerNo, Upper(c.Color))).ToHashSet();
+        return (from m in dto.MarkerComponents
+                from n in dto.Norms
+                where fabricIds.Contains(n.MaterialId) && Same(n.ComponentName, m.ComponentName)
+                let key = (m.MarkerNo, Upper(n.Color))
+                where used.Contains(key)
+                group n.MaterialId by key)
+            .ToDictionary(g => g.Key, g => g.ToHashSet());
     }
 
     private async Task<Result<ProductSpecDto>?> ValidateAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
@@ -279,9 +310,10 @@ public sealed class ProductSpecService : IProductSpecService
             .Where(m => materialIds.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active)
             .Select(m => new { m.MaterialId, m.MaterialType }).ToListAsync(ct);
         if (active.Count != materialIds.Length) return Invalid(Messages.ProductSpecMaterialInvalid);
-        var multiFabric = PanelWithManyFabrics(dto, active.Where(m => m.MaterialType == MaterialTypes.Fabric).Select(m => m.MaterialId).ToHashSet());
+        var fabricIds = active.Where(m => m.MaterialType == MaterialTypes.Fabric).Select(m => m.MaterialId).ToHashSet();
+        var multiFabric = PanelWithManyFabrics(dto, fabricIds);
         if (multiFabric is not null) return Invalid(multiFabric);
-        return await ValidateMarkerGroupsAsync(productId, dto, ct);
+        return await ValidateMarkerGroupsAsync(productId, dto, fabricIds, ct);
     }
 
     /// <summary>
@@ -301,39 +333,109 @@ public sealed class ProductSpecService : IProductSpecService
     }
 
     /// <summary>
-    /// Nhóm bìa (DEV-ALL-85): không trùng; chi tiết là PANEL của mã hàng, màu có trong màu – size; nhóm nào cũng có cả chi tiết và vải;
-    /// đã khai nhóm thì mọi PANEL nằm trên ít nhất một nhóm; vải có trong định mức chi tiết cắt của màu đó; nhóm đang có bìa của đơn không được bỏ.
+    /// Nhóm bìa (DEV-ALL-85, DEV-ALL-89): không trùng; chi tiết là PANEL của mã hàng, màu có trong màu – size; nhóm nào cũng có chi tiết
+    /// và ít nhất một màu; màu dùng chung nhóm thì cùng dạng bìa (dùng chung mọi nhóm); ở mỗi màu dùng nhóm, chi tiết cắt có vải nằm đúng một nhóm của màu đó
+    /// và nhóm × màu đúng một vải; nhóm đang có bìa của đơn không được bỏ, đơn chưa xong thì không đổi chi tiết của nhóm.
     /// </summary>
-    private async Task<Result<ProductSpecDto>?> ValidateMarkerGroupsAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
+    private async Task<Result<ProductSpecDto>?> ValidateMarkerGroupsAsync(int productId, SaveProductSpecDto dto, HashSet<int> fabricIds,
+        CancellationToken ct)
     {
         if (dto.MarkerComponents.GroupBy(m => (m.MarkerNo, Upper(m.ComponentName))).Any(g => g.Count() > 1)
-            || dto.MarkerFabrics.GroupBy(f => (f.MarkerNo, Upper(f.Color))).Any(g => g.Count() > 1))
+            || dto.MarkerColors.GroupBy(f => (f.MarkerNo, Upper(f.Color))).Any(g => g.Count() > 1))
             return Invalid(Messages.ProductSpecMarkerDuplicate);
 
         var panels = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) == ComponentTypes.Panel)
             .Select(c => Upper(c.ComponentName)).ToHashSet();
         var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();
-        if (dto.MarkerComponents.Any(m => !panels.Contains(Upper(m.ComponentName))) || dto.MarkerFabrics.Any(f => !colors.Contains(Upper(f.Color))))
+        if (dto.MarkerComponents.Any(m => !panels.Contains(Upper(m.ComponentName))) || dto.MarkerColors.Any(f => !colors.Contains(Upper(f.Color))))
             return Invalid(Messages.ProductSpecMarkerReference);
         var groups = dto.MarkerComponents.Select(m => m.MarkerNo).ToHashSet();
-        if (!groups.SetEquals(dto.MarkerFabrics.Select(f => f.MarkerNo)))
+        if (!groups.SetEquals(dto.MarkerColors.Select(f => f.MarkerNo)))
             return Invalid(Messages.ProductSpecMarkerIncomplete);
-        if (groups.Count > 0 && !panels.SetEquals(dto.MarkerComponents.Select(m => Upper(m.ComponentName))))
-            return Invalid(Messages.ProductSpecPanelWithoutMarker);
+        var problem = LayoutProblem(dto) ?? PanelCoverageProblem(dto, panels, fabricIds) ?? GroupFabricProblem(dto, fabricIds);
+        if (problem is not null) return Invalid(problem);
 
         var usedGroups = await _uow.Repository<ProductMarker>().Query().Where(m => m.ProductId == productId)
             .Select(m => (int)m.MarkerNo).Distinct().ToListAsync(ct);
         if (usedGroups.Any(g => !groups.Contains(g))) return Invalid(Messages.ProductSpecMarkerGroupInUse);
+        var locked = await LockedGroupProblemAsync(productId, dto, ct);
+        return locked is null ? null : Invalid(locked);
+    }
 
-        var panelNorms = dto.Norms.Where(n => panels.Contains(Upper(n.ComponentName)))
-            .Select(n => (Upper(n.Color), n.MaterialId)).ToHashSet();
-        if (dto.MarkerFabrics.Any(f => !panelNorms.Contains((Upper(f.Color), f.MaterialId))))
-            return Invalid(Messages.ProductSpecMarkerFabricInvalid);
+    /// <summary>
+    /// DEV-ALL-89 (dạng bìa): các màu dùng chung một nhóm bìa phải dùng chung mọi nhóm bìa (cùng một dạng bìa). Màu có nhóm không dùng được
+    /// (chi tiết trong nhóm khác vải ở màu đó, xem <see cref="GroupFabricProblem"/>) thì cả màu sang dạng bìa riêng, không chung nhóm nào.
+    /// </summary>
+    private static string? LayoutProblem(SaveProductSpecDto dto)
+    {
+        var groupsOf = dto.MarkerColors.GroupBy(c => Upper(c.Color))
+            .ToDictionary(g => g.Key, g => (Name: g.First().Color.Trim(), Groups: g.Select(c => c.MarkerNo).ToHashSet()));
+        foreach (var group in dto.MarkerColors.GroupBy(c => c.MarkerNo).OrderBy(g => g.Key))
+        {
+            var colors = group.Select(c => Upper(c.Color)).Distinct().ToList();
+            var first = groupsOf[colors[0]];
+            var other = colors.Skip(1).Select(c => groupsOf[c]).FirstOrDefault(c => !c.Groups.SetEquals(first.Groups));
+            if (other.Groups is not null)
+                return string.Format(Messages.ProductSpecLayoutGroups, other.Name, first.Name, group.Key);
+        }
+        return null;
+    }
 
-        var fabricIds = dto.MarkerFabrics.Select(f => f.MaterialId).Distinct().ToArray();
-        var fabrics = await _uow.Repository<Material>().Query().CountAsync(m => fabricIds.Contains(m.MaterialId)
-            && m.MaterialType == MaterialTypes.Fabric && m.Status == MaterialStatuses.Active, ct);
-        return fabrics == fabricIds.Length ? null : Invalid(Messages.ProductSpecMarkerFabricInvalid);
+    /// <summary>
+    /// DEV-ALL-89: ở mỗi màu dùng ít nhất một nhóm bìa, chi tiết cắt có vải trong định mức của màu đó phải nằm đúng một nhóm mà màu đó
+    /// dùng (thiếu thì không ước được mét, thừa thì tính trùng). Màu chưa dùng nhóm nào thì bỏ qua (ước vải báo chưa có bìa cho màu).
+    /// </summary>
+    private static string? PanelCoverageProblem(SaveProductSpecDto dto, HashSet<string> panels, HashSet<int> fabricIds)
+    {
+        var groupsOf = dto.MarkerColors.GroupBy(c => Upper(c.Color)).ToDictionary(g => g.Key, g => g.Select(c => c.MarkerNo).ToHashSet());
+        foreach (var n in dto.Norms.Where(n => fabricIds.Contains(n.MaterialId) && panels.Contains(Upper(n.ComponentName))))
+        {
+            if (!groupsOf.TryGetValue(Upper(n.Color), out var groups)) continue;
+            var count = dto.MarkerComponents.Count(m => groups.Contains(m.MarkerNo) && Same(m.ComponentName, n.ComponentName));
+            if (count == 1) continue;
+            return string.Format(count == 0 ? Messages.ProductSpecPanelWithoutMarker : Messages.ProductSpecPanelManyMarkers,
+                n.Color.Trim(), n.ComponentName.Trim());
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// DEV-ALL-89: một bìa chỉ trải trên một vải, nên ở mỗi màu dùng nhóm, các chi tiết trên nhóm phải cùng một vải và có vải trong định mức.
+    /// Vải đó được ghi vào ProductMarkerFabric, người dùng không chọn.
+    /// </summary>
+    private static string? GroupFabricProblem(SaveProductSpecDto dto, HashSet<int> fabricIds)
+    {
+        var fabrics = GroupFabrics(dto, fabricIds);
+        foreach (var c in dto.MarkerColors.OrderBy(c => c.MarkerNo))
+        {
+            var ids = fabrics.GetValueOrDefault((c.MarkerNo, Upper(c.Color)));
+            if (ids is null) return string.Format(Messages.ProductSpecMarkerNoFabric, c.MarkerNo, c.Color.Trim());
+            if (ids.Count > 1) return string.Format(Messages.ProductSpecMarkerManyFabrics, c.MarkerNo, c.Color.Trim());
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// DEV-ALL-89: nhóm có bìa của đơn chưa xong (chưa dừng, hủy, giao xong) thì bìa đó được giác cho đúng các chi tiết của nhóm: không đổi
+    /// chi tiết của nhóm. Đổi màu dùng nhóm thì được (bìa vẫn đúng hình chi tiết). Muốn đổi chi tiết thì sửa hoặc xóa bìa của đơn trước.
+    /// </summary>
+    private async Task<string?> LockedGroupProblemAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
+    {
+        var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking()
+            .Where(m => m.ProductId == productId && !OrderStatuses.Closed.Contains(m.Order.Status))
+            .Select(m => new { m.MarkerNo, m.Order.OrderCode })
+            .ToListAsync(ct);
+        if (markers.Count == 0) return null;
+        var saved = await _uow.Repository<ProductMarkerComponent>().Query().AsNoTracking().Where(c => c.ProductId == productId)
+            .Select(c => new { c.MarkerNo, c.ProductComponent.ComponentName }).ToListAsync(ct);
+        foreach (var m in markers.OrderBy(m => m.MarkerNo))
+        {
+            var before = saved.Where(s => s.MarkerNo == m.MarkerNo).Select(s => Upper(s.ComponentName)).ToHashSet();
+            var after = dto.MarkerComponents.Where(c => c.MarkerNo == m.MarkerNo).Select(c => Upper(c.ComponentName));
+            if (!before.SetEquals(after))
+                return string.Format(Messages.ProductSpecMarkerGroupLocked, m.MarkerNo, m.OrderCode);
+        }
+        return null;
     }
 
     private static string Upper(string value) => value.Trim().ToUpperInvariant();

@@ -5,7 +5,9 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
-import { formatDate, formatDateTime, formatQty } from '@/utils/format';
+import { ROLE_LABEL } from '@/constants/hr';
+import { fill, formatDate, formatDateTime, formatQty } from '@/utils/format';
+import { RequestProgress } from './RequestProgress';
 import { DEFAULT_MAX_PHOTOS, GENERIC_FORM_TYPES, REQUEST_STATUS_TAG } from '../constants';
 import { RequestFormModal } from './RequestFormModal';
 import { RequestHistory } from './RequestHistory';
@@ -43,7 +45,8 @@ export function RequestDetailModal() {
       {!notFound && <QueryError error={error} onRetry={() => void refetch()} />}
       {data && (
         <>
-          <Descriptions column={2} size="small" bordered>
+          <RequestProgress requestType={data.requestType} status={data.status} />
+          <Descriptions column={{ xs: 1, sm: 2 }} size="small" bordered>
             <Descriptions.Item label={MESSAGES.requests.type}>
               {REQUEST_TYPE_LABEL[data.requestType] ?? data.requestType}
             </Descriptions.Item>
@@ -62,6 +65,22 @@ export function RequestDetailModal() {
             <Descriptions.Item label={MESSAGES.requests.order}>
               {data.orderCode ?? '—'}
             </Descriptions.Item>
+            {data.workOrderCode && (
+              <Descriptions.Item label={MESSAGES.requests.workOrder}>
+                {data.workOrderCode}
+              </Descriptions.Item>
+            )}
+            {data.handlerRole && (
+              <Descriptions.Item label={MESSAGES.requests.handlerRole} span={2}>
+                {data.handlerTeamName
+                  ? fill(
+                      MESSAGES.requests.handlerOfTeam,
+                      ROLE_LABEL[data.handlerRole],
+                      data.handlerTeamName,
+                    )
+                  : ROLE_LABEL[data.handlerRole]}
+              </Descriptions.Item>
+            )}
             {data.decisionNote && (
               <Descriptions.Item label={MESSAGES.requests.decisionNote} span={2}>
                 {data.decisionNote}

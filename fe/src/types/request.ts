@@ -1,4 +1,5 @@
 import type { RequestStatus, RequestType } from '@/constants/requestTypes';
+import type { Role } from '@/constants/roles';
 import type { AuditEntry } from '@/types/attachment';
 
 export type RequestTypeOption = {
@@ -6,6 +7,8 @@ export type RequestTypeOption = {
   label: string;
   needsApproval: boolean;
   handlerRole: string;
+  /** Có = người tạo chọn vai trò xử lý trong danh sách này (đơn Khác). */
+  handlerRoleOptions: Role[] | null;
 };
 
 export type RequestListItem = {
@@ -53,10 +56,16 @@ export type RequestDetail = {
   targetDate: string | null;
   orderId: number | null;
   orderCode: string | null;
+  /** Đơn xin NVL theo lệnh cắt (DEV-ALL-92). */
+  workOrderId: number | null;
+  workOrderCode: string | null;
   createdBy: number | null;
   createdByName: string | null;
   createdByTeamId: number | null;
   teamName: string | null;
+  /** Đơn Khác: vai trò xử lý người tạo chọn; tổ trưởng thì kèm tổ. */
+  handlerRole: Role | null;
+  handlerTeamName: string | null;
   createdAt: string;
   decidedAt: string | null;
   decisionNote: string | null;
@@ -88,6 +97,10 @@ export type CreateRequestBody = {
   orderId?: number | null;
   defectRecordId?: number | null;
   lines?: RequestLineInput[];
+  /** Chỉ đơn Khác. */
+  handlerRole?: Role | null;
+  /** Đơn xin NVL theo lệnh cắt: tổng các đơn của lệnh không vượt trần (DEV-ALL-92). */
+  workOrderId?: number | null;
 };
 
 export type UpdateRequestBody = Omit<CreateRequestBody, 'requestType'> & { rowVer: string };
