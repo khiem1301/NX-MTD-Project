@@ -39,10 +39,20 @@ setx Agent__DbPath "C:\Ronald Jack Pro\Data\RJData.mdb"
 ```bat
 cd agent
 dotnet build
-dotnet run
+set DOTNET_ENVIRONMENT=Development
+dotnet run --no-launch-profile
 ```
 
-Chạy nền 24/7: dùng **Task Scheduler** của Windows chạy lúc khởi động, hoặc cài làm Windows Service (dùng `sc.exe` + `dotnet publish -r win-x64`).
+### Chạy cùng web (máy dev)
+
+Từ thư mục gốc repo, double-click hoặc chạy `run-dev.bat`: mở Backend → Agent RJ → Frontend. Agent dùng `appsettings.Development.json` (`ApiKey`, `DbPath`).
+
+### Chạy nền 24/7 (máy xưởng / production)
+
+Agent **phải** chạy trên máy Windows có Ronald Jack Pro + `RJData.mdb` (thường là máy văn phòng có máy chấm công). Không gắn vào process web nếu API host trên server khác.
+
+- **Task Scheduler**: tạo task “At startup” / “At log on” chạy `dotnet run` (hoặc exe publish) của agent, biến môi trường `Agent__ApiKey`, `Agent__DbPath`, `Agent__ApiBaseUrl`.
+- Hoặc cài Windows Service (`sc.exe` + `dotnet publish -r win-x64`).
 
 ## Lưu ý
 

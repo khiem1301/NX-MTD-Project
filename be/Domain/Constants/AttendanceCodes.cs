@@ -81,6 +81,9 @@ public static class SettingKeys
 
     /// <summary>KPI không đạt thiếu không quá số % này: tự duyệt tăng ca; thiếu hơn: tổ trưởng quyết định.</summary>
     public const string KpiOtAutoThresholdPct = "KPI_OT_AUTO_THRESHOLD_PCT";
+
+    /// <summary>Tổ may chỉ nhận đơn mới khi đơn đang làm đạt % nhập kho TP / SL đặt (mặc định 90).</summary>
+    public const string TeamOrderProgressGatePct = "TEAM_ORDER_PROGRESS_GATE_PCT";
 }
 
 /// <summary>Trạng thái suất ăn ngày (DailyMeal.Status) — UC30.</summary>

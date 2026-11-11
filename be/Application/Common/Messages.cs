@@ -444,6 +444,9 @@ public static class Messages
     public const string OrderLineTeamLineDuplicate = "Dòng đơn bị chọn trùng.";
     public const string OrderLineTeamNotifyTitle = "Tổ được chia mã hàng mới";
     public const string OrderLineTeamNotifyBody = "Tổ bạn được chia {0} của đơn {1}, vui lòng phân công công đoạn trước khi nhận BTP.";
+    /// <summary>{0}=mã đơn đang làm, {1}=% hiện tại (1 chữ số thập phân), {2}=ngưỡng %.</summary>
+    public const string TeamOrderBusy =
+        "Tổ đang làm đơn {0} (đã nhập kho TP {1}% / đặt). Chỉ giao đơn khác khi đạt từ {2}% hoặc đơn đã đóng.";
     public const string OutputDateFuture = "Không nhập sản lượng cho ngày chưa tới.";
     public const string WorkDateBeforeOrderStart = "Ngày {0} trước ngày nhận đơn {1}. Chỉ ghi, giao việc trong thời gian gia công của đơn (từ ngày nhận đơn đến hôm nay).";
     public const string OutputQtyInvalid = "Số lượng phải là số nguyên không âm.";
