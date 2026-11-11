@@ -32,6 +32,13 @@ export const PENDING_MODAL: Record<
     danger: false,
     done: MESSAGES.requests.completed,
   },
+  notComplete: {
+    title: MESSAGES.requests.notComplete,
+    label: MESSAGES.requests.notCompleteReason,
+    required: true,
+    danger: true,
+    done: MESSAGES.requests.notCompleted,
+  },
   cancel: {
     title: MESSAGES.requests.cancelRequest,
     label: MESSAGES.requests.cancelReason,
@@ -95,6 +102,8 @@ const buildAction = (
       return { kind, ...base, reason: note ?? '' };
     case 'complete':
       return { kind, ...base, resultNote: note };
+    case 'notComplete':
+      return { kind, ...base, reason: note ?? '' };
     case 'cancel':
       return { kind, ...base, reason: note };
   }

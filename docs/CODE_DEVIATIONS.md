@@ -136,6 +136,8 @@
 | DEV-ALL-82 | 07/11/2026 | Claude (AI) | UC41–UC46 (phiếu cấp, phiếu nhập, kiểm kê, trả vải thừa), UC09, `PurchaseOrder`, `OrderMaterial` | Quy tắc ngày chứng từ kho (không tương lai, không trước ngày nhận đơn, không quá 7 ngày trước); thêm `ExpectedDeliveryDate` cho đơn mua và NVL khách cấp; siết kiểm trả vải thừa (một phiếu chờ mỗi dòng, không vượt số thừa theo số đã cắt) | Mở |
 | DEV-ALL-83 | 07/11/2026 | Claude (AI) | UC35 (xe, chuyến xe), đơn xin của Cơ điện (`SPARE_PARTS`, `MACHINE_SUPPLIES`, `NEW_MACHINE`) | Siết kiểm biển số, số xăng, tiền xăng, số km, định mức xăng; đơn xin linh kiện / vật tư / máy chỉ nhận số nguyên có trần (9.999 / 99) và bắt buộc có dòng | Mở |
 | DEV-ALL-84 | 07/11/2026 | Claude (AI) | UC30 (suất ăn) | Số suất ăn tổ trưởng xác nhận không được vượt số người đang làm trong tổ | Mở |
+| DEV-ALL-98 | 11/11/2026 | Claude (AI) | UC07, UC40, `Request` | Mọi đơn từ tạo tay đều cần duyệt (Vật tư máy, Xin NVL, Xin BTP thêm bước duyệt; cấp NVL / BTP chỉ theo đơn xin đã duyệt); thêm trạng thái `NOT_COMPLETED` (Không hoàn thành) cho đơn đã duyệt mà người xử lý không làm được, bắt buộc nêu lý do | Mở |
+| DEV-ALL-99 | 11/11/2026 | Claude (AI) | UC40, `MaterialIssue` | Phiếu cấp NVL / BTP không bắt buộc thuộc lệnh cắt hay đơn xin; tổ may nhận cả NVL (chỉ, cúc…) và BTP; chọn đơn xin thì tự điền tổ, đơn hàng, lệnh cắt, số lượng; thêm kiểm biên số lượng và số dòng | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -2223,4 +2225,33 @@
 - **Lý do:** yêu cầu của người dùng (11/11/2026): gom việc nhận hàng bù của Thủ kho về một màn, bớt phải trượt khi đơn nhiều NVL.
 - **Ảnh hưởng người khác:** Thái (kho), Quản đốc / Admin (vẫn dùng màn Thiếu NVL khi nhập).
 - **Cần sửa trong tài liệu:** Report-3 UC37–UC39, UC08 (luồng Thủ kho lập phiếu bổ sung), mockup màn NVL chờ nhận và Thiếu NVL khi nhập, danh sách menu theo role.
+- **Trạng thái:** Mở
+
+### DEV-ALL-98 · Mọi đơn từ tạo tay cần duyệt + trạng thái Không hoàn thành
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC07, UC40 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** bảng `Request` (`Status`, `ResultNote`): thêm giá trị `NOT_COMPLETED` vào `CK_Request_Status` và `CK_Request_NotComplete` (`NOT_COMPLETED` thì `ResultNote` bắt buộc). Patch `SQL/patches/2026-11-11_requisition_needs_approval.sql`; `SQL/NX-MTD_Database.sql` đã cập nhật (seed `YC-DEMO-001/002` thành `APPROVED`, `YC-DEMO-005` thành `PENDING_APPROVAL`). API thêm `POST common/request-inbox/{id}/not-complete` (`{ reason, rowVer }`); `permissions` thêm `canNotComplete`.
+- **Tài liệu gốc ghi:** AI Context 4.8: Vật tư máy, Xin NVL, Xin BTP không qua bước duyệt (Chờ xử lý → Hoàn thành); trạng thái đơn chỉ có PENDING_APPROVAL / PENDING_PROCESSING / APPROVED / REJECTED / COMPLETED / CANCELLED.
+- **Code đang làm:**
+  - Vật tư máy (Kế toán duyệt), Xin NVL và Xin BTP (Thủ kho duyệt) có bước duyệt: Chờ duyệt → Đã duyệt → Hoàn thành. Chỉ còn Thiếu hàng khi nhập và Mua NVL (hệ thống tự tạo) là không duyệt. Phiếu cấp NVL / BTP chỉ nhận đơn xin ở trạng thái Đã duyệt; ô chọn đơn xin ở phiếu cấp cũng chỉ liệt kê đơn đã duyệt. Đơn cũ đang Chờ xử lý của ba loại này được patch chuyển về Chờ duyệt.
+  - Trạng thái `NOT_COMPLETED` (Không hoàn thành): người xử lý bấm "Không hoàn thành" trên đơn Đã duyệt (hoặc Chờ xử lý với loại không duyệt), bắt buộc nêu lý do (lưu ở `ResultNote`, thời điểm ở `CompletedAt`). Là trạng thái cuối (không làm lại), người tạo nhận thông báo; chỉ cho loại đơn có hoàn thành bằng tay (`AllowManualComplete`), đơn không tính vào trần vải của lệnh cắt.
+- **Lý do:** yêu cầu của người dùng (11/11/2026): tất cả đơn tạo tay cần duyệt; đơn đã duyệt mà không hoàn thành được cần một trạng thái riêng.
+- **Ảnh hưởng người khác:** Thái (phiếu cấp NVL / BTP, đơn xin của tổ), Kế toán và Thủ kho (nay phải duyệt đơn Vật tư máy / Xin NVL / Xin BTP trước khi xử lý). **Chạy patch cùng lúc với bản code mới.** Khởi động lại API sau khi cập nhật.
+- **Cần sửa trong tài liệu:** AI Context 4.8 (cột "duyệt" của ba loại đơn, danh sách trạng thái), Report-3 UC07 / UC40 (luồng và sơ đồ trạng thái đơn từ), ERD / `_Mo_ta` (`CK_Request_Status`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-99 · Phiếu cấp NVL / BTP: lệnh cắt và đơn xin tùy chọn, tổ may nhận cả NVL, kiểm biên số lượng
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC40 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** API `POST .../material-issues` (`CreateMaterialIssueDto` giữ nguyên field, đổi quy tắc), `CreateMaterialIssueDtoValidator`, `MaterialIssueService`, form lập phiếu cấp ở FE (`IssueCreateModal`, `MaterialIssueLines` thay `FabricIssueLines`, `PieceIssueLines`). Không đổi DB (`MaterialIssue.OrderId` vẫn bắt buộc, `RequestId` / `WorkOrderId` vốn đã cho NULL).
+- **Tài liệu gốc ghi:** cấp NVL cho tổ cắt bắt buộc theo lệnh cắt; cấp BTP cho tổ may bắt buộc có đơn Xin BTP; cấp NVL chỉ dành cho tổ cắt.
+- **Code đang làm:**
+  - Lệnh cắt và đơn xin đều tùy chọn cho cả phiếu cấp NVL và BTP. Thiếu lệnh cắt / đơn xin thì phải có tổ nhận + đơn hàng (lệnh cắt hoặc đơn xin điền sẵn hai thứ này). Cấp theo lệnh cắt vẫn chỉ cấp vải trong định mức của lệnh; lệnh cắt phải đang mở / đang cắt (lệnh đã hoàn thành không có trong danh sách chọn).
+  - Phiếu cấp NVL nhận tổ cắt hoặc tổ may đang hoạt động; mọi NVL còn dùng trong danh mục đều cấp được (chỉ, cúc… nằm trong nhóm NVL).
+  - Chọn đơn xin (đã duyệt, đúng loại, đúng tổ nhận): tự điền tổ nhận, đơn hàng, lệnh cắt (nếu đơn xin gắn lệnh) và các dòng với số lượng trong đơn. Đơn xin thuộc lệnh cắt khác với lệnh đã chọn bị từ chối (FE bỏ chọn đơn, BE trả lỗi `WAREHOUSE_INVALID_REQUEST`). Dòng cấp phải có trong đơn xin và không quá số lượng đơn xin.
+  - Chỉ cấp hàng trong phạm vi phiếu (FE chỉ liệt kê, BE kiểm lại): theo lệnh cắt → vải của lệnh; không theo lệnh → NVL đã khai trong NVL của đơn hàng (`OrderMaterial`); phiếu BTP → dòng của đơn hàng; có đơn xin → chỉ hàng trong đơn xin.
+  - Kiểm biên số lượng (FE chặn nhập, BE kiểm lại): tối đa 50 dòng; mỗi dòng 1 đến 9.999.999; vải lẻ tối đa 2 chữ số sau dấu phẩy, NVL khác vải là số nguyên; BTP số nguyên từ 1 đến 1.000.000; không vượt số khả dụng trong kho.
+- **Lý do:** yêu cầu của người dùng (11/11/2026): cấp phát linh hoạt hơn, tổ may cũng cần chỉ, cúc để may.
+- **Ảnh hưởng người khác:** Thái (phiếu cấp), tổ trưởng tổ may (xin và nhận NVL), Thủ kho.
+- **Cần sửa trong tài liệu:** Report-3 UC40 (điều kiện lập phiếu cấp, đối tượng nhận NVL), AI Context (luật phiếu cấp).
 - **Trạng thái:** Mở

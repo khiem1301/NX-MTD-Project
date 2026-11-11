@@ -71,6 +71,7 @@ public sealed class RequestAccess
             CanCancel: creator && pending && createdBy is not null,
             CanApprove: handler && status == RequestStatuses.PendingApproval,
             CanReject: handler && RequestStatuses.Rejectable.Contains(status),
-            CanComplete: handler && allowManualComplete && RequestStatuses.Completable.Contains(status));
+            CanComplete: handler && allowManualComplete && RequestStatuses.Completable.Contains(status),
+            CanNotComplete: handler && allowManualComplete && RequestStatuses.NotCompletable.Contains(status));
     }
 }

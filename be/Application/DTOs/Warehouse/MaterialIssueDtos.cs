@@ -25,9 +25,10 @@ public sealed record CreateIssueLineDto(int? MaterialId, int? OrderLineId, int? 
     decimal IssuedQty);
 
 /// <summary>
-/// MATERIAL: cấp vải cho tổ cắt theo lệnh cắt (WorkOrderId bắt buộc; đơn và tổ lấy từ lệnh).
-/// SEMI_FINISHED: cấp BTP cho tổ may (OrderId + ReceivingTeamId bắt buộc, dòng theo OrderLineId).
-/// RequestId: đơn Xin NVL / Xin BTP đang chờ xử lý của đúng tổ nhận; bắt buộc khi cấp BTP cho tổ may, tùy chọn khi cấp vải.
+/// MATERIAL: cấp NVL (vải, chỉ, cúc…) cho tổ cắt hoặc tổ may. WorkOrderId tùy chọn (có thì đơn và tổ lấy từ lệnh cắt, chỉ cấp vải
+/// trong định mức của lệnh); không có thì cần OrderId + ReceivingTeamId.
+/// SEMI_FINISHED: cấp BTP cho tổ may (OrderId + ReceivingTeamId, dòng theo OrderLineId).
+/// RequestId (tùy chọn, cả hai loại): đơn Xin NVL / Xin BTP đã duyệt của đúng tổ nhận; thiếu lệnh cắt / đơn / tổ thì lấy từ đơn xin.
 /// Lập phiếu xong thì đơn xin tự chuyển sang Hoàn thành.
 /// </summary>
 public sealed record CreateMaterialIssueDto(

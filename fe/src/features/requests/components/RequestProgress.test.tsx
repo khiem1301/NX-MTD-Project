@@ -20,7 +20,7 @@ describe('RequestProgress', () => {
   });
 
   it('loại không duyệt: 2 bước', () => {
-    render(<RequestProgress requestType="MaterialRequisition" status="PendingProcessing" />);
+    render(<RequestProgress requestType="ShortDelivery" status="PendingProcessing" />);
 
     expect(stepTitles()).toEqual([MESSAGES.requests.stepSent, MESSAGES.requests.stepDone]);
   });
@@ -29,6 +29,13 @@ describe('RequestProgress', () => {
     render(<RequestProgress requestType="SpareParts" status="Rejected" />);
 
     expect(screen.getByText(MESSAGES.requests.stepRejected)).toBeInTheDocument();
+    expect(document.querySelector('.ant-steps-item-error')).not.toBeNull();
+  });
+
+  it('không hoàn thành: bước cuối tô đỏ và đổi tên', () => {
+    render(<RequestProgress requestType="MaterialRequisition" status="NotCompleted" />);
+
+    expect(screen.getByText(MESSAGES.requests.stepNotCompleted)).toBeInTheDocument();
     expect(document.querySelector('.ant-steps-item-error')).not.toBeNull();
   });
 

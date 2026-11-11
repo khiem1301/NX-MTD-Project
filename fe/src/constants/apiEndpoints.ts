@@ -115,6 +115,7 @@ export const API = {
     approve: (id: number) => v1(`common/request-inbox/${id}/approve`),
     reject: (id: number) => v1(`common/request-inbox/${id}/reject`),
     complete: (id: number) => v1(`common/request-inbox/${id}/complete`),
+    notComplete: (id: number) => v1(`common/request-inbox/${id}/not-complete`),
   },
   purchase: {
     suppliers: v1('admin/suppliers'),

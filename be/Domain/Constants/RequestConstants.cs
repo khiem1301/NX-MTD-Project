@@ -31,12 +31,18 @@ public static class RequestStatuses
     public const string Approved = "APPROVED";
     public const string Rejected = "REJECTED";
     public const string Completed = "COMPLETED";
+
+    /// <summary>Đã duyệt (hoặc chờ xử lý với loại không duyệt) nhưng người xử lý không làm được; kết thúc, kèm lý do ở ResultNote (DEV-ALL-98).</summary>
+    public const string NotCompleted = "NOT_COMPLETED";
     public const string Cancelled = "CANCELLED";
 
     /// <summary>Người tạo còn sửa / hủy được.</summary>
     public static readonly IReadOnlySet<string> Pending = new HashSet<string> { PendingApproval, PendingProcessing };
     public static readonly IReadOnlySet<string> Rejectable = new HashSet<string> { PendingApproval, PendingProcessing };
     public static readonly IReadOnlySet<string> Completable = new HashSet<string> { Approved, PendingProcessing };
+
+    /// <summary>Người xử lý báo "Không hoàn thành" được khi đơn đang ở các trạng thái này (cùng điều kiện với Hoàn thành).</summary>
+    public static readonly IReadOnlySet<string> NotCompletable = Completable;
 
     /// <summary>Mặc định của "Đơn cần xử lý".</summary>
     public static readonly IReadOnlySet<string> Open = new HashSet<string> { PendingApproval, PendingProcessing, Approved };

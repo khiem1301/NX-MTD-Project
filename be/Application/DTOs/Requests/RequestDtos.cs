@@ -19,6 +19,7 @@ public sealed record UpdateRequestDto(string? Title, string? Content, DateOnly? 
 public sealed record ApproveRequestDto(string? Note, byte[] RowVer);
 public sealed record RejectRequestDto(string Reason, byte[] RowVer);
 public sealed record CompleteRequestDto(string? ResultNote, byte[] RowVer);
+public sealed record NotCompleteRequestDto(string Reason, byte[] RowVer);
 public sealed record CancelRequestDto(string? Reason, byte[] RowVer);
 
 public sealed record RequestQuery : PageQuery
@@ -36,9 +37,10 @@ public sealed record RequestListItemDto(int RequestId, string RequestCode, strin
 public sealed record RequestLineDto(int RequestLineId, int? MaterialId, string? MaterialName, string? MaterialColor,
     int? OrderLineId, string? OrderLineLabel, int? ProductComponentMaterialId, string? ComponentName, string? ItemDescription, decimal Quantity, decimal? ReplenishQty);
 
-public sealed record RequestPermissionsDto(bool CanEdit, bool CanCancel, bool CanApprove, bool CanReject, bool CanComplete)
+public sealed record RequestPermissionsDto(bool CanEdit, bool CanCancel, bool CanApprove, bool CanReject, bool CanComplete,
+    bool CanNotComplete)
 {
-    public static readonly RequestPermissionsDto None = new(false, false, false, false, false);
+    public static readonly RequestPermissionsDto None = new(false, false, false, false, false, false);
 }
 
 public sealed record RequestDetailDto

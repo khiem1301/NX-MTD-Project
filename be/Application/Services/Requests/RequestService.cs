@@ -165,6 +165,24 @@ public sealed class RequestService : IRequestService
         return await CommitTransitionAsync(request, from, AuditActions.Confirm, null, notifyCreator: true, ct);
     }
 
+    public async Task<Result> NotCompleteAsync(int requestId, NotCompleteRequestDto dto, CancellationToken ct)
+    {
+        var request = await _requests.GetByIdAsync(requestId);
+        if (request is null || !_access.IsHandler(request.RequestTypeCode, ChosenOf(request))) return Fail.NotFound();
+        if (!_handlers.For(request.RequestTypeCode).AllowManualComplete)
+            return Result.Failure(ErrorCodes.RequestManualCompleteNotAllowed, Messages.RequestManualCompleteNotAllowed);
+        if (!RequestStatuses.NotCompletable.Contains(request.Status))
+            return Result.Failure(ErrorCodes.RequestInvalidStatus, Messages.RequestAlreadyDecided);
+
+        _requests.SetOriginalRowVersion(request, dto.RowVer);
+        var from = request.Status;
+        request.Status = RequestStatuses.NotCompleted;
+        request.ResultNote = dto.Reason.Trim();
+        request.CompletedAt = _clock.Now;
+        request.UpdatedAt = _clock.Now;
+        return await CommitTransitionAsync(request, from, AuditActions.Update, request.ResultNote, notifyCreator: true, ct);
+    }
+
     public async Task<Result> MarkCompletedAsync(int requestId, string? resultNote, CancellationToken ct)
     {
         var request = await _requests.GetByIdAsync(requestId);
@@ -293,6 +311,7 @@ public sealed class RequestService : IRequestService
         RequestStatuses.Approved => Messages.Confirmed,           // MSG11
         RequestStatuses.Rejected => Messages.Returned,            // MSG12
         RequestStatuses.Completed => Messages.RequestCompleted,
+        RequestStatuses.NotCompleted => Messages.RequestNotCompleted,
         RequestStatuses.Cancelled => Messages.RequestCancelled,
         _ => Messages.Saved,
     };

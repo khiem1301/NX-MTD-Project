@@ -58,6 +58,7 @@ public interface IRequestService
     Task<Result> ApproveAsync(int requestId, ApproveRequestDto dto, CancellationToken ct);
     Task<Result> RejectAsync(int requestId, RejectRequestDto dto, CancellationToken ct);
     Task<Result> CompleteAsync(int requestId, CompleteRequestDto dto, CancellationToken ct);
+    Task<Result> NotCompleteAsync(int requestId, NotCompleteRequestDto dto, CancellationToken ct);
 
     /// <summary>Hệ thống tạo đơn (SHORT_DELIVERY từ UC39 – Thái). Chỉ thêm vào DbContext, KHÔNG SaveChanges:
     /// người gọi lưu trong transaction của mình. Trả entity để gán thêm (vd. request.MaterialReceipt = receipt).</summary>

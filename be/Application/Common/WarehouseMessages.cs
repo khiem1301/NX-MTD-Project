@@ -107,7 +107,21 @@ public static class WarehouseMessages
 
     public const string IssueReceived = "Đã xác nhận nhận hàng, tồn kho đã giảm.";
     public const string IssueRejected = "Đã từ chối phiếu cấp, số giữ chỗ đã được nhả.";
-    public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, đã xử lý, khác tổ hoặc khác đơn hàng). Cấp BTP cho tổ may bắt buộc có đơn Xin BTP.";
+    public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, chưa được duyệt hoặc đã xử lý, khác tổ hoặc khác đơn hàng).";
+    public const string QtyTooLarge = "Số lượng một dòng tối đa 9.999.999.";
+    public const string QtyTooManyDecimals = "Số lượng tối đa 3 chữ số sau dấu phẩy.";
+    public const string IssueTargetRequired = "Chọn tổ nhận và đơn hàng (hoặc chọn lệnh cắt / đơn xin để lấy sẵn).";
+    public const string IssueTeamInvalid = "Tổ nhận phải là tổ cắt hoặc tổ may đang hoạt động.";
+    public const string IssueTeamMismatch = "Tổ nhận không khớp với lệnh cắt hoặc đơn xin đã chọn.";
+    public const string IssueRequestWorkOrderMismatch = "Đơn xin thuộc lệnh cắt khác với lệnh cắt đã chọn.";
+    public const string IssueTooManyLines = "Một phiếu cấp có tối đa {0} dòng.";
+    public const string IssueMaterialInvalid = "NVL không có trong danh mục hoặc đã ngừng dùng.";
+    public const string IssueFabricQtyInvalid = "Vải {0}: số lượng từ 0,01 đến {1:N0}, tối đa 2 chữ số sau dấu phẩy.";
+    public const string IssueOtherQtyInvalid = "NVL {0}: số lượng phải là số nguyên từ 1 đến {1:N0}.";
+    public const string IssuePieceQtyInvalid = "Số lượng BTP phải là số nguyên từ 1 đến {0:N0}.";
+    public const string IssueMaterialNotInOrder = "NVL không có trong NVL của đơn hàng: {0}.";
+    public const string IssueLineNotInRequest = "Dòng cấp không có trong đơn xin đã chọn.";
+    public const string IssueQtyOverRequest = "Số cấp vượt số lượng trong đơn xin (tối đa {0}).";
     public const string WorkOrderRequiredForMaterial = "Cấp NVL cho tổ cắt phải theo lệnh cắt.";
     public const string WorkOrderNotIssuable = "Lệnh cắt không còn mở để cấp vải.";
     public const string MaterialNotInWorkOrder = "Vải (đã gồm màu) không có trong định mức chi tiết vải của các dòng đơn trên bàn cắt.";

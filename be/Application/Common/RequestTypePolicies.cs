@@ -35,15 +35,15 @@ public static class RequestTypePolicies
     {
         new RequestTypePolicy(RequestTypes.SpareParts, new[] { Roles.Electrician }, null, Roles.Admin, true, "Linh kiện"),
         new RequestTypePolicy(RequestTypes.NewMachine, new[] { Roles.Electrician }, null, Roles.Admin, true, "Máy mới"),
-        new RequestTypePolicy(RequestTypes.MachineSupplies, new[] { Roles.Electrician }, null, Roles.Accountant, false, "Vật tư máy"),
+        new RequestTypePolicy(RequestTypes.MachineSupplies, new[] { Roles.Electrician }, null, Roles.Accountant, true, "Vật tư máy"),
         new RequestTypePolicy(RequestTypes.AttendanceCorrection, Leaders, CuttingOrSewing, Roles.Accountant, true, "Chấm công bù"),
         new RequestTypePolicy(RequestTypes.MaterialSupplement, new[] { Roles.TeamLeader, Roles.TeamDeputy, Roles.WarehouseKeeper },
             null, Roles.Manager, true, "Bổ sung NVL"),
         new RequestTypePolicy(RequestTypes.DefectiveMaterial, Leaders, CuttingOnly, Roles.Manager, true, "NVL lỗi"),
         new RequestTypePolicy(RequestTypes.ReplacementCutting, Leaders, SewingOnly, Roles.Manager, true, "Cắt bù"),
         new RequestTypePolicy(RequestTypes.ShortDelivery, NoCreator, null, Roles.Manager, false, "Thiếu hàng khi nhập"),
-        new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, false, "Xin NVL"),
-        new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, false, "Xin BTP"),
+        new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, true, "Xin NVL"),
+        new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, true, "Xin BTP"),
         new RequestTypePolicy(RequestTypes.MaterialPurchase, NoCreator, null, Roles.Manager, false, "Mua NVL"),
         new RequestTypePolicy(RequestTypes.Other, Everyone, null, string.Empty, true, "Khác", HandlerChosenOnCreate: true),
     }.ToDictionary(p => p.RequestType);
@@ -55,6 +55,7 @@ public static class RequestTypePolicies
         [RequestStatuses.Approved] = "Đã duyệt",
         [RequestStatuses.Rejected] = "Từ chối",
         [RequestStatuses.Completed] = "Hoàn thành",
+        [RequestStatuses.NotCompleted] = "Không hoàn thành",
         [RequestStatuses.Cancelled] = "Đã hủy",
     };
 }

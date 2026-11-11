@@ -34,4 +34,8 @@ public sealed class RequestInboxController : CommonBaseController
     [HttpPost("{id:int}/complete")]
     public async Task<IActionResult> Complete(int id, [FromBody] CompleteRequestDto dto, CancellationToken ct) =>
         this.ToResponse(await _requests.CompleteAsync(id, dto, ct));
+
+    [HttpPost("{id:int}/not-complete")]
+    public async Task<IActionResult> NotComplete(int id, [FromBody] NotCompleteRequestDto dto, CancellationToken ct) =>
+        this.ToResponse(await _requests.NotCompleteAsync(id, dto, ct));
 }

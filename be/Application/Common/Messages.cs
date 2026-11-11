@@ -66,6 +66,7 @@ public static class Messages
     public const string RequestManualCompleteNotAllowed = "Loại đơn này tự hoàn thành khi xong bước tiếp theo, không bấm tay.";
     public const string RequestCancelled = "Đã hủy đơn.";
     public const string RequestCompleted = "Đã hoàn thành đơn.";
+    public const string RequestNotCompleted = "Đã ghi nhận đơn không hoàn thành.";
     public const string RequestContentRequired = "Vui lòng nhập nội dung đơn.";
     public const string RequestHandlerRoleRequired = "Vui lòng chọn người xử lý đơn.";
     public const string RequestHandlerRoleInvalid = "Không gửi được đơn cho vai trò này.";

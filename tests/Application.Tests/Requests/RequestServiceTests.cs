@@ -77,7 +77,7 @@ public class RequestServiceTests
     }
 
     [Fact]
-    public async Task Create_MachineSupplies_IsPendingProcessingAndNotifiesAccountant()
+    public async Task Create_MachineSupplies_IsPendingApprovalAndNotifiesAccountant()
     {
         SignIn(Roles.Electrician);
         Request? saved = null;
@@ -85,7 +85,7 @@ public class RequestServiceTests
 
         await Create().CreateAsync(NewDto("MachineSupplies"), default);
 
-        saved!.Status.Should().Be(RequestStatuses.PendingProcessing);
+        saved!.Status.Should().Be(RequestStatuses.PendingApproval);
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Accountant, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
@@ -209,8 +209,8 @@ public class RequestServiceTests
     [Fact]
     public async Task Approve_TypeWithoutApproval_ReturnsInvalidStatus()
     {
-        SignIn(Roles.Accountant);
-        _requests.GetByIdAsync(1).Returns(Existing(RequestTypes.MachineSupplies, RequestStatuses.PendingProcessing));
+        SignIn(Roles.Manager);
+        _requests.GetByIdAsync(1).Returns(Existing(RequestTypes.ShortDelivery, RequestStatuses.PendingProcessing));
 
         var result = await Create().ApproveAsync(1, new ApproveRequestDto(null, RowVer), default);
 
@@ -263,6 +263,59 @@ public class RequestServiceTests
         result.ErrorCode.Should().Be("HOOK");
         await _uow.Received(1).RollbackTransactionAsync();
         await _uow.DidNotReceive().CommitTransactionAsync();
+    }
+
+    [Fact]
+    public async Task NotComplete_Approved_SetsNotCompletedWithReasonAndCommitsOnce()
+    {
+        SignIn(Roles.WarehouseKeeper);
+        var request = Existing(RequestTypes.MaterialRequisition, RequestStatuses.Approved);
+        _requests.GetByIdAsync(1).Returns(request);
+
+        var result = await Create().NotCompleteAsync(1, new NotCompleteRequestDto("  Hết vải  ", RowVer), default);
+
+        result.IsSuccess.Should().BeTrue();
+        request.Status.Should().Be(RequestStatuses.NotCompleted);
+        request.ResultNote.Should().Be("Hết vải");
+        request.CompletedAt.Should().Be(_clock.Now);
+        await _uow.Received(1).CommitTransactionAsync();
+    }
+
+    [Theory]
+    [InlineData(RequestStatuses.PendingApproval)]
+    [InlineData(RequestStatuses.Completed)]
+    [InlineData(RequestStatuses.NotCompleted)]
+    [InlineData(RequestStatuses.Rejected)]
+    public async Task NotComplete_StatusNotApprovedOrProcessing_ReturnsInvalidStatus(string status)
+    {
+        SignIn(Roles.WarehouseKeeper);
+        _requests.GetByIdAsync(1).Returns(Existing(RequestTypes.MaterialRequisition, status));
+
+        var result = await Create().NotCompleteAsync(1, new NotCompleteRequestDto("x", RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.RequestInvalidStatus);
+    }
+
+    [Fact]
+    public async Task NotComplete_HandlerDisallowsManual_ReturnsNotAllowed()
+    {
+        SignIn(Roles.WarehouseKeeper);
+        _requests.GetByIdAsync(1).Returns(Existing(RequestTypes.MaterialRequisition, RequestStatuses.Approved));
+        var handler = Substitute.For<IRequestTypeHandler>();
+        handler.RequestType.Returns(RequestTypes.MaterialRequisition);
+        handler.AllowManualComplete.Returns(false);
+
+        var result = await Create(handler).NotCompleteAsync(1, new NotCompleteRequestDto("x", RowVer), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.RequestManualCompleteNotAllowed);
+    }
+
+    [Fact]
+    public void NotCompleteValidator_EmptyReason_HasReasonRequired()
+    {
+        var result = new NotCompleteRequestDtoValidator().Validate(new NotCompleteRequestDto("", RowVer));
+
+        result.Errors.Should().Contain(e => e.ErrorMessage == Messages.ReasonRequired);
     }
 
     [Fact]

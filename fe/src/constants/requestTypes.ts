@@ -37,6 +37,7 @@ export const REQUEST_STATUS = {
   Rejected: 'Rejected',
   Completed: 'Completed',
   Cancelled: 'Cancelled',
+  NotCompleted: 'NotCompleted',
 } as const;
 export type RequestStatus = (typeof REQUEST_STATUS)[keyof typeof REQUEST_STATUS];
 
@@ -47,4 +48,5 @@ export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
   Rejected: 'Từ chối',
   Completed: 'Hoàn thành',
   Cancelled: 'Đã hủy',
+  NotCompleted: 'Không hoàn thành',
 };

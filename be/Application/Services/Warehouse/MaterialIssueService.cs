@@ -81,8 +81,16 @@ public sealed class MaterialIssueService : IMaterialIssueService
     public async Task<Result<MaterialIssueDto>> CreateAsync(CreateMaterialIssueDto dto, int issuedByEmployeeId,
         CancellationToken ct)
     {
-        var (error, target) = await ResolveTargetAsync(dto, ct);
+        var (requestError, request) = await LoadRequestAsync(dto, ct);
+        if (requestError is not null) return requestError;
+        var (fillError, filled) = FillFromRequest(dto, request);
+        if (fillError is not null) return fillError;
+        dto = filled!;
+
+        var (error, target) = await ResolveTargetAsync(dto, request, ct);
         if (error is not null) return error;
+        var linesError = await CheckLinesAsync(dto, request, target!, ct);
+        if (linesError is not null) return linesError;
 
         var created = await _uow.InTransactionAsync(() => StoreIssueAsync(dto, issuedByEmployeeId, target!, ct));
         if (!created.IsSuccess) return WarehouseFailures.From<MaterialIssueDto>(created);
@@ -242,13 +250,54 @@ public sealed class MaterialIssueService : IMaterialIssueService
         return Result<int>.Success(issue.MaterialIssueId);
     }
 
-    private async Task<(Result<MaterialIssueDto>? Error, IssueTarget? Target)> ResolveTargetAsync(
-        CreateMaterialIssueDto dto, CancellationToken ct)
+    /// <summary>Đơn xin (nếu chọn) phải đúng loại và đã được duyệt; chưa lập phiếu cấp nào cho đơn (đơn xin sang Hoàn thành khi lập phiếu).</summary>
+    private async Task<(Result<MaterialIssueDto>? Error, Request? Request)> LoadRequestAsync(CreateMaterialIssueDto dto,
+        CancellationToken ct)
     {
-        var (error, target) = dto.WarehouseType == WarehouseTypes.Material
-            ? await ResolveCuttingAsync(dto, ct)
-            : await ResolveSewingAsync(dto, ct);
+        if (dto.RequestId is null) return (null, null);
+        var type = dto.WarehouseType == WarehouseTypes.Material
+            ? RequestTypes.MaterialRequisition
+            : RequestTypes.SemiFinishedRequisition;
+        var request = await _uow.Repository<Request>().Query().AsNoTracking().Include(r => r.RequestLines)
+            .FirstOrDefaultAsync(r => r.RequestId == dto.RequestId && r.RequestTypeCode == type
+                                      && r.Status == RequestStatuses.Approved, ct);
+        return request is null
+            ? (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.RequestInvalid), null)
+            : (null, request);
+    }
+
+    /// <summary>
+    /// Chọn đơn xin thì lệnh cắt, tổ nhận và đơn hàng lấy từ đơn xin nếu chưa chọn; đã chọn thì phải khớp (không để chọn lệnh
+    /// cắt này nhưng đơn xin của lệnh cắt khác, DEV-ALL-99).
+    /// </summary>
+    private static (Result<MaterialIssueDto>? Error, CreateMaterialIssueDto? Dto) FillFromRequest(CreateMaterialIssueDto dto,
+        Request? request)
+    {
+        if (request is null) return (null, dto);
+        var isMaterial = dto.WarehouseType == WarehouseTypes.Material;
+        if (isMaterial && request.WorkOrderId is { } requestWo && dto.WorkOrderId is { } chosenWo && requestWo != chosenWo)
+            return (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.IssueRequestWorkOrderMismatch), null);
+        if (request.CreatedByTeamId is { } requestTeam && dto.ReceivingTeamId is { } chosenTeam && requestTeam != chosenTeam)
+            return (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.IssueTeamMismatch), null);
+        if (request.OrderId is { } requestOrder && dto.OrderId is { } chosenOrder && requestOrder != chosenOrder)
+            return (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.RequestInvalid), null);
+        return (null, dto with
+        {
+            WorkOrderId = dto.WorkOrderId ?? (isMaterial ? request.WorkOrderId : null),
+            ReceivingTeamId = dto.ReceivingTeamId ?? request.CreatedByTeamId,
+            OrderId = dto.OrderId ?? request.OrderId,
+        });
+    }
+
+    private async Task<(Result<MaterialIssueDto>? Error, IssueTarget? Target)> ResolveTargetAsync(
+        CreateMaterialIssueDto dto, Request? request, CancellationToken ct)
+    {
+        var (error, target) = dto.WarehouseType != WarehouseTypes.Material ? await ResolveSewingAsync(dto, ct)
+            : dto.WorkOrderId is not null ? await ResolveCuttingAsync(dto, ct)
+            : await ResolveDirectMaterialAsync(dto, ct);
         if (error is not null) return (error, null);
+        if ((dto.ReceivingTeamId is { } team && team != target!.TeamId) || (dto.OrderId is { } chosen && chosen != target!.OrderId))
+            return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueTeamMismatch), null);
 
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderId == target!.OrderId, ct);
@@ -258,9 +307,74 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (dateError is not null)
             return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation), null);
 
-        return await IsRequestValidAsync(dto, target!, ct)
+        return IsRequestValid(request, target!)
             ? (null, target)
             : (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.RequestInvalid), null);
+    }
+
+    /// <summary>Cấp NVL không theo lệnh cắt (DEV-ALL-99): tổ nhận là tổ cắt hoặc tổ may đang hoạt động, đơn hàng bắt buộc.</summary>
+    private async Task<(Result<MaterialIssueDto>?, IssueTarget?)> ResolveDirectMaterialAsync(CreateMaterialIssueDto dto,
+        CancellationToken ct)
+    {
+        if (dto.OrderId is null || dto.ReceivingTeamId is null)
+            return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueTargetRequired,
+                ResultKind.Validation), null);
+        var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.ReceivingTeamId
+            && (t.TeamType == TeamTypes.Cutting || t.TeamType == TeamTypes.Sewing) && t.Status == RecordStatus.Active, ct);
+        return teamOk
+            ? (null, new IssueTarget(dto.OrderId.Value, dto.ReceivingTeamId.Value, null))
+            : (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueTeamInvalid), null);
+    }
+
+    /// <summary>
+    /// Kiểm dòng cấp. NVL phải còn dùng; vải lẻ tối đa 2 chữ số, NVL khác (chỉ, cúc…) số nguyên. Có đơn xin thì chỉ cấp các dòng
+    /// có trong đơn và không quá số lượng đơn xin.
+    /// </summary>
+    private async Task<Result<MaterialIssueDto>?> CheckLinesAsync(CreateMaterialIssueDto dto, Request? request, IssueTarget target,
+        CancellationToken ct)
+    {
+        if (dto.WarehouseType == WarehouseTypes.Material)
+        {
+            var ids = dto.Lines.Select(l => l.MaterialId!.Value).Distinct().ToList();
+            var materials = await _uow.Repository<Material>().Query().AsNoTracking()
+                .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active)
+                .Select(m => new { m.MaterialId, m.MaterialName, m.MaterialType }).ToDictionaryAsync(m => m.MaterialId, ct);
+            foreach (var line in dto.Lines)
+            {
+                if (!materials.TryGetValue(line.MaterialId!.Value, out var material))
+                    return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueMaterialInvalid);
+                if (!MaterialRequisitionRequestHandler.IsQuantityValid(material.MaterialType == MaterialTypes.Fabric, line.IssuedQty))
+                    return Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference,
+                        material.MaterialType == MaterialTypes.Fabric
+                            ? string.Format(WarehouseMessages.IssueFabricQtyInvalid, material.MaterialName, RequisitionLimits.MaxMaterialQty)
+                            : string.Format(WarehouseMessages.IssueOtherQtyInvalid, material.MaterialName, RequisitionLimits.MaxMaterialQty),
+                        ResultKind.Validation);
+            }
+            // Cấp theo đơn hàng (không theo lệnh cắt): chỉ cấp NVL đã khai trong NVL của đơn (DEV-ALL-99). Theo lệnh cắt thì
+            // ResolveCuttingAsync đã giới hạn trong vải của lệnh.
+            if (target.WorkOrderId is null)
+            {
+                var ofOrder = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+                    .Where(m => m.OrderId == target.OrderId && ids.Contains(m.MaterialId)).Select(m => m.MaterialId).ToListAsync(ct);
+                var outside = ids.Except(ofOrder).Select(id => materials[id].MaterialName).ToList();
+                if (outside.Count > 0)
+                    return Fail(ErrorCodes.WarehouseInvalidReference,
+                        string.Format(WarehouseMessages.IssueMaterialNotInOrder, string.Join(", ", outside)));
+            }
+        }
+        if (request is null) return null;
+
+        var requested = request.RequestLines
+            .GroupBy(l => (l.MaterialId, l.OrderLineId)).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
+        foreach (var line in dto.Lines)
+        {
+            if (!requested.TryGetValue((line.MaterialId, line.OrderLineId), out var max))
+                return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueLineNotInRequest);
+            var issued = dto.Lines.Where(l => (l.MaterialId, l.OrderLineId) == (line.MaterialId, line.OrderLineId)).Sum(l => l.IssuedQty);
+            if (issued > max)
+                return Fail(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.IssueQtyOverRequest, max.ToString("#,0.###")));
+        }
+        return null;
     }
 
     /// <summary>Cấp vải: theo lệnh cắt còn mở; chỉ cấp các vải có trong định mức của lệnh.</summary>
@@ -287,6 +401,9 @@ public sealed class MaterialIssueService : IMaterialIssueService
     private async Task<(Result<MaterialIssueDto>?, IssueTarget?)> ResolveSewingAsync(CreateMaterialIssueDto dto,
         CancellationToken ct)
     {
+        if (dto.OrderId is null || dto.ReceivingTeamId is null)
+            return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueTargetRequired,
+                ResultKind.Validation), null);
         var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.ReceivingTeamId
             && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);
         if (!teamOk) return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.SewingTeamInvalid), null);
@@ -332,21 +449,14 @@ public sealed class MaterialIssueService : IMaterialIssueService
     }
 
     /// <summary>
-    /// Cấp BTP cho tổ may bắt buộc có đơn Xin BTP; cấp vải cho tổ cắt thì đơn Xin NVL là tùy chọn (UC40).
-    /// Có RequestId thì đơn phải đúng loại, đang chờ xử lý (đơn xin không qua bước duyệt), của đúng tổ nhận
-    /// và cùng đơn hàng.
+    /// Đơn xin là tùy chọn cho cả phiếu cấp NVL và BTP (DEV-ALL-99). Có đơn xin thì đơn (đã loại, đã duyệt kiểm ở LoadRequestAsync)
+    /// phải của đúng tổ nhận, cùng đơn hàng và cùng lệnh cắt (nếu đơn xin gắn lệnh).
     /// </summary>
-    private async Task<bool> IsRequestValidAsync(CreateMaterialIssueDto dto, IssueTarget target, CancellationToken ct)
-    {
-        if (dto.RequestId is null) return dto.WarehouseType == WarehouseTypes.Material;
-        var type = dto.WarehouseType == WarehouseTypes.Material
-            ? RequestTypes.MaterialRequisition
-            : RequestTypes.SemiFinishedRequisition;
-        return await _uow.Repository<Request>().Query().AnyAsync(r => r.RequestId == dto.RequestId
-            && r.RequestTypeCode == type && r.Status == RequestStatuses.PendingProcessing
-            && r.CreatedByTeamId == target.TeamId
-            && (r.OrderId == null || r.OrderId == target.OrderId), ct);
-    }
+    private static bool IsRequestValid(Request? request, IssueTarget target) =>
+        request is null
+        || (request.CreatedByTeamId == target.TeamId
+            && (request.OrderId == null || request.OrderId == target.OrderId)
+            && (request.WorkOrderId == null || request.WorkOrderId == target.WorkOrderId));
 
     private static StockKey KeyOf(string warehouseType, MaterialIssueLine line) =>
         warehouseType == WarehouseTypes.Material

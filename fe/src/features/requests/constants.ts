@@ -14,6 +14,7 @@ const STATUS_COLOR: Record<RequestStatus, string> = {
   Rejected: 'red',
   Completed: 'green',
   Cancelled: 'default',
+  NotCompleted: 'volcano',
 };
 
 export const REQUEST_STATUS_TAG: Record<string, StatusLabel> = Object.fromEntries(
@@ -38,6 +39,9 @@ export const GENERIC_FORM_TYPES: readonly RequestType[] = [
 export const APPROVAL_TYPES: readonly RequestType[] = [
   'SpareParts',
   'NewMachine',
+  'MachineSupplies',
+  'MaterialRequisition',
+  'SemiFinishedRequisition',
   'AttendanceCorrection',
   'MaterialSupplement',
   'DefectiveMaterial',

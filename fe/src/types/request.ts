@@ -44,6 +44,7 @@ export type RequestPermissions = {
   canApprove: boolean;
   canReject: boolean;
   canComplete: boolean;
+  canNotComplete: boolean;
 };
 
 export type RequestDetail = {
@@ -117,4 +118,5 @@ export type RequestAction =
   | { kind: 'approve'; id: number; note?: string | null; rowVer: string }
   | { kind: 'reject'; id: number; reason: string; rowVer: string }
   | { kind: 'complete'; id: number; resultNote?: string | null; rowVer: string }
+  | { kind: 'notComplete'; id: number; reason: string; rowVer: string }
   | { kind: 'cancel'; id: number; reason?: string | null; rowVer: string };
