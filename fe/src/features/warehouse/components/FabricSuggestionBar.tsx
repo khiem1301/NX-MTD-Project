@@ -1,4 +1,4 @@
-import { Button, Select, Space, Typography, message, type FormInstance } from 'antd';
+import { Button, Select, Space, Typography, message, theme, type FormInstance } from 'antd';
 import { useState } from 'react';
 import { fill } from '@/utils/format';
 import { LABELS } from '../constants';
@@ -16,6 +16,7 @@ const SELECT_WIDTH = 140;
 
 /** Đề xuất số vải cấp theo màu (+ size) của lệnh cắt: nhu cầu tính từ bìa / định mức, không vượt số khả dụng trong kho. */
 export function FabricSuggestionBar({ form, workOrderId, fabrics }: FabricSuggestionBarProps) {
+  const { token } = theme.useToken();
   const info = useWorkOrderLines(workOrderId);
   const fetchNeeds = useFabricNeedsFetcher(workOrderId);
   const [color, setColor] = useState<string>();
@@ -53,12 +54,23 @@ export function FabricSuggestionBar({ form, workOrderId, fabrics }: FabricSugges
   };
 
   return (
-    <Space wrap align="center" style={{ marginBottom: 12 }}>
+    <Space
+      wrap
+      size={8}
+      align="center"
+      style={{
+        marginBottom: 12,
+        padding: '6px 10px',
+        borderRadius: token.borderRadius,
+        background: token.colorFillAlter,
+      }}
+    >
       <Typography.Text strong>{LABELS.suggestTitle}</Typography.Text>
       <Typography.Text type="secondary">
         {LABELS.suggestProduct}: {info.data?.productCode ?? '—'}
       </Typography.Text>
       <Select
+        size="small"
         placeholder={LABELS.suggestColor}
         value={color}
         onChange={(v) => {
@@ -69,6 +81,7 @@ export function FabricSuggestionBar({ form, workOrderId, fabrics }: FabricSugges
         style={{ width: SELECT_WIDTH }}
       />
       <Select
+        size="small"
         allowClear
         placeholder={LABELS.suggestSize}
         value={sizeCode}
@@ -77,7 +90,7 @@ export function FabricSuggestionBar({ form, workOrderId, fabrics }: FabricSugges
         disabled={!color}
         style={{ width: SELECT_WIDTH }}
       />
-      <Button onClick={() => void apply()} disabled={!color} loading={loading}>
+      <Button size="small" onClick={() => void apply()} disabled={!color} loading={loading}>
         {LABELS.suggestFabricAction}
       </Button>
     </Space>

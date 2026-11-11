@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services;
 /// <summary>Số mét vải hệ thống tính cho lệnh cắt (ghép bìa, DEV-ALL-88) và phần còn xin được theo trần của lệnh (DEV-ALL-92).</summary>
 public sealed class WorkOrderFabricNeeds : IWorkOrderFabricNeeds
 {
-    private static readonly string[] ClosedRequestStatuses = { RequestStatuses.Rejected, RequestStatuses.Cancelled };
+    private static readonly string[] ClosedRequestStatuses = { RequestStatuses.Rejected, RequestStatuses.Cancelled, RequestStatuses.NotCompleted };
 
     private readonly IUnitOfWork _uow;
     private readonly WorkOrderFabricChecker _checker;

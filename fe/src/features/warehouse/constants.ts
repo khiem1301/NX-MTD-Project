@@ -118,6 +118,9 @@ export const STOCK_DOC_LABEL: Record<string, string> = {
 
 export const TEAM_TYPE = { CUTTING: 'CUTTING', SEWING: 'SEWING' } as const;
 
+/** Khoảng cách dưới mỗi ô của phần thông tin phiếu cấp (gọn hơn mặc định 24px). */
+export const ISSUE_FIELD = { marginBottom: 12 };
+
 /** Lệnh cắt còn cấp vải được (BE: OPEN hoặc CUTTING). */
 export const ISSUABLE_WORK_ORDER_STATUSES = ['OPEN', 'CUTTING'] as const;
 
@@ -307,9 +310,26 @@ export const LABELS = {
     'Đính kèm ảnh chứng từ giao hàng trước khi lưu phiếu; sau khi lưu không thêm ảnh ở màn chi tiết nữa.',
   photoUploadFailed: 'Đã lưu phiếu nhưng {0} ảnh chưa tải được. Mở phiếu sửa để thêm lại ảnh.',
   requestIdOptional: 'Đơn Xin NVL (nếu có)',
-  requestIdRequired: 'Đơn Xin BTP',
-  issueFabric: 'Cấp vải cho tổ cắt',
-  issuePieces: 'Cấp BTP cho tổ may',
+  requestIdPieces: 'Đơn Xin BTP (nếu có)',
+  requestPlaceholder: 'Chọn đơn đã duyệt',
+  requestWorkOrderMismatch: 'Đơn xin này thuộc lệnh cắt khác với lệnh cắt đã chọn.',
+  workOrderOptional: 'Lệnh cắt (nếu có)',
+  workOrderPlaceholder: 'Không bắt buộc',
+  issueFabric: 'Cấp NVL',
+  issuePieces: 'Cấp BTP',
+  issueMaterialTitle: 'Cấp NVL cho tổ cắt / tổ may',
+  issuePiecesTitle: 'Cấp BTP cho tổ may',
+  issueMaterial: 'NVL',
+  addIssueMaterial: 'Thêm NVL',
+  addIssuePiece: 'Thêm BTP',
+  issueLinesTitle: 'Dòng cấp',
+  issueLinesFilled: 'Đã nhập {0}/{1}',
+  issueLinesEmpty: 'Chưa có dòng cấp',
+  requestedQty: 'Đơn xin',
+  piece: 'BTP (màu - size · chi tiết)',
+  issueNeedMaterialLine: 'Nhập số cấp cho ít nhất một NVL.',
+  overRequestQty: 'Không vượt số lượng trong đơn xin ({0}).',
+  overAvailableQty: 'Không vượt số khả dụng ({0}).',
   remainingQty: 'Còn phải cấp',
   availableQty: 'Khả dụng',
   orderFilter: 'Đơn hàng (đơn đặt của khách)',

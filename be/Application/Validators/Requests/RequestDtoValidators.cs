@@ -67,6 +67,15 @@ public sealed class CompleteRequestDtoValidator : AbstractValidator<CompleteRequ
     }
 }
 
+public sealed class NotCompleteRequestDtoValidator : AbstractValidator<NotCompleteRequestDto>
+{
+    public NotCompleteRequestDtoValidator()
+    {
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.ReasonRequired).MaximumLength(TextLimits.Reason);
+        RuleFor(x => x.RowVer).NotEmpty();
+    }
+}
+
 public sealed class CancelRequestDtoValidator : AbstractValidator<CancelRequestDto>
 {
     public CancelRequestDtoValidator()

@@ -87,7 +87,14 @@ export function RequestDetailModal() {
               </Descriptions.Item>
             )}
             {data.resultNote && (
-              <Descriptions.Item label={MESSAGES.requests.result} span={2}>
+              <Descriptions.Item
+                label={
+                  data.status === 'NotCompleted'
+                    ? MESSAGES.requests.notCompleteReason
+                    : MESSAGES.requests.result
+                }
+                span={2}
+              >
                 {`${data.resultNote} (${formatDateTime(data.completedAt)})`}
               </Descriptions.Item>
             )}
@@ -163,6 +170,11 @@ export function RequestDetailModal() {
             {data.permissions.canApprove && (
               <Button type="primary" onClick={() => setPending('approve')}>
                 {MESSAGES.requests.approve}
+              </Button>
+            )}
+            {data.permissions.canNotComplete && (
+              <Button danger onClick={() => setPending('notComplete')}>
+                {MESSAGES.requests.notComplete}
               </Button>
             )}
             {data.permissions.canComplete && (

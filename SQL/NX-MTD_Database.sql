@@ -777,8 +777,9 @@ CREATE TABLE dbo.Request (
         (RequestTypeCode = 'OTHER' AND ((ISNULL(HandlerRoleCode, '') = 'TEAM_LEADER' AND HandlerTeamId IS NOT NULL)
             OR (ISNULL(HandlerRoleCode, '') IN ('ADMIN','MANAGER','ACCOUNTANT','WAREHOUSE_KEEPER') AND HandlerTeamId IS NULL)))
         OR (RequestTypeCode <> 'OTHER' AND HandlerRoleCode IS NULL AND HandlerTeamId IS NULL)),
-    CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED')),
+    CONSTRAINT CK_Request_Status CHECK (Status IN ('PENDING_APPROVAL','PENDING_PROCESSING','APPROVED','REJECTED','COMPLETED','CANCELLED','NOT_COMPLETED')),
     CONSTRAINT CK_Request_Reject CHECK (Status <> 'REJECTED' OR DecisionNote IS NOT NULL),
+    CONSTRAINT CK_Request_NotComplete CHECK (Status <> 'NOT_COMPLETED' OR ResultNote IS NOT NULL),
     CONSTRAINT CK_Request_Shortage CHECK (ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')),
     CONSTRAINT CK_Request_Delivery CHECK ((ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1)
         AND (TargetDateTo IS NULL OR (TargetDate IS NOT NULL AND TargetDateTo >= TargetDate AND ExpectedDeliveryCount >= 2)))
@@ -4126,9 +4127,9 @@ JOIN (VALUES ('PC-DEMO-005', @l3M, 50), ('PC-DEMO-005', @l3L, 40), ('PC-DEMO-006
   ON v.Code = i.IssueCode;
 
 INSERT dbo.Request (RequestCode, RequestTypeCode, Status, OrderId, WorkOrderId, TargetDate, Title, Content, CreatedBy, CreatedByTeamId, CreatedAt) VALUES
- ('YC-DEMO-001', 'MATERIAL_REQUISITION', 'PENDING_PROCESSING', @o3, @wo2, '2026-10-29', N'Xin thêm vải cho DEMO-DH003',
+ ('YC-DEMO-001', 'MATERIAL_REQUISITION', 'APPROVED', @o3, @wo2, '2026-10-29', N'Xin thêm vải cho DEMO-DH003',
   N'Tổ cắt còn thiếu vải để cắt hết lệnh LC-DEMO-002', @ttcat, @cat, '2026-10-26 15:00:00'),
- ('YC-DEMO-002', 'SEMI_FINISHED_REQUISITION', 'PENDING_PROCESSING', @o3, NULL, '2026-10-29', N'Xin BTP đợt 3 cho DEMO-DH003',
+ ('YC-DEMO-002', 'SEMI_FINISHED_REQUISITION', 'APPROVED', @o3, NULL, '2026-10-29', N'Xin BTP đợt 3 cho DEMO-DH003',
   N'Tổ may cần thêm BTP để chia việc', @ttmay, @may, '2026-10-26 15:30:00');
 INSERT dbo.RequestLine (RequestId, MaterialId, Quantity)
 SELECT RequestId, @mVai, 80 FROM dbo.Request WHERE RequestCode = 'YC-DEMO-001';
@@ -4367,7 +4368,7 @@ FROM (SELECT a.OrderId, o.ProductId, a.SewingTeamId AS TeamId
       FROM dbo.Request r
       JOIN dbo.RequestLine rl ON rl.RequestId = r.RequestId
       JOIN dbo.OrderLine ol ON ol.OrderLineId = rl.OrderLineId
-      WHERE r.RequestTypeCode = 'SEMI_FINISHED_REQUISITION' AND r.Status = 'PENDING_PROCESSING' AND r.CreatedByTeamId IS NOT NULL) s
+      WHERE r.RequestTypeCode = 'SEMI_FINISHED_REQUISITION' AND r.Status IN ('PENDING_APPROVAL','APPROVED') AND r.CreatedByTeamId IS NOT NULL) s
 JOIN dbo.OrderLine line ON line.OrderId = s.OrderId AND line.ProductId = s.ProductId;
 GO
 
@@ -4866,7 +4867,7 @@ INSERT dbo.Request (RequestCode, RequestTypeCode, Status, OrderId, WorkOrderId, 
                     DecidedAt, DecisionNote, ResultNote, CompletedAt, ShortageResolution, CreatedAt) VALUES
  ('YC-DEMO-003', 'SPARE_PARTS', 'PENDING_APPROVAL', NULL, NULL, NULL, NULL, '2026-11-05', N'Thay dây curoa máy 1 kim', N'Máy số 12 tổ may 1 trượt dây', @codien, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-01 08:00:00'),
  ('YC-DEMO-004', 'NEW_MACHINE', 'APPROVED', NULL, NULL, NULL, NULL, '2026-11-20', N'Mua thêm máy vắt sổ', N'Tổ may 2 thiếu máy', @codien, NULL, '2026-10-29 10:00:00', N'Đồng ý, mua trong tháng 11', NULL, NULL, NULL, '2026-10-28 08:00:00'),
- ('YC-DEMO-005', 'MACHINE_SUPPLIES', 'PENDING_PROCESSING', NULL, NULL, NULL, NULL, '2026-11-04', N'Xin dầu máy may', NULL, @codien, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-01 08:30:00'),
+ ('YC-DEMO-005', 'MACHINE_SUPPLIES', 'PENDING_APPROVAL', NULL, NULL, NULL, NULL, '2026-11-04', N'Xin dầu máy may', NULL, @codien, NULL, NULL, NULL, NULL, NULL, NULL, '2026-11-01 08:30:00'),
  ('YC-DEMO-006', 'MACHINE_SUPPLIES', 'COMPLETED', NULL, NULL, NULL, NULL, '2026-10-20', N'Xin kim máy', NULL, @codien, NULL, NULL, NULL, N'Đã cấp đủ 2 hộp', '2026-10-19 15:00:00', NULL, '2026-10-18 08:00:00'),
  ('YC-DEMO-007', 'SPARE_PARTS', 'REJECTED', NULL, NULL, NULL, NULL, '2026-10-25', N'Thay bàn là hơi', NULL, @codien, NULL, '2026-10-22 09:00:00', N'Bàn là còn dùng được, sửa thay vì mua mới', NULL, NULL, NULL, '2026-10-21 08:00:00'),
  ('YC-DEMO-008', 'NEW_MACHINE', 'CANCELLED', NULL, NULL, NULL, NULL, '2026-10-30', N'Mua máy đính cúc', NULL, @codien, NULL, NULL, NULL, NULL, NULL, NULL, '2026-10-20 08:00:00'),

@@ -23,6 +23,7 @@ const NO_PERMISSIONS: RequestPermissions = {
   canApprove: false,
   canReject: false,
   canComplete: false,
+  canNotComplete: false,
 };
 
 const detail = (permissions: Partial<RequestPermissions>): RequestDetail => ({

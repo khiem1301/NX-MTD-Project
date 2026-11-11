@@ -64,13 +64,14 @@ export function useReceiptForm(
               orderId: preset.orderId,
               purchaseOrderId: preset.purchaseOrderId,
               receiptDate: dayjs(),
-              lines: preset.purchaseLines ?? preset.customerLines ?? [
-                {
-                  orderMaterialId: preset.orderMaterialId,
-                  purchaseOrderLineId: preset.purchaseOrderLineId,
-                  acceptedQty: preset.acceptedQty,
-                },
-              ],
+              lines: preset.purchaseLines ??
+                preset.customerLines ?? [
+                  {
+                    orderMaterialId: preset.orderMaterialId,
+                    purchaseOrderLineId: preset.purchaseOrderLineId,
+                    acceptedQty: preset.acceptedQty,
+                  },
+                ],
             }
           : { source: MATERIAL_SOURCE.CUSTOMER, receiptDate: dayjs(), lines: [EMPTY_LINE] },
     );
