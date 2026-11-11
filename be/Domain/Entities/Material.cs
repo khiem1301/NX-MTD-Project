@@ -26,7 +26,7 @@ public partial class Material
 
     public DateTime CreatedAt { get; set; }
 
-    public virtual ICollection<CuttingLay> CuttingLays { get; set; } = new List<CuttingLay>();
+    public virtual ICollection<CuttingLayFabric> CuttingLayFabrics { get; set; } = new List<CuttingLayFabric>();
 
     public virtual ICollection<MaterialIssueLine> MaterialIssueLines { get; set; } = new List<MaterialIssueLine>();
 

@@ -925,14 +925,23 @@ Table CuttingLay [note: 'Bàn cắt'] {
   WorkDate date [not null, note: 'Ngày làm việc']
   ShiftCode varchar(10) [not null, check: `ShiftCode IN ('MORNING','AFTERNOON','OVERTIME')`, note: 'Ca: MORNING (sáng), AFTERNOON (chiều), OVERTIME (tăng ca): MORNING, AFTERNOON, OVERTIME']
   LaySequence smallint [not null, note: 'Số thứ tự bàn cắt trong ca của tổ cắt (bàn 1, 2, 3... của ngày và ca đó), đánh lại từ 1 mỗi ca; không trùng trong cùng tổ, ngày, ca']
-  FabricMaterialId int [not null, note: 'Vải dùng cho bàn cắt (bắt buộc), để đối chiếu với vải cần của lệnh cắt']
-  FabricUsedM decimal(9,2) [check: `FabricUsedM > 0`, note: 'Số mét vải tổ cắt đã dùng cho cả bàn (DEV-ALL-90), không vượt vải còn lại của tổ trên đơn (backend kiểm). NULL = bàn cũ chưa có chiều dài bàn cắt']
   Note nvarchar(500) [note: 'Ghi chú của tổ cắt về bàn cắt']
   Status varchar(10) [not null, default: 'RECORDED', check: `Status IN ('RECORDED','LOCKED')`, note: 'Trạng thái: RECORDED, LOCKED']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
 
   indexes {
     (CuttingTeamId, WorkDate, ShiftCode, LaySequence) [unique, name: 'UQ_CL']
+  }
+}
+
+Table CuttingLayFabric [note: 'Số mét từng vải của bàn cắt (DEV-ALL-93)'] {
+  CuttingLayFabricId int [pk, increment, note: 'Khóa chính, tự tăng']
+  CuttingLayId int [not null, note: 'Bàn cắt']
+  MaterialId int [not null, note: 'Vải. Cắt cả bộ: đủ mọi vải chi tiết của màu áo; cắt bù / cắt lẻ: vải của chi tiết (backend kiểm)']
+  UsedM decimal(9,2) [check: `UsedM > 0`, note: 'Số mét vải đã dùng, không vượt vải còn lại của tổ trên đơn (backend kiểm). NULL = bàn cũ chưa có chiều dài bàn cắt']
+
+  indexes {
+    (CuttingLayId, MaterialId) [unique, name: 'UQ_CLF']
   }
 }
 
@@ -1466,7 +1475,8 @@ Ref FK_PCM_Material: ProductComponentMaterial.MaterialId > Material.MaterialId
 Ref FK_MRL_Material: MaterialReceiptLine.MaterialId > Material.MaterialId
 Ref FK_OM_Material: OrderMaterial.MaterialId > Material.MaterialId
 Ref FK_MIL_Material: MaterialIssueLine.MaterialId > Material.MaterialId
-Ref FK_CL_Material: CuttingLay.FabricMaterialId > Material.MaterialId
+Ref FK_CLF_Lay: CuttingLayFabric.CuttingLayId > CuttingLay.CuttingLayId
+Ref FK_CLF_Material: CuttingLayFabric.MaterialId > Material.MaterialId
 Ref FK_SB_Material: StockBalance.MaterialId > Material.MaterialId
 Ref FK_RequestLine_Material: RequestLine.MaterialId > Material.MaterialId
 Ref FK_CHL_Handover: CutHandoverLine.CutHandoverId > CutHandover.CutHandoverId

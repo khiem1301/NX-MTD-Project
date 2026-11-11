@@ -5,12 +5,12 @@ using NX_MTD.Application.Validators;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-90: số mét vải đã dùng và số lượng sau cắt của bàn cắt; giá trị biên của bàn cắt và phiếu trả vải thừa.</summary>
+/// <summary>DEV-ALL-90, DEV-ALL-93: số mét từng vải đã dùng và số lượng sau cắt của bàn cắt; giá trị biên của bàn cắt và phiếu trả vải thừa.</summary>
 public class CuttingLayValidatorTests
 {
     private static SaveCuttingLayDto Lay(decimal? usedM, int qty = 10, string shift = "MORNING",
         DateOnly? date = null, string? note = null) =>
-        new(1, date ?? new DateOnly(2026, 11, 1), shift, 1, usedM, note, [new SaveLayLineDto(1, null, qty)]);
+        new(1, date ?? new DateOnly(2026, 11, 1), shift, [new SaveLayFabricDto(1, usedM)], note, [new SaveLayLineDto(1, null, qty)]);
 
     private static IEnumerable<string> Errors(SaveCuttingLayDto dto) =>
         new SaveCuttingLayDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage);
@@ -50,14 +50,24 @@ public class CuttingLayValidatorTests
 
     [Fact]
     public void NoLines_AskForAtLeastOneQty() =>
-        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING", 1, 2m, null, []))
+        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING", [new SaveLayFabricDto(1, 2m)], null, []))
             .Should().Equal(WarehouseMessages.LayQtyRequired);
 
     [Fact]
     public void DuplicateLines_AreRefused() =>
-        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING", 1, 2m, null,
+        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING", [new SaveLayFabricDto(1, 2m)], null,
                 [new SaveLayLineDto(1, null, 5), new SaveLayLineDto(1, null, 6)]))
             .Should().Equal(WarehouseMessages.DuplicateLine);
+
+    [Fact]
+    public void Fabrics_RequiredAndNotDuplicated()
+    {
+        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING", [], null, [new SaveLayLineDto(1, null, 5)]))
+            .Should().Equal(WarehouseMessages.FabricRequired);
+        Errors(new SaveCuttingLayDto(1, new DateOnly(2026, 11, 1), "MORNING",
+                [new SaveLayFabricDto(1, 2m), new SaveLayFabricDto(1, 3m)], null, [new SaveLayLineDto(1, null, 5)]))
+            .Should().Equal(WarehouseMessages.DuplicateLine);
+    }
 
     [Fact]
     public void Shift_Qty_FabricUsed_AndMissingDate_ReportInVietnamese()

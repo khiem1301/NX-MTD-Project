@@ -22,9 +22,10 @@ public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
     int CuttingTeamId, string CuttingTeamName, DateOnly DueDate, string Status, int TotalPlannedQty, DateTime CreatedAt);
 
+/// <param name="FabricMaterialIds">Vải dòng này cần (DEV-ALL-93): cả bộ = mọi vải chi tiết của màu áo; cắt bù / cắt lẻ = vải của chi tiết.</param>
 public sealed record WorkOrderLineDto(
     int WorkOrderLineId, int OrderLineId, string Color, string SizeCode, int? ProductComponentMaterialId, string ComponentName,
-    int PlannedQty, int CutQty, int HandedQty);
+    int PlannedQty, int CutQty, int HandedQty, IReadOnlyList<int>? FabricMaterialIds = null);
 
 public sealed record WorkOrderDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,

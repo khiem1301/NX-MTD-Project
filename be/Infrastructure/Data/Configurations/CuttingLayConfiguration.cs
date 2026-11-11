@@ -10,8 +10,6 @@ public sealed class CuttingLayConfiguration : IEntityTypeConfiguration<CuttingLa
     {
         entity.ToTable("CuttingLay", tb => tb.HasComment("Bàn cắt"));
 
-        entity.Property(e => e.FabricUsedM).HasColumnType("decimal(9, 2)");
-
         entity.HasIndex(e => new { e.CuttingTeamId, e.WorkDate, e.ShiftCode, e.LaySequence }, "UQ_CL").IsUnique();
 
         entity.Property(e => e.CreatedAt)
@@ -30,11 +28,6 @@ public sealed class CuttingLayConfiguration : IEntityTypeConfiguration<CuttingLa
             .HasForeignKey(d => d.CuttingTeamId)
             .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_CL_Team");
-
-        entity.HasOne(d => d.FabricMaterial).WithMany(p => p.CuttingLays)
-            .HasForeignKey(d => d.FabricMaterialId)
-            .OnDelete(DeleteBehavior.ClientSetNull)
-            .HasConstraintName("FK_CL_Material");
 
         entity.HasOne(d => d.WorkOrder).WithMany(p => p.CuttingLays)
             .HasForeignKey(d => d.WorkOrderId)

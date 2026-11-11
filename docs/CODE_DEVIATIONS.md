@@ -136,6 +136,7 @@
 | DEV-ALL-82 | 07/11/2026 | Claude (AI) | UC41–UC46 (phiếu cấp, phiếu nhập, kiểm kê, trả vải thừa), UC09, `PurchaseOrder`, `OrderMaterial` | Quy tắc ngày chứng từ kho (không tương lai, không trước ngày nhận đơn, không quá 7 ngày trước); thêm `ExpectedDeliveryDate` cho đơn mua và NVL khách cấp; siết kiểm trả vải thừa (một phiếu chờ mỗi dòng, không vượt số thừa theo số đã cắt) | Mở |
 | DEV-ALL-83 | 07/11/2026 | Claude (AI) | UC35 (xe, chuyến xe), đơn xin của Cơ điện (`SPARE_PARTS`, `MACHINE_SUPPLIES`, `NEW_MACHINE`) | Siết kiểm biển số, số xăng, tiền xăng, số km, định mức xăng; đơn xin linh kiện / vật tư / máy chỉ nhận số nguyên có trần (9.999 / 99) và bắt buộc có dòng | Mở |
 | DEV-ALL-84 | 07/11/2026 | Claude (AI) | UC30 (suất ăn) | Số suất ăn tổ trưởng xác nhận không được vượt số người đang làm trong tổ | Mở |
+| DEV-ALL-93 | 11/11/2026 | Claude (AI) | UC51 (bàn cắt), `CuttingLay`, `CuttingLayFabric` | Bàn cắt nhập số mét riêng từng vải: cắt cả bộ thì bắt buộc đủ mọi vải chi tiết của màu áo, cắt bù / cắt lẻ thì vải của chi tiết; mỗi vải không vượt vải còn lại của tổ. Bỏ một vải + một số mét của bàn và kiểm 50049 | Mở |
 | DEV-ALL-92 | 11/11/2026 | Claude (AI) | UC19 (lệnh cắt), UC07 (đơn xin NVL), `WorkOrder` | Lệnh cắt thêm tỉ lệ sai lệch vải; đơn xin NVL của tổ cắt chọn được lệnh cắt (không bắt buộc) để tự điền vải và số mét hệ thống tính; tổng các đơn xin NVL của lệnh không vượt số mét hệ thống tính × (1 + tỉ lệ) | Mở |
 | DEV-ALL-91 | 11/11/2026 | Claude (AI) | UC07, UC08 (đơn từ), `Request` | Thêm loại đơn Khác: mọi người dùng tạo, người tạo chọn vai trò xử lý (Admin, Quản đốc, Kế toán, Thủ kho, Tổ trưởng; tổ trưởng = tổ của người tạo), có duyệt, không có dòng. Tổ trưởng / tổ phó có hộp "Đơn cần xử lý". Form, danh sách, chi tiết đơn từ dễ dùng hơn | Mở |
 | DEV-ALL-90 | 11/11/2026 | Claude (AI) | UC51 (bàn cắt), `CuttingLay`, `CuttingLayLine` | Bàn cắt không nhập số lớp, tỉ lệ size, chiều dài bàn cắt nữa: nhập số lượng sau cắt từng màu - size và một số mét vải đã dùng của cả bàn; form hiện vải còn lại của tổ trên đơn, chặn số mét vượt số còn lại; bỏ số tính và lý do sửa số | Mở |
@@ -2133,4 +2134,23 @@
 - **Lý do:** yêu cầu của người dùng: tổ cắt chọn lệnh cắt để tự lấy NVL và số lượng hệ thống tính; lệnh cắt có tỉ lệ sai lệch để chặn đơn xin NVL vượt; vẫn xin riêng được, xin một phần được, tổng các đơn của lệnh không vượt trần.
 - **Ảnh hưởng người khác:** Thái (lệnh cắt, cấp vải), Morgan (schema `WorkOrder`). **Chạy patch cùng lúc với bản code này.**
 - **Cần sửa trong tài liệu:** Report-3 UC19 (form lệnh cắt: tỉ lệ sai lệch), UC07 (đơn xin NVL theo lệnh cắt, trần), `NX-MTD_AI_Context.md` mục 4.8; ERD (`WorkOrder`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-93 · Bàn cắt nhập số mét từng vải
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC51 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - Schema: thêm bảng `CuttingLayFabric` (`CuttingLayId`, `MaterialId`, `UsedM DECIMAL(9,2) NULL` > 0, `UQ_CLF`); `CuttingLay` bỏ `FabricMaterialId` (`FK_CL_Material`), `FabricUsedM` (`CK_CL_FabricUsed`); `trg_CuttingLayLine_Check` bỏ kiểm 50049 (vải chi tiết cắt bù = vải của bàn). Patch `SQL/patches/2026-11-11_cutting_lay_fabrics.sql` (chạy sau `2026-11-11_cutting_lay_fabric_used.sql`): chuyển vải + số mét của mỗi bàn đang có sang `CuttingLayFabric`, rồi bỏ cột. `SQL/NX-MTD_Database.sql`, `docs/NX-MTD_Database.dbml`, `docs/NX-MTD_Database_Mo_ta.md` đã cập nhật. Đã kiểm trên DB tạm: script cũ + patch 2 lần cho cùng cột, ràng buộc, trigger, dữ liệu bàn cắt (6 dòng) với script mới. DB tạm đã xóa. **Có xóa cột: báo cả nhóm trước khi merge.**
+  - API: `POST` / `PUT` bàn cắt: `fabricMaterialId`, `fabricUsedM` thay bằng `fabrics: [{ materialId, usedM }]`. `CuttingLayDto` bỏ `fabricMaterialId`, `fabricMaterialCode`, `fabricColor`, `fabricUsedM`, thêm `fabrics` (mã, tên, màu, số mét). Dòng lệnh cắt (`WorkOrderLineDto`) thêm `fabricMaterialIds` (vải dòng đó cần).
+  - Backend: `FabricPlanner.FabricIdsByLineAsync` (vải mỗi dòng cần), `GetCutAsync` cộng theo `CuttingLayFabric`; `CuttingLayService` kiểm đủ đúng bộ vải và vải còn lại theo từng vải.
+  - Frontend: form bàn cắt bỏ ô chọn vải và ô số mét; sau khi nhập số lượng, bảng "Vải đã dùng (m)" tự liệt kê vải các dòng cần (cả bộ: mọi vải của bộ), mỗi vải một ô số mét bắt buộc, hiện còn lại của tổ và sau bàn này, chặn vượt số còn lại. Danh sách và chi tiết bàn hiện "V01: 66; V02: 10".
+  - Test: backend 2200 test qua (thiếu vải của bộ, thừa vải, một vải vượt số còn lại báo đúng vải, đủ vải thì lưu từng vải, dòng cắt bù chỉ cần vải của chi tiết, sửa bàn không tự trừ chính nó, kiểm trùng / thiếu vải). Frontend: thêm test form (chưa nhập số lượng chưa hiện vải, cả bộ hiện đủ vải, bắt buộc đủ vải, chặn vượt, dữ liệu gửi đi) và hàm `requiredFabricIds`, `formatLayFabrics`.
+- **Tài liệu gốc ghi:** DEV-ALL-90 / Report-3 UC51: bàn cắt có một vải và (từ DEV-ALL-90) một số mét đã dùng; vải chi tiết cắt bù phải trùng vải của bàn (50049).
+- **Code đang làm:**
+  - Vải bàn phải nhập = hợp vải của các dòng có số lượng: dòng cả bộ cần mọi vải chi tiết PANEL trong định mức màu áo đó; dòng cắt bù / cắt lẻ cần vải của dòng định mức. Phải nhập đủ đúng bộ này (thiếu hay thừa đều chặn), mỗi vải số mét > 0, tối đa 10.000 m, 2 số lẻ.
+  - Mỗi vải không vượt vải còn lại của tổ trên đơn (đang giữ − các bàn khác đã dùng vải đó), như DEV-ALL-90.
+  - Bàn cũ: mỗi bàn có một dòng `CuttingLayFabric` từ vải + số mét cũ; sửa bàn cũ cắt cả bộ thì phải nhập thêm các vải còn thiếu.
+- **Lý do:** yêu cầu của người dùng: bàn cắt nguyên cả bộ thì phải nhập số mét vải đã dùng cho cả bộ đó; người dùng chọn nhập riêng từng vải và bắt buộc đủ mọi vải.
+- **Ảnh hưởng người khác:** Thái (bàn cắt, trả vải thừa), Morgan (schema). **Chạy patch cùng lúc với bản code này.**
+- **Cần sửa trong tài liệu:** Report-3 UC51 (màn nhập bàn cắt: số mét từng vải); ERD (`CuttingLay`, `CuttingLayFabric`); DEV-ALL-90 phần "một số mét của cả bàn" thay bởi mục này.
 - **Trạng thái:** Mở

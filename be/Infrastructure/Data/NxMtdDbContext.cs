@@ -44,6 +44,8 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<CuttingLayLine> CuttingLayLines { get; set; }
 
+    public virtual DbSet<CuttingLayFabric> CuttingLayFabrics { get; set; }
+
     public virtual DbSet<DailyMeal> DailyMeals { get; set; }
 
     public virtual DbSet<MealRegistration> MealRegistrations { get; set; }

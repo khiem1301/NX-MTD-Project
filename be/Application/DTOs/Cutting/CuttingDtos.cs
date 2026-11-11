@@ -7,20 +7,25 @@ public sealed record CuttingLayLineDto(
     int CuttingLayLineId, int OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string Color, string SizeCode,
     int ActualQty);
 
-/// <param name="FabricColor">Màu của vải (Material.Color, 26/10); '' = không phân màu.</param>
-/// <param name="FabricUsedM">Số mét vải tổ cắt đã dùng cho bàn (DEV-ALL-90); null = bàn cũ chưa có chiều dài bàn cắt.</param>
+/// <param name="UsedM">null = bàn cũ chưa có chiều dài bàn cắt.</param>
+public sealed record CuttingLayFabricDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor, decimal? UsedM);
+
+/// <param name="Fabrics">Số mét từng vải của bàn (DEV-ALL-93).</param>
 /// <param name="SizeSummary">Số lượng sau cắt theo size, VD "M:90, L:60".</param>
 public sealed record CuttingLayDto(
     int CuttingLayId, int WorkOrderId, string WorkOrderCode, DateOnly WorkDate, string ShiftCode, int LaySequence,
-    int FabricMaterialId, string? FabricMaterialCode, string FabricColor, decimal? FabricUsedM, string SizeSummary, string? Note,
+    IReadOnlyList<CuttingLayFabricDto> Fabrics, string SizeSummary, string? Note,
     string Status, DateTime CreatedAt, IReadOnlyList<CuttingLayLineDto> Lines);
 
 /// <summary>ActualQty = số lượng sản phẩm (cắt bù: chi tiết) sau khi cắt của dòng.</summary>
 public sealed record SaveLayLineDto(int OrderLineId, int? ProductComponentMaterialId, int ActualQty);
 
-/// <param name="FabricUsedM">Số mét vải đã dùng của cả bàn; không vượt vải còn lại của tổ trên đơn.</param>
+public sealed record SaveLayFabricDto(int MaterialId, decimal? UsedM);
+
+/// <param name="Fabrics">Đủ mọi vải các dòng cần (cả bộ: mọi vải chi tiết của màu áo; cắt bù / cắt lẻ: vải của chi tiết), mỗi vải
+/// không vượt vải còn lại của tổ trên đơn (DEV-ALL-93).</param>
 public sealed record SaveCuttingLayDto(
-    int WorkOrderId, DateOnly WorkDate, string ShiftCode, int FabricMaterialId, decimal? FabricUsedM,
+    int WorkOrderId, DateOnly WorkDate, string ShiftCode, IReadOnlyList<SaveLayFabricDto> Fabrics,
     string? Note, IReadOnlyList<SaveLayLineDto> Lines);
 
 public sealed record CuttingLayQuery : PageQuery

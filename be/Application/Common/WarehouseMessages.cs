@@ -57,11 +57,13 @@ public static class WarehouseMessages
     public const string CuttingTeamInvalid = "Tổ nhận phải là tổ cắt đang hoạt động.";
     public const string SewingTeamInvalid = "Tổ nhận phải là tổ may đang hoạt động.";
     public const string ProductNotInOrder = "Mã hàng không có trong đơn.";
-    public const string LayFabricUsedRequired = "Vui lòng nhập số mét vải đã dùng của bàn cắt.";
+    public const string LayFabricUsedRequired = "Vui lòng nhập số mét đã dùng của từng vải.";
     public const string LayFabricUsedInvalid = "Số mét vải đã dùng phải lớn hơn 0.";
     public const string LayFabricUsedMax = "Số mét vải đã dùng của một bàn tối đa 10.000 m.";
     public const string LayFabricUsedDecimals = "Số mét vải đã dùng tối đa 2 số lẻ.";
-    public const string LayFabricOverRemaining = "Số mét vải đã dùng ({0} m) vượt vải còn lại của tổ trên đơn ({1} m).";
+    public const string LayFabricOverRemaining = "Vượt vải còn lại của tổ trên đơn: {0}.";
+    public const string LayFabricOverRemainingLine = "{0} dùng {1} m, còn {2} m";
+    public const string LayFabricsMismatch = "Bàn cắt phải nhập đủ đúng các vải của các dòng cắt. Thiếu: {0}. Thừa: {1}.";
     public const string LayQtyRequired = "Nhập số lượng sau cắt cho ít nhất một màu - size.";
     public const string LayQtyRange = "Số lượng sau cắt của mỗi dòng từ 1 đến 100.000.";
     public const string LayWorkOrderRequired = "Vui lòng chọn lệnh cắt.";
@@ -156,7 +158,6 @@ public static class WarehouseMessages
     public const string DailyBelowOutput = "Tồn từ hôm trước cộng số giao của ngày không được nhỏ hơn sản lượng công nhân đã báo trong ngày";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
-    public const string LayComponentFabricMismatch = "Chi tiết cắt bù phải dùng đúng vải (đã gồm màu) của bàn cắt.";
     public const string OperationRequired = "Vui lòng chọn công đoạn.";
     public const string OperationNotAllocatable = "Chỉ giao việc công đoạn may đang dùng của mã hàng.";
     public const string AllocationExceedsRequired = "Số lần giao vượt số còn cần giao của công đoạn";

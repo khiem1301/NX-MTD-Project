@@ -14,6 +14,8 @@ export type WorkOrderLine = {
   plannedQty: number;
   cutQty: number;
   handedQty: number;
+  /** Vải dòng này cần (DEV-ALL-93): cả bộ = mọi vải chi tiết của màu áo; cắt bù / cắt lẻ = vải của chi tiết. */
+  fabricMaterialIds: number[] | null;
 };
 
 /** Vải theo kích thước chi tiết của một NVL: chỉ để cảnh báo, không chặn lập lệnh. materialId = 0: màu – size chưa có định mức vải. */
@@ -100,6 +102,15 @@ export type CuttingLayLine = {
   actualQty: number;
 };
 
+export type CuttingLayFabric = {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  materialColor: string;
+  /** null = bàn cũ chưa có số mét. */
+  usedM: number | null;
+};
+
 export type CuttingLay = {
   cuttingLayId: number;
   workOrderId: number;
@@ -107,11 +118,8 @@ export type CuttingLay = {
   workDate: string;
   shiftCode: string;
   laySequence: number;
-  fabricMaterialId: number | null;
-  fabricMaterialCode: string | null;
-  fabricColor: string;
-  /** Số mét vải đã dùng của bàn (DEV-ALL-90); null = bàn cũ chưa có số mét. */
-  fabricUsedM: number | null;
+  /** Số mét từng vải của bàn (DEV-ALL-93). */
+  fabrics: CuttingLayFabric[];
   /** Số lượng sau cắt theo size, VD "M:90, L:60". */
   sizeSummary: string;
   note: string | null;
@@ -130,8 +138,8 @@ export type SaveCuttingLayPayload = {
   workOrderId: number;
   workDate: string;
   shiftCode: string;
-  fabricMaterialId?: number;
-  fabricUsedM: number;
+  /** Đủ mọi vải các dòng cắt cần (DEV-ALL-93). */
+  fabrics: { materialId: number; usedM: number }[];
   note?: string;
   lines: {
     orderLineId: number;
