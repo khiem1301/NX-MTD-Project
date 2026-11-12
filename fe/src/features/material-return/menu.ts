@@ -8,5 +8,7 @@ export const materialReturnMenu: MenuEntry[] = [
     label: 'Trả vải thừa',
     path: ROUTES.materialReturns,
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy, ROLES.WarehouseKeeper],
+    // Chỉ tổ cắt trả vải thừa về kho; tổ may không dùng màn này.
+    teamTypes: ['Cutting'],
   },
 ];
