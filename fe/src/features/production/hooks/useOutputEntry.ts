@@ -50,13 +50,14 @@ export function useOutputEntry(role: OutputRole) {
     transferExcess = false,
     reason?: string,
   ) => {
-    if (!query || isAllDay || !query.shiftCode || toSave.length === 0) {
+    // Cả ngày chỉ xem — không lưu; sau `isAllDay` thì `shift` đã hẹp thành ShiftCode.
+    if (!query || isAllDay || toSave.length === 0) {
       void message.info(text.nothingChanged);
       return;
     }
     const result = await save.mutateAsync({
       workDate: query.workDate,
-      shiftCode: query.shiftCode,
+      shiftCode: shift,
       orderLineId: query.orderLineId,
       sewingTeamId: query.sewingTeamId,
       reason: reason?.trim() || undefined,
