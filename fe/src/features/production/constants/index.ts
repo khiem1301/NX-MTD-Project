@@ -1,5 +1,5 @@
 import { REASON_MAX_LENGTH } from '@/constants/limits';
-import type { DefectReason, ShiftCode } from '../types';
+import type { DefectReason, ShiftCode, ShiftFilter } from '../types';
 import { OPERATIONS_TEXT, PIECE_RATES_TEXT } from './operationText';
 import { ORDER_LINE_TEAMS_TEXT, ASSIGNMENTS_TEXT } from './assignmentText';
 import { OUTPUT_TEXT, QC_TEXT } from './outputText';
@@ -60,9 +60,10 @@ export const PRODUCTION_TEXT = {
   myDefects: MY_DEFECTS_TEXT,
 } as const;
 
-/** BE trả ca dạng "MORNING" hoặc "Morning": quy về nhãn tiếng Việt. */
+/** BE trả ca dạng "MORNING" hoặc "Morning": quy về nhãn tiếng Việt; ALL = Cả ngày. */
 export const shiftText = (shift: string | null | undefined): string => {
   if (!shift) return '—';
+  if (shift.toUpperCase() === 'ALL') return PRODUCTION_TEXT.output.allDay;
   const key = (shift.charAt(0).toUpperCase() + shift.slice(1).toLowerCase()) as ShiftCode;
   return PRODUCTION_TEXT.output.shiftLabel[key] ?? shift;
 };
@@ -73,6 +74,12 @@ export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as 
     label: PRODUCTION_TEXT.output.shiftLabel[value],
   }),
 );
+
+/** Bộ lọc màn sản lượng: 3 ca nhập + Cả ngày (chỉ xem). */
+export const OUTPUT_SHIFT_FILTER_OPTIONS: { value: ShiftFilter; label: string }[] = [
+  ...SHIFT_OPTIONS,
+  { value: 'AllDay', label: PRODUCTION_TEXT.output.allDay },
+];
 
 /** Lý do tổ trưởng được chọn khi ghi phiếu hàng hỏng. */
 export const DEFECT_REASON_OPTIONS = (

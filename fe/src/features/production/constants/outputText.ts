@@ -4,9 +4,9 @@ export const OUTPUT_TEXT = {
   title: 'Sản lượng cuối ca',
   managerTitle: 'Sửa sản lượng sau hạn',
   subtitle:
-    'Chọn ngày, ca và dòng đơn rồi nhập sản lượng cho từng công nhân. Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
+    'Chọn ngày, ca và dòng đơn rồi nhập sản lượng cho từng công nhân. Chọn Cả ngày để xem tổng các ca (chỉ xem). Sửa trong hạn: tổ trưởng; sau hạn: Quản đốc (bắt buộc lý do).',
   managerSubtitle:
-    'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký.',
+    'Quản đốc sửa sản lượng của tổ, kể cả sau hạn. Phải ghi lý do, hệ thống lưu nhật ký. Cả ngày chỉ xem tổng.',
   date: 'Ngày làm việc',
   shift: 'Ca',
   team: 'Tổ may',
@@ -17,6 +17,8 @@ export const OUTPUT_TEXT = {
   allocatedHelp:
     'Sản lượng của mỗi công nhân không vượt số lần được giao (màn Giao việc) ở đúng công đoạn đó.',
   noRows: 'Chưa có phân công nào cho dòng đơn này. Tổ trưởng cần phân công công đoạn trước.',
+  allDay: 'Cả ngày',
+  chooseShiftToEnter: 'Chọn ca để nhập sản lượng',
   byWorker: {
     search: 'Tìm mã, tên công nhân',
     stateLabel: 'Tình trạng nhập',

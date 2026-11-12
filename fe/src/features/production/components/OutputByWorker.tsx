@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { EditOutlined } from '@ant-design/icons';
 import { Input, Select, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -31,12 +31,16 @@ const t = text.byWorker;
  */
 export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
   const { user } = useAuth();
-  const { isManager, teamId, query, rows, grid, save, saveRows } = entry;
+  const { isManager, isAllDay, teamId, query, rows, grid, save, saveRows } = entry;
   // Quản đốc xem tổ may đang chọn; tổ trưởng / tổ phó xem tổ của mình.
   const members = useTeamMemberLookup(isManager ? teamId : (user?.teamId ?? null));
   const [keyword, setKeyword] = useState('');
   const [state, setState] = useState<OutputWorkerState>(OUTPUT_WORKER_STATE.ALL);
   const [editingId, setEditingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isAllDay) setEditingId(null);
+  }, [isAllDay]);
 
   const workers = useMemo(
     () =>
@@ -88,13 +92,18 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
     {
       title: MESSAGES.common.actions,
       key: 'actions',
-      render: (_, w) => (
-        <IconAction
-          title={t.enter}
-          icon={<EditOutlined />}
-          onClick={() => setEditingId(w.workerId)}
-        />
-      ),
+      render: (_, w) =>
+        isAllDay ? (
+          <span>
+            <IconAction title={text.chooseShiftToEnter} icon={<EditOutlined />} disabled />
+          </span>
+        ) : (
+          <IconAction
+            title={t.enter}
+            icon={<EditOutlined />}
+            onClick={() => setEditingId(w.workerId)}
+          />
+        ),
     },
   ];
 
@@ -138,7 +147,7 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
         loading={grid.isFetching || members.isLoading}
         locale={{ emptyText: t.noWorkers }}
       />
-      {editing && (
+      {!isAllDay && editing && (
         <WorkerOutputModal
           key={editing.workerId}
           worker={editing}

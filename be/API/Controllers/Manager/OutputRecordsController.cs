@@ -16,9 +16,11 @@ public sealed class OutputRecordsController : ManagerBaseController
     public OutputRecordsController(IOutputService output) => _output = output;
 
     [HttpGet("grid")]
-    public async Task<IActionResult> GetGrid([FromQuery] DateOnly workDate, [FromQuery] string shiftCode,
-        [FromQuery] int orderLineId, [FromQuery] int sewingTeamId, CancellationToken ct) =>
-        this.ToResponse(await _output.GetGridAsync(workDate, shiftCode, orderLineId, sewingTeamId, ct));
+    public async Task<IActionResult> GetGrid([FromQuery] DateOnly workDate, [FromQuery] string? shiftCode,
+        [FromQuery] int orderLineId, [FromQuery] int sewingTeamId, [FromQuery] bool allDay, CancellationToken ct) =>
+        allDay
+            ? this.ToResponse(await _output.GetDayGridAsync(workDate, orderLineId, sewingTeamId, ct))
+            : this.ToResponse(await _output.GetGridAsync(workDate, shiftCode ?? "", orderLineId, sewingTeamId, ct));
 
     [HttpPost]
     public async Task<IActionResult> Save([FromBody] SaveOutputDto dto, CancellationToken ct) =>

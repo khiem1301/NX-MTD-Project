@@ -5,6 +5,7 @@ describe('shiftText', () => {
     expect(shiftText('MORNING')).toBe('Ca sáng');
     expect(shiftText('Afternoon')).toBe('Ca chiều');
     expect(shiftText('OVERTIME')).toBe('Tăng ca');
+    expect(shiftText('ALL')).toBe('Cả ngày');
   });
 
   it('ca trống hiện dấu gạch, ca lạ giữ nguyên', () => {
