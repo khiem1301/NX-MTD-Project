@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { EditOutlined } from '@ant-design/icons';
 import { Input, Select, Space, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
@@ -38,10 +38,6 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
   const [state, setState] = useState<OutputWorkerState>(OUTPUT_WORKER_STATE.ALL);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (isAllDay) setEditingId(null);
-  }, [isAllDay]);
-
   const workers = useMemo(
     () =>
       buildOutputWorkers(
@@ -53,7 +49,9 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
     [rows, members.data],
   );
   const visible = filterOutputWorkers(workers, keyword, state);
-  const editing = workers.find((w) => w.workerId === editingId) ?? null;
+  // Cả ngày chỉ xem: không mở modal nhập dù editingId còn từ lần chọn ca trước.
+  const editing =
+    isAllDay ? null : (workers.find((w) => w.workerId === editingId) ?? null);
 
   const columns: ColumnsType<OutputWorker> = [
     {
