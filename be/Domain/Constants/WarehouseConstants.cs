@@ -234,6 +234,8 @@ public static class ShiftCodes
     public const string Morning = "MORNING";
     public const string Afternoon = "AFTERNOON";
     public const string Overtime = "OVERTIME";
+    /// <summary>Mã lưới xem tổng cả ngày (không phải ca lưu DB).</summary>
+    public const string AllDay = "ALL";
 
     public static readonly IReadOnlyList<string> All = new[] { Morning, Afternoon, Overtime };
 }

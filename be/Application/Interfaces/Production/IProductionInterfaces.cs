@@ -86,6 +86,8 @@ public interface IOperationAssignmentService
 public interface IOutputService
 {
     Task<Result<OutputGridDto>> GetGridAsync(DateOnly workDate, string shiftCode, int orderLineId, int? sewingTeamId, CancellationToken ct);
+    /// <summary>Lưới xem tổng sản lượng cả ngày (cộng các ca); không dùng để nhập/sửa.</summary>
+    Task<Result<OutputGridDto>> GetDayGridAsync(DateOnly workDate, int orderLineId, int? sewingTeamId, CancellationToken ct);
     Task<Result<OutputSaveResultDto>> SaveAsync(SaveOutputDto dto, CancellationToken ct);
 }
 

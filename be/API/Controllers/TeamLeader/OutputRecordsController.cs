@@ -13,9 +13,11 @@ public sealed class OutputRecordsController : TeamLeaderBaseController
     public OutputRecordsController(IOutputService output) => _output = output;
 
     [HttpGet("grid")]
-    public async Task<IActionResult> GetGrid([FromQuery] DateOnly workDate, [FromQuery] string shiftCode,
-        [FromQuery] int orderLineId, CancellationToken ct) =>
-        this.ToResponse(await _output.GetGridAsync(workDate, shiftCode, orderLineId, null, ct));
+    public async Task<IActionResult> GetGrid([FromQuery] DateOnly workDate, [FromQuery] string? shiftCode,
+        [FromQuery] int orderLineId, [FromQuery] bool allDay, CancellationToken ct) =>
+        allDay
+            ? this.ToResponse(await _output.GetDayGridAsync(workDate, orderLineId, null, ct))
+            : this.ToResponse(await _output.GetGridAsync(workDate, shiftCode ?? "", orderLineId, null, ct));
 
     /// <summary>Tổ luôn lấy từ tài khoản đăng nhập; SewingTeamId client gửi lên bị bỏ qua.</summary>
     [HttpPost]

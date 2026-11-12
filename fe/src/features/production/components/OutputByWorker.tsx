@@ -31,7 +31,7 @@ const t = text.byWorker;
  */
 export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
   const { user } = useAuth();
-  const { isManager, teamId, query, rows, grid, save, saveRows } = entry;
+  const { isManager, isAllDay, teamId, query, rows, grid, save, saveRows } = entry;
   // Quản đốc xem tổ may đang chọn; tổ trưởng / tổ phó xem tổ của mình.
   const members = useTeamMemberLookup(isManager ? teamId : (user?.teamId ?? null));
   const [keyword, setKeyword] = useState('');
@@ -49,7 +49,9 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
     [rows, members.data],
   );
   const visible = filterOutputWorkers(workers, keyword, state);
-  const editing = workers.find((w) => w.workerId === editingId) ?? null;
+  // Cả ngày chỉ xem: không mở modal nhập dù editingId còn từ lần chọn ca trước.
+  const editing =
+    isAllDay ? null : (workers.find((w) => w.workerId === editingId) ?? null);
 
   const columns: ColumnsType<OutputWorker> = [
     {
@@ -88,13 +90,18 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
     {
       title: MESSAGES.common.actions,
       key: 'actions',
-      render: (_, w) => (
-        <IconAction
-          title={t.enter}
-          icon={<EditOutlined />}
-          onClick={() => setEditingId(w.workerId)}
-        />
-      ),
+      render: (_, w) =>
+        isAllDay ? (
+          <span>
+            <IconAction title={text.chooseShiftToEnter} icon={<EditOutlined />} disabled />
+          </span>
+        ) : (
+          <IconAction
+            title={t.enter}
+            icon={<EditOutlined />}
+            onClick={() => setEditingId(w.workerId)}
+          />
+        ),
     },
   ];
 
@@ -138,7 +145,7 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
         loading={grid.isFetching || members.isLoading}
         locale={{ emptyText: t.noWorkers }}
       />
-      {editing && (
+      {!isAllDay && editing && (
         <WorkerOutputModal
           key={editing.workerId}
           worker={editing}
