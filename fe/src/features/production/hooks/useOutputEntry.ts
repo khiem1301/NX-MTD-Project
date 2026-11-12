@@ -41,8 +41,8 @@ export function useOutputEntry(role: OutputRole) {
 
   const resetWarnings = () => setWarnings([]);
 
-  /** Lưu sản lượng của một công nhân; Quản đốc gửi kèm lý do sửa. */
-  const saveRows = (
+  /** Lưu sản lượng của một công nhân; Quản đốc gửi kèm lý do sửa. Trả về Promise để UI đóng popup sau khi thành công. */
+  const saveRows = async (
     toSave: OutputLineInput[],
     onDone?: () => void,
     transferExcess = false,
@@ -52,18 +52,17 @@ export function useOutputEntry(role: OutputRole) {
       void message.info(text.nothingChanged);
       return;
     }
-    save.mutate(
-      { ...query, reason: reason?.trim() || undefined, rows: toSave, transferExcess },
-      {
-        onSuccess: (result) => {
-          void message.success(
-            fill(text.resultTemplate, result.inserted, result.updated, result.deleted),
-          );
-          setWarnings(result.warnings);
-          onDone?.();
-        },
-      },
+    const result = await save.mutateAsync({
+      ...query,
+      reason: reason?.trim() || undefined,
+      rows: toSave,
+      transferExcess,
+    });
+    void message.success(
+      fill(text.resultTemplate, result.inserted, result.updated, result.deleted),
     );
+    setWarnings(result.warnings);
+    onDone?.();
   };
 
   const teamOptions = (teams.data ?? [])
