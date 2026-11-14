@@ -416,6 +416,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialType` | tính toán |  | `= (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC' ELSE 'TRIM' END AS VARCHAR(10)))` (PERSISTED) |  |
 | `Category` | VARCHAR(15) |  |  |  |
 | `Unit` | NVARCHAR(20) |  |  | m, kg, cuộn, cái, cuộn chỉ… |
+| `WidthM` | DECIMAL(4,2) | ✓ |  | khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu NULL (DEV-ALL-102) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
@@ -423,6 +424,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 - `CK_Material_Category`: Giá trị: `MAIN_FABRIC`, `LINING`, `INTERLINING`, `RIB`, `THREAD`, `ZIPPER`, `BUTTON`, `SNAP`, `ELASTIC`, `TAPE`, `LABEL`, `HANG_TAG`, `PADDING`, `PACKAGING`, `OTHER`
 - `CK_Material_Status`: Giá trị: `ACTIVE`, `DISCONTINUED`
+- `CK_Material_Width`: `CHECK WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)`
 - UNIQUE `UQ_Material_NameType`: (MaterialName, MaterialType)
 
 ### `Supplier` — Nhà cung cấp
@@ -550,11 +552,12 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MarkerNo` | TINYINT |  |  | nhóm bìa của mã hàng (thân, tay...) |
 | `MarkerCode` | VARCHAR(20) |  |  | mã bìa trong nhóm: 1A, 1B... |
 | `LengthM` | DECIMAL(7,2) |  |  | chiều dài bìa (m) |
+| `WidthM` | DECIMAL(4,2) |  | Mặc định `1.50` | khổ bìa (m), tối đa 3,5 m (DEV-ALL-102) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` | `ACTIVE`, `DISCONTINUED` |
 
 **Ràng buộc & index**
 
-- `CK_PM_No`: `CHECK MarkerNo > 0`; `CK_PM_Length`: `CHECK LengthM > 0`
+- `CK_PM_No`: `CHECK MarkerNo > 0`; `CK_PM_Length`: `CHECK LengthM > 0`; `CK_PM_Width`: `CHECK WidthM > 0 AND WidthM <= 3.5`
 - `CK_PM_Status`: `CHECK Status IN ('ACTIVE','DISCONTINUED')`
 - UNIQUE `UQ_PM`: (OrderId, ProductId, MarkerNo, MarkerCode)
 - Index `IX_PM_Product ON dbo.ProductMarker(ProductId)`

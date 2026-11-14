@@ -24,3 +24,8 @@ export const MaterialFormModalSlot = lazy(() =>
 export const PurchaseOrderFormModalSlot = lazy(() =>
   import('@/features/warehouse').then((m) => ({ default: m.PurchaseOrderFormModal })),
 );
+
+/** Thông báo (notification) — bấm thông báo lệch kiểm cuối đơn mở ngay cửa sổ chi tiết của feature KPI, không chuyển trang. */
+export const KpiMismatchModalSlot = lazy(() =>
+  import('@/features/kpi').then((m) => ({ default: m.MismatchDetailModal })),
+);

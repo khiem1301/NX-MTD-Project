@@ -5,7 +5,7 @@ import { IconAction } from '@/components/common/IconAction';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { INCOMING_TEXT, MATERIAL_SOURCE, PO_GOODS_STATUS_LABEL } from '../constants';
 import type {
   ClosedShortPurchase,
@@ -122,7 +122,12 @@ export const customerColumns = (
   {
     title: text.expectedDeliveryDate,
     key: 'expectedDeliveryDate',
-    render: (_, r) => formatDeliveryWindow(r.expectedDeliveryDate, r.expectedDeliveryDateTo),
+    render: (_, r) =>
+      formatDeliveryDates(
+        r.expectedDeliveryDates,
+        r.expectedDeliveryDate,
+        r.expectedDeliveryDateTo,
+      ),
   },
   {
     title: MESSAGES.common.actions,
@@ -199,7 +204,11 @@ export const supplierColumns = (
         {deliveryCell(r.expectedDeliveryCount, r.receivedCount)}
         {r.expectedDeliveryDate && (
           <Typography.Text type="secondary">
-            {formatDeliveryWindow(r.expectedDeliveryDate, r.expectedDeliveryDateTo)}
+            {formatDeliveryDates(
+              r.expectedDeliveryDates,
+              r.expectedDeliveryDate,
+              r.expectedDeliveryDateTo,
+            )}
           </Typography.Text>
         )}
       </Space>

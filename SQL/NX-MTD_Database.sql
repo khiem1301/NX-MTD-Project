@@ -121,6 +121,8 @@
                  Patch SQL/patches/2026-11-11_work_order_fabric_tolerance.sql.
    - 11/11/2026  Bàn cắt nhiều vải (DEV-ALL-93): thêm CuttingLayFabric (số mét từng vải); CuttingLay bỏ FabricMaterialId, FabricUsedM;
                  trg_CuttingLayLine_Check bỏ 50049. Patch SQL/patches/2026-11-11_cutting_lay_fabrics.sql.
+   - 11/11/2026  Thêm lại khổ (DEV-ALL-102): Material.WidthM (khổ vải, NULL với phụ liệu), ProductMarker.WidthM (khổ bìa, mặc định 1,5 m);
+                 cả hai > 0 và ≤ 3,5 m (CK_Material_Width, CK_PM_Width). Patch SQL/patches/2026-11-11_fabric_marker_width.sql.
    - 09/11/2026  ProductComponentMaterial theo màu áo, không theo size (DEV-ALL-87): ProductVariantId thay bằng ProductColorId (FK ghép ProductColor),
                  UQ_PCM thành (ProductColorId, ProductComponentId, MaterialId). Size của chứng từ (lệnh cắt, bàn cắt, kho BTP, phiếu cấp) lấy từ
                  OrderLine; trigger 50041 so màu của định mức với màu của dòng đơn.
@@ -138,6 +140,8 @@
                  CustomerDeliveryDate, CustomerDeliveryDateTo); OrderMaterial bỏ ExpectedDeliveryCount / ExpectedDeliveryDate / ExpectedDeliveryDateTo;
                  RequestLine thêm PurchaseOrderLineId, OrderMaterialId (nguồn dòng SHORT_DELIVERY, kể cả dòng chưa về lần nào);
                  vw_OrderMaterialDelivery đếm số lần theo đơn. Patch: SQL/patches/2026-11-11_order_delivery_plan.sql (DEV-ALL-95).
+   - 13/11/2026  Số lần giao = số ngày giao: thêm bảng DeliveryScheduleDate (một trong PurchaseOrderId / OrderId / RequestId có khoá ngoại, SeqNo, DeliveryDate);
+                 cột ngày đầu / ngày cuối cũ giữ làm tóm tắt. Patch: SQL/patches/2026-11-13_delivery_schedule_date.sql (DEV-ALL-113).
    - 05/11/2026  ProductImage giảm còn tối đa 5 ảnh phụ (CK_ProductImage_Sort 1-5). Thêm ProductColor (màu áo của mã hàng,
                  nơi duy nhất lưu tên màu): ProductVariant, ProductMarkerFabric bỏ cột Color, trỏ ProductColorId (FK ghép
                  với ProductId); UQ_PV thành (ProductColorId, SizeCode). (ảnh theo màu đã bỏ ở DEV-ALL-80).
@@ -384,17 +388,23 @@ CREATE TABLE dbo.Material (
     MaterialCode  VARCHAR(30)   NOT NULL CONSTRAINT UQ_Material_Code UNIQUE,
     MaterialName  NVARCHAR(200) NOT NULL,
     Color         NVARCHAR(50)  NOT NULL CONSTRAINT DF_Material_Color DEFAULT N'',   -- màu NVL; '' = không phân màu. Cùng loại vải khác màu là hai dòng Material
-    MaterialType  AS (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC' ELSE 'TRIM' END
+    MaterialType  AS (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC'
+                               WHEN Category IN ('SCRAP_FABRIC','SCRAP_NEEDLE','SCRAP_OTHER') THEN 'SCRAP'
+                               ELSE 'TRIM' END
                           AS VARCHAR(10))) PERSISTED,
     Category      VARCHAR(15)   NOT NULL,
     Unit          NVARCHAR(20)  NOT NULL,     -- m, kg, cuộn, cái, cuộn chỉ…
+    WidthM        DECIMAL(4,2)  NULL,         -- khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu để NULL (DEV-ALL-102)
     Status        VARCHAR(20)   NOT NULL CONSTRAINT DF_Material_Status DEFAULT 'ACTIVE',
     CreatedAt     DATETIME2(0)  NOT NULL CONSTRAINT DF_Material_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    -- vải: vải chính, vải lót, mex, bo; phụ liệu: chỉ, khóa, cúc, cúc dập, chun, dây / viền, nhãn, thẻ treo, bông / đệm, bao bì, khác
+    -- vải: vải chính, vải lót, mex, bo; phụ liệu: chỉ, khóa, cúc, cúc dập, chun, dây / viền, nhãn, thẻ treo, bông / đệm, bao bì, khác;
+    -- phế phẩm (SCRAP, DEV-ALL-112): vải vụn, kim gãy, khác; chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (kg, cái…)
     CONSTRAINT CK_Material_Category CHECK (Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB',
                                                         'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE',
-                                                        'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')),
+                                                        'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER',
+                                                        'SCRAP_FABRIC','SCRAP_NEEDLE','SCRAP_OTHER')),
     CONSTRAINT CK_Material_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
+    CONSTRAINT CK_Material_Width  CHECK (WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)),
     CONSTRAINT UQ_Material_NameType UNIQUE (MaterialName, MaterialType, Color)
 );
 
@@ -583,9 +593,11 @@ CREATE TABLE dbo.ProductMarker (
     MarkerNo        TINYINT       NOT NULL,   -- nhóm bìa của mã hàng (thân, tay, lót...)
     MarkerCode      VARCHAR(20)   NOT NULL,   -- mã bìa trong nhóm, vd 1A, 1B
     LengthM         DECIMAL(7,2)  NOT NULL,   -- chiều dài bìa (mét)
+    WidthM          DECIMAL(4,2)  NOT NULL CONSTRAINT DF_PM_Width DEFAULT 1.50,   -- khổ bìa (mét), tối đa 3,5 m (DEV-ALL-102)
     Status          VARCHAR(20)   NOT NULL CONSTRAINT DF_PM_Status DEFAULT 'ACTIVE',
     CONSTRAINT CK_PM_No     CHECK (MarkerNo > 0),
     CONSTRAINT CK_PM_Length CHECK (LengthM > 0),
+    CONSTRAINT CK_PM_Width  CHECK (WidthM > 0 AND WidthM <= 3.5),
     CONSTRAINT CK_PM_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT UQ_PM UNIQUE (OrderId, ProductId, MarkerNo, MarkerCode)
 );
@@ -874,6 +886,21 @@ CREATE TABLE dbo.PurchaseOrderLine (
 CREATE UNIQUE INDEX UQ_POL       ON dbo.PurchaseOrderLine(PurchaseOrderId, OrderMaterialId) WHERE OrderMaterialId IS NOT NULL;
 CREATE UNIQUE INDEX UQ_POL_Stock ON dbo.PurchaseOrderLine(PurchaseOrderId, MaterialId) WHERE OrderMaterialId IS NULL;
 
+-- Ngày dự kiến giao từng lần (DEV-ALL-113): số lần giao = số dòng; đúng một chủ lịch (đơn mua / đơn hàng khách giao / đơn giao bù), có khoá ngoại.
+CREATE TABLE dbo.DeliveryScheduleDate (
+    DeliveryScheduleDateId INT IDENTITY(1,1) CONSTRAINT PK_DeliveryScheduleDate PRIMARY KEY,
+    PurchaseOrderId INT NULL CONSTRAINT FK_DSD_PurchaseOrder REFERENCES dbo.PurchaseOrder(PurchaseOrderId) ON DELETE CASCADE,
+    OrderId         INT NULL CONSTRAINT FK_DSD_Order         REFERENCES dbo.CustomerOrder(OrderId)         ON DELETE CASCADE,
+    RequestId       INT NULL CONSTRAINT FK_DSD_Request       REFERENCES dbo.Request(RequestId)             ON DELETE CASCADE,
+    SeqNo           SMALLINT NOT NULL CONSTRAINT CK_DSD_Seq CHECK (SeqNo >= 1),
+    DeliveryDate    DATE NOT NULL,
+    CONSTRAINT CK_DSD_Owner CHECK ((CASE WHEN PurchaseOrderId IS NULL THEN 0 ELSE 1 END + CASE WHEN OrderId IS NULL THEN 0 ELSE 1 END
+                                    + CASE WHEN RequestId IS NULL THEN 0 ELSE 1 END) = 1)
+);
+CREATE UNIQUE INDEX UQ_DSD_PurchaseOrder ON dbo.DeliveryScheduleDate(PurchaseOrderId, SeqNo) WHERE PurchaseOrderId IS NOT NULL;
+CREATE UNIQUE INDEX UQ_DSD_Order         ON dbo.DeliveryScheduleDate(OrderId, SeqNo)         WHERE OrderId IS NOT NULL;
+CREATE UNIQUE INDEX UQ_DSD_Request       ON dbo.DeliveryScheduleDate(RequestId, SeqNo)       WHERE RequestId IS NOT NULL;
+
 -- Phiếu nhập NVL: Mới / Bổ sung (FR 1.4, UC37, UC39). Phiếu bổ sung = có ShortageRequestId; phiếu gốc của nó là
 -- Request.MaterialReceiptId của yêu cầu đó. Source tính từ PurchaseOrderId (có đơn mua = NCC, không có = khách cấp)
 CREATE TABLE dbo.MaterialReceipt (
@@ -995,7 +1022,13 @@ CREATE TABLE dbo.MaterialIssueLine (
 CREATE TABLE dbo.MaterialReturn (
     MaterialReturnId  INT IDENTITY(1,1) CONSTRAINT PK_MaterialReturn PRIMARY KEY,
     ReturnCode        VARCHAR(30)    NOT NULL CONSTRAINT UQ_MaterialReturn_Code UNIQUE,
-    MaterialIssueId   INT            NOT NULL CONSTRAINT FK_MRet_Issue REFERENCES dbo.MaterialIssue(MaterialIssueId),
+    -- DEV-ALL-112: phiếu trả không còn bắt buộc gắn phiếu cấp (MaterialIssueId chỉ có ở phiếu cũ). ReturningTeamId = tổ cắt / tổ may trả;
+    -- WarehouseType MATERIAL = trả NVL / phế phẩm (tổ cắt theo lệnh cắt, tổ may không theo đơn), SEMI_FINISHED = tổ may trả BTP theo đơn.
+    MaterialIssueId   INT            NULL CONSTRAINT FK_MRet_Issue REFERENCES dbo.MaterialIssue(MaterialIssueId),
+    ReturningTeamId   INT            NOT NULL CONSTRAINT FK_MRet_Team REFERENCES dbo.Team(TeamId),
+    WarehouseType     VARCHAR(15)    NOT NULL CONSTRAINT DF_MRet_Warehouse DEFAULT 'MATERIAL',
+    OrderId           INT            NULL CONSTRAINT FK_MRet_Order REFERENCES dbo.CustomerOrder(OrderId),
+    WorkOrderId       INT            NULL CONSTRAINT FK_MRet_WorkOrder REFERENCES dbo.WorkOrder(WorkOrderId),
     Note              NVARCHAR(500)  NULL,
     Status            VARCHAR(20)    NOT NULL CONSTRAINT DF_MRet_Status DEFAULT 'PENDING',
     ConfirmedBy       INT            NULL CONSTRAINT FK_MRet_ConfirmedBy REFERENCES dbo.Employee(EmployeeId),
@@ -1003,19 +1036,26 @@ CREATE TABLE dbo.MaterialReturn (
     RejectReason      NVARCHAR(500)  NULL,
     CreatedAt         DATETIME2(0)   NOT NULL CONSTRAINT DF_MRet_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_MRet_Status CHECK (Status IN ('PENDING','CONFIRMED','REJECTED','CANCELLED')),
-    CONSTRAINT CK_MRet_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL)
+    CONSTRAINT CK_MRet_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
+    CONSTRAINT CK_MRet_Warehouse CHECK (WarehouseType IN ('MATERIAL','SEMI_FINISHED'))
 );
+-- Dòng trả: NVL / phế phẩm (MaterialId) hoặc BTP cả bộ của một dòng đơn (OrderLineId), đúng một trong hai (DEV-ALL-112).
+-- MaterialIssueLineId chỉ có ở dòng của phiếu cũ.
 CREATE TABLE dbo.MaterialReturnLine (
     MaterialReturnLineId INT IDENTITY(1,1) CONSTRAINT PK_MaterialReturnLine PRIMARY KEY,
     MaterialReturnId     INT           NOT NULL CONSTRAINT FK_MRetL_Return REFERENCES dbo.MaterialReturn(MaterialReturnId),
-    MaterialIssueLineId  INT           NOT NULL CONSTRAINT FK_MRetL_IssueLine REFERENCES dbo.MaterialIssueLine(MaterialIssueLineId),
+    MaterialIssueLineId  INT           NULL CONSTRAINT FK_MRetL_IssueLine REFERENCES dbo.MaterialIssueLine(MaterialIssueLineId),
+    MaterialId           INT           NULL CONSTRAINT FK_MRetL_Material REFERENCES dbo.Material(MaterialId),
+    OrderLineId          INT           NULL CONSTRAINT FK_MRetL_OrderLine REFERENCES dbo.OrderLine(OrderLineId),
     ReturnedQty          DECIMAL(18,3) NOT NULL CONSTRAINT CK_MRetL_Qty CHECK (ReturnedQty > 0),
     ConfirmedQty         DECIMAL(18,3) NULL,
     DiscrepancyReason    NVARCHAR(500) NULL,
     CONSTRAINT CK_MRetL_Confirmed CHECK (ConfirmedQty IS NULL OR ConfirmedQty >= 0),
     CONSTRAINT CK_MRetL_Reason    CHECK (ConfirmedQty IS NULL OR ConfirmedQty = ReturnedQty OR DiscrepancyReason IS NOT NULL),
-    CONSTRAINT UQ_MRetL UNIQUE (MaterialReturnId, MaterialIssueLineId)
+    CONSTRAINT CK_MRetL_Item      CHECK ((MaterialId IS NOT NULL AND OrderLineId IS NULL) OR (MaterialId IS NULL AND OrderLineId IS NOT NULL))
 );
+CREATE UNIQUE INDEX UQ_MRetL_Material ON dbo.MaterialReturnLine (MaterialReturnId, MaterialId) WHERE MaterialId IS NOT NULL;
+CREATE UNIQUE INDEX UQ_MRetL_OrderLine ON dbo.MaterialReturnLine (MaterialReturnId, OrderLineId) WHERE OrderLineId IS NOT NULL;
 
 -- Bàn cắt (CUTTING_LAY, FR 2.7): tổ cắt nhập số lượng sau cắt từng màu - size (CuttingLayLine.ActualQty) và số mét đã dùng của từng
 -- vải (CuttingLayFabric), không nhập số lớp / tỉ lệ / chiều dài (DEV-ALL-90, DEV-ALL-93). Cắt cả bộ thì đủ mọi vải chi tiết của màu áo,
@@ -2094,7 +2134,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM inserted i
                JOIN dbo.MaterialReturn r      ON r.MaterialReturnId = i.MaterialReturnId
                JOIN dbo.MaterialIssueLine l   ON l.MaterialIssueLineId = i.MaterialIssueLineId
-               WHERE l.MaterialIssueId <> r.MaterialIssueId)
+               WHERE r.MaterialIssueId IS NOT NULL AND l.MaterialIssueId <> r.MaterialIssueId)
         THROW 50042, N'Dòng phiếu trả phải là dòng của phiếu cấp mà phiếu trả gắn vào.', 1;
 END;
 GO
@@ -4089,11 +4129,11 @@ FROM (VALUES ('PC-DEMO-003', 100, 100), ('PC-DEMO-004', 150, NULL)) v(Code, Qty,
 JOIN dbo.MaterialIssue i ON i.IssueCode = v.Code;
 
 -- TV-DEMO-001: tổ cắt trả 8 m vải thừa, chờ Thủ kho xác nhận
-INSERT dbo.MaterialReturn (ReturnCode, MaterialIssueId, Note, Status, CreatedAt)
-SELECT 'TV-DEMO-001', i.MaterialIssueId, N'Vải thừa sau bàn cắt 1', 'PENDING', '2026-10-25 16:00:00'
+INSERT dbo.MaterialReturn (ReturnCode, MaterialIssueId, ReturningTeamId, OrderId, WorkOrderId, Note, Status, CreatedAt)
+SELECT 'TV-DEMO-001', i.MaterialIssueId, i.ReceivingTeamId, i.OrderId, i.WorkOrderId, N'Vải thừa sau bàn cắt 1', 'PENDING', '2026-10-25 16:00:00'
 FROM dbo.MaterialIssue i WHERE i.IssueCode = 'PC-DEMO-003';
-INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, ReturnedQty)
-SELECT r.MaterialReturnId, l.MaterialIssueLineId, 8
+INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, MaterialId, ReturnedQty)
+SELECT r.MaterialReturnId, l.MaterialIssueLineId, l.MaterialId, 8
 FROM dbo.MaterialReturn r JOIN dbo.MaterialIssueLine l ON l.MaterialIssueId = r.MaterialIssueId WHERE r.ReturnCode = 'TV-DEMO-001';
 
 -- Bàn cắt: bàn 1 cắt 90 M + 60 L, dùng 66 m vải; bàn 2 cắt 30 M + 20 L, dùng 22 m (số lượng sau cắt + số mét, DEV-ALL-90)
@@ -4556,6 +4596,13 @@ INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit, Status) 
  ('DEMO-CUC01', N'Cúc nhựa 4 lỗ DEMO', N'Trắng', 'BUTTON', N'cái', 'ACTIVE'),
  ('DEMO-LOT01', N'Vải lót lưới DEMO', N'Đen', 'LINING', N'm', 'ACTIVE'),
  ('DEMO-NGUNG01', N'Mex dựng cũ DEMO', N'', 'INTERLINING', N'm', 'DISCONTINUED');
+-- NVL phế phẩm: tổ cắt / tổ may trả về kho, không có trần số lượng (DEV-ALL-112)
+INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit, Status) VALUES
+ ('PP-0001', N'Vải vụn', N'', 'SCRAP_FABRIC', N'kg', 'ACTIVE'),
+ ('PP-0002', N'Kim gãy', N'', 'SCRAP_NEEDLE', N'cái', 'ACTIVE'),
+ ('PP-0003', N'Phế phẩm khác', N'', 'SCRAP_OTHER', N'kg', 'ACTIVE');
+-- Khổ vải mặc định 1,5 m cho vải mẫu (DEV-ALL-102)
+UPDATE dbo.Material SET WidthM = 1.50 WHERE MaterialType = 'FABRIC' AND WidthM IS NULL;
 
 -- DEMO-SM03: có màu – size nhưng chưa khai định mức và công đoạn (thử cảnh báo chưa khai); DEMO-NGUNG04: mã hàng ngừng sản xuất
 INSERT dbo.Product (ProductCode, ProductName, Description, Status) VALUES
@@ -4814,14 +4861,15 @@ INSERT dbo.MaterialIssueLine (MaterialIssueId, MaterialId, IssuedQty)
 SELECT MaterialIssueId, @mVaiDen, 30 FROM dbo.MaterialIssue WHERE IssueCode = 'PC-DEMO-901';
 
 DECLARE @il3 INT = (SELECT l.MaterialIssueLineId FROM dbo.MaterialIssueLine l JOIN dbo.MaterialIssue i ON i.MaterialIssueId = l.MaterialIssueId WHERE i.IssueCode = 'PC-DEMO-003');
-INSERT dbo.MaterialReturn (ReturnCode, MaterialIssueId, Note, Status, ConfirmedBy, ConfirmedAt, RejectReason, CreatedAt)
-SELECT v.Code, l.MaterialIssueId, v.Note, v.Status, IIF(v.Status = 'CONFIRMED', @thukho, NULL), IIF(v.Status = 'CONFIRMED', CAST('2026-10-27 16:30:00' AS DATETIME2(0)), NULL), v.Reason, '2026-10-27 16:00:00'
+INSERT dbo.MaterialReturn (ReturnCode, MaterialIssueId, ReturningTeamId, OrderId, WorkOrderId, Note, Status, ConfirmedBy, ConfirmedAt, RejectReason, CreatedAt)
+SELECT v.Code, l.MaterialIssueId, i.ReceivingTeamId, i.OrderId, i.WorkOrderId, v.Note, v.Status, IIF(v.Status = 'CONFIRMED', @thukho, NULL), IIF(v.Status = 'CONFIRMED', CAST('2026-10-27 16:30:00' AS DATETIME2(0)), NULL), v.Reason, '2026-10-27 16:00:00'
 FROM (VALUES ('TV-DEMO-002', N'Vải thừa bàn cắt 2', 'CONFIRMED', CAST(NULL AS NVARCHAR(500))),
              ('TV-DEMO-003', N'Vải đầu tấm', 'REJECTED', N'Vải rách, không nhận lại kho'),
              ('TV-DEMO-004', N'Tổ cắt rút phiếu', 'CANCELLED', NULL)) v(Code, Note, Status, Reason)
-JOIN dbo.MaterialIssueLine l ON l.MaterialIssueLineId = @il3;
-INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, ReturnedQty, ConfirmedQty)
-SELECT r.MaterialReturnId, @il3, v.Qty, IIF(r.Status = 'CONFIRMED', v.Qty, NULL)
+JOIN dbo.MaterialIssueLine l ON l.MaterialIssueLineId = @il3
+JOIN dbo.MaterialIssue i ON i.MaterialIssueId = l.MaterialIssueId;
+INSERT dbo.MaterialReturnLine (MaterialReturnId, MaterialIssueLineId, MaterialId, ReturnedQty, ConfirmedQty)
+SELECT r.MaterialReturnId, @il3, (SELECT MaterialId FROM dbo.MaterialIssueLine WHERE MaterialIssueLineId = @il3), v.Qty, IIF(r.Status = 'CONFIRMED', v.Qty, NULL)
 FROM (VALUES ('TV-DEMO-002', 5), ('TV-DEMO-003', 3), ('TV-DEMO-004', 2)) v(Code, Qty)
 JOIN dbo.MaterialReturn r ON r.ReturnCode = v.Code;
 

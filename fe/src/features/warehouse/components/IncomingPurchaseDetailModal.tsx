@@ -3,7 +3,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { DetailDescriptions, DetailModal } from '@/components/common/DetailModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { formatQty } from '@/utils/format';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { INCOMING_TEXT, PO_GOODS_STATUS_LABEL } from '../constants';
 import type { IncomingSupplierMaterial } from '../types';
 import type { PurchaseOrderGroup } from '../utils/groupByPurchaseOrder';
@@ -53,7 +53,11 @@ export function IncomingPurchaseDetailModal({ order, onClose }: IncomingPurchase
                 : `${order.receivedCount} / ${order.expectedDeliveryCount} ${text.deliveryUnit}`}
             </Descriptions.Item>
             <Descriptions.Item label={text.expectedDeliveryDate}>
-              {formatDeliveryWindow(order.expectedDeliveryDate, order.expectedDeliveryDateTo)}
+              {formatDeliveryDates(
+                order.expectedDeliveryDates,
+                order.expectedDeliveryDate,
+                order.expectedDeliveryDateTo,
+              )}
             </Descriptions.Item>
           </DetailDescriptions>
           <DataTable

@@ -21,7 +21,10 @@ public static class RequisitionLimits
     public const decimal MaxPieceQty = 1_000_000m;
 }
 
-/// <summary>Kiểm chung của đơn Xin NVL / Xin BTP của tổ trưởng: có dòng, tối đa 50 dòng, không trùng, ngày cần không ở quá khứ.</summary>
+/// <summary>
+/// Kiểm chung của đơn Xin NVL / Xin BTP của tổ trưởng: có dòng, tối đa 50 dòng, không trùng, ngày cần không ở quá khứ.
+/// Đơn Xin NVL / Xin BTP còn kiểm trần số lượng mỗi dòng là số khả dụng trong kho (DEV-ALL-110, <see cref="CheckStock"/>).
+/// </summary>
 public abstract class RequisitionRequestHandler : IRequestTypeHandler
 {
     private readonly IClock _clock;
@@ -57,22 +60,36 @@ public abstract class RequisitionRequestHandler : IRequestTypeHandler
 
     protected static Result Invalid(string message) =>
         Result.Failure(ErrorCodes.RequestLinesInvalid, message, ResultKind.Validation);
+
+    /// <summary>Mỗi dòng không vượt khả dụng trong kho; liệt kê mọi dòng vượt trong một lỗi (DEV-ALL-110).</summary>
+    protected static Result CheckStock(IEnumerable<(string Name, decimal Quantity, decimal Available)> lines)
+    {
+        var over = lines.Where(l => l.Quantity > Math.Max(0, l.Available))
+            .Select(l => string.Format(Messages.RequisitionOverStockLine, l.Name, Qty(l.Quantity), Qty(Math.Max(0, l.Available))))
+            .ToList();
+        return over.Count == 0 ? Result.Success() : Invalid(string.Format(Messages.RequisitionOverStock, string.Join("; ", over)));
+    }
+
+    protected static string Qty(decimal value) => value.ToString("#,0.##", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
 }
 
 /// <summary>
 /// Xin NVL (tổ cắt, tổ may): mỗi dòng phải chọn NVL trong danh mục đang dùng. Vải: số lượng lớn hơn 0, tối đa 2 chữ số sau dấu phẩy;
 /// NVL khác vải (chỉ, cúc, phụ liệu…): số nguyên. Tối đa 9.999.999 mỗi dòng.
 /// Có chọn lệnh cắt (tổ cắt, DEV-ALL-92): chỉ xin vải hệ thống tính cho lệnh, tổng các đơn xin NVL của lệnh không vượt trần của lệnh.
+/// Tổ may bắt buộc chọn đơn hàng và chỉ xin NVL của đơn; mọi dòng không vượt khả dụng kho (DEV-ALL-110).
 /// </summary>
 public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandler
 {
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
     private readonly IWorkOrderFabricNeeds _needs;
+    private readonly IStockService _stock;
 
-    public MaterialRequisitionRequestHandler(IClock clock, IUnitOfWork uow, ICurrentUser user, IWorkOrderFabricNeeds needs) : base(clock)
+    public MaterialRequisitionRequestHandler(IClock clock, IUnitOfWork uow, ICurrentUser user, IWorkOrderFabricNeeds needs,
+        IStockService stock) : base(clock)
     {
-        _uow = uow; _user = user; _needs = needs;
+        _uow = uow; _user = user; _needs = needs; _stock = stock;
     }
 
     public override string RequestType => RequestTypes.MaterialRequisition;
@@ -88,7 +105,7 @@ public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandle
 
         var ids = draft.Lines.Select(l => l.MaterialId!.Value).Distinct().ToList();
         var materials = await _uow.Repository<Material>().Query().AsNoTracking()
-            .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active)
+            .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active && m.MaterialType != MaterialTypes.Scrap)
             .Select(m => new { m.MaterialId, m.MaterialName, m.MaterialType }).ToDictionaryAsync(m => m.MaterialId, ct);
 
         foreach (var line in draft.Lines)
@@ -100,9 +117,33 @@ public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandle
                 return Invalid(string.Format(isFabric ? Messages.RequisitionFabricQtyInvalid : Messages.RequisitionOtherQtyInvalid,
                     material.MaterialName));
         }
-        return draft.WorkOrderId is int workOrderId
-            ? await CheckWorkOrderCapAsync(draft, workOrderId, materials.ToDictionary(m => m.Key, m => m.Value.MaterialName), ct)
-            : Result.Success();
+
+        var names = materials.ToDictionary(m => m.Key, m => m.Value.MaterialName);
+        var scope = await CheckOrderScopeAsync(draft, names, ct);
+        if (!scope.IsSuccess) return scope;
+        var available = await _stock.GetMaterialAvailableAsync(ids, ct);
+        var stock = CheckStock(draft.Lines.Select(l => (names[l.MaterialId!.Value], l.Quantity, available.GetValueOrDefault(l.MaterialId!.Value))));
+        if (!stock.IsSuccess) return stock;
+        return draft.WorkOrderId is int workOrderId ? await CheckWorkOrderCapAsync(draft, workOrderId, names, ct) : Result.Success();
+    }
+
+    /// <summary>
+    /// Tổ may bắt buộc chọn đơn hàng (DEV-ALL-110). Có đơn hàng mà không theo lệnh cắt thì chỉ xin NVL đã khai trong NVL của đơn,
+    /// khớp phạm vi phiếu cấp (DEV-ALL-99).
+    /// </summary>
+    private async Task<Result> CheckOrderScopeAsync(RequestDraft draft, IReadOnlyDictionary<int, string> names, CancellationToken ct)
+    {
+        if (draft.OrderId is not int orderId)
+            return SewingTeamScope.Of(_user) is null ? Result.Success() : Invalid(Messages.RequisitionOrderRequired);
+        if (draft.WorkOrderId is not null) return Result.Success();
+
+        var ids = names.Keys.ToList();
+        var ofOrder = await _uow.Repository<OrderMaterial>().Query().AsNoTracking()
+            .Where(m => m.OrderId == orderId && ids.Contains(m.MaterialId)).Select(m => m.MaterialId).ToListAsync(ct);
+        var outside = ids.Except(ofOrder).Select(id => names[id]).ToList();
+        return outside.Count == 0
+            ? Result.Success()
+            : Invalid(string.Format(Messages.RequisitionMaterialNotInOrder, string.Join(", ", outside)));
     }
 
     /// <summary>Lệnh của tổ, đang mở / đang cắt; mỗi NVL là vải hệ thống tính được cho lệnh; đã xin ở đơn khác + đơn này ≤ trần.</summary>
@@ -126,19 +167,40 @@ public sealed class MaterialRequisitionRequestHandler : RequisitionRequestHandle
         }
         return over.Count == 0 ? Result.Success() : Invalid(string.Format(Messages.RequisitionOverWorkOrderCap, string.Join("; ", over)));
     }
-
-    private static string Qty(decimal value) => value.ToString("#,0.##", System.Globalization.CultureInfo.GetCultureInfo("vi-VN"));
 }
 
-/// <summary>Xin BTP (tổ may): số lượng bộ là số nguyên từ 1 đến 1.000.000.</summary>
+/// <summary>
+/// Xin BTP (tổ may): bắt buộc chọn đơn hàng; mỗi dòng là một dòng đơn (mã hàng × màu × size, cả bộ) của đơn đó; số lượng bộ là số
+/// nguyên từ 1 đến 1.000.000 và không vượt số bộ khả dụng trong kho BTP (DEV-ALL-110). Dòng chia cho tổ kiểm ở RequestService.
+/// </summary>
 public sealed class SemiFinishedRequisitionRequestHandler : RequisitionRequestHandler
 {
-    public SemiFinishedRequisitionRequestHandler(IClock clock) : base(clock) { }
+    private readonly IUnitOfWork _uow;
+    private readonly IStockService _stock;
+
+    public SemiFinishedRequisitionRequestHandler(IClock clock, IUnitOfWork uow, IStockService stock) : base(clock)
+    {
+        _uow = uow; _stock = stock;
+    }
 
     public override string RequestType => RequestTypes.SemiFinishedRequisition;
 
-    protected override Task<Result> CheckLinesAsync(RequestDraft draft, CancellationToken ct) =>
-        Task.FromResult(draft.Lines.Any(l => l.Quantity < 1 || l.Quantity > RequisitionLimits.MaxPieceQty || l.Quantity != decimal.Truncate(l.Quantity))
-            ? Invalid(Messages.RequisitionPieceQtyInvalid)
-            : Result.Success());
+    protected override async Task<Result> CheckLinesAsync(RequestDraft draft, CancellationToken ct)
+    {
+        if (draft.Lines.Any(l => l.Quantity < 1 || l.Quantity > RequisitionLimits.MaxPieceQty || l.Quantity != decimal.Truncate(l.Quantity)))
+            return Invalid(Messages.RequisitionPieceQtyInvalid);
+        if (draft.OrderId is not int orderId) return Invalid(Messages.RequisitionOrderRequired);
+        if (draft.Lines.Any(l => l.OrderLineId is null || l.ProductComponentMaterialId is not null))
+            return Invalid(Messages.RequisitionPieceLineRequired);
+
+        var ids = draft.Lines.Select(l => l.OrderLineId!.Value).ToList();
+        var labels = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+            .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == orderId)
+            .Select(l => new { l.OrderLineId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
+            .ToDictionaryAsync(l => l.OrderLineId, l => string.Format(Messages.OrderLineLabel, l.ProductCode, l.Color, l.SizeCode), ct);
+        if (labels.Count != ids.Count) return Invalid(Messages.RequisitionOrderLineNotInOrder);
+
+        var available = await _stock.GetSetAvailableAsync(ids, ct);
+        return CheckStock(draft.Lines.Select(l => (labels[l.OrderLineId!.Value], l.Quantity, available.GetValueOrDefault(l.OrderLineId!.Value))));
+    }
 }

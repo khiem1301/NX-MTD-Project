@@ -74,8 +74,9 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
 
     private void Return(MaterialIssueLine issue, decimal qty, string status) => _returnLines.Add(new MaterialReturnLine
     {
-        MaterialIssueLine = issue, ConfirmedQty = status == HandoverStatuses.Confirmed ? qty : null, ReturnedQty = qty,
-        MaterialReturn = new MaterialReturn { Status = status, MaterialIssue = issue.MaterialIssue },
+        MaterialId = issue.MaterialId, Material = new Material { MaterialId = issue.MaterialId!.Value },
+        ConfirmedQty = status == HandoverStatuses.Confirmed ? qty : null, ReturnedQty = qty,
+        MaterialReturn = new MaterialReturn { Status = status, WorkOrderId = issue.MaterialIssue.WorkOrderId },
     });
 
     private void Cut(int qty) => _layLines.Add(new CuttingLayLine
@@ -115,7 +116,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     {
         Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
         var issue = IssueReceived(120);
-        _returns.Add(new MaterialReturn { Status = HandoverStatuses.Pending, MaterialIssue = issue.MaterialIssue });
+        _returns.Add(new MaterialReturn { Status = HandoverStatuses.Pending, WorkOrderId = issue.MaterialIssue.WorkOrderId });
 
         var blocked = await Sut().CloseShortAsync(7, "Hết vải", default);
 

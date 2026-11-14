@@ -2,7 +2,7 @@ import { Descriptions, Progress, type TableColumnsType } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { DetailDescriptions, DetailModal } from '@/components/common/DetailModal';
 import { formatQty } from '@/utils/format';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { INCOMING_TEXT, PERCENT_MAX } from '../constants';
 import type { IncomingCustomerMaterial } from '../types';
 import type { OrderGroup } from '../utils/groupByOrder';
@@ -61,7 +61,11 @@ export function IncomingCustomerDetailModal({ order, onClose }: IncomingCustomer
                 : `${order.receivedCount} / ${order.expectedDeliveryCount} ${text.deliveryUnit}`}
             </Descriptions.Item>
             <Descriptions.Item label={text.expectedDeliveryDate}>
-              {formatDeliveryWindow(order.expectedDeliveryDate, order.expectedDeliveryDateTo)}
+              {formatDeliveryDates(
+                order.expectedDeliveryDates,
+                order.expectedDeliveryDate,
+                order.expectedDeliveryDateTo,
+              )}
             </Descriptions.Item>
           </DetailDescriptions>
           <DataTable

@@ -24,11 +24,13 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
     private readonly INotificationService _notifier;
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
+    private readonly DeliveryScheduleStore _schedule;
 
     public PurchaseOrderFlowService(IUnitOfWork uow, IPurchaseOrderService orders, IAuditLogService audit,
         INotificationService notifier, ICurrentUser user, IClock clock)
     {
         _uow = uow; _orders = orders; _audit = audit; _notifier = notifier; _user = user; _clock = clock;
+        _schedule = new DeliveryScheduleStore(uow);
     }
 
     private IQueryable<PurchaseOrder> PurchaseOrders => _uow.Repository<PurchaseOrder>().Query();
@@ -87,6 +89,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         if (!detail.IsSuccess) return Fail.NotFound<PurchaseOrderFlowDto>();
         var lines = detail.Data!.Lines;
         var history = await _audit.GetHistoryAsync(nameof(PurchaseOrder), purchaseOrderId, ct);
+        var deliveryDates = await _schedule.GetAsync(DeliveryOwner.PurchaseOrder, purchaseOrderId, ct);
 
         return Result<PurchaseOrderFlowDto>.Success(new PurchaseOrderFlowDto(
             header.PurchaseOrderId, header.PoCode, header.OrderId, header.OrderCode, header.SupplierId,
@@ -96,7 +99,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
             lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
             PermissionsFor(header.GoodsStatus, header.PaymentStatus), history, header.ExpectedDeliveryDate,
-            header.ExpectedDeliveryDateTo));
+            header.ExpectedDeliveryDateTo, deliveryDates));
     }
 
     // ---------- Quản đốc ----------
@@ -110,8 +113,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
         var invalid = ValidatePlaceInput(po, dto);
         if (invalid is not null) return invalid;
-        var dateError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDate,
-            PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo), dto.OrderDate, po.OrderId, ct);
+        var dateError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDates, dto.OrderDate, po.OrderId, ct);
         if (dateError is not null)
             return Result.Failure(ErrorCodes.PurchaseOrderDateInvalid, dateError, ResultKind.Validation);
 
@@ -128,6 +130,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
         return await _uow.InTransactionAsync(async () =>
         {
+            await _schedule.ReplaceAsync(DeliveryOwner.PurchaseOrder, po.PurchaseOrderId, dto.ExpectedDeliveryDates ?? [], ct);
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
                 new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate,
                     po.ExpectedDeliveryDateTo, Lines = Snapshot(po) }));
@@ -170,8 +173,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         po.SupplierId = supplier.SupplierId;
         po.OrderDate = dto.OrderDate;
         po.ExpectedDeliveryCount = dto.ExpectedDeliveryCount;
-        po.ExpectedDeliveryDate = dto.ExpectedDeliveryDate;
-        po.ExpectedDeliveryDateTo = PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo);
+        (po.ExpectedDeliveryDate, po.ExpectedDeliveryDateTo) = DeliveryScheduleStore.Summary(dto.ExpectedDeliveryDates ?? []);
         po.Note = Clean(dto.Note) ?? po.Note;
         po.GoodsStatus = PurchaseGoodsStatuses.Ordered;
     }

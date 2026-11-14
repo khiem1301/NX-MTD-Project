@@ -105,6 +105,7 @@ export type DailyAllocationRow = {
   /** Công đoạn đã phân công cho công nhân trước khi may; false = tổ trưởng thêm ngoài phân công. */
   isAssigned: boolean;
   carriedQty: number;
+  /** Số giao trong ngày, gồm cả phần đang chờ công nhân xác nhận. */
   allocatedQty: number;
   outputQty: number;
   remainingQty: number;
@@ -113,6 +114,15 @@ export type DailyAllocationRow = {
   previousQty: number;
   unitRate: number | null;
   rateApproved: boolean;
+  /** Phần giao trong ngày đang chờ công nhân xác nhận; chưa tính vào trần sản lượng. */
+  pendingQty: number;
+  /** Thành phần (chi tiết vải) của mã hàng mà công đoạn làm trên đó. */
+  components: OperationComponentRef[];
+};
+
+export type OperationComponentRef = {
+  productComponentId: number;
+  componentName: string;
 };
 
 export type DailyAllocationBoard = { workDate: string; rows: DailyAllocationRow[] };

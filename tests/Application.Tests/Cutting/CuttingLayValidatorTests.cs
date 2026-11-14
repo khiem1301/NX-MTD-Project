@@ -2,6 +2,7 @@ using FluentAssertions;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Validators;
+using NX_MTD.Domain.Constants;
 
 namespace Application.Tests;
 
@@ -94,8 +95,8 @@ public class CuttingLayValidatorTests
     [InlineData("-1", false)]
     [InlineData("1.2345", false)]
     public void ReturnQty_Boundaries(string value, bool expected) =>
-        new CreateMaterialReturnDtoValidator().Validate(new CreateMaterialReturnDto(1, null,
-                [new CreateReturnLineDto(1, decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture))]))
+        new CreateMaterialReturnDtoValidator().Validate(new CreateMaterialReturnDto(WarehouseTypes.Material, null, null, null,
+                [new CreateReturnLineDto(1, null, decimal.Parse(value, System.Globalization.CultureInfo.InvariantCulture))]))
             .IsValid.Should().Be(expected);
 
     [Theory]

@@ -29,6 +29,7 @@ public class PurchaseFlowServiceTests
     private readonly List<PurchaseOrder> _pos = new();
     private readonly List<Supplier> _suppliers = new();
     private readonly List<VwPurchaseOrderDelivery> _deliveries = new();
+    private readonly List<DeliveryScheduleDate> _schedule = new();
 
     public PurchaseFlowServiceTests()
     {
@@ -42,6 +43,9 @@ public class PurchaseFlowServiceTests
         var deliveryRepo = Substitute.For<IGenericRepository<VwPurchaseOrderDelivery>>();
         deliveryRepo.Query().Returns(_ => _deliveries.AsTestAsyncQueryable());
         _uow.Repository<VwPurchaseOrderDelivery>().Returns(deliveryRepo);   // số phiếu nhập đã xác nhận (vw_PurchaseOrderDelivery)
+        var scheduleRepo = Substitute.For<IGenericRepository<DeliveryScheduleDate>>();
+        scheduleRepo.Query().Returns(_ => _schedule.AsTestAsyncQueryable());
+        _uow.Repository<DeliveryScheduleDate>().Returns(scheduleRepo);
     }
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
@@ -652,13 +656,16 @@ public class PurchaseFlowValidatorTests
         validator.Validate(new SaveCustomerDto("Khách A", "0901234567", "a@b.vn", "12 Lê Lợi")).IsValid.Should().BeTrue();
     }
 
+    /// <summary>Đúng <paramref name="count"/> ngày giao, mỗi ngày cách một ngày (DEV-ALL-113).</summary>
+    private static DateOnly[] Dates(int count) => Enumerable.Range(0, Math.Max(count, 0)).Select(i => new DateOnly(2026, 11, 10).AddDays(i)).ToArray();
+
     [Fact]
     public void Place_RequiresPositivePriceAndSupplier()
     {
         var validator = new PlacePurchaseOrderDtoValidator();
         var today = new DateOnly(2026, 10, 27);
         PlacePurchaseOrderDto Dto(int supplier, decimal price) =>
-            new(supplier, today, 1, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer, today.AddDays(5));
+            new(supplier, today, 1, null, new[] { new PlacePurchaseLineDto(1, 10, price) }, RowVer, [today.AddDays(5)]);
 
         validator.Validate(Dto(3, 1000)).IsValid.Should().BeTrue();
         validator.Validate(Dto(0, 1000)).IsValid.Should().BeFalse();
@@ -672,7 +679,7 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, new DateOnly(2026, 11, 1), 1, null, [line], new DateOnly(2026, 11, 10)))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, supplierId, new DateOnly(2026, 11, 1), 1, null, [line], [new DateOnly(2026, 11, 10)]))
             .IsValid.Should().Be(valid);
     }
 
@@ -686,18 +693,17 @@ public class PurchaseFlowValidatorTests
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, price);
 
-        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line], new DateOnly(2026, 11, 10),
-            new DateOnly(2026, 11, 20)))
+        new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), count, null, [line], Dates(count)))
             .IsValid.Should().Be(valid);
     }
 
     [Fact]
-    public void Validate_PurchaseOrderDeliversTwiceWithoutDateTo_IsInvalid()
+    public void Validate_DeliveryScheduleDatesNotMatchingCount_IsInvalid()
     {
         var line = new SavePurchaseOrderLineDto(5, null, null, null, 2, 1000);
 
         new CreatePurchaseOrderDtoValidator().Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 2, null, [line],
-            new DateOnly(2026, 11, 10))).IsValid.Should().BeFalse();
+            [new DateOnly(2026, 11, 10)])).IsValid.Should().BeFalse();
     }
 
 
@@ -708,7 +714,7 @@ public class PurchaseFlowValidatorTests
         var validator = new CreatePurchaseOrderDtoValidator();
 
         validator.Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 1, null, [line])).IsValid.Should().BeFalse();
-        validator.Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 1, null, [line], new DateOnly(2026, 11, 10)))
+        validator.Validate(new CreatePurchaseOrderDto(null, 3, new DateOnly(2026, 11, 1), 1, null, [line], [new DateOnly(2026, 11, 10)]))
             .IsValid.Should().BeTrue();
     }
     [Fact]

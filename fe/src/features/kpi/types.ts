@@ -100,16 +100,33 @@ export type KpiCalendar = {
   days: KpiCalendarDay[];
 };
 
-/** Kết thúc đơn của tổ: một công nhân lệch ở một dòng đơn (báo ở công đoạn cuối nhiều hơn QC đạt + hàng hủy). */
-export type EndOfOrderRow = {
-  orderLineId: number;
-  color: string;
-  sizeCode: string;
+/** Công nhân đã báo sản lượng một công đoạn ở một dòng đơn lệch, kèm sản lượng đã báo. */
+export type EndOfOrderWorker = {
   workerId: number;
   workerCode: string;
   workerName: string;
   reportedQty: number;
+};
+
+/** Dòng đơn lệch ở một công đoạn: báo nhiều hơn QC đạt + hàng hủy. Chỉ cảnh báo, không tự trừ lương. Workers: sản lượng giảm dần. */
+export type EndOfOrderLine = {
+  orderLineId: number;
+  color: string;
+  sizeCode: string;
+  reportedQty: number;
+  qcQty: number;
+  scrapQty: number;
   mismatchQty: number;
+  workers: EndOfOrderWorker[];
+};
+
+/** Công đoạn có lệch (chỉ công đoạn lệch được trả về), lệch nhiều nhất lên đầu. */
+export type EndOfOrderOperation = {
+  operationId: number;
+  operationCode: string;
+  operationName: string;
+  mismatchQty: number;
+  lines: EndOfOrderLine[];
 };
 
 export type EndOfOrderPreview = {
@@ -125,8 +142,7 @@ export type EndOfOrderPreview = {
   thresholdPct: number;
   /** None | AutoApproved | LeaderDecides */
   otDecision: 'None' | 'AutoApproved' | 'LeaderDecides';
-  finalOperationName: string | null;
-  rows: EndOfOrderRow[];
+  operations: EndOfOrderOperation[];
   blockers: string[];
   canFinish: boolean;
 };

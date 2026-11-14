@@ -101,20 +101,15 @@ public interface IQcBatchService
     Task<Result> DeleteAsync(int qcBatchId, DeleteQcBatchDto dto, CancellationToken ct);
 }
 
-/// <summary>Tự chốt phiếu hàng hỏng quá hạn phản đối mà công nhân không phản đối (chạy theo chu kỳ ở job nền).</summary>
-public interface IDefectAutoConfirmService
-{
-    /// <returns>Số phiếu đã chuyển sang CONFIRMED.</returns>
-    Task<int> RunAsync(CancellationToken ct);
-}
-
-/// <summary>KI-08 (UC56): tổ trưởng / tổ phó may ghi hàng hỏng Rework / Scrap; công nhân xem và phản hồi nếu ghi sai.</summary>
+/// <summary>
+/// KI-08 (UC56): tổ trưởng / tổ phó may ghi, sửa, hủy phiếu hàng hỏng (trong 24 giờ); Quản đốc / Admin sửa, hủy khi chưa vướng ràng
+/// buộc; công nhân chỉ xem phiếu của mình.
+/// </summary>
 public interface IDefectService
 {
     Task<Result<PagedResult<DefectDto>>> ListForTeamAsync(DefectQuery query, CancellationToken ct);
     Task<Result<IReadOnlyList<DefectDto>>> ListMineAsync(int workerId, DefectQuery query, CancellationToken ct);
     Task<Result<int>> CreateAsync(CreateDefectDto dto, CancellationToken ct);
+    Task<Result> UpdateAsync(int defectRecordId, UpdateDefectDto dto, CancellationToken ct);
     Task<Result> CancelAsync(int defectRecordId, CancelDefectDto dto, CancellationToken ct);
-    Task<Result> ObjectAsync(int workerId, int defectRecordId, ObjectDefectDto dto, CancellationToken ct);
-    Task<Result> ConfirmAsync(int defectRecordId, ConfirmDefectDto dto, CancellationToken ct);
 }

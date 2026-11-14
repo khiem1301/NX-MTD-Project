@@ -76,10 +76,9 @@ public sealed class ResolveShortDeliveryDtoValidator : AbstractValidator<Resolve
             RuleFor(x => x.ExpectedDeliveryCount)
                 .Must(c => c >= 1 && c <= DeliveryLimits.MaxCount)
                 .WithMessage(string.Format(WarehouseMessages.ReplenishCountInvalid, DeliveryLimits.MaxCount));
-            RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ReplenishDateRequired);
-            RuleFor(x => x.ExpectedDeliveryDateTo)
-                .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to) is null)
-                .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to));
+            RuleFor(x => x.ExpectedDeliveryDates).NotNull().WithMessage(WarehouseMessages.ReplenishDateRequired)
+                .Must((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates) is null)
+                .WithMessage((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates));
         });
     }
 }

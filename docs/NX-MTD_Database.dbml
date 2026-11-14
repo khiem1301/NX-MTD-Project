@@ -1147,6 +1147,7 @@ Table Material [note: 'Nguyên vật liệu'] {
   MaterialType varchar(10) [note: 'Cột tính từ Category: FABRIC (vải, đi qua tổ cắt) hoặc TRIM (phụ liệu, cấp thẳng cho tổ may); không nhập']
   Category varchar(15) [not null, check: `Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB', 'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE', 'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER')`, note: 'Loại cụ thể, người dùng chọn; quyết định MaterialType. Vải: MAIN_FABRIC, LINING, INTERLINING, RIB. Phụ liệu: THREAD, ZIPPER, BUTTON, SNAP, ELASTIC, TAPE, LABEL, HANG_TAG, PADDING, PACKAGING, OTHER']
   Unit nvarchar(20) [not null, note: 'Đơn vị tính: m, kg, cuộn, cái, cuộn chỉ...']
+  WidthM decimal(4,2) [check: `WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)`, note: 'Khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu NULL (DEV-ALL-102)']
   Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'Trạng thái: ACTIVE, DISCONTINUED']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
 
@@ -1261,6 +1262,7 @@ Table ProductMarker [note: 'Bìa cắt của đơn (DEV-ALL-85): phía trên gi�
   MarkerNo tinyint [not null, check: `MarkerNo > 0`, note: 'Nhóm bìa của mã hàng (thân, tay...), khớp ProductMarkerFabric / ProductMarkerComponent']
   MarkerCode varchar(20) [not null, note: 'Mã bìa trong nhóm: 1A, 1B...']
   LengthM decimal(7,2) [not null, check: `LengthM > 0`, note: 'Chiều dài bìa (m)']
+  WidthM decimal(4,2) [not null, default: 1.50, check: `WidthM > 0 AND WidthM <= 3.5`, note: 'Khổ bìa (m), tối đa 3,5 m (DEV-ALL-102)']
   Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'ACTIVE / DISCONTINUED']
 
   indexes {

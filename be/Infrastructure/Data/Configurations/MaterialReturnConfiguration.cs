@@ -9,7 +9,7 @@ public sealed class MaterialReturnConfiguration : IEntityTypeConfiguration<Mater
 {
     public void Configure(EntityTypeBuilder<MaterialReturn> entity)
     {
-        entity.ToTable("MaterialReturn", tb => tb.HasComment("Phiếu trả vải thừa"));
+        entity.ToTable("MaterialReturn", tb => tb.HasComment("Phiếu trả NVL / phế phẩm / BTP của tổ cắt, tổ may về kho"));
 
         entity.HasIndex(e => e.ReturnCode, "UQ_MaterialReturn_Code").IsUnique();
 
@@ -26,6 +26,10 @@ public sealed class MaterialReturnConfiguration : IEntityTypeConfiguration<Mater
             .HasMaxLength(20)
             .IsUnicode(false)
             .HasDefaultValue("PENDING");
+        entity.Property(e => e.WarehouseType)
+            .HasMaxLength(15)
+            .IsUnicode(false)
+            .HasDefaultValue("MATERIAL");
 
         entity.HasOne(d => d.ConfirmedByNavigation).WithMany(p => p.MaterialReturns)
             .HasForeignKey(d => d.ConfirmedBy)
@@ -33,7 +37,19 @@ public sealed class MaterialReturnConfiguration : IEntityTypeConfiguration<Mater
 
         entity.HasOne(d => d.MaterialIssue).WithMany(p => p.MaterialReturns)
             .HasForeignKey(d => d.MaterialIssueId)
-            .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_MRet_Issue");
+
+        entity.HasOne(d => d.ReturningTeam).WithMany()
+            .HasForeignKey(d => d.ReturningTeamId)
+            .OnDelete(DeleteBehavior.ClientSetNull)
+            .HasConstraintName("FK_MRet_Team");
+
+        entity.HasOne(d => d.Order).WithMany()
+            .HasForeignKey(d => d.OrderId)
+            .HasConstraintName("FK_MRet_Order");
+
+        entity.HasOne(d => d.WorkOrder).WithMany()
+            .HasForeignKey(d => d.WorkOrderId)
+            .HasConstraintName("FK_MRet_WorkOrder");
     }
 }

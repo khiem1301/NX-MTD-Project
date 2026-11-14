@@ -10,12 +10,18 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>Dòng và số lượng của đơn Xin NVL / Xin BTP (DEV-ALL-77): vải được lẻ 2 số, NVL khác vải và BTP chỉ số nguyên.</summary>
+/// <summary>
+/// Dòng và số lượng của đơn Xin NVL / Xin BTP (DEV-ALL-77): vải được lẻ 2 số, NVL khác vải và BTP chỉ số nguyên.
+/// DEV-ALL-110: Xin BTP chọn dòng đơn của đơn hàng; tổ may xin NVL phải chọn đơn và chỉ NVL của đơn; số xin không vượt khả dụng kho.
+/// </summary>
 public class RequisitionRequestHandlerTests : ProductionTestBase
 {
     private const int FabricId = 1;
     private const int ThreadId = 2;
     private const int OldFabricId = 3;
+    private const int OrderId = 4;
+    private const int LineId = 11;
+    private const int OtherLineId = 12;
     private static readonly DateOnly Day = new(2026, 11, 5);
 
     private readonly List<Material> _materials =
@@ -25,17 +31,41 @@ public class RequisitionRequestHandlerTests : ProductionTestBase
         new() { MaterialId = OldFabricId, MaterialName = "Vải cũ", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Discontinued },
     ];
 
+    private readonly List<OrderMaterial> _orderMaterials = [new OrderMaterial { OrderId = OrderId, MaterialId = ThreadId }];
+
+    private readonly List<OrderLine> _lines =
+    [
+        new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 3 }.WithVariant(TestVariant.Make(3, "MH3")),
+        new OrderLine { OrderLineId = OtherLineId, OrderId = OrderId + 1, ProductId = 3 }.WithVariant(TestVariant.Make(3, "MH3")),
+    ];
+
+    private readonly IStockService _stock = Substitute.For<IStockService>();
+
     public RequisitionRequestHandlerTests()
     {
         Clock.Today.Returns(Day);
+        AsCuttingTeamLeader();
         SetupQueryable(_materials);
+        SetupQueryable(_orderMaterials);
+        SetupQueryable(_lines);
+        GivenStock(Plenty);
+    }
+
+    private const decimal Plenty = 100_000_000m;
+
+    private void GivenStock(decimal available)
+    {
+        _stock.GetMaterialAvailableAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<IReadOnlyCollection<int>>().ToDictionary(id => id, _ => available));
+        _stock.GetSetAvailableAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<IReadOnlyCollection<int>>().ToDictionary(id => id, _ => available));
     }
 
     private readonly IWorkOrderFabricNeeds _needs = Substitute.For<IWorkOrderFabricNeeds>();
 
-    private MaterialRequisitionRequestHandler Nvl() => new(Clock, Uow, User, _needs);
+    private MaterialRequisitionRequestHandler Nvl() => new(Clock, Uow, User, _needs, _stock);
 
-    private SemiFinishedRequisitionRequestHandler Btp() => new(Clock);
+    private SemiFinishedRequisitionRequestHandler Btp() => new(Clock, Uow, _stock);
 
     private static decimal D(string v) => decimal.Parse(v, CultureInfo.InvariantCulture);
 
@@ -43,14 +73,17 @@ public class RequisitionRequestHandlerTests : ProductionTestBase
 
     private static RequestLineInput Text(string description, decimal qty) => new(null, null, null, description, qty);
 
-    private static RequestDraft Draft(string type, IReadOnlyList<RequestLineInput> lines, DateOnly? target = null, int? requestId = null) =>
-        new(type, null, null, null, null, null, null, target, "Xin", "Nội dung", lines, requestId);
+    private static RequestLineInput Piece(decimal qty, int orderLineId = LineId) => new(null, orderLineId, null, null, qty);
+
+    private static RequestDraft Draft(string type, IReadOnlyList<RequestLineInput> lines, DateOnly? target = null, int? requestId = null,
+        int? orderId = null) =>
+        new(type, orderId, null, null, null, null, null, target, "Xin", "Nội dung", lines, requestId);
 
     private Task<Result> CheckNvl(params RequestLineInput[] lines) =>
         Nvl().ValidateAsync(Draft(RequestTypes.MaterialRequisition, lines), default);
 
     private Task<Result> CheckBtp(params RequestLineInput[] lines) =>
-        Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, lines), default);
+        Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, lines, orderId: OrderId), default);
 
     [Theory]
     [InlineData("0.01", true)]
@@ -127,15 +160,41 @@ public class RequisitionRequestHandlerTests : ProductionTestBase
     [InlineData("2.5", false)]
     [InlineData("-3", false)]
     public async Task Btp_QuantityIsWholeNumberUpToOneMillion(string qty, bool expected) =>
-        (await CheckBtp(Text("Áo AO-01 Đỏ M", D(qty)))).IsSuccess.Should().Be(expected);
+        (await CheckBtp(Piece(D(qty)))).IsSuccess.Should().Be(expected);
 
     [Fact]
-    public async Task Btp_SameItemTwice_IsRejected_IgnoringCaseAndSpaces() =>
-        (await CheckBtp(Text("Áo đỏ M", 1), Text(" ÁO ĐỎ M ", 2))).Message.Should().Be(Messages.RequisitionDuplicateItem);
+    public async Task Btp_SameOrderLineTwice_IsRejected() =>
+        (await CheckBtp(Piece(1), Piece(2))).Message.Should().Be(Messages.RequisitionDuplicateItem);
 
     [Fact]
     public async Task Btp_LineWithoutAnyItem_IsRejected() =>
         (await CheckBtp(Text("   ", 5))).Message.Should().Be(Messages.RequisitionItemRequired);
+
+    [Fact]
+    public async Task ValidateAsync_BtpFreeTextLine_ReturnsFailure() =>
+        (await CheckBtp(Text("Áo đỏ M", 5))).Message.Should().Be(Messages.RequisitionPieceLineRequired);
+
+    [Fact]
+    public async Task ValidateAsync_BtpWithoutOrder_ReturnsFailure() =>
+        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Piece(1)]), default))
+            .Message.Should().Be(Messages.RequisitionOrderRequired);
+
+    [Fact]
+    public async Task ValidateAsync_BtpLineOfOtherOrder_ReturnsFailure() =>
+        (await CheckBtp(Piece(1, OtherLineId))).Message.Should().Be(Messages.RequisitionOrderLineNotInOrder);
+
+    [Theory]
+    [InlineData(30, true)]
+    [InlineData(31, false)]
+    public async Task ValidateAsync_BtpOverSetStock_ReturnsFailure(int qty, bool expected)
+    {
+        GivenStock(30);
+
+        var result = await CheckBtp(Piece(qty));
+
+        result.IsSuccess.Should().Be(expected);
+        if (!expected) result.Message.Should().Contain("MH3").And.Contain("khả dụng 30");
+    }
 
     [Fact]
     public async Task NoLines_IsRejected()
@@ -144,29 +203,77 @@ public class RequisitionRequestHandlerTests : ProductionTestBase
         (await CheckBtp()).Message.Should().Be(Messages.RequisitionLinesRequired);
     }
 
-    [Theory]
-    [InlineData(50, true)]
-    [InlineData(51, false)]
-    public async Task Btp_MaxLines50(int count, bool expected)
+    [Fact]
+    public async Task Btp_MoreThan50Lines_IsRejected()
     {
-        var lines = Enumerable.Range(1, count).Select(i => Text($"Hàng {i}", 1)).ToArray();
+        var lines = Enumerable.Range(1, 51).Select(i => Piece(1, i)).ToArray();
 
-        (await CheckBtp(lines)).IsSuccess.Should().Be(expected);
+        (await CheckBtp(lines)).Message.Should().Be(string.Format(Messages.RequisitionTooManyLines, 50));
     }
 
     [Fact]
     public async Task TargetDateInThePast_IsRejectedWhenCreating() =>
-        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Text("Áo", 1)], Day.AddDays(-1)), default))
+        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Piece(1)], Day.AddDays(-1), orderId: OrderId), default))
             .IsSuccess.Should().BeFalse();
 
     [Fact]
     public async Task TargetDateToday_IsAccepted() =>
-        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Text("Áo", 1)], Day), default)).IsSuccess.Should().BeTrue();
+        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Piece(1)], Day, orderId: OrderId), default)).IsSuccess.Should().BeTrue();
 
     [Fact]
     public async Task TargetDateInThePast_IsTolerated_WhenEditingAnExistingRequest() =>
-        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Text("Áo", 1)], Day.AddDays(-1), requestId: 9), default))
+        (await Btp().ValidateAsync(Draft(RequestTypes.SemiFinishedRequisition, [Piece(1)], Day.AddDays(-1), requestId: 9, orderId: OrderId), default))
             .IsSuccess.Should().BeTrue();
+
+    [Theory]
+    [InlineData("12.5", true)]
+    [InlineData("12.51", false)]
+    public async Task ValidateAsync_NvlOverStock_ReturnsFailureNamingTheMaterial(string qty, bool expected)
+    {
+        GivenStock(12.5m);
+
+        var result = await CheckNvl(Item(FabricId, D(qty)));
+
+        result.IsSuccess.Should().Be(expected);
+        if (!expected) result.Message.Should().Contain("Vải kate").And.Contain("khả dụng 12,5");
+    }
+
+    [Fact]
+    public async Task ValidateAsync_NvlMaterialWithoutStock_ReturnsFailure()
+    {
+        _stock.GetMaterialAvailableAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, decimal>());
+
+        (await CheckNvl(Item(ThreadId, 1))).Message.Should().Contain("khả dụng 0");
+    }
+
+    [Fact]
+    public async Task ValidateAsync_SewingTeamNvlWithoutOrder_ReturnsFailure()
+    {
+        AsTeamLeader();
+
+        (await CheckNvl(Item(ThreadId, 1))).Message.Should().Be(Messages.RequisitionOrderRequired);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_SewingTeamNvlNotInOrder_ReturnsFailure()
+    {
+        AsTeamLeader();
+
+        var result = await Nvl().ValidateAsync(
+            Draft(RequestTypes.MaterialRequisition, [Item(ThreadId, 1), Item(FabricId, 1)], orderId: OrderId), default);
+
+        result.Message.Should().Be(string.Format(Messages.RequisitionMaterialNotInOrder, "Vải kate"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_SewingTeamNvlOfOrder_Succeeds()
+    {
+        AsTeamLeader();
+
+        (await Nvl().ValidateAsync(Draft(RequestTypes.MaterialRequisition, [Item(ThreadId, 5)], orderId: OrderId), default))
+            .IsSuccess.Should().BeTrue();
+    }
 
     [Fact]
     public void HandlersCoverTheirOwnTypes()

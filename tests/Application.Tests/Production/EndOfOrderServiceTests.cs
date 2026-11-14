@@ -9,13 +9,11 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>Kết thúc đơn của tổ: lệch kiểm cuối đơn → phiếu hàng hỏng cho công nhân, chốt KPI, tăng ca khi không đạt.</summary>
+/// <summary>Kết thúc đơn của tổ: cảnh báo lệch kiểm cuối đơn theo từng công đoạn (không tự ghi phiếu / trừ lương), chốt KPI, tăng ca khi không đạt.</summary>
 public class EndOfOrderServiceTests : ProductionTestBase
 {
-    private const int TeamId = 5, OrderId = 1, ProductId = 1, FinalOp = 9, LineId = 11;
+    private const int TeamId = 5, OrderId = 1, ProductId = 1, FinalOp = 9, CollarOp = 8, SleeveOp = 7, LineId = 11, Line2Id = 12;
 
-    private readonly IPieceRateService _rates = Substitute.For<IPieceRateService>();
-    private readonly IRequestService _requests = Substitute.For<IRequestService>();
     private readonly List<KpiTarget> _targets = [];
     private readonly List<OrderLine> _lines = [];
     private readonly List<QcBatch> _qc = [];
@@ -29,27 +27,23 @@ public class EndOfOrderServiceTests : ProductionTestBase
     {
         SetupQueryable(_targets); SetupQueryable(_lines); SetupQueryable(_qc); SetupQueryable(_defects);
         SetupQueryable(_operations); SetupQueryable(_outputs); SetupQueryable(_employees);
-        SetupQueryable(new List<AccountingPeriod>());
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
-        Repo<DefectRecord>().When(r => r.AddAsync(Arg.Any<DefectRecord>())).Do(c =>
-        {
-            var d = c.Arg<DefectRecord>();
-            d.DefectRecordId = _defects.Count + 1;
-            _defects.Add(d);
-        });
         AsManager();
         Settings.GetIntAsync(SettingKeys.KpiOtAutoThresholdPct, Arg.Any<int>(), Arg.Any<CancellationToken>()).Returns(10);
-        _rates.FindEffectiveAsync(FinalOp, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns(new EffectivePieceRate(70, 1_000m));
 
         _lines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, OrderedQty = 100 }
             .WithVariant(TestVariant.Make(ProductId, "MH001", "Đen", "M")));
+        _lines.Add(new OrderLine { OrderLineId = Line2Id, OrderId = OrderId, OrderedQty = 100 }
+            .WithVariant(TestVariant.Make(ProductId, "MH001", "Đen", "L")));
+        _operations.Add(new Operation { OperationId = CollarOp, ProductId = ProductId, OperationCode = "OP10", OperationName = "May cổ", Status = OperationStatuses.Active });
+        _operations.Add(new Operation { OperationId = SleeveOp, ProductId = ProductId, OperationCode = "OP20", OperationName = "May tay", Status = OperationStatuses.Active });
         _operations.Add(new Operation
         {
             OperationId = FinalOp, ProductId = ProductId, OperationCode = "OPF", OperationName = "Hoàn thiện",
             IsFinalStep = true, Status = OperationStatuses.Active,
         });
-        _employees.Add(new Employee { EmployeeId = 7, EmployeeCode = "CN7", FullName = "Công nhân 7" });
-        _employees.Add(new Employee { EmployeeId = 8, EmployeeCode = "CN8", FullName = "Công nhân 8" });
+        for (var id = 7; id <= 12; id++)
+            _employees.Add(new Employee { EmployeeId = id, EmployeeCode = "CN" + id, FullName = "Công nhân " + id });
         _target = new KpiTarget
         {
             KpiTargetId = 1, OrderId = OrderId, ProductId = ProductId, SewingTeamId = TeamId, TargetFinishedQty = 100,
@@ -61,35 +55,67 @@ public class EndOfOrderServiceTests : ProductionTestBase
         _targets.Add(_target);
     }
 
-    private EndOfOrderService Sut() => new(Uow, Guard(), _rates, Notifier, Audit, Settings, User, Clock);
+    private EndOfOrderService Sut() => new(Uow, Notifier, Audit, Settings);
 
-    private void Reported(int worker, int qty) => _outputs.Add(new OutputRecord
+    private void Reported(int worker, int qty, int operation = FinalOp, int line = LineId) => _outputs.Add(new OutputRecord
     {
-        SewingTeamId = TeamId, WorkerId = worker, OperationId = FinalOp, OrderLineId = LineId, Quantity = qty,
+        SewingTeamId = TeamId, WorkerId = worker, OperationId = operation, OrderLineId = line, Quantity = qty,
     });
 
-    private void Qc(int qty) => _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = qty });
+    private void Qc(int qty, int line = LineId) => _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = line, FinishedQty = qty });
 
-    [Theory]
-    [InlineData(10, new[] { 6, 4 }, new[] { 6, 4 })]
-    [InlineData(5, new[] { 70, 30 }, new[] { 4, 1 })]
-    [InlineData(1, new[] { 10, 10, 10 }, new[] { 1, 0, 0 })]
-    [InlineData(0, new[] { 3, 3 }, new[] { 0, 0 })]
-    public void Distribute_SplitsByWeightAndKeepsTheTotal(int total, int[] weights, int[] expected) =>
-        EndOfOrderService.Distribute(total, weights).Should().Equal(expected);
+    private async Task<EndOfOrderPreviewDto> Preview(int? teamId = null) => (await Sut().PreviewAsync(1, teamId, default)).Data!;
+
+    private static bool IsMismatchNote(NotificationMessage m) => m.Title == Messages.NotifyEndOfOrderMismatchTitle;
+
+    // ========== So lệch theo từng công đoạn ==========
 
     [Fact]
-    public async Task Preview_SplitsTheMismatchBetweenWorkersByReportedOutput()
+    public async Task Preview_ComparesEveryOperationWithQcPassedPlusScrap_AndListsWhoReportedWhat()
     {
-        Reported(7, 60); Reported(8, 40);   // báo 100
-        Qc(90);                              // QC đạt 90 → lệch 10
+        Qc(90);
+        _defects.Add(new DefectRecord
+        {
+            SewingTeamId = TeamId, OrderLineId = LineId, DefectType = DefectTypes.Scrap, Status = DefectStatuses.Recorded, Quantity = 4,
+        });   // mỗi công đoạn tối đa 94
+        Reported(7, 60, CollarOp); Reported(8, 40, CollarOp);   // may cổ báo 100 → lệch 6
+        Reported(9, 94, SleeveOp);                              // may tay báo 94 → không lệch
+        Reported(10, 50, FinalOp); Reported(11, 47, FinalOp);   // hoàn thiện báo 97 → lệch 3
 
-        var preview = (await Sut().PreviewAsync(1, default)).Data!;
+        var preview = await Preview();
 
         preview.ActualQty.Should().Be(90);
-        preview.Rows.Should().Contain(r => r.WorkerId == 7 && r.MismatchQty == 6)
-            .And.Contain(r => r.WorkerId == 8 && r.MismatchQty == 4);
+        preview.Operations.Select(o => (o.OperationName, o.MismatchQty)).Should().Equal(("May cổ", 6), ("Hoàn thiện", 3));   // lệch nhiều nhất lên đầu
+        var collar = preview.Operations[0].Lines.Should().ContainSingle().Subject;
+        (collar.Color, collar.SizeCode, collar.ReportedQty, collar.QcQty, collar.ScrapQty, collar.MismatchQty)
+            .Should().Be(("Đen", "M", 100, 90, 4, 6));
+        // Hệ thống không biết ai báo dư: liệt kê mọi người đã báo công đoạn đó, sản lượng nhiều nhất trước.
+        collar.Workers.Select(w => (w.WorkerId, w.ReportedQty)).Should().Equal((7, 60), (8, 40));
+        preview.Operations[1].Lines.Single().Workers.Select(w => (w.WorkerId, w.ReportedQty)).Should().Equal((10, 50), (11, 47));
         preview.Blockers.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Preview_OperationsAtOrBelowTheLimit_AreNotListed()
+    {
+        Qc(100);
+        Reported(7, 100, CollarOp); Reported(8, 100, FinalOp); Reported(9, 60, SleeveOp);   // báo thiếu cũng không phải lệch dư
+
+        (await Preview()).Operations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Preview_ListsOnlyTheLinesThatAreOff_MostOffFirst()
+    {
+        Qc(90, LineId); Qc(90, Line2Id);
+        Reported(7, 95, CollarOp, LineId);      // lệch 5
+        Reported(8, 100, CollarOp, Line2Id);    // lệch 10
+        Reported(9, 90, CollarOp, LineId);      // dòng khác của công đoạn khác không lẫn: cộng cùng dòng LineId → 185 − 90 = 95
+
+        var collar = (await Preview()).Operations.Single();
+
+        collar.Lines.Select(l => (l.SizeCode, l.MismatchQty)).Should().Equal(("M", 95), ("L", 10));
+        collar.MismatchQty.Should().Be(105);
     }
 
     [Fact]
@@ -104,7 +130,7 @@ public class EndOfOrderServiceTests : ProductionTestBase
         _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 70, WorkDate = firstDay.AddDays(1) });
         _qc.Add(new QcBatch { SewingTeamId = TeamId, OrderLineId = LineId, FinishedQty = 40, WorkDate = firstDay.AddDays(15) });
 
-        var preview = (await Sut().PreviewAsync(1, default)).Data!;
+        var preview = await Preview();
 
         preview.ActualQty.Should().Be(40);
         preview.Achieved.Should().BeFalse();
@@ -113,64 +139,127 @@ public class EndOfOrderServiceTests : ProductionTestBase
     [Fact]
     public async Task Preview_ScrapAlreadyRecordedIsNotCountedAsMismatch()
     {
-        Reported(7, 100);
-        Qc(90);
+        Reported(7, 100); Qc(90);
         _defects.Add(new DefectRecord
         {
             SewingTeamId = TeamId, OrderLineId = LineId, DefectType = DefectTypes.Scrap, Status = DefectStatuses.Recorded, Quantity = 10,
         });
 
-        (await Sut().PreviewAsync(1, default)).Data!.Rows.Should().OnlyContain(r => r.MismatchQty == 0);
+        (await Preview()).Operations.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Preview_WithoutAFinalOperationOrApprovedRate_IsBlocked()
+    public async Task Preview_ATeamLeaderSeesOnlyTheTargetOfTheirOwnTeam()
     {
         Reported(7, 100); Qc(90);
-        _operations[0].IsFinalStep = false;
-        (await Sut().PreviewAsync(1, default)).Data!.Blockers.Should().ContainSingle().Which.Should().Be(Messages.KpiFinishNoFinalOperation);
 
-        _operations[0].IsFinalStep = true;
-        _rates.FindEffectiveAsync(FinalOp, Arg.Any<DateOnly>(), Arg.Any<CancellationToken>()).Returns((EffectivePieceRate?)null);
-        (await Sut().FinishAsync(1, default)).ErrorCode.Should().Be(ErrorCodes.KpiFinishBlocked);
-        _target.Status.Should().Be(KpiStatuses.Active);
-        _defects.Should().BeEmpty();
+        (await Sut().PreviewAsync(1, TeamId, default)).IsSuccess.Should().BeTrue();
+        (await Sut().PreviewAsync(1, TeamId + 1, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Sut().PreviewAsync(99, TeamId, default)).Kind.Should().Be(ResultKind.NotFound);
     }
 
+    // ========== Kết thúc đơn ==========
+
     [Fact]
-    public async Task Finish_WritesScrapDefectsForTheMismatch_ClosesKpiAndTellsAboutASmallShortfall()
+    public async Task Finish_WithMismatches_WritesNoDefect_AndNotifiesAShortSummaryWithTheTopOperationsAndWorkers()
     {
-        Reported(7, 60); Reported(8, 40); Qc(95);   // thiếu 5% ≤ 10%, lệch 5
+        Qc(95);   // thiếu 5% ≤ 10%
+        Reported(7, 60, CollarOp); Reported(8, 40, CollarOp); Reported(9, 10, CollarOp);   // may cổ lệch 15, 3 người
+        Reported(10, 100, FinalOp);                                                         // hoàn thiện lệch 5
 
         var result = await Sut().FinishAsync(1, default);
 
         result.IsSuccess.Should().BeTrue();
-        _defects.Should().OnlyContain(d => d.DefectType == DefectTypes.Scrap && d.DefectReasonCode == DefectReasons.Other && d.ReasonNote!.Contains("Lệch kiểm cuối đơn")
-            && d.PieceRateId == 70 && d.OperationId == FinalOp && d.SewingTeamId == TeamId);
-        _defects.Sum(d => d.Quantity).Should().Be(5);
-        _defects.Select(d => d.ResponsibleWorkerId).Should().BeSubsetOf(new[] { 7, 8 });
+        _defects.Should().BeEmpty();   // không tự ghi phiếu, không trừ lương
+        Notifier.DidNotReceiveWithAnyArgs().NotifyEmployees(default!, default!);
         _target.Status.Should().Be(KpiStatuses.Closed);
         _target.Result.Should().Be(KpiResults.NotAchieved);
+        string? summary = null;
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m) && Capture(m, out summary)), Arg.Any<CancellationToken>());
+        summary.Should().Contain("May cổ: lệch 15").And.Contain("CN7 Công nhân 7 60, CN8 Công nhân 8 40 và 1 người khác")
+            .And.Contain("Hoàn thiện: lệch 5").And.Contain("Bấm để xem chi tiết");
+        summary!.Length.Should().BeLessThan(1000);
         await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("nên tăng ca")), Arg.Any<CancellationToken>());   // thiếu ít
-        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
-        Notifier.Received().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
+    }
+
+    private static bool Capture(NotificationMessage m, out string? message)
+    {
+        message = m.Message;
+        return true;
     }
 
     [Fact]
-    public async Task Finish_LargeShortfall_LetsTheTeamLeaderDecideOnOvertime()
+    public async Task Finish_MismatchNoteOpensTheDetailInPlace_ByRefInsteadOfALink()
+    {
+        Reported(7, 100); Qc(90);
+
+        (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
+
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m) && m.LinkUrl == null && m.RefTable == NotificationRefs.KpiMismatch && m.RefId == 1), Arg.Any<CancellationToken>());
+        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m) && m.LinkUrl == null && m.RefTable == NotificationRefs.KpiMismatch && m.RefId == 1), Arg.Any<CancellationToken>());
+        // Thông báo thiếu KPI vẫn có link, nhưng đến trang có thật (trước đây trỏ vào /kpi không có route).
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => m.Title == "KPI không đạt khi kết thúc đơn" && m.LinkUrl == "/kpi/targets"), Arg.Any<CancellationToken>());
+        await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId,
+            Arg.Is<NotificationMessage>(m => m.Title == "KPI không đạt khi kết thúc đơn" && m.LinkUrl == "/"), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Finish_ManyOperationsOff_NamesOnlyTheThreeWorstAndCountsTheRest()
+    {
+        Qc(0);
+        for (var i = 0; i < 5; i++)
+        {
+            var id = 100 + i;
+            _operations.Add(new Operation { OperationId = id, ProductId = ProductId, OperationCode = "X" + i, OperationName = "Công đoạn " + i, Status = OperationStatuses.Active });
+            Reported(7, 10 + i, id);   // lệch 10..14
+        }
+
+        (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
+
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m) && m.Message.Contains("ở 5 công đoạn") && m.Message.Contains("Công đoạn 4: lệch 14")
+                && m.Message.Contains("Công đoạn 2: lệch 12") && !m.Message.Contains("Công đoạn 1: lệch 11")
+                && m.Message.Contains("và 2 công đoạn khác")),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Finish_ManyWorkersAndOperations_NeverExceedsTheNotificationColumn()
+    {
+        Qc(0);
+        for (var op = 0; op < 20; op++)
+        {
+            var id = 200 + op;
+            _operations.Add(new Operation { OperationId = id, ProductId = ProductId, OperationCode = "Y" + op, OperationName = "Công đoạn dài " + new string('x', 40) + op, Status = OperationStatuses.Active });
+            for (var w = 7; w <= 12; w++) Reported(w, 5 + op, id);
+        }
+
+        (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
+
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m) && m.Message.Length <= 1000), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Finish_LargeShortfallWithoutMismatch_OnlyLetsTheTeamLeaderDecideOnOvertime()
     {
         Reported(7, 60); Qc(60);   // thiếu 40%, không lệch
 
         (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
 
-        _defects.Should().BeEmpty();
         await Notifier.Received(1).NotifyTeamLeadersAsync(TeamId,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("tổ trưởng quyết định")), Arg.Any<CancellationToken>());
+        await Notifier.DidNotReceive().NotifyTeamLeadersAsync(TeamId,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m)), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Finish_WhenTheTargetIsMet_ClosesAsAchievedWithoutOvertime()
+    public async Task Finish_WhenTheTargetIsMetAndNothingIsOff_ClosesAsAchievedWithoutAnyNotice()
     {
         Reported(7, 100); Qc(100);
 
@@ -185,9 +274,21 @@ public class EndOfOrderServiceTests : ProductionTestBase
     {
         Reported(7, 100); Qc(90);
         (await Sut().FinishAsync(1, default)).IsSuccess.Should().BeTrue();
-        var firstDefects = _defects.Count;
 
         (await Sut().FinishAsync(1, default)).ErrorCode.Should().Be(ErrorCodes.KpiInvalidStatus);
-        _defects.Should().HaveCount(firstDefects);
+        await Notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
+            Arg.Is<NotificationMessage>(m => IsMismatchNote(m)), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Preview_OfAClosedTarget_StillWorksForTheDetailWindow()
+    {
+        Reported(7, 100); Qc(90);
+        await Sut().FinishAsync(1, default);
+
+        var preview = await Preview();
+
+        preview.CanFinish.Should().BeFalse();
+        preview.Operations.Should().ContainSingle();
     }
 }

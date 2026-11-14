@@ -25,6 +25,13 @@ public interface IWorkAllocationService
     Task<Result> ConfirmOnBehalfAsync(int allocationId, ConfirmOnBehalfDto dto, int teamId, CancellationToken ct);
 }
 
+/// <summary>DEV-ALL-101: tự xác nhận phiếu giao việc công nhân để quá hạn không xác nhận (chạy theo chu kỳ ở job nền).</summary>
+public interface IWorkAllocationAutoConfirmService
+{
+    /// <returns>Số phiếu đã chuyển sang CONFIRMED.</returns>
+    Task<int> RunAsync(CancellationToken ct);
+}
+
 /// <summary>
 /// Giao sản lượng công đoạn theo ngày cho công nhân: tổ trưởng nhập số lần giao thêm của từng ngày; phần chưa làm hết của ngày trước
 /// chuyển sang ngày sau cho chính công nhân đó, không thu hồi (DEV-ALL-64).

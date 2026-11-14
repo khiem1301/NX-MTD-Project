@@ -1,6 +1,7 @@
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Application.Services;
 using NX_MTD.Infrastructure.Excel;
+using NX_MTD.Infrastructure.Jobs;
 using NX_MTD.Infrastructure.Optimization;
 using NX_MTD.Infrastructure.Repositories;
 
@@ -29,6 +30,7 @@ public static class WarehouseModule
         services.AddScoped<IAttachmentOwnerAccess, MaterialReceiptAttachmentAccess>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<IMaterialIssueService, MaterialIssueService>();
+        services.AddScoped<MaterialReturnCapacity>();
         services.AddScoped<IMaterialReturnService, MaterialReturnService>();
         services.AddScoped<IFgHandoverService, FgHandoverService>();
         services.AddScoped<IDispatchNoteService, DispatchNoteService>();
@@ -49,6 +51,8 @@ public static class WarehouseModule
         // Giao / thu hồi BTP với công nhân
         services.AddScoped<IWorkAllocationService, WorkAllocationService>();
         services.AddScoped<IDailyWorkAllocationService, DailyWorkAllocationService>();
+        services.AddScoped<IWorkAllocationAutoConfirmService, WorkAllocationAutoConfirmService>();
+        services.AddHostedService<WorkAllocationAutoConfirmJob>();   // phiếu giao chờ quá 60 phút → hệ thống tự xác nhận (DEV-ALL-101)
 
         // Kiểm kê, sổ xe (Thảo)
         services.AddScoped<IStocktakeService, StocktakeService>();

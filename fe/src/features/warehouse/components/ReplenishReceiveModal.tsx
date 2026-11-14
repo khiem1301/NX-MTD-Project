@@ -6,7 +6,7 @@ import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { LABELS } from '../constants';
 import { useCreateSupplementary, useShortDelivery } from '../hooks/useShortDeliveries';
 import {
@@ -79,7 +79,11 @@ export function ReplenishReceiveModal({ requestId, onClose }: ReplenishReceiveMo
                   LABELS.replenishPlanValue,
                   d.replenishDeliveryCount ?? 0,
                   d.expectedDeliveryCount,
-                  formatDeliveryWindow(d.expectedDeliveryDate, d.expectedDeliveryDateTo),
+                  formatDeliveryDates(
+                    d.expectedDeliveryDates,
+                    d.expectedDeliveryDate,
+                    d.expectedDeliveryDateTo,
+                  ),
                 )}
               </Descriptions.Item>
             )}

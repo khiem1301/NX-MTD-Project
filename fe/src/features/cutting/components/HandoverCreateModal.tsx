@@ -8,6 +8,7 @@ import { confirmDialog } from '@/utils/confirmDialog';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
+import { maxQtyRule } from '@/utils/qtyLimit';
 
 type HandoverCreateModalProps = { open: boolean; workOrderId: number; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -67,8 +68,12 @@ export function HandoverCreateModal({ open, workOrderId, onClose }: HandoverCrea
               title: LABELS.handoverQty,
               key: 'qty',
               render: (_, l) => (
-                <Form.Item name={['qty', lineKey(l)]} noStyle>
-                  <QtyInput min={0} max={l.remainingQty} />
+                <Form.Item
+                  name={['qty', lineKey(l)]}
+                  rules={[maxQtyRule(l.remainingQty)]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <QtyInput min={0} />
                 </Form.Item>
               ),
             },

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select } from 'antd';
+import { AutoComplete, Col, Form, Input, Modal, Row, Select } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { normalizeCode } from '@/utils/textInput';
 import { MESSAGES } from '@/constants/messages';
 import { useProductComponents } from '@/hooks/useOrderLookups';
@@ -137,30 +138,24 @@ export function OperationFormModal({
               label={text.form.sequence}
               rules={[{ required: true, message: PRODUCTION_TEXT.required }]}
             >
-              <InputNumber
-                min={1}
-                max={OPERATION_LIMITS.maxSequence}
-                precision={0}
-                style={{ width: '100%' }}
-              />
+              <QtyInput min={1} max={OPERATION_LIMITS.maxSequence} style={{ width: '100%' }} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
             <Form.Item name="skillLevel" label={text.form.skill}>
-              <InputNumber
+              <QtyInput
                 min={OPERATION_LIMITS.minSkill}
                 max={OPERATION_LIMITS.maxSkill}
-                precision={0}
                 style={{ width: '100%' }}
               />
             </Form.Item>
           </Col>
           <Col xs={24} sm={8}>
             <Form.Item name="standardTimeSec" label={text.form.standardTime}>
-              <InputNumber
+              <QtyInput
                 min={0.01}
                 max={OPERATION_LIMITS.maxStandardTimeSec}
-                precision={2}
+                decimals={2}
                 style={{ width: '100%' }}
               />
             </Form.Item>

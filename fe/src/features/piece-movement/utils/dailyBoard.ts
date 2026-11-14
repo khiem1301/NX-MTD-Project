@@ -15,6 +15,8 @@ export type DailyWorker = {
   operationCount: number;
   carriedQty: number;
   allocatedQty: number;
+  /** Phần giao trong ngày công nhân chưa xác nhận. */
+  pendingQty: number;
   outputQty: number;
   remainingQty: number;
 };
@@ -39,6 +41,7 @@ export const buildDailyWorkers = (
       operationCount: own.filter((r) => r.carriedQty + r.allocatedQty > 0).length,
       carriedQty: own.reduce((s, r) => s + r.carriedQty, 0),
       allocatedQty: own.reduce((s, r) => s + Math.max(0, r.allocatedQty), 0),
+      pendingQty: own.reduce((s, r) => s + r.pendingQty, 0),
       outputQty: own.reduce((s, r) => s + r.outputQty, 0),
       remainingQty: own.reduce((s, r) => s + r.remainingQty, 0),
     };
@@ -100,8 +103,14 @@ export const extraRowFrom = (
     previousQty: 0,
     unitRate: null,
     rateApproved: false,
+    pendingQty: 0,
+    components: [],
   };
 };
+
+/** Thành phần của công đoạn để hiển thị, chỉ tên (không kèm số chi tiết): "Tay áo, Thân sau"; rỗng = chưa gắn thành phần. */
+export const componentsText = (row: Pick<DailyAllocationRow, 'components'>) =>
+  (row.components ?? []).map((c) => c.componentName).join(', ');
 
 /** Số giao tối đa ở dòng: phần đã giao trong ngày cộng số còn giao được của cả tổ. */
 export const maxGiveOf = (row: DailyAllocationRow) => row.allocatedQty + row.unallocatedQty;
@@ -109,8 +118,17 @@ export const maxGiveOf = (row: DailyAllocationRow) => row.allocatedQty + row.una
 /** Số giao tối thiểu ở dòng: tồn từ hôm trước cộng số giao phải đủ phần đã báo sản lượng trong ngày. */
 export const minGiveOf = (row: DailyAllocationRow) => Math.max(0, row.outputQty - row.carriedQty);
 
+/** Số giao vượt số giao tối đa của dòng: ô báo lỗi và không cho lưu. */
+export const isOverGive = (row: DailyAllocationRow, value: number) => value > maxGiveOf(row);
+
+/**
+ * Số điền từ ô của dòng nhóm: chỉ nâng lên số giao tối thiểu, không cắt về số tối đa (dòng vượt thì báo lỗi để
+ * tổ trưởng thấy và sửa).
+ */
+export const fillGive = (row: DailyAllocationRow, value: number) => Math.max(value, minGiveOf(row));
+
 /** Đưa số giao về trong khoảng nhập được của dòng. */
-export const clampGive = (row: DailyAllocationRow, value: number) =>
+const clampGive = (row: DailyAllocationRow, value: number) =>
   Math.min(Math.max(value, minGiveOf(row)), maxGiveOf(row));
 
 /** "Giao như lần trước": số của lần giao gần nhất cho các dòng đã từng giao, đưa về khoảng nhập được; dòng chưa từng giao bỏ qua. */
@@ -121,6 +139,6 @@ export const previousEdits = (rows: readonly DailyAllocationRow[]): Record<strin
 
 /** Công đoạn khớp ô tìm theo mã, tên hoặc màu-size; `keyword` đã bỏ dấu (foldVietnamese). */
 export const matchesOperation = (row: DailyAllocationRow, keyword: string) =>
-  foldVietnamese(`${row.color}-${row.sizeCode} ${row.operationCode} ${row.operationName}`).includes(
-    keyword,
-  );
+  foldVietnamese(
+    `${row.color}-${row.sizeCode} ${row.operationCode} ${row.operationName} ${componentsText(row)}`,
+  ).includes(keyword);

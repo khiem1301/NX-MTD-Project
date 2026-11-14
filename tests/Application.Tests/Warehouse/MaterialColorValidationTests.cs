@@ -84,8 +84,36 @@ public class MaterialColorValidationTests
     [InlineData(MaterialTypes.Trim, "", false)]
     [InlineData(MaterialTypes.Trim, "cái", true)]
     public void Validator_OnlyTrimNeedsAUnit(string type, string unit, bool valid) =>
-        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null))
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null,
+                type == MaterialTypes.Fabric ? 1.5m : null))
             .IsValid.Should().Be(valid);
+
+    [Theory]
+    [InlineData("1.5", true)]
+    [InlineData("3.5", true)]
+    [InlineData("3.51", false)]
+    [InlineData("0", false)]
+    [InlineData("1.505", false)]
+    [InlineData(null, false)]
+    public void Validator_FabricWidthRequiredUpTo3Point5Metres(string? width, bool valid) =>
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null,
+                width is null ? null : decimal.Parse(width, System.Globalization.CultureInfo.InvariantCulture)))
+            .IsValid.Should().Be(valid);
+
+    [Fact]
+    public void Validator_TrimWithoutWidth_IsValid() =>
+        new UpdateMaterialDtoValidator().Validate(new UpdateMaterialDto("Cúc", MaterialTypes.Trim, "BUTTON", "cái"))
+            .IsValid.Should().BeTrue();
+
+    [Fact]
+    public async Task CreateAsync_Trim_IgnoresWidth_Fabric_KeepsIt()
+    {
+        var trim = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc nhựa", MaterialTypes.Trim, "BUTTON", "cái", null, 2m), default);
+        var fabric = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải kaki", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 1.6m), default);
+
+        trim.Data!.WidthM.Should().BeNull();
+        fabric.Data!.WidthM.Should().Be(1.6m);
+    }
 
     [Fact]
     public async Task Same_name_and_type_is_allowed_for_another_color_but_not_for_the_same_color()

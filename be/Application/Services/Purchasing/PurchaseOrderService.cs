@@ -19,6 +19,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     private readonly IMaterialService _materials;
     private readonly INotificationService _notifier;
     private readonly IAuditLogService _audit;
+    private readonly DeliveryScheduleStore _schedule;
 
     private const string PaymentLink = "/purchase-payments?id={0}";
     private const string IncomingLink = "/warehouse/incoming-materials";
@@ -27,6 +28,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         INotificationService notifier, IAuditLogService audit)
     {
         _uow = uow; _codes = codes; _clock = clock; _materials = materials; _notifier = notifier; _audit = audit;
+        _schedule = new DeliveryScheduleStore(uow);
     }
 
     private IQueryable<PurchaseOrder> PurchaseOrders => _uow.Repository<PurchaseOrder>().Query();
@@ -96,8 +98,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         if (dto.OrderDate > _clock.Today)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderDateInvalid, Messages.PurchaseOrderOrderDateFuture,
                 ResultKind.Validation);
-        var deliveryError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDate,
-            PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo), dto.OrderDate, dto.OrderId, ct);
+        var deliveryError = await PurchaseDeliveryDate.CheckAsync(_uow, _clock, dto.ExpectedDeliveryDates, dto.OrderDate, dto.OrderId, ct);
         if (deliveryError is not null)
             return Result<PurchaseOrderDto>.Failure(ErrorCodes.PurchaseOrderDateInvalid, deliveryError, ResultKind.Validation);
 
@@ -141,6 +142,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
     private async Task<Result<int>> AddOrderAsync(CreatePurchaseOrderDto dto, List<NewLine> lines,
         Dictionary<int, int> orderMaterials, CancellationToken ct)
     {
+        var deliveryDates = DeliveryScheduleStore.Summary(dto.ExpectedDeliveryDates ?? []);
         var po = new PurchaseOrder
         {
             PoCode = await _codes.NextAsync<PurchaseOrder>(DocumentPrefixes.PurchaseOrder, p => p.PoCode, ct),
@@ -148,8 +150,8 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             SupplierId = dto.SupplierId,
             OrderDate = dto.OrderDate,
             ExpectedDeliveryCount = dto.ExpectedDeliveryCount,
-            ExpectedDeliveryDate = dto.ExpectedDeliveryDate,
-            ExpectedDeliveryDateTo = PurchaseDeliveryDate.DateTo(dto.ExpectedDeliveryCount, dto.ExpectedDeliveryDateTo),
+            ExpectedDeliveryDate = deliveryDates.From,
+            ExpectedDeliveryDateTo = deliveryDates.To,
             GoodsStatus = PurchaseGoodsStatuses.Ordered,
             PaymentStatus = PurchaseOrderStatuses.Unpaid,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
@@ -161,12 +163,13 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
         };
         await _uow.Repository<PurchaseOrder>().AddAsync(po);
         await _uow.SaveChangesAsync();   // log và thông báo cần PurchaseOrderId nên lưu trước (cùng transaction)
+        await _schedule.ReplaceAsync(DeliveryOwner.PurchaseOrder, po.PurchaseOrderId, dto.ExpectedDeliveryDates ?? [], ct);
 
         var supplier = await _uow.Repository<Supplier>().Query().AsNoTracking()
             .Where(s => s.SupplierId == dto.SupplierId).Select(s => s.SupplierName).FirstAsync(ct);
         _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Insert, null,
             new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate, po.ExpectedDeliveryDateTo,
-                Lines = po.PurchaseOrderLines.Count }));
+                ExpectedDeliveryDates = DocumentDateRules.FormatDates(dto.ExpectedDeliveryDates ?? []), Lines = po.PurchaseOrderLines.Count }));
         await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
             Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier),
             string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);

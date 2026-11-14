@@ -1,4 +1,4 @@
-import { CheckCircleOutlined, CloseCircleOutlined, SwapOutlined } from '@ant-design/icons';
+import { CloseCircleOutlined, EditOutlined, SwapOutlined } from '@ant-design/icons';
 import { Space, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { IconAction } from '@/components/common/IconAction';
@@ -6,7 +6,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { canCancelDefect, canConfirmDefect, defectStateOf } from '../utils/defectRules';
+import { canModifyDefect, defectStateOf } from '../utils/defectRules';
 import type { Defect } from '../types';
 
 const text = PRODUCTION_TEXT.defects;
@@ -15,7 +15,7 @@ type DefectColumnsOptions = {
   isManager: boolean;
   onReplace: (defect: Defect) => void;
   onCancel: (defect: Defect) => void;
-  onConfirm: (defect: Defect) => void;
+  onEdit: (defect: Defect) => void;
 };
 
 const reasonText = (d: Defect) =>
@@ -33,14 +33,14 @@ const stacked = (top: string, bottom: string) => (
 
 /**
  * Cột bảng hàng hỏng, gộp lại còn 7 cột: phiếu (mã, ngày, tổ), đơn / mã hàng, công đoạn / công nhân, loại và số lượng,
- * lý do, tình trạng, thao tác. Thông tin phụ nằm ở dòng mở rộng (DefectExpandedRow). Công nhân phản đối thì Quản đốc chọn
- * chấp nhận phiếu (dấu tích) hoặc hủy phiếu (dấu x).
+ * lý do, tình trạng, thao tác. Thông tin phụ nằm ở dòng mở rộng (DefectExpandedRow). Sửa (bút) và hủy (dấu x) hiện khi còn hạn 24 giờ của tổ trưởng,
+ * hoặc với Quản đốc (kiểm ràng buộc ở BE).
  */
 export const defectColumns = ({
   isManager,
   onReplace,
   onCancel,
-  onConfirm,
+  onEdit,
 }: DefectColumnsOptions): ColumnsType<Defect> => [
   {
     title: text.columns.ticket,
@@ -100,12 +100,8 @@ export const defectColumns = ({
     fixed: 'right',
     render: (_, d) => (
       <Space size={0}>
-        {isManager && canConfirmDefect(d) && (
-          <IconAction
-            title={text.confirm}
-            icon={<CheckCircleOutlined />}
-            onClick={() => onConfirm(d)}
-          />
+        {canModifyDefect(d) && (
+          <IconAction title={text.edit} icon={<EditOutlined />} onClick={() => onEdit(d)} />
         )}
         {!isManager &&
           d.defectType === 'Scrap' &&
@@ -117,7 +113,7 @@ export const defectColumns = ({
               onClick={() => onReplace(d)}
             />
           )}
-        {canCancelDefect(d, isManager) && (
+        {canModifyDefect(d) && (
           <IconAction
             title={text.cancel}
             icon={<CloseCircleOutlined />}

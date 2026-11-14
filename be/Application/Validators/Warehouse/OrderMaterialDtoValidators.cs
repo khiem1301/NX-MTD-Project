@@ -58,16 +58,15 @@ public sealed class CreateOrderMaterialBatchDtoValidator : AbstractValidator<Cre
     }
 }
 
-/// <summary>Lịch khách giao NVL của cả đơn: số lần 1–99, ngày bắt buộc, giao từ 2 lần trở lên thì có ngày giao đến (DEV-ALL-95).</summary>
+/// <summary>Lịch khách giao NVL của cả đơn: số lần 1–99, số ngày giao đúng bằng số lần, ngày sau không trước ngày trước (DEV-ALL-95, DEV-ALL-113).</summary>
 public sealed class SaveOrderCustomerDeliveryDtoValidator : AbstractValidator<SaveOrderCustomerDeliveryDto>
 {
     public SaveOrderCustomerDeliveryDtoValidator()
     {
         RuleFor(x => x.DeliveryCount).InclusiveBetween((short)1, DeliveryLimits.MaxCount)
             .WithMessage(string.Format(WarehouseMessages.CustomerDeliveryCountInvalid, DeliveryLimits.MaxCount));
-        RuleFor(x => x.DeliveryDate).NotEqual(default(DateOnly)).WithMessage(WarehouseMessages.ExpectedDeliveryRequired);
-        RuleFor(x => x.DeliveryDateTo)
-            .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.DeliveryCount, x.DeliveryDate, to) is null)
-            .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.DeliveryCount, x.DeliveryDate, to));
+        RuleFor(x => x.DeliveryDates).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired)
+            .Must((x, dates) => DocumentDateRules.CheckDeliveryDates(x.DeliveryCount, dates) is null)
+            .WithMessage((x, dates) => DocumentDateRules.CheckDeliveryDates(x.DeliveryCount, dates));
     }
 }

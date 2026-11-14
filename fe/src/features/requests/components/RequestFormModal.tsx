@@ -7,11 +7,13 @@ import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { RequestDetail } from '@/types/request';
 import { AppDatePicker } from '@/components/common/DateInputs';
-import { CUTTING_TEAM_TYPE, NO_LINE_TYPES } from '../constants';
+import { NO_LINE_TYPES } from '../constants';
 import { RequestLineFields } from './RequestLineFields';
+import { RequisitionLineFields } from './RequisitionLineFields';
+import { RequisitionOrderField } from './RequisitionOrderField';
 import { WorkOrderRequisitionField } from './WorkOrderRequisitionField';
 import { useWorkOrderAllowance } from '../hooks/useWorkOrderRequisition';
-import { useAuth } from '@/hooks/useAuth';
+import { useRequisitionMode } from '../hooks/useRequisitionMode';
 import { useRequestForm } from '../hooks/useRequestForm';
 import type { RequestType } from '@/constants/requestTypes';
 
@@ -47,11 +49,10 @@ export function RequestFormModal({
   const requestType = Form.useWatch('requestType', form) as RequestType | undefined;
   const noLines = requestType !== undefined && NO_LINE_TYPES.includes(requestType);
   const handlerRoles = options.find((o) => o.requestType === requestType)?.handlerRoleOptions;
-  const { user } = useAuth();
-  const byWorkOrder =
-    requestType === 'MaterialRequisition' &&
-    (editing ? editing.workOrderId !== null : user?.teamType === CUTTING_TEAM_TYPE);
+  const mode = useRequisitionMode(requestType, editing);
+  const byWorkOrder = mode.kind === 'requisition' && mode.byWorkOrder;
   const workOrderId = Form.useWatch('workOrderId', form) as number | undefined;
+  const orderId = Form.useWatch('orderId', form) as number | undefined;
   const allowance = useWorkOrderAllowance(
     byWorkOrder ? workOrderId : undefined,
     editing?.requestId,
@@ -134,12 +135,24 @@ export function RequestFormModal({
         {byWorkOrder && (
           <WorkOrderRequisitionField form={form} allowance={allowance.data} locked={!!editing} />
         )}
-        {requestType && !noLines && (
-          <RequestLineFields
+        {mode.kind === 'requisition' && mode.needsOrder && (
+          <RequisitionOrderField
             form={form}
-            requestType={requestType}
+            locked={!!editing}
+            orderCode={editing?.orderCode ?? null}
+          />
+        )}
+        {mode.kind === 'requisition' && (
+          <RequisitionLineFields
+            form={form}
+            requestType={mode.requestType}
+            orderId={orderId}
+            needsOrder={mode.needsOrder}
             allowance={byWorkOrder && workOrderId ? allowance.data : undefined}
           />
+        )}
+        {requestType && !noLines && mode.kind === 'none' && (
+          <RequestLineFields requestType={requestType} />
         )}
         {!editing && (
           <Form.Item label={fill(MESSAGES.requests.photos, maxPhotos)} style={{ marginTop: 16 }}>

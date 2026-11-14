@@ -34,20 +34,23 @@ public static class DocumentDateRules
         return null;
     }
 
-    /// <summary>Giao từ số lần này trở lên thì ngày dự kiến giao là một khoảng (từ ngày – đến ngày).</summary>
-    public const int RangeDeliveryCount = 2;
-
-    /// <summary>Có nhập khoảng ngày giao không (giao từ <see cref="RangeDeliveryCount"/> lần trở lên).</summary>
-    public static bool IsRangeDelivery(short? count) => count >= RangeDeliveryCount;
-
     /// <summary>
-    /// Khoảng ngày giao: giao từ <see cref="RangeDeliveryCount"/> lần trở lên thì bắt buộc có ngày giao đến, không trước ngày giao từ.
-    /// Giao một lần thì bỏ qua ngày giao đến (service tự để trống).
+    /// Lịch giao: số lần giao = số ngày phải nhập (mỗi lần giao một ngày), ngày sau không trước ngày liền trước (DEV-ALL-113).
+    /// Chưa khai số lần hoặc chưa nhập ngày thì bỏ qua (bắt buộc kiểm ở validator).
     /// </summary>
-    public static string? CheckDeliveryRange(short? count, DateOnly? from, DateOnly? to)
+    public static string? CheckDeliveryDates(short? count, IReadOnlyList<DateOnly>? dates)
     {
-        if (!IsRangeDelivery(count)) return null;
-        if (to is not { } end) return WarehouseMessages.DeliveryDateToRequired;
-        return from is { } start && end < start ? WarehouseMessages.DeliveryDateToBeforeFrom : null;
+        if (count is not { } expected || dates is null) return null;
+        if (dates.Count != expected) return string.Format(WarehouseMessages.DeliveryDatesCountMismatch, expected);
+        for (var i = 1; i < dates.Count; i++)
+            if (dates[i] < dates[i - 1]) return string.Format(WarehouseMessages.DeliveryDateBeforePrevious, i + 1, i);
+        return null;
     }
+
+    /// <summary>Kiểm từng ngày giao như ngày dự kiến giao (không trước hôm nay / ngày đặt, không sau hạn giao). Null nếu hợp lệ.</summary>
+    public static string? CheckExpectedDeliveries(IEnumerable<DateOnly> dates, DateOnly today, DateOnly? notBefore, DateOnly? orderDueDate) =>
+        dates.Select(d => CheckExpectedDelivery(d, today, notBefore, orderDueDate)).FirstOrDefault(e => e is not null);
+
+    /// <summary>Danh sách ngày giao hiển thị trong thông báo: "10/12/2026, 15/12/2026".</summary>
+    public static string FormatDates(IEnumerable<DateOnly> dates) => string.Join(", ", dates.Select(d => d.ToString("dd/MM/yyyy")));
 }

@@ -30,6 +30,9 @@ export const lookupApi = {
   teams: async (teamType?: string): Promise<TeamOption[]> =>
     (await apiClient.get<ApiResponse<TeamOption[]>>(API.lookups.teams, { params: { teamType } }))
       .data.data,
+  /** NVL phế phẩm đang dùng để chọn khi trả về kho (DEV-ALL-112). */
+  scrapMaterials: async (): Promise<MaterialOption[]> =>
+    (await apiClient.get<ApiResponse<MaterialOption[]>>(API.lookups.scrapMaterials)).data.data,
   materials: async (keyword?: string): Promise<MaterialOption[]> =>
     (
       await apiClient.get<ApiResponse<MaterialOption[]>>(API.lookups.materials, {

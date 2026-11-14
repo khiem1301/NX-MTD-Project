@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { lastDeliveryDate } from '@/utils/expectedDelivery';
 import type { OrderCustomerDelivery } from '../types';
 
 export const CUSTOMER_DELIVERY_STATUS = {
@@ -21,6 +22,6 @@ export const customerDeliveryStatus = (
 ): CustomerDeliveryStatus | null => {
   if (!plan?.hasCustomerMaterials) return null; // khách không cấp NVL thì không có lịch giao để nhắc
   if (plan.receivedCount >= (plan.deliveryCount ?? 1)) return CUSTOMER_DELIVERY_STATUS.FULL;
-  const lastDate = plan.deliveryDateTo ?? plan.deliveryDate;
+  const lastDate = lastDeliveryDate(plan.deliveryDates, plan.deliveryDate, plan.deliveryDateTo);
   return lastDate && dayjs(lastDate).isBefore(today, 'day') ? CUSTOMER_DELIVERY_STATUS.LATE : null;
 };

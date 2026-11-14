@@ -34,6 +34,7 @@ public class DailyWorkAllocationServiceTests
     private readonly List<OutputRecord> _outputs = new();
     private readonly List<OperationAssignment> _assignments = new();
     private readonly List<OrderLineTeam> _allotted = new();
+    private readonly List<OperationComponent> _components = new();
 
     public DailyWorkAllocationServiceTests()
     {
@@ -63,7 +64,7 @@ public class DailyWorkAllocationServiceTests
         });
         _allotted.Add(new OrderLineTeam { OrderLineId = 101, SewingTeamId = TeamId });
         Setup(_teams); Setup(_employees); Setup(_orderLines); Setup(_operations); Setup(_rates); Setup(_allocations);
-        Setup(_progress); Setup(_outputs); Setup(_assignments); Setup(_allotted);
+        Setup(_progress); Setup(_outputs); Setup(_assignments); Setup(_allotted); Setup(_components);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -140,8 +141,15 @@ public class DailyWorkAllocationServiceTests
     }
 
 
+    private void PendingHandover(int qty, DateOnly day) => _allocations.Add(new WorkAllocation
+    {
+        WorkAllocationId = _allocations.Count + 1, WorkDate = day, MovementType = PieceMovementTypes.Handover, SewingTeamId = TeamId,
+        WorkerId = WorkerId, OrderLineId = 101, OperationId = OpId, Quantity = qty, Status = HandoverStatuses.Pending,
+        ConfirmMode = ConfirmModes.Worker, CreatedAt = Now,
+    });
+
     [Fact]
-    public async Task Save_records_a_confirmed_handover_for_the_day()
+    public async Task SaveAsync_GiveMore_RecordsPendingHandoverForWorkerToConfirm()
     {
         var added = CaptureAdds();
 
@@ -149,9 +157,88 @@ public class DailyWorkAllocationServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.Added.Should().Be(1);
+        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
         var m = added.Should().ContainSingle().Subject;
-        (m.WorkDate, m.MovementType, m.Quantity, m.ConfirmedQty).Should().Be((Today, PieceMovementTypes.Handover, 60, 60));
-        (m.Status, m.ConfirmMode).Should().Be((HandoverStatuses.Confirmed, ConfirmModes.Leader));
+        (m.WorkDate, m.MovementType, m.Quantity, m.ConfirmedQty).Should().Be((Today, PieceMovementTypes.Handover, 60, (int?)null));
+        (m.Status, m.ConfirmMode, m.ConfirmedAt).Should().Be((HandoverStatuses.Pending, ConfirmModes.Worker, (DateTime?)null));
+    }
+
+    [Fact]
+    public async Task SaveAsync_PendingAlreadyGiven_OnlyAddsTheDifference()
+    {
+        Held(PieceMovementTypes.Handover, 20, Today);
+        PendingHandover(30, Today);
+        var added = CaptureAdds();
+
+        var result = await Service().SaveAsync(Save(70), TeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        added.Should().ContainSingle().Which.Quantity.Should().Be(20);
+    }
+
+    [Fact]
+    public async Task SaveAsync_LoweringWithinPending_ShrinksPendingWithoutRetrieval()
+    {
+        PendingHandover(30, Today);
+        var added = CaptureAdds();
+
+        var result = await Service().SaveAsync(Save(10, "giao nhầm"), TeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        added.Should().BeEmpty();
+        var pending = _allocations.Single();
+        (pending.Status, pending.Quantity).Should().Be((HandoverStatuses.Pending, 10));
+    }
+
+    [Fact]
+    public async Task SaveAsync_LoweringPastPending_ClosesPendingAndRetrievesTheRestFromConfirmed()
+    {
+        Held(PieceMovementTypes.Handover, 40, Today);
+        PendingHandover(10, Today);
+        var added = CaptureAdds();
+
+        var result = await Service().SaveAsync(Save(25, "đổi việc"), TeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        var withdrawn = _allocations.Single(a => a.Status == HandoverStatuses.Rejected);
+        withdrawn.RejectReason.Should().Be(string.Format(WarehouseMessages.DailyPendingWithdrawn, "đổi việc"));
+        var retrieval = added.Should().ContainSingle().Subject;
+        (retrieval.MovementType, retrieval.Quantity, retrieval.Status).Should()
+            .Be((PieceMovementTypes.Retrieval, 15, HandoverStatuses.Confirmed));
+    }
+
+    [Fact]
+    public async Task GetBoardAsync_PendingHandover_CountsInGivenButNotInRemaining()
+    {
+        Held(PieceMovementTypes.Handover, 20, Today);
+        PendingHandover(15, Today);
+
+        var result = await Service().GetBoardAsync(TeamId, Today, 7, null, default);
+
+        var row = result.Data!.Rows.Should().ContainSingle().Subject;
+        (row.AllocatedQty, row.PendingQty, row.RemainingQty).Should().Be((35, 15, 20));
+    }
+
+    [Fact]
+    public async Task GetBoardAsync_OperationOnComponents_ListsComponentsByName()
+    {
+        _assignments.Add(new OperationAssignment { SewingTeamId = TeamId, OrderId = 7, OperationId = OpId, WorkerId = WorkerId });
+        _components.Add(new OperationComponent
+        {
+            OperationId = OpId, ProductComponentId = 2, ProductId = 3,
+            ProductComponent = new ProductComponent { ProductComponentId = 2, ComponentName = "Tay áo", PiecesPerGarment = 2 },
+        });
+        _components.Add(new OperationComponent
+        {
+            OperationId = OpId, ProductComponentId = 1, ProductId = 3,
+            ProductComponent = new ProductComponent { ProductComponentId = 1, ComponentName = "Thân sau", PiecesPerGarment = 1 },
+        });
+
+        var result = await Service().GetBoardAsync(TeamId, Today, 7, null, default);
+
+        var row = result.Data!.Rows.Should().ContainSingle().Subject;
+        row.Components!.Select(c => c.ComponentName).Should()
+            .Equal("Tay áo", "Thân sau");
     }
 
     [Fact]

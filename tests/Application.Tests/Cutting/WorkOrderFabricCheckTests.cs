@@ -71,7 +71,8 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
         _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(meters);
 
     /// <summary>Bìa của đơn: tỉ lệ dạng "M:2 L:1".</summary>
-    private void Marker(string code, byte group, decimal length, string ratio, int order = OrderId, string status = RecordStatus.Active)
+    private void Marker(string code, byte group, decimal length, string ratio, int order = OrderId, string status = RecordStatus.Active,
+        decimal width = 1.5m)
     {
         var marker = new ProductMarker
         {
@@ -81,6 +82,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
             MarkerNo = group,
             MarkerCode = code,
             LengthM = length,
+            WidthM = width,
             Status = status,
         };
         foreach (var part in ratio.Split(' '))
@@ -449,16 +451,15 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task ExtraComponent_DoesNotCountAgainstTheOrderedQuantity_ButWholeSetsDo()
+    public async Task CreateAsync_PlanOverOrderedQty_IsNotRejected()
     {
+        // DEV-ALL-108: kế hoạch vượt số đặt chỉ cảnh báo ở màn tạo lệnh, BE không chặn.
         var variant = SeedOrderLine();
         Norm(variant);
 
         var over = await Service().CreateAsync(Save(new SaveWorkOrderLineDto(21, 11)), default);
-        over.Message.Should().Contain("đặt 10");
 
-        var within = await Service().CreateAsync(Save(new(21, 10), new(21, 500, NormThan)), default);
-        within.Message.Should().NotContain("đặt 10");
+        (over.Message ?? string.Empty).Should().NotContain("đặt 10");
     }
 
     [Fact]
@@ -488,5 +489,128 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
         validator.Validate(new CheckWorkOrderFabricDto(1, 1, [])).IsValid.Should().BeFalse();
         validator.Validate(new CheckWorkOrderFabricDto(1, 1, lines.Take(1000).ToList())).IsValid.Should().BeTrue();
         validator.Validate(new CheckWorkOrderFabricDto(1, 1, lines)).IsValid.Should().BeFalse();
+    }
+
+    // ---------- khổ vải so với khổ bìa (DEV-ALL-104: bỏ bìa rộng hơn khổ vải khi ghép) ----------
+
+    [Fact]
+    public async Task CheckAsync_CheaperMarkerWiderThanFabric_IsSkippedAndFittingMarkerIsUsed()
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 1.5m;
+        Marker("1A", 1, 2.2m, "M:2", width: 1.6m);   // M30: 15 lớp × 2,2 = 33 m nhưng rộng hơn vải
+        Marker("1B", 1, 2.5m, "M:2", width: 1.4m);   // M30: 15 lớp × 2,5 = 37,5 m
+
+        var row = await Check(Whole(SizeM, 30));
+
+        (row.Status, row.NeedMeters).Should().Be((FabricCheckStatuses.Enough, 37.5m));
+        row.MarkerPlans!.Single().Markers.Select(m => m.MarkerCode).Should().Equal("1B");
+        row.WidthWarning.Should().Contain("1A").And.Contain("1,6").And.Contain("không đủ rộng");
+    }
+
+    [Fact]
+    public async Task CheckAsync_NoMarkerFitsFabricWidth_CannotEstimateAndSaysFabricTooNarrow()
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 1.5m;
+        Marker("1A", 1, 1.65m, "M:2 L:1", width: 1.8m);
+
+        var row = await Check(Whole(SizeM, 80), Whole(SizeL, 40, "Đen - L"));
+
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.Message.Should().Contain("bìa vừa khổ vải 1,5 m cho nhóm 1").And.Contain("1A (rộng 1,8 m)");
+        row.WidthWarning.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("1.5")]
+    [InlineData("1.2")]
+    public async Task CheckAsync_MarkerFitsFabricWidth_IsUsedWithoutWarning(string markerWidth)
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 1.5m;
+        Marker("1A", 1, 1.65m, "M:2 L:1", width: decimal.Parse(markerWidth, System.Globalization.CultureInfo.InvariantCulture));
+
+        var row = await Check(Whole(SizeM, 80), Whole(SizeL, 40, "Đen - L"));
+
+        (row.NeedMeters, row.WidthWarning).Should().Be((66m, (string?)null));
+    }
+
+    [Fact]
+    public async Task CheckAsync_FabricWithoutWidth_UsesEveryMarker()
+    {
+        BodyOnGroupOne();
+        Marker("1A", 1, 1.65m, "M:2 L:1", width: 3m);
+
+        var row = await Check(Whole(SizeM, 80));
+
+        (row.Status, row.WidthWarning).Should().Be((FabricCheckStatuses.Enough, (string?)null));
+    }
+
+    [Fact]
+    public async Task CheckAsync_ExtraCutOnlyOnMarkerWiderThanFabric_CannotEstimate()
+    {
+        Norm(SizeM); OnFabric(1); OnGroup(1, Body);
+        _fabric.WidthM = 1.4m;
+        Marker("1A", 1, 1m, "M:1", width: 1.6m);
+
+        var row = await Check(Extra(5));
+
+        row.Status.Should().Be(FabricCheckStatuses.Unknown);
+        row.Message.Should().Contain("bìa vừa khổ vải 1,4 m");
+    }
+
+    // ---------- vải rộng gấp k lần bìa: trải k bìa song song (DEV-ALL-105) ----------
+
+    [Fact]
+    public async Task CheckAsync_FabricTwiceAsWideAsMarker_LaysTwoMarkersPerPly()
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 3m;
+        Marker("1A", 1, 2.2m, "M:2", width: 1.4m);   // k = ⌊3 ÷ 1,4⌋ = 2: mỗi lớp 4 áo M → 8 lớp × 2,2 = 17,6 m
+
+        var row = await Check(Whole(SizeM, 30));
+
+        row.NeedMeters.Should().Be(17.6m);
+        var use = row.MarkerPlans!.Single().Markers.Single();
+        (use.MarkerCode, use.Across, use.Plies, use.Ratio.Single().PiecesPerPly).Should().Be(("1A", 2, 8, (short)2));
+        row.MarkerPlans!.Single().Surplus.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CheckAsync_LayingMarkersSideBySide_CanMakeANarrowerMarkerTheBestChoice()
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 3m;
+        Marker("1A", 1, 2.2m, "M:2", width: 1.6m);   // k = 1: 15 lớp × 2,2 = 33 m
+        Marker("1B", 1, 2.5m, "M:2", width: 1.5m);   // k = 2: một lớp 4 áo M, dài 2,5 m
+
+        var row = await Check(Whole(SizeM, 30));
+
+        // 1B × 7 lớp (28 áo) + 1A × 1 lớp (2 áo) = 17,5 + 2,2 = 19,7 m, ít hơn chỉ 1A (33 m) hay chỉ 1B (8 lớp, 20 m).
+        row.NeedMeters.Should().Be(19.7m);
+        row.MarkerPlans!.Single().Markers.Select(m => (m.MarkerCode, m.Across, m.Plies)).Should().Equal(("1A", 1, 1), ("1B", 2, 7));
+    }
+
+    [Fact]
+    public async Task CheckAsync_FabricWidthNotAMultiple_RoundsMarkersAcrossDown()
+    {
+        BodyOnGroupOne();
+        _fabric.WidthM = 2.9m;
+        Marker("1A", 1, 2.2m, "M:2", width: 1.5m);   // k = ⌊2,9 ÷ 1,5⌋ = 1
+
+        var row = await Check(Whole(SizeM, 30));
+
+        (row.NeedMeters, row.MarkerPlans!.Single().Markers.Single().Across).Should().Be((33m, 1));
+    }
+
+    [Fact]
+    public async Task CheckAsync_ExtraCutOnFabricTwiceAsWide_CountsPiecesOfBothMarkers()
+    {
+        Norm(SizeM); OnFabric(1); OnGroup(1, Body);
+        _fabric.WidthM = 3m;
+        Marker("1A", 1, 1m, "M:1", width: 1.5m);   // k = 2: mỗi lớp 2 miếng → 10 miếng cần 5 lớp
+
+        (await Check(Extra(10))).NeedMeters.Should().Be(5m);
     }
 }

@@ -33,6 +33,8 @@ export type WorkOrderFabricCheck = {
   /** Có = kho khả dụng + tổ cắt đang giữ của đơn. */
   warehouseQty: number | null;
   holdingQty: number | null;
+  /** DEV-ALL-103: có bìa nên dùng rộng hơn khổ vải (vải không đủ rộng để cắt); null = không có. */
+  widthWarning?: string | null;
 };
 
 /** Phương án trải bìa của một nhóm bìa trên một vải (DEV-ALL-88). isExtra = phần cắt lẻ / cắt bù; surplus = sản phẩm (cắt lẻ: miếng) dư. */
@@ -52,6 +54,8 @@ export type FabricMarkerUse = {
   plies: number;
   meters: number;
   ratio: { sizeCode: string; piecesPerPly: number }[];
+  /** Số bìa trải song song trên một lớp (vải rộng gấp k lần bìa, DEV-ALL-105); thiếu = 1. */
+  across?: number;
 };
 
 export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {

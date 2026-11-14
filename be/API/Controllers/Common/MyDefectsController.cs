@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Common;
 
-/// <summary>UC56 — công nhân xem phiếu lỗi của chính mình và phản hồi khi ghi sai.</summary>
+/// <summary>UC56 — công nhân chỉ xem phiếu lỗi của chính mình (không phản hồi / khiếu nại, DEV-ALL-106).</summary>
 [Authorize]
 public sealed class MyDefectsController : CommonBaseController
 {
@@ -22,8 +22,4 @@ public sealed class MyDefectsController : CommonBaseController
     [HttpGet]
     public async Task<IActionResult> ListMine([FromQuery] DefectQuery query, CancellationToken ct) =>
         this.ToResponse(await _defects.ListMineAsync(_user.EmployeeId, query, ct));
-
-    [HttpPost("{id:int}/object")]
-    public async Task<IActionResult> Object(int id, [FromBody] ObjectDefectDto dto, CancellationToken ct) =>
-        this.ToResponse(await _defects.ObjectAsync(_user.EmployeeId, id, dto, ct));
 }

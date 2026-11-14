@@ -78,7 +78,7 @@ export const useKpiTargetDetail = (kpiTargetId: number | null) =>
     enabled: kpiTargetId !== null,
   });
 
-/** Xem trước kết thúc đơn của tổ: lệch kiểm cuối đơn theo công nhân, kết quả KPI, tăng ca. */
+/** Xem trước kết thúc đơn của tổ: lệch kiểm cuối đơn theo công đoạn, kết quả KPI, tăng ca. */
 export const useFinishPreview = (kpiTargetId: number | null) =>
   useQuery({
     queryKey: [...KPI_KEY, 'finish-preview', kpiTargetId],
@@ -86,7 +86,7 @@ export const useFinishPreview = (kpiTargetId: number | null) =>
     enabled: kpiTargetId !== null,
   });
 
-/** Kết thúc đơn: ghi phiếu hàng hỏng cho phần lệch, chốt và đóng KPI; làm mới cả hàng hỏng và đơn từ (đơn tăng ca). */
+/** Kết thúc đơn: chốt và đóng KPI, thông báo lệch (không tự ghi phiếu); làm mới cả hàng hỏng và đơn từ. */
 export const useFinishKpiTarget = () =>
   useApiMutation((kpiTargetId: number) => kpiApi.finish(kpiTargetId), {
     invalidate: [KPI_KEY, ['production'], ['requests']],
@@ -114,4 +114,18 @@ export const useCancelKpiTarget = () =>
   useApiMutation((kpiTargetId: number) => kpiApi.cancelTarget(kpiTargetId), {
     invalidate: [KPI_KEY],
     successMessage: KPI_TEXT.cancelled,
+  });
+
+/**
+ * Chi tiết lệch kiểm cuối đơn của một chỉ tiêu (mở từ thông báo), tính lại từ dữ liệu hiện tại nên chỉ tiêu đã đóng vẫn xem được.
+ * Quản đốc / Admin dùng endpoint xem trước; tổ trưởng / tổ phó dùng endpoint chỉ xem của tổ mình.
+ */
+export const useMismatchDetail = (role: 'manager' | 'team-leader', kpiTargetId: number | null) =>
+  useQuery({
+    queryKey: [...KPI_KEY, 'mismatch-detail', role, kpiTargetId],
+    queryFn: () =>
+      role === 'manager'
+        ? kpiApi.finishPreview(kpiTargetId as number)
+        : kpiApi.finishResult(kpiTargetId as number),
+    enabled: kpiTargetId !== null,
   });

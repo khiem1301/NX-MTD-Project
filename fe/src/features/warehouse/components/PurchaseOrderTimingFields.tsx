@@ -1,4 +1,5 @@
-import { Form, InputNumber, Space } from 'antd';
+import { Form, Space } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { DeliveryDateFields } from '@/components/common/DeliveryDateFields';
 import dayjs from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
@@ -28,7 +29,7 @@ export function PurchaseOrderTimingFields() {
           { required: true, type: 'number', min: 1, message: LABELS.expectedDeliveryRequired },
         ]}
       >
-        <InputNumber min={1} max={99} precision={0} style={{ width: 170 }} />
+        <QtyInput min={1} max={99} style={{ width: 170 }} />
       </Form.Item>
       <DeliveryDateFields
         count={deliveryCount}

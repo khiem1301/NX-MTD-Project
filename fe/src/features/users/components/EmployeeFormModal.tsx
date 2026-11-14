@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Button, Form, Input, InputNumber, Select, Space } from 'antd';
+import { Button, Form, Input, Select, Space } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import dayjs from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { RjEmployeePickerModal } from '@/components/common/RjEmployeePickerModal';
@@ -162,7 +163,7 @@ export function EmployeeFormModal({
         )}
         <Space wrap align="start">
           <Form.Item name="attendanceCode" label={MESSAGES.hr.attendanceCode}>
-            <InputNumber min={1} max={99999999} precision={0} controls={false} />
+            <QtyInput min={1} max={99999999} grouping={false} controls={false} />
           </Form.Item>
           {!employee ? (
             <Form.Item label=" ">

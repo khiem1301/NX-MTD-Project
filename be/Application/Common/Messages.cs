@@ -86,6 +86,12 @@ public static class Messages
     public const string MachineRequestQtyInvalid = "Số lượng phải là số nguyên (không số lẻ) từ 1 đến {0}.";
     public const string RequisitionTargetDatePast = "Ngày cần không được trước hôm nay.";
     public const string RequisitionTooManyLines = "Đơn xin tối đa {0} dòng.";
+    public const string RequisitionOrderRequired = "Chọn đơn hàng của đơn xin.";
+    public const string RequisitionMaterialNotInOrder = "NVL không có trong NVL của đơn hàng: {0}.";
+    public const string RequisitionPieceLineRequired = "Mỗi dòng đơn Xin BTP phải chọn mã hàng – màu – size của đơn hàng.";
+    public const string RequisitionOrderLineNotInOrder = "Dòng đơn đã chọn không thuộc đơn hàng của đơn xin.";
+    public const string RequisitionOverStock = "Số xin vượt số khả dụng trong kho: {0}.";
+    public const string RequisitionOverStockLine = "{0} xin {1}, khả dụng {2}";
     public const string NotifyNewRequestTitle = "Có đơn mới cần xử lý";
     public const string NotifyNewRequestBody = "Đơn {0} ({1}) đang chờ bạn xử lý.";
     public const string NotifyRequestChangedTitle = "Đơn của bạn đã được cập nhật";
@@ -276,7 +282,7 @@ public static class Messages
     public const string KpiTotalBelowPlan = "Chỉ tiêu cả kỳ không được nhỏ hơn tổng KPI đã đặt cho các ngày ({0}). Hãy sửa KPI từng ngày trước.";
     public const string KpiInvalidStatusForEdit = "Chỉ có thể sửa chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiInvalidStatusForFinish = "Chỉ kết thúc được đơn của tổ khi chỉ tiêu KPI còn hoạt động (ACTIVE).";
-    public const string KpiFinishNoFinalOperation = "Mã hàng chưa có công đoạn cuối đang dùng nên chưa so được sản lượng cuối đơn.";
+    public const string NotifyEndOfOrderMismatchTitle = "Lệch kiểm cuối đơn của tổ";
     public const string KpiFinished = "Đã kết thúc đơn của tổ và chốt chỉ tiêu KPI.";
     public const string KpiInvalidStatusForCancel = "Chỉ có thể hủy chỉ tiêu KPI đang hoạt động (ACTIVE).";
     public const string KpiTargetBelowActual = "Chỉ tiêu cả kỳ không được nhỏ hơn số tổ đã làm được ({0}).";
@@ -377,6 +383,10 @@ public static class Messages
     // --- Công đoạn + đơn giá (UC25, UC26), phân công (UC52), sản lượng (UC55), QC (UC57), hàng hỏng (UC56) ---
     public const string ProductionSewingTeamOnly = "Chức năng này chỉ dành cho tổ trưởng / tổ phó tổ may.";
     public const string OperationComponentInvalid = "Công đoạn chỉ gắn chi tiết vải (PANEL) của đúng mã hàng; phụ liệu không gắn công đoạn.";
+    // ---- Khổ vải / khổ bìa (DEV-ALL-102); {0} là tên trường ----
+    public const string WidthPositive = "{0} phải lớn hơn 0.";
+    public const string WidthTooLarge = "{0} tối đa 3,5 m.";
+    public const string WidthDecimals = "{0} tối đa {1} số lẻ.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationProductRequired = "Vui lòng chọn mã hàng.";
     public const string OperationCodeFormat = "Mã công đoạn chỉ gồm chữ không dấu, số và các ký tự . _ -";
@@ -487,17 +497,18 @@ public static class Messages
     public const string DefectInvalidStatus = "Phiếu lỗi này không còn hiệu lực để thao tác.";
     public const string DefectSaved = "Đã ghi phiếu lỗi.";
     public const string DefectCancelled = "Đã hủy phiếu lỗi.";
-    public const string DefectObjected = "Đã gửi phản hồi cho tổ trưởng.";
-    public const string DefectObjectionRequired = "Vui lòng nhập nội dung phản hồi.";
-    public const string DefectConfirmed = "Đã chấp nhận phiếu lỗi, phiếu được giữ nguyên.";
-    public const string DefectNoObjection = "Phiếu này chưa có phản đối của công nhân.";
-    public const string DefectObjectionExpired = "Đã quá 48 giờ kể từ lúc phiếu được ghi, không phản đối được nữa.";
-    public const string DefectObjectionDecided = "Quản đốc đã chấp nhận phiếu này, không phản đối được nữa.";
-    public const string DefectManagerOnly = "Chỉ Quản đốc hoặc Admin được chấp nhận phiếu lỗi.";
-    public const string NotifyDefectConfirmedTitle = "Phiếu lỗi được giữ nguyên";
-    public const string NotifyDefectConfirmedBody = "Quản đốc đã chấp nhận phiếu {0}, phản đối của bạn không được chấp nhận.";
+    public const string DefectUpdated = "Đã cập nhật phiếu lỗi.";
+    public const string DefectCancelReasonRequired = "Vui lòng nhập lý do hủy phiếu.";
+    public const string DefectUpdateReasonRequired = "Quản đốc sửa phiếu phải nhập lý do.";
+    public const string DefectEditWindowPassed = "Đã quá 24 giờ kể từ lúc lập phiếu, tổ trưởng không sửa / hủy được. Liên hệ Quản đốc.";
+    public const string DefectOrderClosed = "Đơn hàng đã đóng, không sửa / hủy phiếu lỗi được.";
+    public const string DefectHasReplacement = "Phiếu đã có đơn cắt bù {0} ({1}). Hủy đơn cắt bù trước rồi mới sửa / hủy phiếu.";
+    public const string DefectIncreaseOverOnLine = "Không tăng được: số tăng thêm {0} vượt số hàng đang trên chuyền của tổ ở dòng đơn này ({1}).";
+    public const string DefectNothingChanged = "Phiếu không có thay đổi nào.";
     public const string NotifyDefectTitle = "Bạn có phiếu lỗi mới";
-    public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy phản hồi cho tổ trưởng.";
-    public const string NotifyDefectObjectionTitle = "Công nhân phản hồi phiếu lỗi";
-    public const string NotifyDefectObjectionBody = "{0} phản hồi phiếu {1}: {2}";
+    public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy báo tổ trưởng.";
+    public const string NotifyDefectUpdatedTitle = "Phiếu lỗi được chỉnh sửa";
+    public const string NotifyDefectUpdatedBody = "Phiếu {0} đã được chỉnh sửa: {1} cái {2} ở công đoạn {3}.";
+    public const string NotifyDefectCancelledTitle = "Phiếu lỗi bị hủy";
+    public const string NotifyDefectCancelledBody = "Phiếu {0} đã bị hủy, không còn tính vào bạn. Lý do: {1}";
 }

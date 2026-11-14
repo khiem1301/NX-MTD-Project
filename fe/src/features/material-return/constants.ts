@@ -29,18 +29,45 @@ export const RETURN_STATUS_LABEL: Record<string, StatusLabel> = {
   CANCELLED: { text: 'Đã rút', color: 'default' },
 };
 
+/** Tổ may trả NVL / BTP; tổ cắt chỉ trả NVL (theo lệnh cắt). */
+export const RETURN_KIND = { MATERIAL: 'MATERIAL', SEMI_FINISHED: 'SEMI_FINISHED' } as const;
+
+export const RETURN_KIND_LABEL: Record<string, string> = {
+  MATERIAL: 'NVL / phế phẩm',
+  SEMI_FINISHED: 'BTP',
+};
+
+/** Phế phẩm tính theo đơn vị này thì nhập được số lẻ; đơn vị khác (cái…) là số nguyên. Khớp MaterialTypes.ScrapDecimalUnit ở BE. */
+export const SCRAP_DECIMAL_UNIT = 'kg';
+
 export const RETURN_LABELS = {
-  title: 'Trả vải thừa',
-  create: 'Lập phiếu trả vải',
+  title: 'Trả hàng về kho',
+  create: 'Lập phiếu trả',
+  kind: 'Loại hàng trả',
+  workOrder: 'Lệnh cắt',
+  workOrderPlaceholder: 'Chọn lệnh cắt',
+  orderPlaceholder: 'Chọn đơn hàng',
+  item: 'Hàng',
+  usedCut: 'Đã cắt',
+  usedQc: 'QC đạt',
+  scrapTitle: 'NVL phế phẩm trả thêm',
+  scrapTag: 'phế phẩm',
+  scrapAdd: 'Thêm phế phẩm',
+  scrapPlaceholder: 'Chọn NVL phế phẩm',
+  scrapHint: 'Phế phẩm không có trần số lượng; vải theo kg, kim theo cái.',
+  materialHintSewing: 'Số còn trả được = tổng đã nhận ở mọi phiếu cấp − đã trả (không theo đơn).',
+  btpHint: 'Số bộ còn trả được = đã nhận − đã QC đạt − đã trả, theo từng mã hàng – màu – size.',
+  pickWorkOrder: 'Chọn lệnh cắt để xem vải còn trả được. Chỉ trả phế phẩm thì không cần chọn.',
+  pickOrder: 'Chọn đơn hàng để xem BTP còn trả được.',
+  nothingEntered: 'Nhập số lượng trả ít nhất một dòng.',
   code: 'Mã phiếu',
-  issue: 'Phiếu cấp gốc',
   order: 'Đơn hàng',
-  team: 'Tổ cắt',
+  team: 'Tổ',
   status: 'Trạng thái',
   createdAt: 'Ngày lập',
   totalQty: 'Tổng trả',
   confirmedBy: 'Người nhận kho',
-  material: 'NVL',
+  material: 'Hàng',
   color: 'Màu',
   unit: 'ĐVT',
   receivedQty: 'Đã nhận',
@@ -52,24 +79,23 @@ export const RETURN_LABELS = {
   note: 'Ghi chú',
   receive: 'Nhận vào kho',
   reject: 'Từ chối',
-  rejectTitle: 'Từ chối phiếu trả vải',
+  rejectTitle: 'Từ chối phiếu trả',
   rejectReason: 'Lý do từ chối',
   cancel: 'Rút phiếu',
-  nothingToReturn: 'Tổ chưa nhận vải nào còn trả được.',
-  suggestedQty: 'Còn lại sau cắt',
+  nothingToReturn: 'Không còn hàng nào trả được theo lựa chọn này.',
   suggestHint:
-    'Hệ thống đã điền sẵn số vải còn lại sau các bàn cắt (đã nhận − đã trả − số lớp × chiều dài bàn cắt). Kiểm tra lại cuộn vải thực tế rồi sửa nếu khác.',
+    'Hệ thống đã điền sẵn số vải còn lại sau cắt của lệnh (đã nhận theo lệnh − số mét đã cắt − đã trả). Kiểm tra lại cuộn vải thực tế rồi sửa nếu khác.',
   noSuggestHint:
-    'Có bàn cắt chưa nhập chiều dài nên hệ thống chưa tính được vải còn lại. Nhập số trả theo cuộn vải thực tế.',
+    'Lệnh có bàn cắt chưa nhập số mét nên hệ thống chưa tính được vải còn lại. Nhập số trả theo cuộn vải thực tế.',
 } as const;
 
 export const RETURN_MESSAGES = {
-  created: 'Đã lập phiếu trả vải, chờ Thủ kho nhận.',
-  confirmCreate: 'Lập phiếu trả vải thừa?',
-  confirmReceive: 'Xác nhận nhận vải trả vào kho theo số đếm?',
-  received: 'Đã nhận vải trả vào kho.',
-  rejected: 'Đã từ chối phiếu trả vải.',
-  confirmCancel: 'Rút phiếu trả vải này?',
-  cancelled: 'Đã rút phiếu trả vải.',
+  created: 'Đã lập phiếu trả, chờ Thủ kho nhận.',
+  confirmCreate: 'Lập phiếu trả hàng về kho?',
+  confirmReceive: 'Xác nhận nhận hàng trả vào kho theo số đếm?',
+  received: 'Đã nhận hàng trả vào kho.',
+  rejected: 'Đã từ chối phiếu trả.',
+  confirmCancel: 'Rút phiếu trả này?',
+  cancelled: 'Đã rút phiếu trả.',
   discrepancyReasonRequired: 'Số đếm khác số trả, vui lòng nhập lý do.',
 } as const;

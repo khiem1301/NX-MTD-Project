@@ -138,6 +138,20 @@
 | DEV-ALL-84 | 07/11/2026 | Claude (AI) | UC30 (suất ăn) | Số suất ăn tổ trưởng xác nhận không được vượt số người đang làm trong tổ | Mở |
 | DEV-ALL-98 | 11/11/2026 | Claude (AI) | UC07, UC40, `Request` | Mọi đơn từ tạo tay đều cần duyệt (Vật tư máy, Xin NVL, Xin BTP thêm bước duyệt; cấp NVL / BTP chỉ theo đơn xin đã duyệt); thêm trạng thái `NOT_COMPLETED` (Không hoàn thành) cho đơn đã duyệt mà người xử lý không làm được, bắt buộc nêu lý do | Mở |
 | DEV-ALL-99 | 11/11/2026 | Claude (AI) | UC40, `MaterialIssue` | Phiếu cấp NVL / BTP không bắt buộc thuộc lệnh cắt hay đơn xin; tổ may nhận cả NVL (chỉ, cúc…) và BTP; chọn đơn xin thì tự điền tổ, đơn hàng, lệnh cắt, số lượng; thêm kiểm biên số lượng và số dòng | Mở |
+| DEV-ALL-100 | 11/11/2026 | Claude (AI) | UC53, UC54, UC60, `WorkAllocation` | Giao sản lượng công đoạn theo ngày: phần giao thêm chờ công nhân xác nhận (tổ trưởng xác nhận hộ có cảnh báo), chỉ phần đã xác nhận vào trần sản lượng; khung giao hiện thành phần (chi tiết vải) của công đoạn. Thay phần "phiếu của tổ trưởng CONFIRMED ngay" của DEV-ALL-63 | Mở |
+| DEV-ALL-101 | 11/11/2026 | Claude (AI) | UC53, UC60, `WorkAllocation` | Phiếu giao việc chờ công nhân xác nhận quá 60 phút thì hệ thống tự xác nhận đủ số (job nền mỗi 5 phút, `ConfirmMode = SYSTEM`) | Mở |
+| DEV-ALL-102 | 11/11/2026 | Claude (AI) | UC10 (bìa của đơn), UC24 (NVL), `Material`, `ProductMarker` | Thêm lại khổ vải (`Material.WidthM`) và khổ bìa (`ProductMarker.WidthM`), bắt buộc, > 0 và ≤ 3,5 m; dữ liệu cũ điền 1,5 m. Thay phần "bỏ khổ vải, khổ bìa" của DEV-ALL-85 | Mở |
+| DEV-ALL-103 | 12/11/2026 | Claude (AI) | UC19, UC49–UC51 (ước vải lệnh cắt) | Ước vải lệnh cắt cảnh báo "Vải không đủ rộng để cắt" khi bìa nên dùng rộng hơn khổ vải; chỉ cảnh báo, không đổi số mét và cách chọn bìa | Bỏ (thay bằng DEV-ALL-104) |
+| DEV-ALL-104 | 12/11/2026 | Claude (AI) | UC19, UC49–UC51 (ước vải lệnh cắt), UC10 (bìa của đơn) | Ghép bìa lệnh cắt bỏ bìa rộng hơn khổ vải (không còn bìa vừa thì báo chưa tính được, vải không đủ rộng); tab Bìa cắt cảnh báo ngay khi khổ bìa lớn hơn khổ vải của nhóm. Thay DEV-ALL-103 | Mở |
+| DEV-ALL-105 | 12/11/2026 | Claude (AI) | UC19, UC49–UC51 (ước vải lệnh cắt) | Vải rộng gấp k lần bìa (k = ⌊khổ vải ÷ khổ bìa⌋, không trừ biên) thì một lớp trải k bìa song song (hoặc cắt khổ vải thành k phần): một lớp cắt ra k lần sản phẩm, số mét ước giảm theo; bìa nên dùng ghi "× k bìa song song" | Mở |
+| DEV-ALL-106 | 12/11/2026 | Claude (AI) | UC56, UC22, `DefectRecord` | Phiếu lỗi: bỏ khiếu nại của công nhân (công nhân chỉ xem phiếu của mình); tổ trưởng sửa / hủy phiếu trong 24 giờ kể từ lúc lập (hủy bắt buộc lý do); tổ nào chỉ tổ trưởng tổ đó xem; Quản đốc sửa / hủy không giới hạn giờ nhưng bị chặn khi kỳ lương khóa, đơn đã đóng, đã có đơn cắt bù còn hiệu lực, hoặc hủy / sửa phiếu nhập sai làm sản lượng vượt trần | Mở |
+| DEV-ALL-107 | 12/11/2026 | Claude (AI) | UC57–UC58 (kết thúc đơn của tổ), `DefectRecord`, `KpiTarget` | Kết thúc đơn không còn tự ghi phiếu hàng hủy (trừ lương) cho phần lệch kiểm cuối đơn (thay phần đó của DEV-ALL-15): so lệch ở MỌI công đoạn, chỉ cảnh báo trong màn kết thúc đơn và thông báo tóm tắt Quản đốc, tổ trưởng (bấm mở chi tiết: công đoạn, dòng đơn, những ai đã báo và sản lượng). Thêm: sửa tăng số lượng phiếu lỗi bị giới hạn bởi hàng trên chuyền (DEV-ALL-106) | Mở |
+| DEV-ALL-108 | 13/11/2026 | Claude (AI) | UC19 (lệnh cắt), UC40 (cấp NVL / BTP), mọi ô nhập số | Ô số có hai loại trần: trần cố định tự về trần ngay khi gõ; trần nghiệp vụ (còn lại, đã giao, khả dụng…) không tự cắt mà báo lỗi và chặn lưu. Riêng màn cấp NVL / BTP của Thủ kho (vượt khả dụng / đơn xin) và màn tạo lệnh cắt (vượt số còn lên lệnh được) chỉ cảnh báo, vẫn lưu; BE bỏ chặn "cấp vượt đơn xin" và "tổng kế hoạch vượt số đặt" (thay phần đó của DEV-ALL-99). Màn lệnh cắt hiện cột "Còn lên lệnh được" | Mở |
+| DEV-ALL-109 | 13/11/2026 | Claude (AI) | UC07, UC40, `Request`, `MaterialIssue` | Đơn Xin NVL / Xin BTP không còn tự Hoàn thành khi Thủ kho lập phiếu cấp: đơn giữ Đã duyệt tới khi tổ xác nhận nhận phiếu; tổ từ chối phiếu thì đơn vẫn Đã duyệt để Thủ kho cấp lại; đơn đang có phiếu chờ nhận thì không lập thêm phiếu theo đơn đó | Mở |
+| DEV-ALL-110 | 13/11/2026 | Claude (AI) | UC07, UC40, `Request`, `RequestLine` | Đơn Xin BTP chọn đơn hàng + mã hàng – màu – size của đơn (bỏ gõ tên hàng tự do); Xin NVL của tổ may bắt buộc chọn đơn hàng, chỉ NVL của đơn; số xin mỗi dòng (Xin NVL / Xin BTP, cả tổ cắt và tổ may) không vượt khả dụng trong kho; form hiện cột Khả dụng | Mở |
+| DEV-ALL-111 | 13/11/2026 | Claude (AI) | UC42, `MaterialReturn` | Tổ may cũng trả NVL thừa (chỉ, cúc…) về kho theo phiếu cấp đã nhận, như tổ cắt; đổi chữ "Trả vải thừa" thành "Trả NVL thừa". Thay phần "tổ may không trả" của UC42 (mở rộng thêm ở DEV-ALL-112) | Mở |
+| DEV-ALL-112 | 13/11/2026 | Claude (AI) | UC42, UC24, `MaterialReturn`, `MaterialReturnLine`, `Material` | Phiếu trả không còn theo phiếu cấp: tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL (tổng đã nhận, không theo đơn) và BTP theo đơn – mã hàng – màu – size (trần = đã nhận − đã QC đạt − đã trả); cả hai tổ trả thêm NVL phế phẩm (loại NVL mới SCRAP: vải vụn kg, kim gãy cái…, không trần). Đổi DB: patch `2026-11-13_material_return_scrap.sql` | Mở |
+| DEV-ALL-113 | 13/11/2026 | Claude (AI) | UC10, UC37, UC39, `PurchaseOrder`, `CustomerOrder`, `Request`, `DeliveryScheduleDate` | Lịch giao NVL nhập đúng N ngày cho N lần giao (đơn mua, lịch khách giao, giao bù) thay cho khoảng "từ ngày – đến ngày"; thêm bảng ngày giao DeliveryScheduleDate (mỗi dòng đúng một chủ lịch, có khoá ngoại), cột ngày đầu / cuối cũ giữ làm tóm tắt | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -2254,4 +2268,228 @@
 - **Lý do:** yêu cầu của người dùng (11/11/2026): cấp phát linh hoạt hơn, tổ may cũng cần chỉ, cúc để may.
 - **Ảnh hưởng người khác:** Thái (phiếu cấp), tổ trưởng tổ may (xin và nhận NVL), Thủ kho.
 - **Cần sửa trong tài liệu:** Report-3 UC40 (điều kiện lập phiếu cấp, đối tượng nhận NVL), AI Context (luật phiếu cấp).
+- **Trạng thái:** Mở
+
+### DEV-ALL-100 · Giao sản lượng theo ngày chờ công nhân xác nhận; hiện thành phần của công đoạn
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC53, UC54, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `DailyWorkAllocationService` (`SaveAsync`, `GetBoardAsync`), `DailyAllocationRowDto` thêm `pendingQty`, `components` (`OperationComponentRefDto`), `WarehouseMessages` (`DailySavedPendingConfirm`, `DailyNotifyTitle`, `DailyNotifyBody`, `DailyPendingWithdrawn`). FE: `DailyAllocationBoard` (cột tách ra `dailyBoardColumns`), `dailyModalColumns`, `OperationComponentsLine`, `ConfirmMovementModal`, `dailyBoard.ts`, `constants.ts`. Không đổi schema, không đổi URL API.
+- **Tài liệu gốc ghi:** DEV-ALL-63: phiếu giao theo ngày do tổ trưởng ghi là `CONFIRMED` ngay (`ConfirmMode = LEADER`), không chờ công nhân. Report-3 UC60: công nhân tự xác nhận số được giao, UC54: tổ trưởng xác nhận hộ (bắt buộc lý do).
+- **Code đang làm:**
+  - Lưu giao theo ngày: phần giao thêm ghi phiếu `HANDOVER` `PENDING` (`ConfirmMode = WORKER`), công nhân được thông báo và xác nhận / từ chối ở màn "Sản lượng công đoạn được giao" (UC60, lệch số phải có lý do). Tổ trưởng / tổ phó xác nhận hộ ở tab "Phiếu giao / thu hồi" (UC54, bắt buộc lý do); bấm Xác nhận thì hiện modal cảnh báo "Xác nhận hộ công nhân?" trước khi gửi.
+  - Chỉ phần đã xác nhận mới vào trần sản lượng cuối ca (`vw_WorkerOutputCap`, trigger không đổi). Phần chờ xác nhận đã giữ chỗ trong số còn giao được của công đoạn (`vw_OperationAllocationProgress.PendingQty` vốn có).
+  - Bảng giao theo ngày: "Giao trong ngày" = đã xác nhận + đang chờ, kèm nhãn "Chờ CN xác nhận n" ở từng công đoạn và ở dòng công nhân. "Chưa làm hết" chỉ tính phần đã xác nhận. "Giao như lần trước" tính cả phiếu giao chưa xác nhận.
+  - Hạ số giao trong ngày (vẫn bắt buộc lý do): trừ trước vào phiếu đang chờ (phiếu mới nhất trước: bớt số trên phiếu, phiếu bớt hết chuyển `REJECTED` với lý do "Tổ trưởng hạ số giao trước khi công nhân xác nhận: …"), phần còn lại ghi thu hồi `ADJUSTED` `CONFIRMED` như cũ. Nhãn trạng thái `REJECTED` ở FE đổi thành "Từ chối / đã rút lại".
+  - Khung giao việc của công nhân hiện dưới tên mỗi công đoạn các thành phần (chi tiết vải, `OperationComponent`) công đoạn làm trên đó,, chỉ ghi tên, không kèm số chi tiết / sản phẩm (VD "Thành phần: Tay áo, Thân sau"); ô tìm công đoạn tìm được theo tên thành phần.
+- **Lý do:** yêu cầu của người dùng (11/11/2026): công nhân phải xác nhận số sản lượng công đoạn được giao sau khi tổ trưởng giao; tổ trưởng xác nhận hộ được nhưng có cảnh báo; khi giao cần thấy thành phần của sản phẩm trong công đoạn.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh / Kiều (UC55 sản lượng cuối ca: công nhân chưa xác nhận thì chưa có trần, nhập sản lượng vượt sẽ đi đường chuyển phần vượt của DEV-ALL-64 hoặc bị chặn MSG16 cho tới khi xác nhận).
+- **Cần sửa trong tài liệu:** Report-3 UC53 / UC54 / UC60 (giao theo ngày cần công nhân xác nhận, cảnh báo xác nhận hộ, hiện thành phần của công đoạn); DEV-ALL-63 dòng "phiếu của tổ trưởng CONFIRMED ngay" nay thay bằng mục này.
+- **Trạng thái:** Mở
+
+### DEV-ALL-101 · Hệ thống tự xác nhận phiếu giao việc quá 1 giờ công nhân không xác nhận
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC53, UC60 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `WorkAllocationAutoConfirmService` + `IWorkAllocationAutoConfirmService` (mới), job nền `WorkAllocationAutoConfirmJob` (mới, đăng ký ở `WarehouseModule`), hằng số `AllocationAutoConfirmWindow.Minutes = 60`, `WarehouseMessages.AllocationAutoConfirmed*`. FE: nhãn `CONFIRM_MODE_LABEL.SYSTEM` thành "Hệ thống tự xác nhận", ghi chú ở màn công nhân và khung giao việc. Không đổi schema (`CK_WA_Mode` vốn đã có `SYSTEM`), không đổi API.
+- **Tài liệu gốc ghi:** Report-3 UC60: công nhân tự xác nhận hoặc tổ trưởng xác nhận hộ (UC54); không có tự xác nhận. DEV-ALL-63: `ConfirmMode = SYSTEM` dùng cho tự thu hồi cuối ngày (đã bỏ ở DEV-ALL-64).
+- **Code đang làm:**
+  - Mỗi 5 phút job quét phiếu `HANDOVER` còn `PENDING` có `CreatedAt` cách hiện tại quá 60 phút (giao theo ngày lẫn giao lẻ), chuyển sang `CONFIRMED` với `ConfirmedQty = Quantity`, `ConfirmMode = SYSTEM`, `ConfirmedAt` = lúc chạy; mỗi lần tối đa 500 phiếu. Phiếu thu hồi đang chờ không tự xác nhận.
+  - Chạy trong một transaction, khóa theo tổ × dòng đơn như các luồng xác nhận khác và đọc lại sau khi khóa, nên phiếu công nhân vừa xác nhận / từ chối không bị ghi đè. Ghi `AuditLog` từng phiếu (người ghi rỗng = hệ thống, lý do "Quá 60 phút công nhân không xác nhận…"); mỗi công nhân nhận một thông báo gộp.
+  - Phiếu được xác nhận trễ nhất khoảng 5 phút sau khi hết hạn 60 phút.
+- **Lý do:** yêu cầu của người dùng (11/11/2026): quá 1 giờ sau khi giao mà công nhân không xác nhận thì hệ thống tự xác nhận.
+- **Ảnh hưởng người khác:** Thái (TH-19 giao việc), Minh / Kiều (UC55: sau tối đa ~65 phút phần giao có trần sản lượng dù công nhân không thao tác).
+- **Cần sửa trong tài liệu:** Report-3 UC60 (thêm luồng tự xác nhận sau 60 phút), mục Job (thêm job tự xác nhận phiếu giao việc); `NX-MTD_AI_Context.md` mục 4.3.2 (`WorkerPieceMovement` / `WorkAllocation` có `ConfirmMode = SYSTEM` tự xác nhận).
+- **Trạng thái:** Mở
+
+### DEV-ALL-102 · Thêm lại khổ vải và khổ bìa, tối đa 3,5 m
+
+- **Ngày / Người / Task / PR:** 11/11/2026 · Claude (AI) · UC10, UC24, UC49–UC51 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:**
+  - Schema: `Material.WidthM DECIMAL(4,2) NULL` (khổ vải; phụ liệu NULL) + `CK_Material_Width` (NULL hoặc 0 < WidthM ≤ 3,5); `ProductMarker.WidthM DECIMAL(4,2) NOT NULL DEFAULT 1.50` + `CK_PM_Width` (0 < WidthM ≤ 3,5). Patch `SQL/patches/2026-11-11_fabric_marker_width.sql`; `SQL/NX-MTD_Database.sql`, `docs/NX-MTD_Database.dbml`, `docs/NX-MTD_Database_Mo_ta.md` đã cập nhật. Đã kiểm trên 2 DB tạm (dựng mới từ script mới; dựng từ script cũ rồi chạy patch 2 lần): cột, ràng buộc, dữ liệu giống nhau, ràng buộc chặn 3,51 / 3,6 m; DB tạm đã xóa.
+  - Backend: entity + cấu hình EF `Material.WidthM`, `ProductMarker.WidthM`; `MaterialDto` / `CreateMaterialDto` / `UpdateMaterialDto` thêm `widthM`; `OrderMarkerDto` / `SaveOrderMarkerDto` thêm `widthM`; rule dùng chung `WidthRule.ValidWidthM` (bắt buộc, > 0, ≤ `WidthLimits.MaxM` = 3,5, tối đa 2 số lẻ), `Messages.Width*`; `MaterialService` bỏ khổ của phụ liệu (luôn NULL); `OrderMarkerService` lưu khổ bìa, chặn bìa thiếu khổ.
+  - Frontend: form NVL có ô "Khổ vải (m)" (chỉ với vải, bắt buộc), danh sách NVL có cột khổ; bảng bìa của đơn có cột "Rộng (m)", kiểm trước khi gửi; hằng số `WIDTH_MIN_M`, `WIDTH_MAX_M`, `WIDTH_DECIMALS` ở `constants/limits.ts`.
+- **Tài liệu gốc ghi:** DEV-ALL-85: bỏ `Material.WidthCm` (khổ vải), `ProductMarker.WidthCm` (khổ bìa); khổ vải cố định 1,5 m, ước vải theo bìa không cần khổ.
+- **Code đang làm:**
+  - Khổ tính bằng mét (cùng đơn vị `LengthM` của bìa), 2 số lẻ, lớn hơn 0 và tối đa 3,5 m; bắt buộc khi tạo / sửa NVL loại vải và khi lưu bìa của đơn. Phụ liệu không có khổ (gửi lên cũng bỏ qua).
+  - Dữ liệu cũ: patch điền 1,5 m (khổ cố định đang giả định từ DEV-ALL-85) cho mọi vải và mọi bìa đang có; vải mẫu trong script dựng DB cũng 1,5 m.
+  - Ước vải lệnh cắt vẫn theo số lớp × chiều dài bìa như DEV-ALL-85, **chưa dùng khổ**; chưa kiểm khổ bìa ≤ khổ vải của nhóm bìa.
+- **Lý do:** yêu cầu của người dùng (11/11/2026): thêm lại chiều rộng cho vải, bìa và chặn quá 3,5 m; người dùng chọn bắt buộc nhập.
+- **Ảnh hưởng người khác:** Thái (NVL, lệnh cắt), Khiêm (bìa của đơn), Morgan (schema). **Chạy patch trước khi chạy backend mới** (backend mới đọc cột `WidthM`).
+- **Cần sửa trong tài liệu:** Report-3 UC10 (bìa có khổ), UC24 / form NVL (khổ vải); ERD và `NX-MTD_Database_Giai_thich.md` (cột `WidthM` của `Material`, `ProductMarker`); DEV-ALL-85 phần "bỏ khổ vải, khổ bìa" thay bằng mục này.
+- **Trạng thái:** Mở
+
+### DEV-ALL-103 · Ước vải lệnh cắt cảnh báo vải không đủ rộng cho bìa
+
+- **Ngày / Người / Task / PR:** 12/11/2026 · Claude (AI) · UC19, UC49–UC51 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `WorkOrderFabricChecker` (đọc khổ vải `Material.WidthM`, khổ bìa `ProductMarker.WidthM`), `WorkOrderFabricCheckDto` thêm `widthWarning`, `WarehouseMessages.FabricCheckTooNarrow`, `FabricCheckNarrowMarkerLabel`. FE: `FabricCheckAlerts` thêm khung "Vải không đủ rộng để cắt", `LABELS.fabricTooNarrow`, type `WorkOrderFabricCheck.widthWarning`. Không đổi schema (dùng cột của DEV-ALL-102), API chỉ thêm field.
+- **Tài liệu gốc ghi:** DEV-ALL-85 / DEV-ALL-88: ước vải lệnh cắt = số lớp × chiều dài bìa, ghép bìa cho ít mét nhất; khổ vải cố định 1,5 m nên không so khổ.
+- **Code đang làm:**
+  - Khổ vải và khổ bìa không còn cố định 1,5 m (DEV-ALL-102). Khi ước vải lệnh cắt (cả bộ và cắt lẻ / cắt bù), với mỗi vải: bìa nào trong phương án nên dùng rộng hơn khổ vải thì thêm cảnh báo "{vải}: khổ vải X m hẹp hơn bìa {mã} (rộng Y m), không trải được bìa này trên vải (vải không đủ rộng để cắt)". Màn lập / xem lệnh cắt hiện thành khung cảnh báo riêng.
+  - Chỉ cảnh báo: số mét cần, trạng thái đủ / thiếu vải và bìa nên dùng giữ nguyên; lệnh vẫn lưu được. Vải chưa có khổ thì không so.
+  - Chưa làm (chờ người dùng quyết): bỏ bìa rộng hơn khổ vải khỏi danh sách chọn khi ghép bìa; cảnh báo ở tab Bìa cắt của đơn.
+- **Lý do:** yêu cầu của người dùng (12/11/2026): khổ bìa và khổ vải không còn giới hạn 1,5 m nên không có vải đủ rộng để cắt thì hệ thống cảnh báo.
+- **Ảnh hưởng người khác:** Thái (lệnh cắt, cắt bù), Khiêm (bìa của đơn).
+- **Cần sửa trong tài liệu:** Report-3 UC19 / UC49–UC51 (cảnh báo vải không đủ rộng khi lập lệnh cắt); DEV-ALL-85 phần "khổ vải cố định 1,5 m".
+- **Trạng thái:** Bỏ — 12/11/2026 người dùng chọn bỏ bìa rộng hơn khổ vải khi ghép bìa thay cho chỉ cảnh báo, xem DEV-ALL-104.
+
+### DEV-ALL-104 · Ghép bìa bỏ bìa rộng hơn khổ vải; tab Bìa cắt cảnh báo bìa rộng hơn vải
+
+- **Ngày / Người / Task / PR:** 12/11/2026 · Claude (AI) · UC19, UC49–UC51, UC10 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `WorkOrderFabricChecker` (`MarkersFor`, `NoMarkerProblem`, `WidthWarning`), `WarehouseMessages.FabricCheckTooNarrow` (đổi câu), `FabricCheckNoFittingMarkerLabel` (mới); `OrderMarkerService.GetAsync`, `OrderMarkerGroupDto` thêm `fabrics` (`MarkerGroupFabricDto`: mã, tên, màu, khổ vải). FE: `FabricCheckAlerts` (khung "Vải không đủ rộng để cắt" của DEV-ALL-103 giữ, nay liệt kê bìa bị bỏ), `orderMarkerColumns` (ô "Rộng (m)" viền vàng + biểu tượng + chú thích khi rộng hơn vải), `orderMarker.ts` (`narrowFabricsOf`, `tooWideWarning`), type `OrderMarkerGroup.fabrics`, `MESSAGES.orders.markers.tooWideForFabric`. Không đổi schema, API chỉ thêm field.
+- **Tài liệu gốc ghi:** DEV-ALL-88: mỗi bài toán (mã hàng × nhóm bìa × vải) ghép mọi bìa đang dùng của nhóm cho ít mét nhất. DEV-ALL-103: bìa rộng hơn khổ vải chỉ cảnh báo, vẫn được chọn.
+- **Code đang làm:**
+  - Công thức mét không đổi (Σ số lớp × chiều dài bìa, ít mét nhất); khổ chỉ quyết định bìa nào dùng được. Với mỗi (nhóm bìa × vải), bìa có khổ > khổ vải bị bỏ khỏi danh sách đem ghép; ghép trên các bìa còn lại. Vải chưa có khổ thì dùng mọi bìa.
+  - Có bìa bị bỏ mà vẫn ghép được: số mét / bìa nên dùng theo các bìa vừa khổ (có thể nhiều mét hơn), khung "Vải không đủ rộng để cắt" ghi "{vải}: khổ vải X m hẹp hơn bìa {mã (rộng Y m)} nên không dùng các bìa này khi ước…".
+  - Không còn bìa vừa khổ đủ size: vải đó "Chưa tính được", lý do "bìa vừa khổ vải X m cho nhóm N (bìa … rộng hơn khổ vải, vải không đủ rộng để cắt)". Lệnh vẫn lưu được như mọi cảnh báo vải (DEV-ALL-88).
+  - Tab Bìa cắt của đơn: API trả vải của từng nhóm ở các màu của đơn kèm khổ; khi khổ bìa nhập lớn hơn khổ của một vải trong nhóm, ô "Rộng (m)" chuyển trạng thái cảnh báo, rê chuột hiện "Rộng hơn khổ vải V01 (1,5 m): vải không đủ rộng để cắt bằng bìa này". Chỉ cảnh báo, vẫn lưu được (bìa có thể dùng cho màu khác của nhóm có vải rộng hơn).
+- **Lý do:** người dùng chọn (12/11/2026): "1 sang cách B, 2 có cảnh báo" sau khi so hai cách (A chỉ cảnh báo, B loại bìa không vừa khổ).
+- **Ảnh hưởng người khác:** Thái (lệnh cắt, cắt bù: số mét ước có thể tăng hoặc thành "chưa tính được" khi bìa không vừa khổ vải), Khiêm (tab Bìa cắt).
+- **Cần sửa trong tài liệu:** Report-3 UC19 / UC49–UC51 (ghép bìa chỉ dùng bìa vừa khổ vải), UC10 / bìa của đơn (cảnh báo bìa rộng hơn vải); DEV-ALL-88 phần "ghép mọi bìa của nhóm".
+- **Trạng thái:** Mở
+
+### DEV-ALL-105 · Ước vải lệnh cắt tính trải nhiều bìa song song khi vải rộng gấp nhiều lần bìa
+
+- **Ngày / Người / Task / PR:** 12/11/2026 · Claude (AI) · UC19, UC49–UC51 · cùng nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `MarkerOption`, `MarkerCandidate`, `MarkerUse` thêm `Across`; `MarkerProblem.Create` nhân tỉ lệ size với `Across`, `MarkerProblem.Plan` trả tỉ lệ của một bìa kèm `Across`; `WorkOrderFabricChecker.MarkersFor` tính `Across`; `FabricMarkerUseDto` thêm `across`. FE: `fabricPlan.markerUseLabel`, `LABELS.markerUseAcross`, type `FabricMarkerUse.across`. Không đổi schema, API chỉ thêm field.
+- **Tài liệu gốc ghi:** DEV-ALL-88: bìa j có rⱼₛ sản phẩm size s trên 1 lớp; điều kiện Σⱼ rⱼₛ · xⱼ ≥ Nₛ (cắt lẻ: Σⱼ rⱼₛ · pₖ · xⱼ ≥ Mₖₛ), mục tiêu Σⱼ Dⱼ · xⱼ nhỏ nhất. Mỗi lớp trải một bìa.
+- **Code đang làm:**
+  - Với mỗi (nhóm bìa × vải) đã có khổ: kⱼ = ⌊khổ vải ÷ khổ bìa j⌋, **không trừ biên vải** (người dùng xác nhận xưởng không có biên). kⱼ = 0: bìa rộng hơn vải, bỏ (DEV-ALL-104). kⱼ = 1: như cũ. kⱼ ≥ 2: một lớp trải kⱼ bìa song song, hoặc cắt khổ vải thành kⱼ phần rồi trải (tốn vải như nhau).
+  - Điều kiện đổi thành Σⱼ kⱼ · rⱼₛ · xⱼ ≥ Nₛ (cắt lẻ: Σⱼ kⱼ · rⱼₛ · pₖ · xⱼ ≥ Mₖₛ); **mục tiêu tổng mét Σⱼ Dⱼ · xⱼ giữ nguyên** (k bìa nằm cạnh nhau trên cùng một đoạn vải dài Dⱼ). Số dư tính theo sản phẩm thực cắt ra (đã nhân k). Vải chưa có khổ: k = 1.
+  - Ví dụ: vải 3 m, bìa 1A dài 2,2 m rộng 1,4 m, 2 áo M / bìa, cần 30 áo M: k = 2, một lớp 4 áo → 8 lớp × 2,2 = 17,6 m (dư 2), trước đây 15 lớp, 33 m. Bìa hẹp trải song song có thể thành lựa chọn tốt hơn bìa rộng, bộ giải tự ghép (vd 1B × 7 lớp song song 2 + 1A × 1 lớp = 19,7 m).
+  - Dòng bìa nên dùng ghi "1A (2M) × 2 bìa song song × 8 lớp" (tỉ lệ là của một bìa); k = 1 ghi như cũ.
+- **Lý do:** người dùng (12/11/2026): khổ vải / khổ bìa không cố định nên vải có thể rộng gấp đôi bìa; xưởng có thể cắt đôi khổ vải hoặc trải 2 bìa; không có biên vải.
+- **Ảnh hưởng người khác:** Thái (lệnh cắt, cắt bù, xin / cấp vải theo số mét ước: số mét giảm khi vải rộng gấp nhiều lần bìa).
+- **Cần sửa trong tài liệu:** Report-3 UC19 / UC49–UC51 (công thức ước vải thêm số bìa song song); DEV-ALL-88 (điều kiện của bài toán ghép bìa).
+- **Trạng thái:** Mở
+
+### DEV-ALL-106 · Phiếu lỗi: bỏ khiếu nại, tổ trưởng sửa / hủy trong 24 giờ, Quản đốc sửa / hủy theo ràng buộc
+
+- **Ngày / Người / Task / PR:** 12/11/2026 · Claude (AI) · UC56, UC22 · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `DefectService` (thêm `UpdateAsync`, bỏ `ObjectAsync` / `ConfirmAsync`), `DefectRecordsController` (tổ trưởng + Quản đốc thêm `PUT {id}`, bỏ `POST manager/{id}/confirm`), `MyDefectsController` (bỏ `POST {id}/object`), bỏ `DefectAutoConfirmService` + `DefectAutoConfirmJob`, `DefectEditWindow` (24 giờ) thay `DefectObjectionWindow`, `RequestStatuses.Dead`, `DefectDto` bỏ `WorkerObjection` / `ObjectedAt`, `DefectQuery` bỏ `Objection`. FE: `DefectEditModal` (mới), `defectColumns`, `DefectBoard`, `MyDefectsPage`, `defectRules`. Không đổi schema: cột `WorkerObjection`, `ObjectedAt` và trạng thái `CONFIRMED` giữ để không mất dữ liệu cũ, ứng dụng không còn ghi.
+- **Tài liệu gốc ghi:** Công nhân phản đối phiếu lỗi trong 48 giờ; Quản đốc chấp nhận (CONFIRMED) hoặc hủy; quá 48 giờ không phản đối thì tự CONFIRMED; tổ trưởng hủy được tới hết ngày làm việc kế tiếp (hạn sửa như sản lượng, GBR-09).
+- **Code đang làm:**
+  - Công nhân không khiếu nại; chỉ xem phiếu của mình (không thấy phiếu đã hủy). Job tự chốt 48 giờ bỏ. Phiếu cũ `CONFIRMED` vẫn tính còn hiệu lực và sửa / hủy được như phiếu đã ghi.
+  - Tổ trưởng / tổ phó chỉ xem, sửa, hủy phiếu của tổ mình, trong 24 giờ kể từ `RecordedAt` (đúng 24 giờ vẫn được). Quản đốc / Admin xem mọi tổ, không giới hạn giờ.
+  - Hủy bắt buộc lý do (mọi vai trò), ghi nhật ký và báo công nhân. Sửa (mới) đổi được ca, công đoạn, công nhân, loại, số lượng, lý do; không đổi ngày và dòng đơn (ghi sai thì hủy rồi ghi lại). Quản đốc sửa bắt buộc lý do. Đơn giá khóa giữ nguyên khi vẫn là phiếu trừ lương cùng công đoạn; đổi công đoạn hoặc từ Sửa lại sang Hủy / Nhập sai thì lấy lại đơn giá duyệt của ngày làm việc (MSG18 nếu chưa có). Công nhân cũ và mới được báo.
+  - Ràng buộc chặn sửa / hủy (cả tổ trưởng và Quản đốc): kỳ lương đã khóa; đơn hàng đã đóng; đã có đơn cắt bù còn hiệu lực gắn với phiếu (trừ đơn Từ chối / Không hoàn thành / Đã hủy) — phải hủy đơn trước; phiếu Nhập sai sản lượng: hủy hoặc sửa làm công nhân được nhập lại vượt trần số được giao thì chặn, sửa tăng số trừ không vượt sản lượng đã nhập trong ngày.
+- **Lý do:** yêu cầu của người dùng (12/11/2026); các ràng buộc của Quản đốc do AI đề xuất, người dùng cho phép đề xuất khi thiếu.
+- **Ảnh hưởng người khác:** Kiều (luồng sản lượng / lương: phiếu lỗi sửa được nên số trừ lương tạm tính đổi theo), Thái (đơn cắt bù chặn sửa / hủy phiếu gốc).
+- **Cần sửa trong tài liệu:** Report-3 UC56, UC22 (bỏ phản đối của công nhân, thêm sửa phiếu, hạn 24 giờ, ràng buộc của Quản đốc); `NX-MTD_Database.sql` / `_Mo_ta.md`: ghi chú `WorkerObjection`, `ObjectedAt`, `CONFIRMED` chỉ còn là dữ liệu cũ.
+- **Trạng thái:** Mở
+
+### DEV-ALL-107 · Kết thúc đơn: lệch theo từng công đoạn chỉ cảnh báo (không tự trừ lương); sửa tăng phiếu lỗi theo hàng trên chuyền
+
+- **Ngày / Người / Task / PR:** 12/11/2026 · Claude (AI) · UC57–UC58, UC56 · nhánh `feature/ALL-ui-sync-grade-levels`
+- **Ảnh hưởng tới:** BE: `EndOfOrderService` (bỏ tạo phiếu Scrap, bỏ `Distribute`, so MỌI công đoạn thay vì chỉ công đoạn cuối, thông báo tóm tắt, link riêng theo vai trò; constructor còn `uow, notifier, audit, settings`; `PreviewAsync(id, teamId?, ct)`), `EndOfOrderPreviewDto` (`Operations` → `Lines` → `Workers`, bỏ `FinalOperationName`, `Lines`, `Rows`), `TeamLeader/KpiTargetsController` thêm `GET {id}/finish-result` (chỉ xem tổ mình, tổ khác 404), `Messages.NotifyEndOfOrderMismatchTitle` (bỏ `KpiFinishNoFinalOperation`); `ProductionGuard.ComputeOnLineAsync` (chuyển từ `QcBatchService`), `DefectService.UpdateAsync` (`CheckIncreaseWithinOnLineAsync`), `Messages.DefectIncreaseOverOnLine`. FE: `MismatchDetail` (3 tầng + ô tìm), `MismatchDetailModal` (điều khiển bằng id), `FinishOrderModal`; notification: `NotificationModals`, `useOpenNotification`, `useNotificationModal`, chuông / toast / hộp thư mở chi tiết tại chỗ. Không đổi schema.
+- **Tài liệu gốc ghi:** DEV-ALL-15: kết thúc đơn so sản lượng báo ở công đoạn cuối với QC đạt + hàng hủy, phần lệch ghi thành phiếu hàng hủy chia theo tỉ lệ sản lượng cho từng công nhân (trừ lương).
+- **Code đang làm:**
+  - Với mỗi công đoạn và mỗi dòng đơn: lệch = sản lượng tổ báo − QC đạt − hàng hủy (Scrap chưa hủy); > 0 là lệch (mỗi sản phẩm qua mỗi công đoạn đúng một lần nên một công đoạn không thể báo nhiều hơn QC đạt + hủy). Hàng Rework không tính. Báo thiếu (ít hơn QC đạt) chưa cảnh báo.
+  - Không ghi phiếu, không trừ lương. Hệ thống không biết ai báo dư nên chỉ liệt kê mọi người đã báo công đoạn đó kèm sản lượng (nhiều nhất trước). Quản đốc / tổ trưởng xác minh rồi ghi phiếu lỗi cho đúng người.
+  - Màn kết thúc đơn cảnh báo kèm bảng công đoạn → dòng đơn → công nhân (lệch nhiều nhất lên đầu, có ô tìm theo công đoạn / tên công nhân). Công đoạn không lệch không hiện.
+  - Khi bấm kết thúc, Quản đốc và tổ trưởng nhận thông báo TÓM TẮT có độ dài bị chặn: tối đa 3 công đoạn lệch nhiều nhất, mỗi công đoạn tối đa 2 người báo nhiều nhất kèm sản lượng, còn lại "và N người khác" / "và N công đoạn khác" (cột Message tối đa 1000 ký tự, còn cắt an toàn). Bấm thông báo (ở chuông, toast hoặc hộp thư) mở NGAY TẠI CHỖ cửa sổ chi tiết chỉ xem, không chuyển trang: thông báo mang `RefTable = KpiMismatch`, `RefId = KpiTargetId`, không có `LinkUrl`; `NotificationDto` thêm `RefTable`, `RefId`; cửa sổ dựng ở thanh trên cùng (`NotificationModals`) qua điểm mở rộng `KpiMismatchModalSlot`. Quản đốc / Admin xem bằng `GET manager/kpi-targets/{id}/finish-preview`, tổ trưởng / tổ phó bằng `GET team-leader/kpi-targets/{id}/finish-result` (chỉ tổ mình, tổ khác 404). Chi tiết tính lại từ dữ liệu hiện tại mỗi lần mở (không lưu bản chụp) nên lệch đã xử lý bằng phiếu lỗi sẽ giảm đi; chỉ tiêu đã đóng vẫn xem được.
+  - Link của thông báo "KPI không đạt" trước đây là `/kpi` (không có route): nay Quản đốc `/kpi/targets`, tổ trưởng `/`.
+  - Sửa phiếu lỗi (DEV-ALL-106): tăng số lượng Scrap chỉ được tăng thêm tối đa bằng hàng đang trên chuyền (BTP tổ đã nhận − QC đạt − Scrap chưa hủy) của tổ ở dòng đơn; Rework tăng cũng bị kiểm cùng cách; đổi Rework sang Scrap cần đủ cả số lượng trên chuyền. Giảm hoặc giữ số lượng, và phiếu nhập sai sản lượng (có trần riêng), không bị kiểm. Ghi phiếu mới chưa kiểm hàng trên chuyền (không đổi so với trước). Vế "tăng trong ca" chưa có quy tắc rõ nên chưa làm.
+- **Lý do:** yêu cầu của người dùng (12/11/2026): hệ thống không biết ai gây lệch nên không tự trừ lương; thông báo phải ngắn và không bị cắt khi nhiều công đoạn lệch; mỗi sản phẩm qua mỗi công đoạn một lần nên so được mọi công đoạn.
+- **Ảnh hưởng người khác:** Kiều (lương: kết thúc đơn không còn sinh phiếu trừ lương), Thái / QA-QC (cùng cách tính hàng trên chuyền).
+- **Cần sửa trong tài liệu:** Report-3 UC57–UC58 (kết thúc đơn: lệch theo công đoạn chỉ cảnh báo và thông báo tóm tắt), UC56 (giới hạn tăng số lượng khi sửa); DEV-ALL-15 phần "lệch ghi thành phiếu hàng hủy".
+- **Trạng thái:** Mở
+
+---
+
+### DEV-ALL-108 · Trần ô nhập số: trần cố định tự về trần khi gõ, trần nghiệp vụ báo lỗi; cấp NVL và lệnh cắt chỉ cảnh báo
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) · ALL · —
+- **Ảnh hưởng tới:** UC19 (lập lệnh cắt), UC40 (cấp NVL / BTP), các màn nhập số lượng (bàn giao BTP / thành phẩm, xuất hàng, trả NVL, nhận phiếu cấp, xác nhận giao việc, giao việc theo ngày, thiếu NVL / giao bù); API lookup dòng đơn (`GET .../lookups/orders/{orderId}/lines`) thêm `plannedQty`; bỏ mã lỗi `CUTTING_PLAN_EXCEEDS_ORDER`.
+- **Tài liệu gốc ghi:** DEV-ALL-99: dòng cấp theo đơn xin không quá số lượng đơn xin (BE chặn). UC19 / code cũ: tổng kế hoạch cắt cả bộ của các lệnh thường ≤ số đặt của dòng đơn (BE chặn `CUTTING_PLAN_EXCEEDS_ORDER`). FE cũ: ô số tự cắt về trần nghiệp vụ (không báo gì); ô `InputNumber` thường chỉ về trần khi rời ô.
+- **Code đang làm:**
+  - Trần cố định (hằng số giới hạn của ô: 1.000.000 chiếc, 100.000.000 NVL, giới hạn thứ tự, khổ, km…): gõ / dán vượt thì ô thành đúng trần ngay lúc gõ. Các ô `InputNumber` có trần chuyển sang ô số dùng chung để có hành vi này.
+  - Trần nghiệp vụ (số còn lại, số đã giao / đã cấp, khả dụng, số còn giao được…): ô không tự cắt số, báo "Không được vượt quá {trần}." dưới ô và không cho lưu. Giao việc theo ngày: ô của dòng nhóm điền cùng số cho mọi công đoạn trong nhóm, chỉ nâng lên số giao tối thiểu, không cắt về số tối đa; công đoạn vượt thì báo lỗi, dòng nhóm hiện số công đoạn vượt (kể cả khi nhóm đang đóng), nút Lưu bị khóa.
+  - Ngoại lệ — chỉ cảnh báo, vẫn lưu: màn cấp NVL / BTP của Thủ kho (vượt khả dụng hoặc số trong đơn xin; BE vẫn chặn khi tồn kho không đủ) và màn tạo / sửa lệnh cắt (vượt số còn lên lệnh được). BE bỏ hai kiểm tra: số cấp vượt số trong đơn xin (vẫn chặn dòng không có trong đơn xin) và tổng kế hoạch vượt số đặt.
+  - Màn lệnh cắt thêm cột "Còn lên lệnh được" = số đặt − kế hoạch cả bộ của các lệnh cắt thường chưa hủy (không tính lệnh cắt bù); sửa lệnh thì cộng trả lại số của chính lệnh đó.
+- **Lý do:** yêu cầu của người dùng (13/11/2026): nhập vượt trần phải được báo lỗi thay vì âm thầm sửa số; ô chạm giới hạn phải tự về giới hạn ngay khi gõ; Thủ kho và Quản đốc cần lưu được khi thực tế vượt; người lập lệnh cần biết còn lên lệnh được bao nhiêu.
+- **Ảnh hưởng người khác:** Thái (lệnh cắt có thể có tổng kế hoạch vượt số đặt), Kho (phiếu cấp có thể vượt đơn xin).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC19 (bỏ điều kiện tổng kế hoạch ≤ số đặt, thêm cảnh báo và cột còn lên lệnh được), UC40 (cấp vượt đơn xin chỉ cảnh báo)
+  - [ ] DEV-ALL-99 phần "không quá số lượng đơn xin"
+  - [ ] Mô tả chung form nhập số (trần cố định / trần nghiệp vụ)
+- **Trạng thái:** Mở
+
+### DEV-ALL-109 · Đơn xin NVL / BTP chỉ hoàn thành khi tổ nhận phiếu cấp
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) · ALL · —
+- **Ảnh hưởng tới:** UC07 (đơn từ), UC40 (cấp NVL / BTP), bảng `Request` (`Status`, `ResultNote`, `CompletedAt`), `MaterialIssue` (`RequestId`). Không đổi DB, không đổi API.
+- **Tài liệu gốc ghi:** TH-05 / code cũ: Thủ kho lập phiếu cấp theo đơn xin = đã xử lý đơn, đơn xin sang Hoàn thành ngay trong cùng giao dịch (phiếu cấp vẫn đang Chờ nhận và có thể bị tổ từ chối).
+- **Code đang làm:**
+  - Lập phiếu cấp theo đơn xin: đơn xin giữ `APPROVED` (Đã duyệt).
+  - Tổ xác nhận nhận phiếu (`RECEIVED`): đơn xin sang `COMPLETED`, `ResultNote` = mã phiếu cấp. Nếu trong lúc phiếu chờ nhận người xử lý đã tự bấm Hoàn thành / Không hoàn thành đơn thì giữ nguyên quyết định đó, phiếu vẫn nhận bình thường.
+  - Tổ từ chối phiếu (`REJECTED`): đơn xin vẫn Đã duyệt; thông báo cho Thủ kho lập phiếu thêm câu "Đơn xin … vẫn đang chờ cấp, vui lòng lập lại phiếu cấp".
+  - Đơn xin đang có phiếu cấp Chờ nhận thì không lập thêm phiếu theo đơn đó (`WAREHOUSE_INVALID_REQUEST`, nêu mã phiếu đang chờ).
+  - Các luồng tự hoàn thành khác đã rà, vốn đúng: đơn cắt bù hoàn thành khi kho xác nhận nhận đủ BTP của lệnh cắt bù (phiếu bàn giao `CONFIRMED`); đơn thiếu NVL hoàn thành khi các phiếu nhập bù đã xác nhận đủ số; "chốt không bù" là quyết định trực tiếp của Quản đốc.
+- **Lý do:** yêu cầu của người dùng (13/11/2026): đơn tự hoàn thành ngay khi gắn phiếu trong khi phiếu chưa xong và có thể bị từ chối.
+- **Ảnh hưởng người khác:** Thái (phiếu cấp), Thủ kho (đơn xin còn ở "Đơn cần xử lý" tới khi tổ nhận phiếu), tổ trưởng (thấy đơn của mình Đã duyệt tới khi nhận hàng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC40 (đơn xin hoàn thành khi tổ nhận phiếu, phiếu bị từ chối thì cấp lại), UC07 (sơ đồ trạng thái đơn Xin NVL / Xin BTP)
+  - [ ] DEV-ALL-98 phần "Đã duyệt → Hoàn thành" của Xin NVL / Xin BTP
+- **Trạng thái:** Mở
+
+### DEV-ALL-110 · Đơn Xin NVL / Xin BTP: chọn hàng theo đơn hàng, trần là khả dụng trong kho
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) · ALL · —
+- **Ảnh hưởng tới:** UC07 (đơn từ của tổ), UC40 (cấp NVL / BTP theo đơn xin), bảng `Request` (`OrderId`), `RequestLine` (`OrderLineId`). API mới: `GET common/lookups/requisition-materials?orderId=` (NVL kèm `availableQty`), `GET common/lookups/orders/{orderId}/requisition-pieces` (dòng đơn kèm số bộ khả dụng). `IStockService` thêm hai hàm đọc khả dụng theo lô. Không đổi DB.
+- **Tài liệu gốc ghi:** DEV-ALL-77: Xin BTP gõ tên hàng tự do, số nguyên 1–1.000.000; Xin NVL chọn NVL trong danh mục, không có trần theo tồn kho; đơn hàng chỉ gắn khi xin theo lệnh cắt (DEV-ALL-92).
+- **Code đang làm:**
+  - Xin BTP (tổ may): bắt buộc chọn đơn hàng (chỉ đơn có dòng chia cho tổ); mỗi dòng chọn mã hàng – màu – size (cả bộ) của đơn, không còn gõ tên hàng. Phiếu cấp BTP chọn đơn xin này thì tự điền đúng dòng.
+  - Xin NVL của tổ may: bắt buộc chọn đơn hàng; chỉ chọn NVL đã khai trong NVL của đơn (`OrderMaterial`), khớp phạm vi phiếu cấp không theo lệnh cắt (DEV-ALL-99). Tổ cắt giữ như cũ (lệnh cắt không bắt buộc).
+  - Trần số lượng: mỗi dòng Xin NVL / Xin BTP (cả tổ cắt và tổ may) không vượt số khả dụng trong kho lúc gửi / sửa đơn (kho NVL: theo NVL; kho BTP: theo bộ của dòng đơn). Vượt thì báo lỗi dưới ô (FE) và BE chặn, nêu từng dòng vượt kèm số khả dụng. Đơn theo lệnh cắt còn kiểm trần của lệnh như DEV-ALL-92 (lấy trần nhỏ hơn).
+  - Form: thêm ô Đơn hàng (đổi đơn thì hỏi trước rồi xóa dòng, sửa đơn thì khóa), bảng dòng có cột Khả dụng và Đơn vị; chưa chọn đơn thì ô chọn hàng bị khóa.
+  - Đơn cũ đang chờ duyệt không có đơn hàng / dòng gõ tên hàng thì sửa sẽ bị báo lỗi; hủy và tạo lại.
+- **Lý do:** yêu cầu của người dùng (13/11/2026): chỉnh đơn xin NVL / BTP của tổ may — chỉ NVL của đơn, form dễ dùng hơn, trần số lượng lấy theo kho cho cả tổ cắt và tổ may.
+- **Ảnh hưởng người khác:** Thái (tổ cắt: đơn xin NVL bị giới hạn theo tồn kho), Thủ kho (đơn xin luôn trong số kho có), tổ trưởng tổ may.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC07 (form Xin NVL / Xin BTP, trần theo tồn kho), UC40 (đơn xin BTP gắn dòng đơn)
+  - [ ] DEV-ALL-77 phần "Xin BTP gõ tên hàng"
+- **Trạng thái:** Mở
+
+### DEV-ALL-111 · Tổ may trả NVL thừa về kho
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) · ALL · —
+- **Ảnh hưởng tới:** UC42 (trả vải thừa), `MaterialReturnService`, màn "Trả NVL thừa" (menu, tiêu đề, thông báo). Không đổi DB, không đổi API.
+- **Tài liệu gốc ghi:** UC42 / TH-10: chỉ tổ cắt trả vải thừa; tổ may không trả phụ liệu.
+- **Code đang làm:** Tổ trưởng / tổ phó của tổ may được lập phiếu trả NVL theo phiếu cấp NVL đã nhận của tổ (từ DEV-ALL-99 tổ may nhận cả chỉ, cúc…). Quy tắc giữ như tổ cắt: số trả ≤ số đã nhận − số đã trả (kể cả đang chờ), mỗi dòng một phiếu chờ, Thủ kho đếm và nhận vào kho NVL (lệch phải có lý do) hoặc từ chối. Tổ may không có bàn cắt nên số "đã cắt" là 0 và không có trần theo số đã cắt. Tổ khác loại (văn phòng) vẫn bị từ chối. Vẫn chỉ trả theo dòng của phiếu cấp đã nhận, chưa trả được NVL / BTP ngoài phiếu cấp.
+- **Lý do:** yêu cầu của người dùng (13/11/2026): tổ may được trả NVL về kho.
+- **Ảnh hưởng người khác:** Thái (phiếu trả), Thủ kho (nhận phiếu trả của cả tổ may).
+- **Cần sửa trong tài liệu:** Report-3 UC42 (tác nhân và tên "trả vải thừa" thành "trả NVL thừa"), AI Context (luật trả vải).
+- **Trạng thái:** Mở
+
+### DEV-ALL-112 · Trả hàng về kho: tổ cắt theo lệnh cắt, tổ may NVL / BTP, thêm NVL phế phẩm
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) · ALL · —
+- **Ảnh hưởng tới:** UC42 (trả vải thừa), UC24 (danh mục NVL), bảng `Material` (cột tính `MaterialType` thêm `SCRAP`, `Category` thêm `SCRAP_FABRIC` / `SCRAP_NEEDLE` / `SCRAP_OTHER`), `MaterialReturn` (thêm `ReturningTeamId`, `WarehouseType`, `OrderId`, `WorkOrderId`; `MaterialIssueId` cho NULL), `MaterialReturnLine` (thêm `MaterialId`, `OrderLineId`; `MaterialIssueLineId` cho NULL; unique theo từng loại). Patch `SQL/patches/2026-11-13_material_return_scrap.sql` (chạy lại được; phiếu cũ được điền cột mới); `SQL/NX-MTD_Database.sql` đã cập nhật (kèm seed NVL phế phẩm PP-0001..3). API: `GET team-leader/material-returns/returnable?warehouseType=&workOrderId=&orderId=` (đổi), `POST team-leader/material-returns` (đổi body), `GET common/lookups/scrap-materials` (mới); phiếu trả trả về `teamId`, `teamName`, `warehouseType`, `workOrderCode` thay `cuttingTeam*`, `issueCode`.
+- **Tài liệu gốc ghi:** UC42 / TH-10 và DEV-ALL-111: trả vải / NVL theo phiếu cấp gốc đã nhận; mỗi dòng một phiếu chờ; chỉ trả NVL, không có BTP; không có NVL phế phẩm.
+- **Code đang làm:**
+  - **Tổ cắt:** trả NVL theo lệnh cắt của tổ (bắt buộc chọn lệnh khi trả NVL không phải phế phẩm). Trần mỗi vải = đã nhận theo lệnh − số mét đã cắt của lệnh (nếu mọi bàn đã nhập số mét) − đã trả / đang chờ trả của lệnh. Phiếu cấp không theo lệnh cắt (DEV-ALL-99) thì tổ cắt không trả lại theo đường này được.
+  - **Tổ may trả NVL:** không theo đơn, không theo phiếu cấp. Trần mỗi NVL = tổng đã nhận ở mọi phiếu cấp đã nhận − đã trả / đang chờ trả. NVL không phải vải chỉ trả số nguyên.
+  - **Tổ may trả BTP:** bắt buộc chọn đơn hàng; mỗi dòng là mã hàng – màu – size của đơn (cả bộ). Trần = BTP đã nhận (phiếu cấp BTP đã nhận) − Σ `QcBatch.FinishedQty` của tổ ở dòng đó − đã trả / đang chờ trả. Thủ kho xác nhận thì cộng vào kho BTP (khóa `SemiFinished(dòng đơn, không chi tiết)`). Tổ cắt không trả BTP.
+  - **NVL phế phẩm:** loại NVL mới `SCRAP` trong danh mục (mã PP-, đơn vị tự chọn, không khổ). Cả tổ cắt và tổ may chọn thêm khi trả NVL, không cần đã nhận, không trần; đơn vị `kg` nhập được tối đa 3 số lẻ, đơn vị khác (cái…) là số nguyên. Cộng vào kho NVL khi Thủ kho nhận. Phế phẩm không có trong ô chọn NVL của đơn xin, phiếu cấp, NVL của đơn hàng (BE từ chối ở đơn xin và phiếu cấp).
+  - Bỏ quy tắc "mỗi dòng chỉ một phiếu chờ": số đang chờ đã tính vào số đã trả nên không trả vượt được. Thủ kho đếm / từ chối giữ như cũ. Đóng lệnh cắt vẫn bị chặn khi còn phiếu trả chờ của lệnh đó.
+  - Màn "Trả hàng về kho" (đổi tên từ "Trả vải thừa"): tổ may chọn NVL / BTP; tổ cắt chọn lệnh cắt; bảng hàng còn trả được kèm số đã nhận, đã cắt / QC đạt, đã trả, còn trả được; mục "NVL phế phẩm trả thêm" cho cả hai tổ.
+- **Lý do:** yêu cầu của người dùng (13/11/2026): tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL không theo đơn và BTP theo đơn – mã – màu – size; thêm NVL phế phẩm (vải theo kg, kim theo cái…) để hai tổ trả về kho. Trần trả NVL tổ may và BTP do người dùng chốt.
+- **Ảnh hưởng người khác:** Thái (cắt: trả vải theo lệnh, đóng lệnh), Thủ kho (nhận cả BTP và phế phẩm), tổ trưởng tổ cắt / tổ may. **Chạy patch cùng lúc với bản code mới, rồi khởi động lại API.**
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC42 (tên "trả hàng về kho", tác nhân tổ may, BTP, phế phẩm, cách tính trần), UC24 (loại NVL phế phẩm)
+  - [ ] AI Context 6.3 / luật trả vải; ERD / `_Mo_ta` (`MaterialReturn`, `MaterialReturnLine`, `CK_Material_Category`)
+  - [ ] DEV-ALL-111 phần "chỉ trả theo phiếu cấp gốc"
+- **Trạng thái:** Mở
+
+### DEV-ALL-113 · Số lần giao NVL = số ngày giao, bỏ khoảng "từ ngày – đến ngày"
+
+- **Ngày / Người / Task / PR:** 13/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** đơn mua (tạo, đặt hàng), lịch khách giao NVL của đơn hàng, giao bù đơn thiếu NVL; bảng `PurchaseOrder`, `CustomerOrder`, `Request`, bảng mới `DeliveryScheduleDate`
+- **Tài liệu gốc ghi:** DEV-ALL-94 / DEV-ALL-95: giao từ 2 lần trở lên thì nhập khoảng ngày (ngày từ – ngày đến).
+- **Code đang làm:** giao N lần thì nhập đúng N ngày (mỗi lần một ngày, ngày sau không trước ngày trước, mỗi ngày kiểm như ngày dự kiến giao). API nhận `expectedDeliveryDates` (lịch khách giao: `deliveryDates`) thay cho cặp ngày từ / đến. Ngày lưu ở bảng `DeliveryScheduleDate` (PurchaseOrderId / OrderId / RequestId — đúng một cột có giá trị và có khoá ngoại —, SeqNo, DeliveryDate; xoá đơn thì xoá theo); các cột ngày đầu / ngày cuối cũ vẫn được ghi (ngày đầu; ngày cuối khi giao từ 2 lần) để màn báo chậm và ràng buộc cũ không đổi. Dữ liệu cũ được điền N ngày chia đều từ ngày đầu tới ngày cuối.
+- **Lý do:** UI tự tính khoảng ngày nên dễ lệch so với số lần giao thực tế; người dùng yêu cầu nhập từng ngày.
+- **Ảnh hưởng người khác:** Thủ kho (màn NVL chờ nhận, đơn mua), Quản đốc (đặt hàng, giao bù, lịch khách giao). Migrate: `SQL/patches/2026-11-13_delivery_schedule_date.sql`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC lập đơn mua, UC lịch khách giao NVL, UC chọn giao bù (ô ngày giao từng lần)
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `DeliveryScheduleDate`
+  - [ ] DEV-ALL-94, DEV-ALL-95 (phần khoảng ngày giao)
 - **Trạng thái:** Mở

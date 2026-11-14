@@ -38,13 +38,17 @@ const Group = ({
 
 /**
  * Vải của lệnh cắt ước theo bìa của đơn (DEV-ALL-85, ghép bìa DEV-ALL-88): luôn hiện số mét cần và bìa nên dùng (kèm tỉ lệ size của bìa)
- * do hệ thống tính (ước tính, có thể chênh lệch với thực tế); thiếu vải, chưa tính được thì cảnh báo riêng. Chỉ hiển thị, không chặn lập lệnh.
+ * do hệ thống tính (ước tính, có thể chênh lệch với thực tế); thiếu vải, vải không đủ rộng cho bìa (DEV-ALL-103), chưa tính được thì
+ * cảnh báo riêng. Chỉ hiển thị, không chặn lập lệnh.
  */
 export function FabricCheckAlerts({ checks }: { checks: Check[] }) {
   const linesOf = (status: Check['status']) =>
     checks
       .filter((c) => c.status === status)
       .map((c) => ({ key: c.materialId, text: c.message ?? '' }));
+  const narrow = checks.flatMap((c) =>
+    c.widthWarning ? [{ key: c.materialId, text: c.widthWarning }] : [],
+  );
   const plans = checks.flatMap((c) => {
     const text = fabricPlanLine(c);
     return text === null ? [] : [{ key: c.materialId, text }];
@@ -57,6 +61,12 @@ export function FabricCheckAlerts({ checks }: { checks: Check[] }) {
         type="warning"
         title={LABELS.fabricNotEnough}
         lines={linesOf('Short')}
+        note={LABELS.fabricEstimateNote}
+      />
+      <Group
+        type="warning"
+        title={LABELS.fabricTooNarrow}
+        lines={narrow}
         note={LABELS.fabricEstimateNote}
       />
       <Group type="info" title={LABELS.fabricNotEstimated} lines={linesOf('Unknown')} />

@@ -39,16 +39,22 @@ public sealed record WorkOrderDto(
 /// MaterialId = 0: dòng báo màu – size chưa có định mức vải. AvailableQty = WarehouseQty (kho khả dụng) + HoldingQty (tổ cắt đang giữ).
 /// </summary>
 /// <param name="MarkerPlans">Bìa nên dùng theo từng nhóm bìa, hệ thống ghép cho ít mét nhất (ước tính, có thể chênh lệch với thực tế); rỗng khi chưa tính được.</param>
+/// <param name="WidthWarning">DEV-ALL-103: cảnh báo bìa nên dùng rộng hơn khổ vải (vải không đủ rộng để cắt); null = không có hoặc vải chưa có khổ.</param>
 public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
     string Status, decimal? NeedMeters, decimal? AvailableQty, string? Message,
-    IReadOnlyList<FabricMarkerPlanDto>? MarkerPlans = null, decimal? WarehouseQty = null, decimal? HoldingQty = null);
+    IReadOnlyList<FabricMarkerPlanDto>? MarkerPlans = null, decimal? WarehouseQty = null, decimal? HoldingQty = null,
+    string? WidthWarning = null);
 
 /// <summary>Phương án trải bìa của một nhóm bìa trên một vải. IsExtra = phần cắt lẻ / cắt bù; Surplus = sản phẩm (cắt lẻ: miếng) dư.</summary>
 public sealed record FabricMarkerPlanDto(int MarkerNo, bool IsExtra, decimal Meters, int Surplus, bool IsProvenOptimal,
     IReadOnlyList<FabricMarkerUseDto> Markers);
 
-/// <summary>Một bìa trong phương án: trải Plies lớp × LengthM = Meters; Ratio = số sản phẩm mỗi size trên một lớp (theo thứ tự size).</summary>
-public sealed record FabricMarkerUseDto(string MarkerCode, decimal LengthM, int Plies, decimal Meters, IReadOnlyList<MarkerRatioDto> Ratio);
+/// <summary>
+/// Một bìa trong phương án: trải Plies lớp × LengthM = Meters; Ratio = số sản phẩm mỗi size trên một bìa (theo thứ tự size);
+/// Across = số bìa trải song song trên một lớp (DEV-ALL-105), một lớp cắt ra Across × Ratio.
+/// </summary>
+public sealed record FabricMarkerUseDto(string MarkerCode, decimal LengthM, int Plies, decimal Meters, IReadOnlyList<MarkerRatioDto> Ratio,
+    int Across = 1);
 
 /// <summary>Kiểm vải khi đang lập lệnh, chưa lưu: chỉ cảnh báo, không chặn lưu.</summary>
 public sealed record CheckWorkOrderFabricDto(int OrderId, int CuttingTeamId, IReadOnlyList<SaveWorkOrderLineDto> Lines);

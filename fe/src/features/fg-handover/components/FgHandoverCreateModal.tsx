@@ -9,6 +9,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
 import { QtyInput } from '@/components/common/QtyInput';
+import { maxQtyRule } from '@/utils/qtyLimit';
 
 type FgHandoverCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null> };
@@ -120,8 +121,12 @@ export function FgHandoverCreateModal({ open, onClose }: FgHandoverCreateModalPr
               title: FG_LABELS.handoverQty,
               key: 'qty',
               render: (_, l) => (
-                <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
-                  <QtyInput min={0} max={l.remainingQty} disabled={l.remainingQty === 0} />
+                <Form.Item
+                  name={['qty', String(l.orderLineId)]}
+                  rules={[maxQtyRule(l.remainingQty)]}
+                  style={{ marginBottom: 0 }}
+                >
+                  <QtyInput min={0} disabled={l.remainingQty === 0} />
                 </Form.Item>
               ),
             },

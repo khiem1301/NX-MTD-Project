@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Button } from 'antd';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { fill } from '@/utils/format';
 import { LABELS } from '../constants';
 import { useCustomerDelivery } from '../hooks/useOrderMaterials';
@@ -22,7 +22,7 @@ export function CustomerPlanNotice({ orderId }: { orderId: number }) {
     ? fill(LABELS.customerDeliveryFullNotice, plan.deliveryCount ?? 1)
     : fill(
         LABELS.customerDeliveryLateNotice,
-        formatDeliveryWindow(plan.deliveryDate, plan.deliveryDateTo),
+        formatDeliveryDates(plan.deliveryDates, plan.deliveryDate, plan.deliveryDateTo),
       );
 
   return (

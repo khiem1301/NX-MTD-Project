@@ -33,7 +33,8 @@ type LineValue = { materialId?: number; issuedQty?: number };
 
 /**
  * Bảng dòng cấp NVL cho tổ cắt / tổ may. Chỉ chọn được hàng trong phạm vi phiếu: đơn xin, vải của lệnh cắt, hoặc NVL của đơn
- * hàng (chỉ, cúc… của đơn cũng cấp được). Số cấp theo loại NVL (vải lẻ 2 chữ số, NVL khác số nguyên), không vượt khả dụng và số trong đơn xin.
+ * hàng (chỉ, cúc… của đơn cũng cấp được). Số cấp theo loại NVL (vải lẻ 2 chữ số, NVL khác số nguyên); vượt khả dụng hoặc số trong
+ * đơn xin thì cảnh báo nhưng vẫn lưu được.
  */
 export function MaterialIssueLines({
   form,
@@ -161,7 +162,7 @@ export function MaterialIssueLines({
                   />
                 </Form.Item>
               ),
-              renderQty: (field, rule, max, unit, limitRules) => (
+              renderQty: (field, rule, unit, limitRules) => (
                 <Form.Item
                   name={[field.name, 'issuedQty']}
                   dependencies={[['lines', field.name, 'materialId']]}
@@ -171,7 +172,7 @@ export function MaterialIssueLines({
                   <QtyInput
                     decimals={rule.decimals}
                     min={rule.min}
-                    max={max}
+                    max={rule.max}
                     addonAfter={unit}
                     style={{ width: '100%' }}
                   />

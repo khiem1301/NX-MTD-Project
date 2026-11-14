@@ -129,7 +129,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
                       ]}
                       style={{ marginBottom: 0 }}
                     >
-                      <QtyInput min={1} max={defect?.quantity} placeholder={text.quantity} />
+                      <QtyInput min={1} placeholder={text.quantity} />
                     </Form.Item>
                     {fields.length > 1 && (
                       <MinusCircleOutlined onClick={() => remove(field.name)} />

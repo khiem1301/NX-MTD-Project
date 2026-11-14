@@ -1,10 +1,15 @@
 namespace NX_MTD.Application.Services;
 
-/// <summary>Một bìa của đơn để chọn khi ước vải: mã, chiều dài (m), số sản phẩm mỗi size trên một lớp.</summary>
-public sealed record MarkerOption(string Code, decimal LengthM, IReadOnlyDictionary<string, short> Ratio);
+/// <summary>
+/// Một bìa của đơn để chọn khi ước vải: mã, chiều dài (m), số sản phẩm mỗi size trên một bìa. Across = số bìa trải song song trên một
+/// lớp vải (DEV-ALL-105: ⌊khổ vải ÷ khổ bìa⌋, hoặc cắt khổ vải thành ngần ấy phần); một lớp cắt ra Across × Ratio sản phẩm.
+/// </summary>
+public sealed record MarkerOption(string Code, decimal LengthM, IReadOnlyDictionary<string, short> Ratio, int Across = 1);
 
-/// <summary>Trải bìa <c>Code</c> <c>Plies</c> lớp; LengthM, Ratio (số sản phẩm mỗi size trên một lớp) của bìa để hiển thị.</summary>
-public sealed record MarkerUse(string Code, int Plies, decimal LengthM = 0, IReadOnlyDictionary<string, int>? Ratio = null)
+/// <summary>
+/// Trải bìa <c>Code</c> <c>Plies</c> lớp, mỗi lớp <c>Across</c> bìa song song; LengthM, Ratio (số sản phẩm mỗi size trên một bìa) để hiển thị.
+/// </summary>
+public sealed record MarkerUse(string Code, int Plies, decimal LengthM = 0, IReadOnlyDictionary<string, int>? Ratio = null, int Across = 1)
 {
     public decimal Meters => Plies * LengthM;
 }
@@ -24,8 +29,11 @@ public sealed record PieceNeed(string SizeCode, int Pieces, short PiecesPerGarme
 /// <summary>Một điều kiện của bài toán: Σⱼ rⱼₛ · Factor · xⱼ ≥ Need (Factor = số chi tiết trên một sản phẩm; cắt cả bộ = 1).</summary>
 public sealed record MarkerRequirement(string SizeCode, int Need, int Factor);
 
-/// <summary>Một bìa trong bài toán: mã, chiều dài (m), số sản phẩm mỗi size (khóa size đã chuẩn hóa) trên một lớp.</summary>
-public sealed record MarkerCandidate(string Code, decimal LengthM, IReadOnlyDictionary<string, int> Ratio)
+/// <summary>
+/// Một bìa trong bài toán: mã, chiều dài (m), số sản phẩm mỗi size (khóa size đã chuẩn hóa) trên một <b>lớp</b> — đã nhân số bìa song
+/// song <c>Across</c> (DEV-ALL-105), nên mọi điều kiện / số dư tính theo lớp như cũ.
+/// </summary>
+public sealed record MarkerCandidate(string Code, decimal LengthM, IReadOnlyDictionary<string, int> Ratio, int Across = 1)
 {
     /// <summary>Số đơn vị của điều kiện mà một lớp bìa này cắt được.</summary>
     public int Per(MarkerRequirement r) => Ratio.GetValueOrDefault(r.SizeCode) * r.Factor;
@@ -41,8 +49,8 @@ public sealed record MarkerProblem(IReadOnlyList<MarkerRequirement> Requirements
     public static MarkerProblem? Create(IReadOnlyList<MarkerRequirement> requirements, IEnumerable<MarkerOption> markers)
     {
         if (requirements.Count == 0) return null;
-        var candidates = markers.Where(m => m.LengthM > 0)
-            .Select(m => new MarkerCandidate(m.Code, m.LengthM, m.Ratio.ToDictionary(r => SizeKey(r.Key), r => (int)r.Value)))
+        var candidates = markers.Where(m => m.LengthM > 0 && m.Across > 0)
+            .Select(m => new MarkerCandidate(m.Code, m.LengthM, m.Ratio.ToDictionary(r => SizeKey(r.Key), r => r.Value * m.Across), m.Across))
             .Where(c => requirements.Any(r => c.Per(r) > 0))
             .OrderBy(c => c.Code, StringComparer.Ordinal).ToList();
         return requirements.Any(r => candidates.All(c => c.Per(r) == 0)) ? null : new MarkerProblem(requirements, candidates);
@@ -68,7 +76,10 @@ public sealed record MarkerProblem(IReadOnlyList<MarkerRequirement> Requirements
 
     public MarkerPlan Plan(IReadOnlyList<int> plies, bool isProvenOptimal)
     {
-        var uses = Candidates.Select((c, i) => new MarkerUse(c.Code, plies[i], c.LengthM, c.Ratio)).Where(u => u.Plies > 0).ToList();
+        // Hiển thị tỉ lệ của một bìa (chia lại số bìa song song), số lớp và số bìa song song riêng.
+        var uses = Candidates.Select((c, i) => new MarkerUse(c.Code, plies[i], c.LengthM,
+                c.Ratio.ToDictionary(r => r.Key, r => r.Value / c.Across), c.Across))
+            .Where(u => u.Plies > 0).ToList();
         var meters = Candidates.Select((c, i) => plies[i] * c.LengthM).Sum();
         return new MarkerPlan(uses, meters, Surplus(plies), isProvenOptimal);
     }

@@ -1,7 +1,8 @@
 import { Form, Space, Typography, type TableColumnsType } from 'antd';
 import { formatQty } from '@/utils/format';
 import { QtyInput } from '@/components/common/QtyInput';
-import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
+import { maxQtyRule } from '@/utils/qtyLimit';
 import { LABELS } from '../constants';
 import type { ShortDeliveryLine } from '../types';
 
@@ -53,7 +54,8 @@ export const shortDeliveryColumns = ({
             <QtyInput
               decimals={MATERIAL_QTY_DECIMALS}
               min={0}
-              max={Math.max(0, l.shortfallQty - l.replenishedQty)}
+              max={MAX_MATERIAL_QTY}
+              limit={Math.max(0, l.shortfallQty - l.replenishedQty)}
               value={replenishOf(l)}
               addonAfter={l.unit}
               style={{ width: 150 }}
@@ -86,13 +88,14 @@ export const shortDeliveryColumns = ({
           render: (_: unknown, l: ShortDeliveryLine) => (
             <Form.Item
               name={['lines', l.requestLineId, 'acceptedQty']}
-              noStyle
+              rules={[maxQtyRule(remaining(l))]}
+              style={{ marginBottom: 0 }}
               initialValue={remaining(l)}
             >
               <QtyInput
                 decimals={MATERIAL_QTY_DECIMALS}
                 min={0}
-                max={remaining(l)}
+                max={MAX_MATERIAL_QTY}
                 addonAfter={l.unit}
                 style={{ width: 160 }}
               />

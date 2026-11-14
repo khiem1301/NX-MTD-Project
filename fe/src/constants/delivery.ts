@@ -1,13 +1,9 @@
-/**
- * Giao từ số lần này trở lên thì ngày dự kiến giao là một khoảng (từ ngày – đến ngày); khớp
- * DocumentDateRules.RangeDeliveryCount ở BE (DEV-ALL-94).
- */
-export const RANGE_DELIVERY_COUNT = 2;
+/** Số lần giao tối đa của một lịch giao (số ô ngày hiện ra); khớp trần ô "số lần giao". */
+export const MAX_DELIVERY_DATES = 99;
 
-/** Chữ của ô ngày dự kiến giao dùng chung cho NVL khách cấp, đơn mua, giao bù. */
+/** Chữ của các ô ngày dự kiến giao dùng chung cho NVL khách cấp, đơn mua, giao bù: mỗi lần giao một ngày. */
 export const DELIVERY_TEXT = {
-  dateFrom: 'Giao từ ngày',
-  dateTo: 'Giao đến ngày',
-  dateToRequired: 'Giao từ 2 lần trở lên thì chọn ngày giao đến.',
-  dateToBeforeFrom: 'Ngày giao đến không được trước ngày giao từ.',
+  dateOfTurn: 'Ngày giao lần {0}',
+  dateRequired: 'Chọn ngày giao.',
+  dateBeforePrevious: 'Ngày giao không được trước ngày giao lần trước.',
 } as const;

@@ -6,7 +6,8 @@ import { LABELS } from '../constants';
 import type { MaterialIssueLine } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
-import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
+import { MATERIAL_QTY_DECIMALS, MAX_MATERIAL_QTY } from '@/constants/quantity';
+import { maxQtyRule } from '@/utils/qtyLimit';
 
 type IssueLinesTableProps = { lines: MaterialIssueLine[]; editable: boolean };
 
@@ -30,10 +31,10 @@ export function IssueLinesTable({ lines, editable }: IssueLinesTableProps) {
         editable ? (
           <Form.Item
             name={['lines', index, 'confirmedQty']}
-            rules={[{ required: true, message: MESSAGES.common.required }]}
-            noStyle
+            rules={[{ required: true, message: MESSAGES.common.required }, maxQtyRule(l.issuedQty)]}
+            style={{ marginBottom: 0 }}
           >
-            <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.issuedQty} />
+            <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={MAX_MATERIAL_QTY} />
           </Form.Item>
         ) : (
           formatQty(l.confirmedQty)

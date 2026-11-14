@@ -2,7 +2,7 @@ import { Descriptions } from 'antd';
 import { DetailDescriptions } from '@/components/common/DetailModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { fill, formatDateTime } from '@/utils/format';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { LABELS, SHORTAGE_RESOLUTION_LABEL, SHORTAGE_STATUS_LABEL } from '../constants';
 import type { ShortDelivery } from '../types';
 
@@ -33,7 +33,11 @@ export function ShortDeliveryInfo({ detail: d }: { detail: ShortDelivery }) {
             LABELS.replenishPlanValue,
             d.replenishDeliveryCount ?? 0,
             d.expectedDeliveryCount,
-            formatDeliveryWindow(d.expectedDeliveryDate, d.expectedDeliveryDateTo),
+            formatDeliveryDates(
+              d.expectedDeliveryDates,
+              d.expectedDeliveryDate,
+              d.expectedDeliveryDateTo,
+            ),
           )}
         </Descriptions.Item>
       )}

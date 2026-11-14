@@ -26,7 +26,7 @@ internal static class WorkOrderFinishCheck
             return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingHandoverToFinish));
         // Thứ tự theo swimlane: BTP vào kho → trả vải thừa → báo Quản đốc kèm vải thực dùng. Phiếu trả chờ kho thì chưa tổng kết được.
         if (await uow.Repository<MaterialReturn>().Query().AnyAsync(r => r.Status == HandoverStatuses.Pending
-                && r.MaterialIssue.WorkOrderId == workOrderId, ct))
+                && r.WorkOrderId == workOrderId, ct))
             return new FinishCheck(Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderHasPendingReturn));
 
         var cut = (await uow.Repository<CuttingLayLine>().Query().AsNoTracking()

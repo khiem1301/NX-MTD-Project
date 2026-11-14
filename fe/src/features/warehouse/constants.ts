@@ -3,9 +3,14 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 /** Loại kho dùng chung với kiểm kê: khai báo ở constants/warehouse. */
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
 
-export const MATERIAL_TYPE = { FABRIC: 'FABRIC', TRIM: 'TRIM' } as const;
+/** SCRAP: NVL phế phẩm (vải vụn, kim gãy…), chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (DEV-ALL-112). */
+export const MATERIAL_TYPE = { FABRIC: 'FABRIC', TRIM: 'TRIM', SCRAP: 'SCRAP' } as const;
 
-export const MATERIAL_TYPE_LABEL: Record<string, string> = { FABRIC: 'Vải', TRIM: 'Phụ liệu' };
+export const MATERIAL_TYPE_LABEL: Record<string, string> = {
+  FABRIC: 'Vải',
+  TRIM: 'Phụ liệu',
+  SCRAP: 'Phế phẩm',
+};
 
 export const MATERIAL_CATEGORIES: Record<string, { value: string; label: string }[]> = {
   FABRIC: [
@@ -26,6 +31,11 @@ export const MATERIAL_CATEGORIES: Record<string, { value: string; label: string 
     { value: 'PADDING', label: 'Bông / đệm' },
     { value: 'PACKAGING', label: 'Bao bì' },
     { value: 'OTHER', label: 'Khác' },
+  ],
+  SCRAP: [
+    { value: 'SCRAP_FABRIC', label: 'Vải vụn' },
+    { value: 'SCRAP_NEEDLE', label: 'Kim gãy' },
+    { value: 'SCRAP_OTHER', label: 'Phế phẩm khác' },
   ],
 };
 
@@ -181,6 +191,8 @@ export const LABELS = {
   materialType: 'Loại',
   category: 'Nhóm',
   unit: 'Đơn vị tính',
+  widthM: 'Khổ vải (m)',
+  widthMHint: 'Bắt buộc với vải, từ 0,01 đến 3,5 m.',
   status: 'Trạng thái',
   discontinue: 'Ngừng dùng',
   reactivate: 'Dùng lại',

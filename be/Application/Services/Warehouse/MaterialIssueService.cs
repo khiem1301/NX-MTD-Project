@@ -134,7 +134,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             issue.Status = IssueStatuses.Received;
             issue.ReceivedBy = employeeId;
             issue.ReceivedAt = _clock.Now;
-            if (issue.WarehouseType == WarehouseTypes.SemiFinished) await StartProductionAsync(issue.OrderId, ct);
+            await AfterReceivedAsync(issue, ct);
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.IssueReceived);
         });
@@ -174,6 +174,19 @@ public sealed class MaterialIssueService : IMaterialIssueService
     }
 
     /// <summary>
+    /// Sau khi tổ nhận phiếu: phiếu BTP đưa đơn hàng vào sản xuất; phiếu theo đơn xin thì đơn xin mới sang Hoàn thành (DEV-ALL-109).
+    /// Người xử lý đã tự bấm Hoàn thành / Không hoàn thành đơn trong lúc phiếu chờ nhận thì giữ nguyên quyết định đó.
+    /// </summary>
+    private async Task AfterReceivedAsync(MaterialIssue issue, CancellationToken ct)
+    {
+        if (issue.WarehouseType == WarehouseTypes.SemiFinished) await StartProductionAsync(issue.OrderId, ct);
+        if (issue.RequestId is not { } requestId) return;
+        var completable = await _uow.Repository<Request>().Query().AnyAsync(r => r.RequestId == requestId
+            && RequestStatuses.Completable.Contains(r.Status), ct);
+        if (completable) await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
+    }
+
+    /// <summary>
     /// Tổ may xác nhận nhận BTP (swimlane III.3.4) thì đơn chuyển sang IN_PRODUCTION nếu còn NEW và NVL không còn chờ.
     /// Nút "Chuyển sang sản xuất" của Admin vẫn dùng được; bước nào đến trước thì đổi trạng thái.
     /// </summary>
@@ -195,9 +208,13 @@ public sealed class MaterialIssueService : IMaterialIssueService
 
         issue!.Status = IssueStatuses.Rejected;
         issue.RejectReason = dto.Reason.Trim();
-        // Thủ kho lập phiếu phải xử lý lại.
+        // Thủ kho lập phiếu phải xử lý lại; đơn xin của phiếu vẫn Đã duyệt nên cấp lại được (DEV-ALL-109).
+        var requestCode = issue.RequestId is { } requestId
+            ? await _uow.Repository<Request>().Query().Where(r => r.RequestId == requestId).Select(r => r.RequestCode).FirstAsync(ct)
+            : null;
+        var reissue = requestCode is null ? string.Empty : string.Format(WarehouseMessages.IssueRejectedRequestOpen, requestCode);
         _notifier.NotifyEmployees([issue.IssuedBy], new NotificationMessage(NotificationSources.Warehouse, "Phiếu cấp bị tổ từ chối",
-            $"Tổ nhận từ chối phiếu cấp {issue.IssueCode}: {issue.RejectReason}", IssueLink));
+            $"Tổ nhận từ chối phiếu cấp {issue.IssueCode}: {issue.RejectReason}{reissue}", IssueLink));
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.IssueRejected);
     }
@@ -209,7 +226,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         return issue.Status == IssueStatuses.PendingReceipt ? null : WarehouseFailures.InvalidStatus();
     }
 
-    /// <summary>Kiểm tồn rồi lưu phiếu cấp; phiếu cấp theo đơn xin thì đánh dấu đơn xin hoàn thành và báo tổ trưởng tổ nhận.</summary>
+    /// <summary>Kiểm tồn rồi lưu phiếu cấp (Chờ nhận) và báo tổ trưởng tổ nhận. Đơn xin (nếu có) chưa đổi trạng thái.</summary>
     private async Task<Result<int>> StoreIssueAsync(CreateMaterialIssueDto dto, int issuedByEmployeeId, IssueTarget target, CancellationToken ct)
     {
         var lines = dto.Lines.Select(l => new MaterialIssueLine
@@ -236,12 +253,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             MaterialIssueLines = lines,
         };
         await _uow.Repository<MaterialIssue>().AddAsync(issue);
-        // Thủ kho lập phiếu cấp = đã xử lý đơn xin (DEV-TH-05-1): đơn xin sang Hoàn thành cùng giao dịch.
-        if (dto.RequestId is { } requestId)
-        {
-            var done = await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
-            if (!done.IsSuccess) return WarehouseFailures.From<int>(done);
-        }
+        // Đơn xin giữ Đã duyệt cho tới khi tổ xác nhận nhận phiếu (DEV-ALL-109); phiếu bị từ chối thì Thủ kho cấp lại theo đơn.
         // Tổ trưởng tổ nhận là người xử lý tiếp: kiểm đếm và xác nhận nhận.
         await _notifier.NotifyTeamLeadersAsync(target.TeamId, new NotificationMessage(NotificationSources.Warehouse,
             dto.WarehouseType == WarehouseTypes.SemiFinished ? "Có phiếu cấp BTP chờ nhận" : "Có phiếu cấp vải chờ nhận",
@@ -250,7 +262,10 @@ public sealed class MaterialIssueService : IMaterialIssueService
         return Result<int>.Success(issue.MaterialIssueId);
     }
 
-    /// <summary>Đơn xin (nếu chọn) phải đúng loại và đã được duyệt; chưa lập phiếu cấp nào cho đơn (đơn xin sang Hoàn thành khi lập phiếu).</summary>
+    /// <summary>
+    /// Đơn xin (nếu chọn) phải đúng loại và đã được duyệt; không có phiếu cấp nào của đơn đang chờ tổ nhận (đơn xin chỉ sang
+    /// Hoàn thành khi tổ nhận phiếu, phiếu bị từ chối thì cấp lại được — DEV-ALL-109).
+    /// </summary>
     private async Task<(Result<MaterialIssueDto>? Error, Request? Request)> LoadRequestAsync(CreateMaterialIssueDto dto,
         CancellationToken ct)
     {
@@ -261,9 +276,14 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var request = await _uow.Repository<Request>().Query().AsNoTracking().Include(r => r.RequestLines)
             .FirstOrDefaultAsync(r => r.RequestId == dto.RequestId && r.RequestTypeCode == type
                                       && r.Status == RequestStatuses.Approved, ct);
-        return request is null
-            ? (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.RequestInvalid), null)
-            : (null, request);
+        if (request is null) return (Fail(ErrorCodes.WarehouseInvalidRequest, WarehouseMessages.RequestInvalid), null);
+
+        var pending = await Issues.AsNoTracking()
+            .Where(i => i.RequestId == request.RequestId && i.Status == IssueStatuses.PendingReceipt)
+            .Select(i => i.IssueCode).FirstOrDefaultAsync(ct);
+        return pending is null
+            ? (null, request)
+            : (Fail(ErrorCodes.WarehouseInvalidRequest, string.Format(WarehouseMessages.IssueRequestHasPendingIssue, pending)), null);
     }
 
     /// <summary>
@@ -337,7 +357,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         {
             var ids = dto.Lines.Select(l => l.MaterialId!.Value).Distinct().ToList();
             var materials = await _uow.Repository<Material>().Query().AsNoTracking()
-                .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active)
+                .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active && m.MaterialType != MaterialTypes.Scrap)
                 .Select(m => new { m.MaterialId, m.MaterialName, m.MaterialType }).ToDictionaryAsync(m => m.MaterialId, ct);
             foreach (var line in dto.Lines)
             {
@@ -364,17 +384,11 @@ public sealed class MaterialIssueService : IMaterialIssueService
         }
         if (request is null) return null;
 
-        var requested = request.RequestLines
-            .GroupBy(l => (l.MaterialId, l.OrderLineId)).ToDictionary(g => g.Key, g => g.Sum(l => l.Quantity));
-        foreach (var line in dto.Lines)
-        {
-            if (!requested.TryGetValue((line.MaterialId, line.OrderLineId), out var max))
-                return Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueLineNotInRequest);
-            var issued = dto.Lines.Where(l => (l.MaterialId, l.OrderLineId) == (line.MaterialId, line.OrderLineId)).Sum(l => l.IssuedQty);
-            if (issued > max)
-                return Fail(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.IssueQtyOverRequest, max.ToString("#,0.###")));
-        }
-        return null;
+        // Chỉ cấp hàng có trong đơn xin; số cấp vượt số xin không chặn, màn cấp chỉ cảnh báo (DEV-ALL-108).
+        var requested = request.RequestLines.Select(l => (l.MaterialId, l.OrderLineId)).ToHashSet();
+        return dto.Lines.All(l => requested.Contains((l.MaterialId, l.OrderLineId)))
+            ? null
+            : Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueLineNotInRequest);
     }
 
     /// <summary>Cấp vải: theo lệnh cắt còn mở; chỉ cấp các vải có trong định mức của lệnh.</summary>

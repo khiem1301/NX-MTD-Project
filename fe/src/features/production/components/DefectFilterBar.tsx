@@ -46,7 +46,7 @@ type DefectFilterBarProps = {
   onChange: (patch: Partial<DefectFilters>) => void;
 };
 
-/** Thanh lọc phiếu hàng hỏng, tách khỏi bảng: tìm kiếm, khoảng ngày, loại, tình trạng phiếu, phản đối (và tổ cho Quản đốc). */
+/** Thanh lọc phiếu hàng hỏng, tách khỏi bảng: tìm kiếm, khoảng ngày, loại, tình trạng phiếu (và tổ cho Quản đốc). */
 export function DefectFilterBar({ filters, isManager, onChange }: DefectFilterBarProps) {
   const changeRange = (range: [Dayjs | null, Dayjs | null] | null) => {
     const [from, to] = range ?? [null, null];
@@ -87,14 +87,6 @@ export function DefectFilterBar({ filters, isManager, onChange }: DefectFilterBa
             options={STATUS_OPTIONS}
             value={filters.status}
             onChange={(status) => onChange({ status })}
-          />
-          <FilterSelect
-            style={{ width: 240 }}
-            prefixSelected
-            placeholder={text.filters.objection}
-            options={text.objectionOptions}
-            value={filters.objection}
-            onChange={(objection) => onChange({ objection })}
           />
         </>
       }

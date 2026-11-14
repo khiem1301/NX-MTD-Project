@@ -16,6 +16,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { QtyInput } from '@/components/common/QtyInput';
+import { maxQtyRule } from '@/utils/qtyLimit';
 
 type DispatchCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = {
@@ -129,10 +130,15 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
               title: DISPATCH_LABELS.exportQty,
               key: 'qty',
               render: (_, l) => {
-                const max = Math.min(l.remainingQty, Math.floor(l.availableQty), DISPATCH_MAX_QTY);
+                // Số còn phải xuất và tồn thành phẩm là trần nghiệp vụ: vượt thì báo lỗi, không tự cắt số.
+                const limit = Math.min(l.remainingQty, Math.floor(l.availableQty));
                 return (
-                  <Form.Item name={['qty', String(l.orderLineId)]} noStyle>
-                    <QtyInput min={0} max={max} disabled={max <= 0} />
+                  <Form.Item
+                    name={['qty', String(l.orderLineId)]}
+                    rules={[maxQtyRule(limit)]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <QtyInput min={0} max={DISPATCH_MAX_QTY} disabled={limit <= 0} />
                   </Form.Item>
                 );
               },

@@ -40,6 +40,7 @@ public sealed class SaveOrderMarkerDtoValidator : AbstractValidator<SaveOrderMar
             .GreaterThan(0).WithMessage("Chiều dài bìa phải lớn hơn 0.")
             .LessThanOrEqualTo(OrderMarkerLimits.MaxLengthM).WithMessage("Chiều dài bìa tối đa 99.999,99 m.")
             .Must(v => decimal.Round(v, 2) == v).WithMessage("Chiều dài bìa tối đa 2 số lẻ.");
+        RuleFor(x => x.WidthM).ValidWidthM(WidthLabels.Marker);
         RuleFor(x => CodeText.ToCode(x.Status ?? string.Empty)).Must(s => s is RecordStatus.Active or RecordStatus.Discontinued)
             .OverridePropertyName("status").WithMessage("Trạng thái bìa không hợp lệ.");
         RuleFor(x => x.Ratios).Cascade(CascadeMode.Stop).NotNull().WithMessage("Bìa phải có tỉ lệ size.")

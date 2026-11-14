@@ -21,6 +21,29 @@ public sealed class StockRepository : IStockRepository
     public async Task<decimal> GetAvailableAsync(StockKey key, CancellationToken ct) =>
         await Balances(key).SumAsync(b => b.AvailableQty, ct) ?? 0m;
 
+    public async Task<IReadOnlyDictionary<int, decimal>> GetMaterialAvailableAsync(IReadOnlyCollection<int> materialIds,
+        CancellationToken ct)
+    {
+        if (materialIds.Count == 0) return new Dictionary<int, decimal>();
+        return await _context.VwStockBalances.AsNoTracking()
+            .Where(b => b.WarehouseType == WarehouseTypes.Material && b.MaterialId != null && materialIds.Contains(b.MaterialId.Value))
+            .GroupBy(b => b.MaterialId!.Value)
+            .Select(g => new { g.Key, Qty = g.Sum(b => b.AvailableQty) ?? 0m })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+    }
+
+    public async Task<IReadOnlyDictionary<int, decimal>> GetSetAvailableAsync(IReadOnlyCollection<int> orderLineIds,
+        CancellationToken ct)
+    {
+        if (orderLineIds.Count == 0) return new Dictionary<int, decimal>();
+        return await _context.VwStockBalances.AsNoTracking()
+            .Where(b => b.WarehouseType == WarehouseTypes.SemiFinished && b.ProductComponentMaterialId == null
+                        && b.OrderLineId != null && orderLineIds.Contains(b.OrderLineId.Value))
+            .GroupBy(b => b.OrderLineId!.Value)
+            .Select(g => new { g.Key, Qty = g.Sum(b => b.AvailableQty) ?? 0m })
+            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+    }
+
     public async Task<string> DescribeAsync(StockKey key, CancellationToken ct)
     {
         if (key.WarehouseType == WarehouseTypes.Material)

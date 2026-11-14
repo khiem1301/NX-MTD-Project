@@ -26,8 +26,6 @@ public static class ProductionModule
         services.AddScoped<IOutputService, OutputService>();
         services.AddScoped<IQcBatchService, QcBatchService>();
         services.AddScoped<IDefectService, DefectService>();
-        services.AddScoped<IDefectAutoConfirmService, DefectAutoConfirmService>();
-        services.AddHostedService<DefectAutoConfirmJob>();   // quá 48 giờ không phản đối → CONFIRMED
         services.AddScoped<IEndOfOrderService, EndOfOrderService>();
         services.AddScoped<IRequestTypeHandler, ReplacementCuttingRequestHandler>();   // KI-09
         services.AddScoped<IRequestTypeHandler, DefectiveMaterialRequestHandler>();    // NVL lỗi: duyệt → kiểm tồn → phiếu xin / đơn mua

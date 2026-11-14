@@ -48,7 +48,7 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
       });
     };
     const lines = (form.getFieldValue('lines') ?? []) as NonNullable<FormValues['lines']>;
-    const typed = lines.some((l) => l.materialId || l.itemDescription?.trim());
+    const typed = lines.some((l) => l.materialId || l.orderLineId || l.itemDescription?.trim());
     if (!typed) return apply();
     Modal.confirm({
       title: MESSAGES.requests.changeTypeTitle,
@@ -69,7 +69,8 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
         ? []
         : (values.lines ?? []).map((l) => ({
             materialId: l.materialId ?? null,
-            itemDescription: l.materialId ? null : l.itemDescription,
+            orderLineId: l.orderLineId ?? null,
+            itemDescription: l.materialId || l.orderLineId ? null : l.itemDescription,
             quantity: l.quantity,
           })),
     };
@@ -83,7 +84,8 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
           requestType: values.requestType,
           handlerRole: noLines ? values.handlerRole : null,
           workOrderId: values.workOrderId ?? null,
-          orderId: values.workOrderId ? (values.orderId ?? null) : null,
+          // Đơn theo lệnh cắt lấy đơn hàng từ lệnh; Xin BTP / Xin NVL của tổ may chọn đơn hàng (DEV-ALL-110).
+          orderId: values.orderId ?? null,
         });
         await uploadPhotos(newId);
         void message.success(MESSAGES.requests.created);
@@ -101,11 +103,13 @@ export function useRequestForm(props: Pick<RequestFormModalProps, 'editing' | 'o
     ? {
         requestType: editing.requestType,
         workOrderId: editing.workOrderId ?? undefined,
+        orderId: editing.orderId ?? undefined,
         title: editing.title ?? undefined,
         content: editing.content ?? undefined,
         targetDate: editing.targetDate ? dayjs(editing.targetDate) : undefined,
         lines: editing.lines.map((l) => ({
           materialId: l.materialId ?? undefined,
+          orderLineId: l.orderLineId ?? undefined,
           itemDescription: l.itemDescription ?? '',
           quantity: l.quantity,
         })),
@@ -133,7 +137,12 @@ type FormValues = {
   title?: string;
   content?: string;
   targetDate?: Dayjs;
-  lines?: { materialId?: number; itemDescription?: string; quantity: number }[];
+  lines?: {
+    materialId?: number;
+    orderLineId?: number;
+    itemDescription?: string;
+    quantity: number;
+  }[];
 };
 
 export const EMPTY_LINE = { itemDescription: '', quantity: 1 };

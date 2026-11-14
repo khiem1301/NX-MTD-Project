@@ -12,4 +12,13 @@ public interface ILookupService
     Task<IReadOnlyList<ComponentOptionDto>> GetPanelsOfOrderLineAsync(int orderLineId, CancellationToken ct);
     Task<IReadOnlyList<TeamOptionDto>> GetTeamsAsync(string? teamType, CancellationToken ct);
     Task<IReadOnlyList<MaterialOptionDto>> GetActiveMaterialsAsync(string? keyword, CancellationToken ct);
+
+    /// <summary>NVL phế phẩm đang dùng (vải vụn, kim gãy…) để tổ cắt / tổ may chọn khi trả về kho (DEV-ALL-112).</summary>
+    Task<IReadOnlyList<MaterialOptionDto>> GetScrapMaterialsAsync(CancellationToken ct);
+
+    /// <summary>NVL chọn được ở đơn Xin NVL kèm khả dụng kho: có đơn hàng thì chỉ NVL của đơn (OrderMaterial), không thì NVL đang dùng.</summary>
+    Task<IReadOnlyList<RequisitionMaterialOptionDto>> GetRequisitionMaterialsAsync(int? orderId, CancellationToken ct);
+
+    /// <summary>Dòng đơn chọn được ở đơn Xin BTP kèm số bộ khả dụng; tổ may chỉ thấy dòng chia cho tổ.</summary>
+    Task<IReadOnlyList<RequisitionPieceOptionDto>> GetRequisitionPiecesAsync(int orderId, CancellationToken ct);
 }

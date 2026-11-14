@@ -1,6 +1,6 @@
 import { CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Card, Space } from 'antd';
+import { Alert, Card, Space } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -45,6 +45,7 @@ export function MyPieceMovementsPage() {
 
   return (
     <Card title={PM_LABELS.workerTitle}>
+      <Alert type="info" showIcon message={PM_LABELS.workerHint} style={{ marginBottom: 16 }} />
       <Space style={{ marginBottom: 16 }}>
         <FilterSelect
           value={table.filters.status}

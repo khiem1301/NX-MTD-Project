@@ -16,4 +16,10 @@ public interface IStockService
     Task<Result> PostAsync(IReadOnlyList<StockMovement> movements, CancellationToken ct);
 
     Task<decimal> GetAvailableAsync(StockKey key, CancellationToken ct);
+
+    /// <summary>Khả dụng kho NVL theo MaterialId (NVL chưa có tồn không có trong kết quả).</summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetMaterialAvailableAsync(IReadOnlyCollection<int> materialIds, CancellationToken ct);
+
+    /// <summary>Khả dụng kho BTP theo bộ, theo OrderLineId (dòng chưa có tồn không có trong kết quả).</summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetSetAvailableAsync(IReadOnlyCollection<int> orderLineIds, CancellationToken ct);
 }

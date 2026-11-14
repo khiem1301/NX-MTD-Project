@@ -4,10 +4,15 @@ import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { LEADER_BASE, materialReturnApi, WAREHOUSE_BASE } from '../api/materialReturnApi';
 import { RETURN_MESSAGES } from '../constants';
-import type { ConfirmReturnPayload, CreateReturnPayload, MaterialReturnQuery } from '../types';
+import type {
+  ConfirmReturnPayload,
+  CreateReturnPayload,
+  MaterialReturnQuery,
+  ReturnableQuery,
+} from '../types';
 
 export const RETURN_KEY = ['material-return'] as const;
-// Nhận vải trả làm tăng tồn NVL và giảm vải tổ cắt đang giữ.
+// Nhận hàng trả làm tăng tồn NVL / BTP và giảm vải tổ cắt đang giữ.
 const AFFECTED = [RETURN_KEY, ['warehouse'], ['cutting']];
 
 const useBase = () => {
@@ -33,10 +38,19 @@ export const useMaterialReturn = (id: number | undefined) => {
   });
 };
 
-export const useReturnable = (enabled: boolean) =>
+/** Hàng tổ còn trả được và trần số trả; query = undefined (chưa chọn lệnh cắt / đơn hàng) thì chưa tải. */
+export const useReturnable = (query: ReturnableQuery | undefined) =>
   useQuery({
-    queryKey: [...RETURN_KEY, 'returnable'],
-    queryFn: () => materialReturnApi.returnable(),
+    queryKey: [...RETURN_KEY, 'returnable', query],
+    queryFn: () => (query ? materialReturnApi.returnable(query) : Promise.resolve([])),
+    enabled: query !== undefined,
+  });
+
+/** Lệnh cắt của tổ cắt (chỉ tải khi form trả NVL của tổ cắt mở). */
+export const useReturnWorkOrders = (enabled: boolean) =>
+  useQuery({
+    queryKey: [...RETURN_KEY, 'work-orders'],
+    queryFn: materialReturnApi.teamWorkOrders,
     enabled,
   });
 

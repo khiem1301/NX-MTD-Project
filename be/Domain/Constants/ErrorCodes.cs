@@ -156,7 +156,6 @@ public static class ErrorCodes
     public const string WarehouseMaterialInUse = "WAREHOUSE_MATERIAL_IN_USE";
     public const string WarehouseOrderMaterialDuplicate = "WAREHOUSE_ORDER_MATERIAL_DUPLICATE";
     public const string WarehouseOrderMaterialInUse = "WAREHOUSE_ORDER_MATERIAL_IN_USE";
-    public const string CuttingPlanExceedsOrder = "CUTTING_PLAN_EXCEEDS_ORDER";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
@@ -172,8 +171,6 @@ public static class ErrorCodes
     public const string VehicleInactive = "VEHICLE_INACTIVE";
     public const string VehicleTripInvalid = "VEHICLE_TRIP_INVALID";
     public const string ReturnExceedsIssued = "RETURN_EXCEEDS_ISSUED";
-    public const string ReturnPendingExists = "RETURN_PENDING_EXISTS";
-    public const string ReturnExceedsLeftover = "RETURN_EXCEEDS_LEFTOVER";
     public const string AllocationExceedsRequired = "ALLOCATION_EXCEEDS_REQUIRED";
     public const string PieceRetrievalExceedsHolding = "PIECE_RETRIEVAL_EXCEEDS_HOLDING";
     public const string ShortageNotResolvable = "SHORTAGE_NOT_RESOLVABLE";

@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.TeamLeader;
 
-/// <summary>UC42: tổ trưởng / tổ phó tổ cắt trả vải thừa theo phiếu cấp gốc (tổ may không trả).</summary>
+/// <summary>UC42: tổ trưởng / tổ phó tổ cắt (NVL theo lệnh cắt) và tổ may (NVL, BTP theo đơn) trả hàng về kho (DEV-ALL-112).</summary>
 public sealed class MaterialReturnsController : TeamLeaderBaseController
 {
     private readonly IMaterialReturnService _returns;
@@ -28,8 +28,8 @@ public sealed class MaterialReturnsController : TeamLeaderBaseController
         this.ToResponse(await _returns.GetByIdAsync(id, TeamId, ct));
 
     [HttpGet("returnable")]
-    public async Task<IActionResult> GetReturnable(CancellationToken ct) =>
-        this.ToResponse(await _returns.GetReturnableAsync(TeamId, ct));
+    public async Task<IActionResult> GetReturnable([FromQuery] ReturnableQuery query, CancellationToken ct) =>
+        this.ToResponse(await _returns.GetReturnableAsync(TeamId, query, ct));
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateMaterialReturnDto dto, CancellationToken ct) =>

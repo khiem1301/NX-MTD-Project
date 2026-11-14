@@ -22,6 +22,9 @@ public partial class Material
 
     public string Unit { get; set; } = null!;
 
+    /// <summary>Khổ vải (m), bắt buộc với vải, phụ liệu để NULL (DEV-ALL-102).</summary>
+    public decimal? WidthM { get; set; }
+
     public string Status { get; set; } = null!;
 
     public DateTime CreatedAt { get; set; }

@@ -18,6 +18,9 @@ public partial class ProductMarker
 
     public decimal LengthM { get; set; }
 
+    /// <summary>Khổ bìa (m), tối đa 3,5 m (DEV-ALL-102).</summary>
+    public decimal WidthM { get; set; }
+
     public string Status { get; set; } = null!;
 
     public virtual CustomerOrder Order { get; set; } = null!;

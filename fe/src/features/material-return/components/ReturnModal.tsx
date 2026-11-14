@@ -4,7 +4,7 @@ import { ReturnModalBody } from './ReturnModalBody';
 
 type ReturnModalProps = { returnId: number | undefined; onClose: () => void };
 
-/** Chi tiết phiếu trả vải: Thủ kho đếm (lệch phải có lý do), nhận vào kho hoặc từ chối; tổ cắt rút phiếu chờ. */
+/** Chi tiết phiếu trả NVL: Thủ kho đếm (lệch phải có lý do), nhận vào kho hoặc từ chối; tổ rút phiếu chờ. */
 export function ReturnModal({ returnId, onClose }: ReturnModalProps) {
   const detail = useMaterialReturn(returnId);
   const r = detail.data;

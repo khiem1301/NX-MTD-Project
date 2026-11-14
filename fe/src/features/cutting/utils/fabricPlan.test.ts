@@ -27,6 +27,13 @@ describe('fabricPlan', () => {
     expect(markerUseLabel(use)).toBe('1A (1M, 2L, 1XL) × 10 lớp');
   });
 
+  it('vải rộng gấp k lần bìa ghi số bìa song song trên một lớp', () => {
+    expect(markerUseLabel({ ...use, across: 2, plies: 8 })).toBe(
+      '1A (1M, 2L, 1XL) × 2 bìa song song × 8 lớp',
+    );
+    expect(markerUseLabel({ ...use, across: 1 })).toBe('1A (1M, 2L, 1XL) × 10 lớp');
+  });
+
   it('nhóm bìa ghi các bìa, phần dư và ghi chú chưa chắc tối ưu; cắt lẻ / cắt bù ghi riêng', () => {
     expect(planLabel(plan)).toBe('Nhóm bìa 1: 1A (1M, 2L, 1XL) × 10 lớp');
     expect(

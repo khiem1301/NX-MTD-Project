@@ -18,6 +18,7 @@ public class WorkOrderRequisitionTests : ProductionTestBase
     private const int CutTeam = 2;
 
     private readonly IWorkOrderFabricNeeds _needs = Substitute.For<IWorkOrderFabricNeeds>();
+    private readonly IStockService _stock = Substitute.For<IStockService>();
     private readonly WorkOrder _wo = new() { WorkOrderId = 7, OrderId = 4, CuttingTeamId = CutTeam, Status = WorkOrderStatuses.Open };
 
     public WorkOrderRequisitionTests()
@@ -29,6 +30,8 @@ public class WorkOrderRequisitionTests : ProductionTestBase
             new() { MaterialId = LiningId, MaterialName = "Vải lót", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active },
             new() { MaterialId = OtherFabricId, MaterialName = "Vải khác", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active },
         });
+        _stock.GetMaterialAvailableAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => ci.Arg<IReadOnlyCollection<int>>().ToDictionary(id => id, _ => 100_000m));
         _needs.LoadAsync(7, Arg.Any<CancellationToken>()).Returns(_wo);
         _needs.AllowanceAsync(_wo, Arg.Any<int?>(), Arg.Any<CancellationToken>()).Returns(new[]
         {
@@ -41,7 +44,7 @@ public class WorkOrderRequisitionTests : ProductionTestBase
         new(id, $"V{id}", $"Vải {id}", "", "m", need, cap, requested, cap is null ? null : cap - requested);
 
     private Task<Result> Check(int? workOrderId, params (int Id, decimal Qty)[] lines) =>
-        new MaterialRequisitionRequestHandler(Clock, Uow, User, _needs).ValidateAsync(new RequestDraft(RequestTypes.MaterialRequisition,
+        new MaterialRequisitionRequestHandler(Clock, Uow, User, _needs, _stock).ValidateAsync(new RequestDraft(RequestTypes.MaterialRequisition,
             null, workOrderId, null, null, null, null, null, "Xin", "Nội dung",
             lines.Select(l => new RequestLineInput(l.Id, null, null, null, l.Qty)).ToList(), null), default);
 

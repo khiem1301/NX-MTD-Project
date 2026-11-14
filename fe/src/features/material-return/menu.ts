@@ -5,7 +5,7 @@ import type { MenuEntry } from '@/types/menu';
 export const materialReturnMenu: MenuEntry[] = [
   {
     key: 'material-returns',
-    label: 'Trả vải thừa',
+    label: 'Trả hàng về kho',
     path: ROUTES.materialReturns,
     roles: [ROLES.TeamLeader, ROLES.TeamDeputy, ROLES.WarehouseKeeper],
     // Chỉ tổ cắt trả vải thừa về kho; tổ may không dùng màn này.

@@ -68,6 +68,10 @@ export const shiftText = (shift: string | null | undefined): string => {
   return PRODUCTION_TEXT.output.shiftLabel[key] ?? shift;
 };
 
+/** Quy ca BE trả ("MORNING" hoặc "Morning") về giá trị gửi lên API. */
+export const toShiftCode = (shift: string): ShiftCode =>
+  (shift.charAt(0).toUpperCase() + shift.slice(1).toLowerCase()) as ShiftCode;
+
 export const SHIFT_OPTIONS = (Object.keys(PRODUCTION_TEXT.output.shiftLabel) as ShiftCode[]).map(
   (value) => ({
     value,

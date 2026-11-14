@@ -11,6 +11,8 @@ import {
   useUnreadCount,
 } from '../hooks/useNotifications';
 import { useNewNotificationToast } from '../hooks/useNewNotificationToast';
+import { hasNotificationAction, useOpenNotification } from '../hooks/useOpenNotification';
+import { NotificationModals } from './NotificationModals';
 import type { NotificationItem } from '../types';
 
 const LIST_SIZE = 10;
@@ -18,6 +20,7 @@ const LIST_SIZE = 10;
 /** UC05: chuông thông báo trên thanh trên cùng — số chưa đọc, 10 thông báo mới nhất, đánh dấu đã đọc. */
 export function NotificationBell() {
   const navigate = useNavigate();
+  const openNotification = useOpenNotification();
   useNewNotificationToast();
   const [open, setOpen] = useState(false);
   const unread = useUnreadCount();
@@ -27,10 +30,7 @@ export function NotificationBell() {
 
   const openItem = (n: NotificationItem) => {
     if (!n.isRead) markRead.mutate(n.notificationId);
-    if (n.linkUrl) {
-      setOpen(false);
-      navigate(n.linkUrl);
-    }
+    if (openNotification(n)) setOpen(false);
   };
 
   const content = (
@@ -58,7 +58,7 @@ export function NotificationBell() {
           <List.Item
             onClick={() => openItem(n)}
             style={{
-              cursor: 'pointer',
+              cursor: hasNotificationAction(n) ? 'pointer' : 'default',
               background: n.isRead ? undefined : 'rgba(22,119,255,0.06)',
             }}
           >
@@ -95,21 +95,24 @@ export function NotificationBell() {
   );
 
   return (
-    <Popover
-      content={content}
-      trigger="click"
-      placement="bottomRight"
-      open={open}
-      onOpenChange={setOpen}
-    >
-      <Badge count={unread.data ?? 0} size="small" overflowCount={99}>
-        <Button
-          type="text"
-          shape="circle"
-          icon={<BellOutlined style={{ fontSize: 18 }} />}
-          aria-label="Thông báo"
-        />
-      </Badge>
-    </Popover>
+    <>
+      <Popover
+        content={content}
+        trigger="click"
+        placement="bottomRight"
+        open={open}
+        onOpenChange={setOpen}
+      >
+        <Badge count={unread.data ?? 0} size="small" overflowCount={99}>
+          <Button
+            type="text"
+            shape="circle"
+            icon={<BellOutlined style={{ fontSize: 18 }} />}
+            aria-label="Thông báo"
+          />
+        </Badge>
+      </Popover>
+      <NotificationModals />
+    </>
   );
 }

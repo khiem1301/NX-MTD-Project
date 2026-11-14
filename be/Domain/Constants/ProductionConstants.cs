@@ -37,29 +37,22 @@ public static class DefectTypes
 public static class DefectStatuses
 {
     public const string Recorded = "RECORDED";
-    /// <summary>Công nhân phản đối nhưng Quản đốc / Admin chấp nhận phiếu: phiếu được giữ, không hủy hay phản đối nữa. Vẫn tính như phiếu còn hiệu lực.</summary>
+    /// <summary>Chỉ còn ở dữ liệu cũ (từ thời công nhân được phản đối, DEV-ALL-106): ứng dụng không còn chuyển phiếu sang trạng thái này, nhưng phiếu cũ vẫn tính còn hiệu lực và sửa / hủy được như phiếu đã ghi.</summary>
     public const string Confirmed = "CONFIRMED";
     public const string Cancelled = "CANCELLED";
     /// <summary>Chỉ database dùng (CK_DR_Status, trigger khóa tháng); ứng dụng chưa chuyển phiếu sang trạng thái này nên không có trong <see cref="All"/> và giao diện.</summary>
     public const string Locked = "LOCKED";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string> { Recorded, Confirmed, Cancelled };
+
+    /// <summary>Phiếu còn hiệu lực nên còn sửa / hủy được (nếu qua các ràng buộc ở DefectService).</summary>
+    public static readonly IReadOnlySet<string> Editable = new HashSet<string> { Recorded, Confirmed };
 }
 
-/// <summary>Công nhân chỉ được phản đối phiếu hàng hỏng trong số giờ này kể từ lúc phiếu được ghi (quá hạn thì không phản đối được).</summary>
-public static class DefectObjectionWindow
+/// <summary>Tổ trưởng / tổ phó chỉ được sửa, hủy phiếu hàng hỏng trong số giờ này kể từ lúc lập phiếu (DEV-ALL-106). Quản đốc / Admin không bị giới hạn giờ.</summary>
+public static class DefectEditWindow
 {
-    public const int Hours = 48;
-}
-
-/// <summary>Giá trị bộ lọc phản đối của danh sách phiếu hàng hỏng: chờ quyết định, đã quyết định (chấp nhận hoặc hủy), không có phản đối.</summary>
-public static class DefectObjectionFilters
-{
-    public const string Pending = "Pending";
-    public const string Resolved = "Resolved";
-    public const string None = "None";
-
-    public static readonly IReadOnlySet<string> All = new HashSet<string> { Pending, Resolved, None };
+    public const int Hours = 24;
 }
 
 /// <summary>DefectRecord.DefectReasonCode. OTHER bắt buộc ghi chú (CK_DR_Other).</summary>

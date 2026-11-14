@@ -1,4 +1,4 @@
-import { Descriptions, Typography } from 'antd';
+import { Descriptions } from 'antd';
 import { formatCurrency, formatDateTime } from '@/utils/format';
 import { REQUEST_STATUS_LABEL, type RequestStatus } from '@/constants/requestTypes';
 import { PRODUCTION_TEXT } from '../constants';
@@ -10,7 +10,7 @@ const dash = (v: string | null | undefined) => v || '—';
 
 /**
  * Chi tiết một phiếu hàng hỏng, mở ngay dưới dòng: những thông tin phụ không đủ chỗ ở các cột của bảng. "Cập nhật lần cuối" là
- * giờ chấp nhận hoặc hủy phiếu (người thao tác và ghi chú nằm ở nhật ký thay đổi).
+ * giờ sửa hoặc hủy phiếu (người thao tác và ghi chú nằm ở nhật ký thay đổi).
  */
 export function DefectExpandedRow({ defect: d }: { defect: Defect }) {
   return (
@@ -32,18 +32,6 @@ export function DefectExpandedRow({ defect: d }: { defect: Defect }) {
         {d.replacementRequestCode
           ? `${d.replacementRequestCode} · ${REQUEST_STATUS_LABEL[d.replacementRequestStatus as RequestStatus] ?? d.replacementRequestStatus}`
           : '—'}
-      </Descriptions.Item>
-      <Descriptions.Item label={detail.objection} span={2}>
-        {d.workerObjection ? (
-          <>
-            <Typography.Text>{d.workerObjection}</Typography.Text>
-            {d.objectedAt && (
-              <Typography.Text type="secondary"> · {formatDateTime(d.objectedAt)}</Typography.Text>
-            )}
-          </>
-        ) : (
-          '—'
-        )}
       </Descriptions.Item>
     </Descriptions>
   );

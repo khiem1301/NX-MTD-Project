@@ -180,6 +180,10 @@ export const API = {
       v1(`common/lookups/order-lines/${orderLineId}/components`),
     teams: v1('common/lookups/teams'),
     materials: v1('common/lookups/materials'),
+    scrapMaterials: v1('common/lookups/scrap-materials'),
+    requisitionMaterials: v1('common/lookups/requisition-materials'),
+    requisitionPieces: (orderId: number) =>
+      v1(`common/lookups/orders/${orderId}/requisition-pieces`),
   },
   warehouse: {
     materials: (role: RolePath) => v1(`${role}/materials`),
@@ -206,6 +210,8 @@ export const API = {
     allottedTeams: '/api/v1/manager/order-line-teams/teams',
     calendar: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/calendar`,
     dailyPlan: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-plan`,
+    finishResult: (kpiTargetId: number) =>
+      `/api/v1/team-leader/kpi-targets/${kpiTargetId}/finish-result`,
     finishPreview: (kpiTargetId: number) =>
       `/api/v1/manager/kpi-targets/${kpiTargetId}/finish-preview`,
     finish: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/finish`,
@@ -269,14 +275,14 @@ export const API = {
     outputGrid: (role: 'team-leader' | 'manager') => v1(`${role}/output-records/grid`),
     output: (role: 'team-leader' | 'manager') => v1(`${role}/output-records`),
     defects: (role: 'team-leader' | 'manager') => v1(`${role}/defect-records`),
+    defectUpdate: (role: 'team-leader' | 'manager', id: number) =>
+      v1(`${role}/defect-records/${id}`),
     defectCancel: (role: 'team-leader' | 'manager', id: number) =>
       v1(`${role}/defect-records/${id}/cancel`),
-    defectConfirm: (id: number) => v1(`manager/defect-records/${id}/confirm`),
     qcBatches: (role: 'qa-qc' | 'manager') => v1(`${role}/qc-batches`),
     qcBatch: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}`),
     qcBatchDelete: (role: 'qa-qc' | 'manager', id: number) => v1(`${role}/qc-batches/${id}/delete`),
     qcOnLine: v1('qa-qc/qc-batches/on-line'),
     myDefects: v1('common/my-defects'),
-    myDefectObject: (id: number) => v1(`common/my-defects/${id}/object`),
   },
 } as const;

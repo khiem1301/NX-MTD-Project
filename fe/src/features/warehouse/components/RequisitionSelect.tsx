@@ -14,7 +14,7 @@ type RequisitionSelectProps = {
   width?: number | string;
 };
 
-/** Đơn xin NVL / BTP đã duyệt, đang chờ Thủ kho cấp; lập phiếu cấp xong đơn tự chuyển sang Hoàn thành. */
+/** Đơn xin NVL / BTP đã duyệt, đang chờ Thủ kho cấp; đơn chỉ sang Hoàn thành khi tổ xác nhận nhận phiếu cấp (DEV-ALL-109). */
 export function RequisitionSelect({
   requestType,
   value,

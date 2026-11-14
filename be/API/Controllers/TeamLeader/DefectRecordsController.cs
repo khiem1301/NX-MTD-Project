@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.TeamLeader;
 
-/// <summary>UC56 (KI-08) — tổ trưởng / tổ phó may ghi hàng hỏng Rework / Scrap và hủy phiếu trong hạn.</summary>
+/// <summary>UC56 (KI-08) — tổ trưởng / tổ phó may ghi hàng hỏng Rework / Scrap, sửa và hủy phiếu trong 24 giờ (hủy bắt buộc lý do).</summary>
 public sealed class DefectRecordsController : TeamLeaderBaseController
 {
     private readonly IDefectService _defects;
@@ -19,6 +19,10 @@ public sealed class DefectRecordsController : TeamLeaderBaseController
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateDefectDto dto, CancellationToken ct) =>
         this.ToResponse(await _defects.CreateAsync(dto, ct));
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateDefectDto dto, CancellationToken ct) =>
+        this.ToResponse(await _defects.UpdateAsync(id, dto, ct));
 
     [HttpPost("{id:int}/cancel")]
     public async Task<IActionResult> Cancel(int id, [FromBody] CancelDefectDto dto, CancellationToken ct) =>

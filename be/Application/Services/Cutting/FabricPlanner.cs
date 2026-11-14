@@ -74,9 +74,9 @@ public sealed class FabricPlanner
             .SumAsync(l => l.ConfirmedQty ?? 0, ct);
         var returned = await _uow.Repository<MaterialReturnLine>().Query()
             .Where(r => r.MaterialReturn.Status == HandoverStatuses.Confirmed
-                        && r.MaterialIssueLine.MaterialIssue.ReceivingTeamId == cuttingTeamId
-                        && r.MaterialIssueLine.MaterialIssue.OrderId == orderId
-                        && r.MaterialIssueLine.MaterialId == materialId)
+                        && r.MaterialReturn.ReturningTeamId == cuttingTeamId
+                        && r.MaterialReturn.OrderId == orderId
+                        && r.MaterialId == materialId)
             .SumAsync(r => r.ConfirmedQty ?? 0, ct);
         return received - returned;
     }
@@ -124,8 +124,9 @@ public sealed class FabricPlanner
             .GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
         var returned = (await _uow.Repository<MaterialReturnLine>().Query().AsNoTracking()
             .Where(r => r.MaterialReturn.Status == HandoverStatuses.Confirmed
-                        && r.MaterialIssueLine.MaterialIssue.WorkOrderId == workOrderId && r.MaterialIssueLine.MaterialId != null)
-            .Select(r => new { MaterialId = r.MaterialIssueLine.MaterialId!.Value, Qty = r.ConfirmedQty ?? 0 }).ToListAsync(ct))
+                        && r.MaterialReturn.WorkOrderId == workOrderId && r.MaterialId != null
+                        && r.Material!.MaterialType != MaterialTypes.Scrap)
+            .Select(r => new { MaterialId = r.MaterialId!.Value, Qty = r.ConfirmedQty ?? 0 }).ToListAsync(ct))
             .GroupBy(r => r.MaterialId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
         return (received, returned);
     }

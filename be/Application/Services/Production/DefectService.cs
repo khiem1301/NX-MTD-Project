@@ -10,8 +10,11 @@ namespace NX_MTD.Application.Services;
 /// <summary>
 /// KI-08 (UC56): tổ trưởng / tổ phó may ghi hàng hỏng theo QA/QC báo. REWORK trả lại công nhân sửa, không trừ sản
 /// lượng; SCRAP trừ khỏi hàng trên chuyền và sản lượng được trả của công nhân gây lỗi (khóa <c>PieceRateId</c> bằng
-/// đơn giá duyệt tại ngày làm việc). Bắt buộc công đoạn, công nhân gây lỗi, lý do (OTHER phải ghi chú); báo cho công
-/// nhân; công nhân phản hồi nếu ghi sai. Hạn sửa như sản lượng (GBR-09). Không sinh đơn cắt bù (KI-09 — DEV-KI-08-1).
+/// đơn giá duyệt tại ngày làm việc). Bắt buộc công đoạn, công nhân gây lỗi, lý do (OTHER phải ghi chú); báo cho công nhân.
+/// Công nhân không phản hồi / khiếu nại phiếu (DEV-ALL-106). Sửa / hủy phiếu: tổ trưởng của tổ trong <see cref="DefectEditWindow.Hours"/>
+/// giờ kể từ lúc lập phiếu; Quản đốc / Admin không giới hạn giờ nhưng bị chặn khi đã có ràng buộc phát sinh từ phiếu (kỳ lương
+/// khóa, đơn đã đóng, đã có đơn cắt bù, hủy / sửa phiếu nhập sai làm sản lượng vượt trần). Hủy luôn bắt buộc lý do. Không sinh
+/// đơn cắt bù (KI-09 — DEV-KI-08-1).
 /// </summary>
 public sealed class DefectService : IDefectService
 {
@@ -33,6 +36,7 @@ public sealed class DefectService : IDefectService
 
     // ---------- Xem ----------
 
+    /// <summary>Tổ trưởng / tổ phó chỉ thấy phiếu của tổ mình; Quản đốc / Admin thấy mọi tổ (lọc được theo tổ).</summary>
     public async Task<Result<PagedResult<DefectDto>>> ListForTeamAsync(DefectQuery query, CancellationToken ct)
     {
         int? teamId = null;
@@ -46,19 +50,12 @@ public sealed class DefectService : IDefectService
         var keyword = query.Keyword?.Trim();
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var type = string.IsNullOrWhiteSpace(query.DefectType) ? null : CodeText.ToCode(query.DefectType);
-        var objectionPending = query.Objection == DefectObjectionFilters.Pending;
-        var objectionResolved = query.Objection == DefectObjectionFilters.Resolved;
-        var objectionNone = query.Objection == DefectObjectionFilters.None;
         var page = await Project(Defects.AsNoTracking()
                 .Where(d => teamId == null || d.SewingTeamId == teamId)
                 // Quản đốc lọc theo tổ; tổ trưởng đã bị giới hạn ở tổ mình ở trên.
                 .Where(d => teamId != null || query.SewingTeamId == null || d.SewingTeamId == query.SewingTeamId)
                 .Where(d => status == null || d.Status == status)
                 .Where(d => type == null || d.DefectType == type)
-                // Chờ quyết định = công nhân phản đối mà phiếu vẫn ở trạng thái đã ghi; đã quyết định = đã chấp nhận hoặc hủy.
-                .Where(d => !objectionPending || (d.WorkerObjection != null && d.Status == DefectStatuses.Recorded))
-                .Where(d => !objectionResolved || (d.WorkerObjection != null && d.Status != DefectStatuses.Recorded))
-                .Where(d => !objectionNone || d.WorkerObjection == null)
                 .Where(d => query.WorkDate == null || d.WorkDate == query.WorkDate)
                 .Where(d => query.From == null || d.WorkDate >= query.From)
                 .Where(d => query.To == null || d.WorkDate <= query.To)
@@ -73,6 +70,7 @@ public sealed class DefectService : IDefectService
         return Result<PagedResult<DefectDto>>.Success(page with { Items = page.Items.Select(Finish).ToList() });
     }
 
+    /// <summary>Công nhân chỉ xem phiếu của chính mình (không thấy phiếu đã hủy); không có thao tác phản hồi.</summary>
     public async Task<Result<IReadOnlyList<DefectDto>>> ListMineAsync(int workerId, DefectQuery query, CancellationToken ct)
     {
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
@@ -94,12 +92,13 @@ public sealed class DefectService : IDefectService
         var team = _guard.ResolveSewingTeam(null);   // Quản đốc không ghi phiếu hộ: phiếu do tổ trưởng của tổ lập
         if (!team.IsSuccess) return Fail.As<int>(team);
 
-        var input = ValidateInput(dto);
+        var input = ValidateInput(dto.DefectType, dto.ReasonCode, dto.ReasonNote, dto.Quantity, dto.WorkDate, dto.ShiftCode);
         if (input.Failure is not null) return input.Failure;
         if (await _guard.IsPeriodLockedAsync(dto.WorkDate, ct))
             return Fail.As<int>(_guard.PeriodLockedFailure(dto.WorkDate));
 
-        var refs = await ValidateReferencesAsync(dto, team.Data, ct);
+        var refs = await ValidateReferencesAsync(dto.OrderLineId, dto.OperationId, dto.ResponsibleWorkerId, dto.WorkDate,
+            team.Data, ct);
         if (refs.Failure is not null) return refs.Failure;
         var (operation, worker) = (refs.Operation!, refs.Worker!);
 
@@ -114,7 +113,8 @@ public sealed class DefectService : IDefectService
         }
         if (input.Type == DefectTypes.OutputError)
         {
-            var excess = await CheckOutputErrorQuantityAsync(dto, ct);
+            var excess = await CheckOutputErrorQuantityAsync(dto.WorkDate, dto.ResponsibleWorkerId, dto.OrderLineId,
+                dto.OperationId, dto.Quantity, null, ct);
             if (excess is not null) return excess;
         }
 
@@ -140,40 +140,42 @@ public sealed class DefectService : IDefectService
     private sealed record DefectRefs(Result<int>? Failure, Operation? Operation = null, Employee? Worker = null);
 
     /// <summary>Kiểm tra các trường nhập: loại lỗi, nguyên nhân (Khác phải có ghi chú), số lượng, ngày, ca.</summary>
-    private DefectInput ValidateInput(CreateDefectDto dto)
+    private DefectInput ValidateInput(string defectType, string reasonCodeText, string? reasonNote, int quantity, DateOnly workDate,
+        string? shiftCode)
     {
-        var type = CodeText.ToCode(dto.DefectType);
+        var type = CodeText.ToCode(defectType);
         if (!DefectTypes.All.Contains(type)) return new DefectInput(Invalid(Messages.DefectTypeInvalid));
-        var reasonCode = CodeText.ToCode(dto.ReasonCode);
+        var reasonCode = CodeText.ToCode(reasonCodeText);
         if (type == DefectTypes.OutputError) reasonCode = DefectReasons.Other;   // nhập sai sản lượng: lý do là ghi chú bắt buộc
         if (!DefectReasons.All.Contains(reasonCode)) return new DefectInput(Invalid(Messages.DefectReasonInvalid));
-        var note = string.IsNullOrWhiteSpace(dto.ReasonNote) ? null : dto.ReasonNote.Trim();
+        var note = string.IsNullOrWhiteSpace(reasonNote) ? null : reasonNote.Trim();
         if (reasonCode == DefectReasons.Other && note is null) return new DefectInput(Invalid(Messages.DefectNoteRequired));   // CK_DR_Other
-        if (dto.Quantity <= 0) return new DefectInput(Invalid(Messages.OutputQtyInvalid));
-        if (dto.WorkDate > _clock.Today) return new DefectInput(Invalid(Messages.OutputDateFuture));
+        if (quantity <= 0) return new DefectInput(Invalid(Messages.OutputQtyInvalid));
+        if (workDate > _clock.Today) return new DefectInput(Invalid(Messages.OutputDateFuture));
 
         string? shift = null;
-        if (!string.IsNullOrWhiteSpace(dto.ShiftCode))
+        if (!string.IsNullOrWhiteSpace(shiftCode))
         {
-            shift = CodeText.ToCode(dto.ShiftCode);
+            shift = CodeText.ToCode(shiftCode);
             if (!ShiftCodes.All.Contains(shift)) return new DefectInput(Invalid("Ca làm việc không hợp lệ."));
         }
         return new DefectInput(null, type, reasonCode, note, shift);
     }
 
     /// <summary>Kiểm tra dòng đơn (chưa đóng), công đoạn (đang dùng, đúng mã hàng) và công nhân chịu trách nhiệm (đúng tổ, còn làm).</summary>
-    private async Task<DefectRefs> ValidateReferencesAsync(CreateDefectDto dto, int teamId, CancellationToken ct)
+    private async Task<DefectRefs> ValidateReferencesAsync(int orderLineId, int operationId, int workerId, DateOnly workDate,
+        int teamId, CancellationToken ct)
     {
         var closed = OrderStatuses.Closed.ToArray();
         var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.Order)
-            .FirstOrDefaultAsync(l => l.OrderLineId == dto.OrderLineId && !closed.Contains(l.Order.Status), ct);
+            .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId && !closed.Contains(l.Order.Status), ct);
         if (line is null)
             return new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid));
-        if (ProductionGuard.BeforeOrderStart(dto.WorkDate, line.Order.ReceivedDate) is { } beforeStart)
+        if (ProductionGuard.BeforeOrderStart(workDate, line.Order.ReceivedDate) is { } beforeStart)
             return new DefectRefs(Invalid(beforeStart));
 
         var operation = await _uow.Repository<Operation>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(o => o.OperationId == dto.OperationId, ct);
+            .FirstOrDefaultAsync(o => o.OperationId == operationId, ct);
         if (operation is null) return new DefectRefs(Fail.NotFound<int>());
         if (operation.Status != OperationStatuses.Active)
             return new DefectRefs(Result<int>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive));
@@ -181,7 +183,7 @@ public sealed class DefectService : IDefectService
             return new DefectRefs(Result<int>.Failure(ErrorCodes.OperationProductMismatch, Messages.OperationProductMismatch));
 
         var worker = await _uow.Repository<Employee>().Query().AsNoTracking().FirstOrDefaultAsync(
-            e => e.EmployeeId == dto.ResponsibleWorkerId && e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
+            e => e.EmployeeId == workerId && e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
         return worker is null
             ? new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentWorkerInvalid, Messages.AssignmentWorkerInvalid))
             : new DefectRefs(null, operation, worker);
@@ -199,113 +201,188 @@ public sealed class DefectService : IDefectService
             SewingTeamId = teamId, OrderLineId = dto.OrderLineId, OperationId = dto.OperationId,
             ResponsibleWorkerId = dto.ResponsibleWorkerId, DefectType = input.Type, Quantity = dto.Quantity,
             DefectReasonCode = input.ReasonCode, ReasonNote = input.Note, PieceRateId = scrapRateId, WorkerNotifiedAt = now,
-            EditDeadline = ProductionGuard.NextWorkingDayEnd(dto.WorkDate), Status = DefectStatuses.Recorded,
+            EditDeadline = now.AddHours(DefectEditWindow.Hours), Status = DefectStatuses.Recorded,
             RecordedBy = _user.EmployeeId, RecordedAt = now,
         };
     }
 
+    // ---------- Sửa / hủy ----------
+
+    /// <summary>Sửa phiếu (không đổi ngày và dòng đơn). Quyền và ràng buộc xem <see cref="CheckMutableAsync"/>.</summary>
+    public async Task<Result> UpdateAsync(int defectRecordId, UpdateDefectDto dto, CancellationToken ct)
+    {
+        var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId, ct);
+        if (defect is null || !CanSeeTeam(defect.SewingTeamId)) return Fail.NotFound();
+        var blocked = await CheckMutableAsync(defect, ct);
+        if (blocked is not null) return blocked;
+
+        var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
+        if (_guard.IsManager && reason is null)   // Quản đốc sửa ngoài hạn của tổ trưởng nên phải có lý do để truy vết
+            return Result.Failure(ErrorCodes.DefectInvalid, Messages.DefectUpdateReasonRequired, ResultKind.Validation);
+
+        var input = ValidateInput(dto.DefectType, dto.ReasonCode, dto.ReasonNote, dto.Quantity, defect.WorkDate, dto.ShiftCode);
+        if (input.Failure is not null) return input.Failure;
+        var refs = await ValidateReferencesAsync(defect.OrderLineId, dto.OperationId, dto.ResponsibleWorkerId, defect.WorkDate,
+            defect.SewingTeamId, ct);
+        if (refs.Failure is not null) return refs.Failure;
+        var (operation, worker) = (refs.Operation!, refs.Worker!);
+
+        var changed = defect.ShiftCode != input.Shift || defect.OperationId != dto.OperationId
+                      || defect.ResponsibleWorkerId != dto.ResponsibleWorkerId || defect.DefectType != input.Type
+                      || defect.Quantity != dto.Quantity || defect.DefectReasonCode != input.ReasonCode
+                      || defect.ReasonNote != input.Note;
+        if (!changed) return Result.Failure(ErrorCodes.DefectInvalid, Messages.DefectNothingChanged, ResultKind.Validation);
+
+        var rate = await ResolveRateAsync(defect, dto.OperationId, input.Type, operation, ct);
+        if (rate.Failure is not null) return rate.Failure;
+        var overOnLine = await CheckIncreaseWithinOnLineAsync(defect, input.Type, dto.Quantity, ct);
+        if (overOnLine is not null) return overOnLine;
+        var released = ReleasedOutputErrorQty(defect, input.Type, dto);
+        if (released > 0)
+        {
+            var overCap = await CheckReleaseOutputErrorAsync(defect, released, ct);
+            if (overCap is not null) return overCap;
+        }
+        if (input.Type == DefectTypes.OutputError)
+        {
+            var excess = await CheckOutputErrorQuantityAsync(defect.WorkDate, dto.ResponsibleWorkerId, defect.OrderLineId,
+                dto.OperationId, dto.Quantity, defect.DefectRecordId, ct);
+            if (excess is not null) return excess;
+        }
+
+        var before = Snapshot(defect);
+        var previousWorkerId = defect.ResponsibleWorkerId;
+        _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
+        defect.ShiftCode = input.Shift; defect.OperationId = dto.OperationId; defect.ResponsibleWorkerId = dto.ResponsibleWorkerId;
+        defect.DefectType = input.Type; defect.Quantity = dto.Quantity; defect.DefectReasonCode = input.ReasonCode;
+        defect.ReasonNote = input.Note; defect.PieceRateId = rate.PieceRateId;
+        defect.UpdatedAt = _clock.Now;
+        _audit.Add(new AuditEntry(nameof(DefectRecord), defectRecordId, AuditActions.Update, before, Snapshot(defect), reason));
+
+        var recipients = new[] { previousWorkerId, worker.EmployeeId }.Distinct().ToList();
+        _notifier.NotifyEmployees(recipients, new NotificationMessage(NotificationSources.Production,
+            Messages.NotifyDefectUpdatedTitle,
+            string.Format(Messages.NotifyDefectUpdatedBody, defect.DefectCode, dto.Quantity, DescribeType(input.Type),
+                operation.OperationName),
+            null, nameof(DefectRecord), defectRecordId));
+        await _uow.SaveChangesAsync();
+        return Result.Success(Messages.DefectUpdated);
+    }
+
+    /// <summary>Hủy phiếu: lý do bắt buộc với mọi vai trò (ghi vào nhật ký và báo cho công nhân).</summary>
     public async Task<Result> CancelAsync(int defectRecordId, CancelDefectDto dto, CancellationToken ct)
     {
         var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId, ct);
         if (defect is null || !CanSeeTeam(defect.SewingTeamId)) return Fail.NotFound();
-        if (defect.Status != DefectStatuses.Recorded)
-            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectInvalidStatus);
-
         var reason = string.IsNullOrWhiteSpace(dto.Reason) ? null : dto.Reason.Trim();
-        var window = _guard.CheckEditWindow(defect.EditDeadline, reason);
-        if (window is not null) return window;
-        if (await _guard.IsPeriodLockedAsync(defect.WorkDate, ct)) return _guard.PeriodLockedFailure(defect.WorkDate);
-        var overCap = await CheckCancelOutputErrorAsync(defect, ct);
+        if (reason is null)
+            return Result.Failure(ErrorCodes.DefectInvalid, Messages.DefectCancelReasonRequired, ResultKind.Validation);
+
+        var blocked = await CheckMutableAsync(defect, ct);
+        if (blocked is not null) return blocked;
+        var overCap = await CheckReleaseOutputErrorAsync(defect, defect.Quantity, ct);
         if (overCap is not null) return overCap;
 
+        var previousStatus = defect.Status;
         _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
         defect.Status = DefectStatuses.Cancelled;
         defect.UpdatedAt = _clock.Now;
         _audit.Add(new AuditEntry(nameof(DefectRecord), defectRecordId, AuditActions.Update,
-            new { Status = DefectStatuses.Recorded }, new { defect.Status }, reason));
+            new { Status = previousStatus }, new { defect.Status }, reason));
+        _notifier.NotifyEmployees([defect.ResponsibleWorkerId], new NotificationMessage(NotificationSources.Production,
+            Messages.NotifyDefectCancelledTitle, string.Format(Messages.NotifyDefectCancelledBody, defect.DefectCode, reason),
+            null, nameof(DefectRecord), defectRecordId));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.DefectCancelled);
     }
 
-    public async Task<Result> ObjectAsync(int workerId, int defectRecordId, ObjectDefectDto dto, CancellationToken ct)
-    {
-        var objection = dto.Objection?.Trim();
-        if (string.IsNullOrEmpty(objection))
-            return Result.Failure(ErrorCodes.DefectInvalid, Messages.DefectObjectionRequired, ResultKind.Validation);
-
-        // Công nhân chỉ phản hồi phiếu của chính mình.
-        var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId && d.ResponsibleWorkerId == workerId, ct);
-        if (defect is null) return Fail.NotFound();
-        if (defect.Status == DefectStatuses.Confirmed)
-            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectObjectionDecided);
-        if (defect.Status != DefectStatuses.Recorded)
-            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectInvalidStatus);
-        if (_clock.Now > defect.RecordedAt.AddHours(DefectObjectionWindow.Hours))
-            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectObjectionExpired);
-
-        var workerName = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => e.EmployeeId == workerId).Select(e => e.FullName).FirstAsync(ct);
-        var leaderIds = await LeaderIdsAsync(defect.SewingTeamId, ct);
-
-        _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
-        defect.WorkerObjection = objection;
-        defect.ObjectedAt = _clock.Now;
-        defect.UpdatedAt = _clock.Now;
-        _audit.Add(new AuditEntry(nameof(DefectRecord), defectRecordId, AuditActions.Update, null,
-            new { defect.WorkerObjection }, objection));
-        if (leaderIds.Count > 0)
-            _notifier.NotifyEmployees(leaderIds, new NotificationMessage(NotificationSources.Production,
-                Messages.NotifyDefectObjectionTitle,
-                string.Format(Messages.NotifyDefectObjectionBody, workerName, defect.DefectCode, objection),
-                null, nameof(DefectRecord), defectRecordId));
-        await _uow.SaveChangesAsync();
-        return Result.Success(Messages.DefectObjected);
-    }
-
-    // ---------- Chấp nhận phiếu (Quản đốc / Admin) ----------
-
     /// <summary>
-    /// Quản đốc / Admin chấp nhận phiếu sau khi công nhân phản đối: phiếu được giữ (Status = CONFIRMED), công nhân không phản đối lại
-    /// được. Không chấp nhận thì hủy phiếu bằng <see cref="CancelAsync"/>. Kiểm khóa kỳ vì DB chặn sửa phiếu của tháng đã khóa;
-    /// ghi chú (không bắt buộc) và người thao tác nằm ở AuditLog. Công nhân và tổ trưởng, tổ phó được báo.
+    /// Điều kiện chung để sửa / hủy: phiếu còn hiệu lực; tổ trưởng chỉ trong <see cref="DefectEditWindow.Hours"/> giờ kể từ lúc lập
+    /// (Quản đốc / Admin không giới hạn giờ); kỳ lương chưa khóa; đơn hàng chưa đóng; chưa có đơn cắt bù còn hiệu lực gắn với phiếu.
     /// </summary>
-    public async Task<Result> ConfirmAsync(int defectRecordId, ConfirmDefectDto dto, CancellationToken ct)
+    private async Task<Result?> CheckMutableAsync(DefectRecord defect, CancellationToken ct)
     {
-        if (!_guard.IsManager)
-            return Result.Failure(ErrorCodes.ProductionForbidden, Messages.DefectManagerOnly, ResultKind.Forbidden);
-        var defect = await Defects.FirstOrDefaultAsync(d => d.DefectRecordId == defectRecordId, ct);
-        if (defect is null) return Fail.NotFound();
-        if (defect.Status != DefectStatuses.Recorded)
+        if (!DefectStatuses.Editable.Contains(defect.Status))
             return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectInvalidStatus);
-        if (defect.WorkerObjection is null)
-            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectNoObjection);
+        if (!_guard.IsManager && _clock.Now > defect.RecordedAt.AddHours(DefectEditWindow.Hours))
+            return Result.Failure(ErrorCodes.ProductionEditDeadlinePassed, Messages.DefectEditWindowPassed, ResultKind.Forbidden);
         if (await _guard.IsPeriodLockedAsync(defect.WorkDate, ct)) return _guard.PeriodLockedFailure(defect.WorkDate);
 
-        var note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim();
-        _uow.Repository<DefectRecord>().SetOriginalRowVersion(defect, dto.RowVer);
-        defect.Status = DefectStatuses.Confirmed;
-        defect.UpdatedAt = _clock.Now;
-        _audit.Add(new AuditEntry(nameof(DefectRecord), defectRecordId, AuditActions.Update,
-            new { Status = DefectStatuses.Recorded }, new { defect.Status }, note));
-        _notifier.NotifyEmployees(await RecipientsAsync(defect, ct), new NotificationMessage(NotificationSources.Production,
-            Messages.NotifyDefectConfirmedTitle, string.Format(Messages.NotifyDefectConfirmedBody, defect.DefectCode),
-            null, nameof(DefectRecord), defectRecordId));
-        await _uow.SaveChangesAsync();
-        return Result.Success(Messages.DefectConfirmed);
+        var closed = OrderStatuses.Closed.ToArray();
+        if (await _uow.Repository<OrderLine>().Query().AsNoTracking()
+                .AnyAsync(l => l.OrderLineId == defect.OrderLineId && closed.Contains(l.Order.Status), ct))
+            return Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectOrderClosed);
+
+        var dead = RequestStatuses.Dead.ToArray();
+        var request = await _uow.Repository<Request>().Query().AsNoTracking()
+            .Where(r => r.DefectRecordId == defect.DefectRecordId && !dead.Contains(r.Status))
+            .Select(r => new { r.RequestCode, r.Status }).FirstOrDefaultAsync(ct);
+        return request is null
+            ? null
+            : Result.Failure(ErrorCodes.DefectInvalidStatus,
+                string.Format(Messages.DefectHasReplacement, request.RequestCode, request.Status));
+    }
+
+    private sealed record RateResult(Result? Failure, int? PieceRateId);
+
+    /// <summary>
+    /// Đơn giá khóa của phiếu sau khi sửa: Rework không có; giữ đơn giá cũ khi vẫn là phiếu trừ lương cùng công đoạn (đơn giá khóa
+    /// tại lúc ghi); đổi công đoạn hoặc chuyển từ Rework sang loại trừ lương thì lấy lại đơn giá duyệt của ngày làm việc.
+    /// </summary>
+    private async Task<RateResult> ResolveRateAsync(DefectRecord defect, int operationId, string newType, Operation operation,
+        CancellationToken ct)
+    {
+        if (newType == DefectTypes.Rework) return new RateResult(null, null);
+        if (defect.PieceRateId is { } kept && defect.OperationId == operationId) return new RateResult(null, kept);
+
+        var rate = await _rates.FindEffectiveAsync(operationId, defect.WorkDate, ct);
+        return rate is null
+            ? new RateResult(Result.Failure(ErrorCodes.PieceRateNotApproved, string.Format(Messages.PieceRateNotApproved,
+                operation.OperationCode, defect.WorkDate.ToString("dd/MM/yyyy"))), null)
+            : new RateResult(null, rate.PieceRateId);
+    }
+
+    /// <summary>Số lượng nhập sai mà phiếu cũ đang trừ sẽ được trả lại cho công nhân cũ sau khi sửa (0 nếu không trả gì).</summary>
+    /// <summary>
+    /// Sửa tăng số lượng hàng hỏng (Rework / Scrap) chỉ được tăng thêm tối đa bằng số hàng đang trên chuyền của tổ ở dòng đơn (QA/QC chưa
+    /// nhận, chưa hủy). Giảm hoặc giữ số lượng, và phiếu nhập sai sản lượng (có trần riêng) không bị kiểm.
+    /// </summary>
+    private async Task<Result?> CheckIncreaseWithinOnLineAsync(DefectRecord defect, string newType, int newQuantity, CancellationToken ct)
+    {
+        var increase = newType switch
+        {
+            DefectTypes.Scrap => newQuantity - (defect.DefectType == DefectTypes.Scrap ? defect.Quantity : 0),
+            DefectTypes.Rework => newQuantity - (defect.DefectType == DefectTypes.OutputError ? 0 : defect.Quantity),
+            _ => 0,
+        };
+        if (increase <= 0) return null;
+
+        var onLine = await _guard.ComputeOnLineAsync(defect.SewingTeamId, defect.OrderLineId, null, ct);
+        return increase > onLine.OnLine
+            ? Result.Failure(ErrorCodes.DefectInvalid, string.Format(Messages.DefectIncreaseOverOnLine, increase, onLine.OnLine))
+            : null;
+    }
+
+    private static int ReleasedOutputErrorQty(DefectRecord defect, string newType, UpdateDefectDto dto)
+    {
+        if (defect.DefectType != DefectTypes.OutputError) return 0;
+        var sameSlot = newType == DefectTypes.OutputError && defect.ResponsibleWorkerId == dto.ResponsibleWorkerId
+                       && defect.OperationId == dto.OperationId;
+        return sameSlot ? Math.Max(0, defect.Quantity - dto.Quantity) : defect.Quantity;
+    }
+
+    private async Task<Result?> CheckReleaseOutputErrorAsync(DefectRecord defect, int releasedQty, CancellationToken ct)
+    {
+        if (defect.DefectType != DefectTypes.OutputError) return null;
+        var remaining = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
+            .Where(c => c.WorkerId == defect.ResponsibleWorkerId && c.OrderLineId == defect.OrderLineId && c.OperationId == defect.OperationId)
+            .Select(c => c.RemainingQty).FirstOrDefaultAsync(ct);
+        return remaining is { } left && left < releasedQty
+            ? Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectOutputErrorCancelOverCap)
+            : null;
     }
 
     // ---------- Dùng chung ----------
-
-    /// <summary>Tổ trưởng / tổ phó đang làm của tổ.</summary>
-    private Task<List<int>> LeaderIdsAsync(int teamId, CancellationToken ct) =>
-        _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active
-                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
-            .Select(e => e.EmployeeId).ToListAsync(ct);
-
-    /// <summary>Người nhận thông báo khi Quản đốc chấp nhận phiếu: tổ trưởng / tổ phó của tổ và công nhân gây lỗi.</summary>
-    private async Task<List<int>> RecipientsAsync(DefectRecord defect, CancellationToken ct) =>
-        (await LeaderIdsAsync(defect.SewingTeamId, ct)).Append(defect.ResponsibleWorkerId).Distinct().ToList();
 
     /// <summary>Tổ trưởng / tổ phó chỉ thao tác phiếu của tổ mình; Quản đốc thao tác mọi tổ.</summary>
     private bool CanSeeTeam(int teamId) => _guard.IsManager || _user.TeamId == teamId;
@@ -325,19 +402,27 @@ public sealed class DefectService : IDefectService
         d.DefectRecordId, d.DefectCode, d.WorkDate, d.ShiftCode, d.SewingTeamId, d.OrderLineId, d.OrderLine.Order.OrderCode,
         d.OrderLine.ProductVariant.Product.ProductCode, d.OperationId, d.Operation.OperationCode, d.Operation.OperationName,
         d.ResponsibleWorkerId, d.ResponsibleWorker.FullName, d.DefectType, d.Quantity, d.DefectReasonCode, d.ReasonNote,
-        d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.WorkerObjection, d.ObjectedAt, d.EditDeadline, d.Status, d.RecordedAt,
+        d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
         d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamName, d.UpdatedAt));
 
-    /// <summary>Đổi mã DB sang PascalCase và tính CanEdit (còn hiệu lực và còn hạn, hoặc là Quản đốc).</summary>
-    private DefectDto Finish(DefectDto d) => d with
+    /// <summary>
+    /// Đổi mã DB sang PascalCase; hạn sửa của tổ trưởng luôn là lúc lập + 24 giờ (kể cả phiếu cũ); CanEdit = còn hiệu lực và còn
+    /// hạn, hoặc là Quản đốc (ràng buộc khác như kỳ lương khóa, đã có đơn cắt bù chỉ biết khi bấm sửa / hủy).
+    /// </summary>
+    private DefectDto Finish(DefectDto d)
     {
-        DefectType = CodeText.ToPascal(d.DefectType), DefectReasonCode = CodeText.ToPascal(d.DefectReasonCode),
-        Status = CodeText.ToPascal(d.Status),
-        ReplacementRequestStatus = d.ReplacementRequestStatus is null ? null : CodeText.ToPascal(d.ReplacementRequestStatus),
-        CanEdit = d.Status == DefectStatuses.Recorded && (_clock.Now <= d.EditDeadline || _guard.IsManager),
-    };
+        var deadline = d.RecordedAt.AddHours(DefectEditWindow.Hours);
+        return d with
+        {
+            DefectType = CodeText.ToPascal(d.DefectType), DefectReasonCode = CodeText.ToPascal(d.DefectReasonCode),
+            Status = CodeText.ToPascal(d.Status),
+            ReplacementRequestStatus = d.ReplacementRequestStatus is null ? null : CodeText.ToPascal(d.ReplacementRequestStatus),
+            EditDeadline = deadline,
+            CanEdit = DefectStatuses.Editable.Contains(CodeText.ToCode(d.Status)) && (_clock.Now <= deadline || _guard.IsManager),
+        };
+    }
 
     private static object Snapshot(DefectRecord d) => new
     {
@@ -354,37 +439,26 @@ public sealed class DefectService : IDefectService
 
     /// <summary>
     /// Phiếu nhập sai sản lượng chỉ trừ được phần công nhân đã nhập ở công đoạn đó trong ngày, kể cả các phiếu nhập sai đã ghi trước
-    /// (DEV-ALL-79). Trả null khi số trừ hợp lệ.
+    /// (DEV-ALL-79); <paramref name="excludeDefectId"/> bỏ qua chính phiếu đang sửa. Trả null khi số trừ hợp lệ.
     /// </summary>
-    private async Task<Result<int>?> CheckOutputErrorQuantityAsync(CreateDefectDto dto, CancellationToken ct)
+    private async Task<Result<int>?> CheckOutputErrorQuantityAsync(DateOnly workDate, int workerId, int orderLineId, int operationId,
+        int quantity, int? excludeDefectId, CancellationToken ct)
     {
-        var date = dto.WorkDate.ToString("dd/MM/yyyy");
+        var date = workDate.ToString("dd/MM/yyyy");
         var output = await _uow.Repository<OutputRecord>().Query().AsNoTracking()
-            .Where(r => r.WorkDate == dto.WorkDate && r.WorkerId == dto.ResponsibleWorkerId
-                        && r.OrderLineId == dto.OrderLineId && r.OperationId == dto.OperationId)
+            .Where(r => r.WorkDate == workDate && r.WorkerId == workerId
+                        && r.OrderLineId == orderLineId && r.OperationId == operationId)
             .SumAsync(r => (int?)r.Quantity, ct) ?? 0;
         if (output == 0) return Invalid(string.Format(Messages.DefectOutputErrorNoOutput, date));
 
         var deducted = await Defects.AsNoTracking()
-            .Where(d => d.DefectType == DefectTypes.OutputError && d.Status != DefectStatuses.Cancelled && d.WorkDate == dto.WorkDate
-                        && d.ResponsibleWorkerId == dto.ResponsibleWorkerId && d.OrderLineId == dto.OrderLineId
-                        && d.OperationId == dto.OperationId)
+            .Where(d => d.DefectType == DefectTypes.OutputError && d.Status != DefectStatuses.Cancelled && d.WorkDate == workDate
+                        && d.ResponsibleWorkerId == workerId && d.OrderLineId == orderLineId
+                        && d.OperationId == operationId && d.DefectRecordId != excludeDefectId)
             .SumAsync(d => (int?)d.Quantity, ct) ?? 0;
         var left = output - deducted;
-        return dto.Quantity > left
+        return quantity > left
             ? Invalid(string.Format(Messages.DefectOutputErrorExceeds, date, output, deducted, left))
-            : null;
-    }
-
-    /// <summary>Hủy phiếu nhập sai trả sản lượng về cho công nhân nên không được làm sản lượng vượt trần số lần được giao.</summary>
-    private async Task<Result?> CheckCancelOutputErrorAsync(DefectRecord defect, CancellationToken ct)
-    {
-        if (defect.DefectType != DefectTypes.OutputError) return null;
-        var remaining = await _uow.Repository<VwWorkerOutputCap>().Query().AsNoTracking()
-            .Where(c => c.WorkerId == defect.ResponsibleWorkerId && c.OrderLineId == defect.OrderLineId && c.OperationId == defect.OperationId)
-            .Select(c => c.RemainingQty).FirstOrDefaultAsync(ct);
-        return remaining is { } left && left < defect.Quantity
-            ? Result.Failure(ErrorCodes.DefectInvalidStatus, Messages.DefectOutputErrorCancelOverCap)
             : null;
     }
 

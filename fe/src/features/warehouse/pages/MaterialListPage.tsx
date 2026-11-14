@@ -7,6 +7,7 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
+import { formatNumber } from '@/utils/format';
 import { MaterialFormModal } from '../components/MaterialFormModal';
 import {
   CATEGORY_LABEL,
@@ -57,6 +58,13 @@ export function MaterialListPage() {
       render: (v: string) => CATEGORY_LABEL[v] ?? v,
     },
     { title: LABELS.unit, dataIndex: 'unit', width: 100 },
+    {
+      title: LABELS.widthM,
+      dataIndex: 'widthM',
+      width: 110,
+      align: 'right',
+      render: (v: number | null) => (v === null ? '—' : formatNumber(v)),
+    },
     { title: LABELS.color, dataIndex: 'color', width: 120, render: (v: string) => v || '—' },
     {
       title: LABELS.status,

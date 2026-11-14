@@ -35,13 +35,20 @@ public sealed class OrderMarkerService : IOrderMarkerService
         var lines = await LinesAsync(l => l.OrderId == orderId, ct);
         var productIds = lines.Select(l => l.ProductId).Distinct().ToList();
         var groups = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking().Where(f => productIds.Contains(f.ProductId))
-            .Select(f => new { f.ProductId, f.MarkerNo, f.ProductColorId }).ToListAsync(ct);
+            .Select(f => new
+            {
+                f.ProductId,
+                f.MarkerNo,
+                f.ProductColorId,
+                Fabric = new MarkerGroupFabricDto(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color,
+                    f.Material.WidthM),
+            }).ToListAsync(ct);
         var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Where(m => m.OrderId == orderId)
             .OrderBy(m => m.MarkerNo).ThenBy(m => m.MarkerCode)
             .Select(m => new
             {
                 m.ProductId,
-                Dto = new OrderMarkerDto(m.ProductMarkerId, m.MarkerNo, m.MarkerCode, m.LengthM, m.Status,
+                Dto = new OrderMarkerDto(m.ProductMarkerId, m.MarkerNo, m.MarkerCode, m.LengthM, m.WidthM, m.Status,
                     m.ProductMarkerRatios.OrderBy(r => r.SizeCode).Select(r => new MarkerRatioDto(r.SizeCode, r.PiecesPerPly)).ToList()),
             })
             .ToListAsync(ct);
@@ -51,7 +58,10 @@ public sealed class OrderMarkerService : IOrderMarkerService
                 SizeOrder.Sort(g.Select(l => l.SizeCode)),
                 groups.Where(x => x.ProductId == g.Key).GroupBy(x => (int)x.MarkerNo).OrderBy(x => x.Key)
                     .Select(x => new OrderMarkerGroupDto(x.Key, g.Where(l => x.Any(c => c.ProductColorId == l.ProductColorId))
-                        .Select(l => l.Color).Distinct().Order().ToList()))
+                        .Select(l => l.Color).Distinct().Order().ToList(),
+                        // DEV-ALL-104: vải của nhóm ở các màu của đơn, để màn bìa cảnh báo bìa rộng hơn khổ vải.
+                        x.Where(c => g.Any(l => l.ProductColorId == c.ProductColorId)).Select(c => c.Fabric)
+                            .DistinctBy(f => f.MaterialId).OrderBy(f => f.MaterialCode).ToList()))
                     .ToList(),
                 markers.Where(m => m.ProductId == g.Key).Select(m => m.Dto with { Status = CodeText.ToPascal(m.Dto.Status) }).ToList()))
             .ToList();
@@ -87,6 +97,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
         List<LineColor> lines, CancellationToken ct)
     {
         if (lines.Count == 0) return Invalid(Messages.OrderMarkerProductNotInOrder);
+        if (dto.Markers.Any(m => m.WidthM is null)) return Invalid(Messages.Required(WidthLabels.Marker.ToLowerInvariant()));
 
         var existingIds = existing.Select(m => m.ProductMarkerId).ToHashSet();
         if (dto.Markers.Any(m => m.ProductMarkerId is { } id && !existingIds.Contains(id))) return Fail.NotFound<OrderMarkersDto>();
@@ -129,6 +140,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
             marker.MarkerNo = (byte)input.MarkerNo;
             marker.MarkerCode = input.MarkerCode.Trim().ToUpperInvariant();
             marker.LengthM = input.LengthM;
+            marker.WidthM = input.WidthM ?? 0;   // ValidateAsync đã chặn thiếu khổ (DEV-ALL-102)
             marker.Status = CodeText.ToCode(input.Status);
             marker.ProductMarkerRatios = input.Ratios.Select(r => new ProductMarkerRatio
             {

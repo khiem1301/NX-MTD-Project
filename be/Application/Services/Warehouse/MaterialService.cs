@@ -13,6 +13,7 @@ public sealed class MaterialService : IMaterialService
 {
     private const string FabricCodePrefix = "V-";
     private const string TrimCodePrefix = "PL-";
+    private const string ScrapCodePrefix = "PP-";
     private const int CodeDigits = 4;
 
     private readonly IUnitOfWork _uow;
@@ -69,6 +70,7 @@ public sealed class MaterialService : IMaterialService
                 MaterialName = name,
                 Category = dto.Category,
                 Unit = UnitOf(dto.MaterialType, dto.Unit),
+                WidthM = WidthOf(dto.MaterialType, dto.WidthM),
                 Color = color,
                 Status = MaterialStatuses.Active,
             };
@@ -94,6 +96,7 @@ public sealed class MaterialService : IMaterialService
         material.Color = color;
         material.Category = dto.Category;
         material.Unit = UnitOf(dto.MaterialType, dto.Unit);
+        material.WidthM = WidthOf(dto.MaterialType, dto.WidthM);
         await _uow.SaveChangesAsync();
         return Result<MaterialDto>.Success(MapDto(material));
     }
@@ -123,9 +126,18 @@ public sealed class MaterialService : IMaterialService
 
     private static string ColorOf(string? color) => color?.Trim() ?? string.Empty;
 
+    /// <summary>Khổ chỉ có ở vải (DEV-ALL-102); phụ liệu luôn NULL.</summary>
+    private static decimal? WidthOf(string materialType, decimal? widthM) =>
+        materialType == MaterialTypes.Fabric ? widthM : null;
+
     private async Task<string> NextCodeAsync(string materialType, CancellationToken ct)
     {
-        var prefix = materialType == MaterialTypes.Fabric ? FabricCodePrefix : TrimCodePrefix;
+        var prefix = materialType switch
+        {
+            MaterialTypes.Fabric => FabricCodePrefix,
+            MaterialTypes.Scrap => ScrapCodePrefix,
+            _ => TrimCodePrefix,
+        };
         await _locks.AcquireAsync($"material-code:{prefix}", ct);
         var codes = await Materials.AsNoTracking().Where(m => m.MaterialCode.StartsWith(prefix))
             .Select(m => m.MaterialCode).ToListAsync(ct);
@@ -135,7 +147,7 @@ public sealed class MaterialService : IMaterialService
 
     private static readonly Expression<Func<Material, MaterialDto>> ToDto = m =>
         new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit,
-            m.Color, m.Status, m.CreatedAt);
+            m.Color, m.Status, m.CreatedAt, m.WidthM);
 
     private static readonly Func<Material, MaterialDto> MapDto = ToDto.Compile();
 

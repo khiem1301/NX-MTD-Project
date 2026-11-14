@@ -60,6 +60,12 @@ public sealed class StockService : IStockService
 
     public Task<decimal> GetAvailableAsync(StockKey key, CancellationToken ct) => _stock.GetAvailableAsync(key, ct);
 
+    public Task<IReadOnlyDictionary<int, decimal>> GetMaterialAvailableAsync(IReadOnlyCollection<int> materialIds, CancellationToken ct) =>
+        _stock.GetMaterialAvailableAsync(materialIds, ct);
+
+    public Task<IReadOnlyDictionary<int, decimal>> GetSetAvailableAsync(IReadOnlyCollection<int> orderLineIds, CancellationToken ct) =>
+        _stock.GetSetAvailableAsync(orderLineIds, ct);
+
     /// <summary>Khóa theo thứ tự cố định để hai transaction không chờ nhau vòng tròn (deadlock).</summary>
     private async Task LockAsync(IEnumerable<StockKey> keys, CancellationToken ct)
     {

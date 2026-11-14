@@ -1,10 +1,11 @@
-import { CheckOutlined } from '@ant-design/icons';
+import { CheckOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Segmented, Space, Tag, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime } from '@/utils/format';
+import { hasNotificationAction, useOpenNotification } from '../hooks/useOpenNotification';
 import { useMarkAllRead, useMarkRead, useNotifications } from '../hooks/useNotifications';
 import type { NotificationGroup, NotificationItem } from '../types';
 import { DataTable } from '@/components/common/DataTable';
@@ -14,6 +15,13 @@ export function InboxTab() {
   const list = useNotifications(table.params);
   const markRead = useMarkRead();
   const markAll = useMarkAllRead();
+  const openNotification = useOpenNotification();
+
+  /** Xem chi tiết (cửa sổ tại chỗ hoặc màn liên quan) và đánh dấu đã đọc. */
+  const view = (n: NotificationItem) => {
+    if (!n.isRead) markRead.mutate(n.notificationId);
+    openNotification(n);
+  };
 
   const columns: TableColumnsType<NotificationItem> = [
     {
@@ -36,14 +44,20 @@ export function InboxTab() {
     {
       title: MESSAGES.common.actions,
       key: 'action',
-      render: (_, n) =>
-        n.isRead ? null : (
-          <IconAction
-            title="Đánh dấu đã đọc"
-            icon={<CheckOutlined />}
-            onClick={() => markRead.mutate(n.notificationId)}
-          />
-        ),
+      render: (_, n) => (
+        <Space size={0}>
+          {hasNotificationAction(n) && (
+            <IconAction title="Xem chi tiết" icon={<EyeOutlined />} onClick={() => view(n)} />
+          )}
+          {!n.isRead && (
+            <IconAction
+              title="Đánh dấu đã đọc"
+              icon={<CheckOutlined />}
+              onClick={() => markRead.mutate(n.notificationId)}
+            />
+          )}
+        </Space>
+      ),
     },
   ];
 

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Col, Form, Input, Modal, Row, Select, Typography } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { FABRIC_UNIT } from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
@@ -39,7 +41,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
 
   const handleFinish = (body: SaveMaterialPayload) => {
     save.mutate(
-      { id: material?.materialId, body },
+      { id: material?.materialId, body: { ...body, widthM: isFabric ? body.widthM : null } },
       {
         onSuccess: (saved) => {
           onSaved?.(saved as Material);
@@ -120,6 +122,24 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
               <Input maxLength={20} disabled={isFabric} />
             </Form.Item>
           </Col>
+          {isFabric && (
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="widthM"
+                label={LABELS.widthM}
+                extra={LABELS.widthMHint}
+                rules={[{ required: true, message: MESSAGES.common.required }]}
+              >
+                <QtyInput
+                  min={WIDTH_MIN_M}
+                  max={WIDTH_MAX_M}
+                  decimals={WIDTH_DECIMALS}
+                  step={0.1}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+          )}
           <Col xs={24} sm={12}>
             <Form.Item name="color" label={LABELS.color}>
               <Input maxLength={50} />
