@@ -1,6 +1,13 @@
+import { WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
-import { fill } from '@/utils/format';
-import type { OrderMarkerProduct, OrderMarkerStatus, SaveOrderMarkersPayload } from '../types';
+import { fill, formatNumber } from '@/utils/format';
+import type {
+  MarkerGroupFabric,
+  OrderMarkerGroup,
+  OrderMarkerProduct,
+  OrderMarkerStatus,
+  SaveOrderMarkersPayload,
+} from '../types';
 import { newKey } from './productSpec';
 
 const text = MESSAGES.orders.markers;
@@ -21,6 +28,7 @@ export type OrderMarkerRow = {
   markerNo: number | undefined;
   markerCode: string;
   lengthM: number | null;
+  widthM: number | null;
   status: OrderMarkerStatus;
   pieces: Record<string, number | null>;
 };
@@ -34,6 +42,7 @@ export const toOrderMarkerRows = (product: OrderMarkerProduct): OrderMarkerRow[]
     markerNo: m.markerNo,
     markerCode: m.markerCode,
     lengthM: m.lengthM,
+    widthM: m.widthM,
     status: m.status,
     pieces: Object.fromEntries(m.ratios.map((r) => [sizeKey(r.sizeCode), r.piecesPerPly])),
   }));
@@ -45,6 +54,7 @@ export const newOrderMarkerRow = (product: OrderMarkerProduct): OrderMarkerRow =
   markerNo: product.markerGroups.length === 1 ? product.markerGroups[0]?.markerNo : undefined,
   markerCode: '',
   lengthM: null,
+  widthM: null,
   status: 'Active',
   pieces: {},
 });
@@ -63,6 +73,8 @@ function rowProblem(row: OrderMarkerRow, no: number, sizes: string[]): string {
     return fill(text.codeInvalid, no, maxCodeLength);
   if (row.lengthM === null || row.lengthM <= 0 || row.lengthM > maxLengthM)
     return fill(text.lengthInvalid, no);
+  if (row.widthM === null || row.widthM < WIDTH_MIN_M || row.widthM > WIDTH_MAX_M)
+    return fill(text.widthInvalid, no);
   const pieces = Object.values(row.pieces).filter((p): p is number => p !== null);
   if (pieces.some((p) => p < 1 || p > maxPiecesPerPly))
     return fill(text.piecesInvalid, no, maxPiecesPerPly);
@@ -90,6 +102,7 @@ export const toOrderMarkersPayload = (
     markerNo: r.markerNo ?? 0,
     markerCode: r.markerCode.trim().toUpperCase(),
     lengthM: r.lengthM ?? 0,
+    widthM: r.widthM ?? 0,
     status: r.status,
     ratios: ratiosOf(r, sizes),
   })),
@@ -106,3 +119,30 @@ export const withPieces = (row: OrderMarkerRow, size: string, value: number | nu
  */
 export const markerVersion = (product: OrderMarkerProduct) =>
   `${product.productId}:${JSON.stringify(product.markers)}:${product.sizes.join(',')}:${JSON.stringify(product.markerGroups)}`;
+
+/**
+ * DEV-ALL-104: vải của nhóm bìa có khổ hẹp hơn khổ bìa đang nhập (vải không đủ rộng để cắt bằng bìa này). Bìa chưa chọn nhóm,
+ * chưa nhập khổ, hoặc vải chưa có khổ thì không so.
+ */
+export const narrowFabricsOf = (
+  row: Pick<OrderMarkerRow, 'markerNo' | 'widthM'>,
+  groups: OrderMarkerGroup[],
+): MarkerGroupFabric[] => {
+  const width = row.widthM;
+  if (width === null) return [];
+  const group = groups.find((g) => g.markerNo === row.markerNo);
+  return (group?.fabrics ?? []).filter((f) => f.widthM !== null && width > f.widthM);
+};
+
+/** Cảnh báo bìa rộng hơn khổ vải để hiện dưới ô khổ bìa; chuỗi rỗng = không có. */
+export const tooWideWarning = (
+  row: Pick<OrderMarkerRow, 'markerNo' | 'widthM'>,
+  groups: OrderMarkerGroup[],
+): string => {
+  const narrow = narrowFabricsOf(row, groups);
+  if (narrow.length === 0) return '';
+  const names = narrow.map((f) =>
+    fill(text.fabricWidth, f.materialCode, formatNumber(f.widthM ?? 0)),
+  );
+  return fill(text.tooWideForFabric, names.join(', '));
+};

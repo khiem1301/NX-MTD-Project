@@ -37,6 +37,7 @@ public class MaterialReceiptFlowTests
     private readonly List<Request> _requestList = new();
     private readonly List<RequestLine> _requestLines = new();
     private readonly List<Attachment> _attachments = new();
+    private readonly List<DeliveryScheduleDate> _schedule = new();
 
     public MaterialReceiptFlowTests()
     {
@@ -47,7 +48,7 @@ public class MaterialReceiptFlowTests
         _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>())
             .Returns(_ => new Request { RequestId = 900, RequestCode = "YC261027-001" });
         Setup(_receipts); Setup(_receiptLines); Setup(_pos); Setup(_poLines); Setup(_orders); Setup(_orderMaterials);
-        Setup(_requestList); Setup(_requestLines); Setup(_attachments);
+        Setup(_requestList); Setup(_requestLines); Setup(_attachments); Setup(_schedule);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -619,7 +620,7 @@ public class MaterialReceiptFlowTests
         var (request, line) = OpenShortDelivery(receipt);
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish,
-            new[] { new ReplenishInputDto(901, 15) }, null, 1, Today), 3, default);
+            new[] { new ReplenishInputDto(901, 15) }, null, 1, [Today]), 3, default);
 
         result.IsSuccess.Should().BeTrue();
         request.ShortageResolution.Should().Be(ShortageResolutions.Replenish);
@@ -637,7 +638,7 @@ public class MaterialReceiptFlowTests
         receipt.Status = ReceiptStatuses.Confirmed;
         var (_, line) = OpenShortDelivery(receipt, qty: 20);
 
-        await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 1, Today), 3, default);
+        await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 1, [Today]), 3, default);
 
         line.ReplenishQty.Should().Be(20);
     }
@@ -651,7 +652,7 @@ public class MaterialReceiptFlowTests
         OpenShortDelivery(receipt, qty: 20);
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish,
-            new[] { new ReplenishInputDto(901, 21) }, null, 1, Today), 3, default);
+            new[] { new ReplenishInputDto(901, 21) }, null, 1, [Today]), 3, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.ShortageExceeded);
     }
@@ -759,7 +760,7 @@ public class MaterialReceiptFlowTests
     {
         var validator = new ResolveShortDeliveryDtoValidator();
 
-        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 1, Today)).IsValid.Should().BeTrue();
+        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 1, [Today])).IsValid.Should().BeTrue();
         validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.NoReplenish, null, null)).IsValid.Should().BeTrue();
         validator.Validate(new ResolveShortDeliveryDto("MAYBE", null, null)).IsValid.Should().BeFalse();
     }
@@ -771,8 +772,8 @@ public class MaterialReceiptFlowTests
 
         validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null)).IsValid.Should().BeFalse();
         validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 1, null)).IsValid.Should().BeFalse();
-        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 2, Today)).IsValid.Should().BeFalse();
-        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 2, Today, Today.AddDays(5)))
+        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 2, [Today])).IsValid.Should().BeFalse();
+        validator.Validate(new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null, 2, [Today, Today.AddDays(5)]))
             .IsValid.Should().BeTrue();
     }
 
@@ -941,7 +942,7 @@ public class MaterialReceiptFlowTests
         var (request, _) = OpenShortDelivery(receipt);
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null,
-            2, Today.AddDays(1), Today.AddDays(9)), 3, default);
+            2, [Today.AddDays(1), Today.AddDays(9)]), 3, default);
 
         result.IsSuccess.Should().BeTrue();
         request.ExpectedDeliveryCount.Should().Be(2);
@@ -958,7 +959,7 @@ public class MaterialReceiptFlowTests
         var (request, _) = OpenShortDelivery(receipt);
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish, null, null,
-            1, Today.AddDays(-1)), 3, default);
+            1, [Today.AddDays(-1)]), 3, default);
 
         result.IsSuccess.Should().BeFalse();
         request.ShortageResolution.Should().BeNull();
@@ -1014,7 +1015,7 @@ public class MaterialReceiptFlowTests
         request.ShortageResolution = null;   // đã trả về sau khi giao bù chưa đủ
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish,
-            new[] { new ReplenishInputDto(901, 8) }, null, 1, Today), 3, default);
+            new[] { new ReplenishInputDto(901, 8) }, null, 1, [Today]), 3, default);
 
         result.IsSuccess.Should().BeTrue();
         request.ExpectedDeliveryCount.Should().Be(2);   // đã giao bù 1 lần + 1 lần đợt này
@@ -1028,7 +1029,7 @@ public class MaterialReceiptFlowTests
         request.ShortageResolution = null;
 
         var result = await ShortDeliveries().ResolveAsync(900, new ResolveShortDeliveryDto(ShortageResolutions.Replenish,
-            new[] { new ReplenishInputDto(901, 9) }, null, 1, Today), 3, default);
+            new[] { new ReplenishInputDto(901, 9) }, null, 1, [Today]), 3, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.ShortageExceeded);
         result.Message.Should().Contain("tối đa 8");

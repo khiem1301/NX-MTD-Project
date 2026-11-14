@@ -189,8 +189,8 @@ public class WorkOrderFabricTests : ProductionTestBase
         var issue = new MaterialIssue { WorkOrderId = 7, ReceivingTeamId = TeamId, OrderId = OrderId, WarehouseType = WarehouseTypes.Material, Status = IssueStatuses.Received };
         var line = new MaterialIssueLine { MaterialId = FabricId, IssuedQty = received, ConfirmedQty = received, MaterialIssue = issue };
         _issueLines.Add(line);
-        _returnLines.Add(new MaterialReturnLine { MaterialIssueLine = line, ConfirmedQty = returned, ReturnedQty = returned,
-            MaterialReturn = new MaterialReturn { Status = HandoverStatuses.Confirmed, MaterialIssue = issue } });
+        _returnLines.Add(new MaterialReturnLine { MaterialId = FabricId, Material = _fabric, ConfirmedQty = returned, ReturnedQty = returned,
+            MaterialReturn = new MaterialReturn { Status = HandoverStatuses.Confirmed, ReturningTeamId = TeamId, OrderId = OrderId, WorkOrderId = 7 } });
     }
 
     private void SeedWorkOrderWithFabric()
@@ -280,8 +280,8 @@ public class WorkOrderFabricTests : ProductionTestBase
         var issue = new MaterialIssue { MaterialIssueId = 1, WorkOrderId = 7, Status = IssueStatuses.Received };
         var line = new MaterialIssueLine { MaterialId = FabricId, IssuedQty = 20, ConfirmedQty = 20, MaterialIssue = issue };
         _issueLines.Add(line);
-        _returnLines.Add(new MaterialReturnLine { MaterialIssueLine = line, ConfirmedQty = 4, ReturnedQty = 4,
-            MaterialReturn = new MaterialReturn { Status = HandoverStatuses.Confirmed, MaterialIssue = issue } });
+        _returnLines.Add(new MaterialReturnLine { MaterialId = FabricId, Material = _fabric, ConfirmedQty = 4, ReturnedQty = 4,
+            MaterialReturn = new MaterialReturn { Status = HandoverStatuses.Confirmed, WorkOrderId = 7 } });
 
         var result = await Sut().GetFabricRequirementsAsync(7, default);
 

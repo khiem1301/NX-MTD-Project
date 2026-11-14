@@ -103,4 +103,18 @@ describe('FabricCheckAlerts', () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('bìa rộng hơn khổ vải hiện khung cảnh báo vải không đủ rộng', () => {
+    const warning = 'V01 Vải: khổ vải 1,5 m hẹp hơn bìa A (rộng 1,8 m)';
+    render(<FabricCheckAlerts checks={[check(1, 'Enough', { widthWarning: warning })]} />);
+
+    expect(screen.getByText(LABELS.fabricTooNarrow)).toBeInTheDocument();
+    expect(screen.getByText(warning)).toBeInTheDocument();
+  });
+
+  it('không có cảnh báo khổ thì không hiện khung vải không đủ rộng', () => {
+    render(<FabricCheckAlerts checks={[check(1, 'Enough')]} />);
+
+    expect(screen.queryByText(LABELS.fabricTooNarrow)).not.toBeInTheDocument();
+  });
 });

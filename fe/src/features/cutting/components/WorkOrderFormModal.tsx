@@ -178,7 +178,15 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
             </Form.Item>
           </Col>
         </Row>
-        <PlannedLinesTable lines={productLines} />
+        <PlannedLinesTable
+          lines={productLines}
+          // Lệnh cắt bù không nằm trong số đã lên lệnh nên không cộng trả lại.
+          ownPlanned={
+            workOrder && workOrder.sourceRequestId === null
+              ? splitWorkOrderLines(workOrder.lines).planned
+              : undefined
+          }
+        />
         <ExtraComponentLines form={form} lines={productLines} />
         <FabricCheckAlerts checks={fabricChecks} />
         <WorkOrderNoteFields />

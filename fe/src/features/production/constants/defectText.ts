@@ -1,43 +1,33 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
-import type { DefectObjectionFilter, DefectReason, DefectStatus, DefectType } from '../types';
+import type { DefectReason, DefectStatus, DefectType } from '../types';
 
 export const DEFECTS_TEXT = {
   title: 'Phiếu lỗi / điều chỉnh',
   managerTitle: 'Phiếu lỗi / điều chỉnh của các tổ',
   subtitle:
-    'Ghi hàng hỏng (sửa lại hoặc hủy) hoặc điều chỉnh sản lượng nhập sai của công nhân. Công nhân được thông báo và có quyền phản hồi nếu ghi sai.',
+    'Ghi hàng hỏng (sửa lại hoặc hủy) hoặc điều chỉnh sản lượng nhập sai của công nhân. Công nhân được thông báo. Tổ trưởng sửa / hủy phiếu trong 24 giờ kể từ lúc lập (hủy bắt buộc ghi lý do).',
   managerSubtitle:
-    'Quản đốc xem phiếu lỗi và phiếu điều chỉnh sản lượng của các tổ. Công nhân phản đối thì chấp nhận phiếu (giữ phiếu) hoặc hủy phiếu ghi sai (bắt buộc lý do).',
+    'Quản đốc xem phiếu lỗi và phiếu điều chỉnh sản lượng của các tổ; sửa hoặc hủy phiếu ghi sai kể cả sau 24 giờ (bắt buộc lý do) khi kỳ lương chưa khóa, đơn chưa đóng và chưa có đơn cắt bù.',
   add: 'Ghi phiếu',
   addTitle: 'Ghi phiếu lỗi / điều chỉnh',
+  edit: 'Sửa phiếu',
+  editTitle: 'Sửa phiếu lỗi / điều chỉnh',
+  editHint: 'Không đổi được ngày và dòng đơn; ghi sai hai mục này thì hủy phiếu rồi ghi lại.',
+  editReason: 'Lý do sửa',
+  editReasonRequired: 'Quản đốc sửa phiếu phải nhập lý do.',
   cancel: 'Hủy phiếu',
   cancelTitle: 'Hủy phiếu',
   filterDate: 'Lọc theo ngày',
   searchPlaceholder: 'Tìm theo công nhân, mã hàng, tổ, mã phiếu',
-  objected: 'Công nhân phản hồi',
-  confirm: 'Chấp nhận phiếu',
-  confirmTitle: 'Chấp nhận phiếu',
-  confirmHint:
-    'Công nhân phản đối phiếu này. Chấp nhận thì phiếu được giữ nguyên và công nhân không phản đối lại được; nếu phiếu ghi sai hãy hủy phiếu.',
-  confirmNote: 'Ghi chú (không bắt buộc)',
-  confirmWorker: 'Phản đối của',
   rangeTooLong: 'Khoảng ngày lọc tối đa 366 ngày.',
   filters: {
     range: ['Từ ngày', 'Đến ngày'] as [string, string],
     team: 'Tổ',
     type: 'Loại phiếu',
     status: 'Phiếu',
-    objection: 'Phản đối',
   },
-  objectionOptions: [
-    { value: 'None', label: 'Không phản đối' },
-    { value: 'Pending', label: 'Chờ quyết định' },
-    { value: 'Resolved', label: 'Đã quyết định' },
-  ] as { value: DefectObjectionFilter; label: string }[],
   state: {
-    Pending: { text: 'Đã ghi', color: 'blue' },
-    ObjectionPending: { text: 'Chờ quyết định', color: 'volcano' },
-    Confirmed: { text: 'Đã chấp nhận', color: 'green' },
+    Active: { text: 'Còn hiệu lực', color: 'blue' },
     Cancelled: { text: 'Đã hủy', color: 'default' },
   } as Record<string, StatusLabel>,
   detail: {
@@ -46,7 +36,6 @@ export const DEFECTS_TEXT = {
     deadline: 'Hạn sửa',
     recordedAt: 'Ghi lúc',
     updatedAt: 'Cập nhật lần cuối',
-    objection: 'Phản đối của công nhân',
     replacement: 'Đơn cắt bù',
   },
   columns: {
@@ -66,7 +55,6 @@ export const DEFECTS_TEXT = {
     reason: 'Lý do',
     rate: 'Đơn giá trừ',
     status: 'Trạng thái',
-    objection: 'Phản hồi của công nhân',
     deadline: 'Hạn sửa',
   },
   form: {
@@ -90,7 +78,7 @@ export const DEFECTS_TEXT = {
   done: {
     created: 'Đã ghi phiếu và thông báo cho công nhân.',
     cancelled: 'Đã hủy phiếu.',
-    confirmed: 'Đã chấp nhận phiếu.',
+    updated: 'Đã cập nhật phiếu.',
   },
   type: {
     Rework: { text: 'Sửa lại', color: 'gold' },
@@ -107,7 +95,7 @@ export const DEFECTS_TEXT = {
   } as Record<DefectReason, string>,
   status: {
     Recorded: { text: 'Đã ghi', color: 'blue' },
-    Confirmed: { text: 'Đã chấp nhận', color: 'green' },
+    Confirmed: { text: 'Đã chốt (phiếu cũ)', color: 'green' },
     Cancelled: { text: 'Phiếu đã hủy', color: 'default' },
   } as Record<DefectStatus, StatusLabel>,
 } as const;
@@ -133,12 +121,6 @@ export const REPLACEMENT_TEXT = {
 export const MY_DEFECTS_TEXT = {
   title: 'Phiếu lỗi / điều chỉnh của tôi',
   subtitle:
-    'Các phiếu tổ trưởng ghi cho bạn. Hàng hủy và số nhập sai bị trừ vào sản lượng, lương tạm tính; nếu ghi sai hãy phản hồi.',
-  object: 'Phản hồi',
-  objectTitle: 'Phản hồi phiếu',
-  objection: 'Nội dung phản hồi',
-  objectionRequired: 'Vui lòng nhập nội dung phản hồi.',
-  done: 'Đã gửi phản hồi cho tổ trưởng.',
+    'Các phiếu tổ trưởng ghi cho bạn. Hàng hủy và số nhập sai bị trừ vào sản lượng, lương tạm tính; nếu thấy ghi sai hãy báo tổ trưởng.',
   empty: 'Bạn chưa có phiếu nào.',
-  rejected: 'Phản hồi bị bác',
 } as const;

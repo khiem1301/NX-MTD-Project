@@ -10,7 +10,7 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>TH-05 / TH-08 (UC40): cấp BTP cho tổ may gắn đơn Xin BTP; lập phiếu cấp xong đơn xin tự hoàn thành.</summary>
+/// <summary>TH-05 / TH-08 (UC40): cấp BTP cho tổ may gắn đơn Xin BTP; đơn xin chỉ hoàn thành khi tổ nhận phiếu cấp (DEV-ALL-109).</summary>
 public class MaterialIssueRequisitionTests : ProductionTestBase
 {
     private const int SewingTeamId = 5;
@@ -28,6 +28,7 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     private readonly List<Request> _requestRows = [];
     private readonly List<Material> _materials = [];
     private readonly List<OrderMaterial> _orderMaterials = [new OrderMaterial { OrderId = OrderId, MaterialId = 7 }];
+    private readonly List<MaterialIssue> _issues = [];
     private readonly MaterialIssueService _sut;
 
     public MaterialIssueRequisitionTests()
@@ -39,9 +40,10 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
         SetupQueryable(_allotted);
         SetupQueryable(_orders);
         SetupQueryable(_requestRows);
-        SetupQueryable(new List<MaterialIssue>());
+        SetupQueryable(_issues);
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _stock.EnsureAvailableAsync(Arg.Any<IReadOnlyList<StockRequirement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
+        _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _codes.NextAsync<MaterialIssue>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<MaterialIssue, string>>>(),
             Arg.Any<CancellationToken>()).Returns("CAP-20261021-001");
         _requests.MarkCompletedAsync(Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
@@ -110,14 +112,14 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task SemiFinishedIssue_QtyOverRequest_IsRejected()
+    public async Task SemiFinishedIssue_QtyOverRequest_IsAllowed()
     {
+        // DEV-ALL-108: cấp vượt số trong đơn xin chỉ cảnh báo ở màn cấp, BE không chặn.
         GivenRequest(RequestStatuses.Approved, requestedQty: 40);
 
-        var result = await _sut.CreateAsync(Dto(RequestId), 900, default);
+        await _sut.CreateAsync(Dto(RequestId), 900, default);
 
-        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        result.Message.Should().Be(string.Format(WarehouseMessages.IssueQtyOverRequest, "40"));
+        await _stock.Received(1).EnsureAvailableAsync(Arg.Any<IReadOnlyList<StockRequirement>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -206,14 +208,95 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task SemiFinishedIssue_WithPendingRequest_CompletesTheRequest()
+    public async Task CreateAsync_ApprovedRequest_RequestStaysApproved()
     {
         GivenRequest(RequestStatuses.Approved);
 
         await _sut.CreateAsync(Dto(RequestId), 900, default);
 
-        await _requests.Received(1).MarkCompletedAsync(RequestId, "CAP-20261021-001", Arg.Any<CancellationToken>());
+        await Uow.Repository<MaterialIssue>().ReceivedWithAnyArgs(1).AddAsync(default!);
+        await _requests.DidNotReceiveWithAnyArgs().MarkCompletedAsync(default, default, default);
     }
+
+    [Fact]
+    public async Task CreateAsync_RequestHasPendingIssue_ReturnsFailure()
+    {
+        GivenRequest(RequestStatuses.Approved);
+        GivenIssue(IssueStatuses.PendingReceipt);
+
+        var result = await _sut.CreateAsync(Dto(RequestId), 900, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidRequest);
+        result.Message.Should().Be(string.Format(WarehouseMessages.IssueRequestHasPendingIssue, "CAP-OLD"));
+    }
+
+    [Fact]
+    public async Task CreateAsync_PreviousIssueRejected_IsAllowed()
+    {
+        GivenRequest(RequestStatuses.Approved);
+        GivenIssue(IssueStatuses.Rejected);
+
+        await _sut.CreateAsync(Dto(RequestId), 900, default);
+
+        await Uow.Repository<MaterialIssue>().ReceivedWithAnyArgs(1).AddAsync(default!);
+    }
+
+    [Fact]
+    public async Task ConfirmAsync_IssueOfApprovedRequest_CompletesRequest()
+    {
+        GivenRequest(RequestStatuses.Approved);
+        var issue = GivenIssue(IssueStatuses.PendingReceipt);
+
+        var result = await Receive();
+
+        result.IsSuccess.Should().BeTrue();
+        issue.Status.Should().Be(IssueStatuses.Received);
+        await _requests.Received(1).MarkCompletedAsync(RequestId, "CAP-OLD", Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(RequestStatuses.Completed)]
+    [InlineData(RequestStatuses.NotCompleted)]
+    public async Task ConfirmAsync_RequestAlreadyClosedByHandler_ReceivesAndKeepsRequest(string status)
+    {
+        GivenRequest(status);
+        var issue = GivenIssue(IssueStatuses.PendingReceipt);
+
+        var result = await Receive();
+
+        result.IsSuccess.Should().BeTrue();
+        issue.Status.Should().Be(IssueStatuses.Received);
+        await _requests.DidNotReceiveWithAnyArgs().MarkCompletedAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task RejectAsync_IssueOfRequest_RequestStaysApproved()
+    {
+        GivenRequest(RequestStatuses.Approved);
+        var issue = GivenIssue(IssueStatuses.PendingReceipt);
+
+        var result = await _sut.RejectAsync(issue.MaterialIssueId, new ReasonDto("Sai số lượng"), SewingTeamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        issue.Status.Should().Be(IssueStatuses.Rejected);
+        _requestRows[0].Status.Should().Be(RequestStatuses.Approved);
+        await _requests.DidNotReceiveWithAnyArgs().MarkCompletedAsync(default, default, default);
+    }
+
+    private MaterialIssue GivenIssue(string status)
+    {
+        var issue = new MaterialIssue
+        {
+            MaterialIssueId = 300, IssueCode = "CAP-OLD", RequestId = RequestId, OrderId = OrderId, ReceivingTeamId = SewingTeamId,
+            WarehouseType = WarehouseTypes.Material, Status = status, IssuedBy = 900,
+        };
+        issue.MaterialIssueLines.Add(new MaterialIssueLine { MaterialIssueLineId = 301, MaterialId = 7, IssuedQty = 5 });
+        _issues.Add(issue);
+        return issue;
+    }
+
+    private Task<Result> Receive() =>
+        _sut.ConfirmAsync(300, new ConfirmIssueDto([new ConfirmIssueLineDto(301, 5, null)]), SewingTeamId, 900, default);
 
     [Fact]
     public async Task Issue_ByRequest_StockNotEnough_IsRejectedAndRequestStaysOpen()

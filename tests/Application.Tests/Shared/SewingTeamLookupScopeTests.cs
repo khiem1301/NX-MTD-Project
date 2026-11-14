@@ -17,6 +17,7 @@ public class SewingTeamLookupScopeTests : ProductionTestBase
     private readonly List<CustomerOrder> _orders = [];
     private readonly List<OrderLine> _lines = [];
     private readonly List<OrderLineTeam> _allotted = [];
+    private readonly IStockService _stock = Substitute.For<IStockService>();
     private readonly LookupService _sut;
 
     public SewingTeamLookupScopeTests()
@@ -31,7 +32,7 @@ public class SewingTeamLookupScopeTests : ProductionTestBase
         _allotted.Add(new OrderLineTeam { OrderLineId = 11, SewingTeamId = TeamId });
         _allotted.Add(new OrderLineTeam { OrderLineId = 21, SewingTeamId = TeamId + 1 });
         _allotted.Add(new OrderLineTeam { OrderLineId = 31, SewingTeamId = TeamId });
-        _sut = new LookupService(Uow, User);
+        _sut = new LookupService(Uow, User, _stock);
     }
 
     private void Order(int id, params (int LineId, int ProductId, string Code)[] lines)
@@ -52,6 +53,18 @@ public class SewingTeamLookupScopeTests : ProductionTestBase
         User.Role.Returns(role);
         User.TeamId.Returns((int?)null);
         User.TeamTypeCode.Returns((string?)null);
+    }
+
+    [Fact]
+    public async Task GetRequisitionPiecesAsync_SewingTeam_ReturnsAllottedLinesWithSetStock()
+    {
+        AsTeamLeader(TeamId);
+        _stock.GetSetAvailableAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
+            .Returns(new Dictionary<int, decimal> { [11] = 40m, [12] = 7m });
+
+        var pieces = await _sut.GetRequisitionPiecesAsync(1, default);
+
+        pieces.Select(p => (p.OrderLineId, p.AvailableQty)).Should().Equal((11, 40m));
     }
 
     [Fact]

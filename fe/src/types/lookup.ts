@@ -16,6 +16,8 @@ export type OrderLineOption = {
   color: string;
   sizeCode: string;
   orderedQty: number;
+  /** Tổng kế hoạch cắt cả bộ của các lệnh cắt thường chưa hủy (không tính lệnh cắt bù). */
+  plannedQty: number;
 };
 
 /** Chi tiết cắt (PANEL) của mã hàng, để chọn khi xin cắt bù. */

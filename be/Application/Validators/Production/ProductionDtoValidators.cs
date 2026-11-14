@@ -274,8 +274,6 @@ public sealed class DefectQueryValidator : PageQueryValidatorBase<DefectQuery>
             .When(x => !string.IsNullOrEmpty(x.Status)).WithMessage("Trạng thái phiếu lỗi không hợp lệ.");
         RuleFor(x => x.DefectType).Must(t => DefectTypes.All.Contains(CodeText.ToCode(t!)))
             .When(x => !string.IsNullOrEmpty(x.DefectType)).WithMessage(Messages.DefectTypeInvalid);
-        RuleFor(x => x.Objection).Must(o => DefectObjectionFilters.All.Contains(o!))
-            .When(x => !string.IsNullOrEmpty(x.Objection)).WithMessage("Tình trạng phản đối không hợp lệ.");
         RuleFor(x => x).Must(x => x.From!.Value <= x.To!.Value).WithName("From")
             .WithMessage("Từ ngày phải trước hoặc bằng đến ngày.")
             .When(x => x.From is not null && x.To is not null);
@@ -312,26 +310,31 @@ public sealed class CancelDefectDtoValidator : AbstractValidator<CancelDefectDto
 {
     public CancelDefectDtoValidator()
     {
+        RuleFor(x => x.Reason).Must(r => !string.IsNullOrWhiteSpace(r)).WithMessage(Messages.DefectCancelReasonRequired)
+            .MaxTrimmedLength(DefectLimits.MaxText, "Lý do");
+        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
+    }
+}
+
+public sealed class UpdateDefectDtoValidator : AbstractValidator<UpdateDefectDto>
+{
+    public UpdateDefectDtoValidator()
+    {
+        RuleFor(x => x.OperationId).GreaterThan(0).WithMessage("Vui lòng chọn công đoạn.");
+        RuleFor(x => x.ResponsibleWorkerId).GreaterThan(0).WithMessage("Vui lòng chọn công nhân gây lỗi.");
+        RuleFor(x => x.Quantity).Cascade(CascadeMode.Stop)
+            .GreaterThan(0).WithMessage(Messages.OutputQtyInvalid)
+            .LessThanOrEqualTo(DefectLimits.MaxQty).WithMessage(Messages.OutputQtyMax);
+        RuleFor(x => x.DefectType).Must(t => DefectTypes.All.Contains(CodeText.ToCode(t ?? string.Empty)))
+            .WithMessage(Messages.DefectTypeInvalid);
+        RuleFor(x => x.ReasonCode).Must(c => DefectReasons.All.Contains(CodeText.ToCode(c ?? string.Empty)))
+            .WithMessage(Messages.DefectReasonInvalid);
+        RuleFor(x => x.ReasonNote).MaxTrimmedLength(DefectLimits.MaxText, "Ghi chú");
+        RuleFor(x => x.ReasonNote).Must(n => !string.IsNullOrWhiteSpace(n)).WithMessage(Messages.DefectNoteRequired)
+            .When(x => CodeText.ToCode(x.ReasonCode ?? string.Empty) == DefectReasons.Other);
+        RuleFor(x => x.ShiftCode).Must(s => ShiftCodes.All.Contains(CodeText.ToCode(s!)))
+            .When(x => !string.IsNullOrWhiteSpace(x.ShiftCode)).WithMessage("Ca làm việc không hợp lệ.");
         RuleFor(x => x.Reason).MaxTrimmedLength(DefectLimits.MaxText, "Lý do");
-        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
-    }
-}
-
-public sealed class ObjectDefectDtoValidator : AbstractValidator<ObjectDefectDto>
-{
-    public ObjectDefectDtoValidator()
-    {
-        RuleFor(x => x.Objection).Must(o => !string.IsNullOrWhiteSpace(o)).WithMessage(Messages.DefectObjectionRequired)
-            .MaxTrimmedLength(DefectLimits.MaxText, "Nội dung phản hồi");
-        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
-    }
-}
-
-public sealed class ConfirmDefectDtoValidator : AbstractValidator<ConfirmDefectDto>
-{
-    public ConfirmDefectDtoValidator()
-    {
-        RuleFor(x => x.Note).MaxTrimmedLength(DefectLimits.MaxText, "Ghi chú");
         RuleFor(x => x.RowVer).NotEmpty().WithMessage(DefectLimits.StaleRowVer);
     }
 }

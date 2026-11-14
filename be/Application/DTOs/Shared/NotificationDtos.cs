@@ -3,7 +3,7 @@ using NX_MTD.Application.Common;
 namespace NX_MTD.Application.DTOs;
 
 public sealed record NotificationDto(long NotificationId, string SourceType, string Title, string Message, string? LinkUrl,
-    bool IsRead, bool IsUrgent, bool IsManual, DateTime CreatedAt);
+    bool IsRead, bool IsUrgent, bool IsManual, DateTime CreatedAt, string? RefTable = null, long? RefId = null);
 
 public sealed record NotificationQuery : PageQuery
 {

@@ -34,6 +34,14 @@ export const useTeamOptions = (teamType: string) =>
     staleTime: LOOKUP_STALE_MS,
   });
 
+export const useScrapMaterialOptions = (enabled = true) =>
+  useQuery({
+    queryKey: ['lookups', 'scrap-materials'],
+    queryFn: () => lookupApi.scrapMaterials(),
+    staleTime: LOOKUP_STALE_MS,
+    enabled,
+  });
+
 export const useMaterialOptions = () =>
   useQuery({
     queryKey: ['lookups', 'materials'],

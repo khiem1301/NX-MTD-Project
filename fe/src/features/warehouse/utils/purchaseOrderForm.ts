@@ -1,6 +1,6 @@
 import type { Dayjs } from 'dayjs';
-import { toApiDate, toApiDateOrNull } from '@/utils/format';
-import { deliveryDateTo } from '@/utils/expectedDelivery';
+import { toApiDate } from '@/utils/format';
+import { toDeliveryDatesPayload } from '@/utils/expectedDelivery';
 import type { CreatePurchaseOrderPayload } from '../types';
 import { isNewMaterial, newMaterialName } from './newMaterial';
 
@@ -17,8 +17,7 @@ export type PurchaseOrderFormValues = {
   supplierId?: number;
   orderDate?: Dayjs;
   expectedDeliveryCount?: number;
-  expectedDeliveryDate?: Dayjs;
-  expectedDeliveryDateTo?: Dayjs | null;
+  expectedDeliveryDates?: (Dayjs | null)[];
   note?: string;
   lines: PurchaseOrderLineValues[];
 };
@@ -33,9 +32,9 @@ export const toPurchaseOrderPayload = (
   supplierId: values.supplierId as number,
   orderDate: toApiDate(values.orderDate as Dayjs),
   expectedDeliveryCount: values.expectedDeliveryCount as number,
-  expectedDeliveryDate: toApiDate(values.expectedDeliveryDate as Dayjs),
-  expectedDeliveryDateTo: toApiDateOrNull(
-    deliveryDateTo(values.expectedDeliveryCount, values.expectedDeliveryDateTo),
+  expectedDeliveryDates: toDeliveryDatesPayload(
+    values.expectedDeliveryCount,
+    values.expectedDeliveryDates,
   ),
   note: values.note,
   lines: values.lines.map(({ material, unit, newMaterialColor, ...rest }) =>

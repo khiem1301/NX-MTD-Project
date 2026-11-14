@@ -22,12 +22,12 @@ public sealed class KpiTargetsController : ManagerBaseController
         _kpi = kpi; _calendar = calendar; _endOfOrder = endOfOrder;
     }
 
-    /// <summary>Xem trước kết thúc đơn của tổ: KPI, lệch kiểm cuối đơn theo công nhân, tăng ca.</summary>
+    /// <summary>Xem trước kết thúc đơn của tổ: KPI, dòng đơn lệch kiểm cuối đơn kèm người đã báo, tăng ca.</summary>
     [HttpGet("{id:int}/finish-preview")]
     public async Task<IActionResult> FinishPreview(int id, CancellationToken ct) =>
-        this.ToResponse(await _endOfOrder.PreviewAsync(id, ct));
+        this.ToResponse(await _endOfOrder.PreviewAsync(id, null, ct));
 
-    /// <summary>Kết thúc đơn của tổ: ghi phiếu hàng hỏng cho phần lệch, chốt và đóng KPI, tạo đơn tăng ca nếu không đạt.</summary>
+    /// <summary>Kết thúc đơn của tổ: chốt và đóng KPI, thông báo lệch kiểm cuối đơn và thiếu KPI.</summary>
     [HttpPost("{id:int}/finish")]
     public async Task<IActionResult> Finish(int id, CancellationToken ct) => this.ToResponse(await _endOfOrder.FinishAsync(id, ct));
 

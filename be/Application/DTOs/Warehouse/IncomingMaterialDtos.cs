@@ -17,7 +17,8 @@ public sealed record OrderMaterialPageQuery : PageQuery
 public sealed record IncomingCustomerMaterialDto(
     int OrderMaterialId, int OrderId, string OrderCode, string MaterialCode, string MaterialName, string MaterialColor,
     string Unit, decimal CustomerQty, decimal ReceivedQty, decimal OutstandingQty, short? ExpectedDeliveryCount, int ReceivedCount,
-    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
+    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 /// <summary>
 /// Dòng đơn mua đã đặt hàng mà kho chưa nhận đủ (còn phải nhận = đặt − đã nhận − đã chốt không bù). ExpectedDeliveryCount khai chung
@@ -27,7 +28,8 @@ public sealed record IncomingSupplierMaterialDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, string? SupplierName, short? ExpectedDeliveryCount, int ReceivedCount,
     int PurchaseOrderLineId, string MaterialCode, string MaterialName, string MaterialColor, string Unit,
     decimal OrderedQty, decimal ReceivedQty, decimal OutstandingQty, string GoodsStatus,
-    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
+    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 /// <summary>Dòng đơn mua đã đóng vì giao thiếu (CLOSED_SHORT): phần còn thiếu đã chốt không bù, không nhận tiếp được.</summary>
 public sealed record ClosedShortPurchaseDto(

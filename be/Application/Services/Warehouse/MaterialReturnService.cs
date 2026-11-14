@@ -8,9 +8,9 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// UC42 (TH-10): CHỈ tổ cắt trả vải thừa, theo phiếu cấp gốc (đã nhận); số trả ≤ số đã nhận − số đã trả (kể cả đang chờ).
-/// Thủ kho đếm, xác nhận (cộng kho NVL, lệch phải có lý do) hoặc từ chối có lý do. Tổ may không trả phụ liệu.
-/// Chặn thêm: mỗi dòng chỉ một phiếu chờ xác nhận; số trả không vượt số vải còn thừa theo số đã cắt (khi tính được).
+/// UC42 (TH-10, DEV-ALL-112): tổ cắt và tổ may trả NVL / phế phẩm / BTP về kho. Tổ cắt trả NVL theo lệnh cắt; tổ may trả NVL không
+/// theo đơn và BTP theo đơn – mã hàng – màu – size (cả bộ). Cả hai tổ chọn thêm NVL phế phẩm (không có trần). Trần số trả tính ở
+/// <see cref="MaterialReturnCapacity"/>. Thủ kho đếm, xác nhận (cộng kho, lệch phải có lý do) hoặc từ chối có lý do.
 /// </summary>
 public sealed class MaterialReturnService : IMaterialReturnService
 {
@@ -20,212 +20,211 @@ public sealed class MaterialReturnService : IMaterialReturnService
     private readonly INotificationService _notifier;
     private readonly IAppLock _locks;
     private readonly IClock _clock;
-
-    private readonly FabricPlanner _planner;
+    private readonly MaterialReturnCapacity _capacity;
 
     public MaterialReturnService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes,
-        INotificationService notifier, IAppLock locks, IClock clock, FabricPlanner planner)
+        INotificationService notifier, IAppLock locks, IClock clock, MaterialReturnCapacity capacity)
     {
-        _uow = uow; _stock = stock; _codes = codes; _notifier = notifier; _locks = locks; _clock = clock; _planner = planner;
+        _uow = uow; _stock = stock; _codes = codes; _notifier = notifier; _locks = locks; _clock = clock; _capacity = capacity;
     }
 
     private IQueryable<MaterialReturn> Returns => _uow.Repository<MaterialReturn>().Query();
 
-    public async Task<Result<PagedResult<MaterialReturnListItemDto>>> GetPagedAsync(MaterialReturnQuery query,
-        int? cuttingTeamId, CancellationToken ct)
+    public async Task<Result<PagedResult<MaterialReturnListItemDto>>> GetPagedAsync(MaterialReturnQuery query, int? teamId,
+        CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
         var page = await Returns.AsNoTracking()
-            .Where(r => cuttingTeamId == null || r.MaterialIssue.ReceivingTeamId == cuttingTeamId)
+            .Where(r => teamId == null || r.ReturningTeamId == teamId)
             .Where(r => string.IsNullOrEmpty(query.Status) || r.Status == query.Status)
             .Where(r => string.IsNullOrEmpty(keyword) || r.ReturnCode.Contains(keyword)
-                        || r.MaterialIssue.IssueCode.Contains(keyword) || r.MaterialIssue.Order.OrderCode.Contains(keyword))
+                        || (r.Order != null && r.Order.OrderCode.Contains(keyword))
+                        || (r.WorkOrder != null && r.WorkOrder.WorkOrderCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReturnId)
-            .Select(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.MaterialIssueId,
-                r.MaterialIssue.IssueCode, r.MaterialIssue.Order.OrderCode, r.MaterialIssue.ReceivingTeamId, r.MaterialIssue.ReceivingTeam.TeamName,
-                r.Status, r.CreatedAt, r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName,
-                r.ConfirmedAt, r.MaterialReturnLines.Sum(l => l.ReturnedQty)))
+            .Select(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
+                r.ReturningTeam.TeamName, r.Order == null ? null : r.Order.OrderCode,
+                r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode, r.Status, r.CreatedAt,
+                r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt,
+                r.MaterialReturnLines.Sum(l => l.ReturnedQty)))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<MaterialReturnListItemDto>>.Success(page);
     }
 
-    public async Task<Result<MaterialReturnDto>> GetByIdAsync(int returnId, int? cuttingTeamId, CancellationToken ct)
+    public async Task<Result<MaterialReturnDto>> GetByIdAsync(int returnId, int? teamId, CancellationToken ct)
     {
         var dto = await Returns.AsNoTracking().Where(r => r.MaterialReturnId == returnId)
-            .Select(r => new MaterialReturnDto(r.MaterialReturnId, r.ReturnCode, r.MaterialIssueId, r.MaterialIssue.IssueCode,
-                r.MaterialIssue.Order.OrderCode, r.MaterialIssue.ReceivingTeamId, r.MaterialIssue.ReceivingTeam.TeamName, r.Note, r.Status, r.CreatedAt,
+            .Select(r => new MaterialReturnDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
+                r.ReturningTeam.TeamName, r.Order == null ? null : r.Order.OrderCode,
+                r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode, r.Note, r.Status, r.CreatedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt, r.RejectReason,
                 r.MaterialReturnLines.OrderBy(l => l.MaterialReturnLineId).Select(l => new MaterialReturnLineDto(
-                    l.MaterialReturnLineId, l.MaterialIssueLineId, l.MaterialIssueLine.Material!.MaterialCode,
-                    l.MaterialIssueLine.Material.MaterialName, l.MaterialIssueLine.Material.Unit,
-                    l.MaterialIssueLine.Material.Color, l.ReturnedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
+                    l.MaterialReturnLineId, l.MaterialId, l.OrderLineId,
+                    l.Material != null ? l.Material.MaterialCode : l.OrderLine!.ProductVariant.Product.ProductCode,
+                    l.Material != null ? l.Material.MaterialName
+                        : l.OrderLine!.ProductVariant.ProductColor.Color + "/" + l.OrderLine.ProductVariant.SizeCode,
+                    l.Material != null ? l.Material.Unit : MaterialReturnCapacity.PieceUnit,
+                    l.Material != null ? l.Material.Color : l.OrderLine!.ProductVariant.ProductColor.Color,
+                    l.Material != null && l.Material.MaterialType == MaterialTypes.Scrap,
+                    l.ReturnedQty, l.ConfirmedQty, l.DiscrepancyReason)).ToList()))
             .FirstOrDefaultAsync(ct);
         if (dto is null) return WarehouseFailures.NotFound<MaterialReturnDto>();
-        return cuttingTeamId is not null && dto.CuttingTeamId != cuttingTeamId
+        return teamId is not null && dto.TeamId != teamId
             ? WarehouseFailures.TeamMismatch<MaterialReturnDto>()
             : Result<MaterialReturnDto>.Success(dto);
     }
 
-    public async Task<Result<IReadOnlyList<ReturnableLineDto>>> GetReturnableAsync(int cuttingTeamId, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<ReturnableLineDto>>> GetReturnableAsync(int teamId, ReturnableQuery query,
+        CancellationToken ct)
     {
-        var lines = await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking()
-            .Where(l => l.MaterialIssue.ReceivingTeamId == cuttingTeamId && l.MaterialIssue.WarehouseType == WarehouseTypes.Material
-                        && l.MaterialIssue.Status == IssueStatuses.Received && l.MaterialId != null)
-            .OrderByDescending(l => l.MaterialIssueId).ThenBy(l => l.MaterialIssueLineId)
-            .Select(l => new
-            {
-                l.MaterialIssueId, l.MaterialIssue.IssueCode, l.MaterialIssueLineId, l.MaterialIssue.OrderId, l.MaterialIssue.Order.OrderCode,
-                MaterialId = l.MaterialId!.Value,
-                l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit, Color = l.Material.Color,
-                Received = l.ConfirmedQty ?? 0,
-            }).ToListAsync(ct);
-        var returned = await ReturnedAsync(lines.Select(l => l.MaterialIssueLineId).ToList(), null, ct);
-        var rows = lines.Select(l =>
-        {
-            var done = returned.GetValueOrDefault(l.MaterialIssueLineId);
-            return (l.OrderId, l.MaterialId, Dto: new ReturnableLineDto(l.MaterialIssueId, l.IssueCode, l.MaterialIssueLineId,
-                l.OrderCode, l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Received, done, Math.Max(0, l.Received - done)));
-        }).Where(r => r.Dto.RemainingQty > 0).ToList();
-        return Result<IReadOnlyList<ReturnableLineDto>>.Success(await WithSuggestionAsync(cuttingTeamId, rows, ct));
+        var team = await LoadTeamAsync(teamId, ct);
+        var scope = await CheckScopeAsync(team, query.WarehouseType, query.WorkOrderId, query.OrderId, ct);
+        if (scope.Error is not null) return WarehouseFailures.From<IReadOnlyList<ReturnableLineDto>>(scope.Error);
+        var lines = await ReturnableOfAsync(team!, query.WarehouseType, scope.WorkOrderId, query.OrderId, ct);
+        return Result<IReadOnlyList<ReturnableLineDto>>.Success(lines);
     }
+
+    private Task<IReadOnlyList<ReturnableLineDto>> ReturnableOfAsync(Team team, string warehouseType, int? workOrderId, int? orderId,
+        CancellationToken ct) =>
+        warehouseType == WarehouseTypes.SemiFinished ? _capacity.SemiFinishedAsync(team.TeamId, orderId!.Value, ct)
+        : team.TeamType == TeamTypes.Cutting
+            ? workOrderId is null ? Task.FromResult<IReadOnlyList<ReturnableLineDto>>([]) : _capacity.CuttingMaterialsAsync(team.TeamId, workOrderId.Value, ct)
+            : _capacity.SewingMaterialsAsync(team.TeamId, ct);
+
+    private Task<Team?> LoadTeamAsync(int teamId, CancellationToken ct) =>
+        _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == teamId, ct)!;
+
+    private sealed record Scope(Result? Error, int? WorkOrderId, int? OrderId);
 
     /// <summary>
-    /// Gợi ý số trả: vải còn lại của (đơn, vải) = Σ còn trả được − đã cắt; rót vào các dòng theo thứ tự hiện (phiếu mới trước),
-    /// mỗi dòng không quá số còn trả được của dòng đó.
+    /// Tổ cắt chỉ trả NVL / phế phẩm (NVL theo lệnh cắt của tổ); tổ may trả NVL (không theo đơn) hoặc BTP (bắt buộc đơn hàng).
+    /// Trả về lệnh cắt và đơn hàng ghi vào phiếu.
     /// </summary>
-    private async Task<IReadOnlyList<ReturnableLineDto>> WithSuggestionAsync(int cuttingTeamId,
-        List<(int OrderId, int MaterialId, ReturnableLineDto Dto)> rows, CancellationToken ct)
+    private async Task<Scope> CheckScopeAsync(Team? team, string warehouseType, int? workOrderId, int? orderId, CancellationToken ct)
     {
-        var cutByOrder = new Dictionary<int, Dictionary<int, (decimal CutQty, int UnmeasuredLays)>>();
-        foreach (var orderId in rows.Select(r => r.OrderId).Distinct())
-            cutByOrder[orderId] = await _planner.GetCutAsync(cuttingTeamId, orderId, ct);
-
-        var left = new Dictionary<(int, int), decimal?>();
-        var result = new List<ReturnableLineDto>(rows.Count);
-        foreach (var (orderId, materialId, dto) in rows)
+        if (team is null || team.TeamType is not (TeamTypes.Cutting or TeamTypes.Sewing))
+            return new Scope(WarehouseFailures.TeamMismatch(), null, null);
+        if (warehouseType == WarehouseTypes.SemiFinished)
         {
-            var key = (orderId, materialId);
-            if (!left.TryGetValue(key, out var pool))
-            {
-                var (cutQty, unmeasured) = cutByOrder[orderId].GetValueOrDefault(materialId);
-                var remaining = rows.Where(r => r.OrderId == orderId && r.MaterialId == materialId).Sum(r => r.Dto.RemainingQty);
-                pool = unmeasured > 0 ? null : Math.Max(0, remaining - cutQty);
-            }
-            var take = pool is null ? (decimal?)null : Math.Min(pool.Value, dto.RemainingQty);
-            left[key] = pool - (take ?? 0);
-            result.Add(dto with { SuggestedQty = take });
+            if (team.TeamType != TeamTypes.Sewing) return Rejected(WarehouseMessages.ReturnWarehouseNotAllowed);
+            return orderId is null ? Rejected(WarehouseMessages.ReturnOrderRequired) : new Scope(null, null, orderId);
         }
-        return result;
+        if (warehouseType != WarehouseTypes.Material) return Rejected(WarehouseMessages.ReturnWarehouseNotAllowed);
+        if (team.TeamType == TeamTypes.Sewing || workOrderId is null) return new Scope(null, null, null);
+
+        var wo = await _uow.Repository<WorkOrder>().Query().AsNoTracking().FirstOrDefaultAsync(w => w.WorkOrderId == workOrderId, ct);
+        return wo is null || wo.CuttingTeamId != team.TeamId || wo.Status == WorkOrderStatuses.Cancelled
+            ? Rejected(WarehouseMessages.ReturnWorkOrderInvalid)
+            : new Scope(null, wo.WorkOrderId, wo.OrderId);
     }
 
-    public async Task<Result<MaterialReturnDto>> CreateAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
+    private static Scope Rejected(string message) =>
+        new(Result.Failure(ErrorCodes.WarehouseInvalidReference, message), null, null);
+
+    public async Task<Result<MaterialReturnDto>> CreateAsync(CreateMaterialReturnDto dto, int teamId, CancellationToken ct)
     {
-        var created = await _uow.InTransactionAsync(() => StoreReturnAsync(dto, cuttingTeamId, ct));
-        return created.IsSuccess ? await GetByIdAsync(created.Data, cuttingTeamId, ct) : WarehouseFailures.From<MaterialReturnDto>(created);
+        var created = await _uow.InTransactionAsync(() => StoreReturnAsync(dto, teamId, ct));
+        return created.IsSuccess ? await GetByIdAsync(created.Data, teamId, ct) : WarehouseFailures.From<MaterialReturnDto>(created);
     }
 
-    /// <summary>Kiểm tổ cắt, phiếu cấp, số lượng trả không vượt số đã nhận rồi lưu phiếu trả vải thừa và báo Thủ kho.</summary>
-    private async Task<Result<int>> StoreReturnAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
+    /// <summary>Kiểm tổ, phạm vi trả và từng dòng (trần số trả) rồi lưu phiếu trả và báo Thủ kho.</summary>
+    private async Task<Result<int>> StoreReturnAsync(CreateMaterialReturnDto dto, int teamId, CancellationToken ct)
     {
-        var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == cuttingTeamId, ct);
-        if (team is null || team.TeamType != TeamTypes.Cutting) return WarehouseFailures.TeamMismatch<int>();
+        var team = await LoadTeamAsync(teamId, ct);
+        var scope = await CheckScopeAsync(team, dto.WarehouseType, dto.WorkOrderId, dto.OrderId, ct);
+        if (scope.Error is not null) return WarehouseFailures.From<int>(scope.Error);
 
-        var issue = await _uow.Repository<MaterialIssue>().Query().AsNoTracking().Include(i => i.MaterialIssueLines)
-            .FirstOrDefaultAsync(i => i.MaterialIssueId == dto.MaterialIssueId, ct);
-        if (issue is null) return WarehouseFailures.NotFound<int>();
-        if (issue.ReceivingTeamId != cuttingTeamId) return WarehouseFailures.TeamMismatch<int>();
-        if (issue.WarehouseType != WarehouseTypes.Material || issue.Status != IssueStatuses.Received)
-            return Result<int>.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.ReturnIssueNotReturnable);
-
-        await _locks.AcquireAsync($"material-return:{issue.MaterialIssueId}", ct);
-        var byLine = issue.MaterialIssueLines.Where(l => l.MaterialId != null).ToDictionary(l => l.MaterialIssueLineId);
-        if (dto.Lines.Any(l => !byLine.ContainsKey(l.MaterialIssueLineId)))
-            return Result<int>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReturnLineNotInIssue);
-        var returned = await ReturnedAsync(byLine.Keys.ToList(), null, ct);
-        var over = dto.Lines
-            .Select(l => (Line: l, Remaining: (byLine[l.MaterialIssueLineId].ConfirmedQty ?? 0) - returned.GetValueOrDefault(l.MaterialIssueLineId)))
-            .Where(x => x.Line.ReturnedQty > x.Remaining)
-            .Select(x => $"còn trả được {x.Remaining:0.###}, trả {x.Line.ReturnedQty:0.###}").ToList();
-        if (over.Count > 0)
-            return Result<int>.Failure(ErrorCodes.ReturnExceedsIssued, $"{WarehouseMessages.ReturnExceedsIssued}: {string.Join("; ", over)}.");
-
-        // Mỗi dòng chỉ có một phiếu trả chờ xác nhận tại một thời điểm (tránh trả trùng / chia nhỏ để lách số còn lại).
-        var lineIds = dto.Lines.Select(l => l.MaterialIssueLineId).ToList();
-        if (await _uow.Repository<MaterialReturnLine>().Query().AnyAsync(l => lineIds.Contains(l.MaterialIssueLineId)
-                && l.MaterialReturn.Status == HandoverStatuses.Pending, ct))
-            return Result<int>.Failure(ErrorCodes.ReturnPendingExists, WarehouseMessages.ReturnPendingExists);
-        var leftover = await CheckLeftoverAsync(dto, cuttingTeamId, ct);
-        if (leftover is not null) return Result<int>.Failure(ErrorCodes.ReturnExceedsLeftover, leftover);
+        // Khóa theo tổ để hai phiếu trả cùng lúc không cùng thấy "còn trả được" (phiếu chờ tính vào số đã trả).
+        await _locks.AcquireAsync($"material-return:{teamId}", ct);
+        var lines = await CheckLinesAsync(dto, team!, scope, ct);
+        if (lines is not null) return WarehouseFailures.From<int>(lines);
 
         var ret = new MaterialReturn
         {
             ReturnCode = await _codes.NextAsync<MaterialReturn>(DocumentPrefixes.MaterialReturn, r => r.ReturnCode, ct),
-            MaterialIssueId = issue.MaterialIssueId,
+            ReturningTeamId = teamId,
+            WarehouseType = dto.WarehouseType,
+            OrderId = scope.OrderId,
+            WorkOrderId = scope.WorkOrderId,
             Note = string.IsNullOrWhiteSpace(dto.Note) ? null : dto.Note.Trim(),
             Status = HandoverStatuses.Pending,
             CreatedAt = _clock.Now,
             MaterialReturnLines = dto.Lines.Select(l => new MaterialReturnLine
-                { MaterialIssueLineId = l.MaterialIssueLineId, ReturnedQty = l.ReturnedQty }).ToList(),
+            {
+                MaterialId = l.MaterialId,
+                OrderLineId = l.OrderLineId,
+                ReturnedQty = l.ReturnedQty,
+            }).ToList(),
         };
         await _uow.Repository<MaterialReturn>().AddAsync(ret);
         await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-            "Chờ nhận vải thừa", $"Tổ cắt {team.TeamName} trả vải theo phiếu {issue.IssueCode}, vui lòng đếm và nhận vào kho.", null), ct);
+            "Chờ nhận hàng trả", $"Tổ {team!.TeamName} trả hàng về kho (phiếu chờ xác nhận), vui lòng đếm và nhận vào kho.", null), ct);
         await _uow.SaveChangesAsync();
         return Result<int>.Success(ret.MaterialReturnId, WarehouseMessages.ReturnCreated);
     }
 
-    /// <summary>
-    /// Số trả của mỗi loại vải trong đơn không vượt số vải còn thừa theo số đã cắt (số còn trả được của mọi phiếu cấp cùng đơn,
-    /// cùng vải trừ số đã cắt của tổ). Chưa tính được (có bàn cắt chưa nhập chiều dài) thì không chặn theo số đã cắt.
-    /// Trả về thông báo lỗi, null nếu hợp lệ.
-    /// </summary>
-    private async Task<string?> CheckLeftoverAsync(CreateMaterialReturnDto dto, int cuttingTeamId, CancellationToken ct)
+    private async Task<Result?> CheckLinesAsync(CreateMaterialReturnDto dto, Team team, Scope scope, CancellationToken ct)
     {
-        var returnable = (await GetReturnableAsync(cuttingTeamId, ct)).Data!;
-        var byLine = returnable.ToDictionary(r => r.MaterialIssueLineId);
-        var problems = new List<string>();
-        foreach (var group in dto.Lines.Where(l => byLine.ContainsKey(l.MaterialIssueLineId))
-                     .GroupBy(l => FabricKey(byLine[l.MaterialIssueLineId])))
-        {
-            var pool = returnable.Where(r => FabricKey(r) == group.Key).Select(r => r.SuggestedQty).ToList();
-            if (pool.Any(p => p is null)) continue;
-            var left = pool.Sum(p => p!.Value);
-            var asked = group.Sum(l => l.ReturnedQty);
-            if (asked > left)
-                problems.Add($"{group.Key.MaterialCode} {group.Key.MaterialColor} (đơn {group.Key.OrderCode}): còn thừa {left:0.###}, trả {asked:0.###}");
-        }
-        return problems.Count == 0 ? null : $"{WarehouseMessages.ReturnExceedsLeftover}: {string.Join("; ", problems)}.";
+        if (dto.WarehouseType == WarehouseTypes.SemiFinished)
+            return CheckCap(dto.Lines.Select(l => (l.OrderLineId!.Value, l.ReturnedQty)),
+                await _capacity.SemiFinishedAsync(team.TeamId, scope.OrderId!.Value, ct), byOrderLine: true);
+
+        var ids = dto.Lines.Select(l => l.MaterialId!.Value).ToList();
+        var materials = await _uow.Repository<Material>().Query().AsNoTracking()
+            .Where(m => ids.Contains(m.MaterialId) && m.Status == MaterialStatuses.Active).ToDictionaryAsync(m => m.MaterialId, ct);
+        var invalid = ids.FirstOrDefault(id => !materials.ContainsKey(id));
+        if (invalid != 0) return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueMaterialInvalid);
+        var notWhole = dto.Lines.Where(l => NeedsWholeQty(materials[l.MaterialId!.Value]) && l.ReturnedQty != decimal.Truncate(l.ReturnedQty))
+            .Select(l => materials[l.MaterialId!.Value].MaterialName).ToList();
+        if (notWhole.Count > 0)
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, string.Format(WarehouseMessages.ReturnWholeQtyRequired, string.Join(", ", notWhole)));
+
+        var capped = dto.Lines.Where(l => materials[l.MaterialId!.Value].MaterialType != MaterialTypes.Scrap).ToList();
+        if (capped.Count == 0) return null;
+        if (team.TeamType == TeamTypes.Cutting && scope.WorkOrderId is null)
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReturnWorkOrderRequired);
+        var available = await ReturnableOfAsync(team, dto.WarehouseType, scope.WorkOrderId, scope.OrderId, ct);
+        return CheckCap(capped.Select(l => (l.MaterialId!.Value, l.ReturnedQty)), available, byOrderLine: false);
     }
 
-    private static (string OrderCode, string MaterialCode, string MaterialColor) FabricKey(ReturnableLineDto r) =>
-        (r.OrderCode, r.MaterialCode, r.MaterialColor);
+    /// <summary>NVL không phải vải, và phế phẩm tính theo đơn vị khác kg (cái…), chỉ trả số nguyên.</summary>
+    private static bool NeedsWholeQty(Material m) => m.MaterialType switch
+    {
+        MaterialTypes.Fabric => false,
+        MaterialTypes.Scrap => !string.Equals(m.Unit, MaterialTypes.ScrapDecimalUnit, StringComparison.OrdinalIgnoreCase),
+        _ => true,
+    };
+
+    /// <summary>Mỗi dòng phải có trong danh sách còn trả được và không vượt trần; liệt kê mọi dòng vượt trong một lỗi.</summary>
+    private static Result? CheckCap(IEnumerable<(int Id, decimal Qty)> asked, IReadOnlyList<ReturnableLineDto> available, bool byOrderLine)
+    {
+        var cap = available.ToDictionary(a => (byOrderLine ? a.OrderLineId : a.MaterialId)!.Value);
+        var over = new List<string>();
+        foreach (var (id, qty) in asked)
+        {
+            if (!cap.TryGetValue(id, out var line))
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReturnItemNotReturnable);
+            if (qty > line.RemainingQty)
+                over.Add($"{line.ItemCode} {line.ItemName}: còn trả được {line.RemainingQty:0.###}, trả {qty:0.###}");
+        }
+        return over.Count == 0
+            ? null
+            : Result.Failure(ErrorCodes.ReturnExceedsIssued, $"{WarehouseMessages.ReturnExceedsIssued}: {string.Join("; ", over)}.");
+    }
 
     public Task<Result> ConfirmAsync(int returnId, ConfirmMaterialReturnDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
-            var ret = await Returns.Include(r => r.MaterialReturnLines).ThenInclude(l => l.MaterialIssueLine)
-                .Include(r => r.MaterialIssue).FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
+            var ret = await Returns.Include(r => r.MaterialReturnLines).FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
             if (ret is null) return WarehouseFailures.NotFound();
             if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
-            var byId = dto.Lines.ToDictionary(l => l.MaterialReturnLineId);
-            if (byId.Count != ret.MaterialReturnLines.Count || ret.MaterialReturnLines.Any(l => !byId.ContainsKey(l.MaterialReturnLineId)))
-                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);
-            foreach (var line in ret.MaterialReturnLines)
-            {
-                var input = byId[line.MaterialReturnLineId];
-                if (input.ConfirmedQty > line.ReturnedQty)
-                    return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.HandoverConfirmedExceedsHanded);
-                if (input.ConfirmedQty != line.ReturnedQty && string.IsNullOrWhiteSpace(input.DiscrepancyReason))
-                    return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DiscrepancyReasonRequired);
-                line.ConfirmedQty = input.ConfirmedQty;
-                line.DiscrepancyReason = input.ConfirmedQty == line.ReturnedQty ? null : input.DiscrepancyReason!.Trim();
-            }
+            var counted = ApplyCount(ret, dto);
+            if (counted is not null) return counted;
 
             var today = _clock.Today;
             var movements = ret.MaterialReturnLines.Where(l => l.ConfirmedQty > 0)
-                .Select(l => new StockMovement(StockKey.Material(l.MaterialIssueLine.MaterialId!.Value),
-                    l.ConfirmedQty!.Value, StockDocTypes.MaterialReturn, ret.MaterialReturnId, l.MaterialReturnLineId, today)).ToList();
+                .Select(l => new StockMovement(StockKeyOf(ret.WarehouseType, l), l.ConfirmedQty!.Value,
+                    StockDocTypes.MaterialReturn, ret.MaterialReturnId, l.MaterialReturnLineId, today)).ToList();
             if (movements.Count > 0)
             {
                 var posted = await _stock.PostAsync(movements, ct);
@@ -235,15 +234,39 @@ public sealed class MaterialReturnService : IMaterialReturnService
             ret.Status = HandoverStatuses.Confirmed;
             ret.ConfirmedBy = employeeId;
             ret.ConfirmedAt = _clock.Now;
-            await _notifier.NotifyTeamLeadersAsync(ret.MaterialIssue.ReceivingTeamId, new NotificationMessage(NotificationSources.Warehouse,
-                "Kho đã nhận vải trả", $"Thủ kho đã xác nhận phiếu trả vải {ret.ReturnCode}.", "/warehouse/material-returns"), ct);
+            await _notifier.NotifyTeamLeadersAsync(ret.ReturningTeamId, new NotificationMessage(NotificationSources.Warehouse,
+                "Kho đã nhận hàng trả", $"Thủ kho đã xác nhận phiếu trả {ret.ReturnCode}.", "/warehouse/material-returns"), ct);
             await _uow.SaveChangesAsync();
             return Result.Success(WarehouseMessages.ReturnConfirmed);
         });
 
+    private static StockKey StockKeyOf(string warehouseType, MaterialReturnLine line) =>
+        warehouseType == WarehouseTypes.SemiFinished
+            ? StockKey.SemiFinished(line.OrderLineId!.Value, null)
+            : StockKey.Material(line.MaterialId!.Value);
+
+    /// <summary>Ghi số Thủ kho đếm lên từng dòng: đủ mọi dòng, không vượt số tổ trả, lệch thì phải có lý do.</summary>
+    private static Result? ApplyCount(MaterialReturn ret, ConfirmMaterialReturnDto dto)
+    {
+        var byId = dto.Lines.ToDictionary(l => l.MaterialReturnLineId);
+        if (byId.Count != ret.MaterialReturnLines.Count || ret.MaterialReturnLines.Any(l => !byId.ContainsKey(l.MaterialReturnLineId)))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);
+        foreach (var line in ret.MaterialReturnLines)
+        {
+            var input = byId[line.MaterialReturnLineId];
+            if (input.ConfirmedQty > line.ReturnedQty)
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.HandoverConfirmedExceedsHanded);
+            if (input.ConfirmedQty != line.ReturnedQty && string.IsNullOrWhiteSpace(input.DiscrepancyReason))
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DiscrepancyReasonRequired);
+            line.ConfirmedQty = input.ConfirmedQty;
+            line.DiscrepancyReason = input.ConfirmedQty == line.ReturnedQty ? null : input.DiscrepancyReason!.Trim();
+        }
+        return null;
+    }
+
     public async Task<Result> RejectAsync(int returnId, ReasonDto dto, int employeeId, CancellationToken ct)
     {
-        var ret = await Returns.Include(r => r.MaterialIssue).FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
+        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId, ct);
         if (ret is null) return WarehouseFailures.NotFound();
         if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
@@ -251,32 +274,20 @@ public sealed class MaterialReturnService : IMaterialReturnService
         ret.RejectReason = dto.Reason.Trim();
         ret.ConfirmedBy = employeeId;
         ret.ConfirmedAt = _clock.Now;
-        await _notifier.NotifyTeamLeadersAsync(ret.MaterialIssue.ReceivingTeamId, new NotificationMessage(NotificationSources.Warehouse,
-            "Phiếu trả vải bị từ chối", $"Thủ kho từ chối phiếu trả vải {ret.ReturnCode}: {ret.RejectReason}", "/warehouse/material-returns"), ct);
+        await _notifier.NotifyTeamLeadersAsync(ret.ReturningTeamId, new NotificationMessage(NotificationSources.Warehouse,
+            "Phiếu trả bị từ chối", $"Thủ kho từ chối phiếu trả {ret.ReturnCode}: {ret.RejectReason}", "/warehouse/material-returns"), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReturnRejected);
     }
 
-    public async Task<Result> CancelAsync(int returnId, int cuttingTeamId, CancellationToken ct)
+    public async Task<Result> CancelAsync(int returnId, int teamId, CancellationToken ct)
     {
-        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId && r.MaterialIssue.ReceivingTeamId == cuttingTeamId, ct);
+        var ret = await Returns.FirstOrDefaultAsync(r => r.MaterialReturnId == returnId && r.ReturningTeamId == teamId, ct);
         if (ret is null) return WarehouseFailures.NotFound();
         if (ret.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
 
         ret.Status = HandoverStatuses.Cancelled;
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ReturnCancelled);
-    }
-
-    /// <summary>Số đã trả của từng dòng phiếu cấp: phiếu chờ tính số tổ trả, phiếu đã nhận tính số kho đếm.</summary>
-    private async Task<Dictionary<int, decimal>> ReturnedAsync(IReadOnlyCollection<int> issueLineIds, int? excludeReturnId,
-        CancellationToken ct)
-    {
-        var rows = await _uow.Repository<MaterialReturnLine>().Query().AsNoTracking()
-            .Where(l => issueLineIds.Contains(l.MaterialIssueLineId) && l.MaterialReturnId != excludeReturnId
-                        && (l.MaterialReturn.Status == HandoverStatuses.Pending || l.MaterialReturn.Status == HandoverStatuses.Confirmed))
-            .Select(l => new { l.MaterialIssueLineId, Qty = l.MaterialReturn.Status == HandoverStatuses.Confirmed ? l.ConfirmedQty ?? 0 : l.ReturnedQty })
-            .ToListAsync(ct);
-        return rows.GroupBy(r => r.MaterialIssueLineId).ToDictionary(g => g.Key, g => g.Sum(r => r.Qty));
     }
 }

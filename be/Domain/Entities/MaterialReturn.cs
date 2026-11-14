@@ -1,10 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Phiếu trả vải thừa
+/// Phiếu trả NVL / phế phẩm / BTP của tổ cắt, tổ may về kho (DEV-ALL-112)
 /// </summary>
 public partial class MaterialReturn
 {
@@ -12,7 +12,16 @@ public partial class MaterialReturn
 
     public string ReturnCode { get; set; } = null!;
 
-    public int MaterialIssueId { get; set; }
+    /// <summary>Chỉ có ở phiếu trả cũ (trước DEV-ALL-112) gắn theo phiếu cấp.</summary>
+    public int? MaterialIssueId { get; set; }
+
+    public int ReturningTeamId { get; set; }
+
+    public string WarehouseType { get; set; } = null!;
+
+    public int? OrderId { get; set; }
+
+    public int? WorkOrderId { get; set; }
 
     public string? Note { get; set; }
 
@@ -28,7 +37,13 @@ public partial class MaterialReturn
 
     public virtual Employee? ConfirmedByNavigation { get; set; }
 
-    public virtual MaterialIssue MaterialIssue { get; set; } = null!;
+    public virtual MaterialIssue? MaterialIssue { get; set; }
+
+    public virtual Team ReturningTeam { get; set; } = null!;
+
+    public virtual CustomerOrder? Order { get; set; }
+
+    public virtual WorkOrder? WorkOrder { get; set; }
 
     public virtual ICollection<MaterialReturnLine> MaterialReturnLines { get; set; } = new List<MaterialReturnLine>();
 }

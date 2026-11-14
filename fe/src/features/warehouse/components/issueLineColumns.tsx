@@ -5,7 +5,7 @@ import type { Rule } from 'antd/es/form';
 import { MESSAGES } from '@/constants/messages';
 import { fill, formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
-import { effectiveMax, type IssueQtyRule } from '../utils/issueQuantity';
+import type { IssueQtyRule } from '../utils/issueQuantity';
 
 /** Ô nhập trong bảng không chừa khoảng dưới (lỗi vẫn hiện ngay dưới ô). */
 export const LINE_ITEM = { marginBottom: 0 };
@@ -31,15 +31,18 @@ type IssueLineColumnsOptions = {
   renderQty: (
     field: FormListFieldData,
     rule: IssueQtyRule,
-    max: number,
     unit: string | undefined,
-    /** Kiểm số cấp không vượt khả dụng / đơn xin, báo lỗi ngay dưới ô (BE cũng chặn khi kho không đủ). */
+    /** Cảnh báo số cấp vượt khả dụng / đơn xin ngay dưới ô, vẫn cho lưu (BE vẫn chặn khi kho không đủ). */
     limitRules: Rule[],
   ) => ReactNode;
 };
 
-/** Số cấp vượt khả dụng hoặc vượt số trong đơn xin thì báo lỗi ở ô (thay vì để BE từ chối cả phiếu). */
+/**
+ * Số cấp vượt khả dụng hoặc vượt số trong đơn xin thì cảnh báo ở ô nhưng không chặn lưu: Thủ kho được cấp hơn đơn xin
+ * khi thực tế cần (ô không tự cắt số về trần, chỉ trần cố định của rule mới tự cắt).
+ */
 const limitRule = (line: IssueLineInfo): Rule => ({
+  warningOnly: true,
   validator: async (_rule, value?: number | null) => {
     if (value === undefined || value === null) return;
     if (line.available !== undefined && value > line.available)
@@ -53,8 +56,8 @@ const qtyText = (value: number | undefined) =>
   value === undefined ? <Typography.Text type="secondary">—</Typography.Text> : formatQty(value);
 
 /**
- * Cột chung của bảng dòng cấp NVL / BTP: STT, hàng cấp, khả dụng, số trong đơn xin (khi có đơn), số cấp (trần = nhỏ nhất của
- * trần quy định, khả dụng và đơn xin) và nút xóa dòng.
+ * Cột chung của bảng dòng cấp NVL / BTP: STT, hàng cấp, khả dụng, số trong đơn xin (khi có đơn), số cấp (tự cắt ở trần quy
+ * định; vượt khả dụng / đơn xin chỉ cảnh báo) và nút xóa dòng.
  */
 export const issueLineColumns = ({
   itemTitle,
@@ -90,13 +93,7 @@ export const issueLineColumns = ({
     width: 200,
     render: (_, field) => {
       const line = lineOf(field.name);
-      return renderQty(
-        field,
-        line.rule,
-        effectiveMax(line.rule, line.available, line.requested),
-        line.unit,
-        [limitRule(line)],
-      );
+      return renderQty(field, line.rule, line.unit, [limitRule(line)]);
     },
   },
   {

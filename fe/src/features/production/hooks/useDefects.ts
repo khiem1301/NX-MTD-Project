@@ -5,11 +5,10 @@ import { PRODUCTION_TEXT } from '../constants';
 import { defectsKey } from './productionKeys';
 import type {
   CancelDefectPayload,
-  ConfirmDefectPayload,
   CreateDefectPayload,
   DefectQuery,
-  ObjectDefectPayload,
   OutputRole,
+  UpdateDefectPayload,
 } from '../types';
 
 // ---------- Hàng hỏng ----------
@@ -26,6 +25,14 @@ export const useCreateDefect = () =>
     successMessage: PRODUCTION_TEXT.defects.done.created,
   });
 
+/** Sửa phiếu: tổ trưởng trong 24 giờ kể từ lúc lập, Quản đốc khi chưa vướng ràng buộc (BE kiểm). */
+export const useUpdateDefect = (role: OutputRole) =>
+  useApiMutation(
+    ({ id, body }: { id: number; body: UpdateDefectPayload }) =>
+      productionApi.updateDefect(role, id, body),
+    { invalidate: [defectsKey], successMessage: PRODUCTION_TEXT.defects.done.updated },
+  );
+
 export const useCancelDefect = (role: OutputRole) =>
   useApiMutation(
     ({ id, body }: { id: number; body: CancelDefectPayload }) =>
@@ -36,26 +43,9 @@ export const useCancelDefect = (role: OutputRole) =>
     },
   );
 
-/** Quản đốc / Admin chấp nhận phiếu sau khi công nhân phản đối (giữ phiếu); không chấp nhận thì hủy phiếu. */
-export const useConfirmDefect = () =>
-  useApiMutation(
-    ({ id, body }: { id: number; body: ConfirmDefectPayload }) =>
-      productionApi.confirmDefect(id, body),
-    { invalidate: [defectsKey], successMessage: PRODUCTION_TEXT.defects.done.confirmed },
-  );
-
+/** Công nhân chỉ xem phiếu của mình. */
 export const useMyDefects = (query: DefectQuery) =>
   useQuery({
     queryKey: [...defectsKey, 'mine', query],
     queryFn: () => productionApi.listMyDefects(query),
   });
-
-export const useObjectDefect = () =>
-  useApiMutation(
-    ({ id, body }: { id: number; body: ObjectDefectPayload }) =>
-      productionApi.objectDefect(id, body),
-    {
-      invalidate: [defectsKey],
-      successMessage: PRODUCTION_TEXT.myDefects.done,
-    },
-  );

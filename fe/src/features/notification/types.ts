@@ -6,6 +6,9 @@ export type NotificationItem = {
   title: string;
   message: string;
   linkUrl: string | null;
+  /** Thông báo mở cửa sổ chi tiết tại chỗ (không chuyển trang): loại đối tượng và id (VD KpiMismatch + id chỉ tiêu). */
+  refTable: string | null;
+  refId: number | null;
   isRead: boolean;
   isUrgent: boolean;
   isManual: boolean;

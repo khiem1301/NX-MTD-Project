@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Alert, Form, Input, InputNumber, Modal, Select, Space, Typography } from 'antd';
+import { Alert, Form, Input, Modal, Select, Space, Typography } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, formatQty, toApiDate, toApiDateOrNull } from '@/utils/format';
+import { formatCurrency, formatQty, toApiDate } from '@/utils/format';
 import { PURCHASE_TEXT } from '../constants';
 import { usePlaceOrder, useSupplierOptions } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
@@ -10,7 +11,7 @@ import { PlaceOrderLines } from './PlaceOrderLines';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { DeliveryDateFields } from '@/components/common/DeliveryDateFields';
-import { deliveryDateTo } from '@/utils/expectedDelivery';
+import { toDeliveryDatesPayload } from '@/utils/expectedDelivery';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -24,8 +25,7 @@ type FormValues = {
   supplierId: number;
   orderDate: Dayjs;
   expectedDeliveryCount: number;
-  expectedDeliveryDate: Dayjs;
-  expectedDeliveryDateTo?: Dayjs | null;
+  expectedDeliveryDates?: (Dayjs | null)[];
   note: string | null;
   lines: LineValues[];
 };
@@ -71,9 +71,9 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
         supplierId: values.supplierId,
         orderDate: toApiDate(values.orderDate),
         expectedDeliveryCount: values.expectedDeliveryCount,
-        expectedDeliveryDate: toApiDate(values.expectedDeliveryDate),
-        expectedDeliveryDateTo: toApiDateOrNull(
-          deliveryDateTo(values.expectedDeliveryCount, values.expectedDeliveryDateTo),
+        expectedDeliveryDates: toDeliveryDatesPayload(
+          values.expectedDeliveryCount,
+          values.expectedDeliveryDates,
         ),
         note: values.note?.trim() || null,
         lines: values.lines.map((l) => ({
@@ -137,7 +137,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
             label={text.expectedDate}
             rules={[{ required: true, type: 'number', min: 1, message: text.expectedDateRequired }]}
           >
-            <InputNumber min={1} max={99} precision={0} style={{ width: 150 }} />
+            <QtyInput min={1} max={99} style={{ width: 150 }} />
           </Form.Item>
           <DeliveryDateFields
             count={deliveryCount}

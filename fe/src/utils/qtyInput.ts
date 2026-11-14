@@ -22,28 +22,34 @@ export const formatQtyValue = (value: number | string | undefined, decimals: num
   return Number.isNaN(number) ? '' : display(toPlain(number, decimals));
 };
 
-/**
- * Đọc chữ trong ô thành chuỗi số chuẩn ("1234.5"): bỏ dấu chấm và ký tự lạ, phần lẻ sau dấu phẩy đầu tiên
- * (cắt theo `decimals`, ô số nguyên thì bỏ). Vượt `max` thì thành đúng `max`. Trả chuỗi (không phải Number)
- * để xóa trắng ô thì giá trị là rỗng chứ không thành 0.
- */
-export const parseQtyInput = (text: string | undefined, decimals: number, max: number): string => {
-  const [intPart = '', ...rest] = (text ?? '').split(',');
-  const int = intPart.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
-  const frac = decimals > 0 ? rest.join('').replace(/\D/g, '').slice(0, decimals) : '';
-  if (!int && !frac) return '';
-  const normalized = frac ? `${int || '0'}.${frac}` : int;
-  return Number(normalized) > max ? toPlain(max, decimals) : normalized;
-};
+/** Số chữ số phần nguyên của trần: 1.000.000 → 7. Ô cho gõ vượt trần nhưng không dài hơn số chữ số này. */
+export const maxIntDigits = (max: number): number => String(Math.trunc(Math.abs(max))).length;
 
 /**
- * Định dạng ngay khi đang gõ hoặc dán: thêm dấu chấm ngăn nghìn, giữ dấu phẩy vừa gõ của ô có phần lẻ,
- * vượt `max` thì hiện luôn `max`.
+ * Đọc chữ trong ô thành chuỗi số chuẩn ("1234.5"): bỏ dấu chấm và ký tự lạ, phần lẻ sau dấu phẩy đầu tiên
+ * (cắt theo `decimals`, ô số nguyên thì bỏ). Phần nguyên dài quá `maxDigits` chữ số thì cắt chữ số thừa
+ * (không cắt về trần: được gõ vượt trần, chỉ bị chặn thêm chữ số). Trả chuỗi (không phải Number)
+ * để xóa trắng ô thì giá trị là rỗng chứ không thành 0.
  */
-export const formatQtyTyping = (input: string, decimals: number, max: number): string => {
-  const parsed = parseQtyInput(input, decimals, max);
+export const parseQtyInput = (
+  text: string | undefined,
+  decimals: number,
+  maxDigits: number,
+): string => {
+  const [intPart = '', ...rest] = (text ?? '').split(',');
+  const int = intPart
+    .replace(/\D/g, '')
+    .replace(/^0+(?=\d)/, '')
+    .slice(0, maxDigits);
+  const frac = decimals > 0 ? rest.join('').replace(/\D/g, '').slice(0, decimals) : '';
+  if (!int && !frac) return '';
+  return frac ? `${int || '0'}.${frac}` : int;
+};
+
+/** Định dạng ngay khi gõ hoặc dán: thêm dấu chấm ngăn nghìn, giữ dấu phẩy vừa gõ của ô có phần lẻ. */
+export const formatQtyTyping = (input: string, decimals: number, maxDigits: number): string => {
+  const parsed = parseQtyInput(input, decimals, maxDigits);
   if (parsed === '') return '';
-  const clamped = Number(parseQtyInput(input, decimals, Infinity)) > max;
-  const trailingComma = decimals > 0 && !clamped && !parsed.includes('.') && input.includes(',');
+  const trailingComma = decimals > 0 && !parsed.includes('.') && input.includes(',');
   return display(parsed) + (trailingComma ? ',' : '');
 };

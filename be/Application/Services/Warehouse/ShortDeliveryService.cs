@@ -22,12 +22,13 @@ public sealed class ShortDeliveryService : IShortDeliveryService
     private readonly DeliveryCountGuard _deliveries;
     private readonly ShortageTracker _shortages;
     private readonly IClock _clock;
+    private readonly DeliveryScheduleStore _schedule;
 
     public ShortDeliveryService(IUnitOfWork uow, IRequestService requests, MaterialSupplyUpdater supply,
         INotificationService notifier, IAuditLogService audit, DeliveryCountGuard deliveries, ShortageTracker shortages, IClock clock)
     {
         _uow = uow; _requests = requests; _supply = supply; _notifier = notifier; _audit = audit;
-        _deliveries = deliveries; _shortages = shortages; _clock = clock;
+        _deliveries = deliveries; _shortages = shortages; _clock = clock; _schedule = new DeliveryScheduleStore(uow);
     }
 
     private IQueryable<Request> ShortDeliveries =>
@@ -79,7 +80,8 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             head.Lines.Select(l => new ShortDeliveryLineDto(l.RequestLineId, l.MaterialReceiptLineId, l.MaterialId,
                 l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Quantity, l.ReplenishQty,
                 done.GetValueOrDefault(l.RequestLineId))).ToList(),
-            head.ExpectedDeliveryCount, deliveredCount, head.TargetDate, head.TargetDateTo));
+            head.ExpectedDeliveryCount, deliveredCount, head.TargetDate, head.TargetDateTo,
+            await _schedule.GetAsync(DeliveryOwner.Request, requestId, ct)));
     }
 
     public Task<Result> ResolveAsync(int requestId, ResolveShortDeliveryDto dto, int employeeId, CancellationToken ct) =>
@@ -104,36 +106,28 @@ public sealed class ShortDeliveryService : IShortDeliveryService
     private async Task<Result> ReplenishAsync(Request request, ResolveShortDeliveryDto dto, int employeeId,
         CancellationToken ct)
     {
-        var dateError = new[] { dto.ExpectedDeliveryDate, ReplenishDateTo(dto) }.OfType<DateOnly>()
-            .Select(d => DocumentDateRules.CheckExpectedDelivery(d, _clock.Today, null, null)).FirstOrDefault(e => e is not null);
+        var dates = dto.ExpectedDeliveryDates ?? [];
+        var dateError = DocumentDateRules.CheckExpectedDeliveries(dates, _clock.Today, null, null);
         if (dateError is not null) return Result.Failure(ErrorCodes.WarehouseInvalidReference, dateError, ResultKind.Validation);
         var linesError = await ApplyReplenishQtyAsync(request, dto, ct);
         if (linesError is not null) return linesError;
 
         var delivered = await _deliveries.ReplenishCountAsync(request.RequestId, ct);
         request.ExpectedDeliveryCount = (short)(delivered + dto.ExpectedDeliveryCount!.Value);
-        request.TargetDate = dto.ExpectedDeliveryDate;
-        request.TargetDateTo = ReplenishDateTo(dto);
+        (request.TargetDate, request.TargetDateTo) = DeliveryScheduleStore.Summary(dates);
+        await _schedule.ReplaceAsync(DeliveryOwner.Request, request.RequestId, dates, ct);
         request.ShortageResolution = ShortageResolutions.Replenish;
         _audit.Add(new AuditEntry(nameof(Request), request.RequestId, AuditActions.Update, null,
-            new { request.ShortageResolution, request.ExpectedDeliveryCount, request.TargetDate, request.TargetDateTo },
+            new { request.ShortageResolution, request.ExpectedDeliveryCount, DeliveryDates = DocumentDateRules.FormatDates(dates) },
             dto.Note?.Trim()));
         await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
             WarehouseMessages.NotifyReplenishTitle,
             string.Format(WarehouseMessages.NotifyReplenishBody, request.RequestCode, dto.ExpectedDeliveryCount,
-                DeliveryWindow(request.TargetDate, request.TargetDateTo)),
+                DocumentDateRules.FormatDates(dates)),
             null, nameof(Request), request.RequestId), ct);
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.ShortageResolved);
     }
-
-    private static DateOnly? ReplenishDateTo(ResolveShortDeliveryDto dto) =>
-        DocumentDateRules.IsRangeDelivery(dto.ExpectedDeliveryCount) ? dto.ExpectedDeliveryDateTo : null;
-
-    private static string DeliveryWindow(DateOnly? from, DateOnly? to) =>
-        to is { } end
-            ? string.Format(WarehouseMessages.DeliveryWindowRange, from, end)
-            : string.Format(WarehouseMessages.DeliveryWindowSingle, from);
 
     /// <summary>
     /// Số bù đợt này của từng dòng không vượt phần thiếu chưa nhận bù (không nhập số thì mặc định bù đủ phần đó);

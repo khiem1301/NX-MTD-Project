@@ -11,6 +11,8 @@ export type Material = {
   materialType: string;
   category: string;
   unit: string;
+  /** Khổ vải (m); null với phụ liệu (DEV-ALL-102). */
+  widthM: number | null;
   /** Màu NVL (26/10); '' = không phân màu. Cùng loại vải khác màu là hai NVL. */
   color: string;
   status: string;
@@ -26,6 +28,8 @@ export type SaveMaterialPayload = {
   category: string;
   unit: string;
   color?: string;
+  /** Khổ vải (m), bắt buộc với vải, tối đa 3,5 m (DEV-ALL-102). */
+  widthM?: number | null;
 };
 
 export type OrderMaterial = {
@@ -45,6 +49,8 @@ export type OrderMaterial = {
   expectedDeliveryDate?: string | null;
   /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
   expectedDeliveryDateTo?: string | null;
+  /** Danh sách ngày khách giao, mỗi lần giao một ngày (yyyy-MM-dd). */
+  expectedDeliveryDates?: string[];
   receivedCount: number;
   purchaseQty: number | null;
   source: string | null;
@@ -81,6 +87,8 @@ export type OrderCustomerDelivery = {
   deliveryCount: number | null;
   deliveryDate: string | null;
   deliveryDateTo: string | null;
+  /** Mỗi lần khách giao một ngày (yyyy-MM-dd), đúng số lần giao. */
+  deliveryDates?: string[];
   /** Số lần khách đã giao (phiếu khách cấp thường đã xác nhận). */
   receivedCount: number;
   hasCustomerMaterials: boolean;
@@ -88,8 +96,8 @@ export type OrderCustomerDelivery = {
 
 export type SaveOrderCustomerDeliveryPayload = {
   deliveryCount: number;
-  deliveryDate: string;
-  deliveryDateTo: string | null;
+  /** Đúng `deliveryCount` ngày (yyyy-MM-dd), mỗi ngày không trước ngày liền trước. */
+  deliveryDates: string[];
 };
 
 export type MaterialReceiptListItem = {
@@ -187,10 +195,8 @@ export type CreatePurchaseOrderPayload = {
   supplierId: number;
   /** Ngày đặt hàng (yyyy-MM-dd), không sau hôm nay. */
   orderDate: string;
-  /** Ngày nhà cung cấp dự kiến giao (yyyy-MM-dd), không trước ngày đặt, không sau hạn giao của đơn hàng. */
-  expectedDeliveryDate: string;
-  /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
-  expectedDeliveryDateTo?: string | null;
+  /** Mỗi lần giao một ngày (yyyy-MM-dd), đúng số lần giao; không trước ngày đặt, không sau hạn giao của đơn hàng. */
+  expectedDeliveryDates: string[];
   /** Số lần nhà cung cấp dự kiến giao, từ 1 đến 99. */
   expectedDeliveryCount: number;
   note?: string;
@@ -275,16 +281,16 @@ export type ShortDelivery = ShortDeliveryListItem & {
   replenishDeliveryCount?: number;
   expectedDeliveryDate?: string | null;
   expectedDeliveryDateTo?: string | null;
+  expectedDeliveryDates?: string[];
 };
 
 export type ResolveShortDeliveryPayload = {
   resolution: 'REPLENISH' | 'NO_REPLENISH';
   note?: string;
   lines?: { requestLineId: number; replenishQty: number }[];
-  /** Giao bù: số lần dự kiến giao bù đợt này và ngày / khoảng ngày dự kiến (yyyy-MM-dd). */
+  /** Giao bù: số lần dự kiến giao bù đợt này và mỗi lần một ngày dự kiến (yyyy-MM-dd). */
   expectedDeliveryCount?: number;
-  expectedDeliveryDate?: string;
-  expectedDeliveryDateTo?: string | null;
+  expectedDeliveryDates?: string[];
 };
 
 export type ShortDeliveryQuery = PageParams & { awaitingReplenish?: boolean };
@@ -456,6 +462,7 @@ export type IncomingCustomerMaterial = {
   expectedDeliveryDate?: string | null;
   /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
   expectedDeliveryDateTo?: string | null;
+  expectedDeliveryDates?: string[];
   receivedCount: number;
 };
 
@@ -470,6 +477,7 @@ export type IncomingSupplierMaterial = {
   expectedDeliveryDate?: string | null;
   /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
   expectedDeliveryDateTo?: string | null;
+  expectedDeliveryDates?: string[];
   receivedCount: number;
   purchaseOrderLineId: number;
   materialCode: string;

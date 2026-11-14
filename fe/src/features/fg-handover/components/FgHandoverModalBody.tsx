@@ -18,6 +18,7 @@ import type { FgHandover, FgHandoverLine } from '../types';
 import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
+import { maxQtyRule } from '@/utils/qtyLimit';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
@@ -139,10 +140,13 @@ export function FgHandoverModalBody({
                 canReceive ? (
                   <Form.Item
                     name={['counts', String(l.fgHandoverLineId), 'confirmedQty']}
-                    noStyle
-                    rules={[{ required: true, message: MESSAGES.common.required }]}
+                    style={{ marginBottom: 0 }}
+                    rules={[
+                      { required: true, message: MESSAGES.common.required },
+                      maxQtyRule(l.handedQty),
+                    ]}
                   >
-                    <QtyInput min={0} max={l.handedQty} />
+                    <QtyInput min={0} />
                   </Form.Item>
                 ) : (
                   (l.confirmedQty ?? '—')

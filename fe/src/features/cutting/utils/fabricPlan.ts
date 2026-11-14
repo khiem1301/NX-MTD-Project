@@ -8,9 +8,15 @@ export const ratioLabel = (use: FabricMarkerUse) =>
     .map((r) => fill(LABELS.ratioPart, r.sizeCode, r.piecesPerPly))
     .join(LABELS.listSeparator);
 
-/** "1A (1S, 2M, 1L) × 10 lớp". */
+/** "1A (1S, 2M, 1L) × 10 lớp"; vải rộng gấp k lần bìa: "1A (2M) × 2 bìa song song × 8 lớp" (DEV-ALL-105). */
 export const markerUseLabel = (use: FabricMarkerUse) =>
-  fill(LABELS.markerUse, use.markerCode, ratioLabel(use), use.plies);
+  fill(
+    (use.across ?? 1) > 1 ? LABELS.markerUseAcross : LABELS.markerUse,
+    use.markerCode,
+    ratioLabel(use),
+    use.plies,
+    use.across ?? 1,
+  );
 
 /** "Nhóm bìa 1: 1A (1S, 2M, 1L) × 10 lớp, 1B (4M) × 2 lớp (dư 16)"; cắt lẻ / cắt bù ghi riêng; chưa chắc tối ưu thì ghi chú. */
 export const planLabel = (plan: FabricMarkerPlan) => {

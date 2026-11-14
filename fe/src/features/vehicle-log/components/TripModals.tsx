@@ -1,4 +1,5 @@
-import { Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { MAX_PAGE_SIZE } from '@/constants/pagination';
@@ -81,12 +82,7 @@ export function TripStartModal({ open, onClose }: { open: boolean; onClose: () =
           <Input maxLength={300} />
         </Form.Item>
         <Form.Item name="odometerStart" label={VL_LABELS.odometerStart} rules={required}>
-          <InputNumber
-            min={0}
-            max={VEHICLE_LIMITS.maxOdometer}
-            precision={0}
-            style={{ width: 200 }}
-          />
+          <QtyInput min={0} max={VEHICLE_LIMITS.maxOdometer} style={{ width: 200 }} />
         </Form.Item>
       </Form>
     </Modal>

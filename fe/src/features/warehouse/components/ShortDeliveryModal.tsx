@@ -41,6 +41,8 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
   // Đơn được trả về sau khi giao bù chưa đủ: số bù đợt này tính trên phần chưa nhận bù.
   const unreplenished = (l: ShortDeliveryLine) => Math.max(0, l.shortfallQty - l.replenishedQty);
   const replenishOf = (l: ShortDeliveryLine) => overrides[l.requestLineId] ?? unreplenished(l);
+  // Số bù vượt phần còn thiếu đã báo lỗi ở dòng; còn dòng vượt thì không cho chọn giao bù.
+  const hasOver = (d?.lines ?? []).some((l) => replenishOf(l) > unreplenished(l));
 
   const columns = shortDeliveryColumns({
     canEditReplenish: unresolved && isManager,
@@ -99,6 +101,7 @@ export function ShortDeliveryModal({ requestId, onClose }: ShortDeliveryModalPro
                 <Button
                   type="primary"
                   loading={resolve.isPending}
+                  disabled={hasOver}
                   onClick={() => void submitReplenish()}
                 >
                   {LABELS.replenish}

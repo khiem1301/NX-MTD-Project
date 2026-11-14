@@ -1,15 +1,12 @@
 import { useMemo, useState } from 'react';
-import { EditOutlined } from '@ant-design/icons';
-import { Alert, Input, Select, Space, Tag, Typography, type TableColumnsType } from 'antd';
+import { Alert, Input, Select, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { DataTable } from '@/components/common/DataTable';
-import { IconAction } from '@/components/common/IconAction';
 import { OrderLinePicker } from '@/components/common/OrderLinePicker';
 import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
-import { MESSAGES } from '@/constants/messages';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamMemberLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
@@ -23,6 +20,7 @@ import {
   type DailyState,
   type DailyWorker,
 } from '../utils/dailyBoard';
+import { dailyBoardColumns } from './dailyBoardColumns';
 import { DailyWorkerModal } from './DailyWorkerModal';
 
 /**
@@ -66,39 +64,7 @@ export function DailyAllocationBoard({ canEdit }: { canEdit: boolean }) {
   const lines = orderLines.data ?? [];
   const operations = (board.data?.operations ?? []).filter((o) => o.orderLineId === orderLineId);
 
-  const columns: TableColumnsType<DailyWorker> = [
-    {
-      title: PM_LABELS.worker,
-      key: 'worker',
-      render: (_, w) => <Typography.Text strong>{w.label}</Typography.Text>,
-    },
-    {
-      title: PM_LABELS.operationCount,
-      key: 'operationCount',
-      width: 130,
-      align: 'center',
-      render: (_, w) => (
-        <Tag color={w.operationCount === 0 ? 'orange' : 'default'} style={{ marginInlineEnd: 0 }}>
-          {w.operationCount}
-        </Tag>
-      ),
-    },
-    { title: PM_LABELS.carried, dataIndex: 'carriedQty', width: 140, align: 'right' },
-    { title: PM_LABELS.allocated, dataIndex: 'allocatedQty', width: 140, align: 'right' },
-    { title: PM_LABELS.output, dataIndex: 'outputQty', width: 100, align: 'right' },
-    { title: PM_LABELS.remaining, dataIndex: 'remainingQty', width: 130, align: 'right' },
-    {
-      title: MESSAGES.common.actions,
-      key: 'actions',
-      render: (_, w) => (
-        <IconAction
-          title={PM_LABELS.giveWork}
-          icon={<EditOutlined />}
-          onClick={() => setEditingId(w.workerId)}
-        />
-      ),
-    },
-  ];
+  const columns = dailyBoardColumns(setEditingId);
 
   return (
     <Space direction="vertical" size={12} style={{ width: '100%' }}>

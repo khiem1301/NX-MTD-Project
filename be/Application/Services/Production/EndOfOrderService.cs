@@ -9,8 +9,10 @@ namespace NX_MTD.Application.Services;
 
 /// <summary>
 /// Kết thúc đơn của một tổ may (chỉ đánh giá khi đến cuối đơn, không theo ngày / tháng):
-/// 1) so sản lượng công nhân báo ở công đoạn cuối với số QC đạt + hàng hủy; phần lệch ghi thẳng thành phiếu hàng hỏng
-///    (lý do OTHER, ghi chú "Lệch kiểm cuối đơn") gắn với từng công nhân theo tỉ lệ sản lượng đã báo;
+/// 1) với MỌI công đoạn, so sản lượng công nhân báo ở từng dòng đơn với QC đạt + hàng hủy (mỗi sản phẩm qua mỗi công đoạn đúng một
+///    lần nên một công đoạn không thể có nhiều hơn mức đó); dòng nào báo nhiều hơn là LỆCH. Hệ thống KHÔNG tự ghi phiếu hay trừ
+///    lương (DEV-ALL-107): chỉ cảnh báo trong màn kết thúc đơn và thông báo tóm tắt Quản đốc, tổ trưởng; chi tiết (công đoạn, dòng
+///    đơn, những ai đã báo và sản lượng) xem ở cửa sổ chi tiết, để xác minh rồi ghi phiếu lỗi cho đúng người nếu cần;
 /// 2) chốt KPI (đạt / không đạt theo số QC đạt cả đơn) và đóng chỉ tiêu;
 /// 3) KPI không đạt: báo Quản đốc và tổ trưởng kèm % thiếu — thiếu không quá ngưỡng thì nên tăng ca, thiếu nhiều hơn thì
 ///    tổ trưởng quyết định (DB 29/10 không còn loại đơn tăng ca nên chỉ thông báo, không tạo đơn).
@@ -19,27 +21,34 @@ public sealed class EndOfOrderService : IEndOfOrderService
 {
     public const int DefaultThresholdPct = 10;
 
+    /// <summary>Thông báo lệch chỉ nêu tối đa số công đoạn lệch nhiều nhất này, còn lại ghi "và N công đoạn khác".</summary>
+    public const int MaxOperationsInNote = 3;
+
+    /// <summary>Mỗi công đoạn trong thông báo chỉ nêu tối đa số người báo nhiều nhất này, còn lại ghi "và N người khác".</summary>
+    public const int MaxWorkersInNote = 2;
+
+    /// <summary>Notification.Message tối đa 1000 ký tự (cột NVARCHAR(1000)); số công đoạn / người đã bị chặn nên chỉ cắt khi tên dài bất thường.</summary>
+    private const int MaxNotificationLength = 1000;
+
+    // Link của thông báo "KPI không đạt": Quản đốc mở màn chỉ tiêu KPI, tổ trưởng / tổ phó về trang chủ (khung KPI của tổ).
+    private const string ManagerKpiLink = "/kpi/targets";
+    private const string TeamLeaderKpiLink = "/";
+
     private readonly IUnitOfWork _uow;
-    private readonly ProductionGuard _guard;
-    private readonly IPieceRateService _rates;
     private readonly INotificationService _notifier;
     private readonly IAuditLogService _audit;
     private readonly ISystemSettingReader _settings;
-    private readonly ICurrentUser _user;
-    private readonly IClock _clock;
 
-    public EndOfOrderService(IUnitOfWork uow, ProductionGuard guard, IPieceRateService rates,
-        INotificationService notifier, IAuditLogService audit, ISystemSettingReader settings, ICurrentUser user, IClock clock)
+    public EndOfOrderService(IUnitOfWork uow, INotificationService notifier, IAuditLogService audit, ISystemSettingReader settings)
     {
-        _uow = uow; _guard = guard; _rates = rates; _notifier = notifier; _audit = audit;
-        _settings = settings; _user = user; _clock = clock;
+        _uow = uow; _notifier = notifier; _audit = audit; _settings = settings;
     }
 
-    public async Task<Result<EndOfOrderPreviewDto>> PreviewAsync(int kpiTargetId, CancellationToken ct)
+    public async Task<Result<EndOfOrderPreviewDto>> PreviewAsync(int kpiTargetId, int? teamId, CancellationToken ct)
     {
         var target = await FindTargetAsync(kpiTargetId, ct);
-        if (target is null) return Fail.NotFound<EndOfOrderPreviewDto>();
-        return Result<EndOfOrderPreviewDto>.Success((await BuildAsync(target, ct)).Preview);
+        if (target is null || (teamId is not null && target.SewingTeamId != teamId)) return Fail.NotFound<EndOfOrderPreviewDto>();
+        return Result<EndOfOrderPreviewDto>.Success(await BuildAsync(target, ct));
     }
 
     public async Task<Result<EndOfOrderPreviewDto>> FinishAsync(int kpiTargetId, CancellationToken ct)
@@ -50,25 +59,21 @@ public sealed class EndOfOrderService : IEndOfOrderService
         if (target.Status != KpiStatuses.Active)
             return Result<EndOfOrderPreviewDto>.Failure(ErrorCodes.KpiInvalidStatus, Messages.KpiInvalidStatusForFinish);
 
-        var built = await BuildAsync(target, ct);
-        if (built.Preview.Blockers.Count > 0)
-            return Result<EndOfOrderPreviewDto>.Failure(ErrorCodes.KpiFinishBlocked, string.Join(" ", built.Preview.Blockers));
-
-        var today = _clock.Today;
-        var now = _clock.Now;
-        var preview = built.Preview;
+        var preview = await BuildAsync(target, ct);
+        if (preview.Blockers.Count > 0)
+            return Result<EndOfOrderPreviewDto>.Failure(ErrorCodes.KpiFinishBlocked, string.Join(" ", preview.Blockers));
 
         var result = await _uow.InTransactionAsync(async () =>
         {
-            var created = await CreateMismatchDefectsAsync(target, built, today, now, ct);
-            AuditAndNotifyMismatches(target, created);
-
             var before = new { target.Status, target.Result };
             target.Result = preview.Achieved ? KpiResults.Achieved : KpiResults.NotAchieved;
             target.Status = KpiStatuses.Closed;
             _audit.Add(new AuditEntry(nameof(KpiTarget), target.KpiTargetId, AuditActions.Update, before,
-                new { target.Status, target.Result, ActualQty = preview.ActualQty, MismatchRecords = created.Count }, "Kết thúc đơn của tổ"));
+                new { target.Status, target.Result, ActualQty = preview.ActualQty, MismatchOperations = preview.Operations.Count },
+                "Kết thúc đơn của tổ"));
 
+            if (preview.Operations.Count > 0)
+                await NotifyMismatchAsync(target, preview, ct);
             if (preview.OtDecision != OvertimeDecisions.None)
                 await NotifyShortfallAsync(target, preview, ct);
 
@@ -79,60 +84,15 @@ public sealed class EndOfOrderService : IEndOfOrderService
         return Result<EndOfOrderPreviewDto>.Success(preview, Messages.KpiFinished);
     }
 
-    /// <summary>Ghi phiếu hàng hủy (Scrap) cho phần lệch kiểm cuối đơn của từng công nhân ở công đoạn cuối.</summary>
-    private async Task<List<DefectRecord>> CreateMismatchDefectsAsync(KpiTarget target, Built built, DateOnly today,
-        DateTime now, CancellationToken ct)
-    {
-        var created = new List<DefectRecord>();
-        if (built.FinalOperation is { } finalOp && built.RateId is { } rateId)
-        {
-            var seq = await NextSequenceAsync(target.SewingTeam.TeamCode, today, ct);
-            foreach (var row in built.Preview.Rows.Where(r => r.MismatchQty > 0))
-            {
-                var defect = new DefectRecord
-                {
-                    DefectCode = $"{target.SewingTeam.TeamCode}-{today:yyMMdd}-{seq++:000}", WorkDate = today, ShiftCode = null,
-                    SewingTeamId = target.SewingTeamId, OrderLineId = row.OrderLineId, OperationId = finalOp.OperationId,
-                    ResponsibleWorkerId = row.WorkerId, DefectType = DefectTypes.Scrap, Quantity = row.MismatchQty,
-                    DefectReasonCode = DefectReasons.Other,
-                    ReasonNote = $"Lệch kiểm cuối đơn {target.Order.OrderCode}: sản lượng báo ở công đoạn cuối nhiều hơn số QC đạt và hàng hủy.",
-                    PieceRateId = rateId, WorkerNotifiedAt = now, EditDeadline = ProductionGuard.NextWorkingDayEnd(today),
-                    Status = DefectStatuses.Recorded, RecordedBy = _user.EmployeeId, RecordedAt = now,
-                };
-                await _uow.Repository<DefectRecord>().AddAsync(defect);
-                created.Add(defect);
-            }
-            if (created.Count > 0) await _uow.SaveChangesAsync();   // lấy DefectRecordId cho nhật ký / thông báo
-        }
-        return created;
-    }
-
-    private void AuditAndNotifyMismatches(KpiTarget target, List<DefectRecord> created)
-    {
-        foreach (var d in created)
-        {
-            _audit.Add(new AuditEntry(nameof(DefectRecord), d.DefectRecordId, AuditActions.Insert, null,
-                new { d.DefectCode, d.ResponsibleWorkerId, d.Quantity, d.DefectReasonCode }, "Kiểm cuối đơn"));
-            _notifier.NotifyEmployees([d.ResponsibleWorkerId], new NotificationMessage(NotificationSources.Production,
-                Messages.NotifyDefectTitle,
-                $"Kiểm cuối đơn {target.Order.OrderCode}: {d.Quantity} sản phẩm báo ở công đoạn cuối chưa có QC đạt, ghi hàng hủy (trừ lương).",
-                null, nameof(DefectRecord), d.DefectRecordId));
-        }
-    }
-
     // ---------- Tính toán ----------
 
     private async Task<KpiTarget?> FindTargetAsync(int id, CancellationToken ct) =>
         await _uow.Repository<KpiTarget>().Query().AsNoTracking().Include(k => k.Order).Include(k => k.Product).Include(k => k.SewingTeam)
             .FirstOrDefaultAsync(k => k.KpiTargetId == id, ct);
 
-    private sealed record Built(EndOfOrderPreviewDto Preview, Operation? FinalOperation, int? RateId);
-
-    private async Task<Built> BuildAsync(KpiTarget target, CancellationToken ct)
+    private async Task<EndOfOrderPreviewDto> BuildAsync(KpiTarget target, CancellationToken ct)
     {
-        var blockers = new List<string>();
         var threshold = await _settings.GetIntAsync(SettingKeys.KpiOtAutoThresholdPct, DefaultThresholdPct, ct);
-        var today = _clock.Today;
 
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Include(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
             .Where(l => l.OrderId == target.OrderId && l.ProductId == target.ProductId).ToListAsync(ct);
@@ -140,28 +100,16 @@ public sealed class EndOfOrderService : IEndOfOrderService
 
         var (qcByLine, scrapByLine) = await LoadQcAndScrapAsync(target, lineIds, ct);
         var actual = qcByLine.Values.Sum() - await QcOfOtherTargetsAsync(target, lineIds, ct);
-
-        var finalOp = await _uow.Repository<Operation>().Query().AsNoTracking()
-            .FirstOrDefaultAsync(o => o.ProductId == target.ProductId && o.IsFinalStep && o.Status == OperationStatuses.Active, ct);
-        var rows = new List<EndOfOrderRowDto>();
-        int? rateId = null;
-        if (finalOp is null)
-            blockers.Add(Messages.KpiFinishNoFinalOperation);
-        else
-        {
-            rows = await BuildMismatchRowsAsync(target, finalOp, lines, qcByLine, scrapByLine, ct);
-            if (rows.Any(r => r.MismatchQty > 0)) rateId = await CheckRateAndPeriodAsync(finalOp, blockers, ct);
-        }
+        var operations = await BuildMismatchAsync(target, lines, qcByLine, scrapByLine, ct);
 
         var achieved = actual >= target.TargetFinishedQty;
         var shortfall = Math.Max(0, target.TargetFinishedQty - actual);
         var pct = target.TargetFinishedQty > 0 ? Math.Round(100m * shortfall / target.TargetFinishedQty, 2) : 0m;
         var ot = achieved ? OvertimeDecisions.None : pct <= threshold ? OvertimeDecisions.AutoApproved : OvertimeDecisions.LeaderDecides;
 
-        var preview = new EndOfOrderPreviewDto(target.KpiTargetId, target.Order.OrderCode, target.Product.ProductCode,
+        return new EndOfOrderPreviewDto(target.KpiTargetId, target.Order.OrderCode, target.Product.ProductCode,
             target.SewingTeam.TeamName, target.TargetFinishedQty, actual, achieved, shortfall, pct, threshold, ot,
-            finalOp?.OperationName, rows, blockers, target.Status == KpiStatuses.Active);
-        return new Built(preview, finalOp, rateId);
+            operations, [], target.Status == KpiStatuses.Active);
     }
 
     /// <summary>QC đạt nằm trong kỳ của các chỉ tiêu khác cùng đơn + mã hàng + tổ: đã thuộc về chỉ tiêu đó, không tính lặp vào chỉ tiêu này.</summary>
@@ -197,75 +145,95 @@ public sealed class EndOfOrderService : IEndOfOrderService
         return (qcByLine, scrapByLine);
     }
 
-    /// <summary>Số lệch kiểm cuối đơn của từng công nhân theo dòng đơn: sản lượng báo ở công đoạn cuối − QC đạt − hàng hủy, chia theo tỉ lệ sản lượng.</summary>
-    private async Task<List<EndOfOrderRowDto>> BuildMismatchRowsAsync(KpiTarget target, Operation finalOp,
-        List<OrderLine> lines, Dictionary<int, int> qcByLine, Dictionary<int, int> scrapByLine, CancellationToken ct)
+    /// <summary>
+    /// Các công đoạn có lệch. Với mỗi (công đoạn, dòng đơn): lệch = sản lượng tổ báo − QC đạt − hàng hủy; &gt; 0 thì dòng đó lệch và
+    /// kèm những công nhân đã báo công đoạn đó (sản lượng giảm dần). Hệ thống không biết ai báo dư nên không chia lệch cho từng người.
+    /// Công đoạn xếp theo tổng lệch giảm dần, dòng đơn trong công đoạn cũng vậy.
+    /// </summary>
+    private async Task<List<EndOfOrderOperationDto>> BuildMismatchAsync(KpiTarget target, List<OrderLine> lines,
+        Dictionary<int, int> qcByLine, Dictionary<int, int> scrapByLine, CancellationToken ct)
     {
-        var lineIds = lines.Select(l => l.OrderLineId).ToList();
-        var rows = new List<EndOfOrderRowDto>();
+        var lineById = lines.ToDictionary(l => l.OrderLineId);
         var reported = await _uow.Repository<OutputRecord>().Query().AsNoTracking()
-            .Where(o => o.SewingTeamId == target.SewingTeamId && o.OperationId == finalOp.OperationId && lineIds.Contains(o.OrderLineId))
-            .GroupBy(o => new { o.OrderLineId, o.WorkerId })
-            .Select(g => new { g.Key.OrderLineId, g.Key.WorkerId, Qty = g.Sum(o => o.Quantity) })
+            .Where(o => o.SewingTeamId == target.SewingTeamId && lineById.Keys.Contains(o.OrderLineId))
+            .GroupBy(o => new { o.OperationId, o.OrderLineId, o.WorkerId })
+            .Select(g => new { g.Key.OperationId, g.Key.OrderLineId, g.Key.WorkerId, Qty = g.Sum(o => o.Quantity) })
             .ToListAsync(ct);
+        reported = reported.Where(r => r.Qty > 0).ToList();
+        if (reported.Count == 0) return [];
+
+        var operationIds = reported.Select(r => r.OperationId).Distinct().ToList();
+        var operations = await _uow.Repository<Operation>().Query().AsNoTracking()
+            .Where(o => operationIds.Contains(o.OperationId)).ToDictionaryAsync(o => o.OperationId, ct);
+        var workerIds = reported.Select(r => r.WorkerId).Distinct().ToList();
         var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
-            .Where(e => reported.Select(r => r.WorkerId).Distinct().Contains(e.EmployeeId))
-            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName }).ToListAsync(ct);
+            .Where(e => workerIds.Contains(e.EmployeeId))
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName }).ToDictionaryAsync(e => e.EmployeeId, ct);
 
-        foreach (var line in lines.OrderBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode))
+        var result = new List<EndOfOrderOperationDto>();
+        foreach (var byOperation in reported.GroupBy(r => r.OperationId))
         {
-            var perWorker = reported.Where(r => r.OrderLineId == line.OrderLineId && r.Qty > 0).OrderBy(r => r.WorkerId).ToList();
-            var totalReported = perWorker.Sum(r => r.Qty);
-            var diff = Math.Max(0, totalReported - qcByLine.GetValueOrDefault(line.OrderLineId) - scrapByLine.GetValueOrDefault(line.OrderLineId));
-            foreach (var (r, qty) in perWorker.Zip(Distribute(diff, perWorker.Select(r => r.Qty).ToList())))
+            var mismatchLines = new List<EndOfOrderLineDto>();
+            foreach (var byLine in byOperation.GroupBy(r => r.OrderLineId))
             {
-                var w = workers.First(x => x.EmployeeId == r.WorkerId);
-                rows.Add(new EndOfOrderRowDto(line.OrderLineId, line.ProductVariant.ProductColor.Color, line.ProductVariant.SizeCode,
-                    r.WorkerId, w.EmployeeCode, w.FullName, r.Qty, qty));
+                var total = byLine.Sum(r => r.Qty);
+                var qc = qcByLine.GetValueOrDefault(byLine.Key);
+                var scrap = scrapByLine.GetValueOrDefault(byLine.Key);
+                var diff = total - qc - scrap;
+                if (diff <= 0) continue;
+
+                var line = lineById[byLine.Key];
+                var people = byLine.OrderByDescending(r => r.Qty).ThenBy(r => workers[r.WorkerId].EmployeeCode)
+                    .Select(r => new EndOfOrderWorkerDto(r.WorkerId, workers[r.WorkerId].EmployeeCode, workers[r.WorkerId].FullName, r.Qty))
+                    .ToList();
+                mismatchLines.Add(new EndOfOrderLineDto(line.OrderLineId, line.ProductVariant.ProductColor.Color,
+                    line.ProductVariant.SizeCode, total, qc, scrap, diff, people));
             }
+            if (mismatchLines.Count == 0) continue;
+
+            var op = operations[byOperation.Key];
+            var sorted = mismatchLines.OrderByDescending(l => l.MismatchQty).ThenBy(l => l.Color).ThenBy(l => l.SizeCode).ToList();
+            result.Add(new EndOfOrderOperationDto(op.OperationId, op.OperationCode, op.OperationName, sorted.Sum(l => l.MismatchQty), sorted));
         }
-        return rows;
+        return result.OrderByDescending(o => o.MismatchQty).ThenBy(o => o.OperationCode).ToList();
     }
 
-    /// <summary>Có lệch phải ghi Scrap: cần đơn giá duyệt cho công đoạn cuối và kỳ chưa khóa, nếu không thêm vào blockers. Trả về Id đơn giá.</summary>
-    private async Task<int?> CheckRateAndPeriodAsync(Operation finalOp, List<string> blockers, CancellationToken ct)
+    // ---------- Thông báo ----------
+
+    /// <summary>
+    /// Có công đoạn lệch: báo Quản đốc và tổ trưởng của tổ bản TÓM TẮT có độ dài bị chặn — tối đa <see cref="MaxOperationsInNote"/> công
+    /// đoạn lệch nhiều nhất, mỗi công đoạn tối đa <see cref="MaxWorkersInNote"/> người báo nhiều nhất kèm sản lượng; phần còn lại
+    /// xem ở cửa sổ chi tiết mở NGAY TẠI CHỖ khi bấm thông báo (không chuyển trang): thông báo mang RefTable / RefId thay cho link.
+    /// </summary>
+    private async Task NotifyMismatchAsync(KpiTarget target, EndOfOrderPreviewDto preview, CancellationToken ct)
     {
-        var today = _clock.Today;
-        int? rateId = null;
-        var rate = await _rates.FindEffectiveAsync(finalOp.OperationId, today, ct);
-        if (rate is null)
-            blockers.Add(string.Format(Messages.PieceRateNotApproved, finalOp.OperationCode, today.ToString("dd/MM/yyyy")));
-        else rateId = rate.PieceRateId;
-        if (await _guard.IsPeriodLockedAsync(today, ct)) blockers.Add(_guard.PeriodLockedFailure(today).Message ?? string.Empty);
-        return rateId;
+        var message = MismatchSummary(preview);
+        var title = Messages.NotifyEndOfOrderMismatchTitle;
+        var note = new NotificationMessage(NotificationSources.Production, title, message, null,
+            NotificationRefs.KpiMismatch, target.KpiTargetId);
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager, note, ct);
+        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId, note, ct);
     }
 
-    /// <summary>Chia <paramref name="total"/> theo tỉ lệ <paramref name="weights"/> thành số nguyên (phần dư chia cho phần lẻ lớn nhất).</summary>
-    public static IReadOnlyList<int> Distribute(int total, IReadOnlyList<int> weights)
+    private static string MismatchSummary(EndOfOrderPreviewDto preview)
     {
-        var result = new int[weights.Count];
-        var sum = weights.Sum();
-        if (total <= 0 || sum <= 0) return result;
-        var remainders = new (int Index, long Rem)[weights.Count];
-        var given = 0;
-        for (var i = 0; i < weights.Count; i++)
+        var shown = preview.Operations.Take(MaxOperationsInNote).Select(op =>
         {
-            var scaled = (long)total * weights[i];
-            result[i] = (int)(scaled / sum);
-            given += result[i];
-            remainders[i] = (i, scaled % sum);
-        }
-        foreach (var (index, _) in remainders.OrderByDescending(r => r.Rem).ThenBy(r => r.Index).Take(total - given))
-            result[index]++;
-        return result;
-    }
+            var byWorker = op.Lines.SelectMany(l => l.Workers).GroupBy(w => w.WorkerId)
+                .Select(g => new { g.First().WorkerCode, g.First().WorkerName, Qty = g.Sum(w => w.ReportedQty) })
+                .OrderByDescending(w => w.Qty).ThenBy(w => w.WorkerCode).ToList();
+            var names = string.Join(", ", byWorker.Take(MaxWorkersInNote).Select(w => $"{w.WorkerCode} {w.WorkerName} {w.Qty}"));
+            var more = byWorker.Count - MaxWorkersInNote;
+            var moreText = more > 0 ? $" và {more} người khác" : string.Empty;
+            return $"• {op.OperationName}: lệch {op.MismatchQty} ({op.Lines.Count} dòng đơn) — {names}{moreText}";
+        });
+        var rest = preview.Operations.Count - MaxOperationsInNote;
+        var restText = rest > 0 ? $"\nvà {rest} công đoạn khác." : string.Empty;
 
-    private async Task<int> NextSequenceAsync(string teamCode, DateOnly date, CancellationToken ct)
-    {
-        var prefix = $"{teamCode}-{date:yyMMdd}-";
-        var codes = await _uow.Repository<DefectRecord>().Query().AsNoTracking().Where(d => d.DefectCode.StartsWith(prefix))
-            .Select(d => d.DefectCode).ToListAsync(ct);
-        return codes.Select(c => int.TryParse(c[prefix.Length..], out var n) ? n : 0).DefaultIfEmpty(0).Max() + 1;
+        var message = $"Đơn {preview.OrderCode} · {preview.ProductCode} · {preview.TeamName}: sản lượng báo nhiều hơn QC đạt + hàng hủy " +
+                      $"ở {preview.Operations.Count} công đoạn.\n{string.Join("\n", shown)}{restText}\n" +
+                      "Bấm để xem chi tiết. Hệ thống không tự trừ lương, hãy xác minh rồi ghi phiếu lỗi cho đúng người nếu cần.";
+        return message.Length > MaxNotificationLength ? message[..(MaxNotificationLength - 1)] + "…" : message;
     }
 
     /// <summary>KPI không đạt: báo Quản đốc và tổ trưởng của tổ (không còn đơn tăng ca trong DB).</summary>
@@ -275,8 +243,10 @@ public sealed class EndOfOrderService : IEndOfOrderService
         var message = $"KPI đơn {preview.OrderCode} mã hàng {preview.ProductCode} của {preview.TeamName} chưa đạt: {preview.ActualQty}/{preview.TargetQty} " +
                       $"(thiếu {preview.ShortfallQty}, {preview.ShortfallPct:0.##}%). " +
                       (small ? $"Thiếu không quá {preview.ThresholdPct}%: nên tăng ca để bù." : "Thiếu nhiều: tổ trưởng quyết định có tăng ca hay không.");
-        var note = new NotificationMessage(NotificationSources.Production, "KPI không đạt khi kết thúc đơn", message, "/kpi");
-        await _notifier.NotifyRoleAsync(RoleCodes.Manager, note, ct);
-        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId, note, ct);
+        const string title = "KPI không đạt khi kết thúc đơn";
+        await _notifier.NotifyRoleAsync(RoleCodes.Manager,
+            new NotificationMessage(NotificationSources.Production, title, message, ManagerKpiLink), ct);
+        await _notifier.NotifyTeamLeadersAsync(target.SewingTeamId,
+            new NotificationMessage(NotificationSources.Production, title, message, TeamLeaderKpiLink), ct);
     }
 }

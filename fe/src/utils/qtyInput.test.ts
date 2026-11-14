@@ -1,4 +1,4 @@
-import { formatQtyTyping, formatQtyValue, parseQtyInput } from './qtyInput';
+import { formatQtyTyping, formatQtyValue, maxIntDigits, parseQtyInput } from './qtyInput';
 
 describe('ô số lượng', () => {
   it('hiển thị giá trị đã lưu với dấu chấm ngăn nghìn, dấu phẩy phần lẻ', () => {
@@ -22,21 +22,21 @@ describe('ô số lượng', () => {
     expect(parseQtyInput(undefined, 0, Infinity)).toBe('');
   });
 
-  it('vượt trần thì thành đúng số cao nhất', () => {
-    expect(parseQtyInput('1.000.001', 0, 1_000_000)).toBe('1000000');
-    expect(parseQtyInput('99999999', 0, 1_000_000)).toBe('1000000');
-    expect(parseQtyInput('1.000.000', 0, 1_000_000)).toBe('1000000');
-    expect(parseQtyInput('13', 3, 12.5)).toBe('12.5');
+  it('cho vượt trần nhưng cắt chữ số thừa so với số chữ số của trần', () => {
+    expect(maxIntDigits(1_000_000)).toBe(7);
+    expect(parseQtyInput('2.000.000', 0, 7)).toBe('2000000');
+    expect(parseQtyInput('99999999', 0, 7)).toBe('9999999');
+    expect(parseQtyInput('13,5', 3, 2)).toBe('13.5');
   });
 
-  it('định dạng ngay khi gõ: thêm dấu chấm, giữ dấu phẩy vừa gõ, vượt trần thì hiện trần', () => {
+  it('định dạng ngay khi gõ: thêm dấu chấm, giữ dấu phẩy vừa gõ, cắt chữ số thừa', () => {
     expect(formatQtyTyping('1234567', 0, Infinity)).toBe('1.234.567');
     expect(formatQtyTyping('1.2345', 0, Infinity)).toBe('12.345');
     expect(formatQtyTyping('1234,', 3, Infinity)).toBe('1.234,');
     expect(formatQtyTyping('1234,5', 3, Infinity)).toBe('1.234,5');
     expect(formatQtyTyping('1234,', 0, Infinity)).toBe('1.234');
-    expect(formatQtyTyping('2.000.000', 0, 1_000_000)).toBe('1.000.000');
-    expect(formatQtyTyping('20,', 3, 12.5)).toBe('12,5');
+    expect(formatQtyTyping('20.000.000', 0, 7)).toBe('2.000.000');
+    expect(formatQtyTyping('201,', 3, 2)).toBe('20,');
     expect(formatQtyTyping('', 0, Infinity)).toBe('');
   });
 });

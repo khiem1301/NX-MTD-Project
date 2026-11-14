@@ -28,11 +28,12 @@ public class IncomingMaterialTests
     private readonly List<ProductComponentMaterial> _norms = [];
     private readonly List<RequestLine> _requestLines = [];
     private readonly List<MaterialReceipt> _receipts = [];
+    private readonly List<DeliveryScheduleDate> _schedule = [];
 
     public IncomingMaterialTests()
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_poLines); Setup(_receiptLines); Setup(_materials); Setup(_orderLines);
-        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms); Setup(_requestLines); Setup(_receipts);
+        Setup(_omDeliveries); Setup(_poDeliveries); Setup(_norms); Setup(_requestLines); Setup(_receipts); Setup(_schedule);
         _materials.Add(Mat());
         _uow.Repository<OrderMaterial>().AddAsync(Arg.Do<OrderMaterial>(om => { om.OrderMaterialId = 99; om.Material = _materials[0]; _orderMaterials.Add(om); })).Returns(Task.CompletedTask);
     }

@@ -51,7 +51,10 @@ public sealed record WorkAllocationQuery : PageQuery
 /// trước khi bắt đầu may; dòng không có cờ này là công đoạn tổ trưởng thêm ngoài phân công.
 /// </summary>
 /// <param name="CarriedQty">Phần các ngày trước chưa làm hết, chuyển sang ngày này (DEV-ALL-64: cuối ngày không thu hồi).</param>
-/// <param name="AllocatedQty">Số lần giao thêm của ngày (giao − thu hồi). Trần sản lượng của ngày = tồn từ hôm trước + số này.</param>
+/// <param name="AllocatedQty">Số lần giao thêm của ngày (giao − thu hồi), gồm cả phần đang chờ công nhân xác nhận. Trần sản lượng của
+/// ngày = tồn từ hôm trước + phần đã xác nhận (AllocatedQty − PendingQty).</param>
+/// <param name="PendingQty">Phần giao của ngày đang chờ công nhân xác nhận (DEV-ALL-100); chưa tính vào trần sản lượng.</param>
+/// <param name="Components">Thành phần (chi tiết vải) của mã hàng mà công đoạn làm trên đó (OperationComponent).</param>
 /// <param name="OutputQty">Sản lượng cuối ca đã báo của ngày.</param>
 /// <param name="RemainingQty">Phần chưa làm hết tính cả tồn từ hôm trước (đã chặn theo số công nhân còn giữ), chuyển sang hôm sau.</param>
 /// <param name="UnallocatedQty">Số lần còn giao được của công đoạn × dòng đơn trên toàn tổ.</param>
@@ -60,7 +63,11 @@ public sealed record DailyAllocationRowDto(
     int WorkerId, string WorkerCode, string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color,
     string SizeCode, int OperationId, string OperationCode, string OperationName, string? GroupName, bool IsAssigned,
     int CarriedQty, int AllocatedQty, int OutputQty, int RemainingQty, int UnallocatedQty, int PreviousQty,
-    decimal? UnitRate = null, bool RateApproved = false);
+    decimal? UnitRate = null, bool RateApproved = false, int PendingQty = 0,
+    IReadOnlyList<OperationComponentRefDto>? Components = null);
+
+/// <summary>Một thành phần (chi tiết vải) công đoạn làm trên đó; chỉ hiển thị tên, không kèm số chi tiết.</summary>
+public sealed record OperationComponentRefDto(int ProductComponentId, string ComponentName);
 
 public sealed record DailyAllocationBoardDto(DateOnly WorkDate, IReadOnlyList<DailyAllocationRowDto> Rows);
 

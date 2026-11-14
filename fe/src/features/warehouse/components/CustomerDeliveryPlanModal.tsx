@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
-import { Form, InputNumber, Modal, Space, Typography } from 'antd';
-import dayjs, { type Dayjs } from 'dayjs';
+import { Form, Modal, Space, Typography } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
+import type { Dayjs } from 'dayjs';
 import { DeliveryDateFields } from '@/components/common/DeliveryDateFields';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
-import { deliveryDateTo } from '@/utils/expectedDelivery';
-import { toApiDate, toApiDateOrNull } from '@/utils/format';
+import { toDeliveryDateValues, toDeliveryDatesPayload } from '@/utils/expectedDelivery';
 import { LABELS } from '../constants';
 import { useSaveCustomerDelivery } from '../hooks/useOrderMaterials';
 import type { OrderCustomerDelivery } from '../types';
@@ -13,8 +13,7 @@ import { MAX_DELIVERY_COUNT } from '../utils/orderMaterialRules';
 
 type FormValues = {
   deliveryCount: number;
-  expectedDeliveryDate: Dayjs;
-  expectedDeliveryDateTo?: Dayjs | null;
+  expectedDeliveryDates?: (Dayjs | null)[];
 };
 
 type CustomerDeliveryPlanModalProps = {
@@ -23,9 +22,7 @@ type CustomerDeliveryPlanModalProps = {
   onClose: () => void;
 };
 
-const toDayjs = (value: string | null) => (value ? dayjs(value) : undefined);
-
-/** Khai / sửa lịch khách giao NVL của cả đơn: số lần, ngày (giao từ 2 lần: khoảng ngày) — DEV-ALL-95. */
+/** Khai / sửa lịch khách giao NVL của cả đơn: số lần và mỗi lần một ngày — DEV-ALL-95. */
 export function CustomerDeliveryPlanModal({ open, plan, onClose }: CustomerDeliveryPlanModalProps) {
   const [form] = Form.useForm<FormValues>();
   const save = useSaveCustomerDelivery(plan.orderId);
@@ -36,8 +33,11 @@ export function CustomerDeliveryPlanModal({ open, plan, onClose }: CustomerDeliv
     form.resetFields();
     form.setFieldsValue({
       deliveryCount: plan.deliveryCount ?? 1,
-      expectedDeliveryDate: toDayjs(plan.deliveryDate),
-      expectedDeliveryDateTo: toDayjs(plan.deliveryDateTo),
+      expectedDeliveryDates: toDeliveryDateValues(
+        plan.deliveryDates,
+        plan.deliveryDate,
+        plan.deliveryDateTo,
+      ),
     });
   }, [open, plan, form]);
 
@@ -45,10 +45,7 @@ export function CustomerDeliveryPlanModal({ open, plan, onClose }: CustomerDeliv
     save.mutate(
       {
         deliveryCount: values.deliveryCount,
-        deliveryDate: toApiDate(values.expectedDeliveryDate),
-        deliveryDateTo: toApiDateOrNull(
-          deliveryDateTo(values.deliveryCount, values.expectedDeliveryDateTo),
-        ),
+        deliveryDates: toDeliveryDatesPayload(values.deliveryCount, values.expectedDeliveryDates),
       },
       { onSuccess: onClose },
     );
@@ -80,7 +77,7 @@ export function CustomerDeliveryPlanModal({ open, plan, onClose }: CustomerDeliv
               },
             ]}
           >
-            <InputNumber min={1} max={MAX_DELIVERY_COUNT} precision={0} style={{ width: 170 }} />
+            <QtyInput min={1} max={MAX_DELIVERY_COUNT} style={{ width: 170 }} />
           </Form.Item>
           <DeliveryDateFields
             count={count}

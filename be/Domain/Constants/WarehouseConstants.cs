@@ -33,6 +33,12 @@ public static class MaterialTypes
     public const string Fabric = "FABRIC";
     public const string Trim = "TRIM";
 
+    /// <summary>NVL phế phẩm (vải vụn, kim gãy…): chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (DEV-ALL-112).</summary>
+    public const string Scrap = "SCRAP";
+
+    /// <summary>Phế phẩm tính theo đơn vị này thì được lẻ tối đa 3 chữ số sau dấu phẩy; đơn vị khác (cái…) là số nguyên.</summary>
+    public const string ScrapDecimalUnit = "kg";
+
     /// <summary>Vải luôn tính theo mét, không chọn đơn vị khác (DEV-ALL-46).</summary>
     public const string FabricUnit = "m";
 
@@ -43,6 +49,7 @@ public static class MaterialTypes
         {
             [Fabric] = new[] { "MAIN_FABRIC", "LINING", "INTERLINING", "RIB" },
             [Trim] = new[] { "THREAD", "ZIPPER", "BUTTON", "SNAP", "ELASTIC", "TAPE", "LABEL", "HANG_TAG", "PADDING", "PACKAGING", "OTHER" },
+            [Scrap] = new[] { "SCRAP_FABRIC", "SCRAP_NEEDLE", "SCRAP_OTHER" },
         };
 
     public static bool IsValidCategory(string materialType, string category) =>
@@ -207,8 +214,14 @@ public static class ConfirmModes
     public const string OnBehalf = "ON_BEHALF";
     /// <summary>Tổ trưởng giao việc theo ngày: phiếu ghi xong là CONFIRMED, không chờ công nhân.</summary>
     public const string Leader = "LEADER";
-    /// <summary>Hệ thống tự thu hồi phần chưa làm hết cuối ngày.</summary>
+    /// <summary>Hệ thống tự xác nhận phiếu giao quá hạn chờ công nhân (DEV-ALL-101); trước đây dùng cho tự thu hồi cuối ngày.</summary>
     public const string System = "SYSTEM";
+}
+
+/// <summary>DEV-ALL-101: phiếu giao việc chờ công nhân xác nhận quá số phút này (tính từ lúc ghi) thì hệ thống tự xác nhận đủ số.</summary>
+public static class AllocationAutoConfirmWindow
+{
+    public const int Minutes = 60;
 }
 
 /// <summary>
@@ -258,6 +271,13 @@ public static class PurchaseOrderStatuses
 {
     public const string PendingFinalisation = "PENDING_FINALISATION";
     public const string Unpaid = "UNPAID";
+}
+
+/// <summary>DEV-ALL-102: khổ vải (Material.WidthM) và khổ bìa (ProductMarker.WidthM), mét: lớn hơn 0, tối đa 3,5 m, 2 số lẻ (DECIMAL(4,2)).</summary>
+public static class WidthLimits
+{
+    public const decimal MaxM = 3.5m;
+    public const int Decimals = 2;
 }
 
 /// <summary>Số lần giao dự kiến (NVL khách cấp, đơn mua, giao bù): từ 1 đến <see cref="MaxCount"/>.</summary>

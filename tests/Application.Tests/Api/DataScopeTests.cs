@@ -63,7 +63,7 @@ public class DataScopeTests
             .Returns(Result<PagedResult<KpiTargetDto>>.Success(new PagedResult<KpiTargetDto>(Array.Empty<KpiTargetDto>(), 1, 10, 0)));
         var user = Substitute.For<ICurrentUser>();
         user.TeamId.Returns(3);
-        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(kpi, user)
+        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(kpi, Substitute.For<IEndOfOrderService>(), user)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -71,6 +71,24 @@ public class DataScopeTests
         await controller.GetPaged(new KpiTargetQuery { SewingTeamId = 99 }, default);
 
         await kpi.Received(1).GetPagedAsync(Arg.Is<KpiTargetQuery>(q => q.SewingTeamId == 3), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Team_leader_finish_result_is_scoped_to_the_team_from_token()
+    {
+        var endOfOrder = Substitute.For<IEndOfOrderService>();
+        endOfOrder.PreviewAsync(Arg.Any<int>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
+            .Returns(Fail.NotFound<EndOfOrderPreviewDto>());
+        var user = Substitute.For<ICurrentUser>();
+        user.TeamId.Returns(3);
+        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(Substitute.For<IKpiService>(), endOfOrder, user)
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
+        };
+
+        await controller.FinishResult(7, default);
+
+        await endOfOrder.Received(1).PreviewAsync(7, 3, Arg.Any<CancellationToken>());
     }
 
     [Fact]

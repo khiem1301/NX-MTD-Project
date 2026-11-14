@@ -104,6 +104,13 @@ public static class NotificationPushStatuses
     public const string Skipped = "SKIPPED";
 }
 
+/// <summary>Notification.RefTable cho thông báo mà bấm vào mở cửa sổ chi tiết tại chỗ (không chuyển trang); RefId là id đối tượng.</summary>
+public static class NotificationRefs
+{
+    /// <summary>Lệch kiểm cuối đơn của tổ: RefId = KpiTargetId (DEV-ALL-107).</summary>
+    public const string KpiMismatch = "KpiMismatch";
+}
+
 public static class NotificationSources
 {
     public const string Announcement = "ANNOUNCEMENT";

@@ -56,10 +56,9 @@ public sealed class PlacePurchaseOrderDtoValidator : AbstractValidator<PlacePurc
     {
         RuleFor(x => x.SupplierId).GreaterThan(0).WithMessage(Messages.Required("nhà cung cấp"));
         RuleFor(x => x.ExpectedDeliveryCount).GreaterThanOrEqualTo((short)1).WithMessage(Messages.PurchaseOrderDeliveryCountInvalid);
-        RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired);
-        RuleFor(x => x.ExpectedDeliveryDateTo)
-            .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to) is null)
-            .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to));
+        RuleFor(x => x.ExpectedDeliveryDates).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired)
+            .Must((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates) is null)
+            .WithMessage((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates));
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new PlacePurchaseLineDtoValidator());

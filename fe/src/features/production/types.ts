@@ -347,8 +347,6 @@ export type DefectStatus = 'Recorded' | 'Confirmed' | 'Cancelled';
 export type DefectReason =
   'SkippedStitch' | 'CrookedSeam' | 'WrongSize' | 'Torn' | 'Stained' | 'Other';
 
-export type DefectObjectionFilter = 'Pending' | 'Resolved' | 'None';
-
 export type Defect = {
   defectRecordId: number;
   defectCode: string;
@@ -369,8 +367,6 @@ export type Defect = {
   reasonNote: string | null;
   scrapUnitRate: number | null;
   workerNotifiedAt: string | null;
-  workerObjection: string | null;
-  objectedAt: string | null;
   editDeadline: string;
   status: DefectStatus;
   recordedAt: string;
@@ -382,7 +378,7 @@ export type Defect = {
   replacementRequestCode: string | null;
   replacementRequestStatus: string | null;
   sewingTeamName: string;
-  /** Lần cập nhật gần nhất; sau khi chấp nhận hoặc hủy phiếu chính là giờ của thao tác đó. */
+  /** Lần cập nhật gần nhất (sửa hoặc hủy phiếu). */
   updatedAt: string | null;
 };
 
@@ -396,7 +392,6 @@ export type DefectQuery = Pick<PageParams, 'page' | 'pageSize'> & {
   sewingTeamId?: number;
   status?: DefectStatus;
   defectType?: DefectType;
-  objection?: DefectObjectionFilter;
 };
 
 /** Bộ lọc danh sách phiếu hàng hỏng (không gồm số trang). */
@@ -414,6 +409,11 @@ export type CreateDefectPayload = {
   reasonNote?: string;
 };
 
-export type CancelDefectPayload = { reason?: string; rowVer: string };
-export type ObjectDefectPayload = { objection: string; rowVer: string };
-export type ConfirmDefectPayload = { note?: string; rowVer: string };
+/** Lý do hủy bắt buộc với mọi vai trò. */
+export type CancelDefectPayload = { reason: string; rowVer: string };
+
+/** Sửa phiếu: không đổi ngày và dòng đơn. Quản đốc phải nhập lý do sửa. */
+export type UpdateDefectPayload = Omit<CreateDefectPayload, 'workDate' | 'orderLineId'> & {
+  reason?: string;
+  rowVer: string;
+};

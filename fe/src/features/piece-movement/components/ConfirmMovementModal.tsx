@@ -2,6 +2,7 @@ import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Descriptions, Form, Input, Modal } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { QtyInput } from '@/components/common/QtyInput';
+import { maxQtyRule } from '@/utils/qtyLimit';
 import { MOVEMENT_TYPE_LABEL, PM_LABELS, PM_MESSAGES } from '../constants';
 import { useConfirmByWorker, useConfirmOnBehalf } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
@@ -32,15 +33,26 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
       confirmedQty: values.confirmedQty,
       discrepancyReason: values.discrepancyReason?.trim() || undefined,
     };
-    if (onBehalf)
-      behalf.mutate(
-        {
-          id: movement.workAllocationId,
-          body: { ...base, onBehalfReason: (values.onBehalfReason ?? '').trim() },
-        },
-        { onSuccess: onClose },
-      );
-    else byWorker.mutate({ id: movement.workAllocationId, body: base }, { onSuccess: onClose });
+    if (!onBehalf) {
+      byWorker.mutate({ id: movement.workAllocationId, body: base }, { onSuccess: onClose });
+      return;
+    }
+    // Xác nhận hộ là ngoại lệ (công nhân lẽ ra tự xác nhận): cảnh báo trước khi gửi.
+    Modal.confirm({
+      title: PM_LABELS.onBehalfWarnTitle,
+      content: PM_LABELS.onBehalfWarnContent,
+      okText: PM_LABELS.onBehalfWarnOk,
+      cancelText: MESSAGES.common.cancel,
+      okButtonProps: { danger: true },
+      onOk: () =>
+        behalf.mutate(
+          {
+            id: movement.workAllocationId,
+            body: { ...base, onBehalfReason: (values.onBehalfReason ?? '').trim() },
+          },
+          { onSuccess: onClose },
+        ),
+    });
   };
 
   return (
@@ -80,9 +92,12 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
           <Form.Item
             name="confirmedQty"
             label={PM_LABELS.confirmedQty}
-            rules={[{ required: true, message: MESSAGES.common.required }]}
+            rules={[
+              { required: true, message: MESSAGES.common.required },
+              maxQtyRule(movement.quantity),
+            ]}
           >
-            <QtyInput min={1} max={movement.quantity} />
+            <QtyInput min={1} />
           </Form.Item>
           <Form.Item
             name="discrepancyReason"

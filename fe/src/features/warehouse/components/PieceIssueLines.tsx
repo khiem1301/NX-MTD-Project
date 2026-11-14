@@ -118,14 +118,14 @@ export function PieceIssueLines({ orderId, requested }: PieceIssueLinesProps) {
                   />
                 </Form.Item>
               ),
-              renderQty: (field, rule, max, _unit, limitRules) => (
+              renderQty: (field, rule, _unit, limitRules) => (
                 <Form.Item
                   name={[field.name, 'issuedQty']}
                   rules={[...required, ...limitRules]}
                   dependencies={[['lines', field.name, 'pieceKey']]}
                   style={LINE_ITEM}
                 >
-                  <QtyInput min={rule.min} max={max} style={{ width: '100%' }} />
+                  <QtyInput min={rule.min} max={rule.max} style={{ width: '100%' }} />
                 </Form.Item>
               ),
             })}

@@ -50,15 +50,15 @@ public sealed record PurchaseOrderFlowDto(
     string? RejectReason, string? PaymentReturnReason, DateOnly? PaymentDate, decimal? PaidAmount,
     string? PaymentMethod, string? PaymentNote, decimal TotalAmount, DateTime CreatedAt,
     byte[] RowVer, IReadOnlyList<PurchaseOrderLineDto> Lines, PurchaseOrderPermissionsDto Permissions,
-    IReadOnlyList<AuditLogDto> History, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    IReadOnlyList<AuditLogDto> History, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
+    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 /// <summary>Đặt hàng phải gửi đủ mọi dòng của đơn: số lượng và đơn giá chốt lần cuối (sau đó khóa — GBR-18).</summary>
 public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
 
 public sealed record PlacePurchaseOrderDto(
     int SupplierId, DateOnly OrderDate, short ExpectedDeliveryCount, string? Note,
-    IReadOnlyList<PlacePurchaseLineDto> Lines, byte[] RowVer, DateOnly? ExpectedDeliveryDate = null,
-    DateOnly? ExpectedDeliveryDateTo = null);
+    IReadOnlyList<PlacePurchaseLineDto> Lines, byte[] RowVer, IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 /// <summary>Lý do ngừng hợp tác với nhà cung cấp (không bắt buộc, ghi vào nhật ký nếu có).</summary>
 public sealed record DiscontinueSupplierDto(string? Reason);

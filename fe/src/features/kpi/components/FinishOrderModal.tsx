@@ -1,44 +1,26 @@
-import { Alert, Descriptions, Modal, Spin, Tag, type TableColumnsType } from 'antd';
+import { Alert, Descriptions, Modal, Spin, Tag } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
 import { useFinishKpiTarget, useFinishPreview } from '../hooks/useKpi';
-import type { EndOfOrderRow, KpiTarget } from '../types';
+import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
-import { DataTable } from '@/components/common/DataTable';
+import { MismatchDetail } from './MismatchDetail';
 
 type Props = { target: KpiTarget | null; onClose: () => void };
 
 const text = KPI_TEXT.finish;
 
 /**
- * Kết thúc đơn của tổ (Quản đốc): xem trước lệch kiểm cuối đơn theo công nhân, kết quả KPI và gợi ý tăng ca (chỉ thông báo, không tạo đơn),
- * rồi xác nhận. Phần lệch được ghi thẳng thành phiếu hàng hỏng (trừ lương) gắn với từng công nhân.
+ * Kết thúc đơn của tổ (Quản đốc): xem trước kết quả KPI, gợi ý tăng ca (chỉ thông báo, không tạo đơn) và cảnh báo lệch kiểm cuối đơn theo
+ * công đoạn → dòng đơn → công nhân đã báo (sản lượng của họ). Hệ thống không tự trừ lương, chỉ thông báo Quản đốc và tổ trưởng để xác
+ * minh (DEV-ALL-107).
  */
 export function FinishOrderModal({ target, onClose }: Props) {
   const preview = useFinishPreview(target?.kpiTargetId ?? null);
   const finish = useFinishKpiTarget();
   const data = preview.data;
-  const mismatchTotal = (data?.rows ?? []).reduce((sum, r) => sum + r.mismatchQty, 0);
-
-  const columns: TableColumnsType<EndOfOrderRow> = [
-    { title: text.worker, key: 'worker', render: (_, r) => `${r.workerCode} - ${r.workerName}` },
-    { title: text.line, key: 'line', render: (_, r) => `${r.color} - ${r.sizeCode}` },
-    {
-      title: text.reported,
-      dataIndex: 'reportedQty',
-      align: 'right',
-      render: (v: number) => formatQty(v),
-    },
-    {
-      title: text.mismatch,
-      dataIndex: 'mismatchQty',
-      align: 'right',
-      render: (v: number) =>
-        v > 0 ? <Tag color="red">{formatQty(v)}</Tag> : <Tag color="green">0</Tag>,
-    },
-  ];
 
   const otMessage =
     data?.otDecision === 'AutoApproved'
@@ -83,19 +65,7 @@ export function FinishOrderModal({ target, onClose }: Props) {
           {data.blockers.map((b) => (
             <Alert key={b} type="error" showIcon message={b} style={{ marginBottom: 12 }} />
           ))}
-          <DataTable<EndOfOrderRow>
-            rowKey={(r) => `${r.orderLineId}-${r.workerId}`}
-            size="small"
-            pagination={false}
-            columns={columns}
-            dataSource={data.rows}
-            locale={{ emptyText: text.noOutput }}
-            title={() =>
-              mismatchTotal > 0
-                ? text.mismatchTitle.replace('{n}', formatQty(mismatchTotal))
-                : text.noMismatch
-            }
-          />
+          <MismatchDetail operations={data.operations} emptyText={text.noMismatch} />
         </>
       )}
     </Modal>

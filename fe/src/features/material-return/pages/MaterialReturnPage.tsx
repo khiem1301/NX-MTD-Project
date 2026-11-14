@@ -11,7 +11,7 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDateTime, formatQty } from '@/utils/format';
 import { ReturnCreateModal } from '../components/ReturnCreateModal';
 import { ReturnModal } from '../components/ReturnModal';
-import { RETURN_LABELS, RETURN_STATUS_LABEL } from '../constants';
+import { RETURN_KIND_LABEL, RETURN_LABELS, RETURN_STATUS_LABEL } from '../constants';
 import { useMaterialReturns } from '../hooks/useMaterialReturn';
 import type { MaterialReturnListItem } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
@@ -26,7 +26,7 @@ const STATUS_OPTIONS = Object.entries(RETURN_STATUS_LABEL).map(([value, l]) => (
   label: l.text,
 }));
 
-/** UC42: tổ cắt trả vải thừa theo phiếu cấp gốc; Thủ kho đếm và nhận vào kho NVL. */
+/** UC42: tổ cắt, tổ may trả NVL / phế phẩm / BTP về kho; Thủ kho đếm và nhận vào kho. */
 export function MaterialReturnPage() {
   const table = useTableQuery<Filters>({});
   const returns = useMaterialReturns(table.params);
@@ -38,9 +38,22 @@ export function MaterialReturnPage() {
       title: RETURN_LABELS.code,
       dataIndex: 'returnCode',
     },
-    { title: RETURN_LABELS.issue, dataIndex: 'issueCode' },
-    { title: RETURN_LABELS.order, dataIndex: 'orderCode' },
-    { title: RETURN_LABELS.team, dataIndex: 'cuttingTeamName' },
+    {
+      title: RETURN_LABELS.kind,
+      dataIndex: 'warehouseType',
+      render: (v: string) => RETURN_KIND_LABEL[v],
+    },
+    { title: RETURN_LABELS.team, dataIndex: 'teamName' },
+    {
+      title: RETURN_LABELS.order,
+      key: 'order',
+      render: (_, r) => r.orderCode ?? '—',
+    },
+    {
+      title: RETURN_LABELS.workOrder,
+      key: 'workOrder',
+      render: (_, r) => r.workOrderCode ?? '—',
+    },
     {
       title: RETURN_LABELS.totalQty,
       dataIndex: 'totalReturnedQty',

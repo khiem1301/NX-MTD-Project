@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, ConfigProvider, Input, InputNumber, Select, Typography } from 'antd';
+import { Alert, Button, ConfigProvider, Input, Select, Typography } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import { newKey, patchRow, type ComponentRow } from '../utils/productSpec';
@@ -72,11 +73,10 @@ export function SpecComponentsTab({
               title: text.pieces,
               width: 140,
               render: (_, r) => (
-                <InputNumber
+                <QtyInput
                   size="small"
                   min={1}
                   max={99}
-                  precision={0}
                   value={r.piecesPerGarment}
                   onChange={(v) => patchRow(setComponents, r.key, { piecesPerGarment: v ?? 1 })}
                 />

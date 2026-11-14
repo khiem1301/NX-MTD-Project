@@ -50,6 +50,9 @@ export const kpiApi = {
   saveDailyPlan: (kpiTargetId: number, body: SaveKpiDailyPlanPayload) =>
     put<KpiCalendar>(API.kpi.dailyPlan(kpiTargetId), body),
 
+  /** Tổ trưởng / tổ phó xem kết quả kết thúc đơn của tổ mình (chỉ xem). */
+  finishResult: (kpiTargetId: number) => get<EndOfOrderPreview>(API.kpi.finishResult(kpiTargetId)),
+
   finishPreview: (kpiTargetId: number) =>
     get<EndOfOrderPreview>(API.kpi.finishPreview(kpiTargetId)),
 

@@ -244,11 +244,21 @@ export type OrderMarker = {
   markerNo: number;
   markerCode: string;
   lengthM: number;
+  /** Khổ bìa (m), tối đa 3,5 m (DEV-ALL-102). */
+  widthM: number;
   status: OrderMarkerStatus;
   ratios: MarkerRatio[];
 };
 /** Nhóm bìa đã khai ở mã hàng và các màu của đơn dùng nhóm đó (DEV-ALL-89): bìa của nhóm dùng cho đúng các màu này. */
-export type OrderMarkerGroup = { markerNo: number; colors: string[] };
+/** Vải của nhóm bìa ở các màu của đơn; widthM = khổ vải (m), null khi chưa nhập (DEV-ALL-104). */
+export type MarkerGroupFabric = {
+  materialId: number;
+  materialCode: string;
+  materialName: string;
+  color: string;
+  widthM: number | null;
+};
+export type OrderMarkerGroup = { markerNo: number; colors: string[]; fabrics: MarkerGroupFabric[] };
 /** Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai ở mã hàng (kèm màu dùng nhóm), và các bìa của đơn. */
 export type OrderMarkerProduct = {
   productId: number;

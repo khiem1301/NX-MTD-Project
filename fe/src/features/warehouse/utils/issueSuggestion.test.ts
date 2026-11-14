@@ -16,6 +16,7 @@ const line = (
   color,
   sizeCode: size,
   orderedQty: qty,
+  plannedQty: 0,
 });
 
 describe('suggestFabricQty', () => {

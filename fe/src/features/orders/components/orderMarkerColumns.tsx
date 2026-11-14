@@ -1,11 +1,15 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { Input, InputNumber, Select, type TableColumnsType } from 'antd';
+import { WarningOutlined } from '@ant-design/icons';
+import { Input, Select, Tooltip, type TableColumnsType } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
+import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import type { OrderMarkerGroup, OrderMarkerStatus } from '../types';
 import {
   ORDER_MARKER_LIMITS,
   piecesOf,
+  tooWideWarning,
   withPieces,
   type OrderMarkerRow,
 } from '../utils/orderMarker';
@@ -27,6 +31,7 @@ const WIDTH = {
   group: 180,
   code: 120,
   length: 110,
+  width: 120,
   size: 76,
   status: 130,
   remove: 48,
@@ -38,6 +43,7 @@ export const orderMarkerTableWidth = (sizeCount: number, readOnly: boolean) =>
   WIDTH.group +
   WIDTH.code +
   WIDTH.length +
+  WIDTH.width +
   sizeCount * WIDTH.size +
   WIDTH.status +
   (readOnly ? 0 : WIDTH.remove);
@@ -102,31 +108,60 @@ export const orderMarkerColumns = ({
       key: 'length',
       width: WIDTH.length,
       render: (_, r) => (
-        <InputNumber
+        <QtyInput
           size="small"
           disabled={readOnly}
           aria-label={text.lengthM}
           min={0.01}
           max={ORDER_MARKER_LIMITS.maxLengthM}
-          precision={2}
+          decimals={2}
           value={r.lengthM}
           style={FULL}
           onChange={(lengthM) => patch(r.key, { lengthM })}
         />
       ),
     },
+    {
+      title: text.widthM,
+      key: 'width',
+      width: WIDTH.width,
+      render: (_, r) => {
+        // DEV-ALL-104: bìa rộng hơn khổ vải của nhóm thì cảnh báo ngay khi nhập (không chặn lưu).
+        const warning = tooWideWarning(r, groups);
+        return (
+          // QtyInput không nhận ref nên bọc thẻ div để Tooltip bám vị trí.
+          <Tooltip title={warning || undefined}>
+            <div>
+              <QtyInput
+                size="small"
+                disabled={readOnly}
+                aria-label={text.widthM}
+                aria-description={warning || undefined}
+                status={warning ? 'warning' : undefined}
+                suffix={warning ? <WarningOutlined /> : undefined}
+                min={WIDTH_MIN_M}
+                max={WIDTH_MAX_M}
+                decimals={WIDTH_DECIMALS}
+                value={r.widthM}
+                style={FULL}
+                onChange={(widthM) => patch(r.key, { widthM })}
+              />
+            </div>
+          </Tooltip>
+        );
+      },
+    },
     ...sizes.map((size) => ({
       title: size,
       key: `size-${size}`,
       width: WIDTH.size,
       render: (_: unknown, r: OrderMarkerRow) => (
-        <InputNumber
+        <QtyInput
           size="small"
           disabled={readOnly}
           aria-label={`${text.code} ${r.markerCode} ${size}`}
           min={1}
           max={ORDER_MARKER_LIMITS.maxPiecesPerPly}
-          precision={0}
           value={piecesOf(r, size)}
           style={FULL}
           onChange={(value) => patch(r.key, withPieces(r, size, value))}

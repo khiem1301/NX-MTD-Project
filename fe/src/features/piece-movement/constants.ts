@@ -21,7 +21,7 @@ export const MOVEMENT_STATUS = {
 export const MOVEMENT_STATUS_LABEL: Record<string, StatusLabel> = {
   PENDING: { text: 'Chờ công nhân xác nhận', color: 'gold' },
   CONFIRMED: { text: 'Đã xác nhận', color: 'green' },
-  REJECTED: { text: 'Công nhân từ chối', color: 'red' },
+  REJECTED: { text: 'Từ chối / đã rút lại', color: 'red' },
 };
 
 export const RETRIEVAL_REASON_LABEL: Record<string, string> = {
@@ -36,13 +36,13 @@ export const CONFIRM_MODE_LABEL: Record<string, string> = {
   WORKER: 'Công nhân tự xác nhận',
   ON_BEHALF: 'Tổ trưởng xác nhận hộ',
   LEADER: 'Tổ trưởng giao trực tiếp',
-  SYSTEM: 'Hệ thống tự thu hồi',
+  SYSTEM: 'Hệ thống tự xác nhận',
 };
 
 export const PM_LABELS = {
   leaderTitle: 'Giao sản lượng công đoạn theo ngày',
   leaderSubtitle:
-    'Mỗi ngày lấy sẵn các công đoạn đã phân công cho công nhân, tổ trưởng nhập số lần giao thêm. Phần hôm trước chưa làm hết chuyển sang hôm nay cho chính công nhân đó, không thu hồi. Trần sản lượng cuối ca = tồn từ hôm trước + giao trong ngày. Thêm được công đoạn ngoài phân công.',
+    'Mỗi ngày lấy sẵn các công đoạn đã phân công cho công nhân, tổ trưởng nhập số lần giao thêm; công nhân xác nhận số được giao (tổ trưởng xác nhận hộ được ở tab Phiếu giao / thu hồi). Phần hôm trước chưa làm hết chuyển sang hôm nay cho chính công nhân đó, không thu hồi. Trần sản lượng cuối ca = tồn từ hôm trước + phần giao đã xác nhận. Thêm được công đoạn ngoài phân công.',
   workerTitle: 'Sản lượng công đoạn được giao',
   boardTab: 'Giao theo ngày',
   historyTab: 'Phiếu giao / thu hồi',
@@ -87,12 +87,22 @@ export const PM_LABELS = {
   giveLikePreviousHint: 'Điền lại số của lần giao gần nhất cho các công đoạn đã từng giao',
   workerModalTitle: 'Giao việc: {0}',
   workerModalHint:
-    'Các công đoạn đã phân công cho công nhân được lấy sẵn. Nhập ở dòng nhóm để điền cùng số cho cả nhóm rồi sửa lại từng công đoạn nếu cần. Số 0 là bỏ phần giao thêm của ngày. Phần tồn từ hôm trước vẫn giữ cho công nhân. Số giao không vượt số còn giao được của công đoạn.',
+    'Các công đoạn đã phân công cho công nhân được lấy sẵn. Nhập ở dòng nhóm để điền cùng số cho cả nhóm rồi sửa lại từng công đoạn nếu cần. Số 0 là bỏ phần giao thêm của ngày. Phần tồn từ hôm trước vẫn giữ cho công nhân. Số giao không vượt số còn giao được của công đoạn. Phần giao thêm chờ công nhân xác nhận rồi mới tính vào trần sản lượng; quá 1 giờ công nhân không xác nhận thì hệ thống tự xác nhận đủ số.',
+  workerHint:
+    'Vui lòng xác nhận hoặc từ chối số được giao. Quá 1 giờ kể từ lúc tổ trưởng giao mà bạn chưa xác nhận thì hệ thống tự xác nhận đủ số giao.',
+  components: 'Thành phần',
+  noComponents: 'chưa gắn',
+  pendingConfirm: 'Chờ CN xác nhận {0}',
+  onBehalfWarnTitle: 'Xác nhận hộ công nhân?',
+  onBehalfWarnContent:
+    'Số được giao lẽ ra do công nhân tự xác nhận. Chỉ xác nhận hộ khi công nhân không tự xác nhận được (vắng, không có điện thoại…). Thao tác được ghi lại kèm lý do và không hoàn tác được.',
+  onBehalfWarnOk: 'Vẫn xác nhận hộ',
   groupRow: 'Nhóm {0} ({1} công đoạn)',
   noGroup: 'chưa đặt tên',
   groupInput: 'Số lần giao nhóm {0}',
   groupPlaceholder: 'Cả nhóm',
   groupChanged: 'Đã sửa {0}',
+  groupOver: '{0} vượt số giao được',
   searchOperation: 'Tìm mã, tên công đoạn',
   noMatchOperation: 'Không có công đoạn khớp.',
   operationInput: 'Số lần giao {0}',

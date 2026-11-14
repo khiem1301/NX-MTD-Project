@@ -1,4 +1,5 @@
 import { Form, InputNumber, Modal } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import type { Rule } from 'antd/es/form';
 import { MESSAGES } from '@/constants/messages';
 import { VEHICLE_LIMITS, VL_LABELS, VL_MESSAGES } from '../constants';
@@ -56,10 +57,9 @@ export function TripCompleteModal({
             <InputNumber value={trip.odometerStart} disabled style={{ width: 200 }} />
           </Form.Item>
           <Form.Item name="odometerEnd" label={VL_LABELS.odometerEnd} rules={required}>
-            <InputNumber
+            <QtyInput
               min={trip.odometerStart + 1}
               max={VEHICLE_LIMITS.maxOdometer}
-              precision={0}
               style={{ width: 200 }}
             />
           </Form.Item>
@@ -69,10 +69,10 @@ export function TripCompleteModal({
             dependencies={['fuelCost']}
             rules={[bothOrNeither('fuelCost')]}
           >
-            <InputNumber
+            <QtyInput
               min={0.01}
               max={VEHICLE_LIMITS.maxFuelLiters}
-              precision={2}
+              decimals={2}
               step={0.5}
               style={{ width: 200 }}
             />
@@ -83,13 +83,7 @@ export function TripCompleteModal({
             dependencies={['fuelLiters']}
             rules={[bothOrNeither('fuelLiters')]}
           >
-            <InputNumber
-              min={1}
-              max={VEHICLE_LIMITS.maxFuelCost}
-              precision={0}
-              step={1000}
-              style={{ width: 200 }}
-            />
+            <QtyInput min={1} max={VEHICLE_LIMITS.maxFuelCost} step={1000} style={{ width: 200 }} />
           </Form.Item>
         </Form>
       )}

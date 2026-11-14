@@ -1,13 +1,16 @@
 import type { PageParams } from '@/types/api';
 
+/** Kho nhận hàng trả: NVL / phế phẩm (MATERIAL) hoặc BTP (SEMI_FINISHED). */
+export type ReturnWarehouse = 'MATERIAL' | 'SEMI_FINISHED';
+
 export type MaterialReturnListItem = {
   materialReturnId: number;
   returnCode: string;
-  materialIssueId: number;
-  issueCode: string;
-  orderCode: string;
-  cuttingTeamId: number;
-  cuttingTeamName: string;
+  warehouseType: ReturnWarehouse;
+  teamId: number;
+  teamName: string;
+  orderCode: string | null;
+  workOrderCode: string | null;
   status: string;
   createdAt: string;
   confirmedByName: string | null;
@@ -15,13 +18,16 @@ export type MaterialReturnListItem = {
   totalReturnedQty: number;
 };
 
+/** NVL: itemCode / itemName là mã và tên NVL; BTP: mã hàng và "màu/size" (đơn vị bộ). */
 export type MaterialReturnLine = {
   materialReturnLineId: number;
-  materialIssueLineId: number;
-  materialCode: string;
-  materialName: string;
+  materialId: number | null;
+  orderLineId: number | null;
+  itemCode: string;
+  itemName: string;
   unit: string;
-  materialColor: string;
+  itemColor: string;
+  isScrap: boolean;
   returnedQty: number;
   confirmedQty: number | null;
   discrepancyReason: string | null;
@@ -33,28 +39,37 @@ export type MaterialReturn = Omit<MaterialReturnListItem, 'totalReturnedQty'> & 
   lines: MaterialReturnLine[];
 };
 
+/**
+ * Hàng tổ còn trả được. usedQty: tổ cắt = số mét đã cắt của lệnh (null khi có bàn cắt chưa nhập số mét), tổ may trả BTP = số đã
+ * QC đạt, tổ may trả NVL = null. remainingQty là trần số trả.
+ */
 export type ReturnableLine = {
-  materialIssueId: number;
-  issueCode: string;
-  materialIssueLineId: number;
-  orderCode: string;
-  materialCode: string;
-  materialName: string;
+  materialId: number | null;
+  orderLineId: number | null;
+  itemCode: string;
+  itemName: string;
   unit: string;
-  materialColor: string;
+  itemColor: string;
   receivedQty: number;
+  usedQty: number | null;
   returnedQty: number;
   remainingQty: number;
-  /** Vải còn lại gợi ý trả (đã nhận − đã trả − đã cắt); null khi có bàn cắt chưa nhập chiều dài. */
-  suggestedQty: number | null;
+};
+
+export type ReturnableQuery = {
+  warehouseType: ReturnWarehouse;
+  workOrderId?: number;
+  orderId?: number;
 };
 
 export type MaterialReturnQuery = PageParams & { status?: string };
 
 export type CreateReturnPayload = {
-  materialIssueId: number;
+  warehouseType: ReturnWarehouse;
+  workOrderId?: number;
+  orderId?: number;
   note?: string;
-  lines: { materialIssueLineId: number; returnedQty: number }[];
+  lines: { materialId?: number; orderLineId?: number; returnedQty: number }[];
 };
 
 export type ConfirmReturnPayload = {

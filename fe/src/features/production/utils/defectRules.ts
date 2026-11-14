@@ -1,32 +1,18 @@
 import type { Defect } from '../types';
 
-type DefectLike = Pick<Defect, 'status' | 'workerObjection'>;
+type DefectLike = Pick<Defect, 'status'>;
 
-/** Tình trạng của phiếu: hủy / đã chấp nhận theo Status; còn lại là chờ quyết định (công nhân đã phản đối) hoặc đã ghi. */
-export type DefectState = 'Cancelled' | 'Confirmed' | 'ObjectionPending' | 'Pending';
+/** Tình trạng của phiếu: đã hủy, hoặc còn hiệu lực (đã ghi; phiếu cũ đã "chấp nhận" vẫn tính còn hiệu lực). */
+export type DefectState = 'Cancelled' | 'Active';
 
-/** Công nhân đã phản đối mà Quản đốc chưa quyết định (chấp nhận hay hủy phiếu). */
-export const hasPendingObjection = (d: DefectLike): boolean =>
-  d.status === 'Recorded' && d.workerObjection !== null;
+export const defectStateOf = (d: DefectLike): DefectState =>
+  d.status === 'Cancelled' ? 'Cancelled' : 'Active';
 
-export const defectStateOf = (d: DefectLike): DefectState => {
-  if (d.status === 'Cancelled') return 'Cancelled';
-  if (d.status === 'Confirmed') return 'Confirmed';
-  return hasPendingObjection(d) ? 'ObjectionPending' : 'Pending';
-};
+/** Tổ trưởng chỉ sửa / hủy phiếu trong 24 giờ kể từ lúc lập (khớp DefectEditWindow ở BE). */
+export const DEFECT_EDIT_HOURS = 24;
 
-/** Công nhân chỉ được phản đối trong 48 giờ kể từ lúc phiếu được ghi (khớp DefectObjectionWindow ở BE). */
-export const DEFECT_OBJECTION_HOURS = 48;
-
-/** Còn trong hạn phản đối: tới đúng mốc 48 giờ vẫn được. */
-export const isObjectionOpen = (d: Pick<Defect, 'recordedAt'>, now: Date = new Date()): boolean =>
-  now.getTime() - new Date(d.recordedAt).getTime() <= DEFECT_OBJECTION_HOURS * 3_600_000;
-
-/** Chấp nhận phiếu được khi phiếu còn ở trạng thái đã ghi và công nhân đã phản đối. */
-export const canConfirmDefect = (d: DefectLike): boolean => hasPendingObjection(d);
-
-/** Hủy được khi phiếu còn ở trạng thái đã ghi, và còn hạn (tổ trưởng) hoặc là Quản đốc. */
-export const canCancelDefect = (
-  d: DefectLike & Pick<Defect, 'canEdit'>,
-  isManager: boolean,
-): boolean => d.status === 'Recorded' && (isManager || d.canEdit);
+/**
+ * Sửa / hủy được khi phiếu còn hiệu lực và (còn trong 24 giờ, hoặc là Quản đốc). `canEdit` do BE tính. Các ràng buộc khác (kỳ lương
+ * khóa, đơn đã đóng, đã có đơn cắt bù) chỉ BE biết nên báo lỗi khi thao tác.
+ */
+export const canModifyDefect = (d: Pick<Defect, 'canEdit'>): boolean => d.canEdit;

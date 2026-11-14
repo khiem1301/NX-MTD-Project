@@ -54,20 +54,31 @@ public class DefectValidatorTests
     }
 
     [Fact]
-    public void Cancel_object_and_confirm_need_a_row_version_and_bounded_text()
+    public void Cancel_needs_a_reason_and_a_row_version()
     {
+        new CancelDefectDtoValidator().Validate(new CancelDefectDto("Ghi nhầm", RowVer)).IsValid.Should().BeTrue();
         new CancelDefectDtoValidator().Validate(new CancelDefectDto(new string('a', 500), RowVer)).IsValid.Should().BeTrue();
         new CancelDefectDtoValidator().Validate(new CancelDefectDto(new string('a', 501), RowVer)).IsValid.Should().BeFalse();
-        new CancelDefectDtoValidator().Validate(new CancelDefectDto(null, [])).IsValid.Should().BeFalse();
+        new CancelDefectDtoValidator().Validate(new CancelDefectDto(null, RowVer)).IsValid.Should().BeFalse();
+        new CancelDefectDtoValidator().Validate(new CancelDefectDto("   ", RowVer)).IsValid.Should().BeFalse();
+        new CancelDefectDtoValidator().Validate(new CancelDefectDto("Ghi nhầm", [])).IsValid.Should().BeFalse();
+    }
 
-        new ObjectDefectDtoValidator().Validate(new ObjectDefectDto("Không phải lỗi của em", RowVer)).IsValid.Should().BeTrue();
-        new ObjectDefectDtoValidator().Validate(new ObjectDefectDto("   ", RowVer)).IsValid.Should().BeFalse();
-        new ObjectDefectDtoValidator().Validate(new ObjectDefectDto(new string('a', 501), RowVer)).IsValid.Should().BeFalse();
+    [Fact]
+    public void Update_checks_the_same_fields_as_create_and_needs_a_row_version()
+    {
+        var validator = new UpdateDefectDtoValidator();
+        UpdateDefectDto Update(int qty = 2, string reason = "Torn", string? note = null, byte[]? rowVer = null) =>
+            new("MORNING", 1, 7, "Scrap", qty, reason, note, null, rowVer ?? RowVer);
 
-        new ConfirmDefectDtoValidator().Validate(new ConfirmDefectDto(null, RowVer)).IsValid.Should().BeTrue();
-        new ConfirmDefectDtoValidator().Validate(new ConfirmDefectDto(new string('a', 500), RowVer)).IsValid.Should().BeTrue();
-        new ConfirmDefectDtoValidator().Validate(new ConfirmDefectDto(new string('a', 501), RowVer)).IsValid.Should().BeFalse();
-        new ConfirmDefectDtoValidator().Validate(new ConfirmDefectDto("đúng lỗi", [])).IsValid.Should().BeFalse();
+        validator.Validate(Update()).IsValid.Should().BeTrue();
+        validator.Validate(Update(qty: 0)).IsValid.Should().BeFalse();
+        validator.Validate(Update(reason: "X")).IsValid.Should().BeFalse();
+        validator.Validate(Update(reason: "Other")).IsValid.Should().BeFalse();
+        validator.Validate(Update(reason: "Other", note: "Vải loang")).IsValid.Should().BeTrue();
+        validator.Validate(Update(rowVer: [])).IsValid.Should().BeFalse();
+        validator.Validate(Update() with { DefectType = "X" }).IsValid.Should().BeFalse();
+        validator.Validate(Update() with { Reason = new string('a', 501) }).IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -78,11 +89,10 @@ public class DefectValidatorTests
         validator.Validate(new DefectQuery()).IsValid.Should().BeTrue();
         validator.Validate(new DefectQuery
         {
-            Status = "Confirmed", DefectType = "Scrap", Objection = "Resolved", SewingTeamId = 2,
+            Status = "Confirmed", DefectType = "Scrap", SewingTeamId = 2,
         }).IsValid.Should().BeTrue();
         validator.Validate(new DefectQuery { Status = "X" }).IsValid.Should().BeFalse();
         validator.Validate(new DefectQuery { DefectType = "X" }).IsValid.Should().BeFalse();
-        validator.Validate(new DefectQuery { Objection = "X" }).IsValid.Should().BeFalse();
         validator.Validate(new DefectQuery { SewingTeamId = 0 }).IsValid.Should().BeFalse();
         validator.Validate(new DefectQuery { PageSize = 101 }).IsValid.Should().BeFalse();
     }

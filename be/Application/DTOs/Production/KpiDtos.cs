@@ -46,14 +46,24 @@ public static class OvertimeDecisions
     public const string LeaderDecides = "LeaderDecides";
 }
 
-/// <summary>Một công nhân bị lệch ở một dòng đơn: số báo ở công đoạn cuối và phần lệch (ghi phiếu hàng hỏng nếu &gt; 0).</summary>
-public sealed record EndOfOrderRowDto(int OrderLineId, string Color, string SizeCode, int WorkerId, string WorkerCode,
-    string WorkerName, int ReportedQty, int MismatchQty);
+/// <summary>Công nhân đã báo sản lượng ở một công đoạn của dòng đơn lệch, kèm sản lượng đã báo.</summary>
+public sealed record EndOfOrderWorkerDto(int WorkerId, string WorkerCode, string WorkerName, int ReportedQty);
 
-/// <summary>Xem trước (và kết quả) kết thúc đơn của một tổ: chốt KPI, lệch kiểm cuối đơn theo công nhân, tăng ca.</summary>
+/// <summary>
+/// Dòng đơn lệch ở một công đoạn: sản lượng công nhân báo nhiều hơn QC đạt + hàng hủy (mỗi sản phẩm qua mỗi công đoạn đúng một lần). Hệ thống chỉ
+/// cảnh báo, không tự trừ lương (DEV-ALL-107).
+/// </summary>
+public sealed record EndOfOrderLineDto(int OrderLineId, string Color, string SizeCode, int ReportedQty, int QcQty, int ScrapQty,
+    int MismatchQty, IReadOnlyList<EndOfOrderWorkerDto> Workers);
+
+/// <summary>Công đoạn có lệch: tổng lệch và các dòng đơn lệch (nhiều nhất lên đầu).</summary>
+public sealed record EndOfOrderOperationDto(int OperationId, string OperationCode, string OperationName, int MismatchQty,
+    IReadOnlyList<EndOfOrderLineDto> Lines);
+
+/// <summary>Xem trước (và kết quả) kết thúc đơn của một tổ: chốt KPI, lệch kiểm cuối đơn theo công đoạn (chỉ công đoạn có lệch), tăng ca.</summary>
 public sealed record EndOfOrderPreviewDto(int KpiTargetId, string OrderCode, string ProductCode, string TeamName,
     int TargetQty, int ActualQty, bool Achieved, int ShortfallQty, decimal ShortfallPct, int ThresholdPct, string OtDecision,
-    string? FinalOperationName, IReadOnlyList<EndOfOrderRowDto> Rows, IReadOnlyList<string> Blockers, bool CanFinish);
+    IReadOnlyList<EndOfOrderOperationDto> Operations, IReadOnlyList<string> Blockers, bool CanFinish);
 
 public sealed record KpiTargetQuery : PageQuery
 {

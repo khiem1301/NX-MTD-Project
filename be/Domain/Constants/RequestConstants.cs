@@ -36,6 +36,9 @@ public static class RequestStatuses
     public const string NotCompleted = "NOT_COMPLETED";
     public const string Cancelled = "CANCELLED";
 
+    /// <summary>Đơn đã kết thúc mà không làm gì: không còn ràng buộc phiếu nguồn (VD phiếu hàng hỏng của đơn cắt bù).</summary>
+    public static readonly IReadOnlySet<string> Dead = new HashSet<string> { Rejected, NotCompleted, Cancelled };
+
     /// <summary>Người tạo còn sửa / hủy được.</summary>
     public static readonly IReadOnlySet<string> Pending = new HashSet<string> { PendingApproval, PendingProcessing };
     public static readonly IReadOnlySet<string> Rejectable = new HashSet<string> { PendingApproval, PendingProcessing };

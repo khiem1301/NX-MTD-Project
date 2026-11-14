@@ -15,10 +15,11 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
 {
     private readonly IUnitOfWork _uow;
     private readonly MaterialSupplyUpdater _supply;
+    private readonly DeliveryScheduleStore _schedule;
 
     public IncomingMaterialService(IUnitOfWork uow, MaterialSupplyUpdater supply)
     {
-        _uow = uow; _supply = supply;
+        _uow = uow; _supply = supply; _schedule = new DeliveryScheduleStore(uow);
     }
 
     public async Task<Result<IncomingMaterialsDto>> GetAsync(CancellationToken ct)
@@ -56,12 +57,14 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Where(v => ids.Contains(v.OrderMaterialId))
             .ToDictionaryAsync(v => v.OrderMaterialId, v => v.ReceivedCount, ct);
         var closedShort = await _supply.ClosedWithoutReplenishAsync(ids, ct);
+        var dates = await _schedule.GetManyAsync(DeliveryOwner.CustomerOrder, rows.Select(r => r.OrderId).Distinct().ToArray(), ct);
 
         return rows
             .Select(r => new IncomingCustomerMaterialDto(r.OrderMaterialId, r.OrderId, r.OrderCode, r.MaterialCode, r.MaterialName,
                 r.MaterialColor, r.Unit, r.CustomerQty, received.GetValueOrDefault(r.OrderMaterialId),
                 r.CustomerQty - received.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryCount,
-                counts.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryDate, r.ExpectedDeliveryDateTo))
+                counts.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryDate, r.ExpectedDeliveryDateTo,
+                dates.GetValueOrDefault(r.OrderId)))
             .Where(r => r.OutstandingQty > 0 && !closedShort.Contains(r.OrderMaterialId))
             .OrderBy(r => r.OrderCode).ThenBy(r => r.MaterialCode)
             .ToList();
@@ -132,7 +135,9 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
 
         var ids = rows.Select(r => r.PurchaseOrderLineId).ToArray();
         var received = await ReceivedByLineAsync(ids, ct);
-        var counts = await DeliveryCountsAsync(rows.Select(r => r.PurchaseOrderId).Distinct().ToArray(), ct);
+        var poIds = rows.Select(r => r.PurchaseOrderId).Distinct().ToArray();
+        var counts = await DeliveryCountsAsync(poIds, ct);
+        var dates = await _schedule.GetManyAsync(DeliveryOwner.PurchaseOrder, poIds, ct);
 
         return rows
             .Select(r =>
@@ -142,7 +147,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                     r.ExpectedDeliveryCount, counts.GetValueOrDefault(r.PurchaseOrderId), r.PurchaseOrderLineId,
                     r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
                     r.OrderedQty, got, r.OrderedQty - got - r.NotReplenishedQty, r.GoodsStatus, r.ExpectedDeliveryDate,
-                    r.ExpectedDeliveryDateTo);
+                    r.ExpectedDeliveryDateTo, dates.GetValueOrDefault(r.PurchaseOrderId));
             })
             .Where(r => r.OutstandingQty > 0)
             .OrderBy(r => r.PoCode).ThenBy(r => r.MaterialCode)

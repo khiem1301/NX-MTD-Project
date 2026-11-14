@@ -33,32 +33,34 @@ describe('QtyInput', () => {
     expect(changes.at(-1)).toBe(125_000);
   });
 
-  it('gõ vượt trần thì ô tự thành số cao nhất', async () => {
+  it('gõ vượt trần thì giữ số và cảnh báo, không nhận thêm chữ số', async () => {
     const { input, changes } = setup({ max: 500 });
 
     await userEvent.type(input, '7000');
 
-    expect(input.value).toBe('500');
-    expect(changes.at(-1)).toBe(500);
+    expect(input.value).toBe('700');
+    expect(changes.at(-1)).toBe(700);
+    expect(screen.getByText('Không được vượt quá 500.')).toBeInTheDocument();
   });
 
-  it('dán số vượt trần thì ô thành số cao nhất', async () => {
+  it('dán số dài hơn trần thì cắt chữ số thừa', async () => {
     const { input, changes } = setup();
 
     await userEvent.click(input);
     await userEvent.paste('99.999.999');
 
-    expect(input.value).toBe('1.000.000');
-    expect(changes.at(-1)).toBe(1_000_000);
+    expect(input.value).toBe('9.999.999');
+    expect(changes.at(-1)).toBe(9_999_999);
   });
 
-  it('trần mặc định của hàng chiếc là 1.000.000', async () => {
+  it('trần mặc định 1.000.000: gõ được 2.000.000, không gõ thêm chữ số', async () => {
     const { input, changes } = setup();
 
-    await userEvent.type(input, '9999999');
+    await userEvent.type(input, '20000005');
 
-    expect(input.value).toBe('1.000.000');
-    expect(changes.at(-1)).toBe(1_000_000);
+    expect(input.value).toBe('2.000.000');
+    expect(changes.at(-1)).toBe(2_000_000);
+    expect(screen.getByText('Không được vượt quá 1.000.000.')).toBeInTheDocument();
   });
 
   it('ô NVL nhận phần lẻ sau dấu phẩy', async () => {
@@ -77,6 +79,33 @@ describe('QtyInput', () => {
 
     expect(input.value).toBe('1.234');
     expect(changes.at(-1)).toBe(1234);
+  });
+
+  it('trần nghiệp vụ (limit) không tự cắt số mà báo lỗi dưới ô', async () => {
+    const { input, changes } = setup({ limit: 30 });
+
+    await userEvent.type(input, '45');
+
+    expect(input.value).toBe('45');
+    expect(changes.at(-1)).toBe(45);
+    expect(screen.getByText('Không được vượt quá 30.')).toBeInTheDocument();
+  });
+
+  it('trong trần nghiệp vụ thì không báo lỗi', async () => {
+    const { input } = setup({ limit: 30 });
+
+    await userEvent.type(input, '30');
+
+    expect(screen.queryByText('Không được vượt quá 30.')).not.toBeInTheDocument();
+  });
+
+  it('grouping=false thì không thêm dấu chấm ngăn nghìn', async () => {
+    const { input, changes } = setup({ grouping: false, max: 99_999_999 });
+
+    await userEvent.type(input, '123456');
+
+    expect(input.value).toBe('123456');
+    expect(changes.at(-1)).toBe(123456);
   });
 
   it('hiển thị giá trị có sẵn có dấu chấm', () => {

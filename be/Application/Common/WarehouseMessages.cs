@@ -72,7 +72,6 @@ public static class WarehouseMessages
     public const string LayWorkDateBeforeWorkOrder = "Ngày cắt không được trước ngày lập lệnh cắt ({0}).";
     public const string LayShiftInvalid = "Ca không hợp lệ.";
     public const string LayOrderLineRequired = "Dòng màu - size không hợp lệ.";
-    public const string ReturnIssueRequired = "Vui lòng chọn phiếu cấp.";
     public const string ReturnQtyDecimals = "Số trả tối đa 3 số lẻ.";
     public const string ConfirmedQtyDecimals = "Số kho đếm tối đa 3 số lẻ.";
     public const string FabricCheckShort = "{0}: thiếu khoảng {1} m (cần khoảng {2} m, có {3} m: kho {4}, tổ đang giữ {5}).";
@@ -85,8 +84,12 @@ public static class WarehouseMessages
     public const string FabricCheckNoMarkerGroupLabel = "nhóm bìa cho chi tiết {0}";
     /// <summary>Vải có trong định mức của màu nhưng chưa nằm trên bìa nào, nên chưa cộng được phần vải này.</summary>
     public const string FabricCheckNoMarkerLabel = "bìa cho màu {0}";
+    /// <summary>DEV-ALL-103 / DEV-ALL-104: {0} vải, {1} khổ vải (m), {2} các bìa rộng hơn (đã bỏ khi ghép bìa).</summary>
+    public const string FabricCheckTooNarrow = "{0}: khổ vải {1} m hẹp hơn bìa {2} nên không dùng các bìa này khi ước (vải không đủ rộng để cắt bằng các bìa đó).";
+    public const string FabricCheckNarrowMarkerLabel = "{0} (rộng {1} m)";
+    /// <summary>DEV-ALL-104: {0} khổ vải (m), {1} nhóm bìa, {2} các bìa rộng hơn khổ vải.</summary>
+    public const string FabricCheckNoFittingMarkerLabel = "bìa vừa khổ vải {0} m cho nhóm {1} (bìa {2} rộng hơn khổ vải, vải không đủ rộng để cắt)";
     public const string WorkOrderComponentInvalid = "Chi tiết cắt lẻ phải là chi tiết vải đang dùng trong định mức của đúng màu – size.";
-    public const string PlanExceedsOrder = "Tổng số cắt theo kế hoạch vượt số lượng đặt";
     public const string WorkOrderHasActivity = "Lệnh cắt đã có bàn cắt hoặc phiếu cấp, không thể sửa / hủy.";
     public const string WorkOrderCancelled = "Đã hủy lệnh cắt.";
     public const string WorkOrderStatusInvalid = "Trạng thái lệnh cắt không hợp lệ.";
@@ -97,7 +100,7 @@ public static class WarehouseMessages
     public const string WorkOrderFinishedCutting = "Đã đóng lệnh cắt thiếu, lệnh cắt hoàn thành.";
     public const string WorkOrderNotFinishable = "Chỉ đóng được lệnh đang cắt (đã có bàn cắt).";
     public const string WorkOrderHasPendingHandoverToFinish = "Còn phiếu bàn giao BTP chờ kho xác nhận, chưa đóng lệnh được.";
-    public const string WorkOrderHasPendingReturn = "Còn phiếu trả vải thừa chờ kho xác nhận, chưa đóng lệnh được.";
+    public const string WorkOrderHasPendingReturn = "Còn phiếu trả hàng chờ kho xác nhận, chưa đóng lệnh được.";
     public const string WorkOrderCutNotHandedOver = "Còn BTP đã cắt chưa bàn giao và được kho xác nhận: {0}. Tổ cắt bàn giao hết rồi mới đóng lệnh.";
     public const string WorkOrderFinishShortReasonRequired = "Cắt chưa đủ kế hoạch ({0}/{1}). Nhập lý do cắt thiếu.";
     public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
@@ -114,6 +117,8 @@ public static class WarehouseMessages
     public const string IssueTeamInvalid = "Tổ nhận phải là tổ cắt hoặc tổ may đang hoạt động.";
     public const string IssueTeamMismatch = "Tổ nhận không khớp với lệnh cắt hoặc đơn xin đã chọn.";
     public const string IssueRequestWorkOrderMismatch = "Đơn xin thuộc lệnh cắt khác với lệnh cắt đã chọn.";
+    public const string IssueRequestHasPendingIssue = "Đơn xin đang có phiếu cấp {0} chờ tổ nhận. Chờ tổ xác nhận hoặc từ chối phiếu đó.";
+    public const string IssueRejectedRequestOpen = " — Đơn xin {0} vẫn đang chờ cấp, vui lòng lập lại phiếu cấp.";
     public const string IssueTooManyLines = "Một phiếu cấp có tối đa {0} dòng.";
     public const string IssueMaterialInvalid = "NVL không có trong danh mục hoặc đã ngừng dùng.";
     public const string IssueFabricQtyInvalid = "Vải {0}: số lượng từ 0,01 đến {1:N0}, tối đa 2 chữ số sau dấu phẩy.";
@@ -121,7 +126,6 @@ public static class WarehouseMessages
     public const string IssuePieceQtyInvalid = "Số lượng BTP phải là số nguyên từ 1 đến {0:N0}.";
     public const string IssueMaterialNotInOrder = "NVL không có trong NVL của đơn hàng: {0}.";
     public const string IssueLineNotInRequest = "Dòng cấp không có trong đơn xin đã chọn.";
-    public const string IssueQtyOverRequest = "Số cấp vượt số lượng trong đơn xin (tối đa {0}).";
     public const string WorkOrderRequiredForMaterial = "Cấp NVL cho tổ cắt phải theo lệnh cắt.";
     public const string WorkOrderNotIssuable = "Lệnh cắt không còn mở để cấp vải.";
     public const string MaterialNotInWorkOrder = "Vải (đã gồm màu) không có trong định mức chi tiết vải của các dòng đơn trên bàn cắt.";
@@ -168,6 +172,14 @@ public static class WarehouseMessages
     public const string DailyReasonRequired = "Hạ số giao xuống phải ghi lý do.";
     public const string DailyExceedsUnallocated = "Số giao vượt số lần còn giao được của công đoạn";
     public const string DailyBelowOutput = "Tồn từ hôm trước cộng số giao của ngày không được nhỏ hơn sản lượng công nhân đã báo trong ngày";
+    public const string DailySavedPendingConfirm = "Đã lưu giao việc trong ngày. Phần giao thêm chờ công nhân xác nhận.";
+    public const string DailyNotifyTitle = "Bạn được giao sản lượng công đoạn";
+    public const string DailyNotifyBody = "Tổ trưởng vừa cập nhật sản lượng công đoạn được giao ngày {0:dd/MM/yyyy}, vui lòng kiểm tra và xác nhận.";
+    /// <summary>Lý do ghi trên phiếu giao đang chờ xác nhận khi tổ trưởng hạ số giao xuống trước khi công nhân xác nhận.</summary>
+    public const string DailyPendingWithdrawn = "Tổ trưởng hạ số giao trước khi công nhân xác nhận: {0}";
+    public const string AllocationAutoConfirmedReason = "Quá {0} phút công nhân không xác nhận, hệ thống tự xác nhận đủ số giao.";
+    public const string AllocationAutoConfirmedTitle = "Việc được giao đã tự xác nhận";
+    public const string AllocationAutoConfirmedBody = "Có {0} phiếu giao việc quá {1} phút bạn chưa xác nhận nên hệ thống đã tự xác nhận đủ số giao. Nếu số không đúng, hãy báo tổ trưởng.";
     public const string WorkerNotInTeam = "Công nhân không thuộc tổ của bạn hoặc không còn làm việc.";
     public const string OperationNotOfProduct = "Công đoạn không thuộc mã hàng của dòng đơn.";
     public const string OperationRequired = "Vui lòng chọn công đoạn.";
@@ -187,15 +199,20 @@ public static class WarehouseMessages
     public const string ReplacementRequestNotApproved = "Chỉ lập lệnh cắt bù cho đơn cắt bù đã được duyệt.";
     public const string ReplacementOrderExists = "Đơn cắt bù này đã có lệnh cắt bù.";
     public const string ReplacementLinesMissing = "Đơn cắt bù chưa có dòng chi tiết cần cắt bù hợp lệ.";
-    public const string ReturnIssueNotReturnable = "Chỉ trả vải theo phiếu cấp NVL đã nhận của tổ cắt.";
-    public const string ReturnLineNotInIssue = "Dòng trả không thuộc phiếu cấp đã chọn.";
-    public const string ReturnExceedsIssued = "Số trả vượt số vải đã nhận chưa trả";
-    public const string ReturnPendingExists = "Dòng vải này đã có phiếu trả đang chờ Thủ kho xác nhận, vui lòng đợi xử lý hoặc hủy phiếu cũ trước.";
-    public const string ReturnExceedsLeftover = "Số trả vượt số vải còn thừa theo số đã cắt";
-    public const string ReturnCreated = "Đã lập phiếu trả vải, chờ Thủ kho nhận.";
-    public const string ReturnConfirmed = "Đã nhận vải trả vào kho.";
-    public const string ReturnRejected = "Đã từ chối phiếu trả vải.";
-    public const string ReturnCancelled = "Đã rút phiếu trả vải.";
+    public const string ReturnExceedsIssued = "Số trả vượt số còn trả được (đã nhận trừ đã dùng và đã trả)";
+    public const string ReturnWarehouseNotAllowed = "Tổ cắt chỉ trả NVL; tổ may trả NVL hoặc BTP.";
+    public const string ReturnWorkOrderRequired = "Tổ cắt trả NVL (không phải phế phẩm) phải chọn lệnh cắt.";
+    public const string ReturnWorkOrderInvalid = "Lệnh cắt không thuộc tổ hoặc đã hủy.";
+    public const string ReturnOrderRequired = "Trả BTP phải chọn đơn hàng.";
+    public const string ReturnItemNotReturnable = "Có hàng tổ chưa nhận hoặc không còn gì để trả; tải lại danh sách rồi chọn lại.";
+    public const string ReturnWholeQtyRequired = "Chỉ trả số nguyên với: {0}.";
+    public const string ReturnTooManyLines = "Một phiếu trả có tối đa {0} dòng.";
+    public const string ReturnPieceQtyInvalid = "Số bộ BTP trả phải là số nguyên, tối đa 1.000.000.";
+    public const string ReturnLineKindInvalid = "NVL trả chọn NVL, BTP trả chọn dòng đơn (mã hàng – màu – size).";
+    public const string ReturnCreated = "Đã lập phiếu trả, chờ Thủ kho nhận.";
+    public const string ReturnConfirmed = "Đã nhận hàng trả vào kho.";
+    public const string ReturnRejected = "Đã từ chối phiếu trả.";
+    public const string ReturnCancelled = "Đã rút phiếu trả.";
     public const string StocktakeCreated = "Đã gửi phiếu kiểm kê cho Quản đốc / Admin duyệt.";
     public const string StocktakeApproved = "Đã duyệt phiếu kiểm kê, tồn kho đã điều chỉnh theo số đếm.";
     public const string StocktakeApprovedNoChange = "Đã duyệt phiếu kiểm kê, số đếm khớp sổ nên tồn kho không đổi.";
@@ -210,8 +227,8 @@ public static class WarehouseMessages
     public const string ExpectedDeliveryPast = "Ngày dự kiến giao không được trước hôm nay.";
     public const string ExpectedDeliveryBeforeOrderDate = "Ngày dự kiến giao không được trước ngày đặt hàng ({0:dd/MM/yyyy}).";
     public const string ExpectedDeliveryAfterDue = "Ngày dự kiến giao không được sau hạn giao của đơn hàng ({0:dd/MM/yyyy}).";
-    public const string DeliveryDateToRequired = "Giao từ 2 lần trở lên thì nhập khoảng ngày giao (từ ngày – đến ngày).";
-    public const string DeliveryDateToBeforeFrom = "Ngày giao đến không được trước ngày giao từ.";
+    public const string DeliveryDatesCountMismatch = "Giao {0} lần thì phải nhập đúng {0} ngày giao (mỗi lần giao một ngày).";
+    public const string DeliveryDateBeforePrevious = "Ngày giao lần {0} không được trước ngày giao lần {1}.";
     public const string ReplenishDateRequired = "Vui lòng nhập ngày dự kiến giao bù.";
     public const string ReplenishCountInvalid = "Số lần giao bù phải từ 1 đến {0}.";
     public const string CustomerDeliveryCountInvalid = "Số lần khách giao NVL phải từ 1 đến {0}.";

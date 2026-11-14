@@ -12,6 +12,12 @@ public interface IStockRepository
     /// <summary>Khả dụng = tồn thực − giữ chỗ (vw_StockBalance).</summary>
     Task<decimal> GetAvailableAsync(StockKey key, CancellationToken ct);
 
+    /// <summary>Khả dụng kho NVL của nhiều NVL trong một truy vấn; NVL chưa có dòng tồn không có trong kết quả (= 0).</summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetMaterialAvailableAsync(IReadOnlyCollection<int> materialIds, CancellationToken ct);
+
+    /// <summary>Khả dụng kho BTP theo bộ (không tính chi tiết lẻ) của nhiều dòng đơn trong một truy vấn.</summary>
+    Task<IReadOnlyDictionary<int, decimal>> GetSetAvailableAsync(IReadOnlyCollection<int> orderLineIds, CancellationToken ct);
+
     /// <summary>Tên dễ đọc của dòng tồn để báo lỗi: "Vải chính A (Đỏ)" / "MH01 Đỏ-M".</summary>
     Task<string> DescribeAsync(StockKey key, CancellationToken ct);
 

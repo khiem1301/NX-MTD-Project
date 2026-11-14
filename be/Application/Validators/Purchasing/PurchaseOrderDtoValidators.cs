@@ -27,10 +27,9 @@ public sealed class CreatePurchaseOrderDtoValidator : AbstractValidator<CreatePu
         RuleFor(x => x.OrderDate).NotEqual(default(DateOnly)).WithMessage(Messages.Required("ngày đặt hàng"));
         RuleFor(x => x.ExpectedDeliveryCount).InclusiveBetween((short)1, DeliveryLimits.MaxCount)
             .WithMessage(Messages.PurchaseOrderDeliveryCountInvalid);
-        RuleFor(x => x.ExpectedDeliveryDate).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired);
-        RuleFor(x => x.ExpectedDeliveryDateTo)
-            .Must((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to) is null)
-            .WithMessage((x, to) => DocumentDateRules.CheckDeliveryRange(x.ExpectedDeliveryCount, x.ExpectedDeliveryDate, to));
+        RuleFor(x => x.ExpectedDeliveryDates).NotNull().WithMessage(WarehouseMessages.ExpectedDeliveryRequired)
+            .Must((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates) is null)
+            .WithMessage((x, dates) => DocumentDateRules.CheckDeliveryDates(x.ExpectedDeliveryCount, dates));
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage(WarehouseMessages.LinesRequired);
         RuleForEach(x => x.Lines).SetValidator(new SavePurchaseOrderLineDtoValidator());

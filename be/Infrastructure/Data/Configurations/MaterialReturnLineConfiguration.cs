@@ -11,11 +11,16 @@ public sealed class MaterialReturnLineConfiguration : IEntityTypeConfiguration<M
     {
         entity.ToTable("MaterialReturnLine", tb =>
             {
-                tb.HasComment("Dòng phiếu trả vải thừa");
+                tb.HasComment("Dòng phiếu trả: NVL / phế phẩm hoặc BTP cả bộ của dòng đơn");
                 tb.HasTrigger("trg_MaterialReturnLine_Check");
             });
 
-        entity.HasIndex(e => new { e.MaterialReturnId, e.MaterialIssueLineId }, "UQ_MRetL").IsUnique();
+        entity.HasIndex(e => new { e.MaterialReturnId, e.MaterialId }, "UQ_MRetL_Material")
+            .IsUnique()
+            .HasFilter("([MaterialId] IS NOT NULL)");
+        entity.HasIndex(e => new { e.MaterialReturnId, e.OrderLineId }, "UQ_MRetL_OrderLine")
+            .IsUnique()
+            .HasFilter("([OrderLineId] IS NOT NULL)");
 
         entity.Property(e => e.ConfirmedQty).HasColumnType("decimal(18, 3)");
         entity.Property(e => e.DiscrepancyReason).HasMaxLength(TextLimits.Reason);
@@ -23,8 +28,15 @@ public sealed class MaterialReturnLineConfiguration : IEntityTypeConfiguration<M
 
         entity.HasOne(d => d.MaterialIssueLine).WithMany(p => p.MaterialReturnLines)
             .HasForeignKey(d => d.MaterialIssueLineId)
-            .OnDelete(DeleteBehavior.ClientSetNull)
             .HasConstraintName("FK_MRetL_IssueLine");
+
+        entity.HasOne(d => d.Material).WithMany()
+            .HasForeignKey(d => d.MaterialId)
+            .HasConstraintName("FK_MRetL_Material");
+
+        entity.HasOne(d => d.OrderLine).WithMany()
+            .HasForeignKey(d => d.OrderLineId)
+            .HasConstraintName("FK_MRetL_OrderLine");
 
         entity.HasOne(d => d.MaterialReturn).WithMany(p => p.MaterialReturnLines)
             .HasForeignKey(d => d.MaterialReturnId)

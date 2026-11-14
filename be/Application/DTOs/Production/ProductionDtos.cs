@@ -137,8 +137,8 @@ public sealed record DefectDto(
     int DefectRecordId, string DefectCode, DateOnly WorkDate, string? ShiftCode, int SewingTeamId, int OrderLineId,
     string OrderCode, string ProductCode, int OperationId, string OperationCode, string OperationName,
     int ResponsibleWorkerId, string ResponsibleWorkerName, string DefectType, int Quantity, string DefectReasonCode,
-    string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, string? WorkerObjection, DateTime? ObjectedAt,
-    DateTime EditDeadline, string Status, DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
+    string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, DateTime EditDeadline, string Status,
+    DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
     int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus,
     string SewingTeamName = "", DateTime? UpdatedAt = null);
 
@@ -147,12 +147,16 @@ public sealed record CreateDefectDto(
     DateOnly WorkDate, string? ShiftCode, int OrderLineId, int OperationId, int ResponsibleWorkerId, string DefectType,
     int Quantity, string ReasonCode, string? ReasonNote);
 
+/// <summary>Hủy phiếu: Reason bắt buộc với mọi vai trò (ghi vào nhật ký).</summary>
 public sealed record CancelDefectDto(string? Reason, byte[] RowVer);
 
-public sealed record ObjectDefectDto(string Objection, byte[] RowVer);
-
-/// <summary>Quản đốc / Admin chấp nhận phiếu sau khi công nhân phản đối (giữ phiếu); Note không bắt buộc, ghi vào nhật ký. Không chấp nhận thì hủy phiếu.</summary>
-public sealed record ConfirmDefectDto(string? Note, byte[] RowVer);
+/// <summary>
+/// Sửa phiếu. Không đổi được ngày làm việc và dòng đơn (ghi sai thì hủy rồi ghi lại). Reason bắt buộc khi Quản đốc sửa, tổ
+/// trưởng không bắt buộc; ghi vào nhật ký.
+/// </summary>
+public sealed record UpdateDefectDto(
+    string? ShiftCode, int OperationId, int ResponsibleWorkerId, string DefectType, int Quantity, string ReasonCode,
+    string? ReasonNote, string? Reason, byte[] RowVer);
 
 public sealed record DefectQuery : PageQuery
 {
@@ -165,8 +169,6 @@ public sealed record DefectQuery : PageQuery
     public string? Status { get; init; }
     /// <summary>Rework | Scrap.</summary>
     public string? DefectType { get; init; }
-    /// <summary>Pending (chờ quyết định) | Resolved (đã chấp nhận hoặc hủy) | None (không phản đối).</summary>
-    public string? Objection { get; init; }
 }
 
 // ================= KI-10: IOutputQueryService (dùng chung cho UC19, UC21, UC59) =================

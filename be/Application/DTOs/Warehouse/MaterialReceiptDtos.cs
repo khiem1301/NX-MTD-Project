@@ -73,16 +73,16 @@ public sealed record ShortDeliveryDto(
     int RequestId, string RequestCode, string Status, string? Resolution, string? ResultNote, int ReceiptId,
     string ReceiptCode, string Source, string? PoCode, string? OrderCode, DateTime CreatedAt,
     IReadOnlyList<ShortDeliveryLineDto> Lines, short? ExpectedDeliveryCount = null, int ReplenishDeliveryCount = 0,
-    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
+    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 public sealed record ReplenishInputDto(int RequestLineId, decimal ReplenishQty);
 
 /// <param name="Resolution">REPLENISH (giao bù) hoặc NO_REPLENISH (chốt không bù).</param>
 /// <param name="ExpectedDeliveryCount">Giao bù: số lần dự kiến giao bù đợt này (bắt buộc, 1–99).</param>
-/// <param name="ExpectedDeliveryDate">Giao bù: ngày dự kiến giao bù (giao từ 2 lần: ngày từ).</param>
-/// <param name="ExpectedDeliveryDateTo">Giao bù từ 2 lần: ngày đến.</param>
+/// <param name="ExpectedDeliveryDates">Giao bù: ngày dự kiến giao bù, đúng ExpectedDeliveryCount ngày (DEV-ALL-113).</param>
 public sealed record ResolveShortDeliveryDto(string Resolution, IReadOnlyList<ReplenishInputDto>? Lines, string? Note,
-    short? ExpectedDeliveryCount = null, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    short? ExpectedDeliveryCount = null, IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
 
 public sealed record ShortDeliveryQuery : PageQuery
 {

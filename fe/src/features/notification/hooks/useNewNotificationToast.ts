@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { notification } from 'antd';
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { hasNotificationAction, useOpenNotification } from './useOpenNotification';
 import { notificationApi } from '../api/notificationApi';
 import { NOTIFICATION_KEY } from './useNotifications';
 
@@ -11,10 +11,10 @@ const TOAST_SECONDS = 8;
 
 /**
  * Hiện toast góc màn hình khi có thông báo chưa đọc mới (nạp lại mỗi 30 giây). Lần tải đầu chỉ ghi nhớ những thông báo
- * đang có để không bật toast cho thông báo cũ; bấm vào toast mở màn liên quan. Cũng làm mới chuông và danh sách.
+ * đang có để không bật toast cho thông báo cũ; bấm vào toast mở màn hoặc cửa sổ chi tiết liên quan (không chuyển trang với thông báo có cửa sổ chi tiết). Cũng làm mới chuông và danh sách.
  */
 export function useNewNotificationToast() {
-  const navigate = useNavigate();
+  const openNotification = useOpenNotification();
   const queryClient = useQueryClient();
   const seen = useRef<Set<number> | null>(null);
   const latest = useQuery({
@@ -40,14 +40,14 @@ export function useNewNotificationToast() {
         description: n.message,
         duration: TOAST_SECONDS,
         placement: 'bottomRight',
-        style: n.linkUrl ? { cursor: 'pointer' } : undefined,
+        style: hasNotificationAction(n) ? { cursor: 'pointer' } : undefined,
         onClick: () => {
-          if (n.linkUrl) navigate(n.linkUrl);
+          openNotification(n);
           notification.destroy(`n-${n.notificationId}`);
         },
       });
     });
     void queryClient.invalidateQueries({ queryKey: [...NOTIFICATION_KEY, 'unread-count'] });
     void queryClient.invalidateQueries({ queryKey: [...NOTIFICATION_KEY, 'list'] });
-  }, [items, navigate, queryClient]);
+  }, [items, openNotification, queryClient]);
 }

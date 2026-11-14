@@ -10,11 +10,22 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>TH-10 / UC42: tổ cắt trả vải thừa theo phiếu cấp gốc, Thủ kho xác nhận vào kho NVL.</summary>
+/// <summary>
+/// TH-10 / UC42 (DEV-ALL-112): tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL (không theo đơn) và BTP (theo đơn – mã – màu – size),
+/// cả hai tổ trả được NVL phế phẩm; Thủ kho xác nhận vào kho.
+/// </summary>
 public class MaterialReturnServiceTests
 {
     private static readonly DateTime Now = new(2026, 10, 28, 9, 0, 0);
     private const int CutTeam = 2;
+    private const int SewTeam = 5;
+    private const int WorkOrderId = 30;
+    private const int OrderId = 7;
+    private const int LineId = 70;
+    private const int FabricId = 1;
+    private const int ThreadId = 2;
+    private const int ScrapKgId = 3;
+    private const int ScrapPieceId = 4;
 
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IStockService _stock = Substitute.For<IStockService>();
@@ -23,38 +34,59 @@ public class MaterialReturnServiceTests
     private readonly IAppLock _locks = Substitute.For<IAppLock>();
     private readonly IClock _clock = Substitute.For<IClock>();
 
-    private readonly List<Team> _teams = new();
-    private readonly List<MaterialIssue> _issues = new();
-    private readonly List<MaterialIssueLine> _issueLines = new();
-    private readonly List<MaterialReturn> _returns = new();
-    private readonly List<MaterialReturnLine> _returnLines = new();
-    private readonly List<CuttingLay> _lays = new();
-    private readonly List<CuttingLayFabric> _layFabrics = new();
-    private readonly Team _team = new() { TeamId = CutTeam, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting };
-    private readonly Material _fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
-    private readonly MaterialIssue _issue;
-    private readonly MaterialIssueLine _line;
+    private readonly List<Team> _teams =
+    [
+        new() { TeamId = CutTeam, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting },
+        new() { TeamId = SewTeam, TeamName = "Tổ may", TeamType = TeamTypes.Sewing },
+        new() { TeamId = 9, TeamName = "Văn phòng", TeamType = TeamTypes.Office },
+    ];
+
+    private readonly List<WorkOrder> _workOrders = [new() { WorkOrderId = WorkOrderId, OrderId = OrderId, CuttingTeamId = CutTeam, Status = WorkOrderStatuses.Open }];
+    private readonly List<Material> _materials =
+    [
+        new() { MaterialId = FabricId, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m", Category = "MAIN_FABRIC", Status = MaterialStatuses.Active },
+        new() { MaterialId = ThreadId, MaterialCode = "PL-0001", MaterialName = "Chỉ", Unit = "cuộn", Category = "THREAD", Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapKgId, MaterialCode = "PP-0001", MaterialName = "Vải vụn", Unit = "kg", Category = "SCRAP_FABRIC", Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapPieceId, MaterialCode = "PP-0002", MaterialName = "Kim gãy", Unit = "cái", Category = "SCRAP_NEEDLE", Status = MaterialStatuses.Active },
+    ];
+
+    private readonly List<MaterialIssue> _issues = [];
+    private readonly List<MaterialIssueLine> _issueLines = [];
+    private readonly List<MaterialReturn> _returns = [];
+    private readonly List<MaterialReturnLine> _returnLines = [];
+    private readonly List<CuttingLayFabric> _layFabrics = [];
+    private readonly List<QcBatch> _qc = [];
+    private readonly List<OrderLine> _orderLines = [];
+    private readonly List<MaterialReturn> _added = [];
 
     public MaterialReturnServiceTests()
     {
+        // Gán Material.MaterialType (cột tính của DB) theo Category để lọc phế phẩm giống DB.
+        foreach (var m in _materials)
+            m.MaterialType = m.Category.StartsWith("SCRAP") ? MaterialTypes.Scrap : m.Category == "THREAD" ? MaterialTypes.Trim : MaterialTypes.Fabric;
+        _orderLines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 3 }.WithVariant(TestVariant.Make(3, "MH3")));
         _clock.Now.Returns(Now);
         _clock.Today.Returns(DateOnly.FromDateTime(Now));
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _codes.NextAsync<MaterialReturn>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<MaterialReturn, string>>>(),
             Arg.Any<CancellationToken>()).Returns("TV-20261028-001");
-        _issue = new MaterialIssue
+        Setup(_teams); Setup(_workOrders); Setup(_materials); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines);
+        Setup(_layFabrics); Setup(_qc); Setup(_orderLines);
+        var returnRepo = Substitute.For<IGenericRepository<MaterialReturn>>();
+        returnRepo.Query().Returns(_ => _returns.AsTestAsyncQueryable());
+        returnRepo.AddAsync(Arg.Do<MaterialReturn>(r =>
         {
-            MaterialIssueId = 10, IssueCode = "PC-1", WarehouseType = WarehouseTypes.Material, ReceivingTeamId = CutTeam,
-            ReceivingTeam = _team, Status = IssueStatuses.Received, OrderId = 7, Order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1" },
-        };
-        _line = new MaterialIssueLine
-        {
-            MaterialIssueLineId = 100, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
-            IssuedQty = 120, ConfirmedQty = 100,
-        };
-        _issue.MaterialIssueLines.Add(_line);
-        _teams.Add(_team); _issues.Add(_issue); _issueLines.Add(_line);
-        Setup(_teams); Setup(_issues); Setup(_issueLines); Setup(_returns); Setup(_returnLines); Setup(_lays); Setup(_layFabrics);
+            r.MaterialReturnId = 500 + _returns.Count;
+            r.ReturningTeam = _teams.Single(t => t.TeamId == r.ReturningTeamId);
+            foreach (var l in r.MaterialReturnLines)
+            {
+                l.MaterialReturn = r;
+                l.Material = _materials.SingleOrDefault(m => m.MaterialId == l.MaterialId);
+                l.OrderLine = _orderLines.SingleOrDefault(o => o.OrderLineId == l.OrderLineId);
+            }
+            _added.Add(r); _returns.Add(r); _returnLines.AddRange(r.MaterialReturnLines);
+        })).Returns(Task.CompletedTask);
+        _uow.Repository<MaterialReturn>().Returns(returnRepo);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -64,274 +96,443 @@ public class MaterialReturnServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private MaterialReturnService Service() => new(_uow, _stock, _codes, _notifier, _locks, _clock, new FabricPlanner(_uow));
+    private MaterialReturnService Service() =>
+        new(_uow, _stock, _codes, _notifier, _locks, _clock, new MaterialReturnCapacity(_uow));
 
-    private void Lay(decimal? usedM) => _layFabrics.Add(new CuttingLayFabric
+    /// <summary>Phiếu cấp đã nhận một NVL cho tổ (theo lệnh cắt nếu có).</summary>
+    private void Received(int teamId, int materialId, decimal qty, int? workOrderId = null)
     {
-        MaterialId = 1, UsedM = usedM,
-        CuttingLay = new CuttingLay { CuttingTeamId = CutTeam, WorkOrder = new WorkOrder { OrderId = 7 } },
-    });
+        var issue = new MaterialIssue
+        {
+            MaterialIssueId = 100 + _issues.Count, WarehouseType = WarehouseTypes.Material, ReceivingTeamId = teamId,
+            WorkOrderId = workOrderId, OrderId = OrderId, Status = IssueStatuses.Received,
+        };
+        var line = new MaterialIssueLine
+        {
+            MaterialIssueLineId = 200 + _issueLines.Count, MaterialIssue = issue, MaterialId = materialId,
+            Material = _materials.Single(m => m.MaterialId == materialId), IssuedQty = qty, ConfirmedQty = qty,
+        };
+        issue.MaterialIssueLines.Add(line);
+        _issues.Add(issue); _issueLines.Add(line);
+    }
 
-    private MaterialReturn Return(string status, decimal returned, decimal? confirmed = null)
+    private void ReceivedPieces(int teamId, decimal qty)
+    {
+        var issue = new MaterialIssue
+        {
+            MaterialIssueId = 100 + _issues.Count, WarehouseType = WarehouseTypes.SemiFinished, ReceivingTeamId = teamId,
+            OrderId = OrderId, Status = IssueStatuses.Received,
+        };
+        var line = new MaterialIssueLine
+        {
+            MaterialIssueLineId = 200 + _issueLines.Count, MaterialIssue = issue, OrderLineId = LineId,
+            OrderLine = _orderLines[0], IssuedQty = qty, ConfirmedQty = qty,
+        };
+        issue.MaterialIssueLines.Add(line);
+        _issues.Add(issue); _issueLines.Add(line);
+    }
+
+    private void PriorReturn(int teamId, string warehouse, string status, decimal qty, int? materialId = null, int? orderLineId = null,
+        int? workOrderId = null)
     {
         var ret = new MaterialReturn
         {
-            MaterialReturnId = _returns.Count + 1, ReturnCode = $"TV-{_returns.Count + 1}", MaterialIssueId = 10, MaterialIssue = _issue,
-            Status = status, CreatedAt = Now,
+            MaterialReturnId = 500 + _returns.Count, ReturningTeamId = teamId, WarehouseType = warehouse, Status = status,
+            WorkOrderId = workOrderId,
         };
         var line = new MaterialReturnLine
         {
-            MaterialReturnLineId = ret.MaterialReturnId * 10, MaterialReturnId = ret.MaterialReturnId, MaterialReturn = ret,
-            MaterialIssueLineId = 100, MaterialIssueLine = _line, ReturnedQty = returned, ConfirmedQty = confirmed,
+            MaterialReturnLineId = 600 + _returnLines.Count, MaterialReturn = ret, MaterialId = materialId,
+            Material = _materials.SingleOrDefault(m => m.MaterialId == materialId), OrderLineId = orderLineId, ReturnedQty = qty,
+            ConfirmedQty = status == HandoverStatuses.Confirmed ? qty : null,
         };
         ret.MaterialReturnLines.Add(line);
         _returns.Add(ret); _returnLines.Add(line);
-        return ret;
     }
 
-    private List<MaterialReturn> CaptureAdds()
+    private void Cut(decimal? usedM) => _layFabrics.Add(new CuttingLayFabric
     {
-        var added = new List<MaterialReturn>();
-        _uow.Repository<MaterialReturn>().AddAsync(Arg.Do<MaterialReturn>(r =>
-        {
-            r.MaterialIssue = _issue;
-            foreach (var l in r.MaterialReturnLines) { l.MaterialReturn = r; l.MaterialIssueLine = _line; }
-            added.Add(r); _returns.Add(r); _returnLines.AddRange(r.MaterialReturnLines);
-        }));
-        return added;
-    }
+        MaterialId = FabricId, UsedM = usedM, CuttingLay = new CuttingLay { WorkOrderId = WorkOrderId },
+    });
 
-    private static CreateMaterialReturnDto Create(decimal qty) => new(10, null, new[] { new CreateReturnLineDto(100, qty) });
+    private static CreateMaterialReturnDto Material(int? workOrderId, params (int Id, decimal Qty)[] lines) =>
+        new(WarehouseTypes.Material, workOrderId, null, null, lines.Select(l => new CreateReturnLineDto(l.Id, null, l.Qty)).ToList());
 
-    // ---------- Lập phiếu trả ----------
+    private static CreateMaterialReturnDto Pieces(int? orderId, decimal qty, int lineId = LineId) =>
+        new(WarehouseTypes.SemiFinished, null, orderId, null, [new CreateReturnLineDto(null, lineId, qty)]);
+
+    // ---------- Tổ cắt: NVL theo lệnh cắt ----------
 
     [Fact]
-    public async Task Cutting_team_returns_part_of_the_fabric_it_received()
+    public async Task CreateAsync_CuttingTeamReturnsFabricOfItsWorkOrder_SavesPendingReturnWithOrderAndWorkOrder()
     {
-        var added = CaptureAdds();
+        Received(CutTeam, FabricId, 100, WorkOrderId);
 
-        var result = await Service().CreateAsync(Create(30), CutTeam, default);
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, 30)), CutTeam, default);
 
         result.IsSuccess.Should().BeTrue();
-        var ret = added.Should().ContainSingle().Subject;
+        var ret = _added.Should().ContainSingle().Subject;
         ret.Status.Should().Be(HandoverStatuses.Pending);
-        ret.MaterialReturnLines.Single().ReturnedQty.Should().Be(30);
+        ret.ReturningTeamId.Should().Be(CutTeam);
+        ret.WorkOrderId.Should().Be(WorkOrderId);
+        ret.OrderId.Should().Be(OrderId);
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper, Arg.Any<NotificationMessage>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Return_cannot_exceed_what_was_received_and_not_yet_returned()
+    public async Task CreateAsync_CuttingTeamFabricNotReceivedForThatWorkOrder_ReturnsFailure()
     {
-        Return(HandoverStatuses.Confirmed, 40, confirmed: 38);   // đã trả 38 (kho đếm) → còn trả được 100 − 38 = 62
+        Received(CutTeam, FabricId, 100, workOrderId: 99);
 
-        var over = await Service().CreateAsync(Create(63), CutTeam, default);
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, 10)), CutTeam, default);
 
-        over.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
-        over.Message.Should().Contain("còn trả được 62");
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+        result.Message.Should().Be(WarehouseMessages.ReturnItemNotReturnable);
+    }
 
-        CaptureAdds();
-        (await Service().CreateAsync(Create(62), CutTeam, default)).IsSuccess.Should().BeTrue();
+    [Theory]
+    [InlineData(60, true)]
+    [InlineData(61, false)]
+    public async Task CreateAsync_CuttingTeam_CannotReturnMoreThanReceivedMinusCutMinusReturned(int qty, bool expected)
+    {
+        Received(CutTeam, FabricId, 100, WorkOrderId);
+        Cut(30);
+        PriorReturn(CutTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 10, FabricId, workOrderId: WorkOrderId);
+
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, qty)), CutTeam, default);
+
+        result.IsSuccess.Should().Be(expected);
+        if (!expected) result.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
     }
 
     [Fact]
-    public async Task A_line_with_a_return_still_waiting_for_the_warehouse_cannot_be_returned_again()
+    public async Task CreateAsync_CuttingTeamLayWithoutLength_IsNotCappedByCutting()
     {
-        Return(HandoverStatuses.Pending, 20);
+        Received(CutTeam, FabricId, 100, WorkOrderId);
+        Cut(null);
 
-        var result = await Service().CreateAsync(Create(10), CutTeam, default);
-
-        result.ErrorCode.Should().Be(ErrorCodes.ReturnPendingExists);
-    }
-
-    [Fact]
-    public async Task Return_cannot_exceed_the_fabric_left_after_cutting()
-    {
-        Lay(usedM: 40m);   // đã cắt 40 → còn thừa 100 − 40 = 60
-
-        var over = await Service().CreateAsync(Create(61), CutTeam, default);
-
-        over.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsLeftover);
-        over.Message.Should().Contain("còn thừa 60");
-
-        CaptureAdds();
-        (await Service().CreateAsync(Create(60), CutTeam, default)).IsSuccess.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Return_is_not_capped_by_cutting_while_a_lay_has_no_length_yet()
-    {
-        Lay(usedM: null);
-        CaptureAdds();
-
-        var result = await Service().CreateAsync(Create(100), CutTeam, default);
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, 100)), CutTeam, default);
 
         result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Rejected_and_cancelled_returns_do_not_use_up_the_issued_qty()
+    public async Task CreateAsync_RejectedAndCancelledReturns_DoNotUseUpTheReceivedQty()
     {
-        Return(HandoverStatuses.Rejected, 100);
-        Return(HandoverStatuses.Cancelled, 100);
-        CaptureAdds();
+        Received(CutTeam, FabricId, 100, WorkOrderId);
+        PriorReturn(CutTeam, WarehouseTypes.Material, HandoverStatuses.Rejected, 50, FabricId, workOrderId: WorkOrderId);
+        PriorReturn(CutTeam, WarehouseTypes.Material, HandoverStatuses.Cancelled, 40, FabricId, workOrderId: WorkOrderId);
 
-        var result = await Service().CreateAsync(Create(100), CutTeam, default);
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, 100)), CutTeam, default);
 
         result.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Only_a_cutting_team_can_return_fabric()
+    public async Task CreateAsync_CuttingTeamNonScrapWithoutWorkOrder_ReturnsFailure()
     {
-        _team.TeamType = TeamTypes.Sewing;
+        Received(CutTeam, FabricId, 100, WorkOrderId);
 
-        var result = await Service().CreateAsync(Create(10), CutTeam, default);
+        var result = await Service().CreateAsync(Material(null, (FabricId, 10)), CutTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnWorkOrderRequired);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WorkOrderOfAnotherTeam_ReturnsFailure()
+    {
+        _workOrders[0].CuttingTeamId = 99;
+
+        var result = await Service().CreateAsync(Material(WorkOrderId, (ScrapKgId, 1)), CutTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnWorkOrderInvalid);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CuttingTeamReturnsBtp_ReturnsFailure()
+    {
+        var result = await Service().CreateAsync(Pieces(OrderId, 1), CutTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnWarehouseNotAllowed);
+    }
+
+    // ---------- Tổ may: NVL không theo đơn ----------
+
+    [Fact]
+    public async Task CreateAsync_SewingTeamReturnsMaterialReceivedOnSeveralIssues_UsesTheTotal()
+    {
+        Received(SewTeam, ThreadId, 30);
+        Received(SewTeam, ThreadId, 20, workOrderId: null);
+
+        var tooMuch = await Service().CreateAsync(Material(null, (ThreadId, 51)), SewTeam, default);
+        var ok = await Service().CreateAsync(Material(null, (ThreadId, 50)), SewTeam, default);
+
+        ok.IsSuccess.Should().BeTrue();
+        tooMuch.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SewingTeamMaterialNeverReceived_ReturnsFailure()
+    {
+        var result = await Service().CreateAsync(Material(null, (ThreadId, 1)), SewTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnItemNotReturnable);
+    }
+
+    [Fact]
+    public async Task CreateAsync_SewingTeamPendingReturn_CountsAsReturned()
+    {
+        Received(SewTeam, ThreadId, 30);
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 25, ThreadId);
+
+        var result = await Service().CreateAsync(Material(null, (ThreadId, 6)), SewTeam, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
+    }
+
+    [Fact]
+    public async Task CreateAsync_NonFabricMaterialWithDecimalQty_ReturnsFailureNamingIt()
+    {
+        Received(SewTeam, ThreadId, 30);
+
+        var result = await Service().CreateAsync(Material(null, (ThreadId, 1.5m)), SewTeam, default);
+
+        result.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "Chỉ"));
+    }
+
+    // ---------- Phế phẩm ----------
+
+    [Theory]
+    [InlineData(SewTeam)]
+    [InlineData(CutTeam)]
+    public async Task CreateAsync_ScrapMaterial_HasNoCapAndNeedsNoReceipt(int teamId)
+    {
+        var result = await Service().CreateAsync(Material(null, (ScrapKgId, 12.5m), (ScrapPieceId, 40)), teamId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        _added.Single().MaterialReturnLines.Select(l => l.MaterialId).Should().BeEquivalentTo([ScrapKgId, ScrapPieceId]);
+    }
+
+    [Fact]
+    public async Task CreateAsync_ScrapCountedInPieces_RejectsDecimalButKgAllowsIt()
+    {
+        var piece = await Service().CreateAsync(Material(null, (ScrapPieceId, 1.5m)), SewTeam, default);
+        var kg = await Service().CreateAsync(Material(null, (ScrapKgId, 1.5m)), SewTeam, default);
+
+        piece.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "Kim gãy"));
+        kg.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task CreateAsync_ScrapAlongsideFabricOfWorkOrder_OnlyFabricIsCapped()
+    {
+        Received(CutTeam, FabricId, 10, WorkOrderId);
+
+        var result = await Service().CreateAsync(Material(WorkOrderId, (FabricId, 11), (ScrapKgId, 500)), CutTeam, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.ReturnExceedsIssued);
+        result.Message.Should().Contain("V-0001").And.NotContain("PP-0001");
+    }
+
+    [Fact]
+    public async Task CreateAsync_DiscontinuedScrapMaterial_ReturnsFailure()
+    {
+        _materials.Single(m => m.MaterialId == ScrapKgId).Status = MaterialStatuses.Discontinued;
+
+        var result = await Service().CreateAsync(Material(null, (ScrapKgId, 1)), SewTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.IssueMaterialInvalid);
+    }
+
+    // ---------- Tổ may: BTP theo đơn – mã – màu – size ----------
+
+    [Fact]
+    public async Task CreateAsync_SewingTeamReturnsBtp_SavesLineOfTheOrderLine()
+    {
+        ReceivedPieces(SewTeam, 100);
+
+        var result = await Service().CreateAsync(Pieces(OrderId, 10), SewTeam, default);
+
+        result.IsSuccess.Should().BeTrue();
+        var ret = _added.Single();
+        ret.WarehouseType.Should().Be(WarehouseTypes.SemiFinished);
+        ret.OrderId.Should().Be(OrderId);
+        ret.MaterialReturnLines.Single().OrderLineId.Should().Be(LineId);
+    }
+
+    [Theory]
+    [InlineData(55, true)]
+    [InlineData(56, false)]
+    public async Task CreateAsync_Btp_CannotReturnMoreThanReceivedMinusQcPassedMinusReturned(int qty, bool expected)
+    {
+        ReceivedPieces(SewTeam, 100);
+        _qc.Add(new QcBatch { SewingTeamId = SewTeam, OrderLineId = LineId, FinishedQty = 30 });
+        PriorReturn(SewTeam, WarehouseTypes.SemiFinished, HandoverStatuses.Confirmed, 15, orderLineId: LineId);
+
+        var result = await Service().CreateAsync(Pieces(OrderId, qty), SewTeam, default);
+
+        result.IsSuccess.Should().Be(expected);
+        if (!expected) result.Message.Should().Contain("MH3").And.Contain("còn trả được 55");
+    }
+
+    [Fact]
+    public async Task CreateAsync_BtpWithoutOrder_ReturnsFailure()
+    {
+        var result = await Service().CreateAsync(Pieces(null, 1), SewTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnOrderRequired);
+    }
+
+    [Fact]
+    public async Task CreateAsync_BtpOfOtherOrder_ReturnsFailure()
+    {
+        ReceivedPieces(SewTeam, 100);
+
+        var result = await Service().CreateAsync(Pieces(OrderId + 1, 1), SewTeam, default);
+
+        result.Message.Should().Be(WarehouseMessages.ReturnItemNotReturnable);
+    }
+
+    [Fact]
+    public async Task CreateAsync_OfficeTeam_ReturnsTeamMismatch()
+    {
+        var result = await Service().CreateAsync(Material(null, (ScrapKgId, 1)), 9, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
     }
 
+    // ---------- Danh sách còn trả được ----------
+
     [Fact]
-    public async Task A_team_cannot_return_against_another_teams_issue_or_an_unreceived_issue()
+    public async Task GetReturnableAsync_CuttingTeam_ListsFabricOfWorkOrderWithCutAndCap()
     {
-        (await Service().CreateAsync(Create(10), 99, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
+        Received(CutTeam, FabricId, 100, WorkOrderId);
+        Received(CutTeam, ThreadId, 5, 99);
+        Cut(30);
 
-        _issue.Status = IssueStatuses.PendingReceipt;
-        (await Service().CreateAsync(Create(10), CutTeam, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        var result = await Service().GetReturnableAsync(CutTeam, new ReturnableQuery(WarehouseTypes.Material, WorkOrderId, null), default);
 
-        _issue.Status = IssueStatuses.Received;
-        _issue.WarehouseType = WarehouseTypes.SemiFinished;
-        (await Service().CreateAsync(Create(10), CutTeam, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        var line = result.Data!.Should().ContainSingle().Subject;
+        (line.ReceivedQty, line.UsedQty, line.RemainingQty).Should().Be((100m, 30m, 70m));
     }
 
     [Fact]
-    public async Task Return_line_must_belong_to_the_chosen_issue()
+    public async Task GetReturnableAsync_SewingTeam_ListsMaterialsWithoutScrapAndWithoutExhaustedOnes()
     {
-        var result = await Service().CreateAsync(new CreateMaterialReturnDto(10, null, new[] { new CreateReturnLineDto(999, 5) }), CutTeam, default);
+        Received(SewTeam, ThreadId, 30);
+        Received(SewTeam, FabricId, 10);
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Confirmed, 10, FabricId);
 
-        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+        var result = await Service().GetReturnableAsync(SewTeam, new ReturnableQuery(WarehouseTypes.Material, null, null), default);
+
+        result.Data!.Select(l => l.MaterialId).Should().Equal(ThreadId);
     }
 
     [Fact]
-    public async Task Returnable_lists_only_lines_with_fabric_left_to_return()
+    public async Task GetReturnableAsync_SewingTeamBtp_ListsOrderLineWithQcPassed()
     {
-        Return(HandoverStatuses.Confirmed, 100, confirmed: 100);   // trả hết dòng này
-        var other = new MaterialIssueLine
-        {
-            MaterialIssueLineId = 101, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
-            IssuedQty = 50, ConfirmedQty = 50,
-        };
-        _issue.MaterialIssueLines.Add(other); _issueLines.Add(other);
+        ReceivedPieces(SewTeam, 100);
+        _qc.Add(new QcBatch { SewingTeamId = SewTeam, OrderLineId = LineId, FinishedQty = 40 });
 
-        var lines = (await Service().GetReturnableAsync(CutTeam, default)).Data!;
+        var result = await Service().GetReturnableAsync(SewTeam, new ReturnableQuery(WarehouseTypes.SemiFinished, null, OrderId), default);
 
-        var only = lines.Should().ContainSingle().Subject;
-        only.MaterialIssueLineId.Should().Be(101);
-        only.RemainingQty.Should().Be(50);
+        var line = result.Data!.Should().ContainSingle().Subject;
+        (line.OrderLineId, line.ItemCode, line.ItemName, line.UsedQty, line.RemainingQty).Should().Be((LineId, "MH3", "Đen/M", 40m, 60m));
     }
 
-    [Fact]
-    public async Task Returnable_suggests_the_fabric_left_after_cutting()
-    {
-        Lay(50m);   // đã cắt 50 m trên 100 m đã nhận
-        Return(HandoverStatuses.Pending, 10);   // đang trả 10 m
-
-        var line = (await Service().GetReturnableAsync(CutTeam, default)).Data!.Single();
-
-        line.RemainingQty.Should().Be(90);
-        line.SuggestedQty.Should().Be(40);
-    }
+    // ---------- Thủ kho xác nhận ----------
 
     [Fact]
-    public async Task Returnable_splits_the_suggestion_over_issue_lines_and_skips_it_when_a_lay_has_no_length()
+    public async Task ConfirmAsync_MaterialReturn_AddsCountedQtyToTheMaterialWarehouse()
     {
-        var other = new MaterialIssueLine
-        {
-            MaterialIssueLineId = 101, MaterialIssueId = 10, MaterialIssue = _issue, MaterialId = 1, Material = _fabric,
-            IssuedQty = 50, ConfirmedQty = 50,
-        };
-        _issue.MaterialIssueLines.Add(other); _issueLines.Add(other);
-        Lay(30m);   // cắt 30 m, còn 120 m: dòng đầu 100, dòng sau 20
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
+        IReadOnlyList<StockMovement>? posted = null;
+        _stock.PostAsync(Arg.Do<IReadOnlyList<StockMovement>>(m => posted = m), Arg.Any<CancellationToken>()).Returns(Result.Success());
 
-        var lines = (await Service().GetReturnableAsync(CutTeam, default)).Data!;
-        lines.Select(l => l.SuggestedQty).Should().Equal(100m, 20m);
-
-        Lay(null);   // bàn cũ chưa có số mét vải: chưa biết đã cắt bao nhiêu
-        (await Service().GetReturnableAsync(CutTeam, default)).Data!.Should().OnlyContain(l => l.SuggestedQty == null);
-    }
-
-    // ---------- Thủ kho xác nhận / từ chối ----------
-
-    [Fact]
-    public async Task Confirm_adds_the_counted_fabric_back_to_the_material_warehouse()
-    {
-        var ret = Return(HandoverStatuses.Pending, 30);
-        var lineId = ret.MaterialReturnLines.Single().MaterialReturnLineId;
-
-        var result = await Service().ConfirmAsync(ret.MaterialReturnId,
-            new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(lineId, 30, null) }), 9, default);
+        var result = await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 8, null)]), 900, default);
 
         result.IsSuccess.Should().BeTrue();
-        ret.Status.Should().Be(HandoverStatuses.Confirmed);
-        await _stock.Received(1).PostAsync(
-            Arg.Is<IReadOnlyList<StockMovement>>(m => m.Count == 1 && m[0].QtyChange == 30 && m[0].Key.MaterialId == 1
-                && m[0].SourceDocType == StockDocTypes.MaterialReturn),
-            Arg.Any<CancellationToken>());
+        _returns[0].Status.Should().Be(HandoverStatuses.Confirmed);
+        posted.Should().ContainSingle().Which.Should().Match<StockMovement>(m => m.Key.Equals(StockKey.Material(ScrapKgId)) && m.QtyChange == 8);
     }
 
     [Fact]
-    public async Task Confirm_with_a_different_count_needs_a_reason_and_cannot_exceed_the_returned_qty()
+    public async Task ConfirmAsync_BtpReturn_AddsCountedQtyToTheSemiFinishedWarehouse()
     {
-        var ret = Return(HandoverStatuses.Pending, 30);
-        var lineId = ret.MaterialReturnLines.Single().MaterialReturnLineId;
+        PriorReturn(SewTeam, WarehouseTypes.SemiFinished, HandoverStatuses.Pending, 10, orderLineId: LineId);
+        IReadOnlyList<StockMovement>? posted = null;
+        _stock.PostAsync(Arg.Do<IReadOnlyList<StockMovement>>(m => posted = m), Arg.Any<CancellationToken>()).Returns(Result.Success());
 
-        (await Service().ConfirmAsync(ret.MaterialReturnId, new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(lineId, 28, null) }), 9, default))
-            .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        (await Service().ConfirmAsync(ret.MaterialReturnId, new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(lineId, 31, "x") }), 9, default))
-            .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
-        var ok = await Service().ConfirmAsync(ret.MaterialReturnId, new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(lineId, 28, "ướt 2m") }), 9, default);
+        var result = await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 9, "Thiếu 1 bộ")]), 900, default);
 
-        ok.IsSuccess.Should().BeTrue();
-        ret.MaterialReturnLines.Single().ConfirmedQty.Should().Be(28);
-        ret.MaterialReturnLines.Single().DiscrepancyReason.Should().Be("ướt 2m");
+        result.IsSuccess.Should().BeTrue();
+        posted.Should().ContainSingle().Which.Should().Match<StockMovement>(m => m.Key.Equals(StockKey.SemiFinished(LineId, null)) && m.QtyChange == 9);
     }
 
     [Fact]
-    public async Task Reject_and_cancel_work_only_while_pending_and_cancel_only_for_the_own_team()
+    public async Task ConfirmAsync_DifferentCountWithoutReason_ReturnsFailure()
     {
-        var pending = Return(HandoverStatuses.Pending, 10);
-        var done = Return(HandoverStatuses.Confirmed, 10, confirmed: 10);
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
 
-        (await Service().RejectAsync(done.MaterialReturnId, new ReasonDto("x"), 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
-        (await Service().CancelAsync(pending.MaterialReturnId, 99, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
-        (await Service().CancelAsync(pending.MaterialReturnId, CutTeam, default)).IsSuccess.Should().BeTrue();
-        pending.Status.Should().Be(HandoverStatuses.Cancelled);
+        var noReason = await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 7, null)]), 900, default);
+        var tooMany = await Service().ConfirmAsync(500, new ConfirmMaterialReturnDto([new ConfirmReturnLineDto(600, 9, "x")]), 900, default);
 
-        var second = Return(HandoverStatuses.Pending, 10);
-        (await Service().RejectAsync(second.MaterialReturnId, new ReasonDto(" quá bẩn "), 9, default)).IsSuccess.Should().BeTrue();
-        second.RejectReason.Should().Be("quá bẩn");
+        noReason.Message.Should().Be(WarehouseMessages.DiscrepancyReasonRequired);
+        tooMany.Message.Should().Be(WarehouseMessages.HandoverConfirmedExceedsHanded);
+        _returns[0].Status.Should().Be(HandoverStatuses.Pending);
     }
 
     [Fact]
-    public async Task A_team_cannot_open_another_teams_return()
+    public async Task RejectAndCancel_WorkOnlyWhilePending_AndCancelOnlyForTheOwnTeam()
     {
-        var ret = Return(HandoverStatuses.Pending, 10);
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
 
-        (await Service().GetByIdAsync(ret.MaterialReturnId, 99, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
-        (await Service().GetByIdAsync(ret.MaterialReturnId, CutTeam, default)).IsSuccess.Should().BeTrue();
-        (await Service().GetByIdAsync(ret.MaterialReturnId, null, default)).IsSuccess.Should().BeTrue();
+        (await Service().CancelAsync(500, CutTeam, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+        (await Service().RejectAsync(500, new ReasonDto("Rách"), 900, default)).IsSuccess.Should().BeTrue();
+        (await Service().RejectAsync(500, new ReasonDto("Rách"), 900, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
     }
 
     [Fact]
-    public void Validators_reject_empty_duplicate_and_non_positive_lines()
+    public async Task GetByIdAsync_ReturnOfAnotherTeam_ReturnsTeamMismatch()
     {
-        var create = new CreateMaterialReturnDtoValidator();
-        create.Validate(Create(5)).IsValid.Should().BeTrue();
-        create.Validate(Create(0)).IsValid.Should().BeFalse();
-        create.Validate(new CreateMaterialReturnDto(10, null, Array.Empty<CreateReturnLineDto>())).IsValid.Should().BeFalse();
-        create.Validate(new CreateMaterialReturnDto(10, null, new[] { new CreateReturnLineDto(1, 5), new CreateReturnLineDto(1, 6) })).IsValid.Should().BeFalse();
+        PriorReturn(SewTeam, WarehouseTypes.Material, HandoverStatuses.Pending, 8, ScrapKgId);
+        _returns[0].ReturningTeam = _teams[1];
 
-        var confirm = new ConfirmMaterialReturnDtoValidator();
-        confirm.Validate(new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(1, 0, null) })).IsValid.Should().BeTrue();
-        confirm.Validate(new ConfirmMaterialReturnDto(new[] { new ConfirmReturnLineDto(1, -1, null) })).IsValid.Should().BeFalse();
+        (await Service().GetByIdAsync(500, CutTeam, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseTeamMismatch);
+    }
+
+    // ---------- Validator ----------
+
+    [Theory]
+    [InlineData(WarehouseTypes.Material, 1, null, true)]
+    [InlineData(WarehouseTypes.Material, null, 1, false)]
+    [InlineData(WarehouseTypes.SemiFinished, null, 1, true)]
+    [InlineData(WarehouseTypes.SemiFinished, 1, null, false)]
+    [InlineData("FINISHED", 1, null, false)]
+    public void Validator_LineKindMustMatchWarehouse(string warehouse, int? materialId, int? orderLineId, bool valid)
+    {
+        var dto = new CreateMaterialReturnDto(warehouse, null, 1, null, [new CreateReturnLineDto(materialId, orderLineId, 1)]);
+
+        new CreateMaterialReturnDtoValidator().Validate(dto).IsValid.Should().Be(valid);
+    }
+
+    [Theory]
+    [InlineData(1000000, true)]
+    [InlineData(1000001, false)]
+    [InlineData(1.5, false)]
+    public void Validator_BtpQtyIsWholeUpToOneMillion(double qty, bool valid)
+    {
+        var dto = new CreateMaterialReturnDto(WarehouseTypes.SemiFinished, null, 1, null, [new CreateReturnLineDto(null, 1, (decimal)qty)]);
+
+        new CreateMaterialReturnDtoValidator().Validate(dto).IsValid.Should().Be(valid);
+    }
+
+    [Fact]
+    public void Validator_SameItemTwice_IsRejected()
+    {
+        var dto = new CreateMaterialReturnDto(WarehouseTypes.Material, null, null, null,
+            [new CreateReturnLineDto(1, null, 1), new CreateReturnLineDto(1, null, 2)]);
+
+        new CreateMaterialReturnDtoValidator().Validate(dto).IsValid.Should().BeFalse();
     }
 }

@@ -1,5 +1,8 @@
+import { API } from '@/constants/apiEndpoints';
+import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
+import type { WorkOrderListItem } from '@/types/workOrder';
 import type {
   ConfirmReturnPayload,
   CreateReturnPayload,
@@ -7,6 +10,7 @@ import type {
   MaterialReturnListItem,
   MaterialReturnQuery,
   ReturnableLine,
+  ReturnableQuery,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -20,7 +24,15 @@ export const WAREHOUSE_BASE = '/api/v1/warehouse-keeper/material-returns';
 export const materialReturnApi = {
   list: (base: string, q: MaterialReturnQuery) => get<Paginated<MaterialReturnListItem>>(base, q),
   detail: (base: string, id: number) => get<MaterialReturn>(`${base}/${id}`),
-  returnable: () => get<ReturnableLine[]>(`${LEADER_BASE}/returnable`),
+  returnable: (q: ReturnableQuery) => get<ReturnableLine[]>(`${LEADER_BASE}/returnable`, q),
+  /** Lệnh cắt của tổ cắt để chọn khi trả NVL theo lệnh (DEV-ALL-112). */
+  teamWorkOrders: async (): Promise<WorkOrderListItem[]> =>
+    (
+      await get<Paginated<WorkOrderListItem>>(API.cutting.workOrders('team-leader'), {
+        page: 1,
+        pageSize: MAX_PAGE_SIZE,
+      })
+    ).items,
   create: (body: CreateReturnPayload) => post<MaterialReturn>(LEADER_BASE, body),
   cancel: (id: number) => post<null>(`${LEADER_BASE}/${id}/cancel`),
   confirm: (id: number, body: ConfirmReturnPayload) =>

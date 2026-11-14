@@ -20,6 +20,7 @@ public sealed class ProductMarkerConfiguration : IEntityTypeConfiguration<Produc
 
         entity.Property(e => e.MarkerCode).HasMaxLength(20).IsUnicode(false);
         entity.Property(e => e.LengthM).HasColumnType("decimal(7, 2)");
+        entity.Property(e => e.WidthM).HasColumnType("decimal(4, 2)");
         entity.Property(e => e.Status).HasMaxLength(20).IsUnicode(false).HasDefaultValue("ACTIVE");
 
         entity.HasOne(d => d.Order).WithMany(p => p.ProductMarkers)

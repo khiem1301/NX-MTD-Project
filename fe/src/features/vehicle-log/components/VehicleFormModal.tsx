@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Form, Input, InputNumber, Modal } from 'antd';
+import { Form, Input, Modal } from 'antd';
+import { QtyInput } from '@/components/common/QtyInput';
 import { MESSAGES } from '@/constants/messages';
 import { PLATE_EXAMPLE, PLATE_PATTERN, VEHICLE_LIMITS, VL_LABELS, VL_MESSAGES } from '../constants';
 import { useSaveVehicle } from '../hooks/useVehicleLog';
@@ -57,10 +58,10 @@ export function VehicleFormModal({ open, vehicle, onClose }: VehicleFormModalPro
           label={VL_LABELS.fuelNorm}
           rules={[{ required: true, message: MESSAGES.common.required }]}
         >
-          <InputNumber
+          <QtyInput
             min={0.1}
             max={VEHICLE_LIMITS.maxFuelNorm}
-            precision={2}
+            decimals={2}
             step={0.5}
             style={{ width: 200 }}
           />

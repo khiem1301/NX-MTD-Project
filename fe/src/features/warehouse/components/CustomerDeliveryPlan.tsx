@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CalendarOutlined } from '@ant-design/icons';
 import { Alert, Button, Space, Typography } from 'antd';
-import { formatDeliveryWindow } from '@/utils/expectedDelivery';
+import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { fill } from '@/utils/format';
 import { LABELS } from '../constants';
 import { useCustomerDelivery } from '../hooks/useOrderMaterials';
@@ -31,7 +31,7 @@ export function CustomerDeliveryPlan({ orderId, isClosed }: CustomerDeliveryPlan
         LABELS.customerDeliveryValue,
         data.receivedCount,
         data.deliveryCount ?? 1,
-        formatDeliveryWindow(data.deliveryDate, data.deliveryDateTo),
+        formatDeliveryDates(data.deliveryDates, data.deliveryDate, data.deliveryDateTo),
       )
     : LABELS.customerDeliveryMissing;
 

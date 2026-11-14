@@ -6,17 +6,17 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.Infrastructure.Jobs;
 
 /// <summary>
-/// Mỗi 15 phút chuyển phiếu hàng hỏng quá 48 giờ không bị phản đối sang CONFIRMED (xem DefectAutoConfirmService).
-/// Chạy theo chu kỳ ngắn thay vì một giờ cố định trong ngày vì hạn 48 giờ tính theo từng phiếu.
+/// DEV-ALL-101: mỗi 5 phút tự xác nhận phiếu giao việc công nhân để quá 60 phút không xác nhận (xem WorkAllocationAutoConfirmService).
+/// Chạy theo chu kỳ ngắn vì hạn tính theo từng phiếu; phiếu được xác nhận trễ nhất khoảng một chu kỳ sau khi hết hạn.
 /// </summary>
-public sealed class DefectAutoConfirmJob : BackgroundService
+public sealed class WorkAllocationAutoConfirmJob : BackgroundService
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(5);
 
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<DefectAutoConfirmJob> _logger;
+    private readonly ILogger<WorkAllocationAutoConfirmJob> _logger;
 
-    public DefectAutoConfirmJob(IServiceScopeFactory scopeFactory, ILogger<DefectAutoConfirmJob> logger)
+    public WorkAllocationAutoConfirmJob(IServiceScopeFactory scopeFactory, ILogger<WorkAllocationAutoConfirmJob> logger)
     {
         _scopeFactory = scopeFactory;
         _logger = logger;
@@ -29,11 +29,11 @@ public sealed class DefectAutoConfirmJob : BackgroundService
             try
             {
                 using var scope = _scopeFactory.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<IDefectAutoConfirmService>().RunAsync(stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<IWorkAllocationAutoConfirmService>().RunAsync(stoppingToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                _logger.LogError(ex, "Lỗi khi tự chốt phiếu hàng hỏng quá hạn phản đối");
+                _logger.LogError(ex, "Lỗi khi tự xác nhận phiếu giao việc quá hạn chờ công nhân");
             }
 
             try

@@ -32,7 +32,7 @@ public sealed class WorkOrderFabricChecker
         _uow = uow; _stock = stock; _planner = planner; _solver = solver;
     }
 
-    private sealed record Fabric(int MaterialId, string Code, string Name, string Color, string Unit)
+    private sealed record Fabric(int MaterialId, string Code, string Name, string Color, string Unit, decimal? WidthM = null)
     {
         public string Label => $"{Code} {Name}{(Color == "" ? "" : $" ({Color})")}";
     }
@@ -47,13 +47,17 @@ public sealed class WorkOrderFabricChecker
 
     private sealed record GroupComponent(int ProductId, byte MarkerNo, int ProductComponentId);
 
-    private sealed record OrderMarker(int ProductId, byte MarkerNo, MarkerOption Option);
+    private sealed record OrderMarker(int ProductId, byte MarkerNo, MarkerOption Option, decimal WidthM);
 
     private sealed record Data(Dictionary<int, Variant> Variants, List<Norm> Norms, List<GroupFabric> Fabrics,
         List<GroupComponent> Components, List<OrderMarker> Markers);
 
-    /// <summary>Số mét ước tính của một phần việc trên một vải; Problem = chưa tính được, Plan = bìa nên dùng.</summary>
-    private sealed record Estimate(Fabric Fabric, decimal Meters, string? Problem = null, FabricMarkerPlanDto? Plan = null);
+    /// <summary>
+    /// Số mét ước tính của một phần việc trên một vải; Problem = chưa tính được, Plan = bìa nên dùng, NarrowMarkers = bìa của nhóm
+    /// rộng hơn khổ vải, đã bỏ khi ghép bìa (DEV-ALL-104).
+    /// </summary>
+    private sealed record Estimate(Fabric Fabric, decimal Meters, string? Problem = null, FabricMarkerPlanDto? Plan = null,
+        IReadOnlyList<string>? NarrowMarkers = null);
 
     public async Task<IReadOnlyList<WorkOrderFabricCheckDto>> CheckAsync(int orderId, int cuttingTeamId,
         IReadOnlyList<CutLine> lines, CancellationToken ct)
@@ -90,11 +94,11 @@ public sealed class WorkOrderFabricChecker
                         && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new Norm(p.ProductComponentMaterialId, p.ProductColorId, p.ProductComponentId, p.ProductComponent.ComponentName,
                 p.ProductComponent.PiecesPerGarment,
-                new Fabric(p.MaterialId, p.Material.MaterialCode, p.Material.MaterialName, p.Material.Color, p.Material.Unit)))
+                new Fabric(p.MaterialId, p.Material.MaterialCode, p.Material.MaterialName, p.Material.Color, p.Material.Unit, p.Material.WidthM)))
             .ToListAsync(ct);
         var fabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking().Where(f => productIds.Contains(f.ProductId))
             .Select(f => new GroupFabric(f.ProductId, f.MarkerNo, f.ProductColor.Color,
-                new Fabric(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color, f.Material.Unit)))
+                new Fabric(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color, f.Material.Unit, f.Material.WidthM)))
             .ToListAsync(ct);
         var components = await _uow.Repository<ProductMarkerComponent>().Query().AsNoTracking().Where(c => productIds.Contains(c.ProductId))
             .Select(c => new GroupComponent(c.ProductId, c.MarkerNo, c.ProductComponentId)).ToListAsync(ct);
@@ -111,11 +115,12 @@ public sealed class WorkOrderFabricChecker
                 m.MarkerNo,
                 m.MarkerCode,
                 m.LengthM,
+                m.WidthM,
                 Ratios = m.ProductMarkerRatios.Select(r => new { r.SizeCode, r.PiecesPerPly }).ToList(),
             })
             .ToListAsync(ct);
         return rows.Select(m => new OrderMarker(m.ProductId, m.MarkerNo, new MarkerOption(m.MarkerCode, m.LengthM,
-            m.Ratios.ToDictionary(r => r.SizeCode, r => r.PiecesPerPly, StringComparer.OrdinalIgnoreCase)))).ToList();
+            m.Ratios.ToDictionary(r => r.SizeCode, r => r.PiecesPerPly, StringComparer.OrdinalIgnoreCase)), m.WidthM)).ToList();
     }
 
     /// <summary>Cả bộ: nhu cầu mỗi size gom theo (mã hàng, nhóm bìa, vải), ghép các bìa của đơn trong nhóm cho ít mét nhất.</summary>
@@ -131,15 +136,13 @@ public sealed class WorkOrderFabricChecker
             var need = group.GroupBy(r => r.SizeCode, StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.Sum(r => r.PlannedQty), StringComparer.OrdinalIgnoreCase);
             var (productId, markerNo, _) = group.Key;
-            var choice = MarkerFabricEstimator.ChooseWhole(need, MarkersOf(data, productId, markerNo), _solver);
             var fabric = group.First().Fabric;
-            if (choice is null)
-            {
-                yield return new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, markerNo,
-                    Names(group.Select(r => r.Color).Distinct().ToList()), string.Join(", ", need.Keys)));
-                continue;
-            }
-            yield return new Estimate(fabric, choice.Meters, Plan: PlanDto(markerNo, isExtra: false, choice));
+            var markers = MarkersFor(data, productId, markerNo, fabric);
+            var choice = MarkerFabricEstimator.ChooseWhole(need, markers.Fit, _solver);
+            yield return choice is null
+                ? new Estimate(fabric, 0, NoMarkerProblem(markerNo, fabric, markers,
+                    Names(group.Select(r => r.Color).Distinct().ToList()), string.Join(", ", need.Keys)))
+                : new Estimate(fabric, choice.Meters, Plan: PlanDto(markerNo, isExtra: false, choice), NarrowMarkers: markers.Wide);
         }
     }
 
@@ -158,13 +161,14 @@ public sealed class WorkOrderFabricChecker
         foreach (var group in rows.Where(r => r.Group is not null).GroupBy(r => (r.Variant.ProductId, r.Group!.Value, r.Norm.Fabric.MaterialId)))
         {
             var need = group.Select(r => new PieceNeed(r.Variant.SizeCode, r.Line.PlannedQty, r.Norm.PiecesPerGarment)).ToList();
-            var choice = MarkerFabricEstimator.ChooseExtra(need, MarkersOf(data, group.Key.ProductId, group.Key.Value), _solver);
             var fabric = group.First().Norm.Fabric;
+            var markers = MarkersFor(data, group.Key.ProductId, group.Key.Value, fabric);
+            var choice = MarkerFabricEstimator.ChooseExtra(need, markers.Fit, _solver);
             yield return choice is null
-                ? new Estimate(fabric, 0, string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, group.Key.Value,
+                ? new Estimate(fabric, 0, NoMarkerProblem(group.Key.Value, fabric, markers,
                     Names(group.Select(r => r.Variant.Color).Distinct().ToList()),
                     string.Join(", ", need.Select(p => p.SizeCode).Distinct(StringComparer.OrdinalIgnoreCase))))
-                : new Estimate(fabric, choice.Meters, Plan: PlanDto(group.Key.Value, isExtra: true, choice));
+                : new Estimate(fabric, choice.Meters, Plan: PlanDto(group.Key.Value, isExtra: true, choice), NarrowMarkers: markers.Wide);
         }
     }
 
@@ -190,12 +194,36 @@ public sealed class WorkOrderFabricChecker
         new(markerNo, isExtra, plan.Meters, plan.Surplus, plan.IsProvenOptimal, plan.Uses.Select(u => new FabricMarkerUseDto(
                 u.Code, u.LengthM, u.Plies, u.Meters,
                 (u.Ratio ?? new Dictionary<string, int>()).OrderBy(r => SizeOrder.Rank(r.Key)).ThenBy(r => r.Key, StringComparer.Ordinal)
-                    .Select(r => new MarkerRatioDto(r.Key, (short)r.Value)).ToList()))
+                    .Select(r => new MarkerRatioDto(r.Key, (short)r.Value)).ToList(), u.Across))
             .ToList());
 
-    /// <summary>Bìa của đơn trong nhóm. Nhóm thuộc một dạng bìa (DEV-ALL-89) nên chỉ các màu của dạng đó đi vào nhóm và dùng các bìa này.</summary>
-    private static IEnumerable<MarkerOption> MarkersOf(Data data, int productId, byte markerNo) =>
-        data.Markers.Where(m => m.ProductId == productId && m.MarkerNo == markerNo).Select(m => m.Option);
+    /// <summary>Bìa của nhóm chia theo khổ vải: Fit = bìa trải được trên vải (đem ghép), Wide = "mã bìa (rộng m)" của bìa rộng hơn khổ vải.</summary>
+    private sealed record GroupMarkers(IReadOnlyList<MarkerOption> Fit, IReadOnlyList<string> Wide);
+
+    /// <summary>
+    /// Bìa của đơn trong nhóm. Nhóm thuộc một dạng bìa (DEV-ALL-89) nên chỉ các màu của dạng đó đi vào nhóm và dùng các bìa này.
+    /// DEV-ALL-104: bìa rộng hơn khổ vải không trải được trên vải nên không đem ghép (vải chưa có khổ thì dùng mọi bìa, một bìa / lớp).
+    /// DEV-ALL-105: vải rộng gấp k lần bìa (k = ⌊khổ vải ÷ khổ bìa⌋, không trừ biên) thì một lớp trải k bìa song song (hoặc cắt khổ
+    /// vải thành k phần), một lớp cắt ra k lần sản phẩm của bìa.
+    /// </summary>
+    private static GroupMarkers MarkersFor(Data data, int productId, byte markerNo, Fabric fabric)
+    {
+        var all = data.Markers.Where(m => m.ProductId == productId && m.MarkerNo == markerNo).ToList();
+        if (fabric.WidthM is not { } width) return new GroupMarkers(all.Select(m => m.Option).ToList(), []);
+        return new GroupMarkers(all.Where(m => m.WidthM <= width)
+                .Select(m => m.Option with { Across = (int)Math.Floor(width / m.WidthM) }).ToList(),
+            all.Where(m => m.WidthM > width)
+                .Select(m => string.Format(WarehouseMessages.FabricCheckNarrowMarkerLabel, m.Option.Code, Format(m.WidthM))).ToList());
+    }
+
+    /// <summary>
+    /// Không ghép được bìa cho nhóm: có bìa bị bỏ vì rộng hơn khổ vải thì báo không có bìa vừa khổ (vải không đủ rộng để cắt),
+    /// còn lại báo thiếu bìa của đơn cho các màu / size.
+    /// </summary>
+    private static string NoMarkerProblem(byte markerNo, Fabric fabric, GroupMarkers markers, string colors, string sizes) =>
+        markers.Wide.Count > 0 && fabric.WidthM is { } width
+            ? string.Format(WarehouseMessages.FabricCheckNoFittingMarkerLabel, Format(width), markerNo, Names(markers.Wide))
+            : string.Format(WarehouseMessages.FabricCheckNoOrderMarkerLabel, markerNo, colors, sizes);
 
     private static bool HasGroupFabric(CutLine line, Data data) =>
         data.Variants.TryGetValue(line.ProductVariantId, out var v)
@@ -221,7 +249,17 @@ public sealed class WorkOrderFabricChecker
         var message = available >= need ? null : string.Format(WarehouseMessages.FabricCheckShort, f.Label, Format(need - available),
             Format(need), Format(available), Format(warehouse), Format(holding));
         return new WorkOrderFabricCheckDto(f.MaterialId, f.Code, f.Name, f.Color,
-            message is null ? FabricCheckStatuses.Enough : FabricCheckStatuses.Short, need, available, message, plans, warehouse, holding);
+            message is null ? FabricCheckStatuses.Enough : FabricCheckStatuses.Short, need, available, message, plans, warehouse, holding,
+            WidthWarning(f, estimates));
+    }
+
+    /// <summary>DEV-ALL-104: cảnh báo các bìa rộng hơn khổ vải đã bị bỏ khi ghép bìa (vải không đủ rộng để cắt bằng các bìa đó).</summary>
+    private static string? WidthWarning(Fabric f, IReadOnlyList<Estimate> estimates)
+    {
+        var narrow = estimates.SelectMany(e => e.NarrowMarkers ?? []).Distinct().ToList();
+        return narrow.Count == 0 || f.WidthM is not { } width
+            ? null
+            : string.Format(WarehouseMessages.FabricCheckTooNarrow, f.Label, Format(width), Names(narrow));
     }
 
     /// <summary>Tối đa 3 tên để cảnh báo không quá dài; còn lại ghi số lượng.</summary>

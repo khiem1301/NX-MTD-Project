@@ -7,6 +7,7 @@ import { QtyInput } from '@/components/common/QtyInput';
 import { PM_LABELS } from '../constants';
 import type { DailyAllocationRow } from '../types';
 import { maxGiveOf, minGiveOf } from '../utils/dailyBoard';
+import { OperationComponentsLine } from './OperationComponentsLine';
 
 export type DailyTableRow =
   | {
@@ -18,6 +19,8 @@ export type DailyTableRow =
       isOpen: boolean;
       /** Số công đoạn trong nhóm đã sửa mà chưa lưu, để thấy được cả khi nhóm đang đóng. */
       changedCount: number;
+      /** Số công đoạn trong nhóm vượt số giao được (đang chặn lưu), để thấy được cả khi nhóm đang đóng. */
+      overCount: number;
     }
   | { kind: 'operation'; key: string; row: DailyAllocationRow };
 
@@ -57,12 +60,14 @@ export const dailyModalColumns = ({
           {r.changedCount > 0 && (
             <Tag color="blue">{fill(PM_LABELS.groupChanged, r.changedCount)}</Tag>
           )}
+          {r.overCount > 0 && <Tag color="red">{fill(PM_LABELS.groupOver, r.overCount)}</Tag>}
         </Space>
       ) : (
         <>
           {multiLine && `${r.row.color}-${r.row.sizeCode} · `}
           {`${r.row.operationCode} - ${r.row.operationName}`}{' '}
           {!r.row.isAssigned && <Tag color="purple">{PM_LABELS.outsideAssignment}</Tag>}
+          <OperationComponentsLine row={r.row} />
         </>
       ),
   },
@@ -103,15 +108,22 @@ export const dailyModalColumns = ({
           />
         </span>
       ) : (
-        <QtyInput
-          aria-label={fill(PM_LABELS.operationInput, r.row.operationCode)}
-          disabled={!editable}
-          min={minGiveOf(r.row)}
-          max={maxGiveOf(r.row)}
-          style={{ width: 120 }}
-          value={valueOf(r.row)}
-          onChange={(v) => onQuantityChange(r.row, v)}
-        />
+        <>
+          <QtyInput
+            aria-label={fill(PM_LABELS.operationInput, r.row.operationCode)}
+            disabled={!editable}
+            min={minGiveOf(r.row)}
+            limit={maxGiveOf(r.row)}
+            style={{ width: 120 }}
+            value={valueOf(r.row)}
+            onChange={(v) => onQuantityChange(r.row, v)}
+          />
+          {r.row.pendingQty > 0 && (
+            <Tag color="gold" style={{ marginTop: 4 }}>
+              {fill(PM_LABELS.pendingConfirm, r.row.pendingQty)}
+            </Tag>
+          )}
+        </>
       ),
   },
   {

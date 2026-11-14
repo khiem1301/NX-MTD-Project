@@ -2,33 +2,39 @@ using NX_MTD.Application.Common;
 
 namespace NX_MTD.Application.DTOs;
 
+/// <summary>Phiếu trả NVL / phế phẩm / BTP của tổ cắt, tổ may (DEV-ALL-112). OrderCode / WorkOrderCode có khi phiếu gắn đơn / lệnh cắt.</summary>
 public sealed record MaterialReturnListItemDto(
-    int MaterialReturnId, string ReturnCode, int MaterialIssueId, string IssueCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
+    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamName, string? OrderCode,
+    string? WorkOrderCode, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
     decimal TotalReturnedQty);
 
+/// <summary>Dòng phiếu trả. NVL: ItemCode / ItemName là mã và tên NVL; BTP: mã hàng và "màu/size" (đơn vị bộ).</summary>
 public sealed record MaterialReturnLineDto(
-    int MaterialReturnLineId, int MaterialIssueLineId, string MaterialCode, string MaterialName, string Unit,
-    string MaterialColor, decimal ReturnedQty, decimal? ConfirmedQty, string? DiscrepancyReason);
+    int MaterialReturnLineId, int? MaterialId, int? OrderLineId, string ItemCode, string ItemName, string Unit,
+    string ItemColor, bool IsScrap, decimal ReturnedQty, decimal? ConfirmedQty, string? DiscrepancyReason);
 
 public sealed record MaterialReturnDto(
-    int MaterialReturnId, string ReturnCode, int MaterialIssueId, string IssueCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, string? Note, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
+    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamName, string? OrderCode,
+    string? WorkOrderCode, string? Note, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
     string? RejectReason, IReadOnlyList<MaterialReturnLineDto> Lines);
 
-/// <summary>Vải đã cấp cho tổ cắt (phiếu cấp đã nhận) và số còn trả được của từng dòng.</summary>
-/// <param name="SuggestedQty">
-/// Số vải còn lại gợi ý trả: đã nhận − đã trả / đang trả − đã cắt (Σ số mét vải đã dùng các bàn của tổ trên đơn), chia vào các
-/// dòng phiếu cấp cùng đơn, cùng vải. null khi có bàn cắt chưa nhập chiều dài (chưa tính được số đã cắt).
-/// </param>
+/// <summary>
+/// Hàng tổ còn trả được và trần. NVL của tổ cắt: theo lệnh cắt, UsedQty = số mét đã cắt của lệnh (null khi có bàn cắt chưa nhập
+/// số mét, chưa tính được). NVL của tổ may: tổng đã nhận ở mọi phiếu cấp. BTP: theo dòng đơn, UsedQty = số đã QC đạt.
+/// RemainingQty (trần số trả) = đã nhận − đã dùng (nếu tính được) − đã trả / đang chờ trả.
+/// </summary>
 public sealed record ReturnableLineDto(
-    int MaterialIssueId, string IssueCode, int MaterialIssueLineId, string OrderCode, string MaterialCode,
-    string MaterialName, string Unit, string MaterialColor, decimal ReceivedQty, decimal ReturnedQty, decimal RemainingQty,
-    decimal? SuggestedQty = null);
+    int? MaterialId, int? OrderLineId, string ItemCode, string ItemName, string Unit, string ItemColor,
+    decimal ReceivedQty, decimal? UsedQty, decimal ReturnedQty, decimal RemainingQty);
 
-public sealed record CreateReturnLineDto(int MaterialIssueLineId, decimal ReturnedQty);
+/// <summary>WarehouseType: MATERIAL hoặc SEMI_FINISHED. Tổ cắt trả NVL kèm WorkOrderId, tổ may trả BTP kèm OrderId.</summary>
+public sealed record ReturnableQuery(string WarehouseType, int? WorkOrderId, int? OrderId);
 
-public sealed record CreateMaterialReturnDto(int MaterialIssueId, string? Note, IReadOnlyList<CreateReturnLineDto> Lines);
+/// <summary>NVL: MaterialId (kể cả phế phẩm); BTP: OrderLineId (cả bộ của dòng đơn).</summary>
+public sealed record CreateReturnLineDto(int? MaterialId, int? OrderLineId, decimal ReturnedQty);
+
+public sealed record CreateMaterialReturnDto(string WarehouseType, int? WorkOrderId, int? OrderId, string? Note,
+    IReadOnlyList<CreateReturnLineDto> Lines);
 
 public sealed record ConfirmReturnLineDto(int MaterialReturnLineId, decimal ConfirmedQty, string? DiscrepancyReason);
 

@@ -1,17 +1,12 @@
-import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { FilterSelect } from '@/components/common/FilterSelect';
-import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
-import { ReasonModal } from '@/components/common/ReasonModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
-import { isObjectionOpen } from '../utils/defectRules';
-import { useMyDefects, useObjectDefect } from '../hooks/useDefects';
+import { useMyDefects } from '../hooks/useDefects';
 import type { Defect, DefectStatus } from '../types';
 import { PageCard } from '@/components/common/PageCard';
 import { DataTable } from '@/components/common/DataTable';
@@ -25,12 +20,10 @@ const STATUS_OPTIONS: { value: DefectStatus; label: string }[] = [
   { value: 'Confirmed', label: text.status.Confirmed.text },
 ];
 
-/** UC56 — công nhân xem phiếu hàng hỏng được ghi cho mình và phản hồi khi ghi sai. */
+/** UC56 — công nhân chỉ xem phiếu hàng hỏng được ghi cho mình (không phản hồi / khiếu nại). */
 export function MyDefectsPage() {
   const [status, setStatus] = useState<DefectStatus>();
   const defects = useMyDefects({ page: 1, pageSize: 100, status });
-  const objectDefect = useObjectDefect();
-  const [objecting, setObjecting] = useState<Defect | null>(null);
 
   const columns: ColumnsType<Defect> = [
     { title: text.columns.code, dataIndex: 'defectCode' },
@@ -73,22 +66,6 @@ export function MyDefectsPage() {
       dataIndex: 'status',
       render: (v: string) => <StatusTag status={v} labels={text.status} />,
     },
-    {
-      title: MESSAGES.common.actions,
-      key: 'action',
-      render: (_, d) =>
-        d.status === 'Confirmed' && d.workerObjection ? (
-          <Tag color="red">{mine.rejected}</Tag>
-        ) : d.workerObjection ? (
-          <Tag color="volcano">{text.objected}</Tag>
-        ) : d.status === 'Recorded' && isObjectionOpen(d) ? (
-          <IconAction
-            title={mine.object}
-            icon={<ExclamationCircleOutlined />}
-            onClick={() => setObjecting(d)}
-          />
-        ) : null,
-    },
   ];
 
   return (
@@ -110,20 +87,6 @@ export function MyDefectsPage() {
         loading={defects.isFetching}
         locale={{ emptyText: status ? MESSAGES.common.empty : mine.empty }}
         scroll={{ x: 'max-content' }}
-      />
-
-      <ReasonModal
-        open={objecting !== null}
-        title={mine.objectTitle}
-        loading={objectDefect.isPending}
-        onCancel={() => setObjecting(null)}
-        onSubmit={(objection) =>
-          objecting &&
-          objectDefect.mutate(
-            { id: objecting.defectRecordId, body: { objection, rowVer: objecting.rowVer } },
-            { onSuccess: () => setObjecting(null) },
-          )
-        }
       />
     </PageCard>
   );

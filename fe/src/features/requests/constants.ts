@@ -62,6 +62,9 @@ export const WAITING_STATUSES: readonly RequestStatus[] = [
 /** Tổ cắt xin NVL được theo lệnh cắt của tổ (DEV-ALL-92). */
 export const CUTTING_TEAM_TYPE: TeamType = 'Cutting';
 
+/** Tổ may xin NVL / BTP phải chọn đơn hàng, chỉ xin hàng của đơn (DEV-ALL-110). */
+export const SEWING_TEAM_TYPE: TeamType = 'Sewing';
+
 /** Lệnh cắt gắn được vào đơn xin NVL: đang mở / đang cắt (khớp kiểm ở BE, DEV-ALL-92). */
 export const CUTTABLE_WORK_ORDER_STATUSES: readonly string[] = ['OPEN', 'CUTTING'];
 

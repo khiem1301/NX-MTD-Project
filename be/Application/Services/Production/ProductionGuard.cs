@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
+using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
@@ -84,6 +85,22 @@ public sealed class ProductionGuard
         return string.IsNullOrWhiteSpace(reason)
             ? Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation)
             : null;
+    }
+
+    /// <summary>Hàng đang có trên chuyền = BTP tổ đã nhận − Σ QC đạt (trừ đợt <paramref name="exceptBatchId"/>) − Σ Scrap chưa hủy.</summary>
+    public async Task<OnLineQtyDto> ComputeOnLineAsync(int teamId, int orderLineId, int? exceptBatchId, CancellationToken ct)
+    {
+        var received = (int)await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking().ReceivedSets(teamId, orderLineId)
+            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
+        var finished = await _uow.Repository<QcBatch>().Query().AsNoTracking()
+            .Where(b => b.SewingTeamId == teamId && b.OrderLineId == orderLineId
+                        && (exceptBatchId == null || b.QcBatchId != exceptBatchId))
+            .SumAsync(b => (int?)b.FinishedQty, ct) ?? 0;
+        var scrap = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
+            .Where(d => d.SewingTeamId == teamId && d.OrderLineId == orderLineId && d.DefectType == DefectTypes.Scrap
+                        && d.Status != DefectStatuses.Cancelled)
+            .SumAsync(d => (int?)d.Quantity, ct) ?? 0;
+        return new OnLineQtyDto(teamId, orderLineId, received, finished, scrap, Math.Max(0, received - finished - scrap));
     }
 
     /// <summary>true nếu ngày thuộc tháng đã khóa (chặn bằng pre-check để trả lỗi sạch, ngoài trigger DB).</summary>

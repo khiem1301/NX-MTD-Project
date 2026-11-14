@@ -42,12 +42,12 @@ public sealed record CreateOrderMaterialLineDto(
 public sealed record CreateOrderMaterialBatchDto(int OrderId, IReadOnlyList<CreateOrderMaterialLineDto> Lines);
 
 /// <summary>
-/// Lịch khách giao NVL của cả đơn (DEV-ALL-95): số lần, ngày / khoảng ngày dự kiến; ReceivedCount = số phiếu khách cấp thường đã
+/// Lịch khách giao NVL của cả đơn (DEV-ALL-95): số lần, ngày dự kiến từng lần (DeliveryDates; DeliveryDate / DeliveryDateTo là ngày đầu / cuối); ReceivedCount = số phiếu khách cấp thường đã
 /// xác nhận; HasCustomerMaterials = đơn có NVL khách cấp (khi đó cần khai lịch giao).
 /// </summary>
 public sealed record OrderCustomerDeliveryDto(
     int OrderId, short? DeliveryCount, DateOnly? DeliveryDate, DateOnly? DeliveryDateTo, int ReceivedCount,
-    bool HasCustomerMaterials);
+    bool HasCustomerMaterials, IReadOnlyList<DateOnly>? DeliveryDates = null);
 
-/// <summary>Khai / sửa lịch khách giao NVL của cả đơn. Giao từ 2 lần trở lên thì bắt buộc ngày giao đến.</summary>
-public sealed record SaveOrderCustomerDeliveryDto(short DeliveryCount, DateOnly DeliveryDate, DateOnly? DeliveryDateTo);
+/// <summary>Khai / sửa lịch khách giao NVL của cả đơn: số lần giao = số ngày giao phải nhập (DEV-ALL-113).</summary>
+public sealed record SaveOrderCustomerDeliveryDto(short DeliveryCount, IReadOnlyList<DateOnly> DeliveryDates);

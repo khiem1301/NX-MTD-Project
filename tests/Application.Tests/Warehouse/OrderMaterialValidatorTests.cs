@@ -111,9 +111,12 @@ public class OrderMaterialValidatorTests
 
     // ---------- lịch khách giao của cả đơn (DEV-ALL-95) ----------
 
-    private static string[] PlanErrors(short count, DateOnly date, DateOnly? dateTo = null) =>
-        new SaveOrderCustomerDeliveryDtoValidator().Validate(new SaveOrderCustomerDeliveryDto(count, date, dateTo))
+    private static string[] PlanErrors(short count, IReadOnlyList<DateOnly> dates) =>
+        new SaveOrderCustomerDeliveryDtoValidator().Validate(new SaveOrderCustomerDeliveryDto(count, dates))
             .Errors.Select(e => e.ErrorMessage).ToArray();
+
+    /// <summary>Đúng <paramref name="count"/> ngày giao, mỗi ngày cách một ngày (DEV-ALL-113).</summary>
+    private static DateOnly[] SoonDates(int count) => Enumerable.Range(0, Math.Max(count, 0)).Select(i => Soon.AddDays(i)).ToArray();
 
     [Theory]
     [InlineData((short)1, true)]
@@ -121,27 +124,30 @@ public class OrderMaterialValidatorTests
     [InlineData((short)100, false)]
     [InlineData((short)0, false)]
     public void Validate_CustomerDeliveryCount_Boundaries(short count, bool expected) =>
-        (PlanErrors(count, Soon, count >= 2 ? Soon.AddDays(9) : null).Length == 0).Should().Be(expected);
+        (PlanErrors(count, SoonDates(count)).Length == 0).Should().Be(expected);
 
     [Fact]
     public void Validate_CustomerDeliveryCountOutOfRange_HasOneVietnameseMessage() =>
-        PlanErrors(100, Soon, Soon.AddDays(9)).Should().Equal("Số lần khách giao NVL phải từ 1 đến 99.");
+        PlanErrors(100, SoonDates(100)).Should().Equal("Số lần khách giao NVL phải từ 1 đến 99.");
 
     [Fact]
-    public void Validate_CustomerDeliversTwiceWithoutDateTo_ReturnsDateToRequired() =>
-        PlanErrors(2, Soon).Should().Equal("Giao từ 2 lần trở lên thì nhập khoảng ngày giao (từ ngày – đến ngày).");
+    public void Validate_FewerDatesThanDeliveries_ReturnsCountMismatch() =>
+        PlanErrors(3, SoonDates(2)).Should().Equal("Giao 3 lần thì phải nhập đúng 3 ngày giao (mỗi lần giao một ngày).");
 
     [Fact]
-    public void Validate_DateToBeforeDateFrom_ReturnsBeforeFromError() =>
-        PlanErrors(2, Soon, Soon.AddDays(-1)).Should().Equal("Ngày giao đến không được trước ngày giao từ.");
+    public void Validate_MoreDatesThanDeliveries_ReturnsCountMismatch() =>
+        PlanErrors(1, SoonDates(2)).Should().Equal("Giao 1 lần thì phải nhập đúng 1 ngày giao (mỗi lần giao một ngày).");
 
     [Fact]
-    public void Validate_CustomerDeliversOnceWithDateTo_IgnoresDateTo() =>
-        PlanErrors(1, Soon, Soon.AddDays(-1)).Should().BeEmpty();
+    public void Validate_DateBeforePreviousDate_ReturnsOutOfOrderError() =>
+        PlanErrors(2, [Soon, Soon.AddDays(-1)]).Should().Equal("Ngày giao lần 2 không được trước ngày giao lần 1.");
 
     [Fact]
-    public void Validate_CustomerDeliveryWithoutDate_ReturnsDateRequired() =>
-        PlanErrors(1, default).Should().Equal("Vui lòng nhập ngày dự kiến giao hàng.");
+    public void Validate_EqualDatesOnSameDay_AreAllowed() => PlanErrors(2, [Soon, Soon]).Should().BeEmpty();
+
+    [Fact]
+    public void Validate_CustomerDeliveryWithoutDates_ReturnsCountMismatch() =>
+        PlanErrors(1, []).Should().Equal("Giao 1 lần thì phải nhập đúng 1 ngày giao (mỗi lần giao một ngày).");
 
     // ---------- ghi chú, mã ----------
 

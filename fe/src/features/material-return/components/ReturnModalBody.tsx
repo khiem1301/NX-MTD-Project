@@ -9,6 +9,7 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { formatDateTime, formatQty } from '@/utils/format';
 import {
+  RETURN_KIND_LABEL,
   RETURN_LABELS,
   RETURN_MESSAGES,
   RETURN_STATUS,
@@ -20,7 +21,9 @@ import type { MaterialReturn, MaterialReturnLine } from '../types';
 import { DetailDescriptions, ModalActions } from '@/components/common/DetailModal';
 import { DataTable } from '@/components/common/DataTable';
 import { QtyInput } from '@/components/common/QtyInput';
-import { MATERIAL_QTY_DECIMALS } from '@/constants/quantity';
+import { MAX_MATERIAL_QTY } from '@/constants/quantity';
+import { maxQtyRule } from '@/utils/qtyLimit';
+import { decimalsOfUnit } from '../utils/returnLines';
 
 type FormValues = { counts: Record<string, { confirmedQty: number; discrepancyReason?: string }> };
 
@@ -94,9 +97,14 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
         />
       )}
       <DetailDescriptions>
-        <Descriptions.Item label={RETURN_LABELS.issue}>{r.issueCode}</Descriptions.Item>
-        <Descriptions.Item label={RETURN_LABELS.order}>{r.orderCode}</Descriptions.Item>
-        <Descriptions.Item label={RETURN_LABELS.team}>{r.cuttingTeamName}</Descriptions.Item>
+        <Descriptions.Item label={RETURN_LABELS.kind}>
+          {RETURN_KIND_LABEL[r.warehouseType]}
+        </Descriptions.Item>
+        <Descriptions.Item label={RETURN_LABELS.team}>{r.teamName}</Descriptions.Item>
+        <Descriptions.Item label={RETURN_LABELS.order}>{r.orderCode ?? '—'}</Descriptions.Item>
+        <Descriptions.Item label={RETURN_LABELS.workOrder}>
+          {r.workOrderCode ?? '—'}
+        </Descriptions.Item>
         <Descriptions.Item label={RETURN_LABELS.createdAt}>
           {formatDateTime(r.createdAt)}
         </Descriptions.Item>
@@ -131,7 +139,7 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
               title: RETURN_LABELS.material,
               key: 'material',
               render: (_, l) =>
-                `${l.materialCode} ${l.materialName}${l.materialColor ? ` - ${l.materialColor}` : ''}`,
+                `${l.itemCode} ${l.itemName}${l.materialId !== null && l.itemColor ? ` - ${l.itemColor}` : ''}${l.isScrap ? ` (${RETURN_LABELS.scrapTag})` : ''}`,
             },
             { title: RETURN_LABELS.unit, dataIndex: 'unit' },
             {
@@ -148,9 +156,13 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
                   <Form.Item
                     name={['counts', String(l.materialReturnLineId), 'confirmedQty']}
                     style={{ marginBottom: 0 }}
-                    rules={[{ required: true, message: MESSAGES.common.required }, qtyDecimalsRule]}
+                    rules={[
+                      { required: true, message: MESSAGES.common.required },
+                      qtyDecimalsRule,
+                      maxQtyRule(l.returnedQty),
+                    ]}
                   >
-                    <QtyInput decimals={MATERIAL_QTY_DECIMALS} min={0} max={l.returnedQty} />
+                    <QtyInput decimals={decimalsOfUnit(l.unit)} min={0} max={MAX_MATERIAL_QTY} />
                   </Form.Item>
                 ) : l.confirmedQty === null ? (
                   '—'

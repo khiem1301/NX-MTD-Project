@@ -49,7 +49,7 @@ public sealed class QcBatchService : IQcBatchService
     }
 
     public async Task<Result<OnLineQtyDto>> GetOnLineAsync(int sewingTeamId, int orderLineId, CancellationToken ct) =>
-        Result<OnLineQtyDto>.Success(await ComputeOnLineAsync(sewingTeamId, orderLineId, null, ct));
+        Result<OnLineQtyDto>.Success(await _guard.ComputeOnLineAsync(sewingTeamId, orderLineId, null, ct));
 
     /// <summary>Kiểm ca, số lượng, ngày, kỳ khóa, tổ may, dòng đơn chưa đóng, lô trùng và số lượng không vượt số đang trên chuyền (MSG19).</summary>
     private async Task<Result<int>?> ValidateAsync(CreateQcBatchDto dto, string shift, CancellationToken ct)
@@ -79,7 +79,7 @@ public sealed class QcBatchService : IQcBatchService
             && b.BatchTime == dto.BatchTime && b.SewingTeamId == dto.SewingTeamId && b.OrderLineId == dto.OrderLineId, ct);
         if (duplicate) return Result<int>.Failure(ErrorCodes.QcBatchDuplicate, Messages.QcBatchDuplicate);
 
-        var onLine = await ComputeOnLineAsync(dto.SewingTeamId, dto.OrderLineId, null, ct);
+        var onLine = await _guard.ComputeOnLineAsync(dto.SewingTeamId, dto.OrderLineId, null, ct);
         return dto.FinishedQty > onLine.OnLine
             ? Result<int>.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine))   // MSG19
             : null;
@@ -120,7 +120,7 @@ public sealed class QcBatchService : IQcBatchService
         if (await _guard.IsPeriodLockedAsync(batch.WorkDate, ct)) return _guard.PeriodLockedFailure(batch.WorkDate);
 
         // Trần tính trên chính đợt này đã được trừ ra, để sửa giảm / tăng nhẹ vẫn hợp lệ.
-        var onLine = await ComputeOnLineAsync(batch.SewingTeamId, batch.OrderLineId, qcBatchId, ct);
+        var onLine = await _guard.ComputeOnLineAsync(batch.SewingTeamId, batch.OrderLineId, qcBatchId, ct);
         if (dto.FinishedQty > onLine.OnLine)
             return Result.Failure(ErrorCodes.QcExceedsOnLine, string.Format(Messages.QcExceedsOnLine, onLine.OnLine));
         var handedOver = await CheckHandedOverAsync(batch, dto.FinishedQty, ct);
@@ -172,22 +172,6 @@ public sealed class QcBatchService : IQcBatchService
         return total < handed
             ? Result.Failure(ErrorCodes.QcBelowHandedOver, string.Format(Messages.QcBelowHandedOver, total, handed))
             : null;
-    }
-
-    /// <summary>Hàng đang có trên chuyền = BTP tổ đã nhận − Σ QC đạt (trừ đợt đang sửa) − Σ Scrap chưa hủy.</summary>
-    private async Task<OnLineQtyDto> ComputeOnLineAsync(int teamId, int orderLineId, int? exceptBatchId, CancellationToken ct)
-    {
-        var received = (int)await _uow.Repository<MaterialIssueLine>().Query().AsNoTracking().ReceivedSets(teamId, orderLineId)
-            .SumAsync(l => l.ConfirmedQty ?? 0, ct);
-        var finished = await Batches.AsNoTracking()
-            .Where(b => b.SewingTeamId == teamId && b.OrderLineId == orderLineId
-                        && (exceptBatchId == null || b.QcBatchId != exceptBatchId))
-            .SumAsync(b => (int?)b.FinishedQty, ct) ?? 0;
-        var scrap = await _uow.Repository<DefectRecord>().Query().AsNoTracking()
-            .Where(d => d.SewingTeamId == teamId && d.OrderLineId == orderLineId && d.DefectType == DefectTypes.Scrap
-                        && d.Status != DefectStatuses.Cancelled)
-            .SumAsync(d => (int?)d.Quantity, ct) ?? 0;
-        return new OnLineQtyDto(teamId, orderLineId, received, finished, scrap, Math.Max(0, received - finished - scrap));
     }
 
     private static object Snapshot(QcBatch b) =>

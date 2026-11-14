@@ -21,11 +21,12 @@ public class CustomerDeliveryPlanServiceTests
     private readonly List<CustomerOrder> _orders = new();
     private readonly List<OrderMaterial> _materials = new();
     private readonly List<MaterialReceipt> _receipts = new();
+    private readonly List<DeliveryScheduleDate> _schedule = new();
 
     public CustomerDeliveryPlanServiceTests()
     {
         _clock.Today.Returns(Today);
-        Setup(_orders); Setup(_materials); Setup(_receipts);
+        Setup(_orders); Setup(_materials); Setup(_receipts); Setup(_schedule);
     }
 
     private void Setup<T>(List<T> backing) where T : class
@@ -36,6 +37,10 @@ public class CustomerDeliveryPlanServiceTests
     }
 
     private CustomerDeliveryPlanService Sut() => new(_uow, new DeliveryCountGuard(_uow), _notifier, _audit, _clock);
+
+    private void Scheduled(int orderId, params DateOnly[] dates) =>
+        _schedule.AddRange(dates.Select((d, i) => new DeliveryScheduleDate
+            { OrderId = orderId, SeqNo = (short)(i + 1), DeliveryDate = d }));
 
     private CustomerOrder Order(decimal customerQty = 100)
     {
@@ -50,7 +55,7 @@ public class CustomerDeliveryPlanServiceTests
     {
         var order = Order();
 
-        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(2, Today.AddDays(3), Today.AddDays(10)), default);
+        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(2, [Today.AddDays(3), Today.AddDays(10)]), default);
 
         result.IsSuccess.Should().BeTrue();
         order.CustomerDeliveryCount.Should().Be(2);
@@ -64,7 +69,7 @@ public class CustomerDeliveryPlanServiceTests
     {
         var order = Order();
 
-        await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, Today.AddDays(3), Today.AddDays(10)), default);
+        await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, [Today.AddDays(3)]), default);
 
         order.CustomerDeliveryDateTo.Should().BeNull();
     }
@@ -76,7 +81,7 @@ public class CustomerDeliveryPlanServiceTests
         _receipts.Add(new MaterialReceipt { MaterialReceiptId = 1, OrderId = 7, Status = ReceiptStatuses.Confirmed });
         _receipts.Add(new MaterialReceipt { MaterialReceiptId = 2, OrderId = 7, Status = ReceiptStatuses.Confirmed });
 
-        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, Today.AddDays(3), null), default);
+        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, [Today.AddDays(3)]), default);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("2 lần");
@@ -88,7 +93,7 @@ public class CustomerDeliveryPlanServiceTests
     {
         Order();
 
-        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, Today.AddDays(31), null), default);
+        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(1, [Today.AddDays(31)]), default);
 
         result.IsSuccess.Should().BeFalse();
     }
@@ -100,8 +105,9 @@ public class CustomerDeliveryPlanServiceTests
         order.CustomerDeliveryCount = 2;
         order.CustomerDeliveryDate = Today.AddDays(-20);
         order.CustomerDeliveryDateTo = Today.AddDays(-5);   // lịch cũ đã qua
+        Scheduled(7, Today.AddDays(-20), Today.AddDays(-5));
 
-        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(3, Today.AddDays(-20), Today.AddDays(-5)), default);
+        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(3, [Today.AddDays(-20), Today.AddDays(-10), Today.AddDays(-5)]), default);
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Be(WarehouseMessages.CustomerDeliveryIncreaseNeedsFutureDate);
@@ -115,10 +121,11 @@ public class CustomerDeliveryPlanServiceTests
         order.CustomerDeliveryCount = 2;
         order.CustomerDeliveryDate = Today.AddDays(-20);
         order.CustomerDeliveryDateTo = Today.AddDays(-5);
+        Scheduled(7, Today.AddDays(-20), Today.AddDays(-5));
 
-        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(3, Today.AddDays(-20), Today.AddDays(7)), default);
+        var result = await Sut().SaveAsync(7, new SaveOrderCustomerDeliveryDto(3, [Today.AddDays(-20), Today.AddDays(-5), Today.AddDays(7)]), default);
 
-        result.IsSuccess.Should().BeTrue();   // ngày từ cũ giữ nguyên được, ngày đến mới từ hôm nay trở đi
+        result.IsSuccess.Should().BeTrue();   // ngày cũ giữ nguyên được, ngày mới thêm từ hôm nay trở đi
         order.CustomerDeliveryCount.Should().Be(3);
         order.CustomerDeliveryDateTo.Should().Be(Today.AddDays(7));
     }

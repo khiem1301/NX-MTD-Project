@@ -1,9 +1,13 @@
 import type { DailyAllocationRow } from '../types';
 import {
   buildDailyWorkers,
+  componentsText,
   DAILY_STATE,
+  fillGive,
   filterDailyWorkers,
   groupDailyRows,
+  isOverGive,
+  matchesOperation,
   maxGiveOf,
   minGiveOf,
   previousEdits,
@@ -23,6 +27,8 @@ const row = (over: Partial<DailyAllocationRow>): DailyAllocationRow =>
     previousQty: 0,
     unitRate: null,
     rateApproved: false,
+    pendingQty: 0,
+    components: [],
     ...over,
   }) as DailyAllocationRow;
 
@@ -104,5 +110,48 @@ describe('dailyBoard', () => {
     ]);
 
     expect(edits).toEqual({ '7-1-1': 40, '7-1-2': 25 });
+  });
+
+  it('cộng phần chờ công nhân xác nhận theo công nhân', () => {
+    const [worker] = buildDailyWorkers(
+      [
+        row({ operationId: 1, allocatedQty: 30, pendingQty: 10 }),
+        row({ operationId: 2, pendingQty: 5 }),
+      ],
+      members,
+      undefined,
+    );
+
+    expect(worker?.pendingQty).toBe(15);
+  });
+
+  it('ghi thành phần của công đoạn chỉ theo tên (không kèm số chi tiết), tìm được theo tên thành phần', () => {
+    const r = row({
+      operationCode: 'OP1',
+      operationName: 'Tra tay',
+      color: 'Đen',
+      sizeCode: 'M',
+      components: [
+        { productComponentId: 1, componentName: 'Tay áo' },
+        { productComponentId: 2, componentName: 'Thân sau' },
+      ],
+    });
+
+    expect(componentsText(r)).toBe('Tay áo, Thân sau');
+    expect(matchesOperation(r, 'than sau')).toBe(true);
+  });
+
+  it('ô nhóm chỉ nâng lên số giao tối thiểu, không cắt về số tối đa', () => {
+    const r = row({ allocatedQty: 10, unallocatedQty: 40, outputQty: 30, carriedQty: 0 });
+
+    expect(fillGive(r, 20)).toBe(30);
+    expect(fillGive(r, 90)).toBe(90);
+  });
+
+  it('vượt số giao tối đa thì là vượt trần', () => {
+    const r = row({ allocatedQty: 10, unallocatedQty: 40 });
+
+    expect(isOverGive(r, 50)).toBe(false);
+    expect(isOverGive(r, 51)).toBe(true);
   });
 });

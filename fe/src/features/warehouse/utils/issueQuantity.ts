@@ -23,10 +23,6 @@ export const PIECE_ISSUE_RULE: IssueQtyRule = {
   max: ISSUE_LIMITS.maxPieceQty,
 };
 
-/** Trần thực của một dòng: nhỏ nhất trong trần quy định, số khả dụng và số trong đơn xin (cái nào có). */
-export const effectiveMax = (rule: IssueQtyRule, ...limits: (number | undefined)[]): number =>
-  Math.min(rule.max, ...limits.filter((l): l is number => l !== undefined));
-
 /** Đổi sang NVL không cho số lẻ thì làm tròn số đã nhập (tối thiểu 1). */
 export const roundIssueQty = (qty: number, materialType: string | undefined): number =>
   materialType === FABRIC_MATERIAL_TYPE ? qty : Math.max(1, Math.round(qty));

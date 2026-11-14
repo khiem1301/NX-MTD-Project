@@ -9,7 +9,6 @@ const mockUseMyDefects = jest.fn((_query: { status?: string }) => ({
 
 jest.mock('../hooks/useDefects', () => ({
   useMyDefects: (query: { status?: string }) => mockUseMyDefects(query),
-  useObjectDefect: () => ({ mutate: jest.fn(), isPending: false }),
 }));
 
 describe('MyDefectsPage', () => {
@@ -23,7 +22,7 @@ describe('MyDefectsPage', () => {
 
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0] as HTMLElement);
     expect(screen.queryByText('Phiếu đã hủy')).not.toBeInTheDocument();
-    fireEvent.click(await screen.findByText('Đã chấp nhận'));
+    fireEvent.click(await screen.findByText('Đã chốt (phiếu cũ)'));
 
     expect(mockUseMyDefects).toHaveBeenLastCalledWith({
       page: 1,

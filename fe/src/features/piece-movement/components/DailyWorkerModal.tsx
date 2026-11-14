@@ -11,9 +11,10 @@ import { PM_LABELS } from '../constants';
 import { useSaveDaily } from '../hooks/usePieceMovement';
 import type { DailyAllocationRow, OperationProgress } from '../types';
 import {
-  clampGive,
   extraRowFrom,
+  fillGive,
   groupDailyRows,
+  isOverGive,
   matchesOperation,
   previousEdits,
   rowKeyOf,
@@ -35,7 +36,7 @@ type DailyWorkerModalProps = {
 /**
  * Giao việc trong ngày cho một công nhân: công đoạn đã phân công lấy sẵn, thêm được công đoạn ngoài phân công. Bảng chỉ mở
  * một nhóm mỗi lúc (bấm nhóm để mở/đóng), có ô tìm công đoạn khi nhóm có nhiều công đoạn. Nhập ở dòng nhóm thì
- * điền cùng số cho cả nhóm; "Giao như lần trước" điền lại số của lần giao gần nhất. Trần sản lượng cuối ca = tồn từ hôm trước + số
+ * điền cùng số cho cả nhóm (dòng vượt số giao được thì báo lỗi, không cho lưu); "Giao như lần trước" điền lại số của lần giao gần nhất. Trần sản lượng cuối ca = tồn từ hôm trước + số
  * giao trong ngày; hạ số xuống phải ghi lý do.
  */
 export function DailyWorkerModal({
@@ -55,6 +56,8 @@ export function DailyWorkerModal({
   const valueOf = (r: DailyAllocationRow) => edits[rowKeyOf(r)] ?? r.allocatedQty;
   const changed = rows.filter((r) => valueOf(r) !== r.allocatedQty);
   const hasDecrease = changed.some((r) => valueOf(r) < r.allocatedQty);
+  // Ô vượt số giao tối đa đã báo lỗi tại dòng; còn dòng vượt thì không cho lưu.
+  const over = changed.filter((r) => isOverGive(r, valueOf(r)));
   const multiLine = new Set(rows.map((r) => r.orderLineId)).size > 1;
 
   const accordion = useGroupAccordion(groupDailyRows(rows), matchesOperation);
@@ -68,6 +71,7 @@ export function DailyWorkerModal({
         rows: g.rows,
         isOpen,
         changedCount: g.rows.filter((r) => changed.includes(r)).length,
+        overCount: g.rows.filter((r) => over.includes(r)).length,
       },
       ...(isOpen
         ? shownRows.map((row): DailyTableRow => ({ kind: 'operation', key: rowKeyOf(row), row }))
@@ -84,7 +88,7 @@ export function DailyWorkerModal({
     if (value === null) return;
     setEdits((prev) => {
       const next = { ...prev };
-      for (const r of groupRows) next[rowKeyOf(r)] = clampGive(r, value);
+      for (const r of groupRows) next[rowKeyOf(r)] = fillGive(r, value);
       return next;
     });
   };
@@ -122,7 +126,8 @@ export function DailyWorkerModal({
       okText={`${MESSAGES.common.save}${changed.length > 0 ? ` (${changed.length})` : ''}`}
       cancelText={MESSAGES.common.cancel}
       okButtonProps={{
-        disabled: !canEdit || changed.length === 0 || (hasDecrease && !reason.trim()),
+        disabled:
+          !canEdit || changed.length === 0 || over.length > 0 || (hasDecrease && !reason.trim()),
       }}
       confirmLoading={save.isPending}
       onOk={handleSave}

@@ -107,6 +107,7 @@ export type PurchaseOrderDetail = {
   expectedDeliveryDate?: string | null;
   /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
   expectedDeliveryDateTo?: string | null;
+  expectedDeliveryDates?: string[];
   receivedCount: number;
   note: string | null;
   rejectReason: string | null;
@@ -135,9 +136,8 @@ export type PlacePayload = {
   supplierId: number;
   orderDate: string;
   expectedDeliveryCount: number;
-  expectedDeliveryDate: string;
-  /** Giao từ 2 lần trở lên: ngày giao đến (yyyy-MM-dd). */
-  expectedDeliveryDateTo?: string | null;
+  /** Mỗi lần giao một ngày (yyyy-MM-dd), đúng số lần giao. */
+  expectedDeliveryDates: string[];
   note: string | null;
   lines: { purchaseOrderLineId: number; orderedQty: number; unitPrice: number }[];
   rowVer: string;

@@ -34,4 +34,19 @@ public sealed class LookupsController : CommonBaseController
     [HttpGet("materials")]
     public async Task<IActionResult> Materials([FromQuery] string? keyword, CancellationToken ct) =>
         this.ToResponse(Result<IReadOnlyList<MaterialOptionDto>>.Success(await _lookups.GetActiveMaterialsAsync(keyword, ct)));
+
+    /// <summary>NVL phế phẩm để chọn khi trả về kho.</summary>
+    [HttpGet("scrap-materials")]
+    public async Task<IActionResult> ScrapMaterials(CancellationToken ct) =>
+        this.ToResponse(Result<IReadOnlyList<MaterialOptionDto>>.Success(await _lookups.GetScrapMaterialsAsync(ct)));
+
+    /// <summary>NVL chọn được ở đơn Xin NVL kèm khả dụng kho (orderId: chỉ NVL của đơn hàng).</summary>
+    [HttpGet("requisition-materials")]
+    public async Task<IActionResult> RequisitionMaterials([FromQuery] int? orderId, CancellationToken ct) =>
+        this.ToResponse(Result<IReadOnlyList<RequisitionMaterialOptionDto>>.Success(await _lookups.GetRequisitionMaterialsAsync(orderId, ct)));
+
+    /// <summary>Dòng đơn chọn được ở đơn Xin BTP kèm số bộ khả dụng trong kho BTP.</summary>
+    [HttpGet("orders/{orderId:int}/requisition-pieces")]
+    public async Task<IActionResult> RequisitionPieces(int orderId, CancellationToken ct) =>
+        this.ToResponse(Result<IReadOnlyList<RequisitionPieceOptionDto>>.Success(await _lookups.GetRequisitionPiecesAsync(orderId, ct)));
 }

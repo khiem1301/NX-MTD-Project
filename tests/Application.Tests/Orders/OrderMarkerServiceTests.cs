@@ -40,7 +40,14 @@ public class OrderMarkerServiceTests
     }
 
     private static ProductMarkerFabric GroupColor(byte group, string color) =>
-        new() { ProductId = ProductId, MarkerNo = group, ProductColorId = TestVariant.ColorOf(ProductId, color).ProductColorId };
+        new()
+        {
+            ProductId = ProductId,
+            MarkerNo = group,
+            ProductColorId = TestVariant.ColorOf(ProductId, color).ProductColorId,
+            MaterialId = 100 + group,
+            Material = new Material { MaterialId = 100 + group, MaterialCode = $"V0{group}", MaterialName = "Vải", Color = color, WidthM = 1.5m },
+        };
 
     private void Setup<T>(List<T> backing, Action<T>? onAdd = null) where T : class
     {
@@ -55,7 +62,7 @@ public class OrderMarkerServiceTests
 
     private static SaveOrderMarkerDto Marker(string code = "1A", int group = 1, decimal length = 2.2m, int? id = null,
         params (string Size, short Pieces)[] ratio) =>
-        new(id, group, code, length, "Active",
+        new(id, group, code, length, 1.5m, "Active",
             (ratio.Length == 0 ? [("S", (short)1), ("M", (short)2), ("L", (short)1)] : ratio).Select(r => new MarkerRatioDto(r.Size, r.Pieces)).ToList());
 
     private Task<Result<OrderMarkersDto>> Save(params SaveOrderMarkerDto[] markers) =>
@@ -80,6 +87,15 @@ public class OrderMarkerServiceTests
 
         product.MarkerGroups.ToDictionary(g => g.MarkerNo, g => g.Colors.ToHashSet()).Should().BeEquivalentTo(
             new Dictionary<int, HashSet<string>> { [1] = ["Đen"], [2] = ["Xanh"] });
+    }
+
+    [Fact]
+    public async Task GetAsync_ReturnsTheFabricsOfEachGroupWithTheirWidth()
+    {
+        var product = (await Sut().GetAsync(OrderId, default)).Data!.Products.Single();
+
+        product.MarkerGroups.Single(g => g.MarkerNo == 1).Fabrics.Select(f => (f.MaterialCode, f.WidthM)).Should()
+            .Equal(("V01", (decimal?)1.5m));
     }
 
     [Fact]
@@ -162,5 +178,30 @@ public class OrderMarkerServiceTests
 
         validator.Validate(Marker() with { Ratios = [] }).IsValid.Should().BeFalse();
         validator.Validate(Marker(ratio: [("M", 1), ("m", 2)])).IsValid.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("1.5", true)]
+    [InlineData("3.5", true)]
+    [InlineData("0.01", true)]
+    [InlineData("3.51", false)]
+    [InlineData("0", false)]
+    [InlineData("1.555", false)]
+    public void Validator_MarkerWidthUpTo3Point5Metres(string width, bool expected) =>
+        new SaveOrderMarkerDtoValidator()
+            .Validate(Marker() with { WidthM = decimal.Parse(width, System.Globalization.CultureInfo.InvariantCulture) })
+            .IsValid.Should().Be(expected);
+
+    [Fact]
+    public void Validator_MarkerWithoutWidth_IsInvalid() =>
+        new SaveOrderMarkerDtoValidator().Validate(Marker() with { WidthM = null }).IsValid.Should().BeFalse();
+
+    [Fact]
+    public async Task SaveAsync_SavesMarkerWidth()
+    {
+        var result = await Save(Marker() with { WidthM = 1.8m });
+
+        result.IsSuccess.Should().BeTrue();
+        _markers.Should().ContainSingle().Which.WidthM.Should().Be(1.8m);
     }
 }
