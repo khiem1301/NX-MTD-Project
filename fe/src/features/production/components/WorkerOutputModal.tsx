@@ -31,7 +31,11 @@ type WorkerOutputModalProps = {
   rows: OutputGridRow[];
   saving: boolean;
   /** `transferExcess` = có dòng vượt số được giao và tổ trưởng đã xác nhận chuyển phần vượt. */
-  onSave: (rows: OutputLineInput[], transferExcess: boolean, reason?: string) => void;
+  onSave: (
+    rows: OutputLineInput[],
+    transferExcess: boolean,
+    reason?: string,
+  ) => void | Promise<void>;
   onClose: () => void;
   /** Quản đốc sửa (kể cả sau hạn): bắt buộc ghi lý do sửa. */
   requireReason?: boolean;
@@ -116,10 +120,19 @@ export function WorkerOutputModal({
       rowVer: row.rowVer,
     }));
     // Chỉ Quản đốc gửi lý do sửa; tổ trưởng / tổ phó không có ô lý do.
-    const send = (transferExcess: boolean) =>
-      requireReason ? onSave(toSave, transferExcess, reason) : onSave(toSave, transferExcess);
+    // Lưu xong thì đóng popup; lỗi API giữ popup để sửa lại (message lỗi đã hiện ở hook lưu).
+    const send = async (transferExcess: boolean) => {
+      try {
+        await Promise.resolve(
+          requireReason ? onSave(toSave, transferExcess, reason) : onSave(toSave, transferExcess),
+        );
+        onClose();
+      } catch {
+        /* giữ popup */
+      }
+    };
     if (transferable.length === 0) {
-      send(false);
+      void send(false);
       return;
     }
     confirmDialog({

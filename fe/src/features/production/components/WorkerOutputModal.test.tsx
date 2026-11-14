@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { confirmDialog } from '@/utils/confirmDialog';
 import type { OutputGridRow } from '../types';
 import { WorkerOutputModal } from './WorkerOutputModal';
@@ -6,6 +6,10 @@ import { WorkerOutputModal } from './WorkerOutputModal';
 jest.mock('@/utils/confirmDialog', () => ({
   confirmDialog: jest.fn((props: { onOk?: () => void }) => props.onOk?.()),
 }));
+
+beforeAll(() => {
+  Element.prototype.scrollIntoView = jest.fn();
+});
 
 const row = (over: Partial<OutputGridRow>): OutputGridRow => ({
   operationId: 1,
@@ -39,17 +43,18 @@ const ROWS = [
 
 const setup = (rows: OutputGridRow[] = ROWS, requireReason = false) => {
   const onSave = jest.fn();
+  const onClose = jest.fn();
   render(
     <WorkerOutputModal
       worker={{ workerId: 7, label: 'CN1 - An' }}
       rows={rows}
       saving={false}
       onSave={onSave}
-      onClose={jest.fn()}
+      onClose={onClose}
       requireReason={requireReason}
     />,
   );
-  return onSave;
+  return { onSave, onClose };
 };
 
 const input = (name: string) => screen.getByRole('spinbutton', { name }) as HTMLInputElement;
@@ -88,8 +93,8 @@ describe('WorkerOutputModal', () => {
     expect(screen.queryByText(/Nhóm Túi/)).toBeNull();
   });
 
-  it('sửa lại từng công đoạn sau khi điền nhóm và lưu đúng số đã sửa', () => {
-    const onSave = setup();
+  it('sửa lại từng công đoạn sau khi điền nhóm và lưu đúng số đã sửa', async () => {
+    const { onSave, onClose } = setup();
     type('Sản lượng nhóm Túi', '20');
     type('Sản lượng OP2', '15');
     fireEvent.click(saveButton());
@@ -101,6 +106,7 @@ describe('WorkerOutputModal', () => {
       ],
       false,
     );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it('không điền vào công đoạn đã hết hạn sửa', () => {
@@ -141,8 +147,8 @@ describe('WorkerOutputModal', () => {
     expect(saveButton()).toBeDisabled();
   });
 
-  it('vượt số được giao nhưng chuyển được thì hỏi xác nhận rồi lưu kèm chuyển phần vượt', () => {
-    const onSave = setup([
+  it('vượt số được giao nhưng chuyển được thì hỏi xác nhận rồi lưu kèm chuyển phần vượt', async () => {
+    const { onSave, onClose } = setup([
       row({ operationId: 1, operationCode: 'OP1', capQty: 100, transferableQty: 30 }),
     ]);
 
@@ -155,6 +161,7 @@ describe('WorkerOutputModal', () => {
       [{ operationId: 1, workerId: 7, quantity: 120, rowVer: null }],
       true,
     );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it('vượt quá cả phần chuyển được thì báo lỗi và khóa nút lưu', () => {
@@ -173,8 +180,11 @@ describe('WorkerOutputModal', () => {
     expect(screen.getByText(/chưa được giao việc nào ở dòng đơn này/)).toBeInTheDocument();
   });
 
-  it('số 0 ở dòng đã nhập được gửi để xóa; ô để trống không gửi', () => {
-    const onSave = setup([row({ operationId: 1, operationCode: 'OP1', quantity: 10 }), OP2]);
+  it('số 0 ở dòng đã nhập được gửi để xóa; ô để trống không gửi', async () => {
+    const { onSave, onClose } = setup([
+      row({ operationId: 1, operationCode: 'OP1', quantity: 10 }),
+      OP2,
+    ]);
     type('Sản lượng OP1', '0');
     fireEvent.click(saveButton());
 
@@ -182,6 +192,7 @@ describe('WorkerOutputModal', () => {
       [{ operationId: 1, workerId: 7, quantity: 0, rowVer: null }],
       false,
     );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 
   it('tổ trưởng không có ô lý do sửa', () => {
@@ -190,8 +201,8 @@ describe('WorkerOutputModal', () => {
     expect(screen.queryByRole('textbox', { name: 'Lý do sửa (bắt buộc)' })).not.toBeInTheDocument();
   });
 
-  it('Quản đốc sửa mà chưa ghi lý do thì báo và không lưu được; ghi lý do thì gửi kèm lý do', () => {
-    const onSave = setup(ROWS, true);
+  it('Quản đốc sửa mà chưa ghi lý do thì báo và không lưu được; ghi lý do thì gửi kèm lý do', async () => {
+    const { onSave, onClose } = setup(ROWS, true);
     type('Sản lượng OP1', '5');
 
     expect(saveButton()).toBeDisabled();
@@ -207,5 +218,25 @@ describe('WorkerOutputModal', () => {
       false,
       'Tổ báo thiếu',
     );
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  it('lưu lỗi thì không đóng popup', async () => {
+    const onSave = jest.fn().mockRejectedValue(new Error('fail'));
+    const onClose = jest.fn();
+    render(
+      <WorkerOutputModal
+        worker={{ workerId: 7, label: 'CN1 - An' }}
+        rows={ROWS}
+        saving={false}
+        onSave={onSave}
+        onClose={onClose}
+      />,
+    );
+    type('Sản lượng OP1', '5');
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

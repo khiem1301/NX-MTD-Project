@@ -209,6 +209,8 @@ public static class ErrorCodes
     public const string AssignmentProductNotAllotted = "ASSIGNMENT_PRODUCT_NOT_ALLOTTED";
     public const string OrderLineTeamInvalid = "ORDER_LINE_TEAM_INVALID";
     public const string OrderLineTeamInUse = "ORDER_LINE_TEAM_IN_USE";
+    /// <summary>Tổ còn đơn khác chưa đạt ngưỡng nhập kho TP / SL đặt.</summary>
+    public const string TeamOrderBusy = "TEAM_ORDER_BUSY";
     public const string OutputInvalid = "OUTPUT_INVALID";
     public const string OutputExceedsCap = "OUTPUT_EXCEEDS_CAP";
     public const string ProductionEditDeadlinePassed = "PRODUCTION_EDIT_DEADLINE_PASSED";

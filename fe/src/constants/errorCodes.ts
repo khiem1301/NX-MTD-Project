@@ -69,6 +69,9 @@ export const ERROR_CODES = {
   WarehouseOrderMaterialInUse: 'WAREHOUSE_ORDER_MATERIAL_IN_USE',
   CuttingQtyExceedsPlan: 'CUTTING_QTY_EXCEEDS_PLAN',
   CuttingHandoverExceedsCut: 'CUTTING_HANDOVER_EXCEEDS_CUT',
+  TeamOrderBusy: 'TEAM_ORDER_BUSY',
+  OrderLineTeamInvalid: 'ORDER_LINE_TEAM_INVALID',
+  OrderLineTeamInUse: 'ORDER_LINE_TEAM_IN_USE',
   // Suất ăn (Minh)
   MealTeamNotFound: 'MEAL_TEAM_NOT_FOUND',
   MealNotFound: 'MEAL_NOT_FOUND',

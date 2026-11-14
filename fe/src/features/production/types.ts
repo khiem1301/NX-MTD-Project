@@ -6,8 +6,10 @@ export type QcRole = 'qa-qc' | 'manager';
 export type PieceRateRole = 'accountant' | 'admin';
 
 export type ShiftCode = 'Morning' | 'Afternoon' | 'Overtime';
-/** BE trả ca dạng mã DB ("MORNING") ở một số DTO, nhận cả hai dạng khi gửi lên. */
-export type ShiftValue = ShiftCode | 'MORNING' | 'AFTERNOON' | 'OVERTIME';
+/** Bộ lọc màn sản lượng: ca thật để nhập, hoặc Cả ngày chỉ xem tổng. */
+export type ShiftFilter = ShiftCode | 'AllDay';
+/** BE trả ca dạng mã DB ("MORNING") ở một số DTO, nhận cả hai dạng khi gửi lên; ALL = lưới xem cả ngày. */
+export type ShiftValue = ShiftCode | 'MORNING' | 'AFTERNOON' | 'OVERTIME' | 'ALL';
 
 // ---------- KI-01: công đoạn + đơn giá ----------
 
@@ -261,9 +263,11 @@ export type OutputGrid = {
 
 export type OutputGridQuery = {
   workDate: string;
-  shiftCode: ShiftCode;
   orderLineId: number;
   sewingTeamId?: number;
+  /** Khi true: xem tổng cả ngày (không gửi shiftCode ca thật). */
+  allDay?: boolean;
+  shiftCode?: ShiftCode;
 };
 
 export type OutputLineInput = {

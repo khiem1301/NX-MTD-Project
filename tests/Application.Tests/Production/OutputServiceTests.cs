@@ -347,6 +347,28 @@ public class OutputServiceTests : ProductionTestBase
         rows.Single(r => r.OperationId == 1 && r.WorkerId == 8).TransferableQty.Should().Be(125);
     }
 
+    [Fact]
+    public async Task GetDayGridAsync_SumsQuantitiesAcrossShifts_AndDisablesEdit()
+    {
+        Assign(TeamId, 1, 7);
+        Existing(1, 7, 40, shift: ShiftCodes.Morning);
+        Existing(1, 7, 25, shift: ShiftCodes.Afternoon);
+        Existing(1, 7, 10, shift: ShiftCodes.Overtime);
+        Existing(1, 8, 5, shift: ShiftCodes.Morning); // công nhân khác không cộng vào dòng của 7
+
+        var result = await _sut.GetDayGridAsync(Today, LineId, null, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.ShiftCode.Should().Be(ShiftCodes.AllDay);
+        var row = result.Data.Rows.Single(r => r.OperationId == 1 && r.WorkerId == 7);
+        row.Quantity.Should().Be(75);
+        row.CanEdit.Should().BeFalse();
+        row.OutputRecordId.Should().BeNull();
+        row.RowVer.Should().BeNull();
+        row.TransferableQty.Should().Be(0);
+        result.Data.Rows.Should().OnlyContain(r => !r.CanEdit);
+    }
+
     // ========== Sửa / xóa ==========
 
     [Fact]

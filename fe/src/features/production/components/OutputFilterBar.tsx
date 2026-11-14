@@ -4,9 +4,9 @@ import { AppDatePicker } from '@/components/common/DateInputs';
 import { OrderLinePicker } from '@/components/common/OrderLinePicker';
 import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
-import { PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
+import { OUTPUT_SHIFT_FILTER_OPTIONS, PRODUCTION_TEXT } from '../constants';
 import type { OutputEntryState } from '../hooks/useOutputEntry';
-import type { ShiftCode } from '../types';
+import type { ShiftFilter } from '../types';
 
 type OutputFilterBarProps = { entry: OutputEntryState; isManager: boolean };
 
@@ -40,10 +40,10 @@ export function OutputFilterBar({ entry, isManager }: OutputFilterBarProps) {
           resetWarnings();
         }}
       />
-      <Select<ShiftCode>
+      <Select<ShiftFilter>
         style={{ width: 130 }}
         value={shift}
-        options={SHIFT_OPTIONS}
+        options={OUTPUT_SHIFT_FILTER_OPTIONS}
         onChange={(v) => {
           setShift(v);
           resetWarnings();

@@ -83,6 +83,85 @@ public sealed class OutputService : IOutputService
         return Result<OutputGridDto>.Success(new OutputGridDto(workDate, shift, orderLineId, team.Data, received, rows));
     }
 
+    /// <summary>
+    /// Lưới xem tổng cả ngày: cộng sản lượng các ca Morning/Afternoon/Overtime theo (công đoạn × công nhân).
+    /// Chỉ xem — <c>CanEdit = false</c>, không trả RowVer / OutputRecordId để tránh mở modal sửa.
+    /// </summary>
+    public async Task<Result<OutputGridDto>> GetDayGridAsync(
+        DateOnly workDate, int orderLineId, int? sewingTeamId, CancellationToken ct)
+    {
+        var team = _guard.ResolveSewingTeam(sewingTeamId);
+        if (!team.IsSuccess) return Fail.As<OutputGridDto>(team);
+
+        var line = await _uow.Repository<OrderLine>().Query().AsNoTracking().FirstOrDefaultAsync(l => l.OrderLineId == orderLineId, ct);
+        if (line is null) return Fail.NotFound<OutputGridDto>();
+        if (!await IsAllottedAsync(team.Data, orderLineId, ct)) return NotAllotted<OutputGridDto>();
+
+        var assignments = await _uow.Repository<OperationAssignment>().Query().AsNoTracking()
+            .Where(a => a.SewingTeamId == team.Data && a.OrderId == line.OrderId && a.ValidTo == null
+                        && a.Operation.ProductId == line.ProductId && a.Operation.Status == OperationStatuses.Active)
+            .Select(a => new { a.OperationId, a.WorkerId })
+            .ToListAsync(ct);
+        var records = await Records.AsNoTracking().Include(r => r.PieceRate)
+            .Where(r => r.WorkDate == workDate && r.SewingTeamId == team.Data && r.OrderLineId == orderLineId)
+            .ToListAsync(ct);
+
+        var (caps, teamWorkerIds) = await LoadCapsAsync(orderLineId, team.Data, ct);
+        var capByKey = caps.ToDictionary(v => (v.OperationId, v.WorkerId));
+
+        var keys = assignments.Select(a => (a.OperationId, a.WorkerId))
+            .Union(records.Select(r => (r.OperationId, r.WorkerId)))
+            .Union(caps.Where(c => (c.CapQty ?? 0) > 0 && teamWorkerIds.Contains(c.WorkerId)).Select(c => (c.OperationId, c.WorkerId))).ToList();
+        var (operations, workers) = await LoadOperationsAndWorkersAsync(keys, ct);
+
+        var assigned = assignments.Select(a => (a.OperationId, a.WorkerId)).ToHashSet();
+        var dayByKey = records
+            .GroupBy(r => (r.OperationId, r.WorkerId))
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    Quantity: g.Sum(r => r.Quantity),
+                    UnitRate: g.Select(r => (decimal?)r.PieceRate.Rate).FirstOrDefault(),
+                    IsOutside: g.Any(r => r.IsOutsideAssignment),
+                    NoAttendance: g.Any(r => r.NoAttendanceWarning)));
+
+        var rates = await _rates.FindEffectiveManyAsync(
+            keys.Where(k => !dayByKey.ContainsKey(k)).Select(k => k.OperationId).Distinct().ToList(), workDate, ct);
+
+        var rows = new List<OutputGridRowDto>();
+        foreach (var (operationId, workerId) in keys.OrderBy(k => operations[k.OperationId].StationSequence)
+                     .ThenBy(k => workers[k.WorkerId].EmployeeCode))
+        {
+            var operation = operations[operationId];
+            var worker = workers[workerId];
+            dayByKey.TryGetValue((operationId, workerId), out var day);
+            var hasQty = dayByKey.ContainsKey((operationId, workerId));
+            var rate = hasQty ? day.UnitRate : rates.GetValueOrDefault(operationId)?.Rate;
+            capByKey.TryGetValue((operationId, workerId), out var cap);
+
+            rows.Add(new OutputGridRowDto(
+                operationId, operation.OperationCode, operation.OperationName, workerId,
+                worker.EmployeeCode, worker.FullName,
+                OutputRecordId: null,
+                Quantity: hasQty ? day.Quantity : null,
+                UnitRate: rate,
+                RateApproved: hasQty || rates.ContainsKey(operationId),
+                IsOutsideAssignment: hasQty ? day.IsOutside : !assigned.Contains((operationId, workerId)),
+                NoAttendanceWarning: hasQty && day.NoAttendance,
+                CanEdit: false,
+                EditDeadline: null,
+                RowVer: null,
+                CapQty: cap?.CapQty ?? 0,
+                ReportedQty: cap?.OutputQty ?? 0,
+                GroupName: operation.OperationGroup?.GroupName,
+                TransferableQty: 0));
+        }
+
+        var received = await ReceivedAsync(team.Data, orderLineId, ct);
+        return Result<OutputGridDto>.Success(
+            new OutputGridDto(workDate, ShiftCodes.AllDay, orderLineId, team.Data, received, rows));
+    }
+
     private async Task<(List<VwWorkerOutputCap> Caps, List<int> TeamWorkerIds)> LoadCapsAsync(
         int orderLineId, int teamId, CancellationToken ct)
     {

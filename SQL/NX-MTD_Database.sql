@@ -133,6 +133,9 @@
    - 11/11/2026  Giao >= 2 lần thì có khoảng ngày giao: thêm OrderMaterial.ExpectedDeliveryDateTo, PurchaseOrder.ExpectedDeliveryDateTo; đơn thiếu NVL
                  chọn giao bù lưu số lần giao bù (Request.ExpectedDeliveryCount) và ngày / khoảng ngày giao bù (Request.TargetDate, TargetDateTo).
                  Patch: SQL/patches/2026-11-11_delivery_date_range.sql (DEV-ALL-94).
+   - 11/11/2026  Tổ may một đơn: chỉ chia thêm đơn khác khi đơn đang làm đạt TEAM_ORDER_PROGRESS_GATE_PCT
+                 (mặc định 90 = Σ FinishedReceivedQty / Σ OrderedQty toàn đơn). Patch:
+                 SQL/patches/2026-11-11_team_order_progress_gate.sql.
    - 11/11/2026  Số lần giao + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên CustomerOrder (CustomerDeliveryCount,
                  CustomerDeliveryDate, CustomerDeliveryDateTo); OrderMaterial bỏ ExpectedDeliveryCount / ExpectedDeliveryDate / ExpectedDeliveryDateTo;
                  RequestLine thêm PurchaseOrderLineId, OrderMaterialId (nguồn dòng SHORT_DELIVERY, kể cả dòng chưa về lần nào);
@@ -2977,7 +2980,8 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('DUPLICATE_PUNCH_MINUTES',   N'10',    N'Lượt quẹt cách lượt trước dưới số phút này là máy đọc lặp, bỏ qua'),
  ('SUNDAY_PAY_MULTIPLIER',     N'2',     N'Đi làm Chủ nhật được x2 lương (xưởng xác nhận 16/10)'),
  ('WORKDAY_STANDARD_HOURS',    N'8',     N'Số giờ của 1 công (TongGioTrongCaLamViec của ca Hành Chính)'),
- ('LEADER_ABSENT_CHECK_TIME',   N'08:00', N'Sau giờ này tổ trưởng chưa có giờ vào thì tổ phó thay thao tác (vw_TeamActingLeader)');
+ ('LEADER_ABSENT_CHECK_TIME',   N'08:00', N'Sau giờ này tổ trưởng chưa có giờ vào thì tổ phó thay thao tác (vw_TeamActingLeader)'),
+ ('TEAM_ORDER_PROGRESS_GATE_PCT', N'90', N'Tổ may chỉ nhận đơn mới khi đơn đang làm đạt % nhập kho TP / SL đặt');
 
 INSERT dbo.Customer (CustomerName, Phone, DefaultAddress) VALUES
  (N'Công ty mẹ (khai báo lại tên thật)', NULL, NULL);
