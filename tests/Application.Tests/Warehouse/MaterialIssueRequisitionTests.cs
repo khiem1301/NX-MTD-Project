@@ -180,14 +180,14 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     }
 
     [Theory]
-    [InlineData(WarehouseTypes.Material, null, null, null, 1, 5, false)]            // thiếu tổ nhận, đơn hàng, lệnh cắt, đơn xin
-    [InlineData(WarehouseTypes.Material, 1, null, null, 1, 5, true)]                // chỉ cần lệnh cắt
-    [InlineData(WarehouseTypes.Material, null, 1, SewingTeamId, 1, 5, true)]        // không lệnh cắt, không đơn xin
-    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, null, 0, false)] // số lượng 0
-    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, null, 1_000_001, false)] // vượt trần BTP
-    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, null, 1_000_000, true)]  // đúng trần BTP
-    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, null, 1.5, false)]       // BTP phải là số nguyên
-    public void Validator_ChecksTargetAndQuantityBoundaries(string type, int? workOrderId, int? orderId, int? teamId, int? unused, double qty,
+    [InlineData(WarehouseTypes.Material, null, null, null, 5, false)]            // thiếu tổ nhận, đơn hàng, lệnh cắt, đơn xin
+    [InlineData(WarehouseTypes.Material, 1, null, null, 5, true)]                // chỉ cần lệnh cắt
+    [InlineData(WarehouseTypes.Material, null, 1, SewingTeamId, 5, true)]        // không lệnh cắt, không đơn xin
+    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, 0, false)] // số lượng 0
+    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, 1_000_001, false)] // vượt trần BTP
+    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, 1_000_000, true)]  // đúng trần BTP
+    [InlineData(WarehouseTypes.SemiFinished, null, 1, SewingTeamId, 1.5, false)]       // BTP phải là số nguyên
+    public void Validator_ChecksTargetAndQuantityBoundaries(string type, int? workOrderId, int? orderId, int? teamId, double qty,
         bool valid)
     {
         var line = type == WarehouseTypes.Material

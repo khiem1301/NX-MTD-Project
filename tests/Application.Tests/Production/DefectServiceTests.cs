@@ -509,9 +509,9 @@ public class DefectServiceTests : ProductionTestBase
         var result = await _sut.ListMineAsync(7, new DefectQuery(), default);
 
         result.Data!.Select(d => d.WorkDate).Should().Equal(Today, Today.AddDays(-2));
-        result.Data[0].DefectType.Should().Be("Scrap");
-        result.Data[0].DefectReasonCode.Should().Be("Torn");
-        result.Data[0].Status.Should().Be("Recorded");
+        result.Data![0].DefectType.Should().Be("Scrap");
+        result.Data![0].DefectReasonCode.Should().Be("Torn");
+        result.Data![0].Status.Should().Be("Recorded");
     }
 
     [Fact]
