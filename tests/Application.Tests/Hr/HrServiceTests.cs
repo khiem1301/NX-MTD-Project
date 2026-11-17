@@ -72,7 +72,7 @@ public class HrServiceTests
         var account = new Account { AccountId = 1, PasswordHash = "old", SecurityStamp = Guid.NewGuid() };
         _accounts.GetByIdAsync(1).Returns(account);
         _hasher.Verify(default!, default!).ReturnsForAnyArgs(false);
-        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
 
         var result = await service.ChangePasswordAsync(new ChangePasswordDto("sai", "moi", "moi"), default);
 
@@ -88,7 +88,7 @@ public class HrServiceTests
         _accounts.GetByIdAsync(1).Returns(account);
         _hasher.Verify(default!, default!).ReturnsForAnyArgs(false);
         _auth.IssueForAccountAsync(1, default).ReturnsForAnyArgs(Result<LoginResultDto>.Success(null!));
-        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
 
         var result = await service.ChangePasswordAsync(new ChangePasswordDto(null, "moi", "moi"), default);
 
@@ -102,7 +102,7 @@ public class HrServiceTests
         var account = new Account { AccountId = 1, PasswordHash = "old", IsTemporaryPassword = false, SecurityStamp = Guid.NewGuid() };
         _accounts.GetByIdAsync(1).Returns(account);
         _hasher.Verify(default!, default!).ReturnsForAnyArgs(false);
-        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
 
         var result = await service.ChangePasswordAsync(new ChangePasswordDto(null, "moi", "moi"), default);
 
@@ -117,7 +117,7 @@ public class HrServiceTests
         _accounts.GetByIdAsync(1).Returns(account);
         _hasher.Verify(default!, default!).ReturnsForAnyArgs(true);
         _auth.IssueForAccountAsync(1, default).ReturnsForAnyArgs(Result<LoginResultDto>.Success(null!));
-        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
 
         var result = await service.ChangePasswordAsync(new ChangePasswordDto("cu", "moi", "moi"), default);
 
@@ -132,6 +132,70 @@ public class HrServiceTests
     public void ChangePasswordValidator_Mismatch_Msg05() =>
         new ChangePasswordDtoValidator().Validate(new ChangePasswordDto("a", "b", "c")).Errors
             .Should().Contain(e => e.ErrorMessage == Messages.PasswordMismatch);
+
+    // ---- Sửa hồ sơ của mình (UC04) ----
+    [Fact]
+    public async Task UpdateProfile_SetsDateOfBirthAndPhone_TrimmedAndAudited()
+    {
+        var me = Person(1, RoleCodes.Admin, team: null);
+        _employees.GetFullAsync(1, default).ReturnsForAnyArgs(me);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
+
+        var result = await service.UpdateAsync(new UpdateProfileDto(new DateOnly(1990, 5, 20), " 0901234567 "), default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.DateOfBirth.Should().Be(new DateOnly(1990, 5, 20));
+        result.Data.Phone.Should().Be("0901234567");
+        me.UpdatedAt.Should().Be(_clock.Now);
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(a => a.TableName == nameof(Employee) && a.RecordId == 1 && a.Action == AuditActions.Update));
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_BlankValues_ClearBoth()
+    {
+        var me = Person(1, RoleCodes.Admin, team: null);
+        me.DateOfBirth = new DateOnly(1990, 5, 20);
+        me.Phone = "0901234567";
+        _employees.GetFullAsync(1, default).ReturnsForAnyArgs(me);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
+
+        var result = await service.UpdateAsync(new UpdateProfileDto(null, "  "), default);
+
+        result.IsSuccess.Should().BeTrue();
+        me.DateOfBirth.Should().BeNull();
+        me.Phone.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateProfile_UnknownEmployee_IsNotFound()
+    {
+        _employees.GetFullAsync(1, default).ReturnsForAnyArgs((Employee?)null);
+        var service = new ProfileService(_employees, _accounts, _auth, _hasher, _audit, _uow, _user, _clock);
+
+        var result = await service.UpdateAsync(new UpdateProfileDto(null, null), default);
+
+        result.Kind.Should().Be(ResultKind.NotFound);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Theory]
+    [InlineData("12345")]
+    [InlineData("abc0901234567")]
+    [InlineData("+841234")]
+    public void UpdateProfileValidator_BadPhone_IsInvalid(string phone) =>
+        new UpdateProfileDtoValidator().Validate(new UpdateProfileDto(null, phone)).Errors
+            .Should().Contain(e => e.ErrorMessage == PhoneRule.Message);
+
+    [Fact]
+    public void UpdateProfileValidator_FutureDateOfBirth_IsInvalid() =>
+        new UpdateProfileDtoValidator().Validate(new UpdateProfileDto(DateOnly.FromDateTime(DateTime.Today.AddDays(1)), null))
+            .IsValid.Should().BeFalse();
+
+    [Fact]
+    public void UpdateProfileValidator_EmptyOrValid_IsValid() =>
+        new UpdateProfileDtoValidator().Validate(new UpdateProfileDto(new DateOnly(1990, 5, 20), "+84901234567"))
+            .IsValid.Should().BeTrue();
 
     // ---- Tạo nhân viên ----
     [Fact]
