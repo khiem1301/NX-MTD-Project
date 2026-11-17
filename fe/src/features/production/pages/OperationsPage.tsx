@@ -29,10 +29,11 @@ import { PageCard } from '@/components/common/PageCard';
 const text = PRODUCTION_TEXT.operations;
 
 /**
- * UC25 / UC26 (KI-01), DEV-ALL-50 — Kế toán, Admin quản lý công đoạn và nhóm công đoạn của mã hàng. Riêng Kế toán đặt đơn giá
- * ngay trên từng công đoạn (có ngày hiệu lực, gửi Admin duyệt). Tích nhiều dòng để xếp nhóm một lần.
+ * UC25 / UC26 (KI-01) — Kế toán quản lý công đoạn, nhóm công đoạn, nhập Excel và đặt đơn giá ngay trên từng công đoạn (có ngày
+ * hiệu lực, gửi Admin duyệt). Tích nhiều dòng để xếp nhóm một lần. DEV-ALL-116: Admin chỉ xem (duyệt đơn giá ở màn duyệt).
  */
 export function OperationsPage() {
+  /** Kế toán: quản lý công đoạn và đơn giá. Admin: chỉ xem. */
   const canManageRates = useOperationRole() === 'accountant';
   const { productId, selected, setSelected, filters, pagination, changeProduct, changeFilter } =
     useOperationBoard();
@@ -80,12 +81,14 @@ export function OperationsPage() {
       title={text.title}
       description={canManageRates ? text.subtitle : text.adminSubtitle}
       extra={
-        <OperationPageActions
-          disabled={productId === null}
-          onManageGroups={() => setGroupsOpen(true)}
-          onImport={() => setImportOpen(true)}
-          onAdd={() => setCreating(true)}
-        />
+        canManageRates && (
+          <OperationPageActions
+            disabled={productId === null}
+            onManageGroups={() => setGroupsOpen(true)}
+            onImport={() => setImportOpen(true)}
+            onAdd={() => setCreating(true)}
+          />
+        )
       }
     >
       <OperationFilterBar
@@ -121,13 +124,14 @@ export function OperationsPage() {
             onSelect={setSelected}
             groups={groupList}
             draftRateIds={canManageRates ? draftRateIdsOf(all, selected) : []}
+            readOnly={!canManageRates}
           />
         </>
       )}
 
       <PieceRateHistoryModal operation={viewing} onClose={() => setViewing(null)} />
 
-      {productId !== null && (
+      {productId !== null && canManageRates && (
         <>
           <OperationFormModal
             open={editing !== null || creating}
@@ -143,23 +147,20 @@ export function OperationsPage() {
               setEditing(null);
               setCreating(false);
             }}
-            onCreated={canManageRates ? setPendingRateId : undefined}
+            onCreated={setPendingRateId}
           />
-          {canManageRates && (
-            <PieceRateFormModal
-              operation={ratingTarget}
-              onClose={() => {
-                setRating(null);
-                setPendingRateId(null);
-              }}
-            />
-          )}
+          <PieceRateFormModal
+            operation={ratingTarget}
+            onClose={() => {
+              setRating(null);
+              setPendingRateId(null);
+            }}
+          />
           {importOpen && (
             <OperationImportModal
               open
               productId={productId}
               productLabel={productLabel}
-              allowRates={canManageRates}
               onClose={() => setImportOpen(false)}
             />
           )}

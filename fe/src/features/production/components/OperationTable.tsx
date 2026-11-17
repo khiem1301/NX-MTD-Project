@@ -23,6 +23,8 @@ type OperationTableProps = {
   onSelect: (ids: number[]) => void;
   groups: OperationGroup[];
   draftRateIds: number[];
+  /** Admin chỉ xem (DEV-ALL-116): không tích dòng, không có thanh xếp nhóm hàng loạt. */
+  readOnly?: boolean;
 };
 
 /** Bảng công đoạn; đã tích dòng thì hiện thanh thao tác hàng loạt. Chung một khối để thanh dính được trong suốt chiều dài bảng. */
@@ -36,6 +38,7 @@ export function OperationTable({
   onSelect,
   groups,
   draftRateIds,
+  readOnly = false,
 }: OperationTableProps) {
   return (
     <div>
@@ -49,13 +52,17 @@ export function OperationTable({
         scroll={{ x: TABLE_MIN_WIDTH }}
         sticky={{ offsetHeader: APP_HEADER_HEIGHT }}
         pagination={pagination}
-        rowSelection={{
-          selectedRowKeys: selected,
-          preserveSelectedRowKeys: true,
-          onChange: (keys) => onSelect(keys as number[]),
-        }}
+        rowSelection={
+          readOnly
+            ? undefined
+            : {
+                selectedRowKeys: selected,
+                preserveSelectedRowKeys: true,
+                onChange: (keys) => onSelect(keys as number[]),
+              }
+        }
       />
-      {selected.length > 0 && (
+      {!readOnly && selected.length > 0 && (
         <OperationGroupBulkBar
           productId={productId}
           operationIds={selected}

@@ -9,7 +9,20 @@ namespace NX_MTD.API.Controllers.Admin;
 public sealed class CustomerOrdersController : AdminBaseController
 {
     private readonly ICustomerOrderService _orders;
-    public CustomerOrdersController(ICustomerOrderService orders) => _orders = orders;
+    private readonly IOrderImportService _import;
+
+    public CustomerOrdersController(ICustomerOrderService orders, IOrderImportService import)
+    {
+        _orders = orders; _import = import;
+    }
+
+    /// <summary>DEV-ALL-117: xem trước dòng hàng của đơn từ Excel (multipart: file). Không ghi gì, form đơn lưu như tạo tay.</summary>
+    [HttpPost("import/preview")]
+    public async Task<IActionResult> PreviewImport(IFormFile file, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(await _import.PreviewAsync(stream, ct));
+    }
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] OrderQuery query, CancellationToken ct) =>

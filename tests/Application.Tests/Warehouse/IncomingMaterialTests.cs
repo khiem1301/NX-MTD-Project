@@ -83,7 +83,7 @@ public class IncomingMaterialTests
             MaterialReceipt = new MaterialReceipt { Status = status },
         });
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow), new NX_MTD.Infrastructure.Excel.ClosedXmlOrderMaterialParser());
     private IncomingMaterialService Incoming() => new(_uow, new MaterialSupplyUpdater(_uow));
 
     // ---------- NVL theo mã hàng trong đơn ----------

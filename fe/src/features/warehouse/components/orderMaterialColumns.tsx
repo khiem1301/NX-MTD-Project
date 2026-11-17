@@ -44,12 +44,25 @@ export const orderMaterialColumns = (
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: qtyWithUnit },
+  // DEV-ALL-118: đã nhập tách theo nguồn; còn thiếu đỏ khi > 0, xanh khi đã đủ.
   {
-    title: LABELS.receivedQty,
-    dataIndex: 'receivedQty',
+    title: LABELS.customerReceivedQty,
+    dataIndex: 'customerReceivedQty',
+    align: 'right',
+    render: qtyWithUnit,
+  },
+  {
+    title: LABELS.purchasedReceivedQty,
+    dataIndex: 'purchasedReceivedQty',
+    align: 'right',
+    render: qtyWithUnit,
+  },
+  {
+    title: LABELS.shortQty,
+    dataIndex: 'shortQty',
     align: 'right',
     render: (v: number, om) => (
-      <Typography.Text type={v >= om.requiredQty && om.requiredQty > 0 ? 'success' : undefined}>
+      <Typography.Text type={v > 0 ? 'danger' : om.requiredQty > 0 ? 'success' : undefined}>
         {qtyWithUnit(v, om)}
       </Typography.Text>
     ),

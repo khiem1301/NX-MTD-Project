@@ -42,7 +42,7 @@ public class OrderMaterialCustomerDeliveryTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private OrderMaterialService Sut() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
+    private OrderMaterialService Sut() => new(_uow, _notifier, new DeliveryCountGuard(_uow), new NX_MTD.Infrastructure.Excel.ClosedXmlOrderMaterialParser());
 
     private void Delivered(int count)
     {

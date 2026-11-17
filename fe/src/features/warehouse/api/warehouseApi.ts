@@ -22,6 +22,7 @@ import type {
   CreateOrderMaterialsPayload,
   OrderCustomerDelivery,
   OrderMaterial,
+  OrderMaterialImportPreview,
   OrderMaterialPageQuery,
   OrderProductMaterials,
   PurchaseOrder,
@@ -42,6 +43,12 @@ import type {
   NxtSummary,
   TeamPieceHolding,
 } from '../types';
+
+const fileForm = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
@@ -74,6 +81,24 @@ export const warehouseApi = {
     }),
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
     post<OrderMaterial>(API.warehouse.orderMaterials(role), body),
+  /** DEV-ALL-118: xem trước file Excel NVL của đơn (không ghi gì). */
+  previewOrderMaterialImport: (role: RolePath, orderId: number, file: File) =>
+    apiClient
+      .post<ApiResponse<OrderMaterialImportPreview>>(
+        `${API.warehouse.orderMaterials(role)}/import/preview`,
+        fileForm(file),
+        { params: { orderId } },
+      )
+      .then((r) => r.data.data),
+  /** Trả cả message (số dòng đã nhập). */
+  importOrderMaterials: async (role: RolePath, orderId: number, file: File) =>
+    (
+      await apiClient.post<ApiResponse<unknown>>(
+        `${API.warehouse.orderMaterials(role)}/import`,
+        fileForm(file),
+        { params: { orderId } },
+      )
+    ).data,
   createOrderMaterials: (role: RolePath, body: CreateOrderMaterialsPayload) =>
     post<OrderMaterial[]>(`${API.warehouse.orderMaterials(role)}/batch`, body),
   updateOrderMaterial: (role: RolePath, id: number, body: SaveOrderMaterialPayload) =>

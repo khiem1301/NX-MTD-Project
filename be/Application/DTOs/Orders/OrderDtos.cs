@@ -116,6 +116,8 @@ public sealed record OrderOverviewLineDto(int OrderLineId, int ProductId, string
 public sealed record OrderLookupQuery : PageQuery
 {
     public string? Status { get; init; }      // null = OrderStatuses.Running
+    /// <summary>Chỉ đơn có dòng của mã hàng này (DEV-ALL-114: chọn đơn nhận bìa khi nhập Excel ở màn mã hàng).</summary>
+    public int? ProductId { get; init; }
 }
 
 public sealed record OrderLookupDto(int OrderId, string OrderCode, string CustomerName, DateOnly DueDate, string Status, string MaterialStatus);

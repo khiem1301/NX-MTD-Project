@@ -8,17 +8,19 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>UC09 (phần NVL): NVL khách cấp / phải mua của đơn; số cần nhập tay theo số khách báo.</summary>
-public sealed class OrderMaterialService : IOrderMaterialService
+public sealed partial class OrderMaterialService : IOrderMaterialService
 {
     private const string IncomingLink = "/warehouse/incoming-materials";
 
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notifier;
     private readonly DeliveryCountGuard _deliveries;
+    private readonly IExcelOrderMaterialParser _excel;
 
-    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, DeliveryCountGuard deliveries)
+    public OrderMaterialService(IUnitOfWork uow, INotificationService notifier, DeliveryCountGuard deliveries,
+        IExcelOrderMaterialParser excel)
     {
-        _uow = uow; _notifier = notifier; _deliveries = deliveries;
+        _uow = uow; _notifier = notifier; _deliveries = deliveries; _excel = excel;
     }
 
     private IQueryable<OrderMaterial> OrderMaterials => _uow.Repository<OrderMaterial>().Query();
@@ -39,6 +41,12 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .Select(om => ToDto(om, received.GetValueOrDefault(om.OrderMaterialId),
                 deliveries.GetValueOrDefault(om.OrderMaterialId), plan))
             .ToList());
+    }
+
+    /// <summary>DEV-ALL-118: số đã nhận tách theo nguồn — phiếu khách giao (không gắn đơn mua) và phiếu nhập theo đơn mua.</summary>
+    private sealed record Received(decimal Customer, decimal Purchased)
+    {
+        public decimal Total => Customer + Purchased;
     }
 
     /// <summary>Số đã nhận tính từ phiếu nhập nên lọc trên danh sách đã dựng; số dòng của một đơn không lớn.</summary>
@@ -240,13 +248,16 @@ public sealed class OrderMaterialService : IOrderMaterialService
             IncomingLink, nameof(CustomerOrder), orderId), ct);
     }
 
-    private async Task<Dictionary<int, decimal>> ReceivedQtyAsync(int orderId, CancellationToken ct) =>
-        await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
+    private async Task<Dictionary<int, Received>> ReceivedQtyAsync(int orderId, CancellationToken ct) =>
+        (await _uow.Repository<MaterialReceiptLine>().Query().AsNoTracking()
             .Where(l => l.MaterialReceipt.OrderId == orderId && l.MaterialReceipt.Status == ReceiptStatuses.Confirmed
                 && l.OrderMaterialId != null)
-            .GroupBy(l => l.OrderMaterialId!.Value)
-            .Select(g => new { g.Key, Qty = g.Sum(l => l.AcceptedQty) })
-            .ToDictionaryAsync(x => x.Key, x => x.Qty, ct);
+            .GroupBy(l => new { Id = l.OrderMaterialId!.Value, FromCustomer = l.MaterialReceipt.PurchaseOrderId == null })
+            .Select(g => new { g.Key.Id, g.Key.FromCustomer, Qty = g.Sum(l => l.AcceptedQty) })
+            .ToListAsync(ct))
+        .GroupBy(x => x.Id)
+        .ToDictionary(g => g.Key, g => new Received(
+            g.Where(x => x.FromCustomer).Sum(x => x.Qty), g.Where(x => !x.FromCustomer).Sum(x => x.Qty)));
 
     /// <summary>Thêm, sửa, xóa NVL của đơn đều bị chặn khi đơn đã đóng (hủy, dừng, đã giao, hoàn tất), không chỉ thêm mới.</summary>
     private async Task<bool> IsOrderClosedAsync(int orderId, CancellationToken ct)
@@ -265,13 +276,15 @@ public sealed class OrderMaterialService : IOrderMaterialService
             .ToDictionaryAsync(v => v.OrderMaterialId, v => v.ReceivedCount, ct);
 
     /// <summary>Lịch khách giao (của cả đơn) chỉ gắn vào NVL khách có cấp.</summary>
-    private static OrderMaterialDto ToDto(OrderMaterial om, decimal receivedQty, int receivedCount, CustomerOrder plan)
+    private static OrderMaterialDto ToDto(OrderMaterial om, Received? received, int receivedCount, CustomerOrder plan)
     {
         var supplied = om.CustomerQty > 0;
+        var r = received ?? new Received(0, 0);
         return new(om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
             (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
-            supplied ? plan.CustomerDeliveryCount : null, receivedCount, om.PurchaseQty, om.Source, om.Note, receivedQty,
-            supplied ? plan.CustomerDeliveryDate : null, supplied ? plan.CustomerDeliveryDateTo : null);
+            supplied ? plan.CustomerDeliveryCount : null, receivedCount, om.PurchaseQty, om.Source, om.Note, r.Total,
+            supplied ? plan.CustomerDeliveryDate : null, supplied ? plan.CustomerDeliveryDateTo : null,
+            r.Customer, r.Purchased, Math.Max(om.RequiredQty - r.Total, 0));
     }
 
     private static string MaterialLabel(Material m) =>

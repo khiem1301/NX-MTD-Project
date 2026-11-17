@@ -196,6 +196,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     {
         var query = _context.CustomerOrders.AsNoTracking().Where(o => statuses.Contains(o.Status))
             .Where(o => sewingTeamId == null || o.OrderLines.Any(l => _context.OrderLineTeams.Any(a => a.SewingTeamId == sewingTeamId && a.OrderLineId == l.OrderLineId)));
+        if (q.ProductId is { } productId) query = query.Where(o => o.OrderLines.Any(l => l.ProductId == productId));
         if (!string.IsNullOrWhiteSpace(q.Keyword))
         {
             var k = q.Keyword.Trim();

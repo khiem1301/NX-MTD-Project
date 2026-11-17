@@ -273,3 +273,106 @@ export type OrderMarkers = { orderId: number; products: OrderMarkerProduct[] };
 export type SaveOrderMarkersPayload = {
   markers: (Omit<OrderMarker, 'productMarkerId'> & { productMarkerId: number | null })[];
 };
+
+// ---- DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn ----
+export type SpecImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
+type SpecImportRowBase = { rowNumber: number; action: SpecImportAction; error: string | null };
+export type SpecImportComponentRow = SpecImportRowBase & {
+  componentName: string;
+  /** PANEL | TRIM (mã như trong file), null khi ô sai. */
+  componentType: string | null;
+  piecesPerGarment: number | null;
+};
+export type SpecImportNormRow = SpecImportRowBase & {
+  color: string;
+  componentName: string;
+  materialCode: string;
+  materialName: string | null;
+  unit: string | null;
+  materialColor: string | null;
+  specNote: string | null;
+};
+export type SpecImportMarkerGroupRow = SpecImportRowBase & {
+  markerNo: number | null;
+  componentNames: string[];
+  colors: string[];
+};
+export type SpecImportOrderMarkerRow = SpecImportRowBase & {
+  markerNo: number | null;
+  markerCode: string;
+  lengthM: number | null;
+  widthM: number | null;
+  status: string;
+  ratios: MarkerRatio[];
+};
+export type SpecImportPreview = {
+  productId: number;
+  productCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  components: SpecImportComponentRow[];
+  norms: SpecImportNormRow[];
+  markerGroups: SpecImportMarkerGroupRow[];
+  orderMarkers: SpecImportOrderMarkerRow[];
+  hasComponents: boolean;
+  hasNorms: boolean;
+  hasMarkerGroups: boolean;
+  hasOrderMarkers: boolean;
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  changeCount: number;
+  /** Lỗi của bản đã gộp (kiểm tra của nút Lưu): còn lỗi thì không nhập được. */
+  crossErrors: string[];
+  notes: string[];
+  canImport: boolean;
+};
+export type SpecImportResult = {
+  components: number;
+  norms: number;
+  markerGroups: number;
+  orderMarkers: number;
+};
+/** Màn Mã hàng (Admin) chọn đơn tùy ý; màn Đơn hàng (Admin, Quản đốc) chọn mã hàng của đơn. */
+export type SpecImportTarget =
+  | { scope: 'admin'; productId: number; orderId?: number }
+  | { scope: 'manager'; orderId: number; productId: number };
+
+// ---- DEV-ALL-117: nhập dòng hàng của đơn từ Excel (ma trận màu × size) ----
+export type OrderImportQty = { sizeCode: string; qty: number };
+export type OrderImportRow = {
+  rowNumber: number;
+  productCode: string;
+  /** null khi dòng lỗi. */
+  productId: number | null;
+  productName: string | null;
+  color: string;
+  cmtUnitPrice: number | null;
+  quantities: OrderImportQty[];
+  error: string | null;
+};
+export type OrderImportPreview = {
+  sizeColumns: string[];
+  rows: OrderImportRow[];
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+};
+
+// ---- DEV-ALL-119: tạo mã hàng hàng loạt từ Excel ----
+export type ProductImportRow = {
+  rowNumber: number;
+  /** New | Exists (đã có, bỏ qua) | Error. */
+  action: 'New' | 'Exists' | 'Error';
+  note: string | null;
+  productCode: string;
+  productName: string;
+  description: string | null;
+};
+export type ProductImportPreview = {
+  rows: ProductImportRow[];
+  newCount: number;
+  existsCount: number;
+  errorCount: number;
+  duplicateCount: number;
+};

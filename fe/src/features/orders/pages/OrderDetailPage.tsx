@@ -109,6 +109,7 @@ export function OrderDetailPage() {
       <OrderSummary order={data} showAmount />
       <OrderDetailTabs
         orderId={data.orderId}
+        orderCode={data.orderCode}
         status={data.status}
         lines={data.lines}
         history={data.history}

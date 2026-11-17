@@ -9,3 +9,6 @@ export const PRODUCT_STATUS_TAG: Record<string, StatusLabel> = {
 export const MAX_EXTRA_IMAGES = 5;
 
 export const COLOR_MAX_LENGTH = 50;
+
+/** File mẫu nhập Excel định mức (DEV-ALL-114), nằm trong fe/public/templates. */
+export const SPEC_IMPORT_TEMPLATE_URL = '/templates/Mau_Nhap_Dinh_Muc.xlsx';

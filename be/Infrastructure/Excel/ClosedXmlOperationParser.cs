@@ -22,8 +22,10 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
     private const int MaxHeaderSearchRows = 25;
     private const int MaxNameLength = 200;
 
+    /// <param name="GroupCol">DEV-ALL-115: cột tùy chọn NHÓM CÔNG ĐOẠN; CHI TIẾT (các chi tiết cách nhau dấu ;); CUỐI (đánh x). 0 = không có.</param>
     private sealed record Layout(
-        int HeaderRow, int SttCol, int NameCol, int SkillCol, int TimeCol, int EquipmentCol, int RateCol);
+        int HeaderRow, int SttCol, int NameCol, int SkillCol, int TimeCol, int EquipmentCol, int RateCol,
+        int GroupCol, int ComponentCol, int FinalCol);
 
     public IReadOnlyList<OperationExcelSheetDto> Parse(Stream stream)
     {
@@ -39,7 +41,8 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             var layout = FindLayout(sheet);
             if (layout is null) continue;
             sheets.Add(new OperationExcelSheetDto(
-                sheet.Name, FindProductText(sheet, layout.HeaderRow), layout.RateCol != 0, ReadRows(sheet, layout)));
+                sheet.Name, FindProductText(sheet, layout.HeaderRow), layout.RateCol != 0, ReadRows(sheet, layout),
+                layout.GroupCol != 0, layout.ComponentCol != 0));
         }
 
         if (sheets.Count == 0)
@@ -54,7 +57,7 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
         var lastCol = sheet.LastColumnUsed()?.ColumnNumber() ?? 0;
         for (var r = 1; r <= Math.Min(MaxHeaderSearchRows, lastRow); r++)
         {
-            int stt = 0, name = 0, skill = 0, time = 0, equipment = 0, rate = 0;
+            int stt = 0, name = 0, skill = 0, time = 0, equipment = 0, rate = 0, group = 0, component = 0, final = 0;
             for (var c = 1; c <= lastCol; c++)
             {
                 switch (PayslipLayout.NormalizeKey(CellText(sheet.Cell(r, c))))
@@ -65,9 +68,13 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
                     case "tgct": time = time == 0 ? c : time; break;
                     case "thietbi": equipment = equipment == 0 ? c : equipment; break;
                     case "tien": rate = rate == 0 ? c : rate; break;
+                    case "nhomcongdoan" or "nhom": group = group == 0 ? c : group; break;
+                    case "chitiet": component = component == 0 ? c : component; break;
+                    case "cuoi" or "congdoancuoi": final = final == 0 ? c : final; break;
                 }
             }
-            if (name != 0 && time != 0) return new Layout(r, stt == 0 ? 1 : stt, name, skill, time, equipment, rate);
+            if (name != 0 && time != 0)
+                return new Layout(r, stt == 0 ? 1 : stt, name, skill, time, equipment, rate, group, component, final);
         }
         return null;
     }
@@ -107,7 +114,12 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
             var time = ReadTime(sheet, r, layout, ref error);
             var equipment = layout.EquipmentCol == 0 ? null : NullIfEmpty(CellText(sheet.Cell(r, layout.EquipmentCol)));
             var rate = ReadRate(sheet, r, layout, ref error);
-            rows.Add(new OperationExcelRowDto(r, stt, name, skill, time, equipment, rate, error));
+            var group = layout.GroupCol == 0 ? null : NullIfEmpty(ExcelCells.CompactText(sheet.Cell(r, layout.GroupCol)));
+            if (group is { Length: > OperationLimits.MaxGroupNameLength })
+                error ??= $"Nhóm công đoạn dài quá {OperationLimits.MaxGroupNameLength} ký tự.";
+            var components = layout.ComponentCol == 0 ? null : ExcelCells.SplitList(CellText(sheet.Cell(r, layout.ComponentCol)));
+            var isFinal = layout.FinalCol != 0 && IsFinalMark(CellText(sheet.Cell(r, layout.FinalCol)));
+            rows.Add(new OperationExcelRowDto(r, stt, name, skill, time, equipment, rate, error, group, components, isFinal));
         }
         return rows;
     }
@@ -178,49 +190,11 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
 
     private static string? NullIfEmpty(string text) => text.Length == 0 ? null : text;
 
-    private static bool TryReadNumber(IXLCell cell, out decimal value, out string error)
-    {
-        value = 0m;
-        error = string.Empty;
-        try
-        {
-            var raw = cell.Value;
-            if (raw.IsBlank) return true;
-            if (raw.IsNumber)
-            {
-                value = (decimal)raw.GetNumber();
-                return true;
-            }
-            if (raw.IsError)
-            {
-                error = $"bị lỗi công thức ({raw})";
-                return false;
-            }
+    /// <summary>Cột CUỐI (DEV-ALL-115): đánh x (hoặc "có", 1) ở công đoạn may cuối.</summary>
+    private static bool IsFinalMark(string text) => PayslipLayout.NormalizeKey(text) is "x" or "co" or "1" or "cuoi" or "true";
 
-            var text = raw.ToString().Trim();
-            if (text.Length == 0 || text == "-") return true;
-            if (decimal.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value)) return true;
+    private static bool TryReadNumber(IXLCell cell, out decimal value, out string error) =>
+        ExcelCells.TryReadNumber(cell, out value, out error);
 
-            error = $"không phải số ('{text}')";
-            return false;
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            error = "không đọc được giá trị";
-            return false;
-        }
-    }
-
-    private static string CellText(IXLCell cell)
-    {
-        try
-        {
-            var raw = cell.Value;
-            return raw.IsBlank ? string.Empty : raw.ToString().Trim();
-        }
-        catch (Exception ex) when (ex is not OutOfMemoryException)
-        {
-            return string.Empty;
-        }
-    }
+    private static string CellText(IXLCell cell) => ExcelCells.Text(cell);
 }

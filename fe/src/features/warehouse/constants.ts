@@ -237,6 +237,21 @@ export const LABELS = {
   purchaseQty: 'Phải mua',
   source: 'Nguồn',
   receivedQty: 'Đã nhập',
+  // DEV-ALL-118: đã nhập tách theo nguồn + còn thiếu; nhập Excel NVL của đơn
+  customerReceivedQty: 'Khách đã giao',
+  purchasedReceivedQty: 'Đã mua về',
+  shortQty: 'Còn thiếu',
+  importOrderMaterials: 'Nhập từ Excel',
+  importOrderMaterialsTitle: 'Nhập NVL của đơn từ Excel',
+  importOrderMaterialsHint:
+    'Bảng có cột Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL chưa có được thêm, NVL không có trong file giữ nguyên. Chọn file là xem trước ngay, chưa lưu gì.',
+  importOrderMaterialsConfirm: 'Nhập',
+  importOrderMaterialsConfirmTitle: 'Nhập NVL của đơn?',
+  importOrderMaterialsConfirmBody:
+    'Các dòng hợp lệ có thay đổi sẽ được lưu một lần (lỗi thì không lưu gì). Tiếp tục?',
+  importSummary: '{0} dòng hợp lệ, {1} dòng lỗi, {2} dòng trùng. Chỉ các dòng hợp lệ được nhập.',
+  importResult: 'Kết quả',
+  importRow: 'Dòng',
   note: 'Ghi chú',
   product: 'Mã hàng',
   component: 'Chi tiết',

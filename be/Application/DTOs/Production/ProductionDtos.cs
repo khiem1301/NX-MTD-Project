@@ -208,23 +208,30 @@ public sealed record AddOrderLineTeamsDto(IReadOnlyList<int> OrderLineIds, IRead
 // ================= KI-01: nhập công đoạn từ file Excel quy trình công nghệ =================
 
 /// <summary>Một dòng "bước công việc" đọc từ sheet quy trình. <c>ParseError</c> có khi ô không đọc được hoặc sai giá trị.</summary>
+/// <param name="GroupName">DEV-ALL-115: cột NHÓM CÔNG ĐOẠN (null = ô trống hoặc file không có cột).</param>
+/// <param name="ComponentNames">Cột CHI TIẾT tách theo dấu ";"; null = file không có cột (giữ nguyên chi tiết đang gắn).</param>
+/// <param name="IsFinal">Cột CUỐI có đánh x.</param>
 public sealed record OperationExcelRowDto(
     int RowNumber, int Stt, string? Name, byte? SkillLevel, decimal? StandardTimeSec, string? Equipment, decimal? Rate,
-    string? ParseError);
+    string? ParseError, string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, bool IsFinal = false);
 
-/// <summary>Một sheet quy trình công nghệ trong file (có cột "BƯỚC CÔNG VIỆC" và "TGCT").</summary>
+/// <summary>Một sheet quy trình công nghệ trong file (có cột "BƯỚC CÔNG VIỆC" và "TGCT"). Has…Column: có cột tùy chọn (DEV-ALL-115).</summary>
 public sealed record OperationExcelSheetDto(
-    string SheetName, string? ProductText, bool HasRateColumn, IReadOnlyList<OperationExcelRowDto> Rows);
+    string SheetName, string? ProductText, bool HasRateColumn, IReadOnlyList<OperationExcelRowDto> Rows,
+    bool HasGroupColumn = false, bool HasComponentColumn = false);
 
-/// <summary>Action nhận "New" | "Update" | "Unchanged" | "Error".</summary>
+/// <summary>Action nhận "New" | "Update" | "Unchanged" | "Error". ChangeNote: nhóm / chi tiết đổi thế nào (DEV-ALL-115).</summary>
 public sealed record OperationImportRowDto(
     int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
-    string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null);
+    string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null,
+    string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, string? ChangeNote = null);
 
+/// <param name="FinalSttInFile">STT của dòng đánh x ở cột CUỐI (DEV-ALL-115), để màn hình chọn sẵn công đoạn cuối.</param>
 public sealed record OperationImportPreviewDto(
     string SheetName, IReadOnlyList<string> SheetNames, string? ProductText, int NewCount, int UpdateCount,
     int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
-    int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows);
+    int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows,
+    bool HasGroupColumn = false, bool HasComponentColumn = false, int? FinalSttInFile = null);
 
 public sealed record OperationImportResultDto(
     int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped);
