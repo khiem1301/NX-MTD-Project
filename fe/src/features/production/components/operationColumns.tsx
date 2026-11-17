@@ -59,7 +59,7 @@ type OperationColumnsOptions = {
   onSetRate: (row: Operation) => void;
   onSubmitRate: (pieceRateId: number) => void;
   onToggle: (row: Operation, discontinue: boolean) => void;
-  /** Kế toán quản lý công đoạn và đơn giá; Admin chỉ xem và duyệt đơn giá ở màn duyệt (DEV-ALL-116, trước đây DEV-ALL-50). */
+  /** Kế toán quản lý công đoạn và đơn giá; Admin chỉ xem và duyệt đơn giá ở màn duyệt (DEV-ALL-117, trước đây DEV-ALL-50). */
   canManageRates: boolean;
 };
 

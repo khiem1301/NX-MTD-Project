@@ -274,7 +274,7 @@ export type SaveOrderMarkersPayload = {
   markers: (Omit<OrderMarker, 'productMarkerId'> & { productMarkerId: number | null })[];
 };
 
-// ---- DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn ----
+// ---- DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn ----
 export type SpecImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
 type SpecImportRowBase = { rowNumber: number; action: SpecImportAction; error: string | null };
 export type SpecImportComponentRow = SpecImportRowBase & {
@@ -338,7 +338,7 @@ export type SpecImportTarget =
   | { scope: 'admin'; productId: number; orderId?: number }
   | { scope: 'manager'; orderId: number; productId: number };
 
-// ---- DEV-ALL-117: nhập dòng hàng của đơn từ Excel (ma trận màu × size) ----
+// ---- DEV-ALL-118: nhập dòng hàng của đơn từ Excel (ma trận màu × size) ----
 export type OrderImportQty = { sizeCode: string; qty: number };
 export type OrderImportRow = {
   rowNumber: number;
@@ -359,7 +359,7 @@ export type OrderImportPreview = {
   duplicateCount: number;
 };
 
-// ---- DEV-ALL-119: tạo mã hàng hàng loạt từ Excel ----
+// ---- DEV-ALL-120: tạo mã hàng hàng loạt từ Excel ----
 export type ProductImportRow = {
   rowNumber: number;
   /** New | Exists (đã có, bỏ qua) | Error. */

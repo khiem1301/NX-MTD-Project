@@ -22,7 +22,7 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
     private const int MaxHeaderSearchRows = 25;
     private const int MaxNameLength = 200;
 
-    /// <param name="GroupCol">DEV-ALL-115: cột tùy chọn NHÓM CÔNG ĐOẠN; CHI TIẾT (các chi tiết cách nhau dấu ;); CUỐI (đánh x). 0 = không có.</param>
+    /// <param name="GroupCol">DEV-ALL-116: cột tùy chọn NHÓM CÔNG ĐOẠN; CHI TIẾT (các chi tiết cách nhau dấu ;); CUỐI (đánh x). 0 = không có.</param>
     private sealed record Layout(
         int HeaderRow, int SttCol, int NameCol, int SkillCol, int TimeCol, int EquipmentCol, int RateCol,
         int GroupCol, int ComponentCol, int FinalCol);
@@ -190,7 +190,7 @@ public sealed class ClosedXmlOperationParser : IExcelOperationParser
 
     private static string? NullIfEmpty(string text) => text.Length == 0 ? null : text;
 
-    /// <summary>Cột CUỐI (DEV-ALL-115): đánh x (hoặc "có", 1) ở công đoạn may cuối.</summary>
+    /// <summary>Cột CUỐI (DEV-ALL-116): đánh x (hoặc "có", 1) ở công đoạn may cuối.</summary>
     private static bool IsFinalMark(string text) => PayslipLayout.NormalizeKey(text) is "x" or "co" or "1" or "cuoi" or "true";
 
     private static bool TryReadNumber(IXLCell cell, out decimal value, out string error) =>

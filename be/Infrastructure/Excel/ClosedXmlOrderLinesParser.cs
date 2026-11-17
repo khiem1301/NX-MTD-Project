@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.Infrastructure.Excel;
 
 /// <summary>
-/// DEV-ALL-117: đọc bảng dòng hàng của đơn dạng ma trận. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có
+/// DEV-ALL-118: đọc bảng dòng hàng của đơn dạng ma trận. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có
 /// Mã hàng, Màu, Đơn giá CMT; mọi cột có tiêu đề khác là một size (tên cột = mã size). Mỗi dòng là một mã hàng × màu, ô size là
 /// số lượng (trống / 0 = không đặt size đó). Chỉ kiểm định dạng ô; đối chiếu mã hàng do OrderImportService làm.
 /// </summary>

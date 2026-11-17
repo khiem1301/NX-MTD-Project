@@ -81,7 +81,7 @@ export const warehouseApi = {
     }),
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
     post<OrderMaterial>(API.warehouse.orderMaterials(role), body),
-  /** DEV-ALL-118: xem trước file Excel NVL của đơn (không ghi gì). */
+  /** DEV-ALL-119: xem trước file Excel NVL của đơn (không ghi gì). */
   previewOrderMaterialImport: (role: RolePath, orderId: number, file: File) =>
     apiClient
       .post<ApiResponse<OrderMaterialImportPreview>>(

@@ -92,13 +92,13 @@ const specImportRequest = async <T>(target: SpecImportTarget, file: File, previe
   return (await apiClient.post<ApiResponse<T>>(url, asFormData(file), { params })).data;
 };
 
-/** DEV-ALL-117: xem trước dòng hàng của đơn từ Excel; form đơn tự điền rồi người dùng Lưu. */
+/** DEV-ALL-118: xem trước dòng hàng của đơn từ Excel; form đơn tự điền rồi người dùng Lưu. */
 export const orderImportApi = {
   preview: (file: File) =>
     post<OrderImportPreview>(API.customerOrders.importPreview, asFormData(file)),
 };
 
-/** DEV-ALL-119: tạo mã hàng hàng loạt từ Excel (mã đã có bỏ qua). */
+/** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel (mã đã có bỏ qua). */
 export const productImportApi = {
   preview: (file: File) =>
     post<ProductImportPreview>(API.products.productsImportPreview, asFormData(file)),
@@ -108,7 +108,7 @@ export const productImportApi = {
       .data,
 };
 
-/** DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn. */
+/** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
 export const specImportApi = {
   preview: async (target: SpecImportTarget, file: File) =>
     (await specImportRequest<SpecImportPreview>(target, file, true)).data,

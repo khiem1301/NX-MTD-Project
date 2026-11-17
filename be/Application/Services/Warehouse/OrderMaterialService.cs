@@ -43,7 +43,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
             .ToList());
     }
 
-    /// <summary>DEV-ALL-118: số đã nhận tách theo nguồn — phiếu khách giao (không gắn đơn mua) và phiếu nhập theo đơn mua.</summary>
+    /// <summary>DEV-ALL-119: số đã nhận tách theo nguồn — phiếu khách giao (không gắn đơn mua) và phiếu nhập theo đơn mua.</summary>
     private sealed record Received(decimal Customer, decimal Purchased)
     {
         public decimal Total => Customer + Purchased;

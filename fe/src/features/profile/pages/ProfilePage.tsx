@@ -1,30 +1,28 @@
-import { Avatar, Card, Descriptions, Space, Spin } from 'antd';
-import { useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Avatar, Button, Card, Descriptions, Space, Spin } from 'antd';
+import { useState } from 'react';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { formatDate } from '@/utils/format';
-import { ChangePasswordForm } from '../components/ChangePasswordForm';
+import { ProfileEditModal } from '../components/ProfileEditModal';
 import { useProfile } from '../hooks/useProfile';
 
-/** UC04: hồ sơ chỉ đọc (không có kiểu lương, mã chấm công) + UC03 đổi mật khẩu. */
+/**
+ * UC04: hồ sơ (không có kiểu lương, mã chấm công); nút Sửa mở hộp thoại sửa ngày sinh / số điện thoại và UC03 đổi mật khẩu.
+ * Mật khẩu tạm được xử lý riêng ở ForceChangePasswordPage.
+ */
 export function ProfilePage() {
   const profile = useProfile();
-  const [params] = useSearchParams();
-  const formRef = useRef<HTMLDivElement>(null);
-  const toPassword = params.get('changePassword') === '1';
-
-  // Vào từ menu "Đổi mật khẩu": cuộn tới form. Mật khẩu tạm được xử lý riêng ở ForceChangePasswordPage.
-  useEffect(() => {
-    if (toPassword) formRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [toPassword]);
+  const [editing, setEditing] = useState(false);
 
   if (profile.isLoading) return <Spin />;
   const p = profile.data;
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card title={MESSAGES.hr.profileTitle}>
+      <Card
+        title={MESSAGES.hr.profileTitle}
+        extra={p && <Button onClick={() => setEditing(true)}>{MESSAGES.common.edit}</Button>}
+      >
         <QueryError error={profile.error} onRetry={() => void profile.refetch()} />
         {p && (
           <Space align="start" size="large" wrap>
@@ -55,11 +53,7 @@ export function ProfilePage() {
           </Space>
         )}
       </Card>
-      <div ref={formRef}>
-        <Card title={MESSAGES.hr.changePasswordTitle}>
-          <ChangePasswordForm />
-        </Card>
-      </div>
+      {p && <ProfileEditModal open={editing} profile={p} onClose={() => setEditing(false)} />}
     </Space>
   );
 }

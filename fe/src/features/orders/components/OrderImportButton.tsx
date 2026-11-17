@@ -14,7 +14,7 @@ type OrderImportButtonProps = {
   onApply: (blocks: ProductBlock[], labels: Record<number, string>) => void;
 };
 
-/** DEV-ALL-117: nút "Nhập từ Excel" của form đơn; áp dụng thì gộp dòng hợp lệ vào các khối mã hàng (chưa lưu). */
+/** DEV-ALL-118: nút "Nhập từ Excel" của form đơn; áp dụng thì gộp dòng hợp lệ vào các khối mã hàng (chưa lưu). */
 export function OrderImportButton({ blocks, onApply }: OrderImportButtonProps) {
   const [open, setOpen] = useState(false);
   return (

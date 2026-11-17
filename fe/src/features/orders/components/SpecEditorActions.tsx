@@ -19,7 +19,7 @@ type SpecEditorActionsProps = {
   onClose: () => void;
 };
 
-/** Nút của form định mức: Đóng, Nhập từ Excel (DEV-ALL-114, chỉ người sửa được định mức), Lưu. */
+/** Nút của form định mức: Đóng, Nhập từ Excel (DEV-ALL-115, chỉ người sửa được định mức), Lưu. */
 export function SpecEditorActions({
   product,
   readOnly,

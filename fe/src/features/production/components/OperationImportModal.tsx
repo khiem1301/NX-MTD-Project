@@ -20,10 +20,10 @@ type Props = {
 const text = PRODUCTION_TEXT.operations.import;
 
 /**
- * KI-01 (UC25) — Kế toán nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ (DEV-ALL-116: Admin không nhập): chọn
+ * KI-01 (UC25) — Kế toán nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ (DEV-ALL-117: Admin không nhập): chọn
  * file là xem trước ngay (thêm mới / cập nhật / không đổi / lỗi), chọn sheet nếu file có nhiều bảng, chọn công đoạn cuối (chọn
  * sẵn theo cột CUỐI). Cột TIỀN được đọc thành đơn giá công đoạn hiệu lực từ ngày chọn (Nháp, hoặc gửi Admin duyệt luôn).
- * DEV-ALL-115: cột NHÓM CÔNG ĐOẠN, CHI TIẾT (tùy chọn) được nhập kèm.
+ * DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT (tùy chọn) được nhập kèm.
  * Trang chỉ gắn hộp thoại khi đang mở nên state tự reset mỗi lần mở.
  */
 export function OperationImportModal({ open, productId, productLabel, onClose }: Props) {

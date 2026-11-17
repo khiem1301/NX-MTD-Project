@@ -40,7 +40,7 @@ const columns: ColumnsType<ProductImportRow> = [
 type ProductImportModalProps = { onClose: () => void };
 
 /**
- * DEV-ALL-119: tạo nhiều mã hàng một lần từ Excel. Chọn file là xem trước (Mới / Đã có / Lỗi); bấm Tạo mã hàng thì tạo các mã mới
+ * DEV-ALL-120: tạo nhiều mã hàng một lần từ Excel. Chọn file là xem trước (Mới / Đã có / Lỗi); bấm Tạo mã hàng thì tạo các mã mới
  * hợp lệ trong một lần, mã đã có bỏ qua. Mã mới chọn được ngay ở form đơn hàng. Chỉ gắn khi đang mở.
  */
 export function ProductImportModal({ onClose }: ProductImportModalProps) {

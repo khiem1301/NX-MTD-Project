@@ -8,7 +8,7 @@ import { ORDERS_KEY } from './useOrders';
 /** Số đơn tối đa hiện trong ô chọn đơn (đơn đang chạy của một mã hàng). */
 const PRODUCT_ORDERS_PAGE_SIZE = 100;
 
-/** DEV-ALL-114: xem trước file Excel định mức — không ghi gì nên không làm mới dữ liệu nào. */
+/** DEV-ALL-115: xem trước file Excel định mức — không ghi gì nên không làm mới dữ liệu nào. */
 export const usePreviewSpecImport = () =>
   useApiMutation(
     ({ target, file }: { target: SpecImportTarget; file: File }) =>
@@ -34,11 +34,11 @@ export const useProductOrders = (productId: number) =>
     queryFn: () => orderLookupApi.orders({ productId, pageSize: PRODUCT_ORDERS_PAGE_SIZE }),
   });
 
-/** DEV-ALL-117: xem trước dòng hàng của đơn từ Excel — không ghi gì. */
+/** DEV-ALL-118: xem trước dòng hàng của đơn từ Excel — không ghi gì. */
 export const usePreviewOrderImport = () =>
   useApiMutation((file: File) => orderImportApi.preview(file), { invalidate: [] });
 
-/** DEV-ALL-119: xem trước file Excel mã hàng — không ghi gì. */
+/** DEV-ALL-120: xem trước file Excel mã hàng — không ghi gì. */
 export const usePreviewProductImport = () =>
   useApiMutation((file: File) => productImportApi.preview(file), { invalidate: [] });
 

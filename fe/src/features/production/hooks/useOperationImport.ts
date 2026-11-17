@@ -38,7 +38,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
         effectiveDate: useRates ? toApiDate(date) : undefined,
       },
       {
-        // DEV-ALL-115: chọn sẵn công đoạn cuối theo cột CUỐI (khi mã hàng chưa có công đoạn cuối).
+        // DEV-ALL-116: chọn sẵn công đoạn cuối theo cột CUỐI (khi mã hàng chưa có công đoạn cuối).
         onSuccess: (result) =>
           setFinalStt(
             result.productHasFinalStep ? undefined : (result.finalSttInFile ?? undefined),

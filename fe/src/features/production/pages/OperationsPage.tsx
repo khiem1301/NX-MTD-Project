@@ -30,7 +30,7 @@ const text = PRODUCTION_TEXT.operations;
 
 /**
  * UC25 / UC26 (KI-01) — Kế toán quản lý công đoạn, nhóm công đoạn, nhập Excel và đặt đơn giá ngay trên từng công đoạn (có ngày
- * hiệu lực, gửi Admin duyệt). Tích nhiều dòng để xếp nhóm một lần. DEV-ALL-116: Admin chỉ xem (duyệt đơn giá ở màn duyệt).
+ * hiệu lực, gửi Admin duyệt). Tích nhiều dòng để xếp nhóm một lần. DEV-ALL-117: Admin chỉ xem (duyệt đơn giá ở màn duyệt).
  */
 export function OperationsPage() {
   /** Kế toán: quản lý công đoạn và đơn giá. Admin: chỉ xem. */

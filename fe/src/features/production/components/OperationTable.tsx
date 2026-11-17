@@ -23,7 +23,7 @@ type OperationTableProps = {
   onSelect: (ids: number[]) => void;
   groups: OperationGroup[];
   draftRateIds: number[];
-  /** Admin chỉ xem (DEV-ALL-116): không tích dòng, không có thanh xếp nhóm hàng loạt. */
+  /** Admin chỉ xem (DEV-ALL-117): không tích dòng, không có thanh xếp nhóm hàng loạt. */
   readOnly?: boolean;
 };
 

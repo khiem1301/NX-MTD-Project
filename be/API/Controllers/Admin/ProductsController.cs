@@ -19,7 +19,7 @@ public sealed class ProductsController : AdminBaseController
         _products = products; _specs = specs; _import = import; _productImport = productImport;
     }
 
-    /// <summary>DEV-ALL-119: xem trước file Excel mã hàng (multipart: file), không ghi gì.</summary>
+    /// <summary>DEV-ALL-120: xem trước file Excel mã hàng (multipart: file), không ghi gì.</summary>
     [HttpPost("import-products/preview")]
     public async Task<IActionResult> PreviewProductImport(IFormFile file, CancellationToken ct)
     {
@@ -27,7 +27,7 @@ public sealed class ProductsController : AdminBaseController
         return this.ToResponse(await _productImport.PreviewAsync(stream, ct));
     }
 
-    /// <summary>DEV-ALL-119: tạo các mã hàng mới trong file (mã đã có bỏ qua), một giao dịch.</summary>
+    /// <summary>DEV-ALL-120: tạo các mã hàng mới trong file (mã đã có bỏ qua), một giao dịch.</summary>
     [HttpPost("import-products")]
     public async Task<IActionResult> ImportProducts(IFormFile file, CancellationToken ct)
     {
@@ -60,7 +60,7 @@ public sealed class ProductsController : AdminBaseController
     public async Task<IActionResult> SaveSpec(int id, [FromBody] SaveProductSpecDto dto, CancellationToken ct) =>
         this.ToResponse(await _specs.SaveAsync(id, dto, ct));
 
-    /// <summary>DEV-ALL-114: xem trước file Excel định mức (multipart: file). orderId = đơn nhận bìa của đơn, bỏ trống = chỉ định mức.</summary>
+    /// <summary>DEV-ALL-115: xem trước file Excel định mức (multipart: file). orderId = đơn nhận bìa của đơn, bỏ trống = chỉ định mức.</summary>
     [HttpPost("{id:int}/import/preview")]
     public async Task<IActionResult> PreviewImport(int id, IFormFile file, [FromQuery] int? orderId, CancellationToken ct)
     {
@@ -68,7 +68,7 @@ public sealed class ProductsController : AdminBaseController
         return this.ToResponse(await _import.PreviewAsync(id, orderId, stream, ct));
     }
 
-    /// <summary>DEV-ALL-114: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch.</summary>
+    /// <summary>DEV-ALL-115: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch.</summary>
     [HttpPost("{id:int}/import")]
     public async Task<IActionResult> Import(int id, IFormFile file, [FromQuery] int? orderId, CancellationToken ct)
     {

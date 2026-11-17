@@ -1,6 +1,6 @@
 namespace NX_MTD.Application.DTOs;
 
-// ================= DEV-ALL-117: nhập dòng hàng của đơn từ Excel (ma trận màu × size) =================
+// ================= DEV-ALL-118: nhập dòng hàng của đơn từ Excel (ma trận màu × size) =================
 
 /// <summary>Số lượng một size của một dòng màu (chỉ size có số &gt; 0).</summary>
 public sealed record OrderImportQtyDto(string SizeCode, int Qty);

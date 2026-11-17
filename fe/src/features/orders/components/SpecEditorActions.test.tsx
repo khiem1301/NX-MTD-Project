@@ -31,7 +31,7 @@ const renderActions = (readOnly: boolean, dirty = false) =>
   );
 
 describe('SpecEditorActions', () => {
-  it('Kế toán (chỉ xem, DEV-ALL-116) không có nút Nhập từ Excel và Lưu', () => {
+  it('Kế toán (chỉ xem, DEV-ALL-117) không có nút Nhập từ Excel và Lưu', () => {
     renderActions(true);
 
     expect(screen.getByRole('button', { name: 'Đóng' })).toBeInTheDocument();

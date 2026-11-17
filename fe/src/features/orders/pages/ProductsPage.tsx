@@ -35,7 +35,7 @@ type Filters = { keyword?: string; status?: ProductStatus };
 /** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng sản xuất. */
 export function ProductsPage() {
   const table = useTableQuery<Filters>({});
-  const isAccountant = usePermission().hasRole(ROLES.Accountant); // Kế toán: chỉ xem danh sách và định mức (DEV-ALL-116)
+  const isAccountant = usePermission().hasRole(ROLES.Accountant); // Kế toán: chỉ xem danh sách và định mức (DEV-ALL-117)
   const products = useProducts(table.params);
   const discontinue = useDiscontinueProduct();
   const reactivate = useReactivateProduct();
@@ -112,7 +112,7 @@ export function ProductsPage() {
       extra={
         isAccountant ? undefined : (
           <Space>
-            {/* DEV-ALL-119: tạo nhiều mã hàng một lần từ Excel. */}
+            {/* DEV-ALL-120: tạo nhiều mã hàng một lần từ Excel. */}
             <Button icon={<UploadOutlined />} onClick={() => setImporting(true)}>
               {MESSAGES.orders.productImport.button}
             </Button>

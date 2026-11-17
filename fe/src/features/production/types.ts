@@ -65,7 +65,7 @@ export type OperationImportRow = {
   /** Đơn giá từ cột TIỀN: None (không xử lý) | New | Update | Unchanged | Skipped. */
   rateAction: OperationImportRateAction;
   rateNote: string | null;
-  /** DEV-ALL-115: cột NHÓM CÔNG ĐOẠN / CHI TIẾT (null khi file không có cột), và nhóm / chi tiết đổi thế nào. */
+  /** DEV-ALL-116: cột NHÓM CÔNG ĐOẠN / CHI TIẾT (null khi file không có cột), và nhóm / chi tiết đổi thế nào. */
   groupName: string | null;
   componentNames: string[] | null;
   changeNote: string | null;

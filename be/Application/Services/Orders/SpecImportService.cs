@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-114: nhập Excel định mức mã hàng và bìa của đơn trong một hộp thoại, ở cả màn Mã hàng (Admin) và màn Đơn hàng
+/// DEV-ALL-115: nhập Excel định mức mã hàng và bìa của đơn trong một hộp thoại, ở cả màn Mã hàng (Admin) và màn Đơn hàng
 /// (Admin, Quản đốc). Xem trước chạy đủ kiểm tra của nút Lưu trên bản đã gộp; Nhập lập lại bản gộp từ file (không tin dữ liệu
 /// màn hình gửi) rồi ghi định mức và bìa trong MỘT giao dịch, có lỗi thì không ghi gì. Ghi dùng lại ProductSpecService /
 /// OrderMarkerService nên nhật ký và ràng buộc giống hệt khi lưu tay.

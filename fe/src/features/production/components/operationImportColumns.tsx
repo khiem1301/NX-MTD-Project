@@ -24,7 +24,7 @@ export const operationImportColumns: ColumnsType<OperationImportRow> = [
     render: (v: number | null) => (v === null ? '—' : formatQty(v)),
   },
   { title: text.columns.equipment, dataIndex: 'equipment', render: (v: string | null) => v ?? '—' },
-  // DEV-ALL-115: hai cột tùy chọn của file; file không có cột thì BE trả null và hiện "—".
+  // DEV-ALL-116: hai cột tùy chọn của file; file không có cột thì BE trả null và hiện "—".
   { title: text.columns.group, dataIndex: 'groupName', render: (v: string | null) => v ?? '—' },
   {
     title: text.columns.components,

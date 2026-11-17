@@ -44,7 +44,7 @@ export const orderMaterialColumns = (
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: qtyWithUnit },
-  // DEV-ALL-118: đã nhập tách theo nguồn; còn thiếu đỏ khi > 0, xanh khi đã đủ.
+  // DEV-ALL-119: đã nhập tách theo nguồn; còn thiếu đỏ khi > 0, xanh khi đã đủ.
   {
     title: LABELS.customerReceivedQty,
     dataIndex: 'customerReceivedQty',

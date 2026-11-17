@@ -56,13 +56,13 @@ export type OrderMaterial = {
   source: string | null;
   note: string | null;
   receivedQty: number;
-  /** DEV-ALL-118: đã nhận tách theo nguồn (khách giao / mua về) và còn thiếu = max(số cần − đã nhận, 0). */
+  /** DEV-ALL-119: đã nhận tách theo nguồn (khách giao / mua về) và còn thiếu = max(số cần − đã nhận, 0). */
   customerReceivedQty: number;
   purchasedReceivedQty: number;
   shortQty: number;
 };
 
-// ---- DEV-ALL-118: nhập Excel NVL của đơn ----
+// ---- DEV-ALL-119: nhập Excel NVL của đơn ----
 export type OrderMaterialImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
 export type OrderMaterialImportRow = {
   rowNumber: number;

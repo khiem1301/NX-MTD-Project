@@ -30,7 +30,7 @@ const targetOf = (
   return productId === undefined ? null : { scope: 'manager', orderId: source.orderId, productId };
 };
 
-/** DEV-ALL-114: trạng thái hộp thoại nhập Excel — chọn file, chọn đích, xem trước, xác nhận nhập (lưu ngay). */
+/** DEV-ALL-115: trạng thái hộp thoại nhập Excel — chọn file, chọn đích, xem trước, xác nhận nhập (lưu ngay). */
 export function useSpecImportModal(source: SpecImportSource, onClose: () => void) {
   const [file, setFile] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<number | undefined>(undefined);

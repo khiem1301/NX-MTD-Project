@@ -44,7 +44,7 @@ const mergeIntoBlock = (block: ProductBlock, rows: OrderImportRow[]): ProductBlo
 };
 
 /**
- * DEV-ALL-117: gộp các dòng hợp lệ của file vào form đơn. Mã hàng đã có trên form: dòng cùng màu được ghi số lượng các size trong
+ * DEV-ALL-118: gộp các dòng hợp lệ của file vào form đơn. Mã hàng đã có trên form: dòng cùng màu được ghi số lượng các size trong
  * file (size khác giữ nguyên), màu mới thêm dòng, đơn giá CMT lấy theo file. Mã hàng chưa có: thêm khối mới. Trả kèm nhãn mã hàng.
  */
 export const mergeOrderImport = (

@@ -12,10 +12,10 @@ public sealed record OrderMaterialDto(
     int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty,
     DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
     decimal CustomerReceivedQty = 0, decimal PurchasedReceivedQty = 0, decimal ShortQty = 0);
-// DEV-ALL-118: ReceivedQty = CustomerReceivedQty (phiếu khách giao) + PurchasedReceivedQty (phiếu nhập theo đơn mua);
+// DEV-ALL-119: ReceivedQty = CustomerReceivedQty (phiếu khách giao) + PurchasedReceivedQty (phiếu nhập theo đơn mua);
 // ShortQty = max(RequiredQty − ReceivedQty, 0).
 
-// ---- DEV-ALL-118: nhập Excel NVL của đơn ----
+// ---- DEV-ALL-119: nhập Excel NVL của đơn ----
 
 /// <summary>Một dòng thô đọc từ file: mã NVL, số cần, khách cấp, ghi chú.</summary>
 public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialCode, decimal? RequiredQty, decimal? CustomerQty,

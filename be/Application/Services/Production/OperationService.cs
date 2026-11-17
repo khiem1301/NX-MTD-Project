@@ -196,7 +196,7 @@ public sealed class OperationService : IOperationService
 
     // ---------- Nhập công đoạn (kèm đơn giá) từ file Excel quy trình công nghệ ----------
 
-    /// <param name="ComponentIds">DEV-ALL-115: chi tiết PANEL công đoạn làm trên (null = file không có cột CHI TIẾT, giữ nguyên).</param>
+    /// <param name="ComponentIds">DEV-ALL-116: chi tiết PANEL công đoạn làm trên (null = file không có cột CHI TIẾT, giữ nguyên).</param>
     private sealed record PlannedRow(
         OperationImportRowDto Preview, OperationExcelRowDto Raw, Operation? Existing, PieceRate? ExistingRate,
         IReadOnlyList<int>? ComponentIds = null);
@@ -206,7 +206,7 @@ public sealed class OperationService : IOperationService
         ImportRefs? Refs);
 
     /// <summary>
-    /// DEV-ALL-115: dữ liệu để nhập cột NHÓM CÔNG ĐOẠN / CHI TIẾT. Chỉ nạp khi file có một trong hai cột, nên file quy trình
+    /// DEV-ALL-116: dữ liệu để nhập cột NHÓM CÔNG ĐOẠN / CHI TIẾT. Chỉ nạp khi file có một trong hai cột, nên file quy trình
     /// công nghệ cũ nhập y như trước.
     /// </summary>
     private sealed record ImportRefs(
@@ -280,7 +280,7 @@ public sealed class OperationService : IOperationService
     }
 
     /// <summary>
-    /// DEV-ALL-115: nhóm công đoạn theo tên (chưa có thì tạo, dùng chung trong một lần nhập) và bộ chi tiết của công đoạn
+    /// DEV-ALL-116: nhóm công đoạn theo tên (chưa có thì tạo, dùng chung trong một lần nhập) và bộ chi tiết của công đoạn
     /// (thay bằng bộ trong file). Cột không có trong file thì giữ nguyên.
     /// </summary>
     private void ApplyGroupAndComponents(Operation operation, PlannedRow row, OperationExcelSheetDto sheet, ImportRefs refs, int productId)
@@ -489,7 +489,7 @@ public sealed class OperationService : IOperationService
         return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows, refs));
     }
 
-    /// <summary>Thành phần, nhóm công đoạn và liên kết công đoạn ↔ chi tiết của mã hàng (DEV-ALL-115), có theo dõi để sửa được.</summary>
+    /// <summary>Thành phần, nhóm công đoạn và liên kết công đoạn ↔ chi tiết của mã hàng (DEV-ALL-116), có theo dõi để sửa được.</summary>
     private async Task<ImportRefs> LoadImportRefsAsync(int productId, CancellationToken ct)
     {
         var components = await _uow.Repository<ProductComponent>().Query()
@@ -560,7 +560,7 @@ public sealed class OperationService : IOperationService
         return rows;
     }
 
-    /// <summary>DEV-ALL-115: tên trong cột CHI TIẾT → chi tiết PANEL của mã hàng. Trả (null, null, null) khi file không có cột.</summary>
+    /// <summary>DEV-ALL-116: tên trong cột CHI TIẾT → chi tiết PANEL của mã hàng. Trả (null, null, null) khi file không có cột.</summary>
     private static (IReadOnlyList<int>? Ids, IReadOnlyList<string>? Names, string? Error) ResolveComponents(
         OperationExcelRowDto raw, OperationExcelSheetDto sheet, ImportRefs? refs)
     {
@@ -580,7 +580,7 @@ public sealed class OperationService : IOperationService
         return (ids, names, null);
     }
 
-    /// <summary>Mô tả thay đổi nhóm / chi tiết của công đoạn đã có, null khi không đổi (DEV-ALL-115).</summary>
+    /// <summary>Mô tả thay đổi nhóm / chi tiết của công đoạn đã có, null khi không đổi (DEV-ALL-116).</summary>
     private static string? ChangeNote(Operation existing, OperationExcelRowDto raw, OperationExcelSheetDto sheet, ImportRefs refs,
         IReadOnlyList<int>? componentIds)
     {

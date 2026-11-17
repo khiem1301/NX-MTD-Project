@@ -29,7 +29,7 @@ type SpecNormsTabProps = {
   components: ComponentRow[];
   materialOptions: MaterialOption[];
   materialsLoading: boolean;
-  /** DEV-ALL-116: Kế toán chỉ xem định mức. */
+  /** DEV-ALL-117: Kế toán chỉ xem định mức. */
   readOnly?: boolean;
 };
 

@@ -237,7 +237,7 @@ export const LABELS = {
   purchaseQty: 'Phải mua',
   source: 'Nguồn',
   receivedQty: 'Đã nhập',
-  // DEV-ALL-118: đã nhập tách theo nguồn + còn thiếu; nhập Excel NVL của đơn
+  // DEV-ALL-119: đã nhập tách theo nguồn + còn thiếu; nhập Excel NVL của đơn
   customerReceivedQty: 'Khách đã giao',
   purchasedReceivedQty: 'Đã mua về',
   shortQty: 'Còn thiếu',

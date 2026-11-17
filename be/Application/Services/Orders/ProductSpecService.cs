@@ -72,7 +72,7 @@ public sealed class ProductSpecService : IProductSpecService
         return Result<ProductSpecDto>.Success(spec.Data!, Messages.Saved);
     }
 
-    /// <summary>Mọi kiểm tra của nút Lưu, không ghi gì (dùng chung với nhập Excel định mức, DEV-ALL-114).</summary>
+    /// <summary>Mọi kiểm tra của nút Lưu, không ghi gì (dùng chung với nhập Excel định mức, DEV-ALL-115).</summary>
     public async Task<Result> CheckAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
     {
         if (!await _uow.Repository<Product>().Query().AnyAsync(p => p.ProductId == productId, ct)) return Fail.NotFound();
@@ -80,7 +80,7 @@ public sealed class ProductSpecService : IProductSpecService
         return invalid ?? Result.Success();
     }
 
-    /// <summary>Ghi định mức đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-114).</summary>
+    /// <summary>Ghi định mức đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-115).</summary>
     public Task<Result<int>> WriteAsync(int productId, SaveProductSpecDto dto, CancellationToken ct) =>
         ApplySpecAsync(productId, dto, ct);
 

@@ -1,6 +1,6 @@
 namespace NX_MTD.Application.DTOs;
 
-// ================= DEV-ALL-119: tạo mã hàng hàng loạt từ Excel =================
+// ================= DEV-ALL-120: tạo mã hàng hàng loạt từ Excel =================
 
 public sealed record ProductExcelRow(int RowNumber, string ProductCode, string ProductName, string? Description);
 

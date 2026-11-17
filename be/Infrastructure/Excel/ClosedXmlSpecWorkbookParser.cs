@@ -7,7 +7,7 @@ using NX_MTD.Domain.Constants;
 namespace NX_MTD.Infrastructure.Excel;
 
 /// <summary>
-/// Đọc file Excel định mức mã hàng (DEV-ALL-114). Mỗi bảng nhận theo TÊN cột trên dòng tiêu đề (trong 25 dòng đầu của sheet đang
+/// Đọc file Excel định mức mã hàng (DEV-ALL-115). Mỗi bảng nhận theo TÊN cột trên dòng tiêu đề (trong 25 dòng đầu của sheet đang
 /// hiển thị), không theo tên sheet, nên người dùng được đổi tên sheet hay chèn dòng ghi chú phía trên:
 /// <list type="bullet">
 /// <item>Thành phần: Tên chi tiết, Loại, Số chi tiết / áo.</item>

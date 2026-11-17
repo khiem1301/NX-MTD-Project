@@ -18,7 +18,7 @@ type OrderMarkersTabProps = {
 
 /**
  * Tab "Bìa cắt" của chi tiết đơn (DEV-ALL-85): Admin, Quản đốc khai bìa theo từng mã hàng để lệnh cắt ước số mét vải.
- * DEV-ALL-114: nút Nhập từ Excel nhập định mức mã hàng và bìa của đơn trong một file.
+ * DEV-ALL-115: nút Nhập từ Excel nhập định mức mã hàng và bìa của đơn trong một file.
  */
 export function OrderMarkersTab({ orderId, orderCode, isClosed }: OrderMarkersTabProps) {
   const markers = useOrderMarkers(orderId);

@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.Accountant;
 
 /// <summary>
-/// UC10 (định mức): Kế toán chỉ XEM danh sách mã hàng và định mức (DEV-ALL-116: Admin sửa định mức, Admin / Quản đốc nhập Excel;
+/// UC10 (định mức): Kế toán chỉ XEM danh sách mã hàng và định mức (DEV-ALL-117: Admin sửa định mức, Admin / Quản đốc nhập Excel;
 /// trước đây Kế toán sửa được, DEV-ALL-16). Không thêm / sửa / ngừng sản xuất mã hàng, không đơn giá CMT.
 /// </summary>
 public sealed class ProductsController : AccountantBaseController

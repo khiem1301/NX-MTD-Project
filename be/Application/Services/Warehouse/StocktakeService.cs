@@ -240,7 +240,8 @@ public sealed class StocktakeService : IStocktakeService
     {
         var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
         var colors = await _uow.Repository<OrderLine>().Query().Where(l => ids.Contains(l.OrderLineId))
-            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariant.ProductColorId, ct);
+            .Select(l => new { l.OrderLineId, l.ProductVariant.ProductColorId })
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductColorId, ct);
         if (colors.Count != ids.Count) return WarehouseFailures.NotFound<List<StocktakeLine>>();
 
         var normIds = dto.Lines.Where(l => l.ProductComponentMaterialId is not null).Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();

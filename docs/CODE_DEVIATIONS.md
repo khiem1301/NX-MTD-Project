@@ -152,12 +152,13 @@
 | DEV-ALL-111 | 13/11/2026 | Claude (AI) | UC42, `MaterialReturn` | Tổ may cũng trả NVL thừa (chỉ, cúc…) về kho theo phiếu cấp đã nhận, như tổ cắt; đổi chữ "Trả vải thừa" thành "Trả NVL thừa". Thay phần "tổ may không trả" của UC42 (mở rộng thêm ở DEV-ALL-112) | Mở |
 | DEV-ALL-112 | 13/11/2026 | Claude (AI) | UC42, UC24, `MaterialReturn`, `MaterialReturnLine`, `Material` | Phiếu trả không còn theo phiếu cấp: tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL (tổng đã nhận, không theo đơn) và BTP theo đơn – mã hàng – màu – size (trần = đã nhận − đã QC đạt − đã trả); cả hai tổ trả thêm NVL phế phẩm (loại NVL mới SCRAP: vải vụn kg, kim gãy cái…, không trần). Đổi DB: patch `2026-11-13_material_return_scrap.sql` | Mở |
 | DEV-ALL-113 | 13/11/2026 | Claude (AI) | UC10, UC37, UC39, `PurchaseOrder`, `CustomerOrder`, `Request`, `DeliveryScheduleDate` | Lịch giao NVL nhập đúng N ngày cho N lần giao (đơn mua, lịch khách giao, giao bù) thay cho khoảng "từ ngày – đến ngày"; thêm bảng ngày giao DeliveryScheduleDate (mỗi dòng đúng một chủ lịch, có khoá ngoại), cột ngày đầu / cuối cũ giữ làm tóm tắt | Mở |
-| DEV-ALL-114 | 17/11/2026 | Claude (AI) | UC10, `ProductSpecService`, `OrderMarkerService`, `SpecImportService` | Nhập Excel định mức mã hàng + bìa của đơn trong một hộp thoại (4 bảng, ở màn Mã hàng và tab Bìa cắt của đơn): chỉ gộp theo khóa, xem trước chạy đủ kiểm tra của nút Lưu, lưu định mức và bìa trong một giao dịch | Mở |
-| DEV-ALL-115 | 17/11/2026 | Claude (AI) | UC25, `OperationService`, `OperationGroup`, `OperationComponent` | Nhập công đoạn từ Excel đọc thêm cột tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI (tạo nhóm, gắn chi tiết PANEL, chọn sẵn công đoạn cuối) | Mở |
-| DEV-ALL-116 | 17/11/2026 | Claude (AI) | UC10, UC25, UC26 | Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn và duyệt đơn giá (thay quyền ở DEV-ALL-16, 42, 50, 61) | Mở |
-| DEV-ALL-117 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
-| DEV-ALL-118 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
-| DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-114 | 17/11/2026 | Claude (AI) | UC04, `Employee` | Hồ sơ của tôi không còn chỉ đọc: mọi vai trò tự sửa được ngày sinh và số điện thoại của mình (`PUT common/profile`); các trường còn lại vẫn do Admin / Quản đốc sửa ở UC16. Đổi mật khẩu (UC03) gộp vào cùng hộp thoại Sửa, bỏ card "Đổi mật khẩu" riêng và mục "Đổi mật khẩu" ở menu người dùng | Mở |
+| DEV-ALL-115 | 17/11/2026 | Claude (AI) | UC10, `ProductSpecService`, `OrderMarkerService`, `SpecImportService` | Nhập Excel định mức mã hàng + bìa của đơn trong một hộp thoại (4 bảng, ở màn Mã hàng và tab Bìa cắt của đơn): chỉ gộp theo khóa, xem trước chạy đủ kiểm tra của nút Lưu, lưu định mức và bìa trong một giao dịch | Mở |
+| DEV-ALL-116 | 17/11/2026 | Claude (AI) | UC25, `OperationService`, `OperationGroup`, `OperationComponent` | Nhập công đoạn từ Excel đọc thêm cột tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI (tạo nhóm, gắn chi tiết PANEL, chọn sẵn công đoạn cuối) | Mở |
+| DEV-ALL-117 | 17/11/2026 | Claude (AI) | UC10, UC25, UC26 | Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn và duyệt đơn giá (thay quyền ở DEV-ALL-16, 42, 50, 61) | Mở |
+| DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
+| DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
+| DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -2500,7 +2501,18 @@
   - [ ] DEV-ALL-94, DEV-ALL-95 (phần khoảng ngày giao)
 - **Trạng thái:** Mở
 
-### DEV-ALL-114 · Nhập Excel định mức mã hàng và bìa cắt (một file 4 bảng)
+### DEV-ALL-114 · Tự sửa ngày sinh và số điện thoại ở "Hồ sơ của tôi"
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · UC04 · chưa có PR
+- **Ảnh hưởng tới:** `PUT common/profile` (`UpdateProfileDto`: `DateOfBirth`, `Phone`), `ProfileService.UpdateAsync`, màn Hồ sơ của tôi ở FE (nút Sửa + `ProfileEditModal`); không đổi schema
+- **Tài liệu gốc ghi:** UC04: hồ sơ cá nhân chỉ đọc.
+- **Code đang làm:** mọi vai trò tự cập nhật ngày sinh và số điện thoại của chính mình; để trống thì xóa giá trị. Ngày sinh phải trước hôm nay; số điện thoại theo `PhoneRule` (10 số bắt đầu bằng 0, hoặc +84 kèm 9 số), cùng quy tắc với form nhân viên ở UC16. Ghi `AuditLog` (`Employee`, Update) với giá trị cũ / mới. Họ tên, giới tính, tổ, vai trò, kiểu lương, mã chấm công vẫn chỉ Admin / Quản đốc sửa; sửa hồ sơ không làm đổi `SecurityStamp` nên không đẩy các phiên đăng nhập khác ra.
+  - Đổi mật khẩu (UC03) nằm trong cùng hộp thoại Sửa, không còn card riêng ở màn hồ sơ. Để trống ba ô mật khẩu là không đổi; nhập một ô thì phải nhập đủ ba. Bấm Lưu: nếu có đổi mật khẩu thì gọi `POST common/profile/change-password` trước (sai mật khẩu hiện tại thì chưa lưu gì), rồi mới gọi `PUT common/profile` nếu ngày sinh / số điện thoại có đổi. Đổi mật khẩu vẫn đẩy các phiên khác ra như cũ (MSG08). Menu người dùng ở góc trên phải bỏ mục "Đổi mật khẩu" (chỉ còn "Hồ sơ của tôi" và "Đăng xuất"); muốn đổi mật khẩu thì vào Hồ sơ của tôi → Sửa. Màn bắt buộc đổi mật khẩu tạm (`ForceChangePasswordPage`) giữ nguyên.
+- **Lý do:** tài khoản tạo từ RJ hoặc Admin thường chưa có hai trường này nên màn hồ sơ hiện "—" mà người dùng không tự bổ sung được.
+- **Ảnh hưởng người khác:** không; Admin / Quản đốc vẫn sửa được hai trường này ở UC16.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC04 (thêm luồng tự sửa ngày sinh, số điện thoại); Tổng hợp Use Case
+### DEV-ALL-115 · Nhập Excel định mức mã hàng và bìa cắt (một file 4 bảng)
 
 - **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC10 (định mức mã hàng), bìa của đơn (DEV-ALL-85, DEV-ALL-89); màn Mã hàng → Định mức, màn Đơn hàng → tab Bìa cắt; `ProductSpecService`, `OrderMarkerService`, `SpecImportService` (mới), `ClosedXmlSpecWorkbookParser` (mới); lookup đơn `common/order-lookups/orders` thêm lọc `productId`. Không đổi schema.
@@ -2520,7 +2532,7 @@
   - [ ] Mô tả màn Bìa cắt của đơn (DEV-ALL-85): nhập Excel
 - **Trạng thái:** Mở
 
-### DEV-ALL-115 · Nhập công đoạn từ Excel ghi thêm nhóm công đoạn, chi tiết và công đoạn cuối
+### DEV-ALL-116 · Nhập công đoạn từ Excel ghi thêm nhóm công đoạn, chi tiết và công đoạn cuối
 
 - **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC25, `ClosedXmlOperationParser`, `OperationService.PreviewImportAsync / ImportAsync`, bảng `OperationGroup`, `OperationComponent` (không đổi schema)
@@ -2533,7 +2545,7 @@
   - [ ] DEV-KI-01-2 (danh sách cột đọc), ghi chú "nhập Excel không đổi nhóm / chi tiết"
 - **Trạng thái:** Mở
 
-### DEV-ALL-116 · Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn
+### DEV-ALL-117 · Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn
 
 - **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC10, UC25, UC26; `Accountant/ProductsController` (bỏ `PUT {id}/spec`), `Admin/OperationsController` và `Admin/OperationGroupsController` (chỉ còn `GET`), `Manager/OrderMarkersController` (thêm nhập Excel); FE `ProductsPage` (định mức chỉ xem với Kế toán), `OperationsPage` (Admin chỉ xem: không thêm / sửa / ngừng / dùng lại / nhóm / nhập Excel / tích dòng).
@@ -2546,10 +2558,10 @@
 - **Ảnh hưởng người khác:** Khiêm (mã hàng), Kiều (công đoạn), Minh (Kế toán).
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC10, UC25, UC26: tác nhân
-  - [ ] DEV-ALL-16, DEV-ALL-42, DEV-ALL-50, DEV-ALL-61: ghi bị thay bởi DEV-ALL-116 phần quyền
+  - [ ] DEV-ALL-16, DEV-ALL-42, DEV-ALL-50, DEV-ALL-61: ghi bị thay bởi DEV-ALL-117 phần quyền
 - **Trạng thái:** Mở
 
-### DEV-ALL-117 · Nhập dòng hàng của đơn từ Excel (ma trận màu × size)
+### DEV-ALL-118 · Nhập dòng hàng của đơn từ Excel (ma trận màu × size)
 
 - **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC09 (tạo / sửa đơn hàng); FE `OrderForm`; BE `OrderImportService`, `ClosedXmlOrderLinesParser` (mới), `POST admin/customer-orders/import/preview`. Không đổi schema.
@@ -2561,7 +2573,7 @@
   - [ ] Report-3 UC09: luồng nhập dòng hàng từ Excel + mẫu file
 - **Trạng thái:** Mở
 
-### DEV-ALL-118 · Nhập NVL của đơn từ Excel; tách số đã nhập theo nguồn
+### DEV-ALL-119 · Nhập NVL của đơn từ Excel; tách số đã nhập theo nguồn
 
 - **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC09 (NVL của đơn), DEV-ALL-60; `OrderMaterialService` (+ `OrderMaterialService.Import.cs`), `ClosedXmlOrderMaterialParser` (mới), `Admin/OrderMaterialsController`, `Manager/OrderMaterialsController`; FE tab NVL của đơn. Không đổi schema.
@@ -2576,7 +2588,7 @@
   - [ ] Report-3 UC09 phần NVL: nhập Excel, cột Khách đã giao / Đã mua về / Còn thiếu
 - **Trạng thái:** Mở
 
-### DEV-ALL-119 · Tạo mã hàng hàng loạt từ Excel
+### DEV-ALL-120 · Tạo mã hàng hàng loạt từ Excel
 
 - **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
 - **Ảnh hưởng tới:** UC10 (mã hàng); `ProductImportService`, `ClosedXmlProductParser` (mới), `Admin/ProductsController` (`POST import-products/preview`, `POST import-products`); FE màn Mã hàng. Không đổi schema.

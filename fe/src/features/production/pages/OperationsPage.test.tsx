@@ -203,7 +203,7 @@ describe('OperationsPage', () => {
       expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).not.toBeInTheDocument();
     });
 
-    it('Admin không tích được dòng nên không có nút gửi duyệt hàng loạt (DEV-ALL-116)', () => {
+    it('Admin không tích được dòng nên không có nút gửi duyệt hàng loạt (DEV-ALL-117)', () => {
       mockRole = 'admin';
       mockOperations = [op(1, { nextRate: draft(11) })];
       open();
@@ -230,7 +230,7 @@ describe('OperationsPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('Admin chỉ xem: không có nút đặt / gửi duyệt đơn giá, sửa, ngừng dùng, nhưng vẫn xem được (DEV-ALL-116)', () => {
+    it('Admin chỉ xem: không có nút đặt / gửi duyệt đơn giá, sửa, ngừng dùng, nhưng vẫn xem được (DEV-ALL-117)', () => {
       mockRole = 'admin';
       mockOperations = [
         op(2, {
@@ -262,7 +262,7 @@ describe('OperationsPage', () => {
       expect(screen.getByText('hộp thoại nhập excel')).toBeInTheDocument();
     });
 
-    it('Admin không có nút nhóm công đoạn, nhập Excel, thêm công đoạn (DEV-ALL-116)', () => {
+    it('Admin không có nút nhóm công đoạn, nhập Excel, thêm công đoạn (DEV-ALL-117)', () => {
       mockRole = 'admin';
       open();
 

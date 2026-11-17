@@ -16,7 +16,7 @@ public sealed class CustomerOrdersController : AdminBaseController
         _orders = orders; _import = import;
     }
 
-    /// <summary>DEV-ALL-117: xem trước dòng hàng của đơn từ Excel (multipart: file). Không ghi gì, form đơn lưu như tạo tay.</summary>
+    /// <summary>DEV-ALL-118: xem trước dòng hàng của đơn từ Excel (multipart: file). Không ghi gì, form đơn lưu như tạo tay.</summary>
     [HttpPost("import/preview")]
     public async Task<IActionResult> PreviewImport(IFormFile file, CancellationToken ct)
     {

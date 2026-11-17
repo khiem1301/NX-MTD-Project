@@ -12,7 +12,7 @@ using NX_MTD.Infrastructure.Excel;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn (một file 4 bảng, gộp theo khóa, lưu một giao dịch).</summary>
+/// <summary>DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn (một file 4 bảng, gộp theo khóa, lưu một giao dịch).</summary>
 [Collection(ExcelTestCollection.Name)]
 public class SpecImportTests : ProductionTestBase
 {
@@ -169,18 +169,18 @@ public class SpecImportTests : ProductionTestBase
         }
         using (var stream = File.OpenRead(path))
         {
-            var order = new ClosedXmlOrderLinesParser().Parse(stream);   // DEV-ALL-117: sheet Đơn hàng
+            var order = new ClosedXmlOrderLinesParser().Parse(stream);   // DEV-ALL-118: sheet Đơn hàng
             order.SizeColumns.Should().Equal("S", "M", "L", "XL");
             order.Rows.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
         }
         using (var stream = File.OpenRead(path))
         {
-            var materials = new ClosedXmlOrderMaterialParser().Parse(stream);   // DEV-ALL-118: sheet NVL của đơn
+            var materials = new ClosedXmlOrderMaterialParser().Parse(stream);   // DEV-ALL-119: sheet NVL của đơn
             materials.Should().HaveCount(3).And.OnlyContain(r => r.ParseError == null);
         }
         using (var stream = File.OpenRead(path))
         {
-            var products = new ClosedXmlProductParser().Parse(stream);   // DEV-ALL-119: sheet Mã hàng
+            var products = new ClosedXmlProductParser().Parse(stream);   // DEV-ALL-120: sheet Mã hàng
             products.Select(p => p.ProductCode).Should().Equal("AO-POLO01", "QUAN-KAKI02");
         }
     }

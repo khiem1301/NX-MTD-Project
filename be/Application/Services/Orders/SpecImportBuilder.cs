@@ -9,7 +9,7 @@ namespace NX_MTD.Application.Services;
 public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, string MaterialName, string Unit, string Color);
 
 /// <summary>
-/// DEV-ALL-114: phần tính toán thuần (không truy vấn) của nhập Excel định mức. Kiểm từng dòng file so với dữ liệu hệ thống, đánh dấu
+/// DEV-ALL-115: phần tính toán thuần (không truy vấn) của nhập Excel định mức. Kiểm từng dòng file so với dữ liệu hệ thống, đánh dấu
 /// Thêm mới / Cập nhật / Không đổi / Lỗi, rồi GỘP các dòng hợp lệ vào định mức và bìa đang có: dòng trùng khóa thì ghi đè, dòng không
 /// có trong file giữ nguyên. Khóa: thành phần = tên; định mức = màu + chi tiết (thay cả bộ NVL của cặp đó); nhóm bìa = số nhóm;
 /// bìa của đơn = nhóm + mã bìa. Kết quả gộp là đúng các DTO của nút Lưu, nên mọi kiểm tra của nút Lưu dùng lại được.

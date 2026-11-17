@@ -10,7 +10,7 @@ using NX_MTD.Infrastructure.Excel;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-118: nhập Excel NVL của đơn (gộp theo mã NVL, lưu một lần) và số đã nhận tách khách giao / mua về.</summary>
+/// <summary>DEV-ALL-119: nhập Excel NVL của đơn (gộp theo mã NVL, lưu một lần) và số đã nhận tách khách giao / mua về.</summary>
 [Collection(ExcelTestCollection.Name)]
 public class OrderMaterialImportTests
 {

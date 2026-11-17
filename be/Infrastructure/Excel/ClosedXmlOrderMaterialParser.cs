@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.Infrastructure.Excel;
 
 /// <summary>
-/// DEV-ALL-118: đọc bảng NVL của đơn. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Mã NVL, Số cần; tùy chọn Khách cấp,
+/// DEV-ALL-119: đọc bảng NVL của đơn. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Mã NVL, Số cần; tùy chọn Khách cấp,
 /// Ghi chú (ô trống = 0 / không ghi chú). Chỉ kiểm định dạng ô; đối chiếu NVL, đơn do OrderMaterialService làm.
 /// </summary>
 public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser

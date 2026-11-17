@@ -169,7 +169,9 @@ export const MESSAGES = {
   },
   hr: {
     profileTitle: 'Hồ sơ của tôi',
+    editProfileTitle: 'Cập nhật hồ sơ',
     changePasswordTitle: 'Đổi mật khẩu',
+    passwordOptionalHint: 'Bỏ trống nếu không đổi mật khẩu.',
     currentPassword: 'Mật khẩu hiện tại',
     newPassword: 'Mật khẩu mới',
     confirmPassword: 'Nhập lại mật khẩu mới',
@@ -467,7 +469,7 @@ export const MESSAGES = {
       leave: 'Đóng không lưu',
       stay: 'Tiếp tục sửa',
     },
-    /** DEV-ALL-119: tạo mã hàng hàng loạt từ Excel. */
+    /** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel. */
     productImport: {
       button: 'Nhập từ Excel',
       title: 'Tạo mã hàng từ Excel',
@@ -490,7 +492,7 @@ export const MESSAGES = {
         result: 'Kết quả',
       },
     },
-    /** DEV-ALL-117: nhập dòng hàng của đơn từ Excel (ma trận màu × size). */
+    /** DEV-ALL-118: nhập dòng hàng của đơn từ Excel (ma trận màu × size). */
     orderImport: {
       button: 'Nhập từ Excel',
       title: 'Nhập dòng hàng từ Excel',
@@ -509,7 +511,7 @@ export const MESSAGES = {
         result: 'Kết quả',
       },
     },
-    /** DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn. */
+    /** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
     specImport: {
       button: 'Nhập từ Excel',
       template: 'Tải file mẫu',

@@ -145,7 +145,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             >
               {MESSAGES.orders.addProductBlock}
             </Button>
-            {/* DEV-ALL-117: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
+            {/* DEV-ALL-118: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
             {!locked && (
               <OrderImportButton
                 blocks={blocks}

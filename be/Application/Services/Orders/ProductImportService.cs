@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-119: tạo nhiều mã hàng một lần từ Excel (Mã hàng, Tên mã hàng, Mô tả). Mã đã có thì bỏ qua (không sửa); mỗi dòng kiểm như
+/// DEV-ALL-120: tạo nhiều mã hàng một lần từ Excel (Mã hàng, Tên mã hàng, Mô tả). Mã đã có thì bỏ qua (không sửa); mỗi dòng kiểm như
 /// form thêm mã hàng (SaveProductDtoValidator). Các mã mới được tạo trong một giao dịch, mỗi mã một dòng nhật ký như tạo tay.
 /// </summary>
 public sealed class ProductImportService : IProductImportService

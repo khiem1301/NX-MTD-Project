@@ -32,7 +32,7 @@ type ProductSpecEditorProps = {
   spec: ProductSpec;
   detail: ProductDetail | undefined;
   showHistory: boolean;
-  /** Chế độ chỉ xem: Kế toán chỉ xem định mức (DEV-ALL-116), Admin sửa và nhập Excel. */
+  /** Chế độ chỉ xem: Kế toán chỉ xem định mức (DEV-ALL-117), Admin sửa và nhập Excel. */
   readOnly?: boolean;
   onDirtyChange: (dirty: boolean) => void;
   onClose: () => void;

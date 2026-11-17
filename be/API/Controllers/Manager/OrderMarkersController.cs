@@ -16,7 +16,7 @@ public sealed class OrderMarkersController : ManagerBaseController
         _markers = markers; _import = import;
     }
 
-    /// <summary>DEV-ALL-114: xem trước file Excel định mức + bìa của đơn cho một mã hàng của đơn (multipart: file).</summary>
+    /// <summary>DEV-ALL-115: xem trước file Excel định mức + bìa của đơn cho một mã hàng của đơn (multipart: file).</summary>
     [HttpPost("{orderId:int}/products/{productId:int}/import/preview")]
     public async Task<IActionResult> PreviewImport(int orderId, int productId, IFormFile file, CancellationToken ct)
     {
@@ -24,7 +24,7 @@ public sealed class OrderMarkersController : ManagerBaseController
         return this.ToResponse(await _import.PreviewAsync(productId, orderId, stream, ct));
     }
 
-    /// <summary>DEV-ALL-114 / DEV-ALL-116: Quản đốc và Admin nhập định mức mã hàng + bìa của đơn trong một giao dịch.</summary>
+    /// <summary>DEV-ALL-115 / DEV-ALL-117: Quản đốc và Admin nhập định mức mã hàng + bìa của đơn trong một giao dịch.</summary>
     [HttpPost("{orderId:int}/products/{productId:int}/import")]
     public async Task<IActionResult> Import(int orderId, int productId, IFormFile file, CancellationToken ct)
     {

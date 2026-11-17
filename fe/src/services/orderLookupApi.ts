@@ -13,7 +13,7 @@ type LookupParams = {
   page?: number;
   pageSize?: number;
   status?: string;
-  /** Chỉ đơn có mã hàng này (DEV-ALL-114). */
+  /** Chỉ đơn có mã hàng này (DEV-ALL-115). */
   productId?: number;
 };
 

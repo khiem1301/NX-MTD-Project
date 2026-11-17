@@ -85,7 +85,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
         return Result<OrderMarkersDto>.Success(result.Data!, Messages.Saved);
     }
 
-    /// <summary>Mọi kiểm tra của nút Lưu bìa, không ghi gì (dùng chung với nhập Excel, DEV-ALL-114).</summary>
+    /// <summary>Mọi kiểm tra của nút Lưu bìa, không ghi gì (dùng chung với nhập Excel, DEV-ALL-115).</summary>
     public async Task<Result> CheckAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
     {
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
@@ -99,7 +99,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
         return check ?? Result.Success();
     }
 
-    /// <summary>Ghi bìa đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-114).</summary>
+    /// <summary>Ghi bìa đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-115).</summary>
     public async Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
     {
         var existing = await _uow.Repository<ProductMarker>().Query().Include(m => m.ProductMarkerRatios)

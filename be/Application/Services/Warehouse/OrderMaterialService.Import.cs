@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-118: nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú). Gộp theo NVL: NVL đã có trong đơn thì cập nhật theo
+/// DEV-ALL-119: nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú). Gộp theo NVL: NVL đã có trong đơn thì cập nhật theo
 /// file, NVL chưa có thì thêm, NVL không có trong file giữ nguyên. Mỗi dòng qua đúng kiểm tra của thêm / sửa tay (ApplyAsync).
 /// Các dòng hợp lệ có thay đổi được lưu bằng một lần SaveChanges, nên có lỗi thì không lưu gì.
 /// </summary>

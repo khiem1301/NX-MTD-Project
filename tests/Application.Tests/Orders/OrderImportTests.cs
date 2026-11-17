@@ -8,7 +8,7 @@ using NX_MTD.Infrastructure.Excel;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-117: xem trước dòng hàng của đơn từ Excel dạng ma trận màu × size.</summary>
+/// <summary>DEV-ALL-118: xem trước dòng hàng của đơn từ Excel dạng ma trận màu × size.</summary>
 [Collection(ExcelTestCollection.Name)]
 public class OrderImportTests : ProductionTestBase
 {

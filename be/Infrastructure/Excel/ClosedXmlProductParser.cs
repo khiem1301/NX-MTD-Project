@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.Infrastructure.Excel;
 
 /// <summary>
-/// DEV-ALL-119: đọc bảng mã hàng. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Mã hàng và Tên mã hàng (hoặc Tên hàng);
+/// DEV-ALL-120: đọc bảng mã hàng. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Mã hàng và Tên mã hàng (hoặc Tên hàng);
 /// tùy chọn Mô tả. Bảng phải không có cột Màu / Đơn giá CMT / Nhóm bìa để không nhầm với bảng đơn hàng hay bìa của đơn.
 /// </summary>
 public sealed class ClosedXmlProductParser : IExcelProductParser

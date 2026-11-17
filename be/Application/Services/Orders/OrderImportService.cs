@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-117: xem trước dòng hàng của đơn đọc từ Excel (ma trận màu × size). Không ghi gì: màn hình điền các dòng hợp lệ vào form
+/// DEV-ALL-118: xem trước dòng hàng của đơn đọc từ Excel (ma trận màu × size). Không ghi gì: màn hình điền các dòng hợp lệ vào form
 /// tạo / sửa đơn và người dùng bấm Lưu, nên mọi kiểm tra khi lưu đơn (validator, mã hàng đang sản xuất, trùng dòng...) giữ nguyên.
 /// Màu mới được phép (lưu đơn sẽ tạo màu như gõ tay).
 /// </summary>

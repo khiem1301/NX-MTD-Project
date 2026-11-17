@@ -57,7 +57,7 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
 ];
 
 /**
- * DEV-ALL-117: nhập dòng hàng của đơn từ Excel dạng ma trận màu × size. Chọn file là xem trước (máy chủ kiểm mã hàng, số lượng,
+ * DEV-ALL-118: nhập dòng hàng của đơn từ Excel dạng ma trận màu × size. Chọn file là xem trước (máy chủ kiểm mã hàng, số lượng,
  * đơn giá); Áp dụng thì điền các dòng hợp lệ vào form, người dùng xem lại và bấm Lưu như tạo tay. Chỉ gắn khi đang mở.
  */
 export function OrderImportModal({ onApply, onClose }: OrderImportModalProps) {

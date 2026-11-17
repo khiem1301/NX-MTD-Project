@@ -5,7 +5,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.Admin;
 
 /// <summary>
-/// DEV-ALL-116: Admin chỉ XEM công đoạn của mã hàng và duyệt đơn giá (PieceRatesController). Thêm, sửa, ngừng dùng, dùng lại và nhập
+/// DEV-ALL-117: Admin chỉ XEM công đoạn của mã hàng và duyệt đơn giá (PieceRatesController). Thêm, sửa, ngừng dùng, dùng lại và nhập
 /// Excel công đoạn do Kế toán làm. Trước đây Admin quản lý công đoạn như Kế toán (DEV-ALL-50).
 /// </summary>
 public sealed class OperationsController : AdminBaseController

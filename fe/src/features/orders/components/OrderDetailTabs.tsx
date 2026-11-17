@@ -15,7 +15,7 @@ const HISTORY_TAB = 'history';
 
 type OrderDetailTabsProps = {
   orderId: number;
-  /** Mã đơn, hiện ở tiêu đề hộp thoại nhập Excel (DEV-ALL-114). */
+  /** Mã đơn, hiện ở tiêu đề hộp thoại nhập Excel (DEV-ALL-115). */
   orderCode: string;
   status: OrderStatus;
   lines: OrderDisplayLine[];

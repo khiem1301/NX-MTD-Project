@@ -353,7 +353,7 @@ public static class Messages
     public const string OrderMarkerSizeNotInOrder = "Bìa {0}: size {1} không có trong đơn ở các màu dùng nhóm bìa của bìa.";
     public const string OrderMarkerAuditSummary = "Cập nhật bìa cắt của đơn";
 
-    // DEV-ALL-114: nhập Excel định mức mã hàng + bìa của đơn
+    // DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn
     public const string SpecImportExcelInvalid = "File Excel sai mẫu, không đọc được. Hãy dùng file mẫu của hệ thống.";
     public const string SpecImportNothing = "File không có thay đổi nào hợp lệ để nhập.";
     public const string SpecImportDone = "Đã nhập: {0} thành phần, {1} dòng định mức, {2} nhóm bìa, {3} bìa của đơn.";
@@ -375,12 +375,12 @@ public static class Messages
     public const string SpecImportMarkerCheckLater = "Bìa của đơn sẽ được kiểm lại đầy đủ (size theo màu, vải của nhóm) khi bấm Nhập, sau khi lưu định mức.";
     public const string SpecImportNoChange = "Không có thay đổi nào so với dữ liệu đang có.";
 
-    // DEV-ALL-119: tạo mã hàng hàng loạt từ Excel
+    // DEV-ALL-120: tạo mã hàng hàng loạt từ Excel
     public const string ProductImportExists = "Mã hàng đã có, bỏ qua.";
     public const string ProductImportNothing = "File không có mã hàng mới hợp lệ để tạo.";
     public const string ProductImportDone = "Đã tạo {0} mã hàng, bỏ qua {1} mã đã có.";
 
-    // DEV-ALL-117: nhập dòng hàng của đơn từ Excel
+    // DEV-ALL-118: nhập dòng hàng của đơn từ Excel
     public const string OrderImportProductUnknown = "Mã hàng \"{0}\" không có trong danh mục.";
     public const string OrderImportProductInactive = "Mã hàng \"{0}\" đã ngừng sản xuất.";
     public const string OrderImportColorTooLong = "Màu tối đa 50 ký tự.";
@@ -444,7 +444,7 @@ public static class Messages
     public const string PieceRateNoneSelected = "Chưa chọn đơn giá nào.";
     public const string NotifyPieceRatesApprovedManyBody = "{0} đơn giá công đoạn đã được duyệt.";
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
-    // DEV-ALL-115: cột NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI khi nhập công đoạn
+    // DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI khi nhập công đoạn
     public const string OperationImportManyFinals = "Cột CUỐI chỉ được đánh x ở một công đoạn.";
     public const string OperationImportComponentUnknown = "Chi tiết \"{0}\" chưa có ở mã hàng.";
     public const string OperationImportComponentNotPanel = "Chi tiết \"{0}\" là phụ liệu (TRIM); công đoạn chỉ gắn chi tiết cắt (PANEL).";
