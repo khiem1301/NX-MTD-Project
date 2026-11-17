@@ -54,6 +54,7 @@ public interface ITeamRepository : IGenericRepository<Team>
 public interface IProfileService
 {
     Task<Result<ProfileDto>> GetAsync(CancellationToken ct);
+    Task<Result<ProfileDto>> UpdateAsync(UpdateProfileDto dto, CancellationToken ct);
     Task<Result<LoginResultDto>> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct);
 }
 

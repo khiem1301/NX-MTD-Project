@@ -21,6 +21,12 @@ export type Profile = {
   isTemporaryPassword: boolean;
 };
 
+/** Chỉ hai trường người dùng tự sửa được; null là xóa giá trị. */
+export type UpdateProfilePayload = {
+  dateOfBirth: string | null;
+  phone: string | null;
+};
+
 export type ChangePasswordPayload = {
   /** Bỏ trống khi tài khoản đang dùng mật khẩu tạm. */
   currentPassword?: string;
@@ -31,6 +37,8 @@ export type ChangePasswordPayload = {
 export const profileApi = {
   get: async (): Promise<Profile> =>
     (await apiClient.get<ApiResponse<Profile>>(API.profile.base)).data.data,
+  update: async (body: UpdateProfilePayload): Promise<Profile> =>
+    (await apiClient.put<ApiResponse<Profile>>(API.profile.base, body)).data.data,
   /** BE trả cặp token mới cho phiên hiện tại (D36); các phiên khác bị đẩy ra. */
   changePassword: async (body: ChangePasswordPayload): Promise<LoginResult> =>
     (await apiClient.post<ApiResponse<LoginResult>>(API.profile.changePassword, body)).data.data,

@@ -3,10 +3,13 @@ using NX_MTD.Application.Common;
 namespace NX_MTD.Application.DTOs;
 
 // ---- Hồ sơ + đổi mật khẩu (UC03, UC04) ----
-/// <summary>UC04: chỉ đọc. Không có kiểu lương, mã chấm công, trạng thái tài khoản.</summary>
+/// <summary>UC04: không có kiểu lương, mã chấm công, trạng thái tài khoản. Chỉ ngày sinh và số điện thoại tự sửa được (UpdateProfileDto).</summary>
 public sealed record ProfileDto(int EmployeeId, string EmployeeCode, string Username, string FullName, string? Gender,
     DateOnly? DateOfBirth, string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamName,
     DateOnly StartDate, string? CurrentGradeCode, bool IsTemporaryPassword);
+
+/// <summary>UC04: người dùng tự cập nhật ngày sinh và số điện thoại của mình; để trống thì xóa giá trị.</summary>
+public sealed record UpdateProfileDto(DateOnly? DateOfBirth, string? Phone);
 
 public sealed record ChangePasswordDto(string? CurrentPassword, string NewPassword, string ConfirmPassword);
 

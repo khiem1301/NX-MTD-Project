@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DownOutlined, KeyOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
+import { DownOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { Dropdown, Menu } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { MESSAGES } from '@/constants/messages';
@@ -8,9 +8,7 @@ import { useLogout } from '@/hooks/useLogout';
 import type { UserInfo } from '@/types/auth';
 import { UserAvatar } from './UserAvatar';
 
-const CHANGE_PASSWORD_PATH = `${ROUTES.profile}?changePassword=1`;
-
-/** Hồ sơ người dùng ở góc trên phải: xem thông tin, vào hồ sơ, đổi mật khẩu và đăng xuất. */
+/** Hồ sơ người dùng ở góc trên phải: xem thông tin, vào hồ sơ (sửa hồ sơ và đổi mật khẩu nằm ở đó) và đăng xuất. */
 export function UserMenu({ user, showName }: { user: UserInfo; showName: boolean }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
@@ -33,14 +31,12 @@ export function UserMenu({ user, showName }: { user: UserInfo; showName: boolean
         selectable={false}
         items={[
           { key: 'profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
-          { key: 'password', icon: <KeyOutlined />, label: 'Đổi mật khẩu' },
           { type: 'divider' },
           { key: 'logout', icon: <LogoutOutlined />, label: MESSAGES.auth.logoutButton, danger: true },
         ]}
         onClick={({ key }) => {
           setOpen(false);
           if (key === 'profile') navigate(ROUTES.profile);
-          else if (key === 'password') navigate(CHANGE_PASSWORD_PATH);
           else void logout();
         }}
       />

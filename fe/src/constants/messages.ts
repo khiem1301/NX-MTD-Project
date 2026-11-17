@@ -169,7 +169,9 @@ export const MESSAGES = {
   },
   hr: {
     profileTitle: 'Hồ sơ của tôi',
+    editProfileTitle: 'Cập nhật hồ sơ',
     changePasswordTitle: 'Đổi mật khẩu',
+    passwordOptionalHint: 'Bỏ trống nếu không đổi mật khẩu.',
     currentPassword: 'Mật khẩu hiện tại',
     newPassword: 'Mật khẩu mới',
     confirmPassword: 'Nhập lại mật khẩu mới',
