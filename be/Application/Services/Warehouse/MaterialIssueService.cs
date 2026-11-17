@@ -181,9 +181,11 @@ public sealed class MaterialIssueService : IMaterialIssueService
     {
         if (issue.WarehouseType == WarehouseTypes.SemiFinished) await StartProductionAsync(issue.OrderId, ct);
         if (issue.RequestId is not { } requestId) return;
-        var completable = await _uow.Repository<Request>().Query().AnyAsync(r => r.RequestId == requestId
-            && RequestStatuses.Completable.Contains(r.Status), ct);
-        if (completable) await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
+        // Đọc trạng thái rồi mới kiểm: EF Core không dịch được IReadOnlySet.Contains sang SQL.
+        var status = await _uow.Repository<Request>().Query().Where(r => r.RequestId == requestId)
+            .Select(r => r.Status).FirstOrDefaultAsync(ct);
+        if (status is not null && RequestStatuses.Completable.Contains(status))
+            await _requests.MarkCompletedAsync(requestId, issue.IssueCode, ct);
     }
 
     /// <summary>
@@ -425,7 +427,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var ids = dto.Lines.Select(l => l.OrderLineId!.Value).Distinct().ToList();
         var colors = await _uow.Repository<OrderLine>().Query()
             .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId)
-            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductVariant.ProductColorId, ct);
+            .Select(l => new { l.OrderLineId, l.ProductVariant.ProductColorId })
+            .ToDictionaryAsync(l => l.OrderLineId, l => l.ProductColorId, ct);
         if (colors.Count != ids.Count)
             return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.OrderLineNotInOrder), null);
 
