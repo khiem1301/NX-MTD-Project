@@ -20,12 +20,19 @@ export const ERROR_CODES = {
   AttachmentFileTooLarge: 'ATTACHMENT_FILE_TOO_LARGE',
   AttachmentFileTypeNotAllowed: 'ATTACHMENT_FILE_TYPE_NOT_ALLOWED',
   AttachmentLimitReached: 'ATTACHMENT_LIMIT_REACHED',
+  /** DEV-ALL-128: vai trò không được tải nhóm ảnh này. */
+  AttachmentPurposeNotAllowed: 'ATTACHMENT_PURPOSE_NOT_ALLOWED',
+  /** DEV-ALL-125: SĐT / email đã dùng cho khách hàng hoặc nhà cung cấp khác (lỗi theo field phone / email). */
+  PartnerPhoneDuplicate: 'PARTNER_PHONE_DUPLICATE',
+  PartnerEmailDuplicate: 'PARTNER_EMAIL_DUPLICATE',
   // Đơn từ (KH-06)
   RequestTypeNotAllowed: 'REQUEST_TYPE_NOT_ALLOWED',
   RequestInvalidStatus: 'REQUEST_INVALID_STATUS',
   RequestManualCompleteNotAllowed: 'REQUEST_MANUAL_COMPLETE_NOT_ALLOWED',
   // Mã hàng, đơn hàng (KH-08)
   ProductCodeDuplicate: 'PRODUCT_CODE_DUPLICATE',
+  /** DEV-ALL-121: file Excel không có bảng của mục đang nhập. */
+  ImportTableMissing: 'IMPORT_TABLE_MISSING',
   ProductCodeLocked: 'PRODUCT_CODE_LOCKED',
   ProductNotActive: 'PRODUCT_NOT_ACTIVE',
   ProductInvalidStatus: 'PRODUCT_INVALID_STATUS',

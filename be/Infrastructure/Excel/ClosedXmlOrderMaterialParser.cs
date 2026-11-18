@@ -24,7 +24,7 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
             var header = FindHeader(sheet);
             if (header is not null) return ReadRows(sheet, header.Value.Row, header.Value.Columns);
         }
-        throw new InvalidDataException(
+        throw new ExcelTableMissingException(
             "File Excel sai mẫu: không có bảng có cột 'Mã NVL' và 'Số cần'. Hãy dùng file mẫu của hệ thống.");
     }
 
@@ -63,7 +63,11 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
             string? error = code.Length == 0 ? Messages.Required("mã NVL") : null;
             var required = ReadQty(requiredCell, "Số cần", ref error);
             var customer = customerCell is null ? 0m : ReadQty(customerCell, "Khách cấp", ref error);
-            rows.Add(new OrderMaterialExcelRow(r, code, required, customer, note.Length == 0 ? null : note, error));
+            // DEV-ALL-123: cột tùy chọn Tên NVL, Đơn vị (gợi ý khi thêm NVL chưa có vào danh mục).
+            var name = At(r, "tennvl") is { } nc ? ExcelCells.CompactText(nc) : string.Empty;
+            var unit = At(r, "donvi") is { } uc ? ExcelCells.CompactText(uc) : string.Empty;
+            rows.Add(new OrderMaterialExcelRow(r, code, required, customer, note.Length == 0 ? null : note, error,
+                name.Length == 0 ? null : name, unit.Length == 0 ? null : unit));
         }
         return rows;
     }

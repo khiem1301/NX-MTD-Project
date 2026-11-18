@@ -13,10 +13,11 @@ public sealed class SupplierService : ISupplierService
     private readonly IUnitOfWork _uow;
     private readonly IAuditLogService _audit;
     private readonly IClock _clock;
+    private readonly IPartnerContactChecker _contacts;
 
-    public SupplierService(IUnitOfWork uow, IAuditLogService audit, IClock clock)
+    public SupplierService(IUnitOfWork uow, IAuditLogService audit, IClock clock, IPartnerContactChecker contacts)
     {
-        _uow = uow; _audit = audit; _clock = clock;
+        _uow = uow; _audit = audit; _clock = clock; _contacts = contacts;
     }
 
     private IQueryable<Supplier> Suppliers => _uow.Repository<Supplier>().Query();
@@ -56,6 +57,7 @@ public sealed class SupplierService : ISupplierService
         var name = dto.SupplierName.Trim();
         if (await NameTakenAsync(name, null, ct))
             return Result<int>.Failure(ErrorCodes.SupplierNameDuplicate, Messages.SupplierNameDuplicate);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, null, null, ct) is { } duplicate) return Fail.As<int>(duplicate);
 
         var supplier = new Supplier { Status = RecordStatus.Active, CreatedAt = _clock.Now };
         Apply(supplier, dto, name);
@@ -78,6 +80,7 @@ public sealed class SupplierService : ISupplierService
         var name = dto.SupplierName.Trim();
         if (await NameTakenAsync(name, supplierId, ct))
             return Result.Failure(ErrorCodes.SupplierNameDuplicate, Messages.SupplierNameDuplicate);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, null, supplierId, ct) is { } duplicate) return duplicate;
 
         var before = Snapshot(supplier);
         Apply(supplier, dto, name);

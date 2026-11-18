@@ -56,6 +56,13 @@ public static class Messages
     public const string AttachmentFileTooLarge = "Ảnh vượt quá dung lượng cho phép ({0} MB).";
     public const string AttachmentFileTypeNotAllowed = "Chỉ nhận ảnh JPG, PNG hoặc WEBP.";
     public const string AttachmentLimitReached = "Đã đủ {0} ảnh, không thể thêm.";
+    public const string AttachmentPurposeNotAllowed = "Bạn không được thêm loại ảnh này.";
+
+    // DEV-ALL-125: SĐT / email không trùng giữa khách hàng và nhà cung cấp
+    public const string PartnerPhoneDuplicate = "Số điện thoại đã dùng cho {0}.";
+    public const string PartnerEmailDuplicate = "Email đã dùng cho {0}.";
+    public const string PartnerOwnerCustomer = "khách hàng {0}";
+    public const string PartnerOwnerSupplier = "nhà cung cấp {0}";
     public const string AttachmentUploaded = "Đã tải ảnh lên.";
     public const string AttachmentRemoved = "Đã gỡ ảnh.";
 
@@ -374,6 +381,18 @@ public static class Messages
     public const string SpecImportMarkersSkipped = "Chưa chọn đơn hàng nên bảng Bìa của đơn bị bỏ qua.";
     public const string SpecImportMarkerCheckLater = "Bìa của đơn sẽ được kiểm lại đầy đủ (size theo màu, vải của nhóm) khi bấm Nhập, sau khi lưu định mức.";
     public const string SpecImportNoChange = "Không có thay đổi nào so với dữ liệu đang có.";
+    // DEV-ALL-121: nhập riêng từng bảng từ form mã hàng
+    public const string SpecImportPartUnknown = "Bảng \"{0}\" không hợp lệ (chỉ nhận components, norms, groups, markers).";
+    // DEV-ALL-122: popup kiểm tra Excel trước khi lưu
+    public const string SpecImportPendingColor = "Màu {0} chưa có ở mã hàng — kiểm khi Lưu đơn (đơn tạo màu, size).";
+    public const string SpecImportPendingMarker = "Bìa của đơn kiểm khi Lưu đơn (cần đơn có mã hàng này).";
+    public const string OrderMaterialPendingOrder = "Kiểm đầy đủ khi Lưu đơn (cần đơn).";
+    public const string MaterialNotInCatalog =
+        "NVL \"{0}\" chưa có trong danh mục NVL. Khi Xác nhận sẽ hỏi có thêm vào danh mục không; không thêm thì dòng này bị bỏ qua khi lưu.";
+    public const string ExcelBundleEmpty = "File không có bảng nào nhận được (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn). Hãy dùng file mẫu.";
+    public const string SpecImportGroupColorsSkipped =
+        "Nhóm bìa {0}: bỏ qua màu {1} (mã hàng chưa có màu này trong đơn hàng nào).";
+    public const string SpecImportPartMissing = "File không có bảng {0}. Kiểm tra tên cột trên dòng tiêu đề (dùng file mẫu).";
 
     // DEV-ALL-120: tạo mã hàng hàng loạt từ Excel
     public const string ProductImportExists = "Mã hàng đã có, bỏ qua.";
@@ -401,6 +420,15 @@ public static class Messages
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
     public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn giá trị đơn mua.";
+    // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế
+    public const string PaymentActualAmountRequired = "Nhập tổng giá trị thực tế của đơn Chốt không bù (lớn hơn 0).";
+    public const string PaymentActualAmountExceedsTotal = "Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.";
+    public const string PaymentAmountExceedsActual = "Số tiền thanh toán không được lớn hơn tổng giá trị thực tế.";
+    // DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần.
+    public const string PaymentRemainingExceeds = "Số tiền thanh toán không được lớn hơn số còn phải trả ({0}).";
+    public const string PaymentRemainingNotAllowed = "Chỉ thanh toán nốt được đơn đang Thanh toán một phần.";
+    public const string PaymentRemainingPaid = "Đã thanh toán nốt, đơn mua đã thanh toán đủ.";
+    public const string PaymentRemainingPartial = "Đã ghi nhận thanh toán thêm, đơn vẫn còn phải trả {0}.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
     public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";

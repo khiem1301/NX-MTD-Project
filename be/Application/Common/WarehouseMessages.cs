@@ -166,6 +166,11 @@ public static class WarehouseMessages
     public const string DispatchCreated = "Đã lập phiếu xuất hàng, thành phẩm đã được giữ chỗ.";
     public const string DispatchCancelled = "Đã hủy phiếu xuất hàng, số giữ chỗ đã được nhả.";
     public const string DispatchExported = "Đã xuất hàng, tồn kho thành phẩm đã giảm.";
+    // DEV-ALL-127: Thủ kho chọn cách giao khi xuất kho.
+    public const string DeliveryMethodRequired = "Vui lòng chọn cách giao: khách tự lấy hoặc xe công ty giao.";
+    public const string DispatchVehicleRequired = "Vui lòng chọn xe giao hàng.";
+    public const string DispatchExportedWithTrip = "Đã xuất hàng và tạo chuyến xe {0}. Kế toán kết thúc chuyến ở Sổ xe.";
+    public const string DispatchTripPurpose = "Giao hàng {0} – đơn {1}";
     public const string DispatchRejected = "Đã từ chối phiếu xuất hàng, số giữ chỗ đã được nhả.";
     public const string DispatchDelivered = "Đã xác nhận khách nhận hàng.";
     public const string DailyItemsRequired = "Chưa có dòng giao việc nào.";
@@ -197,6 +202,14 @@ public static class WarehouseMessages
     public const string PieceMovementCreated = "Đã ghi phiếu, chờ công nhân xác nhận.";
     public const string PieceMovementConfirmed = "Đã xác nhận phiếu giao việc.";
     public const string PieceMovementRejected = "Đã từ chối phiếu giao việc.";
+    // DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần.
+    public const string PieceMovementsBatchConfirmed = "Đã xác nhận {0} phiếu giao việc.";
+    public const string BatchConfirmLineFailed = "Phiếu \"{0}\": {1} Chưa lưu phiếu nào.";
+    public const string BatchConfirmItemsRequired = "Chọn ít nhất một phiếu để xác nhận.";
+    public const string BatchConfirmTooMany = "Mỗi lần xác nhận tối đa {0} phiếu.";
+    public const string BatchConfirmDuplicate = "Danh sách có phiếu bị trùng.";
+    public const string BatchConfirmNotifyTitle = "Công nhân đã xác nhận việc được giao";
+    public const string BatchConfirmNotifyBody = "{0} đã xác nhận {1} phiếu giao việc.";
     public const string MovementTypeInvalid = "Loại phiếu phải là giao việc hoặc thu hồi việc.";
     public const string WorkerRequired = "Vui lòng chọn công nhân.";
     public const string RetrievalReasonRequired = "Vui lòng chọn lý do thu hồi.";
@@ -268,7 +281,7 @@ public static class WarehouseMessages
     public const string TripDuplicate = "Đã có chuyến cùng ngày và cùng km đầu của xe này.";
     public const string TripStarted = "Đã ghi chuyến, chờ kết thúc chuyến.";
     public const string TripCompleted = "Đã kết thúc chuyến.";
-    public const string OdometerEndInvalid = "Km cuối phải lớn hơn km đầu.";
+    public const string OdometerEndInvalid = "Km cuối phải lớn hơn km đầu ({0}).";
     public const string KmGapWarning = "Đã ghi chuyến. Số km không liền với chuyến trước (km cuối chuyến trước: {0}) — vui lòng kiểm tra lại.";
     public const string FuelOverNormWarning = "Đã kết thúc chuyến. Lượng xăng vượt định mức quá mức cho phép (định mức {0} lít) — vui lòng kiểm tra lại.";
     public const string PlateRequired = "Vui lòng nhập biển số xe.";

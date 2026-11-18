@@ -33,6 +33,12 @@ public sealed record CreateWorkAllocationDto(string MovementType, int WorkerId, 
 /// <param name="ConfirmedQty">1..Quantity; khác Quantity thì bắt buộc DiscrepancyReason (CK_WA_Confirmed). Không nhận gì thì từ chối.</param>
 public sealed record ConfirmWorkAllocationDto(int ConfirmedQty, string? DiscrepancyReason);
 
+/// <summary>DEV-ALL-126: một dòng khi công nhân xác nhận hàng loạt.</summary>
+public sealed record ConfirmWorkAllocationItemDto(int WorkAllocationId, int ConfirmedQty, string? DiscrepancyReason);
+
+/// <summary>DEV-ALL-126: xác nhận nhiều phiếu một lần — một phiếu lỗi thì không lưu phiếu nào.</summary>
+public sealed record ConfirmWorkAllocationBatchDto(IReadOnlyList<ConfirmWorkAllocationItemDto> Items);
+
 /// <summary>Tổ trưởng xác nhận hộ công nhân (UC54): bắt buộc lý do.</summary>
 public sealed record ConfirmOnBehalfDto(int ConfirmedQty, string? DiscrepancyReason, string OnBehalfReason);
 

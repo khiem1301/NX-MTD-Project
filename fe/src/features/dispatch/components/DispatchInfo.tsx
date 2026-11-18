@@ -2,7 +2,7 @@ import { Descriptions } from 'antd';
 import { DetailDescriptions } from '@/components/common/DetailModal';
 import { StatusTag } from '@/components/common/StatusTag';
 import { formatDate, formatDateTime } from '@/utils/format';
-import { DISPATCH_LABELS, DISPATCH_STATUS_LABEL } from '../constants';
+import { DELIVERY_METHOD_LABEL, DISPATCH_LABELS, DISPATCH_STATUS_LABEL } from '../constants';
 import type { DispatchNote } from '../types';
 
 /** Thông tin chung của phiếu xuất giao: đơn, khách, ngày giao, trạng thái, địa chỉ, người xuất, ghi chú. */
@@ -25,6 +25,13 @@ export function DispatchInfo({ note }: { note: DispatchNote }) {
           ? `${note.dispatchedByName} · ${formatDateTime(note.dispatchedAt)}`
           : '—'}
       </Descriptions.Item>
+      {note.deliveryMethod && (
+        <Descriptions.Item label={DISPATCH_LABELS.deliveryMethod}>
+          {DELIVERY_METHOD_LABEL[note.deliveryMethod]}
+          {note.vehiclePlate &&
+            ` · ${note.vehiclePlate}${note.driverName ? ` · ${note.driverName}` : ''}`}
+        </Descriptions.Item>
+      )}
       <Descriptions.Item label={DISPATCH_LABELS.customerReceivedDate}>
         {note.customerReceivedDate ? formatDate(note.customerReceivedDate) : '—'}
       </Descriptions.Item>

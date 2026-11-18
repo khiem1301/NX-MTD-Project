@@ -12,12 +12,38 @@ public sealed class ProductsController : AdminBaseController
     private readonly IProductSpecService _specs;
     private readonly ISpecImportService _import;
     private readonly IProductImportService _productImport;
+    private readonly IExcelBundleService _bundle;
 
     public ProductsController(IProductService products, IProductSpecService specs, ISpecImportService import,
-        IProductImportService productImport)
+        IProductImportService productImport, IExcelBundleService bundle)
     {
-        _products = products; _specs = specs; _import = import; _productImport = productImport;
+        _products = products; _specs = specs; _import = import; _productImport = productImport; _bundle = bundle;
     }
+
+    /// <summary>DEV-ALL-122: đọc mọi bảng của file Excel nhiều sheet (multipart: file) để popup kiểm tra sửa; không ghi gì.</summary>
+    [HttpPost("excel/parse")]
+    public async Task<IActionResult> ParseExcel(IFormFile file, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(_bundle.Parse(stream));
+    }
+
+    /// <summary>DEV-ALL-122: kiểm bản đã sửa trên popup (mã hàng có thể chưa tạo, đơn có thể chưa có); không ghi gì.</summary>
+    [HttpPost("excel/check")]
+    public async Task<IActionResult> CheckExcel([FromBody] ExcelBundleCheckDto dto, CancellationToken ct) =>
+        this.ToResponse(await _bundle.CheckAsync(dto, ct));
+
+    /// <summary>DEV-ALL-122: xem trước định mức từ bảng đã sửa trên popup (body JSON). parts như xem trước bằng file.</summary>
+    [HttpPost("{id:int}/import/preview-data")]
+    public async Task<IActionResult> PreviewImportData(int id, [FromBody] SpecWorkbookDto workbook, [FromQuery] int? orderId,
+        [FromQuery] string? parts, CancellationToken ct) =>
+        this.ToResponse(await _import.PreviewAsync(id, orderId, workbook, ct, SplitParts(parts)));
+
+    /// <summary>DEV-ALL-122: nhập định mức từ bảng đã sửa trên popup (body JSON), một giao dịch.</summary>
+    [HttpPost("{id:int}/import-data")]
+    public async Task<IActionResult> ImportData(int id, [FromBody] SpecWorkbookDto workbook, [FromQuery] int? orderId,
+        [FromQuery] string? parts, CancellationToken ct) =>
+        this.ToResponse(await _import.ImportAsync(id, orderId, workbook, ct, SplitParts(parts)));
 
     /// <summary>DEV-ALL-120: xem trước file Excel mã hàng (multipart: file), không ghi gì.</summary>
     [HttpPost("import-products/preview")]
@@ -60,21 +86,32 @@ public sealed class ProductsController : AdminBaseController
     public async Task<IActionResult> SaveSpec(int id, [FromBody] SaveProductSpecDto dto, CancellationToken ct) =>
         this.ToResponse(await _specs.SaveAsync(id, dto, ct));
 
-    /// <summary>DEV-ALL-115: xem trước file Excel định mức (multipart: file). orderId = đơn nhận bìa của đơn, bỏ trống = chỉ định mức.</summary>
+    /// <summary>
+    /// DEV-ALL-115: xem trước file Excel định mức (multipart: file). orderId = đơn nhận bìa của đơn, bỏ trống = chỉ định mức.
+    /// parts (DEV-ALL-121) = chỉ lấy các bảng này, cách nhau dấu phẩy: components, norms, groups, markers; bỏ trống = mọi bảng.
+    /// </summary>
     [HttpPost("{id:int}/import/preview")]
-    public async Task<IActionResult> PreviewImport(int id, IFormFile file, [FromQuery] int? orderId, CancellationToken ct)
+    public async Task<IActionResult> PreviewImport(int id, IFormFile file, [FromQuery] int? orderId, [FromQuery] string? parts,
+        CancellationToken ct)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _import.PreviewAsync(id, orderId, stream, ct));
+        return this.ToResponse(await _import.PreviewAsync(id, orderId, stream, ct, SplitParts(parts)));
     }
 
-    /// <summary>DEV-ALL-115: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch.</summary>
+    /// <summary>DEV-ALL-115: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch. parts như xem trước.</summary>
     [HttpPost("{id:int}/import")]
-    public async Task<IActionResult> Import(int id, IFormFile file, [FromQuery] int? orderId, CancellationToken ct)
+    public async Task<IActionResult> Import(int id, IFormFile file, [FromQuery] int? orderId, [FromQuery] string? parts,
+        CancellationToken ct)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _import.ImportAsync(id, orderId, stream, ct));
+        return this.ToResponse(await _import.ImportAsync(id, orderId, stream, ct, SplitParts(parts)));
     }
+
+    private static IReadOnlyCollection<string>? SplitParts(string? parts) =>
+        string.IsNullOrWhiteSpace(parts)
+            ? null
+            : parts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(p => p.ToLowerInvariant()).Distinct().ToList();
 
     private const long MaxRequestBytes = 6 * 1024 * 1024;
 

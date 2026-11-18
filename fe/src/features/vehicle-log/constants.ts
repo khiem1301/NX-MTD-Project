@@ -53,6 +53,8 @@ export const VL_LABELS = {
 export const VL_MESSAGES = {
   plateInvalid: 'Biển số không đúng định dạng (ví dụ 51C-123.45 hoặc 30F-1234).',
   fuelBothRequired: 'Phải nhập cả số xăng và tiền xăng, hoặc để trống cả hai.',
+  /** DEV-ALL-130: khớp WarehouseMessages.OdometerEndInvalid ở BE. */
+  odometerEndTooSmall: 'Km cuối phải lớn hơn km đầu ({0}).',
   vehicleSaved: 'Đã lưu xe.',
   tripStarted: 'Đã ghi chuyến, chờ kết thúc chuyến.',
   tripCompleted: 'Đã kết thúc chuyến.',

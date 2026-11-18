@@ -102,9 +102,11 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             .Select(p => new ProductLookupDto(p.ProductId, p.ProductCode, p.ProductName)).ToPagedAsync(q, ct);
     }
 
-    public async Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<string>> ListColorsAsync(int? productId, CancellationToken ct)
     {
-        var colors = await _context.ProductColors.AsNoTracking().Select(c => c.Color).Distinct().ToListAsync(ct);
+        var colors = await _context.ProductColors.AsNoTracking()
+            .Where(c => productId == null || c.ProductId == productId)
+            .Select(c => c.Color).Distinct().ToListAsync(ct);
         return colors.GroupBy(c => c.Trim(), StringComparer.OrdinalIgnoreCase).Select(g => g.First())
             .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase).ToList();
     }

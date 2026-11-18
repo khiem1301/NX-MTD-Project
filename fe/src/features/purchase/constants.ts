@@ -70,8 +70,11 @@ export const PURCHASE_TEXT = {
     unitPrice: 'Đơn giá',
     amount: 'Thành tiền',
     total: 'Tổng giá trị',
-    /** Chỉ hiện khi đơn Chốt không bù: bằng tổng số đã thanh toán. */
+    /** Chỉ hiện khi đơn Chốt không bù: do Kế toán nhập khi xác nhận thanh toán (DEV-ALL-129). */
     actualTotal: 'Tổng giá trị thực tế',
+    actualNotEntered: 'Chưa nhập (gợi ý {0} theo số đã nhận)',
+    receivedQty: 'Đã nhận',
+    notReplenishedQty: 'Không bù',
   },
 
   actions: {
@@ -80,6 +83,19 @@ export const PURCHASE_TEXT = {
     reprice: 'Sửa đơn giá và gửi lại',
     confirmPayment: 'Xác nhận thanh toán',
     returnPayment: 'Trả lại Quản đốc',
+    payRemaining: 'Thanh toán nốt',
+  },
+
+  // DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần.
+  payRemaining: {
+    title: 'Thanh toán nốt đơn mua',
+    target: 'Phải trả',
+    paid: 'Đã trả',
+    remaining: 'Còn phải trả',
+    amount: 'Số tiền trả thêm',
+    amountExceeds: 'Không được lớn hơn số còn phải trả ({0}).',
+    willBePaid: 'Trả đủ phần còn lại: đơn sẽ là Đã thanh toán.',
+    willBePartial: 'Trả ít hơn phần còn lại: đơn vẫn là Thanh toán một phần.',
   },
 
   place: {
@@ -116,6 +132,14 @@ export const PURCHASE_TEXT = {
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amountRequired: 'Nhập số tiền lớn hơn 0.',
     methodRequired: 'Vui lòng chọn hình thức.',
+    // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế, trạng thái xét theo giá trị này.
+    actualAmount: 'Tổng giá trị thực tế',
+    actualAmountRequired: 'Nhập tổng giá trị thực tế lớn hơn 0.',
+    actualExceedsTotal: 'Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.',
+    actualHint: 'Theo số đã nhận: {0}. Tổng giá trị đơn: {1}.',
+    amountExceedsActual: 'Số tiền thanh toán không được lớn hơn tổng giá trị thực tế.',
+    willBePaid: 'Trả đủ tổng giá trị thực tế: đơn sẽ là Đã thanh toán.',
+    willBePartial: 'Trả ít hơn tổng giá trị thực tế: đơn sẽ là Thanh toán một phần.',
   },
 
   cancelTitle: 'Hủy đơn mua',
@@ -127,6 +151,7 @@ export const PURCHASE_TEXT = {
     cancelled: 'Đã hủy đơn mua.',
     repriced: 'Đã cập nhật đơn giá và gửi lại Kế toán.',
     paid: 'Đã xác nhận thanh toán đơn mua.',
+    paidRemaining: 'Đã ghi nhận thanh toán thêm.',
     returned: 'Đã trả lại Quản đốc kèm lý do.',
   },
 } as const;

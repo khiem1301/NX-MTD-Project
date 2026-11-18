@@ -23,6 +23,9 @@ public sealed class DispatchNoteConfiguration : IEntityTypeConfiguration<Dispatc
             .HasMaxLength(30)
             .IsUnicode(false);
         entity.Property(e => e.DispatchedAt).HasPrecision(0);
+        entity.Property(e => e.DeliveryMethod)
+            .HasMaxLength(20)
+            .IsUnicode(false);
         entity.Property(e => e.Note).HasMaxLength(1000);
         entity.Property(e => e.RejectReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.RowVer)

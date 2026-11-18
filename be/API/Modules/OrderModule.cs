@@ -22,6 +22,7 @@ public static class OrderModule
         services.AddScoped<IOrderImportService, OrderImportService>();
         services.AddSingleton<IExcelProductParser, ClosedXmlProductParser>();
         services.AddScoped<IProductImportService, ProductImportService>();
+        services.AddScoped<IExcelBundleService, ExcelBundleService>();
         services.AddScoped<IProductImageCleanupService, ProductImageCleanupService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderLookupService, OrderLookupService>();

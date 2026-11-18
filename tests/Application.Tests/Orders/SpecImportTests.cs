@@ -378,4 +378,111 @@ public class SpecImportTests : ProductionTestBase
         await Uow.Received(1).RollbackTransactionAsync();
         await Uow.DidNotReceive().CommitTransactionAsync();
     }
+
+    [Fact]
+    public async Task Preview_Parts_KeepsOnlyChosenTables()
+    {
+        using var stream = Book(wb =>
+        {
+            Table(wb, "TP", ComponentHeaders, ["Lót tay", "PANEL", 2]);
+            Table(wb, "ĐM", NormHeaders, ["Xanh", "Tay áo", "VAI03", null]);
+        });
+
+        var preview = (await Sut().PreviewAsync(ProductId, null, stream, default, [SpecImportParts.Components])).Data!;
+
+        preview.HasComponents.Should().BeTrue();
+        preview.HasNorms.Should().BeFalse();
+        preview.Components.Should().ContainSingle();
+        preview.Norms.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Preview_GroupWithSomeUnknownColors_KeepsKnownColorsAndNotes()
+    {
+        using var stream = Book(wb => Table(wb, "Nhóm", GroupHeaders,
+            [1, "Thân trước", "Đen; Hồng; Đỏ"],
+            [2, "Tay áo", "Hồng"]));
+
+        var preview = (await Sut().PreviewAsync(ProductId, null, stream, default)).Data!;
+
+        preview.MarkerGroups[0].Error.Should().BeNull();
+        preview.MarkerGroups[0].Colors.Should().Equal("Đen");
+        preview.Notes.Should().Contain(n => n.Contains("Nhóm bìa 1") && n.Contains("Hồng, Đỏ"));
+        preview.MarkerGroups[1].Action.Should().Be("Error");
+        preview.MarkerGroups[1].Error.Should().Contain("Hồng");
+    }
+
+    [Fact]
+    public async Task Check_NewProduct_ColorsPendingButOtherErrorsReported()
+    {
+        var workbook = Parse(Book(wb =>
+        {
+            Table(wb, "TP", ComponentHeaders, ["Cổ", "PANEL", 1]);
+            Table(wb, "ĐM", NormHeaders, ["Trắng", "Cổ", "VAI01", null], ["Trắng", "Cổ", "VAI99", null], ["Trắng", "Túi", "VAI01", null]);
+            Table(wb, "Nhóm", GroupHeaders, [1, "Cổ", "Trắng"]);
+        }));
+
+        var check = (await Sut().CheckAsync(null, null, workbook, default)).Data!;
+
+        check.Components.Single().Action.Should().Be("New");
+        // DEV-ALL-123: mã NVL chưa có trong danh mục là cảnh báo NewMaterial, không phải lỗi.
+        check.Norms.Select(n => n.Action).Should().Equal("Pending", "NewMaterial", "Error");
+        check.Norms[0].Error.Should().Contain("Trắng");
+        check.Norms[1].Error.Should().Contain("VAI99");
+        check.Norms[2].Error.Should().Contain("Túi");
+        check.MarkerGroups.Single().Action.Should().Be("Pending");
+        check.ErrorCount.Should().Be(1);
+        await _specs.DidNotReceive().WriteAsync(Arg.Any<int>(), Arg.Any<SaveProductSpecDto>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Check_ExistingProductWithoutOrder_MarkersPending()
+    {
+        var workbook = Parse(Book(wb => Table(wb, "Bìa", MarkerHeaders, [null, 1, "1Z", 2.0, 1.5, null, 1, 1, null])));
+
+        var check = (await Sut().CheckAsync(ProductId, null, workbook, default)).Data!;
+
+        check.OrderMarkers.Single().Action.Should().Be("Pending");
+        check.HasOrderMarkers.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task PreviewFromData_SameResultAsFile()
+    {
+        using var stream = Book(wb => Table(wb, "ĐM", NormHeaders, ["Xanh", "Tay áo", "VAI03", null]));
+        var workbook = Parse(Book(wb => Table(wb, "ĐM", NormHeaders, ["Xanh", "Tay áo", "VAI03", null])));
+
+        var fromFile = (await Sut().PreviewAsync(ProductId, null, stream, default)).Data!;
+        var fromData = (await Sut().PreviewAsync(ProductId, null, workbook, default)).Data!;
+
+        fromData.Norms.Single().Action.Should().Be(fromFile.Norms.Single().Action);
+        fromData.CanImport.Should().Be(fromFile.CanImport);
+    }
+
+    private static SpecWorkbookDto Parse(MemoryStream stream)
+    {
+        using (stream) return new ClosedXmlSpecWorkbookParser().Parse(stream);
+    }
+
+    [Fact]
+    public async Task Preview_PartNotInFile_Fails()
+    {
+        using var stream = Book(wb => Table(wb, "TP", ComponentHeaders, ["Lót tay", "PANEL", 2]));
+
+        var result = await Sut().PreviewAsync(ProductId, null, stream, default, [SpecImportParts.Norms]);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Định mức NVL");
+    }
+
+    [Fact]
+    public async Task Preview_UnknownPart_Fails()
+    {
+        using var stream = Book(wb => Table(wb, "TP", ComponentHeaders, ["Lót tay", "PANEL", 2]));
+
+        var result = await Sut().PreviewAsync(ProductId, null, stream, default, ["abc"]);
+
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("abc");
+    }
 }

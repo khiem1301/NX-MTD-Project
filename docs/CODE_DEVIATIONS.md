@@ -159,6 +159,18 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-132 | 18/11/2026 | Claude (AI) | UC09, `ColorAutoComplete`, `order-lookups/product-colors` | Ô màu ở lưới đơn hàng chỉ gợi ý màu đã có của đúng mã hàng đang chọn; mã chưa chọn / mã mới chưa có màu thì không gợi ý (trước đây gợi ý màu của mọi mã) | Mở |
+| DEV-ALL-131 | 18/11/2026 | Claude (AI) | UC34, `PurchaseOrderFlowService.PayRemainingAsync` | Đơn mua Thanh toán một phần có nút "Thanh toán nốt": Kế toán trả thêm (mặc định = còn phải trả, không vượt), cộng dồn vào số đã trả; đủ thì Đã thanh toán | Mở |
+| DEV-ALL-130 | 18/11/2026 | Claude (AI) | UC35, `TripCompleteModal`, `VehicleService.CompleteTripAsync` | Kết thúc chuyến: Km cuối ≤ km đầu thì báo lỗi ngay dưới ô (kèm số km đầu) và không lưu | Mở |
+| DEV-ALL-129 | 18/11/2026 | Claude (AI) | UC34, `PurchaseOrder.ActualAmount`, `PurchaseOrderFlowService`, `MaterialSupplyUpdater` | Đơn mua "Chốt không bù": Kế toán nhập Tổng giá trị thực tế khi thanh toán (bắt buộc, ≤ tổng đơn, gợi ý theo số đã nhận); trả ≥ thực tế → Đã thanh toán, ít hơn → Thanh toán một phần (thay quy tắc "luôn Đã thanh toán") | Mở |
+| DEV-ALL-128 | 18/11/2026 | Claude (AI) | UC46, UC47, `AttachmentService`, ảnh phiếu xuất | Giới hạn 5 ảnh tính theo từng nhóm ảnh (Purpose), không theo cả phiếu; Thủ kho chỉ tải ảnh phiếu xuất đã ký, Kế toán chỉ tải biên bản giao | Mở |
+| DEV-ALL-127 | 18/11/2026 | Claude (AI) | UC46, UC35, `DispatchNote.DeliveryMethod`, `VehicleTrip` | Thủ kho chọn cách giao khi xuất kho (khách tự lấy / xe công ty); xe công ty thì chọn xe, tài xế, km lúc đi và hệ thống tạo luôn chuyến xe đang chạy gắn phiếu | Mở |
+| DEV-ALL-126 | 18/11/2026 | Claude (AI) | UC60, `WorkAllocationService` | Công nhân chọn nhiều phiếu giao việc đang chờ để xác nhận một lần (tối đa 100), sửa số và nhập lý do lệch từng phiếu hoặc lý do chung; một phiếu lỗi thì không lưu phiếu nào | Mở |
+| DEV-ALL-125 | 18/11/2026 | Claude (AI) | UC14, UC09 (khách hàng), `PartnerContactChecker` | Không cho thêm / sửa khách hàng, nhà cung cấp trùng số điện thoại hoặc email với bất kỳ khách hàng / nhà cung cấp nào (kiểm chéo hai bảng, kể cả bản ghi đã ngừng) | Mở |
+| DEV-ALL-124 | 18/11/2026 | Claude (AI) | UC10, form mã hàng | Thêm mới mã hàng bắt buộc có dữ liệu Excel: form trong màn đơn đủ 5 mục (Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn), màn Mã hàng 3 mục định mức; thiếu thì không cho Lưu | Mở |
+| DEV-ALL-123 | 18/11/2026 | Claude (AI) | UC10, UC09, danh mục NVL, popup kiểm tra Excel | NVL trong file chưa có trong danh mục: cảnh báo (không chặn), khi Xác nhận hỏi admin có thêm vào danh mục khi lưu không | Mở |
+| DEV-ALL-122 | 18/11/2026 | Claude (AI) | UC10, UC09, `ExcelBundleService`, `SpecImportService`, popup kiểm tra Excel | Tải file Excel nhiều sheet ở form mã hàng thì mở popup kiểm tra: mỗi sheet một tab sửa trực tiếp, báo dòng lỗi / chờ kiểm, Xác nhận rồi mới Lưu; API nhập nhận dữ liệu JSON đã sửa | Mở |
+| DEV-ALL-121 | 18/11/2026 | Claude (AI) | UC10, `SpecImportService`, form mã hàng | Form Thêm mới / Sửa mã hàng chọn sẵn file Excel cho Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn; Lưu xong nhập lần lượt từng bảng (API nhập định mức nhận `parts`) | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -631,7 +643,7 @@
   - **Hủy đơn mua:** chỉ khi chưa đặt hàng, dùng `GoodsStatus = REJECTED` + `RejectReason` (bắt buộc lý do) vì schema không có trạng thái "hủy" riêng.
   - **Ảnh chứng từ thanh toán không bắt buộc** (Minh chốt ngày 21/10/2026, vd. trả tiền mặt): Kế toán xác nhận được khi không có ảnh; ảnh tối đa 5, chỉ Kế toán thêm / gỡ khi đơn đang chờ thanh toán, Admin / Quản đốc / Kế toán xem được.
   - **Trả lại → sửa đơn giá → gửi lại:** Kế toán trả lại (`UNPAID → RETURNED`, bắt buộc lý do); Quản đốc chỉ sửa được **đơn giá và ghi chú** (số lượng, nhà cung cấp vẫn khóa) rồi gửi lại (`RETURNED → UNPAID`). Đây là bước tự thêm để luồng không bế tắc sau khi bị trả lại.
-  - **Thanh toán:** chỉ xác nhận khi đơn đã đặt hàng (`ORDERED / PARTIALLY_RECEIVED / RECEIVED / CLOSED_SHORT`) và đang `UNPAID`; một lần, không hoàn tác `PAID`. Ngày thanh toán ≤ hôm nay; số tiền nhập tay, có thể khác giá trị đơn (FE chỉ cảnh báo), vì schema chỉ lưu một lần thanh toán.
+  - **Thanh toán:** chỉ xác nhận khi đơn đã đặt hàng (`ORDERED / PARTIALLY_RECEIVED / RECEIVED / CLOSED_SHORT`) và đang `UNPAID`; một lần, không hoàn tác `PAID`. Ngày thanh toán ≤ hôm nay; số tiền nhập tay, có thể khác giá trị đơn (FE chỉ cảnh báo), vì schema chỉ lưu một lần thanh toán. *Cập nhật 18/11/2026:* trả ít hơn giá trị đơn → `PARTIALLY_PAID`, không được vượt giá trị đơn; đơn Chốt không bù xét theo Tổng giá trị thực tế Kế toán nhập — xem DEV-ALL-129.
   - **Thông báo theo vai trò (`INotificationService`):** đặt hàng / gửi lại → Kế toán; thanh toán / trả lại → Quản đốc. Gửi cho mọi người cùng vai trò vì `PurchaseOrder` không lưu người tạo.
   - **AuditLog** (`IAuditLogService`) cho đặt hàng, hủy, sửa đơn giá, thanh toán, trả lại và mọi thay đổi nhà cung cấp, cùng transaction với dữ liệu (GBR-15).
   - Admin chỉ quản lý danh mục nhà cung cấp (thêm / sửa / ngừng hợp tác), không thao tác trên đơn mua.
@@ -2598,4 +2610,148 @@
 - **Ảnh hưởng người khác:** Khiêm (mã hàng).
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC10: tạo mã hàng từ Excel
+- **Trạng thái:** Mở
+
+### DEV-ALL-121 · Nhập Excel từng bảng ngay trong form mã hàng
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC10 (mã hàng), UC09 (NVL của đơn); `SpecImportService`, `SpecImportParts` (mới), `Admin/ProductsController` (`import/preview`, `import` nhận thêm `?parts=`); FE `ProductFormModal`, `ProductExcelImports` (mới), `utils/productExcelImports`. Không đổi schema.
+- **Tài liệu gốc ghi:** UC10: form mã hàng chỉ có mã, tên, mô tả, ảnh; định mức nhập ở hộp thoại Định mức.
+- **Code đang làm:** form Thêm mới / Sửa mã hàng ở màn Mã hàng (Admin) có mục "Nhập từ Excel": chọn file riêng cho Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn và chọn đơn (đơn đang chạy có mã hàng này; mã hàng mới chưa có đơn nên ô chọn đơn bị khóa). Bấm Lưu thì lưu mã hàng trước, rồi nhập lần lượt theo thứ tự trên; mỗi mục là một lần xem trước + nhập riêng (dòng lỗi bỏ qua, mục lỗi không chặn mục sau), xong hiện hộp thoại kết quả từng mục kèm tối đa 5 dòng lỗi. API nhập định mức nhận `parts` (components, norms, groups, markers, cách nhau dấu phẩy): chỉ lấy các bảng đó trong file, bảng khác coi như không có; file thiếu bảng được chọn thì báo lỗi. Mã hàng mới chưa có màu (màu tạo khi lập đơn) nên Định mức NVL, Nhóm bìa của mã mới sẽ báo lỗi màu; Mã hàng mới ở màn Mã hàng chưa thuộc đơn nào nên form chỉ hiện ghi chú cho Bìa cắt, NVL của đơn. Form tạo nhanh mã hàng trong màn tạo / sửa đơn hiện đủ 5 mục: Lưu ở form chỉ lưu mã hàng và giữ file; bấm Lưu đơn thành công thì nhập các file vào chính đơn vừa lưu (định mức, nhóm bìa có màu từ đơn; bìa cắt, NVL của đơn theo đơn đó), chạy nền sau khi chuyển sang chi tiết đơn rồi hiện kết quả. Mã hàng bị bỏ khỏi đơn trước khi lưu thì không nhập. Hộp "Nhập dòng hàng từ Excel" của form đơn: dòng có mã hàng chưa có thì hiện nút "Tạo mã hàng X", mở form Thêm mới điền sẵn từ sheet Mã hàng và gán sẵn chính file đó cho 5 mục (nhập sau khi Lưu đơn); Lưu mã hàng xong hộp tự kiểm lại file. Nút "Tải lên 1 file" đọc sheet Mã hàng (qua API xem trước nhập mã hàng, không ghi) để điền Mã hàng, Tên, Mô tả vào form (Thêm mới: cả ba; Sửa: tên, mô tả khi mã trùng), và gán file cho mọi mục; mục thiếu bảng (mã lỗi `IMPORT_TABLE_MISSING`) hoặc chưa chọn đơn thì bỏ qua. Nhập Excel nhóm bìa (mọi nơi nhập định mức): màu chưa có ở mã hàng thì bỏ qua màu đó kèm ghi chú thay vì lỗi cả dòng (chỉ lỗi khi không còn màu nào), giống định mức NVL bỏ qua dòng màu lạ.
+- **Lý do:** yêu cầu của người dùng (18/11/2026), chọn cách "chọn file ngay khi Thêm mới, lưu xong nhập lần lượt".
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, định mức), người làm NVL của đơn.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10: nhập Excel từng bảng trong form mã hàng
+- **Trạng thái:** Mở
+
+### DEV-ALL-122 · Popup kiểm tra file Excel nhiều sheet trước khi lưu mã hàng
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; `ExcelBundleService` (mới), `SpecImportService` (overload nhận `SpecWorkbookDto`, `CheckAsync`), `ProductImportService`, `OrderMaterialService` (overload nhận dòng JSON); API Admin `products/excel/parse`, `products/excel/check`, `products/{id}/import/preview-data`, `products/{id}/import-data`, `order-materials/import/preview-data`, `order-materials/import-data`; FE `ExcelReviewModal`, `ExcelReviewStatusCell`, `excelReviewColumns`, `useExcelReview`, `ProductExcelImports`, `ProductFormModal`, `OrderImportModal`. Không đổi schema.
+- **Tài liệu gốc ghi:** không có (nhập Excel định mức là DEV-ALL-115/121).
+- **Code đang làm:** chọn file (chung nhiều sheet hoặc riêng một mục) ở form mã hàng thì máy chủ đọc mọi bảng thành JSON (không ghi gì) và mở popup "Kiểm tra dữ liệu từ Excel": mỗi sheet một tab (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn), sửa trực tiếp trong ô, thêm / xóa dòng, lọc "Chỉ hiện dòng lỗi". Sau mỗi lần sửa (chờ 0,5 giây) máy chủ kiểm lại bằng đúng logic xem trước: Hợp lệ / Lỗi (nền đỏ, kèm lý do) / Chờ kiểm (màu chưa có ở mã hàng hoặc chưa có đơn — kiểm khi Lưu đơn) / Đã có (mã hàng). Mã hàng chưa tạo thì coi tạm các màu trong file là có để kiểm phần còn lại (chi tiết, NVL, trùng dòng, PANEL). Xác nhận: điền Mã / Tên / Mô tả vào form và giữ bản đã sửa; Hủy: bỏ. Chỉ khi bấm Lưu mã hàng (hoặc Lưu đơn ở form đơn) mới ghi, bằng các API "-data" nhận JSON đã sửa; dòng còn lỗi bị bỏ qua như trước. Hộp "Nhập dòng hàng" của form đơn: nút "Tạo mã hàng X" đọc file thành dữ liệu và mở form kèm popup ngay. Sheet Dòng hàng vẫn xem và áp dụng ở hộp "Nhập dòng hàng" (không sửa trong popup này).
+- **Lý do:** yêu cầu của người dùng (18/11/2026): admin xem lại, sửa và xác nhận trước khi lưu; hệ thống chỉ ra dòng lỗi.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, định mức), người làm NVL của đơn.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10: popup kiểm tra dữ liệu Excel trước khi lưu
+- **Trạng thái:** Mở
+
+### DEV-ALL-123 · NVL chưa có trong danh mục khi nhập Excel: cảnh báo và hỏi thêm vào danh mục
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, danh mục NVL; `SpecImportService.CheckAsync`, `ExcelBundleService` (thêm `MissingMaterials` vào kết quả kiểm), `SpecImportBuilder.ActionNewMaterial`; FE `ExcelReviewModal`, `MissingMaterialsPanel` (mới), `useExcelReview`, `productExcelImports` (tạo NVL trước khi nhập). Không đổi schema.
+- **Tài liệu gốc ghi:** định mức / NVL của đơn chỉ chọn NVL đã có trong danh mục.
+- **Code đang làm:** ở popup kiểm tra Excel (DEV-ALL-122), dòng định mức NVL hoặc NVL của đơn dùng mã NVL chưa có (hoặc đã ngừng dùng) không còn là lỗi mà là cảnh báo "NVL chưa có" (nền vàng); máy chủ coi tạm NVL đó là có để kiểm phần còn lại. Đầu popup có khung "N NVL chưa có trong danh mục kho" để điền thông tin NVL mới, gợi ý sẵn: mã dùng cho chi tiết PANEL → Vải, Vải chính, màu = màu áo đầu tiên dùng mã, khổ 1,5 m; còn lại → Phụ liệu, Khác, cái; Tên để trống (bắt buộc). Bấm Xác nhận thì hỏi "Thêm NVL vào danh mục?": Thêm vào danh mục (phải điền đủ Tên, khổ với vải) → khi Lưu mã hàng / Lưu đơn, tạo các NVL này (API Admin tạo NVL, giữ đúng mã trong file) rồi mới nhập; Không thêm → vẫn lưu được, các dòng dùng NVL đó bị bỏ qua khi lưu. Sheet NVL của đơn đọc thêm cột tùy chọn "Tên NVL", "Đơn vị" (hiện ở popup, sửa được) làm tên / đơn vị gợi ý của NVL mới; NVL đã có vẫn lấy theo danh mục. Hộp hỏi thêm NVL có nút X: đóng hộp, quay lại popup, chưa chọn gì. Hộp kết quả sau khi lưu có mục "NVL mới vào danh mục" (NVL tạo lỗi, vd mã vừa có người tạo, báo riêng, không chặn phần còn lại).
+- **Lý do:** yêu cầu của người dùng (18/11/2026).
+- **Ảnh hưởng người khác:** Thái (kho, danh mục NVL), Khiêm (mã hàng, định mức).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10 / danh mục NVL: thêm NVL từ file Excel định mức
+- **Trạng thái:** Mở
+
+### DEV-ALL-124 · Thêm mới mã hàng bắt buộc có dữ liệu Excel
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC10; FE `ProductFormModal`, `ProductExcelImports`, `utils/productExcelImports` (`requiredKindsFor`, `missingKinds`). Không đổi backend, schema.
+- **Tài liệu gốc ghi:** Thêm mới mã hàng chỉ cần Mã hàng, Tên mã hàng.
+- **Code đang làm:** khi Thêm mới mã hàng (không áp dụng khi Sửa), bấm Lưu mà thiếu dữ liệu Excel bắt buộc thì không lưu gì: báo "Thiếu dữ liệu Excel bắt buộc: …", ô mục thiếu viền đỏ "Bắt buộc — chưa có dữ liệu". Mục bắt buộc (dấu * đỏ, có dòng gợi ý trong khung Nhập từ Excel): form Thêm mới mở từ màn tạo / sửa đơn (dữ liệu nhập vào chính đơn sau Lưu đơn) — Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn; màn Mã hàng (mã mới chưa có đơn) — Thành phần, Định mức NVL, Nhóm bìa. "Có dữ liệu" = mục có ít nhất một dòng sau khi Xác nhận popup kiểm tra (dòng lỗi vẫn bị bỏ qua khi lưu như trước). Mã hàng, Tên mã hàng vẫn bắt buộc như cũ.
+- **Lý do:** yêu cầu của người dùng (18/11/2026); Thành phần thêm vào danh sách bắt buộc vì định mức, nhóm bìa của mã mới cần chi tiết (người dùng đồng ý).
+- **Ảnh hưởng người khác:** Khiêm (mã hàng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10: dữ liệu Excel bắt buộc khi thêm mã hàng
+- **Trạng thái:** Mở
+
+### DEV-ALL-125 · Không cho trùng số điện thoại / email giữa khách hàng và nhà cung cấp
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC14 (nhà cung cấp), quản lý khách hàng; BE `PartnerContactChecker` (`IPartnerContactChecker`, đăng ký ở `SharedModule`), `CustomerService`, `SupplierService` (Create / Update), `Messages` (`PartnerPhoneDuplicate`, `PartnerEmailDuplicate`, `PartnerOwnerCustomer`, `PartnerOwnerSupplier`), `ErrorCodes` (`PartnerPhoneDuplicate`, `PartnerEmailDuplicate`, đồng bộ FE `errorCodes.ts`). Không đổi schema.
+- **Tài liệu gốc ghi:** chỉ kiểm trùng tên khách hàng / nhà cung cấp; số điện thoại, email không ràng buộc.
+- **Code đang làm:** thêm / sửa khách hàng hoặc nhà cung cấp mà số điện thoại hoặc email đã dùng cho **bất kỳ** khách hàng hay nhà cung cấp nào (kể cả bản ghi đã ngừng; bỏ qua chính bản ghi đang sửa) thì báo lỗi 400 kèm `errors.phone` / `errors.email`, ví dụ "Số điện thoại đã dùng cho nhà cung cấp Phương Mắm."; form hiện lỗi ngay dưới ô. Số điện thoại so theo phần chữ số (bỏ khoảng trắng, dấu chấm, gạch), email so không phân biệt hoa thường, bỏ khoảng trắng hai đầu.
+- **Lý do:** yêu cầu của người dùng (18/11/2026), phạm vi "chéo cả khách hàng và NCC". Không thêm unique index ở DB vì phải kiểm chéo hai bảng, cần so theo dạng chuẩn hóa và dữ liệu cũ có thể đang trùng.
+- **Ảnh hưởng người khác:** Minh (MI-07 nhà cung cấp), Khiêm (khách hàng): dữ liệu cũ đang trùng vẫn giữ, chỉ chặn khi lưu lại bản ghi đó.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC14 / quản lý khách hàng: số điện thoại, email không trùng giữa khách hàng và nhà cung cấp
+- **Trạng thái:** Mở
+
+### DEV-ALL-126 · Công nhân xác nhận nhiều phiếu giao việc một lần
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC60; BE `POST /api/v1/worker/work-allocations/confirm-batch` (`ConfirmWorkAllocationBatchDto`, `ConfirmWorkAllocationBatchDtoValidator`), `WorkAllocationService.Batch.cs` (`ConfirmBatchByWorkerAsync`; `DecideAsync` tách `LoadPendingAsync`, `AuditDecision`, `LeaderIdsAsync` để dùng chung), `WarehouseMessages` (khối DEV-ALL-126); FE `MyPieceMovementsPage` (chọn dòng), `ConfirmBatchModal`, `utils/confirmBatch`, cột "Lý do lệch" trong `allocationColumns`. Không đổi schema.
+- **Tài liệu gốc ghi:** UC60 — công nhân xác nhận hoặc từ chối từng phiếu giao việc.
+- **Code đang làm:** bảng "Việc của tôi" cho chọn các phiếu "Chờ công nhân xác nhận" (nút "Chọn tất cả phiếu đang chờ" của trang đang xem; tối đa 100 phiếu một lần) rồi "Xác nhận các phiếu đã chọn". Popup liệt kê từng phiếu: Số xác nhận mặc định bằng số giao, sửa được (1..số giao); phiếu khác số giao phải có Lý do lệch (ô viền đỏ); ô "Lý do chung" điền nhanh cho mọi phiếu lệch chưa có lý do (không đè lý do đã nhập). BE xác nhận tất cả trong **một transaction** với đúng các kiểm tra của xác nhận từng phiếu (của mình, đang chờ, số trong khoảng, lệch phải có lý do, thu hồi không vượt số đang giữ, khóa tổ × dòng đơn); một phiếu lỗi thì không lưu phiếu nào và báo tên công đoạn lỗi. Ghi nhật ký từng phiếu; tổ trưởng / tổ phó nhận **một** thông báo gộp. Từ chối vẫn làm từng phiếu.
+- **Lý do:** yêu cầu của người dùng (18/11/2026): công nhân nhận nhiều phiếu mỗi ngày, xác nhận từng phiếu mất thời gian; không cho lưu một phần để tránh công nhân tưởng đã xác nhận hết.
+- **Ảnh hưởng người khác:** Kiều / Minh (giao việc, sản lượng): trần sản lượng tính như xác nhận từng phiếu.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC60: thêm xác nhận hàng loạt và lý do chung
+- **Trạng thái:** Mở
+
+### DEV-ALL-127 · Thủ kho chọn cách giao khi xuất kho; xe công ty thì tạo luôn chuyến xe
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC46, UC35; schema `DispatchNote.DeliveryMethod VARCHAR(20) NULL` + `CK_DN_DeliveryMethod` (`CUSTOMER_PICKUP` / `COMPANY_VEHICLE`) + `CK_DN_DeliveryMethodSet` (phiếu `IN_DELIVERY` / `DELIVERED` phải có cách giao) — patch `SQL/patches/2026-11-18_dispatch_delivery_method.sql` (dữ liệu cũ đã xuất điền `COMPANY_VEHICLE`); BE `ExportDispatchDto` + `ExportDispatchDtoValidator` (thay `DispatchActionDto` ở API xuất kho), `DispatchNoteService.ExportAsync`, `IVehicleService.PrepareTripAsync` (tách từ `StartTripAsync`, dùng chung), `GetAvailableVehiclesAsync`, API mới `GET /api/v1/warehouse-keeper/vehicles/available`, `DispatchNoteDto` thêm `DeliveryMethod`, `VehiclePlate`, `DriverName`; `DeliveryMethods` (Domain); FE `ExportDispatchModal`, `DispatchModalBody`, `DispatchInfo`, `useExportDispatch`, `useAvailableVehicles`.
+- **Tài liệu gốc ghi:** UC46 — Thủ kho xác nhận xuất hàng; UC35 — Kế toán ghi sổ chuyến xe (bắt đầu / kết thúc chuyến), chuyến có thể gắn phiếu xuất.
+- **Code đang làm:** nút "Xác nhận xuất hàng" mở popup chọn **Khách tự lấy hàng** hoặc **Xe công ty giao**. Xe công ty: chọn xe (chỉ xe đang hoạt động và không còn chuyến chưa kết thúc), tài xế (tên), km lúc đi (điền sẵn km cuối chuyến trước). Khi xuất, trong cùng transaction với trừ kho, hệ thống tạo chuyến xe `STARTED` gắn phiếu (ngày hôm nay, mục đích "Giao hàng {mã phiếu} – đơn {mã đơn}") với cùng kiểm tra như Kế toán bắt đầu chuyến (xe hoạt động, không có chuyến đang chạy, không trùng ngày + km, cảnh báo lệch km vẫn lưu). Không tạo được chuyến thì không xuất kho. Kế toán vẫn kết thúc chuyến (km về, xăng) ở Sổ xe. Chi tiết phiếu hiện Cách giao, biển số, tài xế. Vẫn bắt buộc ảnh phiếu xuất đã ký trước khi xuất.
+- **Lý do:** yêu cầu của người dùng (18/11/2026): "khi xuất kho chưa có màn thủ kho chọn xe"; người dùng chọn "tạo luôn chuyến xe" và cho hai lựa chọn khách lấy / xe công ty.
+- **Ảnh hưởng người khác:** Minh (UC35 Sổ xe): chuyến tạo từ phiếu xuất xuất hiện ở Sổ xe với mã phiếu; Thái / Khiêm (phiếu xuất): API xuất kho đổi body.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC46: bước chọn cách giao và xe khi xuất kho
+  - [ ] `NX-MTD_Database_Giai_thich.md`: cột `DispatchNote.DeliveryMethod`
+- **Trạng thái:** Mở
+
+### DEV-ALL-128 · Giới hạn 5 ảnh tính theo từng nhóm ảnh; vai trò nào tải nhóm ảnh nấy
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC46, UC47; BE `AttachmentService.UploadAsync`, `IAttachmentRepository.CountCurrentAsync` (thêm `purpose`), `IAttachmentOwnerAccess.CanWritePurpose` (mặc định cho phép), `DispatchNoteAttachmentAccess`, `ErrorCodes` / `Messages` `AttachmentPurposeNotAllowed`. Không đổi schema.
+- **Tài liệu gốc ghi:** ảnh phiếu xuất tối đa 5; ảnh phiếu xuất có Quản đốc ký do Thủ kho chụp, biên bản giao có khách ký do Kế toán chụp.
+- **Code đang làm:** đếm giới hạn 5 ảnh theo đúng nhóm ảnh đang tải (`Purpose`) thay vì mọi ảnh của chứng từ — trước đây Thủ kho đủ 5 ảnh phiếu xuất thì Kế toán không thêm được biên bản giao. Phiếu xuất: Thủ kho chỉ tải `SIGNED_ISSUE_SLIP`, Kế toán chỉ tải `SIGNED_DELIVERY_NOTE` (khác thì 403). Chứng từ khác chỉ có một nhóm ảnh nên kết quả không đổi.
+- **Lý do:** lỗi người dùng báo (18/11/2026); kiểm vai trò ↔ nhóm ảnh trước đây chỉ có ở FE.
+- **Ảnh hưởng người khác:** Khiêm (`AttachmentService` dùng chung).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC46 / UC47: "tối đa 5 ảnh mỗi loại ảnh"
+- **Trạng thái:** Mở
+
+### DEV-ALL-129 · Đơn mua "Chốt không bù": Kế toán nhập Tổng giá trị thực tế, trạng thái thanh toán xét theo giá trị này
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC34; schema `PurchaseOrder.ActualAmount DECIMAL(18,2) NULL` + `CK_PO_ActualAmount` (> 0) — patch `SQL/patches/2026-11-18_purchase_actual_amount.sql` (đơn `CLOSED_SHORT` đã trả: `ActualAmount = PaidAmount`); BE `ConfirmPaymentDto.ActualAmount`, `PurchaseOrderFlowService.ConfirmPaymentAsync` (`PayableAmount`), `PurchaseOrderFlowDto` thêm `ActualAmount`, `ReceivedAmount`, `MaterialSupplyUpdater`, `Messages` (`PaymentActualAmountRequired`, `PaymentActualAmountExceedsTotal`, `PaymentAmountExceedsActual`); FE `ConfirmPaymentModal`, `PaymentAmountFields`, `PurchaseOrderInfo`, `purchaseLineColumns` (cột Đã nhận / Không bù).
+- **Tài liệu gốc ghi:** Kế toán xác nhận thanh toán đơn mua (một lần, `PaidAmount`). Commit 6710036 (chưa có mục DEV) thêm thanh toán một phần và quy tắc "đơn Chốt không bù luôn Đã thanh toán, tổng giá trị thực tế = số đã trả".
+- **Code đang làm:** đơn `CLOSED_SHORT` (Quản đốc chốt không bù phần NCC giao thiếu): popup thanh toán có ô **Tổng giá trị thực tế** — bắt buộc, > 0, ≤ tổng giá trị đơn, điền sẵn gợi ý = Σ(số đã nhận × đơn giá); số tiền trả mặc định = thực tế và không được vượt thực tế. Trả ≥ thực tế → `PAID`, ít hơn → `PARTIALLY_PAID`; popup báo trước trạng thái. Đơn khác giữ quy tắc so với tổng giá trị đơn. Chi tiết đơn hiện Tổng giá trị thực tế đã nhập, chưa nhập thì "Chưa nhập (gợi ý … theo số đã nhận)" thay cho 0 ₫. Đơn đang `PARTIALLY_PAID` rồi mới thành `CLOSED_SHORT`: lấy giá trị đã nhận làm thực tế, đủ thì chuyển `PAID`.
+- **Lý do:** yêu cầu của người dùng (18/11/2026): Kế toán là người nhập tổng giá trị thực tế, hệ thống dựa vào đó để xác định đã thanh toán hay thanh toán một phần; trước đây chưa trả thì màn hình hiện 0 ₫ và mọi đơn chốt không bù đều thành Đã thanh toán.
+- **Ảnh hưởng người khác:** Minh (MI-07, DEV-MI-07-1), Thái (nhập kho / chốt không bù cập nhật `GoodsStatus`).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC34: thanh toán một phần; Tổng giá trị thực tế của đơn Chốt không bù
+  - [ ] `NX-MTD_Database_Giai_thich.md`: cột `PurchaseOrder.ActualAmount`
+- **Trạng thái:** Mở
+
+### DEV-ALL-130 · Km cuối chuyến xe phải lớn hơn km đầu, báo lỗi ngay dưới ô
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC35; FE `TripCompleteModal` (rule `endAfterStart`, `VL_MESSAGES.odometerEndTooSmall`); BE `VehicleService.CompleteTripAsync` trả `ResultKind.Validation` kèm `errors.odometerEnd`, `WarehouseMessages.OdometerEndInvalid` có số km đầu. Không đổi schema.
+- **Tài liệu gốc ghi:** km cuối phải lớn hơn km đầu (MSG30).
+- **Code đang làm:** trước đây ô Km cuối tự kẹp về km đầu + 1 nên người dùng không thấy lỗi; nay ô nhận mọi số, Km cuối ≤ km đầu thì hiện "Km cuối phải lớn hơn km đầu (X)." dưới ô và không lưu; BE vẫn chặn và giữ chuyến đang chạy.
+- **Lý do:** yêu cầu của người dùng (18/11/2026).
+- **Ảnh hưởng người khác:** Minh (UC35 Sổ xe).
+- **Cần sửa trong tài liệu:** không (đúng tài liệu, chỉ đổi cách báo lỗi).
+- **Trạng thái:** Mở
+
+### DEV-ALL-131 · Thanh toán nốt đơn mua Thanh toán một phần
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC34; BE `POST /api/v1/accountant/purchase-payments/{id}/pay-remaining` (`PayRemainingDto`, `PayRemainingDtoValidator`), `PurchaseOrderFlowService.PayRemainingAsync`, `PurchaseOrderPermissionsDto.CanPayRemaining`, `PurchaseOrderFlowDto.RemainingAmount`, `Messages` (`PaymentRemaining*`); FE `PayRemainingModal`, `PurchaseOrderModal` (nút "Thanh toán nốt"), `PaymentInfo` (dòng Còn phải trả), `usePayRemaining`. Không đổi schema.
+- **Tài liệu gốc ghi:** Kế toán xác nhận thanh toán một lần; schema chỉ lưu một lần thanh toán (`PaymentDate`, `PaidAmount`, `PaymentMethod`, `PaymentNote`).
+- **Code đang làm:** đơn `PARTIALLY_PAID` có nút "Thanh toán nốt" (chỉ Kế toán). Popup hiện Phải trả (tổng đơn, hoặc Tổng giá trị thực tế với đơn Chốt không bù — DEV-ALL-129), Đã trả, Còn phải trả; số tiền mặc định = còn phải trả, không được vượt; trả ít hơn thì đơn vẫn Thanh toán một phần và bấm tiếp được. Lưu: `PaidAmount` cộng dồn; ngày, hình thức, ghi chú lấy theo lần trả mới nhất (ghi chú trống thì giữ ghi chú cũ); từng lần trả ghi vào nhật ký (trước / sau số đã trả, số trả thêm) vì schema không có bảng lịch sử thanh toán. Thông báo Quản đốc như khi thanh toán.
+- **Lý do:** yêu cầu của người dùng (18/11/2026); đơn Thanh toán một phần trước đây không còn thao tác nào.
+- **Ảnh hưởng người khác:** Minh (MI-07).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC34: thanh toán nhiều lần cho đến khi đủ
+- **Trạng thái:** Mở
+
+### DEV-ALL-132 · Gợi ý màu theo mã hàng khi tạo đơn
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-product-form-excel-imports`, chưa có PR
+- **Ảnh hưởng tới:** UC09; BE `GET /api/v1/common/order-lookups/product-colors?productId=` (tham số không bắt buộc), `IOrderLookupService.ColorsAsync`, `IProductRepository.ListColorsAsync`; FE `ColorAutoComplete` (prop `productId`), `useProductColors`, `blockGridColumns`. Không đổi schema.
+- **Tài liệu gốc ghi:** không nói về gợi ý màu.
+- **Code đang làm:** tạo / sửa đơn → chọn mã hàng → ô Màu chỉ gợi ý các màu đã có trong DB của đúng mã đó (`ProductColor`) cộng màu đã gõ ở các dòng khác của cùng khối. Chưa chọn mã thì không gợi ý; mã mới tạo chưa có màu thì danh sách trống. Vẫn gõ được màu mới. Gọi API không kèm `productId` vẫn trả màu của mọi mã như trước.
+- **Lý do:** yêu cầu của người dùng (18/11/2026).
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng).
+- **Cần sửa trong tài liệu:** không.
 - **Trạng thái:** Mở

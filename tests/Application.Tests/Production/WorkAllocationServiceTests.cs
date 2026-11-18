@@ -61,8 +61,13 @@ public class WorkAllocationServiceTests
         _rates.Add(TestRates.Approved(id));
         return new()
         {
-            OperationId = id, ProductId = productId, OperationCode = code, OperationName = name,
-            StationSequence = (short)id, Status = RecordStatus.Active, TeamType = TeamTypes.Sewing,
+            OperationId = id,
+            ProductId = productId,
+            OperationCode = code,
+            OperationName = name,
+            StationSequence = (short)id,
+            Status = RecordStatus.Active,
+            TeamType = TeamTypes.Sewing,
         };
     }
 
@@ -73,15 +78,22 @@ public class WorkAllocationServiceTests
         if (qty == 0) return;
         _issueLines.Add(new MaterialIssueLine
         {
-            OrderLineId = 101, IssuedQty = qty, ConfirmedQty = qty,
+            OrderLineId = 101,
+            IssuedQty = qty,
+            ConfirmedQty = qty,
             MaterialIssue = new MaterialIssue { WarehouseType = WarehouseTypes.SemiFinished, Status = IssueStatuses.Received, ReceivingTeamId = TeamId },
         });
     }
 
     private static VwOperationAllocationProgress Progress(int operationId, int required, int allocated, int pending) => new()
     {
-        SewingTeamId = TeamId, OrderLineId = 101, OperationId = operationId, RequiredQty = required, AllocatedQty = allocated,
-        PendingQty = pending, UnallocatedQty = required - allocated - pending,
+        SewingTeamId = TeamId,
+        OrderLineId = 101,
+        OperationId = operationId,
+        RequiredQty = required,
+        AllocatedQty = allocated,
+        PendingQty = pending,
+        UnallocatedQty = required - allocated - pending,
     };
 
     private void Setup<T>(List<T> backing) where T : class
@@ -99,11 +111,22 @@ public class WorkAllocationServiceTests
     {
         var m = new WorkAllocation
         {
-            WorkAllocationId = _allocations.Count + 1, MovementType = type, SewingTeamId = TeamId, SewingTeam = _team,
-            WorkerId = worker, Worker = _worker, OrderLineId = 101, OrderLine = _line, OperationId = operationId,
-            Operation = _operations.First(o => o.OperationId == operationId), Quantity = qty,
-            ConfirmedQty = confirmed, Status = status, ConfirmMode = ConfirmModes.Worker,
-            CreatedAt = Now, RetrievalReason = type == PieceMovementTypes.Retrieval ? retrievalReason ?? RetrievalReasons.WorkerAbsent : null,
+            WorkAllocationId = _allocations.Count + 1,
+            MovementType = type,
+            SewingTeamId = TeamId,
+            SewingTeam = _team,
+            WorkerId = worker,
+            Worker = _worker,
+            OrderLineId = 101,
+            OrderLine = _line,
+            OperationId = operationId,
+            Operation = _operations.First(o => o.OperationId == operationId),
+            Quantity = qty,
+            ConfirmedQty = confirmed,
+            Status = status,
+            ConfirmMode = ConfirmModes.Worker,
+            CreatedAt = Now,
+            RetrievalReason = type == PieceMovementTypes.Retrieval ? retrievalReason ?? RetrievalReasons.WorkerAbsent : null,
         };
         _allocations.Add(m);
         return m;
@@ -363,6 +386,71 @@ public class WorkAllocationServiceTests
 
         result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
         m.Status.Should().Be(HandoverStatuses.Pending);
+    }
+
+    // ---------- Công nhân xác nhận hàng loạt (DEV-ALL-126) ----------
+
+    private static ConfirmWorkAllocationBatchDto Batch(params (int Id, int Qty, string? Reason)[] items) =>
+        new(items.Select(i => new ConfirmWorkAllocationItemDto(i.Id, i.Qty, i.Reason)).ToList());
+
+    [Fact]
+    public async Task Batch_confirm_saves_every_line_and_notifies_leaders_once()
+    {
+        var a = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
+
+        var result = await Service().ConfirmBatchByWorkerAsync(
+            Batch((a.WorkAllocationId, 60, null), (b.WorkAllocationId, 35, " hỏng 5 ")), WorkerId, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Contain("2 phiếu");
+        a.Status.Should().Be(HandoverStatuses.Confirmed);
+        b.ConfirmedQty.Should().Be(35);
+        b.DiscrepancyReason.Should().Be("hỏng 5");
+        _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
+        await _uow.Received(1).SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Batch_confirm_saves_nothing_when_a_line_differs_without_a_reason()
+    {
+        var a = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        var b = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 40, operationId: IronOpId);
+
+        var result = await Service().ConfirmBatchByWorkerAsync(
+            Batch((a.WorkAllocationId, 60, null), (b.WorkAllocationId, 35, null)), WorkerId, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidReference);
+        result.Message.Should().Contain("Là").And.Contain("Chưa lưu phiếu nào");
+        await _uow.DidNotReceive().SaveChangesAsync();
+        await _uow.Received(1).RollbackTransactionAsync();
+        _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task Batch_confirm_refuses_another_workers_or_decided_allocation()
+    {
+        var mine = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60);
+        var other = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Pending, 60, worker: 77);
+        var decided = Allocation(PieceMovementTypes.Handover, HandoverStatuses.Confirmed, 60, confirmed: 60);
+
+        (await Service().ConfirmBatchByWorkerAsync(Batch((mine.WorkAllocationId, 60, null), (other.WorkAllocationId, 60, null)),
+            WorkerId, default)).ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+        (await Service().ConfirmBatchByWorkerAsync(Batch((decided.WorkAllocationId, 60, null)), WorkerId, default))
+            .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public void Batch_validator_rejects_empty_duplicate_and_too_many_items()
+    {
+        var validator = new ConfirmWorkAllocationBatchDtoValidator();
+
+        validator.Validate(Batch()).IsValid.Should().BeFalse();
+        validator.Validate(Batch((1, 5, null), (1, 5, null))).IsValid.Should().BeFalse();
+        validator.Validate(new ConfirmWorkAllocationBatchDto(Enumerable.Range(1, 101)
+            .Select(i => new ConfirmWorkAllocationItemDto(i, 1, null)).ToList())).IsValid.Should().BeFalse();
+        validator.Validate(Batch((1, 5, null), (2, 3, "thiếu"))).IsValid.Should().BeTrue();
     }
 
     // ---------- Tổ trưởng xác nhận hộ (UC54) ----------

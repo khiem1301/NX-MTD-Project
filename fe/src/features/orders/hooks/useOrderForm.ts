@@ -1,4 +1,4 @@
-import { Form } from 'antd';
+import { Form, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useEffect, useMemo, useState } from 'react';
 import { useBlocker, useNavigate } from 'react-router-dom';
@@ -8,7 +8,12 @@ import { ORDER_LIMITED_EDIT_STATUSES, ORDER_MATERIALS_TAB } from '@/constants/or
 import { ROUTES } from '@/constants/routes';
 import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
-import { toApiDate } from '@/utils/format';
+import { fill, toApiDate } from '@/utils/format';
+import {
+  runProductImports,
+  showProductImportResults,
+  type ProductImportSelection,
+} from '../utils/productExcelImports';
 import { useCreateOrder, useCustomerOptions, useNextOrderCode, useUpdateOrder } from './useOrders';
 import {
   blocksTotals,
@@ -58,6 +63,12 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
   const [dirty, setDirty] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [productBlock, setProductBlock] = useState<string>();
+  // DEV-ALL-121: file Excel chọn khi tạo nhanh mã hàng trong form đơn, theo Id mã hàng; nhập sau khi Lưu đơn.
+  const [pendingImports, setPendingImports] = useState<
+    Record<number, { code: string; selection: ProductImportSelection }>
+  >({});
+  const queueImports = (productId: number, code: string, selection: ProductImportSelection) =>
+    setPendingImports((p) => ({ ...p, [productId]: { code, selection } }));
   const locked = isEdit && detail !== undefined && detail.status !== 'New';
   const editable =
     !isEdit ||
@@ -127,7 +138,30 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       lines,
     };
     setDirty(false);
-    const done = (savedId: number) => navigate(ROUTES.orderDetail(savedId));
+    // Mã hàng tạo nhanh còn trong đơn và có file chờ: nhập vào đơn vừa lưu (chạy nền, xong hiện kết quả từng mã hàng).
+    const queued = Object.entries(pendingImports)
+      .map(([id, v]) => ({ productId: Number(id), ...v }))
+      .filter((q) => blocks.some((b) => b.productId === q.productId));
+    const runQueued = async (savedId: number) => {
+      for (const q of queued) {
+        const hide = message.loading(fill(MESSAGES.orders.productExcel.runningOrder, q.code), 0);
+        try {
+          const outcomes = await runProductImports(q.productId, {
+            ...q.selection,
+            orderId: savedId,
+          });
+          showProductImportResults(q.code, outcomes);
+        } finally {
+          hide();
+        }
+      }
+    };
+    const afterSave = (savedId: number, path: string) => {
+      setPendingImports({});
+      navigate(path);
+      if (queued.length > 0) void runQueued(savedId);
+    };
+    const done = (savedId: number) => afterSave(savedId, ROUTES.orderDetail(savedId));
     if (isEdit && detail) {
       update.mutate(
         { ...body, rowVer: detail.rowVer },
@@ -143,7 +177,10 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       create.mutate(body, {
         // Đơn tạo xong mới khai báo NVL: mở thẳng tab NVL của đơn.
         onSuccess: (newId) =>
-          navigate(`${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`),
+          afterSave(
+            newId as number,
+            `${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`,
+          ),
         onError: (e) => {
           setDirty(true);
           handleError(e);
@@ -193,6 +230,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     setCustomerOpen,
     productBlock,
     setProductBlock,
+    queueImports,
   };
 }
 

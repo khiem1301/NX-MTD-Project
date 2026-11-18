@@ -6,10 +6,19 @@ import { productApi } from '../api/orderApi';
 import { isAcceptableImage } from '../utils/imageFile';
 import { ProductImage } from './ProductImage';
 
-type Props = { value?: string; onChange?: (value: string | undefined) => void };
+type Props = {
+  value?: string;
+  onChange?: (value: string | undefined) => void;
+  /** Ẩn dòng gợi ý định dạng (nơi dùng tự ghi một dòng chung cho mọi ô ảnh). */
+  hideHint?: boolean;
+  /** Cỡ ảnh xem trước (px). */
+  size?: number;
+};
+
+const DEFAULT_SIZE = 96;
 
 /** Chọn ảnh mẫu từ máy: tải lên ngay khi chọn, giá trị form là khóa ảnh trả về từ máy chủ. */
-export function SampleImageInput({ value, onChange }: Props) {
+export function SampleImageInput({ value, onChange, hideHint, size = DEFAULT_SIZE }: Props) {
   const [uploading, setUploading] = useState(false);
 
   const beforeUpload = (file: File) => {
@@ -28,7 +37,7 @@ export function SampleImageInput({ value, onChange }: Props) {
 
   return (
     <Space direction="vertical">
-      {value && <ProductImage value={value} size={96} />}
+      {value && <ProductImage value={value} size={size} />}
       <Space>
         <Upload
           accept="image/png,image/jpeg,image/webp"
@@ -45,7 +54,7 @@ export function SampleImageInput({ value, onChange }: Props) {
           </Button>
         )}
       </Space>
-      <Typography.Text type="secondary">{MESSAGES.orders.imageHint}</Typography.Text>
+      {!hideHint && <Typography.Text type="secondary">{MESSAGES.orders.imageHint}</Typography.Text>}
     </Space>
   );
 }

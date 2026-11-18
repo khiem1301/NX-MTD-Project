@@ -11,10 +11,12 @@ public sealed class CustomerService : ICustomerService
     private readonly ICustomerRepository _customers;
     private readonly IAuditLogService _audit;
     private readonly IUnitOfWork _uow;
+    private readonly IPartnerContactChecker _contacts;
 
-    public CustomerService(ICustomerRepository customers, IAuditLogService audit, IUnitOfWork uow)
+    public CustomerService(ICustomerRepository customers, IAuditLogService audit, IUnitOfWork uow,
+        IPartnerContactChecker contacts)
     {
-        _customers = customers; _audit = audit; _uow = uow;
+        _customers = customers; _audit = audit; _uow = uow; _contacts = contacts;
     }
 
     public async Task<Result<PagedResult<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
@@ -29,6 +31,7 @@ public sealed class CustomerService : ICustomerService
         var name = dto.CustomerName.Trim();
         if (await _customers.NameExistsAsync(name, null, ct))
             return Result<int>.Failure(ErrorCodes.CustomerNameDuplicate, Messages.CustomerNameDuplicate);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, null, null, ct) is { } duplicate) return Fail.As<int>(duplicate);
 
         var customer = new Customer { CustomerName = name, Status = RecordStatus.Active };
         Apply(customer, dto);
@@ -49,6 +52,7 @@ public sealed class CustomerService : ICustomerService
         var name = dto.CustomerName.Trim();
         if (await _customers.NameExistsAsync(name, customerId, ct))
             return Result.Failure(ErrorCodes.CustomerNameDuplicate, Messages.CustomerNameDuplicate);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, customerId, null, ct) is { } duplicate) return duplicate;
 
         var before = Snapshot(customer);
         customer.CustomerName = name;

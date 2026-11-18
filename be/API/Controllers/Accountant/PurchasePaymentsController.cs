@@ -24,6 +24,11 @@ public sealed class PurchasePaymentsController : AccountantBaseController
     public async Task<IActionResult> Confirm(int id, [FromBody] ConfirmPaymentDto dto, CancellationToken ct) =>
         this.ToResponse(await _flow.ConfirmPaymentAsync(id, dto, ct));
 
+    /// <summary>DEV-ALL-131: thanh toán nốt phần còn lại của đơn Thanh toán một phần.</summary>
+    [HttpPost("{id:int}/pay-remaining")]
+    public async Task<IActionResult> PayRemaining(int id, [FromBody] PayRemainingDto dto, CancellationToken ct) =>
+        this.ToResponse(await _flow.PayRemainingAsync(id, dto, ct));
+
     [HttpPost("{id:int}/return")]
     public async Task<IActionResult> Return(int id, [FromBody] ReturnPaymentDto dto, CancellationToken ct) =>
         this.ToResponse(await _flow.ReturnPaymentAsync(id, dto, ct));

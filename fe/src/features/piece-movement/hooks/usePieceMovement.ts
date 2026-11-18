@@ -7,6 +7,7 @@ import { PM_MESSAGES } from '../constants';
 import type {
   AllocationQuery,
   ConfirmAllocationPayload,
+  ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
   SaveDailyPayload,
 } from '../types';
@@ -63,6 +64,12 @@ export const useConfirmByWorker = () =>
       pieceMovementApi.confirmByWorker(id, body),
     { invalidate: AFFECTED, successMessage: PM_MESSAGES.confirmed },
   );
+
+export const useConfirmBatchByWorker = () =>
+  useApiMutation((body: ConfirmBatchPayload) => pieceMovementApi.confirmBatchByWorker(body), {
+    invalidate: AFFECTED,
+    successMessage: PM_MESSAGES.batchConfirmed,
+  });
 
 export const useRejectByWorker = () =>
   useApiMutation(

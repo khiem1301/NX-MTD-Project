@@ -83,6 +83,10 @@ export type ConfirmAllocationPayload = {
 };
 export type ConfirmOnBehalfPayload = ConfirmAllocationPayload & { onBehalfReason: string };
 
+/** DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần. */
+export type ConfirmBatchItem = ConfirmAllocationPayload & { workAllocationId: number };
+export type ConfirmBatchPayload = { items: ConfirmBatchItem[] };
+
 export type AllocationFilters = { status?: string; movementType?: string };
 
 /**

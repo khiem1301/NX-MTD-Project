@@ -160,7 +160,7 @@ export function ProductsPage() {
         dataSource={products.data?.items ?? []}
         pagination={table.pagination(products.data?.totalItems)}
       />
-      <ProductFormModal open={open} product={editing} onClose={() => setOpen(false)} />
+      <ProductFormModal open={open} product={editing} allowImports onClose={() => setOpen(false)} />
       <ProductGalleryModal product={gallery} onClose={() => setGallery(null)} />
       {importing && <ProductImportModal onClose={() => setImporting(false)} />}
       <ProductSpecModal

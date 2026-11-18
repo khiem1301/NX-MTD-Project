@@ -14,7 +14,7 @@ namespace NX_MTD.Application.Services;
 /// màn hình gửi) rồi ghi định mức và bìa trong MỘT giao dịch, có lỗi thì không ghi gì. Ghi dùng lại ProductSpecService /
 /// OrderMarkerService nên nhật ký và ràng buộc giống hệt khi lưu tay.
 /// </summary>
-public sealed class SpecImportService : ISpecImportService
+public sealed partial class SpecImportService : ISpecImportService
 {
     private readonly IUnitOfWork _uow;
     private readonly IProductSpecService _specs;
@@ -34,15 +34,31 @@ public sealed class SpecImportService : ISpecImportService
 
     private sealed record Plan(SpecImportPreviewDto Preview, SpecImportBuilder Builder);
 
-    public async Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct)
+    public Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null) => PreviewCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct);
+
+    public Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null) => ImportCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct);
+
+    /// <summary>DEV-ALL-122: xem trước từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
+    public Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null) => PreviewCoreAsync(productId, orderId, () => workbook, parts, ct);
+
+    /// <summary>DEV-ALL-122: nhập từ bảng đã đọc file và sửa trên màn hình.</summary>
+    public Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null) => ImportCoreAsync(productId, orderId, () => workbook, parts, ct);
+
+    private async Task<Result<SpecImportPreviewDto>> PreviewCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
+        IReadOnlyCollection<string>? parts, CancellationToken ct)
     {
-        var plan = await PlanAsync(productId, orderId, stream, ct);
+        var plan = await PlanAsync(productId, orderId, read, parts, ct);
         return plan.IsSuccess ? Result<SpecImportPreviewDto>.Success(plan.Data!.Preview) : Fail.As<SpecImportPreviewDto>(plan);
     }
 
-    public async Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct)
+    private async Task<Result<SpecImportResultDto>> ImportCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
+        IReadOnlyCollection<string>? parts, CancellationToken ct)
     {
-        var plan = await PlanAsync(productId, orderId, stream, ct);
+        var plan = await PlanAsync(productId, orderId, read, parts, ct);
         if (!plan.IsSuccess) return Fail.As<SpecImportResultDto>(plan);
         var preview = plan.Data!.Preview;
         if (!preview.CanImport)
@@ -78,15 +94,21 @@ public sealed class SpecImportService : ISpecImportService
             changes.Components, changes.Norms, changes.MarkerGroups, changes.OrderMarkers));
     }
 
-    private async Task<Result<Plan>> PlanAsync(int productId, int? orderId, Stream stream, CancellationToken ct)
+    private async Task<Result<Plan>> PlanAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
+        IReadOnlyCollection<string>? parts, CancellationToken ct)
     {
+        var unknown = parts?.FirstOrDefault(p => !SpecImportParts.All.Contains(p));
+        if (unknown is not null)
+            return Result<Plan>.Failure(ErrorCodes.SpecImportInvalid, string.Format(Messages.SpecImportPartUnknown, unknown),
+                ResultKind.Validation);
+
         var target = await TargetAsync(productId, orderId, ct);
         if (!target.IsSuccess) return Fail.As<Plan>(target);
 
         SpecWorkbookDto workbook;
         try
         {
-            workbook = _parser.Parse(stream);
+            workbook = read();
         }
         catch (InvalidDataException ex)
         {
@@ -96,6 +118,14 @@ public sealed class SpecImportService : ISpecImportService
                                        or NotImplementedException)
         {
             return Result<Plan>.Failure(ErrorCodes.SpecImportInvalid, Messages.SpecImportExcelInvalid, ResultKind.Validation);
+        }
+        if (parts is { Count: > 0 })
+        {
+            workbook = SpecImportParts.Keep(workbook, parts);
+            if (!workbook.HasComponents && !workbook.HasNorms && !workbook.HasMarkerGroups && !workbook.HasOrderMarkers)
+                return Result<Plan>.Failure(ErrorCodes.ImportTableMissing,
+                    string.Format(Messages.SpecImportPartMissing, string.Join(", ", parts.Select(SpecImportParts.Label))),
+                    ResultKind.Validation);
         }
 
         var spec = await _specs.GetAsync(productId, ct);

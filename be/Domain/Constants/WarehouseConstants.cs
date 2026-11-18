@@ -242,6 +242,15 @@ public static class DispatchStatuses
     public static readonly IReadOnlySet<string> Issuing = new HashSet<string> { Pending, InDelivery, Delivered };
 }
 
+/// <summary>DispatchNote.DeliveryMethod (CK_DN_DeliveryMethod) — DEV-ALL-127.</summary>
+public static class DeliveryMethods
+{
+    public const string CustomerPickup = "CUSTOMER_PICKUP";
+    public const string CompanyVehicle = "COMPANY_VEHICLE";
+
+    public static readonly IReadOnlySet<string> All = new HashSet<string> { CustomerPickup, CompanyVehicle };
+}
+
 public static class ShiftCodes
 {
     public const string Morning = "MORNING";

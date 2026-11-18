@@ -22,6 +22,9 @@ public sealed record VehicleTripDto(
 public sealed record StartVehicleTripDto(int VehicleId, DateOnly TripDate, string? DriverName, int? DriverEmployeeId,
     string? Purpose, int? DispatchNoteId, int OdometerStart);
 
+/// <summary>DEV-ALL-127: xe Thủ kho chọn được khi xuất kho (đang hoạt động, không có chuyến đang chạy) kèm km cuối để điền sẵn.</summary>
+public sealed record AvailableVehicleDto(int VehicleId, string PlateNumber, string VehicleType, int? LastOdometer);
+
 /// <summary>Kết thúc chuyến: km cuối &gt; km đầu; xăng vượt định mức quá dung sai thì bật cảnh báo MSG30.</summary>
 public sealed record CompleteVehicleTripDto(int OdometerEnd, decimal? FuelLiters, decimal? FuelCost);
 

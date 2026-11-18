@@ -23,6 +23,7 @@ public static class SharedModule
         services.Configure<AttachmentOptions>(config.GetSection("Attachment"));
         services.AddScoped<IAttachmentRepository, AttachmentRepository>();
         services.AddScoped<IAttachmentService, AttachmentService>();
+        services.AddScoped<IPartnerContactChecker, PartnerContactChecker>();
         services.AddScoped<IAttachmentCleanupService, AttachmentCleanupService>();
         services.AddSingleton<IFileStorage, LocalFileStorage>();
         services.AddHostedService<DelayRiskJob>();           // JOB-04 (KH-23)
