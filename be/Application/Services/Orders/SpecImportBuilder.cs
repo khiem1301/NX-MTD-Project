@@ -20,6 +20,10 @@ public sealed class SpecImportBuilder
     public const string ActionUpdate = "Update";
     public const string ActionUnchanged = "Unchanged";
     public const string ActionError = "Error";
+    /// <summary>DEV-ALL-122 (chỉ ở popup kiểm tra Excel): dòng đúng định dạng nhưng cần màu / đơn chưa có, kiểm khi Lưu đơn.</summary>
+    public const string ActionPending = "Pending";
+    /// <summary>DEV-ALL-123 (chỉ ở popup kiểm tra Excel): mã NVL chưa có trong danh mục — cảnh báo, admin chọn thêm vào danh mục.</summary>
+    public const string ActionNewMaterial = "NewMaterial";
     private const int MaxNameLength = 100;
     private const int MaxNoteLength = 200;
     private const short MaxPieces = 99;
@@ -157,15 +161,21 @@ public sealed class SpecImportBuilder
         var result = new List<SpecImportMarkerGroupRowDto>(rows.Count);
         foreach (var row in rows)
         {
+            // DEV-ALL-121: màu chưa có ở mã hàng thì bỏ qua màu đó (ghi chú), như định mức NVL bỏ qua dòng màu lạ; chỉ lỗi khi
+            // không còn màu nào. Một file dùng chung cho nhiều đơn khai sẵn mọi màu, đơn chỉ đặt một phần.
+            var unknownColors = row.Colors.Where(c => !_colors.ContainsKey(Upper(c))).ToList();
+            var knownColors = row.Colors.Where(c => _colors.ContainsKey(Upper(c))).ToList();
             var error = row.ParseError
                         ?? (row.MarkerNo > SaveProductSpecDtoValidator.MaxMarkerNo
                             ? string.Format(Messages.SpecImportMarkerNoRange, SaveProductSpecDtoValidator.MaxMarkerNo) : null)
                         ?? GroupComponentProblem(row.ComponentNames)
-                        ?? row.Colors.Where(c => !_colors.ContainsKey(Upper(c)))
-                            .Select(c => string.Format(Messages.SpecImportColorUnknown, c)).FirstOrDefault()
+                        ?? (knownColors.Count == 0 && unknownColors.Count > 0
+                            ? string.Format(Messages.SpecImportColorUnknown, unknownColors[0]) : null)
                         ?? Duplicate(seen, row.MarkerNo?.ToString() ?? string.Empty, row.RowNumber);
+            if (error is null && unknownColors.Count > 0)
+                _notes.Add(string.Format(Messages.SpecImportGroupColorsSkipped, row.MarkerNo, string.Join(", ", unknownColors)));
             var components = row.ComponentNames.Select(n => ComponentOf(n)?.Name ?? n).ToList();
-            var colors = row.Colors.Select(c => _colors.GetValueOrDefault(Upper(c)) ?? c).ToList();
+            var colors = (error is null ? knownColors : row.Colors).Select(c => _colors.GetValueOrDefault(Upper(c)) ?? c).ToList();
             if (error is null) _validGroups[row.MarkerNo!.Value] = row with { ComponentNames = components, Colors = colors };
             result.Add(new SpecImportMarkerGroupRowDto(row.RowNumber, error is null ? GroupAction(row.MarkerNo!.Value, components, colors)
                 : ActionError, error, row.MarkerNo, components, colors));

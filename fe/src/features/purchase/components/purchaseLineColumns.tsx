@@ -20,6 +20,18 @@ export const purchaseLineColumns: ColumnsType<PurchaseOrderLine> = [
     render: (value: number, l) => `${formatQty(value)} ${l.unit}`,
   },
   {
+    title: text.receivedQty,
+    dataIndex: 'receivedQty',
+    align: 'right',
+    render: (value: number | undefined) => formatQty(value ?? 0),
+  },
+  {
+    title: text.notReplenishedQty,
+    dataIndex: 'notReplenishedQty',
+    align: 'right',
+    render: (value: number | undefined) => (value ? formatQty(value) : '—'),
+  },
+  {
     title: text.unitPrice,
     dataIndex: 'unitPrice',
     align: 'right',

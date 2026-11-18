@@ -42,7 +42,8 @@ public sealed record PurchaseOrderFlowListItemDto(
 
 /// <summary>Nút nào hiện được ở màn chi tiết: do server tính theo vai trò + trạng thái đơn (FE không tự suy).</summary>
 public sealed record PurchaseOrderPermissionsDto(
-    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment);
+    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment,
+    bool CanPayRemaining = false);
 
 public sealed record PurchaseOrderFlowDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
@@ -51,7 +52,8 @@ public sealed record PurchaseOrderFlowDto(
     string? PaymentMethod, string? PaymentNote, decimal TotalAmount, DateTime CreatedAt,
     byte[] RowVer, IReadOnlyList<PurchaseOrderLineDto> Lines, PurchaseOrderPermissionsDto Permissions,
     IReadOnlyList<AuditLogDto> History, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
-    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
+    IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null, decimal? ActualAmount = null, decimal ReceivedAmount = 0,
+    decimal? RemainingAmount = null);
 
 /// <summary>Đặt hàng phải gửi đủ mọi dòng của đơn: số lượng và đơn giá chốt lần cuối (sau đó khóa — GBR-18).</summary>
 public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
@@ -70,8 +72,16 @@ public sealed record RepricePurchaseLineDto(int PurchaseOrderLineId, decimal Uni
 
 public sealed record RepricePurchaseOrderDto(string? Note, IReadOnlyList<RepricePurchaseLineDto> Lines, byte[] RowVer);
 
-/// <summary>PaymentMethod nhận PascalCase ("BankTransfer" | "Cash"). Ảnh chứng từ tải lên riêng qua Attachment.</summary>
+/// <summary>
+/// PaymentMethod nhận PascalCase ("BankTransfer" | "Cash"). Ảnh chứng từ tải lên riêng qua Attachment. ActualAmount (DEV-ALL-129):
+/// tổng giá trị thực tế, bắt buộc với đơn Chốt không bù, bỏ qua với đơn khác.
+/// </summary>
 public sealed record ConfirmPaymentDto(
-    DateOnly PaymentDate, decimal PaidAmount, string PaymentMethod, string? PaymentNote, byte[] RowVer);
+    DateOnly PaymentDate, decimal PaidAmount, string PaymentMethod, string? PaymentNote, byte[] RowVer,
+    decimal? ActualAmount = null);
+
+/// <summary>DEV-ALL-131: Kế toán trả thêm cho đơn Thanh toán một phần (số tiền ≤ phần còn lại; đủ thì Đã thanh toán).</summary>
+public sealed record PayRemainingDto(
+    DateOnly PaymentDate, decimal Amount, string PaymentMethod, string? PaymentNote, byte[] RowVer);
 
 public sealed record ReturnPaymentDto(string Reason, byte[] RowVer);

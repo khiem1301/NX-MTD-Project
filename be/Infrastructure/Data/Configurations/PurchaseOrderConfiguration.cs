@@ -22,6 +22,7 @@ public sealed class PurchaseOrderConfiguration : IEntityTypeConfiguration<Purcha
             .HasDefaultValue("PENDING_FINALISATION");
         entity.Property(e => e.Note).HasMaxLength(1000);
         entity.Property(e => e.PaidAmount).HasColumnType("decimal(18, 2)");
+        entity.Property(e => e.ActualAmount).HasColumnType("decimal(18, 2)");
         entity.Property(e => e.PaymentMethod)
             .HasMaxLength(20)
             .IsUnicode(false);

@@ -50,6 +50,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     setCustomerOpen,
     productBlock,
     setProductBlock,
+    queueImports,
   } = useOrderForm({ orderId, detail, copyFrom });
   const { token } = theme.useToken();
   const saving = create.isPending || update.isPending;
@@ -149,6 +150,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             {!locked && (
               <OrderImportButton
                 blocks={blocks}
+                onQueueImports={queueImports}
                 onApply={(next, newLabels) => {
                   setLabels((l) => ({ ...l, ...newLabels }));
                   changeBlocks(next);
@@ -189,6 +191,8 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
         <ProductFormModal
           open={productBlock !== undefined}
           product={null}
+          allowImports
+          onDeferImports={queueImports}
           onClose={() => setProductBlock(undefined)}
           onSaved={(productId, code) => {
             setLabels((l) => ({ ...l, [productId]: code }));

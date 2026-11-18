@@ -1,17 +1,19 @@
 import { useEffect } from 'react';
-import { Col, Divider, Form, Input, Modal, Row, Tooltip } from 'antd';
+import { Col, Form, Input, Modal, Row, Tooltip } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { zodRule } from '@/utils/zodRule';
 import { useProduct, useSaveProduct } from '../hooks/useOrders';
+import { useProductFormImports } from '../hooks/useProductFormImports';
 import {
   productCodeSchema,
   productDescriptionSchema,
   productNameSchema,
   toFieldPath,
 } from '../utils/productValidation';
-import { ExtraImagesInput } from './ExtraImagesInput';
-import { SampleImageInput } from './SampleImageInput';
+import type { ProductImportSelection } from '../utils/productExcelImports';
+import { ProductExcelImports } from './ProductExcelImports';
+import { ProductImagesFields } from './ProductImagesFields';
 import type { NamePath } from 'antd/es/form/interface';
 import type { ProductListItem, SaveProductPayload } from '../types';
 
@@ -24,12 +26,45 @@ type ProductFormModalProps = {
   onClose: () => void;
   /** Gọi sau khi lưu xong, kèm Id (dùng để chọn luôn mã hàng vừa tạo ở form đơn hàng). */
   onSaved?: (productId: number, code: string) => void;
+  /** DEV-ALL-121: hiện mục chọn file Excel (Thành phần, Định mức NVL, Nhóm bìa, Bìa cắt, NVL của đơn) — chỉ màn Mã hàng (Admin). */
+  allowImports?: boolean;
+  /**
+   * Form mở từ màn tạo / sửa đơn: không nhập ngay mà giao file đã chọn cho form đơn, nhập sau khi Lưu đơn (lúc đó đơn đã có
+   * mã hàng, màu, size nên nhập được cả định mức, nhóm bìa, bìa cắt, NVL của đơn).
+   */
+  onDeferImports?: (productId: number, code: string, selection: ProductImportSelection) => void;
+  /** Thêm mới: giá trị điền sẵn (vd mã, tên, mô tả đọc từ file Excel của hộp nhập dòng hàng). */
+  initialValues?: Partial<SaveProductPayload>;
+  /**
+   * Thêm mới: dữ liệu Excel đã đọc sẵn (vd từ hộp Nhập dòng hàng của form đơn); popup kiểm tra mở ngay để xem và sửa. Chỉ đọc khi
+   * form được gắn, nên nơi dùng gắn form riêng mỗi lần mở.
+   */
+  initialImports?: ProductImportSelection;
 };
 
 /** UC10: thêm / sửa mã hàng. Mã khóa khi đã dùng trong đơn. Ảnh mẫu chọn từ máy, lưu khóa file trong SampleImageUrl (DEV-KH-08-1). */
-export function ProductFormModal({ open, product, onClose, onSaved }: ProductFormModalProps) {
+export function ProductFormModal({
+  open,
+  product,
+  onClose,
+  onSaved,
+  allowImports = false,
+  onDeferImports,
+  initialValues,
+  initialImports,
+}: ProductFormModalProps) {
   const [form] = Form.useForm<SaveProductPayload>();
   const save = useSaveProduct();
+  const excel = useProductFormImports({
+    form,
+    product,
+    allowImports,
+    onDeferImports,
+    initialImports,
+    onClose,
+  });
+  const { importing, close } = excel;
+  const busy = save.isPending || importing;
   // Danh sách không có mô tả: phải nạp từ chi tiết, nếu không lưu lại sẽ xóa mất mô tả cũ.
   const detail = useProduct(product?.productId, open && product !== null);
   const loadingDetail = product !== null && !detail.data;
@@ -44,8 +79,10 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         sampleImageUrl: product.sampleImageUrl ?? undefined,
         extraImages: product.extraImages,
       });
+    } else if (initialValues) {
+      form.setFieldsValue(initialValues);
     }
-  }, [open, product, form]);
+  }, [open, product, form, initialValues]);
 
   // Điền mô tả khi mở form (chi tiết đã có sẵn trong bộ nhớ đệm) hoặc khi chi tiết về sau, trừ khi người dùng đã tự gõ.
   useEffect(() => {
@@ -54,12 +91,16 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
   }, [open, product, detail.data, form]);
 
   const handleFinish = (values: SaveProductPayload) => {
+    // DEV-ALL-124: Thêm mới thiếu dữ liệu Excel bắt buộc thì không lưu gì.
+    if (!excel.checkRequired()) return;
     save.mutate(
       { id: product?.productId, body: values },
       {
         onSuccess: (id) => {
-          onSaved?.(id as number, values.productCode.trim().toUpperCase());
-          onClose();
+          const productId = product?.productId ?? (id as number);
+          const code = values.productCode.trim().toUpperCase();
+          onSaved?.(productId, code);
+          excel.afterSave(productId, code);
         },
         onError: (error) =>
           form.setFields(
@@ -83,16 +124,21 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       width={MODAL_WIDTH}
-      confirmLoading={save.isPending}
+      confirmLoading={busy}
       okButtonProps={{ disabled: loadingDetail }}
+      cancelButtonProps={{ disabled: importing }}
+      closable={!importing}
+      maskClosable={!importing}
       onOk={() => form.submit()}
-      onCancel={onClose}
+      onCancel={() => {
+        if (!importing) close();
+      }}
       destroyOnHidden
       // Thân modal tự cuộn để nút Lưu luôn hiện, kể cả khi khai nhiều màu.
       styles={{ body: { maxHeight: BODY_MAX_HEIGHT, overflowY: 'auto', overflowX: 'hidden' } }}
     >
       {detail.error && <QueryError error={detail.error} onRetry={() => void detail.refetch()} />}
-      <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
+      <Form form={form} layout="vertical" onFinish={handleFinish} disabled={busy}>
         <Row gutter={16}>
           <Col xs={24} md={9}>
             <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
@@ -124,26 +170,21 @@ export function ProductFormModal({ open, product, onClose, onSaved }: ProductFor
         >
           <Input.TextArea autoSize={{ minRows: 1, maxRows: 4 }} />
         </Form.Item>
-        <Divider orientation="left" orientationMargin={0} style={{ marginTop: 0 }}>
-          {MESSAGES.orders.images}
-        </Divider>
-        <Row gutter={16}>
-          <Col xs={24} md={9}>
-            <Form.Item
-              name="sampleImageUrl"
-              label={MESSAGES.orders.sampleImage}
-              rules={[{ max: 500 }]}
-            >
-              <SampleImageInput />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={15}>
-            <Form.Item name="extraImages" label={MESSAGES.orders.extraImages}>
-              <ExtraImagesInput />
-            </Form.Item>
-          </Col>
-        </Row>
+        <ProductImagesFields />
       </Form>
+      {allowImports && (
+        <ProductExcelImports
+          productId={product?.productId}
+          deferred={onDeferImports !== undefined}
+          required={excel.required}
+          showMissing={excel.showMissing}
+          onProductRow={excel.fillFromRow}
+          autoReview={initialImports !== undefined && product === null}
+          value={excel.imports}
+          onChange={excel.setImports}
+          disabled={busy}
+        />
+      )}
     </Modal>
   );
 }

@@ -51,6 +51,28 @@ public sealed class DispatchActionDtoValidator : AbstractValidator<DispatchActio
     public DispatchActionDtoValidator() => RuleFor(x => x.RowVer).NotEmpty().WithMessage(DispatchLimits.StaleRowVer);
 }
 
+/// <summary>DEV-ALL-127: xe công ty giao thì bắt buộc xe, tài xế, km lúc đi (cùng giới hạn như Kế toán bắt đầu chuyến).</summary>
+public sealed class ExportDispatchDtoValidator : AbstractValidator<ExportDispatchDto>
+{
+    public ExportDispatchDtoValidator()
+    {
+        RuleFor(x => x.RowVer).NotEmpty().WithMessage(DispatchLimits.StaleRowVer);
+        RuleFor(x => x.DeliveryMethod).Must(m => m is not null && DeliveryMethods.All.Contains(m))
+            .WithMessage(WarehouseMessages.DeliveryMethodRequired);
+        When(x => x.DeliveryMethod == DeliveryMethods.CompanyVehicle, () =>
+        {
+            RuleFor(x => x.VehicleId).Cascade(CascadeMode.Stop)
+                .NotNull().WithMessage(WarehouseMessages.DispatchVehicleRequired)
+                .GreaterThan(0).WithMessage(WarehouseMessages.DispatchVehicleRequired);
+            RuleFor(x => x.DriverName).NotEmpty().WithMessage(WarehouseMessages.DriverRequired).MaximumLength(100);
+            RuleFor(x => x.OdometerStart).Cascade(CascadeMode.Stop)
+                .NotNull().WithMessage(WarehouseMessages.OdometerInvalid)
+                .GreaterThanOrEqualTo(0).WithMessage(WarehouseMessages.OdometerInvalid)
+                .LessThanOrEqualTo(VehicleLimits.MaxOdometer).WithMessage(WarehouseMessages.OdometerTooLarge);
+        });
+    }
+}
+
 public sealed class RejectDispatchDtoValidator : AbstractValidator<RejectDispatchDto>
 {
     public RejectDispatchDtoValidator()

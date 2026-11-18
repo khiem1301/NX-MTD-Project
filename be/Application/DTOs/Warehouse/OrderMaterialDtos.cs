@@ -17,9 +17,12 @@ public sealed record OrderMaterialDto(
 
 // ---- DEV-ALL-119: nhập Excel NVL của đơn ----
 
-/// <summary>Một dòng thô đọc từ file: mã NVL, số cần, khách cấp, ghi chú.</summary>
+/// <summary>
+/// Một dòng thô đọc từ file: mã NVL, số cần, khách cấp, ghi chú. MaterialName / Unit (DEV-ALL-123, cột tùy chọn "Tên NVL",
+/// "Đơn vị") chỉ để hiện và gợi ý khi thêm NVL chưa có vào danh mục; NVL đã có thì lấy theo danh mục.
+/// </summary>
 public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialCode, decimal? RequiredQty, decimal? CustomerQty,
-    string? Note, string? ParseError);
+    string? Note, string? ParseError, string? MaterialName = null, string? Unit = null);
 
 /// <summary>Action: New | Update | Unchanged | Error. PurchaseQty = max(Số cần − Khách cấp, 0) tính trước để xem.</summary>
 public sealed record OrderMaterialImportRowDto(int RowNumber, string Action, string? Error, string MaterialCode, string? MaterialName,

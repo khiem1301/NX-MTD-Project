@@ -71,6 +71,11 @@ export function allocationColumns(
       render: (v: number | null) => v ?? '—',
     },
     {
+      title: PM_LABELS.discrepancyReason,
+      dataIndex: 'discrepancyReason',
+      render: (v: string | null) => v || '—',
+    },
+    {
       title: PM_LABELS.status,
       dataIndex: 'status',
       render: (v: string, m) => (

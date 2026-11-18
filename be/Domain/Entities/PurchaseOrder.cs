@@ -39,6 +39,9 @@ public partial class PurchaseOrder
 
     public decimal? PaidAmount { get; set; }
 
+    /// <summary>DEV-ALL-129: tổng giá trị thực tế của đơn Chốt không bù, Kế toán nhập khi xác nhận thanh toán.</summary>
+    public decimal? ActualAmount { get; set; }
+
     public string? PaymentMethod { get; set; }
 
     public string? PaymentNote { get; set; }

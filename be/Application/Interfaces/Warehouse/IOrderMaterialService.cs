@@ -19,6 +19,10 @@ public interface IOrderMaterialService
     Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, Stream stream, CancellationToken ct);
     /// <summary>DEV-ALL-119: nhập các dòng hợp lệ có thay đổi, lưu một lần (lỗi thì không lưu gì).</summary>
     Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, Stream stream, CancellationToken ct);
+    /// <summary>DEV-ALL-122: như trên nhưng từ dòng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
+    Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows,
+        CancellationToken ct);
+    Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows, CancellationToken ct);
 }
 
 /// <summary>Đọc bảng NVL của đơn (Mã NVL, Số cần, Khách cấp, Ghi chú) từ Excel (DEV-ALL-119).</summary>

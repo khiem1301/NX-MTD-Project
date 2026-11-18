@@ -12,6 +12,7 @@ import { useCancelOrder, usePurchaseOrderDetail, useReturnPayment } from '../hoo
 import type { PurchaseOrderLine, PurchaseRole } from '../types';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { PaymentProofGallery } from './PaymentProofGallery';
+import { PayRemainingModal } from './PayRemainingModal';
 import { PlaceOrderModal } from './PlaceOrderModal';
 import { RepriceModal } from './RepriceModal';
 import { DetailModal } from '@/components/common/DetailModal';
@@ -21,7 +22,7 @@ import { PurchaseOrderInfo } from './PurchaseOrderInfo';
 import { purchaseLineColumns } from './purchaseLineColumns';
 
 type Props = { role: PurchaseRole };
-type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
+type Dialog = 'place' | 'reprice' | 'confirm' | 'payRemaining' | 'cancel' | 'return' | null;
 
 const text = PURCHASE_TEXT.detail;
 
@@ -58,6 +59,11 @@ export function PurchaseOrderModal({ role }: Props) {
       {perm.canConfirmPayment && (
         <Button type="primary" onClick={() => setDialog('confirm')}>
           {PURCHASE_TEXT.actions.confirmPayment}
+        </Button>
+      )}
+      {perm.canPayRemaining && (
+        <Button type="primary" onClick={() => setDialog('payRemaining')}>
+          {PURCHASE_TEXT.actions.payRemaining}
         </Button>
       )}
       {perm.canReturnPayment && (
@@ -136,6 +142,7 @@ export function PurchaseOrderModal({ role }: Props) {
           <PlaceOrderModal open={dialog === 'place'} order={data} onClose={closeDialog} />
           <RepriceModal open={dialog === 'reprice'} order={data} onClose={closeDialog} />
           <ConfirmPaymentModal open={dialog === 'confirm'} order={data} onClose={closeDialog} />
+          {dialog === 'payRemaining' && <PayRemainingModal order={data} onClose={closeDialog} />}
           <ReasonModal
             open={dialog === 'cancel'}
             title={PURCHASE_TEXT.cancelTitle}

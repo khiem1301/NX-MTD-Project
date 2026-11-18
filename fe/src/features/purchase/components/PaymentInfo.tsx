@@ -1,4 +1,4 @@
-import { Descriptions } from 'antd';
+import { Descriptions, Typography } from 'antd';
 import { formatCurrency, formatDate } from '@/utils/format';
 import { PAYMENT_METHOD_LABEL, PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail } from '../types';
@@ -13,6 +13,13 @@ export function PaymentInfo({ order: data }: { order: PurchaseOrderDetail }) {
       <Descriptions.Item label={text.paidAmount}>
         {formatCurrency(data.paidAmount)}
       </Descriptions.Item>
+      {data.remainingAmount !== null && data.remainingAmount !== undefined && (
+        <Descriptions.Item label={PURCHASE_TEXT.payRemaining.remaining}>
+          <Typography.Text type="warning" strong>
+            {formatCurrency(data.remainingAmount)}
+          </Typography.Text>
+        </Descriptions.Item>
+      )}
       <Descriptions.Item label={text.paymentMethod}>
         {data.paymentMethod ? PAYMENT_METHOD_LABEL[data.paymentMethod] : '—'}
       </Descriptions.Item>

@@ -48,8 +48,14 @@ public class VehicleServiceTests
     {
         var t = new VehicleTrip
         {
-            VehicleTripId = id == 0 ? _trips.Count + 1 : id, VehicleId = 1, Vehicle = _truck, TripDate = date ?? Today.AddDays(-1),
-            DriverName = "Tài xế", OdometerStart = start, OdometerEnd = end, Status = status,
+            VehicleTripId = id == 0 ? _trips.Count + 1 : id,
+            VehicleId = 1,
+            Vehicle = _truck,
+            TripDate = date ?? Today.AddDays(-1),
+            DriverName = "Tài xế",
+            OdometerStart = start,
+            OdometerEnd = end,
+            Status = status,
         };
         _trips.Add(t);
         return t;
@@ -231,8 +237,14 @@ public class VehicleServiceTests
     public async Task End_km_must_be_greater_than_start_km_and_a_completed_trip_cannot_be_completed_again()
     {
         var trip = Trip(TripStatuses.Started, 1000, null);
-        (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1000, 5, null), default))
+        var equal = await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1000, 5, null), default);
+        equal.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        equal.Kind.Should().Be(ResultKind.Validation);
+        equal.Errors!["odometerEnd"].Single().Should().Contain("1000");
+        (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(900, 5, null), default))
             .ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        trip.Status.Should().Be(TripStatuses.Started);
+        trip.OdometerEnd.Should().BeNull();
 
         (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1100, 5, null), default)).IsSuccess.Should().BeTrue();
         (await Service().CompleteTripAsync(trip.VehicleTripId, new CompleteVehicleTripDto(1200, 5, null), default))

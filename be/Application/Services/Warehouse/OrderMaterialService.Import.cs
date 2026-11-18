@@ -24,9 +24,24 @@ public sealed partial class OrderMaterialService
 
     private sealed record ImportPlan(CustomerOrder Order, List<ImportPlanRow> Rows, int Duplicates);
 
-    public async Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, Stream stream, CancellationToken ct)
+    public Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, Stream stream, CancellationToken ct) =>
+        PreviewImportCoreAsync(orderId, () => _excel.Parse(stream), ct);
+
+    /// <summary>DEV-ALL-122: xem trước từ dòng đã đọc và sửa trên màn hình (không đọc lại file).</summary>
+    public Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows,
+        CancellationToken ct) => PreviewImportCoreAsync(orderId, () => rows, ct);
+
+    public Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, Stream stream, CancellationToken ct) =>
+        ImportCoreAsync(orderId, () => _excel.Parse(stream), ct);
+
+    /// <summary>DEV-ALL-122: nhập từ dòng đã đọc và sửa trên màn hình.</summary>
+    public Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows,
+        CancellationToken ct) => ImportCoreAsync(orderId, () => rows, ct);
+
+    private async Task<Result<OrderMaterialImportPreviewDto>> PreviewImportCoreAsync(int orderId,
+        Func<IReadOnlyList<OrderMaterialExcelRow>> read, CancellationToken ct)
     {
-        var plan = await PlanImportAsync(orderId, stream, tracked: false, ct);
+        var plan = await PlanImportAsync(orderId, read, tracked: false, ct);
         if (!plan.IsSuccess) return Fail.As<OrderMaterialImportPreviewDto>(plan);
         var p = plan.Data!;
         var errors = p.Rows.Count(r => r.Preview.Action == ActionError);
@@ -34,9 +49,10 @@ public sealed partial class OrderMaterialService
             p.Rows.Count - errors, errors - p.Duplicates, p.Duplicates, p.Rows.Count(r => r.Entity is not null)));
     }
 
-    public async Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, Stream stream, CancellationToken ct)
+    private async Task<Result<OrderMaterialImportResultDto>> ImportCoreAsync(int orderId,
+        Func<IReadOnlyList<OrderMaterialExcelRow>> read, CancellationToken ct)
     {
-        var plan = await PlanImportAsync(orderId, stream, tracked: true, ct);
+        var plan = await PlanImportAsync(orderId, read, tracked: true, ct);
         if (!plan.IsSuccess) return Fail.As<OrderMaterialImportResultDto>(plan);
         var changes = plan.Data!.Rows.Where(r => r.Entity is not null).ToList();
         if (changes.Count == 0)
@@ -59,7 +75,8 @@ public sealed partial class OrderMaterialService
             string.Format(WarehouseMessages.OrderMaterialImportDone, result.Created, result.Updated));
     }
 
-    private async Task<Result<ImportPlan>> PlanImportAsync(int orderId, Stream stream, bool tracked, CancellationToken ct)
+    private async Task<Result<ImportPlan>> PlanImportAsync(int orderId, Func<IReadOnlyList<OrderMaterialExcelRow>> read, bool tracked,
+        CancellationToken ct)
     {
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
         if (order is null) return Fail.NotFound<ImportPlan>();
@@ -69,7 +86,11 @@ public sealed partial class OrderMaterialService
         IReadOnlyList<OrderMaterialExcelRow> excel;
         try
         {
-            excel = _excel.Parse(stream);
+            excel = read();
+        }
+        catch (ExcelTableMissingException ex)
+        {
+            return Result<ImportPlan>.Failure(ErrorCodes.ImportTableMissing, ex.Message, ResultKind.Validation);
         }
         catch (InvalidDataException ex)
         {

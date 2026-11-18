@@ -55,10 +55,15 @@ public sealed class MaterialSupplyUpdater
             ? (anyNotReplenished ? PurchaseGoodsStatuses.ClosedShort : PurchaseGoodsStatuses.Received)
             : (anyReceived ? PurchaseGoodsStatuses.PartiallyReceived : PurchaseGoodsStatuses.Ordered);
 
-        // Chốt không bù: phần còn lại không trả thêm → thanh toán một phần thành đã thanh toán.
+        // DEV-ALL-129: đơn đã trả một phần rồi mới thành Chốt không bù (Kế toán chưa nhập tổng thực tế): lấy giá trị theo số đã
+        // nhận làm tổng thực tế; đã trả đủ giá trị đó thì thành đã thanh toán, chưa đủ thì giữ thanh toán một phần.
         if (po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort
-            && po.PaymentStatus == PurchasePaymentStatuses.PartiallyPaid)
-            po.PaymentStatus = PurchasePaymentStatuses.Paid;
+            && po.PaymentStatus == PurchasePaymentStatuses.PartiallyPaid && po.ActualAmount is null)
+        {
+            var receivedValue = lines.Sum(l => received.GetValueOrDefault(l.PurchaseOrderLineId) * l.UnitPrice);
+            if (receivedValue > 0) po.ActualAmount = receivedValue;
+            if (receivedValue > 0 && po.PaidAmount >= receivedValue) po.PaymentStatus = PurchasePaymentStatuses.Paid;
+        }
     }
 
     /// <summary>

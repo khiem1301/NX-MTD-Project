@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Alert, Modal, Space, Tag, Typography, Upload } from 'antd';
+import { Alert, Button, Modal, Space, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { DownloadOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
 import { fill, formatCurrency, formatQty } from '@/utils/format';
 import { SPEC_IMPORT_TEMPLATE_URL } from '../constants';
+import { unknownCodesOf, useCreateProductFromImport } from '../hooks/useCreateProductFromImport';
 import { usePreviewOrderImport } from '../hooks/useSpecImport';
 import type { OrderImportRow } from '../types';
+import type { ProductImportSelection } from '../utils/productExcelImports';
+import { ProductFormModal } from './ProductFormModal';
 
 const text = MESSAGES.orders.orderImport;
 const col = text.columns;
@@ -16,6 +19,11 @@ const col = text.columns;
 type OrderImportModalProps = {
   onApply: (rows: OrderImportRow[]) => void;
   onClose: () => void;
+  /**
+   * DEV-ALL-121: tạo mã hàng chưa có ngay từ hộp này (form mã hàng điền sẵn từ sheet Mã hàng, dùng luôn file cho định mức, bìa,
+   * NVL); file của mã hàng mới được giao cho form đơn để nhập sau khi Lưu đơn. Không truyền thì không hiện nút tạo.
+   */
+  onQueueImports?: (productId: number, code: string, selection: ProductImportSelection) => void;
 };
 
 const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
@@ -60,10 +68,13 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
  * DEV-ALL-118: nhập dòng hàng của đơn từ Excel dạng ma trận màu × size. Chọn file là xem trước (máy chủ kiểm mã hàng, số lượng,
  * đơn giá); Áp dụng thì điền các dòng hợp lệ vào form, người dùng xem lại và bấm Lưu như tạo tay. Chỉ gắn khi đang mở.
  */
-export function OrderImportModal({ onApply, onClose }: OrderImportModalProps) {
+export function OrderImportModal({ onApply, onClose, onQueueImports }: OrderImportModalProps) {
   const preview = usePreviewOrderImport();
   const [file, setFile] = useState<File | null>(null);
+  const create = useCreateProductFromImport(file);
+  const creating = create.creating;
   const data = file ? preview.data : undefined;
+  const unknownCodes = data && onQueueImports ? unknownCodesOf(data.rows) : [];
 
   return (
     <Modal
@@ -102,6 +113,29 @@ export function OrderImportModal({ onApply, onClose }: OrderImportModalProps) {
           <p>{MESSAGES.orders.specImport.chooseFile}</p>
         </Upload.Dragger>
         {preview.error && <Alert type="error" showIcon message={preview.error.message} />}
+        {unknownCodes.length > 0 && (
+          <Alert
+            type="warning"
+            showIcon
+            message={text.unknownProducts}
+            description={
+              <Space wrap>
+                {unknownCodes.map((code) => (
+                  <Button
+                    key={code}
+                    size="small"
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    loading={create.starting}
+                    onClick={() => create.start(code)}
+                  >
+                    {fill(text.createProduct, code)}
+                  </Button>
+                ))}
+              </Space>
+            }
+          />
+        )}
         {data && (
           <>
             <Typography.Text>
@@ -117,6 +151,19 @@ export function OrderImportModal({ onApply, onClose }: OrderImportModalProps) {
           </>
         )}
       </Space>
+      {/* Gắn riêng mỗi lần tạo để form nhận file gán sẵn; Lưu xong kiểm lại file để các dòng của mã mới hợp lệ. */}
+      {creating && file && onQueueImports && (
+        <ProductFormModal
+          open
+          product={null}
+          allowImports
+          initialValues={creating.values}
+          initialImports={creating.imports}
+          onDeferImports={onQueueImports}
+          onSaved={() => preview.mutate(file)}
+          onClose={create.stop}
+        />
+      )}
     </Modal>
   );
 }

@@ -87,6 +87,11 @@ export const API = {
     productsImportPreview: v1('admin/products/import-products/preview'),
     productsImport: v1('admin/products/import-products'),
     import: (id: number) => v1(`admin/products/${id}/import`),
+    /** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa, xem trước / nhập từ JSON. */
+    excelParse: v1('admin/products/excel/parse'),
+    excelCheck: v1('admin/products/excel/check'),
+    importPreviewData: (id: number) => v1(`admin/products/${id}/import/preview-data`),
+    importData: (id: number) => v1(`admin/products/${id}/import-data`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),
@@ -145,6 +150,7 @@ export const API = {
     payment: (id: number) => v1(`accountant/purchase-payments/${id}`),
     confirmPayment: (id: number) => v1(`accountant/purchase-payments/${id}/confirm`),
     returnPayment: (id: number) => v1(`accountant/purchase-payments/${id}/return`),
+    payRemaining: (id: number) => v1(`accountant/purchase-payments/${id}/pay-remaining`),
   },
   attachments: {
     base: v1('common/attachments'),

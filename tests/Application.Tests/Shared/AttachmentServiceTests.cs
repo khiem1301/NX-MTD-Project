@@ -29,6 +29,7 @@ public class AttachmentServiceTests
         _requestAccess.OwnerType.Returns(AttachmentOwnerTypes.Request);
         _requestAccess.CanWriteAsync(default, default).ReturnsForAnyArgs(true);
         _requestAccess.MaxFilesAsync(default).ReturnsForAnyArgs(5);
+        _requestAccess.CanWritePurpose(default!).ReturnsForAnyArgs(true);
     }
 
     private AttachmentService Create(int maxMb = 5) => new(_repo, _storage, _uow, _user, _clock,
@@ -70,11 +71,36 @@ public class AttachmentServiceTests
     [Fact]
     public async Task Upload_SixthPhoto_ReturnsLimitReached()
     {
-        _repo.CountCurrentAsync(default!, default, default).ReturnsForAnyArgs(5);
+        _repo.CountCurrentAsync(default!, default, default!, default).ReturnsForAnyArgs(5);
 
         var result = await Create().UploadAsync("Request", 1, "Photo", new FileUpload(PngBytes, "a.png"), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.AttachmentLimitReached);
+    }
+
+    [Fact]
+    public async Task Upload_LimitIsCountedPerPurpose()
+    {
+        // DEV-ALL-128: nhóm khác đã đủ 5 ảnh không chặn nhóm này (phiếu xuất: ảnh phiếu xuất vs biên bản giao).
+        _repo.CountCurrentAsync(AttachmentOwnerTypes.Request, 1, AttachmentPurposes.Photo, default).Returns(5);
+        _repo.CountCurrentAsync(AttachmentOwnerTypes.Request, 1, AttachmentPurposes.DocumentPhoto, default).Returns(0);
+
+        var other = await Create().UploadAsync("Request", 1, "DocumentPhoto", new FileUpload(PngBytes, "a.png"), default);
+        var same = await Create().UploadAsync("Request", 1, "Photo", new FileUpload(PngBytes, "a.png"), default);
+
+        other.IsSuccess.Should().BeTrue();
+        same.ErrorCode.Should().Be(ErrorCodes.AttachmentLimitReached);
+    }
+
+    [Fact]
+    public async Task Upload_PurposeNotAllowedForRole_ReturnsForbidden()
+    {
+        _requestAccess.CanWritePurpose(AttachmentPurposes.Photo).Returns(false);
+
+        var result = await Create().UploadAsync("Request", 1, "Photo", new FileUpload(PngBytes, "a.png"), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.AttachmentPurposeNotAllowed);
+        await _storage.DidNotReceiveWithAnyArgs().SaveAsync(default!, default!, default!, default);
     }
 
     [Fact]

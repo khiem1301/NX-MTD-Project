@@ -2,7 +2,9 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import { downloadBlob } from '@/utils/downloadFile';
 import type {
+  AvailableVehicle,
   ConfirmDeliveryPayload,
+  ExportDispatchPayload,
   CreateDispatchPayload,
   DispatchableLine,
   DispatchNote,
@@ -18,6 +20,7 @@ const post = async <T>(url: string, body?: unknown): Promise<T> =>
 export const MANAGER_BASE = '/api/v1/manager/dispatch-notes';
 export const WAREHOUSE_BASE = '/api/v1/warehouse-keeper/dispatch-notes';
 export const ACCOUNTANT_BASE = '/api/v1/accountant/dispatch-notes';
+const WAREHOUSE_VEHICLES = '/api/v1/warehouse-keeper/vehicles/available';
 
 /** Ba vai trò dùng ba nhóm URL; base do hook chọn theo vai trò đăng nhập. */
 export const dispatchApi = {
@@ -30,8 +33,10 @@ export const dispatchApi = {
     downloadBlob(`${base}/${id}/excel`, `PhieuXuat_${code}.xlsx`),
   create: (body: CreateDispatchPayload) => post<DispatchNote>(MANAGER_BASE, body),
   cancel: (id: number, rowVer: string) => post<null>(`${MANAGER_BASE}/${id}/cancel`, { rowVer }),
-  exportGoods: (id: number, rowVer: string) =>
-    post<null>(`${WAREHOUSE_BASE}/${id}/export`, { rowVer }),
+  /** Trả câu báo của BE (có biển số xe / cảnh báo lệch km khi giao bằng xe công ty). */
+  exportGoods: async (id: number, body: ExportDispatchPayload) =>
+    (await apiClient.post<ApiResponse<null>>(`${WAREHOUSE_BASE}/${id}/export`, body)).data.message,
+  availableVehicles: () => get<AvailableVehicle[]>(WAREHOUSE_VEHICLES),
   reject: (id: number, reason: string, rowVer: string) =>
     post<null>(`${WAREHOUSE_BASE}/${id}/reject`, { reason, rowVer }),
   confirmDelivery: (id: number, body: ConfirmDeliveryPayload) =>

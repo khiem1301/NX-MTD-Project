@@ -31,6 +31,28 @@ export type DispatchNote = Omit<DispatchNoteListItem, 'totalIssueQty'> & {
   lines: DispatchNoteLine[];
   /** Phiên bản phiếu đang xem; gửi lại khi hủy, xuất, từ chối, xác nhận giao để phát hiện người khác đã đổi phiếu. */
   rowVer: string;
+  /** DEV-ALL-127: cách giao Thủ kho chọn khi xuất; xe công ty thì kèm biển số và tài xế của chuyến. */
+  deliveryMethod: DeliveryMethod | null;
+  vehiclePlate: string | null;
+  driverName: string | null;
+};
+
+export type DeliveryMethod = 'CUSTOMER_PICKUP' | 'COMPANY_VEHICLE';
+
+export type ExportDispatchPayload = {
+  rowVer: string;
+  deliveryMethod: DeliveryMethod;
+  vehicleId: number | null;
+  driverName: string | null;
+  odometerStart: number | null;
+};
+
+/** Xe đang hoạt động và chưa có chuyến đang chạy; lastOdometer để điền sẵn km lúc đi. */
+export type AvailableVehicle = {
+  vehicleId: number;
+  plateNumber: string;
+  vehicleType: string;
+  lastOdometer: number | null;
 };
 
 export type DispatchableLine = {

@@ -116,6 +116,17 @@ export const PM_LABELS = {
   pastDayReadOnly: 'Ngày đã qua: chỉ xem, không giao hay sửa được nữa.',
   noWorkers: 'Không có công nhân phù hợp.',
   lineSizeSeparator: '-',
+  // DEV-ALL-126: xác nhận hàng loạt.
+  confirmSelected: 'Xác nhận các phiếu đã chọn ({0})',
+  selectAllPending: 'Chọn tất cả phiếu đang chờ',
+  clearSelection: 'Bỏ chọn',
+  batchTitle: 'Xác nhận {0} phiếu giao việc',
+  batchHint:
+    'Số xác nhận mặc định bằng số giao. Phiếu nào nhận khác số giao thì sửa số và ghi lý do lệch (bắt buộc).',
+  sharedReason: 'Lý do chung',
+  sharedReasonPlaceholder: 'Điền nhanh cho mọi phiếu lệch chưa có lý do',
+  applySharedReason: 'Áp dụng',
+  missingReasons: 'Còn {0} phiếu lệch số chưa có lý do.',
 } as const;
 
 export const PM_MESSAGES = {
@@ -123,7 +134,11 @@ export const PM_MESSAGES = {
   rejected: 'Đã từ chối phiếu.',
   discrepancyReasonRequired: 'Số xác nhận khác số ghi trên phiếu, vui lòng nhập lý do.',
   dailySaved: 'Đã lưu giao việc trong ngày.',
+  batchConfirmed: 'Đã xác nhận các phiếu đã chọn.',
 } as const;
+
+/** Tối đa phiếu mỗi lần xác nhận hàng loạt (khớp ConfirmWorkAllocationBatchDtoValidator.MaxItems ở BE). */
+export const MAX_BATCH_CONFIRM = 100;
 
 export const STATUS_OPTIONS = Object.entries(MOVEMENT_STATUS_LABEL).map(([value, l]) => ({
   value,

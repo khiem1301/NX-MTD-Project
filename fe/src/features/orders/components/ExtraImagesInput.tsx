@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Flex, Typography, Upload, message } from 'antd';
+import { Button, Flex, Tooltip, Typography, Upload, message } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
@@ -12,6 +12,8 @@ import { ProductImage } from './ProductImage';
 
 const text = MESSAGES.orders;
 const DEFAULT_THUMB = 80;
+/** Ô nhỏ hơn cỡ này không đủ chỗ cho chữ "Thêm ảnh" (tràn chữ): chỉ hiện dấu +, chữ chuyển vào tooltip. */
+const MIN_THUMB_WITH_LABEL = 72;
 
 type Props = {
   value?: string[];
@@ -37,6 +39,7 @@ export function ExtraImagesInput({
   thumb = DEFAULT_THUMB,
 }: Props) {
   const [uploading, setUploading] = useState(0);
+  const compact = thumb < MIN_THUMB_WITH_LABEL;
   // Chọn nhiều ảnh cùng lúc thì các lần tải xong chồng lên nhau: giữ danh sách mới nhất và số chỗ đã giữ cho ảnh đang tải.
   const latest = useRef(value);
   const reserved = useRef(0);
@@ -104,12 +107,23 @@ export function ExtraImagesInput({
             showUploadList={false}
             beforeUpload={beforeUpload}
           >
-            <Button type="dashed" loading={uploading > 0} style={{ width: thumb, height: thumb }}>
-              <div>
-                <PlusOutlined />
-                <div>{text.addExtraImage}</div>
-              </div>
-            </Button>
+            <Tooltip title={compact ? text.addExtraImage : undefined}>
+              <Button
+                type="dashed"
+                loading={uploading > 0}
+                aria-label={text.addExtraImage}
+                style={{ width: thumb, height: thumb, padding: 0 }}
+              >
+                {compact ? (
+                  <PlusOutlined />
+                ) : (
+                  <div>
+                    <PlusOutlined />
+                    <div>{text.addExtraImage}</div>
+                  </div>
+                )}
+              </Button>
+            </Tooltip>
           </Upload>
         )}
       </Flex>

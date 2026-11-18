@@ -81,6 +81,9 @@ export type PurchaseOrderLine = {
   orderedQty: number;
   unitPrice: number;
   amount: number | null;
+  /** Số đã nhận (phiếu nhập đã xác nhận) và số Quản đốc chốt không bù. */
+  receivedQty: number;
+  notReplenishedQty: number;
 };
 
 /** Nút nào hiện được: do server tính theo vai trò + trạng thái đơn. */
@@ -90,6 +93,8 @@ export type PurchaseOrderPermissions = {
   canReprice: boolean;
   canConfirmPayment: boolean;
   canReturnPayment: boolean;
+  /** DEV-ALL-131: Kế toán + đơn Thanh toán một phần. */
+  canPayRemaining: boolean;
 };
 
 export type PurchaseOrderDetail = {
@@ -117,6 +122,11 @@ export type PurchaseOrderDetail = {
   paymentMethod: PaymentMethod | null;
   paymentNote: string | null;
   totalAmount: number;
+  /** DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù (Kế toán nhập); receivedAmount = Σ số đã nhận × đơn giá (gợi ý). */
+  actualAmount: number | null;
+  receivedAmount: number;
+  /** DEV-ALL-131: số còn phải trả khi đơn Thanh toán một phần (null với trạng thái khác). */
+  remainingAmount: number | null;
   createdAt: string;
   rowVer: string;
   lines: PurchaseOrderLine[];
@@ -152,6 +162,16 @@ export type RepricePayload = {
 export type ConfirmPaymentPayload = {
   paymentDate: string;
   paidAmount: number;
+  paymentMethod: PaymentMethod;
+  paymentNote: string | null;
+  rowVer: string;
+  /** Bắt buộc với đơn Chốt không bù (DEV-ALL-129). */
+  actualAmount?: number | null;
+};
+
+export type PayRemainingPayload = {
+  paymentDate: string;
+  amount: number;
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
   rowVer: string;

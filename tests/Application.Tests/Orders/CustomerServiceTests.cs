@@ -17,7 +17,9 @@ public class CustomerServiceTests
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
 
-    private CustomerService Sut() => new(_customers, _audit, _uow);
+    private readonly IPartnerContactChecker _contacts = Substitute.For<IPartnerContactChecker>();
+
+    private CustomerService Sut() => new(_customers, _audit, _uow, _contacts);
 
     private Customer Existing(string status)
     {

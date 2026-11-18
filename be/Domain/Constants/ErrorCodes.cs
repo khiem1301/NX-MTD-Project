@@ -40,6 +40,11 @@ public static class ErrorCodes
     public const string AttachmentFileTooLarge = "ATTACHMENT_FILE_TOO_LARGE";
     public const string AttachmentFileTypeNotAllowed = "ATTACHMENT_FILE_TYPE_NOT_ALLOWED";
     public const string AttachmentLimitReached = "ATTACHMENT_LIMIT_REACHED";
+    /// <summary>DEV-ALL-128: vai trò không được tải nhóm ảnh này (vd Thủ kho tải biên bản giao của Kế toán).</summary>
+    public const string AttachmentPurposeNotAllowed = "ATTACHMENT_PURPOSE_NOT_ALLOWED";
+    /// <summary>DEV-ALL-125: SĐT / email đã dùng cho khách hàng hoặc nhà cung cấp khác.</summary>
+    public const string PartnerPhoneDuplicate = "PARTNER_PHONE_DUPLICATE";
+    public const string PartnerEmailDuplicate = "PARTNER_EMAIL_DUPLICATE";
 
     // Đơn từ (KH-06)
     public const string RequestTypeNotAllowed = "REQUEST_TYPE_NOT_ALLOWED";
@@ -54,6 +59,8 @@ public static class ErrorCodes
     public const string OrderMarkerInvalid = "ORDER_MARKER_INVALID";
     /// <summary>DEV-ALL-115: file Excel định mức sai mẫu, hoặc nhập khi còn lỗi / không có gì thay đổi.</summary>
     public const string SpecImportInvalid = "SPEC_IMPORT_INVALID";
+    /// <summary>DEV-ALL-121: file Excel không có bảng được yêu cầu (dùng một file nhiều sheet cho mọi mục: mục thiếu bảng thì bỏ qua).</summary>
+    public const string ImportTableMissing = "IMPORT_TABLE_MISSING";
     /// <summary>DEV-ALL-118: file Excel dòng hàng của đơn sai mẫu.</summary>
     public const string OrderImportInvalid = "ORDER_IMPORT_INVALID";
     /// <summary>DEV-ALL-120: file Excel mã hàng sai mẫu hoặc không có mã mới.</summary>

@@ -4,6 +4,7 @@ import { PURCHASE_TEXT } from '../constants';
 import { purchaseApi } from '../api/purchaseApi';
 import type {
   ConfirmPaymentPayload,
+  PayRemainingPayload,
   PlacePayload,
   PurchaseOrderQuery,
   PurchaseRole,
@@ -90,6 +91,13 @@ export const useConfirmPayment = (id: number) =>
   useApiMutation(
     (body: ConfirmPaymentPayload) => purchaseApi.confirmPayment(id, body),
     afterAction(PURCHASE_TEXT.done.paid),
+  );
+
+/** DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần. */
+export const usePayRemaining = (id: number) =>
+  useApiMutation(
+    (body: PayRemainingPayload) => purchaseApi.payRemaining(id, body),
+    afterAction(PURCHASE_TEXT.done.paidRemaining),
   );
 
 export const useReturnPayment = (id: number) =>

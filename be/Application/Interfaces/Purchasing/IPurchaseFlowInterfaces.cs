@@ -43,6 +43,9 @@ public interface IPurchaseOrderFlowService
     /// <summary>UNPAID → PAID: ngày, số tiền, hình thức; ảnh chứng từ tùy chọn (Attachment). Không sửa nhà cung cấp / số lượng (GBR-18).</summary>
     Task<Result> ConfirmPaymentAsync(int purchaseOrderId, ConfirmPaymentDto dto, CancellationToken ct);
 
+    /// <summary>DEV-ALL-131: trả thêm cho đơn Thanh toán một phần; đủ mốc thì Đã thanh toán.</summary>
+    Task<Result> PayRemainingAsync(int purchaseOrderId, PayRemainingDto dto, CancellationToken ct);
+
     /// <summary>UNPAID → RETURNED (bắt buộc lý do): trả lại Quản đốc sửa.</summary>
     Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct);
 }

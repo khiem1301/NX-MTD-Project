@@ -845,6 +845,7 @@ CREATE TABLE dbo.PurchaseOrder (
     -- Thanh toán do Kế toán xác nhận (PAYMENT, UC34); ảnh chứng từ trong Attachment (OwnerType = PURCHASE_ORDER)
     PaymentDate           DATE           NULL,
     PaidAmount            DECIMAL(18,2)  NULL,
+    ActualAmount          DECIMAL(18,2)  NULL,  -- DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán
     PaymentMethod         VARCHAR(20)    NULL,
     PaymentNote           NVARCHAR(500)  NULL,
     Note                  NVARCHAR(1000) NULL,
@@ -857,6 +858,7 @@ CREATE TABLE dbo.PurchaseOrder (
     CONSTRAINT CK_PO_Paid   CHECK (PaymentStatus NOT IN ('PAID','PARTIALLY_PAID')
                                     OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)),
     CONSTRAINT CK_PO_PayReturn CHECK (PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL),
+    CONSTRAINT CK_PO_ActualAmount CHECK (ActualAmount IS NULL OR ActualAmount > 0),
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
@@ -1308,8 +1310,11 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedBy        INT            NULL CONSTRAINT FK_DN_DispatchedBy REFERENCES dbo.Employee(EmployeeId),  -- Thủ kho
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
+    DeliveryMethod      VARCHAR(20)    NULL,     -- DEV-ALL-127: Thủ kho chọn khi xuất: khách lấy / xe công ty giao
     RowVer              ROWVERSION,
     CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED')),
+    CONSTRAINT CK_DN_DeliveryMethod CHECK (DeliveryMethod IS NULL OR DeliveryMethod IN ('CUSTOMER_PICKUP','COMPANY_VEHICLE')),
+    CONSTRAINT CK_DN_DeliveryMethodSet CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR DeliveryMethod IS NOT NULL),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_DN_Delivered CHECK (Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL),
     CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))

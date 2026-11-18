@@ -13,7 +13,7 @@ namespace NX_MTD.Application.Services;
 /// số lần đã giao là trần sản lượng của công nhân ở đúng công đoạn đó (<c>vw_WorkerOutputCap</c>, 50052).
 /// Service kiểm trước để báo lỗi rõ; trigger <c>trg_WorkAllocation_Check</c> là chốt chặn cuối.
 /// </summary>
-public sealed class WorkAllocationService : IWorkAllocationService
+public sealed partial class WorkAllocationService : IWorkAllocationService
 {
     private readonly IUnitOfWork _uow;
     private readonly INotificationService _notifier;
@@ -67,7 +67,11 @@ public sealed class WorkAllocationService : IWorkAllocationService
             .GroupBy(m => new { m.WorkerId, m.Worker.EmployeeCode, m.Worker.FullName, m.OrderLineId, m.OperationId })
             .Select(g => new
             {
-                g.Key.WorkerId, g.Key.EmployeeCode, g.Key.FullName, g.Key.OrderLineId, g.Key.OperationId,
+                g.Key.WorkerId,
+                g.Key.EmployeeCode,
+                g.Key.FullName,
+                g.Key.OrderLineId,
+                g.Key.OperationId,
                 Held = g.Where(m => m.Status == HandoverStatuses.Confirmed)
                     .Sum(m => m.MovementType == PieceMovementTypes.Handover ? m.ConfirmedQty ?? 0 : -(m.ConfirmedQty ?? 0)),
                 PendingRetrieval = g.Where(m => m.Status == HandoverStatuses.Pending && m.MovementType == PieceMovementTypes.Retrieval)
@@ -210,25 +214,15 @@ public sealed class WorkAllocationService : IWorkAllocationService
         Func<WorkAllocation, Task<Result>> apply, bool notifyLeaders) =>
         _uow.InTransactionAsync(async () =>
         {
-            var allocation = await Allocations.Include(m => m.OrderLine).ThenInclude(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
-                .Include(m => m.Operation).FirstOrDefaultAsync(m => m.WorkAllocationId == allocationId, ct);
-            if (allocation is null || !allowed(allocation)) return WarehouseFailures.NotFound();
-            if (allocation.Status != HandoverStatuses.Pending) return WarehouseFailures.InvalidStatus();
-
-            await _locks.AcquireAsync($"work-allocation:{allocation.SewingTeamId}:{allocation.OrderLineId}", ct);
-            var before = new { allocation.Status };
+            var (allocation, failure) = await LoadPendingAsync(allocationId, allowed, ct);
+            if (allocation is null) return failure!;
             var result = await apply(allocation);
             if (!result.IsSuccess) return result;
 
-            _audit.Add(new AuditEntry(nameof(WorkAllocation), allocation.WorkAllocationId, AuditActions.Update, before,
-                new { allocation.Status, allocation.ConfirmedQty, allocation.ConfirmMode },
-                allocation.OnBehalfReason ?? allocation.RejectReason));
+            AuditDecision(allocation);
             if (notifyLeaders)
             {
-                var leaders = await _uow.Repository<Employee>().Query().AsNoTracking()
-                    .Where(e => e.TeamId == allocation.SewingTeamId && e.Status == RecordStatus.Active
-                                && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
-                    .Select(e => e.EmployeeId).ToListAsync(ct);
+                var leaders = await LeaderIdsAsync(allocation.SewingTeamId, ct);
                 _notifier.NotifyEmployees(leaders, new NotificationMessage(NotificationSources.Production,
                     allocation.Status == HandoverStatuses.Confirmed ? "Công nhân đã xác nhận việc được giao" : "Công nhân từ chối phiếu giao việc",
                     $"{allocation.Operation.OperationName} ({allocation.OrderLine.ProductVariant.ProductColor.Color} - {allocation.OrderLine.ProductVariant.SizeCode}): {(allocation.Status == HandoverStatuses.Confirmed ? "đã xác nhận" : "bị từ chối")}.",
@@ -237,6 +231,32 @@ public sealed class WorkAllocationService : IWorkAllocationService
             await _uow.SaveChangesAsync();
             return result;
         });
+
+    /// <summary>Tải phiếu đang chờ của đúng người được quyết định và khóa theo tổ × dòng đơn.</summary>
+    private async Task<(WorkAllocation? Allocation, Result? Failure)> LoadPendingAsync(int allocationId,
+        Func<WorkAllocation, bool> allowed, CancellationToken ct)
+    {
+        var allocation = await Allocations.Include(m => m.OrderLine).ThenInclude(l => l.ProductVariant).ThenInclude(v => v.ProductColor)
+            .Include(m => m.Operation).FirstOrDefaultAsync(m => m.WorkAllocationId == allocationId, ct);
+        if (allocation is null || !allowed(allocation)) return (null, WarehouseFailures.NotFound());
+        if (allocation.Status != HandoverStatuses.Pending) return (null, WarehouseFailures.InvalidStatus());
+
+        await _locks.AcquireAsync($"work-allocation:{allocation.SewingTeamId}:{allocation.OrderLineId}", ct);
+        return (allocation, null);
+    }
+
+    /// <summary>Phiếu chỉ được quyết định khi đang chờ, nên trạng thái trước luôn là PENDING.</summary>
+    private void AuditDecision(WorkAllocation allocation) =>
+        _audit.Add(new AuditEntry(nameof(WorkAllocation), allocation.WorkAllocationId, AuditActions.Update,
+            new { Status = HandoverStatuses.Pending },
+            new { allocation.Status, allocation.ConfirmedQty, allocation.ConfirmMode },
+            allocation.OnBehalfReason ?? allocation.RejectReason));
+
+    private Task<List<int>> LeaderIdsAsync(int teamId, CancellationToken ct) =>
+        _uow.Repository<Employee>().Query().AsNoTracking()
+            .Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active
+                        && (e.Role.RoleCode == RoleCodes.TeamLeader || e.Role.RoleCode == RoleCodes.TeamDeputy))
+            .Select(e => e.EmployeeId).ToListAsync(ct);
 
     private async Task<Result> ApplyConfirmAsync(WorkAllocation m, int confirmedQty, string? discrepancy,
         string mode, string? onBehalfReason, CancellationToken ct)

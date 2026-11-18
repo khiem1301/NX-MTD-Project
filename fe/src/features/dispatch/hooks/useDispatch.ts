@@ -1,10 +1,16 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { message } from 'antd';
 import { ROLES } from '@/constants/roles';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import { useAuth } from '@/hooks/useAuth';
 import { ACCOUNTANT_BASE, dispatchApi, MANAGER_BASE, WAREHOUSE_BASE } from '../api/dispatchApi';
 import { DISPATCH_MESSAGES } from '../constants';
-import type { ConfirmDeliveryPayload, CreateDispatchPayload, DispatchNoteQuery } from '../types';
+import type {
+  ConfirmDeliveryPayload,
+  CreateDispatchPayload,
+  DispatchNoteQuery,
+  ExportDispatchPayload,
+} from '../types';
 
 export const DISPATCH_KEY = ['dispatch'] as const;
 // Xuất hàng làm đổi tồn kho thành phẩm và trạng thái đơn hàng nên nạp lại cả hai.
@@ -57,14 +63,24 @@ export const useCancelDispatch = () =>
     },
   );
 
+/** Hiện câu báo của BE (biển số xe, cảnh báo lệch km khi giao bằng xe công ty) — DEV-ALL-127. */
 export const useExportDispatch = () =>
   useApiMutation(
-    ({ id, rowVer }: { id: number; rowVer: string }) => dispatchApi.exportGoods(id, rowVer),
-    {
-      invalidate: AFFECTED,
-      successMessage: DISPATCH_MESSAGES.exported,
+    async ({ id, body }: { id: number; body: ExportDispatchPayload }) => {
+      const serverMessage = await dispatchApi.exportGoods(id, body);
+      void message.success(serverMessage ?? DISPATCH_MESSAGES.exported, 6);
     },
+    // Xe công ty giao tạo chuyến xe: nạp lại Sổ xe (key của feature vehicle-log).
+    { invalidate: [...AFFECTED, ['vehicle-log']] },
   );
+
+/** Xe Thủ kho chọn được khi xuất bằng xe công ty; chỉ tải khi modal xuất kho mở. */
+export const useAvailableVehicles = (enabled: boolean) =>
+  useQuery({
+    queryKey: [...DISPATCH_KEY, 'available-vehicles'],
+    queryFn: dispatchApi.availableVehicles,
+    enabled,
+  });
 
 export const useRejectDispatch = () =>
   useApiMutation(

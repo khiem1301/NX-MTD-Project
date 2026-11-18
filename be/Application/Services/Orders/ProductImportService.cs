@@ -77,6 +77,10 @@ public sealed class ProductImportService : IProductImportService
             errors - rows.Duplicates, rows.Duplicates);
     }
 
+    /// <summary>DEV-ALL-122: xem trước từ dòng đã đọc và sửa trên màn hình (popup kiểm tra Excel), không ghi gì.</summary>
+    public async Task<Result<ProductImportPreviewDto>> PreviewAsync(IReadOnlyList<ProductExcelRow> rows, CancellationToken ct) =>
+        Result<ProductImportPreviewDto>.Success(Summary(await PlanRowsAsync(rows, ct)));
+
     private async Task<Result<Plan>> PlanAsync(Stream stream, CancellationToken ct)
     {
         IReadOnlyList<ProductExcelRow> excel;
@@ -88,7 +92,11 @@ public sealed class ProductImportService : IProductImportService
         {
             return Result<Plan>.Failure(ErrorCodes.ProductImportInvalid, ex.Message, ResultKind.Validation);
         }
+        return Result<Plan>.Success(await PlanRowsAsync(excel, ct));
+    }
 
+    private async Task<Plan> PlanRowsAsync(IReadOnlyList<ProductExcelRow> excel, CancellationToken ct)
+    {
         var codes = excel.Select(r => r.ProductCode).Where(c => c.Length > 0).Distinct().ToList();
         var existing = (await _uow.Repository<Product>().Query().AsNoTracking().Where(p => codes.Contains(p.ProductCode))
             .Select(p => p.ProductCode).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -111,6 +119,6 @@ public sealed class ProductImportService : IProductImportService
             rows.Add(new ProductImportRowDto(row.RowNumber, action,
                 action == ActionExists ? Messages.ProductImportExists : error, row.ProductCode, row.ProductName, row.Description));
         }
-        return Result<Plan>.Success(rows);
+        return rows;
     }
 }

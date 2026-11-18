@@ -18,6 +18,7 @@ public class DispatchNoteServiceTests
     private static readonly DateOnly Today = new(2026, 10, 30);
     private static readonly byte[] RowVer = { 1 };
     private static readonly DispatchActionDto Act = new(RowVer);
+    private static readonly ExportDispatchDto Pickup = new(RowVer, DeliveryMethods.CustomerPickup, null, null, null);
 
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IStockService _stock = Substitute.For<IStockService>();
@@ -26,6 +27,7 @@ public class DispatchNoteServiceTests
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IAppLock _locks = Substitute.For<IAppLock>();
     private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IVehicleService _vehicles = Substitute.For<IVehicleService>();
 
     private readonly List<CustomerOrder> _orders = new();
     private readonly List<OrderLine> _orderLines = new();
@@ -46,7 +48,9 @@ public class DispatchNoteServiceTests
             Arg.Any<CancellationToken>()).Returns("XH-20261030-001");
         _order = new CustomerOrder
         {
-            OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction,
+            OrderId = 7,
+            OrderCode = "DH-1",
+            Status = OrderStatuses.InProduction,
             Customer = new Customer { CustomerName = "Khách A" },
         };
         _orders.Add(_order);
@@ -63,7 +67,7 @@ public class DispatchNoteServiceTests
     }
 
     private DispatchNoteService Service() =>
-        new(_uow, _stock, _codes, _notifier, _audit, _locks, _clock, NullLogger<DispatchNoteService>.Instance);
+        new(_uow, _stock, _codes, _notifier, _audit, _locks, _clock, NullLogger<DispatchNoteService>.Instance, _vehicles);
 
     private OrderLine AddLine(int id, int ordered)
     {
@@ -76,15 +80,24 @@ public class DispatchNoteServiceTests
     {
         var note = new DispatchNote
         {
-            DispatchNoteId = _notes.Count + 1, DispatchCode = $"XH-{_notes.Count + 1}", OrderId = 7, Order = _order,
-            DeliveryDate = Today, DeliveryAddress = "Kho khách", Status = status, CreatedAt = Now,
+            DispatchNoteId = _notes.Count + 1,
+            DispatchCode = $"XH-{_notes.Count + 1}",
+            OrderId = 7,
+            Order = _order,
+            DeliveryDate = Today,
+            DeliveryAddress = "Kho khách",
+            Status = status,
+            CreatedAt = Now,
         };
         foreach (var (lineId, issue) in lines)
         {
             var line = new DispatchNoteLine
             {
-                DispatchNoteLineId = note.DispatchNoteId * 10 + note.DispatchNoteLines.Count, DispatchNoteId = note.DispatchNoteId,
-                DispatchNote = note, OrderLineId = lineId, OrderLine = _orderLines.First(l => l.OrderLineId == lineId),
+                DispatchNoteLineId = note.DispatchNoteId * 10 + note.DispatchNoteLines.Count,
+                DispatchNoteId = note.DispatchNoteId,
+                DispatchNote = note,
+                OrderLineId = lineId,
+                OrderLine = _orderLines.First(l => l.OrderLineId == lineId),
                 IssueQty = issue,
             };
             note.DispatchNoteLines.Add(line);
@@ -96,7 +109,10 @@ public class DispatchNoteServiceTests
 
     private void Photo(DispatchNote note, string purpose) => _photos.Add(new Attachment
     {
-        OwnerType = AttachmentOwnerTypes.DispatchNote, OwnerId = note.DispatchNoteId, Purpose = purpose, IsCurrent = true,
+        OwnerType = AttachmentOwnerTypes.DispatchNote,
+        OwnerId = note.DispatchNoteId,
+        Purpose = purpose,
+        IsCurrent = true,
     });
 
     /// <summary>Phiếu chờ xuất đã có ảnh phiếu xuất có Quản đốc ký.</summary>
@@ -248,17 +264,17 @@ public class DispatchNoteServiceTests
     {
         var note = Note(DispatchStatuses.Pending, (101, 10));
 
-        var without = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
+        var without = await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default);
 
         without.ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
         note.Status.Should().Be(DispatchStatuses.Pending);
         await _stock.DidNotReceive().PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>());
 
         Photo(note, AttachmentPurposes.SignedDeliveryNote);   // ảnh biên bản giao không thay được ảnh phiếu xuất
-        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
+        (await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default)).ErrorCode.Should().Be(ErrorCodes.DispatchIssuePhotoRequired);
 
         Photo(note, AttachmentPurposes.SignedIssueSlip);
-        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).IsSuccess.Should().BeTrue();
+        (await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default)).IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -266,7 +282,7 @@ public class DispatchNoteServiceTests
     {
         var note = Signed((101, 40), (102, 10));
 
-        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
+        var result = await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default);
 
         result.IsSuccess.Should().BeTrue();
         note.Status.Should().Be(DispatchStatuses.InDelivery);
@@ -288,11 +304,83 @@ public class DispatchNoteServiceTests
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>())
             .Returns(Result.Failure(ErrorCodes.WarehouseInsufficientStock, "x"));
 
-        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 9, default);
+        var result = await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default);
 
         result.IsSuccess.Should().BeFalse();
         note.Status.Should().Be(DispatchStatuses.Pending);
         _order.Status.Should().Be(OrderStatuses.InProduction);
+    }
+
+    // ---------- Cách giao khi xuất (DEV-ALL-127) ----------
+
+    private static ExportDispatchDto ByVehicle(int vehicleId = 3) =>
+        new(RowVer, DeliveryMethods.CompanyVehicle, vehicleId, " Tài xế A ", 1200);
+
+    private void VehicleExists(int vehicleId = 3)
+    {
+        var vehicles = new List<NX_MTD.Domain.Entities.Vehicle> { new() { VehicleId = vehicleId, PlateNumber = "29C-12345" } };
+        Setup(vehicles);
+    }
+
+    [Fact]
+    public async Task Export_by_customer_pickup_stores_the_method_and_starts_no_trip()
+    {
+        var note = Signed((101, 10));
+
+        var result = await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default);
+
+        result.IsSuccess.Should().BeTrue();
+        note.DeliveryMethod.Should().Be(DeliveryMethods.CustomerPickup);
+        await _vehicles.DidNotReceive().PrepareTripAsync(Arg.Any<StartVehicleTripDto>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Export_by_company_vehicle_starts_a_trip_linked_to_the_note()
+    {
+        var note = Signed((101, 10));
+        VehicleExists();
+        _vehicles.PrepareTripAsync(Arg.Any<StartVehicleTripDto>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PreparedTrip>.Success(new PreparedTrip(new VehicleTrip { VehicleId = 3 }, 1200)));
+
+        var result = await Service().ExportAsync(note.DispatchNoteId, ByVehicle(), 9, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Contain("29C-12345");
+        note.DeliveryMethod.Should().Be(DeliveryMethods.CompanyVehicle);
+        note.Status.Should().Be(DispatchStatuses.InDelivery);
+        await _vehicles.Received(1).PrepareTripAsync(Arg.Is<StartVehicleTripDto>(d => d.VehicleId == 3
+            && d.DispatchNoteId == note.DispatchNoteId && d.TripDate == Today && d.OdometerStart == 1200
+            && d.DriverName == " Tài xế A " && d.Purpose!.Contains(note.DispatchCode)), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Export_is_refused_when_the_vehicle_already_has_an_open_trip()
+    {
+        var note = Signed((101, 10));
+        _vehicles.PrepareTripAsync(Arg.Any<StartVehicleTripDto>(), Arg.Any<CancellationToken>())
+            .Returns(Result<PreparedTrip>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripAlreadyOpen));
+
+        var result = await Service().ExportAsync(note.DispatchNoteId, ByVehicle(), 9, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        note.Status.Should().Be(DispatchStatuses.Pending);
+        note.DeliveryMethod.Should().BeNull();
+        await _uow.Received(1).RollbackTransactionAsync();
+    }
+
+    [Fact]
+    public void Export_validator_needs_vehicle_driver_and_odometer_for_company_delivery()
+    {
+        var validator = new ExportDispatchDtoValidator();
+
+        validator.Validate(Pickup).IsValid.Should().BeTrue();
+        validator.Validate(ByVehicle()).IsValid.Should().BeTrue();
+        validator.Validate(Pickup with { DeliveryMethod = "TRUCK" }).IsValid.Should().BeFalse();
+        validator.Validate(ByVehicle() with { VehicleId = null }).Errors.Should().ContainSingle()
+            .Which.ErrorMessage.Should().Be(WarehouseMessages.DispatchVehicleRequired);
+        validator.Validate(ByVehicle() with { DriverName = " " }).IsValid.Should().BeFalse();
+        validator.Validate(ByVehicle() with { OdometerStart = null }).IsValid.Should().BeFalse();
+        validator.Validate(ByVehicle() with { OdometerStart = -1 }).IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -301,7 +389,7 @@ public class DispatchNoteServiceTests
         var note = Note(DispatchStatuses.InDelivery, (101, 10));
         Photo(note, AttachmentPurposes.SignedIssueSlip);
 
-        (await Service().ExportAsync(note.DispatchNoteId, Act, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
+        (await Service().ExportAsync(note.DispatchNoteId, Pickup, 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
         (await Service().RejectAsync(note.DispatchNoteId, new RejectDispatchDto("x", RowVer), 9, default)).ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
     }
 
@@ -404,7 +492,7 @@ public class DispatchNoteServiceTests
         repo.Received(1).SetOriginalRowVersion(cancel, stale);
 
         var signed = Signed((101, 5));
-        await Service().ExportAsync(signed.DispatchNoteId, new DispatchActionDto(stale), 9, default);
+        await Service().ExportAsync(signed.DispatchNoteId, Pickup with { RowVer = stale }, 9, default);
         repo.Received(1).SetOriginalRowVersion(signed, stale);
 
         var reject = Note(DispatchStatuses.Pending, (102, 5));
@@ -422,7 +510,7 @@ public class DispatchNoteServiceTests
         var note = Signed((101, 10));
         _order.Status = OrderStatuses.Cancelled;
 
-        var result = await Service().ExportAsync(note.DispatchNoteId, Act, 5, default);
+        var result = await Service().ExportAsync(note.DispatchNoteId, Pickup, 5, default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseOrderClosed);
         note.Status.Should().Be(DispatchStatuses.Pending);
@@ -481,6 +569,20 @@ public class DispatchNoteServiceTests
 
         (await new DispatchNoteAttachmentAccess(_uow, user).CanReadAsync(note.DispatchNoteId, default)).Should().Be(allowed);
         (await new DispatchNoteAttachmentAccess(_uow, user).CanReadAsync(999, default)).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(Roles.WarehouseKeeper, AttachmentPurposes.SignedIssueSlip, true)]
+    [InlineData(Roles.WarehouseKeeper, AttachmentPurposes.SignedDeliveryNote, false)]
+    [InlineData(Roles.Accountant, AttachmentPurposes.SignedDeliveryNote, true)]
+    [InlineData(Roles.Accountant, AttachmentPurposes.SignedIssueSlip, false)]
+    public void Attachment_purpose_depends_on_role(string role, string purpose, bool allowed)
+    {
+        // DEV-ALL-128: mỗi vai trò chỉ tải đúng nhóm ảnh của mình.
+        var user = Substitute.For<ICurrentUser>();
+        user.Role.Returns(role);
+
+        new DispatchNoteAttachmentAccess(_uow, user).CanWritePurpose(purpose).Should().Be(allowed);
     }
 
     // ---------- Validator ----------

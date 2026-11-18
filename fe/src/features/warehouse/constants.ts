@@ -2,42 +2,9 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 
 /** Loại kho dùng chung với kiểm kê: khai báo ở constants/warehouse. */
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
-
-/** SCRAP: NVL phế phẩm (vải vụn, kim gãy…), chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (DEV-ALL-112). */
-export const MATERIAL_TYPE = { FABRIC: 'FABRIC', TRIM: 'TRIM', SCRAP: 'SCRAP' } as const;
-
-export const MATERIAL_TYPE_LABEL: Record<string, string> = {
-  FABRIC: 'Vải',
-  TRIM: 'Phụ liệu',
-  SCRAP: 'Phế phẩm',
-};
-
-export const MATERIAL_CATEGORIES: Record<string, { value: string; label: string }[]> = {
-  FABRIC: [
-    { value: 'MAIN_FABRIC', label: 'Vải chính' },
-    { value: 'LINING', label: 'Vải lót' },
-    { value: 'INTERLINING', label: 'Mex / dựng' },
-    { value: 'RIB', label: 'Bo / rib' },
-  ],
-  TRIM: [
-    { value: 'THREAD', label: 'Chỉ' },
-    { value: 'ZIPPER', label: 'Khóa kéo' },
-    { value: 'BUTTON', label: 'Cúc' },
-    { value: 'SNAP', label: 'Cúc bấm' },
-    { value: 'ELASTIC', label: 'Chun' },
-    { value: 'TAPE', label: 'Dây / băng' },
-    { value: 'LABEL', label: 'Nhãn' },
-    { value: 'HANG_TAG', label: 'Thẻ treo' },
-    { value: 'PADDING', label: 'Bông / đệm' },
-    { value: 'PACKAGING', label: 'Bao bì' },
-    { value: 'OTHER', label: 'Khác' },
-  ],
-  SCRAP: [
-    { value: 'SCRAP_FABRIC', label: 'Vải vụn' },
-    { value: 'SCRAP_NEEDLE', label: 'Kim gãy' },
-    { value: 'SCRAP_OTHER', label: 'Phế phẩm khác' },
-  ],
-};
+/** Loại / nhóm NVL dùng chung với popup kiểm tra Excel của mã hàng (DEV-ALL-123): khai báo ở constants/warehouse. */
+import { MATERIAL_CATEGORIES } from '@/constants/warehouse';
+export { MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '@/constants/warehouse';
 
 export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
   Object.values(MATERIAL_CATEGORIES)

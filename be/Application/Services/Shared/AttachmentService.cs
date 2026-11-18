@@ -41,15 +41,25 @@ public sealed class AttachmentService : IAttachmentService
                 ResultKind.Validation);
 
         if (!await CanWriteAsync(owner, ownerId, ct)) return Fail.NotFound<AttachmentDto>();
+        if (_access.TryGetValue(owner, out var access) && !access.CanWritePurpose(purposeCode))
+            return Result<AttachmentDto>.Failure(ErrorCodes.AttachmentPurposeNotAllowed, Messages.AttachmentPurposeNotAllowed,
+                ResultKind.Forbidden);
+        // DEV-ALL-128: giới hạn tính theo từng nhóm ảnh (vd phiếu xuất: ảnh phiếu xuất và biên bản giao mỗi nhóm tối đa 5).
         var max = await MaxFilesAsync(owner, ct);
-        if (await _attachments.CountCurrentAsync(owner, ownerId, ct) >= max)
+        if (await _attachments.CountCurrentAsync(owner, ownerId, purposeCode, ct) >= max)
             return Result<AttachmentDto>.Failure(ErrorCodes.AttachmentLimitReached, string.Format(Messages.AttachmentLimitReached, max));
 
         var key = await _storage.SaveAsync(file.Content, owner, kind.Extension, ct);
         var entity = new Attachment
         {
-            OwnerType = owner, OwnerId = ownerId, Purpose = purposeCode, FileUrl = key,
-            FileName = Path.GetFileName(file.FileName), ContentType = kind.ContentType, IsCurrent = true, UploadedAt = _clock.Now,
+            OwnerType = owner,
+            OwnerId = ownerId,
+            Purpose = purposeCode,
+            FileUrl = key,
+            FileName = Path.GetFileName(file.FileName),
+            ContentType = kind.ContentType,
+            IsCurrent = true,
+            UploadedAt = _clock.Now,
         };
         await _attachments.AddAsync(entity, ct);
         await _uow.SaveChangesAsync();

@@ -3,6 +3,7 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   ConfirmPaymentPayload,
+  PayRemainingPayload,
   PlacePayload,
   PurchaseOrderDetail,
   PurchaseOrderListItem,
@@ -56,6 +57,8 @@ export const purchaseApi = {
   // Kế toán
   confirmPayment: (id: number, body: ConfirmPaymentPayload) =>
     post<void>(API.purchase.confirmPayment(id), body),
+  payRemaining: (id: number, body: PayRemainingPayload) =>
+    post<void>(API.purchase.payRemaining(id), body),
   returnPayment: (id: number, body: ReasonPayload) =>
     post<void>(API.purchase.returnPayment(id), body),
 };

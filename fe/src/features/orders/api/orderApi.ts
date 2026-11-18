@@ -4,6 +4,12 @@ import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   CreateOrderPayload,
   Customer,
+  ExcelBundle,
+  ExcelBundleCheck,
+  OrderMaterialCheck,
+  OrderMaterialExcelRow,
+  SpecImportPart,
+  SpecWorkbook,
   CustomerOption,
   CustomerQuery,
   OrderDetail,
@@ -88,7 +94,10 @@ const specImportRequest = async <T>(target: SpecImportTarget, file: File, previe
       : preview
         ? API.orderMarkers.importPreview(target.orderId, target.productId)
         : API.orderMarkers.import(target.orderId, target.productId);
-  const params = target.scope === 'admin' ? { orderId: target.orderId } : undefined;
+  const params =
+    target.scope === 'admin'
+      ? { orderId: target.orderId, parts: target.parts?.join(',') || undefined }
+      : undefined;
   return (await apiClient.post<ApiResponse<T>>(url, asFormData(file), { params })).data;
 };
 
@@ -109,6 +118,59 @@ export const productImportApi = {
 };
 
 /** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
+/** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa (không ghi), xem trước / nhập định mức từ JSON. */
+export const excelBundleApi = {
+  parse: (file: File) => post<ExcelBundle>(API.products.excelParse, asFormData(file)),
+  check: (body: { productId: number | null; orderId: number | null; bundle: ExcelBundle }) =>
+    post<ExcelBundleCheck>(API.products.excelCheck, body),
+  previewSpec: async (
+    productId: number,
+    workbook: SpecWorkbook,
+    orderId: number | undefined,
+    parts: SpecImportPart[],
+  ) =>
+    (
+      await apiClient.post<ApiResponse<SpecImportPreview>>(
+        API.products.importPreviewData(productId),
+        workbook,
+        { params: { orderId, parts: parts.join(',') } },
+      )
+    ).data.data,
+  /** Trả cả message (số dòng đã nhập). */
+  importSpec: async (
+    productId: number,
+    workbook: SpecWorkbook,
+    orderId: number | undefined,
+    parts: SpecImportPart[],
+  ) =>
+    (
+      await apiClient.post<ApiResponse<SpecImportResult>>(
+        API.products.importData(productId),
+        workbook,
+        {
+          params: { orderId, parts: parts.join(',') },
+        },
+      )
+    ).data,
+  /** NVL của đơn (API Admin) từ dòng đã sửa. */
+  previewOrderMaterials: async (orderId: number, rows: OrderMaterialExcelRow[]) =>
+    (
+      await apiClient.post<ApiResponse<OrderMaterialCheck>>(
+        `${API.warehouse.orderMaterials('admin')}/import/preview-data`,
+        rows,
+        { params: { orderId } },
+      )
+    ).data.data,
+  importOrderMaterials: async (orderId: number, rows: OrderMaterialExcelRow[]) =>
+    (
+      await apiClient.post<ApiResponse<unknown>>(
+        `${API.warehouse.orderMaterials('admin')}/import-data`,
+        rows,
+        { params: { orderId } },
+      )
+    ).data,
+};
+
 export const specImportApi = {
   preview: async (target: SpecImportTarget, file: File) =>
     (await specImportRequest<SpecImportPreview>(target, file, true)).data,
