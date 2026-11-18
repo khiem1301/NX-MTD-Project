@@ -6,7 +6,7 @@ export const OPERATIONS_TEXT = {
   subtitle:
     'Nhập công đoạn của mã hàng từ Excel rồi đặt đơn giá từng công đoạn (có ngày hiệu lực), gửi Admin duyệt. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
   adminSubtitle:
-    'Nhập và sửa công đoạn, nhóm công đoạn của mã hàng. Đơn giá do Kế toán đặt, Admin duyệt ở màn Duyệt đơn giá công đoạn. Mỗi mã hàng có đúng một công đoạn cuối đang dùng.',
+    'Xem công đoạn, nhóm công đoạn và đơn giá của mã hàng. Kế toán nhập, sửa công đoạn và đặt đơn giá; Admin duyệt ở màn Duyệt đơn giá công đoạn.',
   summary: '{0} công đoạn đang dùng, {1} chưa có nhóm, {2} chưa có đơn giá được duyệt.',
   noRate: 'Chưa có',
   selectProductHint:
@@ -60,7 +60,7 @@ export const OPERATIONS_TEXT = {
     hint: 'File có bảng với các cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT. Mã công đoạn tự sinh từ STT (STT 7 thành OP07), nhập lại file sẽ cập nhật đúng công đoạn cũ, không tạo trùng.',
     chooseFile: 'Bấm hoặc kéo file .xlsx vào đây',
     chooseFileHint:
-      'Chỉ đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ. Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
+      'Đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ, TIỀN; thêm tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT (cách nhau dấu ;), CUỐI (đánh x). Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
     productInFile: 'Mã hàng ghi trong file',
     productCheck: 'Đối chiếu với mã hàng bạn đang chọn trước khi nhập.',
     sheet: 'Sheet',
@@ -95,6 +95,8 @@ export const OPERATIONS_TEXT = {
       skill: 'Bậc',
       time: 'TG chuẩn (giây)',
       equipment: 'Thiết bị',
+      group: 'Nhóm công đoạn',
+      components: 'Chi tiết',
       rate: 'Đơn giá (đ)',
       action: 'Kết quả',
     },

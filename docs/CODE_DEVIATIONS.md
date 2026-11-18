@@ -153,6 +153,12 @@
 | DEV-ALL-112 | 13/11/2026 | Claude (AI) | UC42, UC24, `MaterialReturn`, `MaterialReturnLine`, `Material` | Phiếu trả không còn theo phiếu cấp: tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL (tổng đã nhận, không theo đơn) và BTP theo đơn – mã hàng – màu – size (trần = đã nhận − đã QC đạt − đã trả); cả hai tổ trả thêm NVL phế phẩm (loại NVL mới SCRAP: vải vụn kg, kim gãy cái…, không trần). Đổi DB: patch `2026-11-13_material_return_scrap.sql` | Mở |
 | DEV-ALL-113 | 13/11/2026 | Claude (AI) | UC10, UC37, UC39, `PurchaseOrder`, `CustomerOrder`, `Request`, `DeliveryScheduleDate` | Lịch giao NVL nhập đúng N ngày cho N lần giao (đơn mua, lịch khách giao, giao bù) thay cho khoảng "từ ngày – đến ngày"; thêm bảng ngày giao DeliveryScheduleDate (mỗi dòng đúng một chủ lịch, có khoá ngoại), cột ngày đầu / cuối cũ giữ làm tóm tắt | Mở |
 | DEV-ALL-114 | 17/11/2026 | Claude (AI) | UC04, `Employee` | Hồ sơ của tôi không còn chỉ đọc: mọi vai trò tự sửa được ngày sinh và số điện thoại của mình (`PUT common/profile`); các trường còn lại vẫn do Admin / Quản đốc sửa ở UC16. Đổi mật khẩu (UC03) gộp vào cùng hộp thoại Sửa, bỏ card "Đổi mật khẩu" riêng và mục "Đổi mật khẩu" ở menu người dùng | Mở |
+| DEV-ALL-115 | 17/11/2026 | Claude (AI) | UC10, `ProductSpecService`, `OrderMarkerService`, `SpecImportService` | Nhập Excel định mức mã hàng + bìa của đơn trong một hộp thoại (4 bảng, ở màn Mã hàng và tab Bìa cắt của đơn): chỉ gộp theo khóa, xem trước chạy đủ kiểm tra của nút Lưu, lưu định mức và bìa trong một giao dịch | Mở |
+| DEV-ALL-116 | 17/11/2026 | Claude (AI) | UC25, `OperationService`, `OperationGroup`, `OperationComponent` | Nhập công đoạn từ Excel đọc thêm cột tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI (tạo nhóm, gắn chi tiết PANEL, chọn sẵn công đoạn cuối) | Mở |
+| DEV-ALL-117 | 17/11/2026 | Claude (AI) | UC10, UC25, UC26 | Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn và duyệt đơn giá (thay quyền ở DEV-ALL-16, 42, 50, 61) | Mở |
+| DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
+| DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
+| DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -2506,4 +2512,90 @@
 - **Ảnh hưởng người khác:** không; Admin / Quản đốc vẫn sửa được hai trường này ở UC16.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 UC04 (thêm luồng tự sửa ngày sinh, số điện thoại); Tổng hợp Use Case
+### DEV-ALL-115 · Nhập Excel định mức mã hàng và bìa cắt (một file 4 bảng)
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC10 (định mức mã hàng), bìa của đơn (DEV-ALL-85, DEV-ALL-89); màn Mã hàng → Định mức, màn Đơn hàng → tab Bìa cắt; `ProductSpecService`, `OrderMarkerService`, `SpecImportService` (mới), `ClosedXmlSpecWorkbookParser` (mới); lookup đơn `common/order-lookups/orders` thêm lọc `productId`. Không đổi schema.
+- **Tài liệu gốc ghi:** Report-3 UC10 và các DEV trước: thành phần, định mức NVL, nhóm bìa và bìa của đơn chỉ nhập tay trên form.
+- **Code đang làm:**
+  - Nút "Nhập từ Excel" ở form Định mức (Admin) và ở tab Bìa cắt của đơn (Admin, Quản đốc) mở cùng một hộp thoại. Một file mẫu (`fe/public/templates/Mau_Nhap_Dinh_Muc.xlsx`) gồm 4 bảng: Thành phần (tên, loại PANEL/TRIM, số chi tiết / áo), Định mức NVL (màu áo, chi tiết, **mã NVL**, ghi chú), Nhóm bìa (số nhóm, chi tiết trên nhóm, màu dùng nhóm; nhiều giá trị cách nhau dấu ;), Bìa của đơn (nhóm, mã bìa, dài, khổ, trạng thái, mỗi cột size là số áo trên một lớp). Bảng nhận theo **tên cột**, không theo tên sheet; thiếu bảng nào thì bỏ qua.
+  - **Chỉ gộp**: dòng trong file thêm mới hoặc ghi đè dòng cùng khóa, dữ liệu không có trong file giữ nguyên. Khóa: thành phần = tên chi tiết; định mức = màu + chi tiết (thay cả bộ NVL của cặp đó); nhóm bìa = số nhóm (thay chi tiết và màu của nhóm); bìa của đơn = nhóm + mã bìa (giữ Id bìa cũ).
+  - Màu áo phải là màu đã có trong đơn hàng của mã hàng (không tạo màu mới); mã NVL phải có trong danh mục NVL đang dùng; nhóm bìa chỉ nhận chi tiết PANEL; size không có trong đơn bị bỏ qua (có ghi chú); dòng bìa của mã hàng khác bị bỏ qua.
+  - **Xem trước** kiểm từng dòng (Thêm mới / Cập nhật / Không đổi / Lỗi kèm lý do, số dòng hợp lệ / lỗi / trùng theo MSG24) và chạy **mọi kiểm tra của nút Lưu** trên bản đã gộp (`ProductSpecService.CheckAsync`, validator của DTO; bìa: `OrderMarkerService.CheckAsync`). Còn lỗi chéo thì không nhập được.
+  - **Nhập** lập lại bản gộp từ file (không tin dữ liệu màn hình gửi) rồi ghi định mức và bìa trong **một giao dịch** (`ProductSpecService.WriteAsync` → `OrderMarkerService.CheckAsync` + `WriteAsync`); lỗi thì không ghi gì. Nhật ký giống khi lưu tay. `SaveAsync` của hai service được tách thành `CheckAsync` + `WriteAsync` (hành vi không đổi) vì `UnitOfWork` không lồng giao dịch.
+  - Ở màn Mã hàng chọn đơn đang chạy có mã hàng để nhập kèm bìa của đơn (bỏ trống = chỉ định mức); ở màn Đơn hàng chọn mã hàng của đơn.
+  - API: `POST admin/products/{id}/import/preview|import?orderId=`, `POST manager/order-markers/{orderId}/products/{productId}/import/preview|import` (multipart: file). Mã lỗi mới `SPEC_IMPORT_INVALID`.
+- **Lý do:** yêu cầu của người dùng (17/11/2026), thiết kế đã duyệt: một hộp thoại đọc đủ 4 bảng, có ở cả màn Mã hàng và màn Đơn hàng, chỉ gộp, xem trước đủ kiểm tra rồi lưu luôn.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng / định mức), Thái (bìa, lệnh cắt ước vải theo bìa).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10: thêm luồng nhập Excel định mức + mẫu file
+  - [ ] Mô tả màn Bìa cắt của đơn (DEV-ALL-85): nhập Excel
+- **Trạng thái:** Mở
+
+### DEV-ALL-116 · Nhập công đoạn từ Excel ghi thêm nhóm công đoạn, chi tiết và công đoạn cuối
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC25, `ClosedXmlOperationParser`, `OperationService.PreviewImportAsync / ImportAsync`, bảng `OperationGroup`, `OperationComponent` (không đổi schema)
+- **Tài liệu gốc ghi:** DEV-KI-01-2 / ghi chú ở mục công đoạn: nhập Excel không đổi nhóm công đoạn và chi tiết của công đoạn (chỉ sửa tay).
+- **Code đang làm:** file quy trình công nghệ có thêm 3 cột **tùy chọn**: NHÓM CÔNG ĐOẠN (chưa có thì tạo, một lần nhập dùng chung), CHI TIẾT (tên chi tiết PANEL của mã hàng, cách nhau dấu ;; ô trống = bỏ hết chi tiết), CUỐI (đánh x; hơn một dòng có x thì các dòng đó lỗi; màn hình chọn sẵn công đoạn cuối theo cột này khi mã hàng chưa có công đoạn cuối). Có cột thì so khác biệt cả nhóm và chi tiết (dòng chỉ đổi nhóm / chi tiết là Cập nhật, có ghi chú "Nhóm: A → B", "Chi tiết: … → …"); không có cột thì giữ nguyên như trước, nên file công nghệ cũ vẫn nhập y như cũ. Chi tiết lạ hoặc là phụ liệu (TRIM) thì dòng lỗi.
+- **Lý do:** yêu cầu của người dùng ("phân công đoạn" = nhóm công đoạn).
+- **Ảnh hưởng người khác:** Kiều (công đoạn, nhóm công đoạn).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC25: cột đọc khi nhập công đoạn từ Excel
+  - [ ] DEV-KI-01-2 (danh sách cột đọc), ghi chú "nhập Excel không đổi nhóm / chi tiết"
+- **Trạng thái:** Mở
+
+### DEV-ALL-117 · Đổi quyền: Kế toán chỉ xem định mức; Quản đốc nhập định mức qua Excel; Admin chỉ xem công đoạn
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC10, UC25, UC26; `Accountant/ProductsController` (bỏ `PUT {id}/spec`), `Admin/OperationsController` và `Admin/OperationGroupsController` (chỉ còn `GET`), `Manager/OrderMarkersController` (thêm nhập Excel); FE `ProductsPage` (định mức chỉ xem với Kế toán), `OperationsPage` (Admin chỉ xem: không thêm / sửa / ngừng / dùng lại / nhóm / nhập Excel / tích dòng).
+- **Tài liệu gốc ghi:** DEV-ALL-16, DEV-ALL-42, DEV-ALL-61: Kế toán cùng Admin sửa định mức, nhóm bìa, thêm NVL mới từ màn định mức. DEV-ALL-50: Admin quản lý công đoạn như Kế toán (thêm, sửa, ngừng, dùng lại, nhập Excel không đọc đơn giá, quản lý nhóm).
+- **Code đang làm:**
+  - **Định mức:** Admin sửa tay và nhập Excel; Quản đốc nhập Excel (định mức + bìa của đơn) từ tab Bìa cắt của đơn, không có form sửa tay định mức; Kế toán chỉ xem (form định mức ở chế độ chỉ xem, không Lưu, không thêm NVL mới).
+  - **Bìa của đơn:** Admin và Quản đốc như cũ.
+  - **Công đoạn:** Kế toán thêm, sửa, ngừng, dùng lại, quản lý nhóm, nhập Excel và đặt đơn giá; Admin chỉ xem danh sách công đoạn và duyệt đơn giá ở màn Duyệt đơn giá công đoạn (`Admin/PieceRatesController` giữ nguyên).
+- **Lý do:** người dùng chốt phân quyền 17/11/2026.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng), Kiều (công đoạn), Minh (Kế toán).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10, UC25, UC26: tác nhân
+  - [ ] DEV-ALL-16, DEV-ALL-42, DEV-ALL-50, DEV-ALL-61: ghi bị thay bởi DEV-ALL-117 phần quyền
+- **Trạng thái:** Mở
+
+### DEV-ALL-118 · Nhập dòng hàng của đơn từ Excel (ma trận màu × size)
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC09 (tạo / sửa đơn hàng); FE `OrderForm`; BE `OrderImportService`, `ClosedXmlOrderLinesParser` (mới), `POST admin/customer-orders/import/preview`. Không đổi schema.
+- **Tài liệu gốc ghi:** Report-3 UC09: dòng hàng của đơn nhập tay trên form.
+- **Code đang làm:** form tạo / sửa đơn (Admin, khi đơn còn Mới; đơn đã khóa dòng hàng thì không có nút) có nút "Nhập từ Excel". File có bảng Mã hàng, Màu, Đơn giá CMT và mỗi size một cột (ô là số lượng, trống / 0 = không đặt); sheet "Đơn hàng" trong file mẫu `Mau_Nhap_Dinh_Muc.xlsx`. Xem trước ở máy chủ, không ghi gì: mã hàng phải có và đang sản xuất, số lượng nguyên dương ≤ 1.000.000, đơn giá 0–100.000.000 (2 số lẻ), mỗi mã hàng một đơn giá, không trùng mã hàng + màu; màu mới được phép. Áp dụng thì các dòng hợp lệ được gộp vào form (mã hàng đã có: ghi đè số lượng các size trong file của màu trùng, giữ size khác, màu mới thêm dòng, đơn giá lấy theo file; mã hàng chưa có: thêm khối), người dùng bấm Lưu như tạo tay nên mọi kiểm tra khi lưu đơn giữ nguyên. Mã lỗi mới `ORDER_IMPORT_INVALID`.
+- **Lý do:** yêu cầu của người dùng (17/11/2026), đã duyệt 7 điểm thiết kế.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC09: luồng nhập dòng hàng từ Excel + mẫu file
+- **Trạng thái:** Mở
+
+### DEV-ALL-119 · Nhập NVL của đơn từ Excel; tách số đã nhập theo nguồn
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC09 (NVL của đơn), DEV-ALL-60; `OrderMaterialService` (+ `OrderMaterialService.Import.cs`), `ClosedXmlOrderMaterialParser` (mới), `Admin/OrderMaterialsController`, `Manager/OrderMaterialsController`; FE tab NVL của đơn. Không đổi schema.
+- **Tài liệu gốc ghi:** UC09 / DEV-ALL-60: NVL của đơn nhập tay (từng NVL hoặc theo mã hàng); cột Đã nhập gộp mọi phiếu nhập.
+- **Code đang làm:**
+  - Nút "Nhập từ Excel" ở tab NVL của đơn (Admin, Quản đốc; ẩn khi đơn đã đóng). File có bảng Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn); sheet "NVL của đơn" trong `Mau_Nhap_Dinh_Muc.xlsx`. Phải mua vẫn là cột tính `PurchaseQty` = max(Số cần − Khách cấp, 0).
+  - Gộp theo NVL: NVL đã có trong đơn được cập nhật Số cần / Khách cấp / Ghi chú theo file, NVL chưa có được thêm, NVL không có trong file giữ nguyên. Mỗi dòng qua đúng kiểm tra của thêm / sửa tay (NVL đang dùng, trùng, CustomerDeliveryFull, validator số). Xem trước: Mới / Cập nhật / Không đổi / Lỗi + MSG24; Nhập lưu các dòng hợp lệ có thay đổi bằng một lần SaveChanges. API `POST {admin|manager}/order-materials/import/preview|import?orderId=`, mã lỗi `ORDER_MATERIAL_IMPORT_INVALID`.
+  - Bảng NVL của đơn: cột Đã nhập tách thành **Khách đã giao** (phiếu nhập không gắn đơn mua, như `vw_OrderMaterialDelivery`) và **Đã mua về** (phiếu nhập theo đơn mua), thêm **Còn thiếu** = max(Số cần − tổng đã nhập, 0). `OrderMaterialDto` thêm `CustomerReceivedQty`, `PurchasedReceivedQty`, `ShortQty` (`ReceivedQty` giữ nguyên).
+- **Lý do:** yêu cầu của người dùng (18/11/2026).
+- **Ảnh hưởng người khác:** Thái (NVL của đơn, phiếu nhập).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC09 phần NVL: nhập Excel, cột Khách đã giao / Đã mua về / Còn thiếu
+- **Trạng thái:** Mở
+
+### DEV-ALL-120 · Tạo mã hàng hàng loạt từ Excel
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · nhánh `feature/ALL-spec-excel-import`, chưa có PR
+- **Ảnh hưởng tới:** UC10 (mã hàng); `ProductImportService`, `ClosedXmlProductParser` (mới), `Admin/ProductsController` (`POST import-products/preview`, `POST import-products`); FE màn Mã hàng. Không đổi schema.
+- **Tài liệu gốc ghi:** UC10: Admin thêm từng mã hàng qua form.
+- **Code đang làm:** nút "Nhập từ Excel" cạnh "Thêm mới" (Admin). File có bảng Mã hàng, Tên mã hàng, Mô tả (sheet "Mã hàng" trong `Mau_Nhap_Dinh_Muc.xlsx`). Mỗi dòng kiểm như form (`SaveProductDtoValidator`); trùng mã trong file là lỗi; mã đã có trong hệ thống được **bỏ qua** (không sửa tên / mô tả). Xem trước Mới / Đã có / Lỗi; Tạo mã hàng thì tạo các mã mới trong một giao dịch, trạng thái Đang sản xuất, mỗi mã một dòng nhật ký Insert. Không nhập ảnh, không nhập định mức (định mức cần màu từ đơn hàng). Mã mới chọn được ngay ở form đơn hàng. Mã lỗi `PRODUCT_IMPORT_INVALID`.
+- **Lý do:** yêu cầu của người dùng (18/11/2026).
+- **Ảnh hưởng người khác:** Khiêm (mã hàng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 UC10: tạo mã hàng từ Excel
 - **Trạng thái:** Mở

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
 import { Button, Space } from 'antd';
 import { LABELS } from '../constants';
 import { useDeleteOrderMaterial, useOrderMaterials } from '../hooks/useOrderMaterials';
@@ -9,6 +9,7 @@ import { OrderMaterialBulkEditor } from './OrderMaterialBulkEditor';
 import { OrderMaterialByProductModal } from './OrderMaterialByProductModal';
 import { OrderMaterialExternalModal } from './OrderMaterialExternalModal';
 import { OrderMaterialFormModal } from './OrderMaterialFormModal';
+import { OrderMaterialImportModal } from './OrderMaterialImportModal';
 import { OrderMaterialTable } from './OrderMaterialTable';
 import { CustomerDeliveryPlan } from './CustomerDeliveryPlan';
 
@@ -27,6 +28,7 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
   const [bulkEditing, setBulkEditing] = useState(false);
   const [byProductOpen, setByProductOpen] = useState(false);
   const [externalOpen, setExternalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const openForm = (om: OrderMaterial) => {
     setEditing(om);
@@ -63,6 +65,9 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
                   {LABELS.bulkEditOrderMaterials}
                 </Button>
               )}
+              <Button icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>
+                {LABELS.importOrderMaterials}
+              </Button>
               <Button icon={<PlusOutlined />} onClick={() => setExternalOpen(true)}>
                 {LABELS.addExternalMaterial}
               </Button>
@@ -88,6 +93,9 @@ export function OrderMaterialsTab({ orderId, isClosed }: OrderMaterialsTabProps)
           declared={list.data ?? []}
           onClose={() => setExternalOpen(false)}
         />
+      )}
+      {importOpen && (
+        <OrderMaterialImportModal orderId={orderId} onClose={() => setImportOpen(false)} />
       )}
       {byProductOpen && (
         <OrderMaterialByProductModal

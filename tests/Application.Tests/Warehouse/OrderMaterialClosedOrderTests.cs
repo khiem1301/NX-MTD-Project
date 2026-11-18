@@ -35,7 +35,7 @@ public class OrderMaterialClosedOrderTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private OrderMaterialService Sut() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
+    private OrderMaterialService Sut() => new(_uow, _notifier, new DeliveryCountGuard(_uow), new NX_MTD.Infrastructure.Excel.ClosedXmlOrderMaterialParser());
 
     private OrderMaterial Line(string orderStatus, decimal required = 100)
     {

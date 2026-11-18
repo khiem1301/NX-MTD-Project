@@ -56,4 +56,20 @@ public sealed class OrderMaterialsController : ManagerBaseController
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct) =>
         this.ToResponse(await _orderMaterials.DeleteAsync(id, ct));
+
+    /// <summary>DEV-ALL-119: xem trước file Excel NVL của đơn (multipart: file), không ghi gì.</summary>
+    [HttpPost("import/preview")]
+    public async Task<IActionResult> PreviewImport(IFormFile file, [FromQuery] int orderId, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(await _orderMaterials.PreviewImportAsync(orderId, stream, ct));
+    }
+
+    /// <summary>DEV-ALL-119: nhập NVL của đơn từ Excel (gộp theo mã NVL, lưu một lần).</summary>
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(IFormFile file, [FromQuery] int orderId, CancellationToken ct)
+    {
+        await using var stream = file.OpenReadStream();
+        return this.ToResponse(await _orderMaterials.ImportAsync(orderId, stream, ct));
+    }
 }

@@ -15,6 +15,8 @@ const HISTORY_TAB = 'history';
 
 type OrderDetailTabsProps = {
   orderId: number;
+  /** Mã đơn, hiện ở tiêu đề hộp thoại nhập Excel (DEV-ALL-115). */
+  orderCode: string;
   status: OrderStatus;
   lines: OrderDisplayLine[];
   /** Không truyền thì không có tab Lịch sử (lịch sử có đơn giá, chỉ Admin xem). */
@@ -22,7 +24,13 @@ type OrderDetailTabsProps = {
 };
 
 /** Các tab của chi tiết đơn; tab đang mở nằm trên đường dẫn (?tab=) để thông báo và nút Mở đơn mở thẳng tab NVL. */
-export function OrderDetailTabs({ orderId, status, lines, history }: OrderDetailTabsProps) {
+export function OrderDetailTabs({
+  orderId,
+  orderCode,
+  status,
+  lines,
+  history,
+}: OrderDetailTabsProps) {
   const [params, setParams] = useSearchParams();
   const isClosed = ORDER_CLOSED_STATUSES.includes(status);
 
@@ -35,7 +43,7 @@ export function OrderDetailTabs({ orderId, status, lines, history }: OrderDetail
     {
       key: MARKERS_TAB,
       label: MESSAGES.orders.markersTab,
-      children: <OrderMarkersTab orderId={orderId} isClosed={isClosed} />,
+      children: <OrderMarkersTab orderId={orderId} orderCode={orderCode} isClosed={isClosed} />,
     },
     ...ORDER_DETAIL_TABS.map((t) => ({
       key: t.key,

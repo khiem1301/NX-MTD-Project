@@ -77,6 +77,10 @@ public interface IProductSpecService
 {
     Task<Result<ProductSpecDto>> GetAsync(int productId, CancellationToken ct);
     Task<Result<ProductSpecDto>> SaveAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
+    /// <summary>Mọi kiểm tra của Lưu định mức, không ghi (DEV-ALL-115).</summary>
+    Task<Result> CheckAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
+    /// <summary>Ghi định mức đã kiểm, KHÔNG mở giao dịch: người gọi bọc giao dịch (DEV-ALL-115).</summary>
+    Task<Result<int>> WriteAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
 }
 
 public interface ICustomerOrderService
@@ -109,8 +113,21 @@ public interface IOrderLookupService
 }
 
 /// <summary>Bìa cắt của đơn (DEV-ALL-85): xem theo đơn, lưu theo từng mã hàng của đơn.</summary>
+/// <summary>DEV-ALL-115: nhập Excel định mức mã hàng (thành phần, định mức NVL, nhóm bìa) và bìa của đơn trong một file.</summary>
+public interface ISpecImportService
+{
+    /// <summary>Xem trước: kiểm từng dòng, gộp với dữ liệu đang có và chạy mọi kiểm tra của nút Lưu. Không ghi gì.</summary>
+    Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct);
+    /// <summary>Nhập: lập lại bản gộp từ file rồi lưu định mức và bìa của đơn trong một giao dịch.</summary>
+    Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct);
+}
+
 public interface IOrderMarkerService
 {
     Task<Result<OrderMarkersDto>> GetAsync(int orderId, CancellationToken ct);
     Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+    /// <summary>Mọi kiểm tra của Lưu bìa, không ghi (DEV-ALL-115).</summary>
+    Task<Result> CheckAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+    /// <summary>Ghi bìa đã kiểm, KHÔNG mở giao dịch: người gọi bọc giao dịch (DEV-ALL-115).</summary>
+    Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
 }

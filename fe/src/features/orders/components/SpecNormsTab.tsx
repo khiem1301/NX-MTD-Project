@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { MaterialFormModalSlot } from '@/app/featureSlots';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
+import { Button, ConfigProvider, Typography } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
@@ -29,6 +29,8 @@ type SpecNormsTabProps = {
   components: ComponentRow[];
   materialOptions: MaterialOption[];
   materialsLoading: boolean;
+  /** DEV-ALL-117: Kế toán chỉ xem định mức. */
+  readOnly?: boolean;
 };
 
 /** Tab "Định mức NVL": mỗi dòng là một thành phần dùng NVL nào; một dòng áp dụng cho nhiều màu – size cùng lúc. */
@@ -39,6 +41,7 @@ export function SpecNormsTab({
   components,
   materialOptions,
   materialsLoading,
+  readOnly = false,
 }: SpecNormsTabProps) {
   const [normFilter, setNormFilter] = useState<NormFilter>({});
   const [normPage, setNormPage] = useState({ current: 1, pageSize: 10 });
@@ -135,31 +138,35 @@ export function SpecNormsTab({
           </>
         }
       />
-      <DataTable<NormRow>
-        rowKey="key"
-        size="small"
-        pagination={{
-          ...normPage,
-          total: visibleNorms.length,
-          showSizeChanger: true,
-          pageSizeOptions: [10, 20, 50],
-          showTotal: (total) => `${total} ${text.normRows}`,
-          onChange: (current, pageSize) => setNormPage({ current, pageSize }),
-        }}
-        dataSource={visibleNorms}
-        scroll={{ x: 'max-content', y: 'max(260px, calc(100vh - 560px))' }}
-        columns={specNormColumns({
-          componentOptions,
-          materialOptions,
-          materialsLoading,
-          colorOptions,
-          setNorms,
-          onAddMaterial: setAddingMaterialFor,
-        })}
-      />
-      <Button type="dashed" icon={<PlusOutlined />} style={{ marginTop: 8 }} onClick={addNorm}>
-        {text.addNorm}
-      </Button>
+      <ConfigProvider componentDisabled={readOnly}>
+        <DataTable<NormRow>
+          rowKey="key"
+          size="small"
+          pagination={{
+            ...normPage,
+            total: visibleNorms.length,
+            showSizeChanger: true,
+            pageSizeOptions: [10, 20, 50],
+            showTotal: (total) => `${total} ${text.normRows}`,
+            onChange: (current, pageSize) => setNormPage({ current, pageSize }),
+          }}
+          dataSource={visibleNorms}
+          scroll={{ x: 'max-content', y: 'max(260px, calc(100vh - 560px))' }}
+          columns={specNormColumns({
+            componentOptions,
+            materialOptions,
+            materialsLoading,
+            colorOptions,
+            setNorms,
+            onAddMaterial: setAddingMaterialFor,
+          })}
+        />
+      </ConfigProvider>
+      {!readOnly && (
+        <Button type="dashed" icon={<PlusOutlined />} style={{ marginTop: 8 }} onClick={addNorm}>
+          {text.addNorm}
+        </Button>
+      )}
       {addingMaterialFor && (
         <Suspense fallback={null}>
           <MaterialFormModalSlot

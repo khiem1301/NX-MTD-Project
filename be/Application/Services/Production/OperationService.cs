@@ -196,11 +196,22 @@ public sealed class OperationService : IOperationService
 
     // ---------- Nhập công đoạn (kèm đơn giá) từ file Excel quy trình công nghệ ----------
 
+    /// <param name="ComponentIds">DEV-ALL-116: chi tiết PANEL công đoạn làm trên (null = file không có cột CHI TIẾT, giữ nguyên).</param>
     private sealed record PlannedRow(
-        OperationImportRowDto Preview, OperationExcelRowDto Raw, Operation? Existing, PieceRate? ExistingRate);
+        OperationImportRowDto Preview, OperationExcelRowDto Raw, Operation? Existing, PieceRate? ExistingRate,
+        IReadOnlyList<int>? ComponentIds = null);
 
     private sealed record ImportPlan(
-        OperationExcelSheetDto Sheet, IReadOnlyList<string> SheetNames, bool ProductHasFinalStep, IReadOnlyList<PlannedRow> Rows);
+        OperationExcelSheetDto Sheet, IReadOnlyList<string> SheetNames, bool ProductHasFinalStep, IReadOnlyList<PlannedRow> Rows,
+        ImportRefs? Refs);
+
+    /// <summary>
+    /// DEV-ALL-116: dữ liệu để nhập cột NHÓM CÔNG ĐOẠN / CHI TIẾT. Chỉ nạp khi file có một trong hai cột, nên file quy trình
+    /// công nghệ cũ nhập y như trước.
+    /// </summary>
+    private sealed record ImportRefs(
+        Dictionary<string, ProductComponent> Components, Dictionary<string, OperationGroup> Groups,
+        Dictionary<int, string> GroupNameById, List<OperationComponent> Links);
 
     private const string ActionNew = "New";
     private const string ActionUpdate = "Update";
@@ -221,11 +232,13 @@ public sealed class OperationService : IOperationService
         var p = plan.Data!;
         int Count(string action) => p.Rows.Count(r => r.Preview.Action == action);
         int RateCount(string action) => p.Rows.Count(r => r.Preview.RateAction == action);
+        var finalInFile = p.Rows.Where(r => r.Raw.IsFinal && r.Preview.Action != ActionError).Select(r => (int?)r.Preview.Stt)
+            .FirstOrDefault();
         return Result<OperationImportPreviewDto>.Success(new OperationImportPreviewDto(
             p.Sheet.SheetName, p.SheetNames, p.Sheet.ProductText, Count(ActionNew), Count(ActionUpdate),
             Count(ActionUnchanged), Count(ActionError), p.ProductHasFinalStep, p.Sheet.HasRateColumn,
             RateCount(ActionNew), RateCount(ActionUpdate), RateCount(ActionUnchanged), RateCount(RateSkipped),
-            p.Rows.Select(r => r.Preview).ToList()));
+            p.Rows.Select(r => r.Preview).ToList(), p.Sheet.HasGroupColumn, p.Sheet.HasComponentColumn, finalInFile));
     }
 
     public async Task<Result<OperationImportResultDto>> ImportAsync(
@@ -253,7 +266,52 @@ public sealed class OperationService : IOperationService
         Dictionary<int, Operation> OperationByStt, int Unchanged);
 
     /// <summary>Áp các dòng hợp lệ lên công đoạn: dòng mới tạo thực thể, dòng đã có cập nhật nếu thay đổi (hoặc được chọn làm bước cuối).</summary>
-    private RowChanges ApplyRows(int productId, IReadOnlyList<PlannedRow> valid, int? finalStt)
+    private RowChanges ApplyRows(int productId, IReadOnlyList<PlannedRow> valid, int? finalStt, ImportPlan plan)
+    {
+        var changes = ApplyBaseRows(productId, valid, finalStt);
+        if (plan.Refs is null) return changes;
+        foreach (var row in valid)
+        {
+            var operation = changes.OperationByStt[row.Preview.Stt];
+            var touched = changes.Created.Contains(operation) || changes.Updated.Any(u => u.Operation == operation);
+            if (touched) ApplyGroupAndComponents(operation, row, plan.Sheet, plan.Refs, productId);
+        }
+        return changes;
+    }
+
+    /// <summary>
+    /// DEV-ALL-116: nhóm công đoạn theo tên (chưa có thì tạo, dùng chung trong một lần nhập) và bộ chi tiết của công đoạn
+    /// (thay bằng bộ trong file). Cột không có trong file thì giữ nguyên.
+    /// </summary>
+    private void ApplyGroupAndComponents(Operation operation, PlannedRow row, OperationExcelSheetDto sheet, ImportRefs refs, int productId)
+    {
+        if (sheet.HasGroupColumn)
+        {
+            var name = row.Raw.GroupName;
+            if (name is null)
+            {
+                operation.OperationGroup = null;
+                operation.OperationGroupId = null;
+            }
+            else
+            {
+                if (!refs.Groups.TryGetValue(name, out var group))
+                {
+                    group = new OperationGroup { ProductId = productId, GroupName = name };
+                    refs.Groups[name] = group;
+                }
+                operation.OperationGroup = group;
+            }
+        }
+
+        if (row.ComponentIds is null) return;
+        var current = refs.Links.Where(l => operation.OperationId != 0 && l.OperationId == operation.OperationId).ToList();
+        _uow.Repository<OperationComponent>().RemoveRange(current.Where(l => !row.ComponentIds.Contains(l.ProductComponentId)).ToList());
+        foreach (var id in row.ComponentIds.Where(id => current.All(l => l.ProductComponentId != id)))
+            operation.OperationComponents.Add(new OperationComponent { ProductComponentId = id, ProductId = productId });
+    }
+
+    private RowChanges ApplyBaseRows(int productId, IReadOnlyList<PlannedRow> valid, int? finalStt)
     {
         var created = new List<Operation>();
         var updated = new List<(Operation Operation, object Before)>();
@@ -297,7 +355,9 @@ public sealed class OperationService : IOperationService
         IReadOnlyList<PlannedRow> valid, int? finalStt, DateOnly? effectiveDate, bool submitRates, int skipped,
         CancellationToken ct)
     {
-        var (created, updated, operationByStt, unchanged) = ApplyRows(productId, valid, finalStt);
+        var (created, updated, operationByStt, unchanged) = ApplyRows(productId, valid, finalStt, plan);
+        var newGroups = plan.Refs?.Groups.Values.Where(g => g.OperationGroupId == 0).ToList() ?? [];
+        if (newGroups.Count > 0) await _uow.Repository<OperationGroup>().AddRangeAsync(newGroups);
         if (created.Count > 0) await _uow.Repository<Operation>().AddRangeAsync(created);
         await _uow.SaveChangesAsync();   // lấy OperationId của dòng mới để ghi nhật ký và gắn đơn giá
 
@@ -422,10 +482,27 @@ public sealed class OperationService : IOperationService
                 .ToListAsync(ct))
             .GroupBy(r => r.OperationId)
             .ToDictionary(g => g.Key, g => g.ToList());
-        var rows = PlanRows(sheet, byCode, ratesByOperation, effectiveDate);
+        var refs = sheet.HasGroupColumn || sheet.HasComponentColumn ? await LoadImportRefsAsync(productId, ct) : null;
+        var rows = PlanRows(sheet, byCode, ratesByOperation, effectiveDate, refs);
 
         var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
-        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows));
+        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows, refs));
+    }
+
+    /// <summary>Thành phần, nhóm công đoạn và liên kết công đoạn ↔ chi tiết của mã hàng (DEV-ALL-116), có theo dõi để sửa được.</summary>
+    private async Task<ImportRefs> LoadImportRefsAsync(int productId, CancellationToken ct)
+    {
+        var components = await _uow.Repository<ProductComponent>().Query()
+            .Where(c => c.ProductId == productId && c.Status == RecordStatus.Active).ToListAsync(ct);
+        var groups = await _uow.Repository<OperationGroup>().Query().Where(g => g.ProductId == productId).ToListAsync(ct);
+        var links = await _uow.Repository<OperationComponent>().Query().Where(l => l.ProductId == productId).ToListAsync(ct);
+        return new ImportRefs(
+            components.GroupBy(c => c.ComponentName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase),
+            groups.GroupBy(g => g.GroupName.Trim(), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase),
+            groups.ToDictionary(g => g.OperationGroupId, g => g.GroupName),
+            links);
     }
 
     /// <summary>Đọc các sheet từ file Excel; file hỏng thì trả lỗi validation.</summary>
@@ -449,30 +526,83 @@ public sealed class OperationService : IOperationService
 
     /// <summary>Lập kế hoạch cho từng dòng của sheet: lỗi / thêm mới / cập nhật / không đổi, kèm cách xử lý đơn giá.</summary>
     private static List<PlannedRow> PlanRows(OperationExcelSheetDto sheet, IReadOnlyDictionary<string, Operation> byCode,
-        IReadOnlyDictionary<int, List<PieceRate>> ratesByOperation, DateOnly? effectiveDate)
+        IReadOnlyDictionary<int, List<PieceRate>> ratesByOperation, DateOnly? effectiveDate, ImportRefs? refs)
     {
         var seenStt = new HashSet<int>();
+        var manyFinals = sheet.Rows.Count(r => r.IsFinal) > 1;
         var rows = new List<PlannedRow>(sheet.Rows.Count);
         foreach (var raw in sheet.Rows)
         {
             var code = CodeFor(raw.Stt);
             var error = raw.ParseError;
             if (error is null && !seenStt.Add(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
+            if (error is null && manyFinals && raw.IsFinal) error = Messages.OperationImportManyFinals;
+            var (componentIds, componentNames, componentError) = ResolveComponents(raw, sheet, refs);
+            error ??= componentError;
+            var group = sheet.HasGroupColumn ? raw.GroupName : null;
 
             if (error is not null)
             {
                 rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
-                    raw.StandardTimeSec, raw.Equipment, raw.Rate, ActionError, error), raw, null, null));
+                    raw.StandardTimeSec, raw.Equipment, raw.Rate, ActionError, error, GroupName: group,
+                    ComponentNames: componentNames), raw, null, null));
                 continue;
             }
 
             byCode.TryGetValue(code, out var existing);
-            var action = existing is null ? ActionNew : IsSame(existing, raw) ? ActionUnchanged : ActionUpdate;
+            var note = existing is null || refs is null ? null : ChangeNote(existing, raw, sheet, refs, componentIds);
+            var action = existing is null ? ActionNew : IsSame(existing, raw) && note is null ? ActionUnchanged : ActionUpdate;
             var (rateAction, rateNote, existingRate) = PlanRate(raw, existing, effectiveDate, ratesByOperation);
             rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
-                raw.StandardTimeSec, raw.Equipment, raw.Rate, action, null, rateAction, rateNote), raw, existing, existingRate));
+                raw.StandardTimeSec, raw.Equipment, raw.Rate, action, null, rateAction, rateNote, group, componentNames, note),
+                raw, existing, existingRate, componentIds));
         }
         return rows;
+    }
+
+    /// <summary>DEV-ALL-116: tên trong cột CHI TIẾT → chi tiết PANEL của mã hàng. Trả (null, null, null) khi file không có cột.</summary>
+    private static (IReadOnlyList<int>? Ids, IReadOnlyList<string>? Names, string? Error) ResolveComponents(
+        OperationExcelRowDto raw, OperationExcelSheetDto sheet, ImportRefs? refs)
+    {
+        if (!sheet.HasComponentColumn || refs is null || raw.ComponentNames is null) return (null, null, null);
+        var ids = new List<int>();
+        var names = new List<string>();
+        foreach (var name in raw.ComponentNames)
+        {
+            if (!refs.Components.TryGetValue(name, out var component))
+                return (null, raw.ComponentNames, string.Format(Messages.OperationImportComponentUnknown, name));
+            if (component.ComponentType != ComponentTypes.Panel)
+                return (null, raw.ComponentNames, string.Format(Messages.OperationImportComponentNotPanel, name));
+            if (ids.Contains(component.ProductComponentId)) continue;
+            ids.Add(component.ProductComponentId);
+            names.Add(component.ComponentName);
+        }
+        return (ids, names, null);
+    }
+
+    /// <summary>Mô tả thay đổi nhóm / chi tiết của công đoạn đã có, null khi không đổi (DEV-ALL-116).</summary>
+    private static string? ChangeNote(Operation existing, OperationExcelRowDto raw, OperationExcelSheetDto sheet, ImportRefs refs,
+        IReadOnlyList<int>? componentIds)
+    {
+        var parts = new List<string>();
+        if (sheet.HasGroupColumn)
+        {
+            var current = existing.OperationGroupId is { } gid ? refs.GroupNameById.GetValueOrDefault(gid) : null;
+            if (!string.Equals(current?.Trim(), raw.GroupName, StringComparison.OrdinalIgnoreCase))
+                parts.Add(string.Format(Messages.OperationImportGroupChange, current ?? Messages.OperationImportNone,
+                    raw.GroupName ?? Messages.OperationImportNone));
+        }
+        if (componentIds is not null)
+        {
+            var current = refs.Links.Where(l => l.OperationId == existing.OperationId).Select(l => l.ProductComponentId).ToHashSet();
+            if (!current.SetEquals(componentIds))
+            {
+                string Names(IEnumerable<int> ids) => string.Join(", ", refs.Components.Values.Where(c => ids.Contains(c.ProductComponentId))
+                    .Select(c => c.ComponentName)) is { Length: > 0 } s ? s : Messages.OperationImportNone;
+                parts.Add(string.Format(Messages.OperationImportComponentChange, Names(current), Names(componentIds)));
+            }
+        }
+        return parts.Count == 0 ? null : string.Join("; ", parts);
     }
 
     /// <summary>

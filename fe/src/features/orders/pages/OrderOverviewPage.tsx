@@ -38,7 +38,12 @@ export function OrderOverviewPage() {
       description={data.customerName}
     >
       <OrderSummary order={data} />
-      <OrderDetailTabs orderId={data.orderId} status={data.status} lines={data.lines} />
+      <OrderDetailTabs
+        orderId={data.orderId}
+        orderCode={data.orderCode}
+        status={data.status}
+        lines={data.lines}
+      />
     </PageCard>
   );
 }

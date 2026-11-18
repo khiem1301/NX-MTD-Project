@@ -10,7 +10,25 @@ public sealed record OrderMaterialDto(
     int OrderMaterialId, int OrderId, int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string MaterialColor, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
     int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty,
-    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null);
+    DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
+    decimal CustomerReceivedQty = 0, decimal PurchasedReceivedQty = 0, decimal ShortQty = 0);
+// DEV-ALL-119: ReceivedQty = CustomerReceivedQty (phiếu khách giao) + PurchasedReceivedQty (phiếu nhập theo đơn mua);
+// ShortQty = max(RequiredQty − ReceivedQty, 0).
+
+// ---- DEV-ALL-119: nhập Excel NVL của đơn ----
+
+/// <summary>Một dòng thô đọc từ file: mã NVL, số cần, khách cấp, ghi chú.</summary>
+public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialCode, decimal? RequiredQty, decimal? CustomerQty,
+    string? Note, string? ParseError);
+
+/// <summary>Action: New | Update | Unchanged | Error. PurchaseQty = max(Số cần − Khách cấp, 0) tính trước để xem.</summary>
+public sealed record OrderMaterialImportRowDto(int RowNumber, string Action, string? Error, string MaterialCode, string? MaterialName,
+    string? MaterialColor, string? Unit, decimal? RequiredQty, decimal? CustomerQty, decimal? PurchaseQty, string? Note);
+
+public sealed record OrderMaterialImportPreviewDto(IReadOnlyList<OrderMaterialImportRowDto> Rows, int ValidCount, int ErrorCount,
+    int DuplicateCount, int ChangeCount);
+
+public sealed record OrderMaterialImportResultDto(int Created, int Updated);
 
 /// <summary>Phần chung của tạo / sửa NVL của đơn (dùng chung validator). Lịch khách giao khai ở cả đơn, không theo từng NVL.</summary>
 public interface IOrderMaterialInput

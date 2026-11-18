@@ -56,6 +56,33 @@ export type OrderMaterial = {
   source: string | null;
   note: string | null;
   receivedQty: number;
+  /** DEV-ALL-119: đã nhận tách theo nguồn (khách giao / mua về) và còn thiếu = max(số cần − đã nhận, 0). */
+  customerReceivedQty: number;
+  purchasedReceivedQty: number;
+  shortQty: number;
+};
+
+// ---- DEV-ALL-119: nhập Excel NVL của đơn ----
+export type OrderMaterialImportAction = 'New' | 'Update' | 'Unchanged' | 'Error';
+export type OrderMaterialImportRow = {
+  rowNumber: number;
+  action: OrderMaterialImportAction;
+  error: string | null;
+  materialCode: string;
+  materialName: string | null;
+  materialColor: string | null;
+  unit: string | null;
+  requiredQty: number | null;
+  customerQty: number | null;
+  purchaseQty: number | null;
+  note: string | null;
+};
+export type OrderMaterialImportPreview = {
+  rows: OrderMaterialImportRow[];
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  changeCount: number;
 };
 
 /** Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt. */

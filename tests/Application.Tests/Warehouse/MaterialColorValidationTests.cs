@@ -50,7 +50,7 @@ public class MaterialColorValidationTests
 
     private MaterialService Materials() => new(_uow, _locks);
 
-    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow));
+    private OrderMaterialService OrderMaterials() => new(_uow, _notifier, new DeliveryCountGuard(_uow), new NX_MTD.Infrastructure.Excel.ClosedXmlOrderMaterialParser());
 
     // ---------- Danh mục NVL ----------
 

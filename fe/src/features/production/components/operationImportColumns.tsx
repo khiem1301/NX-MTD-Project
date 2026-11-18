@@ -24,6 +24,13 @@ export const operationImportColumns: ColumnsType<OperationImportRow> = [
     render: (v: number | null) => (v === null ? '—' : formatQty(v)),
   },
   { title: text.columns.equipment, dataIndex: 'equipment', render: (v: string | null) => v ?? '—' },
+  // DEV-ALL-116: hai cột tùy chọn của file; file không có cột thì BE trả null và hiện "—".
+  { title: text.columns.group, dataIndex: 'groupName', render: (v: string | null) => v ?? '—' },
+  {
+    title: text.columns.components,
+    dataIndex: 'componentNames',
+    render: (v: string[] | null) => (v && v.length > 0 ? v.join(', ') : '—'),
+  },
   {
     title: text.columns.rate,
     key: 'rate',
@@ -45,6 +52,7 @@ export const operationImportColumns: ColumnsType<OperationImportRow> = [
       <Space direction="vertical" size={0}>
         <StatusTag status={row.action} labels={text.action} />
         {row.error && <Typography.Text type="danger">{row.error}</Typography.Text>}
+        {row.changeNote && <Typography.Text type="secondary">{row.changeNote}</Typography.Text>}
       </Space>
     ),
   },

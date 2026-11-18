@@ -8,7 +8,14 @@ import type {
   ProductLookup,
 } from '@/types/orderLookup';
 
-type LookupParams = { keyword?: string; page?: number; pageSize?: number; status?: string };
+type LookupParams = {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  /** Chỉ đơn có mã hàng này (DEV-ALL-115). */
+  productId?: number;
+};
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;

@@ -28,6 +28,10 @@ public static class WarehouseMessages
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
     public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa hoặc đổi sang NVL khác.";
+    // DEV-ALL-119: nhập Excel NVL của đơn
+    public const string OrderMaterialImportUnknown = "Mã NVL \"{0}\" không có trong danh mục NVL.";
+    public const string OrderMaterialImportNothing = "File không có dòng hợp lệ nào thay đổi NVL của đơn.";
+    public const string OrderMaterialImportDone = "Đã nhập NVL của đơn: thêm {0}, cập nhật {1}.";
     public const string OrderMaterialOrderClosed = "Đơn hàng đã đóng, không thể thêm, sửa hoặc xóa NVL của đơn.";
     public const string OrderMaterialNotInOrder = "NVL không thuộc đơn hàng của phiếu.";
     public const string OrderLineNotInOrder = "Dòng đơn không thuộc đơn hàng.";

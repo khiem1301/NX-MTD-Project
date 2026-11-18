@@ -21,6 +21,11 @@ import type {
   SaveOrderMarkersPayload,
   SaveProductPayload,
   SaveProductSpecPayload,
+  OrderImportPreview,
+  ProductImportPreview,
+  SpecImportPreview,
+  SpecImportResult,
+  SpecImportTarget,
   UpdateOrderPayload,
 } from '../types';
 
@@ -65,6 +70,51 @@ export const productApi = {
     get<ProductSpec>(API.products.spec(id, scope)),
   saveSpec: (id: number, body: SaveProductSpecPayload, scope: ProductScope = 'admin') =>
     put<ProductSpec>(API.products.spec(id, scope), body),
+};
+
+const asFormData = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
+
+/** Màn Mã hàng gọi API Admin (kèm ?orderId= nếu chọn đơn); màn Đơn hàng gọi API Quản đốc theo đơn × mã hàng. */
+const specImportRequest = async <T>(target: SpecImportTarget, file: File, preview: boolean) => {
+  const url =
+    target.scope === 'admin'
+      ? preview
+        ? API.products.importPreview(target.productId)
+        : API.products.import(target.productId)
+      : preview
+        ? API.orderMarkers.importPreview(target.orderId, target.productId)
+        : API.orderMarkers.import(target.orderId, target.productId);
+  const params = target.scope === 'admin' ? { orderId: target.orderId } : undefined;
+  return (await apiClient.post<ApiResponse<T>>(url, asFormData(file), { params })).data;
+};
+
+/** DEV-ALL-118: xem trước dòng hàng của đơn từ Excel; form đơn tự điền rồi người dùng Lưu. */
+export const orderImportApi = {
+  preview: (file: File) =>
+    post<OrderImportPreview>(API.customerOrders.importPreview, asFormData(file)),
+};
+
+/** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel (mã đã có bỏ qua). */
+export const productImportApi = {
+  preview: (file: File) =>
+    post<ProductImportPreview>(API.products.productsImportPreview, asFormData(file)),
+  /** Trả cả message (số mã đã tạo / bỏ qua). */
+  import: async (file: File) =>
+    (await apiClient.post<ApiResponse<unknown>>(API.products.productsImport, asFormData(file)))
+      .data,
+};
+
+/** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
+export const specImportApi = {
+  preview: async (target: SpecImportTarget, file: File) =>
+    (await specImportRequest<SpecImportPreview>(target, file, true)).data,
+  /** Trả cả message (số dòng đã nhập) để hiện cho người dùng. */
+  import: (target: SpecImportTarget, file: File) =>
+    specImportRequest<SpecImportResult>(target, file, false),
 };
 
 export const orderApi = {
