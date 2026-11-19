@@ -202,7 +202,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             : null;
     }
 
-    /// <summary>Đổi mỗi dòng thành MaterialId; NVL nhập tay chưa có thì thêm vào danh mục (phụ liệu, nhóm OTHER).</summary>
+    /// <summary>Đổi mỗi dòng thành MaterialId; NVL nhập tay chưa có thì thêm vào danh mục (phụ liệu).</summary>
     private async Task<Result<List<int>>> ResolveMaterialsAsync(IReadOnlyList<SavePurchaseOrderLineDto> lines,
         CancellationToken ct)
     {
@@ -224,7 +224,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             }
 
             var created = await _materials.CreateAsync(
-                new CreateMaterialDto(null, name, MaterialTypes.Trim, "OTHER", line.NewMaterialUnit!.Trim(), color), ct);
+                new CreateMaterialDto(null, name, MaterialTypes.Trim, line.NewMaterialUnit!.Trim(), color), ct);
             if (!created.IsSuccess)
                 return Result<List<int>>.Failure(created.ErrorCode!, created.Message!, created.Kind, created.Errors);
             ids.Add(created.Data!.MaterialId);

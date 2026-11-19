@@ -43,10 +43,14 @@ export function CustomerFormModal({ open, customer, onClose, onSaved }: Customer
           form.setFields(
             error.errorCode === ERROR_CODES.CustomerNameDuplicate
               ? [{ name: 'customerName', errors: [error.message] }]
-              : Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-                  name: name as keyof SaveCustomerPayload,
-                  errors,
-                })),
+              : error.errorCode === ERROR_CODES.CustomerPhoneDuplicate
+                ? [{ name: 'phone', errors: [error.message] }]
+                : error.errorCode === ERROR_CODES.CustomerEmailDuplicate
+                  ? [{ name: 'email', errors: [error.message] }]
+                  : Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+                      name: name as keyof SaveCustomerPayload,
+                      errors,
+                    })),
           ),
       },
     );

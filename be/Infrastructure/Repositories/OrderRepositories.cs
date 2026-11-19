@@ -36,6 +36,12 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
 
     public Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct) =>
         _context.Customers.AnyAsync(c => c.CustomerName == name && (exceptId == null || c.CustomerId != exceptId), ct);
+
+    public Task<bool> PhoneExistsAsync(string phone, int? exceptId, CancellationToken ct) =>
+        _context.Customers.AnyAsync(c => c.Phone == phone && (exceptId == null || c.CustomerId != exceptId), ct);
+
+    public Task<bool> EmailExistsAsync(string email, int? exceptId, CancellationToken ct) =>
+        _context.Customers.AnyAsync(c => c.Email == email && (exceptId == null || c.CustomerId != exceptId), ct);
 }
 
 public sealed class ProductRepository : GenericRepository<Product>, IProductRepository

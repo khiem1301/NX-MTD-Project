@@ -113,6 +113,30 @@ public sealed class ConfirmPaymentDtoValidator : AbstractValidator<ConfirmPaymen
     }
 }
 
+public sealed class UpdatePurchasePaymentDtoValidator : AbstractValidator<UpdatePurchasePaymentDto>
+{
+    public UpdatePurchasePaymentDtoValidator()
+    {
+        RuleFor(x => x.PaymentMethod).NotEmpty().WithMessage(Messages.PaymentMethodInvalid)
+            .Must(m => m is "BankTransfer" or "Cash").WithMessage(Messages.PaymentMethodInvalid);
+        RuleFor(x => x.Amount).GreaterThan(0).WithMessage(Messages.PaymentAmountInvalid);
+        RuleFor(x => x.PaymentNote).MaximumLength(500);
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.PaymentEditReasonRequired).MaximumLength(TextLimits.Reason);
+        RuleFor(x => x.RowVer).NotEmpty();
+    }
+}
+
+public sealed class SetActualAmountDtoValidator : AbstractValidator<SetActualAmountDto>
+{
+    public SetActualAmountDtoValidator()
+    {
+        RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).When(x => x.Amount is not null).WithMessage(Messages.PaymentAmountInvalid);
+        RuleFor(x => x.Reason).NotEmpty().When(x => x.Amount is not null).WithMessage(Messages.PaymentActualReasonRequired)
+            .MaximumLength(TextLimits.Reason);
+        RuleFor(x => x.RowVer).NotEmpty();
+    }
+}
+
 public sealed class ReturnPaymentDtoValidator : AbstractValidator<ReturnPaymentDto>
 {
     public ReturnPaymentDtoValidator()

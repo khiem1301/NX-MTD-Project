@@ -164,6 +164,8 @@ public static class Messages
     public const string NotifyNewOrderBody = "Đơn {0}, giao ngày {1}. Vui lòng xem NVL của đơn.";
     public const string CustomerNotFound = "Khách hàng không tồn tại.";
     public const string CustomerNameDuplicate = "Tên khách hàng đã tồn tại.";
+    public const string CustomerPhoneDuplicate = "Số điện thoại đã thuộc về khách hàng khác.";
+    public const string CustomerEmailDuplicate = "Email đã thuộc về khách hàng khác.";
     public const string CustomerNotActive = "Khách hàng đã ngừng hợp tác, vui lòng chọn khách hàng khác.";
     public const string CustomerDiscontinued = "Đã chuyển khách hàng sang ngừng hợp tác.";
     public const string ProductNotFound = "Mã hàng không tồn tại.";
@@ -321,6 +323,8 @@ public static class Messages
 
     // --- Nhà cung cấp + đơn mua + thanh toán (UC14, UC23, UC34) ---
     public const string SupplierNameDuplicate = "Tên nhà cung cấp đã tồn tại.";
+    public const string SupplierPhoneDuplicate = "Số điện thoại đã thuộc về nhà cung cấp khác.";
+    public const string SupplierEmailDuplicate = "Email đã thuộc về nhà cung cấp khác.";
     public const string SupplierNotActive = "Nhà cung cấp đã ngừng hợp tác, vui lòng chọn nhà cung cấp khác.";
     public const string SupplierNotFound = "Nhà cung cấp không tồn tại.";
     public const string SupplierSaved = "Đã lưu nhà cung cấp.";
@@ -333,7 +337,6 @@ public static class Messages
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu có trong danh sách.";
-    public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu.";
     public const string ProductSpecMarkerDuplicate = "Mỗi nhóm bìa chỉ khai mỗi chi tiết và mỗi màu một lần.";
@@ -364,7 +367,21 @@ public static class Messages
     public const string PaymentReturned = "Đã trả lại Quản đốc kèm lý do.";
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
-    public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn giá trị đơn mua.";
+    public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn số còn phải thanh toán (giá trị thực tế trừ số đã thanh toán).";
+    public const string PaymentUpdated = "Đã sửa lần thanh toán.";
+    public const string FinalAmountSaved = "Đã lưu giá trị chốt của đơn hàng.";
+    public const string FinalAmountReasonRequired = "Phải nhập lý do khi chốt hoặc đổi giá trị đơn hàng.";
+    public const string FinalAmountBelowPaid = "Giá trị chốt không phù hợp với số đã thanh toán: tổng đã thanh toán phải nằm giữa 0 và giá trị chốt.";
+    public const string OrderPaymentNeedFinalAmount = "Phải chốt giá trị đơn hàng trước khi ghi nhận thanh toán.";
+    public const string OrderPaymentAmountInvalid = "Số tiền thanh toán phải khác 0 (dương: khách trả, âm: mình trả khách).";
+    public const string OrderPaymentOutOfRange = "Tổng đã thanh toán phải nằm giữa 0 và giá trị chốt của đơn hàng.";
+    public const string OrderPaymentAdded = "Đã ghi nhận lần thanh toán.";
+    public const string PaymentEditExpired = "Đã quá 24 giờ kể từ lúc nhập nên không sửa được lần thanh toán này.";
+    public const string PaymentEditReasonRequired = "Phải nhập lý do khi sửa lần thanh toán.";
+    public const string PaymentActualSaved = "Đã lưu giá trị thực tế của đơn mua.";
+    public const string PaymentActualNotAllowed = "Chỉ đơn đang nhận hàng hoặc đã chốt giao thiếu mới nhập được giá trị thực tế.";
+    public const string PaymentActualBelowPaid = "Giá trị thực tế không được nhỏ hơn số đã thanh toán.";
+    public const string PaymentActualReasonRequired = "Phải nhập lý do khi nhập giá trị thực tế.";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
     public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";

@@ -41,9 +41,14 @@ export function PurchaseOrderInfo({ order: data }: { order: PurchaseOrderDetail 
       <Descriptions.Item label={text.total}>
         <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
       </Descriptions.Item>
-      {data.goodsStatus === 'ClosedShort' && (
+      {data.actualAmount !== data.totalAmount && (
         <Descriptions.Item label={text.actualTotal}>
-          <Typography.Text strong>{formatCurrency(data.paidAmount ?? 0)}</Typography.Text>
+          <Typography.Text strong>{formatCurrency(data.actualAmount)}</Typography.Text>
+        </Descriptions.Item>
+      )}
+      {data.actualAmountReason && (
+        <Descriptions.Item label={text.actualOverrideReason} span={2}>
+          {data.actualAmountReason}
         </Descriptions.Item>
       )}
       <Descriptions.Item label={text.note}>{data.note ?? '—'}</Descriptions.Item>

@@ -12,39 +12,6 @@ export const MATERIAL_TYPE_LABEL: Record<string, string> = {
   SCRAP: 'Phế phẩm',
 };
 
-export const MATERIAL_CATEGORIES: Record<string, { value: string; label: string }[]> = {
-  FABRIC: [
-    { value: 'MAIN_FABRIC', label: 'Vải chính' },
-    { value: 'LINING', label: 'Vải lót' },
-    { value: 'INTERLINING', label: 'Mex / dựng' },
-    { value: 'RIB', label: 'Bo / rib' },
-  ],
-  TRIM: [
-    { value: 'THREAD', label: 'Chỉ' },
-    { value: 'ZIPPER', label: 'Khóa kéo' },
-    { value: 'BUTTON', label: 'Cúc' },
-    { value: 'SNAP', label: 'Cúc bấm' },
-    { value: 'ELASTIC', label: 'Chun' },
-    { value: 'TAPE', label: 'Dây / băng' },
-    { value: 'LABEL', label: 'Nhãn' },
-    { value: 'HANG_TAG', label: 'Thẻ treo' },
-    { value: 'PADDING', label: 'Bông / đệm' },
-    { value: 'PACKAGING', label: 'Bao bì' },
-    { value: 'OTHER', label: 'Khác' },
-  ],
-  SCRAP: [
-    { value: 'SCRAP_FABRIC', label: 'Vải vụn' },
-    { value: 'SCRAP_NEEDLE', label: 'Kim gãy' },
-    { value: 'SCRAP_OTHER', label: 'Phế phẩm khác' },
-  ],
-};
-
-export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  Object.values(MATERIAL_CATEGORIES)
-    .flat()
-    .map((c) => [c.value, c.label]),
-);
-
 export const MATERIAL_STATUS = { ACTIVE: 'ACTIVE', DISCONTINUED: 'DISCONTINUED' } as const;
 
 export const MATERIAL_STATUS_LABEL: Record<string, StatusLabel> = {
@@ -189,7 +156,6 @@ export const LABELS = {
   materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
   materialName: 'Tên NVL',
   materialType: 'Loại',
-  category: 'Nhóm',
   unit: 'Đơn vị tính',
   widthM: 'Khổ vải (m)',
   widthMHint: 'Bắt buộc với vải, từ 0,01 đến 3,5 m.',

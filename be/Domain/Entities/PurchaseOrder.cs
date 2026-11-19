@@ -43,6 +43,11 @@ public partial class PurchaseOrder
 
     public string? PaymentNote { get; set; }
 
+    /// <summary>Kế toán nhập giá trị thực tế thay giá trị tự tính (kèm <see cref="ActualAmountReason"/>).</summary>
+    public decimal? ActualAmountOverride { get; set; }
+
+    public string? ActualAmountReason { get; set; }
+
     public string? Note { get; set; }
 
     public DateTime CreatedAt { get; set; }
@@ -54,6 +59,8 @@ public partial class PurchaseOrder
     public virtual CustomerOrder? Order { get; set; }
 
     public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
+
+    public virtual ICollection<PurchasePayment> PurchasePayments { get; set; } = new List<PurchasePayment>();
 
     public virtual Request? SourceRequest { get; set; }
 

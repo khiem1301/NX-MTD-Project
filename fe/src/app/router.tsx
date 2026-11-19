@@ -22,6 +22,7 @@ import { payrollRoutes } from '@/features/payroll/routes';
 import { pieceMovementRoutes } from '@/features/piece-movement/routes';
 import { productionRoutes } from '@/features/production/routes';
 import { profileRoutes } from '@/features/profile/routes';
+import { orderPaymentRoutes } from '@/features/order-payment/routes';
 import { purchaseRoutes } from '@/features/purchase/routes';
 import { requestRoutes } from '@/features/requests/routes';
 import { revenueRoutes } from '@/features/revenue/routes';
@@ -54,6 +55,7 @@ const featureRoutes = [
   ...attendanceRoutes, // Minh
   ...mealRoutes, // Minh
   ...payrollRoutes, // Minh
+  ...orderPaymentRoutes, // Thanh toán đơn hàng khách (DEV-ALL-118)
   ...purchaseRoutes, // Minh (MI-07)
   ...monthlyCostRoutes, // Minh
   ...kpiRoutes, // Minh

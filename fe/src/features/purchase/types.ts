@@ -90,6 +90,21 @@ export type PurchaseOrderPermissions = {
   canReprice: boolean;
   canConfirmPayment: boolean;
   canReturnPayment: boolean;
+  /** Kế toán nhập giá trị thực tế (đơn đang nhận hàng / đã chốt giao thiếu). */
+  canSetActualAmount: boolean;
+};
+
+/** Một lần thanh toán đơn mua; canEdit: Kế toán, trong 24 giờ kể từ lúc nhập. Không xóa được. */
+export type PurchasePayment = {
+  purchasePaymentId: number;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentNote: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  editReason: string | null;
+  canEdit: boolean;
 };
 
 export type PurchaseOrderDetail = {
@@ -117,6 +132,12 @@ export type PurchaseOrderDetail = {
   paymentMethod: PaymentMethod | null;
   paymentNote: string | null;
   totalAmount: number;
+  /** Giá trị thực tế: đã trừ phần chốt không bù; số đã trả không được vượt quá. */
+  actualAmount: number;
+  /** Số Kế toán đã nhập thay giá trị tự tính (null = dùng giá trị tự tính) và lý do. */
+  actualAmountOverride: number | null;
+  actualAmountReason: string | null;
+  payments: PurchasePayment[];
   createdAt: string;
   rowVer: string;
   lines: PurchaseOrderLine[];
@@ -154,6 +175,22 @@ export type ConfirmPaymentPayload = {
   paidAmount: number;
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
+  rowVer: string;
+};
+
+export type UpdatePaymentPayload = {
+  paymentDate: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentNote: string | null;
+  reason: string;
+  rowVer: string;
+};
+
+/** amount null = bỏ số đã nhập, dùng lại giá trị tự tính. */
+export type SetActualAmountPayload = {
+  amount: number | null;
+  reason: string | null;
   rowVer: string;
 };
 

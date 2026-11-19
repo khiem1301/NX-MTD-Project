@@ -12,6 +12,7 @@ public static class PurchaseModule
     {
         services.AddScoped<ISupplierService, SupplierService>();
         services.AddScoped<IPurchaseOrderFlowService, PurchaseOrderFlowService>();
+        services.AddScoped<IPurchasePaymentService, PurchasePaymentService>();
         // Ảnh chứng từ thanh toán (KH-07): quyền theo OwnerType PURCHASE_ORDER.
         services.AddScoped<IAttachmentOwnerAccess, PurchaseOrderAttachmentAccess>();
         return services;

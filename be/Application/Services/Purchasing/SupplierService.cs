@@ -56,6 +56,8 @@ public sealed class SupplierService : ISupplierService
         var name = dto.SupplierName.Trim();
         if (await NameTakenAsync(name, null, ct))
             return Result<int>.Failure(ErrorCodes.SupplierNameDuplicate, Messages.SupplierNameDuplicate);
+        if (await ContactTakenAsync(dto, null, ct) is { } taken)
+            return Result<int>.Failure(taken.Code, taken.Message);
 
         var supplier = new Supplier { Status = RecordStatus.Active, CreatedAt = _clock.Now };
         Apply(supplier, dto, name);
@@ -78,6 +80,8 @@ public sealed class SupplierService : ISupplierService
         var name = dto.SupplierName.Trim();
         if (await NameTakenAsync(name, supplierId, ct))
             return Result.Failure(ErrorCodes.SupplierNameDuplicate, Messages.SupplierNameDuplicate);
+        if (await ContactTakenAsync(dto, supplierId, ct) is { } taken)
+            return Result.Failure(taken.Code, taken.Message);
 
         var before = Snapshot(supplier);
         Apply(supplier, dto, name);
@@ -128,6 +132,18 @@ public sealed class SupplierService : ISupplierService
 
     private Task<bool> NameTakenAsync(string name, int? exceptId, CancellationToken ct) =>
         Suppliers.AsNoTracking().AnyAsync(s => s.SupplierName == name && (exceptId == null || s.SupplierId != exceptId), ct);
+
+    /// <summary>Hai nhà cung cấp không dùng chung số điện thoại hoặc email (bỏ trống thì không kiểm).</summary>
+    private async Task<(string Code, string Message)?> ContactTakenAsync(SaveSupplierDto dto, int? exceptId, CancellationToken ct)
+    {
+        var phone = Clean(dto.Phone);
+        if (phone is not null && await Suppliers.AsNoTracking().AnyAsync(s => s.Phone == phone && (exceptId == null || s.SupplierId != exceptId), ct))
+            return (ErrorCodes.SupplierPhoneDuplicate, Messages.SupplierPhoneDuplicate);
+        var email = Clean(dto.Email);
+        if (email is not null && await Suppliers.AsNoTracking().AnyAsync(s => s.Email == email && (exceptId == null || s.SupplierId != exceptId), ct))
+            return (ErrorCodes.SupplierEmailDuplicate, Messages.SupplierEmailDuplicate);
+        return null;
+    }
 
     private static void Apply(Supplier supplier, SaveSupplierDto dto, string name)
     {

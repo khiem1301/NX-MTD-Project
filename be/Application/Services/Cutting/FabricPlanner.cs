@@ -23,7 +23,7 @@ public sealed class FabricPlanner
         var colorIds = list.Select(d => d.ProductColorId).Distinct().ToArray();
         var rows = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                        && p.Material.MaterialType == MaterialTypes.Fabric)
+                        && p.Material.MaterialType == MaterialTypes.Fabric && p.Status == RecordStatus.Active)
             .Select(p => new
             {
                 p.ProductComponentMaterialId,
@@ -53,7 +53,7 @@ public sealed class FabricPlanner
         var colorIds = list.Select(d => d.ProductColorId).Distinct().ToArray();
         var rows = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                        && p.Material.MaterialType == MaterialTypes.Fabric)
+                        && p.Material.MaterialType == MaterialTypes.Fabric && p.Status == RecordStatus.Active)
             .Select(p => new { p.ProductComponentMaterialId, p.ProductColorId, p.MaterialId })
             .ToListAsync(ct);
         return list.ToDictionary(d => d, d => (IReadOnlyList<int>)rows

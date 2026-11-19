@@ -38,6 +38,10 @@ public partial class NxMtdDbContext : DbContext
 
     public virtual DbSet<DeliveryScheduleDate> DeliveryScheduleDates { get; set; }
 
+    public virtual DbSet<PurchasePayment> PurchasePayments { get; set; }
+
+    public virtual DbSet<OrderPayment> OrderPayments { get; set; }
+
     public virtual DbSet<CutHandover> CutHandovers { get; set; }
 
     public virtual DbSet<CutHandoverLine> CutHandoverLines { get; set; }

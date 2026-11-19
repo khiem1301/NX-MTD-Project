@@ -11,10 +11,12 @@ import type {
   ReasonPayload,
   RepricePayload,
   SaveSupplierPayload,
+  SetActualAmountPayload,
   Supplier,
   SupplierDetail,
   SupplierOption,
   SupplierQuery,
+  UpdatePaymentPayload,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -56,6 +58,10 @@ export const purchaseApi = {
   // Kế toán
   confirmPayment: (id: number, body: ConfirmPaymentPayload) =>
     post<void>(API.purchase.confirmPayment(id), body),
+  updatePayment: (id: number, paymentId: number, body: UpdatePaymentPayload) =>
+    put<void>(API.purchase.updatePayment(id, paymentId), body),
+  setActualAmount: (id: number, body: SetActualAmountPayload) =>
+    put<void>(API.purchase.actualAmount(id), body),
   returnPayment: (id: number, body: ReasonPayload) =>
     post<void>(API.purchase.returnPayment(id), body),
 };

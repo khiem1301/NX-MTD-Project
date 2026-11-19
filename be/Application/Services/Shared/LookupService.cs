@@ -58,7 +58,7 @@ public sealed class LookupService : ILookupService
         // Mỗi dòng định mức (chi tiết vải × NVL) của đúng màu áo là một lựa chọn cắt bù (định mức theo màu, DEV-ALL-87).
         return await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => p.ProductColorId == colorId && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                        && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
+                        && p.ProductComponent.Status == RecordStatus.Active && p.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .OrderBy(p => p.ProductComponentId).ThenBy(p => p.ProductComponentMaterialId)
             .Select(p => new ComponentOptionDto(p.ProductComponentMaterialId,
                 p.ProductComponent.ComponentName + " – " + p.Material.MaterialName + (p.Material.Color == "" ? "" : " " + p.Material.Color),

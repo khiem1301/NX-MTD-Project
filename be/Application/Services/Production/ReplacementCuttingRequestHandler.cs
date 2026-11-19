@@ -58,7 +58,7 @@ public sealed class ReplacementCuttingRequestHandler : IRequestTypeHandler
         var validNorms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .CountAsync(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductColorId == colorId
                              && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                             && p.ProductComponent.Status == RecordStatus.Active, ct);
+                             && p.ProductComponent.Status == RecordStatus.Active && p.Status == RecordStatus.Active, ct);
         if (validNorms != normIds.Count) return Invalid(Messages.ReplacementCuttingLines);
 
         var duplicate = await _uow.Repository<Request>().Query().AsNoTracking()

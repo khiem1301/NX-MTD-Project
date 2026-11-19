@@ -22,7 +22,6 @@ public static class WarehouseMessages
 
     public const string MaterialCodeDuplicate = "Mã NVL đã tồn tại.";
     public const string MaterialNameDuplicate = "Đã có NVL cùng tên, cùng loại và cùng màu.";
-    public const string MaterialCategoryInvalid = "Nhóm NVL không khớp với loại.";
     public const string MaterialInactive = "NVL đã ngừng sử dụng.";
     public const string MaterialStatusChanged = "Đã cập nhật trạng thái NVL.";
 

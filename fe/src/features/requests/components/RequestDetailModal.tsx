@@ -21,6 +21,8 @@ export function RequestDetailModal() {
     id,
     act,
     close,
+    handleUrl,
+    goHandle,
     notFound,
     submit,
     pending,
@@ -175,6 +177,11 @@ export function RequestDetailModal() {
             {data.permissions.canNotComplete && (
               <Button danger onClick={() => setPending('notComplete')}>
                 {MESSAGES.requests.notComplete}
+              </Button>
+            )}
+            {handleUrl && (
+              <Button type="primary" onClick={goHandle}>
+                {MESSAGES.requests.handleNow}
               </Button>
             )}
             {data.permissions.canComplete && (

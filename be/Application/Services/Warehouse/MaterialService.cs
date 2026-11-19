@@ -68,7 +68,7 @@ public sealed class MaterialService : IMaterialService
             {
                 MaterialCode = code,
                 MaterialName = name,
-                Category = dto.Category,
+                MaterialType = dto.MaterialType,
                 Unit = UnitOf(dto.MaterialType, dto.Unit),
                 WidthM = WidthOf(dto.MaterialType, dto.WidthM),
                 Color = color,
@@ -94,7 +94,7 @@ public sealed class MaterialService : IMaterialService
 
         material.MaterialName = name;
         material.Color = color;
-        material.Category = dto.Category;
+        material.MaterialType = dto.MaterialType;
         material.Unit = UnitOf(dto.MaterialType, dto.Unit);
         material.WidthM = WidthOf(dto.MaterialType, dto.WidthM);
         await _uow.SaveChangesAsync();
@@ -146,7 +146,7 @@ public sealed class MaterialService : IMaterialService
     }
 
     private static readonly Expression<Func<Material, MaterialDto>> ToDto = m =>
-        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Category, m.Unit,
+        new MaterialDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType, m.Unit,
             m.Color, m.Status, m.CreatedAt, m.WidthM);
 
     private static readonly Func<Material, MaterialDto> MapDto = ToDto.Compile();

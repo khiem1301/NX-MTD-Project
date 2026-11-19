@@ -46,6 +46,9 @@ public class PurchaseFlowServiceTests
         var scheduleRepo = Substitute.For<IGenericRepository<DeliveryScheduleDate>>();
         scheduleRepo.Query().Returns(_ => _schedule.AsTestAsyncQueryable());
         _uow.Repository<DeliveryScheduleDate>().Returns(scheduleRepo);
+        var paymentRepo = Substitute.For<IGenericRepository<PurchasePayment>>();
+        paymentRepo.Query().Returns(_ => _pos.SelectMany(p => p.PurchasePayments).AsTestAsyncQueryable());
+        _uow.Repository<PurchasePayment>().Returns(paymentRepo);
     }
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
@@ -378,9 +381,10 @@ public class PurchaseFlowServiceTests
     }
 
     [Fact]
-    public async Task ConfirmPayment_ClosedShort_MarksPaidEvenIfAmountLessThanTotal()
+    public async Task ConfirmPayment_ClosedShort_PaidInFullOfActualValue_MarksPaid()
     {
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
+        po.PurchaseOrderLines.Single(l => l.PurchaseOrderLineId == 12).NotReplenishedQty = 50;   // giá trị thực tế còn 1.000.000
 
         var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000), default);
 
@@ -430,6 +434,22 @@ public class PurchaseFlowServiceTests
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
         result.Message.Should().Be(Messages.PaymentAmountExceedsTotal);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_ClosedShort_AmountIsCappedAtActualValue()
+    {
+        var po = Po(PurchaseGoodsStatuses.Ordered);
+        var line = po.PurchaseOrderLines.First();
+        line.NotReplenishedQty = line.OrderedQty / 2;
+        var actual = po.PurchaseOrderLines.Sum(l => (l.OrderedQty - l.NotReplenishedQty) * l.UnitPrice);
+
+        var over = await Flow().ConfirmPaymentAsync(5, Pay(amount: actual + 1), default);
+        var ok = await Flow().ConfirmPaymentAsync(5, Pay(amount: actual), default);
+
+        over.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        over.Message.Should().Be(Messages.PaymentAmountExceedsTotal);
+        ok.IsSuccess.Should().BeTrue();
     }
 
     [Fact]

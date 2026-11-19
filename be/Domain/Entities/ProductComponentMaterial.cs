@@ -20,6 +20,8 @@ public partial class ProductComponentMaterial
 
     public string? SpecNote { get; set; }
 
+    public string Status { get; set; } = Constants.RecordStatus.Active;
+
     public virtual ICollection<CutHandoverLine> CutHandoverLines { get; set; } = new List<CutHandoverLine>();
 
     public virtual ICollection<CuttingLayLine> CuttingLayLines { get; set; } = new List<CuttingLayLine>();

@@ -11,10 +11,7 @@ public sealed class CreateMaterialDtoValidator : AbstractValidator<CreateMateria
     {
         RuleFor(x => x.MaterialCode).MaximumLength(30);
         RuleFor(x => x.MaterialName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.MaterialType).NotEmpty().Must(t => MaterialTypes.Categories.ContainsKey(t));
-        RuleFor(x => x.Category).NotEmpty()
-            .Must((dto, c) => MaterialTypes.IsValidCategory(dto.MaterialType, c))
-            .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
+        RuleFor(x => x.MaterialType).NotEmpty().Must(MaterialTypes.IsValid);
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);
@@ -27,10 +24,7 @@ public sealed class UpdateMaterialDtoValidator : AbstractValidator<UpdateMateria
     public UpdateMaterialDtoValidator()
     {
         RuleFor(x => x.MaterialName).NotEmpty().MaximumLength(200);
-        RuleFor(x => x.MaterialType).NotEmpty().Must(t => MaterialTypes.Categories.ContainsKey(t));
-        RuleFor(x => x.Category).NotEmpty()
-            .Must((dto, c) => MaterialTypes.IsValidCategory(dto.MaterialType, c))
-            .WithMessage(WarehouseMessages.MaterialCategoryInvalid);
+        RuleFor(x => x.MaterialType).NotEmpty().Must(MaterialTypes.IsValid);
         RuleFor(x => x.Unit).MaximumLength(20);
         RuleFor(x => x.Unit).NotEmpty().When(x => x.MaterialType != MaterialTypes.Fabric);
         RuleFor(x => x.Color).MaximumLength(50);

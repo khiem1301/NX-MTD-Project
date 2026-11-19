@@ -67,6 +67,8 @@ public static class ErrorCodes
     public const string OrderMaterialsAwaiting = "ORDER_MATERIALS_AWAITING";
     public const string OrderFullyDispatched = "ORDER_FULLY_DISPATCHED";
     public const string CustomerNameDuplicate = "CUSTOMER_NAME_DUPLICATE";
+    public const string CustomerPhoneDuplicate = "CUSTOMER_PHONE_DUPLICATE";
+    public const string CustomerEmailDuplicate = "CUSTOMER_EMAIL_DUPLICATE";
     public const string CustomerNotActive = "CUSTOMER_NOT_ACTIVE";
 
     // Nhân sự, tài khoản, tổ (KH-10)
@@ -178,12 +180,15 @@ public static class ErrorCodes
 
     // Nhà cung cấp, đơn mua, thanh toán (Minh, MI-07)
     public const string SupplierNameDuplicate = "SUPPLIER_NAME_DUPLICATE";
+    public const string SupplierPhoneDuplicate = "SUPPLIER_PHONE_DUPLICATE";
+    public const string SupplierEmailDuplicate = "SUPPLIER_EMAIL_DUPLICATE";
     public const string SupplierNotActive = "SUPPLIER_NOT_ACTIVE";
     public const string PurchaseOrderInvalidStatus = "PURCHASE_ORDER_INVALID_STATUS";
     public const string PurchaseOrderLinesMismatch = "PURCHASE_ORDER_LINES_MISMATCH";
     public const string PurchaseOrderPriceRequired = "PURCHASE_ORDER_PRICE_REQUIRED";
     public const string PurchaseOrderDateInvalid = "PURCHASE_ORDER_DATE_INVALID";
     public const string PaymentInvalid = "PAYMENT_INVALID";
+    public const string PaymentEditExpired = "PAYMENT_EDIT_EXPIRED";
 
     // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";

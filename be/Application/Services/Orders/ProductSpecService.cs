@@ -36,7 +36,7 @@ public sealed class ProductSpecService : IProductSpecService
             .Select(v => new { v.ProductVariantId, v.ProductColor.Color, v.SizeCode, v.Status })
             .ToListAsync(ct);
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
-            .Where(n => n.ProductId == productId)
+            .Where(n => n.ProductId == productId && n.Status == RecordStatus.Active)
             .OrderBy(n => n.ProductComponentId)
             .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductColor.Color)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
@@ -103,8 +103,7 @@ public sealed class ProductSpecService : IProductSpecService
         await ClearMarkerGroupsAsync(productId, ct);   // trước khi gỡ thành phần: ProductMarkerComponent trỏ vào thành phần
         var removeNorms = await RemoveDroppedComponentsAsync(productId, components, keptComponents, norms, ct);
         var componentByName = await UpsertComponentsAsync(productId, componentMatch);
-        var failed = await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), colorByName, componentByName, ct);
-        if (failed is not null) return failed;
+        await WriteNormsAsync(productId, dto, norms.Except(removeNorms).ToList(), colorByName, componentByName, ct);
         await RemoveStaleOperationLinksAsync(productId, dto, componentByName, ct);
         await WriteMarkerGroupsAsync(productId, dto, componentByName, ct);
 
@@ -175,9 +174,10 @@ public sealed class ProductSpecService : IProductSpecService
 
     /// <summary>
     /// Bước 3: ghi định mức theo kiểu cập nhật / thêm / xóa (giữ Id: lệnh cắt, phiếu cấp, bàn cắt, tồn kho BTP
-    /// trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại). Trả về lỗi nếu định mức bị bỏ đã được dùng.
+    /// trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại). Dòng bị bỏ: chưa dùng thì xóa, đã dùng thì ngừng dùng
+    /// (ẩn, DEV-ALL-116); dòng ngừng dùng được thêm lại thì dùng lại.
     /// </summary>
-    private async Task<Result<int>?> WriteNormsAsync(int productId, SaveProductSpecDto dto, List<ProductComponentMaterial> remainingNorms,
+    private async Task WriteNormsAsync(int productId, SaveProductSpecDto dto, List<ProductComponentMaterial> remainingNorms,
         Dictionary<string, int> colorByName, Dictionary<string, ProductComponent> componentByName, CancellationToken ct)
     {
         var keptComponentIds = componentByName.Values.Select(c => c.ProductComponentId).ToHashSet();
@@ -203,13 +203,13 @@ public sealed class ProductSpecService : IProductSpecService
                 await _uow.Repository<ProductComponentMaterial>().AddAsync(row);
             }
             row.SpecNote = string.IsNullOrWhiteSpace(n.SpecNote) ? null : n.SpecNote.Trim();
+            row.Status = RecordStatus.Active;
         }
-        var stale = existing.Where(e => !wanted.Contains(e.Key)).Select(e => e.Value).ToList();
-        if (stale.Count == 0) return null;
+        var stale = existing.Where(e => !wanted.Contains(e.Key) && e.Value.Status != RecordStatus.Discontinued).Select(e => e.Value).ToList();
+        if (stale.Count == 0) return;
         var inUse = await UsedNormIdsAsync(stale.Select(n => n.ProductComponentMaterialId).ToList(), ct);
-        if (inUse.Count > 0) return Fail.As<int>(Invalid(Messages.ProductSpecNormInUse));
-        _uow.Repository<ProductComponentMaterial>().RemoveRange(stale);
-        return null;
+        foreach (var n in stale.Where(n => inUse.Contains(n.ProductComponentMaterialId))) n.Status = RecordStatus.Discontinued;
+        _uow.Repository<ProductComponentMaterial>().RemoveRange(stale.Where(n => !inUse.Contains(n.ProductComponentMaterialId)).ToList());
     }
 
     /// <summary>

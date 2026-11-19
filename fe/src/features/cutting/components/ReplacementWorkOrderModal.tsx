@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert, Descriptions, Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
@@ -10,18 +10,39 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDatePicker } from '@/components/common/DateInputs';
 
-type ReplacementWorkOrderModalProps = { open: boolean; onClose: () => void };
+/** `presetRequestId`: mở từ nút "Xử lý ngay" của đơn cắt bù đã duyệt, chọn sẵn đơn đó. */
+type ReplacementWorkOrderModalProps = {
+  open: boolean;
+  onClose: () => void;
+  presetRequestId?: number | null;
+};
 type FormValues = { requestId: number; cuttingTeamId: number; dueDate: Dayjs; note?: string };
 
 const CUTTING_TEAM_TYPE = 'Cutting';
 
 /** UC19 (TH-10): Quản đốc lập lệnh cắt bù từ đơn cắt bù đã duyệt; dòng lệnh lấy từ đơn (chi tiết + số lượng). */
-export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrderModalProps) {
+export function ReplacementWorkOrderModal({
+  open,
+  onClose,
+  presetRequestId = null,
+}: ReplacementWorkOrderModalProps) {
   const [form] = Form.useForm<FormValues>();
   const requests = useReplacementRequests(open);
   const teams = useTeamOptions(CUTTING_TEAM_TYPE);
   const create = useCreateReplacement();
-  const [requestId, setRequestId] = useState<number>();
+  const requestId = Form.useWatch('requestId', form);
+  const presetApplied = useRef(false);
+
+  useEffect(() => {
+    if (!open) {
+      presetApplied.current = false;
+      return;
+    }
+    if (presetRequestId === null || presetApplied.current) return;
+    if (!(requests.data ?? []).some((r) => r.requestId === presetRequestId)) return;
+    presetApplied.current = true;
+    form.setFieldValue('requestId', presetRequestId);
+  }, [open, presetRequestId, requests.data, form]);
   const selected = (requests.data ?? []).find((r) => r.requestId === requestId);
   const required = [{ required: true, message: MESSAGES.common.required }];
 
@@ -67,7 +88,6 @@ export function ReplacementWorkOrderModal({ open, onClose }: ReplacementWorkOrde
           <Select
             placeholder={LABELS.selectReplacementRequest}
             loading={requests.isLoading}
-            onChange={(id: number) => setRequestId(id)}
             options={(requests.data ?? []).map((r) => ({
               value: r.requestId,
               label: `${r.requestCode} · ${r.orderCode} · ${r.productCode}`,

@@ -152,6 +152,11 @@
 | DEV-ALL-111 | 13/11/2026 | Claude (AI) | UC42, `MaterialReturn` | Tổ may cũng trả NVL thừa (chỉ, cúc…) về kho theo phiếu cấp đã nhận, như tổ cắt; đổi chữ "Trả vải thừa" thành "Trả NVL thừa". Thay phần "tổ may không trả" của UC42 (mở rộng thêm ở DEV-ALL-112) | Mở |
 | DEV-ALL-112 | 13/11/2026 | Claude (AI) | UC42, UC24, `MaterialReturn`, `MaterialReturnLine`, `Material` | Phiếu trả không còn theo phiếu cấp: tổ cắt trả NVL theo lệnh cắt, tổ may trả NVL (tổng đã nhận, không theo đơn) và BTP theo đơn – mã hàng – màu – size (trần = đã nhận − đã QC đạt − đã trả); cả hai tổ trả thêm NVL phế phẩm (loại NVL mới SCRAP: vải vụn kg, kim gãy cái…, không trần). Đổi DB: patch `2026-11-13_material_return_scrap.sql` | Mở |
 | DEV-ALL-113 | 13/11/2026 | Claude (AI) | UC10, UC37, UC39, `PurchaseOrder`, `CustomerOrder`, `Request`, `DeliveryScheduleDate` | Lịch giao NVL nhập đúng N ngày cho N lần giao (đơn mua, lịch khách giao, giao bù) thay cho khoảng "từ ngày – đến ngày"; thêm bảng ngày giao DeliveryScheduleDate (mỗi dòng đúng một chủ lịch, có khoá ngoại), cột ngày đầu / cuối cũ giữ làm tóm tắt | Mở |
+| DEV-ALL-118 | 18/11/2026 | Claude (AI) | UC34 mở rộng, `CustomerOrder`, `OrderPayment` | Đơn hàng khách có giá trị chốt do Kế toán nhập (cho phép âm khi mình phải đền hợp đồng) và sổ thanh toán nhiều lần hai chiều (dương: khách trả, âm: mình trả); màn mới "Thanh toán đơn hàng" của Kế toán | Mở |
+| DEV-ALL-117 | 18/11/2026 | Claude (AI) | UC34, `PurchaseOrder`, `PurchasePayment` | Đơn mua thanh toán nhiều lần (bảng `PurchasePayment`, sửa trong 24 giờ kèm lý do, không xóa); giá trị thực tế của đơn tự tính từ phần chốt không bù hoặc Kế toán nhập kèm lý do; tổng các lần trả không vượt giá trị thực tế | Mở |
+| DEV-ALL-116 | 17/11/2026 | Claude (AI) | UC định mức mã hàng, `ProductComponentMaterial` | Xóa dòng định mức NVL: chưa có chứng từ dùng thì xóa hẳn, đã dùng thì ngừng dùng (ẩn, cột `Status`) thay vì báo lỗi; dòng ẩn không hiện ở form định mức và không chọn được cho chứng từ mới | Mở |
+| DEV-ALL-115 | 17/11/2026 | Claude (AI) | UC38 (danh mục NVL), `Material`, `vw_MaterialStock` | Bỏ nhóm NVL (`Material.Category`); loại NVL (`MaterialType`: FABRIC / TRIM / SCRAP) từ cột tính thành cột thật người dùng chọn trực tiếp, bỏ ô "Nhóm" ở form và bảng NVL | Mở |
+| DEV-ALL-114 | 17/11/2026 | Claude (AI) | UC khách hàng, UC nhà cung cấp, `Customer`, `Supplier` | Hai khách hàng (hoặc hai nhà cung cấp) không được cùng số điện thoại, không được cùng email; thêm 4 unique index có điều kiện, lỗi trùng báo ngay dưới ô nhập | Mở |
 | DEV-ALL-97 | 11/11/2026 | Claude (AI) | UC37–UC39, UC08 (thiếu NVL), màn NVL chờ nhận | Thủ kho nhận hàng bù và xem đơn thiếu NVL ngay trong màn NVL chờ nhận (tab "Giao bù"), bỏ mục menu "Thiếu NVL khi nhập" của Thủ kho; chi tiết đơn mua xem bằng nút Xem; mỗi tab có bộ lọc riêng | Mở |
 | DEV-ALL-96 | 11/11/2026 | Claude (AI) | UC24 (tồn kho), báo cáo nhập xuất tồn | Báo cáo nhập xuất tồn không còn là màn riêng (bỏ menu + đường dẫn `/warehouse/nxt-report`), thành một tab của màn Tồn kho | Mở |
 | DEV-ALL-95 | 11/11/2026 | Claude (AI) | UC09, UC37–UC39, UC08, `CustomerOrder`, `OrderMaterial`, `RequestLine` | Số lần + ngày giao dùng chung cho cả đơn: lịch khách giao NVL chuyển lên đơn hàng (bỏ ở từng NVL), đơn mua đếm theo cả đơn mua; đơn đủ số lần mà còn thiếu thì mọi NVL còn thiếu (kể cả NVL chưa về lần nào) vào đơn thiếu NVL; phiếu bổ sung theo dòng đơn thiếu. Thay phần "theo từng NVL / từng dòng" của DEV-ALL-94 | Mở |
@@ -2492,4 +2497,70 @@
   - [ ] Report-3: UC lập đơn mua, UC lịch khách giao NVL, UC chọn giao bù (ô ngày giao từng lần)
   - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `DeliveryScheduleDate`
   - [ ] DEV-ALL-94, DEV-ALL-95 (phần khoảng ngày giao)
+- **Trạng thái:** Mở
+
+### DEV-ALL-114 · Số điện thoại, email không trùng giữa các khách hàng / nhà cung cấp
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn Khách hàng, màn Nhà cung cấp (tạo, sửa); bảng `Customer`, `Supplier`
+- **Tài liệu gốc ghi:** chỉ tên khách hàng, tên nhà cung cấp là UNIQUE; `Phone`, `Email` cho phép trùng.
+- **Code đang làm:** hai khách hàng không cùng `Phone`, không cùng `Email`; hai nhà cung cấp cũng vậy (so sánh sau khi cắt khoảng trắng, bỏ trống thì không kiểm). Trùng thì API trả 409 với mã `CUSTOMER_PHONE_DUPLICATE`, `CUSTOMER_EMAIL_DUPLICATE`, `SUPPLIER_PHONE_DUPLICATE`, `SUPPLIER_EMAIL_DUPLICATE`; form hiện lỗi dưới đúng ô số điện thoại / email. Chỉ kiểm trong từng loại: một khách hàng và một nhà cung cấp vẫn được dùng chung số. DB có 4 unique index có điều kiện `WHERE ... IS NOT NULL`.
+- **Lý do:** tránh nhập trùng một đối tác thành hai bản ghi; người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Minh (nhà cung cấp, MI-07), người phụ trách khách hàng. Migrate: `SQL/patches/2026-11-17_customer_supplier_unique_contact.sql` (dừng và liệt kê nếu dữ liệu đang có giá trị trùng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC quản lý khách hàng, UC quản lý nhà cung cấp (quy tắc và thông báo lỗi trùng số điện thoại / email)
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: index `UQ_Customer_Phone`, `UQ_Customer_Email`, `UQ_Supplier_Phone`, `UQ_Supplier_Email`
+- **Trạng thái:** Mở
+
+### DEV-ALL-115 · Bỏ nhóm NVL, loại NVL là cột người dùng chọn
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn Danh mục NVL (form thêm / sửa, bảng, API), kho NVL; bảng `Material`, view `vw_MaterialStock`
+- **Tài liệu gốc ghi:** người dùng chọn `Category` (vải chính, vải lót, mex, bo, chỉ, khóa, cúc... và nhóm phế phẩm); `MaterialType` là cột tính từ `Category` (22/10, DEV-ALL-112 thêm SCRAP).
+- **Code đang làm:** không còn `Category`. `MaterialType` (FABRIC / TRIM / SCRAP) là cột thật `NOT NULL` có `CK_Material_Type`, người dùng chọn ở ô "Loại". API NVL bỏ trường `category` (tạo, sửa, trả về); view `vw_MaterialStock` bỏ cột `Category`. Khóa duy nhất `UQ_Material_NameType` giữ nguyên (tên, loại, màu). Giá trị Loại của NVL hiện có được giữ nguyên khi migrate. Mất khả năng phân biệt vải chính / lót / mex / bo, các loại phụ liệu và các loại phế phẩm; các chỗ nghiệp vụ trước đây chỉ dùng Loại nên không đổi.
+- **Lý do:** nhóm chỉ dùng để suy ra Loại, người dùng thấy thừa; người dùng yêu cầu bỏ hẳn.
+- **Ảnh hưởng người khác:** Thủ kho (danh mục NVL, nhập NVL mới), Tổ cắt / Quản đốc (chọn vải khi lập định mức, lệnh cắt: vẫn lọc theo Loại). Migrate: `SQL/patches/2026-11-17_material_drop_category.sql`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC38 (nhập NVL mới: bỏ ô nhóm), mockup màn Danh mục NVL
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `Material` (bỏ `Category`, `MaterialType` là cột thật), view `vw_MaterialStock`
+  - [ ] DEV-ALL-112 (phần nhóm phế phẩm SCRAP_FABRIC / SCRAP_NEEDLE / SCRAP_OTHER)
+- **Trạng thái:** Mở
+
+### DEV-ALL-116 · Xóa dòng định mức NVL: chưa dùng thì xóa, đã dùng thì ẩn
+
+- **Ngày / Người / Task / PR:** 17/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn Định mức mã hàng (lưu), chọn vải khi lập lệnh cắt / cắt bù / phiếu cấp BTP / kiểm kê BTP, danh sách NVL của đơn; bảng `ProductComponentMaterial`
+- **Tài liệu gốc ghi:** không nói rõ; code cũ chặn xóa dòng định mức đã được lệnh cắt, đơn xin, phiếu cấp, bàn cắt, bàn giao hoặc tồn BTP dùng (báo lỗi, bắt sửa số lượng thay vì xóa).
+- **Code đang làm:** bỏ dòng định mức khỏi form rồi lưu: chưa dùng ở đâu thì xóa hẳn; đã dùng thì đặt `Status = DISCONTINUED` (ẩn), chứng từ cũ vẫn giữ nguyên tham chiếu. Dòng ẩn không hiện lại ở form định mức, không tính vào nhu cầu vải của lệnh cắt mới và không chọn được cho chứng từ mới. Thêm lại đúng dòng đã ẩn (cùng màu, chi tiết, NVL) thì dùng lại dòng đó. Cách làm giống thành phần mã hàng khi bị bỏ.
+- **Lý do:** đổi vải của mã hàng (vải cũ sang vải mới) mà không phải giữ dòng cũ hoặc bị chặn; người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Thái (lệnh cắt, kho BTP): lệnh cắt nguyên bộ đang mở sẽ không còn tính vải của dòng đã ẩn. Migrate: `SQL/patches/2026-11-17_pcm_status.sql`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC định mức mã hàng (xóa dòng định mức: xóa hoặc ẩn)
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `ProductComponentMaterial` (cột `Status`, `CK_PCM_Status`)
+- **Trạng thái:** Mở
+
+### DEV-ALL-117 · Đơn mua: thanh toán nhiều lần, giá trị thực tế
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC34 (Kế toán xác nhận thanh toán đơn mua), màn Thanh toán mua hàng và chi tiết đơn mua; bảng `PurchaseOrder`, bảng mới `PurchasePayment`
+- **Tài liệu gốc ghi:** một đơn mua có một lần thanh toán (`PaymentDate`, `PaidAmount`, `PaymentMethod`, `PaymentNote` ngay trên `PurchaseOrder`); Kế toán xác nhận một lần rồi đơn đã thanh toán.
+- **Code đang làm:** mỗi lần Kế toán thanh toán là một dòng `PurchasePayment`; đơn ở trạng thái "Thanh toán một phần" thì thêm lần nữa được, đủ giá trị thực tế thì thành "Đã thanh toán". `PurchaseOrder.PaidAmount` là tổng các lần, `PaymentDate / PaymentMethod / PaymentNote` là của lần gần nhất. Giá trị thực tế của đơn = Σ (số đặt − số chốt không bù) × đơn giá; đơn đang nhận hàng (NCC giao thiếu, còn giao thêm) hoặc đã chốt giao thiếu thì Kế toán nhập được số khác (`ActualAmountOverride`, bắt buộc lý do, không nhỏ hơn số đã trả). Tổng các lần trả không vượt giá trị thực tế. Không xóa lần thanh toán; sửa một lần trong 24 giờ kể từ lúc nhập, bắt buộc lý do, sửa xong trạng thái thanh toán tính lại. "Trả lại Quản đốc" chỉ khi chưa trả lần nào. Chốt giao thiếu: nếu số đã trả đã đủ giá trị thực tế mới thì thành "Đã thanh toán" (trước đây một phần tự thành đã thanh toán).
+- **Lý do:** đơn mua thường trả nhiều đợt, NCC giao thiếu thì giá trị phải trả đổi; người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Minh (đơn mua, MI-07), Quản đốc (theo dõi đơn mua: thấy thêm danh sách các lần thanh toán). Migrate: `SQL/patches/2026-11-18_purchase_payment.sql` (đơn đã thanh toán cũ được chuyển thành một dòng, không còn sửa được).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC34 (thanh toán nhiều lần, sửa trong 24 giờ, giá trị thực tế), sơ đồ trạng thái thanh toán đơn mua
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `PurchasePayment`; cột `ActualAmountOverride`, `ActualAmountReason` của `PurchaseOrder`; `CK_PO_ActualOverride`
+- **Trạng thái:** Mở
+
+### DEV-ALL-118 · Đơn hàng khách: giá trị chốt (có thể âm) và thanh toán nhiều lần
+
+- **Ngày / Người / Task / PR:** 18/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn mới "Thanh toán đơn hàng" (Kế toán, menu Quản lí đơn hàng); bảng `CustomerOrder`, bảng mới `OrderPayment`
+- **Tài liệu gốc ghi:** đơn hàng không có khái niệm thanh toán; số tiền chỉ nằm ở đơn giá gia công (`OrderLine.CmtUnitPrice`, dữ liệu mật chỉ Admin).
+- **Code đang làm:** Kế toán nhập "giá trị chốt" cả đơn (`FinalAmount`, cho phép âm hoặc 0, bắt buộc lý do) và ghi các lần thanh toán vào `OrderPayment` (số dương: khách trả mình; số âm: mình trả khách, dùng cho đền hợp đồng). Tổng các lần luôn nằm giữa 0 và giá trị chốt. Còn lại = giá trị chốt − đã thanh toán (dương: khách còn phải trả; âm: mình còn phải trả khách). Trạng thái hiển thị tính ra: Chưa chốt giá trị / Chưa thanh toán / Thanh toán một phần / Đã tất toán. Không xóa lần thanh toán; sửa trong 24 giờ kèm lý do. Lịch sử ghi dưới bảng "OrderPayment", không dùng lịch sử `CustomerOrder` để Kế toán không thấy thay đổi đơn giá gia công. **Khác với phương án đã trao đổi:** giá trị chốt không mặc định bằng Σ đơn giá × số lượng, vì Kế toán không được thấy đơn giá gia công (GBR-02); phải nhập tay lần đầu. Doanh thu (`FinanceService`) vẫn tính theo đơn giá × sản lượng, chưa đọc giá trị chốt. Chỉ Kế toán dùng màn này (Admin chưa có).
+- **Lý do:** có đơn phải nhập lại giá tiền, phải đền hợp đồng, thu / trả nhiều đợt; người dùng yêu cầu.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng), Admin (chưa có màn thanh toán đơn hàng). Migrate: `SQL/patches/2026-11-18_order_payment.sql`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC mới "Thanh toán đơn hàng khách" (giá trị chốt, thu / chi nhiều lần), mockup màn hình
+  - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `OrderPayment`; cột `FinalAmount`, `FinalAmountReason` của `CustomerOrder`; `CK_CustomerOrder_Final`
 - **Trạng thái:** Mở

@@ -380,29 +380,24 @@ CREATE TABLE dbo.Customer (
     DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
+-- Hai khách hàng không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-114)
+CREATE UNIQUE INDEX UQ_Customer_Phone ON dbo.Customer(Phone) WHERE Phone IS NOT NULL;
+CREATE UNIQUE INDEX UQ_Customer_Email ON dbo.Customer(Email) WHERE Email IS NOT NULL;
 
--- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chỉ chọn Category (loại chi tiết);
--- MaterialType (FABRIC: vải, đi qua tổ cắt; TRIM: phụ liệu, cấp thẳng cho tổ may) là cột tính từ Category (22/10)
+-- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm Category (DEV-ALL-115)
+-- MaterialType: FABRIC = vải, đi qua tổ cắt; TRIM = phụ liệu, cấp thẳng cho tổ may; SCRAP = phế phẩm, chỉ để trả về kho (DEV-ALL-112)
 CREATE TABLE dbo.Material (
     MaterialId    INT IDENTITY(1,1) CONSTRAINT PK_Material PRIMARY KEY,
     MaterialCode  VARCHAR(30)   NOT NULL CONSTRAINT UQ_Material_Code UNIQUE,
     MaterialName  NVARCHAR(200) NOT NULL,
     Color         NVARCHAR(50)  NOT NULL CONSTRAINT DF_Material_Color DEFAULT N'',   -- màu NVL; '' = không phân màu. Cùng loại vải khác màu là hai dòng Material
-    MaterialType  AS (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC'
-                               WHEN Category IN ('SCRAP_FABRIC','SCRAP_NEEDLE','SCRAP_OTHER') THEN 'SCRAP'
-                               ELSE 'TRIM' END
-                          AS VARCHAR(10))) PERSISTED,
-    Category      VARCHAR(15)   NOT NULL,
+    MaterialType  VARCHAR(10)   NOT NULL,
     Unit          NVARCHAR(20)  NOT NULL,     -- m, kg, cuộn, cái, cuộn chỉ…
     WidthM        DECIMAL(4,2)  NULL,         -- khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu để NULL (DEV-ALL-102)
     Status        VARCHAR(20)   NOT NULL CONSTRAINT DF_Material_Status DEFAULT 'ACTIVE',
     CreatedAt     DATETIME2(0)  NOT NULL CONSTRAINT DF_Material_CreatedAt DEFAULT (dbo.fn_VnNow()),
-    -- vải: vải chính, vải lót, mex, bo; phụ liệu: chỉ, khóa, cúc, cúc dập, chun, dây / viền, nhãn, thẻ treo, bông / đệm, bao bì, khác;
-    -- phế phẩm (SCRAP, DEV-ALL-112): vải vụn, kim gãy, khác; chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (kg, cái…)
-    CONSTRAINT CK_Material_Category CHECK (Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB',
-                                                        'THREAD','ZIPPER','BUTTON','SNAP','ELASTIC','TAPE',
-                                                        'LABEL','HANG_TAG','PADDING','PACKAGING','OTHER',
-                                                        'SCRAP_FABRIC','SCRAP_NEEDLE','SCRAP_OTHER')),
+    -- phế phẩm (SCRAP, DEV-ALL-112): vải vụn, kim gãy…; chỉ để tổ cắt / tổ may trả về kho, đơn vị tự chọn (kg, cái…)
+    CONSTRAINT CK_Material_Type   CHECK (MaterialType IN ('FABRIC','TRIM','SCRAP')),
     CONSTRAINT CK_Material_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT CK_Material_Width  CHECK (WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)),
     CONSTRAINT UQ_Material_NameType UNIQUE (MaterialName, MaterialType, Color)
@@ -421,6 +416,9 @@ CREATE TABLE dbo.Supplier (
     CreatedAt      DATETIME2(0)  NOT NULL CONSTRAINT DF_Supplier_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Supplier_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
+-- Hai nhà cung cấp không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-114)
+CREATE UNIQUE INDEX UQ_Supplier_Phone ON dbo.Supplier(Phone) WHERE Phone IS NOT NULL;
+CREATE UNIQUE INDEX UQ_Supplier_Email ON dbo.Supplier(Email) WHERE Email IS NOT NULL;
 
 -- Mã hàng (style)
 CREATE TABLE dbo.Product (
@@ -500,6 +498,8 @@ CREATE TABLE dbo.ProductComponentMaterial (
     ProductComponentId  INT            NOT NULL,
     MaterialId          INT            NOT NULL CONSTRAINT FK_PCM_Material REFERENCES dbo.Material(MaterialId),
     SpecNote            NVARCHAR(200)  NULL,         -- ghi chú quy cách khác
+    Status              VARCHAR(20)    NOT NULL CONSTRAINT DF_PCM_Status DEFAULT 'ACTIVE', -- 17/11: dòng đã có chứng từ dùng thì ngừng dùng (DISCONTINUED) thay vì xóa, DEV-ALL-116
+    CONSTRAINT CK_PCM_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT FK_PCM_Color     FOREIGN KEY (ProductColorId, ProductId)     REFERENCES dbo.ProductColor(ProductColorId, ProductId),
     CONSTRAINT FK_PCM_Component FOREIGN KEY (ProductComponentId, ProductId) REFERENCES dbo.ProductComponent(ProductComponentId, ProductId),
     CONSTRAINT UQ_PCM UNIQUE (ProductColorId, ProductComponentId, MaterialId)
@@ -548,6 +548,8 @@ CREATE TABLE dbo.CustomerOrder (
     DelayRiskSince   DATE           NULL,     -- JOB-04 ghi ngày bắt đầu có nguy cơ trễ, xóa khi hết nguy cơ
     IsDelayRisk      AS (CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT)), -- cờ, không phải trạng thái; tính từ DelayRiskSince
     StopReason       NVARCHAR(500)  NULL,
+    FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-118)
+    FinalAmountReason NVARCHAR(500) NULL,
     Note             NVARCHAR(1000) NULL,
     CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
     CustomerDeliveryDate   DATE     NULL,     -- ngày khách dự kiến giao; giao >= 2 lần: ngày giao từ
@@ -560,11 +562,28 @@ CREATE TABLE dbo.CustomerOrder (
                                                          'IN_DELIVERY','PARTIALLY_DELIVERED','DELIVERED','COMPLETED','CANCELLED','STOPPED')),
     CONSTRAINT CK_CustomerOrder_Dates  CHECK (DueDate >= ReceivedDate),
     CONSTRAINT CK_CustomerOrder_Stop   CHECK (Status <> 'STOPPED' OR StopReason IS NOT NULL),
+    CONSTRAINT CK_CustomerOrder_Final  CHECK (FinalAmount IS NULL OR FinalAmountReason IS NOT NULL),
     CONSTRAINT CK_CO_CustomerDelivery CHECK ((CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1)
         AND (CustomerDeliveryDateTo IS NULL OR (CustomerDeliveryDate IS NOT NULL AND CustomerDeliveryDateTo >= CustomerDeliveryDate
                                                 AND CustomerDeliveryCount >= 2)))
 );
 CREATE INDEX IX_CustomerOrder_Status ON dbo.CustomerOrder(Status, DueDate);
+
+-- Từng lần thanh toán của đơn hàng khách (DEV-ALL-118): Amount dương = khách trả mình, âm = mình trả khách (đền hợp đồng).
+-- Tổng các lần luôn nằm giữa 0 và CustomerOrder.FinalAmount (backend kiểm). Không xóa dòng; sửa được trong 24 giờ kể từ CreatedAt, bắt buộc có lý do.
+CREATE TABLE dbo.OrderPayment (
+    OrderPaymentId  INT IDENTITY(1,1) CONSTRAINT PK_OrderPayment PRIMARY KEY,
+    OrderId         INT            NOT NULL CONSTRAINT FK_OP_Order REFERENCES dbo.CustomerOrder(OrderId),
+    PaymentDate     DATE           NOT NULL,
+    Amount          DECIMAL(18,2)  NOT NULL CONSTRAINT CK_OP_Amount CHECK (Amount <> 0),
+    PaymentMethod   VARCHAR(20)    NOT NULL CONSTRAINT CK_OP_Method CHECK (PaymentMethod IN ('BANK_TRANSFER','CASH')),
+    PaymentNote     NVARCHAR(500)  NULL,
+    CreatedAt       DATETIME2(0)   NOT NULL CONSTRAINT DF_OP_CreatedAt DEFAULT (dbo.fn_VnNow()),
+    UpdatedAt       DATETIME2(0)   NULL,
+    EditReason      NVARCHAR(500)  NULL,
+    CONSTRAINT CK_OP_Edit CHECK ((UpdatedAt IS NULL AND EditReason IS NULL) OR (UpdatedAt IS NOT NULL AND EditReason IS NOT NULL))
+);
+CREATE INDEX IX_OP_Order ON dbo.OrderPayment(OrderId);
 
 -- Dòng đơn: một biến thể (mã hàng – màu – size) – đơn vị trung tâm cho cắt, sản lượng, QC, kho TP, giao hàng.
 -- Màu, size đọc từ ProductVariant. ProductId giữ lại để lọc theo mã hàng; FK ghép bảo đảm khớp với biến thể.
@@ -847,6 +866,8 @@ CREATE TABLE dbo.PurchaseOrder (
     PaidAmount            DECIMAL(18,2)  NULL,
     PaymentMethod         VARCHAR(20)    NULL,
     PaymentNote           NVARCHAR(500)  NULL,
+    ActualAmountOverride  DECIMAL(18,2)  NULL,  -- Kế toán nhập giá trị thực tế thay giá trị tự tính (đơn chốt thiếu / giao thiếu), DEV-ALL-117
+    ActualAmountReason    NVARCHAR(500)  NULL,
     Note                  NVARCHAR(1000) NULL,
     CreatedAt             DATETIME2(0)   NOT NULL CONSTRAINT DF_PO_CreatedAt DEFAULT (dbo.fn_VnNow()),
     RowVer                ROWVERSION,
@@ -857,6 +878,7 @@ CREATE TABLE dbo.PurchaseOrder (
     CONSTRAINT CK_PO_Paid   CHECK (PaymentStatus NOT IN ('PAID','PARTIALLY_PAID')
                                     OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)),
     CONSTRAINT CK_PO_PayReturn CHECK (PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL),
+    CONSTRAINT CK_PO_ActualOverride CHECK (ActualAmountOverride IS NULL OR (ActualAmountOverride >= 0 AND ActualAmountReason IS NOT NULL)),
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
@@ -885,6 +907,22 @@ CREATE TABLE dbo.PurchaseOrderLine (
 -- Unique dạng filtered index để nhiều dòng NULL vẫn hợp lệ
 CREATE UNIQUE INDEX UQ_POL       ON dbo.PurchaseOrderLine(PurchaseOrderId, OrderMaterialId) WHERE OrderMaterialId IS NOT NULL;
 CREATE UNIQUE INDEX UQ_POL_Stock ON dbo.PurchaseOrderLine(PurchaseOrderId, MaterialId) WHERE OrderMaterialId IS NULL;
+
+-- Mỗi lần Kế toán thanh toán đơn mua là một dòng (DEV-ALL-117). PurchaseOrder.PaidAmount là tổng các dòng; PaymentDate / PaymentMethod /
+-- PaymentNote là của lần thanh toán gần nhất. Không xóa dòng; sửa được trong 24 giờ kể từ CreatedAt, bắt buộc có lý do.
+CREATE TABLE dbo.PurchasePayment (
+    PurchasePaymentId INT IDENTITY(1,1) CONSTRAINT PK_PurchasePayment PRIMARY KEY,
+    PurchaseOrderId   INT            NOT NULL CONSTRAINT FK_PP_PurchaseOrder REFERENCES dbo.PurchaseOrder(PurchaseOrderId),
+    PaymentDate       DATE           NOT NULL,
+    Amount            DECIMAL(18,2)  NOT NULL CONSTRAINT CK_PP_Amount CHECK (Amount > 0),
+    PaymentMethod     VARCHAR(20)    NOT NULL CONSTRAINT CK_PP_Method CHECK (PaymentMethod IN ('BANK_TRANSFER','CASH')),
+    PaymentNote       NVARCHAR(500)  NULL,
+    CreatedAt         DATETIME2(0)   NOT NULL CONSTRAINT DF_PP_CreatedAt DEFAULT (dbo.fn_VnNow()),
+    UpdatedAt         DATETIME2(0)   NULL,
+    EditReason        NVARCHAR(500)  NULL,
+    CONSTRAINT CK_PP_Edit CHECK ((UpdatedAt IS NULL AND EditReason IS NULL) OR (UpdatedAt IS NOT NULL AND EditReason IS NOT NULL))
+);
+CREATE INDEX IX_PP_PurchaseOrder ON dbo.PurchasePayment(PurchaseOrderId);
 
 -- Ngày dự kiến giao từng lần (DEV-ALL-113): số lần giao = số dòng; đúng một chủ lịch (đơn mua / đơn hàng khách giao / đơn giao bù), có khoá ngoại.
 CREATE TABLE dbo.DeliveryScheduleDate (
@@ -2670,7 +2708,7 @@ GO
 -- Tồn NVL kèm thông tin vật tư (màn hình kho NVL)
 CREATE VIEW dbo.vw_MaterialStock
 AS
-SELECT  m.MaterialId, m.MaterialCode, m.MaterialName, m.Color, m.MaterialType, m.Category, m.Unit,
+SELECT  m.MaterialId, m.MaterialCode, m.MaterialName, m.Color, m.MaterialType, m.Unit,
         sb.OnHandQty, sb.ReservedQty, sb.AvailableQty
 FROM dbo.vw_StockBalance sb
 JOIN dbo.Material m ON m.MaterialId = sb.MaterialId
@@ -3163,17 +3201,17 @@ DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-A
         @p2 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-QU02');
 
 -- Màu NVL nằm trong Material.Color: vải gió có 4 dòng (Đen, Xanh, Trắng, Be), chỉ may có 3 (Đen, Xanh, Be)
-INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit) VALUES
- ('DEMO-VAI01',  N'Vải gió 2 lớp DEMO', N'Đen',   'MAIN_FABRIC', N'm'),
- ('DEMO-CHI01',  N'Chỉ may 40/2 DEMO',  N'Đen',   'THREAD',      N'cuộn'),
- ('DEMO-KHOA01', N'Khóa kéo 60cm DEMO', N'',      'ZIPPER',      N'cái'),
- ('DEMO-NHAN01', N'Nhãn dệt DEMO',      N'',      'LABEL',       N'cái'),
- ('DEMO-KIM01',  N'Kim máy 14 DEMO',    N'',      'OTHER',       N'hộp'),
- ('DEMO-VAI02',  N'Vải gió 2 lớp DEMO', N'Xanh',  'MAIN_FABRIC', N'm'),
- ('DEMO-VAI03',  N'Vải gió 2 lớp DEMO', N'Trắng', 'MAIN_FABRIC', N'm'),
- ('DEMO-VAI04',  N'Vải gió 2 lớp DEMO', N'Be',    'MAIN_FABRIC', N'm'),
- ('DEMO-CHI02',  N'Chỉ may 40/2 DEMO',  N'Xanh',  'THREAD',      N'cuộn'),
- ('DEMO-CHI03',  N'Chỉ may 40/2 DEMO',  N'Be',    'THREAD',      N'cuộn');
+INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit) VALUES
+ ('DEMO-VAI01',  N'Vải gió 2 lớp DEMO', N'Đen',   'FABRIC', N'm'),
+ ('DEMO-CHI01',  N'Chỉ may 40/2 DEMO',  N'Đen',   'TRIM',   N'cuộn'),
+ ('DEMO-KHOA01', N'Khóa kéo 60cm DEMO', N'',      'TRIM',   N'cái'),
+ ('DEMO-NHAN01', N'Nhãn dệt DEMO',      N'',      'TRIM',   N'cái'),
+ ('DEMO-KIM01',  N'Kim máy 14 DEMO',    N'',      'TRIM',   N'hộp'),
+ ('DEMO-VAI02',  N'Vải gió 2 lớp DEMO', N'Xanh',  'FABRIC', N'm'),
+ ('DEMO-VAI03',  N'Vải gió 2 lớp DEMO', N'Trắng', 'FABRIC', N'm'),
+ ('DEMO-VAI04',  N'Vải gió 2 lớp DEMO', N'Be',    'FABRIC', N'm'),
+ ('DEMO-CHI02',  N'Chỉ may 40/2 DEMO',  N'Xanh',  'TRIM',   N'cuộn'),
+ ('DEMO-CHI03',  N'Chỉ may 40/2 DEMO',  N'Be',    'TRIM',   N'cuộn');
 DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
         @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
         @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
@@ -4592,15 +4630,15 @@ INSERT dbo.Customer (CustomerName, Phone, Email, DefaultAddress, Status, Discont
  (N'Công ty C (DEMO - ngừng)', '0287654321', 'lienhe@congtyc.demo', N'45 Hai Bà Trưng, Quận 3, TP.HCM', 'DISCONTINUED', N'Khách đã ngừng đặt hàng từ tháng 9');
 DECLARE @cusB INT = (SELECT CustomerId FROM dbo.Customer WHERE CustomerName = N'Công ty B (DEMO)');
 
-INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit, Status) VALUES
- ('DEMO-CUC01', N'Cúc nhựa 4 lỗ DEMO', N'Trắng', 'BUTTON', N'cái', 'ACTIVE'),
- ('DEMO-LOT01', N'Vải lót lưới DEMO', N'Đen', 'LINING', N'm', 'ACTIVE'),
- ('DEMO-NGUNG01', N'Mex dựng cũ DEMO', N'', 'INTERLINING', N'm', 'DISCONTINUED');
+INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Status) VALUES
+ ('DEMO-CUC01', N'Cúc nhựa 4 lỗ DEMO', N'Trắng', 'TRIM', N'cái', 'ACTIVE'),
+ ('DEMO-LOT01', N'Vải lót lưới DEMO', N'Đen', 'FABRIC', N'm', 'ACTIVE'),
+ ('DEMO-NGUNG01', N'Mex dựng cũ DEMO', N'', 'FABRIC', N'm', 'DISCONTINUED');
 -- NVL phế phẩm: tổ cắt / tổ may trả về kho, không có trần số lượng (DEV-ALL-112)
-INSERT dbo.Material (MaterialCode, MaterialName, Color, Category, Unit, Status) VALUES
- ('PP-0001', N'Vải vụn', N'', 'SCRAP_FABRIC', N'kg', 'ACTIVE'),
- ('PP-0002', N'Kim gãy', N'', 'SCRAP_NEEDLE', N'cái', 'ACTIVE'),
- ('PP-0003', N'Phế phẩm khác', N'', 'SCRAP_OTHER', N'kg', 'ACTIVE');
+INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Status) VALUES
+ ('PP-0001', N'Vải vụn', N'', 'SCRAP', N'kg', 'ACTIVE'),
+ ('PP-0002', N'Kim gãy', N'', 'SCRAP', N'cái', 'ACTIVE'),
+ ('PP-0003', N'Phế phẩm khác', N'', 'SCRAP', N'kg', 'ACTIVE');
 -- Khổ vải mặc định 1,5 m cho vải mẫu (DEV-ALL-102)
 UPDATE dbo.Material SET WidthM = 1.50 WHERE MaterialType = 'FABRIC' AND WidthM IS NULL;
 
@@ -4831,6 +4869,11 @@ INSERT dbo.PurchaseOrder (PoCode, OrderId, SupplierId, OrderDate, ExpectedDelive
  ('DM-DEMO-013', @o13, @sup1, '2026-10-25', 1, 'PARTIALLY_RECEIVED', 'UNPAID', NULL, NULL, NULL, NULL, N'NCC giao thiếu 30 m', '2026-10-25 09:00:00'),
  ('DM-DEMO-014', @o8, @sup1, '2026-10-13', 1, 'RECEIVED', 'PAID', '2026-10-20', 4500000, 'BANK_TRANSFER', N'Chuyển khoản đợt 1', N'Đã nhận đủ và thanh toán', '2026-10-13 09:00:00'),
  ('DM-DEMO-015', NULL, @sup3, '2026-10-05', 1, 'CLOSED_SHORT', 'PAID', '2026-10-15', 1500000, 'CASH', NULL, N'Mua kim dùng chung, chốt thiếu 5 hộp', '2026-10-05 09:00:00');
+
+-- Đơn mua demo đã thanh toán: mỗi đơn một lần thanh toán (CreatedAt = ngày thanh toán nên quá hạn sửa 24 giờ).
+INSERT dbo.PurchasePayment (PurchaseOrderId, PaymentDate, Amount, PaymentMethod, PaymentNote, CreatedAt)
+SELECT PurchaseOrderId, PaymentDate, PaidAmount, PaymentMethod, PaymentNote, CAST(PaymentDate AS DATETIME2(0))
+FROM dbo.PurchaseOrder WHERE PaidAmount > 0;
 INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, OrderedQty, UnitPrice)
 SELECT p.PurchaseOrderId, m.OrderMaterialId, 100, v.Price
 FROM (VALUES ('DM-DEMO-013', @o13, 52000), ('DM-DEMO-014', @o8, 45000)) v(Code, OrderId, Price)

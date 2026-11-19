@@ -1,5 +1,7 @@
 import { IconAction } from '@/components/common/IconAction';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { REQUEST_TYPE } from '@/constants/requestTypes';
+import { useFromRequest } from '@/hooks/useFromRequest';
 import { PlusOutlined, EyeOutlined } from '@ant-design/icons';
 import { Button, Card, type TableColumnsType } from 'antd';
 import { Can } from '@/components/guards/Can';
@@ -35,7 +37,18 @@ export function MaterialIssueListPage() {
   const table = useTableQuery<Filters>({});
   const issues = useIssues(table.params);
   const [viewingId, setViewingId] = useState<number>();
-  const [createOpen, setCreateOpen] = useState(false);
+  const from = useFromRequest();
+  const preset = useMemo(
+    () =>
+      from.requestId === null
+        ? null
+        : {
+            requestId: from.requestId,
+            isMaterial: from.requestType !== REQUEST_TYPE.SemiFinishedRequisition,
+          },
+    [from.requestId, from.requestType],
+  );
+  const [createOpen, setCreateOpen] = useState(preset !== null);
 
   const columns: TableColumnsType<MaterialIssueListItem> = [
     {
@@ -117,7 +130,11 @@ export function MaterialIssueListPage() {
         scroll={{ x: true }}
       />
       <IssueDetailModal issueId={viewingId} onClose={() => setViewingId(undefined)} />
-      <IssueCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
+      <IssueCreateModal
+        open={createOpen}
+        presetRequest={preset}
+        onClose={() => setCreateOpen(false)}
+      />
     </Card>
   );
 }

@@ -13,9 +13,6 @@ public sealed class VwMaterialStockConfiguration : IEntityTypeConfiguration<VwMa
             .ToView("vw_MaterialStock");
 
         entity.Property(e => e.AvailableQty).HasColumnType("decimal(38, 3)");
-        entity.Property(e => e.Category)
-            .HasMaxLength(15)
-            .IsUnicode(false);
         entity.Property(e => e.Color).HasMaxLength(50);
         entity.Property(e => e.MaterialCode)
             .HasMaxLength(30)

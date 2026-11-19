@@ -77,7 +77,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
                 p.SupplierId, SupplierName = p.Supplier == null ? null : p.Supplier.SupplierName,
                 p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryCount, p.ExpectedDeliveryDate, p.ExpectedDeliveryDateTo, p.Note, p.RejectReason,
                 p.PaymentReturnReason, p.PaymentDate, p.PaidAmount, p.PaymentMethod, p.PaymentNote,
-                p.CreatedAt, p.RowVer,
+                p.ActualAmountOverride, p.ActualAmountReason, p.CreatedAt, p.RowVer,
             })
             .FirstOrDefaultAsync(ct);
         if (header is null) return Fail.NotFound<PurchaseOrderFlowDto>();
@@ -90,6 +90,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var lines = detail.Data!.Lines;
         var history = await _audit.GetHistoryAsync(nameof(PurchaseOrder), purchaseOrderId, ct);
         var deliveryDates = await _schedule.GetAsync(DeliveryOwner.PurchaseOrder, purchaseOrderId, ct);
+        var payments = await PaymentsOfAsync(purchaseOrderId, header.GoodsStatus, ct);
 
         return Result<PurchaseOrderFlowDto>.Success(new PurchaseOrderFlowDto(
             header.PurchaseOrderId, header.PoCode, header.OrderId, header.OrderCode, header.SupplierId,
@@ -99,7 +100,9 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
             lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
             PermissionsFor(header.GoodsStatus, header.PaymentStatus), history, header.ExpectedDeliveryDate,
-            header.ExpectedDeliveryDateTo, deliveryDates));
+            header.ExpectedDeliveryDateTo, deliveryDates,
+            header.ActualAmountOverride ?? lines.Sum(l => (l.OrderedQty - l.NotReplenishedQty) * l.UnitPrice),
+            payments, header.ActualAmountOverride, header.ActualAmountReason));
     }
 
     // ---------- Quản đốc ----------
@@ -236,7 +239,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
     public async Task<Result> ConfirmPaymentAsync(int purchaseOrderId, ConfirmPaymentDto dto, CancellationToken ct)
     {
-        var po = await LoadWithLinesAsync(purchaseOrderId, ct);
+        var po = await PurchaseOrders.Include(p => p.PurchaseOrderLines).Include(p => p.PurchasePayments)
+            .FirstOrDefaultAsync(p => p.PurchaseOrderId == purchaseOrderId, ct);
         if (po is null) return Fail.NotFound();
         if (!CanPay(po.GoodsStatus, po.PaymentStatus))
             return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
@@ -246,28 +250,27 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentMethodInvalid, ResultKind.Validation);
         if (dto.PaidAmount <= 0)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountInvalid, ResultKind.Validation);
-        var orderTotal = po.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice);
-        if (dto.PaidAmount > orderTotal)
+        var remaining = PurchaseAmounts.Actual(po) - PurchaseAmounts.Paid(po);
+        if (dto.PaidAmount > remaining)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountExceedsTotal, ResultKind.Validation);
         if (dto.PaymentDate > _clock.Today)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentDateFuture, ResultKind.Validation);
 
         _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
         var from = po.PaymentStatus;
-        // Chốt không bù: tổng thực tế = số đã trả → coi là đã thanh toán đủ.
-        po.PaymentStatus = po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort || dto.PaidAmount >= orderTotal
-            ? PurchasePaymentStatuses.Paid
-            : PurchasePaymentStatuses.PartiallyPaid;
-        po.PaymentDate = dto.PaymentDate;
-        po.PaidAmount = dto.PaidAmount;
-        po.PaymentMethod = method;
-        po.PaymentNote = Clean(dto.PaymentNote);
+        // Mỗi lần trả là một dòng; tổng đã trả đủ giá trị thực tế thì đơn thành đã thanh toán (DEV-ALL-117).
+        po.PurchasePayments.Add(new PurchasePayment
+        {
+            PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, PaymentMethod = method,
+            PaymentNote = Clean(dto.PaymentNote), CreatedAt = _clock.Now,
+        });
+        PurchaseAmounts.Sync(po);
 
         return await _uow.InTransactionAsync(async () =>
         {
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Confirm,
                 new { PaymentStatus = from },
-                new { po.PaymentStatus, po.PaymentDate, po.PaidAmount, po.PaymentMethod, po.PaymentNote }));
+                new { po.PaymentStatus, PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, po.PaidAmount, po.PaymentMethod, po.PaymentNote }));
             await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPaidTitle, string.Format(Messages.NotifyPoPaidBody, po.PoCode),
                 string.Format(ManagerLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
@@ -280,7 +283,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
     {
         var po = await _uow.Repository<PurchaseOrder>().GetByIdAsync(purchaseOrderId);
         if (po is null) return Fail.NotFound();
-        if (!CanPay(po.GoodsStatus, po.PaymentStatus))
+        if (!CanReturn(po.GoodsStatus, po.PaymentStatus))
             return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PurchaseOrderInvalidStatus);
 
         var reason = dto.Reason.Trim();
@@ -320,9 +323,24 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    /// <summary>Chỉ đơn đã đặt hàng và chưa thanh toán mới xác nhận hoặc trả lại được.</summary>
+    /// <summary>Đơn đã đặt hàng, chưa trả đủ: Kế toán thêm được lần thanh toán (nhiều lần, DEV-ALL-117).</summary>
     internal static bool CanPay(string goodsStatus, string paymentStatus) =>
+        PurchaseGoodsStatuses.Placed.Contains(goodsStatus)
+        && paymentStatus is PurchaseOrderStatuses.Unpaid or PurchasePaymentStatuses.PartiallyPaid;
+
+    /// <summary>Chỉ đơn đã đặt hàng và chưa trả lần nào mới trả lại Quản đốc được.</summary>
+    internal static bool CanReturn(string goodsStatus, string paymentStatus) =>
         PurchaseGoodsStatuses.Placed.Contains(goodsStatus) && paymentStatus == PurchaseOrderStatuses.Unpaid;
+
+    private async Task<IReadOnlyList<PurchasePaymentDto>> PaymentsOfAsync(int purchaseOrderId, string goodsStatus, CancellationToken ct)
+    {
+        var canEdit = _user.Role == Roles.Accountant && PurchaseGoodsStatuses.Placed.Contains(goodsStatus);
+        var now = _clock.Now;
+        var rows = await _uow.Repository<PurchasePayment>().Query().AsNoTracking()
+            .Where(p => p.PurchaseOrderId == purchaseOrderId).OrderBy(p => p.CreatedAt).ThenBy(p => p.PurchasePaymentId).ToListAsync(ct);
+        return rows.Select(p => new PurchasePaymentDto(p.PurchasePaymentId, p.PaymentDate, p.Amount, CodeText.ToPascal(p.PaymentMethod),
+            p.PaymentNote, p.CreatedAt, p.UpdatedAt, p.EditReason, canEdit && PurchasePaymentService.IsEditable(p, now))).ToList();
+    }
 
     private PurchaseOrderPermissionsDto PermissionsFor(string goodsStatus, string paymentStatus)
     {
@@ -330,9 +348,11 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var isAccountant = _user.Role == Roles.Accountant;
         var pending = goodsStatus == PurchaseOrderStatuses.PendingFinalisation;
         var payable = CanPay(goodsStatus, paymentStatus);
+        var returnable = CanReturn(goodsStatus, paymentStatus);
         var repriceable = PurchaseGoodsStatuses.Repriceable.Contains(goodsStatus)
                           && paymentStatus == PurchasePaymentStatuses.Returned;
         return new PurchaseOrderPermissionsDto(isManager && pending, isManager && pending, isManager && repriceable,
-            isAccountant && payable, isAccountant && payable);
+            isAccountant && payable, isAccountant && returnable,
+            isAccountant && PurchasePaymentService.CanSetActual(goodsStatus, paymentStatus));
     }
 }

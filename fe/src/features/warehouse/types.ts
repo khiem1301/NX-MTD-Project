@@ -9,7 +9,6 @@ export type Material = {
   materialCode: string;
   materialName: string;
   materialType: string;
-  category: string;
   unit: string;
   /** Khổ vải (m); null với phụ liệu (DEV-ALL-102). */
   widthM: number | null;
@@ -25,7 +24,6 @@ export type SaveMaterialPayload = {
   materialCode?: string;
   materialName: string;
   materialType: string;
-  category: string;
   unit: string;
   color?: string;
   /** Khổ vải (m), bắt buộc với vải, tối đa 3,5 m (DEV-ALL-102). */

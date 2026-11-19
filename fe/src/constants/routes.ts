@@ -44,6 +44,10 @@ export const ROUTES = {
   cutHandovers: '/cutting/handovers',
 } as const;
 
+/** Query mở sẵn đơn từ ở màn hình xử lý: `?fromRequest=<requestId>&requestType=<loại đơn>` (nút "Xử lý ngay" ở chi tiết đơn). */
+export const FROM_REQUEST_PARAM = 'fromRequest';
+export const FROM_REQUEST_TYPE_PARAM = 'requestType';
+
 export const ATTENDANCE_ROUTES = {
   attendance: '/attendance',
   teamAttendance: '/team/attendance',
@@ -62,6 +66,10 @@ export const PAYROLL_ROUTES = {
   approval: '/payrolls/approval',
   myPayslip: '/my/payslips',
   myEstimatedPay: '/my/estimated-pay',
+} as const;
+
+export const ORDER_PAYMENT_ROUTES = {
+  list: '/accounting/order-payments',
 } as const;
 
 export const PURCHASE_ROUTES = {

@@ -117,6 +117,14 @@ export const API = {
     complete: (id: number) => v1(`common/request-inbox/${id}/complete`),
     notComplete: (id: number) => v1(`common/request-inbox/${id}/not-complete`),
   },
+  orderPayment: {
+    list: v1('accountant/order-payments'),
+    detail: (id: number) => v1(`accountant/order-payments/${id}`),
+    finalAmount: (id: number) => v1(`accountant/order-payments/${id}/final-amount`),
+    payments: (id: number) => v1(`accountant/order-payments/${id}/payments`),
+    payment: (id: number, paymentId: number) =>
+      v1(`accountant/order-payments/${id}/payments/${paymentId}`),
+  },
   purchase: {
     suppliers: v1('admin/suppliers'),
     supplier: (id: number) => v1(`admin/suppliers/${id}`),
@@ -131,6 +139,9 @@ export const API = {
     payments: v1('accountant/purchase-payments'),
     payment: (id: number) => v1(`accountant/purchase-payments/${id}`),
     confirmPayment: (id: number) => v1(`accountant/purchase-payments/${id}/confirm`),
+    updatePayment: (id: number, paymentId: number) =>
+      v1(`accountant/purchase-payments/${id}/payments/${paymentId}`),
+    actualAmount: (id: number) => v1(`accountant/purchase-payments/${id}/actual-amount`),
     returnPayment: (id: number) => v1(`accountant/purchase-payments/${id}/return`),
   },
   attachments: {

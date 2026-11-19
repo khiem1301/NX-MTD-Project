@@ -5,7 +5,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { FABRIC_UNIT } from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS, MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
+import { LABELS, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
 import type { Material, SaveMaterialPayload } from '../types';
 
@@ -98,19 +98,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
               label={LABELS.materialType}
               rules={[{ required: true, message: MESSAGES.common.required }]}
             >
-              <Select
-                options={TYPE_OPTIONS}
-                onChange={() => form.setFieldValue('category', undefined)}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={12}>
-            <Form.Item
-              name="category"
-              label={LABELS.category}
-              rules={[{ required: true, message: MESSAGES.common.required }]}
-            >
-              <Select options={materialType ? MATERIAL_CATEGORIES[materialType] : []} />
+              <Select options={TYPE_OPTIONS} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>

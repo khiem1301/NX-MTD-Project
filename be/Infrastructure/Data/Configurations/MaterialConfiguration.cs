@@ -14,9 +14,6 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
 
         entity.HasIndex(e => new { e.MaterialName, e.MaterialType, e.Color }, "UQ_Material_NameType").IsUnique();
 
-        entity.Property(e => e.Category)
-            .HasMaxLength(15)
-            .IsUnicode(false);
         entity.Property(e => e.Color)
             .HasMaxLength(50)
             .HasDefaultValue("");
@@ -29,8 +26,7 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
         entity.Property(e => e.MaterialName).HasMaxLength(200);
         entity.Property(e => e.MaterialType)
             .HasMaxLength(10)
-            .IsUnicode(false)
-            .HasComputedColumnSql("(CONVERT([varchar](10),case when [Category]='RIB' OR [Category]='INTERLINING' OR [Category]='LINING' OR [Category]='MAIN_FABRIC' then 'FABRIC' else 'TRIM' end))", true);
+            .IsUnicode(false);
         entity.Property(e => e.Status)
             .HasMaxLength(20)
             .IsUnicode(false)

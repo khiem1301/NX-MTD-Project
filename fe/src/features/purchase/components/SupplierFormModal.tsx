@@ -43,10 +43,14 @@ export function SupplierFormModal({ open, supplier, onClose }: Props) {
           form.setFields(
             error.errorCode === ERROR_CODES.SupplierNameDuplicate
               ? [{ name: 'supplierName', errors: [error.message] }]
-              : Object.entries(error.errors ?? {}).map(([name, errors]) => ({
-                  name: name as keyof SaveSupplierPayload,
-                  errors,
-                })),
+              : error.errorCode === ERROR_CODES.SupplierPhoneDuplicate
+                ? [{ name: 'phone', errors: [error.message] }]
+                : error.errorCode === ERROR_CODES.SupplierEmailDuplicate
+                  ? [{ name: 'email', errors: [error.message] }]
+                  : Object.entries(error.errors ?? {}).map(([name, errors]) => ({
+                      name: name as keyof SaveSupplierPayload,
+                      errors,
+                    })),
           ),
       },
     );

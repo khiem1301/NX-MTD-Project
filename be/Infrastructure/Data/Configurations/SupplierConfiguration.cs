@@ -12,6 +12,8 @@ public sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         entity.ToTable("Supplier", tb => tb.HasComment("Nhà cung cấp"));
 
         entity.HasIndex(e => e.SupplierName, "UQ_Supplier_Name").IsUnique();
+        entity.HasIndex(e => e.Phone, "UQ_Supplier_Phone").IsUnique().HasFilter("([Phone] IS NOT NULL)");
+        entity.HasIndex(e => e.Email, "UQ_Supplier_Email").IsUnique().HasFilter("([Email] IS NOT NULL)");
 
         entity.Property(e => e.Address).HasMaxLength(500);
         entity.Property(e => e.CreatedAt)

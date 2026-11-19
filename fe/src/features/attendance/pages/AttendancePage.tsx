@@ -15,17 +15,19 @@ import { SyncHealthBanner } from '../components/SyncHealthBanner';
 import { SyncSessionTable } from '../components/SyncSessionTable';
 import { TimesheetView } from '../components/TimesheetView';
 import { PageCard } from '@/components/common/PageCard';
+import { useFromRequest } from '@/hooks/useFromRequest';
 
 /** UC28 — bảng công, tạo công nhân từ RJ, lịch sử đồng bộ (không còn gán mã tay). */
 export function AttendancePage() {
   const { data: health } = useSyncHealth();
+  const { requestId: presetRequestId } = useFromRequest();
 
   return (
     <PageCard title={ATTENDANCE_TEXT.pageTitle} description={ATTENDANCE_TEXT.pageSubtitle}>
       <SyncHealthBanner health={health} />
 
       <Tabs
-        defaultActiveKey="rj-employees"
+        defaultActiveKey={presetRequestId === null ? 'rj-employees' : 'adjustments'}
         items={[
           {
             key: 'rj-employees',
@@ -63,7 +65,7 @@ export function AttendancePage() {
                 <EditOutlined /> {ATTENDANCE_TEXT.tabs.adjustments}
               </span>
             ),
-            children: <AdjustmentPanel />,
+            children: <AdjustmentPanel presetRequestId={presetRequestId} />,
           },
           {
             key: 'import',

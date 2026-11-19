@@ -50,13 +50,14 @@ const columns: ColumnsType<AttendanceAdjustment> = [
  * GBR-25 / UC07 — tab "Chấm công hộ" của Kế toán: lịch sử chấm bù, nút chấm hộ, và danh sách đơn xin chấm công bù đã duyệt
  * đang chờ để chấm hộ ngay (điền sẵn ngày và đơn).
  */
-export function AdjustmentPanel() {
+export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: number | null }) {
   const [range, setRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(30, 'day'), dayjs()]);
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [formOpen, setFormOpen] = useState(false);
   const [prefill, setPrefill] = useState<AdjustmentPrefill | null>(null);
+  const [presetDone, setPresetDone] = useState(false);
 
   const filter: AdjustmentFilter = {
     fromDate: toApiDate(range[0]),
@@ -74,9 +75,26 @@ export function AdjustmentPanel() {
   });
 
   const openForm = (next: AdjustmentPrefill | null) => {
+    setPresetDone(true);
     setPrefill(next);
     setFormOpen(true);
   };
+  const closeForm = () => {
+    setPresetDone(true);
+    setFormOpen(false);
+  };
+
+  // Mở từ nút "Xử lý ngay" của đơn: mở sẵn form chấm hộ của đơn đó khi danh sách đơn đã duyệt tải xong.
+  const presetRequest = presetDone
+    ? undefined
+    : approved.data?.items.find((r) => r.requestId === presetRequestId);
+  const formPrefill: AdjustmentPrefill | null = presetRequest
+    ? {
+        requestId: presetRequest.requestId,
+        workDate: presetRequest.targetDate,
+        reason: presetRequest.title,
+      }
+    : prefill;
 
   const requestColumns: ColumnsType<RequestListItem> = [
     { title: text.approvedRequests.columns.code, dataIndex: 'requestCode' },
@@ -178,7 +196,11 @@ export function AdjustmentPanel() {
         }}
       />
 
-      <AdjustmentFormModal open={formOpen} prefill={prefill} onClose={() => setFormOpen(false)} />
+      <AdjustmentFormModal
+        open={formOpen || presetRequest !== undefined}
+        prefill={formPrefill}
+        onClose={closeForm}
+      />
     </Space>
   );
 }

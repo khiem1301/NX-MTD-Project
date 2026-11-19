@@ -118,4 +118,49 @@ public class CustomerServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Data.Should().Equal(all);
     }
+
+    [Fact]
+    public async Task Create_withPhoneUsedByAnotherCustomer_isRejected()
+    {
+        _customers.PhoneExistsAsync("0901234567", null, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Sut().CreateAsync(new SaveCustomerDto("Khách mới", " 0901234567 ", null, null), default);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.CustomerPhoneDuplicate);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Create_withEmailUsedByAnotherCustomer_isRejected()
+    {
+        _customers.EmailExistsAsync("a@b.vn", null, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Sut().CreateAsync(new SaveCustomerDto("Khách mới", null, "a@b.vn", null), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CustomerEmailDuplicate);
+    }
+
+    [Fact]
+    public async Task Update_excludesItself_andBlankContactIsNotChecked()
+    {
+        Existing(RecordStatus.Active);
+
+        var result = await Sut().UpdateAsync(3, new SaveCustomerDto("Công ty mẹ", "  ", null, null), default);
+
+        result.IsSuccess.Should().BeTrue();
+        await _customers.DidNotReceive().PhoneExistsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
+        await _customers.DidNotReceive().EmailExistsAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Update_withPhoneOfAnotherCustomer_isRejected()
+    {
+        Existing(RecordStatus.Active);
+        _customers.PhoneExistsAsync("0901234567", 3, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Sut().UpdateAsync(3, new SaveCustomerDto("Công ty mẹ", "0901234567", null, null), default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.CustomerPhoneDuplicate);
+    }
 }

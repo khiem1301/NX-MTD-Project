@@ -16,6 +16,7 @@ public static class FinanceModule
         services.AddSingleton<IFinanceExcelWriter, ClosedXmlFinanceWriter>();
         services.AddScoped<IFinanceRepository, FinanceRepository>();
         services.AddScoped<IFinanceService, FinanceService>();
+        services.AddScoped<IOrderPaymentService, OrderPaymentService>();
         return services;
     }
 }

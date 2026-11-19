@@ -9,8 +9,13 @@ namespace NX_MTD.API.Controllers.Accountant;
 public sealed class PurchasePaymentsController : AccountantBaseController
 {
     private readonly IPurchaseOrderFlowService _flow;
+    private readonly IPurchasePaymentService _payments;
 
-    public PurchasePaymentsController(IPurchaseOrderFlowService flow) => _flow = flow;
+    public PurchasePaymentsController(IPurchaseOrderFlowService flow, IPurchasePaymentService payments)
+    {
+        _flow = flow;
+        _payments = payments;
+    }
 
     /// <summary>Chỉ đơn đã đặt hàng với nhà cung cấp mới đến lượt thanh toán.</summary>
     [HttpGet]
@@ -23,6 +28,16 @@ public sealed class PurchasePaymentsController : AccountantBaseController
     [HttpPost("{id:int}/confirm")]
     public async Task<IActionResult> Confirm(int id, [FromBody] ConfirmPaymentDto dto, CancellationToken ct) =>
         this.ToResponse(await _flow.ConfirmPaymentAsync(id, dto, ct));
+
+    /// <summary>Sửa một lần thanh toán trong 24 giờ kể từ lúc nhập, bắt buộc lý do. Không có thao tác xóa.</summary>
+    [HttpPut("{id:int}/payments/{paymentId:int}")]
+    public async Task<IActionResult> UpdatePayment(int id, int paymentId, [FromBody] UpdatePurchasePaymentDto dto, CancellationToken ct) =>
+        this.ToResponse(await _payments.UpdatePaymentAsync(id, paymentId, dto, ct));
+
+    /// <summary>Nhập giá trị thực tế của đơn đang nhận hàng / đã chốt giao thiếu (Amount null = bỏ, dùng giá trị tự tính).</summary>
+    [HttpPut("{id:int}/actual-amount")]
+    public async Task<IActionResult> SetActualAmount(int id, [FromBody] SetActualAmountDto dto, CancellationToken ct) =>
+        this.ToResponse(await _payments.SetActualAmountAsync(id, dto, ct));
 
     [HttpPost("{id:int}/return")]
     public async Task<IActionResult> Return(int id, [FromBody] ReturnPaymentDto dto, CancellationToken ct) =>

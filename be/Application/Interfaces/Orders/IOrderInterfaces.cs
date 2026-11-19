@@ -9,6 +9,8 @@ public interface ICustomerRepository : IGenericRepository<Customer>
     Task<PagedResult<CustomerDto>> ListAsync(CustomerQuery query, string? statusCode, CancellationToken ct);
     Task<IReadOnlyList<CustomerOptionDto>> ListOptionsAsync(CancellationToken ct);
     Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct);
+    Task<bool> PhoneExistsAsync(string phone, int? exceptId, CancellationToken ct);
+    Task<bool> EmailExistsAsync(string email, int? exceptId, CancellationToken ct);
 }
 
 public interface IProductRepository : IGenericRepository<Product>
