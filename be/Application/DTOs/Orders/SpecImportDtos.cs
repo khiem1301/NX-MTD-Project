@@ -54,7 +54,7 @@ public sealed record SpecImportPreviewDto(
     bool HasComponents, bool HasNorms, bool HasMarkerGroups, bool HasOrderMarkers,
     int ValidCount, int ErrorCount, int DuplicateCount, int ChangeCount,
     IReadOnlyList<string> CrossErrors, IReadOnlyList<string> Notes, bool CanImport,
-    int RemovedCount = 0, IReadOnlyList<string>? RemovedNames = null);
+    int RemovedCount = 0, IReadOnlyList<string>? RemovedNames = null, IReadOnlyList<string>? OrderSizes = null);
 
 /// <param name="Removed">Chế độ thay thế: số dòng cũ bị bỏ vì không có trong file (xóa, hoặc ngừng dùng nếu đang được dùng).</param>
 public sealed record SpecImportResultDto(int Components, int Norms, int MarkerGroups, int OrderMarkers, int Removed = 0);

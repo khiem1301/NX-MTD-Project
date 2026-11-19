@@ -1,7 +1,10 @@
 namespace NX_MTD.Application.DTOs;
 
-/// <summary>Cột của bảng trong file mẫu. Kind: R = bắt buộc (xanh đậm), O = tùy chọn (xanh nhạt), G = cột size / tùy chọn mới (xanh lá).</summary>
-public sealed record TemplateColumn(string Name, char Kind, double Width);
+/// <summary>
+/// Cột của bảng trong file mẫu. Kind: R = bắt buộc (xanh đậm), O = tùy chọn (xanh nhạt), G = cột size / tùy chọn mới (xanh lá).
+/// Options: có thì ô của cột là danh sách chọn (dropdown) gồm các giá trị này.
+/// </summary>
+public sealed record TemplateColumn(string Name, char Kind, double Width, IReadOnlyList<string>? Options = null);
 
 /// <summary>
 /// Một bảng (sheet) của file mẫu. IsDemo = true khi bảng chưa có dữ liệu trong hệ thống nên các dòng là ví dụ (chữ xám nghiêng);

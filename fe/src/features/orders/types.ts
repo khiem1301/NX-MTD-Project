@@ -327,6 +327,8 @@ export type SpecImportPreview = {
   crossErrors: string[];
   notes: string[];
   canImport: boolean;
+  /** Size có trong đơn của mã hàng (đã sắp xếp); rỗng khi không nhập bìa của đơn. */
+  orderSizes?: string[];
   /** Chế độ thay thế: số dòng cũ bị bỏ vì không có trong file, và tên từng dòng. */
   removedCount: number;
   removedNames: string[] | null;

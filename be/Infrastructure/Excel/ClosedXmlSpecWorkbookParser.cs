@@ -13,7 +13,7 @@ namespace NX_MTD.Infrastructure.Excel;
 /// <item>Thành phần: Tên chi tiết, Loại, Số chi tiết / áo.</item>
 /// <item>Định mức NVL: Màu áo, Tên chi tiết, Mã NVL, Ghi chú quy cách (tùy chọn).</item>
 /// <item>Nhóm bìa: Nhóm bìa, Chi tiết trên nhóm, Màu áo dùng nhóm (nhiều giá trị cách nhau dấu ;).</item>
-/// <item>Bìa của đơn: Nhóm bìa, Mã bìa, Dài (m), Khổ (m), Mã hàng / Trạng thái (tùy chọn); mọi cột khác là cột size.</item>
+/// <item>Bìa của đơn: Nhóm bìa, Mã bìa, Dài (m), Khổ (m), Mã hàng / Ngừng dùng (tick, tùy chọn; cột Trạng thái cũ vẫn đọc được); mọi cột khác là cột size.</item>
 /// </list>
 /// Chỉ kiểm định dạng ô; đối chiếu màu, NVL, chi tiết với hệ thống do SpecImportService làm.
 /// </summary>
@@ -26,7 +26,7 @@ public sealed class ClosedXmlSpecWorkbookParser : IExcelSpecWorkbookParser
 
     private sealed record Header(int Row, Dictionary<string, int> Columns, IReadOnlyList<(int Col, string Size)> Sizes);
 
-    private static readonly HashSet<string> MarkerKnownKeys = ["stt", "mahang", "nhombia", "mabia", "trangthai", "ghichu"];
+    private static readonly HashSet<string> MarkerKnownKeys = ["stt", "mahang", "nhombia", "mabia", "trangthai", "ngungdung", "ghichu"];
 
     public SpecWorkbookDto Parse(Stream stream)
     {
@@ -184,7 +184,7 @@ public sealed class ClosedXmlSpecWorkbookParser : IExcelSpecWorkbookParser
         if (code.Length == 0) error ??= Messages.Required("mã bìa");
         var length = ReadDecimal(lengthCell, "Dài (m)", ref error);
         var width = ReadDecimal(widthCell, "Khổ (m)", ref error);
-        var status = StatusOf(Text(sheet, r, h, "trangthai"));
+        var status = h.Columns.ContainsKey("ngungdung") ? StatusOfTick(Text(sheet, r, h, "ngungdung")) : StatusOf(Text(sheet, r, h, "trangthai"));
         if (status is null) error ??= "Trạng thái phải là ACTIVE (đang dùng) hoặc DISCONTINUED (ngừng dùng).";
 
         var ratios = new List<MarkerRatioDto>();
@@ -196,6 +196,15 @@ public sealed class ClosedXmlSpecWorkbookParser : IExcelSpecWorkbookParser
         var product = Text(sheet, r, h, "mahang");
         return new SpecOrderMarkerExcelRow(r, product.Length == 0 ? null : product.ToUpperInvariant(), no is null or 0 ? null : no,
             code, length, width, status ?? RecordStatus.Active, ratios, error);
+    }
+
+    private static readonly HashSet<string> NotTicked = ["0", "false", "no", "không", "khong", "đang dùng", "dang dung", "active"];
+
+    /// <summary>Cột tick "Ngừng dùng": 1 = ngừng dùng; 0 hoặc ô trống = đang dùng (chữ ✓, x, có… cũng coi là ngừng dùng).</summary>
+    private static string StatusOfTick(string text)
+    {
+        var value = text.Trim().ToLowerInvariant();
+        return value.Length == 0 || NotTicked.Contains(value) ? RecordStatus.Active : RecordStatus.Discontinued;
     }
 
     private static string? StatusOf(string text) => PayslipLayout.NormalizeKey(text) switch

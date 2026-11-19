@@ -457,15 +457,16 @@ public class OperationImportTests : ProductionTestBase
             TeamType = team, Status = OperationStatuses.Active,
         };
         _operations.AddRange([Op(1, "OP01"), Op(9, "OP09"), Op(10, "OP10"), Op(20, "CUT01", TeamTypes.Cutting)]);
-        // OP10 đang có việc mở: công nhân còn giữ 5 bộ của đơn đang chạy
-        var order = new CustomerOrder { OrderId = 1, Status = OrderStatuses.InProduction };
-        SetupQueryable(new List<OrderLine> { new() { OrderLineId = 1, OrderId = 1, Order = order } });
+        // OP10 đã được dùng (có sản lượng ghi nhận): không được xóa hay sửa
         SetupQueryable(new List<WorkAllocation>());
-        SetupQueryable(new List<VwWorkerOutputCap> { new() { OperationId = 10, OrderLineId = 1, RemainingQty = 5 } });
+        SetupQueryable(new List<OperationAssignment>());
+        SetupQueryable(new List<DefectRecord>());
+        SetupQueryable(new List<OutputRecord> { new() { OperationId = 10 } });
+        SetupQueryable(new List<OperationComponent>());
     }
 
     [Fact]
-    public async Task Import_Replace_DiscontinuesSewingOperationsNotInFile_ExceptOnesWithOpenWork()
+    public async Task Import_Replace_DeletesUnusedSewingOperationsNotInFile_KeepsUsedOnes()
     {
         ExistingOperationsForReplace();
 
@@ -478,21 +479,21 @@ public class OperationImportTests : ProductionTestBase
 
         result.IsSuccess.Should().BeTrue(result.Message);
         result.Data!.Removed.Should().Be(1);
-        _operations.Single(o => o.OperationCode == "OP09").Status.Should().Be(OperationStatuses.Discontinued);
-        _operations.Single(o => o.OperationCode == "OP10").Status.Should().Be(OperationStatuses.Active);    // đang có việc: giữ
-        _operations.Single(o => o.OperationCode == "CUT01").Status.Should().Be(OperationStatuses.Active);   // công đoạn cắt không thuộc file
-        _operations.Single(o => o.OperationCode == "OP01").Status.Should().Be(OperationStatuses.Active);    // có trong file
-        result.Message.Should().Contain("Đã ngừng dùng 1");
+        Repo<Operation>().Received(1).Remove(Arg.Is<Operation>(o => o.OperationCode == "OP09"));
+        Repo<Operation>().DidNotReceive().Remove(Arg.Is<Operation>(o => o.OperationCode != "OP09"));
+        _operations.Single(o => o.OperationCode == "OP10").Status.Should().Be(OperationStatuses.Active);    // đã dùng: giữ nguyên
+        _operations.Single(o => o.OperationCode == "OP09").Status.Should().Be(OperationStatuses.Active);    // bị xóa chứ không đổi trạng thái
+        result.Message.Should().Contain("Đã xóa 1");
     }
 
     [Fact]
-    public async Task Import_WithoutReplace_NeverDiscontinues()
+    public async Task Import_WithoutReplace_NeverRemoves()
     {
         ExistingOperationsForReplace();
 
         var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default);
 
         result.Data!.Removed.Should().Be(0);
-        _operations.Where(o => o.OperationCode is "OP09" or "OP10").Should().OnlyContain(o => o.Status == OperationStatuses.Active);
+        Repo<Operation>().DidNotReceive().Remove(Arg.Any<Operation>());
     }
 }

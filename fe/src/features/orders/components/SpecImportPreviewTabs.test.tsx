@@ -80,4 +80,38 @@ describe('SpecImportPreviewTabs', () => {
     expect(screen.getByText(/các chi tiết dùng vải khác nhau/)).toBeInTheDocument();
     expect(screen.getByText(/Cột size XL/)).toBeInTheDocument();
   });
+
+  it('bìa của đơn: mỗi size của đơn một cột, không hiện size khác', () => {
+    render(
+      <SpecImportPreviewTabs
+        data={preview({
+          hasNorms: false,
+          norms: [],
+          hasOrderMarkers: true,
+          orderSizes: ['S', 'M'],
+          orderMarkers: [
+            {
+              rowNumber: 4,
+              action: 'New',
+              error: null,
+              markerNo: 1,
+              markerCode: '1A',
+              lengthM: 2.2,
+              widthM: 1.5,
+              status: 'Active',
+              ratios: [
+                { sizeCode: 'S', piecesPerPly: 1 },
+                { sizeCode: 'M', piecesPerPly: 2 },
+              ],
+            },
+          ],
+        })}
+      />,
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'S' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'M' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'XL' })).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Trạng thái' })).toBeInTheDocument();
+  });
 });

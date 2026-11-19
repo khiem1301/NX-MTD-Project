@@ -136,9 +136,26 @@ public sealed partial class SpecImportService : ISpecImportService
         if (!spec.IsSuccess) return Fail.As<Plan>(spec);
         var materials = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
         var t = target.Data!;
-        var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook, replace);
+        var usage = replace ? await UsageAsync(productId, spec.Data!, ct) : SpecImportUsage.None;
+        var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook, replace, usage);
         var crossErrors = await CrossErrorsAsync(productId, orderId, builder, ct);
         return Result<Plan>.Success(new Plan(ToPreview(productId, orderId, t, workbook, builder, crossErrors), builder));
+    }
+
+    /// <summary>
+    /// Chế độ thay thế: dữ liệu cũ đã được dùng ở bảng khác thì không được xóa hay sửa. Định mức đã dùng (lệnh cắt, đơn xin, bàn cắt,
+    /// bàn giao, phiếu cấp, tồn BTP) giữ luôn thành phần và cặp màu + chi tiết của nó; nhóm bìa đã có bìa của đơn (bất kỳ đơn nào) giữ nguyên.
+    /// </summary>
+    private async Task<SpecImportUsage> UsageAsync(int productId, ProductSpecDto spec, CancellationToken ct)
+    {
+        var usedIds = await NormUsage.UsedIdsAsync(_uow, spec.Norms.Select(n => n.ProductComponentMaterialId).ToList(), ct);
+        var usedNorms = spec.Norms.Where(n => usedIds.Contains(n.ProductComponentMaterialId)).ToList();
+        var groups = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Where(m => m.ProductId == productId)
+            .Select(m => (int)m.MarkerNo).Distinct().ToListAsync(ct);
+        return new SpecImportUsage(
+            usedNorms.Select(n => n.ComponentName.Trim().ToUpperInvariant()).ToHashSet(),
+            usedNorms.Select(n => $"{n.Color.Trim().ToUpperInvariant()}|{n.ComponentName.Trim().ToUpperInvariant()}").ToHashSet(),
+            groups.ToHashSet());
     }
 
     /// <summary>Mã hàng phải có; nếu chọn đơn thì đơn phải có mã hàng này và còn đang chạy (giống điều kiện lưu bìa).</summary>
@@ -216,11 +233,14 @@ public sealed partial class SpecImportService : ISpecImportService
         if (builder.SpecChanged && builder.Markers is not null && builder.Changes.OrderMarkers + builder.RemovedMarkers > 0)
             notes.Add(Messages.SpecImportMarkerCheckLater);
         if (changes == 0) notes.Add(Messages.SpecImportNoChange);
+        if (builder.KeptUsedNames.Count > 0)
+            notes.Add(string.Format(Messages.SpecImportKeptUsed, string.Join("; ", builder.KeptUsedNames)));
 
         return new SpecImportPreviewDto(productId, target.ProductCode, target.OrderProduct is null ? null : orderId, target.OrderCode,
             builder.Components, builder.Norms, builder.MarkerGroups, builder.OrderMarkers,
             workbook.HasComponents, workbook.HasNorms, workbook.HasMarkerGroups, workbook.HasOrderMarkers && target.OrderProduct is not null,
             actions.Count - errors, errors - builder.DuplicateCount, builder.DuplicateCount, changes,
-            crossErrors, notes, changes > 0 && crossErrors.Count == 0, builder.RemovedTotal, builder.RemovedNames);
+            crossErrors, notes, changes > 0 && crossErrors.Count == 0, builder.RemovedTotal, builder.RemovedNames,
+            target.OrderProduct is null ? [] : SizeOrder.Sort(target.OrderProduct.Sizes));
     }
 }

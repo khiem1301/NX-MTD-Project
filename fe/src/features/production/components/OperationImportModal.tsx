@@ -74,7 +74,6 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
           removed={data?.removed}
           blocked={data?.blocked}
           unit="công đoạn"
-          discontinue
         />
 
         <Upload.Dragger

@@ -11,12 +11,10 @@ type ReplaceImportOptionProps = {
   disabled?: boolean;
   /** Dòng cũ sẽ bị bỏ theo bản xem trước (máy chủ tính). */
   removed?: readonly string[] | null;
-  /** Dòng cũ không có trong file nhưng không bỏ được (đang được dùng): giữ nguyên. */
+  /** Dòng cũ không có trong file nhưng đã được dùng ở bảng khác: giữ nguyên, không xóa, không sửa. */
   blocked?: readonly string[] | null;
   /** Gọi tên dòng trong thông báo: "dòng", "NVL", "công đoạn". */
   unit?: string;
-  /** true = dòng bị bỏ chuyển sang ngừng dùng (không xóa hẳn). */
-  discontinue?: boolean;
 };
 
 const list = (items: readonly string[]) =>
@@ -34,12 +32,15 @@ export function ReplaceImportOption({
   removed,
   blocked,
   unit = 'dòng',
-  discontinue = false,
 }: ReplaceImportOptionProps) {
   return (
     <Space direction="vertical" size={8} style={{ width: '100%' }}>
       <Tooltip title={text.hint}>
-        <Checkbox checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)}>
+        <Checkbox
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange(e.target.checked)}
+        >
           {text.label}
         </Checkbox>
       </Tooltip>
@@ -47,7 +48,7 @@ export function ReplaceImportOption({
         <Alert
           type="warning"
           showIcon
-          message={fill(discontinue ? text.willDiscontinue : text.willRemove, removed.length, unit)}
+          message={fill(text.willRemove, removed.length, unit)}
           description={list(removed)}
         />
       )}

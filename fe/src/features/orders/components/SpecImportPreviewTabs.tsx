@@ -64,7 +64,7 @@ export function SpecImportPreviewTabs({ data }: SpecImportPreviewTabsProps) {
         <DataTable
           rowKey="rowNumber"
           size="small"
-          columns={markerImportColumns}
+          columns={markerImportColumns(data.orderSizes ?? [])}
           dataSource={data.orderMarkers}
           scroll={TABLE_SCROLL}
         />

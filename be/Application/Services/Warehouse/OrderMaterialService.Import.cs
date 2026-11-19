@@ -131,7 +131,7 @@ public sealed partial class OrderMaterialService
 
     /// <summary>
     /// Chế độ thay thế: NVL của đơn không có trong file (kể cả dòng lỗi của file thì NVL đó vẫn coi là có trong file) bị xóa; NVL đã có
-    /// phiếu nhập hoặc dòng đơn mua thì không xóa được (giống nút xóa tay), giữ nguyên và báo lại. File không có dòng đọc được thì không xóa gì.
+    /// phiếu nhập, dòng đơn mua hoặc dòng đơn xin / bổ sung thì không xóa được (giống nút xóa tay), giữ nguyên và báo lại. File không có dòng đọc được thì không xóa gì.
     /// </summary>
     private async Task<(List<(OrderMaterial Entity, string Label)> Removals, List<string> Blocked)> PlanRemovalsAsync(
         IReadOnlyList<OrderMaterialExcelRow> excel, Dictionary<string, Material> materials, Dictionary<int, OrderMaterial> existing,
@@ -146,7 +146,9 @@ public sealed partial class OrderMaterialService
             .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value)).Select(l => l.OrderMaterialId!.Value).ToListAsync(ct);
         var purchases = await _uow.Repository<PurchaseOrderLine>().Query().AsNoTracking()
             .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value)).Select(l => l.OrderMaterialId!.Value).ToListAsync(ct);
-        var used = receipts.Concat(purchases).ToHashSet();
+        var requests = await _uow.Repository<RequestLine>().Query().AsNoTracking()
+            .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value)).Select(l => l.OrderMaterialId!.Value).ToListAsync(ct);
+        var used = receipts.Concat(purchases).Concat(requests).ToHashSet();
         var codes = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => candidates.Select(c => c.MaterialId).Contains(m.MaterialId))
             .ToDictionaryAsync(m => m.MaterialId, m => m.MaterialCode, ct);
 

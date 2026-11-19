@@ -9,6 +9,15 @@ namespace NX_MTD.Application.Services;
 public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, string MaterialName, string Unit, string Color);
 
 /// <summary>
+/// Dữ liệu cũ đã được dùng ở bảng khác (chế độ thay thế không được xóa hay sửa): tên thành phần (hoa) có định mức đã dùng, cặp
+/// "MÀU|CHI TIẾT" có định mức đã dùng, số nhóm bìa đã có bìa của đơn.
+/// </summary>
+public sealed record SpecImportUsage(IReadOnlySet<string> Components, IReadOnlySet<string> NormPairs, IReadOnlySet<int> Groups)
+{
+    public static SpecImportUsage None { get; } = new(new HashSet<string>(), new HashSet<string>(), new HashSet<int>());
+}
+
+/// <summary>
 /// DEV-ALL-115: phần tính toán thuần (không truy vấn) của nhập Excel định mức. Kiểm từng dòng file so với dữ liệu hệ thống, đánh dấu
 /// Thêm mới / Cập nhật / Không đổi / Lỗi, rồi GỘP các dòng hợp lệ vào định mức và bìa đang có: dòng trùng khóa thì ghi đè, dòng không
 /// có trong file giữ nguyên. Khóa: thành phần = tên; định mức = màu + chi tiết (thay cả bộ NVL của cặp đó); nhóm bìa = số nhóm;
@@ -40,17 +49,21 @@ public sealed class SpecImportBuilder
     private readonly List<string> _notes = [];
     private int _duplicates;
     private readonly bool _replaceComponents, _replaceNorms, _replaceGroups, _replaceMarkers;
+    private readonly SpecImportUsage _usage;
     private readonly HashSet<string> _fileComponentKeys, _fileNormKeys;
     private readonly HashSet<int> _fileGroupNos;
     private readonly HashSet<(int No, string Code)> _fileMarkerKeys;
 
     /// <param name="replace">
-    /// Chế độ thay thế: bảng nào có trong file thì dữ liệu cũ của bảng đó không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng, theo
-    /// đúng cách nút Lưu xử lý). Bảng không có trong file không bao giờ bị đụng tới. Dòng lỗi vẫn giữ dữ liệu cũ cùng khóa.
+    /// Chế độ thay thế: bảng nào có trong file thì dữ liệu cũ của bảng đó không có trong file bị xóa, TRỪ dữ liệu đã được dùng ở bảng
+    /// khác (usage): dữ liệu đã dùng giữ nguyên, không xóa, không ngừng dùng. Bảng không có trong file không bao giờ bị đụng tới.
+    /// Dòng lỗi vẫn giữ dữ liệu cũ cùng khóa.
     /// </param>
     public SpecImportBuilder(ProductSpecDto spec, IReadOnlyDictionary<string, SpecImportMaterial> materials,
-        OrderMarkerProductDto? orderProduct, string productCode, SpecWorkbookDto workbook, bool replace = false)
+        OrderMarkerProductDto? orderProduct, string productCode, SpecWorkbookDto workbook, bool replace = false,
+        SpecImportUsage? usage = null)
     {
+        _usage = usage ?? SpecImportUsage.None;
         _replaceComponents = replace && workbook.HasComponents;
         _replaceNorms = replace && workbook.HasNorms;
         _replaceGroups = replace && workbook.HasMarkerGroups;
@@ -230,9 +243,18 @@ public sealed class SpecImportBuilder
 
     // ---------- Gộp định mức ----------
 
+    /// <summary>Thay thế: thành phần đã có định mức được dùng, hoặc nằm trên nhóm bìa đã có bìa của đơn, thì không được bỏ.</summary>
+    private bool IsComponentKept(string name)
+    {
+        var key = Upper(name);
+        return _usage.Components.Contains(key)
+               || _spec.MarkerComponents.Any(m => _usage.Groups.Contains(m.MarkerNo) && Upper(m.ComponentName) == key);
+    }
+
     private SaveProductSpecDto MergeSpec()
     {
-        var components = _components.Values.Where(c => !_replaceComponents || _fileComponentKeys.Contains(Upper(c.ComponentName)))
+        var components = _components.Values.Where(c => !_replaceComponents || _fileComponentKeys.Contains(Upper(c.ComponentName))
+                                                       || IsComponentKept(c.ComponentName))
             .Select(c => _validComponents.TryGetValue(Upper(c.ComponentName), out var v)
                 ? new SaveProductComponentDto(c.ProductComponentId, c.ComponentName, CodeText.ToPascal(v.Type), v.Pieces)
                 : new SaveProductComponentDto(c.ProductComponentId, c.ComponentName, c.ComponentType, c.PiecesPerGarment))
@@ -248,20 +270,21 @@ public sealed class SpecImportBuilder
         var norms = _spec.Norms
             .Where(n => activeNames.Contains(Upper(n.ComponentName)) && _colors.ContainsKey(Upper(n.Color))
                         && !fileNormKeys.Contains((Upper(n.Color), Upper(n.ComponentName)))
-                        && (!_replaceNorms || _fileNormKeys.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}")))
+                        && (!_replaceNorms || _fileNormKeys.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}")
+                            || _usage.NormPairs.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}")))
             .Select(n => new SaveProductNormDto(n.ComponentName, n.Color, n.MaterialId, n.SpecNote))
             .Concat(_validNorms).ToList();
 
         var groupNos = _validGroups.Keys.ToHashSet();
         var markerComponents = _spec.MarkerComponents
             .Where(m => !groupNos.Contains(m.MarkerNo) && activeNames.Contains(Upper(m.ComponentName))
-                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo)))
+                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo) || _usage.Groups.Contains(m.MarkerNo)))
             .Select(m => new SaveProductMarkerComponentDto(m.MarkerNo, m.ComponentName))
             .Concat(_validGroups.SelectMany(g => g.Value.ComponentNames.Select(n => new SaveProductMarkerComponentDto(g.Key, n))))
             .ToList();
         var markerColors = _spec.MarkerFabrics
             .Where(m => !groupNos.Contains(m.MarkerNo) && _colors.ContainsKey(Upper(m.Color))
-                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo)))
+                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo) || _usage.Groups.Contains(m.MarkerNo)))
             .Select(m => new SaveProductMarkerColorDto(m.MarkerNo, m.Color))
             .Concat(_validGroups.SelectMany(g => g.Value.Colors.Select(c => new SaveProductMarkerColorDto(g.Key, c))))
             .ToList();
@@ -352,6 +375,22 @@ public sealed class SpecImportBuilder
 
         Removed = new SpecImportResultDto(removedComponents.Count, removedPairs.Count, removedGroups.Count, removedMarkers.Count);
         RemovedNames = names;
+        KeptUsedNames = KeptUsed(mergedComponents, mergedPairs, mergedGroupNos);
+    }
+
+    /// <summary>Thay thế: dòng cũ không có trong file nhưng đã được dùng nên được giữ nguyên (báo lại cho người dùng).</summary>
+    public IReadOnlyList<string> KeptUsedNames { get; private set; } = [];
+
+    private List<string> KeptUsed(HashSet<string> mergedComponents, HashSet<string> mergedPairs, HashSet<int> mergedGroupNos)
+    {
+        var names = new List<string>();
+        names.AddRange(_components.Values.Where(c => _replaceComponents && !_fileComponentKeys.Contains(Upper(c.ComponentName))
+                && mergedComponents.Contains(Upper(c.ComponentName))).Select(c => $"Thành phần: {c.ComponentName}"));
+        names.AddRange(_spec.Norms.Where(n => _replaceNorms && !_fileNormKeys.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}")
+                && mergedPairs.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}"))
+            .DistinctBy(n => $"{Upper(n.Color)}|{Upper(n.ComponentName)}").Select(n => $"Định mức: {n.Color} · {n.ComponentName}"));
+        names.AddRange(mergedGroupNos.Where(no => _replaceGroups && !_fileGroupNos.Contains(no)).Order().Select(no => $"Nhóm bìa: {no}"));
+        return names;
     }
 
     // ---------- Tiện ích ----------

@@ -23,15 +23,7 @@ describe('ReplaceImportOption', () => {
 
     expect(screen.getByText('Sẽ xóa 2 NVL không có trong file')).toBeTruthy();
     expect(screen.getByText('KHOA01; CHI01')).toBeTruthy();
-    expect(screen.getByText('Không xóa được 1 NVL (đang được dùng), giữ nguyên')).toBeTruthy();
-  });
-
-  it('công đoạn: ghi là ngừng dùng chứ không phải xóa', () => {
-    render(
-      <ReplaceImportOption checked onChange={jest.fn()} unit="công đoạn" discontinue removed={['OP09 Vắt sổ']} />,
-    );
-
-    expect(screen.getByText('Sẽ ngừng dùng 1 công đoạn không có trong file')).toBeTruthy();
+    expect(screen.getByText('Giữ nguyên 1 NVL vì đã được dùng')).toBeTruthy();
   });
 
   it('rút gọn khi quá nhiều dòng', () => {

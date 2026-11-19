@@ -379,7 +379,8 @@ public static class Messages
     public const string SpecImportOtherProductRows = "{0} dòng bìa của mã hàng khác bị bỏ qua.";
     public const string SpecImportMarkersSkipped = "Chưa chọn đơn hàng nên bảng Bìa của đơn bị bỏ qua.";
     public const string SpecImportMarkerCheckLater = "Bìa của đơn sẽ được kiểm lại đầy đủ (size theo màu, vải của nhóm) khi bấm Nhập, sau khi lưu định mức.";
-    public const string SpecImportRemovedDone = " Đã bỏ {0} dòng cũ không có trong file (đang được dùng thì chuyển sang ngừng dùng).";
+    public const string SpecImportRemovedDone = " Đã xóa {0} dòng cũ không có trong file (chưa được dùng ở đâu).";
+    public const string SpecImportKeptUsed = "Giữ nguyên, không xóa vì đã được dùng ở bảng khác: {0}.";
     public const string SpecImportNoChange = "Không có thay đổi nào so với dữ liệu đang có.";
     // DEV-ALL-121: nhập riêng từng bảng từ form mã hàng
     public const string SpecImportPartUnknown = "Bảng \"{0}\" không hợp lệ (chỉ nhận components, norms, groups, markers).";
@@ -469,7 +470,8 @@ public static class Messages
     public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
     public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
     public const string OperationImportSheetNotFound = "Không tìm thấy sheet đã chọn trong file Excel.";
-    public const string OperationImportRemoved = " Đã ngừng dùng {0} công đoạn không có trong file.";
+    public const string OperationImportRemoved = " Đã xóa {0} công đoạn không có trong file (chưa từng dùng).";
+    public const string OperationImportRemoveReason = "Nhập Excel thay thế: không có trong file, chưa từng dùng";
     public const string OperationImportDone =
         "Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi. Đơn giá: thêm {4}, cập nhật {5}, không đổi {6}, bỏ qua {7}.";
     public const string NotifyPieceRatesImportedBody = "Sheet {0}: có {1} đơn giá công đoạn mới nhập từ Excel đang chờ duyệt.";
