@@ -30,6 +30,22 @@ public static class PurchasePaymentStatuses
     public const string Returned = "RETURNED";
 }
 
+/// <summary>Quy tắc các lần thanh toán đơn mua (DEV-ALL-136).</summary>
+public static class PurchasePaymentRules
+{
+    /// <summary>Sửa được một lần thanh toán trong ngần này giờ kể từ lúc nhập.</summary>
+    public const int EditWindowHours = 24;
+}
+
+/// <summary>Trạng thái thanh toán của đơn hàng khách (DEV-ALL-137), tính từ giá trị chốt và các lần thanh toán, không lưu cột.</summary>
+public static class OrderPaymentStates
+{
+    public const string NotSet = "NotSet";
+    public const string Unpaid = "Unpaid";
+    public const string Partial = "Partial";
+    public const string Settled = "Settled";
+}
+
 /// <summary>PurchaseOrder.PaymentMethod (CK_PO_PaymentMethod).</summary>
 public static class PaymentMethods
 {

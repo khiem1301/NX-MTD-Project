@@ -56,7 +56,7 @@ const wrap = (ui: ReactNode) => (
 );
 
 describe('ProductExcelImports', () => {
-  it('Tải lên 1 file: đọc file, mở popup, Xác nhận thì giữ dữ liệu và điền dòng Mã hàng', async () => {
+  it('Chọn 1 file chung: đọc file, mở popup, Xác nhận thì giữ dữ liệu và điền dòng Mã hàng', async () => {
     const onChange = jest.fn();
     const onProductRow = jest.fn();
     const { container } = render(

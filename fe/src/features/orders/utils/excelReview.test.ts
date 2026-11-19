@@ -79,6 +79,6 @@ describe('excelReview (DEV-ALL-122/123)', () => {
       materialName: '',
     });
     expect(incompleteMaterials([fabric, trim]).map((m) => m.materialCode)).toEqual(['CUC']);
-    expect(materialTypeDefaults('TRIM', 2)).toMatchObject({ category: 'OTHER', widthM: null });
+    expect(materialTypeDefaults('TRIM', 2)).toMatchObject({ unit: 'cái', widthM: null });
   });
 });

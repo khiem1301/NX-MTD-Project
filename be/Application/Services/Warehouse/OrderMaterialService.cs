@@ -81,7 +81,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
         var colorIds = lines.Select(l => l.ProductColorId).Distinct().ToList();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => colorIds.Contains(n.ProductColorId) && n.Material.Status == MaterialStatuses.Active
-                && n.ProductComponent.Status == RecordStatus.Active)
+                && n.ProductComponent.Status == RecordStatus.Active && n.Status == RecordStatus.Active)
             .Select(n => new
             {
                 n.ProductId,

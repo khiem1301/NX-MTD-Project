@@ -12,6 +12,8 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         entity.ToTable("Customer", tb => tb.HasComment("Khách hàng (công ty mẹ)"));
 
         entity.HasIndex(e => e.CustomerName, "UQ_Customer_Name").IsUnique();
+        entity.HasIndex(e => e.Phone, "UQ_Customer_Phone").IsUnique().HasFilter("([Phone] IS NOT NULL)");
+        entity.HasIndex(e => e.Email, "UQ_Customer_Email").IsUnique().HasFilter("([Email] IS NOT NULL)");
 
         entity.Property(e => e.CustomerName).HasMaxLength(200);
         entity.Property(e => e.DefaultAddress).HasMaxLength(500);

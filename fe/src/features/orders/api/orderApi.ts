@@ -28,7 +28,6 @@ import type {
   SaveProductPayload,
   SaveProductSpecPayload,
   OrderImportPreview,
-  ProductImportPreview,
   SpecImportPreview,
   SpecImportResult,
   SpecImportTarget,
@@ -85,7 +84,12 @@ const asFormData = (file: File) => {
 };
 
 /** Màn Mã hàng gọi API Admin (kèm ?orderId= nếu chọn đơn); màn Đơn hàng gọi API Quản đốc theo đơn × mã hàng. */
-const specImportRequest = async <T>(target: SpecImportTarget, file: File, preview: boolean) => {
+const specImportRequest = async <T>(
+  target: SpecImportTarget,
+  file: File,
+  preview: boolean,
+  replace: boolean,
+) => {
   const url =
     target.scope === 'admin'
       ? preview
@@ -94,10 +98,12 @@ const specImportRequest = async <T>(target: SpecImportTarget, file: File, previe
       : preview
         ? API.orderMarkers.importPreview(target.orderId, target.productId)
         : API.orderMarkers.import(target.orderId, target.productId);
-  const params =
-    target.scope === 'admin'
+  const params = {
+    ...(target.scope === 'admin'
       ? { orderId: target.orderId, parts: target.parts?.join(',') || undefined }
-      : undefined;
+      : {}),
+    replace: replace || undefined,
+  };
   return (await apiClient.post<ApiResponse<T>>(url, asFormData(file), { params })).data;
 };
 
@@ -105,16 +111,6 @@ const specImportRequest = async <T>(target: SpecImportTarget, file: File, previe
 export const orderImportApi = {
   preview: (file: File) =>
     post<OrderImportPreview>(API.customerOrders.importPreview, asFormData(file)),
-};
-
-/** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel (mã đã có bỏ qua). */
-export const productImportApi = {
-  preview: (file: File) =>
-    post<ProductImportPreview>(API.products.productsImportPreview, asFormData(file)),
-  /** Trả cả message (số mã đã tạo / bỏ qua). */
-  import: async (file: File) =>
-    (await apiClient.post<ApiResponse<unknown>>(API.products.productsImport, asFormData(file)))
-      .data,
 };
 
 /** DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn. */
@@ -172,11 +168,11 @@ export const excelBundleApi = {
 };
 
 export const specImportApi = {
-  preview: async (target: SpecImportTarget, file: File) =>
-    (await specImportRequest<SpecImportPreview>(target, file, true)).data,
+  preview: async (target: SpecImportTarget, file: File, replace = false) =>
+    (await specImportRequest<SpecImportPreview>(target, file, true, replace)).data,
   /** Trả cả message (số dòng đã nhập) để hiện cho người dùng. */
-  import: (target: SpecImportTarget, file: File) =>
-    specImportRequest<SpecImportResult>(target, file, false),
+  import: (target: SpecImportTarget, file: File, replace = false) =>
+    specImportRequest<SpecImportResult>(target, file, false, replace),
 };
 
 export const orderApi = {

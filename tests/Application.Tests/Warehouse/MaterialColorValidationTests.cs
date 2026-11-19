@@ -37,7 +37,7 @@ public class MaterialColorValidationTests
 
     private static Material Fabric(int id, string code, string color) => new()
     {
-        MaterialId = id, MaterialCode = code, MaterialName = "Vải gió", MaterialType = MaterialTypes.Fabric, Category = "MAIN",
+        MaterialId = id, MaterialCode = code, MaterialName = "Vải gió", MaterialType = MaterialTypes.Fabric,
         Unit = "m", Color = color, Status = MaterialStatuses.Active,
     };
 
@@ -57,7 +57,7 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task CreateAsync_Fabric_AlwaysUsesMeters_WhateverUnitIsSent()
     {
-        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải lụa", MaterialTypes.Fabric, "MAIN_FABRIC", "kg", "Đỏ"), default);
+        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải lụa", MaterialTypes.Fabric, "kg", "Đỏ"), default);
 
         result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
     }
@@ -65,7 +65,7 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task CreateAsync_Trim_KeepsTheUnitTyped()
     {
-        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc áo", MaterialTypes.Trim, "BUTTON", " cái "), default);
+        var result = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc áo", MaterialTypes.Trim, " cái "), default);
 
         result.Data!.Unit.Should().Be("cái");
     }
@@ -73,7 +73,7 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task UpdateAsync_Fabric_AlwaysUsesMeters()
     {
-        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN_FABRIC", "cuộn", "Đen"), default);
+        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "cuộn", "Đen"), default);
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.Unit.Should().Be(MaterialTypes.FabricUnit);
@@ -84,7 +84,7 @@ public class MaterialColorValidationTests
     [InlineData(MaterialTypes.Trim, "", false)]
     [InlineData(MaterialTypes.Trim, "cái", true)]
     public void Validator_OnlyTrimNeedsAUnit(string type, string unit, bool valid) =>
-        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, type == MaterialTypes.Fabric ? "MAIN_FABRIC" : "BUTTON", unit, null,
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "NVL", type, unit, null,
                 type == MaterialTypes.Fabric ? 1.5m : null))
             .IsValid.Should().Be(valid);
 
@@ -96,20 +96,20 @@ public class MaterialColorValidationTests
     [InlineData("1.505", false)]
     [InlineData(null, false)]
     public void Validator_FabricWidthRequiredUpTo3Point5Metres(string? width, bool valid) =>
-        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null,
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "m", null,
                 width is null ? null : decimal.Parse(width, System.Globalization.CultureInfo.InvariantCulture)))
             .IsValid.Should().Be(valid);
 
     [Fact]
     public void Validator_TrimWithoutWidth_IsValid() =>
-        new UpdateMaterialDtoValidator().Validate(new UpdateMaterialDto("Cúc", MaterialTypes.Trim, "BUTTON", "cái"))
+        new UpdateMaterialDtoValidator().Validate(new UpdateMaterialDto("Cúc", MaterialTypes.Trim, "cái"))
             .IsValid.Should().BeTrue();
 
     [Fact]
     public async Task CreateAsync_Trim_IgnoresWidth_Fabric_KeepsIt()
     {
-        var trim = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc nhựa", MaterialTypes.Trim, "BUTTON", "cái", null, 2m), default);
-        var fabric = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải kaki", MaterialTypes.Fabric, "MAIN_FABRIC", "m", null, 1.6m), default);
+        var trim = await Materials().CreateAsync(new CreateMaterialDto(null, "Cúc nhựa", MaterialTypes.Trim, "cái", null, 2m), default);
+        var fabric = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải kaki", MaterialTypes.Fabric, "m", null, 1.6m), default);
 
         trim.Data!.WidthM.Should().BeNull();
         fabric.Data!.WidthM.Should().Be(1.6m);
@@ -118,11 +118,11 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task Same_name_and_type_is_allowed_for_another_color_but_not_for_the_same_color()
     {
-        var sameColor = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải gió", MaterialTypes.Fabric, "MAIN", "m", " Đen "), default);
+        var sameColor = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải gió", MaterialTypes.Fabric, "m", " Đen "), default);
         sameColor.ErrorCode.Should().Be(ErrorCodes.WarehouseMaterialDuplicate);
         sameColor.Message.Should().Be(WarehouseMessages.MaterialNameDuplicate);
 
-        var otherColor = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải gió", MaterialTypes.Fabric, "MAIN", "m", "Xanh"), default);
+        var otherColor = await Materials().CreateAsync(new CreateMaterialDto(null, "Vải gió", MaterialTypes.Fabric, "m", "Xanh"), default);
         otherColor.IsSuccess.Should().BeTrue();
         otherColor.Data!.Color.Should().Be("Xanh");
     }
@@ -132,7 +132,7 @@ public class MaterialColorValidationTests
     {
         _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 1, MaterialId = 1 });
 
-        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN", "m", "Xanh"), default);
+        var result = await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "m", "Xanh"), default);
 
         result.ErrorCode.Should().Be(ErrorCodes.WarehouseMaterialInUse);
         _materials[0].Color.Should().Be("Đen");
@@ -141,17 +141,17 @@ public class MaterialColorValidationTests
     [Fact]
     public async Task An_unused_material_can_change_color_and_a_missing_color_keeps_the_current_one()
     {
-        (await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN", "m"), default)).IsSuccess.Should().BeTrue();
+        (await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "m"), default)).IsSuccess.Should().BeTrue();
         _materials[0].Color.Should().Be("Đen");
 
-        (await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "MAIN", "m", "Xanh"), default)).IsSuccess.Should().BeTrue();
+        (await Materials().UpdateAsync(1, new UpdateMaterialDto("Vải gió", MaterialTypes.Fabric, "m", "Xanh"), default)).IsSuccess.Should().BeTrue();
         _materials[0].Color.Should().Be("Xanh");
     }
 
     [Fact]
     public void Material_validator_limits_the_color_length()
     {
-        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "MAIN", "m", new string('x', 51)))
+        new CreateMaterialDtoValidator().Validate(new CreateMaterialDto(null, "Vải", MaterialTypes.Fabric, "m", new string('x', 51)))
             .IsValid.Should().BeFalse();
     }
 

@@ -9,7 +9,6 @@ export type Material = {
   materialCode: string;
   materialName: string;
   materialType: string;
-  category: string;
   unit: string;
   /** Khổ vải (m); null với phụ liệu (DEV-ALL-102). */
   widthM: number | null;
@@ -77,6 +76,10 @@ export type OrderMaterialImportPreview = {
   errorCount: number;
   duplicateCount: number;
   changeCount: number;
+  /** Chế độ thay thế: NVL sẽ bị xóa vì không có trong file; và NVL không xóa được (đã có phiếu nhập / đơn mua). */
+  removeCount: number;
+  removed: string[] | null;
+  blocked: string[] | null;
 };
 
 /** Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt. */

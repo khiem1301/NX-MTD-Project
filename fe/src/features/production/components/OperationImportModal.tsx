@@ -1,5 +1,7 @@
 import { Alert, Modal, Select, Space, Typography, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
+import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
+import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OperationImportRow } from '../types';
@@ -38,6 +40,8 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     setEffectiveDate,
     submitRates,
     setSubmitRates,
+    replace,
+    setReplace,
     preview,
     importOps,
     data,
@@ -62,6 +66,16 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <ImportTemplateLink kind="operations" productId={productId} />
+        <ReplaceImportOption
+          checked={replace}
+          onChange={setReplace}
+          disabled={preview.isPending || importOps.isPending}
+          removed={data?.removed}
+          blocked={data?.blocked}
+          unit="công đoạn"
+          discontinue
+        />
 
         <Upload.Dragger
           maxCount={1}

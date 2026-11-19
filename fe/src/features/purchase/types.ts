@@ -93,8 +93,19 @@ export type PurchaseOrderPermissions = {
   canReprice: boolean;
   canConfirmPayment: boolean;
   canReturnPayment: boolean;
-  /** DEV-ALL-131: Kế toán + đơn Thanh toán một phần. */
-  canPayRemaining: boolean;
+};
+
+/** Một lần thanh toán đơn mua; canEdit: Kế toán, trong 24 giờ kể từ lúc nhập. Không xóa được. */
+export type PurchasePayment = {
+  purchasePaymentId: number;
+  paymentDate: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentNote: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  editReason: string | null;
+  canEdit: boolean;
 };
 
 export type PurchaseOrderDetail = {
@@ -125,8 +136,7 @@ export type PurchaseOrderDetail = {
   /** DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù (Kế toán nhập); receivedAmount = Σ số đã nhận × đơn giá (gợi ý). */
   actualAmount: number | null;
   receivedAmount: number;
-  /** DEV-ALL-131: số còn phải trả khi đơn Thanh toán một phần (null với trạng thái khác). */
-  remainingAmount: number | null;
+  payments: PurchasePayment[];
   createdAt: string;
   rowVer: string;
   lines: PurchaseOrderLine[];
@@ -169,11 +179,12 @@ export type ConfirmPaymentPayload = {
   actualAmount?: number | null;
 };
 
-export type PayRemainingPayload = {
+export type UpdatePaymentPayload = {
   paymentDate: string;
   amount: number;
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
+  reason: string;
   rowVer: string;
 };
 

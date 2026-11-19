@@ -15,8 +15,6 @@ public partial class VwMaterialStock
 
     public string? MaterialType { get; set; }
 
-    public string Category { get; set; } = null!;
-
     public string Unit { get; set; } = null!;
 
     public decimal? OnHandQty { get; set; }

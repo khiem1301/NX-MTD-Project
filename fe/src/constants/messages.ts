@@ -2,6 +2,16 @@ import { PASSWORD_MAX_LENGTH } from './limits';
 
 export const MESSAGES = {
   common: {
+    /** Ô "Thay thế dữ liệu cũ" của các hộp thoại nhập Excel. */
+    importReplace: {
+      label: 'Thay thế dữ liệu cũ: xóa các dòng không có trong file',
+      hint: 'Bình thường nhập Excel chỉ thêm mới hoặc ghi đè, không xóa. Bật ô này thì dòng cũ không có trong file bị xóa (bảng không có trong file thì không bị đụng tới).',
+      willRemove: 'Sẽ xóa {0} {1} không có trong file',
+      willDiscontinue: 'Sẽ ngừng dùng {0} {1} không có trong file',
+      blocked: 'Không xóa được {0} {1} (đang được dùng), giữ nguyên',
+      more: '…và {0} dòng khác',
+      confirmExtra: 'Đang bật chế độ thay thế: {0} dòng cũ không có trong file sẽ bị bỏ.',
+    },
     networkError: 'Mất kết nối. Dữ liệu đang nhập vẫn được giữ, vui lòng thử lại.', // MSG28
     unknownError: 'Có lỗi xảy ra. Vui lòng thử lại.',
     loading: 'Đang tải...',
@@ -399,6 +409,8 @@ export const MESSAGES = {
       status: 'Trạng thái',
       active: 'Đang dùng',
       discontinued: 'Ngừng dùng',
+      discontinue: 'Ngừng dùng bìa',
+      reactivate: 'Dùng lại bìa',
       addMarker: 'Thêm bìa',
       maxMarkers: 'Tối đa {0} bìa cho mỗi mã hàng của đơn.',
       groupRequired: 'Bìa dòng {0}: chưa chọn nhóm bìa.',
@@ -472,32 +484,10 @@ export const MESSAGES = {
       stay: 'Tiếp tục sửa',
     },
     /** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel. */
-    productImport: {
-      button: 'Nhập từ Excel',
-      title: 'Tạo mã hàng từ Excel',
-      hint: 'Bảng có cột Mã hàng, Tên mã hàng, Mô tả (tùy chọn). Mã hàng chỉ gồm chữ, số và . _ -, tối đa 30 ký tự. Mã đã có trong hệ thống được bỏ qua (không sửa). Chọn file là xem trước ngay, chưa tạo gì.',
-      confirm: 'Tạo mã hàng',
-      confirmTitle: 'Tạo các mã hàng mới?',
-      confirmBody:
-        'Các mã hàng mới hợp lệ sẽ được tạo ngay; mã đã có và dòng lỗi được bỏ qua. Tiếp tục?',
-      summary: '{0} mã mới, {1} mã đã có (bỏ qua), {2} dòng lỗi, {3} dòng trùng.',
-      action: {
-        New: { text: 'Mới', color: 'green' },
-        Exists: { text: 'Đã có', color: 'default' },
-        Error: { text: 'Lỗi', color: 'red' },
-      },
-      columns: {
-        row: 'Dòng',
-        code: 'Mã hàng',
-        name: 'Tên mã hàng',
-        description: 'Mô tả',
-        result: 'Kết quả',
-      },
-    },
     /** DEV-ALL-121: chọn sẵn file Excel ở form mã hàng; bấm Lưu thì lưu mã hàng rồi nhập lần lượt từng file. */
     productExcel: {
       section: 'Nhập từ Excel',
-      hint: 'Bấm Lưu: lưu mã hàng rồi nhập lần lượt từng file. Dòng lỗi được bỏ qua và báo lại sau khi nhập.',
+      hint: 'Chọn 1 file chung (nút xanh) hoặc chọn file riêng cho từng mục. Bấm Lưu để nhập; dòng lỗi được bỏ qua và báo lại.',
       template: 'Tải file mẫu',
       choose: 'Chọn file',
       change: 'Đổi file',
@@ -505,15 +495,12 @@ export const MESSAGES = {
       specGroup: 'Định mức mã hàng',
       specGroupNote: 'Định mức NVL, Nhóm bìa cần màu đã có (tạo khi lập đơn)',
       orderGroup: 'Theo đơn hàng',
-      orderGroupNote: 'cần chọn đơn',
-      orderGroupLater:
-        'Bìa cắt, NVL của đơn nhập sau khi mã hàng có đơn (Mã hàng → Sửa, hoặc trong chi tiết đơn)',
       chosenCount: 'Đã chọn {0} file',
-      uploadAll: 'Tải lên 1 file',
+      uploadAll: 'Chọn 1 file chung cho tất cả',
       reviewAgain: 'Xem / sửa lại',
       rowsReady: '{0} dòng đã kiểm',
       uploadAllTip:
-        'Chọn một file nhiều sheet (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn): sheet Mã hàng điền vào Mã hàng, Tên, Mô tả; file được gán cho mọi mục, mục nào file không có bảng thì bỏ qua.',
+        'Một file Excel nhiều sheet cho tất cả các mục. Sheet nào có thì nhập vào mục cùng tên, sheet nào không có thì bỏ qua. Có bảng kiểm tra để sửa trước khi Lưu.',
       filledFromExcel: 'Đã điền mã hàng {0} từ sheet Mã hàng.',
       filledFromExcelEdit: 'Đã điền tên và mô tả từ sheet Mã hàng.',
       productExists: 'Mã hàng {0} đã có trong hệ thống: đổi mã khác hoặc sửa mã hàng đó.',
@@ -573,7 +560,6 @@ export const MESSAGES = {
         code: 'Mã NVL',
         name: 'Tên NVL',
         type: 'Loại',
-        category: 'Nhóm',
         unit: 'Đơn vị',
         color: 'Màu',
         width: 'Khổ (m)',
@@ -730,6 +716,7 @@ export const MESSAGES = {
     addLine: 'Thêm dòng',
     photos: 'Ảnh (tối đa {0})',
     approve: 'Duyệt',
+    handleNow: 'Xử lý ngay',
     reject: 'Từ chối',
     complete: 'Hoàn thành',
     notComplete: 'Không hoàn thành',

@@ -28,10 +28,13 @@ public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialCode, d
 public sealed record OrderMaterialImportRowDto(int RowNumber, string Action, string? Error, string MaterialCode, string? MaterialName,
     string? MaterialColor, string? Unit, decimal? RequiredQty, decimal? CustomerQty, decimal? PurchaseQty, string? Note);
 
+/// <param name="RemoveCount">Chế độ thay thế: số NVL của đơn sẽ bị xóa vì không có trong file.</param>
+/// <param name="Removed">Mã NVL sẽ bị xóa.</param>
+/// <param name="Blocked">Mã NVL không có trong file nhưng không xóa được (đã có phiếu nhập hoặc đơn mua): giữ nguyên.</param>
 public sealed record OrderMaterialImportPreviewDto(IReadOnlyList<OrderMaterialImportRowDto> Rows, int ValidCount, int ErrorCount,
-    int DuplicateCount, int ChangeCount);
+    int DuplicateCount, int ChangeCount, int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null);
 
-public sealed record OrderMaterialImportResultDto(int Created, int Updated);
+public sealed record OrderMaterialImportResultDto(int Created, int Updated, int Removed = 0);
 
 /// <summary>Phần chung của tạo / sửa NVL của đơn (dùng chung validator). Lịch khách giao khai ở cả đơn, không theo từng NVL.</summary>
 public interface IOrderMaterialInput

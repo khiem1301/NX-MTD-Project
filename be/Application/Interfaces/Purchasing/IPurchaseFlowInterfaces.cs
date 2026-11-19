@@ -40,12 +40,15 @@ public interface IPurchaseOrderFlowService
 
     // ---------- Kế toán ----------
 
-    /// <summary>UNPAID → PAID: ngày, số tiền, hình thức; ảnh chứng từ tùy chọn (Attachment). Không sửa nhà cung cấp / số lượng (GBR-18).</summary>
+    /// <summary>Thêm một lần thanh toán (UNPAID / PARTIALLY_PAID → PARTIALLY_PAID / PAID): ngày, số tiền (không quá số còn phải trả), hình thức; ảnh chứng từ tùy chọn (Attachment). Không sửa nhà cung cấp / số lượng (GBR-18).</summary>
     Task<Result> ConfirmPaymentAsync(int purchaseOrderId, ConfirmPaymentDto dto, CancellationToken ct);
-
-    /// <summary>DEV-ALL-131: trả thêm cho đơn Thanh toán một phần; đủ mốc thì Đã thanh toán.</summary>
-    Task<Result> PayRemainingAsync(int purchaseOrderId, PayRemainingDto dto, CancellationToken ct);
 
     /// <summary>UNPAID → RETURNED (bắt buộc lý do): trả lại Quản đốc sửa.</summary>
     Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct);
+}
+
+/// <summary>DEV-ALL-136: sửa lần thanh toán đơn mua (24 giờ, bắt buộc lý do). Không có thao tác xóa.</summary>
+public interface IPurchasePaymentService
+{
+    Task<Result> UpdatePaymentAsync(int purchaseOrderId, int paymentId, UpdatePurchasePaymentDto dto, CancellationToken ct);
 }

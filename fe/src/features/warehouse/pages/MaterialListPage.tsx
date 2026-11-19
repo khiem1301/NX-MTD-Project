@@ -10,7 +10,6 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatNumber } from '@/utils/format';
 import { MaterialFormModal } from '../components/MaterialFormModal';
 import {
-  CATEGORY_LABEL,
   LABELS,
   MATERIAL_STATUS,
   MATERIAL_STATUS_LABEL,
@@ -51,11 +50,6 @@ export function MaterialListPage() {
       title: LABELS.materialType,
       dataIndex: 'materialType',
       render: (v: string) => MATERIAL_TYPE_LABEL[v],
-    },
-    {
-      title: LABELS.category,
-      dataIndex: 'category',
-      render: (v: string) => CATEGORY_LABEL[v] ?? v,
     },
     { title: LABELS.unit, dataIndex: 'unit', width: 100 },
     {

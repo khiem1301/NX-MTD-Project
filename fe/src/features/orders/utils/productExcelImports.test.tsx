@@ -34,6 +34,8 @@ const preview = (over: object) => ({
   crossErrors: [],
   notes: [],
   canImport: true,
+  removedCount: 0,
+  removedNames: null,
   ...over,
 });
 
@@ -177,7 +179,6 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
     const material = {
       materialName: 'Vải mới',
       materialType: 'FABRIC',
-      category: 'MAIN_FABRIC',
       unit: 'm',
     };
 

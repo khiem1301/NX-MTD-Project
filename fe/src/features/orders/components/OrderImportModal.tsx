@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Alert, Button, Modal, Space, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DownloadOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons';
+import { InboxOutlined, PlusOutlined } from '@ant-design/icons';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
 import { fill, formatCurrency, formatQty } from '@/utils/format';
-import { SPEC_IMPORT_TEMPLATE_URL } from '../constants';
+import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { unknownCodesOf, useCreateProductFromImport } from '../hooks/useCreateProductFromImport';
 import { usePreviewOrderImport } from '../hooks/useSpecImport';
 import type { OrderImportRow } from '../types';
@@ -17,6 +17,8 @@ const text = MESSAGES.orders.orderImport;
 const col = text.columns;
 
 type OrderImportModalProps = {
+  /** Đơn đang sửa (null / bỏ trống khi tạo mới): file mẫu chứa dòng hàng hiện có của đơn. */
+  orderId?: number | null;
   onApply: (rows: OrderImportRow[]) => void;
   onClose: () => void;
   /**
@@ -68,7 +70,7 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
  * DEV-ALL-118: nhập dòng hàng của đơn từ Excel dạng ma trận màu × size. Chọn file là xem trước (máy chủ kiểm mã hàng, số lượng,
  * đơn giá); Áp dụng thì điền các dòng hợp lệ vào form, người dùng xem lại và bấm Lưu như tạo tay. Chỉ gắn khi đang mở.
  */
-export function OrderImportModal({ onApply, onClose, onQueueImports }: OrderImportModalProps) {
+export function OrderImportModal({ orderId, onApply, onClose, onQueueImports }: OrderImportModalProps) {
   const preview = usePreviewOrderImport();
   const [file, setFile] = useState<File | null>(null);
   const create = useCreateProductFromImport(file);
@@ -90,9 +92,7 @@ export function OrderImportModal({ onApply, onClose, onQueueImports }: OrderImpo
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Text type="secondary">{text.hint}</Typography.Text>
-        <Typography.Link href={SPEC_IMPORT_TEMPLATE_URL} download>
-          <DownloadOutlined /> {MESSAGES.orders.specImport.template}
-        </Typography.Link>
+        <ImportTemplateLink kind="order-lines" orderId={orderId} />
         <Upload.Dragger
           maxCount={1}
           accept=".xlsx"

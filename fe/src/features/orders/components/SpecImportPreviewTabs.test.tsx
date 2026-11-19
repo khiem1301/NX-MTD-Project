@@ -47,6 +47,8 @@ const preview = (over: Partial<SpecImportPreview> = {}): SpecImportPreview => ({
   crossErrors: [],
   notes: [],
   canImport: true,
+  removedCount: 0,
+  removedNames: null,
   ...over,
 });
 

@@ -25,7 +25,14 @@ export const MENU_GROUPS: MenuGroup[] = [
     key: 'orders',
     label: 'Quản lí đơn hàng',
     icon: <ShoppingOutlined />,
-    entries: ['orders', 'manager-orders', 'products', 'products-accountant', 'customers'],
+    entries: [
+      'orders',
+      'manager-orders',
+      'products',
+      'products-accountant',
+      'customers',
+      'order-payments',
+    ],
   },
   {
     key: 'purchase',

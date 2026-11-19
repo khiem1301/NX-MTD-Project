@@ -10,8 +10,6 @@ export const MAX_EXTRA_IMAGES = 5;
 
 export const COLOR_MAX_LENGTH = 50;
 
-/** File mẫu nhập Excel định mức (DEV-ALL-115), nằm trong fe/public/templates. */
-export const SPEC_IMPORT_TEMPLATE_URL = '/templates/Mau_Nhap_Dinh_Muc.xlsx';
 
 // ---- DEV-ALL-122/123: popup kiểm tra file Excel nhiều sheet ----
 
@@ -32,10 +30,10 @@ export const EXCEL_COMPONENT_TYPE = { PANEL: 'PANEL', TRIM: 'TRIM' } as const;
 /** Trạng thái bìa trong file Excel (mã như BE nhận). */
 export const EXCEL_MARKER_STATUS = { ACTIVE: 'ACTIVE', DISCONTINUED: 'DISCONTINUED' } as const;
 
-/** Gợi ý khi thêm NVL chưa có vào danh mục: nhóm, đơn vị, khổ mặc định theo loại (vải: mét, khổ 1,5 m). */
+/** Gợi ý khi thêm NVL chưa có vào danh mục: đơn vị, khổ mặc định theo loại (vải: mét, khổ 1,5 m). */
 export const NEW_MATERIAL_DEFAULTS = {
-  FABRIC: { category: 'MAIN_FABRIC', unit: 'm', widthM: 1.5 },
-  TRIM: { category: 'OTHER', unit: 'cái', widthM: null },
+  FABRIC: { unit: 'm', widthM: 1.5 },
+  TRIM: { unit: 'cái', widthM: null },
 } as const;
 
 /** Khổ vải tối đa (m), khớp validator BE (DEV-ALL-102). */

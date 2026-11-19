@@ -39,10 +39,27 @@ public sealed class SpecImportBuilder
     private readonly Dictionary<int, SpecMarkerGroupExcelRow> _validGroups = new();
     private readonly List<string> _notes = [];
     private int _duplicates;
+    private readonly bool _replaceComponents, _replaceNorms, _replaceGroups, _replaceMarkers;
+    private readonly HashSet<string> _fileComponentKeys, _fileNormKeys;
+    private readonly HashSet<int> _fileGroupNos;
+    private readonly HashSet<(int No, string Code)> _fileMarkerKeys;
 
+    /// <param name="replace">
+    /// Chế độ thay thế: bảng nào có trong file thì dữ liệu cũ của bảng đó không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng, theo
+    /// đúng cách nút Lưu xử lý). Bảng không có trong file không bao giờ bị đụng tới. Dòng lỗi vẫn giữ dữ liệu cũ cùng khóa.
+    /// </param>
     public SpecImportBuilder(ProductSpecDto spec, IReadOnlyDictionary<string, SpecImportMaterial> materials,
-        OrderMarkerProductDto? orderProduct, string productCode, SpecWorkbookDto workbook)
+        OrderMarkerProductDto? orderProduct, string productCode, SpecWorkbookDto workbook, bool replace = false)
     {
+        _replaceComponents = replace && workbook.HasComponents;
+        _replaceNorms = replace && workbook.HasNorms;
+        _replaceGroups = replace && workbook.HasMarkerGroups;
+        _replaceMarkers = replace && workbook.HasOrderMarkers && orderProduct is not null;
+        _fileComponentKeys = workbook.Components.Select(r => Upper(r.Name)).ToHashSet();
+        _fileNormKeys = workbook.Norms.Select(r => $"{Upper(r.Color)}|{Upper(r.ComponentName)}").ToHashSet();
+        _fileGroupNos = workbook.MarkerGroups.Where(r => r.MarkerNo is not null).Select(r => r.MarkerNo!.Value).ToHashSet();
+        _fileMarkerKeys = workbook.OrderMarkers.Where(r => r.MarkerNo is not null).Select(r => (r.MarkerNo!.Value, Upper(r.MarkerCode))).ToHashSet();
+
         _spec = spec;
         _materials = materials;
         _orderProduct = orderProduct;
@@ -58,6 +75,7 @@ public sealed class SpecImportBuilder
         if (workbook.HasOrderMarkers && orderProduct is null) _notes.Add(Messages.SpecImportMarkersSkipped);
         OrderMarkers = orderProduct is not null && workbook.HasOrderMarkers ? BuildOrderMarkers(workbook) : [];
         Markers = orderProduct is not null && workbook.HasOrderMarkers ? MergeMarkers() : null;
+        ComputeRemoved();
     }
 
     public IReadOnlyList<SpecImportComponentRowDto> Components { get; }
@@ -74,7 +92,14 @@ public sealed class SpecImportBuilder
     public SpecImportResultDto Changes => new(Changed(Components.Select(r => r.Action)), Changed(Norms.Select(r => r.Action)),
         Changed(MarkerGroups.Select(r => r.Action)), Changed(OrderMarkers.Select(r => r.Action)));
 
-    public bool SpecChanged => Changes is { } c && c.Components + c.Norms + c.MarkerGroups > 0;
+    public bool SpecChanged => Changes is { } c && c.Components + c.Norms + c.MarkerGroups > 0 || RemovedSpecCount > 0;
+
+    /// <summary>Dòng cũ bị bỏ vì không có trong file (chỉ khi chế độ thay thế): thành phần, cặp màu + chi tiết của định mức, nhóm bìa, bìa của đơn.</summary>
+    public SpecImportResultDto Removed { get; private set; } = new(0, 0, 0, 0);
+    public IReadOnlyList<string> RemovedNames { get; private set; } = [];
+    public int RemovedSpecCount => Removed.Components + Removed.Norms + Removed.MarkerGroups;
+    public int RemovedMarkers => Removed.OrderMarkers;
+    public int RemovedTotal => RemovedSpecCount + RemovedMarkers;
 
     public IEnumerable<string> AllActions => Components.Select(r => r.Action).Concat(Norms.Select(r => r.Action))
         .Concat(MarkerGroups.Select(r => r.Action)).Concat(OrderMarkers.Select(r => r.Action));
@@ -207,7 +232,8 @@ public sealed class SpecImportBuilder
 
     private SaveProductSpecDto MergeSpec()
     {
-        var components = _components.Values.Select(c => _validComponents.TryGetValue(Upper(c.ComponentName), out var v)
+        var components = _components.Values.Where(c => !_replaceComponents || _fileComponentKeys.Contains(Upper(c.ComponentName)))
+            .Select(c => _validComponents.TryGetValue(Upper(c.ComponentName), out var v)
                 ? new SaveProductComponentDto(c.ProductComponentId, c.ComponentName, CodeText.ToPascal(v.Type), v.Pieces)
                 : new SaveProductComponentDto(c.ProductComponentId, c.ComponentName, c.ComponentType, c.PiecesPerGarment))
             .Concat(_validComponents.Where(v => !_components.ContainsKey(v.Key))
@@ -221,18 +247,21 @@ public sealed class SpecImportBuilder
         var fileNormKeys = _validNorms.Select(n => (Upper(n.Color), Upper(n.ComponentName))).ToHashSet();
         var norms = _spec.Norms
             .Where(n => activeNames.Contains(Upper(n.ComponentName)) && _colors.ContainsKey(Upper(n.Color))
-                        && !fileNormKeys.Contains((Upper(n.Color), Upper(n.ComponentName))))
+                        && !fileNormKeys.Contains((Upper(n.Color), Upper(n.ComponentName)))
+                        && (!_replaceNorms || _fileNormKeys.Contains($"{Upper(n.Color)}|{Upper(n.ComponentName)}")))
             .Select(n => new SaveProductNormDto(n.ComponentName, n.Color, n.MaterialId, n.SpecNote))
             .Concat(_validNorms).ToList();
 
         var groupNos = _validGroups.Keys.ToHashSet();
         var markerComponents = _spec.MarkerComponents
-            .Where(m => !groupNos.Contains(m.MarkerNo) && activeNames.Contains(Upper(m.ComponentName)))
+            .Where(m => !groupNos.Contains(m.MarkerNo) && activeNames.Contains(Upper(m.ComponentName))
+                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo)))
             .Select(m => new SaveProductMarkerComponentDto(m.MarkerNo, m.ComponentName))
             .Concat(_validGroups.SelectMany(g => g.Value.ComponentNames.Select(n => new SaveProductMarkerComponentDto(g.Key, n))))
             .ToList();
         var markerColors = _spec.MarkerFabrics
-            .Where(m => !groupNos.Contains(m.MarkerNo) && _colors.ContainsKey(Upper(m.Color)))
+            .Where(m => !groupNos.Contains(m.MarkerNo) && _colors.ContainsKey(Upper(m.Color))
+                        && (!_replaceGroups || _fileGroupNos.Contains(m.MarkerNo)))
             .Select(m => new SaveProductMarkerColorDto(m.MarkerNo, m.Color))
             .Concat(_validGroups.SelectMany(g => g.Value.Colors.Select(c => new SaveProductMarkerColorDto(g.Key, c))))
             .ToList();
@@ -289,9 +318,40 @@ public sealed class SpecImportBuilder
     private SaveOrderMarkersDto MergeMarkers()
     {
         var replaced = _validMarkers.Where(m => m.ProductMarkerId is not null).Select(m => m.ProductMarkerId!.Value).ToHashSet();
-        var kept = _orderProduct!.Markers.Where(m => !replaced.Contains(m.ProductMarkerId))
+        var kept = _orderProduct!.Markers.Where(m => !replaced.Contains(m.ProductMarkerId)
+                && (!_replaceMarkers || _fileMarkerKeys.Contains((m.MarkerNo, Upper(m.MarkerCode)))))
             .Select(m => new SaveOrderMarkerDto(m.ProductMarkerId, m.MarkerNo, m.MarkerCode, m.LengthM, m.WidthM, m.Status, m.Ratios));
         return new SaveOrderMarkersDto(kept.Concat(_validMarkers).ToList());
+    }
+
+    // ---------- Dòng cũ bị bỏ (chế độ thay thế) ----------
+
+    private void ComputeRemoved()
+    {
+        if (!(_replaceComponents || _replaceNorms || _replaceGroups || _replaceMarkers)) return;   // không thay thế: không có dòng nào bị bỏ
+        var names = new List<string>();
+        var mergedComponents = Spec.Components.Select(c => Upper(c.ComponentName)).ToHashSet();
+        var removedComponents = _components.Values.Where(c => _replaceComponents && !mergedComponents.Contains(Upper(c.ComponentName))).ToList();
+        names.AddRange(removedComponents.Select(c => $"Thành phần: {c.ComponentName}"));
+
+        var mergedPairs = Spec.Norms.Select(n => $"{Upper(n.Color)}|{Upper(n.ComponentName)}").ToHashSet();
+        var removedPairs = _spec.Norms
+            .Where(n => _replaceNorms && mergedComponents.Contains(Upper(n.ComponentName)) && _colors.ContainsKey(Upper(n.Color)))
+            .Select(n => (Key: $"{Upper(n.Color)}|{Upper(n.ComponentName)}", n.Color, n.ComponentName))
+            .Where(p => !mergedPairs.Contains(p.Key)).DistinctBy(p => p.Key).ToList();
+        names.AddRange(removedPairs.Select(p => $"Định mức: {p.Color} · {p.ComponentName}"));
+
+        var mergedGroupNos = Spec.MarkerComponents.Select(m => m.MarkerNo).Concat(Spec.MarkerColors.Select(m => m.MarkerNo)).ToHashSet();
+        var removedGroups = _spec.MarkerComponents.Select(m => m.MarkerNo).Concat(_spec.MarkerFabrics.Select(m => m.MarkerNo))
+            .Distinct().Where(no => _replaceGroups && !mergedGroupNos.Contains(no)).Order().ToList();
+        names.AddRange(removedGroups.Select(no => $"Nhóm bìa: {no}"));
+
+        var removedMarkers = _orderProduct is null || Markers is null ? new List<OrderMarkerDto>()
+            : _orderProduct.Markers.Where(m => _replaceMarkers && Markers.Markers.All(k => k.ProductMarkerId != m.ProductMarkerId)).ToList();
+        names.AddRange(removedMarkers.Select(m => $"Bìa của đơn: {m.MarkerCode}"));
+
+        Removed = new SpecImportResultDto(removedComponents.Count, removedPairs.Count, removedGroups.Count, removedMarkers.Count);
+        RemovedNames = names;
     }
 
     // ---------- Tiện ích ----------

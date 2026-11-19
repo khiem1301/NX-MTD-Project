@@ -16,9 +16,8 @@ public partial class Material
 
     public string Color { get; set; } = null!;
 
-    public string? MaterialType { get; set; }
-
-    public string Category { get; set; } = null!;
+    /// <summary>FABRIC (vải, qua tổ cắt), TRIM (phụ liệu, cấp thẳng tổ may), SCRAP (phế phẩm, chỉ để trả về kho).</summary>
+    public string MaterialType { get; set; } = null!;
 
     public string Unit { get; set; } = null!;
 

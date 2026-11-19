@@ -113,14 +113,15 @@ public sealed class ConfirmPaymentDtoValidator : AbstractValidator<ConfirmPaymen
     }
 }
 
-public sealed class PayRemainingDtoValidator : AbstractValidator<PayRemainingDto>
+public sealed class UpdatePurchasePaymentDtoValidator : AbstractValidator<UpdatePurchasePaymentDto>
 {
-    public PayRemainingDtoValidator()
+    public UpdatePurchasePaymentDtoValidator()
     {
         RuleFor(x => x.PaymentMethod).NotEmpty().WithMessage(Messages.PaymentMethodInvalid)
             .Must(m => m is "BankTransfer" or "Cash").WithMessage(Messages.PaymentMethodInvalid);
         RuleFor(x => x.Amount).GreaterThan(0).WithMessage(Messages.PaymentAmountInvalid);
         RuleFor(x => x.PaymentNote).MaximumLength(500);
+        RuleFor(x => x.Reason).NotEmpty().WithMessage(Messages.PaymentEditReasonRequired).MaximumLength(TextLimits.Reason);
         RuleFor(x => x.RowVer).NotEmpty();
     }
 }

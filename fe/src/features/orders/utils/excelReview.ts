@@ -167,13 +167,12 @@ export const rowStateOf = (status: RowStatus | undefined, parseError?: string | 
   return status?.action === EXCEL_ROW_ACTION.PENDING ? 'pending' : 'valid';
 };
 
-/** Giá trị mặc định theo loại khi đổi loại NVL mới (nhóm, đơn vị, khổ). */
+/** Giá trị mặc định theo loại khi đổi loại NVL mới (đơn vị, khổ). */
 export const materialTypeDefaults = (materialType: string, widthM?: number | null) => {
   const fabric = materialType === MATERIAL_TYPE.FABRIC;
   const d = fabric ? NEW_MATERIAL_DEFAULTS.FABRIC : NEW_MATERIAL_DEFAULTS.TRIM;
   return {
     materialType,
-    category: d.category,
     unit: d.unit,
     widthM: fabric ? (widthM ?? d.widthM) : null,
   };
@@ -181,7 +180,7 @@ export const materialTypeDefaults = (materialType: string, widthM?: number | nul
 
 /**
  * DEV-ALL-123: gợi ý NVL mới — tên, đơn vị lấy từ sheet NVL của đơn (nếu có); vải (dùng cho chi tiết PANEL) = vải chính, mét,
- * màu áo đầu tiên dùng mã, khổ mặc định; phụ liệu = nhóm Khác.
+ * màu áo đầu tiên dùng mã, khổ mặc định; phụ liệu = đơn vị mặc định.
  */
 export const defaultMaterial = (m: MissingMaterial): SaveMaterialPayload => {
   const fabric = m.suggestedType === MATERIAL_TYPE.FABRIC;

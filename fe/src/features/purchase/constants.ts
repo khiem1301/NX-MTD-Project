@@ -58,6 +58,10 @@ export const PURCHASE_TEXT = {
     paymentInfo: 'Thanh toán',
     paymentDate: 'Ngày thanh toán',
     paidAmount: 'Số tiền đã thanh toán',
+    remaining: 'Còn phải thanh toán',
+    enteredAt: 'Nhập lúc',
+    editedNote: 'Đã sửa',
+    editPayment: 'Sửa lần thanh toán',
     paymentMethod: 'Hình thức',
     paymentNote: 'Ghi chú thanh toán',
     lines: 'Dòng đơn mua',
@@ -83,19 +87,6 @@ export const PURCHASE_TEXT = {
     reprice: 'Sửa đơn giá và gửi lại',
     confirmPayment: 'Xác nhận thanh toán',
     returnPayment: 'Trả lại Quản đốc',
-    payRemaining: 'Thanh toán nốt',
-  },
-
-  // DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần.
-  payRemaining: {
-    title: 'Thanh toán nốt đơn mua',
-    target: 'Phải trả',
-    paid: 'Đã trả',
-    remaining: 'Còn phải trả',
-    amount: 'Số tiền trả thêm',
-    amountExceeds: 'Không được lớn hơn số còn phải trả ({0}).',
-    willBePaid: 'Trả đủ phần còn lại: đơn sẽ là Đã thanh toán.',
-    willBePartial: 'Trả ít hơn phần còn lại: đơn vẫn là Thanh toán một phần.',
   },
 
   place: {
@@ -122,13 +113,20 @@ export const PURCHASE_TEXT = {
   },
 
   pay: {
-    title: 'Xác nhận thanh toán đơn mua',
+    title: 'Thêm lần thanh toán đơn mua',
+    editTitle: 'Sửa lần thanh toán',
+    editReason: 'Lý do sửa',
+    editReasonRequired: 'Vui lòng nhập lý do sửa.',
+    maxForThis: 'Tối đa cho lần này',
+    remaining: 'Còn phải thanh toán',
     date: 'Ngày thanh toán',
     amount: 'Số tiền thanh toán',
     method: 'Hình thức',
     note: 'Ghi chú',
-    differsFromTotal: 'Số tiền khác giá trị đơn mua.',
-    amountExceedsTotal: 'Số tiền thanh toán không được lớn hơn giá trị đơn mua.',
+    differsFromTotal:
+      'Số tiền ít hơn số còn phải thanh toán: đơn sẽ ở trạng thái thanh toán một phần.',
+    amountExceedsTotal:
+      'Số tiền thanh toán không được lớn hơn số còn phải thanh toán (giá trị thực tế trừ số đã thanh toán).',
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amountRequired: 'Nhập số tiền lớn hơn 0.',
     methodRequired: 'Vui lòng chọn hình thức.',
@@ -142,6 +140,19 @@ export const PURCHASE_TEXT = {
     willBePartial: 'Trả ít hơn tổng giá trị thực tế: đơn sẽ là Thanh toán một phần.',
   },
 
+  actual: {
+    title: 'Nhập giá trị thực tế',
+    hint: 'Dùng khi NCC giao thiếu hoặc đổi giá: tổng các lần thanh toán không vượt quá số này. Phải có lý do.',
+    amount: 'Giá trị thực tế',
+    computed: 'Giá trị tự tính',
+    paid: 'Đã thanh toán',
+    reason: 'Lý do',
+    amountRequired: 'Nhập giá trị thực tế.',
+    reasonRequired: 'Vui lòng nhập lý do.',
+    belowPaid: 'Giá trị thực tế không được nhỏ hơn số đã thanh toán.',
+    clear: 'Bỏ giá trị đã nhập (dùng giá trị tự tính)',
+  },
+
   cancelTitle: 'Hủy đơn mua',
   returnTitle: 'Trả lại Quản đốc',
   saved: 'Đã lưu.',
@@ -150,8 +161,8 @@ export const PURCHASE_TEXT = {
     placed: 'Đã đặt hàng. Kế toán sẽ xác nhận thanh toán.',
     cancelled: 'Đã hủy đơn mua.',
     repriced: 'Đã cập nhật đơn giá và gửi lại Kế toán.',
-    paid: 'Đã xác nhận thanh toán đơn mua.',
-    paidRemaining: 'Đã ghi nhận thanh toán thêm.',
+    paid: 'Đã ghi nhận lần thanh toán.',
+    paymentUpdated: 'Đã sửa lần thanh toán.',
     returned: 'Đã trả lại Quản đốc kèm lý do.',
   },
 } as const;

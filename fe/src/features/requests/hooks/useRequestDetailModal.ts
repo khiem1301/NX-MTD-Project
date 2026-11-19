@@ -1,7 +1,10 @@
 import { message } from 'antd';
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { MESSAGES } from '@/constants/messages';
+import { REQUEST_STATUS } from '@/constants/requestTypes';
+import { getHandleUrl } from '../utils/handleTarget';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import type { ApiError } from '@/types/api';
 import { useRequestAction, useRequestDetail } from '@/hooks/useRequests';
@@ -51,6 +54,8 @@ export const PENDING_MODAL: Record<
 /** Trạng thái và xử lý của RequestDetailModal; component chỉ lo giao diện. */
 export function useRequestDetailModal() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const idParam = Number(searchParams.get('id'));
   const id = Number.isInteger(idParam) && idParam > 0 ? idParam : null;
   const { data, isLoading, error, refetch } = useRequestDetail(id);
@@ -59,6 +64,11 @@ export function useRequestDetailModal() {
   const [editing, setEditing] = useState(false);
 
   const close = () => setSearchParams({});
+  const handleUrl =
+    data?.status === REQUEST_STATUS.Approved
+      ? getHandleUrl(data.requestType, data.requestId, user?.role)
+      : null;
+  const goHandle = () => handleUrl && navigate(handleUrl);
   const notFound = (error as ApiError | null)?.errorCode === ERROR_CODES.CommonNotFound;
 
   const submit = (note: string | null) => {
@@ -74,6 +84,8 @@ export function useRequestDetailModal() {
     id,
     act,
     close,
+    handleUrl,
+    goHandle,
     notFound,
     submit,
     pending,

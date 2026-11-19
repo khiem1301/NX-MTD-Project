@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Alert, Modal, Space, Typography, Upload, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined } from '@ant-design/icons';
+import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
+import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { StatusTag } from '@/components/common/StatusTag';
@@ -13,7 +15,6 @@ import { useImportOrderMaterials, usePreviewOrderMaterialImport } from '../hooks
 import type { OrderMaterialImportRow } from '../types';
 
 /** File mẫu dùng chung với nhập định mức (sheet "NVL của đơn"). */
-const TEMPLATE_URL = '/templates/Mau_Nhap_Dinh_Muc.xlsx';
 const qty = (v: number | null) => (v === null ? '—' : formatQty(v));
 
 const columns: ColumnsType<OrderMaterialImportRow> = [
@@ -52,15 +53,25 @@ export function OrderMaterialImportModal({ orderId, onClose }: OrderMaterialImpo
   const preview = usePreviewOrderMaterialImport(orderId);
   const doImport = useImportOrderMaterials(orderId);
   const [file, setFile] = useState<File | null>(null);
+  const [replace, setReplaceState] = useState(false);
   const data = file ? preview.data : undefined;
+
+  const setReplace = (next: boolean) => {
+    setReplaceState(next);
+    if (file) preview.mutate({ file, replace: next });
+  };
 
   const handleImport = () => {
     if (!file) return;
+    const removed = replace ? (data?.removeCount ?? 0) : 0;
     confirmDialog({
       title: LABELS.importOrderMaterialsConfirmTitle,
-      content: LABELS.importOrderMaterialsConfirmBody,
+      content:
+        removed > 0
+          ? `${LABELS.importOrderMaterialsConfirmBody} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}`
+          : LABELS.importOrderMaterialsConfirmBody,
       onOk: () =>
-        doImport.mutateAsync(file).then((result) => {
+        doImport.mutateAsync({ file, replace }).then((result) => {
           void message.success(result.message ?? MESSAGES.common.saved);
           onClose();
         }),
@@ -84,16 +95,22 @@ export function OrderMaterialImportModal({ orderId, onClose }: OrderMaterialImpo
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <Typography.Text type="secondary">{LABELS.importOrderMaterialsHint}</Typography.Text>
-        <Typography.Link href={TEMPLATE_URL} download>
-          <DownloadOutlined /> {MESSAGES.orders.specImport.template}
-        </Typography.Link>
+        <ImportTemplateLink kind="order-materials" orderId={orderId} />
+        <ReplaceImportOption
+          checked={replace}
+          onChange={setReplace}
+          disabled={preview.isPending || doImport.isPending}
+          removed={data?.removed}
+          blocked={data?.blocked}
+          unit="NVL"
+        />
         <Upload.Dragger
           maxCount={1}
           accept=".xlsx"
           disabled={preview.isPending}
           beforeUpload={(next) => {
             setFile(next);
-            preview.mutate(next);
+            preview.mutate({ file: next, replace });
             return false;
           }}
           onRemove={() => {

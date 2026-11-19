@@ -67,7 +67,7 @@ export const productionApi = {
   previewOperationImport: (
     role: OperationRole,
     file: File,
-    params: Pick<OperationImportParams, 'productId' | 'sheetName' | 'effectiveDate'>,
+    params: Pick<OperationImportParams, 'productId' | 'sheetName' | 'effectiveDate' | 'replace'>,
   ) => post<OperationImportPreview>(P.operationImportPreview(role), asFormData(file), params),
   importOperations: (role: OperationRole, file: File, params: OperationImportParams) =>
     post<OperationImportResult>(P.operationImport(role), asFormData(file), params),

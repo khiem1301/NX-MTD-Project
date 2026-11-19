@@ -11,13 +11,12 @@ public sealed class ProductsController : AdminBaseController
     private readonly IProductService _products;
     private readonly IProductSpecService _specs;
     private readonly ISpecImportService _import;
-    private readonly IProductImportService _productImport;
     private readonly IExcelBundleService _bundle;
 
     public ProductsController(IProductService products, IProductSpecService specs, ISpecImportService import,
-        IProductImportService productImport, IExcelBundleService bundle)
+        IExcelBundleService bundle)
     {
-        _products = products; _specs = specs; _import = import; _productImport = productImport; _bundle = bundle;
+        _products = products; _specs = specs; _import = import; _bundle = bundle;
     }
 
     /// <summary>DEV-ALL-122: đọc mọi bảng của file Excel nhiều sheet (multipart: file) để popup kiểm tra sửa; không ghi gì.</summary>
@@ -44,22 +43,6 @@ public sealed class ProductsController : AdminBaseController
     public async Task<IActionResult> ImportData(int id, [FromBody] SpecWorkbookDto workbook, [FromQuery] int? orderId,
         [FromQuery] string? parts, CancellationToken ct) =>
         this.ToResponse(await _import.ImportAsync(id, orderId, workbook, ct, SplitParts(parts)));
-
-    /// <summary>DEV-ALL-120: xem trước file Excel mã hàng (multipart: file), không ghi gì.</summary>
-    [HttpPost("import-products/preview")]
-    public async Task<IActionResult> PreviewProductImport(IFormFile file, CancellationToken ct)
-    {
-        await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _productImport.PreviewAsync(stream, ct));
-    }
-
-    /// <summary>DEV-ALL-120: tạo các mã hàng mới trong file (mã đã có bỏ qua), một giao dịch.</summary>
-    [HttpPost("import-products")]
-    public async Task<IActionResult> ImportProducts(IFormFile file, CancellationToken ct)
-    {
-        await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _productImport.ImportAsync(stream, ct));
-    }
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] ProductQuery query, CancellationToken ct) =>
@@ -92,19 +75,19 @@ public sealed class ProductsController : AdminBaseController
     /// </summary>
     [HttpPost("{id:int}/import/preview")]
     public async Task<IActionResult> PreviewImport(int id, IFormFile file, [FromQuery] int? orderId, [FromQuery] string? parts,
-        CancellationToken ct)
+        CancellationToken ct, [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _import.PreviewAsync(id, orderId, stream, ct, SplitParts(parts)));
+        return this.ToResponse(await _import.PreviewAsync(id, orderId, stream, ct, SplitParts(parts), replace));
     }
 
-    /// <summary>DEV-ALL-115: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch. parts như xem trước.</summary>
+    /// <summary>DEV-ALL-115: nhập file Excel định mức (và bìa của đơn nếu có orderId) trong một giao dịch. parts như xem trước. replace = thay thế (bỏ dòng cũ không có trong file).</summary>
     [HttpPost("{id:int}/import")]
     public async Task<IActionResult> Import(int id, IFormFile file, [FromQuery] int? orderId, [FromQuery] string? parts,
-        CancellationToken ct)
+        CancellationToken ct, [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _import.ImportAsync(id, orderId, stream, ct, SplitParts(parts)));
+        return this.ToResponse(await _import.ImportAsync(id, orderId, stream, ct, SplitParts(parts), replace));
     }
 
     private static IReadOnlyCollection<string>? SplitParts(string? parts) =>

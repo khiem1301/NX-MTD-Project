@@ -28,6 +28,11 @@ public partial class CustomerOrder
 
     public string? StopReason { get; set; }
 
+    /// <summary>Giá trị chốt cả đơn do Kế toán nhập (có thể âm = mình phải đền hợp đồng); null = chưa chốt (DEV-ALL-137).</summary>
+    public decimal? FinalAmount { get; set; }
+
+    public string? FinalAmountReason { get; set; }
+
     public string? Note { get; set; }
 
     /// <summary>Số lần khách dự kiến giao NVL của cả đơn (DEV-ALL-95); một phiếu khách cấp thường đã xác nhận là một lần.</summary>
@@ -60,6 +65,8 @@ public partial class CustomerOrder
     public virtual ICollection<OperationAssignment> OperationAssignments { get; set; } = new List<OperationAssignment>();
 
     public virtual ICollection<OrderLine> OrderLines { get; set; } = new List<OrderLine>();
+
+    public virtual ICollection<OrderPayment> OrderPayments { get; set; } = new List<OrderPayment>();
 
     public virtual ICollection<ProductMarker> ProductMarkers { get; set; } = new List<ProductMarker>();
 

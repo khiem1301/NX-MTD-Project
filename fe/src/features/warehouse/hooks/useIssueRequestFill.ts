@@ -31,7 +31,8 @@ export const useIssueRequestFill = (form: FormInstance, isMaterial: boolean) => 
 
   const clear = () => setRequest(null);
 
-  const choose = async (requestId: number | undefined) => {
+  /** `material` chỉ truyền khi form chưa kịp đọc loại kho (mở sẵn từ đơn từ). */
+  const choose = async (requestId: number | undefined, material = isMaterial) => {
     if (requestId === undefined) return clear();
     const detail = await queryClient.fetchQuery({
       queryKey: [...REQUESTS_KEY, 'detail', requestId],
@@ -39,7 +40,7 @@ export const useIssueRequestFill = (form: FormInstance, isMaterial: boolean) => 
     });
     const chosenWorkOrder = form.getFieldValue('workOrderId') as number | undefined;
     if (
-      isMaterial &&
+      material &&
       detail.workOrderId !== null &&
       chosenWorkOrder !== undefined &&
       chosenWorkOrder !== detail.workOrderId
@@ -51,10 +52,10 @@ export const useIssueRequestFill = (form: FormInstance, isMaterial: boolean) => 
     setRequest(detail);
     form.setFieldsValue({
       requestId,
-      workOrderId: isMaterial ? (detail.workOrderId ?? chosenWorkOrder) : undefined,
+      workOrderId: material ? (detail.workOrderId ?? chosenWorkOrder) : undefined,
       orderId: detail.orderId ?? (form.getFieldValue('orderId') as number | undefined),
       receivingTeamId: detail.createdByTeamId ?? undefined,
-      lines: toLines(detail, isMaterial),
+      lines: toLines(detail, material),
     });
   };
 

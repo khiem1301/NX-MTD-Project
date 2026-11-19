@@ -64,7 +64,6 @@ public static class ErrorCodes
     /// <summary>DEV-ALL-118: file Excel dòng hàng của đơn sai mẫu.</summary>
     public const string OrderImportInvalid = "ORDER_IMPORT_INVALID";
     /// <summary>DEV-ALL-120: file Excel mã hàng sai mẫu hoặc không có mã mới.</summary>
-    public const string ProductImportInvalid = "PRODUCT_IMPORT_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
     public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";
@@ -199,6 +198,7 @@ public static class ErrorCodes
     public const string PurchaseOrderPriceRequired = "PURCHASE_ORDER_PRICE_REQUIRED";
     public const string PurchaseOrderDateInvalid = "PURCHASE_ORDER_DATE_INVALID";
     public const string PaymentInvalid = "PAYMENT_INVALID";
+    public const string PaymentEditExpired = "PAYMENT_EDIT_EXPIRED";
 
     // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";

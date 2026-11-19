@@ -444,7 +444,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             var normIds = pieceLines.Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToList();
             var norms = await _uow.Repository<ProductComponentMaterial>().Query()
                 .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                            && p.Material.MaterialType == MaterialTypes.Fabric)
+                            && p.Material.MaterialType == MaterialTypes.Fabric && p.Status == RecordStatus.Active)
                 .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductColorId, ct);
             if (pieceLines.Any(l => !norms.TryGetValue(l.ProductComponentMaterialId!.Value, out var c) || c != colors[l.OrderLineId!.Value]))
                 return (Fail(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ComponentNotInVariantNorm), null);

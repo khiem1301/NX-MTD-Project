@@ -42,8 +42,12 @@ public sealed record PurchaseOrderFlowListItemDto(
 
 /// <summary>Nút nào hiện được ở màn chi tiết: do server tính theo vai trò + trạng thái đơn (FE không tự suy).</summary>
 public sealed record PurchaseOrderPermissionsDto(
-    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment,
-    bool CanPayRemaining = false);
+    bool CanPlace, bool CanCancel, bool CanReprice, bool CanConfirmPayment, bool CanReturnPayment);
+
+/// <summary>Một lần thanh toán đơn mua. <c>CanEdit</c>: Kế toán, trong 24 giờ kể từ lúc nhập (DEV-ALL-136).</summary>
+public sealed record PurchasePaymentDto(
+    int PurchasePaymentId, DateOnly PaymentDate, decimal Amount, string PaymentMethod, string? PaymentNote,
+    DateTime CreatedAt, DateTime? UpdatedAt, string? EditReason, bool CanEdit);
 
 public sealed record PurchaseOrderFlowDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, int? SupplierId, string? SupplierName,
@@ -53,7 +57,7 @@ public sealed record PurchaseOrderFlowDto(
     byte[] RowVer, IReadOnlyList<PurchaseOrderLineDto> Lines, PurchaseOrderPermissionsDto Permissions,
     IReadOnlyList<AuditLogDto> History, DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
     IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null, decimal? ActualAmount = null, decimal ReceivedAmount = 0,
-    decimal? RemainingAmount = null);
+    IReadOnlyList<PurchasePaymentDto>? Payments = null);
 
 /// <summary>Đặt hàng phải gửi đủ mọi dòng của đơn: số lượng và đơn giá chốt lần cuối (sau đó khóa — GBR-18).</summary>
 public sealed record PlacePurchaseLineDto(int PurchaseOrderLineId, decimal OrderedQty, decimal UnitPrice);
@@ -80,8 +84,8 @@ public sealed record ConfirmPaymentDto(
     DateOnly PaymentDate, decimal PaidAmount, string PaymentMethod, string? PaymentNote, byte[] RowVer,
     decimal? ActualAmount = null);
 
-/// <summary>DEV-ALL-131: Kế toán trả thêm cho đơn Thanh toán một phần (số tiền ≤ phần còn lại; đủ thì Đã thanh toán).</summary>
-public sealed record PayRemainingDto(
-    DateOnly PaymentDate, decimal Amount, string PaymentMethod, string? PaymentNote, byte[] RowVer);
+/// <summary>Sửa một lần thanh toán: bắt buộc <c>Reason</c>; PaymentMethod PascalCase.</summary>
+public sealed record UpdatePurchasePaymentDto(
+    DateOnly PaymentDate, decimal Amount, string PaymentMethod, string? PaymentNote, string Reason, byte[] RowVer);
 
 public sealed record ReturnPaymentDto(string Reason, byte[] RowVer);

@@ -44,10 +44,10 @@ public class MaterialReturnServiceTests
     private readonly List<WorkOrder> _workOrders = [new() { WorkOrderId = WorkOrderId, OrderId = OrderId, CuttingTeamId = CutTeam, Status = WorkOrderStatuses.Open }];
     private readonly List<Material> _materials =
     [
-        new() { MaterialId = FabricId, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m", Category = "MAIN_FABRIC", Status = MaterialStatuses.Active },
-        new() { MaterialId = ThreadId, MaterialCode = "PL-0001", MaterialName = "Chỉ", Unit = "cuộn", Category = "THREAD", Status = MaterialStatuses.Active },
-        new() { MaterialId = ScrapKgId, MaterialCode = "PP-0001", MaterialName = "Vải vụn", Unit = "kg", Category = "SCRAP_FABRIC", Status = MaterialStatuses.Active },
-        new() { MaterialId = ScrapPieceId, MaterialCode = "PP-0002", MaterialName = "Kim gãy", Unit = "cái", Category = "SCRAP_NEEDLE", Status = MaterialStatuses.Active },
+        new() { MaterialId = FabricId, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active },
+        new() { MaterialId = ThreadId, MaterialCode = "PL-0001", MaterialName = "Chỉ", Unit = "cuộn", MaterialType = MaterialTypes.Trim, Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapKgId, MaterialCode = "PP-0001", MaterialName = "Vải vụn", Unit = "kg", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapPieceId, MaterialCode = "PP-0002", MaterialName = "Kim gãy", Unit = "cái", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
     ];
 
     private readonly List<MaterialIssue> _issues = [];
@@ -61,9 +61,6 @@ public class MaterialReturnServiceTests
 
     public MaterialReturnServiceTests()
     {
-        // Gán Material.MaterialType (cột tính của DB) theo Category để lọc phế phẩm giống DB.
-        foreach (var m in _materials)
-            m.MaterialType = m.Category.StartsWith("SCRAP") ? MaterialTypes.Scrap : m.Category == "THREAD" ? MaterialTypes.Trim : MaterialTypes.Fabric;
         _orderLines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = 3 }.WithVariant(TestVariant.Make(3, "MH3")));
         _clock.Now.Returns(Now);
         _clock.Today.Returns(DateOnly.FromDateTime(Now));

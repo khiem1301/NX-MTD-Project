@@ -21,7 +21,6 @@ jest.mock('../utils/productExcelImports', () => ({
   showProductImportResults: jest.fn(),
 }));
 jest.mock('./ProductExcelImports', () => ({ ProductExcelImports: () => null }));
-jest.mock('../api/orderApi', () => ({ productImportApi: { preview: jest.fn() } }));
 jest.mock('./ExtraImagesInput', () => ({ ExtraImagesInput: () => null }));
 // Ô màu gọi API gợi ý màu (cần QueryClient); thay bằng ô nhập thường.
 jest.mock('./ColorAutoComplete', () => ({

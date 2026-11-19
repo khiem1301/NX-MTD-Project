@@ -16,10 +16,11 @@ const isPositive = (value: unknown): value is number => typeof value === 'number
 export function PaymentAmountFields({ order, form, closedShort }: Props) {
   const paid = Form.useWatch('paidAmount', form);
   const actual = Form.useWatch('actualAmount', form);
+  const alreadyPaid = order.paidAmount ?? 0;
   const target = closedShort ? actual : order.totalAmount;
   const exceedsMessage = closedShort ? text.amountExceedsActual : text.amountExceedsTotal;
-  const showPreview = isPositive(paid) && isPositive(target) && paid <= target;
-  const fullyPaid = showPreview && Math.round(paid) >= Math.round(target);
+  const showPreview = isPositive(paid) && isPositive(target) && alreadyPaid + paid <= target;
+  const fullyPaid = showPreview && Math.round(alreadyPaid + paid) >= Math.round(target);
 
   return (
     <>
@@ -48,7 +49,12 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
             precision={0}
             addonAfter="₫"
             style={{ width: 240 }}
-            onChange={(value) => form.setFieldValue('paidAmount', value)}
+            onChange={(value) =>
+              form.setFieldValue(
+                'paidAmount',
+                typeof value === 'number' && value > alreadyPaid ? value - alreadyPaid : null,
+              )
+            }
           />
         </Form.Item>
       )}
@@ -61,7 +67,7 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
           {
             validator: async (_, value) => {
               const max = closedShort ? form.getFieldValue('actualAmount') : order.totalAmount;
-              if (typeof value !== 'number' || typeof max !== 'number' || value <= max) return;
+              if (typeof value !== 'number' || typeof max !== 'number' || value <= max - alreadyPaid) return;
               throw new Error(exceedsMessage);
             },
           },
@@ -69,7 +75,7 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
         extra={
           closedShort
             ? undefined
-            : `${PURCHASE_TEXT.detail.total}: ${formatCurrency(order.totalAmount)}`
+            : `${text.remaining}: ${formatCurrency(Math.max(0, order.totalAmount - alreadyPaid))} (${PURCHASE_TEXT.detail.total}: ${formatCurrency(order.totalAmount)})`
         }
       >
         <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 240 }} />

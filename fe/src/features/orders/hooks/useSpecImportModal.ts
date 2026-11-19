@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
 import { confirmDialog } from '@/utils/confirmDialog';
 import type { SpecImportTarget } from '../types';
 import { usePreviewSpecImport, useSpecImport } from './useSpecImport';
@@ -34,6 +35,7 @@ const targetOf = (
 export function useSpecImportModal(source: SpecImportSource, onClose: () => void) {
   const [file, setFile] = useState<File | null>(null);
   const [orderId, setOrderId] = useState<number | undefined>(undefined);
+  const [replace, setReplaceState] = useState(false);
   const [productId, setProductId] = useState<number | undefined>(
     source.scope === 'manager' && source.products.length === 1
       ? source.products[0]?.productId
@@ -43,9 +45,18 @@ export function useSpecImportModal(source: SpecImportSource, onClose: () => void
   const doImport = useSpecImport();
   const target = targetOf(source, orderId, productId);
 
-  const runPreview = (nextFile: File | null, nextTarget: SpecImportTarget | null) => {
+  const runPreview = (
+    nextFile: File | null,
+    nextTarget: SpecImportTarget | null,
+    nextReplace: boolean = replace,
+  ) => {
     if (!nextFile || !nextTarget) return;
-    preview.mutate({ target: nextTarget, file: nextFile });
+    preview.mutate({ target: nextTarget, file: nextFile, replace: nextReplace });
+  };
+
+  const setReplace = (next: boolean) => {
+    setReplaceState(next);
+    runPreview(file, target, next);
   };
 
   const chooseFile = (nextFile: File | null) => {
@@ -67,11 +78,12 @@ export function useSpecImportModal(source: SpecImportSource, onClose: () => void
 
   const handleConfirm = () => {
     if (!file || !target) return;
+    const removed = replace ? (preview.data?.removedCount ?? 0) : 0;
     confirmDialog({
       title: text.confirmTitle,
-      content: text.confirmBody,
+      content: removed > 0 ? `${text.confirmBody} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}` : text.confirmBody,
       onOk: () =>
-        doImport.mutateAsync({ target, file }).then((result) => {
+        doImport.mutateAsync({ target, file, replace }).then((result) => {
           void message.success(result.message ?? MESSAGES.common.saved);
           onClose();
         }),
@@ -80,6 +92,8 @@ export function useSpecImportModal(source: SpecImportSource, onClose: () => void
 
   return {
     file,
+    replace,
+    setReplace,
     orderId,
     productId,
     preview,

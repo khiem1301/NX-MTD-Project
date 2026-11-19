@@ -24,7 +24,8 @@ export function WorkOrderNoteFields() {
         </Form.Item>
       </Col>
       <Col xs={24} sm={16} lg={18}>
-        <Form.Item name="note" label={LABELS.note} style={{ marginBottom: 0 }}>
+        {/* Chừa chỗ dưới ô cho bộ đếm ký tự (showCount nằm ngoài ô nhập), tránh đè lên nút Lưu của modal. */}
+        <Form.Item name="note" label={LABELS.note} style={{ marginBottom: 20 }}>
           <Input.TextArea
             autoSize={{ minRows: 1, maxRows: 3 }}
             maxLength={WORK_ORDER_LIMITS.noteMax}

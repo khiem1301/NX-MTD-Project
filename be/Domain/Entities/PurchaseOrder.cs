@@ -58,6 +58,8 @@ public partial class PurchaseOrder
 
     public virtual ICollection<PurchaseOrderLine> PurchaseOrderLines { get; set; } = new List<PurchaseOrderLine>();
 
+    public virtual ICollection<PurchasePayment> PurchasePayments { get; set; } = new List<PurchasePayment>();
+
     public virtual Request? SourceRequest { get; set; }
 
     public virtual Supplier? Supplier { get; set; }

@@ -13,10 +13,11 @@ public interface IOperationService
     Task<Result> ReactivateAsync(int operationId, CancellationToken ct);
 
     /// <summary>Xem trước file Excel quy trình công nghệ (chưa ghi DB): dòng nào thêm mới, cập nhật, không đổi, lỗi.</summary>
-    Task<Result<OperationImportPreviewDto>> PreviewImportAsync(int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct);
+    /// <param name="replace">Thay thế: công đoạn may đang dùng không có trong file bị ngừng dùng (đang có việc mở thì giữ nguyên).</param>
+    Task<Result<OperationImportPreviewDto>> PreviewImportAsync(int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false);
 
     /// <summary>Nhập công đoạn từ Excel theo mã công đoạn (OP + STT): thêm mới hoặc cập nhật, không xóa công đoạn nào. <paramref name="finalStt"/> đánh dấu công đoạn cuối.</summary>
-    Task<Result<OperationImportResultDto>> ImportAsync(int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct);
+    Task<Result<OperationImportResultDto>> ImportAsync(int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates, CancellationToken ct, bool replace = false);
 }
 
 /// <summary>KI-01 (UC25, UC26): đơn giá công đoạn DRAFT → PENDING_APPROVAL → APPROVED / REJECTED (Admin duyệt).</summary>

@@ -91,7 +91,7 @@ public sealed class WorkOrderFabricChecker
         var colorIds = variants.Values.Select(v => v.ProductColorId).Distinct().ToArray();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(p => colorIds.Contains(p.ProductColorId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                        && p.ProductComponent.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
+                        && p.ProductComponent.Status == RecordStatus.Active && p.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new Norm(p.ProductComponentMaterialId, p.ProductColorId, p.ProductComponentId, p.ProductComponent.ComponentName,
                 p.ProductComponent.PiecesPerGarment,
                 new Fabric(p.MaterialId, p.Material.MaterialCode, p.Material.MaterialName, p.Material.Color, p.Material.Unit, p.Material.WidthM)))

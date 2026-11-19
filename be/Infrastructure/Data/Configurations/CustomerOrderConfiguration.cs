@@ -20,6 +20,8 @@ public sealed class CustomerOrderConfiguration : IEntityTypeConfiguration<Custom
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
+        entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
+        entity.Property(e => e.FinalAmountReason).HasMaxLength(TextLimits.Reason);
         entity.Property(e => e.IsDelayRisk).HasComputedColumnSql("(CONVERT([bit],case when [DelayRiskSince] IS NULL then (0) else (1) end))", false);
         entity.Property(e => e.MaterialStatus)
             .HasMaxLength(10)

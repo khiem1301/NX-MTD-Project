@@ -7,6 +7,7 @@ import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
+import { useFromRequest } from '@/hooks/useFromRequest';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import type { WorkOrderListItem } from '@/types/workOrder';
 import { formatDate } from '@/utils/format';
@@ -35,7 +36,8 @@ export function WorkOrderListPage() {
   const [viewingId, setViewingId] = useState<number>();
   const [editing, setEditing] = useState<WorkOrder | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [replacementOpen, setReplacementOpen] = useState(false);
+  const { requestId: presetRequestId } = useFromRequest();
+  const [replacementOpen, setReplacementOpen] = useState(presetRequestId !== null);
 
   const openForm = (workOrder: WorkOrder | null) => {
     setViewingId(undefined);
@@ -117,7 +119,11 @@ export function WorkOrderListPage() {
         onClose={() => setViewingId(undefined)}
         onEdit={openForm}
       />
-      <ReplacementWorkOrderModal open={replacementOpen} onClose={() => setReplacementOpen(false)} />
+      <ReplacementWorkOrderModal
+        open={replacementOpen}
+        presetRequestId={presetRequestId}
+        onClose={() => setReplacementOpen(false)}
+      />
       <WorkOrderFormModal open={formOpen} workOrder={editing} onClose={() => setFormOpen(false)} />
     </Card>
   );

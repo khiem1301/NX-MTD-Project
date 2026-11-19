@@ -46,6 +46,9 @@ public class PurchaseFlowServiceTests
         var scheduleRepo = Substitute.For<IGenericRepository<DeliveryScheduleDate>>();
         scheduleRepo.Query().Returns(_ => _schedule.AsTestAsyncQueryable());
         _uow.Repository<DeliveryScheduleDate>().Returns(scheduleRepo);
+        var paymentRepo = Substitute.For<IGenericRepository<PurchasePayment>>();
+        paymentRepo.Query().Returns(_ => _pos.SelectMany(p => p.PurchasePayments).AsTestAsyncQueryable());
+        _uow.Repository<PurchasePayment>().Returns(paymentRepo);
     }
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
@@ -383,86 +386,13 @@ public class PurchaseFlowServiceTests
         po.PaidAmount.Should().Be(1_000_000);
     }
 
-    // DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần (tổng đơn mặc định 1.500.000).
-
-    private static PayRemainingDto Remaining(decimal amount) =>
-        new(new DateOnly(2026, 10, 27), amount, "Cash", " trả nốt ", RowVer);
-
-    private PurchaseOrder PartlyPaid(decimal paid, string goods = PurchaseGoodsStatuses.Received, decimal? actual = null)
-    {
-        var po = Po(goods, PurchasePaymentStatuses.PartiallyPaid);
-        po.PaidAmount = paid;
-        po.ActualAmount = actual;
-        return po;
-    }
-
-    [Fact]
-    public async Task PayRemaining_FullRemaining_AddsToPaidAndMarksPaid()
-    {
-        var po = PartlyPaid(1_000_000);
-
-        var result = await Flow().PayRemainingAsync(5, Remaining(500_000), default);
-
-        result.IsSuccess.Should().BeTrue();
-        po.PaidAmount.Should().Be(1_500_000);
-        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
-        po.PaymentMethod.Should().Be(PaymentMethods.Cash);
-        po.PaymentNote.Should().Be("trả nốt");
-        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(PurchaseOrder)));
-    }
-
-    [Fact]
-    public async Task PayRemaining_LessThanRemaining_StaysPartiallyPaid()
-    {
-        var po = PartlyPaid(1_000_000);
-
-        var result = await Flow().PayRemainingAsync(5, Remaining(200_000), default);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Message.Should().Contain("300");
-        po.PaidAmount.Should().Be(1_200_000);
-        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.PartiallyPaid);
-    }
-
-    [Fact]
-    public async Task PayRemaining_MoreThanRemaining_IsRejected()
-    {
-        var po = PartlyPaid(1_000_000);
-
-        var result = await Flow().PayRemainingAsync(5, Remaining(600_000), default);
-
-        result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
-        result.Errors!.Should().ContainKey("amount");
-        po.PaidAmount.Should().Be(1_000_000);
-    }
-
-    [Fact]
-    public async Task PayRemaining_ClosedShort_UsesActualAmount()
-    {
-        var po = PartlyPaid(500_000, PurchaseGoodsStatuses.ClosedShort, actual: 800_000);
-
-        (await Flow().PayRemainingAsync(5, Remaining(400_000), default)).ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
-        (await Flow().PayRemainingAsync(5, Remaining(300_000), default)).IsSuccess.Should().BeTrue();
-        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
-    }
-
-    [Theory]
-    [InlineData(PurchaseOrderStatuses.Unpaid)]
-    [InlineData(PurchasePaymentStatuses.Paid)]
-    public async Task PayRemaining_OnlyForPartiallyPaid(string payment)
-    {
-        Po(PurchaseGoodsStatuses.Received, payment);
-
-        (await Flow().PayRemainingAsync(5, Remaining(100_000), default))
-            .ErrorCode.Should().Be(ErrorCodes.PurchaseOrderInvalidStatus);
-    }
-
     // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế, trạng thái xét theo giá trị đó.
 
     [Fact]
     public async Task ConfirmPayment_ClosedShort_PaidEqualsActual_MarksPaidAndStoresActual()
     {
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
+        po.PurchaseOrderLines.Single(l => l.PurchaseOrderLineId == 12).NotReplenishedQty = 50;   // giá trị thực tế còn 1.000.000
 
         var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000) with { ActualAmount = 1_000_000 }, default);
 

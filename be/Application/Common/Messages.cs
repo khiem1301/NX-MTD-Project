@@ -340,7 +340,6 @@ public static class Messages
     public const string ProductSpecComponentDuplicate = "Tên thành phần của mã hàng bị trùng.";
     public const string ProductSpecVariantDuplicate = "Màu – size của mã hàng bị trùng.";
     public const string ProductSpecNormReference = "Định mức phải dùng thành phần và màu có trong danh sách.";
-    public const string ProductSpecNormInUse = "Dòng định mức này đã được dùng ở lệnh cắt, phiếu cấp, bàn cắt hoặc tồn kho nên không xóa được; hãy sửa số lượng thay vì xóa.";
     public const string ProductSpecVariantFromOrders = "Màu – size lấy từ đơn hàng, không thêm ở màn định mức.";
     public const string ProductSpecNormDuplicate = "Mỗi NVL chỉ khai một dòng cho mỗi thành phần và màu.";
     public const string ProductSpecMarkerDuplicate = "Mỗi nhóm bìa chỉ khai mỗi chi tiết và mỗi màu một lần.";
@@ -380,6 +379,7 @@ public static class Messages
     public const string SpecImportOtherProductRows = "{0} dòng bìa của mã hàng khác bị bỏ qua.";
     public const string SpecImportMarkersSkipped = "Chưa chọn đơn hàng nên bảng Bìa của đơn bị bỏ qua.";
     public const string SpecImportMarkerCheckLater = "Bìa của đơn sẽ được kiểm lại đầy đủ (size theo màu, vải của nhóm) khi bấm Nhập, sau khi lưu định mức.";
+    public const string SpecImportRemovedDone = " Đã bỏ {0} dòng cũ không có trong file (đang được dùng thì chuyển sang ngừng dùng).";
     public const string SpecImportNoChange = "Không có thay đổi nào so với dữ liệu đang có.";
     // DEV-ALL-121: nhập riêng từng bảng từ form mã hàng
     public const string SpecImportPartUnknown = "Bảng \"{0}\" không hợp lệ (chỉ nhận components, norms, groups, markers).";
@@ -396,8 +396,6 @@ public static class Messages
 
     // DEV-ALL-120: tạo mã hàng hàng loạt từ Excel
     public const string ProductImportExists = "Mã hàng đã có, bỏ qua.";
-    public const string ProductImportNothing = "File không có mã hàng mới hợp lệ để tạo.";
-    public const string ProductImportDone = "Đã tạo {0} mã hàng, bỏ qua {1} mã đã có.";
 
     // DEV-ALL-118: nhập dòng hàng của đơn từ Excel
     public const string OrderImportProductUnknown = "Mã hàng \"{0}\" không có trong danh mục.";
@@ -419,16 +417,22 @@ public static class Messages
     public const string PaymentReturned = "Đã trả lại Quản đốc kèm lý do.";
     public const string PaymentMethodInvalid = "Hình thức thanh toán phải là chuyển khoản hoặc tiền mặt.";
     public const string PaymentAmountInvalid = "Số tiền thanh toán phải lớn hơn 0.";
-    public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn giá trị đơn mua.";
+    public const string PaymentAmountExceedsTotal = "Số tiền thanh toán không được lớn hơn số còn phải thanh toán (giá trị đơn mua hoặc giá trị thực tế, trừ số đã thanh toán).";
+    public const string PaymentUpdated = "Đã sửa lần thanh toán.";
+    public const string FinalAmountSaved = "Đã lưu giá trị chốt của đơn hàng.";
+    public const string FinalAmountReasonRequired = "Phải nhập lý do khi chốt hoặc đổi giá trị đơn hàng.";
+    public const string FinalAmountBelowPaid = "Giá trị chốt không phù hợp với số đã thanh toán: tổng đã thanh toán phải nằm giữa 0 và giá trị chốt.";
+    public const string OrderPaymentNeedFinalAmount = "Phải chốt giá trị đơn hàng trước khi ghi nhận thanh toán.";
+    public const string OrderPaymentAmountInvalid = "Số tiền thanh toán phải khác 0 (dương: khách trả, âm: mình trả khách).";
+    public const string OrderPaymentOutOfRange = "Tổng đã thanh toán phải nằm giữa 0 và giá trị chốt của đơn hàng.";
+    public const string OrderPaymentAdded = "Đã ghi nhận lần thanh toán.";
+    public const string PaymentEditExpired = "Đã quá 24 giờ kể từ lúc nhập nên không sửa được lần thanh toán này.";
+    public const string PaymentEditReasonRequired = "Phải nhập lý do khi sửa lần thanh toán.";
     // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế
     public const string PaymentActualAmountRequired = "Nhập tổng giá trị thực tế của đơn Chốt không bù (lớn hơn 0).";
     public const string PaymentActualAmountExceedsTotal = "Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.";
-    public const string PaymentAmountExceedsActual = "Số tiền thanh toán không được lớn hơn tổng giá trị thực tế.";
-    // DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần.
-    public const string PaymentRemainingExceeds = "Số tiền thanh toán không được lớn hơn số còn phải trả ({0}).";
-    public const string PaymentRemainingNotAllowed = "Chỉ thanh toán nốt được đơn đang Thanh toán một phần.";
-    public const string PaymentRemainingPaid = "Đã thanh toán nốt, đơn mua đã thanh toán đủ.";
-    public const string PaymentRemainingPartial = "Đã ghi nhận thanh toán thêm, đơn vẫn còn phải trả {0}.";
+    public const string PaymentActualBelowPaid = "Tổng giá trị thực tế không được nhỏ hơn số đã thanh toán.";
+    public const string PaymentAmountExceedsActual = "Số tiền thanh toán không được lớn hơn tổng giá trị thực tế (trừ số đã thanh toán).";
     public const string PaymentDateFuture = "Ngày thanh toán không được sau hôm nay.";
     public const string NotifyIncomingCustomerTitle = "Khách sẽ cấp NVL";
     public const string NotifyIncomingCustomerBody = "Đơn {0}: khách cấp {1} {2} {3}. Xem màn NVL chờ nhận để lập phiếu nhập khi hàng về.";
@@ -465,6 +469,7 @@ public static class Messages
     public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
     public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
     public const string OperationImportSheetNotFound = "Không tìm thấy sheet đã chọn trong file Excel.";
+    public const string OperationImportRemoved = " Đã ngừng dùng {0} công đoạn không có trong file.";
     public const string OperationImportDone =
         "Đã nhập công đoạn: thêm {0}, cập nhật {1}, không đổi {2}, bỏ qua {3} dòng lỗi. Đơn giá: thêm {4}, cập nhật {5}, không đổi {6}, bỏ qua {7}.";
     public const string NotifyPieceRatesImportedBody = "Sheet {0}: có {1} đơn giá công đoạn mới nhập từ Excel đang chờ duyệt.";

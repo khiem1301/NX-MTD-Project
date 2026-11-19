@@ -3,7 +3,6 @@ import { apiClient } from '@/services/apiClient';
 import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   ConfirmPaymentPayload,
-  PayRemainingPayload,
   PlacePayload,
   PurchaseOrderDetail,
   PurchaseOrderListItem,
@@ -16,6 +15,7 @@ import type {
   SupplierDetail,
   SupplierOption,
   SupplierQuery,
+  UpdatePaymentPayload,
 } from '../types';
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
@@ -57,8 +57,8 @@ export const purchaseApi = {
   // Kế toán
   confirmPayment: (id: number, body: ConfirmPaymentPayload) =>
     post<void>(API.purchase.confirmPayment(id), body),
-  payRemaining: (id: number, body: PayRemainingPayload) =>
-    post<void>(API.purchase.payRemaining(id), body),
+  updatePayment: (id: number, paymentId: number, body: UpdatePaymentPayload) =>
+    put<void>(API.purchase.updatePayment(id, paymentId), body),
   returnPayment: (id: number, body: ReasonPayload) =>
     post<void>(API.purchase.returnPayment(id), body),
 };

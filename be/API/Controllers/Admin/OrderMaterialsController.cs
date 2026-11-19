@@ -59,18 +59,19 @@ public sealed class OrderMaterialsController : AdminBaseController
 
     /// <summary>DEV-ALL-119: xem trước file Excel NVL của đơn (multipart: file), không ghi gì.</summary>
     [HttpPost("import/preview")]
-    public async Task<IActionResult> PreviewImport(IFormFile file, [FromQuery] int orderId, CancellationToken ct)
+    public async Task<IActionResult> PreviewImport(IFormFile file, [FromQuery] int orderId, CancellationToken ct,
+        [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _orderMaterials.PreviewImportAsync(orderId, stream, ct));
+        return this.ToResponse(await _orderMaterials.PreviewImportAsync(orderId, stream, ct, replace));
     }
 
     /// <summary>DEV-ALL-119: nhập NVL của đơn từ Excel (gộp theo mã NVL, lưu một lần).</summary>
     [HttpPost("import")]
-    public async Task<IActionResult> Import(IFormFile file, [FromQuery] int orderId, CancellationToken ct)
+    public async Task<IActionResult> Import(IFormFile file, [FromQuery] int orderId, CancellationToken ct, [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _orderMaterials.ImportAsync(orderId, stream, ct));
+        return this.ToResponse(await _orderMaterials.ImportAsync(orderId, stream, ct, replace));
     }
 
     /// <summary>DEV-ALL-122: xem trước NVL của đơn từ dòng đã sửa trên popup kiểm tra Excel (body JSON), không ghi gì.</summary>

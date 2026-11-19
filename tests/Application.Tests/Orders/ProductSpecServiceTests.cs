@@ -223,7 +223,7 @@ public class ProductSpecServiceTests
     }
 
     [Fact]
-    public async Task Save_refuses_to_delete_a_norm_row_that_is_already_used()
+    public async Task Save_hides_instead_of_deleting_a_norm_row_that_is_already_used()
     {
         var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
         AddVariant(21, "Đen", "M");
@@ -233,9 +233,22 @@ public class ProductSpecServiceTests
 
         var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [Variant(21, "Đen", "M")], []), default);   // bỏ hết định mức
 
-        result.ErrorCode.Should().Be(ErrorCodes.ProductSpecInvalid);
-        result.Message.Should().Be(Messages.ProductSpecNormInUse);
-        _norms.Should().ContainSingle();
+        result.IsSuccess.Should().BeTrue();
+        _norms.Should().ContainSingle().Which.Status.Should().Be(RecordStatus.Discontinued);
+    }
+
+    [Fact]
+    public async Task Save_deletes_a_norm_row_that_is_not_used_yet()
+    {
+        var comp = new ProductComponent { ProductComponentId = 11, ProductId = 1, ComponentName = "Tay", ComponentType = "PANEL", Status = RecordStatus.Active };
+        AddVariant(21, "Đen", "M");
+        _components.Add(comp);
+        _norms.Add(new ProductComponentMaterial { ProductComponentMaterialId = 3, ProductId = 1, ProductColorId = ColorIdOf(21), ProductComponentId = 11, MaterialId = 1 });
+
+        var result = await Create().SaveAsync(1, Spec([Panel("Tay", id: 11)], [Variant(21, "Đen", "M")], []), default);
+
+        result.IsSuccess.Should().BeTrue();
+        _norms.Should().BeEmpty();
     }
 
     [Fact]

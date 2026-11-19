@@ -4,7 +4,6 @@ import { PURCHASE_TEXT } from '../constants';
 import { purchaseApi } from '../api/purchaseApi';
 import type {
   ConfirmPaymentPayload,
-  PayRemainingPayload,
   PlacePayload,
   PurchaseOrderQuery,
   PurchaseRole,
@@ -12,6 +11,7 @@ import type {
   RepricePayload,
   SaveSupplierPayload,
   SupplierQuery,
+  UpdatePaymentPayload,
 } from '../types';
 
 export const PURCHASE_KEY = ['purchase'] as const;
@@ -93,11 +93,11 @@ export const useConfirmPayment = (id: number) =>
     afterAction(PURCHASE_TEXT.done.paid),
   );
 
-/** DEV-ALL-131: thanh toán nốt đơn Thanh toán một phần. */
-export const usePayRemaining = (id: number) =>
+export const useUpdatePayment = (id: number) =>
   useApiMutation(
-    (body: PayRemainingPayload) => purchaseApi.payRemaining(id, body),
-    afterAction(PURCHASE_TEXT.done.paidRemaining),
+    ({ paymentId, body }: { paymentId: number; body: UpdatePaymentPayload }) =>
+      purchaseApi.updatePayment(id, paymentId, body),
+    afterAction(PURCHASE_TEXT.done.paymentUpdated),
   );
 
 export const useReturnPayment = (id: number) =>

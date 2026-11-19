@@ -2,15 +2,9 @@ import type { StatusLabel } from '@/components/common/StatusTag';
 
 /** Loại kho dùng chung với kiểm kê: khai báo ở constants/warehouse. */
 export { WAREHOUSE_TYPE, WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
-/** Loại / nhóm NVL dùng chung với popup kiểm tra Excel của mã hàng (DEV-ALL-123): khai báo ở constants/warehouse. */
-import { MATERIAL_CATEGORIES } from '@/constants/warehouse';
-export { MATERIAL_CATEGORIES, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '@/constants/warehouse';
 
-export const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  Object.values(MATERIAL_CATEGORIES)
-    .flat()
-    .map((c) => [c.value, c.label]),
-);
+/** Loại NVL dùng chung với popup kiểm tra Excel của mã hàng (DEV-ALL-123): khai báo ở constants/warehouse. */
+export { MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '@/constants/warehouse';
 
 export const MATERIAL_STATUS = { ACTIVE: 'ACTIVE', DISCONTINUED: 'DISCONTINUED' } as const;
 
@@ -156,7 +150,6 @@ export const LABELS = {
   materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
   materialName: 'Tên NVL',
   materialType: 'Loại',
-  category: 'Nhóm',
   unit: 'Đơn vị tính',
   widthM: 'Khổ vải (m)',
   widthMHint: 'Bắt buộc với vải, từ 0,01 đến 3,5 m.',

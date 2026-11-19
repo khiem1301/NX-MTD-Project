@@ -104,6 +104,7 @@ export const ERROR_CODES = {
   PurchaseOrderPriceRequired: 'PURCHASE_ORDER_PRICE_REQUIRED',
   PurchaseOrderDateInvalid: 'PURCHASE_ORDER_DATE_INVALID',
   PaymentInvalid: 'PAYMENT_INVALID',
+  PaymentEditExpired: 'PAYMENT_EDIT_EXPIRED',
   PayrollPeriodMonthInvalid: 'PAYROLL_PERIOD_MONTH_INVALID',
   PayslipNotFound: 'PAYSLIP_NOT_FOUND',
   // Chi phí tháng (Minh)

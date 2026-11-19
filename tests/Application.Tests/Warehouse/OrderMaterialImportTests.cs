@@ -21,11 +21,12 @@ public class OrderMaterialImportTests
     private readonly List<Material> _materials = [];
     private readonly List<MaterialReceipt> _receipts = [];
     private readonly List<MaterialReceiptLine> _receiptLines = [];
+    private readonly List<PurchaseOrderLine> _purchaseLines = [];
     private readonly CustomerOrder _order = new() { OrderId = 1, OrderCode = "DH1", Status = OrderStatuses.New, CustomerDeliveryCount = 2 };
 
     public OrderMaterialImportTests()
     {
-        Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receipts); Setup(_receiptLines);
+        Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receipts); Setup(_receiptLines); Setup(_purchaseLines);
         Setup(new List<VwOrderMaterialDelivery>());
         _orders.Add(_order);
         _materials.AddRange([Mat(1, "VAI01"), Mat(2, "CHI01"), Mat(3, "KHOA01"),
@@ -161,5 +162,63 @@ public class OrderMaterialImportTests
         row.PurchasedReceivedQty.Should().Be(15);
         row.ReceivedQty.Should().Be(75);
         row.ShortQty.Should().Be(25);
+    }
+
+    // ========== Chế độ thay thế ==========
+
+    [Fact]
+    public async Task Import_Replace_RemovesOrderMaterialsNotInFile_ExceptThoseWithReceiptsOrPurchases()
+    {
+        _orderMaterials.Add(new OrderMaterial { OrderMaterialId = 8, OrderId = 1, MaterialId = 3, Material = _materials[2], RequiredQty = 5 });   // KHOA01: xóa được
+        _receiptLines.Add(new MaterialReceiptLine { MaterialReceiptLineId = 1, OrderMaterialId = 7, AcceptedQty = 10 });                        // VAI01: đã có phiếu nhập
+        using var stream = Book(["CHI01", 300, 0, null]);
+
+        var preview = (await Sut().PreviewImportAsync(1, stream, default, replace: true)).Data!;
+        preview.RemoveCount.Should().Be(1);
+        preview.Removed.Should().Equal("KHOA01");
+        preview.Blocked.Should().Equal("VAI01");
+        preview.ChangeCount.Should().Be(2);                     // 1 thêm (CHI01) + 1 xóa (KHOA01)
+
+        using var again = Book(["CHI01", 300, 0, null]);
+        var result = await Sut().ImportAsync(1, again, default, replace: true);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        result.Data!.Created.Should().Be(1);
+        result.Data.Removed.Should().Be(1);
+        _uow.Repository<OrderMaterial>().Received(1).Remove(Arg.Is<OrderMaterial>(o => o.OrderMaterialId == 8));
+        result.Message.Should().Contain("Đã xóa 1 NVL");
+    }
+
+    [Fact]
+    public async Task Import_WithoutReplace_NeverRemoves()
+    {
+        _orderMaterials.Add(new OrderMaterial { OrderMaterialId = 8, OrderId = 1, MaterialId = 3, Material = _materials[2], RequiredQty = 5 });
+        using var stream = Book(["CHI01", 300, 0, null]);
+
+        var result = await Sut().ImportAsync(1, stream, default);
+
+        result.Data!.Removed.Should().Be(0);
+        _uow.Repository<OrderMaterial>().DidNotReceive().Remove(Arg.Any<OrderMaterial>());
+    }
+
+    [Fact]
+    public async Task Import_Replace_FileWithOnlyErrorRows_RemovesNothing()
+    {
+        _orderMaterials.Add(new OrderMaterial { OrderMaterialId = 8, OrderId = 1, MaterialId = 3, Material = _materials[2], RequiredQty = 5 });
+        using var stream = Book(["CHI01", "abc", 0, null]);
+
+        var preview = (await Sut().PreviewImportAsync(1, stream, default, replace: true)).Data!;
+
+        preview.RemoveCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Import_Replace_ErrorRowMaterialStillCountsAsInFile()
+    {
+        using var stream = Book(["VAI01", "abc", 100, null], ["CHI01", 300, 0, null]);   // VAI01 lỗi (không phải số) nhưng vẫn có trong file
+
+        var preview = (await Sut().PreviewImportAsync(1, stream, default, replace: true)).Data!;
+
+        preview.RemoveCount.Should().Be(0);
     }
 }

@@ -231,7 +231,9 @@ public sealed record OperationImportPreviewDto(
     string SheetName, IReadOnlyList<string> SheetNames, string? ProductText, int NewCount, int UpdateCount,
     int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
     int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows,
-    bool HasGroupColumn = false, bool HasComponentColumn = false, int? FinalSttInFile = null);
+    bool HasGroupColumn = false, bool HasComponentColumn = false, int? FinalSttInFile = null,
+    int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null);
 
 public sealed record OperationImportResultDto(
-    int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped);
+    int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped,
+    int Removed = 0);

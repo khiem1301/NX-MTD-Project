@@ -2,7 +2,7 @@ import { Alert, AutoComplete, Input, InputNumber, Select, Table, Typography } fr
 import type { ColumnsType } from 'antd/es/table';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import { MATERIAL_CATEGORIES, MATERIAL_TYPE } from '@/constants/warehouse';
+import { MATERIAL_TYPE } from '@/constants/warehouse';
 import type { SaveMaterialPayload } from '@/types/material';
 import { MAX_FABRIC_WIDTH_M } from '../constants';
 import type { MissingMaterial } from '../types';
@@ -57,19 +57,6 @@ export function MissingMaterialsPanel({
           onChange={(materialType: string) =>
             onChange(m.materialCode ?? '', materialTypeDefaults(materialType, m.widthM))
           }
-        />
-      ),
-    },
-    {
-      title: col.category,
-      key: 'category',
-      width: 130,
-      render: (_, m) => (
-        <Select
-          style={{ width: '100%' }}
-          value={m.category}
-          options={MATERIAL_CATEGORIES[m.materialType] ?? []}
-          onChange={(category: string) => onChange(m.materialCode ?? '', { category })}
         />
       ),
     },

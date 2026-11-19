@@ -248,7 +248,7 @@ public sealed class StocktakeService : IStocktakeService
         if (normIds.Count == 0) return null;
         var norms = await _uow.Repository<ProductComponentMaterial>().Query()
             .Where(p => normIds.Contains(p.ProductComponentMaterialId) && p.ProductComponent.ComponentType == ComponentTypes.Panel
-                        && p.Material.MaterialType == MaterialTypes.Fabric)
+                        && p.Material.MaterialType == MaterialTypes.Fabric && p.Status == RecordStatus.Active)
             .ToDictionaryAsync(p => p.ProductComponentMaterialId, p => p.ProductColorId, ct);
         return dto.Lines.Any(l => l.ProductComponentMaterialId is { } pcm
                                   && (!norms.TryGetValue(pcm, out var c) || c != colors[l.OrderLineId!.Value]))

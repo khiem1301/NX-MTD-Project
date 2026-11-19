@@ -395,17 +395,16 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `CustomerId` | INT |  | **PK**; tự tăng |  |
 | `CustomerName` | NVARCHAR(200) |  | UNIQUE |  |
-| `Phone` | VARCHAR(15) | ✓ |  |  |
-| `Email` | VARCHAR(100) | ✓ |  |  |
+| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai khách hàng không cùng số điện thoại |
+| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai khách hàng không cùng email |
 | `DefaultAddress` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'`; giá trị: `ACTIVE`, `DISCONTINUED` |  |
 | `DiscontinueReason` | NVARCHAR(500) | ✓ |  | lý do ngừng hợp tác (bắt buộc khi ngừng) |
 
 ### `Material` — Nguyên vật liệu
 
-> Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chỉ chọn Category (loại chi tiết);
-> MaterialType (FABRIC: vải, đi qua tổ cắt; TRIM: phụ liệu, cấp thẳng cho tổ may) là cột tính từ Category (22/10)
-> vải: vải chính, vải lót, mex, bo; phụ liệu: chỉ, khóa, cúc, cúc dập, chun, dây / viền, nhãn, thẻ treo, bông / đệm, bao bì, khác
+> Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm `Category` (DEV-ALL-134).
+> MaterialType: FABRIC = vải, đi qua tổ cắt; TRIM = phụ liệu, cấp thẳng cho tổ may; SCRAP = phế phẩm, chỉ để tổ cắt / tổ may trả về kho (DEV-ALL-112)
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
@@ -413,8 +412,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialCode` | VARCHAR(30) |  | UNIQUE |  |
 | `MaterialName` | NVARCHAR(200) |  |  |  |
 | `Color` | NVARCHAR(50) |  | Mặc định `N''` | màu NVL; trống = không phân màu. Cùng loại vải khác màu là hai dòng `Material` |
-| `MaterialType` | tính toán |  | `= (CAST(CASE WHEN Category IN ('MAIN_FABRIC','LINING','INTERLINING','RIB') THEN 'FABRIC' ELSE 'TRIM' END AS VARCHAR(10)))` (PERSISTED) |  |
-| `Category` | VARCHAR(15) |  |  |  |
+| `MaterialType` | VARCHAR(10) |  | `CHECK IN ('FABRIC','TRIM','SCRAP')` | loại NVL, người dùng chọn (DEV-ALL-134) |
 | `Unit` | NVARCHAR(20) |  |  | m, kg, cuộn, cái, cuộn chỉ… |
 | `WidthM` | DECIMAL(4,2) | ✓ |  | khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu NULL (DEV-ALL-102) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
@@ -422,10 +420,10 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 
 **Ràng buộc & index**
 
-- `CK_Material_Category`: Giá trị: `MAIN_FABRIC`, `LINING`, `INTERLINING`, `RIB`, `THREAD`, `ZIPPER`, `BUTTON`, `SNAP`, `ELASTIC`, `TAPE`, `LABEL`, `HANG_TAG`, `PADDING`, `PACKAGING`, `OTHER`
+- `CK_Material_Type`: Giá trị: `FABRIC`, `TRIM`, `SCRAP`
 - `CK_Material_Status`: Giá trị: `ACTIVE`, `DISCONTINUED`
 - `CK_Material_Width`: `CHECK WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)`
-- UNIQUE `UQ_Material_NameType`: (MaterialName, MaterialType)
+- UNIQUE `UQ_Material_NameType`: (MaterialName, MaterialType, Color)
 
 ### `Supplier` — Nhà cung cấp
 
@@ -433,8 +431,8 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `SupplierId` | INT |  | **PK**; tự tăng |  |
 | `SupplierName` | NVARCHAR(200) |  | UNIQUE |  |
-| `Phone` | VARCHAR(15) | ✓ |  |  |
-| `Email` | VARCHAR(100) | ✓ |  |  |
+| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai nhà cung cấp không cùng số điện thoại |
+| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai nhà cung cấp không cùng email |
 | `Address` | NVARCHAR(500) | ✓ |  |  |
 | `MaterialTypes` | NVARCHAR(200) | ✓ |  | loại NVL cung cấp (mô tả) |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
@@ -622,6 +620,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ProductComponentId` | INT |  | FK ghép → `ProductComponent` |  |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
 | `SpecNote` | NVARCHAR(200) | ✓ |  | ghi chú quy cách khác |
+| `Status` | VARCHAR(20) |  | `'ACTIVE'` | ACTIVE / DISCONTINUED: dòng đã có chứng từ dùng thì ẩn thay vì xóa (DEV-ALL-135) |
 
 **Ràng buộc & index**
 
@@ -647,6 +646,8 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `DelayRiskSince` | DATE | ✓ |  | JOB-04 ghi ngày bắt đầu có nguy cơ trễ, xóa khi hết nguy cơ |
 | `IsDelayRisk` | BIT | ✓ | *tính toán*: `IIF(DelayRiskSince IS NULL, 0, 1)` | cờ, không phải trạng thái; không ghi trực tiếp |
 | `StopReason` | NVARCHAR(500) | ✓ |  |  |
+| `FinalAmount` | DECIMAL(18,2) | ✓ |  | giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-137) |
+| `FinalAmountReason` | NVARCHAR(500) | ✓ |  | lý do chốt / đổi giá trị; bắt buộc khi có `FinalAmount` |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CustomerDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11, DEV-ALL-95) |
 | `CustomerDeliveryDate` | DATE | ✓ |  | ngày khách dự kiến giao NVL; giao >= 2 lần: ngày giao từ (DEV-ALL-95) |
@@ -661,6 +662,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - `CK_CustomerOrder_Status`: Giá trị: `NEW`, `IN_PRODUCTION`, `IN_DELIVERY`, `PARTIALLY_DELIVERED`, `DELIVERED`, `COMPLETED`, `CANCELLED`, `STOPPED`
 - `CK_CustomerOrder_Dates`: `CHECK DueDate >= ReceivedDate`
 - `CK_CustomerOrder_Stop`: `CHECK Status <> 'STOPPED' OR StopReason IS NOT NULL`
+- `CK_CustomerOrder_Final`: `CHECK FinalAmount IS NULL OR FinalAmountReason IS NOT NULL`
 - `CK_CO_CustomerDelivery`: `CHECK (CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1) AND (CustomerDeliveryDateTo IS NULL OR (CustomerDeliveryDate IS NOT NULL AND CustomerDeliveryDateTo >= CustomerDeliveryDate AND CustomerDeliveryCount >= 2))`
 - Index: `IX_CustomerOrder_Status ON dbo.CustomerOrder(Status, DueDate)`
 
@@ -943,11 +945,14 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `PaymentReturnReason` | NVARCHAR(500) | ✓ |  | Kế toán trả lại Quản đốc |
 | `PaymentDate` | DATE | ✓ |  |  |
 | `PaidAmount` | DECIMAL(18,2) | ✓ |  |  |
+| `ActualAmount` | DECIMAL(18,2) | ✓ | `CHECK > 0` | tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán (DEV-ALL-129) |
 | `PaymentMethod` | VARCHAR(20) | ✓ |  |  |
 | `PaymentNote` | NVARCHAR(500) | ✓ |  |  |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `RowVer` | ROWVERSION |  | khóa lạc quan (concurrency) |  |
+
+> Từ DEV-ALL-136: `PaidAmount` là tổng các dòng `PurchasePayment`; `PaymentDate`, `PaymentMethod`, `PaymentNote` là của lần thanh toán gần nhất.
 
 **Ràng buộc & index**
 
@@ -961,6 +966,42 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 - `CK_PO_DeliveryCount`: `CHECK ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`
 - `CK_PO_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate`
 - `CK_PO_DeliveryDateTo`: `CHECK ExpectedDeliveryDateTo IS NULL OR (ExpectedDeliveryDate IS NOT NULL AND ExpectedDeliveryDateTo >= ExpectedDeliveryDate AND ExpectedDeliveryCount >= 2)`
+
+### `PurchasePayment` — Từng lần thanh toán đơn mua (DEV-ALL-136)
+
+> Mỗi lần Kế toán thanh toán đơn mua là một dòng. Không xóa; sửa được trong 24 giờ kể từ `CreatedAt`, bắt buộc có lý do.
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `PurchasePaymentId` | INT |  | **PK**; tự tăng |  |
+| `PurchaseOrderId` | INT |  | FK → `PurchaseOrder.PurchaseOrderId` |  |
+| `PaymentDate` | DATE |  |  |  |
+| `Amount` | DECIMAL(18,2) |  | `CK_PP_Amount`: `Amount > 0` |  |
+| `PaymentMethod` | VARCHAR(20) |  | `CK_PP_Method`: `BANK_TRANSFER`, `CASH` |  |
+| `PaymentNote` | NVARCHAR(500) | ✓ |  |  |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` | mốc tính hạn sửa 24 giờ |
+| `UpdatedAt` | DATETIME2(0) | ✓ |  | lần sửa gần nhất |
+| `EditReason` | NVARCHAR(500) | ✓ | `CK_PP_Edit`: có `UpdatedAt` thì phải có lý do | lý do sửa lần gần nhất |
+
+Index: `IX_PP_PurchaseOrder (PurchaseOrderId)`.
+
+### `OrderPayment` — Từng lần thanh toán đơn hàng khách (DEV-ALL-137)
+
+> Số tiền dương = khách trả mình, âm = mình trả khách (đền hợp đồng). Tổng các lần luôn nằm giữa 0 và `CustomerOrder.FinalAmount` (backend kiểm). Không xóa; sửa được trong 24 giờ kể từ `CreatedAt`, bắt buộc có lý do.
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `OrderPaymentId` | INT |  | **PK**; tự tăng |  |
+| `OrderId` | INT |  | FK → `CustomerOrder.OrderId` |  |
+| `PaymentDate` | DATE |  |  |  |
+| `Amount` | DECIMAL(18,2) |  | `CK_OP_Amount`: `Amount <> 0` | dương: khách trả; âm: mình trả |
+| `PaymentMethod` | VARCHAR(20) |  | `CK_OP_Method`: `BANK_TRANSFER`, `CASH` |  |
+| `PaymentNote` | NVARCHAR(500) | ✓ |  |  |
+| `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` | mốc tính hạn sửa 24 giờ |
+| `UpdatedAt` | DATETIME2(0) | ✓ |  | lần sửa gần nhất |
+| `EditReason` | NVARCHAR(500) | ✓ | `CK_OP_Edit`: có `UpdatedAt` thì phải có lý do | lý do sửa lần gần nhất |
+
+Index: `IX_OP_Order (OrderId)`.
 
 ### `PurchaseOrderLine` — Dòng đơn mua NVL
 

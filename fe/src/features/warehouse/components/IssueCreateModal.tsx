@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Form, Modal, Radio, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
@@ -14,7 +15,12 @@ import { PieceIssueLines } from './PieceIssueLines';
 import { IssueTargetFields } from './IssueTargetFields';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 
-type IssueCreateModalProps = { open: boolean; onClose: () => void };
+/** `presetRequest`: mở từ nút "Xử lý ngay" của đơn xin đã duyệt, điền sẵn loại kho và đơn xin đó. */
+type IssueCreateModalProps = {
+  open: boolean;
+  onClose: () => void;
+  presetRequest?: { requestId: number; isMaterial: boolean } | null;
+};
 type FormValues = Omit<CreateIssuePayload, 'issueDate' | 'lines'> & {
   issueDate: Dayjs;
   lines: (CreateIssuePayload['lines'][number] & { pieceKey?: string })[];
@@ -33,8 +39,9 @@ const RESET_TARGET = {
  * Lệnh cắt và đơn xin đều không bắt buộc (DEV-ALL-99). Chọn đơn xin thì tổ, đơn hàng, lệnh cắt và số lượng được điền sẵn.
  * Lệnh cắt đã hoàn thành không có trong danh sách chọn.
  */
-export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
+export function IssueCreateModal({ open, onClose, presetRequest = null }: IssueCreateModalProps) {
   const [form] = Form.useForm<FormValues>();
+  const presetApplied = useRef(false);
   const create = useCreateIssue();
   const type = Form.useWatch('warehouseType', form);
   const workOrderId = Form.useWatch('workOrderId', form);
@@ -46,6 +53,18 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
   const sewingTeams = useTeamOptions(TEAM_TYPE.SEWING);
   const fromRequest = useIssueRequestFill(form, isMaterial);
   const { request } = fromRequest;
+
+  const { choose } = fromRequest;
+
+  useEffect(() => {
+    if (!open) {
+      presetApplied.current = false;
+      return;
+    }
+    if (!presetRequest || presetApplied.current) return;
+    presetApplied.current = true;
+    void choose(presetRequest.requestId, presetRequest.isMaterial);
+  }, [open, presetRequest, choose]);
 
   const teams = [...(isMaterial ? (cuttingTeams.data ?? []) : []), ...(sewingTeams.data ?? [])];
   const teamLocked = workOrderId !== undefined || (request?.createdByTeamId ?? null) !== null;
@@ -106,7 +125,13 @@ export function IssueCreateModal({ open, onClose }: IssueCreateModalProps) {
         onFinish={handleFinish}
         disabled={create.isPending}
         // Form dựng lại mỗi lần mở (destroyOnHidden) nên giá trị mặc định đặt ở đây, không dùng setFieldsValue trước khi dựng.
-        initialValues={{ warehouseType: WAREHOUSE_TYPE.MATERIAL, issueDate: dayjs() }}
+        initialValues={{
+          warehouseType:
+            presetRequest && !presetRequest.isMaterial
+              ? WAREHOUSE_TYPE.SEMI_FINISHED
+              : WAREHOUSE_TYPE.MATERIAL,
+          issueDate: dayjs(),
+        }}
       >
         <Form.Item name="warehouseType" style={ISSUE_FIELD}>
           <Radio.Group

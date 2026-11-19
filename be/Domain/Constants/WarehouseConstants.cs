@@ -43,17 +43,10 @@ public static class MaterialTypes
     public const string FabricUnit = "m";
 
 
-    /// <summary>Nhóm hợp lệ theo loại (CHECK constraint của bảng Material).</summary>
-    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Categories =
-        new Dictionary<string, IReadOnlyList<string>>
-        {
-            [Fabric] = new[] { "MAIN_FABRIC", "LINING", "INTERLINING", "RIB" },
-            [Trim] = new[] { "THREAD", "ZIPPER", "BUTTON", "SNAP", "ELASTIC", "TAPE", "LABEL", "HANG_TAG", "PADDING", "PACKAGING", "OTHER" },
-            [Scrap] = new[] { "SCRAP_FABRIC", "SCRAP_NEEDLE", "SCRAP_OTHER" },
-        };
+    /// <summary>Các loại hợp lệ (CHECK constraint CK_Material_Type của bảng Material).</summary>
+    public static readonly IReadOnlyList<string> All = new[] { Fabric, Trim, Scrap };
 
-    public static bool IsValidCategory(string materialType, string category) =>
-        Categories.TryGetValue(materialType, out var list) && list.Contains(category);
+    public static bool IsValid(string? materialType) => materialType is not null && All.Contains(materialType);
 }
 
 public static class MaterialStatuses

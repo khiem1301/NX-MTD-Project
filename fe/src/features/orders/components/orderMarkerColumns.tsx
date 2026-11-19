@@ -1,7 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { WarningOutlined } from '@ant-design/icons';
-import { Input, Select, Tooltip, type TableColumnsType } from 'antd';
+import { PlayCircleOutlined, StopOutlined, WarningOutlined } from '@ant-design/icons';
+import { Flex, Input, Select, Tooltip, type TableColumnsType } from 'antd';
+import { IconAction } from '@/components/common/IconAction';
 import { QtyInput } from '@/components/common/QtyInput';
+import { StatusTag, type StatusLabel } from '@/components/common/StatusTag';
 import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
@@ -18,10 +20,10 @@ import { deleteRowColumn } from './deleteRowColumn';
 
 const text = MESSAGES.orders.markers;
 
-const STATUS_OPTIONS: { value: OrderMarkerStatus; label: string }[] = [
-  { value: 'Active', label: text.active },
-  { value: 'Discontinued', label: text.discontinued },
-];
+const STATUS_LABELS: Record<OrderMarkerStatus, StatusLabel> = {
+  Active: { text: text.active, color: 'green' },
+  Discontinued: { text: text.discontinued, color: 'default' },
+};
 
 /**
  * Bề rộng cột (px). Cột có bề rộng cố định; bảng có bề rộng tối thiểu tính sẵn và cuộn bằng khung ngoài, để antd không phải
@@ -33,7 +35,7 @@ const WIDTH = {
   length: 110,
   width: 120,
   size: 76,
-  status: 130,
+  status: 200,
   remove: 48,
 } as const;
 const FULL = { width: '100%' } as const;
@@ -173,15 +175,19 @@ export const orderMarkerColumns = ({
       key: 'status',
       width: WIDTH.status,
       render: (_, r) => (
-        <Select
-          size="small"
-          disabled={readOnly}
-          aria-label={text.status}
-          value={r.status}
-          options={STATUS_OPTIONS}
-          style={FULL}
-          onChange={(status: OrderMarkerStatus) => patch(r.key, { status })}
-        />
+        <Flex align="center" justify="space-between">
+          <StatusTag status={r.status} labels={STATUS_LABELS} />
+          {!readOnly && (
+            <IconAction
+              title={r.status === 'Active' ? text.discontinue : text.reactivate}
+              icon={r.status === 'Active' ? <StopOutlined /> : <PlayCircleOutlined />}
+              danger={r.status === 'Active'}
+              onClick={() =>
+                patch(r.key, { status: r.status === 'Active' ? 'Discontinued' : 'Active' })
+              }
+            />
+          )}
+        </Flex>
       ),
     },
     // Bỏ ghim phải của cột xóa: bảng không cuộn bằng antd nên cột ghim chỉ làm antd đo lại vô ích.

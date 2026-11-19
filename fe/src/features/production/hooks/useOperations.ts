@@ -47,6 +47,7 @@ export const usePreviewOperationImport = () => {
       productId: number;
       sheetName?: string;
       effectiveDate?: string;
+      replace?: boolean;
     }) => productionApi.previewOperationImport(role, file, params),
     { invalidate: [] },
   );

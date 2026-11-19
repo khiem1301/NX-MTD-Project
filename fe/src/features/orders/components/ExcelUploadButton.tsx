@@ -7,7 +7,7 @@ const EXCEL_ACCEPT = '.xlsx';
 type ExcelUploadButtonProps = {
   disabled?: boolean;
   loading?: boolean;
-  /** Nút nổi bật (viền màu chính) cho "Tải lên 1 file". */
+  /** Nút nổi bật (viền màu chính) cho "Chọn 1 file chung cho tất cả". */
   primary?: boolean;
   onFile: (file: File) => void;
   children: ReactNode;

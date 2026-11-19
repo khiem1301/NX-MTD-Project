@@ -446,4 +446,53 @@ public class OperationImportTests : ProductionTestBase
 
         result.ErrorCode.Should().Be(ErrorCodes.OperationNotActive);
     }
+
+    // ========== Chế độ thay thế ==========
+
+    private void ExistingOperationsForReplace()
+    {
+        Operation Op(int id, string code, string team = TeamTypes.Sewing) => new()
+        {
+            OperationId = id, ProductId = 1, OperationCode = code, OperationName = "Việc " + code, StationSequence = (short)id,
+            TeamType = team, Status = OperationStatuses.Active,
+        };
+        _operations.AddRange([Op(1, "OP01"), Op(9, "OP09"), Op(10, "OP10"), Op(20, "CUT01", TeamTypes.Cutting)]);
+        // OP10 đang có việc mở: công nhân còn giữ 5 bộ của đơn đang chạy
+        var order = new CustomerOrder { OrderId = 1, Status = OrderStatuses.InProduction };
+        SetupQueryable(new List<OrderLine> { new() { OrderLineId = 1, OrderId = 1, Order = order } });
+        SetupQueryable(new List<WorkAllocation>());
+        SetupQueryable(new List<VwWorkerOutputCap> { new() { OperationId = 10, OrderLineId = 1, RemainingQty = 5 } });
+    }
+
+    [Fact]
+    public async Task Import_Replace_DiscontinuesSewingOperationsNotInFile_ExceptOnesWithOpenWork()
+    {
+        ExistingOperationsForReplace();
+
+        var preview = (await _sut.PreviewImportAsync(1, Workbook(), null, null, default, replace: true)).Data!;
+        preview.RemoveCount.Should().Be(1);
+        preview.Removed.Should().Equal("OP09 Việc OP09");
+        preview.Blocked.Should().Equal("OP10 Việc OP10");
+
+        var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default, replace: true);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        result.Data!.Removed.Should().Be(1);
+        _operations.Single(o => o.OperationCode == "OP09").Status.Should().Be(OperationStatuses.Discontinued);
+        _operations.Single(o => o.OperationCode == "OP10").Status.Should().Be(OperationStatuses.Active);    // đang có việc: giữ
+        _operations.Single(o => o.OperationCode == "CUT01").Status.Should().Be(OperationStatuses.Active);   // công đoạn cắt không thuộc file
+        _operations.Single(o => o.OperationCode == "OP01").Status.Should().Be(OperationStatuses.Active);    // có trong file
+        result.Message.Should().Contain("Đã ngừng dùng 1");
+    }
+
+    [Fact]
+    public async Task Import_WithoutReplace_NeverDiscontinues()
+    {
+        ExistingOperationsForReplace();
+
+        var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default);
+
+        result.Data!.Removed.Should().Be(0);
+        _operations.Where(o => o.OperationCode is "OP09" or "OP10").Should().OnlyContain(o => o.Status == OperationStatuses.Active);
+    }
 }

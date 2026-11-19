@@ -327,12 +327,16 @@ export type SpecImportPreview = {
   crossErrors: string[];
   notes: string[];
   canImport: boolean;
+  /** Chế độ thay thế: số dòng cũ bị bỏ vì không có trong file, và tên từng dòng. */
+  removedCount: number;
+  removedNames: string[] | null;
 };
 export type SpecImportResult = {
   components: number;
   norms: number;
   markerGroups: number;
   orderMarkers: number;
+  removed: number;
 };
 /** Màn Mã hàng (Admin) chọn đơn tùy ý; màn Đơn hàng (Admin, Quản đốc) chọn mã hàng của đơn. */
 /** DEV-ALL-121: bảng của file định mức để nhập riêng (không truyền = mọi bảng trong file). */
