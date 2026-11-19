@@ -159,6 +159,10 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-141 | 19/11/2026 | Claude (AI) | UC10, form Sửa mã hàng, `ProductExcelImports` | Form Sửa mã hàng bỏ ô chọn đơn và hai ô Bìa cắt, NVL của đơn: chỉ còn Thành phần, Định mức NVL, Nhóm bìa; Bìa cắt và NVL của đơn nhập ở chi tiết đơn (hoặc form đơn hàng) | Mở |
+| DEV-ALL-140 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `SpecImportBuilder`, `OrderMaterialService`, `OperationService` | Hộp thoại nhập Excel có ô "Thay thế dữ liệu cũ" (mặc định tắt) cho 6 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn, Công đoạn: dòng cũ không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng), bảng không có trong file không bị đụng tới | Mở |
+| DEV-ALL-139 | 19/11/2026 | Claude (AI) | UC10, `ProductImportService`, màn Mã hàng | Bỏ chức năng tạo nhiều mã hàng từ Excel ở màn Mã hàng (nút Nhập từ Excel, hộp thoại, API `import-products`, file mẫu `Mau_Ma_Hang.xlsx`). Sheet Mã hàng của file chung ở form mã hàng vẫn dùng để điền Mã hàng, Tên, Mô tả của form | Mở |
+| DEV-ALL-138 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `ImportTemplateService`, `ImportTemplatesController` | Mỗi chức năng nhập Excel có file mẫu riêng (5 loại), do server dựng khi bấm Tải file mẫu: bảng nào mã hàng / đơn hàng đang mở đã có dữ liệu thì ghi dữ liệu đó, bảng chưa có thì ghi dòng ví dụ chữ xám nghiêng; thêm nút Tải file mẫu cho hộp thoại nhập công đoạn; đổi chữ nút "Tải lên 1 file" thành "Chọn 1 file chung cho tất cả" | Mở |
 | DEV-ALL-137 | 18/11/2026 | Claude (AI) | UC34 mở rộng, `CustomerOrder`, `OrderPayment` | Đơn hàng khách có giá trị chốt do Kế toán nhập (cho phép âm khi mình phải đền hợp đồng) và sổ thanh toán nhiều lần hai chiều (dương: khách trả, âm: mình trả); màn mới "Thanh toán đơn hàng" của Kế toán | Mở |
 | DEV-ALL-136 | 18/11/2026 | Claude (AI) | UC34, `PurchaseOrder`, `PurchasePayment` | Đơn mua thanh toán nhiều lần (bảng `PurchasePayment`, sửa trong 24 giờ kèm lý do, không xóa); đơn Chốt không bù tính theo Tổng giá trị thực tế Kế toán nhập khi thanh toán (DEV-ALL-129); tổng các lần trả không vượt mốc trả đủ | Mở |
 | DEV-ALL-135 | 17/11/2026 | Claude (AI) | UC định mức mã hàng, `ProductComponentMaterial` | Xóa dòng định mức NVL: chưa có chứng từ dùng thì xóa hẳn, đã dùng thì ngừng dùng (ẩn, cột `Status`) thay vì báo lỗi; dòng ẩn không hiện ở form định mức và không chọn được cho chứng từ mới | Mở |
@@ -2826,4 +2830,48 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC mới "Thanh toán đơn hàng khách" (giá trị chốt, thu / chi nhiều lần), mockup màn hình
   - [ ] `NX-MTD_Database.sql` / `_Giai_thich.md`: bảng `OrderPayment`; cột `FinalAmount`, `FinalAmountReason` của `CustomerOrder`; `CK_CustomerOrder_Final`
+- **Trạng thái:** Mở
+
+### DEV-ALL-138 · File mẫu Excel riêng cho từng chức năng nhập, dựng từ dữ liệu hiện có
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, UC25, UC37–UC39; BE `GET api/v1/common/import-templates/{kind}` (`ImportTemplatesController`, `ImportTemplateService`, `ClosedXmlImportTemplateWriter`; Admin, Quản đốc, Kế toán); FE `ImportTemplateLink` dùng ở `ProductExcelImports`, `OrderImportModal`, `SpecImportModal`, `OperationImportModal`, `OrderMaterialImportModal`; test `ImportTemplateServiceTests`
+- **Tài liệu gốc ghi:** DEV-ALL-115 đến 122 dùng chung một file mẫu tĩnh `Mau_Nhap_Dinh_Muc.xlsx` (9 sheet, dữ liệu ví dụ cố định) cho mọi chức năng nhập Excel.
+- **Code đang làm:** không còn file mẫu tĩnh. Bấm Tải file mẫu thì server dựng file theo chức năng: `spec` (Định mức mã hàng / Bìa cắt: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn), `order-lines` (dòng hàng của đơn), `order-materials` (NVL của đơn), `operations` (công đoạn, có đơn giá đã duyệt hiện hành), `product-form` (form mã hàng: Mã hàng, Thành phần, Định mức NVL, Nhóm bìa; thêm Bìa của đơn, NVL của đơn khi form Sửa mã hàng hoặc form đơn hàng). Mỗi bảng: có dữ liệu của mã hàng / đơn đang mở thì ghi dữ liệu đó (chữ thường), chưa có thì ghi dòng ví dụ (chữ xám nghiêng, tiêu đề sheet ghi "ví dụ"); mỗi file có sheet Hướng dẫn riêng. Nút xanh ở form mã hàng đổi tên thành "Chọn 1 file chung cho tất cả". Thêm nút Tải file mẫu cho hộp thoại nhập công đoạn. Bộ đọc file không đổi (nhận bảng theo tên cột).
+- **Lý do:** một file chung 9 sheet gây rối và dữ liệu ví dụ cố định không dùng được cho mã hàng / đơn đang mở; người dùng yêu cầu tách theo chức năng và dùng dữ liệu thật nếu có.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng), Thái (công đoạn), Minh (NVL của đơn).
+- **Cần sửa trong tài liệu:** không (các mục DEV-ALL-115 đến 122 nhắc tới file mẫu chung nay thay bằng file dựng theo chức năng).
+- **Trạng thái:** Mở
+
+### DEV-ALL-139 · Bỏ tạo nhiều mã hàng từ Excel ở màn Mã hàng
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10; BE `ProductsController` (bỏ `POST import-products/preview` và `POST import-products`), `IProductImportService` / `ProductImportService` (chỉ còn xem trước theo dòng cho popup kiểm tra), `Messages`, `ErrorCodes.ProductImportInvalid`; FE `ProductsPage`, `ProductImportModal` (xóa), `orderApi`, `useSpecImport`; file mẫu của chức năng này (xóa)
+- **Tài liệu gốc ghi:** DEV-ALL-120: màn Mã hàng có nút Nhập từ Excel tạo nhiều mã hàng một lần (mã đã có bỏ qua).
+- **Code đang làm:** màn Mã hàng không còn nút Nhập từ Excel; mã hàng chỉ thêm tay qua form. Form mã hàng vẫn đọc sheet Mã hàng của file chung (nút "Chọn 1 file chung cho tất cả") để điền Mã hàng, Tên, Mô tả của form, chỉ lấy dòng đầu; mã hàng chỉ được tạo bằng nút Lưu của form.
+- **Lý do:** người dùng yêu cầu bỏ.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng).
+- **Cần sửa trong tài liệu:** DEV-ALL-120 (phần màn Mã hàng), DEV-ALL-122 (phần sheet Mã hàng chỉ còn điền form).
+- **Trạng thái:** Mở
+
+### DEV-ALL-140 · Nhập Excel có chế độ thay thế (bỏ dòng cũ không có trong file)
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, UC25, UC37–UC39; BE `SpecImportBuilder` / `SpecImportService` (tham số `replace`), `OrderMaterialService.Import`, `OperationService` (nhập công đoạn), các controller nhập Excel dạng file (Admin `products/{id}/import`, Quản đốc `order-markers/.../import`, Admin / Quản đốc `order-materials/import`, Kế toán `operations/import`, đều thêm `?replace=true`); FE `ReplaceImportOption` (mới), `SpecImportModal`, `OrderMaterialImportModal`, `OperationImportModal`
+- **Tài liệu gốc ghi:** DEV-ALL-115, 116, 119: nhập Excel chỉ gộp (thêm mới hoặc ghi đè theo khóa), dòng không có trong file giữ nguyên, không xóa gì.
+- **Code đang làm:** mỗi hộp thoại có ô "Thay thế dữ liệu cũ" (mặc định tắt = vẫn chỉ gộp). Bật thì xem trước ghi rõ những dòng cũ sẽ bị bỏ và nhập xong dòng đó mất: thành phần không có trong file (chi tiết đang được dùng chuyển sang ngừng dùng, theo `ProductSpecService`), cặp màu + chi tiết của định mức, nhóm bìa, bìa của đơn; NVL của đơn bị xóa (NVL đã có phiếu nhập hoặc dòng đơn mua thì giữ nguyên và báo lại); công đoạn may đang dùng bị ngừng dùng (đang có việc mở thì giữ nguyên và báo lại; công đoạn của tổ cắt không bị đụng). Chỉ áp dụng cho bảng có trong file; dòng lỗi của file vẫn coi là "có trong file" nên dòng cũ cùng khóa không bị bỏ; file không có dòng nào đọc được thì không bỏ gì. Xác nhận nhập có thêm câu nêu số dòng sẽ bị bỏ. Bảng Dòng hàng của đơn không có chế độ này (nhập chỉ điền form), và đường nhập qua popup kiểm tra Excel nhiều sheet (nút "Chọn 1 file chung") vẫn chỉ gộp.
+- **Lý do:** người dùng muốn file Excel có thể làm bản chuẩn thay cho dữ liệu cũ, không phải xóa tay từng dòng.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng), Thái (công đoạn), Minh (NVL của đơn).
+- **Cần sửa trong tài liệu:** DEV-ALL-115, 116, 119 (câu "không xóa dòng nào" nay chỉ đúng khi không bật chế độ thay thế).
+- **Trạng thái:** Mở
+
+### DEV-ALL-141 · Form Sửa mã hàng bỏ phần nhập theo đơn
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10; FE `ProductExcelImports` (bỏ `ProductOrderSelect`), file mẫu `product-form`
+- **Tài liệu gốc ghi:** DEV-ALL-121: form Sửa mã hàng chọn đơn rồi nhập Bìa cắt, NVL của đơn.
+- **Code đang làm:** form Thêm mới / Sửa mã hàng chỉ nhập Thành phần, Định mức NVL, Nhóm bìa. Bìa cắt và NVL của đơn chỉ nhập ở chi tiết đơn (tab Bìa cắt, tab NVL của đơn) hoặc ở form đơn hàng. File mẫu của form mã hàng chỉ có 4 sheet (Mã hàng, Thành phần, Định mức NVL, Nhóm bìa); bản "theo đơn" chỉ còn cho form đơn hàng.
+- **Lý do:** người dùng yêu cầu bỏ ô chọn đơn ở form Sửa mã hàng.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, đơn hàng).
+- **Cần sửa trong tài liệu:** DEV-ALL-121 (phần form Sửa mã hàng).
 - **Trạng thái:** Mở

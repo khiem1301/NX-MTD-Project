@@ -10,8 +10,6 @@ export const MAX_EXTRA_IMAGES = 5;
 
 export const COLOR_MAX_LENGTH = 50;
 
-/** File mẫu nhập Excel định mức (DEV-ALL-115), nằm trong fe/public/templates. */
-export const SPEC_IMPORT_TEMPLATE_URL = '/templates/Mau_Nhap_Dinh_Muc.xlsx';
 
 // ---- DEV-ALL-122/123: popup kiểm tra file Excel nhiều sheet ----
 

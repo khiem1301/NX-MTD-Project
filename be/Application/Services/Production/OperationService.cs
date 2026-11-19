@@ -201,9 +201,11 @@ public sealed class OperationService : IOperationService
         OperationImportRowDto Preview, OperationExcelRowDto Raw, Operation? Existing, PieceRate? ExistingRate,
         IReadOnlyList<int>? ComponentIds = null);
 
+    /// <param name="Removals">Chế độ thay thế: công đoạn may đang dùng không có trong file và ngừng dùng được.</param>
+    /// <param name="Blocked">Công đoạn không có trong file nhưng đang có việc mở nên giữ nguyên.</param>
     private sealed record ImportPlan(
         OperationExcelSheetDto Sheet, IReadOnlyList<string> SheetNames, bool ProductHasFinalStep, IReadOnlyList<PlannedRow> Rows,
-        ImportRefs? Refs);
+        ImportRefs? Refs, IReadOnlyList<Operation> Removals, IReadOnlyList<string> Blocked);
 
     /// <summary>
     /// DEV-ALL-116: dữ liệu để nhập cột NHÓM CÔNG ĐOẠN / CHI TIẾT. Chỉ nạp khi file có một trong hai cột, nên file quy trình
@@ -224,9 +226,9 @@ public sealed class OperationService : IOperationService
     private static string CodeFor(int stt) => $"OP{stt:00}";
 
     public async Task<Result<OperationImportPreviewDto>> PreviewImportAsync(
-        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct)
+        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false)
     {
-        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct);
+        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace);
         if (!plan.IsSuccess) return Fail.As<OperationImportPreviewDto>(plan);
 
         var p = plan.Data!;
@@ -238,14 +240,15 @@ public sealed class OperationService : IOperationService
             p.Sheet.SheetName, p.SheetNames, p.Sheet.ProductText, Count(ActionNew), Count(ActionUpdate),
             Count(ActionUnchanged), Count(ActionError), p.ProductHasFinalStep, p.Sheet.HasRateColumn,
             RateCount(ActionNew), RateCount(ActionUpdate), RateCount(ActionUnchanged), RateCount(RateSkipped),
-            p.Rows.Select(r => r.Preview).ToList(), p.Sheet.HasGroupColumn, p.Sheet.HasComponentColumn, finalInFile));
+            p.Rows.Select(r => r.Preview).ToList(), p.Sheet.HasGroupColumn, p.Sheet.HasComponentColumn, finalInFile,
+            p.Removals.Count, p.Removals.Select(o => $"{o.OperationCode} {o.OperationName}").ToList(), p.Blocked));
     }
 
     public async Task<Result<OperationImportResultDto>> ImportAsync(
         int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates,
-        CancellationToken ct)
+        CancellationToken ct, bool replace = false)
     {
-        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct);
+        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace);
         if (!plan.IsSuccess) return Fail.As<OperationImportResultDto>(plan);
 
         var valid = plan.Data!.Rows.Where(r => r.Preview.Action != ActionError).ToList();
@@ -254,7 +257,7 @@ public sealed class OperationService : IOperationService
                 ResultKind.Validation);
         var skipped = plan.Data.Rows.Count - valid.Count;
 
-        var finalError = await CheckFinalStepAsync(productId, valid, finalStt, ct);
+        var finalError = await CheckFinalStepAsync(productId, valid, finalStt, ct, plan.Data.Removals.Select(o => o.OperationId).ToList());
         if (finalError is not null) return finalError;
 
         return await _uow.InTransactionAsync(
@@ -366,6 +369,14 @@ public sealed class OperationService : IOperationService
         foreach (var (operation, before) in updated)
             _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update, before, Snapshot(operation)));
 
+        // Chế độ thay thế: công đoạn không có trong file chuyển sang ngừng dùng (không xóa vì đã có đơn giá, sản lượng)
+        foreach (var operation in plan.Removals)
+        {
+            operation.Status = OperationStatuses.Discontinued;
+            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update,
+                new { Status = OperationStatuses.Active }, new { operation.Status }, "Nhập Excel thay thế: không có trong file"));
+        }
+
         var rateStats = await ApplyImportedRatesAsync(valid, operationByStt, effectiveDate, submitRates);
         await _uow.SaveChangesAsync();
 
@@ -376,15 +387,16 @@ public sealed class OperationService : IOperationService
                 null, null, null), ct);
 
         var result = new OperationImportResultDto(created.Count, updated.Count, unchanged, skipped,
-            rateStats.Created, rateStats.Updated, rateStats.Unchanged, rateStats.Skipped);
+            rateStats.Created, rateStats.Updated, rateStats.Unchanged, rateStats.Skipped, plan.Removals.Count);
         return Result<OperationImportResultDto>.Success(result, string.Format(Messages.OperationImportDone,
             created.Count, updated.Count, unchanged, skipped, rateStats.Created, rateStats.Updated,
-            rateStats.Unchanged, rateStats.Skipped));
+            rateStats.Unchanged, rateStats.Skipped)
+            + (plan.Removals.Count > 0 ? string.Format(Messages.OperationImportRemoved, plan.Removals.Count) : string.Empty));
     }
 
     /// <summary>Khi chọn dòng làm công đoạn cuối: dòng phải hợp lệ và mã hàng chưa có công đoạn cuối khác. Trả về lỗi hoặc null.</summary>
     private async Task<Result<OperationImportResultDto>?> CheckFinalStepAsync(int productId, IReadOnlyList<PlannedRow> valid,
-        int? finalStt, CancellationToken ct)
+        int? finalStt, CancellationToken ct, IReadOnlyCollection<int>? removedIds = null)
     {
         if (finalStt is null) return null;
         var target = valid.FirstOrDefault(r => r.Preview.Stt == finalStt);
@@ -393,7 +405,7 @@ public sealed class OperationService : IOperationService
                 Messages.OperationImportFinalNotFound, ResultKind.Validation);
         if (target.Existing is { Status: not OperationStatuses.Active })
             return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationNotActive, Messages.OperationNotActive);
-        if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct))
+        if (await FinalStepExistsAsync(productId, target.Existing?.OperationId, ct, removedIds))
             return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
                 Messages.OperationFinalStepExists);
         return null;
@@ -460,7 +472,7 @@ public sealed class OperationService : IOperationService
     }
 
     private async Task<Result<ImportPlan>> BuildImportPlanAsync(
-        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct)
+        int productId, Stream stream, string? sheetName, DateOnly? effectiveDate, CancellationToken ct, bool replace = false)
     {
         var product = await CheckProductAsync(productId, ct);
         if (product is not null) return Fail.As<ImportPlan>(product);
@@ -486,7 +498,19 @@ public sealed class OperationService : IOperationService
         var rows = PlanRows(sheet, byCode, ratesByOperation, effectiveDate, refs);
 
         var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
-        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows, refs));
+        var removals = new List<Operation>();
+        var blocked = new List<string>();
+        // Thay thế: công đoạn may đang dùng mà mã (OP + STT) không có trong file thì ngừng dùng; file không có dòng đọc được thì không đụng gì
+        if (replace && rows.Any(r => r.Preview.Action != ActionError))
+        {
+            var fileCodes = rows.Select(r => r.Preview.OperationCode).Where(c => !string.IsNullOrEmpty(c)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var o in existingOps.Where(o => o.Status == OperationStatuses.Active && o.TeamType == TeamTypes.Sewing && !fileCodes.Contains(o.OperationCode)))
+            {
+                if (await HasOpenWorkAsync(o.OperationId, ct)) blocked.Add($"{o.OperationCode} {o.OperationName}");
+                else removals.Add(o);
+            }
+        }
+        return Result<ImportPlan>.Success(new ImportPlan(sheet, sheets.Select(s => s.SheetName).ToList(), hasFinal, rows, refs, removals, blocked));
     }
 
     /// <summary>Thành phần, nhóm công đoạn và liên kết công đoạn ↔ chi tiết của mã hàng (DEV-ALL-116), có theo dõi để sửa được.</summary>
@@ -680,9 +704,11 @@ public sealed class OperationService : IOperationService
         if (others.Count > 0) await _uow.SaveChangesAsync();
     }
 
-    private Task<bool> FinalStepExistsAsync(int productId, int? exceptId, CancellationToken ct) =>
+    /// <param name="alsoIgnore">Công đoạn sắp bị ngừng dùng trong cùng lần nhập (chế độ thay thế): không tính là công đoạn cuối đang có.</param>
+    private Task<bool> FinalStepExistsAsync(int productId, int? exceptId, CancellationToken ct, IReadOnlyCollection<int>? alsoIgnore = null) =>
         Operations.AsNoTracking().AnyAsync(o => o.ProductId == productId && o.IsFinalStep
-            && o.Status == OperationStatuses.Active && (exceptId == null || o.OperationId != exceptId), ct);
+            && o.Status == OperationStatuses.Active && (exceptId == null || o.OperationId != exceptId)
+            && (alsoIgnore == null || !alsoIgnore.Contains(o.OperationId)), ct);
 
     private static void Apply(Operation operation, SaveOperationDto dto, string code)
     {

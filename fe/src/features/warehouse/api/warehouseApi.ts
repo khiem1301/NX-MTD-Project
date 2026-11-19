@@ -82,21 +82,21 @@ export const warehouseApi = {
   createOrderMaterial: (role: RolePath, body: SaveOrderMaterialPayload) =>
     post<OrderMaterial>(API.warehouse.orderMaterials(role), body),
   /** DEV-ALL-119: xem trước file Excel NVL của đơn (không ghi gì). */
-  previewOrderMaterialImport: (role: RolePath, orderId: number, file: File) =>
+  previewOrderMaterialImport: (role: RolePath, orderId: number, file: File, replace = false) =>
     apiClient
       .post<ApiResponse<OrderMaterialImportPreview>>(
         `${API.warehouse.orderMaterials(role)}/import/preview`,
         fileForm(file),
-        { params: { orderId } },
+        { params: { orderId, replace: replace || undefined } },
       )
       .then((r) => r.data.data),
   /** Trả cả message (số dòng đã nhập). */
-  importOrderMaterials: async (role: RolePath, orderId: number, file: File) =>
+  importOrderMaterials: async (role: RolePath, orderId: number, file: File, replace = false) =>
     (
       await apiClient.post<ApiResponse<unknown>>(
         `${API.warehouse.orderMaterials(role)}/import`,
         fileForm(file),
-        { params: { orderId } },
+        { params: { orderId, replace: replace || undefined } },
       )
     ).data,
   createOrderMaterials: (role: RolePath, body: CreateOrderMaterialsPayload) =>

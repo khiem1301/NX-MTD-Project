@@ -1,6 +1,6 @@
 namespace NX_MTD.Application.DTOs;
 
-// ================= DEV-ALL-120: tạo mã hàng hàng loạt từ Excel =================
+// ================= Dòng Mã hàng của file Excel nhiều sheet (popup kiểm tra form mã hàng) =================
 
 public sealed record ProductExcelRow(int RowNumber, string ProductCode, string ProductName, string? Description);
 
@@ -15,4 +15,3 @@ public sealed record ProductImportRowDto(int RowNumber, string Action, string? N
 public sealed record ProductImportPreviewDto(IReadOnlyList<ProductImportRowDto> Rows, int NewCount, int ExistsCount, int ErrorCount,
     int DuplicateCount);
 
-public sealed record ProductImportResultDto(int Created, int Skipped);

@@ -35,10 +35,12 @@ public sealed partial class SpecImportService : ISpecImportService
     private sealed record Plan(SpecImportPreviewDto Preview, SpecImportBuilder Builder);
 
     public Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null) => PreviewCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct);
+        IReadOnlyCollection<string>? parts = null, bool replace = false) =>
+        PreviewCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct, replace);
 
     public Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null) => ImportCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct);
+        IReadOnlyCollection<string>? parts = null, bool replace = false) =>
+        ImportCoreAsync(productId, orderId, () => _parser.Parse(stream), parts, ct, replace);
 
     /// <summary>DEV-ALL-122: xem trước từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
     public Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
@@ -49,16 +51,16 @@ public sealed partial class SpecImportService : ISpecImportService
         IReadOnlyCollection<string>? parts = null) => ImportCoreAsync(productId, orderId, () => workbook, parts, ct);
 
     private async Task<Result<SpecImportPreviewDto>> PreviewCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
-        IReadOnlyCollection<string>? parts, CancellationToken ct)
+        IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
     {
-        var plan = await PlanAsync(productId, orderId, read, parts, ct);
+        var plan = await PlanAsync(productId, orderId, read, parts, ct, replace);
         return plan.IsSuccess ? Result<SpecImportPreviewDto>.Success(plan.Data!.Preview) : Fail.As<SpecImportPreviewDto>(plan);
     }
 
     private async Task<Result<SpecImportResultDto>> ImportCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
-        IReadOnlyCollection<string>? parts, CancellationToken ct)
+        IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
     {
-        var plan = await PlanAsync(productId, orderId, read, parts, ct);
+        var plan = await PlanAsync(productId, orderId, read, parts, ct, replace);
         if (!plan.IsSuccess) return Fail.As<SpecImportResultDto>(plan);
         var preview = plan.Data!.Preview;
         if (!preview.CanImport)
@@ -77,7 +79,7 @@ public sealed partial class SpecImportService : ISpecImportService
         }
 
         var changes = builder.Changes;
-        if (orderId is { } id && builder.Markers is not null && changes.OrderMarkers > 0)
+        if (orderId is { } id && builder.Markers is not null && changes.OrderMarkers + builder.RemovedMarkers > 0)
         {
             // Định mức có đổi: kiểm đầy đủ lại sau khi ghi (cùng giao dịch) vì nhóm bìa, vải của nhóm là bản mới.
             // Định mức không đổi thì bước xem trước vừa chạy đúng kiểm tra này.
@@ -90,12 +92,14 @@ public sealed partial class SpecImportService : ISpecImportService
             if (!markers.IsSuccess) return Fail.As<SpecImportResultDto>(markers);
         }
 
-        return Result<SpecImportResultDto>.Success(changes, string.Format(Messages.SpecImportDone,
-            changes.Components, changes.Norms, changes.MarkerGroups, changes.OrderMarkers));
+        var removed = builder.RemovedTotal;
+        return Result<SpecImportResultDto>.Success(changes with { Removed = removed }, string.Format(Messages.SpecImportDone,
+            changes.Components, changes.Norms, changes.MarkerGroups, changes.OrderMarkers)
+            + (removed > 0 ? string.Format(Messages.SpecImportRemovedDone, removed) : string.Empty));
     }
 
     private async Task<Result<Plan>> PlanAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
-        IReadOnlyCollection<string>? parts, CancellationToken ct)
+        IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
     {
         var unknown = parts?.FirstOrDefault(p => !SpecImportParts.All.Contains(p));
         if (unknown is not null)
@@ -132,7 +136,7 @@ public sealed partial class SpecImportService : ISpecImportService
         if (!spec.IsSuccess) return Fail.As<Plan>(spec);
         var materials = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
         var t = target.Data!;
-        var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook);
+        var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook, replace);
         var crossErrors = await CrossErrorsAsync(productId, orderId, builder, ct);
         return Result<Plan>.Success(new Plan(ToPreview(productId, orderId, t, workbook, builder, crossErrors), builder));
     }
@@ -189,7 +193,7 @@ public sealed partial class SpecImportService : ISpecImportService
             }
         }
 
-        if (orderId is { } id && builder.Markers is not null && builder.Changes.OrderMarkers > 0)
+        if (orderId is { } id && builder.Markers is not null && builder.Changes.OrderMarkers + builder.RemovedMarkers > 0)
         {
             var format = await _markerValidator.ValidateAsync(builder.Markers, ct);
             errors.AddRange(format.Errors.Select(e => e.ErrorMessage).Distinct());
@@ -207,9 +211,9 @@ public sealed partial class SpecImportService : ISpecImportService
     {
         var actions = builder.AllActions.ToList();
         var errors = actions.Count(a => a == SpecImportBuilder.ActionError);
-        var changes = actions.Count(a => a is SpecImportBuilder.ActionNew or SpecImportBuilder.ActionUpdate);
+        var changes = actions.Count(a => a is SpecImportBuilder.ActionNew or SpecImportBuilder.ActionUpdate) + builder.RemovedTotal;
         var notes = builder.Notes.ToList();
-        if (builder.SpecChanged && builder.Markers is not null && builder.Changes.OrderMarkers > 0)
+        if (builder.SpecChanged && builder.Markers is not null && builder.Changes.OrderMarkers + builder.RemovedMarkers > 0)
             notes.Add(Messages.SpecImportMarkerCheckLater);
         if (changes == 0) notes.Add(Messages.SpecImportNoChange);
 
@@ -217,6 +221,6 @@ public sealed partial class SpecImportService : ISpecImportService
             builder.Components, builder.Norms, builder.MarkerGroups, builder.OrderMarkers,
             workbook.HasComponents, workbook.HasNorms, workbook.HasMarkerGroups, workbook.HasOrderMarkers && target.OrderProduct is not null,
             actions.Count - errors, errors - builder.DuplicateCount, builder.DuplicateCount, changes,
-            crossErrors, notes, changes > 0 && crossErrors.Count == 0);
+            crossErrors, notes, changes > 0 && crossErrors.Count == 0, builder.RemovedTotal, builder.RemovedNames);
     }
 }

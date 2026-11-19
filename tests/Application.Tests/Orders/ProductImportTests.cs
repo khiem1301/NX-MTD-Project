@@ -10,28 +10,18 @@ using NX_MTD.Infrastructure.Excel;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-120: tạo mã hàng hàng loạt từ Excel; mã đã có thì bỏ qua.</summary>
+/// <summary>Kiểm các dòng Mã hàng của file Excel nhiều sheet (popup kiểm tra form mã hàng): mã đã có thì bỏ qua.</summary>
 [Collection(ExcelTestCollection.Name)]
 public class ProductImportTests : ProductionTestBase
 {
     private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active }];
-    private readonly List<Product> _added = [];
 
     public ProductImportTests()
     {
         SetupQueryable(_products);
-        Repo<Product>().When(r => r.AddRangeAsync(Arg.Any<IEnumerable<Product>>())).Do(c =>
-        {
-            var id = 100;
-            foreach (var p in c.Arg<IEnumerable<Product>>())
-            {
-                p.ProductId = id++;
-                _added.Add(p);
-            }
-        });
     }
 
-    private ProductImportService Sut() => new(Uow, Audit, Clock, new ClosedXmlProductParser());
+    private ProductImportService Sut() => new(Uow);
 
     private static MemoryStream Book(params string?[][] rows)
     {
@@ -58,7 +48,8 @@ public class ProductImportTests : ProductionTestBase
             ["MA HANG", "Có dấu cách", null], // mã sai ký tự
             ["SM03", null, null]);            // thiếu tên
 
-        var data = (await Sut().PreviewAsync(stream, default)).Data!;
+        var rows = new ClosedXmlProductParser().Parse(stream);
+        var data = (await Sut().PreviewAsync(rows, default)).Data!;
 
         data.Rows.Select(r => r.Action).Should().Equal("Exists", "New", "Error", "Error", "Error");
         data.Rows[2].Error.Should().Contain("dòng 5");
@@ -66,33 +57,5 @@ public class ProductImportTests : ProductionTestBase
         data.ExistsCount.Should().Be(1);
         data.DuplicateCount.Should().Be(1);
         data.ErrorCount.Should().Be(2);
-    }
-
-    [Fact]
-    public async Task Import_CreatesOnlyNewProductsWithAuditInTransaction()
-    {
-        using var stream = Book(["AO01", "Áo", null], ["QU02", "Quần âu", "Vải kaki"], ["SM03", "Sơ mi", null]);
-
-        var result = await Sut().ImportAsync(stream, default);
-
-        result.IsSuccess.Should().BeTrue(result.Message);
-        result.Data!.Created.Should().Be(2);
-        result.Data.Skipped.Should().Be(1);
-        _added.Select(p => p.ProductCode).Should().Equal("QU02", "SM03");
-        _added.Should().OnlyContain(p => p.Status == RecordStatus.Active && p.CreatedAt == Now);
-        Audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Insert));
-        await Uow.Received(1).BeginTransactionAsync();
-        await Uow.Received(1).CommitTransactionAsync();
-    }
-
-    [Fact]
-    public async Task Import_NoNewProducts_Fails()
-    {
-        using var stream = Book(["AO01", "Áo", null]);
-
-        var result = await Sut().ImportAsync(stream, default);
-
-        result.ErrorCode.Should().Be(ErrorCodes.ProductImportInvalid);
-        result.Message.Should().Be(Messages.ProductImportNothing);
     }
 }

@@ -1,9 +1,10 @@
 import { Alert, Modal, Select, Space, Spin, Typography, Upload } from 'antd';
-import { DownloadOutlined, InboxOutlined } from '@ant-design/icons';
+import { InboxOutlined } from '@ant-design/icons';
+import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
+import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { fill, formatDate } from '@/utils/format';
-import { SPEC_IMPORT_TEMPLATE_URL } from '../constants';
 import { useProductOrders } from '../hooks/useSpecImport';
 import { useSpecImportModal, type SpecImportSource } from '../hooks/useSpecImportModal';
 import { SpecImportPreviewTabs } from './SpecImportPreviewTabs';
@@ -97,10 +98,15 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
               />
             </Space>
           )}
-          <Typography.Link href={SPEC_IMPORT_TEMPLATE_URL} download>
-            <DownloadOutlined /> {text.template}
-          </Typography.Link>
+          <ImportTemplateLink kind="spec" productId={m.productId} orderId={m.orderId} />
         </Space>
+
+        <ReplaceImportOption
+          checked={m.replace}
+          onChange={m.setReplace}
+          disabled={m.preview.isPending || m.doImport.isPending}
+          removed={m.data?.removedNames}
+        />
 
         <Upload.Dragger
           maxCount={1}

@@ -9,8 +9,8 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-120: tạo nhiều mã hàng một lần từ Excel (Mã hàng, Tên mã hàng, Mô tả). Mã đã có thì bỏ qua (không sửa); mỗi dòng kiểm như
-/// form thêm mã hàng (SaveProductDtoValidator). Các mã mới được tạo trong một giao dịch, mỗi mã một dòng nhật ký như tạo tay.
+/// Kiểm các dòng Mã hàng của file Excel nhiều sheet trên popup kiểm tra của form mã hàng (DEV-ALL-122): mã đã có thì bỏ qua, mỗi dòng
+/// kiểm như form thêm mã hàng (SaveProductDtoValidator). Không ghi gì; mã hàng được tạo bằng nút Lưu của form.
 /// </summary>
 public sealed class ProductImportService : IProductImportService
 {
@@ -19,51 +19,8 @@ public sealed class ProductImportService : IProductImportService
     public const string ActionError = "Error";
 
     private readonly IUnitOfWork _uow;
-    private readonly IAuditLogService _audit;
-    private readonly IClock _clock;
-    private readonly IExcelProductParser _parser;
 
-    public ProductImportService(IUnitOfWork uow, IAuditLogService audit, IClock clock, IExcelProductParser parser)
-    {
-        _uow = uow; _audit = audit; _clock = clock; _parser = parser;
-    }
-
-    public async Task<Result<ProductImportPreviewDto>> PreviewAsync(Stream stream, CancellationToken ct)
-    {
-        var rows = await PlanAsync(stream, ct);
-        if (!rows.IsSuccess) return Fail.As<ProductImportPreviewDto>(rows);
-        return Result<ProductImportPreviewDto>.Success(Summary(rows.Data!));
-    }
-
-    public async Task<Result<ProductImportResultDto>> ImportAsync(Stream stream, CancellationToken ct)
-    {
-        var rows = await PlanAsync(stream, ct);
-        if (!rows.IsSuccess) return Fail.As<ProductImportResultDto>(rows);
-        var fresh = rows.Data!.Where(r => r.Action == ActionNew).ToList();
-        if (fresh.Count == 0)
-            return Result<ProductImportResultDto>.Failure(ErrorCodes.ProductImportInvalid, Messages.ProductImportNothing, ResultKind.Validation);
-
-        return await _uow.InTransactionAsync(async () =>
-        {
-            var products = fresh.Select(r => new Product
-            {
-                ProductCode = r.ProductCode,
-                ProductName = r.ProductName,
-                Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description,
-                Status = RecordStatus.Active,
-                CreatedAt = _clock.Now,
-            }).ToList();
-            await _uow.Repository<Product>().AddRangeAsync(products);
-            await _uow.SaveChangesAsync();   // cần ProductId để ghi nhật ký (D17)
-            foreach (var p in products)
-                _audit.Add(new AuditEntry(nameof(Product), p.ProductId, AuditActions.Insert, null,
-                    new { p.ProductCode, p.ProductName, p.Description, p.Status }));
-            await _uow.SaveChangesAsync();
-            var skipped = rows.Data!.Count(r => r.Action == ActionExists);
-            return Result<ProductImportResultDto>.Success(new ProductImportResultDto(products.Count, skipped),
-                string.Format(Messages.ProductImportDone, products.Count, skipped));
-        });
-    }
+    public ProductImportService(IUnitOfWork uow) => _uow = uow;
 
     private sealed class Plan : List<ProductImportRowDto>
     {
@@ -80,20 +37,6 @@ public sealed class ProductImportService : IProductImportService
     /// <summary>DEV-ALL-122: xem trước từ dòng đã đọc và sửa trên màn hình (popup kiểm tra Excel), không ghi gì.</summary>
     public async Task<Result<ProductImportPreviewDto>> PreviewAsync(IReadOnlyList<ProductExcelRow> rows, CancellationToken ct) =>
         Result<ProductImportPreviewDto>.Success(Summary(await PlanRowsAsync(rows, ct)));
-
-    private async Task<Result<Plan>> PlanAsync(Stream stream, CancellationToken ct)
-    {
-        IReadOnlyList<ProductExcelRow> excel;
-        try
-        {
-            excel = _parser.Parse(stream);
-        }
-        catch (InvalidDataException ex)
-        {
-            return Result<Plan>.Failure(ErrorCodes.ProductImportInvalid, ex.Message, ResultKind.Validation);
-        }
-        return Result<Plan>.Success(await PlanRowsAsync(excel, ct));
-    }
 
     private async Task<Plan> PlanRowsAsync(IReadOnlyList<ProductExcelRow> excel, CancellationToken ct)
     {

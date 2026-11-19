@@ -87,7 +87,8 @@ export const useSaveCustomerDelivery = (orderId: number) => {
 export const usePreviewOrderMaterialImport = (orderId: number) => {
   const role = useRolePath();
   return useApiMutation(
-    (file: File) => warehouseApi.previewOrderMaterialImport(role, orderId, file),
+    ({ file, replace }: { file: File; replace?: boolean }) =>
+      warehouseApi.previewOrderMaterialImport(role, orderId, file, replace),
     { invalidate: [] },
   );
 };
@@ -95,7 +96,9 @@ export const usePreviewOrderMaterialImport = (orderId: number) => {
 /** Nhập NVL của đơn từ Excel; thông báo kết quả lấy từ máy chủ nên không đặt successMessage. */
 export const useImportOrderMaterials = (orderId: number) => {
   const role = useRolePath();
-  return useApiMutation((file: File) => warehouseApi.importOrderMaterials(role, orderId, file), {
-    invalidate: [WAREHOUSE_KEY],
-  });
+  return useApiMutation(
+    ({ file, replace }: { file: File; replace?: boolean }) =>
+      warehouseApi.importOrderMaterials(role, orderId, file, replace),
+    { invalidate: [WAREHOUSE_KEY] },
+  );
 };

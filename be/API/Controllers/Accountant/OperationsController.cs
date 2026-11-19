@@ -20,21 +20,21 @@ public sealed class OperationsController : AccountantBaseController
     [HttpPost("import/preview")]
     public async Task<IActionResult> PreviewImport(
         IFormFile file, [FromQuery] int productId, [FromQuery] string? sheetName, [FromQuery] DateOnly? effectiveDate,
-        CancellationToken ct)
+        CancellationToken ct, [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
-        return this.ToResponse(await _operations.PreviewImportAsync(productId, stream, sheetName, effectiveDate, ct));
+        return this.ToResponse(await _operations.PreviewImportAsync(productId, stream, sheetName, effectiveDate, ct, replace));
     }
 
     /// <summary>Nhập công đoạn từ file Excel quy trình công nghệ. <c>finalStt</c> (không bắt buộc) đánh dấu công đoạn cuối; có <c>effectiveDate</c> thì đọc luôn cột TIỀN thành đơn giá Nháp (hoặc Chờ duyệt nếu <c>submitRates</c>).</summary>
     [HttpPost("import")]
     public async Task<IActionResult> Import(
         IFormFile file, [FromQuery] int productId, [FromQuery] string? sheetName, [FromQuery] int? finalStt,
-        [FromQuery] DateOnly? effectiveDate, [FromQuery] bool submitRates, CancellationToken ct)
+        [FromQuery] DateOnly? effectiveDate, [FromQuery] bool submitRates, CancellationToken ct, [FromQuery] bool replace = false)
     {
         await using var stream = file.OpenReadStream();
         return this.ToResponse(
-            await _operations.ImportAsync(productId, stream, sheetName, finalStt, effectiveDate, submitRates, ct));
+            await _operations.ImportAsync(productId, stream, sheetName, finalStt, effectiveDate, submitRates, ct, replace));
     }
 
     [HttpPost]

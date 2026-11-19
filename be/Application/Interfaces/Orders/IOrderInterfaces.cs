@@ -119,11 +119,12 @@ public interface ISpecImportService
 {
     /// <summary>Xem trước: kiểm từng dòng, gộp với dữ liệu đang có và chạy mọi kiểm tra của nút Lưu. Không ghi gì.</summary>
     /// <param name="parts">DEV-ALL-121: chỉ lấy các bảng này trong file (components, norms, groups, markers — xem SpecImportParts); null = mọi bảng.</param>
+    /// <param name="replace">Thay thế: bảng có trong file thì dòng cũ không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng).</param>
     Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null);
+        IReadOnlyCollection<string>? parts = null, bool replace = false);
     /// <summary>Nhập: lập lại bản gộp từ file rồi lưu định mức và bìa của đơn trong một giao dịch.</summary>
     Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null);
+        IReadOnlyCollection<string>? parts = null, bool replace = false);
     /// <summary>DEV-ALL-122: xem trước / nhập từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
     Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
         IReadOnlyCollection<string>? parts = null);

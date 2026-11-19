@@ -73,6 +73,8 @@ export const API = {
     discontinue: (id: number) => v1(`admin/customers/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/customers/${id}/reactivate`),
   },
+  /** File mẫu nhập Excel theo từng chức năng (dữ liệu thật nếu có, ví dụ nếu chưa có). */
+  importTemplate: (kind: string) => v1(`common/import-templates/${kind}`),
   /** Mã hàng: Admin đầy đủ; Kế toán chỉ xem danh sách và sửa định mức (scope = 'accountant'). */
   products: {
     base: (scope: ProductScope = 'admin') => v1(`${scope}/products`),
@@ -84,8 +86,6 @@ export const API = {
     /** DEV-ALL-115: nhập Excel định mức (Admin), ?orderId= để nhập kèm bìa của đơn. */
     importPreview: (id: number) => v1(`admin/products/${id}/import/preview`),
     /** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel. */
-    productsImportPreview: v1('admin/products/import-products/preview'),
-    productsImport: v1('admin/products/import-products'),
     import: (id: number) => v1(`admin/products/${id}/import`),
     /** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa, xem trước / nhập từ JSON. */
     excelParse: v1('admin/products/excel/parse'),

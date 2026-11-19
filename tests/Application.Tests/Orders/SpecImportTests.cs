@@ -143,48 +143,6 @@ public class SpecImportTests : ProductionTestBase
         marker.Ratios.Select(r => $"{r.SizeCode}:{r.PiecesPerPly}").Should().Equal("S:1", "XL:4");
     }
 
-    /// <summary>File mẫu tải từ app (fe/public/templates) phải đọc được đủ 4 bảng định mức và bảng công đoạn.</summary>
-    [Fact]
-    public void Template_InRepo_ParsesAllTables()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "fe", "public", "templates", "Mau_Nhap_Dinh_Muc.xlsx")))
-            dir = dir.Parent;
-        dir.Should().NotBeNull("file mẫu phải nằm ở fe/public/templates");
-        var path = Path.Combine(dir!.FullName, "fe", "public", "templates", "Mau_Nhap_Dinh_Muc.xlsx");
-
-        using (var stream = File.OpenRead(path))
-        {
-            var book = new ClosedXmlSpecWorkbookParser().Parse(stream);
-            book.Components.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-            book.Norms.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-            book.MarkerGroups.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-            book.OrderMarkers.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-        }
-        using (var stream = File.OpenRead(path))
-        {
-            var sheet = new ClosedXmlOperationParser().Parse(stream).Single();
-            sheet.HasGroupColumn.Should().BeTrue();
-            sheet.Rows.Should().OnlyContain(r => r.ParseError == null).And.ContainSingle(r => r.IsFinal);
-        }
-        using (var stream = File.OpenRead(path))
-        {
-            var order = new ClosedXmlOrderLinesParser().Parse(stream);   // DEV-ALL-118: sheet Đơn hàng
-            order.SizeColumns.Should().Equal("S", "M", "L", "XL");
-            order.Rows.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-        }
-        using (var stream = File.OpenRead(path))
-        {
-            var materials = new ClosedXmlOrderMaterialParser().Parse(stream);   // DEV-ALL-119: sheet NVL của đơn
-            materials.Should().HaveCount(3).And.OnlyContain(r => r.ParseError == null);
-        }
-        using (var stream = File.OpenRead(path))
-        {
-            var products = new ClosedXmlProductParser().Parse(stream);   // DEV-ALL-120: sheet Mã hàng
-            products.Select(p => p.ProductCode).Should().Equal("AO-POLO01", "QUAN-KAKI02");
-        }
-    }
-
     [Fact]
     public void Parser_NoKnownTable_Throws()
     {
@@ -484,5 +442,75 @@ public class SpecImportTests : ProductionTestBase
 
         result.IsSuccess.Should().BeFalse();
         result.Message.Should().Contain("abc");
+    }
+
+    // ========== Chế độ thay thế (bỏ dòng cũ không có trong file) ==========
+
+    [Fact]
+    public async Task Import_Replace_DropsComponentsAndNormPairsNotInFile_KeepsTablesAbsentFromFile()
+    {
+        SaveProductSpecDto? written = null;
+        _specs.WriteAsync(ProductId, Arg.Do<SaveProductSpecDto>(d => written = d), Arg.Any<CancellationToken>())
+            .Returns(Result<int>.Success(ProductId));
+        using var stream = Book(wb =>
+        {
+            Table(wb, "TP", ComponentHeaders, ["Tay áo", "PANEL", 2]);
+            Table(wb, "ĐM", NormHeaders, ["Đen", "Tay áo", "VAI02", null]);
+        });
+
+        var result = await Sut().ImportAsync(ProductId, null, stream, default, replace: true);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        // Thân trước, Nhãn không có trong file -> bị bỏ; cặp Xanh|Tay áo không có trong file -> bỏ; Đen|Tay áo thay theo file
+        result.Data!.Removed.Should().Be(3);
+        written!.Components.Select(c => c.ComponentName).Should().Equal("Tay áo");
+        written.Norms.Select(n => $"{n.Color}|{n.ComponentName}|{n.MaterialId}").Should().Equal("Đen|Tay áo|101");
+        // bảng Nhóm bìa không có trong file nên không bị đụng: nhóm 2 (Tay áo) còn, nhóm 1 mất theo chi tiết Thân trước
+        written.MarkerComponents.Select(m => $"{m.MarkerNo}:{m.ComponentName}").Should().Equal("2:Tay áo");
+        result.Message.Should().Contain("Đã bỏ 3 dòng cũ");
+    }
+
+    [Fact]
+    public async Task Import_WithoutReplace_NeverDropsAnything()
+    {
+        SaveProductSpecDto? written = null;
+        _specs.WriteAsync(ProductId, Arg.Do<SaveProductSpecDto>(d => written = d), Arg.Any<CancellationToken>())
+            .Returns(Result<int>.Success(ProductId));
+        using var stream = Book(wb => Table(wb, "TP", ComponentHeaders, ["Tay áo", "PANEL", 1]));
+
+        var result = await Sut().ImportAsync(ProductId, null, stream, default);
+
+        result.Data!.Removed.Should().Be(0);
+        written!.Components.Select(c => c.ComponentName).Should().BeEquivalentTo("Thân trước", "Tay áo", "Nhãn");
+    }
+
+    [Fact]
+    public async Task Preview_Replace_ListsRemovedRows_AndFileWithOnlyErrorRowsKeepsOldData()
+    {
+        using var ok = Book(wb => Table(wb, "TP", ComponentHeaders, ["Tay áo", "PANEL", 2]));
+        var preview = (await Sut().PreviewAsync(ProductId, null, ok, default, replace: true)).Data!;
+        preview.RemovedCount.Should().Be(2);
+        preview.RemovedNames.Should().BeEquivalentTo("Thành phần: Thân trước", "Thành phần: Nhãn");
+        preview.CanImport.Should().BeTrue();
+
+        // dòng lỗi (loại sai) của Tay áo: vẫn tính là có trong file nên Tay áo không bị bỏ; Thân trước, Nhãn vẫn bị bỏ
+        using var bad = Book(wb => Table(wb, "TP", ComponentHeaders, ["Tay áo", "XYZ", 2], ["Thân trước", "PANEL", 2]));
+        var second = (await Sut().PreviewAsync(ProductId, null, bad, default, replace: true)).Data!;
+        second.RemovedNames.Should().BeEquivalentTo("Thành phần: Nhãn");
+    }
+
+    [Fact]
+    public async Task Import_Replace_DropsOrderMarkersNotInFile()
+    {
+        SaveOrderMarkersDto? written = null;
+        _markers.WriteAsync(OrderId, ProductId, Arg.Do<SaveOrderMarkersDto>(d => written = d), Arg.Any<CancellationToken>())
+            .Returns(Result<int>.Success(OrderId));
+        using var stream = Book(wb => Table(wb, "Bìa", MarkerHeaders, ["AO01", 1, "1B", 2.0, 1.5, null, 1, 1, null]));
+
+        var result = await Sut().ImportAsync(ProductId, OrderId, stream, default, replace: true);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        result.Data!.Removed.Should().Be(1);                                  // bìa 1A cũ không có trong file
+        written!.Markers.Select(m => m.MarkerCode).Should().Equal("1B");
     }
 }

@@ -149,6 +149,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             {/* DEV-ALL-118: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
             {!locked && (
               <OrderImportButton
+                orderId={orderId}
                 blocks={blocks}
                 onQueueImports={queueImports}
                 onApply={(next, newLabels) => {

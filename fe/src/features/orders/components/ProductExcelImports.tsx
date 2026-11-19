@@ -1,8 +1,8 @@
 import { Button, Card, Col, Flex, Row, Space, Tag, Tooltip, Typography, theme } from 'antd';
-import { DownloadOutlined, EditOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { EditOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
-import { SPEC_IMPORT_TEMPLATE_URL } from '../constants';
+import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { useProductExcelImports } from '../hooks/useProductExcelImports';
 import type { ProductExcelRow } from '../types';
 import {
@@ -14,7 +14,6 @@ import {
 import { ExcelKindSlot } from './ExcelKindSlot';
 import { ExcelReviewModal } from './ExcelReviewModal';
 import { ExcelUploadButton } from './ExcelUploadButton';
-import { ProductOrderSelect } from './ProductOrderSelect';
 
 const text = MESSAGES.orders.productExcel;
 const SPEC_KINDS: readonly ProductImportKind[] = ['components', 'norms', 'groups'];
@@ -89,27 +88,13 @@ export function ProductExcelImports({
     </Row>
   );
 
+  /** Chỉ form đơn hàng (deferred) có Bìa cắt, NVL của đơn: nhập vào chính đơn đó sau khi Lưu đơn. Form mã hàng không có phần theo đơn. */
   const orderGroup = deferred ? (
     <>
       <GroupTitle title={text.orderGroup} note={text.orderGroupDeferred} />
       {slots(ORDER_KINDS, ORDER_SPAN)}
     </>
-  ) : productId === undefined ? (
-    <GroupTitle title={text.orderGroup} note={text.orderGroupLater} />
-  ) : (
-    <>
-      <Flex justify="space-between" align="center" wrap gap={8}>
-        <GroupTitle title={text.orderGroup} note={text.orderGroupNote} />
-        <ProductOrderSelect
-          productId={productId}
-          value={value.orderId}
-          disabled={disabled}
-          onChange={(orderId) => onChange({ ...value, orderId })}
-        />
-      </Flex>
-      {slots(ORDER_KINDS, ORDER_SPAN)}
-    </>
-  );
+  ) : null;
 
   return (
     <>
@@ -149,9 +134,12 @@ export function ProductExcelImports({
                 </ExcelUploadButton>
               </span>
             </Tooltip>
-            <Typography.Link href={SPEC_IMPORT_TEMPLATE_URL} download>
-              <DownloadOutlined /> {text.template}
-            </Typography.Link>
+            <ImportTemplateLink
+              kind="product-form"
+              productId={productId}
+              orderId={value.orderId}
+              withOrder={deferred}
+            />
           </Space>
         }
       >
@@ -170,9 +158,11 @@ export function ProductExcelImports({
           />
           {slots(SPEC_KINDS, SPEC_SPAN)}
         </Flex>
-        <Flex vertical gap={8} style={{ marginTop: token.margin }}>
-          {orderGroup}
-        </Flex>
+        {orderGroup && (
+          <Flex vertical gap={8} style={{ marginTop: token.margin }}>
+            {orderGroup}
+          </Flex>
+        )}
       </Card>
       {imports.reviewing && (
         <ExcelReviewModal

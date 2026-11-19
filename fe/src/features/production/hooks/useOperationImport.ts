@@ -16,6 +16,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
   const [withRates, setWithRates] = useState(true);
   const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
   const [submitRates, setSubmitRates] = useState(true);
+  const [replace, setReplaceState] = useState(false);
   const preview = usePreviewOperationImport();
   const importOps = useImportOperations();
   const data = preview.data;
@@ -23,7 +24,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
 
   const runPreview = (
     nextFile: File,
-    options: { sheetName?: string; withRates?: boolean; date?: Dayjs } = {},
+    options: { sheetName?: string; withRates?: boolean; date?: Dayjs; replace?: boolean } = {},
   ) => {
     setFinalStt(undefined);
     const useRates = options.withRates ?? withRates;
@@ -36,6 +37,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
         productId,
         sheetName,
         effectiveDate: useRates ? toApiDate(date) : undefined,
+        replace: (options.replace ?? replace) || undefined,
       },
       {
         // DEV-ALL-116: chọn sẵn công đoạn cuối theo cột CUỐI (khi mã hàng chưa có công đoạn cuối).
@@ -47,11 +49,20 @@ export function useOperationImport(productId: number, onClose: () => void) {
     );
   };
 
+  const setReplace = (next: boolean) => {
+    setReplaceState(next);
+    if (file) runPreview(file, { replace: next });
+  };
+
   const handleConfirm = () => {
     if (!file || !data) return;
+    const removed = replace ? (data.removeCount ?? 0) : 0;
     confirmDialog({
       title: text.confirmTitle,
-      content: text.confirmContent,
+      content:
+        removed > 0
+          ? `${text.confirmContent} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}`
+          : text.confirmContent,
       okText: MESSAGES.common.confirm,
       cancelText: MESSAGES.common.cancel,
       onOk: () =>
@@ -64,6 +75,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
               finalStt,
               effectiveDate: ratesOn ? toApiDate(effectiveDate) : undefined,
               submitRates: ratesOn ? submitRates : undefined,
+              replace: replace || undefined,
             },
           })
           .then((result) => {
@@ -83,7 +95,9 @@ export function useOperationImport(productId: number, onClose: () => void) {
                 result.updated,
                 result.unchanged,
                 result.skipped,
-              ) + rates,
+              ) +
+                rates +
+                (result.removed > 0 ? ` Đã ngừng dùng ${result.removed} công đoạn không có trong file.` : ''),
             );
             onClose();
           }),
@@ -94,6 +108,7 @@ export function useOperationImport(productId: number, onClose: () => void) {
   const importable =
     (data?.newCount ?? 0) +
     (data?.updateCount ?? 0) +
+    (replace ? (data?.removeCount ?? 0) : 0) +
     rateChanges +
     (finalStt !== undefined ? 1 : 0);
   const finalOptions = (data?.rows ?? [])
@@ -111,6 +126,8 @@ export function useOperationImport(productId: number, onClose: () => void) {
     setEffectiveDate,
     submitRates,
     setSubmitRates,
+    replace,
+    setReplace,
     preview,
     importOps,
     data,

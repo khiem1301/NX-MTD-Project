@@ -90,6 +90,10 @@ export type OperationImportPreview = {
   hasComponentColumn: boolean;
   /** STT của dòng đánh x ở cột CUỐI: màn hình chọn sẵn làm công đoạn cuối. */
   finalSttInFile: number | null;
+  /** Chế độ thay thế: công đoạn sẽ ngừng dùng vì không có trong file; và công đoạn đang có việc mở nên giữ nguyên. */
+  removeCount: number;
+  removed: string[] | null;
+  blocked: string[] | null;
 };
 
 export type OperationImportResult = {
@@ -101,6 +105,7 @@ export type OperationImportResult = {
   rateUpdated: number;
   rateUnchanged: number;
   rateSkipped: number;
+  removed: number;
 };
 
 export type OperationImportParams = {
@@ -111,6 +116,8 @@ export type OperationImportParams = {
   effectiveDate?: string;
   /** Gửi Admin duyệt luôn (Chờ duyệt) thay vì để Nháp. */
   submitRates?: boolean;
+  /** Thay thế: công đoạn may đang dùng không có trong file bị ngừng dùng. */
+  replace?: boolean;
 };
 
 /** API công đoạn theo vai trò: Admin không đặt được đơn giá (DEV-ALL-50). */

@@ -34,6 +34,8 @@ const preview = (over: object) => ({
   crossErrors: [],
   notes: [],
   canImport: true,
+  removedCount: 0,
+  removedNames: null,
   ...over,
 });
 

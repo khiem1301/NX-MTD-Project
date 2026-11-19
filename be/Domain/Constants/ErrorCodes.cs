@@ -64,7 +64,6 @@ public static class ErrorCodes
     /// <summary>DEV-ALL-118: file Excel dòng hàng của đơn sai mẫu.</summary>
     public const string OrderImportInvalid = "ORDER_IMPORT_INVALID";
     /// <summary>DEV-ALL-120: file Excel mã hàng sai mẫu hoặc không có mã mới.</summary>
-    public const string ProductImportInvalid = "PRODUCT_IMPORT_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
     public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";
