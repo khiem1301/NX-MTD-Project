@@ -69,24 +69,29 @@ export const groupImportColumns: ColumnsType<SpecImportMarkerGroupRow> = [
   resultColumn,
 ];
 
-export const markerImportColumns: ColumnsType<SpecImportOrderMarkerRow> = [
+/** Bìa của đơn: mỗi size của đơn một cột (không hiện size khác trong file), rồi trạng thái bìa và kết quả như các bảng khác. */
+export const markerImportColumns = (
+  sizes: readonly string[],
+): ColumnsType<SpecImportOrderMarkerRow> => [
   rowColumn,
   { title: col.markerNo, dataIndex: 'markerNo', width: 70, render: num },
   { title: col.markerCode, dataIndex: 'markerCode', width: 90 },
   { title: col.lengthM, dataIndex: 'lengthM', width: 90, align: 'right', render: num },
   { title: col.widthM, dataIndex: 'widthM', width: 90, align: 'right', render: num },
+  ...sizes.map((size) => ({
+    title: size,
+    key: `size-${size}`,
+    width: 64,
+    align: 'right' as const,
+    render: (_: unknown, r: SpecImportOrderMarkerRow) =>
+      r.ratios.find((x) => x.sizeCode === size)?.piecesPerPly ?? EMPTY,
+  })),
   {
     title: col.status,
     dataIndex: 'status',
     width: 110,
     render: (v: string) =>
       v === 'Discontinued' ? MESSAGES.orders.markers.discontinued : MESSAGES.orders.markers.active,
-  },
-  {
-    title: col.ratios,
-    dataIndex: 'ratios',
-    render: (ratios: SpecImportOrderMarkerRow['ratios']) =>
-      list(ratios.map((r) => `${r.sizeCode}: ${r.piecesPerPly}`)),
   },
   resultColumn,
 ];

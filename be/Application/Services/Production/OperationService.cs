@@ -156,6 +156,32 @@ public sealed class OperationService : IOperationService
         return Result.Success(Messages.Saved);
     }
 
+    /// <summary>
+    /// Chế độ thay thế: xóa công đoạn chưa từng được dùng cùng đơn giá và liên kết chi tiết của nó (công đoạn đã dùng đã bị loại khỏi
+    /// danh sách xóa lúc lập kế hoạch nên không bao giờ bị sửa).
+    /// </summary>
+    private async Task RemoveUnusedOperationsAsync(IReadOnlyList<Operation> removals, CancellationToken ct)
+    {
+        if (removals.Count == 0) return;
+        var ids = removals.Select(o => o.OperationId).ToList();
+        _uow.Repository<PieceRate>().RemoveRange(await _uow.Repository<PieceRate>().Query().Where(r => ids.Contains(r.OperationId)).ToListAsync(ct));
+        _uow.Repository<OperationComponent>().RemoveRange(
+            await _uow.Repository<OperationComponent>().Query().Where(l => ids.Contains(l.OperationId)).ToListAsync(ct));
+        foreach (var operation in removals)
+        {
+            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Delete, Snapshot(operation), null,
+                Messages.OperationImportRemoveReason));
+            _uow.Repository<Operation>().Remove(operation);
+        }
+    }
+
+    /// <summary>Công đoạn đã có phiếu giao việc, phân công, sản lượng hoặc phiếu hàng hỏng (kể cả đã xong): không xóa, không sửa khi thay thế.</summary>
+    private async Task<bool> IsUsedAsync(int operationId, CancellationToken ct) =>
+        await _uow.Repository<WorkAllocation>().Query().AnyAsync(x => x.OperationId == operationId, ct)
+        || await _uow.Repository<OperationAssignment>().Query().AnyAsync(x => x.OperationId == operationId, ct)
+        || await _uow.Repository<OutputRecord>().Query().AnyAsync(x => x.OperationId == operationId, ct)
+        || await _uow.Repository<DefectRecord>().Query().AnyAsync(x => x.OperationId == operationId, ct);
+
     private Task<bool> HasOpenWorkAsync(int operationId, CancellationToken ct)
     {
         var openLines = _uow.Repository<OrderLine>().Query().Where(l => !OrderStatuses.Closed.Contains(l.Order.Status)).Select(l => l.OrderLineId);
@@ -201,8 +227,8 @@ public sealed class OperationService : IOperationService
         OperationImportRowDto Preview, OperationExcelRowDto Raw, Operation? Existing, PieceRate? ExistingRate,
         IReadOnlyList<int>? ComponentIds = null);
 
-    /// <param name="Removals">Chế độ thay thế: công đoạn may đang dùng không có trong file và ngừng dùng được.</param>
-    /// <param name="Blocked">Công đoạn không có trong file nhưng đang có việc mở nên giữ nguyên.</param>
+    /// <param name="Removals">Chế độ thay thế: công đoạn may không có trong file và chưa từng dùng nên xóa được.</param>
+    /// <param name="Blocked">Công đoạn không có trong file nhưng đã được dùng nên giữ nguyên.</param>
     private sealed record ImportPlan(
         OperationExcelSheetDto Sheet, IReadOnlyList<string> SheetNames, bool ProductHasFinalStep, IReadOnlyList<PlannedRow> Rows,
         ImportRefs? Refs, IReadOnlyList<Operation> Removals, IReadOnlyList<string> Blocked);
@@ -369,13 +395,7 @@ public sealed class OperationService : IOperationService
         foreach (var (operation, before) in updated)
             _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update, before, Snapshot(operation)));
 
-        // Chế độ thay thế: công đoạn không có trong file chuyển sang ngừng dùng (không xóa vì đã có đơn giá, sản lượng)
-        foreach (var operation in plan.Removals)
-        {
-            operation.Status = OperationStatuses.Discontinued;
-            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Update,
-                new { Status = OperationStatuses.Active }, new { operation.Status }, "Nhập Excel thay thế: không có trong file"));
-        }
+        await RemoveUnusedOperationsAsync(plan.Removals, ct);
 
         var rateStats = await ApplyImportedRatesAsync(valid, operationByStt, effectiveDate, submitRates);
         await _uow.SaveChangesAsync();
@@ -500,13 +520,14 @@ public sealed class OperationService : IOperationService
         var hasFinal = existingOps.Any(o => o.IsFinalStep && o.Status == OperationStatuses.Active);
         var removals = new List<Operation>();
         var blocked = new List<string>();
-        // Thay thế: công đoạn may đang dùng mà mã (OP + STT) không có trong file thì ngừng dùng; file không có dòng đọc được thì không đụng gì
+        // Thay thế: công đoạn may mà mã (OP + STT) không có trong file thì xóa nếu chưa từng dùng, đã dùng thì giữ nguyên (báo lại);
+        // file không có dòng đọc được thì không đụng gì
         if (replace && rows.Any(r => r.Preview.Action != ActionError))
         {
             var fileCodes = rows.Select(r => r.Preview.OperationCode).Where(c => !string.IsNullOrEmpty(c)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             foreach (var o in existingOps.Where(o => o.Status == OperationStatuses.Active && o.TeamType == TeamTypes.Sewing && !fileCodes.Contains(o.OperationCode)))
             {
-                if (await HasOpenWorkAsync(o.OperationId, ct)) blocked.Add($"{o.OperationCode} {o.OperationName}");
+                if (await IsUsedAsync(o.OperationId, ct)) blocked.Add($"{o.OperationCode} {o.OperationName}");
                 else removals.Add(o);
             }
         }

@@ -200,6 +200,28 @@ public sealed class ImportTemplateService : IImportTemplateService
             [[1, "Thân trước; Thân sau", "Trắng; Xanh nhạt"], [2, "Tay áo", "Trắng; Xanh nhạt"], [3, "Cổ áo", "Trắng; Xanh nhạt"]]);
     }
 
+    private const string StatusActive = "Đang dùng";
+    private const string StatusDiscontinued = "Ngừng dùng";
+    private static readonly string[] StatusOptions = [StatusActive, StatusDiscontinued];
+
+    /// <summary>Số sản phẩm mỗi size trên một lớp của 4 bìa ví dụ; đơn có bao nhiêu size thì lấy bấy nhiêu số (lặp lại khi nhiều size).</summary>
+    private static readonly int?[][] DemoRatios = [[1, 2, 2, 1], [null, 4, 1, null], [1, 2, 2, 1], [2, 4, 4, 2]];
+
+    private static IReadOnlyList<IReadOnlyList<object?>> DemoMarkerRows(int sizeCount) =>
+    [
+        DemoMarkerRow(1, "1A", 3.4, 0, sizeCount), DemoMarkerRow(1, "1B", 2.6, 1, sizeCount),
+        DemoMarkerRow(2, "2A", 1.9, 2, sizeCount), DemoMarkerRow(3, "3A", 0.9, 3, sizeCount),
+    ];
+
+    private static IReadOnlyList<object?> DemoMarkerRow(int group, string code, double length, int pattern, int sizeCount)
+    {
+        var ratios = Enumerable.Range(0, sizeCount).Select(i => (object?)DemoRatios[pattern][i % DemoRatios[pattern].Length]).ToList();
+        if (ratios.Count > 0 && ratios.All(r => r is null)) ratios[0] = 1;   // mỗi bìa phải có ít nhất một size
+        return new object?[] { "AS-0412", group, code, length, 1.5, StatusActive }.Concat(ratios).ToList();
+    }
+
+    private static string StatusText(string status) => status == RecordStatus.Discontinued ? StatusDiscontinued : StatusActive;
+
     private async Task<TemplateTable> MarkersAsync(int? productId, int? orderId, string no, CancellationToken ct)
     {
         var sizes = new List<string>();
@@ -210,23 +232,23 @@ public sealed class ImportTemplateService : IImportTemplateService
                 .Where(m => m.OrderId == oid && m.ProductId == pid).OrderBy(m => m.MarkerNo).ThenBy(m => m.MarkerCode).ToListAsync(ct);
             var orderSizes = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == oid && l.ProductId == pid)
                 .Select(l => l.ProductVariant.SizeCode).Distinct().ToListAsync(ct);
-            sizes = SortSizes(orderSizes.Concat(markers.SelectMany(m => m.ProductMarkerRatios.Select(r => r.SizeCode))).Distinct()).ToList();
-            rows = markers.Select(m => (IReadOnlyList<object?>)new object?[] { m.Product.ProductCode, (int)m.MarkerNo, m.MarkerCode, (double)m.LengthM, (double)m.WidthM, m.Status }
+            sizes = SortSizes(orderSizes).ToList();   // chỉ size của đơn này
+            rows = markers.Select(m => (IReadOnlyList<object?>)new object?[] { m.Product.ProductCode, (int)m.MarkerNo, m.MarkerCode, (double)m.LengthM, (double)m.WidthM, StatusText(m.Status) }
                 .Concat(sizes.Select(s => m.ProductMarkerRatios.FirstOrDefault(r => r.SizeCode == s) is { } r ? (object?)(int)r.PiecesPerPly : null)).ToList()).ToList();
         }
         var cols = new List<TemplateColumn>
         {
-            new("Mã hàng", 'O', 14), new("Nhóm bìa", 'R', 12), new("Mã bìa", 'R', 10), new("Dài (m)", 'R', 10), new("Khổ (m)", 'R', 10), new("Trạng thái", 'O', 14),
+            new("Mã hàng", 'O', 14), new("Nhóm bìa", 'R', 12), new("Mã bìa", 'R', 10), new("Dài (m)", 'R', 10), new("Khổ (m)", 'R', 10), new("Trạng thái", 'O', 14, StatusOptions),
         };
         var demoCols = new List<TemplateColumn>(cols);
         cols.AddRange(sizes.Select(s => new TemplateColumn(s, 'G', 6)));
-        demoCols.AddRange(DemoSizes.Select(s => new TemplateColumn(s, 'G', 6)));
-        var note = "Mã hàng: để trống nếu đơn chỉ có một mã hàng. Nhóm bìa: phải là nhóm đã khai ở mã hàng. Mã bìa: duy nhất trong nhóm của đơn (1A, 1B…). Dài / Khổ: mét, khổ ≤ 3,5. Trạng thái: ACTIVE hoặc DISCONTINUED (để trống = ACTIVE). Các cột size (S, M, L…) = số áo của size đó trên 1 lớp vải; để trống = bìa không cắt size này. Tên cột size phải trùng size có trong đơn.";
+        var demoSizes = sizes.Count > 0 ? sizes : [.. DemoSizes];
+        demoCols.AddRange(demoSizes.Select(s => new TemplateColumn(s, 'G', 6)));
+        var note = "Mã hàng: để trống nếu đơn chỉ có một mã hàng. Nhóm bìa: phải là nhóm đã khai ở mã hàng. Mã bìa: duy nhất trong nhóm của đơn (1A, 1B…). Dài / Khổ: mét, khổ ≤ 3,5. Trạng thái: chọn Đang dùng hoặc Ngừng dùng trong danh sách (để trống = Đang dùng). Các cột size (S, M, L…) = số áo của size đó trên 1 lớp vải; để trống = bìa không cắt size này. Tên cột size phải trùng size có trong đơn.";
         return rows.Count > 0
             ? new TemplateTable("Bìa của đơn", no + "BÌA CỦA ĐƠN HÀNG (loại bìa 2 – khai ở đơn)", note, cols, rows, false)
             : new TemplateTable("Bìa của đơn", no + "BÌA CỦA ĐƠN HÀNG (loại bìa 2 – khai ở đơn)  ·  ví dụ", note, demoCols,
-                [["AS-0412", 1, "1A", 3.4, 1.5, "ACTIVE", 1, 2, 2, 1], ["AS-0412", 1, "1B", 2.6, 1.5, "ACTIVE", null, 4, 1, null],
-                 ["AS-0412", 2, "2A", 1.9, 1.5, "ACTIVE", 1, 2, 2, 1], ["AS-0412", 3, "3A", 0.9, 1.5, "ACTIVE", 2, 4, 4, 2]], true);
+                DemoMarkerRows(demoSizes.Count), true);
     }
 
     private async Task<TemplateTable> OrderLinesTableAsync(int? orderId, string no, CancellationToken ct)

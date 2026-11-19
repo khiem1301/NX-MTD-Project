@@ -15,6 +15,8 @@ public sealed class ClosedXmlImportTemplateWriter : IImportTemplateWriter
     private static readonly XLColor Green = XLColor.FromHtml("#E2EFDA");
     private static readonly XLColor DemoText = XLColor.FromHtml("#8C8C8C");
 
+    private const int MaxValidationRow = 500;
+
     public byte[] Write(ImportTemplateModel model)
     {
         using var wb = new XLWorkbook();
@@ -71,6 +73,12 @@ public sealed class ClosedXmlImportTemplateWriter : IImportTemplateWriter
             cell.Style.Alignment.WrapText = true;
             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             ws.Column(c + 1).Width = col.Width;
+            if (col.Options is { Count: > 0 })
+            {
+                var validation = ws.Range(4, c + 1, MaxValidationRow, c + 1).CreateDataValidation();
+                validation.List($"\"{string.Join(",", col.Options)}\"", true);   // danh sách ghi thẳng phải đặt trong dấu ngoặc kép
+                validation.IgnoreBlanks = true;
+            }
         }
 
         for (var i = 0; i < table.Rows.Count; i++)

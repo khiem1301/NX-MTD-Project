@@ -26,7 +26,7 @@ public class OrderMaterialImportTests
 
     public OrderMaterialImportTests()
     {
-        Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receipts); Setup(_receiptLines); Setup(_purchaseLines);
+        Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receipts); Setup(_receiptLines); Setup(_purchaseLines); Setup(new List<RequestLine>());
         Setup(new List<VwOrderMaterialDelivery>());
         _orders.Add(_order);
         _materials.AddRange([Mat(1, "VAI01"), Mat(2, "CHI01"), Mat(3, "KHOA01"),

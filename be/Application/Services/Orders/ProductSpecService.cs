@@ -449,26 +449,7 @@ public sealed class ProductSpecService : IProductSpecService
 
     private static string Upper(string value) => value.Trim().ToUpperInvariant();
 
-    /// <summary>Dòng định mức đã được dùng ở lệnh cắt, đơn từ, bàn cắt, bàn giao, phiếu cấp hoặc dòng tồn kho BTP.</summary>
-    private async Task<HashSet<int>> UsedNormIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct)
-    {
-        var used = new HashSet<int>();
-        if (ids.Count == 0) return used;
-        var idArray = ids.ToArray();
-        used.UnionWith(await _uow.Repository<WorkOrderLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<RequestLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<CuttingLayLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<CutHandoverLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<MaterialIssueLine>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        used.UnionWith(await _uow.Repository<StockBalance>().Query().Where(l => l.ProductComponentMaterialId != null && idArray.Contains(l.ProductComponentMaterialId.Value))
-            .Select(l => l.ProductComponentMaterialId!.Value).Distinct().ToListAsync(ct));
-        return used;
-    }
+    private Task<HashSet<int>> UsedNormIdsAsync(IReadOnlyCollection<int> ids, CancellationToken ct) => NormUsage.UsedIdsAsync(_uow, ids, ct);
 
     private static bool Same(string a, string b) => string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 

@@ -1,4 +1,4 @@
-import { AutoComplete, Button, Input, InputNumber, Select } from 'antd';
+import { AutoComplete, Button, Checkbox, Input, InputNumber, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { DeleteOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -27,6 +27,7 @@ export type ReviewColumnsCtx<R> = {
 
 const rowCol = { title: col.row, dataIndex: 'rowNumber', width: 64 };
 const RESULT_WIDTH = 240;
+const MARKER_STATUS = { ACTIVE: 'ACTIVE', DISCONTINUED: 'DISCONTINUED' } as const;
 
 const tail = <R extends { rowNumber: number; parseError?: string | null }>(
   ctx: ReviewColumnsCtx<R>,
@@ -315,13 +316,16 @@ export const markerColumns = (
   {
     title: col.markerStatus,
     key: 'status',
-    width: 130,
+    width: 110,
+    align: 'center',
     render: (_, r) => (
-      <Select
-        style={{ width: '100%' }}
-        value={r.status}
-        options={Object.entries(text.markerStatus).map(([value, label]) => ({ value, label }))}
-        onChange={(status: string) => ctx.update(r.rowNumber, { status })}
+      <Checkbox
+        checked={r.status === MARKER_STATUS.DISCONTINUED}
+        onChange={(e) =>
+          ctx.update(r.rowNumber, {
+            status: e.target.checked ? MARKER_STATUS.DISCONTINUED : MARKER_STATUS.ACTIVE,
+          })
+        }
       />
     ),
   },

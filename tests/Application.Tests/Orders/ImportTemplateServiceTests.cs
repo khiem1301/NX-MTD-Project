@@ -154,6 +154,55 @@ public class ImportTemplateServiceTests : ProductionTestBase
         table.Rows[0].Should().Equal("AS-1", "Trắng", 38000d, 100, 20);
     }
 
+    private void OrderWithSizes(params string[] sizes)
+    {
+        _products.Add(new Product { ProductId = 7, ProductCode = "AS-1", ProductName = "Áo" });
+        _orders.Add(new CustomerOrder { OrderId = 3, OrderCode = "DH" });
+        var product = new Product { ProductId = 7, ProductCode = "AS-1" };
+        var white = new ProductColor { ProductColorId = 1, ProductId = 7, Color = "Trắng" };
+        var id = 1;
+        foreach (var size in sizes)
+            _lines.Add(new OrderLine
+            {
+                OrderLineId = id, OrderId = 3, ProductId = 7, OrderedQty = 1,
+                ProductVariant = new ProductVariant { ProductVariantId = id++, ProductId = 7, Product = product, ProductColorId = 1, ProductColor = white, SizeCode = size },
+            });
+    }
+
+    [Fact]
+    public async Task Spec_OrderWithoutMarkers_DemoMarkerColumnsAreOnlyOrderSizes()
+    {
+        OrderWithSizes("XL", "M");
+        ImportTemplateModel? model = null;
+
+        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, true, default);
+
+        result.IsSuccess.Should().BeTrue();
+        var table = model!.Tables.Single(t => t.Sheet == "Bìa của đơn");
+        table.IsDemo.Should().BeTrue();
+        table.Columns.Skip(6).Select(c => c.Name).Should().Equal("M", "XL");
+        table.Rows.Should().OnlyContain(r => r.Count == 8);
+    }
+
+    [Fact]
+    public async Task Spec_OrderWithMarkers_ColumnsAreOnlyOrderSizesEvenIfMarkerHasOtherSize()
+    {
+        OrderWithSizes("S", "M");
+        _markers.Add(new ProductMarker
+        {
+            ProductMarkerId = 1, ProductId = 7, OrderId = 3, MarkerNo = 1, MarkerCode = "1A", LengthM = 2, WidthM = 1.5m, Status = RecordStatus.Active,
+            Product = new Product { ProductCode = "AS-1" },
+            ProductMarkerRatios = [new ProductMarkerRatio { SizeCode = "S", PiecesPerPly = 1 }, new ProductMarkerRatio { SizeCode = "XXL", PiecesPerPly = 3 }],
+        });
+        ImportTemplateModel? model = null;
+
+        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, true, default);
+
+        var table = model!.Tables.Single(t => t.Sheet == "Bìa của đơn");
+        table.IsDemo.Should().BeFalse();
+        table.Columns.Skip(6).Select(c => c.Name).Should().Equal("S", "M");
+    }
+
     [Fact]
     public async Task OrderMaterials_RealRows_CustomerQtyBlankWhenZero()
     {

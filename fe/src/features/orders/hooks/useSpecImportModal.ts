@@ -81,7 +81,10 @@ export function useSpecImportModal(source: SpecImportSource, onClose: () => void
     const removed = replace ? (preview.data?.removedCount ?? 0) : 0;
     confirmDialog({
       title: text.confirmTitle,
-      content: removed > 0 ? `${text.confirmBody} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}` : text.confirmBody,
+      content:
+        removed > 0
+          ? `${text.confirmBody} ${fill(MESSAGES.common.importReplace.confirmExtra, removed)}`
+          : text.confirmBody,
       onOk: () =>
         doImport.mutateAsync({ target, file, replace }).then((result) => {
           void message.success(result.message ?? MESSAGES.common.saved);
@@ -94,7 +97,8 @@ export function useSpecImportModal(source: SpecImportSource, onClose: () => void
     file,
     replace,
     setReplace,
-    orderId,
+    // Màn đơn hàng: đơn cố định theo màn; màn Mã hàng: đơn do người dùng chọn (có thể chưa chọn).
+    orderId: source.scope === 'manager' ? source.orderId : orderId,
     productId,
     preview,
     doImport,

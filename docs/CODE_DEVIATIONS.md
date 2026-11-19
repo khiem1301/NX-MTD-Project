@@ -159,6 +159,7 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-142 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `SpecImportBuilder`, `OperationService`, `OrderMaterialService`, popup kiểm tra Excel | Thay thế khi nhập Excel chỉ xóa dòng chưa được dùng ở bảng khác; dòng đã dùng giữ nguyên, không xóa, không ngừng dùng (sửa DEV-ALL-140); bảng Bìa của đơn ở xem trước / popup kiểm tra chỉ hiện cột size của đơn, mỗi size một cột | Mở |
 | DEV-ALL-141 | 19/11/2026 | Claude (AI) | UC10, form Sửa mã hàng, `ProductExcelImports` | Form Sửa mã hàng bỏ ô chọn đơn và hai ô Bìa cắt, NVL của đơn: chỉ còn Thành phần, Định mức NVL, Nhóm bìa; Bìa cắt và NVL của đơn nhập ở chi tiết đơn (hoặc form đơn hàng) | Mở |
 | DEV-ALL-140 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `SpecImportBuilder`, `OrderMaterialService`, `OperationService` | Hộp thoại nhập Excel có ô "Thay thế dữ liệu cũ" (mặc định tắt) cho 6 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn, Công đoạn: dòng cũ không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng), bảng không có trong file không bị đụng tới | Mở |
 | DEV-ALL-139 | 19/11/2026 | Claude (AI) | UC10, `ProductImportService`, màn Mã hàng | Bỏ chức năng tạo nhiều mã hàng từ Excel ở màn Mã hàng (nút Nhập từ Excel, hộp thoại, API `import-products`, file mẫu `Mau_Ma_Hang.xlsx`). Sheet Mã hàng của file chung ở form mã hàng vẫn dùng để điền Mã hàng, Tên, Mô tả của form | Mở |
@@ -2874,4 +2875,15 @@
 - **Lý do:** người dùng yêu cầu bỏ ô chọn đơn ở form Sửa mã hàng.
 - **Ảnh hưởng người khác:** Khiêm (mã hàng, đơn hàng).
 - **Cần sửa trong tài liệu:** DEV-ALL-121 (phần form Sửa mã hàng).
+- **Trạng thái:** Mở
+
+### DEV-ALL-142 · Thay thế khi nhập Excel không đụng dữ liệu đã dùng; bảng Bìa của đơn chỉ hiện size của đơn
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, UC25, UC37–UC39; BE `SpecImportBuilder` (`SpecImportUsage`), `SpecImportService`, `NormUsage` (mới, tách từ `ProductSpecService`), `OperationService`, `OrderMaterialService.Import`, `SpecImportPreviewDto.OrderSizes`; FE `ReplaceImportOption`, `specImportColumns`, `ExcelReviewTabs`
+- **Tài liệu gốc ghi:** DEV-ALL-140: chế độ thay thế bỏ dòng cũ không có trong file; dòng đang dùng thì chuyển sang ngừng dùng (thành phần, định mức, công đoạn). Bảng Bìa của đơn ở xem trước hiện cột "Tỉ lệ size" gộp; popup kiểm tra hiện mọi cột size có trong file.
+- **Code đang làm:** chế độ thay thế chỉ XÓA dòng chưa được dùng ở bảng khác; dòng đã dùng giữ nguyên hoàn toàn (không xóa, không ngừng dùng) và được liệt kê ở ghi chú xem trước. "Đã dùng": định mức NVL có trong lệnh cắt, đơn xin NVL, bàn cắt, bàn giao, phiếu cấp, tồn BTP (kéo theo giữ thành phần và cặp màu + chi tiết đó); nhóm bìa đã có bìa của đơn (kéo theo giữ các chi tiết trên nhóm); NVL của đơn có phiếu nhập, đơn mua hoặc dòng đơn xin; công đoạn có phiếu giao việc, phân công, sản lượng hoặc phiếu hàng hỏng (công đoạn chưa dùng bị xóa cùng đơn giá và liên kết chi tiết, không còn "ngừng dùng"). Bìa của đơn không bảng nào tham chiếu nên xóa tự do. Dòng đã dùng trùng khóa với dòng trong file vẫn được cập nhật như chế độ gộp thường (chỉ phần "xóa khi thay thế" được khóa). Bảng Bìa của đơn ở xem trước và popup kiểm tra: mỗi size của đơn một cột (máy chủ trả `orderSizes`), không hiện size khác trong file; cột Trạng thái bìa nằm trước cột Kết quả như các bảng khác. Chưa có đơn (thêm mã hàng mới) thì popup tạm hiện size trong file.
+- **Lý do:** người dùng yêu cầu thay thế chỉ xóa dữ liệu không ảnh hưởng bảng khác, dữ liệu đã dùng không được sửa; bìa của đơn chỉ cần size của đơn đó.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng), Thái (công đoạn), Minh (NVL của đơn).
+- **Cần sửa trong tài liệu:** DEV-ALL-140 (các câu "đang dùng thì ngừng dùng" nay là "đang dùng thì giữ nguyên").
 - **Trạng thái:** Mở

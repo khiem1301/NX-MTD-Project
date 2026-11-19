@@ -21,6 +21,9 @@ public class SpecImportTests : ProductionTestBase
 
     private readonly IProductSpecService _specs = Substitute.For<IProductSpecService>();
     private readonly IOrderMarkerService _markers = Substitute.For<IOrderMarkerService>();
+    /// <summary>Dòng định mức đã được lệnh cắt dùng (khóa = ProductComponentMaterialId); nhóm bìa đã có bìa của đơn.</summary>
+    private readonly List<WorkOrderLine> _workOrderLines = [];
+    private readonly List<ProductMarker> _productMarkers = [];
     private readonly List<CustomerOrder> _orders = [new() { OrderId = OrderId, OrderCode = "DH01", Status = OrderStatuses.InProduction }];
 
     public SpecImportTests()
@@ -32,6 +35,13 @@ public class SpecImportTests : ProductionTestBase
             Mat(100, "VAI01"), Mat(101, "VAI02"), Mat(102, "VAI03"), Mat(200, "NHAN01"),
             new() { MaterialId = 300, MaterialCode = "VAICU", MaterialName = "Vải cũ", Color = "Đen", Unit = "m", Status = MaterialStatuses.Discontinued },
         });
+        SetupQueryable(_workOrderLines);
+        SetupQueryable(_productMarkers);
+        SetupQueryable(new List<RequestLine>());
+        SetupQueryable(new List<CuttingLayLine>());
+        SetupQueryable(new List<CutHandoverLine>());
+        SetupQueryable(new List<MaterialIssueLine>());
+        SetupQueryable(new List<StockBalance>());
         _specs.GetAsync(ProductId, Arg.Any<CancellationToken>()).Returns(Result<ProductSpecDto>.Success(Spec()));
         _specs.CheckAsync(ProductId, Arg.Any<SaveProductSpecDto>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _specs.WriteAsync(ProductId, Arg.Any<SaveProductSpecDto>(), Arg.Any<CancellationToken>()).Returns(Result<int>.Success(ProductId));
@@ -117,6 +127,37 @@ public class SpecImportTests : ProductionTestBase
     private static readonly string[] MarkerHeaders = ["Mã hàng", "Nhóm bìa", "Mã bìa", "Dài (m)", "Khổ (m)", "Trạng thái", "S", "M", "XL"];
 
     // ========== Parser ==========
+
+    [Theory]
+    [InlineData("Đang dùng", RecordStatus.Active)]
+    [InlineData("Ngừng dùng", RecordStatus.Discontinued)]
+    public void Parser_MarkerStatusInVietnamese_MapsToStatusCode(string text, string expected)
+    {
+        using var stream = Book(wb => Table(wb, "Bìa", MarkerHeaders, [null, 1, "1A", 2.1, 1.5, text, 1, null, 4]));
+
+        var marker = new ClosedXmlSpecWorkbookParser().Parse(stream).OrderMarkers.Single();
+
+        marker.ParseError.Should().BeNull();
+        marker.Status.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null, RecordStatus.Active)]
+    [InlineData("1", RecordStatus.Discontinued)]
+    [InlineData("0", RecordStatus.Active)]
+    [InlineData("✓", RecordStatus.Discontinued)]
+    [InlineData("x", RecordStatus.Discontinued)]
+    [InlineData("không", RecordStatus.Active)]
+    public void Parser_MarkerTickColumn_BlankIsActiveTickedIsDiscontinued(string? tick, string expected)
+    {
+        string[] headers = ["Mã hàng", "Nhóm bìa", "Mã bìa", "Dài (m)", "Khổ (m)", "Ngừng dùng", "S", "M"];
+        using var stream = Book(wb => Table(wb, "Bìa", headers, [null, 1, "1A", 2.1, 1.5, tick, 1, 2]));
+
+        var book = new ClosedXmlSpecWorkbookParser().Parse(stream);
+
+        book.SizeColumns.Should().Equal("S", "M");
+        book.OrderMarkers.Single().Status.Should().Be(expected);
+    }
 
     [Fact]
     public void Parser_FindsTablesByHeaderNames_SplitsListsAndReadsSizeColumns()
@@ -467,7 +508,36 @@ public class SpecImportTests : ProductionTestBase
         written.Norms.Select(n => $"{n.Color}|{n.ComponentName}|{n.MaterialId}").Should().Equal("Đen|Tay áo|101");
         // bảng Nhóm bìa không có trong file nên không bị đụng: nhóm 2 (Tay áo) còn, nhóm 1 mất theo chi tiết Thân trước
         written.MarkerComponents.Select(m => $"{m.MarkerNo}:{m.ComponentName}").Should().Equal("2:Tay áo");
-        result.Message.Should().Contain("Đã bỏ 3 dòng cũ");
+        result.Message.Should().Contain("Đã xóa 3 dòng cũ");
+    }
+
+    [Fact]
+    public async Task Import_Replace_KeepsUsedNormsComponentsAndGroupsUntouched()
+    {
+        // Định mức Tay áo|Xanh (mã 1010) đã dùng ở lệnh cắt; nhóm bìa 1 đã có bìa của đơn
+        _workOrderLines.Add(new WorkOrderLine { ProductComponentMaterialId = 1010 });
+        _productMarkers.Add(new ProductMarker { ProductId = ProductId, MarkerNo = 1 });
+        SaveProductSpecDto? written = null;
+        _specs.WriteAsync(ProductId, Arg.Do<SaveProductSpecDto>(d => written = d), Arg.Any<CancellationToken>())
+            .Returns(Result<int>.Success(ProductId));
+        using var stream = Book(wb =>
+        {
+            Table(wb, "TP", ComponentHeaders, ["Nhãn", "TRIM", 1]);
+            Table(wb, "ĐM", NormHeaders, ["Đen", "Nhãn", "NHAN01", null]);
+            Table(wb, "NB", GroupHeaders, ["2", "Tay áo", "Đen"]);
+        });
+
+        var preview = (await Sut().PreviewAsync(ProductId, null, stream, default, replace: true)).Data!;
+        stream.Position = 0;
+        var result = await Sut().ImportAsync(ProductId, null, stream, default, replace: true);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        // Tay áo giữ vì có định mức đã dùng; Thân trước giữ vì nằm trên nhóm 1 đã có bìa; chỉ bỏ được những dòng chưa dùng
+        written!.Components.Select(c => c.ComponentName).Should().BeEquivalentTo("Nhãn", "Tay áo", "Thân trước");
+        written.Norms.Should().Contain(n => n.Color == "Xanh" && n.ComponentName == "Tay áo" && n.MaterialId == 101);
+        written.MarkerComponents.Select(m => m.MarkerNo).Should().Contain(1);
+        preview.Notes.Should().Contain(n => n.Contains("Giữ nguyên") && n.Contains("Tay áo"));
+        preview.RemovedNames.Should().NotContain(n => n.Contains("Tay áo") && !n.Contains("Đen"));
     }
 
     [Fact]
