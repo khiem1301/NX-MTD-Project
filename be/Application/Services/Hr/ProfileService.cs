@@ -6,7 +6,7 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>UC03 đổi mật khẩu + UC04 xem hồ sơ của mình.</summary>
+/// <summary>UC03 đổi mật khẩu + UC04 xem hồ sơ của mình và sửa ngày sinh, số điện thoại.</summary>
 public sealed class ProfileService : IProfileService
 {
     private readonly IEmployeeRepository _employees;
@@ -16,23 +16,44 @@ public sealed class ProfileService : IProfileService
     private readonly IAuditLogService _audit;
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
+    private readonly IClock _clock;
 
     public ProfileService(IEmployeeRepository employees, IGenericRepository<Account> accounts, IAuthService auth,
-        IPasswordHasher hasher, IAuditLogService audit, IUnitOfWork uow, ICurrentUser user)
+        IPasswordHasher hasher, IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock)
     {
         _employees = employees; _accounts = accounts; _auth = auth; _hasher = hasher; _audit = audit; _uow = uow; _user = user;
+        _clock = clock;
     }
 
     public async Task<Result<ProfileDto>> GetAsync(CancellationToken ct)
     {
         var e = await _employees.GetFullAsync(_user.EmployeeId, ct);
+        return e is null ? Fail.NotFound<ProfileDto>() : Result<ProfileDto>.Success(ToDto(e));
+    }
+
+    /// <summary>UC04: chỉ ngày sinh và số điện thoại của chính mình; các trường khác do Admin / Quản đốc sửa ở UC16.</summary>
+    public async Task<Result<ProfileDto>> UpdateAsync(UpdateProfileDto dto, CancellationToken ct)
+    {
+        var e = await _employees.GetFullAsync(_user.EmployeeId, ct);
         if (e is null) return Fail.NotFound<ProfileDto>();
+
+        var before = new { e.DateOfBirth, e.Phone };
+        e.DateOfBirth = dto.DateOfBirth;
+        e.Phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
+        e.UpdatedAt = _clock.Now;
+        _audit.Add(new AuditEntry(nameof(Employee), e.EmployeeId, AuditActions.Update, before, new { e.DateOfBirth, e.Phone }));
+        await _uow.SaveChangesAsync();
+        return Result<ProfileDto>.Success(ToDto(e), Messages.Saved);
+    }
+
+    private static ProfileDto ToDto(Employee e)
+    {
         // UC04: bậc thợ chỉ có ý nghĩa với người của tổ may.
         var showGrade = e.Team?.TeamType == TeamTypes.Sewing
                         && e.Role.RoleCode is RoleCodes.Worker or RoleCodes.TeamLeader or RoleCodes.TeamDeputy;
-        return Result<ProfileDto>.Success(new ProfileDto(e.EmployeeId, e.EmployeeCode, e.Account?.Username ?? e.EmployeeCode,
+        return new ProfileDto(e.EmployeeId, e.EmployeeCode, e.Account?.Username ?? e.EmployeeCode,
             e.FullName, e.Gender, e.DateOfBirth, e.Phone, e.AvatarUrl, Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName,
-            e.Team?.TeamName, e.StartDate, showGrade ? e.CurrentGradeCode : null, e.Account?.IsTemporaryPassword ?? false));
+            e.Team?.TeamName, e.StartDate, showGrade ? e.CurrentGradeCode : null, e.Account?.IsTemporaryPassword ?? false);
     }
 
     public async Task<Result<LoginResultDto>> ChangePasswordAsync(ChangePasswordDto dto, CancellationToken ct)

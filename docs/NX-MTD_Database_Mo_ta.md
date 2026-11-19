@@ -395,15 +395,15 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `CustomerId` | INT |  | **PK**; tự tăng |  |
 | `CustomerName` | NVARCHAR(200) |  | UNIQUE |  |
-| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-114 | hai khách hàng không cùng số điện thoại |
-| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-114 | hai khách hàng không cùng email |
+| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai khách hàng không cùng số điện thoại |
+| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai khách hàng không cùng email |
 | `DefaultAddress` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'`; giá trị: `ACTIVE`, `DISCONTINUED` |  |
 | `DiscontinueReason` | NVARCHAR(500) | ✓ |  | lý do ngừng hợp tác (bắt buộc khi ngừng) |
 
 ### `Material` — Nguyên vật liệu
 
-> Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm `Category` (DEV-ALL-115).
+> Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm `Category` (DEV-ALL-134).
 > MaterialType: FABRIC = vải, đi qua tổ cắt; TRIM = phụ liệu, cấp thẳng cho tổ may; SCRAP = phế phẩm, chỉ để tổ cắt / tổ may trả về kho (DEV-ALL-112)
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
@@ -412,7 +412,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `MaterialCode` | VARCHAR(30) |  | UNIQUE |  |
 | `MaterialName` | NVARCHAR(200) |  |  |  |
 | `Color` | NVARCHAR(50) |  | Mặc định `N''` | màu NVL; trống = không phân màu. Cùng loại vải khác màu là hai dòng `Material` |
-| `MaterialType` | VARCHAR(10) |  | `CHECK IN ('FABRIC','TRIM','SCRAP')` | loại NVL, người dùng chọn (DEV-ALL-115) |
+| `MaterialType` | VARCHAR(10) |  | `CHECK IN ('FABRIC','TRIM','SCRAP')` | loại NVL, người dùng chọn (DEV-ALL-134) |
 | `Unit` | NVARCHAR(20) |  |  | m, kg, cuộn, cái, cuộn chỉ… |
 | `WidthM` | DECIMAL(4,2) | ✓ |  | khổ vải (m), bắt buộc với vải (backend kiểm), phụ liệu NULL (DEV-ALL-102) |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
@@ -431,8 +431,8 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `SupplierId` | INT |  | **PK**; tự tăng |  |
 | `SupplierName` | NVARCHAR(200) |  | UNIQUE |  |
-| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-114 | hai nhà cung cấp không cùng số điện thoại |
-| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-114 | hai nhà cung cấp không cùng email |
+| `Phone` | VARCHAR(15) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai nhà cung cấp không cùng số điện thoại |
+| `Email` | VARCHAR(100) | ✓ | UNIQUE (bỏ qua NULL), DEV-ALL-133 | hai nhà cung cấp không cùng email |
 | `Address` | NVARCHAR(500) | ✓ |  |  |
 | `MaterialTypes` | NVARCHAR(200) | ✓ |  | loại NVL cung cấp (mô tả) |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
@@ -620,7 +620,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `ProductComponentId` | INT |  | FK ghép → `ProductComponent` |  |
 | `MaterialId` | INT |  | FK → `Material.MaterialId` |  |
 | `SpecNote` | NVARCHAR(200) | ✓ |  | ghi chú quy cách khác |
-| `Status` | VARCHAR(20) |  | `'ACTIVE'` | ACTIVE / DISCONTINUED: dòng đã có chứng từ dùng thì ẩn thay vì xóa (DEV-ALL-116) |
+| `Status` | VARCHAR(20) |  | `'ACTIVE'` | ACTIVE / DISCONTINUED: dòng đã có chứng từ dùng thì ẩn thay vì xóa (DEV-ALL-135) |
 
 **Ràng buộc & index**
 
@@ -646,7 +646,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `DelayRiskSince` | DATE | ✓ |  | JOB-04 ghi ngày bắt đầu có nguy cơ trễ, xóa khi hết nguy cơ |
 | `IsDelayRisk` | BIT | ✓ | *tính toán*: `IIF(DelayRiskSince IS NULL, 0, 1)` | cờ, không phải trạng thái; không ghi trực tiếp |
 | `StopReason` | NVARCHAR(500) | ✓ |  |  |
-| `FinalAmount` | DECIMAL(18,2) | ✓ |  | giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-118) |
+| `FinalAmount` | DECIMAL(18,2) | ✓ |  | giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-137) |
 | `FinalAmountReason` | NVARCHAR(500) | ✓ |  | lý do chốt / đổi giá trị; bắt buộc khi có `FinalAmount` |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CustomerDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11, DEV-ALL-95) |
@@ -945,15 +945,14 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 | `PaymentReturnReason` | NVARCHAR(500) | ✓ |  | Kế toán trả lại Quản đốc |
 | `PaymentDate` | DATE | ✓ |  |  |
 | `PaidAmount` | DECIMAL(18,2) | ✓ |  |  |
+| `ActualAmount` | DECIMAL(18,2) | ✓ | `CHECK > 0` | tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán (DEV-ALL-129) |
 | `PaymentMethod` | VARCHAR(20) | ✓ |  |  |
 | `PaymentNote` | NVARCHAR(500) | ✓ |  |  |
-| `ActualAmountOverride` | DECIMAL(18,2) | ✓ |  | giá trị thực tế do Kế toán nhập thay giá trị tự tính; NULL = dùng giá trị tự tính (DEV-ALL-117) |
-| `ActualAmountReason` | NVARCHAR(500) | ✓ |  | lý do nhập giá trị thực tế |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 | `RowVer` | ROWVERSION |  | khóa lạc quan (concurrency) |  |
 
-> Từ DEV-ALL-117: `PaidAmount` là tổng các dòng `PurchasePayment`; `PaymentDate`, `PaymentMethod`, `PaymentNote` là của lần thanh toán gần nhất.
+> Từ DEV-ALL-136: `PaidAmount` là tổng các dòng `PurchasePayment`; `PaymentDate`, `PaymentMethod`, `PaymentNote` là của lần thanh toán gần nhất.
 
 **Ràng buộc & index**
 
@@ -968,7 +967,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 - `CK_PO_DeliveryDate`: `CHECK ExpectedDeliveryDate IS NULL OR OrderDate IS NULL OR ExpectedDeliveryDate >= OrderDate`
 - `CK_PO_DeliveryDateTo`: `CHECK ExpectedDeliveryDateTo IS NULL OR (ExpectedDeliveryDate IS NOT NULL AND ExpectedDeliveryDateTo >= ExpectedDeliveryDate AND ExpectedDeliveryCount >= 2)`
 
-### `PurchasePayment` — Từng lần thanh toán đơn mua (DEV-ALL-117)
+### `PurchasePayment` — Từng lần thanh toán đơn mua (DEV-ALL-136)
 
 > Mỗi lần Kế toán thanh toán đơn mua là một dòng. Không xóa; sửa được trong 24 giờ kể từ `CreatedAt`, bắt buộc có lý do.
 
@@ -986,7 +985,7 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 Index: `IX_PP_PurchaseOrder (PurchaseOrderId)`.
 
-### `OrderPayment` — Từng lần thanh toán đơn hàng khách (DEV-ALL-118)
+### `OrderPayment` — Từng lần thanh toán đơn hàng khách (DEV-ALL-137)
 
 > Số tiền dương = khách trả mình, âm = mình trả khách (đền hợp đồng). Tổng các lần luôn nằm giữa 0 và `CustomerOrder.FinalAmount` (backend kiểm). Không xóa; sửa được trong 24 giờ kể từ `CreatedAt`, bắt buộc có lý do.
 

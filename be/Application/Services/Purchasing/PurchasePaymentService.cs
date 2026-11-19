@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-117: sửa một lần thanh toán đơn mua (trong 24 giờ kể từ lúc nhập, bắt buộc có lý do) và nhập giá trị thực tế của đơn.
+/// DEV-ALL-136: sửa một lần thanh toán đơn mua (trong 24 giờ kể từ lúc nhập, bắt buộc có lý do).
 /// Thêm lần thanh toán nằm ở <see cref="PurchaseOrderFlowService.ConfirmPaymentAsync"/>. Không có thao tác xóa.
 /// </summary>
 public sealed class PurchasePaymentService : IPurchasePaymentService
@@ -63,43 +63,9 @@ public sealed class PurchasePaymentService : IPurchasePaymentService
         });
     }
 
-    public async Task<Result> SetActualAmountAsync(int purchaseOrderId, SetActualAmountDto dto, CancellationToken ct)
-    {
-        var po = await LoadAsync(purchaseOrderId, ct);
-        if (po is null) return Fail.NotFound();
-        if (!CanSetActual(po.GoodsStatus, po.PaymentStatus))
-            return Result.Failure(ErrorCodes.PurchaseOrderInvalidStatus, Messages.PaymentActualNotAllowed);
-        if (dto.Amount is not null)
-        {
-            if (dto.Amount < 0 || string.IsNullOrWhiteSpace(dto.Reason))
-                return Result.Failure(ErrorCodes.PaymentInvalid,
-                    dto.Amount < 0 ? Messages.PaymentAmountInvalid : Messages.PaymentActualReasonRequired, ResultKind.Validation);
-            if (dto.Amount < PurchaseAmounts.Paid(po))
-                return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentActualBelowPaid, ResultKind.Validation);
-        }
-
-        _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
-        var before = new { po.ActualAmountOverride, po.PaymentStatus };
-        po.ActualAmountOverride = dto.Amount;
-        po.ActualAmountReason = dto.Amount is null ? null : dto.Reason?.Trim();
-        PurchaseAmounts.Sync(po);
-
-        return await _uow.InTransactionAsync(async () =>
-        {
-            _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
-                new { po.ActualAmountOverride, po.PaymentStatus }, po.ActualAmountReason));
-            await _uow.SaveChangesAsync();
-            return Result.Success(Messages.PaymentActualSaved);
-        });
-    }
-
     /// <summary>Sửa được trong 24 giờ kể từ lúc nhập lần thanh toán đó.</summary>
     internal static bool IsEditable(PurchasePayment payment, DateTime now) =>
         now - payment.CreatedAt <= TimeSpan.FromHours(PurchasePaymentRules.EditWindowHours);
-
-    /// <summary>Chỉ đơn đang nhận hàng hoặc đã chốt giao thiếu mới nhập được giá trị thực tế; đơn trả lại Quản đốc thì chưa.</summary>
-    internal static bool CanSetActual(string goodsStatus, string paymentStatus) =>
-        PurchaseGoodsStatuses.ActualAmountEditable.Contains(goodsStatus) && paymentStatus != PurchasePaymentStatuses.Returned;
 
     private Task<PurchaseOrder?> LoadAsync(int purchaseOrderId, CancellationToken ct) =>
         _uow.Repository<PurchaseOrder>().Query().Include(p => p.PurchaseOrderLines).Include(p => p.PurchasePayments)

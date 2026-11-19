@@ -20,15 +20,8 @@ export type Material = {
 
 export type MaterialQuery = PageParams & { materialType?: string; status?: string };
 
-export type SaveMaterialPayload = {
-  materialCode?: string;
-  materialName: string;
-  materialType: string;
-  unit: string;
-  color?: string;
-  /** Khổ vải (m), bắt buộc với vải, tối đa 3,5 m (DEV-ALL-102). */
-  widthM?: number | null;
-};
+/** Dùng chung với popup kiểm tra Excel của mã hàng (DEV-ALL-123): khai báo ở types/material. */
+export type { SaveMaterialPayload } from '@/types/material';
 
 export type OrderMaterial = {
   orderMaterialId: number;
@@ -54,6 +47,35 @@ export type OrderMaterial = {
   source: string | null;
   note: string | null;
   receivedQty: number;
+  /** DEV-ALL-119: đã nhận tách theo nguồn (khách giao / mua về) và còn thiếu = max(số cần − đã nhận, 0). */
+  customerReceivedQty: number;
+  purchasedReceivedQty: number;
+  shortQty: number;
+};
+
+// ---- DEV-ALL-119: nhập Excel NVL của đơn ----
+/** Pending (DEV-ALL-122, popup kiểm tra Excel khi chưa có đơn): đúng định dạng, kiểm theo đơn khi Lưu đơn. */
+export type OrderMaterialImportAction =
+  'New' | 'Update' | 'Unchanged' | 'Error' | 'Pending' | 'NewMaterial';
+export type OrderMaterialImportRow = {
+  rowNumber: number;
+  action: OrderMaterialImportAction;
+  error: string | null;
+  materialCode: string;
+  materialName: string | null;
+  materialColor: string | null;
+  unit: string | null;
+  requiredQty: number | null;
+  customerQty: number | null;
+  purchaseQty: number | null;
+  note: string | null;
+};
+export type OrderMaterialImportPreview = {
+  rows: OrderMaterialImportRow[];
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  changeCount: number;
 };
 
 /** Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt. */

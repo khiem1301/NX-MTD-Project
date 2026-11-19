@@ -3,6 +3,7 @@ import type { ApiResponse, Paginated } from '@/types/api';
 import type {
   AllocationQuery,
   ConfirmAllocationPayload,
+  ConfirmBatchPayload,
   ConfirmOnBehalfPayload,
   DailyAllocationBoard,
   DailyAllocationResult,
@@ -31,6 +32,8 @@ export const pieceMovementApi = {
     post<null>(`${LEADER_BASE}/${id}/confirm-on-behalf`, body),
   confirmByWorker: (id: number, body: ConfirmAllocationPayload) =>
     post<null>(`${WORKER_BASE}/${id}/confirm`, body),
+  confirmBatchByWorker: (body: ConfirmBatchPayload) =>
+    post<null>(`${WORKER_BASE}/confirm-batch`, body),
   rejectByWorker: (id: number, reason: string) =>
     post<null>(`${WORKER_BASE}/${id}/reject`, { reason }),
 };

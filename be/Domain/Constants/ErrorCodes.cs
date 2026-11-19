@@ -40,6 +40,11 @@ public static class ErrorCodes
     public const string AttachmentFileTooLarge = "ATTACHMENT_FILE_TOO_LARGE";
     public const string AttachmentFileTypeNotAllowed = "ATTACHMENT_FILE_TYPE_NOT_ALLOWED";
     public const string AttachmentLimitReached = "ATTACHMENT_LIMIT_REACHED";
+    /// <summary>DEV-ALL-128: vai trò không được tải nhóm ảnh này (vd Thủ kho tải biên bản giao của Kế toán).</summary>
+    public const string AttachmentPurposeNotAllowed = "ATTACHMENT_PURPOSE_NOT_ALLOWED";
+    /// <summary>DEV-ALL-125: SĐT / email đã dùng cho khách hàng hoặc nhà cung cấp khác.</summary>
+    public const string PartnerPhoneDuplicate = "PARTNER_PHONE_DUPLICATE";
+    public const string PartnerEmailDuplicate = "PARTNER_EMAIL_DUPLICATE";
 
     // Đơn từ (KH-06)
     public const string RequestTypeNotAllowed = "REQUEST_TYPE_NOT_ALLOWED";
@@ -52,6 +57,14 @@ public static class ErrorCodes
     public const string ProductCodeLocked = "PRODUCT_CODE_LOCKED";
     public const string ProductSpecInvalid = "PRODUCT_SPEC_INVALID";
     public const string OrderMarkerInvalid = "ORDER_MARKER_INVALID";
+    /// <summary>DEV-ALL-115: file Excel định mức sai mẫu, hoặc nhập khi còn lỗi / không có gì thay đổi.</summary>
+    public const string SpecImportInvalid = "SPEC_IMPORT_INVALID";
+    /// <summary>DEV-ALL-121: file Excel không có bảng được yêu cầu (dùng một file nhiều sheet cho mọi mục: mục thiếu bảng thì bỏ qua).</summary>
+    public const string ImportTableMissing = "IMPORT_TABLE_MISSING";
+    /// <summary>DEV-ALL-118: file Excel dòng hàng của đơn sai mẫu.</summary>
+    public const string OrderImportInvalid = "ORDER_IMPORT_INVALID";
+    /// <summary>DEV-ALL-120: file Excel mã hàng sai mẫu hoặc không có mã mới.</summary>
+    public const string ProductImportInvalid = "PRODUCT_IMPORT_INVALID";
     public const string KpiExceedsStock = "KPI_EXCEEDS_STOCK";
     public const string ReceiptPhotoRequired = "RECEIPT_PHOTO_REQUIRED";
     public const string DispatchIssuePhotoRequired = "DISPATCH_ISSUE_PHOTO_REQUIRED";
@@ -67,8 +80,6 @@ public static class ErrorCodes
     public const string OrderMaterialsAwaiting = "ORDER_MATERIALS_AWAITING";
     public const string OrderFullyDispatched = "ORDER_FULLY_DISPATCHED";
     public const string CustomerNameDuplicate = "CUSTOMER_NAME_DUPLICATE";
-    public const string CustomerPhoneDuplicate = "CUSTOMER_PHONE_DUPLICATE";
-    public const string CustomerEmailDuplicate = "CUSTOMER_EMAIL_DUPLICATE";
     public const string CustomerNotActive = "CUSTOMER_NOT_ACTIVE";
 
     // Nhân sự, tài khoản, tổ (KH-10)
@@ -158,6 +169,8 @@ public static class ErrorCodes
     public const string WarehouseMaterialInUse = "WAREHOUSE_MATERIAL_IN_USE";
     public const string WarehouseOrderMaterialDuplicate = "WAREHOUSE_ORDER_MATERIAL_DUPLICATE";
     public const string WarehouseOrderMaterialInUse = "WAREHOUSE_ORDER_MATERIAL_IN_USE";
+    /// <summary>DEV-ALL-119: file Excel NVL của đơn sai mẫu hoặc không có gì để nhập.</summary>
+    public const string OrderMaterialImportInvalid = "ORDER_MATERIAL_IMPORT_INVALID";
     public const string CuttingQtyExceedsPlan = "CUTTING_QTY_EXCEEDS_PLAN";
     public const string CuttingHandoverExceedsCut = "CUTTING_HANDOVER_EXCEEDS_CUT";
     public const string ReceiptExceedsPurchase = "RECEIPT_EXCEEDS_PURCHASE";
@@ -180,8 +193,6 @@ public static class ErrorCodes
 
     // Nhà cung cấp, đơn mua, thanh toán (Minh, MI-07)
     public const string SupplierNameDuplicate = "SUPPLIER_NAME_DUPLICATE";
-    public const string SupplierPhoneDuplicate = "SUPPLIER_PHONE_DUPLICATE";
-    public const string SupplierEmailDuplicate = "SUPPLIER_EMAIL_DUPLICATE";
     public const string SupplierNotActive = "SUPPLIER_NOT_ACTIVE";
     public const string PurchaseOrderInvalidStatus = "PURCHASE_ORDER_INVALID_STATUS";
     public const string PurchaseOrderLinesMismatch = "PURCHASE_ORDER_LINES_MISMATCH";

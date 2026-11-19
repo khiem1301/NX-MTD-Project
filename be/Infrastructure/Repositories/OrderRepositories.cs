@@ -36,12 +36,6 @@ public sealed class CustomerRepository : GenericRepository<Customer>, ICustomerR
 
     public Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct) =>
         _context.Customers.AnyAsync(c => c.CustomerName == name && (exceptId == null || c.CustomerId != exceptId), ct);
-
-    public Task<bool> PhoneExistsAsync(string phone, int? exceptId, CancellationToken ct) =>
-        _context.Customers.AnyAsync(c => c.Phone == phone && (exceptId == null || c.CustomerId != exceptId), ct);
-
-    public Task<bool> EmailExistsAsync(string email, int? exceptId, CancellationToken ct) =>
-        _context.Customers.AnyAsync(c => c.Email == email && (exceptId == null || c.CustomerId != exceptId), ct);
 }
 
 public sealed class ProductRepository : GenericRepository<Product>, IProductRepository
@@ -108,9 +102,11 @@ public sealed class ProductRepository : GenericRepository<Product>, IProductRepo
             .Select(p => new ProductLookupDto(p.ProductId, p.ProductCode, p.ProductName)).ToPagedAsync(q, ct);
     }
 
-    public async Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<string>> ListColorsAsync(int? productId, CancellationToken ct)
     {
-        var colors = await _context.ProductColors.AsNoTracking().Select(c => c.Color).Distinct().ToListAsync(ct);
+        var colors = await _context.ProductColors.AsNoTracking()
+            .Where(c => productId == null || c.ProductId == productId)
+            .Select(c => c.Color).Distinct().ToListAsync(ct);
         return colors.GroupBy(c => c.Trim(), StringComparer.OrdinalIgnoreCase).Select(g => g.First())
             .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
@@ -202,6 +198,7 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
     {
         var query = _context.CustomerOrders.AsNoTracking().Where(o => statuses.Contains(o.Status))
             .Where(o => sewingTeamId == null || o.OrderLines.Any(l => _context.OrderLineTeams.Any(a => a.SewingTeamId == sewingTeamId && a.OrderLineId == l.OrderLineId)));
+        if (q.ProductId is { } productId) query = query.Where(o => o.OrderLines.Any(l => l.ProductId == productId));
         if (!string.IsNullOrWhiteSpace(q.Keyword))
         {
             var k = q.Keyword.Trim();

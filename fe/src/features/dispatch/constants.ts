@@ -1,4 +1,5 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
+import type { DeliveryMethod } from './types';
 
 export const DISPATCH_STATUS = {
   PENDING: 'PENDING',
@@ -54,7 +55,36 @@ export const DISPATCH_LABELS = {
   confirmDelivery: 'Xác nhận khách đã nhận',
   issueSlipPhotos: 'Ảnh phiếu xuất có Quản đốc ký',
   deliveryNotePhotos: 'Ảnh biên bản giao có khách ký',
+  // DEV-ALL-127: Thủ kho chọn cách giao khi xuất kho.
+  exportTitle: 'Xuất hàng · {0}',
+  exportHint: 'Tồn kho thành phẩm sẽ giảm theo số trên phiếu. Chọn cách giao hàng cho phiếu này.',
+  deliveryMethod: 'Cách giao',
+  vehicle: 'Xe giao hàng',
+  vehiclePlaceholder: 'Chọn xe đang rảnh',
+  noVehicle: 'Không có xe nào đang rảnh (xe ngừng dùng hoặc còn chuyến chưa kết thúc).',
+  driver: 'Tài xế',
+  odometerStart: 'Km lúc đi',
+  odometerHint: 'Km cuối chuyến trước: {0}',
+  tripHint:
+    'Hệ thống tạo chuyến xe đang chạy gắn phiếu này; Kế toán ghi km về và xăng ở Sổ xe khi xe về.',
+  vehicleRequired: 'Vui lòng chọn xe giao hàng.',
+  driverRequired: 'Vui lòng nhập tên tài xế.',
+  odometerRequired: 'Nhập km lúc đi (từ 0 trở lên).',
 } as const;
+
+export const DELIVERY_METHOD = {
+  CUSTOMER_PICKUP: 'CUSTOMER_PICKUP',
+  COMPANY_VEHICLE: 'COMPANY_VEHICLE',
+} as const;
+
+export const DELIVERY_METHOD_LABEL: Record<DeliveryMethod, string> = {
+  CUSTOMER_PICKUP: 'Khách tự lấy hàng',
+  COMPANY_VEHICLE: 'Xe công ty giao',
+};
+
+/** Khớp VehicleLimits.MaxOdometer / độ dài tên tài xế ở BE. */
+export const MAX_ODOMETER = 9_999_999;
+export const DRIVER_NAME_MAX = 100;
 
 export const DISPATCH_MESSAGES = {
   created: 'Đã lập phiếu xuất hàng, thành phẩm đã được giữ chỗ.',
@@ -62,7 +92,6 @@ export const DISPATCH_MESSAGES = {
     'Lập phiếu xuất hàng? Số xuất sẽ được giữ chỗ trong kho thành phẩm đến khi kho xuất hoặc từ chối.',
   confirmCancel: 'Hủy phiếu xuất hàng này? Số giữ chỗ sẽ được nhả.',
   cancelled: 'Đã hủy phiếu xuất hàng.',
-  confirmExport: 'Xác nhận đã xuất hàng? Tồn kho thành phẩm sẽ giảm theo số trên phiếu.',
   exported: 'Đã xuất hàng.',
   rejected: 'Đã từ chối phiếu xuất hàng.',
   delivered: 'Đã xác nhận khách nhận hàng.',

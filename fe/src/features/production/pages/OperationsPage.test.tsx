@@ -61,9 +61,7 @@ jest.mock('../components/ProductSelect', () => ({
 jest.mock('../components/PieceRateFormModal', () => ({ PieceRateFormModal: () => null }));
 jest.mock('../components/PieceRateHistory', () => ({ PieceRateHistoryModal: () => null }));
 jest.mock('../components/OperationImportModal', () => ({
-  OperationImportModal: ({ allowRates }: { allowRates: boolean }) => (
-    <div>nhập excel, đơn giá: {String(allowRates)}</div>
-  ),
+  OperationImportModal: () => <div>hộp thoại nhập excel</div>,
 }));
 
 const open = () => {
@@ -205,12 +203,12 @@ describe('OperationsPage', () => {
       expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).not.toBeInTheDocument();
     });
 
-    it('Admin không có nút gửi duyệt hàng loạt', () => {
+    it('Admin không tích được dòng nên không có nút gửi duyệt hàng loạt (DEV-ALL-117)', () => {
       mockRole = 'admin';
       mockOperations = [op(1, { nextRate: draft(11) })];
       open();
-      tick('Công đoạn 1');
 
+      expect(within(rowOf('Công đoạn 1')).queryByRole('checkbox')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Gửi duyệt/ })).not.toBeInTheDocument();
     });
   });
@@ -232,7 +230,7 @@ describe('OperationsPage', () => {
       ).toBeInTheDocument();
     });
 
-    it('Admin không có nút đặt, gửi duyệt đơn giá nhưng vẫn thấy đơn giá hiện hành', () => {
+    it('Admin chỉ xem: không có nút đặt / gửi duyệt đơn giá, sửa, ngừng dùng, nhưng vẫn xem được (DEV-ALL-117)', () => {
       mockRole = 'admin';
       mockOperations = [
         op(2, {
@@ -251,19 +249,26 @@ describe('OperationsPage', () => {
       expect(row.queryByRole('button', { name: 'Đặt đơn giá' })).not.toBeInTheDocument();
       expect(row.queryByRole('button', { name: /Sửa đơn giá/ })).not.toBeInTheDocument();
       expect(row.queryByRole('button', { name: /Gửi/ })).not.toBeInTheDocument();
-      expect(row.getByRole('button', { name: 'Sửa' })).toBeInTheDocument();
+      expect(row.queryByRole('button', { name: 'Sửa' })).not.toBeInTheDocument();
+      expect(row.queryByRole('button', { name: /Ngừng dùng/ })).not.toBeInTheDocument();
+      expect(row.getByRole('button', { name: 'Xem' })).toBeInTheDocument();
     });
 
-    it.each([
-      ['accountant', 'true'],
-      ['admin', 'false'],
-    ] as const)('nhập Excel của %s: đọc đơn giá = %s', (role, allowed) => {
-      mockRole = role;
+    it('Kế toán mở được hộp thoại nhập Excel', () => {
       open();
 
       fireEvent.click(screen.getByRole('button', { name: /Nhập từ Excel/ }));
 
-      expect(screen.getByText('nhập excel, đơn giá: ' + allowed)).toBeInTheDocument();
+      expect(screen.getByText('hộp thoại nhập excel')).toBeInTheDocument();
+    });
+
+    it('Admin không có nút nhóm công đoạn, nhập Excel, thêm công đoạn (DEV-ALL-117)', () => {
+      mockRole = 'admin';
+      open();
+
+      expect(screen.queryByRole('button', { name: /Nhóm công đoạn/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Nhập từ Excel/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Thêm công đoạn/ })).not.toBeInTheDocument();
     });
   });
 

@@ -13,6 +13,7 @@ import { useOrderForm, type HeaderValues } from '../hooks/useOrderForm';
 import { CustomerFormModal } from './CustomerFormModal';
 import { OrderHeaderFields } from './OrderHeaderFields';
 import { ProductBlockEditor } from './ProductBlockEditor';
+import { OrderImportButton } from './OrderImportButton';
 import { ProductFormModal } from './ProductFormModal';
 import type { OrderDetail } from '../types';
 
@@ -49,6 +50,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     setCustomerOpen,
     productBlock,
     setProductBlock,
+    queueImports,
   } = useOrderForm({ orderId, detail, copyFrom });
   const { token } = theme.useToken();
   const saving = create.isPending || update.isPending;
@@ -135,14 +137,27 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
           />
         ))}
         {editable && (
-          <Button
-            block
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={() => changeBlocks([...blocks, newBlock()])}
-          >
-            {MESSAGES.orders.addProductBlock}
-          </Button>
+          <Space.Compact block>
+            <Button
+              block
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => changeBlocks([...blocks, newBlock()])}
+            >
+              {MESSAGES.orders.addProductBlock}
+            </Button>
+            {/* DEV-ALL-118: đơn đã bắt đầu sản xuất thì khóa dòng hàng nên không nhập Excel. */}
+            {!locked && (
+              <OrderImportButton
+                blocks={blocks}
+                onQueueImports={queueImports}
+                onApply={(next, newLabels) => {
+                  setLabels((l) => ({ ...l, ...newLabels }));
+                  changeBlocks(next);
+                }}
+              />
+            )}
+          </Space.Compact>
         )}
         <div style={footerStyle}>
           {saveError && (
@@ -176,6 +191,8 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
         <ProductFormModal
           open={productBlock !== undefined}
           product={null}
+          allowImports
+          onDeferImports={queueImports}
           onClose={() => setProductBlock(undefined)}
           onSaved={(productId, code) => {
             setLabels((l) => ({ ...l, [productId]: code }));

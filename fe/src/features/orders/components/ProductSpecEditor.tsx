@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Alert, Button, Tabs, Typography, message } from 'antd';
+import { Alert, Tabs, Typography, message } from 'antd';
 import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
-import { ModalActions } from '@/components/common/DetailModal';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { fill } from '@/utils/format';
@@ -21,6 +20,7 @@ import {
   type VariantRow,
 } from '../utils/productSpec';
 import { SpecComponentsTab } from './SpecComponentsTab';
+import { SpecEditorActions } from './SpecEditorActions';
 import { SpecMarkersTab } from './SpecMarkersTab';
 import { SpecNormsTab } from './SpecNormsTab';
 import { SpecVariantsTab } from './SpecVariantsTab';
@@ -32,7 +32,7 @@ type ProductSpecEditorProps = {
   spec: ProductSpec;
   detail: ProductDetail | undefined;
   showHistory: boolean;
-  /** Chế độ chỉ xem. Kế toán và Admin đều sửa được định mức nên màn mã hàng không bật. */
+  /** Chế độ chỉ xem: Kế toán chỉ xem định mức (DEV-ALL-117), Admin sửa và nhập Excel. */
   readOnly?: boolean;
   onDirtyChange: (dirty: boolean) => void;
   onClose: () => void;
@@ -61,10 +61,11 @@ export function ProductSpecEditor({
 
   const snapshot = JSON.stringify({ components, variants, norms, layouts });
   const [baseline] = useState(snapshot);
+  const dirty = snapshot !== baseline;
   useEffect(() => {
-    onDirtyChange(snapshot !== baseline);
+    onDirtyChange(dirty);
     return () => onDirtyChange(false);
-  }, [snapshot, baseline, onDirtyChange]);
+  }, [dirty, onDirtyChange]);
 
   const materialOptions = (materials.data ?? []).map(toMaterialOption);
 
@@ -101,14 +102,14 @@ export function ProductSpecEditor({
 
   return (
     <>
-      <ModalActions>
-        <Button onClick={onClose}>{MESSAGES.common.close}</Button>
-        {!readOnly && (
-          <Button type="primary" loading={save.isPending} onClick={handleSave}>
-            {MESSAGES.common.save}
-          </Button>
-        )}
-      </ModalActions>
+      <SpecEditorActions
+        product={product}
+        readOnly={readOnly}
+        dirty={dirty}
+        saving={save.isPending}
+        onSave={handleSave}
+        onClose={onClose}
+      />
       {detail?.description && (
         <Typography.Paragraph type="secondary">{`${MESSAGES.orders.description}: ${detail.description}`}</Typography.Paragraph>
       )}
@@ -146,6 +147,7 @@ export function ProductSpecEditor({
                 components={components}
                 materialOptions={materialOptions}
                 materialsLoading={materials.isLoading}
+                readOnly={readOnly}
               />
             ),
           },

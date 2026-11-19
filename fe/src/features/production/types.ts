@@ -65,6 +65,10 @@ export type OperationImportRow = {
   /** Đơn giá từ cột TIỀN: None (không xử lý) | New | Update | Unchanged | Skipped. */
   rateAction: OperationImportRateAction;
   rateNote: string | null;
+  /** DEV-ALL-116: cột NHÓM CÔNG ĐOẠN / CHI TIẾT (null khi file không có cột), và nhóm / chi tiết đổi thế nào. */
+  groupName: string | null;
+  componentNames: string[] | null;
+  changeNote: string | null;
 };
 
 export type OperationImportPreview = {
@@ -82,6 +86,10 @@ export type OperationImportPreview = {
   rateUnchangedCount: number;
   rateSkippedCount: number;
   rows: OperationImportRow[];
+  hasGroupColumn: boolean;
+  hasComponentColumn: boolean;
+  /** STT của dòng đánh x ở cột CUỐI: màn hình chọn sẵn làm công đoạn cuối. */
+  finalSttInFile: number | null;
 };
 
 export type OperationImportResult = {

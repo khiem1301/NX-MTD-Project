@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-118: giá trị chốt đơn hàng khách (có thể âm) và thanh toán nhiều lần hai chiều.</summary>
+/// <summary>DEV-ALL-137: giá trị chốt đơn hàng khách (có thể âm) và thanh toán nhiều lần hai chiều.</summary>
 public class OrderPaymentServiceTests
 {
     private static readonly byte[] RowVer = { 7 };

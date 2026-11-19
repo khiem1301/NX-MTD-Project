@@ -24,13 +24,14 @@ public sealed class DispatchNoteService : IDispatchNoteService
     private readonly IAppLock _locks;
     private readonly IClock _clock;
     private readonly ILogger<DispatchNoteService> _logger;
+    private readonly IVehicleService _vehicles;
 
     public DispatchNoteService(IUnitOfWork uow, IStockService stock, IDocumentCodeGenerator codes,
         INotificationService notifier, IAuditLogService audit, IAppLock locks, IClock clock,
-        ILogger<DispatchNoteService> logger)
+        ILogger<DispatchNoteService> logger, IVehicleService vehicles)
     {
         _uow = uow; _stock = stock; _codes = codes; _notifier = notifier; _audit = audit; _locks = locks;
-        _clock = clock; _logger = logger;
+        _clock = clock; _logger = logger; _vehicles = vehicles;
     }
 
     private const int MaxDeliveryDaysAhead = 366;
@@ -63,7 +64,10 @@ public sealed class DispatchNoteService : IDispatchNoteService
                 d.DispatchedAt, d.CustomerReceivedDate,
                 d.DispatchNoteLines.OrderBy(l => l.DispatchNoteLineId).Select(l => new DispatchNoteLineDto(
                     l.DispatchNoteLineId, l.OrderLineId, l.OrderLine.ProductVariant.Product.ProductCode, l.OrderLine.ProductVariant.ProductColor.Color,
-                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty)).ToList(), d.RowVer))
+                    l.OrderLine.ProductVariant.SizeCode, l.IssueQty)).ToList(), d.RowVer, d.DeliveryMethod,
+                d.VehicleTrips.OrderByDescending(t => t.VehicleTripId).Select(t => t.Vehicle.PlateNumber).FirstOrDefault(),
+                d.VehicleTrips.OrderByDescending(t => t.VehicleTripId)
+                    .Select(t => t.DriverName ?? (t.DriverEmployee == null ? null : t.DriverEmployee.FullName)).FirstOrDefault()))
             .FirstOrDefaultAsync(ct);
         return dto is null ? WarehouseFailures.NotFound<DispatchNoteDto>() : Result<DispatchNoteDto>.Success(dto);
     }
@@ -153,7 +157,7 @@ public sealed class DispatchNoteService : IDispatchNoteService
         return Result.Success(WarehouseMessages.DispatchCancelled);
     }
 
-    public Task<Result> ExportAsync(int dispatchNoteId, DispatchActionDto dto, int employeeId, CancellationToken ct) =>
+    public Task<Result> ExportAsync(int dispatchNoteId, ExportDispatchDto dto, int employeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
             var note = await Notes.Include(d => d.DispatchNoteLines).Include(d => d.Order)
@@ -174,17 +178,41 @@ public sealed class DispatchNoteService : IDispatchNoteService
                     note.DispatchNoteId, l.DispatchNoteLineId, today)).ToList(), ct);
             if (!posted.IsSuccess) return posted;
 
+            var trip = await StartDeliveryTripAsync(note, dto, ct);
+            if (!trip.IsSuccess) return trip;
+
             note.Status = DispatchStatuses.InDelivery;
+            note.DeliveryMethod = dto.DeliveryMethod;
             note.DispatchedBy = employeeId;
             note.DispatchedAt = _clock.Now;
             if (OrderStatuses.Running.Contains(note.Order.Status)) note.Order.Status = OrderStatuses.InDelivery;
             await NotifyExportedAsync(note, ct);
             _audit.Add(new AuditEntry(nameof(DispatchNote), note.DispatchNoteId, AuditActions.Confirm,
-                new { Status = DispatchStatuses.Pending }, new { note.Status }));
+                new { Status = DispatchStatuses.Pending },
+                new { note.Status, note.DeliveryMethod, dto.VehicleId, dto.DriverName, dto.OdometerStart }));
             await _uow.SaveChangesAsync();
-            _logger.LogInformation("Dispatch note {Code} exported by employee {EmployeeId}", note.DispatchCode, employeeId);
-            return Result.Success(WarehouseMessages.DispatchExported);
+            _logger.LogInformation("Dispatch note {Code} exported by employee {EmployeeId} ({Method})",
+                note.DispatchCode, employeeId, note.DeliveryMethod);
+            return Result.Success(trip.Data ?? WarehouseMessages.DispatchExported);
         });
+
+    /// <summary>
+    /// DEV-ALL-127: xe công ty giao thì tạo luôn chuyến xe STARTED gắn phiếu (cùng kiểm tra với Kế toán bắt đầu chuyến:
+    /// xe hoạt động, không có chuyến đang chạy, cảnh báo lệch km). Trả câu báo thành công, null khi khách tự lấy.
+    /// </summary>
+    private async Task<Result<string?>> StartDeliveryTripAsync(DispatchNote note, ExportDispatchDto dto, CancellationToken ct)
+    {
+        if (dto.DeliveryMethod != DeliveryMethods.CompanyVehicle) return Result<string?>.Success(null);
+        var prepared = await _vehicles.PrepareTripAsync(new StartVehicleTripDto(dto.VehicleId!.Value, _clock.Today,
+            dto.DriverName, null, string.Format(WarehouseMessages.DispatchTripPurpose, note.DispatchCode, note.Order.OrderCode),
+            note.DispatchNoteId, dto.OdometerStart!.Value), ct);
+        if (!prepared.IsSuccess) return WarehouseFailures.From<string?>(prepared);
+        var (trip, lastEnd) = prepared.Data!;
+        var plate = await _uow.Repository<Vehicle>().Query().AsNoTracking()
+            .Where(v => v.VehicleId == trip.VehicleId).Select(v => v.PlateNumber).FirstAsync(ct);
+        var message = string.Format(WarehouseMessages.DispatchExportedWithTrip, plate);
+        return Result<string?>.Success(trip.KmGapWarning ? $"{message} {string.Format(WarehouseMessages.KmGapWarning, lastEnd)}" : message);
+    }
 
     public async Task<Result> RejectAsync(int dispatchNoteId, RejectDispatchDto dto, int employeeId, CancellationToken ct)
     {
@@ -324,6 +352,14 @@ public sealed class DispatchNoteAttachmentAccess : IAttachmentOwnerAccess
     }
 
     public Task<int> MaxFilesAsync(CancellationToken ct) => Task.FromResult(MaxPhotos);
+
+    /// <summary>DEV-ALL-128: Thủ kho chỉ tải ảnh phiếu xuất đã ký, Kế toán chỉ tải biên bản giao có khách ký.</summary>
+    public bool CanWritePurpose(string purpose) => _user.Role switch
+    {
+        Roles.WarehouseKeeper => purpose == AttachmentPurposes.SignedIssueSlip,
+        Roles.Accountant => purpose == AttachmentPurposes.SignedDeliveryNote,
+        _ => false,
+    };
 
     private Task<string?> GetStatusAsync(int dispatchNoteId, CancellationToken ct) =>
         _uow.Repository<DispatchNote>().Query().AsNoTracking().Where(d => d.DispatchNoteId == dispatchNoteId)

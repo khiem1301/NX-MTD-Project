@@ -76,20 +76,35 @@ public sealed class OrderMarkerService : IOrderMarkerService
 
     public async Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
     {
-        var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
-        if (order is null) return Fail.NotFound<OrderMarkersDto>();
-        if (OrderStatuses.Closed.Contains(order.Status)) return Invalid(Messages.OrderMarkerOrderClosed);
+        var check = await CheckAsync(orderId, productId, dto, ct);
+        if (!check.IsSuccess) return Fail.As<OrderMarkersDto>(check);
 
-        var existing = await _uow.Repository<ProductMarker>().Query().Include(m => m.ProductMarkerRatios)
-            .Where(m => m.OrderId == orderId && m.ProductId == productId).ToListAsync(ct);
-        var lines = await LinesAsync(l => l.OrderId == orderId && l.ProductId == productId, ct);
-        var check = await ValidateAsync(productId, dto, existing, lines, ct);
-        if (check is not null) return check;
-
-        var saved = await _uow.InTransactionAsync(() => WriteAsync(orderId, productId, dto, existing));
+        var saved = await _uow.InTransactionAsync(() => WriteAsync(orderId, productId, dto, ct));
         if (!saved.IsSuccess) return Fail.As<OrderMarkersDto>(saved);
         var result = await GetAsync(orderId, ct);
         return Result<OrderMarkersDto>.Success(result.Data!, Messages.Saved);
+    }
+
+    /// <summary>Mọi kiểm tra của nút Lưu bìa, không ghi gì (dùng chung với nhập Excel, DEV-ALL-115).</summary>
+    public async Task<Result> CheckAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
+    {
+        var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking().FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
+        if (order is null) return Fail.NotFound();
+        if (OrderStatuses.Closed.Contains(order.Status)) return Invalid(Messages.OrderMarkerOrderClosed);
+
+        var existing = await _uow.Repository<ProductMarker>().Query().AsNoTracking()
+            .Where(m => m.OrderId == orderId && m.ProductId == productId).ToListAsync(ct);
+        var lines = await LinesAsync(l => l.OrderId == orderId && l.ProductId == productId, ct);
+        var check = await ValidateAsync(productId, dto, existing, lines, ct);
+        return check ?? Result.Success();
+    }
+
+    /// <summary>Ghi bìa đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-115).</summary>
+    public async Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct)
+    {
+        var existing = await _uow.Repository<ProductMarker>().Query().Include(m => m.ProductMarkerRatios)
+            .Where(m => m.OrderId == orderId && m.ProductId == productId).ToListAsync(ct);
+        return await WriteMarkersAsync(orderId, productId, dto, existing);
     }
 
     /// <summary>Mã hàng có trong đơn, nhóm bìa đã khai vải, mã bìa không trùng trong nhóm, Id là bìa của đúng đơn và mã hàng, size hợp lệ.</summary>
@@ -126,7 +141,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
     }
 
     /// <summary>Xóa bìa bỏ đi và tỉ lệ cũ trước (khóa UQ_PM), rồi cập nhật / thêm bìa và ghi lại tỉ lệ.</summary>
-    private async Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, List<ProductMarker> existing)
+    private async Task<Result<int>> WriteMarkersAsync(int orderId, int productId, SaveOrderMarkersDto dto, List<ProductMarker> existing)
     {
         var keptIds = dto.Markers.Where(m => m.ProductMarkerId is not null).Select(m => m.ProductMarkerId!.Value).ToHashSet();
         _uow.Repository<ProductMarkerRatio>().RemoveRange(existing.SelectMany(m => m.ProductMarkerRatios).ToList());

@@ -52,7 +52,9 @@ public sealed class VehicleService : IVehicleService
 
         var vehicle = new Vehicle
         {
-            PlateNumber = plate, VehicleType = dto.VehicleType.Trim(), FuelNormPer100Km = dto.FuelNormPer100Km,
+            PlateNumber = plate,
+            VehicleType = dto.VehicleType.Trim(),
+            FuelNormPer100Km = dto.FuelNormPer100Km,
             Status = RecordStatus.Active,
         };
         await _uow.Repository<Vehicle>().AddAsync(vehicle);
@@ -121,37 +123,62 @@ public sealed class VehicleService : IVehicleService
 
     public async Task<Result<VehicleTripDto>> StartTripAsync(StartVehicleTripDto dto, CancellationToken ct)
     {
-        var vehicle = await Vehicles.FirstOrDefaultAsync(v => v.VehicleId == dto.VehicleId, ct);
-        if (vehicle is null) return WarehouseFailures.NotFound<VehicleTripDto>();
-        if (vehicle.Status != RecordStatus.Active)
-            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleInactive, WarehouseMessages.VehicleInactive);
-        if (dto.TripDate > _clock.Today)
-            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripDateFuture);
-        if (dto.DispatchNoteId is { } noteId && !await _uow.Repository<DispatchNote>().Query().AnyAsync(d => d.DispatchNoteId == noteId, ct))
-            return WarehouseFailures.NotFound<VehicleTripDto>();
-        if (await Trips.AnyAsync(t => t.VehicleId == dto.VehicleId && t.Status == TripStatuses.Started, ct))
-            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripAlreadyOpen);
-        if (await Trips.AnyAsync(t => t.VehicleId == dto.VehicleId && t.TripDate == dto.TripDate && t.OdometerStart == dto.OdometerStart, ct))
-            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripDuplicate);
-
-        // Km đầu phải liền với km cuối chuyến hoàn thành gần nhất của xe (MSG30); lệch vẫn lưu nhưng cảnh báo.
-        var lastEnd = await LastOdometerAsync(dto.VehicleId, ct);
-        var gap = lastEnd is not null && dto.OdometerStart != lastEnd;
-
-        var trip = new VehicleTrip
-        {
-            VehicleId = dto.VehicleId, TripDate = dto.TripDate,
-            DriverEmployeeId = dto.DriverEmployeeId, DriverName = dto.DriverEmployeeId is null ? dto.DriverName?.Trim() : null,   // CK_VT_Driver: hoặc nhân viên hoặc tên tài xế ngoài
-            Purpose = string.IsNullOrWhiteSpace(dto.Purpose) ? null : dto.Purpose.Trim(), DispatchNoteId = dto.DispatchNoteId,
-            OdometerStart = dto.OdometerStart, Status = TripStatuses.Started, KmGapWarning = gap, RecordedAt = _clock.Now,
-        };
-        await _uow.Repository<VehicleTrip>().AddAsync(trip);
+        var prepared = await PrepareTripAsync(dto, ct);
+        if (!prepared.IsSuccess) return WarehouseFailures.From<VehicleTripDto>(prepared);
+        var (trip, lastEnd) = prepared.Data!;
         await _uow.SaveChangesAsync();
         _audit.Add(new AuditEntry(nameof(VehicleTrip), trip.VehicleTripId, AuditActions.Insert, null,
             new { trip.VehicleId, trip.TripDate, trip.OdometerStart, trip.KmGapWarning }));
         await _uow.SaveChangesAsync();
         return Result<VehicleTripDto>.Success(await ReloadAsync(trip.VehicleTripId, ct),
-            gap ? string.Format(WarehouseMessages.KmGapWarning, lastEnd) : WarehouseMessages.TripStarted);
+            trip.KmGapWarning ? string.Format(WarehouseMessages.KmGapWarning, lastEnd) : WarehouseMessages.TripStarted);
+    }
+
+    public async Task<Result<PreparedTrip>> PrepareTripAsync(StartVehicleTripDto dto, CancellationToken ct)
+    {
+        var vehicle = await Vehicles.FirstOrDefaultAsync(v => v.VehicleId == dto.VehicleId, ct);
+        if (vehicle is null) return WarehouseFailures.NotFound<PreparedTrip>();
+        if (vehicle.Status != RecordStatus.Active)
+            return Result<PreparedTrip>.Failure(ErrorCodes.VehicleInactive, WarehouseMessages.VehicleInactive);
+        if (dto.TripDate > _clock.Today)
+            return Result<PreparedTrip>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripDateFuture);
+        if (dto.DispatchNoteId is { } noteId && !await _uow.Repository<DispatchNote>().Query().AnyAsync(d => d.DispatchNoteId == noteId, ct))
+            return WarehouseFailures.NotFound<PreparedTrip>();
+        if (await Trips.AnyAsync(t => t.VehicleId == dto.VehicleId && t.Status == TripStatuses.Started, ct))
+            return Result<PreparedTrip>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripAlreadyOpen);
+        if (await Trips.AnyAsync(t => t.VehicleId == dto.VehicleId && t.TripDate == dto.TripDate && t.OdometerStart == dto.OdometerStart, ct))
+            return Result<PreparedTrip>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.TripDuplicate);
+
+        // Km đầu phải liền với km cuối chuyến hoàn thành gần nhất của xe (MSG30); lệch vẫn lưu nhưng cảnh báo.
+        var lastEnd = await LastOdometerAsync(dto.VehicleId, ct);
+        var trip = new VehicleTrip
+        {
+            VehicleId = dto.VehicleId,
+            TripDate = dto.TripDate,
+            DriverEmployeeId = dto.DriverEmployeeId,
+            DriverName = dto.DriverEmployeeId is null ? dto.DriverName?.Trim() : null,   // CK_VT_Driver: hoặc nhân viên hoặc tên tài xế ngoài
+            Purpose = string.IsNullOrWhiteSpace(dto.Purpose) ? null : dto.Purpose.Trim(),
+            DispatchNoteId = dto.DispatchNoteId,
+            OdometerStart = dto.OdometerStart,
+            Status = TripStatuses.Started,
+            KmGapWarning = lastEnd is not null && dto.OdometerStart != lastEnd,
+            RecordedAt = _clock.Now,
+        };
+        await _uow.Repository<VehicleTrip>().AddAsync(trip);
+        return Result<PreparedTrip>.Success(new PreparedTrip(trip, lastEnd));
+    }
+
+    public async Task<Result<IReadOnlyList<AvailableVehicleDto>>> GetAvailableVehiclesAsync(CancellationToken ct)
+    {
+        var vehicles = await Vehicles.AsNoTracking()
+            .Where(v => v.Status == RecordStatus.Active && !v.VehicleTrips.Any(t => t.Status == TripStatuses.Started))
+            .OrderBy(v => v.PlateNumber)
+            .Select(v => new AvailableVehicleDto(v.VehicleId, v.PlateNumber, v.VehicleType,
+                v.VehicleTrips.Where(t => t.Status == TripStatuses.Completed)
+                    .OrderByDescending(t => t.TripDate).ThenByDescending(t => t.VehicleTripId)
+                    .Select(t => t.OdometerEnd).FirstOrDefault()))
+            .ToListAsync(ct);
+        return Result<IReadOnlyList<AvailableVehicleDto>>.Success(vehicles);
     }
 
     public async Task<Result<VehicleTripDto>> CompleteTripAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct)
@@ -160,7 +187,12 @@ public sealed class VehicleService : IVehicleService
         if (trip is null) return WarehouseFailures.NotFound<VehicleTripDto>();
         if (trip.Status != TripStatuses.Started) return WarehouseFailures.InvalidStatus<VehicleTripDto>();
         if (dto.OdometerEnd <= trip.OdometerStart)
-            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.OdometerEndInvalid);
+        {
+            // DEV-ALL-130: báo lỗi ngay dưới ô Km cuối, không lưu.
+            var message = string.Format(WarehouseMessages.OdometerEndInvalid, trip.OdometerStart);
+            return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, message, ResultKind.Validation,
+                new Dictionary<string, string[]> { ["odometerEnd"] = [message] });
+        }
 
         trip.OdometerEnd = dto.OdometerEnd;
         trip.FuelLiters = dto.FuelLiters;

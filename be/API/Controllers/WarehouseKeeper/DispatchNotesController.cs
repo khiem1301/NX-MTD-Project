@@ -31,7 +31,7 @@ public sealed class DispatchNotesController : WarehouseKeeperBaseController
         this.ToExcelFile(await exports.ExportDispatchNoteAsync(id, ct));
 
     [HttpPost("{id:int}/export")]
-    public async Task<IActionResult> Export(int id, [FromBody] DispatchActionDto dto, CancellationToken ct) =>
+    public async Task<IActionResult> Export(int id, [FromBody] ExportDispatchDto dto, CancellationToken ct) =>
         this.ToResponse(await _notes.ExportAsync(id, dto, _user.EmployeeId, ct));
 
     [HttpPost("{id:int}/reject")]

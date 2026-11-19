@@ -15,7 +15,8 @@ public interface IDispatchNoteService
     Task<Result> CancelAsync(int dispatchNoteId, DispatchActionDto dto, CancellationToken ct);
 
     /// <summary>Thủ kho xuất hàng (cần ảnh phiếu có Quản đốc ký): trừ kho thành phẩm, phiếu PENDING sang IN_DELIVERY.</summary>
-    Task<Result> ExportAsync(int dispatchNoteId, DispatchActionDto dto, int employeeId, CancellationToken ct);
+    /// <summary>DEV-ALL-127: xuất kho kèm cách giao; xe công ty giao thì tạo chuyến xe STARTED gắn phiếu.</summary>
+    Task<Result> ExportAsync(int dispatchNoteId, ExportDispatchDto dto, int employeeId, CancellationToken ct);
 
     Task<Result> RejectAsync(int dispatchNoteId, RejectDispatchDto dto, int employeeId, CancellationToken ct);
 

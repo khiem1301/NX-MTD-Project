@@ -14,9 +14,14 @@ type ColorAutoCompleteProps = {
   placeholder?: string;
   /** Màu đang có trong form (chưa lưu) cũng được gợi ý. */
   extraColors?: readonly string[];
+  /**
+   * DEV-ALL-132: mã hàng của dòng. Số → chỉ gợi ý màu đã có của mã đó; `null` → mã mới chưa có trong hệ thống, không gợi
+   * ý màu nào; bỏ trống → màu của mọi mã hàng.
+   */
+  productId?: number | null;
 };
 
-/** Ô màu: gợi ý các màu đã khai ở mã hàng trước (gõ không dấu cũng được), vẫn nhập được màu mới. */
+/** Ô màu: gợi ý màu (gõ không dấu cũng được), vẫn nhập được màu mới. */
 export function ColorAutoComplete({
   value = '',
   onChange,
@@ -25,16 +30,18 @@ export function ColorAutoComplete({
   status,
   placeholder,
   extraColors = [],
+  productId,
 }: ColorAutoCompleteProps) {
-  const colors = useProductColors();
+  const colors = useProductColors(productId);
   const all = useMemo(() => {
     const seen = new Map<string, string>();
-    for (const c of [...(colors.data ?? []), ...extraColors]) {
+    const source = productId === null ? [] : [...(colors.data ?? []), ...extraColors];
+    for (const c of source) {
       const t = c.trim();
       if (t && !seen.has(t.toLowerCase())) seen.set(t.toLowerCase(), t);
     }
     return [...seen.values()];
-  }, [colors.data, extraColors]);
+  }, [colors.data, extraColors, productId]);
   const options = useMemo(() => filterColors(all, value).map((c) => ({ value: c })), [all, value]);
 
   return (

@@ -1,5 +1,6 @@
 using NX_MTD.Application.Services;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Infrastructure.Excel;
 using NX_MTD.Infrastructure.Repositories;
 
 namespace NX_MTD.API.Modules;
@@ -15,6 +16,13 @@ public static class OrderModule
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<IProductSpecService, ProductSpecService>();
         services.AddScoped<IOrderMarkerService, OrderMarkerService>();
+        services.AddSingleton<IExcelSpecWorkbookParser, ClosedXmlSpecWorkbookParser>();
+        services.AddScoped<ISpecImportService, SpecImportService>();
+        services.AddSingleton<IExcelOrderLinesParser, ClosedXmlOrderLinesParser>();
+        services.AddScoped<IOrderImportService, OrderImportService>();
+        services.AddSingleton<IExcelProductParser, ClosedXmlProductParser>();
+        services.AddScoped<IProductImportService, ProductImportService>();
+        services.AddScoped<IExcelBundleService, ExcelBundleService>();
         services.AddScoped<IProductImageCleanupService, ProductImageCleanupService>();
         services.AddScoped<ICustomerOrderService, CustomerOrderService>();
         services.AddScoped<IOrderLookupService, OrderLookupService>();

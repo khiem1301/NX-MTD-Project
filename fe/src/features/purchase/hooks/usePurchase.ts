@@ -10,7 +10,6 @@ import type {
   ReasonPayload,
   RepricePayload,
   SaveSupplierPayload,
-  SetActualAmountPayload,
   SupplierQuery,
   UpdatePaymentPayload,
 } from '../types';
@@ -99,12 +98,6 @@ export const useUpdatePayment = (id: number) =>
     ({ paymentId, body }: { paymentId: number; body: UpdatePaymentPayload }) =>
       purchaseApi.updatePayment(id, paymentId, body),
     afterAction(PURCHASE_TEXT.done.paymentUpdated),
-  );
-
-export const useSetActualAmount = (id: number) =>
-  useApiMutation(
-    (body: SetActualAmountPayload) => purchaseApi.setActualAmount(id, body),
-    afterAction(PURCHASE_TEXT.done.actualSaved),
   );
 
 export const useReturnPayment = (id: number) =>

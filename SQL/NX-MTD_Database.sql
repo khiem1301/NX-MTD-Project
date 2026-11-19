@@ -380,11 +380,11 @@ CREATE TABLE dbo.Customer (
     DiscontinueReason NVARCHAR(500) NULL,    -- lý do ngừng hợp tác (không bắt buộc, DEV-ALL-76)
     CONSTRAINT CK_Customer_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
--- Hai khách hàng không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-114)
+-- Hai khách hàng không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-133)
 CREATE UNIQUE INDEX UQ_Customer_Phone ON dbo.Customer(Phone) WHERE Phone IS NOT NULL;
 CREATE UNIQUE INDEX UQ_Customer_Email ON dbo.Customer(Email) WHERE Email IS NOT NULL;
 
--- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm Category (DEV-ALL-115)
+-- Nguyên vật liệu (tạo ngay khi nhập phiếu nhập – UC38). Người dùng chọn thẳng MaterialType; không còn nhóm Category (DEV-ALL-134)
 -- MaterialType: FABRIC = vải, đi qua tổ cắt; TRIM = phụ liệu, cấp thẳng cho tổ may; SCRAP = phế phẩm, chỉ để trả về kho (DEV-ALL-112)
 CREATE TABLE dbo.Material (
     MaterialId    INT IDENTITY(1,1) CONSTRAINT PK_Material PRIMARY KEY,
@@ -416,7 +416,7 @@ CREATE TABLE dbo.Supplier (
     CreatedAt      DATETIME2(0)  NOT NULL CONSTRAINT DF_Supplier_CreatedAt DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_Supplier_Status CHECK (Status IN ('ACTIVE','DISCONTINUED'))
 );
--- Hai nhà cung cấp không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-114)
+-- Hai nhà cung cấp không cùng số điện thoại / email, bỏ trống thì không kiểm (DEV-ALL-133)
 CREATE UNIQUE INDEX UQ_Supplier_Phone ON dbo.Supplier(Phone) WHERE Phone IS NOT NULL;
 CREATE UNIQUE INDEX UQ_Supplier_Email ON dbo.Supplier(Email) WHERE Email IS NOT NULL;
 
@@ -498,7 +498,7 @@ CREATE TABLE dbo.ProductComponentMaterial (
     ProductComponentId  INT            NOT NULL,
     MaterialId          INT            NOT NULL CONSTRAINT FK_PCM_Material REFERENCES dbo.Material(MaterialId),
     SpecNote            NVARCHAR(200)  NULL,         -- ghi chú quy cách khác
-    Status              VARCHAR(20)    NOT NULL CONSTRAINT DF_PCM_Status DEFAULT 'ACTIVE', -- 17/11: dòng đã có chứng từ dùng thì ngừng dùng (DISCONTINUED) thay vì xóa, DEV-ALL-116
+    Status              VARCHAR(20)    NOT NULL CONSTRAINT DF_PCM_Status DEFAULT 'ACTIVE', -- 17/11: dòng đã có chứng từ dùng thì ngừng dùng (DISCONTINUED) thay vì xóa, DEV-ALL-135
     CONSTRAINT CK_PCM_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT FK_PCM_Color     FOREIGN KEY (ProductColorId, ProductId)     REFERENCES dbo.ProductColor(ProductColorId, ProductId),
     CONSTRAINT FK_PCM_Component FOREIGN KEY (ProductComponentId, ProductId) REFERENCES dbo.ProductComponent(ProductComponentId, ProductId),
@@ -548,7 +548,7 @@ CREATE TABLE dbo.CustomerOrder (
     DelayRiskSince   DATE           NULL,     -- JOB-04 ghi ngày bắt đầu có nguy cơ trễ, xóa khi hết nguy cơ
     IsDelayRisk      AS (CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT)), -- cờ, không phải trạng thái; tính từ DelayRiskSince
     StopReason       NVARCHAR(500)  NULL,
-    FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-118)
+    FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-137)
     FinalAmountReason NVARCHAR(500) NULL,
     Note             NVARCHAR(1000) NULL,
     CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
@@ -569,7 +569,7 @@ CREATE TABLE dbo.CustomerOrder (
 );
 CREATE INDEX IX_CustomerOrder_Status ON dbo.CustomerOrder(Status, DueDate);
 
--- Từng lần thanh toán của đơn hàng khách (DEV-ALL-118): Amount dương = khách trả mình, âm = mình trả khách (đền hợp đồng).
+-- Từng lần thanh toán của đơn hàng khách (DEV-ALL-137): Amount dương = khách trả mình, âm = mình trả khách (đền hợp đồng).
 -- Tổng các lần luôn nằm giữa 0 và CustomerOrder.FinalAmount (backend kiểm). Không xóa dòng; sửa được trong 24 giờ kể từ CreatedAt, bắt buộc có lý do.
 CREATE TABLE dbo.OrderPayment (
     OrderPaymentId  INT IDENTITY(1,1) CONSTRAINT PK_OrderPayment PRIMARY KEY,
@@ -864,10 +864,9 @@ CREATE TABLE dbo.PurchaseOrder (
     -- Thanh toán do Kế toán xác nhận (PAYMENT, UC34); ảnh chứng từ trong Attachment (OwnerType = PURCHASE_ORDER)
     PaymentDate           DATE           NULL,
     PaidAmount            DECIMAL(18,2)  NULL,
+    ActualAmount          DECIMAL(18,2)  NULL,  -- DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán
     PaymentMethod         VARCHAR(20)    NULL,
     PaymentNote           NVARCHAR(500)  NULL,
-    ActualAmountOverride  DECIMAL(18,2)  NULL,  -- Kế toán nhập giá trị thực tế thay giá trị tự tính (đơn chốt thiếu / giao thiếu), DEV-ALL-117
-    ActualAmountReason    NVARCHAR(500)  NULL,
     Note                  NVARCHAR(1000) NULL,
     CreatedAt             DATETIME2(0)   NOT NULL CONSTRAINT DF_PO_CreatedAt DEFAULT (dbo.fn_VnNow()),
     RowVer                ROWVERSION,
@@ -878,7 +877,7 @@ CREATE TABLE dbo.PurchaseOrder (
     CONSTRAINT CK_PO_Paid   CHECK (PaymentStatus NOT IN ('PAID','PARTIALLY_PAID')
                                     OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)),
     CONSTRAINT CK_PO_PayReturn CHECK (PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL),
-    CONSTRAINT CK_PO_ActualOverride CHECK (ActualAmountOverride IS NULL OR (ActualAmountOverride >= 0 AND ActualAmountReason IS NOT NULL)),
+    CONSTRAINT CK_PO_ActualAmount CHECK (ActualAmount IS NULL OR ActualAmount > 0),
     CONSTRAINT CK_PO_Ordered CHECK (GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED')
                                     OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)),
     CONSTRAINT CK_PO_Reject CHECK (GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL),
@@ -908,7 +907,7 @@ CREATE TABLE dbo.PurchaseOrderLine (
 CREATE UNIQUE INDEX UQ_POL       ON dbo.PurchaseOrderLine(PurchaseOrderId, OrderMaterialId) WHERE OrderMaterialId IS NOT NULL;
 CREATE UNIQUE INDEX UQ_POL_Stock ON dbo.PurchaseOrderLine(PurchaseOrderId, MaterialId) WHERE OrderMaterialId IS NULL;
 
--- Mỗi lần Kế toán thanh toán đơn mua là một dòng (DEV-ALL-117). PurchaseOrder.PaidAmount là tổng các dòng; PaymentDate / PaymentMethod /
+-- Mỗi lần Kế toán thanh toán đơn mua là một dòng (DEV-ALL-136). PurchaseOrder.PaidAmount là tổng các dòng; PaymentDate / PaymentMethod /
 -- PaymentNote là của lần thanh toán gần nhất. Không xóa dòng; sửa được trong 24 giờ kể từ CreatedAt, bắt buộc có lý do.
 CREATE TABLE dbo.PurchasePayment (
     PurchasePaymentId INT IDENTITY(1,1) CONSTRAINT PK_PurchasePayment PRIMARY KEY,
@@ -1346,8 +1345,11 @@ CREATE TABLE dbo.DispatchNote (
     DispatchedBy        INT            NULL CONSTRAINT FK_DN_DispatchedBy REFERENCES dbo.Employee(EmployeeId),  -- Thủ kho
     DispatchedAt        DATETIME2(0)   NULL,
     CustomerReceivedDate DATE          NULL,
+    DeliveryMethod      VARCHAR(20)    NULL,     -- DEV-ALL-127: Thủ kho chọn khi xuất: khách lấy / xe công ty giao
     RowVer              ROWVERSION,
     CONSTRAINT CK_DN_Status CHECK (Status IN ('PENDING','REJECTED','CANCELLED','IN_DELIVERY','DELIVERED')),
+    CONSTRAINT CK_DN_DeliveryMethod CHECK (DeliveryMethod IS NULL OR DeliveryMethod IN ('CUSTOMER_PICKUP','COMPANY_VEHICLE')),
+    CONSTRAINT CK_DN_DeliveryMethodSet CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR DeliveryMethod IS NOT NULL),
     CONSTRAINT CK_DN_Reject CHECK (Status <> 'REJECTED' OR RejectReason IS NOT NULL),
     CONSTRAINT CK_DN_Delivered CHECK (Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL),
     CONSTRAINT CK_DN_Dispatched CHECK (Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL))

@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using NX_MTD.API.Common;
-using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Admin;
 
-/// <summary>DEV-ALL-50: Admin quản lý nhóm công đoạn của mã hàng.</summary>
+/// <summary>
+/// DEV-ALL-117: Admin chỉ XEM nhóm công đoạn của mã hàng (Kế toán quản lý nhóm). Trước đây Admin thêm / đổi tên / xóa / xếp nhóm được
+/// (DEV-ALL-50).
+/// </summary>
 public sealed class OperationGroupsController : AdminBaseController
 {
     private readonly IOperationGroupService _groups;
@@ -15,20 +17,4 @@ public sealed class OperationGroupsController : AdminBaseController
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] int productId, CancellationToken ct) =>
         this.ToResponse(await _groups.ListAsync(productId, ct));
-
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateOperationGroupDto dto, CancellationToken ct) =>
-        this.ToResponse(await _groups.CreateAsync(dto, ct));
-
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Rename(int id, [FromBody] RenameOperationGroupDto dto, CancellationToken ct) =>
-        this.ToResponse(await _groups.RenameAsync(id, dto, ct));
-
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct) =>
-        this.ToResponse(await _groups.DeleteAsync(id, ct));
-
-    [HttpPut("operations")]
-    public async Task<IActionResult> SetOperationsGroup([FromBody] SetOperationsGroupDto dto, CancellationToken ct) =>
-        this.ToResponse(await _groups.SetOperationsGroupAsync(dto, ct));
 }

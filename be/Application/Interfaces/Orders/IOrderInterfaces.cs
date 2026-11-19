@@ -9,8 +9,6 @@ public interface ICustomerRepository : IGenericRepository<Customer>
     Task<PagedResult<CustomerDto>> ListAsync(CustomerQuery query, string? statusCode, CancellationToken ct);
     Task<IReadOnlyList<CustomerOptionDto>> ListOptionsAsync(CancellationToken ct);
     Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct);
-    Task<bool> PhoneExistsAsync(string phone, int? exceptId, CancellationToken ct);
-    Task<bool> EmailExistsAsync(string email, int? exceptId, CancellationToken ct);
 }
 
 public interface IProductRepository : IGenericRepository<Product>
@@ -25,7 +23,8 @@ public interface IProductRepository : IGenericRepository<Product>
     Task<PagedResult<ProductLookupDto>> LookupAsync(PageQuery query, CancellationToken ct);
 
     /// <summary>Các màu đã khai ở mọi mã hàng (ProductVariant.Color), bỏ trùng không phân biệt hoa thường.</summary>
-    Task<IReadOnlyList<string>> ListColorsAsync(CancellationToken ct);
+    /// <param name="productId">Có giá trị = chỉ màu của mã hàng này (DEV-ALL-132).</param>
+    Task<IReadOnlyList<string>> ListColorsAsync(int? productId, CancellationToken ct);
 }
 
 public interface ICustomerOrderRepository : IGenericRepository<CustomerOrder>
@@ -79,6 +78,10 @@ public interface IProductSpecService
 {
     Task<Result<ProductSpecDto>> GetAsync(int productId, CancellationToken ct);
     Task<Result<ProductSpecDto>> SaveAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
+    /// <summary>Mọi kiểm tra của Lưu định mức, không ghi (DEV-ALL-115).</summary>
+    Task<Result> CheckAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
+    /// <summary>Ghi định mức đã kiểm, KHÔNG mở giao dịch: người gọi bọc giao dịch (DEV-ALL-115).</summary>
+    Task<Result<int>> WriteAsync(int productId, SaveProductSpecDto dto, CancellationToken ct);
 }
 
 public interface ICustomerOrderService
@@ -107,12 +110,35 @@ public interface IOrderLookupService
     /// <summary>Tổ may chỉ thấy dòng chia cho tổ; Quản đốc / Admin truyền sewingTeamId để lọc theo tổ đang chọn.</summary>
     Task<Result<IReadOnlyList<OrderLineLookupDto>>> LinesAsync(int orderId, int? sewingTeamId, CancellationToken ct);
     Task<Result<PagedResult<ProductLookupDto>>> ProductsAsync(PageQuery query, CancellationToken ct);
-    Task<Result<IReadOnlyList<string>>> ColorsAsync(CancellationToken ct);
+    Task<Result<IReadOnlyList<string>>> ColorsAsync(int? productId, CancellationToken ct);
 }
 
 /// <summary>Bìa cắt của đơn (DEV-ALL-85): xem theo đơn, lưu theo từng mã hàng của đơn.</summary>
+/// <summary>DEV-ALL-115: nhập Excel định mức mã hàng (thành phần, định mức NVL, nhóm bìa) và bìa của đơn trong một file.</summary>
+public interface ISpecImportService
+{
+    /// <summary>Xem trước: kiểm từng dòng, gộp với dữ liệu đang có và chạy mọi kiểm tra của nút Lưu. Không ghi gì.</summary>
+    /// <param name="parts">DEV-ALL-121: chỉ lấy các bảng này trong file (components, norms, groups, markers — xem SpecImportParts); null = mọi bảng.</param>
+    Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null);
+    /// <summary>Nhập: lập lại bản gộp từ file rồi lưu định mức và bìa của đơn trong một giao dịch.</summary>
+    Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, Stream stream, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null);
+    /// <summary>DEV-ALL-122: xem trước / nhập từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
+    Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null);
+    Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
+        IReadOnlyCollection<string>? parts = null);
+    /// <summary>DEV-ALL-122: kiểm cho popup, kể cả mã hàng chưa tạo; dòng cần màu / đơn chưa có trả Pending. Không ghi gì.</summary>
+    Task<Result<SpecImportPreviewDto>> CheckAsync(int? productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct);
+}
+
 public interface IOrderMarkerService
 {
     Task<Result<OrderMarkersDto>> GetAsync(int orderId, CancellationToken ct);
     Task<Result<OrderMarkersDto>> SaveAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+    /// <summary>Mọi kiểm tra của Lưu bìa, không ghi (DEV-ALL-115).</summary>
+    Task<Result> CheckAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
+    /// <summary>Ghi bìa đã kiểm, KHÔNG mở giao dịch: người gọi bọc giao dịch (DEV-ALL-115).</summary>
+    Task<Result<int>> WriteAsync(int orderId, int productId, SaveOrderMarkersDto dto, CancellationToken ct);
 }

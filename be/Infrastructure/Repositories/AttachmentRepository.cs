@@ -17,8 +17,8 @@ public sealed class AttachmentRepository : IAttachmentRepository
     public Task<Attachment?> GetAsync(long attachmentId, CancellationToken ct) =>
         _db.Attachments.FirstOrDefaultAsync(a => a.AttachmentId == attachmentId, ct);
 
-    public Task<int> CountCurrentAsync(string ownerType, int ownerId, CancellationToken ct) =>
-        _db.Attachments.CountAsync(a => a.OwnerType == ownerType && a.OwnerId == ownerId && a.IsCurrent, ct);
+    public Task<int> CountCurrentAsync(string ownerType, int ownerId, string purpose, CancellationToken ct) =>
+        _db.Attachments.CountAsync(a => a.OwnerType == ownerType && a.OwnerId == ownerId && a.Purpose == purpose && a.IsCurrent, ct);
 
     public async Task<IReadOnlyList<AttachmentDto>> ListCurrentAsync(string ownerType, int ownerId, CancellationToken ct)
     {

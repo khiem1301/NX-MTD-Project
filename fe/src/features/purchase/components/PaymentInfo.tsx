@@ -9,6 +9,7 @@ import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
 import { PAYMENT_METHOD_LABEL, PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail, PurchasePayment } from '../types';
 import { EditPaymentModal } from './EditPaymentModal';
+import { payableAmount } from '../utils/payable';
 
 const text = PURCHASE_TEXT.detail;
 
@@ -19,6 +20,7 @@ const text = PURCHASE_TEXT.detail;
 export function PaymentInfo({ order: data }: { order: PurchaseOrderDetail }) {
   const [editing, setEditing] = useState<PurchasePayment | null>(null);
   const paid = data.paidAmount ?? 0;
+  const target = payableAmount(data);
 
   const columns: ColumnsType<PurchasePayment> = [
     { title: text.paymentDate, dataIndex: 'paymentDate', render: (v: string) => formatDate(v) },
@@ -60,11 +62,11 @@ export function PaymentInfo({ order: data }: { order: PurchaseOrderDetail }) {
       <Descriptions bordered size="small" column={{ xs: 1, sm: 3 }} style={{ marginBottom: 12 }}>
         <Descriptions.Item label={text.paidAmount}>{formatCurrency(paid)}</Descriptions.Item>
         <Descriptions.Item label={text.actualTotal}>
-          {formatCurrency(data.actualAmount)}
+          {formatCurrency(target)}
         </Descriptions.Item>
         <Descriptions.Item label={text.remaining}>
           <Typography.Text strong>
-            {formatCurrency(Math.max(0, data.actualAmount - paid))}
+            {formatCurrency(Math.max(0, target - paid))}
           </Typography.Text>
         </Descriptions.Item>
       </Descriptions>

@@ -241,14 +241,14 @@ Table ProductComponentMaterial [note: 'Định mức NVL theo màu áo × thành
   ProductComponentId int [not null, note: 'Thành phần dùng NVL này; FK ghép cùng ProductId nên phải đúng mã hàng']
   MaterialId int [not null, note: 'Vật tư']
   SpecNote nvarchar(200) [note: 'Ghi chú quy cách khác']
-  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'ACTIVE; DISCONTINUED = đã có chứng từ dùng nên chỉ ẩn (DEV-ALL-116)']
+  Status varchar(20) [not null, default: 'ACTIVE', check: `Status IN ('ACTIVE','DISCONTINUED')`, note: 'ACTIVE; DISCONTINUED = đã có chứng từ dùng nên chỉ ẩn (DEV-ALL-135)']
   indexes {
     (ProductColorId, ProductComponentId, MaterialId) [unique, name: 'UQ_PCM']
     (MaterialId) [name: 'IX_PCM_Material']
   }
 }
 
-Table PurchasePayment [note: 'Từng lần thanh toán đơn mua (DEV-ALL-117): không xóa, sửa trong 24 giờ kèm lý do. PurchaseOrder.PaidAmount là tổng các lần'] {
+Table PurchasePayment [note: 'Từng lần thanh toán đơn mua (DEV-ALL-136): không xóa, sửa trong 24 giờ kèm lý do. PurchaseOrder.PaidAmount là tổng các lần'] {
   PurchasePaymentId int [pk, increment, note: 'Khóa chính, tự tăng']
   PurchaseOrderId int [not null, note: 'Đơn mua']
   PaymentDate date [not null, note: 'Ngày thanh toán']
@@ -263,7 +263,7 @@ Table PurchasePayment [note: 'Từng lần thanh toán đơn mua (DEV-ALL-117): 
   }
 }
 
-Table OrderPayment [note: 'Từng lần thanh toán đơn hàng khách (DEV-ALL-118): dương = khách trả, âm = mình trả khách (đền hợp đồng); không xóa, sửa trong 24 giờ kèm lý do'] {
+Table OrderPayment [note: 'Từng lần thanh toán đơn hàng khách (DEV-ALL-137): dương = khách trả, âm = mình trả khách (đền hợp đồng); không xóa, sửa trong 24 giờ kèm lý do'] {
   OrderPaymentId int [pk, increment, note: 'Khóa chính, tự tăng']
   OrderId int [not null, note: 'Đơn hàng']
   PaymentDate date [not null, note: 'Ngày thanh toán']
@@ -326,7 +326,7 @@ Table CustomerOrder [note: 'Đơn hàng gia công'] {
   DelayRiskSince date [note: 'Ngày JOB-04 bắt đầu cảnh báo nguy cơ trễ đơn']
   IsDelayRisk bit [note: 'Cờ cảnh báo nguy cơ trễ đơn do JOB-04 đặt; không phải trạng thái đơn (cột tính: CAST(IIF(DelayRiskSince IS NULL, 0, 1) AS BIT))']
   StopReason nvarchar(500) [note: 'Lý do tạm dừng / hủy đơn']
-  FinalAmount decimal(18,2) [note: 'Giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-118)']
+  FinalAmount decimal(18,2) [note: 'Giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-137)']
   FinalAmountReason nvarchar(500) [note: 'Lý do chốt / đổi giá trị (bắt buộc khi có FinalAmount)']
   Note nvarchar(1000) [note: 'Ghi chú chung của đơn hàng']
   CustomerDeliveryCount smallint [check: `CustomerDeliveryCount IS NULL OR CustomerDeliveryCount >= 1`, note: 'Số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11/2026, DEV-ALL-95)']
@@ -1235,10 +1235,9 @@ Table PurchaseOrder [note: 'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn
   PaymentReturnReason nvarchar(500) [note: 'Lý do Kế toán trả lại Quản đốc']
   PaymentDate date [note: 'Ngày Kế toán thanh toán cho NCC']
   PaidAmount decimal(18,2) [note: 'Số tiền Kế toán đã thanh toán cho NCC (đồng); bắt buộc > 0 khi PAID']
+  ActualAmount decimal(18,2) [note: 'DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù, Kế toán nhập khi thanh toán; > 0']
   PaymentMethod varchar(20) [check: `PaymentMethod IS NULL OR PaymentMethod IN ('BANK_TRANSFER','CASH')`, note: 'Hình thức: BANK_TRANSFER (chuyển khoản) hoặc CASH (tiền mặt)']
   PaymentNote nvarchar(500) [note: 'Ghi chú thanh toán']
-  ActualAmountOverride decimal(18,2) [note: 'Giá trị thực tế do Kế toán nhập thay giá trị tự tính (đơn đang nhận hàng / đã chốt thiếu); NULL = dùng giá trị tự tính (DEV-ALL-117)']
-  ActualAmountReason nvarchar(500) [note: 'Lý do nhập giá trị thực tế']
   Note nvarchar(1000) [note: 'Ghi chú đơn mua cho NCC hoặc Kế toán']
   CreatedAt datetime2(0) [not null, default: `[dbo].[fn_VnNow]()`, note: 'Thời điểm tạo bản ghi (giờ Việt Nam)']
   RowVer rowversion [not null, note: 'Phiên bản dòng, EF Core dùng để chặn hai người sửa cùng lúc']

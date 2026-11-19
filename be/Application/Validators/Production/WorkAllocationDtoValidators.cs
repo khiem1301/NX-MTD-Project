@@ -33,6 +33,25 @@ public sealed class ConfirmWorkAllocationDtoValidator : AbstractValidator<Confir
     }
 }
 
+public sealed class ConfirmWorkAllocationBatchDtoValidator : AbstractValidator<ConfirmWorkAllocationBatchDto>
+{
+    public const int MaxItems = 100;
+
+    public ConfirmWorkAllocationBatchDtoValidator()
+    {
+        RuleFor(x => x.Items).NotEmpty().WithMessage(WarehouseMessages.BatchConfirmItemsRequired)
+            .Must(i => i.Count <= MaxItems).WithMessage(string.Format(WarehouseMessages.BatchConfirmTooMany, MaxItems))
+            .Must(i => i.Select(x => x.WorkAllocationId).Distinct().Count() == i.Count)
+            .WithMessage(WarehouseMessages.BatchConfirmDuplicate);
+        RuleForEach(x => x.Items).ChildRules(item =>
+        {
+            item.RuleFor(i => i.WorkAllocationId).GreaterThan(0);
+            item.RuleFor(i => i.ConfirmedQty).GreaterThan(0).WithMessage(WarehouseMessages.AllocationConfirmZero);
+            item.RuleFor(i => i.DiscrepancyReason).MaximumLength(TextLimits.Reason);
+        });
+    }
+}
+
 public sealed class ConfirmOnBehalfDtoValidator : AbstractValidator<ConfirmOnBehalfDto>
 {
     public ConfirmOnBehalfDtoValidator()

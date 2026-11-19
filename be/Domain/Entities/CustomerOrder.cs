@@ -28,7 +28,7 @@ public partial class CustomerOrder
 
     public string? StopReason { get; set; }
 
-    /// <summary>Giá trị chốt cả đơn do Kế toán nhập (có thể âm = mình phải đền hợp đồng); null = chưa chốt (DEV-ALL-118).</summary>
+    /// <summary>Giá trị chốt cả đơn do Kế toán nhập (có thể âm = mình phải đền hợp đồng); null = chưa chốt (DEV-ALL-137).</summary>
     public decimal? FinalAmount { get; set; }
 
     public string? FinalAmountReason { get; set; }

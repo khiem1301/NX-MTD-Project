@@ -62,11 +62,8 @@ public sealed class ProductSpecService : IProductSpecService
 
     public async Task<Result<ProductSpecDto>> SaveAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
     {
-        var product = await _uow.Repository<Product>().Query().FirstOrDefaultAsync(p => p.ProductId == productId, ct);
-        if (product is null) return Fail.NotFound<ProductSpecDto>();
-
-        var invalid = await ValidateAsync(productId, dto, ct);
-        if (invalid is not null) return invalid;
+        var check = await CheckAsync(productId, dto, ct);
+        if (!check.IsSuccess) return Fail.As<ProductSpecDto>(check);
 
         var saved = await _uow.InTransactionAsync(() => ApplySpecAsync(productId, dto, ct));
         if (!saved.IsSuccess) return Fail.As<ProductSpecDto>(saved);
@@ -74,6 +71,18 @@ public sealed class ProductSpecService : IProductSpecService
         var spec = await GetAsync(productId, ct);
         return Result<ProductSpecDto>.Success(spec.Data!, Messages.Saved);
     }
+
+    /// <summary>Mọi kiểm tra của nút Lưu, không ghi gì (dùng chung với nhập Excel định mức, DEV-ALL-115).</summary>
+    public async Task<Result> CheckAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
+    {
+        if (!await _uow.Repository<Product>().Query().AnyAsync(p => p.ProductId == productId, ct)) return Fail.NotFound();
+        var invalid = await ValidateAsync(productId, dto, ct);
+        return invalid ?? Result.Success();
+    }
+
+    /// <summary>Ghi định mức đã qua <see cref="CheckAsync"/>, không mở giao dịch: người gọi tự bọc giao dịch (DEV-ALL-115).</summary>
+    public Task<Result<int>> WriteAsync(int productId, SaveProductSpecDto dto, CancellationToken ct) =>
+        ApplySpecAsync(productId, dto, ct);
 
     /// <summary>Ghi định mức trong một giao dịch: gỡ mục bỏ đi → cập nhật / thêm thành phần, biến thể → ghi định mức.</summary>
     private async Task<Result<int>> ApplySpecAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
@@ -175,7 +184,7 @@ public sealed class ProductSpecService : IProductSpecService
     /// <summary>
     /// Bước 3: ghi định mức theo kiểu cập nhật / thêm / xóa (giữ Id: lệnh cắt, phiếu cấp, bàn cắt, tồn kho BTP
     /// trỏ vào ProductComponentMaterialId nên không thể xóa rồi tạo lại). Dòng bị bỏ: chưa dùng thì xóa, đã dùng thì ngừng dùng
-    /// (ẩn, DEV-ALL-116); dòng ngừng dùng được thêm lại thì dùng lại.
+    /// (ẩn, DEV-ALL-135); dòng ngừng dùng được thêm lại thì dùng lại.
     /// </summary>
     private async Task WriteNormsAsync(int productId, SaveProductSpecDto dto, List<ProductComponentMaterial> remainingNorms,
         Dictionary<string, int> colorByName, Dictionary<string, ProductComponent> componentByName, CancellationToken ct)

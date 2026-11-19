@@ -8,6 +8,7 @@ import { formatCurrency, toApiDate } from '@/utils/format';
 import { PAYMENT_METHOD_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { useUpdatePayment } from '../hooks/usePurchase';
 import type { PaymentMethod, PurchaseOrderDetail, PurchasePayment } from '../types';
+import { payableAmount } from '../utils/payable';
 
 type Props = {
   order: PurchaseOrderDetail;
@@ -31,7 +32,7 @@ export function EditPaymentModal({ order, payment, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const update = useUpdatePayment(order.purchaseOrderId);
   // Số tối đa của lần này = giá trị thực tế trừ các lần khác.
-  const maxAmount = order.actualAmount - ((order.paidAmount ?? 0) - (payment?.amount ?? 0));
+  const maxAmount = payableAmount(order) - ((order.paidAmount ?? 0) - (payment?.amount ?? 0));
 
   useEffect(() => {
     if (!payment) return;

@@ -32,6 +32,9 @@ public partial class DispatchNote
 
     public DateOnly? CustomerReceivedDate { get; set; }
 
+    /// <summary>DEV-ALL-127: CUSTOMER_PICKUP / COMPANY_VEHICLE, bắt buộc khi đã xuất.</summary>
+    public string? DeliveryMethod { get; set; }
+
     public byte[] RowVer { get; set; } = null!;
 
     public virtual ICollection<DispatchNoteLine> DispatchNoteLines { get; set; } = new List<DispatchNoteLine>();

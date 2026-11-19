@@ -59,7 +59,7 @@ type OperationColumnsOptions = {
   onSetRate: (row: Operation) => void;
   onSubmitRate: (pieceRateId: number) => void;
   onToggle: (row: Operation, discontinue: boolean) => void;
-  /** Admin chỉ xem đơn giá, Kế toán mới đặt và gửi duyệt (DEV-ALL-50). */
+  /** Kế toán quản lý công đoạn và đơn giá; Admin chỉ xem và duyệt đơn giá ở màn duyệt (DEV-ALL-117, trước đây DEV-ALL-50). */
   canManageRates: boolean;
 };
 
@@ -141,11 +141,13 @@ export const operationColumns = ({
           icon={<EyeOutlined />}
           onClick={() => onView(row)}
         />
-        <IconAction
-          title={MESSAGES.common.edit}
-          icon={<EditOutlined />}
-          onClick={() => onEdit(row)}
-        />
+        {canManageRates && (
+          <IconAction
+            title={MESSAGES.common.edit}
+            icon={<EditOutlined />}
+            onClick={() => onEdit(row)}
+          />
+        )}
         {canManageRates && canSetRate(row) && (
           <IconAction
             title={editableRate(row) ? rateText.editRate : rateText.setRate}
@@ -161,7 +163,7 @@ export const operationColumns = ({
             <IconAction title={rateText.submit} icon={<SendOutlined />} />
           </ConfirmAction>
         )}
-        {row.status === 'Active' ? (
+        {!canManageRates ? null : row.status === 'Active' ? (
           <ConfirmAction
             title={text.discontinueConfirm}
             description={row.isFinalStep ? text.finalDiscontinueConfirm : undefined}

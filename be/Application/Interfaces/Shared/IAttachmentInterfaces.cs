@@ -28,14 +28,22 @@ public interface IAttachmentOwnerAccess
     string OwnerType { get; }
     Task<bool> CanReadAsync(int ownerId, CancellationToken ct);
     Task<bool> CanWriteAsync(int ownerId, CancellationToken ct);
+    /// <summary>Số ảnh tối đa của MỘT nhóm ảnh (Purpose) trên một chủ sở hữu (DEV-ALL-128).</summary>
     Task<int> MaxFilesAsync(CancellationToken ct);
+
+    /// <summary>
+    /// DEV-ALL-128: vai trò hiện tại có được tải nhóm ảnh này không (vd phiếu xuất: Thủ kho chỉ ảnh phiếu xuất đã ký, Kế toán chỉ
+    /// biên bản giao). Mặc định mọi nhóm, cho các chủ sở hữu chỉ có một nhóm ảnh.
+    /// </summary>
+    bool CanWritePurpose(string purpose) => true;
 }
 
 public interface IAttachmentRepository
 {
     Task AddAsync(Attachment attachment, CancellationToken ct);
     Task<Attachment?> GetAsync(long attachmentId, CancellationToken ct);   // tracked
-    Task<int> CountCurrentAsync(string ownerType, int ownerId, CancellationToken ct);
+    /// <summary>Số ảnh đang có của một nhóm ảnh (Purpose) trên chủ sở hữu — giới hạn tính theo từng nhóm (DEV-ALL-128).</summary>
+    Task<int> CountCurrentAsync(string ownerType, int ownerId, string purpose, CancellationToken ct);
     Task<IReadOnlyList<AttachmentDto>> ListCurrentAsync(string ownerType, int ownerId, CancellationToken ct);
 }
 

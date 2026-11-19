@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-118: Kế toán chốt giá trị đơn hàng khách (âm = mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần
+/// DEV-ALL-137: Kế toán chốt giá trị đơn hàng khách (âm = mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần
 /// (số dương = khách trả, số âm = mình trả). Tổng đã thanh toán luôn nằm giữa 0 và giá trị chốt. Không xóa lần thanh toán;
 /// sửa trong 24 giờ kể từ lúc nhập, bắt buộc lý do. Lịch sử ghi dưới bảng "OrderPayment" (không lẫn lịch sử sửa đơn hàng,
 /// vốn có đơn giá gia công là dữ liệu mật GBR-02).

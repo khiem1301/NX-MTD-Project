@@ -1,7 +1,7 @@
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Một lần thanh toán của đơn hàng khách (DEV-ALL-118). <see cref="Amount"/> dương = khách trả mình, âm = mình trả khách (đền hợp đồng).
+/// Một lần thanh toán của đơn hàng khách (DEV-ALL-137). <see cref="Amount"/> dương = khách trả mình, âm = mình trả khách (đền hợp đồng).
 /// Không xóa; sửa được trong 24 giờ kể từ <see cref="CreatedAt"/>, bắt buộc có lý do.
 /// </summary>
 public partial class OrderPayment

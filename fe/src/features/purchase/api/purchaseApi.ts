@@ -11,7 +11,6 @@ import type {
   ReasonPayload,
   RepricePayload,
   SaveSupplierPayload,
-  SetActualAmountPayload,
   Supplier,
   SupplierDetail,
   SupplierOption,
@@ -60,8 +59,6 @@ export const purchaseApi = {
     post<void>(API.purchase.confirmPayment(id), body),
   updatePayment: (id: number, paymentId: number, body: UpdatePaymentPayload) =>
     put<void>(API.purchase.updatePayment(id, paymentId), body),
-  setActualAmount: (id: number, body: SetActualAmountPayload) =>
-    put<void>(API.purchase.actualAmount(id), body),
   returnPayment: (id: number, body: ReasonPayload) =>
     post<void>(API.purchase.returnPayment(id), body),
 };

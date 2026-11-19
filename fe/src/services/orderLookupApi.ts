@@ -8,7 +8,14 @@ import type {
   ProductLookup,
 } from '@/types/orderLookup';
 
-type LookupParams = { keyword?: string; page?: number; pageSize?: number; status?: string };
+type LookupParams = {
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  /** Chỉ đơn có mã hàng này (DEV-ALL-115). */
+  productId?: number;
+};
 
 const get = async <T>(url: string, params?: object): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url, { params })).data.data;
@@ -21,7 +28,8 @@ export const orderLookupApi = {
     get<OrderLineLookup[]>(API.orderLookups.orderLines(orderId), { sewingTeamId }),
   products: (params?: LookupParams) =>
     get<Paginated<ProductLookup>>(API.orderLookups.products, params),
-  productColors: () => get<string[]>(API.orderLookups.productColors),
+  productColors: (productId?: number) =>
+    get<string[]>(API.orderLookups.productColors, productId ? { productId } : undefined),
   /** Chi tiết của mã hàng, đọc từ API định mức (Admin / Kế toán). */
   productComponents: async (productId: number, scope: ProductScope) =>
     (await get<{ components: ProductComponentLookup[] }>(API.products.spec(productId, scope)))

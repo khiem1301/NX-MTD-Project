@@ -1,7 +1,7 @@
 namespace NX_MTD.Domain.Entities;
 
 /// <summary>
-/// Một lần Kế toán thanh toán đơn mua (DEV-ALL-117). Không xóa; sửa được trong 24 giờ kể từ <see cref="CreatedAt"/>, bắt buộc có lý do.
+/// Một lần Kế toán thanh toán đơn mua (DEV-ALL-136). Không xóa; sửa được trong 24 giờ kể từ <see cref="CreatedAt"/>, bắt buộc có lý do.
 /// </summary>
 public partial class PurchasePayment
 {

@@ -54,7 +54,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...profileMenu, // Khiêm
   ...mealMenu, // Minh
   ...payrollMenu, // Minh
-  ...orderPaymentMenu, // Thanh toán đơn hàng khách (DEV-ALL-118)
+  ...orderPaymentMenu, // Thanh toán đơn hàng khách (DEV-ALL-137)
   ...purchaseMenu, // Minh (MI-07)
   ...monthlyCostMenu, // Minh
   ...kpiMenu, // Minh

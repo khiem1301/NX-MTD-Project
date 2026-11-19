@@ -126,17 +126,6 @@ public sealed class UpdatePurchasePaymentDtoValidator : AbstractValidator<Update
     }
 }
 
-public sealed class SetActualAmountDtoValidator : AbstractValidator<SetActualAmountDto>
-{
-    public SetActualAmountDtoValidator()
-    {
-        RuleFor(x => x.Amount).GreaterThanOrEqualTo(0).When(x => x.Amount is not null).WithMessage(Messages.PaymentAmountInvalid);
-        RuleFor(x => x.Reason).NotEmpty().When(x => x.Amount is not null).WithMessage(Messages.PaymentActualReasonRequired)
-            .MaximumLength(TextLimits.Reason);
-        RuleFor(x => x.RowVer).NotEmpty();
-    }
-}
-
 public sealed class ReturnPaymentDtoValidator : AbstractValidator<ReturnPaymentDto>
 {
     public ReturnPaymentDtoValidator()

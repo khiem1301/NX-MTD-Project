@@ -62,7 +62,6 @@ export const PURCHASE_TEXT = {
     enteredAt: 'Nhập lúc',
     editedNote: 'Đã sửa',
     editPayment: 'Sửa lần thanh toán',
-    actualOverrideReason: 'Lý do nhập giá trị thực tế',
     paymentMethod: 'Hình thức',
     paymentNote: 'Ghi chú thanh toán',
     lines: 'Dòng đơn mua',
@@ -75,15 +74,17 @@ export const PURCHASE_TEXT = {
     unitPrice: 'Đơn giá',
     amount: 'Thành tiền',
     total: 'Tổng giá trị',
-    /** Giá trị đơn đã trừ phần chốt không bù (hoặc số Kế toán nhập); tổng các lần thanh toán không được vượt quá. */
+    /** Chỉ hiện khi đơn Chốt không bù: do Kế toán nhập khi xác nhận thanh toán (DEV-ALL-129). */
     actualTotal: 'Tổng giá trị thực tế',
+    actualNotEntered: 'Chưa nhập (gợi ý {0} theo số đã nhận)',
+    receivedQty: 'Đã nhận',
+    notReplenishedQty: 'Không bù',
   },
 
   actions: {
     place: 'Chọn NCC và đặt hàng',
     cancel: 'Hủy đơn mua',
     reprice: 'Sửa đơn giá và gửi lại',
-    setActual: 'Nhập giá trị thực tế',
     confirmPayment: 'Xác nhận thanh toán',
     returnPayment: 'Trả lại Quản đốc',
   },
@@ -129,6 +130,14 @@ export const PURCHASE_TEXT = {
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amountRequired: 'Nhập số tiền lớn hơn 0.',
     methodRequired: 'Vui lòng chọn hình thức.',
+    // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế, trạng thái xét theo giá trị này.
+    actualAmount: 'Tổng giá trị thực tế',
+    actualAmountRequired: 'Nhập tổng giá trị thực tế lớn hơn 0.',
+    actualExceedsTotal: 'Tổng giá trị thực tế không được lớn hơn tổng giá trị đơn mua.',
+    actualHint: 'Theo số đã nhận: {0}. Tổng giá trị đơn: {1}.',
+    amountExceedsActual: 'Số tiền thanh toán không được lớn hơn tổng giá trị thực tế.',
+    willBePaid: 'Trả đủ tổng giá trị thực tế: đơn sẽ là Đã thanh toán.',
+    willBePartial: 'Trả ít hơn tổng giá trị thực tế: đơn sẽ là Thanh toán một phần.',
   },
 
   actual: {
@@ -154,7 +163,6 @@ export const PURCHASE_TEXT = {
     repriced: 'Đã cập nhật đơn giá và gửi lại Kế toán.',
     paid: 'Đã ghi nhận lần thanh toán.',
     paymentUpdated: 'Đã sửa lần thanh toán.',
-    actualSaved: 'Đã lưu giá trị thực tế.',
     returned: 'Đã trả lại Quản đốc kèm lý do.',
   },
 } as const;

@@ -1,5 +1,5 @@
 /* =====================================================================================
-   DEV-ALL-118: thanh toán đơn hàng khách nhiều lần. CustomerOrder thêm FinalAmount (giá trị chốt cả đơn do Kế toán nhập, có thể âm khi
+   DEV-ALL-137: thanh toán đơn hàng khách nhiều lần. CustomerOrder thêm FinalAmount (giá trị chốt cả đơn do Kế toán nhập, có thể âm khi
    mình phải đền hợp đồng) và FinalAmountReason; thêm bảng OrderPayment (Amount dương = khách trả, âm = mình trả khách; không xóa,
    sửa trong 24 giờ kèm lý do). Chạy lại không lỗi. DB dựng mới từ NX-MTD_Database.sql không cần chạy.
    Lệnh (PowerShell, tại thư mục gốc dự án):

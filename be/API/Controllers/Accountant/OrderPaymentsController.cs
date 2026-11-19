@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.API.Controllers.Accountant;
 
 /// <summary>
-/// DEV-ALL-118 — Kế toán chốt giá trị đơn hàng khách (có thể âm khi mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần
+/// DEV-ALL-137 — Kế toán chốt giá trị đơn hàng khách (có thể âm khi mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần
 /// (dương = khách trả, âm = mình trả). Không có thao tác xóa; sửa một lần thanh toán trong 24 giờ kèm lý do.
 /// </summary>
 public sealed class OrderPaymentsController : AccountantBaseController

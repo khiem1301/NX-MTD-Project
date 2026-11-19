@@ -1,5 +1,5 @@
 /* =====================================================================================
-   DEV-ALL-115: bỏ cột Material.Category (Nhóm NVL). Loại NVL (MaterialType: FABRIC / TRIM / SCRAP) trước đây là cột tính từ Category,
+   DEV-ALL-134: bỏ cột Material.Category (Nhóm NVL). Loại NVL (MaterialType: FABRIC / TRIM / SCRAP) trước đây là cột tính từ Category,
    nay là cột thật do người dùng chọn trực tiếp. Giá trị Loại của NVL hiện có được giữ nguyên.
    Các bước: thêm cột tạm, chép Loại cũ vào, bỏ UQ_Material_NameType, CK_Material_Category, cột tính MaterialType và Category,
    đổi tên cột tạm thành MaterialType (NOT NULL), thêm CK_Material_Type, dựng lại UQ_Material_NameType và view vw_MaterialStock (bỏ Category).

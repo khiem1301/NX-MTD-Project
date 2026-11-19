@@ -63,7 +63,8 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         {
             Items = page.Items.Select(i => i with
             {
-                GoodsStatus = CodeText.ToPascal(i.GoodsStatus), PaymentStatus = CodeText.ToPascal(i.PaymentStatus),
+                GoodsStatus = CodeText.ToPascal(i.GoodsStatus),
+                PaymentStatus = CodeText.ToPascal(i.PaymentStatus),
             }).ToList(),
         });
     }
@@ -73,11 +74,28 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var header = await PurchaseOrders.AsNoTracking().Where(p => p.PurchaseOrderId == purchaseOrderId)
             .Select(p => new
             {
-                p.PurchaseOrderId, p.PoCode, p.OrderId, OrderCode = p.Order == null ? null : p.Order.OrderCode,
-                p.SupplierId, SupplierName = p.Supplier == null ? null : p.Supplier.SupplierName,
-                p.GoodsStatus, p.PaymentStatus, p.OrderDate, p.ExpectedDeliveryCount, p.ExpectedDeliveryDate, p.ExpectedDeliveryDateTo, p.Note, p.RejectReason,
-                p.PaymentReturnReason, p.PaymentDate, p.PaidAmount, p.PaymentMethod, p.PaymentNote,
-                p.ActualAmountOverride, p.ActualAmountReason, p.CreatedAt, p.RowVer,
+                p.PurchaseOrderId,
+                p.PoCode,
+                p.OrderId,
+                OrderCode = p.Order == null ? null : p.Order.OrderCode,
+                p.SupplierId,
+                SupplierName = p.Supplier == null ? null : p.Supplier.SupplierName,
+                p.GoodsStatus,
+                p.PaymentStatus,
+                p.OrderDate,
+                p.ExpectedDeliveryCount,
+                p.ExpectedDeliveryDate,
+                p.ExpectedDeliveryDateTo,
+                p.Note,
+                p.RejectReason,
+                p.PaymentReturnReason,
+                p.PaymentDate,
+                p.PaidAmount,
+                p.PaymentMethod,
+                p.PaymentNote,
+                p.ActualAmount,
+                p.CreatedAt,
+                p.RowVer,
             })
             .FirstOrDefaultAsync(ct);
         if (header is null) return Fail.NotFound<PurchaseOrderFlowDto>();
@@ -100,9 +118,10 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
             header.PaymentMethod is null ? null : CodeText.ToPascal(header.PaymentMethod), header.PaymentNote,
             lines.Sum(l => l.OrderedQty * l.UnitPrice), header.CreatedAt, header.RowVer, lines,
             PermissionsFor(header.GoodsStatus, header.PaymentStatus), history, header.ExpectedDeliveryDate,
-            header.ExpectedDeliveryDateTo, deliveryDates,
-            header.ActualAmountOverride ?? lines.Sum(l => (l.OrderedQty - l.NotReplenishedQty) * l.UnitPrice),
-            payments, header.ActualAmountOverride, header.ActualAmountReason));
+            header.ExpectedDeliveryDateTo, deliveryDates, header.ActualAmount,
+            // DEV-ALL-129: giá trị theo số đã nhận, gợi ý Tổng giá trị thực tế cho đơn Chốt không bù.
+            lines.Sum(l => l.ReceivedQty * l.UnitPrice),
+            payments));
     }
 
     // ---------- Quản đốc ----------
@@ -135,8 +154,16 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         {
             await _schedule.ReplaceAsync(DeliveryOwner.PurchaseOrder, po.PurchaseOrderId, dto.ExpectedDeliveryDates ?? [], ct);
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Update, before,
-                new { po.GoodsStatus, po.SupplierId, po.OrderDate, po.ExpectedDeliveryCount, po.ExpectedDeliveryDate,
-                    po.ExpectedDeliveryDateTo, Lines = Snapshot(po) }));
+                new
+                {
+                    po.GoodsStatus,
+                    po.SupplierId,
+                    po.OrderDate,
+                    po.ExpectedDeliveryCount,
+                    po.ExpectedDeliveryDate,
+                    po.ExpectedDeliveryDateTo,
+                    Lines = Snapshot(po)
+                }));
             await _notifier.NotifyRoleAsync(RoleCodes.Accountant, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPlacedTitle, string.Format(Messages.NotifyPoPlacedBody, po.PoCode, supplier.SupplierName),
                 string.Format(PaymentLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
@@ -248,17 +275,17 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var method = CodeText.ToCode(dto.PaymentMethod);
         if (!PaymentMethods.All.Contains(method))
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentMethodInvalid, ResultKind.Validation);
-        if (dto.PaidAmount <= 0)
-            return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountInvalid, ResultKind.Validation);
-        var remaining = PurchaseAmounts.Actual(po) - PurchaseAmounts.Paid(po);
-        if (dto.PaidAmount > remaining)
-            return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentAmountExceedsTotal, ResultKind.Validation);
         if (dto.PaymentDate > _clock.Today)
             return Result.Failure(ErrorCodes.PaymentInvalid, Messages.PaymentDateFuture, ResultKind.Validation);
+        // DEV-ALL-129: đơn thường so với tổng giá trị đơn; đơn Chốt không bù so với tổng giá trị thực tế Kế toán nhập.
+        var payable = PayableAmount(po, dto);
+        if (!payable.IsSuccess) return payable;
+        var target = payable.Data;
 
         _uow.Repository<PurchaseOrder>().SetOriginalRowVersion(po, dto.RowVer);
         var from = po.PaymentStatus;
-        // Mỗi lần trả là một dòng; tổng đã trả đủ giá trị thực tế thì đơn thành đã thanh toán (DEV-ALL-117).
+        // Mỗi lần trả là một dòng; tổng đã trả đủ mốc (giá trị đơn / giá trị thực tế) thì đơn thành đã thanh toán (DEV-ALL-136, 129).
+        if (po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort) po.ActualAmount = target;
         po.PurchasePayments.Add(new PurchasePayment
         {
             PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, PaymentMethod = method,
@@ -270,13 +297,36 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         {
             _audit.Add(new AuditEntry(nameof(PurchaseOrder), po.PurchaseOrderId, AuditActions.Confirm,
                 new { PaymentStatus = from },
-                new { po.PaymentStatus, PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, po.PaidAmount, po.PaymentMethod, po.PaymentNote }));
+                new { po.PaymentStatus, PaymentDate = dto.PaymentDate, Amount = dto.PaidAmount, po.PaidAmount, po.ActualAmount, po.PaymentMethod, po.PaymentNote }));
             await _notifier.NotifyRoleAsync(RoleCodes.Manager, new NotificationMessage(NotificationSources.Warehouse,
                 Messages.NotifyPoPaidTitle, string.Format(Messages.NotifyPoPaidBody, po.PoCode),
                 string.Format(ManagerLink, po.PurchaseOrderId), nameof(PurchaseOrder), po.PurchaseOrderId), ct);
             await _uow.SaveChangesAsync();
             return Result.Success(Messages.PaymentConfirmed);
         });
+    }
+
+    /// <summary>
+    /// DEV-ALL-129: số tiền làm mốc "đã thanh toán đủ". Đơn thường = tổng giá trị đơn. Đơn Chốt không bù = Tổng giá trị thực tế Kế
+    /// toán nhập (bắt buộc lần đầu, các lần sau dùng lại số đã lưu; không vượt tổng giá trị đơn, không nhỏ hơn số đã trả).
+    /// Số trả lần này không được vượt phần còn phải trả của mốc (DEV-ALL-136: đơn trả nhiều lần).
+    /// </summary>
+    private static Result<decimal> PayableAmount(PurchaseOrder po, ConfirmPaymentDto dto)
+    {
+        static Result<decimal> Invalid(string message) =>
+            Result<decimal>.Failure(ErrorCodes.PaymentInvalid, message, ResultKind.Validation);
+
+        if (dto.PaidAmount <= 0) return Invalid(Messages.PaymentAmountInvalid);
+        var orderTotal = po.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice);
+        var paid = PurchaseAmounts.Paid(po);
+        if (po.GoodsStatus != PurchaseGoodsStatuses.ClosedShort)
+            return dto.PaidAmount > orderTotal - paid ? Invalid(Messages.PaymentAmountExceedsTotal) : Result<decimal>.Success(orderTotal);
+
+        if ((dto.ActualAmount ?? po.ActualAmount) is not { } actual || actual <= 0) return Invalid(Messages.PaymentActualAmountRequired);
+        if (actual > orderTotal) return Invalid(Messages.PaymentActualAmountExceedsTotal);
+        if (actual < paid) return Invalid(Messages.PaymentActualBelowPaid);
+        if (dto.PaidAmount > actual - paid) return Invalid(Messages.PaymentAmountExceedsActual);
+        return Result<decimal>.Success(actual);
     }
 
     public async Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct)
@@ -323,7 +373,7 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    /// <summary>Đơn đã đặt hàng, chưa trả đủ: Kế toán thêm được lần thanh toán (nhiều lần, DEV-ALL-117).</summary>
+    /// <summary>Đơn đã đặt hàng, chưa trả đủ: Kế toán thêm được lần thanh toán (nhiều lần, DEV-ALL-136).</summary>
     internal static bool CanPay(string goodsStatus, string paymentStatus) =>
         PurchaseGoodsStatuses.Placed.Contains(goodsStatus)
         && paymentStatus is PurchaseOrderStatuses.Unpaid or PurchasePaymentStatuses.PartiallyPaid;
@@ -352,7 +402,6 @@ public sealed class PurchaseOrderFlowService : IPurchaseOrderFlowService
         var repriceable = PurchaseGoodsStatuses.Repriceable.Contains(goodsStatus)
                           && paymentStatus == PurchasePaymentStatuses.Returned;
         return new PurchaseOrderPermissionsDto(isManager && pending, isManager && pending, isManager && repriceable,
-            isAccountant && payable, isAccountant && returnable,
-            isAccountant && PurchasePaymentService.CanSetActual(goodsStatus, paymentStatus));
+            isAccountant && payable, isAccountant && returnable);
     }
 }

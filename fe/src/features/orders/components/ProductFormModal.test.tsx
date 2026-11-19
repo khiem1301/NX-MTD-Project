@@ -12,6 +12,16 @@ jest.mock('../hooks/useOrders', () => ({
 
 // Ô ảnh kéo theo cấu hình môi trường (import.meta) mà jest không đọc được; test này không cần ảnh.
 jest.mock('./SampleImageInput', () => ({ SampleImageInput: () => null }));
+// Nhập Excel sau khi lưu (DEV-ALL-121) gọi API thật; test này không bật mục đó.
+jest.mock('../utils/productExcelImports', () => ({
+  hasImportFiles: () => false,
+  requiredKindsFor: () => [],
+  missingKinds: () => [],
+  runProductImports: jest.fn(),
+  showProductImportResults: jest.fn(),
+}));
+jest.mock('./ProductExcelImports', () => ({ ProductExcelImports: () => null }));
+jest.mock('../api/orderApi', () => ({ productImportApi: { preview: jest.fn() } }));
 jest.mock('./ExtraImagesInput', () => ({ ExtraImagesInput: () => null }));
 // Ô màu gọi API gợi ý màu (cần QueryClient); thay bằng ô nhập thường.
 jest.mock('./ColorAutoComplete', () => ({

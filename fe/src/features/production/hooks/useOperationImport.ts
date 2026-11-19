@@ -10,10 +10,10 @@ import { PRODUCTION_TEXT } from '../constants';
 const text = PRODUCTION_TEXT.operations.import;
 
 /** Trạng thái và thao tác của màn nhập công đoạn từ Excel: chọn file, xem trước, tùy chọn đơn giá, xác nhận nhập. */
-export function useOperationImport(productId: number, onClose: () => void, allowRates: boolean) {
+export function useOperationImport(productId: number, onClose: () => void) {
   const [file, setFile] = useState<File | null>(null);
   const [finalStt, setFinalStt] = useState<number | undefined>(undefined);
-  const [withRates, setWithRates] = useState(allowRates);
+  const [withRates, setWithRates] = useState(true);
   const [effectiveDate, setEffectiveDate] = useState<Dayjs>(dayjs());
   const [submitRates, setSubmitRates] = useState(true);
   const preview = usePreviewOperationImport();
@@ -30,12 +30,21 @@ export function useOperationImport(productId: number, onClose: () => void, allow
     const date = options.date ?? effectiveDate;
     // Chọn file mới truyền sheetName: undefined (đọc sheet đầu); đổi ngày / tùy chọn thì giữ sheet đang xem.
     const sheetName = 'sheetName' in options ? options.sheetName : data?.sheetName;
-    preview.mutate({
-      file: nextFile,
-      productId,
-      sheetName,
-      effectiveDate: useRates ? toApiDate(date) : undefined,
-    });
+    preview.mutate(
+      {
+        file: nextFile,
+        productId,
+        sheetName,
+        effectiveDate: useRates ? toApiDate(date) : undefined,
+      },
+      {
+        // DEV-ALL-116: chọn sẵn công đoạn cuối theo cột CUỐI (khi mã hàng chưa có công đoạn cuối).
+        onSuccess: (result) =>
+          setFinalStt(
+            result.productHasFinalStep ? undefined : (result.finalSttInFile ?? undefined),
+          ),
+      },
+    );
   };
 
   const handleConfirm = () => {

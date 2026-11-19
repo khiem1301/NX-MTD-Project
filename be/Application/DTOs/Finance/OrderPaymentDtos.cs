@@ -2,7 +2,7 @@ using NX_MTD.Application.Common;
 
 namespace NX_MTD.Application.DTOs;
 
-// DEV-ALL-118: Kế toán chốt giá trị đơn hàng khách (có thể âm = mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần.
+// DEV-ALL-137: Kế toán chốt giá trị đơn hàng khách (có thể âm = mình phải đền hợp đồng) và ghi nhận thanh toán nhiều lần.
 // Số tiền dương = khách trả mình, âm = mình trả khách. Không có đơn giá gia công (GBR-02): giá trị chốt do Kế toán nhập.
 
 public sealed record OrderPaymentQuery : PageQuery

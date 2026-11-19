@@ -1,6 +1,6 @@
 import { Descriptions, Typography } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
-import { formatCurrency, formatDate } from '@/utils/format';
+import { fill, formatCurrency, formatDate } from '@/utils/format';
 import { formatDeliveryDates } from '@/utils/expectedDelivery';
 import { GOODS_STATUS_LABEL, PAYMENT_STATUS_LABEL, PURCHASE_TEXT } from '../constants';
 import type { PurchaseOrderDetail } from '../types';
@@ -41,14 +41,15 @@ export function PurchaseOrderInfo({ order: data }: { order: PurchaseOrderDetail 
       <Descriptions.Item label={text.total}>
         <Typography.Text strong>{formatCurrency(data.totalAmount)}</Typography.Text>
       </Descriptions.Item>
-      {data.actualAmount !== data.totalAmount && (
+      {data.goodsStatus === 'ClosedShort' && (
         <Descriptions.Item label={text.actualTotal}>
-          <Typography.Text strong>{formatCurrency(data.actualAmount)}</Typography.Text>
-        </Descriptions.Item>
-      )}
-      {data.actualAmountReason && (
-        <Descriptions.Item label={text.actualOverrideReason} span={2}>
-          {data.actualAmountReason}
+          {data.actualAmount !== null ? (
+            <Typography.Text strong>{formatCurrency(data.actualAmount)}</Typography.Text>
+          ) : (
+            <Typography.Text type="secondary">
+              {fill(text.actualNotEntered, formatCurrency(data.receivedAmount))}
+            </Typography.Text>
+          )}
         </Descriptions.Item>
       )}
       <Descriptions.Item label={text.note}>{data.note ?? '—'}</Descriptions.Item>

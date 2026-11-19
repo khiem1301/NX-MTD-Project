@@ -15,7 +15,6 @@ import {
   useCancelDispatch,
   useConfirmDelivery,
   useDownloadDispatch,
-  useExportDispatch,
   useRejectDispatch,
 } from '../hooks/useDispatch';
 import type { DispatchNote, DispatchNoteLine } from '../types';
@@ -25,6 +24,7 @@ import { AppDatePicker } from '@/components/common/DateInputs';
 import { type Dayjs } from 'dayjs';
 import { DispatchInfo } from './DispatchInfo';
 import { DispatchPhotos } from './DispatchPhotos';
+import { ExportDispatchModal } from './ExportDispatchModal';
 import { dispatchLineColumns } from './dispatchLineColumns';
 
 type FormValues = { receivedDate: Dayjs };
@@ -32,7 +32,7 @@ type FormValues = { receivedDate: Dayjs };
 export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClose: () => void }) {
   const { hasRole } = usePermission();
   const cancel = useCancelDispatch();
-  const exportGoods = useExportDispatch();
+  const [exporting, setExporting] = useState(false);
   const reject = useRejectDispatch();
   const photos = useAttachments(ATTACHMENT_OWNER.DispatchNote, note.dispatchNoteId);
   const hasIssuePhoto = (photos.data ?? []).some(
@@ -99,20 +99,9 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         {canExport && (
           <Tooltip title={hasIssuePhoto ? undefined : DISPATCH_LABELS.needIssuePhoto}>
             <span>
-              <ConfirmAction
-                title={DISPATCH_MESSAGES.confirmExport}
-                disabled={!hasIssuePhoto}
-                onConfirm={() =>
-                  exportGoods.mutate(
-                    { id: note.dispatchNoteId, rowVer: note.rowVer },
-                    { onSuccess: onClose },
-                  )
-                }
-              >
-                <Button type="primary" disabled={!hasIssuePhoto} loading={exportGoods.isPending}>
-                  {DISPATCH_LABELS.export}
-                </Button>
-              </ConfirmAction>
+              <Button type="primary" disabled={!hasIssuePhoto} onClick={() => setExporting(true)}>
+                {DISPATCH_LABELS.export}
+              </Button>
             </span>
           </Tooltip>
         )}
@@ -165,6 +154,16 @@ export function DispatchModalBody({ note, onClose }: { note: DispatchNote; onClo
         />
       </Form>
       <DispatchPhotos note={note} />
+      {exporting && (
+        <ExportDispatchModal
+          note={note}
+          onClose={() => setExporting(false)}
+          onDone={() => {
+            setExporting(false);
+            onClose();
+          }}
+        />
+      )}
       <ReasonModal
         open={rejecting}
         title={DISPATCH_LABELS.rejectTitle}

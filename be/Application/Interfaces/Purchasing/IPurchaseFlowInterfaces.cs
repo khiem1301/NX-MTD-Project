@@ -47,10 +47,8 @@ public interface IPurchaseOrderFlowService
     Task<Result> ReturnPaymentAsync(int purchaseOrderId, ReturnPaymentDto dto, CancellationToken ct);
 }
 
-/// <summary>DEV-ALL-117: sửa lần thanh toán đơn mua (24 giờ, bắt buộc lý do) và nhập giá trị thực tế của đơn. Không có thao tác xóa.</summary>
+/// <summary>DEV-ALL-136: sửa lần thanh toán đơn mua (24 giờ, bắt buộc lý do). Không có thao tác xóa.</summary>
 public interface IPurchasePaymentService
 {
     Task<Result> UpdatePaymentAsync(int purchaseOrderId, int paymentId, UpdatePurchasePaymentDto dto, CancellationToken ct);
-
-    Task<Result> SetActualAmountAsync(int purchaseOrderId, SetActualAmountDto dto, CancellationToken ct);
 }

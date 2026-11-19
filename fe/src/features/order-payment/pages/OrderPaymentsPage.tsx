@@ -26,7 +26,7 @@ type Filters = { keyword?: string; state?: OrderPaymentState };
 
 const text = ORDER_PAYMENT_TEXT.columns;
 
-/** Kế toán: danh sách đơn hàng khách kèm giá trị chốt, đã thanh toán và còn lại (DEV-ALL-118). */
+/** Kế toán: danh sách đơn hàng khách kèm giá trị chốt, đã thanh toán và còn lại (DEV-ALL-137). */
 export function OrderPaymentsPage() {
   const [, setSearchParams] = useSearchParams();
   const table = useTableQuery<Filters>({});

@@ -19,11 +19,15 @@ export const useOrderLineLookup = (orderId: number | null, sewingTeamId?: number
     enabled: orderId !== null,
   });
 
-/** Màu đã khai ở các mã hàng (gợi ý khi nhập màu). */
-export const useProductColors = () =>
+/**
+ * Màu gợi ý khi nhập màu. `productId` là số → chỉ màu của mã hàng đó; `null` → mã mới chưa có trong hệ thống, không tải
+ * (không gợi ý màu — DEV-ALL-132); `undefined` → màu của mọi mã hàng.
+ */
+export const useProductColors = (productId?: number | null) =>
   useQuery({
-    queryKey: [...KEY, 'product-colors'],
-    queryFn: () => orderLookupApi.productColors(),
+    queryKey: [...KEY, 'product-colors', productId ?? 'all'],
+    queryFn: () => orderLookupApi.productColors(productId ?? undefined),
+    enabled: productId !== null,
     staleTime: 60_000,
   });
 

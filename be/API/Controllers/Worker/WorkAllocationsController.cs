@@ -24,6 +24,10 @@ public sealed class WorkAllocationsController : WorkerBaseController
     public async Task<IActionResult> Confirm(int id, [FromBody] ConfirmWorkAllocationDto dto, CancellationToken ct) =>
         this.ToResponse(await _allocations.ConfirmByWorkerAsync(id, dto, _user.EmployeeId, ct));
 
+    [HttpPost("confirm-batch")]
+    public async Task<IActionResult> ConfirmBatch([FromBody] ConfirmWorkAllocationBatchDto dto, CancellationToken ct) =>
+        this.ToResponse(await _allocations.ConfirmBatchByWorkerAsync(dto, _user.EmployeeId, ct));
+
     [HttpPost("{id:int}/reject")]
     public async Task<IActionResult> Reject(int id, [FromBody] ReasonDto dto, CancellationToken ct) =>
         this.ToResponse(await _allocations.RejectByWorkerAsync(id, dto, _user.EmployeeId, ct));

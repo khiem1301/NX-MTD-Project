@@ -3,15 +3,17 @@ using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
-/// <summary>Giá trị thực tế của đơn mua và trạng thái thanh toán theo các lần thanh toán (DEV-ALL-117).</summary>
+/// <summary>Mốc trả đủ của đơn mua và trạng thái thanh toán theo các lần thanh toán (DEV-ALL-136).</summary>
 public static class PurchaseAmounts
 {
-    /// <summary>Giá trị tự tính: phần đã chốt không bù không tính (đơn chưa chốt thiếu thì bằng giá trị đơn mua).</summary>
-    public static decimal Computed(IEnumerable<PurchaseOrderLine> lines) =>
-        lines.Sum(l => (l.OrderedQty - l.NotReplenishedQty) * l.UnitPrice);
-
-    /// <summary>Giá trị thực tế: số Kế toán nhập (nếu có) hoặc giá trị tự tính. Cần nạp sẵn <see cref="PurchaseOrder.PurchaseOrderLines"/>.</summary>
-    public static decimal Actual(PurchaseOrder po) => po.ActualAmountOverride ?? Computed(po.PurchaseOrderLines);
+    /// <summary>
+    /// Mốc "trả đủ": đơn Chốt không bù đã có Tổng giá trị thực tế (DEV-ALL-129) thì lấy số đó, còn lại là tổng giá trị đơn mua.
+    /// Cần nạp sẵn <see cref="PurchaseOrder.PurchaseOrderLines"/>.
+    /// </summary>
+    public static decimal Actual(PurchaseOrder po) =>
+        po.GoodsStatus == PurchaseGoodsStatuses.ClosedShort && po.ActualAmount is { } actual
+            ? actual
+            : po.PurchaseOrderLines.Sum(l => l.OrderedQty * l.UnitPrice);
 
     public static decimal Paid(PurchaseOrder po) => po.PurchasePayments.Sum(p => p.Amount);
 

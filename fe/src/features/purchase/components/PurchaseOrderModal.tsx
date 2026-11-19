@@ -10,7 +10,6 @@ import type { ApiError } from '@/types/api';
 import { PURCHASE_TEXT } from '../constants';
 import { useCancelOrder, usePurchaseOrderDetail, useReturnPayment } from '../hooks/usePurchase';
 import type { PurchaseOrderLine, PurchaseRole } from '../types';
-import { ActualAmountModal } from './ActualAmountModal';
 import { ConfirmPaymentModal } from './ConfirmPaymentModal';
 import { PaymentProofGallery } from './PaymentProofGallery';
 import { PlaceOrderModal } from './PlaceOrderModal';
@@ -22,7 +21,7 @@ import { PurchaseOrderInfo } from './PurchaseOrderInfo';
 import { purchaseLineColumns } from './purchaseLineColumns';
 
 type Props = { role: PurchaseRole };
-type Dialog = 'place' | 'reprice' | 'confirm' | 'actual' | 'cancel' | 'return' | null;
+type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
 
 const text = PURCHASE_TEXT.detail;
 
@@ -60,9 +59,6 @@ export function PurchaseOrderModal({ role }: Props) {
         <Button type="primary" onClick={() => setDialog('confirm')}>
           {PURCHASE_TEXT.actions.confirmPayment}
         </Button>
-      )}
-      {perm.canSetActualAmount && (
-        <Button onClick={() => setDialog('actual')}>{PURCHASE_TEXT.actions.setActual}</Button>
       )}
       {perm.canReturnPayment && (
         <Button danger onClick={() => setDialog('return')}>
@@ -140,7 +136,6 @@ export function PurchaseOrderModal({ role }: Props) {
           <PlaceOrderModal open={dialog === 'place'} order={data} onClose={closeDialog} />
           <RepriceModal open={dialog === 'reprice'} order={data} onClose={closeDialog} />
           <ConfirmPaymentModal open={dialog === 'confirm'} order={data} onClose={closeDialog} />
-          <ActualAmountModal open={dialog === 'actual'} order={data} onClose={closeDialog} />
           <ReasonModal
             open={dialog === 'cancel'}
             title={PURCHASE_TEXT.cancelTitle}

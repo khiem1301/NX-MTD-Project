@@ -11,10 +11,12 @@ public sealed class CustomerService : ICustomerService
     private readonly ICustomerRepository _customers;
     private readonly IAuditLogService _audit;
     private readonly IUnitOfWork _uow;
+    private readonly IPartnerContactChecker _contacts;
 
-    public CustomerService(ICustomerRepository customers, IAuditLogService audit, IUnitOfWork uow)
+    public CustomerService(ICustomerRepository customers, IAuditLogService audit, IUnitOfWork uow,
+        IPartnerContactChecker contacts)
     {
-        _customers = customers; _audit = audit; _uow = uow;
+        _customers = customers; _audit = audit; _uow = uow; _contacts = contacts;
     }
 
     public async Task<Result<PagedResult<CustomerDto>>> ListAsync(CustomerQuery query, CancellationToken ct) =>
@@ -29,8 +31,7 @@ public sealed class CustomerService : ICustomerService
         var name = dto.CustomerName.Trim();
         if (await _customers.NameExistsAsync(name, null, ct))
             return Result<int>.Failure(ErrorCodes.CustomerNameDuplicate, Messages.CustomerNameDuplicate);
-        if (await ContactTakenAsync(dto, null, ct) is { } taken)
-            return Result<int>.Failure(taken.Code, taken.Message);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, null, null, ct) is { } duplicate) return Fail.As<int>(duplicate);
 
         var customer = new Customer { CustomerName = name, Status = RecordStatus.Active };
         Apply(customer, dto);
@@ -51,8 +52,7 @@ public sealed class CustomerService : ICustomerService
         var name = dto.CustomerName.Trim();
         if (await _customers.NameExistsAsync(name, customerId, ct))
             return Result.Failure(ErrorCodes.CustomerNameDuplicate, Messages.CustomerNameDuplicate);
-        if (await ContactTakenAsync(dto, customerId, ct) is { } taken)
-            return Result.Failure(taken.Code, taken.Message);
+        if (await _contacts.CheckAsync(dto.Phone, dto.Email, customerId, null, ct) is { } duplicate) return duplicate;
 
         var before = Snapshot(customer);
         customer.CustomerName = name;
@@ -90,18 +90,6 @@ public sealed class CustomerService : ICustomerService
             new { Status = RecordStatus.Discontinued }, new { customer.Status }));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
-    }
-
-    /// <summary>Hai khách hàng không dùng chung số điện thoại hoặc email (bỏ trống thì không kiểm).</summary>
-    private async Task<(string Code, string Message)?> ContactTakenAsync(SaveCustomerDto dto, int? exceptId, CancellationToken ct)
-    {
-        var phone = Clean(dto.Phone);
-        if (phone is not null && await _customers.PhoneExistsAsync(phone, exceptId, ct))
-            return (ErrorCodes.CustomerPhoneDuplicate, Messages.CustomerPhoneDuplicate);
-        var email = Clean(dto.Email);
-        if (email is not null && await _customers.EmailExistsAsync(email, exceptId, ct))
-            return (ErrorCodes.CustomerEmailDuplicate, Messages.CustomerEmailDuplicate);
-        return null;
     }
 
     private static void Apply(Customer c, SaveCustomerDto dto)

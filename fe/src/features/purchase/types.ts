@@ -81,6 +81,9 @@ export type PurchaseOrderLine = {
   orderedQty: number;
   unitPrice: number;
   amount: number | null;
+  /** Số đã nhận (phiếu nhập đã xác nhận) và số Quản đốc chốt không bù. */
+  receivedQty: number;
+  notReplenishedQty: number;
 };
 
 /** Nút nào hiện được: do server tính theo vai trò + trạng thái đơn. */
@@ -90,8 +93,6 @@ export type PurchaseOrderPermissions = {
   canReprice: boolean;
   canConfirmPayment: boolean;
   canReturnPayment: boolean;
-  /** Kế toán nhập giá trị thực tế (đơn đang nhận hàng / đã chốt giao thiếu). */
-  canSetActualAmount: boolean;
 };
 
 /** Một lần thanh toán đơn mua; canEdit: Kế toán, trong 24 giờ kể từ lúc nhập. Không xóa được. */
@@ -132,11 +133,9 @@ export type PurchaseOrderDetail = {
   paymentMethod: PaymentMethod | null;
   paymentNote: string | null;
   totalAmount: number;
-  /** Giá trị thực tế: đã trừ phần chốt không bù; số đã trả không được vượt quá. */
-  actualAmount: number;
-  /** Số Kế toán đã nhập thay giá trị tự tính (null = dùng giá trị tự tính) và lý do. */
-  actualAmountOverride: number | null;
-  actualAmountReason: string | null;
+  /** DEV-ALL-129: tổng giá trị thực tế đơn Chốt không bù (Kế toán nhập); receivedAmount = Σ số đã nhận × đơn giá (gợi ý). */
+  actualAmount: number | null;
+  receivedAmount: number;
   payments: PurchasePayment[];
   createdAt: string;
   rowVer: string;
@@ -176,6 +175,8 @@ export type ConfirmPaymentPayload = {
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
   rowVer: string;
+  /** Bắt buộc với đơn Chốt không bù (DEV-ALL-129). */
+  actualAmount?: number | null;
 };
 
 export type UpdatePaymentPayload = {
@@ -184,13 +185,6 @@ export type UpdatePaymentPayload = {
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
   reason: string;
-  rowVer: string;
-};
-
-/** amount null = bỏ số đã nhập, dùng lại giá trị tự tính. */
-export type SetActualAmountPayload = {
-  amount: number | null;
-  reason: string | null;
   rowVer: string;
 };
 

@@ -9,7 +9,7 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>DEV-ALL-117: thanh toán đơn mua nhiều lần, sửa trong 24 giờ kèm lý do, giá trị thực tế do Kế toán nhập.</summary>
+/// <summary>DEV-ALL-136: thanh toán đơn mua nhiều lần, sửa trong 24 giờ kèm lý do, giá trị thực tế do Kế toán nhập.</summary>
 public class PurchasePaymentServiceTests
 {
     private static readonly byte[] RowVer = { 7 };
@@ -126,49 +126,5 @@ public class PurchasePaymentServiceTests
         Po(PurchaseGoodsStatuses.Ordered, (500_000, 1));
 
         (await Sut().UpdatePaymentAsync(5, 99, Update(), default)).Kind.Should().Be(ResultKind.NotFound);
-    }
-
-    [Fact]
-    public async Task SetActualAmount_LowerThanOrder_MarksPaidWhenAlreadyCovered()
-    {
-        var po = Po(PurchaseGoodsStatuses.PartiallyReceived, (600_000, 1));
-        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.PartiallyPaid);
-
-        var result = await Sut().SetActualAmountAsync(5, new SetActualAmountDto(600_000, "NCC giảm giá do giao thiếu", RowVer), default);
-
-        result.IsSuccess.Should().BeTrue();
-        po.ActualAmountOverride.Should().Be(600_000);
-        po.ActualAmountReason.Should().Be("NCC giảm giá do giao thiếu");
-        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
-    }
-
-    [Fact]
-    public async Task SetActualAmount_BelowPaid_WithoutReason_OrWrongStatus_IsRefused()
-    {
-        Po(PurchaseGoodsStatuses.PartiallyReceived, (600_000, 1));
-        var belowPaid = await Sut().SetActualAmountAsync(5, new SetActualAmountDto(500_000, "x", RowVer), default);
-        var noReason = await Sut().SetActualAmountAsync(5, new SetActualAmountDto(700_000, null, RowVer), default);
-
-        belowPaid.Message.Should().Be(Messages.PaymentActualBelowPaid);
-        noReason.Message.Should().Be(Messages.PaymentActualReasonRequired);
-
-        _pos.Clear();
-        Po(PurchaseGoodsStatuses.Ordered);
-        var wrongStatus = await Sut().SetActualAmountAsync(5, new SetActualAmountDto(700_000, "x", RowVer), default);
-        wrongStatus.ErrorCode.Should().Be(ErrorCodes.PurchaseOrderInvalidStatus);
-    }
-
-    [Fact]
-    public async Task SetActualAmount_Null_ClearsOverride()
-    {
-        var po = Po(PurchaseGoodsStatuses.ClosedShort);
-        po.ActualAmountOverride = 300_000;
-        po.ActualAmountReason = "x";
-
-        var result = await Sut().SetActualAmountAsync(5, new SetActualAmountDto(null, null, RowVer), default);
-
-        result.IsSuccess.Should().BeTrue();
-        po.ActualAmountOverride.Should().BeNull();
-        po.ActualAmountReason.Should().BeNull();
     }
 }

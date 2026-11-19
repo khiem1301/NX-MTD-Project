@@ -1,41 +1,47 @@
 import { useEffect } from 'react';
-import { Alert, Form, Input, InputNumber, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, toApiDate } from '@/utils/format';
+import { toApiDate } from '@/utils/format';
 import { PAYMENT_METHOD_OPTIONS, PURCHASE_TEXT } from '../constants';
 import { useConfirmPayment } from '../hooks/usePurchase';
 import type { PaymentMethod, PurchaseOrderDetail } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { PaymentAmountFields } from './PaymentAmountFields';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
 type FormValues = {
   paymentDate: Dayjs;
   paidAmount: number | null;
+  actualAmount?: number | null;
   paymentMethod: PaymentMethod;
   paymentNote: string | null;
 };
 
-/** UC34: Kế toán xác nhận thanh toán đơn mua. Ảnh chứng từ không bắt buộc, đính ở khung ảnh bên ngoài. */
+const positiveOrNull = (value: number) => (value > 0 ? Math.round(value) : null);
+
+/**
+ * UC34: Kế toán xác nhận thanh toán đơn mua. Ảnh chứng từ không bắt buộc, đính ở khung ảnh bên ngoài.
+ * Đơn Chốt không bù: nhập Tổng giá trị thực tế (gợi ý theo số đã nhận) — DEV-ALL-129.
+ */
 export function ConfirmPaymentModal({ open, order, onClose }: Props) {
   const [form] = Form.useForm<FormValues>();
   const confirm = useConfirmPayment(order.purchaseOrderId);
   const text = PURCHASE_TEXT.pay;
-  const amount = Form.useWatch('paidAmount', form);
-  const remaining = Math.max(0, order.actualAmount - (order.paidAmount ?? 0));
-  const differs =
-    typeof amount === 'number' && amount > 0 && Math.round(amount) < Math.round(remaining);
+  const closedShort = order.goodsStatus === 'ClosedShort';
 
   useEffect(() => {
     if (!open) return;
+    const actual = closedShort ? positiveOrNull(order.actualAmount ?? order.receivedAmount) : null;
     form.resetFields();
     form.setFieldsValue({
       paymentDate: dayjs(),
-      paidAmount: remaining > 0 ? remaining : null,
+      actualAmount: actual,
+      paidAmount: positiveOrNull((closedShort ? (actual ?? 0) : order.totalAmount) - (order.paidAmount ?? 0)),
       paymentMethod: 'BankTransfer',
     });
-  }, [open, order, remaining, form]);
+  }, [open, order, form, closedShort]);
 
   const handleFinish = (values: FormValues) => {
     confirm.mutate(
@@ -45,6 +51,7 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
         paymentMethod: values.paymentMethod,
         paymentNote: values.paymentNote?.trim() || null,
         rowVer: order.rowVer,
+        actualAmount: closedShort ? (values.actualAmount ?? null) : null,
       },
       { onSuccess: onClose },
     );
@@ -69,31 +76,7 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
         >
           <AppDatePicker disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
         </Form.Item>
-        <Form.Item
-          name="paidAmount"
-          label={text.amount}
-          validateTrigger="onSubmit"
-          rules={[
-            { required: true, type: 'number', min: 0.01, message: text.amountRequired },
-            {
-              validator: async (_, value) => {
-                if (typeof value !== 'number' || value <= remaining) return;
-                throw new Error(text.amountExceedsTotal);
-              },
-            },
-          ]}
-          extra={`${text.remaining}: ${formatCurrency(remaining)} (${PURCHASE_TEXT.detail.actualTotal}: ${formatCurrency(order.actualAmount)})`}
-        >
-          <InputNumber min={0} precision={0} addonAfter="₫" style={{ width: 240 }} />
-        </Form.Item>
-        {differs && (
-          <Alert
-            type="warning"
-            showIcon
-            message={text.differsFromTotal}
-            style={{ marginBottom: 16 }}
-          />
-        )}
+        <PaymentAmountFields order={order} form={form} closedShort={closedShort} />
         <Form.Item
           name="paymentMethod"
           label={text.method}

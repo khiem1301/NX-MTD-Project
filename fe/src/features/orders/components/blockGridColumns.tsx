@@ -51,6 +51,7 @@ export const blockGridColumns = ({
         value={row.color}
         disabled={locked && rowHasOldLine(row)}
         extraColors={block.rows.map((r) => r.color)}
+        productId={block.productId}
         onChange={(color) => setRow(index, { color })}
       />
     ),

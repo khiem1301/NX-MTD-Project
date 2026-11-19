@@ -1,5 +1,5 @@
 /* =====================================================================================
-   DEV-ALL-116: ProductComponentMaterial thêm Status (ACTIVE / DISCONTINUED). Dòng định mức NVL đã có chứng từ dùng (lệnh cắt, đơn xin,
+   DEV-ALL-135: ProductComponentMaterial thêm Status (ACTIVE / DISCONTINUED). Dòng định mức NVL đã có chứng từ dùng (lệnh cắt, đơn xin,
    phiếu cấp, bàn cắt, bàn giao, tồn BTP) thì ngừng dùng (ẩn) thay vì bị chặn khi xóa; chưa dùng thì xóa hẳn.
    Chạy lại không lỗi. DB dựng mới từ NX-MTD_Database.sql không cần chạy.
    Lệnh (PowerShell, tại thư mục gốc dự án):

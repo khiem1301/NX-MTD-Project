@@ -14,26 +14,19 @@ type Props = {
   open: boolean;
   productId: number;
   productLabel: string;
-  /** Admin nhập công đoạn không kèm đơn giá (DEV-ALL-50). */
-  allowRates: boolean;
   onClose: () => void;
 };
 
 const text = PRODUCTION_TEXT.operations.import;
 
 /**
- * KI-01 (UC25) — Kế toán, Admin nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ: chọn file là xem trước ngay
- * (thêm mới / cập nhật / không đổi / lỗi), chọn sheet nếu file có nhiều bảng, chọn công đoạn cuối. Cột TIỀN được đọc
- * thành đơn giá công đoạn hiệu lực từ ngày chọn (Nháp, hoặc gửi Admin duyệt luôn).
+ * KI-01 (UC25) — Kế toán nhập công đoạn của một mã hàng từ file Excel quy trình công nghệ (DEV-ALL-117: Admin không nhập): chọn
+ * file là xem trước ngay (thêm mới / cập nhật / không đổi / lỗi), chọn sheet nếu file có nhiều bảng, chọn công đoạn cuối (chọn
+ * sẵn theo cột CUỐI). Cột TIỀN được đọc thành đơn giá công đoạn hiệu lực từ ngày chọn (Nháp, hoặc gửi Admin duyệt luôn).
+ * DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT (tùy chọn) được nhập kèm.
  * Trang chỉ gắn hộp thoại khi đang mở nên state tự reset mỗi lần mở.
  */
-export function OperationImportModal({
-  open,
-  productId,
-  productLabel,
-  allowRates,
-  onClose,
-}: Props) {
+export function OperationImportModal({ open, productId, productLabel, onClose }: Props) {
   const {
     file,
     setFile,
@@ -53,7 +46,7 @@ export function OperationImportModal({
     handleConfirm,
     importable,
     finalOptions,
-  } = useOperationImport(productId, onClose, allowRates);
+  } = useOperationImport(productId, onClose);
 
   return (
     <Modal
@@ -135,23 +128,21 @@ export function OperationImportModal({
               </Space>
             </Space>
 
-            {allowRates && (
-              <OperationImportRateOptions
-                data={data}
-                withRates={withRates}
-                effectiveDate={effectiveDate}
-                submitRates={submitRates}
-                onWithRatesChange={(checked) => {
-                  setWithRates(checked);
-                  runPreview(file, { withRates: checked });
-                }}
-                onEffectiveDateChange={(date) => {
-                  setEffectiveDate(date);
-                  runPreview(file, { date });
-                }}
-                onSubmitRatesChange={setSubmitRates}
-              />
-            )}
+            <OperationImportRateOptions
+              data={data}
+              withRates={withRates}
+              effectiveDate={effectiveDate}
+              submitRates={submitRates}
+              onWithRatesChange={(checked) => {
+                setWithRates(checked);
+                runPreview(file, { withRates: checked });
+              }}
+              onEffectiveDateChange={(date) => {
+                setEffectiveDate(date);
+                runPreview(file, { date });
+              }}
+              onSubmitRatesChange={setSubmitRates}
+            />
 
             <OperationImportSummary data={data} ratesOn={ratesOn} />
 

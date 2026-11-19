@@ -27,6 +27,15 @@ public sealed class ChangePasswordDtoValidator : AbstractValidator<ChangePasswor
     }
 }
 
+public sealed class UpdateProfileDtoValidator : AbstractValidator<UpdateProfileDto>
+{
+    public UpdateProfileDtoValidator()
+    {
+        RuleFor(x => x.DateOfBirth).LessThan(DateOnly.FromDateTime(DateTime.Today)).When(x => x.DateOfBirth is not null);
+        RuleFor(x => x.Phone).MustBePhone().When(x => !string.IsNullOrWhiteSpace(x.Phone));
+    }
+}
+
 public sealed class CreateEmployeeDtoValidator : AbstractValidator<CreateEmployeeDto>
 {
     public CreateEmployeeDtoValidator()

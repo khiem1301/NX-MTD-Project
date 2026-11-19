@@ -19,6 +19,9 @@ public interface IWorkAllocationService
     /// <summary>Công nhân tự xác nhận (UC60); lệch số phải có lý do.</summary>
     Task<Result> ConfirmByWorkerAsync(int allocationId, ConfirmWorkAllocationDto dto, int workerId, CancellationToken ct);
 
+    /// <summary>DEV-ALL-126: công nhân xác nhận nhiều phiếu một lần (một transaction, lỗi một phiếu thì không lưu gì).</summary>
+    Task<Result> ConfirmBatchByWorkerAsync(ConfirmWorkAllocationBatchDto dto, int workerId, CancellationToken ct);
+
     Task<Result> RejectByWorkerAsync(int allocationId, ReasonDto dto, int workerId, CancellationToken ct);
 
     /// <summary>Tổ trưởng xác nhận hộ (UC54): bắt buộc lý do.</summary>

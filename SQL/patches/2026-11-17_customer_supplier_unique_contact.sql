@@ -1,5 +1,5 @@
 /* =====================================================================================
-   DEV-ALL-114: hai khách hàng (hoặc hai nhà cung cấp) không được cùng số điện thoại, không được cùng email.
+   DEV-ALL-133: hai khách hàng (hoặc hai nhà cung cấp) không được cùng số điện thoại, không được cùng email.
    Thêm 4 unique index có điều kiện (bỏ trống thì không kiểm): UQ_Customer_Phone, UQ_Customer_Email, UQ_Supplier_Phone, UQ_Supplier_Email.
    Chỉ kiểm trong từng loại: một khách hàng và một nhà cung cấp vẫn được trùng số.
    Nếu DB đang có dữ liệu trùng thì script dừng và liệt kê giá trị trùng, cần sửa tay rồi chạy lại.

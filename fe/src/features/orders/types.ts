@@ -273,3 +273,210 @@ export type OrderMarkers = { orderId: number; products: OrderMarkerProduct[] };
 export type SaveOrderMarkersPayload = {
   markers: (Omit<OrderMarker, 'productMarkerId'> & { productMarkerId: number | null })[];
 };
+
+// ---- DEV-ALL-115: nhập Excel định mức mã hàng + bìa của đơn ----
+/** Pending (DEV-ALL-122, chỉ ở popup kiểm tra Excel): đúng định dạng, cần màu / đơn chưa có nên kiểm khi Lưu đơn. */
+export type SpecImportAction = 'New' | 'Update' | 'Unchanged' | 'Error' | 'Pending' | 'NewMaterial';
+type SpecImportRowBase = { rowNumber: number; action: SpecImportAction; error: string | null };
+export type SpecImportComponentRow = SpecImportRowBase & {
+  componentName: string;
+  /** PANEL | TRIM (mã như trong file), null khi ô sai. */
+  componentType: string | null;
+  piecesPerGarment: number | null;
+};
+export type SpecImportNormRow = SpecImportRowBase & {
+  color: string;
+  componentName: string;
+  materialCode: string;
+  materialName: string | null;
+  unit: string | null;
+  materialColor: string | null;
+  specNote: string | null;
+};
+export type SpecImportMarkerGroupRow = SpecImportRowBase & {
+  markerNo: number | null;
+  componentNames: string[];
+  colors: string[];
+};
+export type SpecImportOrderMarkerRow = SpecImportRowBase & {
+  markerNo: number | null;
+  markerCode: string;
+  lengthM: number | null;
+  widthM: number | null;
+  status: string;
+  ratios: MarkerRatio[];
+};
+export type SpecImportPreview = {
+  productId: number;
+  productCode: string;
+  orderId: number | null;
+  orderCode: string | null;
+  components: SpecImportComponentRow[];
+  norms: SpecImportNormRow[];
+  markerGroups: SpecImportMarkerGroupRow[];
+  orderMarkers: SpecImportOrderMarkerRow[];
+  hasComponents: boolean;
+  hasNorms: boolean;
+  hasMarkerGroups: boolean;
+  hasOrderMarkers: boolean;
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  changeCount: number;
+  /** Lỗi của bản đã gộp (kiểm tra của nút Lưu): còn lỗi thì không nhập được. */
+  crossErrors: string[];
+  notes: string[];
+  canImport: boolean;
+};
+export type SpecImportResult = {
+  components: number;
+  norms: number;
+  markerGroups: number;
+  orderMarkers: number;
+};
+/** Màn Mã hàng (Admin) chọn đơn tùy ý; màn Đơn hàng (Admin, Quản đốc) chọn mã hàng của đơn. */
+/** DEV-ALL-121: bảng của file định mức để nhập riêng (không truyền = mọi bảng trong file). */
+export type SpecImportPart = 'components' | 'norms' | 'groups' | 'markers';
+export type SpecImportTarget =
+  | { scope: 'admin'; productId: number; orderId?: number; parts?: SpecImportPart[] }
+  | { scope: 'manager'; orderId: number; productId: number };
+
+// ---- DEV-ALL-118: nhập dòng hàng của đơn từ Excel (ma trận màu × size) ----
+export type OrderImportQty = { sizeCode: string; qty: number };
+export type OrderImportRow = {
+  rowNumber: number;
+  productCode: string;
+  /** null khi dòng lỗi. */
+  productId: number | null;
+  productName: string | null;
+  color: string;
+  cmtUnitPrice: number | null;
+  quantities: OrderImportQty[];
+  error: string | null;
+};
+export type OrderImportPreview = {
+  sizeColumns: string[];
+  rows: OrderImportRow[];
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+};
+
+// ---- DEV-ALL-120: tạo mã hàng hàng loạt từ Excel ----
+export type ProductImportRow = {
+  rowNumber: number;
+  /** New | Exists (đã có, bỏ qua) | Error. */
+  action: 'New' | 'Exists' | 'Error';
+  note: string | null;
+  productCode: string;
+  productName: string;
+  description: string | null;
+};
+export type ProductImportPreview = {
+  rows: ProductImportRow[];
+  newCount: number;
+  existsCount: number;
+  errorCount: number;
+  duplicateCount: number;
+};
+
+// ---- DEV-ALL-122: popup kiểm tra file Excel nhiều sheet (dòng thô đọc từ file, sửa được trên màn hình) ----
+/** parseError: lỗi định dạng ô khi đọc file; sửa ô trên popup thì xóa (máy chủ kiểm lại nội dung). */
+type ExcelRowBase = { rowNumber: number; parseError: string | null };
+export type ProductExcelRow = Omit<ExcelRowBase, 'parseError'> & {
+  productCode: string;
+  productName: string;
+  description: string | null;
+};
+export type SpecComponentExcelRow = ExcelRowBase & {
+  name: string;
+  /** PANEL | TRIM. */
+  componentType: string | null;
+  piecesPerGarment: number | null;
+};
+export type SpecNormExcelRow = ExcelRowBase & {
+  color: string;
+  componentName: string;
+  materialCode: string;
+  specNote: string | null;
+};
+export type SpecMarkerGroupExcelRow = ExcelRowBase & {
+  markerNo: number | null;
+  componentNames: string[];
+  colors: string[];
+};
+export type SpecOrderMarkerExcelRow = ExcelRowBase & {
+  productCode: string | null;
+  markerNo: number | null;
+  markerCode: string;
+  lengthM: number | null;
+  widthM: number | null;
+  /** ACTIVE | DISCONTINUED. */
+  status: string;
+  ratios: MarkerRatio[];
+};
+export type SpecWorkbook = {
+  hasComponents: boolean;
+  components: SpecComponentExcelRow[];
+  hasNorms: boolean;
+  norms: SpecNormExcelRow[];
+  hasMarkerGroups: boolean;
+  markerGroups: SpecMarkerGroupExcelRow[];
+  hasOrderMarkers: boolean;
+  orderMarkers: SpecOrderMarkerExcelRow[];
+  sizeColumns: string[];
+};
+export type OrderMaterialExcelRow = ExcelRowBase & {
+  materialCode: string;
+  requiredQty: number | null;
+  customerQty: number | null;
+  note: string | null;
+  /** DEV-ALL-123: cột tùy chọn Tên NVL / Đơn vị của file — gợi ý khi thêm NVL chưa có vào danh mục. */
+  materialName?: string | null;
+  unit?: string | null;
+};
+export type ExcelBundle = {
+  hasProducts: boolean;
+  products: ProductExcelRow[];
+  spec: SpecWorkbook;
+  hasOrderMaterials: boolean;
+  orderMaterials: OrderMaterialExcelRow[];
+};
+/** Kết quả kiểm / xem trước NVL của đơn (khớp OrderMaterialImportPreviewDto của BE). */
+export type OrderMaterialCheckRow = {
+  rowNumber: number;
+  /** New | Update | Unchanged | Error | Pending | NewMaterial. */
+  action: SpecImportAction;
+  error: string | null;
+  materialCode: string;
+  materialName: string | null;
+  materialColor: string | null;
+  unit: string | null;
+  requiredQty: number | null;
+  customerQty: number | null;
+  purchaseQty: number | null;
+  note: string | null;
+};
+export type OrderMaterialCheck = {
+  rows: OrderMaterialCheckRow[];
+  validCount: number;
+  errorCount: number;
+  duplicateCount: number;
+  changeCount: number;
+};
+export type ExcelBundleCheck = {
+  products: ProductImportPreview | null;
+  spec: SpecImportPreview;
+  orderMaterials: OrderMaterialCheck | null;
+  /** DEV-ALL-123: mã NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
+  missingMaterials: MissingMaterial[];
+};
+export type MissingMaterial = {
+  materialCode: string;
+  /** FABRIC | TRIM. */
+  suggestedType: string;
+  colors: string[];
+  /** Từ cột Tên NVL / Đơn vị của sheet NVL của đơn (nếu có). */
+  suggestedName?: string | null;
+  suggestedUnit?: string | null;
+};

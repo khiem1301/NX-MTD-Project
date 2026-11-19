@@ -81,10 +81,23 @@ export const API = {
     discontinue: (id: number) => v1(`admin/products/${id}/discontinue`),
     reactivate: (id: number) => v1(`admin/products/${id}/reactivate`),
     spec: (id: number, scope: ProductScope = 'admin') => v1(`${scope}/products/${id}/spec`),
+    /** DEV-ALL-115: nhập Excel định mức (Admin), ?orderId= để nhập kèm bìa của đơn. */
+    importPreview: (id: number) => v1(`admin/products/${id}/import/preview`),
+    /** DEV-ALL-120: tạo mã hàng hàng loạt từ Excel. */
+    productsImportPreview: v1('admin/products/import-products/preview'),
+    productsImport: v1('admin/products/import-products'),
+    import: (id: number) => v1(`admin/products/${id}/import`),
+    /** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa, xem trước / nhập từ JSON. */
+    excelParse: v1('admin/products/excel/parse'),
+    excelCheck: v1('admin/products/excel/check'),
+    importPreviewData: (id: number) => v1(`admin/products/${id}/import/preview-data`),
+    importData: (id: number) => v1(`admin/products/${id}/import-data`),
   },
   customerOrders: {
     base: v1('admin/customer-orders'),
     nextCode: v1('admin/customer-orders/next-code'),
+    /** DEV-ALL-118: xem trước dòng hàng của đơn từ Excel (không ghi gì). */
+    importPreview: v1('admin/customer-orders/import/preview'),
     byId: (id: number) => v1(`admin/customer-orders/${id}`),
     cancel: (id: number) => v1(`admin/customer-orders/${id}/cancel`),
     stop: (id: number) => v1(`admin/customer-orders/${id}/stop`),
@@ -98,6 +111,11 @@ export const API = {
     byOrder: (orderId: number) => v1(`manager/order-markers/${orderId}`),
     byProduct: (orderId: number, productId: number) =>
       v1(`manager/order-markers/${orderId}/products/${productId}`),
+    /** DEV-ALL-115: nhập Excel định mức + bìa của đơn cho một mã hàng của đơn (Admin, Quản đốc). */
+    importPreview: (orderId: number, productId: number) =>
+      v1(`manager/order-markers/${orderId}/products/${productId}/import/preview`),
+    import: (orderId: number, productId: number) =>
+      v1(`manager/order-markers/${orderId}/products/${productId}/import`),
   },
   /** Tra cứu cho luồng khác: không có đơn giá (D26). */
   orderLookups: {
@@ -141,7 +159,6 @@ export const API = {
     confirmPayment: (id: number) => v1(`accountant/purchase-payments/${id}/confirm`),
     updatePayment: (id: number, paymentId: number) =>
       v1(`accountant/purchase-payments/${id}/payments/${paymentId}`),
-    actualAmount: (id: number) => v1(`accountant/purchase-payments/${id}/actual-amount`),
     returnPayment: (id: number) => v1(`accountant/purchase-payments/${id}/return`),
   },
   attachments: {

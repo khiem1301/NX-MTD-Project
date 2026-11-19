@@ -21,7 +21,7 @@ export const ORDER_PAYMENT_METHOD_OPTIONS = (
   Object.keys(ORDER_PAYMENT_METHOD_LABEL) as OrderPaymentMethod[]
 ).map((value) => ({ value, label: ORDER_PAYMENT_METHOD_LABEL[value] }));
 
-/** Chữ hiển thị của màn Thanh toán đơn hàng (DEV-ALL-118). */
+/** Chữ hiển thị của màn Thanh toán đơn hàng (DEV-ALL-137). */
 export const ORDER_PAYMENT_TEXT = {
   title: 'Thanh toán đơn hàng',
   subtitle:

@@ -53,7 +53,9 @@ public class PurchaseFlowServiceTests
 
     private PurchaseOrderFlowService Flow() => new(_uow, _orders, _audit, _notifier, _user, _clock);
 
-    private SupplierService Suppliers() => new(_uow, _audit, _clock);
+    private readonly IPartnerContactChecker _contacts = Substitute.For<IPartnerContactChecker>();
+
+    private SupplierService Suppliers() => new(_uow, _audit, _clock, _contacts);
 
     private static PurchaseOrderLine Line(int id, decimal qty = 100, decimal price = 0) =>
         new() { PurchaseOrderLineId = id, OrderedQty = qty, UnitPrice = price };
@@ -63,8 +65,12 @@ public class PurchaseFlowServiceTests
     {
         var po = new PurchaseOrder
         {
-            PurchaseOrderId = id, PoCode = "DM-20261027-001", GoodsStatus = goods, PaymentStatus = payment,
-            CreatedAt = Now, RowVer = RowVer,
+            PurchaseOrderId = id,
+            PoCode = "DM-20261027-001",
+            GoodsStatus = goods,
+            PaymentStatus = payment,
+            CreatedAt = Now,
+            RowVer = RowVer,
             // Tổng mặc định 1.500.000 (dùng cho UC34: PaidAmount không được vượt tổng đơn).
             PurchaseOrderLines = new List<PurchaseOrderLine> { Line(11, 100, 10_000), Line(12, 50, 10_000) },
         };
@@ -380,17 +386,57 @@ public class PurchaseFlowServiceTests
         po.PaidAmount.Should().Be(1_000_000);
     }
 
+    // DEV-ALL-129: đơn Chốt không bù — Kế toán nhập Tổng giá trị thực tế, trạng thái xét theo giá trị đó.
+
     [Fact]
-    public async Task ConfirmPayment_ClosedShort_PaidInFullOfActualValue_MarksPaid()
+    public async Task ConfirmPayment_ClosedShort_PaidEqualsActual_MarksPaidAndStoresActual()
     {
         var po = Po(PurchaseGoodsStatuses.ClosedShort);
         po.PurchaseOrderLines.Single(l => l.PurchaseOrderLineId == 12).NotReplenishedQty = 50;   // giá trị thực tế còn 1.000.000
 
-        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000), default);
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_000_000) with { ActualAmount = 1_000_000 }, default);
 
         result.IsSuccess.Should().BeTrue();
         po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
-        po.PaidAmount.Should().Be(1_000_000);
+        po.ActualAmount.Should().Be(1_000_000);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_ClosedShort_PaidLessThanActual_MarksPartiallyPaid()
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: 800_000) with { ActualAmount = 1_200_000 }, default);
+
+        result.IsSuccess.Should().BeTrue();
+        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.PartiallyPaid);
+        po.ActualAmount.Should().Be(1_200_000);
+    }
+
+    [Theory]
+    [InlineData(null, 500_000, "tổng giá trị thực tế của đơn")]      // thiếu thực tế
+    [InlineData(2_000_000, 500_000, "lớn hơn tổng giá trị đơn")]       // thực tế vượt tổng đơn (1.500.000)
+    [InlineData(900_000, 1_000_000, "lớn hơn tổng giá trị thực tế")]   // trả vượt thực tế
+    public async Task ConfirmPayment_ClosedShort_InvalidActual_ReturnsValidation(int? actual, int paid, string message)
+    {
+        var po = Po(PurchaseGoodsStatuses.ClosedShort);
+
+        var result = await Flow().ConfirmPaymentAsync(5, Pay(amount: paid) with { ActualAmount = actual }, default);
+
+        result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
+        result.Message.Should().Contain(message);
+        po.PaymentStatus.Should().Be(PurchaseOrderStatuses.Unpaid);
+    }
+
+    [Fact]
+    public async Task ConfirmPayment_NotClosedShort_IgnoresActualAmount()
+    {
+        var po = Po(PurchaseGoodsStatuses.Ordered);
+
+        await Flow().ConfirmPaymentAsync(5, Pay(amount: 1_500_000) with { ActualAmount = 100 }, default);
+
+        po.PaymentStatus.Should().Be(PurchasePaymentStatuses.Paid);
+        po.ActualAmount.Should().BeNull();
     }
 
     [Theory]
@@ -434,22 +480,6 @@ public class PurchaseFlowServiceTests
         result.IsSuccess.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
         result.Message.Should().Be(Messages.PaymentAmountExceedsTotal);
-    }
-
-    [Fact]
-    public async Task ConfirmPayment_ClosedShort_AmountIsCappedAtActualValue()
-    {
-        var po = Po(PurchaseGoodsStatuses.Ordered);
-        var line = po.PurchaseOrderLines.First();
-        line.NotReplenishedQty = line.OrderedQty / 2;
-        var actual = po.PurchaseOrderLines.Sum(l => (l.OrderedQty - l.NotReplenishedQty) * l.UnitPrice);
-
-        var over = await Flow().ConfirmPaymentAsync(5, Pay(amount: actual + 1), default);
-        var ok = await Flow().ConfirmPaymentAsync(5, Pay(amount: actual), default);
-
-        over.ErrorCode.Should().Be(ErrorCodes.PaymentInvalid);
-        over.Message.Should().Be(Messages.PaymentAmountExceedsTotal);
-        ok.IsSuccess.Should().BeTrue();
     }
 
     [Fact]

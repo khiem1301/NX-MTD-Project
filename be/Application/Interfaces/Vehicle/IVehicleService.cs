@@ -15,4 +15,16 @@ public interface IVehicleService
     Task<Result<VehicleTripDto>> GetTripAsync(int tripId, CancellationToken ct);
     Task<Result<VehicleTripDto>> StartTripAsync(StartVehicleTripDto dto, CancellationToken ct);
     Task<Result<VehicleTripDto>> CompleteTripAsync(int tripId, CompleteVehicleTripDto dto, CancellationToken ct);
+
+    /// <summary>DEV-ALL-127: xe đang hoạt động và chưa có chuyến đang chạy (Thủ kho chọn khi xuất kho).</summary>
+    Task<Result<IReadOnlyList<AvailableVehicleDto>>> GetAvailableVehiclesAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Kiểm tra và thêm chuyến STARTED vào unit of work, chưa lưu — để gọi trong transaction của nghiệp vụ khác
+    /// (xuất kho bằng xe công ty, DEV-ALL-127). Cùng kiểm tra với <see cref="StartTripAsync"/>.
+    /// </summary>
+    Task<Result<PreparedTrip>> PrepareTripAsync(StartVehicleTripDto dto, CancellationToken ct);
 }
+
+/// <param name="LastOdometer">Km cuối chuyến hoàn thành gần nhất; lệch với km đầu thì <c>Trip.KmGapWarning</c> = true.</param>
+public sealed record PreparedTrip(NX_MTD.Domain.Entities.VehicleTrip Trip, int? LastOdometer);

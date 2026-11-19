@@ -82,3 +82,20 @@ export const useSaveCustomerDelivery = (orderId: number) => {
     { invalidate: [WAREHOUSE_KEY], successMessage: MESSAGES.warehouse.customerDeliverySaved },
   );
 };
+
+/** DEV-ALL-119: xem trước file Excel NVL của đơn — không ghi gì. */
+export const usePreviewOrderMaterialImport = (orderId: number) => {
+  const role = useRolePath();
+  return useApiMutation(
+    (file: File) => warehouseApi.previewOrderMaterialImport(role, orderId, file),
+    { invalidate: [] },
+  );
+};
+
+/** Nhập NVL của đơn từ Excel; thông báo kết quả lấy từ máy chủ nên không đặt successMessage. */
+export const useImportOrderMaterials = (orderId: number) => {
+  const role = useRolePath();
+  return useApiMutation((file: File) => warehouseApi.importOrderMaterials(role, orderId, file), {
+    invalidate: [WAREHOUSE_KEY],
+  });
+};

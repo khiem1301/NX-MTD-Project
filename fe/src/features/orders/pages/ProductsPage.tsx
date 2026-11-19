@@ -5,6 +5,7 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   ProfileOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { Button, Card, Space, Tag, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
@@ -20,6 +21,7 @@ import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductSpecModal } from '../components/ProductSpecModal';
+import { ProductImportModal } from '../components/ProductImportModal';
 import { useDiscontinueProduct, useProducts, useReactivateProduct } from '../hooks/useOrders';
 import type { ProductListItem, ProductStatus } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
@@ -33,7 +35,7 @@ type Filters = { keyword?: string; status?: ProductStatus };
 /** UC10: mã hàng. Không xóa (GBR-14), chỉ ngừng sản xuất. */
 export function ProductsPage() {
   const table = useTableQuery<Filters>({});
-  const isAccountant = usePermission().hasRole(ROLES.Accountant); // Kế toán: chỉ xem danh sách và sửa định mức
+  const isAccountant = usePermission().hasRole(ROLES.Accountant); // Kế toán: chỉ xem danh sách và định mức (DEV-ALL-117)
   const products = useProducts(table.params);
   const discontinue = useDiscontinueProduct();
   const reactivate = useReactivateProduct();
@@ -41,6 +43,7 @@ export function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [specFor, setSpecFor] = useState<ProductListItem | null>(null);
   const [gallery, setGallery] = useState<ProductListItem | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const columns: TableColumnsType<ProductListItem> = [
     {
@@ -108,16 +111,22 @@ export function ProductsPage() {
       title={MESSAGES.orders.productsTitle}
       extra={
         isAccountant ? undefined : (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditing(null);
-              setOpen(true);
-            }}
-          >
-            {MESSAGES.common.create}
-          </Button>
+          <Space>
+            {/* DEV-ALL-120: tạo nhiều mã hàng một lần từ Excel. */}
+            <Button icon={<UploadOutlined />} onClick={() => setImporting(true)}>
+              {MESSAGES.orders.productImport.button}
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditing(null);
+                setOpen(true);
+              }}
+            >
+              {MESSAGES.common.create}
+            </Button>
+          </Space>
         )
       }
     >
@@ -151,11 +160,13 @@ export function ProductsPage() {
         dataSource={products.data?.items ?? []}
         pagination={table.pagination(products.data?.totalItems)}
       />
-      <ProductFormModal open={open} product={editing} onClose={() => setOpen(false)} />
+      <ProductFormModal open={open} product={editing} allowImports onClose={() => setOpen(false)} />
       <ProductGalleryModal product={gallery} onClose={() => setGallery(null)} />
+      {importing && <ProductImportModal onClose={() => setImporting(false)} />}
       <ProductSpecModal
         product={specFor}
         showHistory={!isAccountant}
+        readOnly={isAccountant}
         onClose={() => setSpecFor(null)}
       />
     </Card>
