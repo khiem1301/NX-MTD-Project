@@ -179,10 +179,10 @@ export const normColumns = (
       <Select
         showSearch
         style={{ width: '100%' }}
-        value={r.materialName || undefined}
+        value={r.materialCode || undefined}
         options={materialOptions}
         optionFilterProp="label"
-        onChange={(materialName: string) => ctx.update(r.rowNumber, { materialName })}
+        onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
       />
     ),
   },
@@ -356,10 +356,22 @@ export const orderMaterialColumns = (
       <Select
         showSearch
         style={{ width: '100%' }}
-        value={r.materialName || undefined}
+        value={r.materialCode || undefined}
         options={materialOptions}
         optionFilterProp="label"
-        onChange={(materialName: string) => ctx.update(r.rowNumber, { materialName })}
+        onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
+      />
+    ),
+  },
+  {
+    // DEV-ALL-123: tên NVL theo file (NVL đã có thì danh mục quyết định; NVL chưa có thì làm tên gợi ý khi thêm vào danh mục).
+    title: col.materialName,
+    key: 'name',
+    width: 180,
+    render: (_, r) => (
+      <Input
+        value={text$(r.materialName)}
+        onChange={(e) => ctx.update(r.rowNumber, { materialName: e.target.value || null })}
       />
     ),
   },

@@ -19,7 +19,6 @@ export const GR_LABELS = {
   levelsTab: 'Bậc & mức tiền',
   addCode: 'Thêm bậc',
   searchGrade: 'Tìm theo mã, tên bậc...',
-  editCode: 'Sửa bậc',
   codeHint:
     'Mỗi dòng là một bậc và mức tiền đang áp dụng. Đổi tiền = thêm mức mới theo ngày hiệu lực, mức cũ giữ làm lịch sử. Bậc đã có người, đề xuất hoặc tiền bậc dùng thì không xóa được, chỉ ngừng dùng.',
   codeCode: 'Mã bậc (chữ hoa / số, tối đa 5 ký tự)',
@@ -72,7 +71,6 @@ export const GR_LABELS = {
   replaceHint: 'Ngày này đã có mức hẹn, lưu sẽ thay thế mức đó',
   allGrades: 'Mọi bậc',
   gradeCode: 'Bậc',
-  gradeName: 'Tên bậc',
   amount: 'Tiền bậc / tháng',
   current: 'Đang áp dụng',
   none: 'Chưa có',
@@ -92,3 +90,77 @@ export const GR_MESSAGES = {
 
 /** Luật bắt buộc nhập dùng chung cho các form của màn Bậc thợ. */
 export const REQUIRED_RULES = [{ required: true, message: MESSAGES.common.required }];
+
+// ---------- AI gợi ý bậc cho cả tổ (DEV-ALL-148) ----------
+
+/** Bộ lọc dòng trong modal AI gợi ý. */
+export const AI_FILTER = {
+  CHANGED: 'changed',
+  UNCHANGED: 'unchanged',
+  EDITED: 'edited',
+  PENDING: 'pending',
+} as const;
+
+export type AiFilter = (typeof AI_FILTER)[keyof typeof AI_FILTER];
+
+export const AI_FILTER_OPTIONS: { value: AiFilter; label: string }[] = [
+  { value: AI_FILTER.CHANGED, label: 'Đổi bậc' },
+  { value: AI_FILTER.UNCHANGED, label: 'Giữ nguyên bậc' },
+  { value: AI_FILTER.EDITED, label: 'Tổ trưởng đã sửa' },
+  { value: AI_FILTER.PENDING, label: 'Đang có đề xuất chờ' },
+];
+
+/** Số ngày lấy dữ liệu khi tạo gợi ý (khớp BE GradeSuggestionLimits). */
+export const AI_LOOKBACK = { MIN: 7, MAX: 90, DEFAULT: 90 } as const;
+
+export const AI_LABELS = {
+  lookbackBefore: 'Lấy dữ liệu',
+  lookbackAfter: 'ngày gần nhất',
+  open: 'AI gợi ý bậc cả tổ',
+  title: 'AI gợi ý bậc thợ cho cả tổ',
+  generate: 'Tạo gợi ý',
+  regenerate: 'Tạo lại',
+  regenerateTitle: 'Tạo lại gợi ý?',
+  regenerateBody:
+    'AI sẽ phân tích lại số liệu {0} ngày gần nhất và thay toàn bộ gợi ý hiện tại, kể cả các dòng bạn đã sửa.',
+  generating: 'AI đang phân tích số liệu của cả tổ, có thể mất tới một phút...',
+  emptyHint:
+    'Chưa có gợi ý nào còn hạn. Chọn số ngày lấy dữ liệu rồi bấm Tạo gợi ý. AI sẽ dựa vào ngày công, giờ làm, sản lượng, độ khó công đoạn và số lỗi của từng công nhân để gợi ý bậc. Hệ thống chỉ gửi số liệu, không gửi tên hay mã nhân viên.',
+  period: 'Số liệu từ {0} đến {1}',
+  generatedAt: 'Tạo lúc {0} bởi {1}',
+  expiresAt: 'Lưu đến {0}',
+  confirmedAt: 'Đã xác nhận lúc {0}',
+  confirm: 'Xác nhận gửi đề xuất ({0})',
+  confirmTitle: 'Gửi đề xuất bậc thợ?',
+  confirmBody:
+    'Sẽ gửi {0} đề xuất cho công nhân có bậc khác bậc hiện tại ({1} đề xuất đang chờ sẽ được thay bằng bản mới). Công nhân giữ nguyên bậc không được gửi.',
+  skippedTitle: 'Một số dòng không được gửi',
+  filterAll: 'Mọi dòng',
+  filterGrade: 'Bậc đề xuất',
+  metrics: 'Số liệu kỳ',
+  aiGrade: 'AI gợi ý',
+  change: 'Thay đổi',
+  changed: 'Đổi bậc',
+  unchanged: 'Giữ nguyên',
+  edited: 'Đã sửa',
+  pendingTag: 'Đang chờ: {0}',
+  workDays: 'Ngày công: {0}',
+  output: 'Sản lượng: {0} ({1} công đoạn)',
+  efficiency: 'Hiệu suất: {0}%',
+  defects: 'Lỗi: sửa {0}, hỏng {1}',
+  defectRate: ' ({0}%)',
+  hours: 'Giờ làm: {0} (tăng ca {1})',
+  tenure: 'Thâm niên: {0} tháng',
+  skill: 'Độ khó TB: {0}',
+  aiReason: 'AI: {0}',
+  remove: 'Bỏ gợi ý này',
+  removeTitle: 'Bỏ gợi ý của {0}?',
+  removeBody: 'Công nhân này sẽ không có trong lần gửi đề xuất. Muốn có lại thì bấm Tạo lại.',
+} as const;
+
+export const AI_MESSAGES = {
+  generated: 'AI đã gợi ý bậc cho cả tổ.',
+  confirmed: 'Đã gửi {0} đề xuất bậc ({1} mới, {2} thay đề xuất cũ).',
+  noChange: 'Không có công nhân nào đổi bậc nên không có đề xuất nào được gửi.',
+  removed: 'Đã bỏ gợi ý của công nhân này.',
+} as const;

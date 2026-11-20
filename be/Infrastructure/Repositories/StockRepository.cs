@@ -49,9 +49,9 @@ public sealed class StockRepository : IStockRepository
         if (key.WarehouseType == WarehouseTypes.Material)
         {
             var m = await _context.Materials.AsNoTracking().Where(x => x.MaterialId == key.MaterialId)
-                .Select(x => new { x.MaterialName, x.Color }).FirstOrDefaultAsync(ct);
+                .Select(x => new { x.MaterialCode, x.MaterialName, x.Color }).FirstOrDefaultAsync(ct);
             if (m is null) return "?";
-            return string.IsNullOrEmpty(m.Color) ? $"{m.MaterialName}" : $"{m.MaterialName} ({m.Color})";
+            return string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";
         }
         return await _context.OrderLines.AsNoTracking().Where(l => l.OrderLineId == key.OrderLineId)
             .Select(l => l.ProductVariant.Product.ProductCode + " " + l.ProductVariant.ProductColor.Color + "-" + l.ProductVariant.SizeCode).FirstOrDefaultAsync(ct) ?? "?";
@@ -131,7 +131,7 @@ public sealed class StockRepository : IStockRepository
             .Select(g => new { g.Key.SewingTeamId, g.Key.OrderLineId, Qty = g.Sum(d => d.Quantity) }).ToListAsync(ct);
         var teamIds = received.Select(r => r.TeamId).Distinct().ToList();
         var teams = await _context.Teams.AsNoTracking().Where(t => teamIds.Contains(t.TeamId))
-            .ToDictionaryAsync(t => t.TeamId, t => t.TeamName, ct);
+            .ToDictionaryAsync(t => t.TeamId, t => t.TeamCode, ct);
         var lines = await _context.OrderLines.AsNoTracking().Where(l => lineIds.Contains(l.OrderLineId))
             .Select(l => new { l.OrderLineId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
             .ToDictionaryAsync(l => l.OrderLineId, ct);
@@ -146,7 +146,7 @@ public sealed class StockRepository : IStockRepository
                 return new TeamPieceHoldingDto(r.TeamId, teams.GetValueOrDefault(r.TeamId, "?"), r.OrderLineId, l.OrderCode,
                     l.ProductCode, l.Color, l.SizeCode, qty, done, lost, Math.Max(0, qty - done - lost));
             })
-            .OrderBy(x => x.TeamName).ThenBy(x => x.OrderCode).ThenBy(x => x.ProductCode).ThenBy(x => x.Color).ThenBy(x => x.SizeCode)
+            .OrderBy(x => x.TeamCode).ThenBy(x => x.OrderCode).ThenBy(x => x.ProductCode).ThenBy(x => x.Color).ThenBy(x => x.SizeCode)
             .ToList();
     }
 
@@ -173,14 +173,14 @@ public sealed class StockRepository : IStockRepository
         var q = from b in _context.VwStockBalances.AsNoTracking()
                 join m in _context.Materials on b.MaterialId equals m.MaterialId
                 where b.WarehouseType == WarehouseTypes.Material && (b.OnHandQty != 0 || b.ReservedQty != 0)
-                      && (string.IsNullOrEmpty(keyword) || m.MaterialName.Contains(keyword))
+                      && (string.IsNullOrEmpty(keyword) || m.MaterialCode.Contains(keyword) || m.MaterialName.Contains(keyword))
                       && (string.IsNullOrEmpty(query.Color) || m.Color == query.Color)
                       && (query.OrderId == null || _context.OrderMaterials.Any(o => o.OrderId == query.OrderId
                           && o.MaterialId == b.MaterialId))
                       && (query.OrderScope != MaterialOrderScopes.NoOrder
                           || !_context.OrderMaterials.Any(o => o.MaterialId == b.MaterialId))
-                orderby m.MaterialName, m.Color
-                select new StockBalanceDto(b.WarehouseType, m.MaterialId, m.MaterialName,
+                orderby m.MaterialCode, m.Color
+                select new StockBalanceDto(b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
                     m.MaterialType, m.Unit, m.Color, null, null, null, null, null, null,
                     b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, null, null);
         return q.ToPagedAsync(query, ct);
@@ -201,7 +201,7 @@ public sealed class StockRepository : IStockRepository
                       && (string.IsNullOrEmpty(query.SizeCode) || l.ProductVariant.SizeCode == query.SizeCode)
                 orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                     c.ProductComponentId
-                select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, l.OrderLineId,
+                select new StockBalanceDto(b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
                     l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                     b.OnHandQty ?? 0, b.ReservedQty ?? 0, b.AvailableQty ?? 0, b.ProductComponentMaterialId,
                     pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName + (pcm.Material.Color == "" ? "" : " " + pcm.Material.Color));
@@ -238,7 +238,7 @@ public sealed class StockRepository : IStockRepository
                 var inQty = move?.InQty ?? 0m;
                 var outQty = move?.OutQty ?? 0m;
                 var closing = opening + inQty - outQty;
-                return new NxtSummaryDto(c.WarehouseType, c.MaterialId, c.MaterialName, c.MaterialType,
+                return new NxtSummaryDto(c.WarehouseType, c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialType,
                     c.Unit, c.MaterialColor, c.OrderLineId, c.OrderId, c.OrderCode, c.ProductCode,
                     c.Color, c.SizeCode, c.ProductComponentMaterialId, c.ComponentName, opening, inQty, outQty, closing);
             })
@@ -251,7 +251,7 @@ public sealed class StockRepository : IStockRepository
     }
 
     private sealed record NxtCandidate(
-        int StockBalanceId, string WarehouseType, int? MaterialId, string? MaterialName,
+        int StockBalanceId, string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName,
         string? MaterialType, string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode,
         string? ProductCode, string? Color, string? SizeCode, int? ProductComponentMaterialId,
         string? ComponentName);
@@ -267,9 +267,9 @@ public sealed class StockRepository : IStockRepository
             where b.WarehouseType == WarehouseTypes.Material
                   && _context.OrderMaterials.Any(o => o.OrderId == query.OrderId && o.MaterialId == b.MaterialId)
                   && (string.IsNullOrEmpty(keyword)
-                      || m.MaterialName.Contains(keyword))
-            orderby m.MaterialName, m.Color
-            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, m.MaterialId, m.MaterialName,
+                      || m.MaterialCode.Contains(keyword) || m.MaterialName.Contains(keyword))
+            orderby m.MaterialCode, m.Color
+            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, m.MaterialId, m.MaterialCode, m.MaterialName,
                 m.MaterialType, m.Unit, m.Color, null, query.OrderId, orderCode, null, null, null, null, null)
         ).ToListAsync(ct);
     }
@@ -289,7 +289,7 @@ public sealed class StockRepository : IStockRepository
                       || l.Order.OrderCode.Contains(keyword))
             orderby l.Order.OrderCode, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color,
                 l.ProductVariant.SizeCode, c.ProductComponentId
-            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, null, null, null, null, null, l.OrderLineId,
+            select new NxtCandidate(b.StockBalanceId, b.WarehouseType, null, null, null, null, null, null, l.OrderLineId,
                 l.OrderId, l.Order.OrderCode, l.ProductVariant.Product.ProductCode,
                 l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, b.ProductComponentMaterialId,
                 pcm == null ? null : c.ComponentName + " – " + pcm.Material.MaterialName

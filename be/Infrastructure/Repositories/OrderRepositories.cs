@@ -181,6 +181,8 @@ public sealed class CustomerOrderRepository : GenericRepository<CustomerOrder>, 
                 ReceivedDate = o.ReceivedDate, DueDate = o.DueDate, Status = o.Status, MaterialStatus = o.MaterialStatus,
                 IsDelayRisk = o.IsDelayRisk ?? false, StopReason = o.StopReason, DeliveryAddress = o.DeliveryAddress, Note = o.Note, CreatedAt = o.CreatedAt,
                 UpdatedAt = o.UpdatedAt, RowVer = o.RowVer,
+                HasOrderMarkers = _context.ProductMarkers.Any(m => m.OrderId == o.OrderId),
+                HasOrderMaterials = _context.OrderMaterials.Any(m => m.OrderId == o.OrderId),
                 Lines = o.OrderLines.OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
                     .Select(l => new OrderLineDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode,
                         l.OrderedQty, l.CmtUnitPrice,

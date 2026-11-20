@@ -18,7 +18,7 @@ public sealed record OrderMarkerDto(int ProductMarkerId, int MarkerNo, string Ma
 public sealed record OrderMarkerGroupDto(int MarkerNo, IReadOnlyList<string> Colors, IReadOnlyList<MarkerGroupFabricDto> Fabrics);
 
 /// <summary>Một vải của nhóm bìa; WidthM = khổ vải (m), null khi chưa nhập.</summary>
-public sealed record MarkerGroupFabricDto(int MaterialId, string MaterialName, string Color, decimal? WidthM);
+public sealed record MarkerGroupFabricDto(int MaterialId, string MaterialCode, string MaterialName, string Color, decimal? WidthM);
 
 /// <summary>Một mã hàng của đơn: size có trong đơn, nhóm bìa đã khai ở mã hàng (kèm màu dùng nhóm), và các bìa của đơn.</summary>
 public sealed record OrderMarkerProductDto(int ProductId, string ProductCode, IReadOnlyList<string> Sizes,

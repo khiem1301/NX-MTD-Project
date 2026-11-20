@@ -72,7 +72,7 @@ public class KpiCalendarServiceTests
         KpiTargetId = id, OrderId = 1, ProductId = 1, SewingTeamId = teamId,
         StartDate = new DateOnly(2026, 10, 1), EndDate = new DateOnly(2026, 10, 31), TargetFinishedQty = targetQty, WorkingDays = 27,
         Status = status, Order = new CustomerOrder { OrderCode = "DH001" }, Product = new Product { ProductCode = "MH001" },
-        SewingTeam = new Team { TeamName = $"Tổ may {teamId}" },
+        SewingTeam = new Team { TeamCode = $"Tổ may {teamId}" },
     };
 
     private static OrderLine Line() => new() { OrderId = 1, ProductId = 1 };

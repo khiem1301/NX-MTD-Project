@@ -46,7 +46,7 @@ export function CutHandoverPage() {
     },
     { title: LABELS.workOrder, dataIndex: 'workOrderCode' },
     { title: LABELS.order, dataIndex: 'orderCode' },
-    { title: LABELS.cuttingTeam, dataIndex: 'cuttingTeamName' },
+    { title: LABELS.cuttingTeam, dataIndex: 'cuttingTeamCode' },
     { title: LABELS.totalHandedQty, dataIndex: 'totalHandedQty', align: 'right' },
     { title: LABELS.handedAt, dataIndex: 'handedAt', render: formatDateTime },
     {

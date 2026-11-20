@@ -4,7 +4,7 @@ namespace NX_MTD.Application.DTOs;
 
 /// <summary>Gợi ý số suất ăn hôm nay cho tổ của tổ trưởng, lấy theo số người đã quẹt / còn tick.</summary>
 public sealed record TeamMealSuggestionDto(
-    DateOnly MealDate, int TeamId, string TeamName, int SuggestedCount,
+    DateOnly MealDate, int TeamId, string TeamCode, int SuggestedCount,
     int? MealCount, string? Source, DateTime? ConfirmedAt, bool IsLocked);
 
 /// <summary>Tổ trưởng/tổ phó xác nhận đã rà soát checklist; MealCount lấy từ số WillEat.</summary>
@@ -16,7 +16,7 @@ public sealed record TeamMealMemberDto(
 
 /// <summary>Checklist suất ăn của tổ trong ngày.</summary>
 public sealed record TeamMealMembersDto(
-    DateOnly MealDate, int TeamId, string TeamName,
+    DateOnly MealDate, int TeamId, string TeamCode,
     int AttendanceCount, int MealCount, bool IsLocked,
     IReadOnlyList<TeamMealMemberDto> Members);
 
@@ -39,7 +39,7 @@ public sealed record SetGuestMealDto(DateOnly MealDate, int GuestCount, string? 
 
 /// <summary>Một dòng tổ trong bảng tổng hợp; Source null = tổ chưa xác nhận (số là gợi ý từ chấm công).</summary>
 public sealed record TeamMealRowDto(
-    int TeamId, string TeamName, int MealCount, int AttendanceCount, string? Source, DateTime? ConfirmedAt);
+    int TeamId, string TeamCode, int MealCount, int AttendanceCount, string? Source, DateTime? ConfirmedAt);
 
 /// <summary>Tổng hợp suất ăn một ngày cho Kế toán (màn "Tổng hợp suất ăn").</summary>
 public sealed record DailyMealSummaryDto(

@@ -51,7 +51,6 @@ export const ERROR_CODES = {
   AccountCannotLockSelf: 'ACCOUNT_CANNOT_LOCK_SELF',
   AccountInvalidStatus: 'ACCOUNT_INVALID_STATUS',
   TeamCodeDuplicate: 'TEAM_CODE_DUPLICATE',
-  TeamNameDuplicate: 'TEAM_NAME_DUPLICATE',
   TeamNotActive: 'TEAM_NOT_ACTIVE',
   TeamLeaderInvalidTeam: 'TEAM_LEADER_INVALID_TEAM',
   TeamLeaderExists: 'TEAM_LEADER_EXISTS',
@@ -122,4 +121,8 @@ export const ERROR_CODES = {
   BreakEvenNotFound: 'BREAK_EVEN_NOT_FOUND',
   // Báo cáo kế toán (Minh)
   AccountingReportPeriodMonthInvalid: 'ACCOUNTING_REPORT_PERIOD_MONTH_INVALID',
+  // Bậc thợ (Khiêm)
+  GradeInvalid: 'GRADE_INVALID',
+  /** DEV-ALL-148: AI gợi ý bậc chưa cấu hình khóa Gemini hoặc Gemini không trả được kết quả. */
+  GradeAiUnavailable: 'GRADE_AI_UNAVAILABLE',
 } as const;

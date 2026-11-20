@@ -201,9 +201,9 @@ public class ImportTemplateServiceTests : ProductionTestBase
     {
         _orders.Add(new CustomerOrder { OrderId = 3, OrderCode = "DH" });
         _orderMaterials.AddRange([
-            new OrderMaterial { OrderMaterialId = 1, OrderId = 3, RequiredQty = 100, CustomerQty = 0, Material = new Material { MaterialName = "V1" } },
-            new OrderMaterial { OrderMaterialId = 2, OrderId = 3, RequiredQty = 50, CustomerQty = 20, Note = "n", Material = new Material { MaterialName = "T1" } },
-            new OrderMaterial { OrderMaterialId = 3, OrderId = 9, RequiredQty = 1, CustomerQty = 0, Material = new Material { MaterialName = "X" } }]);
+            new OrderMaterial { OrderMaterialId = 1, OrderId = 3, RequiredQty = 100, CustomerQty = 0, Material = new Material { MaterialCode = "V1" } },
+            new OrderMaterial { OrderMaterialId = 2, OrderId = 3, RequiredQty = 50, CustomerQty = 20, Note = "n", Material = new Material { MaterialCode = "T1" } },
+            new OrderMaterial { OrderMaterialId = 3, OrderId = 9, RequiredQty = 1, CustomerQty = 0, Material = new Material { MaterialCode = "X" } }]);
         ImportTemplateModel? model = null;
 
         await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMaterials, null, 3, default);

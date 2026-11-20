@@ -89,7 +89,7 @@ INSERT dbo.RequestLine (RequestId, MaterialId, OrderLineId, ItemDescription, Qua
 SELECT r.RequestId, m.MaterialId, NULL, NULL, v.Qty, NULL
 FROM (VALUES ('MR1', 'V-KATE-TR', 180), ('MR1', 'V-KATE-XN', 120), ('MR2', 'V-POLO-HG', 120), ('MR2', 'V-POLO-TR', 25), ('MR3', 'V-POLO-HG', 60),
              ('DM1', 'V-POLO-HG', 18), ('DM2', 'V-LOT-DEN', 25), ('DM3', 'V-KATE-TR', 40), ('MP1', 'V-POLO-HG', 18), ('MSU1', 'T-NUT-4L', 200)) v (K, Mat, Qty)
-JOIN #Rq r ON r.K = v.K JOIN dbo.Material m ON m.MaterialName = v.Mat;
+JOIN #Rq r ON r.K = v.K JOIN dbo.Material m ON m.MaterialCode = v.Mat;
 INSERT dbo.RequestLine (RequestId, OrderLineId, Quantity)
 SELECT r.RequestId, MIN(ol.OrderLineId), v.Qty
 FROM (VALUES ('SR1', 120), ('SR2', 60)) v (K, Qty)

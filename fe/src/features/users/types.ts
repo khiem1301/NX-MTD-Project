@@ -10,7 +10,7 @@ export type EmployeeListItem = {
   role: Role;
   roleName: string;
   teamId: number | null;
-  teamName: string | null;
+  teamCode: string | null;
   payType: PayType;
   currentGradeCode: string | null;
   attendanceCode: number | null;
@@ -40,7 +40,7 @@ export type EmployeeDetail = {
   role: Role;
   roleName: string;
   teamId: number | null;
-  teamName: string | null;
+  teamCode: string | null;
   payType: PayType;
   currentGradeCode: string | null;
   attendanceCode: number | null;

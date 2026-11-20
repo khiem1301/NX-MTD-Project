@@ -74,6 +74,13 @@ public static class GradeCodes
         && code.Trim().All(c => char.IsAsciiLetterUpper(c) || char.IsAsciiDigit(c));
 }
 
+/// <summary>DEV-ALL-148: số ngày lấy số liệu khi AI gợi ý bậc (tổ trưởng chọn trong khoảng này).</summary>
+public static class GradeSuggestionLimits
+{
+    public const int MinLookbackDays = 7;
+    public const int MaxLookbackDays = 90;
+}
+
 /// <summary>GradeEvaluation.Status (CK_GradeEval_Status). Dòng APPLIED là lịch sử bậc.</summary>
 public static class GradeEvaluationStatuses
 {

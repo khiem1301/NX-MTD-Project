@@ -5,7 +5,7 @@ namespace NX_MTD.Application.DTOs;
 /// <summary>Một dòng dữ liệu tính lương của một nhân viên trong tháng (nguồn vw_PayrollExportData)
 /// kèm 2 cảnh báo: ngày thiếu giờ (chấm công) và ngày có giờ công nhưng chưa nhập sản lượng công đoạn.</summary>
 public sealed record PayrollExportRowDto(
-    int EmployeeId, string EmployeeCode, string FullName, string RoleName, string PayType, string? TeamName,
+    int EmployeeId, string EmployeeCode, string FullName, string RoleName, string PayType, string? TeamCode,
     decimal WorkDays, decimal SundayWorkDays, decimal OvertimeHours, decimal SundayOvertimeHours,
     decimal PieceRateAmount, decimal SundayPieceRateBonus, decimal ScrapDeduction,
     string? GradeCode, decimal? GradeAllowance,
@@ -64,7 +64,7 @@ public sealed record PayslipItemDto(
 
 /// <summary>Phiếu lương một nhân viên trong bảng lương, kèm các khoản chi tiết — UC06, UC32.</summary>
 public sealed record PayslipDto(
-    int PayslipId, int EmployeeId, string EmployeeCode, string FullName, string? TeamName,
+    int PayslipId, int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
     decimal? WorkDays, decimal TotalAdditions, decimal TotalDeductions, decimal Insurance, decimal NetPay,
     IReadOnlyList<PayslipItemDto> Items);
 

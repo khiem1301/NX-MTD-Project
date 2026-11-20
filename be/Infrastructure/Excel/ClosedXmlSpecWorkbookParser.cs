@@ -11,7 +11,7 @@ namespace NX_MTD.Infrastructure.Excel;
 /// hiển thị), không theo tên sheet, nên người dùng được đổi tên sheet hay chèn dòng ghi chú phía trên:
 /// <list type="bullet">
 /// <item>Thành phần: Tên chi tiết, Loại, Số chi tiết / áo.</item>
-/// <item>Định mức NVL: Màu áo, Tên chi tiết, Tên NVL, Ghi chú quy cách (tùy chọn).</item>
+/// <item>Định mức NVL: Màu áo, Tên chi tiết, Mã NVL, Ghi chú quy cách (tùy chọn).</item>
 /// <item>Nhóm bìa: Nhóm bìa, Chi tiết trên nhóm, Màu áo dùng nhóm (nhiều giá trị cách nhau dấu ;).</item>
 /// <item>Bìa của đơn: Nhóm bìa, Mã bìa, Dài (m), Khổ (m), Mã hàng / Ngừng dùng (tick, tùy chọn; cột Trạng thái cũ vẫn đọc được); mọi cột khác là cột size.</item>
 /// </list>
@@ -74,7 +74,7 @@ public sealed class ClosedXmlSpecWorkbookParser : IExcelSpecWorkbookParser
             if (Has("nhombia", "mabia") && Starts(columns, "dai") is not null && Starts(columns, "kho") is not null)
                 return (Table.OrderMarkers, new Header(r, columns, SizeColumns(sheet, r, lastCol)));
             if (Has("nhombia", "chitiettrennhom", "mauaodungnhom")) return (Table.MarkerGroups, new Header(r, columns, []));
-            if (Has("mauao", "tenchitiet", "tennvl")) return (Table.Norms, new Header(r, columns, []));
+            if (Has("mauao", "tenchitiet", "manvl")) return (Table.Norms, new Header(r, columns, []));
             if (Has("tenchitiet", "loai") && Starts(columns, "sochitiet") is not null)
                 return (Table.Components, new Header(r, columns, []));
         }
@@ -145,13 +145,13 @@ public sealed class ClosedXmlSpecWorkbookParser : IExcelSpecWorkbookParser
     {
         var color = Text(sheet, r, h, "mauao");
         var component = Text(sheet, r, h, "tenchitiet");
-        var code = Text(sheet, r, h, "tennvl").ToUpperInvariant();
+        var code = Text(sheet, r, h, "manvl").ToUpperInvariant();
         var note = Text(sheet, r, h, "ghichuquycach");
         if (color.Length == 0 && component.Length == 0 && code.Length == 0) return null;
 
         var error = color.Length == 0 ? Messages.Required("màu áo")
             : component.Length == 0 ? Messages.Required("tên chi tiết")
-            : code.Length == 0 ? Messages.Required("tên NVL") : null;
+            : code.Length == 0 ? Messages.Required("mã NVL") : null;
         return new SpecNormExcelRow(r, color, component, code, note.Length == 0 ? null : note, error);
     }
 

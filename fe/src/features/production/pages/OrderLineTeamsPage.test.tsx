@@ -36,8 +36,8 @@ jest.mock('../hooks/useOrderLineTeams', () => ({
 jest.mock('@/hooks/useLookups', () => ({
   useTeamOptions: () => ({
     data: [
-      { teamId: 5, teamName: 'Tổ may 1' },
-      { teamId: 6, teamName: 'Tổ may 2' },
+      { teamId: 5, teamCode: 'Tổ may 1' },
+      { teamId: 6, teamCode: 'Tổ may 2' },
     ],
     isLoading: false,
   }),
@@ -74,7 +74,7 @@ describe('OrderLineTeamsPage', () => {
   });
 
   it('chọn thêm tổ thì giữ tổ đã chia', async () => {
-    mockRows = [row({ teams: [{ teamId: 5, teamName: 'Tổ may 1' }] })];
+    mockRows = [row({ teams: [{ teamId: 5, teamCode: 'Tổ may 1' }] })];
     render(<OrderLineTeamsPage />);
 
     fireEvent.mouseDown(teamBox());
@@ -84,7 +84,7 @@ describe('OrderLineTeamsPage', () => {
   });
 
   it('tổ đã chia nhưng ngừng hoạt động vẫn hiện, có ghi chú', () => {
-    mockRows = [row({ teams: [{ teamId: 9, teamName: 'Tổ may cũ' }] })];
+    mockRows = [row({ teams: [{ teamId: 9, teamCode: 'Tổ may cũ' }] })];
     render(<OrderLineTeamsPage />);
 
     expect(screen.getByText('Tổ may cũ (ngừng hoạt động)')).toBeInTheDocument();

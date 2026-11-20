@@ -149,7 +149,7 @@ export function PurchaseOrderFormModal({ open, onClose }: PurchaseOrderFormModal
                     style={{ width: 380 }}
                     options={addable.map((om) => ({
                       value: om.materialId,
-                      label: `${om.materialName}`,
+                      label: `${om.materialCode} - ${om.materialName}`,
                     }))}
                     onChange={(materialId: number) => {
                       const om = addable.find((x) => x.materialId === materialId);

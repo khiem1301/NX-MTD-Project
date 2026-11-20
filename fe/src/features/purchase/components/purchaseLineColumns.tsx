@@ -10,7 +10,7 @@ export const purchaseLineColumns: ColumnsType<PurchaseOrderLine> = [
   {
     title: text.material,
     key: 'material',
-    render: (_, l) => `${l.materialName}`,
+    render: (_, l) => `${l.materialCode} - ${l.materialName}`,
   },
   { title: text.color, dataIndex: 'materialColor', render: (value: string) => value || '—' },
   {

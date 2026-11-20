@@ -7,7 +7,7 @@ namespace NX_MTD.Application.DTOs;
 /// MaterialColor = Material.Color (26/10: màu nằm trong NVL, chọn NVL là đã chọn màu).
 /// </summary>
 public sealed record OrderMaterialDto(
-    int OrderMaterialId, int OrderId, int MaterialId, string MaterialName, string MaterialType,
+    int OrderMaterialId, int OrderId, int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string MaterialColor, decimal RequiredQty, decimal CustomerQty, short? ExpectedDeliveryCount,
     int ReceivedCount, decimal? PurchaseQty, string? Source, string? Note, decimal ReceivedQty,
     DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
@@ -18,19 +18,19 @@ public sealed record OrderMaterialDto(
 // ---- DEV-ALL-119: nhập Excel NVL của đơn ----
 
 /// <summary>
-/// Một dòng thô đọc từ file: tên NVL, số cần, khách cấp, ghi chú. MaterialName / Unit (DEV-ALL-123, cột tùy chọn "Tên NVL",
+/// Một dòng thô đọc từ file: mã NVL, số cần, khách cấp, ghi chú. MaterialName / Unit (DEV-ALL-123, cột tùy chọn "Tên NVL",
 /// "Đơn vị") chỉ để hiện và gợi ý khi thêm NVL chưa có vào danh mục; NVL đã có thì lấy theo danh mục.
 /// </summary>
-public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialName, decimal? RequiredQty, decimal? CustomerQty,
-    string? Note, string? ParseError, string? Unit = null);
+public sealed record OrderMaterialExcelRow(int RowNumber, string MaterialCode, decimal? RequiredQty, decimal? CustomerQty,
+    string? Note, string? ParseError, string? MaterialName = null, string? Unit = null);
 
 /// <summary>Action: New | Update | Unchanged | Error. PurchaseQty = max(Số cần − Khách cấp, 0) tính trước để xem.</summary>
-public sealed record OrderMaterialImportRowDto(int RowNumber, string Action, string? Error, string? MaterialName,
+public sealed record OrderMaterialImportRowDto(int RowNumber, string Action, string? Error, string MaterialCode, string? MaterialName,
     string? MaterialColor, string? Unit, decimal? RequiredQty, decimal? CustomerQty, decimal? PurchaseQty, string? Note);
 
 /// <param name="RemoveCount">Chế độ thay thế: số NVL của đơn sẽ bị xóa vì không có trong file.</param>
-/// <param name="Removed">Tên NVL sẽ bị xóa.</param>
-/// <param name="Blocked">Tên NVL không có trong file nhưng không xóa được (đã có phiếu nhập hoặc đơn mua): giữ nguyên.</param>
+/// <param name="Removed">Mã NVL sẽ bị xóa.</param>
+/// <param name="Blocked">Mã NVL không có trong file nhưng không xóa được (đã có phiếu nhập hoặc đơn mua): giữ nguyên.</param>
 public sealed record OrderMaterialImportPreviewDto(IReadOnlyList<OrderMaterialImportRowDto> Rows, int ValidCount, int ErrorCount,
     int DuplicateCount, int ChangeCount, int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null);
 
@@ -53,7 +53,7 @@ public sealed record UpdateOrderMaterialDto(
 
 /// <summary>Một NVL trong định mức của mã hàng.</summary>
 public sealed record ProductMaterialOptionDto(
-    int MaterialId, string MaterialName, string MaterialType, string Unit, string Color);
+    int MaterialId, string MaterialCode, string MaterialName, string MaterialType, string Unit, string Color);
 
 /// <summary>Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt.</summary>
 public sealed record OrderProductMaterialsDto(

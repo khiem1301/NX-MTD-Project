@@ -46,7 +46,8 @@ describe('fabricPlan', () => {
   it('dòng của vải gộp các nhóm bìa; vải chưa tính được thì không có dòng', () => {
     const check = {
       materialId: 1,
-      materialName: 'V01',
+      materialCode: 'V01',
+      materialName: 'Vải',
       materialColor: 'Đen',
       status: 'Enough',
       needMeters: 38,
@@ -65,7 +66,7 @@ describe('fabricPlan', () => {
     } satisfies WorkOrderFabricCheck;
 
     expect(fabricPlanLine(check)).toBe(
-      'V01 (Đen): cần khoảng 38 m. Nhóm bìa 1: 1A (1M, 2L, 1XL) × 10 lớp; Nhóm bìa 2: 2A (2M) × 10 lớp',
+      'V01 Vải (Đen): cần khoảng 38 m. Nhóm bìa 1: 1A (1M, 2L, 1XL) × 10 lớp; Nhóm bìa 2: 2A (2M) × 10 lớp',
     );
     expect(
       fabricPlanLine({ ...check, status: 'Unknown', needMeters: null, markerPlans: null }),

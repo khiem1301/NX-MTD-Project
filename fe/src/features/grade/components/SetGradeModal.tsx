@@ -23,7 +23,7 @@ export function SetGradeModal({ open, onClose }: { open: boolean; onClose: () =>
   const all = workers.data ?? [];
   const teamOptions = [
     ...new Map(
-      all.map((w) => [String(w.teamId ?? 'none'), w.teamName ?? GR_LABELS.noTeam]),
+      all.map((w) => [String(w.teamId ?? 'none'), w.teamCode ?? GR_LABELS.noTeam]),
     ).entries(),
   ].map(([value, label]) => ({ value, label }));
   const inTeam = all.filter((w) => String(w.teamId ?? 'none') === teamKey);

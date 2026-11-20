@@ -68,7 +68,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                 r.Title,
                 r.TargetDate,
                 CreatedByName = r.CreatedByNavigation == null ? null : r.CreatedByNavigation.FullName,
-                TeamName = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamName,
+                TeamCode = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamCode,
                 r.CreatedAt,
                 r.DecidedAt,
             })
@@ -76,7 +76,7 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
 
         var items = page.Items.Select(r => new RequestListItemDto(r.RequestId, r.RequestCode,
             CodeText.ToPascal(r.RequestTypeCode), CodeText.ToPascal(r.Status), r.Title, r.TargetDate,
-            r.CreatedByName, r.TeamName, r.CreatedAt, r.DecidedAt)).ToList();
+            r.CreatedByName, r.TeamCode, r.CreatedAt, r.DecidedAt)).ToList();
         return new PagedResult<RequestListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
     }
 
@@ -98,10 +98,10 @@ public sealed class RequestRepository : GenericRepository<Request>, IRequestRepo
                 CreatedBy = r.CreatedBy,
                 CreatedByName = r.CreatedByNavigation == null ? null : r.CreatedByNavigation.FullName,
                 CreatedByTeamId = r.CreatedByTeamId,
-                TeamName = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamName,
+                TeamCode = r.CreatedByTeam == null ? null : r.CreatedByTeam.TeamCode,
                 HandlerRole = r.HandlerRoleCode,
                 HandlerTeamId = r.HandlerTeamId,
-                HandlerTeamName = r.HandlerTeam == null ? null : r.HandlerTeam.TeamName,
+                HandlerTeamCode = r.HandlerTeam == null ? null : r.HandlerTeam.TeamCode,
                 CreatedAt = r.CreatedAt,
                 DecidedAt = r.DecidedAt,
                 DecisionNote = r.DecisionNote,

@@ -122,7 +122,7 @@ export function ReplacementWorkOrderModal({
         <Form.Item name="cuttingTeamId" label={LABELS.cuttingTeam} rules={required}>
           <Select
             loading={teams.isLoading}
-            options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+            options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
           />
         </Form.Item>
         <Form.Item name="dueDate" label={LABELS.dueDate} rules={required}>

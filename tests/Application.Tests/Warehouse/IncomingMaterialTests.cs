@@ -45,8 +45,8 @@ public class IncomingMaterialTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private static Material Mat(string code = "VAI01", string unit = "m") =>
-        new() { MaterialId = 1, MaterialName = code, Unit = unit, Status = MaterialStatuses.Active, MaterialType = "FABRIC" };
+    private static Material Mat(string code = "VAI01", string name = "Vải cotton", string unit = "m") =>
+        new() { MaterialId = 1, MaterialCode = code, MaterialName = name, Unit = unit, Status = MaterialStatuses.Active, MaterialType = "FABRIC" };
 
     private CustomerOrder Order(int id, string code, string status = OrderStatuses.New, string material = OrderMaterialStatuses.Awaiting,
         int dueInDays = 10)
@@ -109,7 +109,7 @@ public class IncomingMaterialTests
         });
 
     private static Material OtherMat(int id, string code, string status = MaterialStatuses.Active) =>
-        new() { MaterialId = id, MaterialName = code, Unit = "m", Color = "", Status = status, MaterialType = "FABRIC" };
+        new() { MaterialId = id, MaterialCode = code, MaterialName = code, Unit = "m", Color = "", Status = status, MaterialType = "FABRIC" };
 
     [Fact]
     public async Task GetProductMaterials_OrderNotFound_ReturnsNotFound()
@@ -251,7 +251,7 @@ public class IncomingMaterialTests
         var buy = OrderMat(o, 2, 0, 50);
         customer.RequiredQty = 100;
         buy.RequiredQty = 50;
-        buy.Material = new Material { MaterialId = 2, MaterialName = "CHI01", Color = "Xanh", Unit = "cuộn" };
+        buy.Material = new Material { MaterialId = 2, MaterialCode = "CHI01", MaterialName = "Chỉ may", Color = "Xanh", Unit = "cuộn" };
         return (o, customer, buy);
     }
 
@@ -282,8 +282,9 @@ public class IncomingMaterialTests
 
     [Theory]
     [InlineData("chi01")]
+    [InlineData("CHỈ MAY")]
     [InlineData("xanh")]
-    public async Task Order_material_table_searches_name_and_color_ignoring_case(string keyword)
+    public async Task Order_material_table_searches_code_name_and_color_ignoring_case(string keyword)
     {
         TwoLines();
 
@@ -321,7 +322,7 @@ public class IncomingMaterialTests
         row.OutstandingQty.Should().Be(300);
         row.ExpectedDeliveryCount.Should().Be(3);
         row.ReceivedCount.Should().Be(1);
-        row.MaterialName.Should().Be("VAI01");
+        row.MaterialName.Should().Be("Vải cotton");
     }
 
     [Fact]
@@ -354,7 +355,7 @@ public class IncomingMaterialTests
         var line = new PurchaseOrderLine
         {
             PurchaseOrderLineId = id, PurchaseOrderId = poId, OrderedQty = ordered, NotReplenishedQty = notReplenished,
-            Material = Mat("KHOA", "cái"),
+            Material = Mat("KHOA", "Khóa kéo", "cái"),
             PurchaseOrder = new PurchaseOrder
             {
                 PurchaseOrderId = poId, PoCode = poCode, GoodsStatus = goodsStatus, ExpectedDeliveryCount = 2,
@@ -380,7 +381,7 @@ public class IncomingMaterialTests
         row.OrderedQty.Should().Be(1000);
         row.ReceivedQty.Should().Be(300);
         row.OutstandingQty.Should().Be(600);   // 1000 − 300 − 100 chốt không bù
-        row.MaterialName.Should().Be("KHOA");
+        row.MaterialName.Should().Be("Khóa kéo");
         row.ExpectedDeliveryCount.Should().Be(2);
         row.ReceivedCount.Should().Be(1);
     }
@@ -412,7 +413,7 @@ public class IncomingMaterialTests
         result.IsSuccess.Should().BeTrue();
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.WarehouseKeeper,
             Arg.Is<NotificationMessage>(m => m.LinkUrl == "/warehouse/incoming-materials" && m.Message.Contains("DH001")
-                && m.Message.Contains("500") && m.Message.Contains("VAI01")),
+                && m.Message.Contains("500") && m.Message.Contains("Vải cotton")),
             Arg.Any<CancellationToken>());
     }
 

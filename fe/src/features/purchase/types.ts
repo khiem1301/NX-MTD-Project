@@ -74,6 +74,7 @@ export type PurchaseOrderLine = {
   purchaseOrderLineId: number;
   orderMaterialId: number | null;
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;

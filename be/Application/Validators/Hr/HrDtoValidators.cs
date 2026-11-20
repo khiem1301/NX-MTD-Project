@@ -123,7 +123,6 @@ public sealed class SaveTeamDtoValidator : AbstractValidator<SaveTeamDto>
         RuleFor(x => x.TeamCode).NotEmpty().WithMessage(Messages.Required("mã tổ")).MaximumLength(20)
             .Must(c => System.Text.RegularExpressions.Regex.IsMatch(c.Trim(), "^[A-Za-z0-9._-]+$"))
             .WithMessage("Mã tổ chỉ gồm chữ, số và . _ -");
-        RuleFor(x => x.TeamName).NotEmpty().WithMessage(Messages.Required("tên tổ")).MaximumLength(100);
         RuleFor(x => x.TeamType).Must(HrRules.TeamTypeNames.Contains).WithMessage("Loại tổ không hợp lệ.");
     }
 }

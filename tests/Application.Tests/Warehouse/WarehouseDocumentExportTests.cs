@@ -36,7 +36,7 @@ public class WarehouseDocumentExportTests
         SubmittedAt: new DateTime(2026, 10, 20, 8, 0, 0), ConfirmedAt: null, ConfirmedByName: "Nguyễn Quản Đốc",
         Lines: new[]
         {
-            new MaterialReceiptLineDto(1, 10, 7, null, 2, "VAI01", "m", "Đen", 15000m, null, 95m),
+            new MaterialReceiptLineDto(1, 10, 7, null, 2, "VAI01", "Vải cotton", "m", "Đen", 15000m, null, 95m),
         });
 
     [Fact]
@@ -82,13 +82,13 @@ public class WarehouseDocumentExportTests
 
     private static MaterialIssueDto Issue() => new(
         MaterialIssueId: 8, IssueCode: "PC-2026-0008", WarehouseType: "Material", OrderId: 1, OrderCode: "DH001",
-        WorkOrderId: 4, WorkOrderCode: "LC-0004", RequestId: null, ReceivingTeamId: 2, ReceivingTeamName: "Tổ cắt",
+        WorkOrderId: 4, WorkOrderCode: "LC-0004", RequestId: null, ReceivingTeamId: 2, ReceivingTeamCode: "Tổ cắt",
         IssueDate: new DateOnly(2026, 10, 21), Status: "PendingReceipt", IssuedByName: "Thủ kho A", ReceivedByName: null,
         ReceivedAt: null, RejectReason: null, CreatedAt: new DateTime(2026, 10, 21, 9, 0, 0),
         Lines: new[]
         {
-            new MaterialIssueLineDto(1, 2, "VAI01", "m", "Đen", null, null, null, null, null, null, 120m, null, null),
-            new MaterialIssueLineDto(2, null, null, null, null, 9, null, null, "AO01", "Trắng", "M", 30m, 28m, "Rách 2 cái"),
+            new MaterialIssueLineDto(1, 2, "VAI01", "Vải cotton", "m", "Đen", null, null, null, null, null, null, 120m, null, null),
+            new MaterialIssueLineDto(2, null, null, null, null, null, 9, null, null, "AO01", "Trắng", "M", 30m, 28m, "Rách 2 cái"),
         });
 
     [Fact]

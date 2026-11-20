@@ -59,7 +59,7 @@ public sealed class WorkOrderFabricNeeds : IWorkOrderFabricNeeds
         {
             var cap = n.NeedMeters is { } need ? Cap(need, wo.FabricTolerancePercent) : (decimal?)null;
             var done = requested.GetValueOrDefault(n.MaterialId);
-            return new WorkOrderMaterialAllowanceDto(n.MaterialId, n.MaterialName, n.MaterialColor,
+            return new WorkOrderMaterialAllowanceDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.MaterialColor,
                 units.GetValueOrDefault(n.MaterialId, string.Empty), n.NeedMeters, cap, done, cap is null ? null : Math.Max(0, cap.Value - done));
         }).ToList();
     }

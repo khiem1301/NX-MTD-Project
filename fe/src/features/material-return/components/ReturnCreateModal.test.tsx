@@ -74,7 +74,8 @@ jest.mock('@/hooks/useLookups', () => ({
     data: [
       {
         materialId: 9,
-        materialName: 'PP-0001',
+        materialCode: 'PP-0001',
+        materialName: 'Vải vụn',
         materialType: 'SCRAP',
         unit: 'kg',
         color: '',
@@ -95,7 +96,7 @@ const signIn = (teamType: TeamType) =>
       role: 'TeamLeader',
       roleName: 'TeamLeader',
       teamId: 2,
-      teamName: 'Tổ',
+      teamCode: 'Tổ',
       teamType,
       isTemporaryPassword: false,
     } satisfies UserInfo,

@@ -28,6 +28,7 @@ import type {
   SaveProductPayload,
   SaveProductSpecPayload,
   OrderImportPreview,
+  OrderSaveResult,
   SpecImportPreview,
   SpecImportResult,
   SpecImportTarget,
@@ -182,8 +183,9 @@ export const orderApi = {
   overviews: (q: OrderOverviewQuery) =>
     get<Paginated<OrderOverviewListItem>>(API.customerOrders.overviews, q),
   overview: (id: number) => get<OrderOverview>(API.customerOrders.overviewById(id)),
-  create: (body: CreateOrderPayload) => post<number>(API.customerOrders.base, body),
-  update: (id: number, body: UpdateOrderPayload) => put<unknown>(API.customerOrders.byId(id), body),
+  create: (body: CreateOrderPayload) => post<OrderSaveResult>(API.customerOrders.base, body),
+  update: (id: number, body: UpdateOrderPayload) =>
+    put<OrderSaveResult>(API.customerOrders.byId(id), body),
   cancel: (id: number, reason: string | null, rowVer: string) =>
     post<unknown>(API.customerOrders.cancel(id), { reason, rowVer }),
   startProduction: (id: number, rowVer: string) =>

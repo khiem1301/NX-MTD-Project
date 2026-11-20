@@ -49,6 +49,13 @@ public static class MaterialTypes
     public static bool IsValid(string? materialType) => materialType is not null && All.Contains(materialType);
 }
 
+/// <summary>Giới hạn của Mã NVL (cột VARCHAR(30): chữ có dấu sẽ hỏng khi lưu).</summary>
+public static class MaterialLimits
+{
+    public const int MaxCodeLength = 30;
+    public const int MaxNameLength = 200;
+}
+
 public static class MaterialStatuses
 {
     public const string Active = "ACTIVE";

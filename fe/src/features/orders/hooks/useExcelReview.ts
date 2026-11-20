@@ -57,7 +57,7 @@ export function useExcelReview(
   );
   const newMaterials: SaveMaterialPayload[] = (check.data?.missingMaterials ?? []).map((m) => ({
     ...defaultMaterial(m),
-    ...materialEdits[m.materialName],
+    ...materialEdits[m.materialCode],
   }));
 
   return {

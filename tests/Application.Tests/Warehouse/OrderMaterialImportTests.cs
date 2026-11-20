@@ -30,7 +30,7 @@ public class OrderMaterialImportTests
         Setup(new List<VwOrderMaterialDelivery>());
         _orders.Add(_order);
         _materials.AddRange([Mat(1, "VAI01"), Mat(2, "CHI01"), Mat(3, "KHOA01"),
-            new Material { MaterialId = 4, MaterialName = "CU01", Color = "", Unit = "m", Status = MaterialStatuses.Discontinued }]);
+            new Material { MaterialId = 4, MaterialCode = "CU01", MaterialName = "Cũ", Color = "", Unit = "m", Status = MaterialStatuses.Discontinued }]);
         _orderMaterials.Add(new OrderMaterial
         {
             OrderMaterialId = 7,
@@ -44,7 +44,7 @@ public class OrderMaterialImportTests
     }
 
     private static Material Mat(int id, string code) =>
-        new() { MaterialId = id, MaterialName = code, Color = "Đen", Unit = "m", Status = MaterialStatuses.Active };
+        new() { MaterialId = id, MaterialCode = code, MaterialName = "NVL " + code, Color = "Đen", Unit = "m", Status = MaterialStatuses.Active };
 
     private void Setup<T>(List<T> backing) where T : class
     {
@@ -59,7 +59,7 @@ public class OrderMaterialImportTests
     {
         var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("NVL của đơn");
-        string[] headers = ["Tên NVL", "Số cần", "Khách cấp", "Ghi chú"];
+        string[] headers = ["Mã NVL", "Số cần", "Khách cấp", "Ghi chú"];
         for (var c = 0; c < headers.Length; c++) ws.Cell(3, c + 1).Value = headers[c];
         for (var r = 0; r < rows.Length; r++)
             for (var c = 0; c < rows[r].Length; c++)

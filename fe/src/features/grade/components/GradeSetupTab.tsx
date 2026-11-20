@@ -26,7 +26,7 @@ export function GradeSetupTab() {
   const levels = useGradeLevels();
   const update = useUpdateGradeCode();
   const remove = useDeleteGradeCode();
-  const [editing, setEditing] = useState<GradeCode | 'new' | null>(null);
+  const [adding, setAdding] = useState(false);
   const [changing, setChanging] = useState<GradeCode | null>(null);
   const [viewing, setViewing] = useState<GradeCode | null>(null);
   const [keyword, setKeyword] = useState('');
@@ -36,18 +36,17 @@ export function GradeSetupTab() {
   const visible = (codes.data ?? []).filter(
     (c) =>
       (statusFilter === undefined || c.status === statusFilter) &&
-      (needle === '' || normalizeText(`${c.gradeCode} ${c.gradeName}`).includes(needle)),
+      (needle === '' || normalizeText(c.gradeCode).includes(needle)),
   );
 
   const columns = gradeCodeColumns({
     levels: all,
     onView: setViewing,
     onChangeAmount: setChanging,
-    onEdit: setEditing,
     onToggleStatus: (row) =>
       update.mutate({
         code: row.gradeCode,
-        body: { gradeName: row.gradeName, status: row.status === 'Active' ? 'Inactive' : 'Active' },
+        body: { status: row.status === 'Active' ? 'Inactive' : 'Active' },
       }),
     onRemove: (row) => remove.mutate(row.gradeCode),
   });
@@ -76,7 +75,7 @@ export function GradeSetupTab() {
           </>
         }
         actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setEditing('new')}>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setAdding(true)}>
             {GR_LABELS.addCode}
           </Button>
         }
@@ -92,7 +91,7 @@ export function GradeSetupTab() {
       <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
         {GR_LABELS.codeHint}
       </Typography.Paragraph>
-      <GradeCodeFormModal editing={editing} onClose={() => setEditing(null)} />
+      <GradeCodeFormModal open={adding} onClose={() => setAdding(false)} />
       <ChangeAmountModal code={changing} rows={all} onClose={() => setChanging(null)} />
       <LevelHistoryModal code={viewing} rows={all} onClose={() => setViewing(null)} />
     </>

@@ -224,7 +224,7 @@ export type OrderLineTeamRow = {
   color: string;
   sizeCode: string;
   orderedQty: number;
-  teams: { teamId: number; teamName: string }[];
+  teams: { teamId: number; teamCode: string }[];
 };
 
 export type OrderLineTeamParams = {
@@ -321,7 +321,7 @@ export type QcBatch = {
   shiftCode: ShiftValue;
   batchTime: string;
   sewingTeamId: number;
-  sewingTeamName: string;
+  sewingTeamCode: string;
   orderLineId: number;
   orderCode: string;
   productCode: string;
@@ -399,7 +399,7 @@ export type Defect = {
   replacementRequestId: number | null;
   replacementRequestCode: string | null;
   replacementRequestStatus: string | null;
-  sewingTeamName: string;
+  sewingTeamCode: string;
   /** Lần cập nhật gần nhất (sửa hoặc hủy phiếu). */
   updatedAt: string | null;
 };

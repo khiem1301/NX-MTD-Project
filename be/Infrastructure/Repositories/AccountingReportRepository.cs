@@ -20,7 +20,7 @@ public sealed class AccountingReportRepository : IAccountingReportRepository
 
     // ---------- 1. Công + tăng ca ----------
 
-    public async Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamName,
+    public async Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
             decimal WorkdayValue, decimal OvertimeHours, bool IsSunday)>>
         GetTimesheetRowsAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct)
     {
@@ -29,13 +29,13 @@ public sealed class AccountingReportRepository : IAccountingReportRepository
             .Select(t => new
             {
                 t.EmployeeId, t.Employee.EmployeeCode, t.Employee.FullName,
-                TeamName = t.Employee.Team == null ? null : t.Employee.Team.TeamName,
+                TeamCode = t.Employee.Team == null ? null : t.Employee.Team.TeamCode,
                 t.WorkdayValue, t.OvertimeHours, IsSunday = t.IsSunday ?? false,
             })
             .ToListAsync(ct);
 
         return rows
-            .Select(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamName, r.WorkdayValue, r.OvertimeHours, r.IsSunday))
+            .Select(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode, r.WorkdayValue, r.OvertimeHours, r.IsSunday))
             .ToList();
     }
 

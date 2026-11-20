@@ -14,7 +14,7 @@ export type KpiTarget = {
   productId: number;
   productCode: string;
   sewingTeamId: number;
-  sewingTeamName: string;
+  sewingTeamCode: string;
   startDate: string;
   endDate: string;
   targetFinishedQty: number;
@@ -83,7 +83,7 @@ export type KpiCalendar = {
   kpiTargetId: number;
   orderCode: string;
   productCode: string;
-  sewingTeamName: string;
+  sewingTeamCode: string;
   startDate: string;
   endDate: string;
   today: string;
@@ -131,7 +131,7 @@ export type EndOfOrderPreview = {
   kpiTargetId: number;
   orderCode: string;
   productCode: string;
-  teamName: string;
+  teamCode: string;
   targetQty: number;
   actualQty: number;
   achieved: boolean;

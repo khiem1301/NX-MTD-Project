@@ -16,6 +16,7 @@ export type StocktakeListItem = {
 export type StocktakeLine = {
   stocktakeLineId: number;
   materialId: number | null;
+  materialCode: string | null;
   materialName: string | null;
   unit: string | null;
   materialColor: string | null;

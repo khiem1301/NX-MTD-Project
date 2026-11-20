@@ -30,7 +30,7 @@ public class AuthServiceTests
         {
             EmployeeId = 7, EmployeeCode = "TTMAY", FullName = "Tổ trưởng", TeamId = 3, Status = employeeStatus,
             Role = new Role { RoleCode = roleCode, RoleName = "Tổ trưởng" },
-            Team = new Team { TeamId = 3, TeamName = "Tổ may 1", TeamType = "SEWING" },
+            Team = new Team { TeamId = 3, TeamCode = "MAY1", TeamType = "SEWING" },
         };
         return new Account
         {

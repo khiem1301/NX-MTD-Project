@@ -29,7 +29,7 @@ export const planLabel = (plan: FabricMarkerPlan) => {
 
 /** Tên vải đầy đủ: mã, tên, màu. */
 export const fabricName = (c: WorkOrderFabricCheck) =>
-  `${c.materialName}${c.materialColor ? ` (${c.materialColor})` : ''}`;
+  `${c.materialCode} ${c.materialName}${c.materialColor ? ` (${c.materialColor})` : ''}`;
 
 /** "V01 Vải gió (Đen): cần khoảng 195,3 m. Nhóm bìa 1: …; Nhóm bìa 2: …"; null khi vải chưa tính được. */
 export const fabricPlanLine = (c: WorkOrderFabricCheck): string | null =>

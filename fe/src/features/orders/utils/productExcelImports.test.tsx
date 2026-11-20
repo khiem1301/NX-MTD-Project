@@ -51,7 +51,7 @@ const bundle: ExcelBundle = {
         rowNumber: 5,
         color: 'Tím',
         componentName: 'Cổ',
-        materialName: 'V-1',
+        materialCode: 'V-1',
         specNote: null,
         parseError: null,
       },
@@ -76,7 +76,7 @@ const bundle: ExcelBundle = {
   orderMaterials: [
     {
       rowNumber: 5,
-      materialName: 'V-1',
+      materialCode: 'V-1',
       requiredQty: 10,
       customerQty: null,
       note: null,
@@ -136,9 +136,9 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
   it('tạo NVL trước rồi mới nhập; NVL lỗi báo riêng, không chặn', async () => {
     const order: string[] = [];
     (materialApi.create as jest.Mock).mockImplementation(
-      async (_role, m: { materialName: string }) => {
-        order.push(`create ${m.materialName}`);
-        if (m.materialName === 'X2')
+      async (_role, m: { materialCode: string }) => {
+        order.push(`create ${m.materialCode}`);
+        if (m.materialCode === 'X2')
           throw { success: false, errorCode: 'DUP', message: 'Mã đã có' };
         return {};
       },
@@ -157,8 +157,8 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
     const outcomes = await runProductImports(9, {
       bundle: clearKind(bundle, 'norms'),
       newMaterials: [
-        { ...material, materialName: 'X1' },
-        { ...material, materialName: 'X2' },
+        { ...material, materialCode: 'X1' },
+        { ...material, materialCode: 'X2' },
       ],
     });
 

@@ -47,10 +47,10 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
 
         var rows = r.Lines.Select((l, i) => (IReadOnlyList<object?>)new object?[]
         {
-            i + 1, l.MaterialName, l.Unit, l.MaterialColor, l.AcceptedQty, l.UnitPrice,
+            i + 1, l.MaterialCode, l.MaterialName, l.Unit, l.MaterialColor, l.AcceptedQty, l.UnitPrice,
         }).ToList();
         var doc = new PrintableDocument("PHIẾU NHẬP NGUYÊN VẬT LIỆU", r.ReceiptCode, info,
-            new[] { "STT", "Tên NVL", "ĐVT", "Màu", "SL đạt", "Đơn giá" }, rows,
+            new[] { "STT", "Mã NVL", "Tên NVL", "ĐVT", "Màu", "SL đạt", "Đơn giá" }, rows,
             new[] { "Người lập phiếu", "Thủ kho", "Quản đốc" });
         return Build(doc, "PhieuNhap");
     }
@@ -67,7 +67,7 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
             Pair("Ngày cấp", Date(i.IssueDate)),
             Pair("Loại", Norm(i.WarehouseType) == "MATERIAL" ? "Cấp vải" : "Cấp bán thành phẩm"),
             Pair("Đơn hàng", i.OrderCode),
-            Pair("Tổ nhận", i.ReceivingTeamName),
+            Pair("Tổ nhận", i.ReceivingTeamCode),
             Pair("Người cấp", i.IssuedByName),
             Pair("Trạng thái", IssueStatus(i.Status)),
         };
@@ -78,11 +78,12 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
         var rows = i.Lines.Select((l, n) => (IReadOnlyList<object?>)new object?[]
         {
             n + 1,
+            l.MaterialCode ?? l.ProductCode,
             l.MaterialName ?? string.Join(" / ", new[] { l.ProductCode, l.Color, l.SizeCode }.Where(s => !string.IsNullOrEmpty(s))),
             l.Unit ?? "cái", l.MaterialColor ?? l.Color, l.IssuedQty, l.ConfirmedQty, l.DiscrepancyReason,
         }).ToList();
         var doc = new PrintableDocument("PHIẾU CẤP HÀNG CHO TỔ", i.IssueCode, info,
-            new[] { "STT", "Tên NVL / hàng", "ĐVT", "Màu", "SL cấp", "SL tổ nhận", "Lý do lệch" }, rows,
+            new[] { "STT", "Mã", "Tên hàng", "ĐVT", "Màu", "SL cấp", "SL tổ nhận", "Lý do lệch" }, rows,
             new[] { "Người lập phiếu", "Thủ kho", "Tổ trưởng nhận" });
         return Build(doc, "PhieuCap");
     }

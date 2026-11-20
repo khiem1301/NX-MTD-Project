@@ -11,9 +11,10 @@ jest.mock('../hooks/useOrderMaterials', () => ({
   useCreateOrderMaterials: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
-const material = (materialId: number, materialName: string) => ({
+const material = (materialId: number, materialCode: string) => ({
   materialId,
-  materialName,
+  materialCode,
+  materialName: `Tên ${materialCode}`,
   materialType: 'FABRIC',
   unit: 'm',
   color: '',

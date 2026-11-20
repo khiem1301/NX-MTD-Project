@@ -41,7 +41,18 @@ public sealed record SaveProductDto(string ProductCode, string? SampleImageUrl, 
 
 // ---- Đơn hàng ----
 /// <param name="OrderLineId">null = dòng mới; có giá trị = dòng cũ (sửa).</param>
+/// <param name="ProductId">Mã hàng đã có (dương). Âm = mã hàng tạo cùng đơn, trùng <see cref="StagedProductDto.TempId"/>.</param>
 public sealed record OrderLineInput(int? OrderLineId, int ProductId, string Color, string SizeCode, int OrderedQty, decimal CmtUnitPrice);
+
+/// <summary>DEV-ALL-151: mã hàng khai trên form đơn, chưa ghi danh mục. Ghi trong cùng giao dịch với đơn.</summary>
+public sealed record StagedProductDto(int TempId, string ProductCode, string? SampleImageUrl, string? Description,
+    IReadOnlyList<string>? ExtraImages = null);
+
+/// <summary>Mã hàng vừa tạo cùng đơn: TempId trên form → ProductId thật.</summary>
+public sealed record CreatedProductDto(int TempId, int ProductId, string ProductCode);
+
+/// <summary>Kết quả lưu đơn. Products rỗng khi đơn không tạo mã hàng mới.</summary>
+public sealed record OrderSaveResultDto(int OrderId, IReadOnlyList<CreatedProductDto> Products);
 
 /// <summary>Phần chung của tạo / sửa đơn hàng, để dùng chung validator.</summary>
 public interface IOrderInput
@@ -53,14 +64,16 @@ public interface IOrderInput
     string DeliveryAddress { get; }
     string? Note { get; }
     IReadOnlyList<OrderLineInput> Lines { get; }
+    /// <summary>DEV-ALL-151: mã hàng tạo trên form đơn. null = không tạo mã mới.</summary>
+    IReadOnlyList<StagedProductDto>? StagedProducts { get; }
 }
 
 public sealed record CreateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string DeliveryAddress, string? Note,
-    IReadOnlyList<OrderLineInput> Lines) : IOrderInput;
+    IReadOnlyList<OrderLineInput> Lines, IReadOnlyList<StagedProductDto>? StagedProducts = null) : IOrderInput;
 
 /// <summary>Gửi đủ mọi dòng muốn giữ (D27). Dòng cũ không có trong danh sách = xóa (chỉ khi NEW).</summary>
 public sealed record UpdateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string DeliveryAddress, string? Note,
-    IReadOnlyList<OrderLineInput> Lines, byte[] RowVer) : IOrderInput;
+    IReadOnlyList<OrderLineInput> Lines, byte[] RowVer, IReadOnlyList<StagedProductDto>? StagedProducts = null) : IOrderInput;
 
 public sealed record CancelOrderDto(string? Reason, byte[] RowVer);
 public sealed record StopOrderDto(string Reason, byte[] RowVer);
@@ -98,6 +111,9 @@ public sealed record OrderDetailDto
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
     public byte[] RowVer { get; init; } = Array.Empty<byte>();
+    /// <summary>DEV-ALL-150: đơn đã có bìa cắt của đơn / NVL của đơn chưa (màn đơn cảnh báo khi thiếu).</summary>
+    public bool HasOrderMarkers { get; init; }
+    public bool HasOrderMaterials { get; init; }
     public IReadOnlyList<OrderLineDto> Lines { get; init; } = Array.Empty<OrderLineDto>();
     public IReadOnlyList<AuditLogDto> History { get; init; } = Array.Empty<AuditLogDto>();
 }

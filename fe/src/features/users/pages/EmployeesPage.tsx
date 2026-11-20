@@ -66,7 +66,7 @@ export function EmployeesPage() {
     },
     { title: MESSAGES.hr.fullName, dataIndex: 'fullName' },
     { title: MESSAGES.hr.role, dataIndex: 'role', render: (v: Role) => ROLE_LABEL[v] ?? v },
-    { title: MESSAGES.hr.team, dataIndex: 'teamName', render: (v: string | null) => v ?? '—' },
+    { title: MESSAGES.hr.team, dataIndex: 'teamCode', render: (v: string | null) => v ?? '—' },
     {
       title: MESSAGES.hr.payType,
       dataIndex: 'payType',
@@ -148,7 +148,7 @@ export function EmployeesPage() {
               optionFilterProp="label"
               placeholder={MESSAGES.hr.team}
               style={{ width: 200 }}
-              options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+              options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
               onChange={(teamId) => table.setFilters({ teamId })}
             />
             <FilterSelect<Role>

@@ -58,10 +58,10 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
 
         var lineIds = page.Items.Select(r => r.OrderLineId).ToList();
         var teams = await Allotments.AsNoTracking().Where(a => lineIds.Contains(a.OrderLineId))
-            .OrderBy(a => a.SewingTeam.TeamName)
-            .Select(a => new { a.OrderLineId, a.SewingTeamId, a.SewingTeam.TeamName }).ToListAsync(ct);
+            .OrderBy(a => a.SewingTeam.TeamCode)
+            .Select(a => new { a.OrderLineId, a.SewingTeamId, a.SewingTeam.TeamCode }).ToListAsync(ct);
         var items = page.Items.Select(r => new OrderLineTeamDto(r.OrderLineId, r.OrderId, r.OrderCode, r.DueDate, r.ProductId, r.ProductCode, r.Color, r.SizeCode, r.OrderedQty,
-            teams.Where(t => t.OrderLineId == r.OrderLineId).Select(t => new AllottedTeamDto(t.SewingTeamId, t.TeamName)).ToList())).ToList();
+            teams.Where(t => t.OrderLineId == r.OrderLineId).Select(t => new AllottedTeamDto(t.SewingTeamId, t.TeamCode)).ToList())).ToList();
         return Result<PagedResult<OrderLineTeamDto>>.Success(new PagedResult<OrderLineTeamDto>(items, page.Page, page.PageSize, page.TotalItems));
     }
 
@@ -70,9 +70,9 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var lineIds = Lines.Where(l => l.OrderId == orderId && l.ProductId == productId).Select(l => l.OrderLineId);
         var teams = await Allotments.AsNoTracking()
             .Where(a => lineIds.Contains(a.OrderLineId) && a.SewingTeam.Status == RecordStatus.Active)
-            .Select(a => new { a.SewingTeamId, a.SewingTeam.TeamName })
-            .Distinct().OrderBy(t => t.TeamName).ToListAsync(ct);
-        return Result<IReadOnlyList<AllottedTeamDto>>.Success(teams.Select(t => new AllottedTeamDto(t.SewingTeamId, t.TeamName)).ToList());
+            .Select(a => new { a.SewingTeamId, a.SewingTeam.TeamCode })
+            .Distinct().OrderBy(t => t.TeamCode).ToListAsync(ct);
+        return Result<IReadOnlyList<AllottedTeamDto>>.Success(teams.Select(t => new AllottedTeamDto(t.SewingTeamId, t.TeamCode)).ToList());
     }
 
     public async Task<Result> SetTeamsAsync(SetOrderLineTeamsDto dto, CancellationToken ct)
@@ -219,7 +219,7 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var busy = issued.Concat(withWork).Distinct().ToList();
         if (busy.Count == 0) return null;
         var names = await _uow.Repository<Team>().Query().AsNoTracking().Where(t => busy.Contains(t.TeamId))
-            .OrderBy(t => t.TeamName).Select(t => t.TeamName).ToListAsync(ct);
+            .OrderBy(t => t.TeamCode).Select(t => t.TeamCode).ToListAsync(ct);
         return Result.Failure(ErrorCodes.OrderLineTeamInUse, string.Format(Messages.OrderLineTeamInUse, string.Join(", ", names)));
     }
 

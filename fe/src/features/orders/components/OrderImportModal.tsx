@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Button, Modal, Space, Tag, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, PlusOutlined } from '@ant-design/icons';
@@ -10,7 +10,8 @@ import { ReasonHover } from '@/components/common/ReasonHover';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { unknownCodesOf, useCreateProductFromImport } from '../hooks/useCreateProductFromImport';
 import { usePreviewOrderImport } from '../hooks/useSpecImport';
-import type { OrderImportRow } from '../types';
+import type { OrderImportRow, SaveProductPayload } from '../types';
+import { acceptMissingProduct } from '../utils/orderImport';
 import type { ProductImportSelection } from '../utils/productExcelImports';
 import { ProductFormModal } from './ProductFormModal';
 
@@ -23,10 +24,14 @@ type OrderImportModalProps = {
   onApply: (rows: OrderImportRow[]) => void;
   onClose: () => void;
   /**
-   * DEV-ALL-121: tạo mã hàng chưa có ngay từ hộp này (form mã hàng điền sẵn từ sheet Mã hàng, dùng luôn file cho định mức, bìa,
-   * NVL); file của mã hàng mới được giao cho form đơn để nhập sau khi Lưu đơn. Không truyền thì không hiện nút tạo.
+   * DEV-ALL-151: khai mã chưa có (chưa ghi). File Excel của mã được giao cho form đơn, nhập sau khi Lưu đơn.
+   * Không truyền thì không hiện nút tạo.
    */
-  onQueueImports?: (productId: number, code: string, selection: ProductImportSelection) => void;
+  onStageProduct?: (
+    body: SaveProductPayload,
+    selection: ProductImportSelection,
+  ) => number | null;
+  onUnstageProduct?: (tempId: number) => void;
 };
 
 const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
@@ -74,14 +79,28 @@ export function OrderImportModal({
   orderId,
   onApply,
   onClose,
-  onQueueImports,
+  onStageProduct,
+  onUnstageProduct,
 }: OrderImportModalProps) {
   const preview = usePreviewOrderImport();
   const [file, setFile] = useState<File | null>(null);
+  const [accepted, setAccepted] = useState<Record<string, number>>({});
+  const stagedIds = useRef<number[]>([]);
   const create = useCreateProductFromImport(file);
   const creating = create.creating;
-  const data = file ? preview.data : undefined;
-  const unknownCodes = data && onQueueImports ? unknownCodesOf(data.rows) : [];
+  const raw = file ? preview.data : undefined;
+  const data = raw
+    ? Object.entries(accepted).reduce(
+        (previewRows, [code, tempId]) => acceptMissingProduct(previewRows, code, tempId),
+        raw,
+      )
+    : undefined;
+  const unknownCodes = data && onStageProduct ? unknownCodesOf(data.rows) : [];
+  const dropStaged = () => {
+    stagedIds.current.forEach((id) => onUnstageProduct?.(id));
+    stagedIds.current = [];
+    setAccepted({});
+  };
 
   return (
     <Modal
@@ -91,8 +110,15 @@ export function OrderImportModal({
       okText={text.apply}
       cancelText={MESSAGES.common.cancel}
       okButtonProps={{ disabled: !data || data.validCount === 0 || preview.isPending }}
-      onOk={() => data && onApply(data.rows)}
-      onCancel={onClose}
+      onOk={() => {
+        if (!data) return;
+        stagedIds.current = [];
+        onApply(data.rows);
+      }}
+      onCancel={() => {
+        dropStaged();
+        onClose();
+      }}
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -103,11 +129,13 @@ export function OrderImportModal({
           accept=".xlsx"
           disabled={preview.isPending}
           beforeUpload={(next) => {
+            dropStaged();
             setFile(next);
             preview.mutate(next);
             return false;
           }}
           onRemove={() => {
+            dropStaged();
             setFile(null);
             preview.reset();
           }}
@@ -156,16 +184,21 @@ export function OrderImportModal({
           </>
         )}
       </Space>
-      {/* Gắn riêng mỗi lần tạo để form nhận file gán sẵn; Lưu xong kiểm lại file để các dòng của mã mới hợp lệ. */}
-      {creating && file && onQueueImports && (
+      {/* Gắn riêng mỗi lần tạo để form nhận file gán sẵn. Lưu form không ghi mã: dòng chỉ thiếu mã được nhận, mã ghi khi Lưu đơn. */}
+      {creating && file && onStageProduct && (
         <ProductFormModal
           open
           product={null}
           allowImports
           initialValues={creating.values}
           initialImports={creating.imports}
-          onDeferImports={onQueueImports}
-          onSaved={() => preview.mutate(file)}
+          onStage={(body, selection) => {
+            const tempId = onStageProduct(body, selection);
+            if (tempId === null) return false;
+            stagedIds.current = [...stagedIds.current, tempId];
+            setAccepted((prev) => ({ ...prev, [body.productCode.trim().toUpperCase()]: tempId }));
+            return true;
+          }}
           onClose={create.stop}
         />
       )}

@@ -36,7 +36,7 @@ public sealed class ClosedXmlPayrollWriter : IPayrollExcelWriter
             sheet.Cell(r, c++).Value = row.EmployeeCode;
             sheet.Cell(r, c++).Value = row.FullName;
             sheet.Cell(r, c++).Value = row.RoleName;
-            sheet.Cell(r, c++).Value = row.TeamName ?? "";
+            sheet.Cell(r, c++).Value = row.TeamCode ?? "";
             sheet.Cell(r, c++).Value = row.PayType;
             sheet.Cell(r, c++).Value = row.WorkDays;
             sheet.Cell(r, c++).Value = row.SundayWorkDays;

@@ -38,8 +38,14 @@ export const bulkOrderMaterialColumns = ({
   const option = (line: BulkLine) => materialOptions.find((m) => m.materialId === line.materialId);
   const unitOf = (line: BulkLine) => line.original?.unit ?? option(line)?.unit;
 
-  /** Màu của NVL trên một dòng (tên đã hiện ở dòng trên); bỏ qua khi không có. */
-  const detailOf = (line: BulkLine) => line.original?.materialColor ?? option(line)?.color ?? '';
+  /** Tên, màu của NVL trên một dòng; bỏ qua phần không có. */
+  const detailOf = (line: BulkLine) =>
+    [
+      line.original?.materialName ?? option(line)?.materialName,
+      line.original?.materialColor ?? option(line)?.color,
+    ]
+      .filter(Boolean)
+      .join(' · ');
 
   /** Cột số cần / số khách cấp: cùng ô nhập, cùng kiểm lỗi. */
   const qtyColumn = (
@@ -73,7 +79,7 @@ export const bulkOrderMaterialColumns = ({
         <>
           {line.original || lockMaterial ? (
             <Typography.Text strong>
-              {line.original?.materialName ?? option(line)?.materialName}{' '}
+              {line.original?.materialCode ?? option(line)?.materialCode}{' '}
             </Typography.Text>
           ) : (
             <Select
@@ -91,7 +97,7 @@ export const bulkOrderMaterialColumns = ({
                 )
                 .map((m) => ({
                   value: m.materialId,
-                  label: `${m.materialName}${m.color ? ` - ${m.color}` : ''}`,
+                  label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''}`,
                 }))}
               onChange={(id: number) => onPickMaterial(line.key, id)}
             />

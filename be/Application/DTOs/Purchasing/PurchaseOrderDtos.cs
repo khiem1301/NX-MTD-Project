@@ -7,7 +7,7 @@ public sealed record PurchaseOrderListItemDto(
     string PaymentStatus, DateTime CreatedAt, int LineCount);
 
 public sealed record PurchaseOrderLineDto(
-    int PurchaseOrderLineId, int? OrderMaterialId, int MaterialId, string MaterialName,
+    int PurchaseOrderLineId, int? OrderMaterialId, int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal OrderedQty, decimal UnitPrice, decimal? Amount,
     decimal ReceivedQty, decimal NotReplenishedQty);
 

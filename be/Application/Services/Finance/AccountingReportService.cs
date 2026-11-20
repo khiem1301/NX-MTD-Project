@@ -40,9 +40,9 @@ public sealed class AccountingReportService : IAccountingReportService
         var rows = await _repo.GetTimesheetRowsAsync(start, end, ct);
 
         var byEmployee = rows
-            .GroupBy(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamName))
+            .GroupBy(r => (r.EmployeeId, r.EmployeeCode, r.FullName, r.TeamCode))
             .Select(g => new WorkdayOvertimeRowDto(
-                g.Key.EmployeeId, g.Key.EmployeeCode, g.Key.FullName, g.Key.TeamName,
+                g.Key.EmployeeId, g.Key.EmployeeCode, g.Key.FullName, g.Key.TeamCode,
                 RegularWorkdays: g.Where(x => !x.IsSunday).Sum(x => x.WorkdayValue),
                 SundayWorkdays: g.Where(x => x.IsSunday).Sum(x => x.WorkdayValue),
                 TotalWorkdays: g.Sum(x => x.WorkdayValue),

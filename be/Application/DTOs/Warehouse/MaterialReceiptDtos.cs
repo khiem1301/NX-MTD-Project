@@ -13,7 +13,7 @@ public sealed record MaterialReceiptListItemDto(
 /// <param name="ExpectedDeliveryCount">Số lần giao dự kiến của nguồn (đơn mua hoặc NVL khách cấp), mặc định 1.</param>
 public sealed record MaterialReceiptLineDto(
     int MaterialReceiptLineId, int? OrderMaterialId, int? PurchaseOrderLineId, int? OriginalReceiptLineId,
-    int MaterialId, string MaterialName, string Unit, string MaterialColor,
+    int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
     decimal? UnitPrice, decimal? ToReplenishQty, decimal AcceptedQty, int? DeliveryNo = null, int? ExpectedDeliveryCount = null);
 
 /// <param name="ReceiptType">Mới (New) hoặc Bổ sung (Supplementary): phiếu bổ sung là phiếu có ShortageRequestId.</param>
@@ -57,7 +57,7 @@ public sealed record MaterialReceiptQuery : PageQuery
 /// <param name="ShortfallQty">Số còn thiếu của dòng phiếu nhập gốc khi hệ thống tạo yêu cầu (số cần bù).</param>
 /// <param name="ReplenishedQty">Đã nhận bù (phiếu bổ sung đã xác nhận).</param>
 public sealed record ShortDeliveryLineDto(
-    int RequestLineId, int? MaterialReceiptLineId, int MaterialId, string MaterialName,
+    int RequestLineId, int? MaterialReceiptLineId, int MaterialId, string MaterialCode, string MaterialName,
     string Unit, string MaterialColor, decimal ShortfallQty,
     decimal? ReplenishQty, decimal ReplenishedQty);
 

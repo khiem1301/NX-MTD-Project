@@ -10,6 +10,8 @@ public partial class Material
 {
     public int MaterialId { get; set; }
 
+    public string MaterialCode { get; set; } = null!;
+
     public string MaterialName { get; set; } = null!;
 
     public string Color { get; set; } = null!;

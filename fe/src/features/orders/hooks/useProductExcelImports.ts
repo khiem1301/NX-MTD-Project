@@ -50,7 +50,7 @@ export function useProductExcelImports({ value, onChange, onProductRow, autoRevi
     const newMaterials = kind
       ? [
           ...(value.newMaterials ?? []).filter(
-            (m) => !materials.some((x) => x.materialName === m.materialName),
+            (m) => !materials.some((x) => x.materialCode === m.materialCode),
           ),
           ...materials,
         ]

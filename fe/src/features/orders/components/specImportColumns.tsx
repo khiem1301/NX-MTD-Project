@@ -49,8 +49,9 @@ export const normImportColumns: ColumnsType<SpecImportNormRow> = [
   rowColumn,
   { title: col.color, dataIndex: 'color', width: 110 },
   { title: col.component, dataIndex: 'componentName' },
+  { title: col.materialCode, dataIndex: 'materialCode', width: 130 },
   {
-    title: col.materialName,
+    title: col.material,
     key: 'material',
     render: (_, r) =>
       r.materialName ? `${r.materialName}${r.materialColor ? ` (${r.materialColor})` : ''}` : EMPTY,

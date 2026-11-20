@@ -22,7 +22,7 @@ export function UserMenu({ user, showName }: { user: UserInfo; showName: boolean
           <div className="app-user-pop__name">{user.fullName}</div>
           <div className="app-user-pop__meta">
             {user.roleName}
-            {user.teamName ? ` · ${user.teamName}` : ''}
+            {user.teamCode ? ` · ${user.teamCode}` : ''}
           </div>
           <div className="app-user-pop__meta">Mã NV: {user.username}</div>
         </div>
@@ -32,7 +32,12 @@ export function UserMenu({ user, showName }: { user: UserInfo; showName: boolean
         items={[
           { key: 'profile', icon: <UserOutlined />, label: 'Hồ sơ của tôi' },
           { type: 'divider' },
-          { key: 'logout', icon: <LogoutOutlined />, label: MESSAGES.auth.logoutButton, danger: true },
+          {
+            key: 'logout',
+            icon: <LogoutOutlined />,
+            label: MESSAGES.auth.logoutButton,
+            danger: true,
+          },
         ]}
         onClick={({ key }) => {
           setOpen(false);
@@ -44,7 +49,13 @@ export function UserMenu({ user, showName }: { user: UserInfo; showName: boolean
   );
 
   return (
-    <Dropdown open={open} onOpenChange={setOpen} trigger={['click']} placement="bottomRight" popupRender={() => popup}>
+    <Dropdown
+      open={open}
+      onOpenChange={setOpen}
+      trigger={['click']}
+      placement="bottomRight"
+      popupRender={() => popup}
+    >
       <button type="button" className="app-user" aria-label={user.fullName}>
         <UserAvatar name={user.fullName} />
         {showName && (

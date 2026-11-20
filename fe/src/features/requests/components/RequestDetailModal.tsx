@@ -56,7 +56,7 @@ export function RequestDetailModal() {
               {data.createdByName ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={MESSAGES.requests.team}>
-              {data.teamName ?? '—'}
+              {data.teamCode ?? '—'}
             </Descriptions.Item>
             <Descriptions.Item label={MESSAGES.requests.createdAt}>
               {formatDateTime(data.createdAt)}
@@ -74,11 +74,11 @@ export function RequestDetailModal() {
             )}
             {data.handlerRole && (
               <Descriptions.Item label={MESSAGES.requests.handlerRole} span={2}>
-                {data.handlerTeamName
+                {data.handlerTeamCode
                   ? fill(
                       MESSAGES.requests.handlerOfTeam,
                       ROLE_LABEL[data.handlerRole],
-                      data.handlerTeamName,
+                      data.handlerTeamCode,
                     )
                   : ROLE_LABEL[data.handlerRole]}
               </Descriptions.Item>

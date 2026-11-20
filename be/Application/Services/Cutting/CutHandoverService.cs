@@ -45,7 +45,7 @@ public sealed class CutHandoverService : ICutHandoverService
                         || h.WorkOrder.WorkOrderCode.Contains(keyword) || h.WorkOrder.Order.OrderCode.Contains(keyword))
             .OrderByDescending(h => h.CutHandoverId)
             .Select(h => new CutHandoverListItemDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId,
-                h.WorkOrder.WorkOrderCode, h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamName,
+                h.WorkOrder.WorkOrderCode, h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamCode,
                 h.HandedAt, h.Status, h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName,
                 h.ConfirmedAt, h.CutHandoverLines.Sum(l => l.HandedQty)))
             .ToPagedAsync(query, ct);
@@ -56,7 +56,7 @@ public sealed class CutHandoverService : ICutHandoverService
     {
         var dto = await Handovers.AsNoTracking().Where(h => h.CutHandoverId == handoverId)
             .Select(h => new CutHandoverDto(h.CutHandoverId, h.HandoverCode, h.WorkOrderId, h.WorkOrder.WorkOrderCode,
-                h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamName, h.HandedAt, h.Status,
+                h.WorkOrder.Order.OrderCode, h.WorkOrder.CuttingTeamId, h.WorkOrder.CuttingTeam.TeamCode, h.HandedAt, h.Status,
                 h.ConfirmedByNavigation == null ? null : h.ConfirmedByNavigation.FullName, h.ConfirmedAt, h.RejectReason,
                 h.CutHandoverLines.OrderBy(l => l.CutHandoverLineId).Select(l => new CutHandoverLineDto(
                     l.CutHandoverLineId, l.OrderLineId, l.ProductComponentMaterialId,

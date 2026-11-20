@@ -21,7 +21,7 @@ export function OrderLineTeamSelect({ row, teamOptions, teamsLoading }: OrderLin
   const known = new Set(teamOptions.map((o) => o.value));
   const gone = row.teams
     .filter((t) => !known.has(t.teamId))
-    .map((t) => ({ value: t.teamId, label: fill(text.teamGone, t.teamName) }));
+    .map((t) => ({ value: t.teamId, label: fill(text.teamGone, t.teamCode) }));
 
   return (
     <Select<number[]>

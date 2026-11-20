@@ -48,7 +48,7 @@ export function ScrapLines() {
                       aria-label={RETURN_LABELS.scrapPlaceholder}
                       options={(scrap.data ?? []).map((m) => ({
                         value: m.materialId,
-                        label: `${m.materialName}`,
+                        label: `${m.materialCode} ${m.materialName}`,
                       }))}
                     />
                   </Form.Item>

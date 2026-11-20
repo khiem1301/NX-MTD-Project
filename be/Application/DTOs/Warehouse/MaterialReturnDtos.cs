@@ -4,7 +4,7 @@ namespace NX_MTD.Application.DTOs;
 
 /// <summary>Phiếu trả NVL / phế phẩm / BTP của tổ cắt, tổ may (DEV-ALL-112). OrderCode / WorkOrderCode có khi phiếu gắn đơn / lệnh cắt.</summary>
 public sealed record MaterialReturnListItemDto(
-    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamName, string? OrderCode,
+    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamCode, string? OrderCode,
     string? WorkOrderCode, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
     decimal TotalReturnedQty);
 
@@ -14,7 +14,7 @@ public sealed record MaterialReturnLineDto(
     string ItemColor, bool IsScrap, decimal ReturnedQty, decimal? ConfirmedQty, string? DiscrepancyReason);
 
 public sealed record MaterialReturnDto(
-    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamName, string? OrderCode,
+    int MaterialReturnId, string ReturnCode, string WarehouseType, int TeamId, string TeamCode, string? OrderCode,
     string? WorkOrderCode, string? Note, string Status, DateTime CreatedAt, string? ConfirmedByName, DateTime? ConfirmedAt,
     string? RejectReason, IReadOnlyList<MaterialReturnLineDto> Lines);
 

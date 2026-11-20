@@ -22,7 +22,7 @@ type StocktakeModalProps = {
 
 const lineName = (l: StocktakeLine) =>
   l.materialId !== null
-    ? `${l.materialName}${l.materialColor ? ` - ${l.materialColor}` : ''}`
+    ? `${l.materialCode} ${l.materialName}${l.materialColor ? ` - ${l.materialColor}` : ''}`
     : `${l.orderCode} · ${l.productCode} ${l.color}-${l.sizeCode}${l.componentName ? ` · ${l.componentName}` : ''}`;
 
 /** Chi tiết phiếu kiểm kê: Quản đốc / Admin duyệt (điều chỉnh kho) hoặc trả lại; Thủ kho sửa phiếu bị trả. */

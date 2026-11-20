@@ -48,12 +48,12 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
         var page = await query.OrderBy(e => e.EmployeeCode).Select(e => new
         {
             e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.Role.RoleName, e.TeamId,
-            TeamName = e.Team == null ? null : e.Team.TeamName, e.PayType, e.CurrentGradeCode, e.AttendanceCode, e.Status,
+            TeamCode = e.Team == null ? null : e.Team.TeamCode, e.PayType, e.CurrentGradeCode, e.AttendanceCode, e.Status,
             AccountStatus = e.Account == null ? null : e.Account.Status, e.StartDate,
         }).ToPagedAsync(q, ct);
 
         var items = page.Items.Select(e => new EmployeeListItemDto(e.EmployeeId, e.EmployeeCode, e.FullName,
-            Roles.FromRoleCode(e.RoleCode), e.RoleName, e.TeamId, e.TeamName, CodeText.ToPascal(e.PayType), e.CurrentGradeCode,
+            Roles.FromRoleCode(e.RoleCode), e.RoleName, e.TeamId, e.TeamCode, CodeText.ToPascal(e.PayType), e.CurrentGradeCode,
             e.AttendanceCode, CodeText.ToPascal(e.Status),
             includeAccount && e.AccountStatus is not null ? CodeText.ToPascal(e.AccountStatus) : null, e.StartDate)).ToList();
         return new PagedResult<EmployeeListItemDto>(items, page.Page, page.PageSize, page.TotalItems);
@@ -64,7 +64,7 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
         var e = await _context.Employees.AsNoTracking().Where(x => x.EmployeeId == employeeId).Select(x => new
         {
             x.EmployeeId, x.EmployeeCode, x.FullName, x.Gender, x.DateOfBirth, x.Phone, x.AvatarUrl,
-            x.Role.RoleCode, x.Role.RoleName, x.TeamId, TeamName = x.Team == null ? null : x.Team.TeamName,
+            x.Role.RoleCode, x.Role.RoleName, x.TeamId, TeamCode = x.Team == null ? null : x.Team.TeamCode,
             x.PayType, x.CurrentGradeCode, x.AttendanceCode, x.StartDate, x.ResignDate, x.Status, x.RowVer,
             Account = x.Account == null ? null : new AccountInfoDto(x.Account.AccountId, x.Account.Username,
                 x.Account.Status, x.Account.IsTemporaryPassword, x.Account.LockedAt, x.Account.LockReason),
@@ -76,7 +76,7 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
         {
             EmployeeId = e.EmployeeId, EmployeeCode = e.EmployeeCode, FullName = e.FullName, Gender = e.Gender,
             DateOfBirth = e.DateOfBirth, Phone = e.Phone, AvatarUrl = e.AvatarUrl, Role = Roles.FromRoleCode(e.RoleCode),
-            RoleName = e.RoleName, TeamId = e.TeamId, TeamName = e.TeamName, PayType = CodeText.ToPascal(e.PayType),
+            RoleName = e.RoleName, TeamId = e.TeamId, TeamCode = e.TeamCode, PayType = CodeText.ToPascal(e.PayType),
             CurrentGradeCode = e.CurrentGradeCode, AttendanceCode = e.AttendanceCode, StartDate = e.StartDate,
             ResignDate = e.ResignDate, Status = CodeText.ToPascal(e.Status), RowVer = e.RowVer, Account = account,
         };
@@ -126,14 +126,14 @@ public sealed class TeamRepository : GenericRepository<Team>, ITeamRepository
         if (!includeDiscontinued) query = query.Where(t => t.Status == RecordStatus.Active);
         var rows = await query.OrderBy(t => t.TeamCode).Select(t => new
         {
-            t.TeamId, t.TeamCode, t.TeamName, t.TeamType, t.Status,
+            t.TeamId, t.TeamCode, t.TeamType, t.Status,
             LeaderName = _context.Employees.Where(e => e.TeamId == t.TeamId && e.Status == RecordStatus.Active
                 && e.Role.RoleCode == RoleCodes.TeamLeader).Select(e => e.FullName).FirstOrDefault(),
             DeputyName = _context.Employees.Where(e => e.TeamId == t.TeamId && e.Status == RecordStatus.Active
                 && e.Role.RoleCode == RoleCodes.TeamDeputy).Select(e => e.FullName).FirstOrDefault(),
             MemberCount = _context.Employees.Count(e => e.TeamId == t.TeamId && e.Status == RecordStatus.Active),
         }).ToListAsync(ct);
-        return rows.Select(t => new TeamListItemDto(t.TeamId, t.TeamCode, t.TeamName, CodeText.ToPascal(t.TeamType),
+        return rows.Select(t => new TeamListItemDto(t.TeamId, t.TeamCode, CodeText.ToPascal(t.TeamType),
             CodeText.ToPascal(t.Status), t.LeaderName, t.DeputyName, t.MemberCount)).ToList();
     }
 
@@ -150,15 +150,12 @@ public sealed class TeamRepository : GenericRepository<Team>, ITeamRepository
             .ToListAsync(ct);
         var list = rows.Select(e => new TeamMemberDto(e.EmployeeId, e.EmployeeCode, e.FullName, Roles.FromRoleCode(e.RoleCode),
             e.RoleName, CodeText.ToPascal(e.PayType), e.CurrentGradeCode)).ToList();
-        return new TeamDetailDto(team.TeamId, team.TeamCode, team.TeamName, CodeText.ToPascal(team.TeamType),
+        return new TeamDetailDto(team.TeamId, team.TeamCode, CodeText.ToPascal(team.TeamType),
             CodeText.ToPascal(team.Status), list, Array.Empty<AuditLogDto>());
     }
 
     public Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct) =>
         _context.Teams.AnyAsync(t => t.TeamCode == code && (exceptId == null || t.TeamId != exceptId), ct);
-
-    public Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct) =>
-        _context.Teams.AnyAsync(t => t.TeamName == name && (exceptId == null || t.TeamId != exceptId), ct);
 
     public Task<int> CountActiveMembersAsync(int teamId, CancellationToken ct) =>
         _context.Employees.CountAsync(e => e.TeamId == teamId && e.Status == RecordStatus.Active, ct);
@@ -166,7 +163,7 @@ public sealed class TeamRepository : GenericRepository<Team>, ITeamRepository
     public async Task<IReadOnlyList<TeamLookupDto>> LookupAsync(CancellationToken ct)
     {
         var rows = await _context.Teams.AsNoTracking().Where(t => t.Status == RecordStatus.Active).OrderBy(t => t.TeamCode)
-            .Select(t => new { t.TeamId, t.TeamCode, t.TeamName, t.TeamType }).ToListAsync(ct);
-        return rows.Select(t => new TeamLookupDto(t.TeamId, t.TeamCode, t.TeamName, CodeText.ToPascal(t.TeamType))).ToList();
+            .Select(t => new { t.TeamId, t.TeamCode, t.TeamType }).ToListAsync(ct);
+        return rows.Select(t => new TeamLookupDto(t.TeamId, t.TeamCode, CodeText.ToPascal(t.TeamType))).ToList();
     }
 }

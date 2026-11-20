@@ -63,8 +63,8 @@ export function ExcelReviewModal({
   const [asking, setAsking] = useState(false);
   const materials = useMaterialOptions();
   const materialOptions = (materials.data ?? []).map((m) => ({
-    value: m.materialName,
-    label: `${m.materialName}${m.color ? ` (${m.color})` : ''}`,
+    value: m.materialCode,
+    label: `${m.materialCode} · ${m.materialName}${m.color ? ` (${m.color})` : ''}`,
   }));
   const crossErrors = review.check.data?.spec.crossErrors ?? [];
 
@@ -74,7 +74,7 @@ export function ExcelReviewModal({
     const incomplete = incompleteMaterials(newMaterials);
     if (incomplete.length > 0) {
       void message.error(
-        fill(text.missingInfoRequired, incomplete.map((m) => m.materialName).join(', ')),
+        fill(text.missingInfoRequired, incomplete.map((m) => m.materialCode).join(', ')),
       );
       return;
     }
@@ -152,7 +152,7 @@ export function ExcelReviewModal({
       </Space>
       <AddMaterialsAskModal
         open={asking}
-        codes={newMaterials.map((m) => m.materialName ?? '')}
+        codes={newMaterials.map((m) => m.materialCode ?? '')}
         onAdd={handleAdd}
         onSkip={() => {
           setAsking(false);

@@ -20,7 +20,7 @@ public class QcBatchServiceTests : ProductionTestBase
     private readonly List<QcBatch> _batches = [];
     private readonly List<MaterialIssueLine> _issueLines = [];
     private readonly List<DefectRecord> _defects = [];
-    private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
+    private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
     private readonly List<OrderLine> _lines = [];
     private readonly List<AccountingPeriod> _periods = [];
     private readonly List<FgHandoverLine> _handoverLines = [];

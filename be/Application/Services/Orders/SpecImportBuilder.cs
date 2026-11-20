@@ -6,7 +6,7 @@ using NX_MTD.Domain.Constants;
 namespace NX_MTD.Application.Services;
 
 /// <summary>NVL tra theo mã khi nhập định mức (chỉ NVL đang dùng).</summary>
-public sealed record SpecImportMaterial(int MaterialId, string MaterialName, string Unit, string Color);
+public sealed record SpecImportMaterial(int MaterialId, string MaterialCode, string MaterialName, string Unit, string Color);
 
 /// <summary>
 /// Dữ liệu cũ đã được dùng ở bảng khác (chế độ thay thế không được xóa hay sửa): tên thành phần (hoa) có định mức đã dùng, cặp
@@ -31,7 +31,7 @@ public sealed class SpecImportBuilder
     public const string ActionError = "Error";
     /// <summary>DEV-ALL-122 (chỉ ở popup kiểm tra Excel): dòng đúng định dạng nhưng cần màu / đơn chưa có, kiểm khi Lưu đơn.</summary>
     public const string ActionPending = "Pending";
-    /// <summary>DEV-ALL-123 (chỉ ở popup kiểm tra Excel): tên NVL chưa có trong danh mục — cảnh báo, admin chọn thêm vào danh mục.</summary>
+    /// <summary>DEV-ALL-123 (chỉ ở popup kiểm tra Excel): mã NVL chưa có trong danh mục — cảnh báo, admin chọn thêm vào danh mục.</summary>
     public const string ActionNewMaterial = "NewMaterial";
     private const int MaxNameLength = 100;
     private const int MaxNoteLength = 200;
@@ -162,20 +162,20 @@ public sealed class SpecImportBuilder
         {
             var color = _colors.GetValueOrDefault(Upper(row.Color));
             var component = ComponentOf(row.ComponentName);
-            var material = _materials.GetValueOrDefault(row.MaterialName);
+            var material = _materials.GetValueOrDefault(row.MaterialCode);
             var error = row.ParseError
                         ?? (color is null ? string.Format(Messages.SpecImportColorUnknown, row.Color) : null)
                         ?? (component is null ? string.Format(Messages.SpecImportComponentUnknown, row.ComponentName) : null)
-                        ?? (material is null ? string.Format(Messages.SpecImportMaterialUnknown, row.MaterialName) : null)
+                        ?? (material is null ? string.Format(Messages.SpecImportMaterialUnknown, row.MaterialCode) : null)
                         ?? (row.SpecNote is { Length: > MaxNoteLength } ? Messages.SpecImportNoteTooLong : null)
-                        ?? Duplicate(seen, $"{Upper(row.Color)}|{Upper(row.ComponentName)}|{Upper(row.MaterialName)}", row.RowNumber);
+                        ?? Duplicate(seen, $"{Upper(row.Color)}|{Upper(row.ComponentName)}|{row.MaterialCode}", row.RowNumber);
             checkedRows.Add((row, error, color ?? row.Color, component?.Name ?? row.ComponentName, material));
             if (error is null) _validNorms.Add(new SaveProductNormDto(component!.Value.Name, color!, material!.MaterialId, row.SpecNote));
         }
 
         return checkedRows.Select(c => new SpecImportNormRowDto(c.Row.RowNumber,
             c.Error is not null ? ActionError : NormAction(c.Color, c.Component), c.Error, c.Color, c.Component,
-            c.Row.MaterialName, c.Material?.Unit, c.Material?.Color, c.Row.SpecNote)).ToList();
+            c.Row.MaterialCode, c.Material?.MaterialName, c.Material?.Unit, c.Material?.Color, c.Row.SpecNote)).ToList();
     }
 
     /// <summary>So bộ NVL (kèm ghi chú) của cặp màu + chi tiết trong file với bộ đang có.</summary>

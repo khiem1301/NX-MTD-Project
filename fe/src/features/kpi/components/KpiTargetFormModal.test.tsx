@@ -45,7 +45,7 @@ const TARGET = {
   productId: 3,
   productCode: 'MH003',
   sewingTeamId: 4,
-  sewingTeamName: 'Tổ may 1',
+  sewingTeamCode: 'Tổ may 1',
   startDate: '2030-01-05',
   endDate: '2030-01-18',
   targetFinishedQty: 100,

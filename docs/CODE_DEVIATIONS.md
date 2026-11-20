@@ -159,6 +159,10 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-151 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, UC10, `Product`, `CustomerOrder`, form đơn hàng | Mã hàng tạo trong form đơn (nút thêm mã hoặc từ Excel dòng hàng) chưa ghi danh mục; chỉ ghi khi Lưu đơn, cùng giao dịch với đơn. Hủy / đóng form đơn thì mã không được tạo | Mở |
+| DEV-ALL-150 | 20/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `ProductMarker`, form tạo / sửa đơn, chi tiết đơn | Form tạo / sửa đơn có khung nhập Excel Bìa của đơn, NVL của đơn (không bắt buộc): chọn file chỉ đọc, bấm Lưu đơn mới nhập vào đơn; form và chi tiết đơn cảnh báo khi đơn chưa có bìa cắt hoặc NVL của đơn | Mở |
+| DEV-ALL-149 | 20/11/2026 | Claude (AI) | UC10, UC37–UC39, UC13–UC16, `Material`, `Team`, `GradeLevelCode`, mọi màn hiển thị NVL / tổ / bậc | Có lại Mã NVL (`Material.MaterialCode`, bỏ phần Mã NVL của DEV-ALL-144): mã chỉ chữ không dấu, số, . _ -, lưu chữ hoa, kiểm trùng; Tên NVL lại là tên tiếng Việt (trùng khi cùng tên + loại + màu). Bỏ Tên tổ (`Team.TeamName`) và Tên bậc (`GradeLevelCode.GradeName`): tổ / bậc chỉ có mã, mọi nơi hiện mã | Mở |
+| DEV-ALL-148 | 20/11/2026 | Claude (AI) | UC50, `GradeEvaluation`, màn Bậc thợ (tab Đề xuất bậc), Gemini 3.1 Flash Lite | Tổ trưởng / tổ phó có nút "AI gợi ý bậc cả tổ": tổ trưởng chọn số ngày lấy dữ liệu (7–90 ngày, mặc định 90), hệ thống tổng hợp số liệu (ngày công, giờ làm, tăng ca, sản lượng công đoạn, số công đoạn, độ khó, hiệu suất theo thời gian chuẩn, Rework / Scrap, thâm niên) đã ẩn danh gửi Gemini; bản gợi ý lưu tạm 24 giờ theo tổ (file JSON `App_Data/grade-suggestions`), modal là bản xem trước sửa trực tiếp (đổi bậc / gõ lý do là tự lưu, không cần bấm nút), bỏ được từng dòng gợi ý, lọc, tạo lại; xác nhận chỉ gửi dòng đổi bậc, đề xuất đang chờ của công nhân được thay bằng bản mới | Mở |
 | DEV-ALL-147 | 20/11/2026 | Claude (AI) | UC09, UC45, `CustomerOrder`, form đơn hàng, phiếu xuất | Đơn hàng có địa chỉ giao hàng (`CustomerOrder.DeliveryAddress`, bắt buộc khi tạo / sửa đơn, ≤ 500 ký tự), điền sẵn theo địa chỉ khách khi chọn khách; hiện ở chi tiết đơn; Quản đốc lập phiếu xuất chọn đơn thì địa chỉ giao của phiếu được điền sẵn từ đơn (vẫn sửa được) | Mở |
 | DEV-ALL-146 | 19/11/2026 | Claude (AI) | UC25, `OperationService`, hộp thoại nhập công đoạn | Cột CHI TIẾT của file nhập công đoạn: tên chi tiết chưa có ở mã hàng hoặc là phụ liệu không còn là lỗi chặn dòng mà là cảnh báo (bỏ qua chi tiết đó, vẫn nhập phần còn lại); xem trước có dòng cảnh báo chung và chi tiết từng dòng ở cột Kết quả | Mở |
 | DEV-ALL-145 | 19/11/2026 | Claude (AI) | UC10, UC09, form Thêm mới mã hàng trong form đơn hàng, `ProductExcelImports`, file mẫu `Mau_Form_Ma_Hang` | Form Thêm mới mã hàng (cả khi mở từ form đơn hàng) chỉ còn 3 mục Excel: Thành phần, Định mức NVL, Nhóm bìa; bỏ nhóm "Theo đơn hàng" (Bìa cắt, NVL của đơn); sheet Bìa của đơn / NVL của đơn trong file chung bị bỏ khi đọc file; file mẫu form mã hàng chỉ còn 4 sheet (bỏ bản "Theo_Don", bỏ tham số `withOrder`) | Mở |
@@ -2946,4 +2950,65 @@
 - **Lý do:** người dùng yêu cầu thêm địa chỉ giao hàng lúc tạo đơn hàng.
 - **Ảnh hưởng người khác:** Khiêm (đơn hàng), Thái / Minh (phiếu xuất, kho); DB cũ phải chạy patch trước khi chạy bản BE mới.
 - **Cần sửa trong tài liệu:** Report-3 UC09 (thông tin đơn hàng), UC45; `NX-MTD_Database_Giai_thich.md` (bảng `CustomerOrder`).
+- **Trạng thái:** Mở
+
+### DEV-ALL-148 · AI gợi ý bậc thợ cho cả tổ
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC50 (tổ trưởng đề xuất bậc), UC16 (Admin / Quản đốc quyết định); bảng `GradeEvaluation` (không đổi schema); BE `GradeSuggestionService`, `GradeMetricsReader`, `GradeDefectCounter` (tách từ `GradeService`), `GeminiGradeAdvisor`, `LocalGradeSuggestionStore`, `TeamLeader/GradeSuggestionsController` (`/api/v1/team-leader/grade-suggestions`: GET, POST `generate`, PUT `items/{workerId}`, DELETE `items/{workerId}`, POST `confirm`), mã lỗi `GRADE_AI_UNAVAILABLE`, cấu hình `GradeSuggestion` + `Gemini` trong appsettings; FE `AiSuggestionModal`, `AiSuggestionToolbar`, `aiSuggestionColumns`, `SuggestionMetrics`, `useGradeSuggestion`
+- **Tài liệu gốc ghi:** tổ trưởng tự đề xuất bậc cho từng công nhân (chọn công nhân, bậc, lý do; hệ thống chỉ tính số lỗi 30 ngày); đề xuất đang chờ thì không đề xuất thêm được. `NX-MTD_AI_Context.md` mục 9 chỉ nêu AI nhận diện lỗi / AI dự báo hòa vốn là ngoài phạm vi, không có AI gợi ý bậc.
+- **Code đang làm:**
+  - Nút "AI gợi ý bậc cả tổ" (chỉ tổ trưởng / tổ phó) mở modal. Tổ trưởng chọn số ngày gần nhất lấy dữ liệu (ô số ngày cạnh nút "Tạo gợi ý" / "Tạo lại", 7–90 ngày, mặc định và tối đa 90, mở lại thì hiện đúng kỳ của bản đang có) rồi tạo; hệ thống tổng hợp số liệu của mọi công nhân đang làm việc trong tổ trong kỳ đó: ngày công, giờ làm, tăng ca (`DailyTimesheet`); sản lượng công đoạn trừ phần nhập sai, số công đoạn, độ khó trung bình (`Operation.SkillLevel`), hiệu suất = SL × `StandardTimeSec` / giờ làm (`OutputRecord`); SL Rework / Scrap và tỉ lệ lỗi (`DefectRecord` chưa hủy); thâm niên (`Employee.StartDate`).
+  - Chỉ gửi Gemini (model `gemini-3.1-flash-lite`; `gemini-2.5-flash` Google không còn mở cho tài khoản mới): danh sách bậc đang dùng (mã + thứ hạng theo tiền bậc đang hiệu lực, không gửi số tiền; bậc không còn tên từ DEV-ALL-149), số ngày của kỳ và cho mỗi công nhân một khóa tạm (W1, W2...) + bậc hiện tại + các số liệu trên. Không gửi tên, mã nhân viên, tổ, đơn giá, lương. Gemini trả JSON theo schema (bậc chỉ trong danh sách); thiếu dòng nào thì dòng đó giữ bậc hiện tại.
+  - Bản gợi ý lưu tạm mỗi tổ một bản (file `App_Data/grade-suggestions/team-{id}.json`, không thêm bảng DB), hết hạn sau `RetentionHours` (mặc định 24 giờ); tạo lại thì thay bản cũ. Modal hiện như bản xem trước sửa được ngay: ô chọn bậc và ô lý do luôn mở trên từng dòng; đổi bậc là lưu, gõ lý do rồi rời ô là lưu vào bản gợi ý (không có nút Sửa / Lưu riêng) (giữ cả bản AI để so sánh, đánh dấu "Đã sửa"). Mỗi dòng có nút xóa (có hộp xác nhận) để bỏ gợi ý của công nhân đó khỏi bản gợi ý: dòng bị bỏ không được gửi khi xác nhận, muốn có lại thì Tạo lại. Modal có lọc theo tên / mã, loại thay đổi (đổi bậc, giữ nguyên, đã sửa, đang có đề xuất chờ) và bậc đề xuất.
+  - "Xác nhận gửi đề xuất" (có hộp xác nhận): chỉ dòng có bậc khác bậc hiện tại mới thành `GradeEvaluation` SUBMITTED. Công nhân đang có đề xuất SUBMITTED (chưa được Admin / Quản đốc quyết định) thì đề xuất đó được sửa thành bản mới (bậc, lý do, người đề xuất, ngày, số lỗi 30 ngày; ghi `AuditLog`) thay vì tạo thêm. Bỏ qua (có báo) công nhân đã rời tổ, bậc đã ngừng dùng, hoặc trùng `UQ_GradeEval` với đề xuất đã quyết định hôm nay của chính người xác nhận. Gửi một thông báo cho Admin.
+- **Lý do:** người dùng yêu cầu dùng AI tổng hợp, gợi ý đánh giá bậc toàn bộ công nhân trong tổ cho tổ trưởng.
+- **Ảnh hưởng người khác:** Khiêm (bậc thợ); Minh / Kiều (chỉ đọc bảng công, sản lượng, phiếu lỗi). Cần đặt khóa `Gemini:ApiKey` trong User Secrets / `appsettings.Development.json` / biến môi trường `Gemini__ApiKey` (không commit); chưa có khóa thì nút báo chưa cấu hình. Chạy nhiều máy chủ thì cần đổi kho lưu tạm sang chỗ dùng chung (`GradeSuggestion:RootPath`).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC50 (thêm luồng AI gợi ý cả tổ), mục API ngoài (Gemini), NFR bảo mật dữ liệu gửi ra ngoài
+  - [ ] `NX-MTD_AI_Context.md` mục 4.8 (bậc thợ) và mục 9 (ngoài phạm vi)
+- **Trạng thái:** Mở
+
+### DEV-ALL-149 · Có lại Mã NVL; bỏ Tên tổ, Tên bậc
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, UC37–UC39 (NVL), UC13–UC14 (tổ), UC15–UC16, UC50 (bậc thợ) và mọi màn / file xuất có NVL, tổ, bậc; DB (`Material`, `Team`, `GradeLevelCode`, view `vw_MaterialStock`, `vw_PayrollExportData`), patch `SQL/patches/2026-11-20_restore_material_code.sql`, `SQL/patches/2026-11-20_drop_team_grade_name.sql`; BE (entity, DTO, `MaterialService`, `TeamService`, `GradeService`, `GradeSuggestionService`, nhập Excel định mức / NVL của đơn), FE (form NVL, form tổ, danh mục bậc, mọi bảng / ô chọn tổ), seed
+- **Tài liệu gốc ghi:** NVL có Mã NVL + Tên NVL; tổ có Mã tổ + Tên tổ (duy nhất); bậc thợ có Mã bậc + Tên bậc. DEV-ALL-144 đã bỏ Mã NVL (tên NVL thành định danh, chữ hoa, không dấu).
+- **Code đang làm:**
+  - **NVL:** `Material.MaterialCode` VARCHAR(30) có lại (`UQ_Material_Code`), tên NVL hết là định danh: bỏ `UQ_Material_Name`, trả lại `UQ_Material_NameType` (tên + loại + màu), tên được gõ tiếng Việt, không tự viết hoa. Mã NVL: để trống thì tự sinh (V-0001 / PL-0001 / PP-0001); nhập thì chỉ chữ không dấu, số và . _ - (FE lọc ký tự khi gõ / dán và viết hoa, BE validator chặn), BE Trim + chữ hoa trước khi lưu, kiểm trùng không phân biệt hoa thường; mã không sửa được sau khi tạo. Nhãn NVL lại là "mã tên (màu)", Excel định mức / NVL của đơn lại dùng cột "Mã NVL" (cột "Tên NVL" của NVL của đơn là tùy chọn, gợi ý tên khi thêm NVL mới). Phần bỏ Tên mã hàng của DEV-ALL-144 giữ nguyên.
+  - Patch DB cũ: Mã NVL = Tên NVL hiện có (chữ hoa; khoảng trắng → '-', bỏ ký tự ngoài A-Z 0-9 . _ -, tối đa 30 ký tự, trùng thì thêm -<MaterialId>); NVL của dữ liệu mẫu lấy lại tên tiếng Việt cũ (bỏ qua dòng sẽ trùng tên + loại + màu), NVL khác giữ tên = mã để người dùng sửa ở màn NVL.
+  - **Tổ:** bỏ `Team.TeamName` (và `UQ_Team_Name`, mã lỗi `TEAM_NAME_DUPLICATE`); form tổ chỉ còn Mã tổ, Loại tổ. Mọi DTO / API trả tên tổ đổi thành mã tổ: `teamName` → `teamCode`, `sewingTeamName` → `sewingTeamCode`, `cuttingTeamName` → `cuttingTeamCode`, `receivingTeamName` → `receivingTeamCode`, `handlerTeamName` → `handlerTeamCode`; DTO vốn có cả mã và tên thì bỏ tên. Tìm kiếm / sắp xếp theo tổ dùng mã; thông báo, nhật ký ghi "tổ <mã>". `vw_PayrollExportData` trả `TeamCode`, file xuất lương / công cột Tổ là mã tổ.
+  - **Bậc thợ:** bỏ `GradeLevelCode.GradeName`; thêm bậc chỉ nhập mã + mức tiền đầu tiên, không còn nút / form Sửa bậc (chỉ còn đổi tiền, ngừng / dùng lại, xóa); API `POST grade-codes` body `{ gradeCode }`, `PUT grade-codes/{code}` body `{ status }`. Ô chọn bậc hiện mã. AI gợi ý bậc (DEV-ALL-148) gửi mã bậc + thứ hạng (1 = tiền bậc đang hiệu lực cao nhất) thay cho tên bậc.
+- **Lý do:** người dùng yêu cầu "thông tin NVL có lại Mã NVL, tổ bỏ tên tổ, bậc thợ bỏ tên bậc"; mã NVL không nhập tiếng Việt, lưu chữ hoa, kiểm trùng; đồng thời sửa lại tên NVL.
+- **Ảnh hưởng người khác:** Minh (NVL, kho), Thái (định mức, lệnh cắt), Khiêm (tổ, bậc thợ, đơn hàng), Kiều (bảng công, lương: cột Tổ là mã). DB cũ phải chạy hai patch trên trước khi chạy bản BE mới. FE / client khác đọc `teamName` phải đổi sang `teamCode`.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC NVL (Mã NVL có lại, quy tắc mã), UC13–UC14 (bỏ Tên tổ), UC15–UC16 (bỏ Tên bậc), mockup các bảng có cột tổ / bậc
+  - [ ] `NX-MTD_Database_Giai_thich.md`: bảng `Material`, `Team`, `GradeLevelCode`, view `vw_PayrollExportData`
+  - [ ] DEV-ALL-144: phần "bỏ Mã NVL" không còn đúng (giữ phần bỏ Tên mã hàng)
+- **Trạng thái:** Mở
+
+### DEV-ALL-150 · Nhập Bìa / NVL của đơn ngay ở form đơn, cảnh báo đơn thiếu
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 (tạo / sửa đơn, chi tiết đơn), UC10 (bìa của đơn), NVL của đơn; BE `OrderDetailDto` thêm `HasOrderMarkers`, `HasOrderMaterials` (không đổi schema); FE `OrderExcelImports`, `OrderMissingDataAlert`, `OrderFormFooter`, `useOrderExcelImports`, `utils/orderExcelImports`
+- **Tài liệu gốc ghi:** bìa của đơn và NVL của đơn khai sau khi có đơn, ở tab Bìa cắt / NVL của đơn. DEV-ALL-145 đã bỏ phần "Theo đơn hàng" ở form mã hàng mở từ form đơn.
+- **Code đang làm:**
+  - Form tạo / sửa đơn (khi còn sửa được) có khung "Bìa và NVL của đơn (Excel, không bắt buộc)" với 2 ô: Bìa của đơn (sheet "Bìa của đơn" của file mẫu định mức, cột Mã hàng chọn mã hàng của đơn) và NVL của đơn (file mẫu NVL của đơn); có link tải 2 file mẫu. Chọn file chỉ đọc file (không ghi gì), bỏ được từng ô. Bấm Lưu đơn: lưu đơn trước, rồi chạy nền nhập định mức của mã hàng tạo nhanh (nếu có), sau đó NVL của đơn và bìa của từng mã hàng vào đơn vừa lưu; dòng lỗi bỏ qua, xong hiện hộp kết quả. Dòng bìa không ghi Mã hàng chỉ nhận khi đơn có đúng một mã hàng; mã hàng không có trong đơn thì bỏ qua và báo lại.
+  - Cảnh báo (không chặn lưu) "Đơn chưa có thông tin cho đơn": ở form khi đơn chưa có và chưa chọn file Bìa / NVL; ở chi tiết đơn (đơn còn sửa được) khi đơn chưa có bìa cắt của đơn hoặc NVL của đơn.
+- **Lý do:** người dùng yêu cầu nhập NVL, bìa của đơn ngay lúc tạo đơn (không bắt buộc, chỉ lưu khi bấm Lưu đơn) và cảnh báo đơn thiếu bìa / NVL.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng), Minh (NVL của đơn), Thái (bìa cắt). Dùng lại API nhập có sẵn (`products/{id}/import-data` với `orderId`, `order-materials/import-data`), không thêm endpoint.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC09 (form đơn có nhập Excel bìa / NVL của đơn, cảnh báo đơn thiếu)
+- **Trạng thái:** Mở
+
+### DEV-ALL-151 · Mã hàng tạo lúc lập đơn chỉ ghi khi lưu đơn
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 (tạo / sửa đơn), UC10 (tạo mã hàng); `CreateOrderDto` / `UpdateOrderDto` thêm `stagedProducts` (không đổi schema); phản hồi lưu đơn từ số Id thành `{ orderId, products: [{ tempId, productId, productCode }] }`; xem trước nhập dòng hàng thêm `missingProduct`
+- **Tài liệu gốc ghi:** UC10 tạo mã hàng là một việc riêng (lưu là có mã trong danh mục). Form đơn chọn mã đã có. DEV-ALL-121 ghi mã ngay khi bấm Lưu ở form mã hàng mở từ form đơn, rồi mới nhập Excel sau khi Lưu đơn.
+- **Code đang làm:** Bấm Lưu ở form mã hàng mở từ form đơn (nút thêm mã, hoặc tạo mã thiếu trong hộp Nhập dòng hàng) không gọi API tạo mã. Mã nằm trên đơn với Id tạm âm. Bấm Lưu đơn thì máy chủ tạo các mã đó rồi ghi đơn trong cùng một giao dịch: đơn lỗi hoặc mã bị trùng thì không còn mã nào vừa tạo. Đóng form đơn hoặc bỏ khối mã thì mã không được ghi. File Excel của mã vẫn nhập sau khi đơn đã lưu (cần màu, size của đơn). Dòng Excel chỉ thiếu mã hàng được nhận vào form ngay, chưa cần mã có trong danh mục.
+- **Lý do:** Khiêm yêu cầu mã hàng tạo lúc lập đơn chỉ được lưu khi đơn được lưu.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng). Màn Mã hàng vẫn lưu mã ngay. API tạo đơn / sửa đơn cũ không gửi `stagedProducts` thì giữ nguyên. Client đọc `data` của POST/PUT đơn phải đọc `orderId` thay vì một số.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC09 / UC10 (tạo mã hàng từ form đơn ghi cùng lúc với đơn)
 - **Trạng thái:** Mở

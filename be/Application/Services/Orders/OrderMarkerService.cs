@@ -40,7 +40,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
                 f.ProductId,
                 f.MarkerNo,
                 f.ProductColorId,
-                Fabric = new MarkerGroupFabricDto(f.MaterialId, f.Material.MaterialName, f.Material.Color,
+                Fabric = new MarkerGroupFabricDto(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color,
                     f.Material.WidthM),
             }).ToListAsync(ct);
         var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Where(m => m.OrderId == orderId)
@@ -61,7 +61,7 @@ public sealed class OrderMarkerService : IOrderMarkerService
                         .Select(l => l.Color).Distinct().Order().ToList(),
                         // DEV-ALL-104: vải của nhóm ở các màu của đơn, để màn bìa cảnh báo bìa rộng hơn khổ vải.
                         x.Where(c => g.Any(l => l.ProductColorId == c.ProductColorId)).Select(c => c.Fabric)
-                            .DistinctBy(f => f.MaterialId).OrderBy(f => f.MaterialName).ToList()))
+                            .DistinctBy(f => f.MaterialId).OrderBy(f => f.MaterialCode).ToList()))
                     .ToList(),
                 markers.Where(m => m.ProductId == g.Key).Select(m => m.Dto with { Status = CodeText.ToPascal(m.Dto.Status) }).ToList()))
             .ToList();

@@ -77,6 +77,7 @@ export type ProductNormItem = {
   componentName: string;
   color: string;
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
@@ -94,6 +95,7 @@ export type ProductMarkerFabricItem = {
   markerNo: number;
   color: string;
   materialId: number;
+  materialCode: string;
   materialName: string;
   materialColor: string;
 };
@@ -200,6 +202,9 @@ export type OrderDetail = {
   updatedAt: string | null;
   /** byte[] → base64; gửi nguyên chuỗi khi sửa / hủy / dừng. */
   rowVer: string;
+  /** DEV-ALL-150: đơn đã có bìa cắt của đơn / NVL của đơn. */
+  hasOrderMarkers: boolean;
+  hasOrderMaterials: boolean;
   lines: OrderLine[];
   history: AuditEntry[];
 };
@@ -213,6 +218,24 @@ export type OrderLineInput = {
   cmtUnitPrice: number;
 };
 
+/** DEV-ALL-151: mã hàng khai trên form đơn, ghi cùng lúc với đơn. tempId âm, dòng đơn dùng productId = tempId. */
+export type StagedProductInput = {
+  tempId: number;
+  productCode: string;
+  sampleImageUrl?: string | null;
+  description?: string | null;
+  extraImages?: string[];
+};
+export type CreatedProduct = {
+  tempId: number;
+  productId: number;
+  productCode: string;
+};
+export type OrderSaveResult = {
+  orderId: number;
+  products: CreatedProduct[];
+};
+
 export type CreateOrderPayload = {
   orderCode: string;
   customerId: number;
@@ -221,6 +244,7 @@ export type CreateOrderPayload = {
   deliveryAddress: string;
   note?: string | null;
   lines: OrderLineInput[];
+  stagedProducts?: StagedProductInput[];
 };
 export type UpdateOrderPayload = CreateOrderPayload & { rowVer: string };
 
@@ -257,6 +281,7 @@ export type OrderMarker = {
 /** Vải của nhóm bìa ở các màu của đơn; widthM = khổ vải (m), null khi chưa nhập (DEV-ALL-104). */
 export type MarkerGroupFabric = {
   materialId: number;
+  materialCode: string;
   materialName: string;
   color: string;
   widthM: number | null;
@@ -289,6 +314,7 @@ export type SpecImportComponentRow = SpecImportRowBase & {
 export type SpecImportNormRow = SpecImportRowBase & {
   color: string;
   componentName: string;
+  materialCode: string;
   materialName: string | null;
   unit: string | null;
   materialColor: string | null;
@@ -359,6 +385,8 @@ export type OrderImportRow = {
   cmtUnitPrice: number | null;
   quantities: OrderImportQty[];
   error: string | null;
+  /** true khi dòng chỉ thiếu mã hàng; form đơn nhận dòng sau khi khai mã, mã được ghi khi lưu đơn. */
+  missingProduct?: boolean;
 };
 export type OrderImportPreview = {
   sizeColumns: string[];
@@ -401,7 +429,7 @@ export type SpecComponentExcelRow = ExcelRowBase & {
 export type SpecNormExcelRow = ExcelRowBase & {
   color: string;
   componentName: string;
-  materialName: string;
+  materialCode: string;
   specNote: string | null;
 };
 export type SpecMarkerGroupExcelRow = ExcelRowBase & {
@@ -431,6 +459,7 @@ export type SpecWorkbook = {
   sizeColumns: string[];
 };
 export type OrderMaterialExcelRow = ExcelRowBase & {
+  materialCode: string;
   requiredQty: number | null;
   customerQty: number | null;
   note: string | null;
@@ -451,6 +480,7 @@ export type OrderMaterialCheckRow = {
   /** New | Update | Unchanged | Error | Pending | NewMaterial. */
   action: SpecImportAction;
   error: string | null;
+  materialCode: string;
   materialName: string | null;
   materialColor: string | null;
   unit: string | null;
@@ -470,14 +500,15 @@ export type ExcelBundleCheck = {
   products: ProductImportPreview | null;
   spec: SpecImportPreview;
   orderMaterials: OrderMaterialCheck | null;
-  /** DEV-ALL-123: tên NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
+  /** DEV-ALL-123: mã NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
   missingMaterials: MissingMaterial[];
 };
 export type MissingMaterial = {
-  materialName: string;
+  materialCode: string;
   /** FABRIC | TRIM. */
   suggestedType: string;
   colors: string[];
-  /** Từ cột Đơn vị của sheet NVL của đơn (nếu có). */
+  /** Từ cột Tên NVL / Đơn vị của sheet NVL của đơn (nếu có). */
+  suggestedName?: string | null;
   suggestedUnit?: string | null;
 };

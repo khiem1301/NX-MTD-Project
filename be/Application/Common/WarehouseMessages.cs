@@ -20,14 +20,15 @@ public static class WarehouseMessages
     public const string QtyMustBePositive = "Số lượng phải lớn hơn 0.";
     public const string QtyMustNotBeNegative = "Số lượng không được âm.";
 
-    public const string MaterialNameDuplicate = "Đã có NVL cùng tên.";
+    public const string MaterialCodeDuplicate = "Mã NVL đã tồn tại.";
+    public const string MaterialNameDuplicate = "Đã có NVL cùng tên, cùng loại và cùng màu.";
     public const string MaterialInactive = "NVL đã ngừng sử dụng.";
     public const string MaterialStatusChanged = "Đã cập nhật trạng thái NVL.";
 
     public const string OrderMaterialDuplicate = "NVL và màu này đã có trong đơn.";
     public const string OrderMaterialInUse = "NVL của đơn đã có phiếu nhập, không thể xóa hoặc đổi sang NVL khác.";
     // DEV-ALL-119: nhập Excel NVL của đơn
-    public const string OrderMaterialImportUnknown = "Tên NVL \"{0}\" không có trong danh mục NVL.";
+    public const string OrderMaterialImportUnknown = "Mã NVL \"{0}\" không có trong danh mục NVL.";
     public const string OrderMaterialImportRemoved = " Đã xóa {0} NVL không có trong file.";
     public const string OrderMaterialImportNothing = "File không có dòng hợp lệ nào thay đổi NVL của đơn.";
     public const string OrderMaterialImportDone = "Đã nhập NVL của đơn: thêm {0}, cập nhật {1}.";

@@ -70,7 +70,7 @@ const BLANK: { [K in ReviewTable]: (rowNumber: number) => RowOf<K> } = {
     rowNumber,
     color: '',
     componentName: '',
-    materialName: '',
+    materialCode: '',
     specNote: null,
     parseError: null,
   }),
@@ -94,7 +94,8 @@ const BLANK: { [K in ReviewTable]: (rowNumber: number) => RowOf<K> } = {
   }),
   orderMaterials: (rowNumber) => ({
     rowNumber,
-    materialName: '',
+    materialCode: '',
+    materialName: null,
     unit: null,
     requiredQty: null,
     customerQty: null,
@@ -186,12 +187,17 @@ export const defaultMaterial = (m: MissingMaterial): SaveMaterialPayload => {
   const base = materialTypeDefaults(fabric ? MATERIAL_TYPE.FABRIC : MATERIAL_TYPE.TRIM);
   return {
     ...base,
-    materialName: m.materialName,
+    materialCode: m.materialCode,
+    materialName: m.suggestedName ?? '',
     unit: fabric ? base.unit : m.suggestedUnit || base.unit,
     color: fabric ? (m.colors[0] ?? '') : '',
   };
 };
 
-/** NVL mới còn thiếu thông tin bắt buộc (vải cần khổ; phụ liệu cần đơn vị). */
+/** NVL mới còn thiếu thông tin bắt buộc (tên; vải cần khổ; phụ liệu cần đơn vị). */
 export const incompleteMaterials = (materials: SaveMaterialPayload[]) =>
-  materials.filter((m) => (m.materialType === MATERIAL_TYPE.FABRIC ? !m.widthM : !m.unit.trim()));
+  materials.filter(
+    (m) =>
+      !m.materialName.trim() ||
+      (m.materialType === MATERIAL_TYPE.FABRIC ? !m.widthM : !m.unit.trim()),
+  );

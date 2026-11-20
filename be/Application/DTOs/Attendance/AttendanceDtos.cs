@@ -52,7 +52,7 @@ public sealed record RjEmployeeDto(
 // ---------- Bảng công ngày (UC28, UC58) ----------
 
 public sealed record DailyTimesheetDto(
-    int DailyTimesheetId, int EmployeeId, string EmployeeCode, string FullName, string? TeamName,
+    int DailyTimesheetId, int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
     DateOnly WorkDate, DateTime? CheckIn, DateTime? CheckOut,
     decimal WorkedHours, decimal WorkdayValue, decimal OvertimeHours,
     bool IsMissingPunch, bool HasExtraPunch, bool IsSunday,

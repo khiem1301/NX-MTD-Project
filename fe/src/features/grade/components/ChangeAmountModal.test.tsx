@@ -7,7 +7,7 @@ import { ChangeAmountModal } from './ChangeAmountModal';
 
 jest.mock('../api/gradeApi', () => ({ gradeApi: { addLevel: jest.fn() } }));
 
-const CODE: GradeCode = { gradeCode: 'D', gradeName: 'Bậc D – Yếu', status: 'Active', inUse: true };
+const CODE: GradeCode = { gradeCode: 'D', status: 'Active', inUse: true };
 const ROWS: GradeLevel[] = [
   {
     gradeLevelId: 1,

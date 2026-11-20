@@ -90,7 +90,7 @@ export function WorkOrderRequisitionField({
               key: 'material',
               render: (_, a) => (
                 <Typography.Text>
-                  {`${a.materialName}${a.materialColor ? ` - ${a.materialColor}` : ''}`}
+                  {`${a.materialCode} ${a.materialName}${a.materialColor ? ` - ${a.materialColor}` : ''}`}
                 </Typography.Text>
               ),
             },

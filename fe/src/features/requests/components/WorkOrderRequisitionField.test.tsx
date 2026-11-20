@@ -34,7 +34,8 @@ jest.mock('../api/requisitionLookupApi', () => ({
     materials: jest.fn().mockResolvedValue([
       {
         materialId: 1,
-        materialName: 'V1',
+        materialCode: 'V1',
+        materialName: 'Kate',
         color: '',
         unit: 'm',
         materialType: 'FABRIC',
@@ -42,7 +43,8 @@ jest.mock('../api/requisitionLookupApi', () => ({
       },
       {
         materialId: 2,
-        materialName: 'C1',
+        materialCode: 'C1',
+        materialName: 'Chỉ',
         color: '',
         unit: 'cuộn',
         materialType: 'TRIM',
@@ -73,7 +75,7 @@ const signIn = (teamType: TeamType) =>
       role: 'TeamLeader',
       roleName: 'TeamLeader',
       teamId: 2,
-      teamName: 'Tổ cắt',
+      teamCode: 'Tổ cắt',
       teamType,
       isTemporaryPassword: false,
     } satisfies UserInfo,
@@ -110,7 +112,8 @@ const renderModal = () => {
   (workOrderRequisitionApi.allowance as jest.Mock).mockResolvedValue([
     {
       materialId: 1,
-      materialName: 'V1',
+      materialCode: 'V1',
+      materialName: 'Kate',
       materialColor: '',
       unit: 'm',
       needQty: 100,

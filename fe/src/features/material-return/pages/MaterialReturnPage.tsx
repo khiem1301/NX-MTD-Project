@@ -43,7 +43,7 @@ export function MaterialReturnPage() {
       dataIndex: 'warehouseType',
       render: (v: string) => RETURN_KIND_LABEL[v],
     },
-    { title: RETURN_LABELS.team, dataIndex: 'teamName' },
+    { title: RETURN_LABELS.team, dataIndex: 'teamCode' },
     {
       title: RETURN_LABELS.order,
       key: 'order',

@@ -74,32 +74,38 @@ public sealed class CustomerOrderService : ICustomerOrderService
             o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.DeliveryAddress, o.Note, o.CreatedAt, lines));
     }
 
-    public async Task<Result<int>> CreateAsync(CreateOrderDto dto, CancellationToken ct)
+    public async Task<Result<OrderSaveResultDto>> CreateAsync(CreateOrderDto dto, CancellationToken ct)
     {
         var code = dto.OrderCode.Trim().ToUpperInvariant();
         if (await _orders.CodeExistsAsync(code, null, ct))
-            return Result<int>.Failure(ErrorCodes.OrderCodeDuplicate, Messages.OrderCodeDuplicate);
-        var check = await CheckReferencesAsync(dto.CustomerId, dto.Lines.Select(l => l.ProductId), ct);
-        if (!check.IsSuccess) return Fail.As<int>(check);
-        var variants = await ResolveVariantsAsync(dto.Lines, ct);
-        if (!variants.IsSuccess) return Fail.As<int>(variants);
+            return Result<OrderSaveResultDto>.Failure(ErrorCodes.OrderCodeDuplicate, Messages.OrderCodeDuplicate);
+        var check = await CheckReferencesAsync(dto.CustomerId, dto.Lines.Select(l => l.ProductId).Where(id => id > 0), ct);
+        if (!check.IsSuccess) return Fail.As<OrderSaveResultDto>(check);
 
-        var order = new CustomerOrder
+        return await _uow.InTransactionAsync(async () =>   // D17: log cần OrderId; mã hàng mới cùng giao dịch (DEV-ALL-151)
         {
-            OrderCode = code,
-            CustomerId = dto.CustomerId,
-            ReceivedDate = dto.ReceivedDate,
-            DueDate = dto.DueDate,
-            DeliveryAddress = dto.DeliveryAddress.Trim(),
-            Note = Clean(dto.Note),
-            Status = OrderStatuses.New,
-            MaterialStatus = OrderMaterialStatuses.Awaiting,
-            CreatedAt = _clock.Now,
-        };
-        foreach (var l in dto.Lines) order.OrderLines.Add(NewLine(l, variants.Data!));
+            var created = await InsertStagedProductsAsync(dto.StagedProducts, dto.Lines, ct);
+            if (!created.IsSuccess) return Fail.As<OrderSaveResultDto>(created);
+            var bound = BindProductIds(dto.Lines, created.Data!);
+            if (!bound.IsSuccess) return Fail.As<OrderSaveResultDto>(bound);
+            var lines = bound.Data!;
+            var variants = await ResolveVariantsAsync(lines, ct);
+            if (!variants.IsSuccess) return Fail.As<OrderSaveResultDto>(variants);
 
-        return await _uow.InTransactionAsync(async () =>   // D17: log cần OrderId
-        {
+            var order = new CustomerOrder
+            {
+                OrderCode = code,
+                CustomerId = dto.CustomerId,
+                ReceivedDate = dto.ReceivedDate,
+                DueDate = dto.DueDate,
+                DeliveryAddress = dto.DeliveryAddress.Trim(),
+                Note = Clean(dto.Note),
+                Status = OrderStatuses.New,
+                MaterialStatus = OrderMaterialStatuses.Awaiting,
+                CreatedAt = _clock.Now,
+            };
+            foreach (var l in lines) order.OrderLines.Add(NewLine(l, variants.Data!));
+
             await _orders.AddAsync(order);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(CustomerOrder), order.OrderId, AuditActions.Insert, null, Snapshot(order)));
@@ -108,29 +114,48 @@ public sealed class CustomerOrderService : ICustomerOrderService
                 string.Format(Messages.NotifyNewOrderBody, order.OrderCode, order.DueDate.ToString("dd/MM/yyyy")),
                 $"/manager/orders/{order.OrderId}?tab=materials", nameof(CustomerOrder), order.OrderId), ct);
             await _uow.SaveChangesAsync();
-            return Result<int>.Success(order.OrderId, Messages.Saved);
+            return Result<OrderSaveResultDto>.Success(new OrderSaveResultDto(order.OrderId, created.Data!), Messages.Saved);
         });
     }
 
-    public async Task<Result> UpdateAsync(int orderId, UpdateOrderDto dto, CancellationToken ct)
+    public async Task<Result<OrderSaveResultDto>> UpdateAsync(int orderId, UpdateOrderDto dto, CancellationToken ct)
     {
         var order = await _orders.GetWithLinesAsync(orderId, ct);
-        if (order is null) return Fail.NotFound();
+        if (order is null) return Fail.NotFound<OrderSaveResultDto>();
         var isNew = order.Status == OrderStatuses.New;
         if (!isNew && !OrderStatuses.LimitedEdit.Contains(order.Status))
-            return Result.Failure(ErrorCodes.OrderNotEditable, Messages.OrderNotEditable);
+            return Result<OrderSaveResultDto>.Failure(ErrorCodes.OrderNotEditable, Messages.OrderNotEditable);
 
         var header = await CheckHeaderAsync(order, dto, isNew, ct);
-        if (!header.IsSuccess) return header;
-        var refs = await CheckReferencesAsync(dto.CustomerId, NewProductIds(order, dto.Lines), ct, order.CustomerId);
-        if (!refs.IsSuccess) return refs;
-        var variants = await ResolveVariantsAsync(dto.Lines, ct);
-        if (!variants.IsSuccess) return variants;
+        if (!header.IsSuccess) return Fail.As<OrderSaveResultDto>(header);
+        var refs = await CheckReferencesAsync(dto.CustomerId, NewProductIds(order, dto.Lines).Where(id => id > 0), ct, order.CustomerId);
+        if (!refs.IsSuccess) return Fail.As<OrderSaveResultDto>(refs);
+
+        if (dto.StagedProducts is not { Count: > 0 })
+            return await ApplyUpdateAsync(order, dto, dto.Lines, [], ct);
+
+        return await _uow.InTransactionAsync(async () =>
+        {
+            var created = await InsertStagedProductsAsync(dto.StagedProducts, dto.Lines, ct);
+            if (!created.IsSuccess) return Fail.As<OrderSaveResultDto>(created);
+            var bound = BindProductIds(dto.Lines, created.Data!);
+            if (!bound.IsSuccess) return Fail.As<OrderSaveResultDto>(bound);
+            return await ApplyUpdateAsync(order, dto, bound.Data!, created.Data!, ct);
+        });
+    }
+
+    /// <summary>Ghi phần sửa đơn. Khi có mã hàng mới thì chạy trong transaction của UpdateAsync để lỗi đơn thì mã hàng cũng không còn.</summary>
+    private async Task<Result<OrderSaveResultDto>> ApplyUpdateAsync(CustomerOrder order, UpdateOrderDto dto,
+        IReadOnlyList<OrderLineInput> lines, IReadOnlyList<CreatedProductDto> created, CancellationToken ct)
+    {
+        var isNew = order.Status == OrderStatuses.New;
+        var variants = await ResolveVariantsAsync(lines, ct);
+        if (!variants.IsSuccess) return Fail.As<OrderSaveResultDto>(variants);
 
         _orders.SetOriginalRowVersion(order, dto.RowVer);
         var before = Snapshot(order);
-        var diff = ApplyLines(order, dto.Lines, isNew, variants.Data!);
-        if (!diff.IsSuccess) return diff;
+        var diff = ApplyLines(order, lines, isNew, variants.Data!);
+        if (!diff.IsSuccess) return Fail.As<OrderSaveResultDto>(diff);
 
         order.OrderCode = dto.OrderCode.Trim().ToUpperInvariant();
         order.CustomerId = dto.CustomerId;
@@ -139,10 +164,71 @@ public sealed class CustomerOrderService : ICustomerOrderService
         order.DeliveryAddress = dto.DeliveryAddress.Trim();
         order.Note = Clean(dto.Note);
         order.UpdatedAt = _clock.Now;
-        _audit.Add(new AuditEntry(nameof(CustomerOrder), orderId, AuditActions.Update, before, Snapshot(order)));
+        _audit.Add(new AuditEntry(nameof(CustomerOrder), order.OrderId, AuditActions.Update, before, Snapshot(order)));
         await _uow.SaveChangesAsync();
-        return Result.Success(Messages.Saved);
+        return Result<OrderSaveResultDto>.Success(new OrderSaveResultDto(order.OrderId, created), Messages.Saved);
     }
+
+    /// <summary>
+    /// DEV-ALL-151: tạo các mã hàng form đơn đang giữ, chỉ những mã có dòng. Trùng mã thì không ghi mã nào.
+    /// Gọi trong transaction của đơn: SaveChanges lấy ProductId, commit do transaction bên ngoài.
+    /// </summary>
+    private async Task<Result<IReadOnlyList<CreatedProductDto>>> InsertStagedProductsAsync(
+        IReadOnlyList<StagedProductDto>? staged, IReadOnlyList<OrderLineInput> lines, CancellationToken ct)
+    {
+        var used = lines.Select(l => l.ProductId).ToHashSet();
+        var items = (staged ?? []).Where(s => used.Contains(s.TempId)).ToList();
+        if (items.Count == 0) return Result<IReadOnlyList<CreatedProductDto>>.Success([]);
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var pending = new List<(StagedProductDto Item, Product Product, string Code)>();
+        foreach (var item in items)
+        {
+            var code = item.ProductCode.Trim().ToUpperInvariant();
+            if (!seen.Add(code) || await _products.CodeExistsAsync(code, null, ct))
+                return Result<IReadOnlyList<CreatedProductDto>>.Failure(ErrorCodes.ProductCodeDuplicate, Messages.ProductCodeDuplicate);
+            var product = new Product
+            {
+                ProductCode = code,
+                SampleImageUrl = Clean(item.SampleImageUrl),
+                Description = Clean(item.Description),
+                Status = RecordStatus.Active,
+                CreatedAt = _clock.Now,
+            };
+            foreach (var image in ExtraImages(item.ExtraImages)) product.ProductImages.Add(image);
+            pending.Add((item, product, code));
+        }
+        foreach (var (_, product, _) in pending) await _products.AddAsync(product);
+        await _uow.SaveChangesAsync();
+
+        var created = new List<CreatedProductDto>(pending.Count);
+        foreach (var (item, product, code) in pending)
+        {
+            _audit.Add(new AuditEntry(nameof(Product), product.ProductId, AuditActions.Insert, null,
+                new { product.ProductCode, product.SampleImageUrl, product.Description, product.Status, ExtraImages = product.ProductImages.Count }));
+            created.Add(new CreatedProductDto(item.TempId, product.ProductId, code));
+        }
+        return Result<IReadOnlyList<CreatedProductDto>>.Success(created);
+    }
+
+    /// <summary>Đổi ProductId âm thành Id vừa tạo. Còn Id không dương thì dòng trỏ mã không được khai.</summary>
+    private static Result<IReadOnlyList<OrderLineInput>> BindProductIds(IReadOnlyList<OrderLineInput> lines,
+        IReadOnlyList<CreatedProductDto> created)
+    {
+        var map = created.ToDictionary(c => c.TempId, c => c.ProductId);
+        var bound = lines.Select(l => map.TryGetValue(l.ProductId, out var id) ? l with { ProductId = id } : l).ToList();
+        return bound.Any(l => l.ProductId <= 0)
+            ? Result<IReadOnlyList<OrderLineInput>>.Failure(ErrorCodes.CommonValidation, Messages.StagedProductUnbound, ResultKind.Validation)
+            : Result<IReadOnlyList<OrderLineInput>>.Success(bound);
+    }
+
+    private List<ProductImage> ExtraImages(IReadOnlyList<string>? keys) =>
+        (keys ?? []).Select((key, index) => new ProductImage
+        {
+            ImageKey = key.Trim(),
+            SortOrder = (byte)(index + 1),
+            CreatedAt = _clock.Now,
+        }).ToList();
 
     public async Task<Result> CancelAsync(int orderId, CancelOrderDto dto, CancellationToken ct)
     {

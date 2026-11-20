@@ -116,14 +116,15 @@ export type MaterialOption = { value: number; label: string; short: string; isFa
 
 export const toMaterialOption = (m: {
   materialId: number;
+  materialCode: string;
   materialName: string;
   color: string;
   unit: string;
   materialType?: string;
 }): MaterialOption => ({
   value: m.materialId,
-  label: `${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
-  short: `${m.materialName}${m.color ? ` - ${m.color}` : ''}`,
+  label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+  short: `${m.materialCode}${m.color ? ` - ${m.color}` : ''}`,
   isFabric: m.materialType === MATERIAL_TYPE_FABRIC,
 });
 

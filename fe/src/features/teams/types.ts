@@ -7,7 +7,6 @@ export type TeamStatus = 'Active' | 'Discontinued';
 export type TeamListItem = {
   teamId: number;
   teamCode: string;
-  teamName: string;
   teamType: TeamType;
   status: TeamStatus;
   leaderName: string | null;
@@ -28,14 +27,13 @@ export type TeamMember = {
 export type TeamDetail = {
   teamId: number;
   teamCode: string;
-  teamName: string;
   teamType: TeamType;
   status: TeamStatus;
   members: TeamMember[];
   history: AuditEntry[];
 };
 
-export type SaveTeamPayload = { teamCode: string; teamName: string; teamType: TeamType };
+export type SaveTeamPayload = { teamCode: string; teamType: TeamType };
 export type TransferPayload = {
   employeeIds: number[];
   effectiveDate: string;

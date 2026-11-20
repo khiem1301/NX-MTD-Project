@@ -82,7 +82,6 @@ const FIELD_LABEL: Record<string, string> = {
   Gender: 'Giới tính',
   GoodsStatus: 'Trạng thái hàng',
   GradeCode: 'Mã bậc thợ',
-  GradeName: 'Tên bậc thợ',
   IsFinalStep: 'Công đoạn cuối',
   ItemCount: 'Số khoản',
   KmGapWarning: 'Cảnh báo chênh số km',

@@ -1,6 +1,7 @@
 import type { OrderImportRow } from '../types';
 import { newBlock, type ProductBlock } from './orderGrid';
-import { mergeOrderImport } from './orderImport';
+import { acceptMissingProduct, mergeOrderImport } from './orderImport';
+import type { OrderImportPreview } from '../types';
 
 const row = (over: Partial<OrderImportRow>): OrderImportRow => ({
   rowNumber: 4,
@@ -70,5 +71,39 @@ describe('mergeOrderImport', () => {
     expect(blocks).toHaveLength(1);
     expect(blocks[0]!.productId).toBe(2);
     expect(labels).toEqual({ 2: 'QU02' });
+  });
+});
+
+describe('acceptMissingProduct', () => {
+  const preview: OrderImportPreview = {
+    sizeColumns: ['M'],
+    validCount: 0,
+    errorCount: 2,
+    duplicateCount: 0,
+    rows: [
+      row({
+        productId: null,
+        productCode: 'ao-moi',
+        error: 'Mã hàng "ao-moi" không có trong danh mục.',
+        missingProduct: true,
+        quantities: [{ sizeCode: 'M', qty: 4 }],
+      }),
+      row({
+        rowNumber: 5,
+        productId: null,
+        productCode: 'XX',
+        error: 'Số lượng không hợp lệ',
+        missingProduct: false,
+      }),
+    ],
+  };
+
+  it('gắn mã tạm cho dòng chỉ thiếu mã hàng, giữ dòng lỗi khác', () => {
+    const next = acceptMissingProduct(preview, 'AO-MOI', -1);
+
+    expect(next.rows[0]).toMatchObject({ productId: -1, error: null, missingProduct: false });
+    expect(next.rows[1]!.productId).toBeNull();
+    expect(next.validCount).toBe(1);
+    expect(next.errorCount).toBe(1);
   });
 });

@@ -10,13 +10,13 @@ public sealed record OrderLineOptionDto(int OrderLineId, int ProductId, string P
 /// <summary>Chi tiết cắt (PANEL) của mã hàng để chọn khi xin cắt bù một chi tiết.</summary>
 public sealed record ComponentOptionDto(int ProductComponentMaterialId, string ComponentName, short PiecesPerGarment);
 
-public sealed record TeamOptionDto(int TeamId, string TeamCode, string TeamName, string TeamType);
+public sealed record TeamOptionDto(int TeamId, string TeamCode, string TeamType);
 
-public sealed record MaterialOptionDto(int MaterialId, string MaterialName, string MaterialType,
+public sealed record MaterialOptionDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string Color);
 
 /// <summary>NVL chọn được ở đơn Xin NVL kèm số khả dụng trong kho (trần số lượng xin, DEV-ALL-110).</summary>
-public sealed record RequisitionMaterialOptionDto(int MaterialId, string MaterialName, string MaterialType,
+public sealed record RequisitionMaterialOptionDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialType,
     string Unit, string Color, decimal AvailableQty);
 
 /// <summary>Dòng đơn (cả bộ) chọn được ở đơn Xin BTP kèm số bộ khả dụng trong kho BTP (DEV-ALL-110).</summary>

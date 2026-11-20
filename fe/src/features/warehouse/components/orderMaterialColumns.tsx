@@ -38,6 +38,7 @@ const actionColumn = ({
 export const orderMaterialColumns = (
   actions?: OrderMaterialColumnsOptions,
 ): TableColumnsType<OrderMaterial> => [
+  { title: LABELS.materialCode, dataIndex: 'materialCode' },
   { title: LABELS.materialName, dataIndex: 'materialName' },
   { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },

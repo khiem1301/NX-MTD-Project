@@ -66,7 +66,7 @@ public sealed class OrderMaterialsController : AdminBaseController
         return this.ToResponse(await _orderMaterials.PreviewImportAsync(orderId, stream, ct, replace));
     }
 
-    /// <summary>DEV-ALL-119: nhập NVL của đơn từ Excel (gộp theo tên NVL, lưu một lần).</summary>
+    /// <summary>DEV-ALL-119: nhập NVL của đơn từ Excel (gộp theo mã NVL, lưu một lần).</summary>
     [HttpPost("import")]
     public async Task<IActionResult> Import(IFormFile file, [FromQuery] int orderId, CancellationToken ct, [FromQuery] bool replace = false)
     {

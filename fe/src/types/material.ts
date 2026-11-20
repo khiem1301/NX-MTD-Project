@@ -3,6 +3,7 @@
  * của mã hàng khi thêm NVL chưa có vào danh mục (DEV-ALL-123).
  */
 export type SaveMaterialPayload = {
+  materialCode?: string;
   materialName: string;
   materialType: string;
   unit: string;

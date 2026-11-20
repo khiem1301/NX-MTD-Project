@@ -82,6 +82,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
                 r.MaterialReceiptLines.OrderBy(l => l.MaterialReceiptLineId).Select(l => new MaterialReceiptLineDto(
                     l.MaterialReceiptLineId, l.OrderMaterialId, l.PurchaseOrderLineId, l.OriginalReceiptLineId,
                     l.OrderMaterial != null ? l.OrderMaterial.MaterialId : l.MaterialId!.Value,
+                    l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,

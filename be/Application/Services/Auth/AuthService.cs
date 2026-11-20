@@ -101,7 +101,7 @@ public sealed class AuthService : IAuthService
     {
         var e = account.Employee;
         return new UserInfoDto(account.AccountId, e.EmployeeId, account.Username, e.FullName,
-            Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName, e.TeamId, e.Team?.TeamName,
+            Roles.FromRoleCode(e.Role.RoleCode), e.Role.RoleName, e.TeamId, e.Team?.TeamCode,
             e.Team is null ? null : CodeText.ToPascal(e.Team.TeamType), account.IsTemporaryPassword);
     }
 

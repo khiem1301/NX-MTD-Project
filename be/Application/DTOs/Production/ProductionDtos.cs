@@ -110,7 +110,7 @@ public sealed record OutputSaveResultDto(int Inserted, int Updated, int Deleted,
 // ================= KI-06 + KI-11: QC (UC57) =================
 
 public sealed record QcBatchDto(
-    int QcBatchId, DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int SewingTeamId, string SewingTeamName,
+    int QcBatchId, DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int SewingTeamId, string SewingTeamCode,
     int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode, int FinishedQty,
     int InspectorId, string InspectorName, DateTime EditDeadline, bool CanEdit, byte[] RowVer);
 
@@ -140,7 +140,7 @@ public sealed record DefectDto(
     string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, DateTime EditDeadline, string Status,
     DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
     int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus,
-    string SewingTeamName = "", DateTime? UpdatedAt = null);
+    string SewingTeamCode = "", DateTime? UpdatedAt = null);
 
 /// <summary>DefectType nhận "Rework" | "Scrap"; ReasonCode nhận PascalCase ("SkippedStitch", "Other"...).</summary>
 public sealed record CreateDefectDto(
@@ -192,7 +192,7 @@ public sealed record OrderLineTeamQuery : PageQuery
     public bool OnlyUnallotted { get; init; }
 }
 
-public sealed record AllottedTeamDto(int TeamId, string TeamName);
+public sealed record AllottedTeamDto(int TeamId, string TeamCode);
 
 /// <summary>Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia.</summary>
 public sealed record OrderLineTeamDto(

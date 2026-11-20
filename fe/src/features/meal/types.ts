@@ -8,7 +8,7 @@ export type MealStatus = 'Open' | 'AutoClosed' | 'Closed' | 'KitchenNotified';
 export type TeamMealSuggestion = {
   mealDate: string;
   teamId: number;
-  teamName: string;
+  teamCode: string;
   suggestedCount: number;
   mealCount: number | null;
   source: MealConfirmationSource | null;
@@ -27,7 +27,7 @@ export type TeamMealMember = {
 export type TeamMealMembers = {
   mealDate: string;
   teamId: number;
-  teamName: string;
+  teamCode: string;
   attendanceCount: number;
   mealCount: number;
   isLocked: boolean;
@@ -68,7 +68,7 @@ export type SetGuestMealPayload = {
 /** Một dòng tổ trong bảng tổng hợp; source = null nghĩa là tổ chưa xác nhận (số là gợi ý). */
 export type TeamMealRow = {
   teamId: number;
-  teamName: string;
+  teamCode: string;
   mealCount: number;
   attendanceCount: number;
   source: MealConfirmationSource | null;

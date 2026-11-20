@@ -87,9 +87,9 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
   }, [lines.data, target]);
 
   const options = useMemo(() => {
-    const allotted = (teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }));
+    const allotted = (teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }));
     return target && !allotted.some((o) => o.value === target.sewingTeamId)
-      ? [{ value: target.sewingTeamId, label: target.sewingTeamName }, ...allotted]
+      ? [{ value: target.sewingTeamId, label: target.sewingTeamCode }, ...allotted]
       : allotted;
   }, [teams.data, target]);
 

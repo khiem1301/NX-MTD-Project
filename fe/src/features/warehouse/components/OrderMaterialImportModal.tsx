@@ -20,6 +20,7 @@ const qty = (v: number | null) => (v === null ? '—' : formatQty(v));
 
 const columns: ColumnsType<OrderMaterialImportRow> = [
   { title: LABELS.importRow, dataIndex: 'rowNumber', width: 64 },
+  { title: LABELS.materialCode, dataIndex: 'materialCode', width: 130 },
   {
     title: LABELS.materialName,
     key: 'name',

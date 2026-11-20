@@ -44,8 +44,8 @@ public class CuttingLayServiceTests : ProductionTestBase
         SetupQueryable(_issueLines);
         SetupQueryable(new List<Material>
         {
-            new() { MaterialId = MainId, MaterialName = "V1" },
-            new() { MaterialId = LiningId, MaterialName = "V2" },
+            new() { MaterialId = MainId, MaterialCode = "V1" },
+            new() { MaterialId = LiningId, MaterialCode = "V2" },
         });
         SetupQueryable(new List<MaterialReturnLine>());
         SetupQueryable(new List<CuttingLayLine>());

@@ -42,7 +42,7 @@ public static class AuditText
         ["DueDate"] = "Ngày giao", ["EffectiveDate"] = "Ngày hiệu lực", ["ExpectedDeliveryCount"] = "Số lần giao dự kiến", ["ExpectedDeliveryDate"] = "Ngày dự kiến giao",
         ["ExtraImages"] = "Số ảnh phụ",
         ["FullName"] = "Họ tên", ["Gender"] = "Giới tính", ["GoodsStatus"] = "Trạng thái hàng", ["GradeCode"] = "Mã bậc thợ",
-        ["GradeName"] = "Tên bậc thợ", ["MonthlyAmount"] = "Số tiền theo tháng", ["Note"] = "Ghi chú",
+        ["MonthlyAmount"] = "Số tiền theo tháng", ["Note"] = "Ghi chú",
         ["OrderDate"] = "Ngày đặt", ["Amount"] = "Số tiền", ["FinalAmount"] = "Giá trị chốt", ["ActualAmount"] = "Giá trị thực tế", ["PaidAmount"] = "Số tiền đã trả", ["PayType"] = "Hình thức lương",
         ["PaymentDate"] = "Ngày thanh toán", ["PaymentMethod"] = "Hình thức thanh toán", ["PaymentStatus"] = "Trạng thái thanh toán",
         ["Phone"] = "Số điện thoại", ["ProductName"] = "Tên hàng", ["Quantity"] = "Số lượng", ["Rate"] = "Đơn giá",

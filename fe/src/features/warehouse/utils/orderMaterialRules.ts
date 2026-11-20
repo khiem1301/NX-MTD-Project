@@ -42,12 +42,12 @@ export const orderMaterialOptions = (
     )
     .map((m) => ({
       value: m.materialId,
-      label: `${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+      label: `${m.materialCode} - ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
     }));
   if (orderMaterial && !options.some((o) => o.value === orderMaterial.materialId)) {
     options.push({
       value: orderMaterial.materialId,
-      label: `${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
+      label: `${orderMaterial.materialCode} - ${orderMaterial.materialName}${orderMaterial.materialColor ? ` - ${orderMaterial.materialColor}` : ''}`,
     });
   }
   return options;

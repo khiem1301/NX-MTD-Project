@@ -49,7 +49,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             .OrderByDescending(i => i.MaterialIssueId)
             .Select(i => new MaterialIssueListItemDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
                 i.Order.OrderCode, i.WorkOrderId, i.WorkOrder == null ? null : i.WorkOrder.WorkOrderCode, i.RequestId,
-                i.ReceivingTeamId, i.ReceivingTeam.TeamName, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
+                i.ReceivingTeamId, i.ReceivingTeam.TeamCode, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
                 i.ReceivedAt, i.MaterialIssueLines.Count))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<MaterialIssueListItemDto>>.Success(page);
@@ -60,12 +60,12 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var dto = await Issues.AsNoTracking().Where(i => i.MaterialIssueId == issueId)
             .Select(i => new MaterialIssueDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
                 i.Order.OrderCode, i.WorkOrderId, i.WorkOrder == null ? null : i.WorkOrder.WorkOrderCode, i.RequestId,
-                i.ReceivingTeamId, i.ReceivingTeam.TeamName, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
+                i.ReceivingTeamId, i.ReceivingTeam.TeamCode, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
                 i.ReceivedByNavigation == null ? null : i.ReceivedByNavigation.FullName, i.ReceivedAt, i.RejectReason,
                 i.CreatedAt,
                 i.MaterialIssueLines.OrderBy(l => l.MaterialIssueLineId).Select(l => new MaterialIssueLineDto(
-                    l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName,
-                    l.Material == null ? null : l.Material.Unit,
+                    l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialCode,
+                    l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Unit,
                     l.Material == null ? null : l.Material.Color, l.OrderLineId, l.ProductComponentMaterialId,
                     l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode,

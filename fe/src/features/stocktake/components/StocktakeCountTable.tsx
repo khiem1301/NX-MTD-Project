@@ -16,7 +16,7 @@ type StocktakeCountTableProps = {
 
 const rowName = (b: StockBalance) =>
   b.materialId !== null
-    ? `${b.materialName}${b.materialColor ? ` - ${b.materialColor}` : ''}`
+    ? `${b.materialCode} ${b.materialName}${b.materialColor ? ` - ${b.materialColor}` : ''}`
     : `${b.orderCode} · ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` · ${b.componentName}` : ''}`;
 
 /**

@@ -108,5 +108,5 @@ public sealed class DefectiveMaterialRequestHandler : IRequestTypeHandler
 
     private static string Describe(IReadOnlyDictionary<int, decimal> qty, IReadOnlyDictionary<int, Material> info) =>
         string.Join(", ", qty.Select(kv =>
-            $"{(info.TryGetValue(kv.Key, out var m) ? m.MaterialName : kv.Key.ToString(CultureInfo.InvariantCulture))} {kv.Value:0.###}"));
+            $"{(info.TryGetValue(kv.Key, out var m) ? m.MaterialCode : kv.Key.ToString(CultureInfo.InvariantCulture))} {kv.Value:0.###}"));
 }

@@ -28,10 +28,23 @@ export function MissingMaterialsPanel({
   onChange,
 }: MissingMaterialsPanelProps) {
   const colorsOf = (code: string) =>
-    (missing.find((m) => m.materialName === code)?.colors ?? []).map((c) => ({ value: c }));
+    (missing.find((m) => m.materialCode === code)?.colors ?? []).map((c) => ({ value: c }));
 
   const columns: ColumnsType<SaveMaterialPayload> = [
-    { title: col.name, dataIndex: 'materialName', width: 200 },
+    { title: col.code, dataIndex: 'materialCode', width: 110 },
+    {
+      title: col.name,
+      key: 'name',
+      width: 200,
+      render: (_, m) => (
+        <Input
+          status={m.materialName.trim() ? undefined : 'error'}
+          value={m.materialName}
+          placeholder={col.name}
+          onChange={(e) => onChange(m.materialCode ?? '', { materialName: e.target.value })}
+        />
+      ),
+    },
     {
       title: col.type,
       key: 'type',
@@ -42,7 +55,7 @@ export function MissingMaterialsPanel({
           value={m.materialType}
           options={Object.entries(text.materialTypes).map(([value, label]) => ({ value, label }))}
           onChange={(materialType: string) =>
-            onChange(m.materialName ?? '', materialTypeDefaults(materialType, m.widthM))
+            onChange(m.materialCode ?? '', materialTypeDefaults(materialType, m.widthM))
           }
         />
       ),
@@ -55,7 +68,7 @@ export function MissingMaterialsPanel({
         <Input
           value={m.unit}
           disabled={m.materialType === MATERIAL_TYPE.FABRIC}
-          onChange={(e) => onChange(m.materialName ?? '', { unit: e.target.value })}
+          onChange={(e) => onChange(m.materialCode ?? '', { unit: e.target.value })}
         />
       ),
     },
@@ -67,8 +80,8 @@ export function MissingMaterialsPanel({
         <AutoComplete
           style={{ width: '100%' }}
           value={m.color}
-          options={colorsOf(m.materialName ?? '')}
-          onChange={(color: string) => onChange(m.materialName ?? '', { color })}
+          options={colorsOf(m.materialCode ?? '')}
+          onChange={(color: string) => onChange(m.materialCode ?? '', { color })}
         />
       ),
     },
@@ -84,7 +97,7 @@ export function MissingMaterialsPanel({
             step={0.1}
             status={m.widthM ? undefined : 'error'}
             value={m.widthM}
-            onChange={(widthM) => onChange(m.materialName ?? '', { widthM })}
+            onChange={(widthM) => onChange(m.materialCode ?? '', { widthM })}
           />
         ) : (
           '—'
@@ -103,7 +116,7 @@ export function MissingMaterialsPanel({
             {text.missingHint}
           </Typography.Paragraph>
           <Table<SaveMaterialPayload>
-            rowKey={(m) => m.materialName ?? ''}
+            rowKey={(m) => m.materialCode ?? ''}
             size="small"
             pagination={false}
             columns={columns}

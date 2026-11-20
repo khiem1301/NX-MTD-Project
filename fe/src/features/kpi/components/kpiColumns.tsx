@@ -19,7 +19,7 @@ export const kpiTargetColumns = (showTeam: boolean): ColumnsType<KpiTarget> => [
   { title: KPI_TEXT.table.product, dataIndex: 'productCode' },
   ...(showTeam
     ? ([
-        { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamName' },
+        { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamCode' },
       ] as ColumnsType<KpiTarget>)
     : []),
   {

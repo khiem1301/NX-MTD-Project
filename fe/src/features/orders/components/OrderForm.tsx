@@ -1,19 +1,19 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Alert, Button, Form, Space, Typography, theme } from 'antd';
-import type { CSSProperties } from 'react';
+import { Alert, Button, Form, Space } from 'antd';
 import { PageCard } from '@/components/common/PageCard';
 import { StatusTag } from '@/components/common/StatusTag';
 import { UnsavedChangesModal } from '@/components/common/UnsavedChangesModal';
 import { MESSAGES } from '@/constants/messages';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
 import { ROUTES } from '@/constants/routes';
-import { formatCurrency, formatQty } from '@/utils/format';
 import { newBlock } from '../utils/orderGrid';
 import { useOrderForm, type HeaderValues } from '../hooks/useOrderForm';
 import { CustomerFormModal } from './CustomerFormModal';
 import { OrderHeaderFields } from './OrderHeaderFields';
 import { ProductBlockEditor } from './ProductBlockEditor';
 import { OrderImportButton } from './OrderImportButton';
+import { OrderExcelImports } from './OrderExcelImports';
+import { OrderFormFooter } from './OrderFormFooter';
 import { ProductFormModal } from './ProductFormModal';
 import type { OrderDetail } from '../types';
 
@@ -51,31 +51,17 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     setCustomerOpen,
     productBlock,
     setProductBlock,
-    queueImports,
+    stageProduct,
+    stageOntoBlock,
+    unstageProduct,
+    orderImports,
   } = useOrderForm({ orderId, detail, copyFrom });
-  const { token } = theme.useToken();
   const saving = create.isPending || update.isPending;
   const goBack = () => navigate(isEdit ? ROUTES.orderDetail(orderId as number) : ROUTES.orders);
   const saveError =
     lineError ??
     (Object.keys(blockErrors).length > 0 ? MESSAGES.orders.validation.fixLines : undefined);
   const pageDescription = locked && editable ? MESSAGES.orders.lockedEditHint : undefined;
-
-  // Thanh tổng và nút Lưu dính đáy màn hình: đơn nhiều mã hàng không phải cuộn xuống cuối để lưu.
-  const footerStyle: CSSProperties = {
-    position: 'sticky',
-    bottom: 0,
-    zIndex: 10,
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 8,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 12,
-    padding: '12px 0',
-    background: token.colorBgContainer,
-    borderTop: `1px solid ${token.colorBorderSecondary}`,
-  };
 
   return (
     <PageCard
@@ -153,7 +139,8 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
               <OrderImportButton
                 orderId={orderId}
                 blocks={blocks}
-                onQueueImports={queueImports}
+                onStageProduct={(body, selection) => stageProduct(body, selection)}
+                onUnstageProduct={unstageProduct}
                 onApply={(next, newLabels) => {
                   setLabels((l) => ({ ...l, ...newLabels }));
                   changeBlocks(next);
@@ -162,20 +149,28 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             )}
           </Space.Compact>
         )}
-        <div style={footerStyle}>
-          {saveError && (
-            <Alert type="error" showIcon message={saveError} style={{ width: '100%' }} />
-          )}
-          <Typography.Text strong>
-            {`${MESSAGES.orders.totalQty}: ${formatQty(totals.qty)} · ${MESSAGES.orders.totalAmount}: ${formatCurrency(totals.amount)}`}
-          </Typography.Text>
-          <Space>
-            <Button onClick={goBack}>{MESSAGES.common.cancel}</Button>
-            <Button type="primary" disabled={!editable} loading={saving} onClick={handleSave}>
-              {MESSAGES.common.save}
-            </Button>
-          </Space>
-        </div>
+        {editable && (
+          <OrderExcelImports
+            orderId={orderId}
+            selection={orderImports.selection}
+            reading={orderImports.reading}
+            existing={{
+              markers: detail?.hasOrderMarkers ?? false,
+              orderMaterials: detail?.hasOrderMaterials ?? false,
+            }}
+            disabled={saving}
+            onFile={orderImports.choose}
+            onClear={orderImports.clear}
+          />
+        )}
+        <OrderFormFooter
+          saveError={saveError}
+          totals={totals}
+          editable={editable}
+          saving={saving}
+          onCancel={goBack}
+          onSave={handleSave}
+        />
 
         <UnsavedChangesModal
           open={leaveGuard.open}
@@ -195,12 +190,10 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
           open={productBlock !== undefined}
           product={null}
           allowImports
-          onDeferImports={queueImports}
+          onStage={(body, selection) =>
+            productBlock !== undefined && stageOntoBlock(productBlock, body, selection)
+          }
           onClose={() => setProductBlock(undefined)}
-          onSaved={(productId, code) => {
-            setLabels((l) => ({ ...l, [productId]: code }));
-            changeBlocks(blocks.map((b) => (b.key === productBlock ? { ...b, productId } : b)));
-          }}
         />
       </div>
     </PageCard>

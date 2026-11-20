@@ -18,7 +18,7 @@ const sourceTag = (source: TeamMealRow['source']) => {
 };
 
 const columns: ColumnsType<TeamMealRow> = [
-  { title: MEAL_TEXT.summary.team, dataIndex: 'teamName' },
+  { title: MEAL_TEXT.summary.team, dataIndex: 'teamCode' },
   { title: MEAL_TEXT.summary.mealCount, dataIndex: 'mealCount', align: 'right' },
   {
     title: MEAL_TEXT.summary.attendanceCount,

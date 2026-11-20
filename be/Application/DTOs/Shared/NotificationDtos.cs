@@ -21,7 +21,7 @@ public sealed record AnnouncementDto(int AnnouncementId, string Content, string 
 public sealed record SendAnnouncementDto(string Content, string Priority, string TargetScope, IReadOnlyList<int>? TeamIds,
     IReadOnlyList<int>? RoleIds);
 
-public sealed record AnnouncementTeamOptionDto(int TeamId, string TeamName, string TeamType);
+public sealed record AnnouncementTeamOptionDto(int TeamId, string TeamCode, string TeamType);
 
 public sealed record AnnouncementRoleOptionDto(int RoleId, string RoleCode, string RoleName);
 

@@ -29,6 +29,7 @@ public sealed class FabricPlanner
                 p.ProductComponentMaterialId,
                 p.ProductColorId,
                 p.MaterialId,
+                p.Material.MaterialCode,
                 p.Material.MaterialName,
                 p.Material.Unit,
                 p.Material.Color,
@@ -39,8 +40,8 @@ public sealed class FabricPlanner
                                       && (d.ProductComponentMaterialId == null || d.ProductComponentMaterialId == r.ProductComponentMaterialId)))
             .GroupBy(r => r.MaterialId)
             .Select(g => g.First())
-            .Select(r => new FabricInfo(r.MaterialId, r.MaterialName, r.Unit, r.Color))
-            .OrderBy(f => f.MaterialName).ThenBy(f => f.MaterialColor)
+            .Select(r => new FabricInfo(r.MaterialId, r.MaterialCode, r.MaterialName, r.Unit, r.Color))
+            .OrderBy(f => f.MaterialCode).ThenBy(f => f.MaterialColor)
             .ToList();
     }
 
@@ -134,4 +135,4 @@ public sealed class FabricPlanner
 /// <summary>Một dòng của lệnh cắt: màu áo của dòng đơn; ProductComponentMaterialId null = cả bộ, có giá trị = chỉ dòng định mức đó (cắt bù).</summary>
 public sealed record FabricLine(int ProductColorId, int? ProductComponentMaterialId);
 
-public sealed record FabricInfo(int MaterialId, string MaterialName, string Unit, string MaterialColor);
+public sealed record FabricInfo(int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor);

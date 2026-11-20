@@ -32,7 +32,7 @@ export function KpiCalendarModal({ target, onClose }: KpiCalendarModalProps) {
           KPI_TEXT.calendar.title,
           target.orderCode,
           target.productCode,
-          target.sewingTeamName,
+          target.sewingTeamCode,
           formatDate(target.startDate),
           formatDate(target.endDate),
         )

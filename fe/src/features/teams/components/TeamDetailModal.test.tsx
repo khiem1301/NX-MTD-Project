@@ -18,7 +18,6 @@ const member = (id: number, role: TeamMember['role'], name: string): TeamMember 
 const detail = (status: TeamDetail['status'] = 'Active'): TeamDetail => ({
   teamId: 4,
   teamCode: 'TM1',
-  teamName: 'Tổ may 1',
   teamType: 'Sewing',
   status,
   members: [member(1, 'TeamLeader', 'An'), member(2, 'Worker', 'Bình'), member(3, 'Worker', 'Chi')],

@@ -41,7 +41,7 @@ public class DailyWorkAllocationServiceTests
         _clock.Now.Returns(Now);
         _clock.Today.Returns(Today);
         var order = new CustomerOrder { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction, ReceivedDate = new DateOnly(2026, 10, 1) };
-        _teams.Add(new Team { TeamId = TeamId, TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing });
+        _teams.Add(new Team { TeamId = TeamId, TeamCode = "MAY1", TeamType = TeamTypes.Sewing });
         _employees.Add(new Employee
         {
             EmployeeId = WorkerId, EmployeeCode = "CNMAY1", FullName = "Công nhân 1", TeamId = TeamId,

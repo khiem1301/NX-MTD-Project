@@ -1,7 +1,6 @@
 export type TeamLookup = {
   teamId: number;
   teamCode: string;
-  teamName: string;
   teamType: 'Cutting' | 'Sewing' | 'Office';
 };
 

@@ -26,35 +26,35 @@ INSERT dbo.Vehicle (PlateNumber, VehicleType, FuelNormPer100Km, Status) VALUES
  ('59F-246.80', N'Xe bán tải (đã thanh lý)', 11.00, 'DISCONTINUED');
 
 /* ---------------- NVL ---------------- */
-INSERT dbo.Material (MaterialName, Color, MaterialType, Unit, WidthM, Status) VALUES
- (N'V-KATE-TR', N'Trắng',      'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-KATE-XN', N'Xanh nhạt',  'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-KAKI-BE', N'Be',         'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-KAKI-DEN', N'Đen',        'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-GIO-DEN', N'Đen',        'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-GIO-NAVY', N'Xanh navy',  'FABRIC', N'm', 1.50, 'ACTIVE'),
- (N'V-LOT-DEN', N'Đen',        'FABRIC', N'm', 1.40, 'ACTIVE'),
- (N'V-POLO-HG', N'Hồng',       'FABRIC', N'm', 1.60, 'ACTIVE'),
- (N'V-POLO-TR', N'Trắng',      'FABRIC', N'm', 1.60, 'ACTIVE'),
- (N'V-CANIFA', N'Xám',       'FABRIC', N'm', 1.50, 'DISCONTINUED'),
- (N'T-CHI-TR', N'Trắng',      'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-CHI-XN', N'Xanh nhạt',  'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-CHI-BE', N'Be',         'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-CHI-DEN', N'Đen',        'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-CHI-NAVY', N'Xanh navy',  'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-CHI-HG', N'Hồng',       'TRIM',   N'cuộn', NULL, 'ACTIVE'),
- (N'T-NUT-4L', N'Trắng',      'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-NUT-KAKI', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-KHOA-18', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-KHOA-60D', N'Đen',        'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-KHOA-60N', N'Xanh navy',  'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-NHAN-DET', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-NHAN-SZ', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-THE-TREO', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-TUI-PE', N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
- (N'T-KIM-14', N'',           'TRIM',   N'hộp', NULL, 'ACTIVE'),
- (N'S-VAI-VUN', N'',           'SCRAP',  N'kg',  NULL, 'ACTIVE'),
- (N'S-KIM-GAY', N'',           'SCRAP',  N'cái', NULL, 'ACTIVE');
+INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, WidthM, Status) VALUES
+ ('V-KATE-TR',  N'Vải kate Hàn 2 chiều',   N'Trắng',      'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-KATE-XN',  N'Vải kate Hàn 2 chiều',   N'Xanh nhạt',  'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-KAKI-BE',  N'Vải kaki co giãn',       N'Be',         'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-KAKI-DEN', N'Vải kaki co giãn',       N'Đen',        'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-GIO-DEN',  N'Vải dù gió 2 lớp',       N'Đen',        'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-GIO-NAVY', N'Vải dù gió 2 lớp',       N'Xanh navy',  'FABRIC', N'm', 1.50, 'ACTIVE'),
+ ('V-LOT-DEN',  N'Vải lót taffeta',        N'Đen',        'FABRIC', N'm', 1.40, 'ACTIVE'),
+ ('V-POLO-HG',  N'Vải thun cá sấu',        N'Hồng',       'FABRIC', N'm', 1.60, 'ACTIVE'),
+ ('V-POLO-TR',  N'Vải thun cá sấu',        N'Trắng',      'FABRIC', N'm', 1.60, 'ACTIVE'),
+ ('V-CANIFA',   N'Vải canifa (ngừng nhập)', N'Xám',       'FABRIC', N'm', 1.50, 'DISCONTINUED'),
+ ('T-CHI-TR',   N'Chỉ may 40/2',           N'Trắng',      'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-CHI-XN',   N'Chỉ may 40/2',           N'Xanh nhạt',  'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-CHI-BE',   N'Chỉ may 40/2',           N'Be',         'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-CHI-DEN',  N'Chỉ may 40/2',           N'Đen',        'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-CHI-NAVY', N'Chỉ may 40/2',           N'Xanh navy',  'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-CHI-HG',   N'Chỉ may 40/2',           N'Hồng',       'TRIM',   N'cuộn', NULL, 'ACTIVE'),
+ ('T-NUT-4L',   N'Nút 4 lỗ 11mm',          N'Trắng',      'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-NUT-KAKI', N'Nút quần kim loại',      N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-KHOA-18',  N'Khóa quần 18cm',         N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-KHOA-60D', N'Khóa áo khoác 60cm',     N'Đen',        'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-KHOA-60N', N'Khóa áo khoác 60cm',     N'Xanh navy',  'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-NHAN-DET', N'Nhãn dệt thương hiệu',   N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-NHAN-SZ',  N'Nhãn size',              N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-THE-TREO', N'Thẻ treo giấy',          N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-TUI-PE',   N'Túi PE đóng gói',        N'',           'TRIM',   N'cái', NULL, 'ACTIVE'),
+ ('T-KIM-14',   N'Kim máy may số 14',      N'',           'TRIM',   N'hộp', NULL, 'ACTIVE'),
+ ('S-VAI-VUN',  N'Vải vụn',                N'',           'SCRAP',  N'kg',  NULL, 'ACTIVE'),
+ ('S-KIM-GAY',  N'Kim gãy',                N'',           'SCRAP',  N'cái', NULL, 'ACTIVE');
 
 /* ---------------- Mã hàng ---------------- */
 INSERT dbo.Product (ProductCode, Description, Status) VALUES
@@ -137,7 +137,7 @@ FROM @pcm x
 JOIN dbo.Product p          ON p.ProductCode = x.Prod
 JOIN dbo.ProductColor pcol  ON pcol.ProductId = p.ProductId AND pcol.Color = x.Color
 JOIN dbo.ProductComponent pc ON pc.ProductId = p.ProductId AND pc.ComponentName = x.Comp
-JOIN dbo.Material m         ON m.MaterialName = x.Mat;
+JOIN dbo.Material m         ON m.MaterialCode = x.Mat;
 
 -- Nhóm bìa: mỗi nhóm một vải ở mỗi màu áo
 DECLARE @mk TABLE (Prod VARCHAR(30), MarkerNo TINYINT, Comp NVARCHAR(100));

@@ -1,7 +1,6 @@
 import {
   DeleteOutlined,
   DollarOutlined,
-  EditOutlined,
   StopOutlined,
   PlayCircleOutlined,
   EyeOutlined,
@@ -20,7 +19,6 @@ type GradeCodeColumnsOptions = {
   levels: GradeLevel[];
   onView: (row: GradeCode) => void;
   onChangeAmount: (row: GradeCode) => void;
-  onEdit: (row: GradeCode) => void;
   onToggleStatus: (row: GradeCode) => void;
   onRemove: (row: GradeCode) => void;
 };
@@ -30,7 +28,6 @@ export const gradeCodeColumns = ({
   levels,
   onView,
   onChangeAmount,
-  onEdit,
   onToggleStatus,
   onRemove,
 }: GradeCodeColumnsOptions): TableColumnsType<GradeCode> => [
@@ -39,7 +36,6 @@ export const gradeCodeColumns = ({
     dataIndex: 'gradeCode',
     width: 100,
   },
-  { title: GR_LABELS.gradeName, dataIndex: 'gradeName' },
   {
     title: GR_LABELS.amount,
     key: 'amount',
@@ -88,11 +84,6 @@ export const gradeCodeColumns = ({
           title={GR_LABELS.changeAmount}
           icon={<DollarOutlined />}
           onClick={() => onChangeAmount(row)}
-        />
-        <IconAction
-          title={MESSAGES.common.edit}
-          icon={<EditOutlined />}
-          onClick={() => onEdit(row)}
         />
         <IconAction
           title={row.status === 'Active' ? GR_LABELS.deactivate : GR_LABELS.reactivate}

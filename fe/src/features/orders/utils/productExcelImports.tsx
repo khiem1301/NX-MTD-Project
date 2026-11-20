@@ -32,7 +32,10 @@ export type ProductImportSelection = {
 };
 
 export type ProductImportOutcome = {
-  kind: ProductImportKind | 'materials';
+  /** markers, orderMaterials: nhập theo đơn ở form đơn hàng (DEV-ALL-150). */
+  kind: ProductImportKind | 'materials' | 'markers' | 'orderMaterials';
+  /** Ghi thêm sau tên mục (vd mã hàng của bìa). */
+  label?: string;
   ok: boolean;
   message: string;
   rowErrors: string[];
@@ -145,7 +148,7 @@ const workbookOf = (spec: SpecWorkbook, part: ProductImportKind): SpecWorkbook =
 
 type ErrorRow = { rowNumber: number; error: string | null };
 
-const rowErrorsOf = (rows: readonly ErrorRow[]): string[] => {
+export const rowErrorsOf = (rows: readonly ErrorRow[]): string[] => {
   const errors = rows.filter((r) => r.error);
   const lines = errors
     .slice(0, MAX_ROW_ERRORS)
@@ -189,12 +192,12 @@ const createMaterials = async (materials: SaveMaterialPayload[]): Promise<Produc
   for (const m of materials) {
     try {
       await materialApi.create('admin', m);
-      created.push(m.materialName ?? '');
+      created.push(m.materialCode ?? '');
     } catch (error) {
       failed.push(
         fill(
           text.materialFailed,
-          m.materialName ?? '',
+          m.materialCode ?? '',
           isApiError(error) ? error.message : MESSAGES.common.unknownError,
         ),
       );
@@ -234,16 +237,23 @@ export async function runProductImports(
     }
   }
   if (outcomes.some((o) => o.ok) || (selection.newMaterials?.length ?? 0) > 0)
-    await Promise.all(
-      [['orders'], ['lookups'], ['order-lookups'], ['warehouse'], ['cutting']].map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey }),
-      ),
-    );
+    await refreshAfterImport();
   return outcomes;
 }
 
+/** Làm mới dữ liệu đơn hàng, tra cứu, kho, cắt sau khi nhập Excel. */
+export const refreshAfterImport = () =>
+  Promise.all(
+    [['orders'], ['lookups'], ['order-lookups'], ['warehouse'], ['cutting']].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }),
+    ),
+  );
+
+export const showProductImportResults = (productCode: string, outcomes: ProductImportOutcome[]) =>
+  showImportResults(fill(text.saved, productCode), outcomes);
+
 /** Hộp thoại kết quả: mỗi mục một dòng (Đã nhập / Chưa nhập / Bỏ qua) kèm lỗi của từng dòng. */
-export function showProductImportResults(productCode: string, outcomes: ProductImportOutcome[]) {
+export function showImportResults(headline: string, outcomes: ProductImportOutcome[]) {
   const show = outcomes.every((o) => o.ok) ? Modal.success : Modal.warning;
   show({
     title: text.resultTitle,
@@ -251,11 +261,13 @@ export function showProductImportResults(productCode: string, outcomes: ProductI
     okText: MESSAGES.common.close,
     content: (
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Typography.Text>{fill(text.saved, productCode)}</Typography.Text>
+        <Typography.Text>{headline}</Typography.Text>
         {outcomes.map((o) => (
-          <div key={o.kind}>
+          <div key={`${o.kind}-${o.label ?? ''}`}>
             <Space size={8} wrap>
-              <Tag color={o.ok ? 'green' : 'red'}>{text.kinds[o.kind]}</Tag>
+              <Tag color={o.ok ? 'green' : 'red'}>
+                {o.label ? `${text.kinds[o.kind]} ${o.label}` : text.kinds[o.kind]}
+              </Tag>
               <Typography.Text type={o.ok ? undefined : 'danger'}>{o.message}</Typography.Text>
             </Space>
             {o.rowErrors.map((line) => (

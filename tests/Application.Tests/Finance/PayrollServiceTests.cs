@@ -54,7 +54,7 @@ public class PayrollServiceTests
     /// <summary>Một dòng nhân viên: mã chấm công 25001, 26 công, thực lĩnh 5.000.000 = 6.000.000 − 500.000 − 500.000.</summary>
     private static PayrollExcelRowDto Row(int rowNumber = 8, string? code = "25001", decimal? netPay = 5_000_000,
         string? grade = "A", string? parseError = null, params PayrollExcelItemDto[] items) =>
-        new("Tổ may 1", rowNumber, code, "Nguyễn Thị Thanh", grade, 26, netPay,
+        new("MAY1", rowNumber, code, "Nguyễn Thị Thanh", grade, 26, netPay,
             items.Length > 0 || parseError is not null
                 ? items
                 :
@@ -98,7 +98,7 @@ public class PayrollServiceTests
             new()
             {
                 PeriodMonth = Month, EmployeeId = 1, EmployeeCode = "NV001", FullName = "Nguyễn Văn A",
-                RoleName = "Công nhân", PayType = "PIECE_RATE", TeamName = "Tổ may 1", WorkDays = 26,
+                RoleName = "Công nhân", PayType = "PIECE_RATE", TeamCode = "MAY1", WorkDays = 26,
             },
         });
         _repo.GetMissingPunchDaysAsync(period.StartDate, period.EndDate, Arg.Any<CancellationToken>())

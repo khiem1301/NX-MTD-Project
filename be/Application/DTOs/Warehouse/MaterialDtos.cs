@@ -4,12 +4,12 @@ namespace NX_MTD.Application.DTOs;
 
 /// <param name="Color">Màu NVL (26/10); '' = không phân màu. Cùng loại vải khác màu là hai NVL.</param>
 public sealed record MaterialDto(
-    int MaterialId, string MaterialName, string MaterialType, string Unit,
+    int MaterialId, string MaterialCode, string MaterialName, string MaterialType, string Unit,
     string Color, string Status, DateTime CreatedAt, decimal? WidthM = null);
 
-/// <summary>MaterialName là định danh của NVL (trước đây là mã NVL; không còn trường mã riêng). Color trống = không phân màu.</summary>
+/// <summary>MaterialCode để trống → hệ thống tự sinh V-0001 (vải) / PL-0001 (phụ liệu). Color trống = không phân màu.</summary>
 /// Unit của vải luôn là m, giá trị gửi lên được bỏ qua. WidthM (khổ vải, m) bắt buộc với vải, bỏ qua với phụ liệu (DEV-ALL-102).
-public sealed record CreateMaterialDto(string MaterialName, string MaterialType,
+public sealed record CreateMaterialDto(string? MaterialCode, string MaterialName, string MaterialType,
     string Unit, string? Color = null, decimal? WidthM = null);
 
 /// <summary>Đổi màu chỉ được khi NVL chưa dùng ở định mức, NVL của đơn, chứng từ hay tồn kho.</summary>

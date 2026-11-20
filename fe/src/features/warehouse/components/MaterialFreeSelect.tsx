@@ -20,7 +20,7 @@ export function MaterialFreeSelect({ value, onChange, disabled }: MaterialFreeSe
 
   const options: { value: number | string; label: string }[] = (materials.data ?? []).map((m) => ({
     value: m.materialId,
-    label: `${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
+    label: `${m.materialCode} ${m.materialName}${m.color ? ` - ${m.color}` : ''} (${m.unit})`,
   }));
   const typed = search.trim();
   // Cùng tên khác màu là NVL khác nên vẫn cho thêm mới; màu nhập ở dòng đơn mua.

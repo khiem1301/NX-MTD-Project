@@ -8,7 +8,7 @@ import {
 } from './bulkOrderMaterial';
 
 const OPTIONS = [
-  { materialId: 2, materialName: 'CHI01', color: 'Xanh', unit: 'cuộn' },
+  { materialId: 2, materialCode: 'CHI01', materialName: 'Chỉ may', color: 'Xanh', unit: 'cuộn' },
 ] as MaterialOption[];
 const NEW_LINE: BulkLine = { key: 'new-1', materialId: null, draft: { ...EMPTY_DRAFT } };
 const PICKED: BulkLine = { ...NEW_LINE, materialId: 2 };

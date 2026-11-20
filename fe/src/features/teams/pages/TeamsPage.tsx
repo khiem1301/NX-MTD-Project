@@ -43,7 +43,6 @@ export function TeamsPage() {
       title: MESSAGES.hr.teamCode,
       dataIndex: 'teamCode',
     },
-    { title: MESSAGES.hr.teamName, dataIndex: 'teamName' },
     {
       title: MESSAGES.hr.teamType,
       dataIndex: 'teamType',

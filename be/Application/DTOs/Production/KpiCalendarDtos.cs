@@ -17,6 +17,6 @@ public sealed record KpiBtpDto(int WarehouseBtp, int TeamHeld, int NeededByOther
 
 /// <summary>Lịch KPI theo ngày của một chỉ tiêu. FinishedQty = hàng hoàn thiện của tổ trong kỳ. FirstEditableDate = ngày sớm nhất còn sửa được KPI, hôm nay nếu chưa tới EditCutoff.</summary>
 public sealed record KpiCalendarDto(
-    int KpiTargetId, string OrderCode, string ProductCode, string SewingTeamName,
+    int KpiTargetId, string OrderCode, string ProductCode, string SewingTeamCode,
     DateOnly StartDate, DateOnly EndDate, DateOnly Today, DateOnly DueDate, DateOnly FirstEditableDate, TimeOnly EditCutoff,
     int TargetFinishedQty, int FinishedQty, bool CanEdit, KpiBtpDto Btp, IReadOnlyList<KpiCalendarDayDto> Days);

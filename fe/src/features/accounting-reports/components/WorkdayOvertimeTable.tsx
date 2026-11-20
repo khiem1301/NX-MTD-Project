@@ -11,8 +11,8 @@ const columns: ColumnsType<WorkdayOvertimeRow> = [
   { title: ACCOUNTING_REPORT_TEXT.workdayTable.employeeCode, dataIndex: 'employeeCode' },
   { title: ACCOUNTING_REPORT_TEXT.workdayTable.fullName, dataIndex: 'fullName' },
   {
-    title: ACCOUNTING_REPORT_TEXT.workdayTable.teamName,
-    dataIndex: 'teamName',
+    title: ACCOUNTING_REPORT_TEXT.workdayTable.teamCode,
+    dataIndex: 'teamCode',
     render: (v: string | null) => v ?? '—',
   },
   {

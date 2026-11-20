@@ -2,9 +2,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { OrderMaterial } from '../types';
 import { OrderMaterialFormModal } from './OrderMaterialFormModal';
 
-const option = (materialId: number, materialName: string) => ({
+const option = (materialId: number, materialCode: string) => ({
   materialId,
-  materialName,
+  materialCode,
+  materialName: 'Vải',
   materialType: 'FABRIC',
   unit: 'm',
   color: '',
@@ -22,11 +23,12 @@ jest.mock('../hooks/useOrderMaterials', () => ({
 }));
 jest.mock('./MaterialFormModal', () => ({ MaterialFormModal: () => null }));
 
-const declared = (materialId: number, materialName: string) =>
+const declared = (materialId: number, materialCode: string) =>
   ({
     orderMaterialId: materialId,
     materialId,
-    materialName,
+    materialCode,
+    materialName: 'Vải',
     materialColor: '',
     requiredQty: 1,
     customerQty: 0,

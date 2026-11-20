@@ -89,7 +89,6 @@ public static class ErrorCodes
     public const string AccountCannotLockSelf = "ACCOUNT_CANNOT_LOCK_SELF";
     public const string AccountInvalidStatus = "ACCOUNT_INVALID_STATUS";
     public const string TeamCodeDuplicate = "TEAM_CODE_DUPLICATE";
-    public const string TeamNameDuplicate = "TEAM_NAME_DUPLICATE";
     public const string TeamNotActive = "TEAM_NOT_ACTIVE";
     public const string TeamLeaderInvalidTeam = "TEAM_LEADER_INVALID_TEAM";
     public const string TeamLeaderExists = "TEAM_LEADER_EXISTS";
@@ -180,6 +179,8 @@ public static class ErrorCodes
     public const string DispatchExceedsOrder = "DISPATCH_EXCEEDS_ORDER";
     public const string AnnouncementInvalid = "ANNOUNCEMENT_INVALID";
     public const string GradeInvalid = "GRADE_INVALID";
+    /// <summary>DEV-ALL-148: AI gợi ý bậc chưa cấu hình hoặc Gemini không trả được kết quả.</summary>
+    public const string GradeAiUnavailable = "GRADE_AI_UNAVAILABLE";
     public const string EmployeeImportInvalid = "EMPLOYEE_IMPORT_INVALID";
     public const string VehiclePlateDuplicate = "VEHICLE_PLATE_DUPLICATE";
     public const string VehicleInactive = "VEHICLE_INACTIVE";

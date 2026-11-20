@@ -34,7 +34,9 @@ public sealed class VwPayrollExportDatumConfiguration : IEntityTypeConfiguration
         entity.Property(e => e.SundayOvertimeHours).HasColumnType("decimal(38, 2)");
         entity.Property(e => e.SundayPieceRateBonus).HasColumnType("decimal(38, 2)");
         entity.Property(e => e.SundayWorkDays).HasColumnType("decimal(38, 2)");
-        entity.Property(e => e.TeamName).HasMaxLength(100);
+        entity.Property(e => e.TeamCode)
+            .HasMaxLength(20)
+            .IsUnicode(false);
         entity.Property(e => e.WorkDays).HasColumnType("decimal(38, 2)");
     }
 }

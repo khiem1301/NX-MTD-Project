@@ -134,7 +134,7 @@ public sealed partial class SpecImportService : ISpecImportService
 
         var spec = await _specs.GetAsync(productId, ct);
         if (!spec.IsSuccess) return Fail.As<Plan>(spec);
-        var materials = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialName), ct);
+        var materials = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
         var t = target.Data!;
         var usage = replace ? await UsageAsync(productId, spec.Data!, ct) : SpecImportUsage.None;
         var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook, replace, usage);
@@ -185,10 +185,10 @@ public sealed partial class SpecImportService : ISpecImportService
         var wanted = codes.Where(c => c.Length > 0).Distinct().ToList();
         if (wanted.Count == 0) return new Dictionary<string, SpecImportMaterial>();
         var rows = await _uow.Repository<Material>().Query().AsNoTracking()
-            .Where(m => wanted.Contains(m.MaterialName) && m.Status == MaterialStatuses.Active)
-            .Select(m => new SpecImportMaterial(m.MaterialId, m.MaterialName, m.Unit, m.Color))
+            .Where(m => wanted.Contains(m.MaterialCode) && m.Status == MaterialStatuses.Active)
+            .Select(m => new SpecImportMaterial(m.MaterialId, m.MaterialCode, m.MaterialName, m.Unit, m.Color))
             .ToListAsync(ct);
-        return rows.GroupBy(m => m.MaterialName, StringComparer.OrdinalIgnoreCase)
+        return rows.GroupBy(m => m.MaterialCode, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
     }
 

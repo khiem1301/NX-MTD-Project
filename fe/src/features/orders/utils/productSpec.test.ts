@@ -23,7 +23,8 @@ const norm = (
   componentName: component,
   color,
   materialId: material,
-  materialName: 'V1',
+  materialCode: 'V1',
+  materialName: 'Vải',
   unit: 'm',
   materialColor: 'Đen',
   materialType: 'FABRIC',
@@ -263,7 +264,8 @@ describe('panelFabricProblem (DEV-ALL-86)', () => {
   const material = (materialId: number, materialType: string) =>
     toMaterialOption({
       materialId,
-      materialName: `M${materialId}`,
+      materialCode: `M${materialId}`,
+      materialName: 'NVL',
       color: '',
       unit: 'm',
       materialType,

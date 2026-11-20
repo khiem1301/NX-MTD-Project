@@ -38,9 +38,10 @@ public sealed class ProductSpecService : IProductSpecService
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
             .Where(n => n.ProductId == productId && n.Status == RecordStatus.Active)
             .OrderBy(n => n.ProductComponentId)
-            .ThenBy(n => n.Material.MaterialName).ThenBy(n => n.ProductColor.Color)
+            .ThenBy(n => n.Material.MaterialCode).ThenBy(n => n.ProductColor.Color)
             .Select(n => new ProductNormDto(n.ProductComponentMaterialId, n.ProductComponent.ComponentName,
-                n.ProductColor.Color, n.MaterialId, n.Material.MaterialName, n.Material.Unit, n.Material.Color, n.SpecNote, n.Material.MaterialType ?? ""))
+                n.ProductColor.Color, n.MaterialId, n.Material.MaterialCode,
+                n.Material.MaterialName, n.Material.Unit, n.Material.Color, n.SpecNote, n.Material.MaterialType ?? ""))
             .ToListAsync(ct);
         var markers = await _uow.Repository<ProductMarkerComponent>().Query().AsNoTracking()
             .Where(m => m.ProductId == productId).OrderBy(m => m.MarkerNo).ThenBy(m => m.ProductComponentId)
@@ -48,7 +49,8 @@ public sealed class ProductSpecService : IProductSpecService
             .ToListAsync(ct);
         var markerFabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking()
             .Where(f => f.ProductId == productId).OrderBy(f => f.MarkerNo).ThenBy(f => f.ProductColor.Color)
-            .Select(f => new ProductMarkerFabricDto(f.MarkerNo, f.ProductColor.Color, f.MaterialId, f.Material.MaterialName, f.Material.Color))
+            .Select(f => new ProductMarkerFabricDto(f.MarkerNo, f.ProductColor.Color, f.MaterialId, f.Material.MaterialCode,
+                f.Material.MaterialName, f.Material.Color))
             .ToListAsync(ct);
 
         return Result<ProductSpecDto>.Success(new ProductSpecDto(productId,

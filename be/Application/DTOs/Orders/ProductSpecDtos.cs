@@ -13,14 +13,14 @@ public sealed record ProductVariantDto(int ProductVariantId, string Color, strin
 /// <summary>Một dòng định mức = một NVL của một thành phần cho một màu áo, dùng chung mọi size (29/10: không còn lượng / hao hụt;
 /// 09/11: không còn kích thước chi tiết, DEV-ALL-85; theo màu, DEV-ALL-87). MaterialColor = Material.Color (26/10: màu nằm trong NVL).</summary>
 public sealed record ProductNormDto(int ProductComponentMaterialId, string ComponentName, string Color,
-    int MaterialId, string MaterialName, string Unit, string MaterialColor, string? SpecNote,
+    int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor, string? SpecNote,
     string MaterialType = "");
 
 /// <summary>Chi tiết nằm trên nhóm bìa nào (DEV-ALL-85). Bìa (chiều dài, tỉ lệ size) khai theo đơn ở OrderMarkerService.</summary>
 public sealed record ProductMarkerComponentDto(int MarkerNo, string ComponentName);
 
 /// <summary>Màu áo dùng nhóm bìa và vải nhóm trải ở màu đó; vải do backend lấy từ định mức của các chi tiết trên nhóm (DEV-ALL-89).</summary>
-public sealed record ProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId, string MaterialName,
+public sealed record ProductMarkerFabricDto(int MarkerNo, string Color, int MaterialId, string MaterialCode, string MaterialName,
     string MaterialColor);
 
 public sealed record ProductSpecDto(int ProductId, IReadOnlyList<ProductComponentDto> Components,

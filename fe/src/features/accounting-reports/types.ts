@@ -5,7 +5,7 @@ export type WorkdayOvertimeRow = {
   employeeId: number;
   employeeCode: string;
   fullName: string;
-  teamName: string | null;
+  teamCode: string | null;
   regularWorkdays: number;
   sundayWorkdays: number;
   totalWorkdays: number;

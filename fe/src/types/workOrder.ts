@@ -8,7 +8,7 @@ export type WorkOrderListItem = {
   productId: number;
   productCode: string;
   cuttingTeamId: number;
-  cuttingTeamName: string;
+  cuttingTeamCode: string;
   dueDate: string;
   status: string;
   totalPlannedQty: number;
@@ -21,6 +21,7 @@ export type WorkOrderListItem = {
  */
 export type WorkOrderMaterialAllowance = {
   materialId: number;
+  materialCode: string;
   materialName: string;
   materialColor: string;
   unit: string;
@@ -33,6 +34,7 @@ export type WorkOrderMaterialAllowance = {
 /** Vải của lệnh cắt: đã cấp, khả dụng trong kho, tổ đã nhận / đã trả lại kho / thực dùng (không còn so với định mức). */
 export type FabricRequirement = {
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;

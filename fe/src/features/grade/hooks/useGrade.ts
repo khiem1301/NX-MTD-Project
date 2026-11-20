@@ -64,7 +64,7 @@ export const useGradeOptions = () => {
   });
   const options = (query.data ?? []).map((c) => ({
     value: c.gradeCode,
-    label: c.gradeName || `Bậc ${c.gradeCode}`,
+    label: c.gradeCode,
   }));
   return { ...query, options };
 };

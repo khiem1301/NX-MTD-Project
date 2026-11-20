@@ -65,7 +65,7 @@ public sealed class ImportTemplateService : IImportTemplateService
             new("2 · Định mức NVL", "Mỗi dòng = một NVL của một chi tiết ở một màu áo. Dùng MÃ NVL, không gõ tên."),
             new("3 · Nhóm bìa", "Bìa loại 1, khai ở mã hàng: chi tiết trên nhóm và các màu áo dùng nhóm. Vải của nhóm lấy từ định mức."),
             new("4 · Bìa của đơn", "Bìa loại 2, khai theo đơn hàng. Ở màn Mã hàng phải chọn đơn thì bảng này mới được nhập."),
-            new("Giới hạn", "Màu áo phải là màu đã có trong đơn hàng của mã hàng (nhập Excel không tạo màu mới). Tên NVL phải có trong danh mục NVL đang dùng. Mỗi chi tiết PANEL chỉ một vải ở mỗi màu. Khổ bìa tối đa 3,5 m."),
+            new("Giới hạn", "Màu áo phải là màu đã có trong đơn hàng của mã hàng (nhập Excel không tạo màu mới). Mã NVL phải có trong danh mục NVL đang dùng. Mỗi chi tiết PANEL chỉ một vải ở mỗi màu. Khổ bìa tối đa 3,5 m."),
             new("Dữ liệu trong file", DemoNote),
         ],
         [
@@ -88,7 +88,7 @@ public sealed class ImportTemplateService : IImportTemplateService
         [
             new("Dùng ở đâu", "Chi tiết đơn hàng → tab 'NVL của đơn' → nút 'Nhập từ Excel' (Admin, Quản đốc; ẩn khi đơn đã đóng)."),
             new("Cách nhập", "Chọn file là xem trước ngay. NVL đã có trong đơn được cập nhật theo file, NVL không có trong file giữ nguyên."),
-            new("Sheet cần có", "NVL của đơn: Tên NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp, hệ thống tự tính."),
+            new("Sheet cần có", "NVL của đơn: Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp, hệ thống tự tính."),
             new("Dữ liệu trong file", DemoNote),
         ],
         [await OrderMaterialsTableAsync(orderId, "", ct)]);
@@ -157,11 +157,11 @@ public sealed class ImportTemplateService : IImportTemplateService
             rows = (await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
                 .Where(p => p.ProductId == pid && p.Status == RecordStatus.Active && p.ProductComponent.Status == RecordStatus.Active)
                 .OrderBy(p => p.ProductColorId).ThenBy(p => p.ProductComponentId)
-                .Select(p => new { p.ProductColor.Color, p.ProductComponent.ComponentName, p.Material.MaterialName, p.SpecNote }).ToListAsync(ct))
-                .Select(p => (IReadOnlyList<object?>)[p.Color, p.ComponentName, p.MaterialName, p.SpecNote]).ToList();
+                .Select(p => new { p.ProductColor.Color, p.ProductComponent.ComponentName, p.Material.MaterialCode, p.SpecNote }).ToListAsync(ct))
+                .Select(p => (IReadOnlyList<object?>)[p.Color, p.ComponentName, p.MaterialCode, p.SpecNote]).ToList();
         return Pick("Định mức NVL", no + "ĐỊNH MỨC NVL THEO MÀU ÁO",
-            "Màu áo: phải là màu đã có trong đơn hàng của mã hàng. Tên chi tiết: phải có ở sheet Thành phần. Tên NVL: đúng tên NVL trong danh mục NVL (đã gồm màu). Chi tiết PANEL chỉ một vải mỗi màu; vải lót / mex / bo khai thành chi tiết riêng. Ghi chú quy cách: tùy chọn (≤ 200 ký tự).",
-            [new("Màu áo", 'R', 16), new("Tên chi tiết", 'R', 26), new("Tên NVL", 'R', 18), new("Ghi chú quy cách", 'O', 34)], rows,
+            "Màu áo: phải là màu đã có trong đơn hàng của mã hàng. Tên chi tiết: phải có ở sheet Thành phần. Mã NVL: MaterialCode trong danh mục NVL (đã gồm màu). Chi tiết PANEL chỉ một vải mỗi màu; vải lót / mex / bo khai thành chi tiết riêng. Ghi chú quy cách: tùy chọn (≤ 200 ký tự).",
+            [new("Màu áo", 'R', 16), new("Tên chi tiết", 'R', 26), new("Mã NVL", 'R', 18), new("Ghi chú quy cách", 'O', 34)], rows,
             [["Trắng", "Thân trước", "V-KATE-TR"], ["Trắng", "Thân sau", "V-KATE-TR"], ["Trắng", "Tay áo", "V-KATE-TR"],
              ["Trắng", "Cổ áo", "V-KATE-TR", "Cổ cắt dọc canh sợi"], ["Trắng", "Nút", "T-NUT-4L"], ["Trắng", "Chỉ may", "T-CHI-TR"],
              ["Trắng", "Nhãn dệt", "T-NHAN-DET"], ["Xanh nhạt", "Thân trước", "V-KATE-XN"], ["Xanh nhạt", "Thân sau", "V-KATE-XN"],
@@ -268,11 +268,11 @@ public sealed class ImportTemplateService : IImportTemplateService
         IReadOnlyList<IReadOnlyList<object?>> rows = [];
         if (orderId is { } oid)
             rows = (await _uow.Repository<OrderMaterial>().Query().AsNoTracking().Where(m => m.OrderId == oid).OrderBy(m => m.OrderMaterialId)
-                .Select(m => new { m.Material.MaterialName, m.RequiredQty, m.CustomerQty, m.Note }).ToListAsync(ct))
-                .Select(m => (IReadOnlyList<object?>)[m.MaterialName, (double)m.RequiredQty, m.CustomerQty > 0 ? (double)m.CustomerQty : null, m.Note]).ToList();
+                .Select(m => new { m.Material.MaterialCode, m.RequiredQty, m.CustomerQty, m.Note }).ToListAsync(ct))
+                .Select(m => (IReadOnlyList<object?>)[m.MaterialCode, (double)m.RequiredQty, m.CustomerQty > 0 ? (double)m.CustomerQty : null, m.Note]).ToList();
         return Pick("NVL của đơn", no + "NVL CỦA ĐƠN (nhập ở chi tiết đơn → tab NVL của đơn)",
-            "Tên NVL: phải có trong danh mục NVL (đã gồm màu). Số cần: tổng số đơn cần theo số khách báo. Khách cấp: phần khách giao (trống = 0). Phải mua = Số cần − Khách cấp, Đã nhập (khách giao / mua về) và Còn thiếu do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL không có trong file giữ nguyên.",
-            [new("Tên NVL", 'R', 18), new("Số cần", 'R', 12), new("Khách cấp", 'O', 12), new("Ghi chú", 'O', 34)], rows,
+            "Mã NVL: phải có trong danh mục NVL (đã gồm màu). Số cần: tổng số đơn cần theo số khách báo. Khách cấp: phần khách giao (trống = 0). Phải mua = Số cần − Khách cấp, Đã nhập (khách giao / mua về) và Còn thiếu do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL không có trong file giữ nguyên.",
+            [new("Mã NVL", 'R', 18), new("Số cần", 'R', 12), new("Khách cấp", 'O', 12), new("Ghi chú", 'O', 34)], rows,
             [["V-KATE-TR", 1200, null, "Mua toàn bộ"], ["T-CHI-TR", 40, null, "Chỉ 40/2, tự mua"], ["T-NHAN-DET", 680, 680, "Khách cấp đủ"],
              ["T-NUT-4L", 6200, 2000, "Khách cấp 2.000, mua thêm phần còn lại"]]);
     }

@@ -20,8 +20,8 @@ const product: OrderMarkerProduct = {
       markerNo: 1,
       colors: ['Đen', 'Xanh'],
       fabrics: [
-        { materialId: 1, materialName: 'V01', color: 'Đen', widthM: 1.5 },
-        { materialId: 2, materialName: 'V02', color: 'Xanh', widthM: 1.6 },
+        { materialId: 1, materialCode: 'V01', materialName: 'Vải', color: 'Đen', widthM: 1.5 },
+        { materialId: 2, materialCode: 'V02', materialName: 'Vải', color: 'Xanh', widthM: 1.6 },
       ],
     },
   ],
@@ -135,7 +135,7 @@ describe('narrowFabricsOf, tooWideWarning (DEV-ALL-104)', () => {
   const groups = product.markerGroups;
 
   it('bìa rộng hơn khổ vải của nhóm thì liệt kê vải hẹp hơn', () => {
-    expect(narrowFabricsOf(row({ widthM: 1.55 }), groups).map((f) => f.materialName)).toEqual([
+    expect(narrowFabricsOf(row({ widthM: 1.55 }), groups).map((f) => f.materialCode)).toEqual([
       'V01',
     ]);
     expect(tooWideWarning(row({ widthM: 1.7 }), groups)).toBe(
@@ -154,7 +154,9 @@ describe('narrowFabricsOf, tooWideWarning (DEV-ALL-104)', () => {
       {
         markerNo: 1,
         colors: ['Đen'],
-        fabrics: [{ materialId: 1, materialName: 'V01', color: 'Đen', widthM: null }],
+        fabrics: [
+          { materialId: 1, materialCode: 'V01', materialName: 'Vải', color: 'Đen', widthM: null },
+        ],
       },
     ];
     expect(tooWideWarning(row({ widthM: 3 }), noWidth)).toBe('');

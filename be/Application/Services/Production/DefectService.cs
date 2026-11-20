@@ -63,7 +63,7 @@ public sealed class DefectService : IDefectService
                 .Where(d => string.IsNullOrEmpty(keyword) || d.DefectCode.Contains(keyword)
                             || d.ResponsibleWorker.FullName.Contains(keyword)
                             || d.OrderLine.ProductVariant.Product.ProductCode.Contains(keyword)
-                            || d.SewingTeam.TeamName.Contains(keyword) || d.SewingTeam.TeamCode.Contains(keyword)
+                            || d.SewingTeam.TeamCode.Contains(keyword)
                             || d.OrderLine.Order.OrderCode.Contains(keyword))
                 .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId))
             .ToPagedAsync(query, ct);
@@ -405,7 +405,7 @@ public sealed class DefectService : IDefectService
         d.PieceRate == null ? (decimal?)null : d.PieceRate.Rate, d.WorkerNotifiedAt, d.EditDeadline, d.Status, d.RecordedAt,
         false, d.RowVer, d.OrderLine.OrderId,
         d.Request == null ? (int?)null : d.Request.RequestId, d.Request == null ? null : d.Request.RequestCode,
-        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamName, d.UpdatedAt));
+        d.Request == null ? null : d.Request.Status, d.SewingTeam.TeamCode, d.UpdatedAt));
 
     /// <summary>
     /// Đổi mã DB sang PascalCase; hạn sửa của tổ trưởng luôn là lúc lập + 24 giờ (kể cả phiếu cũ); CanEdit = còn hiệu lực và còn

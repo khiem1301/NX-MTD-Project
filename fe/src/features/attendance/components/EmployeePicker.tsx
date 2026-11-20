@@ -26,7 +26,7 @@ export function EmployeePicker({ value, onChange, disabled }: Props) {
         loading={teams.isLoading}
         disabled={disabled}
         value={teamId ?? undefined}
-        options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+        options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
         onChange={(next) => {
           setTeamId(next);
           onChange?.(undefined);

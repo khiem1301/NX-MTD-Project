@@ -46,7 +46,7 @@ public class OrderMarkerServiceTests
             MarkerNo = group,
             ProductColorId = TestVariant.ColorOf(ProductId, color).ProductColorId,
             MaterialId = 100 + group,
-            Material = new Material { MaterialId = 100 + group, MaterialName = $"V0{group}", Color = color, WidthM = 1.5m },
+            Material = new Material { MaterialId = 100 + group, MaterialCode = $"V0{group}", MaterialName = "Vải", Color = color, WidthM = 1.5m },
         };
 
     private void Setup<T>(List<T> backing, Action<T>? onAdd = null) where T : class
@@ -94,7 +94,7 @@ public class OrderMarkerServiceTests
     {
         var product = (await Sut().GetAsync(OrderId, default)).Data!.Products.Single();
 
-        product.MarkerGroups.Single(g => g.MarkerNo == 1).Fabrics.Select(f => (f.MaterialName, f.WidthM)).Should()
+        product.MarkerGroups.Single(g => g.MarkerNo == 1).Fabrics.Select(f => (f.MaterialCode, f.WidthM)).Should()
             .Equal(("V01", (decimal?)1.5m));
     }
 

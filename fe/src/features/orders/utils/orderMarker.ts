@@ -142,7 +142,7 @@ export const tooWideWarning = (
   const narrow = narrowFabricsOf(row, groups);
   if (narrow.length === 0) return '';
   const names = narrow.map((f) =>
-    fill(text.fabricWidth, f.materialName, formatNumber(f.widthM ?? 0)),
+    fill(text.fabricWidth, f.materialCode, formatNumber(f.widthM ?? 0)),
   );
   return fill(text.tooWideForFabric, names.join(', '));
 };

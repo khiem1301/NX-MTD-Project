@@ -83,10 +83,10 @@ FROM #Po p
 JOIN dbo.PurchaseOrder po ON po.PoCode = p.PoCode
 JOIN dbo.OrderMaterial om ON om.OrderId = po.OrderId
 JOIN dbo.Material m ON m.MaterialId = om.MaterialId
-JOIN #Price pr ON pr.Mat = m.MaterialName
+JOIN #Price pr ON pr.Mat = m.MaterialCode
 WHERE om.PurchaseQty > 0
-  AND ((p.Grp = 'FAB' AND m.MaterialType = 'FABRIC' AND m.MaterialName <> 'V-LOT-DEN')
-    OR (p.Grp = 'LIN' AND m.MaterialName = 'V-LOT-DEN')
+  AND ((p.Grp = 'FAB' AND m.MaterialType = 'FABRIC' AND m.MaterialCode <> 'V-LOT-DEN')
+    OR (p.Grp = 'LIN' AND m.MaterialCode = 'V-LOT-DEN')
     OR (p.Grp = 'TRM' AND m.MaterialType = 'TRIM'));
 -- Đơn mua dùng chung (không gắn đơn hàng): ghi thẳng NVL
 INSERT dbo.PurchaseOrderLine (PurchaseOrderId, OrderMaterialId, MaterialId, OrderedQty, UnitPrice)
@@ -94,8 +94,8 @@ SELECT po.PurchaseOrderId, NULL, m.MaterialId, v.Qty, IIF(p.Goods = 'PENDING_FIN
 FROM #Po p
 JOIN dbo.PurchaseOrder po ON po.PoCode = p.PoCode
 JOIN (VALUES ('SH-1', 'T-KIM-14', 30), ('SH-2', 'T-KIM-14', 40)) v (K, Mat, Qty) ON v.K = p.K
-JOIN dbo.Material m ON m.MaterialName = v.Mat
-JOIN #Price pr ON pr.Mat = m.MaterialName;
+JOIN dbo.Material m ON m.MaterialCode = v.Mat
+JOIN #Price pr ON pr.Mat = m.MaterialCode;
 
 /* ---------- Ngày giao dự kiến của NCC ---------- */
 UPDATE po SET ExpectedDeliveryDate = DATEADD(DAY, p.OrdOff + 3, @today),
@@ -163,7 +163,7 @@ INSERT dbo.MaterialReceiptLine (MaterialReceiptId, OrderMaterialId, AcceptedQty)
 SELECT mr.MaterialReceiptId, om.OrderMaterialId, 300
 FROM dbo.MaterialReceipt mr
 JOIN dbo.OrderMaterial om ON om.OrderId = mr.OrderId
-JOIN dbo.Material m ON m.MaterialId = om.MaterialId AND m.MaterialName = 'V-GIO-DEN'
+JOIN dbo.Material m ON m.MaterialId = om.MaterialId AND m.MaterialCode = 'V-GIO-DEN'
 WHERE mr.Status = 'PENDING' AND mr.PurchaseOrderId IS NULL;
 
 -- RETURNED: Quản đốc trả lại phiếu nhập vì sai số lượng; thủ kho lập lại

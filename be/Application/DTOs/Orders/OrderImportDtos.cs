@@ -11,9 +11,10 @@ public sealed record OrderImportExcelRow(int RowNumber, string ProductCode, stri
 
 public sealed record OrderImportExcelDto(IReadOnlyList<string> SizeColumns, IReadOnlyList<OrderImportExcelRow> Rows);
 
-/// <param name="ProductId">null khi mã hàng không có / đã ngừng (Error có lý do).</param>
+/// <param name="ProductId">null khi dòng lỗi.</param>
+/// <param name="MissingProduct">true khi dòng chỉ thiếu mã hàng (các kiểm tra khác đã qua). Form đơn nhận dòng này sau khi khai mã, ghi mã khi lưu đơn.</param>
 public sealed record OrderImportRowDto(int RowNumber, string ProductCode, int? ProductId, string Color,
-    decimal? CmtUnitPrice, IReadOnlyList<OrderImportQtyDto> Quantities, string? Error);
+    decimal? CmtUnitPrice, IReadOnlyList<OrderImportQtyDto> Quantities, string? Error, bool MissingProduct = false);
 
 /// <summary>Kết quả xem trước; màn hình điền các dòng hợp lệ vào form, người dùng bấm Lưu như tạo tay.</summary>
 public sealed record OrderImportPreviewDto(IReadOnlyList<string> SizeColumns, IReadOnlyList<OrderImportRowDto> Rows,

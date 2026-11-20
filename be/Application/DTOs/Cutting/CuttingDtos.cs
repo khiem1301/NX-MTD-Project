@@ -8,7 +8,7 @@ public sealed record CuttingLayLineDto(
     int ActualQty);
 
 /// <param name="UsedM">null = bàn cũ chưa có chiều dài bàn cắt.</param>
-public sealed record CuttingLayFabricDto(int MaterialId, string MaterialName, string MaterialColor, decimal? UsedM);
+public sealed record CuttingLayFabricDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor, decimal? UsedM);
 
 /// <param name="Fabrics">Số mét từng vải của bàn (DEV-ALL-93).</param>
 /// <param name="SizeSummary">Số lượng sau cắt theo size, VD "M:90, L:60".</param>
@@ -37,7 +37,7 @@ public sealed record CuttingLayQuery : PageQuery
 
 public sealed record CutHandoverListItemDto(
     int CutHandoverId, string HandoverCode, int WorkOrderId, string WorkOrderCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
+    string CuttingTeamCode, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
     int TotalHandedQty);
 
 public sealed record CutHandoverLineDto(
@@ -46,7 +46,7 @@ public sealed record CutHandoverLineDto(
 
 public sealed record CutHandoverDto(
     int CutHandoverId, string HandoverCode, int WorkOrderId, string WorkOrderCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
+    string CuttingTeamCode, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
     string? RejectReason, IReadOnlyList<CutHandoverLineDto> Lines);
 
 /// <summary>Số còn được bàn giao của từng dòng đơn = đã cắt − đã bàn giao (chờ nhận + đã nhận).</summary>

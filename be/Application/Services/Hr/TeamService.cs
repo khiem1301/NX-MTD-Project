@@ -41,7 +41,7 @@ public sealed class TeamService : ITeamService
         if (duplicate is not null) return Fail.As<int>(duplicate);
         var team = new Team
         {
-            TeamCode = dto.TeamCode.Trim().ToUpperInvariant(), TeamName = dto.TeamName.Trim(),
+            TeamCode = dto.TeamCode.Trim().ToUpperInvariant(),
             TeamType = CodeText.ToCode(dto.TeamType), Status = RecordStatus.Active, CreatedAt = _clock.Now,
         };
         return await _uow.InTransactionAsync(async () =>   // D17: log cần TeamId
@@ -70,7 +70,6 @@ public sealed class TeamService : ITeamService
         }
         var before = Snapshot(team);
         team.TeamCode = dto.TeamCode.Trim().ToUpperInvariant();
-        team.TeamName = dto.TeamName.Trim();
         team.TeamType = newType;
         _audit.Add(new AuditEntry(nameof(Team), teamId, AuditActions.Update, before, Snapshot(team)));
         await _uow.SaveChangesAsync();
@@ -163,7 +162,7 @@ public sealed class TeamService : ITeamService
                 ChangeRole(holder, workerRoleId, roleCode, RoleCodes.Worker, "Thôi giữ chức do bổ nhiệm người khác");
                 await _uow.SaveChangesAsync();
             }
-            ChangeRole(person, newRoleId, person.Role.RoleCode, roleCode, $"Bổ nhiệm {label} tổ {team.TeamName}");
+            ChangeRole(person, newRoleId, person.Role.RoleCode, roleCode, $"Bổ nhiệm {label} tổ {team.TeamCode}");
             LogTeam(teamId, holder is null
                 ? $"Bổ nhiệm {person.FullName} làm {label}"
                 : $"Bổ nhiệm {person.FullName} làm {label}, {holder.FullName} về Công nhân");
@@ -186,7 +185,7 @@ public sealed class TeamService : ITeamService
 
         var label = oldCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó";
         ChangeRole(person, await _employees.GetRoleIdAsync(RoleCodes.Worker, ct), oldCode, RoleCodes.Worker,
-            $"Thôi giữ chức {label} tổ {team.TeamName}");
+            $"Thôi giữ chức {label} tổ {team.TeamCode}");
         LogTeam(teamId, $"{person.FullName} thôi giữ chức {label}, về Công nhân");
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.TeamDismissed);
@@ -207,7 +206,7 @@ public sealed class TeamService : ITeamService
         if (taken is not null)
             return Result.Failure(ErrorCodes.TeamMemberHasTeam, string.Format(Messages.TeamMemberHasTeam, taken.FullName));
 
-        SetTeam(people, null, teamId, $"Thêm vào tổ {team.TeamName}. {dto.Reason?.Trim()}".Trim());
+        SetTeam(people, null, teamId, $"Thêm vào tổ {team.TeamCode}. {dto.Reason?.Trim()}".Trim());
         LogTeam(teamId, $"Thêm vào tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
         await _uow.SaveChangesAsync();
         return Result.Success(string.Format(Messages.TeamMembersAdded, people.Count));
@@ -225,7 +224,7 @@ public sealed class TeamService : ITeamService
         if (leader is not null)
             return Result.Failure(ErrorCodes.TeamRemoveLeader, string.Format(Messages.TeamRemoveLeader, leader.FullName));
 
-        SetTeam(people, teamId, null, $"Loại khỏi tổ {team.TeamName}. {dto.Reason?.Trim()}".Trim());
+        SetTeam(people, teamId, null, $"Loại khỏi tổ {team.TeamCode}. {dto.Reason?.Trim()}".Trim());
         LogTeam(teamId, $"Loại khỏi tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
         await _uow.SaveChangesAsync();
         return Result.Success(string.Format(Messages.TeamMembersRemoved, people.Count));
@@ -246,7 +245,7 @@ public sealed class TeamService : ITeamService
         if (moved.Count == 0) return;
         LogTeam(target.TeamId, $"Nhận chuyển đến: {Names(moved)} (hiệu lực {effectiveDate:dd/MM/yyyy})");
         foreach (var group in moved.Where(p => oldTeams[p.EmployeeId] is not null).GroupBy(p => oldTeams[p.EmployeeId]!.Value))
-            LogTeam(group.Key, $"Chuyển sang tổ {target.TeamName}: {Names(group)} (hiệu lực {effectiveDate:dd/MM/yyyy})");
+            LogTeam(group.Key, $"Chuyển sang tổ {target.TeamCode}: {Names(group)} (hiệu lực {effectiveDate:dd/MM/yyyy})");
     }
 
     private void SetTeam(IEnumerable<Employee> people, int? from, int? to, string reason)
@@ -274,10 +273,8 @@ public sealed class TeamService : ITeamService
     {
         if (await _teams.CodeExistsAsync(dto.TeamCode.Trim().ToUpperInvariant(), exceptId, ct))
             return Result.Failure(ErrorCodes.TeamCodeDuplicate, Messages.TeamCodeDuplicate);
-        if (await _teams.NameExistsAsync(dto.TeamName.Trim(), exceptId, ct))
-            return Result.Failure(ErrorCodes.TeamNameDuplicate, Messages.TeamNameDuplicate);
         return null;
     }
 
-    private static object Snapshot(Team t) => new { t.TeamCode, t.TeamName, t.TeamType, t.Status };
+    private static object Snapshot(Team t) => new { t.TeamCode, t.TeamType, t.Status };
 }

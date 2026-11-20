@@ -6,6 +6,7 @@ export type PageParams = { page: number; pageSize: number; keyword?: string };
 
 export type Material = {
   materialId: number;
+  materialCode: string;
   materialName: string;
   materialType: string;
   unit: string;
@@ -26,6 +27,7 @@ export type OrderMaterial = {
   orderMaterialId: number;
   orderId: number;
   materialId: number;
+  materialCode: string;
   materialName: string;
   materialType: string;
   unit: string;
@@ -59,6 +61,7 @@ export type OrderMaterialImportRow = {
   rowNumber: number;
   action: OrderMaterialImportAction;
   error: string | null;
+  materialCode: string;
   materialName: string | null;
   materialColor: string | null;
   unit: string | null;
@@ -143,6 +146,7 @@ export type MaterialReceiptLine = {
   purchaseOrderLineId: number | null;
   originalReceiptLineId: number | null;
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
@@ -181,6 +185,7 @@ export type PurchaseOrderLine = {
   purchaseOrderLineId: number;
   orderMaterialId: number | null;
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
@@ -280,6 +285,7 @@ export type ShortDeliveryLine = {
   /** Dòng phiếu nhập gốc; null = NVL chưa về lần nào. */
   materialReceiptLineId: number | null;
   materialId: number;
+  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
@@ -322,7 +328,7 @@ export type MaterialIssueListItem = {
   workOrderCode: string | null;
   requestId: number | null;
   receivingTeamId: number;
-  receivingTeamName: string;
+  receivingTeamCode: string;
   issueDate: string;
   status: string;
   issuedByName: string;
@@ -333,6 +339,7 @@ export type MaterialIssueListItem = {
 export type MaterialIssueLine = {
   materialIssueLineId: number;
   materialId: number | null;
+  materialCode: string | null;
   materialName: string | null;
   unit: string | null;
   materialColor: string | null;
@@ -409,6 +416,7 @@ export type NxtReportQuery = PageParams & {
 export type NxtSummary = {
   warehouseType: string;
   materialId: number | null;
+  materialCode: string | null;
   materialName: string | null;
   materialType: string | null;
   unit: string | null;
@@ -430,7 +438,7 @@ export type NxtSummary = {
 /** BTP tổ may theo dòng đơn (26/10): số bộ đã nhận từ kho, đã QC đạt, hàng hủy, còn trên chuyền. */
 export type TeamPieceHolding = {
   sewingTeamId: number;
-  teamName: string;
+  teamCode: string;
   orderLineId: number;
   orderCode: string;
   productCode: string;
@@ -464,6 +472,7 @@ export type IncomingCustomerMaterial = {
   orderMaterialId: number;
   orderId: number;
   orderCode: string;
+  materialCode: string;
   materialName: string;
   materialColor: string;
   unit: string;
@@ -493,6 +502,7 @@ export type IncomingSupplierMaterial = {
   expectedDeliveryDates?: string[];
   receivedCount: number;
   purchaseOrderLineId: number;
+  materialCode: string;
   materialName: string;
   materialColor: string;
   unit: string;
@@ -510,6 +520,7 @@ export type ClosedShortPurchase = {
   orderCode: string | null;
   supplierName: string | null;
   purchaseOrderLineId: number;
+  materialCode: string;
   materialName: string;
   materialColor: string;
   unit: string;

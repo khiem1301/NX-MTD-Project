@@ -62,7 +62,7 @@ public sealed class PayrollService : IPayrollService
         var daysWithoutOutput = await _repo.GetDaysWithoutOutputAsync(period.StartDate, period.EndDate, ct);
 
         var exportRows = rows.Select(r => new PayrollExportRowDto(
-                r.EmployeeId, r.EmployeeCode, r.FullName, r.RoleName, CodeText.ToPascal(r.PayType), r.TeamName,
+                r.EmployeeId, r.EmployeeCode, r.FullName, r.RoleName, CodeText.ToPascal(r.PayType), r.TeamCode,
                 r.WorkDays, r.SundayWorkDays, r.OvertimeHours, r.SundayOvertimeHours,
                 r.PieceRateAmount, r.SundayPieceRateBonus, r.ScrapDeduction, r.GradeCode, r.GradeAllowance,
                 missingPunch.GetValueOrDefault(r.EmployeeId), daysWithoutOutput.GetValueOrDefault(r.EmployeeId)))
@@ -361,7 +361,7 @@ public sealed class PayrollService : IPayrollService
             .ToList();   // OrderBy ổn định nên giữ nguyên thứ tự cột trong nhóm
 
     private static PayslipDto ToPayslipDto(Payslip s) => new(
-        s.PayslipId, s.EmployeeId, s.Employee.EmployeeCode, s.Employee.FullName, s.Employee.Team?.TeamName,
+        s.PayslipId, s.EmployeeId, s.Employee.EmployeeCode, s.Employee.FullName, s.Employee.Team?.TeamCode,
         s.WorkDays, s.TotalAdditions, s.TotalDeductions, s.Insurance, s.NetPay,
         OrderForDisplay(s.PayslipItems));
 

@@ -191,7 +191,7 @@ public sealed class EmployeeService : IEmployeeService
 
         var wasLeader = employee.Role.RoleCode is RoleCodes.TeamLeader or RoleCodes.TeamDeputy;
         var message = wasLeader
-            ? string.Format(Messages.ResignedWasLeader, employee.Team?.TeamName, employee.Role.RoleCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó")
+            ? string.Format(Messages.ResignedWasLeader, employee.Team?.TeamCode, employee.Role.RoleCode == RoleCodes.TeamLeader ? "tổ trưởng" : "tổ phó")
             : Messages.EmployeeResigned;
         return Result.Success(message);
     }
@@ -274,7 +274,7 @@ public sealed class EmployeeService : IEmployeeService
             {
                 if (team.TeamType == TeamTypes.Office) return Result.Failure(ErrorCodes.TeamLeaderInvalidTeam, Messages.TeamLeaderInvalidTeam);
                 var holder = await _employees.FindTeamRoleHolderAsync(tid, roleCode, exceptEmployeeId, ct);
-                if (holder is not null) return PositionTaken(roleCode, team.TeamName, holder.FullName);
+                if (holder is not null) return PositionTaken(roleCode, team.TeamCode, holder.FullName);
             }
         }
         if (attendanceCode is int att && await _employees.AttendanceCodeTakenAsync(att, exceptEmployeeId, ct))
@@ -282,10 +282,10 @@ public sealed class EmployeeService : IEmployeeService
         return Result.Success();
     }
 
-    private static Result PositionTaken(string roleCode, string teamName, string holderName) =>
+    private static Result PositionTaken(string roleCode, string teamCode, string holderName) =>
         roleCode == RoleCodes.TeamLeader
-            ? Result.Failure(ErrorCodes.TeamLeaderExists, string.Format(Messages.TeamLeaderExistsNamed, teamName, holderName))
-            : Result.Failure(ErrorCodes.TeamDeputyExists, string.Format(Messages.TeamDeputyExistsNamed, teamName, holderName));
+            ? Result.Failure(ErrorCodes.TeamLeaderExists, string.Format(Messages.TeamLeaderExistsNamed, teamCode, holderName))
+            : Result.Failure(ErrorCodes.TeamDeputyExists, string.Format(Messages.TeamDeputyExistsNamed, teamCode, holderName));
 
     /// <summary>Lưu thay đổi hồ sơ rồi mới gọi thủ tục map mã chấm công (thủ tục UPDATE Employee làm đổi RowVer, D30).</summary>
     private async Task<Result> SaveAndMapAsync(Employee employee, object before, string roleCode, int? mapCode, string? reason,

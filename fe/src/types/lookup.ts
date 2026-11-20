@@ -28,10 +28,11 @@ export type ComponentOption = {
   piecesPerGarment: number;
 };
 
-export type TeamOption = { teamId: number; teamCode: string; teamName: string; teamType: string };
+export type TeamOption = { teamId: number; teamCode: string; teamType: string };
 
 export type MaterialOption = {
   materialId: number;
+  materialCode: string;
   materialName: string;
   materialType: string;
   unit: string;

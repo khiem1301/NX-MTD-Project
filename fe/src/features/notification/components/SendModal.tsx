@@ -59,7 +59,7 @@ export function SendModal({ open, onClose }: { open: boolean; onClose: () => voi
               loading={targets.isLoading}
               options={(targets.data?.teams ?? []).map((t) => ({
                 value: t.teamId,
-                label: t.teamName,
+                label: t.teamCode,
               }))}
             />
           </Form.Item>

@@ -78,6 +78,8 @@ public class OrderImportTests : ProductionTestBase
 
         data.Rows.Select(r => r.Error is null).Should().Equal(false, false, true, false, false, false, false);
         data.Rows[0].Error.Should().Be(string.Format(Messages.OrderImportProductUnknown, "XX99"));
+        data.Rows[0].MissingProduct.Should().BeTrue();
+        data.Rows[1].MissingProduct.Should().BeFalse();
         data.Rows[1].Error.Should().Be(string.Format(Messages.OrderImportProductInactive, "CU02"));
         data.Rows[3].Error.Should().Be(string.Format(Messages.OrderImportPriceMismatch, "AO01"));
         data.Rows[4].Error.Should().Be(Messages.OrderImportNoQty);

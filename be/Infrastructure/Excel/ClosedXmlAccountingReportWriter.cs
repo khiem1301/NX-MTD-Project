@@ -44,7 +44,7 @@ public sealed class ClosedXmlAccountingReportWriter : IAccountingReportExcelWrit
             var c = 1;
             sheet.Cell(r, c++).Value = row.EmployeeCode;
             sheet.Cell(r, c++).Value = row.FullName;
-            sheet.Cell(r, c++).Value = row.TeamName ?? "";
+            sheet.Cell(r, c++).Value = row.TeamCode ?? "";
             sheet.Cell(r, c++).Value = row.RegularWorkdays;
             sheet.Cell(r, c++).Value = row.SundayWorkdays;
             sheet.Cell(r, c++).Value = row.TotalWorkdays;

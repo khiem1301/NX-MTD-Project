@@ -137,7 +137,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
             >
               <Select
                 placeholder={LABELS.selectCuttingTeam}
-                options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+                options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
               />
             </Form.Item>
           </Col>

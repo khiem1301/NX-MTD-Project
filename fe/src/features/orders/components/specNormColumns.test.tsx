@@ -4,10 +4,11 @@ import { DataTable } from '@/components/common/DataTable';
 import { toMaterialOption, type NormRow } from '../utils/productSpec';
 import { specNormColumns } from './specNormColumns';
 
-const FULL_LABEL = 'V-01 - Đen (m)';
+const FULL_LABEL = 'V-01 - Vải thun cotton 2 chiều - Đen (m)';
 const material = toMaterialOption({
   materialId: 1,
-  materialName: 'V-01',
+  materialCode: 'V-01',
+  materialName: 'Vải thun cotton 2 chiều',
   color: 'Đen',
   unit: 'm',
 });
@@ -73,14 +74,15 @@ describe('cột NVL của bảng định mức', () => {
     expect(material).toMatchObject({ value: 1, label: FULL_LABEL, short: 'V-01 - Đen' });
   });
 
-  it('NVL không phân màu thì chỉ hiện tên', () => {
+  it('NVL không phân màu thì chỉ hiện mã', () => {
     expect(
       toMaterialOption({
         materialId: 2,
-        materialName: 'K-01',
+        materialCode: 'K-01',
+        materialName: 'Khóa kéo',
         color: '',
         unit: 'cái',
       }),
-    ).toMatchObject({ label: 'K-01 (cái)', short: 'K-01' });
+    ).toMatchObject({ label: 'K-01 - Khóa kéo (cái)', short: 'K-01' });
   });
 });

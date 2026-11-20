@@ -173,7 +173,7 @@ FROM #Iss i
 JOIN (SELECT WoKey, MaterialId, SUM(UsedM) AS Total FROM #LayFab GROUP BY WoKey, MaterialId) t ON t.WoKey = i.WoKey
 CROSS APPLY (SELECT CAST(ROUND(t.Total * 1.005 * CASE WHEN i.IssueKey LIKE '%-F1' THEN .55 WHEN i.IssueKey LIKE '%-F2' THEN .45 ELSE .10 END, 1) AS DECIMAL(18,3)) AS Issued) a
 CROSS APPLY (SELECT a.Issued,
-                    CASE WHEN i.IssueKey = 'O3-F1' AND t.MaterialId = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'V-GIO-DEN') THEN 2.0 ELSE 0 END AS Short) q
+                    CASE WHEN i.IssueKey = 'O3-F1' AND t.MaterialId = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'V-GIO-DEN') THEN 2.0 ELSE 0 END AS Short) q
 WHERE i.Wh = 'MATERIAL' AND q.Issued > 0;
 INSERT #Mv (Wh, MaterialId, DocType, DocId, LineId, Qty, D, Ord)
 SELECT 'MATERIAL', l.MaterialId, 'MATERIAL_ISSUE', mi.MaterialIssueId, l.MaterialIssueLineId, -l.ConfirmedQty, mi.IssueDate, 20
@@ -340,7 +340,7 @@ FROM dbo.MaterialReturn mr
 JOIN dbo.CustomerOrder co ON co.OrderId = mr.OrderId
 JOIN (VALUES ('DH-2509-001', 'S-VAI-VUN', 46.5), ('DH-2510-002', 'S-VAI-VUN', 21.0), ('DH-2510-003', 'S-VAI-VUN', 38.0), ('DH-2510-003', 'S-KIM-GAY', 12.0)) v (OrderCode, Mat, Qty)
      ON v.OrderCode = co.OrderCode
-JOIN dbo.Material m ON m.MaterialName = v.Mat
+JOIN dbo.Material m ON m.MaterialCode = v.Mat
 WHERE mr.Status = 'CONFIRMED' AND mr.Note NOT LIKE N'%lập lại%';
 INSERT #Mv (Wh, MaterialId, DocType, DocId, LineId, Qty, D, Ord)
 SELECT 'MATERIAL', l.MaterialId, 'MATERIAL_RETURN', mr.MaterialReturnId, l.MaterialReturnLineId, l.ConfirmedQty, CAST(mr.ConfirmedAt AS DATE), 40

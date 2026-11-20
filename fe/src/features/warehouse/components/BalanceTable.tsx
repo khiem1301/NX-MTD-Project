@@ -28,6 +28,7 @@ const qty = (title: string, dataIndex: keyof StockBalance) => ({
 });
 
 const materialColumns: TableColumnsType<StockBalance> = [
+  { title: LABELS.materialCode, dataIndex: 'materialCode' },
   { title: LABELS.materialName, dataIndex: 'materialName' },
   {
     title: LABELS.materialType,
@@ -52,7 +53,7 @@ const pieceColumns: TableColumnsType<StockBalance> = [
 
 const describe = (b: StockBalance): string =>
   b.materialId !== null
-    ? `${b.materialName} (${b.materialColor || '—'})`
+    ? `${b.materialCode} ${b.materialName} (${b.materialColor || '—'})`
     : `${b.orderCode} ${b.productCode} ${b.color}-${b.sizeCode}${b.componentName ? ` (${b.componentName})` : ''}`;
 
 /** Bảng tồn của một kho; mở thẻ kho ở cột thao tác. */

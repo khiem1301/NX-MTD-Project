@@ -213,10 +213,10 @@ public class FgHandoverServiceTests
             Arg.Any<CancellationToken>());
     }
 
-    private void Kpi(int target, string status = KpiStatuses.Active, int id = 1, string team = "Tổ may 1") => _kpis.Add(new KpiTarget
+    private void Kpi(int target, string status = KpiStatuses.Active, int id = 1, string team = "MAY1") => _kpis.Add(new KpiTarget
     {
         KpiTargetId = id, OrderId = 7, ProductId = 3, TargetFinishedQty = target, Status = status, Order = _order, Product = _product,
-        SewingTeam = new Team { TeamName = team },
+        SewingTeam = new Team { TeamCode = team },
     });
 
     private void GivenQc(params (int KpiTargetId, int Qty)[] rows) =>
@@ -238,7 +238,7 @@ public class FgHandoverServiceTests
 
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("130/200") && m.Message.Contains("65%") && m.Message.Contains("chưa đạt")
-                && m.Message.Contains("DH-1") && m.Message.Contains("Tổ may 1")),
+                && m.Message.Contains("DH-1") && m.Message.Contains("MAY1")),
             Arg.Any<CancellationToken>());
     }
 
@@ -257,8 +257,8 @@ public class FgHandoverServiceTests
     [Fact]
     public async Task Confirm_with_many_teams_sends_one_message_comparing_the_warehouse_with_the_total_target()
     {
-        Kpi(100, id: 1, team: "Tổ may 1");
-        Kpi(100, id: 2, team: "Tổ may 2");
+        Kpi(100, id: 1, team: "MAY1");
+        Kpi(100, id: 2, team: "MAY2");
         GivenQc((1, 40), (2, 10));
         var h = Handover(HandoverStatuses.Pending, (101, 40), (102, 10));
 
@@ -266,7 +266,7 @@ public class FgHandoverServiceTests
 
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("50/200") && m.Message.Contains("25%") && m.Message.Contains("chưa đạt")
-                && m.Message.Contains("Tổ may 1 40/100") && m.Message.Contains("Tổ may 2 10/100")
+                && m.Message.Contains("MAY1 40/100") && m.Message.Contains("MAY2 10/100")
                 && !m.Message.Contains("(đạt)") && !m.Message.Contains("Kết thúc đơn")),
             Arg.Any<CancellationToken>());
     }
@@ -274,8 +274,8 @@ public class FgHandoverServiceTests
     [Fact]
     public async Task Confirm_never_says_a_team_is_met_just_because_the_warehouse_received_enough_from_all_teams()
     {
-        Kpi(50, id: 1, team: "Tổ may 1");
-        Kpi(50, id: 2, team: "Tổ may 2");
+        Kpi(50, id: 1, team: "MAY1");
+        Kpi(50, id: 2, team: "MAY2");
         GivenQc((1, 50), (2, 0));
         var h = Handover(HandoverStatuses.Pending, (101, 40), (102, 10));
 
@@ -283,7 +283,7 @@ public class FgHandoverServiceTests
 
         await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Manager,
             Arg.Is<NotificationMessage>(m => m.Message.Contains("50/100")
-                && m.Message.Contains("Tổ may 1 50/50 (đạt)") && m.Message.Contains("Tổ may 2 0/50.")
+                && m.Message.Contains("MAY1 50/50 (đạt)") && m.Message.Contains("MAY2 0/50.")
                 && m.Message.Contains("Tổ đạt có thể bấm Kết thúc đơn")),
             Arg.Any<CancellationToken>());
     }

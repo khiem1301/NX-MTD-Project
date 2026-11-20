@@ -104,20 +104,20 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     check.mockImplementation(({ bundle: b }: { bundle: ExcelBundle }) =>
       Promise.resolve({
         ...respond(b),
-        missingMaterials: [{ materialName: 'V-9999', suggestedType: 'FABRIC', colors: ['Hồng'] }],
+        missingMaterials: [{ materialCode: 'V-9999', suggestedType: 'FABRIC', colors: ['Hồng'] }],
       }),
     ),
   );
 
-  const openAsk = async (widthM?: number) => {
+  const openAsk = async (materialName?: string) => {
     const onConfirm = jest.fn();
     renderModal(onConfirm);
     await act(async () => {
       jest.advanceTimersByTime(600);
     });
     await waitFor(() => expect(screen.getByText(/1 NVL chưa có trong danh mục kho/)).toBeTruthy());
-    if (widthM !== undefined)
-      fireEvent.change(screen.getByRole('spinbutton'), { target: { value: String(widthM) } });
+    if (materialName)
+      fireEvent.change(screen.getByPlaceholderText('Tên NVL'), { target: { value: materialName } });
     fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
     await waitFor(() =>
       expect(screen.getAllByText('Thêm NVL vào danh mục?').length).toBeGreaterThan(0),
@@ -143,14 +143,24 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     expect(screen.getByRole('button', { name: /Xác nhận/ })).toBeTruthy();
   });
 
-  it('Thêm vào danh mục: kèm NVL mới với gợi ý vải, màu, khổ mặc định', async () => {
+  it('Thêm vào danh mục mà thiếu tên NVL thì chưa xác nhận', async () => {
     const onConfirm = await openAsk();
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
+    await act(async () => {
+      jest.advanceTimersByTime(100);
+    });
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('Thêm vào danh mục: kèm NVL mới đã điền (gợi ý vải, màu, khổ)', async () => {
+    const onConfirm = await openAsk('Lụa hồng mới');
     fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][1]).toEqual([
       expect.objectContaining({
-        materialName: 'V-9999',
+        materialCode: 'V-9999',
+        materialName: 'Lụa hồng mới',
         materialType: 'FABRIC',
         color: 'Hồng',
         widthM: 1.5,

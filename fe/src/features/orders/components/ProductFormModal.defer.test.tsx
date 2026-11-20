@@ -55,14 +55,9 @@ beforeEach(() => {
 
 it('DEV-ALL-124: Thêm mới thiếu mục Excel bắt buộc thì không lưu', async () => {
   mockMissing.mockReturnValue(['markers', 'orderMaterials']);
+  const onStage = jest.fn();
   render(
-    <ProductFormModal
-      open
-      product={null}
-      allowImports
-      onDeferImports={jest.fn()}
-      onClose={jest.fn()}
-    />,
+    <ProductFormModal open product={null} allowImports onStage={onStage} onClose={jest.fn()} />,
   );
   fireEvent.click(screen.getByText('xác nhận popup'));
   await waitFor(() => expect(screen.getByDisplayValue('TEST01')).toBeTruthy());
@@ -71,21 +66,13 @@ it('DEV-ALL-124: Thêm mới thiếu mục Excel bắt buộc thì không lưu',
 
   await waitFor(() => expect(mockMissing).toHaveBeenCalled());
   expect(mutate).not.toHaveBeenCalled();
+  expect(onStage).not.toHaveBeenCalled();
 });
 
-it('form đơn: Xác nhận popup điền form; Lưu mã hàng thì giao dữ liệu đã sửa cho form đơn', async () => {
-  mutate.mockImplementation((_vars, opts: { onSuccess: (id: number) => void }) =>
-    opts.onSuccess(15),
-  );
-  const onDefer = jest.fn();
+it('form đơn: Lưu không ghi mã hàng, giao dữ liệu đã sửa cho form đơn', async () => {
+  const onStage = jest.fn();
   render(
-    <ProductFormModal
-      open
-      product={null}
-      allowImports
-      onDeferImports={onDefer}
-      onClose={jest.fn()}
-    />,
+    <ProductFormModal open product={null} allowImports onStage={onStage} onClose={jest.fn()} />,
   );
   fireEvent.click(screen.getByText('xác nhận popup'));
   await waitFor(() => expect(screen.getByDisplayValue('TEST01')).toBeTruthy());
@@ -93,10 +80,8 @@ it('form đơn: Xác nhận popup điền form; Lưu mã hàng thì giao dữ li
 
   fireEvent.click(screen.getByRole('button', { name: /Lưu/ }));
 
-  await waitFor(() => expect(onDefer).toHaveBeenCalled());
-  expect(mutate.mock.calls[0][0].body).toMatchObject({
-    productCode: 'TEST01',
-  });
-  expect(onDefer.mock.calls[0][0]).toBe(15);
-  expect(onDefer.mock.calls[0][2]).toEqual({ bundle, fileName: 'all.xlsx' });
+  await waitFor(() => expect(onStage).toHaveBeenCalled());
+  expect(mutate).not.toHaveBeenCalled();
+  expect(onStage.mock.calls[0][0]).toMatchObject({ productCode: 'TEST01' });
+  expect(onStage.mock.calls[0][1]).toEqual({ bundle, fileName: 'all.xlsx' });
 });

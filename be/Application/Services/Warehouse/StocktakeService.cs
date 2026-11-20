@@ -51,6 +51,7 @@ public sealed class StocktakeService : IStocktakeService
             .Select(s => new StocktakeDto(s.StocktakeId, s.StocktakeCode, s.WarehouseType, s.Scope, s.StocktakeDate, s.Status,
                 s.ReturnReason, s.CreatedAt, s.ApprovedAt,
                 s.StocktakeLines.OrderBy(l => l.StocktakeLineId).Select(l => new StocktakeLineDto(l.StocktakeLineId, l.StockBalance.MaterialId,
+                    l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialCode,
                     l.StockBalance.Material == null ? null : l.StockBalance.Material.MaterialName,
                     l.StockBalance.Material == null ? null : l.StockBalance.Material.Unit, l.StockBalance.Material == null ? null : l.StockBalance.Material.Color,
                     l.StockBalance.OrderLineId,

@@ -14,8 +14,6 @@ namespace NX_MTD.Application.Services;
 /// </summary>
 public sealed class GradeService : IGradeService
 {
-    private const int DefectWindowDays = 30;
-
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUser _user;
     private readonly INotificationService _notifier;
@@ -71,10 +69,10 @@ public sealed class GradeService : IGradeService
         if (await Codes.AnyAsync(c => c.GradeCode == code, ct))
             return Result<GradeCodeDto>.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeDuplicate);
 
-        var row = new GradeLevelCode { GradeCode = code, GradeName = dto.GradeName.Trim(), Status = GradeCodes.Active, CreatedAt = _clock.Now };
+        var row = new GradeLevelCode { GradeCode = code, Status = GradeCodes.Active, CreatedAt = _clock.Now };
         await _uow.Repository<GradeLevelCode>().AddAsync(row);
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Insert, null, new { row.GradeCode, row.GradeName },
-            Summary: $"Thêm bậc thợ {row.GradeCode} ({row.GradeName})"));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Insert, null, new { row.GradeCode },
+            Summary: $"Thêm bậc thợ {row.GradeCode}"));
         await _uow.SaveChangesAsync();
         return Result<GradeCodeDto>.Success(ToDto(row, false), Messages.Saved);
     }
@@ -85,11 +83,10 @@ public sealed class GradeService : IGradeService
         var row = await Codes.FirstOrDefaultAsync(c => c.GradeCode == code, ct);
         if (row is null) return Fail.NotFound<GradeCodeDto>();
 
-        var before = new { row.GradeName, row.Status };
-        row.GradeName = dto.GradeName.Trim();
+        var before = new { row.Status };
         row.Status = dto.Status == "Inactive" ? GradeCodes.Inactive : GradeCodes.Active;
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Update, before, new { row.GradeName, row.Status }, code,
-            $"Cập nhật bậc thợ {code}: tên {before.GradeName} → {row.GradeName}, trạng thái {(row.Status == GradeCodes.Active ? "đang dùng" : "ngừng dùng")}"));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Update, before, new { row.Status }, code,
+            $"Cập nhật bậc thợ {code}: trạng thái {(row.Status == GradeCodes.Active ? "đang dùng" : "ngừng dùng")}"));
         await _uow.SaveChangesAsync();
         return Result<GradeCodeDto>.Success(ToDto(row, await IsInUseAsync(code, ct)), Messages.Saved);
     }
@@ -102,14 +99,14 @@ public sealed class GradeService : IGradeService
         if (await IsInUseAsync(code, ct)) return Result.Failure(ErrorCodes.GradeInvalid, Messages.GradeCodeInUse);
 
         _uow.Repository<GradeLevelCode>().Remove(row);
-        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Delete, new { row.GradeCode, row.GradeName }, null, code,
-            $"Xóa bậc thợ {code} ({row.GradeName})"));
+        _audit.Add(new AuditEntry(nameof(GradeLevelCode), 0, AuditActions.Delete, new { row.GradeCode }, null, code,
+            $"Xóa bậc thợ {code}"));
         await _uow.SaveChangesAsync();
         return Result.Success(Messages.Saved);
     }
 
     private static GradeCodeDto ToDto(GradeLevelCode c, bool inUse) =>
-        new(c.GradeCode, c.GradeName, CodeText.ToPascal(c.Status), inUse);
+        new(c.GradeCode, CodeText.ToPascal(c.Status), inUse);
 
     public async Task<Result<GradeLevelDto>> UpdateLevelAsync(int gradeLevelId, UpdateGradeLevelDto dto, CancellationToken ct)
     {
@@ -181,7 +178,7 @@ public sealed class GradeService : IGradeService
         var workers = await _uow.Repository<Employee>().Query().AsNoTracking()
             .Where(e => e.Status == RecordStatus.Active && e.Role.RoleCode == RoleCodes.Worker)
             .OrderBy(e => e.EmployeeCode)
-            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.CurrentGradeCode, e.TeamId, TeamName = e.Team == null ? null : e.Team.TeamName })
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.CurrentGradeCode, e.TeamId, TeamCode = e.Team == null ? null : e.Team.TeamCode })
             .ToListAsync(ct);
         var ids = workers.Select(w => w.EmployeeId).ToList();
         var defects = await DefectCountsAsync(ids, ct);
@@ -189,7 +186,7 @@ public sealed class GradeService : IGradeService
             .Select(e => e.WorkerId).Distinct().ToListAsync(ct);
         return Result<IReadOnlyList<GradeWorkerDto>>.Success(workers
             .Select(w => new GradeWorkerDto(w.EmployeeId, w.EmployeeCode, w.FullName, w.CurrentGradeCode, defects.GetValueOrDefault(w.EmployeeId),
-                pending.Contains(w.EmployeeId), w.TeamName, w.TeamId))
+                pending.Contains(w.EmployeeId), w.TeamCode, w.TeamId))
             .ToList());
     }
 
@@ -203,7 +200,7 @@ public sealed class GradeService : IGradeService
             .Where(e => string.IsNullOrEmpty(keyword) || e.Worker.FullName.Contains(keyword) || e.Worker.EmployeeCode.Contains(keyword))
             .OrderByDescending(e => e.GradeEvaluationId)
             .Select(e => new GradeEvaluationDto(e.GradeEvaluationId, e.WorkerId, e.Worker.EmployeeCode, e.Worker.FullName, e.TeamId,
-                e.Team == null ? null : e.Team.TeamName, e.ProposedByNavigation.FullName, e.CurrentGradeCode, e.ProposedGradeCode,
+                e.Team == null ? null : e.Team.TeamCode, e.ProposedByNavigation.FullName, e.CurrentGradeCode, e.ProposedGradeCode,
                 e.Reason, e.RecentDefectCount, e.EvaluationDate, e.Status, e.EffectiveDate, e.ConsideredAt, e.DecisionNote, e.CreatedAt))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<GradeEvaluationDto>>.Success(page);
@@ -325,21 +322,14 @@ public sealed class GradeService : IGradeService
 
     // ---------- Nội bộ ----------
 
-    /// <summary>Số phiếu lỗi (Rework + Scrap, không tính đã hủy) do công nhân gây ra trong 30 ngày gần nhất.</summary>
-    private async Task<Dictionary<int, int>> DefectCountsAsync(IReadOnlyCollection<int> workerIds, CancellationToken ct)
-    {
-        var from = _clock.Today.AddDays(-DefectWindowDays);
-        return await _uow.Repository<DefectRecord>().Query()
-            .Where(d => workerIds.Contains(d.ResponsibleWorkerId) && d.Status != DefectStatuses.Cancelled && d.WorkDate >= from)
-            .GroupBy(d => d.ResponsibleWorkerId).Select(g => new { g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
-    }
+    private Task<Dictionary<int, int>> DefectCountsAsync(IReadOnlyCollection<int> workerIds, CancellationToken ct) =>
+        GradeDefectCounter.CountRecentAsync(_uow, _clock.Today, workerIds, ct);
 
     private async Task<Result<GradeEvaluationDto>> GetOneAsync(int id, string message, CancellationToken ct)
     {
         var dto = (await Evaluations.AsNoTracking().Where(e => e.GradeEvaluationId == id)
             .Select(e => new GradeEvaluationDto(e.GradeEvaluationId, e.WorkerId, e.Worker.EmployeeCode, e.Worker.FullName, e.TeamId,
-                e.Team == null ? null : e.Team.TeamName, e.ProposedByNavigation.FullName, e.CurrentGradeCode, e.ProposedGradeCode,
+                e.Team == null ? null : e.Team.TeamCode, e.ProposedByNavigation.FullName, e.CurrentGradeCode, e.ProposedGradeCode,
                 e.Reason, e.RecentDefectCount, e.EvaluationDate, e.Status, e.EffectiveDate, e.ConsideredAt, e.DecisionNote, e.CreatedAt))
             .FirstAsync(ct));
         return Result<GradeEvaluationDto>.Success(dto, message);

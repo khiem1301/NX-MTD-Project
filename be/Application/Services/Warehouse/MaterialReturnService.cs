@@ -42,7 +42,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
                         || (r.WorkOrder != null && r.WorkOrder.WorkOrderCode.Contains(keyword)))
             .OrderByDescending(r => r.MaterialReturnId)
             .Select(r => new MaterialReturnListItemDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
-                r.ReturningTeam.TeamName, r.Order == null ? null : r.Order.OrderCode,
+                r.ReturningTeam.TeamCode, r.Order == null ? null : r.Order.OrderCode,
                 r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode, r.Status, r.CreatedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt,
                 r.MaterialReturnLines.Sum(l => l.ReturnedQty)))
@@ -54,13 +54,13 @@ public sealed class MaterialReturnService : IMaterialReturnService
     {
         var dto = await Returns.AsNoTracking().Where(r => r.MaterialReturnId == returnId)
             .Select(r => new MaterialReturnDto(r.MaterialReturnId, r.ReturnCode, r.WarehouseType, r.ReturningTeamId,
-                r.ReturningTeam.TeamName, r.Order == null ? null : r.Order.OrderCode,
+                r.ReturningTeam.TeamCode, r.Order == null ? null : r.Order.OrderCode,
                 r.WorkOrder == null ? null : r.WorkOrder.WorkOrderCode, r.Note, r.Status, r.CreatedAt,
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt, r.RejectReason,
                 r.MaterialReturnLines.OrderBy(l => l.MaterialReturnLineId).Select(l => new MaterialReturnLineDto(
                     l.MaterialReturnLineId, l.MaterialId, l.OrderLineId,
-                    l.Material != null ? l.Material.MaterialName : l.OrderLine!.ProductVariant.Product.ProductCode,
-                    l.Material != null ? string.Empty
+                    l.Material != null ? l.Material.MaterialCode : l.OrderLine!.ProductVariant.Product.ProductCode,
+                    l.Material != null ? l.Material.MaterialName
                         : l.OrderLine!.ProductVariant.ProductColor.Color + "/" + l.OrderLine.ProductVariant.SizeCode,
                     l.Material != null ? l.Material.Unit : MaterialReturnCapacity.PieceUnit,
                     l.Material != null ? l.Material.Color : l.OrderLine!.ProductVariant.ProductColor.Color,
@@ -157,7 +157,7 @@ public sealed class MaterialReturnService : IMaterialReturnService
         };
         await _uow.Repository<MaterialReturn>().AddAsync(ret);
         await _notifier.NotifyRoleAsync(RoleCodes.WarehouseKeeper, new NotificationMessage(NotificationSources.Warehouse,
-            "Chờ nhận hàng trả", $"Tổ {team!.TeamName} trả hàng về kho (phiếu chờ xác nhận), vui lòng đếm và nhận vào kho.", null), ct);
+            "Chờ nhận hàng trả", $"Tổ {team!.TeamCode} trả hàng về kho (phiếu chờ xác nhận), vui lòng đếm và nhận vào kho.", null), ct);
         await _uow.SaveChangesAsync();
         return Result<int>.Success(ret.MaterialReturnId, WarehouseMessages.ReturnCreated);
     }

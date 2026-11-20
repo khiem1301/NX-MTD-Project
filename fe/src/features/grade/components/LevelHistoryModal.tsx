@@ -55,7 +55,7 @@ export function LevelHistoryModal({
       open={code !== null}
       onClose={onClose}
       size="md"
-      title={code ? `${GR_LABELS.levelHistory} - ${code.gradeCode} · ${code.gradeName}` : undefined}
+      title={code ? `${GR_LABELS.levelHistory} - ${code.gradeCode}` : undefined}
     >
       <Alert type="info" showIcon style={{ marginBottom: 16 }} message={GR_LABELS.futureOnlyHint} />
       <DataTable rowKey="gradeLevelId" columns={columns} dataSource={list} pagination={false} />

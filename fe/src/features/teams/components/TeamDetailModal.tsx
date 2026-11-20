@@ -82,7 +82,7 @@ export function TeamDetailModal() {
     <DetailModal
       open={id !== null}
       onClose={close}
-      title={data ? `${data.teamCode} · ${data.teamName}` : undefined}
+      title={data?.teamCode}
       extra={
         data && (
           <Space wrap>

@@ -60,12 +60,12 @@ public sealed class WorkOrderCompletion
         var ids = received.Where(r => r.Value > 0).Select(r => r.Key).ToList();
         if (ids.Count == 0) return string.Empty;
         var materials = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => ids.Contains(m.MaterialId))
-            .Select(m => new { m.MaterialId, m.MaterialName, m.Unit }).ToListAsync(ct);
-        var rows = materials.OrderBy(m => m.MaterialName).Select(m =>
+            .Select(m => new { m.MaterialId, m.MaterialCode, m.Unit }).ToListAsync(ct);
+        var rows = materials.OrderBy(m => m.MaterialCode).Select(m =>
         {
             var got = received[m.MaterialId];
             var back = returned.GetValueOrDefault(m.MaterialId);
-            return $"{m.MaterialName}: nhận {Format(got)}, trả {Format(back)}, thực dùng {Format(Math.Max(0, got - back))} {m.Unit}";
+            return $"{m.MaterialCode}: nhận {Format(got)}, trả {Format(back)}, thực dùng {Format(Math.Max(0, got - back))} {m.Unit}";
         });
         return $" Vải: {string.Join("; ", rows)}.";
     }

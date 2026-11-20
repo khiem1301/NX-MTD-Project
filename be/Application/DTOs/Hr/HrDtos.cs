@@ -5,7 +5,7 @@ namespace NX_MTD.Application.DTOs;
 // ---- Hồ sơ + đổi mật khẩu (UC03, UC04) ----
 /// <summary>UC04: không có kiểu lương, mã chấm công, trạng thái tài khoản. Chỉ ngày sinh và số điện thoại tự sửa được (UpdateProfileDto).</summary>
 public sealed record ProfileDto(int EmployeeId, string EmployeeCode, string Username, string FullName, string? Gender,
-    DateOnly? DateOfBirth, string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamName,
+    DateOnly? DateOfBirth, string? Phone, string? AvatarUrl, string Role, string RoleName, string? TeamCode,
     DateOnly StartDate, string? CurrentGradeCode, bool IsTemporaryPassword);
 
 /// <summary>UC04: người dùng tự cập nhật ngày sinh và số điện thoại của mình; để trống thì xóa giá trị.</summary>
@@ -22,7 +22,7 @@ public sealed record EmployeeQuery : PageQuery
 }
 
 public sealed record EmployeeListItemDto(int EmployeeId, string EmployeeCode, string FullName, string Role, string RoleName,
-    int? TeamId, string? TeamName, string PayType, string? CurrentGradeCode, int? AttendanceCode, string Status,
+    int? TeamId, string? TeamCode, string PayType, string? CurrentGradeCode, int? AttendanceCode, string Status,
     string? AccountStatus, DateOnly StartDate);
 
 public sealed record AccountInfoDto(int AccountId, string Username, string Status, bool IsTemporaryPassword,
@@ -40,7 +40,7 @@ public sealed record EmployeeDetailDto
     public string Role { get; init; } = string.Empty;
     public string RoleName { get; init; } = string.Empty;
     public int? TeamId { get; init; }
-    public string? TeamName { get; init; }
+    public string? TeamCode { get; init; }
     public string PayType { get; init; } = string.Empty;
     public string? CurrentGradeCode { get; init; }
     public int? AttendanceCode { get; init; }
@@ -82,17 +82,17 @@ public sealed record ResignEmployeeDto(DateOnly ResignDate, string Reason, byte[
 public sealed record LockAccountDto(string Reason);
 
 // ---- Tổ (UC18) ----
-public sealed record TeamListItemDto(int TeamId, string TeamCode, string TeamName, string TeamType, string Status,
+public sealed record TeamListItemDto(int TeamId, string TeamCode, string TeamType, string Status,
     string? LeaderName, string? DeputyName, int MemberCount);
 
 public sealed record TeamMemberDto(int EmployeeId, string EmployeeCode, string FullName, string Role, string RoleName,
     string PayType, string? CurrentGradeCode);
 
-public sealed record TeamDetailDto(int TeamId, string TeamCode, string TeamName, string TeamType, string Status,
+public sealed record TeamDetailDto(int TeamId, string TeamCode, string TeamType, string Status,
     IReadOnlyList<TeamMemberDto> Members, IReadOnlyList<AuditLogDto> History);
 
 /// <param name="TeamType">PascalCase: Cutting, Sewing, Office.</param>
-public sealed record SaveTeamDto(string TeamCode, string TeamName, string TeamType);
+public sealed record SaveTeamDto(string TeamCode, string TeamType);
 public sealed record TransferMembersDto(IReadOnlyList<int> EmployeeIds, DateOnly EffectiveDate, string? Reason);
 
 /// <summary>Thêm nhân viên chưa có tổ vào tổ, hoặc loại khỏi tổ.</summary>
@@ -105,5 +105,5 @@ public sealed record DismissDto(int EmployeeId);
 public sealed record AppointDto(int EmployeeId, string Position);
 
 // ---- Tra cứu dùng chung (Minh, Kiều) ----
-public sealed record TeamLookupDto(int TeamId, string TeamCode, string TeamName, string TeamType);
+public sealed record TeamLookupDto(int TeamId, string TeamCode, string TeamType);
 public sealed record EmployeeLookupDto(int EmployeeId, string EmployeeCode, string FullName, string Role, int? TeamId, string PayType);

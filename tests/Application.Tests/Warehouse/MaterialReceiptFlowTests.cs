@@ -111,7 +111,7 @@ public class MaterialReceiptFlowTests
 
     // ---------- Dữ liệu mẫu ----------
 
-    private static readonly Material Fabric = new() { MaterialId = 1, MaterialName = "V-0001", Unit = "m" };
+    private static readonly Material Fabric = new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" };
 
     private (PurchaseOrder Po, PurchaseOrderLine Line, OrderMaterial Om, CustomerOrder Order) PlacedPo(
         string goodsStatus = PurchaseGoodsStatuses.Ordered, decimal ordered = 100, decimal required = 100,
@@ -223,7 +223,7 @@ public class MaterialReceiptFlowTests
         var saved = receipt.MaterialReceiptLines.Should().ContainSingle().Subject;
         saved.PurchaseOrderLineId.Should().Be(11);
         saved.OrderMaterialId.Should().Be(21);
-        result.Data!.Lines.Single().MaterialName.Should().Be("V-0001");
+        result.Data!.Lines.Single().MaterialCode.Should().Be("V-0001");
     }
 
     [Fact]
@@ -826,7 +826,7 @@ public class MaterialReceiptFlowTests
         var thread = new PurchaseOrderLine
         {
             PurchaseOrderLineId = 12, PurchaseOrderId = po.PurchaseOrderId, PurchaseOrder = po, MaterialId = 2, OrderedQty = 50,
-            Material = new Material { MaterialId = 2, MaterialName = "C-0001", Unit = "cuộn" },
+            Material = new Material { MaterialId = 2, MaterialCode = "C-0001", MaterialName = "Chỉ", Unit = "cuộn" },
         };
         po.PurchaseOrderLines.Add(thread);
         _poLines.Add(thread);
@@ -907,7 +907,7 @@ public class MaterialReceiptFlowTests
         var thread = new OrderMaterial
         {
             OrderMaterialId = 22, OrderId = 7, Order = order, MaterialId = 2, CustomerQty = 30,
-            Material = new Material { MaterialId = 2, MaterialName = "C-0001", Unit = "cuộn" },
+            Material = new Material { MaterialId = 2, MaterialCode = "C-0001", MaterialName = "Chỉ", Unit = "cuộn" },
         };
         _orderMaterials.Add(thread);
         var receipt = new MaterialReceipt

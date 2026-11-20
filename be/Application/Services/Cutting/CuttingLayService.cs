@@ -177,7 +177,7 @@ public sealed class CuttingLayService : ICuttingLayService
 
         var ids = required.Union(given).ToList();
         var codes = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => ids.Contains(m.MaterialId))
-            .ToDictionaryAsync(m => m.MaterialId, m => m.MaterialName, ct);
+            .ToDictionaryAsync(m => m.MaterialId, m => m.MaterialCode, ct);
         string List(IEnumerable<int> set) => set.Any() ? string.Join(", ", set.Select(id => codes.GetValueOrDefault(id, id.ToString()))) : "—";
         return Result.Failure(ErrorCodes.WarehouseInvalidReference,
             string.Format(WarehouseMessages.LayFabricsMismatch, List(required.Except(given)), List(given.Except(required))));
@@ -209,7 +209,7 @@ public sealed class CuttingLayService : ICuttingLayService
     }
 
     private Task<string> CodeAsync(int materialId, CancellationToken ct) =>
-        _uow.Repository<Material>().Query().Where(m => m.MaterialId == materialId).Select(m => m.MaterialName).FirstAsync(ct);
+        _uow.Repository<Material>().Query().Where(m => m.MaterialId == materialId).Select(m => m.MaterialCode).FirstAsync(ct);
 
     private static string Format(decimal qty) => qty.ToString("#,0.##", Vietnamese);
 
@@ -273,8 +273,8 @@ public sealed class CuttingLayService : ICuttingLayService
     private static System.Linq.Expressions.Expression<Func<CuttingLay, CuttingLayDto>> ToDto() => l =>
         new CuttingLayDto(l.CuttingLayId, l.WorkOrderId, l.WorkOrder.WorkOrderCode, l.WorkDate, l.ShiftCode,
             l.LaySequence,
-            l.CuttingLayFabrics.OrderBy(f => f.Material.MaterialName).Select(f => new CuttingLayFabricDto(f.MaterialId,
-                f.Material.MaterialName, f.Material.Color, f.UsedM)).ToList(),
+            l.CuttingLayFabrics.OrderBy(f => f.Material.MaterialCode).Select(f => new CuttingLayFabricDto(f.MaterialId,
+                f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color, f.UsedM)).ToList(),
             string.Empty, l.Note, l.Status, l.CreatedAt,
             l.CuttingLayLines.OrderBy(x => x.CuttingLayLineId).Select(x => new CuttingLayLineDto(x.CuttingLayLineId,
                 x.OrderLineId, x.ProductComponentMaterialId, x.ProductComponentMaterial == null ? null : x.ProductComponentMaterial.ProductComponent.ComponentName + " – " + x.ProductComponentMaterial.Material.MaterialName + (x.ProductComponentMaterial.Material.Color == "" ? "" : " " + x.ProductComponentMaterial.Material.Color),

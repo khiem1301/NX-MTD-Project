@@ -49,7 +49,7 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
 
     private readonly Material _fabric = new()
     {
-        MaterialId = 100, MaterialName = "V01", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
+        MaterialId = 100, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
     };
 
     /// <summary>Dòng định mức vải thân (PANEL) của màu 5 (biến thể 5): cho biết vải nào thuộc lệnh cắt.</summary>

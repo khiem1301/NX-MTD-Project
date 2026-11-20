@@ -26,11 +26,11 @@ public class GradeServiceTests
 
     private readonly List<GradeLevelCode> _codes = new()
     {
-        new() { GradeCode = "A", GradeName = "Bậc A", Status = GradeCodes.Active },
-        new() { GradeCode = "B", GradeName = "Bậc B", Status = GradeCodes.Active },
-        new() { GradeCode = "C", GradeName = "Bậc C", Status = GradeCodes.Active },
-        new() { GradeCode = "D", GradeName = "Bậc D", Status = GradeCodes.Active },
-        new() { GradeCode = "X", GradeName = "Bậc cũ", Status = GradeCodes.Inactive },
+        new() { GradeCode = "A", Status = GradeCodes.Active },
+        new() { GradeCode = "B", Status = GradeCodes.Active },
+        new() { GradeCode = "C", Status = GradeCodes.Active },
+        new() { GradeCode = "D", Status = GradeCodes.Active },
+        new() { GradeCode = "X", Status = GradeCodes.Inactive },
     };
     private readonly List<GradeLevel> _levels = new();
     private readonly List<GradeEvaluation> _evals = new();
@@ -240,7 +240,7 @@ public class GradeServiceTests
     [Fact]
     public async Task All_active_workers_of_every_team_can_be_listed_for_a_direct_set()
     {
-        _worker.Team = new Team { TeamName = "Tổ may 1" };
+        _worker.Team = new Team { TeamCode = "MAY1" };
         Eval();
 
         var result = await Service().GetAllWorkersAsync(default);
@@ -266,7 +266,7 @@ public class GradeServiceTests
     [Fact]
     public async Task Admin_adds_a_new_grade_and_it_can_then_be_assigned()
     {
-        var added = await Service().CreateCodeAsync(new SaveGradeCodeDto("e", "Bậc E – Xuất sắc"), default);
+        var added = await Service().CreateCodeAsync(new SaveGradeCodeDto("e"), default);
         added.IsSuccess.Should().BeTrue();
         _codes.Should().Contain(c => c.GradeCode == "E" && c.Status == GradeCodes.Active);   // mã chuẩn hóa chữ hoa
 
@@ -277,8 +277,8 @@ public class GradeServiceTests
     [Fact]
     public async Task A_duplicate_or_malformed_code_is_refused()
     {
-        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A", "trùng"), default)).Message.Should().Be(Messages.GradeCodeDuplicate);
-        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A-1", "sai"), default)).Message.Should().Be(Messages.GradeCodeMalformed);
+        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A"), default)).Message.Should().Be(Messages.GradeCodeDuplicate);
+        (await Service().CreateCodeAsync(new SaveGradeCodeDto("A-1"), default)).Message.Should().Be(Messages.GradeCodeMalformed);
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public class GradeServiceTests
         (await Service().SetGradeAsync(new SetGradeDto(40, "X", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
         (await Service().ProposeAsync(new ProposeGradeDto(40, "X", "x"), TeamId, default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
 
-        var update = await Service().UpdateCodeAsync("D", new UpdateGradeCodeDto("Bậc D", "Inactive"), default);
+        var update = await Service().UpdateCodeAsync("D", new UpdateGradeCodeDto("Inactive"), default);
         update.IsSuccess.Should().BeTrue();
         (await Service().SetGradeAsync(new SetGradeDto(40, "D", "x", null), default)).ErrorCode.Should().Be(ErrorCodes.GradeInvalid);
     }

@@ -5,6 +5,7 @@ import type { PageParams } from '@/types/api';
 export type StockBalance = {
   warehouseType: string;
   materialId: number | null;
+  materialCode: string | null;
   materialName: string | null;
   materialType: string | null;
   unit: string | null;

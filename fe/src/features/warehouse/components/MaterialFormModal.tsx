@@ -3,9 +3,14 @@ import { Col, Form, Input, Modal, Row, Select, Typography } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
-import { FABRIC_UNIT } from '@/constants/materials';
+import {
+  FABRIC_UNIT,
+  MATERIAL_CODE_MAX_LENGTH,
+  MATERIAL_NAME_MAX_LENGTH,
+  normalizeMaterialCode,
+} from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS, MATERIAL_NAME_PATTERN, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
+import { LABELS, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
 import type { Material, SaveMaterialPayload } from '../types';
 
@@ -62,7 +67,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     <Modal
       open={open}
       width={MODAL_WIDTH.md}
-      title={material ? `${MESSAGES.common.edit} ${material.materialName}` : MESSAGES.common.create}
+      title={material ? `${MESSAGES.common.edit} ${material.materialCode}` : MESSAGES.common.create}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
@@ -72,17 +77,25 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
         <Row gutter={16}>
-          <Col xs={24}>
+          {!material && (
+            <Col xs={24} sm={8}>
+              <Form.Item
+                name="materialCode"
+                label={LABELS.materialCode}
+                extra={LABELS.materialCodeHint}
+                normalize={normalizeMaterialCode}
+              >
+                <Input maxLength={MATERIAL_CODE_MAX_LENGTH} />
+              </Form.Item>
+            </Col>
+          )}
+          <Col xs={24} sm={material ? 24 : 16}>
             <Form.Item
               name="materialName"
               label={LABELS.materialName}
-              normalize={(v: string) => v.toUpperCase()}
-              rules={[
-                { required: true, whitespace: true, message: MESSAGES.common.required },
-                { pattern: MATERIAL_NAME_PATTERN, message: LABELS.materialNameFormat },
-              ]}
+              rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
             >
-              <Input maxLength={200} />
+              <Input maxLength={MATERIAL_NAME_MAX_LENGTH} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>
