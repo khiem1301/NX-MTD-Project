@@ -127,11 +127,12 @@ public interface ISpecImportService
         IReadOnlyCollection<string>? parts = null, bool replace = false);
     /// <summary>DEV-ALL-122: xem trước / nhập từ bảng đã đọc file và sửa trên màn hình (popup kiểm tra Excel).</summary>
     Task<Result<SpecImportPreviewDto>> PreviewAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null);
+        IReadOnlyCollection<string>? parts = null, bool replace = false);
     Task<Result<SpecImportResultDto>> ImportAsync(int productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
-        IReadOnlyCollection<string>? parts = null);
+        IReadOnlyCollection<string>? parts = null, bool replace = false);
     /// <summary>DEV-ALL-122: kiểm cho popup, kể cả mã hàng chưa tạo; dòng cần màu / đơn chưa có trả Pending. Không ghi gì.</summary>
-    Task<Result<SpecImportPreviewDto>> CheckAsync(int? productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct);
+    Task<Result<SpecImportPreviewDto>> CheckAsync(int? productId, int? orderId, SpecWorkbookDto workbook, CancellationToken ct,
+        bool replace = false);
 }
 
 public interface IOrderMarkerService

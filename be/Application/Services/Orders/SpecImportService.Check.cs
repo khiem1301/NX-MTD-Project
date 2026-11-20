@@ -17,7 +17,7 @@ public sealed partial class SpecImportService
     private sealed record Assumed(HashSet<string> Colors, HashSet<string> Materials);
 
     public async Task<Result<SpecImportPreviewDto>> CheckAsync(int? productId, int? orderId, SpecWorkbookDto workbook,
-        CancellationToken ct)
+        CancellationToken ct, bool replace = false)
     {
         var start = await CheckStartAsync(productId, orderId, ct);
         if (!start.IsSuccess) return Fail.As<SpecImportPreviewDto>(start);
@@ -27,7 +27,9 @@ public sealed partial class SpecImportService
         var (materials, missingMaterials) = await AssumeMaterialsAsync(workbook, ct);
         var assumed = new Assumed(colors, missingMaterials);
 
-        var builder = new SpecImportBuilder(assumedSpec, materials, target.OrderProduct, target.ProductCode, workbook);
+        // DEV-ALL-155: form sửa mã hàng — chế độ thay thế cần biết dòng đã dùng để liệt kê sẽ xóa / giữ.
+        var usage = replace && productId is { } id ? await UsageAsync(id, spec, ct) : SpecImportUsage.None;
+        var builder = new SpecImportBuilder(assumedSpec, materials, target.OrderProduct, target.ProductCode, workbook, replace, usage);
         // Kiểm của nút Lưu cần mã hàng thật, đủ màu và NVL có thật; thiếu thì để lúc nhập thật (sau Lưu đơn / sau khi thêm NVL).
         var crossErrors = productId is { } pid && colors.Count == 0 && missingMaterials.Count == 0
             ? await CrossErrorsAsync(pid, orderId, builder, ct) : [];

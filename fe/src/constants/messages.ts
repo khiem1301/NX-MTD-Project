@@ -536,7 +536,7 @@ export const MESSAGES = {
     /** DEV-ALL-150: nhập Bìa của đơn, NVL của đơn ở form tạo / sửa đơn (không bắt buộc, ghi khi Lưu đơn). */
     orderExcel: {
       section: 'Bìa và NVL của đơn (Excel, không bắt buộc)',
-      hint: 'Chọn file là đọc ngay; dữ liệu chỉ được lưu vào đơn khi bấm Lưu đơn. Dòng lỗi được bỏ qua và báo lại.',
+      hint: 'Chọn file là mở bảng kiểm tra để xem và sửa; Xác nhận mới giữ trên form. Dữ liệu chỉ được lưu vào đơn khi bấm Lưu đơn. Dòng lỗi bỏ qua khi lưu và báo lại.',
       markerTemplate: 'File mẫu bìa cắt',
       materialTemplate: 'File mẫu NVL của đơn',
       markerTemplateHint: 'File mẫu bìa cắt chỉ có sheet "Bìa của đơn" (không kèm Thành phần, Định mức NVL, Nhóm bìa).',
@@ -612,7 +612,7 @@ export const MESSAGES = {
         markerCode: 'Mã bìa',
         length: 'Dài (m)',
         width: 'Khổ (m)',
-        markerStatus: 'Ngừng dùng',
+        markerStatus: 'Trạng thái',
         materialName: 'Tên NVL',
         unit: 'Đơn vị',
         requiredQty: 'Số cần',

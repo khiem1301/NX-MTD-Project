@@ -118,19 +118,24 @@ export const orderImportApi = {
 /** DEV-ALL-122: popup kiểm tra Excel nhiều sheet — đọc file, kiểm bản đã sửa (không ghi), xem trước / nhập định mức từ JSON. */
 export const excelBundleApi = {
   parse: (file: File) => post<ExcelBundle>(API.products.excelParse, asFormData(file)),
-  check: (body: { productId: number | null; orderId: number | null; bundle: ExcelBundle }) =>
-    post<ExcelBundleCheck>(API.products.excelCheck, body),
+  check: (body: {
+    productId: number | null;
+    orderId: number | null;
+    bundle: ExcelBundle;
+    replace?: boolean;
+  }) => post<ExcelBundleCheck>(API.products.excelCheck, body),
   previewSpec: async (
     productId: number,
     workbook: SpecWorkbook,
     orderId: number | undefined,
     parts: SpecImportPart[],
+    replace = false,
   ) =>
     (
       await apiClient.post<ApiResponse<SpecImportPreview>>(
         API.products.importPreviewData(productId),
         workbook,
-        { params: { orderId, parts: parts.join(',') } },
+        { params: { orderId, parts: parts.join(','), replace: replace || undefined } },
       )
     ).data.data,
   /** Trả cả message (số dòng đã nhập). */
@@ -139,13 +144,14 @@ export const excelBundleApi = {
     workbook: SpecWorkbook,
     orderId: number | undefined,
     parts: SpecImportPart[],
+    replace = false,
   ) =>
     (
       await apiClient.post<ApiResponse<SpecImportResult>>(
         API.products.importData(productId),
         workbook,
         {
-          params: { orderId, parts: parts.join(',') },
+          params: { orderId, parts: parts.join(','), replace: replace || undefined },
         },
       )
     ).data,

@@ -9,17 +9,25 @@ import type {
   SpecWorkbook,
 } from '../types';
 import {
+  EMPTY_BUNDLE,
   EMPTY_WORKBOOK,
   refreshAfterImport,
   rowErrorsOf,
   type ProductImportOutcome,
 } from './productExcelImports';
+import type { ReviewTable } from './excelReview';
 
 const text = MESSAGES.orders.orderExcel;
 const productText = MESSAGES.orders.productExcel;
 
 /** DEV-ALL-150: bảng theo đơn nhập ở form tạo / sửa đơn. */
 export type OrderImportKind = 'markers' | 'orderMaterials';
+
+/** Tab popup kiểm tra tương ứng từng mục form đơn (DEV-ALL-154). */
+export const ORDER_IMPORT_TABLE: Record<OrderImportKind, ReviewTable> = {
+  markers: 'markers',
+  orderMaterials: 'orderMaterials',
+};
 
 /** Dữ liệu đã đọc từ file, giữ ở form đến khi bấm Lưu đơn (không ghi gì trước đó). */
 export type OrderImportSelection = {
@@ -58,6 +66,51 @@ export const orderRowCount = (s: OrderImportSelection, kind: OrderImportKind) =>
 
 export const hasOrderImports = (s: OrderImportSelection) =>
   orderRowCount(s, 'markers') > 0 || orderRowCount(s, 'orderMaterials') > 0;
+
+/** Gói ExcelBundle từ dữ liệu đã xác nhận của một mục (mở lại popup kiểm tra / xem sửa). */
+export const bundleOfOrderKind = (
+  selection: OrderImportSelection,
+  kind: OrderImportKind,
+): ExcelBundle | null => {
+  if (kind === 'markers') {
+    const markers = selection.markers;
+    if (!markers?.rows.length) return null;
+    return {
+      ...EMPTY_BUNDLE,
+      spec: {
+        ...EMPTY_WORKBOOK,
+        hasOrderMarkers: true,
+        orderMarkers: markers.rows,
+        sizeColumns: markers.sizeColumns,
+      },
+    };
+  }
+  const materials = selection.orderMaterials;
+  if (!materials?.rows.length) return null;
+  return { ...EMPTY_BUNDLE, hasOrderMaterials: true, orderMaterials: materials.rows };
+};
+
+/** Lấy dữ liệu đã sửa trên popup vào selection của form đơn. */
+export const takeOrderKind = (
+  current: OrderImportSelection,
+  kind: OrderImportKind,
+  fileName: string,
+  bundle: ExcelBundle,
+): OrderImportSelection => {
+  if (kind === 'markers')
+    return {
+      ...current,
+      markers: {
+        fileName,
+        rows: bundle.spec.orderMarkers,
+        sizeColumns: bundle.spec.sizeColumns,
+      },
+    };
+  return {
+    ...current,
+    orderMaterials: { fileName, rows: bundle.orderMaterials },
+  };
+};
 
 /**
  * Chia dòng bìa theo mã hàng của đơn. Dòng không ghi mã hàng chỉ nhận khi đơn có đúng một mã hàng;

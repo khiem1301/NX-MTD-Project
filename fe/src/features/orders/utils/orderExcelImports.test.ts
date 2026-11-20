@@ -1,10 +1,12 @@
 import type { SpecOrderMarkerExcelRow } from '../types';
 import { excelBundleApi } from '../api/orderApi';
 import {
+  bundleOfOrderKind,
   groupMarkersByProduct,
   hasOrderImports,
   pickOrderData,
   runOrderImports,
+  takeOrderKind,
 } from './orderExcelImports';
 import { EMPTY_BUNDLE } from './productExcelImports';
 
@@ -68,6 +70,31 @@ describe('orderExcelImports', () => {
     expect(pickOrderData({}, bundle, 'orderMaterials', 'bia.xlsx')).toBeNull();
     expect(hasOrderImports(picked ?? {})).toBe(true);
     expect(hasOrderImports({})).toBe(false);
+  });
+
+  it('bundleOfOrderKind / takeOrderKind giữ đúng bảng đã sửa trên popup kiểm tra', () => {
+    const rows = [marker(5, 'AO-01')];
+    const selection = {
+      markers: { fileName: 'bia.xlsx', rows, sizeColumns: ['M'] },
+    };
+    const bundle = bundleOfOrderKind(selection, 'markers');
+    expect(bundle?.spec.orderMarkers).toEqual(rows);
+    expect(bundleOfOrderKind({}, 'markers')).toBeNull();
+
+    const edited = {
+      ...EMPTY_BUNDLE,
+      spec: {
+        ...EMPTY_BUNDLE.spec,
+        hasOrderMarkers: true,
+        orderMarkers: [marker(5, 'AO-01'), marker(6, 'QU-02')],
+        sizeColumns: ['M', 'L'],
+      },
+    };
+    expect(takeOrderKind(selection, 'markers', 'bia2.xlsx', edited).markers).toEqual({
+      fileName: 'bia2.xlsx',
+      rows: edited.spec.orderMarkers,
+      sizeColumns: ['M', 'L'],
+    });
   });
 
   it('groupMarkersByProduct chia theo mã hàng; mã lạ hoặc thiếu mã khi đơn nhiều mã hàng thì bỏ qua', () => {

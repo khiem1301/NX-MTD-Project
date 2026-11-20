@@ -27,10 +27,12 @@ export function useExcelReview(
   initial: ExcelBundle,
   productId: number | null,
   tables: readonly ReviewTable[],
+  orderId: number | null = null,
+  replace = false,
 ) {
   const [draft, setDraft] = useState(initial);
   const check = useApiMutation(
-    (bundle: ExcelBundle) => excelBundleApi.check({ productId, orderId: null, bundle }),
+    (bundle: ExcelBundle) => excelBundleApi.check({ productId, orderId, bundle, replace }),
     { invalidate: [] },
   );
   const { mutate } = check;
@@ -38,7 +40,7 @@ export function useExcelReview(
   useEffect(() => {
     const timer = setTimeout(() => mutate(draft), RECHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [draft, mutate]);
+  }, [draft, mutate, replace]);
 
   const status = useMemo(() => statusMaps(check.data), [check.data]);
   const stateOf = (table: ReviewTable, r: { rowNumber: number; parseError?: string | null }) =>

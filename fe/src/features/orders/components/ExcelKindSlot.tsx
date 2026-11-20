@@ -1,5 +1,5 @@
 import { Button, Flex, Typography, theme } from 'antd';
-import { CloseOutlined, FileExcelOutlined } from '@ant-design/icons';
+import { CloseOutlined, EditOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { EXCEL_ICON_COLOR } from '../constants';
@@ -15,6 +15,8 @@ type ExcelKindSlotProps = {
   loading?: boolean;
   onFile: (file: File) => void;
   onClear: () => void;
+  /** DEV-ALL-154: mở lại popup kiểm tra / sửa dữ liệu đã xác nhận. */
+  onReview?: () => void;
   /** DEV-ALL-124: mục bắt buộc (dấu * đỏ); missing = đã bấm Lưu mà chưa có dữ liệu (viền đỏ). */
   required?: boolean;
   missing?: boolean;
@@ -28,6 +30,7 @@ export function ExcelKindSlot({
   loading,
   onFile,
   onClear,
+  onReview,
   required,
   missing,
 }: ExcelKindSlotProps) {
@@ -60,6 +63,17 @@ export function ExcelKindSlot({
           <>
             <FileExcelOutlined style={{ color: EXCEL_ICON_COLOR }} />
             <Typography.Text style={{ flex: 1 }}>{fill(text.rowsReady, rows)}</Typography.Text>
+            {onReview && (
+              <Button
+                size="small"
+                type="link"
+                icon={<EditOutlined />}
+                disabled={disabled}
+                onClick={onReview}
+              >
+                {text.reviewAgain}
+              </Button>
+            )}
             <Button
               size="small"
               type="text"

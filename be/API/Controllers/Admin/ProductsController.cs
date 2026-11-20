@@ -32,17 +32,17 @@ public sealed class ProductsController : AdminBaseController
     public async Task<IActionResult> CheckExcel([FromBody] ExcelBundleCheckDto dto, CancellationToken ct) =>
         this.ToResponse(await _bundle.CheckAsync(dto, ct));
 
-    /// <summary>DEV-ALL-122: xem trước định mức từ bảng đã sửa trên popup (body JSON). parts như xem trước bằng file.</summary>
+    /// <summary>DEV-ALL-122: xem trước định mức từ bảng đã sửa trên popup (body JSON). parts như xem trước bằng file. replace = thay thế.</summary>
     [HttpPost("{id:int}/import/preview-data")]
     public async Task<IActionResult> PreviewImportData(int id, [FromBody] SpecWorkbookDto workbook, [FromQuery] int? orderId,
-        [FromQuery] string? parts, CancellationToken ct) =>
-        this.ToResponse(await _import.PreviewAsync(id, orderId, workbook, ct, SplitParts(parts)));
+        [FromQuery] string? parts, CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _import.PreviewAsync(id, orderId, workbook, ct, SplitParts(parts), replace));
 
-    /// <summary>DEV-ALL-122: nhập định mức từ bảng đã sửa trên popup (body JSON), một giao dịch.</summary>
+    /// <summary>DEV-ALL-122: nhập định mức từ bảng đã sửa trên popup (body JSON), một giao dịch. replace = thay thế.</summary>
     [HttpPost("{id:int}/import-data")]
     public async Task<IActionResult> ImportData(int id, [FromBody] SpecWorkbookDto workbook, [FromQuery] int? orderId,
-        [FromQuery] string? parts, CancellationToken ct) =>
-        this.ToResponse(await _import.ImportAsync(id, orderId, workbook, ct, SplitParts(parts)));
+        [FromQuery] string? parts, CancellationToken ct, [FromQuery] bool replace = false) =>
+        this.ToResponse(await _import.ImportAsync(id, orderId, workbook, ct, SplitParts(parts), replace));
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] ProductQuery query, CancellationToken ct) =>

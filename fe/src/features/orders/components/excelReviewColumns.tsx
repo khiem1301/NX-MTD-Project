@@ -1,8 +1,9 @@
-import { AutoComplete, Button, Checkbox, Input, InputNumber, Select } from 'antd';
+import { cloneElement, type ReactElement } from 'react';
+import { AutoComplete, Button, Input, InputNumber, Select, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, WarningOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
-import { EXCEL_COMPONENT_TYPE } from '../constants';
+import { EXCEL_COMPONENT_TYPE, EXCEL_ROW_ACTION } from '../constants';
 import type { RowStatus } from '../utils/excelReview';
 import { ExcelReviewStatusCell } from './ExcelReviewStatusCell';
 import type {
@@ -25,8 +26,35 @@ export type ReviewColumnsCtx<R> = {
   creating?: boolean;
 };
 
+/**
+ * DEV-ALL-154: chỉ lỗi thật (định dạng / Action = Error). Ghi chú Pending ("Kiểm khi Lưu đơn") không tô cam ô nhập —
+ * hiện ở cột Kết quả.
+ */
+const rowError = <R extends { rowNumber: number; parseError?: string | null }>(
+  ctx: ReviewColumnsCtx<R>,
+  r: R,
+) => {
+  if (r.parseError) return r.parseError;
+  const status = ctx.status.get(r.rowNumber);
+  return status?.action === EXCEL_ROW_ACTION.ERROR ? status.error : null;
+};
+
+const withWarn = (error: string | null, node: ReactElement) => {
+  if (!error) return node;
+  return (
+    <Tooltip title={error} color="orange">
+      <span style={{ display: 'block' }}>
+        {cloneElement(node, {
+          status: 'warning' as const,
+          suffix: <WarningOutlined />,
+        })}
+      </span>
+    </Tooltip>
+  );
+};
+
 const rowCol = { title: col.row, dataIndex: 'rowNumber', width: 64 };
-const RESULT_WIDTH = 240;
+const RESULT_WIDTH = 200;
 const MARKER_STATUS = { ACTIVE: 'ACTIVE', DISCONTINUED: 'DISCONTINUED' } as const;
 
 const tail = <R extends { rowNumber: number; parseError?: string | null }>(
@@ -36,6 +64,8 @@ const tail = <R extends { rowNumber: number; parseError?: string | null }>(
     title: col.result,
     key: 'result',
     width: RESULT_WIDTH,
+    // Ghim phải cạnh nút xóa: không bị cuộn ngang che (file nhiều cột size / NVL).
+    fixed: 'right' as const,
     render: (_: unknown, r: R) => (
       <ExcelReviewStatusCell
         status={ctx.status.get(r.rowNumber)}
@@ -47,7 +77,6 @@ const tail = <R extends { rowNumber: number; parseError?: string | null }>(
   {
     key: 'remove',
     width: 48,
-    // Ghim phải để nút xóa không bị thanh cuộn ngang che.
     fixed: 'right' as const,
     render: (_: unknown, r: R) => (
       <Button
@@ -254,68 +283,92 @@ export const markerColumns = (
 ): ColumnsType<SpecOrderMarkerExcelRow> => [
   rowCol,
   {
+    title: col.productCode,
+    key: 'product',
+    width: 120,
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={r.productCode ?? ''}
+          onChange={(e) =>
+            ctx.update(r.rowNumber, { productCode: e.target.value.toUpperCase() || null })
+          }
+        />,
+      ),
+  },
+  {
     title: col.markerNo,
     key: 'no',
     width: 90,
-    render: (_, r) => (
-      <InputNumber
-        min={1}
-        precision={0}
-        value={r.markerNo}
-        onChange={(v) => ctx.update(r.rowNumber, { markerNo: v })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={1}
+          precision={0}
+          value={r.markerNo}
+          onChange={(v) => ctx.update(r.rowNumber, { markerNo: v })}
+        />,
+      ),
   },
   {
     title: col.markerCode,
     key: 'code',
     width: 100,
-    render: (_, r) => (
-      <Input
-        value={r.markerCode}
-        onChange={(e) => ctx.update(r.rowNumber, { markerCode: e.target.value.toUpperCase() })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={r.markerCode}
+          onChange={(e) => ctx.update(r.rowNumber, { markerCode: e.target.value.toUpperCase() })}
+        />,
+      ),
   },
   {
     title: col.length,
     key: 'length',
     width: 100,
-    render: (_, r) => (
-      <InputNumber
-        min={0}
-        step={0.1}
-        value={r.lengthM}
-        onChange={(v) => ctx.update(r.rowNumber, { lengthM: v })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          step={0.1}
+          value={r.lengthM}
+          onChange={(v) => ctx.update(r.rowNumber, { lengthM: v })}
+        />,
+      ),
   },
   {
     title: col.width,
     key: 'width',
     width: 100,
-    render: (_, r) => (
-      <InputNumber
-        min={0}
-        step={0.1}
-        value={r.widthM}
-        onChange={(v) => ctx.update(r.rowNumber, { widthM: v })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          step={0.1}
+          value={r.widthM}
+          onChange={(v) => ctx.update(r.rowNumber, { widthM: v })}
+        />,
+      ),
   },
   {
+    // Khớp cột Trạng thái của file mẫu bìa (Đang dùng / Ngừng dùng).
     title: col.markerStatus,
     key: 'status',
-    width: 110,
-    align: 'center',
+    width: 130,
     render: (_, r) => (
-      <Checkbox
-        checked={r.status === MARKER_STATUS.DISCONTINUED}
-        onChange={(e) =>
-          ctx.update(r.rowNumber, {
-            status: e.target.checked ? MARKER_STATUS.DISCONTINUED : MARKER_STATUS.ACTIVE,
-          })
-        }
+      <Select
+        style={{ width: '100%' }}
+        value={r.status === MARKER_STATUS.DISCONTINUED ? MARKER_STATUS.DISCONTINUED : MARKER_STATUS.ACTIVE}
+        options={[
+          { value: MARKER_STATUS.ACTIVE, label: MESSAGES.orders.markers.active },
+          { value: MARKER_STATUS.DISCONTINUED, label: MESSAGES.orders.markers.discontinued },
+        ]}
+        onChange={(status: string) => ctx.update(r.rowNumber, { status })}
       />
     ),
   },
@@ -323,26 +376,29 @@ export const markerColumns = (
     title: size,
     key: `size-${size}`,
     width: 76,
-    render: (_: unknown, r: SpecOrderMarkerExcelRow) => (
-      <InputNumber
-        min={0}
-        precision={0}
-        style={{ width: 64 }}
-        value={r.ratios.find((x) => x.sizeCode === size)?.piecesPerPly ?? null}
-        onChange={(v) =>
-          ctx.update(r.rowNumber, {
-            ratios: [
-              ...r.ratios.filter((x) => x.sizeCode !== size),
-              ...(v ? [{ sizeCode: size, piecesPerPly: v }] : []),
-            ],
-          })
-        }
-      />
-    ),
+    render: (_: unknown, r: SpecOrderMarkerExcelRow) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          precision={0}
+          style={{ width: 64 }}
+          value={r.ratios.find((x) => x.sizeCode === size)?.piecesPerPly ?? null}
+          onChange={(v) =>
+            ctx.update(r.rowNumber, {
+              ratios: [
+                ...r.ratios.filter((x) => x.sizeCode !== size),
+                ...(v ? [{ sizeCode: size, piecesPerPly: v }] : []),
+              ],
+            })
+          }
+        />,
+      ),
   })),
   ...tail(ctx),
 ];
 
+/** Khớp file mẫu Mau_NVL_Cua_Don: Mã NVL, Số cần, Khách cấp, Ghi chú (Tên / Đơn vị chỉ dùng khi thêm NVL mới ở panel riêng). */
 export const orderMaterialColumns = (
   ctx: ReviewColumnsCtx<OrderMaterialExcelRow>,
   materialOptions: { value: string; label: string }[],
@@ -351,74 +407,68 @@ export const orderMaterialColumns = (
   {
     title: col.material,
     key: 'material',
-    width: 240,
-    render: (_, r) => (
-      <Select
-        showSearch
-        style={{ width: '100%' }}
-        value={r.materialCode || undefined}
-        options={materialOptions}
-        optionFilterProp="label"
-        onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
-      />
-    ),
-  },
-  {
-    // DEV-ALL-123: tên NVL theo file (NVL đã có thì danh mục quyết định; NVL chưa có thì làm tên gợi ý khi thêm vào danh mục).
-    title: col.materialName,
-    key: 'name',
-    width: 180,
-    render: (_, r) => (
-      <Input
-        value={text$(r.materialName)}
-        onChange={(e) => ctx.update(r.rowNumber, { materialName: e.target.value || null })}
-      />
-    ),
-  },
-  {
-    title: col.unit,
-    key: 'unit',
-    width: 90,
-    render: (_, r) => (
-      <Input
-        value={text$(r.unit)}
-        onChange={(e) => ctx.update(r.rowNumber, { unit: e.target.value || null })}
-      />
-    ),
+    width: 260,
+    render: (_, r) => {
+      const error = rowError(ctx, r);
+      const field = (
+        <Select
+          showSearch
+          style={{ width: '100%' }}
+          status={error ? 'warning' : undefined}
+          value={r.materialCode || undefined}
+          options={materialOptions}
+          optionFilterProp="label"
+          onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
+        />
+      );
+      return error ? (
+        <Tooltip title={error} color="orange">
+          <span style={{ display: 'block' }}>{field}</span>
+        </Tooltip>
+      ) : (
+        field
+      );
+    },
   },
   {
     title: col.requiredQty,
     key: 'required',
     width: 120,
-    render: (_, r) => (
-      <InputNumber
-        min={0}
-        value={r.requiredQty}
-        onChange={(v) => ctx.update(r.rowNumber, { requiredQty: v })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          value={r.requiredQty}
+          onChange={(v) => ctx.update(r.rowNumber, { requiredQty: v })}
+        />,
+      ),
   },
   {
     title: col.customerQty,
     key: 'customer',
     width: 120,
-    render: (_, r) => (
-      <InputNumber
-        min={0}
-        value={r.customerQty}
-        onChange={(v) => ctx.update(r.rowNumber, { customerQty: v })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <InputNumber
+          min={0}
+          value={r.customerQty}
+          onChange={(v) => ctx.update(r.rowNumber, { customerQty: v })}
+        />,
+      ),
   },
   {
     title: col.note,
     key: 'note',
-    render: (_, r) => (
-      <Input
-        value={text$(r.note)}
-        onChange={(e) => ctx.update(r.rowNumber, { note: e.target.value || null })}
-      />
-    ),
+    render: (_, r) =>
+      withWarn(
+        rowError(ctx, r),
+        <Input
+          value={text$(r.note)}
+          onChange={(e) => ctx.update(r.rowNumber, { note: e.target.value || null })}
+        />,
+      ),
   },
   ...tail(ctx),
 ];

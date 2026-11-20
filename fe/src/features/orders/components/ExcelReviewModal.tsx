@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Button, Checkbox, Flex, Modal, Space, Typography, message } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
+import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
 import { useMaterialOptions } from '@/hooks/useLookups';
 import { fill } from '@/utils/format';
@@ -31,24 +32,33 @@ const presentTables = (b: ExcelBundle): ReviewTable[] => {
 type ExcelReviewModalProps = {
   fileName: string;
   bundle: ExcelBundle;
-  /** Mã hàng đang sửa; null = Thêm mới. */
+  /** Mã hàng đang sửa; null = Thêm mới / nhập theo đơn. */
   productId: number | null;
+  /** Đơn đang tạo / sửa: máy chủ kiểm bìa, NVL theo size và NVL đã có của đơn. */
+  orderId?: number | null;
   /** Chỉ hiện các bảng này (chọn file cho một mục); bỏ trống = mọi bảng có trong file. */
   only?: ReviewTable[];
+  /** DEV-ALL-155: form sửa mã hàng — hiện ô thay thế và giữ trạng thái khi xem lại. */
+  allowReplace?: boolean;
+  initialReplace?: boolean;
   /** newMaterials: NVL chưa có mà admin chọn thêm vào danh mục khi lưu (rỗng = không thêm). */
-  onConfirm: (bundle: ExcelBundle, newMaterials: SaveMaterialPayload[]) => void;
+  onConfirm: (bundle: ExcelBundle, newMaterials: SaveMaterialPayload[], replace: boolean) => void;
   onCancel: () => void;
 };
 
 /**
- * DEV-ALL-122/123: popup kiểm tra dữ liệu đọc từ file Excel nhiều sheet. Mỗi sheet một tab sửa trực tiếp; máy chủ kiểm lại sau
+ * DEV-ALL-122/123/155: popup kiểm tra dữ liệu đọc từ file Excel nhiều sheet. Mỗi sheet một tab sửa trực tiếp; máy chủ kiểm lại sau
  * mỗi lần sửa (không ghi gì). NVL chưa có trong danh mục là cảnh báo; Xác nhận thì hỏi có thêm vào danh mục khi lưu không.
+ * Form sửa mã hàng có thêm ô thay thế dữ liệu cũ như các chỗ nhập Excel khác.
  */
 export function ExcelReviewModal({
   fileName,
   bundle,
   productId,
+  orderId = null,
   only,
+  allowReplace = false,
+  initialReplace = false,
   onConfirm,
   onCancel,
 }: ExcelReviewModalProps) {
@@ -56,7 +66,8 @@ export function ExcelReviewModal({
   const missing = REVIEW_TABLES.filter(
     (t) => !presentTables(bundle).includes(t) && (!only || only.includes(t)),
   );
-  const review = useExcelReview(bundle, productId, tables);
+  const [replace, setReplace] = useState(initialReplace);
+  const review = useExcelReview(bundle, productId, tables, orderId, allowReplace && replace);
   const { draft, counts, newMaterials } = review;
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
   const [onlyErrors, setOnlyErrors] = useState(false);
@@ -67,8 +78,11 @@ export function ExcelReviewModal({
     label: `${m.materialCode} · ${m.materialName}${m.color ? ` (${m.color})` : ''}`,
   }));
   const crossErrors = review.check.data?.spec.crossErrors ?? [];
+  const removedNames = allowReplace && replace ? (review.check.data?.spec.removedNames ?? []) : [];
+  const done = (materialsToAdd: SaveMaterialPayload[]) =>
+    onConfirm(draft, materialsToAdd, allowReplace && replace);
 
-  const handleConfirm = () => (newMaterials.length === 0 ? onConfirm(draft, []) : setAsking(true));
+  const handleConfirm = () => (newMaterials.length === 0 ? done([]) : setAsking(true));
   const handleAdd = () => {
     setAsking(false);
     const incomplete = incompleteMaterials(newMaterials);
@@ -78,7 +92,7 @@ export function ExcelReviewModal({
       );
       return;
     }
-    onConfirm(draft, newMaterials);
+    done(newMaterials);
   };
 
   return (
@@ -114,6 +128,14 @@ export function ExcelReviewModal({
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
         <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        {allowReplace && (
+          <ReplaceImportOption
+            checked={replace}
+            onChange={setReplace}
+            disabled={review.check.isPending}
+            removed={removedNames}
+          />
+        )}
         {crossErrors.length > 0 && (
           <Alert
             type="error"
@@ -156,7 +178,7 @@ export function ExcelReviewModal({
         onAdd={handleAdd}
         onSkip={() => {
           setAsking(false);
-          onConfirm(draft, []);
+          done([]);
         }}
         onClose={() => setAsking(false)}
       />

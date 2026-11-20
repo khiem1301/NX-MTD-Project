@@ -76,7 +76,7 @@ public sealed class ExcelBundleService : IExcelBundleService
             products = p.Data;
         }
 
-        var spec = await _specImport.CheckAsync(dto.ProductId, dto.OrderId, bundle.Spec, ct);
+        var spec = await _specImport.CheckAsync(dto.ProductId, dto.OrderId, bundle.Spec, ct, dto.Replace);
         if (!spec.IsSuccess) return Fail.As<ExcelBundleCheckResultDto>(spec);
 
         OrderMaterialImportPreviewDto? orderMaterials = null;
