@@ -14,7 +14,6 @@ import { ROUTES } from '@/constants/routes';
 import { usePermission } from '@/hooks/usePermission';
 import type { ApiError } from '@/types/api';
 import { OrderDetailTabs } from '../components/OrderDetailTabs';
-import { OrderMissingDataAlert } from '../components/OrderMissingDataAlert';
 import { OrderSummary } from '../components/OrderSummary';
 import { useCancelOrder, useOrder, useStartProduction, useStopOrder } from '../hooks/useOrders';
 
@@ -108,13 +107,6 @@ export function OrderDetailPage() {
       }
     >
       <OrderSummary order={data} showAmount />
-      {canEdit && (
-        <OrderMissingDataAlert
-          missingMarkers={!data.hasOrderMarkers}
-          missingMaterials={!data.hasOrderMaterials}
-          hint={MESSAGES.orders.orderExcel.missingDetailHint}
-        />
-      )}
       <OrderDetailTabs
         orderId={data.orderId}
         orderCode={data.orderCode}

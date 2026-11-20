@@ -5,7 +5,12 @@ import { API } from '@/constants/apiEndpoints';
 import { MESSAGES } from '@/constants/messages';
 
 export type ImportTemplateKind =
-  'spec' | 'order-lines' | 'order-materials' | 'operations' | 'product-form';
+  | 'spec'
+  | 'order-lines'
+  | 'order-materials'
+  | 'order-markers'
+  | 'operations'
+  | 'product-form';
 
 type ImportTemplateLinkProps = {
   kind: ImportTemplateKind;
@@ -21,6 +26,7 @@ const FILE_NAME: Record<ImportTemplateKind, string> = {
   spec: 'Mau_Dinh_Muc_Bia_Cat.xlsx',
   'order-lines': 'Mau_Dong_Hang_Don.xlsx',
   'order-materials': 'Mau_NVL_Cua_Don.xlsx',
+  'order-markers': 'Mau_Bia_Cua_Don.xlsx',
   operations: 'Mau_Cong_Doan.xlsx',
   'product-form': 'Mau_Form_Ma_Hang.xlsx',
 };

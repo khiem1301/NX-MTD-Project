@@ -154,10 +154,6 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             orderId={orderId}
             selection={orderImports.selection}
             reading={orderImports.reading}
-            existing={{
-              markers: detail?.hasOrderMarkers ?? false,
-              orderMaterials: detail?.hasOrderMaterials ?? false,
-            }}
             disabled={saving}
             onFile={orderImports.choose}
             onClear={orderImports.clear}

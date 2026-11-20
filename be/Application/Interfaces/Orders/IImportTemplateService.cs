@@ -11,12 +11,15 @@ public static class ImportTemplateKinds
     public const string OrderLines = "order-lines";
     /// <summary>NVL của đơn.</summary>
     public const string OrderMaterials = "order-materials";
+    /// <summary>DEV-ALL-153: chỉ Bìa của đơn (form đơn / tab Bìa cắt), không kèm định mức mã hàng.</summary>
+    public const string OrderMarkers = "order-markers";
     /// <summary>Công đoạn của mã hàng.</summary>
     public const string Operations = "operations";
     /// <summary>Form Thêm mới / Sửa mã hàng: một file chung nhiều sheet.</summary>
     public const string ProductForm = "product-form";
 
-    public static readonly IReadOnlyList<string> All = [Spec, OrderLines, OrderMaterials, Operations, ProductForm];
+    public static readonly IReadOnlyList<string> All =
+        [Spec, OrderLines, OrderMaterials, OrderMarkers, Operations, ProductForm];
 }
 
 /// <summary>
