@@ -8,7 +8,6 @@ import { useProductFormImports } from '../hooks/useProductFormImports';
 import {
   productCodeSchema,
   productDescriptionSchema,
-  productNameSchema,
   toFieldPath,
 } from '../utils/productValidation';
 import type { ProductImportSelection } from '../utils/productExcelImports';
@@ -33,6 +32,11 @@ type ProductFormModalProps = {
    * mã hàng, màu, size nên nhập được cả định mức, nhóm bìa, bìa cắt, NVL của đơn).
    */
   onDeferImports?: (productId: number, code: string, selection: ProductImportSelection) => void;
+  /**
+   * DEV-ALL-151: form mở từ đơn hàng. Lưu không ghi mã hàng; giao dữ liệu cho form đơn, chỉ ghi khi đơn được lưu.
+   * Trả false thì giữ hộp thoại (vd mã đã có trên đơn).
+   */
+  onStage?: (body: SaveProductPayload, selection: ProductImportSelection) => boolean | void;
   /** Thêm mới: giá trị điền sẵn (vd mã, tên, mô tả đọc từ file Excel của hộp nhập dòng hàng). */
   initialValues?: Partial<SaveProductPayload>;
   /**
@@ -50,6 +54,7 @@ export function ProductFormModal({
   onSaved,
   allowImports = false,
   onDeferImports,
+  onStage,
   initialValues,
   initialImports,
 }: ProductFormModalProps) {
@@ -75,7 +80,6 @@ export function ProductFormModal({
     if (product) {
       form.setFieldsValue({
         productCode: product.productCode,
-        productName: product.productName,
         sampleImageUrl: product.sampleImageUrl ?? undefined,
         extraImages: product.extraImages,
       });
@@ -93,6 +97,14 @@ export function ProductFormModal({
   const handleFinish = (values: SaveProductPayload) => {
     // DEV-ALL-124: Thêm mới thiếu dữ liệu Excel bắt buộc thì không lưu gì.
     if (!excel.checkRequired()) return;
+    if (onStage) {
+      const accepted = onStage(
+        { ...values, productCode: values.productCode.trim().toUpperCase() },
+        excel.imports,
+      );
+      if (accepted !== false) close();
+      return;
+    }
     save.mutate(
       { id: product?.productId, body: values },
       {
@@ -140,7 +152,7 @@ export function ProductFormModal({
       {detail.error && <QueryError error={detail.error} onRetry={() => void detail.refetch()} />}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={busy}>
         <Row gutter={16}>
-          <Col xs={24} md={9}>
+          <Col xs={24}>
             <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
               <Form.Item
                 name="productCode"
@@ -151,16 +163,6 @@ export function ProductFormModal({
                 <Input disabled={locked} />
               </Form.Item>
             </Tooltip>
-          </Col>
-          <Col xs={24} md={15}>
-            <Form.Item
-              name="productName"
-              label={MESSAGES.orders.productName}
-              required
-              rules={[zodRule(productNameSchema)]}
-            >
-              <Input />
-            </Form.Item>
           </Col>
         </Row>
         <Form.Item
@@ -175,7 +177,7 @@ export function ProductFormModal({
       {allowImports && (
         <ProductExcelImports
           productId={product?.productId}
-          deferred={onDeferImports !== undefined}
+          deferred={onDeferImports !== undefined || onStage !== undefined}
           required={excel.required}
           showMissing={excel.showMissing}
           onProductRow={excel.fillFromRow}

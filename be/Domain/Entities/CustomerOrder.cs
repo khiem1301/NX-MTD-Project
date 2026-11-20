@@ -33,6 +33,9 @@ public partial class CustomerOrder
 
     public string? FinalAmountReason { get; set; }
 
+    /// <summary>Địa chỉ giao hàng của đơn (nhập lúc tạo đơn, mặc định theo địa chỉ khách; phiếu xuất lấy sẵn từ đây).</summary>
+    public string DeliveryAddress { get; set; } = string.Empty;
+
     public string? Note { get; set; }
 
     /// <summary>Số lần khách dự kiến giao NVL của cả đơn (DEV-ALL-95); một phiếu khách cấp thường đã xác nhận là một lần.</summary>

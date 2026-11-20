@@ -7,7 +7,6 @@ export type BreakEvenResultItem = {
   periodMonth: string;
   productId: number;
   productCode: string;
-  productName: string;
   allocationBasis: AllocationBasis;
   finishedQty: number;
   cmtUnitPrice: number;

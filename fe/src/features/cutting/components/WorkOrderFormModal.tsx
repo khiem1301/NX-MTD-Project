@@ -122,7 +122,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
                 disabled={!orderId}
                 options={products.map((p) => ({
                   value: p.productId,
-                  label: `${p.productCode} ${p.productName}`,
+                  label: `${p.productCode}`,
                 }))}
                 onChange={() => form.setFieldsValue({ planned: {}, extras: [] })}
               />
@@ -137,7 +137,7 @@ export function WorkOrderFormModal({ open, workOrder, onClose }: WorkOrderFormMo
             >
               <Select
                 placeholder={LABELS.selectCuttingTeam}
-                options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+                options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
               />
             </Form.Item>
           </Col>

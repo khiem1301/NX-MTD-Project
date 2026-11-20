@@ -7,9 +7,9 @@ namespace Application.Tests;
 /// <summary>Giới hạn biên của mã hàng và định mức mã hàng (khớp độ rộng cột trong database).</summary>
 public class ProductValidatorTests
 {
-    private static bool ProductIsValid(string code = "AO-01", string name = "Áo", string? image = null, string? description = null,
+    private static bool ProductIsValid(string code = "AO-01", string? image = null, string? description = null,
         IReadOnlyList<string>? extraImages = null) =>
-        new SaveProductDtoValidator().Validate(new SaveProductDto(code, name, image, description, extraImages)).IsValid;
+        new SaveProductDtoValidator().Validate(new SaveProductDto(code, image, description, extraImages)).IsValid;
 
     private static string ImageKey(int i) => $"PRODUCT/2026/11/{i:x32}.jpg";
 
@@ -30,16 +30,6 @@ public class ProductValidatorTests
     [InlineData("   ", false)]
     [InlineData("", false)]
     public void ProductCode_Pattern(string code, bool expected) => ProductIsValid(code: code).Should().Be(expected);
-
-    [Theory]
-    [InlineData(200, true)]
-    [InlineData(201, false)]
-    public void ProductName_MaxLength(int length, bool expected) => ProductIsValid(name: new string('x', length)).Should().Be(expected);
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ProductName_Required(string name) => ProductIsValid(name: name).Should().BeFalse();
 
     [Theory]
     [InlineData(1000, true)]
@@ -81,7 +71,7 @@ public class ProductValidatorTests
     [Fact]
     public void ExtraImages_ReportsOneMessageForTooMany()
     {
-        var dto = new SaveProductDto("AO-01", "Áo", null, null, Enumerable.Range(1, 6).Select(ImageKey).ToList());
+        var dto = new SaveProductDto("AO-01", null, null, Enumerable.Range(1, 6).Select(ImageKey).ToList());
 
         new SaveProductDtoValidator().Validate(dto).Errors.Select(e => e.ErrorMessage).Should().Equal("Tối đa 5 ảnh phụ.");
     }

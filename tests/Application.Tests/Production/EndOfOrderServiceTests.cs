@@ -50,7 +50,7 @@ public class EndOfOrderServiceTests : ProductionTestBase
             Status = KpiStatuses.Active,
             Order = new CustomerOrder { OrderId = OrderId, OrderCode = "DH001" },
             Product = new Product { ProductId = ProductId, ProductCode = "MH001" },
-            SewingTeam = new Team { TeamId = TeamId, TeamCode = "MAY1", TeamName = "Tổ may 1" },
+            SewingTeam = new Team { TeamId = TeamId, TeamCode = "MAY1" },
         };
         _targets.Add(_target);
     }

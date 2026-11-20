@@ -6,7 +6,7 @@ export type WorkAllocation = {
   workDate: string;
   movementType: string;
   sewingTeamId: number;
-  teamName: string;
+  teamCode: string;
   workerId: number;
   workerCode: string;
   workerName: string;

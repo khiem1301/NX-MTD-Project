@@ -37,10 +37,10 @@ public class MonthlyCostServiceTests
         string? productCode, decimal? amount, int? quantity = null, string? note = null, string? parseError = null) =>
         new(rowNumber, category, costType, productCode, amount, quantity, note, parseError);
 
-    private static IReadOnlyDictionary<string, (int ProductId, string ProductName)> Products() =>
-        new Dictionary<string, (int, string)>(StringComparer.OrdinalIgnoreCase)
+    private static IReadOnlyDictionary<string, int> Products() =>
+        new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
         {
-            ["SP001"] = (1, "Áo thun nam"),
+            ["SP001"] = 1,
         };
 
     // ---------- ExportTemplateAsync (UC12) ----------

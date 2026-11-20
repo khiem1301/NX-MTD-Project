@@ -36,9 +36,9 @@ public class MaterialReturnServiceTests
 
     private readonly List<Team> _teams =
     [
-        new() { TeamId = CutTeam, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting },
-        new() { TeamId = SewTeam, TeamName = "Tổ may", TeamType = TeamTypes.Sewing },
-        new() { TeamId = 9, TeamName = "Văn phòng", TeamType = TeamTypes.Office },
+        new() { TeamId = CutTeam, TeamCode = "CAT1", TeamType = TeamTypes.Cutting },
+        new() { TeamId = SewTeam, TeamCode = "MAY1", TeamType = TeamTypes.Sewing },
+        new() { TeamId = 9, TeamCode = "VP", TeamType = TeamTypes.Office },
     ];
 
     private readonly List<WorkOrder> _workOrders = [new() { WorkOrderId = WorkOrderId, OrderId = OrderId, CuttingTeamId = CutTeam, Status = WorkOrderStatuses.Open }];

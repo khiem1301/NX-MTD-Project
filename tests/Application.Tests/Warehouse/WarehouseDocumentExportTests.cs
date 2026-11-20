@@ -52,7 +52,7 @@ public class WarehouseDocumentExportTests
         text.Should().Contain(new[]
         {
             "PHIẾU NHẬP NGUYÊN VẬT LIỆU", "PN-2026-0005", "20/10/2026", "Nhà cung cấp", "Đã xác nhận", "DH001", "PO-003",
-            "Nguyễn Quản Đốc", "Giao buổi sáng", "VAI01", "Vải cotton", "Đen", "95", "Thủ kho", "Quản đốc",
+            "Nguyễn Quản Đốc", "Giao buổi sáng", "VAI01", "Đen", "95", "Thủ kho", "Quản đốc",
         });
     }
 
@@ -82,7 +82,7 @@ public class WarehouseDocumentExportTests
 
     private static MaterialIssueDto Issue() => new(
         MaterialIssueId: 8, IssueCode: "PC-2026-0008", WarehouseType: "Material", OrderId: 1, OrderCode: "DH001",
-        WorkOrderId: 4, WorkOrderCode: "LC-0004", RequestId: null, ReceivingTeamId: 2, ReceivingTeamName: "Tổ cắt",
+        WorkOrderId: 4, WorkOrderCode: "LC-0004", RequestId: null, ReceivingTeamId: 2, ReceivingTeamCode: "Tổ cắt",
         IssueDate: new DateOnly(2026, 10, 21), Status: "PendingReceipt", IssuedByName: "Thủ kho A", ReceivedByName: null,
         ReceivedAt: null, RejectReason: null, CreatedAt: new DateTime(2026, 10, 21, 9, 0, 0),
         Lines: new[]
@@ -101,7 +101,7 @@ public class WarehouseDocumentExportTests
         result.Data!.FileName.Should().Be("PhieuCap_PC-2026-0008.xlsx");
         TextOf(Open(result.Data)).Should().Contain(new[]
         {
-            "PHIẾU CẤP HÀNG CHO TỔ", "Cấp vải", "Tổ cắt", "Chờ tổ nhận", "LC-0004", "Vải cotton", "AO01 / Trắng / M", "28", "Rách 2 cái",
+            "PHIẾU CẤP HÀNG CHO TỔ", "Cấp vải", "Tổ cắt", "Chờ tổ nhận", "LC-0004", "VAI01", "AO01 / Trắng / M", "28", "Rách 2 cái",
             "Tổ trưởng nhận",
         });
     }

@@ -65,7 +65,7 @@ export function TimesheetTable({
           },
           {
             title: ATTENDANCE_TEXT.table.team,
-            dataIndex: 'teamName',
+            dataIndex: 'teamCode',
             width: 140,
             responsive: ['lg'],
             render: (value: string | null) => value ?? '—',

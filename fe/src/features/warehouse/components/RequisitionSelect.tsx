@@ -42,7 +42,7 @@ export function RequisitionSelect({
       style={{ width }}
       options={(requests.data?.items ?? []).map((r) => ({
         value: r.requestId,
-        label: [r.requestCode, r.title, r.teamName].filter(Boolean).join(' · '),
+        label: [r.requestCode, r.title, r.teamCode].filter(Boolean).join(' · '),
       }))}
     />
   );

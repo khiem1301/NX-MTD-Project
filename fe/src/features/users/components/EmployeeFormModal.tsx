@@ -145,7 +145,7 @@ export function EmployeeFormModal({
             allowClear
             showSearch
             optionFilterProp="label"
-            options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }))}
+            options={(teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }))}
             onChange={suggest}
           />
         </Form.Item>

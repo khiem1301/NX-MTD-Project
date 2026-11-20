@@ -15,7 +15,7 @@ export type Profile = {
   avatarUrl: string | null;
   role: Role;
   roleName: string;
-  teamName: string | null;
+  teamCode: string | null;
   startDate: string;
   currentGradeCode: string | null;
   isTemporaryPassword: boolean;

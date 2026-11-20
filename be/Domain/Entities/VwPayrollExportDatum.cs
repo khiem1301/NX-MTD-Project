@@ -17,7 +17,7 @@ public partial class VwPayrollExportDatum
 
     public string PayType { get; set; } = null!;
 
-    public string? TeamName { get; set; }
+    public string? TeamCode { get; set; }
 
     public decimal WorkDays { get; set; }
 

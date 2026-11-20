@@ -26,7 +26,7 @@ export type Payslip = {
   employeeId: number;
   employeeCode: string;
   fullName: string;
-  teamName: string | null;
+  teamCode: string | null;
   workDays: number | null;
   totalAdditions: number;
   totalDeductions: number;

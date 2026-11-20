@@ -66,7 +66,7 @@ public sealed class MealService : IMealService
         }
 
         return Result<TeamMealSuggestionDto>.Success(new TeamMealSuggestionDto(
-            date, teamId, team.TeamName, attendanceCount,
+            date, teamId, team.TeamCode, attendanceCount,
             confirmation?.MealCount ?? willEat, ToPascalOrNull(confirmation?.Source),
             confirmation?.ConfirmedAt, locked));
     }
@@ -111,7 +111,7 @@ public sealed class MealService : IMealService
             r.EmployeeId, r.Employee.EmployeeCode, r.Employee.FullName, r.WillEat, HasAttendance: true)).ToList();
 
         return Result<TeamMealMembersDto>.Success(new TeamMealMembersDto(
-            date, teamId, team.TeamName,
+            date, teamId, team.TeamCode,
             members.Count, members.Count(m => m.WillEat),
             await IsLockedAsync(meal, ct), members));
     }
@@ -273,7 +273,7 @@ public sealed class MealService : IMealService
             if (leaderIds.Count > 0)
                 _notifier.NotifyEmployees(leaderIds, new NotificationMessage(NotificationSources.System,
                     Messages.NotifyMealReminderTitle,
-                    string.Format(Messages.NotifyMealReminderBody, team.TeamName, date.ToString("dd/MM/yyyy"), mealCount,
+                    string.Format(Messages.NotifyMealReminderBody, team.TeamCode, date.ToString("dd/MM/yyyy"), mealCount,
                         (await _settings.GetTimeAsync(SettingKeys.MealCutoffTime, new TimeOnly(8, 30), ct)).ToString("HH:mm")),
                     MealLink, nameof(TeamMealConfirmation)));
         }
@@ -397,12 +397,12 @@ public sealed class MealService : IMealService
             {
                 // Khi còn OPEN ưu tiên số WillEat mới nhất; đã chốt dùng MealCount đã lưu.
                 var count = meal.Status == MealStatus.Open ? willEat : c.MealCount;
-                rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, count, c.AttendanceCount,
+                rows.Add(new TeamMealRowDto(team.TeamId, team.TeamCode, count, c.AttendanceCount,
                     ToPascalOrNull(c.Source), c.ConfirmedAt));
                 continue;
             }
 
-            rows.Add(new TeamMealRowDto(team.TeamId, team.TeamName, willEat, attendance, null, null));
+            rows.Add(new TeamMealRowDto(team.TeamId, team.TeamCode, willEat, attendance, null, null));
         }
 
         return rows;

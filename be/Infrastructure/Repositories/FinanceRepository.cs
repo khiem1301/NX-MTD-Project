@@ -40,17 +40,17 @@ public sealed class FinanceRepository : IFinanceRepository
             .ToDictionaryAsync(o => o.OrderId, o => o.OrderCode, ct);
     }
 
-    public async Task<IReadOnlyDictionary<int, (string ProductCode, string ProductName)>> GetProductsAsync(
+    public async Task<IReadOnlyDictionary<int, string>> GetProductsAsync(
         IReadOnlyCollection<int> productIds, CancellationToken ct)
     {
-        if (productIds.Count == 0) return new Dictionary<int, (string, string)>();
+        if (productIds.Count == 0) return new Dictionary<int, string>();
 
         var rows = await _context.Products.AsNoTracking()
             .Where(p => productIds.Contains(p.ProductId))
-            .Select(p => new { p.ProductId, p.ProductCode, p.ProductName })
+            .Select(p => new { p.ProductId, p.ProductCode })
             .ToListAsync(ct);
 
-        return rows.ToDictionary(p => p.ProductId, p => (p.ProductCode, p.ProductName));
+        return rows.ToDictionary(p => p.ProductId, p => p.ProductCode);
     }
 
     // ---------- Cổng điều kiện tính hòa vốn (GBR-17) ----------

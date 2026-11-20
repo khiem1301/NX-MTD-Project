@@ -13,13 +13,12 @@ export type OrderLineLookup = {
   orderId: number;
   productId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;
 };
 
-export type ProductLookup = { productId: number; productCode: string; productName: string };
+export type ProductLookup = { productId: number; productCode: string };
 
 /** Chi tiết của mã hàng (lấy từ định mức), để luồng khác chọn chi tiết. */
 export type ProductComponentLookup = {

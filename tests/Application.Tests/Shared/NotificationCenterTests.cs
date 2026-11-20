@@ -33,8 +33,8 @@ public class NotificationCenterTests
         _user.EmployeeId.Returns(Me);
         _roles.Add(new Role { RoleId = 1, RoleCode = RoleCodes.Worker, RoleName = "Công nhân" });
         _roles.Add(new Role { RoleId = 2, RoleCode = RoleCodes.Manager, RoleName = "Quản đốc" });
-        _teams.Add(new Team { TeamId = 5, TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active });
-        _teams.Add(new Team { TeamId = 6, TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
+        _teams.Add(new Team { TeamId = 5, TeamCode = "MAY1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active });
+        _teams.Add(new Team { TeamId = 6, TeamCode = "CAT1", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
         Employee(Me, roleId: 2, teamId: null);          // người gửi
         Employee(11, roleId: 1, teamId: 5);
         Employee(12, roleId: 1, teamId: 5);
@@ -216,7 +216,7 @@ public class NotificationCenterTests
     [Fact]
     public async Task Targets_list_active_teams_and_all_roles()
     {
-        _teams.Add(new Team { TeamId = 7, TeamName = "Tổ cũ", TeamType = TeamTypes.Sewing, Status = RecordStatus.Discontinued });
+        _teams.Add(new Team { TeamId = 7, TeamCode = "MAYCU", TeamType = TeamTypes.Sewing, Status = RecordStatus.Discontinued });
 
         var targets = (await Announcements().GetTargetsAsync(default)).Data!;
 

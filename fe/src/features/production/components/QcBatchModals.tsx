@@ -84,7 +84,7 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
             loading={teams.isLoading}
             options={(teams.data ?? [])
               .filter((t) => t.teamType === 'Sewing')
-              .map((t) => ({ value: t.teamId, label: t.teamName }))}
+              .map((t) => ({ value: t.teamId, label: t.teamCode }))}
           />
         </Form.Item>
         <Form.Item name="orderId" label={PRODUCTION_TEXT.selectOrder} rules={required}>

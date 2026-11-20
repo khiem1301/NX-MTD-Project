@@ -30,7 +30,7 @@ internal static class TestVariant
     }
 
     public static ProductVariant Make(int productId, string productCode = "MH001", string color = "Đen", string size = "M") =>
-        Make(new Product { ProductId = productId, ProductCode = productCode, ProductName = productCode }, color, size);
+        Make(new Product { ProductId = productId, ProductCode = productCode }, color, size);
 
     /// <summary>Gán biến thể cho dòng đơn, giữ ProductId khớp với biến thể (FK ghép ProductVariantId + ProductId).</summary>
     public static OrderLine WithVariant(this OrderLine line, ProductVariant variant)

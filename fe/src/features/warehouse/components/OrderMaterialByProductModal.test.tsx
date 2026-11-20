@@ -22,7 +22,6 @@ const material = (materialId: number, materialCode: string) => ({
 const product = (materials = [material(1, 'VAI01'), material(2, 'CHI02')]) => ({
   productId: 7,
   productCode: 'AO-01',
-  productName: 'Áo',
   materials,
 });
 

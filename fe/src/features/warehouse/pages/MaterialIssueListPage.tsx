@@ -62,7 +62,7 @@ export function MaterialIssueListPage() {
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.workOrder, dataIndex: 'workOrderCode', render: (v: string | null) => v ?? '—' },
-    { title: LABELS.receivingTeam, dataIndex: 'receivingTeamName' },
+    { title: LABELS.receivingTeam, dataIndex: 'receivingTeamCode' },
     { title: LABELS.issueDate, dataIndex: 'issueDate', render: formatDate },
     { title: LABELS.issuedBy, dataIndex: 'issuedByName' },
     {

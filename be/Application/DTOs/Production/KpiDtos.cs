@@ -6,8 +6,8 @@ namespace NX_MTD.Application.DTOs;
 /// ActualFinishedQty = Σ hàng hoàn thiện cả kỳ (vw_KpiDailyResult), PercentAchieved = thực tế / chỉ tiêu cả kỳ × 100 (MI-17).
 /// Lines = chỉ tiêu theo màu × size (DEV-ALL-62); rỗng ở chỉ tiêu cũ chỉ có số tổng.</summary>
 public sealed record KpiTargetDto(
-    int KpiTargetId, int OrderId, string OrderCode, int ProductId, string ProductCode, string ProductName,
-    int SewingTeamId, string SewingTeamName, DateOnly StartDate, DateOnly EndDate, int TargetFinishedQty,
+    int KpiTargetId, int OrderId, string OrderCode, int ProductId, string ProductCode,
+    int SewingTeamId, string SewingTeamCode, DateOnly StartDate, DateOnly EndDate, int TargetFinishedQty,
     short WorkingDays, decimal DailyTarget, string Status, string? Result, DateTime CreatedAt,
     int ActualFinishedQty = 0, decimal PercentAchieved = 0m, IReadOnlyList<KpiTargetLineDto>? Lines = null);
 
@@ -61,7 +61,7 @@ public sealed record EndOfOrderOperationDto(int OperationId, string OperationCod
     IReadOnlyList<EndOfOrderLineDto> Lines);
 
 /// <summary>Xem trước (và kết quả) kết thúc đơn của một tổ: chốt KPI, lệch kiểm cuối đơn theo công đoạn (chỉ công đoạn có lệch), tăng ca.</summary>
-public sealed record EndOfOrderPreviewDto(int KpiTargetId, string OrderCode, string ProductCode, string TeamName,
+public sealed record EndOfOrderPreviewDto(int KpiTargetId, string OrderCode, string ProductCode, string TeamCode,
     int TargetQty, int ActualQty, bool Achieved, int ShortfallQty, decimal ShortfallPct, int ThresholdPct, string OtDecision,
     IReadOnlyList<EndOfOrderOperationDto> Operations, IReadOnlyList<string> Blockers, bool CanFinish);
 

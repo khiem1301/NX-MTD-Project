@@ -70,7 +70,7 @@ export function IssueTargetFields({
             onChange={onWorkOrderChange}
             options={workOrders.map((w) => ({
               value: w.workOrderId,
-              label: `${w.workOrderCode} · ${w.orderCode} · ${w.productCode} · ${w.cuttingTeamName} (${formatDate(w.dueDate)})`,
+              label: `${w.workOrderCode} · ${w.orderCode} · ${w.productCode} · ${w.cuttingTeamCode} (${formatDate(w.dueDate)})`,
             }))}
           />
         </Form.Item>
@@ -84,7 +84,7 @@ export function IssueTargetFields({
         <Select
           disabled={teamLocked}
           style={{ width: WIDTH.team }}
-          options={teams.map((t) => ({ value: t.teamId, label: t.teamName }))}
+          options={teams.map((t) => ({ value: t.teamId, label: t.teamCode }))}
         />
       </Form.Item>
       <Form.Item name="orderId" style={ISSUE_FIELD} label={LABELS.order} rules={required}>

@@ -8,7 +8,7 @@ export type WorkOrderListItem = {
   productId: number;
   productCode: string;
   cuttingTeamId: number;
-  cuttingTeamName: string;
+  cuttingTeamCode: string;
   dueDate: string;
   status: string;
   totalPlannedQty: number;

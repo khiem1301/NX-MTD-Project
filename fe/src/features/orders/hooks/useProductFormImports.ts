@@ -41,9 +41,7 @@ export function useProductFormImports({
   );
   const [importing, setImporting] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
-  const required = allowImports
-    ? requiredKindsFor(product === null, onDeferImports !== undefined)
-    : [];
+  const required = allowImports ? requiredKindsFor(product === null) : [];
 
   // Bỏ dữ liệu đã chọn mỗi lần đóng để lần mở sau bắt đầu trống.
   const close = () => {
@@ -77,10 +75,10 @@ export function useProductFormImports({
       .finally(() => setImporting(false));
   };
 
-  /** Thêm mới: điền Mã, Tên, Mô tả; Sửa: chỉ điền Tên, Mô tả khi mã trong file trùng mã đang sửa. */
+  /** Thêm mới: điền Mã, Mô tả; Sửa: chỉ điền Mô tả khi mã trong file trùng mã đang sửa. */
   const fillFromRow = (row: ProductExcelRow) => {
     const code = row.productCode.trim().toUpperCase();
-    const values = { productName: row.productName, description: row.description ?? undefined };
+    const values = { description: row.description ?? undefined };
     if (product) {
       if (code !== product.productCode.toUpperCase()) {
         void message.warning(fill(text.otherProductInFile, row.productCode));

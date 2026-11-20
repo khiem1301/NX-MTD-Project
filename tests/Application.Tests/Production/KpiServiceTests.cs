@@ -90,10 +90,10 @@ public class KpiServiceTests
     private static CustomerOrder Order(int id = 1, string code = "DH001") => new() { OrderId = id, OrderCode = code, Status = OrderStatuses.InProduction };
 
     private static Product Product(int id = 1, string code = "MH001", string name = "Áo thun") =>
-        new() { ProductId = id, ProductCode = code, ProductName = name };
+        new() { ProductId = id, ProductCode = code };
 
-    private static Team SewingTeam(int id = 1, string name = "Tổ may 1", string status = RecordStatus.Active) =>
-        new() { TeamId = id, TeamCode = "MAY1", TeamName = name, TeamType = TeamTypes.Sewing, Status = status };
+    private static Team SewingTeam(int id = 1, string code = "MAY1", string status = RecordStatus.Active) =>
+        new() { TeamId = id, TeamCode = code, TeamType = TeamTypes.Sewing, Status = status };
 
     private static OrderLine Line(int orderId, int productId) =>
         new() { OrderLineId = orderId * 1000 + productId, OrderId = orderId, ProductId = productId, ProductVariant = TestVariant.Make(productId), OrderedQty = 1000 };
@@ -137,7 +137,7 @@ public class KpiServiceTests
     {
         _orders.Add(Order());
         _products.Add(Product());
-        _teams.Add(new Team { TeamId = 1, TeamCode = "CAT1", TeamName = "Tổ cắt 1", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
+        _teams.Add(new Team { TeamId = 1, TeamCode = "CAT1", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
         _orderLines.Add(Line(1, 1));
 
         var result = await _sut.CreateAsync(Dto(), CancellationToken.None);
@@ -333,7 +333,7 @@ public class KpiServiceTests
     public async Task CreateAsync_SamePeriodOnAnotherTeam_IsAllowed()
     {
         GivenSetup();
-        _teams.Add(SewingTeam(2, "Tổ may 2"));
+        _teams.Add(SewingTeam(2, "MAY2"));
         _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 100, order: _orders[0], product: _products[0], team: _teams[0]));
 
         (await _sut.CreateAsync(Dto(teamId: 2, targetQty: 100), CancellationToken.None)).IsSuccess.Should().BeTrue();
@@ -375,7 +375,7 @@ public class KpiServiceTests
     public async Task CreateAsync_TargetsOfManyTeams_ShareTheOrderQty_WithoutCheckingBtp()
     {
         GivenSetup();
-        _teams.Add(SewingTeam(2, "Tổ may 2"));
+        _teams.Add(SewingTeam(2, "MAY2"));
         _kpiTargets.Add(Target(1, 1, 1, 1, Start, End, targetQty: 700, order: _orders[0], product: _products[0], team: _teams[0]));
 
         (await _sut.CreateAsync(Dto(teamId: 2, targetQty: 301), CancellationToken.None)).ErrorCode.Should().Be(ErrorCodes.KpiExceedsOrderQty);
@@ -424,7 +424,7 @@ public class KpiServiceTests
         result.Data.DailyTarget.Should().Be(43.48m);
         result.Data.OrderCode.Should().Be("DH001");
         result.Data.ProductCode.Should().Be("MH001");
-        result.Data.SewingTeamName.Should().Be("Tổ may 1");
+        result.Data.SewingTeamCode.Should().Be("MAY1");
         _kpiTargets.Should().ContainSingle(k => k.Status == KpiStatuses.Active);
         await _uow.Received(2).SaveChangesAsync();   // lưu chỉ tiêu (lấy Id) rồi lưu AuditLog, cùng transaction
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e =>
@@ -439,7 +439,7 @@ public class KpiServiceTests
         _orders.Add(Order());
         _products.Add(Product());
         _teams.Add(SewingTeam());
-        _teams.Add(SewingTeam(2, "Tổ may 2"));
+        _teams.Add(SewingTeam(2, "MAY2"));
         _orderLines.Add(new OrderLine { OrderLineId = 11, OrderId = 1, OrderedQty = 600 }.WithVariant(TestVariant.Make(1, color: "Đen", size: "M")));
         _orderLines.Add(new OrderLine { OrderLineId = 12, OrderId = 1, OrderedQty = 400 }.WithVariant(TestVariant.Make(1, color: "Trắng", size: "L")));
     }

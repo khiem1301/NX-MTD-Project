@@ -57,7 +57,7 @@ public sealed record ProductMaterialOptionDto(
 
 /// <summary>Mã hàng trong đơn và các NVL định mức của những màu × size đơn đặt.</summary>
 public sealed record OrderProductMaterialsDto(
-    int ProductId, string ProductCode, string ProductName, IReadOnlyList<ProductMaterialOptionDto> Materials);
+    int ProductId, string ProductCode, IReadOnlyList<ProductMaterialOptionDto> Materials);
 
 public sealed record CreateOrderMaterialLineDto(
     int MaterialId, decimal RequiredQty, decimal CustomerQty, string? Note) : IOrderMaterialInput;

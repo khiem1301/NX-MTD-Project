@@ -155,6 +155,10 @@
                  · Account.Username: tên đăng nhập tách khỏi Employee.EmployeeCode (mã NV chỉ map RJ). UQ_Account_Username;
                    seed Username = EmployeeCode; NV mới backend sinh từ họ tên (ThaiPH, trùng → 01/02). Patch:
                    SQL/patches/2026-11-10_account_username.sql.
+   - 20/11/2026  (DEV-ALL-149) Material có lại MaterialCode (VARCHAR(30), UQ_Material_Code; tên duy nhất theo Tên + Loại + Màu
+                 UQ_Material_NameType như trước DEV-ALL-144). Team bỏ TeamName, GradeLevelCode bỏ GradeName (tổ / bậc chỉ có mã);
+                 vw_PayrollExportData trả TeamCode. Patch: SQL/patches/2026-11-20_restore_material_code.sql,
+                 SQL/patches/2026-11-20_drop_team_grade_name.sql.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -221,7 +225,6 @@ CREATE TABLE dbo.SystemSetting (
 -- Danh mục bậc thợ (A, B, C, D... Admin thêm / sửa / ngừng dùng). Mã bậc là khóa; nhân viên, đánh giá và tiền bậc tham chiếu mã này.
 CREATE TABLE dbo.GradeLevelCode (
     GradeCode  VARCHAR(5)    NOT NULL CONSTRAINT PK_GradeLevelCode PRIMARY KEY CONSTRAINT CK_GLC_Code CHECK (GradeCode NOT LIKE '%[^A-Z0-9]%'),
-    GradeName  NVARCHAR(50)  NOT NULL,
     Status     VARCHAR(10)   NOT NULL CONSTRAINT DF_GLC_Status DEFAULT 'ACTIVE' CONSTRAINT CK_GLC_Status CHECK (Status IN ('ACTIVE','INACTIVE')),
     CreatedAt  DATETIME2(0)  NOT NULL CONSTRAINT DF_GLC_CreatedAt DEFAULT (dbo.fn_VnNow())
 );
@@ -244,7 +247,6 @@ GO
 CREATE TABLE dbo.Team (
     TeamId           INT IDENTITY(1,1) CONSTRAINT PK_Team PRIMARY KEY,
     TeamCode         VARCHAR(20)   NOT NULL CONSTRAINT UQ_Team_Code UNIQUE,
-    TeamName         NVARCHAR(100) NOT NULL CONSTRAINT UQ_Team_Name UNIQUE,
     TeamType         VARCHAR(10)   NOT NULL,
     Status           VARCHAR(20)   NOT NULL CONSTRAINT DF_Team_Status DEFAULT 'ACTIVE',
     CreatedAt        DATETIME2(0)  NOT NULL CONSTRAINT DF_Team_CreatedAt DEFAULT (dbo.fn_VnNow()),
@@ -424,7 +426,6 @@ CREATE UNIQUE INDEX UQ_Supplier_Email ON dbo.Supplier(Email) WHERE Email IS NOT 
 CREATE TABLE dbo.Product (
     ProductId       INT IDENTITY(1,1) CONSTRAINT PK_Product PRIMARY KEY,
     ProductCode     VARCHAR(30)    NOT NULL CONSTRAINT UQ_Product_Code UNIQUE,
-    ProductName     NVARCHAR(200)  NOT NULL,
     SampleImageUrl  NVARCHAR(500)  NULL,
     Description     NVARCHAR(1000) NULL,
     Status          VARCHAR(20)    NOT NULL CONSTRAINT DF_Product_Status DEFAULT 'ACTIVE',
@@ -550,6 +551,7 @@ CREATE TABLE dbo.CustomerOrder (
     StopReason       NVARCHAR(500)  NULL,
     FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-137)
     FinalAmountReason NVARCHAR(500) NULL,
+    DeliveryAddress  NVARCHAR(500)  NOT NULL CONSTRAINT DF_CustomerOrder_DeliveryAddress DEFAULT N'', -- địa chỉ giao hàng của đơn (DEV-ALL-147), BE bắt buộc nhập khi tạo / sửa đơn
     Note             NVARCHAR(1000) NULL,
     CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
     CustomerDeliveryDate   DATE     NULL,     -- ngày khách dự kiến giao; giao >= 2 lần: ngày giao từ
@@ -2904,7 +2906,7 @@ GO
 -- Dữ liệu xuất cho Kế toán làm lương tháng (UC31): ngày công, tăng ca, sản lượng × đơn giá, bậc thợ
 CREATE VIEW dbo.vw_PayrollExportData
 AS
-SELECT  p.PeriodMonth, e.EmployeeId, e.EmployeeCode, e.FullName, r.RoleName, e.PayType, t.TeamName,
+SELECT  p.PeriodMonth, e.EmployeeId, e.EmployeeCode, e.FullName, r.RoleName, e.PayType, t.TeamCode,
         ISNULL(ts.WorkDays, 0)        AS WorkDays,             -- tổng công, gồm cả Chủ nhật
         ISNULL(ts.SundayWorkDays, 0)  AS SundayWorkDays,       -- phần công Chủ nhật (lương x SUNDAY_PAY_MULTIPLIER)
         ISNULL(ts.OvertimeHours, 0)   AS OvertimeHours,
@@ -2985,11 +2987,8 @@ INSERT dbo.Role (RoleCode, RoleName, IsProduction) VALUES
  ('WORKER',           N'Công nhân',            1);
 -- Cách tính lương (Employee.PayType) đặt theo từng người khi tạo: tổ may PIECE_RATE, tổ cắt và QA/QC DAILY, còn lại MONTHLY.
 
-INSERT dbo.GradeLevelCode (GradeCode, GradeName) VALUES
- ('A', N'Bậc A – Giỏi'),
- ('B', N'Bậc B – Khá'),
- ('C', N'Bậc C – Trung bình'),
- ('D', N'Bậc D – Yếu');
+-- Bậc chỉ có mã (DEV-ALL-149); thứ hạng theo tiền bậc (GradeLevel)
+INSERT dbo.GradeLevelCode (GradeCode) VALUES ('A'), ('B'), ('C'), ('D');
 
 INSERT dbo.GradeLevel (GradeCode, MonthlyAmount, EffectiveDate) VALUES
  ('A', 600000, '2026-01-01'),
@@ -3026,9 +3025,9 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
 INSERT dbo.Customer (CustomerName, Phone, DefaultAddress) VALUES
  (N'Công ty mẹ (khai báo lại tên thật)', NULL, NULL);
 
-INSERT dbo.Team (TeamCode, TeamName, TeamType) VALUES
- ('VP',  N'Khối văn phòng', 'OFFICE'),
- ('CAT', N'Tổ cắt',         'CUTTING');
+INSERT dbo.Team (TeamCode, TeamType) VALUES
+ ('VP',  'OFFICE'),
+ ('CAT', 'CUTTING');
 
 -- Tài khoản Admin đầu tiên. PasswordHash phải được backend ghi đè bằng hash thật khi seed lần đầu.
 INSERT dbo.Employee (EmployeeCode, FullName, RoleId, TeamId, PayType, StartDate)
@@ -3055,7 +3054,7 @@ GO
 SET NOCOUNT ON;
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Team WHERE TeamCode = 'MAY1')
-    INSERT dbo.Team (TeamCode, TeamName, TeamType) VALUES ('MAY1', N'Tổ may 1', 'SEWING');
+    INSERT dbo.Team (TeamCode, TeamType) VALUES ('MAY1', 'SEWING');
 
 DECLARE @vp   INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'VP');
 DECLARE @cat  INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'CAT');
@@ -3196,9 +3195,9 @@ DECLARE @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNM
         @w4 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY4');
 
 /* ---------- 2. Mã hàng, NVL, nhà cung cấp, đơn hàng ---------- */
-INSERT dbo.Product (ProductCode, ProductName, Description) VALUES
- ('DEMO-AO01', N'Áo khoác gió DEMO', N'Mã hàng demo có 5 công đoạn'),
- ('DEMO-QU02', N'Quần short DEMO', N'Mã hàng demo có 2 công đoạn');
+INSERT dbo.Product (ProductCode, Description) VALUES
+ ('DEMO-AO01', N'Mã hàng demo có 5 công đoạn'),
+ ('DEMO-QU02', N'Mã hàng demo có 2 công đoạn');
 DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
         @p2 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-QU02');
 
@@ -3647,11 +3646,11 @@ SET XACT_ABORT ON;
 
 BEGIN TRANSACTION;
 
-CREATE TABLE #P (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT, ProductName NVARCHAR(200) COLLATE DATABASE_DEFAULT,
+CREATE TABLE #P (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT,
                  Description NVARCHAR(1000) COLLATE DATABASE_DEFAULT NULL);
-INSERT #P (ProductCode, ProductName, Description) VALUES
- (N'DEMO-AO01', N'Áo khoác gió DEMO', N'Mã hàng demo có 5 công đoạn'),
- (N'DEMO-QU02', N'Quần short DEMO', N'Mã hàng demo có 2 công đoạn');
+INSERT #P (ProductCode, Description) VALUES
+ (N'DEMO-AO01', N'Mã hàng demo có 5 công đoạn'),
+ (N'DEMO-QU02', N'Mã hàng demo có 2 công đoạn');
 
 CREATE TABLE #O (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT, OperationCode VARCHAR(30) COLLATE DATABASE_DEFAULT,
                  OperationName NVARCHAR(200) COLLATE DATABASE_DEFAULT, Seq SMALLINT, Skill TINYINT NULL, StdTime DECIMAL(9,2) NULL,
@@ -3963,8 +3962,8 @@ INSERT #R (ProductCode, OperationCode, Rate, EffectiveDate, Status, SubmittedAt,
  (N'DEMO-QU02', N'OP99', 1319.11, '2026-10-22', 'APPROVED', '2026-10-22T08:23:08', '2026-10-22T09:00:59', NULL, NULL);
 
 -- Mã hàng
-INSERT dbo.Product (ProductCode, ProductName, Description)
-SELECT s.ProductCode, s.ProductName, s.Description FROM #P s
+INSERT dbo.Product (ProductCode, Description)
+SELECT s.ProductCode, s.Description FROM #P s
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Product p WHERE p.ProductCode = s.ProductCode);
 
 -- Công đoạn: bỏ cờ công đoạn cuối trước (chỉ được một công đoạn cuối đang dùng cho mỗi mã hàng), cập nhật, thêm, rồi đặt lại cờ
@@ -4254,11 +4253,11 @@ INSERT dbo.FgHandoverLine (FgHandoverId, OrderLineId, HandedQty)
 SELECT FgHandoverId, @lM, 60 FROM dbo.FgHandover WHERE HandoverCode = 'TP-DEMO-004';
 
 -- XH-DEMO-001 và XH-DEMO-003 chờ Thủ kho xuất;
--- XH-DEMO-002 đã xuất, đang giao (Kế toán xác nhận khách nhận)
-INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt) VALUES
- ('XH-DEMO-001', @o1, '2026-11-05', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-30 15:00:00', NULL, NULL),
- ('XH-DEMO-002', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-29 15:00:00', @thukho, '2026-10-31 09:00:00'),
- ('XH-DEMO-003', @o1, '2026-11-09', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3', 'PENDING', '2026-10-31 08:00:00', NULL, NULL);
+-- XH-DEMO-002 đã xuất, đang giao bằng xe công ty (Kế toán xác nhận khách nhận); phiếu đã xuất phải có DeliveryMethod (CK_DN_DeliveryMethodSet)
+INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt, DeliveryMethod) VALUES
+ ('XH-DEMO-001', @o1, '2026-11-05', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 2', 'PENDING', '2026-10-30 15:00:00', NULL, NULL, NULL),
+ ('XH-DEMO-002', @o1, '2026-11-02', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 1', 'IN_DELIVERY', '2026-10-29 15:00:00', @thukho, '2026-10-31 09:00:00', 'COMPANY_VEHICLE'),
+ ('XH-DEMO-003', @o1, '2026-11-09', N'Kho khách hàng, KCN Tân Bình, TP.HCM', N'Giao đợt 3', 'PENDING', '2026-10-31 08:00:00', NULL, NULL, NULL);
 INSERT dbo.DispatchNoteLine (DispatchNoteId, OrderLineId, IssueQty)
 SELECT d.DispatchNoteId, v.OrderLineId, v.Qty
 FROM dbo.DispatchNote d
@@ -4483,7 +4482,7 @@ END;
 
 BEGIN TRANSACTION;
 
-INSERT dbo.Team (TeamCode, TeamName, TeamType, CreatedAt) VALUES ('MAY2', N'Tổ may 2', 'SEWING', '2026-10-27 08:00:00');
+INSERT dbo.Team (TeamCode, TeamType, CreatedAt) VALUES ('MAY2', 'SEWING', '2026-10-27 08:00:00');
 DECLARE @may1 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY1'),
         @may2 INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'MAY2'),
         @quandoc INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC'),
@@ -4511,7 +4510,7 @@ DECLARE @tt2 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'TT
 
 -- Lịch sử tổ: câu Summary giống TeamService (tạo tổ, thêm thành viên, bổ nhiệm, chuyển tổ)
 INSERT dbo.AuditLog (TableName, RecordId, Action, OldValues, NewValues, Reason, Summary, ChangedBy, ChangedAt) VALUES
- ('Team', @may2, 'INSERT', NULL, N'{"TeamCode":"MAY2","TeamName":"Tổ may 2","TeamType":"SEWING","Status":"ACTIVE"}', NULL, NULL, @admin, '2026-10-27 08:00:00'),
+ ('Team', @may2, 'INSERT', NULL, N'{"TeamCode":"MAY2","TeamType":"SEWING","Status":"ACTIVE"}', NULL, NULL, @admin, '2026-10-27 08:00:00'),
  ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Thêm vào tổ: Trương Văn Bình, Phạm Thị Hoa, Đỗ Văn Nam, Vũ Thị Thu. Mở tổ may 2 cho đơn quần short', @quandoc, '2026-10-27 08:10:00'),
  ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Bổ nhiệm Trương Văn Bình làm tổ trưởng', @quandoc, '2026-10-27 08:15:00'),
  ('Team', @may2, 'UPDATE', NULL, NULL, NULL, N'Nhận chuyển đến: Hoàng Văn Long (hiệu lực 28/10/2026)', @quandoc, '2026-10-28 07:45:00'),
@@ -4645,19 +4644,19 @@ INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Stat
 UPDATE dbo.Material SET WidthM = 1.50 WHERE MaterialType = 'FABRIC' AND WidthM IS NULL;
 
 -- DEMO-SM03: có màu – size nhưng chưa khai định mức và công đoạn (thử cảnh báo chưa khai); DEMO-NGUNG04: mã hàng ngừng sản xuất
-INSERT dbo.Product (ProductCode, ProductName, Description, Status) VALUES
- ('DEMO-SM03', N'Sơ mi DEMO', N'Mã hàng mới, chưa khai định mức và công đoạn', 'ACTIVE'),
- ('DEMO-NGUNG04', N'Áo thun cũ DEMO', N'Đã ngừng sản xuất', 'DISCONTINUED');
+INSERT dbo.Product (ProductCode, Description, Status) VALUES
+ ('DEMO-SM03', N'Mã hàng mới, chưa khai định mức và công đoạn', 'ACTIVE'),
+ ('DEMO-NGUNG04', N'Đã ngừng sản xuất', 'DISCONTINUED');
 DECLARE @pSm INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-SM03');
 INSERT dbo.ProductColor (ProductId, Color) VALUES (@pSm, N'Trắng');
 INSERT dbo.ProductVariant (ProductId, ProductColorId, SizeCode)
 SELECT @pSm, ProductColorId, s.SizeCode FROM dbo.ProductColor CROSS JOIN (VALUES ('M'), ('L')) s (SizeCode)
 WHERE ProductId = @pSm AND Color = N'Trắng';
 
-INSERT dbo.GradeLevelCode (GradeCode, GradeName, Status) VALUES ('E', N'Bậc E – Thử việc (ngừng dùng)', 'INACTIVE');
+INSERT dbo.GradeLevelCode (GradeCode, Status) VALUES ('E', 'INACTIVE');
 INSERT dbo.GradeLevel (GradeCode, MonthlyAmount, EffectiveDate) VALUES ('E', 0, '2026-01-01');
 
-INSERT dbo.Team (TeamCode, TeamName, TeamType, Status, CreatedAt) VALUES ('MAY3', N'Tổ may 3 (ngừng)', 'SEWING', 'DISCONTINUED', '2026-06-01 08:00:00');
+INSERT dbo.Team (TeamCode, TeamType, Status, CreatedAt) VALUES ('MAY3', 'SEWING', 'DISCONTINUED', '2026-06-01 08:00:00');
 INSERT dbo.Vehicle (PlateNumber, VehicleType, FuelNormPer100Km, Status) VALUES ('51E-000.00', N'Xe tải cũ', 14, 'DISCONTINUED');
 
 -- Nhân viên: tổ phó, công nhân cắt, người đã nghỉ, tài khoản bị khóa, và công nhân tổ may 2 để danh sách đủ dài
@@ -4823,8 +4822,9 @@ SELECT h.FgHandoverId, l.OrderLineId, l.OrderedQty, l.OrderedQty
 FROM #Ch c JOIN dbo.FgHandover h ON h.HandoverCode = 'TP-DEMO-' + c.N JOIN dbo.OrderLine l ON l.OrderId = c.OrderId;
 
 -- Phiếu xuất đã xuất kho: DH009 đang giao; DH010 đã giao đợt 1 (còn hàng chưa giao); DH011, DH012 giao đủ
-INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt, CustomerReceivedDate)
-SELECT 'XH-DEMO-' + c.N, c.OrderId, v.DeliveryDate, N'Kho khách hàng, KCN Tân Bình, TP.HCM', v.Note, v.Status, '2026-10-30 16:00:00', @thukho, '2026-10-31 08:00:00', v.ReceivedDate
+INSERT dbo.DispatchNote (DispatchCode, OrderId, DeliveryDate, DeliveryAddress, Note, Status, CreatedAt, DispatchedBy, DispatchedAt, CustomerReceivedDate, DeliveryMethod)
+SELECT 'XH-DEMO-' + c.N, c.OrderId, v.DeliveryDate, N'Kho khách hàng, KCN Tân Bình, TP.HCM', v.Note, v.Status, '2026-10-30 16:00:00', @thukho, '2026-10-31 08:00:00', v.ReceivedDate,
+       'COMPANY_VEHICLE'
 FROM #Ch c
 JOIN (VALUES ('009', CAST('2026-11-03' AS DATE), N'Đang trên đường giao', 'IN_DELIVERY', CAST(NULL AS DATE)),
              ('010', '2026-10-31', N'Giao đợt 1', 'DELIVERED', '2026-10-31'),

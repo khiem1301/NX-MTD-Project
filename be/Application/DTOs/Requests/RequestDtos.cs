@@ -32,7 +32,7 @@ public sealed record RequestTypeOptionDto(string RequestType, string Label, bool
     IReadOnlyList<string>? HandlerRoleOptions = null);
 
 public sealed record RequestListItemDto(int RequestId, string RequestCode, string RequestType, string Status,
-    string? Title, DateOnly? TargetDate, string? CreatedByName, string? TeamName, DateTime CreatedAt, DateTime? DecidedAt);
+    string? Title, DateOnly? TargetDate, string? CreatedByName, string? TeamCode, DateTime CreatedAt, DateTime? DecidedAt);
 
 public sealed record RequestLineDto(int RequestLineId, int? MaterialId, string? MaterialName, string? MaterialColor,
     int? OrderLineId, string? OrderLineLabel, int? ProductComponentMaterialId, string? ComponentName, string? ItemDescription, decimal Quantity, decimal? ReplenishQty);
@@ -59,9 +59,9 @@ public sealed record RequestDetailDto
     public int? CreatedBy { get; init; }
     public string? CreatedByName { get; init; }
     public int? CreatedByTeamId { get; init; }
-    public string? TeamName { get; init; }
+    public string? TeamCode { get; init; }
     public string? HandlerRole { get; init; }
-    public string? HandlerTeamName { get; init; }
+    public string? HandlerTeamCode { get; init; }
     public int? HandlerTeamId { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? DecidedAt { get; init; }

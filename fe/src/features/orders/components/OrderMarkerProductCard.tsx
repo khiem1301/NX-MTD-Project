@@ -48,7 +48,7 @@ export function OrderMarkerProductCard({
   return (
     <Card
       size="small"
-      title={`${product.productCode} - ${product.productName}`}
+      title={`${product.productCode}`}
       extra={
         editable && (
           <Button type="primary" size="small" loading={save.isPending} onClick={handleSave}>

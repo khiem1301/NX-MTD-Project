@@ -267,7 +267,8 @@ public sealed class OperationService : IOperationService
             Count(ActionUnchanged), Count(ActionError), p.ProductHasFinalStep, p.Sheet.HasRateColumn,
             RateCount(ActionNew), RateCount(ActionUpdate), RateCount(ActionUnchanged), RateCount(RateSkipped),
             p.Rows.Select(r => r.Preview).ToList(), p.Sheet.HasGroupColumn, p.Sheet.HasComponentColumn, finalInFile,
-            p.Removals.Count, p.Removals.Select(o => $"{o.OperationCode} {o.OperationName}").ToList(), p.Blocked));
+            p.Removals.Count, p.Removals.Select(o => $"{o.OperationCode} {o.OperationName}").ToList(), p.Blocked,
+            p.Rows.Count(r => r.Preview.Warning is not null)));
     }
 
     public async Task<Result<OperationImportResultDto>> ImportAsync(
@@ -582,15 +583,14 @@ public sealed class OperationService : IOperationService
             var error = raw.ParseError;
             if (error is null && !seenStt.Add(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
             if (error is null && manyFinals && raw.IsFinal) error = Messages.OperationImportManyFinals;
-            var (componentIds, componentNames, componentError) = ResolveComponents(raw, sheet, refs);
-            error ??= componentError;
+            var (componentIds, componentNames, componentWarning) = ResolveComponents(raw, sheet, refs);
             var group = sheet.HasGroupColumn ? raw.GroupName : null;
 
             if (error is not null)
             {
                 rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
                     raw.StandardTimeSec, raw.Equipment, raw.Rate, ActionError, error, GroupName: group,
-                    ComponentNames: componentNames), raw, null, null));
+                    ComponentNames: componentNames, Warning: componentWarning), raw, null, null));
                 continue;
             }
 
@@ -599,30 +599,38 @@ public sealed class OperationService : IOperationService
             var action = existing is null ? ActionNew : IsSame(existing, raw) && note is null ? ActionUnchanged : ActionUpdate;
             var (rateAction, rateNote, existingRate) = PlanRate(raw, existing, effectiveDate, ratesByOperation);
             rows.Add(new PlannedRow(new OperationImportRowDto(raw.RowNumber, raw.Stt, code, raw.Name, raw.SkillLevel,
-                raw.StandardTimeSec, raw.Equipment, raw.Rate, action, null, rateAction, rateNote, group, componentNames, note),
+                raw.StandardTimeSec, raw.Equipment, raw.Rate, action, null, rateAction, rateNote, group, componentNames, note, componentWarning),
                 raw, existing, existingRate, componentIds));
         }
         return rows;
     }
 
-    /// <summary>DEV-ALL-116: tên trong cột CHI TIẾT → chi tiết PANEL của mã hàng. Trả (null, null, null) khi file không có cột.</summary>
-    private static (IReadOnlyList<int>? Ids, IReadOnlyList<string>? Names, string? Error) ResolveComponents(
+    /// <summary>
+    /// DEV-ALL-116: tên trong cột CHI TIẾT → chi tiết PANEL của mã hàng. Tên không có ở mã hàng hoặc là phụ liệu không chặn dòng: bỏ qua
+    /// tên đó và trả cảnh báo (xem trước hiện chi tiết). Không có tên nào gắn được thì giữ nguyên bộ chi tiết đang có (ids = null).
+    /// Trả (null, null, null) khi file không có cột.
+    /// </summary>
+    private static (IReadOnlyList<int>? Ids, IReadOnlyList<string>? Names, string? Warning) ResolveComponents(
         OperationExcelRowDto raw, OperationExcelSheetDto sheet, ImportRefs? refs)
     {
         if (!sheet.HasComponentColumn || refs is null || raw.ComponentNames is null) return (null, null, null);
         var ids = new List<int>();
         var names = new List<string>();
+        var skipped = new List<string>();
         foreach (var name in raw.ComponentNames)
         {
             if (!refs.Components.TryGetValue(name, out var component))
-                return (null, raw.ComponentNames, string.Format(Messages.OperationImportComponentUnknown, name));
-            if (component.ComponentType != ComponentTypes.Panel)
-                return (null, raw.ComponentNames, string.Format(Messages.OperationImportComponentNotPanel, name));
-            if (ids.Contains(component.ProductComponentId)) continue;
-            ids.Add(component.ProductComponentId);
-            names.Add(component.ComponentName);
+                skipped.Add(string.Format(Messages.OperationImportComponentUnknown, name));
+            else if (component.ComponentType != ComponentTypes.Panel)
+                skipped.Add(string.Format(Messages.OperationImportComponentNotPanel, name));
+            else if (!ids.Contains(component.ProductComponentId))
+            {
+                ids.Add(component.ProductComponentId);
+                names.Add(component.ComponentName);
+            }
         }
-        return (ids, names, null);
+        var warning = skipped.Count == 0 ? null : string.Format(Messages.OperationImportComponentsSkipped, string.Join("; ", skipped));
+        return ids.Count == 0 && skipped.Count > 0 ? (null, names, warning) : (ids, names, warning);
     }
 
     /// <summary>Mô tả thay đổi nhóm / chi tiết của công đoạn đã có, null khi không đổi (DEV-ALL-116).</summary>

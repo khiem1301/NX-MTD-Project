@@ -12,7 +12,6 @@ const line = (
   orderLineId: id,
   productId: 1,
   productCode: code,
-  productName: 'Áo',
   color,
   sizeCode: size,
   orderedQty: qty,

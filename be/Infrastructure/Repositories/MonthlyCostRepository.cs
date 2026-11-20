@@ -69,18 +69,18 @@ public sealed class MonthlyCostRepository : IMonthlyCostRepository
 
     // ---------- Import Excel: tra cứu mã hàng cho khoản VARIABLE (UC12) ----------
 
-    public async Task<IReadOnlyDictionary<string, (int ProductId, string ProductName)>> GetProductsByCodesAsync(
+    public async Task<IReadOnlyDictionary<string, int>> GetProductsByCodesAsync(
         IReadOnlyCollection<string> productCodes, CancellationToken ct)
     {
         if (productCodes.Count == 0)
-            return new Dictionary<string, (int, string)>();
+            return new Dictionary<string, int>();
 
         var rows = await _context.Products.AsNoTracking()
             .Where(p => productCodes.Contains(p.ProductCode))
-            .Select(p => new { p.ProductCode, p.ProductId, p.ProductName })
+            .Select(p => new { p.ProductCode, p.ProductId })
             .ToListAsync(ct);
 
-        return rows.ToDictionary(p => p.ProductCode, p => (p.ProductId, p.ProductName),
+        return rows.ToDictionary(p => p.ProductCode, p => p.ProductId,
             StringComparer.OrdinalIgnoreCase);
     }
 

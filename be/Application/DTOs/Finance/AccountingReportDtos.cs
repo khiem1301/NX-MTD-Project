@@ -8,7 +8,7 @@ namespace NX_MTD.Application.DTOs;
 /// <summary>Tổng công + tăng ca của một nhân viên trong tháng, tách công Chủ nhật (IsSunday, SUNDAY_PAY_MULTIPLIER)
 /// khỏi công ngày thường.</summary>
 public sealed record WorkdayOvertimeRowDto(
-    int EmployeeId, string EmployeeCode, string FullName, string? TeamName,
+    int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
     decimal RegularWorkdays, decimal SundayWorkdays, decimal TotalWorkdays, decimal TotalOvertimeHours);
 
 /// <summary>Báo cáo công + tăng ca toàn xưởng trong một tháng — UC36.</summary>

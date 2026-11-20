@@ -96,7 +96,7 @@ public class IncomingMaterialTests
             {
                 ProductVariantId = variantId, ProductId = productId, ProductColorId = variantId,
                 ProductColor = new ProductColor { ProductColorId = variantId, Color = "Đỏ" }, SizeCode = "M",
-                Product = new Product { ProductId = productId, ProductCode = code, ProductName = "Áo " + code },
+                Product = new Product { ProductId = productId, ProductCode = code },
             },
         });
 

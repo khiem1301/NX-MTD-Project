@@ -15,7 +15,7 @@ public interface IAccountingReportRepository
 
     /// <summary>Từng dòng DailyTimesheet trong khoảng ngày của kỳ, kèm tên nhân viên/tổ — Service tự gộp
     /// theo nhân viên (regular vs Sunday theo IsSunday).</summary>
-    Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamName,
+    Task<IReadOnlyList<(int EmployeeId, string EmployeeCode, string FullName, string? TeamCode,
             decimal WorkdayValue, decimal OvertimeHours, bool IsSunday)>>
         GetTimesheetRowsAsync(DateOnly fromDate, DateOnly toDate, CancellationToken ct);
 

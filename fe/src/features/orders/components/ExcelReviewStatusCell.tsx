@@ -1,4 +1,5 @@
-import { Space, Tag, Typography } from 'antd';
+import { Tag, Typography } from 'antd';
+import { ReasonHover } from '@/components/common/ReasonHover';
 import { MESSAGES } from '@/constants/messages';
 import { EXCEL_ROW_ACTION } from '../constants';
 import type { RowStatus } from '../utils/excelReview';
@@ -35,10 +36,9 @@ export function ExcelReviewStatusCell({
 }: ExcelReviewStatusCellProps) {
   if (!status)
     return parseError ? (
-      <Space direction="vertical" size={0}>
+      <ReasonHover reasons={[{ text: parseError, type: 'danger' }]}>
         <Tag color="red">{text.status.error}</Tag>
-        <Typography.Text type="danger">{parseError}</Typography.Text>
-      </Space>
+      </ReasonHover>
     ) : (
       <Typography.Text type="secondary">{text.status.checking}</Typography.Text>
     );
@@ -50,9 +50,8 @@ export function ExcelReviewStatusCell({
         ? null
         : status.error;
   return (
-    <Space direction="vertical" size={0}>
+    <ReasonHover reasons={[reason && { text: reason, type: look.type ?? 'secondary' }]}>
       <Tag color={look.color}>{look.label}</Tag>
-      {reason && <Typography.Text type={look.type}>{reason}</Typography.Text>}
-    </Space>
+    </ReasonHover>
   );
 }

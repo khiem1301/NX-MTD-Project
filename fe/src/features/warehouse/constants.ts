@@ -147,7 +147,8 @@ export const LABELS = {
   addMaterial: 'Thêm NVL mới',
   materialsTitle: 'Danh mục NVL',
   materialCode: 'Mã NVL',
-  materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
+  materialCodeHint:
+    'Chữ không dấu, số và . _ - (tự viết hoa). Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
   materialName: 'Tên NVL',
   materialType: 'Loại',
   unit: 'Đơn vị tính',

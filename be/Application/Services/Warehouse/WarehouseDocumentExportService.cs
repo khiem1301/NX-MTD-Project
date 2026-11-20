@@ -67,7 +67,7 @@ public sealed class WarehouseDocumentExportService : IWarehouseDocumentExportSer
             Pair("Ngày cấp", Date(i.IssueDate)),
             Pair("Loại", Norm(i.WarehouseType) == "MATERIAL" ? "Cấp vải" : "Cấp bán thành phẩm"),
             Pair("Đơn hàng", i.OrderCode),
-            Pair("Tổ nhận", i.ReceivingTeamName),
+            Pair("Tổ nhận", i.ReceivingTeamCode),
             Pair("Người cấp", i.IssuedByName),
             Pair("Trạng thái", IssueStatus(i.Status)),
         };

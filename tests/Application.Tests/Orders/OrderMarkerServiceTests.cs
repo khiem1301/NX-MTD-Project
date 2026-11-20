@@ -30,7 +30,7 @@ public class OrderMarkerServiceTests
     /// <summary>Đơn có áo Đen S, M, L và Xanh M, L. Nhóm 1 dùng cho Đen, nhóm 2 cho Xanh (dạng bìa riêng).</summary>
     public OrderMarkerServiceTests()
     {
-        var product = new Product { ProductId = ProductId, ProductCode = "AO-01", ProductName = "Áo" };
+        var product = new Product { ProductId = ProductId, ProductCode = "AO-01" };
         foreach (var (color, size) in new[] { ("Đen", "S"), ("Đen", "M"), ("Đen", "L"), ("Xanh", "M"), ("Xanh", "L") })
             _lines.Add(new OrderLine { OrderLineId = _lines.Count + 1, OrderId = OrderId, OrderedQty = 10 }
                 .WithVariant(TestVariant.Make(product, color, size)));

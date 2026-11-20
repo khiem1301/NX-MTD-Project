@@ -10,7 +10,7 @@ public interface IProductImportService
     Task<Result<ProductImportPreviewDto>> PreviewAsync(IReadOnlyList<ProductExcelRow> rows, CancellationToken ct);
 }
 
-/// <summary>Đọc bảng mã hàng (Mã hàng, Tên mã hàng, Mô tả) từ Excel. Ném InvalidDataException khi không có bảng đúng mẫu.</summary>
+/// <summary>Đọc bảng mã hàng (Mã hàng, Mô tả) từ Excel. Ném InvalidDataException khi không có bảng đúng mẫu.</summary>
 public interface IExcelProductParser
 {
     IReadOnlyList<ProductExcelRow> Parse(Stream stream);

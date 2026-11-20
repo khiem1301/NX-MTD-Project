@@ -8,6 +8,7 @@ const text = MESSAGES.orders.validation;
 export const MAX_ORDER_QTY = 1_000_000;
 export const MAX_CMT_UNIT_PRICE = 100_000_000;
 export const MAX_COLOR_LENGTH = 50;
+export const MAX_DELIVERY_ADDRESS_LENGTH = 500;
 
 export const orderCodeSchema = z
   .string()
@@ -17,6 +18,12 @@ export const orderCodeSchema = z
   .regex(/^[A-Za-z0-9._-]+$/, text.codeFormat);
 
 export const orderNoteSchema = z.string().max(1000, text.noteMax);
+
+export const deliveryAddressSchema = z
+  .string()
+  .trim()
+  .min(1, MESSAGES.common.required)
+  .max(MAX_DELIVERY_ADDRESS_LENGTH, text.addressMax);
 
 const hasAtMostTwoDecimals = (value: number) => Math.round(value * 100) / 100 === value;
 

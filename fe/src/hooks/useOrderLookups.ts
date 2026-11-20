@@ -27,7 +27,8 @@ export const useProductColors = (productId?: number | null) =>
   useQuery({
     queryKey: [...KEY, 'product-colors', productId ?? 'all'],
     queryFn: () => orderLookupApi.productColors(productId ?? undefined),
-    enabled: productId !== null,
+    // null: chưa chọn mã, không gọi. Âm: mã khai trên form đơn, chưa có trong danh mục.
+    enabled: productId !== null && (productId === undefined || productId > 0),
     staleTime: 60_000,
   });
 

@@ -110,7 +110,7 @@ public sealed record OutputSaveResultDto(int Inserted, int Updated, int Deleted,
 // ================= KI-06 + KI-11: QC (UC57) =================
 
 public sealed record QcBatchDto(
-    int QcBatchId, DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int SewingTeamId, string SewingTeamName,
+    int QcBatchId, DateOnly WorkDate, string ShiftCode, TimeOnly BatchTime, int SewingTeamId, string SewingTeamCode,
     int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode, int FinishedQty,
     int InspectorId, string InspectorName, DateTime EditDeadline, bool CanEdit, byte[] RowVer);
 
@@ -140,7 +140,7 @@ public sealed record DefectDto(
     string? ReasonNote, decimal? ScrapUnitRate, DateTime? WorkerNotifiedAt, DateTime EditDeadline, string Status,
     DateTime RecordedAt, bool CanEdit, byte[] RowVer, int OrderId,
     int? ReplacementRequestId, string? ReplacementRequestCode, string? ReplacementRequestStatus,
-    string SewingTeamName = "", DateTime? UpdatedAt = null);
+    string SewingTeamCode = "", DateTime? UpdatedAt = null);
 
 /// <summary>DefectType nhận "Rework" | "Scrap"; ReasonCode nhận PascalCase ("SkippedStitch", "Other"...).</summary>
 public sealed record CreateDefectDto(
@@ -192,11 +192,11 @@ public sealed record OrderLineTeamQuery : PageQuery
     public bool OnlyUnallotted { get; init; }
 }
 
-public sealed record AllottedTeamDto(int TeamId, string TeamName);
+public sealed record AllottedTeamDto(int TeamId, string TeamCode);
 
 /// <summary>Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia.</summary>
 public sealed record OrderLineTeamDto(
-    int OrderLineId, int OrderId, string OrderCode, DateOnly DueDate, int ProductId, string ProductCode, string ProductName,
+    int OrderLineId, int OrderId, string OrderCode, DateOnly DueDate, int ProductId, string ProductCode,
     string Color, string SizeCode, int OrderedQty, IReadOnlyList<AllottedTeamDto> Teams);
 
 /// <summary>Danh sách tổ may mới của dòng đơn; danh sách rỗng là bỏ chia.</summary>
@@ -224,7 +224,8 @@ public sealed record OperationExcelSheetDto(
 public sealed record OperationImportRowDto(
     int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
     string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null,
-    string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, string? ChangeNote = null);
+    string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, string? ChangeNote = null,
+    string? Warning = null);
 
 /// <param name="FinalSttInFile">STT của dòng đánh x ở cột CUỐI (DEV-ALL-116), để màn hình chọn sẵn công đoạn cuối.</param>
 public sealed record OperationImportPreviewDto(
@@ -232,7 +233,7 @@ public sealed record OperationImportPreviewDto(
     int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
     int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows,
     bool HasGroupColumn = false, bool HasComponentColumn = false, int? FinalSttInFile = null,
-    int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null);
+    int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null, int WarningCount = 0);
 
 public sealed record OperationImportResultDto(
     int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped,

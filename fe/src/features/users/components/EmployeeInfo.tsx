@@ -13,7 +13,7 @@ export function EmployeeInfo({ employee: data }: { employee: EmployeeDetail }) {
       <Descriptions.Item label={MESSAGES.hr.role}>
         {ROLE_LABEL[data.role] ?? data.role}
       </Descriptions.Item>
-      <Descriptions.Item label={MESSAGES.hr.team}>{data.teamName ?? '—'}</Descriptions.Item>
+      <Descriptions.Item label={MESSAGES.hr.team}>{data.teamCode ?? '—'}</Descriptions.Item>
       <Descriptions.Item label={MESSAGES.hr.status}>
         <StatusTag status={data.status} labels={EMPLOYEE_STATUS_TAG} />
       </Descriptions.Item>

@@ -34,8 +34,7 @@ public sealed record StockBalanceQuery : PageQuery
 
 public sealed record StockBalanceDto(
     string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
-    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
-    string? ProductName, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
+    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
     int? ProductComponentMaterialId, string? ComponentName);
 
 /// <param name="ProductComponentMaterialId">Chỉ kho BTP: để trống = bộ đủ; có giá trị = chi tiết × vải (hàng cắt bù).</param>
@@ -48,7 +47,7 @@ public sealed record StockCardEntryDto(
 
 /// <summary>BTP tổ may theo dòng đơn (26/10): số bộ đã nhận từ kho, đã QC đạt, hàng hủy và còn trên chuyền.</summary>
 public sealed record TeamPieceHoldingDto(
-    int SewingTeamId, string TeamName, int OrderLineId, string OrderCode, string ProductCode, string Color,
+    int SewingTeamId, string TeamCode, int OrderLineId, string OrderCode, string ProductCode, string Color,
     string SizeCode, int ReceivedQty, int FinishedQty, int ScrapQty, int OnLineQty);
 
 /// <summary>Bộ lọc báo cáo nhập xuất tồn tổng hợp theo đơn và kỳ.</summary>
@@ -63,6 +62,5 @@ public sealed record NxtReportQuery : PageQuery
 /// <summary>Một dòng NXT: tồn đầu / nhập / xuất / tồn cuối trong kỳ.</summary>
 public sealed record NxtSummaryDto(
     string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
-    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
-    string? ProductName, string? Color, string? SizeCode, int? ProductComponentMaterialId, string? ComponentName,
+    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode, string? Color, string? SizeCode, int? ProductComponentMaterialId, string? ComponentName,
     decimal OpeningQty, decimal InQty, decimal OutQty, decimal ClosingQty);

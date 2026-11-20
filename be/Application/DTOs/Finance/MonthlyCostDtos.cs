@@ -19,7 +19,7 @@ public static class MonthlyCostRowStatus
 
 /// <summary>Một dòng trong bảng xem trước, đã gắn tên mã hàng (nếu tìm thấy) và trạng thái.</summary>
 public sealed record MonthlyCostExcelRowPreviewDto(
-    int RowNumber, string? CostCategoryCode, string? CostType, string? ProductCode, string? ProductName,
+    int RowNumber, string? CostCategoryCode, string? CostType, string? ProductCode,
     decimal? Amount, int? Quantity, string? Note, string RowStatus, string? ErrorMessage);
 
 /// <summary>Đối soát MEALS: hóa đơn bếp (dòng CostCategoryCode = MEALS) so với Σ DailyMeal.TotalAmount
@@ -41,8 +41,7 @@ public sealed record MonthlyCostImportResultDto(
 
 /// <summary>Một dòng chi phí đã lưu, kèm tên mã hàng cho khoản VARIABLE.</summary>
 public sealed record MonthlyCostItemDto(
-    int MonthlyCostId, string CostCategoryCode, string CostType, int? ProductId, string? ProductCode,
-    string? ProductName, decimal Amount, int? Quantity, string? Note, DateTime ImportedAt);
+    int MonthlyCostId, string CostCategoryCode, string CostType, int? ProductId, string? ProductCode, decimal Amount, int? Quantity, string? Note, DateTime ImportedAt);
 
 /// <summary>Toàn bộ chi phí đã nhập của một tháng — UC12/UC33. IsLocked cho FE biết tháng đã khóa để vô
 /// hiệu hóa nút nhập lại, tránh phải thử rồi mới biết qua lỗi 409 (MSG21).</summary>

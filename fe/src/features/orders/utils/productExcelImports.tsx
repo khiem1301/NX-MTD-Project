@@ -6,23 +6,15 @@ import { fill } from '@/utils/format';
 import { materialApi } from '@/services/materialApi';
 import type { SaveMaterialPayload } from '@/types/material';
 import { excelBundleApi } from '../api/orderApi';
-import type { ExcelBundle, SpecImportPart, SpecImportPreview, SpecWorkbook } from '../types';
+import type { ExcelBundle, SpecImportPreview, SpecWorkbook } from '../types';
 
 const text = MESSAGES.orders.productExcel;
 const MAX_ROW_ERRORS = 5;
 const RESULT_WIDTH = 640;
 
 /** DEV-ALL-121: các mục nhập Excel ở form mã hàng, theo thứ tự nhập (thành phần trước vì định mức, nhóm bìa dựa vào nó). */
-export type ProductImportKind = SpecImportPart | 'orderMaterials';
-export const PRODUCT_IMPORT_KINDS: readonly ProductImportKind[] = [
-  'components',
-  'norms',
-  'groups',
-  'markers',
-  'orderMaterials',
-];
-/** Mục cần chọn đơn hàng. */
-export const ORDER_IMPORT_KINDS: readonly ProductImportKind[] = ['markers', 'orderMaterials'];
+export type ProductImportKind = 'components' | 'norms' | 'groups';
+export const PRODUCT_IMPORT_KINDS: readonly ProductImportKind[] = ['components', 'norms', 'groups'];
 
 /**
  * DEV-ALL-122: dữ liệu đã đọc từ file Excel và sửa trên popup kiểm tra (không còn giữ file). Chỉ được ghi khi bấm Lưu mã hàng
@@ -32,7 +24,6 @@ export type ProductImportSelection = {
   bundle?: ExcelBundle;
   /** Tên file đã tải (hiện trên khung nhập). */
   fileName?: string;
-  orderId?: number;
   /**
    * DEV-ALL-123: NVL chưa có trong danh mục mà admin chọn "Thêm vào danh mục" khi Xác nhận popup. Tạo trước khi nhập (lúc Lưu);
    * rỗng / không có = không thêm, các dòng dùng NVL đó bị bỏ qua khi lưu.
@@ -41,12 +32,13 @@ export type ProductImportSelection = {
 };
 
 export type ProductImportOutcome = {
-  kind: ProductImportKind | 'materials';
+  /** markers, orderMaterials: nhập theo đơn ở form đơn hàng (DEV-ALL-150). */
+  kind: ProductImportKind | 'materials' | 'markers' | 'orderMaterials';
+  /** Ghi thêm sau tên mục (vd mã hàng của bìa). */
+  label?: string;
   ok: boolean;
   message: string;
   rowErrors: string[];
-  /** Không nhập vì chưa có đơn cho Bìa cắt, NVL của đơn (không tính là lỗi). */
-  skipped?: boolean;
 };
 
 export const EMPTY_WORKBOOK: SpecWorkbook = {
@@ -77,10 +69,6 @@ export const rowCountOf = (bundle: ExcelBundle, kind: ProductImportKind): number
       return bundle.spec.norms.length;
     case 'groups':
       return bundle.spec.markerGroups.length;
-    case 'markers':
-      return bundle.spec.orderMarkers.length;
-    case 'orderMaterials':
-      return bundle.orderMaterials.length;
   }
 };
 
@@ -91,14 +79,10 @@ export const kindsWithData = (bundle: ExcelBundle | undefined): ProductImportKin
 export const hasImportFiles = (s: ProductImportSelection) => kindsWithData(s.bundle).length > 0;
 
 /**
- * DEV-ALL-124: mục Excel bắt buộc khi Thêm mới mã hàng. Form trong màn tạo / sửa đơn (nhập vào chính đơn sau Lưu đơn): đủ 5 mục.
- * Màn Mã hàng (chưa có đơn): Thành phần, Định mức NVL, Nhóm bìa. Sửa mã hàng: không bắt buộc.
+ * DEV-ALL-124: mục Excel bắt buộc khi Thêm mới mã hàng: Thành phần, Định mức NVL, Nhóm bìa. Sửa mã hàng: không bắt buộc.
  */
-export const requiredKindsFor = (
-  creating: boolean,
-  deferred: boolean,
-): readonly ProductImportKind[] =>
-  !creating ? [] : deferred ? PRODUCT_IMPORT_KINDS : ['components', 'norms', 'groups'];
+export const requiredKindsFor = (creating: boolean): readonly ProductImportKind[] =>
+  creating ? PRODUCT_IMPORT_KINDS : [];
 
 /** Mục bắt buộc mà bộ dữ liệu chưa có dòng nào. */
 export const missingKinds = (
@@ -119,15 +103,16 @@ export const clearKind = (bundle: ExcelBundle, kind: ProductImportKind): ExcelBu
       return { ...bundle, spec: { ...spec, hasNorms: false, norms: [] } };
     case 'groups':
       return { ...bundle, spec: { ...spec, hasMarkerGroups: false, markerGroups: [] } };
-    case 'markers':
-      return {
-        ...bundle,
-        spec: { ...spec, hasOrderMarkers: false, orderMarkers: [], sizeColumns: [] },
-      };
-    case 'orderMaterials':
-      return { ...bundle, hasOrderMaterials: false, orderMaterials: [] };
   }
 };
+
+/** File chung có thể kèm sheet Bìa của đơn, NVL của đơn: form mã hàng không nhập hai bảng này nên bỏ ngay khi đọc file. */
+export const withoutOrderData = (bundle: ExcelBundle): ExcelBundle => ({
+  ...bundle,
+  hasOrderMaterials: false,
+  orderMaterials: [],
+  spec: { ...bundle.spec, hasOrderMarkers: false, orderMarkers: [], sizeColumns: [] },
+});
 
 /** Chọn file cho một mục: lấy đúng bảng của mục đó từ file mới, các mục khác giữ nguyên. */
 export const takeKind = (
@@ -150,41 +135,20 @@ export const takeKind = (
         ...base,
         spec: { ...spec, hasMarkerGroups: from.hasMarkerGroups, markerGroups: from.markerGroups },
       };
-    case 'markers':
-      return {
-        ...base,
-        spec: {
-          ...spec,
-          hasOrderMarkers: from.hasOrderMarkers,
-          orderMarkers: from.orderMarkers,
-          sizeColumns: from.sizeColumns,
-        },
-      };
-    case 'orderMaterials':
-      return {
-        ...base,
-        hasOrderMaterials: incoming.hasOrderMaterials,
-        orderMaterials: incoming.orderMaterials,
-      };
   }
 };
 
 /** Bảng định mức chỉ gồm bảng của một mục (nhập riêng từng mục, theo thứ tự). */
-const workbookOf = (spec: SpecWorkbook, part: SpecImportPart): SpecWorkbook => ({
+const workbookOf = (spec: SpecWorkbook, part: ProductImportKind): SpecWorkbook => ({
   ...EMPTY_WORKBOOK,
   ...(part === 'components' && { hasComponents: true, components: spec.components }),
   ...(part === 'norms' && { hasNorms: true, norms: spec.norms }),
   ...(part === 'groups' && { hasMarkerGroups: true, markerGroups: spec.markerGroups }),
-  ...(part === 'markers' && {
-    hasOrderMarkers: true,
-    orderMarkers: spec.orderMarkers,
-    sizeColumns: spec.sizeColumns,
-  }),
 });
 
 type ErrorRow = { rowNumber: number; error: string | null };
 
-const rowErrorsOf = (rows: readonly ErrorRow[]): string[] => {
+export const rowErrorsOf = (rows: readonly ErrorRow[]): string[] => {
   const errors = rows.filter((r) => r.error);
   const lines = errors
     .slice(0, MAX_ROW_ERRORS)
@@ -194,7 +158,7 @@ const rowErrorsOf = (rows: readonly ErrorRow[]): string[] => {
   return lines;
 };
 
-const specRows = (preview: SpecImportPreview, part: SpecImportPart): readonly ErrorRow[] => {
+const specRows = (preview: SpecImportPreview, part: ProductImportKind): readonly ErrorRow[] => {
   switch (part) {
     case 'components':
       return preview.components;
@@ -202,37 +166,22 @@ const specRows = (preview: SpecImportPreview, part: SpecImportPart): readonly Er
       return preview.norms;
     case 'groups':
       return preview.markerGroups;
-    case 'markers':
-      return preview.orderMarkers;
   }
 };
 
 /** Một bảng định mức: xem trước (lấy dòng lỗi) rồi nhập nếu có thay đổi hợp lệ. */
 const importSpecPart = async (
   productId: number,
-  part: SpecImportPart,
+  part: ProductImportKind,
   spec: SpecWorkbook,
-  orderId: number | undefined,
 ): Promise<Omit<ProductImportOutcome, 'kind'>> => {
   const workbook = workbookOf(spec, part);
-  const order = part === 'markers' ? orderId : undefined;
-  const preview = await excelBundleApi.previewSpec(productId, workbook, order, [part]);
+  const preview = await excelBundleApi.previewSpec(productId, workbook, undefined, [part]);
   // Ghi chú của máy chủ (vd màu bị bỏ qua ở nhóm bìa) hiện chung với dòng lỗi.
   const rowErrors = [...rowErrorsOf(specRows(preview, part)), ...preview.notes];
   if (!preview.canImport)
     return { ok: false, message: preview.crossErrors[0] ?? text.nothing, rowErrors };
-  const result = await excelBundleApi.importSpec(productId, workbook, order, [part]);
-  return { ok: true, message: result.message ?? MESSAGES.common.saved, rowErrors };
-};
-
-const importOrderMaterials = async (
-  orderId: number,
-  bundle: ExcelBundle,
-): Promise<Omit<ProductImportOutcome, 'kind'>> => {
-  const preview = await excelBundleApi.previewOrderMaterials(orderId, bundle.orderMaterials);
-  const rowErrors = rowErrorsOf(preview.rows);
-  if (preview.changeCount === 0) return { ok: false, message: text.nothing, rowErrors };
-  const result = await excelBundleApi.importOrderMaterials(orderId, bundle.orderMaterials);
+  const result = await excelBundleApi.importSpec(productId, workbook, undefined, [part]);
   return { ok: true, message: result.message ?? MESSAGES.common.saved, rowErrors };
 };
 
@@ -264,7 +213,7 @@ const createMaterials = async (materials: SaveMaterialPayload[]): Promise<Produc
 
 /**
  * Nhập lần lượt dữ liệu đã kiểm cho mã hàng vừa lưu. Mục lỗi không chặn mục sau (mỗi mục là một lần nhập riêng của máy chủ).
- * Bìa cắt, NVL của đơn chưa có đơn thì bỏ qua. Xong thì làm mới dữ liệu đơn hàng, tra cứu, kho, cắt.
+ * Xong thì làm mới dữ liệu đơn hàng, tra cứu, kho, cắt.
  */
 export async function runProductImports(
   productId: number,
@@ -275,21 +224,8 @@ export async function runProductImports(
   if (!bundle) return outcomes;
   if (selection.newMaterials?.length) outcomes.push(await createMaterials(selection.newMaterials));
   for (const kind of kindsWithData(bundle)) {
-    if (ORDER_IMPORT_KINDS.includes(kind) && selection.orderId === undefined) {
-      outcomes.push({
-        kind,
-        ok: false,
-        skipped: true,
-        message: text.skippedNoOrder,
-        rowErrors: [],
-      });
-      continue;
-    }
     try {
-      const result =
-        kind === 'orderMaterials'
-          ? await importOrderMaterials(selection.orderId as number, bundle)
-          : await importSpecPart(productId, kind, bundle.spec, selection.orderId);
+      const result = await importSpecPart(productId, kind, bundle.spec);
       outcomes.push({ kind, ...result });
     } catch (error) {
       outcomes.push({
@@ -301,31 +237,38 @@ export async function runProductImports(
     }
   }
   if (outcomes.some((o) => o.ok) || (selection.newMaterials?.length ?? 0) > 0)
-    await Promise.all(
-      [['orders'], ['lookups'], ['order-lookups'], ['warehouse'], ['cutting']].map((queryKey) =>
-        queryClient.invalidateQueries({ queryKey }),
-      ),
-    );
+    await refreshAfterImport();
   return outcomes;
 }
 
+/** Làm mới dữ liệu đơn hàng, tra cứu, kho, cắt sau khi nhập Excel. */
+export const refreshAfterImport = () =>
+  Promise.all(
+    [['orders'], ['lookups'], ['order-lookups'], ['warehouse'], ['cutting']].map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey }),
+    ),
+  );
+
+export const showProductImportResults = (productCode: string, outcomes: ProductImportOutcome[]) =>
+  showImportResults(fill(text.saved, productCode), outcomes);
+
 /** Hộp thoại kết quả: mỗi mục một dòng (Đã nhập / Chưa nhập / Bỏ qua) kèm lỗi của từng dòng. */
-export function showProductImportResults(productCode: string, outcomes: ProductImportOutcome[]) {
-  const show = outcomes.every((o) => o.ok || o.skipped) ? Modal.success : Modal.warning;
+export function showImportResults(headline: string, outcomes: ProductImportOutcome[]) {
+  const show = outcomes.every((o) => o.ok) ? Modal.success : Modal.warning;
   show({
     title: text.resultTitle,
     width: RESULT_WIDTH,
     okText: MESSAGES.common.close,
     content: (
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Typography.Text>{fill(text.saved, productCode)}</Typography.Text>
+        <Typography.Text>{headline}</Typography.Text>
         {outcomes.map((o) => (
-          <div key={o.kind}>
+          <div key={`${o.kind}-${o.label ?? ''}`}>
             <Space size={8} wrap>
-              <Tag color={o.ok ? 'green' : o.skipped ? 'default' : 'red'}>{text.kinds[o.kind]}</Tag>
-              <Typography.Text type={o.ok ? undefined : o.skipped ? 'secondary' : 'danger'}>
-                {o.message}
-              </Typography.Text>
+              <Tag color={o.ok ? 'green' : 'red'}>
+                {o.label ? `${text.kinds[o.kind]} ${o.label}` : text.kinds[o.kind]}
+              </Tag>
+              <Typography.Text type={o.ok ? undefined : 'danger'}>{o.message}</Typography.Text>
             </Space>
             {o.rowErrors.map((line) => (
               <div key={line}>

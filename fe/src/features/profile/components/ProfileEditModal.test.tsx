@@ -21,7 +21,7 @@ const profile: Profile = {
   avatarUrl: null,
   role: 'Admin',
   roleName: 'Giám đốc (Admin)',
-  teamName: null,
+  teamCode: null,
   startDate: '2026-01-01',
   currentGradeCode: null,
   isTemporaryPassword: false,
@@ -38,7 +38,8 @@ const renderModal = () =>
 
 const type = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
-const save = () => fireEvent.click(screen.getByText(MESSAGES.common.save, { selector: 'button span' }));
+const save = () =>
+  fireEvent.click(screen.getByText(MESSAGES.common.save, { selector: 'button span' }));
 const fillPasswords = (current: string, next: string, again: string) => {
   type(MESSAGES.hr.currentPassword, current);
   type(MESSAGES.hr.newPassword, next);

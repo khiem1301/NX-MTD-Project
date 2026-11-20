@@ -20,7 +20,7 @@ public sealed record FabricNeedDto(int MaterialId, string MaterialCode, string M
 
 public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
-    int CuttingTeamId, string CuttingTeamName, DateOnly DueDate, string Status, int TotalPlannedQty, DateTime CreatedAt);
+    int CuttingTeamId, string CuttingTeamCode, DateOnly DueDate, string Status, int TotalPlannedQty, DateTime CreatedAt);
 
 /// <param name="FabricMaterialIds">Vải dòng này cần (DEV-ALL-93): cả bộ = mọi vải chi tiết của màu áo; cắt bù / cắt lẻ = vải của chi tiết.</param>
 public sealed record WorkOrderLineDto(
@@ -28,8 +28,7 @@ public sealed record WorkOrderLineDto(
     int PlannedQty, int CutQty, int HandedQty, IReadOnlyList<int>? FabricMaterialIds = null);
 
 public sealed record WorkOrderDto(
-    int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
-    string ProductName, int CuttingTeamId, string CuttingTeamName, int? SourceRequestId, DateOnly DueDate,
+    int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode, int CuttingTeamId, string CuttingTeamCode, int? SourceRequestId, DateOnly DueDate,
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
     IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks,
     decimal FabricTolerancePercent = 0);

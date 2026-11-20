@@ -33,7 +33,6 @@ type ExcelReviewModalProps = {
   bundle: ExcelBundle;
   /** Mã hàng đang sửa; null = Thêm mới. */
   productId: number | null;
-  orderId: number | null;
   /** Chỉ hiện các bảng này (chọn file cho một mục); bỏ trống = mọi bảng có trong file. */
   only?: ReviewTable[];
   /** newMaterials: NVL chưa có mà admin chọn thêm vào danh mục khi lưu (rỗng = không thêm). */
@@ -49,7 +48,6 @@ export function ExcelReviewModal({
   fileName,
   bundle,
   productId,
-  orderId,
   only,
   onConfirm,
   onCancel,
@@ -58,7 +56,7 @@ export function ExcelReviewModal({
   const missing = REVIEW_TABLES.filter(
     (t) => !presentTables(bundle).includes(t) && (!only || only.includes(t)),
   );
-  const review = useExcelReview(bundle, productId, orderId, tables);
+  const review = useExcelReview(bundle, productId, tables);
   const { draft, counts, newMaterials } = review;
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
   const [onlyErrors, setOnlyErrors] = useState(false);

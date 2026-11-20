@@ -82,16 +82,6 @@ export const productColumns = (
     ),
   },
   {
-    title: col.productName,
-    key: 'name',
-    render: (_, r) => (
-      <Input
-        value={r.productName}
-        onChange={(e) => ctx.update(r.rowNumber, { productName: e.target.value })}
-      />
-    ),
-  },
-  {
     title: col.description,
     key: 'desc',
     render: (_, r) => (

@@ -106,6 +106,7 @@ public static class Messages
 
     // ---- Mã hàng, đơn hàng ----
     public const string ProductCodeDuplicate = "Mã hàng đã tồn tại.";
+    public const string StagedProductUnbound = "Dòng hàng trỏ mã hàng mới không có trong danh sách tạo cùng đơn.";
     public const string ProductCodeLocked = "Mã hàng đã dùng trong đơn hàng, không đổi được mã.";
     public const string ProductNotActive = "Mã hàng {0} đã ngừng sản xuất.";
     public const string ProductInvalidStatus = "Trạng thái mã hàng không cho phép thao tác này.";
@@ -159,6 +160,25 @@ public static class Messages
     public const string GradeSet = "Đã đặt bậc thợ.";
     public const string GradeApplied = "Đã áp dụng bậc thợ.";
     public const string GradeNotApplied = "Đã ghi nhận không áp dụng bậc thợ.";
+    // AI gợi ý bậc thợ cho cả tổ (DEV-ALL-148)
+    public const string GradeAiNotConfigured = "Chức năng AI gợi ý bậc chưa được cấu hình (thiếu khóa Gemini). Vui lòng liên hệ Admin.";
+    public const string GradeAiFailed = "AI chưa trả được gợi ý. Vui lòng thử tạo lại sau ít phút.";
+    public const string GradeAiNoWorkers = "Tổ chưa có công nhân đang làm việc để đánh giá.";
+    public const string GradeAiNoDraft = "Chưa có gợi ý AI hoặc gợi ý đã hết hạn. Vui lòng tạo gợi ý mới.";
+    public const string GradeAiWorkerNotInDraft = "Công nhân không có trong gợi ý AI hiện tại.";
+    public const string GradeAiLookbackInvalid = "Số ngày lấy dữ liệu phải từ {0} đến {1} ngày.";
+    public const string GradeAiGenerated = "AI đã gợi ý bậc cho cả tổ.";
+    public const string GradeAiItemRemoved = "Đã bỏ gợi ý của công nhân này.";
+    public const string GradeAiItemSaved = "Đã lưu chỉnh sửa gợi ý.";
+    public const string GradeAiMissingAdvice = "AI không trả gợi ý cho công nhân này, tạm giữ bậc hiện tại.";
+    public const string GradeAiNoChange = "Không có công nhân nào đổi bậc so với bậc hiện tại nên không có đề xuất nào được gửi.";
+    public const string GradeAiConfirmed = "Đã gửi {0} đề xuất bậc ({1} mới, {2} thay đề xuất cũ đang chờ).";
+    public const string GradeAiSkipLeftTeam = "{0}: không còn làm việc trong tổ, bỏ qua.";
+    public const string GradeAiSkipProposedToday = "{0}: hôm nay bạn đã có đề xuất cho công nhân này đã được quyết định, bỏ qua.";
+    public const string GradeAiSkipInvalidGrade = "{0}: bậc đã chọn không còn dùng, bỏ qua.";
+    public const string GradeAiReplacedAudit = "Thay đề xuất bậc đang chờ bằng gợi ý AI tổ trưởng đã xác nhận";
+    public const string GradeAiNotifyTitle = "Có đề xuất bậc thợ chờ duyệt";
+    public const string GradeAiNotifyBody = "Tổ trưởng gửi {0} đề xuất bậc thợ (từ gợi ý AI).";
     public const string AnnouncementTooLong = "Nội dung thông báo tối đa 1000 ký tự.";
     public const string AnnouncementTargetRequired = "Vui lòng chọn ít nhất một tổ hoặc một vai trò nhận thông báo.";
     public const string AnnouncementScopeInvalid = "Phạm vi gửi phải là toàn xưởng, theo tổ hoặc theo vai trò.";
@@ -190,7 +210,6 @@ public static class Messages
     public const string AccountUnlockedDone = "Đã mở khóa tài khoản.";
     public const string PasswordResetDone = "Đã đặt lại mật khẩu tạm.";
     public const string TeamCodeDuplicate = "Mã tổ đã tồn tại.";
-    public const string TeamNameDuplicate = "Tên tổ đã tồn tại.";
     public const string TeamNotActive = "Tổ đã ngừng hoạt động.";
     public const string TeamLeaderInvalidTeam = "Tổ trưởng / tổ phó phải thuộc tổ cắt hoặc tổ may đang hoạt động.";
     public const string TeamLeaderExistsNamed = "Tổ {0} đã có tổ trưởng: {1}.";
@@ -458,6 +477,7 @@ public static class Messages
     public const string WidthDecimals = "{0} tối đa {1} số lẻ.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationProductRequired = "Vui lòng chọn mã hàng.";
+    public const string MaterialCodeFormat = "Mã NVL chỉ gồm chữ không dấu, số và các ký tự . _ -";
     public const string OperationCodeFormat = "Mã công đoạn chỉ gồm chữ không dấu, số và các ký tự . _ -";
     public const string OperationFinalMustBeSewing = "Công đoạn cuối phải là công đoạn của tổ may.";
     public const string OperationHasOpenWork = "Không ngừng dùng được: công nhân còn việc đang giao hoặc chưa làm xong của công đoạn này trong đơn đang mở. Hãy thu hồi việc trước.";
@@ -481,8 +501,9 @@ public static class Messages
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
     // DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI khi nhập công đoạn
     public const string OperationImportManyFinals = "Cột CUỐI chỉ được đánh x ở một công đoạn.";
-    public const string OperationImportComponentUnknown = "Chi tiết \"{0}\" chưa có ở mã hàng.";
-    public const string OperationImportComponentNotPanel = "Chi tiết \"{0}\" là phụ liệu (TRIM); công đoạn chỉ gắn chi tiết cắt (PANEL).";
+    public const string OperationImportComponentUnknown = "\"{0}\" chưa có ở mã hàng";
+    public const string OperationImportComponentNotPanel = "\"{0}\" là phụ liệu (TRIM), công đoạn chỉ gắn chi tiết cắt (PANEL)";
+    public const string OperationImportComponentsSkipped = "Chi tiết không gắn vào công đoạn (bỏ qua): {0}.";
     public const string OperationImportGroupChange = "Nhóm: {0} → {1}";
     public const string OperationImportComponentChange = "Chi tiết: {0} → {1}";
     public const string OperationImportNone = "(trống)";

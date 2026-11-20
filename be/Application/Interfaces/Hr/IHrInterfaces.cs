@@ -46,7 +46,6 @@ public interface ITeamRepository : IGenericRepository<Team>
     Task<IReadOnlyList<TeamListItemDto>> ListAsync(bool includeDiscontinued, CancellationToken ct);
     Task<TeamDetailDto?> GetDetailAsync(int teamId, IReadOnlyCollection<string>? hiddenRoleCodes, CancellationToken ct);
     Task<bool> CodeExistsAsync(string code, int? exceptId, CancellationToken ct);
-    Task<bool> NameExistsAsync(string name, int? exceptId, CancellationToken ct);
     Task<int> CountActiveMembersAsync(int teamId, CancellationToken ct);
     Task<IReadOnlyList<TeamLookupDto>> LookupAsync(CancellationToken ct);
 }

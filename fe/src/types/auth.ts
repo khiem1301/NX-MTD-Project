@@ -10,7 +10,7 @@ export type UserInfo = {
   role: Role;
   roleName: string;
   teamId: number | null;
-  teamName: string | null;
+  teamCode: string | null;
   teamType: TeamType | null;
   isTemporaryPassword: boolean;
 };

@@ -49,7 +49,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
             .OrderByDescending(i => i.MaterialIssueId)
             .Select(i => new MaterialIssueListItemDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
                 i.Order.OrderCode, i.WorkOrderId, i.WorkOrder == null ? null : i.WorkOrder.WorkOrderCode, i.RequestId,
-                i.ReceivingTeamId, i.ReceivingTeam.TeamName, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
+                i.ReceivingTeamId, i.ReceivingTeam.TeamCode, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
                 i.ReceivedAt, i.MaterialIssueLines.Count))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<MaterialIssueListItemDto>>.Success(page);
@@ -60,7 +60,7 @@ public sealed class MaterialIssueService : IMaterialIssueService
         var dto = await Issues.AsNoTracking().Where(i => i.MaterialIssueId == issueId)
             .Select(i => new MaterialIssueDto(i.MaterialIssueId, i.IssueCode, i.WarehouseType, i.OrderId,
                 i.Order.OrderCode, i.WorkOrderId, i.WorkOrder == null ? null : i.WorkOrder.WorkOrderCode, i.RequestId,
-                i.ReceivingTeamId, i.ReceivingTeam.TeamName, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
+                i.ReceivingTeamId, i.ReceivingTeam.TeamCode, i.IssueDate, i.Status, i.IssuedByNavigation.FullName,
                 i.ReceivedByNavigation == null ? null : i.ReceivedByNavigation.FullName, i.ReceivedAt, i.RejectReason,
                 i.CreatedAt,
                 i.MaterialIssueLines.OrderBy(l => l.MaterialIssueLineId).Select(l => new MaterialIssueLineDto(

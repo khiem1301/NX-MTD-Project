@@ -15,7 +15,7 @@ namespace Application.Tests;
 [Collection(ExcelTestCollection.Name)]
 public class OperationAndPieceRateServiceTests : ProductionTestBase
 {
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", ProductName = "Áo", Status = RecordStatus.Active }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", Status = RecordStatus.Active }];
     private readonly List<Operation> _operations = [];
     private readonly List<PieceRate> _rates = [];
     private readonly List<OrderLine> _lines = [];

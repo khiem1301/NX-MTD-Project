@@ -73,11 +73,11 @@ public class CostSummaryServiceTests
         var period = Period();
         var items = new List<MonthlyCostItemDto>
         {
-            new(1, "Meals", "Fixed", null, null, null, 20_000_000m, null, null, DateTime.UtcNow),
-            new(2, "Fuel", "Fixed", null, null, null, 5_000_000m, null, null, DateTime.UtcNow),
-            new(3, "MaterialsBought", "Variable", 1, "SP001", "Áo thun nam", 3_000_000m, 100, null, DateTime.UtcNow),
-            new(4, "Scrap", "Variable", 1, "SP001", "Áo thun nam", 500_000m, null, null, DateTime.UtcNow),
-            new(5, "MaterialsBought", "Variable", 2, "SP002", "Quần jean", 7_000_000m, 50, null, DateTime.UtcNow),
+            new(1, "Meals", "Fixed", null, null, 20_000_000m, null, null, DateTime.UtcNow),
+            new(2, "Fuel", "Fixed", null, null, 5_000_000m, null, null, DateTime.UtcNow),
+            new(3, "MaterialsBought", "Variable", 1, "SP001", 3_000_000m, 100, null, DateTime.UtcNow),
+            new(4, "Scrap", "Variable", 1, "SP001", 500_000m, null, null, DateTime.UtcNow),
+            new(5, "MaterialsBought", "Variable", 2, "SP002", 7_000_000m, 50, null, DateTime.UtcNow),
         };
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));
@@ -107,7 +107,7 @@ public class CostSummaryServiceTests
         var period = Period();
         var items = new List<MonthlyCostItemDto>
         {
-            new(1, "Fuel", "Fixed", null, null, null, 5_000_000m, null, null, DateTime.UtcNow),
+            new(1, "Fuel", "Fixed", null, null, 5_000_000m, null, null, DateTime.UtcNow),
         };
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));
@@ -129,7 +129,7 @@ public class CostSummaryServiceTests
         var period = Period();
         var items = new List<MonthlyCostItemDto>
         {
-            new(1, "Fuel", "Fixed", null, null, null, 1_000_000m, null, null, DateTime.UtcNow),
+            new(1, "Fuel", "Fixed", null, null, 1_000_000m, null, null, DateTime.UtcNow),
         };
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));
@@ -147,7 +147,7 @@ public class CostSummaryServiceTests
         var period = Period();
         var items = new List<MonthlyCostItemDto>
         {
-            new(1, "Fuel", "Fixed", null, null, null, 1_000_000m, null, null, DateTime.UtcNow),
+            new(1, "Fuel", "Fixed", null, null, 1_000_000m, null, null, DateTime.UtcNow),
         };
         _monthlyCosts.GetByPeriodMonthAsync(Month, Arg.Any<CancellationToken>())
             .Returns(Result<MonthlyCostSummaryDto>.Success(CostSummary(period.PeriodId, items)));

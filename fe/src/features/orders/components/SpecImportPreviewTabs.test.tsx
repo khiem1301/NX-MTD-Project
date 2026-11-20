@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { SpecImportPreview } from '../types';
 import { SpecImportPreviewTabs } from './SpecImportPreviewTabs';
 
@@ -53,7 +53,7 @@ const preview = (over: Partial<SpecImportPreview> = {}): SpecImportPreview => ({
 });
 
 describe('SpecImportPreviewTabs', () => {
-  it('tóm tắt theo MSG24, chỉ có tab của bảng có trong file, hiện lý do dòng lỗi', () => {
+  it('tóm tắt theo MSG24, chỉ có tab của bảng có trong file, lý do dòng lỗi hiện khi trỏ vào nhãn', async () => {
     render(<SpecImportPreviewTabs data={preview()} />);
 
     expect(
@@ -62,7 +62,9 @@ describe('SpecImportPreviewTabs', () => {
     expect(screen.getByRole('tab', { name: 'Định mức NVL (2)' })).toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Thành phần/ })).not.toBeInTheDocument();
     expect(screen.getByText('Cập nhật')).toBeInTheDocument();
-    expect(screen.getByText(/chưa có trong đơn hàng/)).toBeInTheDocument();
+    expect(screen.queryByText(/chưa có trong đơn hàng/)).not.toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole('img', { name: 'info-circle' }));
+    expect(await screen.findByText(/chưa có trong đơn hàng/)).toBeInTheDocument();
   });
 
   it('hiện lỗi của bản đã gộp và ghi chú', () => {

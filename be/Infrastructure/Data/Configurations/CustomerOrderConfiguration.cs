@@ -27,6 +27,7 @@ public sealed class CustomerOrderConfiguration : IEntityTypeConfiguration<Custom
             .HasMaxLength(10)
             .IsUnicode(false)
             .HasDefaultValue("AWAITING");
+        entity.Property(e => e.DeliveryAddress).HasMaxLength(500);
         entity.Property(e => e.Note).HasMaxLength(1000);
         entity.Property(e => e.OrderCode)
             .HasMaxLength(30)

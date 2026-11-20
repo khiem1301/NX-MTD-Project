@@ -86,7 +86,6 @@ export type OrderMaterialImportPreview = {
 export type OrderProductMaterials = {
   productId: number;
   productCode: string;
-  productName: string;
   materials: MaterialOption[];
 };
 
@@ -329,7 +328,7 @@ export type MaterialIssueListItem = {
   workOrderCode: string | null;
   requestId: number | null;
   receivingTeamId: number;
-  receivingTeamName: string;
+  receivingTeamCode: string;
   issueDate: string;
   status: string;
   issuedByName: string;
@@ -426,7 +425,6 @@ export type NxtSummary = {
   orderId: number | null;
   orderCode: string | null;
   productCode: string | null;
-  productName: string | null;
   color: string | null;
   sizeCode: string | null;
   productComponentMaterialId: number | null;
@@ -440,7 +438,7 @@ export type NxtSummary = {
 /** BTP tổ may theo dòng đơn (26/10): số bộ đã nhận từ kho, đã QC đạt, hàng hủy, còn trên chuyền. */
 export type TeamPieceHolding = {
   sewingTeamId: number;
-  teamName: string;
+  teamCode: string;
   orderLineId: number;
   orderCode: string;
   productCode: string;

@@ -92,7 +92,7 @@ export function IssueDetailModal({ issueId, onClose }: IssueDetailModalProps) {
             <Descriptions.Item label={LABELS.order}>{i.orderCode}</Descriptions.Item>
             <Descriptions.Item label={LABELS.workOrder}>{i.workOrderCode ?? '—'}</Descriptions.Item>
             <Descriptions.Item label={LABELS.receivingTeam}>
-              {i.receivingTeamName}
+              {i.receivingTeamCode}
             </Descriptions.Item>
             <Descriptions.Item label={LABELS.issueDate}>
               {formatDate(i.issueDate)}

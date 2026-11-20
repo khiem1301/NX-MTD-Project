@@ -28,7 +28,7 @@ public class SpecImportTests : ProductionTestBase
 
     public SpecImportTests()
     {
-        SetupQueryable(new List<Product> { new() { ProductId = ProductId, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active } });
+        SetupQueryable(new List<Product> { new() { ProductId = ProductId, ProductCode = "AO01", Status = RecordStatus.Active } });
         SetupQueryable(_orders);
         SetupQueryable(new List<Material>
         {
@@ -82,7 +82,7 @@ public class SpecImportTests : ProductionTestBase
 
     private static OrderMarkersDto Markers() => new(OrderId,
     [
-        new OrderMarkerProductDto(ProductId, "AO01", "Áo", ["S", "M"], [],
+        new OrderMarkerProductDto(ProductId, "AO01", ["S", "M"], [],
             [new OrderMarkerDto(500, 1, "1A", 2.2m, 1.5m, "Active", [new MarkerRatioDto("S", 1), new MarkerRatioDto("M", 2)])]),
     ]);
 

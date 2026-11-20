@@ -49,7 +49,7 @@ public class AccountingReportServiceTests
     public async Task GetWorkdayOvertimeReportAsync_Valid_AggregatesPerEmployeeSplitBySunday()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamName, decimal WorkdayValue,
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
                 decimal OvertimeHours, bool IsSunday)>
         {
             (1, "NV001", "Nguyễn Văn A", "Tổ may 1", 1m, 1m, false),
@@ -79,7 +79,7 @@ public class AccountingReportServiceTests
     public async Task GetWorkdayOvertimeReportAsync_NoRows_ReturnsNoDataMessage()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamName, decimal WorkdayValue,
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
                 decimal OvertimeHours, bool IsSunday)>());
 
         var result = await _sut.GetWorkdayOvertimeReportAsync(Month, CancellationToken.None);
@@ -188,7 +188,7 @@ public class AccountingReportServiceTests
     public async Task ExportAsync_Valid_BuildsWorkbookFromThreeSections()
     {
         _repo.GetTimesheetRowsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>()).Returns(new List<
-            (int EmployeeId, string EmployeeCode, string FullName, string? TeamName, decimal WorkdayValue,
+            (int EmployeeId, string EmployeeCode, string FullName, string? TeamCode, decimal WorkdayValue,
                 decimal OvertimeHours, bool IsSunday)>());
         _repo.GetMealTotalsAsync(MonthStart, MonthEnd, Arg.Any<CancellationToken>())
             .Returns((DaysWithData: 0, TotalMeals: 0, TotalAmount: 0m));

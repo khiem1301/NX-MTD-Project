@@ -1,5 +1,5 @@
-import { Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { ReasonHover } from '@/components/common/ReasonHover';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
@@ -23,10 +23,9 @@ const resultColumn = {
   key: 'result',
   width: 260,
   render: (_: unknown, row: Row) => (
-    <Space direction="vertical" size={0}>
+    <ReasonHover reasons={[row.error && { text: row.error, type: 'danger' }]}>
       <StatusTag status={row.action} labels={text.action} />
-      {row.error && <Typography.Text type="danger">{row.error}</Typography.Text>}
-    </Space>
+    </ReasonHover>
   ),
 };
 

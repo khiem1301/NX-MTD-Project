@@ -89,7 +89,7 @@ public sealed class AnnouncementService : IAnnouncementService
             {
                 a.AnnouncementId, a.Content, a.Priority, a.TargetScope, Sender = a.Sender.FullName, a.SentAt,
                 Recipients = notifications.Count(n => n.RefId == a.AnnouncementId),
-                Teams = a.AnnouncementTargets.Where(t => t.Team != null).Select(t => t.Team!.TeamName).ToList(),
+                Teams = a.AnnouncementTargets.Where(t => t.Team != null).Select(t => t.Team!.TeamCode).ToList(),
                 Roles = a.AnnouncementTargets.Where(t => t.Role != null).Select(t => t.Role!.RoleName).ToList(),
             })
             .ToPagedAsync(query, ct);
@@ -101,7 +101,7 @@ public sealed class AnnouncementService : IAnnouncementService
     public async Task<Result<AnnouncementTargetsDto>> GetTargetsAsync(CancellationToken ct)
     {
         var teams = await _uow.Repository<Team>().Query().AsNoTracking().Where(t => t.Status == RecordStatus.Active)
-            .OrderBy(t => t.TeamName).Select(t => new AnnouncementTeamOptionDto(t.TeamId, t.TeamName, t.TeamType)).ToListAsync(ct);
+            .OrderBy(t => t.TeamCode).Select(t => new AnnouncementTeamOptionDto(t.TeamId, t.TeamCode, t.TeamType)).ToListAsync(ct);
         var roles = await _uow.Repository<Role>().Query().AsNoTracking().OrderBy(r => r.RoleId)
             .Select(r => new AnnouncementRoleOptionDto(r.RoleId, r.RoleCode, r.RoleName)).ToListAsync(ct);
         return Result<AnnouncementTargetsDto>.Success(new AnnouncementTargetsDto(teams, roles));

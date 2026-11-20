@@ -33,7 +33,7 @@ export function FinishOrderModal({ target, onClose }: Props) {
     <Modal
       open={target !== null}
       width={MODAL_WIDTH.md}
-      title={target ? `${text.title}: ${target.orderCode} · ${target.sewingTeamName}` : text.title}
+      title={target ? `${text.title}: ${target.orderCode} · ${target.sewingTeamCode}` : text.title}
       okText={text.confirm}
       cancelText={MESSAGES.common.cancel}
       okButtonProps={{ disabled: !data || data.blockers.length > 0, danger: true }}

@@ -55,7 +55,6 @@ jest.mock('../api/requisitionLookupApi', () => ({
       {
         orderLineId: 11,
         productCode: 'AO1',
-        productName: 'Áo',
         color: 'Đỏ',
         sizeCode: 'M',
         orderedQty: 100,
@@ -76,7 +75,7 @@ const signIn = (teamType: TeamType) =>
       role: 'TeamLeader',
       roleName: 'TeamLeader',
       teamId: 2,
-      teamName: 'Tổ cắt',
+      teamCode: 'Tổ cắt',
       teamType,
       isTemporaryPassword: false,
     } satisfies UserInfo,
@@ -256,7 +255,7 @@ describe('Đơn xin NVL / BTP của tổ may (DEV-ALL-110)', () => {
   it('xin NVL: chọn đơn rồi chọn NVL của đơn, gửi kèm đơn hàng', async () => {
     await start('Xin NVL');
     await chooseOption(1, 'DH4');
-    await chooseOption(2, 'C1 Chỉ');
+    await chooseOption(2, 'C1');
     fireEvent.change(screen.getByLabelText(MESSAGES.requests.quantity), {
       target: { value: '5' },
     });

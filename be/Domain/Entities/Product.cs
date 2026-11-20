@@ -12,8 +12,6 @@ public partial class Product
 
     public string ProductCode { get; set; } = null!;
 
-    public string ProductName { get; set; } = null!;
-
     public string? SampleImageUrl { get; set; }
 
     public string? Description { get; set; }

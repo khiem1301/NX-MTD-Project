@@ -40,7 +40,7 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
       ? [
           {
             title: MESSAGES.requests.team,
-            dataIndex: 'teamName',
+            dataIndex: 'teamCode',
             render: (v: string | null) => v ?? '—',
           },
         ]

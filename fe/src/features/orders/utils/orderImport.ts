@@ -1,4 +1,4 @@
-import type { OrderImportRow } from '../types';
+import type { OrderImportPreview, OrderImportRow } from '../types';
 import { sortSizes, type GridCell, type GridRow, type ProductBlock } from './orderGrid';
 
 let importSeq = 0;
@@ -59,7 +59,7 @@ export const mergeOrderImport = (
   const labels: Record<number, string> = {};
   for (const [productId, productRows] of byProduct) {
     const first = productRows[0]!;
-    labels[productId] = `${first.productCode} · ${first.productName ?? ''}`;
+    labels[productId] = `${first.productCode}`;
     const index = next.findIndex((b) => b.productId === productId);
     if (index >= 0) {
       next = next.map((b, i) => (i === index ? mergeIntoBlock(b, productRows) : b));
@@ -75,4 +75,28 @@ export const mergeOrderImport = (
     }
   }
   return { blocks: next, labels };
+};
+
+/**
+ * DEV-ALL-151: dòng chỉ thiếu mã hàng được nhận khi người dùng đã khai mã đó trên form đơn (chưa ghi danh mục).
+ * Gắn tempId âm để Áp dụng điền khối; mã được ghi khi Lưu đơn.
+ */
+export const acceptMissingProduct = (
+  preview: OrderImportPreview,
+  code: string,
+  tempId: number,
+): OrderImportPreview => {
+  const wanted = code.trim().toUpperCase();
+  let cleared = 0;
+  const rows = preview.rows.map((row) => {
+    if (!row.missingProduct || row.productCode.trim().toUpperCase() !== wanted) return row;
+    cleared += 1;
+    return { ...row, productId: tempId, error: null, missingProduct: false };
+  });
+  return {
+    ...preview,
+    rows,
+    validCount: preview.validCount + cleared,
+    errorCount: preview.errorCount - cleared,
+  };
 };

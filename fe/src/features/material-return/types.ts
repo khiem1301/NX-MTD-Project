@@ -8,7 +8,7 @@ export type MaterialReturnListItem = {
   returnCode: string;
   warehouseType: ReturnWarehouse;
   teamId: number;
-  teamName: string;
+  teamCode: string;
   orderCode: string | null;
   workOrderCode: string | null;
   status: string;

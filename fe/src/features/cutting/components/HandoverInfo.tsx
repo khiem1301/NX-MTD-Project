@@ -11,7 +11,7 @@ export function HandoverInfo({ handover: h }: { handover: CutHandover }) {
     <DetailDescriptions>
       <Descriptions.Item label={LABELS.workOrder}>{h.workOrderCode}</Descriptions.Item>
       <Descriptions.Item label={LABELS.order}>{h.orderCode}</Descriptions.Item>
-      <Descriptions.Item label={LABELS.cuttingTeam}>{h.cuttingTeamName}</Descriptions.Item>
+      <Descriptions.Item label={LABELS.cuttingTeam}>{h.cuttingTeamCode}</Descriptions.Item>
       <Descriptions.Item label={LABELS.handedAt}>{formatDateTime(h.handedAt)}</Descriptions.Item>
       <Descriptions.Item label={LABELS.status}>
         <StatusTag status={h.status} labels={HANDOVER_STATUS_LABEL} />

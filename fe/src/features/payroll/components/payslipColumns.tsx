@@ -20,7 +20,7 @@ export const payslipColumns = ({ onView }: PayslipColumnsOptions): ColumnsType<P
   },
   {
     title: PAYROLL_TEXT.table.team,
-    dataIndex: 'teamName',
+    dataIndex: 'teamCode',
     render: (v: string | null) => v ?? '—',
   },
   {

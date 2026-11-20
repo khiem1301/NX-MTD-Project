@@ -3,7 +3,12 @@ import { Col, Form, Input, Modal, Row, Select, Typography } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
-import { FABRIC_UNIT } from '@/constants/materials';
+import {
+  FABRIC_UNIT,
+  MATERIAL_CODE_MAX_LENGTH,
+  MATERIAL_NAME_MAX_LENGTH,
+  normalizeMaterialCode,
+} from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
 import { LABELS, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
@@ -78,8 +83,9 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
                 name="materialCode"
                 label={LABELS.materialCode}
                 extra={LABELS.materialCodeHint}
+                normalize={normalizeMaterialCode}
               >
-                <Input maxLength={30} />
+                <Input maxLength={MATERIAL_CODE_MAX_LENGTH} />
               </Form.Item>
             </Col>
           )}
@@ -89,7 +95,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
               label={LABELS.materialName}
               rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
             >
-              <Input maxLength={200} />
+              <Input maxLength={MATERIAL_NAME_MAX_LENGTH} />
             </Form.Item>
           </Col>
           <Col xs={24} sm={12}>

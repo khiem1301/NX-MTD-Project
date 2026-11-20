@@ -42,14 +42,14 @@ INSERT #Po (K, OrderCode, Supplier, Grp, OrdOff, Goods, Pay, ExpCnt, D1, D2, Not
  ('O5-TRM', 'DH-2511-005', N'Phụ liệu may Hoàng Gia',     'TRM', -18, 'ORDERED',            'UNPAID',        1, 0,   0,   N'Chỉ, nút áo polo, chưa giao'),
  ('O6-FAB', 'DH-2511-006', N'Công ty Vải Sợi Thành Công', 'FAB', -11, 'PARTIALLY_RECEIVED', 'PARTIALLY_PAID', 2, .70, 0,   N'Vải kate, giao lần 1'),
  ('O6-TRM', 'DH-2511-006', N'Phụ liệu may Hoàng Gia',     'TRM', -11, 'ORDERED',            'UNPAID',        1, 0,   0,   N'Chỉ, nút, nhãn'),
- ('O7-FAB', 'DH-2511-007', NULL,                            'FAB', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'Quản đốc chưa chốt nhà cung cấp và đơn giá'),
- ('O7-TRM', 'DH-2511-007', NULL,                            'TRM', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'Khóa, nút, chỉ (khóa khách cấp)'),
+ ('O7-FAB', 'DH-2511-007', N'Công ty Vải Sợi Thành Công', 'FAB', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'NCC dự kiến Công ty Vải Sợi Thành Công, Quản đốc chưa chốt đơn giá và ngày đặt'),
+ ('O7-TRM', 'DH-2511-007', N'Phụ liệu may Hoàng Gia',     'TRM', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'Khóa, nút, chỉ (khóa khách cấp), NCC dự kiến, chờ Quản đốc chốt'),
  ('O8-KH',  'DH-2511-008', NULL,                            'NONE', 0,  'CUSTOMER_SUPPLIED',  'UNPAID',        NULL, 0, 0,  N'Khách cấp toàn bộ NVL, không phải mua'),
  ('O9-FAB', 'DH-2510-009', N'Công ty Vải Sợi Thành Công', 'FAB', -25, 'RECEIVED',           'PAID',          1, 1,   0,   N'Vải dù gió navy'),
  ('O9-LIN', 'DH-2510-009', N'Công ty Vải Sợi Thành Công', 'LIN', -25, 'RECEIVED',           'PAID',          1, 1,   0,   N'Vải lót taffeta'),
- ('O9-TRM', 'DH-2510-009', NULL,                            'TRM', -25, 'REJECTED',           'UNPAID',        NULL, 0, 0,  N'Đơn mua phụ liệu bị hủy khi đơn hàng tạm dừng'),
- ('O10-FAB','DH-2510-010', NULL,                            'FAB', -44, 'REJECTED',           'UNPAID',        NULL, 0, 0,  N'Đơn mua vải hủy do khách hủy đơn'),
- ('SH-1',   NULL,          NULL,                            'KIM', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'Kim máy dùng chung cho nhiều đơn'),
+ ('O9-TRM', 'DH-2510-009', N'Phụ liệu may Hoàng Gia',     'TRM', -25, 'REJECTED',           'UNPAID',        NULL, 0, 0,  N'Đơn mua phụ liệu bị hủy khi đơn hàng tạm dừng'),
+ ('O10-FAB','DH-2510-010', N'Công ty Vải Sợi Thành Công', 'FAB', -44, 'REJECTED',           'UNPAID',        NULL, 0, 0,  N'Đơn mua vải hủy do khách hủy đơn'),
+ ('SH-1',   NULL,          N'Cửa hàng Kim máy Minh Phát',  'KIM', 0,   'PENDING_FINALISATION', 'UNPAID',    NULL, 0, 0,  N'Kim máy dùng chung cho nhiều đơn, NCC dự kiến, chờ Quản đốc chốt'),
  ('SH-2',   NULL,          N'Cửa hàng Kim máy Minh Phát',  'KIM', -20, 'RECEIVED',           'PAID',          1, 1,   0,   N'Kim máy số 14 mua dự trữ');
 
 -- Mã đơn mua theo định dạng của hệ thống: DM-yyyyMMdd-NNN

@@ -58,7 +58,7 @@ const SETTERS: { [K in ReviewTable]: (b: ExcelBundle, rows: RowsOf[K]) => ExcelB
 
 /** Dòng trống khi bấm Thêm dòng. */
 const BLANK: { [K in ReviewTable]: (rowNumber: number) => RowOf<K> } = {
-  products: (rowNumber) => ({ rowNumber, productCode: '', productName: '', description: null }),
+  products: (rowNumber) => ({ rowNumber, productCode: '', description: null }),
   components: (rowNumber) => ({
     rowNumber,
     name: '',

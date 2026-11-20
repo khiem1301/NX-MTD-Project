@@ -34,7 +34,7 @@ public class WorkAllocationServiceTests
     private readonly List<VwOperationAllocationProgress> _progress = new();
     private readonly List<OutputRecord> _outputs = new();
     private readonly List<MaterialIssueLine> _issueLines = new();
-    private readonly Team _team = new() { TeamId = TeamId, TeamName = "Tổ may 1", TeamType = TeamTypes.Sewing };
+    private readonly Team _team = new() { TeamId = TeamId, TeamCode = "MAY1", TeamType = TeamTypes.Sewing };
     private readonly Employee _worker;
     private readonly CustomerOrder _order = new() { OrderId = 7, OrderCode = "DH-1", Status = OrderStatuses.InProduction };
     private readonly OrderLine _line;

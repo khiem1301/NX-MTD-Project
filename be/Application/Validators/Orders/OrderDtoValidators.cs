@@ -49,7 +49,6 @@ public sealed class SaveProductDtoValidator : AbstractValidator<SaveProductDto>
         RuleFor(x => x.ProductCode).NotEmpty().WithMessage(Messages.Required("mã hàng"))
             .Must(c => c.Trim().Length <= 30).WithMessage("Mã hàng tối đa 30 ký tự.")
             .Must(c => CodePattern.IsMatch(c.Trim())).WithMessage("Mã hàng chỉ gồm chữ, số và . _ -");
-        RuleFor(x => x.ProductName).NotEmpty().WithMessage(Messages.Required("tên mã hàng")).MaximumLength(200);
         RuleFor(x => x.SampleImageUrl).MaximumLength(500)
             .Must(u => SampleImageKey.IsValid(u.Trim()) || (Uri.TryCreate(u, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)))
             .When(x => !string.IsNullOrWhiteSpace(x.SampleImageUrl)).WithMessage("Ảnh mẫu không hợp lệ, vui lòng chọn lại ảnh.");
@@ -66,7 +65,7 @@ public sealed class OrderLineInputValidator : AbstractValidator<OrderLineInput>
 {
     public OrderLineInputValidator()
     {
-        RuleFor(x => x.ProductId).GreaterThan(0);
+        RuleFor(x => x.ProductId).NotEqual(0).WithMessage("Vui lòng chọn mã hàng.");
         RuleFor(x => x.Color).NotEmpty().WithMessage(Messages.Required("màu")).MaximumLength(50);
         RuleFor(x => x.SizeCode).NotEmpty().WithMessage(Messages.Required("size")).MaximumLength(10)
             .Matches(@"^[A-Za-z0-9]+$").WithMessage("Size chỉ gồm chữ và số.");
@@ -79,6 +78,9 @@ public sealed class OrderLineInputValidator : AbstractValidator<OrderLineInput>
 /// <summary>Luật chung của tạo / sửa đơn hàng.</summary>
 public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T : IOrderInput
 {
+    /// <summary>Khớp độ rộng cột CustomerOrder.DeliveryAddress.</summary>
+    private const int DeliveryAddressMaxLength = 500;
+
     protected OrderInputValidatorBase()
     {
         RuleFor(x => x.OrderCode).NotEmpty().WithMessage(Messages.Required("mã đơn hàng"))
@@ -88,6 +90,8 @@ public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T 
         RuleFor(x => x.ReceivedDate).NotEmpty().WithMessage(Messages.Required("ngày nhận"));
         RuleFor(x => x.DueDate).NotEmpty().WithMessage(Messages.Required("ngày giao"))
             .Must((x, d) => d >= x.ReceivedDate).WithMessage("Ngày giao phải sau hoặc bằng ngày nhận.");
+        RuleFor(x => x.DeliveryAddress).NotEmpty().WithMessage(Messages.Required("địa chỉ giao hàng"))
+            .MaximumLength(DeliveryAddressMaxLength);
         RuleFor(x => x.Note).MaximumLength(1000);
         RuleFor(x => x.Lines).NotEmpty().WithMessage("Vui lòng nhập ít nhất một dòng màu × size.");
         RuleForEach(x => x.Lines).SetValidator(new OrderLineInputValidator());
@@ -102,6 +106,33 @@ public abstract class OrderInputValidatorBase<T> : AbstractValidator<T> where T 
             // Một mã hàng chỉ khai một lần trong đơn (một đơn giá); thêm màu / size khác vào cùng khối mã hàng đó.
             foreach (var g in list.GroupBy(l => l.ProductId).Where(g => g.Select(x => x.CmtUnitPrice).Distinct().Count() > 1))
                 ctx.AddFailure($"Mã hàng #{g.Key} đã có trong đơn với đơn giá khác: mỗi mã hàng chỉ khai một lần, thêm màu / size vào cùng khối.");
+        });
+        // DEV-ALL-151: dòng ProductId âm phải khớp một mã hàng khai cùng đơn; mã đó phải qua luật mã hàng.
+        RuleFor(x => x).Custom((order, ctx) =>
+        {
+            var staged = order.StagedProducts ?? [];
+            var tempIds = new HashSet<int>();
+            var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var productValidator = new SaveProductDtoValidator();
+            for (var i = 0; i < staged.Count; i++)
+            {
+                var item = staged[i];
+                if (item.TempId >= 0)
+                    ctx.AddFailure($"StagedProducts[{i}].TempId", "Mã hàng mới phải dùng mã tạm âm.");
+                else if (!tempIds.Add(item.TempId))
+                    ctx.AddFailure($"StagedProducts[{i}].TempId", "Mã tạm bị trùng.");
+                var code = item.ProductCode?.Trim() ?? "";
+                if (code.Length > 0 && !codes.Add(code))
+                    ctx.AddFailure($"StagedProducts[{i}].ProductCode", "Mã hàng bị trùng trong đơn.");
+                var check = productValidator.Validate(new SaveProductDto(item.ProductCode ?? "", item.SampleImageUrl, item.Description, item.ExtraImages));
+                foreach (var failure in check.Errors)
+                    ctx.AddFailure($"StagedProducts[{i}].{failure.PropertyName}", failure.ErrorMessage);
+            }
+            var lineIds = order.Lines.Select(l => l.ProductId).ToHashSet();
+            if (tempIds.Any(id => !lineIds.Contains(id)))
+                ctx.AddFailure(nameof(order.StagedProducts), "Mã hàng mới không có dòng nào trong đơn.");
+            if (order.Lines.Any(l => l.ProductId < 0 && !tempIds.Contains(l.ProductId)))
+                ctx.AddFailure(nameof(order.Lines), Messages.StagedProductUnbound);
         });
     }
 }

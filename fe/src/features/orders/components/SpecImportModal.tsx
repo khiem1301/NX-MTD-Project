@@ -93,7 +93,7 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
                 onChange={m.chooseProduct}
                 options={source.products.map((p) => ({
                   value: p.productId,
-                  label: `${p.productCode} - ${p.productName}`,
+                  label: `${p.productCode}`,
                 }))}
               />
             </Space>

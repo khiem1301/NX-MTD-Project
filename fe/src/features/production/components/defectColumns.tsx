@@ -48,7 +48,7 @@ export const defectColumns = ({
     render: (_, d) =>
       stacked(
         d.defectCode,
-        isManager ? `${formatDate(d.workDate)} · ${d.sewingTeamName}` : formatDate(d.workDate),
+        isManager ? `${formatDate(d.workDate)} · ${d.sewingTeamCode}` : formatDate(d.workDate),
       ),
   },
   {

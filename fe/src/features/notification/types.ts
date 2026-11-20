@@ -31,7 +31,7 @@ export type Announcement = {
 };
 
 export type AnnouncementTargets = {
-  teams: { teamId: number; teamName: string; teamType: string }[];
+  teams: { teamId: number; teamCode: string; teamType: string }[];
   roles: { roleId: number; roleCode: string; roleName: string }[];
 };
 

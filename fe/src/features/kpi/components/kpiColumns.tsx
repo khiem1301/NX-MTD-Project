@@ -1,4 +1,4 @@
-import { Progress, Tag, Tooltip } from 'antd';
+import { Progress, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { fill, formatDate, formatQty } from '@/utils/format';
 import { KPI_TEXT } from '../constants';
@@ -16,14 +16,10 @@ const progressStatus = (percent: number): 'success' | 'normal' | 'exception' =>
 /** Cột xem chỉ tiêu KPI dùng chung cho Quản đốc và tổ trưởng; tổ trưởng chỉ thấy tổ mình nên bỏ cột tổ may. */
 export const kpiTargetColumns = (showTeam: boolean): ColumnsType<KpiTarget> => [
   { title: KPI_TEXT.table.order, dataIndex: 'orderCode' },
-  {
-    title: KPI_TEXT.table.product,
-    dataIndex: 'productCode',
-    render: (code: string, row) => <Tooltip title={row.productName}>{code}</Tooltip>,
-  },
+  { title: KPI_TEXT.table.product, dataIndex: 'productCode' },
   ...(showTeam
     ? ([
-        { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamName' },
+        { title: KPI_TEXT.table.sewingTeam, dataIndex: 'sewingTeamCode' },
       ] as ColumnsType<KpiTarget>)
     : []),
   {

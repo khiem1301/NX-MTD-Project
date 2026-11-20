@@ -19,7 +19,7 @@ export type RequestListItem = {
   title: string | null;
   targetDate: string | null;
   createdByName: string | null;
-  teamName: string | null;
+  teamCode: string | null;
   createdAt: string;
   decidedAt: string | null;
 };
@@ -63,10 +63,10 @@ export type RequestDetail = {
   createdBy: number | null;
   createdByName: string | null;
   createdByTeamId: number | null;
-  teamName: string | null;
+  teamCode: string | null;
   /** Đơn Khác: vai trò xử lý người tạo chọn; tổ trưởng thì kèm tổ. */
   handlerRole: Role | null;
-  handlerTeamName: string | null;
+  handlerTeamCode: string | null;
   createdAt: string;
   decidedAt: string | null;
   decisionNote: string | null;

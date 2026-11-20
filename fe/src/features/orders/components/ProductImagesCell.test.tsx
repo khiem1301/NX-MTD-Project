@@ -9,7 +9,6 @@ jest.mock('./ProductImage', () => ({
 const product = (change: Partial<ProductListItem>): ProductListItem => ({
   productId: 1,
   productCode: 'AO-01',
-  productName: 'Áo',
   sampleImageUrl: 'PRODUCT/2026/11/main.png',
   extraImages: [],
   status: 'Active',

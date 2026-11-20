@@ -35,8 +35,8 @@ public class MealServiceTests
             NullLogger<MealService>.Instance);
     }
 
-    private static Team Team(int id = 3, string name = "Tổ may 1") =>
-        new() { TeamId = id, TeamCode = "MAY1", TeamName = name, TeamType = TeamTypes.Sewing, Status = RecordStatus.Active };
+    private static Team Team(int id = 3, string code = "MAY1") =>
+        new() { TeamId = id, TeamCode = code, TeamType = TeamTypes.Sewing, Status = RecordStatus.Active };
 
     private static DailyMeal Meal(int id = 1, string status = MealStatus.Open) =>
         new() { DailyMealId = id, MealDate = Today, Status = status };

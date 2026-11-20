@@ -26,7 +26,7 @@ export function OrderLineTeamsPage() {
   const table = useTableQuery<Filters>({});
   const list = useOrderLineTeams(table.params);
   const teams = useTeamOptions(SEWING_TEAM_TYPE);
-  const teamOptions = (teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamName }));
+  const teamOptions = (teams.data ?? []).map((t) => ({ value: t.teamId, label: t.teamCode }));
   const [selected, setSelected] = useState<number[]>([]);
 
   // Đổi bộ lọc thì bỏ chọn, để không chia nhầm dòng đang bị ẩn.
@@ -45,13 +45,7 @@ export function OrderLineTeamsPage() {
     {
       title: text.columns.product,
       key: 'product',
-      render: (_, r) => (
-        <>
-          <Typography.Text strong>{r.productCode}</Typography.Text>
-          <br />
-          <Typography.Text type="secondary">{r.productName}</Typography.Text>
-        </>
-      ),
+      render: (_, r) => <Typography.Text strong>{r.productCode}</Typography.Text>,
     },
     { title: text.columns.color, dataIndex: 'color' },
     { title: text.columns.size, dataIndex: 'sizeCode' },

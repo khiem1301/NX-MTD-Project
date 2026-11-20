@@ -96,10 +96,8 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
         <>
           <DetailDescriptions>
             <Descriptions.Item label={LABELS.order}>{w.orderCode}</Descriptions.Item>
-            <Descriptions.Item
-              label={LABELS.product}
-            >{`${w.productCode} ${w.productName}`}</Descriptions.Item>
-            <Descriptions.Item label={LABELS.cuttingTeam}>{w.cuttingTeamName}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.product}>{`${w.productCode}`}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.cuttingTeam}>{w.cuttingTeamCode}</Descriptions.Item>
             <Descriptions.Item label={LABELS.dueDate}>{formatDate(w.dueDate)}</Descriptions.Item>
             <Descriptions.Item
               label={LABELS.fabricTolerance}

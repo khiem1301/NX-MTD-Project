@@ -22,7 +22,7 @@ const put = async <T>(url: string, body?: unknown): Promise<T> =>
 
 export const kpiApi = {
   getAllottedTeams: (orderId: number, productId: number) =>
-    get<{ teamId: number; teamName: string }[]>(API.kpi.allottedTeams, { orderId, productId }),
+    get<{ teamId: number; teamCode: string }[]>(API.kpi.allottedTeams, { orderId, productId }),
   getTargets: (filter: KpiTargetFilter) => get<Paginated<KpiTarget>>(API.kpi.targets, filter),
 
   getTeamTargets: (filter: KpiTargetFilter) =>

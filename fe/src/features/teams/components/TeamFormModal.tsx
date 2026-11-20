@@ -23,7 +23,6 @@ export function TeamFormModal({ open, team, onClose }: TeamFormModalProps) {
     if (team)
       form.setFieldsValue({
         teamCode: team.teamCode,
-        teamName: team.teamName,
         teamType: team.teamType,
       });
   }, [open, team, form]);
@@ -63,16 +62,6 @@ export function TeamFormModal({ open, team, onClose }: TeamFormModalProps) {
             { required: true, whitespace: true, message: MESSAGES.common.required },
             { max: 20 },
             { pattern: CODE_PATTERN, message: MESSAGES.hr.codeInvalid },
-          ]}
-        >
-          <Input />
-        </Form.Item>
-        <Form.Item
-          name="teamName"
-          label={MESSAGES.hr.teamName}
-          rules={[
-            { required: true, whitespace: true, message: MESSAGES.common.required },
-            { max: 100 },
           ]}
         >
           <Input />

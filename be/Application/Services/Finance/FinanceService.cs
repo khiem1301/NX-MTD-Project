@@ -65,7 +65,7 @@ public sealed class FinanceService : IFinanceService
         var orders = dtos.GroupBy(d => d.OrderId).Select(g => new RevenueOrderOptionDto(g.Key, g.First().OrderCode))
             .OrderBy(o => o.OrderCode).ToList();
         var products = dtos.GroupBy(d => d.ProductId)
-            .Select(g => new RevenueProductOptionDto(g.Key, g.First().ProductCode, g.First().ProductName))
+            .Select(g => new RevenueProductOptionDto(g.Key, g.First().ProductCode))
             .OrderBy(p => p.ProductCode).ToList();
         return Result<RevenueFilterOptionsDto>.Success(new RevenueFilterOptionsDto(orders, products));
     }
@@ -95,9 +95,9 @@ public sealed class FinanceService : IFinanceService
         return rows.Select(r =>
         {
             var orderCode = orderCodes.GetValueOrDefault(r.OrderId, "");
-            var (productCode, productName) = products.GetValueOrDefault(r.ProductId, ("", ""));
+            var productCode = products.GetValueOrDefault(r.ProductId, "");
             return new RevenueSummaryDto(r.PeriodMonth ?? "", r.OrderId, orderCode, r.ProductId, productCode,
-                productName, r.FinishedQty ?? 0, r.Revenue ?? 0m);
+                r.FinishedQty ?? 0, r.Revenue ?? 0m);
         }).ToList();
     }
 
@@ -176,7 +176,7 @@ public sealed class FinanceService : IFinanceService
 
     /// <summary>Tính kết quả hòa vốn cho từng mã hàng có doanh thu trong tháng (bước 1-6 của UC11).</summary>
     private async Task<(List<BreakEvenResult> Entities, Dictionary<int, string> Warnings,
-        IReadOnlyDictionary<int, (string ProductCode, string ProductName)> Products, DateTime CalculatedAt)>
+        IReadOnlyDictionary<int, string> Products, DateTime CalculatedAt)>
         BuildEntitiesAsync(AccountingPeriod period, string allocationBasis, IReadOnlyList<VwMonthlyRevenue> revenueRows,
             CancellationToken ct)
     {
@@ -343,8 +343,8 @@ public sealed class FinanceService : IFinanceService
     private static bool IsValidMonth(string periodMonth) => PeriodMonthPattern.IsMatch(periodMonth);
 
     private static string ProductCodeOf(
-        IReadOnlyDictionary<int, (string ProductCode, string ProductName)> products, int productId) =>
-        products.TryGetValue(productId, out var p) ? p.ProductCode : "";
+        IReadOnlyDictionary<int, string> products, int productId) =>
+        products.TryGetValue(productId, out var p) ? p : "";
 
     /// <summary>"Output"/"LabourHours" (FE, PascalCase theo Coding Rules 2.2) → "OUTPUT"/"LABOUR_HOURS" (DB).
     /// Cũng chấp nhận luôn giá trị UPPER_SNAKE gốc (gọi trực tiếp qua Swagger/test). Giá trị lạ trả về null
@@ -383,12 +383,12 @@ public sealed class FinanceService : IFinanceService
     }
 
     private static BreakEvenResultDto ToDto(BreakEvenResult r, string periodMonth,
-        IReadOnlyDictionary<int, (string ProductCode, string ProductName)> products,
+        IReadOnlyDictionary<int, string> products,
         IReadOnlyDictionary<int, string> warningsByProductId)
     {
-        var (productCode, productName) = products.GetValueOrDefault(r.ProductId, ("", ""));
+        var productCode = products.GetValueOrDefault(r.ProductId, "");
         return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, productCode,
-            productName, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
+            CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
             r.VariableCost, r.AllocatedFixedCost, r.BreakEvenQty, r.PercentReached, r.SurplusValue, r.IsAtRisk,
             r.CalculatedAt, warningsByProductId.GetValueOrDefault(r.ProductId));
     }
@@ -404,8 +404,7 @@ public sealed class FinanceService : IFinanceService
                 : string.Format(Messages.BreakEvenAtRiskWarningNoBreakEven, r.Product.ProductCode);
         }
 
-        return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, r.Product.ProductCode,
-            r.Product.ProductName, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
+        return new BreakEvenResultDto(r.BreakEvenResultId, r.PeriodId, periodMonth, r.ProductId, r.Product.ProductCode, CodeText.ToPascal(r.AllocationBasis), r.FinishedQty, r.CmtUnitPrice, r.Revenue,
             r.VariableCost, r.AllocatedFixedCost, r.BreakEvenQty, r.PercentReached, r.SurplusValue, r.IsAtRisk,
             r.CalculatedAt, warning);
     }

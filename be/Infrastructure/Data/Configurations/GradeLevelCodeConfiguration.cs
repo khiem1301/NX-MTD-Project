@@ -18,7 +18,6 @@ public sealed class GradeLevelCodeConfiguration : IEntityTypeConfiguration<Grade
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.GradeName).HasMaxLength(50);
         entity.Property(e => e.Status)
             .HasMaxLength(10)
             .IsUnicode(false)

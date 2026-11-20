@@ -8,7 +8,7 @@ import type { TeamPieceHolding } from '../types';
 import { DataTable } from '@/components/common/DataTable';
 
 const columns: TableColumnsType<TeamPieceHolding> = [
-  { title: LABELS.team, dataIndex: 'teamName' },
+  { title: LABELS.team, dataIndex: 'teamCode' },
   { title: LABELS.order, dataIndex: 'orderCode' },
   { title: LABELS.product, dataIndex: 'productCode' },
   { title: LABELS.garmentColor, dataIndex: 'color' },

@@ -56,6 +56,12 @@ export function OrderSummary({ order, showAmount = false }: OrderSummaryProps) {
           {formatDateTime(order.createdAt)}
         </Descriptions.Item>
       </Descriptions>
+      {order.deliveryAddress && (
+        <Typography.Paragraph style={{ margin: '8px 0 0' }}>
+          <Typography.Text type="secondary">{`${MESSAGES.orders.deliveryAddress}: `}</Typography.Text>
+          {order.deliveryAddress}
+        </Typography.Paragraph>
+      )}
       {order.note && (
         <Typography.Paragraph
           type="secondary"

@@ -43,14 +43,14 @@ function Host() {
 }
 
 describe('cột NVL của bảng định mức', () => {
-  it('ô đã chọn chỉ hiện mã - màu, không hiện tên và đơn vị', () => {
+  it('ô đã chọn chỉ hiện tên - màu, không hiện đơn vị', () => {
     render(<Host />);
 
     expect(screen.getByText('V-01 - Đen')).toBeInTheDocument();
     expect(screen.queryByText(/Vải thun/)).not.toBeInTheDocument();
   });
 
-  it('trỏ chuột vào ô thì hiện đủ mã, tên, màu và đơn vị', async () => {
+  it('trỏ chuột vào ô thì hiện đủ tên, màu và đơn vị', async () => {
     const { container } = render(<Host />);
 
     // Ô chọn đầu tiên của dòng là Thành phần; ô thứ hai mới là NVL.

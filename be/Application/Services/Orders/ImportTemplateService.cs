@@ -32,7 +32,7 @@ public sealed class ImportTemplateService : IImportTemplateService
         _uow = uow; _writer = writer; _clock = clock;
     }
 
-    public async Task<Result<ExcelFileDto>> BuildAsync(string kind, int? productId, int? orderId, bool withOrder, CancellationToken ct)
+    public async Task<Result<ExcelFileDto>> BuildAsync(string kind, int? productId, int? orderId, CancellationToken ct)
     {
         if (productId is { } pid && !await _uow.Repository<Product>().Query().AnyAsync(p => p.ProductId == pid, ct))
             return Fail.NotFound<ExcelFileDto>();
@@ -45,7 +45,7 @@ public sealed class ImportTemplateService : IImportTemplateService
             ImportTemplateKinds.OrderLines => await OrderLinesAsync(orderId, ct),
             ImportTemplateKinds.OrderMaterials => await OrderMaterialsAsync(orderId, ct),
             ImportTemplateKinds.Operations => await OperationsAsync(productId, ct),
-            ImportTemplateKinds.ProductForm => await ProductFormAsync(productId, orderId, withOrder, ct),
+            ImportTemplateKinds.ProductForm => await ProductFormAsync(productId, ct),
             _ => null,
         };
         if (model is null) return Fail.NotFound<ExcelFileDto>();
@@ -103,33 +103,21 @@ public sealed class ImportTemplateService : IImportTemplateService
         ],
         [await OperationsTableAsync(productId, "", ct)]);
 
-    private async Task<ImportTemplateModel> ProductFormAsync(int? productId, int? orderId, bool withOrder, CancellationToken ct)
+    private async Task<ImportTemplateModel> ProductFormAsync(int? productId, CancellationToken ct)
     {
         var guide = new List<TemplateGuideRow>
         {
-            new("Dùng ở đâu", withOrder
-                ? "Form tạo / sửa đơn hàng → khung 'Nhập từ Excel' → nút 'Chọn 1 file chung cho tất cả'."
-                : "Form Thêm mới / Sửa mã hàng → khung 'Nhập từ Excel' → nút 'Chọn 1 file chung cho tất cả'."),
-            new("Cách nhập", $"File này gom {(withOrder ? 6 : 4)} sheet cho một mã hàng. Sheet Mã hàng tự điền Mã hàng, Tên, Mô tả của form (nếu có nhiều dòng chỉ lấy dòng đầu); mỗi sheet còn lại được nhập vào mục cùng tên. Sheet nào file không có thì bỏ qua. Sau khi chọn file, hệ thống mở bảng kiểm tra để xem và sửa; bấm Lưu thì lưu mã hàng rồi nhập các bảng."),
+            new("Dùng ở đâu", "Form Thêm mới / Sửa mã hàng (màn Mã hàng hoặc form đơn hàng) → khung 'Nhập từ Excel' → nút 'Chọn 1 file chung cho tất cả'."),
+            new("Cách nhập", "File này gom 4 sheet cho một mã hàng. Sheet Mã hàng tự điền Mã hàng, Mô tả của form (nếu có nhiều dòng chỉ lấy dòng đầu); mỗi sheet còn lại được nhập vào mục cùng tên. Sheet nào file không có thì bỏ qua. Sau khi chọn file, hệ thống mở bảng kiểm tra để xem và sửa; bấm Lưu thì lưu mã hàng rồi nhập các bảng."),
+            new("Bắt buộc khi thêm mới", "Thành phần, Định mức NVL, Nhóm bìa phải có dữ liệu (thiếu thì không cho Lưu). Bìa của đơn, NVL của đơn không nhập ở form mã hàng: nhập ở chi tiết đơn hàng."),
+            new("Dữ liệu trong file", DemoNote),
         };
-        if (withOrder)
-            guide.Add(new("Dữ liệu theo đơn", "Bìa của đơn và NVL của đơn chỉ nhập được khi đã chọn đơn hàng (hoặc đang ở form đơn hàng: nhập vào chính đơn đó sau khi Lưu đơn)."));
-        else
-            guide.Add(new("Bắt buộc khi thêm mới", "Thành phần, Định mức NVL, Nhóm bìa phải có dữ liệu (thiếu thì không cho Lưu). Bìa của đơn, NVL của đơn không nhập ở form mã hàng: nhập ở chi tiết đơn hàng (tab Bìa cắt, tab NVL của đơn)."));
-        guide.Add(new("Dữ liệu trong file", DemoNote));
-
         var tables = new List<TemplateTable>
         {
             await ProductTableAsync(productId, ct), await ComponentsAsync(productId, "", ct),
             await NormsAsync(productId, "", ct), await GroupsAsync(productId, "", ct),
         };
-        if (withOrder)
-        {
-            tables.Add(await MarkersAsync(productId, orderId, "", ct));
-            tables.Add(await OrderMaterialsTableAsync(orderId, "", ct));
-        }
-        return new ImportTemplateModel("Mau_Form_Ma_Hang" + (withOrder ? "_Theo_Don" : "") + XlsxName,
-            withOrder ? "MẪU NHẬP MÃ HÀNG KÈM ĐỊNH MỨC VÀ DỮ LIỆU THEO ĐƠN" : "MẪU NHẬP MÃ HÀNG KÈM ĐỊNH MỨC (FORM MÃ HÀNG)", guide, tables);
+        return new ImportTemplateModel("Mau_Form_Ma_Hang" + XlsxName, "MẪU NHẬP MÃ HÀNG KÈM ĐỊNH MỨC (FORM MÃ HÀNG)", guide, tables);
     }
 
     // ---------------------------------------------------------------- Từng bảng: dữ liệu thật, hoặc ví dụ khi chưa có
@@ -139,12 +127,12 @@ public sealed class ImportTemplateService : IImportTemplateService
         IReadOnlyList<IReadOnlyList<object?>> rows = [];
         if (productId is { } pid)
             rows = (await _uow.Repository<Product>().Query().AsNoTracking().Where(p => p.ProductId == pid)
-                .Select(p => new { p.ProductCode, p.ProductName, p.Description }).ToListAsync(ct))
-                .Select(p => (IReadOnlyList<object?>)[p.ProductCode, p.ProductName, p.Description]).ToList();
+                .Select(p => new { p.ProductCode, p.Description }).ToListAsync(ct))
+                .Select(p => (IReadOnlyList<object?>)[p.ProductCode, p.Description]).ToList();
         return Pick("Mã hàng", "MÃ HÀNG",
-            "Mã hàng: chữ, số và . _ -, tối đa 30 ký tự; mã đã có trong hệ thống được bỏ qua (không sửa). Tên mã hàng: bắt buộc, tối đa 200 ký tự. Mô tả: tùy chọn. Chỉ lấy dòng đầu để điền form.",
-            [new("Mã hàng", 'R', 18), new("Tên mã hàng", 'R', 34), new("Mô tả", 'O', 40)], rows,
-            [["AO-POLO01", "Áo polo nam", "Vải cá sấu, cổ dệt"]]);
+            "Mã hàng: chữ, số và . _ -, tối đa 30 ký tự; mã đã có trong hệ thống được bỏ qua (không sửa). Mô tả: tùy chọn. Chỉ lấy dòng đầu để điền form.",
+            [new("Mã hàng", 'R', 18), new("Mô tả", 'O', 40)], rows,
+            [["AO-POLO01", "Vải cá sấu, cổ dệt"]]);
     }
 
     private async Task<TemplateTable> ComponentsAsync(int? productId, string no, CancellationToken ct)

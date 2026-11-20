@@ -33,7 +33,6 @@ describe('fromPiece', () => {
       fromPiece({
         orderLineId: 11,
         productCode: 'AO1',
-        productName: 'Áo',
         color: 'Đỏ',
         sizeCode: 'M',
         orderedQty: 100,

@@ -105,7 +105,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
     },
     {
       title: text.approvedRequests.columns.team,
-      dataIndex: 'teamName',
+      dataIndex: 'teamCode',
       render: (v: string | null) => v ?? '—',
     },
     {

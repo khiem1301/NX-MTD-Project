@@ -76,7 +76,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
             return Fail.NotFound<IReadOnlyList<OrderProductMaterialsDto>>();
 
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .Select(l => new { l.ProductVariant.ProductColorId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName })
+            .Select(l => new { l.ProductVariant.ProductColorId, l.ProductId, l.ProductVariant.Product.ProductCode })
             .ToListAsync(ct);
         var colorIds = lines.Select(l => l.ProductColorId).Distinct().ToList();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
@@ -91,9 +91,9 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
             .ToListAsync(ct);
 
         return Result<IReadOnlyList<OrderProductMaterialsDto>>.Success(lines
-            .GroupBy(l => (l.ProductId, l.ProductCode, l.ProductName))
+            .GroupBy(l => (l.ProductId, l.ProductCode))
             .OrderBy(g => g.Key.ProductCode)
-            .Select(g => new OrderProductMaterialsDto(g.Key.ProductId, g.Key.ProductCode, g.Key.ProductName, norms
+            .Select(g => new OrderProductMaterialsDto(g.Key.ProductId, g.Key.ProductCode, norms
                 .Where(n => n.ProductId == g.Key.ProductId)
                 .Select(n => n.Material)
                 .Distinct()

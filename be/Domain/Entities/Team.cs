@@ -12,8 +12,6 @@ public partial class Team
 
     public string TeamCode { get; set; } = null!;
 
-    public string TeamName { get; set; } = null!;
-
     public string TeamType { get; set; } = null!;
 
     public string Status { get; set; } = null!;

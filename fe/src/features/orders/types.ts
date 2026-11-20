@@ -18,7 +18,13 @@ export type CustomerQuery = {
   pageSize?: number;
 };
 /** Khách hàng rút gọn cho ô chọn: đủ để lọc khách đang hợp tác. */
-export type CustomerOption = { customerId: number; customerName: string; status: CustomerStatus };
+export type CustomerOption = {
+  customerId: number;
+  customerName: string;
+  status: CustomerStatus;
+  /** Gợi ý địa chỉ giao hàng khi chọn khách lúc tạo đơn. */
+  defaultAddress?: string | null;
+};
 export type SaveCustomerPayload = {
   customerName: string;
   phone?: string | null;
@@ -30,7 +36,6 @@ export type ProductStatus = 'Active' | 'Discontinued';
 export type ProductListItem = {
   productId: number;
   productCode: string;
-  productName: string;
   sampleImageUrl: string | null;
   /** Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5). */
   extraImages: string[];
@@ -46,7 +51,6 @@ export type ProductDetail = ProductListItem & {
 };
 export type SaveProductPayload = {
   productCode: string;
-  productName: string;
   sampleImageUrl?: string | null;
   /** Ảnh phụ theo thứ tự hiển thị (tối đa 5); bỏ trống = giữ nguyên, mảng rỗng = xóa hết. */
   extraImages?: string[];
@@ -152,7 +156,6 @@ export type OrderOverviewLine = {
   orderLineId: number;
   productId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;
@@ -176,6 +179,7 @@ export type OrderOverview = {
   materialStatus: OrderMaterialStatus;
   isDelayRisk: boolean;
   stopReason: string | null;
+  deliveryAddress: string;
   note: string | null;
   createdAt: string;
   lines: OrderOverviewLine[];
@@ -192,11 +196,15 @@ export type OrderDetail = {
   materialStatus: OrderMaterialStatus;
   isDelayRisk: boolean;
   stopReason: string | null;
+  deliveryAddress: string;
   note: string | null;
   createdAt: string;
   updatedAt: string | null;
   /** byte[] → base64; gửi nguyên chuỗi khi sửa / hủy / dừng. */
   rowVer: string;
+  /** DEV-ALL-150: đơn đã có bìa cắt của đơn / NVL của đơn. */
+  hasOrderMarkers: boolean;
+  hasOrderMaterials: boolean;
   lines: OrderLine[];
   history: AuditEntry[];
 };
@@ -210,13 +218,33 @@ export type OrderLineInput = {
   cmtUnitPrice: number;
 };
 
+/** DEV-ALL-151: mã hàng khai trên form đơn, ghi cùng lúc với đơn. tempId âm, dòng đơn dùng productId = tempId. */
+export type StagedProductInput = {
+  tempId: number;
+  productCode: string;
+  sampleImageUrl?: string | null;
+  description?: string | null;
+  extraImages?: string[];
+};
+export type CreatedProduct = {
+  tempId: number;
+  productId: number;
+  productCode: string;
+};
+export type OrderSaveResult = {
+  orderId: number;
+  products: CreatedProduct[];
+};
+
 export type CreateOrderPayload = {
   orderCode: string;
   customerId: number;
   receivedDate: string;
   dueDate: string;
+  deliveryAddress: string;
   note?: string | null;
   lines: OrderLineInput[];
+  stagedProducts?: StagedProductInput[];
 };
 export type UpdateOrderPayload = CreateOrderPayload & { rowVer: string };
 
@@ -263,7 +291,6 @@ export type OrderMarkerGroup = { markerNo: number; colors: string[]; fabrics: Ma
 export type OrderMarkerProduct = {
   productId: number;
   productCode: string;
-  productName: string;
   sizes: string[];
   markerGroups: OrderMarkerGroup[];
   markers: OrderMarker[];
@@ -354,11 +381,12 @@ export type OrderImportRow = {
   productCode: string;
   /** null khi dòng lỗi. */
   productId: number | null;
-  productName: string | null;
   color: string;
   cmtUnitPrice: number | null;
   quantities: OrderImportQty[];
   error: string | null;
+  /** true khi dòng chỉ thiếu mã hàng; form đơn nhận dòng sau khi khai mã, mã được ghi khi lưu đơn. */
+  missingProduct?: boolean;
 };
 export type OrderImportPreview = {
   sizeColumns: string[];
@@ -375,7 +403,6 @@ export type ProductImportRow = {
   action: 'New' | 'Exists' | 'Error';
   note: string | null;
   productCode: string;
-  productName: string;
   description: string | null;
 };
 export type ProductImportPreview = {
@@ -391,7 +418,6 @@ export type ProductImportPreview = {
 type ExcelRowBase = { rowNumber: number; parseError: string | null };
 export type ProductExcelRow = Omit<ExcelRowBase, 'parseError'> & {
   productCode: string;
-  productName: string;
   description: string | null;
 };
 export type SpecComponentExcelRow = ExcelRowBase & {

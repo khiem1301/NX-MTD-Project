@@ -60,8 +60,8 @@ public sealed class MaterialService : IMaterialService
 
             var code = string.IsNullOrWhiteSpace(dto.MaterialCode)
                 ? await NextCodeAsync(dto.MaterialType, ct)
-                : dto.MaterialCode.Trim().ToUpperInvariant();
-            if (await Materials.AnyAsync(m => m.MaterialCode == code, ct))
+                : CodeOf(dto.MaterialCode);
+            if (await CodeTakenAsync(code, ct))
                 return Conflict(WarehouseMessages.MaterialCodeDuplicate);
 
             var material = new Material
@@ -110,6 +110,12 @@ public sealed class MaterialService : IMaterialService
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.MaterialStatusChanged);
     }
+
+    /// <summary>Mã NVL lưu chữ hoa (UQ_Material_Code); so trùng không phân biệt hoa thường.</summary>
+    public static string CodeOf(string code) => code.Trim().ToUpperInvariant();
+
+    private Task<bool> CodeTakenAsync(string code, CancellationToken ct) =>
+        Materials.AnyAsync(m => m.MaterialCode.ToUpper() == code, ct);
 
     /// <summary>UQ_Material_NameType (Tên, Loại, Màu).</summary>
     private Task<bool> NameTakenAsync(string name, string type, string color, int? exceptId, CancellationToken ct) =>

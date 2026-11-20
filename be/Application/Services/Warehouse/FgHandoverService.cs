@@ -181,8 +181,8 @@ public sealed class FgHandoverService : IFgHandoverService
         {
             var targets = await _uow.Repository<KpiTarget>().Query().AsNoTracking()
                 .Where(k => k.OrderId == pair.OrderId && k.ProductId == pair.ProductId && k.Status == KpiStatuses.Active)
-                .OrderBy(k => k.SewingTeam.TeamName)
-                .Select(k => new { k.KpiTargetId, k.TargetFinishedQty, OrderCode = k.Order.OrderCode, ProductCode = k.Product.ProductCode, Team = k.SewingTeam.TeamName })
+                .OrderBy(k => k.SewingTeam.TeamCode)
+                .Select(k => new { k.KpiTargetId, k.TargetFinishedQty, OrderCode = k.Order.OrderCode, ProductCode = k.Product.ProductCode, Team = k.SewingTeam.TeamCode })
                 .ToListAsync(ct);
             if (targets.Count == 0) continue;
 

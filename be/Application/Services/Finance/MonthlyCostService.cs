@@ -158,7 +158,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
 
     private static MonthlyCostItemDto ToItemDto(MonthlyCost m) => new(
         m.MonthlyCostId, CodeText.ToPascal(m.CostCategoryCode), CodeText.ToPascal(m.CostType), m.ProductId,
-        m.Product?.ProductCode, m.Product?.ProductName, m.Amount, m.Quantity, m.Note, m.ImportedAt);
+        m.Product?.ProductCode, m.Amount, m.Quantity, m.Note, m.ImportedAt);
 
     /// <summary>MSG24: {a} dòng hợp lệ, {b} dòng lỗi, {c} dòng trùng.</summary>
     private static string BuildImportMessage(int valid, int error, int duplicate) =>
@@ -236,7 +236,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
         return null;
     }
 
-    private async Task<IReadOnlyDictionary<string, (int ProductId, string ProductName)>> LookupProductsAsync(
+    private async Task<IReadOnlyDictionary<string, int>> LookupProductsAsync(
         IReadOnlyList<MonthlyCostExcelRowDto> rawRows, CancellationToken ct)
     {
         var codes = rawRows.Where(r => r.ParseError is null && !string.IsNullOrWhiteSpace(r.ProductCode))
@@ -253,7 +253,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
     private static (List<MonthlyCostExcelRowPreviewDto> Previews, int Valid, int Error, int Duplicate,
         List<MonthlyCost> Items)
         ValidateRows(IReadOnlyList<MonthlyCostExcelRowDto> rawRows,
-            IReadOnlyDictionary<string, (int ProductId, string ProductName)> products)
+            IReadOnlyDictionary<string, int> products)
     {
         var previews = new List<MonthlyCostExcelRowPreviewDto>(rawRows.Count);
         var items = new List<MonthlyCost>();
@@ -265,7 +265,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
             var check = CheckRow(row, products);
             if (check.Error is not null)
             {
-                previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Error, check.Error));
+                previews.Add(ToPreview(row, MonthlyCostRowStatus.Error, check.Error));
                 error++;
                 continue;
             }
@@ -273,7 +273,7 @@ public sealed class MonthlyCostService : IMonthlyCostService
             var key = (check.Category!, check.ProductId);
             if (!seenKeys.Add(key))
             {
-                previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Duplicate,
+                previews.Add(ToPreview(row, MonthlyCostRowStatus.Duplicate,
                     "Dòng trùng (cùng loại chi phí và mã hàng)."));
                 duplicate++;
                 continue;
@@ -284,19 +284,19 @@ public sealed class MonthlyCostService : IMonthlyCostService
                 CostCategoryCode = check.Category!, CostType = check.CostType!, ProductId = check.ProductId,
                 Amount = row.Amount!.Value, Quantity = row.Quantity, Note = row.Note,
             });
-            previews.Add(ToPreview(row, check.ProductName, MonthlyCostRowStatus.Valid, null));
+            previews.Add(ToPreview(row, MonthlyCostRowStatus.Valid, null));
             valid++;
         }
 
         return (previews, valid, error, duplicate, items);
     }
 
-    private sealed record RowCheck(string? Error, string? ProductName = null, string? Category = null,
+    private sealed record RowCheck(string? Error, string? Category = null,
         string? CostType = null, int? ProductId = null);
 
     /// <summary>Kiểm tra một dòng thô: loại / kiểu chi phí, mã hàng đúng chiều theo kiểu, số tiền. Lỗi đầu tiên được trả về.</summary>
     private static RowCheck CheckRow(MonthlyCostExcelRowDto row,
-        IReadOnlyDictionary<string, (int ProductId, string ProductName)> products)
+        IReadOnlyDictionary<string, int> products)
     {
         if (row.ParseError is not null) return new RowCheck(row.ParseError);
 
@@ -311,24 +311,22 @@ public sealed class MonthlyCostService : IMonthlyCostService
 
         var productCode = row.ProductCode?.Trim();
         int? productId = null;
-        string? productName = null;
         if (costType == MonthlyCostType.Variable)
         {
             if (string.IsNullOrWhiteSpace(productCode)) return new RowCheck("Khoản biến đổi (VARIABLE) phải có mã hàng.");
             if (!products.TryGetValue(productCode, out var product)) return new RowCheck($"Mã hàng '{productCode}' không tồn tại.");
-            productId = product.ProductId;
-            productName = product.ProductName;
+            productId = product;
         }
         else if (!string.IsNullOrWhiteSpace(productCode))
             return new RowCheck("Khoản cố định (FIXED) không được có mã hàng.");
 
-        if (row.Amount is null) return new RowCheck("Thiếu số tiền.", productName);
-        if (row.Amount < 0) return new RowCheck("Số tiền phải lớn hơn hoặc bằng 0.", productName);
-        return new RowCheck(null, productName, category, costType, productId);
+        if (row.Amount is null) return new RowCheck("Thiếu số tiền.");
+        if (row.Amount < 0) return new RowCheck("Số tiền phải lớn hơn hoặc bằng 0.");
+        return new RowCheck(null, category, costType, productId);
     }
 
-    private static MonthlyCostExcelRowPreviewDto ToPreview(MonthlyCostExcelRowDto row, string? productName,
+    private static MonthlyCostExcelRowPreviewDto ToPreview(MonthlyCostExcelRowDto row,
         string status, string? errorMessage) => new(
-        row.RowNumber, row.CostCategoryCode, row.CostType, row.ProductCode, productName, row.Amount, row.Quantity,
+        row.RowNumber, row.CostCategoryCode, row.CostType, row.ProductCode, row.Amount, row.Quantity,
         row.Note, status, errorMessage);
 }

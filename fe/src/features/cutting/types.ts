@@ -59,7 +59,6 @@ export type FabricMarkerUse = {
 };
 
 export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {
-  productName: string;
   sourceRequestId: number | null;
   note: string | null;
   lines: WorkOrderLine[];
@@ -159,7 +158,7 @@ export type CutHandoverListItem = {
   workOrderCode: string;
   orderCode: string;
   cuttingTeamId: number;
-  cuttingTeamName: string;
+  cuttingTeamCode: string;
   handedAt: string;
   status: string;
   confirmedByName: string | null;

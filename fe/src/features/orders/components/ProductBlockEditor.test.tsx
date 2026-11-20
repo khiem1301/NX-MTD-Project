@@ -6,7 +6,7 @@ import { ProductBlockEditor } from './ProductBlockEditor';
 
 jest.mock('@/hooks/useOrderLookups', () => ({
   useProductLookup: () => ({
-    data: { items: [{ productId: 1, productCode: 'AO-01', productName: 'Áo' }] },
+    data: { items: [{ productId: 1, productCode: 'AO-01' }] },
   }),
   useProductColors: () => ({ data: ['Be', 'Đen', 'Xanh'] }),
 }));

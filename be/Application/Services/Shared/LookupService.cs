@@ -31,7 +31,7 @@ public sealed class LookupService : ILookupService
             .Where(o => teamId == null || o.OrderLines.Any(l => allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId)))
             .Where(o => string.IsNullOrEmpty(kw) || o.OrderCode.Contains(kw))
             .OrderByDescending(o => o.OrderId).Take(MaxOptions)
-            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate))
+            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate, o.DeliveryAddress))
             .ToListAsync(ct);
     }
 
@@ -43,7 +43,7 @@ public sealed class LookupService : ILookupService
             .Where(l => l.OrderId == orderId)
             .Where(l => teamId == null || allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
+            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode,
                 l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty,
                 l.WorkOrderLines.Where(w => w.ProductComponentMaterialId == null && w.WorkOrder.Status != WorkOrderStatuses.Cancelled
                                             && w.WorkOrder.SourceRequestId == null).Sum(w => (int?)w.PlannedQty) ?? 0))
@@ -69,8 +69,8 @@ public sealed class LookupService : ILookupService
     public async Task<IReadOnlyList<TeamOptionDto>> GetTeamsAsync(string? teamType, CancellationToken ct) =>
         await _uow.Repository<Team>().Query().AsNoTracking()
             .Where(t => t.Status == RecordStatus.Active && (string.IsNullOrEmpty(teamType) || t.TeamType == teamType))
-            .OrderBy(t => t.TeamName)
-            .Select(t => new TeamOptionDto(t.TeamId, t.TeamCode, t.TeamName, t.TeamType))
+            .OrderBy(t => t.TeamCode)
+            .Select(t => new TeamOptionDto(t.TeamId, t.TeamCode, t.TeamType))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<MaterialOptionDto>> GetActiveMaterialsAsync(string? keyword, CancellationToken ct)
@@ -111,7 +111,7 @@ public sealed class LookupService : ILookupService
     {
         var lines = await GetOrderLinesAsync(orderId, ct);
         var available = await _stock.GetSetAvailableAsync(lines.Select(l => l.OrderLineId).ToList(), ct);
-        return lines.Select(l => new RequisitionPieceOptionDto(l.OrderLineId, l.ProductCode, l.ProductName, l.Color, l.SizeCode,
+        return lines.Select(l => new RequisitionPieceOptionDto(l.OrderLineId, l.ProductCode, l.Color, l.SizeCode,
             l.OrderedQty, Math.Max(0, available.GetValueOrDefault(l.OrderLineId)))).ToList();
     }
 }

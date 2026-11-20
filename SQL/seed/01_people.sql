@@ -9,13 +9,13 @@ SET XACT_ABORT ON;
 
 DECLARE @today DATE = CAST(dbo.fn_VnNow() AS DATE);
 
-INSERT dbo.Team (TeamCode, TeamName, TeamType, Status) VALUES
- ('VP',   N'Khối văn phòng', 'OFFICE',  'ACTIVE'),
- ('CAT',  N'Tổ cắt',         'CUTTING', 'ACTIVE'),
- ('MAY1', N'Tổ may 1',       'SEWING',  'ACTIVE'),
- ('MAY2', N'Tổ may 2',       'SEWING',  'ACTIVE'),
- ('MAY3', N'Tổ may 3',       'SEWING',  'ACTIVE'),
- ('MAY0', N'Tổ may cũ (đã giải thể)', 'SEWING', 'DISCONTINUED');
+INSERT dbo.Team (TeamCode, TeamType, Status) VALUES
+ ('VP',   'OFFICE',  'ACTIVE'),
+ ('CAT',  'CUTTING', 'ACTIVE'),
+ ('MAY1', 'SEWING',  'ACTIVE'),
+ ('MAY2', 'SEWING',  'ACTIVE'),
+ ('MAY3', 'SEWING',  'ACTIVE'),
+ ('MAY0', 'SEWING',  'DISCONTINUED');
 
 -- Code | Tên | Giới | Ngày sinh | SĐT | Role | Tổ | PayType | Bậc | Mã chấm công | Vào làm | Trạng thái
 DECLARE @e TABLE (Code VARCHAR(20), FullName NVARCHAR(100), Gender CHAR(1), Dob DATE, Phone VARCHAR(15), RoleCode VARCHAR(30),

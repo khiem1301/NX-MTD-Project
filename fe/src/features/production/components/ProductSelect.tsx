@@ -33,7 +33,7 @@ export function ProductSelect({
       style={{ width }}
       options={(products.data?.items ?? []).map((p) => ({
         value: p.productId,
-        label: `${p.productCode} - ${p.productName}`,
+        label: `${p.productCode}`,
       }))}
     />
   );

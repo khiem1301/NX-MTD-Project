@@ -16,8 +16,8 @@ public class OrderImportTests : ProductionTestBase
     {
         SetupQueryable(new List<Product>
         {
-            new() { ProductId = 1, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active },
-            new() { ProductId = 2, ProductCode = "CU02", ProductName = "Cũ", Status = RecordStatus.Discontinued },
+            new() { ProductId = 1, ProductCode = "AO01", Status = RecordStatus.Active },
+            new() { ProductId = 2, ProductCode = "CU02", Status = RecordStatus.Discontinued },
         });
     }
 
@@ -78,6 +78,8 @@ public class OrderImportTests : ProductionTestBase
 
         data.Rows.Select(r => r.Error is null).Should().Equal(false, false, true, false, false, false, false);
         data.Rows[0].Error.Should().Be(string.Format(Messages.OrderImportProductUnknown, "XX99"));
+        data.Rows[0].MissingProduct.Should().BeTrue();
+        data.Rows[1].MissingProduct.Should().BeFalse();
         data.Rows[1].Error.Should().Be(string.Format(Messages.OrderImportProductInactive, "CU02"));
         data.Rows[3].Error.Should().Be(string.Format(Messages.OrderImportPriceMismatch, "AO01"));
         data.Rows[4].Error.Should().Be(Messages.OrderImportNoQty);

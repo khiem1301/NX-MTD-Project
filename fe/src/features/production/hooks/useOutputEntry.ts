@@ -73,7 +73,7 @@ export function useOutputEntry(role: OutputRole) {
 
   const teamOptions = (teams.data ?? [])
     .filter((t) => t.teamType === 'Sewing')
-    .map((t) => ({ value: t.teamId, label: t.teamName }));
+    .map((t) => ({ value: t.teamId, label: t.teamCode }));
 
   return {
     isManager,

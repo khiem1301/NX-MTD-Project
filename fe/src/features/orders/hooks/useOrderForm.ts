@@ -1,6 +1,6 @@
 import { Form, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useNavigate } from 'react-router-dom';
 import { ERROR_CODES } from '@/constants/errorCodes';
 import { MESSAGES } from '@/constants/messages';
@@ -10,10 +10,19 @@ import type { ApiError } from '@/types/api';
 import { applyFieldErrors } from '@/utils/apiError';
 import { fill, toApiDate } from '@/utils/format';
 import {
+  hasImportFiles,
   runProductImports,
+  showImportResults,
   showProductImportResults,
   type ProductImportSelection,
 } from '../utils/productExcelImports';
+import {
+  hasOrderImports,
+  runOrderImports,
+  type OrderImportProduct,
+  type OrderImportSelection,
+} from '../utils/orderExcelImports';
+import { useOrderExcelImports } from './useOrderExcelImports';
 import { useCreateOrder, useCustomerOptions, useNextOrderCode, useUpdateOrder } from './useOrders';
 import {
   blocksTotals,
@@ -25,12 +34,14 @@ import {
 } from '../utils/orderGrid';
 import { validateBlocks } from '../utils/orderValidation';
 import type { OrderFormProps } from '../components/OrderForm';
+import type { OrderSaveResult, SaveProductPayload, StagedProductInput } from '../types';
 
 export type HeaderValues = {
   orderCode: string;
   customerId: number;
   receivedDate: Dayjs;
   dueDate: Dayjs;
+  deliveryAddress?: string;
   note?: string;
 };
 
@@ -54,21 +65,21 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
         : [newBlock()],
   );
   const [labels, setLabels] = useState<Record<number, string>>(() =>
-    Object.fromEntries(
-      (seedLines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`]),
-    ),
+    Object.fromEntries((seedLines ?? []).map((l) => [l.productId, `${l.productCode}`])),
   );
   const [lineError, setLineError] = useState<string>();
   const [showBlockErrors, setShowBlockErrors] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [customerOpen, setCustomerOpen] = useState(false);
   const [productBlock, setProductBlock] = useState<string>();
-  // DEV-ALL-121: file Excel chọn khi tạo nhanh mã hàng trong form đơn, theo Id mã hàng; nhập sau khi Lưu đơn.
+  // DEV-ALL-151: mã hàng khai trên form, chưa ghi. tempId âm. File Excel nhập sau khi Lưu đơn.
+  const tempSeq = useRef(0);
+  const [staged, setStaged] = useState<{ tempId: number; body: SaveProductPayload }[]>([]);
   const [pendingImports, setPendingImports] = useState<
     Record<number, { code: string; selection: ProductImportSelection }>
   >({});
-  const queueImports = (productId: number, code: string, selection: ProductImportSelection) =>
-    setPendingImports((p) => ({ ...p, [productId]: { code, selection } }));
+  // DEV-ALL-150: Bìa của đơn, NVL của đơn đọc từ Excel; nhập vào đơn sau khi Lưu đơn.
+  const orderImports = useOrderExcelImports(() => setDirty(true));
   const locked = isEdit && detail !== undefined && detail.status !== 'New';
   const editable =
     !isEdit ||
@@ -101,6 +112,82 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     setBlocks(next);
     setDirty(true);
     setLineError(undefined);
+    const used = new Set(next.map((b) => b.productId));
+    setStaged((prev) => prev.filter((p) => used.has(p.tempId)));
+    setPendingImports((prev) => {
+      const kept: typeof prev = {};
+      for (const [id, value] of Object.entries(prev)) {
+        if (used.has(Number(id))) kept[Number(id)] = value;
+      }
+      return kept;
+    });
+  };
+
+  /** Mã đã nằm trên đơn (khối khác) hoặc đang chờ ghi. exceptBlockKey: khối sắp nhận mã mới, không tính mã hiện tại của khối đó. */
+  const codeInUse = (code: string, exceptBlockKey?: string) => {
+    const upper = code.trim().toUpperCase();
+    return (
+      blocks.some(
+        (b) =>
+          b.key !== exceptBlockKey &&
+          b.productId !== null &&
+          labels[b.productId]?.toUpperCase() === upper,
+      ) ||
+      staged.some(
+        (s) =>
+          s.body.productCode.toUpperCase() === upper &&
+          !blocks.some((b) => b.key === exceptBlockKey && b.productId === s.tempId),
+      )
+    );
+  };
+
+  /**
+   * Giữ mã hàng trên form, không gọi API. Trả tempId âm; null khi mã đã có trên đơn.
+   * Chưa gắn vào khối (nhập Excel gọi hàm này, Áp dụng mới gắn). Không đánh dấu form bẩn — gắn khối mới đánh dấu.
+   */
+  const stageProduct = (
+    body: SaveProductPayload,
+    selection: ProductImportSelection,
+    exceptBlockKey?: string,
+  ): number | null => {
+    const productCode = body.productCode.trim().toUpperCase();
+    if (codeInUse(productCode, exceptBlockKey)) {
+      void message.error(fill(MESSAGES.orders.stagedDuplicate, productCode));
+      return null;
+    }
+    const tempId = -(tempSeq.current += 1);
+    const normalized = { ...body, productCode };
+    setStaged((prev) => [...prev, { tempId, body: normalized }]);
+    if (hasImportFiles(selection))
+      setPendingImports((p) => ({ ...p, [tempId]: { code: productCode, selection } }));
+    setLabels((l) => ({ ...l, [tempId]: productCode }));
+    void message.success(fill(MESSAGES.orders.stagedWithOrder, productCode));
+    return tempId;
+  };
+
+  /** Gắn mã vừa khai vào khối đang mở form mã hàng. */
+  const stageOntoBlock = (
+    blockKey: string,
+    body: SaveProductPayload,
+    selection: ProductImportSelection,
+  ) => {
+    const tempId = stageProduct(body, selection, blockKey);
+    if (tempId === null) return false;
+    changeBlocks(blocks.map((b) => (b.key === blockKey ? { ...b, productId: tempId } : b)));
+    return true;
+  };
+
+  /** Bỏ mã khai trong hộp nhập Excel khi đóng hộp mà không Áp dụng. */
+  const unstageProduct = (tempId: number) => {
+    setStaged((prev) => prev.filter((p) => p.tempId !== tempId));
+    setPendingImports((prev) => {
+      const { [tempId]: _removed, ...rest } = prev;
+      return rest;
+    });
+    setLabels((prev) => {
+      const { [tempId]: _removed, ...rest } = prev;
+      return rest;
+    });
   };
 
   const handleError = (error: ApiError) => {
@@ -129,62 +216,71 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       setLineError(MESSAGES.orders.needLine);
       return;
     }
+    const used = new Set(blocks.map((b) => b.productId));
+    const stagedProducts: StagedProductInput[] = staged
+      .filter((s) => used.has(s.tempId))
+      .map((s) => ({ tempId: s.tempId, ...s.body }));
     const body = {
       orderCode: values.orderCode.trim(),
       customerId: values.customerId,
       receivedDate: toApiDate(values.receivedDate),
       dueDate: toApiDate(values.dueDate),
+      deliveryAddress: values.deliveryAddress?.trim() ?? '',
       note: values.note?.trim() || null,
       lines,
+      ...(stagedProducts.length > 0 ? { stagedProducts } : {}),
     };
     setDirty(false);
-    // Mã hàng tạo nhanh còn trong đơn và có file chờ: nhập vào đơn vừa lưu (chạy nền, xong hiện kết quả từng mã hàng).
+    // Mã hàng tạo trên form còn trong đơn và có file chờ: nhập định mức sau khi đơn đã tạo màu, size.
     const queued = Object.entries(pendingImports)
       .map(([id, v]) => ({ productId: Number(id), ...v }))
-      .filter((q) => blocks.some((b) => b.productId === q.productId));
-    const runQueued = async (savedId: number) => {
-      for (const q of queued) {
-        const hide = message.loading(fill(MESSAGES.orders.productExcel.runningOrder, q.code), 0);
-        try {
-          const outcomes = await runProductImports(q.productId, {
-            ...q.selection,
-            orderId: savedId,
-          });
-          showProductImportResults(q.code, outcomes);
-        } finally {
-          hide();
-        }
-      }
-    };
-    const afterSave = (savedId: number, path: string) => {
+      .filter((q) => used.has(q.productId));
+    const orderSelection = orderImports.selection;
+    const productIds = [
+      ...new Set(blocks.map((b) => b.productId).filter((id): id is number => id !== null)),
+    ];
+    const afterSave = (path: string, saved: OrderSaveResult) => {
+      const realId = new Map(saved.products.map((p) => [p.tempId, p.productId]));
+      const idOf = (id: number) => realId.get(id) ?? id;
       setPendingImports({});
+      setStaged([]);
+      orderImports.reset();
       navigate(path);
-      if (queued.length > 0) void runQueued(savedId);
+      const imports = queued.map((q) => ({ ...q, productId: idOf(q.productId) }));
+      const products: OrderImportProduct[] = productIds.map((productId) => ({
+        productId: idOf(productId),
+        productCode: labels[productId] ?? '',
+      }));
+      if (imports.length > 0 || hasOrderImports(orderSelection))
+        void runImportsAfterSave(
+          imports,
+          saved.orderId,
+          values.orderCode.trim(),
+          orderSelection,
+          products,
+        );
     };
-    const done = (savedId: number) => afterSave(savedId, ROUTES.orderDetail(savedId));
+    const fail = (e: ApiError) => {
+      setDirty(true);
+      handleError(e);
+    };
     if (isEdit && detail) {
       update.mutate(
         { ...body, rowVer: detail.rowVer },
         {
-          onSuccess: () => done(detail.orderId),
-          onError: (e) => {
-            setDirty(true);
-            handleError(e);
-          },
+          onSuccess: (saved) => afterSave(ROUTES.orderDetail(saved.orderId), saved),
+          onError: fail,
         },
       );
     } else {
       create.mutate(body, {
         // Đơn tạo xong mới khai báo NVL: mở thẳng tab NVL của đơn.
-        onSuccess: (newId) =>
+        onSuccess: (saved) =>
           afterSave(
-            newId as number,
-            `${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`,
+            `${ROUTES.orderDetail(saved.orderId)}?tab=${ORDER_MATERIALS_TAB}`,
+            saved,
           ),
-        onError: (e) => {
-          setDirty(true);
-          handleError(e);
-        },
+        onError: fail,
       });
     }
   };
@@ -195,15 +291,24 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
         customerId: detail.customerId,
         receivedDate: dayjs(detail.receivedDate),
         dueDate: dayjs(detail.dueDate),
+        deliveryAddress: detail.deliveryAddress,
         note: detail.note ?? undefined,
       }
     : copyFrom
       ? {
           customerId: copyFrom.customerId,
           receivedDate: dayjs(),
+          deliveryAddress: copyFrom.deliveryAddress,
           note: copyFrom.note ?? undefined,
         }
       : { receivedDate: dayjs() };
+
+  /** Tạo đơn: chọn khách thì điền sẵn địa chỉ mặc định của khách vào ô địa chỉ giao hàng, trừ khi người dùng đã tự gõ địa chỉ. */
+  const fillAddressFromCustomer = (customerId: number) => {
+    if (isEdit || form.isFieldTouched('deliveryAddress')) return;
+    const address = customers.data?.find((c) => c.customerId === customerId)?.defaultAddress;
+    form.setFieldValue('deliveryAddress', address ?? undefined);
+  };
 
   return {
     initialValues,
@@ -219,6 +324,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     handleFinish,
     handleSave,
     leaveGuard,
+    fillAddressFromCustomer,
     form,
     blocks,
     blockErrors,
@@ -230,11 +336,52 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     setCustomerOpen,
     productBlock,
     setProductBlock,
-    queueImports,
+    stageProduct,
+    stageOntoBlock,
+    unstageProduct,
+    orderImports,
   };
 }
 
-const HEADER_FIELDS = ['orderCode', 'customerId', 'receivedDate', 'dueDate', 'note'];
+type QueuedProductImport = { productId: number; code: string; selection: ProductImportSelection };
+
+/**
+ * Sau khi Lưu đơn: nhập định mức của mã hàng tạo nhanh trước (nhóm bìa cần có trước bìa của đơn), rồi Bìa của đơn,
+ * NVL của đơn (DEV-ALL-150). Chạy nền, xong hiện kết quả.
+ */
+async function runImportsAfterSave(
+  queued: QueuedProductImport[],
+  orderId: number,
+  orderCode: string,
+  selection: OrderImportSelection,
+  products: OrderImportProduct[],
+) {
+  for (const q of queued) {
+    const hide = message.loading(fill(MESSAGES.orders.productExcel.runningOrder, q.code), 0);
+    try {
+      showProductImportResults(q.code, await runProductImports(q.productId, q.selection));
+    } finally {
+      hide();
+    }
+  }
+  if (!hasOrderImports(selection)) return;
+  const hide = message.loading(fill(MESSAGES.orders.orderExcel.running, orderCode), 0);
+  try {
+    const outcomes = await runOrderImports(orderId, selection, products);
+    showImportResults(fill(MESSAGES.orders.orderExcel.saved, orderCode), outcomes);
+  } finally {
+    hide();
+  }
+}
+
+const HEADER_FIELDS = [
+  'orderCode',
+  'customerId',
+  'receivedDate',
+  'dueDate',
+  'deliveryAddress',
+  'note',
+];
 const LINE_ERROR_CODES: string[] = [
   ERROR_CODES.OrderLineRemoveNotAllowed,
   ERROR_CODES.OrderLineKeyLocked,

@@ -7,7 +7,6 @@ public partial class GradeLevelCode
 {
     public string GradeCode { get; set; } = null!;
 
-    public string GradeName { get; set; } = null!;
 
     public string Status { get; set; } = null!;
 

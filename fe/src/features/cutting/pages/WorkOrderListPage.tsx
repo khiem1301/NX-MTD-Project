@@ -52,7 +52,7 @@ export function WorkOrderListPage() {
     },
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.product, dataIndex: 'productCode' },
-    { title: LABELS.cuttingTeam, dataIndex: 'cuttingTeamName' },
+    { title: LABELS.cuttingTeam, dataIndex: 'cuttingTeamCode' },
     { title: LABELS.totalPlannedQty, dataIndex: 'totalPlannedQty', align: 'right' },
     { title: LABELS.dueDate, dataIndex: 'dueDate', render: formatDate },
     {

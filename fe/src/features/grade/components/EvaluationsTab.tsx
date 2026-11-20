@@ -1,5 +1,10 @@
 import { useState } from 'react';
-import { PlusOutlined, CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  CloseCircleOutlined,
+  CheckCircleOutlined,
+  RobotOutlined,
+} from '@ant-design/icons';
 import { Button, Space, Tag, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
@@ -10,13 +15,14 @@ import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatDate } from '@/utils/format';
-import { EVAL_STATUS, EVAL_STATUS_LABEL, GR_LABELS } from '../constants';
+import { AI_LABELS, EVAL_STATUS, EVAL_STATUS_LABEL, GR_LABELS } from '../constants';
 import { useEvaluations, useRejectGrade } from '../hooks/useGrade';
 import type { GradeEvaluation } from '../types';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
 import { DataTable } from '@/components/common/DataTable';
 import { TableToolbar } from '@/components/common/TableToolbar';
+import { AiSuggestionModal } from './AiSuggestionModal';
 import { ApplyModal } from './ApplyModal';
 import { ProposeModal } from './ProposeModal';
 import { SetGradeModal } from './SetGradeModal';
@@ -34,6 +40,7 @@ export function EvaluationsTab() {
   const list = useEvaluations(table.params);
   const reject = useRejectGrade();
   const [proposeOpen, setProposeOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
   const [setOpen, setSetOpen] = useState(false);
   const [applying, setApplying] = useState<GradeEvaluation | null>(null);
   const [rejecting, setRejecting] = useState<GradeEvaluation | null>(null);
@@ -44,7 +51,7 @@ export function EvaluationsTab() {
       key: 'worker',
       render: (_, e) => `${e.workerCode} - ${e.workerName}`,
     },
-    { title: GR_LABELS.team, dataIndex: 'teamName', render: (v: string | null) => v ?? '—' },
+    { title: GR_LABELS.team, dataIndex: 'teamCode', render: (v: string | null) => v ?? '—' },
     {
       title: GR_LABELS.currentGrade,
       dataIndex: 'currentGradeCode',
@@ -121,9 +128,14 @@ export function EvaluationsTab() {
         actions={
           <>
             {isLeader && (
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setProposeOpen(true)}>
-                {GR_LABELS.propose}
-              </Button>
+              <>
+                <Button icon={<RobotOutlined />} onClick={() => setAiOpen(true)}>
+                  {AI_LABELS.open}
+                </Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setProposeOpen(true)}>
+                  {GR_LABELS.propose}
+                </Button>
+              </>
             )}
             {canDecide && (
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setSetOpen(true)}>
@@ -142,6 +154,7 @@ export function EvaluationsTab() {
         pagination={table.pagination(list.data?.totalItems)}
       />
       <ProposeModal open={proposeOpen} onClose={() => setProposeOpen(false)} />
+      {isLeader && <AiSuggestionModal open={aiOpen} onClose={() => setAiOpen(false)} />}
       <SetGradeModal open={setOpen} onClose={() => setSetOpen(false)} />
       <ApplyModal evaluation={applying} onClose={() => setApplying(null)} />
       <ReasonModal

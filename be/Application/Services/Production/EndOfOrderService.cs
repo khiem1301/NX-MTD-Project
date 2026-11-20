@@ -108,7 +108,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
         var ot = achieved ? OvertimeDecisions.None : pct <= threshold ? OvertimeDecisions.AutoApproved : OvertimeDecisions.LeaderDecides;
 
         return new EndOfOrderPreviewDto(target.KpiTargetId, target.Order.OrderCode, target.Product.ProductCode,
-            target.SewingTeam.TeamName, target.TargetFinishedQty, actual, achieved, shortfall, pct, threshold, ot,
+            target.SewingTeam.TeamCode, target.TargetFinishedQty, actual, achieved, shortfall, pct, threshold, ot,
             operations, [], target.Status == KpiStatuses.Active);
     }
 
@@ -230,7 +230,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
         var rest = preview.Operations.Count - MaxOperationsInNote;
         var restText = rest > 0 ? $"\nvà {rest} công đoạn khác." : string.Empty;
 
-        var message = $"Đơn {preview.OrderCode} · {preview.ProductCode} · {preview.TeamName}: sản lượng báo nhiều hơn QC đạt + hàng hủy " +
+        var message = $"Đơn {preview.OrderCode} · {preview.ProductCode} · tổ {preview.TeamCode}: sản lượng báo nhiều hơn QC đạt + hàng hủy " +
                       $"ở {preview.Operations.Count} công đoạn.\n{string.Join("\n", shown)}{restText}\n" +
                       "Bấm để xem chi tiết. Hệ thống không tự trừ lương, hãy xác minh rồi ghi phiếu lỗi cho đúng người nếu cần.";
         return message.Length > MaxNotificationLength ? message[..(MaxNotificationLength - 1)] + "…" : message;
@@ -240,7 +240,7 @@ public sealed class EndOfOrderService : IEndOfOrderService
     private async Task NotifyShortfallAsync(KpiTarget target, EndOfOrderPreviewDto preview, CancellationToken ct)
     {
         var small = preview.OtDecision == OvertimeDecisions.AutoApproved;
-        var message = $"KPI đơn {preview.OrderCode} mã hàng {preview.ProductCode} của {preview.TeamName} chưa đạt: {preview.ActualQty}/{preview.TargetQty} " +
+        var message = $"KPI đơn {preview.OrderCode} mã hàng {preview.ProductCode} của tổ {preview.TeamCode} chưa đạt: {preview.ActualQty}/{preview.TargetQty} " +
                       $"(thiếu {preview.ShortfallQty}, {preview.ShortfallPct:0.##}%). " +
                       (small ? $"Thiếu không quá {preview.ThresholdPct}%: nên tăng ca để bù." : "Thiếu nhiều: tổ trưởng quyết định có tăng ca hay không.");
         const string title = "KPI không đạt khi kết thúc đơn";

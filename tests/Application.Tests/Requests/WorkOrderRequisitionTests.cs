@@ -41,7 +41,7 @@ public class WorkOrderRequisitionTests : ProductionTestBase
     }
 
     private static WorkOrderMaterialAllowanceDto Allow(int id, decimal? need, decimal? cap, decimal requested) =>
-        new(id, $"V{id}", $"Vải {id}", "", "m", need, cap, requested, cap is null ? null : cap - requested);
+        new(id, $"V{id}", "Vải", "", "m", need, cap, requested, cap is null ? null : cap - requested);
 
     private Task<Result> Check(int? workOrderId, params (int Id, decimal Qty)[] lines) =>
         new MaterialRequisitionRequestHandler(Clock, Uow, User, _needs, _stock).ValidateAsync(new RequestDraft(RequestTypes.MaterialRequisition,

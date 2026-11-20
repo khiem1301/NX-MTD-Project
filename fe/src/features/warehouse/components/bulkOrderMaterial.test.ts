@@ -18,9 +18,8 @@ describe('matchesKeyword', () => {
     expect(matchesKeyword(PICKED, '  ', OPTIONS)).toBe(true);
   });
 
-  it('tìm theo mã, tên, màu, không phân biệt hoa thường', () => {
+  it('tìm theo tên, màu, không phân biệt hoa thường', () => {
     expect(matchesKeyword(PICKED, 'chi01', OPTIONS)).toBe(true);
-    expect(matchesKeyword(PICKED, 'CHỈ', OPTIONS)).toBe(true);
     expect(matchesKeyword(PICKED, 'xanh', OPTIONS)).toBe(true);
     expect(matchesKeyword(PICKED, 'vải', OPTIONS)).toBe(false);
   });

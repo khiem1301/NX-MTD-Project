@@ -43,7 +43,7 @@ public class WorkOrderFabricTests : ProductionTestBase
         SetupQueryable(_norms); SetupQueryable(_issueLines); SetupQueryable(_returnLines); SetupQueryable(_lays); SetupQueryable(_layFabrics);
         SetupQueryable(_variants); SetupQueryable(_groupFabrics); SetupQueryable(_groupComponents); SetupQueryable(_markers);
         _orders.Add(new CustomerOrder { OrderId = OrderId, OrderCode = "DH001", Status = OrderStatuses.InProduction });
-        _teams.Add(new Team { TeamId = TeamId, TeamCode = "CAT", TeamName = "Tổ cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
+        _teams.Add(new Team { TeamId = TeamId, TeamCode = "CAT", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active });
         _lines.Add(new OrderLine { OrderLineId = LineId, OrderId = OrderId, ProductId = ProductId, OrderedQty = 200 }
             .WithVariant(TestVariant.Make(ProductId, "MH001", "Đen", "M")));
         _variants.Add(_lines[0].ProductVariant);

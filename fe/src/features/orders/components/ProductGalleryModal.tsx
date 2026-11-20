@@ -12,11 +12,7 @@ export function ProductGalleryModal({ product, onClose }: ProductGalleryModalPro
   return (
     <Modal
       open={product !== null}
-      title={
-        product
-          ? `${text.galleryTitle}: ${product.productCode} - ${product.productName}`
-          : text.galleryTitle
-      }
+      title={product ? `${text.galleryTitle}: ${product.productCode}` : text.galleryTitle}
       footer={null}
       width={720}
       onCancel={onClose}

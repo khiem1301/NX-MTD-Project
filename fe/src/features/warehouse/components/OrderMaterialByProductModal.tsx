@@ -111,7 +111,7 @@ export function OrderMaterialByProductModal({
             value={product?.productId}
             options={list.map((p) => ({
               value: p.productId,
-              label: `${p.productCode} - ${p.productName}`,
+              label: `${p.productCode}`,
             }))}
             onChange={pickProduct}
           />

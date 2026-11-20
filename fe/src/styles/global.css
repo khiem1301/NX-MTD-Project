@@ -2,3 +2,11 @@
 body {
   margin: 0;
 }
+
+/*
+ * Mọi ô nhập số (InputNumber) không hiện nút tăng / giảm 1: người dùng gõ số trực tiếp (phím mũi tên vẫn dùng được).
+ * Cần !important vì style của antd được chèn lúc chạy, sau file này, với selector .ant-input-number .ant-input-number-handler-wrap.
+ */
+.ant-input-number .ant-input-number-handler-wrap {
+  display: none !important;
+}

@@ -100,7 +100,7 @@ export function ReturnModalBody({ ret: r, onClose }: { ret: MaterialReturn; onCl
         <Descriptions.Item label={RETURN_LABELS.kind}>
           {RETURN_KIND_LABEL[r.warehouseType]}
         </Descriptions.Item>
-        <Descriptions.Item label={RETURN_LABELS.team}>{r.teamName}</Descriptions.Item>
+        <Descriptions.Item label={RETURN_LABELS.team}>{r.teamCode}</Descriptions.Item>
         <Descriptions.Item label={RETURN_LABELS.order}>{r.orderCode ?? '—'}</Descriptions.Item>
         <Descriptions.Item label={RETURN_LABELS.workOrder}>
           {r.workOrderCode ?? '—'}

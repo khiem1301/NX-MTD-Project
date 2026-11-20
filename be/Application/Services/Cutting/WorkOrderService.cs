@@ -57,7 +57,7 @@ public sealed class WorkOrderService : IWorkOrderService
                         || w.Order.OrderCode.Contains(keyword) || w.Product.ProductCode.Contains(keyword))
             .OrderByDescending(w => w.WorkOrderId)
             .Select(w => new WorkOrderListItemDto(w.WorkOrderId, w.WorkOrderCode, w.OrderId, w.Order.OrderCode,
-                w.ProductId, w.Product.ProductCode, w.CuttingTeamId, w.CuttingTeam.TeamName, w.DueDate, w.Status,
+                w.ProductId, w.Product.ProductCode, w.CuttingTeamId, w.CuttingTeam.TeamCode, w.DueDate, w.Status,
                 w.WorkOrderLines.Sum(l => l.PlannedQty), w.CreatedAt))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<WorkOrderListItemDto>>.Success(page);
@@ -87,8 +87,8 @@ public sealed class WorkOrderService : IWorkOrderService
             .ToList();
 
         return Result<WorkOrderDto>.Success(new WorkOrderDto(wo.WorkOrderId, wo.WorkOrderCode, wo.OrderId,
-            wo.Order.OrderCode, wo.ProductId, wo.Product.ProductCode, wo.Product.ProductName, wo.CuttingTeamId,
-            wo.CuttingTeam.TeamName, wo.SourceRequestId, wo.DueDate, wo.Status, wo.Note, wo.CreatedAt, lines,
+            wo.Order.OrderCode, wo.ProductId, wo.Product.ProductCode, wo.CuttingTeamId,
+            wo.CuttingTeam.TeamCode, wo.SourceRequestId, wo.DueDate, wo.Status, wo.Note, wo.CreatedAt, lines,
             await GetFabricsAsync(wo, ct), await FabricChecksAsync(wo, ct), wo.FabricTolerancePercent));
     }
 

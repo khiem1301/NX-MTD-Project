@@ -64,7 +64,7 @@ export function TransferModal({ open, fromTeamId, employeeIds, onClose }: Transf
             optionFilterProp="label"
             options={(teams.data ?? [])
               .filter((t) => t.teamId !== fromTeamId)
-              .map((t) => ({ value: t.teamId, label: t.teamName }))}
+              .map((t) => ({ value: t.teamId, label: t.teamCode }))}
           />
         </Form.Item>
         <Form.Item

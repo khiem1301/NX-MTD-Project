@@ -13,7 +13,6 @@ export type RequisitionMaterialOption = {
 export type RequisitionPieceOption = {
   orderLineId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;

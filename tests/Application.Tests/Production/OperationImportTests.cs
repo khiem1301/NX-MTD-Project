@@ -15,7 +15,7 @@ namespace Application.Tests;
 [Collection(ExcelTestCollection.Name)]
 public class OperationImportTests : ProductionTestBase
 {
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "LUNA", ProductName = "Áo dạ", Status = RecordStatus.Active }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "LUNA", Status = RecordStatus.Active }];
     private readonly List<Operation> _operations = [];
     private readonly List<PieceRate> _rates = [];
     private readonly OperationService _sut;

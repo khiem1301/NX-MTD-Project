@@ -5,7 +5,7 @@ public sealed record RefreshTokenDto(string RefreshToken);
 
 public sealed record UserInfoDto(
     int AccountId, int EmployeeId, string Username, string FullName,
-    string Role, string RoleName, int? TeamId, string? TeamName, string? TeamType,
+    string Role, string RoleName, int? TeamId, string? TeamCode, string? TeamType,
     bool IsTemporaryPassword);
 
 public sealed record LoginResultDto(

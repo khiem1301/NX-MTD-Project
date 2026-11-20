@@ -61,7 +61,6 @@ const renderModal = (onConfirm = jest.fn()) =>
         fileName="all.xlsx"
         bundle={bundle}
         productId={null}
-        orderId={null}
         onConfirm={onConfirm}
         onCancel={jest.fn()}
       />
@@ -81,6 +80,9 @@ it('hiện dòng lỗi; sửa ô thì kiểm lại; Xác nhận trả bản đã
   await act(async () => {
     jest.advanceTimersByTime(600);
   });
+  // Lý do lỗi không hiện sẵn: trỏ chuột vào nhãn "Lỗi" mới thấy.
+  await waitFor(() => expect(screen.getByText('Lỗi')).toBeTruthy());
+  fireEvent.mouseEnter(screen.getByRole('img', { name: 'info-circle' }));
   await waitFor(() => expect(screen.getByText('Thiếu tên chi tiết.')).toBeTruthy());
 
   const inputs = screen.getAllByRole('textbox');
@@ -89,7 +91,7 @@ it('hiện dòng lỗi; sửa ô thì kiểm lại; Xác nhận trả bản đã
     jest.advanceTimersByTime(600);
   });
 
-  await waitFor(() => expect(screen.queryByText('Thiếu tên chi tiết.')).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('img', { name: 'info-circle' })).toBeNull());
   expect(check).toHaveBeenCalledTimes(2);
 
   fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));

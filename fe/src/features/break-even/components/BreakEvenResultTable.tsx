@@ -17,7 +17,7 @@ const columns: ColumnsType<BreakEvenResultItem> = [
   {
     title: BREAK_EVEN_TEXT.table.product,
     key: 'product',
-    render: (_, row) => `${row.productCode} — ${row.productName}`,
+    render: (_, row) => `${row.productCode}`,
   },
   { title: BREAK_EVEN_TEXT.table.allocationBasis, dataIndex: 'allocationBasis' },
   { title: BREAK_EVEN_TEXT.table.finishedQty, dataIndex: 'finishedQty', align: 'right' },

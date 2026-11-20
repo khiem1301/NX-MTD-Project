@@ -7,7 +7,6 @@ const team = (id: number, status: TeamListItem['status']) =>
   ({
     teamId: id,
     teamCode: `T${id}`,
-    teamName: `Tổ ${id}`,
     teamType: 'Sewing',
     status,
     leaderName: null,
@@ -36,14 +35,14 @@ const renderPage = () =>
 describe('TeamsPage', () => {
   it('mặc định hiện mọi tổ, lọc Ngừng thì chỉ còn tổ đã ngừng', async () => {
     renderPage();
-    expect(screen.getByText('Tổ 1')).toBeInTheDocument();
-    expect(screen.getByText('Tổ 2')).toBeInTheDocument();
+    expect(screen.getByText('T1')).toBeInTheDocument();
+    expect(screen.getByText('T2')).toBeInTheDocument();
 
     fireEvent.mouseDown(screen.getAllByRole('combobox')[0] as HTMLElement);
     const options = await screen.findAllByText('Ngừng');
     fireEvent.click(options[options.length - 1] as HTMLElement);
 
-    expect(screen.queryByText('Tổ 1')).not.toBeInTheDocument();
-    expect(screen.getByText('Tổ 2')).toBeInTheDocument();
+    expect(screen.queryByText('T1')).not.toBeInTheDocument();
+    expect(screen.getByText('T2')).toBeInTheDocument();
   });
 });

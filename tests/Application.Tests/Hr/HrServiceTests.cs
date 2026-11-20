@@ -59,7 +59,7 @@ public class HrServiceTests
     };
 
     private static Team TeamOf(string type = TeamTypes.Sewing, int id = 4) =>
-        new() { TeamId = id, TeamName = "Tổ may 1", TeamType = type, Status = RecordStatus.Active };
+        new() { TeamId = id, TeamCode = "MAY1", TeamType = type, Status = RecordStatus.Active };
 
     // Chỉ vai trò văn phòng được tạo trên web; công nhân / tổ trưởng / tổ phó lấy từ máy chấm công RJ.
     private static CreateEmployeeDto NewEmployee(string role = "WarehouseKeeper", int? att = null) =>
@@ -581,7 +581,7 @@ public class HrServiceTests
         a.TeamId.Should().Be(5);
         _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.Contains("hiệu lực 24/10/2026")));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 5 && e.Summary!.StartsWith("Nhận chuyển đến: Người 8, Người 9")));
-        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Chuyển sang tổ Tổ may 1: Người 8, Người 9")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Chuyển sang tổ MAY1: Người 8, Người 9")));
     }
 
     [Fact]
@@ -640,7 +640,7 @@ public class HrServiceTests
         result.IsSuccess.Should().BeTrue();
         a.TeamId.Should().Be(4);
         b.TeamId.Should().Be(4);
-        _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.StartsWith("Thêm vào tổ Tổ may 1")));
+        _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.StartsWith("Thêm vào tổ MAY1")));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Thêm vào tổ: Người 8, Người 9. bổ sung")));
     }
 
@@ -678,7 +678,7 @@ public class HrServiceTests
 
         ok.IsSuccess.Should().BeTrue();
         worker.TeamId.Should().BeNull();
-        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason!.StartsWith("Loại khỏi tổ Tổ may 1")));
+        _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason!.StartsWith("Loại khỏi tổ MAY1")));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Loại khỏi tổ: Người 9. nghỉ phép dài")));
     }
 

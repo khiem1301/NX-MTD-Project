@@ -80,9 +80,11 @@ export function DispatchCreateModal({ open, onClose }: DispatchCreateModalProps)
             <OrderSelect
               value={orderId}
               placeholder={DISPATCH_LABELS.selectOrder}
-              onChange={(id) => {
+              onChange={(id, address) => {
                 setOrderId(id);
                 form.setFieldValue('qty', {});
+                // Địa chỉ giao khai ở đơn hàng được điền sẵn, người lập phiếu vẫn sửa được (vd giao về địa chỉ khác).
+                if (address) form.setFieldValue('deliveryAddress', address);
               }}
             />
           </Form.Item>

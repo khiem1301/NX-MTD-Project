@@ -59,7 +59,7 @@ export function SpecEditorActions({
           source={{
             scope: 'admin',
             productId: product.productId,
-            productLabel: `${product.productCode} - ${product.productName}`,
+            productLabel: `${product.productCode}`,
           }}
           onClose={() => setImporting(false)}
         />

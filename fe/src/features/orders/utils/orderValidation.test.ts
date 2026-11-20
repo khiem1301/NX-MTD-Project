@@ -1,6 +1,7 @@
 import type { ProductBlock } from './orderGrid';
 import {
   colorErrorKey,
+  deliveryAddressSchema,
   orderCodeSchema,
   orderNoteSchema,
   qtyErrorKey,
@@ -165,6 +166,13 @@ describe('thông tin chung của đơn', () => {
     expect(orderCodeSchema.safeParse('A'.repeat(30)).success).toBe(true);
     expect(orderCodeSchema.safeParse(` ${'A'.repeat(30)} `).success).toBe(true);
     expect(orderCodeSchema.safeParse('A'.repeat(31)).success).toBe(false);
+  });
+
+  it('địa chỉ giao hàng bắt buộc, tối đa 500 ký tự', () => {
+    expect(deliveryAddressSchema.safeParse('125 Nguyễn Văn Linh, Quận 7').success).toBe(true);
+    expect(deliveryAddressSchema.safeParse('   ').success).toBe(false);
+    expect(deliveryAddressSchema.safeParse('x'.repeat(500)).success).toBe(true);
+    expect(deliveryAddressSchema.safeParse('x'.repeat(501)).success).toBe(false);
   });
 
   it('ghi chú tối đa 1000 ký tự', () => {

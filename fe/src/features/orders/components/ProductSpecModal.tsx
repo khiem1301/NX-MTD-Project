@@ -39,9 +39,7 @@ export function ProductSpecModal({ product, showHistory, readOnly = false, onClo
   return (
     <DetailModal
       open={product !== null}
-      title={
-        product ? `${text.title}: ${product.productCode} - ${product.productName}` : text.title
-      }
+      title={product ? `${text.title}: ${product.productCode}` : text.title}
       onClose={requestClose}
       size="xl"
     >

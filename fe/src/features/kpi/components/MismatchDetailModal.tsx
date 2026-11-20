@@ -27,7 +27,7 @@ export function MismatchDetailModal({ role, kpiTargetId, onClose }: MismatchDeta
     <Modal
       open={kpiTargetId !== null}
       width={MODAL_WIDTH.md}
-      title={data ? `${text.detailTitle}: ${data.orderCode} · ${data.teamName}` : text.detailTitle}
+      title={data ? `${text.detailTitle}: ${data.orderCode} · ${data.teamCode}` : text.detailTitle}
       footer={null}
       onCancel={onClose}
       destroyOnHidden

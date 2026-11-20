@@ -40,9 +40,7 @@ export function ChangeAmountModal({
     <Modal
       open={code !== null}
       title={
-        code
-          ? `${current ? GR_LABELS.changeAmount : GR_LABELS.addLevel} - ${code.gradeCode} · ${code.gradeName}`
-          : ''
+        code ? `${current ? GR_LABELS.changeAmount : GR_LABELS.addLevel} - ${code.gradeCode}` : ''
       }
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}

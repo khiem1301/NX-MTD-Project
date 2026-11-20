@@ -38,11 +38,6 @@ const columns: ColumnsType<MonthlyCostExcelRowPreview> = [
     render: (v: string | null) => v ?? '—',
   },
   {
-    title: MONTHLY_COST_TEXT.previewColumns.productName,
-    dataIndex: 'productName',
-    render: (v: string | null) => v ?? '—',
-  },
-  {
     title: MONTHLY_COST_TEXT.previewColumns.amount,
     dataIndex: 'amount',
     align: 'right',

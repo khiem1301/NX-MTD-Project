@@ -17,7 +17,6 @@ export type StockBalance = {
   orderId: number | null;
   orderCode: string | null;
   productCode: string | null;
-  productName: string | null;
   color: string | null;
   sizeCode: string | null;
   onHandQty: number;

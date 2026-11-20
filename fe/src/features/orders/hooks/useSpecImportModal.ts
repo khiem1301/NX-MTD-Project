@@ -11,7 +11,6 @@ const text = MESSAGES.orders.specImport;
 export type SpecImportProductOption = {
   productId: number;
   productCode: string;
-  productName: string;
 };
 
 /**

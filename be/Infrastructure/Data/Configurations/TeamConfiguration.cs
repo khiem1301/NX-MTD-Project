@@ -12,8 +12,6 @@ public sealed class TeamConfiguration : IEntityTypeConfiguration<Team>
 
         entity.HasIndex(e => e.TeamCode, "UQ_Team_Code").IsUnique();
 
-        entity.HasIndex(e => e.TeamName, "UQ_Team_Name").IsUnique();
-
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
@@ -24,7 +22,6 @@ public sealed class TeamConfiguration : IEntityTypeConfiguration<Team>
         entity.Property(e => e.TeamCode)
             .HasMaxLength(20)
             .IsUnicode(false);
-        entity.Property(e => e.TeamName).HasMaxLength(100);
         entity.Property(e => e.TeamType)
             .HasMaxLength(10)
             .IsUnicode(false);

@@ -30,7 +30,7 @@ const makeUser = (role: Role, teamType: TeamType | null = null): UserInfo => ({
   role,
   roleName: role,
   teamId: null,
-  teamName: null,
+  teamCode: null,
   teamType,
   isTemporaryPassword: false,
 });

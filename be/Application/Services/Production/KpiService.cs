@@ -42,8 +42,8 @@ public sealed class KpiService : IKpiService
     private IQueryable<KpiTarget> Targets => _uow.Repository<KpiTarget>().Query();
 
     private static readonly Expression<Func<KpiTarget, KpiTargetDto>> ToDto = k => new KpiTargetDto(
-        k.KpiTargetId, k.OrderId, k.Order.OrderCode, k.ProductId, k.Product.ProductCode, k.Product.ProductName,
-        k.SewingTeamId, k.SewingTeam.TeamName, k.StartDate, k.EndDate, k.TargetFinishedQty, k.WorkingDays,
+        k.KpiTargetId, k.OrderId, k.Order.OrderCode, k.ProductId, k.Product.ProductCode,
+        k.SewingTeamId, k.SewingTeam.TeamCode, k.StartDate, k.EndDate, k.TargetFinishedQty, k.WorkingDays,
         Math.Round(k.TargetFinishedQty / (decimal)k.WorkingDays, 2), k.Status, k.Result, k.CreatedAt, 0, 0m, null);   // thực tế, dòng điền sau (WithActualAsync)
 
     public async Task<Result<PagedResult<KpiTargetDto>>> GetPagedAsync(KpiTargetQuery query, CancellationToken ct)
@@ -55,7 +55,7 @@ public sealed class KpiService : IKpiService
             .Where(k => query.OrderId == null || k.OrderId == query.OrderId)
             .Where(k => query.SewingTeamId == null || k.SewingTeamId == query.SewingTeamId)
             .Where(k => string.IsNullOrEmpty(keyword) || k.Order.OrderCode.Contains(keyword)
-                        || k.Product.ProductCode.Contains(keyword) || k.SewingTeam.TeamName.Contains(keyword))
+                        || k.Product.ProductCode.Contains(keyword) || k.SewingTeam.TeamCode.Contains(keyword))
             .OrderByDescending(k => k.KpiTargetId)
             .Select(ToDto)
             .ToPagedAsync(query, ct);

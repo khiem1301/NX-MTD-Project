@@ -14,7 +14,6 @@ const sizes = ['S', 'M', 'L'];
 const product: OrderMarkerProduct = {
   productId: 7,
   productCode: 'AO-01',
-  productName: 'Áo',
   sizes,
   markerGroups: [
     {

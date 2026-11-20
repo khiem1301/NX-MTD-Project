@@ -33,7 +33,7 @@ function TeamFilter({ value, onChange }: { value?: number; onChange: (id?: numbe
       loading={teams.isLoading}
       options={(teams.data ?? [])
         .filter((t) => t.teamType === 'Sewing')
-        .map((t) => ({ value: t.teamId, label: t.teamName }))}
+        .map((t) => ({ value: t.teamId, label: t.teamCode }))}
       value={value}
       onChange={onChange}
     />

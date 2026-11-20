@@ -57,12 +57,12 @@ INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Widt
  ('S-KIM-GAY',  N'Kim gãy',                N'',           'SCRAP',  N'cái', NULL, 'ACTIVE');
 
 /* ---------------- Mã hàng ---------------- */
-INSERT dbo.Product (ProductCode, ProductName, Description, Status) VALUES
- ('AS-0412', N'Áo sơ mi nam dài tay',   N'Áo sơ mi công sở, cổ đức, tay dài, 9 công đoạn may', 'ACTIVE'),
- ('QK-0308', N'Quần kaki nam ống đứng', N'Quần kaki co giãn, 2 túi trước, 2 túi sau',           'ACTIVE'),
- ('AK-0522', N'Áo khoác gió 2 lớp',     N'Áo khoác gió có mũ, lót taffeta, khóa kéo toàn thân', 'ACTIVE'),
- ('AP-0715', N'Áo polo nữ cá sấu',      N'Áo polo nữ cổ bẻ, tay ngắn',                           'ACTIVE'),
- ('VD-0101', N'Váy đầm công sở (ngừng sản xuất)', N'Mã hàng cũ khách không đặt nữa',            'DISCONTINUED');
+INSERT dbo.Product (ProductCode, Description, Status) VALUES
+ ('AS-0412', N'Áo sơ mi công sở, cổ đức, tay dài, 9 công đoạn may', 'ACTIVE'),
+ ('QK-0308', N'Quần kaki co giãn, 2 túi trước, 2 túi sau',           'ACTIVE'),
+ ('AK-0522', N'Áo khoác gió có mũ, lót taffeta, khóa kéo toàn thân', 'ACTIVE'),
+ ('AP-0715', N'Áo polo nữ cổ bẻ, tay ngắn',                           'ACTIVE'),
+ ('VD-0101', N'Mã hàng cũ khách không đặt nữa',            'DISCONTINUED');
 
 -- Màu áo
 INSERT dbo.ProductColor (ProductId, Color)

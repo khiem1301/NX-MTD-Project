@@ -76,7 +76,7 @@ export type DailyTimesheet = {
   employeeId: number;
   employeeCode: string;
   fullName: string;
-  teamName: string | null;
+  teamCode: string | null;
   workDate: string;
   checkIn: string | null;
   checkOut: string | null;

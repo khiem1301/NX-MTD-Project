@@ -4,7 +4,7 @@ namespace NX_MTD.Application.DTOs;
 
 /// <summary>Một lần giao / thu hồi việc với công nhân (WorkAllocation): số lần làm công đoạn × màu × size.</summary>
 public sealed record WorkAllocationDto(
-    int WorkAllocationId, DateOnly WorkDate, string MovementType, int SewingTeamId, string TeamName, int WorkerId, string WorkerCode,
+    int WorkAllocationId, DateOnly WorkDate, string MovementType, int SewingTeamId, string TeamCode, int WorkerId, string WorkerCode,
     string WorkerName, int OrderLineId, string OrderCode, string ProductCode, string Color, string SizeCode,
     int OperationId, string OperationCode, string OperationName, int Quantity,
     int? ConfirmedQty, string? DiscrepancyReason, string? RetrievalReason, string? RetrievalNote, string ConfirmMode,

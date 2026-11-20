@@ -15,7 +15,7 @@ export const ACCOUNTING_REPORT_TEXT = {
   workdayTable: {
     employeeCode: 'Mã NV',
     fullName: 'Họ tên',
-    teamName: 'Tổ',
+    teamCode: 'Tổ',
     regularWorkdays: 'Công ngày thường',
     sundayWorkdays: 'Công Chủ nhật',
     totalWorkdays: 'Tổng công',

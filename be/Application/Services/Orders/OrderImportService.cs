@@ -46,7 +46,7 @@ public sealed class OrderImportService : IOrderImportService
 
         var codes = excel.Rows.Select(r => r.ProductCode).Where(c => c.Length > 0).Distinct().ToList();
         var products = (await _uow.Repository<Product>().Query().AsNoTracking().Where(p => codes.Contains(p.ProductCode))
-                .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.Status }).ToListAsync(ct))
+                .Select(p => new { p.ProductId, p.ProductCode, p.Status }).ToListAsync(ct))
             .ToDictionary(p => p.ProductCode, StringComparer.OrdinalIgnoreCase);
 
         // Form đơn có một đơn giá cho mỗi mã hàng: các dòng cùng mã hàng phải cùng giá (lấy giá của dòng đầu làm chuẩn).
@@ -57,11 +57,11 @@ public sealed class OrderImportService : IOrderImportService
         foreach (var row in excel.Rows)
         {
             products.TryGetValue(row.ProductCode, out var product);
+            var inactive = product is not null && product.Status != RecordStatus.Active;
+            // Mã chưa có vẫn kiểm số lượng, giá, trùng màu. Chỉ khi phần đó ổn mới báo thiếu mã (form đơn nhận dòng sau khi khai mã).
             var error = row.ParseError
-                        ?? (product is null ? string.Format(Messages.OrderImportProductUnknown, row.ProductCode) : null)
-                        ?? (product!.Status != RecordStatus.Active ? string.Format(Messages.OrderImportProductInactive, row.ProductCode) : null)
                         ?? (row.Color.Length > MaxColorLength ? Messages.OrderImportColorTooLong : null)
-                        ?? PriceProblem(row.CmtUnitPrice!.Value)
+                        ?? (row.CmtUnitPrice is null ? Messages.OrderImportPriceInvalid : PriceProblem(row.CmtUnitPrice.Value))
                         ?? (row.Quantities.Count == 0 ? Messages.OrderImportNoQty : null)
                         ?? (row.Quantities.Any(q => q.Qty > MaxQty) ? Messages.OrderImportQtyTooLarge : null)
                         ?? (priceOf.TryGetValue(row.ProductCode, out var first) && first != row.CmtUnitPrice
@@ -74,10 +74,15 @@ public sealed class OrderImportService : IOrderImportService
             if (error is null)
             {
                 seen[$"{row.ProductCode}|{row.Color.Trim()}"] = row.RowNumber;
-                priceOf.TryAdd(row.ProductCode, row.CmtUnitPrice!.Value);
+                if (row.CmtUnitPrice is decimal price) priceOf.TryAdd(row.ProductCode, price);
+                if (inactive)
+                    error = string.Format(Messages.OrderImportProductInactive, row.ProductCode);
+                else if (product is null)
+                    error = string.Format(Messages.OrderImportProductUnknown, row.ProductCode);
             }
-            rows.Add(new OrderImportRowDto(row.RowNumber, product?.ProductCode ?? row.ProductCode, error is null ? product!.ProductId : null,
-                product?.ProductName, row.Color, row.CmtUnitPrice, row.Quantities, error));
+            var missing = product is null && error == string.Format(Messages.OrderImportProductUnknown, row.ProductCode);
+            rows.Add(new OrderImportRowDto(row.RowNumber, product?.ProductCode ?? row.ProductCode,
+                error is null ? product!.ProductId : null, row.Color, row.CmtUnitPrice, row.Quantities, error, missing));
         }
 
         var errors = rows.Count(r => r.Error is not null);

@@ -18,7 +18,7 @@ export function OrderReadOnlyGrid({ lines }: { lines: OrderDisplayLine[] }) {
             key={block.key}
             size="small"
             style={{ marginBottom: 12 }}
-            title={`${first?.productCode ?? ''} · ${first?.productName ?? ''}`}
+            title={`${first?.productCode ?? ''}`}
             extra={
               block.cmtUnitPrice !== null &&
               `${MESSAGES.orders.unitPrice}: ${formatCurrency(block.cmtUnitPrice)} · ${MESSAGES.orders.totalAmount}: ${formatCurrency(total * block.cmtUnitPrice)}`

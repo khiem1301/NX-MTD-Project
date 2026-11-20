@@ -17,18 +17,16 @@ import { ExcelUploadButton } from './ExcelUploadButton';
 
 const text = MESSAGES.orders.productExcel;
 const SPEC_KINDS: readonly ProductImportKind[] = ['components', 'norms', 'groups'];
-const ORDER_KINDS: readonly ProductImportKind[] = ['markers', 'orderMaterials'];
-/** Ô Định mức chia 3 cột, ô Theo đơn hàng chia 2 cột (lưới 24). */
+/** Ba ô Định mức chia 3 cột (lưới 24). */
 const SPEC_SPAN = 8;
-const ORDER_SPAN = 12;
 
 type ProductExcelImportsProps = {
-  /** Mã hàng đang sửa; undefined = đang thêm mới (chưa có đơn để chọn). */
+  /** Mã hàng đang sửa; undefined = đang thêm mới. */
   productId?: number;
   value: ProductImportSelection;
   onChange: (next: ProductImportSelection) => void;
   disabled?: boolean;
-  /** Mở từ form đơn hàng: dữ liệu được nhập vào chính đơn đó sau khi Lưu đơn (không cần chọn đơn). */
+  /** Mở từ form đơn hàng: dữ liệu được nhập sau khi Lưu đơn (đơn tạo màu, size). */
   deferred?: boolean;
   /** Xác nhận popup của file chung có sheet Mã hàng: form điền Mã hàng, Tên, Mô tả từ dòng này. */
   onProductRow?: (row: ProductExcelRow) => void;
@@ -88,14 +86,6 @@ export function ProductExcelImports({
     </Row>
   );
 
-  /** Chỉ form đơn hàng (deferred) có Bìa cắt, NVL của đơn: nhập vào chính đơn đó sau khi Lưu đơn. Form mã hàng không có phần theo đơn. */
-  const orderGroup = deferred ? (
-    <>
-      <GroupTitle title={text.orderGroup} note={text.orderGroupDeferred} />
-      {slots(ORDER_KINDS, ORDER_SPAN)}
-    </>
-  ) : null;
-
   return (
     <>
       <Card
@@ -134,12 +124,7 @@ export function ProductExcelImports({
                 </ExcelUploadButton>
               </span>
             </Tooltip>
-            <ImportTemplateLink
-              kind="product-form"
-              productId={productId}
-              orderId={value.orderId}
-              withOrder={deferred}
-            />
+            <ImportTemplateLink kind="product-form" productId={productId} />
           </Space>
         }
       >
@@ -158,18 +143,12 @@ export function ProductExcelImports({
           />
           {slots(SPEC_KINDS, SPEC_SPAN)}
         </Flex>
-        {orderGroup && (
-          <Flex vertical gap={8} style={{ marginTop: token.margin }}>
-            {orderGroup}
-          </Flex>
-        )}
       </Card>
       {imports.reviewing && (
         <ExcelReviewModal
           fileName={imports.reviewing.fileName}
           bundle={imports.reviewing.bundle}
           productId={productId ?? null}
-          orderId={value.orderId ?? null}
           only={imports.reviewing.kind ? [imports.reviewing.kind] : undefined}
           onConfirm={imports.confirm}
           onCancel={imports.closeReview}

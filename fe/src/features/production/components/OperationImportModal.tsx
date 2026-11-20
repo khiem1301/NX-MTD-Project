@@ -3,6 +3,7 @@ import { InboxOutlined } from '@ant-design/icons';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OperationImportRow } from '../types';
 import { DataTable } from '@/components/common/DataTable';
@@ -158,6 +159,14 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
             />
 
             <OperationImportSummary data={data} ratesOn={ratesOn} />
+
+            {data.warningCount > 0 && (
+              <Alert
+                type="warning"
+                showIcon
+                message={fill(text.componentWarning, data.warningCount)}
+              />
+            )}
 
             <DataTable<OperationImportRow>
               rowKey={(r) => `${r.rowNumber}-${r.stt}`}

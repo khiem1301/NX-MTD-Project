@@ -14,7 +14,7 @@ namespace Application.Tests;
 [Collection(ExcelTestCollection.Name)]
 public class ProductImportTests : ProductionTestBase
 {
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO01", Status = RecordStatus.Active }];
 
     public ProductImportTests()
     {
@@ -27,7 +27,7 @@ public class ProductImportTests : ProductionTestBase
     {
         var wb = new XLWorkbook();
         var ws = wb.Worksheets.Add("Mã hàng");
-        string[] headers = ["Mã hàng", "Tên mã hàng", "Mô tả"];
+        string[] headers = ["Mã hàng", "Mô tả"];
         for (var c = 0; c < headers.Length; c++) ws.Cell(3, c + 1).Value = headers[c];
         for (var r = 0; r < rows.Length; r++)
             for (var c = 0; c < rows[r].Length; c++)
@@ -42,20 +42,19 @@ public class ProductImportTests : ProductionTestBase
     public async Task Preview_ClassifiesNewExistsAndErrors()
     {
         using var stream = Book(
-            ["ao01", "Áo cũ", null],          // đã có
-            ["QU02", "Quần âu", "Vải kaki"],  // mới
-            ["qu02", "Quần trùng", null],     // trùng dòng 5
-            ["MA HANG", "Có dấu cách", null], // mã sai ký tự
-            ["SM03", null, null]);            // thiếu tên
+            ["ao01", null],          // đã có
+            ["QU02", "Vải kaki"],  // mới
+            ["qu02", null],     // trùng dòng 5
+            ["MA HANG", null]); // mã sai ký tự
 
         var rows = new ClosedXmlProductParser().Parse(stream);
         var data = (await Sut().PreviewAsync(rows, default)).Data!;
 
-        data.Rows.Select(r => r.Action).Should().Equal("Exists", "New", "Error", "Error", "Error");
+        data.Rows.Select(r => r.Action).Should().Equal("Exists", "New", "Error", "Error");
         data.Rows[2].Error.Should().Contain("dòng 5");
         data.NewCount.Should().Be(1);
         data.ExistsCount.Should().Be(1);
         data.DuplicateCount.Should().Be(1);
-        data.ErrorCount.Should().Be(2);
+        data.ErrorCount.Should().Be(1);
     }
 }

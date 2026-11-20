@@ -15,7 +15,7 @@ public class ProductSpecServiceTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
 
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO-01", ProductName = "Áo" }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO-01" }];
     private readonly List<ProductComponent> _components = [];
     private readonly List<ProductVariant> _variants = [];
     private readonly List<ProductComponentMaterial> _norms = [];

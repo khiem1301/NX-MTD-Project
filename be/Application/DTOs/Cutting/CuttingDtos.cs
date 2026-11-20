@@ -37,7 +37,7 @@ public sealed record CuttingLayQuery : PageQuery
 
 public sealed record CutHandoverListItemDto(
     int CutHandoverId, string HandoverCode, int WorkOrderId, string WorkOrderCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
+    string CuttingTeamCode, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
     int TotalHandedQty);
 
 public sealed record CutHandoverLineDto(
@@ -46,7 +46,7 @@ public sealed record CutHandoverLineDto(
 
 public sealed record CutHandoverDto(
     int CutHandoverId, string HandoverCode, int WorkOrderId, string WorkOrderCode, string OrderCode, int CuttingTeamId,
-    string CuttingTeamName, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
+    string CuttingTeamCode, DateTime HandedAt, string Status, string? ConfirmedByName, DateTime? ConfirmedAt,
     string? RejectReason, IReadOnlyList<CutHandoverLineDto> Lines);
 
 /// <summary>Số còn được bàn giao của từng dòng đơn = đã cắt − đã bàn giao (chờ nhận + đã nhận).</summary>

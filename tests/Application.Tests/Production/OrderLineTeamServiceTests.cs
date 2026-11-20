@@ -28,9 +28,9 @@ public class OrderLineTeamServiceTests : ProductionTestBase
     private readonly List<OrderLine> _lines = [];
     private readonly List<Team> _teams =
     [
-        new() { TeamId = TeamA, TeamName = "May 1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active },
-        new() { TeamId = TeamB, TeamName = "May 2", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active },
-        new() { TeamId = 7, TeamName = "Cắt", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active },
+        new() { TeamId = TeamA, TeamCode = "MAY1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active },
+        new() { TeamId = TeamB, TeamCode = "MAY2", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active },
+        new() { TeamId = 7, TeamCode = "CAT1", TeamType = TeamTypes.Cutting, Status = RecordStatus.Active },
     ];
     private readonly List<OrderLineTeam> _allotted = [];
     private readonly List<OperationAssignment> _assignments = [];
@@ -102,7 +102,7 @@ public class OrderLineTeamServiceTests : ProductionTestBase
         var page = (await _sut.GetPagedAsync(new OrderLineTeamQuery(), default)).Data!;
 
         page.Items.Select(r => (r.OrderLineId, r.Color, r.SizeCode, r.OrderedQty)).Should().Equal((LineRed, "Đỏ", "M", 30), (LineBlue, "Xanh", "L", 20));
-        page.Items[0].Teams.Should().Equal(new AllottedTeamDto(TeamB, "May 2"));
+        page.Items[0].Teams.Should().Equal(new AllottedTeamDto(TeamB, "MAY2"));
         page.Items[1].Teams.Should().BeEmpty();
     }
 
@@ -207,7 +207,7 @@ public class OrderLineTeamServiceTests : ProductionTestBase
         var result = await Set();
 
         result.ErrorCode.Should().Be(ErrorCodes.OrderLineTeamInUse);
-        result.Message.Should().Be(string.Format(Messages.OrderLineTeamInUse, "May 1"));
+        result.Message.Should().Be(string.Format(Messages.OrderLineTeamInUse, "MAY1"));
         await Uow.DidNotReceive().SaveChangesAsync();
     }
 
@@ -287,7 +287,7 @@ public class OrderLineTeamServiceTests : ProductionTestBase
 
         var result = await _sut.ListTeamsAsync(OrderId, ProductId, default);
 
-        result.Data.Should().Equal(new AllottedTeamDto(TeamA, "May 1"));
+        result.Data.Should().Equal(new AllottedTeamDto(TeamA, "MAY1"));
     }
 
     private static bool IsMissingPairs(IEnumerable<OrderLineTeam> rows) =>

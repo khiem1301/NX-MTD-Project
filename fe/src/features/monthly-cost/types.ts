@@ -23,7 +23,6 @@ export type MonthlyCostExcelRowPreview = {
   costCategoryCode: string | null;
   costType: string | null;
   productCode: string | null;
-  productName: string | null;
   amount: number | null;
   quantity: number | null;
   note: string | null;
@@ -64,7 +63,6 @@ export type MonthlyCostItem = {
   costType: MonthlyCostType;
   productId: number | null;
   productCode: string | null;
-  productName: string | null;
   amount: number;
   quantity: number | null;
   note: string | null;

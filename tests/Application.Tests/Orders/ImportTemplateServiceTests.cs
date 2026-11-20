@@ -48,7 +48,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
     [Fact]
     public async Task Demo_Spec_ParsesAllTables()
     {
-        var result = await Sut().BuildAsync(ImportTemplateKinds.Spec, null, null, false, default);
+        var result = await Sut().BuildAsync(ImportTemplateKinds.Spec, null, null, default);
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.FileName.Should().Be("Mau_Dinh_Muc_Bia_Cat.xlsx");
@@ -62,7 +62,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
     [Fact]
     public async Task Demo_OrderLines_ParsesSizeColumns()
     {
-        var result = await Sut().BuildAsync(ImportTemplateKinds.OrderLines, null, null, false, default);
+        var result = await Sut().BuildAsync(ImportTemplateKinds.OrderLines, null, null, default);
 
         var order = new ClosedXmlOrderLinesParser().Parse(Open(result));
         order.SizeColumns.Should().Equal("S", "M", "L", "XL");
@@ -72,7 +72,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
     [Fact]
     public async Task Demo_OrderMaterials_Parses()
     {
-        var result = await Sut().BuildAsync(ImportTemplateKinds.OrderMaterials, null, null, false, default);
+        var result = await Sut().BuildAsync(ImportTemplateKinds.OrderMaterials, null, null, default);
 
         new ClosedXmlOrderMaterialParser().Parse(Open(result)).Should().HaveCount(4).And.OnlyContain(r => r.ParseError == null);
     }
@@ -80,39 +80,32 @@ public class ImportTemplateServiceTests : ProductionTestBase
     [Fact]
     public async Task Demo_Operations_ParsesFinalStepAndGroups()
     {
-        var result = await Sut().BuildAsync(ImportTemplateKinds.Operations, null, null, false, default);
+        var result = await Sut().BuildAsync(ImportTemplateKinds.Operations, null, null, default);
 
         var sheet = new ClosedXmlOperationParser().Parse(Open(result)).Single();
         sheet.HasGroupColumn.Should().BeTrue();
         sheet.Rows.Should().OnlyContain(r => r.ParseError == null).And.ContainSingle(r => r.IsFinal);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Demo_ProductForm_ParsesItsSheets(bool withOrder)
+    [Fact]
+    public async Task Demo_ProductForm_ParsesItsSheets()
     {
-        var result = await Sut().BuildAsync(ImportTemplateKinds.ProductForm, null, null, withOrder, default);
+        var result = await Sut().BuildAsync(ImportTemplateKinds.ProductForm, null, null, default);
 
-        result.Data!.FileName.Should().Be(withOrder ? "Mau_Form_Ma_Hang_Theo_Don.xlsx" : "Mau_Form_Ma_Hang.xlsx");
+        result.Data!.FileName.Should().Be("Mau_Form_Ma_Hang.xlsx");
         new ClosedXmlProductParser().Parse(Open(result)).Should().HaveCount(1);
         var book = new ClosedXmlSpecWorkbookParser().Parse(Open(result));
         book.Components.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
         book.Norms.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
         book.MarkerGroups.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-        if (withOrder)
-        {
-            book.OrderMarkers.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-            new ClosedXmlOrderMaterialParser().Parse(Open(result)).Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
-        }
-        else book.OrderMarkers.Should().BeEmpty();
+        book.OrderMarkers.Should().BeEmpty();
     }
 
     /// <summary>Mã hàng đã có thành phần nhưng chưa có định mức: sheet Thành phần dùng dữ liệu thật, sheet Định mức NVL dùng ví dụ.</summary>
     [Fact]
     public async Task Spec_RealComponents_DemoNorms()
     {
-        _products.Add(new Product { ProductId = 7, ProductCode = "AS-1", ProductName = "Áo" });
+        _products.Add(new Product { ProductId = 7, ProductCode = "AS-1" });
         _components.AddRange([
             new ProductComponent { ProductComponentId = 1, ProductId = 7, ComponentName = "Thân trước", ComponentType = "PANEL", PiecesPerGarment = 2, Status = RecordStatus.Active },
             new ProductComponent { ProductComponentId = 2, ProductId = 7, ComponentName = "Khóa", ComponentType = "TRIM", PiecesPerGarment = 1, Status = RecordStatus.Active },
@@ -120,7 +113,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
             new ProductComponent { ProductComponentId = 4, ProductId = 8, ComponentName = "Của mã khác", ComponentType = "PANEL", PiecesPerGarment = 1, Status = RecordStatus.Active }]);
         ImportTemplateModel? model = null;
 
-        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, null, false, default);
+        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, null, default);
 
         result.IsSuccess.Should().BeTrue();
         var components = model!.Tables.Single(t => t.Sheet == "Thành phần");
@@ -144,7 +137,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
             new OrderLine { OrderLineId = 3, OrderId = 4, ProductId = 7, ProductVariant = V(3, "S"), OrderedQty = 5, CmtUnitPrice = 1 }]);
         ImportTemplateModel? model = null;
 
-        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderLines, null, 3, false, default);
+        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderLines, null, 3, default);
 
         result.IsSuccess.Should().BeTrue();
         var table = model!.Tables.Single();
@@ -156,7 +149,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
 
     private void OrderWithSizes(params string[] sizes)
     {
-        _products.Add(new Product { ProductId = 7, ProductCode = "AS-1", ProductName = "Áo" });
+        _products.Add(new Product { ProductId = 7, ProductCode = "AS-1" });
         _orders.Add(new CustomerOrder { OrderId = 3, OrderCode = "DH" });
         var product = new Product { ProductId = 7, ProductCode = "AS-1" };
         var white = new ProductColor { ProductColorId = 1, ProductId = 7, Color = "Trắng" };
@@ -175,7 +168,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
         OrderWithSizes("XL", "M");
         ImportTemplateModel? model = null;
 
-        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, true, default);
+        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, default);
 
         result.IsSuccess.Should().BeTrue();
         var table = model!.Tables.Single(t => t.Sheet == "Bìa của đơn");
@@ -196,7 +189,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
         });
         ImportTemplateModel? model = null;
 
-        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, true, default);
+        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.Spec, 7, 3, default);
 
         var table = model!.Tables.Single(t => t.Sheet == "Bìa của đơn");
         table.IsDemo.Should().BeFalse();
@@ -213,7 +206,7 @@ public class ImportTemplateServiceTests : ProductionTestBase
             new OrderMaterial { OrderMaterialId = 3, OrderId = 9, RequiredQty = 1, CustomerQty = 0, Material = new Material { MaterialCode = "X" } }]);
         ImportTemplateModel? model = null;
 
-        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMaterials, null, 3, false, default);
+        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMaterials, null, 3, default);
 
         var table = model!.Tables.Single();
         table.IsDemo.Should().BeFalse();
@@ -225,8 +218,8 @@ public class ImportTemplateServiceTests : ProductionTestBase
     [Fact]
     public async Task UnknownProductOrOrderOrKind_IsNotFound()
     {
-        (await Sut().BuildAsync(ImportTemplateKinds.Spec, 99, null, false, default)).Kind.Should().Be(ResultKind.NotFound);
-        (await Sut().BuildAsync(ImportTemplateKinds.OrderLines, null, 99, false, default)).Kind.Should().Be(ResultKind.NotFound);
-        (await Sut().BuildAsync("khac", null, null, false, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Sut().BuildAsync(ImportTemplateKinds.Spec, 99, null, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Sut().BuildAsync(ImportTemplateKinds.OrderLines, null, 99, default)).Kind.Should().Be(ResultKind.NotFound);
+        (await Sut().BuildAsync("khac", null, null, default)).Kind.Should().Be(ResultKind.NotFound);
     }
 }

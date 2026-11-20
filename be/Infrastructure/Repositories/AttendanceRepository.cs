@@ -288,7 +288,7 @@ public sealed class AttendanceRepository : IAttendanceRepository
             .Take(query.PageSize)
             .Select(t => new DailyTimesheetDto(
                 t.DailyTimesheetId, t.EmployeeId, t.Employee.EmployeeCode, t.Employee.FullName,
-                t.Employee.Team == null ? null : t.Employee.Team.TeamName,
+                t.Employee.Team == null ? null : t.Employee.Team.TeamCode,
                 t.WorkDate, t.CheckIn, t.CheckOut, t.WorkedHours, t.WorkdayValue, t.OvertimeHours,
                 t.IsMissingPunch, t.HasExtraPunch, t.IsSunday ?? false,
                 t.Source ?? string.Empty, t.Note, t.UpdatedAt))
