@@ -6,6 +6,7 @@ import type { ExcelBundle, ProductExcelRow } from '../types';
 import {
   EMPTY_BUNDLE,
   takeKind,
+  withoutOrderData,
   type ProductImportKind,
   type ProductImportSelection,
 } from '../utils/productExcelImports';
@@ -35,7 +36,8 @@ export function useProductExcelImports({ value, onChange, onProductRow, autoRevi
   const openFile = (file: File, kind?: ProductImportKind) => {
     setParsingKind(kind ?? 'all');
     parse.mutate(file, {
-      onSuccess: (bundle) => setReviewing({ bundle, fileName: file.name, kind }),
+      onSuccess: (bundle) =>
+        setReviewing({ bundle: withoutOrderData(bundle), fileName: file.name, kind }),
       onSettled: () => setParsingKind(undefined),
     });
   };
@@ -48,7 +50,7 @@ export function useProductExcelImports({ value, onChange, onProductRow, autoRevi
     const newMaterials = kind
       ? [
           ...(value.newMaterials ?? []).filter(
-            (m) => !materials.some((x) => x.materialCode === m.materialCode),
+            (m) => !materials.some((x) => x.materialName === m.materialName),
           ),
           ...materials,
         ]

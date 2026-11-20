@@ -32,9 +32,9 @@ public sealed class WorkOrderFabricChecker
         _uow = uow; _stock = stock; _planner = planner; _solver = solver;
     }
 
-    private sealed record Fabric(int MaterialId, string Code, string Name, string Color, string Unit, decimal? WidthM = null)
+    private sealed record Fabric(int MaterialId, string Name, string Color, string Unit, decimal? WidthM = null)
     {
-        public string Label => $"{Code} {Name}{(Color == "" ? "" : $" ({Color})")}";
+        public string Label => $"{Name}{(Color == "" ? "" : $" ({Color})")}";
     }
 
     private sealed record Variant(int ProductVariantId, int ProductId, int ProductColorId, string Color, string SizeCode);
@@ -68,14 +68,14 @@ public sealed class WorkOrderFabricChecker
             .Concat(UnplacedFabrics(whole, data)).ToList();
 
         var result = new List<WorkOrderFabricCheckDto>();
-        foreach (var fabric in estimates.GroupBy(e => e.Fabric.MaterialId).OrderBy(g => g.First().Fabric.Code))
+        foreach (var fabric in estimates.GroupBy(e => e.Fabric.MaterialId).OrderBy(g => g.First().Fabric.Name))
             result.Add(await CheckFabricAsync(orderId, cuttingTeamId, fabric.ToList(), ct));
 
         var known = data.Norms.Select(n => n.ProductColorId).ToHashSet();
         var noFabric = lines.Where(l => !(data.Variants.TryGetValue(l.ProductVariantId, out var v) && known.Contains(v.ProductColorId)) && !HasGroupFabric(l, data))
             .Select(l => l.VariantLabel).Distinct().ToList();
         if (noFabric.Count > 0)
-            result.Add(new WorkOrderFabricCheckDto(0, string.Empty, string.Empty, string.Empty, FabricCheckStatuses.Unknown, null, null,
+            result.Add(new WorkOrderFabricCheckDto(0, string.Empty, string.Empty, FabricCheckStatuses.Unknown, null, null,
                 string.Format(WarehouseMessages.FabricCheckNoNorm, Names(noFabric))));
         return result;
     }
@@ -94,11 +94,11 @@ public sealed class WorkOrderFabricChecker
                         && p.ProductComponent.Status == RecordStatus.Active && p.Status == RecordStatus.Active && p.Material.MaterialType == MaterialTypes.Fabric)
             .Select(p => new Norm(p.ProductComponentMaterialId, p.ProductColorId, p.ProductComponentId, p.ProductComponent.ComponentName,
                 p.ProductComponent.PiecesPerGarment,
-                new Fabric(p.MaterialId, p.Material.MaterialCode, p.Material.MaterialName, p.Material.Color, p.Material.Unit, p.Material.WidthM)))
+                new Fabric(p.MaterialId, p.Material.MaterialName, p.Material.Color, p.Material.Unit, p.Material.WidthM)))
             .ToListAsync(ct);
         var fabrics = await _uow.Repository<ProductMarkerFabric>().Query().AsNoTracking().Where(f => productIds.Contains(f.ProductId))
             .Select(f => new GroupFabric(f.ProductId, f.MarkerNo, f.ProductColor.Color,
-                new Fabric(f.MaterialId, f.Material.MaterialCode, f.Material.MaterialName, f.Material.Color, f.Material.Unit, f.Material.WidthM)))
+                new Fabric(f.MaterialId, f.Material.MaterialName, f.Material.Color, f.Material.Unit, f.Material.WidthM)))
             .ToListAsync(ct);
         var components = await _uow.Repository<ProductMarkerComponent>().Query().AsNoTracking().Where(c => productIds.Contains(c.ProductId))
             .Select(c => new GroupComponent(c.ProductId, c.MarkerNo, c.ProductComponentId)).ToListAsync(ct);
@@ -234,7 +234,7 @@ public sealed class WorkOrderFabricChecker
     private async Task<WorkOrderFabricCheckDto> CheckFabricAsync(int orderId, int cuttingTeamId, IReadOnlyList<Estimate> estimates, CancellationToken ct)
     {
         var f = estimates[0].Fabric;
-        WorkOrderFabricCheckDto Row(string status, string? message) => new(f.MaterialId, f.Code, f.Name, f.Color, status, null, null, message);
+        WorkOrderFabricCheckDto Row(string status, string? message) => new(f.MaterialId, f.Name, f.Color, status, null, null, message);
 
         if (f.Unit != MaterialTypes.FabricUnit) return Row(FabricCheckStatuses.Unknown, string.Format(WarehouseMessages.FabricCheckNotMeters, f.Label));
         var problems = estimates.Where(e => e.Problem is not null).Select(e => e.Problem!).Distinct().ToList();
@@ -248,7 +248,7 @@ public sealed class WorkOrderFabricChecker
         var plans = estimates.Where(e => e.Plan is not null).Select(e => e.Plan!).OrderBy(p => p.IsExtra).ThenBy(p => p.MarkerNo).ToList();
         var message = available >= need ? null : string.Format(WarehouseMessages.FabricCheckShort, f.Label, Format(need - available),
             Format(need), Format(available), Format(warehouse), Format(holding));
-        return new WorkOrderFabricCheckDto(f.MaterialId, f.Code, f.Name, f.Color,
+        return new WorkOrderFabricCheckDto(f.MaterialId, f.Name, f.Color,
             message is null ? FabricCheckStatuses.Enough : FabricCheckStatuses.Short, need, available, message, plans, warehouse, holding,
             WidthWarning(f, estimates));
     }

@@ -49,7 +49,7 @@ jest.mock('../hooks/useOperations', () => ({
 }));
 jest.mock('@/hooks/useOrderLookups', () => ({
   useProductLookup: () => ({
-    data: { items: [{ productId: 1, productCode: 'AO', productName: 'Áo' }] },
+    data: { items: [{ productId: 1, productCode: 'AO' }] },
   }),
   useProductComponents: () => ({ data: undefined, isLoading: false }),
 }));
@@ -364,7 +364,7 @@ describe('OperationsPage', () => {
     it('liệt kê nhóm và số công đoạn, kể cả nhóm chưa có công đoạn', () => {
       const dialog = openGroups();
 
-      expect(dialog.getByText('Nhóm công đoạn của AO - Áo')).toBeInTheDocument();
+      expect(dialog.getByText('Nhóm công đoạn của AO')).toBeInTheDocument();
       expect(
         within(dialog.getByText('May cổ').closest('tr') as HTMLElement).getByText('0'),
       ).toBeInTheDocument();

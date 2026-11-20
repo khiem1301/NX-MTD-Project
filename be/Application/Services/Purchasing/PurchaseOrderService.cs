@@ -62,7 +62,6 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
                 p.PurchaseOrderLines.OrderBy(l => l.PurchaseOrderLineId).Select(l => new PurchaseOrderLineDto(
                     l.PurchaseOrderLineId, l.OrderMaterialId,
                     l.OrderMaterial != null ? l.OrderMaterial.MaterialId : l.MaterialId!.Value,
-                    l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                     l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
@@ -224,7 +223,7 @@ public sealed class PurchaseOrderService : IPurchaseOrderService
             }
 
             var created = await _materials.CreateAsync(
-                new CreateMaterialDto(null, name, MaterialTypes.Trim, line.NewMaterialUnit!.Trim(), color), ct);
+                new CreateMaterialDto(name, MaterialTypes.Trim, line.NewMaterialUnit!.Trim(), color), ct);
             if (!created.IsSuccess)
                 return Result<List<int>>.Failure(created.ErrorCode!, created.Message!, created.Kind, created.Errors);
             ids.Add(created.Data!.MaterialId);

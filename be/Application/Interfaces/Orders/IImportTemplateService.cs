@@ -28,8 +28,7 @@ public interface IImportTemplateService
     /// <param name="kind">Một giá trị của <see cref="ImportTemplateKinds"/>.</param>
     /// <param name="productId">Mã hàng đang mở (null = chưa có).</param>
     /// <param name="orderId">Đơn hàng đang mở (null = chưa có).</param>
-    /// <param name="withOrder">Chỉ với <see cref="ImportTemplateKinds.ProductForm"/>: file có thêm Bìa của đơn, NVL của đơn.</param>
-    Task<Result<ExcelFileDto>> BuildAsync(string kind, int? productId, int? orderId, bool withOrder, CancellationToken ct);
+    Task<Result<ExcelFileDto>> BuildAsync(string kind, int? productId, int? orderId, CancellationToken ct);
 }
 
 public interface IImportTemplateWriter

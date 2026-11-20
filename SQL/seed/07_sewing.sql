@@ -167,13 +167,15 @@ WHERE c.Out > 0 AND (c.Out * d.i) / d.Cnt - (c.Out * (d.i - 1)) / d.Cnt > 0;
 
 /* ---------- Hàng lỗi ---------- */
 IF OBJECT_ID('tempdb..#Def') IS NOT NULL DROP TABLE #Def;
-SELECT TOP 22 ROW_NUMBER() OVER (ORDER BY ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId))) AS rn,
+-- Lấy lần lượt từng đơn một (vòng tròn) để phiếu lỗi rải đều các đơn, không dồn vào một đơn
+SELECT TOP 22 ROW_NUMBER() OVER (ORDER BY c.Rr, ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId))) AS rn,
        c.TeamId, c.WorkerId, c.OrderLineId, c.OperationId, c.OrderCode,
        (SELECT MAX(o.WorkDate) FROM dbo.OutputRecord o WHERE o.WorkerId = c.WorkerId AND o.OrderLineId = c.OrderLineId AND o.OperationId = c.OperationId) AS WorkDate
 INTO #Def
-FROM #Cmb2 c
-WHERE c.Out >= 12 AND c.OrderCode IN ('DH-2510-003', 'DH-2510-004', 'DH-2511-005', 'DH-2510-002', 'DH-2509-001')
-ORDER BY ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId));
+FROM (SELECT c0.*, ROW_NUMBER() OVER (PARTITION BY c0.OrderCode ORDER BY ABS(CHECKSUM(c0.OrderLineId, c0.OperationId, c0.WorkerId))) AS Rr
+      FROM #Cmb2 c0
+      WHERE c0.Out >= 12 AND c0.OrderCode IN ('DH-2510-003', 'DH-2510-004', 'DH-2511-005', 'DH-2510-002', 'DH-2509-001')) c
+ORDER BY c.Rr, ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId));
 
 INSERT dbo.DefectRecord (DefectCode, WorkDate, ShiftCode, SewingTeamId, OrderLineId, OperationId, ResponsibleWorkerId, DefectType, Quantity,
                          DefectReasonCode, ReasonNote, PieceRateId, WorkerNotifiedAt, WorkerObjection, ObjectedAt, EditDeadline, Status, RecordedBy, RecordedAt)
@@ -186,11 +188,33 @@ SELECT CONCAT('LO-', FORMAT(f.WorkDate, 'yyyyMMdd'), '-', RIGHT(CONCAT('00', ROW
        CASE WHEN f.rn IN (4, 11) THEN DATEADD(HOUR, 14, CAST(f.WorkDate AS DATETIME2)) END,
        DATEADD(HOUR, 8, CAST(DATEADD(DAY, 1, f.WorkDate) AS DATETIME2)), t.Status, @qaqc1, DATEADD(HOUR, 9, CAST(f.WorkDate AS DATETIME2))
 FROM #Def f
-CROSS APPLY (SELECT CHOOSE((f.rn - 1) % 10 + 1, 'REWORK', 'REWORK', 'SCRAP', 'REWORK', 'OUTPUT_ERR', 'REWORK', 'SCRAP', 'REWORK', 'OUTPUT_ERR', 'REWORK') AS Type,
+-- Chu kỳ 9 và 7 (nguyên tố cùng 5 đơn lấy vòng tròn) để mỗi đơn có đủ loại lỗi và trạng thái
+CROSS APPLY (SELECT CHOOSE((f.rn - 1) % 9 + 1, 'REWORK', 'REWORK', 'SCRAP', 'REWORK', 'OUTPUT_ERR', 'REWORK', 'SCRAP', 'REWORK', 'OUTPUT_ERR') AS Type,
                     CHOOSE((f.rn - 1) % 6 + 1, 'SKIPPED_STITCH', 'CROOKED_SEAM', 'STAINED', 'TORN', 'WRONG_SIZE', 'OTHER') AS Reason,
                     1 + (f.rn % 3) AS Qty,
-                    CHOOSE((f.rn - 1) % 5 + 1, 'RECORDED', 'CONFIRMED', 'CONFIRMED', 'RECORDED', 'CANCELLED') AS Status) t
+                    CHOOSE((f.rn - 1) % 7 + 1, 'RECORDED', 'CONFIRMED', 'CONFIRMED', 'RECORDED', 'CANCELLED', 'CONFIRMED', 'RECORDED') AS Status) t
 OUTER APPLY (SELECT TOP 1 r.PieceRateId FROM dbo.PieceRate r WHERE r.OperationId = f.OperationId AND r.Status = 'APPROVED' AND r.EffectiveDate <= f.WorkDate
+             ORDER BY r.EffectiveDate DESC) pr
+WHERE f.WorkDate IS NOT NULL;
+
+-- Phiếu hàng hỏng loại Hủy (Scrap) đã xác nhận của đơn DH-2510-003: nguồn cho 4 đơn cắt bù ở file 10 (mỗi phiếu chỉ có một đơn cắt bù)
+IF OBJECT_ID('tempdb..#Scr') IS NOT NULL DROP TABLE #Scr;
+SELECT TOP 4 ROW_NUMBER() OVER (ORDER BY ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId))) AS rn, c.TeamId, c.WorkerId, c.OrderLineId, c.OperationId,
+       (SELECT MAX(o.WorkDate) FROM dbo.OutputRecord o WHERE o.WorkerId = c.WorkerId AND o.OrderLineId = c.OrderLineId AND o.OperationId = c.OperationId) AS WorkDate
+INTO #Scr
+FROM #Cmb2 c
+WHERE c.Out >= 12 AND c.OrderCode = 'DH-2510-003'
+ORDER BY ABS(CHECKSUM(c.OrderLineId, c.OperationId, c.WorkerId));
+
+INSERT dbo.DefectRecord (DefectCode, WorkDate, ShiftCode, SewingTeamId, OrderLineId, OperationId, ResponsibleWorkerId, DefectType, Quantity,
+                         DefectReasonCode, ReasonNote, PieceRateId, WorkerNotifiedAt, EditDeadline, Status, RecordedBy, RecordedAt)
+SELECT CONCAT('LO-', FORMAT(f.WorkDate, 'yyyyMMdd'), '-', RIGHT(CONCAT('00', 90 + f.rn), 3)),
+       f.WorkDate, 'MORNING', f.TeamId, f.OrderLineId, f.OperationId, f.WorkerId, 'SCRAP', CHOOSE(f.rn, 12, 6, 8, 5),
+       CHOOSE(f.rn, 'TORN', 'STAINED', 'TORN', 'WRONG_SIZE'), N'Hàng hủy, cần cắt bù', pr.PieceRateId,
+       DATEADD(HOUR, 10, CAST(f.WorkDate AS DATETIME2)), DATEADD(HOUR, 8, CAST(DATEADD(DAY, 1, f.WorkDate) AS DATETIME2)), 'CONFIRMED', @qaqc1,
+       DATEADD(HOUR, 9, CAST(f.WorkDate AS DATETIME2))
+FROM #Scr f
+CROSS APPLY (SELECT TOP 1 r.PieceRateId FROM dbo.PieceRate r WHERE r.OperationId = f.OperationId AND r.Status = 'APPROVED' AND r.EffectiveDate <= f.WorkDate
              ORDER BY r.EffectiveDate DESC) pr
 WHERE f.WorkDate IS NOT NULL;
 

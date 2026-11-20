@@ -16,8 +16,8 @@ public class OrderImportTests : ProductionTestBase
     {
         SetupQueryable(new List<Product>
         {
-            new() { ProductId = 1, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active },
-            new() { ProductId = 2, ProductCode = "CU02", ProductName = "Cũ", Status = RecordStatus.Discontinued },
+            new() { ProductId = 1, ProductCode = "AO01", Status = RecordStatus.Active },
+            new() { ProductId = 2, ProductCode = "CU02", Status = RecordStatus.Discontinued },
         });
     }
 

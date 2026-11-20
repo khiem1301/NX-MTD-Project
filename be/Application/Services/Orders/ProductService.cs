@@ -78,7 +78,6 @@ public sealed class ProductService : IProductService
         var product = new Product
         {
             ProductCode = code,
-            ProductName = dto.ProductName.Trim(),
             SampleImageUrl = Clean(dto.SampleImageUrl),
             Description = Clean(dto.Description),
             Status = RecordStatus.Active,
@@ -108,7 +107,6 @@ public sealed class ProductService : IProductService
         var extras = await LoadExtraImagesAsync(productId, ExtraImages(dto, productId), ct);
         var before = Snapshot(product, extras.Current.Count);
         product.ProductCode = code;
-        product.ProductName = dto.ProductName.Trim();
         product.SampleImageUrl = Clean(dto.SampleImageUrl);
         product.Description = Clean(dto.Description);
         _audit.Add(new AuditEntry(nameof(Product), productId, AuditActions.Update, before,
@@ -175,7 +173,7 @@ public sealed class ProductService : IProductService
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static object Snapshot(Product p, int extraImages) =>
-        new { p.ProductCode, p.ProductName, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages };
+        new { p.ProductCode, p.SampleImageUrl, p.Description, p.Status, ExtraImages = extraImages };
 
     /// <summary>Ảnh phụ theo thứ tự gửi lên; null = không gửi (giữ nguyên).</summary>
     private List<ProductImage>? ExtraImages(SaveProductDto dto, int productId = 0) =>

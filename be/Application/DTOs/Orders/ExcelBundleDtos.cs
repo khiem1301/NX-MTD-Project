@@ -23,8 +23,8 @@ public sealed record ExcelBundleCheckResultDto(
     IReadOnlyList<MissingMaterialDto> MissingMaterials);
 
 /// <summary>
-/// DEV-ALL-123: mã NVL trong file chưa có trong danh mục. SuggestedType = FABRIC khi mã dùng cho chi tiết PANEL ở bảng định mức
-/// (còn lại TRIM); Colors = các màu áo dùng mã này (gợi ý màu NVL). Màn hình hỏi admin có thêm vào danh mục khi lưu không.
+/// DEV-ALL-123: tên NVL trong file chưa có trong danh mục. SuggestedType = FABRIC khi NVL dùng cho chi tiết PANEL ở bảng định mức
+/// (còn lại TRIM); Colors = các màu áo dùng NVL này (gợi ý màu NVL). Màn hình hỏi admin có thêm vào danh mục khi lưu không.
 /// </summary>
-public sealed record MissingMaterialDto(string MaterialCode, string SuggestedType, IReadOnlyList<string> Colors,
-    string? SuggestedName = null, string? SuggestedUnit = null);
+public sealed record MissingMaterialDto(string MaterialName, string SuggestedType, IReadOnlyList<string> Colors,
+    string? SuggestedUnit = null);

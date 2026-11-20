@@ -48,6 +48,11 @@ SELECT o.OrderCode, o.Cust, DATEADD(DAY, o.RecvOff, @today), DATEADD(DAY, o.DueO
        DATEADD(DAY, o.RecvOff, CAST(@today AS DATETIME2))
 FROM #Ord o;
 
+-- Địa chỉ giao hàng: mặc định theo địa chỉ khách, riêng đơn DH-2511-006 giao về kho khác
+UPDATE co SET DeliveryAddress = ISNULL(c.DefaultAddress, N'')
+FROM dbo.CustomerOrder co JOIN dbo.Customer c ON c.CustomerId = co.CustomerId;
+UPDATE dbo.CustomerOrder SET DeliveryAddress = N'Kho Bình Minh, 20 Đường số 7, KCN Tân Bình, TP.HCM' WHERE OrderCode = 'DH-2511-006';
+
 /* Dòng đơn: màu × size × số lượng */
 IF OBJECT_ID('tempdb..#Ln') IS NOT NULL DROP TABLE #Ln;
 CREATE TABLE #Ln (OrderCode VARCHAR(30) COLLATE DATABASE_DEFAULT, Color NVARCHAR(50) COLLATE DATABASE_DEFAULT, Size VARCHAR(10) COLLATE DATABASE_DEFAULT, Qty INT, Team VARCHAR(20) COLLATE DATABASE_DEFAULT);
@@ -91,7 +96,7 @@ WHERE l.Team IS NOT NULL;
 
 /* NVL của đơn: nhu cầu = Σ SL × định mức × hao hụt; phần khách cấp theo bảng dưới */
 IF OBJECT_ID('tempdb..#Need') IS NOT NULL DROP TABLE #Need;
-SELECT co.OrderId, o.OrderCode, m.MaterialId, m.MaterialCode, m.MaterialType,
+SELECT co.OrderId, o.OrderCode, m.MaterialId, m.MaterialName, m.MaterialType,
        SUM(ol.OrderedQty * c.PerGarment) AS RawQty
 INTO #Need
 FROM dbo.OrderLine ol
@@ -102,7 +107,7 @@ JOIN dbo.ProductComponentMaterial pcm ON pcm.ProductId = ol.ProductId AND pcm.Pr
 JOIN dbo.ProductComponent pcmp ON pcmp.ProductComponentId = pcm.ProductComponentId
 JOIN #Cons c ON c.Prod = o.Prod AND c.Comp = pcmp.ComponentName
 JOIN dbo.Material m ON m.MaterialId = pcm.MaterialId
-GROUP BY co.OrderId, o.OrderCode, m.MaterialId, m.MaterialCode, m.MaterialType;
+GROUP BY co.OrderId, o.OrderCode, m.MaterialId, m.MaterialName, m.MaterialType;
 
 -- Phần khách cấp: (đơn, mã NVL bắt đầu bằng, tỉ lệ)
 DECLARE @cust TABLE (OrderCode VARCHAR(30), MatLike VARCHAR(30), Frac DECIMAL(4,2));
@@ -114,7 +119,7 @@ INSERT @cust VALUES
 INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty, Note)
 SELECT n.OrderId, n.MaterialId,
        CASE WHEN n.MaterialType = 'FABRIC' THEN CEILING(n.RawQty * 1.03) ELSE CEILING(n.RawQty * 1.02) END,
-       ISNULL((SELECT CAST(MAX(c.Frac) AS DECIMAL(9,4)) FROM @cust c WHERE c.OrderCode = n.OrderCode AND n.MaterialCode LIKE c.MatLike), 0)
+       ISNULL((SELECT CAST(MAX(c.Frac) AS DECIMAL(9,4)) FROM @cust c WHERE c.OrderCode = n.OrderCode AND n.MaterialName LIKE c.MatLike), 0)
          * CASE WHEN n.MaterialType = 'FABRIC' THEN CEILING(n.RawQty * 1.03) ELSE CEILING(n.RawQty * 1.02) END,
        CASE WHEN n.MaterialType = 'FABRIC' THEN N'Đã gồm 3% hao hụt cắt' ELSE N'Đã gồm 2% hao hụt' END
 FROM #Need n;

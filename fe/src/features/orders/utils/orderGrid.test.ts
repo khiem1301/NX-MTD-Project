@@ -26,7 +26,6 @@ const line = (
   orderLineId: id,
   productId,
   productCode: 'AO-01',
-  productName: 'Áo',
   color,
   sizeCode: size,
   orderedQty: qty,
@@ -39,7 +38,6 @@ describe('fromLines không có đơn giá (Quản đốc)', () => {
       orderLineId: 1,
       productId: 1,
       productCode: 'AO-01',
-      productName: 'Áo',
       color: 'Đỏ',
       orderedQty: 10,
     };

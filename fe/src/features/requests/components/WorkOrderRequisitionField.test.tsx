@@ -34,8 +34,7 @@ jest.mock('../api/requisitionLookupApi', () => ({
     materials: jest.fn().mockResolvedValue([
       {
         materialId: 1,
-        materialCode: 'V1',
-        materialName: 'Kate',
+        materialName: 'V1',
         color: '',
         unit: 'm',
         materialType: 'FABRIC',
@@ -43,8 +42,7 @@ jest.mock('../api/requisitionLookupApi', () => ({
       },
       {
         materialId: 2,
-        materialCode: 'C1',
-        materialName: 'Chỉ',
+        materialName: 'C1',
         color: '',
         unit: 'cuộn',
         materialType: 'TRIM',
@@ -55,7 +53,6 @@ jest.mock('../api/requisitionLookupApi', () => ({
       {
         orderLineId: 11,
         productCode: 'AO1',
-        productName: 'Áo',
         color: 'Đỏ',
         sizeCode: 'M',
         orderedQty: 100,
@@ -113,8 +110,7 @@ const renderModal = () => {
   (workOrderRequisitionApi.allowance as jest.Mock).mockResolvedValue([
     {
       materialId: 1,
-      materialCode: 'V1',
-      materialName: 'Kate',
+      materialName: 'V1',
       materialColor: '',
       unit: 'm',
       needQty: 100,
@@ -256,7 +252,7 @@ describe('Đơn xin NVL / BTP của tổ may (DEV-ALL-110)', () => {
   it('xin NVL: chọn đơn rồi chọn NVL của đơn, gửi kèm đơn hàng', async () => {
     await start('Xin NVL');
     await chooseOption(1, 'DH4');
-    await chooseOption(2, 'C1 Chỉ');
+    await chooseOption(2, 'C1');
     fireEvent.change(screen.getByLabelText(MESSAGES.requests.quantity), {
       target: { value: '5' },
     });

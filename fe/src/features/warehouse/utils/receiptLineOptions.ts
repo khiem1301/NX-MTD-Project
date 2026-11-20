@@ -10,8 +10,8 @@ export type ReceiptLineOption = {
   disabled: boolean;
 };
 
-const materialText = (code: string, name: string, color: string | null, unit: string) =>
-  `${code} ${name}${color ? ` - ${color}` : ''} (${unit})`;
+const materialText = (name: string, color: string | null, unit: string) =>
+  `${name}${color ? ` - ${color}` : ''} (${unit})`;
 
 /**
  * NVL khách cấp của đơn: chỉ NVL khách có cấp (NVL phải mua nhập theo đơn mua). NVL đã nhận đủ số khách cấp, hoặc đơn đã nhận đủ số
@@ -31,7 +31,7 @@ export const customerLineOptions = (rows: OrderMaterial[]): ReceiptLineOption[] 
         value: om.orderMaterialId,
         outstanding,
         disabled: outstanding <= 0 || reached,
-        label: `${materialText(om.materialCode, om.materialName, om.materialColor, om.unit)} · ${status}`,
+        label: `${materialText(om.materialName, om.materialColor, om.unit)} · ${status}`,
       };
     });
 
@@ -55,7 +55,7 @@ export const purchaseLineOptions = (
       value: l.purchaseOrderLineId,
       outstanding,
       disabled: outstanding <= 0 || reached,
-      label: `${materialText(l.materialCode, l.materialName, l.materialColor, l.unit)} · ${status}`,
+      label: `${materialText(l.materialName, l.materialColor, l.unit)} · ${status}`,
     };
   });
 };

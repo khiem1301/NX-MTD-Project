@@ -29,7 +29,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
     {
         var rows = await OrderMaterials.AsNoTracking().Where(om => om.OrderId == orderId)
             .Include(om => om.Material)
-            .OrderBy(om => om.Material.MaterialType).ThenBy(om => om.Material.MaterialCode).ThenBy(om => om.Material.Color)
+            .OrderBy(om => om.Material.MaterialType).ThenBy(om => om.Material.MaterialName).ThenBy(om => om.Material.Color)
             .ToListAsync(ct);
 
         var received = await ReceivedQtyAsync(orderId, ct);
@@ -55,7 +55,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
         var keyword = query.Keyword?.Trim();
         var all = (await GetByOrderAsync(query.OrderId, ct)).Data!;
         var rows = all
-            .Where(m => string.IsNullOrEmpty(keyword) || new[] { m.MaterialCode, m.MaterialName, m.MaterialColor }
+            .Where(m => string.IsNullOrEmpty(keyword) || new[] { m.MaterialName, m.MaterialColor }
                 .Any(text => text?.Contains(keyword, StringComparison.OrdinalIgnoreCase) == true))
             .Where(m => query.Supply != OrderMaterialSupplies.Customer || m.CustomerQty > 0)
             .Where(m => query.Supply != OrderMaterialSupplies.Purchase || m.PurchaseQty > 0)
@@ -76,7 +76,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
             return Fail.NotFound<IReadOnlyList<OrderProductMaterialsDto>>();
 
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == orderId)
-            .Select(l => new { l.ProductVariant.ProductColorId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName })
+            .Select(l => new { l.ProductVariant.ProductColorId, l.ProductId, l.ProductVariant.Product.ProductCode })
             .ToListAsync(ct);
         var colorIds = lines.Select(l => l.ProductColorId).Distinct().ToList();
         var norms = await _uow.Repository<ProductComponentMaterial>().Query().AsNoTracking()
@@ -85,19 +85,19 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
             .Select(n => new
             {
                 n.ProductId,
-                Material = new ProductMaterialOptionDto(n.MaterialId, n.Material.MaterialCode, n.Material.MaterialName,
+                Material = new ProductMaterialOptionDto(n.MaterialId, n.Material.MaterialName,
                     n.Material.MaterialType ?? string.Empty, n.Material.Unit, n.Material.Color),
             })
             .ToListAsync(ct);
 
         return Result<IReadOnlyList<OrderProductMaterialsDto>>.Success(lines
-            .GroupBy(l => (l.ProductId, l.ProductCode, l.ProductName))
+            .GroupBy(l => (l.ProductId, l.ProductCode))
             .OrderBy(g => g.Key.ProductCode)
-            .Select(g => new OrderProductMaterialsDto(g.Key.ProductId, g.Key.ProductCode, g.Key.ProductName, norms
+            .Select(g => new OrderProductMaterialsDto(g.Key.ProductId, g.Key.ProductCode, norms
                 .Where(n => n.ProductId == g.Key.ProductId)
                 .Select(n => n.Material)
                 .Distinct()
-                .OrderBy(m => m.MaterialType).ThenBy(m => m.MaterialCode).ThenBy(m => m.Color)
+                .OrderBy(m => m.MaterialType).ThenBy(m => m.MaterialName).ThenBy(m => m.Color)
                 .ToList()))
             .ToList());
     }
@@ -280,7 +280,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
     {
         var supplied = om.CustomerQty > 0;
         var r = received ?? new Received(0, 0);
-        return new(om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialCode, om.Material.MaterialName,
+        return new(om.OrderMaterialId, om.OrderId, om.MaterialId, om.Material.MaterialName,
             (om.Material.MaterialType ?? string.Empty), om.Material.Unit, om.Material.Color, om.RequiredQty, om.CustomerQty,
             supplied ? plan.CustomerDeliveryCount : null, receivedCount, om.PurchaseQty, om.Source, om.Note, r.Total,
             supplied ? plan.CustomerDeliveryDate : null, supplied ? plan.CustomerDeliveryDateTo : null,
@@ -288,7 +288,7 @@ public sealed partial class OrderMaterialService : IOrderMaterialService
     }
 
     private static string MaterialLabel(Material m) =>
-        string.IsNullOrEmpty(m.Color) ? $"{m.MaterialCode} {m.MaterialName}" : $"{m.MaterialCode} {m.MaterialName} ({m.Color})";
+        string.IsNullOrEmpty(m.Color) ? $"{m.MaterialName}" : $"{m.MaterialName} ({m.Color})";
 
     private static Result<OrderMaterialDto> NotFound() =>
         Result<OrderMaterialDto>.Failure(ErrorCodes.CommonNotFound, WarehouseMessages.NotFound, ResultKind.NotFound);

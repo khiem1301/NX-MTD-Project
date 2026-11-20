@@ -16,8 +16,7 @@ const mockOrderMaterials = {
     {
       orderMaterialId: 5,
       orderId: 1,
-      materialCode: 'V1',
-      materialName: 'Vải',
+      materialName: 'V1',
       materialColor: null,
       unit: 'm',
       customerQty: 10,

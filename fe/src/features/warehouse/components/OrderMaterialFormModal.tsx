@@ -61,7 +61,7 @@ export function OrderMaterialFormModal({
     <Modal
       open={open}
       width={MODAL_WIDTH.md}
-      title={`${MESSAGES.common.edit} ${orderMaterial.materialCode}`}
+      title={`${MESSAGES.common.edit} ${orderMaterial.materialName}`}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}

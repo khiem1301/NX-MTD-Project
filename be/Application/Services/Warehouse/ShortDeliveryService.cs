@@ -66,7 +66,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
                 Lines = q.RequestLines.OrderBy(l => l.RequestLineId).Select(l => new
                 {
                     l.RequestLineId, l.MaterialReceiptLineId, MaterialId = l.MaterialId!.Value,
-                    l.Material!.MaterialCode, l.Material.MaterialName, l.Material.Unit,
+                    l.Material!.MaterialName, l.Material.Unit,
                     Color = l.Material.Color, l.Quantity, l.ReplenishQty,
                 }).ToList(),
             }).FirstOrDefaultAsync(ct);
@@ -78,7 +78,7 @@ public sealed class ShortDeliveryService : IShortDeliveryService
             head.ShortageResolution, head.ResultNote, head.ReceiptId!.Value, head.ReceiptCode, head.Source, head.PoCode,
             head.OrderCode, head.CreatedAt,
             head.Lines.Select(l => new ShortDeliveryLineDto(l.RequestLineId, l.MaterialReceiptLineId, l.MaterialId,
-                l.MaterialCode, l.MaterialName, l.Unit, l.Color, l.Quantity, l.ReplenishQty,
+                l.MaterialName, l.Unit, l.Color, l.Quantity, l.ReplenishQty,
                 done.GetValueOrDefault(l.RequestLineId))).ToList(),
             head.ExpectedDeliveryCount, deliveredCount, head.TargetDate, head.TargetDateTo,
             await _schedule.GetAsync(DeliveryOwner.Request, requestId, ct)));

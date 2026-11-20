@@ -9,8 +9,7 @@ import {
 const om = (id: number, patch: Partial<OrderMaterial>): OrderMaterial =>
   ({
     orderMaterialId: id,
-    materialCode: `V${id}`,
-    materialName: 'Vải',
+    materialName: `V${id}`,
     materialColor: '',
     unit: 'm',
     requiredQty: 10,
@@ -43,8 +42,7 @@ describe('purchaseLineOptions', () => {
     const line = (id: number, receivedQty: number) =>
       ({
         purchaseOrderLineId: id,
-        materialCode: 'C1',
-        materialName: 'Chỉ',
+        materialName: 'C1',
         materialColor: '',
         unit: 'cuộn',
         orderedQty: 10,
@@ -76,8 +74,7 @@ describe('purchaseLineOptions theo số lần giao của cả đơn mua (DEV-ALL
   const line = (id: number) =>
     ({
       purchaseOrderLineId: id,
-      materialCode: `C${id}`,
-      materialName: 'Chỉ',
+      materialName: `C${id}`,
       materialColor: '',
       unit: 'cuộn',
       orderedQty: 10,

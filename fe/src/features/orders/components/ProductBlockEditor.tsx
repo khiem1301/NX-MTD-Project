@@ -53,8 +53,7 @@ export function ProductBlockEditor({
   const options = new Map<number, string>();
   if (block.productId !== null && productLabels[block.productId])
     options.set(block.productId, productLabels[block.productId] as string);
-  for (const p of products.data?.items ?? [])
-    options.set(p.productId, `${p.productCode} · ${p.productName}`);
+  for (const p of products.data?.items ?? []) options.set(p.productId, `${p.productCode}`);
   for (const id of usedProductIds) if (id !== block.productId) options.delete(id);
 
   const setRow = (index: number, patch: Partial<GridRow>) =>

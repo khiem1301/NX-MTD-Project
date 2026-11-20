@@ -81,9 +81,8 @@ export function useKpiTargetForm(props: Pick<Props, 'open' | 'target' | 'onClose
 
   const productOptions = useMemo(() => {
     const seen = new Map<number, string>();
-    (lines.data ?? []).forEach((l) => seen.set(l.productId, `${l.productCode} - ${l.productName}`));
-    if (target && !seen.has(target.productId))
-      seen.set(target.productId, `${target.productCode} - ${target.productName}`);
+    (lines.data ?? []).forEach((l) => seen.set(l.productId, `${l.productCode}`));
+    if (target && !seen.has(target.productId)) seen.set(target.productId, `${target.productCode}`);
     return [...seen].map(([value, label]) => ({ value, label }));
   }, [lines.data, target]);
 

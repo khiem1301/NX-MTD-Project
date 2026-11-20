@@ -46,7 +46,7 @@ public sealed class OrderImportService : IOrderImportService
 
         var codes = excel.Rows.Select(r => r.ProductCode).Where(c => c.Length > 0).Distinct().ToList();
         var products = (await _uow.Repository<Product>().Query().AsNoTracking().Where(p => codes.Contains(p.ProductCode))
-                .Select(p => new { p.ProductId, p.ProductCode, p.ProductName, p.Status }).ToListAsync(ct))
+                .Select(p => new { p.ProductId, p.ProductCode, p.Status }).ToListAsync(ct))
             .ToDictionary(p => p.ProductCode, StringComparer.OrdinalIgnoreCase);
 
         // Form đơn có một đơn giá cho mỗi mã hàng: các dòng cùng mã hàng phải cùng giá (lấy giá của dòng đầu làm chuẩn).
@@ -77,7 +77,7 @@ public sealed class OrderImportService : IOrderImportService
                 priceOf.TryAdd(row.ProductCode, row.CmtUnitPrice!.Value);
             }
             rows.Add(new OrderImportRowDto(row.RowNumber, product?.ProductCode ?? row.ProductCode, error is null ? product!.ProductId : null,
-                product?.ProductName, row.Color, row.CmtUnitPrice, row.Quantities, error));
+                row.Color, row.CmtUnitPrice, row.Quantities, error));
         }
 
         var errors = rows.Count(r => r.Error is not null);

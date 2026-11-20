@@ -9,7 +9,6 @@ export type RevenueSummary = {
   orderCode: string;
   productId: number;
   productCode: string;
-  productName: string;
   finishedQty: number;
   revenue: number;
 };
@@ -25,5 +24,5 @@ export type RevenueFilter = {
 /** Gợi ý cho bộ lọc: đơn hàng và mã hàng đã có doanh thu. */
 export type RevenueFilterOptions = {
   orders: { orderId: number; orderCode: string }[];
-  products: { productId: number; productCode: string; productName: string }[];
+  products: { productId: number; productCode: string }[];
 };

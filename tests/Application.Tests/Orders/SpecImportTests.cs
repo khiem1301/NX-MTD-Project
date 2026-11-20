@@ -28,12 +28,12 @@ public class SpecImportTests : ProductionTestBase
 
     public SpecImportTests()
     {
-        SetupQueryable(new List<Product> { new() { ProductId = ProductId, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active } });
+        SetupQueryable(new List<Product> { new() { ProductId = ProductId, ProductCode = "AO01", Status = RecordStatus.Active } });
         SetupQueryable(_orders);
         SetupQueryable(new List<Material>
         {
             Mat(100, "VAI01"), Mat(101, "VAI02"), Mat(102, "VAI03"), Mat(200, "NHAN01"),
-            new() { MaterialId = 300, MaterialCode = "VAICU", MaterialName = "Vải cũ", Color = "Đen", Unit = "m", Status = MaterialStatuses.Discontinued },
+            new() { MaterialId = 300, MaterialName = "VAICU", Color = "Đen", Unit = "m", Status = MaterialStatuses.Discontinued },
         });
         SetupQueryable(_workOrderLines);
         SetupQueryable(_productMarkers);
@@ -51,7 +51,7 @@ public class SpecImportTests : ProductionTestBase
     }
 
     private static Material Mat(int id, string code) =>
-        new() { MaterialId = id, MaterialCode = code, MaterialName = $"NVL {code}", Color = "Đen", Unit = "m", Status = MaterialStatuses.Active };
+        new() { MaterialId = id, MaterialName = code, Color = "Đen", Unit = "m", Status = MaterialStatuses.Active };
 
     /// <summary>Định mức đang có: 3 chi tiết, 2 màu (Đen S/M, Xanh S); nhóm 1 = thân, nhóm 2 = tay.</summary>
     private static ProductSpecDto Spec() => new(ProductId,
@@ -75,14 +75,14 @@ public class SpecImportTests : ProductionTestBase
         ]);
 
     private static ProductNormDto Norm(string component, string color, int materialId) =>
-        new(materialId * 10, component, color, materialId, $"M{materialId}", "NVL", "m", color, null);
+        new(materialId * 10, component, color, materialId, $"M{materialId}", "m", color, null);
 
     private static ProductMarkerFabricDto Fabric(int no, string color, int materialId) =>
-        new(no, color, materialId, $"M{materialId}", "NVL", color);
+        new(no, color, materialId, $"M{materialId}", color);
 
     private static OrderMarkersDto Markers() => new(OrderId,
     [
-        new OrderMarkerProductDto(ProductId, "AO01", "Áo", ["S", "M"], [],
+        new OrderMarkerProductDto(ProductId, "AO01", ["S", "M"], [],
             [new OrderMarkerDto(500, 1, "1A", 2.2m, 1.5m, "Active", [new MarkerRatioDto("S", 1), new MarkerRatioDto("M", 2)])]),
     ]);
 
@@ -122,7 +122,7 @@ public class SpecImportTests : ProductionTestBase
     }
 
     private static readonly string[] ComponentHeaders = ["Tên chi tiết", "Loại", "Số chi tiết / áo"];
-    private static readonly string[] NormHeaders = ["Màu áo", "Tên chi tiết", "Mã NVL", "Ghi chú quy cách"];
+    private static readonly string[] NormHeaders = ["Màu áo", "Tên chi tiết", "Tên NVL", "Ghi chú quy cách"];
     private static readonly string[] GroupHeaders = ["Nhóm bìa", "Chi tiết trên nhóm", "Màu áo dùng nhóm"];
     private static readonly string[] MarkerHeaders = ["Mã hàng", "Nhóm bìa", "Mã bìa", "Dài (m)", "Khổ (m)", "Trạng thái", "S", "M", "XL"];
 

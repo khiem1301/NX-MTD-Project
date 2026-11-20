@@ -16,7 +16,9 @@ import { DataTable } from '@/components/common/DataTable';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { ORDER_STATUS_TAG } from '@/constants/orderStatus';
-import { formatDate } from '@/utils/format';
+import { fill, formatDate } from '@/utils/format';
+import { ORDER_DELAY, ORDER_DELAY_TEXT } from '../constants';
+import { orderDelayOf } from '../utils/orderDelay';
 import { useOrderProgress } from '../hooks/useOrderProgress';
 import type { OrderProgress } from '../types';
 import { OrderLinesModal } from './OrderLinesModal';
@@ -27,7 +29,9 @@ export function OrderProgressPanel() {
   const [includeClosed, setIncludeClosed] = useState(false);
   const [viewing, setViewing] = useState<OrderProgress | null>(null);
   const overview = useOrderProgress(includeClosed);
-  const risky = (overview.data ?? []).filter((o) => o.isDelayRisk);
+  const orders = overview.data ?? [];
+  const late = orders.filter((o) => orderDelayOf(o) === ORDER_DELAY.LATE);
+  const risky = orders.filter((o) => orderDelayOf(o) === ORDER_DELAY.RISK);
 
   const columns: TableColumnsType<OrderProgress> = [
     {
@@ -47,7 +51,9 @@ export function OrderProgressPanel() {
         <Space direction="vertical" size={0}>
           {formatDate(o.dueDate)}
           <Typography.Text type={o.daysLeft < 0 ? 'danger' : 'secondary'}>
-            {o.daysLeft < 0 ? `Quá hạn ${-o.daysLeft} ngày` : `Còn ${o.daysLeft} ngày`}
+            {o.daysLeft < 0
+              ? fill(ORDER_DELAY_TEXT.lateDays, -o.daysLeft)
+              : fill(ORDER_DELAY_TEXT.daysLeft, o.daysLeft)}
           </Typography.Text>
         </Space>
       ),
@@ -108,12 +114,17 @@ export function OrderProgressPanel() {
     {
       title: 'Cảnh báo',
       key: 'risk',
-      render: (_, o) =>
-        o.isDelayRisk ? (
-          <Tag color="red">
-            Nguy cơ trễ{o.delayRiskSince ? ` từ ${formatDate(o.delayRiskSince)}` : ''}
+      render: (_, o) => {
+        const delay = orderDelayOf(o);
+        if (delay === ORDER_DELAY.LATE) return <Tag color="red">{ORDER_DELAY_TEXT.late}</Tag>;
+        if (delay !== ORDER_DELAY.RISK) return null;
+        return (
+          <Tag color="orange">
+            {ORDER_DELAY_TEXT.risk}
+            {o.delayRiskSince ? fill(ORDER_DELAY_TEXT.since, formatDate(o.delayRiskSince)) : ''}
           </Tag>
-        ) : null,
+        );
+      },
     },
     {
       title: MESSAGES.common.actions,
@@ -133,12 +144,28 @@ export function OrderProgressPanel() {
       <Space style={{ marginBottom: 16 }} wrap>
         <Checkbox onChange={(e) => setIncludeClosed(e.target.checked)}>Gồm đơn đã đóng</Checkbox>
       </Space>
-      {risky.length > 0 && (
+      {late.length > 0 && (
         <Alert
           type="error"
           showIcon
           style={{ marginBottom: 12 }}
-          message={`${risky.length} đơn có nguy cơ trễ hạn: ${risky.map((o) => o.orderCode).join(', ')}`}
+          message={fill(
+            ORDER_DELAY_TEXT.lateSummary,
+            late.length,
+            late.map((o) => o.orderCode).join(', '),
+          )}
+        />
+      )}
+      {risky.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 12 }}
+          message={fill(
+            ORDER_DELAY_TEXT.riskSummary,
+            risky.length,
+            risky.map((o) => o.orderCode).join(', '),
+          )}
         />
       )}
       <QueryError error={overview.error} onRetry={() => void overview.refetch()} />

@@ -15,7 +15,7 @@ import type {
 } from '../types';
 import type { OrderGroup } from '../utils/groupByOrder';
 import type { PurchaseOrderGroup } from '../utils/groupByPurchaseOrder';
-import { MaterialCodeTip } from './MaterialCodeTip';
+import { MaterialNameTip } from './MaterialNameTip';
 
 const text = INCOMING_TEXT;
 
@@ -67,32 +67,24 @@ const purchaseHeadColumns = <T extends PurchaseLine>(): TableColumnsType<Purchas
   },
   { title: text.supplier, dataIndex: 'supplierName', render: (v: string | null) => v ?? '—' },
   lineColumn<T>(text.material, 'material', (l) => (
-    <MaterialCodeTip code={l.materialCode} name={l.materialName} color={l.materialColor} />
+    <MaterialNameTip name={l.materialName} color={l.materialColor} />
   )),
   lineColumn<T>(text.ordered, 'ordered', (l) => formatQty(l.orderedQty), 'right'),
   lineColumn<T>(text.received, 'received', (l) => formatQty(l.receivedQty), 'right'),
 ];
 
 /** NVL đầu tiên của đơn kèm thẻ "+N khác" (trỏ vào thì liệt kê mã các NVL còn lại). */
-const materialsCell = (
-  lines: { materialCode: string; materialName: string; materialColor: string }[],
-) => {
+const materialsCell = (lines: { materialName: string; materialColor: string }[]) => {
   const [first] = lines;
   const more = lines.length - 1;
   return (
     <>
-      {first && (
-        <MaterialCodeTip
-          code={first.materialCode}
-          name={first.materialName}
-          color={first.materialColor}
-        />
-      )}
+      {first && <MaterialNameTip name={first.materialName} color={first.materialColor} />}
       {more > 0 && (
         <Tooltip
           title={lines
             .slice(1)
-            .map((l) => l.materialCode)
+            .map((l) => l.materialName)
             .join(', ')}
         >
           <Tag style={{ marginLeft: 6 }}>
@@ -173,18 +165,12 @@ export const supplierColumns = (
       const more = r.lines.length - 1;
       return (
         <>
-          {first && (
-            <MaterialCodeTip
-              code={first.materialCode}
-              name={first.materialName}
-              color={first.materialColor}
-            />
-          )}
+          {first && <MaterialNameTip name={first.materialName} color={first.materialColor} />}
           {more > 0 && (
             <Tooltip
               title={r.lines
                 .slice(1)
-                .map((l) => l.materialCode)
+                .map((l) => l.materialName)
                 .join(', ')}
             >
               <Tag style={{ marginLeft: 6 }}>

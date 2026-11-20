@@ -44,10 +44,10 @@ public class MaterialReturnServiceTests
     private readonly List<WorkOrder> _workOrders = [new() { WorkOrderId = WorkOrderId, OrderId = OrderId, CuttingTeamId = CutTeam, Status = WorkOrderStatuses.Open }];
     private readonly List<Material> _materials =
     [
-        new() { MaterialId = FabricId, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active },
-        new() { MaterialId = ThreadId, MaterialCode = "PL-0001", MaterialName = "Chỉ", Unit = "cuộn", MaterialType = MaterialTypes.Trim, Status = MaterialStatuses.Active },
-        new() { MaterialId = ScrapKgId, MaterialCode = "PP-0001", MaterialName = "Vải vụn", Unit = "kg", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
-        new() { MaterialId = ScrapPieceId, MaterialCode = "PP-0002", MaterialName = "Kim gãy", Unit = "cái", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
+        new() { MaterialId = FabricId, MaterialName = "V-0001", Unit = "m", MaterialType = MaterialTypes.Fabric, Status = MaterialStatuses.Active },
+        new() { MaterialId = ThreadId, MaterialName = "PL-0001", Unit = "cuộn", MaterialType = MaterialTypes.Trim, Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapKgId, MaterialName = "PP-0001", Unit = "kg", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
+        new() { MaterialId = ScrapPieceId, MaterialName = "PP-0002", Unit = "cái", MaterialType = MaterialTypes.Scrap, Status = MaterialStatuses.Active },
     ];
 
     private readonly List<MaterialIssue> _issues = [];
@@ -294,7 +294,7 @@ public class MaterialReturnServiceTests
 
         var result = await Service().CreateAsync(Material(null, (ThreadId, 1.5m)), SewTeam, default);
 
-        result.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "Chỉ"));
+        result.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "PL-0001"));
     }
 
     // ---------- Phế phẩm ----------
@@ -316,7 +316,7 @@ public class MaterialReturnServiceTests
         var piece = await Service().CreateAsync(Material(null, (ScrapPieceId, 1.5m)), SewTeam, default);
         var kg = await Service().CreateAsync(Material(null, (ScrapKgId, 1.5m)), SewTeam, default);
 
-        piece.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "Kim gãy"));
+        piece.Message.Should().Be(string.Format(WarehouseMessages.ReturnWholeQtyRequired, "PP-0002"));
         kg.IsSuccess.Should().BeTrue();
     }
 

@@ -15,7 +15,7 @@ public sealed record OrderMaterialPageQuery : PageQuery
 /// khách cấp thường đã xác nhận của đơn (DEV-ALL-95).
 /// </summary>
 public sealed record IncomingCustomerMaterialDto(
-    int OrderMaterialId, int OrderId, string OrderCode, string MaterialCode, string MaterialName, string MaterialColor,
+    int OrderMaterialId, int OrderId, string OrderCode, string MaterialName, string MaterialColor,
     string Unit, decimal CustomerQty, decimal ReceivedQty, decimal OutstandingQty, short? ExpectedDeliveryCount, int ReceivedCount,
     DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
     IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
@@ -26,7 +26,7 @@ public sealed record IncomingCustomerMaterialDto(
 /// </summary>
 public sealed record IncomingSupplierMaterialDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, string? SupplierName, short? ExpectedDeliveryCount, int ReceivedCount,
-    int PurchaseOrderLineId, string MaterialCode, string MaterialName, string MaterialColor, string Unit,
+    int PurchaseOrderLineId, string MaterialName, string MaterialColor, string Unit,
     decimal OrderedQty, decimal ReceivedQty, decimal OutstandingQty, string GoodsStatus,
     DateOnly? ExpectedDeliveryDate = null, DateOnly? ExpectedDeliveryDateTo = null,
     IReadOnlyList<DateOnly>? ExpectedDeliveryDates = null);
@@ -34,7 +34,7 @@ public sealed record IncomingSupplierMaterialDto(
 /// <summary>Dòng đơn mua đã đóng vì giao thiếu (CLOSED_SHORT): phần còn thiếu đã chốt không bù, không nhận tiếp được.</summary>
 public sealed record ClosedShortPurchaseDto(
     int PurchaseOrderId, string PoCode, int? OrderId, string? OrderCode, string? SupplierName,
-    int PurchaseOrderLineId, string MaterialCode, string MaterialName, string MaterialColor, string Unit,
+    int PurchaseOrderLineId, string MaterialName, string MaterialColor, string Unit,
     decimal OrderedQty, decimal ReceivedQty, decimal NotReplenishedQty);
 
 public sealed record IncomingMaterialsDto(

@@ -6,7 +6,7 @@ using NX_MTD.Application.Interfaces;
 namespace NX_MTD.Infrastructure.Excel;
 
 /// <summary>
-/// DEV-ALL-119: đọc bảng NVL của đơn. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Mã NVL, Số cần; tùy chọn Khách cấp,
+/// DEV-ALL-119: đọc bảng NVL của đơn. Dòng tiêu đề (trong 25 dòng đầu của sheet đang hiển thị) có Tên NVL, Số cần; tùy chọn Khách cấp,
 /// Ghi chú (ô trống = 0 / không ghi chú). Chỉ kiểm định dạng ô; đối chiếu NVL, đơn do OrderMaterialService làm.
 /// </summary>
 public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
@@ -25,7 +25,7 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
             if (header is not null) return ReadRows(sheet, header.Value.Row, header.Value.Columns);
         }
         throw new ExcelTableMissingException(
-            "File Excel sai mẫu: không có bảng có cột 'Mã NVL' và 'Số cần'. Hãy dùng file mẫu của hệ thống.");
+            "File Excel sai mẫu: không có bảng có cột 'Tên NVL' và 'Số cần'. Hãy dùng file mẫu của hệ thống.");
     }
 
     private static (int Row, Dictionary<string, int> Columns)? FindHeader(IXLWorksheet sheet)
@@ -40,7 +40,7 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
                 var key = ExcelCells.Key(sheet.Cell(r, c));
                 if (key.Length > 0) columns.TryAdd(key, c);
             }
-            if (columns.ContainsKey("manvl") && columns.ContainsKey("socan")) return (r, columns);
+            if (columns.ContainsKey("tennvl") && columns.ContainsKey("socan")) return (r, columns);
         }
         return null;
     }
@@ -52,7 +52,7 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
         var lastRow = sheet.LastRowUsed()?.RowNumber() ?? 0;
         for (var r = headerRow + 1; r <= lastRow; r++)
         {
-            var code = ExcelCells.CompactText(At(r, "manvl")!).ToUpperInvariant();
+            var code = ExcelCells.CompactText(At(r, "tennvl")!).ToUpperInvariant();
             var requiredCell = At(r, "socan")!;
             var customerCell = At(r, "khachcap");
             var note = At(r, "ghichu") is { } n ? ExcelCells.CompactText(n) : string.Empty;
@@ -60,14 +60,13 @@ public sealed class ClosedXmlOrderMaterialParser : IExcelOrderMaterialParser
                 && (customerCell is null || ExcelCells.Text(customerCell).Length == 0))
                 continue;
 
-            string? error = code.Length == 0 ? Messages.Required("mã NVL") : null;
+            string? error = code.Length == 0 ? Messages.Required("tên NVL") : null;
             var required = ReadQty(requiredCell, "Số cần", ref error);
             var customer = customerCell is null ? 0m : ReadQty(customerCell, "Khách cấp", ref error);
-            // DEV-ALL-123: cột tùy chọn Tên NVL, Đơn vị (gợi ý khi thêm NVL chưa có vào danh mục).
-            var name = At(r, "tennvl") is { } nc ? ExcelCells.CompactText(nc) : string.Empty;
+            // DEV-ALL-123: cột tùy chọn Đơn vị (gợi ý khi thêm NVL chưa có vào danh mục).
             var unit = At(r, "donvi") is { } uc ? ExcelCells.CompactText(uc) : string.Empty;
             rows.Add(new OrderMaterialExcelRow(r, code, required, customer, note.Length == 0 ? null : note, error,
-                name.Length == 0 ? null : name, unit.Length == 0 ? null : unit));
+                unit.Length == 0 ? null : unit));
         }
         return rows;
     }

@@ -24,7 +24,6 @@ const bundle = { hasProducts: true } as ExcelBundle;
 const row: ProductExcelRow = {
   rowNumber: 5,
   productCode: 'test01',
-  productName: 'Áo test',
   description: 'Mô tả từ Excel',
 };
 
@@ -97,7 +96,6 @@ it('form đơn: Xác nhận popup điền form; Lưu mã hàng thì giao dữ li
   await waitFor(() => expect(onDefer).toHaveBeenCalled());
   expect(mutate.mock.calls[0][0].body).toMatchObject({
     productCode: 'TEST01',
-    productName: 'Áo test',
   });
   expect(onDefer.mock.calls[0][0]).toBe(15);
   expect(onDefer.mock.calls[0][2]).toEqual({ bundle, fileName: 'all.xlsx' });

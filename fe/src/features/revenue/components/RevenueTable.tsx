@@ -27,7 +27,7 @@ const columns: ColumnsType<RevenueSummary> = [
   {
     title: REVENUE_TEXT.table.product,
     key: 'product',
-    render: (_, row) => `${row.productCode} — ${row.productName}`,
+    render: (_, row) => `${row.productCode}`,
   },
   {
     title: REVENUE_TEXT.table.finishedQty,
@@ -87,7 +87,7 @@ export function RevenueTable({ scope, filter, onFilterChange }: Props) {
           value={filter.productId}
           options={(options.data?.products ?? []).map((p) => ({
             value: p.productId,
-            label: `${p.productCode} — ${p.productName}`,
+            label: `${p.productCode}`,
           }))}
           onChange={(value?: number) => onFilterChange({ ...filter, page: 1, productId: value })}
         />

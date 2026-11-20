@@ -52,10 +52,13 @@ Tên đăng nhập = mã nhân viên. Tài khoản đã có từ trước giữ 
 - **Công đoạn và đơn giá**: 32 công đoạn; đơn giá đủ DRAFT, PENDING_APPROVAL, APPROVED (giá cũ, mới, tương lai), REJECTED.
 - **Mua hàng**: 22 đơn mua đủ trạng thái hàng và thanh toán; phiếu nhập CONFIRMED / PENDING / RETURNED.
 - **Kho**: tồn 3 kho qua thẻ kho; phiếu cấp, trả vải / phế liệu, bàn giao BTP, bàn giao thành phẩm, phiếu xuất; kiểm kê APPROVED / PENDING_APPROVAL / RETURNED.
-- **Sản xuất**: lệnh cắt, bàn cắt, phân công công đoạn (có lịch sử), giao / thu hồi việc (đủ cách xác nhận), ~4.900 dòng sản lượng, hàng lỗi (Rework / Scrap / Output_Err, có phản hồi của công nhân), đợt kiểm QA/QC, KPI (ACTIVE / CLOSED đạt - không đạt / CANCELLED).
+- **Sản xuất**: lệnh cắt, bàn cắt, phân công công đoạn (có lịch sử), giao / thu hồi việc (đủ cách xác nhận), ~4.900 dòng sản lượng, hàng lỗi (Rework / Scrap / Output_Err, có phản hồi của công nhân; rải đều các đơn, đơn DH-2510-003 có thêm 4 phiếu Scrap làm nguồn cho đơn cắt bù), đợt kiểm QA/QC, KPI (ACTIVE / CLOSED đạt - không đạt / CANCELLED).
 - **Chấm công**: từ 03/08 đến hôm nay: đi muộn, tăng ca, quên quẹt ra, quẹt lặp / thừa, nghỉ, làm Chủ nhật, mã chưa map (201-203), chấm bù đủ 4 loại; các lần đồng bộ RJ SUCCEEDED / FAILED / RUNNING và import Excel.
 - **Suất ăn**: 60 ngày, đủ OPEN / CLOSED / AUTO_CLOSED / KITCHEN_NOTIFIED, suất khách, tổ xác nhận và hệ thống tự lấy.
 - **Đơn từ**: đủ 12 loại với các trạng thái PENDING_APPROVAL, PENDING_PROCESSING, APPROVED, REJECTED, COMPLETED, NOT_COMPLETED, CANCELLED.
+  - Đơn cắt bù (4 đơn: chờ duyệt, từ chối, đã duyệt chờ lập lệnh, đã duyệt đã có lệnh cắt bù) đều gắn phiếu hàng hỏng Scrap và dòng chi tiết cần cắt bù (định mức PANEL đúng màu áo); lệnh cắt bù có dòng cắt lẻ theo chi tiết.
+  - Đơn giao thiếu gắn phiếu nhập gốc và dòng phiếu nhập; đơn bù (SD1) có phiếu nhập bổ sung đang chờ xác nhận.
+  - Đơn mua Chờ chốt và Đã từ chối đều có nhà cung cấp dự kiến (hộp thoại Đặt hàng tự chọn sẵn, Quản đốc đổi được); chỉ đơn Khách cấp NVL không có nhà cung cấp vì không mua của ai.
 - **Tài chính**: bảng lương tháng 8 (REJECTED), 9 (APPROVED), 10 (PENDING_APPROVAL), 11 (DRAFT) với phiếu lương theo bảng công và sản lượng; chi phí tháng; hòa vốn; thanh toán đơn hàng; tháng 1-9 đã khóa (thử sửa sản lượng tháng cũ sẽ bị chặn).
 - **Khác**: xe và chuyến xe (có cảnh báo km, xăng), thông báo nhanh, thông báo người dùng, nhật ký thay đổi, ảnh đính kèm.
 

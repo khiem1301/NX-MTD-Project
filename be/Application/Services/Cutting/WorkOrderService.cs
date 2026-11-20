@@ -87,7 +87,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .ToList();
 
         return Result<WorkOrderDto>.Success(new WorkOrderDto(wo.WorkOrderId, wo.WorkOrderCode, wo.OrderId,
-            wo.Order.OrderCode, wo.ProductId, wo.Product.ProductCode, wo.Product.ProductName, wo.CuttingTeamId,
+            wo.Order.OrderCode, wo.ProductId, wo.Product.ProductCode, wo.CuttingTeamId,
             wo.CuttingTeam.TeamName, wo.SourceRequestId, wo.DueDate, wo.Status, wo.Note, wo.CreatedAt, lines,
             await GetFabricsAsync(wo, ct), await FabricChecksAsync(wo, ct), wo.FabricTolerancePercent));
     }
@@ -146,7 +146,7 @@ public sealed class WorkOrderService : IWorkOrderService
             .Where(l => string.IsNullOrEmpty(sizeKey) || string.Equals(l.OrderLine.ProductVariant.SizeCode, sizeKey, StringComparison.OrdinalIgnoreCase));
         var checks = await _needs.NeedsAsync(wo, lines, ct);
         IReadOnlyList<FabricNeedDto> needs = checks.Where(c => c.NeedMeters is > 0)
-            .Select(c => new FabricNeedDto(c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialColor, c.NeedMeters!.Value)).ToList();
+            .Select(c => new FabricNeedDto(c.MaterialId, c.MaterialName, c.MaterialColor, c.NeedMeters!.Value)).ToList();
         return Result<IReadOnlyList<FabricNeedDto>>.Success(needs);
     }
 
@@ -416,19 +416,19 @@ public sealed class WorkOrderService : IWorkOrderService
         if (extra.Count > 0)
         {
             var more = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => extra.Contains(m.MaterialId))
-                .Select(m => new FabricInfo(m.MaterialId, m.MaterialCode, m.MaterialName, m.Unit, m.Color)).ToListAsync(ct);
+                .Select(m => new FabricInfo(m.MaterialId, m.MaterialName, m.Unit, m.Color)).ToListAsync(ct);
             foreach (var m in more) infos[m.MaterialId] = m;
         }
 
         var result = new List<FabricRequirementDto>(infos.Count);
-        foreach (var n in infos.Values.OrderBy(f => f.MaterialCode).ThenBy(f => f.MaterialColor))
+        foreach (var n in infos.Values.OrderBy(f => f.MaterialName).ThenBy(f => f.MaterialColor))
         {
             var got = received.GetValueOrDefault(n.MaterialId);
             var back = returned.GetValueOrDefault(n.MaterialId);
             var available = await _stock.GetAvailableAsync(StockKey.Material(n.MaterialId), ct);
             var held = Math.Max(0, await _planner.GetTeamHoldingAsync(wo.CuttingTeamId, wo.OrderId, n.MaterialId, ct));
             var (cutQty, unmeasured) = cut.GetValueOrDefault(n.MaterialId);
-            result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialCode, n.MaterialName, n.Unit, n.MaterialColor,
+            result.Add(new FabricRequirementDto(n.MaterialId, n.MaterialName, n.Unit, n.MaterialColor,
                 issued.GetValueOrDefault(n.MaterialId), available, got, back, Math.Max(0, got - back),
                 held, cutQty, held - cutQty, unmeasured));
         }

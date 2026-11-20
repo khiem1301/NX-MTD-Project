@@ -35,8 +35,7 @@ export function LayFabricBalance({ fabrics, lay }: LayFabricBalanceProps) {
         {
           title: LABELS.fabricMaterial,
           key: 'fabric',
-          render: (_, f) =>
-            `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
+          render: (_, f) => `${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
         },
         {
           title: LABELS.layFabricUsed,
@@ -65,7 +64,7 @@ export function LayFabricBalance({ fabrics, lay }: LayFabricBalanceProps) {
                   max={LAY_MAX_FABRIC_USED_M}
                   decimals={LAY_FABRIC_DECIMALS}
                   style={{ width: '100%' }}
-                  aria-label={`${LABELS.layFabricUsed} ${f.materialCode}`}
+                  aria-label={`${LABELS.layFabricUsed} ${f.materialName}`}
                 />
               </Form.Item>
             );

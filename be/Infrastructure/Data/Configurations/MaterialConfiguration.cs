@@ -10,9 +10,7 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
     {
         entity.ToTable("Material", tb => tb.HasComment("Nguyên vật liệu"));
 
-        entity.HasIndex(e => e.MaterialCode, "UQ_Material_Code").IsUnique();
-
-        entity.HasIndex(e => new { e.MaterialName, e.MaterialType, e.Color }, "UQ_Material_NameType").IsUnique();
+        entity.HasIndex(e => e.MaterialName, "UQ_Material_Name").IsUnique();
 
         entity.Property(e => e.Color)
             .HasMaxLength(50)
@@ -20,9 +18,6 @@ public sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
         entity.Property(e => e.CreatedAt)
             .HasPrecision(0)
             .HasDefaultValueSql("([dbo].[fn_VnNow]())");
-        entity.Property(e => e.MaterialCode)
-            .HasMaxLength(30)
-            .IsUnicode(false);
         entity.Property(e => e.MaterialName).HasMaxLength(200);
         entity.Property(e => e.MaterialType)
             .HasMaxLength(10)

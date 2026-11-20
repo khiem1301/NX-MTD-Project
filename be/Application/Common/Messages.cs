@@ -371,7 +371,7 @@ public static class Messages
     public const string SpecImportColorUnknown = "Màu \"{0}\" chưa có trong đơn hàng nào của mã hàng này.";
     public const string SpecImportComponentUnknown = "Chi tiết \"{0}\" chưa có ở mã hàng (thêm ở bảng Thành phần).";
     public const string SpecImportComponentNotPanel = "Chi tiết \"{0}\" là phụ liệu (TRIM); nhóm bìa chỉ gồm chi tiết cắt (PANEL).";
-    public const string SpecImportMaterialUnknown = "Mã NVL \"{0}\" không có trong danh mục NVL đang dùng.";
+    public const string SpecImportMaterialUnknown = "Tên NVL \"{0}\" không có trong danh mục NVL đang dùng.";
     public const string SpecImportMarkerNoRange = "Nhóm bìa từ 1 đến {0}.";
     public const string SpecImportGroupUnknown = "Nhóm bìa {0} chưa khai ở mã hàng (bảng Nhóm bìa).";
     public const string SpecImportNoSizeOfOrder = "Bìa không có size nào của đơn.";
@@ -470,6 +470,7 @@ public static class Messages
     public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
     public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
     public const string OperationImportSheetNotFound = "Không tìm thấy sheet đã chọn trong file Excel.";
+    public const string MaterialNameFormat = "Tên NVL chỉ gồm chữ không dấu, số, khoảng trắng và . _ -";
     public const string OperationImportRemoved = " Đã xóa {0} công đoạn không có trong file (chưa từng dùng).";
     public const string OperationImportRemoveReason = "Nhập Excel thay thế: không có trong file, chưa từng dùng";
     public const string OperationImportDone =
@@ -481,8 +482,9 @@ public static class Messages
     public const string OperationImportFinalNotFound = "Số thứ tự công đoạn cuối không có trong các dòng hợp lệ của file.";
     // DEV-ALL-116: cột NHÓM CÔNG ĐOẠN, CHI TIẾT, CUỐI khi nhập công đoạn
     public const string OperationImportManyFinals = "Cột CUỐI chỉ được đánh x ở một công đoạn.";
-    public const string OperationImportComponentUnknown = "Chi tiết \"{0}\" chưa có ở mã hàng.";
-    public const string OperationImportComponentNotPanel = "Chi tiết \"{0}\" là phụ liệu (TRIM); công đoạn chỉ gắn chi tiết cắt (PANEL).";
+    public const string OperationImportComponentUnknown = "\"{0}\" chưa có ở mã hàng";
+    public const string OperationImportComponentNotPanel = "\"{0}\" là phụ liệu (TRIM), công đoạn chỉ gắn chi tiết cắt (PANEL)";
+    public const string OperationImportComponentsSkipped = "Chi tiết không gắn vào công đoạn (bỏ qua): {0}.";
     public const string OperationImportGroupChange = "Nhóm: {0} → {1}";
     public const string OperationImportComponentChange = "Chi tiết: {0} → {1}";
     public const string OperationImportNone = "(trống)";

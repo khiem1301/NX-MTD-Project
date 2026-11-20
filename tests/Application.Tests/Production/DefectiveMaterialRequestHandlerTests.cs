@@ -26,8 +26,8 @@ public class DefectiveMaterialRequestHandlerTests : ProductionTestBase
         SetupQueryable(_lines); SetupQueryable(_materials);
         _requests.StageSystemRequestAsync(Arg.Any<RequestDraft>(), Arg.Any<CancellationToken>(), Arg.Any<int?>())
             .Returns(new Request { RequestCode = "YC-TEST-001", RequestTypeCode = RequestTypes.MaterialRequisition });
-        _materials.Add(new Material { MaterialId = VaiA, MaterialCode = "VA", MaterialName = "Vải A" });
-        _materials.Add(new Material { MaterialId = VaiB, MaterialCode = "VB", MaterialName = "Vải B" });
+        _materials.Add(new Material { MaterialId = VaiA, MaterialName = "VA" });
+        _materials.Add(new Material { MaterialId = VaiB, MaterialName = "VB" });
         _request = new Request
         {
             RequestId = 9, RequestCode = "YC-9", RequestTypeCode = RequestTypes.DefectiveMaterial, Status = RequestStatuses.Approved,

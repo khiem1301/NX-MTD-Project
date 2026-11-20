@@ -13,7 +13,7 @@ public sealed record CustomerQuery : PageQuery
 }
 
 /// <summary>Khách hàng rút gọn cho ô chọn (form đơn hàng, bộ lọc đơn hàng): không phân trang, không có SĐT / email / địa chỉ.</summary>
-public sealed record CustomerOptionDto(int CustomerId, string CustomerName, string Status);
+public sealed record CustomerOptionDto(int CustomerId, string CustomerName, string Status, string? DefaultAddress = null);
 /// <summary>Lý do ngừng hợp tác với khách hàng (bắt buộc, lưu vào hồ sơ và nhật ký).</summary>
 public sealed record DiscontinueCustomerDto(string? Reason);
 public sealed record SaveCustomerDto(string CustomerName, string? Phone, string? Email, string? DefaultAddress);
@@ -25,18 +25,18 @@ public sealed record ProductQuery : PageQuery
 }
 
 /// <param name="ExtraImages">Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5); ảnh chính là SampleImageUrl.</param>
-public sealed record ProductListItemDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
+public sealed record ProductListItemDto(int ProductId, string ProductCode, string? SampleImageUrl,
     string Status, bool IsUsed, DateTime CreatedAt, IReadOnlyList<string> ExtraImages);
 
 /// <param name="Colors">Các màu áo đã có biến thể (do đơn hàng tạo).</param>
-public sealed record ProductDetailDto(int ProductId, string ProductCode, string ProductName, string? SampleImageUrl,
+public sealed record ProductDetailDto(int ProductId, string ProductCode, string? SampleImageUrl,
     string? Description, string Status, bool IsUsed, DateTime CreatedAt,
     IReadOnlyList<string> ExtraImages, IReadOnlyList<string> Colors,
     IReadOnlyList<AuditLogDto> History);
 
 /// <param name="SampleImageUrl">Ảnh chính: khóa ảnh tải từ máy, hoặc đường dẫn http/https (dữ liệu cũ).</param>
 /// <param name="ExtraImages">Ảnh phụ (tối đa 5, khóa ảnh tải từ máy, theo thứ tự hiển thị). null = giữ nguyên, danh sách rỗng = xóa hết.</param>
-public sealed record SaveProductDto(string ProductCode, string ProductName, string? SampleImageUrl, string? Description,
+public sealed record SaveProductDto(string ProductCode, string? SampleImageUrl, string? Description,
     IReadOnlyList<string>? ExtraImages = null);
 
 // ---- Đơn hàng ----
@@ -50,15 +50,16 @@ public interface IOrderInput
     int CustomerId { get; }
     DateOnly ReceivedDate { get; }
     DateOnly DueDate { get; }
+    string DeliveryAddress { get; }
     string? Note { get; }
     IReadOnlyList<OrderLineInput> Lines { get; }
 }
 
-public sealed record CreateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string? Note,
+public sealed record CreateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string DeliveryAddress, string? Note,
     IReadOnlyList<OrderLineInput> Lines) : IOrderInput;
 
 /// <summary>Gửi đủ mọi dòng muốn giữ (D27). Dòng cũ không có trong danh sách = xóa (chỉ khi NEW).</summary>
-public sealed record UpdateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string? Note,
+public sealed record UpdateOrderDto(string OrderCode, int CustomerId, DateOnly ReceivedDate, DateOnly DueDate, string DeliveryAddress, string? Note,
     IReadOnlyList<OrderLineInput> Lines, byte[] RowVer) : IOrderInput;
 
 public sealed record CancelOrderDto(string? Reason, byte[] RowVer);
@@ -77,7 +78,7 @@ public sealed record OrderListItemDto(int OrderId, string OrderCode, string Cust
     string Status, string MaterialStatus, bool IsDelayRisk, int TotalQty, decimal TotalAmount, string ProductCodes);
 
 /// <summary>DeliveredQty: số đã giao của dòng đơn = tổng số xuất của các phiếu xuất đã DELIVERED (vw_OrderLineProgress).</summary>
-public sealed record OrderLineDto(int OrderLineId, int ProductId, string ProductCode, string ProductName, string Color,
+public sealed record OrderLineDto(int OrderLineId, int ProductId, string ProductCode, string Color,
     string SizeCode, int OrderedQty, decimal CmtUnitPrice, int DeliveredQty);
 
 public sealed record OrderDetailDto
@@ -92,6 +93,7 @@ public sealed record OrderDetailDto
     public string MaterialStatus { get; init; } = string.Empty;
     public bool IsDelayRisk { get; init; }
     public string? StopReason { get; init; }
+    public string DeliveryAddress { get; init; } = string.Empty;
     public string? Note { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -105,11 +107,11 @@ public sealed record OrderOverviewListItemDto(int OrderId, string OrderCode, str
     string Status, string MaterialStatus, bool IsDelayRisk, int TotalQty, string ProductCodes);
 
 public sealed record OrderOverviewDto(int OrderId, string OrderCode, string CustomerName, DateOnly ReceivedDate, DateOnly DueDate,
-    string Status, string MaterialStatus, bool IsDelayRisk, string? StopReason, string? Note, DateTime CreatedAt,
+    string Status, string MaterialStatus, bool IsDelayRisk, string? StopReason, string DeliveryAddress, string? Note, DateTime CreatedAt,
     IReadOnlyList<OrderOverviewLineDto> Lines);
 
 /// <summary>Dòng đơn khi xem (không có đơn giá); DeliveredQty = tổng số xuất của phiếu đã giao.</summary>
-public sealed record OrderOverviewLineDto(int OrderLineId, int ProductId, string ProductCode, string ProductName,
+public sealed record OrderOverviewLineDto(int OrderLineId, int ProductId, string ProductCode,
     string Color, string SizeCode, int OrderedQty, int DeliveredQty);
 
 // ---- Tra cứu cho luồng khác (D26: KHÔNG có đơn giá) ----
@@ -121,6 +123,6 @@ public sealed record OrderLookupQuery : PageQuery
 }
 
 public sealed record OrderLookupDto(int OrderId, string OrderCode, string CustomerName, DateOnly DueDate, string Status, string MaterialStatus);
-public sealed record OrderLineLookupDto(int OrderLineId, int OrderId, int ProductId, string ProductCode, string ProductName,
+public sealed record OrderLineLookupDto(int OrderLineId, int OrderId, int ProductId, string ProductCode,
     string Color, string SizeCode, int OrderedQty);
-public sealed record ProductLookupDto(int ProductId, string ProductCode, string ProductName);
+public sealed record ProductLookupDto(int ProductId, string ProductCode);

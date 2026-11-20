@@ -24,7 +24,7 @@ public class OrderMaterialClosedOrderTests
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receiptLines); Setup(_deliveries);
         Setup(new List<MaterialReceipt>());
-        _materials.Add(new Material { MaterialId = 1, MaterialCode = "V1", MaterialName = "Vải", Unit = "m", Status = MaterialStatuses.Active, MaterialType = "FABRIC" });
+        _materials.Add(new Material { MaterialId = 1, MaterialName = "V1", Unit = "m", Status = MaterialStatuses.Active, MaterialType = "FABRIC" });
     }
 
     private void Setup<T>(List<T> backing) where T : class

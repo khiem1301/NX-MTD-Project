@@ -11,11 +11,6 @@ export const productCodeSchema = z
   .max(30, text.codeMax)
   .regex(/^[A-Za-z0-9._-]+$/, text.codeFormat);
 
-export const productNameSchema = z
-  .string()
-  .refine((v) => v.trim().length > 0, MESSAGES.common.required)
-  .refine((v) => v.length <= 200, text.nameMax);
-
 export const productDescriptionSchema = z.string().max(1000, text.descriptionMax);
 
 /** Tên lỗi BE trả về (vd "ExtraImages[0]") → đường dẫn field của Form antd (["extraImages", 0]). */

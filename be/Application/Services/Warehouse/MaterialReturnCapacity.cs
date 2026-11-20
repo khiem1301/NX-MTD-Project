@@ -79,7 +79,7 @@ public sealed class MaterialReturnCapacity
             var usedQty = used.GetValueOrDefault(id);
             var done = returned.GetValueOrDefault(id);
             var remaining = Math.Max(0, received[id] - (usedQty ?? 0) - done);
-            return new ReturnableLineDto(id, null, m.MaterialCode, m.MaterialName, m.Unit, m.Color, received[id], usedQty, done, remaining);
+            return new ReturnableLineDto(id, null, m.MaterialName, string.Empty, m.Unit, m.Color, received[id], usedQty, done, remaining);
         }).Where(l => l.RemainingQty > 0).OrderBy(l => l.ItemCode).ToList();
     }
 

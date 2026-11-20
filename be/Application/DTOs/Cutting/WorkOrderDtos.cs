@@ -11,12 +11,12 @@ namespace NX_MTD.Application.DTOs;
 /// <param name="RemainingQty">Vải còn lại = HeldQty − CutQty; âm nghĩa là đã cắt nhiều hơn số đang giữ.</param>
 /// <param name="UnmeasuredLayCount">Số bàn dùng vải này chưa có số mét vải đã dùng (bàn cũ) nên chưa cộng vào CutQty.</param>
 public sealed record FabricRequirementDto(
-    int MaterialId, string MaterialCode, string MaterialName, string Unit, string MaterialColor,
+    int MaterialId, string MaterialName, string Unit, string MaterialColor,
     decimal IssuedQty, decimal AvailableQty, decimal ReceivedQty = 0, decimal ReturnedQty = 0, decimal UsedQty = 0,
     decimal HeldQty = 0, decimal CutQty = 0, decimal RemainingQty = 0, int UnmeasuredLayCount = 0);
 
 /// <summary>Số mét vải một NVL cần cho các dòng (màu, size) đã chọn của lệnh cắt: Thủ kho dùng để đề xuất số cấp.</summary>
-public sealed record FabricNeedDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor, decimal NeedMeters);
+public sealed record FabricNeedDto(int MaterialId, string MaterialName, string MaterialColor, decimal NeedMeters);
 
 public sealed record WorkOrderListItemDto(
     int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
@@ -28,8 +28,7 @@ public sealed record WorkOrderLineDto(
     int PlannedQty, int CutQty, int HandedQty, IReadOnlyList<int>? FabricMaterialIds = null);
 
 public sealed record WorkOrderDto(
-    int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode,
-    string ProductName, int CuttingTeamId, string CuttingTeamName, int? SourceRequestId, DateOnly DueDate,
+    int WorkOrderId, string WorkOrderCode, int OrderId, string OrderCode, int ProductId, string ProductCode, int CuttingTeamId, string CuttingTeamName, int? SourceRequestId, DateOnly DueDate,
     string Status, string? Note, DateTime CreatedAt, IReadOnlyList<WorkOrderLineDto> Lines,
     IReadOnlyList<FabricRequirementDto> Fabrics, IReadOnlyList<WorkOrderFabricCheckDto> FabricChecks,
     decimal FabricTolerancePercent = 0);
@@ -40,7 +39,7 @@ public sealed record WorkOrderDto(
 /// </summary>
 /// <param name="MarkerPlans">Bìa nên dùng theo từng nhóm bìa, hệ thống ghép cho ít mét nhất (ước tính, có thể chênh lệch với thực tế); rỗng khi chưa tính được.</param>
 /// <param name="WidthWarning">DEV-ALL-103: cảnh báo bìa nên dùng rộng hơn khổ vải (vải không đủ rộng để cắt); null = không có hoặc vải chưa có khổ.</param>
-public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
+public sealed record WorkOrderFabricCheckDto(int MaterialId, string MaterialName, string MaterialColor,
     string Status, decimal? NeedMeters, decimal? AvailableQty, string? Message,
     IReadOnlyList<FabricMarkerPlanDto>? MarkerPlans = null, decimal? WarehouseQty = null, decimal? HoldingQty = null,
     string? WidthWarning = null);
@@ -84,7 +83,7 @@ public sealed record SaveWorkOrderDto(int OrderId, int ProductId, int CuttingTea
 /// Vải của lệnh cắt cho đơn xin NVL (DEV-ALL-92): số mét hệ thống tính, trần = cần × (1 + tỉ lệ sai lệch), đã xin ở các đơn xin NVL
 /// khác của lệnh (trừ đơn bị từ chối / hủy), còn xin được. NeedQty null = chưa tính được (mã hàng chưa có bìa), không xin theo lệnh được.
 /// </summary>
-public sealed record WorkOrderMaterialAllowanceDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor,
+public sealed record WorkOrderMaterialAllowanceDto(int MaterialId, string MaterialName, string MaterialColor,
     string Unit, decimal? NeedQty, decimal? CapQty, decimal RequestedQty, decimal? RemainingQty);
 
 public sealed record WorkOrderQuery : PageQuery

@@ -63,6 +63,8 @@ export const OPERATIONS_TEXT = {
       'Đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ, TIỀN; thêm tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT (cách nhau dấu ;), CUỐI (đánh x). Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
     productInFile: 'Mã hàng ghi trong file',
     productCheck: 'Đối chiếu với mã hàng bạn đang chọn trước khi nhập.',
+    componentWarning:
+      '{0} dòng có chi tiết không gắn được vào công đoạn (chưa có ở mã hàng hoặc là phụ liệu): các chi tiết đó bị bỏ qua, vẫn nhập các phần còn lại. Chi tiết từng dòng ở cột Kết quả.',
     sheet: 'Sheet',
     finalStep: 'Công đoạn cuối (không bắt buộc)',
     finalStepPlaceholder: 'Chọn công đoạn cuối',

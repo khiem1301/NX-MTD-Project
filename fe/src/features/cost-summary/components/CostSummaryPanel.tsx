@@ -28,7 +28,7 @@ const byProductColumns: ColumnsType<CostByProduct> = [
   {
     title: COST_SUMMARY_TEXT.byProductTable.product,
     key: 'product',
-    render: (_, row) => `${row.productCode} — ${row.productName}`,
+    render: (_, row) => `${row.productCode}`,
   },
   {
     title: COST_SUMMARY_TEXT.byProductTable.amount,

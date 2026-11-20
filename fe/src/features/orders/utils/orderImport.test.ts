@@ -6,7 +6,6 @@ const row = (over: Partial<OrderImportRow>): OrderImportRow => ({
   rowNumber: 4,
   productCode: 'AO01',
   productId: 1,
-  productName: 'Áo',
   color: 'Đen',
   cmtUnitPrice: 25000,
   quantities: [],
@@ -62,7 +61,6 @@ describe('mergeOrderImport', () => {
         row({
           productId: 2,
           productCode: 'QU02',
-          productName: 'Quần',
           quantities: [{ sizeCode: 'M', qty: 4 }],
         }),
         row({ productId: null, error: 'Mã hàng không có', productCode: 'XX' }),
@@ -71,6 +69,6 @@ describe('mergeOrderImport', () => {
 
     expect(blocks).toHaveLength(1);
     expect(blocks[0]!.productId).toBe(2);
-    expect(labels).toEqual({ 2: 'QU02 · Quần' });
+    expect(labels).toEqual({ 2: 'QU02' });
   });
 });

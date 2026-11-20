@@ -47,9 +47,9 @@ public class FinanceServiceTests
         _repo.HasMonthlyCostAsync(period.PeriodId, Arg.Any<CancellationToken>()).Returns(hasCost);
     }
 
-    private void SetupProducts(params (int Id, string Code, string Name)[] products) =>
+    private void SetupProducts(params (int Id, string Code)[] products) =>
         _repo.GetProductsAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
-            .Returns(products.ToDictionary(p => p.Id, p => (p.Code, p.Name)));
+            .Returns(products.ToDictionary(p => p.Id, p => p.Code));
 
     private void CaptureAddedResults(out Func<List<BreakEvenResult>> getAdded)
     {
@@ -131,7 +131,7 @@ public class FinanceServiceTests
     {
         var period = Period();
         SetupReady(period);
-        SetupProducts((1, "SP001", "Ao thun A"));
+        SetupProducts((1, "SP001"));
         _repo.GetRevenueRowsAsync(Month, null, null, Arg.Any<CancellationToken>())
             .Returns(new List<VwMonthlyRevenue> { Revenue(orderId: 10, productId: 1, qty: 100, revenue: 10_000_000m) });
         _repo.GetMonthlyCostsAsync(period.PeriodId, Arg.Any<CancellationToken>())
@@ -152,7 +152,7 @@ public class FinanceServiceTests
     {
         var period = Period();
         SetupReady(period);
-        SetupProducts((1, "SP001", "Ao thun A"), (2, "SP002", "Ao thun B"));
+        SetupProducts((1, "SP001"), (2, "SP002"));
 
         // Mã hàng 1: 100 sp, doanh thu 10,000,000 -> đơn giá 100,000. Biến phí 2,000,000 -> 20,000/sp.
         // Mã hàng 2: 50 sp, doanh thu 4,000,000 -> đơn giá 80,000. Biến phí 4,500,000 -> 90,000/sp > đơn giá
@@ -223,7 +223,7 @@ public class FinanceServiceTests
     {
         var period = Period();
         SetupReady(period);
-        SetupProducts((1, "SP001", "Ao A"), (2, "SP002", "Ao B"), (3, "SP003", "Ao C"));
+        SetupProducts((1, "SP001"), (2, "SP002"), (3, "SP003"));
 
         // 3 mã hàng cùng hoàn thiện trong tháng; mã 3 không có OutputRecord nào trong dữ liệu giờ công
         // (ví dụ: output của nó không nằm trong khoảng ngày lấy mẫu) -> phải fallback sang tỉ lệ OUTPUT.
@@ -277,7 +277,7 @@ public class FinanceServiceTests
         var period = Period();
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
 
-        var product = new Product { ProductId = 1, ProductCode = "SP001", ProductName = "Ao A" };
+        var product = new Product { ProductId = 1, ProductCode = "SP001" };
         var older = new BreakEvenResult
         {
             BreakEvenResultId = 1, PeriodId = period.PeriodId, ProductId = 1, Product = product,
@@ -306,7 +306,7 @@ public class FinanceServiceTests
     {
         var period = Period();
         _repo.FindPeriodByMonthAsync(Month, Arg.Any<CancellationToken>()).Returns(period);
-        var product = new Product { ProductId = 1, ProductCode = "SP001", ProductName = "Ao A" };
+        var product = new Product { ProductId = 1, ProductCode = "SP001" };
         var rows = new List<BreakEvenResult>
         {
             new() { BreakEvenResultId = 1, PeriodId = period.PeriodId, ProductId = 1, Product = product,
@@ -343,7 +343,7 @@ public class FinanceServiceTests
         });
         _repo.GetOrderCodesAsync(Arg.Any<IReadOnlyCollection<int>>(), Arg.Any<CancellationToken>())
             .Returns(new Dictionary<int, string> { [10] = "DH001" });
-        SetupProducts((1, "SP001", "Ao thun A"));
+        SetupProducts((1, "SP001"));
 
         var result = await _sut.GetRevenueAsync(new RevenueQuery { PeriodMonth = Month }, CancellationToken.None);
 

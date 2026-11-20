@@ -15,7 +15,7 @@ public interface IOrderMaterialService
     Task<Result<IReadOnlyList<OrderMaterialDto>>> CreateBatchAsync(CreateOrderMaterialBatchDto dto, CancellationToken ct);
     Task<Result<OrderMaterialDto>> UpdateAsync(int orderMaterialId, UpdateOrderMaterialDto dto, CancellationToken ct);
     Task<Result> DeleteAsync(int orderMaterialId, CancellationToken ct);
-    /// <summary>DEV-ALL-119: xem trước file Excel NVL của đơn (gộp theo mã NVL), không ghi gì.</summary>
+    /// <summary>DEV-ALL-119: xem trước file Excel NVL của đơn (gộp theo tên NVL), không ghi gì.</summary>
     /// <param name="replace">Thay thế: NVL của đơn không có trong file bị xóa (NVL đã có phiếu nhập / đơn mua thì giữ nguyên).</param>
     Task<Result<OrderMaterialImportPreviewDto>> PreviewImportAsync(int orderId, Stream stream, CancellationToken ct, bool replace = false);
     /// <summary>DEV-ALL-119: nhập các dòng hợp lệ có thay đổi, lưu một lần (lỗi thì không lưu gì).</summary>
@@ -26,7 +26,7 @@ public interface IOrderMaterialService
     Task<Result<OrderMaterialImportResultDto>> ImportAsync(int orderId, IReadOnlyList<OrderMaterialExcelRow> rows, CancellationToken ct);
 }
 
-/// <summary>Đọc bảng NVL của đơn (Mã NVL, Số cần, Khách cấp, Ghi chú) từ Excel (DEV-ALL-119).</summary>
+/// <summary>Đọc bảng NVL của đơn (Tên NVL, Số cần, Khách cấp, Ghi chú) từ Excel (DEV-ALL-119).</summary>
 public interface IExcelOrderMaterialParser
 {
     /// <summary>Ném InvalidDataException khi không có bảng đúng mẫu.</summary>

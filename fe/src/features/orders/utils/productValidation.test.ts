@@ -1,9 +1,4 @@
-import {
-  productCodeSchema,
-  productDescriptionSchema,
-  productNameSchema,
-  toFieldPath,
-} from './productValidation';
+import { productCodeSchema, productDescriptionSchema, toFieldPath } from './productValidation';
 
 describe('toFieldPath', () => {
   it('đổi tên lỗi BE thành đường dẫn field của form', () => {
@@ -22,12 +17,6 @@ describe('mã hàng', () => {
     expect(productCodeSchema.safeParse('AO/01').success).toBe(false);
     expect(productCodeSchema.safeParse('   ').success).toBe(false);
     expect(productCodeSchema.safeParse('').success).toBe(false);
-  });
-
-  it('tên bắt buộc và tối đa 200 ký tự', () => {
-    expect(productNameSchema.safeParse('x'.repeat(200)).success).toBe(true);
-    expect(productNameSchema.safeParse('x'.repeat(201)).success).toBe(false);
-    expect(productNameSchema.safeParse('   ').success).toBe(false);
   });
 
   it('mô tả tối đa 1000 ký tự, để trống được', () => {

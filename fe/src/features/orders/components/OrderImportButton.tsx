@@ -19,7 +19,12 @@ type OrderImportButtonProps = {
 };
 
 /** DEV-ALL-118: nút "Nhập từ Excel" của form đơn; áp dụng thì gộp dòng hợp lệ vào các khối mã hàng (chưa lưu). */
-export function OrderImportButton({ orderId, blocks, onApply, onQueueImports }: OrderImportButtonProps) {
+export function OrderImportButton({
+  orderId,
+  blocks,
+  onApply,
+  onQueueImports,
+}: OrderImportButtonProps) {
   const [open, setOpen] = useState(false);
   return (
     <>

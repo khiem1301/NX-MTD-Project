@@ -27,7 +27,7 @@ const columns: ColumnsType<MonthlyCostItem> = [
   {
     title: MONTHLY_COST_TEXT.table.product,
     dataIndex: 'productCode',
-    render: (v: string | null, row) => (v ? `${v} — ${row.productName ?? ''}` : '—'),
+    render: (v: string | null) => v ?? '—',
   },
   {
     title: MONTHLY_COST_TEXT.table.amount,

@@ -8,7 +8,7 @@ import {
 } from './bulkOrderMaterial';
 
 const OPTIONS = [
-  { materialId: 2, materialCode: 'CHI01', materialName: 'Chỉ may', color: 'Xanh', unit: 'cuộn' },
+  { materialId: 2, materialName: 'CHI01', color: 'Xanh', unit: 'cuộn' },
 ] as MaterialOption[];
 const NEW_LINE: BulkLine = { key: 'new-1', materialId: null, draft: { ...EMPTY_DRAFT } };
 const PICKED: BulkLine = { ...NEW_LINE, materialId: 2 };
@@ -18,9 +18,8 @@ describe('matchesKeyword', () => {
     expect(matchesKeyword(PICKED, '  ', OPTIONS)).toBe(true);
   });
 
-  it('tìm theo mã, tên, màu, không phân biệt hoa thường', () => {
+  it('tìm theo tên, màu, không phân biệt hoa thường', () => {
     expect(matchesKeyword(PICKED, 'chi01', OPTIONS)).toBe(true);
-    expect(matchesKeyword(PICKED, 'CHỈ', OPTIONS)).toBe(true);
     expect(matchesKeyword(PICKED, 'xanh', OPTIONS)).toBe(true);
     expect(matchesKeyword(PICKED, 'vải', OPTIONS)).toBe(false);
   });

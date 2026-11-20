@@ -45,13 +45,7 @@ export function OrderLineTeamsPage() {
     {
       title: text.columns.product,
       key: 'product',
-      render: (_, r) => (
-        <>
-          <Typography.Text strong>{r.productCode}</Typography.Text>
-          <br />
-          <Typography.Text type="secondary">{r.productName}</Typography.Text>
-        </>
-      ),
+      render: (_, r) => <Typography.Text strong>{r.productCode}</Typography.Text>,
     },
     { title: text.columns.color, dataIndex: 'color' },
     { title: text.columns.size, dataIndex: 'sizeCode' },

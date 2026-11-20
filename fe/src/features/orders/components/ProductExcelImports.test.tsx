@@ -7,7 +7,7 @@ import type { ProductImportSelection } from '../utils/productExcelImports';
 
 const parsed: ExcelBundle = {
   hasProducts: true,
-  products: [{ rowNumber: 5, productCode: 'TEST01', productName: 'Áo test', description: null }],
+  products: [{ rowNumber: 5, productCode: 'TEST01', description: null }],
   spec: {
     hasComponents: true,
     components: [

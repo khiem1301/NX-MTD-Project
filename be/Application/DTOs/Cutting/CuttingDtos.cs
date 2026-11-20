@@ -8,7 +8,7 @@ public sealed record CuttingLayLineDto(
     int ActualQty);
 
 /// <param name="UsedM">null = bàn cũ chưa có chiều dài bàn cắt.</param>
-public sealed record CuttingLayFabricDto(int MaterialId, string MaterialCode, string MaterialName, string MaterialColor, decimal? UsedM);
+public sealed record CuttingLayFabricDto(int MaterialId, string MaterialName, string MaterialColor, decimal? UsedM);
 
 /// <param name="Fabrics">Số mét từng vải của bàn (DEV-ALL-93).</param>
 /// <param name="SizeSummary">Số lượng sau cắt theo size, VD "M:90, L:60".</param>

@@ -28,7 +28,7 @@ const bundle: ExcelBundle = {
   orderMaterials: [
     {
       rowNumber: 9,
-      materialCode: 'X',
+      materialName: 'X',
       requiredQty: 1,
       customerQty: null,
       note: null,
@@ -58,16 +58,15 @@ describe('excelReview (DEV-ALL-122/123)', () => {
     expect(rowStateOf(undefined, 'sai')).toBe('error');
   });
 
-  it('gợi ý NVL mới theo loại; thiếu tên / khổ thì chưa đủ thông tin', () => {
+  it('gợi ý NVL mới theo loại; thiếu khổ / đơn vị thì chưa đủ thông tin', () => {
     const fabric = defaultMaterial({
-      materialCode: 'LUA',
+      materialName: 'LUA',
       suggestedType: 'FABRIC',
       colors: ['Hồng'],
-      suggestedName: 'Lụa hồng',
     });
     expect(fabric).toMatchObject({ materialType: 'FABRIC', unit: 'm', color: 'Hồng', widthM: 1.5 });
     const trim = defaultMaterial({
-      materialCode: 'CUC',
+      materialName: 'CUC',
       suggestedType: 'TRIM',
       colors: [],
       suggestedUnit: 'hộp',
@@ -76,9 +75,13 @@ describe('excelReview (DEV-ALL-122/123)', () => {
       materialType: 'TRIM',
       unit: 'hộp',
       widthM: null,
-      materialName: '',
+      materialName: 'CUC',
     });
-    expect(incompleteMaterials([fabric, trim]).map((m) => m.materialCode)).toEqual(['CUC']);
+    expect(
+      incompleteMaterials([fabric, trim, { ...fabric, materialName: 'KHO', widthM: null }]).map(
+        (m) => m.materialName,
+      ),
+    ).toEqual(['KHO']);
     expect(materialTypeDefaults('TRIM', 2)).toMatchObject({ unit: 'cái', widthM: null });
   });
 });

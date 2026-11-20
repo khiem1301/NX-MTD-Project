@@ -68,10 +68,10 @@ public sealed class CustomerOrderService : ICustomerOrderService
     {
         var o = await _orders.GetDetailAsync(orderId, ct);
         if (o is null) return Fail.NotFound<OrderOverviewDto>();
-        var lines = o.Lines.Select(l => new OrderOverviewLineDto(l.OrderLineId, l.ProductId, l.ProductCode, l.ProductName,
+        var lines = o.Lines.Select(l => new OrderOverviewLineDto(l.OrderLineId, l.ProductId, l.ProductCode,
             l.Color, l.SizeCode, l.OrderedQty, l.DeliveredQty)).ToList();
         return Result<OrderOverviewDto>.Success(new OrderOverviewDto(o.OrderId, o.OrderCode, o.CustomerName, o.ReceivedDate, o.DueDate,
-            o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.Note, o.CreatedAt, lines));
+            o.Status, o.MaterialStatus, o.IsDelayRisk, o.StopReason, o.DeliveryAddress, o.Note, o.CreatedAt, lines));
     }
 
     public async Task<Result<int>> CreateAsync(CreateOrderDto dto, CancellationToken ct)
@@ -90,6 +90,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
             CustomerId = dto.CustomerId,
             ReceivedDate = dto.ReceivedDate,
             DueDate = dto.DueDate,
+            DeliveryAddress = dto.DeliveryAddress.Trim(),
             Note = Clean(dto.Note),
             Status = OrderStatuses.New,
             MaterialStatus = OrderMaterialStatuses.Awaiting,
@@ -135,6 +136,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
         order.CustomerId = dto.CustomerId;
         order.ReceivedDate = dto.ReceivedDate;
         order.DueDate = dto.DueDate;
+        order.DeliveryAddress = dto.DeliveryAddress.Trim();
         order.Note = Clean(dto.Note);
         order.UpdatedAt = _clock.Now;
         _audit.Add(new AuditEntry(nameof(CustomerOrder), orderId, AuditActions.Update, before, Snapshot(order)));
@@ -363,7 +365,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
     /// <summary>Có đơn giá CMT: lịch sử đơn hàng chỉ Admin xem (D26).</summary>
     private static object Snapshot(CustomerOrder o) => new
     {
-        o.OrderCode, o.CustomerId, o.ReceivedDate, o.DueDate, o.Note, o.Status, o.StopReason,
+        o.OrderCode, o.CustomerId, o.ReceivedDate, o.DueDate, o.DeliveryAddress, o.Note, o.Status, o.StopReason,
         Lines = o.OrderLines.OrderBy(l => l.ProductId).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
             .Select(l => new { l.OrderLineId, l.ProductId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty, l.CmtUnitPrice }).ToList(),
     };

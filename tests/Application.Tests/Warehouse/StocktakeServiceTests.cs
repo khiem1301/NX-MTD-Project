@@ -26,7 +26,7 @@ public class StocktakeServiceTests
 
     private readonly List<Stocktake> _stocktakes = new();
     private readonly List<StocktakeLine> _lines = new();
-    private readonly List<Material> _materials = new() { new Material { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Unit = "m" } };
+    private readonly List<Material> _materials = new() { new Material { MaterialId = 1, MaterialName = "V-0001", Unit = "m" } };
     private readonly List<OrderLine> _orderLines = new() { new OrderLine { OrderLineId = 101, ProductVariant = TestVariant.Make(1) } };
 
     public StocktakeServiceTests()

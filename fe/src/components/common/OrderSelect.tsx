@@ -4,7 +4,8 @@ import { formatDate } from '@/utils/format';
 
 type OrderSelectProps = {
   value?: number;
-  onChange?: (orderId: number | undefined) => void;
+  /** `deliveryAddress`: địa chỉ giao hàng của đơn vừa chọn (undefined khi bỏ chọn). */
+  onChange?: (orderId: number | undefined, deliveryAddress?: string) => void;
   placeholder?: string;
   allowClear?: boolean;
   width?: number | string;
@@ -35,7 +36,9 @@ export function OrderSelect({
       allowClear={allowClear}
       disabled={disabled}
       value={value}
-      onChange={onChange}
+      onChange={(id: number | undefined) =>
+        onChange?.(id, (orders.data ?? []).find((o) => o.orderId === id)?.deliveryAddress)
+      }
       placeholder={placeholder}
       notFoundContent={notFoundContent}
       optionFilterProp="label"

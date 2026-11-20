@@ -69,6 +69,8 @@ export type OperationImportRow = {
   groupName: string | null;
   componentNames: string[] | null;
   changeNote: string | null;
+  /** Cảnh báo không chặn dòng, vd chi tiết ở cột CHI TIẾT không gắn được. */
+  warning: string | null;
 };
 
 export type OperationImportPreview = {
@@ -94,6 +96,8 @@ export type OperationImportPreview = {
   removeCount: number;
   removed: string[] | null;
   blocked: string[] | null;
+  /** Số dòng có cảnh báo (chi tiết không gắn được). */
+  warningCount: number;
 };
 
 export type OperationImportResult = {
@@ -217,7 +221,6 @@ export type OrderLineTeamRow = {
   dueDate: string;
   productId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;

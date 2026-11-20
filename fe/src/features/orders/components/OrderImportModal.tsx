@@ -6,6 +6,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
 import { fill, formatCurrency, formatQty } from '@/utils/format';
+import { ReasonHover } from '@/components/common/ReasonHover';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { unknownCodesOf, useCreateProductFromImport } from '../hooks/useCreateProductFromImport';
 import { usePreviewOrderImport } from '../hooks/useSpecImport';
@@ -33,7 +34,7 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
   {
     title: col.product,
     key: 'product',
-    render: (_, r) => (r.productName ? `${r.productCode} · ${r.productName}` : r.productCode),
+    dataIndex: 'productCode',
   },
   { title: col.color, dataIndex: 'color', width: 110 },
   {
@@ -56,12 +57,11 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
     key: 'result',
     width: 260,
     render: (_, r) => (
-      <Space direction="vertical" size={0}>
+      <ReasonHover reasons={[r.error && { text: r.error, type: 'danger' }]}>
         <Tag color={r.error ? text.invalid.color : text.valid.color}>
           {r.error ? text.invalid.text : text.valid.text}
         </Tag>
-        {r.error && <Typography.Text type="danger">{r.error}</Typography.Text>}
-      </Space>
+      </ReasonHover>
     ),
   },
 ];
@@ -70,7 +70,12 @@ const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
  * DEV-ALL-118: nhập dòng hàng của đơn từ Excel dạng ma trận màu × size. Chọn file là xem trước (máy chủ kiểm mã hàng, số lượng,
  * đơn giá); Áp dụng thì điền các dòng hợp lệ vào form, người dùng xem lại và bấm Lưu như tạo tay. Chỉ gắn khi đang mở.
  */
-export function OrderImportModal({ orderId, onApply, onClose, onQueueImports }: OrderImportModalProps) {
+export function OrderImportModal({
+  orderId,
+  onApply,
+  onClose,
+  onQueueImports,
+}: OrderImportModalProps) {
   const preview = usePreviewOrderImport();
   const [file, setFile] = useState<File | null>(null);
   const create = useCreateProductFromImport(file);

@@ -64,8 +64,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
                 i.ReceivedByNavigation == null ? null : i.ReceivedByNavigation.FullName, i.ReceivedAt, i.RejectReason,
                 i.CreatedAt,
                 i.MaterialIssueLines.OrderBy(l => l.MaterialIssueLineId).Select(l => new MaterialIssueLineDto(
-                    l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialCode,
-                    l.Material == null ? null : l.Material.MaterialName, l.Material == null ? null : l.Material.Unit,
+                    l.MaterialIssueLineId, l.MaterialId, l.Material == null ? null : l.Material.MaterialName,
+                    l.Material == null ? null : l.Material.Unit,
                     l.Material == null ? null : l.Material.Color, l.OrderLineId, l.ProductComponentMaterialId,
                     l.ProductComponentMaterial == null ? null : l.ProductComponentMaterial.ProductComponent.ComponentName + " – " + l.ProductComponentMaterial.Material.MaterialName + (l.ProductComponentMaterial.Material.Color == "" ? "" : " " + l.ProductComponentMaterial.Material.Color),
                     l.OrderLine == null ? null : l.OrderLine.ProductVariant.Product.ProductCode,

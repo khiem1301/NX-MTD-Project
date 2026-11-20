@@ -96,9 +96,7 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
         <>
           <DetailDescriptions>
             <Descriptions.Item label={LABELS.order}>{w.orderCode}</Descriptions.Item>
-            <Descriptions.Item
-              label={LABELS.product}
-            >{`${w.productCode} ${w.productName}`}</Descriptions.Item>
+            <Descriptions.Item label={LABELS.product}>{`${w.productCode}`}</Descriptions.Item>
             <Descriptions.Item label={LABELS.cuttingTeam}>{w.cuttingTeamName}</Descriptions.Item>
             <Descriptions.Item label={LABELS.dueDate}>{formatDate(w.dueDate)}</Descriptions.Item>
             <Descriptions.Item
@@ -154,7 +152,7 @@ export function WorkOrderDetailModal({ workOrderId, onClose, onEdit }: WorkOrder
                 title: LABELS.material,
                 key: 'm',
                 render: (_, f) =>
-                  `${f.materialCode} ${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
+                  `${f.materialName}${f.materialColor ? ` (${f.materialColor})` : ''}`,
               },
               {
                 title: LABELS.issuedQty,

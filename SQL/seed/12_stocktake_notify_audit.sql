@@ -164,7 +164,7 @@ FROM (
     UNION ALL
     SELECT 'PurchaseOrder', po.PurchaseOrderId, 'UPDATE', '{"GoodsStatus":"PENDING_FINALISATION"}', CONCAT('{"GoodsStatus":"ORDERED","SupplierId":', po.SupplierId, '}'), NULL, N'Chốt NCC và đơn giá',
            (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'QUANDOC'), DATEADD(DAY, 1, po.CreatedAt)
-    FROM dbo.PurchaseOrder po WHERE po.SupplierId IS NOT NULL
+    FROM dbo.PurchaseOrder po WHERE po.GoodsStatus NOT IN ('PENDING_FINALISATION', 'CUSTOMER_SUPPLIED', 'REJECTED')
     UNION ALL
     SELECT 'PurchaseOrder', po.PurchaseOrderId, 'CONFIRM', '{"PaymentStatus":"UNPAID"}', CONCAT('{"PaymentStatus":"', po.PaymentStatus, '","PaidAmount":', CAST(po.PaidAmount AS VARCHAR(30)), '}'), NULL, N'Kế toán xác nhận thanh toán',
            (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'KETOAN'), CAST(po.PaymentDate AS DATETIME2)

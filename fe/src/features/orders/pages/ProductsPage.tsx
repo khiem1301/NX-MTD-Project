@@ -47,7 +47,6 @@ export function ProductsPage() {
       title: MESSAGES.orders.productCode,
       dataIndex: 'productCode',
     },
-    { title: MESSAGES.orders.productName, dataIndex: 'productName' },
     {
       title: MESSAGES.orders.images,
       render: (_: unknown, p) => (

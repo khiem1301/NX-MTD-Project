@@ -33,9 +33,8 @@ public sealed record StockBalanceQuery : PageQuery
 }
 
 public sealed record StockBalanceDto(
-    string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
-    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
-    string? ProductName, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
+    string WarehouseType, int? MaterialId, string? MaterialName, string? MaterialType,
+    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode, string? Color, string? SizeCode, decimal OnHandQty, decimal ReservedQty, decimal AvailableQty,
     int? ProductComponentMaterialId, string? ComponentName);
 
 /// <param name="ProductComponentMaterialId">Chỉ kho BTP: để trống = bộ đủ; có giá trị = chi tiết × vải (hàng cắt bù).</param>
@@ -62,7 +61,6 @@ public sealed record NxtReportQuery : PageQuery
 
 /// <summary>Một dòng NXT: tồn đầu / nhập / xuất / tồn cuối trong kỳ.</summary>
 public sealed record NxtSummaryDto(
-    string WarehouseType, int? MaterialId, string? MaterialCode, string? MaterialName, string? MaterialType,
-    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode,
-    string? ProductName, string? Color, string? SizeCode, int? ProductComponentMaterialId, string? ComponentName,
+    string WarehouseType, int? MaterialId, string? MaterialName, string? MaterialType,
+    string? Unit, string? MaterialColor, int? OrderLineId, int? OrderId, string? OrderCode, string? ProductCode, string? Color, string? SizeCode, int? ProductComponentMaterialId, string? ComponentName,
     decimal OpeningQty, decimal InQty, decimal OutQty, decimal ClosingQty);

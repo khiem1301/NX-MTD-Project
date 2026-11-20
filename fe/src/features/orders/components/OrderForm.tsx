@@ -38,6 +38,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     handleFinish,
     handleSave,
     leaveGuard,
+    fillAddressFromCustomer,
     initialValues,
     form,
     blocks,
@@ -118,6 +119,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
             currentCustomerId={detail?.customerId ?? copyFrom?.customerId}
             locked={locked}
             onAddCustomer={() => setCustomerOpen(true)}
+            onCustomerChange={fillAddressFromCustomer}
           />
         </Form>
 

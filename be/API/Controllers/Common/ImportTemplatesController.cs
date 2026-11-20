@@ -21,9 +21,9 @@ public sealed class ImportTemplatesController : CommonBaseController
     /// <param name="kind">spec | order-lines | order-materials | operations | product-form.</param>
     [HttpGet("{kind}")]
     public async Task<IActionResult> Get(string kind, [FromQuery] int? productId, [FromQuery] int? orderId,
-        [FromQuery] bool withOrder, CancellationToken ct)
+        CancellationToken ct)
     {
-        var result = await _templates.BuildAsync(kind, productId, orderId, withOrder, ct);
+        var result = await _templates.BuildAsync(kind, productId, orderId, ct);
         if (!result.IsSuccess) return this.ToResponse(result);
         return File(result.Data!.Content, Xlsx, result.Data.FileName);
     }

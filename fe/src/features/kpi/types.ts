@@ -13,7 +13,6 @@ export type KpiTarget = {
   orderCode: string;
   productId: number;
   productCode: string;
-  productName: string;
   sewingTeamId: number;
   sewingTeamName: string;
   startDate: string;
@@ -84,7 +83,6 @@ export type KpiCalendar = {
   kpiTargetId: number;
   orderCode: string;
   productCode: string;
-  productName: string;
   sewingTeamName: string;
   startDate: string;
   endDate: string;

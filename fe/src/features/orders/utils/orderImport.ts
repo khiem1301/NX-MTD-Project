@@ -59,7 +59,7 @@ export const mergeOrderImport = (
   const labels: Record<number, string> = {};
   for (const [productId, productRows] of byProduct) {
     const first = productRows[0]!;
-    labels[productId] = `${first.productCode} · ${first.productName ?? ''}`;
+    labels[productId] = `${first.productCode}`;
     const index = next.findIndex((b) => b.productId === productId);
     if (index >= 0) {
       next = next.map((b, i) => (i === index ? mergeIntoBlock(b, productRows) : b));

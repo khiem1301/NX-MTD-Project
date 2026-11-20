@@ -39,8 +39,7 @@ const check = (
   change: Partial<WorkOrderFabricCheck> = {},
 ): WorkOrderFabricCheck => ({
   materialId,
-  materialCode: 'V01',
-  materialName: 'Vải',
+  materialName: 'V01',
   materialColor: '',
   status,
   needMeters: 195.3,
@@ -60,7 +59,7 @@ describe('FabricCheckAlerts', () => {
     expect(screen.getByText('Số mét vải cần và bìa nên dùng')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'V01 Vải: cần khoảng 195,3 m. Nhóm bìa 1: A (1S, 2L) × 48 lớp, B (3M, 1L) × 33 lớp (dư 16)',
+        'V01: cần khoảng 195,3 m. Nhóm bìa 1: A (1S, 2L) × 48 lớp, B (3M, 1L) × 33 lớp (dư 16)',
       ),
     ).toBeInTheDocument();
     expect(screen.getByText(LABELS.fabricPlanNote)).toBeInTheDocument();

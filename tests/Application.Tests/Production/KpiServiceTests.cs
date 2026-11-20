@@ -90,7 +90,7 @@ public class KpiServiceTests
     private static CustomerOrder Order(int id = 1, string code = "DH001") => new() { OrderId = id, OrderCode = code, Status = OrderStatuses.InProduction };
 
     private static Product Product(int id = 1, string code = "MH001", string name = "Áo thun") =>
-        new() { ProductId = id, ProductCode = code, ProductName = name };
+        new() { ProductId = id, ProductCode = code };
 
     private static Team SewingTeam(int id = 1, string name = "Tổ may 1", string status = RecordStatus.Active) =>
         new() { TeamId = id, TeamCode = "MAY1", TeamName = name, TeamType = TeamTypes.Sewing, Status = status };

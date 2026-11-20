@@ -11,14 +11,12 @@ export type CostVariableItem = {
   costCategoryCode: string;
   productId: number;
   productCode: string;
-  productName: string;
   amount: number;
 };
 
 export type CostByProduct = {
   productId: number;
   productCode: string;
-  productName: string;
   amount: number;
 };
 

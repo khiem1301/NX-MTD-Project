@@ -19,7 +19,6 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         entity.Property(e => e.ProductCode)
             .HasMaxLength(30)
             .IsUnicode(false);
-        entity.Property(e => e.ProductName).HasMaxLength(200);
         entity.Property(e => e.SampleImageUrl).HasMaxLength(500);
         entity.Property(e => e.Status)
             .HasMaxLength(20)

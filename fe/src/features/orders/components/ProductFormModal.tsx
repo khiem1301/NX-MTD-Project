@@ -8,7 +8,6 @@ import { useProductFormImports } from '../hooks/useProductFormImports';
 import {
   productCodeSchema,
   productDescriptionSchema,
-  productNameSchema,
   toFieldPath,
 } from '../utils/productValidation';
 import type { ProductImportSelection } from '../utils/productExcelImports';
@@ -75,7 +74,6 @@ export function ProductFormModal({
     if (product) {
       form.setFieldsValue({
         productCode: product.productCode,
-        productName: product.productName,
         sampleImageUrl: product.sampleImageUrl ?? undefined,
         extraImages: product.extraImages,
       });
@@ -140,7 +138,7 @@ export function ProductFormModal({
       {detail.error && <QueryError error={detail.error} onRetry={() => void detail.refetch()} />}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={busy}>
         <Row gutter={16}>
-          <Col xs={24} md={9}>
+          <Col xs={24}>
             <Tooltip title={locked ? MESSAGES.orders.codeLockedHint : undefined}>
               <Form.Item
                 name="productCode"
@@ -151,16 +149,6 @@ export function ProductFormModal({
                 <Input disabled={locked} />
               </Form.Item>
             </Tooltip>
-          </Col>
-          <Col xs={24} md={15}>
-            <Form.Item
-              name="productName"
-              label={MESSAGES.orders.productName}
-              required
-              rules={[zodRule(productNameSchema)]}
-            >
-              <Input />
-            </Form.Item>
           </Col>
         </Row>
         <Form.Item

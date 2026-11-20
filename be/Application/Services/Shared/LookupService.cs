@@ -31,7 +31,7 @@ public sealed class LookupService : ILookupService
             .Where(o => teamId == null || o.OrderLines.Any(l => allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId)))
             .Where(o => string.IsNullOrEmpty(kw) || o.OrderCode.Contains(kw))
             .OrderByDescending(o => o.OrderId).Take(MaxOptions)
-            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate))
+            .Select(o => new OrderOptionDto(o.OrderId, o.OrderCode, o.Status, o.MaterialStatus, o.DueDate, o.ReceivedDate, o.DeliveryAddress))
             .ToListAsync(ct);
     }
 
@@ -43,7 +43,7 @@ public sealed class LookupService : ILookupService
             .Where(l => l.OrderId == orderId)
             .Where(l => teamId == null || allotments.Any(a => a.SewingTeamId == teamId && a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.ProductVariant.Product.ProductCode).ThenBy(l => l.ProductVariant.ProductColor.Color).ThenBy(l => l.ProductVariant.SizeCode)
-            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.Product.ProductName,
+            .Select(l => new OrderLineOptionDto(l.OrderLineId, l.ProductId, l.ProductVariant.Product.ProductCode,
                 l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty,
                 l.WorkOrderLines.Where(w => w.ProductComponentMaterialId == null && w.WorkOrder.Status != WorkOrderStatuses.Cancelled
                                             && w.WorkOrder.SourceRequestId == null).Sum(w => (int?)w.PlannedQty) ?? 0))
@@ -78,17 +78,17 @@ public sealed class LookupService : ILookupService
         var kw = keyword?.Trim();
         return await _uow.Repository<Material>().Query().AsNoTracking()
             .Where(m => m.Status == MaterialStatuses.Active && m.MaterialType != MaterialTypes.Scrap)
-            .Where(m => string.IsNullOrEmpty(kw) || m.MaterialCode.Contains(kw) || m.MaterialName.Contains(kw) || m.Color.Contains(kw))
-            .OrderBy(m => m.MaterialCode).Take(MaxOptions)
-            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit, m.Color))
+            .Where(m => string.IsNullOrEmpty(kw) || m.MaterialName.Contains(kw) || m.Color.Contains(kw))
+            .OrderBy(m => m.MaterialName).Take(MaxOptions)
+            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit, m.Color))
             .ToListAsync(ct);
     }
 
     public async Task<IReadOnlyList<MaterialOptionDto>> GetScrapMaterialsAsync(CancellationToken ct) =>
         await _uow.Repository<Material>().Query().AsNoTracking()
             .Where(m => m.Status == MaterialStatuses.Active && m.MaterialType == MaterialTypes.Scrap)
-            .OrderBy(m => m.MaterialCode)
-            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit, m.Color))
+            .OrderBy(m => m.MaterialName)
+            .Select(m => new MaterialOptionDto(m.MaterialId, m.MaterialName, m.MaterialType ?? string.Empty, m.Unit, m.Color))
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<RequisitionMaterialOptionDto>> GetRequisitionMaterialsAsync(int? orderId, CancellationToken ct)
@@ -97,13 +97,13 @@ public sealed class LookupService : ILookupService
         var query = _uow.Repository<Material>().Query().AsNoTracking()
             .Where(m => m.Status == MaterialStatuses.Active && m.MaterialType != MaterialTypes.Scrap
                         && (orderId == null || ofOrder.Contains(m.MaterialId)))
-            .OrderBy(m => m.MaterialCode);
+            .OrderBy(m => m.MaterialName);
         // NVL của một đơn hàng là danh sách ngắn, lấy đủ; cả danh mục thì giới hạn như ô chọn NVL thường.
         var materials = await (orderId == null ? query.Take(MaxOptions) : query)
-            .Select(m => new { m.MaterialId, m.MaterialCode, m.MaterialName, MaterialType = m.MaterialType ?? string.Empty, m.Unit, m.Color })
+            .Select(m => new { m.MaterialId, m.MaterialName, MaterialType = m.MaterialType ?? string.Empty, m.Unit, m.Color })
             .ToListAsync(ct);
         var available = await _stock.GetMaterialAvailableAsync(materials.Select(m => m.MaterialId).ToList(), ct);
-        return materials.Select(m => new RequisitionMaterialOptionDto(m.MaterialId, m.MaterialCode, m.MaterialName, m.MaterialType,
+        return materials.Select(m => new RequisitionMaterialOptionDto(m.MaterialId, m.MaterialName, m.MaterialType,
             m.Unit, m.Color, Math.Max(0, available.GetValueOrDefault(m.MaterialId)))).ToList();
     }
 
@@ -111,7 +111,7 @@ public sealed class LookupService : ILookupService
     {
         var lines = await GetOrderLinesAsync(orderId, ct);
         var available = await _stock.GetSetAvailableAsync(lines.Select(l => l.OrderLineId).ToList(), ct);
-        return lines.Select(l => new RequisitionPieceOptionDto(l.OrderLineId, l.ProductCode, l.ProductName, l.Color, l.SizeCode,
+        return lines.Select(l => new RequisitionPieceOptionDto(l.OrderLineId, l.ProductCode, l.Color, l.SizeCode,
             l.OrderedQty, Math.Max(0, available.GetValueOrDefault(l.OrderLineId)))).ToList();
     }
 }

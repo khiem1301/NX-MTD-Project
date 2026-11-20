@@ -31,6 +31,7 @@ export type HeaderValues = {
   customerId: number;
   receivedDate: Dayjs;
   dueDate: Dayjs;
+  deliveryAddress?: string;
   note?: string;
 };
 
@@ -54,9 +55,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
         : [newBlock()],
   );
   const [labels, setLabels] = useState<Record<number, string>>(() =>
-    Object.fromEntries(
-      (seedLines ?? []).map((l) => [l.productId, `${l.productCode} · ${l.productName}`]),
-    ),
+    Object.fromEntries((seedLines ?? []).map((l) => [l.productId, `${l.productCode}`])),
   );
   const [lineError, setLineError] = useState<string>();
   const [showBlockErrors, setShowBlockErrors] = useState(false);
@@ -134,34 +133,32 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       customerId: values.customerId,
       receivedDate: toApiDate(values.receivedDate),
       dueDate: toApiDate(values.dueDate),
+      deliveryAddress: values.deliveryAddress?.trim() ?? '',
       note: values.note?.trim() || null,
       lines,
     };
     setDirty(false);
-    // Mã hàng tạo nhanh còn trong đơn và có file chờ: nhập vào đơn vừa lưu (chạy nền, xong hiện kết quả từng mã hàng).
+    // Mã hàng tạo nhanh còn trong đơn và có file chờ: nhập định mức của mã hàng sau khi đơn đã tạo màu, size (chạy nền, xong hiện kết quả từng mã hàng).
     const queued = Object.entries(pendingImports)
       .map(([id, v]) => ({ productId: Number(id), ...v }))
       .filter((q) => blocks.some((b) => b.productId === q.productId));
-    const runQueued = async (savedId: number) => {
+    const runQueued = async () => {
       for (const q of queued) {
         const hide = message.loading(fill(MESSAGES.orders.productExcel.runningOrder, q.code), 0);
         try {
-          const outcomes = await runProductImports(q.productId, {
-            ...q.selection,
-            orderId: savedId,
-          });
+          const outcomes = await runProductImports(q.productId, q.selection);
           showProductImportResults(q.code, outcomes);
         } finally {
           hide();
         }
       }
     };
-    const afterSave = (savedId: number, path: string) => {
+    const afterSave = (path: string) => {
       setPendingImports({});
       navigate(path);
-      if (queued.length > 0) void runQueued(savedId);
+      if (queued.length > 0) void runQueued();
     };
-    const done = (savedId: number) => afterSave(savedId, ROUTES.orderDetail(savedId));
+    const done = (savedId: number) => afterSave(ROUTES.orderDetail(savedId));
     if (isEdit && detail) {
       update.mutate(
         { ...body, rowVer: detail.rowVer },
@@ -177,10 +174,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       create.mutate(body, {
         // Đơn tạo xong mới khai báo NVL: mở thẳng tab NVL của đơn.
         onSuccess: (newId) =>
-          afterSave(
-            newId as number,
-            `${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`,
-          ),
+          afterSave(`${ROUTES.orderDetail(newId as number)}?tab=${ORDER_MATERIALS_TAB}`),
         onError: (e) => {
           setDirty(true);
           handleError(e);
@@ -195,15 +189,24 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
         customerId: detail.customerId,
         receivedDate: dayjs(detail.receivedDate),
         dueDate: dayjs(detail.dueDate),
+        deliveryAddress: detail.deliveryAddress,
         note: detail.note ?? undefined,
       }
     : copyFrom
       ? {
           customerId: copyFrom.customerId,
           receivedDate: dayjs(),
+          deliveryAddress: copyFrom.deliveryAddress,
           note: copyFrom.note ?? undefined,
         }
       : { receivedDate: dayjs() };
+
+  /** Tạo đơn: chọn khách thì điền sẵn địa chỉ mặc định của khách vào ô địa chỉ giao hàng, trừ khi người dùng đã tự gõ địa chỉ. */
+  const fillAddressFromCustomer = (customerId: number) => {
+    if (isEdit || form.isFieldTouched('deliveryAddress')) return;
+    const address = customers.data?.find((c) => c.customerId === customerId)?.defaultAddress;
+    form.setFieldValue('deliveryAddress', address ?? undefined);
+  };
 
   return {
     initialValues,
@@ -219,6 +222,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     handleFinish,
     handleSave,
     leaveGuard,
+    fillAddressFromCustomer,
     form,
     blocks,
     blockErrors,
@@ -234,7 +238,14 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
   };
 }
 
-const HEADER_FIELDS = ['orderCode', 'customerId', 'receivedDate', 'dueDate', 'note'];
+const HEADER_FIELDS = [
+  'orderCode',
+  'customerId',
+  'receivedDate',
+  'dueDate',
+  'deliveryAddress',
+  'note',
+];
 const LINE_ERROR_CODES: string[] = [
   ERROR_CODES.OrderLineRemoveNotAllowed,
   ERROR_CODES.OrderLineKeyLocked,

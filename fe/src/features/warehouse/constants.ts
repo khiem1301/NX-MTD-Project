@@ -146,9 +146,8 @@ export const LABELS = {
   openShortage: 'Xem yêu cầu thiếu NVL',
   addMaterial: 'Thêm NVL mới',
   materialsTitle: 'Danh mục NVL',
-  materialCode: 'Mã NVL',
-  materialCodeHint: 'Để trống để hệ thống tự sinh (V-0001 / PL-0001)',
   materialName: 'Tên NVL',
+  materialNameFormat: 'Tên NVL chỉ gồm chữ không dấu, số, khoảng trắng và . _ -',
   materialType: 'Loại',
   unit: 'Đơn vị tính',
   widthM: 'Khổ vải (m)',
@@ -204,7 +203,7 @@ export const LABELS = {
   importOrderMaterials: 'Nhập từ Excel',
   importOrderMaterialsTitle: 'Nhập NVL của đơn từ Excel',
   importOrderMaterialsHint:
-    'Bảng có cột Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL chưa có được thêm, NVL không có trong file giữ nguyên. Chọn file là xem trước ngay, chưa lưu gì.',
+    'Bảng có cột Tên NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL chưa có được thêm, NVL không có trong file giữ nguyên. Chọn file là xem trước ngay, chưa lưu gì.',
   importOrderMaterialsConfirm: 'Nhập',
   importOrderMaterialsConfirmTitle: 'Nhập NVL của đơn?',
   importOrderMaterialsConfirmBody:
@@ -408,7 +407,6 @@ export const INCOMING_TEXT = {
   replenishEmpty: 'Chưa có đơn thiếu nào.',
   notResolved: 'Chưa xử lý',
   moreMaterials: 'khác',
-  materialCode: 'Mã NVL',
   materialName: 'Tên NVL',
 } as const;
 
@@ -422,3 +420,6 @@ export const INCOMING_TAB = {
 
 /** Tỷ lệ phần trăm tối đa của thanh tiến độ nhận. */
 export const PERCENT_MAX = 100;
+
+/** Khớp MaterialNamePattern ở BE: tên NVL chỉ chữ không dấu, số, khoảng trắng và . _ - (lưu chữ hoa). */
+export const MATERIAL_NAME_PATTERN = /^[A-Za-z0-9._ -]+$/;

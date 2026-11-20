@@ -84,7 +84,6 @@ export const matchesKeyword = (
   if (!term || line.materialId === null) return true;
   const option = options.find((m) => m.materialId === line.materialId);
   return [
-    line.original?.materialCode ?? option?.materialCode,
     line.original?.materialName ?? option?.materialName,
     line.original?.materialColor ?? option?.color,
   ].some((text) => text?.toLowerCase().includes(term));

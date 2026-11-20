@@ -1,5 +1,6 @@
 import { Space, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { ReasonHover } from '@/components/common/ReasonHover';
 import { StatusTag } from '@/components/common/StatusTag';
 import { formatCurrency, formatQty } from '@/utils/format';
 import type { OperationImportRow } from '../types';
@@ -49,11 +50,15 @@ export const operationImportColumns: ColumnsType<OperationImportRow> = [
     title: text.columns.action,
     key: 'action',
     render: (_, row) => (
-      <Space direction="vertical" size={0}>
+      <ReasonHover
+        reasons={[
+          row.error && { text: row.error, type: 'danger' },
+          row.warning && { text: row.warning, type: 'warning' },
+          row.changeNote && { text: row.changeNote, type: 'secondary' },
+        ]}
+      >
         <StatusTag status={row.action} labels={text.action} />
-        {row.error && <Typography.Text type="danger">{row.error}</Typography.Text>}
-        {row.changeNote && <Typography.Text type="secondary">{row.changeNote}</Typography.Text>}
-      </Space>
+      </ReasonHover>
     ),
   },
 ];

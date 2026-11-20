@@ -13,7 +13,6 @@ const row = (over: Partial<OrderLineTeamRow> = {}): OrderLineTeamRow => ({
   dueDate: '2026-11-20',
   productId: 3,
   productCode: 'AO01',
-  productName: 'Áo khoác',
   color: 'Đỏ',
   sizeCode: 'M',
   orderedQty: 500,

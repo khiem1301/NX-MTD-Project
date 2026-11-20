@@ -65,11 +65,11 @@ public sealed partial class SpecImportService
     private async Task<(IReadOnlyDictionary<string, SpecImportMaterial> Materials, HashSet<string> Missing)> AssumeMaterialsAsync(
         SpecWorkbookDto workbook, CancellationToken ct)
     {
-        var found = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
-        var missing = workbook.Norms.Select(n => Up(n.MaterialCode))
+        var found = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialName), ct);
+        var missing = workbook.Norms.Select(n => Up(n.MaterialName))
             .Where(c => c.Length > 0 && !found.ContainsKey(c)).Distinct().ToList();
         if (missing.Count == 0) return (found, []);
-        var temp = missing.Select((c, i) => KeyValuePair.Create(c, new SpecImportMaterial(-(i + 1), c, c, string.Empty, string.Empty)));
+        var temp = missing.Select((c, i) => KeyValuePair.Create(c, new SpecImportMaterial(-(i + 1), c, string.Empty, string.Empty)));
         return (new Dictionary<string, SpecImportMaterial>(found.Concat(temp), StringComparer.OrdinalIgnoreCase),
             missing.ToHashSet(StringComparer.OrdinalIgnoreCase));
     }
@@ -103,11 +103,11 @@ public sealed partial class SpecImportService
 
     private static SpecImportNormRowDto MarkNorm(SpecImportNormRowDto n, Assumed assumed) =>
         n.Action == SpecImportBuilder.ActionError ? n
-        : assumed.Materials.Contains(n.MaterialCode)
+        : assumed.Materials.Contains(n.MaterialName)
             ? n with
             {
                 Action = SpecImportBuilder.ActionNewMaterial,
-                Error = string.Format(Messages.MaterialNotInCatalog, n.MaterialCode),
+                Error = string.Format(Messages.MaterialNotInCatalog, n.MaterialName),
                 MaterialName = null,
                 Unit = null,
                 MaterialColor = null,

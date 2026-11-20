@@ -27,7 +27,6 @@ const qty = (title: string, dataIndex: keyof NxtSummary) => ({
 });
 
 const materialColumns: TableColumnsType<NxtSummary> = [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
   { title: LABELS.materialName, dataIndex: 'materialName' },
   {
     title: LABELS.materialType,

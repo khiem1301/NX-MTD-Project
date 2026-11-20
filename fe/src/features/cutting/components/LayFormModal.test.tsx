@@ -13,8 +13,7 @@ jest.mock('../hooks/useCutting', () => ({
 
 const fabric = (materialId: number, code: string, cutQty: number) => ({
   materialId,
-  materialCode: code,
-  materialName: code === 'V01' ? 'Kaki' : 'Lót',
+  materialName: code,
   unit: 'm',
   materialColor: '',
   issuedQty: 100,

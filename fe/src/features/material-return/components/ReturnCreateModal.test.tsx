@@ -74,8 +74,7 @@ jest.mock('@/hooks/useLookups', () => ({
     data: [
       {
         materialId: 9,
-        materialCode: 'PP-0001',
-        materialName: 'Vải vụn',
+        materialName: 'PP-0001',
         materialType: 'SCRAP',
         unit: 'kg',
         color: '',
@@ -187,7 +186,7 @@ describe('ReturnCreateModal – tổ may', () => {
   it('thêm phế phẩm: gửi kèm dòng phế phẩm, không cần chọn gì khác', async () => {
     open();
     fireEvent.click(screen.getByText(RETURN_LABELS.scrapAdd));
-    await choose(0, 'PP-0001 Vải vụn');
+    await choose(0, 'PP-0001');
     fireEvent.change(screen.getByLabelText(RETURN_LABELS.returnQty), { target: { value: '2,5' } });
     fireEvent.click(screen.getByRole('button', { name: MESSAGES.common.confirm }));
     // Hộp xác nhận tĩnh của antd không có locale trong test nên nút là "OK".

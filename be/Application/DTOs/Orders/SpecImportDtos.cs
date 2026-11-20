@@ -8,7 +8,7 @@ namespace NX_MTD.Application.DTOs;
 public sealed record SpecComponentExcelRow(int RowNumber, string Name, string? ComponentType, short? PiecesPerGarment,
     string? ParseError);
 
-public sealed record SpecNormExcelRow(int RowNumber, string Color, string ComponentName, string MaterialCode, string? SpecNote,
+public sealed record SpecNormExcelRow(int RowNumber, string Color, string ComponentName, string MaterialName, string? SpecNote,
     string? ParseError);
 
 public sealed record SpecMarkerGroupExcelRow(int RowNumber, int? MarkerNo, IReadOnlyList<string> ComponentNames,
@@ -34,7 +34,7 @@ public sealed record SpecImportComponentRowDto(int RowNumber, string Action, str
     string? ComponentType, short? PiecesPerGarment);
 
 public sealed record SpecImportNormRowDto(int RowNumber, string Action, string? Error, string Color, string ComponentName,
-    string MaterialCode, string? MaterialName, string? Unit, string? MaterialColor, string? SpecNote);
+    string? MaterialName, string? Unit, string? MaterialColor, string? SpecNote);
 
 public sealed record SpecImportMarkerGroupRowDto(int RowNumber, string Action, string? Error, int? MarkerNo,
     IReadOnlyList<string> ComponentNames, IReadOnlyList<string> Colors);

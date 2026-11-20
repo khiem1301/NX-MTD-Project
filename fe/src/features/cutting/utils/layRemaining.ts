@@ -29,7 +29,7 @@ export const formatLayFabrics = (
   fabrics: readonly CuttingLayFabric[],
   format: (v: number) => string,
 ) =>
-  fabrics.map((f) => `${f.materialCode}: ${f.usedM === null ? '—' : format(f.usedM)}`).join('; ') ||
+  fabrics.map((f) => `${f.materialName}: ${f.usedM === null ? '—' : format(f.usedM)}`).join('; ') ||
   '—';
 
 export type TeamFabricBalance = {

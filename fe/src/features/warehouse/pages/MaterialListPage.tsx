@@ -44,7 +44,6 @@ export function MaterialListPage() {
   };
 
   const columns: TableColumnsType<Material> = [
-    { title: LABELS.materialCode, dataIndex: 'materialCode', width: 120 },
     { title: LABELS.materialName, dataIndex: 'materialName' },
     {
       title: LABELS.materialType,

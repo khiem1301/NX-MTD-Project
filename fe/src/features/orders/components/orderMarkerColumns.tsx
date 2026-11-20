@@ -128,12 +128,11 @@ export const orderMarkerColumns = ({
       key: 'width',
       width: WIDTH.width,
       render: (_, r) => {
-        // DEV-ALL-104: bìa rộng hơn khổ vải của nhóm thì cảnh báo ngay khi nhập (không chặn lưu).
+        // DEV-ALL-104: bìa rộng hơn khổ vải của nhóm thì tô cam ô và hiện cảnh báo khi trỏ vào ô (không chặn lưu).
         const warning = tooWideWarning(r, groups);
         return (
-          // QtyInput không nhận ref nên bọc thẻ div để Tooltip bám vị trí.
-          <Tooltip title={warning || undefined}>
-            <div>
+          <Tooltip title={warning || undefined} color="orange">
+            <span style={{ display: 'block' }}>
               <QtyInput
                 size="small"
                 disabled={readOnly}
@@ -148,7 +147,7 @@ export const orderMarkerColumns = ({
                 style={FULL}
                 onChange={(widthM) => patch(r.key, { widthM })}
               />
-            </div>
+            </span>
           </Tooltip>
         );
       },

@@ -6,7 +6,7 @@ namespace NX_MTD.Application.DTOs;
 /// ActualFinishedQty = Σ hàng hoàn thiện cả kỳ (vw_KpiDailyResult), PercentAchieved = thực tế / chỉ tiêu cả kỳ × 100 (MI-17).
 /// Lines = chỉ tiêu theo màu × size (DEV-ALL-62); rỗng ở chỉ tiêu cũ chỉ có số tổng.</summary>
 public sealed record KpiTargetDto(
-    int KpiTargetId, int OrderId, string OrderCode, int ProductId, string ProductCode, string ProductName,
+    int KpiTargetId, int OrderId, string OrderCode, int ProductId, string ProductCode,
     int SewingTeamId, string SewingTeamName, DateOnly StartDate, DateOnly EndDate, int TargetFinishedQty,
     short WorkingDays, decimal DailyTarget, string Status, string? Result, DateTime CreatedAt,
     int ActualFinishedQty = 0, decimal PercentAchieved = 0m, IReadOnlyList<KpiTargetLineDto>? Lines = null);

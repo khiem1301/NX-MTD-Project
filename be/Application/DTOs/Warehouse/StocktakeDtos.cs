@@ -8,7 +8,7 @@ public sealed record StocktakeListItemDto(
 
 /// <summary>CurrentQty = tồn thực lúc xem, chỉ có khi phiếu đang chờ duyệt: để người duyệt thấy tồn đã đổi so với số sổ lúc lập.</summary>
 public sealed record StocktakeLineDto(
-    int StocktakeLineId, int? MaterialId, string? MaterialCode, string? MaterialName, string? Unit, string? MaterialColor,
+    int StocktakeLineId, int? MaterialId, string? MaterialName, string? Unit, string? MaterialColor,
     int? OrderLineId, int? ProductComponentMaterialId, string? ComponentName, string? OrderCode, string? ProductCode, string? Color,
     string? SizeCode, decimal BookQty,
     decimal? CountedQty, decimal DifferenceQty, string? Note, decimal? CurrentQty);

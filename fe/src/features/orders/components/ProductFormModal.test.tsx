@@ -44,7 +44,6 @@ jest.mock('./ColorAutoComplete', () => ({
 const product: ProductListItem = {
   productId: 7,
   productCode: 'AO-01',
-  productName: 'Áo khoác',
   sampleImageUrl: null,
   extraImages: [],
   status: 'Active',
@@ -108,21 +107,9 @@ describe('ProductFormModal', () => {
     renderModal(null);
 
     fireEvent.change(field('Mã hàng'), { target: { value: code } });
-    fireEvent.change(field('Tên mã hàng'), { target: { value: 'Áo' } });
     clickSave();
 
     expect(await screen.findByText(message)).toBeInTheDocument();
-    expect(mutate).not.toHaveBeenCalled();
-  });
-
-  it('tên mã hàng chỉ có khoảng trắng thì báo bắt buộc', async () => {
-    renderModal(null);
-
-    fireEvent.change(field('Mã hàng'), { target: { value: 'AO-02' } });
-    fireEvent.change(field('Tên mã hàng'), { target: { value: '   ' } });
-    clickSave();
-
-    expect((await screen.findAllByText('Vui lòng nhập thông tin này.')).length).toBeGreaterThan(0);
     expect(mutate).not.toHaveBeenCalled();
   });
 });

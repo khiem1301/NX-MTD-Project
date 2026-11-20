@@ -26,7 +26,7 @@ public class OrderMaterialCustomerDeliveryTests
     {
         Setup(_orders); Setup(_orderMaterials); Setup(_materials); Setup(_receipts);
         Setup(new List<MaterialReceiptLine>()); Setup(new List<VwOrderMaterialDelivery>());
-        _materials.Add(new Material { MaterialId = 1, MaterialCode = "V1", MaterialName = "Vải", Unit = "m", Status = MaterialStatuses.Active });
+        _materials.Add(new Material { MaterialId = 1, MaterialName = "V1", Unit = "m", Status = MaterialStatuses.Active });
         _order = new CustomerOrder { OrderId = 1, OrderCode = "DH1", Status = OrderStatuses.InProduction, CustomerDeliveryCount = 1 };
         _orders.Add(_order);
         _orderMaterials.Add(new OrderMaterial

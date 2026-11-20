@@ -29,7 +29,7 @@ export const filterCustomer = (rows: IncomingCustomerMaterial[], f: IncomingFilt
   return rows.filter(
     (r) =>
       (!f.orderCode || r.orderCode === f.orderCode) &&
-      matches(keyword, [r.orderCode, r.materialCode, r.materialName, r.materialColor]),
+      matches(keyword, [r.orderCode, r.materialName, r.materialColor]),
   );
 };
 
@@ -46,7 +46,7 @@ export const filterPurchase = <T extends PurchaseRow>(rows: T[], f: IncomingFilt
           r.poCode,
           r.orderCode,
           r.supplierName,
-          r.materialCode,
+          r.materialName,
           r.materialName,
           r.materialColor,
         ]),

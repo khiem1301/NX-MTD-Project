@@ -8,7 +8,7 @@ namespace NX_MTD.Application.DTOs;
 /// tính sẵn trong view). Không có trường đơn giá CMT — đó là dữ liệu "mật", chỉ Admin được xem (GBR-02),
 /// và chỉ lộ ra ở màn hòa vốn (<see cref="BreakEvenResultDto"/>), không phải màn doanh thu.</summary>
 public sealed record RevenueSummaryDto(
-    string PeriodMonth, int OrderId, string OrderCode, int ProductId, string ProductCode, string ProductName,
+    string PeriodMonth, int OrderId, string OrderCode, int ProductId, string ProductCode,
     int FinishedQty, decimal Revenue);
 
 /// <summary>Gợi ý cho bộ lọc doanh thu: các đơn hàng và mã hàng đã có doanh thu.</summary>
@@ -17,7 +17,7 @@ public sealed record RevenueFilterOptionsDto(
 
 public sealed record RevenueOrderOptionDto(int OrderId, string OrderCode);
 
-public sealed record RevenueProductOptionDto(int ProductId, string ProductCode, string ProductName);
+public sealed record RevenueProductOptionDto(int ProductId, string ProductCode);
 
 public sealed record RevenueQuery : PageQuery
 {
@@ -35,7 +35,7 @@ public sealed record BreakEvenCalculateDto(string PeriodMonth, string Allocation
 /// <summary>Một dòng kết quả hòa vốn theo mã hàng — CHỈ Admin xem được (chứa CmtUnitPrice/VariableCost/
 /// AllocatedFixedCost/SurplusValue, đều là dữ liệu "mật" theo GBR-02).</summary>
 public sealed record BreakEvenResultDto(
-    int BreakEvenResultId, int PeriodId, string PeriodMonth, int ProductId, string ProductCode, string ProductName,
+    int BreakEvenResultId, int PeriodId, string PeriodMonth, int ProductId, string ProductCode,
     string AllocationBasis, int FinishedQty, decimal CmtUnitPrice, decimal Revenue, decimal VariableCost,
     decimal AllocatedFixedCost, decimal? BreakEvenQty, decimal? PercentReached, decimal SurplusValue, bool IsAtRisk,
     DateTime CalculatedAt, string? AtRiskWarning);

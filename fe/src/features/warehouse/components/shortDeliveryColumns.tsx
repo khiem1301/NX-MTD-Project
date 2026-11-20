@@ -31,7 +31,7 @@ export const shortDeliveryColumns = ({
     key: 'material',
     render: (_, l) => (
       <Space direction="vertical" size={0}>
-        <b>{l.materialCode}</b>
+        <b>{l.materialName}</b>
         <Typography.Text type="secondary">
           {l.materialName}
           {l.materialColor ? ` - ${l.materialColor}` : ''}

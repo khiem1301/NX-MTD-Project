@@ -30,7 +30,7 @@ public class OrderMarkerServiceTests
     /// <summary>Đơn có áo Đen S, M, L và Xanh M, L. Nhóm 1 dùng cho Đen, nhóm 2 cho Xanh (dạng bìa riêng).</summary>
     public OrderMarkerServiceTests()
     {
-        var product = new Product { ProductId = ProductId, ProductCode = "AO-01", ProductName = "Áo" };
+        var product = new Product { ProductId = ProductId, ProductCode = "AO-01" };
         foreach (var (color, size) in new[] { ("Đen", "S"), ("Đen", "M"), ("Đen", "L"), ("Xanh", "M"), ("Xanh", "L") })
             _lines.Add(new OrderLine { OrderLineId = _lines.Count + 1, OrderId = OrderId, OrderedQty = 10 }
                 .WithVariant(TestVariant.Make(product, color, size)));
@@ -46,7 +46,7 @@ public class OrderMarkerServiceTests
             MarkerNo = group,
             ProductColorId = TestVariant.ColorOf(ProductId, color).ProductColorId,
             MaterialId = 100 + group,
-            Material = new Material { MaterialId = 100 + group, MaterialCode = $"V0{group}", MaterialName = "Vải", Color = color, WidthM = 1.5m },
+            Material = new Material { MaterialId = 100 + group, MaterialName = $"V0{group}", Color = color, WidthM = 1.5m },
         };
 
     private void Setup<T>(List<T> backing, Action<T>? onAdd = null) where T : class
@@ -94,7 +94,7 @@ public class OrderMarkerServiceTests
     {
         var product = (await Sut().GetAsync(OrderId, default)).Data!.Products.Single();
 
-        product.MarkerGroups.Single(g => g.MarkerNo == 1).Fabrics.Select(f => (f.MaterialCode, f.WidthM)).Should()
+        product.MarkerGroups.Single(g => g.MarkerNo == 1).Fabrics.Select(f => (f.MaterialName, f.WidthM)).Should()
             .Equal(("V01", (decimal?)1.5m));
     }
 

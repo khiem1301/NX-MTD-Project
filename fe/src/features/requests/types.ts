@@ -1,7 +1,6 @@
 /** NVL chọn được ở đơn Xin NVL kèm số khả dụng trong kho (trần số lượng xin, DEV-ALL-110). */
 export type RequisitionMaterialOption = {
   materialId: number;
-  materialCode: string;
   materialName: string;
   materialType: string;
   unit: string;
@@ -13,7 +12,6 @@ export type RequisitionMaterialOption = {
 export type RequisitionPieceOption = {
   orderLineId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;

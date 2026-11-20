@@ -37,7 +37,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
             .Where(om => om.CustomerQty > 0 && !closed.Contains(om.Order.Status))
             .Select(om => new
             {
-                om.OrderMaterialId, om.OrderId, om.Order.OrderCode, om.Material.MaterialCode, om.Material.MaterialName,
+                om.OrderMaterialId, om.OrderId, om.Order.OrderCode, om.Material.MaterialName,
                 MaterialColor = om.Material.Color, om.Material.Unit, om.CustomerQty,
                 ExpectedDeliveryCount = om.Order.CustomerDeliveryCount, ExpectedDeliveryDate = om.Order.CustomerDeliveryDate,
                 ExpectedDeliveryDateTo = om.Order.CustomerDeliveryDateTo,   // lịch khách giao của cả đơn (DEV-ALL-95)
@@ -60,13 +60,13 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
         var dates = await _schedule.GetManyAsync(DeliveryOwner.CustomerOrder, rows.Select(r => r.OrderId).Distinct().ToArray(), ct);
 
         return rows
-            .Select(r => new IncomingCustomerMaterialDto(r.OrderMaterialId, r.OrderId, r.OrderCode, r.MaterialCode, r.MaterialName,
+            .Select(r => new IncomingCustomerMaterialDto(r.OrderMaterialId, r.OrderId, r.OrderCode, r.MaterialName,
                 r.MaterialColor, r.Unit, r.CustomerQty, received.GetValueOrDefault(r.OrderMaterialId),
                 r.CustomerQty - received.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryCount,
                 counts.GetValueOrDefault(r.OrderMaterialId), r.ExpectedDeliveryDate, r.ExpectedDeliveryDateTo,
                 dates.GetValueOrDefault(r.OrderId)))
             .Where(r => r.OutstandingQty > 0 && !closedShort.Contains(r.OrderMaterialId))
-            .OrderBy(r => r.OrderCode).ThenBy(r => r.MaterialCode)
+            .OrderBy(r => r.OrderCode).ThenBy(r => r.MaterialName)
             .ToList();
     }
 
@@ -97,7 +97,6 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 OrderCode = l.PurchaseOrder.Order == null ? null : l.PurchaseOrder.Order.OrderCode,
                 SupplierName = l.PurchaseOrder.Supplier == null ? null : l.PurchaseOrder.Supplier.SupplierName,
                 l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
-                MaterialCode = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                 MaterialName = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                 Unit = l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                 MaterialColor = l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
@@ -108,7 +107,7 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
         var received = await ReceivedByLineAsync(rows.Select(r => r.PurchaseOrderLineId).ToArray(), ct);
         return rows
             .Select(r => new ClosedShortPurchaseDto(r.PurchaseOrderId, r.PoCode, r.OrderId, r.OrderCode, r.SupplierName,
-                r.PurchaseOrderLineId, r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
+                r.PurchaseOrderLineId, r.MaterialName, r.MaterialColor, r.Unit,
                 r.OrderedQty, received.GetValueOrDefault(r.PurchaseOrderLineId), r.NotReplenishedQty))
             .ToList();
     }
@@ -125,7 +124,6 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 SupplierName = l.PurchaseOrder.Supplier == null ? null : l.PurchaseOrder.Supplier.SupplierName,
                 l.PurchaseOrder.GoodsStatus, l.PurchaseOrder.ExpectedDeliveryCount, l.PurchaseOrder.ExpectedDeliveryDate,
                 l.PurchaseOrder.ExpectedDeliveryDateTo, l.PurchaseOrderLineId, l.OrderedQty, l.NotReplenishedQty,
-                MaterialCode = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialCode : l.Material!.MaterialCode,
                 MaterialName = l.OrderMaterial != null ? l.OrderMaterial.Material.MaterialName : l.Material!.MaterialName,
                 Unit = l.OrderMaterial != null ? l.OrderMaterial.Material.Unit : l.Material!.Unit,
                 MaterialColor = l.OrderMaterial != null ? l.OrderMaterial.Material.Color : l.Material!.Color,
@@ -145,12 +143,12 @@ public sealed class IncomingMaterialService : IIncomingMaterialService
                 var got = received.GetValueOrDefault(r.PurchaseOrderLineId);
                 return new IncomingSupplierMaterialDto(r.PurchaseOrderId, r.PoCode, r.OrderId, r.OrderCode, r.SupplierName,
                     r.ExpectedDeliveryCount, counts.GetValueOrDefault(r.PurchaseOrderId), r.PurchaseOrderLineId,
-                    r.MaterialCode, r.MaterialName, r.MaterialColor, r.Unit,
+                    r.MaterialName, r.MaterialColor, r.Unit,
                     r.OrderedQty, got, r.OrderedQty - got - r.NotReplenishedQty, r.GoodsStatus, r.ExpectedDeliveryDate,
                     r.ExpectedDeliveryDateTo, dates.GetValueOrDefault(r.PurchaseOrderId));
             })
             .Where(r => r.OutstandingQty > 0)
-            .OrderBy(r => r.PoCode).ThenBy(r => r.MaterialCode)
+            .OrderBy(r => r.PoCode).ThenBy(r => r.MaterialName)
             .ToList();
     }
 }

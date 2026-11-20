@@ -159,6 +159,11 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-147 | 20/11/2026 | Claude (AI) | UC09, UC45, `CustomerOrder`, form đơn hàng, phiếu xuất | Đơn hàng có địa chỉ giao hàng (`CustomerOrder.DeliveryAddress`, bắt buộc khi tạo / sửa đơn, ≤ 500 ký tự), điền sẵn theo địa chỉ khách khi chọn khách; hiện ở chi tiết đơn; Quản đốc lập phiếu xuất chọn đơn thì địa chỉ giao của phiếu được điền sẵn từ đơn (vẫn sửa được) | Mở |
+| DEV-ALL-146 | 19/11/2026 | Claude (AI) | UC25, `OperationService`, hộp thoại nhập công đoạn | Cột CHI TIẾT của file nhập công đoạn: tên chi tiết chưa có ở mã hàng hoặc là phụ liệu không còn là lỗi chặn dòng mà là cảnh báo (bỏ qua chi tiết đó, vẫn nhập phần còn lại); xem trước có dòng cảnh báo chung và chi tiết từng dòng ở cột Kết quả | Mở |
+| DEV-ALL-145 | 19/11/2026 | Claude (AI) | UC10, UC09, form Thêm mới mã hàng trong form đơn hàng, `ProductExcelImports`, file mẫu `Mau_Form_Ma_Hang` | Form Thêm mới mã hàng (cả khi mở từ form đơn hàng) chỉ còn 3 mục Excel: Thành phần, Định mức NVL, Nhóm bìa; bỏ nhóm "Theo đơn hàng" (Bìa cắt, NVL của đơn); sheet Bìa của đơn / NVL của đơn trong file chung bị bỏ khi đọc file; file mẫu form mã hàng chỉ còn 4 sheet (bỏ bản "Theo_Don", bỏ tham số `withOrder`) | Mở |
+| DEV-ALL-144 | 19/11/2026 | Claude (AI) | UC10, UC09, UC37–UC39, `Product`, `Material`, mọi màn hiển thị mã hàng / NVL, nhập Excel | Bỏ cột Tên mã hàng (`Product.ProductName`) và Mã NVL (`Material.MaterialCode`): mã hàng chỉ còn mã; NVL chỉ còn Tên NVL (`MaterialName`, dữ liệu cũ thay bằng mã NVL cũ), tên NVL là định danh duy nhất (`UQ_Material_Name`, thay UQ tên + loại + màu); Excel nhập đổi cột "Mã NVL" thành "Tên NVL", bỏ cột Tên mã hàng | Mở |
+| DEV-ALL-143 | 19/11/2026 | Claude (AI) | UC21, `OrderProgressPanel` | Bảng Tiến độ đơn hàng tách hai cảnh báo: đơn đã quá ngày giao mà chưa đóng là "Trễ hạn" (đỏ), đơn còn hạn mà hệ thống dự báo không kịp là "Nguy cơ trễ" (cam); dòng cảnh báo phía trên cũng tách hai dòng | Mở |
 | DEV-ALL-142 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `SpecImportBuilder`, `OperationService`, `OrderMaterialService`, popup kiểm tra Excel | Thay thế khi nhập Excel chỉ xóa dòng chưa được dùng ở bảng khác; dòng đã dùng giữ nguyên, không xóa, không ngừng dùng (sửa DEV-ALL-140); bảng Bìa của đơn ở xem trước / popup kiểm tra chỉ hiện cột size của đơn, mỗi size một cột | Mở |
 | DEV-ALL-141 | 19/11/2026 | Claude (AI) | UC10, form Sửa mã hàng, `ProductExcelImports` | Form Sửa mã hàng bỏ ô chọn đơn và hai ô Bìa cắt, NVL của đơn: chỉ còn Thành phần, Định mức NVL, Nhóm bìa; Bìa cắt và NVL của đơn nhập ở chi tiết đơn (hoặc form đơn hàng) | Mở |
 | DEV-ALL-140 | 19/11/2026 | Claude (AI) | UC10, UC09, UC25, UC37–UC39, `SpecImportBuilder`, `OrderMaterialService`, `OperationService` | Hộp thoại nhập Excel có ô "Thay thế dữ liệu cũ" (mặc định tắt) cho 6 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn, NVL của đơn, Công đoạn: dòng cũ không có trong file bị bỏ (xóa; đang dùng thì ngừng dùng), bảng không có trong file không bị đụng tới | Mở |
@@ -2886,4 +2891,59 @@
 - **Lý do:** người dùng yêu cầu thay thế chỉ xóa dữ liệu không ảnh hưởng bảng khác, dữ liệu đã dùng không được sửa; bìa của đơn chỉ cần size của đơn đó.
 - **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng), Thái (công đoạn), Minh (NVL của đơn).
 - **Cần sửa trong tài liệu:** DEV-ALL-140 (các câu "đang dùng thì ngừng dùng" nay là "đang dùng thì giữ nguyên").
+- **Trạng thái:** Mở
+
+### DEV-ALL-143 · Tiến độ đơn hàng: tách "Trễ hạn" và "Nguy cơ trễ"
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC21; FE `OrderProgressPanel`, `features/dashboard/utils/orderDelay.ts` (mới), `features/dashboard/constants.ts` (mới)
+- **Tài liệu gốc ghi:** UC21 / JOB-04: đơn có cờ `IsDelayRisk` (SL còn lại ÷ trung bình hoàn thiện > số ngày còn lại) hiện nhãn "Nguy cơ trễ", kể cả khi đã quá ngày giao.
+- **Code đang làm:** đơn chưa đóng (không phải Đã giao, Hoàn tất, Đã hủy, Đã dừng) có số ngày còn lại < 0 hiện nhãn đỏ "Trễ hạn" và nằm trong dòng cảnh báo đỏ "N đơn đã trễ hạn"; đơn còn hạn mà có cờ `IsDelayRisk` hiện nhãn cam "Nguy cơ trễ" và dòng cảnh báo vàng "N đơn có nguy cơ trễ hạn". Đơn đã đóng không cảnh báo. BE (JOB-04, cờ `IsDelayRisk`, thông báo) giữ nguyên.
+- **Lý do:** người dùng yêu cầu đơn đã quá ngày thì báo là trễ, chưa quá thì báo nguy cơ khi đến gần.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng).
+- **Cần sửa trong tài liệu:** Report-3 UC21 (mục cảnh báo đơn trễ).
+- **Trạng thái:** Mở
+
+### DEV-ALL-144 · Bỏ Tên mã hàng và Mã NVL, tên NVL thành định danh
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, UC37–UC39 và mọi nơi hiển thị mã hàng / NVL; DB (`Product`, `Material`, view `vw_MaterialStock`), BE (entity, DTO, `MaterialService`, nhập Excel định mức / NVL của đơn / mã hàng, file mẫu, xuất Excel tài chính, phiếu in kho), FE (form mã hàng, form NVL, bảng, popup kiểm tra Excel), seed
+- **Tài liệu gốc ghi:** Mã hàng có Mã + Tên mã hàng (bắt buộc, ≤ 200 ký tự); NVL có Mã NVL (tự sinh V-0001 / PL-0001 nếu để trống) + Tên NVL; Excel nhập NVL dùng cột Mã NVL; tên NVL trùng khi cùng tên + loại + màu.
+- **Code đang làm:** `Product.ProductName` và `Material.MaterialCode` bị xóa khỏi DB. Mã hàng chỉ còn `ProductCode` (mọi nhãn "mã - tên" chỉ còn mã). NVL chỉ còn `MaterialName`: patch `SQL/patches/2026-11-19_drop_product_name_material_code.sql` thay `MaterialName` bằng mã cũ rồi bỏ cột mã; `MaterialName` duy nhất toàn bảng (`UQ_Material_Name`), không còn tự sinh mã, muốn phân biệt màu thì đặt tên khác nhau (vd V-KATE-TR / V-KATE-XN). Excel nhập định mức và NVL của đơn dùng cột "Tên NVL"; Excel mã hàng chỉ còn "Mã hàng", "Mô tả"; xuất Excel doanh thu / hòa vốn / chi phí và phiếu nhập, phiếu cấp bỏ cột tên. Nhập Excel không còn gợi ý tên cho NVL mới (tên chính là cột Tên NVL của file). Tên NVL chỉ gồm chữ không dấu, số, khoảng trắng và . _ - (không nhập tiếng Việt có dấu), BE Trim + chữ hoa trước khi lưu, kiểm trùng không phân biệt hoa thường; mã hàng, mã đơn hàng đã có quy tắc tương tự từ trước.
+- **Lý do:** người dùng yêu cầu bỏ Tên mã hàng, bỏ Mã NVL và đưa dữ liệu mã NVL vào Tên NVL.
+- **Ảnh hưởng người khác:** Khiêm (mã hàng, đơn hàng), Minh (NVL, kho), Thái (định mức, công đoạn); DB cũ phải chạy patch trước khi chạy bản BE mới.
+- **Cần sửa trong tài liệu:** Report-3 các UC có Mã / Tên mã hàng, Mã / Tên NVL; `NX-MTD_Database_Giai_thich.md` (bảng `Product`, `Material`); file Excel mẫu mô tả trong hướng dẫn.
+- **Trạng thái:** Mở
+
+### DEV-ALL-145 · Form mã hàng trong form đơn hàng bỏ phần "Theo đơn hàng"
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; FE `ProductExcelImports`, `productExcelImports.tsx`, `useProductExcelImports`, `ExcelReviewModal`, `ImportTemplateLink`; BE `ImportTemplateService` / `ImportTemplatesController` (bỏ tham số `withOrder`)
+- **Tài liệu gốc ghi:** DEV-ALL-124 / DEV-ALL-141: form Thêm mới mã hàng trong màn đơn đủ 5 mục Excel (thêm Bìa cắt, NVL của đơn, nhập vào chính đơn sau khi Lưu đơn); file mẫu có bản "Theo đơn" 6 sheet.
+- **Code đang làm:** khung "Nhập từ Excel" của form mã hàng luôn chỉ có 3 mục (Thành phần, Định mức NVL, Nhóm bìa), bắt buộc khi Thêm mới. Bìa cắt và NVL của đơn chỉ nhập ở chi tiết đơn (tab Bìa cắt, tab NVL của đơn). File chung có sheet Bìa của đơn / NVL của đơn thì hai bảng này bị bỏ ngay khi đọc file (không hiện ở popup kiểm tra). File mẫu form mã hàng chỉ có bản 4 sheet.
+- **Lý do:** người dùng yêu cầu bỏ phần "Theo đơn hàng" ở form Thêm mới mã hàng.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng), Minh (NVL của đơn).
+- **Cần sửa trong tài liệu:** DEV-ALL-124, DEV-ALL-141 (phần form đơn hàng nhập Bìa cắt, NVL của đơn).
+- **Trạng thái:** Mở
+
+### DEV-ALL-146 · Nhập công đoạn: chi tiết không gắn được chỉ cảnh báo
+
+- **Ngày / Người / Task / PR:** 19/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC25 (nhập công đoạn từ Excel); BE `OperationService.ResolveComponents`, `OperationImportRowDto.Warning`, `OperationImportPreviewDto.WarningCount`; FE `OperationImportModal`, `operationImportColumns`
+- **Tài liệu gốc ghi:** DEV-ALL-116: tên ở cột CHI TIẾT phải là chi tiết PANEL của mã hàng, sai thì dòng đó báo lỗi và không nhập.
+- **Code đang làm:** tên chi tiết không có ở mã hàng hoặc là phụ liệu (TRIM) chỉ gây cảnh báo: dòng vẫn nhập được, tên đó bị bỏ qua, các tên gắn được vẫn gắn. Nếu không tên nào gắn được thì giữ nguyên bộ chi tiết hiện có của công đoạn (không xóa liên kết). Hộp thoại xem trước hiện một cảnh báo chung (số dòng) và chi tiết từng dòng ở cột Kết quả. Lỗi trùng STT, nhiều dòng CUỐI vẫn là lỗi.
+- **Lý do:** người dùng yêu cầu chi tiết không có thì cảnh báo (chung, chi tiết ở xem trước) chứ không báo lỗi.
+- **Ảnh hưởng người khác:** Thái (công đoạn, định mức).
+- **Cần sửa trong tài liệu:** DEV-ALL-116 (phần báo lỗi chi tiết không có).
+- **Trạng thái:** Mở
+
+### DEV-ALL-147 · Địa chỉ giao hàng của đơn hàng
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 (tạo / sửa đơn), UC45 (phiếu xuất); DB `CustomerOrder.DeliveryAddress` (patch `SQL/patches/2026-11-20_order_delivery_address.sql`), BE `CustomerOrderService`, `OrderInputValidatorBase`, DTO đơn hàng, lookup đơn / khách; FE form đơn hàng, chi tiết đơn, hộp thoại lập phiếu xuất
+- **Tài liệu gốc ghi:** đơn hàng không có địa chỉ giao; địa chỉ chỉ nhập ở phiếu xuất (`DispatchNote.DeliveryAddress`) và địa chỉ mặc định ở khách hàng.
+- **Code đang làm:** form tạo / sửa đơn có ô "Địa chỉ giao hàng" bắt buộc; chọn khách khi tạo đơn thì điền sẵn địa chỉ mặc định của khách (không đè nếu người dùng đã tự gõ). Đơn cũ được điền sẵn bằng địa chỉ mặc định của khách. Địa chỉ sửa được ở mọi trạng thái đơn còn sửa được. Chi tiết đơn hiện địa chỉ. Hộp thoại lập phiếu xuất: chọn đơn thì điền sẵn địa chỉ giao từ đơn, vẫn sửa được.
+- **Lý do:** người dùng yêu cầu thêm địa chỉ giao hàng lúc tạo đơn hàng.
+- **Ảnh hưởng người khác:** Khiêm (đơn hàng), Thái / Minh (phiếu xuất, kho); DB cũ phải chạy patch trước khi chạy bản BE mới.
+- **Cần sửa trong tài liệu:** Report-3 UC09 (thông tin đơn hàng), UC45; `NX-MTD_Database_Giai_thich.md` (bảng `CustomerOrder`).
 - **Trạng thái:** Mở

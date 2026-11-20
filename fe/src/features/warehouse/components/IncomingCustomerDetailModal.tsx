@@ -10,7 +10,6 @@ import type { OrderGroup } from '../utils/groupByOrder';
 const text = INCOMING_TEXT;
 
 const lineColumns: TableColumnsType<IncomingCustomerMaterial> = [
-  { title: text.materialCode, dataIndex: 'materialCode' },
   { title: text.materialName, dataIndex: 'materialName' },
   { title: text.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
   {

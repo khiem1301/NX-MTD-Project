@@ -60,7 +60,7 @@ export function OperationsPage() {
   const activeCounts = countOperations(filterOperations(all, { status: 'Active' }));
   const counts = countOperations(filterOperations(all, { status: filters.status }));
   const product = products.data?.items.find((p) => p.productId === productId);
-  const productLabel = product ? `${product.productCode} - ${product.productName}` : '';
+  const productLabel = product ? `${product.productCode}` : '';
   const showNoFinalHint =
     operations.isSuccess &&
     activeCounts.active > 0 &&

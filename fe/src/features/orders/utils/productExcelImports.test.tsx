@@ -15,8 +15,6 @@ jest.mock('../api/orderApi', () => ({
   excelBundleApi: {
     previewSpec: jest.fn(),
     importSpec: jest.fn(),
-    previewOrderMaterials: jest.fn(),
-    importOrderMaterials: jest.fn(),
   },
 }));
 jest.mock('@/services/materialApi', () => ({ materialApi: { create: jest.fn() } }));
@@ -53,7 +51,7 @@ const bundle: ExcelBundle = {
         rowNumber: 5,
         color: 'Tím',
         componentName: 'Cổ',
-        materialCode: 'V-1',
+        materialName: 'V-1',
         specNote: null,
         parseError: null,
       },
@@ -78,7 +76,7 @@ const bundle: ExcelBundle = {
   orderMaterials: [
     {
       rowNumber: 5,
-      materialCode: 'V-1',
+      materialName: 'V-1',
       requiredQty: 10,
       customerQty: null,
       note: null,
@@ -90,7 +88,7 @@ const bundle: ExcelBundle = {
 describe('runProductImports', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('nhập từng bảng riêng theo thứ tự bằng dữ liệu đã sửa; chưa có đơn thì bỏ qua bìa, NVL', async () => {
+  it('nhập từng bảng riêng theo thứ tự bằng dữ liệu đã sửa; mục lỗi không chặn mục sau', async () => {
     api.previewSpec.mockImplementation(async (_id, workbook) =>
       workbook.hasNorms
         ? (preview({
@@ -103,11 +101,9 @@ describe('runProductImports', () => {
 
     const outcomes = await runProductImports(9, { bundle });
 
-    expect(outcomes.map((o) => [o.kind, o.ok, o.skipped ?? false])).toEqual([
-      ['components', true, false],
-      ['norms', false, false],
-      ['markers', false, true],
-      ['orderMaterials', false, true],
+    expect(outcomes.map((o) => [o.kind, o.ok])).toEqual([
+      ['components', true],
+      ['norms', false],
     ]);
     expect(outcomes[1]?.rowErrors[0]).toContain('Dòng 5');
     // Mỗi lần chỉ gửi bảng của mục đó.
@@ -117,30 +113,6 @@ describe('runProductImports', () => {
     expect(api.importSpec).toHaveBeenCalledTimes(1);
   });
 
-  it('có đơn thì nhập bìa cắt và NVL của đơn theo đơn đó', async () => {
-    api.previewSpec.mockResolvedValue(preview({}) as never);
-    api.importSpec.mockResolvedValue({ success: true, data: {} as never, message: 'OK' });
-    api.previewOrderMaterials.mockResolvedValue({
-      rows: [],
-      validCount: 1,
-      errorCount: 0,
-      duplicateCount: 0,
-      changeCount: 1,
-    });
-    api.importOrderMaterials.mockResolvedValue({ success: true, data: null, message: 'OK' });
-
-    const outcomes = await runProductImports(9, { bundle, orderId: 23 });
-
-    expect(outcomes.every((o) => o.ok)).toBe(true);
-    expect(api.previewSpec).toHaveBeenCalledWith(
-      9,
-      expect.objectContaining({ hasOrderMarkers: true }),
-      23,
-      ['markers'],
-    );
-    expect(api.importOrderMaterials).toHaveBeenCalledWith(23, bundle.orderMaterials);
-  });
-
   it('lỗi máy chủ của một mục không chặn mục sau', async () => {
     api.previewSpec
       .mockRejectedValueOnce({ success: false, errorCode: 'X', message: 'Lỗi máy chủ' })
@@ -148,7 +120,7 @@ describe('runProductImports', () => {
     api.importSpec.mockResolvedValue({ success: true, data: {} as never, message: 'Đã nhập' });
 
     const outcomes = await runProductImports(9, {
-      bundle: clearKind(clearKind(bundle, 'markers'), 'orderMaterials'),
+      bundle,
     });
 
     expect(outcomes.map((o) => [o.kind, o.ok, o.message])).toEqual([
@@ -164,9 +136,9 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
   it('tạo NVL trước rồi mới nhập; NVL lỗi báo riêng, không chặn', async () => {
     const order: string[] = [];
     (materialApi.create as jest.Mock).mockImplementation(
-      async (_role, m: { materialCode: string }) => {
-        order.push(`create ${m.materialCode}`);
-        if (m.materialCode === 'X2')
+      async (_role, m: { materialName: string }) => {
+        order.push(`create ${m.materialName}`);
+        if (m.materialName === 'X2')
           throw { success: false, errorCode: 'DUP', message: 'Mã đã có' };
         return {};
       },
@@ -183,10 +155,10 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
     };
 
     const outcomes = await runProductImports(9, {
-      bundle: clearKind(clearKind(clearKind(bundle, 'markers'), 'orderMaterials'), 'norms'),
+      bundle: clearKind(bundle, 'norms'),
       newMaterials: [
-        { ...material, materialCode: 'X1' },
-        { ...material, materialCode: 'X2' },
+        { ...material, materialName: 'X1' },
+        { ...material, materialName: 'X2' },
       ],
     });
 
@@ -198,21 +170,14 @@ describe('NVL mới vào danh mục (DEV-ALL-123)', () => {
 });
 
 describe('mục bắt buộc khi Thêm mới (DEV-ALL-124)', () => {
-  it('form đơn bắt buộc đủ 5 mục; màn Mã hàng 3 mục định mức; Sửa không bắt buộc', () => {
-    expect(requiredKindsFor(true, true)).toEqual([
-      'components',
-      'norms',
-      'groups',
-      'markers',
-      'orderMaterials',
-    ]);
-    expect(requiredKindsFor(true, false)).toEqual(['components', 'norms', 'groups']);
-    expect(requiredKindsFor(false, true)).toEqual([]);
+  it('Thêm mới bắt buộc 3 mục định mức; Sửa không bắt buộc', () => {
+    expect(requiredKindsFor(true)).toEqual(['components', 'norms', 'groups']);
+    expect(requiredKindsFor(false)).toEqual([]);
   });
 
   it('liệt kê mục bắt buộc chưa có dòng nào', () => {
     const noGroups = clearKind(bundle, 'groups');
-    expect(missingKinds({ bundle: noGroups }, requiredKindsFor(true, true))).toEqual(['groups']);
+    expect(missingKinds({ bundle: noGroups }, requiredKindsFor(true))).toEqual(['groups']);
     expect(missingKinds({}, ['components'])).toEqual(['components']);
   });
 });
@@ -229,7 +194,6 @@ describe('bộ dữ liệu', () => {
 
     expect(merged.spec.components).toEqual([]);
     expect(merged.spec.norms).toBe(bundle.spec.norms);
-    expect(merged.orderMaterials).toBe(bundle.orderMaterials);
-    expect(kindsWithData(merged)).toEqual(['norms', 'markers', 'orderMaterials']);
+    expect(kindsWithData(merged)).toEqual(['norms']);
   });
 });

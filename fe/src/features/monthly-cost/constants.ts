@@ -24,7 +24,6 @@ export const MONTHLY_COST_TEXT = {
     costCategoryCode: 'Loại chi phí',
     costType: 'Kiểu',
     productCode: 'Mã hàng',
-    productName: 'Tên hàng',
     amount: 'Số tiền',
     quantity: 'Số lượng',
     note: 'Ghi chú',

@@ -34,14 +34,13 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
     private IQueryable<VwOrderLineProgress> Progress => _uow.Repository<VwOrderLineProgress>().Query();
 
     private sealed record LineRow(int OrderLineId, int OrderId, string OrderCode, string OrderStatus, DateOnly DueDate, int ProductId,
-        string ProductCode, string ProductName, string Color, string SizeCode, int OrderedQty)
+        string ProductCode, string Color, string SizeCode, int OrderedQty)
     {
         public string Label => string.Format(Messages.OrderLineLabel, ProductCode, Color, SizeCode);
     }
 
     private static IQueryable<LineRow> ToRows(IQueryable<OrderLine> lines) => lines.Select(l => new LineRow(l.OrderLineId, l.OrderId,
-        l.Order.OrderCode, l.Order.Status, l.Order.DueDate, l.ProductId, l.ProductVariant.Product.ProductCode,
-        l.ProductVariant.Product.ProductName, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty));
+        l.Order.OrderCode, l.Order.Status, l.Order.DueDate, l.ProductId, l.ProductVariant.Product.ProductCode, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode, l.OrderedQty));
 
     public async Task<Result<PagedResult<OrderLineTeamDto>>> GetPagedAsync(OrderLineTeamQuery query, CancellationToken ct)
     {
@@ -50,7 +49,7 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var filtered = Lines.AsNoTracking()
             .Where(l => !OrderStatuses.Closed.Contains(l.Order.Status))
             .Where(l => string.IsNullOrEmpty(keyword) || l.Order.OrderCode.Contains(keyword)
-                        || l.ProductVariant.Product.ProductCode.Contains(keyword) || l.ProductVariant.Product.ProductName.Contains(keyword)
+                        || l.ProductVariant.Product.ProductCode.Contains(keyword)
                         || l.ProductVariant.ProductColor.Color.Contains(keyword) || l.ProductVariant.SizeCode.Contains(keyword))
             .Where(l => !query.OnlyUnallotted || !allotments.Any(a => a.OrderLineId == l.OrderLineId))
             .OrderBy(l => l.Order.DueDate).ThenBy(l => l.OrderId).ThenBy(l => l.ProductVariant.Product.ProductCode)
@@ -61,8 +60,7 @@ public sealed class OrderLineTeamService : IOrderLineTeamService
         var teams = await Allotments.AsNoTracking().Where(a => lineIds.Contains(a.OrderLineId))
             .OrderBy(a => a.SewingTeam.TeamName)
             .Select(a => new { a.OrderLineId, a.SewingTeamId, a.SewingTeam.TeamName }).ToListAsync(ct);
-        var items = page.Items.Select(r => new OrderLineTeamDto(r.OrderLineId, r.OrderId, r.OrderCode, r.DueDate, r.ProductId, r.ProductCode,
-            r.ProductName, r.Color, r.SizeCode, r.OrderedQty,
+        var items = page.Items.Select(r => new OrderLineTeamDto(r.OrderLineId, r.OrderId, r.OrderCode, r.DueDate, r.ProductId, r.ProductCode, r.Color, r.SizeCode, r.OrderedQty,
             teams.Where(t => t.OrderLineId == r.OrderLineId).Select(t => new AllottedTeamDto(t.SewingTeamId, t.TeamName)).ToList())).ToList();
         return Result<PagedResult<OrderLineTeamDto>>.Success(new PagedResult<OrderLineTeamDto>(items, page.Page, page.PageSize, page.TotalItems));
     }

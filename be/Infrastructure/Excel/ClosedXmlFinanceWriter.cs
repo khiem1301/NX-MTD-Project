@@ -9,11 +9,11 @@ namespace NX_MTD.Infrastructure.Excel;
 public sealed class ClosedXmlFinanceWriter : IFinanceExcelWriter
 {
     private static readonly string[] RevenueHeaders =
-        { "Tháng", "Mã đơn hàng", "Mã hàng", "Tên hàng", "SL hoàn thiện", "Doanh thu" };
+        { "Tháng", "Mã đơn hàng", "Mã hàng", "SL hoàn thiện", "Doanh thu" };
 
     private static readonly string[] BreakEvenHeaders =
     {
-        "Tháng", "Mã hàng", "Tên hàng", "Cách phân bổ định phí", "SL hoàn thiện", "Đơn giá CMT", "Doanh thu",
+        "Tháng", "Mã hàng", "Cách phân bổ định phí", "SL hoàn thiện", "Đơn giá CMT", "Doanh thu",
         "Biến phí", "Định phí phân bổ", "SL hòa vốn", "% đạt hòa vốn", "Giá trị thặng dư", "Nguy cơ lỗ", "Tính lúc",
     };
 
@@ -31,7 +31,6 @@ public sealed class ClosedXmlFinanceWriter : IFinanceExcelWriter
             sheet.Cell(r, c++).Value = row.PeriodMonth;
             sheet.Cell(r, c++).Value = row.OrderCode;
             sheet.Cell(r, c++).Value = row.ProductCode;
-            sheet.Cell(r, c++).Value = row.ProductName;
             sheet.Cell(r, c++).Value = row.FinishedQty;
             sheet.Cell(r, c).Value = row.Revenue;
             r++;
@@ -54,7 +53,6 @@ public sealed class ClosedXmlFinanceWriter : IFinanceExcelWriter
             var c = 1;
             sheet.Cell(r, c++).Value = row.PeriodMonth;
             sheet.Cell(r, c++).Value = row.ProductCode;
-            sheet.Cell(r, c++).Value = row.ProductName;
             sheet.Cell(r, c++).Value = row.AllocationBasis;
             sheet.Cell(r, c++).Value = row.FinishedQty;
             sheet.Cell(r, c++).Value = row.CmtUnitPrice;

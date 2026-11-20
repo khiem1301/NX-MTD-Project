@@ -25,7 +25,7 @@ public class ExcelBundleServiceTests : ProductionTestBase
     {
         SetupQueryable(new List<Material>
         {
-            new() { MaterialId = 1, MaterialCode = "V-0001", MaterialName = "Vải", Color = "Hồng", Unit = "m", Status = MaterialStatuses.Active },
+            new() { MaterialId = 1, MaterialName = "V-0001", Color = "Hồng", Unit = "m", Status = MaterialStatuses.Active },
         });
         _specImport.CheckAsync(Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<SpecWorkbookDto>(), Arg.Any<CancellationToken>())
             .Returns(Result<SpecImportPreviewDto>.Success(SpecPreview()));
@@ -59,17 +59,16 @@ public class ExcelBundleServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public void Parse_OrderMaterialSheet_ReadsOptionalNameAndUnit()
+    public void Parse_OrderMaterialSheet_ReadsNameAndOptionalUnit()
     {
         using var stream = Book(wb =>
         {
             var ws = wb.AddWorksheet("NVL");
-            string[] headers = ["Mã NVL", "Tên NVL", "Đơn vị", "Số cần"];
+            string[] headers = ["Tên NVL", "Đơn vị", "Số cần"];
             for (var c = 0; c < headers.Length; c++) ws.Cell(1, c + 1).Value = headers[c];
             ws.Cell(2, 1).Value = "lua-xanh";
-            ws.Cell(2, 2).Value = "Lụa xanh";
-            ws.Cell(2, 3).Value = "m";
-            ws.Cell(2, 4).Value = 10;
+            ws.Cell(2, 2).Value = "m";
+            ws.Cell(2, 3).Value = 10;
         });
 
         var bundle = Sut().Parse(stream).Data!;
@@ -77,7 +76,7 @@ public class ExcelBundleServiceTests : ProductionTestBase
         bundle.HasProducts.Should().BeFalse();
         bundle.HasOrderMaterials.Should().BeTrue();
         bundle.OrderMaterials.Single().Should().Match<OrderMaterialExcelRow>(r =>
-            r.MaterialCode == "LUA-XANH" && r.MaterialName == "Lụa xanh" && r.Unit == "m" && r.RequiredQty == 10);
+            r.MaterialName == "LUA-XANH" && r.Unit == "m" && r.RequiredQty == 10);
     }
 
     [Fact]
@@ -86,7 +85,7 @@ public class ExcelBundleServiceTests : ProductionTestBase
         var bundle = new ExcelBundleDto(false, [], EmptySpec, true,
         [
             new OrderMaterialExcelRow(5, "V-0001", 10, null, null, null),
-            new OrderMaterialExcelRow(6, "LUA-XANH", 20, null, null, null, "Lụa xanh", "m"),
+            new OrderMaterialExcelRow(6, "LUA-XANH", 20, null, null, null, "m"),
         ]);
 
         var result = (await Sut().CheckAsync(new ExcelBundleCheckDto(null, null, bundle), default)).Data!;
@@ -94,7 +93,7 @@ public class ExcelBundleServiceTests : ProductionTestBase
         result.OrderMaterials!.Rows.Select(r => r.Action).Should().Equal(
             SpecImportBuilder.ActionPending, SpecImportBuilder.ActionNewMaterial);
         result.MissingMaterials.Should().ContainSingle().Which.Should().Match<MissingMaterialDto>(m =>
-            m.MaterialCode == "LUA-XANH" && m.SuggestedType == MaterialTypes.Trim && m.SuggestedName == "Lụa xanh" && m.SuggestedUnit == "m");
+            m.MaterialName == "LUA-XANH" && m.SuggestedType == MaterialTypes.Trim && m.SuggestedUnit == "m");
         await _orderMaterials.DidNotReceive().PreviewImportAsync(Arg.Any<int>(), Arg.Any<IReadOnlyList<OrderMaterialExcelRow>>(),
             Arg.Any<CancellationToken>());
     }
@@ -109,7 +108,7 @@ public class ExcelBundleServiceTests : ProductionTestBase
         };
         _specImport.CheckAsync(Arg.Any<int?>(), Arg.Any<int?>(), Arg.Any<SpecWorkbookDto>(), Arg.Any<CancellationToken>())
             .Returns(Result<SpecImportPreviewDto>.Success(SpecPreview(
-                new SpecImportNormRowDto(5, SpecImportBuilder.ActionNewMaterial, "x", "Xanh", "Thân", "LUA-XANH", null, null, null, null))));
+                new SpecImportNormRowDto(5, SpecImportBuilder.ActionNewMaterial, "x", "Xanh", "Thân", "LUA-XANH", null, null, null))));
 
         var result = (await Sut().CheckAsync(new ExcelBundleCheckDto(null, null, new ExcelBundleDto(false, [], spec, false, [])), default))
             .Data!;

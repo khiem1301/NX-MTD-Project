@@ -21,7 +21,6 @@ export type WorkOrderLine = {
 /** Vải theo kích thước chi tiết của một NVL: chỉ để cảnh báo, không chặn lập lệnh. materialId = 0: màu – size chưa có định mức vải. */
 export type WorkOrderFabricCheck = {
   materialId: number;
-  materialCode: string;
   materialName: string;
   materialColor: string;
   status: 'Enough' | 'Short' | 'Unknown';
@@ -59,7 +58,6 @@ export type FabricMarkerUse = {
 };
 
 export type WorkOrder = Omit<WorkOrderListItem, 'totalPlannedQty'> & {
-  productName: string;
   sourceRequestId: number | null;
   note: string | null;
   lines: WorkOrderLine[];
@@ -108,7 +106,6 @@ export type CuttingLayLine = {
 
 export type CuttingLayFabric = {
   materialId: number;
-  materialCode: string;
   materialName: string;
   materialColor: string;
   /** null = bàn cũ chưa có số mét. */

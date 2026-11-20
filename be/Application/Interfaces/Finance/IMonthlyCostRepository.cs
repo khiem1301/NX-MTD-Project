@@ -30,7 +30,7 @@ public interface IMonthlyCostRepository
 
     // ---------- Import Excel: tra cứu mã hàng cho khoản VARIABLE (UC12) ----------
 
-    Task<IReadOnlyDictionary<string, (int ProductId, string ProductName)>> GetProductsByCodesAsync(
+    Task<IReadOnlyDictionary<string, int>> GetProductsByCodesAsync(
         IReadOnlyCollection<string> productCodes, CancellationToken ct);
 
     // ---------- Đối soát suất ăn (UC30/UC12): Σ DailyMeal.TotalAmount trong khoảng ngày ----------

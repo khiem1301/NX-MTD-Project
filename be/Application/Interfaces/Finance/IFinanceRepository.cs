@@ -19,7 +19,7 @@ public interface IFinanceRepository
 
     Task<IReadOnlyDictionary<int, string>> GetOrderCodesAsync(IReadOnlyCollection<int> orderIds, CancellationToken ct);
 
-    Task<IReadOnlyDictionary<int, (string ProductCode, string ProductName)>> GetProductsAsync(
+    Task<IReadOnlyDictionary<int, string>> GetProductsAsync(
         IReadOnlyCollection<int> productIds, CancellationToken ct);
 
     // ---------- Cổng điều kiện tính hòa vốn (GBR-17, MSG25) ----------

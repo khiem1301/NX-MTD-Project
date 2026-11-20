@@ -41,7 +41,7 @@ public class WorkOrderRequisitionTests : ProductionTestBase
     }
 
     private static WorkOrderMaterialAllowanceDto Allow(int id, decimal? need, decimal? cap, decimal requested) =>
-        new(id, $"V{id}", $"Vải {id}", "", "m", need, cap, requested, cap is null ? null : cap - requested);
+        new(id, $"V{id}", "", "m", need, cap, requested, cap is null ? null : cap - requested);
 
     private Task<Result> Check(int? workOrderId, params (int Id, decimal Qty)[] lines) =>
         new MaterialRequisitionRequestHandler(Clock, Uow, User, _needs, _stock).ValidateAsync(new RequestDraft(RequestTypes.MaterialRequisition,
@@ -114,7 +114,7 @@ public class WorkOrderRequisitionTests : ProductionTestBase
             Line(Req(6, RequestStatuses.PendingProcessing), 15m),   // đơn đang sửa
         });
         _wo.FabricTolerancePercent = 10m;
-        var needs = new[] { new WorkOrderFabricCheckDto(FabricId, "V1", "Vải kate", "", FabricCheckStatuses.Enough, 100m, null, null) };
+        var needs = new[] { new WorkOrderFabricCheckDto(FabricId, "V1", "", FabricCheckStatuses.Enough, 100m, null, null) };
 
         var row = (await new WorkOrderFabricNeeds(Uow, null!).AllowanceFromNeedsAsync(_wo, needs, 6, default)).Single();
 

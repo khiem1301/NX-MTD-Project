@@ -11,10 +11,9 @@ jest.mock('../hooks/useOrderMaterials', () => ({
   useCreateOrderMaterials: () => ({ mutate: mockMutate, isPending: false }),
 }));
 
-const material = (materialId: number, materialCode: string) => ({
+const material = (materialId: number, materialName: string) => ({
   materialId,
-  materialCode,
-  materialName: `Tên ${materialCode}`,
+  materialName,
   materialType: 'FABRIC',
   unit: 'm',
   color: '',
@@ -22,7 +21,6 @@ const material = (materialId: number, materialCode: string) => ({
 const product = (materials = [material(1, 'VAI01'), material(2, 'CHI02')]) => ({
   productId: 7,
   productCode: 'AO-01',
-  productName: 'Áo',
   materials,
 });
 

@@ -82,16 +82,6 @@ export const productColumns = (
     ),
   },
   {
-    title: col.productName,
-    key: 'name',
-    render: (_, r) => (
-      <Input
-        value={r.productName}
-        onChange={(e) => ctx.update(r.rowNumber, { productName: e.target.value })}
-      />
-    ),
-  },
-  {
     title: col.description,
     key: 'desc',
     render: (_, r) => (
@@ -189,10 +179,10 @@ export const normColumns = (
       <Select
         showSearch
         style={{ width: '100%' }}
-        value={r.materialCode || undefined}
+        value={r.materialName || undefined}
         options={materialOptions}
         optionFilterProp="label"
-        onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
+        onChange={(materialName: string) => ctx.update(r.rowNumber, { materialName })}
       />
     ),
   },
@@ -366,22 +356,10 @@ export const orderMaterialColumns = (
       <Select
         showSearch
         style={{ width: '100%' }}
-        value={r.materialCode || undefined}
+        value={r.materialName || undefined}
         options={materialOptions}
         optionFilterProp="label"
-        onChange={(materialCode: string) => ctx.update(r.rowNumber, { materialCode })}
-      />
-    ),
-  },
-  {
-    // DEV-ALL-123: tên NVL theo file (NVL đã có thì danh mục quyết định; NVL chưa có thì làm tên gợi ý khi thêm vào danh mục).
-    title: col.materialName,
-    key: 'name',
-    width: 180,
-    render: (_, r) => (
-      <Input
-        value={text$(r.materialName)}
-        onChange={(e) => ctx.update(r.rowNumber, { materialName: e.target.value || null })}
+        onChange={(materialName: string) => ctx.update(r.rowNumber, { materialName })}
       />
     ),
   },

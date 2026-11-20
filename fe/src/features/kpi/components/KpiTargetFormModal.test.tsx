@@ -44,7 +44,6 @@ const TARGET = {
   orderCode: 'DH002',
   productId: 3,
   productCode: 'MH003',
-  productName: 'Quần',
   sewingTeamId: 4,
   sewingTeamName: 'Tổ may 1',
   startDate: '2030-01-05',

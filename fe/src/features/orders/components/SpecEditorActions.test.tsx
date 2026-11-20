@@ -12,7 +12,6 @@ jest.mock('./SpecImportModal', () => ({
 const product = {
   productId: 1,
   productCode: 'AO01',
-  productName: 'Áo khoác',
 } as ProductListItem;
 
 /** Nút nằm ở chân DetailModal (ModalActions đưa nút vào đó), nên bọc trong DetailModal như form định mức thật. */
@@ -44,7 +43,7 @@ describe('SpecEditorActions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Nhập từ Excel/ }));
 
-    expect(screen.getByText('hộp thoại nhập AO01 - Áo khoác')).toBeInTheDocument();
+    expect(screen.getByText('hộp thoại nhập AO01')).toBeInTheDocument();
   });
 
   it('form còn thay đổi chưa lưu thì hỏi trước khi mở', async () => {

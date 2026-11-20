@@ -34,7 +34,7 @@ public class WorkOrderFabricTests : ProductionTestBase
     private readonly List<ProductMarker> _markers = [];
     private readonly Material _fabric = new()
     {
-        MaterialId = FabricId, MaterialCode = "V01", MaterialName = "Vải gió", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
+        MaterialId = FabricId, MaterialName = "V01", Unit = "m", Color = "Đen", MaterialType = MaterialTypes.Fabric,
     };
 
     public WorkOrderFabricTests()

@@ -15,7 +15,6 @@ const TARGET: KpiTarget = {
   orderCode: 'DH001',
   productId: 2,
   productCode: 'MH001',
-  productName: 'Áo',
   sewingTeamId: 3,
   sewingTeamName: 'Tổ may 1',
   startDate: '2026-10-14',

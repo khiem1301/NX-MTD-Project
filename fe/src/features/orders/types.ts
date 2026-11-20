@@ -18,7 +18,13 @@ export type CustomerQuery = {
   pageSize?: number;
 };
 /** Khách hàng rút gọn cho ô chọn: đủ để lọc khách đang hợp tác. */
-export type CustomerOption = { customerId: number; customerName: string; status: CustomerStatus };
+export type CustomerOption = {
+  customerId: number;
+  customerName: string;
+  status: CustomerStatus;
+  /** Gợi ý địa chỉ giao hàng khi chọn khách lúc tạo đơn. */
+  defaultAddress?: string | null;
+};
 export type SaveCustomerPayload = {
   customerName: string;
   phone?: string | null;
@@ -30,7 +36,6 @@ export type ProductStatus = 'Active' | 'Discontinued';
 export type ProductListItem = {
   productId: number;
   productCode: string;
-  productName: string;
   sampleImageUrl: string | null;
   /** Khóa các ảnh phụ theo thứ tự hiển thị (tối đa 5). */
   extraImages: string[];
@@ -46,7 +51,6 @@ export type ProductDetail = ProductListItem & {
 };
 export type SaveProductPayload = {
   productCode: string;
-  productName: string;
   sampleImageUrl?: string | null;
   /** Ảnh phụ theo thứ tự hiển thị (tối đa 5); bỏ trống = giữ nguyên, mảng rỗng = xóa hết. */
   extraImages?: string[];
@@ -73,7 +77,6 @@ export type ProductNormItem = {
   componentName: string;
   color: string;
   materialId: number;
-  materialCode: string;
   materialName: string;
   unit: string;
   materialColor: string;
@@ -91,7 +94,6 @@ export type ProductMarkerFabricItem = {
   markerNo: number;
   color: string;
   materialId: number;
-  materialCode: string;
   materialName: string;
   materialColor: string;
 };
@@ -152,7 +154,6 @@ export type OrderOverviewLine = {
   orderLineId: number;
   productId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;
@@ -176,6 +177,7 @@ export type OrderOverview = {
   materialStatus: OrderMaterialStatus;
   isDelayRisk: boolean;
   stopReason: string | null;
+  deliveryAddress: string;
   note: string | null;
   createdAt: string;
   lines: OrderOverviewLine[];
@@ -192,6 +194,7 @@ export type OrderDetail = {
   materialStatus: OrderMaterialStatus;
   isDelayRisk: boolean;
   stopReason: string | null;
+  deliveryAddress: string;
   note: string | null;
   createdAt: string;
   updatedAt: string | null;
@@ -215,6 +218,7 @@ export type CreateOrderPayload = {
   customerId: number;
   receivedDate: string;
   dueDate: string;
+  deliveryAddress: string;
   note?: string | null;
   lines: OrderLineInput[];
 };
@@ -253,7 +257,6 @@ export type OrderMarker = {
 /** Vải của nhóm bìa ở các màu của đơn; widthM = khổ vải (m), null khi chưa nhập (DEV-ALL-104). */
 export type MarkerGroupFabric = {
   materialId: number;
-  materialCode: string;
   materialName: string;
   color: string;
   widthM: number | null;
@@ -263,7 +266,6 @@ export type OrderMarkerGroup = { markerNo: number; colors: string[]; fabrics: Ma
 export type OrderMarkerProduct = {
   productId: number;
   productCode: string;
-  productName: string;
   sizes: string[];
   markerGroups: OrderMarkerGroup[];
   markers: OrderMarker[];
@@ -287,7 +289,6 @@ export type SpecImportComponentRow = SpecImportRowBase & {
 export type SpecImportNormRow = SpecImportRowBase & {
   color: string;
   componentName: string;
-  materialCode: string;
   materialName: string | null;
   unit: string | null;
   materialColor: string | null;
@@ -354,7 +355,6 @@ export type OrderImportRow = {
   productCode: string;
   /** null khi dòng lỗi. */
   productId: number | null;
-  productName: string | null;
   color: string;
   cmtUnitPrice: number | null;
   quantities: OrderImportQty[];
@@ -375,7 +375,6 @@ export type ProductImportRow = {
   action: 'New' | 'Exists' | 'Error';
   note: string | null;
   productCode: string;
-  productName: string;
   description: string | null;
 };
 export type ProductImportPreview = {
@@ -391,7 +390,6 @@ export type ProductImportPreview = {
 type ExcelRowBase = { rowNumber: number; parseError: string | null };
 export type ProductExcelRow = Omit<ExcelRowBase, 'parseError'> & {
   productCode: string;
-  productName: string;
   description: string | null;
 };
 export type SpecComponentExcelRow = ExcelRowBase & {
@@ -403,7 +401,7 @@ export type SpecComponentExcelRow = ExcelRowBase & {
 export type SpecNormExcelRow = ExcelRowBase & {
   color: string;
   componentName: string;
-  materialCode: string;
+  materialName: string;
   specNote: string | null;
 };
 export type SpecMarkerGroupExcelRow = ExcelRowBase & {
@@ -433,7 +431,6 @@ export type SpecWorkbook = {
   sizeColumns: string[];
 };
 export type OrderMaterialExcelRow = ExcelRowBase & {
-  materialCode: string;
   requiredQty: number | null;
   customerQty: number | null;
   note: string | null;
@@ -454,7 +451,6 @@ export type OrderMaterialCheckRow = {
   /** New | Update | Unchanged | Error | Pending | NewMaterial. */
   action: SpecImportAction;
   error: string | null;
-  materialCode: string;
   materialName: string | null;
   materialColor: string | null;
   unit: string | null;
@@ -474,15 +470,14 @@ export type ExcelBundleCheck = {
   products: ProductImportPreview | null;
   spec: SpecImportPreview;
   orderMaterials: OrderMaterialCheck | null;
-  /** DEV-ALL-123: mã NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
+  /** DEV-ALL-123: tên NVL trong file chưa có trong danh mục (gợi ý loại theo chi tiết PANEL, màu áo đang dùng). */
   missingMaterials: MissingMaterial[];
 };
 export type MissingMaterial = {
-  materialCode: string;
+  materialName: string;
   /** FABRIC | TRIM. */
   suggestedType: string;
   colors: string[];
-  /** Từ cột Tên NVL / Đơn vị của sheet NVL của đơn (nếu có). */
-  suggestedName?: string | null;
+  /** Từ cột Đơn vị của sheet NVL của đơn (nếu có). */
   suggestedUnit?: string | null;
 };

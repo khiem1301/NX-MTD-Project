@@ -11,7 +11,6 @@ import type { PurchaseOrderGroup } from '../utils/groupByPurchaseOrder';
 const text = INCOMING_TEXT;
 
 const lineColumns: TableColumnsType<IncomingSupplierMaterial> = [
-  { title: text.materialCode, dataIndex: 'materialCode' },
   { title: text.materialName, dataIndex: 'materialName' },
   { title: text.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
   { title: text.ordered, dataIndex: 'orderedQty', align: 'right', render: formatQty },

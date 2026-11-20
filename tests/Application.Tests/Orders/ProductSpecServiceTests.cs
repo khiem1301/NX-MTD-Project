@@ -15,14 +15,14 @@ public class ProductSpecServiceTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
 
-    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO-01", ProductName = "Áo" }];
+    private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "AO-01" }];
     private readonly List<ProductComponent> _components = [];
     private readonly List<ProductVariant> _variants = [];
     private readonly List<ProductComponentMaterial> _norms = [];
     private readonly List<Material> _materials =
     [
-        new() { MaterialId = 1, MaterialCode = "V1", MaterialName = "Vải", Unit = "m", Status = MaterialStatuses.Active },
-        new() { MaterialId = 2, MaterialCode = "K1", MaterialName = "Khóa", Unit = "cái", Status = MaterialStatuses.Discontinued },
+        new() { MaterialId = 1, MaterialName = "V1", Unit = "m", Status = MaterialStatuses.Active },
+        new() { MaterialId = 2, MaterialName = "K1", Unit = "cái", Status = MaterialStatuses.Discontinued },
     ];
     private readonly List<OrderLine> _orderLines = [];
     private readonly List<ProductMarker> _markers = [];
@@ -275,7 +275,7 @@ public class ProductSpecServiceTests
 
         result.IsSuccess.Should().BeTrue();
         result.Data!.MarkerComponents.Should().ContainSingle().Which.Should().Be(new ProductMarkerComponentDto(1, "Thân"));
-        result.Data.MarkerFabrics.Should().ContainSingle().Which.Should().Be(new ProductMarkerFabricDto(1, "Đen", 1, "V1", "Vải", ""));
+        result.Data.MarkerFabrics.Should().ContainSingle().Which.Should().Be(new ProductMarkerFabricDto(1, "Đen", 1, "V1", ""));
     }
 
     [Fact]
@@ -500,7 +500,7 @@ public class ProductSpecServiceTests
 
     private void AddActiveMaterial(int id, string type) => _materials.Add(new Material
     {
-        MaterialId = id, MaterialCode = $"M{id}", MaterialName = "NVL", Unit = "m", Color = "", MaterialType = type, Status = MaterialStatuses.Active,
+        MaterialId = id, MaterialName = $"M{id}", Unit = "m", Color = "", MaterialType = type, Status = MaterialStatuses.Active,
     });
 
     [Fact]
@@ -581,7 +581,7 @@ public class ProductSpecServiceTests
         result.Data!.Components.Single().ComponentType.Should().Be("Panel");
         result.Data.Variants.Single().Should().Match<ProductVariantDto>(v => v.Status == "Active");
         result.Data.Norms.Single().Should().Match<ProductNormDto>(n => n.ComponentName == "Thân" && n.Color == "Đen" && n.SpecNote == "May viền"
-            && n.MaterialCode == "V1");
+            && n.MaterialName == "V1");
         (await Create().GetAsync(99, default)).Kind.Should().Be(NX_MTD.Application.Common.ResultKind.NotFound);
     }
 }

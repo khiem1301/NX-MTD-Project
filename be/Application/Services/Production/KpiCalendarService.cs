@@ -30,7 +30,7 @@ public sealed class KpiCalendarService : IKpiCalendarService
 
     private sealed record Head(
         int KpiTargetId, int OrderId, int ProductId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate, int TargetFinishedQty,
-        string Status, string OrderStatus, DateOnly DueDate, string OrderCode, string ProductCode, string ProductName, string TeamName);
+        string Status, string OrderStatus, DateOnly DueDate, string OrderCode, string ProductCode, string TeamName);
 
     private sealed record OtherKpi(int KpiTargetId, int SewingTeamId, DateOnly StartDate, DateOnly EndDate);
 
@@ -142,7 +142,7 @@ public sealed class KpiCalendarService : IKpiCalendarService
             days.Add(new KpiCalendarDayDto(date, plan.GetValueOrDefault(date),
                 date > today ? null : d.Qc.Where(q => q.TeamId == k.SewingTeamId && q.Date == date).Sum(q => q.Qty)));
 
-        return new KpiCalendarDto(k.KpiTargetId, k.OrderCode, k.ProductCode, k.ProductName, k.TeamName, k.StartDate, k.EndDate, today,
+        return new KpiCalendarDto(k.KpiTargetId, k.OrderCode, k.ProductCode, k.TeamName, k.StartDate, k.EndDate, today,
             k.DueDate, FirstEditableDate(_clock.Now, d.EditCutoff), d.EditCutoff, k.TargetFinishedQty, FinishedOf(d, k.SewingTeamId, k.StartDate, k.EndDate), k.Status == KpiStatuses.Active && !OrderStatuses.Closed.Contains(k.OrderStatus), ComputeBtp(d), days);
     }
 
@@ -168,7 +168,7 @@ public sealed class KpiCalendarService : IKpiCalendarService
     {
         var k = await Targets.AsNoTracking().Where(x => x.KpiTargetId == kpiTargetId)
             .Select(x => new Head(x.KpiTargetId, x.OrderId, x.ProductId, x.SewingTeamId, x.StartDate, x.EndDate, x.TargetFinishedQty,
-                x.Status, x.Order.Status, x.Order.DueDate, x.Order.OrderCode, x.Product.ProductCode, x.Product.ProductName, x.SewingTeam.TeamName))
+                x.Status, x.Order.Status, x.Order.DueDate, x.Order.OrderCode, x.Product.ProductCode, x.SewingTeam.TeamName))
             .FirstOrDefaultAsync(ct);
         if (k is null) return null;
 

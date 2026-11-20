@@ -17,7 +17,6 @@ const DATA: KpiCalendar = {
   kpiTargetId: 7,
   orderCode: 'DH001',
   productCode: 'MH001',
-  productName: 'Áo',
   sewingTeamName: 'Tổ may 1',
   startDate: '2026-10-14',
   endDate: '2026-10-17',

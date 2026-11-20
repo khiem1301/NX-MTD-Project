@@ -18,7 +18,6 @@ jest.mock('../hooks/useCutting', () => ({
       workOrderCode: 'LC-7',
       orderCode: 'DH001',
       productCode: 'AO01',
-      productName: 'Áo',
       cuttingTeamName: 'Tổ cắt',
       dueDate: '2026-12-01',
       status: mockStatus,

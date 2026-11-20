@@ -4,7 +4,7 @@ import type { RequisitionItem, RequisitionMaterialOption, RequisitionPieceOption
 
 export const fromMaterial = (m: RequisitionMaterialOption): RequisitionItem => ({
   id: m.materialId,
-  label: `${m.materialCode} ${m.materialName}${m.color ? ` - ${m.color}` : ''}`,
+  label: `${m.materialName}${m.color ? ` - ${m.color}` : ''}`,
   unit: m.unit,
   materialType: m.materialType,
   availableQty: m.availableQty,

@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-119: nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú). Gộp theo NVL: NVL đã có trong đơn thì cập nhật theo
+/// DEV-ALL-119: nhập NVL của đơn từ Excel (Tên NVL, Số cần, Khách cấp, Ghi chú). Gộp theo NVL: NVL đã có trong đơn thì cập nhật theo
 /// file, NVL chưa có thì thêm, NVL không có trong file giữ nguyên. Mỗi dòng qua đúng kiểm tra của thêm / sửa tay (ApplyAsync).
 /// Các dòng hợp lệ có thay đổi được lưu bằng một lần SaveChanges, nên có lỗi thì không lưu gì.
 /// </summary>
@@ -104,10 +104,10 @@ public sealed partial class OrderMaterialService
             return Result<ImportPlan>.Failure(ErrorCodes.OrderMaterialImportInvalid, ex.Message, ResultKind.Validation);
         }
 
-        var codes = excel.Select(r => r.MaterialCode).Where(c => c.Length > 0).Distinct().ToList();
-        var materials = (await _uow.Repository<Material>().Query().AsNoTracking().Where(m => codes.Contains(m.MaterialCode))
+        var codes = excel.Select(r => r.MaterialName).Where(c => c.Length > 0).Distinct().ToList();
+        var materials = (await _uow.Repository<Material>().Query().AsNoTracking().Where(m => codes.Contains(m.MaterialName))
                 .ToListAsync(ct))
-            .GroupBy(m => m.MaterialCode, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+            .GroupBy(m => m.MaterialName, StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
         var query = OrderMaterials.Where(om => om.OrderId == orderId);
         var existing = (tracked ? await query.ToListAsync(ct) : await query.AsNoTracking().ToListAsync(ct))
             .ToDictionary(om => om.MaterialId);
@@ -117,10 +117,10 @@ public sealed partial class OrderMaterialService
         var rows = new List<ImportPlanRow>(excel.Count);
         foreach (var row in excel)
         {
-            var dup = row.ParseError is null && seen.TryGetValue(row.MaterialCode, out var first)
+            var dup = row.ParseError is null && seen.TryGetValue(row.MaterialName, out var first)
                 ? string.Format(Messages.SpecImportDuplicateRow, first) : null;
             if (dup is not null) duplicates++;
-            else if (row.ParseError is null) seen[row.MaterialCode] = row.RowNumber;
+            else if (row.ParseError is null) seen[row.MaterialName] = row.RowNumber;
             rows.Add(await PlanRowAsync(order.OrderId, row, dup, materials, existing, ct));
         }
         var (removals, blocked) = replace && excel.Any(r => r.ParseError is null)
@@ -137,7 +137,7 @@ public sealed partial class OrderMaterialService
         IReadOnlyList<OrderMaterialExcelRow> excel, Dictionary<string, Material> materials, Dictionary<int, OrderMaterial> existing,
         CancellationToken ct)
     {
-        var inFile = excel.Select(r => materials.GetValueOrDefault(r.MaterialCode)?.MaterialId).Where(id => id is not null).Select(id => id!.Value).ToHashSet();
+        var inFile = excel.Select(r => materials.GetValueOrDefault(r.MaterialName)?.MaterialId).Where(id => id is not null).Select(id => id!.Value).ToHashSet();
         var candidates = existing.Values.Where(om => !inFile.Contains(om.MaterialId)).ToList();
         if (candidates.Count == 0) return ([], []);
 
@@ -150,7 +150,7 @@ public sealed partial class OrderMaterialService
             .Where(l => l.OrderMaterialId != null && ids.Contains(l.OrderMaterialId.Value)).Select(l => l.OrderMaterialId!.Value).ToListAsync(ct);
         var used = receipts.Concat(purchases).Concat(requests).ToHashSet();
         var codes = await _uow.Repository<Material>().Query().AsNoTracking().Where(m => candidates.Select(c => c.MaterialId).Contains(m.MaterialId))
-            .ToDictionaryAsync(m => m.MaterialId, m => m.MaterialCode, ct);
+            .ToDictionaryAsync(m => m.MaterialId, m => m.MaterialName, ct);
 
         var removals = new List<(OrderMaterial, string)>();
         var blocked = new List<string>();
@@ -166,12 +166,12 @@ public sealed partial class OrderMaterialService
     private async Task<ImportPlanRow> PlanRowAsync(int orderId, OrderMaterialExcelRow row, string? duplicate,
         Dictionary<string, Material> materials, Dictionary<int, OrderMaterial> existing, CancellationToken ct)
     {
-        materials.TryGetValue(row.MaterialCode, out var material);
+        materials.TryGetValue(row.MaterialName, out var material);
         var required = row.RequiredQty ?? 0;
         var customer = row.CustomerQty ?? 0;
         var input = new CreateOrderMaterialLineDto(material?.MaterialId ?? 0, required, customer, row.Note);
         var error = row.ParseError ?? duplicate
-                    ?? (material is null ? string.Format(WarehouseMessages.OrderMaterialImportUnknown, row.MaterialCode) : null)
+                    ?? (material is null ? string.Format(WarehouseMessages.OrderMaterialImportUnknown, row.MaterialName) : null)
                     ?? new OrderMaterialInputValidator().Validate(input).Errors.Select(e => e.ErrorMessage).FirstOrDefault();
 
         OrderMaterial? current = material is null ? null : existing.GetValueOrDefault(material.MaterialId);
@@ -187,7 +187,7 @@ public sealed partial class OrderMaterialService
         }
 
         var action = error is not null ? ActionError : unchanged ? ActionUnchanged : current is null ? ActionNew : ActionUpdate;
-        var preview = new OrderMaterialImportRowDto(row.RowNumber, action, error, row.MaterialCode, material?.MaterialName,
+        var preview = new OrderMaterialImportRowDto(row.RowNumber, action, error, row.MaterialName,
             material?.Color, material?.Unit, row.RequiredQty, row.CustomerQty,
             row.RequiredQty is { } r && row.CustomerQty is { } c ? Math.Max(r - c, 0) : null, row.Note);
         return new ImportPlanRow(preview, action is ActionNew or ActionUpdate ? entity : null, current is null, oldCustomer);

@@ -5,7 +5,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { WIDTH_DECIMALS, WIDTH_MAX_M, WIDTH_MIN_M } from '@/constants/limits';
 import { FABRIC_UNIT } from '@/constants/materials';
 import { MESSAGES } from '@/constants/messages';
-import { LABELS, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
+import { LABELS, MATERIAL_NAME_PATTERN, MATERIAL_TYPE, MATERIAL_TYPE_LABEL } from '../constants';
 import { useSaveMaterial } from '../hooks/useMaterials';
 import type { Material, SaveMaterialPayload } from '../types';
 
@@ -62,7 +62,7 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     <Modal
       open={open}
       width={MODAL_WIDTH.md}
-      title={material ? `${MESSAGES.common.edit} ${material.materialCode}` : MESSAGES.common.create}
+      title={material ? `${MESSAGES.common.edit} ${material.materialName}` : MESSAGES.common.create}
       okText={MESSAGES.common.save}
       cancelText={MESSAGES.common.cancel}
       confirmLoading={save.isPending}
@@ -72,22 +72,15 @@ export function MaterialFormModal({ open, material, onClose, onSaved }: Material
     >
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
         <Row gutter={16}>
-          {!material && (
-            <Col xs={24} sm={8}>
-              <Form.Item
-                name="materialCode"
-                label={LABELS.materialCode}
-                extra={LABELS.materialCodeHint}
-              >
-                <Input maxLength={30} />
-              </Form.Item>
-            </Col>
-          )}
-          <Col xs={24} sm={material ? 24 : 16}>
+          <Col xs={24}>
             <Form.Item
               name="materialName"
               label={LABELS.materialName}
-              rules={[{ required: true, whitespace: true, message: MESSAGES.common.required }]}
+              normalize={(v: string) => v.toUpperCase()}
+              rules={[
+                { required: true, whitespace: true, message: MESSAGES.common.required },
+                { pattern: MATERIAL_NAME_PATTERN, message: LABELS.materialNameFormat },
+              ]}
             >
               <Input maxLength={200} />
             </Form.Item>

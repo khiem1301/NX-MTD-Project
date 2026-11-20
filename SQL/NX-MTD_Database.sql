@@ -388,7 +388,6 @@ CREATE UNIQUE INDEX UQ_Customer_Email ON dbo.Customer(Email) WHERE Email IS NOT 
 -- MaterialType: FABRIC = vải, đi qua tổ cắt; TRIM = phụ liệu, cấp thẳng cho tổ may; SCRAP = phế phẩm, chỉ để trả về kho (DEV-ALL-112)
 CREATE TABLE dbo.Material (
     MaterialId    INT IDENTITY(1,1) CONSTRAINT PK_Material PRIMARY KEY,
-    MaterialCode  VARCHAR(30)   NOT NULL CONSTRAINT UQ_Material_Code UNIQUE,
     MaterialName  NVARCHAR(200) NOT NULL,
     Color         NVARCHAR(50)  NOT NULL CONSTRAINT DF_Material_Color DEFAULT N'',   -- màu NVL; '' = không phân màu. Cùng loại vải khác màu là hai dòng Material
     MaterialType  VARCHAR(10)   NOT NULL,
@@ -400,7 +399,7 @@ CREATE TABLE dbo.Material (
     CONSTRAINT CK_Material_Type   CHECK (MaterialType IN ('FABRIC','TRIM','SCRAP')),
     CONSTRAINT CK_Material_Status CHECK (Status IN ('ACTIVE','DISCONTINUED')),
     CONSTRAINT CK_Material_Width  CHECK (WidthM IS NULL OR (WidthM > 0 AND WidthM <= 3.5)),
-    CONSTRAINT UQ_Material_NameType UNIQUE (MaterialName, MaterialType, Color)
+    CONSTRAINT UQ_Material_Name UNIQUE (MaterialName)
 );
 
 CREATE TABLE dbo.Supplier (
@@ -424,7 +423,6 @@ CREATE UNIQUE INDEX UQ_Supplier_Email ON dbo.Supplier(Email) WHERE Email IS NOT 
 CREATE TABLE dbo.Product (
     ProductId       INT IDENTITY(1,1) CONSTRAINT PK_Product PRIMARY KEY,
     ProductCode     VARCHAR(30)    NOT NULL CONSTRAINT UQ_Product_Code UNIQUE,
-    ProductName     NVARCHAR(200)  NOT NULL,
     SampleImageUrl  NVARCHAR(500)  NULL,
     Description     NVARCHAR(1000) NULL,
     Status          VARCHAR(20)    NOT NULL CONSTRAINT DF_Product_Status DEFAULT 'ACTIVE',
@@ -550,6 +548,7 @@ CREATE TABLE dbo.CustomerOrder (
     StopReason       NVARCHAR(500)  NULL,
     FinalAmount      DECIMAL(18,2)  NULL,     -- giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (18/11/2026, DEV-ALL-137)
     FinalAmountReason NVARCHAR(500) NULL,
+    DeliveryAddress  NVARCHAR(500)  NOT NULL CONSTRAINT DF_CustomerOrder_DeliveryAddress DEFAULT N'', -- địa chỉ giao hàng của đơn (DEV-ALL-147), BE bắt buộc nhập khi tạo / sửa đơn
     Note             NVARCHAR(1000) NULL,
     CustomerDeliveryCount  SMALLINT NULL,     -- số lần khách dự kiến giao NVL của cả đơn (11/11/2026, DEV-ALL-95); số lần đã nhận xem vw_OrderMaterialDelivery
     CustomerDeliveryDate   DATE     NULL,     -- ngày khách dự kiến giao; giao >= 2 lần: ngày giao từ
@@ -2710,7 +2709,7 @@ GO
 -- Tồn NVL kèm thông tin vật tư (màn hình kho NVL)
 CREATE VIEW dbo.vw_MaterialStock
 AS
-SELECT  m.MaterialId, m.MaterialCode, m.MaterialName, m.Color, m.MaterialType, m.Unit,
+SELECT  m.MaterialId, m.MaterialName, m.Color, m.MaterialType, m.Unit,
         sb.OnHandQty, sb.ReservedQty, sb.AvailableQty
 FROM dbo.vw_StockBalance sb
 JOIN dbo.Material m ON m.MaterialId = sb.MaterialId
@@ -3196,34 +3195,34 @@ DECLARE @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNM
         @w4 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNMAY4');
 
 /* ---------- 2. Mã hàng, NVL, nhà cung cấp, đơn hàng ---------- */
-INSERT dbo.Product (ProductCode, ProductName, Description) VALUES
- ('DEMO-AO01', N'Áo khoác gió DEMO', N'Mã hàng demo có 5 công đoạn'),
- ('DEMO-QU02', N'Quần short DEMO', N'Mã hàng demo có 2 công đoạn');
+INSERT dbo.Product (ProductCode, Description) VALUES
+ ('DEMO-AO01', N'Mã hàng demo có 5 công đoạn'),
+ ('DEMO-QU02', N'Mã hàng demo có 2 công đoạn');
 DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
         @p2 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-QU02');
 
 -- Màu NVL nằm trong Material.Color: vải gió có 4 dòng (Đen, Xanh, Trắng, Be), chỉ may có 3 (Đen, Xanh, Be)
-INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit) VALUES
- ('DEMO-VAI01',  N'Vải gió 2 lớp DEMO', N'Đen',   'FABRIC', N'm'),
- ('DEMO-CHI01',  N'Chỉ may 40/2 DEMO',  N'Đen',   'TRIM',   N'cuộn'),
- ('DEMO-KHOA01', N'Khóa kéo 60cm DEMO', N'',      'TRIM',   N'cái'),
- ('DEMO-NHAN01', N'Nhãn dệt DEMO',      N'',      'TRIM',   N'cái'),
- ('DEMO-KIM01',  N'Kim máy 14 DEMO',    N'',      'TRIM',   N'hộp'),
- ('DEMO-VAI02',  N'Vải gió 2 lớp DEMO', N'Xanh',  'FABRIC', N'm'),
- ('DEMO-VAI03',  N'Vải gió 2 lớp DEMO', N'Trắng', 'FABRIC', N'm'),
- ('DEMO-VAI04',  N'Vải gió 2 lớp DEMO', N'Be',    'FABRIC', N'm'),
- ('DEMO-CHI02',  N'Chỉ may 40/2 DEMO',  N'Xanh',  'TRIM',   N'cuộn'),
- ('DEMO-CHI03',  N'Chỉ may 40/2 DEMO',  N'Be',    'TRIM',   N'cuộn');
-DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
-        @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
-        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
-        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-NHAN01'),
-        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KIM01'),
-        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI02'),
-        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI03'),
-        @mVaiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI04'),
-        @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI02'),
-        @mChiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI03');
+INSERT dbo.Material (MaterialName, Color, MaterialType, Unit) VALUES
+ (N'DEMO-VAI01', N'Đen',   'FABRIC', N'm'),
+ (N'DEMO-CHI01', N'Đen',   'TRIM',   N'cuộn'),
+ (N'DEMO-KHOA01', N'',      'TRIM',   N'cái'),
+ (N'DEMO-NHAN01', N'',      'TRIM',   N'cái'),
+ (N'DEMO-KIM01', N'',      'TRIM',   N'hộp'),
+ (N'DEMO-VAI02', N'Xanh',  'FABRIC', N'm'),
+ (N'DEMO-VAI03', N'Trắng', 'FABRIC', N'm'),
+ (N'DEMO-VAI04', N'Be',    'FABRIC', N'm'),
+ (N'DEMO-CHI02', N'Xanh',  'TRIM',   N'cuộn'),
+ (N'DEMO-CHI03', N'Be',    'TRIM',   N'cuộn');
+DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI01'),
+        @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI01'),
+        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KHOA01'),
+        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-NHAN01'),
+        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KIM01'),
+        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI02'),
+        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI03'),
+        @mVaiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI04'),
+        @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI02'),
+        @mChiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI03');
 
 -- Biến thể, thành phần và định mức (23/10). Phải có trước OrderLine (FK_OrderLine_Variant).
 -- Xanh – S chưa có trong đơn nào: biến thể khai báo trước, đơn sau mới dùng.
@@ -3647,11 +3646,11 @@ SET XACT_ABORT ON;
 
 BEGIN TRANSACTION;
 
-CREATE TABLE #P (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT, ProductName NVARCHAR(200) COLLATE DATABASE_DEFAULT,
+CREATE TABLE #P (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT,
                  Description NVARCHAR(1000) COLLATE DATABASE_DEFAULT NULL);
-INSERT #P (ProductCode, ProductName, Description) VALUES
- (N'DEMO-AO01', N'Áo khoác gió DEMO', N'Mã hàng demo có 5 công đoạn'),
- (N'DEMO-QU02', N'Quần short DEMO', N'Mã hàng demo có 2 công đoạn');
+INSERT #P (ProductCode, Description) VALUES
+ (N'DEMO-AO01', N'Mã hàng demo có 5 công đoạn'),
+ (N'DEMO-QU02', N'Mã hàng demo có 2 công đoạn');
 
 CREATE TABLE #O (ProductCode VARCHAR(30) COLLATE DATABASE_DEFAULT, OperationCode VARCHAR(30) COLLATE DATABASE_DEFAULT,
                  OperationName NVARCHAR(200) COLLATE DATABASE_DEFAULT, Seq SMALLINT, Skill TINYINT NULL, StdTime DECIMAL(9,2) NULL,
@@ -3963,8 +3962,8 @@ INSERT #R (ProductCode, OperationCode, Rate, EffectiveDate, Status, SubmittedAt,
  (N'DEMO-QU02', N'OP99', 1319.11, '2026-10-22', 'APPROVED', '2026-10-22T08:23:08', '2026-10-22T09:00:59', NULL, NULL);
 
 -- Mã hàng
-INSERT dbo.Product (ProductCode, ProductName, Description)
-SELECT s.ProductCode, s.ProductName, s.Description FROM #P s
+INSERT dbo.Product (ProductCode, Description)
+SELECT s.ProductCode, s.Description FROM #P s
 WHERE NOT EXISTS (SELECT 1 FROM dbo.Product p WHERE p.ProductCode = s.ProductCode);
 
 -- Công đoạn: bỏ cờ công đoạn cuối trước (chỉ được một công đoạn cuối đang dùng cho mỗi mã hàng), cập nhật, thêm, rồi đặt lại cờ
@@ -4082,14 +4081,14 @@ DECLARE @w1 INT = (SELECT EmployeeId FROM dbo.Employee WHERE EmployeeCode = 'CNM
 DECLARE @p1 INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-AO01'),
         @o1 INT = (SELECT OrderId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001'),
         @cus INT = (SELECT CustomerId FROM dbo.CustomerOrder WHERE OrderCode = 'DEMO-DH001');
-DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
-        @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI01'),
-        @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI02'),
-        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
-        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-NHAN01'),
-        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KIM01'),
-        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI02'),
-        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI03');
+DECLARE @mVai INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI01'),
+        @mChi INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI01'),
+        @mChiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI02'),
+        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KHOA01'),
+        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-NHAN01'),
+        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KIM01'),
+        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI02'),
+        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI03');
 DECLARE @sup1 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Công ty Vải Sợi Thành Công%'),
         @sup2 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Phụ liệu may Hoàng Gia%');
 DECLARE @lM INT = (SELECT ol.OrderLineId FROM dbo.OrderLine ol JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId
@@ -4388,7 +4387,7 @@ INSERT dbo.OrderMaterial (OrderId, MaterialId, RequiredQty, CustomerQty)
 SELECT @o4, m.MaterialId, v.Qty, 0
 FROM (VALUES ('DEMO-VAI02', 260), ('DEMO-VAI03', 105), ('DEMO-VAI01', 175), ('DEMO-CHI02', 25), ('DEMO-CHI01', 15),
              ('DEMO-KHOA01', 370), ('DEMO-NHAN01', 370)) v(Code, Qty)
-JOIN dbo.Material m ON m.MaterialCode = v.Code;
+JOIN dbo.Material m ON m.MaterialName = v.Code;
 
 COMMIT TRANSACTION;
 GO
@@ -4617,14 +4616,14 @@ DECLARE @cat INT = (SELECT TeamId FROM dbo.Team WHERE TeamCode = 'CAT'),
         @wo2 INT = (SELECT WorkOrderId FROM dbo.WorkOrder WHERE WorkOrderCode = 'LC-DEMO-002'),
         @sup1 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Công ty Vải Sợi Thành Công%'),
         @sup3 INT = (SELECT SupplierId FROM dbo.Supplier WHERE SupplierName LIKE N'Cửa hàng Kim máy Minh Phát%'),
-        @mVaiDen INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI01'),
-        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI02'),
-        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI03'),
-        @mVaiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-VAI04'),
-        @mChiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-CHI03'),
-        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KHOA01'),
-        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-NHAN01'),
-        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialCode = 'DEMO-KIM01');
+        @mVaiDen INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI01'),
+        @mVaiXanh INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI02'),
+        @mVaiTrang INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI03'),
+        @mVaiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-VAI04'),
+        @mChiBe INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-CHI03'),
+        @mKhoa INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KHOA01'),
+        @mNhan INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-NHAN01'),
+        @mKim INT = (SELECT MaterialId FROM dbo.Material WHERE MaterialName = 'DEMO-KIM01');
 
 /* ---------- 1. Danh mục: đủ trạng thái đang dùng / ngừng dùng ---------- */
 INSERT dbo.Customer (CustomerName, Phone, Email, DefaultAddress, Status, DiscontinueReason) VALUES
@@ -4632,22 +4631,22 @@ INSERT dbo.Customer (CustomerName, Phone, Email, DefaultAddress, Status, Discont
  (N'Công ty C (DEMO - ngừng)', '0287654321', 'lienhe@congtyc.demo', N'45 Hai Bà Trưng, Quận 3, TP.HCM', 'DISCONTINUED', N'Khách đã ngừng đặt hàng từ tháng 9');
 DECLARE @cusB INT = (SELECT CustomerId FROM dbo.Customer WHERE CustomerName = N'Công ty B (DEMO)');
 
-INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Status) VALUES
- ('DEMO-CUC01', N'Cúc nhựa 4 lỗ DEMO', N'Trắng', 'TRIM', N'cái', 'ACTIVE'),
- ('DEMO-LOT01', N'Vải lót lưới DEMO', N'Đen', 'FABRIC', N'm', 'ACTIVE'),
- ('DEMO-NGUNG01', N'Mex dựng cũ DEMO', N'', 'FABRIC', N'm', 'DISCONTINUED');
+INSERT dbo.Material (MaterialName, Color, MaterialType, Unit, Status) VALUES
+ (N'DEMO-CUC01', N'Trắng', 'TRIM', N'cái', 'ACTIVE'),
+ (N'DEMO-LOT01', N'Đen', 'FABRIC', N'm', 'ACTIVE'),
+ (N'DEMO-NGUNG01', N'', 'FABRIC', N'm', 'DISCONTINUED');
 -- NVL phế phẩm: tổ cắt / tổ may trả về kho, không có trần số lượng (DEV-ALL-112)
-INSERT dbo.Material (MaterialCode, MaterialName, Color, MaterialType, Unit, Status) VALUES
- ('PP-0001', N'Vải vụn', N'', 'SCRAP', N'kg', 'ACTIVE'),
- ('PP-0002', N'Kim gãy', N'', 'SCRAP', N'cái', 'ACTIVE'),
- ('PP-0003', N'Phế phẩm khác', N'', 'SCRAP', N'kg', 'ACTIVE');
+INSERT dbo.Material (MaterialName, Color, MaterialType, Unit, Status) VALUES
+ (N'PP-0001', N'', 'SCRAP', N'kg', 'ACTIVE'),
+ (N'PP-0002', N'', 'SCRAP', N'cái', 'ACTIVE'),
+ (N'PP-0003', N'', 'SCRAP', N'kg', 'ACTIVE');
 -- Khổ vải mặc định 1,5 m cho vải mẫu (DEV-ALL-102)
 UPDATE dbo.Material SET WidthM = 1.50 WHERE MaterialType = 'FABRIC' AND WidthM IS NULL;
 
 -- DEMO-SM03: có màu – size nhưng chưa khai định mức và công đoạn (thử cảnh báo chưa khai); DEMO-NGUNG04: mã hàng ngừng sản xuất
-INSERT dbo.Product (ProductCode, ProductName, Description, Status) VALUES
- ('DEMO-SM03', N'Sơ mi DEMO', N'Mã hàng mới, chưa khai định mức và công đoạn', 'ACTIVE'),
- ('DEMO-NGUNG04', N'Áo thun cũ DEMO', N'Đã ngừng sản xuất', 'DISCONTINUED');
+INSERT dbo.Product (ProductCode, Description, Status) VALUES
+ ('DEMO-SM03', N'Mã hàng mới, chưa khai định mức và công đoạn', 'ACTIVE'),
+ ('DEMO-NGUNG04', N'Đã ngừng sản xuất', 'DISCONTINUED');
 DECLARE @pSm INT = (SELECT ProductId FROM dbo.Product WHERE ProductCode = 'DEMO-SM03');
 INSERT dbo.ProductColor (ProductId, Color) VALUES (@pSm, N'Trắng');
 INSERT dbo.ProductVariant (ProductId, ProductColorId, SizeCode)

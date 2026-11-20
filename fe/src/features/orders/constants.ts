@@ -10,7 +10,6 @@ export const MAX_EXTRA_IMAGES = 5;
 
 export const COLOR_MAX_LENGTH = 50;
 
-
 // ---- DEV-ALL-122/123: popup kiểm tra file Excel nhiều sheet ----
 
 /** Kết quả kiểm một dòng (Action của BE): Pending / NewMaterial chỉ có ở popup kiểm tra; Exists là mã hàng đã có. */

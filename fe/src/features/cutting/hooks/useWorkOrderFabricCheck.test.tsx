@@ -10,8 +10,7 @@ jest.mock('../api/cuttingApi', () => ({ cuttingApi: { checkWorkOrderFabric: jest
 
 const check = (materialId: number): WorkOrderFabricCheck => ({
   materialId,
-  materialCode: 'V01',
-  materialName: 'Vải',
+  materialName: 'V01',
   materialColor: '',
   status: 'Short',
   needMeters: 100,

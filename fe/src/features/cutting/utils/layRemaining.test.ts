@@ -35,8 +35,7 @@ const layLine = (over: Partial<CuttingLayLine> = {}): CuttingLayLine => ({
 
 const fabric = (over: Partial<FabricRequirement> = {}): FabricRequirement => ({
   materialId: 1,
-  materialCode: 'V01',
-  materialName: 'Kaki',
+  materialName: 'V01',
   unit: 'm',
   materialColor: 'Đen',
   issuedQty: 100,
@@ -67,9 +66,7 @@ describe('teamFabricBalance', () => {
     const b = teamFabricBalance(
       fabric(),
       {
-        fabrics: [
-          { materialId: 1, materialCode: 'V01', materialName: '', materialColor: '', usedM: 20 },
-        ],
+        fabrics: [{ materialId: 1, materialName: 'V01', materialColor: '', usedM: 20 }],
       },
       50,
     );
@@ -81,9 +78,7 @@ describe('teamFabricBalance', () => {
       teamFabricBalance(
         fabric(),
         {
-          fabrics: [
-            { materialId: 2, materialCode: 'V02', materialName: '', materialColor: '', usedM: 20 },
-          ],
+          fabrics: [{ materialId: 2, materialName: 'V02', materialColor: '', usedM: 20 }],
         },
         0,
       ).left,
@@ -140,8 +135,7 @@ describe('formatLayFabrics', () => {
   it('liệt kê mã vải và số mét; bàn cũ chưa có số mét ghi —', () => {
     const f = (code: string, usedM: number | null) => ({
       materialId: 1,
-      materialCode: code,
-      materialName: '',
+      materialName: code,
       materialColor: '',
       usedM,
     });

@@ -71,8 +71,7 @@ const norms = [
 const material = (materialId: number, materialType = 'FABRIC') =>
   toMaterialOption({
     materialId,
-    materialCode: `V${materialId}`,
-    materialName: 'Vải',
+    materialName: `V${materialId}`,
     color: '',
     unit: 'm',
     materialType,

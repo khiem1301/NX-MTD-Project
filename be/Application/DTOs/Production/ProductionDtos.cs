@@ -196,7 +196,7 @@ public sealed record AllottedTeamDto(int TeamId, string TeamName);
 
 /// <summary>Một dòng đơn (mã hàng × màu × size) của đơn đang mở và các tổ may được chia.</summary>
 public sealed record OrderLineTeamDto(
-    int OrderLineId, int OrderId, string OrderCode, DateOnly DueDate, int ProductId, string ProductCode, string ProductName,
+    int OrderLineId, int OrderId, string OrderCode, DateOnly DueDate, int ProductId, string ProductCode,
     string Color, string SizeCode, int OrderedQty, IReadOnlyList<AllottedTeamDto> Teams);
 
 /// <summary>Danh sách tổ may mới của dòng đơn; danh sách rỗng là bỏ chia.</summary>
@@ -224,7 +224,8 @@ public sealed record OperationExcelSheetDto(
 public sealed record OperationImportRowDto(
     int RowNumber, int Stt, string OperationCode, string? OperationName, byte? SkillLevel, decimal? StandardTimeSec,
     string? Equipment, decimal? Rate, string Action, string? Error, string RateAction = "None", string? RateNote = null,
-    string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, string? ChangeNote = null);
+    string? GroupName = null, IReadOnlyList<string>? ComponentNames = null, string? ChangeNote = null,
+    string? Warning = null);
 
 /// <param name="FinalSttInFile">STT của dòng đánh x ở cột CUỐI (DEV-ALL-116), để màn hình chọn sẵn công đoạn cuối.</param>
 public sealed record OperationImportPreviewDto(
@@ -232,7 +233,7 @@ public sealed record OperationImportPreviewDto(
     int UnchangedCount, int ErrorCount, bool ProductHasFinalStep, bool HasRateColumn, int RateNewCount,
     int RateUpdateCount, int RateUnchangedCount, int RateSkippedCount, IReadOnlyList<OperationImportRowDto> Rows,
     bool HasGroupColumn = false, bool HasComponentColumn = false, int? FinalSttInFile = null,
-    int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null);
+    int RemoveCount = 0, IReadOnlyList<string>? Removed = null, IReadOnlyList<string>? Blocked = null, int WarningCount = 0);
 
 public sealed record OperationImportResultDto(
     int Created, int Updated, int Unchanged, int Skipped, int RateCreated, int RateUpdated, int RateUnchanged, int RateSkipped,

@@ -73,11 +73,11 @@ public sealed class CostSummaryService : ICostSummaryService
 
         var variableItemsRaw = cost.Items.Where(i => i.CostType == variableTypeText).ToList();
         var variableItems = variableItemsRaw
-            .Select(i => new CostVariableItemDto(i.CostCategoryCode, i.ProductId!.Value, i.ProductCode!, i.ProductName!, i.Amount))
+            .Select(i => new CostVariableItemDto(i.CostCategoryCode, i.ProductId!.Value, i.ProductCode!, i.Amount))
             .ToList();
         var variableByProduct = variableItemsRaw
-            .GroupBy(i => (ProductId: i.ProductId!.Value, ProductCode: i.ProductCode!, ProductName: i.ProductName!))
-            .Select(g => new CostByProductDto(g.Key.ProductId, g.Key.ProductCode, g.Key.ProductName, g.Sum(i => i.Amount)))
+            .GroupBy(i => (ProductId: i.ProductId!.Value, ProductCode: i.ProductCode!))
+            .Select(g => new CostByProductDto(g.Key.ProductId, g.Key.ProductCode, g.Sum(i => i.Amount)))
             .OrderBy(p => p.ProductCode)
             .ToList();
         return (fixedItems, variableItems, variableByProduct);

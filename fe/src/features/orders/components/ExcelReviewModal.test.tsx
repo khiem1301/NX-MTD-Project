@@ -61,7 +61,6 @@ const renderModal = (onConfirm = jest.fn()) =>
         fileName="all.xlsx"
         bundle={bundle}
         productId={null}
-        orderId={null}
         onConfirm={onConfirm}
         onCancel={jest.fn()}
       />
@@ -81,6 +80,9 @@ it('hiện dòng lỗi; sửa ô thì kiểm lại; Xác nhận trả bản đã
   await act(async () => {
     jest.advanceTimersByTime(600);
   });
+  // Lý do lỗi không hiện sẵn: trỏ chuột vào nhãn "Lỗi" mới thấy.
+  await waitFor(() => expect(screen.getByText('Lỗi')).toBeTruthy());
+  fireEvent.mouseEnter(screen.getByRole('img', { name: 'info-circle' }));
   await waitFor(() => expect(screen.getByText('Thiếu tên chi tiết.')).toBeTruthy());
 
   const inputs = screen.getAllByRole('textbox');
@@ -89,7 +91,7 @@ it('hiện dòng lỗi; sửa ô thì kiểm lại; Xác nhận trả bản đã
     jest.advanceTimersByTime(600);
   });
 
-  await waitFor(() => expect(screen.queryByText('Thiếu tên chi tiết.')).toBeNull());
+  await waitFor(() => expect(screen.queryByRole('img', { name: 'info-circle' })).toBeNull());
   expect(check).toHaveBeenCalledTimes(2);
 
   fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
@@ -102,20 +104,20 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     check.mockImplementation(({ bundle: b }: { bundle: ExcelBundle }) =>
       Promise.resolve({
         ...respond(b),
-        missingMaterials: [{ materialCode: 'V-9999', suggestedType: 'FABRIC', colors: ['Hồng'] }],
+        missingMaterials: [{ materialName: 'V-9999', suggestedType: 'FABRIC', colors: ['Hồng'] }],
       }),
     ),
   );
 
-  const openAsk = async (materialName?: string) => {
+  const openAsk = async (widthM?: number) => {
     const onConfirm = jest.fn();
     renderModal(onConfirm);
     await act(async () => {
       jest.advanceTimersByTime(600);
     });
     await waitFor(() => expect(screen.getByText(/1 NVL chưa có trong danh mục kho/)).toBeTruthy());
-    if (materialName)
-      fireEvent.change(screen.getByPlaceholderText('Tên NVL'), { target: { value: materialName } });
+    if (widthM !== undefined)
+      fireEvent.change(screen.getByRole('spinbutton'), { target: { value: String(widthM) } });
     fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
     await waitFor(() =>
       expect(screen.getAllByText('Thêm NVL vào danh mục?').length).toBeGreaterThan(0),
@@ -141,24 +143,14 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     expect(screen.getByRole('button', { name: /Xác nhận/ })).toBeTruthy();
   });
 
-  it('Thêm vào danh mục mà thiếu tên NVL thì chưa xác nhận', async () => {
+  it('Thêm vào danh mục: kèm NVL mới với gợi ý vải, màu, khổ mặc định', async () => {
     const onConfirm = await openAsk();
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
-    await act(async () => {
-      jest.advanceTimersByTime(100);
-    });
-    expect(onConfirm).not.toHaveBeenCalled();
-  });
-
-  it('Thêm vào danh mục: kèm NVL mới đã điền (gợi ý vải, màu, khổ)', async () => {
-    const onConfirm = await openAsk('Lụa hồng mới');
     fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][1]).toEqual([
       expect.objectContaining({
-        materialCode: 'V-9999',
-        materialName: 'Lụa hồng mới',
+        materialName: 'V-9999',
         materialType: 'FABRIC',
         color: 'Hồng',
         widthM: 1.5,

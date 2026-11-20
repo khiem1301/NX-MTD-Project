@@ -43,8 +43,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly Material _fabric = new()
     {
         MaterialId = FabricId,
-        MaterialCode = "V01",
-        MaterialName = "Vải gió",
+        MaterialName = "V01",
         Unit = "m",
         Color = "Đen",
         MaterialType = MaterialTypes.Fabric,
@@ -52,8 +51,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     private readonly Material _white = new()
     {
         MaterialId = 200,
-        MaterialCode = "V02",
-        MaterialName = "Vải gió",
+        MaterialName = "V02",
         Unit = "m",
         Color = "Trắng",
         MaterialType = MaterialTypes.Fabric,
@@ -243,7 +241,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
 
         var rows = await CheckAll(Whole(SizeM, 10), Whole(BlueM, 4, "Xanh - M"));
 
-        rows.Select(r => (r.MaterialCode, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)4m)]);
+        rows.Select(r => (r.MaterialName, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)4m)]);
     }
 
     [Fact]
@@ -257,8 +255,8 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
 
         var rows = await CheckAll(Whole(SizeM, 10), Whole(BlueM, 4, "Xanh - M"));
 
-        rows.Select(r => (r.MaterialCode, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)6m)]);
-        rows.Single(r => r.MaterialCode == "V02").MarkerPlans!.Single().Markers.Single().MarkerCode.Should().Be("3C");
+        rows.Select(r => (r.MaterialName, r.NeedMeters)).Should().BeEquivalentTo([("V01", (decimal?)10m), ("V02", (decimal?)6m)]);
+        rows.Single(r => r.MaterialName == "V02").MarkerPlans!.Single().Markers.Single().MarkerCode.Should().Be("3C");
     }
 
     [Fact]
@@ -378,7 +376,7 @@ public class WorkOrderFabricCheckTests : ProductionTestBase
     [Fact]
     public async Task FabricNotInMeters_CannotBeEstimated()
     {
-        var kg = new Material { MaterialId = 300, MaterialCode = "V03", MaterialName = "Vải cân", Unit = "kg", Color = "", MaterialType = MaterialTypes.Fabric };
+        var kg = new Material { MaterialId = 300, MaterialName = "V03", Unit = "kg", Color = "", MaterialType = MaterialTypes.Fabric };
         Norm(SizeM, material: kg);
         OnFabric(1, material: kg); OnGroup(1, Body);
         Marker("1A", 1, 2m, "M:1");

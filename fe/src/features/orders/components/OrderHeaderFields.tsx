@@ -5,7 +5,7 @@ import { AppDatePicker } from '@/components/common/DateInputs';
 import { MESSAGES } from '@/constants/messages';
 import { zodRule } from '@/utils/zodRule';
 import type { CustomerOption } from '../types';
-import { orderCodeSchema, orderNoteSchema } from '../utils/orderValidation';
+import { deliveryAddressSchema, orderCodeSchema, orderNoteSchema } from '../utils/orderValidation';
 
 type OrderHeaderFieldsProps = {
   customers: CustomerOption[];
@@ -14,6 +14,8 @@ type OrderHeaderFieldsProps = {
   /** Đơn không còn ở trạng thái Mới: không đổi mã đơn, khách hàng, ngày nhận. */
   locked: boolean;
   onAddCustomer: () => void;
+  /** Chọn khách: form tạo đơn dùng để điền sẵn địa chỉ giao hàng. */
+  onCustomerChange?: (customerId: number) => void;
 };
 
 const FIELD_STYLE = { marginBottom: 12 };
@@ -25,6 +27,7 @@ export function OrderHeaderFields({
   currentCustomerId,
   locked,
   onAddCustomer,
+  onCustomerChange,
 }: OrderHeaderFieldsProps) {
   return (
     <Row gutter={16}>
@@ -50,6 +53,7 @@ export function OrderHeaderFields({
             showSearch
             optionFilterProp="label"
             disabled={locked}
+            onChange={onCustomerChange}
             options={customers
               .filter((c) => c.status === 'Active' || c.customerId === currentCustomerId)
               .map((c) => ({ value: c.customerId, label: c.customerName }))}
@@ -94,6 +98,17 @@ export function OrderHeaderFields({
           ]}
         >
           <AppDatePicker style={FULL_WIDTH} />
+        </Form.Item>
+      </Col>
+      <Col span={24}>
+        <Form.Item
+          name="deliveryAddress"
+          label={MESSAGES.orders.deliveryAddress}
+          style={FIELD_STYLE}
+          required
+          rules={[zodRule(deliveryAddressSchema)]}
+        >
+          <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
         </Form.Item>
       </Col>
       <Col span={24}>

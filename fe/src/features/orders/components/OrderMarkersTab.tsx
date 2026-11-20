@@ -61,7 +61,6 @@ export function OrderMarkersTab({ orderId, orderCode, isClosed }: OrderMarkersTa
             products: products.map((p) => ({
               productId: p.productId,
               productCode: p.productCode,
-              productName: p.productName,
             })),
           }}
           onClose={() => setImporting(false)}

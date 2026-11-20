@@ -27,6 +27,7 @@ const mockOrder: { data: OrderOverview } = {
     materialStatus: 'Awaiting',
     isDelayRisk: false,
     stopReason: null,
+    deliveryAddress: '125 Nguyễn Văn Linh, Quận 7',
     note: null,
     createdAt: '2026-10-01T08:00:00',
     lines: [
@@ -34,7 +35,6 @@ const mockOrder: { data: OrderOverview } = {
         orderLineId: 7,
         productId: 1,
         productCode: 'AO-01',
-        productName: 'Áo',
         color: 'Đỏ',
         sizeCode: 'M',
         orderedQty: 10,
@@ -71,7 +71,8 @@ describe('OrderOverviewPage', () => {
     renderAt('/manager/orders/5');
 
     expect(screen.getByText('DH2610-001')).toBeInTheDocument();
-    expect(screen.getByText('AO-01 · Áo')).toBeInTheDocument();
+    expect(screen.getByText('AO-01')).toBeInTheDocument();
+    expect(screen.getByText('125 Nguyễn Văn Linh, Quận 7')).toBeInTheDocument();
     for (const name of [
       MESSAGES.common.edit,
       MESSAGES.orders.cancelOrder,

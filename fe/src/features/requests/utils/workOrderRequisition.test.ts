@@ -3,8 +3,7 @@ import { remainingOf, suggestLines } from './workOrderRequisition';
 
 const row = (over: Partial<WorkOrderMaterialAllowance>): WorkOrderMaterialAllowance => ({
   materialId: 1,
-  materialCode: 'V1',
-  materialName: 'Kate',
+  materialName: 'V1',
   materialColor: '',
   unit: 'm',
   needQty: 100,

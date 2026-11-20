@@ -13,13 +13,13 @@ export type NewProductFromImport = {
 
 const same = (a: string, b: string) => a.trim().toUpperCase() === b.trim().toUpperCase();
 
-/** Mã hàng trong file chưa có trong hệ thống: máy chủ không trả tên mã hàng cho dòng đó. */
+/** Mã hàng trong file chưa có trong hệ thống: máy chủ không gắn mã hàng (productId) cho dòng đó. */
 export const unknownCodesOf = (rows: OrderImportRow[]) => [
-  ...new Set(rows.filter((r) => r.productName === null && r.productCode).map((r) => r.productCode)),
+  ...new Set(rows.filter((r) => r.productId === null && r.productCode).map((r) => r.productCode)),
 ];
 
 /**
- * DEV-ALL-121/122: tạo mã hàng chưa có từ hộp "Nhập dòng hàng". Đọc mọi bảng của file (không ghi gì), lấy tên, mô tả của mã từ
+ * DEV-ALL-121/122: tạo mã hàng chưa có từ hộp "Nhập dòng hàng". Đọc mọi bảng của file (không ghi gì), lấy mô tả của mã từ
  * sheet Mã hàng rồi mở form Thêm mới kèm dữ liệu đã đọc; form mở luôn popup kiểm tra. Chỉ tạo khi bấm Lưu ở form.
  */
 export function useCreateProductFromImport(file: File | null) {
@@ -36,7 +36,6 @@ export function useCreateProductFromImport(file: File | null) {
           code,
           values: {
             productCode: code,
-            productName: row?.productName,
             description: row?.description ?? undefined,
           },
           imports: { bundle, fileName: file.name },

@@ -49,7 +49,7 @@ public sealed class ProductImportService : IProductImportService
         var rows = new Plan();
         foreach (var row in excel)
         {
-            var error = validator.Validate(new SaveProductDto(row.ProductCode, row.ProductName, null, row.Description))
+            var error = validator.Validate(new SaveProductDto(row.ProductCode, null, row.Description))
                 .Errors.Select(e => e.ErrorMessage).FirstOrDefault();
             if (error is null && seen.TryGetValue(row.ProductCode, out var first))
             {
@@ -60,7 +60,7 @@ public sealed class ProductImportService : IProductImportService
 
             var action = error is not null ? ActionError : existing.Contains(row.ProductCode) ? ActionExists : ActionNew;
             rows.Add(new ProductImportRowDto(row.RowNumber, action,
-                action == ActionExists ? Messages.ProductImportExists : error, row.ProductCode, row.ProductName, row.Description));
+                action == ActionExists ? Messages.ProductImportExists : error, row.ProductCode, row.Description));
         }
         return rows;
     }

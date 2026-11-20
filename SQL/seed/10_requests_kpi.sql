@@ -55,6 +55,8 @@ INSERT #Rq (K, Type, Status, OrderId, WorkOrderId, TargetOff, Title, Content, Cr
  -- Cắt bù, vải lỗi, giao thiếu, bổ sung
  ('RC1', 'REPLACEMENT_CUTTING', 'PENDING_APPROVAL', @o3, @wo3, NULL, N'Cắt bù 12 thân sau áo khoác đen',               N'12 thân sau bị rách do dao cắt, xin cắt bù.', @ttcat, @cat, -1, NULL, NULL, NULL, NULL, NULL),
  ('RC2', 'REPLACEMENT_CUTTING', 'REJECTED',        @o3, @wo3, NULL, N'Cắt bù tay áo khoác',                            N'5 tay áo lệch canh sợi, xin cắt bù.', @ttcat, @cat, -12, N'Số lượng ít, dùng vải thừa của bàn cuối, không cần lập lệnh bù', NULL, NULL, NULL, NULL),
+ ('RC3', 'REPLACEMENT_CUTTING', 'APPROVED',        @o3, @wo3, NULL, N'Cắt bù 8 thân trước áo khoác',                  N'8 thân trước dính dầu máy không giặt được, xin cắt bù.', @ttcat, @cat, -6, N'Duyệt, chờ Quản đốc lập lệnh cắt bù', NULL, NULL, NULL, NULL),
+ ('RC4', 'REPLACEMENT_CUTTING', 'APPROVED',        @o3, @wo3, NULL, N'Cắt bù 6 tay áo khoác',                         N'6 tay áo bị lệch size, xin cắt bù.', @ttcat, @cat, -8, N'Duyệt, đã lập lệnh cắt bù', NULL, NULL, NULL, NULL),
  ('DM1', 'DEFECTIVE_MATERIAL',  'PENDING_APPROVAL', @o5, @wo5, NULL, N'Cuộn vải thun hồng bị loang màu',                N'Cuộn số 5 loang màu ở giữa, khoảng 18m không dùng được.', @ttcat, @cat, 0, NULL, NULL, NULL, NULL, NULL),
  ('DM2', 'DEFECTIVE_MATERIAL',  'APPROVED',        @o3, @wo3, NULL, N'Vải lót taffeta bị thủng',                         N'Phát hiện 25m vải lót thủng lỗ, xin đổi.', @ttcat, @cat, -28, N'Duyệt: đổi 25m, kho đủ tồn', NULL, NULL, NULL, NULL),
  ('DM3', 'DEFECTIVE_MATERIAL',  'NOT_COMPLETED',   @o6, NULL, NULL, N'Vải kate lệch tông',                              N'Cuộn vải giao lần 1 lệch tông so với mẫu.', @ttcat, @cat, -4, N'Duyệt mua bù', N'NCC không còn vải cùng lô, đã báo khách đổi lô', NULL, NULL, NULL),
@@ -87,15 +89,11 @@ INSERT dbo.RequestLine (RequestId, MaterialId, OrderLineId, ItemDescription, Qua
 SELECT r.RequestId, m.MaterialId, NULL, NULL, v.Qty, NULL
 FROM (VALUES ('MR1', 'V-KATE-TR', 180), ('MR1', 'V-KATE-XN', 120), ('MR2', 'V-POLO-HG', 120), ('MR2', 'V-POLO-TR', 25), ('MR3', 'V-POLO-HG', 60),
              ('DM1', 'V-POLO-HG', 18), ('DM2', 'V-LOT-DEN', 25), ('DM3', 'V-KATE-TR', 40), ('MP1', 'V-POLO-HG', 18), ('MSU1', 'T-NUT-4L', 200)) v (K, Mat, Qty)
-JOIN #Rq r ON r.K = v.K JOIN dbo.Material m ON m.MaterialCode = v.Mat;
+JOIN #Rq r ON r.K = v.K JOIN dbo.Material m ON m.MaterialName = v.Mat;
 INSERT dbo.RequestLine (RequestId, OrderLineId, Quantity)
 SELECT r.RequestId, MIN(ol.OrderLineId), v.Qty
 FROM (VALUES ('SR1', 120), ('SR2', 60)) v (K, Qty)
 JOIN #Rq r ON r.K = v.K JOIN dbo.OrderLine ol ON ol.OrderId = r.OrderId GROUP BY r.RequestId, v.Qty;
-INSERT dbo.RequestLine (RequestId, OrderLineId, Quantity, ItemDescription)
-SELECT r.RequestId, MIN(ol.OrderLineId), v.Qty, v.Item
-FROM (VALUES ('RC1', 12, N'Thân sau áo khoác đen M'), ('RC2', 5, N'Tay áo khoác đen L')) v (K, Qty, Item)
-JOIN #Rq r ON r.K = v.K JOIN dbo.OrderLine ol ON ol.OrderId = r.OrderId GROUP BY r.RequestId, v.Qty, v.Item;
 INSERT dbo.RequestLine (RequestId, ItemDescription, Quantity)
 SELECT r.RequestId, v.Item, v.Qty
 FROM (VALUES ('SP1', N'Dây curoa A38', 4), ('SP2', N'Bộ kim vắt sổ 4 chỉ', 2), ('SP2', N'Thoi vắt sổ', 2), ('NM1', N'Máy may 1 kim điện tử', 2), ('NM2', N'Máy thùa khuy đính nút', 1),
@@ -122,6 +120,66 @@ UPDATE mi SET RequestId = r.RequestId
 FROM dbo.MaterialIssue mi JOIN #Rq r ON r.K = 'SR1'
 WHERE mi.MaterialIssueId = (SELECT TOP 1 MaterialIssueId FROM dbo.MaterialIssue WHERE OrderId = @o4 AND WarehouseType = 'SEMI_FINISHED' AND Status = 'RECEIVED' ORDER BY IssueDate DESC);
 UPDATE r SET MaterialIssueId = mi.MaterialIssueId FROM dbo.Request r JOIN dbo.MaterialIssue mi ON mi.RequestId = r.RequestId;
+
+/* ---------- Cắt bù: gắn phiếu hàng hỏng, dòng chi tiết cần cắt bù, lệnh cắt bù ---------- */
+-- Mỗi đơn cắt bù gắn một phiếu hàng hỏng loại Hủy (đã xác nhận) của đơn DH-2510-003; tổ trưởng tổ may của phiếu lập đơn;
+-- dòng cắt bù = một chi tiết PANEL (định mức) của đúng màu áo của phiếu, số lượng không vượt số hàng đã hủy.
+IF OBJECT_ID('tempdb..#Rc') IS NOT NULL DROP TABLE #Rc;
+SELECT d.DefectRecordId, d.OrderLineId, d.Quantity, d.SewingTeamId, ol.ProductId, pv.ProductColorId, v.K, v.I
+INTO #Rc
+FROM (VALUES ('RC1', 12, 1), ('RC2', 5, 2), ('RC3', 8, 3), ('RC4', 6, 4)) v (K, Qty, I)
+JOIN dbo.DefectRecord d ON d.Quantity = v.Qty AND d.DefectType = 'SCRAP' AND d.Status = 'CONFIRMED' AND d.ReasonNote = N'Hàng hủy, cần cắt bù'
+JOIN dbo.OrderLine ol ON ol.OrderLineId = d.OrderLineId AND ol.OrderId = @o3
+JOIN dbo.ProductVariant pv ON pv.ProductVariantId = ol.ProductVariantId;
+
+UPDATE r SET DefectRecordId = c.DefectRecordId, CreatedBy = lead.EmployeeId, CreatedByTeamId = c.SewingTeamId
+FROM dbo.Request r JOIN #Rq q ON q.RequestId = r.RequestId JOIN #Rc c ON c.K = q.K
+CROSS APPLY (SELECT TOP 1 e.EmployeeId FROM dbo.Employee e JOIN dbo.Role ro ON ro.RoleId = e.RoleId
+             WHERE e.TeamId = c.SewingTeamId AND ro.RoleCode = 'TEAM_LEADER' AND e.Status = 'ACTIVE' ORDER BY e.EmployeeId) lead;
+
+INSERT dbo.RequestLine (RequestId, OrderLineId, ProductComponentMaterialId, Quantity, ItemDescription)
+SELECT q.RequestId, c.OrderLineId, n.ProductComponentMaterialId, c.Quantity, CONCAT(n.ComponentName, N' (', n.MaterialName, N')')
+FROM #Rc c JOIN #Rq q ON q.K = c.K
+CROSS APPLY (SELECT x.ProductComponentMaterialId, x.ComponentName, x.MaterialName
+             FROM (SELECT pcm.ProductComponentMaterialId, pc.ComponentName, m.MaterialName,
+                          ROW_NUMBER() OVER (ORDER BY pcm.ProductComponentMaterialId) AS Rk, COUNT(*) OVER () AS Cnt
+                   FROM dbo.ProductComponentMaterial pcm
+                   JOIN dbo.ProductComponent pc ON pc.ProductComponentId = pcm.ProductComponentId AND pc.ComponentType = 'PANEL' AND pc.Status = 'ACTIVE'
+                   JOIN dbo.Material m ON m.MaterialId = pcm.MaterialId
+                   WHERE pcm.ProductId = c.ProductId AND pcm.ProductColorId = c.ProductColorId AND pcm.Status = 'ACTIVE') x
+             WHERE x.Rk = (c.I - 1) % x.Cnt + 1) n;
+
+-- Lệnh cắt bù đã lập cho đơn RC4 (RC3 đã duyệt, chờ Quản đốc lập lệnh)
+INSERT dbo.WorkOrder (WorkOrderCode, OrderId, ProductId, CuttingTeamId, DueDate, Status, Note, CreatedAt, SourceRequestId, FabricTolerancePercent)
+SELECT CONCAT('LC-', FORMAT(DATEADD(DAY, -6, @today), 'yyyyMMdd'), '-901'), @o3, c.ProductId, @cat, DATEADD(DAY, 3, @today), 'OPEN',
+       N'Lệnh cắt bù 6 tay áo khoác theo đơn cắt bù', DATEADD(HOUR, 9, CAST(DATEADD(DAY, -6, @today) AS DATETIME2)), q.RequestId, 0
+FROM #Rc c JOIN #Rq q ON q.K = c.K WHERE c.K = 'RC4';
+INSERT dbo.WorkOrderLine (WorkOrderId, OrderLineId, PlannedQty, ProductComponentMaterialId)
+SELECT wo.WorkOrderId, rl.OrderLineId, rl.Quantity, rl.ProductComponentMaterialId
+FROM dbo.WorkOrder wo JOIN dbo.RequestLine rl ON rl.RequestId = wo.SourceRequestId;
+
+/* ---------- Giao thiếu: phiếu nhập gốc, và phiếu nhập bổ sung của đơn bù ---------- */
+UPDATE rl SET MaterialReceiptLineId = mrl.MaterialReceiptLineId
+FROM dbo.RequestLine rl JOIN dbo.Request r ON r.RequestId = rl.RequestId AND r.RequestTypeCode = 'SHORT_DELIVERY'
+CROSS APPLY (SELECT TOP 1 l.MaterialReceiptLineId FROM dbo.MaterialReceiptLine l
+             JOIN dbo.MaterialReceipt m ON m.MaterialReceiptId = l.MaterialReceiptId AND m.ShortageRequestId IS NULL AND m.Status = 'CONFIRMED'
+             WHERE l.PurchaseOrderLineId = rl.PurchaseOrderLineId ORDER BY l.MaterialReceiptLineId DESC) mrl;
+UPDATE r SET MaterialReceiptId = l.MaterialReceiptId
+FROM dbo.Request r JOIN dbo.RequestLine rl ON rl.RequestId = r.RequestId JOIN dbo.MaterialReceiptLine l ON l.MaterialReceiptLineId = rl.MaterialReceiptLineId
+WHERE r.RequestTypeCode = 'SHORT_DELIVERY';
+
+-- SD1 (NCC bù trong lần giao sau): thủ kho đã lập phiếu nhập bổ sung, chờ Quản đốc xác nhận
+INSERT dbo.MaterialReceipt (ReceiptCode, ShortageRequestId, OrderId, PurchaseOrderId, ReceiptDate, Status, Note, SubmittedAt)
+SELECT CONCAT('PN-', FORMAT(@today, 'yyyyMMdd'), '-902'), q.RequestId, po.OrderId, po.PurchaseOrderId, @today, 'PENDING',
+       N'NCC giao bù phần vải kate thiếu của lần giao 1', @now
+FROM #Rq q JOIN dbo.RequestLine rl ON rl.RequestId = q.RequestId
+JOIN dbo.PurchaseOrderLine pol ON pol.PurchaseOrderLineId = rl.PurchaseOrderLineId JOIN dbo.PurchaseOrder po ON po.PurchaseOrderId = pol.PurchaseOrderId
+WHERE q.K = 'SD1';
+INSERT dbo.MaterialReceiptLine (MaterialReceiptId, OrderMaterialId, PurchaseOrderLineId, OriginalReceiptLineId, AcceptedQty)
+SELECT mr.MaterialReceiptId, pol.OrderMaterialId, pol.PurchaseOrderLineId, rl.MaterialReceiptLineId, 80
+FROM #Rq q JOIN dbo.MaterialReceipt mr ON mr.ShortageRequestId = q.RequestId
+JOIN dbo.RequestLine rl ON rl.RequestId = q.RequestId JOIN dbo.PurchaseOrderLine pol ON pol.PurchaseOrderLineId = rl.PurchaseOrderLineId
+WHERE q.K = 'SD1';
 
 /* ---------- Chấm bù qua thủ tục (APPROVED_REQUEST gắn đơn AC1) ---------- */
 DECLARE @acReq INT = (SELECT RequestId FROM #Rq WHERE K = 'AC1');

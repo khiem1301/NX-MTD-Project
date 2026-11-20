@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Modal, Space, Typography, Upload, message } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined } from '@ant-design/icons';
+import { ReasonHover } from '@/components/common/ReasonHover';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
 import { DataTable } from '@/components/common/DataTable';
@@ -19,7 +20,6 @@ const qty = (v: number | null) => (v === null ? '—' : formatQty(v));
 
 const columns: ColumnsType<OrderMaterialImportRow> = [
   { title: LABELS.importRow, dataIndex: 'rowNumber', width: 64 },
-  { title: LABELS.materialCode, dataIndex: 'materialCode', width: 130 },
   {
     title: LABELS.materialName,
     key: 'name',
@@ -35,10 +35,9 @@ const columns: ColumnsType<OrderMaterialImportRow> = [
     key: 'result',
     width: 260,
     render: (_, r) => (
-      <Space direction="vertical" size={0}>
+      <ReasonHover reasons={[r.error && { text: r.error, type: 'danger' }]}>
         <StatusTag status={r.action} labels={MESSAGES.orders.specImport.action} />
-        {r.error && <Typography.Text type="danger">{r.error}</Typography.Text>}
-      </Space>
+      </ReasonHover>
     ),
   },
 ];

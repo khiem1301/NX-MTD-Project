@@ -26,12 +26,11 @@ const RECHECK_DELAY_MS = 500;
 export function useExcelReview(
   initial: ExcelBundle,
   productId: number | null,
-  orderId: number | null,
   tables: readonly ReviewTable[],
 ) {
   const [draft, setDraft] = useState(initial);
   const check = useApiMutation(
-    (bundle: ExcelBundle) => excelBundleApi.check({ productId, orderId, bundle }),
+    (bundle: ExcelBundle) => excelBundleApi.check({ productId, orderId: null, bundle }),
     { invalidate: [] },
   );
   const { mutate } = check;
@@ -58,7 +57,7 @@ export function useExcelReview(
   );
   const newMaterials: SaveMaterialPayload[] = (check.data?.missingMaterials ?? []).map((m) => ({
     ...defaultMaterial(m),
-    ...materialEdits[m.materialCode],
+    ...materialEdits[m.materialName],
   }));
 
   return {

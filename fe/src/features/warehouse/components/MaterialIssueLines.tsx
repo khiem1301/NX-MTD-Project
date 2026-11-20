@@ -26,8 +26,7 @@ type MaterialIssueLinesProps = {
   requested: Map<number, number>;
 };
 
-const materialLabel = (code: string, name: string, color: string) =>
-  `${code} ${name}${color ? ` - ${color}` : ''}`;
+const materialLabel = (name: string, color: string) => `${name}${color ? ` - ${color}` : ''}`;
 
 type LineValue = { materialId?: number; issuedQty?: number };
 
@@ -72,15 +71,13 @@ export function MaterialIssueLines({
   });
   const labels = new Map<number, string>([
     ...(materials.data ?? []).map(
-      (m) => [m.materialId, materialLabel(m.materialCode, m.materialName, m.color)] as const,
+      (m) => [m.materialId, materialLabel(m.materialName, m.color)] as const,
     ),
     ...(orderMaterials.data ?? []).map(
-      (m) =>
-        [m.materialId, materialLabel(m.materialCode, m.materialName, m.materialColor)] as const,
+      (m) => [m.materialId, materialLabel(m.materialName, m.materialColor)] as const,
     ),
     ...(fabrics.data ?? []).map(
-      (f) =>
-        [f.materialId, materialLabel(f.materialCode, f.materialName, f.materialColor)] as const,
+      (f) => [f.materialId, materialLabel(f.materialName, f.materialColor)] as const,
     ),
   ]);
   const options = [...allowed].map((id) => ({ value: id, label: labels.get(id) ?? String(id) }));

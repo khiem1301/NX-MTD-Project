@@ -33,7 +33,6 @@ type ExcelReviewModalProps = {
   bundle: ExcelBundle;
   /** Mã hàng đang sửa; null = Thêm mới. */
   productId: number | null;
-  orderId: number | null;
   /** Chỉ hiện các bảng này (chọn file cho một mục); bỏ trống = mọi bảng có trong file. */
   only?: ReviewTable[];
   /** newMaterials: NVL chưa có mà admin chọn thêm vào danh mục khi lưu (rỗng = không thêm). */
@@ -49,7 +48,6 @@ export function ExcelReviewModal({
   fileName,
   bundle,
   productId,
-  orderId,
   only,
   onConfirm,
   onCancel,
@@ -58,15 +56,15 @@ export function ExcelReviewModal({
   const missing = REVIEW_TABLES.filter(
     (t) => !presentTables(bundle).includes(t) && (!only || only.includes(t)),
   );
-  const review = useExcelReview(bundle, productId, orderId, tables);
+  const review = useExcelReview(bundle, productId, tables);
   const { draft, counts, newMaterials } = review;
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
   const [onlyErrors, setOnlyErrors] = useState(false);
   const [asking, setAsking] = useState(false);
   const materials = useMaterialOptions();
   const materialOptions = (materials.data ?? []).map((m) => ({
-    value: m.materialCode,
-    label: `${m.materialCode} · ${m.materialName}${m.color ? ` (${m.color})` : ''}`,
+    value: m.materialName,
+    label: `${m.materialName}${m.color ? ` (${m.color})` : ''}`,
   }));
   const crossErrors = review.check.data?.spec.crossErrors ?? [];
 
@@ -76,7 +74,7 @@ export function ExcelReviewModal({
     const incomplete = incompleteMaterials(newMaterials);
     if (incomplete.length > 0) {
       void message.error(
-        fill(text.missingInfoRequired, incomplete.map((m) => m.materialCode).join(', ')),
+        fill(text.missingInfoRequired, incomplete.map((m) => m.materialName).join(', ')),
       );
       return;
     }
@@ -154,7 +152,7 @@ export function ExcelReviewModal({
       </Space>
       <AddMaterialsAskModal
         open={asking}
-        codes={newMaterials.map((m) => m.materialCode ?? '')}
+        codes={newMaterials.map((m) => m.materialName ?? '')}
         onAdd={handleAdd}
         onSkip={() => {
           setAsking(false);

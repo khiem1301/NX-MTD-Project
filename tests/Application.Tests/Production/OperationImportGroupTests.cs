@@ -21,7 +21,7 @@ public class OperationImportGroupTests : ProductionTestBase
 
     public OperationImportGroupTests()
     {
-        SetupQueryable(new List<Product> { new() { ProductId = 1, ProductCode = "AO01", ProductName = "Áo", Status = RecordStatus.Active } });
+        SetupQueryable(new List<Product> { new() { ProductId = 1, ProductCode = "AO01", Status = RecordStatus.Active } });
         SetupQueryable(_operations);
         SetupQueryable(new List<PieceRate>());
         SetupQueryable(_groups);
@@ -118,20 +118,35 @@ public class OperationImportGroupTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Preview_UnknownOrTrimComponentAndTwoFinals_AreErrors()
+    public async Task Preview_UnknownOrTrimComponent_IsWarningNotError()
     {
         using var stream = Workbook(
             [1, "Ráp vai", 2, 18, null, "Ống tay", null],
             [2, "Gắn nhãn", 1, 8, null, "Nhãn", null],
+            [3, "Là", 1, 10, null, "Thân; Ống tay", null]);
+
+        var data = (await _sut.PreviewImportAsync(1, stream, null, null, default)).Data!;
+
+        data.Rows.Select(r => r.Action).Should().NotContain("Error");
+        data.Rows.Should().OnlyContain(r => r.Error == null);
+        data.WarningCount.Should().Be(3);
+        data.Rows[0].Warning.Should().Contain(string.Format(Messages.OperationImportComponentUnknown, "Ống tay"));
+        data.Rows[1].Warning.Should().Contain(string.Format(Messages.OperationImportComponentNotPanel, "Nhãn"));
+        data.Rows[2].Warning.Should().Contain("Ống tay").And.NotContain("Thân");   // Thân gắn được, chỉ Ống tay bị bỏ
+        data.Rows[2].ComponentNames.Should().Equal("Thân");
+    }
+
+    [Fact]
+    public async Task Preview_TwoFinals_StillAnError()
+    {
+        using var stream = Workbook(
             [3, "Là", 1, 10, null, null, "x"],
             [4, "Kiểm hàng", 1, 20, null, null, "x"]);
 
         var rows = (await _sut.PreviewImportAsync(1, stream, null, null, default)).Data!.Rows;
 
         rows.Select(r => r.Action).Should().AllBe("Error");
-        rows[0].Error.Should().Be(string.Format(Messages.OperationImportComponentUnknown, "Ống tay"));
-        rows[1].Error.Should().Be(string.Format(Messages.OperationImportComponentNotPanel, "Nhãn"));
-        rows[2].Error.Should().Be(Messages.OperationImportManyFinals);
+        rows[0].Error.Should().Be(Messages.OperationImportManyFinals);
     }
 
     [Fact]

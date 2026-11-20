@@ -6,13 +6,14 @@ export type OrderOption = {
   dueDate: string;
   /** Ngày nhận đơn = ngày bắt đầu của đơn. */
   receivedDate: string;
+  /** Địa chỉ giao hàng khai khi tạo đơn (gợi ý cho phiếu xuất). */
+  deliveryAddress: string;
 };
 
 export type OrderLineOption = {
   orderLineId: number;
   productId: number;
   productCode: string;
-  productName: string;
   color: string;
   sizeCode: string;
   orderedQty: number;
@@ -31,7 +32,6 @@ export type TeamOption = { teamId: number; teamCode: string; teamName: string; t
 
 export type MaterialOption = {
   materialId: number;
-  materialCode: string;
   materialName: string;
   materialType: string;
   unit: string;

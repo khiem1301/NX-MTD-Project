@@ -59,8 +59,8 @@ public sealed class MaterialReturnService : IMaterialReturnService
                 r.ConfirmedByNavigation == null ? null : r.ConfirmedByNavigation.FullName, r.ConfirmedAt, r.RejectReason,
                 r.MaterialReturnLines.OrderBy(l => l.MaterialReturnLineId).Select(l => new MaterialReturnLineDto(
                     l.MaterialReturnLineId, l.MaterialId, l.OrderLineId,
-                    l.Material != null ? l.Material.MaterialCode : l.OrderLine!.ProductVariant.Product.ProductCode,
-                    l.Material != null ? l.Material.MaterialName
+                    l.Material != null ? l.Material.MaterialName : l.OrderLine!.ProductVariant.Product.ProductCode,
+                    l.Material != null ? string.Empty
                         : l.OrderLine!.ProductVariant.ProductColor.Color + "/" + l.OrderLine.ProductVariant.SizeCode,
                     l.Material != null ? l.Material.Unit : MaterialReturnCapacity.PieceUnit,
                     l.Material != null ? l.Material.Color : l.OrderLine!.ProductVariant.ProductColor.Color,

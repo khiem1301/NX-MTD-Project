@@ -40,15 +40,13 @@ public sealed class ClosedXmlCostSummaryWriter : ICostSummaryExcelWriter
         sheet.Row(row).Style.Font.Bold = true;
         row++;
         sheet.Cell(row, 1).Value = "Mã hàng";
-        sheet.Cell(row, 2).Value = "Tên hàng";
-        sheet.Cell(row, 3).Value = "Số tiền";
+        sheet.Cell(row, 2).Value = "Số tiền";
         sheet.Row(row).Style.Font.Bold = true;
         row++;
         foreach (var item in dto.VariableCostsByProduct)
         {
             sheet.Cell(row, 1).Value = item.ProductCode;
-            sheet.Cell(row, 2).Value = item.ProductName;
-            sheet.Cell(row, 3).Value = item.Amount;
+            sheet.Cell(row, 2).Value = item.Amount;
             row++;
         }
         sheet.Cell(row, 1).Value = "Tổng chi phí biến đổi";
