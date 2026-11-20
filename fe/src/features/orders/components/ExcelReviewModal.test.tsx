@@ -97,6 +97,41 @@ it('hiện dòng lỗi; sửa ô thì kiểm lại; Xác nhận trả bản đã
   fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
   const confirmed = onConfirm.mock.calls[0][0] as ExcelBundle;
   expect(confirmed.spec.components.map((c) => c.name)).toEqual(['Cổ', 'Thân']);
+  expect(onConfirm.mock.calls[0][2]).toBe(false);
+});
+
+it('DEV-ALL-155: form sửa mã hàng hiện ô thay thế; bật thì Xác nhận gửi replace=true', async () => {
+  const onConfirm = jest.fn();
+  check.mockImplementation(({ bundle: b, replace }: { bundle: ExcelBundle; replace?: boolean }) =>
+    Promise.resolve({
+      ...respond(b),
+      spec: {
+        ...respond(b).spec,
+        removedNames: replace ? ['Thành phần: Cổ áo cũ'] : null,
+        removedCount: replace ? 1 : 0,
+      },
+    }),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <ExcelReviewModal
+        fileName="all.xlsx"
+        bundle={bundle}
+        productId={7}
+        allowReplace
+        onConfirm={onConfirm}
+        onCancel={jest.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText(/Thay thế dữ liệu cũ/)).toBeTruthy();
+  fireEvent.click(screen.getByRole('checkbox', { name: /Thay thế dữ liệu cũ/ }));
+  await act(async () => {
+    jest.advanceTimersByTime(600);
+  });
+  await waitFor(() => expect(screen.getByText(/Sẽ xóa 1 dòng/)).toBeTruthy());
+  fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
+  expect(onConfirm.mock.calls[0][2]).toBe(true);
 });
 
 describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {

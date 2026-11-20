@@ -159,6 +159,10 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-155 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC10, form sửa mã hàng, `ExcelReviewModal`, `SpecImport` JSON | Form sửa mã hàng (popup kiểm tra Excel) có ô "Thay thế dữ liệu cũ" như các chỗ nhập Excel khác; API preview/import-data và excel/check nhận `replace` | Mở |
+| DEV-ALL-154 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, form đơn, `OrderExcelImports`, `ExcelReviewModal` | Nhập Bìa / NVL Excel ở form đơn mở popup kiểm tra để xem và sửa (ô lỗi viền cam + tooltip mô tả); Xác nhận mới giữ trên form, Lưu đơn mới ghi | Mở |
+| DEV-ALL-153 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, `ImportTemplateService` | File mẫu bìa cắt ở form đơn (`order-markers` → `Mau_Bia_Cua_Don.xlsx`) chỉ còn sheet Bìa của đơn, không kèm Thành phần / Định mức NVL / Nhóm bìa | Mở |
+| DEV-ALL-152 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, form đơn / chi tiết đơn | Bỏ cảnh báo "Đơn chưa có thông tin cho đơn" (bìa cắt / NVL của đơn thiếu); vẫn giữ khung nhập Excel Bìa / NVL ở form đơn | Mở |
 | DEV-ALL-151 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, UC10, `Product`, `CustomerOrder`, form đơn hàng | Mã hàng tạo trong form đơn (nút thêm mã hoặc từ Excel dòng hàng) chưa ghi danh mục; chỉ ghi khi Lưu đơn, cùng giao dịch với đơn. Hủy / đóng form đơn thì mã không được tạo | Mở |
 | DEV-ALL-150 | 20/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `ProductMarker`, form tạo / sửa đơn, chi tiết đơn | Form tạo / sửa đơn có khung nhập Excel Bìa của đơn, NVL của đơn (không bắt buộc): chọn file chỉ đọc, bấm Lưu đơn mới nhập vào đơn; form và chi tiết đơn cảnh báo khi đơn chưa có bìa cắt hoặc NVL của đơn | Mở |
 | DEV-ALL-149 | 20/11/2026 | Claude (AI) | UC10, UC37–UC39, UC13–UC16, `Material`, `Team`, `GradeLevelCode`, mọi màn hiển thị NVL / tổ / bậc | Có lại Mã NVL (`Material.MaterialCode`, bỏ phần Mã NVL của DEV-ALL-144): mã chỉ chữ không dấu, số, . _ -, lưu chữ hoa, kiểm trùng; Tên NVL lại là tên tiếng Việt (trùng khi cùng tên + loại + màu). Bỏ Tên tổ (`Team.TeamName`) và Tên bậc (`GradeLevelCode.GradeName`): tổ / bậc chỉ có mã, mọi nơi hiện mã | Mở |
@@ -3011,4 +3015,52 @@
 - **Ảnh hưởng người khác:** Khiêm (đơn hàng, mã hàng). Màn Mã hàng vẫn lưu mã ngay. API tạo đơn / sửa đơn cũ không gửi `stagedProducts` thì giữ nguyên. Client đọc `data` của POST/PUT đơn phải đọc `orderId` thay vì một số.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC09 / UC10 (tạo mã hàng từ form đơn ghi cùng lúc với đơn)
+- **Trạng thái:** Mở
+
+### DEV-ALL-152 · Bỏ cảnh báo đơn thiếu bìa / NVL
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 form đơn / chi tiết đơn; xóa `OrderMissingDataAlert`
+- **Tài liệu gốc ghi:** (DEV-ALL-150) form và chi tiết đơn cảnh báo khi đơn chưa có bìa cắt hoặc NVL của đơn.
+- **Code đang làm:** Không còn banner "Đơn chưa có thông tin cho đơn". Khung nhập Excel Bìa / NVL ở form đơn và API `HasOrderMarkers` / `HasOrderMaterials` giữ nguyên.
+- **Lý do:** Khiêm yêu cầu bỏ cảnh báo.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / DEV-ALL-150: bỏ phần cảnh báo đơn thiếu
+- **Trạng thái:** Mở
+
+### DEV-ALL-153 · File mẫu bìa cắt chỉ còn Bìa của đơn
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 form đơn (khung Excel Bìa / NVL); `ImportTemplateKinds.OrderMarkers`, file `Mau_Bia_Cua_Don.xlsx`
+- **Tài liệu gốc ghi:** file mẫu định mức + bìa cắt (`spec` / `Mau_Dinh_Muc_Bia_Cat.xlsx`) gồm Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn. DEV-ALL-150 gắn link "File mẫu bìa cắt" ở form đơn tới `spec`.
+- **Code đang làm:** Link "File mẫu bìa cắt" ở form đơn tải `order-markers` → chỉ sheet Bìa của đơn. File `spec` (định mức đầy đủ) vẫn dùng ở màn Định mức / tab Bìa cắt khi nhập cả bộ.
+- **Lý do:** Khiêm yêu cầu mẫu bìa cắt chỉ nhập bìa của đơn, không cần nhóm bìa / định mức / thành phần.
+- **Ảnh hưởng người khác:** Thái (bìa cắt) — tab Bìa cắt vẫn có thể dùng `spec` nếu cần; form đơn dùng mẫu riêng.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / DEV-ALL-150: file mẫu bìa ở form đơn chỉ còn Bìa của đơn
+- **Trạng thái:** Mở
+
+### DEV-ALL-154 · Popup kiểm tra / sửa khi nhập Bìa · NVL ở form đơn
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09 form tạo / sửa đơn; `OrderExcelImports`, `useOrderExcelImports`, `ExcelReviewModal` (thêm `orderId`), cột Bìa / NVL trong popup kiểm tra
+- **Tài liệu gốc ghi:** (DEV-ALL-150) chọn file Bìa / NVL ở form đơn chỉ đọc vào form, không có bước xem / sửa trước khi giữ dữ liệu.
+- **Code đang làm:** Chọn file mở `ExcelReviewModal` (sửa trực tiếp, máy chủ kiểm lại); bảng NVL khớp file mẫu (Mã NVL, Số cần, Khách cấp, Ghi chú); ô chỉ tô cam khi lỗi thật (không tô vì ghi chú Pending); cột Kết quả ghim phải; Xác nhận mới giữ trên form; nút "Xem / sửa lại"; Lưu đơn mới ghi như DEV-ALL-150. Tab Bìa cắt vẫn dùng `SpecImportModal` (xem trước rồi nhập ngay).
+- **Lý do:** Khiêm yêu cầu nhập file có view / chỉnh sửa như các chỗ import khác, lỗi định dạng hiện như ô cảnh báo có tooltip; form hiển thị khớp cột file.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / DEV-ALL-150: form đơn nhập Bìa / NVL qua popup kiểm tra trước khi giữ
+- **Trạng thái:** Mở
+
+### DEV-ALL-155 · Form sửa mã hàng: ô thay thế dữ liệu cũ khi nhập Excel
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10 form sửa mã hàng; `ExcelReviewModal`, `ProductExcelImports`, `runProductImports`; BE `ExcelBundleCheckDto.Replace`, `SpecImport` Preview/Import JSON `?replace=`, `CheckAsync(replace)`
+- **Tài liệu gốc ghi:** DEV-ALL-140: ô thay thế có ở `SpecImportModal`, nhập NVL của đơn, nhập công đoạn; form sửa mã hàng dùng popup kiểm tra Excel (DEV-ALL-122) chưa có ô này.
+- **Code đang làm:** Form sửa mã hàng (có `productId`) hiện `ReplaceImportOption` trên popup kiểm tra; bật thì kiểm / nhập với `replace=true` (xóa dòng cũ không có trong file, trừ dòng đã dùng). Form thêm mới không hiện ô (chưa có dữ liệu cũ).
+- **Lý do:** Khiêm yêu cầu chỗ sửa mã hàng cũng có "Thay thế dữ liệu cũ" như các chỗ import khác.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / DEV-ALL-140: form sửa mã hàng (popup kiểm tra) cũng có chế độ thay thế
 - **Trạng thái:** Mở

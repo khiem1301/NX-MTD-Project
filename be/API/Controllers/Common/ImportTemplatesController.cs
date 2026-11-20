@@ -18,7 +18,7 @@ public sealed class ImportTemplatesController : CommonBaseController
 
     public ImportTemplatesController(IImportTemplateService templates) => _templates = templates;
 
-    /// <param name="kind">spec | order-lines | order-materials | operations | product-form.</param>
+    /// <param name="kind">spec | order-lines | order-materials | order-markers | operations | product-form.</param>
     [HttpGet("{kind}")]
     public async Task<IActionResult> Get(string kind, [FromQuery] int? productId, [FromQuery] int? orderId,
         CancellationToken ct)

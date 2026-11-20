@@ -29,6 +29,8 @@ export type ProductImportSelection = {
    * rỗng / không có = không thêm, các dòng dùng NVL đó bị bỏ qua khi lưu.
    */
   newMaterials?: SaveMaterialPayload[];
+  /** DEV-ALL-155: form sửa mã hàng — thay thế dữ liệu cũ (xóa dòng không có trong file). */
+  replace?: boolean;
 };
 
 export type ProductImportOutcome = {
@@ -174,14 +176,15 @@ const importSpecPart = async (
   productId: number,
   part: ProductImportKind,
   spec: SpecWorkbook,
+  replace: boolean,
 ): Promise<Omit<ProductImportOutcome, 'kind'>> => {
   const workbook = workbookOf(spec, part);
-  const preview = await excelBundleApi.previewSpec(productId, workbook, undefined, [part]);
+  const preview = await excelBundleApi.previewSpec(productId, workbook, undefined, [part], replace);
   // Ghi chú của máy chủ (vd màu bị bỏ qua ở nhóm bìa) hiện chung với dòng lỗi.
   const rowErrors = [...rowErrorsOf(specRows(preview, part)), ...preview.notes];
   if (!preview.canImport)
     return { ok: false, message: preview.crossErrors[0] ?? text.nothing, rowErrors };
-  const result = await excelBundleApi.importSpec(productId, workbook, undefined, [part]);
+  const result = await excelBundleApi.importSpec(productId, workbook, undefined, [part], replace);
   return { ok: true, message: result.message ?? MESSAGES.common.saved, rowErrors };
 };
 
@@ -223,9 +226,10 @@ export async function runProductImports(
   const outcomes: ProductImportOutcome[] = [];
   if (!bundle) return outcomes;
   if (selection.newMaterials?.length) outcomes.push(await createMaterials(selection.newMaterials));
+  const replace = selection.replace === true;
   for (const kind of kindsWithData(bundle)) {
     try {
-      const result = await importSpecPart(productId, kind, bundle.spec);
+      const result = await importSpecPart(productId, kind, bundle.spec, replace);
       outcomes.push({ kind, ...result });
     } catch (error) {
       outcomes.push({

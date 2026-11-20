@@ -44,6 +44,7 @@ public sealed class ImportTemplateService : IImportTemplateService
             ImportTemplateKinds.Spec => await SpecAsync(productId, orderId, ct),
             ImportTemplateKinds.OrderLines => await OrderLinesAsync(orderId, ct),
             ImportTemplateKinds.OrderMaterials => await OrderMaterialsAsync(orderId, ct),
+            ImportTemplateKinds.OrderMarkers => await OrderMarkersAsync(orderId, ct),
             ImportTemplateKinds.Operations => await OperationsAsync(productId, ct),
             ImportTemplateKinds.ProductForm => await ProductFormAsync(productId, ct),
             _ => null,
@@ -92,6 +93,18 @@ public sealed class ImportTemplateService : IImportTemplateService
             new("Dữ liệu trong file", DemoNote),
         ],
         [await OrderMaterialsTableAsync(orderId, "", ct)]);
+
+    /// <summary>DEV-ALL-153: chỉ sheet Bìa của đơn — dùng ở form đơn và tab Bìa cắt, không kèm Thành phần / Định mức / Nhóm bìa.</summary>
+    private async Task<ImportTemplateModel> OrderMarkersAsync(int? orderId, CancellationToken ct) =>
+        new("Mau_Bia_Cua_Don" + XlsxName, "MẪU NHẬP BÌA CỦA ĐƠN",
+        [
+            new("Dùng ở đâu", "Form tạo / sửa đơn → khung 'Bìa và NVL của đơn', hoặc chi tiết đơn → tab 'Bìa cắt' → Nhập từ Excel."),
+            new("Cách nhập", "Chọn file là đọc ngay. Ở form đơn: bấm Lưu đơn mới ghi. Ở tab Bìa cắt: xem trước rồi nhập như trước."),
+            new("Sheet cần có", "Chỉ một sheet 'Bìa của đơn'. Không cần Thành phần, Định mức NVL, Nhóm bìa."),
+            new("Nhóm bìa", "Cột Nhóm bìa phải là nhóm đã khai ở định mức mã hàng. Mã hàng: để trống nếu đơn chỉ có một mã."),
+            new("Dữ liệu trong file", DemoNote),
+        ],
+        [await MarkersAsync(null, orderId, "", ct)]);
 
     private async Task<ImportTemplateModel> OperationsAsync(int? productId, CancellationToken ct) =>
         new("Mau_Cong_Doan" + XlsxName, "MẪU NHẬP CÔNG ĐOẠN CỦA MÃ HÀNG",
@@ -214,13 +227,16 @@ public sealed class ImportTemplateService : IImportTemplateService
     {
         var sizes = new List<string>();
         IReadOnlyList<IReadOnlyList<object?>> rows = [];
-        if (productId is { } pid && orderId is { } oid)
+        // productId = null: mọi mã hàng của đơn (file mẫu order-markers ở form đơn). Có productId: chỉ mã đang mở (file định mức / tab bìa).
+        if (orderId is { } oid)
         {
             var markers = await _uow.Repository<ProductMarker>().Query().AsNoTracking().Include(m => m.ProductMarkerRatios).Include(m => m.Product)
-                .Where(m => m.OrderId == oid && m.ProductId == pid).OrderBy(m => m.MarkerNo).ThenBy(m => m.MarkerCode).ToListAsync(ct);
-            var orderSizes = await _uow.Repository<OrderLine>().Query().AsNoTracking().Where(l => l.OrderId == oid && l.ProductId == pid)
+                .Where(m => m.OrderId == oid && (productId == null || m.ProductId == productId))
+                .OrderBy(m => m.ProductId).ThenBy(m => m.MarkerNo).ThenBy(m => m.MarkerCode).ToListAsync(ct);
+            var orderSizes = await _uow.Repository<OrderLine>().Query().AsNoTracking()
+                .Where(l => l.OrderId == oid && (productId == null || l.ProductId == productId))
                 .Select(l => l.ProductVariant.SizeCode).Distinct().ToListAsync(ct);
-            sizes = SortSizes(orderSizes).ToList();   // chỉ size của đơn này
+            sizes = SortSizes(orderSizes).ToList();   // chỉ size của đơn (hoặc của mã đang mở)
             rows = markers.Select(m => (IReadOnlyList<object?>)new object?[] { m.Product.ProductCode, (int)m.MarkerNo, m.MarkerCode, (double)m.LengthM, (double)m.WidthM, StatusText(m.Status) }
                 .Concat(sizes.Select(s => m.ProductMarkerRatios.FirstOrDefault(r => r.SizeCode == s) is { } r ? (object?)(int)r.PiecesPerPly : null)).ToList()).ToList();
         }

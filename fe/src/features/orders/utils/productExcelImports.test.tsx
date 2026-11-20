@@ -113,6 +113,34 @@ describe('runProductImports', () => {
     expect(api.importSpec).toHaveBeenCalledTimes(1);
   });
 
+  it('DEV-ALL-155: bật replace thì gửi replace=true khi xem trước và nhập', async () => {
+    api.previewSpec.mockResolvedValue(preview({}) as never);
+    api.importSpec.mockResolvedValue({ success: true, data: {} as never, message: 'Đã nhập' });
+
+    await runProductImports(9, {
+      bundle: {
+        ...EMPTY_BUNDLE,
+        spec: { ...EMPTY_BUNDLE.spec, hasComponents: true, components: bundle.spec.components },
+      },
+      replace: true,
+    });
+
+    expect(api.previewSpec).toHaveBeenCalledWith(
+      9,
+      expect.anything(),
+      undefined,
+      ['components'],
+      true,
+    );
+    expect(api.importSpec).toHaveBeenCalledWith(
+      9,
+      expect.anything(),
+      undefined,
+      ['components'],
+      true,
+    );
+  });
+
   it('lỗi máy chủ của một mục không chặn mục sau', async () => {
     api.previewSpec
       .mockRejectedValueOnce({ success: false, errorCode: 'X', message: 'Lỗi máy chủ' })

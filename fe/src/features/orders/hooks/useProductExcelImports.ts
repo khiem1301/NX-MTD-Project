@@ -42,7 +42,7 @@ export function useProductExcelImports({ value, onChange, onProductRow, autoRevi
     });
   };
 
-  const confirm = (edited: ExcelBundle, materials: SaveMaterialPayload[]) => {
+  const confirm = (edited: ExcelBundle, materials: SaveMaterialPayload[], replace: boolean) => {
     if (!reviewing) return;
     const { kind, fileName } = reviewing;
     const bundle = kind ? takeKind(value.bundle ?? EMPTY_BUNDLE, edited, kind) : edited;
@@ -60,6 +60,7 @@ export function useProductExcelImports({ value, onChange, onProductRow, autoRevi
       bundle,
       newMaterials,
       fileName: kind ? (value.fileName ?? fileName) : fileName,
+      replace: replace || undefined,
     });
     const row = edited.products[0];
     if (!kind && row) onProductRow?.(row);

@@ -39,8 +39,9 @@ public class ImportTemplateServiceTests : ProductionTestBase
 
     private static IImportTemplateWriter Capture(Action<ImportTemplateModel> onWrite)
     {
+        var real = new ClosedXmlImportTemplateWriter();
         var writer = Substitute.For<IImportTemplateWriter>();
-        writer.Write(Arg.Do(onWrite)).Returns([1]);
+        writer.Write(Arg.Do(onWrite)).Returns(ci => real.Write(ci.Arg<ImportTemplateModel>()));
         return writer;
     }
 
@@ -75,6 +76,43 @@ public class ImportTemplateServiceTests : ProductionTestBase
         var result = await Sut().BuildAsync(ImportTemplateKinds.OrderMaterials, null, null, default);
 
         new ClosedXmlOrderMaterialParser().Parse(Open(result)).Should().HaveCount(4).And.OnlyContain(r => r.ParseError == null);
+    }
+
+    [Fact]
+    public async Task Demo_OrderMarkers_OnlyOrderMarkersSheet()
+    {
+        ImportTemplateModel? model = null;
+
+        var result = await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMarkers, null, null, default);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.FileName.Should().Be("Mau_Bia_Cua_Don.xlsx");
+        model!.Tables.Should().ContainSingle().Which.Sheet.Should().Be("Bìa của đơn");
+        var book = new ClosedXmlSpecWorkbookParser().Parse(Open(result));
+        book.Components.Should().BeEmpty();
+        book.Norms.Should().BeEmpty();
+        book.MarkerGroups.Should().BeEmpty();
+        book.OrderMarkers.Should().NotBeEmpty().And.OnlyContain(r => r.ParseError == null);
+    }
+
+    [Fact]
+    public async Task OrderMarkers_RealRows_AllProductsOfOrder()
+    {
+        OrderWithSizes("S", "M");
+        _markers.Add(new ProductMarker
+        {
+            ProductMarkerId = 1, ProductId = 7, OrderId = 3, MarkerNo = 1, MarkerCode = "1A", LengthM = 2, WidthM = 1.5m,
+            Status = RecordStatus.Active, Product = new Product { ProductCode = "AS-1" },
+            ProductMarkerRatios = [new ProductMarkerRatio { SizeCode = "S", PiecesPerPly = 1 }],
+        });
+        ImportTemplateModel? model = null;
+
+        await Sut(Capture(m => model = m)).BuildAsync(ImportTemplateKinds.OrderMarkers, null, 3, default);
+
+        var table = model!.Tables.Single();
+        table.IsDemo.Should().BeFalse();
+        table.Rows.Should().ContainSingle().Which[0].Should().Be("AS-1");
+        table.Columns.Skip(6).Select(c => c.Name).Should().Equal("S", "M");
     }
 
     [Fact]

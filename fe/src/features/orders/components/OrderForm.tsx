@@ -150,18 +150,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
           </Space.Compact>
         )}
         {editable && (
-          <OrderExcelImports
-            orderId={orderId}
-            selection={orderImports.selection}
-            reading={orderImports.reading}
-            existing={{
-              markers: detail?.hasOrderMarkers ?? false,
-              orderMaterials: detail?.hasOrderMaterials ?? false,
-            }}
-            disabled={saving}
-            onFile={orderImports.choose}
-            onClear={orderImports.clear}
-          />
+          <OrderExcelImports orderId={orderId} imports={orderImports} disabled={saving} />
         )}
         <OrderFormFooter
           saveError={saveError}
