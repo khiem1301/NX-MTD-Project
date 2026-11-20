@@ -150,7 +150,7 @@ export function ProductExcelImports({
           bundle={imports.reviewing.bundle}
           productId={productId ?? null}
           only={imports.reviewing.kind ? [imports.reviewing.kind] : undefined}
-          allowReplace={productId != null}
+          allowReplace={productId !== undefined}
           initialReplace={value.replace === true}
           onConfirm={imports.confirm}
           onCancel={imports.closeReview}
