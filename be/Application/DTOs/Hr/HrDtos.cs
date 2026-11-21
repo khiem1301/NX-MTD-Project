@@ -106,4 +106,5 @@ public sealed record AppointDto(int EmployeeId, string Position);
 
 // ---- Tra cứu dùng chung (Minh, Kiều) ----
 public sealed record TeamLookupDto(int TeamId, string TeamCode, string TeamType);
-public sealed record EmployeeLookupDto(int EmployeeId, string EmployeeCode, string FullName, string Role, int? TeamId, string PayType);
+public sealed record EmployeeLookupDto(int EmployeeId, string EmployeeCode, string FullName, string Role, int? TeamId, string PayType,
+    string? CurrentGradeCode = null);

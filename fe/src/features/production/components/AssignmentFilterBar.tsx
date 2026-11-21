@@ -6,6 +6,7 @@ import { ASSIGNMENT_SEARCH_MAX_LENGTH, PRODUCTION_TEXT } from '../constants';
 import {
   ASSIGNMENT_STATE,
   assignmentGroups,
+  assignmentSkillLevels,
   workerLoads,
   type AssignmentFilter,
   type AssignmentRow,
@@ -31,6 +32,7 @@ export function AssignmentFilterBar({
   const missing = rows.filter((r) => !r.isCovered).length;
   const loads = workerLoads(rows);
   const groups = assignmentGroups(rows);
+  const levels = assignmentSkillLevels(rows);
 
   return (
     <TableToolbar
@@ -54,6 +56,15 @@ export function AssignmentFilterBar({
               options={groups.map((g) => ({ value: g, label: g }))}
               value={filter.group}
               onChange={(group) => onChange({ group })}
+            />
+          )}
+          {levels.length > 0 && (
+            <FilterSelect
+              style={{ width: 120 }}
+              placeholder={text.filterLevel}
+              options={levels.map((l) => ({ value: l, label: fill(text.levelOption, l) }))}
+              value={filter.skillLevel}
+              onChange={(skillLevel) => onChange({ skillLevel })}
             />
           )}
           <FilterSelect

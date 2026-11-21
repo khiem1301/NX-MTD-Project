@@ -14,6 +14,7 @@ import { useSaveWorkerOperations } from '../hooks/useAssignments';
 import {
   ASSIGNMENT_STATE,
   assignmentGroups,
+  assignmentSkillLevels,
   filterAssignmentRows,
   type AssignmentRow,
   type AssignmentState,
@@ -91,6 +92,7 @@ export function WorkerOperationsModal({
   const save = useSaveWorkerOperations();
   const [keyword, setKeyword] = useState<string>();
   const [group, setGroup] = useState<string>();
+  const [skillLevel, setSkillLevel] = useState<number>();
   const [state, setState] = useState<AssignmentState>(ASSIGNMENT_STATE.ALL);
   const own = (row: AssignmentRow) => row.assignments.find((a) => a.workerId === worker?.value);
   const original = rows.filter((r) => own(r)).map((r) => r.operation.operationId);
@@ -102,7 +104,8 @@ export function WorkerOperationsModal({
   const toRemove = original.filter((id) => !checked.includes(id));
   const tooMany = toAdd.length > ASSIGNMENT_MAX_OPERATIONS;
   const changed = toAdd.length + toRemove.length > 0;
-  const visible = filterAssignmentRows(rows, { keyword, group, state });
+  const visible = filterAssignmentRows(rows, { keyword, group, skillLevel, state });
+  const levels = assignmentSkillLevels(rows);
   const missing = rows.filter((r) => !r.isCovered).length;
 
   const onSave = () => {
@@ -133,6 +136,7 @@ export function WorkerOperationsModal({
         setEdited(null);
         setKeyword(undefined);
         setGroup(undefined);
+        setSkillLevel(undefined);
         setState(ASSIGNMENT_STATE.ALL);
       }}
     >
@@ -159,6 +163,15 @@ export function WorkerOperationsModal({
             value={group}
             onChange={setGroup}
           />
+          {levels.length > 0 && (
+            <FilterSelect
+              style={{ width: 120 }}
+              placeholder={text.filterLevel}
+              options={levels.map((l) => ({ value: l, label: fill(text.levelOption, l) }))}
+              value={skillLevel}
+              onChange={setSkillLevel}
+            />
+          )}
           <Select<AssignmentState>
             style={{ width: 190 }}
             value={state}

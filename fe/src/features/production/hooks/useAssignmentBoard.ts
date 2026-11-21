@@ -16,6 +16,7 @@ const NO_FILTER: AssignmentFilter = {
   keyword: undefined,
   group: undefined,
   workerId: undefined,
+  skillLevel: undefined,
   state: ASSIGNMENT_STATE.ALL,
 };
 

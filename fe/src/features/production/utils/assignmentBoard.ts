@@ -62,18 +62,21 @@ export type AssignmentFilter = {
   keyword?: string;
   group?: string;
   workerId?: number;
+  /** Bậc (level) của công đoạn. */
+  skillLevel?: number;
   state: AssignmentState;
 };
 
 export const filterAssignmentRows = (
   rows: readonly AssignmentRow[],
-  { keyword, group, workerId, state }: AssignmentFilter,
+  { keyword, group, workerId, skillLevel, state }: AssignmentFilter,
 ): AssignmentRow[] => {
   const kw = foldVietnamese(keyword?.trim() ?? '');
   return rows.filter(({ operation: o, assignments, isCovered }) => {
     if (state === ASSIGNMENT_STATE.MISSING && isCovered) return false;
     if (state === ASSIGNMENT_STATE.COVERED && !isCovered) return false;
     if (group !== undefined && o.groupName !== group) return false;
+    if (skillLevel !== undefined && o.skillLevel !== skillLevel) return false;
     if (workerId !== undefined && !assignments.some((a) => a.workerId === workerId)) return false;
     return !kw || foldVietnamese(`${o.operationCode} ${o.operationName}`).includes(kw);
   });
@@ -83,6 +86,16 @@ export const filterAssignmentRows = (
 export const assignmentGroups = (rows: readonly AssignmentRow[]): string[] => [
   ...new Set(rows.flatMap((r) => (r.operation.groupName ? [r.operation.groupName] : []))),
 ];
+
+/** Các bậc có trong đơn, từ thấp đến cao. */
+export const assignmentSkillLevels = (rows: readonly AssignmentRow[]): number[] =>
+  [
+    ...new Set(
+      rows.flatMap((r) => (r.operation.skillLevel === null ? [] : [r.operation.skillLevel])),
+    ),
+  ]
+    .filter((l): l is number => l !== undefined)
+    .sort((a, b) => a - b);
 
 /** Số công đoạn của từng công nhân, để chia việc cho đều. */
 export const workerLoads = (rows: readonly AssignmentRow[]): Map<number, number> => {
