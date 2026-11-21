@@ -85,5 +85,4 @@ export const MEAL_TEXT = {
     save: 'Lưu đơn giá',
     disabledHint: 'Chỉ nhập đơn giá sau khi ngày này đã chốt suất ăn.',
   },
-
 } as const;

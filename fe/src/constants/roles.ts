@@ -13,7 +13,11 @@ export const ROLES = {
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 /** Vai trò gắn với một tổ: tổ cắt và tổ may cùng vai trò nhưng khác chức năng. */
-export const TEAM_SCOPED_ROLES: readonly Role[] = [ROLES.TeamLeader, ROLES.TeamDeputy, ROLES.Worker];
+export const TEAM_SCOPED_ROLES: readonly Role[] = [
+  ROLES.TeamLeader,
+  ROLES.TeamDeputy,
+  ROLES.Worker,
+];
 
 /**
  * Người dùng có vào được chức năng giới hạn theo loại tổ không.

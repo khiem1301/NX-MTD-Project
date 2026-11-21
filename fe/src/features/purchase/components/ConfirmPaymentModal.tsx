@@ -38,7 +38,9 @@ export function ConfirmPaymentModal({ open, order, onClose }: Props) {
     form.setFieldsValue({
       paymentDate: dayjs(),
       actualAmount: actual,
-      paidAmount: positiveOrNull((closedShort ? (actual ?? 0) : order.totalAmount) - (order.paidAmount ?? 0)),
+      paidAmount: positiveOrNull(
+        (closedShort ? (actual ?? 0) : order.totalAmount) - (order.paidAmount ?? 0),
+      ),
       paymentMethod: 'BankTransfer',
     });
   }, [open, order, form, closedShort]);

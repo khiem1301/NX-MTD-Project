@@ -15,7 +15,11 @@ export function SideMenu({ items, selectedPath, activeGroupKey, collapsed, onNav
   // Người dùng tự mở/đóng nhóm thì nhớ cho tới khi sang nhóm khác; từ đó tự mở nhóm của trang mới.
   const [manual, setManual] = useState<{ at: string | undefined; keys: string[] } | null>(null);
   const openKeys =
-    manual !== null && manual.at === activeGroupKey ? manual.keys : activeGroupKey ? [activeGroupKey] : [];
+    manual !== null && manual.at === activeGroupKey
+      ? manual.keys
+      : activeGroupKey
+        ? [activeGroupKey]
+        : [];
 
   return (
     <Menu

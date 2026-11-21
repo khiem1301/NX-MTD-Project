@@ -159,6 +159,7 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-156 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC52, màn Phân công công đoạn, `EmployeeLookupDto` | Ô chọn công nhân ở màn Phân công công đoạn hiện thêm bậc thợ hiện tại ("mã - tên (bậc X)"); API lookup team-members trả thêm `currentGradeCode` | Mở |
 | DEV-ALL-155 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC10, form sửa mã hàng, `ExcelReviewModal`, `SpecImport` JSON | Form sửa mã hàng (popup kiểm tra Excel) có ô "Thay thế dữ liệu cũ" như các chỗ nhập Excel khác; API preview/import-data và excel/check nhận `replace` | Mở |
 | DEV-ALL-154 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, form đơn, `OrderExcelImports`, `ExcelReviewModal` | Nhập Bìa / NVL Excel ở form đơn mở popup kiểm tra để xem và sửa (ô lỗi viền cam + tooltip mô tả); Xác nhận mới giữ trên form, Lưu đơn mới ghi | Mở |
 | DEV-ALL-153 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, `ImportTemplateService` | File mẫu bìa cắt ở form đơn (`order-markers` → `Mau_Bia_Cua_Don.xlsx`) chỉ còn sheet Bìa của đơn, không kèm Thành phần / Định mức NVL / Nhóm bìa | Mở |
@@ -3063,4 +3064,16 @@
 - **Ảnh hưởng người khác:** Không.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 / DEV-ALL-140: form sửa mã hàng (popup kiểm tra) cũng có chế độ thay thế
+- **Trạng thái:** Mở
+
+### DEV-ALL-156 · Phân công công đoạn: hiện bậc thợ của công nhân
+
+- **Ngày / Người / Task / PR:** 20/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC52 màn Phân công công đoạn (ô chọn công nhân, lọc, giao hàng loạt, xem theo công nhân); BE `EmployeeLookupDto.CurrentGradeCode`, `EmployeeRepository.LookupMembersAsync`
+- **Tài liệu gốc ghi:** Report-3 UC52: danh sách công nhân chỉ gồm mã và tên.
+- **Code đang làm:** Nhãn công nhân thêm bậc thợ hiện tại (`CurrentGradeCode`) nếu có, dạng `mã - tên (bậc X)`, để tổ trưởng đối chiếu với bậc của công đoạn khi phân công.
+- **Lý do:** Khiêm yêu cầu.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC52, mô tả danh sách chọn công nhân
 - **Trạng thái:** Mở

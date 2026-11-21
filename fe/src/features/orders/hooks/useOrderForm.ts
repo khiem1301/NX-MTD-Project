@@ -276,10 +276,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
       create.mutate(body, {
         // Đơn tạo xong mới khai báo NVL: mở thẳng tab NVL của đơn.
         onSuccess: (saved) =>
-          afterSave(
-            `${ROUTES.orderDetail(saved.orderId)}?tab=${ORDER_MATERIALS_TAB}`,
-            saved,
-          ),
+          afterSave(`${ROUTES.orderDetail(saved.orderId)}?tab=${ORDER_MATERIALS_TAB}`, saved),
         onError: fail,
       });
     }

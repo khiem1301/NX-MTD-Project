@@ -97,7 +97,9 @@ export function useOperationImport(productId: number, onClose: () => void) {
                 result.skipped,
               ) +
                 rates +
-                (result.removed > 0 ? ` Đã ngừng dùng ${result.removed} công đoạn không có trong file.` : ''),
+                (result.removed > 0
+                  ? ` Đã ngừng dùng ${result.removed} công đoạn không có trong file.`
+                  : ''),
             );
             onClose();
           }),

@@ -11,4 +11,5 @@ export type EmployeeLookup = {
   role: string;
   teamId: number | null;
   payType: string;
+  currentGradeCode?: string | null;
 };

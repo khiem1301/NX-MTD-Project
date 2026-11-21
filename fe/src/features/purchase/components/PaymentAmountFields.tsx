@@ -67,7 +67,12 @@ export function PaymentAmountFields({ order, form, closedShort }: Props) {
           {
             validator: async (_, value) => {
               const max = closedShort ? form.getFieldValue('actualAmount') : order.totalAmount;
-              if (typeof value !== 'number' || typeof max !== 'number' || value <= max - alreadyPaid) return;
+              if (
+                typeof value !== 'number' ||
+                typeof max !== 'number' ||
+                value <= max - alreadyPaid
+              )
+                return;
               throw new Error(exceedsMessage);
             },
           },

@@ -11,8 +11,7 @@ export function MyMealPage() {
   const { data, isLoading, error } = useMyMeal(date);
   const setMeal = useSetMyMeal(date);
 
-  const punchedButNoEditableMeal =
-    !!data?.hasAttendance && data.isLocked && !data.willEat;
+  const punchedButNoEditableMeal = !!data?.hasAttendance && data.isLocked && !data.willEat;
 
   return (
     <PageCard title={MEAL_TEXT.myPageTitle} description={MEAL_TEXT.myPageSubtitle}>

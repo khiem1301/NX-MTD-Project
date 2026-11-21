@@ -3,7 +3,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { apiClient } from '@/services/apiClient';
 import { AttachmentUploadButton } from './AttachmentUploadButton';
 
-jest.mock('@/services/apiClient', () => ({ apiClient: { post: jest.fn(), get: jest.fn(), delete: jest.fn() } }));
+jest.mock('@/services/apiClient', () => ({
+  apiClient: { post: jest.fn(), get: jest.fn(), delete: jest.fn() },
+}));
 
 const renderButton = (remaining: number) =>
   render(

@@ -29,7 +29,11 @@ export function GlobalSearch({ leaves }: { leaves: NavLeaf[] }) {
     const groups = new Map<string, Option[]>();
     for (const leaf of leaves) {
       const list = groups.get(leaf.groupLabel) ?? [];
-      list.push({ value: leaf.path, label: leaf.label, search: `${leaf.label} ${leaf.groupLabel}` });
+      list.push({
+        value: leaf.path,
+        label: leaf.label,
+        search: `${leaf.label} ${leaf.groupLabel}`,
+      });
       groups.set(leaf.groupLabel, list);
     }
     return [...groups.entries()].map(([label, items]) => ({ label, options: items }));
@@ -48,7 +52,9 @@ export function GlobalSearch({ leaves }: { leaves: NavLeaf[] }) {
         navigate(path);
       }}
       filterOption={(input, option) =>
-        normalizeText((option as Option | undefined)?.search ?? '').includes(normalizeText(input.trim()))
+        normalizeText((option as Option | undefined)?.search ?? '').includes(
+          normalizeText(input.trim()),
+        )
       }
       popupMatchSelectWidth={320}
       notFoundContent="Không tìm thấy chức năng"

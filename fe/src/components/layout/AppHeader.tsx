@@ -17,7 +17,15 @@ type Props = {
 };
 
 /** Thanh trên cùng: nút thu gọn menu, tên trang, tìm nhanh, thông báo và hồ sơ người dùng. */
-export function AppHeader({ user, leaves, active, isDesktop, showSearch, collapsed, onToggleMenu }: Props) {
+export function AppHeader({
+  user,
+  leaves,
+  active,
+  isDesktop,
+  showSearch,
+  collapsed,
+  onToggleMenu,
+}: Props) {
   const toggleIcon = isDesktop && !collapsed ? <MenuFoldOutlined /> : <MenuUnfoldOutlined />;
   return (
     <Layout.Header className="app-header">

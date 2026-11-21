@@ -26,7 +26,10 @@ export function DebouncedSearch({ onSearch, onChange, ...rest }: SearchProps) {
         onChange?.(e);
         clearTimeout(timer.current);
         const value = e.target.value;
-        timer.current = setTimeout(() => latest.current?.(value, undefined, { source: 'input' }), SEARCH_DEBOUNCE_MS);
+        timer.current = setTimeout(
+          () => latest.current?.(value, undefined, { source: 'input' }),
+          SEARCH_DEBOUNCE_MS,
+        );
       }}
       onSearch={(value, event, info) => {
         clearTimeout(timer.current);

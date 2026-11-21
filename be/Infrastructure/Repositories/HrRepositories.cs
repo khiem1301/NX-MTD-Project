@@ -98,9 +98,9 @@ public sealed class EmployeeRepository : GenericRepository<Employee>, IEmployeeR
         var query = _context.Employees.AsNoTracking().Where(e => e.TeamId == teamId && e.Status == RecordStatus.Active);
         if (hidden is not null) query = query.Where(e => !hidden.Contains(e.Role.RoleCode));
         var rows = await query.OrderBy(e => e.EmployeeCode)
-            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.TeamId, e.PayType }).ToListAsync(ct);
+            .Select(e => new { e.EmployeeId, e.EmployeeCode, e.FullName, e.Role.RoleCode, e.TeamId, e.PayType, e.CurrentGradeCode }).ToListAsync(ct);
         return rows.Select(e => new EmployeeLookupDto(e.EmployeeId, e.EmployeeCode, e.FullName, Roles.FromRoleCode(e.RoleCode),
-            e.TeamId, CodeText.ToPascal(e.PayType))).ToList();
+            e.TeamId, CodeText.ToPascal(e.PayType), e.CurrentGradeCode)).ToList();
     }
 
     public async Task<IReadOnlyList<EmployeeLookupDto>> LookupUnassignedAsync(IReadOnlyCollection<string>? hidden, CancellationToken ct)

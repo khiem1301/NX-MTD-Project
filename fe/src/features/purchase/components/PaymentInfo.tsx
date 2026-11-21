@@ -61,13 +61,9 @@ export function PaymentInfo({ order: data }: { order: PurchaseOrderDetail }) {
     <>
       <Descriptions bordered size="small" column={{ xs: 1, sm: 3 }} style={{ marginBottom: 12 }}>
         <Descriptions.Item label={text.paidAmount}>{formatCurrency(paid)}</Descriptions.Item>
-        <Descriptions.Item label={text.actualTotal}>
-          {formatCurrency(target)}
-        </Descriptions.Item>
+        <Descriptions.Item label={text.actualTotal}>{formatCurrency(target)}</Descriptions.Item>
         <Descriptions.Item label={text.remaining}>
-          <Typography.Text strong>
-            {formatCurrency(Math.max(0, target - paid))}
-          </Typography.Text>
+          <Typography.Text strong>{formatCurrency(Math.max(0, target - paid))}</Typography.Text>
         </Descriptions.Item>
       </Descriptions>
       <DataTable<PurchasePayment>
