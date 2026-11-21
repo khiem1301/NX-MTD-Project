@@ -76,7 +76,11 @@ export function TeamMealMemberList({ date, members, suggestion }: Props) {
         <span>
           {MEAL_TEXT.checklist.mealCount}: <strong>{members.mealCount}</strong>
         </span>
-        <Tag color={sourceKey === 'Confirmed' ? 'green' : sourceKey === 'Attendance' ? 'blue' : 'default'}>
+        <Tag
+          color={
+            sourceKey === 'Confirmed' ? 'green' : sourceKey === 'Attendance' ? 'blue' : 'default'
+          }
+        >
           {sourceLabel}
         </Tag>
         {suggestion.confirmedAt ? (

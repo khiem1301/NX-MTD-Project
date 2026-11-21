@@ -363,7 +363,11 @@ export const markerColumns = (
     render: (_, r) => (
       <Select
         style={{ width: '100%' }}
-        value={r.status === MARKER_STATUS.DISCONTINUED ? MARKER_STATUS.DISCONTINUED : MARKER_STATUS.ACTIVE}
+        value={
+          r.status === MARKER_STATUS.DISCONTINUED
+            ? MARKER_STATUS.DISCONTINUED
+            : MARKER_STATUS.ACTIVE
+        }
         options={[
           { value: MARKER_STATUS.ACTIVE, label: MESSAGES.orders.markers.active },
           { value: MARKER_STATUS.DISCONTINUED, label: MESSAGES.orders.markers.discontinued },

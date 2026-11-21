@@ -21,7 +21,16 @@ type DetailModalProps = {
 };
 
 /** Khung xem chi tiết dùng chung: Modal cùng cỡ, nút thao tác ở chân, cùng cách hiện loading / lỗi. */
-export function DetailModal({ open, onClose, title, size = 'lg', extra, loading, error, children }: DetailModalProps) {
+export function DetailModal({
+  open,
+  onClose,
+  title,
+  size = 'lg',
+  extra,
+  loading,
+  error,
+  children,
+}: DetailModalProps) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <Modal

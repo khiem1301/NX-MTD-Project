@@ -50,8 +50,7 @@ export function OutputByWorker({ entry }: { entry: OutputEntryState }) {
   );
   const visible = filterOutputWorkers(workers, keyword, state);
   // Cả ngày chỉ xem: không mở modal nhập dù editingId còn từ lần chọn ca trước.
-  const editing =
-    isAllDay ? null : (workers.find((w) => w.workerId === editingId) ?? null);
+  const editing = isAllDay ? null : (workers.find((w) => w.workerId === editingId) ?? null);
 
   const columns: ColumnsType<OutputWorker> = [
     {

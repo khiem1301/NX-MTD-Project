@@ -16,10 +16,7 @@ type OrderImportButtonProps = {
   blocks: ProductBlock[];
   onApply: (blocks: ProductBlock[], labels: Record<number, string>) => void;
   /** DEV-ALL-151: khai mã chưa có, chưa ghi. Trả tempId âm; null khi mã đã có trên đơn. */
-  onStageProduct?: (
-    body: SaveProductPayload,
-    selection: ProductImportSelection,
-  ) => number | null;
+  onStageProduct?: (body: SaveProductPayload, selection: ProductImportSelection) => number | null;
   /** Đóng hộp nhập mà không Áp dụng thì bỏ các mã vừa khai trong hộp. */
   onUnstageProduct?: (tempId: number) => void;
 };

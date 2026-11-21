@@ -51,7 +51,8 @@ export function ProfileEditModal({ open, profile, onClose }: Props) {
           confirmPassword: v.confirmPassword ?? '',
         });
       } catch (error) {
-        if (!showPasswordError(form, error as ApiError)) void message.error((error as ApiError).message);
+        if (!showPasswordError(form, error as ApiError))
+          void message.error((error as ApiError).message);
         return;
       }
       void message.success(MESSAGES.hr.passwordChanged);
@@ -105,7 +106,9 @@ export function ProfileEditModal({ open, profile, onClose }: Props) {
           <Input maxLength={12} style={{ width: 160 }} inputMode="tel" />
         </Form.Item>
         <Divider orientation="left">{MESSAGES.hr.changePasswordTitle}</Divider>
-        <Typography.Paragraph type="secondary">{MESSAGES.hr.passwordOptionalHint}</Typography.Paragraph>
+        <Typography.Paragraph type="secondary">
+          {MESSAGES.hr.passwordOptionalHint}
+        </Typography.Paragraph>
         <PasswordFields optional />
       </Form>
     </DetailModal>

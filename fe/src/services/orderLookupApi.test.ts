@@ -4,7 +4,13 @@ import type { OrderLineLookup, OrderLookup, ProductLookup } from '@/types/orderL
 describe('order lookup types', () => {
   it('không có cmtUnitPrice / totalAmount', () => {
     type Forbidden = 'cmtUnitPrice' | 'totalAmount';
-    const noPrice: [Extract<keyof OrderLookup, Forbidden>, Extract<keyof OrderLineLookup, Forbidden>, Extract<keyof ProductLookup, Forbidden>] extends [never, never, never] ? true : false = true;
+    const noPrice: [
+      Extract<keyof OrderLookup, Forbidden>,
+      Extract<keyof OrderLineLookup, Forbidden>,
+      Extract<keyof ProductLookup, Forbidden>,
+    ] extends [never, never, never]
+      ? true
+      : false = true;
     expect(noPrice).toBe(true);
   });
 });

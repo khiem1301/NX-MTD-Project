@@ -27,10 +27,7 @@ type OrderImportModalProps = {
    * DEV-ALL-151: khai mã chưa có (chưa ghi). File Excel của mã được giao cho form đơn, nhập sau khi Lưu đơn.
    * Không truyền thì không hiện nút tạo.
    */
-  onStageProduct?: (
-    body: SaveProductPayload,
-    selection: ProductImportSelection,
-  ) => number | null;
+  onStageProduct?: (body: SaveProductPayload, selection: ProductImportSelection) => number | null;
   onUnstageProduct?: (tempId: number) => void;
 };
 

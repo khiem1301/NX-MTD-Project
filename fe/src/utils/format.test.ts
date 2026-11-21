@@ -1,5 +1,14 @@
 import type { Dayjs } from 'dayjs';
-import { fill, formatCurrency, formatDate, formatDateTime, formatMonth, formatQty, formatTime, toApiDate } from './format';
+import {
+  fill,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  formatMonth,
+  formatQty,
+  formatTime,
+  toApiDate,
+} from './format';
 
 describe('formatQty', () => {
   it('dùng dấu chấm ngăn nghìn, dấu phẩy thập phân', () => {

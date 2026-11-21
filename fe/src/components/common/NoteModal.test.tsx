@@ -3,7 +3,14 @@ import { NoteModal } from './NoteModal';
 
 const renderModal = (required: boolean, onSubmit = jest.fn()) => {
   render(
-    <NoteModal open title="Hủy đơn" label="Ghi chú" required={required} onSubmit={onSubmit} onCancel={jest.fn()} />,
+    <NoteModal
+      open
+      title="Hủy đơn"
+      label="Ghi chú"
+      required={required}
+      onSubmit={onSubmit}
+      onCancel={jest.fn()}
+    />,
   );
   return onSubmit;
 };

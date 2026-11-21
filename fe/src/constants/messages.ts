@@ -539,7 +539,8 @@ export const MESSAGES = {
       hint: 'Chọn file là mở bảng kiểm tra để xem và sửa; Xác nhận mới giữ trên form. Dữ liệu chỉ được lưu vào đơn khi bấm Lưu đơn. Dòng lỗi bỏ qua khi lưu và báo lại.',
       markerTemplate: 'File mẫu bìa cắt',
       materialTemplate: 'File mẫu NVL của đơn',
-      markerTemplateHint: 'File mẫu bìa cắt chỉ có sheet "Bìa của đơn" (không kèm Thành phần, Định mức NVL, Nhóm bìa).',
+      markerTemplateHint:
+        'File mẫu bìa cắt chỉ có sheet "Bìa của đơn" (không kèm Thành phần, Định mức NVL, Nhóm bìa).',
       noTable: 'File không có bảng {0}.',
       saved: 'Đã lưu đơn {0}.',
       running: 'Đang nhập bìa, NVL của đơn {0}...',

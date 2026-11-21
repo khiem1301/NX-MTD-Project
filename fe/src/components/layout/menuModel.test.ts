@@ -13,7 +13,12 @@ const entries: MenuEntry[] = [
   { key: 'orders', label: 'Đơn hàng', path: '/admin/orders', roles: [ROLES.Admin] },
   { key: 'products', label: 'Mã hàng', path: '/admin/products', roles: [ROLES.Admin] },
   { key: 'requests', label: 'Đơn từ của tôi', path: '/requests', roles: [ROLES.TeamLeader] },
-  { key: 'requests-inbox', label: 'Đơn cần xử lý', path: '/requests/inbox', roles: [ROLES.TeamLeader] },
+  {
+    key: 'requests-inbox',
+    label: 'Đơn cần xử lý',
+    path: '/requests/inbox',
+    roles: [ROLES.TeamLeader],
+  },
   { key: 'profile', label: 'Hồ sơ của tôi', path: '/profile', roles: 'all' },
   { key: 'new-feature', label: 'Chức năng mới', path: '/new', roles: 'all' },
 ];
@@ -33,7 +38,13 @@ describe('buildNavigation', () => {
   });
 
   it('nhóm chỉ còn một mục vẫn hiện thành nhóm có menu con', () => {
-    const single = buildNavigation(entries.filter((e) => e.key !== 'requests-inbox'), groups, ROLES.TeamLeader, ['profile'], home);
+    const single = buildNavigation(
+      entries.filter((e) => e.key !== 'requests-inbox'),
+      groups,
+      ROLES.TeamLeader,
+      ['profile'],
+      home,
+    );
 
     const req = single.items.find((i) => i.key === 'req');
     expect(req?.children?.map((c) => c.key)).toEqual(['/requests']);
@@ -49,11 +60,25 @@ describe('buildNavigation', () => {
   it('Tổ trưởng chỉ thấy chức năng đúng loại tổ; vai trò ngoài tổ không bị lọc', () => {
     const scoped: MenuEntry[] = [
       { key: 'home', label: 'Trang chủ', path: '/', roles: 'all' },
-      { key: 'work-orders', label: 'Lệnh cắt', path: '/work-orders', roles: [ROLES.Manager, ROLES.TeamLeader], teamTypes: ['Cutting'] },
-      { key: 'output', label: 'Sản lượng', path: '/output', roles: [ROLES.TeamLeader], teamTypes: ['Sewing'] },
+      {
+        key: 'work-orders',
+        label: 'Lệnh cắt',
+        path: '/work-orders',
+        roles: [ROLES.Manager, ROLES.TeamLeader],
+        teamTypes: ['Cutting'],
+      },
+      {
+        key: 'output',
+        label: 'Sản lượng',
+        path: '/output',
+        roles: [ROLES.TeamLeader],
+        teamTypes: ['Sewing'],
+      },
     ];
-    const paths = (role: typeof ROLES[keyof typeof ROLES], teamType: 'Cutting' | 'Sewing' | null) =>
-      buildNavigation(scoped, [], role, [], home, teamType).leaves.map((l) => l.path);
+    const paths = (
+      role: (typeof ROLES)[keyof typeof ROLES],
+      teamType: 'Cutting' | 'Sewing' | null,
+    ) => buildNavigation(scoped, [], role, [], home, teamType).leaves.map((l) => l.path);
 
     expect(paths(ROLES.TeamLeader, 'Sewing')).toEqual(['/', '/output']);
     expect(paths(ROLES.TeamLeader, 'Cutting')).toEqual(['/', '/work-orders']);

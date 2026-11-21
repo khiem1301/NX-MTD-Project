@@ -5,12 +5,7 @@ import { API } from '@/constants/apiEndpoints';
 import { MESSAGES } from '@/constants/messages';
 
 export type ImportTemplateKind =
-  | 'spec'
-  | 'order-lines'
-  | 'order-materials'
-  | 'order-markers'
-  | 'operations'
-  | 'product-form';
+  'spec' | 'order-lines' | 'order-materials' | 'order-markers' | 'operations' | 'product-form';
 
 type ImportTemplateLinkProps = {
   kind: ImportTemplateKind;

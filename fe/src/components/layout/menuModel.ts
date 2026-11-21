@@ -57,8 +57,11 @@ export function buildNavigation(
   visible.forEach((e) => byKey.set(e.key, e));
 
   const claimed = new Set(groups.flatMap((g) => g.entries));
-  const orphans = visible.filter((e) => e.key !== home.key && !claimed.has(e.key)).map((e) => e.key);
-  const allGroups: MenuGroup[] = orphans.length > 0 ? [...groups, { ...OTHER_GROUP, entries: orphans }] : [...groups];
+  const orphans = visible
+    .filter((e) => e.key !== home.key && !claimed.has(e.key))
+    .map((e) => e.key);
+  const allGroups: MenuGroup[] =
+    orphans.length > 0 ? [...groups, { ...OTHER_GROUP, entries: orphans }] : [...groups];
 
   const items: NavItem[] = [];
   const leaves: NavLeaf[] = [];
@@ -66,11 +69,18 @@ export function buildNavigation(
   const homeEntry = byKey.get(home.key);
   if (homeEntry) {
     items.push({ key: homeEntry.path, label: homeEntry.label, icon: home.icon });
-    leaves.push({ path: homeEntry.path, label: homeEntry.label, groupKey: home.key, groupLabel: homeEntry.label });
+    leaves.push({
+      path: homeEntry.path,
+      label: homeEntry.label,
+      groupKey: home.key,
+      groupLabel: homeEntry.label,
+    });
   }
 
   for (const group of allGroups) {
-    const members = group.entries.map((k) => byKey.get(k)).filter((e): e is MenuEntry => e !== undefined);
+    const members = group.entries
+      .map((k) => byKey.get(k))
+      .filter((e): e is MenuEntry => e !== undefined);
     members.forEach((m) =>
       leaves.push({ path: m.path, label: m.label, groupKey: group.key, groupLabel: group.label }),
     );

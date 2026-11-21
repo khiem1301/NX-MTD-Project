@@ -8,5 +8,9 @@ export const hrLookupApi = {
   teams: async (): Promise<TeamLookup[]> =>
     (await apiClient.get<ApiResponse<TeamLookup[]>>(API.hrLookups.teams)).data.data,
   teamMembers: async (teamId: number): Promise<EmployeeLookup[]> =>
-    (await apiClient.get<ApiResponse<EmployeeLookup[]>>(API.hrLookups.teamMembers, { params: { teamId } })).data.data,
+    (
+      await apiClient.get<ApiResponse<EmployeeLookup[]>>(API.hrLookups.teamMembers, {
+        params: { teamId },
+      })
+    ).data.data,
 };

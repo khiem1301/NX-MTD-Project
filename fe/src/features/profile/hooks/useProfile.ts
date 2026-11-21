@@ -5,7 +5,11 @@ import { tokenStorage } from '@/services/tokenStorage';
 import { useAuthStore } from '@/store/authStore';
 import type { ApiError } from '@/types/api';
 import type { LoginResult } from '@/types/auth';
-import { profileApi, type ChangePasswordPayload, type UpdateProfilePayload } from '../api/profileApi';
+import {
+  profileApi,
+  type ChangePasswordPayload,
+  type UpdateProfilePayload,
+} from '../api/profileApi';
 
 const PROFILE_KEY = ['profile'];
 
