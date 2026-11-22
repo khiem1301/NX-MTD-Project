@@ -11,29 +11,30 @@ const AUTO_HIDE_MS = 20_000;
 
 /**
  * MSG23: hiện khi quá hạn đồng bộ, tự ẩn sau 20 giây (hoặc bấm đóng).
- * Vào lại trang / health đổi trạng thái overdue thì hiện lại.
+ * Vào lại trang / health đổi trạng thái overdue thì hiện lại (remount theo overdueKey).
  */
 export function SyncHealthBanner({ health }: { health: SyncHealth | undefined }) {
-  const { user } = useAuth();
-  const isAdmin = user?.role === ROLES.Admin;
-  const [hidden, setHidden] = useState(false);
-
   const overdueKey =
     health?.isOverdue === true
       ? `${health.lastSucceededAt ?? 'never'}|${health.alertThresholdMinutes}`
       : null;
 
+  if (!health?.isOverdue || overdueKey === null) return null;
+
+  return <OverdueBanner key={overdueKey} health={health} />;
+}
+
+function OverdueBanner({ health }: { health: SyncHealth }) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === ROLES.Admin;
+  const [hidden, setHidden] = useState(false);
+
   useEffect(() => {
-    if (overdueKey === null) {
-      setHidden(false);
-      return;
-    }
-    setHidden(false);
     const timer = window.setTimeout(() => setHidden(true), AUTO_HIDE_MS);
     return () => window.clearTimeout(timer);
-  }, [overdueKey]);
+  }, []);
 
-  if (!health?.isOverdue || hidden) return null;
+  if (hidden) return null;
 
   const lastText =
     health.lastSucceededAt === null

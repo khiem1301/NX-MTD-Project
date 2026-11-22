@@ -114,7 +114,8 @@ public class WorkOrderFinishCuttingTests : ProductionTestBase
     [Fact]
     public async Task APendingFabricReturn_BlocksFinishing_UntilTheWarehouseConfirmsIt()
     {
-        Cut(100); Handover(HandoverStatuses.Confirmed, 100, 100);
+        // Cắt thiếu (80/100) để sau khi hết phiếu trả chờ kho vẫn đóng thiếu được (không dính “đã cắt đủ”).
+        Cut(80); Handover(HandoverStatuses.Confirmed, 80, 80);
         var issue = IssueReceived(120);
         _returns.Add(new MaterialReturn { Status = HandoverStatuses.Pending, WorkOrderId = issue.MaterialIssue.WorkOrderId });
 

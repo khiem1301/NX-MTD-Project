@@ -246,24 +246,24 @@ public sealed class CustomerOrderService : ICustomerOrderService
     public async Task<Result> CancelAsync(int orderId, CancelOrderDto dto, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(dto.Reason))
-            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
         var order = await _orders.GetByIdAsync(orderId);
         if (order is null) return Fail.NotFound();
         if (order.Status != OrderStatuses.New)
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
         return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled, ct);
     }
 
     public async Task<Result> StopAsync(int orderId, StopOrderDto dto, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (string.IsNullOrWhiteSpace(dto.Reason))
-            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
         var order = await _orders.GetByIdAsync(orderId);
         if (order is null) return Fail.NotFound();
         if (!OrderStatuses.Stoppable.Contains(order.Status))
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
         var ordered = await _lines.Query().Where(l => l.OrderId == orderId).SumAsync(l => (int?)l.OrderedQty, ct) ?? 0;
         if (ordered <= 0)
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderStopNoLines, ResultKind.Validation);

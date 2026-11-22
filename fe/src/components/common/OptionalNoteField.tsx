@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Button, Form, type FormItemProps } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -24,20 +24,16 @@ export function OptionalNoteField({
 }: Props) {
   const form = Form.useFormInstance();
   const watched = Form.useWatch(name, form) as string | undefined;
-  const [open, setOpen] = useState(defaultOpen);
-
-  useEffect(() => {
-    if (defaultOpen || (typeof watched === 'string' && watched.trim())) {
-      setOpen(true);
-    }
-  }, [defaultOpen, watched]);
+  const [manualOpen, setManualOpen] = useState(false);
+  const hasNote = typeof watched === 'string' && watched.trim().length > 0;
+  const open = defaultOpen || hasNote || manualOpen;
 
   if (!open) {
     return (
       <Button
         type="link"
         icon={<PlusOutlined />}
-        onClick={() => setOpen(true)}
+        onClick={() => setManualOpen(true)}
         style={{ paddingLeft: 0, marginBottom: 12, ...style }}
       >
         {MESSAGES.common.addNote}
