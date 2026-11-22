@@ -29,6 +29,7 @@ public class CustomerOrderServiceHighComplexityTests
     private readonly List<ProductColor> _newColors = [];
     private readonly List<DispatchNote> _notes = [];
     private readonly List<OrderLine> _orderLines = [];
+    private readonly List<CuttingLayLine> _layLines = [];
     private readonly List<WorkOrder> _workOrders = [];
     private readonly List<KpiTarget> _kpis = [];
 
@@ -60,7 +61,7 @@ public class CustomerOrderServiceHighComplexityTests
         returnRepo.Query().Returns(_ => new List<MaterialReturn>().AsTestAsyncQueryable());
         _uow.Repository<MaterialReturn>().Returns(returnRepo);
         var layLineRepo = Substitute.For<IGenericRepository<CuttingLayLine>>();
-        layLineRepo.Query().Returns(_ => new List<CuttingLayLine>().AsTestAsyncQueryable());
+        layLineRepo.Query().Returns(_ => _layLines.AsTestAsyncQueryable());
         _uow.Repository<CuttingLayLine>().Returns(layLineRepo);
         _clock.Now.Returns(Now);
         _clock.Today.Returns(Today);
@@ -100,6 +101,8 @@ public class CustomerOrderServiceHighComplexityTests
     {
         var v = TestVariant.Make(1, "AO-01", color, size);
         _variants.Add(v);
+        if (cut > 0)
+            _layLines.Add(new CuttingLayLine { OrderLineId = lineId, ActualQty = cut, CuttingLay = new CuttingLay() });
         return new OrderLine
         {
             OrderLineId = lineId, OrderId = 1, ProductId = 1, ProductVariantId = v.ProductVariantId,
@@ -609,8 +612,8 @@ public class CustomerOrderServiceHighComplexityTests
     [Fact]
     public async Task UTCID447_UpdateAsync_InProduction_QtyEqualsCut_Success()
     {
-        // Arrange
-        var line = Line(200, "Đỏ", "M", 500);
+        // Arrange — đã cắt 300
+        var line = Line(200, "Đỏ", "M", 500, cut: 300);
         var order = Order(2, OrderStatuses.InProduction, line);
         _orders.GetWithLinesAsync(2, Arg.Any<CancellationToken>()).Returns(order);
 
@@ -625,8 +628,8 @@ public class CustomerOrderServiceHighComplexityTests
     [Fact]
     public async Task UTCID448_UpdateAsync_InProduction_QtyBelowProduced_Fails()
     {
-        // Arrange — header khớp đơn 2 (tránh Fail giả do OrderHeaderLocked)
-        var line = Line(200, "Đỏ", "M", 300);
+        // Arrange — header khớp đơn 2; đã cắt 300
+        var line = Line(200, "Đỏ", "M", 300, cut: 300);
         _orderLines.Add(new OrderLine { OrderLineId = 200, OrderId = 2, OrderedQty = 300 });
         var order = Order(2, OrderStatuses.InProduction, line);
         _orders.GetWithLinesAsync(2, Arg.Any<CancellationToken>()).Returns(order);

@@ -5,7 +5,7 @@ import { PageCard } from '@/components/common/PageCard';
 /** UC28 — tổ trưởng / tổ phó xem bảng công tổ mình (GBR-01, phạm vi do BE ép). */
 export function TeamAttendancePage() {
   return (
-    <PageCard title={ATTENDANCE_TEXT.teamPageTitle} description={ATTENDANCE_TEXT.pageSubtitle}>
+    <PageCard title={ATTENDANCE_TEXT.teamPageTitle}>
       <TimesheetView audience="teamLeader" />
     </PageCard>
   );

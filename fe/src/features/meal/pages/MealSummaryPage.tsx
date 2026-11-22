@@ -14,7 +14,7 @@ export function MealSummaryPage() {
   const { data, isLoading, error } = useMealSummary(date);
 
   return (
-    <PageCard title={MEAL_TEXT.summaryPageTitle} description={MEAL_TEXT.summaryPageSubtitle}>
+    <PageCard title={MEAL_TEXT.summaryPageTitle}>
       {error ? (
         <Alert type="error" showIcon message={(error as { message: string }).message} />
       ) : null}

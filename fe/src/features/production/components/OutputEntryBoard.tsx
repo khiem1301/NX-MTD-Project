@@ -20,10 +20,7 @@ export function OutputEntryBoard({ role }: { role: OutputRole }) {
   const { isManager, warnings, setWarnings, grid } = entry;
 
   return (
-    <PageCard
-      title={isManager ? text.managerTitle : text.title}
-      description={isManager ? text.managerSubtitle : text.subtitle}
-    >
+    <PageCard title={isManager ? text.managerTitle : text.title}>
       <OutputFilterBar entry={entry} isManager={isManager} />
 
       <QueryError error={grid.error} onRetry={() => void grid.refetch()} />

@@ -79,7 +79,6 @@ export function OperationsPage() {
   return (
     <PageCard
       title={text.title}
-      description={canManageRates ? text.subtitle : text.adminSubtitle}
       extra={
         canManageRates && (
           <OperationPageActions

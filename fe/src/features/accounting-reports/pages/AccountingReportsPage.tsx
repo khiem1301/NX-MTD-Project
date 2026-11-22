@@ -67,10 +67,7 @@ export function AccountingReportsPage() {
   ];
 
   return (
-    <PageCard
-      title={ACCOUNTING_REPORT_TEXT.pageTitle}
-      description={ACCOUNTING_REPORT_TEXT.pageSubtitle}
-    >
+    <PageCard title={ACCOUNTING_REPORT_TEXT.pageTitle}>
       <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
         <Space>
           <Typography.Text>{ACCOUNTING_REPORT_TEXT.periodMonth}</Typography.Text>

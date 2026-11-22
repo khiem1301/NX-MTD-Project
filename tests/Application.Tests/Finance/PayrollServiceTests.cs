@@ -425,7 +425,7 @@ public class PayrollServiceTests
     public async Task ApproveAsync_NotPending_ReturnsFailure()
     {
         var payroll = Payroll();
-        _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        _repo.FindPayrollByIdAsync(1, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         var result = await _sut.ApproveAsync(1, CancellationToken.None);
 
@@ -436,7 +436,8 @@ public class PayrollServiceTests
     public async Task ApproveAsync_Valid_ApprovesPayrollAndLocksPeriod()
     {
         var payroll = Payroll(status: PayrollStatus.PendingApproval);
-        _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        payroll.Payslips.Add(new Payslip { NetPay = 1 });
+        _repo.FindPayrollByIdAsync(1, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         var result = await _sut.ApproveAsync(1, CancellationToken.None);
 
@@ -556,7 +557,8 @@ public class PayrollServiceTests
     public async Task ApproveAsync_Valid_LogsApproveAndPeriodLock()
     {
         var payroll = Payroll(status: PayrollStatus.PendingApproval);
-        _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        payroll.Payslips.Add(new Payslip { NetPay = 1 });
+        _repo.FindPayrollByIdAsync(1, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         await _sut.ApproveAsync(1, CancellationToken.None);
 
@@ -594,7 +596,7 @@ public class PayrollServiceTests
     [Fact]
     public async Task ApproveAsync_NotPending_LogsNothing()
     {
-        _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(Payroll());
+        _repo.FindPayrollByIdAsync(1, true, Arg.Any<CancellationToken>()).Returns(Payroll());
 
         await _sut.ApproveAsync(1, CancellationToken.None);
 

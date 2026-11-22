@@ -99,6 +99,7 @@ export const KPI_TEXT = {
   teamPanel: {
     title: 'KPI của tổ',
     empty: 'Tổ chưa được giao chỉ tiêu KPI nào.',
+    viewDaily: 'Xem KPI theo ngày',
   },
 
   filter: {

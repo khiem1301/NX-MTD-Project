@@ -1,19 +1,42 @@
-import { Card } from 'antd';
+import { useState } from 'react';
+import { Card, Space } from 'antd';
+import { EyeOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import { DataTable } from '@/components/common/DataTable';
 import { FilterSelect } from '@/components/common/FilterSelect';
+import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
+import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { KPI_TEXT } from '../constants';
 import { useTeamKpiTargets } from '../hooks/useKpi';
 import type { KpiTarget, KpiTargetStatus } from '../types';
+import { KpiCalendarModal } from './KpiCalendarModal';
 import { KPI_STATUS_OPTIONS, kpiTargetColumns } from './kpiColumns';
 
-const columns = kpiTargetColumns(false);
-
-/** Trang chủ tổ trưởng / tổ phó may: chỉ tiêu KPI được giao cho tổ và tiến độ, mặc định các chỉ tiêu đang theo dõi. */
+/** Trang chủ tổ trưởng / tổ phó may: chỉ tiêu KPI được giao cho tổ, tiến độ, và xem KPI theo ngày. */
 export function TeamKpiPanel() {
   const table = useTableQuery<{ status?: KpiTargetStatus }>({ status: 'Active' });
   const targets = useTeamKpiTargets(table.params);
+  const [calendarOf, setCalendarOf] = useState<KpiTarget | null>(null);
+
+  const columns: ColumnsType<KpiTarget> = [
+    ...kpiTargetColumns(false),
+    {
+      title: MESSAGES.common.actions,
+      key: 'action',
+      width: 88,
+      render: (_, row) => (
+        <Space size={0}>
+          <IconAction
+            title={KPI_TEXT.teamPanel.viewDaily}
+            icon={<EyeOutlined />}
+            onClick={() => setCalendarOf(row)}
+          />
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <Card title={KPI_TEXT.teamPanel.title} style={{ marginTop: 16 }}>
@@ -32,6 +55,11 @@ export function TeamKpiPanel() {
         loading={targets.isFetching}
         locale={{ emptyText: KPI_TEXT.teamPanel.empty }}
         pagination={table.pagination(targets.data?.totalItems)}
+      />
+      <KpiCalendarModal
+        target={calendarOf}
+        mode="team"
+        onClose={() => setCalendarOf(null)}
       />
     </Card>
   );

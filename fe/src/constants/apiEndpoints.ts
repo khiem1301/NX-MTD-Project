@@ -237,6 +237,8 @@ export const API = {
     lineCapacity: '/api/v1/manager/kpi-targets/line-capacity',
     allottedTeams: '/api/v1/manager/order-line-teams/teams',
     calendar: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/calendar`,
+    teamCalendar: (kpiTargetId: number) =>
+      `/api/v1/team-leader/kpi-targets/${kpiTargetId}/calendar`,
     dailyPlan: (kpiTargetId: number) => `/api/v1/manager/kpi-targets/${kpiTargetId}/daily-plan`,
     finishResult: (kpiTargetId: number) =>
       `/api/v1/team-leader/kpi-targets/${kpiTargetId}/finish-result`,

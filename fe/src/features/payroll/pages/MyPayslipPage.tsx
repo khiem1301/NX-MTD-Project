@@ -16,10 +16,7 @@ export function MyPayslipPage() {
   const rows = summaries.data ?? [];
 
   return (
-    <PageCard
-      title={PAYROLL_TEXT.myPayslipPageTitle}
-      description={PAYROLL_TEXT.myPayslipPageSubtitle}
-    >
+    <PageCard title={PAYROLL_TEXT.myPayslipPageTitle}>
       {summaries.error ? <Alert type="error" showIcon message={summaries.error.message} /> : null}
       {summaries.isLoading ? <Spin /> : null}
 

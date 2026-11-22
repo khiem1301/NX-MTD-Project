@@ -60,6 +60,14 @@ export const PRODUCTION_TEXT = {
   myDefects: MY_DEFECTS_TEXT,
 } as const;
 
+/** C7 — ca mặc định theo giờ hiện tại: sáng <12, chiều <17, còn lại tăng ca. */
+export const currentShiftCode = (now = new Date()): ShiftCode => {
+  const hour = now.getHours();
+  if (hour < 12) return 'Morning';
+  if (hour < 17) return 'Afternoon';
+  return 'Overtime';
+};
+
 /** BE trả ca dạng "MORNING" hoặc "Morning": quy về nhãn tiếng Việt; ALL = Cả ngày. */
 export const shiftText = (shift: string | null | undefined): string => {
   if (!shift) return '—';

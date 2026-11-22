@@ -705,6 +705,7 @@ public class CustomerOrderServiceTests
         (await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default)).ErrorCode
             .Should().Be(ErrorCodes.OrderInvalidStatus);
 
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
         var running = Existing(OrderStatuses.InProduction);
         _orders.GetByIdAsync(5).Returns(running);
         var result = await Create().StopAsync(5, new StopOrderDto(" khách hủy ", RowVer), default);
@@ -730,7 +731,7 @@ public class CustomerOrderServiceTests
         var order = Existing(OrderStatuses.New);
         _orders.GetByIdAsync(5).Returns(order);
 
-        var result = await Create().CancelAsync(5, new CancelOrderDto(null, RowVer), default);
+        var result = await Create().CancelAsync(5, new CancelOrderDto("Khách hủy", RowVer), default);
 
         result.IsSuccess.Should().BeTrue();
         pending.Status.Should().Be(DispatchStatuses.Cancelled);
@@ -790,6 +791,7 @@ public class CustomerOrderServiceTests
         var closed = new KpiTarget { KpiTargetId = 2, OrderId = 5, Status = KpiStatuses.Closed };
         var otherKpi = new KpiTarget { KpiTargetId = 3, OrderId = 9, Status = KpiStatuses.Active };
         _kpis.AddRange([active, closed, otherKpi]);
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
         _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
 
         var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);
@@ -809,6 +811,7 @@ public class CustomerOrderServiceTests
         var cutting = new WorkOrder { WorkOrderId = 5, OrderId = 5, WorkOrderCode = "LC-5", Status = WorkOrderStatuses.Cutting };
         _workOrders.Add(cutting);
         _handoverLines.Add(new CutHandoverLine { CutHandover = new CutHandover { WorkOrderId = 5, Status = HandoverStatuses.Pending } });
+        _orderLines.Add(new OrderLine { OrderId = 5, OrderedQty = 100 });
         _orders.GetByIdAsync(5).Returns(Existing(OrderStatuses.InProduction));
 
         var result = await Create().StopAsync(5, new StopOrderDto("hết hàng", RowVer), default);

@@ -182,7 +182,7 @@ export function IncomingMaterialsPage() {
   ];
 
   return (
-    <PageCard title={text.title} description={text.subtitle}>
+    <PageCard title={text.title}>
       <QueryError error={incoming.error} onRetry={() => void incoming.refetch()} />
       <Tabs items={items} />
       <ReceiptFormModal

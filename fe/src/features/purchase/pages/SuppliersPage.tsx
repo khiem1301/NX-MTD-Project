@@ -48,13 +48,13 @@ export function SuppliersPage() {
     {
       title: text.status,
       dataIndex: 'status',
-      render: (value: string) => <StatusTag status={value} labels={SUPPLIER_STATUS_LABEL} />,
-    },
-    {
-      title: text.discontinueReason,
-      dataIndex: 'discontinueReason',
-      ellipsis: true,
-      render: (v: string | null) => v ?? '—',
+      render: (value: string, row) => (
+        <StatusTag
+          status={value}
+          labels={SUPPLIER_STATUS_LABEL}
+          title={row.discontinueReason || undefined}
+        />
+      ),
     },
     { title: text.orderCount, dataIndex: 'purchaseOrderCount', align: 'right' },
     {
@@ -89,7 +89,6 @@ export function SuppliersPage() {
   return (
     <PageCard
       title={PURCHASE_TEXT.suppliersTitle}
-      description={PURCHASE_TEXT.suppliersSubtitle}
       extra={
         <Button type="primary" icon={<PlusOutlined />} onClick={() => openForm(null)}>
           {PURCHASE_TEXT.add}

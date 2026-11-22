@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -28,6 +29,11 @@ public sealed class OperationService : IOperationService
     {
         if (productId <= 0)
             return Result<IReadOnlyList<OperationDto>>.Failure(ErrorCodes.OperationInvalid, Messages.OperationProductRequired, ResultKind.Validation);
+
+        var productExists = await _uow.Repository<Product>().Query().AsNoTracking()
+            .AnyAsync(p => p.ProductId == productId, ct);
+        if (!productExists)
+            return Fail.As<IReadOnlyList<OperationDto>>(Fail.NotFound());
 
         var items = await Operations.AsNoTracking()
             .Where(o => o.ProductId == productId && (includeDiscontinued || o.Status == OperationStatuses.Active))
@@ -93,8 +99,13 @@ public sealed class OperationService : IOperationService
 
     public async Task<Result<int>> CreateAsync(SaveOperationDto dto, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         var product = await CheckProductAsync(dto.ProductId, ct);
         if (product is not null) return Fail.As<int>(product);
+
+        var fields = ValidateSaveFields(dto);
+        if (fields is not null) return Fail.As<int>(fields);
 
         var code = dto.OperationCode.Trim().ToUpperInvariant();
         var check = await CheckAsync(dto, code, null, ct);
@@ -107,19 +118,35 @@ public sealed class OperationService : IOperationService
 
         return await _uow.InTransactionAsync(async () =>   // log cần OperationId nên lưu trước
         {
-            if (dto.IsFinalStep) await MoveFinalStepAsync(dto.ProductId, null, ct);
-            await _uow.Repository<Operation>().AddAsync(operation);
-            await _uow.SaveChangesAsync();
-            _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
-            await _uow.SaveChangesAsync();
-            return Result<int>.Success(operation.OperationId, Messages.Saved);
+            List<Operation>? clearedFinals = null;
+            try
+            {
+                if (dto.IsFinalStep) clearedFinals = await MoveFinalStepAsync(dto.ProductId, null, ct);
+                await _uow.Repository<Operation>().AddAsync(operation);
+                await _uow.SaveChangesAsync();
+                _audit.Add(new AuditEntry(nameof(Operation), operation.OperationId, AuditActions.Insert, null, Snapshot(operation)));
+                await _uow.SaveChangesAsync();
+                return Result<int>.Success(operation.OperationId, Messages.Saved);
+            }
+            catch
+            {
+                // Rollback DB đã xử lý bởi InTransactionAsync; khôi phục cờ IsFinalStep trên entity đang theo dõi.
+                if (clearedFinals is not null)
+                    foreach (var other in clearedFinals) other.IsFinalStep = true;
+                throw;
+            }
         });
     }
 
     public async Task<Result> UpdateAsync(int operationId, SaveOperationDto dto, CancellationToken ct)
     {
+        ArgumentNullException.ThrowIfNull(dto);
+
         var operation = await _uow.Repository<Operation>().GetByIdAsync(operationId);
         if (operation is null) return Fail.NotFound();
+
+        var fields = ValidateSaveFields(dto);
+        if (fields is not null) return fields;
 
         var code = dto.OperationCode.Trim().ToUpperInvariant();
         // Mã hàng của công đoạn không đổi: sản lượng và đơn giá cũ gắn với mã hàng đó.
@@ -148,6 +175,10 @@ public sealed class OperationService : IOperationService
         // Màn giao việc chỉ hiện công đoạn đang dùng và sản lượng chặn công đoạn đã ngừng: việc đang giao sẽ không thu hồi, không báo xong được.
         if (await HasOpenWorkAsync(operationId, ct))
             return Result.Failure(ErrorCodes.OperationHasOpenWork, Messages.OperationHasOpenWork);
+        // Mã hàng phải luôn còn đúng một công đoạn may cuối đang dùng.
+        if (operation.IsFinalStep
+            && !await FinalStepExistsAsync(operation.ProductId, operationId, ct))
+            return Result.Failure(ErrorCodes.OperationFinalStepRequired, Messages.OperationFinalStepRequired);
 
         operation.Status = OperationStatuses.Discontinued;
         _audit.Add(new AuditEntry(nameof(Operation), operationId, AuditActions.Update,
@@ -275,8 +306,14 @@ public sealed class OperationService : IOperationService
         int productId, Stream stream, string? sheetName, int? finalStt, DateOnly? effectiveDate, bool submitRates,
         CancellationToken ct, bool replace = false)
     {
-        var plan = await BuildImportPlanAsync(productId, stream, sheetName, effectiveDate, ct, replace);
+        // submitRates mà không chọn ngày → dùng hôm nay (đơn giá chờ duyệt phải có EffectiveDate).
+        var rateEffective = effectiveDate ?? (submitRates ? _clock.Today : (DateOnly?)null);
+        var plan = await BuildImportPlanAsync(productId, stream, sheetName, rateEffective, ct, replace);
         if (!plan.IsSuccess) return Fail.As<OperationImportResultDto>(plan);
+
+        if (plan.Data!.Rows.Count(r => r.Raw.IsFinal) > 1)
+            return Result<OperationImportResultDto>.Failure(ErrorCodes.OperationFinalStepExists,
+                Messages.OperationFinalStepExists);
 
         var valid = plan.Data!.Rows.Where(r => r.Preview.Action != ActionError).ToList();
         if (valid.Count == 0)
@@ -288,7 +325,7 @@ public sealed class OperationService : IOperationService
         if (finalError is not null) return finalError;
 
         return await _uow.InTransactionAsync(
-            () => ApplyImportAsync(productId, plan.Data!, valid, finalStt, effectiveDate, submitRates, skipped, ct));
+            () => ApplyImportAsync(productId, plan.Data!, valid, finalStt, rateEffective, submitRates, skipped, ct));
     }
 
     private sealed record RowChanges(
@@ -502,6 +539,10 @@ public sealed class OperationService : IOperationService
         if (!parsed.IsSuccess) return Fail.As<ImportPlan>(parsed);
         var sheets = parsed.Data!;
 
+        if (sheets.Count == 0)
+            return Result<ImportPlan>.Failure(ErrorCodes.OperationExcelInvalid, Messages.OperationExcelInvalid,
+                ResultKind.Validation);
+
         var sheet = string.IsNullOrWhiteSpace(sheetName)
             ? sheets[0]
             : sheets.FirstOrDefault(s => string.Equals(s.SheetName, sheetName.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -574,14 +615,16 @@ public sealed class OperationService : IOperationService
     private static List<PlannedRow> PlanRows(OperationExcelSheetDto sheet, IReadOnlyDictionary<string, Operation> byCode,
         IReadOnlyDictionary<int, List<PieceRate>> ratesByOperation, DateOnly? effectiveDate, ImportRefs? refs)
     {
-        var seenStt = new HashSet<int>();
+        var duplicateStt = sheet.Rows.GroupBy(r => r.Stt).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
         var manyFinals = sheet.Rows.Count(r => r.IsFinal) > 1;
         var rows = new List<PlannedRow>(sheet.Rows.Count);
         foreach (var raw in sheet.Rows)
         {
             var code = CodeFor(raw.Stt);
             var error = raw.ParseError;
-            if (error is null && !seenStt.Add(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
+            if (error is null && (raw.Stt < 1 || raw.Stt > short.MaxValue))
+                error = Messages.OperationImportSttOutOfRange;
+            if (error is null && duplicateStt.Contains(raw.Stt)) error = $"Trùng STT {raw.Stt} trong file.";
             if (error is null && manyFinals && raw.IsFinal) error = Messages.OperationImportManyFinals;
             var (componentIds, componentNames, componentWarning) = ResolveComponents(raw, sheet, refs);
             var group = sheet.HasGroupColumn ? raw.GroupName : null;
@@ -705,13 +748,31 @@ public sealed class OperationService : IOperationService
 
     private static object RateSnapshot(PieceRate r) => new { r.OperationId, r.Rate, r.EffectiveDate, r.Status };
 
-    /// <summary>Mã trùng trong mã hàng — báo rõ trước khi DB chặn.</summary>
+    /// <summary>Kiểm tra mã / thời gian chuẩn trước khi Trim (tránh NRE khi OperationCode null).</summary>
+    private static Result? ValidateSaveFields(SaveOperationDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.OperationCode))
+            return Result.Failure(ErrorCodes.OperationInvalid, Messages.Required("mã công đoạn"), ResultKind.Validation);
+        if (dto.OperationCode.Trim().Length > OperationLimits.MaxOperationCodeLength)
+            return Result.Failure(ErrorCodes.OperationInvalid, Messages.OperationCodeTooLong, ResultKind.Validation);
+        if (dto.StandardTimeSec is <= 0)
+            return Result.Failure(ErrorCodes.OperationInvalid, Messages.OperationStandardTimeInvalid, ResultKind.Validation);
+        return null;
+    }
+
+    /// <summary>Mã / STT trùng trong mã hàng — báo rõ trước khi DB chặn.</summary>
     private async Task<Result?> CheckAsync(SaveOperationDto dto, string code, Operation? existing, CancellationToken ct)
     {
         var exceptId = existing?.OperationId;
         var duplicate = await Operations.AsNoTracking().AnyAsync(
             o => o.ProductId == dto.ProductId && o.OperationCode == code && (exceptId == null || o.OperationId != exceptId), ct);
         if (duplicate) return Result.Failure(ErrorCodes.OperationCodeDuplicate, Messages.OperationCodeDuplicate);
+
+        var duplicateSeq = await Operations.AsNoTracking().AnyAsync(
+            o => o.ProductId == dto.ProductId && o.StationSequence == dto.StationSequence
+                 && (exceptId == null || o.OperationId != exceptId), ct);
+        if (duplicateSeq)
+            return Result.Failure(ErrorCodes.OperationSequenceDuplicate, Messages.OperationSequenceDuplicate);
 
         return null;
     }
@@ -720,7 +781,7 @@ public sealed class OperationService : IOperationService
     /// Tick công đoạn cuối ở công đoạn này thì công đoạn cuối đang dùng trước đó tự bỏ tick. Lưu ngay, vì chỉ mục UX_Operation_FinalStep
     /// không cho hai dòng cùng là công đoạn cuối trong một lô lệnh, mà EF ghi theo thứ tự khóa chứ không theo thứ tự gán.
     /// </summary>
-    private async Task MoveFinalStepAsync(int productId, int? exceptId, CancellationToken ct)
+    private async Task<List<Operation>> MoveFinalStepAsync(int productId, int? exceptId, CancellationToken ct)
     {
         var others = await Operations.Where(o => o.ProductId == productId && o.IsFinalStep
             && o.Status == OperationStatuses.Active && (exceptId == null || o.OperationId != exceptId)).ToListAsync(ct);
@@ -731,6 +792,7 @@ public sealed class OperationService : IOperationService
                 new { IsFinalStep = true }, new { IsFinalStep = false }));
         }
         if (others.Count > 0) await _uow.SaveChangesAsync();
+        return others;
     }
 
     /// <param name="alsoIgnore">Công đoạn sắp bị ngừng dùng trong cùng lần nhập (chế độ thay thế): không tính là công đoạn cuối đang có.</param>
@@ -747,7 +809,9 @@ public sealed class OperationService : IOperationService
         operation.SkillLevel = dto.SkillLevel;
         operation.StandardTimeSec = dto.StandardTimeSec;
         operation.TeamType = string.IsNullOrWhiteSpace(dto.TeamType) ? TeamTypes.Sewing : CodeText.ToCode(dto.TeamType);
-        operation.IsFinalStep = dto.IsFinalStep;
+        // Công đoạn đã ngừng: không đổi / không nhận tick công đoạn cuối (MoveFinalStep cũng bỏ qua).
+        if (operation.Status == OperationStatuses.Active)
+            operation.IsFinalStep = dto.IsFinalStep;
     }
 
     /// <summary>

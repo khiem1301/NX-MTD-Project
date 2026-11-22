@@ -29,6 +29,22 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
     private readonly List<Material> _materials = [];
     private readonly List<OrderMaterial> _orderMaterials = [new OrderMaterial { OrderId = OrderId, MaterialId = 7 }];
     private readonly List<MaterialIssue> _issues = [];
+    private readonly List<Operation> _operations =
+    [
+        new Operation
+        {
+            OperationId = 1, ProductId = 3, OperationCode = "OP10", StationSequence = 1,
+            Status = OperationStatuses.Active, TeamType = TeamTypes.Sewing,
+        },
+    ];
+    private readonly List<OperationAssignment> _assignments =
+    [
+        new OperationAssignment
+        {
+            OperationId = 1, OrderId = OrderId, SewingTeamId = SewingTeamId, ValidTo = null,
+            Worker = new Employee { Status = RecordStatus.Active, TeamId = SewingTeamId },
+        },
+    ];
     private readonly MaterialIssueService _sut;
 
     public MaterialIssueRequisitionTests()
@@ -41,6 +57,8 @@ public class MaterialIssueRequisitionTests : ProductionTestBase
         SetupQueryable(_orders);
         SetupQueryable(_requestRows);
         SetupQueryable(_issues);
+        SetupQueryable(_operations);
+        SetupQueryable(_assignments);
         Uow.SaveChangesAsync().Returns(Task.FromResult(1));
         _stock.EnsureAvailableAsync(Arg.Any<IReadOnlyList<StockRequirement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _stock.PostAsync(Arg.Any<IReadOnlyList<StockMovement>>(), Arg.Any<CancellationToken>()).Returns(Result.Success());

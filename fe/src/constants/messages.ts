@@ -32,11 +32,14 @@ export const MESSAGES = {
     view: 'Xem',
     search: 'Tìm theo mã, tên...',
     reason: 'Lý do',
+    addNote: '+ Thêm ghi chú',
     reasonRequired: 'Vui lòng nhập lý do.', // MSG01
     required: 'Vui lòng nhập thông tin này.', // MSG01
     overMaxQty: 'Không được vượt quá {0}.',
     saved: 'Đã lưu.',
     actions: 'Thao tác',
+    /** Tooltip trạng thái đã xác nhận: {0}=tên, {1}=thời điểm. */
+    confirmedByAt: 'Đã xác nhận bởi {0} lúc {1}',
     tableTotal: '{0}–{1} / {2} dòng',
     perPage: '{0} / trang',
     pageSizeLabel: 'Số dòng mỗi trang',
@@ -220,7 +223,7 @@ export const MESSAGES = {
     addEmployee: 'Thêm nhân viên văn phòng',
     editEmployee: 'Sửa nhân viên',
     floorFromRjHint:
-      'Chỉ Admin / Quản đốc cấp tài khoản. Công nhân: Chấm công → Nhân viên RJ → Tạo trên hệ thống. Kế toán chỉ xem danh sách.',
+      'Chỉ Admin / Quản đốc cấp tài khoản. Công nhân: Chấm công → Nhân viên → Tạo trên hệ thống. Kế toán chỉ xem danh sách.',
     resign: 'Cho nghỉ việc',
     resignReason: 'Lý do nghỉ việc',
     lockAccount: 'Khóa tài khoản',

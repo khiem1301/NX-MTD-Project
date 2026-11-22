@@ -21,7 +21,7 @@ export function MonthlyCostPage() {
   const canImport = !monthlyCost.isLoading && (notFound || monthlyCost.data?.isLocked === false);
 
   return (
-    <PageCard title={MONTHLY_COST_TEXT.pageTitle} description={MONTHLY_COST_TEXT.pageSubtitle}>
+    <PageCard title={MONTHLY_COST_TEXT.pageTitle}>
       <Space>
         <Typography.Text>{MONTHLY_COST_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker

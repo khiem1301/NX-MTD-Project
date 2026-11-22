@@ -10,11 +10,13 @@ import { KpiCalendarBody } from './KpiCalendarBody';
 type KpiCalendarModalProps = {
   target: KpiTarget | null;
   onClose: () => void;
+  /** manager: Quản đốc đặt/sửa; team: tổ trưởng chỉ xem. */
+  mode?: 'manager' | 'team';
 };
 
 /** Modal lịch KPI theo ngày của một chỉ tiêu. */
-export function KpiCalendarModal({ target, onClose }: KpiCalendarModalProps) {
-  const calendar = useKpiCalendar(target?.kpiTargetId ?? null);
+export function KpiCalendarModal({ target, onClose, mode = 'manager' }: KpiCalendarModalProps) {
+  const calendar = useKpiCalendar(target?.kpiTargetId ?? null, mode);
   const data = calendar.data;
 
   return (

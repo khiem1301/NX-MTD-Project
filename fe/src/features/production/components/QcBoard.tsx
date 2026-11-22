@@ -79,7 +79,6 @@ export function QcBoard({ role }: { role: QcRole }) {
   return (
     <PageCard
       title={isManager ? text.managerTitle : text.title}
-      description={isManager ? text.managerSubtitle : text.subtitle}
       extra={
         !isManager && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>

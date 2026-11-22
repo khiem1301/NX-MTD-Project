@@ -15,7 +15,7 @@ export function RevenueBoard({ scope }: RevenueBoardProps) {
   const [filter, setFilter] = useState<RevenueFilter>(DEFAULT_FILTER);
 
   return (
-    <PageCard title={REVENUE_TEXT.pageTitle} description={REVENUE_TEXT.pageSubtitle}>
+    <PageCard title={REVENUE_TEXT.pageTitle}>
       <RevenueTable scope={scope} filter={filter} onFilterChange={setFilter} />
     </PageCard>
   );

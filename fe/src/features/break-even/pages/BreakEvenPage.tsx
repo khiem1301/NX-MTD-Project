@@ -26,7 +26,7 @@ export function BreakEvenPage() {
   const notReady = error?.errorCode === ERROR_CODES.BreakEvenNotReady;
 
   return (
-    <PageCard title={BREAK_EVEN_TEXT.pageTitle} description={BREAK_EVEN_TEXT.pageSubtitle}>
+    <PageCard title={BREAK_EVEN_TEXT.pageTitle}>
       <Space>
         <Typography.Text>{BREAK_EVEN_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker

@@ -12,6 +12,7 @@ import {
   DEFECT_MAX_QTY,
   DEFECT_REASON_OPTIONS,
   DEFECT_TEXT_MAX,
+  currentShiftCode,
   PRODUCTION_TEXT,
   SHIFT_OPTIONS,
 } from '../constants';
@@ -65,7 +66,12 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    form.setFieldsValue({ workDate: dayjs(), defectType: 'Rework', quantity: 1 });
+    form.setFieldsValue({
+      workDate: dayjs(),
+      shiftCode: currentShiftCode(),
+      defectType: 'Rework',
+      quantity: 1,
+    });
   }, [open, form]);
 
   const handleFinish = (values: FormValues) => {

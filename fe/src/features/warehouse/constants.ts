@@ -219,6 +219,7 @@ export const LABELS = {
   garmentColor: 'Màu SP',
   sizeCode: 'Size',
   wholeGarment: 'Cả bộ',
+  belongsTo: 'Thuộc',
   purchaseOrdersTitle: 'Đơn mua NVL',
   poCode: 'Số đơn mua',
   purchaseOrderOrder: 'Đơn hàng',

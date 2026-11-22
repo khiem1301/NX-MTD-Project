@@ -10,6 +10,7 @@ public static class OperationLimits
     public const int MinSkillLevel = 1;
     public const int MaxSkillLevel = 9;
     public const decimal MaxStandardTimeSec = 9999999.99m;   // DECIMAL(9,2)
+    public const int MaxOperationCodeLength = 50;
     public const int MaxGroupNameLength = 200;
     public const int MaxOperationsPerGroupChange = 500;
 }
@@ -25,7 +26,8 @@ public sealed class SaveOperationDtoValidator : AbstractValidator<SaveOperationD
     public SaveOperationDtoValidator()
     {
         RuleFor(x => x.ProductId).GreaterThan(0);
-        RuleFor(x => x.OperationCode).NotEmpty().WithMessage(Messages.Required("mã công đoạn")).MaximumLength(30);
+        RuleFor(x => x.OperationCode).NotEmpty().WithMessage(Messages.Required("mã công đoạn"))
+            .MaximumLength(OperationLimits.MaxOperationCodeLength).WithMessage(Messages.OperationCodeTooLong);
         RuleFor(x => x.OperationCode).Must(c => CodeFormat.IsMatch(c.Trim())).When(x => !string.IsNullOrWhiteSpace(x.OperationCode))
             .WithMessage(Messages.OperationCodeFormat);   // cột VARCHAR: chữ có dấu sẽ bị mất khi lưu
         RuleFor(x => x.OperationName).NotEmpty().WithMessage(Messages.Required("tên công đoạn")).MaximumLength(200);

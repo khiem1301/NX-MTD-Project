@@ -1,7 +1,7 @@
 import { Space, Tag, Typography, type TableColumnsType } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
-import { formatCurrency, formatDate, formatDateTime } from '@/utils/format';
+import { formatCurrency, formatDate } from '@/utils/format';
 import {
   CONFIRM_MODE_LABEL,
   MOVEMENT_STATUS,
@@ -88,7 +88,6 @@ export function allocationColumns(
         </Space>
       ),
     },
-    { title: PM_LABELS.createdAt, dataIndex: 'createdAt', render: formatDateTime },
     { title: MESSAGES.common.actions, key: 'action', render: (_, m) => extra(m) },
   ];
 }

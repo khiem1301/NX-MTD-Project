@@ -54,13 +54,6 @@ export function EmployeesPage() {
 
   const columns: TableColumnsType<EmployeeListItem> = [
     {
-      title: 'STT',
-      key: 'stt',
-      width: 64,
-      render: (_: unknown, __: EmployeeListItem, index: number) =>
-        (table.params.page - 1) * table.params.pageSize + index + 1,
-    },
-    {
       title: MESSAGES.hr.employeeCode,
       dataIndex: 'employeeCode',
     },

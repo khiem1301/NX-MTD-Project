@@ -87,7 +87,7 @@ public sealed class WorkOrderQueryValidator : PageQueryValidatorBase<WorkOrderQu
 {
     public WorkOrderQueryValidator()
     {
-        RuleFor(x => x.Status).Must(s => WorkOrderStatuses.All.Contains(s!))
+        RuleFor(x => x.Status).Must(s => WorkOrderStatuses.All.Contains(CodeText.ToCode(s!)))
             .When(x => !string.IsNullOrEmpty(x.Status)).WithMessage(WarehouseMessages.WorkOrderStatusInvalid);
         RuleFor(x => x.OrderId).GreaterThan(0).When(x => x.OrderId is not null).WithMessage("Đơn hàng không hợp lệ.");
     }

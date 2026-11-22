@@ -1,6 +1,6 @@
-import { Alert, Card, Descriptions, Tag } from 'antd';
+import { Alert, Card, Descriptions, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { formatDateTime, formatMonth, formatCurrency } from '@/utils/format';
+import { formatMonth, formatCurrency } from '@/utils/format';
 import {
   MONTHLY_COST_CATEGORY_LABEL,
   MONTHLY_COST_TEXT,
@@ -44,12 +44,15 @@ const columns: ColumnsType<MonthlyCostItem> = [
   {
     title: MONTHLY_COST_TEXT.table.note,
     dataIndex: 'note',
-    render: (v: string | null) => v ?? '—',
-  },
-  {
-    title: MONTHLY_COST_TEXT.table.importedAt,
-    dataIndex: 'importedAt',
-    render: (v: string) => formatDateTime(v),
+    ellipsis: true,
+    render: (v: string | null) =>
+      v ? (
+        <Tooltip title={v}>
+          <span>{v}</span>
+        </Tooltip>
+      ) : (
+        '—'
+      ),
   },
 ];
 

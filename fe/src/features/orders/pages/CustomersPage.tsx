@@ -48,13 +48,9 @@ export function CustomersPage() {
     {
       title: MESSAGES.orders.status,
       dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={STATUS_TAG} />,
-    },
-    {
-      title: MESSAGES.orders.customerDiscontinueReason,
-      dataIndex: 'discontinueReason',
-      ellipsis: true,
-      render: (v: string | null) => v ?? '—',
+      render: (v: string, c) => (
+        <StatusTag status={v} labels={STATUS_TAG} title={c.discontinueReason || undefined} />
+      ),
     },
     {
       title: MESSAGES.common.actions,

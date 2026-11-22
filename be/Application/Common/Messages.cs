@@ -1,4 +1,4 @@
-﻿namespace NX_MTD.Application.Common;
+namespace NX_MTD.Application.Common;
 
 /// <summary>Chuỗi tiếng Việt theo mã MSG trong SRS.</summary>
 public static class Messages
@@ -114,6 +114,12 @@ public static class Messages
     public const string ProductImageUsedTwice = "Không dùng một ảnh hai lần.";
     public const string OrderCodeDuplicate = "Mã đơn hàng đã tồn tại.";
     public const string OrderNotEditable = "Đơn hàng ở trạng thái này không sửa được.";
+    public const string OrderLinesRequired = "Vui lòng nhập ít nhất một dòng màu × size.";
+    public const string OrderQtyInvalid = "Số lượng đặt phải từ 1 đến 1.000.000.";
+    public const string OrderDueBeforeReceived = "Ngày giao phải sau hoặc bằng ngày nhận.";
+    public const string StagedProductUnused = "Mã hàng mới không có dòng nào trong đơn.";
+    public const string OrderQtyBelowCut = "Số lượng đặt không được nhỏ hơn số đã cắt ({0}).";
+    public const string OrderStopNoLines = "Đơn không có dòng hàng, không dừng được.";
     public const string OrderLineRemoveNotAllowed = "Đơn đã vào sản xuất, không xóa được dòng đơn.";
     public const string OrderLineKeyLocked = "Đơn đã vào sản xuất, không đổi mã hàng / màu / size của dòng cũ.";
     public const string OrderInvalidStatus = "Trạng thái đơn hàng không cho phép thao tác này.";
@@ -270,6 +276,7 @@ public static class Messages
     public const string PayrollInvalidStatusForApprove = "Chỉ bảng lương đang chờ duyệt mới duyệt được.";
     public const string PayrollInvalidStatusForReject = "Chỉ bảng lương đang chờ duyệt mới từ chối được.";
     public const string PayrollInvalidStatusForReopen = "Chỉ bảng lương đã duyệt mới mở lại được.";
+    public const string PayrollStatusInvalid = "Trạng thái bảng lương không hợp lệ.";
     public const string PayrollRejectReasonRequired = "Vui lòng nhập lý do từ chối.";          // MSG09
     public const string PayrollReopenReasonRequired = "Vui lòng nhập lý do mở lại.";            // MSG09
     public const string PayrollExcelInvalid =
@@ -476,16 +483,21 @@ public static class Messages
     public const string WidthTooLarge = "{0} tối đa 3,5 m.";
     public const string WidthDecimals = "{0} tối đa {1} số lẻ.";
     public const string OperationCodeDuplicate = "Mã công đoạn đã tồn tại trong mã hàng này.";
+    public const string OperationSequenceDuplicate = "Số thứ tự công đoạn đã tồn tại trong mã hàng này.";
     public const string OperationProductRequired = "Vui lòng chọn mã hàng.";
     public const string MaterialCodeFormat = "Mã NVL chỉ gồm chữ không dấu, số và các ký tự . _ -";
     public const string OperationCodeFormat = "Mã công đoạn chỉ gồm chữ không dấu, số và các ký tự . _ -";
+    public const string OperationCodeTooLong = "Mã công đoạn tối đa 50 ký tự.";
+    public const string OperationStandardTimeInvalid = "Thời gian chuẩn phải lớn hơn 0.";
     public const string OperationFinalMustBeSewing = "Công đoạn cuối phải là công đoạn của tổ may.";
     public const string OperationHasOpenWork = "Không ngừng dùng được: công nhân còn việc đang giao hoặc chưa làm xong của công đoạn này trong đơn đang mở. Hãy thu hồi việc trước.";
     public const string OperationGroupDuplicate = "Tên nhóm công đoạn đã có trong mã hàng này.";
     public const string OperationGroupProductMismatch = "Công đoạn và nhóm phải cùng mã hàng.";
     public const string OperationDuplicateInRequest = "Công đoạn bị chọn trùng.";
     public const string OperationFinalStepExists = "Mã hàng này đã có công đoạn may cuối đang dùng. Chỉ được một công đoạn cuối.";
+    public const string OperationFinalStepRequired = "Không ngừng dùng được: đây là công đoạn may cuối đang dùng duy nhất của mã hàng. Hãy chọn công đoạn cuối khác trước.";
     public const string OperationNotActive = "Công đoạn đã ngừng dùng.";
+    public const string OperationImportSttOutOfRange = "STT vượt giới hạn (1–32767).";
     public const string OperationProductMismatch = "Công đoạn không thuộc mã hàng của dòng đơn này.";
     public const string OperationExcelInvalid = "File Excel sai mẫu: không đọc được bảng bước công việc.";
     public const string OperationExcelEmpty = "File Excel không có công đoạn hợp lệ nào để nhập.";
@@ -566,6 +578,8 @@ public static class Messages
     public const string OutputTeamRequired = "Quản đốc phải chọn tổ may.";
     /// <summary>MSG16: vượt số BTP tổ / công nhân đã nhận.</summary>
     public const string OutputExceedsCap = "Sản lượng công đoạn {0} vượt số lần được giao ({1}): còn tối đa {2}. Hãy giao thêm việc cho công nhân ở màn Giao việc.";
+    public const string OutputExceedsCapTrigger = "Sản lượng vượt số lần được giao cho công nhân ở công đoạn này.";
+    public const string OutputLockBusy = "Đang có người khác lưu sản lượng / giao việc cho dòng đơn này. Vui lòng thử lại.";
     /// <summary>DEV-ALL-64: chuyển phần báo vượt từ người cùng công đoạn / phần tổ chưa giao.</summary>
     public const string OutputTransferNotEnough = "Công đoạn {0} báo vượt số được giao {1} lần nhưng người cùng công đoạn và phần tổ chưa giao chỉ còn {2}.";
     public const string OutputTransferNote = "Chuyển sang {0} khi nhập sản lượng ca {1} ngày {2} (báo vượt số được giao).";
@@ -603,6 +617,7 @@ public static class Messages
     public const string DefectOrderClosed = "Đơn hàng đã đóng, không sửa / hủy phiếu lỗi được.";
     public const string DefectHasReplacement = "Phiếu đã có đơn cắt bù {0} ({1}). Hủy đơn cắt bù trước rồi mới sửa / hủy phiếu.";
     public const string DefectIncreaseOverOnLine = "Không tăng được: số tăng thêm {0} vượt số hàng đang trên chuyền của tổ ở dòng đơn này ({1}).";
+    public const string DefectExceedsOnLine = "Số lượng vượt hàng đang có trên chuyền của tổ ở dòng đơn này ({0}).";
     public const string DefectNothingChanged = "Phiếu không có thay đổi nào.";
     public const string NotifyDefectTitle = "Bạn có phiếu lỗi mới";
     public const string NotifyDefectBody = "Ngày {0}: {1} cái {2} ở công đoạn {3}. Nếu ghi sai, hãy báo tổ trưởng.";

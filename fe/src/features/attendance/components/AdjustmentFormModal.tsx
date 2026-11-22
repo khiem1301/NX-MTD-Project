@@ -20,7 +20,13 @@ export type AdjustmentPrefill = {
   reason: string | null;
 };
 
-type Props = { open: boolean; prefill: AdjustmentPrefill | null; onClose: () => void };
+type Props = {
+  open: boolean;
+  prefill: AdjustmentPrefill | null;
+  onClose: () => void;
+  /** Ngày công vừa lưu — panel mở rộng khoảng lọc nếu cần. */
+  onSaved?: (workDate: string) => void;
+};
 
 type FormValues = {
   employeeId: number;
@@ -44,7 +50,7 @@ const TIME_FORMAT = 'HH:mm';
  * GBR-25 — Kế toán chấm công hộ: bắt buộc lý do và ít nhất giờ vào hoặc giờ ra. Loại "Theo đơn xin chấm bù" phải chọn một
  * đơn đã được duyệt. BE chặn chấm trùng ngày và tháng đã khóa.
  */
-export function AdjustmentFormModal({ open, prefill, onClose }: Props) {
+export function AdjustmentFormModal({ open, prefill, onClose, onSaved }: Props) {
   const [form] = Form.useForm<FormValues>();
   const create = useCreateAdjustment();
   const type = Form.useWatch('adjustmentType', form);
@@ -69,17 +75,23 @@ export function AdjustmentFormModal({ open, prefill, onClose }: Props) {
   }, [open, prefill, form]);
 
   const handleFinish = (values: FormValues) => {
+    const workDate = toApiDate(values.workDate);
     create.mutate(
       {
         employeeId: values.employeeId,
-        workDate: toApiDate(values.workDate),
+        workDate,
         adjustmentType: values.adjustmentType,
         reason: values.reason.trim(),
         requestId: values.adjustmentType === 'APPROVED_REQUEST' ? values.requestId : undefined,
         checkIn: values.checkIn ? `${values.checkIn.format(TIME_FORMAT)}:00` : undefined,
         checkOut: values.checkOut ? `${values.checkOut.format(TIME_FORMAT)}:00` : undefined,
       },
-      { onSuccess: onClose },
+      {
+        onSuccess: () => {
+          onSaved?.(workDate);
+          onClose();
+        },
+      },
     );
   };
 

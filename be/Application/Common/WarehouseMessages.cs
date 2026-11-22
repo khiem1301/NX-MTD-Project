@@ -107,12 +107,16 @@ public static class WarehouseMessages
     public const string WorkOrderHasPendingReturn = "Còn phiếu trả hàng chờ kho xác nhận, chưa đóng lệnh được.";
     public const string WorkOrderCutNotHandedOver = "Còn BTP đã cắt chưa bàn giao và được kho xác nhận: {0}. Tổ cắt bàn giao hết rồi mới đóng lệnh.";
     public const string WorkOrderFinishShortReasonRequired = "Cắt chưa đủ kế hoạch ({0}/{1}). Nhập lý do cắt thiếu.";
+    public const string WorkOrderAlreadyFullyCut = "Lệnh đã cắt đủ kế hoạch, không đóng cắt thiếu.";
+    public const string WorkOrderFabricShortage = "Vải không đủ để lập lệnh cắt.";
+    public const string WorkOrderLineNotInOrder = "Có dòng đơn không thuộc đơn hàng đã chọn.";
     public const string ReceiptDuplicatePending = "NVL này đã có phiếu nhập chờ xác nhận ({0}). Chờ Quản đốc xác nhận hoặc trả lại rồi mới lập phiếu tiếp.";
     public const string ReceiptShortageClosed = "NVL này đã được Quản đốc chốt không bù (hủy giao phần thiếu), không thể lập thêm phiếu nhập.";
     public const string ReceiptExceedsCustomer = "Số nhận vượt số khách cấp còn phải nhận";
     public const string ReceiptPhotoRequired = "Phiếu nhập chưa có ảnh chứng từ giao hàng. Thủ kho cần chụp và đính kèm trước khi xác nhận.";
 
     public const string IssueReceived = "Đã xác nhận nhận hàng, tồn kho đã giảm.";
+    public const string IssueConfirmZero = "Số xác nhận phải lớn hơn 0; không nhận gì thì bấm Từ chối.";
     public const string IssueRejected = "Đã từ chối phiếu cấp, số giữ chỗ đã được nhả.";
     public const string RequestInvalid = "Đơn xin cấp không hợp lệ (sai loại, chưa được duyệt hoặc đã xử lý, khác tổ hoặc khác đơn hàng).";
     public const string QtyTooLarge = "Số lượng một dòng tối đa 9.999.999.";
@@ -264,6 +268,9 @@ public static class WarehouseMessages
     public const string ReplenishCompletedNote = "Đã nhận đủ hàng bù.";
     public const string ReplenishRoundReopened = "Đã nhận đủ số lần giao bù nhưng còn thiếu, đơn thiếu NVL chờ Quản đốc quyết định lại.";
     public const string ReceiptBeforePurchaseDate = "Ngày nhập không được trước ngày đặt đơn mua ({0:dd/MM/yyyy}).";
+    public const string ReceiptBeforeShortageRequest = "Ngày nhập không được trước ngày tạo đơn thiếu NVL ({0:dd/MM/yyyy}).";
+    public const string ReceiptConfirmEmpty = "Phiếu nhập phải có ít nhất một dòng với số lượng > 0.";
+    public const string ReceiptConfirmedByRequired = "Vui lòng chọn người xác nhận.";
     public const string LabelIssueDate = "Ngày cấp";
     public const string LabelReceiptDate = "Ngày nhập";
     public const string LabelStocktakeDate = "Ngày kiểm kê";

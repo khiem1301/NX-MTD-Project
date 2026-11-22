@@ -6,6 +6,7 @@ import { MESSAGES } from '@/constants/messages';
 import { formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import type { OrderMaterial } from '../types';
+import { MaterialIdentityCell } from './MaterialIdentityCell';
 
 type OrderMaterialColumnsOptions = {
   onEdit: (om: OrderMaterial) => void;
@@ -38,9 +39,17 @@ const actionColumn = ({
 export const orderMaterialColumns = (
   actions?: OrderMaterialColumnsOptions,
 ): TableColumnsType<OrderMaterial> => [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
-  { title: LABELS.materialName, dataIndex: 'materialName' },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
+  {
+    title: LABELS.material,
+    key: 'material',
+    render: (_, om) => (
+      <MaterialIdentityCell
+        code={om.materialCode}
+        name={om.materialName}
+        color={om.materialColor}
+      />
+    ),
+  },
   { title: LABELS.requiredQty, dataIndex: 'requiredQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.customerQty, dataIndex: 'customerQty', align: 'right', render: qtyWithUnit },
   { title: LABELS.purchaseQty, dataIndex: 'purchaseQty', align: 'right', render: qtyWithUnit },

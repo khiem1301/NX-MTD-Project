@@ -6,7 +6,7 @@ import { MESSAGES } from '@/constants/messages';
 import { useTeamLookup } from '@/hooks/useHrLookups';
 import { useOrderLineLookup } from '@/hooks/useOrderLookups';
 import { fill, formatQty, toApiDate } from '@/utils/format';
-import { OUTPUT_MAX_QTY, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
+import { currentShiftCode, OUTPUT_MAX_QTY, PRODUCTION_TEXT, SHIFT_OPTIONS } from '../constants';
 import { useCreateQcBatch, useOnLineQty } from '../hooks/useQcBatches';
 import type { ShiftCode } from '../types';
 import { AppDatePicker, AppTimePicker } from '@/components/common/DateInputs';
@@ -40,7 +40,11 @@ export function QcCreateModal({ open, onClose }: { open: boolean; onClose: () =>
   useEffect(() => {
     if (!open) return;
     form.resetFields();
-    form.setFieldsValue({ workDate: dayjs(), shiftCode: 'Afternoon', batchTime: dayjs() });
+    form.setFieldsValue({
+      workDate: dayjs(),
+      shiftCode: currentShiftCode(),
+      batchTime: dayjs(),
+    });
   }, [open, form]);
 
   const handleFinish = (values: CreateValues) => {

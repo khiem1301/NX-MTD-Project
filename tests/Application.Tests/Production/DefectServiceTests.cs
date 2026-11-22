@@ -19,6 +19,7 @@ public class DefectServiceTests : ProductionTestBase
     private readonly IPieceRateService _rates = Substitute.For<IPieceRateService>();
     private readonly List<DefectRecord> _defects = [];
     private readonly List<OrderLine> _lines = [];
+    private readonly List<OrderLineTeam> _allotted = [new() { OrderLineId = LineId, SewingTeamId = TeamId }];
     private readonly List<Operation> _operations = [];
     private readonly List<Employee> _employees = [];
     private readonly List<Team> _teams = [new() { TeamId = TeamId, TeamCode = "MAY1", TeamType = TeamTypes.Sewing, Status = RecordStatus.Active }];
@@ -35,6 +36,7 @@ public class DefectServiceTests : ProductionTestBase
     {
         SetupQueryable(_defects);
         SetupQueryable(_lines);
+        SetupQueryable(_allotted);
         SetupQueryable(_operations);
         SetupQueryable(_employees);
         SetupQueryable(_teams);

@@ -32,7 +32,7 @@ export function OperationAssignmentsPage() {
   const { orderId, view, rows, products, current, workers, picked } = board;
 
   return (
-    <PageCard title={text.title} description={text.subtitle}>
+    <PageCard title={text.title}>
       <Space wrap>
         <OrderSelect
           value={orderId ?? undefined}

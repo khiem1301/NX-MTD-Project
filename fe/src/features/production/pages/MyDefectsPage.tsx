@@ -69,7 +69,7 @@ export function MyDefectsPage() {
   ];
 
   return (
-    <PageCard title={mine.title} description={mine.subtitle}>
+    <PageCard title={mine.title}>
       <FilterSelect<DefectStatus>
         value={status}
         placeholder={text.columns.status}

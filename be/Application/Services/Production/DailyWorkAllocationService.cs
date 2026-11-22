@@ -51,6 +51,13 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     public async Task<Result<DailyAllocationBoardDto>> GetBoardAsync(int teamId, DateOnly workDate, int orderId, int? orderLineId,
         CancellationToken ct)
     {
+        if (!await _uow.Repository<Team>().Query().AsNoTracking()
+                .AnyAsync(t => t.TeamId == teamId && t.TeamType == TeamTypes.Sewing, ct))
+            return WarehouseFailures.NotFound<DailyAllocationBoardDto>();
+        // Đơn không tồn tại (không có dòng đơn) → NotFound; đơn có dòng nhưng chưa chia cho tổ thì trả board rỗng.
+        if (!await _uow.Repository<OrderLine>().Query().AsNoTracking().AnyAsync(l => l.OrderId == orderId, ct))
+            return WarehouseFailures.NotFound<DailyAllocationBoardDto>();
+
         var allotted = Allotted(teamId);
         // Chỉ các dòng đơn (mã hàng × màu × size) đã chia cho tổ (DEV-ALL-49, DEV-ALL-68).
         var lines = await _uow.Repository<OrderLine>().Query().AsNoTracking()
@@ -139,7 +146,15 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
         if (invalid is not null) return invalid;
 
         var lineIds = dto.Items.Select(i => i.OrderLineId).Distinct().OrderBy(i => i).ToList();
-        foreach (var id in lineIds) await _locks.AcquireAsync($"work-allocation:{teamId}:{id}", ct);
+        try
+        {
+            foreach (var id in lineIds) await _locks.AcquireAsync($"work-allocation:{teamId}:{id}", ct);
+        }
+        catch (Exception ex) when (ex is TimeoutException || (ex is InvalidOperationException ioe && IsLockTimeout(ioe)))
+        {
+            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.TeamOrderBusy, Messages.OutputLockBusy);
+        }
+
         // Đọc số đã giao một lần (sau khi khóa) cho cả kiểm lý do lẫn ghi phần chênh.
         var workerIds = dto.Items.Select(i => i.WorkerId).Distinct().ToList();
         var positions = await LoadPositionsAsync(teamId, lineIds, dto.WorkDate, workerIds, ct);
@@ -178,6 +193,11 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
         return Result<DailyAllocationResultDto>.Success(new DailyAllocationResultDto(added, adjusted),
             awaiting > 0 ? WarehouseMessages.DailySavedPendingConfirm : WarehouseMessages.PieceMovementCreated);
     }
+
+    private static bool IsLockTimeout(InvalidOperationException ex) =>
+        ex.Message.Contains("Lock timeout", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("busy", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Giao thêm (không vượt số tổ còn giao được của công đoạn): phiếu PENDING chờ công nhân xác nhận (DEV-ALL-100).</summary>
     private async Task<Result<DailyAllocationResultDto>?> GiveMoreAsync(SaveDailyAllocationDto dto, int teamId, SaveDailyAllocationItem item,
@@ -386,6 +406,13 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     /// <summary>Công nhân đúng tổ và còn làm, dòng đơn đã chia cho tổ và chưa đóng, công đoạn may đang dùng thuộc mã hàng của dòng đơn.</summary>
     private async Task<Result<DailyAllocationResultDto>?> ValidateAsync(SaveDailyAllocationDto dto, int teamId, CancellationToken ct)
     {
+        if (dto.Items.Any(i => i.Quantity < 0))
+            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustNotBeNegative,
+                ResultKind.Validation);
+        if (dto.Items.Select(i => (i.WorkerId, i.OrderLineId, i.OperationId)).Distinct().Count() != dto.Items.Count)
+            return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DailyDuplicateItems,
+                ResultKind.Validation);
+
         var team = await _uow.Repository<Team>().Query().AsNoTracking().FirstOrDefaultAsync(t => t.TeamId == teamId, ct);
         if (team is null || team.TeamType != TeamTypes.Sewing) return WarehouseFailures.TeamMismatch<DailyAllocationResultDto>();
 
@@ -430,8 +457,15 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     private void NotifyWorkers(List<int> workerIds, DateOnly workDate)
     {
         if (workerIds.Count == 0) return;
-        _notifier.NotifyEmployees(workerIds, new NotificationMessage(NotificationSources.Production, WarehouseMessages.DailyNotifyTitle,
-            string.Format(WarehouseMessages.DailyNotifyBody, workDate), null));
+        try
+        {
+            _notifier.NotifyEmployees(workerIds, new NotificationMessage(NotificationSources.Production, WarehouseMessages.DailyNotifyTitle,
+                string.Format(WarehouseMessages.DailyNotifyBody, workDate), null));
+        }
+        catch
+        {
+            // Thông báo không chặn lưu phân việc.
+        }
     }
 
     private static Result<DailyAllocationResultDto> Failure(string code, string message) =>

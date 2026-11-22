@@ -9,7 +9,7 @@ export function PayrollApprovalPage() {
   const [viewingId, setViewingId] = useState<number | null>(null);
 
   return (
-    <PageCard title={PAYROLL_TEXT.adminPageTitle} description={PAYROLL_TEXT.adminPageSubtitle}>
+    <PageCard title={PAYROLL_TEXT.adminPageTitle}>
       <PendingPayrollTable onView={setViewingId} />
       <PayrollDetailModal payrollId={viewingId} onClose={() => setViewingId(null)} />
     </PageCard>

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, Button, Card, Form, Skeleton } from 'antd';
+import { Button, Card, Form, Skeleton } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { QueryError } from '@/components/common/QueryError';
 import { MEAL_TEXT } from '../constants';
@@ -31,16 +31,11 @@ export function MealSettingsPage() {
   }, [data, form]);
 
   return (
-    <PageCard
-      title={MEAL_TEXT.settingsPageTitle}
-      description={text.subtitle}
-      style={{ maxWidth: 560 }}
-    >
+    <PageCard title={MEAL_TEXT.settingsPageTitle} style={{ maxWidth: 560 }}>
       <QueryError error={settings.error} onRetry={() => void settings.refetch()} />
       {settings.isLoading && <Skeleton active />}
       {data && (
         <Card>
-          <Alert type="info" showIcon message={text.hint} style={{ marginBottom: 16 }} />
           <Form
             form={form}
             layout="vertical"

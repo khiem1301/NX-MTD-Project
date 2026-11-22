@@ -7,10 +7,12 @@ export const ATTENDANCE_TEXT = {
 
   tabs: {
     timesheet: 'Bảng công ngày',
-    rjEmployees: 'Nhân viên RJ',
+    rjEmployees: 'Nhân viên',
     sessions: 'Lịch sử đồng bộ',
     adjustments: 'Chấm công hộ',
     import: 'Import Excel dự phòng',
+    /** Tab chỉ Admin: gộp lịch sử đồng bộ + Import Excel. */
+    sync: 'Đồng bộ',
   },
 
   rj: {
@@ -136,9 +138,13 @@ export const ATTENDANCE_TEXT = {
 
   sync: {
     healthyTitle: 'Đồng bộ lượt quẹt bình thường',
-    overdueTitle: 'Chưa đồng bộ được lượt quẹt chấm công hơn {0} phút', // MSG23
+    overdueTitle: 'Chưa nhận lượt quẹt mới từ máy chấm công hơn {0} phút', // MSG23
     overdueHint:
-      'Cảnh báo này theo lượt quẹt vân tay, không phải danh sách nhân viên RJ. Bấm “Đồng bộ từ RJ” hoặc nhập file dự phòng.',
+      'Đây là cảnh báo trạng thái đồng bộ vân tay (không phải lỗi lưu dữ liệu). Bảng công vẫn xem được bình thường.',
+    overdueHintAdmin:
+      'Vào tab Nhân viên → Đồng bộ từ RJ, hoặc tab Đồng bộ → Import Excel dự phòng nếu máy/agent không chạy.',
+    overdueHintOther:
+      'Liên hệ Admin để đồng bộ máy chấm công hoặc nhập file dự phòng. Bảng công vẫn xem được bình thường.',
     never: 'Chưa từng đồng bộ',
     minutesAgo: '{0} phút trước',
     sourceRjSync: 'Máy chấm công',

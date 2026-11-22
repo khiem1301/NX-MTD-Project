@@ -23,7 +23,7 @@ export function KpiBoard() {
   };
 
   return (
-    <PageCard title={KPI_TEXT.listPageTitle} description={KPI_TEXT.listPageSubtitle}>
+    <PageCard title={KPI_TEXT.listPageTitle}>
       <KpiTargetTable
         filter={filter}
         onFilterChange={setFilter}

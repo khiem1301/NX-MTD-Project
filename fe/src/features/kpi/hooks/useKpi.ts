@@ -64,10 +64,11 @@ export const useKpiLineCapacity = (
   });
 
 /** Lịch KPI theo ngày của một chỉ tiêu, kèm BTP khả dụng. */
-export const useKpiCalendar = (kpiTargetId: number | null) =>
+export const useKpiCalendar = (kpiTargetId: number | null, mode: 'manager' | 'team' = 'manager') =>
   useQuery({
-    queryKey: [...KPI_KEY, 'calendar', kpiTargetId],
-    queryFn: () => kpiApi.getCalendar(kpiTargetId!),
+    queryKey: [...KPI_KEY, 'calendar', mode, kpiTargetId],
+    queryFn: () =>
+      mode === 'team' ? kpiApi.getTeamCalendar(kpiTargetId!) : kpiApi.getCalendar(kpiTargetId!),
     enabled: kpiTargetId !== null,
   });
 

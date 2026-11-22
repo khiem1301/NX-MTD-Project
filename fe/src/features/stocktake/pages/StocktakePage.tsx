@@ -9,7 +9,7 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { WAREHOUSE_TYPE_LABEL } from '@/constants/warehouse';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import { StocktakeModal } from '../components/StocktakeModal';
 import { StocktakeFormModal } from '../components/StocktakeFormModal';
 import { ST_LABELS, STOCKTAKE_STATUS_LABEL } from '../constants';
@@ -55,7 +55,6 @@ export function StocktakePage() {
     { title: ST_LABELS.date, dataIndex: 'stocktakeDate', render: formatDate },
     { title: ST_LABELS.lines, dataIndex: 'lineCount', align: 'right' },
     { title: ST_LABELS.diffLines, dataIndex: 'differenceLineCount', align: 'right' },
-    { title: ST_LABELS.createdAt, dataIndex: 'createdAt', render: formatDateTime },
     {
       title: ST_LABELS.status,
       dataIndex: 'status',

@@ -6,7 +6,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { REQUEST_TYPE_LABEL } from '@/constants/requestTypes';
 import type { Paginated } from '@/types/api';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { formatDate } from '@/utils/format';
 import { OPEN_STATUSES, REQUEST_STATUS_TAG } from '../constants';
 import type { RequestListItem } from '@/types/request';
 import { DataTable } from '@/components/common/DataTable';
@@ -50,7 +50,6 @@ export function RequestTable({ data, loading, pagination, showTeam, onOpen }: Re
       dataIndex: 'createdByName',
       render: (v: string | null) => v ?? '—',
     },
-    { title: MESSAGES.requests.createdAt, dataIndex: 'createdAt', render: formatDateTime },
     {
       title: MESSAGES.requests.targetDate,
       dataIndex: 'targetDate',

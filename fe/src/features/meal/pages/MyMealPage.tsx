@@ -14,7 +14,7 @@ export function MyMealPage() {
   const punchedButNoEditableMeal = !!data?.hasAttendance && data.isLocked && !data.willEat;
 
   return (
-    <PageCard title={MEAL_TEXT.myPageTitle} description={MEAL_TEXT.myPageSubtitle}>
+    <PageCard title={MEAL_TEXT.myPageTitle}>
       {error ? (
         <Alert type="error" showIcon message={(error as { message: string }).message} />
       ) : null}

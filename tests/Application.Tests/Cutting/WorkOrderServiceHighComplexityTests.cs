@@ -64,7 +64,8 @@ public class WorkOrderServiceHighComplexityTests
         _uow.SaveChangesAsync().Returns(1);
         _codes.NextAsync<WorkOrder>(Arg.Any<string>(), Arg.Any<System.Linq.Expressions.Expression<Func<WorkOrder, string>>>(), Arg.Any<CancellationToken>())
             .Returns("LC2611-001");
-        _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(200m);
+        // Đủ cho tạo lệnh (need ~600m / 300pcs); case thiếu tồn tự Returns(0) / thấp hơn.
+        _stock.GetAvailableAsync(Arg.Any<StockKey>(), Arg.Any<CancellationToken>()).Returns(10_000m);
 
         SetupQueryable(_workOrders);
         SetupQueryable(_orders);

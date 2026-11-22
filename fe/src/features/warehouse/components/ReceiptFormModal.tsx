@@ -1,6 +1,7 @@
 import { Button, Form, Input, Modal, Radio, Select, Space, Upload, message } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { AttachmentGallery } from '@/components/common/attachments';
+import { OptionalNoteField } from '@/components/common/OptionalNoteField';
 import { ATTACHMENT_ACCEPT, MAX_ATTACHMENT_BYTES } from '@/constants/attachments';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -183,9 +184,9 @@ export function ReceiptFormModal({ open, receipt, preset = null, onClose }: Rece
             </Upload>
           )}
         </Form.Item>
-        <Form.Item name="note" label={LABELS.note}>
+        <OptionalNoteField label={LABELS.note} defaultOpen={Boolean(receipt?.note)}>
           <Input.TextArea rows={2} maxLength={1000} />
-        </Form.Item>
+        </OptionalNoteField>
       </Form>
     </Modal>
   );

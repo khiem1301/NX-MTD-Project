@@ -76,6 +76,9 @@ public sealed class CustomerOrderService : ICustomerOrderService
 
     public async Task<Result<OrderSaveResultDto>> CreateAsync(CreateOrderDto dto, CancellationToken ct)
     {
+        var input = ValidateOrderInput(dto);
+        if (input is not null) return Fail.As<OrderSaveResultDto>(input);
+
         var code = dto.OrderCode.Trim().ToUpperInvariant();
         if (await _orders.CodeExistsAsync(code, null, ct))
             return Result<OrderSaveResultDto>.Failure(ErrorCodes.OrderCodeDuplicate, Messages.OrderCodeDuplicate);
@@ -122,9 +125,13 @@ public sealed class CustomerOrderService : ICustomerOrderService
     {
         var order = await _orders.GetWithLinesAsync(orderId, ct);
         if (order is null) return Fail.NotFound<OrderSaveResultDto>();
+
         var isNew = order.Status == OrderStatuses.New;
         if (!isNew && !OrderStatuses.LimitedEdit.Contains(order.Status))
             return Result<OrderSaveResultDto>.Failure(ErrorCodes.OrderNotEditable, Messages.OrderNotEditable);
+
+        var input = ValidateOrderInput(dto);
+        if (input is not null) return Fail.As<OrderSaveResultDto>(input);
 
         var header = await CheckHeaderAsync(order, dto, isNew, ct);
         if (!header.IsSuccess) return Fail.As<OrderSaveResultDto>(header);
@@ -151,8 +158,11 @@ public sealed class CustomerOrderService : ICustomerOrderService
         var isNew = order.Status == OrderStatuses.New;
         var variants = await ResolveVariantsAsync(lines, ct);
         if (!variants.IsSuccess) return Fail.As<OrderSaveResultDto>(variants);
+        var floor = await CheckOrderedQtyFloorAsync(lines, ct);
+        if (floor is not null) return Fail.As<OrderSaveResultDto>(floor);
 
         _orders.SetOriginalRowVersion(order, dto.RowVer);
+        if (RowVerMismatch(order.RowVer, dto.RowVer) is { } stale) return Fail.As<OrderSaveResultDto>(stale);
         var before = Snapshot(order);
         var diff = ApplyLines(order, lines, isNew, variants.Data!);
         if (!diff.IsSuccess) return Fail.As<OrderSaveResultDto>(diff);
@@ -177,6 +187,9 @@ public sealed class CustomerOrderService : ICustomerOrderService
         IReadOnlyList<StagedProductDto>? staged, IReadOnlyList<OrderLineInput> lines, CancellationToken ct)
     {
         var used = lines.Select(l => l.ProductId).ToHashSet();
+        if (staged is { Count: > 0 } && staged.Any(s => !used.Contains(s.TempId)))
+            return Result<IReadOnlyList<CreatedProductDto>>.Failure(ErrorCodes.CommonValidation, Messages.StagedProductUnused,
+                ResultKind.Validation);
         var items = (staged ?? []).Where(s => used.Contains(s.TempId)).ToList();
         if (items.Count == 0) return Result<IReadOnlyList<CreatedProductDto>>.Success([]);
 
@@ -232,19 +245,28 @@ public sealed class CustomerOrderService : ICustomerOrderService
 
     public async Task<Result> CancelAsync(int orderId, CancelOrderDto dto, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var order = await _orders.GetByIdAsync(orderId);
         if (order is null) return Fail.NotFound();
         if (order.Status != OrderStatuses.New)
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
         return await ChangeStatusAsync(order, dto.RowVer, OrderStatuses.Cancelled, dto.Reason, null, Messages.OrderCancelled, ct);
     }
 
     public async Task<Result> StopAsync(int orderId, StopOrderDto dto, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var order = await _orders.GetByIdAsync(orderId);
         if (order is null) return Fail.NotFound();
         if (!OrderStatuses.Stoppable.Contains(order.Status))
             return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderInvalidStatus);
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.ReasonRequired, ResultKind.Validation);
+        var ordered = await _lines.Query().Where(l => l.OrderId == orderId).SumAsync(l => (int?)l.OrderedQty, ct) ?? 0;
+        if (ordered <= 0)
+            return Result.Failure(ErrorCodes.OrderInvalidStatus, Messages.OrderStopNoLines, ResultKind.Validation);
         // Hàng đã xuất hết (đang giao + đã giao) thì không còn phần nào để dừng: chờ khách nhận là đơn sang Đã giao.
         if (await IsFullyDispatchedAsync(orderId, ct))
             return Result.Failure(ErrorCodes.OrderFullyDispatched, Messages.OrderFullyDispatched);
@@ -253,6 +275,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
 
     public async Task<Result> StartProductionAsync(int orderId, StartOrderProductionDto dto, CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var order = await _orders.GetByIdAsync(orderId);
         if (order is null) return Fail.NotFound();
         if (order.Status != OrderStatuses.New)
@@ -266,6 +289,7 @@ public sealed class CustomerOrderService : ICustomerOrderService
         string? stopReason, string successMessage, CancellationToken ct)
     {
         _orders.SetOriginalRowVersion(order, rowVer);
+        if (RowVerMismatch(order.RowVer, rowVer) is { } stale) return stale;
         var from = order.Status;
         order.Status = to;
         if (stopReason is not null) order.StopReason = stopReason;
@@ -275,6 +299,48 @@ public sealed class CustomerOrderService : ICustomerOrderService
         if (to is OrderStatuses.Cancelled or OrderStatuses.Stopped) await new OrderCloseCascade(_uow, _audit, _notifier).RunAsync(order, to, _clock.Now, ct);
         await _uow.SaveChangesAsync();
         return Result.Success(successMessage);
+    }
+
+    /// <summary>Kiểm đầu vào tạo/sửa đơn (unit test gọi service trực tiếp, không qua FluentValidation).</summary>
+    private static Result? ValidateOrderInput(IOrderInput dto)
+    {
+        if (dto.Lines is null || dto.Lines.Count == 0)
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.OrderLinesRequired, ResultKind.Validation);
+        if (dto.Lines.Any(l => l.OrderedQty is < 1 or > 1_000_000))
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.OrderQtyInvalid, ResultKind.Validation);
+        if (dto.DueDate < dto.ReceivedDate)
+            return Result.Failure(ErrorCodes.CommonValidation, Messages.OrderDueBeforeReceived, ResultKind.Validation);
+        var staged = dto.StagedProducts ?? [];
+        if (staged.Count > 0)
+        {
+            var lineIds = dto.Lines.Select(l => l.ProductId).ToHashSet();
+            if (staged.Any(s => !lineIds.Contains(s.TempId)))
+                return Result.Failure(ErrorCodes.CommonValidation, Messages.StagedProductUnused, ResultKind.Validation);
+        }
+        return null;
+    }
+
+    private static Result? RowVerMismatch(byte[] current, byte[] incoming) =>
+        current is { Length: > 0 } && (incoming is null || !current.SequenceEqual(incoming))
+            ? Result.Failure(ErrorCodes.CommonConcurrencyConflict, Messages.ConcurrencyConflict)
+            : null;
+
+    /// <summary>Số đặt không được nhỏ hơn số đã cắt (Σ ActualQty bàn cắt của dòng).</summary>
+    private async Task<Result?> CheckOrderedQtyFloorAsync(IReadOnlyList<OrderLineInput> lines, CancellationToken ct)
+    {
+        var ids = lines.Where(l => l.OrderLineId is not null).Select(l => l.OrderLineId!.Value).Distinct().ToList();
+        if (ids.Count == 0) return null;
+        var cut = await _uow.Repository<CuttingLayLine>().Query().AsNoTracking()
+            .Where(l => ids.Contains(l.OrderLineId))
+            .GroupBy(l => l.OrderLineId)
+            .Select(g => new { OrderLineId = g.Key, Qty = g.Sum(x => x.ActualQty) })
+            .ToDictionaryAsync(x => x.OrderLineId, x => x.Qty, ct);
+        foreach (var line in lines)
+        {
+            if (line.OrderLineId is not int id || !cut.TryGetValue(id, out var cutQty) || line.OrderedQty >= cutQty) continue;
+            return Result.Failure(ErrorCodes.CommonValidation, string.Format(Messages.OrderQtyBelowCut, cutQty), ResultKind.Validation);
+        }
+        return null;
     }
 
     /// <summary>Số đã xuất kho (đang giao + đã giao) của các phiếu xuất đã phủ hết số đặt của đơn.</summary>

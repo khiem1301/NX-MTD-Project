@@ -1,4 +1,4 @@
-import { Alert, Card, Col, Row, Statistic, Typography, type TableColumnsType } from 'antd';
+import { Alert, Card, Col, Row, Statistic, type TableColumnsType } from 'antd';
 import { useMemo } from 'react';
 import { QueryError } from '@/components/common/QueryError';
 import { REVENUE_TEXT } from '../constants';
@@ -59,7 +59,6 @@ export function RevenuePanel() {
   return (
     <Card title="Doanh thu" style={{ marginTop: 16 }} loading={revenue.isLoading}>
       <QueryError error={revenue.error} onRetry={() => void revenue.refetch()} />
-      <Typography.Paragraph type="secondary">{REVENUE_TEXT.pageSubtitle}</Typography.Paragraph>
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12}>
           <Statistic

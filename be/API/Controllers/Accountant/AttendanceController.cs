@@ -7,8 +7,8 @@ using NX_MTD.Domain.Constants;
 
 namespace NX_MTD.API.Controllers.Accountant;
 
-/// <summary>UC28 — Admin / Quản đốc / Kế toán: đồng bộ RJ, xem snapshot NV, bảng công.
-/// Chỉ Admin / Quản đốc tạo tài khoản (qua API Nhân viên); Kế toán chỉ xem danh sách RJ.</summary>
+/// <summary>UC28 — Admin / Quản đốc / Kế toán: bảng công, snapshot NV RJ, chấm hộ.
+/// Lịch sử đồng bộ / Import Excel chỉ Admin. Chỉ Admin / Quản đốc tạo tài khoản (API Nhân viên).</summary>
 [ApiController]
 [Route("api/v1/accountant/[controller]")]
 [Authorize(Roles = Roles.Accountant + "," + Roles.Admin + "," + Roles.Manager)]
@@ -28,7 +28,9 @@ public sealed class AttendanceController : ControllerBase
     public async Task<IActionResult> GetSyncHealth(CancellationToken ct) =>
         this.ToResponse(await _attendance.GetHealthAsync(ct));
 
+    /// <summary>Lịch sử phiên đồng bộ / import — chỉ Admin.</summary>
     [HttpGet("sync-sessions")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> GetSyncSessions([FromQuery] int take, [FromQuery] string? status, CancellationToken ct) =>
         this.ToResponse(await _attendance.GetSessionsAsync(take, status, ct));
 
@@ -65,16 +67,18 @@ public sealed class AttendanceController : ControllerBase
 
     // ---------- Import Excel chấm công (UC29) ----------
 
-    /// <summary>Xem trước file Excel dự phòng (chưa ghi DB).</summary>
+    /// <summary>Xem trước file Excel dự phòng (chưa ghi DB) — chỉ Admin.</summary>
     [HttpPost("import/preview")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> PreviewExcel(IFormFile file, CancellationToken ct)
     {
         await using var stream = file.OpenReadStream();
         return this.ToResponse(await _attendance.PreviewExcelAsync(stream, file.FileName, ct));
     }
 
-    /// <summary>Nhập file Excel dự phòng (Source = EXCEL_IMPORT).</summary>
+    /// <summary>Nhập file Excel dự phòng (Source = EXCEL_IMPORT) — chỉ Admin.</summary>
     [HttpPost("import")]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> ImportExcel(IFormFile file, CancellationToken ct)
     {
         await using var stream = file.OpenReadStream();

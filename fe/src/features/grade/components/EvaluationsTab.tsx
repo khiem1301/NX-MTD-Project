@@ -51,7 +51,15 @@ export function EvaluationsTab() {
       key: 'worker',
       render: (_, e) => `${e.workerCode} - ${e.workerName}`,
     },
-    { title: GR_LABELS.team, dataIndex: 'teamCode', render: (v: string | null) => v ?? '—' },
+    ...(!isLeader
+      ? [
+          {
+            title: GR_LABELS.team,
+            dataIndex: 'teamCode',
+            render: (v: string | null) => v ?? '—',
+          } satisfies TableColumnsType<GradeEvaluation>[number],
+        ]
+      : []),
     {
       title: GR_LABELS.currentGrade,
       dataIndex: 'currentGradeCode',

@@ -8,7 +8,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDateTime } from '@/utils/format';
+import { fill, formatDateTime } from '@/utils/format';
 import { FgHandoverCreateModal } from '../components/FgHandoverCreateModal';
 import { FgHandoverModal } from '../components/FgHandoverModal';
 import { FG_LABELS, FG_STATUS_LABEL } from '../constants';
@@ -46,12 +46,21 @@ export function FgHandoverPage() {
     {
       title: FG_LABELS.status,
       dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={FG_STATUS_LABEL} />,
-    },
-    {
-      title: FG_LABELS.confirmedBy,
-      dataIndex: 'confirmedByName',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string, h) => (
+        <StatusTag
+          status={v}
+          labels={FG_STATUS_LABEL}
+          title={
+            h.confirmedByName
+              ? fill(
+                  MESSAGES.common.confirmedByAt,
+                  h.confirmedByName,
+                  formatDateTime(h.confirmedAt),
+                )
+              : undefined
+          }
+        />
+      ),
     },
     {
       title: MESSAGES.common.actions,

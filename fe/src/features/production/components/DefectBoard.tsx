@@ -49,7 +49,6 @@ export function DefectBoard({ role }: { role: OutputRole }) {
   return (
     <PageCard
       title={isManager ? text.managerTitle : text.title}
-      description={isManager ? text.managerSubtitle : text.subtitle}
       extra={
         !isManager && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setFormOpen(true)}>

@@ -55,11 +55,15 @@ export function MaterialIssueListPage() {
       title: LABELS.issueCode,
       dataIndex: 'issueCode',
     },
-    {
-      title: LABELS.warehouseType,
-      dataIndex: 'warehouseType',
-      render: (v: string) => WAREHOUSE_TYPE_LABEL[v],
-    },
+    ...(table.filters.warehouseType
+      ? []
+      : [
+          {
+            title: LABELS.warehouseType,
+            dataIndex: 'warehouseType',
+            render: (v: string) => WAREHOUSE_TYPE_LABEL[v],
+          } satisfies TableColumnsType<MaterialIssueListItem>[number],
+        ]),
     { title: LABELS.order, dataIndex: 'orderCode' },
     { title: LABELS.workOrder, dataIndex: 'workOrderCode', render: (v: string | null) => v ?? '—' },
     { title: LABELS.receivingTeam, dataIndex: 'receivingTeamCode' },

@@ -8,7 +8,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDate, formatDateTime } from '@/utils/format';
+import { fill, formatDate, formatDateTime } from '@/utils/format';
 import { ReceiptDetailModal } from '../components/ReceiptDetailModal';
 import { PurchaseOrderFormModal } from '../components/PurchaseOrderFormModal';
 import { ReceiptFormModal } from '../components/ReceiptFormModal';
@@ -54,12 +54,21 @@ export function MaterialReceiptListPage() {
     {
       title: LABELS.status,
       dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={RECEIPT_STATUS_LABEL} />,
-    },
-    {
-      title: LABELS.confirmedBy,
-      dataIndex: 'confirmedByName',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string, r) => (
+        <StatusTag
+          status={v}
+          labels={RECEIPT_STATUS_LABEL}
+          title={
+            r.confirmedByName
+              ? fill(
+                  MESSAGES.common.confirmedByAt,
+                  r.confirmedByName,
+                  formatDateTime(r.confirmedAt),
+                )
+              : undefined
+          }
+        />
+      ),
     },
     {
       title: MESSAGES.common.actions,

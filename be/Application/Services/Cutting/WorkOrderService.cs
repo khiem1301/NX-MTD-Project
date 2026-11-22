@@ -49,9 +49,10 @@ public sealed class WorkOrderService : IWorkOrderService
         int? cuttingTeamId, CancellationToken ct)
     {
         var keyword = query.Keyword?.Trim();
+        var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var page = await WorkOrders.AsNoTracking()
             .Where(w => cuttingTeamId == null || w.CuttingTeamId == cuttingTeamId)
-            .Where(w => string.IsNullOrEmpty(query.Status) || w.Status == query.Status)
+            .Where(w => status == null || w.Status == status)
             .Where(w => query.OrderId == null || w.OrderId == query.OrderId)
             .Where(w => string.IsNullOrEmpty(keyword) || w.WorkOrderCode.Contains(keyword)
                         || w.Order.OrderCode.Contains(keyword) || w.Product.ProductCode.Contains(keyword))
@@ -108,17 +109,23 @@ public sealed class WorkOrderService : IWorkOrderService
 
     public async Task<Result<IReadOnlyList<WorkOrderFabricCheckDto>>> CheckFabricAsync(CheckWorkOrderFabricDto dto, CancellationToken ct)
     {
-        var ids = dto.Lines.Select(l => l.OrderLineId).ToArray();
+        if (!await _uow.Repository<CustomerOrder>().Query().AnyAsync(o => o.OrderId == dto.OrderId, ct))
+            return WarehouseFailures.NotFound<IReadOnlyList<WorkOrderFabricCheckDto>>();
+
+        var ids = dto.Lines.Select(l => l.OrderLineId).Distinct().ToArray();
         var variants = await _uow.Repository<OrderLine>().Query().AsNoTracking()
             .Where(l => ids.Contains(l.OrderLineId) && l.OrderId == dto.OrderId)
             .Select(l => new { l.OrderLineId, l.ProductVariantId, l.ProductVariant.ProductColor.Color, l.ProductVariant.SizeCode })
             .ToDictionaryAsync(l => l.OrderLineId, ct);
-        var lines = dto.Lines.Where(l => variants.ContainsKey(l.OrderLineId))
-            .Select(l =>
-            {
-                var v = variants[l.OrderLineId];
-                return new CutLine(v.ProductVariantId, l.PlannedQty, VariantLabel(v.Color, v.SizeCode), l.ProductComponentMaterialId);
-            }).ToList();
+        if (variants.Count != ids.Length)
+            return Result<IReadOnlyList<WorkOrderFabricCheckDto>>.Failure(ErrorCodes.WarehouseInvalidReference,
+                WarehouseMessages.WorkOrderLineNotInOrder, ResultKind.Validation);
+
+        var lines = dto.Lines.Select(l =>
+        {
+            var v = variants[l.OrderLineId];
+            return new CutLine(v.ProductVariantId, l.PlannedQty, VariantLabel(v.Color, v.SizeCode), l.ProductComponentMaterialId);
+        }).ToList();
         return Result<IReadOnlyList<WorkOrderFabricCheckDto>>.Success(
             await _fabricChecker.CheckAsync(dto.OrderId, dto.CuttingTeamId, lines, ct));
     }
@@ -145,8 +152,12 @@ public sealed class WorkOrderService : IWorkOrderService
             .Where(l => string.IsNullOrEmpty(colorKey) || string.Equals(l.OrderLine.ProductVariant.ProductColor.Color, colorKey, StringComparison.OrdinalIgnoreCase))
             .Where(l => string.IsNullOrEmpty(sizeKey) || string.Equals(l.OrderLine.ProductVariant.SizeCode, sizeKey, StringComparison.OrdinalIgnoreCase));
         var checks = await _needs.NeedsAsync(wo, lines, ct);
-        IReadOnlyList<FabricNeedDto> needs = checks.Where(c => c.NeedMeters is > 0)
-            .Select(c => new FabricNeedDto(c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialColor, c.NeedMeters!.Value)).ToList();
+        // NeedMeters = phần còn thiếu (cần − khả dụng); đủ thì 0 và bỏ khỏi danh sách xin thêm.
+        IReadOnlyList<FabricNeedDto> needs = checks
+            .Where(c => c.MaterialId > 0 && c.NeedMeters is { } need && c.AvailableQty is { } avail && need > avail)
+            .Select(c => new FabricNeedDto(c.MaterialId, c.MaterialCode, c.MaterialName, c.MaterialColor,
+                c.NeedMeters!.Value - c.AvailableQty!.Value))
+            .ToList();
         return Result<IReadOnlyList<FabricNeedDto>>.Success(needs);
     }
 
@@ -163,6 +174,12 @@ public sealed class WorkOrderService : IWorkOrderService
     {
         var check = await ValidateAsync(dto, ct);
         if (check is not null) return check;
+
+        var fabric = await CheckFabricAsync(new CheckWorkOrderFabricDto(dto.OrderId, dto.CuttingTeamId, dto.Lines), ct);
+        if (!fabric.IsSuccess)
+            return Result<WorkOrderDto>.Failure(fabric.ErrorCode!, fabric.Message!, fabric.Kind, fabric.Errors);
+        if (fabric.Data!.Any(c => c.Status == FabricCheckStatuses.Short))
+            return Fail(ErrorCodes.WarehouseInsufficientStock, WarehouseMessages.WorkOrderFabricShortage);
 
         var created = await _uow.InTransactionAsync(async () =>
         {
@@ -188,7 +205,9 @@ public sealed class WorkOrderService : IWorkOrderService
             .Select(w => w.SourceRequestId!.Value);
         var requests = await _uow.Repository<Request>().Query().AsNoTracking()
             .Where(r => r.RequestTypeCode == RequestTypes.ReplacementCutting && r.Status == RequestStatuses.Approved
-                        && !withOrder.Contains(r.RequestId))
+                        && !withOrder.Contains(r.RequestId)
+                        && r.RequestLines.All(l => l.OrderLineId != null && l.ProductComponentMaterialId != null && l.OrderLine != null
+                                                   && l.ProductComponentMaterial != null))
             .OrderBy(r => r.RequestId)
             .Select(r => new ReplacementRequestDto(r.RequestId, r.RequestCode, r.OrderId!.Value, r.Order!.OrderCode,
                 r.RequestLines.Select(l => l.OrderLine!.ProductVariant.Product.ProductCode).FirstOrDefault() ?? string.Empty, r.Content,
@@ -324,6 +343,8 @@ public sealed class WorkOrderService : IWorkOrderService
         var check = await WorkOrderFinishCheck.RunAsync(_uow, wo, reason, ct);
         if (check.Failure is not null) return check.Failure;
         var (inWarehouse, planned) = (check.InWarehouse, check.Planned);
+        if (inWarehouse >= planned)
+            return Result.Failure(ErrorCodes.WarehouseInvalidStatus, WarehouseMessages.WorkOrderAlreadyFullyCut);
 
         var note = AppendShortReason(wo.Note, reason);
         if (note.Length > MaxNoteLength)
@@ -362,6 +383,13 @@ public sealed class WorkOrderService : IWorkOrderService
     private async Task<Result<WorkOrderDto>?> ValidateAsync(SaveWorkOrderDto dto, CancellationToken ct,
         DateOnly? previousDueDate = null)
     {
+        if (dto.Lines is null || dto.Lines.Count == 0)
+            return Result<WorkOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired,
+                ResultKind.Validation);
+        if (dto.Lines.Any(l => l.PlannedQty <= 0))
+            return Result<WorkOrderDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.QtyMustBePositive,
+                ResultKind.Validation);
+
         var order = await _uow.Repository<CustomerOrder>().Query().AsNoTracking()
             .FirstOrDefaultAsync(o => o.OrderId == dto.OrderId, ct);
         if (order is null) return WarehouseFailures.NotFound<WorkOrderDto>();
