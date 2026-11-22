@@ -20,10 +20,6 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
     private static readonly DateTime SpecNow = new(2026, 11, 22, 10, 0, 0);
     private static readonly DateOnly SpecToday = new(2026, 11, 22);
 
-    /// <summary>Business error codes from spec not yet in <see cref="ErrorCodes"/> (Group B asserts).</summary>
-    private const string ExpectedDuplicateSequence = "OPERATION_SEQUENCE_DUPLICATE";
-    private const string ExpectedFinalStepRequired = "OPERATION_FINAL_STEP_REQUIRED";
-
     private readonly List<Product> _products = [new() { ProductId = 1, ProductCode = "MH001", Status = RecordStatus.Active }];
     private readonly List<Operation> _operations = [];
     private readonly List<PieceRate> _rates = [];
@@ -524,7 +520,7 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ExpectedDuplicateSequence);
+        result.ErrorCode.Should().Be(ErrorCodes.OperationSequenceDuplicate);
     }
 
     [Fact]
@@ -802,7 +798,7 @@ public sealed class OperationServiceHighComplexityTests : ProductionTestBase
 
         // Assert
         result.IsSuccess.Should().BeFalse();
-        result.ErrorCode.Should().Be(ExpectedFinalStepRequired);
+        result.ErrorCode.Should().Be(ErrorCodes.OperationFinalStepRequired);
     }
 
     // ==================== ReactivateAsync ====================

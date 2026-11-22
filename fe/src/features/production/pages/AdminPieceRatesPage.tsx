@@ -51,7 +51,7 @@ export function AdminPieceRatesPage() {
   const columns = pieceRateColumns({ onApprove: setApproving, onReject: setRejecting });
 
   return (
-    <PageCard title={text.adminTitle} description={text.adminSubtitle}>
+    <PageCard title={text.adminTitle}>
       <TableToolbar
         filters={
           <>

@@ -23,10 +23,7 @@ export function AccountantPayrollPage() {
     (notFound || payroll.data?.status === 'Draft' || payroll.data?.status === 'Rejected');
 
   return (
-    <PageCard
-      title={PAYROLL_TEXT.accountantPageTitle}
-      description={PAYROLL_TEXT.accountantPageSubtitle}
-    >
+    <PageCard title={PAYROLL_TEXT.accountantPageTitle}>
       <Space>
         <Typography.Text>{PAYROLL_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker

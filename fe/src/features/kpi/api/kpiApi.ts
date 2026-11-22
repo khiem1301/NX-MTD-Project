@@ -35,6 +35,9 @@ export const kpiApi = {
 
   getCalendar: (kpiTargetId: number) => get<KpiCalendar>(API.kpi.calendar(kpiTargetId)),
 
+  /** Tổ trưởng / tổ phó may: xem lịch KPI ngày của chỉ tiêu tổ mình (chỉ đọc). */
+  getTeamCalendar: (kpiTargetId: number) => get<KpiCalendar>(API.kpi.teamCalendar(kpiTargetId)),
+
   // ---------- Quản đốc, Admin lập / sửa / hủy ----------
 
   getOrderCapacity: (params: { orderId: number; productId: number; exceptKpiTargetId?: number }) =>

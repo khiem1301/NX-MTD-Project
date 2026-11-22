@@ -23,7 +23,7 @@ export function CostSummaryPage() {
   const notFound = error?.errorCode === ERROR_CODES.MonthlyCostNotFound;
 
   return (
-    <PageCard title={COST_SUMMARY_TEXT.pageTitle} description={COST_SUMMARY_TEXT.pageSubtitle}>
+    <PageCard title={COST_SUMMARY_TEXT.pageTitle}>
       <Space>
         <Typography.Text>{COST_SUMMARY_TEXT.periodMonth}</Typography.Text>
         <AppMonthPicker

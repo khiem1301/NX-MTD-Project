@@ -1,16 +1,17 @@
 import { IconAction } from '@/components/common/IconAction';
 import { ProfileOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { type TableColumnsType } from 'antd';
+import { Typography, type TableColumnsType } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { QueryError } from '@/components/common/QueryError';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatQty } from '@/utils/format';
-import { LABELS, MATERIAL_TYPE_LABEL, WAREHOUSE_TYPE } from '../constants';
+import { LABELS, WAREHOUSE_TYPE } from '../constants';
 import { useBalances } from '@/hooks/useStockBalances';
 import type { MaterialOrderScope, StockBalance } from '@/types/stock';
 import type { StockCardQuery } from '../types';
+import { MaterialIdentityCell } from './MaterialIdentityCell';
 import { StockCardModal } from './StockCardModal';
 import { StockOrderFilter } from './StockOrderFilter';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
@@ -28,26 +29,32 @@ const qty = (title: string, dataIndex: keyof StockBalance) => ({
 });
 
 const materialColumns: TableColumnsType<StockBalance> = [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
-  { title: LABELS.materialName, dataIndex: 'materialName' },
   {
-    title: LABELS.materialType,
-    dataIndex: 'materialType',
-    render: (v: string) => MATERIAL_TYPE_LABEL[v],
+    title: LABELS.material,
+    key: 'material',
+    render: (_, b) => (
+      <MaterialIdentityCell
+        code={b.materialCode ?? ''}
+        name={b.materialName ?? ''}
+        color={b.materialColor}
+        unit={b.unit}
+      />
+    ),
   },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string) => v || '—' },
-  { title: LABELS.unit, dataIndex: 'unit' },
 ];
 
 const pieceColumns: TableColumnsType<StockBalance> = [
-  { title: LABELS.order, dataIndex: 'orderCode' },
-  { title: LABELS.product, dataIndex: 'productCode' },
-  { title: LABELS.garmentColor, dataIndex: 'color' },
-  { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
   {
-    title: LABELS.component,
-    dataIndex: 'componentName',
-    render: (v: string | null) => v ?? LABELS.wholeGarment,
+    title: LABELS.belongsTo,
+    key: 'belongs',
+    render: (_, b) => (
+      <div>
+        <div>{`${b.orderCode} · ${b.productCode}`}</div>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {[b.color, b.sizeCode, b.componentName ?? LABELS.wholeGarment].join(' · ')}
+        </Typography.Text>
+      </div>
+    ),
   },
 ];
 

@@ -56,8 +56,8 @@ public sealed class PayrollService : IPayrollService
             return Result<ExcelFileDto>.Failure(ErrorCodes.PayrollPeriodMonthInvalid,
                 Messages.PayrollPeriodMonthInvalid, ResultKind.Validation);
 
-        var period = await _repo.GetOrCreatePeriodAsync(periodMonth, ct);
-        var rows = await _repo.GetExportRowsAsync(periodMonth, ct);
+        var period = await _repo.GetOrCreatePeriodAsync(periodMonth!, ct);
+        var rows = await _repo.GetExportRowsAsync(periodMonth!, ct);
         var missingPunch = await _repo.GetMissingPunchDaysAsync(period.StartDate, period.EndDate, ct);
         var daysWithoutOutput = await _repo.GetDaysWithoutOutputAsync(period.StartDate, period.EndDate, ct);
 
@@ -68,7 +68,7 @@ public sealed class PayrollService : IPayrollService
                 missingPunch.GetValueOrDefault(r.EmployeeId), daysWithoutOutput.GetValueOrDefault(r.EmployeeId)))
             .ToList();
 
-        var content = _excelWriter.WriteExportSheet(periodMonth, exportRows);
+        var content = _excelWriter.WriteExportSheet(periodMonth!, exportRows);
 
         _logger.LogInformation("Đã xuất dữ liệu tính lương tháng {PeriodMonth}: {Count} nhân viên",
             periodMonth, exportRows.Count);
@@ -196,7 +196,12 @@ public sealed class PayrollService : IPayrollService
         var pageSize = Paging.NormalizePageSize(query.PageSize);
         // Contract 2.2: FE chỉ biết trạng thái dạng PascalCase (giống Status trong PayrollSummaryDto trả về);
         // DB/PayrollRepository lưu/so sánh theo mã UPPER_SNAKE nên phải đổi chiều ngược lại ở đây.
-        var (items, total) = await _repo.GetPayrollsAsync(ToRawStatus(query.Status), page, pageSize, ct);
+        var status = ToRawStatus(query.Status);
+        if (query.Status is { Length: > 0 } && status is null)
+            return Result<PagedResult<PayrollSummaryDto>>.Failure(ErrorCodes.PayrollInvalidStatus,
+                Messages.PayrollStatusInvalid, ResultKind.Validation);
+
+        var (items, total) = await _repo.GetPayrollsAsync(status, page, pageSize, ct);
         var dtos = await ToSummariesAsync(items, ct);
 
         return Result<PagedResult<PayrollSummaryDto>>.Success(
@@ -217,12 +222,15 @@ public sealed class PayrollService : IPayrollService
 
     public async Task<Result> ApproveAsync(int payrollId, CancellationToken ct)
     {
-        var payroll = await _repo.FindPayrollByIdAsync(payrollId, includePayslips: false, ct);
+        var payroll = await _repo.FindPayrollByIdAsync(payrollId, includePayslips: true, ct);
         if (payroll is null)
             return Result.Failure(ErrorCodes.PayrollNotFound, Messages.PayrollNotFound, ResultKind.NotFound);
 
         if (payroll.Status != PayrollStatus.PendingApproval)
             return Result.Failure(ErrorCodes.PayrollInvalidStatus, Messages.PayrollInvalidStatusForApprove);
+
+        if (payroll.Payslips.Count == 0)
+            return Result.Failure(ErrorCodes.PayrollEmpty, Messages.PayrollEmpty);
 
         // "Duyệt thì bảng lương bị khóa" = chốt tháng (UC31 cuối luồng): khóa luôn AccountingPeriod.
         // Một lần SaveChangesAsync ghi cả hai bảng trong cùng transaction (Rules mục 3.5/3.7).
@@ -250,8 +258,12 @@ public sealed class PayrollService : IPayrollService
         if (payroll.Status != PayrollStatus.PendingApproval)
             return Result.Failure(ErrorCodes.PayrollInvalidStatus, Messages.PayrollInvalidStatusForReject);
 
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.PayrollReasonRequired, Messages.PayrollRejectReasonRequired,
+                ResultKind.Validation);
+
         payroll.Status = PayrollStatus.Rejected;
-        payroll.RejectReason = dto.Reason;
+        payroll.RejectReason = dto.Reason.Trim();
         _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId, AuditActions.Reject,
             new { Status = PayrollStatus.PendingApproval }, new { payroll.Status }, dto.Reason));
         await _repo.SaveChangesAsync(ct);
@@ -269,6 +281,11 @@ public sealed class PayrollService : IPayrollService
         if (payroll.Status != PayrollStatus.Approved)
             return Result.Failure(ErrorCodes.PayrollInvalidStatus, Messages.PayrollInvalidStatusForReopen);
 
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.PayrollReasonRequired, Messages.PayrollReopenReasonRequired,
+                ResultKind.Validation);
+
+        var reason = dto.Reason.Trim();
         // DEV-MI-09-2: SRS chỉ nói "mở lại về Nháp, bắt buộc lý do"; khóa tháng gắn liền với duyệt
         // (xem ApproveAsync) nên suy luận mở lại cũng mở khóa tháng — xem docs/CODE_DEVIATIONS.md.
         payroll.Status = PayrollStatus.Draft;
@@ -276,9 +293,9 @@ public sealed class PayrollService : IPayrollService
         payroll.Period.Status = RecordStatus.Open;
         payroll.Period.LockedAt = null;
         _audit.Add(new AuditEntry(nameof(Payroll), payroll.PayrollId, AuditActions.Unlock,
-            new { Status = PayrollStatus.Approved }, new { payroll.Status }, dto.Reason));   // lý do mở lại đọc từ AuditLog
+            new { Status = PayrollStatus.Approved }, new { payroll.Status }, reason));   // lý do mở lại đọc từ AuditLog
         _audit.Add(new AuditEntry(nameof(AccountingPeriod), payroll.PeriodId, AuditActions.Unlock,
-            new { Status = RecordStatus.Locked }, new { payroll.Period.Status }, dto.Reason));
+            new { Status = RecordStatus.Locked }, new { payroll.Period.Status }, reason));
         await _repo.SaveChangesAsync(ct);
 
         _logger.LogInformation("Đã mở lại bảng lương {PayrollId} về Nháp, mở khóa tháng {PeriodMonth}",
@@ -290,6 +307,10 @@ public sealed class PayrollService : IPayrollService
 
     public async Task<Result<IReadOnlyList<MyPayslipSummaryDto>>> GetMyPayslipsAsync(int employeeId, CancellationToken ct)
     {
+        if (employeeId <= 0)
+            return Result<IReadOnlyList<MyPayslipSummaryDto>>.Failure(ErrorCodes.PayrollInvalidStatus,
+                Messages.Required("nhân viên"), ResultKind.Validation);
+
         var rows = await _repo.GetMyPayslipSummariesAsync(employeeId, ct);
         var dtos = rows.Select(r => new MyPayslipSummaryDto(r.PeriodMonth, r.NetPay, r.ApprovedAt)).ToList();
 
@@ -302,7 +323,7 @@ public sealed class PayrollService : IPayrollService
             return Result<MyPayslipDetailDto>.Failure(ErrorCodes.PayrollPeriodMonthInvalid,
                 Messages.PayrollPeriodMonthInvalid, ResultKind.Validation);
 
-        var found = await _repo.FindMyPayslipAsync(employeeId, periodMonth, ct);
+        var found = await _repo.FindMyPayslipAsync(employeeId, periodMonth!, ct);
         if (found is null)
             return Result<MyPayslipDetailDto>.Failure(ErrorCodes.PayslipNotFound, Messages.PayslipNotFound,
                 ResultKind.NotFound);
@@ -317,10 +338,11 @@ public sealed class PayrollService : IPayrollService
 
     // ---------- Dùng chung ----------
 
-    private static bool IsValidMonth(string periodMonth) => PeriodMonthPattern.IsMatch(periodMonth);
+    private static bool IsValidMonth([System.Diagnostics.CodeAnalysis.NotNullWhen(true)] string? periodMonth) =>
+        !string.IsNullOrEmpty(periodMonth) && PeriodMonthPattern.IsMatch(periodMonth);
 
     /// <summary>"PendingApproval" (FE gửi lại đúng giá trị PascalCase đã nhận) → "PENDING_APPROVAL" (DB).
-    /// Giá trị lạ/không khớp giữ nguyên để lọc ra danh sách rỗng thay vì ném lỗi.</summary>
+    /// Status lạ → null để GetPayrollsAsync trả Validation (không lọc im lặng).</summary>
     private static string? ToRawStatus(string? status) => status switch
     {
         null or "" => null,
@@ -328,7 +350,7 @@ public sealed class PayrollService : IPayrollService
         "PendingApproval" => PayrollStatus.PendingApproval,
         nameof(PayrollStatus.Approved) => PayrollStatus.Approved,
         nameof(PayrollStatus.Rejected) => PayrollStatus.Rejected,
-        _ => status,
+        _ => null,
     };
 
     private async Task<List<PayrollSummaryDto>> ToSummariesAsync(IReadOnlyCollection<Payroll> payrolls, CancellationToken ct)
@@ -591,6 +613,7 @@ public sealed class PayrollService : IPayrollService
             return ($"Mã chấm công {code} ({row.FullName}) không có trong hệ thống.", null);
         if (employee.Status != RecordStatus.Active) return ($"Nhân viên mã chấm công {code} đã nghỉ việc.", employee);
         if (row.NetPay is null) return ("Thiếu thực lĩnh.", employee);
+        if (row.WorkDays is null) return ("Thiếu số công.", employee);
         if (row.WorkDays is < 0 or > 31) return ("Số công không hợp lệ (0-31).", employee);
         if (row.Items.Count == 0) return ("Dòng không có khoản lương nào lớn hơn 0.", employee);
         return (null, employee);

@@ -1,4 +1,4 @@
-﻿namespace NX_MTD.Domain.Constants;
+namespace NX_MTD.Domain.Constants;
 
 /// <summary>Khai báo một nơi; đồng bộ sang FE src/constants/errorCodes.ts.</summary>
 public static class ErrorCodes
@@ -204,10 +204,12 @@ public static class ErrorCodes
     // Công đoạn, đơn giá, phân công, sản lượng, QC, hàng hỏng (KI-01…KI-11, Minh làm hộ Kiều)
     public const string ProductionForbidden = "PRODUCTION_FORBIDDEN";
     public const string OperationCodeDuplicate = "OPERATION_CODE_DUPLICATE";
+    public const string OperationSequenceDuplicate = "OPERATION_SEQUENCE_DUPLICATE";
     public const string OperationInvalid = "OPERATION_INVALID";
     public const string OperationGroupDuplicate = "OPERATION_GROUP_DUPLICATE";
     public const string OperationHasOpenWork = "OPERATION_HAS_OPEN_WORK";
     public const string OperationFinalStepExists = "OPERATION_FINAL_STEP_EXISTS";
+    public const string OperationFinalStepRequired = "OPERATION_FINAL_STEP_REQUIRED";
     public const string OperationNotActive = "OPERATION_NOT_ACTIVE";
     public const string OperationProductMismatch = "OPERATION_PRODUCT_MISMATCH";
     public const string OperationExcelInvalid = "OPERATION_EXCEL_INVALID";

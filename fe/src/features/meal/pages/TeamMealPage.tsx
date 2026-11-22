@@ -16,7 +16,7 @@ export function TeamMealPage() {
   const isLoading = suggestion.isLoading || members.isLoading;
 
   return (
-    <PageCard title={MEAL_TEXT.teamPageTitle} description={MEAL_TEXT.teamPageSubtitle}>
+    <PageCard title={MEAL_TEXT.teamPageTitle}>
       {error ? (
         <Alert type="error" showIcon message={(error as { message: string }).message} />
       ) : null}

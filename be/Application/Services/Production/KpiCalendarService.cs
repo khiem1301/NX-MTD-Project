@@ -74,6 +74,13 @@ public sealed class KpiCalendarService : IKpiCalendarService
         return data is null ? NotFound() : Result<KpiCalendarDto>.Success(Build(data));
     }
 
+    public async Task<Result<KpiCalendarDto>> GetForTeamAsync(int kpiTargetId, int sewingTeamId, CancellationToken ct)
+    {
+        var data = await LoadAsync(kpiTargetId, ct);
+        if (data is null || data.K.SewingTeamId != sewingTeamId) return NotFound();
+        return Result<KpiCalendarDto>.Success(Build(data) with { CanEdit = false });
+    }
+
     public async Task<Result<KpiCalendarDto>> SaveDailyPlanAsync(int kpiTargetId, SaveKpiDailyPlanDto dto, CancellationToken ct)
     {
         var data = await LoadAsync(kpiTargetId, ct);

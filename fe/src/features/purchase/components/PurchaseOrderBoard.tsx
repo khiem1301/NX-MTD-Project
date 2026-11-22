@@ -30,7 +30,6 @@ export function PurchaseOrderBoard({ role }: { role: PurchaseRole }) {
   return (
     <PageCard
       title={isManager ? PURCHASE_TEXT.ordersTitle : PURCHASE_TEXT.paymentsTitle}
-      description={isManager ? PURCHASE_TEXT.ordersSubtitle : PURCHASE_TEXT.paymentsSubtitle}
       extra={
         isManager && (
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>

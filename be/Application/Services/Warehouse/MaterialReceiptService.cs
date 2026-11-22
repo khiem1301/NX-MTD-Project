@@ -193,6 +193,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
 
     public async Task<Result<MaterialReceiptDto>> CreateAsync(SaveMaterialReceiptDto dto, CancellationToken ct)
     {
+        var linesError = CheckLinesPresent(dto.Lines);
+        if (linesError is not null) return Fail.As<MaterialReceiptDto>(linesError);
+
         var resolved = await ResolveAsync(dto, null, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(resolved);
 
@@ -210,6 +213,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             await _uow.SaveChangesAsync();
             return Result<int>.Success(receipt.MaterialReceiptId);
         });
+        if (!created.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(created);
         return await GetByIdAsync(created.Data, ct);
     }
 
@@ -222,6 +226,9 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         if (receipt.ShortageRequestId != null   // phiếu bổ sung không sửa
             || receipt.Status is not (ReceiptStatuses.Pending or ReceiptStatuses.Returned))
             return WarehouseFailures.InvalidStatus<MaterialReceiptDto>();
+
+        var linesError = CheckLinesPresent(dto.Lines);
+        if (linesError is not null) return Fail.As<MaterialReceiptDto>(linesError);
 
         var resolved = await ResolveAsync(dto, receiptId, ct);
         if (!resolved.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(resolved);
@@ -246,6 +253,10 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         if (notResolvable is not null) return notResolvable;
 
         var original = await Receipts.AsNoTracking().FirstAsync(r => r.MaterialReceiptId == request!.MaterialReceiptId, ct);
+        var requestDay = DateOnly.FromDateTime(request!.CreatedAt);
+        if (dto.ReceiptDate < requestDay)
+            return Result<MaterialReceiptDto>.Failure(ErrorCodes.WarehouseInvalidReference,
+                string.Format(WarehouseMessages.ReceiptBeforeShortageRequest, requestDay), ResultKind.Validation);
         var supplementaryDate = await CheckReceiptDateAsync(dto.ReceiptDate, original.OrderId, null, ct);
         if (supplementaryDate is not null)
             return Result<MaterialReceiptDto>.Failure(ErrorCodes.WarehouseInvalidReference, supplementaryDate, ResultKind.Validation);
@@ -256,6 +267,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             return Result<MaterialReceiptDto>.Failure(ErrorCodes.ReceiptDeliveryCountReached, countReached);
 
         var created = await _uow.InTransactionAsync(() => AddSupplementaryReceiptAsync(dto, request!, original, ct));
+        if (!created.IsSuccess) return WarehouseFailures.From<MaterialReceiptDto>(created);
         return await GetByIdAsync(created.Data, ct);
     }
 
@@ -334,10 +346,17 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
     public Task<Result> ConfirmAsync(int receiptId, int confirmedByEmployeeId, CancellationToken ct) =>
         _uow.InTransactionAsync(async () =>
         {
+            if (confirmedByEmployeeId <= 0)
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReceiptConfirmedByRequired,
+                    ResultKind.Validation);
+
             var receipt = await Receipts.Include(r => r.MaterialReceiptLines).ThenInclude(l => l.OrderMaterial)
                 .FirstOrDefaultAsync(r => r.MaterialReceiptId == receiptId, ct);
             if (receipt is null) return WarehouseFailures.NotFound();
             if (receipt.Status != ReceiptStatuses.Pending) return WarehouseFailures.InvalidStatus();
+            if (receipt.MaterialReceiptLines.Count == 0 || receipt.MaterialReceiptLines.All(l => l.AcceptedQty <= 0))
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReceiptConfirmEmpty,
+                    ResultKind.Validation);
             var blocked = await CheckConfirmableAsync(receipt, ct);
             if (blocked is not null) return blocked;
 
@@ -407,6 +426,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var receipt = await Receipts.FirstOrDefaultAsync(r => r.MaterialReceiptId == receiptId, ct);
         if (receipt is null) return WarehouseFailures.NotFound();
         if (receipt.Status != ReceiptStatuses.Pending) return WarehouseFailures.InvalidStatus();
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReasonRequired, ResultKind.Validation);
 
         receipt.Status = ReceiptStatuses.Returned;
         receipt.ReturnReason = dto.Reason.Trim();
@@ -431,7 +452,8 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
             {
                 var pol = lines[l.PurchaseOrderLineId!.Value];
                 var outstanding = pol.OrderedQty - others.GetValueOrDefault(pol.PurchaseOrderLineId) - pol.NotReplenishedQty;
-                if (l.AcceptedQty > outstanding) messages.Add($"còn {outstanding:0.###}, nhập {l.AcceptedQty:0.###}");
+                if (l.AcceptedQty > outstanding)
+                    messages.Add($"còn {Math.Max(0m, outstanding):0.###}, nhập {l.AcceptedQty:0.###}");
             }
             if (messages.Count > 0) return $"{WarehouseMessages.ReceiptExceedsPurchase}: {string.Join("; ", messages)}.";
         }
@@ -445,10 +467,16 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         foreach (var l in receipt.MaterialReceiptLines.Where(l => l.PurchaseOrderLineId == null && l.OrderMaterialId != null))
         {
             var outstanding = materials[l.OrderMaterialId!.Value].CustomerQty - received.GetValueOrDefault(l.OrderMaterialId.Value);
-            if (l.AcceptedQty > outstanding) messages.Add($"còn {outstanding:0.###}, nhập {l.AcceptedQty:0.###}");
+            if (l.AcceptedQty > outstanding)
+                messages.Add($"còn {Math.Max(0m, outstanding):0.###}, nhập {l.AcceptedQty:0.###}");
         }
         return messages.Count == 0 ? null : $"{WarehouseMessages.ReceiptExceedsCustomer}: {string.Join("; ", messages)}.";
     }
+
+    private static Result? CheckLinesPresent(IReadOnlyList<SaveReceiptLineDto>? lines) =>
+        lines is null || lines.Count == 0
+            ? Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired, ResultKind.Validation)
+            : null;
 
     /// <summary>Số đã nhận (phiếu khách cấp ĐÃ XÁC NHẬN, không có đơn mua) theo NVL của đơn, bỏ qua một phiếu nếu cần.</summary>
     private async Task<Dictionary<int, decimal>> ConfirmedCustomerReceivedAsync(IReadOnlyCollection<int> orderMaterialIds,
@@ -562,7 +590,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var over = dto.Lines.Select(l => (Line: l, Om: materials.First(m => m.OrderMaterialId == l.OrderMaterialId)))
             .Select(x => (x.Line, Outstanding: x.Om.CustomerQty - receivedByMaterial.GetValueOrDefault(x.Om.OrderMaterialId)))
             .Where(x => x.Line.AcceptedQty > x.Outstanding)
-            .Select(x => $"còn {x.Outstanding:0.###}, nhập {x.Line.AcceptedQty:0.###}").ToList();
+            .Select(x => $"còn {Math.Max(0m, x.Outstanding):0.###}, nhập {x.Line.AcceptedQty:0.###}").ToList();
         if (over.Count > 0)
             return Result<ResolvedReceipt>.Failure(ErrorCodes.ReceiptExceedsPurchase,
                 $"{WarehouseMessages.ReceiptExceedsCustomer}: {string.Join("; ", over)}.");
@@ -624,7 +652,7 @@ public sealed class MaterialReceiptService : IMaterialReceiptService
         var over = dto.Lines.Select(l => (Line: l, Pol: byId[l.PurchaseOrderLineId!.Value]))
             .Select(x => (x.Line, Outstanding: x.Pol.OrderedQty - received.GetValueOrDefault(x.Pol.PurchaseOrderLineId) - x.Pol.NotReplenishedQty))
             .Where(x => x.Line.AcceptedQty > x.Outstanding)
-            .Select(x => $"còn {x.Outstanding:0.###}, nhập {x.Line.AcceptedQty:0.###}")
+            .Select(x => $"còn {Math.Max(0m, x.Outstanding):0.###}, nhập {x.Line.AcceptedQty:0.###}")
             .ToList();
         if (over.Count > 0)
             return Result<ResolvedReceipt>.Failure(ErrorCodes.ReceiptExceedsPurchase,

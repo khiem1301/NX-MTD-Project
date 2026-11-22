@@ -1,4 +1,4 @@
-import { type TableColumnsType } from 'antd';
+import { Typography, type TableColumnsType } from 'antd';
 import { QueryError } from '@/components/common/QueryError';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { DataTable } from '@/components/common/DataTable';
@@ -6,9 +6,10 @@ import { TableToolbar } from '@/components/common/TableToolbar';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { formatQty } from '@/utils/format';
-import { LABELS, MATERIAL_TYPE_LABEL, WAREHOUSE_TYPE } from '../constants';
+import { LABELS, WAREHOUSE_TYPE } from '../constants';
 import { useNxtReport } from '../hooks/useInventory';
 import type { NxtSummary } from '../types';
+import { MaterialIdentityCell } from './MaterialIdentityCell';
 
 type NxtReportTableProps = {
   warehouseType: string;
@@ -27,26 +28,32 @@ const qty = (title: string, dataIndex: keyof NxtSummary) => ({
 });
 
 const materialColumns: TableColumnsType<NxtSummary> = [
-  { title: LABELS.materialCode, dataIndex: 'materialCode' },
-  { title: LABELS.materialName, dataIndex: 'materialName' },
   {
-    title: LABELS.materialType,
-    dataIndex: 'materialType',
-    render: (v: string | null) => (v ? MATERIAL_TYPE_LABEL[v] : '—'),
+    title: LABELS.material,
+    key: 'material',
+    render: (_, r) => (
+      <MaterialIdentityCell
+        code={r.materialCode ?? ''}
+        name={r.materialName ?? ''}
+        color={r.materialColor}
+        unit={r.unit}
+      />
+    ),
   },
-  { title: LABELS.color, dataIndex: 'materialColor', render: (v: string | null) => v || '—' },
-  { title: LABELS.unit, dataIndex: 'unit' },
 ];
 
 const pieceColumns: TableColumnsType<NxtSummary> = [
-  { title: LABELS.order, dataIndex: 'orderCode' },
-  { title: LABELS.product, dataIndex: 'productCode' },
-  { title: LABELS.garmentColor, dataIndex: 'color' },
-  { title: LABELS.sizeCode, dataIndex: 'sizeCode' },
   {
-    title: LABELS.component,
-    dataIndex: 'componentName',
-    render: (v: string | null) => v ?? LABELS.wholeGarment,
+    title: LABELS.belongsTo,
+    key: 'belongs',
+    render: (_, r) => (
+      <div>
+        <div>{`${r.orderCode} · ${r.productCode}`}</div>
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {[r.color, r.sizeCode, r.componentName ?? LABELS.wholeGarment].join(' · ')}
+        </Typography.Text>
+      </div>
+    ),
   },
 ];
 

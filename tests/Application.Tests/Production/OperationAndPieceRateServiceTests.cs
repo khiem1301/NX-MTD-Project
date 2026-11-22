@@ -124,25 +124,26 @@ public class OperationAndPieceRateServiceTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task DiscontinueOperation_ActiveFinalStep_IsAllowed()
+    public async Task DiscontinueOperation_OnlyActiveFinalStep_ReturnsFinalStepRequired()
     {
-        var op = AddOperation(1, "OP90", final: true);
+        AddOperation(1, "OP90", final: true);
 
         var result = await _operationService.DiscontinueAsync(1, default);
 
-        result.IsSuccess.Should().BeTrue();
-        op.Status.Should().Be(OperationStatuses.Discontinued);
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.OperationFinalStepRequired);
     }
 
     [Fact]
     public async Task UpdateOperation_TickingFinal_SavesTheOldFinalBeforeTheNewOne()
     {
         AddOperation(2, "OP95", final: true, sequence: 2);
-        AddOperation(1, "OP90");
+        AddOperation(1, "OP90", sequence: 1);
         var order = new List<string>();
         Uow.When(u => u.SaveChangesAsync()).Do(_ => order.Add(string.Join(",", _operations.Where(o => o.IsFinalStep).Select(o => o.OperationCode))));
 
-        await _operationService.UpdateAsync(1, OpDto("OP90", final: true), default);
+        // Giữ StationSequence=1 của OP90 — tránh OPERATION_SEQUENCE_DUPLICATE với OP95 (seq 2).
+        await _operationService.UpdateAsync(1, new SaveOperationDto(1, "OP90", "May cổ", 1, null, null, null, true), default);
 
         order.Should().StartWith([""]);   // lần lưu đầu: công đoạn cũ đã bỏ cờ, chưa công đoạn nào là cuối
         _operations.Count(o => o.IsFinalStep).Should().Be(1);

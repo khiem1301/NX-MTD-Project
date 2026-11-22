@@ -347,9 +347,11 @@ public class OperationImportTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Import_WithoutEffectiveDate_IgnoresRateColumn()
+    public async Task Import_WithoutEffectiveDate_IgnoresRateColumn_WhenNotSubmitting()
     {
-        var result = await _sut.ImportAsync(1, Workbook(), null, null, null, true, default);
+        // submitRates=false + effectiveDate=null → không tạo đơn giá.
+        // (submitRates=true + effectiveDate=null dùng Today — UTCID66)
+        var result = await _sut.ImportAsync(1, Workbook(), null, null, null, false, default);
 
         result.Data!.RateCreated.Should().Be(0);
         _rates.Should().BeEmpty();

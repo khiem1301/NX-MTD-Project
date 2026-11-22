@@ -6,7 +6,6 @@ import type { DailyTimesheet } from '../types';
 import { formatDate, formatNumber, formatTime } from '@/utils/format';
 import { formatHours, workdayTone } from '../utils/timesheet';
 import { DataTable } from '@/components/common/DataTable';
-import { StatusTags } from './StatusTags';
 
 const WORKDAY_COLOR = {
   full: '#52c41a',
@@ -20,8 +19,10 @@ type Props = {
   isFetching: boolean;
   error: { message: string } | null;
   onPageChange: (page: number, pageSize: number) => void;
-  /** Màn "của tôi" đã biết người là ai nên ẩn cột nhân viên và tổ. */
+  /** Màn "của tôi" đã biết người là ai nên ẩn cột nhân viên. */
   showEmployee?: boolean;
+  /** Ẩn cột tổ khi màn chấm công tổ / đã lọc 1 tổ. */
+  showTeam?: boolean;
 };
 
 export function TimesheetTable({
@@ -31,6 +32,7 @@ export function TimesheetTable({
   error,
   onPageChange,
   showEmployee = true,
+  showTeam = true,
 }: Props) {
   if (error) {
     return <Alert type="error" showIcon message={error.message} />;
@@ -63,6 +65,10 @@ export function TimesheetTable({
               </div>
             ),
           },
+        ] satisfies ColumnsType<DailyTimesheet>)
+      : []),
+    ...(showTeam
+      ? ([
           {
             title: ATTENDANCE_TEXT.table.team,
             dataIndex: 'teamCode',
@@ -120,12 +126,6 @@ export function TimesheetTable({
       responsive: ['md'],
       render: (value: number) =>
         value > 0 ? <Tag color="blue">{formatHours(value)}</Tag> : <span>—</span>,
-    },
-    {
-      title: ATTENDANCE_TEXT.table.status,
-      key: 'status',
-      width: 170,
-      render: (_, row) => <StatusTags row={row} />,
     },
     {
       title: ATTENDANCE_TEXT.table.note,

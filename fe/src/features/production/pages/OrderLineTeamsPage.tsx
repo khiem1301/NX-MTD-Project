@@ -61,7 +61,7 @@ export function OrderLineTeamsPage() {
   ];
 
   return (
-    <PageCard title={text.title} description={text.subtitle}>
+    <PageCard title={text.title}>
       <TableToolbar
         filters={
           <>

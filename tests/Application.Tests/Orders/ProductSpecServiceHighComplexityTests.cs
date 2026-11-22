@@ -542,12 +542,14 @@ public class ProductSpecServiceHighComplexityTests
         _operationLinks.Add(new OperationComponent { OperationId = 1, ProductId = 1, ProductComponentId = 11 });
         AddVariant(21, "Đen", "M");
 
-        // Act
-        var act = () => Create().WriteAsync(1, Spec(
+        // Act — đổi Panel → Trim + đổi tên: gỡ liên kết công đoạn an toàn, không KeyNotFound
+        var result = await Create().WriteAsync(1, Spec(
             [new SaveProductComponentDto(11, "Nhãn mới", "Trim", 1)],
             [Variant(21, "Đen", "M")], []), default);
 
         // Assert
-        await act.Should().ThrowAsync<Exception>();
+        result.IsSuccess.Should().BeTrue();
+        comp.ComponentName.Should().Be("Nhãn mới");
+        _operationLinks.Should().BeEmpty();
     }
 }

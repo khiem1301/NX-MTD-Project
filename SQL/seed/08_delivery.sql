@@ -164,9 +164,10 @@ IF OBJECT_ID('tempdb..#Trip') IS NOT NULL DROP TABLE #Trip;
 SELECT n.DispatchNoteId, n.DeliveryDate, n.Status, d.OrderCode, ROW_NUMBER() OVER (ORDER BY n.DeliveryDate, n.DispatchNoteId) AS rn
 INTO #Trip FROM dbo.DispatchNote n JOIN #Dn d ON d.DnId = n.DispatchNoteId WHERE n.DeliveryMethod = 'COMPANY_VEHICLE';
 
+-- UQ_VT_OneOpen: mỗi xe tối đa 1 chuyến STARTED — giao đang chạy gắn @v1; chuyến việc khác STARTED gắn @v2 bên dưới.
 INSERT dbo.VehicleTrip (VehicleId, TripDate, DriverName, DriverEmployeeId, Purpose, DispatchNoteId, OdometerStart, OdometerEnd, FuelLiters, FuelCost,
                         Status, KmGapWarning, FuelOverNormWarning, RecordedAt)
-SELECT IIF(t.rn % 3 = 0, @v2, @v1), t.DeliveryDate, IIF(t.rn = 3, NULL, N'Nguyễn Văn Tài (lái xe)'), IIF(t.rn = 3, @codien, NULL),
+SELECT IIF(t.Status = 'IN_DELIVERY', @v1, IIF(t.rn % 3 = 0, @v2, @v1)), t.DeliveryDate, IIF(t.rn = 3, NULL, N'Nguyễn Văn Tài (lái xe)'), IIF(t.rn = 3, @codien, NULL),
        CONCAT(N'Giao hàng đơn ', t.OrderCode), t.DispatchNoteId,
        10000 + t.rn * 160, IIF(t.Status = 'IN_DELIVERY', NULL, 10000 + t.rn * 160 + 38 + (t.rn % 4) * 12),
        IIF(t.Status = 'IN_DELIVERY', NULL, 6.0 + (t.rn % 4) * 1.2 + IIF(t.rn = 4, 6, 0)),

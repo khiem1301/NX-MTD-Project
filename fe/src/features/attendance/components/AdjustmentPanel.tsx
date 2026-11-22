@@ -51,13 +51,25 @@ const columns: ColumnsType<AttendanceAdjustment> = [
  * đang chờ để chấm hộ ngay (điền sẵn ngày và đơn).
  */
 export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: number | null }) {
-  const [range, setRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(30, 'day'), dayjs()]);
+  // 60 ngày: đơn xin chấm bù demo/thực tế thường có ngày công cũ hơn 30 ngày.
+  const [range, setRange] = useState<[Dayjs, Dayjs]>([dayjs().subtract(60, 'day'), dayjs()]);
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [formOpen, setFormOpen] = useState(false);
   const [prefill, setPrefill] = useState<AdjustmentPrefill | null>(null);
   const [presetDone, setPresetDone] = useState(false);
+
+  /** Sau khi lưu: đảm bảo khoảng lọc chứa ngày công vừa chấm, rồi về trang 1. */
+  const includeWorkDateInRange = (workDate: string) => {
+    const day = dayjs(workDate);
+    setRange(([from, to]) => {
+      const nextFrom = day.isBefore(from, 'day') ? day : from;
+      const nextTo = day.isAfter(to, 'day') ? day : to;
+      return [nextFrom, nextTo];
+    });
+    setPage(1);
+  };
 
   const filter: AdjustmentFilter = {
     fromDate: toApiDate(range[0]),
@@ -200,6 +212,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
         open={formOpen || presetRequest !== undefined}
         prefill={formPrefill}
         onClose={closeForm}
+        onSaved={includeWorkDateInRange}
       />
     </Space>
   );

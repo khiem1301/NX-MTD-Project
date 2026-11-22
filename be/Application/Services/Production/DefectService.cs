@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
+using NX_MTD.Application.Validators;
 using NX_MTD.Domain.Constants;
 using NX_MTD.Domain.Entities;
 
@@ -73,6 +74,10 @@ public sealed class DefectService : IDefectService
     /// <summary>Công nhân chỉ xem phiếu của chính mình (không thấy phiếu đã hủy); không có thao tác phản hồi.</summary>
     public async Task<Result<IReadOnlyList<DefectDto>>> ListMineAsync(int workerId, DefectQuery query, CancellationToken ct)
     {
+        if (workerId <= 0)
+            return Result<IReadOnlyList<DefectDto>>.Failure(ErrorCodes.DefectInvalid, Messages.AssignmentWorkerInvalid,
+                ResultKind.Validation);
+
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : CodeText.ToCode(query.Status);
         var items = await Project(Defects.AsNoTracking()
                 .Where(d => d.ResponsibleWorkerId == workerId && d.Status != DefectStatuses.Cancelled)
@@ -80,7 +85,6 @@ public sealed class DefectService : IDefectService
                 .Where(d => query.From == null || d.WorkDate >= query.From)
                 .Where(d => query.To == null || d.WorkDate <= query.To)
                 .OrderByDescending(d => d.WorkDate).ThenByDescending(d => d.DefectRecordId))
-            .Take(Paging.MaxPageSize)
             .ToListAsync(ct);
         return Result<IReadOnlyList<DefectDto>>.Success(items.Select(Finish).ToList());
     }
@@ -91,6 +95,9 @@ public sealed class DefectService : IDefectService
     {
         var team = _guard.ResolveSewingTeam(null);   // Quản đốc không ghi phiếu hộ: phiếu do tổ trưởng của tổ lập
         if (!team.IsSuccess) return Fail.As<int>(team);
+        if (!await _uow.Repository<Team>().Query().AsNoTracking()
+                .AnyAsync(t => t.TeamId == team.Data && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct))
+            return Fail.NotFound<int>();
 
         var input = ValidateInput(dto.DefectType, dto.ReasonCode, dto.ReasonNote, dto.Quantity, dto.WorkDate, dto.ShiftCode);
         if (input.Failure is not null) return input.Failure;
@@ -111,6 +118,12 @@ public sealed class DefectService : IDefectService
                     operation.OperationCode, dto.WorkDate.ToString("dd/MM/yyyy")));
             scrapRateId = rate.PieceRateId;   // khóa tại thời điểm ghi (CK_DR_Rate)
         }
+        if (input.Type is DefectTypes.Scrap or DefectTypes.Rework)
+        {
+            var onLine = await _guard.ComputeOnLineAsync(team.Data, dto.OrderLineId, null, ct);
+            if (dto.Quantity > onLine.OnLine)
+                return Invalid(string.Format(Messages.DefectExceedsOnLine, onLine.OnLine));
+        }
         if (input.Type == DefectTypes.OutputError)
         {
             var excess = await CheckOutputErrorQuantityAsync(dto.WorkDate, dto.ResponsibleWorkerId, dto.OrderLineId,
@@ -124,11 +137,18 @@ public sealed class DefectService : IDefectService
             await _uow.Repository<DefectRecord>().AddAsync(defect);
             await _uow.SaveChangesAsync();
             _audit.Add(new AuditEntry(nameof(DefectRecord), defect.DefectRecordId, AuditActions.Insert, null, Snapshot(defect)));
-            _notifier.NotifyEmployees([worker.EmployeeId], new NotificationMessage(NotificationSources.Production,
-                Messages.NotifyDefectTitle,
-                string.Format(Messages.NotifyDefectBody, dto.WorkDate.ToString("dd/MM/yyyy"), dto.Quantity,
-                    DescribeType(input.Type), operation.OperationName),
-                null, nameof(DefectRecord), defect.DefectRecordId));
+            try
+            {
+                _notifier.NotifyEmployees([worker.EmployeeId], new NotificationMessage(NotificationSources.Production,
+                    Messages.NotifyDefectTitle,
+                    string.Format(Messages.NotifyDefectBody, dto.WorkDate.ToString("dd/MM/yyyy"), dto.Quantity,
+                        DescribeType(input.Type), operation.OperationName),
+                    null, nameof(DefectRecord), defect.DefectRecordId));
+            }
+            catch
+            {
+                // Thông báo không chặn lưu phiếu (FCM / DB notify lệch).
+            }
             await _uow.SaveChangesAsync();
             return Result<int>.Success(defect.DefectRecordId, Messages.DefectSaved);
         });
@@ -151,6 +171,7 @@ public sealed class DefectService : IDefectService
         var note = string.IsNullOrWhiteSpace(reasonNote) ? null : reasonNote.Trim();
         if (reasonCode == DefectReasons.Other && note is null) return new DefectInput(Invalid(Messages.DefectNoteRequired));   // CK_DR_Other
         if (quantity <= 0) return new DefectInput(Invalid(Messages.OutputQtyInvalid));
+        if (quantity > DefectLimits.MaxQty) return new DefectInput(Invalid(Messages.OutputQtyMax));
         if (workDate > _clock.Today) return new DefectInput(Invalid(Messages.OutputDateFuture));
 
         string? shift = null;
@@ -162,7 +183,7 @@ public sealed class DefectService : IDefectService
         return new DefectInput(null, type, reasonCode, note, shift);
     }
 
-    /// <summary>Kiểm tra dòng đơn (chưa đóng), công đoạn (đang dùng, đúng mã hàng) và công nhân chịu trách nhiệm (đúng tổ, còn làm).</summary>
+    /// <summary>Kiểm tra dòng đơn (chưa đóng, đã chia cho tổ), công đoạn (đang dùng, đúng mã hàng) và công nhân chịu trách nhiệm (đúng tổ, còn làm).</summary>
     private async Task<DefectRefs> ValidateReferencesAsync(int orderLineId, int operationId, int workerId, DateOnly workDate,
         int teamId, CancellationToken ct)
     {
@@ -171,6 +192,9 @@ public sealed class DefectService : IDefectService
             .FirstOrDefaultAsync(l => l.OrderLineId == orderLineId && !closed.Contains(l.Order.Status), ct);
         if (line is null)
             return new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentOrderInvalid, Messages.AssignmentOrderInvalid));
+        if (!await _uow.Repository<OrderLineTeam>().Query()
+                .AnyAsync(a => a.SewingTeamId == teamId && a.OrderLineId == orderLineId, ct))
+            return new DefectRefs(Result<int>.Failure(ErrorCodes.AssignmentProductNotAllotted, Messages.OrderLineNotAllotted));
         if (ProductionGuard.BeforeOrderStart(workDate, line.Order.ReceivedDate) is { } beforeStart)
             return new DefectRefs(Invalid(beforeStart));
 

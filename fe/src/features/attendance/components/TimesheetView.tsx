@@ -88,6 +88,7 @@ export function TimesheetView({ audience, personal = false }: Props) {
         error={(timesheets.error as ApiError | null) ?? null}
         onPageChange={filterState.changePage}
         showEmployee={!personal}
+        showTeam={!personal && audience !== 'teamLeader'}
       />
     </Space>
   );

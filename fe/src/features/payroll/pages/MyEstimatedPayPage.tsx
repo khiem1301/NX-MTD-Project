@@ -99,7 +99,6 @@ export function MyEstimatedPayPage() {
           <Tag color="orange">{text.estimateTag}</Tag>
         </Space>
       }
-      description={text.pageSubtitle}
     >
       <Space>
         <Typography.Text>{text.month}</Typography.Text>

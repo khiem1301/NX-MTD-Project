@@ -121,7 +121,7 @@ public sealed class OutputService : IOutputService
                 g => g.Key,
                 g => (
                     Quantity: g.Sum(r => r.Quantity),
-                    UnitRate: g.Select(r => (decimal?)r.PieceRate.Rate).FirstOrDefault(),
+                    UnitRate: WeightedAverageRate(g),
                     IsOutside: g.Any(r => r.IsOutsideAssignment),
                     NoAttendance: g.Any(r => r.NoAttendanceWarning)));
 
@@ -129,7 +129,9 @@ public sealed class OutputService : IOutputService
             keys.Where(k => !dayByKey.ContainsKey(k)).Select(k => k.OperationId).Distinct().ToList(), workDate, ct);
 
         var rows = new List<OutputGridRowDto>();
-        foreach (var (operationId, workerId) in keys.OrderBy(k => operations[k.OperationId].StationSequence)
+        foreach (var (operationId, workerId) in keys
+                     .Where(k => operations.ContainsKey(k.OperationId) && workers.ContainsKey(k.WorkerId))
+                     .OrderBy(k => operations[k.OperationId].StationSequence)
                      .ThenBy(k => workers[k.WorkerId].EmployeeCode))
         {
             var operation = operations[operationId];
@@ -143,7 +145,7 @@ public sealed class OutputService : IOutputService
                 operationId, operation.OperationCode, operation.OperationName, workerId,
                 worker.EmployeeCode, worker.FullName,
                 OutputRecordId: null,
-                Quantity: hasQty ? day.Quantity : null,
+                Quantity: hasQty ? day.Quantity : 0,
                 UnitRate: rate,
                 RateApproved: hasQty || rates.ContainsKey(operationId),
                 IsOutsideAssignment: hasQty ? day.IsOutside : !assigned.Contains((operationId, workerId)),
@@ -196,7 +198,9 @@ public sealed class OutputService : IOutputService
         var rates = await _rates.FindEffectiveManyAsync(
             keys.Where(k => !recordByKey.ContainsKey(k)).Select(k => k.OperationId).Distinct().ToList(), workDate, ct);
         var rows = new List<OutputGridRowDto>();
-        foreach (var (operationId, workerId) in keys.OrderBy(k => operations[k.OperationId].StationSequence)
+        foreach (var (operationId, workerId) in keys
+                     .Where(k => operations.ContainsKey(k.OperationId) && workers.ContainsKey(k.WorkerId))
+                     .OrderBy(k => operations[k.OperationId].StationSequence)
                      .ThenBy(k => workers[k.WorkerId].EmployeeCode))
         {
             var operation = operations[operationId];
@@ -214,6 +218,15 @@ public sealed class OutputService : IOutputService
                 cap?.OutputQty ?? 0, operation.OperationGroup?.GroupName));
         }
         return rows;
+    }
+
+    /// <summary>Đơn giá đại diện cả ngày = trung bình có trọng số theo số lượng từng ca.</summary>
+    private static decimal? WeightedAverageRate(IEnumerable<OutputRecord> records)
+    {
+        var list = records.Where(r => r.PieceRate is not null).ToList();
+        var qty = list.Sum(r => r.Quantity);
+        if (qty <= 0) return list.Select(r => (decimal?)r.PieceRate.Rate).FirstOrDefault();
+        return list.Sum(r => r.Quantity * r.PieceRate.Rate) / qty;
     }
 
     // ---------- Lưu ----------
@@ -403,35 +416,61 @@ public sealed class OutputService : IOutputService
         var created = new List<OutputRecord>();
         return await _uow.InTransactionAsync(async () =>
         {
-            var moved = new List<string>();
-            if (lookups.Shortages.Count > 0)
+            try
             {
-                await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
-                var transfer = await _transfer.ApplyAsync(new OutputCapTransfer.Context(teamId, dto.OrderLineId, dto.WorkDate, shift),
-                    lookups.Shortages, lookups.OutputIncrease, lookups.Operations, ct);
-                if (!transfer.IsSuccess) return transfer;
-                moved = transfer.Data!;
+                var moved = new List<string>();
+                if (lookups.Shortages.Count > 0)
+                {
+                    await _locks.AcquireAsync($"work-allocation:{teamId}:{dto.OrderLineId}", ct);
+                    var transfer = await _transfer.ApplyAsync(new OutputCapTransfer.Context(teamId, dto.OrderLineId, dto.WorkDate, shift),
+                        lookups.Shortages, lookups.OutputIncrease, lookups.Operations, ct);
+                    if (!transfer.IsSuccess) return transfer;
+                    moved = transfer.Data!;
+                }
+
+                created = await AddInsertsAsync(dto, shift, teamId, plan, lookups.Rates, assigned, attendedWorkerIds, newDeadline);
+                ApplyUpdatesAndDeletes(plan, reason);
+                await _uow.SaveChangesAsync();   // lấy OutputRecordId của dòng mới trước khi ghi log Insert
+
+                foreach (var record in created)
+                    _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Insert, null,
+                        new
+                        {
+                            record.WorkDate,
+                            record.ShiftCode,
+                            record.WorkerId,
+                            record.OperationId,
+                            record.OrderLineId,
+                            record.Quantity,
+                            record.PieceRateId
+                        }, reason));
+                await _uow.SaveChangesAsync();
+                return Result<List<string>>.Success(moved);
             }
-
-            created = await AddInsertsAsync(dto, shift, teamId, plan, lookups.Rates, assigned, attendedWorkerIds, newDeadline);
-            ApplyUpdatesAndDeletes(plan, reason);
-            await _uow.SaveChangesAsync();   // lấy OutputRecordId của dòng mới trước khi ghi log Insert
-
-            foreach (var record in created)
-                _audit.Add(new AuditEntry(nameof(OutputRecord), record.OutputRecordId, AuditActions.Insert, null,
-                    new
-                    {
-                        record.WorkDate,
-                        record.ShiftCode,
-                        record.WorkerId,
-                        record.OperationId,
-                        record.OrderLineId,
-                        record.Quantity,
-                        record.PieceRateId
-                    }, reason));
-            await _uow.SaveChangesAsync();
-            return Result<List<string>>.Success(moved);
+            catch (DbUpdateConcurrencyException)
+            {
+                return Result<List<string>>.Failure(ErrorCodes.CommonConcurrencyConflict, Messages.ConcurrencyConflict);
+            }
+            catch (InvalidOperationException ex) when (IsLockTimeout(ex))
+            {
+                return Result<List<string>>.Failure(ErrorCodes.TeamOrderBusy, Messages.OutputLockBusy);
+            }
+            catch (DbUpdateException ex) when (IsCapTrigger(ex))
+            {
+                return Result<List<string>>.Failure(ErrorCodes.OutputExceedsCap, Messages.OutputExceedsCapTrigger);
+            }
         });
+    }
+
+    private static bool IsLockTimeout(InvalidOperationException ex) =>
+        ex.Message.Contains("Lock timeout", StringComparison.OrdinalIgnoreCase)
+        || ex.Message.Contains("timeout", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsCapTrigger(DbUpdateException ex)
+    {
+        var text = ex.InnerException?.Message ?? ex.Message;
+        return text.Contains("50052", StringComparison.Ordinal)
+               || text.Contains("vượt số lần được giao", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<List<OutputRecord>> AddInsertsAsync(SaveOutputDto dto, string shift, int teamId, OutputPlan plan,

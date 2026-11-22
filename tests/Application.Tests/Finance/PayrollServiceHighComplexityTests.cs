@@ -859,7 +859,7 @@ public class PayrollServiceHighComplexityTests
         // Arrange
         var payroll = PayrollEntity(1, PayrollStatus.PendingApproval);
         payroll.Payslips.Add(new Payslip { NetPay = 1 });
-        _repo.FindPayrollByIdAsync(1, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        _repo.FindPayrollByIdAsync(1, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         // Act
         var result = await _sut.ApproveAsync(1, default);
@@ -876,7 +876,7 @@ public class PayrollServiceHighComplexityTests
     {
         // Arrange
         var payroll = PayrollEntity(5, PayrollStatus.PendingApproval);
-        _repo.FindPayrollByIdAsync(5, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        _repo.FindPayrollByIdAsync(5, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         // Act
         var result = await _sut.ApproveAsync(5, default);
@@ -891,7 +891,7 @@ public class PayrollServiceHighComplexityTests
     {
         // Arrange
         var payroll = PayrollEntity(2, PayrollStatus.Draft);
-        _repo.FindPayrollByIdAsync(2, false, Arg.Any<CancellationToken>()).Returns(payroll);
+        _repo.FindPayrollByIdAsync(2, true, Arg.Any<CancellationToken>()).Returns(payroll);
 
         // Act
         var result = await _sut.ApproveAsync(2, default);

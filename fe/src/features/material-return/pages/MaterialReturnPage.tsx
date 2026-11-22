@@ -8,7 +8,7 @@ import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDateTime, formatQty } from '@/utils/format';
+import { fill, formatDateTime, formatQty } from '@/utils/format';
 import { ReturnCreateModal } from '../components/ReturnCreateModal';
 import { ReturnModal } from '../components/ReturnModal';
 import { RETURN_KIND_LABEL, RETURN_LABELS, RETURN_STATUS_LABEL } from '../constants';
@@ -64,12 +64,21 @@ export function MaterialReturnPage() {
     {
       title: RETURN_LABELS.status,
       dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={RETURN_STATUS_LABEL} />,
-    },
-    {
-      title: RETURN_LABELS.confirmedBy,
-      dataIndex: 'confirmedByName',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string, r) => (
+        <StatusTag
+          status={v}
+          labels={RETURN_STATUS_LABEL}
+          title={
+            r.confirmedByName
+              ? fill(
+                  MESSAGES.common.confirmedByAt,
+                  r.confirmedByName,
+                  formatDateTime(r.confirmedAt),
+                )
+              : undefined
+          }
+        />
+      ),
     },
     {
       title: MESSAGES.common.actions,

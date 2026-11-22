@@ -2,6 +2,7 @@ import { PlusOutlined } from '@ant-design/icons';
 import { Button, Col, Divider, Form, Input, Row, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
+import { OptionalNoteField } from '@/components/common/OptionalNoteField';
 import { MESSAGES } from '@/constants/messages';
 import { zodRule } from '@/utils/zodRule';
 import type { CustomerOption } from '../types';
@@ -112,14 +113,13 @@ export function OrderHeaderFields({
         </Form.Item>
       </Col>
       <Col span={24}>
-        <Form.Item
-          name="note"
+        <OptionalNoteField
           label={MESSAGES.orders.note}
           style={FIELD_STYLE}
           rules={[zodRule(orderNoteSchema)]}
         >
           <Input.TextArea autoSize={{ minRows: 1, maxRows: 3 }} />
-        </Form.Item>
+        </OptionalNoteField>
       </Col>
     </Row>
   );

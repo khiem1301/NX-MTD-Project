@@ -69,7 +69,9 @@ public sealed class ProductSpecService : IProductSpecService
         if (!saved.IsSuccess) return Fail.As<ProductSpecDto>(saved);
 
         var spec = await GetAsync(productId, ct);
-        return Result<ProductSpecDto>.Success(spec.Data!, Messages.Saved);
+        return spec.IsSuccess
+            ? Result<ProductSpecDto>.Success(spec.Data!, Messages.Saved)
+            : Fail.As<ProductSpecDto>(spec);
     }
 
     /// <summary>Mọi kiểm tra của nút Lưu, không ghi gì (dùng chung với nhập Excel định mức, DEV-ALL-115).</summary>
@@ -145,6 +147,11 @@ public sealed class ProductSpecService : IProductSpecService
         var usedComponents = norms.Where(n => droppedComponentIds.Contains(n.ProductComponentId)
                                               && usedNormIds.Contains(n.ProductComponentMaterialId))
             .Select(n => n.ProductComponentId).ToHashSet();
+        // Thành phần còn gắn công đoạn: soft-discontinue, không xóa cứng (OperationComponent còn FK).
+        foreach (var id in await _uow.Repository<OperationComponent>().Query()
+                     .Where(oc => oc.ProductId == productId && droppedComponentIds.Contains(oc.ProductComponentId))
+                     .Select(oc => oc.ProductComponentId).Distinct().ToListAsync(ct))
+            usedComponents.Add(id);
 
         var goneComponentIds = droppedComponentIds.Where(id => !usedComponents.Contains(id)).ToHashSet();
         var removeNorms = norms.Where(n => goneComponentIds.Contains(n.ProductComponentId)).ToList();
@@ -227,8 +234,12 @@ public sealed class ProductSpecService : IProductSpecService
     private async Task RemoveStaleOperationLinksAsync(int productId, SaveProductSpecDto dto, Dictionary<string, ProductComponent> componentByName,
         CancellationToken ct)
     {
-        var trimIds = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) != ComponentTypes.Panel)
-            .Select(c => componentByName[c.ComponentName.Trim()].ProductComponentId).ToHashSet();
+        var trimIds = new HashSet<int>();
+        foreach (var c in dto.Components.Where(c => CodeText.ToCode(c.ComponentType) != ComponentTypes.Panel))
+        {
+            if (componentByName.TryGetValue(c.ComponentName.Trim(), out var component))
+                trimIds.Add(component.ProductComponentId);
+        }
         if (trimIds.Count == 0) return;
         var links = await _uow.Repository<OperationComponent>().Query()
             .Where(oc => oc.ProductId == productId && trimIds.Contains(oc.ProductComponentId)).ToListAsync(ct);
@@ -301,10 +312,20 @@ public sealed class ProductSpecService : IProductSpecService
 
     private async Task<Result<ProductSpecDto>?> ValidateAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
     {
+        if (dto.Components.Any(c => c.PiecesPerGarment is < 1 or > 99))
+            return Invalid(Messages.SpecImportPiecesRange);
         if (dto.Components.GroupBy(c => c.ComponentName.Trim(), StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
             return Invalid(Messages.ProductSpecComponentDuplicate);
         if (dto.Variants.GroupBy(v => (v.Color.Trim().ToUpperInvariant(), v.SizeCode.Trim().ToUpperInvariant())).Any(g => g.Count() > 1))
             return Invalid(Messages.ProductSpecVariantDuplicate);
+
+        // Màu – size lấy từ đơn hàng: không tạo mới ở màn định mức (chặn trước khi mở giao dịch).
+        var existingVariants = await _uow.Repository<ProductVariant>().Query().AsNoTracking()
+            .Include(v => v.ProductColor).Where(v => v.ProductId == productId).ToListAsync(ct);
+        if (dto.Variants.Any(v => v.ProductVariantId is { } id
+                ? existingVariants.All(e => e.ProductVariantId != id)
+                : existingVariants.All(e => !Same(e.ProductColor.Color, v.Color) || !Same(e.SizeCode, v.SizeCode))))
+            return Invalid(Messages.ProductSpecVariantFromOrders);
 
         var componentNames = dto.Components.Select(c => c.ComponentName.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();

@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { PlusOutlined, CameraOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { IconAction } from '@/components/common/IconAction';
 import { TableToolbar } from '@/components/common/TableToolbar';
-import { Button, Checkbox, Space, Tag, type TableColumnsType } from 'antd';
+import { Button, Checkbox, Space, type TableColumnsType } from 'antd';
 import { AttachmentGallery } from '@/components/common/attachments';
 import { QueryError } from '@/components/common/QueryError';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { useTableQuery } from '@/hooks/useTableQuery';
 import { ATTACHMENT_OWNER, ATTACHMENT_PURPOSE } from '@/types/attachment';
-import { formatCurrency, formatDate, formatQty } from '@/utils/format';
+import { formatCurrency, formatDate } from '@/utils/format';
 import { TripStartModal } from './TripModals';
 import { FUEL_PHOTO_MAX, TRIP_STATUS, TRIP_STATUS_LABEL, VL_LABELS } from '../constants';
 import { useTrips } from '../hooks/useVehicleLog';
@@ -53,32 +53,10 @@ export function TripsTab() {
       render: (v: number | null) => v ?? '—',
     },
     {
-      title: VL_LABELS.fuelLiters,
-      dataIndex: 'fuelLiters',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-    },
-    {
-      title: VL_LABELS.fuelNormLiters,
-      dataIndex: 'fuelNormLiters',
-      align: 'right',
-      render: (v: number | null) => (v === null ? '—' : formatQty(v)),
-    },
-    {
       title: VL_LABELS.fuelCost,
       dataIndex: 'fuelCost',
       align: 'right',
       render: (v: number | null) => (v === null ? '—' : formatCurrency(v)),
-    },
-    {
-      title: VL_LABELS.warnings,
-      key: 'warnings',
-      render: (_, t) => (
-        <Space size={4} wrap>
-          {t.kmGapWarning && <Tag color="orange">{VL_LABELS.kmGap}</Tag>}
-          {t.fuelOverNormWarning && <Tag color="red">{VL_LABELS.fuelOver}</Tag>}
-        </Space>
-      ),
     },
     {
       title: VL_LABELS.status,

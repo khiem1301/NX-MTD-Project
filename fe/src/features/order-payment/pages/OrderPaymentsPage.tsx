@@ -76,7 +76,7 @@ export function OrderPaymentsPage() {
   ];
 
   return (
-    <PageCard title={ORDER_PAYMENT_TEXT.title} description={ORDER_PAYMENT_TEXT.subtitle}>
+    <PageCard title={ORDER_PAYMENT_TEXT.title}>
       <Card size="small">
         <Space direction="vertical" style={{ width: '100%' }}>
           <Space wrap>

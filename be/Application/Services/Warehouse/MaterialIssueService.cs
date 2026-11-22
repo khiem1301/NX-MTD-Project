@@ -81,6 +81,10 @@ public sealed class MaterialIssueService : IMaterialIssueService
     public async Task<Result<MaterialIssueDto>> CreateAsync(CreateMaterialIssueDto dto, int issuedByEmployeeId,
         CancellationToken ct)
     {
+        if (dto.Lines is null || dto.Lines.Count == 0)
+            return Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired,
+                ResultKind.Validation);
+
         var (requestError, request) = await LoadRequestAsync(dto, ct);
         if (requestError is not null) return requestError;
         var (fillError, filled) = FillFromRequest(dto, request);
@@ -91,6 +95,22 @@ public sealed class MaterialIssueService : IMaterialIssueService
         if (error is not null) return error;
         var linesError = await CheckLinesAsync(dto, request, target!, ct);
         if (linesError is not null) return linesError;
+
+        // Cấp BTP: tổ may phải đã phân công đủ công đoạn trước khi lập phiếu (cùng quy tắc lúc nhận).
+        if (dto.WarehouseType == WarehouseTypes.SemiFinished)
+        {
+            var draft = new MaterialIssue
+            {
+                WarehouseType = WarehouseTypes.SemiFinished,
+                OrderId = target!.OrderId,
+                ReceivingTeamId = target.TeamId,
+                MaterialIssueLines = dto.Lines.Select(l => new MaterialIssueLine { OrderLineId = l.OrderLineId }).ToList(),
+            };
+            var assignmentCheck = await CheckOperationsAssignedAsync(draft, ct);
+            if (assignmentCheck is not null)
+                return Result<MaterialIssueDto>.Failure(assignmentCheck.ErrorCode!, assignmentCheck.Message!,
+                    assignmentCheck.Kind, assignmentCheck.Errors);
+        }
 
         var created = await _uow.InTransactionAsync(() => StoreIssueAsync(dto, issuedByEmployeeId, target!, ct));
         if (!created.IsSuccess) return WarehouseFailures.From<MaterialIssueDto>(created);
@@ -109,6 +129,8 @@ public sealed class MaterialIssueService : IMaterialIssueService
             var byId = dto.Lines.ToDictionary(l => l.MaterialIssueLineId);
             if (byId.Count != issue!.MaterialIssueLines.Count || issue.MaterialIssueLines.Any(l => !byId.ContainsKey(l.MaterialIssueLineId)))
                 return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.LinesRequired);
+            if (issue.MaterialIssueLines.All(l => byId[l.MaterialIssueLineId].ConfirmedQty <= 0))
+                return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueConfirmZero, ResultKind.Validation);
 
             foreach (var line in issue.MaterialIssueLines)
             {
@@ -204,6 +226,9 @@ public sealed class MaterialIssueService : IMaterialIssueService
 
     public async Task<Result> RejectAsync(int issueId, ReasonDto dto, int teamId, CancellationToken ct)
     {
+        if (string.IsNullOrWhiteSpace(dto.Reason))
+            return Result.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.ReasonRequired, ResultKind.Validation);
+
         var issue = await Issues.FirstOrDefaultAsync(i => i.MaterialIssueId == issueId, ct);
         var check = CheckPending(issue, teamId);
         if (check is not null) return check;
@@ -215,8 +240,15 @@ public sealed class MaterialIssueService : IMaterialIssueService
             ? await _uow.Repository<Request>().Query().Where(r => r.RequestId == requestId).Select(r => r.RequestCode).FirstAsync(ct)
             : null;
         var reissue = requestCode is null ? string.Empty : string.Format(WarehouseMessages.IssueRejectedRequestOpen, requestCode);
-        _notifier.NotifyEmployees([issue.IssuedBy], new NotificationMessage(NotificationSources.Warehouse, "Phiếu cấp bị tổ từ chối",
-            $"Tổ nhận từ chối phiếu cấp {issue.IssueCode}: {issue.RejectReason}{reissue}", IssueLink));
+        try
+        {
+            _notifier.NotifyEmployees([issue.IssuedBy], new NotificationMessage(NotificationSources.Warehouse, "Phiếu cấp bị tổ từ chối",
+                $"Tổ nhận từ chối phiếu cấp {issue.IssueCode}: {issue.RejectReason}{reissue}", IssueLink));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Notify issuer failed for rejected material issue {IssueId}", issueId);
+        }
         await _uow.SaveChangesAsync();
         return Result.Success(WarehouseMessages.IssueRejected);
     }
@@ -419,6 +451,9 @@ public sealed class MaterialIssueService : IMaterialIssueService
     {
         if (dto.OrderId is null || dto.ReceivingTeamId is null)
             return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueTargetRequired,
+                ResultKind.Validation), null);
+        if (dto.Lines.Any(l => l.OrderLineId is null || l.OrderLineId <= 0 || l.MaterialId is not null))
+            return (Result<MaterialIssueDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.IssueLinePieceOnly,
                 ResultKind.Validation), null);
         var teamOk = await _uow.Repository<Team>().Query().AnyAsync(t => t.TeamId == dto.ReceivingTeamId
             && t.TeamType == TeamTypes.Sewing && t.Status == RecordStatus.Active, ct);

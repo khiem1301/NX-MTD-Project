@@ -11,7 +11,7 @@ import { MAX_PAGE_SIZE } from '@/constants/pagination';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDateTime } from '@/utils/format';
+import { fill, formatDateTime } from '@/utils/format';
 import { HandoverCreateModal } from '../components/HandoverCreateModal';
 import { HandoverDetailModal } from '../components/HandoverDetailModal';
 import { HANDOVER_STATUS_LABEL, LABELS, WORK_ORDER_STATUS } from '../constants';
@@ -52,12 +52,21 @@ export function CutHandoverPage() {
     {
       title: LABELS.status,
       dataIndex: 'status',
-      render: (v: string) => <StatusTag status={v} labels={HANDOVER_STATUS_LABEL} />,
-    },
-    {
-      title: LABELS.confirmedBy,
-      dataIndex: 'confirmedByName',
-      render: (v: string | null) => v ?? '—',
+      render: (v: string, h) => (
+        <StatusTag
+          status={v}
+          labels={HANDOVER_STATUS_LABEL}
+          title={
+            h.confirmedByName
+              ? fill(
+                  MESSAGES.common.confirmedByAt,
+                  h.confirmedByName,
+                  formatDateTime(h.confirmedAt),
+                )
+              : undefined
+          }
+        />
+      ),
     },
     {
       title: MESSAGES.common.actions,

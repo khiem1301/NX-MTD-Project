@@ -159,6 +159,8 @@
                  UQ_Material_NameType như trước DEV-ALL-144). Team bỏ TeamName, GradeLevelCode bỏ GradeName (tổ / bậc chỉ có mã);
                  vw_PayrollExportData trả TeamCode. Patch: SQL/patches/2026-11-20_restore_material_code.sql,
                  SQL/patches/2026-11-20_drop_team_grade_name.sql.
+   - 22/11/2026  Công nguyên ngày: WorkdayValue = 1 nếu giờ làm ≥ WORKDAY_STANDARD_HOURS, không thì 0
+                 (usp_Attendance_RebuildTimesheet / ApplyAdjustment). Patch: SQL/patches/2026-11-22_workday_full_day.sql.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -2374,7 +2376,7 @@ GO
 --   * lượt cách lượt trước dưới DUPLICATE_PUNCH_MINUTES là máy đọc lặp, bỏ qua;
 --   * giờ vào = lượt đầu tiên; giờ ra = lượt kế tiếp (quẹt ra nhiều lần chỉ tính lần ra đầu tiên);
 --   * tính theo giờ thực làm: giờ làm = phần nằm trong [WORK_START, WORK_END] trừ nghỉ trưa,
---     giờ quẹt cắt về phút; công = giờ làm / WORKDAY_STANDARD_HOURS (làm tròn 2 số, tối đa 1);
+--     giờ quẹt cắt về phút; công nguyên ngày = 1 nếu giờ làm ≥ WORKDAY_STANDARD_HOURS, không thì 0;
 --   * tăng ca = giờ ra − WORK_END;
 --   * Chủ nhật tính như trên; hệ số lương SUNDAY_PAY_MULTIPLIER áp ở view lương.
 CREATE PROCEDURE dbo.usp_Attendance_RebuildTimesheet
@@ -2433,7 +2435,7 @@ BEGIN
     )
     SELECT EmployeeId, WorkDate, CheckIn, CheckOut,
            CAST(Worked AS DECIMAL(5,2)) AS WorkedHours,
-           CAST(IIF(Worked >= @std, 1, ROUND(Worked / @std, 2)) AS DECIMAL(4,2)) AS WorkdayValue,
+           CAST(IIF(Worked >= @std, 1, 0) AS DECIMAL(4,2)) AS WorkdayValue,
            CAST(OT AS DECIMAL(5,2)) AS OvertimeHours,
            CAST(IIF(CheckOut IS NULL, 1, 0) AS BIT) AS IsMissingPunch,
            CAST(IIF(KeptCount > 2, 1, 0) AS BIT) AS HasExtraPunch
@@ -2578,7 +2580,7 @@ BEGIN
         ) / 60.0 END;
     SET @ot = CASE WHEN @CheckOut IS NULL OR @outM <= @weD THEN 0
                    ELSE DATEDIFF(MINUTE, @weD, @outM) / 60.0 END;
-    SET @workday = CAST(IIF(@worked >= @std, 1, ROUND(@worked / @std, 2)) AS DECIMAL(4,2));
+    SET @workday = CAST(IIF(@worked >= @std, 1, 0) AS DECIMAL(4,2));
 
     BEGIN TRAN;
         INSERT dbo.AttendanceAdjustment (EmployeeId, WorkDate, AdjustmentType, Reason, RequestId, CheckIn, CheckOut)
@@ -3022,7 +3024,7 @@ INSERT dbo.SystemSetting (SettingKey, SettingValue, Description) VALUES
  ('LUNCH_END_TIME',            N'12:30', N'Kết thúc nghỉ trưa'),
  ('DUPLICATE_PUNCH_MINUTES',   N'10',    N'Lượt quẹt cách lượt trước dưới số phút này là máy đọc lặp, bỏ qua'),
  ('SUNDAY_PAY_MULTIPLIER',     N'2',     N'Đi làm Chủ nhật được x2 lương (xưởng xác nhận 16/10)'),
- ('WORKDAY_STANDARD_HOURS',    N'8',     N'Số giờ của 1 công (TongGioTrongCaLamViec của ca Hành Chính)'),
+ ('WORKDAY_STANDARD_HOURS',    N'8',     N'Số giờ tối thiểu để ghi 1 công nguyên ngày (TongGioTrongCaLamViec ca Hành Chính)'),
  ('LEADER_ABSENT_CHECK_TIME',   N'08:00', N'Sau giờ này tổ trưởng chưa có giờ vào thì tổ phó thay thao tác (vw_TeamActingLeader)'),
  ('TEAM_ORDER_PROGRESS_GATE_PCT', N'90', N'Tổ may chỉ nhận đơn mới khi đơn đang làm đạt % nhập kho TP / SL đặt');
 

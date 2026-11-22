@@ -63,7 +63,8 @@ public class DataScopeTests
             .Returns(Result<PagedResult<KpiTargetDto>>.Success(new PagedResult<KpiTargetDto>(Array.Empty<KpiTargetDto>(), 1, 10, 0)));
         var user = Substitute.For<ICurrentUser>();
         user.TeamId.Returns(3);
-        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(kpi, Substitute.For<IEndOfOrderService>(), user)
+        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(
+            kpi, Substitute.For<IKpiCalendarService>(), Substitute.For<IEndOfOrderService>(), user)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
@@ -81,7 +82,8 @@ public class DataScopeTests
             .Returns(Fail.NotFound<EndOfOrderPreviewDto>());
         var user = Substitute.For<ICurrentUser>();
         user.TeamId.Returns(3);
-        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(Substitute.For<IKpiService>(), endOfOrder, user)
+        var controller = new NX_MTD.API.Controllers.TeamLeader.KpiTargetsController(
+            Substitute.For<IKpiService>(), Substitute.For<IKpiCalendarService>(), endOfOrder, user)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };

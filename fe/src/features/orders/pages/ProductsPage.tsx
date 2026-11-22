@@ -17,7 +17,6 @@ import { MESSAGES } from '@/constants/messages';
 import { ROLES } from '@/constants/roles';
 import { usePermission } from '@/hooks/usePermission';
 import { useTableQuery } from '@/hooks/useTableQuery';
-import { formatDate } from '@/utils/format';
 import { ProductFormModal } from '../components/ProductFormModal';
 import { ProductSpecModal } from '../components/ProductSpecModal';
 import { useDiscontinueProduct, useProducts, useReactivateProduct } from '../hooks/useOrders';
@@ -63,7 +62,6 @@ export function ProductsPage() {
       dataIndex: 'isUsed',
       render: (v: boolean) => (v ? <Tag color="blue">{MESSAGES.orders.used}</Tag> : '—'),
     },
-    { title: MESSAGES.requests.createdAt, dataIndex: 'createdAt', render: formatDate },
     {
       title: MESSAGES.common.actions,
       render: (_: unknown, p) => (

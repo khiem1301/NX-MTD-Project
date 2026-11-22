@@ -2,7 +2,7 @@ import { Alert, Descriptions, Typography } from 'antd';
 import { StatusTag } from '@/components/common/StatusTag';
 import { MESSAGES } from '@/constants/messages';
 import { MATERIAL_STATUS_TAG } from '@/constants/orderStatus';
-import { formatCurrency, formatDate, formatDateTime, formatQty } from '@/utils/format';
+import { formatCurrency, formatDate, formatQty } from '@/utils/format';
 import { blocksTotals, fromLines, linesDelivered } from '../utils/orderGrid';
 import type { OrderDisplayLine, OrderOverview } from '../types';
 
@@ -52,9 +52,6 @@ export function OrderSummary({ order, showAmount = false }: OrderSummaryProps) {
             <b>{formatCurrency(totals.amount)}</b>
           </Descriptions.Item>
         )}
-        <Descriptions.Item label={MESSAGES.requests.createdAt}>
-          {formatDateTime(order.createdAt)}
-        </Descriptions.Item>
       </Descriptions>
       {order.deliveryAddress && (
         <Typography.Paragraph style={{ margin: '8px 0 0' }}>
