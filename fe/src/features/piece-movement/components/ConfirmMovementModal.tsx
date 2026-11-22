@@ -1,5 +1,6 @@
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { Descriptions, Form, Input, Modal } from 'antd';
+import { useEffect } from 'react';
 import { MESSAGES } from '@/constants/messages';
 import { QtyInput } from '@/components/common/QtyInput';
 import { maxQtyRule } from '@/utils/qtyLimit';
@@ -26,6 +27,14 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
   const byWorker = useConfirmByWorker();
   const behalf = useConfirmOnBehalf();
   const loading = byWorker.isPending || behalf.isPending;
+  const movementId = movement?.workAllocationId;
+
+  // Form giữ giá trị của lần mở trước (lý do, số xác nhận): mỗi phiếu mở ra phải về trạng thái ban đầu.
+  useEffect(() => {
+    form.resetFields();
+    if (movement) form.setFieldsValue({ confirmedQty: movement.quantity });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [movementId, onBehalf, form]);
 
   const handleFinish = (values: FormValues) => {
     if (!movement) return;
@@ -70,6 +79,7 @@ export function ConfirmMovementModal({ movement, onBehalf, onClose }: ConfirmMov
         <Form
           form={form}
           layout="vertical"
+          preserve={false}
           disabled={loading}
           initialValues={{ confirmedQty: movement.quantity }}
           onFinish={handleFinish}

@@ -181,7 +181,7 @@ public static class WarehouseMessages
     public const string DailyReasonRequired = "Hạ số giao xuống phải ghi lý do.";
     public const string DailyExceedsUnallocated = "Số giao vượt số lần còn giao được của công đoạn";
     public const string DailyBelowOutput = "Tồn từ hôm trước cộng số giao của ngày không được nhỏ hơn sản lượng công nhân đã báo trong ngày";
-    public const string DailySavedPendingConfirm = "Đã lưu giao việc trong ngày. Phần giao thêm chờ công nhân xác nhận.";
+    public const string DailySavedPendingConfirm = "Đã lưu giao việc trong ngày. Phần giao thêm hoặc hạ bớt chờ công nhân xác nhận (tổ trưởng xác nhận hộ được).";
     public const string DailyNotifyTitle = "Bạn được giao sản lượng công đoạn";
     public const string DailyNotifyBody = "Tổ trưởng vừa cập nhật sản lượng công đoạn được giao ngày {0:dd/MM/yyyy}, vui lòng kiểm tra và xác nhận.";
     /// <summary>Lý do ghi trên phiếu giao đang chờ xác nhận khi tổ trưởng hạ số giao xuống trước khi công nhân xác nhận.</summary>

@@ -3077,3 +3077,15 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC52, mô tả danh sách chọn công nhân
 - **Trạng thái:** Mở
+
+### DEV-ALL-157 · Giao sản lượng theo ngày: hạ số cũng chờ công nhân xác nhận
+
+- **Ngày / Người / Task / PR:** 22/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn Giao sản lượng theo ngày của tổ trưởng; BE `DailyWorkAllocationService` (`NewRow`, `LowerAsync`, `Position`, `LoadPositionsAsync`), `WarehouseMessages.DailySavedPendingConfirm`
+- **Tài liệu gốc ghi:** DEV-ALL-100: giao thêm chờ công nhân xác nhận; hạ số giao ghi thu hồi `ADJUSTED` đã xác nhận ngay (`ConfirmMode = LEADER`).
+- **Code đang làm:** Hạ số giao phần đã xác nhận ghi phiếu thu hồi `ADJUSTED` ở trạng thái `PENDING`, `ConfirmMode = WORKER`. Công nhân xác nhận, tổ trưởng xác nhận hộ (kèm lý do) qua luồng xác nhận phiếu sẵn có. Phần hạ đang chờ được trừ vào số giao hiển thị và số còn thu hồi được; công nhân được báo. Phần hạ bớt vào phiếu giao còn chờ vẫn đóng ngay (`REJECTED`).
+- **Lý do:** Khiêm yêu cầu: hạ sản lượng của công nhân vẫn phải để công nhân xác nhận, tổ trưởng cũng xác nhận hộ được.
+- **Ảnh hưởng người khác:** Công nhân thấy thêm phiếu thu hồi chờ xác nhận.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / DEV-ALL-100: hạ số giao theo ngày chờ xác nhận như giao thêm
+- **Trạng thái:** Mở

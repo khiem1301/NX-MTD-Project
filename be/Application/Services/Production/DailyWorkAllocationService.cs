@@ -37,15 +37,15 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     /// Số liệu của một công nhân × dòng đơn × công đoạn: phần tồn từ các ngày trước (giao − sản lượng trước ngày), phần giao ròng và
     /// sản lượng của ngày, phần giữ ròng và sản lượng cộng dồn (chỉ phiếu đã xác nhận), phần giao của ngày đang chờ công nhân xác nhận.
     /// </summary>
-    private sealed record Position(int Carry, int DayNet, int DayOutput, int Held, int Output, int DayPending)
+    private sealed record Position(int Carry, int DayNet, int DayOutput, int Held, int Output, int DayPending, int DayPendingRetrieval)
     {
-        public static readonly Position Empty = new(0, 0, 0, 0, 0, 0);
+        public static readonly Position Empty = new(0, 0, 0, 0, 0, 0, 0);
 
-        /// <summary>Số giao của ngày tổ trưởng đã nhập: đã xác nhận cộng đang chờ xác nhận.</summary>
-        public int DayGiven => DayNet + DayPending;
+    /// <summary>Số giao của ngày tổ trưởng đã nhập: đã xác nhận cộng đang chờ xác nhận, trừ phần hạ đang chờ công nhân xác nhận.</summary>
+        public int DayGiven => DayNet + DayPending - DayPendingRetrieval;
 
         /// <summary>Phần chưa làm hết tính cả tồn từ hôm trước: không vượt số công nhân còn giữ sau khi trừ sản lượng đã báo.</summary>
-        public int Remaining => Math.Max(0, Math.Min(Carry + DayNet - DayOutput, Held - Output));
+        public int Remaining => Math.Max(0, Math.Min(Carry + DayNet - DayOutput, Held - Output) - DayPendingRetrieval);
     }
 
     public async Task<Result<DailyAllocationBoardDto>> GetBoardAsync(int teamId, DateOnly workDate, int orderId, int? orderLineId,
@@ -158,7 +158,7 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
             .ToDictionaryAsync(o => o.OperationId, o => o.OperationCode, ct);
         var pending = await LoadPendingRowsAsync(teamId, lineIds, dto.WorkDate, workerIds, ct);
 
-        var (added, adjusted) = (0, 0);
+        var (added, adjusted, awaiting) = (0, 0, 0);
         foreach (var item in dto.Items)
         {
             var pos = PositionOf(item);
@@ -170,12 +170,13 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
                 : await LowerAsync(dto, teamId, item, pos, -delta, label, unallocated, pending);
             if (error is not null) return error;
             if (delta > 0) added++; else adjusted++;
+            if (delta > 0 || -delta > pos.DayPending) awaiting++;
         }
-        if (added > 0)
-            NotifyWorkers(dto.Items.Where(i => i.Quantity > PositionOf(i).DayGiven).Select(i => i.WorkerId).Distinct().ToList(), dto.WorkDate);
+        if (awaiting > 0)
+            NotifyWorkers(dto.Items.Where(i => i.Quantity != PositionOf(i).DayGiven).Select(i => i.WorkerId).Distinct().ToList(), dto.WorkDate);
         if (added + adjusted > 0) await _uow.SaveChangesAsync();
         return Result<DailyAllocationResultDto>.Success(new DailyAllocationResultDto(added, adjusted),
-            added > 0 ? WarehouseMessages.DailySavedPendingConfirm : WarehouseMessages.PieceMovementCreated);
+            awaiting > 0 ? WarehouseMessages.DailySavedPendingConfirm : WarehouseMessages.PieceMovementCreated);
     }
 
     /// <summary>Giao thêm (không vượt số tổ còn giao được của công đoạn): phiếu PENDING chờ công nhân xác nhận (DEV-ALL-100).</summary>
@@ -201,7 +202,7 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
     {
         var fromPending = Math.Min(cut, pos.DayPending);
         var fromConfirmed = cut - fromPending;
-        if (fromConfirmed > 0 && pos.Carry + pos.DayNet - fromConfirmed < pos.DayOutput)
+        if (fromConfirmed > 0 && pos.Carry + pos.DayNet - pos.DayPendingRetrieval - fromConfirmed < pos.DayOutput)
             return Failure(ErrorCodes.PieceRetrievalExceedsHolding,
                 $"{WarehouseMessages.DailyBelowOutput} ({label}: tồn từ hôm trước {pos.Carry}, đã báo {pos.DayOutput}).");
         if (fromConfirmed > pos.Remaining)
@@ -241,10 +242,9 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
 
     // ---------- Nội bộ ----------
 
-    /// <summary>Giao: phiếu PENDING chờ công nhân xác nhận. Thu hồi do tổ trưởng hạ số: CONFIRMED ngay (ConfirmMode = LEADER).</summary>
+    /// <summary>Giao: phiếu PENDING chờ công nhân xác nhận. Thu hồi do tổ trưởng hạ số cũng PENDING: công nhân xác nhận, tổ trưởng xác nhận hộ được.</summary>
     private WorkAllocation NewRow(int teamId, DateOnly workDate, SaveDailyAllocationItem item, string type, int qty)
     {
-        var handover = type == PieceMovementTypes.Handover;
         return new WorkAllocation
         {
             WorkDate = workDate,
@@ -254,11 +254,9 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
             OrderLineId = item.OrderLineId,
             OperationId = item.OperationId,
             Quantity = qty,
-            ConfirmedQty = handover ? null : qty,
-            ConfirmMode = handover ? ConfirmModes.Worker : ConfirmModes.Leader,
-            Status = handover ? HandoverStatuses.Pending : HandoverStatuses.Confirmed,
+            ConfirmMode = ConfirmModes.Worker,
+            Status = HandoverStatuses.Pending,
             CreatedAt = _clock.Now,
-            ConfirmedAt = handover ? null : _clock.Now,
         };
     }
 
@@ -288,13 +286,17 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
                 .GroupBy(a => new { a.WorkerId, a.OrderLineId, a.OperationId })
                 .Select(g => new { g.Key.WorkerId, g.Key.OrderLineId, g.Key.OperationId, Qty = g.Sum(a => a.Quantity) }).ToListAsync(ct))
             .ToDictionary(p => new Key(p.WorkerId, p.OrderLineId, p.OperationId), p => p.Qty);
+        var pendingRetrieval = (await PendingOf(teamId, lineIds, workDate, workerIds, PieceMovementTypes.Retrieval).AsNoTracking()
+                .GroupBy(a => new { a.WorkerId, a.OrderLineId, a.OperationId })
+                .Select(g => new { g.Key.WorkerId, g.Key.OrderLineId, g.Key.OperationId, Qty = g.Sum(a => a.Quantity) }).ToListAsync(ct))
+            .ToDictionary(p => new Key(p.WorkerId, p.OrderLineId, p.OperationId), p => p.Qty);
         var outputs = await LoadOutputsAsync(teamId, lineIds, workDate, workerIds, ct);
-        return moves.Keys.Union(pending.Keys).ToDictionary(k => k, k =>
+        return moves.Keys.Union(pending.Keys).Union(pendingRetrieval.Keys).ToDictionary(k => k, k =>
         {
             var m = moves.GetValueOrDefault(k);
             var o = outputs.GetValueOrDefault(k) ?? OutputSums.Empty;
             return new Position(Math.Max(0, (m?.Before ?? 0) - o.Before), m?.Day ?? 0, o.Day, m?.Held ?? 0, o.All,
-                pending.GetValueOrDefault(k));
+                pending.GetValueOrDefault(k), pendingRetrieval.GetValueOrDefault(k));
         });
     }
 
@@ -375,9 +377,10 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
         .Where(a => a.SewingTeamId == teamId && a.Status == HandoverStatuses.Confirmed && lineIds.Contains(a.OrderLineId));
 
     /// <summary>Phiếu giao của ngày đang chờ công nhân xác nhận.</summary>
-    private IQueryable<WorkAllocation> PendingOf(int teamId, List<int> lineIds, DateOnly workDate, IReadOnlyList<int>? workerIds) =>
+    private IQueryable<WorkAllocation> PendingOf(int teamId, List<int> lineIds, DateOnly workDate, IReadOnlyList<int>? workerIds,
+        string movementType = PieceMovementTypes.Handover) =>
         Allocations.Where(a => a.SewingTeamId == teamId && lineIds.Contains(a.OrderLineId) && a.WorkDate == workDate
-                               && a.Status == HandoverStatuses.Pending && a.MovementType == PieceMovementTypes.Handover)
+                               && a.Status == HandoverStatuses.Pending && a.MovementType == movementType)
             .Where(a => workerIds == null || workerIds.Contains(a.WorkerId));
 
     /// <summary>Công nhân đúng tổ và còn làm, dòng đơn đã chia cho tổ và chưa đóng, công đoạn may đang dùng thuộc mã hàng của dòng đơn.</summary>
