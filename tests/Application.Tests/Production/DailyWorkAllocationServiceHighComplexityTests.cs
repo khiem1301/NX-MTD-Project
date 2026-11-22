@@ -10,7 +10,7 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>UTCID470–UTCID501: DailyWorkAllocationService high-complexity cases.</summary>
+/// <summary>UTCID470–UTCID511: DailyWorkAllocationService high-complexity cases (incl. DEV-ALL-157).</summary>
 [Trait("Category", "HighComplexity")]
 public class DailyWorkAllocationServiceHighComplexityTests
 {
@@ -116,8 +116,26 @@ public class DailyWorkAllocationServiceHighComplexityTests
         Quantity = qty, Status = HandoverStatuses.Pending, ConfirmMode = ConfirmModes.Worker, CreatedAt = Now,
     });
 
+    /// <summary>Phiếu thu hồi ADJUSTED đang chờ công nhân xác nhận (DEV-ALL-157).</summary>
+    private void PendingRetrieval(int qty, DateOnly day) => _allocations.Add(new WorkAllocation
+    {
+        WorkAllocationId = _allocations.Count + 1, WorkDate = day, MovementType = PieceMovementTypes.Retrieval,
+        SewingTeamId = TeamId, WorkerId = WorkerW1, OrderLineId = Line100, OperationId = Op10,
+        Quantity = qty, Status = HandoverStatuses.Pending, ConfirmMode = ConfirmModes.Worker,
+        RetrievalReason = RetrievalReasons.Adjusted, CreatedAt = Now,
+    });
+
     private void Output(int qty, DateOnly day, int worker = WorkerW1, int line = Line100) =>
         _outputs.Add(new OutputRecord { WorkDate = day, SewingTeamId = TeamId, WorkerId = worker, OrderLineId = line, OperationId = Op10, Quantity = qty });
+
+    private void CaptureAdds() =>
+        _uow.Repository<WorkAllocation>()
+            .AddAsync(Arg.Do<WorkAllocation>(a =>
+            {
+                if (a.WorkAllocationId == 0) a.WorkAllocationId = _allocations.Count + 1;
+                _allocations.Add(a);
+            }))
+            .Returns(Task.CompletedTask);
 
     private static SaveDailyAllocationDto Save(int qty, string? reason = null, DateOnly? day = null,
         int worker = WorkerW1, int line = Line100) =>
@@ -139,6 +157,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         var row = result.Data!.Rows.Should().ContainSingle().Subject;
+        row.AllocatedQty.Should().Be(30); // DayGiven = DayNet + DayPending − DayPendingRetrieval
         row.RemainingQty.Should().Be(25);
         row.UnallocatedQty.Should().Be(50);
         row.RateApproved.Should().BeTrue();
@@ -253,7 +272,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     public async Task UTCID479_SaveAsync_GiveMore_CreatesPending_LocksNotifier()
     {
         // Arrange
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(30), TeamId, default);
@@ -261,6 +280,11 @@ public class DailyWorkAllocationServiceHighComplexityTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.Added.Should().Be(1);
+        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
+        var handover = _allocations.Should().ContainSingle().Subject;
+        handover.MovementType.Should().Be(PieceMovementTypes.Handover);
+        handover.Status.Should().Be(HandoverStatuses.Pending);
+        handover.ConfirmMode.Should().Be(ConfirmModes.Worker);
         await _locks.Received(1).AcquireAsync($"work-allocation:{TeamId}:{Line100}", Arg.Any<CancellationToken>());
         _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
         await _uow.Received().SaveChangesAsync();
@@ -269,25 +293,29 @@ public class DailyWorkAllocationServiceHighComplexityTests
     [Fact]
     public async Task UTCID480_SaveAsync_LowerPending_First()
     {
-        // Arrange
+        // Arrange — chỉ hạ pending → không awaiting, message PieceMovementCreated
         PendingHandover(30, Today);
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(20, "Đổi việc"), TeamId, default);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
+        result.Data!.Adjusted.Should().Be(1);
+        result.Message.Should().Be(WarehouseMessages.PieceMovementCreated);
+        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
         _allocations.Single(a => a.Status == HandoverStatuses.Pending).Quantity.Should().Be(20);
+        _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
     }
 
     [Fact]
     public async Task UTCID481_SaveAsync_LowerMixedPendingAndConfirmed()
     {
-        // Arrange
+        // Arrange — DEV-ALL-157: phần hạ từ confirmed → Retrieval PENDING (WORKER), không Confirmed ngay
         ConfirmedHandover(20, Today);
         PendingHandover(10, Today);
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(15, "Điều chuyển"), TeamId, default);
@@ -295,6 +323,16 @@ public class DailyWorkAllocationServiceHighComplexityTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Data!.Adjusted.Should().Be(1);
+        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
+        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
+        retrieval.Quantity.Should().Be(5);
+        retrieval.Status.Should().Be(HandoverStatuses.Pending);
+        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
+        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
+        retrieval.ConfirmedQty.Should().BeNull();
+        retrieval.ConfirmedAt.Should().BeNull();
+        _notifier.Received(1).NotifyEmployees(
+            Arg.Is<IEnumerable<int>>(ids => ids.Contains(WorkerW1)), Arg.Any<NotificationMessage>());
     }
 
     [Fact]
@@ -302,7 +340,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     {
         // Arrange
         _progress[0].UnallocatedQty = 50;
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(50), TeamId, default);
@@ -317,7 +355,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     {
         // Arrange
         _progress[0].UnallocatedQty = 50;
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(51), TeamId, default);
@@ -380,7 +418,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     {
         // Arrange
         PendingHandover(10, Today);
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(0, "x"), TeamId, default);
@@ -448,7 +486,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     {
         // Arrange
         _employees.Add(new Employee { EmployeeId = 9, TeamId = 5, Status = RecordStatus.Active, Role = new Role { RoleCode = RoleCodes.Worker } });
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
 
         // Act
         var result = await Sut().SaveAsync(Save(10, worker: 9), TeamId, default);
@@ -550,7 +588,7 @@ public class DailyWorkAllocationServiceHighComplexityTests
     public async Task UTCID501_SaveAsync_NotifierThrows_StillCommits()
     {
         // Arrange
-        _uow.Repository<WorkAllocation>().AddAsync(Arg.Do<WorkAllocation>(a => _allocations.Add(a)));
+        CaptureAdds();
         _notifier.When(n => n.NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>()))
             .Do(_ => throw new InvalidOperationException("notify"));
 
@@ -560,5 +598,202 @@ public class DailyWorkAllocationServiceHighComplexityTests
         // Assert
         result.IsSuccess.Should().BeTrue();
         await _uow.Received().SaveChangesAsync();
+    }
+
+    // ---------- DEV-ALL-157 (UTCID502–UTCID511) ----------
+
+    [Fact]
+    public async Task UTCID502_GetBoardAsync_DayGivenSubtractsPendingRetrieval()
+    {
+        // Arrange — DayNet=20, DayPending=10, DayPendingRetrieval=5 → DayGiven=25
+        ConfirmedHandover(20, Today);
+        PendingHandover(10, Today);
+        PendingRetrieval(5, Today);
+
+        // Act
+        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var row = result.Data!.Rows.Should().ContainSingle().Subject;
+        row.AllocatedQty.Should().Be(25);
+        row.PendingQty.Should().Be(10);
+    }
+
+    [Fact]
+    public async Task UTCID503_GetBoardAsync_RemainingSubtractsPendingRetrieval()
+    {
+        // Arrange — Remaining = max(0, min(30−10, 30−10) − 15) = 5
+        ConfirmedHandover(30, Today);
+        Output(10, Today);
+        PendingRetrieval(15, Today);
+
+        // Act
+        var result = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Rows.Should().ContainSingle().Which.RemainingQty.Should().Be(5);
+    }
+
+    [Fact]
+    public async Task UTCID504_SaveAsync_LowerConfirmed_CreatesPendingRetrieval()
+    {
+        // Arrange — 30 CONFIRMED → Qty=10 (hạ 20)
+        ConfirmedHandover(30, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(10, "Giảm ca"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Adjusted.Should().Be(1);
+        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
+        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
+        retrieval.Quantity.Should().Be(20);
+        retrieval.Status.Should().Be(HandoverStatuses.Pending);
+        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
+        retrieval.ConfirmedQty.Should().BeNull();
+        retrieval.ConfirmedAt.Should().BeNull();
+        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
+        _notifier.Received(1).NotifyEmployees(
+            Arg.Is<IEnumerable<int>>(ids => ids.Contains(WorkerW1)), Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task UTCID505_SaveAsync_AdditionalLower_StacksPendingRetrieval()
+    {
+        // Arrange — DayGiven=20 (30−10), Remaining=8; hạ thêm 5 → Retrieval PENDING 5
+        ConfirmedHandover(30, Today);
+        Output(12, Today);
+        PendingRetrieval(10, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(15, "Hạ tiếp"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _allocations.Where(a => a.MovementType == PieceMovementTypes.Retrieval && a.Status == HandoverStatuses.Pending)
+            .Sum(a => a.Quantity).Should().Be(15);
+        var board = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
+        board.Data!.Rows.Single().RemainingQty.Should().Be(3);
+        board.Data.Rows.Single().AllocatedQty.Should().Be(15); // 30 + 0 − 15
+    }
+
+    [Fact]
+    public async Task UTCID506_SaveAsync_LowerWhenRemainingZero_Fails()
+    {
+        // Arrange — DayGiven=20, Remaining=0; Qty=15 cần fromConfirmed=5 > 0
+        ConfirmedHandover(30, Today);
+        Output(20, Today);
+        PendingRetrieval(10, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(15, "x"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
+        _allocations.Count(a => a.MovementType == PieceMovementTypes.Retrieval).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UTCID507_SaveAsync_LowerBelowReportedOutput_Fails()
+    {
+        // Arrange — DayNet=30, DayOutput=25; Qty=4 → hạ 26 dưới sản lượng đã báo
+        ConfirmedHandover(30, Today);
+        Output(25, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(4, "x"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.PieceRetrievalExceedsHolding);
+        result.Message.Should().Contain(WarehouseMessages.DailyBelowOutput);
+        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
+    }
+
+    [Fact]
+    public async Task UTCID508_SaveAsync_LowerExactPending_NoRetrieval_NoAwaiting()
+    {
+        // Arrange — DayPending=5, DayNet=20, DayGiven=25; cut=5 (== DayPending)
+        ConfirmedHandover(20, Today);
+        PendingHandover(5, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(20, "x"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be(WarehouseMessages.PieceMovementCreated);
+        _allocations.Should().NotContain(a => a.MovementType == PieceMovementTypes.Retrieval);
+        _notifier.DidNotReceive().NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task UTCID509_SaveAsync_LowerPastPending_CreatesPendingRetrieval()
+    {
+        // Arrange — DayPending=5, DayNet=20, DayGiven=25; cut=8 → Withdraw 5 + Retrieval 3
+        ConfirmedHandover(20, Today);
+        PendingHandover(5, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SaveAsync(Save(17, "x"), TeamId, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Message.Should().Be(WarehouseMessages.DailySavedPendingConfirm);
+        var retrieval = _allocations.Should().ContainSingle(a => a.MovementType == PieceMovementTypes.Retrieval).Subject;
+        retrieval.Quantity.Should().Be(3);
+        retrieval.Status.Should().Be(HandoverStatuses.Pending);
+        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
+        _notifier.Received(1).NotifyEmployees(Arg.Any<IEnumerable<int>>(), Arg.Any<NotificationMessage>());
+    }
+
+    [Fact]
+    public async Task UTCID510_GetBoardAndSave_PendingRetrieval_NoDoubleCount()
+    {
+        // Arrange — DayNet=30, DayPendingRetrieval=10 → DayGiven=20; Save giữ nguyên
+        ConfirmedHandover(30, Today);
+        PendingRetrieval(10, Today);
+
+        // Act
+        var board = await Sut().GetBoardAsync(TeamId, Today, OrderId, Line100, default);
+        var save = await Sut().SaveAsync(Save(20), TeamId, default);
+
+        // Assert
+        board.Data!.Rows.Single().AllocatedQty.Should().Be(20);
+        save.IsSuccess.Should().BeTrue();
+        save.Data!.Added.Should().Be(0);
+        save.Data.Adjusted.Should().Be(0);
+        await _uow.DidNotReceive().SaveChangesAsync();
+        _allocations.Count(a => a.MovementType == PieceMovementTypes.Retrieval).Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UTCID511_SaveAsync_AfterLower_UnallocatedFreedAllowsGiveMore()
+    {
+        // Arrange — hạ 20 frees Unallocated; view mock +20 rồi giao thêm 51 (vượt 50 cũ)
+        ConfirmedHandover(30, Today);
+        CaptureAdds();
+        var lower = await Sut().SaveAsync(Save(10, "Giảm"), TeamId, default);
+        lower.IsSuccess.Should().BeTrue();
+        _progress[0].UnallocatedQty = 70; // mô phỏng view sau khi hạ (+20)
+
+        // Act
+        var give = await Sut().SaveAsync(Save(61), TeamId, default); // DayGiven≈10 → delta 51
+
+        // Assert
+        give.IsSuccess.Should().BeTrue();
+        give.Data!.Added.Should().Be(1);
+        _allocations.Should().Contain(a =>
+            a.MovementType == PieceMovementTypes.Handover && a.Status == HandoverStatuses.Pending && a.Quantity == 51);
     }
 }
