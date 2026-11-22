@@ -42,7 +42,7 @@ public class VehicleServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private VehicleService Service() => new(_uow, _settings, _audit, _clock);
+    private VehicleService Service() => new(_uow, _settings, _audit, _clock, Substitute.For<IAppLock>());
 
     private VehicleTrip Trip(string status, int start, int? end, DateOnly? date = null, int id = 0)
     {
@@ -70,6 +70,27 @@ public class VehicleServiceTests
 
     private static StartVehicleTripDto Start(int odometer, DateOnly? date = null) =>
         new(1, date ?? Today, " Nguyễn Văn A ", null, "Giao hàng", null, odometer);
+
+    // ---------- Admin xem trạng thái chạy ----------
+
+    [Fact]
+    public async Task LiveStatus_marks_vehicle_with_started_trip_as_running_and_filters()
+    {
+        var idle = new Vehicle { VehicleId = 2, PlateNumber = "30A-11111", VehicleType = "Xe con", FuelNormPer100Km = 8m, Status = RecordStatus.Active };
+        _vehicles.Add(idle);
+        var open = Trip(TripStatuses.Started, 1000, null);
+        _truck.VehicleTrips.Add(Trip(TripStatuses.Completed, 900, 1000));
+        _truck.VehicleTrips.Add(open);
+
+        var all = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery(), default);
+        var running = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = true }, default);
+        var notRunning = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = false }, default);
+
+        all.Data!.Items.Select(v => (v.VehicleId, v.IsRunning)).Should().Equal((1, true), (2, false));
+        var row = running.Data!.Items.Should().ContainSingle().Subject;
+        (row.OpenTripCount, row.CurrentTripId, row.DriverName, row.OdometerStart).Should().Be((1, open.VehicleTripId, "Tài xế", 1000));
+        notRunning.Data!.Items.Should().ContainSingle().Which.VehicleId.Should().Be(2);
+    }
 
     // ---------- Xe ----------
 

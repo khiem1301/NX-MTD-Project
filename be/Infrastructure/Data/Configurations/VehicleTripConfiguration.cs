@@ -11,6 +11,7 @@ public sealed class VehicleTripConfiguration : IEntityTypeConfiguration<VehicleT
         entity.ToTable("VehicleTrip", tb => tb.HasComment("Chuyến xe & nhiên liệu"));
 
         entity.HasIndex(e => new { e.VehicleId, e.TripDate, e.OdometerStart }, "UQ_VT").IsUnique();
+        entity.HasIndex(e => e.VehicleId, "UQ_VT_OneOpen").IsUnique().HasFilter("[Status] = 'STARTED'");
 
         entity.Property(e => e.DriverName).HasMaxLength(100);
         entity.Property(e => e.FuelCost).HasColumnType("decimal(18, 2)");

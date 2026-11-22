@@ -31,6 +31,7 @@ export const ROUTES = {
   dispatchNotes: '/warehouse/dispatch-notes',
   stocktakes: '/warehouse/stocktakes',
   vehicleLog: '/accounting/vehicle-log',
+  vehicleStatus: '/admin/vehicles',
   notifications: '/notifications',
   grades: '/hr/grades',
   auditLogs: '/admin/audit-logs',

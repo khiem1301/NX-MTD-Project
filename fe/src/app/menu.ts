@@ -25,6 +25,7 @@ import { purchaseMenu } from '@/features/purchase/menu';
 import { revenueMenu } from '@/features/revenue/menu';
 import { stocktakeMenu } from '@/features/stocktake/menu';
 import { vehicleLogMenu } from '@/features/vehicle-log/menu';
+import { vehicleStatusMenu } from '@/features/vehicle-status/menu';
 import { warehouseMenu } from '@/features/warehouse/menu';
 import type { MenuEntry } from '@/types/menu';
 
@@ -48,6 +49,7 @@ export const MENU_ENTRIES: MenuEntry[] = [
   ...dispatchMenu, // Thái (TH-14)
   ...stocktakeMenu, // Thảo (TA-02)
   ...vehicleLogMenu, // Thảo (TA-03)
+  ...vehicleStatusMenu, // DEV-ALL-159
   ...materialReturnMenu, // Thái (TH-10)
   ...pieceMovementMenu, // Thái (TH-19)
   ...attendanceMenu, // Minh

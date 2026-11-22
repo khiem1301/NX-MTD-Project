@@ -30,6 +30,7 @@ import { stocktakeRoutes } from '@/features/stocktake/routes';
 import { teamRoutes } from '@/features/teams/routes';
 import { userRoutes } from '@/features/users/routes';
 import { vehicleLogRoutes } from '@/features/vehicle-log/routes';
+import { vehicleStatusRoutes } from '@/features/vehicle-status/routes';
 import { warehouseRoutes } from '@/features/warehouse/routes';
 
 // Mỗi luồng khai báo route ở features/<x>/routes.tsx (lazy load theo trang) rồi thêm một dòng vào mảng dưới.
@@ -51,6 +52,7 @@ const featureRoutes = [
   ...pieceMovementRoutes, // Thái (TH-19)
   ...stocktakeRoutes, // Thảo (TA-02)
   ...vehicleLogRoutes, // Thảo (TA-03)
+  ...vehicleStatusRoutes, // DEV-ALL-159
   ...productionRoutes, // Minh làm hộ Kiều (KI-01..KI-11)
   ...attendanceRoutes, // Minh
   ...mealRoutes, // Minh

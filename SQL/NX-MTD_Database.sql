@@ -1706,6 +1706,10 @@ CREATE TABLE dbo.VehicleTrip (
 );
 GO
 
+-- Một xe chỉ có một chuyến đang chạy (DEV-ALL-158)
+CREATE UNIQUE INDEX UQ_VT_OneOpen ON dbo.VehicleTrip (VehicleId) WHERE Status = 'STARTED';
+GO
+
 /* =====================================================================================
    13. HỆ THỐNG: tệp đính kèm, nhật ký thay đổi (GBR-15) – gồm cả lịch sử trạng thái đơn từ, mở khóa tháng, đổi tổ
    ---------------------------------------------------------------------------------
