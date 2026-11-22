@@ -1,5 +1,6 @@
 using FluentAssertions;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
@@ -10,7 +11,9 @@ using NX_MTD.Domain.Entities;
 
 namespace Application.Tests;
 
-/// <summary>TA-03 / UC35: sổ xe và nhiên liệu — cảnh báo lệch km và xăng vượt định mức (MSG30).</summary>
+/// <summary>
+/// TA-03 / UC35: sổ xe và nhiên liệu (MSG30) + phụ lục DEV-ALL-158/159 (UTCID512–532).
+/// </summary>
 public class VehicleServiceTests
 {
     private static readonly DateTime Now = new(2026, 11, 12, 9, 0, 0);
@@ -20,6 +23,7 @@ public class VehicleServiceTests
     private readonly ISystemSettingReader _settings = Substitute.For<ISystemSettingReader>();
     private readonly IAuditLogService _audit = Substitute.For<IAuditLogService>();
     private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IAppLock _locks = Substitute.For<IAppLock>();
 
     private readonly List<Vehicle> _vehicles = new();
     private readonly List<VehicleTrip> _trips = new();
@@ -31,6 +35,7 @@ public class VehicleServiceTests
         _clock.Now.Returns(Now);
         _clock.Today.Returns(Today);
         _settings.GetDecimalAsync(SettingKeys.FuelNormTolerancePercent, Arg.Any<decimal>(), Arg.Any<CancellationToken>()).Returns(15m);
+        _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _vehicles.Add(_truck);
         Setup(_vehicles); Setup(_trips); Setup(_notes);
     }
@@ -42,15 +47,16 @@ public class VehicleServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    private VehicleService Service() => new(_uow, _settings, _audit, _clock, Substitute.For<IAppLock>());
+    private VehicleService Service() => new(_uow, _settings, _audit, _clock, _locks);
 
-    private VehicleTrip Trip(string status, int start, int? end, DateOnly? date = null, int id = 0)
+    private VehicleTrip Trip(string status, int start, int? end, DateOnly? date = null, int id = 0, int vehicleId = 1)
     {
+        var vehicle = _vehicles.FirstOrDefault(v => v.VehicleId == vehicleId) ?? _truck;
         var t = new VehicleTrip
         {
             VehicleTripId = id == 0 ? _trips.Count + 1 : id,
-            VehicleId = 1,
-            Vehicle = _truck,
+            VehicleId = vehicleId,
+            Vehicle = vehicle,
             TripDate = date ?? Today.AddDays(-1),
             DriverName = "Tài xế",
             OdometerStart = start,
@@ -64,23 +70,36 @@ public class VehicleServiceTests
     private List<VehicleTrip> CaptureTrips()
     {
         var added = new List<VehicleTrip>();
-        _uow.Repository<VehicleTrip>().AddAsync(Arg.Do<VehicleTrip>(t => { t.Vehicle = _truck; t.VehicleTripId = _trips.Count + 1; added.Add(t); _trips.Add(t); }));
+        _uow.Repository<VehicleTrip>().AddAsync(Arg.Do<VehicleTrip>(t =>
+        {
+            t.Vehicle ??= _vehicles.FirstOrDefault(v => v.VehicleId == t.VehicleId) ?? _truck;
+            if (t.VehicleTripId == 0) t.VehicleTripId = _trips.Count + 1;
+            added.Add(t);
+            _trips.Add(t);
+        }));
         return added;
     }
 
-    private static StartVehicleTripDto Start(int odometer, DateOnly? date = null) =>
-        new(1, date ?? Today, " Nguyễn Văn A ", null, "Giao hàng", null, odometer);
+    private static StartVehicleTripDto Start(int odometer, DateOnly? date = null, int vehicleId = 1, string? driver = " Nguyễn Văn A ") =>
+        new(vehicleId, date ?? Today, driver, null, "Giao hàng", null, odometer);
+
+    /// <summary>UTCID512 setup: xe 1 có 1 Trip STARTED; xe 2 Active không chuyến mở.</summary>
+    private VehicleTrip SeedLivePair()
+    {
+        var idle = new Vehicle { VehicleId = 2, PlateNumber = "30A-11111", VehicleType = "Xe con", FuelNormPer100Km = 8m, Status = RecordStatus.Active };
+        _vehicles.Add(idle);
+        var open = Trip(TripStatuses.Started, 1000, null, date: Today);
+        _truck.VehicleTrips.Add(open);
+        return open;
+    }
 
     // ---------- Admin xem trạng thái chạy ----------
 
     [Fact]
     public async Task LiveStatus_marks_vehicle_with_started_trip_as_running_and_filters()
     {
-        var idle = new Vehicle { VehicleId = 2, PlateNumber = "30A-11111", VehicleType = "Xe con", FuelNormPer100Km = 8m, Status = RecordStatus.Active };
-        _vehicles.Add(idle);
-        var open = Trip(TripStatuses.Started, 1000, null);
+        var open = SeedLivePair();
         _truck.VehicleTrips.Add(Trip(TripStatuses.Completed, 900, 1000));
-        _truck.VehicleTrips.Add(open);
 
         var all = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery(), default);
         var running = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = true }, default);
@@ -90,6 +109,333 @@ public class VehicleServiceTests
         var row = running.Data!.Items.Should().ContainSingle().Subject;
         (row.OpenTripCount, row.CurrentTripId, row.DriverName, row.OdometerStart).Should().Be((1, open.VehicleTripId, "Tài xế", 1000));
         notRunning.Data!.Items.Should().ContainSingle().Which.VehicleId.Should().Be(2);
+    }
+
+    // ---------- Phụ lục A — DEV-ALL-158 / DEV-ALL-159 (UTCID512–532) ----------
+
+    [Fact]
+    public async Task UTCID512_GetLiveStatusAsync_All_RunningFirst()
+    {
+        // Arrange
+        SeedLivePair();
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery(), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Select(v => (v.VehicleId, v.IsRunning, v.OpenTripCount))
+            .Should().Equal((1, true, 1), (2, false, 0));
+    }
+
+    [Fact]
+    public async Task UTCID513_GetLiveStatusAsync_RunningTrue_OnlyOpen()
+    {
+        // Arrange
+        var open = SeedLivePair();
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = true }, default);
+
+        // Assert
+        var row = result.Data!.Items.Should().ContainSingle().Subject;
+        row.VehicleId.Should().Be(1);
+        (row.CurrentTripId, row.DriverName, row.OdometerStart).Should().Be((open.VehicleTripId, "Tài xế", 1000));
+    }
+
+    [Fact]
+    public async Task UTCID514_GetLiveStatusAsync_RunningFalse_OnlyIdle()
+    {
+        // Arrange
+        SeedLivePair();
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = false }, default);
+
+        // Assert
+        result.Data!.Items.Should().ContainSingle().Which.VehicleId.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task UTCID515_GetLiveStatusAsync_KeywordPlate()
+    {
+        // Arrange
+        _truck.PlateNumber = "51C-123.45";
+        _truck.VehicleType = "Xe tải";
+        _vehicles.Add(new Vehicle { VehicleId = 2, PlateNumber = "30A-11111", VehicleType = "Xe con", FuelNormPer100Km = 8m, Status = RecordStatus.Active });
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Keyword = "51C" }, default);
+
+        // Assert
+        result.Data!.Items.Should().ContainSingle().Which.VehicleId.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UTCID516_GetLiveStatusAsync_KeywordTrim()
+    {
+        // Arrange
+        _truck.PlateNumber = "51C-123.45";
+        _vehicles.Add(new Vehicle { VehicleId = 2, PlateNumber = "30A-11111", VehicleType = "Xe con", FuelNormPer100Km = 8m, Status = RecordStatus.Active });
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Keyword = "  51C  " }, default);
+
+        // Assert
+        result.Data!.Items.Should().ContainSingle().Which.VehicleId.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task UTCID517_GetLiveStatusAsync_TwoOpenTrips_CountAndLatest()
+    {
+        // Arrange — data lệch: 2 Trip STARTED
+        var older = Trip(TripStatuses.Started, 900, null, date: Today.AddDays(-1), id: 10);
+        var newer = Trip(TripStatuses.Started, 1000, null, date: Today, id: 20);
+        _truck.VehicleTrips.Add(older);
+        _truck.VehicleTrips.Add(newer);
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery(), default);
+
+        // Assert
+        var row = result.Data!.Items.Should().ContainSingle().Subject;
+        row.IsRunning.Should().BeTrue();
+        row.OpenTripCount.Should().Be(2);
+        row.CurrentTripId.Should().Be(newer.VehicleTripId);
+    }
+
+    [Fact]
+    public async Task UTCID518_GetLiveStatusAsync_EmptyFleet()
+    {
+        // Arrange
+        _vehicles.Clear();
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery(), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Should().BeEmpty();
+        result.Data.TotalItems.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task UTCID519_GetLiveStatusAsync_OnlyStartedCounts_LastOdometerFromAll()
+    {
+        // Arrange
+        var completed = Trip(TripStatuses.Completed, 900, 950);
+        var open = Trip(TripStatuses.Started, 1000, null, date: Today);
+        _truck.VehicleTrips.Add(completed);
+        _truck.VehicleTrips.Add(open);
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Running = true }, default);
+
+        // Assert
+        var row = result.Data!.Items.Should().ContainSingle().Subject;
+        row.OpenTripCount.Should().Be(1);
+        row.CurrentTripId.Should().Be(open.VehicleTripId);
+        row.LastOdometer.Should().Be(1000); // Max(OdometerEnd ?? OdometerStart) trên mọi trip
+    }
+
+    [Fact]
+    public async Task UTCID520_GetLiveStatusAsync_NullKeywordRunning_NoThrow()
+    {
+        // Arrange
+        SeedLivePair();
+
+        // Act
+        var result = await Service().GetLiveStatusAsync(new VehicleLiveStatusQuery { Keyword = null, Running = null }, default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Items.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task UTCID521_StartTripAsync_AcquiresLock_InTransaction_Audit()
+    {
+        // Arrange
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000, driver: "A"), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Status.Should().Be(TripStatuses.Started);
+        await _locks.Received(1).AcquireAsync("vehicle-trip:1", Arg.Any<CancellationToken>());
+        await _uow.Received().BeginTransactionAsync();
+        await _uow.Received().CommitTransactionAsync();
+        _audit.Received().Add(Arg.Is<AuditEntry>(e => e.Action == AuditActions.Insert));
+    }
+
+    [Fact]
+    public async Task UTCID522_StartTripAsync_ContinuesLastEnd_NoKmGap()
+    {
+        // Arrange
+        Trip(TripStatuses.Completed, 900, 1000);
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.KmGapWarning.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UTCID523_StartTripAsync_KmGap_WarningTrue()
+    {
+        // Arrange
+        Trip(TripStatuses.Completed, 900, 1000);
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1100), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.KmGapWarning.Should().BeTrue();
+        result.Message.Should().Contain("1000");
+    }
+
+    [Fact]
+    public async Task UTCID524_StartTripAsync_TripDateToday_Ok()
+    {
+        // Arrange
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000, Today), default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Data!.Status.Should().Be(TripStatuses.Started);
+    }
+
+    [Fact]
+    public async Task UTCID525_StartTripAsync_AlreadyOpen_Fails_StillAcquiresLock()
+    {
+        // Arrange
+        Trip(TripStatuses.Started, 1000, null);
+        CaptureTrips();
+        var before = _trips.Count;
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1100), default);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        result.Message.Should().Be(WarehouseMessages.TripAlreadyOpen);
+        await _locks.Received(1).AcquireAsync("vehicle-trip:1", Arg.Any<CancellationToken>());
+        _trips.Should().HaveCount(before);
+    }
+
+    [Fact]
+    public async Task UTCID526_StartTripAsync_LockTimeout_NoTrip()
+    {
+        // Arrange — Acquire ném timeout; service hiện không map sang Result Failure (ném ra ngoài)
+        CaptureTrips();
+        _locks.AcquireAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new TimeoutException("busy"));
+
+        // Act
+        var act = () => Service().StartTripAsync(Start(1000), default);
+
+        // Assert
+        await act.Should().ThrowAsync<TimeoutException>();
+        await _uow.DidNotReceive().SaveChangesAsync();
+        _trips.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UTCID527_StartTripAsync_InactiveVehicle()
+    {
+        // Arrange
+        _truck.Status = RecordStatus.Discontinued;
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000), default);
+
+        // Assert
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleInactive);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task UTCID528_StartTripAsync_VehicleNotFound()
+    {
+        // Arrange
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000, vehicleId: 999), default);
+
+        // Assert
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task UTCID529_StartTripAsync_TripDateFuture()
+    {
+        // Arrange
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000, Today.AddDays(1)), default);
+
+        // Assert
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        result.Message.Should().Be(WarehouseMessages.TripDateFuture);
+    }
+
+    [Fact]
+    public async Task UTCID530_StartTripAsync_DispatchNoteMissing()
+    {
+        // Arrange
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000) with { DispatchNoteId = 55 }, default);
+
+        // Assert
+        result.ErrorCode.Should().Be(ErrorCodes.CommonNotFound);
+    }
+
+    [Fact]
+    public async Task UTCID531_StartTripAsync_DuplicateSameDayOdometer()
+    {
+        // Arrange
+        Trip(TripStatuses.Completed, 1000, 1100, date: Today);
+        CaptureTrips();
+
+        // Act
+        var result = await Service().StartTripAsync(Start(1000), default);
+
+        // Assert
+        result.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        result.Message.Should().Be(WarehouseMessages.TripDuplicate);
+    }
+
+    [Fact]
+    public async Task UTCID532_StartTripAsync_SecondStartSameVehicle_TripAlreadyOpen()
+    {
+        // Arrange — hai lần Start tuần tự; lock no-op
+        CaptureTrips();
+
+        // Act
+        var first = await Service().StartTripAsync(Start(1000), default);
+        var second = await Service().StartTripAsync(Start(1100), default);
+
+        // Assert
+        first.IsSuccess.Should().BeTrue();
+        second.IsSuccess.Should().BeFalse();
+        second.ErrorCode.Should().Be(ErrorCodes.VehicleTripInvalid);
+        second.Message.Should().Be(WarehouseMessages.TripAlreadyOpen);
     }
 
     // ---------- Xe ----------

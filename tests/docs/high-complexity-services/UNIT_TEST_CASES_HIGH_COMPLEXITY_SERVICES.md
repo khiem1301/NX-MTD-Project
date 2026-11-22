@@ -621,3 +621,47 @@
 Có **55** case mang ký hiệu ⚠ (dự kiến FAIL trên code hiện tại). Đây là các case nên chạy đầu tiên để xác nhận bug.
 
 **DEV-ALL-157:** +10 case (`UTCID502`–`UTCID511`); chỉnh expected `UTCID470`/`UTCID480`/`UTCID481`/`UTCID479` theo công thức và thu hồi PENDING.
+
+---
+
+## Phụ lục A — VehicleService (DEV-ALL-158 / DEV-ALL-159)
+
+> **Không thuộc shortlist HighComplexity Round 1** (10 service CAO).  
+> Mục đích: thiết kế unit test **suite thường** (`VehicleServiceTests`) sau update 22/11/2026.  
+> - **DEV-ALL-159:** `GetLiveStatusAsync` — Admin đọc trạng thái xe (suy ra từ chuyến `STARTED`).  
+> - **DEV-ALL-158:** `StartTripAsync` / `PrepareTripAsync` — `IAppLock` theo xe + chạy trong transaction; DB còn `UQ_VT_OneOpen` (kiểm Integration, không thay bằng unit).  
+> File code test hiện có: `tests/Application.Tests/Vehicle/VehicleServiceTests.cs` (đã có 1 smoke LiveStatus).
+
+| Test Case ID | Function Name | Type (N/B/A) | Precondition & Mock Setup | Input Data | Expected Output / Exception |
+|---|---|---|---|---|---|
+| UTCID512 | VehicleService.GetLiveStatusAsync | N | Xe 1 Active có 1 Trip STARTED (DriverName="Tài xế", OdometerStart=1000); Xe 2 Active không chuyến mở | query `{}` (Running=null) | Success; 2 dòng: (1, IsRunning=true, OpenTripCount=1), (2, IsRunning=false, OpenTripCount=0); xe đang chạy xếp trước |
+| UTCID513 | VehicleService.GetLiveStatusAsync | N | Như UTCID512 | Running=true | Success; đúng 1 xe Id=1; CurrentTripId / DriverName / OdometerStart khớp chuyến STARTED |
+| UTCID514 | VehicleService.GetLiveStatusAsync | N | Như UTCID512 | Running=false | Success; đúng 1 xe Id=2 |
+| UTCID515 | VehicleService.GetLiveStatusAsync | B | Xe 1 Plate `51C-123.45`, Type `Xe tải` | Keyword=`51C` | Success; chỉ xe 1 |
+| UTCID516 | VehicleService.GetLiveStatusAsync | B | Keyword trim khoảng trắng | Keyword=`  51C  ` | Success; giống UTCID515 (đã Trim) |
+| UTCID517 | VehicleService.GetLiveStatusAsync | B | Xe 1 có **2** Trip STARTED (data lệch) | Running=null | Success; IsRunning=true, **OpenTripCount=2**; CurrentTripId = chuyến mới nhất (OrderBy TripDate/Id desc). FE hiện cảnh báo |
+| UTCID518 | VehicleService.GetLiveStatusAsync | B | 0 xe trong DB | query `{}` | Success; Items rỗng, TotalItems=0 |
+| UTCID519 | VehicleService.GetLiveStatusAsync | B | Xe có Trip COMPLETED + STARTED | Running=true | Chỉ tính STARTED; LastOdometer lấy Max(OdometerEnd ?? OdometerStart) trên mọi trip |
+| UTCID520 | VehicleService.GetLiveStatusAsync | A | — | Keyword=null, Running=null | Success; không exception, tương đương không lọc keyword |
+| UTCID521 | VehicleService.StartTripAsync | N | Xe 1 Active, không Trip STARTED; mock `IAppLock` + UoW transaction spy | StartTripDto {VehicleId=1, TripDate=Today, OdometerStart=1000, DriverName="A"} | Success; Trip Status=STARTED; **AcquireAsync(`vehicle-trip:1`)** được gọi 1 lần; chạy trong `InTransactionAsync`; Audit Insert |
+| UTCID522 | VehicleService.StartTripAsync | N | Xe 1 Active; chuyến COMPLETED gần nhất OdometerEnd=1000 | OdometerStart=1000 | Success; KmGapWarning=false |
+| UTCID523 | VehicleService.StartTripAsync | B | Chuyến COMPLETED gần nhất OdometerEnd=1000 | OdometerStart=1100 | Success; KmGapWarning=true; message chứa cảnh báo lệch km |
+| UTCID524 | VehicleService.StartTripAsync | B | Xe 1 Active, không trip | TripDate=Today (biên hôm nay) | Success |
+| UTCID525 | VehicleService.StartTripAsync | A | Xe 1 đã có Trip STARTED | dto hợp lệ | Failure `VehicleTripInvalid` / `TripAlreadyOpen`; **vẫn gọi AcquireAsync** trước khi fail; không Add trip mới |
+| UTCID526 | VehicleService.StartTripAsync | A | Mock `IAppLock.AcquireAsync` ném timeout / trả fail | dto hợp lệ | Failure (Busy/lock); không SaveChanges / không tạo Trip |
+| UTCID527 | VehicleService.StartTripAsync | A | Xe Status ≠ Active | dto.VehicleId=1 | Failure `VehicleInactive` |
+| UTCID528 | VehicleService.StartTripAsync | A | Không có xe 999 | VehicleId=999 | Failure `NotFound` |
+| UTCID529 | VehicleService.StartTripAsync | A | — | TripDate=Today+1 | Failure `TripDateFuture` |
+| UTCID530 | VehicleService.StartTripAsync | A | DispatchNoteId=55 không tồn tại | dto có DispatchNoteId=55 | Failure `NotFound` |
+| UTCID531 | VehicleService.StartTripAsync | A | Đã có trip cùng ngày + cùng OdometerStart | dto trùng | Failure `TripDuplicate` |
+| UTCID532 | VehicleService.PrepareTripAsync / StartTrip | A | Hai lần StartTrip tuần tự (mock lock no-op): lần 1 Success tạo STARTED | Lần 2 cùng VehicleId | Lần 2 Failure `TripAlreadyOpen` (check code). Race thật + `UQ_VT_OneOpen` → **Integration Test**, không thay bằng unit |
+
+### Ghi chú triển khai
+
+| Nhóm | File test gợi ý | Ghi chú |
+|---|---|---|
+| UTCID512–520 | `VehicleServiceTests.cs` | Mở rộng từ smoke `LiveStatus_marks_...` đã có |
+| UTCID521–531 | `VehicleServiceTests.cs` | Mock `IAppLock` bằng NSubstitute; verify `Received(1).AcquireAsync("vehicle-trip:1", …)` |
+| UTCID532 / `UQ_VT_OneOpen` | Integration / DB fixture | Unit không chứng minh được unique index dưới concurrent load |
+
+**Cộng phụ lục:** 21 case (N=5, B=6, A=10). Tổng tài liệu nếu cộng phụ lục: **511 + 21 = 532** (Round 1 HighComplexity vẫn giữ **511**).
