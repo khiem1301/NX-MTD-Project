@@ -42,7 +42,15 @@ internal sealed class TestAsyncEnumerator<T>(IEnumerator<T> inner) : IAsyncEnume
 
 internal sealed class TestAsyncQueryProvider<TEntity>(IQueryProvider inner) : IAsyncQueryProvider
 {
-    public IQueryable CreateQuery(Expression expression) => new TestAsyncEnumerable<TEntity>(expression);
+    /// <summary>GroupBy/Select đổi element type — phải tạo TestAsyncEnumerable đúng T, không giữ TEntity gốc.</summary>
+    public IQueryable CreateQuery(Expression expression)
+    {
+        var elementType = expression.Type.IsGenericType
+            ? expression.Type.GetGenericArguments()[0]
+            : typeof(TEntity);
+        var qType = typeof(TestAsyncEnumerable<>).MakeGenericType(elementType);
+        return (IQueryable)Activator.CreateInstance(qType, expression)!;
+    }
 
     public IQueryable<TElement> CreateQuery<TElement>(Expression expression) => new TestAsyncEnumerable<TElement>(expression);
 
