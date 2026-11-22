@@ -204,7 +204,8 @@ public class DailyWorkAllocationServiceTests
         withdrawn.RejectReason.Should().Be(string.Format(WarehouseMessages.DailyPendingWithdrawn, "đổi việc"));
         var retrieval = added.Should().ContainSingle().Subject;
         (retrieval.MovementType, retrieval.Quantity, retrieval.Status).Should()
-            .Be((PieceMovementTypes.Retrieval, 15, HandoverStatuses.Confirmed));
+            .Be((PieceMovementTypes.Retrieval, 15, HandoverStatuses.Pending));
+        retrieval.ConfirmMode.Should().Be(ConfirmModes.Worker);
     }
 
     [Fact]
