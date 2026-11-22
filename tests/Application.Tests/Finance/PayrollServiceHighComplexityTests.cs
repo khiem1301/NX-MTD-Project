@@ -12,6 +12,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID135–UTCID203: PayrollService per UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md.</summary>
+[Trait("Category", "HighComplexity")]
 public class PayrollServiceHighComplexityTests
 {
     private static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);

@@ -10,6 +10,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID416–UTCID469: CustomerOrderService high-complexity cases.</summary>
+[Trait("Category", "HighComplexity")]
 public class CustomerOrderServiceHighComplexityTests
 {
     private static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);

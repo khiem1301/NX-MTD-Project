@@ -14,6 +14,7 @@ namespace Application.Tests;
 
 /// <summary>UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES §1 — OperationService UTCID01–UTCID70.</summary>
 [Collection(ExcelTestCollection.Name)]
+[Trait("Category", "HighComplexity")]
 public sealed class OperationServiceHighComplexityTests : ProductionTestBase
 {
     private static readonly DateTime SpecNow = new(2026, 11, 22, 10, 0, 0);

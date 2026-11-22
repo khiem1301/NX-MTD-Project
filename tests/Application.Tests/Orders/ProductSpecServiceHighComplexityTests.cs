@@ -10,6 +10,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID292–UTCID314 — ProductSpecService high-complexity cases from UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md.</summary>
+[Trait("Category", "HighComplexity")]
 public class ProductSpecServiceHighComplexityTests
 {
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();

@@ -11,6 +11,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID315–UTCID373 — WorkOrderService high-complexity cases from UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md.</summary>
+[Trait("Category", "HighComplexity")]
 public class WorkOrderServiceHighComplexityTests
 {
     private static readonly DateOnly Today = new(2026, 11, 22);

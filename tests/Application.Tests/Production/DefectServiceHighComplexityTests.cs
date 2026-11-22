@@ -10,6 +10,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID374–UTCID415: DefectService high-complexity cases per UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md.</summary>
+[Trait("Category", "HighComplexity")]
 public class DefectServiceHighComplexityTests : ProductionTestBase
 {
     private new static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);

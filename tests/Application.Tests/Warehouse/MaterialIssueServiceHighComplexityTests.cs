@@ -12,6 +12,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID252–UTCID291: MaterialIssueService độ phức tạp cao (UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md).</summary>
+[Trait("Category", "HighComplexity")]
 public sealed class MaterialIssueServiceHighComplexityTests : ProductionTestBase
 {
     private const int Team3 = 3;

@@ -11,6 +11,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID470–UTCID501: DailyWorkAllocationService high-complexity cases.</summary>
+[Trait("Category", "HighComplexity")]
 public class DailyWorkAllocationServiceHighComplexityTests
 {
     private static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);

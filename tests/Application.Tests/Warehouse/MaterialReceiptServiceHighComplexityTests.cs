@@ -12,6 +12,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID71–UTCID134: MaterialReceiptService per UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md.</summary>
+[Trait("Category", "HighComplexity")]
 public class MaterialReceiptServiceHighComplexityTests
 {
     private static readonly DateTime Now = new(2026, 11, 22, 10, 0, 0);

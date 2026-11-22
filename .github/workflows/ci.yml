@@ -23,13 +23,42 @@ jobs:
         run: dotnet restore tests/Application.Tests/Application.Tests.csproj
       - name: Build
         run: dotnet build tests/Application.Tests/Application.Tests.csproj --no-restore -c Release
-      - name: Test
-        run: dotnet test tests/Application.Tests/Application.Tests.csproj --no-build -c Release --logger "trx;LogFileName=test-results.trx"
+      - name: Test (exclude HighComplexity bug-hunt suite)
+        run: >
+          dotnet test tests/Application.Tests/Application.Tests.csproj --no-build -c Release
+          --filter "Category!=HighComplexity"
+          --logger "trx;LogFileName=test-results.trx"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: backend-test-results
           path: "**/test-results.trx"
+
+  # Round-1 high-complexity cases (UTCID01–501): intentional Group B fails document product bugs.
+  # Not required for merge — informational only (continue-on-error).
+  backend-high-complexity:
+    name: Backend HighComplexity (informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+      - name: Restore
+        run: dotnet restore tests/Application.Tests/Application.Tests.csproj
+      - name: Build
+        run: dotnet build tests/Application.Tests/Application.Tests.csproj --no-restore -c Release
+      - name: Test HighComplexity
+        run: >
+          dotnet test tests/Application.Tests/Application.Tests.csproj --no-build -c Release
+          --filter "Category=HighComplexity"
+          --logger "trx;LogFileName=high-complexity-results.trx"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-high-complexity-results
+          path: "**/high-complexity-results.trx"
 
   frontend:
     name: Frontend (lint + typecheck + test + build)

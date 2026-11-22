@@ -14,6 +14,7 @@ using NX_MTD.Domain.Entities;
 namespace Application.Tests;
 
 /// <summary>UTCID204–UTCID251: OutputService độ phức tạp cao (UNIT_TEST_CASES_HIGH_COMPLEXITY_SERVICES.md).</summary>
+[Trait("Category", "HighComplexity")]
 public sealed class OutputServiceHighComplexityTests : ProductionTestBase
 {
     private const int TeamId = 3;
