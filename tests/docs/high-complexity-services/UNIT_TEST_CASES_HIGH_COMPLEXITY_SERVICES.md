@@ -548,27 +548,34 @@
 
 ## 10. DailyWorkAllocationService
 
+> **DEV-ALL-157 (22/11/2026):** Hạ số giao phần đã xác nhận **không** còn ghi thu hồi `CONFIRMED` ngay (`ConfirmMode=LEADER`). Thay bằng phiếu thu hồi `ADJUSTED` ở trạng thái **`PENDING`**, `ConfirmMode=WORKER` (công nhân xác nhận / tổ trưởng xác nhận hộ).  
+> Công thức mới:  
+> - `DayGiven = DayNet + DayPending − DayPendingRetrieval`  
+> - `Remaining = max(0, min(Carry + DayNet − DayOutput, Held − Output) − DayPendingRetrieval)`  
+> Notify + message `DailySavedPendingConfirm` khi có phiếu chờ (giao thêm **hoặc** thu hồi chờ xác nhận: `-delta > DayPending`).  
+> Case **UTCID481** đã chỉnh expected theo semantics mới; **UTCID502–UTCID511** là case bổ sung cho DEV-ALL-157.
+
 | Test Case ID | Function Name | Type (N/B/A) | Precondition & Mock Setup | Input Data | Expected Output / Exception |
 |---|---|---|---|---|---|
-| UTCID470 | DailyWorkAllocationService.GetBoardAsync | N | Tổ may 3; đơn 1; OrderLine 100 Allotted tổ 3; Assignment W1×OP10; Carry=20, DayGiven=30, DayOutput=25, Held=100, Output=60; rate APPROVED | teamId=3, workDate=2026-11-22, orderId=1, orderLineId=100 | Success; W1×OP10 Remaining = min(20+30−25, 100−60) = 25; có Unallocated, Rate |
+| UTCID470 | DailyWorkAllocationService.GetBoardAsync | N | Tổ may 3; đơn 1; OrderLine 100 Allotted tổ 3; Assignment W1×OP10; Carry=20, DayNet=30, DayPending=0, DayPendingRetrieval=0, DayOutput=25, Held=100, Output=60; rate APPROVED | teamId=3, workDate=2026-11-22, orderId=1, orderLineId=100 | Success; DayGiven=30; Remaining = min(20+30−25, 100−60) − 0 = 25; có Unallocated, Rate |
 | UTCID471 | DailyWorkAllocationService.GetBoardAsync | N | Đơn 1 có OrderLine 100, 101 Allotted, 102 không Allotted | orderLineId=null | Board gồm dòng 100 và 101; không có 102 |
-| UTCID472 | DailyWorkAllocationService.GetBoardAsync | B | Carry+DayNet−DayOutput = -5 | như trên | Remaining = 0 (floor 0) |
+| UTCID472 | DailyWorkAllocationService.GetBoardAsync | B | Carry+DayNet−DayOutput = -5; DayPendingRetrieval=0 | như trên | Remaining = 0 (floor 0) |
 | UTCID473 | DailyWorkAllocationService.GetBoardAsync | B | Đơn có OrderLine nhưng 0 assignment/position | orderLineId=100 | Success; rows rỗng |
 | UTCID474 | DailyWorkAllocationService.GetBoardAsync | B | — | workDate=2026-11-21 (quá khứ) | Success board (chỉ xem); FE phải biết không Save được (#1) |
 | UTCID475 | DailyWorkAllocationService.GetBoardAsync | B | Handover CONFIRMED có ConfirmedQty=null (data lỗi) | như trên | Remaining tính an toàn, không âm/sai lệch. ⚠ `?? 0` làm Held sai (#2) |
 | UTCID476 | DailyWorkAllocationService.GetBoardAsync | A | — | teamId=999 | Failure (Team NotFound). ⚠ Hiện tại không validate (#1) |
 | UTCID477 | DailyWorkAllocationService.GetBoardAsync | A | — | orderId=999 | Failure `NotFound`. ⚠ Không validate (#1) |
 | UTCID478 | DailyWorkAllocationService.GetBoardAsync | A | Row có OperationId=777 không có trong dictionary `sequence` | như trên | Đẩy xuống cuối hoặc bỏ qua. ⚠ `KeyNotFoundException` khi sort (#7) |
-| UTCID479 | DailyWorkAllocationService.SaveAsync | N | Tổ may 3; W1 thuộc tổ; line 100 Allotted, đơn mở; Unallocated OP10 = 50; rate APPROVED; mock IAppLock OK, Notifier | dto {WorkDate=2026-11-22, Items=[(W1,100,OP10,Qty=30)]} (đang 0 → 30), teamId=3 | Success {Added=1, Adjusted=0}; tạo WorkAllocation PENDING 30; AppLock theo line; Notifier await |
-| UTCID480 | DailyWorkAllocationService.SaveAsync | N | W1×OP10 DayGiven=30, toàn PENDING | Qty=20, Reason="Đổi việc" | Success; PENDING giảm còn 20 (hạ pending trước) |
-| UTCID481 | DailyWorkAllocationService.SaveAsync | N | W1×OP10 DayGiven=30 (10 PENDING + 20 CONFIRMED), Remaining=15 | Qty=15, Reason="Điều chuyển" | Success; hủy 10 PENDING + ADJUSTED −5 từ confirmed |
+| UTCID479 | DailyWorkAllocationService.SaveAsync | N | Tổ may 3; W1 thuộc tổ; line 100 Allotted, đơn mở; Unallocated OP10 = 50; rate APPROVED; mock IAppLock OK, Notifier | dto {WorkDate=2026-11-22, Items=[(W1,100,OP10,Qty=30)]} (đang 0 → 30), teamId=3 | Success {Added=1, Adjusted=0}; tạo Handover PENDING 30, ConfirmMode=WORKER; message `DailySavedPendingConfirm`; AppLock theo line; Notifier được gọi |
+| UTCID480 | DailyWorkAllocationService.SaveAsync | N | W1×OP10 DayGiven=30, toàn PENDING (DayPending=30) | Qty=20, Reason="Đổi việc" | Success {Adjusted=1}; PENDING giảm còn 20 (hạ pending trước, REJECTED/giảm qty); **không** tạo Retrieval; message `PieceMovementCreated` (chỉ hạ pending → không awaiting) |
+| UTCID481 | DailyWorkAllocationService.SaveAsync | N | W1×OP10 DayGiven=30 (10 PENDING + 20 CONFIRMED), Remaining=15, DayPendingRetrieval=0 | Qty=15, Reason="Điều chuyển" | Success {Adjusted=1}; hủy/giảm 10 PENDING + tạo **Retrieval ADJUSTED Qty=5**, Status=**PENDING**, ConfirmMode=**WORKER** (DEV-ALL-157, không còn Confirmed ngay); message `DailySavedPendingConfirm`; Notifier báo W1 |
 | UTCID482 | DailyWorkAllocationService.SaveAsync | B | Unallocated OP10 = 50, đang giao 0 | Qty=50 (delta = unallocated) | Success |
 | UTCID483 | DailyWorkAllocationService.SaveAsync | B | Unallocated = 50 | Qty=51 | Failure (OverUnallocated) |
-| UTCID484 | DailyWorkAllocationService.SaveAsync | B | W1×OP10 hiện 30 | Qty=30 (delta=0) | Success {Added=0, Adjusted=0}; không ghi DB |
+| UTCID484 | DailyWorkAllocationService.SaveAsync | B | W1×OP10 hiện 30 | Qty=30 (delta=0) | Success {Added=0, Adjusted=0}; không ghi DB; không Notifier |
 | UTCID485 | DailyWorkAllocationService.SaveAsync | B | — | WorkDate=2026-11-21 (Today−1) | Failure (WorkDateMustBeToday) |
 | UTCID486 | DailyWorkAllocationService.SaveAsync | B | — | WorkDate=2026-11-23 (Today+1) | Failure (WorkDateMustBeToday) |
 | UTCID487 | DailyWorkAllocationService.SaveAsync | B | — | Items=[] | Success 0/0 hoặc Failure Validation; không lấy lock |
-| UTCID488 | DailyWorkAllocationService.SaveAsync | B | DayGiven=10 toàn PENDING, Remaining=0 | Qty=0, Reason="x" | Success; chỉ hủy PENDING, không chạm confirmed (#4) |
+| UTCID488 | DailyWorkAllocationService.SaveAsync | B | DayGiven=10 toàn PENDING, Remaining=0 | Qty=0, Reason="x" | Success; chỉ hủy PENDING, không tạo Retrieval (#4) |
 | UTCID489 | DailyWorkAllocationService.SaveAsync | A | — | Qty=-1 | Failure (Validation). ⚠ Cần xác nhận ValidateAsync có chặn (#6) |
 | UTCID490 | DailyWorkAllocationService.SaveAsync | A | — | Items=[(W1,100,OP10,10),(W1,100,OP10,20)] (trùng key) | Failure (DuplicateItem). ⚠ Nguy cơ delta kép (#6) |
 | UTCID491 | DailyWorkAllocationService.SaveAsync | A | W1×OP10 hiện 30 | Qty=20, Reason=null | Failure (ReasonRequired) |
@@ -581,7 +588,17 @@
 | UTCID498 | DailyWorkAllocationService.SaveAsync | A | PieceRate OP10 chưa APPROVED | Qty=10 | Failure `PieceRateNotApproved` |
 | UTCID499 | DailyWorkAllocationService.SaveAsync | A | PieceRate OP10 chưa APPROVED, W1 hiện 10 | Qty=0, Reason="x" | Success (Qty = 0 không cần rate) |
 | UTCID500 | DailyWorkAllocationService.SaveAsync | A | Mock IAppLock timeout | dto hợp lệ | Failure (Busy); không SaveChanges |
-| UTCID501 | DailyWorkAllocationService.SaveAsync | A | Mock Notifier ném exception | dto hợp lệ | Lỗi được log/báo; dữ liệu phân việc vẫn commit. ⚠ `NotifyWorkers` không await (#5) |
+| UTCID501 | DailyWorkAllocationService.SaveAsync | A | Mock Notifier ném exception | dto hợp lệ (giao thêm hoặc hạ confirmed) | Lỗi được log/báo; dữ liệu phân việc vẫn commit. ⚠ `NotifyWorkers` không await (#5) |
+| UTCID502 | DailyWorkAllocationService.GetBoardAsync | N | W1×OP10: DayNet=20, DayPending=10, DayPendingRetrieval=5 (có Retrieval PENDING), DayOutput=0, Carry=0, Held=20, Output=0 | teamId=3, workDate=Today, orderLineId=100 | Success; **DayGiven = 20+10−5 = 25**; PendingQty hiển thị/đi kèm phản ánh đúng phần chờ |
+| UTCID503 | DailyWorkAllocationService.GetBoardAsync | B | W1×OP10: Carry=0, DayNet=30, DayOutput=10, Held=30, Output=10, DayPendingRetrieval=15 | như trên | Remaining = max(0, min(0+30−10, 30−10) − 15) = max(0, 20−15) = **5** (trừ DayPendingRetrieval) |
+| UTCID504 | DailyWorkAllocationService.SaveAsync | N | W1×OP10: 0 PENDING, 30 CONFIRMED, Remaining≥20, DayPendingRetrieval=0; mock Notifier | Qty=10, Reason="Giảm ca" (hạ 20 từ confirmed) | Success {Adjusted=1}; **1 Retrieval** MovementType=Retrieval/ADJUSTED, Qty=20, Status=**PENDING**, ConfirmMode=**WORKER**, ConfirmedQty=null, ConfirmedAt=null; RetrievalReason=Adjusted; message `DailySavedPendingConfirm`; Notifier gọi W1 |
+| UTCID505 | DailyWorkAllocationService.SaveAsync | N | Seed: DayNet=30, DayPending=0, DayPendingRetrieval=10 → DayGiven=20; Remaining=8 | Qty=15, Reason="Hạ tiếp" (hạ thêm 5 từ confirmed) | Success; thêm Retrieval PENDING Qty=5; sau Save tổng DayPendingRetrieval=15; Remaining mới = 8−5=3 |
+| UTCID506 | DailyWorkAllocationService.SaveAsync | B | DayNet=30, DayPending=0, DayPendingRetrieval=10, Remaining=0 (đã trừ hết) | Qty=15 (&lt; DayGiven 20 nhưng fromConfirmed=5 &gt; Remaining 0), Reason="x" | Failure `PieceRetrievalExceedsHolding` (không tạo Retrieval mới) |
+| UTCID507 | DailyWorkAllocationService.SaveAsync | B | DayNet=30, DayPending=0, DayPendingRetrieval=0, DayOutput=25, Carry=0 → không được hạ dưới sản lượng đã báo | Qty=4 (hạ 26 → Carry+DayNet−fromConfirmed &lt; DayOutput), Reason="x" | Failure `DailyBelowOutput` / `PieceRetrievalExceedsHolding` |
+| UTCID508 | DailyWorkAllocationService.SaveAsync | B | DayPending=5, DayNet=20 (Confirmed), Remaining đủ; cut=5 (= DayPending) | Qty = DayGiven−5, Reason="x" | Success; chỉ WithdrawPending; **0** Retrieval mới; message `PieceMovementCreated` (không awaiting vì `-delta == DayPending`, không `>`) |
+| UTCID509 | DailyWorkAllocationService.SaveAsync | B | DayPending=5, DayNet=20; cut=8 | Qty = DayGiven−8, Reason="x" | Success; Withdraw 5 PENDING + Retrieval PENDING Qty=3; message `DailySavedPendingConfirm`; Notifier |
+| UTCID510 | DailyWorkAllocationService.SaveAsync | A | Đã có Retrieval PENDING Qty=10 cho W1×OP10 | GetBoard / Save không đổi Qty | DayGiven đã trừ 10; không double-count khi LoadPositions (pendingRetrieval group theo key) |
+| UTCID511 | DailyWorkAllocationService.SaveAsync | A | W1 vừa hạ confirmed → Retrieval PENDING; Unallocated tăng lại `+cut` | Sau Save, gọi Save giao thêm Qty tăng trong hạn Unallocated mới | Success; Unallocated đã được cộng lại khi hạ (free tăng) nên giao thêm trong hạn mới được |
 
 ---
 
@@ -598,7 +615,9 @@
 | WorkOrderService | 12 | 12 | 22 | 25 | 59 |
 | DefectService | 5 | 9 | 13 | 20 | 42 |
 | CustomerOrderService | 10 | 12 | 17 | 25 | 54 |
-| DailyWorkAllocationService | 2 | 5 | 11 | 16 | 32 |
-| **Tổng** | **68** | **98** | **191** | **212** | **501** |
+| DailyWorkAllocationService | 2 | 8 | 16 | 18 | 42 |
+| **Tổng** | **68** | **101** | **196** | **214** | **511** |
 
 Có **55** case mang ký hiệu ⚠ (dự kiến FAIL trên code hiện tại). Đây là các case nên chạy đầu tiên để xác nhận bug.
+
+**DEV-ALL-157:** +10 case (`UTCID502`–`UTCID511`); chỉnh expected `UTCID470`/`UTCID480`/`UTCID481`/`UTCID479` theo công thức và thu hồi PENDING.
