@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -22,6 +22,18 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\be\NX-MTD.csproj" />
+  </ItemGroup>
+
+  <!-- Tạm loại HighComplexity chưa compile sạch (trừ file đang chạy: DailyWorkAllocationService) -->
+  <ItemGroup Condition="'$(ExcludeOtherHighComplexity)' == 'true'">
+    <Compile Remove="Warehouse\MaterialReceiptServiceHighComplexityTests.cs" />
+    <Compile Remove="Warehouse\MaterialIssueServiceHighComplexityTests.cs" />
+    <Compile Remove="Finance\PayrollServiceHighComplexityTests.cs" />
+    <Compile Remove="Production\OutputServiceHighComplexityTests.cs" />
+    <Compile Remove="Orders\ProductSpecServiceHighComplexityTests.cs" />
+    <Compile Remove="Cutting\WorkOrderServiceHighComplexityTests.cs" />
+    <Compile Remove="Production\DefectServiceHighComplexityTests.cs" />
+    <Compile Remove="Orders\CustomerOrderServiceHighComplexityTests.cs" />
   </ItemGroup>
 
 </Project>
