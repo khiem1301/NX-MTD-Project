@@ -122,6 +122,7 @@ export const MENU_GROUPS: MenuGroup[] = [
       'cost-summary',
       'accounting-reports',
       'vehicle-log',
+      'vehicle-status',
     ],
   },
   {

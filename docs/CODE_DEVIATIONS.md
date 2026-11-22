@@ -3089,3 +3089,27 @@
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 / DEV-ALL-100: hạ số giao theo ngày chờ xác nhận như giao thêm
 - **Trạng thái:** Mở
+
+### DEV-ALL-158 · Chuyến xe: một xe chỉ có một chuyến đang chạy, chặn ở DB và khóa theo xe
+
+- **Ngày / Người / Task / PR:** 22/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC35 bắt đầu chuyến xe, thủ kho xuất hàng bằng xe công ty; BE `VehicleService.PrepareTripAsync` / `StartTripAsync`, `VehicleTripConfiguration`; DB `UQ_VT_OneOpen`, `SQL/patches/2026-11-22_vehicle_trip_one_open.sql`
+- **Tài liệu gốc ghi:** Xe đang có chuyến STARTED thì không bắt đầu chuyến mới, chỉ kiểm trong code.
+- **Code đang làm:** Khóa `vehicle-trip:{VehicleId}` trong transaction trước khi kiểm (`StartTripAsync` nay chạy trong transaction); thêm chỉ mục unique có lọc `UQ_VT_OneOpen (VehicleId) WHERE Status = 'STARTED'`. Patch dừng và liệt kê nếu DB đã có xe với từ hai chuyến STARTED.
+- **Lý do:** Khiêm yêu cầu; hai người xuất hàng cùng lúc bằng một xe có thể cùng thấy xe rảnh.
+- **Ảnh hưởng người khác:** DB hiện có xe 2 với hai chuyến STARTED (chuyến 6 và 9), cần xử lý trước khi chạy patch.
+- **Cần sửa trong tài liệu:**
+  - [ ] NX-MTD_Database.sql (đã thêm chỉ mục), Report-3 UC35
+- **Trạng thái:** Mở
+
+### DEV-ALL-159 · Admin xem xe và trạng thái đang chạy
+
+- **Ngày / Người / Task / PR:** 22/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** màn mới `/admin/vehicles` (Admin, chỉ đọc); BE `GET /api/v1/admin/vehicles`, `IVehicleService.GetLiveStatusAsync`, `VehicleLiveStatusDto`; FE `features/vehicle-status`
+- **Tài liệu gốc ghi:** UC35 chỉ Kế toán xem danh mục xe và chuyến; Admin không có màn xem xe.
+- **Code đang làm:** Admin xem danh sách xe kèm trạng thái: đang chạy (có chuyến STARTED) hay rảnh, tài xế, phiếu xuất, ngày chuyến, km đầu, km hiện tại, tình trạng xe. Lọc theo biển số / loại xe và theo đang chạy / không chạy; tự làm mới 30 giây. Xe có hơn một chuyến STARTED hiện cảnh báo.
+- **Lý do:** Khiêm yêu cầu (xe không có cờ "đang chạy" riêng, trạng thái suy ra từ sổ chuyến).
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: thêm màn Admin xem trạng thái xe (UC35 hoặc UC mới)
+- **Trạng thái:** Mở

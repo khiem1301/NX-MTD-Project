@@ -20,10 +20,11 @@ public sealed class VehicleService : IVehicleService
     private readonly ISystemSettingReader _settings;
     private readonly IAuditLogService _audit;
     private readonly IClock _clock;
+    private readonly IAppLock _locks;
 
-    public VehicleService(IUnitOfWork uow, ISystemSettingReader settings, IAuditLogService audit, IClock clock)
+    public VehicleService(IUnitOfWork uow, ISystemSettingReader settings, IAuditLogService audit, IClock clock, IAppLock locks)
     {
-        _uow = uow; _settings = settings; _audit = audit; _clock = clock;
+        _uow = uow; _settings = settings; _audit = audit; _clock = clock; _locks = locks;
     }
 
     private IQueryable<Vehicle> Vehicles => _uow.Repository<Vehicle>().Query();
@@ -42,6 +43,37 @@ public sealed class VehicleService : IVehicleService
                 v.VehicleTrips.Count, v.VehicleTrips.Max(t => (int?)(t.OdometerEnd ?? t.OdometerStart))))
             .ToPagedAsync(query, ct);
         return Result<PagedResult<VehicleDto>>.Success(page);
+    }
+
+    public async Task<Result<PagedResult<VehicleLiveStatusDto>>> GetLiveStatusAsync(VehicleLiveStatusQuery query, CancellationToken ct)
+    {
+        var keyword = query.Keyword?.Trim();
+        var page = await Vehicles.AsNoTracking()
+            .Where(v => string.IsNullOrEmpty(keyword) || v.PlateNumber.Contains(keyword) || v.VehicleType.Contains(keyword))
+            .Where(v => query.Running == null || v.VehicleTrips.Any(t => t.Status == TripStatuses.Started) == query.Running)
+            .OrderByDescending(v => v.VehicleTrips.Any(t => t.Status == TripStatuses.Started)).ThenBy(v => v.PlateNumber)
+            .Select(v => new
+            {
+                Vehicle = v,
+                Open = v.VehicleTrips.Where(t => t.Status == TripStatuses.Started)
+                    .OrderByDescending(t => t.TripDate).ThenByDescending(t => t.VehicleTripId)
+                    .Select(t => new
+                    {
+                        t.VehicleTripId,
+                        t.TripDate,
+                        Driver = t.DriverName ?? (t.DriverEmployee == null ? null : t.DriverEmployee.FullName),
+                        Dispatch = t.DispatchNote == null ? null : t.DispatchNote.DispatchCode,
+                        t.OdometerStart
+                    }).FirstOrDefault(),
+                OpenCount = v.VehicleTrips.Count(t => t.Status == TripStatuses.Started),
+                LastOdometer = v.VehicleTrips.Max(t => (int?)(t.OdometerEnd ?? t.OdometerStart))
+            })
+            .Select(x => new VehicleLiveStatusDto(x.Vehicle.VehicleId, x.Vehicle.PlateNumber, x.Vehicle.VehicleType, x.Vehicle.Status,
+                x.OpenCount > 0, x.OpenCount, x.Open == null ? null : x.Open.VehicleTripId, x.Open == null ? null : x.Open.TripDate,
+                x.Open == null ? null : x.Open.Driver, x.Open == null ? null : x.Open.Dispatch,
+                x.Open == null ? null : x.Open.OdometerStart, x.LastOdometer))
+            .ToPagedAsync(query, ct);
+        return Result<PagedResult<VehicleLiveStatusDto>>.Success(page);
     }
 
     public async Task<Result<VehicleDto>> CreateVehicleAsync(SaveVehicleDto dto, CancellationToken ct)
@@ -121,7 +153,10 @@ public sealed class VehicleService : IVehicleService
         return trip is null ? WarehouseFailures.NotFound<VehicleTripDto>() : Result<VehicleTripDto>.Success(ToDto(trip));
     }
 
-    public async Task<Result<VehicleTripDto>> StartTripAsync(StartVehicleTripDto dto, CancellationToken ct)
+    public Task<Result<VehicleTripDto>> StartTripAsync(StartVehicleTripDto dto, CancellationToken ct) =>
+        _uow.InTransactionAsync(() => StartTripInTransactionAsync(dto, ct));
+
+    private async Task<Result<VehicleTripDto>> StartTripInTransactionAsync(StartVehicleTripDto dto, CancellationToken ct)
     {
         var prepared = await PrepareTripAsync(dto, ct);
         if (!prepared.IsSuccess) return WarehouseFailures.From<VehicleTripDto>(prepared);
@@ -136,6 +171,8 @@ public sealed class VehicleService : IVehicleService
 
     public async Task<Result<PreparedTrip>> PrepareTripAsync(StartVehicleTripDto dto, CancellationToken ct)
     {
+        // Khóa theo xe (trong transaction của caller) để hai người không cùng thấy "xe rảnh" rồi mở hai chuyến STARTED.
+        await _locks.AcquireAsync($"vehicle-trip:{dto.VehicleId}", ct);
         var vehicle = await Vehicles.FirstOrDefaultAsync(v => v.VehicleId == dto.VehicleId, ct);
         if (vehicle is null) return WarehouseFailures.NotFound<PreparedTrip>();
         if (vehicle.Status != RecordStatus.Active)

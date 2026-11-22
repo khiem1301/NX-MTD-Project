@@ -7,6 +7,8 @@ namespace NX_MTD.Application.Interfaces;
 public interface IVehicleService
 {
     Task<Result<PagedResult<VehicleDto>>> GetVehiclesAsync(VehicleQuery query, CancellationToken ct);
+    /// <summary>Admin: danh sách xe kèm trạng thái đang chạy hay không (chuyến STARTED), chỉ đọc.</summary>
+    Task<Result<PagedResult<VehicleLiveStatusDto>>> GetLiveStatusAsync(VehicleLiveStatusQuery query, CancellationToken ct);
     Task<Result<VehicleDto>> CreateVehicleAsync(SaveVehicleDto dto, CancellationToken ct);
     Task<Result<VehicleDto>> UpdateVehicleAsync(int vehicleId, SaveVehicleDto dto, CancellationToken ct);
     Task<Result> ChangeVehicleStatusAsync(int vehicleId, bool active, CancellationToken ct);

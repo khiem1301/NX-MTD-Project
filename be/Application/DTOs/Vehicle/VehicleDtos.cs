@@ -5,6 +5,20 @@ namespace NX_MTD.Application.DTOs;
 public sealed record VehicleDto(int VehicleId, string PlateNumber, string VehicleType, decimal FuelNormPer100Km, string Status,
     int TripCount, int? LastOdometer);
 
+/// <summary>
+/// Admin xem xe và trạng thái chạy: <c>IsRunning</c> = xe có chuyến STARTED (xe không có cờ riêng, suy ra từ sổ chuyến);
+/// <c>OpenTripCount</c> &gt; 1 là dữ liệu bất thường (chuyến chưa kết thúc bị bỏ quên).
+/// </summary>
+public sealed record VehicleLiveStatusDto(int VehicleId, string PlateNumber, string VehicleType, string Status, bool IsRunning,
+    int OpenTripCount, int? CurrentTripId, DateOnly? TripDate, string? DriverName, string? DispatchCode, int? OdometerStart,
+    int? LastOdometer);
+
+public sealed record VehicleLiveStatusQuery : PageQuery
+{
+    /// <summary>true = chỉ xe đang chạy; false = chỉ xe không chạy; bỏ trống = tất cả.</summary>
+    public bool? Running { get; init; }
+}
+
 public sealed record SaveVehicleDto(string PlateNumber, string VehicleType, decimal FuelNormPer100Km);
 
 public sealed record VehicleQuery : PageQuery
