@@ -1,13 +1,13 @@
 # NX-MTD – Mô tả cơ sở dữ liệu
 
-Tài liệu mô tả database **NXMTD** (SQL Server) theo script `NX-MTD_Database.sql` **bản 02/11/2026**. Phần chi tiết cột của từng bảng được sinh trực tiếp từ script nên khớp với DDL; phần tổng quan và luồng nghiệp vụ tóm tắt cách các bảng nối với nhau.
+Tài liệu mô tả database **NXMTD** (SQL Server) theo script `NX-MTD_Database.sql` **bản 22/11/2026**. Phần chi tiết cột của từng bảng được sinh trực tiếp từ script nên khớp với DDL; phần tổng quan và luồng nghiệp vụ tóm tắt cách các bảng nối với nhau.
 
 | Hạng mục | Số lượng |
 |---|---|
-| Bảng | 76 |
-| View | 17 |
+| Bảng | 86 |
+| View | 15 |
 | Hàm | 3 |
-| Trigger | 29 |
+| Trigger | 32 |
 | Thủ tục (stored procedure) | 5 |
 
 **Mục lục**
@@ -48,14 +48,14 @@ Ký hiệu trong bảng cột: **PK** khóa chính; **FK →** khóa ngoại; **
 |---|---|---|
 | 4.1 Danh mục & cấu hình | `Role`, `SystemSetting`, `GradeLevelCode`, `GradeLevel` | Vai trò, tham số hệ thống, bậc thợ |
 | 4.2 Nhân sự & thông báo | `Team`, `Employee`, `Account`, `GradeEvaluation`, `Announcement`, `AnnouncementTarget`, `Notification` | Tổ, nhân viên, tài khoản, đổi bậc thợ, thông báo |
-| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerRatio`, `ProductMarkerFabric`, `ProductMarkerComponent`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget` | Dữ liệu gốc của sản xuất |
-| 4.4 Đơn từ | `Request`, `RequestLine` | 10 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
-| 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine` | Đơn mua, thanh toán, phiếu nhập |
+| 4.3 Mã hàng, đơn hàng, định mức | `Customer`, `Material`, `Supplier`, `Product`, `ProductImage`, `ProductColor`, `ProductVariant`, `ProductComponent`, `ProductMarker`, `ProductMarkerRatio`, `ProductMarkerFabric`, `ProductMarkerComponent`, `ProductComponentMaterial`, `CustomerOrder`, `OrderLine`, `OrderMaterial`, `OperationGroup`, `Operation`, `OperationComponent`, `PieceRate`, `KpiTarget`, `KpiDailyTarget`, `KpiTargetLine` | Dữ liệu gốc của sản xuất |
+| 4.4 Đơn từ | `Request`, `RequestLine` | 13 loại đơn từ, gồm yêu cầu NVL / BTP / cắt bù / thiếu NVL |
+| 4.5 Nhập NVL | `PurchaseOrder`, `PurchaseOrderLine`, `MaterialReceipt`, `MaterialReceiptLine`, `PurchasePayment`, `OrderPayment`, `DeliveryScheduleDate` | Đơn mua, thanh toán, phiếu nhập |
 | 4.6 Cắt & cấp kho | `WorkOrder`, `WorkOrderLine`, `MaterialIssue`, `MaterialIssueLine`, `MaterialReturn`, `MaterialReturnLine`, `CuttingLay`, `CuttingLayLine`, `CutHandover`, `CutHandoverLine` | Lệnh cắt, cấp NVL / BTP, trả vải, bàn cắt, bàn giao BTP |
 | 4.7 May & QC | `OrderLineTeam`, `OperationAssignment`, `WorkAllocation`, `OutputRecord`, `DefectRecord`, `QcBatch`, `FgHandover`, `FgHandoverLine` | Phân công, giao / thu hồi việc, sản lượng, hàng lỗi, QC, bàn giao thành phẩm |
 | 4.8 Xuất hàng | `DispatchNote`, `DispatchNoteLine` | Phiếu xuất kho thành phẩm kiêm lệnh giao |
 | 4.9 Kho | `StockBalance`, `Stocktake`, `StocktakeLine`, `StockTransaction` | Tồn hiện tại, kiểm kê, thẻ kho |
-| 4.10 Chấm công & suất ăn | `AttendanceSyncSession`, `AttendanceLog`, `AttendanceAdjustment`, `DailyTimesheet`, `DailyMeal`, `TeamMealConfirmation` | Đồng bộ Ronald Jack Pro, bảng công, suất ăn |
+| 4.10 Chấm công & suất ăn | `AttendanceSyncSession`, `AttendanceLog`, `AttendanceAdjustment`, `DailyTimesheet`, `DailyMeal`, `TeamMealConfirmation`, `RjEmployeeSnapshot`, `MealRegistration` | Đồng bộ Ronald Jack Pro, bảng công, suất ăn |
 | 4.11 Kế toán | `AccountingPeriod`, `Payroll`, `Payslip`, `PayslipItem`, `MonthlyCost`, `BreakEvenResult` | Kỳ kế toán, lương, chi phí, hòa vốn |
 | 4.12 Xe | `Vehicle`, `VehicleTrip` | Chuyến xe, nhiên liệu |
 | 4.13 Hệ thống | `Attachment`, `AuditLog` | Tệp đính kèm, nhật ký thay đổi |
@@ -194,7 +194,6 @@ Vai trò người dùng (9 vai trò), tham số hệ thống dạng khóa – gi
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `GradeCode` | VARCHAR(5) |  | **PK** | chỉ chữ in hoa không dấu và số |
-| `GradeName` | NVARCHAR(50) |  |  | tên bậc |
 | `Status` | VARCHAR(10) |  | Mặc định `'ACTIVE'`; giá trị: `ACTIVE`, `INACTIVE` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
 
@@ -231,7 +230,6 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 |---|---|:-:|---|---|
 | `TeamId` | INT |  | **PK**; tự tăng |  |
 | `TeamCode` | VARCHAR(20) |  | UNIQUE |  |
-| `TeamName` | NVARCHAR(100) |  | UNIQUE |  |
 | `TeamType` | VARCHAR(10) |  |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
 | `CreatedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` |  |
@@ -246,7 +244,7 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `EmployeeId` | INT |  | **PK**; tự tăng |  |
-| `EmployeeCode` | VARCHAR(20) |  | UNIQUE | = username |
+| `EmployeeCode` | VARCHAR(20) |  | UNIQUE | mã nhân viên; không còn là tên đăng nhập (xem `Account.Username`) |
 | `FullName` | NVARCHAR(100) |  |  |  |
 | `Gender` | CHAR(1) | ✓ | Giá trị: `M`, `F` |  |
 | `DateOfBirth` | DATE | ✓ |  |  |
@@ -255,7 +253,7 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 | `RoleId` | INT |  | FK → `Role.RoleId` |  |
 | `TeamId` | INT | ✓ | FK → `Team.TeamId` | tổ hiện tại (đổi tổ ghi AuditLog) |
 | `PayType` | VARCHAR(20) |  |  | PIECE_RATE: CN may; DAILY: thợ cắt, QA/QC; MONTHLY: còn lại |
-| `CurrentGradeCode` | CHAR(1) | ✓ | Giá trị: `A`, `B`, `C`, `D` | chỉ CN may, tổ phó & tổ trưởng |
+| `CurrentGradeCode` | VARCHAR(5) | ✓ | FK → `GradeLevelCode.GradeCode` | chỉ CN may, tổ phó & tổ trưởng |
 | `AttendanceCode` | INT | ✓ |  | mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong) |
 | `StartDate` | DATE |  |  |  |
 | `ResignDate` | DATE | ✓ |  |  |
@@ -280,6 +278,7 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 |---|---|:-:|---|---|
 | `AccountId` | INT |  | **PK**; tự tăng |  |
 | `EmployeeId` | INT |  | FK → `Employee.EmployeeId`; UNIQUE |  |
+| `Username` | VARCHAR(50) |  | UNIQUE (`UQ_Account_Username`) | tên đăng nhập, sinh từ họ tên (dữ liệu mẫu = `EmployeeCode`) |
 | `PasswordHash` | NVARCHAR(500) |  |  | chỉ lưu hash (ASP.NET Identity / BCrypt) |
 | `IsTemporaryPassword` | BIT |  | Mặc định `1` |  |
 | `SecurityStamp` | UNIQUEIDENTIFIER |  |  | đổi khi đổi/đặt lại mật khẩu → đăng xuất phiên khác |
@@ -292,7 +291,7 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 
 - `CK_Account_Status`: Giá trị: `ACTIVE`, `LOCKED`
 - `CK_Account_Lock`: `CHECK Status <> 'LOCKED' OR LockedAt IS NOT NULL`
-- Tên đăng nhập là `Employee.EmployeeCode` (23/10 bỏ `Username` trùng)
+- Tên đăng nhập là `Account.Username`, tách khỏi `Employee.EmployeeCode` (10/11: mã nhân viên chỉ dùng để map Ronald Jack Pro)
 
 ### `GradeEvaluation` — Đề xuất / đổi bậc thợ; dòng APPLIED là lịch sử bậc
 
@@ -306,8 +305,8 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 | `WorkerId` | INT |  | FK → `Employee.EmployeeId` |  |
 | `ProposedBy` | INT |  | FK → `Employee.EmployeeId` |  |
 | `TeamId` | INT | ✓ | FK → `Team.TeamId` |  |
-| `CurrentGradeCode` | CHAR(1) | ✓ |  |  |
-| `ProposedGradeCode` | CHAR(1) |  |  |  |
+| `CurrentGradeCode` | VARCHAR(5) | ✓ | FK → `GradeLevelCode.GradeCode` |  |
+| `ProposedGradeCode` | VARCHAR(5) |  | FK → `GradeLevelCode.GradeCode` |  |
 | `Reason` | NVARCHAR(500) |  |  |  |
 | `RecentDefectCount` | INT |  | Mặc định `0` |  |
 | `EvaluationDate` | DATE |  |  |  |
@@ -319,7 +318,6 @@ Mỗi nhân viên thuộc một vai trò và (tùy chọn) một tổ; mỗi nh�
 
 **Ràng buộc & index**
 
-- `CK_GradeEval_Grades`: `CHECK ProposedGradeCode IN ('A','B','C','D') AND (CurrentGradeCode IS NULL OR CurrentGradeCode IN ('A','B','C','D'))`
 - `CK_GradeEval_Status`: Giá trị: `SUBMITTED`, `APPLIED`, `NOT_APPLIED`
 - `CK_GradeEval_Applied`: `CHECK Status <> 'APPLIED' OR (EffectiveDate IS NOT NULL AND ConsideredAt IS NOT NULL)`
 - UNIQUE `UQ_GradeEval`: (WorkerId, ProposedBy, EvaluationDate)
@@ -452,7 +450,6 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 |---|---|:-:|---|---|
 | `ProductId` | INT |  | **PK**; tự tăng |  |
 | `ProductCode` | VARCHAR(30) |  | UNIQUE |  |
-| `ProductName` | NVARCHAR(200) |  |  |  |
 | `SampleImageUrl` | NVARCHAR(500) | ✓ |  |  |
 | `Description` | NVARCHAR(1000) | ✓ |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'ACTIVE'` |  |
@@ -648,6 +645,7 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 | `StopReason` | NVARCHAR(500) | ✓ |  |  |
 | `FinalAmount` | DECIMAL(18,2) | ✓ |  | giá trị chốt cả đơn do Kế toán nhập, có thể âm (mình phải đền hợp đồng); NULL = chưa chốt (DEV-ALL-137) |
 | `FinalAmountReason` | NVARCHAR(500) | ✓ |  | lý do chốt / đổi giá trị; bắt buộc khi có `FinalAmount` |
+| `DeliveryAddress` | NVARCHAR(500) |  | Mặc định `N''` | địa chỉ giao hàng của đơn (DEV-ALL-147); backend bắt buộc nhập khi tạo / sửa |
 | `Note` | NVARCHAR(1000) | ✓ |  |  |
 | `CustomerDeliveryCount` | SMALLINT | ✓ |  | số lần khách dự kiến giao NVL của cả đơn; một phiếu khách cấp thường đã xác nhận là một lần (11/11, DEV-ALL-95) |
 | `CustomerDeliveryDate` | DATE | ✓ |  | ngày khách dự kiến giao NVL; giao >= 2 lần: ngày giao từ (DEV-ALL-95) |
@@ -842,11 +840,28 @@ Dữ liệu gốc của sản xuất. Ba bảng `ProductVariant`, `ProductCompon
 - `CK_KpiDaily_Qty`: `CHECK TargetQty > 0`
 - UNIQUE `UQ_KpiDaily`: (KpiTargetId, WorkDate)
 
+### `KpiTargetLine` — KPI tổ may theo dòng đơn (màu × size)
+
+> Chỉ tiêu KPI chia theo dòng đơn (03/11); chỉ tiêu demo chia theo tỉ lệ số còn trống của dòng
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `KpiTargetLineId` | INT |  | **PK**; tự tăng |  |
+| `KpiTargetId` | INT |  | FK → `KpiTarget.KpiTargetId` |  |
+| `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
+| `TargetQty` | INT |  | `CHECK TargetQty > 0` | chỉ tiêu của dòng đơn trong cả kỳ |
+
+**Ràng buộc & index**
+
+- `CK_KpiLine_Qty`: `CHECK TargetQty > 0`
+- UNIQUE `UQ_KpiTargetLine`: (KpiTargetId, OrderLineId)
+- Index: `IX_KpiLine_OrderLine ON dbo.KpiTargetLine(OrderLineId) INCLUDE (TargetQty)`
+
 ### 4.4 Đơn từ
 
 Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `OrderId`, `WorkOrderId`, `KpiTargetId`, `MaterialIssueId`, `MaterialReceiptId`, `DefectRecordId` chỉ dùng cho loại liên quan. Chứng từ sinh ra từ đơn từ (lệnh cắt bù, đơn mua, phiếu cấp, phiếu nhập bổ sung) trỏ ngược về đây.
 
-### `Request` — Đơn từ (10 loại, gồm yêu cầu NVL / BTP)
+### `Request` — Đơn từ (13 loại, gồm yêu cầu NVL / BTP / sửa máy)
 
 > Lệnh cắt bù / đơn mua / phiếu cấp sinh ra từ đơn từ trỏ ngược về đây qua SourceRequestId / RequestId
 
@@ -882,10 +897,11 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 
 **Ràng buộc & index**
 
-- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`, `MATERIAL_PURCHASE`, `OTHER`
+- `CK_Request_Type`: Giá trị: `SPARE_PARTS`, `NEW_MACHINE`, `MACHINE_SUPPLIES`, `ATTENDANCE_CORRECTION`, `MATERIAL_SUPPLEMENT`, `DEFECTIVE_MATERIAL`, `REPLACEMENT_CUTTING`, `SHORT_DELIVERY`, `MATERIAL_REQUISITION`, `SEMI_FINISHED_REQUISITION`, `MATERIAL_PURCHASE`, `OTHER`, `MACHINE_REPAIR` (Sửa máy, DEV-ALL-169)
 - `CK_Request_Handler`: chỉ `OTHER` có `HandlerRoleCode` (bắt buộc); `TEAM_LEADER` thì có `HandlerTeamId`, vai trò khác thì không
-- `CK_Request_Status`: Giá trị: `PENDING_APPROVAL`, `PENDING_PROCESSING`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`
+- `CK_Request_Status`: Giá trị: `PENDING_APPROVAL`, `PENDING_PROCESSING`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`, `NOT_COMPLETED`
 - `CK_Request_Reject`: `CHECK Status <> 'REJECTED' OR DecisionNote IS NOT NULL`
+- `CK_Request_NotComplete`: `CHECK Status <> 'NOT_COMPLETED' OR ResultNote IS NOT NULL`
 - `CK_Request_Shortage`: `CHECK ShortageResolution IS NULL OR ShortageResolution IN ('REPLENISH','NO_REPLENISH')`
 - `CK_Request_Delivery`: `CHECK (ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1) AND (TargetDateTo IS NULL OR (TargetDate IS NOT NULL AND TargetDateTo >= TargetDate AND ExpectedDeliveryCount >= 2))`
 - Index: `IX_Request_Inbox ON dbo.Request(RequestTypeCode, Status) INCLUDE (CreatedAt)`
@@ -957,10 +973,11 @@ Một bảng chung cho 10 loại đơn từ (`RequestTypeCode`). Các cột `Ord
 **Ràng buộc & index**
 
 - `CK_PO_GoodsStatus`: Giá trị: `PENDING_FINALISATION`, `ORDERED`, `PARTIALLY_RECEIVED`, `RECEIVED`, `CLOSED_SHORT`, `CUSTOMER_SUPPLIED`, `REJECTED`
-- `CK_PO_PaymentStatus`: Giá trị: `UNPAID`, `PAID`, `RETURNED`
+- `CK_PO_PaymentStatus`: Giá trị: `UNPAID`, `PAID`, `PARTIALLY_PAID`, `RETURNED`
 - `CK_PO_PaymentMethod`: `CHECK PaymentMethod IS NULL OR PaymentMethod IN ('BANK_TRANSFER','CASH')`
-- `CK_PO_Paid`: `CHECK PaymentStatus <> 'PAID' OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)`
+- `CK_PO_Paid`: `CHECK PaymentStatus NOT IN ('PAID','PARTIALLY_PAID') OR (PaymentDate IS NOT NULL AND PaidAmount > 0 AND PaymentMethod IS NOT NULL)`
 - `CK_PO_PayReturn`: `CHECK PaymentStatus <> 'RETURNED' OR PaymentReturnReason IS NOT NULL`
+- `CK_PO_ActualAmount`: `CHECK ActualAmount IS NULL OR ActualAmount > 0`
 - `CK_PO_Ordered`: `CHECK GoodsStatus IN ('PENDING_FINALISATION','CUSTOMER_SUPPLIED','REJECTED') OR (SupplierId IS NOT NULL AND OrderDate IS NOT NULL)`
 - `CK_PO_Reject`: `CHECK GoodsStatus <> 'REJECTED' OR RejectReason IS NOT NULL`
 - `CK_PO_DeliveryCount`: `CHECK ExpectedDeliveryCount IS NULL OR ExpectedDeliveryCount >= 1`
@@ -1077,6 +1094,27 @@ Index: `IX_OP_Order (OrderId)`.
 - Index UNIQUE: `UQ_MRL_Stock ON dbo.MaterialReceiptLine(MaterialReceiptId, MaterialId) WHERE OrderMaterialId IS NULL`
 
 
+### `DeliveryScheduleDate` — Lịch giao hàng theo ngày
+
+> Số lần giao = số ngày giao (13/11, DEV-ALL-113). Mỗi dòng thuộc đúng một trong ba chứng từ: đơn mua (NCC giao), đơn hàng (khách giao NVL) hoặc đơn từ SHORT_DELIVERY (giao bù). Xóa chứng từ thì xóa lịch. Cột ngày đầu / ngày cuối cũ giữ làm tóm tắt
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `DeliveryScheduleDateId` | INT |  | **PK**; tự tăng |  |
+| `PurchaseOrderId` | INT | ✓ | FK → `PurchaseOrder.PurchaseOrderId` (`ON DELETE CASCADE`) |  |
+| `OrderId` | INT | ✓ | FK → `CustomerOrder.OrderId` (`ON DELETE CASCADE`) |  |
+| `RequestId` | INT | ✓ | FK → `Request.RequestId` (`ON DELETE CASCADE`) |  |
+| `SeqNo` | SMALLINT |  | `CHECK SeqNo >= 1` | lần giao thứ mấy |
+| `DeliveryDate` | DATE |  |  | ngày giao của lần này |
+
+**Ràng buộc & index**
+
+- `CK_DSD_Seq`: `CHECK SeqNo >= 1`
+- `CK_DSD_Owner`: đúng một trong `PurchaseOrderId`, `OrderId`, `RequestId` có giá trị
+- UNIQUE `UQ_DSD_PurchaseOrder`: (PurchaseOrderId, SeqNo) WHERE PurchaseOrderId IS NOT NULL
+- UNIQUE `UQ_DSD_Order`: (OrderId, SeqNo) WHERE OrderId IS NOT NULL
+- UNIQUE `UQ_DSD_Request`: (RequestId, SeqNo) WHERE RequestId IS NOT NULL
+
 ### 4.6 Cắt & cấp kho
 
 Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ may), phiếu trả vải thừa, bàn cắt và bàn giao BTP vào kho.
@@ -1174,13 +1212,18 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 ### `MaterialReturn` — Phiếu trả vải thừa
 
-> Phiếu trả vải thừa: chỉ tổ cắt lập, thủ kho xác nhận (FR 2.10, 2.11). Tổ trả = MaterialIssue.ReceivingTeamId
+> Phiếu trả hàng về kho, thủ kho xác nhận (FR 2.10, 2.11; DEV-ALL-112). Không còn bắt buộc gắn phiếu cấp (`MaterialIssueId` chỉ có ở phiếu cũ).
+> `ReturningTeamId` = tổ cắt hoặc tổ may trả. `WarehouseType` MATERIAL = trả NVL / phế phẩm (tổ cắt theo lệnh cắt, tổ may không theo đơn); SEMI_FINISHED = tổ may trả BTP theo đơn
 
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `MaterialReturnId` | INT |  | **PK**; tự tăng |  |
 | `ReturnCode` | VARCHAR(30) |  | UNIQUE |  |
-| `MaterialIssueId` | INT |  | FK → `MaterialIssue.MaterialIssueId` |  |
+| `MaterialIssueId` | INT | ✓ | FK → `MaterialIssue.MaterialIssueId` | chỉ có ở phiếu trả cũ |
+| `ReturningTeamId` | INT |  | FK → `Team.TeamId` | tổ cắt / tổ may trả hàng |
+| `WarehouseType` | VARCHAR(15) |  | Mặc định `'MATERIAL'`; giá trị: `MATERIAL`, `SEMI_FINISHED` |  |
+| `OrderId` | INT | ✓ | FK → `CustomerOrder.OrderId` | đơn hàng (trả BTP của tổ may) |
+| `WorkOrderId` | INT | ✓ | FK → `WorkOrder.WorkOrderId` | lệnh cắt (trả NVL của tổ cắt) |
 | `Note` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(20) |  | Mặc định `'PENDING'` |  |
 | `ConfirmedBy` | INT | ✓ | FK → `Employee.EmployeeId` |  |
@@ -1192,6 +1235,7 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 - `CK_MRet_Status`: Giá trị: `PENDING`, `CONFIRMED`, `REJECTED`, `CANCELLED`
 - `CK_MRet_Reject`: `CHECK Status <> 'REJECTED' OR RejectReason IS NOT NULL`
+- `CK_MRet_Warehouse`: Giá trị: `MATERIAL`, `SEMI_FINISHED`
 
 ### `MaterialReturnLine` — Dòng phiếu trả vải thừa
 
@@ -1199,7 +1243,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 |---|---|:-:|---|---|
 | `MaterialReturnLineId` | INT |  | **PK**; tự tăng |  |
 | `MaterialReturnId` | INT |  | FK → `MaterialReturn.MaterialReturnId` |  |
-| `MaterialIssueLineId` | INT |  | FK → `MaterialIssueLine.MaterialIssueLineId` |  |
+| `MaterialIssueLineId` | INT | ✓ | FK → `MaterialIssueLine.MaterialIssueLineId` | chỉ có ở phiếu trả cũ |
+| `MaterialId` | INT | ✓ | FK → `Material.MaterialId` | NVL trả (phiếu trả NVL / phế phẩm) |
+| `OrderLineId` | INT | ✓ | FK → `OrderLine.OrderLineId` | dòng đơn trả BTP (phiếu trả BTP) |
 | `ReturnedQty` | DECIMAL(18,3) |  | `CHECK ReturnedQty > 0` |  |
 | `ConfirmedQty` | DECIMAL(18,3) | ✓ |  |  |
 | `DiscrepancyReason` | NVARCHAR(500) | ✓ |  |  |
@@ -1208,7 +1254,9 @@ Lệnh cắt, phiếu cấp kho (NVL cho tổ cắt / may hoặc BTP cho tổ ma
 
 - `CK_MRetL_Confirmed`: `CHECK ConfirmedQty IS NULL OR ConfirmedQty >= 0`
 - `CK_MRetL_Reason`: `CHECK ConfirmedQty IS NULL OR ConfirmedQty = ReturnedQty OR DiscrepancyReason IS NOT NULL`
-- UNIQUE `UQ_MRetL`: (MaterialReturnId, MaterialIssueLineId)
+- `CK_MRetL_Item`: `CHECK (MaterialId IS NOT NULL AND OrderLineId IS NULL) OR (MaterialId IS NULL AND OrderLineId IS NOT NULL)`
+- UNIQUE `UQ_MRetL_Material`: (MaterialReturnId, MaterialId) WHERE MaterialId IS NOT NULL
+- UNIQUE `UQ_MRetL_OrderLine`: (MaterialReturnId, OrderLineId) WHERE OrderLineId IS NOT NULL
 
 ### `CuttingLay` — Bàn cắt
 
@@ -1346,6 +1394,7 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 | Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
 |---|---|:-:|---|---|
 | `WorkAllocationId` | INT |  | **PK**; tự tăng |  |
+| `WorkDate` | DATE |  | Mặc định ngày hiện tại (giờ VN) | ngày làm việc của phiếu (giao việc theo ngày, 03/11) |
 | `MovementType` | VARCHAR(10) |  |  | HANDOVER: giao; RETRIEVAL: thu hồi |
 | `SewingTeamId` | INT |  | FK → `Team.TeamId` | tổ may |
 | `WorkerId` | INT |  | FK → `Employee.EmployeeId` |  |
@@ -1354,8 +1403,9 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 | `Quantity` | INT |  | `CHECK Quantity > 0` | số lần làm được giao / thu hồi |
 | `ConfirmedQty` | INT | ✓ |  | số lần công nhân xác nhận |
 | `DiscrepancyReason` | NVARCHAR(500) | ✓ |  | bắt buộc khi số xác nhận khác số giao |
-| `RetrievalReason` | VARCHAR(20) | ✓ |  | thu hồi: OPERATION_CHANGED, WORKER_ABSENT, STYLE_FINISHED |
-| `ConfirmMode` | VARCHAR(10) |  |  | WORKER: CN tự xác nhận; ON_BEHALF: tổ trưởng xác nhận hộ |
+| `RetrievalReason` | VARCHAR(20) | ✓ |  | thu hồi: OPERATION_CHANGED, WORKER_ABSENT, STYLE_FINISHED, END_OF_DAY, ADJUSTED |
+| `RetrievalNote` | NVARCHAR(500) | ✓ |  | lý do thu hồi cuối ngày (chữ tự do) |
+| `ConfirmMode` | VARCHAR(10) |  | Giá trị: `WORKER`, `ON_BEHALF`, `LEADER`, `SYSTEM` | WORKER: CN tự xác nhận; ON_BEHALF: tổ trưởng xác nhận hộ; LEADER: tổ trưởng giao trực tiếp; SYSTEM: hệ thống tự thu hồi cuối ngày |
 | `OnBehalfReason` | NVARCHAR(500) | ✓ |  |  |
 | `Status` | VARCHAR(10) |  | Mặc định `'PENDING'` | PENDING, CONFIRMED, REJECTED |
 | `RejectReason` | NVARCHAR(500) | ✓ |  |  |
@@ -1365,12 +1415,15 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 **Ràng buộc & index**
 
 - `CK_WA_Type`: Giá trị: `HANDOVER`, `RETRIEVAL`
-- `CK_WA_Retr`: `CHECK MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED')`
-- `CK_WA_Mode`, `CK_WA_Behalf`, `CK_WA_Status`, `CK_WA_Reject`: như bảng cũ
+- `CK_WA_Retr`: `CHECK MovementType = 'HANDOVER' OR RetrievalReason IN ('OPERATION_CHANGED','WORKER_ABSENT','STYLE_FINISHED','END_OF_DAY','ADJUSTED')`
+- `CK_WA_Mode`: Giá trị: `WORKER`, `ON_BEHALF`, `LEADER`, `SYSTEM`
+- `CK_WA_Behalf`: `CHECK ConfirmMode <> 'ON_BEHALF' OR OnBehalfReason IS NOT NULL`
+- `CK_WA_Status`, `CK_WA_Reject`: như bảng cũ
 - `CK_WA_Confirmed`: `CHECK ConfirmedQty IS NULL OR (ConfirmedQty >= 0 AND (ConfirmedQty = Quantity OR DiscrepancyReason IS NOT NULL))`
 - `CK_WA_ConfirmedStatus`: `CHECK Status <> 'CONFIRMED' OR ConfirmedQty IS NOT NULL`
 - Index: `IX_WA_Line ON dbo.WorkAllocation(SewingTeamId, OrderLineId, OperationId, Status) INCLUDE (MovementType, Quantity, ConfirmedQty)`
 - Index: `IX_WA_Worker ON dbo.WorkAllocation(WorkerId, OrderLineId, OperationId, Status)`
+- Index: `IX_WA_Day ON dbo.WorkAllocation(SewingTeamId, WorkDate) INCLUDE (WorkerId, OrderLineId, OperationId, MovementType, ConfirmedQty, Status)`
 
 **Ví dụ:** tổ nhận 400 bộ BTP DH001 Đen M. "KT tay to lần" cần làm 400 lần. Chị A nhận 250 lần, chị D nhận 150 lần. "Là bụng tay lần": chị C nhận 400 lần. Giao tổng lên 401 lần cho một công đoạn thì bị chặn. Chị A nghỉ sau 180 lần: thu hồi 70 lần kèm 70 BTP rồi giao lại cho chị D.
 
@@ -1435,7 +1488,7 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 
 **Ràng buộc & index**
 
-- `CK_DR_Type`: Giá trị: `REWORK`, `SCRAP`
+- `CK_DR_Type`: Giá trị: `REWORK`, `SCRAP`, `OUTPUT_ERR` (tổ trưởng nhập sai sản lượng, trừ khỏi sản lượng và tiền của công nhân, DEV-ALL-79)
 - `CK_DR_Reason`: Giá trị: `SKIPPED_STITCH`, `CROOKED_SEAM`, `WRONG_SIZE`, `TORN`, `STAINED`, `OTHER`
 - `CK_DR_Other`: `CHECK DefectReasonCode <> 'OTHER' OR ReasonNote IS NOT NULL`
 - `CK_DR_Status`: Giá trị: `RECORDED`, `CANCELLED`, `LOCKED`
@@ -1528,14 +1581,17 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 | `DispatchedBy` | INT | ✓ | FK → `Employee.EmployeeId` | Thủ kho |
 | `DispatchedAt` | DATETIME2(0) | ✓ |  |  |
 | `CustomerReceivedDate` | DATE | ✓ |  |  |
+| `DeliveryMethod` | VARCHAR(20) | ✓ | Giá trị: `CUSTOMER_PICKUP`, `COMPANY_VEHICLE` | Thủ kho chọn khi xuất: khách lấy / xe công ty giao (DEV-ALL-127) |
 | `RowVer` | ROWVERSION |  | khóa lạc quan (concurrency) |  |
 
 **Ràng buộc & index**
 
-- `CK_DN_Status`: Giá trị: `PENDING`, `REJECTED`, `CANCELLED`, `IN_DELIVERY`, `DELIVERED`, `PARTIALLY_DELIVERED`
+- `CK_DN_Status`: Giá trị: `PENDING`, `REJECTED`, `CANCELLED`, `IN_DELIVERY`, `DELIVERED`
+- `CK_DN_DeliveryMethod`: `CHECK DeliveryMethod IS NULL OR DeliveryMethod IN ('CUSTOMER_PICKUP','COMPANY_VEHICLE')`
+- `CK_DN_DeliveryMethodSet`: `CHECK Status NOT IN ('IN_DELIVERY','DELIVERED') OR DeliveryMethod IS NOT NULL`
 - `CK_DN_Reject`: `CHECK Status <> 'REJECTED' OR RejectReason IS NOT NULL`
-- `CK_DN_Delivered`: `CHECK Status NOT IN ('DELIVERED','PARTIALLY_DELIVERED') OR CustomerReceivedDate IS NOT NULL`
-- `CK_DN_Dispatched`: `CHECK Status NOT IN ('IN_DELIVERY','DELIVERED','PARTIALLY_DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL)`
+- `CK_DN_Delivered`: `CHECK Status <> 'DELIVERED' OR CustomerReceivedDate IS NOT NULL`
+- `CK_DN_Dispatched`: `CHECK Status NOT IN ('IN_DELIVERY','DELIVERED') OR (DispatchedBy IS NOT NULL AND DispatchedAt IS NOT NULL)`
 - Index: `IX_DN_Order ON dbo.DispatchNote(OrderId, Status)`
 
 ### `DispatchNoteLine` — Dòng phiếu xuất kho
@@ -1546,11 +1602,10 @@ Mọi số liệu ở phân hệ này gắn theo `OrderLineId` (dòng đơn) và
 | `DispatchNoteId` | INT |  | FK → `DispatchNote.DispatchNoteId` |  |
 | `OrderLineId` | INT |  | FK → `OrderLine.OrderLineId` |  |
 | `IssueQty` | INT |  | `CHECK IssueQty > 0` |  |
-| `ReceivedQty` | INT | ✓ |  | khách nhận thực tế (không vượt số xuất) |
 
 **Ràng buộc & index**
 
-- `CK_DNL_Received`: `CHECK ReceivedQty IS NULL OR ReceivedQty BETWEEN 0 AND IssueQty`
+- `CK_DNL_Qty`: `CHECK IssueQty > 0`; khách nhận đúng số xuất khi phiếu `DELIVERED` (DEV-ALL-70)
 - UNIQUE `UQ_DNL`: (DispatchNoteId, OrderLineId)
 
 
@@ -1787,6 +1842,37 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 - UNIQUE `UQ_TMC`: (DailyMealId, TeamId)
 
 
+### `RjEmployeeSnapshot` — Cache nhân viên từ Ronald Jack Pro
+
+> Cache nhẹ nhân viên bên Ronald Jack Pro (mã chấm công + tên, 10/11). Agent ghi lại toàn bộ mỗi chu kỳ; web dùng để gán mã chấm công cho nhân viên hoặc tạo công nhân mới
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `AttendanceCode` | INT |  | **PK** | mã chấm công trên Ronald Jack Pro (NHANVIEN.MaChamCong) |
+| `FullName` | NVARCHAR(200) |  |  |  |
+| `RjEmployeeCode` | NVARCHAR(50) | ✓ |  | mã nhân viên bên Ronald Jack Pro |
+| `SyncedAt` | DATETIME2(0) |  | Mặc định `(dbo.fn_VnNow())` | lần đồng bộ gần nhất |
+
+### `MealRegistration` — Suất ăn theo nhân viên
+
+> Suất ăn từng nhân viên (10/11): sinh từ `DailyTimesheet.CheckIn` (`WillEat` mặc định 1); tổ trưởng / công nhân bỏ tick trước giờ chốt. `TeamMealConfirmation.MealCount` = Σ `WillEat`
+
+| Cột | Kiểu | Null | Ràng buộc / mặc định | Ghi chú |
+|---|---|:-:|---|---|
+| `MealRegistrationId` | INT |  | **PK**; tự tăng |  |
+| `DailyMealId` | INT |  | FK → `DailyMeal.DailyMealId` |  |
+| `EmployeeId` | INT |  | FK → `Employee.EmployeeId` |  |
+| `TeamId` | INT | ✓ | FK → `Team.TeamId` | tổ của nhân viên lúc đó |
+| `WillEat` | BIT |  | Mặc định `1` | bỏ tick thì về 0 |
+| `UpdatedByEmployeeId` | INT | ✓ | FK → `Employee.EmployeeId` | người sửa tick |
+| `UpdatedAt` | DATETIME2(0) | ✓ |  |  |
+
+**Ràng buộc & index**
+
+- UNIQUE `UQ_MR`: (DailyMealId, EmployeeId)
+- Index: `IX_MR_DailyMeal_Team ON dbo.MealRegistration(DailyMealId, TeamId) INCLUDE (WillEat, EmployeeId)`
+- Trigger `trg_MealRegistration_Cutoff`: không đổi sau khi ngày ăn đã chốt
+
 ### 4.11 Kỳ kế toán, lương, chi phí, hòa vốn
 
 ### `AccountingPeriod` — Kỳ kế toán (tháng), khóa / mở khóa
@@ -1960,6 +2046,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 - `CK_VT_Completed`: `CHECK Status = 'STARTED' OR OdometerEnd IS NOT NULL`
 - `CK_VT_Driver`: `CHECK (DriverEmployeeId IS NULL AND DriverName IS NOT NULL) OR (DriverEmployeeId IS NOT NULL AND DriverName IS NULL)`
 - UNIQUE `UQ_VT`: (VehicleId, TripDate, OdometerStart)
+- UNIQUE `UQ_VT_OneOpen ON dbo.VehicleTrip(VehicleId) WHERE Status = 'STARTED'`: mỗi xe chỉ một chuyến đang chạy (DEV-ALL-159)
 
 
 ### 4.13 Hệ thống
@@ -2062,6 +2149,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `trg_MonthlyCost_PeriodLock` | `MonthlyCost` | Như trên |
 | `trg_Employee_TeamLeadership` | `Employee` | Mỗi tổ cắt / may tối đa 1 tổ trưởng và 1 tổ phó đang làm; hai vai trò này phải thuộc tổ cắt hoặc may |
 | `trg_TeamMeal_Cutoff` | `TeamMealConfirmation` | Không đổi số suất của tổ sau khi đã chốt 08:30 (GBR-13, MSG22) |
+| `trg_MealRegistration_Cutoff` | `MealRegistration` | Không thêm / sửa / xóa suất ăn của nhân viên khi ngày ăn đã chốt (50020) |
 | `trg_DailyMeal_GuestCutoff` | `DailyMeal` | Không đổi suất khách sau khi đã chốt |
 | `trg_PieceRate_Approved` | `PieceRate` | Đơn giá đã duyệt không sửa số tiền, ngày hiệu lực, công đoạn, không xóa; đổi giá = thêm dòng mới |
 | `trg_WorkOrderLine_Check` | `WorkOrderLine` | Dòng đơn thuộc đúng đơn hàng và mã hàng của lệnh cắt (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size dòng đơn (50041) |
@@ -2070,7 +2158,7 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `trg_MaterialReceiptLine_Check` | `MaterialReceiptLine` | Dòng đơn mua thuộc đơn mua của phiếu, `OrderMaterialId` thuộc đơn hàng của phiếu (50042); NVL + màu khớp dòng đơn mua (50043) |
 | `trg_MaterialIssue_Check` | `MaterialIssue` | Đơn hàng của phiếu cấp trùng đơn hàng của lệnh cắt (50042) |
 | `trg_MaterialIssueLine_Check` | `MaterialIssueLine` | Phiếu NVL chỉ có dòng NVL, phiếu BTP chỉ có dòng BTP (50045); dòng BTP thuộc đơn hàng của phiếu (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041) |
-| `trg_MaterialReturnLine_Check` | `MaterialReturnLine` | Dòng trả là dòng của phiếu cấp mà phiếu trả gắn vào (50042) |
+| `trg_MaterialReturnLine_Check` | `MaterialReturnLine` | Phiếu trả có gắn phiếu cấp thì dòng trả phải là dòng của phiếu cấp đó (50042) |
 | `trg_CuttingLayLine_Check` | `CuttingLayLine` | Dòng đơn thuộc đơn hàng và mã hàng của lệnh cắt (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041); 50049 bỏ từ DEV-ALL-93 (bàn nhiều vải, backend kiểm) |
 | `trg_CutHandoverLine_Check` | `CutHandoverLine` | Như trên (50042); `ProductComponentMaterialId` là chi tiết `PANEL` của đúng màu × size (50041) |
 | `trg_OperationAssignment_Check` | `OperationAssignment` | Công đoạn thuộc một mã hàng của đơn hàng (50044) |
@@ -2080,6 +2168,8 @@ Ba kho: `MATERIAL` (NVL, theo `MaterialId`), `SEMI_FINISHED` (BTP) và `FINISHED
 | `trg_FgHandoverLine_Check` | `FgHandoverLine` | Dòng đơn thuộc đơn hàng và mã hàng của phiếu bàn giao (50042) |
 | `trg_DispatchNoteLine_Check` | `DispatchNoteLine` | Dòng đơn thuộc đơn hàng của phiếu xuất (50042) |
 | `trg_StocktakeLine_Check` | `StocktakeLine` | Dòng tồn được đếm thuộc đúng kho của phiếu kiểm kê (50045) |
+| `trg_ProductMarker_Check` | `ProductMarker` | Bìa thuộc mã hàng có trong đơn; nhóm bìa đã khai vải theo màu áo; size trong tỉ lệ có trong đơn (50055, DEV-ALL-85) |
+| `trg_ProductMarkerRatio_Check` | `ProductMarkerRatio` | Size trong tỉ lệ bìa phải có trong đơn hàng của mã hàng đó (50055) |
 
 ### Thủ tục
 
@@ -2144,9 +2234,9 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 
 | Bảng | Tham chiếu tới |
 |---|---|
-| `Employee` | `Role`, `Team` |
+| `Employee` | `GradeLevelCode`, `Role`, `Team` |
 | `Account` | `Employee` |
-| `GradeEvaluation` | `Employee`, `Team` |
+| `GradeEvaluation` | `Employee`, `GradeLevelCode`, `Team` |
 | `Announcement` | `Employee` |
 | `AnnouncementTarget` | `Announcement`, `Role`, `Team` |
 | `Notification` | `Employee` |
@@ -2158,7 +2248,7 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `ProductMarkerComponent` | `ProductComponent` |
 | `ProductMarkerFabric` | `Material`, `Product`, `ProductColor` |
 | `ProductComponent` | `Product` |
-| `ProductComponentMaterial` | `Material`, `ProductComponent`, `ProductVariant` |
+| `ProductComponentMaterial` | `Material`, `ProductColor`, `ProductComponent` |
 | `CustomerOrder` | `Customer` |
 | `OrderLine` | `CustomerOrder`, `ProductVariant` |
 | `OrderMaterial` | `CustomerOrder`, `Material` |
@@ -2169,7 +2259,7 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `KpiTarget` | `CustomerOrder`, `Product`, `Team` |
 | `KpiDailyTarget` | `KpiTarget` |
 | `Request` | `CustomerOrder`, `DefectRecord`, `Employee`, `KpiTarget`, `MaterialIssue`, `MaterialReceipt`, `Team`, `WorkOrder` |
-| `RequestLine` | `Material`, `MaterialReceiptLine`, `OrderLine`, `ProductComponentMaterial`, `Request` |
+| `RequestLine` | `Material`, `MaterialReceiptLine`, `OrderLine`, `OrderMaterial`, `ProductComponentMaterial`, `PurchaseOrderLine`, `Request` |
 | `PurchaseOrder` | `CustomerOrder`, `Request`, `Supplier` |
 | `PurchaseOrderLine` | `Material`, `OrderMaterial`, `PurchaseOrder` |
 | `MaterialReceipt` | `CustomerOrder`, `Employee`, `PurchaseOrder`, `Request` |
@@ -2178,9 +2268,9 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `WorkOrderLine` | `OrderLine`, `ProductComponentMaterial`, `WorkOrder` |
 | `MaterialIssue` | `CustomerOrder`, `Employee`, `Request`, `Team`, `WorkOrder` |
 | `MaterialIssueLine` | `Material`, `MaterialIssue`, `OrderLine`, `ProductComponentMaterial` |
-| `MaterialReturn` | `Employee`, `MaterialIssue` |
-| `MaterialReturnLine` | `MaterialIssueLine`, `MaterialReturn` |
-| `CuttingLay` | `Material`, `Team`, `WorkOrder` |
+| `MaterialReturn` | `CustomerOrder`, `Employee`, `MaterialIssue`, `Team`, `WorkOrder` |
+| `MaterialReturnLine` | `Material`, `MaterialIssueLine`, `MaterialReturn`, `OrderLine` |
+| `CuttingLay` | `Team`, `WorkOrder` |
 | `CuttingLayLine` | `CuttingLay`, `OrderLine`, `ProductComponentMaterial` |
 | `CutHandover` | `Employee`, `WorkOrder` |
 | `CutHandoverLine` | `CutHandover`, `OrderLine`, `ProductComponentMaterial` |
@@ -2208,6 +2298,13 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | `BreakEvenResult` | `AccountingPeriod`, `Product` |
 | `VehicleTrip` | `DispatchNote`, `Employee`, `Vehicle` |
 | `AuditLog` | `Employee` |
+| `GradeLevel` | `GradeLevelCode` |
+| `OrderPayment` | `CustomerOrder` |
+| `KpiTargetLine` | `KpiTarget`, `OrderLine` |
+| `PurchasePayment` | `PurchaseOrder` |
+| `DeliveryScheduleDate` | `CustomerOrder`, `PurchaseOrder`, `Request` |
+| `CuttingLayFabric` | `CuttingLay`, `Material` |
+| `MealRegistration` | `DailyMeal`, `Employee`, `Team` |
 
 ---
 
@@ -2227,3 +2324,10 @@ Mỗi dòng: bảng → các bảng nó tham chiếu.
 | 09/11/2026 | `OperationComponent` chỉ gắn chi tiết vải (PANEL); mỗi chi tiết cắt một vải ở một màu áo, vải lót, mex, bo là chi tiết riêng (DEV-ALL-86, backend kiểm, không đổi cấu trúc bảng) |
 | 09/11/2026 | `ProductComponentMaterial` theo màu áo, không theo size: `ProductVariantId` thay bằng `ProductColorId` (FK ghép `ProductColor`), `UQ_PCM` (ProductColorId, ProductComponentId, MaterialId); 6 trigger 50041 so màu của định mức với màu dòng đơn (DEV-ALL-87) |
 | 10/11/2026 | Dạng bìa theo màu áo (DEV-ALL-89): `ProductMarkerFabric` giữ cấu trúc, mỗi dòng là màu dùng nhóm bìa, `MaterialId` do backend lấy từ định mức của các chi tiết trên nhóm; các màu dùng chung nhóm phải dùng chung mọi nhóm, mỗi nhóm một vải ở mỗi màu. Patch `SQL/patches/2026-11-10_marker_layouts.sql` |
+| 11/11/2026 | Bàn cắt nhập số lượng sau cắt và số mét vải (DEV-ALL-90, 93); `Request.HandlerRoleCode`, `HandlerTeamId` (loại `OTHER`, DEV-ALL-91); `WorkOrder.FabricTolerancePercent` (DEV-ALL-92); khổ vải / khổ bìa `WidthM` (DEV-ALL-102); lịch giao theo đơn: `CustomerOrder.CustomerDeliveryCount/Date/DateTo`, `Request.ExpectedDeliveryCount`, `TargetDateTo`, `RequestLine.PurchaseOrderLineId`, `OrderMaterialId` (DEV-ALL-94, 95) |
+| 13/11/2026 | Thêm `DeliveryScheduleDate` (số lần giao = số ngày giao, DEV-ALL-113) |
+| 03/11/2026 – 19/11/2026 | Thêm `KpiTargetLine`; `WorkAllocation` thêm `WorkDate`, `RetrievalNote`, `ConfirmMode` thêm `LEADER` / `SYSTEM`, `RetrievalReason` thêm `END_OF_DAY` / `ADJUSTED`; `DispatchNote` bỏ `PARTIALLY_DELIVERED`, `DispatchNoteLine` bỏ `ReceivedQty` (DEV-ALL-70), thêm `DispatchNote.DeliveryMethod` (DEV-ALL-127); `DefectRecord.DefectType` thêm `OUTPUT_ERR` (DEV-ALL-79); `Request.Status` thêm `NOT_COMPLETED`; `PurchaseOrder.PaymentStatus` thêm `PARTIALLY_PAID`; thêm `PurchasePayment`, `OrderPayment` (DEV-ALL-136, 137) |
+| 10/11/2026 (2) | Thêm `RjEmployeeSnapshot`, `MealRegistration` (+ `trg_MealRegistration_Cutoff`); `Account.Username` tách khỏi `Employee.EmployeeCode` |
+| 20/11/2026 | `Material.MaterialCode` có lại (DEV-ALL-149); `Team` bỏ `TeamName`, `GradeLevelCode` bỏ `GradeName`, `Product` bỏ `ProductName`; `Employee` / `GradeEvaluation` bậc thợ đổi `CHAR(1)` thành `VARCHAR(5)` có FK sang `GradeLevelCode`; `CustomerOrder.DeliveryAddress` (DEV-ALL-147) |
+| 22/11/2026 | `MaterialReturn` / `MaterialReturnLine` trả được NVL, phế phẩm, BTP không cần phiếu cấp: thêm `ReturningTeamId`, `WarehouseType`, `OrderId`, `WorkOrderId`, `MaterialId`, `OrderLineId` (DEV-ALL-112); `VehicleTrip` thêm `UQ_VT_OneOpen` (DEV-ALL-159). Rà lại tài liệu này và `NX-MTD_Database.dbml` cho khớp script |
+| 24/11/2026 | Đơn từ thêm loại `MACHINE_REPAIR` (Sửa máy): tổ cắt / may gửi, Cơ điện xử lý, không qua duyệt (DEV-ALL-169). Patch `SQL/patches/2026-11-24_request_machine_repair.sql` |
