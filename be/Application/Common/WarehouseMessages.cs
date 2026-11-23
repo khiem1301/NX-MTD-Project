@@ -291,6 +291,7 @@ public static class WarehouseMessages
     public const string TripDuplicate = "Đã có chuyến cùng ngày và cùng km đầu của xe này.";
     public const string TripStarted = "Đã ghi chuyến, chờ kết thúc chuyến.";
     public const string TripCompleted = "Đã kết thúc chuyến.";
+    public const string FuelReceiptRequired = "Nhập tiền xăng thì phải có ít nhất một ảnh hóa đơn xăng. Chụp / tải ảnh lên rồi lưu.";
     public const string OdometerEndInvalid = "Km cuối phải lớn hơn km đầu ({0}).";
     public const string KmGapWarning = "Đã ghi chuyến. Số km không liền với chuyến trước (km cuối chuyến trước: {0}) — vui lòng kiểm tra lại.";
     public const string FuelOverNormWarning = "Đã kết thúc chuyến. Lượng xăng vượt định mức quá mức cho phép (định mức {0} lít) — vui lòng kiểm tra lại.";
