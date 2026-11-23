@@ -24,6 +24,9 @@ public static class Messages
     public const string AttendanceSyncStatusInvalid = "Trạng thái phiên đồng bộ không hợp lệ.";
     public const string AttendanceSyncOverdue =
         "Chưa đồng bộ được chấm công hơn 30 phút. Có thể nhập file dự phòng.";                // MSG23
+    public const string NotifyAttendanceSyncOverdueTitle = "Đồng bộ chấm công RJ bị gián đoạn";
+    public const string NotifyAttendanceSyncOverdueBody =
+        "Chưa đồng bộ được chấm công hơn {0} phút (lần cuối: {1}). Kiểm tra agent / máy RJ hoặc nhập file Excel dự phòng.";
     public const string AttendanceRjEmployeeSyncRequested =
         "Đã gửi yêu cầu. Agent sẽ đồng bộ nhân viên và lượt quẹt từ máy RJ trong vài giây (cần agent đang chạy).";
     public const string DateRangeInvalid = "Ngày kết thúc phải không nhỏ hơn ngày bắt đầu.";
