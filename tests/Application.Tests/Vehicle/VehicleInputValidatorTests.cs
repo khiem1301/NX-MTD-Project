@@ -34,10 +34,10 @@ public class VehicleInputValidatorTests
     [InlineData(null, 0, false)]                // 0 đồng không có nghĩa
     [InlineData(null, 100_000_001, false)]      // vượt trần tiền
     [InlineData(null, 1000.5, false)]           // tiền xăng phải là số nguyên đồng
-    [InlineData(0, 100_000, false)]             // 0 lít không hợp lệ nếu API gửi kèm
+    [InlineData(0.0, 100_000, false)]           // 0 lít không hợp lệ nếu API gửi kèm (phải double cho double?)
     [InlineData(1_000.01, 100_000, false)]      // vượt 1.000 lít
     [InlineData(10.123, 100_000, false)]        // quá 2 số lẻ
-    [InlineData(10, 100_000, true)]             // lít vẫn hợp lệ nếu API gửi kèm
+    [InlineData(10.0, 100_000, true)]           // lít vẫn hợp lệ nếu API gửi kèm
     public void FuelLitersAndCost_AreBoundedAndPositive(double? liters, double cost, bool valid) =>
         TripValid(liters is null ? null : (decimal)liters, (decimal)cost).Should().Be(valid);
 
