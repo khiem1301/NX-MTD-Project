@@ -11,9 +11,10 @@ public sealed record OrderPaymentQuery : PageQuery
     public string? State { get; init; }
 }
 
+/// <summary><c>OrderAmount</c> = tổng tiền gia công của cả đơn (Σ số lượng × đơn giá CMT); chỉ trả tổng, không trả đơn giá.</summary>
 public sealed record OrderPaymentListItemDto(
-    int OrderId, string OrderCode, string CustomerName, string OrderStatus, decimal? FinalAmount, decimal PaidAmount,
-    decimal? Remaining, string State);
+    int OrderId, string OrderCode, string CustomerName, string OrderStatus, decimal OrderAmount, decimal? FinalAmount,
+    decimal PaidAmount, decimal? Remaining, string State);
 
 /// <summary>Một lần thanh toán. <c>CanEdit</c>: trong 24 giờ kể từ lúc nhập.</summary>
 public sealed record OrderPaymentLineDto(
@@ -22,8 +23,8 @@ public sealed record OrderPaymentLineDto(
 
 /// <summary>Remaining = giá trị chốt − đã thanh toán (dương: khách còn phải trả; âm: mình còn phải trả khách).</summary>
 public sealed record OrderPaymentDto(
-    int OrderId, string OrderCode, string CustomerName, string OrderStatus, decimal? FinalAmount, string? FinalAmountReason,
-    decimal PaidAmount, decimal? Remaining, string State, byte[] RowVer, IReadOnlyList<OrderPaymentLineDto> Payments,
+    int OrderId, string OrderCode, string CustomerName, string OrderStatus, decimal OrderAmount, decimal? FinalAmount,
+    string? FinalAmountReason, decimal PaidAmount, decimal? Remaining, string State, byte[] RowVer, IReadOnlyList<OrderPaymentLineDto> Payments,
     IReadOnlyList<AuditLogDto> History);
 
 /// <summary>Giá trị chốt cả đơn (cho phép âm hoặc 0); bắt buộc lý do. Tổng đã thanh toán phải còn nằm giữa 0 và giá trị mới.</summary>

@@ -111,6 +111,10 @@ public sealed class ProductSpecService : IProductSpecService
         // Định mức theo màu áo (DEV-ALL-87): màu của các màu – size gửi lên.
         var colorByName = variantMatch.Select(m => m.Entity!.ProductColor).DistinctBy(c => c.ProductColorId)
             .ToDictionary(c => Upper(c.Color), c => c.ProductColorId);
+        // Màu đã có ở mã hàng nhưng chưa có size (tạo khi nhập Excel định mức): chỉ thêm màu được định mức / nhóm bìa dùng.
+        var referenced = dto.Norms.Select(n => Upper(n.Color)).Concat(dto.MarkerColors.Select(f => Upper(f.Color))).ToHashSet();
+        foreach (var (name, id) in await ColorIdsAsync(productId, ct))
+            if (referenced.Contains(name)) colorByName.TryAdd(name, id);
         await ClearMarkerGroupsAsync(productId, ct);   // trước khi gỡ thành phần: ProductMarkerComponent trỏ vào thành phần
         var removeNorms = await RemoveDroppedComponentsAsync(productId, components, keptComponents, norms, ct);
         var componentByName = await UpsertComponentsAsync(productId, componentMatch);
@@ -310,6 +314,12 @@ public sealed class ProductSpecService : IProductSpecService
             .ToDictionary(g => g.Key, g => g.ToHashSet());
     }
 
+    /// <summary>Mọi màu của mã hàng (kể cả màu chưa có size), theo tên chữ hoa.</summary>
+    private async Task<Dictionary<string, int>> ColorIdsAsync(int productId, CancellationToken ct) =>
+        (await _uow.Repository<ProductColor>().Query().AsNoTracking().Where(c => c.ProductId == productId)
+            .Select(c => new { c.Color, c.ProductColorId }).ToListAsync(ct))
+        .GroupBy(c => Upper(c.Color)).ToDictionary(g => g.Key, g => g.First().ProductColorId);
+
     private async Task<Result<ProductSpecDto>?> ValidateAsync(int productId, SaveProductSpecDto dto, CancellationToken ct)
     {
         if (dto.Components.Any(c => c.PiecesPerGarment is < 1 or > 99))
@@ -329,6 +339,7 @@ public sealed class ProductSpecService : IProductSpecService
 
         var componentNames = dto.Components.Select(c => c.ComponentName.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();
+        colors.UnionWith((await ColorIdsAsync(productId, ct)).Keys);
         if (dto.Norms.Any(n => !componentNames.Contains(n.ComponentName.Trim()) || !colors.Contains(Upper(n.Color))))
             return Invalid(Messages.ProductSpecNormReference);
         // UQ_PCM: mỗi (màu, thành phần, NVL) một dòng.
@@ -377,6 +388,7 @@ public sealed class ProductSpecService : IProductSpecService
         var panels = dto.Components.Where(c => CodeText.ToCode(c.ComponentType) == ComponentTypes.Panel)
             .Select(c => Upper(c.ComponentName)).ToHashSet();
         var colors = dto.Variants.Select(v => Upper(v.Color)).ToHashSet();
+        colors.UnionWith((await ColorIdsAsync(productId, ct)).Keys);
         if (dto.MarkerComponents.Any(m => !panels.Contains(Upper(m.ComponentName))) || dto.MarkerColors.Any(f => !colors.Contains(Upper(f.Color))))
             return Invalid(Messages.ProductSpecMarkerReference);
         var groups = dto.MarkerComponents.Select(m => m.MarkerNo).ToHashSet();

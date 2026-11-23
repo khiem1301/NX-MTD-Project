@@ -411,7 +411,7 @@ public static class Messages
     // DEV-ALL-121: nhập riêng từng bảng từ form mã hàng
     public const string SpecImportPartUnknown = "Bảng \"{0}\" không hợp lệ (chỉ nhận components, norms, groups, markers).";
     // DEV-ALL-122: popup kiểm tra Excel trước khi lưu
-    public const string SpecImportPendingColor = "Màu {0} chưa có ở mã hàng — kiểm khi Lưu đơn (đơn tạo màu, size).";
+    public const string SpecImportPendingColor = "Màu {0} chưa có ở mã hàng — tự tạo khi bấm Lưu.";
     public const string SpecImportPendingMarker = "Bìa của đơn kiểm khi Lưu đơn (cần đơn có mã hàng này).";
     public const string OrderMaterialPendingOrder = "Kiểm đầy đủ khi Lưu đơn (cần đơn).";
     public const string MaterialNotInCatalog =

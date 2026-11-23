@@ -41,11 +41,11 @@ public class VehicleInputValidatorTests
         TripValid((decimal)liters, (decimal)cost).Should().Be(valid);
 
     [Fact]
-    public void FuelLitersAndCost_AreBothGivenOrBothEmpty()
+    public void FuelCost_CanBeGivenWithoutLiters()
     {
         TripValid(null, null).Should().BeTrue();
-        TripValid(10, null).Should().BeFalse();
-        TripValid(null, 100_000).Should().BeFalse();
+        TripValid(null, 100_000).Should().BeTrue();   // màn Sổ xe chỉ nhập tiền xăng
+        TripValid(10, null).Should().BeTrue();
     }
 
     [Fact]

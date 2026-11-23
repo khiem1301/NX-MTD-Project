@@ -299,7 +299,6 @@ public static class WarehouseMessages
     public const string PlateInvalid = "Biển số không đúng định dạng (ví dụ 51C-123.45 hoặc 30F-1234).";
     public const string FuelLitersInvalid = "Số xăng phải lớn hơn 0, tối đa 1.000 lít và tối đa 2 chữ số sau dấu phẩy.";
     public const string FuelCostInvalid = "Tiền xăng phải là số nguyên đồng lớn hơn 0, tối đa 100.000.000 ₫.";
-    public const string FuelBothRequired = "Phải nhập cả số xăng và tiền xăng, hoặc để trống cả hai.";
     public const string OdometerTooLarge = "Số km tối đa 9.999.999.";
     public const string FuelNormScale = "Định mức xăng tối đa 2 chữ số sau dấu phẩy.";
     public const string DeliveryDateRequired = "Vui lòng chọn ngày giao hàng.";

@@ -51,7 +51,7 @@ public sealed class CompleteVehicleTripDtoValidator : AbstractValidator<Complete
         RuleFor(x => x.OdometerEnd).Cascade(CascadeMode.Stop)
             .GreaterThan(0).WithMessage(WarehouseMessages.OdometerInvalid)
             .LessThanOrEqualTo(VehicleLimits.MaxOdometer).WithMessage(WarehouseMessages.OdometerTooLarge);
-        // Có xăng thì phải có tiền xăng và ngược lại; không đổ xăng thì để trống cả hai (0 không có nghĩa).
+        // Màn Sổ xe chỉ nhập tiền xăng (DEV-ALL-167); số lít không bắt buộc, có gửi thì vẫn kiểm (0 không có nghĩa).
         RuleFor(x => x.FuelLiters)
             .Must(v => v is > 0 and <= VehicleLimits.MaxFuelLiters && decimal.Round(v.Value, 2) == v)
             .WithMessage(WarehouseMessages.FuelLitersInvalid)
@@ -60,7 +60,5 @@ public sealed class CompleteVehicleTripDtoValidator : AbstractValidator<Complete
             .Must(v => v is > 0 and <= VehicleLimits.MaxFuelCost && decimal.Truncate(v.Value) == v)
             .WithMessage(WarehouseMessages.FuelCostInvalid)
             .When(x => x.FuelCost is not null);
-        RuleFor(x => x).Must(x => (x.FuelLiters is null) == (x.FuelCost is null)).WithName("FuelCost")
-            .WithMessage(WarehouseMessages.FuelBothRequired);
     }
 }

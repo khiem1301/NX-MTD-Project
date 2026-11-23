@@ -207,6 +207,18 @@ public class OrderPaymentServiceTests
     }
 
     [Fact]
+    public async Task Get_ReturnsOrderAmountAsSumOfQtyTimesPrice()
+    {
+        var order = Order(null);
+        order.OrderLines.Add(new OrderLine { OrderedQty = 100, CmtUnitPrice = 15_000 });
+        order.OrderLines.Add(new OrderLine { OrderedQty = 50, CmtUnitPrice = 20_000 });
+
+        var dto = (await Sut().GetAsync(3, default)).Data!;
+
+        dto.OrderAmount.Should().Be(2_500_000);
+    }
+
+    [Fact]
     public async Task List_FiltersByState()
     {
         Order(1_000_000, (1_000_000, 1));

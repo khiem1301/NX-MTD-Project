@@ -33,6 +33,8 @@ public sealed class SpecImportBuilder
     public const string ActionPending = "Pending";
     /// <summary>DEV-ALL-123 (chỉ ở popup kiểm tra Excel): mã NVL chưa có trong danh mục — cảnh báo, admin chọn thêm vào danh mục.</summary>
     public const string ActionNewMaterial = "NewMaterial";
+    /// <summary>Size của biến thể tạm: màu đã có ở mã hàng (ProductColor) nhưng chưa có size từ đơn hàng.</summary>
+    public const string ColorOnlySize = "?";
     private const int MaxNameLength = 100;
     private const int MaxNoteLength = 200;
     private const short MaxPieces = 99;
@@ -263,7 +265,8 @@ public sealed class SpecImportBuilder
             .ToList();
         var activeNames = components.Select(c => Upper(c.ComponentName)).ToHashSet();
 
-        var variants = _spec.Variants.Where(v => v.Status == "Active")
+        // Biến thể tạm (màu chưa có size, xem ColorOnlySize) chỉ để nhận màu, không ghi.
+        var variants = _spec.Variants.Where(v => v.Status == "Active" && v.SizeCode != ColorOnlySize)
             .Select(v => new SaveProductVariantDto(v.ProductVariantId, v.Color, v.SizeCode)).ToList();
 
         var fileNormKeys = _validNorms.Select(n => (Upper(n.Color), Upper(n.ComponentName))).ToHashSet();
