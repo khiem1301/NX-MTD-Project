@@ -159,6 +159,14 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-167 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, màn Sổ xe và nhiên liệu, `CompleteVehicleTripDtoValidator` | Kết thúc chuyến chỉ nhập Km cuối và Tiền xăng; bỏ ô Xăng (lít) và quy tắc "có lít thì phải có tiền xăng"; tiền xăng nhập riêng được | Mở |
+| DEV-ALL-166 | 24/11/2026 | AI theo yêu cầu của người dùng | UC05, thông báo, form Thêm khách / Nhà cung cấp, đăng nhập | Thông báo có nhãn màu theo loại (Từ quản lý xanh dương, Đơn từ tím, Kho cam, Sản xuất xanh lá, Hệ thống xanh ngọc, Khẩn đỏ), toast thông báo khẩn màu cam; các trường bắt buộc nhập (tên, địa chỉ, điện thoại, email của khách / NCC; đăng nhập) hiện dấu * đỏ | Mở |
+| DEV-ALL-165 | 24/11/2026 | AI theo yêu cầu của người dùng | UC34 mở rộng, màn Công nợ đơn hàng, `OrderPaymentService`, GBR-02 | Màn "Thanh toán đơn hàng" đổi tên thành "Công nợ đơn hàng"; Kế toán thấy thêm Tổng tiền đơn (Σ số lượng × đơn giá CMT) ở danh sách và chi tiết; Quản đốc vẫn không thấy | Mở |
+| DEV-ALL-164 | 24/11/2026 | AI theo yêu cầu của người dùng | Mọi màn, `HintTip`, `global.css`, `constants/messages.ts` | Hint (chữ hướng dẫn) chỉ hiện khi di chuột: dưới ô nhập (Form.Item extra) hiện khi trỏ vào ô, ở đầu modal / tab thành biểu tượng (i); rút gọn chữ hint; giảm cỡ chữ, chiều cao ô, khoảng cách dòng, modal sát mép trên hơn | Mở |
+| DEV-ALL-163 | 23/11/2026 | AI theo yêu cầu của Khiêm | UC09, form đơn, `OrderImportModal` | Hộp Nhập dòng hàng từ Excel nhận luôn mã hàng đã khai trên form đơn (chờ Lưu đơn), không hiện nút "Tạo mã hàng" cho mã đó | Mở |
+| DEV-ALL-162 | 23/11/2026 | AI theo yêu cầu của Khiêm | UC10, `ProductColor`, `SpecImportService`, `ProductSpecService` | Nhập Excel định mức tự tạo màu áo có trong file (Định mức NVL, Nhóm bìa) mà mã hàng chưa có; định mức / nhóm bìa dùng được màu chưa có size. Lưu mã hàng ở màn Mã hàng là nhập được định mức ngay, không phải chờ đơn | Mở |
+| DEV-ALL-161 | 23/11/2026 | AI theo yêu cầu của Khiêm | UC10, UC09, danh mục NVL, popup kiểm tra Excel | Bỏ hộp hỏi "Thêm NVL vào danh mục?" (sửa DEV-ALL-123): Xác nhận là NVL chưa có tự được thêm vào danh mục khi lưu; thiếu Tên / Khổ thì không cho Xác nhận | Mở |
+| DEV-ALL-160 | 23/11/2026 | AI theo yêu cầu của Khiêm | UC10, UC09, popup kiểm tra Excel, form mã hàng | Popup kiểm tra Excel báo ngay dòng thiếu trường bắt buộc; còn dòng lỗi thì không cho Xác nhận (sửa DEV-ALL-122: dòng lỗi bỏ qua khi lưu). Thêm mới mã hàng kiểm lại file trước khi Lưu, còn lỗi thì không lưu gì | Mở |
 | DEV-ALL-156 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC52, màn Phân công công đoạn, `EmployeeLookupDto` | Ô chọn công nhân ở màn Phân công công đoạn hiện thêm bậc thợ hiện tại ("mã - tên (bậc X)"); API lookup team-members trả thêm `currentGradeCode` | Mở |
 | DEV-ALL-155 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC10, form sửa mã hàng, `ExcelReviewModal`, `SpecImport` JSON | Form sửa mã hàng (popup kiểm tra Excel) có ô "Thay thế dữ liệu cũ" như các chỗ nhập Excel khác; API preview/import-data và excel/check nhận `replace` | Mở |
 | DEV-ALL-154 | 20/11/2026 | AI theo yêu cầu của Khiêm | UC09, form đơn, `OrderExcelImports`, `ExcelReviewModal` | Nhập Bìa / NVL Excel ở form đơn mở popup kiểm tra để xem và sửa (ô lỗi viền cam + tooltip mô tả); Xác nhận mới giữ trên form, Lưu đơn mới ghi | Mở |
@@ -3112,4 +3120,101 @@
 - **Ảnh hưởng người khác:** Không.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: thêm màn Admin xem trạng thái xe (UC35 hoặc UC mới)
+- **Trạng thái:** Mở
+
+### DEV-ALL-160 · Popup kiểm tra Excel: thiếu trường là lỗi, còn lỗi thì không Xác nhận / không Lưu
+
+- **Ngày / Người / Task / PR:** 23/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09; FE `ExcelReviewModal`, `useExcelReview`, `utils/excelReview` (`missingFieldsError`, `withMissingFields`, `bundleErrorCount`), `useProductFormImports.checkNoErrors`, `ProductFormModal`
+- **Tài liệu gốc ghi:** DEV-ALL-122: popup báo dòng lỗi / chờ kiểm; dòng lỗi còn lại khi Xác nhận bị bỏ qua khi lưu.
+- **Code đang làm:** Dòng thiếu trường bắt buộc (Thành phần: tên, loại, số chi tiết; Định mức NVL: màu, chi tiết, mã NVL; Nhóm bìa: số nhóm, chi tiết, màu; Bìa của đơn: mã hàng, nhóm, mã bìa, dài, khổ, trạng thái, tỉ lệ size; NVL của đơn: mã NVL, số cần) là lỗi ngay trên máy, không chờ máy chủ. Còn dòng lỗi thì Xác nhận bị chặn và bảng tự lọc dòng lỗi. Form Thêm mới mã hàng gọi kiểm lại file với máy chủ khi bấm Lưu; còn dòng lỗi, lỗi chéo hoặc NVL mới thiếu thông tin thì không lưu gì, form vẫn mở để sửa.
+- **Lý do:** Khiêm yêu cầu: thiếu trường thì báo lỗi luôn và không cho lưu; tạo mã hàng phải đủ và không lỗi mới lưu.
+- **Ảnh hưởng người khác:** Bìa của đơn bắt buộc cột Mã hàng (trước đây đơn một mã hàng được để trống).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC10, UC09 (kiểm tra dữ liệu Excel trước khi lưu)
+- **Trạng thái:** Mở
+
+### DEV-ALL-161 · Bỏ hộp hỏi thêm NVL vào danh mục
+
+- **Ngày / Người / Task / PR:** 23/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10, UC09, danh mục NVL; FE `ExcelReviewModal` (xóa `AddMaterialsAskModal`)
+- **Tài liệu gốc ghi:** DEV-ALL-123: khi Xác nhận hỏi admin có thêm NVL chưa có vào danh mục không; không thêm thì dòng dùng NVL đó bị bỏ qua.
+- **Code đang làm:** Không hỏi: Xác nhận là NVL chưa có luôn được thêm vào danh mục khi lưu. NVL mới thiếu Tên (vải thiếu Khổ) thì báo lỗi, chưa Xác nhận.
+- **Lý do:** Khiêm yêu cầu bỏ bảng hỏi, tự thêm NVL.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC10 (NVL chưa có trong danh mục khi nhập Excel)
+- **Trạng thái:** Mở
+
+### DEV-ALL-162 · Nhập Excel định mức tự tạo màu áo của mã hàng
+
+- **Ngày / Người / Task / PR:** 23/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC10; bảng `ProductColor`; BE `SpecImportService` (`EnsureColorsAsync`, `WithColorOnlyAsync`, `PlanAsync`, `ImportCoreAsync`), `SpecImportBuilder.ColorOnlySize`, `ProductSpecService` (`ColorIdsAsync`, kiểm / ghi định mức và nhóm bìa)
+- **Tài liệu gốc ghi:** Màu – size của mã hàng lấy từ đơn hàng; định mức NVL, nhóm bìa chỉ nhận màu đã có trong đơn của mã hàng (lỗi "Màu … chưa có trong đơn hàng nào của mã hàng này").
+- **Code đang làm:** Nhập Excel định mức (cả file và dữ liệu đã sửa) tạo `ProductColor` cho màu trong sheet Định mức NVL / Nhóm bìa mà mã hàng chưa có, trong cùng giao dịch với ghi định mức (lỗi thì không để lại màu). Định mức và nhóm bìa dùng được màu chưa có size; size vẫn chỉ tạo từ đơn hàng, đơn sau đó dùng lại màu theo tên. Xem trước coi màu trong file là sẽ được tạo; kiểm chéo của nút Lưu chạy lúc Nhập.
+- **Lý do:** Khiêm yêu cầu: lưu mã hàng thì lưu luôn định mức NVL và nhóm bìa, không chờ Lưu đơn.
+- **Ảnh hưởng người khác:** Màu gõ sai trong file Excel cũng thành màu mới của mã hàng.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC10 (định mức theo màu), quy tắc màu – size lấy từ đơn hàng
+- **Trạng thái:** Mở
+
+### DEV-ALL-163 · Nhập dòng hàng nhận mã hàng đã khai trên form đơn
+
+- **Ngày / Người / Task / PR:** 23/11/2026 · AI theo yêu cầu của Khiêm · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC09; FE `OrderImportModal`, `OrderImportButton`, `useOrderForm.stagedProducts`, `utils/orderImport.acceptStagedProducts`
+- **Tài liệu gốc ghi:** DEV-ALL-151: mã hàng khai trên form đơn chỉ ghi khi Lưu đơn; hộp Nhập dòng hàng chỉ nhận mã đã có trong danh mục hoặc mã tạo trong chính hộp đó.
+- **Code đang làm:** Mã hàng đã khai trên form đơn (nút thêm mã, chờ Lưu đơn) được hộp Nhập dòng hàng nhận luôn: dòng của mã đó hợp lệ, gắn vào khối mã hàng đang có, không hiện nút "Tạo mã hàng".
+- **Lý do:** Khiêm yêu cầu: mã vừa thêm trong lúc tạo đơn thì không hiện tạo mã hàng nữa khi nhập số lượng màu size.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC09 (nhập dòng hàng từ Excel)
+- **Trạng thái:** Mở
+
+### DEV-ALL-164 · Hint chỉ hiện khi di chuột, chữ hint ngắn gọn, giao diện gọn hơn
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** mọi màn; FE `components/common/HintTip`, `styles/global.css`, `styles/theme.ts`, `components/layout/MainLayout`, `constants/messages.ts` và `constants` của từng feature (chữ hint)
+- **Tài liệu gốc ghi:** Hint / chú thích hiển thị sẵn dưới ô nhập và ở đầu modal, tab (các câu MSG và mockup trong Report-3).
+- **Code đang làm:** Hint dưới ô nhập (Form.Item extra) ẩn, chỉ hiện khi di chuột vào ô; di chuột ra là ẩn kể cả khi đang nhập. Hint ở đầu modal / tab (đoạn chữ xám, khung Alert xanh) đổi thành biểu tượng (i), di chuột vào mới hiện. Rút gọn chữ khoảng 55 câu hint. Giảm cỡ chữ 15 xuống 14, chiều cao ô 38 xuống 34, khoảng cách dòng chữ và dòng bảng, menu trái 260 xuống 240; modal cách mép trên 24px.
+- **Lý do:** Người dùng yêu cầu giao diện gọn, hint không chiếm chỗ.
+- **Ảnh hưởng người khác:** Không. Cảnh báo trạng thái (Alert warning / error) và Alert "chưa có dữ liệu" giữ nguyên.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: mockup và chữ hướng dẫn ở các màn có hint
+- **Trạng thái:** Mở
+
+### DEV-ALL-165 · Công nợ đơn hàng: Kế toán thấy tổng tiền của đơn
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC34 mở rộng (DEV-ALL-137), GBR-02; BE `OrderPaymentListItemDto.OrderAmount`, `OrderPaymentDto.OrderAmount`, `OrderPaymentService` (`ListAsync`, `GetAsync`, `LoadAsync`); FE `features/order-payment`
+- **Tài liệu gốc ghi:** GBR-02: đơn giá CMT và thành tiền là dữ liệu mật. DEV-ALL-137: Kế toán không được thấy đơn giá gia công nên giá trị chốt phải nhập tay.
+- **Code đang làm:** Màn đổi tên "Thanh toán đơn hàng" thành "Công nợ đơn hàng" (menu, tiêu đề). API của Kế toán trả thêm `OrderAmount` = Σ số lượng × đơn giá CMT của cả đơn; danh sách có cột "Tổng tiền đơn", chi tiết có dòng "Tổng tiền đơn". Chỉ trả tổng, không trả đơn giá từng dòng. Màn và API chỉ dành cho Kế toán nên Quản đốc không thấy; các API của Quản đốc vẫn không trả đơn giá, thành tiền.
+- **Lý do:** Người dùng yêu cầu Kế toán xem được tiền cả đơn để chốt giá trị và theo dõi công nợ; Quản đốc không được xem.
+- **Ảnh hưởng người khác:** Kế toán nay suy ra được đơn giá trung bình của đơn (tổng tiền / tổng số lượng).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 / `NX-MTD_AI_Context.md` mục 3 tầng dữ liệu (GBR-02): Kế toán thấy tổng tiền đơn hàng
+  - [ ] Report-3: tên màn "Công nợ đơn hàng"
+- **Trạng thái:** Mở
+
+### DEV-ALL-166 · Thông báo có màu theo loại, dấu * cho trường bắt buộc
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC05; FE `features/notification` (`NotificationTypeTags`, `NOTIFICATION_SOURCE_LABEL`), `utils/zodRule`, `utils/partnerRules`, `LoginPage`
+- **Tài liệu gốc ghi:** Thông báo chỉ phân biệt Khẩn và "Từ quản lý" / "Hệ thống"; trường bắt buộc chỉ báo khi lưu.
+- **Code đang làm:** Mỗi loại thông báo có nhãn màu riêng ở chuông, trang chủ, hộp thư: Từ quản lý xanh dương, Đơn từ tím, Kho cam, Sản xuất xanh lá, Hệ thống xanh ngọc, Khẩn đỏ. Toast thông báo khẩn hiện màu cam. Trường bắt buộc (tên, địa chỉ, điện thoại, email của khách hàng / nhà cung cấp; tên đăng nhập, mật khẩu) có dấu * đỏ ở nhãn.
+- **Lý do:** Người dùng yêu cầu dễ phân biệt loại thông báo và biết trường nào bắt buộc.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC05 (hiển thị thông báo), mockup form Thêm khách / Nhà cung cấp
+- **Trạng thái:** Mở
+
+### DEV-ALL-167 · Sổ xe: bỏ ô Xăng (lít) khi kết thúc chuyến
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC35, MSG30 (cảnh báo xăng vượt định mức); FE `TripCompleteModal`, `vehicle-log/constants`; BE `CompleteVehicleTripDtoValidator`, `WarehouseMessages.FuelBothRequired` (xóa)
+- **Tài liệu gốc ghi:** Kết thúc chuyến nhập Km cuối, Xăng (lít), Tiền xăng; có xăng thì phải có tiền xăng và ngược lại; xăng vượt định mức × (1 + dung sai) thì cảnh báo MSG30.
+- **Code đang làm:** Form kết thúc chuyến chỉ còn Km cuối (bắt buộc) và Tiền xăng (tùy chọn). BE bỏ quy tắc "cả hai hoặc không"; vẫn nhận `FuelLiters` tùy chọn (không có thì để trống). Cột `VehicleTrip.FuelLiters` giữ nguyên trong DB. Vì UI không còn gửi số lít nên cảnh báo xăng vượt định mức (MSG30) không còn được kích hoạt từ màn này; báo cáo kế toán Xe vẫn có cột Tổng xăng (lít) nhưng sẽ là 0 / trống với chuyến mới.
+- **Lý do:** Người dùng yêu cầu bỏ trường Xăng (lít) ở Sổ xe và nhiên liệu.
+- **Ảnh hưởng người khác:** Báo cáo kế toán (UC36) cột Tổng xăng (lít) và định mức xăng của xe không còn dữ liệu mới.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC35 (form kết thúc chuyến), MSG30; UC36 (cột Tổng xăng)
 - **Trạng thái:** Mở
