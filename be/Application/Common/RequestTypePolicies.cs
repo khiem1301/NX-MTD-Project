@@ -45,6 +45,7 @@ public static class RequestTypePolicies
         new RequestTypePolicy(RequestTypes.MaterialRequisition, Leaders, CuttingOrSewing, Roles.WarehouseKeeper, true, "Xin NVL"),
         new RequestTypePolicy(RequestTypes.SemiFinishedRequisition, Leaders, SewingOnly, Roles.WarehouseKeeper, true, "Xin BTP"),
         new RequestTypePolicy(RequestTypes.MaterialPurchase, NoCreator, null, Roles.Manager, false, "Mua NVL"),
+        new RequestTypePolicy(RequestTypes.MachineRepair, Leaders, CuttingOrSewing, Roles.Electrician, false, "Sửa máy"),
         new RequestTypePolicy(RequestTypes.Other, Everyone, null, string.Empty, true, "Khác", HandlerChosenOnCreate: true),
     }.ToDictionary(p => p.RequestType);
 

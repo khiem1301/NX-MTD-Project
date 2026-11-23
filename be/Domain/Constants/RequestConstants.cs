@@ -15,12 +15,14 @@ public static class RequestTypes
     /// <summary>Hệ thống tạo khi duyệt đơn NVL lỗi mà kho thiếu NVL: Quản đốc đọc rồi tự tạo đơn mua.</summary>
     public const string MaterialPurchase = "MATERIAL_PURCHASE";
     public const string Other = "OTHER";
+    /// <summary>Tổ cắt / may báo máy hỏng, Cơ điện xử lý (DEV-ALL-169).</summary>
+    public const string MachineRepair = "MACHINE_REPAIR";
 
     public static readonly IReadOnlyList<string> All = new[]
     {
         SpareParts, NewMachine, MachineSupplies, AttendanceCorrection, MaterialSupplement,
         DefectiveMaterial, ReplacementCutting, ShortDelivery, MaterialRequisition, SemiFinishedRequisition,
-        MaterialPurchase, Other,
+        MaterialPurchase, Other, MachineRepair,
     };
 }
 

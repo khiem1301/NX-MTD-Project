@@ -33,6 +33,7 @@ export const GENERIC_FORM_TYPES: readonly RequestType[] = [
   'SemiFinishedRequisition',
   'DefectiveMaterial',
   'Other',
+  'MachineRepair',
 ];
 
 /** Loại đơn có bước duyệt, khớp NeedsApproval của RequestTypePolicies ở BE. */
@@ -49,8 +50,8 @@ export const APPROVAL_TYPES: readonly RequestType[] = [
   'Other',
 ];
 
-/** Đơn Khác chỉ có nội dung, không có dòng chi tiết. */
-export const NO_LINE_TYPES: readonly RequestType[] = ['Other'];
+/** Đơn Khác và đơn Sửa máy chỉ có nội dung, không có dòng chi tiết. */
+export const NO_LINE_TYPES: readonly RequestType[] = ['Other', 'MachineRepair'];
 
 /** Tab trạng thái đang chờ, hiện kèm số đơn. */
 export const WAITING_STATUSES: readonly RequestStatus[] = [

@@ -11,6 +11,7 @@ export const REQUEST_TYPE = {
   SemiFinishedRequisition: 'SemiFinishedRequisition',
   MaterialPurchase: 'MaterialPurchase',
   Other: 'Other',
+  MachineRepair: 'MachineRepair',
 } as const;
 export type RequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE];
 
@@ -28,6 +29,7 @@ export const REQUEST_TYPE_LABEL: Record<RequestType, string> = {
   SemiFinishedRequisition: 'Xin BTP',
   MaterialPurchase: 'Mua NVL',
   Other: 'Khác',
+  MachineRepair: 'Sửa máy',
 };
 
 export const REQUEST_STATUS = {

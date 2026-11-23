@@ -85,6 +85,7 @@ public static class Messages
     public const string RequisitionOverWorkOrderCap = "Vượt trần vải của lệnh cắt (số mét hệ thống tính + tỉ lệ sai lệch): {0}.";
     public const string RequisitionOverCapLine = "{0}: trần {1}, các đơn khác đã xin {2}, đơn này {3}";
     public const string OtherRequestNoLines = "Đơn khác không có dòng chi tiết, ghi yêu cầu ở phần nội dung.";
+    public const string MachineRepairNoLines = "Đơn sửa máy không có dòng chi tiết, ghi máy nào hỏng và lỗi gì ở phần nội dung.";
     public const string RequisitionLinesRequired = "Đơn xin phải có ít nhất một dòng.";
     public const string RequisitionMaterialRequired = "Đơn Xin NVL phải chọn NVL trong danh mục cho từng dòng.";
     public const string RequisitionMaterialInvalid = "NVL đã chọn không còn dùng hoặc không tồn tại.";
