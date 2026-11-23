@@ -44,4 +44,10 @@ public interface IDailyWorkAllocationService
     Task<Result<DailyAllocationBoardDto>> GetBoardAsync(int teamId, DateOnly workDate, int orderId, int? orderLineId, CancellationToken ct);
 
     Task<Result<DailyAllocationResultDto>> SaveAsync(SaveDailyAllocationDto dto, int teamId, CancellationToken ct);
+
+    /// <summary>
+    /// Khi công nhân rời tổ may (chuyển tổ / loại khỏi tổ): giữ nguyên sản lượng đã báo ở tổ cũ, rút phiếu
+    /// PENDING, thu hồi CONFIRMED phần chưa làm xong, đóng phân công. Gọi trước khi đổi <c>Employee.TeamId</c>.
+    /// </summary>
+    Task<Result> SettleOnTeamLeaveAsync(int oldTeamId, IReadOnlyList<int> workerIds, CancellationToken ct);
 }

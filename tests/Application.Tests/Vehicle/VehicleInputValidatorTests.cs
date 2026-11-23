@@ -29,23 +29,24 @@ public class VehicleInputValidatorTests
     public void Plate_MustLookLikeAVietnameseCarPlate(string plate, bool valid) => PlateValid(plate).Should().Be(valid);
 
     [Theory]
-    [InlineData(0.5, 100_000, true)]
-    [InlineData(1_000, 100_000_000, true)]      // đúng trần
-    [InlineData(0, 100_000, false)]             // 0 lít không có nghĩa
+    [InlineData(null, 100_000, true)]
+    [InlineData(null, 100_000_000, true)]       // đúng trần tiền
+    [InlineData(null, 0, false)]                // 0 đồng không có nghĩa
+    [InlineData(null, 100_000_001, false)]      // vượt trần tiền
+    [InlineData(null, 1000.5, false)]           // tiền xăng phải là số nguyên đồng
+    [InlineData(0.0, 100_000, false)]           // 0 lít không hợp lệ nếu API gửi kèm (phải double cho double?)
     [InlineData(1_000.01, 100_000, false)]      // vượt 1.000 lít
     [InlineData(10.123, 100_000, false)]        // quá 2 số lẻ
-    [InlineData(10, 0, false)]                  // 0 đồng
-    [InlineData(10, 100_000_001, false)]        // vượt trần tiền
-    [InlineData(10, 1000.5, false)]             // tiền xăng phải là số nguyên đồng
-    public void FuelLitersAndCost_AreBoundedAndPositive(double liters, double cost, bool valid) =>
-        TripValid((decimal)liters, (decimal)cost).Should().Be(valid);
+    [InlineData(10.0, 100_000, true)]           // lít vẫn hợp lệ nếu API gửi kèm
+    public void FuelLitersAndCost_AreBoundedAndPositive(double? liters, double cost, bool valid) =>
+        TripValid(liters is null ? null : (decimal)liters, (decimal)cost).Should().Be(valid);
 
     [Fact]
-    public void FuelLitersAndCost_AreBothGivenOrBothEmpty()
+    public void FuelCost_MayBeGivenWithoutLiters()
     {
         TripValid(null, null).Should().BeTrue();
-        TripValid(10, null).Should().BeFalse();
-        TripValid(null, 100_000).Should().BeFalse();
+        TripValid(null, 100_000).Should().BeTrue();
+        TripValid(10, null).Should().BeTrue();
     }
 
     [Fact]

@@ -255,6 +255,8 @@ export const MESSAGES = {
     transferTarget: 'Tổ đích',
     effectiveDate: 'Ngày hiệu lực',
     transferReason: 'Lý do',
+    transferSettleHint:
+      'Với tổ may: hệ thống giữ sản lượng công nhân đã báo ở tổ cũ và tự thu hồi phần giao chưa làm xong.',
     addMembers: 'Thêm nhân viên',
     addMembersPick: 'Nhân viên chưa thuộc tổ nào',
     addMembersEmpty: 'Không còn nhân viên nào chưa thuộc tổ.',

@@ -229,6 +229,8 @@ public static class Messages
     public const string TeamMemberNotInTeam = "Nhân viên không thuộc tổ này.";
     public const string TeamAppointed = "Đã bổ nhiệm. Người giữ chức cũ (nếu có) đã chuyển về Công nhân.";
     public const string TeamTransferred = "Đã chuyển {0} nhân viên.";
+    /// <summary>Thêm vào message thành công khi có thu hồi sản lượng giao chưa làm xong ở tổ may cũ.</summary>
+    public const string TeamTransferSettledSuffix = " Đã chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ.";
     public const string TeamMemberHasTeam = "{0} đang thuộc tổ khác. Dùng Chuyển sang tổ khác.";
     public const string TeamRemoveLeader = "{0} đang là tổ trưởng / tổ phó. Thôi giữ chức trước khi loại khỏi tổ.";
     public const string TeamMembersAdded = "Đã thêm {0} nhân viên vào tổ.";

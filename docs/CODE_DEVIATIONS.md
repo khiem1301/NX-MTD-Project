@@ -45,6 +45,7 @@
 | DEV-KH-08-1 | 23/10/2026 | Khiêm | UC10, `Product` | Ảnh mẫu mã hàng nhập đường dẫn, chưa upload | Mở |
 | DEV-KH-10-1 | 24/10/2026 | Khiêm | UC18, `Employee` | Chuyển tổ chỉ cho ngày hiệu lực ≤ hôm nay | Mở |
 | DEV-KH-10-2 | 24/10/2026 | Khiêm | UC16, UC18 | Bổ nhiệm tổ trưởng / tổ phó hạ người cũ về Công nhân; Quản đốc đổi vai trò được qua bổ nhiệm | Mở |
+| DEV-KH-10-3 | 24/11/2026 | Khiêm | UC18, UC53/UC60, `WorkAllocation` | Chuyển / loại khỏi tổ may: chốt sản lượng đã báo, tự thu hồi phần chưa làm xong | Mở |
 | DEV-KH-06-1 | 22/10/2026 | Khiêm | UC07, `Request` | Tổ trưởng / tổ phó tổ may cũng tạo được đơn xin NVL | Mở |
 | DEV-KH-06-2 | 22/10/2026 | Khiêm | UC07, UC08, R1 | Tổ phó luôn có quyền như tổ trưởng (chưa xét tổ trưởng vắng) | Mở |
 | DEV-MI-09-7 | 21/10/2026 | Minh (AI) | UC31/UC12/UC29, `ClosedXmlPayrollParser`, `XlsxWorkbookLoader` | File Excel thật có logo ảnh hỏng và công thức tham chiếu file khác: gói được làm sạch (bỏ hình, bỏ công thức, giữ giá trị lưu sẵn) trước khi đọc; sheet có cột SLĐ nhưng không có Thực lĩnh bị bỏ qua thay vì làm lỗi cả file | Mở |
@@ -640,6 +641,18 @@
 - **Ảnh hưởng người khác:** Minh (chấm công, lương theo tổ), Kiều (phân công công đoạn) – tổ đổi ngay lúc lưu.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3 + `NX-MTD_Tong_hop_Use_Case.md` UC18: ghi rõ ngày hiệu lực ≤ hôm nay
+- **Trạng thái:** Mở
+
+### DEV-KH-10-3 · Chuyển / loại khỏi tổ may: chốt sản lượng đã báo, thu hồi phần chưa làm xong
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · Khiêm · KH-10 · (chưa mở PR)
+- **Ảnh hưởng tới:** UC18, UC53/UC60, `WorkAllocation`, `OperationAssignment`, `DailyWorkAllocationService.SettleOnTeamLeaveAsync`, `TeamService.TransferInAsync` / `RemoveMembersAsync`, `EmployeeService` đổi tổ
+- **Tài liệu gốc ghi:** UC18 chuyển tổ không nêu xử lý sản lượng / giao việc đã giao ở tổ cũ.
+- **Code đang làm:** Trước khi đổi `Employee.TeamId`, với tổ may cũ: giữ nguyên `OutputRecord` đã báo; rút phiếu giao PENDING; xác nhận luôn phiếu thu hồi PENDING; ghi thu hồi `ADJUSTED` **CONFIRMED** (`ConfirmMode = SYSTEM`) đúng `Remaining` (đã giao − đã báo, gồm tồn mang sang); đóng phân công (`ValidTo = hôm nay`). Tổ cắt / văn phòng bỏ qua.
+- **Lý do:** Sau chuyển tổ, tổ trưởng cũ không còn hạ số giao cho công nhân (`WorkerNotInTeam`); nếu không thu hồi thì phần giao chưa làm chiếm quota tổ cũ.
+- **Ảnh hưởng người khác:** Kiều (giao việc / sản lượng), Minh (trần sản lượng / lương theo tổ).
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 + UC18: ghi rõ bước chốt sản lượng + tự thu hồi khi chuyển / loại khỏi tổ may
 - **Trạng thái:** Mở
 
 ### DEV-KH-10-2 · Bổ nhiệm tổ trưởng / tổ phó

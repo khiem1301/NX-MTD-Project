@@ -28,6 +28,7 @@ public class HrServiceTests
     private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
     private readonly ICurrentUser _user = Substitute.For<ICurrentUser>();
     private readonly IClock _clock = Substitute.For<IClock>();
+    private readonly IDailyWorkAllocationService _dailyAllocations = Substitute.For<IDailyWorkAllocationService>();
 
     public HrServiceTests()
     {
@@ -39,14 +40,20 @@ public class HrServiceTests
         _hasher.Hash(default!).ReturnsForAnyArgs(c => "hash:" + c.Arg<string>());
         _passwords.Generate().Returns("123456");
         _employees.GetRoleIdAsync(default!, default).ReturnsForAnyArgs(9);
+        _dailyAllocations.SettleOnTeamLeaveAsync(default, default!, default)
+            .ReturnsForAnyArgs(Result.Success());
+        _uow.BeginTransactionAsync().Returns(Task.CompletedTask);
+        _uow.CommitTransactionAsync().Returns(Task.CompletedTask);
+        _uow.RollbackTransactionAsync().Returns(Task.CompletedTask);
     }
 
     private EmployeeScope Scope() => new(_user);
 
     private EmployeeService Employees() =>
-        new(_employees, _accountRepo, _teams, _hasher, _passwords, _usernames, _audit, _uow, _user, _clock, Scope());
+        new(_employees, _accountRepo, _teams, _hasher, _passwords, _usernames, _audit, _uow, _user, _clock, Scope(),
+            _dailyAllocations);
 
-    private TeamService Teams() => new(_teams, _employees, _audit, _uow, _clock, Scope());
+    private TeamService Teams() => new(_teams, _employees, _audit, _uow, _clock, Scope(), _dailyAllocations);
 
     private static Employee Person(int id, string role, int? team = 4, string pay = PayTypes.PieceRate) => new()
     {
@@ -375,6 +382,8 @@ public class HrServiceTests
         person.TeamId.Should().Be(5);
         person.FullName.Should().Be("Tên mới");
         person.Account.SecurityStamp.Should().NotBe(oldStamp);
+        await _dailyAllocations.Received(1).SettleOnTeamLeaveAsync(4,
+            Arg.Is<IReadOnlyList<int>>(ids => ids.Single() == 7), Arg.Any<CancellationToken>());
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.Reason != null && e.Reason.StartsWith("Chuyển tổ")));
     }
 
@@ -576,9 +585,13 @@ public class HrServiceTests
         var a = Person(8, RoleCodes.Worker);
         var b = Person(9, RoleCodes.Worker);
         _employees.GetActiveByIdsAsync(default!, default).ReturnsForAnyArgs(new List<Employee> { a, b });
+        _teams.GetByIdAsync(4).Returns(TeamOf(id: 4));
         var ok = await Teams().TransferInAsync(5, new TransferMembersDto(new[] { 8, 9 }, new DateOnly(2026, 10, 24), "cần người"), default);
         ok.IsSuccess.Should().BeTrue();
+        ok.Message.Should().Contain(Messages.TeamTransferSettledSuffix);
         a.TeamId.Should().Be(5);
+        await _dailyAllocations.Received(1).SettleOnTeamLeaveAsync(4,
+            Arg.Is<IReadOnlyList<int>>(ids => ids.OrderBy(x => x).SequenceEqual(new[] { 8, 9 })), Arg.Any<CancellationToken>());
         _audit.Received(2).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Employee) && e.Reason!.Contains("hiệu lực 24/10/2026")));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 5 && e.Summary!.StartsWith("Nhận chuyển đến: Người 8, Người 9")));
         _audit.Received(1).Add(Arg.Is<AuditEntry>(e => e.TableName == nameof(Team) && e.RecordId == 4 && e.Summary!.StartsWith("Chuyển sang tổ MAY1: Người 8, Người 9")));
