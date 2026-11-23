@@ -161,6 +161,8 @@
                  SQL/patches/2026-11-20_drop_team_grade_name.sql.
    - 22/11/2026  Công nguyên ngày: WorkdayValue = 1 nếu giờ làm ≥ WORKDAY_STANDARD_HOURS, không thì 0
                  (usp_Attendance_RebuildTimesheet / ApplyAdjustment). Patch: SQL/patches/2026-11-22_workday_full_day.sql.
+   - 24/11/2026  (DEV-ALL-169) Đơn từ loại MACHINE_REPAIR (Sửa máy): tổ trưởng / tổ phó tổ cắt và tổ may gửi, Cơ điện xử lý, không qua duyệt.
+                 CK_Request_Type thêm MACHINE_REPAIR. Patch: SQL/patches/2026-11-24_request_machine_repair.sql.
    Đây là MỘT file duy nhất: ai chưa có database chạy một lần là có đủ schema, tài khoản mẫu và dữ liệu demo.
 
    Chạy được trên SQL Server 2019 trở lên (đã chạy thử trên SQL Server 2019 CU32).
@@ -810,7 +812,8 @@ CREATE TABLE dbo.Request (
     UpdatedAt            DATETIME2(0)   NULL,
     RowVer               ROWVERSION,
     CONSTRAINT CK_Request_Type CHECK (RequestTypeCode IN ('SPARE_PARTS','NEW_MACHINE','MACHINE_SUPPLIES','ATTENDANCE_CORRECTION',
-        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE','OTHER')),
+        'MATERIAL_SUPPLEMENT','DEFECTIVE_MATERIAL','REPLACEMENT_CUTTING','SHORT_DELIVERY','MATERIAL_REQUISITION','SEMI_FINISHED_REQUISITION','MATERIAL_PURCHASE','OTHER',
+        'MACHINE_REPAIR')),
     CONSTRAINT CK_Request_Handler CHECK (
         (RequestTypeCode = 'OTHER' AND ((ISNULL(HandlerRoleCode, '') = 'TEAM_LEADER' AND HandlerTeamId IS NOT NULL)
             OR (ISNULL(HandlerRoleCode, '') IN ('ADMIN','MANAGER','ACCOUNTANT','WAREHOUSE_KEEPER') AND HandlerTeamId IS NULL)))
@@ -3114,7 +3117,7 @@ INSERT @d VALUES
  ('Product', N'Mã hàng'), ('OperationGroup', N'Công đoạn to (nhóm công đoạn)'), ('Operation', N'Công đoạn'), ('OperationComponent', N'Công đoạn làm trên chi tiết vải nào'), ('PieceRate', N'Đơn giá công đoạn'),
  ('OrderMaterial', N'NVL của đơn: cần bao nhiêu, khách cấp bao nhiêu, phải mua bao nhiêu'), ('ProductColor', N'Màu áo của mã hàng'), ('ProductVariant', N'Biến thể mã hàng: màu × size'),('ProductComponent', N'Thành phần của mã hàng: chi tiết vải (PANEL) và phụ liệu (TRIM)'),
  ('ProductComponentMaterial', N'Định mức NVL theo màu áo × thành phần: dùng NVL nào (đã gồm màu NVL)'), ('KpiTarget', N'KPI tổ may'), ('KpiDailyTarget', N'KPI tổ may theo từng ngày'), ('KpiTargetLine', N'KPI tổ may theo dòng đơn (màu × size)'),
- ('Request', N'Đơn từ (10 loại, gồm yêu cầu NVL / BTP)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
+ ('Request', N'Đơn từ (13 loại, gồm yêu cầu NVL / BTP / sửa máy)'), ('RequestLine', N'Dòng chi tiết đơn từ'),
  ('Material', N'Nguyên vật liệu'), ('Supplier', N'Nhà cung cấp'), ('PurchaseOrder', N'Đơn mua NVL kèm thanh toán (OrderId NULL = đơn mua dùng chung)'),
  ('PurchaseOrderLine', N'Dòng đơn mua NVL'),
  ('MaterialReceipt', N'Phiếu nhập NVL (mới / bổ sung)'), ('MaterialReceiptLine', N'Dòng phiếu nhập NVL'),

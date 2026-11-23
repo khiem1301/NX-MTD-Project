@@ -14,6 +14,7 @@ public static class RequestModule
         services.AddScoped<IRequestTypeHandler, MachineSuppliesRequestHandler>();  // Cơ điện xin vật tư máy
         services.AddScoped<IRequestTypeHandler, NewMachineRequestHandler>();       // Cơ điện xin máy mới
         services.AddScoped<IRequestTypeHandler, OtherRequestHandler>();            // Đơn khác (DEV-ALL-91)
+        services.AddScoped<IRequestTypeHandler, MachineRepairRequestHandler>();    // Tổ cắt / may báo máy hỏng cho Cơ điện (DEV-ALL-169)
         services.AddScoped<IRequestRepository, RequestRepository>();
         services.AddScoped<IRequestService, RequestService>();
         services.AddScoped<IRequestQueryService, RequestQueryService>();

@@ -164,6 +164,8 @@
 | DEV-ALL-172 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-10, GBR-17, popup Tính hòa vốn | Tháng đã khóa sổ vẫn tính hòa vốn được (không chặn như GBR-10), popup chỉ cảnh báo; vì duyệt lương tự khóa tháng nên chặn sẽ làm hòa vốn không bao giờ tính được | Mở |
 | DEV-ALL-171 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-17, `BreakEvenResult`, `FinanceService`, màn Hòa vốn | Mỗi lần tính hòa vốn chạy cả hai cách chia định phí (sản lượng, giờ công) và so sánh cạnh nhau; bỏ ô chọn cách; tỉ lệ giờ công chuẩn hóa về 100%; popup Tính có kiểm dữ liệu đầu vào (API `break-even/inputs`); bấm mã hàng xem chi tiết; `UQ_BER` thêm `AllocationBasis` (patch `2026-11-24_break_even_both_bases.sql`) | Mở |
 | DEV-ALL-170 | 24/11/2026 | AI theo yêu cầu của người dùng | UC21, trang chủ, `HomeDashboardService`, `/api/v1/<role>/home` | Trang chủ theo vai trò cho cả 9 vai trò: ô số bấm được, biểu đồ tròn tiến độ từng đơn / lệnh cắt, danh sách chờ xử lý; mỗi role một API `home` trả đủ số liệu; bỏ bảng tiến độ đơn, khối doanh thu và khối KPI tổ cũ ở trang chủ | Mở |
+
+| DEV-ALL-169 | 24/11/2026 | AI theo yêu cầu của người dùng | UC07 / UC08 (đơn từ), `RequestTypePolicies`, `MachineRepairRequestHandler`, `Request` | Thêm loại đơn từ thứ 13 MACHINE_REPAIR (Sửa máy): tổ trưởng / tổ phó tổ cắt và tổ may báo máy hỏng, Cơ điện xử lý, không qua duyệt, chỉ có tiêu đề, nội dung, ảnh; Cơ điện có thêm menu Đơn cần xử lý | Mở |
 | DEV-ALL-167 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, màn Sổ xe và nhiên liệu, `CompleteVehicleTripDtoValidator` | Kết thúc chuyến chỉ nhập Km cuối và Tiền xăng; bỏ ô Xăng (lít) và quy tắc "có lít thì phải có tiền xăng"; tiền xăng nhập riêng được | Mở |
 | DEV-ALL-166 | 24/11/2026 | AI theo yêu cầu của người dùng | UC05, thông báo, form Thêm khách / Nhà cung cấp, đăng nhập | Thông báo có nhãn màu theo loại (Từ quản lý xanh dương, Đơn từ tím, Kho cam, Sản xuất xanh lá, Hệ thống xanh ngọc, Khẩn đỏ), toast thông báo khẩn màu cam; các trường bắt buộc nhập (tên, địa chỉ, điện thoại, email của khách / NCC; đăng nhập) hiện dấu * đỏ | Mở |
 | DEV-ALL-165 | 24/11/2026 | AI theo yêu cầu của người dùng | UC34 mở rộng, màn Công nợ đơn hàng, `OrderPaymentService`, GBR-02 | Màn "Thanh toán đơn hàng" đổi tên thành "Công nợ đơn hàng"; Kế toán thấy thêm Tổng tiền đơn (Σ số lượng × đơn giá CMT) ở danh sách và chi tiết; Quản đốc vẫn không thấy | Mở |
@@ -225,6 +227,7 @@
 | DEV-ALL-14 | 27/10/2026 | Claude (AI) | UC24, UC38, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 26/10: màu NVL nằm trong `Material.Color`, giao việc không còn BTP giao kèm, bỏ `vw_TeamPieceHolding`; thêm validate và dữ liệu demo 19.3 | Đã làm |
 | DEV-ALL-13 | 26/10/2026 | Claude (AI) | UC24, UC40–UC44, UC47, UC52–UC55, UC60 | Chuyển code sang database bản 25/10: ghi kho qua usp_Stock_Post, cắt bù theo chi tiết × vải, giao việc theo công đoạn (WorkAllocation), công đoạn to / chi tiết | Đã làm |
 | DEV-ALL-12 | 25/10/2026 | Claude (AI) | UC37, UC45–UC47, swimlane III.1–III.5 | Đối chiếu màn hình luồng chính với swimlane; còn lệch: Thủ kho không nhập thiếu / lỗi, chưa có bước Quản đốc duyệt phiếu xuất (database chưa có trạng thái) | Mở |
+| DEV-ALL-168 | 23/11/2026 | Claude (AI) | Bộ UC v26 (73 UC), UC21 / UC33 / UC35 / UC39 / UC45 / UC61 | Bộ Use Case v26 đổi từ 67 lên 73 UC và đánh số lại; thêm 6 UC cho các chức năng code đã có (nhật ký thay đổi, bìa cắt theo đơn, thanh toán đơn hàng khách, giờ suất ăn, xem xe, AI gợi ý bậc). Số UC trong các mục cũ của file này không đổi | Mở |
 
 ---
 
@@ -3284,4 +3287,110 @@
 - **Ảnh hưởng người khác:** Kế toán (ghi chuyến, Sổ xe) phải chụp / tải ảnh trước khi lưu chuyến có tiền xăng.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC35 (kết thúc chuyến: ảnh hóa đơn xăng bắt buộc khi có tiền xăng)
+
+### DEV-ALL-168 · Bộ Use Case v26: 73 UC, đánh số lại, thêm 6 UC cho chức năng code đã có
+
+- **Ngày / Người / Task / PR:** 23/11/2026 · Claude (AI) theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** `NX-MTD_Danh_sach_Use_Case_v26.docx`, `NX-MTD_4.2_Use_Cases_VI.docx` / `_EN.docx`, bộ sơ đồ `NX-MTD_UC_Diagrams_v26_VI_EN` (thư mục `Đồ Án/File_visual/UC/v26`); mọi chỗ trong Report-3 và file này tham chiếu số UC
+- **Tài liệu gốc ghi:** Bộ UC v26 (28/10/2026) có 67 UC. Nhật ký thay đổi, bìa cắt theo đơn, thanh toán đơn hàng khách, cấu hình giờ suất ăn, Admin xem xe và AI gợi ý bậc thợ chưa có UC riêng (nằm lẫn trong UC19, UC31, UC32, UC67, UC40, UC55) hoặc không được nhắc.
+- **Code đang làm:** Các chức năng trên đã chạy (DEV-ALL-85 và DEV-ALL-115 bìa cắt, DEV-ALL-137 thanh toán đơn hàng, DEV-ALL-148 AI gợi ý bậc, DEV-ALL-159 Admin xem xe, màn Cấu hình suất ăn và Nhật ký thay đổi của Admin). Bộ UC được sửa theo code: thêm 6 UC và đánh số lại 73 UC theo thứ tự xếp cạnh UC liên quan (UC01–UC20 giữ nguyên).
+  - **UC mới (số mới):** UC21 Xem nhật ký thay đổi dữ liệu (Admin) · UC33 Quản lý bìa cắt theo đơn (Manager, Admin kế thừa) · UC35 Quản lý thanh toán đơn hàng khách (Accountant) · UC39 Cấu hình giờ nhắc và giờ chốt suất ăn (Admin) · UC45 Xem xe và trạng thái đang chạy (Admin) · UC61 AI gợi ý bậc thợ cho tổ (Team Leader; actor phụ mới **AI service**, hiện dùng Gemini).
+  - **Đổi số UC cũ của v26 sang số mới:** UC21–UC31 → UC22–UC32; UC32 → UC34; UC33–UC35 → UC36–UC38; UC36–UC40 → UC40–UC44; UC41–UC55 → UC46–UC60; UC56–UC67 → UC62–UC73 (ví dụ Quản lý KPI UC22 → UC23, Quản lý phiếu xuất kho UC50 → UC55, Đồng bộ chấm công UC66 → UC72). Bảng đầy đủ nằm trong `CHANGELOG_v26_vi.md`.
+  - **UC07, UC08 (đơn từ), giữ theo tài liệu, code làm khác:** (1) đơn bổ sung NVL: tài liệu cho Manager và Team Leader tạo, code cho Team Leader, Team Deputy và Warehouse Keeper tạo, Manager không tạo được; (2) đơn báo NVL lỗi: tài liệu ghi Warehouse Keeper tạo từ phiếu nhập (UC47), code chỉ cho Team Leader / Team Deputy tổ Cắt tạo, phiếu nhập không có luồng này; (3) đơn cắt bù: tài liệu ghi hoàn thành khi hàng cắt bù đã nhập kho, code chỉ cho Manager bấm Hoàn thành thủ công (`ReplacementCuttingRequestHandler.AllowManualComplete = true`), mỗi đơn gắn đúng một phiếu hàng hỏng Scrap. Đã bổ sung vào mô tả UC07, UC08 phần code có mà tài liệu thiếu: Manager duyệt đơn NVL lỗi thì hệ thống tự tạo đơn xin NVL (đủ tồn) hoặc đơn Mua NVL (thiếu tồn); bỏ quan hệ extend UC07 → UC47 và UC07 → UC67 khỏi bảng quan hệ và sơ đồ (hệ thống không tự tạo đơn từ khi lập phiếu nhập hay ghi hàng hỏng); liên hệ giữa UC08 với UC50, UC23, UC36, UC27 chỉ nằm trong mô tả UC, bảng quan hệ chỉ dùng include / extend chuẩn UML.
+  - **Luồng "UC này dẫn sang UC kia", tài liệu và code lệch (rà 23/11/2026, đã sửa mô tả UC theo code):** (1) đơn NVL giao thiếu (UC47, UC49 → UC07): tài liệu ghi hệ thống tự lập khi phiếu nhập có dòng nhận ít hơn số còn thiếu (UC49 ghi "từ lúc Warehouse Keeper gửi phiếu"), code chỉ lập sau khi Manager **xác nhận** phiếu và chỉ khi đơn đã đủ số lần giao dự kiến (`DeliveryCountGuard`, `MaterialReceiptService.HandleShortageAsync`, DEV-ALL-94 / 95), khi đó lập cho mọi NVL còn thiếu của đơn kể cả NVL chưa về lần nào; (2) hủy phần thiếu (UC08 → UC27): tài liệu ghi hệ thống tự lập đơn mua mới ở trạng thái Chờ chốt cho phần bị hủy, code không tự tạo đơn mua (chỉ `PurchaseOrderService` tạo đơn mua, Manager tạo tay); hủy phần thiếu chỉ đóng thiếu dòng đơn mua / giảm NVL khách cấp; (3) đơn xin bán thành phẩm (UC08 → UC50, UC23): tài liệu ghi thiếu tồn thì Warehouse Keeper chuyển phần thiếu cho Manager ra lệnh cắt, còn một phần thì cấp phần có và chuyển phần thiếu, code chặn ngay lúc tạo đơn nếu số xin vượt số bộ khả dụng trong kho (DEV-ALL-110), không có bước chuyển phần thiếu. (4) đơn mua NVL (UC27): tài liệu ghi Warehouse Keeper tạo, code do Manager tạo (`Manager/PurchaseOrdersController`), Warehouse Keeper chỉ xem đơn mua để chọn khi lập phiếu nhập; (5) phiếu cấp vải cho tổ Cắt (UC50): tài liệu ghi tạo từ phiếu yêu cầu bán thành phẩm của tổ May, code tạo từ đơn xin NVL của Team Leader (chọn theo lệnh cắt). Các luồng khớp: ghi hàng hủy không tự tạo đơn mà mở form đơn cắt bù (UC67), duyệt đơn cắt bù → nút Xử lý ngay mở form lập lệnh cắt bù (UC23), đơn chấm công bù đã duyệt → Accountant chấm hộ (UC36), xác nhận giao hàng → đơn Đã giao đủ (UC57 → UC09).
+  - **UC thông báo và UC hệ thống (rà 23/11/2026, đã sửa mô tả UC theo code):** (1) thông báo đẩy (FCM) chưa làm, `PushStatus` luôn `SKIPPED`: UC02, UC05 chỉ còn thông báo trong hộp thư trên web; (2) UC24 ghi "dùng lại mẫu câu có sẵn" nhưng màn gửi thông báo không có mẫu câu, chỉ có nội dung (tối đa 1000 ký tự), mức Thường / Khẩn và phạm vi toàn xưởng / tổ / role, loại người gửi và người đã nghỉ, bắt buộc có người nhận; (3) UC72: đồng bộ chấm công do agent console chạy trên máy Ronald Jack Pro (đọc `RJData.mdb` bằng OleDb, gửi lô kèm khóa agent, theo mốc `CheckInOut.ID`, chu kỳ `ATTENDANCE_SYNC_MINUTES` mặc định 10 phút) chứ không phải hệ thống đọc CSDL SQL; quá ngưỡng (`AttendanceAlertMinutes`, mặc định 30 phút) không đồng bộ chỉ hiện cảnh báo trên màn bảng công và ghi log (`AttendanceSyncMonitorJob`), không gửi thông báo, nên UC05 bỏ "đồng bộ chấm công lỗi" khỏi nguồn thông báo; (4) UC73: nhắc 08:15 là thông báo trong hộp thư gửi Team Leader của tổ chưa xác nhận, mỗi tổ một lần; UC39: giờ nhắc phải sớm hơn giờ chốt; (5) việc nền có trong code mà tài liệu chưa nhắc, đã thêm vào mô tả: JOB-04 lúc 17:00 đặt cờ nguy cơ trễ và báo Admin, Manager ngày đầu gắn cờ (UC25), `WorkAllocationAutoConfirmJob` mỗi 5 phút tự xác nhận phiếu giao việc quá 60 phút công nhân chưa xác nhận (UC64, UC71, DEV-ALL-101), JOB-05 lúc 01:00 xóa thông báo quá 90 ngày (UC05); các việc dọn ảnh mã hàng (02:00) và tệp chứng từ (02:30) chỉ ghi ở danh sách actor, chưa thành UC riêng.
+  - **Sửa mô tả cho khớp code:** UC04 (User tự sửa ngày sinh, SĐT), UC17 (Manager thêm, đổi role, cho nghỉ việc, đặt bậc trực tiếp), UC38 (cũ UC35) và UC73 (cũ UC67) (hệ thống tự chốt suất ăn 08:30), UC70 (cũ UC64) (có lương tạm tính), cùng nhiều UC được bổ sung chức năng còn thiếu.
+- **Lý do:** Người dùng yêu cầu đối chiếu UC với chức năng thực tế của hệ thống và đánh số lại.
+- **Ảnh hưởng người khác:** Các mục cũ trong file này dùng số UC của Report-3 / `NX-MTD_Tong_hop_Use_Case.md` (ví dụ UC35 là chuyến xe, UC09 là đơn hàng), **không phải** số v26 mới. Theo mục 8.1 không sửa mục cũ nên chúng giữ nguyên số; khi sửa Report cuối kỳ phải đối chiếu qua tên UC, không qua số. Bảng đổi số Report-3 → v26 mới nằm ngay dưới mục này.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3 mục 4.2 và các mục tham chiếu số UC: dùng bộ 73 UC mới
+  - [ ] Các mục DEV có ghi "UC mới" hoặc "UC chưa có" (DEV-ALL-159, DEV-ALL-148, DEV-ALL-137, DEV-ALL-85, DEV-ALL-115): đã có UC tương ứng (UC45, UC61, UC35, UC33), đánh dấu khi sửa Report
+  - [ ] Danh sách actor của Report: thêm actor hệ thống AI service
+  - [ ] Report-3 UC02, UC05, UC24, UC72, UC73: sửa theo code (không có thông báo đẩy, không có mẫu câu, agent đồng bộ chấm công, cảnh báo đồng bộ chỉ trên màn hình); hoặc làm FCM và mẫu câu nếu giữ nguyên Report
+  - [ ] Report-3 UC08, UC27, UC47, UC49, UC50: sửa theo code năm luồng đã nêu (bộ UC v26 đã sửa; Report-3 chưa)
+  - [ ] Report-3 UC07, UC08: chốt lại ba điểm tài liệu và code đang khác (đơn bổ sung NVL, báo NVL lỗi, hoàn thành đơn cắt bù); sửa tài liệu hoặc sửa code
+- **Trạng thái:** Mở
+
+#### Bảng đổi số: UC trong code và các mục DEV cũ (Report-3, bản v25, UC01–UC62) → bộ UC v26 mới (73 UC)
+
+- **Cách dựng:** chú thích UCnn trong code (BE, FE) và các mục DEV dùng hệ số của bản v25 (62 UC; mục DEV còn ghi "UC37–UC62" cho bản v25, UC61 là đồng bộ chấm công, UC62 là nhắc suất ăn). Changelog v26 ghi v26 chỉ thêm 5 UC (UC11, UC19, UC20, UC28, UC31 của v26) và không bỏ UC nào (62 + 5 = 67), nên số v25 → v26 tính được theo thứ tự; sau đó áp bảng đánh số lại 73 UC. Tên UC ở cột 2 đã đối chiếu với chú thích trong code cho từng dòng; UC01, UC02, UC53, UC62 không có chú thích nên chỉ dựa vào thứ tự.
+- **Cách dùng:** đọc số UC trong mục cũ ở cột 1, tra tên ở cột 2 rồi lấy số mới ở cột 4. Các mục DEV cũ không bị sửa.
+- **UC của bản 73 UC không có số cũ (v25):** UC11 Quản lý thông tin khách hàng, UC19 Quản lý tài khoản, UC20 Quản lý role, UC29 Quản lý danh mục NVL, UC32 Quản lý thành phần và thông số mã hàng (5 UC thêm ở v26) và 6 UC thêm ở DEV-ALL-168 (UC21, UC33, UC35, UC39, UC45, UC61). Chức năng của chúng trước đây nằm lẫn trong UC09, UC10, UC16–UC18, UC38 hoặc được ghi "UC mới" trong các mục DEV.
+- **Ngoại lệ cần đọc theo ngữ cảnh:** (1) vài mục rất cũ (Phase N, DEV-ALL đầu tiên) ghi "UC13–UC14 (tổ)", "UC15–UC16 (bậc thợ)", "UC13 (phiếu nhập)", "UC43 (phiếu xuất hàng)" không khớp hệ số v25; hãy đọc theo tên chức năng trong mục đó. (2) Một số mục viết "UC22 (KI-11)" là sửa số liệu sau hạn (UC26 mới), còn "UC19 / UC21 (KPI)" là Quản lý KPI (UC23 mới) và Theo dõi tiến độ (UC25 mới).
+| UC trong code / mục cũ | Tên UC (theo v26 mới) | UC v26 (28/10) | UC v26 mới (73 UC) |
+|---|---|---|---|
+| UC01 | Đăng nhập | UC01 | **UC01** |
+| UC02 | Đăng xuất | UC02 | **UC02** |
+| UC03 | Đổi mật khẩu | UC03 | **UC03** |
+| UC04 | Xem thông tin cá nhân | UC04 | **UC04** |
+| UC05 | Xem thông báo | UC05 | **UC05** |
+| UC06 | Xem phiếu lương | UC06 | **UC06** |
+| UC07 | Quản lý đơn từ | UC07 | **UC07** |
+| UC08 | Xử lý đơn từ | UC08 | **UC08** |
+| UC09 | Quản lý đơn hàng | UC09 | **UC09** |
+| UC10 | Quản lý sản phẩm (mã hàng) | UC10 | **UC10** |
+| UC11 | Tính điểm hòa vốn và giá trị thặng dư | UC12 | **UC12** |
+| UC12 | Xem tổng hợp chi phí | UC13 | **UC13** |
+| UC13 | Xuất báo cáo ra Excel | UC14 | **UC14** |
+| UC14 | Quản lý nhà cung cấp | UC15 | **UC15** |
+| UC15 | Quản lý danh mục bậc thợ | UC16 | **UC16** |
+| UC16 | Cập nhật hồ sơ và bậc thợ nhân viên | UC17 | **UC17** |
+| UC17 | Quản lý nhân sự | UC18 | **UC18** |
+| UC18 | Quản lý tổ | UC21 | **UC22** |
+| UC19 | Quản lý KPI | UC22 | **UC23** |
+| UC20 | Quản lý thông báo | UC23 | **UC24** |
+| UC21 | Theo dõi tiến độ, chất lượng và báo cáo sản xuất | UC24 | **UC25** |
+| UC22 | Sửa số liệu sản xuất sau thời hạn (riêng comment "UC22: Admin xem nhật ký thay đổi" trong AuditLogsController là UC21 mới) | UC25 | **UC26** |
+| UC23 | Xử lý đơn mua NVL | UC26 | **UC27** |
+| UC24 | Xem tồn kho và thẻ kho | UC27 | **UC28** |
+| UC25 | Quản lý công đoạn và đơn giá | UC29 | **UC30** |
+| UC26 | Duyệt đơn giá công đoạn | UC30 | **UC31** |
+| UC27 | Xem doanh thu | UC32 | **UC34** |
+| UC28 | Quản lý bảng công | UC33 | **UC36** |
+| UC29 | Import file chấm công dự phòng | UC34 | **UC37** |
+| UC30 | Quản lý suất ăn | UC35 | **UC38** |
+| UC31 | Quản lý bảng lương | UC36 | **UC40** |
+| UC32 | Duyệt bảng lương | UC37 | **UC41** |
+| UC33 | Nhập dữ liệu chi phí | UC38 | **UC42** |
+| UC34 | Xác nhận thanh toán đơn mua NVL | UC39 | **UC43** |
+| UC35 | Quản lý chuyến xe và xăng xe | UC40 | **UC44** |
+| UC36 | Xem báo cáo kế toán | UC41 | **UC46** |
+| UC37 | Quản lý phiếu nhập NVL | UC42 | **UC47** |
+| UC38 | Thêm danh mục NVL | UC43 | **UC48** |
+| UC39 | Xác nhận phiếu nhập NVL | UC44 | **UC49** |
+| UC40 | Cấp phát NVL cho tổ | UC45 | **UC50** |
+| UC41 | Xác nhận nhận NVL từ kho | UC46 | **UC51** |
+| UC42 | Trả lại NVL thừa về kho | UC47 | **UC52** |
+| UC43 | Nhập kho bán thành phẩm | UC48 | **UC53** |
+| UC44 | Nhập kho thành phẩm | UC49 | **UC54** |
+| UC45 | Quản lý phiếu xuất kho | UC50 | **UC55** |
+| UC46 | Xác nhận phiếu xuất kho | UC51 | **UC56** |
+| UC47 | Xác nhận giao hàng cho khách | UC52 | **UC57** |
+| UC48 | Quản lý phiếu kiểm kê | UC53 | **UC58** |
+| UC49 | Duyệt phiếu kiểm kê | UC54 | **UC59** |
+| UC50 | Đánh giá bậc thợ tổ viên | UC55 | **UC60** |
+| UC51 | Nhập sản lượng cắt theo bàn cắt | UC56 | **UC62** |
+| UC52 | Phân công công đoạn cho công nhân | UC57 | **UC63** |
+| UC53 | Giao sản lượng công đoạn cho công nhân | UC58 | **UC64** |
+| UC54 | Thu hồi sản lượng công đoạn từ công nhân | UC59 | **UC65** |
+| UC55 | Nhập sản lượng công đoạn cuối ca | UC60 | **UC66** |
+| UC56 | Ghi nhận hàng hỏng và người gây hỏng | UC61 | **UC67** |
+| UC57 | Quản lý đợt kiểm hoàn thiện | UC62 | **UC68** |
+| UC58 | Xem ngày công và bậc thợ | UC63 | **UC69** |
+| UC59 | Xem sản lượng của bản thân | UC64 | **UC70** |
+| UC60 | Xác nhận số lượng bàn giao hoặc thu hồi | UC65 | **UC71** |
+| UC61 | Đồng bộ chấm công | UC66 | **UC72** |
+| UC62 | Nhắc và tự chốt suất ăn | UC67 | **UC73** |
+
+### DEV-ALL-169 · Đơn Sửa máy: tổ cắt / may gửi, Cơ điện xử lý
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC07 / UC08 (đơn từ), bảng `Request` (`CK_Request_Type`); BE `RequestTypes`, `RequestTypePolicies`, `MachineRepairRequestHandler` (cùng `NoLineRequestHandler` với đơn Khác), `Roles.Handlers`; FE `requestTypes.ts`, `features/requests/constants.ts`, `menu.ts`; patch `SQL/patches/2026-11-24_request_machine_repair.sql`
+- **Tài liệu gốc ghi:** 12 loại đơn từ; Cơ điện chỉ tạo đơn Linh kiện, Máy mới, Vật tư máy (Admin / Kế toán duyệt), không xử lý đơn nào.
+- **Code đang làm:** thêm loại `MACHINE_REPAIR` (nhãn "Sửa máy"): tổ trưởng / tổ phó của tổ cắt và tổ may tạo, vai trò xử lý là Cơ điện, không qua bước duyệt (vào thẳng Chờ xử lý, Cơ điện Hoàn thành hoặc Không hoàn thành kèm lý do). Đơn chỉ có tiêu đề, nội dung, ảnh đính kèm, không có dòng chi tiết. Cơ điện thấy menu "Đơn cần xử lý" và được thông báo khi có đơn mới. Số loại đơn từ lên 13.
+- **Lý do:** người dùng yêu cầu Cơ điện có đơn cần xử lý để nhận các đơn sửa lỗi máy móc từ tổ may / cắt.
+- **Ảnh hưởng người khác:** Cơ điện (menu mới); tổ trưởng / tổ phó tổ cắt và tổ may (thêm loại đơn khi tạo). Database cũ phải chạy patch trên.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: bảng loại đơn từ (12 thành 13), UC của Cơ điện (thêm xử lý đơn Sửa máy), phân quyền đơn từ
+  - [ ] `NX-MTD_AI_Context.md` mục 4.8 (bảng ai tạo / ai xử lý đơn từ)
 - **Trạng thái:** Mở

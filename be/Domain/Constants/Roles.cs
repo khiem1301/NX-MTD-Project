@@ -15,8 +15,8 @@ public static class Roles
     /// <summary>Tổ phó có cùng quyền tổ trưởng trong tổ của mình.</summary>
     public const string TeamLeaderOrDeputy = TeamLeader + "," + TeamDeputy;
 
-    /// <summary>Người xử lý đơn từ (D12).</summary>
-    public const string Handlers = Admin + "," + Manager + "," + Accountant + "," + WarehouseKeeper;
+    /// <summary>Người xử lý đơn từ (D12); Cơ điện xử lý đơn Sửa máy (DEV-ALL-169).</summary>
+    public const string Handlers = Admin + "," + Manager + "," + Accountant + "," + WarehouseKeeper + "," + Electrician;
     public const string AdminOrManager = Admin + "," + Manager;
     /// <summary>Mọi vai trò trừ Công nhân: dùng cho API tra cứu dùng chung.</summary>
     public const string StaffExceptWorker = Admin + "," + Manager + "," + Accountant + "," + WarehouseKeeper + ","
