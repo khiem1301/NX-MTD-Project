@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Card, Descriptions, Space, Typography, Upload } from 'antd';
+import { Button, Card, Descriptions, Space, Typography, Upload } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { InboxOutlined, UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
@@ -9,6 +9,7 @@ import type { AttendanceExcelPreviewRow } from '../types';
 import { confirmDialog } from '@/utils/confirmDialog';
 import { formatDate } from '@/utils/format';
 import { DataTable } from '@/components/common/DataTable';
+import { HintTip } from '@/components/common/HintTip';
 
 const columns: ColumnsType<AttendanceExcelPreviewRow> = [
   {
@@ -61,7 +62,7 @@ export function ExcelImportPanel() {
   return (
     <Card size="small" title={ATTENDANCE_TEXT.import.title}>
       <Space direction="vertical" style={{ width: '100%' }} size={16}>
-        <Alert type="info" showIcon message={ATTENDANCE_TEXT.import.hint} />
+        <HintTip text={ATTENDANCE_TEXT.import.hint} />
 
         <Upload.Dragger
           maxCount={1}

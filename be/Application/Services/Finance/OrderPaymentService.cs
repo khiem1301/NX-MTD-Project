@@ -46,12 +46,14 @@ public sealed class OrderPaymentService : IOrderPaymentService
             .Select(o => new
             {
                 o.OrderId, o.OrderCode, o.Customer.CustomerName, o.Status, o.FinalAmount,
+                Amount = o.OrderLines.Sum(l => (decimal?)l.OrderedQty * l.CmtUnitPrice) ?? 0,
                 Paid = o.OrderPayments.Sum(p => (decimal?)p.Amount) ?? 0,
             })
             .ToPagedAsync(query, ct);
 
         var items = page.Items.Select(o => new OrderPaymentListItemDto(o.OrderId, o.OrderCode, o.CustomerName,
-            CodeText.ToPascal(o.Status), o.FinalAmount, o.Paid, Remaining(o.FinalAmount, o.Paid), StateOf(o.FinalAmount, o.Paid))).ToList();
+            CodeText.ToPascal(o.Status), o.Amount, o.FinalAmount, o.Paid, Remaining(o.FinalAmount, o.Paid),
+            StateOf(o.FinalAmount, o.Paid))).ToList();
         return Result<PagedResult<OrderPaymentListItemDto>>.Success(new PagedResult<OrderPaymentListItemDto>(items, page.Page, page.PageSize, page.TotalItems));
     }
 
@@ -66,8 +68,9 @@ public sealed class OrderPaymentService : IOrderPaymentService
                 p.PaymentNote, p.CreatedAt, p.UpdatedAt, p.EditReason, IsEditable(p, now))).ToList();
         var history = await _audit.GetHistoryAsync(AuditTable, orderId, ct);
         return Result<OrderPaymentDto>.Success(new OrderPaymentDto(order.OrderId, order.OrderCode, order.Customer.CustomerName,
-            CodeText.ToPascal(order.Status), order.FinalAmount, order.FinalAmountReason, paid, Remaining(order.FinalAmount, paid),
-            StateOf(order.FinalAmount, paid), order.RowVer, payments, history));
+            CodeText.ToPascal(order.Status), order.OrderLines.Sum(l => l.OrderedQty * l.CmtUnitPrice), order.FinalAmount,
+            order.FinalAmountReason, paid, Remaining(order.FinalAmount, paid), StateOf(order.FinalAmount, paid), order.RowVer,
+            payments, history));
     }
 
     // ---------- Ghi ----------
@@ -192,8 +195,10 @@ public sealed class OrderPaymentService : IOrderPaymentService
 
     private Task<CustomerOrder?> LoadAsync(int orderId, bool asNoTracking, CancellationToken ct)
     {
-        var query = _uow.Repository<CustomerOrder>().Query().Include(o => o.Customer).Include(o => o.OrderPayments);
-        return (asNoTracking ? query.AsNoTracking() : query).FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
+        IQueryable<CustomerOrder> query = _uow.Repository<CustomerOrder>().Query().Include(o => o.Customer).Include(o => o.OrderPayments);
+        // Chỉ khi xem: cần dòng đơn để tính tổng tiền của đơn.
+        if (asNoTracking) query = query.Include(o => o.OrderLines).AsNoTracking();
+        return query.FirstOrDefaultAsync(o => o.OrderId == orderId, ct);
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

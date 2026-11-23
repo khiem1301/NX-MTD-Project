@@ -14,6 +14,7 @@ import { fill, formatQty } from '@/utils/format';
 import { LABELS } from '../constants';
 import { useImportOrderMaterials, usePreviewOrderMaterialImport } from '../hooks/useOrderMaterials';
 import type { OrderMaterialImportRow } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 /** File mẫu dùng chung với nhập định mức (sheet "NVL của đơn"). */
 const qty = (v: number | null) => (v === null ? '—' : formatQty(v));
@@ -94,7 +95,7 @@ export function OrderMaterialImportModal({ orderId, onClose }: OrderMaterialImpo
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{LABELS.importOrderMaterialsHint}</Typography.Text>
+        <HintTip text={LABELS.importOrderMaterialsHint} />
         <ImportTemplateLink kind="order-materials" orderId={orderId} />
         <ReplaceImportOption
           checked={replace}

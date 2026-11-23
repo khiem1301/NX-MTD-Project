@@ -9,10 +9,10 @@ export const MEAL_TEXT = {
   settings: {
     subtitle:
       'Admin cấu hình giờ nhắc tổ trưởng xác nhận và giờ hệ thống tự chốt suất ăn mỗi ngày.',
-    hint: 'Sau giờ chốt, không sửa được suất ăn và suất khách. Đổi giờ có hiệu lực ngay từ lần kiểm tra kế tiếp; ngày đã chốt rồi thì không mở lại.',
+    hint: 'Sau giờ chốt không sửa được suất ăn, suất khách; ngày đã chốt không mở lại. Đổi giờ có hiệu lực từ lần kiểm tra kế tiếp.',
     reminder: 'Giờ nhắc xác nhận',
     reminderHelp:
-      'Tổ chưa xác nhận lúc này sẽ được nhắc; hệ thống tạm lấy theo số suất đang tick. Mặc định 08:15.',
+      'Tổ chưa xác nhận lúc này sẽ được nhắc, tạm lấy theo số suất đang tick. Mặc định 08:15.',
     cutoff: 'Giờ chốt suất ăn',
     cutoffHelp: 'Từ {from} đến {to}. Mặc định 08:30.',
     required: 'Vui lòng chọn giờ.',
@@ -43,7 +43,7 @@ export const MEAL_TEXT = {
     you: 'Bạn',
     attendanceCount: 'Đã quẹt',
     mealCount: 'Còn tick',
-    hint: 'Chỉ hiện người đã quẹt (gồm tổ trưởng/tổ phó). Bỏ tick nếu không ăn; có thể tick lại trước giờ chốt.',
+    hint: 'Chỉ hiện người đã quẹt. Bỏ tick nếu không ăn; tick lại được trước giờ chốt.',
     empty: 'Chưa có ai trong tổ quẹt vân tay hôm nay.',
   },
 

@@ -161,7 +161,7 @@ export const LABELS = {
   addByProduct: 'Thêm theo mã hàng',
   addExternalMaterial: 'Thêm NVL ngoài',
   externalMaterialsHint:
-    'Thêm nhiều NVL cùng lúc, mỗi dòng một NVL. Số lần và ngày khách giao khai ở Lịch khách giao NVL của cả đơn.',
+    'Thêm nhiều NVL một lúc, mỗi dòng một NVL. Số lần và ngày giao khai ở Lịch khách giao NVL của đơn.',
   selectProduct: 'Chọn mã hàng trong đơn',
   productMaterialsHint:
     'Nhập số cho từng NVL của mã hàng. NVL đơn này không dùng thì xóa khỏi bảng trước khi lưu.',
@@ -183,7 +183,7 @@ export const LABELS = {
   customerDeliveryMissing:
     'Đơn có NVL khách cấp nhưng chưa khai lịch giao. Kho sẽ coi như khách giao 1 lần.',
   customerDeliveryHint:
-    'Số lần và ngày giao dùng chung cho mọi NVL khách cấp của đơn. Mỗi phiếu nhập khách cấp là một lần giao, dù có bao nhiêu NVL.',
+    'Dùng chung cho mọi NVL khách cấp của đơn. Mỗi phiếu nhập khách cấp là một lần giao.',
   editCustomerDelivery: 'Khai lịch giao',
   customerDeliveryLateTag: '(đã quá ngày)',
   customerDeliveryFullNotice:
@@ -205,7 +205,7 @@ export const LABELS = {
   importOrderMaterials: 'Nhập từ Excel',
   importOrderMaterialsTitle: 'Nhập NVL của đơn từ Excel',
   importOrderMaterialsHint:
-    'Bảng có cột Mã NVL, Số cần, Khách cấp (tùy chọn), Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp do hệ thống tính. NVL đã có trong đơn được cập nhật theo file, NVL chưa có được thêm, NVL không có trong file giữ nguyên. Chọn file là xem trước ngay, chưa lưu gì.',
+    'Cột: Mã NVL, Số cần, Khách cấp và Ghi chú (tùy chọn). Phải mua = Số cần − Khách cấp. NVL có rồi thì cập nhật, chưa có thì thêm, không có trong file thì giữ nguyên. Chọn file là xem trước, chưa lưu.',
   importOrderMaterialsConfirm: 'Nhập',
   importOrderMaterialsConfirmTitle: 'Nhập NVL của đơn?',
   importOrderMaterialsConfirmBody:
@@ -406,7 +406,7 @@ export const INCOMING_TEXT = {
   receivedProgress: 'Đã nhận',
   tabReplenish: 'Giao bù',
   replenishHint:
-    'Đơn thiếu NVL khi nhập (đủ số lần giao mà còn thiếu). Đơn Quản đốc đã chọn giao bù: hàng bù về thì bấm Lập phiếu bổ sung; đơn khác chỉ để xem.',
+    'Đơn thiếu NVL khi nhập. Đơn Quản đốc chọn giao bù: hàng về thì Lập phiếu bổ sung; đơn khác chỉ để xem.',
   replenishEmpty: 'Chưa có đơn thiếu nào.',
   notResolved: 'Chưa xử lý',
   moreMaterials: 'khác',

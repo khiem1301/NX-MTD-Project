@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Button, Divider, Result, Space, Spin, Typography } from 'antd';
+import { Alert, Button, Divider, Result, Space, Spin } from 'antd';
 import { useSearchParams } from 'react-router-dom';
 import { AuditHistoryTable } from '@/components/common/AuditHistoryTable';
 import { QueryError } from '@/components/common/QueryError';
@@ -19,6 +19,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { PaymentInfo } from './PaymentInfo';
 import { PurchaseOrderInfo } from './PurchaseOrderInfo';
 import { purchaseLineColumns } from './purchaseLineColumns';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { role: PurchaseRole };
 type Dialog = 'place' | 'reprice' | 'confirm' | 'cancel' | 'return' | null;
@@ -120,9 +121,7 @@ export function PurchaseOrderModal({ role }: Props) {
           {data.goodsStatus !== 'PendingFinalisation' && data.goodsStatus !== 'Rejected' && (
             <>
               <Divider orientation="left">{text.proofs}</Divider>
-              {perm?.canConfirmPayment && (
-                <Typography.Paragraph type="secondary">{text.proofsHint}</Typography.Paragraph>
-              )}
+              {perm?.canConfirmPayment && <HintTip text={text.proofsHint} />}
               <PaymentProofGallery
                 purchaseOrderId={data.purchaseOrderId}
                 canEdit={perm?.canConfirmPayment ?? false}

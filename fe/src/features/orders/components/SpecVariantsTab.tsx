@@ -1,7 +1,8 @@
-import { Alert, Typography } from 'antd';
+import { Alert } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MESSAGES } from '@/constants/messages';
 import type { VariantRow } from '../utils/productSpec';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.spec;
 
@@ -15,7 +16,7 @@ type SpecVariantsTabProps = {
 export function SpecVariantsTab({ variants, discontinuedVariants }: SpecVariantsTabProps) {
   return (
     <>
-      <Typography.Paragraph type="secondary">{text.variantHint}</Typography.Paragraph>
+      <HintTip text={text.variantHint} />
       <DataTable<VariantRow>
         rowKey="key"
         size="small"

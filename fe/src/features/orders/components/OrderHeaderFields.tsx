@@ -115,6 +115,7 @@ export function OrderHeaderFields({
       <Col span={24}>
         <OptionalNoteField
           label={MESSAGES.orders.note}
+          defaultOpen
           style={FIELD_STYLE}
           rules={[zodRule(orderNoteSchema)]}
         >

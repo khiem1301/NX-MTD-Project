@@ -34,7 +34,8 @@ export function useNewNotificationToast() {
     if (fresh.length === 0) return;
     fresh.forEach((n) => {
       seen.current!.add(n.notificationId);
-      notification.info({
+      // Thông báo khẩn hiện toast màu cam (cảnh báo), còn lại màu xanh.
+      (n.isUrgent ? notification.warning : notification.info)({
         key: `n-${n.notificationId}`,
         message: n.title,
         description: n.message,

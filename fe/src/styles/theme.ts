@@ -11,15 +11,16 @@ export const antdTheme: ThemeConfig = {
     colorWarning: '#fa8c16',
     colorError: '#ff4d4f',
     borderRadius: 8,
-    fontSize: 15,
-    controlHeight: 38,
+    fontSize: 14,
+    lineHeight: 1.5,
+    controlHeight: 34,
   },
   components: {
     Table: {
       headerBg: '#fafafa',
       headerColor: '#434343',
       rowHoverBg: '#f0f7ff',
-      cellPaddingBlock: 12,
+      cellPaddingBlock: 9,
     },
     Layout: {
       siderBg: '#001529',
@@ -35,7 +36,7 @@ export const antdTheme: ThemeConfig = {
       darkItemHoverBg: 'rgba(255, 255, 255, 0.08)',
       itemBorderRadius: 8,
       itemMarginInline: 8,
-      itemHeight: 42,
+      itemHeight: 38,
       iconSize: 16,
       collapsedIconSize: 18,
     },
@@ -43,7 +44,7 @@ export const antdTheme: ThemeConfig = {
       boxShadowTertiary: '0 1px 2px rgba(0, 0, 0, 0.04)',
     },
     Tabs: {
-      titleFontSize: 15,
+      titleFontSize: 14,
     },
   },
 };

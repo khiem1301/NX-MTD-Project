@@ -52,6 +52,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
     productBlock,
     setProductBlock,
     stageProduct,
+    stagedProducts,
     stageOntoBlock,
     unstageProduct,
     orderImports,
@@ -109,6 +110,9 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
           />
         </Form>
 
+        {editable && (
+          <OrderExcelImports orderId={orderId} imports={orderImports} disabled={saving} />
+        )}
         {blocks.map((block, index) => (
           <ProductBlockEditor
             key={block.key}
@@ -140,6 +144,7 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
                 orderId={orderId}
                 blocks={blocks}
                 onStageProduct={(body, selection) => stageProduct(body, selection)}
+                stagedProducts={stagedProducts}
                 onUnstageProduct={unstageProduct}
                 onApply={(next, newLabels) => {
                   setLabels((l) => ({ ...l, ...newLabels }));
@@ -148,9 +153,6 @@ export function OrderForm({ orderId, detail, copyFrom }: OrderFormProps) {
               />
             )}
           </Space.Compact>
-        )}
-        {editable && (
-          <OrderExcelImports orderId={orderId} imports={orderImports} disabled={saving} />
         )}
         <OrderFormFooter
           saveError={saveError}

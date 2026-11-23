@@ -31,7 +31,7 @@ export const OUTPUT_TEXT = {
     enter: 'Nhập sản lượng',
     modalTitle: 'Nhập sản lượng: {0}',
     modalHint:
-      'Các công đoạn lấy từ màn Giao việc (công nhân đã xác nhận). Nhập ở dòng nhóm để điền cùng số cho các công đoạn nhập được trong nhóm, rồi sửa lại từng công đoạn nếu cần. Số 0 ở dòng đã nhập nghĩa là xóa dòng đó.',
+      'Công đoạn lấy từ màn Giao việc (đã xác nhận). Nhập ở dòng nhóm để điền cùng số cho cả nhóm. Số 0 ở dòng đã nhập = xóa dòng.',
     groupRow: 'Nhóm {0} (nhập được {1}/{2} công đoạn)',
     noGroup: 'chưa đặt tên',
     groupInput: 'Sản lượng nhóm {0}',

@@ -1,7 +1,8 @@
-import { Col, Form, Row, Typography } from 'antd';
+import { Col, Form, Row } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { ExtraImagesInput } from './ExtraImagesInput';
 import { SampleImageInput } from './SampleImageInput';
+import { HintTip } from '@/components/common/HintTip';
 
 /** Cỡ ô ảnh trong form (nhỏ hơn mặc định để form gọn) và khoảng cách tới dòng gợi ý định dạng ảnh. */
 const IMAGE_THUMB = 56;
@@ -39,7 +40,7 @@ export function ProductImagesFields() {
           </Form.Item>
         </Col>
       </Row>
-      <Typography.Text type="secondary">{MESSAGES.orders.imageHintAll}</Typography.Text>
+      <HintTip text={MESSAGES.orders.imageHintAll} />
     </>
   );
 }

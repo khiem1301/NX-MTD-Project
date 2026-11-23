@@ -32,6 +32,15 @@ const bundle: ExcelBundle = {
   orderMaterials: [],
 };
 
+/** Bản không có dòng lỗi (Xác nhận được). */
+const validBundle: ExcelBundle = {
+  ...bundle,
+  spec: {
+    ...bundle.spec,
+    components: bundle.spec.components.map((c) => ({ ...c, name: c.name || 'Thân' })),
+  },
+};
+
 /** Máy chủ: dòng tên trống là lỗi, còn lại hợp lệ. */
 const respond = (b: ExcelBundle): ExcelBundleCheck =>
   ({
@@ -54,12 +63,12 @@ const respond = (b: ExcelBundle): ExcelBundleCheck =>
     },
   }) as unknown as ExcelBundleCheck;
 
-const renderModal = (onConfirm = jest.fn()) =>
+const renderModal = (onConfirm = jest.fn(), b: ExcelBundle = bundle) =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ExcelReviewModal
         fileName="all.xlsx"
-        bundle={bundle}
+        bundle={b}
         productId={null}
         onConfirm={onConfirm}
         onCancel={jest.fn()}
@@ -116,7 +125,7 @@ it('DEV-ALL-155: form sửa mã hàng hiện ô thay thế; bật thì Xác nh�
     <QueryClientProvider client={new QueryClient()}>
       <ExcelReviewModal
         fileName="all.xlsx"
-        bundle={bundle}
+        bundle={validBundle}
         productId={7}
         allowReplace
         onConfirm={onConfirm}
@@ -144,9 +153,9 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     ),
   );
 
-  const openAsk = async (materialName?: string) => {
+  const confirmWith = async (materialName?: string) => {
     const onConfirm = jest.fn();
-    renderModal(onConfirm);
+    renderModal(onConfirm, validBundle);
     await act(async () => {
       jest.advanceTimersByTime(600);
     });
@@ -154,42 +163,24 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
     if (materialName)
       fireEvent.change(screen.getByPlaceholderText('Tên NVL'), { target: { value: materialName } });
     fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
-    await waitFor(() =>
-      expect(screen.getAllByText('Thêm NVL vào danh mục?').length).toBeGreaterThan(0),
-    );
-    return onConfirm;
-  };
-
-  it('Không thêm: vẫn xác nhận, không kèm NVL mới', async () => {
-    const onConfirm = await openAsk();
-    fireEvent.click(screen.getByRole('button', { name: 'Không thêm' }));
-    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
-    expect(onConfirm.mock.calls[0][1]).toEqual([]);
-  });
-
-  it('Nút X: đóng hộp hỏi, quay lại popup, chưa xác nhận gì', async () => {
-    const onConfirm = await openAsk();
-    const closeButtons = screen.getAllByRole('button', { name: /close|đóng/i });
-    fireEvent.click(closeButtons[closeButtons.length - 1] as Element);
-    await act(async () => {
-      jest.advanceTimersByTime(500);
-    });
-    expect(onConfirm).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /Xác nhận/ })).toBeTruthy();
-  });
-
-  it('Thêm vào danh mục mà thiếu tên NVL thì chưa xác nhận', async () => {
-    const onConfirm = await openAsk();
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
     await act(async () => {
       jest.advanceTimersByTime(100);
     });
+    return onConfirm;
+  };
+
+  it('Xác nhận không hiện hộp hỏi thêm NVL', async () => {
+    await confirmWith('Lụa hồng mới');
+    expect(screen.queryByText('Thêm NVL vào danh mục?')).toBeNull();
+  });
+
+  it('Xác nhận mà thiếu tên NVL thì chưa xác nhận', async () => {
+    const onConfirm = await confirmWith();
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it('Thêm vào danh mục: kèm NVL mới đã điền (gợi ý vải, màu, khổ)', async () => {
-    const onConfirm = await openAsk('Lụa hồng mới');
-    fireEvent.click(screen.getByRole('button', { name: 'Thêm vào danh mục' }));
+  it('Xác nhận: tự thêm NVL mới đã điền (gợi ý vải, màu, khổ)', async () => {
+    const onConfirm = await confirmWith('Lụa hồng mới');
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0][1]).toEqual([
@@ -206,11 +197,24 @@ describe('NVL chưa có trong danh mục (DEV-ALL-123)', () => {
 
 it('Thêm dòng và xóa dòng', async () => {
   const onConfirm = jest.fn();
-  renderModal(onConfirm);
+  renderModal(onConfirm, validBundle);
   fireEvent.click(screen.getByRole('button', { name: /Thêm dòng/ }));
+  // Dòng mới còn trống tên là lỗi thiếu trường: xóa đi mới Xác nhận được.
+  const deletes = screen.getAllByRole('button', { name: /Xóa/ });
+  fireEvent.click(deletes[deletes.length - 1] as Element);
   fireEvent.click(screen.getAllByRole('button', { name: /Xóa/ })[0] as Element);
   fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
 
   const confirmed = onConfirm.mock.calls[0][0] as ExcelBundle;
-  expect(confirmed.spec.components.map((c) => c.rowNumber)).toEqual([6, 7]);
+  expect(confirmed.spec.components.map((c) => c.rowNumber)).toEqual([6]);
+});
+
+it('Còn dòng lỗi thì không cho Xác nhận', async () => {
+  const onConfirm = jest.fn();
+  renderModal(onConfirm);
+  await act(async () => {
+    jest.advanceTimersByTime(600);
+  });
+  fireEvent.click(screen.getByRole('button', { name: /Xác nhận/ }));
+  expect(onConfirm).not.toHaveBeenCalled();
 });

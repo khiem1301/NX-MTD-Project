@@ -18,6 +18,7 @@ import {
 import type { ShortDeliveryListItem } from '../types';
 import { ReplenishReceiveModal } from './ReplenishReceiveModal';
 import { ShortDeliveryModal } from './ShortDeliveryModal';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = INCOMING_TEXT;
 
@@ -91,7 +92,7 @@ export function ShortageTable({ rows, loading, pagination, emptyText }: Shortage
 
   return (
     <>
-      <Typography.Paragraph type="secondary">{text.replenishHint}</Typography.Paragraph>
+      <HintTip text={text.replenishHint} />
       <DataTable
         rowKey="requestId"
         columns={columns}

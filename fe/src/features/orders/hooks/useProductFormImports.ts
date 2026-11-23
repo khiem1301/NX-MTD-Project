@@ -11,6 +11,8 @@ import {
   showProductImportResults,
   type ProductImportSelection,
 } from '../utils/productExcelImports';
+import { excelBundleApi } from '../api/orderApi';
+import { bundleErrorCount, incompleteMaterials } from '../utils/excelReview';
 
 const text = MESSAGES.orders.productExcel;
 const NO_IMPORTS: ProductImportSelection = {};
@@ -40,6 +42,7 @@ export function useProductFormImports({
     initialImports && product === null ? initialImports : NO_IMPORTS,
   );
   const [importing, setImporting] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
   const required = allowImports ? requiredKindsFor(product === null) : [];
 
@@ -57,6 +60,30 @@ export function useProductFormImports({
     setShowMissing(true);
     void message.error(fill(text.requiredMissing, missing.map((k) => text.kinds[k]).join(', ')));
     return false;
+  };
+
+  /**
+   * Thêm mới: kiểm lại file Excel đã chọn với máy chủ ngay trước khi lưu. Còn dòng lỗi, thiếu trường, lỗi chéo hoặc NVL mới
+   * thiếu thông tin thì báo, trả false (không lưu, form vẫn mở để bấm "Xem / sửa lại").
+   */
+  const checkNoErrors = async () => {
+    const bundle = imports.bundle;
+    if (product !== null || !allowImports || !bundle) return true;
+    setChecking(true);
+    try {
+      const result = await excelBundleApi.check({ productId: null, orderId: null, bundle });
+      const { rows, cross } = bundleErrorCount(bundle, result);
+      const incomplete = incompleteMaterials(imports.newMaterials ?? []);
+      if (rows === 0 && cross === 0 && incomplete.length === 0) return true;
+      setShowMissing(true);
+      void message.error(fill(text.saveBlockedByErrors, rows + cross + incomplete.length));
+      return false;
+    } catch {
+      void message.error(text.saveCheckFailed);
+      return false;
+    } finally {
+      setChecking(false);
+    }
   };
 
   /** Mã hàng đã lưu: nhập ngay (màn Mã hàng), giao cho form đơn (nhập sau Lưu đơn) hoặc đóng nếu không có gì để nhập. */
@@ -95,7 +122,8 @@ export function useProductFormImports({
   return {
     imports,
     setImports,
-    importing,
+    importing: importing || checking,
+    checkNoErrors,
     required,
     showMissing,
     close,

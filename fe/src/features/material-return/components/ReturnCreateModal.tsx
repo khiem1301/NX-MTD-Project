@@ -16,6 +16,7 @@ import {
 } from '../utils/returnLines';
 import { ReturnableTable } from './ReturnableTable';
 import { ScrapLines } from './ScrapLines';
+import { HintTip } from '@/components/common/HintTip';
 
 type ReturnCreateModalProps = { open: boolean; onClose: () => void };
 type FormValues = { qty: Record<string, number | null>; scrap?: ScrapRow[]; note?: string };
@@ -140,7 +141,7 @@ export function ReturnCreateModal({ open, onClose }: ReturnCreateModalProps) {
         )}
         {lines.length > 0 && (
           <>
-            <Alert type="info" showIcon message={hint} style={{ marginBottom: 12 }} />
+            <HintTip text={hint} />
             <ReturnableTable
               lines={lines}
               usedTitle={

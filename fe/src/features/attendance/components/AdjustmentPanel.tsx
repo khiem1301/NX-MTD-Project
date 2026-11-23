@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card, Space, Typography } from 'antd';
+import { Button, Card, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from 'dayjs';
@@ -17,6 +17,7 @@ import { AdjustmentFormModal, type AdjustmentPrefill } from './AdjustmentFormMod
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { DataTable } from '@/components/common/DataTable';
 import { AppDateRangeFields } from '@/components/common/DateInputs';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = ATTENDANCE_TEXT.adjust;
 const shortTime = (v: string | null) => (v ? v.slice(0, 5) : '—');
@@ -147,7 +148,7 @@ export function AdjustmentPanel({ presetRequestId = null }: { presetRequestId?: 
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Typography.Text type="secondary">{text.hint}</Typography.Text>
+      <HintTip text={text.hint} />
 
       <Card size="small" title={text.approvedRequests.title}>
         <DataTable<RequestListItem>

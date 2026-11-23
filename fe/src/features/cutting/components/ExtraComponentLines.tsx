@@ -7,6 +7,7 @@ import { useOrderLineComponents } from '@/hooks/useLookups';
 import type { OrderLineOption } from '@/types/lookup';
 import { QtyInput } from '@/components/common/QtyInput';
 import { LABELS } from '../constants';
+import { HintTip } from '@/components/common/HintTip';
 
 const required = [{ required: true, message: MESSAGES.common.required }];
 const NO_MARGIN = { marginBottom: 0 };
@@ -50,7 +51,7 @@ export function ExtraComponentLines({ form, lines }: ExtraComponentLinesProps) {
             <Flex justify="space-between" align="center" gap={8} wrap style={{ marginBottom: 8 }}>
               <div>
                 <Typography.Text strong>{LABELS.extraComponents}</Typography.Text>{' '}
-                <Typography.Text type="secondary">{LABELS.extraComponentsHint}</Typography.Text>
+                <HintTip text={LABELS.extraComponentsHint} />
               </div>
               <Button size="small" icon={<PlusOutlined />} onClick={() => add()}>
                 {LABELS.addExtraComponent}

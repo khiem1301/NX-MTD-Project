@@ -100,3 +100,16 @@ export const acceptMissingProduct = (
     errorCount: preview.errorCount - cleared,
   };
 };
+
+/**
+ * Nhận mọi mã đã khai (mã → tempId): mã khai trước đó trên form đơn và mã vừa tạo trong hộp nhập. Mã đã khai không còn hiện
+ * nút "Tạo mã hàng" ở hộp nhập dòng hàng.
+ */
+export const acceptStagedProducts = (
+  preview: OrderImportPreview,
+  staged: Record<string, number>,
+): OrderImportPreview =>
+  Object.entries(staged).reduce(
+    (current, [code, tempId]) => acceptMissingProduct(current, code, tempId),
+    preview,
+  );

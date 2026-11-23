@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { MaterialFormModalSlot } from '@/app/featureSlots';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, ConfigProvider, Typography } from 'antd';
+import { Button, ConfigProvider } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
@@ -19,6 +19,7 @@ import {
   type VariantRow,
 } from '../utils/productSpec';
 import { specNormColumns } from './specNormColumns';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.spec;
 
@@ -95,7 +96,7 @@ export function SpecNormsTab({
 
   return (
     <>
-      <Typography.Paragraph type="secondary">{text.normHint}</Typography.Paragraph>
+      <HintTip text={text.normHint} />
       <TableToolbar
         filters={
           <>

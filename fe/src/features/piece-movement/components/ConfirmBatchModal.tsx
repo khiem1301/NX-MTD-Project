@@ -7,6 +7,7 @@ import { fill, formatDate } from '@/utils/format';
 import { PM_LABELS } from '../constants';
 import { useConfirmBatchByWorker } from '../hooks/usePieceMovement';
 import type { WorkAllocation } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 import {
   applySharedReason,
   batchQty,
@@ -92,7 +93,7 @@ export function ConfirmBatchModal({ rows, onClose, onDone }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
-      <Alert type="info" showIcon message={PM_LABELS.batchHint} style={{ marginBottom: 12 }} />
+      <HintTip text={PM_LABELS.batchHint} />
       <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
         <Input
           addonBefore={PM_LABELS.sharedReason}

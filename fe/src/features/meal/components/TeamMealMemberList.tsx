@@ -5,6 +5,7 @@ import { formatDateTime } from '@/utils/format';
 import { MEAL_TEXT } from '../constants';
 import { useConfirmTeamMeal, useSetTeamMemberMeal } from '../hooks/useMeal';
 import type { TeamMealMember, TeamMealMembers, TeamMealSuggestion } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = {
   date: string;
@@ -93,7 +94,7 @@ export function TeamMealMemberList({ date, members, suggestion }: Props) {
       {members.isLocked ? (
         <Alert type="warning" showIcon message={MEAL_TEXT.suggestion.lockedHint} />
       ) : (
-        <Alert type="info" showIcon message={MEAL_TEXT.checklist.hint} />
+        <HintTip text={MEAL_TEXT.checklist.hint} />
       )}
 
       <Table

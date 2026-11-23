@@ -3,6 +3,54 @@ body {
   margin: 0;
 }
 
+/* Modal sát mép trên hơn mặc định của antd (100px); cần !important vì style antd chèn lúc chạy, sau file này. */
+.ant-modal {
+  top: 24px !important;
+  padding-bottom: 24px;
+}
+
+/* Hướng dẫn (HintTip): chỉ biểu tượng, nội dung hiện khi di chuột. */
+.hint-tip {
+  margin-bottom: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  line-height: 1;
+}
+
+.hint-tip .anticon {
+  cursor: help;
+}
+
+/*
+ * Hướng dẫn dưới ô nhập (Form.Item extra): ẩn, chỉ hiện khi di chuột vào ô nhập; di chuột ra là ẩn, kể cả khi đang nhập.
+ * Nổi lên trên (không đẩy các ô bên dưới) nên không làm nhảy bố cục.
+ */
+.ant-form-item-control {
+  position: relative;
+}
+
+.ant-form-item-extra {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 10;
+  max-width: 360px;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff !important;
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.ant-form-item-control:hover > .ant-form-item-extra {
+  opacity: 1;
+  visibility: visible;
+}
+
 /*
  * Mọi ô nhập số (InputNumber) không hiện nút tăng / giảm 1: người dùng gõ số trực tiếp (phím mũi tên vẫn dùng được).
  * Cần !important vì style của antd được chèn lúc chạy, sau file này, với selector .ant-input-number .ant-input-number-handler-wrap.

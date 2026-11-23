@@ -1,4 +1,4 @@
-import { Alert, AutoComplete, Input, InputNumber, Select, Table, Typography } from 'antd';
+import { Alert, AutoComplete, Input, InputNumber, Select, Table } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
@@ -7,6 +7,7 @@ import type { SaveMaterialPayload } from '@/types/material';
 import { MAX_FABRIC_WIDTH_M } from '../constants';
 import type { MissingMaterial } from '../types';
 import { materialTypeDefaults } from '../utils/excelReview';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.excelReview;
 const col = text.materialColumns;
@@ -112,9 +113,7 @@ export function MissingMaterialsPanel({
       message={fill(text.missingTitle, materials.length)}
       description={
         <>
-          <Typography.Paragraph style={{ marginBottom: 8 }}>
-            {text.missingHint}
-          </Typography.Paragraph>
+          <HintTip text={text.missingHint} />
           <Table<SaveMaterialPayload>
             rowKey={(m) => m.materialCode ?? ''}
             size="small"

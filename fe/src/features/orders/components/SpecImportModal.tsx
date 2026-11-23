@@ -1,4 +1,4 @@
-import { Alert, Modal, Select, Space, Spin, Typography, Upload } from 'antd';
+import { Alert, Modal, Select, Space, Spin, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
@@ -8,6 +8,7 @@ import { fill, formatDate } from '@/utils/format';
 import { useProductOrders } from '../hooks/useSpecImport';
 import { useSpecImportModal, type SpecImportSource } from '../hooks/useSpecImportModal';
 import { SpecImportPreviewTabs } from './SpecImportPreviewTabs';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.specImport;
 const SELECT_WIDTH = 320;
@@ -72,7 +73,7 @@ export function SpecImportModal({ source, onClose }: SpecImportModalProps) {
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <HintTip text={text.hint} />
         <Space wrap size={24}>
           {source.scope === 'admin' ? (
             <Space>

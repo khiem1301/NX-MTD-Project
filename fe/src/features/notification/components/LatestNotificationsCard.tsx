@@ -1,9 +1,10 @@
 import { BellOutlined } from '@ant-design/icons';
-import { Button, Card, List, Tag, Typography } from 'antd';
+import { Button, Card, List, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { useMarkRead, useNotifications } from '../hooks/useNotifications';
 import { formatDateTime } from '@/utils/format';
+import { NotificationTypeTags } from './NotificationTypeTags';
 
 const LIMIT = 3;
 
@@ -43,7 +44,7 @@ export function LatestNotificationsCard() {
             <List.Item.Meta
               title={
                 <>
-                  {n.isUrgent && <Tag color="red">Khẩn</Tag>}
+                  <NotificationTypeTags n={n} />
                   {n.title}
                 </>
               }

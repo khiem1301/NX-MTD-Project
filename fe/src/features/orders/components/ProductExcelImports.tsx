@@ -14,6 +14,7 @@ import {
 import { ExcelKindSlot } from './ExcelKindSlot';
 import { ExcelReviewModal } from './ExcelReviewModal';
 import { ExcelUploadButton } from './ExcelUploadButton';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.productExcel;
 const SPEC_KINDS: readonly ProductImportKind[] = ['components', 'norms', 'groups'];
@@ -128,14 +129,14 @@ export function ProductExcelImports({
           </Space>
         }
       >
-        <Typography.Paragraph type="secondary" style={{ marginBottom: token.marginSM }}>
-          {deferred ? text.hintDeferred : text.hint}{' '}
+        <Space size={8} style={{ marginBottom: token.marginSM }}>
+          <HintTip text={deferred ? text.hintDeferred : text.hint} />
           {required.length > 0 && (
             <Typography.Text type="danger">
               {fill(text.requiredHint, required.map((k) => text.kinds[k]).join(', '))}
             </Typography.Text>
           )}
-        </Typography.Paragraph>
+        </Space>
         <Flex vertical gap={8}>
           <GroupTitle
             title={text.specGroup}

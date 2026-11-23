@@ -120,6 +120,9 @@ export function OrderPaymentModal() {
             <Descriptions.Item label={ORDER_PAYMENT_TEXT.columns.state}>
               <StatusTag status={data.state} labels={ORDER_PAYMENT_STATE_LABEL} />
             </Descriptions.Item>
+            <Descriptions.Item label={ORDER_PAYMENT_TEXT.columns.orderAmount}>
+              {formatCurrency(data.orderAmount)}
+            </Descriptions.Item>
             <Descriptions.Item label={text.finalAmount}>
               {data.finalAmount === null ? text.notSet : formatCurrency(data.finalAmount)}
             </Descriptions.Item>

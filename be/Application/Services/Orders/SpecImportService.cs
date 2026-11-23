@@ -22,12 +22,13 @@ public sealed partial class SpecImportService : ISpecImportService
     private readonly IExcelSpecWorkbookParser _parser;
     private readonly IValidator<SaveProductSpecDto> _specValidator;
     private readonly IValidator<SaveOrderMarkersDto> _markerValidator;
+    private readonly IClock _clock;
 
     public SpecImportService(IUnitOfWork uow, IProductSpecService specs, IOrderMarkerService markers, IExcelSpecWorkbookParser parser,
-        IValidator<SaveProductSpecDto> specValidator, IValidator<SaveOrderMarkersDto> markerValidator)
+        IValidator<SaveProductSpecDto> specValidator, IValidator<SaveOrderMarkersDto> markerValidator, IClock clock)
     {
         _uow = uow; _specs = specs; _markers = markers; _parser = parser;
-        _specValidator = specValidator; _markerValidator = markerValidator;
+        _specValidator = specValidator; _markerValidator = markerValidator; _clock = clock;
     }
 
     private sealed record Target(string ProductCode, string? OrderCode, OrderMarkerProductDto? OrderProduct);
@@ -62,14 +63,46 @@ public sealed partial class SpecImportService : ISpecImportService
     private async Task<Result<SpecImportResultDto>> ImportCoreAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
         IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
     {
-        var plan = await PlanAsync(productId, orderId, read, parts, ct, replace);
-        if (!plan.IsSuccess) return Fail.As<SpecImportResultDto>(plan);
-        var preview = plan.Data!.Preview;
-        if (!preview.CanImport)
-            return Result<SpecImportResultDto>.Failure(ErrorCodes.SpecImportInvalid,
-                preview.CrossErrors.FirstOrDefault() ?? Messages.SpecImportNothing, ResultKind.Validation);
+        // Tạo màu trong file, lập kế hoạch và ghi trong MỘT giao dịch: lỗi ở bước nào cũng không để lại màu thừa.
+        return await _uow.InTransactionAsync(async () =>
+        {
+            var plan = await PlanAsync(productId, orderId, read, parts, ct, replace, createColors: true);
+            if (!plan.IsSuccess) return Fail.As<SpecImportResultDto>(plan);
+            var preview = plan.Data!.Preview;
+            if (!preview.CanImport)
+                return Result<SpecImportResultDto>.Failure(ErrorCodes.SpecImportInvalid,
+                    preview.CrossErrors.FirstOrDefault() ?? Messages.SpecImportNothing, ResultKind.Validation);
+            return await WriteAsync(productId, orderId, plan.Data.Builder, ct);
+        });
+    }
 
-        return await _uow.InTransactionAsync(() => WriteAsync(productId, orderId, plan.Data.Builder, ct));
+    /// <summary>
+    /// Màu trong file (định mức NVL, nhóm bìa) mà mã hàng chưa có thì tạo (ProductColor, chưa có size): nhập được định mức ngay khi
+    /// tạo mã hàng, không phải chờ đơn hàng. Đơn hàng sau đó dùng lại màu này theo tên.
+    /// </summary>
+    private async Task EnsureColorsAsync(int productId, SpecWorkbookDto workbook, CancellationToken ct)
+    {
+        var wanted = workbook.Norms.Select(n => n.Color).Concat(workbook.MarkerGroups.SelectMany(g => g.Colors))
+            .Select(c => c.Trim()).Where(c => c.Length > 0).DistinctBy(c => c.ToUpperInvariant()).ToList();
+        if (wanted.Count == 0) return;
+        var existing = (await _uow.Repository<ProductColor>().Query().AsNoTracking().Where(c => c.ProductId == productId)
+            .Select(c => c.Color).ToListAsync(ct)).Select(c => c.Trim().ToUpperInvariant()).ToHashSet();
+        var created = wanted.Where(c => !existing.Contains(c.ToUpperInvariant()))
+            .Select(c => new ProductColor { ProductId = productId, Color = c, CreatedAt = _clock.Now }).ToList();
+        if (created.Count == 0) return;
+        await _uow.Repository<ProductColor>().AddRangeAsync(created);
+        await _uow.SaveChangesAsync();
+    }
+
+    /// <summary>Thêm biến thể tạm (size <see cref="SpecImportBuilder.ColorOnlySize"/>) cho màu đã có mà chưa có size đang dùng.</summary>
+    private async Task<ProductSpecDto> WithColorOnlyAsync(int productId, ProductSpecDto spec, CancellationToken ct)
+    {
+        var known = spec.Variants.Where(v => v.Status == "Active").Select(v => v.Color.Trim().ToUpperInvariant()).ToHashSet();
+        var colors = await _uow.Repository<ProductColor>().Query().AsNoTracking().Where(c => c.ProductId == productId)
+            .Select(c => c.Color).ToListAsync(ct);
+        var extra = colors.Where(c => !known.Contains(c.Trim().ToUpperInvariant()))
+            .Select(c => new ProductVariantDto(0, c.Trim(), SpecImportBuilder.ColorOnlySize, "Active")).ToList();
+        return extra.Count == 0 ? spec : spec with { Variants = [.. spec.Variants, .. extra] };
     }
 
     private async Task<Result<SpecImportResultDto>> WriteAsync(int productId, int? orderId, SpecImportBuilder builder, CancellationToken ct)
@@ -101,7 +134,7 @@ public sealed partial class SpecImportService : ISpecImportService
     }
 
     private async Task<Result<Plan>> PlanAsync(int productId, int? orderId, Func<SpecWorkbookDto> read,
-        IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false)
+        IReadOnlyCollection<string>? parts, CancellationToken ct, bool replace = false, bool createColors = false)
     {
         var unknown = parts?.FirstOrDefault(p => !SpecImportParts.All.Contains(p));
         if (unknown is not null)
@@ -134,13 +167,18 @@ public sealed partial class SpecImportService : ISpecImportService
                     ResultKind.Validation);
         }
 
+        if (createColors) await EnsureColorsAsync(productId, workbook, ct);
         var spec = await _specs.GetAsync(productId, ct);
         if (!spec.IsSuccess) return Fail.As<Plan>(spec);
+        var specWithColors = await WithColorOnlyAsync(productId, spec.Data!, ct);
+        // Xem trước: màu trong file chưa có sẽ được tạo khi Nhập, nên coi như đã có (cùng kết quả với Nhập).
+        var (planSpec, colorsToCreate) = AssumeColors(specWithColors, workbook);
         var materials = await MaterialsAsync(workbook.Norms.Select(n => n.MaterialCode), ct);
         var t = target.Data!;
         var usage = replace ? await UsageAsync(productId, spec.Data!, ct) : SpecImportUsage.None;
-        var builder = new SpecImportBuilder(spec.Data!, materials, t.OrderProduct, t.ProductCode, workbook, replace, usage);
-        var crossErrors = await CrossErrorsAsync(productId, orderId, builder, ct);
+        var builder = new SpecImportBuilder(planSpec, materials, t.OrderProduct, t.ProductCode, workbook, replace, usage);
+        // Kiểm của nút Lưu cần màu có thật: còn màu chưa tạo (chỉ ở xem trước) thì để lúc Nhập kiểm, trong cùng giao dịch.
+        var crossErrors = colorsToCreate.Count == 0 ? await CrossErrorsAsync(productId, orderId, builder, ct) : [];
         return Result<Plan>.Success(new Plan(ToPreview(productId, orderId, t, workbook, builder, crossErrors), builder));
     }
 

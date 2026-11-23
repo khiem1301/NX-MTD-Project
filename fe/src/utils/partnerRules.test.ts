@@ -16,6 +16,13 @@ const pad = (n: number, c = 'x') => c.repeat(n);
 describe('partnerRules', () => {
   const name = partnerRules.required('Tên khách hàng', PARTNER_LIMITS.name);
 
+  it('trường bắt buộc (tên, địa chỉ, điện thoại, email) hiện dấu * ở nhãn; trường tùy chọn thì không', () => {
+    expect(name).toMatchObject({ required: true });
+    expect(partnerRules.phone).toMatchObject({ required: true });
+    expect(partnerRules.email).toMatchObject({ required: true });
+    expect(partnerRules.optional('Ghi chú', 500)).not.toHaveProperty('required');
+  });
+
   it('tên bắt buộc: trống, toàn khoảng trắng hoặc undefined đều bị báo', async () => {
     expect(await ok(name, '')).toBe(false);
     expect(await ok(name, '   ')).toBe(false);

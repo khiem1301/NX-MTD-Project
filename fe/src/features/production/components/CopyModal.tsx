@@ -1,9 +1,10 @@
-import { Form, Modal, Typography, message } from 'antd';
+import { Form, Modal, message } from 'antd';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
 import { fill } from '@/utils/format';
 import { PRODUCTION_TEXT } from '../constants';
 import { useCopyAssignments } from '../hooks/useAssignments';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = PRODUCTION_TEXT.assignments;
 const required = [{ required: true, message: PRODUCTION_TEXT.required }];
@@ -31,7 +32,7 @@ export function CopyModal({
       onCancel={onClose}
       destroyOnHidden
     >
-      <Typography.Paragraph type="secondary">{text.copyHint}</Typography.Paragraph>
+      <HintTip text={text.copyHint} />
       <Form
         form={form}
         layout="vertical"

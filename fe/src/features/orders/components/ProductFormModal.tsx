@@ -94,9 +94,11 @@ export function ProductFormModal({
       form.setFieldsValue({ description: detail.data.description ?? undefined });
   }, [open, product, detail.data, form]);
 
-  const handleFinish = (values: SaveProductPayload) => {
+  const handleFinish = async (values: SaveProductPayload) => {
     // DEV-ALL-124: Thêm mới thiếu dữ liệu Excel bắt buộc thì không lưu gì.
     if (!excel.checkRequired()) return;
+    // Thêm mới: dữ liệu Excel còn dòng lỗi / thiếu trường thì không lưu, ở lại form để sửa.
+    if (!(await excel.checkNoErrors())) return;
     if (onStage) {
       const accepted = onStage(
         { ...values, productCode: values.productCode.trim().toUpperCase() },

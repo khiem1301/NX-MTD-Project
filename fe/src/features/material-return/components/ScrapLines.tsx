@@ -6,6 +6,7 @@ import { MAX_MATERIAL_QTY } from '@/constants/quantity';
 import { useScrapMaterialOptions } from '@/hooks/useLookups';
 import { RETURN_LABELS, qtyDecimalsRule } from '../constants';
 import { decimalsOfUnit, type ScrapRow } from '../utils/returnLines';
+import { HintTip } from '@/components/common/HintTip';
 
 const ITEM_SPAN = { xs: 24, sm: 12 };
 const QTY_SPAN = { xs: 14, sm: 6 };
@@ -28,9 +29,7 @@ export function ScrapLines() {
       {(fields, { add, remove }) => (
         <>
           <Typography.Text strong>{RETURN_LABELS.scrapTitle}</Typography.Text>
-          <Typography.Paragraph type="secondary" style={{ marginBottom: 8 }}>
-            {RETURN_LABELS.scrapHint}
-          </Typography.Paragraph>
+          <HintTip text={RETURN_LABELS.scrapHint} />
           {fields.map((f) => {
             const material = byId.get(rows?.[f.name]?.materialId ?? 0);
             return (

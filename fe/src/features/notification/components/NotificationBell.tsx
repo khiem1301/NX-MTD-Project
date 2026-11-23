@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BellOutlined } from '@ant-design/icons';
-import { Badge, Button, Empty, List, Popover, Space, Tag, Typography } from 'antd';
+import { Badge, Button, Empty, List, Popover, Space, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { formatDateTime } from '@/utils/format';
@@ -14,6 +14,7 @@ import { useNewNotificationToast } from '../hooks/useNewNotificationToast';
 import { hasNotificationAction, useOpenNotification } from '../hooks/useOpenNotification';
 import { NotificationModals } from './NotificationModals';
 import type { NotificationItem } from '../types';
+import { NotificationTypeTags } from './NotificationTypeTags';
 
 const LIST_SIZE = 10;
 
@@ -65,7 +66,7 @@ export function NotificationBell() {
             <List.Item.Meta
               title={
                 <Space size={4}>
-                  {n.isUrgent && <Tag color="red">Khẩn</Tag>}
+                  <NotificationTypeTags n={n} />
                   <Typography.Text strong={!n.isRead}>{n.title}</Typography.Text>
                 </Space>
               }

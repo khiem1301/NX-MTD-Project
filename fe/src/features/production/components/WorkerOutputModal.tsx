@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SearchOutlined } from '@ant-design/icons';
-import { Input, Modal, Space, Typography } from 'antd';
+import { Input, Modal, Space } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
@@ -19,6 +19,7 @@ import {
 import { OutputReasonField } from './OutputReasonField';
 import { WorkerOutputAlerts } from './WorkerOutputAlerts';
 import { workerOutputColumns, type WorkerOutputTableRow } from './workerOutputColumns';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = PRODUCTION_TEXT.output;
 const t = text.byWorker;
@@ -156,7 +157,7 @@ export function WorkerOutputModal({
       onCancel={onClose}
     >
       <Space direction="vertical" style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{t.modalHint}</Typography.Text>
+        <HintTip text={t.modalHint} />
         {requireReason && (
           <OutputReasonField
             value={reason}

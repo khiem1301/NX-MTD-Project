@@ -5,7 +5,7 @@ export const MESSAGES = {
     /** Ô "Thay thế dữ liệu cũ" của các hộp thoại nhập Excel. */
     importReplace: {
       label: 'Thay thế dữ liệu cũ: xóa các dòng không có trong file',
-      hint: 'Bình thường nhập Excel chỉ thêm mới hoặc ghi đè, không xóa. Bật ô này thì dòng cũ không có trong file bị xóa, trừ dòng đã được dùng ở bảng khác (giữ nguyên, không sửa). Bảng không có trong file thì không bị đụng tới.',
+      hint: 'Bật: dòng cũ không có trong file sẽ bị xóa (trừ dòng đã dùng ở bảng khác).',
       willRemove: 'Sẽ xóa {0} {1} không có trong file',
       blocked: 'Giữ nguyên {0} {1} vì đã được dùng',
       more: '…và {0} dòng khác',
@@ -223,7 +223,7 @@ export const MESSAGES = {
     addEmployee: 'Thêm nhân viên văn phòng',
     editEmployee: 'Sửa nhân viên',
     floorFromRjHint:
-      'Chỉ Admin / Quản đốc cấp tài khoản. Công nhân: Chấm công → Nhân viên → Tạo trên hệ thống. Kế toán chỉ xem danh sách.',
+      'Chỉ Admin / Quản đốc cấp tài khoản. Công nhân: Chấm công → Nhân viên → Tạo trên hệ thống.',
     resign: 'Cho nghỉ việc',
     resignReason: 'Lý do nghỉ việc',
     lockAccount: 'Khóa tài khoản',
@@ -277,7 +277,7 @@ export const MESSAGES = {
     createOrder: 'Tạo đơn hàng',
     copyOrder: 'Sao chép đơn',
     copyOrderHint:
-      'Đang tạo đơn mới từ {0}. Mã đơn lấy mới; ngày giao cần chọn lại. NVL của đơn không được copy.',
+      'Tạo đơn mới từ {0}: lấy mã đơn mới, chọn lại ngày giao, không copy NVL của đơn.',
     editOrder: 'Sửa đơn hàng',
     productCode: 'Mã hàng',
     sampleImage: 'Ảnh chính',
@@ -384,8 +384,7 @@ export const MESSAGES = {
     stagedWithOrder: 'Mã hàng {0} sẽ được lưu khi lưu đơn.',
     stagedDuplicate: 'Mã hàng {0} đã có trên đơn này.',
     removeProductBlock: 'Bỏ mã hàng khỏi đơn',
-    lockedEditHint:
-      'Đơn đã vào sản xuất: không đổi mã đơn, khách hàng, ngày nhận, màu và size đã khai; vẫn sửa được số lượng, đơn giá, ngày giao, ghi chú và thêm màu, size mới.',
+    lockedEditHint: 'Đơn đã vào sản xuất: không đổi mã đơn, khách, ngày nhận, màu, size đã khai.',
     needLine: 'Vui lòng nhập ít nhất một dòng màu × size.', // MSG01
     duplicateProduct:
       'Một mã hàng chỉ khai một lần trong đơn: thêm màu / size vào cùng khối mã hàng đó.',
@@ -401,7 +400,7 @@ export const MESSAGES = {
     materialsTab: 'NVL của đơn',
     markersTab: 'Bìa cắt',
     markers: {
-      hint: 'Bìa phía trên giác theo tỉ lệ size của đơn, chỉ dùng để ước số mét vải khi lập lệnh cắt. Mỗi bìa thuộc một nhóm bìa đã khai ở định mức mã hàng và dùng cho các màu dùng nhóm đó (màu cần bìa riêng thì khai dạng bìa riêng ở định mức); nhập dài bìa (m) và số sản phẩm mỗi size trên một lớp vải (bỏ trống = size không có trên bìa).',
+      hint: 'Bìa giác theo tỉ lệ size của đơn, chỉ để ước số mét vải khi lập lệnh cắt. Nhập dài bìa (m) và số sản phẩm mỗi size trên một lớp vải; để trống = size không có trên bìa.',
       empty: 'Đơn hàng chưa có mã hàng.',
       noGroups: 'Mã hàng chưa khai dạng bìa, nhóm bìa ở định mức, chưa nhập bìa được.',
       noMarkers: 'Chưa có bìa, lệnh cắt sẽ báo chưa tính được vải.',
@@ -442,10 +441,10 @@ export const MESSAGES = {
       tabNorms: 'Định mức NVL',
       tabMarkers: 'Nhóm bìa',
       componentHint:
-        'Sản phẩm gồm những gì, khai một lần cho mọi màu – size. Chi tiết cắt (Panel) đi qua tổ cắt; phụ liệu (Trim) như khóa, cúc, nhãn, chỉ cấp thẳng cho tổ may.',
+        'Khai một lần cho mọi màu – size. Panel (chi tiết cắt) qua tổ cắt; Trim (khóa, cúc, nhãn, chỉ) cấp thẳng cho tổ may.',
       variantHint: 'Màu – size lấy từ các đơn hàng của mã hàng (không thêm / xóa ở đây).',
       normHint:
-        'Mỗi dòng cho biết một thành phần của mã hàng dùng NVL nào, theo màu áo; mọi size của một màu dùng chung định mức. Chọn nhiều màu để dùng chung một dòng.',
+        'Mỗi dòng: thành phần dùng NVL nào theo màu áo; mọi size của màu dùng chung. Chọn nhiều màu để dùng chung một dòng.',
       componentName: 'Tên thành phần',
       componentType: 'Loại',
       typePanel: 'Chi tiết cắt (Panel)',
@@ -465,7 +464,7 @@ export const MESSAGES = {
       addNorm: 'Thêm dòng định mức',
       addMaterial: 'Thêm NVL mới',
       markerHint:
-        'Dạng bìa là các màu áo dùng chung một bộ nhóm bìa; mỗi nhóm bìa gom các chi tiết cắt (Panel) cắt chung một bìa. Ở mỗi màu, các chi tiết trong một nhóm phải cùng vải; màu nào có nhóm mà chi tiết khác vải thì sang dạng bìa riêng. Vải của nhóm lấy từ định mức. Bìa cụ thể (mã bìa, dài, tỉ lệ size) khai ở đơn hàng theo nhóm.',
+        'Dạng bìa = các màu dùng chung bộ nhóm bìa; mỗi nhóm gom các Panel cắt chung một bìa và phải cùng vải ở mỗi màu (khác vải thì tách dạng bìa riêng). Bìa cụ thể khai ở đơn hàng.',
       markerEmpty: 'Mã hàng chưa có dạng bìa, lệnh cắt sẽ báo chưa tính được vải.',
       layoutTitle: 'Dạng bìa {0}',
       layoutColorsOf: 'Màu của dạng bìa {0}',
@@ -492,7 +491,7 @@ export const MESSAGES = {
     /** DEV-ALL-121: chọn sẵn file Excel ở form mã hàng; bấm Lưu thì lưu mã hàng rồi nhập lần lượt từng file. */
     productExcel: {
       section: 'Nhập từ Excel',
-      hint: 'Chọn 1 file chung (nút xanh) hoặc chọn file riêng cho từng mục. Bấm Lưu để nhập; dòng lỗi được bỏ qua và báo lại.',
+      hint: 'Chọn 1 file chung (nút xanh) hoặc file riêng từng mục. Dòng lỗi được bỏ qua và báo lại.',
       template: 'Tải file mẫu',
       choose: 'Chọn file',
       change: 'Đổi file',
@@ -511,8 +510,7 @@ export const MESSAGES = {
       otherProductInFile: 'Sheet Mã hàng là mã {0}, khác mã đang sửa: không điền.',
       moreProductsInFile: 'Sheet Mã hàng có {0} dòng, chỉ lấy dòng đầu.',
       skippedNoTable: 'Bỏ qua: file chung không có bảng này.',
-      hintDeferred:
-        'Bấm Lưu ở đây chưa ghi mã hàng. Mã hàng và file Excel được ghi khi bạn bấm Lưu đơn; dòng lỗi được bỏ qua và báo lại.',
+      hintDeferred: 'Lưu ở đây chưa ghi mã hàng: mã hàng và file Excel ghi khi Lưu đơn.',
       specGroupNoteDeferred: 'nhập sau khi Lưu đơn (đơn tạo màu, size)',
       runningOrder: 'Đang nhập file Excel của mã hàng {0} vào đơn...',
       orderPlaceholder: 'Chọn đơn đang chạy có mã hàng này',
@@ -528,6 +526,9 @@ export const MESSAGES = {
       requiredHint: 'Thêm mới mã hàng bắt buộc có dữ liệu: {0}.',
       requiredMissing:
         'Thiếu dữ liệu Excel bắt buộc: {0}. Tải file có đủ các sheet này rồi bấm Lưu.',
+      saveBlockedByErrors:
+        'Chưa lưu: dữ liệu Excel còn {0} lỗi (thiếu trường hoặc sai dữ liệu). Bấm "Xem / sửa lại" để sửa hết lỗi rồi Lưu.',
+      saveCheckFailed: 'Chưa lưu: không kiểm tra được dữ liệu Excel. Thử lại.',
       slotRequired: 'Bắt buộc — chưa có dữ liệu',
       materialsCreated: 'Đã thêm {0} NVL vào danh mục: {1}.',
       materialFailed: 'NVL {0}: {1}',
@@ -540,12 +541,11 @@ export const MESSAGES = {
     },
     /** DEV-ALL-150: nhập Bìa của đơn, NVL của đơn ở form tạo / sửa đơn (không bắt buộc, ghi khi Lưu đơn). */
     orderExcel: {
-      section: 'Bìa và NVL của đơn (Excel, không bắt buộc)',
-      hint: 'Chọn file là mở bảng kiểm tra để xem và sửa; Xác nhận mới giữ trên form. Dữ liệu chỉ được lưu vào đơn khi bấm Lưu đơn. Dòng lỗi bỏ qua khi lưu và báo lại.',
+      section: 'Bìa và NVL của đơn',
+      hint: 'Chọn file để xem và sửa trong bảng kiểm tra, Xác nhận để giữ trên form. Chỉ lưu vào đơn khi Lưu đơn.',
       markerTemplate: 'File mẫu bìa cắt',
       materialTemplate: 'File mẫu NVL của đơn',
-      markerTemplateHint:
-        'File mẫu bìa cắt chỉ có sheet "Bìa của đơn" (không kèm Thành phần, Định mức NVL, Nhóm bìa).',
+      markerTemplateHint: 'File mẫu bìa cắt chỉ có sheet "Bìa của đơn".',
       noTable: 'File không có bảng {0}.',
       saved: 'Đã lưu đơn {0}.',
       running: 'Đang nhập bìa, NVL của đơn {0}...',
@@ -555,7 +555,9 @@ export const MESSAGES = {
     /** DEV-ALL-122: popup kiểm tra file Excel nhiều sheet trước khi lưu (sửa trực tiếp, Xác nhận rồi mới Lưu). */
     excelReview: {
       title: 'Kiểm tra dữ liệu từ Excel — {0}',
-      hint: 'Sửa trực tiếp trong bảng. Dòng lỗi tô đỏ; dòng lỗi còn lại khi Xác nhận sẽ bị bỏ qua khi lưu. Chưa có gì được lưu: dữ liệu chỉ ghi khi bấm Lưu mã hàng / Lưu đơn.',
+      hint: 'Sửa trực tiếp trong bảng. Dòng lỗi (thiếu trường, sai dữ liệu) tô đỏ; sửa hoặc xóa hết mới Xác nhận được. Chưa lưu gì.',
+      blockedByErrors: 'Còn {0} dòng lỗi. Sửa hoặc xóa các dòng lỗi rồi mới Xác nhận.',
+      missingFields: 'Thiếu: {0}.',
       onlyErrors: 'Chỉ hiện dòng lỗi',
       addRow: 'Thêm dòng',
       recheck: 'Kiểm tra lại',
@@ -565,12 +567,7 @@ export const MESSAGES = {
         '{0} hợp lệ · {1} lỗi (bỏ qua khi lưu) · {2} chờ kiểm khi Lưu đơn · {3} dùng NVL chưa có trong kho',
       missingTitle: '{0} NVL chưa có trong danh mục kho',
       missingHint:
-        'Các dòng dùng NVL này vẫn được giữ. Khi Xác nhận, hệ thống hỏi có thêm các NVL này vào danh mục NVL khi lưu không: thêm thì điền thông tin dưới đây (Tên bắt buộc, vải cần khổ); không thêm thì các dòng đó bị bỏ qua khi lưu.',
-      askAddTitle: 'Thêm NVL vào danh mục?',
-      askAddBody:
-        'Có {0} NVL chưa có trong danh mục kho: {1}. Thêm các NVL này vào danh mục NVL khi bấm Lưu? Không thêm thì các dòng dùng các NVL này sẽ bị bỏ qua.',
-      askAddYes: 'Thêm vào danh mục',
-      askAddNo: 'Không thêm',
+        'Khi Xác nhận, các NVL này tự được thêm vào danh mục. Điền Tên (vải cần thêm Khổ).',
       missingInfoRequired: 'Điền Tên NVL (và Khổ với vải) cho: {0}.',
       materialColumns: {
         code: 'Mã NVL',
@@ -619,6 +616,7 @@ export const MESSAGES = {
         length: 'Dài (m)',
         width: 'Khổ (m)',
         markerStatus: 'Trạng thái',
+        sizeRatios: 'Tỉ lệ size',
         materialName: 'Tên NVL',
         unit: 'Đơn vị',
         requiredQty: 'Số cần',
@@ -627,13 +625,12 @@ export const MESSAGES = {
         result: 'Kết quả',
       },
       componentTypes: { PANEL: 'PANEL (vải cắt)', TRIM: 'TRIM (phụ liệu)' },
-      askClose: 'Đóng, chưa chọn',
     },
     /** DEV-ALL-118: nhập dòng hàng của đơn từ Excel (ma trận màu × size). */
     orderImport: {
       button: 'Nhập từ Excel',
       title: 'Nhập dòng hàng từ Excel',
-      hint: 'Bảng có cột Mã hàng, Màu, Đơn giá CMT và mỗi size một cột (ô là số lượng, trống = không đặt). Mỗi mã hàng một đơn giá. Áp dụng thì dòng hàng được điền vào form (mã hàng đã có trên form: ghi đè số lượng các size trong file của màu trùng, màu mới thêm dòng); xem lại rồi bấm Lưu.',
+      hint: 'Cột: Mã hàng, Màu, Đơn giá CMT, mỗi size một cột (trống = không đặt). Áp dụng để điền vào form (màu trùng: ghi đè số lượng), xem lại rồi Lưu.',
       apply: 'Áp dụng vào form',
       unknownProducts:
         'File có mã hàng chưa có trong hệ thống. Bấm Tạo mã hàng: form điền sẵn từ sheet Mã hàng. Lưu form chỉ giữ mã trên đơn; mã hàng được ghi khi bấm Lưu đơn. Dòng chỉ thiếu mã hàng được nhận ngay.',
@@ -656,7 +653,7 @@ export const MESSAGES = {
       button: 'Nhập từ Excel',
       template: 'Tải file mẫu',
       title: 'Nhập từ Excel: {0}',
-      hint: 'Một file gồm 4 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn (nhận theo tên cột, thiếu bảng nào thì bỏ qua bảng đó). Dòng trong file thêm mới hoặc ghi đè dòng cùng khóa; dữ liệu không có trong file giữ nguyên. Chọn file là xem trước ngay, chưa lưu gì.',
+      hint: 'File gồm 4 bảng: Thành phần, Định mức NVL, Nhóm bìa, Bìa của đơn (thiếu bảng nào bỏ qua bảng đó). Ghi đè dòng cùng khóa, giữ dòng khác. Chọn file là xem trước, chưa lưu.',
       chooseFile: 'Bấm hoặc kéo file Excel (.xlsx) vào đây',
       chooseFileHint: 'Dùng file mẫu để đúng tên cột.',
       order: 'Đơn nhận bìa của đơn',

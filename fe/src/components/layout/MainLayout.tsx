@@ -14,7 +14,7 @@ import { Brand } from './Brand';
 import './layout.css';
 
 const COLLAPSED_KEY = 'nxmtd.sider.collapsed';
-const SIDER_WIDTH = 260;
+const SIDER_WIDTH = 240;
 const SIDER_COLLAPSED_WIDTH = 72;
 const SIDER_BG = '#001529';
 

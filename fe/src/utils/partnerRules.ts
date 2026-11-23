@@ -18,11 +18,14 @@ const tooLong = (label: string, max: number) => `${label} tối đa ${max} ký t
 /** Rule cho khách hàng / nhà cung cấp (Rules 4.9): độ dài tính sau khi cắt khoảng trắng đầu cuối, đúng với giá trị BE lưu. */
 export const partnerRules = {
   required: (label: string, max: number, requiredMessage: string = MESSAGES.common.required) =>
-    zodRule(z.string().trim().min(1, requiredMessage).max(max, tooLong(label, max))),
+    zodRule(z.string().trim().min(1, requiredMessage).max(max, tooLong(label, max)), {
+      required: true,
+    }),
   optional: (label: string, max: number) =>
     zodRule(z.string().trim().max(max, tooLong(label, max))),
   phone: zodRule(
     z.string().trim().min(1, MESSAGES.common.required).regex(PHONE_PATTERN, PHONE_INVALID_MESSAGE),
+    { required: true },
   ),
   email: zodRule(
     z
@@ -31,5 +34,6 @@ export const partnerRules = {
       .min(1, MESSAGES.common.required)
       .max(PARTNER_LIMITS.email, tooLong('Email', PARTNER_LIMITS.email))
       .regex(EMAIL_PATTERN, EMAIL_INVALID_MESSAGE),
+    { required: true },
   ),
 };

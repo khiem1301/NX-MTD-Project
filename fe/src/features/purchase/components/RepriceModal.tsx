@@ -6,6 +6,7 @@ import { PURCHASE_TEXT } from '../constants';
 import { useRepriceOrder } from '../hooks/usePurchase';
 import type { PurchaseOrderDetail } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -63,7 +64,7 @@ export function RepriceModal({ open, order, onClose }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
-      <Alert type="info" showIcon message={text.hint} style={{ marginBottom: 12 }} />
+      <HintTip text={text.hint} />
       {order.paymentReturnReason && (
         <Alert
           type="warning"

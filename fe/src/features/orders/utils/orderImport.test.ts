@@ -1,6 +1,6 @@
 import type { OrderImportRow } from '../types';
 import { newBlock, type ProductBlock } from './orderGrid';
-import { acceptMissingProduct, mergeOrderImport } from './orderImport';
+import { acceptMissingProduct, acceptStagedProducts, mergeOrderImport } from './orderImport';
 import type { OrderImportPreview } from '../types';
 
 const row = (over: Partial<OrderImportRow>): OrderImportRow => ({
@@ -105,5 +105,13 @@ describe('acceptMissingProduct', () => {
     expect(next.rows[1]!.productId).toBeNull();
     expect(next.validCount).toBe(1);
     expect(next.errorCount).toBe(1);
+  });
+
+  it('mã đã khai trên form đơn được nhận luôn, không còn trong danh sách cần tạo', () => {
+    const next = acceptStagedProducts(preview, { 'AO-MOI': -3 });
+
+    expect(next.rows[0]).toMatchObject({ productId: -3, error: null, missingProduct: false });
+    expect(next.rows.some((r) => r.missingProduct)).toBe(false);
+    expect(next.validCount).toBe(1);
   });
 });

@@ -1,6 +1,6 @@
 import { CloseCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useState } from 'react';
-import { Alert, Button, Card, Space } from 'antd';
+import { Button, Card, Space } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { QueryError } from '@/components/common/QueryError';
 import { ReasonModal } from '@/components/common/ReasonModal';
@@ -16,6 +16,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { allocationColumns } from '../components/allocationColumns';
 import type { AllocationFilters } from '../types';
 import { STATUS_OPTIONS } from '../constants';
+import { HintTip } from '@/components/common/HintTip';
 
 const isPending = (m: WorkAllocation) => m.status === MOVEMENT_STATUS.PENDING;
 
@@ -55,7 +56,7 @@ export function MyPieceMovementsPage() {
 
   return (
     <Card title={PM_LABELS.workerTitle}>
-      <Alert type="info" showIcon message={PM_LABELS.workerHint} style={{ marginBottom: 16 }} />
+      <HintTip text={PM_LABELS.workerHint} />
       <Space style={{ marginBottom: 16 }} wrap>
         <FilterSelect
           value={table.filters.status}

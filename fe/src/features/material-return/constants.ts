@@ -56,7 +56,7 @@ export const RETURN_LABELS = {
   scrapPlaceholder: 'Chọn NVL phế phẩm',
   scrapHint: 'Phế phẩm không có trần số lượng; vải theo kg, kim theo cái.',
   materialHintSewing: 'Số còn trả được = tổng đã nhận ở mọi phiếu cấp − đã trả (không theo đơn).',
-  btpHint: 'Số bộ còn trả được = đã nhận − đã QC đạt − đã trả, theo từng mã hàng – màu – size.',
+  btpHint: 'Còn trả được = đã nhận − đã QC đạt − đã trả, theo mã hàng – màu – size.',
   pickWorkOrder: 'Chọn lệnh cắt để xem vải còn trả được. Chỉ trả phế phẩm thì không cần chọn.',
   pickOrder: 'Chọn đơn hàng để xem BTP còn trả được.',
   nothingEntered: 'Nhập số lượng trả ít nhất một dòng.',
@@ -84,9 +84,9 @@ export const RETURN_LABELS = {
   cancel: 'Rút phiếu',
   nothingToReturn: 'Không còn hàng nào trả được theo lựa chọn này.',
   suggestHint:
-    'Hệ thống đã điền sẵn số vải còn lại sau cắt của lệnh (đã nhận theo lệnh − số mét đã cắt − đã trả). Kiểm tra lại cuộn vải thực tế rồi sửa nếu khác.',
+    'Đã điền sẵn vải còn lại sau cắt (đã nhận − đã cắt − đã trả). Kiểm tra cuộn vải thực tế rồi sửa nếu khác.',
   noSuggestHint:
-    'Lệnh có bàn cắt chưa nhập số mét nên hệ thống chưa tính được vải còn lại. Nhập số trả theo cuộn vải thực tế.',
+    'Bàn cắt chưa nhập số mét nên chưa tính được vải còn lại. Nhập số trả theo cuộn vải thực tế.',
 } as const;
 
 export const RETURN_MESSAGES = {

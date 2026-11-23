@@ -20,7 +20,7 @@ export const GR_LABELS = {
   addCode: 'Thêm bậc',
   searchGrade: 'Tìm theo mã, tên bậc...',
   codeHint:
-    'Mỗi dòng là một bậc và mức tiền đang áp dụng. Đổi tiền = thêm mức mới theo ngày hiệu lực, mức cũ giữ làm lịch sử. Bậc đã có người, đề xuất hoặc tiền bậc dùng thì không xóa được, chỉ ngừng dùng.',
+    'Mỗi dòng một bậc và mức tiền đang áp dụng. Đổi tiền = thêm mức mới theo ngày hiệu lực. Bậc đã dùng thì chỉ ngừng dùng, không xóa.',
   codeCode: 'Mã bậc (chữ hoa / số, tối đa 5 ký tự)',
   active: 'Đang dùng',
   inactive: 'Ngừng dùng',
@@ -33,8 +33,7 @@ export const GR_LABELS = {
   futureOnlyHint: 'Mức đã có hiệu lực là lịch sử lương, không sửa hoặc xóa.',
   propose: 'Đề xuất bậc',
   setDirect: 'Đặt bậc trực tiếp',
-  setDirectHint:
-    'Đặt bậc ngay, không cần tổ trưởng đề xuất. Đề xuất đang chờ của công nhân này (nếu có) sẽ bị đóng lại.',
+  setDirectHint: 'Đặt bậc ngay, không cần đề xuất; đề xuất đang chờ của công nhân này bị đóng.',
   newGrade: 'Bậc mới',
   setReason: 'Lý do',
   worker: 'Công nhân',
@@ -66,8 +65,7 @@ export const GR_LABELS = {
   expired: 'Đã thay thế',
   diffFromPrev: 'Chênh so với mức trước',
   sameAmount: 'Mức mới đang trùng mức hiện tại.',
-  effectiveHint:
-    'Mức cũ được giữ làm lịch sử. Chọn ngày sau ngày hiệu lực của mức hiện tại, kể cả ngày trong tương lai.',
+  effectiveHint: 'Mức cũ giữ làm lịch sử. Chọn ngày sau ngày hiệu lực hiện tại.',
   replaceHint: 'Ngày này đã có mức hẹn, lưu sẽ thay thế mức đó',
   allGrades: 'Mọi bậc',
   gradeCode: 'Bậc',
@@ -85,7 +83,7 @@ export const GR_MESSAGES = {
   levelDeleted: 'Đã xóa mức tiền bậc.',
   codeSaved: 'Đã lưu bậc thợ.',
   codeDeleted: 'Đã xóa bậc thợ.',
-  levelHint: 'Đổi tiền bậc = thêm một dòng mới với ngày hiệu lực mới, các dòng cũ giữ làm lịch sử.',
+  levelHint: 'Đổi tiền bậc = thêm dòng mới với ngày hiệu lực mới; dòng cũ giữ làm lịch sử.',
 } as const;
 
 /** Luật bắt buộc nhập dùng chung cho các form của màn Bậc thợ. */

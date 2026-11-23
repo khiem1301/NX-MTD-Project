@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamMemberLookup } from '@/hooks/useHrLookups';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
@@ -15,6 +15,7 @@ import {
 import { useAssignableOperations } from '../hooks/useAssignments';
 import { useUpdateDefect } from '../hooks/useDefects';
 import type { Defect, DefectReason, DefectType, OutputRole, ShiftCode } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 type DefectEditModalProps = {
   role: OutputRole;
@@ -97,7 +98,7 @@ export function DefectEditModal({ role, defect, onClose }: DefectEditModalProps)
       onCancel={onClose}
       destroyOnHidden
     >
-      <Alert type="info" showIcon message={text.editHint} style={{ marginBottom: 16 }} />
+      <HintTip text={text.editHint} />
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={update.isPending}>
         <Form.Item name="shiftCode" label={text.form.shift}>
           <Select allowClear options={SHIFT_OPTIONS} style={{ width: 160 }} />

@@ -24,6 +24,11 @@ public class SpecImportTests : ProductionTestBase
     /// <summary>Dòng định mức đã được lệnh cắt dùng (khóa = ProductComponentMaterialId); nhóm bìa đã có bìa của đơn.</summary>
     private readonly List<WorkOrderLine> _workOrderLines = [];
     private readonly List<ProductMarker> _productMarkers = [];
+    private readonly List<ProductColor> _productColors =
+    [
+        new() { ProductColorId = 1, ProductId = ProductId, Color = "Đen" },
+        new() { ProductColorId = 2, ProductId = ProductId, Color = "Xanh" },
+    ];
     private readonly List<CustomerOrder> _orders = [new() { OrderId = OrderId, OrderCode = "DH01", Status = OrderStatuses.InProduction }];
 
     public SpecImportTests()
@@ -42,6 +47,7 @@ public class SpecImportTests : ProductionTestBase
         SetupQueryable(new List<CutHandoverLine>());
         SetupQueryable(new List<MaterialIssueLine>());
         SetupQueryable(new List<StockBalance>());
+        SetupQueryable(_productColors);
         _specs.GetAsync(ProductId, Arg.Any<CancellationToken>()).Returns(Result<ProductSpecDto>.Success(Spec()));
         _specs.CheckAsync(ProductId, Arg.Any<SaveProductSpecDto>(), Arg.Any<CancellationToken>()).Returns(Result.Success());
         _specs.WriteAsync(ProductId, Arg.Any<SaveProductSpecDto>(), Arg.Any<CancellationToken>()).Returns(Result<int>.Success(ProductId));
@@ -87,7 +93,7 @@ public class SpecImportTests : ProductionTestBase
     ]);
 
     private SpecImportService Sut() => new(Uow, _specs, _markers, new ClosedXmlSpecWorkbookParser(),
-        new SaveProductSpecDtoValidator(), new SaveOrderMarkersDtoValidator());
+        new SaveProductSpecDtoValidator(), new SaveOrderMarkersDtoValidator(), Substitute.For<IClock>());
 
     // ---------- File mẫu ----------
 
@@ -222,15 +228,15 @@ public class SpecImportTests : ProductionTestBase
 
         var preview = (await Sut().PreviewAsync(ProductId, null, stream, default)).Data!;
 
-        preview.Norms.Select(n => n.Action).Should().Equal("Error", "Error", "Error", "Update", "Error");
-        preview.Norms[0].Error.Should().Contain("Tím");
+        preview.Norms.Select(n => n.Action).Should().Equal("New", "Error", "Error", "Update", "Error");
+        preview.Norms[0].Error.Should().BeNull();                  // màu Tím chưa có: tạo khi Nhập
         preview.Norms[1].Error.Should().Contain("VAI99");
         preview.Norms[2].Error.Should().Contain("VAICU");          // NVL đã ngừng dùng
         preview.Norms[4].Error.Should().Contain("dòng 7");          // trùng màu + chi tiết + NVL với dòng 7
         preview.MarkerGroups.Single().Error.Should().Contain("TRIM");
         preview.DuplicateCount.Should().Be(1);
-        preview.ErrorCount.Should().Be(4);
-        preview.ValidCount.Should().Be(1);
+        preview.ErrorCount.Should().Be(3);
+        preview.ValidCount.Should().Be(2);
         preview.CanImport.Should().BeTrue();
     }
 
@@ -340,6 +346,25 @@ public class SpecImportTests : ProductionTestBase
     }
 
     [Fact]
+    public async Task Import_NewColorInFile_CreatesColorAndImportsNorms()
+    {
+        Uow.Repository<ProductColor>().AddRangeAsync(Arg.Do<IEnumerable<ProductColor>>(c => _productColors.AddRange(c)))
+            .Returns(Task.CompletedTask);
+        SaveProductSpecDto? written = null;
+        _specs.WriteAsync(ProductId, Arg.Do<SaveProductSpecDto>(d => written = d), Arg.Any<CancellationToken>())
+            .Returns(Result<int>.Success(ProductId));
+        using var stream = Book(wb => Table(wb, "ĐM", NormHeaders, ["Kem", "Tay áo", "VAI01", null]));
+
+        var result = await Sut().ImportAsync(ProductId, null, stream, default);
+
+        result.IsSuccess.Should().BeTrue(result.Message);
+        _productColors.Select(c => c.Color).Should().Contain("Kem");
+        written!.Norms.Should().Contain(n => n.Color == "Kem" && n.ComponentName == "Tay áo" && n.MaterialId == 100);
+        written.Variants.Should().NotContain(v => v.SizeCode == SpecImportBuilder.ColorOnlySize);
+        await Uow.Received(1).CommitTransactionAsync();
+    }
+
+    [Fact]
     public async Task Import_OrderMarkersOnly_SkipsSpecWriteAndSavesMergedMarkers()
     {
         SaveOrderMarkersDto? written = null;
@@ -396,7 +421,7 @@ public class SpecImportTests : ProductionTestBase
     }
 
     [Fact]
-    public async Task Preview_GroupWithSomeUnknownColors_KeepsKnownColorsAndNotes()
+    public async Task Preview_GroupWithUnknownColors_KeepsThemToCreateOnImport()
     {
         using var stream = Book(wb => Table(wb, "Nhóm", GroupHeaders,
             [1, "Thân trước", "Đen; Hồng; Đỏ"],
@@ -405,10 +430,8 @@ public class SpecImportTests : ProductionTestBase
         var preview = (await Sut().PreviewAsync(ProductId, null, stream, default)).Data!;
 
         preview.MarkerGroups[0].Error.Should().BeNull();
-        preview.MarkerGroups[0].Colors.Should().Equal("Đen");
-        preview.Notes.Should().Contain(n => n.Contains("Nhóm bìa 1") && n.Contains("Hồng, Đỏ"));
-        preview.MarkerGroups[1].Action.Should().Be("Error");
-        preview.MarkerGroups[1].Error.Should().Contain("Hồng");
+        preview.MarkerGroups[0].Colors.Should().Equal("Đen", "Hồng", "Đỏ");   // màu chưa có: tạo khi Nhập
+        preview.MarkerGroups[1].Error.Should().BeNull();
     }
 
     [Fact]

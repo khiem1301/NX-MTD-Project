@@ -11,6 +11,18 @@ jest.mock('../hooks/useOrders', () => ({
 }));
 
 // Ô ảnh kéo theo cấu hình môi trường (import.meta) mà jest không đọc được; test này không cần ảnh.
+jest.mock('../api/orderApi', () => ({
+  excelBundleApi: {
+    check: jest.fn(() =>
+      Promise.resolve({
+        products: null,
+        orderMaterials: null,
+        missingMaterials: [],
+        spec: { components: [], norms: [], markerGroups: [], orderMarkers: [], crossErrors: [] },
+      }),
+    ),
+  },
+}));
 jest.mock('./SampleImageInput', () => ({ SampleImageInput: () => null }));
 // Nhập Excel sau khi lưu (DEV-ALL-121) gọi API thật; test này không bật mục đó.
 jest.mock('../utils/productExcelImports', () => ({

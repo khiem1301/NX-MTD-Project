@@ -1,7 +1,7 @@
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { useMemo, useState } from 'react';
 import { HistoryOutlined, SearchOutlined } from '@ant-design/icons';
-import { Button, Input, Modal, Select, Space, Tooltip, Typography } from 'antd';
+import { Button, Input, Modal, Select, Space, Tooltip } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
@@ -21,6 +21,7 @@ import {
   type DailyWorker,
 } from '../utils/dailyBoard';
 import { dailyModalColumns, type DailyTableRow } from './dailyModalColumns';
+import { HintTip } from '@/components/common/HintTip';
 
 const TABLE_SCROLL = { x: 560, y: 'calc(100vh - 520px)' };
 
@@ -133,7 +134,7 @@ export function DailyWorkerModal({
       onOk={handleSave}
       onCancel={onClose}
     >
-      <Typography.Paragraph type="secondary">{PM_LABELS.workerModalHint}</Typography.Paragraph>
+      <HintTip text={PM_LABELS.workerModalHint} />
       {canEdit && (
         <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
           <Select<string>

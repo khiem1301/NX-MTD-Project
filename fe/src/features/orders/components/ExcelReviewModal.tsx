@@ -9,9 +9,9 @@ import type { SaveMaterialPayload } from '@/types/material';
 import { useExcelReview } from '../hooks/useExcelReview';
 import type { ExcelBundle } from '../types';
 import { REVIEW_TABLES, incompleteMaterials, type ReviewTable } from '../utils/excelReview';
-import { AddMaterialsAskModal } from './AddMaterialsAskModal';
 import { ExcelReviewTabs } from './ExcelReviewTabs';
 import { MissingMaterialsPanel } from './MissingMaterialsPanel';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.excelReview;
 const MODAL_WIDTH = 1180;
@@ -71,20 +71,25 @@ export function ExcelReviewModal({
   const { draft, counts, newMaterials } = review;
   const [active, setActive] = useState<ReviewTable | undefined>(tables[0]);
   const [onlyErrors, setOnlyErrors] = useState(false);
-  const [asking, setAsking] = useState(false);
   const materials = useMaterialOptions();
   const materialOptions = (materials.data ?? []).map((m) => ({
     value: m.materialCode,
     label: `${m.materialCode} · ${m.materialName}${m.color ? ` (${m.color})` : ''}`,
   }));
-  const crossErrors = review.check.data?.spec.crossErrors ?? [];
-  const removedNames = allowReplace && replace ? (review.check.data?.spec.removedNames ?? []) : [];
+  // review.data: kết quả kiểm gần nhất, không mất trong lúc đang kiểm lại.
+  const crossErrors = review.data?.spec.crossErrors ?? [];
+  const removedNames = allowReplace && replace ? (review.data?.spec.removedNames ?? []) : [];
   const done = (materialsToAdd: SaveMaterialPayload[]) =>
     onConfirm(draft, materialsToAdd, allowReplace && replace);
 
-  const handleConfirm = () => (newMaterials.length === 0 ? done([]) : setAsking(true));
-  const handleAdd = () => {
-    setAsking(false);
+  /** Xác nhận: NVL chưa có trong danh mục được thêm luôn khi Lưu, không hỏi lại. */
+  const handleConfirm = () => {
+    if (counts.error > 0) {
+      setOnlyErrors(true);
+      void message.error(fill(text.blockedByErrors, counts.error));
+      return;
+    }
+    if (newMaterials.length === 0) return done([]);
     const incomplete = incompleteMaterials(newMaterials);
     if (incomplete.length > 0) {
       void message.error(
@@ -127,7 +132,7 @@ export function ExcelReviewModal({
       }
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <HintTip text={text.hint} />
         {allowReplace && (
           <ReplaceImportOption
             checked={replace}
@@ -148,7 +153,7 @@ export function ExcelReviewModal({
         )}
         {newMaterials.length > 0 && (
           <MissingMaterialsPanel
-            missing={review.check.data?.missingMaterials ?? []}
+            missing={review.data?.missingMaterials ?? []}
             materials={newMaterials}
             onChange={review.updateMaterial}
           />
@@ -172,16 +177,6 @@ export function ExcelReviewModal({
           materialOptions={materialOptions}
         />
       </Space>
-      <AddMaterialsAskModal
-        open={asking}
-        codes={newMaterials.map((m) => m.materialCode ?? '')}
-        onAdd={handleAdd}
-        onSkip={() => {
-          setAsking(false);
-          done([]);
-        }}
-        onClose={() => setAsking(false)}
-      />
     </Modal>
   );
 }

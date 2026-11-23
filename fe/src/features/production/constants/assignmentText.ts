@@ -90,8 +90,7 @@ export const ASSIGNMENTS_TEXT = {
   copy: 'Chép từ đơn khác',
   copyTitle: 'Chép phân công từ đơn khác',
   copyFrom: 'Đơn nguồn',
-  copyHint:
-    'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn (theo mã công đoạn).',
+  copyHint: 'Chép phân công đang hiệu lực của tổ từ đơn nguồn sang đơn đang chọn.',
   columns: {
     operation: 'Công đoạn',
     skill: 'Bậc',
