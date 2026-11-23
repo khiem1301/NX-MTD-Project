@@ -14,6 +14,7 @@ namespace NX_MTD.Application.Services;
 /// mới vào trần sản lượng; phần hạ số xuống trừ trước vào phiếu đang chờ, phần còn lại ghi thu hồi ADJUSTED (CONFIRMED ngay).
 /// DEV-ALL-64: cuối ngày không thu hồi, phần chưa làm hết chuyển sang hôm sau cho chính công nhân đó (tồn từ hôm trước); trần cộng dồn
 /// của <c>vw_WorkerOutputCap</c> và trigger giữ nguyên.
+/// DEV-KH-10-3: khi công nhân rời tổ may, chốt sản lượng đã báo rồi thu hồi CONFIRMED phần chưa làm xong trước khi đổi TeamId.
 /// </summary>
 public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
 {
@@ -138,6 +139,93 @@ public sealed class DailyWorkAllocationService : IDailyWorkAllocationService
         if (dto.WorkDate != _clock.Today)
             return Result<DailyAllocationResultDto>.Failure(ErrorCodes.WarehouseInvalidReference, WarehouseMessages.DailyDateMustBeToday);
         return await _uow.InTransactionAsync(() => SaveInTransactionAsync(dto, teamId, ct));
+    }
+
+    /// <inheritdoc />
+    public async Task<Result> SettleOnTeamLeaveAsync(int oldTeamId, IReadOnlyList<int> workerIds, CancellationToken ct)
+    {
+        if (workerIds.Count == 0) return Result.Success();
+
+        var team = await _uow.Repository<Team>().Query().AsNoTracking()
+            .FirstOrDefaultAsync(t => t.TeamId == oldTeamId, ct);
+        if (team is null || team.TeamType != TeamTypes.Sewing) return Result.Success();
+
+        var ids = workerIds.Distinct().ToList();
+        var lineIds = await Allocations.AsNoTracking()
+            .Where(a => a.SewingTeamId == oldTeamId && ids.Contains(a.WorkerId))
+            .Select(a => a.OrderLineId).Distinct().OrderBy(id => id).ToListAsync(ct);
+
+        try
+        {
+            foreach (var id in lineIds) await _locks.AcquireAsync($"work-allocation:{oldTeamId}:{id}", ct);
+        }
+        catch (Exception ex) when (ex is TimeoutException || (ex is InvalidOperationException ioe && IsLockTimeout(ioe)))
+        {
+            return Result.Failure(ErrorCodes.TeamOrderBusy, Messages.OutputLockBusy);
+        }
+
+        var reason = WarehouseMessages.TeamLeaveRetrieveNote;
+        var pendingHandovers = await Allocations
+            .Where(a => a.SewingTeamId == oldTeamId && ids.Contains(a.WorkerId)
+                        && a.Status == HandoverStatuses.Pending && a.MovementType == PieceMovementTypes.Handover)
+            .ToListAsync(ct);
+        foreach (var row in pendingHandovers)
+        {
+            row.Status = HandoverStatuses.Rejected;
+            row.RejectReason = string.Format(WarehouseMessages.TeamLeavePendingWithdrawn, reason);
+            row.ConfirmedAt = _clock.Now;
+        }
+
+        var pendingRetrievals = await Allocations
+            .Where(a => a.SewingTeamId == oldTeamId && ids.Contains(a.WorkerId)
+                        && a.Status == HandoverStatuses.Pending && a.MovementType == PieceMovementTypes.Retrieval)
+            .ToListAsync(ct);
+        foreach (var row in pendingRetrievals)
+        {
+            row.ConfirmedQty = row.Quantity;
+            row.ConfirmMode = ConfirmModes.System;
+            row.Status = HandoverStatuses.Confirmed;
+            row.ConfirmedAt = _clock.Now;
+            row.RetrievalNote = string.IsNullOrWhiteSpace(row.RetrievalNote) ? reason : $"{row.RetrievalNote} | {reason}";
+        }
+
+        if (pendingHandovers.Count + pendingRetrievals.Count > 0)
+            await _uow.SaveChangesAsync();
+
+        if (lineIds.Count > 0)
+        {
+            var positions = await LoadPositionsAsync(oldTeamId, lineIds, _clock.Today, ids, ct);
+            foreach (var (key, pos) in positions.Where(p => p.Value.Remaining > 0))
+            {
+                await _uow.Repository<WorkAllocation>().AddAsync(new WorkAllocation
+                {
+                    WorkDate = _clock.Today,
+                    MovementType = PieceMovementTypes.Retrieval,
+                    SewingTeamId = oldTeamId,
+                    WorkerId = key.WorkerId,
+                    OrderLineId = key.OrderLineId,
+                    OperationId = key.OperationId,
+                    Quantity = pos.Remaining,
+                    ConfirmedQty = pos.Remaining,
+                    RetrievalReason = RetrievalReasons.Adjusted,
+                    RetrievalNote = reason,
+                    ConfirmMode = ConfirmModes.System,
+                    Status = HandoverStatuses.Confirmed,
+                    CreatedAt = _clock.Now,
+                    ConfirmedAt = _clock.Now,
+                });
+            }
+        }
+
+        var openAssignments = await _uow.Repository<OperationAssignment>().Query()
+            .Where(a => a.SewingTeamId == oldTeamId && ids.Contains(a.WorkerId) && a.ValidTo == null)
+            .ToListAsync(ct);
+        foreach (var row in openAssignments)
+            row.ValidTo = _clock.Today;
+
+        if (lineIds.Count > 0 || openAssignments.Count > 0)
+            await _uow.SaveChangesAsync();
+        return Result.Success();
     }
 
     private async Task<Result<DailyAllocationResultDto>> SaveInTransactionAsync(SaveDailyAllocationDto dto, int teamId, CancellationToken ct)

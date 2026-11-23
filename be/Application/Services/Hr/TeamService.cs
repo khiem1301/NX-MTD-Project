@@ -17,11 +17,13 @@ public sealed class TeamService : ITeamService
     private readonly IUnitOfWork _uow;
     private readonly IClock _clock;
     private readonly EmployeeScope _scope;
+    private readonly IDailyWorkAllocationService _dailyAllocations;
 
     public TeamService(ITeamRepository teams, IEmployeeRepository employees, IAuditLogService audit, IUnitOfWork uow,
-        IClock clock, EmployeeScope scope)
+        IClock clock, EmployeeScope scope, IDailyWorkAllocationService dailyAllocations)
     {
         _teams = teams; _employees = employees; _audit = audit; _uow = uow; _clock = clock; _scope = scope;
+        _dailyAllocations = dailyAllocations;
     }
 
     public async Task<Result<IReadOnlyList<TeamListItemDto>>> ListAsync(bool includeDiscontinued, CancellationToken ct) =>
@@ -103,7 +105,10 @@ public sealed class TeamService : ITeamService
         return Result.Success(Messages.Saved);
     }
 
-    /// <summary>D32: ngày hiệu lực ≤ hôm nay; TeamId đổi ngay, ngày ghi trong AuditLog.</summary>
+    /// <summary>
+    /// D32 / DEV-KH-10-1: ngày hiệu lực ≤ hôm nay; TeamId đổi ngay, ngày ghi trong AuditLog.
+    /// DEV-KH-10-3: trước khi đổi tổ may, chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ.
+    /// </summary>
     public async Task<Result> TransferInAsync(int targetTeamId, TransferMembersDto dto, CancellationToken ct)
     {
         if (dto.EffectiveDate > _clock.Today)
@@ -119,20 +124,34 @@ public sealed class TeamService : ITeamService
             return Result.Failure(ErrorCodes.TeamTransferLeader, string.Format(Messages.TeamTransferLeader, leader.FullName));
 
         var moving = people.Where(p => p.TeamId != targetTeamId).ToList();
-        var oldTeams = moving.ToDictionary(p => p.EmployeeId, p => p.TeamId);
-        var reason = $"Chuyển tổ, hiệu lực {dto.EffectiveDate:dd/MM/yyyy}. {dto.Reason?.Trim()}".Trim();
-        foreach (var person in moving)
+        return await _uow.InTransactionAsync(async () =>
         {
-            var oldTeam = person.TeamId;
-            person.TeamId = targetTeamId;
-            person.UpdatedAt = _clock.Now;
-            if (person.Account is not null) person.Account.SecurityStamp = Guid.NewGuid();
-            _audit.Add(new AuditEntry(nameof(Employee), person.EmployeeId, AuditActions.Update,
-                new { TeamId = oldTeam }, new { TeamId = targetTeamId }, reason));
-        }
-        LogTransfer(team, moving, oldTeams, dto.EffectiveDate);
-        await _uow.SaveChangesAsync();
-        return Result.Success(string.Format(Messages.TeamTransferred, moving.Count));
+            var settledSewing = false;
+            foreach (var group in moving.Where(p => p.TeamId is not null).GroupBy(p => p.TeamId!.Value))
+            {
+                var oldTeam = await _teams.GetByIdAsync(group.Key);
+                var settle = await _dailyAllocations.SettleOnTeamLeaveAsync(group.Key, group.Select(p => p.EmployeeId).ToList(), ct);
+                if (!settle.IsSuccess) return settle;
+                if (oldTeam?.TeamType == TeamTypes.Sewing) settledSewing = true;
+            }
+
+            var oldTeams = moving.ToDictionary(p => p.EmployeeId, p => p.TeamId);
+            var reason = $"Chuyển tổ, hiệu lực {dto.EffectiveDate:dd/MM/yyyy}. {dto.Reason?.Trim()}".Trim();
+            foreach (var person in moving)
+            {
+                var oldTeam = person.TeamId;
+                person.TeamId = targetTeamId;
+                person.UpdatedAt = _clock.Now;
+                if (person.Account is not null) person.Account.SecurityStamp = Guid.NewGuid();
+                _audit.Add(new AuditEntry(nameof(Employee), person.EmployeeId, AuditActions.Update,
+                    new { TeamId = oldTeam }, new { TeamId = targetTeamId }, reason));
+            }
+            LogTransfer(team, moving, oldTeams, dto.EffectiveDate);
+            await _uow.SaveChangesAsync();
+            var message = string.Format(Messages.TeamTransferred, moving.Count);
+            if (settledSewing) message += Messages.TeamTransferSettledSuffix;
+            return Result.Success(message);
+        });
     }
 
     /// <summary>D31, D33: người đang giữ chức chuyển về Công nhân (giữ kiểu lương); hạ trước, lưu, rồi mới nâng để trigger không thấy 2 người.</summary>
@@ -224,10 +243,18 @@ public sealed class TeamService : ITeamService
         if (leader is not null)
             return Result.Failure(ErrorCodes.TeamRemoveLeader, string.Format(Messages.TeamRemoveLeader, leader.FullName));
 
-        SetTeam(people, teamId, null, $"Loại khỏi tổ {team.TeamCode}. {dto.Reason?.Trim()}".Trim());
-        LogTeam(teamId, $"Loại khỏi tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
-        await _uow.SaveChangesAsync();
-        return Result.Success(string.Format(Messages.TeamMembersRemoved, people.Count));
+        return await _uow.InTransactionAsync(async () =>
+        {
+            var settle = await _dailyAllocations.SettleOnTeamLeaveAsync(teamId, people.Select(p => p.EmployeeId).ToList(), ct);
+            if (!settle.IsSuccess) return settle;
+
+            SetTeam(people, teamId, null, $"Loại khỏi tổ {team.TeamCode}. {dto.Reason?.Trim()}".Trim());
+            LogTeam(teamId, $"Loại khỏi tổ: {Names(people)}. {dto.Reason?.Trim()}".Trim());
+            await _uow.SaveChangesAsync();
+            var message = string.Format(Messages.TeamMembersRemoved, people.Count);
+            if (team.TeamType == TeamTypes.Sewing) message += Messages.TeamTransferSettledSuffix;
+            return Result.Success(message);
+        });
     }
 
     /// <summary>Lịch sử của tổ (tab Lịch sử): thành viên đổi, bổ nhiệm, thôi giữ chức. Lịch sử từng người nằm ở bản ghi Employee.</summary>

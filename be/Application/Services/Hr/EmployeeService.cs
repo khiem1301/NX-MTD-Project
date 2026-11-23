@@ -23,13 +23,16 @@ public sealed class EmployeeService : IEmployeeService
     private readonly ICurrentUser _user;
     private readonly IClock _clock;
     private readonly EmployeeScope _scope;
+    private readonly IDailyWorkAllocationService _dailyAllocations;
 
     public EmployeeService(IEmployeeRepository employees, IAccountRepository accounts, ITeamRepository teams,
         IPasswordHasher hasher, ITemporaryPasswordGenerator passwords, IUsernameGenerator usernames,
-        IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock, EmployeeScope scope)
+        IAuditLogService audit, IUnitOfWork uow, ICurrentUser user, IClock clock, EmployeeScope scope,
+        IDailyWorkAllocationService dailyAllocations)
     {
         _employees = employees; _accounts = accounts; _teams = teams; _hasher = hasher; _passwords = passwords;
         _usernames = usernames; _audit = audit; _uow = uow; _user = user; _clock = clock; _scope = scope;
+        _dailyAllocations = dailyAllocations;
     }
 
     public async Task<Result<PagedResult<EmployeeListItemDto>>> ListAsync(EmployeeQuery query, CancellationToken ct)
@@ -122,16 +125,17 @@ public sealed class EmployeeService : IEmployeeService
         _employees.SetOriginalRowVersion(employee, dto.RowVer);
         var oldRole = employee.Role.RoleCode;
         var before = Snapshot(employee, oldRole);
-        var teamChanged = employee.TeamId != dto.TeamId;
+        var oldTeamId = employee.TeamId;
+        var teamChanged = oldTeamId != dto.TeamId;
         var identityChanged = oldRole != roleCode || teamChanged;
         if (oldRole != roleCode) employee.RoleId = await _employees.GetRoleIdAsync(roleCode, ct);
         ApplyProfile(employee, dto.FullName, dto.Gender, dto.DateOfBirth, dto.Phone, dto.StartDate);
-        employee.TeamId = dto.TeamId;
         employee.PayType = CodeText.ToCode(dto.PayType);
         if (dto.AttendanceCode is null) employee.AttendanceCode = null;   // gán mã mới đi qua thủ tục bên dưới
         if (identityChanged) RotateStamp(employee);   // token cũ mang vai trò / tổ cũ (D29)
         var reason = teamChanged ? $"Chuyển tổ, hiệu lực {_clock.Today:dd/MM/yyyy}" : null;   // D32
-        return await SaveAndMapAsync(employee, before, roleCode, attChanged ? dto.AttendanceCode : null, reason, ct);
+        return await ApplyTeamChangeAndSaveAsync(employee, before, roleCode, dto.TeamId, oldTeamId, teamChanged,
+            attChanged ? dto.AttendanceCode : null, reason, ct);
     }
 
     public async Task<Result> ManagerUpdateAsync(int employeeId, ManagerUpdateEmployeeDto dto, CancellationToken ct)
@@ -156,16 +160,17 @@ public sealed class EmployeeService : IEmployeeService
         _employees.SetOriginalRowVersion(employee, dto.RowVer);
         var oldRole = employee.Role.RoleCode;
         var before = Snapshot(employee, oldRole);
-        var teamChanged = employee.TeamId != dto.TeamId;
+        var oldTeamId = employee.TeamId;
+        var teamChanged = oldTeamId != dto.TeamId;
         var identityChanged = oldRole != roleCode || teamChanged;
         if (oldRole != roleCode) employee.RoleId = await _employees.GetRoleIdAsync(roleCode, ct);
         ApplyProfile(employee, dto.FullName, dto.Gender, dto.DateOfBirth, dto.Phone, dto.StartDate);
-        employee.TeamId = dto.TeamId;
         employee.PayType = CodeText.ToCode(dto.PayType);
         if (dto.AttendanceCode is null) employee.AttendanceCode = null;
         if (identityChanged) RotateStamp(employee);   // token cũ mang vai trò / tổ cũ (D29)
         var reason = teamChanged ? $"Chuyển tổ, hiệu lực {_clock.Today:dd/MM/yyyy}" : null;   // D32
-        return await SaveAndMapAsync(employee, before, roleCode, attChanged ? dto.AttendanceCode : null, reason, ct);
+        return await ApplyTeamChangeAndSaveAsync(employee, before, roleCode, dto.TeamId, oldTeamId, teamChanged,
+            attChanged ? dto.AttendanceCode : null, reason, ct);
     }
 
     public async Task<Result> ResignAsync(int employeeId, ResignEmployeeDto dto, CancellationToken ct)
@@ -288,6 +293,26 @@ public sealed class EmployeeService : IEmployeeService
             : Result.Failure(ErrorCodes.TeamDeputyExists, string.Format(Messages.TeamDeputyExistsNamed, teamCode, holderName));
 
     /// <summary>Lưu thay đổi hồ sơ rồi mới gọi thủ tục map mã chấm công (thủ tục UPDATE Employee làm đổi RowVer, D30).</summary>
+    /// <summary>DEV-KH-10-3: nếu đổi tổ may thì chốt/thu hồi sản lượng tổ cũ trước, rồi mới gán TeamId mới.</summary>
+    private async Task<Result> ApplyTeamChangeAndSaveAsync(Employee employee, object before, string roleCode, int? newTeamId,
+        int? oldTeamId, bool teamChanged, int? mapCode, string? reason, CancellationToken ct)
+    {
+        return await _uow.InTransactionAsync(async () =>
+        {
+            if (teamChanged && oldTeamId is int from)
+            {
+                var settle = await _dailyAllocations.SettleOnTeamLeaveAsync(from, [employee.EmployeeId], ct);
+                if (!settle.IsSuccess) return settle;
+            }
+            employee.TeamId = newTeamId;
+            employee.UpdatedAt = _clock.Now;
+            _audit.Add(new AuditEntry(nameof(Employee), employee.EmployeeId, AuditActions.Update, before, Snapshot(employee, roleCode), reason));
+            await _uow.SaveChangesAsync();
+            if (mapCode is int att) await _employees.MapAttendanceCodeAsync(att, employee.EmployeeId, _user.EmployeeId, ct);
+            return Result.Success(Messages.Saved);
+        });
+    }
+
     private async Task<Result> SaveAndMapAsync(Employee employee, object before, string roleCode, int? mapCode, string? reason,
         CancellationToken ct)
     {
