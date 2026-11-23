@@ -160,6 +160,10 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
+| DEV-ALL-171 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, Sổ xe và nhiên liệu, `VehicleService.CompleteTripAsync` | Kết thúc chuyến: nhập tiền xăng thì bắt buộc có ít nhất một ảnh hóa đơn xăng (FuelReceipt); ảnh tải ngay trong popup, thiếu thì BE trả lỗi ở ô tiền xăng và không lưu | Mở |
+| DEV-ALL-170 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-10, GBR-17, popup Tính hòa vốn | Tháng đã khóa sổ vẫn tính hòa vốn được (không chặn như GBR-10), popup chỉ cảnh báo; vì duyệt lương tự khóa tháng nên chặn sẽ làm hòa vốn không bao giờ tính được | Mở |
+| DEV-ALL-169 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-17, `BreakEvenResult`, `FinanceService`, màn Hòa vốn | Mỗi lần tính hòa vốn chạy cả hai cách chia định phí (sản lượng, giờ công) và so sánh cạnh nhau; bỏ ô chọn cách; tỉ lệ giờ công chuẩn hóa về 100%; popup Tính có kiểm dữ liệu đầu vào (API `break-even/inputs`); bấm mã hàng xem chi tiết; `UQ_BER` thêm `AllocationBasis` (patch `2026-11-24_break_even_both_bases.sql`) | Mở |
+| DEV-ALL-168 | 24/11/2026 | AI theo yêu cầu của người dùng | UC21, trang chủ, `HomeDashboardService`, `/api/v1/<role>/home` | Trang chủ theo vai trò cho cả 9 vai trò: ô số bấm được, biểu đồ tròn tiến độ từng đơn / lệnh cắt, danh sách chờ xử lý; mỗi role một API `home` trả đủ số liệu; bỏ bảng tiến độ đơn, khối doanh thu và khối KPI tổ cũ ở trang chủ | Mở |
 | DEV-ALL-167 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, màn Sổ xe và nhiên liệu, `CompleteVehicleTripDtoValidator` | Kết thúc chuyến chỉ nhập Km cuối và Tiền xăng; bỏ ô Xăng (lít) và quy tắc "có lít thì phải có tiền xăng"; tiền xăng nhập riêng được | Mở |
 | DEV-ALL-166 | 24/11/2026 | AI theo yêu cầu của người dùng | UC05, thông báo, form Thêm khách / Nhà cung cấp, đăng nhập | Thông báo có nhãn màu theo loại (Từ quản lý xanh dương, Đơn từ tím, Kho cam, Sản xuất xanh lá, Hệ thống xanh ngọc, Khẩn đỏ), toast thông báo khẩn màu cam; các trường bắt buộc nhập (tên, địa chỉ, điện thoại, email của khách / NCC; đăng nhập) hiện dấu * đỏ | Mở |
 | DEV-ALL-165 | 24/11/2026 | AI theo yêu cầu của người dùng | UC34 mở rộng, màn Công nợ đơn hàng, `OrderPaymentService`, GBR-02 | Màn "Thanh toán đơn hàng" đổi tên thành "Công nợ đơn hàng"; Kế toán thấy thêm Tổng tiền đơn (Σ số lượng × đơn giá CMT) ở danh sách và chi tiết; Quản đốc vẫn không thấy | Mở |
@@ -3230,4 +3234,54 @@
 - **Ảnh hưởng người khác:** Báo cáo kế toán (UC36) cột Tổng xăng (lít) và định mức xăng của xe không còn dữ liệu mới.
 - **Cần sửa trong tài liệu:**
   - [ ] Report-3: UC35 (form kết thúc chuyến), MSG30; UC36 (cột Tổng xăng)
+- **Trạng thái:** Mở
+
+### DEV-ALL-168 · Trang chủ theo vai trò
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC21 (tiến độ đơn), trang chủ; BE `HomeDashboardService` (partial theo role), `HomeController` ở folder Admin / Manager, `HomeModule`; FE `features/dashboard` (`AdminHome`, `ManagerHome`, `StatTile`, `OrderProgressPie`)
+- **Tài liệu gốc ghi:** Trang chủ Giám đốc / Quản đốc là bảng Tiến độ đơn hàng (UC21) kèm khối Doanh thu của Giám đốc; các vai trò khác không có trang chủ riêng.
+- **Code đang làm:** Mỗi role một API `GET /api/v1/<role>/home` (Admin, Manager, Accountant, WarehouseKeeper, TeamLeader gồm tổ phó, QaQc, Worker, Electrician), logic ở `HomeDashboardService` (chỉ đọc, dùng lại service tiến độ đơn, tổng hợp chi phí, hộp đơn từ, chấm công, NVL chờ nhận, lương tạm tính, suất ăn). Giám đốc: đơn giá và bảng lương chờ duyệt, đơn đang SX, doanh thu / chi phí tháng so tháng trước, lưới biểu đồ tròn tiến độ đơn. Quản đốc: phiếu nhập NVL, đơn từ chờ duyệt, tổ chưa có tổ trưởng điểm danh 08:00, lưới tiến độ đơn, 5 đơn từ mới nhất. Kế toán: lượt thiếu chấm công tháng, mã hàng thiếu / bị trả đơn giá, đơn mua chưa thanh toán đủ, đơn chưa chốt giá trị, tình trạng chi phí / lương. Thủ kho: NVL chờ nhận, lệnh cắt chưa cấp vải, đơn xin chờ cấp, bàn giao chờ nhận. Tổ cắt: phiếu cấp vải chờ nhận, đã cắt chưa bàn giao BTP, lệnh xong chưa trả vải thừa, biểu đồ tròn lệnh cắt đang mở. Tổ may: KPI hôm nay, phiếu BTP chờ nhận (cảnh báo chặn khi còn công đoạn chưa phân công), giao việc chờ xác nhận, suất ăn tổ. QA/QC: hàng trên chuyền chưa kiểm, hoàn thiện chưa nhập kho, bàn giao thành phẩm chờ kho. Công nhân: lương tạm tính hôm nay / từ đầu tháng (ghi rõ số tạm tính, ẩn nếu không khoán sản phẩm), phiếu lương đã duyệt mới nhất, việc chờ xác nhận, phiếu lỗi 7 ngày, suất ăn hôm nay. Cơ điện: đơn từ do mình tạo còn mở hiện như ticket. Biểu đồ tròn chia số đặt theo vị trí hiện tại của hàng: Cắt, May, QC, Giao, chưa cắt. Bỏ bảng tiến độ đơn cũ (ô "gồm đơn đã đóng"), khối doanh thu và bảng KPI tổ ở trang chủ (màn Doanh thu và màn KPI vẫn còn).
+- **Lý do:** Người dùng gửi mockup trang chủ theo vai trò và yêu cầu làm theo; chia nhiều đợt.
+- **Ảnh hưởng người khác:** Ô mockup chưa có nghiệp vụ được thay bằng số gần nhất: QA/QC "hàng trên chuyền chưa kiểm" (đã cấp may − hoàn thiện − hủy) thay "lô chờ kiểm"; công nhân không có "còn X giờ phản đối" phiếu lỗi (chưa có luồng phản đối); cơ điện chỉ xem đơn từ như ticket, không có nút Close; công nhân chưa đăng ký suất ăn nhanh ngay trên trang chủ (bấm vào mở màn Suất ăn); thủ kho / tổ cắt chưa có "vải đang giữ" từng lệnh.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC21 và mockup trang chủ theo vai trò
+- **Trạng thái:** Mở
+
+### DEV-ALL-169 · Hòa vốn: tính cả hai cách chia định phí, popup kiểm dữ liệu đầu vào, chi tiết mã hàng
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC11, GBR-17, MSG25/MSG26; bảng `BreakEvenResult` (`UQ_BER`), patch `SQL/patches/2026-11-24_break_even_both_bases.sql`; BE `FinanceService` (`CalculateAsync`, `BuildEntitiesAsync`, `LabourShares`, `GetBreakEvenInputsAsync`), `BreakEvenCalculateDto` (bỏ `AllocationBasis`), `BreakEvenResultDto.SharePct`, `BreakEvenInputsDto`, API `GET /api/v1/admin/break-even/inputs`, Excel ghi nhãn tiếng Việt; FE `features/break-even` (`BreakEvenCalculateModal`, `BreakEvenResultTable`, `BreakEvenSummaryCard`, `BreakEvenDetailModal`, `utils/pivotResults`); tài liệu `docs/HUONG_DAN_HOA_VON.md`
+- **Tài liệu gốc ghi:** SRS 6.1: Admin chọn cách phân bổ định phí (field 3) rồi Tính; DEV-MI-13-1: mỗi lần tính một cách (OUTPUT hoặc LABOUR_HOURS), mã hàng không có giờ công dùng tỉ lệ sản lượng (tổng định phí chia có thể khác định phí tháng). `UQ_BER (PeriodId, CalculatedAt, ProductId)`.
+- **Code đang làm:** Bỏ ô chọn cách. Mỗi lần tính lưu 2 dòng / mã hàng (OUTPUT và LABOUR_HOURS) cùng `CalculatedAt`; `UQ_BER` thành `(PeriodId, CalculatedAt, ProductId, AllocationBasis)`. Tỉ lệ giờ công sau khi lấy tỉ lệ sản lượng cho mã không có giờ thì chuẩn hóa để tổng = 100%. Popup Tính hiện 4 mục đầu vào (bảng lương đã duyệt, chi phí tháng, thành phẩm nhập kho, giờ công); ba mục đầu thiếu thì khóa nút Tính, giờ công thiếu chỉ cảnh báo. Bảng kết quả mỗi mã hàng một dòng, hai nhóm cột theo sản lượng / theo giờ công, có khối tổng quan lần tính; bấm dòng mở popup chi tiết (SRS 6.2) có công thức, tỉ lệ chia, thanh % đạt. Lịch sử cũ (một cách / lần) vẫn đọc được, cách còn lại hiện trống. Thêm file hướng dẫn số liệu.
+- **Lý do:** Người dùng yêu cầu gộp hai cách cho gọn (chọn: tính cả hai và so sánh), thiết kế lại popup tính và làm tài liệu số liệu.
+- **Ảnh hưởng người khác:** Minh (MI-13): đổi công thức chia giờ công và DTO tính; DB cần chạy patch trước khi chạy BE mới.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC11, §6.1 (bỏ ô chọn cách, thêm kiểm dữ liệu đầu vào), §6.2 (chi tiết hai cách)
+  - [ ] `NX-MTD_AI_Context.md` mục 12: chốt cách phân bổ định phí = tính cả hai
+  - [ ] `NX-MTD_Database.sql` / `_Mo_ta.md`: `UQ_BER` thêm `AllocationBasis`
+- **Trạng thái:** Mở
+
+### DEV-ALL-170 · Hòa vốn: tháng đã khóa sổ chỉ cảnh báo, không chặn
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC11, GBR-10, GBR-17; BE `BreakEvenInputsDto.PeriodLocked`, `FinanceService.GetBreakEvenInputsAsync`; FE `BreakEvenCalculateModal`
+- **Tài liệu gốc ghi:** GBR-10: dữ liệu tháng đã khóa không sửa, nhập hay tính lại được (gồm hòa vốn). GBR-17: hòa vốn chỉ tính khi bảng lương tháng đã duyệt.
+- **Code đang làm:** Duyệt bảng lương khóa luôn kỳ kế toán (`PayrollService.ApproveAsync`), nên mọi tháng đủ điều kiện GBR-17 đều đã khóa. Hai quy tắc mâu thuẫn nếu chặn; code ưu tiên GBR-17: vẫn tính được nhiều lần, popup hiện cảnh báo "tháng đã khóa sổ", mỗi lần tính lưu thêm một bộ kết quả như cũ. GBR-10 áp dụng cho dữ liệu nguồn (chấm công, sản lượng, chi phí, lương).
+- **Lý do:** Người dùng chọn "tính được nhiều lần, cảnh báo khi tháng đã khóa" sau khi mình chỉ ra mâu thuẫn.
+- **Ảnh hưởng người khác:** Không.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: GBR-10 bỏ "break-even" khỏi cột dữ liệu bị chặn, hoặc đổi GBR-17 / luồng khóa tháng
+- **Trạng thái:** Mở
+
+### DEV-ALL-171 · Sổ xe: tiền xăng bắt buộc có ảnh hóa đơn
+
+- **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
+- **Ảnh hưởng tới:** UC35; BE `VehicleService.CompleteTripAsync` (`HasFuelReceiptAsync`), `WarehouseMessages.FuelReceiptRequired`; FE `TripCompleteModal`, `vehicle-log/constants`
+- **Tài liệu gốc ghi:** Ảnh phiếu xăng (FuelReceipt) là tùy chọn, đính kèm sau ở danh sách chuyến xe.
+- **Code đang làm:** Nhập tiền xăng ở bước Kết thúc chuyến thì phải có ít nhất một ảnh FuelReceipt đang hiệu lực (chưa bị gỡ) gắn vào chuyến. Popup hiện khung tải ảnh ngay khi có tiền xăng; thiếu ảnh thì báo lỗi dưới ô tiền xăng và không lưu. BE kiểm lại (nguồn sự thật), lỗi `VEHICLE_TRIP_INVALID` kèm field `fuelCost`. Không nhập tiền xăng thì không cần ảnh. Các chuyến đã kết thúc trước đây không bị ảnh hưởng.
+- **Lý do:** Người dùng yêu cầu: nhập tiền xăng thì bắt buộc phải có ảnh.
+- **Ảnh hưởng người khác:** Kế toán (ghi chuyến, Sổ xe) phải chụp / tải ảnh trước khi lưu chuyến có tiền xăng.
+- **Cần sửa trong tài liệu:**
+  - [ ] Report-3: UC35 (kết thúc chuyến: ảnh hóa đơn xăng bắt buộc khi có tiền xăng)
 - **Trạng thái:** Mở
