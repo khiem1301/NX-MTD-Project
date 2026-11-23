@@ -51,7 +51,7 @@ public sealed class CompleteVehicleTripDtoValidator : AbstractValidator<Complete
         RuleFor(x => x.OdometerEnd).Cascade(CascadeMode.Stop)
             .GreaterThan(0).WithMessage(WarehouseMessages.OdometerInvalid)
             .LessThanOrEqualTo(VehicleLimits.MaxOdometer).WithMessage(WarehouseMessages.OdometerTooLarge);
-        // Màn Sổ xe chỉ nhập tiền xăng (DEV-ALL-167); số lít không bắt buộc, có gửi thì vẫn kiểm (0 không có nghĩa).
+        // Form chỉ thu thập tiền xăng; lít giữ trên DTO/DB cho dữ liệu cũ / báo cáo (không còn bắt nhập kèm).
         RuleFor(x => x.FuelLiters)
             .Must(v => v is > 0 and <= VehicleLimits.MaxFuelLiters && decimal.Round(v.Value, 2) == v)
             .WithMessage(WarehouseMessages.FuelLitersInvalid)

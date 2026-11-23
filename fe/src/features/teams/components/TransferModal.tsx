@@ -1,5 +1,5 @@
 import { REASON_MAX_LENGTH } from '@/constants/limits';
-import { Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select, Typography } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { useTeamLookup } from '@/hooks/useHrLookups';
@@ -17,7 +17,10 @@ type TransferModalProps = {
 
 type FormValues = { targetTeamId: number; effectiveDate: Dayjs; reason?: string };
 
-/** D32: ngày hiệu lực không được sau hôm nay; TeamId đổi ngay khi lưu, ngày ghi vào lịch sử. */
+/**
+ * D32 / DEV-KH-10-1: ngày hiệu lực ≤ hôm nay; TeamId đổi ngay khi lưu.
+ * DEV-KH-10-3: tổ may — hệ thống chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ trước khi đổi tổ.
+ */
 export function TransferModal({ open, fromTeamId, employeeIds, onClose }: TransferModalProps) {
   const [form] = Form.useForm<FormValues>();
   const teams = useTeamLookup();
@@ -81,6 +84,7 @@ export function TransferModal({ open, fromTeamId, employeeIds, onClose }: Transf
         >
           <Input.TextArea rows={2} />
         </Form.Item>
+        <Typography.Text type="secondary">{MESSAGES.hr.transferSettleHint}</Typography.Text>
       </Form>
     </Modal>
   );

@@ -190,6 +190,9 @@ public static class WarehouseMessages
     public const string DailyNotifyBody = "Tổ trưởng vừa cập nhật sản lượng công đoạn được giao ngày {0:dd/MM/yyyy}, vui lòng kiểm tra và xác nhận.";
     /// <summary>Lý do ghi trên phiếu giao đang chờ xác nhận khi tổ trưởng hạ số giao xuống trước khi công nhân xác nhận.</summary>
     public const string DailyPendingWithdrawn = "Tổ trưởng hạ số giao trước khi công nhân xác nhận: {0}";
+    /// <summary>Lý do thu hồi / rút phiếu khi công nhân chuyển tổ hoặc bị loại khỏi tổ may.</summary>
+    public const string TeamLeaveRetrieveNote = "Chuyển tổ: chốt sản lượng đã báo, thu hồi phần chưa làm xong.";
+    public const string TeamLeavePendingWithdrawn = "Công nhân chuyển tổ trước khi xác nhận phiếu giao: {0}";
     public const string AllocationAutoConfirmedReason = "Quá {0} phút công nhân không xác nhận, hệ thống tự xác nhận đủ số giao.";
     public const string AllocationAutoConfirmedTitle = "Việc được giao đã tự xác nhận";
     public const string AllocationAutoConfirmedBody = "Có {0} phiếu giao việc quá {1} phút bạn chưa xác nhận nên hệ thống đã tự xác nhận đủ số giao. Nếu số không đúng, hãy báo tổ trưởng.";

@@ -796,4 +796,31 @@ public class DailyWorkAllocationServiceHighComplexityTests
         _allocations.Should().Contain(a =>
             a.MovementType == PieceMovementTypes.Handover && a.Status == HandoverStatuses.Pending && a.Quantity == 51);
     }
+
+    /// <summary>DEV-KH-10-3: chuyển tổ — giữ sản lượng đã báo, rút PENDING, thu hồi Remaining CONFIRMED SYSTEM, đóng phân công.</summary>
+    [Fact]
+    public async Task UTCID512_SettleOnTeamLeave_KeepsOutput_RetrievesRemaining_ClosesAssignment()
+    {
+        // Arrange — giao 30 (confirmed) + 10 pending; đã báo 12 → Remaining = 18 sau khi rút pending
+        ConfirmedHandover(30, Today);
+        PendingHandover(10, Today);
+        Output(12, Today);
+        CaptureAdds();
+
+        // Act
+        var result = await Sut().SettleOnTeamLeaveAsync(TeamId, [WorkerW1], default);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        _allocations.Should().Contain(a => a.Status == HandoverStatuses.Rejected && a.MovementType == PieceMovementTypes.Handover);
+        var retrieval = _allocations.Should().ContainSingle(a =>
+            a.MovementType == PieceMovementTypes.Retrieval && a.ConfirmMode == ConfirmModes.System).Subject;
+        retrieval.Quantity.Should().Be(18);
+        retrieval.ConfirmedQty.Should().Be(18);
+        retrieval.Status.Should().Be(HandoverStatuses.Confirmed);
+        retrieval.RetrievalReason.Should().Be(RetrievalReasons.Adjusted);
+        retrieval.RetrievalNote.Should().Be(WarehouseMessages.TeamLeaveRetrieveNote);
+        _assignments.Single().ValidTo.Should().Be(Today);
+        await _locks.Received(1).AcquireAsync($"work-allocation:{TeamId}:{Line100}", Arg.Any<CancellationToken>());
+    }
 }

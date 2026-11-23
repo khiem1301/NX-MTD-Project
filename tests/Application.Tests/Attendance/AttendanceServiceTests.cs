@@ -19,8 +19,11 @@ public class AttendanceServiceTests
     private readonly IAttendanceRepository _repo = Substitute.For<IAttendanceRepository>();
     private readonly IMealRegistrationSeeder _mealSeeder = Substitute.For<IMealRegistrationSeeder>();
     private readonly ISystemSettingReader _settings = Substitute.For<ISystemSettingReader>();
+    private readonly IUnitOfWork _uow = Substitute.For<IUnitOfWork>();
+    private readonly INotificationService _notifier = Substitute.For<INotificationService>();
     private readonly IClock _clock = Substitute.For<IClock>();
     private readonly IExcelAttendanceParser _excel = Substitute.For<IExcelAttendanceParser>();
+    private readonly List<Notification> _notifications = [];
     private readonly AttendanceService _sut;
 
     public AttendanceServiceTests()
@@ -29,7 +32,10 @@ public class AttendanceServiceTests
         _clock.Today.Returns(DateOnly.FromDateTime(Now));
         _settings.GetIntAsync(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
             .Returns(call => call.ArgAt<int>(1));
-        _sut = new AttendanceService(_repo, _mealSeeder, _settings, _clock, _excel,
+        var notifRepo = Substitute.For<IGenericRepository<Notification>>();
+        notifRepo.Query().Returns(_ => _notifications.AsTestAsyncQueryable());
+        _uow.Repository<Notification>().Returns(notifRepo);
+        _sut = new AttendanceService(_repo, _mealSeeder, _settings, _uow, _notifier, _clock, _excel,
             NullLogger<AttendanceService>.Instance);
     }
 
@@ -158,6 +164,79 @@ public class AttendanceServiceTests
 
         result.Data!.IsOverdue.Should().BeTrue();
         result.Data.MinutesSinceLastSuccess.Should().BeNull();
+    }
+
+    // ---------- AlertSyncOverdueAsync (MSG23 → hộp thư Admin) ----------
+
+    [Fact]
+    public async Task AlertSyncOverdueAsync_Healthy_DoesNotNotify()
+    {
+        _repo.GetLastSucceededAtAsync(Arg.Any<CancellationToken>()).Returns(Now.AddMinutes(-5));
+
+        await _sut.AlertSyncOverdueAsync(CancellationToken.None);
+
+        await _notifier.DidNotReceiveWithAnyArgs().NotifyRoleAsync(default!, default!, default);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task AlertSyncOverdueAsync_Overdue_NotifiesAdminOncePerEpisode()
+    {
+        var lastOk = Now.AddMinutes(-45);
+        _repo.GetLastSucceededAtAsync(Arg.Any<CancellationToken>()).Returns(lastOk);
+        _repo.CountUnmappedCodesAsync(Arg.Any<CancellationToken>()).Returns(0);
+
+        await _sut.AlertSyncOverdueAsync(CancellationToken.None);
+
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin,
+            Arg.Is<NotificationMessage>(m =>
+                m.SourceType == NotificationSources.System
+                && m.Title == Messages.NotifyAttendanceSyncOverdueTitle
+                && m.RefTable == NotificationRefs.AttendanceSyncOverdue
+                && m.LinkUrl == "/attendance"),
+            Arg.Any<CancellationToken>());
+        await _uow.Received(1).SaveChangesAsync();
+
+        // Giả lập đã lưu thông báo sau lần báo đầu — lần sau trong cùng đợt không báo lại.
+        _notifications.Add(new Notification
+        {
+            RefTable = NotificationRefs.AttendanceSyncOverdue,
+            CreatedAt = Now,
+            Title = Messages.NotifyAttendanceSyncOverdueTitle,
+            Message = "x",
+            SourceType = NotificationSources.System,
+            PushStatus = NotificationPushStatuses.Skipped,
+        });
+        _notifier.ClearReceivedCalls();
+        _uow.ClearReceivedCalls();
+
+        await _sut.AlertSyncOverdueAsync(CancellationToken.None);
+
+        await _notifier.DidNotReceiveWithAnyArgs().NotifyRoleAsync(default!, default!, default);
+        await _uow.DidNotReceive().SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task AlertSyncOverdueAsync_AfterSyncRecoversThenFailsAgain_NotifiesAgain()
+    {
+        var previousSuccess = Now.AddMinutes(-90);
+        _notifications.Add(new Notification
+        {
+            RefTable = NotificationRefs.AttendanceSyncOverdue,
+            CreatedAt = previousSuccess.AddMinutes(35),
+            Title = Messages.NotifyAttendanceSyncOverdueTitle,
+            Message = "cũ",
+            SourceType = NotificationSources.System,
+            PushStatus = NotificationPushStatuses.Skipped,
+        });
+        // Đã đồng bộ lại lúc -45' rồi lại quá hạn → đợt mới, phải báo lại.
+        _repo.GetLastSucceededAtAsync(Arg.Any<CancellationToken>()).Returns(Now.AddMinutes(-45));
+        _repo.CountUnmappedCodesAsync(Arg.Any<CancellationToken>()).Returns(0);
+
+        await _sut.AlertSyncOverdueAsync(CancellationToken.None);
+
+        await _notifier.Received(1).NotifyRoleAsync(RoleCodes.Admin, Arg.Any<NotificationMessage>(),
+            Arg.Any<CancellationToken>());
     }
 
     // ---------- MapCodeAsync (UC28) ----------

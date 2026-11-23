@@ -24,6 +24,9 @@ public static class Messages
     public const string AttendanceSyncStatusInvalid = "Trạng thái phiên đồng bộ không hợp lệ.";
     public const string AttendanceSyncOverdue =
         "Chưa đồng bộ được chấm công hơn 30 phút. Có thể nhập file dự phòng.";                // MSG23
+    public const string NotifyAttendanceSyncOverdueTitle = "Đồng bộ chấm công RJ bị gián đoạn";
+    public const string NotifyAttendanceSyncOverdueBody =
+        "Chưa đồng bộ được chấm công hơn {0} phút (lần cuối: {1}). Kiểm tra agent / máy RJ hoặc nhập file Excel dự phòng.";
     public const string AttendanceRjEmployeeSyncRequested =
         "Đã gửi yêu cầu. Agent sẽ đồng bộ nhân viên và lượt quẹt từ máy RJ trong vài giây (cần agent đang chạy).";
     public const string DateRangeInvalid = "Ngày kết thúc phải không nhỏ hơn ngày bắt đầu.";
@@ -226,6 +229,8 @@ public static class Messages
     public const string TeamMemberNotInTeam = "Nhân viên không thuộc tổ này.";
     public const string TeamAppointed = "Đã bổ nhiệm. Người giữ chức cũ (nếu có) đã chuyển về Công nhân.";
     public const string TeamTransferred = "Đã chuyển {0} nhân viên.";
+    /// <summary>Thêm vào message thành công khi có thu hồi sản lượng giao chưa làm xong ở tổ may cũ.</summary>
+    public const string TeamTransferSettledSuffix = " Đã chốt sản lượng đã báo và thu hồi phần chưa làm xong ở tổ cũ.";
     public const string TeamMemberHasTeam = "{0} đang thuộc tổ khác. Dùng Chuyển sang tổ khác.";
     public const string TeamRemoveLeader = "{0} đang là tổ trưởng / tổ phó. Thôi giữ chức trước khi loại khỏi tổ.";
     public const string TeamMembersAdded = "Đã thêm {0} nhân viên vào tổ.";

@@ -1,8 +1,10 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NX_MTD.Application.Common;
 using NX_MTD.Application.DTOs;
 using NX_MTD.Application.Interfaces;
 using NX_MTD.Domain.Constants;
+using NX_MTD.Domain.Entities;
 
 namespace NX_MTD.Application.Services;
 
@@ -16,20 +18,26 @@ public sealed class AttendanceService : IAttendanceService
     /// <summary>Số phiên đồng bộ hiện trên màn hình theo dõi.</summary>
     private const int RecentSessionTake = 20;
 
+    private const string AttendanceLink = "/attendance";
+
     private readonly IAttendanceRepository _attendance;
     private readonly IMealRegistrationSeeder _mealSeeder;
     private readonly ISystemSettingReader _settings;
+    private readonly IUnitOfWork _uow;
+    private readonly INotificationService _notifier;
     private readonly IClock _clock;
     private readonly IExcelAttendanceParser _excelParser;
     private readonly ILogger<AttendanceService> _logger;
 
     public AttendanceService(IAttendanceRepository attendance, IMealRegistrationSeeder mealSeeder,
-        ISystemSettingReader settings, IClock clock,
+        ISystemSettingReader settings, IUnitOfWork uow, INotificationService notifier, IClock clock,
         IExcelAttendanceParser excelParser, ILogger<AttendanceService> logger)
     {
         _attendance = attendance;
         _mealSeeder = mealSeeder;
         _settings = settings;
+        _uow = uow;
+        _notifier = notifier;
         _clock = clock;
         _excelParser = excelParser;
         _logger = logger;
@@ -85,6 +93,33 @@ public sealed class AttendanceService : IAttendanceService
         return Result<SyncHealthDto>.Success(
             new SyncHealthDto(lastAt, minutes, threshold, overdue, unmapped),
             overdue ? Messages.AttendanceSyncOverdue : null);
+    }
+
+    public async Task AlertSyncOverdueAsync(CancellationToken ct)
+    {
+        var health = await GetHealthAsync(ct);
+        if (health.Data?.IsOverdue != true) return;
+
+        // Một đợt quá hạn chỉ báo một lần; sau khi đồng bộ lại thành công (LastSucceededAt đổi) mới báo lần sau.
+        var since = health.Data.LastSucceededAt ?? DateTime.MinValue;
+        var alreadySent = await _uow.Repository<Notification>().Query().AsNoTracking()
+            .AnyAsync(n => n.RefTable == NotificationRefs.AttendanceSyncOverdue && n.CreatedAt > since, ct);
+        if (alreadySent) return;
+
+        var lastText = health.Data.LastSucceededAt is { } at
+            ? at.ToString("dd/MM/yyyy HH:mm")
+            : "chưa từng đồng bộ";
+        await _notifier.NotifyRoleAsync(RoleCodes.Admin, new NotificationMessage(
+            NotificationSources.System,
+            Messages.NotifyAttendanceSyncOverdueTitle,
+            string.Format(Messages.NotifyAttendanceSyncOverdueBody, health.Data.AlertThresholdMinutes, lastText),
+            AttendanceLink,
+            NotificationRefs.AttendanceSyncOverdue), ct);
+        await _uow.SaveChangesAsync();
+
+        _logger.LogWarning(
+            "Đã báo Admin: chưa đồng bộ được chấm công hơn {Threshold} phút (lần cuối: {LastSucceededAt})",
+            health.Data.AlertThresholdMinutes, health.Data.LastSucceededAt);
     }
 
     public async Task<Result<IReadOnlyList<SyncSessionDto>>> GetSessionsAsync(int take, string? status, CancellationToken ct)

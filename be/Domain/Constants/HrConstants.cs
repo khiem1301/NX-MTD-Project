@@ -116,6 +116,9 @@ public static class NotificationRefs
 {
     /// <summary>Lệch kiểm cuối đơn của tổ: RefId = KpiTargetId (DEV-ALL-107).</summary>
     public const string KpiMismatch = "KpiMismatch";
+
+    /// <summary>Cảnh báo đồng bộ RJ quá hạn (MSG23); dùng để chống gửi trùng trong một đợt quá hạn.</summary>
+    public const string AttendanceSyncOverdue = "AttendanceSyncOverdue";
 }
 
 public static class NotificationSources
