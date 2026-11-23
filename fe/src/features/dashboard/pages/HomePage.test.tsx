@@ -3,33 +3,52 @@ import { useAuth } from '@/hooks/useAuth';
 import { HomePage } from './HomePage';
 
 jest.mock('@/hooks/useAuth', () => ({ useAuth: jest.fn() }));
-jest.mock('../components/OrderProgressPanel', () => ({
-  OrderProgressPanel: () => <div>tiến độ</div>,
+jest.mock('../components/home/AdminHome', () => ({
+  AdminHome: () => <div>trang chủ giám đốc</div>,
 }));
-jest.mock('@/features/revenue', () => ({ RevenuePanel: () => <div>doanh thu</div> }));
-jest.mock('@/features/kpi', () => ({ TeamKpiPanel: () => <div>kpi của tổ</div> }));
+jest.mock('../components/home/ManagerHome', () => ({
+  ManagerHome: () => <div>trang chủ quản đốc</div>,
+}));
+jest.mock('../components/home/AccountantHome', () => ({
+  AccountantHome: () => <div>trang chủ kế toán</div>,
+}));
+jest.mock('../components/home/WarehouseHome', () => ({
+  WarehouseHome: () => <div>trang chủ thủ kho</div>,
+}));
+jest.mock('../components/home/TeamLeaderHome', () => ({
+  TeamLeaderHome: () => <div>trang chủ tổ trưởng</div>,
+}));
+jest.mock('../components/home/QaqcHome', () => ({ QaqcHome: () => <div>trang chủ qa/qc</div> }));
+jest.mock('../components/home/WorkerHome', () => ({
+  WorkerHome: () => <div>trang chủ công nhân</div>,
+}));
+jest.mock('../components/home/ElectricianHome', () => ({
+  ElectricianHome: () => <div>trang chủ cơ điện</div>,
+}));
 
-const asUser = (role: string, teamType: string | null) =>
-  (useAuth as jest.Mock).mockReturnValue({ user: { role, teamType } });
+const asRole = (role: string) => (useAuth as jest.Mock).mockReturnValue({ user: { role } });
 
 describe('HomePage', () => {
   it.each([
-    ['TeamLeader', 'Sewing'],
-    ['TeamDeputy', 'Sewing'],
-  ])('%s tổ may xem được KPI của tổ', async (role, teamType) => {
-    asUser(role, teamType);
+    ['Admin', 'trang chủ giám đốc'],
+    ['Manager', 'trang chủ quản đốc'],
+    ['Accountant', 'trang chủ kế toán'],
+    ['WarehouseKeeper', 'trang chủ thủ kho'],
+    ['TeamLeader', 'trang chủ tổ trưởng'],
+    ['TeamDeputy', 'trang chủ tổ trưởng'],
+    ['QaQc', 'trang chủ qa/qc'],
+    ['Worker', 'trang chủ công nhân'],
+    ['Electrician', 'trang chủ cơ điện'],
+  ])('%s thấy đúng trang chủ của vai trò', (role, text) => {
+    asRole(role);
     render(<HomePage />);
-    expect(await screen.findByText('kpi của tổ')).toBeInTheDocument();
+    expect(screen.getByText(text)).toBeInTheDocument();
+    expect(screen.getAllByText(/^trang chủ /)).toHaveLength(1);
   });
 
-  it.each([
-    ['TeamLeader', 'Cutting'],
-    ['Worker', 'Sewing'],
-    ['Manager', 'Office'],
-  ])('%s %s không có khối KPI của tổ', async (role, teamType) => {
-    asUser(role, teamType);
-    render(<HomePage />);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(screen.queryByText('kpi của tổ')).not.toBeInTheDocument();
+  it('chưa đăng nhập thì không hiện gì', () => {
+    (useAuth as jest.Mock).mockReturnValue({ user: null });
+    const { container } = render(<HomePage />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
