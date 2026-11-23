@@ -39,19 +39,20 @@ const rowError = <R extends { rowNumber: number; parseError?: string | null }>(
   return status?.action === EXCEL_ROW_ACTION.ERROR ? status.error : null;
 };
 
-const withWarn = (error: string | null, node: ReactElement) => {
-  if (!error) return node;
-  return (
-    <Tooltip title={error} color="orange">
-      <span style={{ display: 'block' }}>
-        {cloneElement(node, {
-          status: 'warning' as const,
-          suffix: <WarningOutlined />,
-        })}
-      </span>
-    </Tooltip>
-  );
-};
+/**
+ * Giữ nguyên cấu trúc ô dù có lỗi hay không (luôn bọc Tooltip, luôn có suffix): đổi cấu trúc làm React dựng lại ô nhập,
+ * mất con trỏ sau mỗi ký tự gõ.
+ */
+const withWarn = (error: string | null, node: ReactElement) => (
+  <Tooltip title={error ?? undefined} color="orange">
+    <span style={{ display: 'block' }}>
+      {cloneElement(node, {
+        status: error ? ('warning' as const) : undefined,
+        suffix: error ? <WarningOutlined /> : <span />,
+      })}
+    </span>
+  </Tooltip>
+);
 
 const rowCol = { title: col.row, dataIndex: 'rowNumber', width: 64 };
 const RESULT_WIDTH = 200;

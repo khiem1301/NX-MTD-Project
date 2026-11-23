@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Form, Modal, Space, Typography } from 'antd';
+import { Form, Modal, Space } from 'antd';
 import { QtyInput } from '@/components/common/QtyInput';
 import type { Dayjs } from 'dayjs';
 import { DeliveryDateFields } from '@/components/common/DeliveryDateFields';
@@ -10,6 +10,7 @@ import { LABELS } from '../constants';
 import { useSaveCustomerDelivery } from '../hooks/useOrderMaterials';
 import type { OrderCustomerDelivery } from '../types';
 import { MAX_DELIVERY_COUNT } from '../utils/orderMaterialRules';
+import { HintTip } from '@/components/common/HintTip';
 
 type FormValues = {
   deliveryCount: number;
@@ -62,7 +63,7 @@ export function CustomerDeliveryPlanModal({ open, plan, onClose }: CustomerDeliv
       onCancel={onClose}
       destroyOnHidden
     >
-      <Typography.Paragraph type="secondary">{LABELS.customerDeliveryHint}</Typography.Paragraph>
+      <HintTip text={LABELS.customerDeliveryHint} />
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={save.isPending}>
         <Space wrap align="start">
           <Form.Item

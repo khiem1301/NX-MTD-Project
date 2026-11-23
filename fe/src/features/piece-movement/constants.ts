@@ -87,9 +87,9 @@ export const PM_LABELS = {
   giveLikePreviousHint: 'Điền lại số của lần giao gần nhất cho các công đoạn đã từng giao',
   workerModalTitle: 'Giao việc: {0}',
   workerModalHint:
-    'Các công đoạn đã phân công cho công nhân được lấy sẵn. Nhập ở dòng nhóm để điền cùng số cho cả nhóm rồi sửa lại từng công đoạn nếu cần. Số 0 là bỏ phần giao thêm của ngày. Phần tồn từ hôm trước vẫn giữ cho công nhân. Số giao không vượt số còn giao được của công đoạn. Phần giao thêm chờ công nhân xác nhận rồi mới tính vào trần sản lượng; quá 1 giờ công nhân không xác nhận thì hệ thống tự xác nhận đủ số.',
+    'Công đoạn đã phân công được lấy sẵn. Nhập ở dòng nhóm để điền cùng số cho cả nhóm. Số 0 = bỏ phần giao thêm của ngày. Số giao không vượt số còn giao được; công nhân không xác nhận sau 1 giờ thì tự xác nhận đủ.',
   workerHint:
-    'Vui lòng xác nhận hoặc từ chối số được giao. Quá 1 giờ kể từ lúc tổ trưởng giao mà bạn chưa xác nhận thì hệ thống tự xác nhận đủ số giao.',
+    'Xác nhận hoặc từ chối số được giao. Quá 1 giờ chưa xác nhận thì hệ thống tự xác nhận đủ số.',
   components: 'Thành phần',
   noComponents: 'chưa gắn',
   pendingConfirm: 'Chờ CN xác nhận {0}',
@@ -122,7 +122,7 @@ export const PM_LABELS = {
   clearSelection: 'Bỏ chọn',
   batchTitle: 'Xác nhận {0} phiếu giao việc',
   batchHint:
-    'Số xác nhận mặc định bằng số giao. Phiếu nào nhận khác số giao thì sửa số và ghi lý do lệch (bắt buộc).',
+    'Số xác nhận mặc định bằng số giao. Nhận khác thì sửa số và ghi lý do lệch (bắt buộc).',
   sharedReason: 'Lý do chung',
   sharedReasonPlaceholder: 'Điền nhanh cho mọi phiếu lệch chưa có lý do',
   applySharedReason: 'Áp dụng',

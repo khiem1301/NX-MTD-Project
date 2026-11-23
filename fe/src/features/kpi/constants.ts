@@ -125,7 +125,7 @@ export const KPI_TEXT = {
     button: 'Kết thúc đơn',
     title: 'Kết thúc đơn của tổ',
     confirm: 'Kết thúc đơn',
-    hint: 'Chỉ đánh giá khi đến cuối đơn. Với từng công đoạn, so sản lượng công nhân báo ở mỗi dòng đơn với số QC đạt và hàng hủy (mỗi sản phẩm qua mỗi công đoạn một lần). Nếu lệch, hệ thống KHÔNG tự trừ lương: chỉ cảnh báo và thông báo Quản đốc, tổ trưởng; hãy xác minh những người đã báo rồi ghi phiếu lỗi cho đúng người nếu cần. Sau đó chốt và đóng KPI.',
+    hint: 'Đánh giá cuối đơn: so sản lượng công nhân báo với số QC đạt và hàng hủy từng công đoạn. Nếu lệch, hệ thống không tự trừ lương mà báo Quản đốc, tổ trưởng; xác minh rồi ghi phiếu lỗi nếu cần, sau đó chốt và đóng KPI.',
     target: 'Chỉ tiêu',
     actual: 'Thực tế (QC đạt)',
     result: 'Kết quả KPI',
@@ -144,7 +144,7 @@ export const KPI_TEXT = {
     workersTitle: 'Người đã báo công đoạn này (sản lượng giảm dần)',
     detailTitle: 'Chi tiết lệch kiểm cuối đơn',
     detailHint:
-      'Lệch = đã báo − QC đạt − hàng hủy. Hệ thống không biết ai báo dư nên liệt kê mọi người đã báo công đoạn đó để xác minh.',
+      'Lệch = đã báo − QC đạt − hàng hủy. Liệt kê mọi người đã báo công đoạn này để xác minh.',
     detailEmpty: 'Hiện không còn công đoạn nào lệch (có thể đã được xử lý bằng phiếu lỗi).',
     mismatchTitle:
       'Cảnh báo: lệch kiểm cuối đơn ở {n} công đoạn. Hệ thống không tự trừ lương, hãy xác minh rồi ghi phiếu lỗi cho đúng người nếu cần.',
@@ -166,7 +166,7 @@ export const KPI_TEXT = {
     workingDays: 'Số ngày làm việc',
     dailyTarget: 'Chỉ tiêu ngày',
     noDailyResultsHint:
-      'Chỉ hiển thị các ngày QA/QC đã nhập hàng hoàn thiện. Ngày không có dòng nghĩa là ngày đó chưa có hàng hoàn thiện, không phải lỗi dữ liệu.',
+      'Chỉ hiện ngày QA/QC đã nhập hàng hoàn thiện; ngày không có dòng là chưa có hàng, không phải lỗi.',
   },
 
   dailyTable: {

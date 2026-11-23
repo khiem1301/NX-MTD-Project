@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { Alert, Form, Input, InputNumber, Modal } from 'antd';
+import { Form, Input, InputNumber, Modal } from 'antd';
 import { REASON_MAX_LENGTH } from '@/constants/limits';
 import { MESSAGES } from '@/constants/messages';
 import { formatCurrency } from '@/utils/format';
 import { ORDER_PAYMENT_TEXT } from '../constants';
 import { useSetFinalAmount } from '../hooks/useOrderPayment';
 import type { OrderPaymentDetail } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { order: OrderPaymentDetail; open: boolean; onClose: () => void };
 type FormValues = { amount: number | null; reason: string };
@@ -34,7 +35,7 @@ export function FinalAmountModal({ order, open, onClose }: Props) {
       onCancel={onClose}
       destroyOnHidden
     >
-      <Alert type="info" showIcon message={text.amountHint} style={{ marginBottom: 16 }} />
+      <HintTip text={text.amountHint} />
       <Form
         form={form}
         layout="vertical"

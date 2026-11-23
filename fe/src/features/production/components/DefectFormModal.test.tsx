@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { PRODUCTION_TEXT } from '../constants';
 import { DefectFormModal } from './DefectFormModal';
 
@@ -44,7 +44,7 @@ describe('DefectFormModal', () => {
     openModal();
 
     expect(screen.getByLabelText(text.reason)).toBeInTheDocument();
-    expect(screen.queryByText(text.outputErrorHint)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Hướng dẫn')).not.toBeInTheDocument();
   });
 
   it('chọn Nhập sai sản lượng: ẩn lý do hỏng, hiện hướng dẫn và ghi chú bắt buộc', async () => {
@@ -52,7 +52,8 @@ describe('DefectFormModal', () => {
 
     await chooseType(PRODUCTION_TEXT.defects.type.OutputErr.text);
 
-    await waitFor(() => expect(screen.getByText(text.outputErrorHint)).toBeInTheDocument());
+    fireEvent.mouseEnter(await screen.findByLabelText('Hướng dẫn'));
+    expect(await screen.findByText(text.outputErrorHint)).toBeInTheDocument();
     expect(screen.queryByLabelText(text.reason)).not.toBeInTheDocument();
     expect(screen.getByLabelText(text.outputErrorNote)).toBeInTheDocument();
   });

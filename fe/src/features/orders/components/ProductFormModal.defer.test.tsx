@@ -10,6 +10,18 @@ jest.mock('../hooks/useOrders', () => ({
   useSaveProduct: () => ({ mutate, isPending: false }),
   useProduct: () => ({ data: undefined, error: null, refetch: jest.fn() }),
 }));
+jest.mock('../api/orderApi', () => ({
+  excelBundleApi: {
+    check: jest.fn(() =>
+      Promise.resolve({
+        products: null,
+        orderMaterials: null,
+        missingMaterials: [],
+        spec: { components: [], norms: [], markerGroups: [], orderMarkers: [], crossErrors: [] },
+      }),
+    ),
+  },
+}));
 jest.mock('./SampleImageInput', () => ({ SampleImageInput: () => null }));
 jest.mock('./ExtraImagesInput', () => ({ ExtraImagesInput: () => null }));
 jest.mock('../utils/productExcelImports', () => ({
@@ -20,7 +32,12 @@ jest.mock('../utils/productExcelImports', () => ({
   showProductImportResults: jest.fn(),
 }));
 
-const bundle = { hasProducts: true } as ExcelBundle;
+const bundle = {
+  hasProducts: true,
+  products: [],
+  spec: { components: [], norms: [], markerGroups: [], orderMarkers: [], sizeColumns: [] },
+  orderMaterials: [],
+} as unknown as ExcelBundle;
 const row: ProductExcelRow = {
   rowNumber: 5,
   productCode: 'test01',

@@ -19,6 +19,8 @@ type OrderImportButtonProps = {
   onStageProduct?: (body: SaveProductPayload, selection: ProductImportSelection) => number | null;
   /** Đóng hộp nhập mà không Áp dụng thì bỏ các mã vừa khai trong hộp. */
   onUnstageProduct?: (tempId: number) => void;
+  /** Mã hàng đã khai trên form đơn (chờ Lưu đơn): mã chữ hoa → tempId. */
+  stagedProducts?: Record<string, number>;
 };
 
 /** DEV-ALL-118: nút "Nhập từ Excel" của form đơn; áp dụng thì gộp dòng hợp lệ vào các khối mã hàng (chưa lưu). */
@@ -28,6 +30,7 @@ export function OrderImportButton({
   onApply,
   onStageProduct,
   onUnstageProduct,
+  stagedProducts,
 }: OrderImportButtonProps) {
   const [open, setOpen] = useState(false);
   return (
@@ -41,6 +44,7 @@ export function OrderImportButton({
           onClose={() => setOpen(false)}
           onStageProduct={onStageProduct}
           onUnstageProduct={onUnstageProduct}
+          stagedProducts={stagedProducts}
           onApply={(rows) => {
             const merged = mergeOrderImport(blocks, rows);
             onApply(merged.blocks, merged.labels);

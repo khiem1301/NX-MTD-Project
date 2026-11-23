@@ -57,7 +57,7 @@ const featureRoutes = [
   ...attendanceRoutes, // Minh
   ...mealRoutes, // Minh
   ...payrollRoutes, // Minh
-  ...orderPaymentRoutes, // Thanh toán đơn hàng khách (DEV-ALL-137)
+  ...orderPaymentRoutes, // Công nợ đơn hàng khách (DEV-ALL-137, 165)
   ...purchaseRoutes, // Minh (MI-07)
   ...monthlyCostRoutes, // Minh
   ...kpiRoutes, // Minh

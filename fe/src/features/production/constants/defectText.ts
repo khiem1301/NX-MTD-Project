@@ -12,7 +12,7 @@ export const DEFECTS_TEXT = {
   addTitle: 'Ghi phiếu lỗi / điều chỉnh',
   edit: 'Sửa phiếu',
   editTitle: 'Sửa phiếu lỗi / điều chỉnh',
-  editHint: 'Không đổi được ngày và dòng đơn; ghi sai hai mục này thì hủy phiếu rồi ghi lại.',
+  editHint: 'Không đổi được ngày và dòng đơn; ghi sai thì hủy phiếu rồi ghi lại.',
   editReason: 'Lý do sửa',
   editReasonRequired: 'Quản đốc sửa phiếu phải nhập lý do.',
   cancel: 'Hủy phiếu',
@@ -73,7 +73,7 @@ export const DEFECTS_TEXT = {
     outputErrorNote: 'Lý do nhập sai',
     outputErrorNoteRequired: 'Vui lòng ghi rõ nhập sai thế nào.',
     outputErrorHint:
-      'Trừ số lượng nhập sai khỏi sản lượng và tiền của công nhân ở công đoạn này (theo đơn giá đang duyệt), tính lại tiến độ và số còn phải làm. Không phải hàng hỏng. Số trừ không vượt sản lượng công nhân đã nhập trong ngày.',
+      'Trừ số nhập sai khỏi sản lượng và tiền công nhân ở công đoạn này, tính lại tiến độ. Không phải hàng hỏng. Không vượt sản lượng đã nhập trong ngày.',
   },
   done: {
     created: 'Đã ghi phiếu và thông báo cho công nhân.',
@@ -103,7 +103,7 @@ export const DEFECTS_TEXT = {
 export const REPLACEMENT_TEXT = {
   button: 'Đơn cắt bù',
   title: 'Đơn cắt bù từ phiếu hàng hỏng',
-  hint: 'Gửi Quản đốc duyệt để cắt bù các chi tiết của số hàng đã hủy. Mỗi phiếu hàng hỏng chỉ có một đơn cắt bù.',
+  hint: 'Gửi Quản đốc duyệt để cắt bù chi tiết của hàng đã hủy. Mỗi phiếu chỉ có một đơn cắt bù.',
   defect: 'Phiếu hàng hỏng',
   panels: 'Chi tiết cần cắt bù',
   panelName: 'Chọn chi tiết (thân trước, tay, cổ...)',

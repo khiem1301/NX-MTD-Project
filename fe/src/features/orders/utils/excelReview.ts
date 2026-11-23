@@ -7,6 +7,10 @@ import {
   NEW_MATERIAL_DEFAULTS,
 } from '../constants';
 import type { ExcelBundle, ExcelBundleCheck, MissingMaterial } from '../types';
+import { MESSAGES } from '@/constants/messages';
+import { fill } from '@/utils/format';
+
+const col = MESSAGES.orders.excelReview.columns;
 
 /** DEV-ALL-122: bảng sửa được trong popup kiểm tra Excel (products = sheet Mã hàng). */
 export type ReviewTable =
@@ -158,6 +162,83 @@ export const statusMaps = (
     markers: toMap(check?.spec.orderMarkers ?? []),
     orderMaterials: toMap(check?.orderMaterials?.rows ?? []),
   };
+};
+
+const blank = (v: unknown) => v === null || v === undefined || String(v).trim() === '';
+
+/** Trường bắt buộc của từng bảng: [nhãn cột, có thiếu không]. */
+const REQUIRED: { [K in ReviewTable]: (r: RowOf<K>) => [string, boolean][] } = {
+  products: (r) => [[col.productCode, blank(r.productCode)]],
+  components: (r) => [
+    [col.name, blank(r.name)],
+    [col.type, blank(r.componentType)],
+    [col.pieces, blank(r.piecesPerGarment)],
+  ],
+  norms: (r) => [
+    [col.color, blank(r.color)],
+    [col.component, blank(r.componentName)],
+    [col.material, blank(r.materialCode)],
+  ],
+  groups: (r) => [
+    [col.markerNo, blank(r.markerNo)],
+    [col.groupComponents, r.componentNames.length === 0],
+    [col.groupColors, r.colors.length === 0],
+  ],
+  markers: (r) => [
+    [col.productCode, blank(r.productCode)],
+    [col.markerNo, blank(r.markerNo)],
+    [col.markerCode, blank(r.markerCode)],
+    [col.length, blank(r.lengthM)],
+    [col.width, blank(r.widthM)],
+    [col.markerStatus, blank(r.status)],
+    [col.sizeRatios, r.ratios.length === 0],
+  ],
+  orderMaterials: (r) => [
+    [col.material, blank(r.materialCode)],
+    [col.requiredQty, blank(r.requiredQty)],
+  ],
+};
+
+/** Lỗi thiếu trường bắt buộc của một dòng (kiểm ngay trên máy, không chờ máy chủ); null khi đủ. */
+export const missingFieldsError = <T extends ReviewTable>(table: T, row: RowOf<T>) => {
+  const missing = REQUIRED[table](row)
+    .filter(([, m]) => m)
+    .map(([label]) => label);
+  return missing.length > 0
+    ? fill(MESSAGES.orders.excelReview.missingFields, missing.join(', '))
+    : null;
+};
+
+/** Gộp lỗi thiếu trường vào kết quả kiểm của máy chủ: dòng thiếu trường luôn là lỗi. */
+export const withMissingFields = (
+  maps: Record<ReviewTable, Map<number, RowStatus>>,
+  bundle: ExcelBundle,
+  tables: readonly ReviewTable[],
+) => {
+  const out = { ...maps };
+  for (const t of tables) {
+    const m = new Map(maps[t]);
+    for (const r of rowsOf(bundle, t)) {
+      const err = missingFieldsError(t, r as RowOf<typeof t>);
+      // Máy chủ đã báo lỗi dòng này thì giữ lý do của máy chủ.
+      if (err && m.get(r.rowNumber)?.action !== EXCEL_ROW_ACTION.ERROR)
+        m.set(r.rowNumber, { action: EXCEL_ROW_ACTION.ERROR, error: err });
+    }
+    out[t] = m;
+  }
+  return out;
+};
+
+/** Số dòng lỗi (máy chủ báo, lỗi đọc file, thiếu trường) và lỗi chéo giữa các bảng của một file. */
+export const bundleErrorCount = (bundle: ExcelBundle, check: ExcelBundleCheck) => {
+  const maps = withMissingFields(statusMaps(check), bundle, REVIEW_TABLES);
+  let rows = 0;
+  for (const t of REVIEW_TABLES)
+    for (const r of rowsOf(bundle, t)) {
+      const parseError = 'parseError' in r ? r.parseError : null;
+      if (rowStateOf(maps[t].get(r.rowNumber), parseError) === 'error') rows++;
+    }
+  return { rows, cross: check.spec.crossErrors?.length ?? 0 };
 };
 
 /** Phân loại một dòng: lỗi định dạng lúc đọc file cũng là lỗi (khi chưa có kết quả kiểm). */

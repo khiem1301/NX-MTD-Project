@@ -1,4 +1,4 @@
-import { Alert, Modal, Select, Space, Typography, Upload } from 'antd';
+import { Alert, Modal, Select, Space, Upload } from 'antd';
 import { InboxOutlined } from '@ant-design/icons';
 import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { ReplaceImportOption } from '@/components/common/ReplaceImportOption';
@@ -12,6 +12,7 @@ import { useOperationImport } from '../hooks/useOperationImport';
 import { operationImportColumns } from './operationImportColumns';
 import { OperationImportRateOptions } from './OperationImportRateOptions';
 import { OperationImportSummary } from './OperationImportSummary';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = {
   open: boolean;
@@ -66,7 +67,7 @@ export function OperationImportModal({ open, productId, productLabel, onClose }:
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <HintTip text={text.hint} />
         <ImportTemplateLink kind="operations" productId={productId} />
         <ReplaceImportOption
           checked={replace}

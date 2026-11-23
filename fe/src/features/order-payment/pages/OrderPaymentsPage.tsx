@@ -37,6 +37,12 @@ export function OrderPaymentsPage() {
     { title: text.order, dataIndex: 'orderCode' },
     { title: text.customer, dataIndex: 'customerName' },
     {
+      title: text.orderAmount,
+      dataIndex: 'orderAmount',
+      align: 'right',
+      render: (v: number) => formatCurrency(v),
+    },
+    {
       title: text.finalAmount,
       dataIndex: 'finalAmount',
       align: 'right',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CheckOutlined, CloseOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Button, Input, Modal, Space, Typography } from 'antd';
+import { Button, Input, Modal, Space } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import { DataTable } from '@/components/common/DataTable';
@@ -17,6 +17,7 @@ import {
   useRenameOperationGroup,
 } from '../hooks/useOperations';
 import type { OperationGroup } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = PRODUCTION_TEXT.operations.groups;
 
@@ -115,7 +116,7 @@ export function OperationGroupModal({
       destroyOnHidden
     >
       <Space direction="vertical" size={12} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <HintTip text={text.hint} />
         <Space.Compact style={{ width: '100%' }}>
           <Input
             aria-label={text.addPlaceholder}

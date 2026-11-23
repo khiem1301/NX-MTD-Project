@@ -12,6 +12,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { DeliveryDateFields } from '@/components/common/DeliveryDateFields';
 import { toDeliveryDatesPayload } from '@/utils/expectedDelivery';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { open: boolean; order: PurchaseOrderDetail; onClose: () => void };
 
@@ -108,7 +109,7 @@ export function PlaceOrderModal({ open, order, onClose }: Props) {
       {suppliers.isSuccess && options.length === 0 ? (
         <Alert type="warning" showIcon message={text.noSupplier} style={{ marginBottom: 16 }} />
       ) : (
-        <Alert type="info" showIcon message={text.lockedHint} style={{ marginBottom: 16 }} />
+        <HintTip text={text.lockedHint} />
       )}
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={place.isPending}>
         <Space wrap align="start">

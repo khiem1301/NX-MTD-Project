@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useWorkDateRange } from '@/hooks/useLookups';
 import { OrderSelect } from '@/components/common/OrderSelect';
@@ -22,6 +22,7 @@ import type { DefectReason, DefectType, ShiftCode } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { QtyInput } from '@/components/common/QtyInput';
+import { HintTip } from '@/components/common/HintTip';
 
 /** onCreated: báo phiếu vừa ghi (id + loại) để trang mở luôn form đơn cắt bù khi là hàng hủy (Scrap). */
 type Props = {
@@ -176,7 +177,7 @@ export function DefectFormModal({ open, onClose, onCreated }: Props) {
           <QtyInput min={1} max={DEFECT_MAX_QTY} style={{ width: 160 }} />
         </Form.Item>
         {isOutputError ? (
-          <Alert type="info" showIcon message={text.outputErrorHint} style={{ marginBottom: 16 }} />
+          <HintTip text={text.outputErrorHint} />
         ) : (
           <Form.Item name="reasonCode" label={text.reason} rules={required}>
             <Select options={DEFECT_REASON_OPTIONS} style={{ width: 260 }} />

@@ -17,7 +17,7 @@ export const ATTENDANCE_TEXT = {
 
   rj: {
     title: 'Nhân viên trên máy Ronald Jack Pro',
-    hint: 'Công nhân tạo từ danh sách này — chỉ Admin / Quản đốc được cấp tài khoản. Kế toán xem danh sách và đồng bộ dữ liệu. Mật khẩu tạm 6 số do hệ thống sinh; tên đăng nhập tự sinh từ họ tên (vd Nguyễn Văn Sáng → SangNV); mã NV RJ chỉ dùng để map chấm công.',
+    hint: 'Chỉ Admin / Quản đốc cấp tài khoản. Mật khẩu tạm 6 số; tên đăng nhập sinh từ họ tên (vd SangNV); mã NV RJ chỉ để map chấm công.',
     onlyUnmapped: 'Chỉ hiện chưa tạo trên hệ thống',
     mappedTo: 'Đã có trên hệ thống',
     unmapped: 'Chưa tạo',
@@ -35,7 +35,7 @@ export const ATTENDANCE_TEXT = {
 
   adjust: {
     title: 'Chấm công hộ',
-    hint: 'Chấm bù cho nhân viên quên quẹt, vân tay lỗi, đi làm ngoài hoặc theo đơn xin chấm bù đã được duyệt. Bắt buộc ghi lý do và có ít nhất giờ vào hoặc giờ ra.',
+    hint: 'Chấm bù khi quên quẹt, vân tay lỗi, đi làm ngoài hoặc có đơn xin chấm bù đã duyệt. Cần lý do và ít nhất giờ vào hoặc giờ ra.',
     add: 'Chấm công hộ',
     addTitle: 'Chấm công hộ cho nhân viên',
     team: 'Tổ',

@@ -58,6 +58,5 @@ export type StartTripPayload = {
 
 export type CompleteTripPayload = {
   odometerEnd: number;
-  fuelLiters?: number | null;
   fuelCost?: number | null;
 };

@@ -44,7 +44,7 @@ export function ExcelReviewTabs({
     .filter((c) => c.componentType === EXCEL_COMPONENT_TYPE.PANEL)
     .map((c) => c.name);
   // Bìa của đơn chỉ hiện size của đơn (máy chủ trả sau lần kiểm đầu); chưa có đơn / chưa kiểm thì tạm hiện size trong file.
-  const orderSizes = review.check.data?.spec.orderSizes;
+  const orderSizes = review.data?.spec.orderSizes; // kết quả kiểm gần nhất
   const markerSizes = orderSizes && orderSizes.length > 0 ? orderSizes : draft.spec.sizeColumns;
   const colors = [
     ...draft.spec.norms.map((n) => n.color),

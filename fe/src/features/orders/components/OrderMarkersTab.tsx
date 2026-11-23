@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Button, Empty, Flex, Skeleton, Typography } from 'antd';
+import { Button, Empty, Flex, Skeleton } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { MESSAGES } from '@/constants/messages';
 import { useOrderMarkers } from '../hooks/useOrders';
 import { markerVersion } from '../utils/orderMarker';
 import { OrderMarkerProductCard } from './OrderMarkerProductCard';
 import { SpecImportModal } from './SpecImportModal';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.markers;
 
@@ -30,9 +31,9 @@ export function OrderMarkersTab({ orderId, orderCode, isClosed }: OrderMarkersTa
   return (
     <>
       <Flex justify="space-between" align="flex-start" gap={12} wrap>
-        <Typography.Paragraph type="secondary" style={{ flex: 1, minWidth: 280 }}>
-          {text.hint}
-        </Typography.Paragraph>
+        <div style={{ flex: 1, minWidth: 280 }}>
+          <HintTip text={text.hint} />
+        </div>
         {!isClosed && products.length > 0 && (
           <Button icon={<UploadOutlined />} onClick={() => setImporting(true)}>
             {MESSAGES.orders.specImport.button}

@@ -1,5 +1,5 @@
 import { REASON_MAX_LENGTH } from '@/constants/limits';
-import { Alert, Form, Input, Modal, Select } from 'antd';
+import { Form, Input, Modal, Select } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { MESSAGES } from '@/constants/messages';
 import { API_DATE } from '@/utils/format';
@@ -7,6 +7,7 @@ import { GR_LABELS } from '../constants';
 import { useAllGradeWorkers, useGradeOptions, useSetGrade } from '../hooks/useGrade';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { REQUIRED_RULES } from '../constants';
+import { HintTip } from '@/components/common/HintTip';
 
 export function SetGradeModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const gradeOptions = useGradeOptions();
@@ -40,7 +41,7 @@ export function SetGradeModal({ open, onClose }: { open: boolean; onClose: () =>
       onCancel={onClose}
       destroyOnHidden
     >
-      <Alert type="info" showIcon style={{ marginBottom: 12 }} message={GR_LABELS.setDirectHint} />
+      <HintTip text={GR_LABELS.setDirectHint} />
       <Form
         form={form}
         layout="vertical"

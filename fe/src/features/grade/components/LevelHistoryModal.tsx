@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { Alert, Space, type TableColumnsType } from 'antd';
+import { Space, type TableColumnsType } from 'antd';
 import { IconAction } from '@/components/common/IconAction';
 import { ConfirmAction } from '@/components/common/ConfirmAction';
 import dayjs from 'dayjs';
@@ -12,6 +12,7 @@ import { DataTable } from '@/components/common/DataTable';
 import { DetailModal } from '@/components/common/DetailModal';
 import { EditLevelModal } from './EditLevelModal';
 import { levelColumns } from './levelColumns';
+import { HintTip } from '@/components/common/HintTip';
 
 /** Lịch sử mức tiền của một bậc; mức chưa hiệu lực sửa / xóa được. */
 export function LevelHistoryModal({
@@ -57,7 +58,7 @@ export function LevelHistoryModal({
       size="md"
       title={code ? `${GR_LABELS.levelHistory} - ${code.gradeCode}` : undefined}
     >
-      <Alert type="info" showIcon style={{ marginBottom: 16 }} message={GR_LABELS.futureOnlyHint} />
+      <HintTip text={GR_LABELS.futureOnlyHint} />
       <DataTable rowKey="gradeLevelId" columns={columns} dataSource={list} pagination={false} />
       <EditLevelModal level={editing} onClose={() => setEditing(null)} />
     </DetailModal>

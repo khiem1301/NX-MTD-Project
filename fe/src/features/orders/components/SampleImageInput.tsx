@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Button, Space, Typography, Upload, message } from 'antd';
+import { Button, Space, Upload, message } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import type { ApiError } from '@/types/api';
 import { productApi } from '../api/orderApi';
 import { isAcceptableImage } from '../utils/imageFile';
 import { ProductImage } from './ProductImage';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = {
   value?: string;
@@ -54,7 +55,7 @@ export function SampleImageInput({ value, onChange, hideHint, size = DEFAULT_SIZ
           </Button>
         )}
       </Space>
-      {!hideHint && <Typography.Text type="secondary">{MESSAGES.orders.imageHint}</Typography.Text>}
+      {!hideHint && <HintTip text={MESSAGES.orders.imageHint} />}
     </Space>
   );
 }

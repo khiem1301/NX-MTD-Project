@@ -1,8 +1,9 @@
-import { Alert, Checkbox, Space, Typography } from 'antd';
+import { Alert, Checkbox, Space } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { PRODUCTION_TEXT } from '../constants';
 import type { OperationImportPreview } from '../types';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = PRODUCTION_TEXT.operations.import;
 
@@ -53,7 +54,7 @@ export function OperationImportRateOptions({
           </Checkbox>
         </Space>
       )}
-      {withRates && <Typography.Text type="secondary">{text.rateHint}</Typography.Text>}
+      {withRates && <HintTip text={text.rateHint} />}
     </Space>
   ) : (
     <Alert type="warning" showIcon message={text.noRateColumn} />

@@ -20,7 +20,7 @@ type OrderExcelImportsProps = {
 export function OrderExcelImports({ orderId, imports, disabled }: OrderExcelImportsProps) {
   const { selection, reading, reviewing } = imports;
   return (
-    <div style={{ marginTop: 16 }}>
+    <div style={{ marginTop: 4, marginBottom: 16 }}>
       <Flex justify="space-between" align="center" wrap gap={8}>
         <Typography.Text strong>{text.section}</Typography.Text>
         <Space size={16} wrap>
@@ -32,10 +32,7 @@ export function OrderExcelImports({ orderId, imports, disabled }: OrderExcelImpo
           />
         </Space>
       </Flex>
-      <Typography.Paragraph type="secondary" style={{ margin: '4px 0 8px' }}>
-        {text.hint} {text.markerTemplateHint}
-      </Typography.Paragraph>
-      <Row gutter={[8, 8]}>
+      <Row gutter={[8, 8]} style={{ marginTop: 8 }}>
         {KINDS.map((kind) => (
           <Col key={kind} xs={24} md={12}>
             <ExcelKindSlot

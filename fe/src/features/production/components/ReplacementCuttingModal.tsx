@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Button, Descriptions, Form, Input, Modal, Select, Space, Typography, message } from 'antd';
+import { Button, Descriptions, Form, Input, Modal, Select, Space, message } from 'antd';
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
@@ -14,6 +14,7 @@ import type { Defect } from '../types';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { QtyInput } from '@/components/common/QtyInput';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { defect: Defect | null; onClose: () => void };
 
@@ -89,7 +90,7 @@ export function ReplacementCuttingModal({ defect, onClose }: Props) {
           </Descriptions.Item>
         </Descriptions>
       )}
-      <Typography.Paragraph type="secondary">{text.hint}</Typography.Paragraph>
+      <HintTip text={text.hint} />
 
       <Form form={form} layout="vertical" onFinish={handleFinish} disabled={create.isPending}>
         <Form.Item label={text.panels} required style={{ marginBottom: 8 }}>

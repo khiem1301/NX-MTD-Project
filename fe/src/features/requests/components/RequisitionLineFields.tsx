@@ -11,6 +11,7 @@ import { useRequisitionItems } from '../hooks/useRequisitionItems';
 import { lineQuantityRule, roundForMaterial } from '../utils/lineQuantity';
 import { lineCap } from '../utils/requisitionItems';
 import { remainingOf } from '../utils/workOrderRequisition';
+import { HintTip } from '@/components/common/HintTip';
 
 type RequisitionLineFieldsProps = {
   form: FormInstance;
@@ -84,7 +85,7 @@ export function RequisitionLineFields({
     <Form.List name="lines">
       {(fields, { add, remove }) => (
         <>
-          <Typography.Text type="secondary">{MESSAGES.requests.requisitionHint}</Typography.Text>
+          <HintTip text={MESSAGES.requests.requisitionHint} />
           <Row gutter={8} style={{ margin: '4px 0' }}>
             <Col {...ITEM_SPAN}>
               <Typography.Text strong>{itemLabel}</Typography.Text>

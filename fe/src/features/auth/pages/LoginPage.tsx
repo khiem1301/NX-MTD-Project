@@ -6,6 +6,9 @@ import { ROUTES } from '@/constants/routes';
 import { useAuth } from '@/hooks/useAuth';
 import type { LoginRequest } from '@/types/auth';
 import { useLogin } from '../hooks/useLogin';
+import logo from '@/assets/logo.png';
+
+const LOGIN_LOGO_WIDTH = 200;
 
 const loginSchema = z.object({
   username: z.string().trim().min(1, MESSAGES.auth.usernameRequired),
@@ -13,6 +16,7 @@ const loginSchema = z.object({
 });
 
 const zodRule = (field: keyof LoginRequest) => ({
+  required: true,
   validator: async (_: unknown, value: unknown) => {
     const result = loginSchema.shape[field].safeParse(value ?? '');
     if (!result.success) throw new Error(result.error.issues[0]?.message);
@@ -61,9 +65,11 @@ export function LoginPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 16 }}>
       <Card style={{ width: 380, maxWidth: '100%' }}>
-        <Typography.Title level={3} style={{ marginBottom: 0 }}>
-          {MESSAGES.auth.title}
-        </Typography.Title>
+        <img
+          src={logo}
+          alt={MESSAGES.auth.title}
+          style={{ display: 'block', width: LOGIN_LOGO_WIDTH, margin: '0 auto 8px' }}
+        />
         <Typography.Paragraph type="secondary">{MESSAGES.auth.subtitle}</Typography.Paragraph>
         <Form form={form} layout="vertical" onFinish={onFinish} disabled={login.isPending}>
           <Form.Item name="username" label={MESSAGES.auth.username} rules={[zodRule('username')]}>

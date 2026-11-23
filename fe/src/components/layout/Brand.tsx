@@ -1,3 +1,6 @@
+import logoMark from '@/assets/logo-mark.png';
+import { MESSAGES } from '@/constants/messages';
+
 export function Brand({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
     <div
@@ -7,7 +10,9 @@ export function Brand({ collapsed, onClick }: { collapsed: boolean; onClick: () 
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onClick()}
     >
-      <div className="app-brand__logo">NX</div>
+      <div className="app-brand__logo">
+        <img src={logoMark} alt={MESSAGES.auth.title} />
+      </div>
       {!collapsed && (
         <div>
           <div className="app-brand__name">NX-MTD</div>

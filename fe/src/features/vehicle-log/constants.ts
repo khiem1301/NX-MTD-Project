@@ -37,7 +37,6 @@ export const VL_LABELS = {
   odometerStart: 'Km đầu',
   odometerEnd: 'Km cuối',
   distance: 'Quãng đường (km)',
-  fuelLiters: 'Xăng (lít)',
   fuelNormLiters: 'Định mức (lít)',
   fuelCost: 'Tiền xăng',
   warnings: 'Cảnh báo',
@@ -52,7 +51,6 @@ export const VL_LABELS = {
 
 export const VL_MESSAGES = {
   plateInvalid: 'Biển số không đúng định dạng (ví dụ 51C-123.45 hoặc 30F-1234).',
-  fuelBothRequired: 'Phải nhập cả số xăng và tiền xăng, hoặc để trống cả hai.',
   /** DEV-ALL-130: khớp WarehouseMessages.OdometerEndInvalid ở BE. */
   odometerEndTooSmall: 'Km cuối phải lớn hơn km đầu ({0}).',
   vehicleSaved: 'Đã lưu xe.',
@@ -69,7 +67,6 @@ export const PLATE_EXAMPLE = '51C-123.45';
 /** Trần nhập liệu của xe / chuyến xe, khớp VehicleLimits ở BE. */
 export const VEHICLE_LIMITS = {
   maxOdometer: 9_999_999,
-  maxFuelLiters: 1_000,
   maxFuelCost: 100_000_000,
   maxFuelNorm: 9_999,
 } as const;

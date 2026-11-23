@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Alert, Form, Input, Modal, Select, Space, message } from 'antd';
+import { Form, Input, Modal, Select, Space, message } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import { OrderSelect } from '@/components/common/OrderSelect';
 import { MESSAGES } from '@/constants/messages';
@@ -21,6 +21,7 @@ import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { AppDatePicker } from '@/components/common/DateInputs';
 import { StocktakeCountTable } from './StocktakeCountTable';
+import { HintTip } from '@/components/common/HintTip';
 
 type StocktakeFormModalProps = { open: boolean; stocktake: Stocktake | null; onClose: () => void };
 type FormValues = CountValues & {
@@ -154,7 +155,7 @@ export function StocktakeFormModal({ open, stocktake, onClose }: StocktakeFormMo
             />
           )}
         </Space>
-        <Alert type="info" showIcon message={ST_LABELS.blankHint} style={{ marginBottom: 12 }} />
+        <HintTip text={ST_LABELS.blankHint} />
         <StocktakeCountTable
           isMaterial={isMaterial}
           balances={balances.data?.items}

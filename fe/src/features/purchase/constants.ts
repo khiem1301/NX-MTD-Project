@@ -108,7 +108,7 @@ export const PURCHASE_TEXT = {
 
   reprice: {
     title: 'Sửa đơn giá và gửi lại Kế toán',
-    hint: 'Kế toán đã trả lại đơn. Chỉ sửa được đơn giá; số lượng và nhà cung cấp giữ nguyên.',
+    hint: 'Kế toán đã trả lại đơn: chỉ sửa được đơn giá.',
     returnedBy: 'Lý do Kế toán trả lại',
   },
 
@@ -142,7 +142,7 @@ export const PURCHASE_TEXT = {
 
   actual: {
     title: 'Nhập giá trị thực tế',
-    hint: 'Dùng khi NCC giao thiếu hoặc đổi giá: tổng các lần thanh toán không vượt quá số này. Phải có lý do.',
+    hint: 'Dùng khi NCC giao thiếu hoặc đổi giá: tổng thanh toán không vượt số này. Phải có lý do.',
     amount: 'Giá trị thực tế',
     computed: 'Giá trị tự tính',
     paid: 'Đã thanh toán',

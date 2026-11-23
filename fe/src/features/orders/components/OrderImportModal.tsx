@@ -11,9 +11,10 @@ import { ImportTemplateLink } from '@/components/common/ImportTemplateLink';
 import { unknownCodesOf, useCreateProductFromImport } from '../hooks/useCreateProductFromImport';
 import { usePreviewOrderImport } from '../hooks/useSpecImport';
 import type { OrderImportRow, SaveProductPayload } from '../types';
-import { acceptMissingProduct } from '../utils/orderImport';
+import { acceptStagedProducts } from '../utils/orderImport';
 import type { ProductImportSelection } from '../utils/productExcelImports';
 import { ProductFormModal } from './ProductFormModal';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.orderImport;
 const col = text.columns;
@@ -29,6 +30,8 @@ type OrderImportModalProps = {
    */
   onStageProduct?: (body: SaveProductPayload, selection: ProductImportSelection) => number | null;
   onUnstageProduct?: (tempId: number) => void;
+  /** Mã hàng đã khai trên form đơn (chờ Lưu đơn): mã chữ hoa → tempId. Dòng của mã này được nhận luôn, không hiện nút tạo. */
+  stagedProducts?: Record<string, number>;
 };
 
 const columnsFor = (sizes: string[]): ColumnsType<OrderImportRow> => [
@@ -78,6 +81,7 @@ export function OrderImportModal({
   onClose,
   onStageProduct,
   onUnstageProduct,
+  stagedProducts = {},
 }: OrderImportModalProps) {
   const preview = usePreviewOrderImport();
   const [file, setFile] = useState<File | null>(null);
@@ -86,12 +90,7 @@ export function OrderImportModal({
   const create = useCreateProductFromImport(file);
   const creating = create.creating;
   const raw = file ? preview.data : undefined;
-  const data = raw
-    ? Object.entries(accepted).reduce(
-        (previewRows, [code, tempId]) => acceptMissingProduct(previewRows, code, tempId),
-        raw,
-      )
-    : undefined;
+  const data = raw ? acceptStagedProducts(raw, { ...stagedProducts, ...accepted }) : undefined;
   const unknownCodes = data && onStageProduct ? unknownCodesOf(data.rows) : [];
   const dropStaged = () => {
     stagedIds.current.forEach((id) => onUnstageProduct?.(id));
@@ -119,7 +118,7 @@ export function OrderImportModal({
       destroyOnHidden
     >
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Typography.Text type="secondary">{text.hint}</Typography.Text>
+        <HintTip text={text.hint} />
         <ImportTemplateLink kind="order-lines" orderId={orderId} />
         <Upload.Dragger
           maxCount={1}

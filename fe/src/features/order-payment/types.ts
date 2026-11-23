@@ -9,6 +9,8 @@ export type OrderPaymentListItem = {
   orderCode: string;
   customerName: string;
   orderStatus: string;
+  /** Tổng tiền gia công cả đơn (Σ số lượng × đơn giá); chỉ Kế toán thấy, Quản đốc không. */
+  orderAmount: number;
   /** Giá trị chốt cả đơn do Kế toán nhập; âm = mình phải đền hợp đồng; null = chưa chốt. */
   finalAmount: number | null;
   /** Tổng đã thanh toán: dương = khách đã trả, âm = mình đã trả khách. */

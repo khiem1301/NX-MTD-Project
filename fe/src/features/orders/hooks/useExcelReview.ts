@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApiMutation } from '@/hooks/useApiMutation';
 import type { SaveMaterialPayload } from '@/types/material';
 import { excelBundleApi } from '../api/orderApi';
-import type { ExcelBundle } from '../types';
+import type { ExcelBundle, ExcelBundleCheck } from '../types';
 import {
   addRow,
   defaultMaterial,
@@ -11,6 +11,7 @@ import {
   rowStateOf,
   rowsOf,
   statusMaps,
+  withMissingFields,
   type ReviewTable,
   type RowOf,
   type RowState,
@@ -42,7 +43,15 @@ export function useExcelReview(
     return () => clearTimeout(timer);
   }, [draft, mutate, replace]);
 
-  const status = useMemo(() => statusMaps(check.data), [check.data]);
+  // Giữ kết quả kiểm gần nhất trong lúc chờ lần kiểm mới: mutation xóa data khi gọi lại, làm khung NVL mới và trạng thái
+  // dòng biến mất rồi hiện lại (nhấp nháy như tải lại trang, mất con trỏ) sau mỗi lần gõ.
+  const [data, setData] = useState<ExcelBundleCheck>();
+  if (check.data && check.data !== data) setData(check.data);
+
+  const status = useMemo(
+    () => withMissingFields(statusMaps(data), draft, tables),
+    [data, draft, tables],
+  );
   const stateOf = (table: ReviewTable, r: { rowNumber: number; parseError?: string | null }) =>
     rowStateOf(status[table].get(r.rowNumber), r.parseError);
   const counts = tables.reduce(
@@ -57,7 +66,7 @@ export function useExcelReview(
   const [materialEdits, setMaterialEdits] = useState<Record<string, Partial<SaveMaterialPayload>>>(
     {},
   );
-  const newMaterials: SaveMaterialPayload[] = (check.data?.missingMaterials ?? []).map((m) => ({
+  const newMaterials: SaveMaterialPayload[] = (data?.missingMaterials ?? []).map((m) => ({
     ...defaultMaterial(m),
     ...materialEdits[m.materialCode],
   }));
@@ -65,6 +74,8 @@ export function useExcelReview(
   return {
     draft,
     check,
+    /** Kết quả kiểm gần nhất (không mất khi đang kiểm lại). */
+    data,
     status,
     stateOf,
     counts,

@@ -21,9 +21,9 @@ export const ORDER_PAYMENT_METHOD_OPTIONS = (
   Object.keys(ORDER_PAYMENT_METHOD_LABEL) as OrderPaymentMethod[]
 ).map((value) => ({ value, label: ORDER_PAYMENT_METHOD_LABEL[value] }));
 
-/** Chữ hiển thị của màn Thanh toán đơn hàng (DEV-ALL-137). */
+/** Chữ hiển thị của màn Công nợ đơn hàng (DEV-ALL-137; đổi tên ở DEV-ALL-165). */
 export const ORDER_PAYMENT_TEXT = {
-  title: 'Thanh toán đơn hàng',
+  title: 'Công nợ đơn hàng',
   subtitle:
     'Chốt giá trị đơn hàng (có thể âm khi phải đền hợp đồng) và ghi nhận các lần thanh toán. Số dương: khách trả; số âm: mình trả khách.',
   search: 'Tìm theo mã đơn hoặc khách hàng',
@@ -31,6 +31,7 @@ export const ORDER_PAYMENT_TEXT = {
   columns: {
     order: 'Đơn hàng',
     customer: 'Khách hàng',
+    orderAmount: 'Tổng tiền đơn',
     finalAmount: 'Giá trị chốt',
     paid: 'Đã thanh toán',
     remaining: 'Còn lại',
@@ -61,7 +62,7 @@ export const ORDER_PAYMENT_TEXT = {
     title: 'Chốt giá trị đơn hàng',
     amount: 'Giá trị chốt',
     amountHint:
-      'Nhập số dương nếu khách phải trả mình; số âm nếu mình phải đền hợp đồng cho khách. Tổng đã thanh toán phải còn nằm giữa 0 và giá trị này.',
+      'Dương: khách trả mình. Âm: mình đền khách. Tổng đã thanh toán phải nằm giữa 0 và giá trị này.',
     amountRequired: 'Nhập giá trị chốt.',
     reason: 'Lý do',
     reasonRequired: 'Vui lòng nhập lý do.',
@@ -73,7 +74,7 @@ export const ORDER_PAYMENT_TEXT = {
     dateRequired: 'Vui lòng chọn ngày thanh toán.',
     amount: 'Số tiền',
     amountHint:
-      'Dương: khách trả mình. Âm: mình trả khách. Tổng các lần phải nằm giữa 0 và giá trị chốt.',
+      'Dương: khách trả mình. Âm: mình trả khách. Tổng các lần nằm giữa 0 và giá trị chốt.',
     amountRequired: 'Nhập số tiền khác 0.',
     allowed: 'Còn nhập được',
     method: 'Hình thức',

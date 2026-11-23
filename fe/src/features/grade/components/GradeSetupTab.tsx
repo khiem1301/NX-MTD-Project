@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
+import { Button } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { DebouncedSearch } from '@/components/common/DebouncedSearch';
 import { FilterSelect } from '@/components/common/FilterSelect';
@@ -19,6 +19,7 @@ import { ChangeAmountModal } from './ChangeAmountModal';
 import { gradeCodeColumns } from './gradeCodeColumns';
 import { GradeCodeFormModal } from './GradeCodeFormModal';
 import { LevelHistoryModal } from './LevelHistoryModal';
+import { HintTip } from '@/components/common/HintTip';
 
 /** Admin: bậc thợ và mức tiền bậc trong một bảng (mỗi dòng một bậc). Thêm bậc kèm luôn mức tiền đầu tiên. */
 export function GradeSetupTab() {
@@ -88,9 +89,9 @@ export function GradeSetupTab() {
         loading={codes.isFetching || levels.isFetching}
         pagination={false}
       />
-      <Typography.Paragraph type="secondary" style={{ marginTop: 12 }}>
-        {GR_LABELS.codeHint}
-      </Typography.Paragraph>
+      <div style={{ marginTop: 12 }}>
+        <HintTip text={GR_LABELS.codeHint} />
+      </div>
       <GradeCodeFormModal open={adding} onClose={() => setAdding(false)} />
       <ChangeAmountModal code={changing} rows={all} onClose={() => setChanging(null)} />
       <LevelHistoryModal code={viewing} rows={all} onClose={() => setViewing(null)} />

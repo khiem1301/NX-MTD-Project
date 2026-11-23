@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Modal, Space, Typography } from 'antd';
+import { Button, Modal, Space } from 'antd';
 import { DataTable } from '@/components/common/DataTable';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MESSAGES } from '@/constants/messages';
@@ -19,6 +19,7 @@ import {
 import { bulkOrderMaterialColumns } from './bulkOrderMaterialColumns';
 import { CustomerPlanNotice } from './CustomerPlanNotice';
 import { MaterialFormModal } from './MaterialFormModal';
+import { HintTip } from '@/components/common/HintTip';
 
 type OrderMaterialExternalModalProps = {
   orderId: number;
@@ -85,7 +86,7 @@ export function OrderMaterialExternalModal({
       onCancel={onClose}
     >
       <CustomerPlanNotice orderId={orderId} />
-      <Typography.Paragraph type="secondary">{LABELS.externalMaterialsHint}</Typography.Paragraph>
+      <HintTip text={LABELS.externalMaterialsHint} />
       <Space style={{ marginBottom: 12 }}>
         <Button icon={<PlusOutlined />} onClick={() => setLines((prev) => [...prev, newLine()])}>
           {LABELS.addLine}

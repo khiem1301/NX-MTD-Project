@@ -17,6 +17,7 @@ import {
   useRjEmployees,
 } from '../hooks/useAttendance';
 import type { RjEmployee } from '@/types/rjEmployee';
+import { HintTip } from '@/components/common/HintTip';
 
 /** Danh sách NV từ RJ: mọi role được vào màn có thể xem + đồng bộ; chỉ Admin / Quản đốc cấp tài khoản. */
 export function RjEmployeePanel() {
@@ -106,7 +107,7 @@ export function RjEmployeePanel() {
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Alert type="info" showIcon message={ATTENDANCE_TEXT.rj.hint} />
+      <HintTip text={ATTENDANCE_TEXT.rj.hint} />
       <Space wrap>
         <Button
           type="primary"
@@ -119,7 +120,7 @@ export function RjEmployeePanel() {
         <Button onClick={() => void refetch()} loading={isFetching}>
           Làm mới danh sách
         </Button>
-        <Typography.Text type="secondary">{ATTENDANCE_TEXT.rj.syncHint}</Typography.Text>
+        <HintTip text={ATTENDANCE_TEXT.rj.syncHint} />
       </Space>
       <Checkbox checked={onlyUnmapped} onChange={(e) => setOnlyUnmapped(e.target.checked)}>
         {ATTENDANCE_TEXT.rj.onlyUnmapped}

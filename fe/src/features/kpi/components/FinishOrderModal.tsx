@@ -7,6 +7,7 @@ import { useFinishKpiTarget, useFinishPreview } from '../hooks/useKpi';
 import type { KpiTarget } from '../types';
 import { MODAL_WIDTH } from '@/components/common/modalSize';
 import { MismatchDetail } from './MismatchDetail';
+import { HintTip } from '@/components/common/HintTip';
 
 type Props = { target: KpiTarget | null; onClose: () => void };
 
@@ -46,7 +47,7 @@ export function FinishOrderModal({ target, onClose }: Props) {
       <QueryError error={preview.error} onRetry={() => void preview.refetch()} />
       {data && (
         <>
-          <Alert type="info" showIcon message={text.hint} style={{ marginBottom: 12 }} />
+          <HintTip text={text.hint} />
           <Descriptions size="small" bordered column={2} style={{ marginBottom: 12 }}>
             <Descriptions.Item label={text.target}>{formatQty(data.targetQty)}</Descriptions.Item>
             <Descriptions.Item label={text.actual}>{formatQty(data.actualQty)}</Descriptions.Item>

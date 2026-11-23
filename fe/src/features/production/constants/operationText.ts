@@ -10,7 +10,7 @@ export const OPERATIONS_TEXT = {
   summary: '{0} công đoạn đang dùng, {1} chưa có nhóm, {2} chưa có đơn giá được duyệt.',
   noRate: 'Chưa có',
   selectProductHint:
-    'Chọn mã hàng để xem, nhập công đoạn và đơn giá. Mã hàng chưa có công đoạn thì bấm Nhập từ Excel hoặc Thêm công đoạn.',
+    'Chọn mã hàng để xem, nhập công đoạn và đơn giá. Chưa có công đoạn thì Nhập từ Excel hoặc Thêm công đoạn.',
   rateFilter: {
     label: 'Đơn giá',
     missing: 'Chưa có giá duyệt ({0})',
@@ -51,13 +51,13 @@ export const OPERATIONS_TEXT = {
   edit: 'Sửa công đoạn',
   add: 'Thêm công đoạn',
   addTitle: 'Thêm công đoạn',
-  addHint: 'Thêm một công đoạn cho mã hàng đang chọn, rồi nhập đơn giá và gửi Admin duyệt.',
+  addHint: 'Thêm công đoạn cho mã hàng đang chọn, nhập đơn giá và gửi Admin duyệt.',
   importExcel: 'Nhập từ Excel',
   noFinalStep:
     'Mã hàng này chưa có công đoạn cuối. Bấm "Sửa" ở công đoạn cuối của quy trình và tick "Là công đoạn cuối".',
   import: {
     title: 'Nhập công đoạn từ file Excel quy trình công nghệ',
-    hint: 'File có bảng với các cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT. Mã công đoạn tự sinh từ STT (STT 7 thành OP07), nhập lại file sẽ cập nhật đúng công đoạn cũ, không tạo trùng.',
+    hint: 'Cột: STT, BƯỚC CÔNG VIỆC, BẬC, TGCT. Mã công đoạn sinh từ STT (7 thành OP07); nhập lại file thì cập nhật, không tạo trùng.',
     chooseFile: 'Bấm hoặc kéo file .xlsx vào đây',
     chooseFileHint:
       'Đọc cột STT, BƯỚC CÔNG VIỆC, BẬC, TGCT, THIẾT BỊ, TIỀN; thêm tùy chọn NHÓM CÔNG ĐOẠN, CHI TIẾT (cách nhau dấu ;), CUỐI (đánh x). Dòng tiêu đề nhóm, chỗ trống và "Dự phòng" được bỏ qua.',
@@ -83,7 +83,7 @@ export const OPERATIONS_TEXT = {
     effectiveDate: 'Đơn giá hiệu lực từ',
     submitRates: 'Gửi Admin duyệt luôn (bỏ chọn thì lưu Nháp)',
     rateHint:
-      'Đơn giá cùng ngày đã chờ duyệt hoặc đã duyệt với giá khác sẽ được bỏ qua; đơn giá bằng giá hiện hành không tạo thêm.',
+      'Đơn giá cùng ngày đã chờ duyệt/đã duyệt với giá khác bị bỏ qua; bằng giá hiện hành thì không tạo thêm.',
     rateSummary: {
       created: 'Đơn giá mới',
       updated: 'Đơn giá cập nhật',
@@ -143,11 +143,10 @@ export const OPERATIONS_TEXT = {
     isFinalMoves: 'Công đoạn cuối hiện tại sẽ chuyển sang công đoạn này.',
     codeFormat: 'Mã chỉ gồm chữ không dấu, số và các ký tự . _ -',
     group: 'Nhóm công đoạn',
-    groupHint:
-      'Chọn hoặc gõ tên mới (vd May tay) để nhóm các công đoạn nhỏ; tìm theo tên này ở màn Giao việc.',
+    groupHint: 'Chọn hoặc gõ tên mới (vd May tay) để nhóm công đoạn; tìm theo tên ở màn Giao việc.',
     components: 'Chi tiết vải công đoạn làm trên',
     componentsHint:
-      'Chỉ chi tiết cắt (Panel); vải của chi tiết lấy theo định mức mã hàng (vải lót, mex, bo khai thành chi tiết riêng, vd Lót tay áo, Mex cổ). Một công đoạn có thể làm trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước, Thân sau). Bỏ trống nếu không gắn chi tiết.',
+      'Chỉ chi tiết cắt (Panel), vải lấy theo định mức mã hàng. Một công đoạn làm được trên nhiều chi tiết (vd Tra tay: Tay áo, Thân trước). Bỏ trống nếu không gắn chi tiết.',
   },
   filterGroup: 'Nhóm',
   searchOperation: 'Tìm mã, tên',
@@ -194,7 +193,7 @@ export const PIECE_RATES_TEXT = {
     rateMin: 'Đơn giá phải lớn hơn 0.',
     rateMax: 'Đơn giá không được vượt quá 100.000.000 đồng.',
     pastDateHint:
-      'Ngày hiệu lực đã qua: sau khi duyệt, đơn giá này áp dụng cho sản lượng nhập mới của các ngày từ đó. Sản lượng đã nhập giữ nguyên đơn giá cũ.',
+      'Ngày hiệu lực đã qua: sau khi duyệt, đơn giá áp dụng cho sản lượng nhập mới từ ngày đó; sản lượng cũ giữ đơn giá cũ.',
     currentRate: 'Đơn giá hiện hành',
   },
   done: {

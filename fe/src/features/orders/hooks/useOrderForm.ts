@@ -165,6 +165,11 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     return tempId;
   };
 
+  /** Mã hàng đã khai trên form (chờ Lưu đơn), theo mã chữ hoa → tempId: hộp nhập dòng hàng nhận luôn, không hỏi tạo lại. */
+  const stagedProducts: Record<string, number> = Object.fromEntries(
+    staged.map((s) => [s.body.productCode, s.tempId]),
+  );
+
   /** Gắn mã vừa khai vào khối đang mở form mã hàng. */
   const stageOntoBlock = (
     blockKey: string,
@@ -334,6 +339,7 @@ export function useOrderForm(props: Pick<OrderFormProps, 'orderId' | 'detail' | 
     productBlock,
     setProductBlock,
     stageProduct,
+    stagedProducts,
     stageOntoBlock,
     unstageProduct,
     orderImports,

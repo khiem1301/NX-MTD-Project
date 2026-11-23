@@ -57,7 +57,7 @@ export const DISPATCH_LABELS = {
   deliveryNotePhotos: 'Ảnh biên bản giao có khách ký',
   // DEV-ALL-127: Thủ kho chọn cách giao khi xuất kho.
   exportTitle: 'Xuất hàng · {0}',
-  exportHint: 'Tồn kho thành phẩm sẽ giảm theo số trên phiếu. Chọn cách giao hàng cho phiếu này.',
+  exportHint: 'Tồn kho thành phẩm giảm theo số trên phiếu. Chọn cách giao hàng.',
   deliveryMethod: 'Cách giao',
   vehicle: 'Xe giao hàng',
   vehiclePlaceholder: 'Chọn xe đang rảnh',
@@ -65,8 +65,7 @@ export const DISPATCH_LABELS = {
   driver: 'Tài xế',
   odometerStart: 'Km lúc đi',
   odometerHint: 'Km cuối chuyến trước: {0}',
-  tripHint:
-    'Hệ thống tạo chuyến xe đang chạy gắn phiếu này; Kế toán ghi km về và xăng ở Sổ xe khi xe về.',
+  tripHint: 'Hệ thống tạo chuyến xe đang chạy; Kế toán ghi km về và xăng ở Sổ xe.',
   vehicleRequired: 'Vui lòng chọn xe giao hàng.',
   driverRequired: 'Vui lòng nhập tên tài xế.',
   odometerRequired: 'Nhập km lúc đi (từ 0 trở lên).',

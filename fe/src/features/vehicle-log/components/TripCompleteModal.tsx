@@ -9,18 +9,6 @@ import type { VehicleTrip } from '../types';
 
 const required = [{ required: true, message: MESSAGES.common.required }];
 
-/** Có xăng thì phải có tiền xăng và ngược lại (khớp CompleteVehicleTripDtoValidator ở BE). */
-const bothOrNeither =
-  (other: keyof CompleteForm): Rule =>
-  ({ getFieldValue }) => ({
-    validator: async (_rule, value: number | null | undefined) => {
-      const hasThis = value !== null && value !== undefined;
-      const otherValue = getFieldValue(other) as number | null | undefined;
-      if (hasThis !== (otherValue !== null && otherValue !== undefined))
-        throw new Error(VL_MESSAGES.fuelBothRequired);
-    },
-  });
-
 /** DEV-ALL-130: km cuối nhỏ hơn hoặc bằng km đầu thì báo lỗi dưới ô, không lưu. */
 const endAfterStart = (start: number): Rule => ({
   validator: async (_rule, value: number | null | undefined) => {
@@ -29,9 +17,9 @@ const endAfterStart = (start: number): Rule => ({
   },
 });
 
-type CompleteForm = { odometerEnd: number; fuelLiters?: number | null; fuelCost?: number | null };
+type CompleteForm = { odometerEnd: number; fuelCost?: number | null };
 
-/** UC35: kết thúc chuyến (km cuối, xăng, tiền xăng). Xăng vượt định mức × (1 + dung sai) bị cảnh báo (MSG30). */
+/** UC35: kết thúc chuyến (km cuối, tiền xăng). */
 export function TripCompleteModal({
   trip,
   onClose,
@@ -72,26 +60,7 @@ export function TripCompleteModal({
           >
             <QtyInput min={0} max={VEHICLE_LIMITS.maxOdometer} style={{ width: 200 }} />
           </Form.Item>
-          <Form.Item
-            name="fuelLiters"
-            label={VL_LABELS.fuelLiters}
-            dependencies={['fuelCost']}
-            rules={[bothOrNeither('fuelCost')]}
-          >
-            <QtyInput
-              min={0.01}
-              max={VEHICLE_LIMITS.maxFuelLiters}
-              decimals={2}
-              step={0.5}
-              style={{ width: 200 }}
-            />
-          </Form.Item>
-          <Form.Item
-            name="fuelCost"
-            label={VL_LABELS.fuelCost}
-            dependencies={['fuelLiters']}
-            rules={[bothOrNeither('fuelLiters')]}
-          >
+          <Form.Item name="fuelCost" label={VL_LABELS.fuelCost}>
             <QtyInput min={1} max={VEHICLE_LIMITS.maxFuelCost} step={1000} style={{ width: 200 }} />
           </Form.Item>
         </Form>

@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { PlusOutlined, ThunderboltOutlined } from '@ant-design/icons';
-import { Button, Empty, Flex, Space, Typography } from 'antd';
+import { Button, Empty, Flex, Space } from 'antd';
 import { MESSAGES } from '@/constants/messages';
 import {
   distinctColors,
@@ -21,6 +21,7 @@ import {
   type VariantRow,
 } from '../utils/productSpec';
 import { SpecLayoutCard } from './SpecLayoutCard';
+import { HintTip } from '@/components/common/HintTip';
 
 const text = MESSAGES.orders.spec;
 
@@ -65,7 +66,7 @@ export function SpecMarkersTab({
 
   return (
     <>
-      <Typography.Paragraph type="secondary">{text.markerHint}</Typography.Paragraph>
+      <HintTip text={text.markerHint} />
       {layouts.length === 0 && (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={text.markerEmpty} />
       )}

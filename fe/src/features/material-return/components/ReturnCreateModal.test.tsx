@@ -123,6 +123,12 @@ beforeEach(() => {
   mockLines = [];
 });
 
+/** Hướng dẫn chỉ hiện khi di chuột vào biểu tượng (i). */
+const expectHintOnHover = async (hint: string) => {
+  (await screen.findAllByLabelText('Hướng dẫn')).forEach((icon) => fireEvent.mouseEnter(icon));
+  expect(await screen.findByText(hint)).toBeInTheDocument();
+};
+
 describe('ReturnCreateModal – tổ cắt', () => {
   beforeEach(() => signIn('Cutting'));
 
@@ -139,7 +145,7 @@ describe('ReturnCreateModal – tổ cắt', () => {
     await choose(0, 'LC-7');
 
     expect(mockReturnable).toHaveBeenLastCalledWith({ warehouseType: 'MATERIAL', workOrderId: 7 });
-    expect(await screen.findByText(RETURN_LABELS.suggestHint)).toBeInTheDocument();
+    await expectHintOnHover(RETURN_LABELS.suggestHint);
     const row = screen.getByText(/V01 Vải gió/).closest('tr') as HTMLElement;
     expect(within(row).getByRole('spinbutton')).toHaveValue('40');
   });
@@ -149,7 +155,7 @@ describe('ReturnCreateModal – tổ cắt', () => {
     open();
     await choose(0, 'LC-7');
 
-    expect(await screen.findByText(RETURN_LABELS.noSuggestHint)).toBeInTheDocument();
+    await expectHintOnHover(RETURN_LABELS.noSuggestHint);
     const row = screen.getByText(/V01 Vải gió/).closest('tr') as HTMLElement;
     expect(within(row).getByRole('spinbutton')).toHaveValue('');
   });
@@ -164,12 +170,12 @@ describe('ReturnCreateModal – tổ cắt', () => {
 describe('ReturnCreateModal – tổ may', () => {
   beforeEach(() => signIn('Sewing'));
 
-  it('trả NVL không cần chọn đơn: tải ngay danh sách NVL đã nhận', () => {
+  it('trả NVL không cần chọn đơn: tải ngay danh sách NVL đã nhận', async () => {
     mockLines = [material(1, null)];
     open();
 
     expect(mockReturnable).toHaveBeenLastCalledWith({ warehouseType: 'MATERIAL' });
-    expect(screen.getByText(RETURN_LABELS.materialHintSewing)).toBeInTheDocument();
+    await expectHintOnHover(RETURN_LABELS.materialHintSewing);
   });
 
   it('chuyển sang BTP thì phải chọn đơn hàng, chọn đơn rồi tải dòng đơn', async () => {
