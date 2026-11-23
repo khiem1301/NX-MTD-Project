@@ -115,7 +115,6 @@ export const ERROR_CODES = {
   // Doanh thu + hòa vốn (Minh)
   RevenuePeriodMonthInvalid: 'REVENUE_PERIOD_MONTH_INVALID',
   BreakEvenPeriodMonthInvalid: 'BREAK_EVEN_PERIOD_MONTH_INVALID',
-  BreakEvenInvalidAllocationBasis: 'BREAK_EVEN_INVALID_ALLOCATION_BASIS',
   BreakEvenNotReady: 'BREAK_EVEN_NOT_READY',
   BreakEvenNoOutput: 'BREAK_EVEN_NO_OUTPUT',
   BreakEvenNotFound: 'BREAK_EVEN_NOT_FOUND',

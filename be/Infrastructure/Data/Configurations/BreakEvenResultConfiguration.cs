@@ -10,7 +10,8 @@ public sealed class BreakEvenResultConfiguration : IEntityTypeConfiguration<Brea
     {
         entity.ToTable("BreakEvenResult", tb => tb.HasComment("Kết quả hòa vốn theo mã hàng"));
 
-        entity.HasIndex(e => new { e.PeriodId, e.CalculatedAt, e.ProductId }, "UQ_BER").IsUnique();
+        // DEV-ALL-169: mỗi lần tính có 2 dòng / mã hàng (OUTPUT, LABOUR_HOURS).
+        entity.HasIndex(e => new { e.PeriodId, e.CalculatedAt, e.ProductId, e.AllocationBasis }, "UQ_BER").IsUnique();
 
         entity.Property(e => e.AllocatedFixedCost).HasColumnType("decimal(18, 2)");
         entity.Property(e => e.AllocationBasis)

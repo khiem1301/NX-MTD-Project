@@ -232,7 +232,6 @@ export const API = {
   },
   kpi: {
     targets: '/api/v1/manager/kpi-targets',
-    teamTargets: '/api/v1/team-leader/kpi-targets',
     orderCapacity: '/api/v1/manager/kpi-targets/order-capacity',
     lineCapacity: '/api/v1/manager/kpi-targets/line-capacity',
     allottedTeams: '/api/v1/manager/order-line-teams/teams',
@@ -260,6 +259,7 @@ export const API = {
   breakEven: {
     base: '/api/v1/admin/break-even',
     calculate: '/api/v1/admin/break-even/calculate',
+    inputs: '/api/v1/admin/break-even/inputs',
     export: '/api/v1/admin/break-even/export',
   },
   costSummary: {

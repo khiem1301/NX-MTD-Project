@@ -1650,7 +1650,8 @@ CREATE TABLE dbo.MonthlyCost (
     CONSTRAINT UQ_MC UNIQUE (PeriodId, CostCategoryCode, ProductId)
 );
 
--- Kết quả hòa vốn theo mã hàng (BREAK_EVEN_RESULT, UC33). Mỗi lần tính là một bộ dòng mới cùng CalculatedAt (GBR-17)
+-- Kết quả hòa vốn theo mã hàng (BREAK_EVEN_RESULT, UC33). Mỗi lần tính là một bộ dòng mới cùng CalculatedAt (GBR-17),
+-- mỗi mã hàng 2 dòng: chia định phí theo sản lượng và theo giờ công (DEV-ALL-169)
 CREATE TABLE dbo.BreakEvenResult (
     BreakEvenResultId   INT IDENTITY(1,1) CONSTRAINT PK_BreakEvenResult PRIMARY KEY,
     PeriodId            INT           NOT NULL CONSTRAINT FK_BER_Period REFERENCES dbo.AccountingPeriod(PeriodId),
@@ -1667,7 +1668,7 @@ CREATE TABLE dbo.BreakEvenResult (
     IsAtRisk            BIT           NOT NULL, -- "Nguy cơ lỗ"
     CalculatedAt        DATETIME2(0)  NOT NULL CONSTRAINT DF_BER_At DEFAULT (dbo.fn_VnNow()),
     CONSTRAINT CK_BER_Basis CHECK (AllocationBasis IN ('LABOUR_HOURS','OUTPUT')),
-    CONSTRAINT UQ_BER UNIQUE (PeriodId, CalculatedAt, ProductId)
+    CONSTRAINT UQ_BER UNIQUE (PeriodId, CalculatedAt, ProductId, AllocationBasis)
 );
 GO
 

@@ -341,7 +341,6 @@ public static class Messages
     // --- Doanh thu (UC27) + Hòa vốn, giá trị thặng dư (UC11, GBR-17, chỉ Admin) ---
     public const string RevenuePeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
     public const string BreakEvenPeriodMonthInvalid = "Tháng phải theo định dạng YYYY-MM.";
-    public const string BreakEvenInvalidAllocationBasis = "Cách phân bổ định phí không hợp lệ (cần OUTPUT hoặc LABOUR_HOURS).";
     /// <summary>MSG25.</summary>
     public const string BreakEvenNotReady = "Chưa thể tính: bảng lương tháng chưa được duyệt hoặc chi phí tháng chưa được nhập.";
     public const string BreakEvenNoOutput = "Tháng này chưa có mã hàng nào hoàn thiện, không có dữ liệu để tính hòa vốn.";

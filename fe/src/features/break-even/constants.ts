@@ -1,44 +1,84 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
-import type { AllocationBasis } from './types';
 
-/** Chuỗi hiển thị màn Hòa vốn + giá trị thặng dư (UC11, MI-13, chỉ Admin). */
+/** Chuỗi hiển thị màn Hòa vốn + giá trị thặng dư (UC11, chỉ Admin; DEV-ALL-169). */
 export const BREAK_EVEN_TEXT = {
   pageTitle: 'Hòa vốn & giá trị thặng dư',
-  pageSubtitle:
-    'Chỉ tính khi bảng lương tháng đã duyệt và chi phí tháng đã nhập (MSG25). Mỗi lần tính lưu thêm một bộ kết quả mới, không ghi đè lần trước.',
   periodMonth: 'Tháng',
-  allocationBasis: 'Cách phân bổ định phí',
-  calculate: 'Tính toán',
+  openCalculate: 'Tính hòa vốn',
   viewHistory: 'Xem lịch sử các lần tính',
-  viewLatest: 'Chỉ xem lần tính gần nhất',
   export: 'Xuất Excel',
-  noDataYet: 'Tháng này chưa có kết quả hòa vốn. Chọn cách phân bổ rồi bấm "Tính toán".',
-
-  allocationBasisLabel: {
-    Output: 'Theo sản lượng (OUTPUT)',
-    LabourHours: 'Theo giờ công quy đổi (LABOUR_HOURS)',
+  runAt: 'Lần tính {0}',
+  basis: {
+    Output: 'Theo sản lượng',
+    LabourHours: 'Theo giờ công',
   },
-
+  summary: {
+    title: 'Tổng quan lần tính {0}',
+    revenue: 'Doanh thu',
+    variableCost: 'Biến phí',
+    fixedCost: 'Định phí tháng',
+    surplus: 'Thặng dư',
+    risk: '{0} mã nguy cơ lỗ theo sản lượng · {1} mã theo giờ công',
+    noRisk: 'Không có mã hàng nào nguy cơ lỗ.',
+  },
   table: {
     product: 'Mã hàng',
-    allocationBasis: 'Cách phân bổ',
     finishedQty: 'SL hoàn thiện',
     cmtUnitPrice: 'Đơn giá CMT',
     revenue: 'Doanh thu',
     variableCost: 'Biến phí',
-    allocatedFixedCost: 'Định phí phân bổ',
+    allocatedFixedCost: 'Định phí',
     breakEvenQty: 'SL hòa vốn',
-    percentReached: '% đạt hòa vốn',
-    surplusValue: 'Giá trị thặng dư',
-    risk: 'Nguy cơ lỗ',
+    percentReached: '% đạt',
+    surplusValue: 'Thặng dư',
+    risk: 'Rủi ro',
     calculatedAt: 'Tính lúc',
   },
+  modal: {
+    title: 'Tính hòa vốn · Tháng {0}',
+    inputs: '1. Dữ liệu đầu vào',
+    method: '2. Cách chia định phí',
+    methodText:
+      'Tính cả theo sản lượng (số lượng hoàn thiện) và theo giờ công (giờ làm từ chấm công), so sánh trong bảng kết quả.',
+    history: 'Mỗi lần tính lưu thêm một bộ kết quả, giữ lịch sử các lần trước.',
+    submit: 'Tính ngay',
+    payroll: 'Bảng lương tháng',
+    payrollOk: 'Đã duyệt',
+    payrollMissing: 'Chưa duyệt',
+    cost: 'Chi phí tháng',
+    costOk: 'Định phí {0} · Biến phí {1} (gắn {2} mã hàng)',
+    costMissing: 'Chưa nhập',
+    output: 'Thành phẩm nhập kho',
+    outputOk: '{0} mã hàng · {1} sp · doanh thu {2}',
+    outputMissing: 'Chưa có thành phẩm nhập kho trong tháng',
+    hours: 'Giờ công (chấm công + sản lượng)',
+    hoursOk: '{0} giờ',
+    hoursMissing: 'Chưa có — cách giờ công sẽ chia theo sản lượng',
+    locked:
+      'Tháng đã khóa sổ (bảng lương đã duyệt): số liệu gốc không đổi, kết quả tính mới chỉ để tham khảo và vẫn lưu thêm vào lịch sử.',
+    noPeriod: 'Tháng này chưa có kỳ kế toán (chưa nhập chi phí / bảng lương).',
+    goPayroll: 'Đến màn duyệt bảng lương',
+    goCost: 'Xem tổng hợp chi phí',
+  },
+  detail: {
+    title: '{0} · Tháng {1}',
+    revenue: 'Doanh thu',
+    revenueFormula: '{0} sp × {1} = {2}',
+    revenueSource: 'thành phẩm nhập kho × đơn giá CMT',
+    variableCost: 'Biến phí',
+    variableFormula: '{0} → {1} / sp',
+    variableSource: 'chi phí tháng gắn mã hàng',
+    share: 'Tỉ lệ chia định phí',
+    allocated: 'Định phí được chia',
+    breakEvenQty: 'SL hòa vốn',
+    breakEvenFormula: '{0} ÷ ({1} − {2})',
+    noBreakEven: 'Không đạt được (đơn giá ≤ biến phí / sp)',
+    percent: '% đạt hòa vốn',
+    surplus: 'Giá trị thặng dư',
+    surplusFormula: 'doanh thu − biến phí − định phí được chia',
+    noData: 'Lần tính này không có cách chia này.',
+  },
 } as const;
-
-export const ALLOCATION_BASIS_OPTIONS: { value: AllocationBasis; label: string }[] = [
-  { value: 'Output', label: BREAK_EVEN_TEXT.allocationBasisLabel.Output },
-  { value: 'LabourHours', label: BREAK_EVEN_TEXT.allocationBasisLabel.LabourHours },
-];
 
 export const RISK_LABEL: Record<'atRisk' | 'safe', StatusLabel> = {
   atRisk: { text: 'Nguy cơ lỗ', color: 'red' },

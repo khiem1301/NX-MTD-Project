@@ -151,9 +151,6 @@ export const MESSAGES = {
     exportFailed: 'Không xuất được file Excel. Vui lòng thử lại.',
     noDataYet: 'Tháng này chưa có kết quả hòa vốn. Hãy chạy tính toán.',
     notReady: 'Chưa thể tính: bảng lương tháng chưa được duyệt hoặc chi phí tháng chưa được nhập.', // MSG25
-    confirmCalculateTitle: 'Tính hòa vốn tháng này?',
-    confirmCalculateContent:
-      'Hệ thống sẽ lưu thêm một bộ kết quả mới (giữ lại lịch sử các lần tính trước).',
     calculated: 'Đã tính hòa vốn.',
     atRisk: 'Nguy cơ lỗ',
     safe: 'An toàn',
