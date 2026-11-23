@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Electrician;
 
-/// <summary>DEV-ALL-168: số liệu trang chủ của cơ điện.</summary>
+/// <summary>DEV-ALL-170: số liệu trang chủ của cơ điện.</summary>
 public sealed class HomeController : ElectricianBaseController
 {
     private readonly IHomeDashboardService _home;

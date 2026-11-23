@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.WarehouseKeeper;
 
-/// <summary>DEV-ALL-168: số liệu trang chủ của Thủ kho.</summary>
+/// <summary>DEV-ALL-170: số liệu trang chủ của Thủ kho.</summary>
 public sealed class HomeController : WarehouseKeeperBaseController
 {
     private readonly IHomeDashboardService _home;

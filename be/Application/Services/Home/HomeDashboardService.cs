@@ -8,7 +8,7 @@ using NX_MTD.Domain.Entities;
 namespace NX_MTD.Application.Services;
 
 /// <summary>
-/// DEV-ALL-168: trang chủ theo vai trò. Chỉ đọc; dùng lại service có sẵn (tiến độ đơn, tổng hợp chi phí, hộp đơn từ) để số
+/// DEV-ALL-170: trang chủ theo vai trò. Chỉ đọc; dùng lại service có sẵn (tiến độ đơn, tổng hợp chi phí, hộp đơn từ) để số
 /// trên trang chủ khớp với màn nghiệp vụ. Mỗi role một file partial.
 /// </summary>
 public sealed partial class HomeDashboardService : IHomeDashboardService

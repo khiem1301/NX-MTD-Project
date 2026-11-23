@@ -22,12 +22,12 @@ public sealed class BreakEvenController : AdminBaseController
         this.ToResponse(await _finance.GetBreakEvenAsync(periodMonth, productId, history, ct));
 
     /// <summary>Chạy một lần tính hòa vốn mới cho một tháng, cả hai cách chia định phí (OUTPUT và LABOUR_HOURS,
-    /// DEV-ALL-169) — trả kèm danh sách cảnh báo mã hàng nguy cơ lỗ (MSG26).</summary>
+    /// DEV-ALL-171) — trả kèm danh sách cảnh báo mã hàng nguy cơ lỗ (MSG26).</summary>
     [HttpPost("calculate")]
     public async Task<IActionResult> Calculate([FromBody] BreakEvenCalculateDto dto, CancellationToken ct) =>
         this.ToResponse(await _finance.CalculateAsync(dto, ct));
 
-    /// <summary>DEV-ALL-169: dữ liệu đầu vào của tháng (bảng lương, chi phí, thành phẩm, giờ công) trước khi tính.</summary>
+    /// <summary>DEV-ALL-171: dữ liệu đầu vào của tháng (bảng lương, chi phí, thành phẩm, giờ công) trước khi tính.</summary>
     [HttpGet("inputs")]
     public async Task<IActionResult> Inputs([FromQuery] string periodMonth, CancellationToken ct) =>
         this.ToResponse(await _finance.GetBreakEvenInputsAsync(periodMonth, ct));

@@ -18,7 +18,7 @@ import { pivotResults, summarize } from '../utils/pivotResults';
 
 /**
  * UC11 — Admin: chọn tháng, mở popup "Tính hòa vốn" (xem dữ liệu đầu vào rồi tính cả hai cách chia định phí), xem / so sánh /
- * xuất kết quả (mật, chỉ Admin — GBR-02; DEV-ALL-169).
+ * xuất kết quả (mật, chỉ Admin — GBR-02; DEV-ALL-171).
  */
 export function BreakEvenPage() {
   const [filter, setFilter] = useState<BreakEvenFilter>(() => ({

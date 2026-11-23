@@ -48,7 +48,7 @@ public class VehicleServiceTests
         _uow.Repository<T>().Returns(repo);
     }
 
-    /// <summary>Gắn một ảnh hóa đơn xăng đang hiệu lực vào chuyến (DEV-ALL-171).</summary>
+    /// <summary>Gắn một ảnh hóa đơn xăng đang hiệu lực vào chuyến (DEV-ALL-173).</summary>
     private void AddFuelReceipt(VehicleTrip trip) => _attachments.Add(new Attachment
     {
         OwnerType = AttachmentOwnerTypes.VehicleTrip, OwnerId = trip.VehicleTripId, Purpose = AttachmentPurposes.FuelReceipt, IsCurrent = true,
@@ -627,7 +627,7 @@ public class VehicleServiceTests
             .ErrorCode.Should().Be(ErrorCodes.WarehouseInvalidStatus);
     }
 
-    // ---------- Tiền xăng bắt buộc có ảnh hóa đơn (DEV-ALL-171) ----------
+    // ---------- Tiền xăng bắt buộc có ảnh hóa đơn (DEV-ALL-173) ----------
 
     [Fact]
     public async Task Fuel_cost_without_a_receipt_photo_is_rejected_and_the_trip_stays_open()

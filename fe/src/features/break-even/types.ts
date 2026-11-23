@@ -20,11 +20,11 @@ export type BreakEvenResultItem = {
   calculatedAt: string;
   /** MSG26 (hoặc biến thể khi không tính được điểm hòa vốn), đã dựng sẵn ở BE — chỉ hiện khi isAtRisk. */
   atRiskWarning: string | null;
-  /** Tỉ lệ (%) định phí tháng chia cho mã hàng theo cách của dòng này (DEV-ALL-169). */
+  /** Tỉ lệ (%) định phí tháng chia cho mã hàng theo cách của dòng này (DEV-ALL-171). */
   sharePct: number;
 };
 
-/** Mỗi lần tính có cả hai cách chia định phí (DEV-ALL-169). */
+/** Mỗi lần tính có cả hai cách chia định phí (DEV-ALL-171). */
 export type BreakEvenCalculationResult = {
   periodId: number;
   periodMonth: string;
@@ -46,10 +46,10 @@ export type BreakEvenFilter = {
   history?: boolean;
 };
 
-/** Dữ liệu đầu vào của tháng, hiện trong popup "Tính hòa vốn" (DEV-ALL-169). */
+/** Dữ liệu đầu vào của tháng, hiện trong popup "Tính hòa vốn" (DEV-ALL-171). */
 export type BreakEvenInputs = {
   periodExists: boolean;
-  /** Tháng đã khóa sổ (duyệt lương): vẫn tính được, chỉ cảnh báo (DEV-ALL-170). */
+  /** Tháng đã khóa sổ (duyệt lương): vẫn tính được, chỉ cảnh báo (DEV-ALL-172). */
   periodLocked: boolean;
   payrollApproved: boolean;
   costEntered: boolean;

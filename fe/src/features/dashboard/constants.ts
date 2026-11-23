@@ -12,7 +12,7 @@ export const ORDER_DELAY_TEXT = {
   daysLeft: 'Còn {0} ngày',
 } as const;
 
-/** Chữ hiển thị của trang chủ theo vai trò (DEV-ALL-168). */
+/** Chữ hiển thị của trang chủ theo vai trò (DEV-ALL-170). */
 export const HOME_TEXT = {
   decide: 'Cần quyết',
   pending: 'Chờ xử lý',
@@ -38,7 +38,7 @@ export const HOME_TEXT = {
   waitMaterial: 'Chờ NVL · chưa vào sản xuất',
 } as const;
 
-/** Chữ hiển thị của trang chủ các vai trò còn lại (DEV-ALL-168). */
+/** Chữ hiển thị của trang chủ các vai trò còn lại (DEV-ALL-170). */
 export const HOME_ROLE_TEXT = {
   month: 'Việc tháng này',
   waiting: 'Chờ nhận / chờ lập phiếu',

@@ -16,10 +16,10 @@ const post = async <T>(url: string, body?: unknown): Promise<T> =>
 export const breakEvenApi = {
   getBreakEven: (filter: BreakEvenFilter) => get<BreakEvenListResult>(API.breakEven.base, filter),
 
-  /** Dữ liệu đầu vào của tháng (bảng lương, chi phí, thành phẩm, giờ công) — DEV-ALL-169. */
+  /** Dữ liệu đầu vào của tháng (bảng lương, chi phí, thành phẩm, giờ công) — DEV-ALL-171. */
   inputs: (periodMonth: string) => get<BreakEvenInputs>(API.breakEven.inputs, { periodMonth }),
 
-  /** Một lần tính chạy cả hai cách chia định phí (DEV-ALL-169). */
+  /** Một lần tính chạy cả hai cách chia định phí (DEV-ALL-171). */
   calculate: (periodMonth: string) =>
     post<BreakEvenCalculationResult>(API.breakEven.calculate, { periodMonth }),
 

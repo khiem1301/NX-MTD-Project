@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Manager;
 
-/// <summary>DEV-ALL-168: số liệu trang chủ của Quản đốc.</summary>
+/// <summary>DEV-ALL-170: số liệu trang chủ của Quản đốc.</summary>
 public sealed class HomeController : ManagerBaseController
 {
     private readonly IHomeDashboardService _home;

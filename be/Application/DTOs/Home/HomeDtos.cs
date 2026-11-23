@@ -1,6 +1,6 @@
 namespace NX_MTD.Application.DTOs;
 
-// DEV-ALL-168: trang chủ theo vai trò. Mỗi role một API GET /api/v1/<role>/home trả đủ số liệu trong một lần gọi.
+// DEV-ALL-170: trang chủ theo vai trò. Mỗi role một API GET /api/v1/<role>/home trả đủ số liệu trong một lần gọi.
 
 /// <summary>Tiền tháng này và tháng trước (null = tháng đó chưa có số liệu, vd chưa nhập chi phí).</summary>
 public sealed record HomeMoneyDto(decimal? ThisMonth, decimal? LastMonth);

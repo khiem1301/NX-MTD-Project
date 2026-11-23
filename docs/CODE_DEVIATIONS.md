@@ -160,10 +160,10 @@
 | DEV-ALL-118 | 17/11/2026 | Claude (AI) | UC09, `OrderImportService`, `OrderForm` | Nhập dòng hàng của đơn từ Excel (ma trận màu × size) ở form tạo / sửa đơn: xem trước ở máy chủ, áp dụng thì điền vào form, Lưu như tạo tay | Mở |
 | DEV-ALL-119 | 18/11/2026 | Claude (AI) | UC09, `OrderMaterial`, `OrderMaterialService` | Nhập NVL của đơn từ Excel (Mã NVL, Số cần, Khách cấp, Ghi chú; gộp theo NVL, lưu một lần); bảng NVL của đơn tách Đã nhập thành Khách đã giao / Đã mua về và thêm Còn thiếu | Mở |
 | DEV-ALL-120 | 18/11/2026 | Claude (AI) | UC10, `Product`, `ProductImportService` | Tạo nhiều mã hàng một lần từ Excel ở màn Mã hàng (Mã hàng, Tên mã hàng, Mô tả); mã đã có bỏ qua | Mở |
-| DEV-ALL-171 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, Sổ xe và nhiên liệu, `VehicleService.CompleteTripAsync` | Kết thúc chuyến: nhập tiền xăng thì bắt buộc có ít nhất một ảnh hóa đơn xăng (FuelReceipt); ảnh tải ngay trong popup, thiếu thì BE trả lỗi ở ô tiền xăng và không lưu | Mở |
-| DEV-ALL-170 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-10, GBR-17, popup Tính hòa vốn | Tháng đã khóa sổ vẫn tính hòa vốn được (không chặn như GBR-10), popup chỉ cảnh báo; vì duyệt lương tự khóa tháng nên chặn sẽ làm hòa vốn không bao giờ tính được | Mở |
-| DEV-ALL-169 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-17, `BreakEvenResult`, `FinanceService`, màn Hòa vốn | Mỗi lần tính hòa vốn chạy cả hai cách chia định phí (sản lượng, giờ công) và so sánh cạnh nhau; bỏ ô chọn cách; tỉ lệ giờ công chuẩn hóa về 100%; popup Tính có kiểm dữ liệu đầu vào (API `break-even/inputs`); bấm mã hàng xem chi tiết; `UQ_BER` thêm `AllocationBasis` (patch `2026-11-24_break_even_both_bases.sql`) | Mở |
-| DEV-ALL-168 | 24/11/2026 | AI theo yêu cầu của người dùng | UC21, trang chủ, `HomeDashboardService`, `/api/v1/<role>/home` | Trang chủ theo vai trò cho cả 9 vai trò: ô số bấm được, biểu đồ tròn tiến độ từng đơn / lệnh cắt, danh sách chờ xử lý; mỗi role một API `home` trả đủ số liệu; bỏ bảng tiến độ đơn, khối doanh thu và khối KPI tổ cũ ở trang chủ | Mở |
+| DEV-ALL-173 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, Sổ xe và nhiên liệu, `VehicleService.CompleteTripAsync` | Kết thúc chuyến: nhập tiền xăng thì bắt buộc có ít nhất một ảnh hóa đơn xăng (FuelReceipt); ảnh tải ngay trong popup, thiếu thì BE trả lỗi ở ô tiền xăng và không lưu | Mở |
+| DEV-ALL-172 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-10, GBR-17, popup Tính hòa vốn | Tháng đã khóa sổ vẫn tính hòa vốn được (không chặn như GBR-10), popup chỉ cảnh báo; vì duyệt lương tự khóa tháng nên chặn sẽ làm hòa vốn không bao giờ tính được | Mở |
+| DEV-ALL-171 | 24/11/2026 | AI theo yêu cầu của người dùng | UC11, GBR-17, `BreakEvenResult`, `FinanceService`, màn Hòa vốn | Mỗi lần tính hòa vốn chạy cả hai cách chia định phí (sản lượng, giờ công) và so sánh cạnh nhau; bỏ ô chọn cách; tỉ lệ giờ công chuẩn hóa về 100%; popup Tính có kiểm dữ liệu đầu vào (API `break-even/inputs`); bấm mã hàng xem chi tiết; `UQ_BER` thêm `AllocationBasis` (patch `2026-11-24_break_even_both_bases.sql`) | Mở |
+| DEV-ALL-170 | 24/11/2026 | AI theo yêu cầu của người dùng | UC21, trang chủ, `HomeDashboardService`, `/api/v1/<role>/home` | Trang chủ theo vai trò cho cả 9 vai trò: ô số bấm được, biểu đồ tròn tiến độ từng đơn / lệnh cắt, danh sách chờ xử lý; mỗi role một API `home` trả đủ số liệu; bỏ bảng tiến độ đơn, khối doanh thu và khối KPI tổ cũ ở trang chủ | Mở |
 | DEV-ALL-167 | 24/11/2026 | AI theo yêu cầu của người dùng | UC35, màn Sổ xe và nhiên liệu, `CompleteVehicleTripDtoValidator` | Kết thúc chuyến chỉ nhập Km cuối và Tiền xăng; bỏ ô Xăng (lít) và quy tắc "có lít thì phải có tiền xăng"; tiền xăng nhập riêng được | Mở |
 | DEV-ALL-166 | 24/11/2026 | AI theo yêu cầu của người dùng | UC05, thông báo, form Thêm khách / Nhà cung cấp, đăng nhập | Thông báo có nhãn màu theo loại (Từ quản lý xanh dương, Đơn từ tím, Kho cam, Sản xuất xanh lá, Hệ thống xanh ngọc, Khẩn đỏ), toast thông báo khẩn màu cam; các trường bắt buộc nhập (tên, địa chỉ, điện thoại, email của khách / NCC; đăng nhập) hiện dấu * đỏ | Mở |
 | DEV-ALL-165 | 24/11/2026 | AI theo yêu cầu của người dùng | UC34 mở rộng, màn Công nợ đơn hàng, `OrderPaymentService`, GBR-02 | Màn "Thanh toán đơn hàng" đổi tên thành "Công nợ đơn hàng"; Kế toán thấy thêm Tổng tiền đơn (Σ số lượng × đơn giá CMT) ở danh sách và chi tiết; Quản đốc vẫn không thấy | Mở |
@@ -3236,7 +3236,7 @@
   - [ ] Report-3: UC35 (form kết thúc chuyến), MSG30; UC36 (cột Tổng xăng)
 - **Trạng thái:** Mở
 
-### DEV-ALL-168 · Trang chủ theo vai trò
+### DEV-ALL-170 · Trang chủ theo vai trò
 
 - **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
 - **Ảnh hưởng tới:** UC21 (tiến độ đơn), trang chủ; BE `HomeDashboardService` (partial theo role), `HomeController` ở folder Admin / Manager, `HomeModule`; FE `features/dashboard` (`AdminHome`, `ManagerHome`, `StatTile`, `OrderProgressPie`)
@@ -3248,7 +3248,7 @@
   - [ ] Report-3: UC21 và mockup trang chủ theo vai trò
 - **Trạng thái:** Mở
 
-### DEV-ALL-169 · Hòa vốn: tính cả hai cách chia định phí, popup kiểm dữ liệu đầu vào, chi tiết mã hàng
+### DEV-ALL-171 · Hòa vốn: tính cả hai cách chia định phí, popup kiểm dữ liệu đầu vào, chi tiết mã hàng
 
 - **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
 - **Ảnh hưởng tới:** UC11, GBR-17, MSG25/MSG26; bảng `BreakEvenResult` (`UQ_BER`), patch `SQL/patches/2026-11-24_break_even_both_bases.sql`; BE `FinanceService` (`CalculateAsync`, `BuildEntitiesAsync`, `LabourShares`, `GetBreakEvenInputsAsync`), `BreakEvenCalculateDto` (bỏ `AllocationBasis`), `BreakEvenResultDto.SharePct`, `BreakEvenInputsDto`, API `GET /api/v1/admin/break-even/inputs`, Excel ghi nhãn tiếng Việt; FE `features/break-even` (`BreakEvenCalculateModal`, `BreakEvenResultTable`, `BreakEvenSummaryCard`, `BreakEvenDetailModal`, `utils/pivotResults`); tài liệu `docs/HUONG_DAN_HOA_VON.md`
@@ -3262,7 +3262,7 @@
   - [ ] `NX-MTD_Database.sql` / `_Mo_ta.md`: `UQ_BER` thêm `AllocationBasis`
 - **Trạng thái:** Mở
 
-### DEV-ALL-170 · Hòa vốn: tháng đã khóa sổ chỉ cảnh báo, không chặn
+### DEV-ALL-172 · Hòa vốn: tháng đã khóa sổ chỉ cảnh báo, không chặn
 
 - **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
 - **Ảnh hưởng tới:** UC11, GBR-10, GBR-17; BE `BreakEvenInputsDto.PeriodLocked`, `FinanceService.GetBreakEvenInputsAsync`; FE `BreakEvenCalculateModal`
@@ -3274,7 +3274,7 @@
   - [ ] Report-3: GBR-10 bỏ "break-even" khỏi cột dữ liệu bị chặn, hoặc đổi GBR-17 / luồng khóa tháng
 - **Trạng thái:** Mở
 
-### DEV-ALL-171 · Sổ xe: tiền xăng bắt buộc có ảnh hóa đơn
+### DEV-ALL-173 · Sổ xe: tiền xăng bắt buộc có ảnh hóa đơn
 
 - **Ngày / Người / Task / PR:** 24/11/2026 · AI theo yêu cầu của người dùng · ALL · chưa có PR
 - **Ảnh hưởng tới:** UC35; BE `VehicleService.CompleteTripAsync` (`HasFuelReceiptAsync`), `WarehouseMessages.FuelReceiptRequired`; FE `TripCompleteModal`, `vehicle-log/constants`

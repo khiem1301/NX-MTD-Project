@@ -254,7 +254,7 @@ public class FinanceServiceTests
         var labour = result.Data!.Items.Where(i => i.AllocationBasis == "LabourHours").ToDictionary(i => i.ProductId);
 
         // Tỉ lệ thô: SP1 = 4.8/8 = 0.6, SP2 = 3.2/8 = 0.4, SP3 không có giờ -> tỉ lệ sản lượng 50/200 = 0.25; tổng 1.25.
-        // DEV-ALL-169: chuẩn hóa về 100% -> 0.48 / 0.32 / 0.20, tổng định phí chia đúng bằng 1,000,000.
+        // DEV-ALL-171: chuẩn hóa về 100% -> 0.48 / 0.32 / 0.20, tổng định phí chia đúng bằng 1,000,000.
         labour[1].AllocatedFixedCost.Should().Be(480_000m);
         labour[2].AllocatedFixedCost.Should().Be(320_000m);
         labour[3].AllocatedFixedCost.Should().Be(200_000m);
@@ -362,7 +362,7 @@ public class FinanceServiceTests
         result.ErrorCode.Should().Be(ErrorCodes.RevenuePeriodMonthInvalid);
     }
 
-    // ================= Dữ liệu đầu vào (DEV-ALL-169) =================
+    // ================= Dữ liệu đầu vào (DEV-ALL-171) =================
 
     [Fact]
     public async Task GetBreakEvenInputsAsync_Ready_ReportsTotalsAndCanCalculate()

@@ -37,7 +37,7 @@ export type LineProgress = {
   defectRatePct: number | null;
 };
 
-// ---------- Trang chủ theo vai trò (DEV-ALL-168), khớp HomeDtos.cs ở BE ----------
+// ---------- Trang chủ theo vai trò (DEV-ALL-170), khớp HomeDtos.cs ở BE ----------
 
 /** Tiền tháng này và tháng trước; null = tháng đó chưa có số liệu (vd chưa nhập chi phí). */
 export type HomeMoney = { thisMonth: number | null; lastMonth: number | null };

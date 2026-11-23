@@ -3,7 +3,7 @@ using NX_MTD.Application.DTOs;
 
 namespace NX_MTD.Application.Interfaces;
 
-/// <summary>DEV-ALL-168: số liệu trang chủ theo vai trò (chỉ đọc).</summary>
+/// <summary>DEV-ALL-170: số liệu trang chủ theo vai trò (chỉ đọc).</summary>
 public interface IHomeDashboardService
 {
     Task<Result<AdminHomeDto>> GetAdminAsync(CancellationToken ct);

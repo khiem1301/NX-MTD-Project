@@ -10,7 +10,7 @@ import { TeamLeaderHome } from '../components/home/TeamLeaderHome';
 import { WarehouseHome } from '../components/home/WarehouseHome';
 import { WorkerHome } from '../components/home/WorkerHome';
 
-/** Trang chủ của từng vai trò (DEV-ALL-168). */
+/** Trang chủ của từng vai trò (DEV-ALL-170). */
 const HOME_BY_ROLE: Record<Role, () => ReactElement> = {
   [ROLES.Admin]: () => <AdminHome />,
   [ROLES.Manager]: () => <ManagerHome />,

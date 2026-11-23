@@ -231,7 +231,7 @@ public sealed class VehicleService : IVehicleService
                 new Dictionary<string, string[]> { ["odometerEnd"] = [message] });
         }
 
-        // DEV-ALL-171: có tiền xăng thì bắt buộc có ảnh hóa đơn xăng (ảnh đính kèm vào chuyến đang chạy trước khi bấm Lưu).
+        // DEV-ALL-173: có tiền xăng thì bắt buộc có ảnh hóa đơn xăng (ảnh đính kèm vào chuyến đang chạy trước khi bấm Lưu).
         if (dto.FuelCost is not null && !await HasFuelReceiptAsync(tripId, ct))
             return Result<VehicleTripDto>.Failure(ErrorCodes.VehicleTripInvalid, WarehouseMessages.FuelReceiptRequired, ResultKind.Validation,
                 new Dictionary<string, string[]> { ["fuelCost"] = [WarehouseMessages.FuelReceiptRequired] });

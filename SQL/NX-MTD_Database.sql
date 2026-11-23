@@ -1651,7 +1651,7 @@ CREATE TABLE dbo.MonthlyCost (
 );
 
 -- Kết quả hòa vốn theo mã hàng (BREAK_EVEN_RESULT, UC33). Mỗi lần tính là một bộ dòng mới cùng CalculatedAt (GBR-17),
--- mỗi mã hàng 2 dòng: chia định phí theo sản lượng và theo giờ công (DEV-ALL-169)
+-- mỗi mã hàng 2 dòng: chia định phí theo sản lượng và theo giờ công (DEV-ALL-171)
 CREATE TABLE dbo.BreakEvenResult (
     BreakEvenResultId   INT IDENTITY(1,1) CONSTRAINT PK_BreakEvenResult PRIMARY KEY,
     PeriodId            INT           NOT NULL CONSTRAINT FK_BER_Period REFERENCES dbo.AccountingPeriod(PeriodId),

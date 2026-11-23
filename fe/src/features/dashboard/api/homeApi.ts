@@ -14,7 +14,7 @@ import type {
 const get = async <T>(url: string): Promise<T> =>
   (await apiClient.get<ApiResponse<T>>(url)).data.data;
 
-/** Trang chủ theo vai trò: mỗi role một API (DEV-ALL-168). */
+/** Trang chủ theo vai trò: mỗi role một API (DEV-ALL-170). */
 export const homeApi = {
   admin: () => get<AdminHome>('/api/v1/admin/home'),
   manager: () => get<ManagerHome>('/api/v1/manager/home'),

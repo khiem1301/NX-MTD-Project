@@ -1,6 +1,6 @@
 import type { StatusLabel } from '@/components/common/StatusTag';
 
-/** Chuỗi hiển thị màn Hòa vốn + giá trị thặng dư (UC11, chỉ Admin; DEV-ALL-169). */
+/** Chuỗi hiển thị màn Hòa vốn + giá trị thặng dư (UC11, chỉ Admin; DEV-ALL-171). */
 export const BREAK_EVEN_TEXT = {
   pageTitle: 'Hòa vốn & giá trị thặng dư',
   periodMonth: 'Tháng',

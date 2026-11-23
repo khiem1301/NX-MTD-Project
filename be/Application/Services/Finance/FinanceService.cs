@@ -136,7 +136,7 @@ public sealed class FinanceService : IFinanceService
             string.Format(Messages.BreakEvenCalculated, dto.PeriodMonth));
     }
 
-    /// <summary>DEV-ALL-169: dữ liệu đầu vào của tháng cho popup "Tính hòa vốn" (chỉ đọc).</summary>
+    /// <summary>DEV-ALL-171: dữ liệu đầu vào của tháng cho popup "Tính hòa vốn" (chỉ đọc).</summary>
     public async Task<Result<BreakEvenInputsDto>> GetBreakEvenInputsAsync(string periodMonth, CancellationToken ct)
     {
         if (!IsValidMonth(periodMonth))
@@ -195,7 +195,7 @@ public sealed class FinanceService : IFinanceService
 
     /// <summary>
     /// Tính kết quả hòa vốn cho từng mã hàng có doanh thu trong tháng (bước 1-6 của UC11), cả hai cách chia định phí
-    /// (DEV-ALL-169): mỗi mã hàng 2 dòng cùng CalculatedAt, khác AllocationBasis.
+    /// (DEV-ALL-171): mỗi mã hàng 2 dòng cùng CalculatedAt, khác AllocationBasis.
     /// </summary>
     private async Task<(List<BreakEvenResult> Entities, Dictionary<(int, string), string> Warnings,
         IReadOnlyDictionary<int, string> Products, DateTime CalculatedAt, decimal TotalFixedCost)>
@@ -262,7 +262,7 @@ public sealed class FinanceService : IFinanceService
 
     /// <summary>
     /// Tỉ lệ chia định phí theo giờ công. DEV-MI-13-1: mã hàng không quy đổi được giờ công hợp lệ trong kỳ (không có
-    /// OutputRecord, hoặc công nhân không có DailyTimesheet khớp ngày) tạm dùng tỉ lệ sản lượng. DEV-ALL-169: sau đó chuẩn
+    /// OutputRecord, hoặc công nhân không có DailyTimesheet khớp ngày) tạm dùng tỉ lệ sản lượng. DEV-ALL-171: sau đó chuẩn
     /// hóa để tổng các tỉ lệ đúng bằng 100%, tức tổng định phí chia ra đúng bằng định phí tháng.
     /// </summary>
     private static Dictionary<int, decimal> LabourShares(

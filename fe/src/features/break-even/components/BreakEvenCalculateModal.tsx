@@ -59,7 +59,7 @@ const checksOf = (d: BreakEvenInputs): Check[] => [
   },
 ];
 
-/** UC11 — popup "Tính hòa vốn": xem dữ liệu đầu vào của tháng rồi tính cả hai cách chia định phí (DEV-ALL-169). */
+/** UC11 — popup "Tính hòa vốn": xem dữ liệu đầu vào của tháng rồi tính cả hai cách chia định phí (DEV-ALL-171). */
 export function BreakEvenCalculateModal({
   periodMonth,
   open,

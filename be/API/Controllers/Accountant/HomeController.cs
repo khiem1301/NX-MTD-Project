@@ -4,7 +4,7 @@ using NX_MTD.Application.Interfaces;
 
 namespace NX_MTD.API.Controllers.Accountant;
 
-/// <summary>DEV-ALL-168: số liệu trang chủ của Kế toán.</summary>
+/// <summary>DEV-ALL-170: số liệu trang chủ của Kế toán.</summary>
 public sealed class HomeController : AccountantBaseController
 {
     private readonly IHomeDashboardService _home;

@@ -56,7 +56,7 @@ export const VL_MESSAGES = {
   vehicleSaved: 'Đã lưu xe.',
   tripStarted: 'Đã ghi chuyến, chờ kết thúc chuyến.',
   tripCompleted: 'Đã kết thúc chuyến.',
-  /** DEV-ALL-171: khớp WarehouseMessages.FuelReceiptRequired ở BE. */
+  /** DEV-ALL-173: khớp WarehouseMessages.FuelReceiptRequired ở BE. */
   fuelReceiptRequired:
     'Nhập tiền xăng thì phải có ít nhất một ảnh hóa đơn xăng. Chụp / tải ảnh lên rồi lưu.',
   confirmDiscontinue:

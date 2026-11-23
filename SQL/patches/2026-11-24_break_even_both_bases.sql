@@ -1,5 +1,5 @@
 /* =====================================================================================
-   DEV-ALL-169: mỗi lần tính hòa vốn lưu cả hai cách chia định phí (OUTPUT và LABOUR_HOURS) cùng CalculatedAt.
+   DEV-ALL-171: mỗi lần tính hòa vốn lưu cả hai cách chia định phí (OUTPUT và LABOUR_HOURS) cùng CalculatedAt.
    - UQ_BER đổi từ (PeriodId, CalculatedAt, ProductId) thành (PeriodId, CalculatedAt, ProductId, AllocationBasis):
      một mã hàng có 2 dòng trong cùng một lần tính, khác cách chia.
    - Dữ liệu cũ (mỗi lần tính một cách) vẫn hợp lệ với khóa mới, không phải sửa.

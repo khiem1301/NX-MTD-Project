@@ -23,7 +23,7 @@ const endAfterStart = (start: number): Rule => ({
 
 type CompleteForm = { odometerEnd: number; fuelCost?: number | null };
 
-/** UC35: kết thúc chuyến (km cuối, tiền xăng). DEV-ALL-171: có tiền xăng thì phải có ảnh hóa đơn xăng (tải ngay trong popup). */
+/** UC35: kết thúc chuyến (km cuối, tiền xăng). DEV-ALL-173: có tiền xăng thì phải có ảnh hóa đơn xăng (tải ngay trong popup). */
 export function TripCompleteModal({
   trip,
   onClose,
